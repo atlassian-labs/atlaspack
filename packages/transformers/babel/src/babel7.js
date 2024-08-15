@@ -69,7 +69,7 @@ export default async function babel7(
       ],
     },
     caller: {
-      name: 'parcel',
+      name: 'atlaspack',
       version: transformerVersion,
       targets: JSON.stringify(babelOptions.targets),
       outputFormat: asset.env.outputFormat,

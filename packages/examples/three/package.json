@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "setup": "make src",
-    "build": "rm -rf dist && parcel build src/entry.js --no-cache",
+    "build": "rm -rf dist && atlaspack build src/entry.js --no-cache",
     "get-size": "du -sh dist"
   },
   "browserLegacy": "dist/legacy/index.js",
@@ -30,6 +30,6 @@
     "@atlaspack/config-default": "2.12.0",
     "@atlaspack/core": "2.12.0",
     "@atlaspack/optimizer-esbuild": "2.12.0",
-    "parcel": "2.12.0"
+    "atlaspack": "2.12.0"
   }
 }

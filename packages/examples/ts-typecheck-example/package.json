@@ -4,7 +4,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "demo": "parcel build src/index.ts --no-cache"
+    "demo": "atlaspack build src/index.ts --no-cache"
   },
   "browserModern": "dist/modern/index.js",
   "targets": {

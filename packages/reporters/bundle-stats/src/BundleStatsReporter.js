@@ -39,7 +39,7 @@ export default (new Reporter({
       bundlesByTarget.get(bundle.target.name).push(bundle);
     }
 
-    let reportsDir = path.join(options.projectRoot, 'parcel-bundle-reports');
+    let reportsDir = path.join(options.projectRoot, 'atlaspack-bundle-reports');
     await options.outputFS.mkdirp(reportsDir);
 
     await Promise.all(

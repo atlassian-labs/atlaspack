@@ -24,7 +24,7 @@ import {type ProjectPath, toProjectPath} from './projectPath';
 import {version as ATLASPACK_VERSION} from '../package.json';
 
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
-const CONFIG = Symbol.for('parcel-plugin-config');
+const CONFIG = Symbol.for('atlaspack-plugin-config');
 
 export default async function loadPlugin<T>(
   pluginName: PackageName,
@@ -78,8 +78,8 @@ export default async function loadPlugin<T>(
       configPkg.config.dependencies?.[pluginName] == null
     ) {
       // If not in the config's dependencies, the plugin will be auto installed with
-      // the version declared in "parcelDependencies".
-      range = configPkg.config.parcelDependencies?.[pluginName];
+      // the version declared in "atlaspackDependencies".
+      range = configPkg.config.atlaspackDependencies?.[pluginName];
 
       if (range == null) {
         let contents = await options.inputFS.readFile(
@@ -91,11 +91,11 @@ export default async function loadPlugin<T>(
             message: md`Could not determine version of ${pluginName} in ${path.relative(
               process.cwd(),
               resolveFrom,
-            )}. Either include it in "dependencies" or "parcelDependencies".`,
+            )}. Either include it in "dependencies" or "atlaspackDependencies".`,
             origin: '@atlaspack/core',
             codeFrames:
               configPkg.config.dependencies ||
-              configPkg.config.parcelDependencies
+              configPkg.config.atlaspackDependencies
                 ? [
                     {
                       filePath: configPkg.files[0].filePath,
@@ -103,7 +103,7 @@ export default async function loadPlugin<T>(
                       code: contents,
                       codeHighlights: generateJSONCodeHighlights(contents, [
                         {
-                          key: configPkg.config.parcelDependencies
+                          key: configPkg.config.atlaspackDependencies
                             ? '/parcelDependencies'
                             : '/dependencies',
                           type: 'key',
@@ -173,18 +173,18 @@ export default async function loadPlugin<T>(
   // Remove plugin version compatiblility validation in canary builds as they don't use semver
   if (!process.env.SKIP_PLUGIN_COMPATIBILITY_CHECK) {
     if (!pluginName.startsWith('.')) {
-      // Validate the engines.parcel field in the plugin's package.json
-      let parcelVersionRange = pkg && pkg.engines && pkg.engines.parcel;
-      if (!parcelVersionRange) {
+      // Validate the engines.atlaspack field in the plugin's package.json
+      let atlaspackVersionRange = pkg && pkg.engines && pkg.engines.atlaspack;
+      if (!atlaspackVersionRange) {
         logger.warn({
           origin: '@atlaspack/core',
-          message: `The plugin "${pluginName}" needs to specify a \`package.json#engines.parcel\` field with the supported Parcel version range.`,
+          message: `The plugin "${pluginName}" needs to specify a \`package.json#engines.atlaspack\` field with the supported Parcel version range.`,
         });
       }
 
       if (
-        parcelVersionRange &&
-        !semver.satisfies(ATLASPACK_VERSION, parcelVersionRange)
+        atlaspackVersionRange &&
+        !semver.satisfies(ATLASPACK_VERSION, atlaspackVersionRange)
       ) {
         let pkgFile = nullthrows(
           await resolveConfig(
@@ -197,7 +197,7 @@ export default async function loadPlugin<T>(
         let pkgContents = await options.inputFS.readFile(pkgFile, 'utf8');
         throw new ThrowableDiagnostic({
           diagnostic: {
-            message: md`The plugin "${pluginName}" is not compatible with the current version of Parcel. Requires "${parcelVersionRange}" but the current version is "${ATLASPACK_VERSION}".`,
+            message: md`The plugin "${pluginName}" is not compatible with the current version of Parcel. Requires "${atlaspackVersionRange}" but the current version is "${ATLASPACK_VERSION}".`,
             origin: '@atlaspack/core',
             codeFrames: [
               {

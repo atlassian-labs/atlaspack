@@ -36,7 +36,7 @@ export default (new Reporter({
       case 'buildStart':
         invariant(tracer == null, 'Tracer multiple initialisation');
         tracer = new Tracer();
-        filename = `parcel-trace-${getTimeId()}.json`;
+        filename = `atlaspack-trace-${getTimeId()}.json`;
         filePath = path.join(options.projectRoot, filename);
         invariant(
           writeStream == null,

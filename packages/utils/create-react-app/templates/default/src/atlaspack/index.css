@@ -1,26 +1,26 @@
-.parcel-container {
+.atlaspack-container {
   height: 100vh;
   width: 100vw;
   display: flex;
 }
 
-.parcel-heading {
+.atlaspack-heading {
   font-family: system-ui;
   color: #e6daca;
   margin: auto;
 }
 
-.parcel-logo {
+.atlaspack-logo {
   margin-bottom: 60px;
 }
 
-.parcel-box {
+.atlaspack-box {
   position: relative;
   height: 474px;
   width: 600px;
 }
 
-.parcel-box-front {
+.atlaspack-box-front {
   position: absolute;
   top: 0;
   left: 0;

@@ -17,7 +17,7 @@
   "source": "src/BundleAnalyzerReporter.js",
   "engines": {
     "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
+    "atlaspack": "^2.12.0"
   },
   "dependencies": {
     "@atlaspack/plugin": "2.12.0",

@@ -179,12 +179,12 @@ type RequestNode = {|
 |};
 
 export const requestTypes = {
-  parcel_build_request: 1,
+  atlaspack_build_request: 1,
   bundle_graph_request: 2,
   asset_graph_request: 3,
   entry_request: 4,
   target_request: 5,
-  parcel_config_request: 6,
+  atlaspack_config_request: 6,
   path_request: 7,
   dev_dep_request: 8,
   asset_request: 9,
@@ -1593,7 +1593,7 @@ export async function readAndDeserializeRequestGraph(
       ...serializedRequestGraph,
       nodes: (await Promise.all(nodePromises)).flat(),
     }),
-    // This is used inside parcel query for `.inspectCache`
+    // This is used inside atlaspack query for `.inspectCache`
     bufferLength,
   };
 }

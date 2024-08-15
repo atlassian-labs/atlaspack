@@ -343,7 +343,7 @@ describe.v2('transpilation', function () {
     assert(!file.includes('es.array.concat'));
   });
 
-  it('should resolve @swc/helpers and regenerator-runtime relative to parcel', async function () {
+  it('should resolve @swc/helpers and regenerator-runtime relative to atlaspack', async function () {
     let dir = path.join('/tmp/' + Math.random().toString(36).slice(2));
     await outputFS.mkdirp(dir);
     await ncp(path.join(__dirname, '/integration/swc-helpers'), dir);

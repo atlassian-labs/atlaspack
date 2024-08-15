@@ -1,5 +1,5 @@
 // @flow
-/* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope */
+/* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __atlaspack__import__, __atlaspack__importScripts__, ServiceWorkerGlobalScope */
 
 /*::
 import type {
@@ -43,13 +43,13 @@ declare var HMR_SECURE: boolean;
 declare var HMR_USE_SSE: boolean;
 declare var chrome: ExtensionContext;
 declare var browser: ExtensionContext;
-declare var __parcel__import__: (string) => Promise<void>;
-declare var __parcel__importScripts__: (string) => Promise<void>;
+declare var __atlaspack__import__: (string) => Promise<void>;
+declare var __atlaspack__importScripts__: (string) => Promise<void>;
 declare var globalThis: typeof self;
 declare var ServiceWorkerGlobalScope: Object;
 */
 
-var OVERLAY_ID = '__parcel__error__overlay__';
+var OVERLAY_ID = '__atlaspack__error__overlay__';
 
 var OldModule = module.bundle.Module;
 
@@ -100,7 +100,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
 
   var ws;
   if (HMR_USE_SSE) {
-    ws = new EventSource('/__parcel_hmr');
+    ws = new EventSource('/__atlaspack_hmr');
   } else {
     try {
       ws = new WebSocket(
@@ -166,7 +166,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
           typeof window !== 'undefined' &&
           typeof CustomEvent !== 'undefined'
         ) {
-          window.dispatchEvent(new CustomEvent('parcelhmraccept'));
+          window.dispatchEvent(new CustomEvent('atlaspackhmraccept'));
         }
 
         await hmrApplyUpdates(assets);
@@ -196,14 +196,14 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
     }
 
     if (data.type === 'error') {
-      // Log parcel errors to console
+      // Log atlaspack errors to console
       for (let ansiDiagnostic of data.diagnostics.ansi) {
         let stack = ansiDiagnostic.codeframe
           ? ansiDiagnostic.codeframe
           : ansiDiagnostic.stack;
 
         console.error(
-          '🚨 [parcel]: ' +
+          '🚨 [atlaspack]: ' +
             ansiDiagnostic.message +
             '\n' +
             stack +
@@ -229,7 +229,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
     };
     ws.onclose = function (e) {
       if (process.env.ATLASPACK_BUILD_ENV !== 'test') {
-        console.warn('[parcel] 🚨 Connection to the HMR server was lost');
+        console.warn('[atlaspack] 🚨 Connection to the HMR server was lost');
       }
     };
   }
@@ -239,7 +239,7 @@ function removeErrorOverlay() {
   var overlay = document.getElementById(OVERLAY_ID);
   if (overlay) {
     overlay.remove();
-    console.log('[parcel] ✨ Error resolved');
+    console.log('[atlaspack] ✨ Error resolved');
   }
 }
 
@@ -254,7 +254,7 @@ function createErrorOverlay(diagnostics) {
     let stack = diagnostic.frames.length
       ? diagnostic.frames.reduce((p, frame) => {
           return `${p}
-<a href="/__parcel_launch_editor?file=${encodeURIComponent(
+<a href="/__atlaspack_launch_editor?file=${encodeURIComponent(
             frame.location,
           )}" style="text-decoration: underline; color: #888" onclick="fetch(this.href); return false">${
             frame.location
@@ -391,11 +391,11 @@ function hmrDownload(asset) {
     } else if (typeof importScripts === 'function') {
       // Worker scripts
       if (asset.outputFormat === 'esmodule') {
-        return __parcel__import__(asset.url + '?t=' + Date.now());
+        return __atlaspack__import__(asset.url + '?t=' + Date.now());
       } else {
         return new Promise((resolve, reject) => {
           try {
-            __parcel__importScripts__(asset.url + '?t=' + Date.now());
+            __atlaspack__importScripts__(asset.url + '?t=' + Date.now());
             resolve();
           } catch (err) {
             reject(err);
@@ -407,7 +407,7 @@ function hmrDownload(asset) {
 }
 
 async function hmrApplyUpdates(assets) {
-  global.parcelHotUpdate = Object.create(null);
+  global.atlaspackHotUpdate = Object.create(null);
 
   let scriptsToRemove;
   try {
@@ -442,7 +442,7 @@ async function hmrApplyUpdates(assets) {
       hmrApply(module.bundle.root, asset);
     });
   } finally {
-    delete global.parcelHotUpdate;
+    delete global.atlaspackHotUpdate;
 
     if (scriptsToRemove) {
       scriptsToRemove.forEach(script => {
@@ -487,7 +487,7 @@ function hmrApply(bundle /*: ParcelRequire */, asset /*:  HMRAsset */) {
       }
 
       // $FlowFixMe
-      let fn = global.parcelHotUpdate[asset.id];
+      let fn = global.atlaspackHotUpdate[asset.id];
       modules[asset.id] = [fn, deps];
     } else if (bundle.parent) {
       hmrApply(bundle.parent, asset);

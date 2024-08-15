@@ -72,7 +72,7 @@ export default class Parcel {
   #initialized /*: boolean*/ = false;
   #disposable /*: Disposable */;
   #initialOptions /*: InitialParcelOptions */;
-  #parcelV3: ParcelV3;
+  #atlaspackV3: ParcelV3;
   #reporterRunner /*: ReporterRunner*/;
   #resolvedOptions /*: ?ParcelOptions*/ = null;
   #optionsRef /*: SharedReference */;
@@ -123,7 +123,7 @@ export default class Parcel {
     this.#resolvedOptions = resolvedOptions;
 
     let rustParcel: ParcelV3;
-    if (resolvedOptions.featureFlags.parcelV3) {
+    if (resolvedOptions.featureFlags.atlaspackV3) {
       // eslint-disable-next-line no-unused-vars
       let {entries, inputFS, outputFS, ...options} = this.#initialOptions;
 
@@ -499,7 +499,7 @@ export default class Parcel {
   _getResolvedParcelOptions(): ParcelOptions {
     return nullthrows(
       this.#resolvedOptions,
-      'Resolved options is null, please let parcel initialize before accessing this.',
+      'Resolved options is null, please let atlaspack initialize before accessing this.',
     );
   }
 

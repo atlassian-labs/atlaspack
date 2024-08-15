@@ -95,7 +95,8 @@ const commonOptions = {
   '--no-cache': 'disable the filesystem cache',
   '--config <path>':
     'specify which config to use. can be a path or a package name',
-  '--cache-dir <path>': 'set the cache directory. defaults to ".parcel-cache"',
+  '--cache-dir <path>':
+    'set the cache directory. defaults to ".atlaspack-cache"',
   '--watch-dir <path>':
     'set the root watch directory. defaults to nearest lockfile or source control dir.',
   '--watch-ignore [path]': [
@@ -242,7 +243,7 @@ program.on('--help', function () {
   INTERNAL_ORIGINAL_CONSOLE.log('');
   INTERNAL_ORIGINAL_CONSOLE.log(
     '  Run `' +
-      chalk.bold('parcel help <command>') +
+      chalk.bold('atlaspack help <command>') +
       '` for more information on specific commands',
   );
   INTERNAL_ORIGINAL_CONSOLE.log('');
@@ -287,7 +288,7 @@ async function run(
   let Parcel = require('@atlaspack/core').default;
   let fs = new NodeFS();
   let options = await normalizeOptions(command, fs);
-  let parcel = new Parcel({
+  let atlaspack = new Parcel({
     entries,
     defaultConfig: require.resolve('@atlaspack/config-default', {
       paths: [fs.cwd(), __dirname],
@@ -307,8 +308,8 @@ async function run(
     isExiting = true;
     if (unsubscribe != null) {
       await unsubscribe();
-    } else if (parcel.isProfiling) {
-      await parcel.stopProfiling();
+    } else if (atlaspack.isProfiling) {
+      await atlaspack.stopProfiling();
     }
 
     if (process.stdin.isTTY && process.stdin.isRaw) {
@@ -348,12 +349,12 @@ async function run(
           await exit(isWatching ? 0 : SIGINT_EXIT_CODE);
           break;
         case 'e':
-          await (parcel.isProfiling
-            ? parcel.stopProfiling()
-            : parcel.startProfiling());
+          await (atlaspack.isProfiling
+            ? atlaspack.stopProfiling()
+            : atlaspack.startProfiling());
           break;
         case 'y':
-          await parcel.takeHeapSnapshot();
+          await atlaspack.takeHeapSnapshot();
           break;
       }
     });
@@ -364,7 +365,7 @@ async function run(
   }
 
   if (isWatching) {
-    ({unsubscribe} = await parcel.watch(err => {
+    ({unsubscribe} = await atlaspack.watch(err => {
       if (err) {
         throw err;
       }
@@ -394,7 +395,7 @@ async function run(
     process.on('SIGTERM', () => exit());
   } else {
     try {
-      await parcel.run();
+      await atlaspack.run();
     } catch (err) {
       // If an exception is thrown during Parcel.build, it is given to reporters in a
       // buildFailure event, and has been shown to the user.
@@ -465,7 +466,7 @@ async function normalizeOptions(
       throw new ThrowableDiagnostic({
         diagnostic: {
           message: `Could not get available port: ${err.message}`,
-          origin: 'parcel',
+          origin: 'atlaspack',
           stack: err.stack,
         },
       });

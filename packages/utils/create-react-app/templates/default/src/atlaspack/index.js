@@ -6,19 +6,19 @@ import './index.css';
 
 export default function Parcel() {
   return (
-    <div className="parcel-container">
-      <div className="parcel-heading">
+    <div className="atlaspack-container">
+      <div className="atlaspack-heading">
         <div>
           <h1>Welcome to</h1>
-          <img src={logoUrl} className="parcel-logo" alt="Parcel logo" />
+          <img src={logoUrl} className="atlaspack-logo" alt="Parcel logo" />
         </div>
 
-        <div className="parcel-box">
+        <div className="atlaspack-box">
           <img src={backUrl} alt="" height="474" />
           <div id="icons" />
           <img
             src={frontUrl}
-            className="parcel-box-front"
+            className="atlaspack-box-front"
             alt="Parcel box"
             height="474"
           />

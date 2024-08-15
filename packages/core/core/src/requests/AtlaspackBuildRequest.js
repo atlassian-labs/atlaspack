@@ -43,7 +43,7 @@ type RunInput<TResult> = {|
 
 export type ParcelBuildRequest = {|
   id: ContentKey,
-  +type: typeof requestTypes.parcel_build_request,
+  +type: typeof requestTypes.atlaspack_build_request,
   run: (RunInput<ParcelBuildRequestResult>) => Async<ParcelBuildRequestResult>,
   input: ParcelBuildRequestInput,
 |};
@@ -52,8 +52,8 @@ export default function createParcelBuildRequest(
   input: ParcelBuildRequestInput,
 ): ParcelBuildRequest {
   return {
-    type: requestTypes.parcel_build_request,
-    id: 'parcel_build_request',
+    type: requestTypes.atlaspack_build_request,
+    id: 'atlaspack_build_request',
     run,
     input,
   };

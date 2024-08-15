@@ -18,7 +18,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "bin": {
-    "parcel-query": "bin/parcel-query.js"
+    "atlaspack-query": "bin/parcel-query.js"
   },
   "main": "src/index.js",
   "dependencies": {

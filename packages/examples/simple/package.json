@@ -4,8 +4,8 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build": "ATLASPACK_WORKERS=0 parcel src/index.js --no-cache",
-    "clean-demo": "rm -rf .parcel-cache dist && yarn demo"
+    "build": "ATLASPACK_WORKERS=0 atlaspack src/index.js --no-cache",
+    "clean-demo": "rm -rf .atlaspack-cache dist && yarn demo"
   },
   "devDependencies": {
     "@babel/core": "^7.22.11",

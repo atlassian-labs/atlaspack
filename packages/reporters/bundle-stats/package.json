@@ -7,11 +7,11 @@
   "main": "lib/BundleStatsReporter.js",
   "source": "src/BundleStatsReporter.js",
   "bin": {
-    "parcel-bundle-stats": "bin.js"
+    "atlaspack-bundle-stats": "bin.js"
   },
   "engines": {
     "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
+    "atlaspack": "^2.12.0"
   },
   "dependencies": {
     "@atlaspack/core": "2.12.0",

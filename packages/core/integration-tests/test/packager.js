@@ -18,7 +18,7 @@ const runBundler = (name, opts = {}) => {
 };
 
 function hasPolyfill(code) {
-  const noPolyfill = `var $parcel$global = globalThis;`;
+  const noPolyfill = `var $atlaspack$global = globalThis;`;
   const polyfill = `typeof globalThis !== 'undefined'`;
   return code.includes(polyfill) && !code.includes(noPolyfill);
 }

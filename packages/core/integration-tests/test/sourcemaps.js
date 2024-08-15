@@ -220,7 +220,7 @@ describe.v2('sourcemaps', function () {
 
     let sourceMap = new SourceMap('/');
     sourceMap.addVLQMap(map);
-    assert.strictEqual(map.sourceRoot, '/__parcel_source_root/');
+    assert.strictEqual(map.sourceRoot, '/__atlaspack_source_root/');
     let input = await inputFS.readFile(
       path.join(fixture, map.sources[0]),
       'utf8',
@@ -500,7 +500,7 @@ describe.v2('sourcemaps', function () {
 
     assert.equal(map.file, 'index.js.map');
     assert(raw.includes('//# sourceMappingURL=index.js.map'));
-    // assert.equal(map.sourceRoot, '/__parcel_source_root/');
+    // assert.equal(map.sourceRoot, '/__atlaspack_source_root/');
 
     let sourceMap = new SourceMap('/');
     sourceMap.addVLQMap(map);
@@ -597,7 +597,7 @@ describe.v2('sourcemaps', function () {
 
     assert.equal(map.file, 'index.js.map');
     assert(raw.includes('//# sourceMappingURL=index.js.map'));
-    // assert.equal(map.sourceRoot, '/__parcel_source_root/');
+    // assert.equal(map.sourceRoot, '/__atlaspack_source_root/');
 
     let sourceMap = new SourceMap('/');
     sourceMap.addVLQMap(map);

@@ -54,7 +54,7 @@ type RunOpts<TResult> = {|
 
 export type ParcelConfigRequest = {|
   id: string,
-  type: typeof requestTypes.parcel_config_request,
+  type: typeof requestTypes.atlaspack_config_request,
   input: null,
   run: (RunOpts<ParcelConfigRequestResult>) => Async<ParcelConfigRequestResult>,
 |};
@@ -66,7 +66,7 @@ type ParcelConfigChain = {|
   extendedFiles: Array<FilePath>,
 |};
 
-const type = 'parcel_config_request';
+const type = 'atlaspack_config_request';
 
 export default function createParcelConfigRequest(): ParcelConfigRequest {
   return {
@@ -112,33 +112,33 @@ export default function createParcelConfigRequest(): ParcelConfigRequest {
   };
 }
 
-const parcelConfigCache = createBuildCache();
+const atlaspackConfigCache = createBuildCache();
 export function getCachedParcelConfig(
   result: ConfigAndCachePath,
   options: ParcelOptions,
 ): ParcelConfig {
   let {config: processedConfig, cachePath} = result;
-  let config = parcelConfigCache.get(cachePath);
+  let config = atlaspackConfigCache.get(cachePath);
   if (config) {
     return config;
   }
 
   config = new ParcelConfig(processedConfig, options);
 
-  parcelConfigCache.set(cachePath, config);
+  atlaspackConfigCache.set(cachePath, config);
   return config;
 }
 
 export async function loadParcelConfig(
   options: ParcelOptions,
 ): Promise<{|...ParcelConfigChain, usedDefault: boolean|}> {
-  let parcelConfig = await resolveParcelConfig(options);
+  let atlaspackConfig = await resolveParcelConfig(options);
 
-  if (!parcelConfig) {
+  if (!atlaspackConfig) {
     throw new Error('Could not find a .atlaspackrc');
   }
 
-  return parcelConfig;
+  return atlaspackConfig;
 }
 
 export async function resolveParcelConfig(
@@ -174,7 +174,7 @@ export async function resolveParcelConfig(
   } catch (e) {
     throw new ThrowableDiagnostic({
       diagnostic: {
-        message: md`Could not find parcel config at ${path.relative(
+        message: md`Could not find atlaspack config at ${path.relative(
           options.projectRoot,
           configPath,
         )}`,
@@ -499,7 +499,7 @@ export async function resolveExtends(
       );
       throw new ThrowableDiagnostic({
         diagnostic: {
-          message: `Cannot find extended parcel config`,
+          message: `Cannot find extended atlaspack config`,
           origin: '@atlaspack/core',
           codeFrames: [
             {
@@ -548,7 +548,7 @@ async function processExtendedConfig(
     );
     throw new ThrowableDiagnostic({
       diagnostic: {
-        message: 'Cannot find extended parcel config',
+        message: 'Cannot find extended atlaspack config',
         origin: '@atlaspack/core',
         codeFrames: [
           {

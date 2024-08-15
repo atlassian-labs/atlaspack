@@ -526,13 +526,13 @@ describe('fsFixture', () => {
         yarn.lock:
         node_modules
           .bin
-            parcel -> ${path.resolve(__dirname, '../../parcel/src/bin.js')}
-          parcel -> ${path.resolve(__dirname, '../../parcel')}
+            atlaspack -> ${path.resolve(__dirname, '../../parcel/src/bin.js')}
+          atlaspack -> ${path.resolve(__dirname, '../../parcel')}
           @parcel
             core -> ${path.resolve(__dirname, '../../core')}
         .atlaspackrc: ${{
           extends: '@atlaspack/config-default',
-          transforms: ['parcel-transformer-custom', '...'],
+          transforms: ['atlaspack-transformer-custom', '...'],
         }}
     `;
 
@@ -544,7 +544,7 @@ describe('fsFixture', () => {
       fs.readFileSync('/app/.atlaspackrc', 'utf8'),
       JSON.stringify({
         extends: '@atlaspack/config-default',
-        transforms: ['parcel-transformer-custom', '...'],
+        transforms: ['atlaspack-transformer-custom', '...'],
       }),
     );
 

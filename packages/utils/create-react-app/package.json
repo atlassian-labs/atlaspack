@@ -2,7 +2,7 @@
   "name": "@atlaspack/create-react-app",
   "version": "2.12.0",
   "bin": {
-    "parcel-create-react-app": "lib/bin.js"
+    "atlaspack-create-react-app": "lib/bin.js"
   },
   "main": "src/bin.js",
   "repository": {

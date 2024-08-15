@@ -100,13 +100,13 @@ export default class Transformation {
   options: ParcelOptions;
   pluginOptions: PluginOptions;
   workerApi: WorkerApi;
-  parcelConfig: ParcelConfig;
+  atlaspackConfig: ParcelConfig;
   invalidations: Invalidations;
   resolverRunner: ResolverRunner;
 
   constructor({request, options, config, workerApi}: TransformationOpts) {
     this.configs = new Map();
-    this.parcelConfig = config;
+    this.atlaspackConfig = config;
     this.options = options;
     this.request = request;
     this.workerApi = workerApi;
@@ -171,7 +171,7 @@ export default class Transformation {
     invalidateDevDeps(
       this.request.invalidDevDeps,
       this.options,
-      this.parcelConfig,
+      this.atlaspackConfig,
     );
 
     let pipeline = await this.loadPipeline(
@@ -387,7 +387,7 @@ export default class Transformation {
             transformer.name,
             transformer.config,
             transformer.configKeyPath,
-            this.parcelConfig,
+            this.atlaspackConfig,
           );
 
           measurement && measurement.end();
@@ -401,7 +401,7 @@ export default class Transformation {
               asset.createChildAsset(
                 result,
                 transformer.name,
-                this.parcelConfig.filePath,
+                this.atlaspackConfig.filePath,
                 transformer.configKeyPath,
               ),
             );
@@ -475,7 +475,7 @@ export default class Transformation {
     isSource: boolean,
     pipeline: ?string,
   ): Promise<Pipeline> {
-    let transformers = await this.parcelConfig.getTransformers(
+    let transformers = await this.atlaspackConfig.getTransformers(
       filePath,
       pipeline,
       this.request.isURL,
@@ -567,7 +567,7 @@ export default class Transformation {
     transformerName: string,
     preloadedConfig: ?Config,
     configKeyPath?: string,
-    parcelConfig: ParcelConfig,
+    atlaspackConfig: ParcelConfig,
   ): Promise<$ReadOnlyArray<TransformerResult | UncommittedAsset>> {
     const logger = new PluginLogger({origin: transformerName});
     const tracer = new PluginTracer({
@@ -707,7 +707,7 @@ export default class Transformation {
             asset.createChildAsset(
               result,
               transformerName,
-              parcelConfig.filePath,
+              atlaspackConfig.filePath,
               // configKeyPath,
             ),
           ),

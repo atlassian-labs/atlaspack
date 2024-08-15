@@ -116,7 +116,7 @@ expose({
 const PathUtils = {
   APP_DIR: '/app',
   DIST_DIR: '/app/dist',
-  CACHE_DIR: '/.parcel-cache',
+  CACHE_DIR: '/.atlaspack-cache',
   fromAssetPath(str) {
     return path.join('/app', str);
   },

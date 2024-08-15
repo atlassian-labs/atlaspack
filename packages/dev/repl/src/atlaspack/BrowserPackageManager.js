@@ -164,7 +164,7 @@ export class BrowserPackageManager implements PackageManager {
           name: name,
           version: '2.0.0',
           engines: {
-            parcel: '^2.0.0',
+            atlaspack: '^2.0.0',
           },
         },
         invalidateOnFileChange: new Set(),

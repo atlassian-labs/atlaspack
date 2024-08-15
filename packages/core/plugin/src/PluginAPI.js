@@ -13,7 +13,7 @@ import type {
   Validator as ValidatorOpts,
 } from '@atlaspack/types';
 
-const CONFIG = Symbol.for('parcel-plugin-config');
+const CONFIG = Symbol.for('atlaspack-plugin-config');
 
 export class Transformer {
   constructor<T>(opts: TransformerOpts<T>) {

@@ -46,7 +46,7 @@ export async function link(
   // Step 1: Determine all Parcel packages to link
   // --------------------------------------------------------------------------------
 
-  let parcelPackages = await findParcelPackages(config.fs, packageRoot);
+  let atlaspackPackages = await findParcelPackages(config.fs, packageRoot);
 
   // Step 2: Delete all official packages (`@atlaspack/*`) from node_modules
   // --------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ export async function link(
     await cleanupBin(nodeModules, opts);
     await cleanupNodeModules(
       nodeModules,
-      packageName => parcelPackages.has(packageName),
+      packageName => atlaspackPackages.has(packageName),
       opts,
     );
   }
@@ -63,11 +63,11 @@ export async function link(
   // Step 3: Link the Parcel packages into node_modules
   // --------------------------------------------------------------------------------
 
-  for (let [packageName, p] of parcelPackages) {
+  for (let [packageName, p] of atlaspackPackages) {
     await fsSymlink(p, path.join(appRoot, 'node_modules', packageName), opts);
   }
 
-  // Step 4: Point `parcel` bin symlink to linked `packages/core/parcel/src/bin.js`
+  // Step 4: Point `atlaspack` bin symlink to linked `packages/core/parcel/src/bin.js`
   // --------------------------------------------------------------------------------
 
   await fsSymlink(
@@ -76,24 +76,24 @@ export async function link(
     opts,
   );
 
-  // Step 5 (optional): If a namespace is not "@parcel", map namespaced package aliases.
+  // Step 5 (optional): If a namespace is not "@atlaspack", map namespaced package aliases.
   // --------------------------------------------------------------------------------
 
-  if (namespace != null && namespace !== '@parcel') {
+  if (namespace != null && namespace !== '@atlaspack') {
     let namespacePackages = mapNamespacePackageAliases(
       namespace,
-      parcelPackages,
+      atlaspackPackages,
     );
 
     // Step 5.1: In .atlaspackrc, rewrite all references to official plugins to `@atlaspack/*`
     // --------------------------------------------------------------------------------
 
-    let parcelConfigPath = path.join(appRoot, '.atlaspackrc');
-    if (config.fs.existsSync(parcelConfigPath)) {
-      let parcelConfig = config.fs.readFileSync(parcelConfigPath, 'utf8');
+    let atlaspackConfigPath = path.join(appRoot, '.atlaspackrc');
+    if (config.fs.existsSync(atlaspackConfigPath)) {
+      let atlaspackConfig = config.fs.readFileSync(atlaspackConfigPath, 'utf8');
       await fsWrite(
-        parcelConfigPath,
-        parcelConfig.replace(
+        atlaspackConfigPath,
+        atlaspackConfig.replace(
           new RegExp(`"(${namespace}/parcel-[^"]*)"`, 'g'),
           (_, match) => `"${namespacePackages.get(match) ?? match}"`,
         ),
@@ -133,8 +133,8 @@ export async function link(
     // Step 5.4: Link the Parcel packages into node_modules as `@namespace/parcel-*`
     // --------------------------------------------------------------------------------
 
-    for (let [alias, parcelName] of namespacePackages) {
-      let p = nullthrows(parcelPackages.get(parcelName));
+    for (let [alias, atlaspackName] of namespacePackages) {
+      let p = nullthrows(atlaspackPackages.get(atlaspackName));
       await fsSymlink(p, path.join(appRoot, 'node_modules', alias), opts);
     }
   }
@@ -155,7 +155,11 @@ export function createLinkCommand(
         'Path to the Parcel package root\nDefaults to the package root containing this package',
     })
     .option('-d, --dry-run', 'Do not write any changes')
-    .option('-n, --namespace <namespace>', 'Namespace for packages', '@parcel')
+    .option(
+      '-n, --namespace <namespace>',
+      'Namespace for packages',
+      '@atlaspack',
+    )
     .option(
       '-g, --node-modules-glob <glob>',
       'Location where node_modules should be linked in the app.\nCan be repeated with multiple globs.',
@@ -166,21 +170,21 @@ export function createLinkCommand(
       if (options.dryRun) log('Dry run...');
       let appRoot = process.cwd();
 
-      let parcelLinkConfig;
+      let atlaspackLinkConfig;
 
       try {
-        parcelLinkConfig = await ParcelLinkConfig.load(appRoot, {fs});
+        atlaspackLinkConfig = await ParcelLinkConfig.load(appRoot, {fs});
       } catch (e) {
         // boop!
       }
 
-      if (parcelLinkConfig) {
+      if (atlaspackLinkConfig) {
         throw new Error(
-          'A Parcel link already exists! Try `parcel-link unlink` to re-link.',
+          'A Parcel link already exists! Try `atlaspack-link unlink` to re-link.',
         );
       }
 
-      parcelLinkConfig = new ParcelLinkConfig({
+      atlaspackLinkConfig = new ParcelLinkConfig({
         fs,
         appRoot,
         packageRoot: packageRoot ?? path.join(__dirname, '../../../'),
@@ -188,9 +192,9 @@ export function createLinkCommand(
         nodeModulesGlobs: options.nodeModulesGlob,
       });
 
-      await action(parcelLinkConfig, {dryRun: options.dryRun, log});
+      await action(atlaspackLinkConfig, {dryRun: options.dryRun, log});
 
-      if (!options.dryRun) await parcelLinkConfig.save();
+      if (!options.dryRun) await atlaspackLinkConfig.save();
 
       log('🎉 Linking successful');
     });

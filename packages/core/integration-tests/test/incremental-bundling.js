@@ -16,7 +16,7 @@ import {NodePackageManager} from '@atlaspack/package-manager';
 
 import {type Asset} from '@atlaspack/types';
 
-const CONFIG = Symbol.for('parcel-plugin-config');
+const CONFIG = Symbol.for('atlaspack-plugin-config');
 let packageManager = new NodePackageManager(inputFS, '/');
 
 describe.v2('incremental bundling', function () {
@@ -272,7 +272,7 @@ console.log(a);`,
         }
       });
 
-      // this case is similar to applying a patch or restarting parcel with changes
+      // this case is similar to applying a patch or restarting atlaspack with changes
       it('adds multiple non-dependency related changes', async () => {
         let subscription;
         let fixture = path.join(__dirname, '/integration/incremental-bundling');
@@ -614,7 +614,7 @@ console.log(a, b);
           'utf8',
         );
         assert(
-          dynamicContent.includes(`parcelHelpers.export(exports, "b", ()=>b);
+          dynamicContent.includes(`atlaspackHelpers.export(exports, "b", ()=>b);
 const b = 'b';`),
         );
       } finally {
@@ -666,7 +666,7 @@ console.log('index.js');`,
   });
 
   describe('other changes that would for a re-bundle', () => {
-    it('changing the bundler in parcel configs', async () => {
+    it('changing the bundler in atlaspack configs', async () => {
       let subscription;
       let fixture = path.join(__dirname, '/integration/incremental-bundling');
       try {
@@ -687,7 +687,7 @@ console.log('index.js');`,
           path.join(fixture, '.atlaspackrc'),
           JSON.stringify({
             extends: '@atlaspack/config-default',
-            bundler: 'parcel-bundler-test',
+            bundler: 'atlaspack-bundler-test',
           }),
         );
 
@@ -787,7 +787,7 @@ console.log('index.js');`,
         path.join(fixture, '.atlaspackrc'),
         JSON.stringify({
           extends: '@atlaspack/config-default',
-          namers: ['parcel-namer-test'],
+          namers: ['atlaspack-namer-test'],
         }),
       );
 
@@ -831,7 +831,7 @@ console.log('index.js');`,
         path.join(fixture, '.atlaspackrc'),
         JSON.stringify({
           extends: '@atlaspack/config-default',
-          runtimes: ['parcel-runtime-test'],
+          runtimes: ['atlaspack-runtime-test'],
         }),
       );
 

@@ -13,8 +13,8 @@ import * as bundleReport from '../src/bundleReport';
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 
 const EMPTY_OPTIONS = {
-  cacheDir: '.parcel-cache',
-  parcelVersion: '',
+  cacheDir: '.atlaspack-cache',
+  atlaspackVersion: '',
   entries: [],
   logLevel: 'info',
   targets: [],

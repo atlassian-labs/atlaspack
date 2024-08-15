@@ -34,7 +34,7 @@ function register(inputOpts?: InitialParcelOptions): IDisposable {
     lastDisposable.dispose();
   }
 
-  let parcel = new Parcel({
+  let atlaspack = new Parcel({
     logLevel: 'error',
     ...opts,
   });
@@ -46,7 +46,7 @@ function register(inputOpts?: InitialParcelOptions): IDisposable {
     },
   };
 
-  syncPromise(parcel._init());
+  syncPromise(atlaspack._init());
 
   let isProcessing = false;
 
@@ -59,7 +59,7 @@ function register(inputOpts?: InitialParcelOptions): IDisposable {
     try {
       isProcessing = true;
       // $FlowFixMe
-      let result = await parcel[INTERNAL_TRANSFORM]({
+      let result = await atlaspack[INTERNAL_TRANSFORM]({
         filePath,
         env,
       });
@@ -92,7 +92,7 @@ function register(inputOpts?: InitialParcelOptions): IDisposable {
 
       let resolved = syncPromise(
         // $FlowFixMe
-        parcel[INTERNAL_RESOLVE]({
+        atlaspack[INTERNAL_RESOLVE]({
           specifier: targetFile,
           sourcePath: currFile,
           env,
@@ -126,7 +126,11 @@ function register(inputOpts?: InitialParcelOptions): IDisposable {
   // $FlowFixMe[prop-missing]
   const originalResolveFilename = Module._resolveFilename;
   // $FlowFixMe[prop-missing]
-  Module._resolveFilename = function parcelResolveFilename(to, from, ...rest) {
+  Module._resolveFilename = function atlaspackResolveFilename(
+    to,
+    from,
+    ...rest
+  ) {
     return isProcessing || disposed
       ? originalResolveFilename(to, from, ...rest)
       : resolveFile(from?.filename, to);

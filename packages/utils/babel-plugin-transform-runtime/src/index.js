@@ -4,12 +4,12 @@ const pluginTransformRuntime =
 
 const COMPATIBLE_ATLASPACK_BABEL_TRANSFORMER_SEMVER = '^2.0.0-alpha.1.1';
 
-module.exports = function parcelPluginTransformRuntime(api, opts, dirname) {
+module.exports = function atlaspackPluginTransformRuntime(api, opts, dirname) {
   let name = api.caller(caller => caller && caller.name);
   let version = api.caller(caller => caller && caller.version);
 
   if (
-    name === 'parcel' &&
+    name === 'atlaspack' &&
     typeof version === 'string' &&
     semver.satisfies(version, COMPATIBLE_ATLASPACK_BABEL_TRANSFORMER_SEMVER)
   ) {

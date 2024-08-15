@@ -6,10 +6,10 @@ import path from 'path';
 
 export type ParcelSeverity = DiagnosticLogEvent['level'];
 
-export function parcelSeverityToLspSeverity(
-  parcelSeverity: ParcelSeverity,
+export function atlaspackSeverityToLspSeverity(
+  atlaspackSeverity: ParcelSeverity,
 ): ODiagnosticSeverity {
-  switch (parcelSeverity) {
+  switch (atlaspackSeverity) {
     case 'error':
       return DiagnosticSeverity.Error;
     case 'warn':

@@ -166,7 +166,7 @@ describe.v2('output formats', function () {
       );
 
       let dist = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-      assert(dist.includes('$parcel$interopDefault'));
+      assert(dist.includes('$atlaspack$interopDefault'));
       assert.equal((await run(b)).bar, 3);
     });
 
@@ -179,7 +179,7 @@ describe.v2('output formats', function () {
       );
 
       let dist = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-      assert(dist.includes('$parcel$interopDefault'));
+      assert(dist.includes('$atlaspack$interopDefault'));
       await run(b);
     });
 
@@ -193,7 +193,7 @@ describe.v2('output formats', function () {
 
       let dist = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
       assert(dist.includes('= require("lodash")'));
-      assert(dist.includes('= (0, ($parcel$interopDefault('));
+      assert(dist.includes('= (0, ($atlaspack$interopDefault('));
       assert(/var {add: \s*\$.+?\$add\s*} = lodash/);
       assert.equal((await run(b)).bar, 6);
     });
@@ -812,7 +812,7 @@ describe.v2('output formats', function () {
         b.getBundles().find(b => !b.needsStableName).filePath,
         'utf8',
       );
-      assert(dist.includes('$parcel$interopDefault'));
+      assert(dist.includes('$atlaspack$interopDefault'));
       let ns = await run(b);
       assert.deepEqual(await ns.default, [123, 123]);
     });

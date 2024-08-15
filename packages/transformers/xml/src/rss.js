@@ -22,10 +22,10 @@ export function description(
   asset: MutableAsset,
   parts: Array<TransformerResult>,
 ) {
-  let parcelKey = `${asset.id}:${parts.length}`;
+  let atlaspackKey = `${asset.id}:${parts.length}`;
 
   asset.addDependency({
-    specifier: parcelKey,
+    specifier: atlaspackKey,
     specifierType: 'esm',
     bundleBehavior: 'inline',
   });
@@ -33,7 +33,7 @@ export function description(
   parts.push({
     type: 'html',
     content: element.textContent,
-    uniqueKey: parcelKey,
+    uniqueKey: atlaspackKey,
     bundleBehavior: 'inline',
   });
 
@@ -46,6 +46,6 @@ export function description(
     'https://parceljs.org',
     'inline',
   );
-  el.setAttribute('key', parcelKey);
+  el.setAttribute('key', atlaspackKey);
   element.appendChild(el);
 }

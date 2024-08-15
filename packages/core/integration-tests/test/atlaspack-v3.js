@@ -29,7 +29,7 @@ describe('ParcelV3', function () {
       yarn.lock: {}
     `;
 
-    let parcel = new ParcelV3({
+    let atlaspack = new ParcelV3({
       corePath: '',
       entries: [join(__dirname, 'index.js')],
       fs: toFileSystemV3(overlayFS),
@@ -37,6 +37,6 @@ describe('ParcelV3', function () {
       packageManager: new NodePackageManager(inputFS, __dirname),
     });
 
-    await parcel.build();
+    await atlaspack.build();
   });
 });

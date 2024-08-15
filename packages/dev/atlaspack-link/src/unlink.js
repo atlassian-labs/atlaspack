@@ -46,7 +46,7 @@ export async function unlink(
   // Step 1: Determine all Parcel packages that could be linked
   // --------------------------------------------------------------------------------
 
-  let parcelPackages = await findParcelPackages(config.fs, packageRoot);
+  let atlaspackPackages = await findParcelPackages(config.fs, packageRoot);
 
   // Step 2: Delete all official packages (`@atlaspack/*`) from node_modules
   // This is very brute-force, but should ensure that we catch all linked packages.
@@ -56,36 +56,36 @@ export async function unlink(
     await cleanupBin(nodeModules, opts);
     await cleanupNodeModules(
       nodeModules,
-      packageName => parcelPackages.has(packageName),
+      packageName => atlaspackPackages.has(packageName),
       opts,
     );
   }
 
-  // Step 3 (optional): If a namespace is not "@parcel", restore all aliased references.
+  // Step 3 (optional): If a namespace is not "@atlaspack", restore all aliased references.
   // --------------------------------------------------------------------------------
 
-  if (namespace != null && namespace !== '@parcel') {
+  if (namespace != null && namespace !== '@atlaspack') {
     // Step 3.1: Determine all namespace packages that could be aliased
     // --------------------------------------------------------------------------------
 
     let namespacePackages = mapNamespacePackageAliases(
       namespace,
-      parcelPackages,
+      atlaspackPackages,
     );
 
     // Step 3.2: In .atlaspackrc, restore all references to namespaced plugins.
     // --------------------------------------------------------------------------------
 
-    let parcelConfigPath = path.join(appRoot, '.atlaspackrc');
-    if (config.fs.existsSync(parcelConfigPath)) {
-      let parcelConfig = config.fs.readFileSync(parcelConfigPath, 'utf8');
-      for (let [alias, parcel] of namespacePackages) {
-        parcelConfig = parcelConfig.replace(
-          new RegExp(`"${parcel}"`, 'g'),
+    let atlaspackConfigPath = path.join(appRoot, '.atlaspackrc');
+    if (config.fs.existsSync(atlaspackConfigPath)) {
+      let atlaspackConfig = config.fs.readFileSync(atlaspackConfigPath, 'utf8');
+      for (let [alias, atlaspack] of namespacePackages) {
+        atlaspackConfig = atlaspackConfig.replace(
+          new RegExp(`"${atlaspack}"`, 'g'),
           `"${alias}"`,
         );
       }
-      await fsWrite(parcelConfigPath, parcelConfig, opts);
+      await fsWrite(atlaspackConfigPath, atlaspackConfig, opts);
     }
 
     // Step 3.3: In the root package.json, restore all references to namespaced plugins
@@ -95,9 +95,9 @@ export async function unlink(
     let rootPkgPath = path.join(appRoot, 'package.json');
     if (config.fs.existsSync(rootPkgPath)) {
       let rootPkg = config.fs.readFileSync(rootPkgPath, 'utf8');
-      for (let [alias, parcel] of namespacePackages) {
+      for (let [alias, atlaspack] of namespacePackages) {
         rootPkg = rootPkg.replace(
-          new RegExp(`"${parcel}"(\\s*:\\s*{)`, 'g'),
+          new RegExp(`"${atlaspack}"(\\s*:\\s*{)`, 'g'),
           `"${alias}"$1`,
         );
       }
@@ -145,21 +145,21 @@ export function createUnlinkCommand(
       if (options.dryRun) log('Dry run...');
       let appRoot = process.cwd();
 
-      let parcelLinkConfig;
+      let atlaspackLinkConfig;
       try {
-        parcelLinkConfig = await ParcelLinkConfig.load(appRoot, {fs});
+        atlaspackLinkConfig = await ParcelLinkConfig.load(appRoot, {fs});
       } catch (e) {
         // boop!
       }
 
-      if (parcelLinkConfig) {
-        await action(parcelLinkConfig, {
+      if (atlaspackLinkConfig) {
+        await action(atlaspackLinkConfig, {
           dryRun: options.dryRun,
           forceInstall: options.forceInstall,
           log,
         });
 
-        if (!options.dryRun) await parcelLinkConfig.delete();
+        if (!options.dryRun) await atlaspackLinkConfig.delete();
       } else {
         throw new Error('A Parcel link could not be found!');
       }

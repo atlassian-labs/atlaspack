@@ -1,6 +1,6 @@
 module.exports = api => {
   let name = api.caller(caller => caller && caller.name);
-  if (name === 'parcel') {
+  if (name === 'atlaspack') {
     return {
       presets: [require('@babel/preset-flow')],
       plugins: [

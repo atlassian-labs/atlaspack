@@ -285,12 +285,12 @@ function createClient(metafilepath: string, metafile: Metafile) {
 }
 
 // Take realpath because to have consistent cache keys on macOS (/var -> /private/var)
-const BASEDIR = path.join(fs.realpathSync(os.tmpdir()), 'parcel-lsp');
+const BASEDIR = path.join(fs.realpathSync(os.tmpdir()), 'atlaspack-lsp');
 fs.mkdirSync(BASEDIR, {recursive: true});
 
 fs.writeFileSync(path.join(BASEDIR, LSP_SENTINEL_FILENAME), '');
 
-// Search for currently running Parcel processes in the parcel-lsp dir.
+// Search for currently running Parcel processes in the atlaspack-lsp dir.
 // Create an IPC client connection for each running process.
 for (let filename of fs.readdirSync(BASEDIR)) {
   if (!filename.endsWith('.json')) continue;
@@ -303,7 +303,7 @@ for (let filename of fs.readdirSync(BASEDIR)) {
   }
 }
 
-// Watch for new Parcel processes in the parcel-lsp dir, and disconnect the
+// Watch for new Parcel processes in the atlaspack-lsp dir, and disconnect the
 // client for each corresponding connection when a Parcel process ends
 watcher.subscribe(BASEDIR, async (err, events) => {
   if (err) {

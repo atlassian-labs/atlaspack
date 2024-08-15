@@ -6,9 +6,9 @@ import {Panel, PanelGroup, PanelResizeHandle} from 'react-resizable-panels';
 import {useMedia} from 'react-use';
 
 // $FlowFixMe
-import parcelLogo from 'url:./assets/logo.svg';
+import atlaspackLogo from 'url:./assets/logo.svg';
 // $FlowFixMe
-import parcelText from 'url:./assets/parcel.png';
+import atlaspackText from 'url:./assets/parcel.png';
 
 import {
   Editor,
@@ -351,15 +351,15 @@ function App() {
       <header>
         <a href="/">
           <img
-            className="parcel"
-            src={parcelText}
+            className="atlaspack"
+            src={atlaspackText}
             height="30"
             style={{marginTop: '5px'}}
             alt=""
           />
           <img
             className="type"
-            src={parcelLogo}
+            src={atlaspackLogo}
             style={{width: '120px'}}
             alt=""
           />

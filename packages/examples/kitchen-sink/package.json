@@ -4,8 +4,8 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "serve": "parcel serve src/index.html --https --open",
-    "build": "rm -rf dist && parcel build src/index.html --no-cache"
+    "serve": "atlaspack serve src/index.html --https --open",
+    "build": "rm -rf dist && atlaspack build src/index.html --no-cache"
   },
   "devDependencies": {
     "@babel/core": "^7.22.11",
@@ -14,7 +14,7 @@
     "@atlaspack/core": "2.12.0",
     "@atlaspack/optimizer-esbuild": "2.12.0",
     "@atlaspack/reporter-sourcemap-visualiser": "2.12.0",
-    "parcel": "2.12.0"
+    "atlaspack": "2.12.0"
   },
   "targets": {
     "browserModern": {

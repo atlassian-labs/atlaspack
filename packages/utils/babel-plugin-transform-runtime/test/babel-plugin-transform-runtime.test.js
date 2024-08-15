@@ -20,7 +20,7 @@ describe('@atlaspack/plugin-transform-runtime', () => {
       presets: [preset],
       plugins: [plugin],
       caller: {
-        name: 'parcel',
+        name: 'atlaspack',
         version: '2.0.0',
         targets: JSON.stringify({browsers: ['last 1 Chrome version']}),
         env: 'esmodule',
@@ -37,7 +37,7 @@ describe('@atlaspack/plugin-transform-runtime', () => {
       presets: [preset],
       plugins: [plugin],
       caller: {
-        name: 'parcel',
+        name: 'atlaspack',
         version: '2.0.0',
         targets: JSON.stringify({browsers: ['last 1 Chrome version']}),
       },

@@ -56,7 +56,7 @@ export type HMRMessage =
     |};
 
 const FS_CONCURRENCY = 64;
-const HMR_ENDPOINT = '/__parcel_hmr';
+const HMR_ENDPOINT = '/__atlaspack_hmr';
 const BROADCAST_MAX_ASSETS = 10000;
 
 export default class HMRServer {
@@ -241,7 +241,7 @@ export default class HMRServer {
     let bundleGraph = nullthrows(this.bundleGraph);
     if (asset.type === 'js') {
       let publicId = bundleGraph.getAssetPublicId(asset);
-      output = `parcelHotUpdate['${publicId}'] = function (require, module, exports) {${output}}`;
+      output = `atlaspackHotUpdate['${publicId}'] = function (require, module, exports) {${output}}`;
     }
 
     let sourcemap = await asset.getMap();

@@ -133,7 +133,7 @@ export function getParcelOptions(
         },
       },
       featureFlags: {
-        parcelV3: isParcelV3,
+        atlaspackV3: isParcelV3,
       },
     },
     opts,
@@ -371,7 +371,7 @@ export async function runBundles(
     esmOutput = bundles.length === 1 ? res[0] : res;
   } else {
     for (let [code, b] of bundles) {
-      // require, parcelRequire was set up in prepare*Context
+      // require, atlaspackRequire was set up in prepare*Context
       new vm.Script((opts.strict ? '"use strict";\n' : '') + code, {
         filename:
           b.bundleBehavior === 'inline'
@@ -405,7 +405,7 @@ export async function runBundles(
           return typeof ctx.output !== 'undefined' ? ctx.output : undefined;
         } else {
           for (let key in ctx) {
-            if (key.startsWith('parcelRequire')) {
+            if (key.startsWith('atlaspackRequire')) {
               // $FlowFixMe[incompatible-use]
               return ctx[key](bundleGraph.getAssetPublicId(entryAsset));
             }
@@ -657,7 +657,7 @@ function prepareBrowserContext(
     },
 
     getElementById(id) {
-      if (id !== '__parcel__error__overlay__') return fakeElement;
+      if (id !== '__atlaspack__error__overlay__') return fakeElement;
     },
 
     body: {
@@ -1113,7 +1113,7 @@ export async function assertESMExports(
   // $FlowFixMe[unclear-type]
   evaluate: ?({|[string]: any|}) => mixed,
 ) {
-  let parcelResult = await run(b, undefined, undefined, externalModules);
+  let atlaspackResult = await run(b, undefined, undefined, externalModules);
 
   let entry = nullthrows(
     b
@@ -1131,19 +1131,19 @@ export async function assertESMExports(
   );
 
   if (evaluate) {
-    parcelResult = await evaluate(parcelResult);
+    atlaspackResult = await evaluate(atlaspackResult);
     nodeResult = await evaluate(nodeResult);
   }
   assert.deepEqual(
-    parcelResult,
+    atlaspackResult,
     nodeResult,
     "Bundle exports don't match Node's native behaviour",
   );
 
   if (!evaluate) {
-    parcelResult = {...parcelResult};
+    atlaspackResult = {...atlaspackResult};
   }
-  assert.deepEqual(parcelResult, expected);
+  assert.deepEqual(atlaspackResult, expected);
 }
 
 export async function assertNoFilePathInCache(
@@ -1268,45 +1268,45 @@ export function request(
 
 // $FlowFixMe
 let origDescribe = globalThis.describe;
-let parcelVersion: string | void;
+let atlaspackVersion: string | void;
 export function describe(...args: mixed[]) {
-  parcelVersion = undefined;
+  atlaspackVersion = undefined;
   origDescribe.apply(this, args);
 }
 
 describe.only = function (...args: mixed[]) {
-  parcelVersion = undefined;
+  atlaspackVersion = undefined;
   origDescribe.only.apply(this, args);
 };
 
 describe.skip = function (...args: mixed[]) {
-  parcelVersion = undefined;
+  atlaspackVersion = undefined;
   origDescribe.skip.apply(this, args);
 };
 
 describe.v2 = function (...args: mixed[]) {
-  parcelVersion = 'v2';
+  atlaspackVersion = 'v2';
   if (!isParcelV3) {
     origDescribe.apply(this, args);
   }
 };
 
 describe.v2.only = function (...args: mixed[]) {
-  parcelVersion = 'v2';
+  atlaspackVersion = 'v2';
   if (!isParcelV3) {
     origDescribe.only.apply(this, args);
   }
 };
 
 describe.v3 = function (...args: mixed[]) {
-  parcelVersion = 'v3';
+  atlaspackVersion = 'v3';
   if (isParcelV3) {
     origDescribe.apply(this, args);
   }
 };
 
 describe.v3.only = function (...args: mixed[]) {
-  parcelVersion = 'v3';
+  atlaspackVersion = 'v3';
   if (isParcelV3) {
     origDescribe.only.apply(this, args);
   }
@@ -1315,9 +1315,9 @@ describe.v3.only = function (...args: mixed[]) {
 let origIt = globalThis.it;
 export function it(...args: mixed[]) {
   if (
-    parcelVersion == null ||
-    (parcelVersion == 'v2' && !isParcelV3) ||
-    (parcelVersion == 'v3' && isParcelV3)
+    atlaspackVersion == null ||
+    (atlaspackVersion == 'v2' && !isParcelV3) ||
+    (atlaspackVersion == 'v3' && isParcelV3)
   ) {
     origIt.apply(this, args);
   }

@@ -23,7 +23,7 @@ describe.v2('tracing', function () {
     );
 
     const files = outputFS.readdirSync(__dirname);
-    const profileFile = files.find(file => file.startsWith('parcel-trace'));
+    const profileFile = files.find(file => file.startsWith('atlaspack-trace'));
     assert(profileFile !== null);
     const content = await outputFS.readFile(
       path.join(__dirname, profileFile),

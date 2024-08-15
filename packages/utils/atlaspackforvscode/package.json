@@ -1,11 +1,11 @@
 {
-  "name": "parcel-for-vscode",
+  "name": "atlaspack-for-vscode",
   "version": "2.12.0",
   "license": "MIT",
-  "publisher": "parcel",
+  "publisher": "atlaspack",
   "icon": "logo.png",
   "displayName": "Parcel for VS Code",
-  "parcel-lsp.trace.server": "verbose",
+  "atlaspack-lsp.trace.server": "verbose",
   "description": "",
   "private": true,
   "funding": {
@@ -99,7 +99,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "rm -rf lib; parcel build --no-cache",
+    "vscode:prepublish": "rm -rf lib; atlaspack build --no-cache",
     "package": "vsce package --yarn",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",

@@ -40,7 +40,7 @@ export default (new Reporter({
         Date.now() - value.timings[value.lastPhase];
       let metricsFilePath = path.join(
         options.projectRoot,
-        'parcel-metrics.json',
+        'atlaspack-metrics.json',
       );
 
       let {bundles} = await generateBuildMetrics(

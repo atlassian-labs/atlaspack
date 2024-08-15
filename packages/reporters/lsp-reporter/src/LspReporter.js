@@ -34,7 +34,7 @@ import {
   DiagnosticSeverity,
   DiagnosticTag,
   normalizeFilePath,
-  parcelSeverityToLspSeverity,
+  atlaspackSeverityToLspSeverity,
 } from './utils';
 import type {FSWatcher} from 'fs';
 
@@ -48,9 +48,9 @@ const ignoreFail = func => {
   }
 };
 
-const BASEDIR = fs.realpathSync(path.join(os.tmpdir(), 'parcel-lsp'));
-const SOCKET_FILE = path.join(BASEDIR, `parcel-${process.pid}`);
-const META_FILE = path.join(BASEDIR, `parcel-${process.pid}.json`);
+const BASEDIR = fs.realpathSync(path.join(os.tmpdir(), 'atlaspack-lsp'));
+const SOCKET_FILE = path.join(BASEDIR, `atlaspack-${process.pid}`);
+const META_FILE = path.join(BASEDIR, `atlaspack-${process.pid}.json`);
 
 let workspaceDiagnostics: DefaultMap<
   string,
@@ -108,7 +108,7 @@ async function doWatchStart(options) {
   // by a process that quit unexpectedly.
   for (let filename of fs.readdirSync(BASEDIR)) {
     if (filename.endsWith('.json')) continue;
-    let pid = parseInt(filename.slice('parcel-'.length), 10);
+    let pid = parseInt(filename.slice('atlaspack-'.length), 10);
     let resultList = await lookupPid({pid});
     if (resultList.length > 0) continue;
     fs.unlinkSync(path.join(BASEDIR, filename));
@@ -241,11 +241,11 @@ function sendDiagnostics() {
 }
 
 function updateDiagnostics(
-  parcelDiagnostics: Array<ParcelDiagnostic>,
-  parcelSeverity: ParcelSeverity,
+  atlaspackDiagnostics: Array<ParcelDiagnostic>,
+  atlaspackSeverity: ParcelSeverity,
   projectRoot: FilePath,
 ): void {
-  for (let diagnostic of parcelDiagnostics) {
+  for (let diagnostic of atlaspackDiagnostics) {
     const codeFrames = diagnostic.codeFrames;
     if (codeFrames == null) {
       continue;
@@ -307,7 +307,7 @@ function updateDiagnostics(
           },
         },
         source: diagnostic.origin,
-        severity: parcelSeverityToLspSeverity(parcelSeverity),
+        severity: atlaspackSeverityToLspSeverity(atlaspackSeverity),
         message:
           diagnostic.message +
           (firstFrameHighlight.message == null

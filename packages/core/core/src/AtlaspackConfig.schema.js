@@ -17,22 +17,22 @@ export function validatePackageName(
 
   assert(typeof pkg === 'string', `"${key}" must be a string`);
 
-  if (pkg.startsWith('@parcel')) {
+  if (pkg.startsWith('@atlaspack')) {
     assert(
-      pkg.replace(/^@parcel\//, '').startsWith(`${pluginType}-`),
-      `Official parcel ${pluginType} packages must be named according to "@atlaspack/${pluginType}-{name}"`,
+      pkg.replace(/^@atlaspack\//, '').startsWith(`${pluginType}-`),
+      `Official atlaspack ${pluginType} packages must be named according to "@atlaspack/${pluginType}-{name}"`,
     );
   } else if (pkg.startsWith('@')) {
     let [scope, name] = pkg.split('/');
     assert(
-      name.startsWith(`parcel-${pluginType}-`) ||
-        name === `parcel-${pluginType}`,
-      `Scoped parcel ${pluginType} packages must be named according to "${scope}/parcel-${pluginType}[-{name}]"`,
+      name.startsWith(`atlaspack-${pluginType}-`) ||
+        name === `atlaspack-${pluginType}`,
+      `Scoped atlaspack ${pluginType} packages must be named according to "${scope}/parcel-${pluginType}[-{name}]"`,
     );
   } else if (!pkg.startsWith('.')) {
     assert(
-      pkg.startsWith(`parcel-${pluginType}-`),
-      `Parcel ${pluginType} packages must be named according to "parcel-${pluginType}-{name}"`,
+      pkg.startsWith(`atlaspack-${pluginType}-`),
+      `Parcel ${pluginType} packages must be named according to "atlaspack-${pluginType}-{name}"`,
     );
   }
 }

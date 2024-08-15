@@ -1243,7 +1243,7 @@ describe('TargetResolver', () => {
       [
         {
           name: 'default',
-          distDir: '.parcel-cache/dist',
+          distDir: '.atlaspack-cache/dist',
           publicUrl: '/',
           env: {
             id: 'd6ea1d42532a7575',

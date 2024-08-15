@@ -82,19 +82,19 @@ export async function findParcelPackages(
 
 export function mapNamespacePackageAliases(
   ns: string,
-  parcelPackages: Map<string, string>,
+  atlaspackPackages: Map<string, string>,
 ): Map<string, string> {
   let aliasesToParcelPackages = new Map();
-  for (let packageName of parcelPackages.keys()) {
+  for (let packageName of atlaspackPackages.keys()) {
     if (packageName.startsWith(ns)) {
       continue;
     }
     aliasesToParcelPackages.set(
-      packageName === 'parcel'
+      packageName === 'atlaspack'
         ? `${ns}/parcel`
-        : packageName === 'parcelforvscode'
+        : packageName === 'atlaspackforvscode'
         ? `${ns}/parcelforvscode`
-        : packageName.replace(/^@parcel\//, `${ns}/parcel-`),
+        : packageName.replace(/^@atlaspack\//, `${ns}/parcel-`),
       packageName,
     );
   }

@@ -216,7 +216,7 @@ export default async function dumpGraphToGraphViz(
     globalThis.ATLASPACK_DUMP_GRAPHVIZ?.(name, g.to_dot());
   } else {
     const tempy = require('tempy');
-    let tmp = tempy.file({name: `parcel-${name}.png`});
+    let tmp = tempy.file({name: `atlaspack-${name}.png`});
     await g.output('png', tmp);
     // eslint-disable-next-line no-console
     console.log('Dumped', tmp);

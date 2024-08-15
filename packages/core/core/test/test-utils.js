@@ -17,8 +17,8 @@ export let cache: FSCache = new FSCache(outputFS, cacheDir);
 cache.ensure();
 
 export const DEFAULT_OPTIONS: ParcelOptions = {
-  cacheDir: path.join(__dirname, '.parcel-cache'),
-  parcelVersion: '',
+  cacheDir: path.join(__dirname, '.atlaspack-cache'),
+  atlaspackVersion: '',
   watchDir: __dirname,
   watchIgnore: undefined,
   watchBackend: undefined,

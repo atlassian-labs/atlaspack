@@ -31,7 +31,7 @@ describe.v2('reporters', () => {
   describe('running on the cli', () => {
     it('exit successfully when no errors are emitted', () => {
       assert.doesNotThrow(() =>
-        execSync(`parcel build --no-cache ${successfulEntry}`, {
+        execSync(`atlaspack build --no-cache ${successfulEntry}`, {
           stdio: 'ignore',
         }),
       );
@@ -39,7 +39,7 @@ describe.v2('reporters', () => {
 
     it('exit with an error code when a reporter fails to load', () => {
       assert.throws(() =>
-        execSync(`parcel build --no-cache ${loadReporterFailureEntry}`, {
+        execSync(`atlaspack build --no-cache ${loadReporterFailureEntry}`, {
           stdio: 'ignore',
         }),
       );
@@ -47,7 +47,7 @@ describe.v2('reporters', () => {
 
     it('exit with an error code when a reporter emits an error', () => {
       assert.throws(() =>
-        execSync(`parcel build --no-cache ${failingReporterEntry}`, {
+        execSync(`atlaspack build --no-cache ${failingReporterEntry}`, {
           stdio: 'ignore',
         }),
       );

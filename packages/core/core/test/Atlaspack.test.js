@@ -20,10 +20,10 @@ describe('Parcel', function () {
 
   it('does not initialize when passed an ending farm', async () => {
     workerFarm.ending = true;
-    let parcel = createParcel({workerFarm});
+    let atlaspack = createParcel({workerFarm});
 
     // $FlowFixMe
-    await assert.rejects(() => parcel.run(), {
+    await assert.rejects(() => atlaspack.run(), {
       name: 'Error',
       message: 'Supplied WorkerFarm is ending',
     });
@@ -31,7 +31,7 @@ describe('Parcel', function () {
     workerFarm.ending = false;
   });
 
-  describe('parcel.end()', () => {
+  describe('atlaspack.end()', () => {
     let endSpy;
     beforeEach(() => {
       endSpy = sinon.spy(WorkerFarm.prototype, 'end');
@@ -42,31 +42,31 @@ describe('Parcel', function () {
     });
 
     it('ends any WorkerFarm it creates', async () => {
-      let parcel = createParcel();
-      await parcel.run();
+      let atlaspack = createParcel();
+      await atlaspack.run();
       assert.equal(endSpy.callCount, 1);
     });
 
     it('runs and constructs another farm for subsequent builds', async () => {
-      let parcel = createParcel();
+      let atlaspack = createParcel();
 
-      await parcel.run();
-      await parcel.run();
+      await atlaspack.run();
+      await atlaspack.run();
 
       assert.equal(endSpy.callCount, 2);
     });
 
     it('does not end passed WorkerFarms', async () => {
-      let parcel = createParcel({workerFarm});
-      await parcel.run();
+      let atlaspack = createParcel({workerFarm});
+      await atlaspack.run();
       assert.equal(endSpy.callCount, 0);
 
       await workerFarm.end();
     });
 
     it('removes shared references it creates', async () => {
-      let parcel = createParcel({workerFarm});
-      await parcel.run();
+      let atlaspack = createParcel({workerFarm});
+      await atlaspack.run();
 
       assert.equal(workerFarm.sharedReferences.size, 0);
       assert.equal(workerFarm.sharedReferencesByValue.size, 0);
@@ -85,10 +85,10 @@ describe('ParcelAPI', function () {
 
   afterEach(() => workerFarm.end());
 
-  describe('parcel.unstable_transform()', () => {
+  describe('atlaspack.unstable_transform()', () => {
     it('should transform simple file', async () => {
-      let parcel = createParcel({workerFarm});
-      let res = await parcel.unstable_transform({
+      let atlaspack = createParcel({workerFarm});
+      let res = await atlaspack.unstable_transform({
         filePath: path.join(__dirname, 'fixtures/parcel/index.js'),
       });
       let code = await res[0].getCode();
@@ -96,8 +96,8 @@ describe('ParcelAPI', function () {
     });
 
     it('should transform with standalone mode', async () => {
-      let parcel = createParcel({workerFarm});
-      let res = await parcel.unstable_transform({
+      let atlaspack = createParcel({workerFarm});
+      let res = await atlaspack.unstable_transform({
         filePath: path.join(__dirname, 'fixtures/parcel/other.js'),
         query: 'standalone=true',
       });
@@ -109,10 +109,10 @@ describe('ParcelAPI', function () {
     });
   });
 
-  describe('parcel.resolve()', () => {
+  describe('atlaspack.resolve()', () => {
     it('should resolve dependencies', async () => {
-      let parcel = createParcel({workerFarm});
-      let res = await parcel.unstable_resolve({
+      let atlaspack = createParcel({workerFarm});
+      let res = await atlaspack.unstable_resolve({
         specifier: './other',
         specifierType: 'esm',
         resolveFrom: path.join(__dirname, 'fixtures/parcel/index.js'),

@@ -39,7 +39,12 @@ export function activate(context: vscode.ExtensionContext) {
     documentSelector: [{scheme: 'file', pattern: '**/*'}],
   };
   // Create the language client and start the client.
-  client = new LanguageClient('parcel', 'Parcel', serverOptions, clientOptions);
+  client = new LanguageClient(
+    'atlaspack',
+    'Parcel',
+    serverOptions,
+    clientOptions,
+  );
 
   // Start the client. This will also launch the server
   client.start();
@@ -54,7 +59,7 @@ export function deactivate(): Thenable<void> | undefined {
 
   const LSP_SENTINEL_FILEPATH = path.join(
     fs.realpathSync(os.tmpdir()),
-    'parcel-lsp',
+    'atlaspack-lsp',
     'lsp-server',
   );
 

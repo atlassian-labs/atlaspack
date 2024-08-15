@@ -4,7 +4,7 @@ import path from 'path';
 import {bundle, describe, fsFixture, overlayFS} from '@atlaspack/test-utils';
 import {loadGraphs} from '../../../dev/query/src';
 
-describe.v2('parcel-query', () => {
+describe.v2('atlaspack-query', () => {
   it('loadGraphs', async function () {
     let entries = 'index.js';
     let options = {
@@ -14,7 +14,7 @@ describe.v2('parcel-query', () => {
       },
       shouldDisableCache: false,
       inputFS: overlayFS,
-      cacheDir: path.join(__dirname, '.parcel-cache'),
+      cacheDir: path.join(__dirname, '.atlaspack-cache'),
     };
 
     await fsFixture(overlayFS)`

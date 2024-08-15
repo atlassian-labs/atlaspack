@@ -125,7 +125,7 @@ async function getDependencies(
   asset,
   resolve,
   options,
-  parcelOptions,
+  atlaspackOptions,
   nativeGlob,
   seen = new Set(),
   includeImports = true,
@@ -212,7 +212,7 @@ async function getDependencies(
             asset,
             resolve,
             options,
-            parcelOptions,
+            atlaspackOptions,
             nativeGlob,
             seen,
             false,
@@ -232,7 +232,7 @@ async function createEvaluator(
   asset,
   resolve,
   options,
-  parcelOptions,
+  atlaspackOptions,
   nativeGlob,
 ) {
   const deps = await getDependencies(
@@ -241,12 +241,12 @@ async function createEvaluator(
     asset,
     resolve,
     options,
-    parcelOptions,
+    atlaspackOptions,
     nativeGlob,
   );
 
   // This is a custom stylus evaluator that extends stylus with support for the node
-  // require resolution algorithm. It also adds all dependencies to the parcel asset
+  // require resolution algorithm. It also adds all dependencies to the atlaspack asset
   // tree so the file watcher works correctly, etc.
   class CustomEvaluator extends Evaluator {
     visitImport(imported) {

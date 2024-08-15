@@ -20,12 +20,12 @@ describe('ParcelConfig', () => {
         bundler: undefined,
         packagers: {
           '*.css': {
-            packageName: 'parcel-packager-css',
+            packageName: 'atlaspack-packager-css',
             resolveFrom: ATLASPACKRC_PATH,
             keyPath: '/packagers/*.css',
           },
           '*.js': {
-            packageName: 'parcel-packager-js',
+            packageName: 'atlaspack-packager-js',
             resolveFrom: ATLASPACKRC_PATH,
             keyPath: '/packagers/*.js',
           },
@@ -48,7 +48,7 @@ describe('ParcelConfig', () => {
         config.packagers,
       );
       assert.deepEqual(result, {
-        packageName: 'parcel-packager-js',
+        packageName: 'atlaspack-packager-js',
         resolveFrom: ATLASPACKRC_PATH,
         keyPath: '/packagers/*.js',
       });
@@ -63,7 +63,7 @@ describe('ParcelConfig', () => {
         transformers: {
           '*.jsx': [
             {
-              packageName: 'parcel-transform-jsx',
+              packageName: 'atlaspack-transform-jsx',
               resolveFrom: ATLASPACKRC_PATH,
               keyPath: '/transformers/*.jsx/0',
             },
@@ -71,7 +71,7 @@ describe('ParcelConfig', () => {
           ],
           '*.{js,jsx}': [
             {
-              packageName: 'parcel-transform-js',
+              packageName: 'atlaspack-transform-js',
               resolveFrom: ATLASPACKRC_PATH,
               keyPath: '/transformers/*.{js,jsx}/0',
             },
@@ -96,7 +96,7 @@ describe('ParcelConfig', () => {
       );
       assert.deepEqual(pipeline, [
         {
-          packageName: 'parcel-transform-js',
+          packageName: 'atlaspack-transform-js',
           resolveFrom: ATLASPACKRC_PATH,
           keyPath: '/transformers/*.{js,jsx}/0',
         },
@@ -110,12 +110,12 @@ describe('ParcelConfig', () => {
       );
       assert.deepEqual(pipeline, [
         {
-          packageName: 'parcel-transform-jsx',
+          packageName: 'atlaspack-transform-jsx',
           resolveFrom: ATLASPACKRC_PATH,
           keyPath: '/transformers/*.jsx/0',
         },
         {
-          packageName: 'parcel-transform-js',
+          packageName: 'atlaspack-transform-js',
           resolveFrom: ATLASPACKRC_PATH,
           keyPath: '/transformers/*.{js,jsx}/0',
         },
@@ -124,7 +124,7 @@ describe('ParcelConfig', () => {
   });
 
   describe('loadPlugin', () => {
-    it('should warn if a plugin needs to specify an engines.parcel field in package.json', async () => {
+    it('should warn if a plugin needs to specify an engines.atlaspack field in package.json', async () => {
       let projectRoot = path.join(__dirname, 'fixtures', 'plugins');
       let configFilePath = toProjectPath(
         projectRoot,
@@ -137,7 +137,7 @@ describe('ParcelConfig', () => {
           transformers: {
             '*.js': [
               {
-                packageName: 'parcel-transformer-no-engines',
+                packageName: 'atlaspack-transformer-no-engines',
                 resolveFrom: configFilePath,
                 keyPath: '/transformers/*.js/0',
               },
@@ -149,7 +149,7 @@ describe('ParcelConfig', () => {
 
       let warnStub = sinon.stub(logger, 'warn');
       let {plugin} = await config.loadPlugin({
-        packageName: 'parcel-transformer-no-engines',
+        packageName: 'atlaspack-transformer-no-engines',
         resolveFrom: configFilePath,
         keyPath: '/transformers/*.js/0',
       });
@@ -159,12 +159,12 @@ describe('ParcelConfig', () => {
       assert.deepEqual(warnStub.getCall(0).args[0], {
         origin: '@atlaspack/core',
         message:
-          'The plugin "parcel-transformer-no-engines" needs to specify a `package.json#engines.parcel` field with the supported Parcel version range.',
+          'The plugin "atlaspack-transformer-no-engines" needs to specify a `package.json#engines.atlaspack` field with the supported Parcel version range.',
       });
       warnStub.restore();
     });
 
-    it('should error if a plugin specifies an invalid engines.parcel field in package.json', async () => {
+    it('should error if a plugin specifies an invalid engines.atlaspack field in package.json', async () => {
       let projectRoot = path.join(__dirname, 'fixtures', 'plugins');
       let configFilePath = toProjectPath(
         projectRoot,
@@ -177,7 +177,7 @@ describe('ParcelConfig', () => {
           transformers: {
             '*.js': [
               {
-                packageName: 'parcel-transformer-not-found',
+                packageName: 'atlaspack-transformer-not-found',
                 resolveFrom: configFilePath,
                 keyPath: '/transformers/*.js/0',
               },
@@ -187,13 +187,13 @@ describe('ParcelConfig', () => {
         {...DEFAULT_OPTIONS, projectRoot},
       );
       // $FlowFixMe[untyped-import]
-      let parcelVersion = require('../package.json').version;
+      let atlaspackVersion = require('../package.json').version;
       let pkgJSON = path.join(
         __dirname,
         'fixtures',
         'plugins',
         'node_modules',
-        'parcel-transformer-bad-engines',
+        'atlaspack-transformer-bad-engines',
         'package.json',
       );
       let code = inputFS.readFileSync(pkgJSON, 'utf8');
@@ -202,7 +202,7 @@ describe('ParcelConfig', () => {
       await assert.rejects(
         () =>
           config.loadPlugin({
-            packageName: 'parcel-transformer-bad-engines',
+            packageName: 'atlaspack-transformer-bad-engines',
             resolveFrom: configFilePath,
             keyPath: '/transformers/*.js/0',
           }),
@@ -210,7 +210,7 @@ describe('ParcelConfig', () => {
           name: 'Error',
           diagnostics: [
             {
-              message: `The plugin "parcel-transformer-bad-engines" is not compatible with the current version of Parcel. Requires "5.x" but the current version is "${parcelVersion}".`,
+              message: `The plugin "atlaspack-transformer-bad-engines" is not compatible with the current version of Parcel. Requires "5.x" but the current version is "${atlaspackVersion}".`,
               origin: '@atlaspack/core',
               codeFrames: [
                 {
@@ -245,10 +245,10 @@ describe('ParcelConfig', () => {
         code,
         DEFAULT_OPTIONS,
       );
-      let parcelConfig = new ParcelConfig(config, DEFAULT_OPTIONS);
+      let atlaspackConfig = new ParcelConfig(config, DEFAULT_OPTIONS);
 
       // $FlowFixMe
-      await assert.rejects(() => parcelConfig.getTransformers('test.js'), {
+      await assert.rejects(() => atlaspackConfig.getTransformers('test.js'), {
         name: 'Error',
         diagnostics: [
           {
@@ -362,18 +362,18 @@ describe('ParcelConfig', () => {
         code,
         DEFAULT_OPTIONS,
       );
-      let parcelConfig = new ParcelConfig(config, DEFAULT_OPTIONS);
+      let atlaspackConfig = new ParcelConfig(config, DEFAULT_OPTIONS);
       let extendedConfigPath = path.join(
         __dirname,
         'fixtures',
         'local-plugin-config-pkg',
         'node_modules',
-        'parcel-config-local',
+        'atlaspack-config-local',
         'index.json',
       );
 
       // $FlowFixMe
-      await assert.rejects(() => parcelConfig.getTransformers('test.js'), {
+      await assert.rejects(() => atlaspackConfig.getTransformers('test.js'), {
         name: 'Error',
         diagnostics: [
           {

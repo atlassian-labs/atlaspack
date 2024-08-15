@@ -14,20 +14,20 @@ import type {PackageManager} from '@atlaspack/package-manager';
 import type {ParcelOptions} from '../types';
 import {type FeatureFlags} from '@atlaspack/feature-flags';
 
-let parcelOptionsToPluginOptions: WeakMap<ParcelOptions, PluginOptions> =
+let atlaspackOptionsToPluginOptions: WeakMap<ParcelOptions, PluginOptions> =
   new WeakMap();
 
 export default class PluginOptions implements IPluginOptions {
   #options /*: ParcelOptions */;
 
   constructor(options: ParcelOptions): PluginOptions {
-    let existing = parcelOptionsToPluginOptions.get(options);
+    let existing = atlaspackOptionsToPluginOptions.get(options);
     if (existing != null) {
       return existing;
     }
 
     this.#options = options;
-    parcelOptionsToPluginOptions.set(options, this);
+    atlaspackOptionsToPluginOptions.set(options, this);
     return this;
   }
 
@@ -43,8 +43,8 @@ export default class PluginOptions implements IPluginOptions {
     return this.#options.env;
   }
 
-  get parcelVersion(): string {
-    return this.#options.parcelVersion;
+  get atlaspackVersion(): string {
+    return this.#options.atlaspackVersion;
   }
 
   get hmrOptions(): ?HMROptions {

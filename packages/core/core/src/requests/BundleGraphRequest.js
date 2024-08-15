@@ -142,12 +142,12 @@ export default function createBundleGraphRequest(
 
       assertSignalNotAborted(signal);
 
-      let parcelConfig = getCachedParcelConfig(configResult, input.options);
+      let atlaspackConfig = getCachedParcelConfig(configResult, input.options);
       let {devDeps, invalidDevDeps} = await getDevDepRequests(input.api);
-      invalidateDevDeps(invalidDevDeps, input.options, parcelConfig);
+      invalidateDevDeps(invalidDevDeps, input.options, atlaspackConfig);
 
       let bundlingMeasurement = tracer.createMeasurement('bundling');
-      let builder = new BundlerRunner(input, parcelConfig, devDeps);
+      let builder = new BundlerRunner(input, atlaspackConfig, devDeps);
       let res: BundleGraphResult = await builder.bundle({
         graph: assetGraph,
         changedAssets: changedAssets,

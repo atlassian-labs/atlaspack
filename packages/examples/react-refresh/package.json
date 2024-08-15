@@ -4,7 +4,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start": "parcel src/index.html"
+    "start": "atlaspack src/index.html"
   },
   "devDependencies": {
     "@babel/core": "^7.22.11",

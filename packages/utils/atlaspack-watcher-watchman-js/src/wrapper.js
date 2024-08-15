@@ -45,7 +45,7 @@ export class ParcelWatcherWatchmanJS implements Watcher {
   initPromise: Promise<void> | void;
 
   constructor() {
-    this.subscriptionName = 'parcel-watcher-subscription-' + Date.now();
+    this.subscriptionName = 'atlaspack-watcher-subscription-' + Date.now();
     this.client = new watchman.Client();
   }
 

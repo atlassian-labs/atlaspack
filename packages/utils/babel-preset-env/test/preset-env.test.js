@@ -22,12 +22,12 @@ export default class Foo {
 const preset = require.resolve('../src');
 
 describe('@atlaspack/babel-preset-env', () => {
-  it('compiles against targets passed through caller when the caller is parcel 2.x', () => {
+  it('compiles against targets passed through caller when the caller is atlaspack 2.x', () => {
     let {code: transformed} = babel.transformSync(input, {
       configFile: false,
       presets: [preset],
       caller: {
-        name: 'parcel',
+        name: 'atlaspack',
         version: '2.0.0',
         targets: JSON.stringify({
           browsers: ['last 1 Chrome version'],
@@ -40,7 +40,7 @@ describe('@atlaspack/babel-preset-env', () => {
     assert(transformed.includes('export default'));
   });
 
-  it('does not compile against targets passed through caller when the caller is not parcel', () => {
+  it('does not compile against targets passed through caller when the caller is not atlaspack', () => {
     let {code: transformed} = babel.transformSync(input, {
       configFile: false,
       presets: [preset],

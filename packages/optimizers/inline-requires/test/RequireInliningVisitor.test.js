@@ -54,13 +54,13 @@ describe('InliningVisitor', () => {
   it('performs module default inlining', async () => {
     const src = getModule(
       `var $abc123 = require('abc123');
-        var $abc123Default =  parcelHelpers.interopDefault($abc123);
+        var $abc123Default =  atlaspackHelpers.interopDefault($abc123);
         console.log($abc123Default.foo());`,
     );
     const expected = getModule(
       `var $abc123;
         var $abc123Default;
-        console.log((0, parcelHelpers.interopDefault(require('abc123'))).foo());`,
+        console.log((0, atlaspackHelpers.interopDefault(require('abc123'))).foo());`,
     );
     const result = await testRequireInliningVisitor(src, []);
     assertEqualCode(result, expected);

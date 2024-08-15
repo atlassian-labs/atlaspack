@@ -133,7 +133,7 @@ export type Engines = {
   +browsers?: string | Array<string>,
   +electron?: SemverRange,
   +node?: SemverRange,
-  +parcel?: SemverRange,
+  +atlaspack?: SemverRange,
   ...
 };
 
@@ -404,7 +404,7 @@ export type InitialServerOptions = {|
 
 export interface PluginOptions {
   +mode: BuildMode;
-  +parcelVersion: string;
+  +atlaspackVersion: string;
   +env: EnvMap;
   +hmrOptions: ?HMROptions;
   +serveOptions: ServerOptions | false;
@@ -892,7 +892,7 @@ export type DevDepOptions = {|
   range?: ?SemverRange,
   /**
    * When this dev dependency is invalidated, also invalidate these dependencies.
-   * This is useful if the parcel plugin or another parent dependency
+   * This is useful if the atlaspack plugin or another parent dependency
    * has its own cache for this dev dependency other than Node's require cache.
    */
   additionalInvalidations?: Array<{|

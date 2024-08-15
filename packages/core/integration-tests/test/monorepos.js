@@ -206,7 +206,7 @@ describe.v2('monorepos', function () {
         path.join(distDir, '/pkg-a/src/index.js'),
         'utf8',
       );
-      assert(contents.includes('$parcel$export(module.exports, "default"'));
+      assert(contents.includes('$atlaspack$export(module.exports, "default"'));
 
       contents = await outputFS.readFile(
         path.join(distDir, '/pkg-b/src/index.js'),
@@ -271,7 +271,7 @@ describe.v2('monorepos', function () {
       ),
       'utf8',
     );
-    assert(contents.includes('$parcel$export(module.exports, "default"'));
+    assert(contents.includes('$atlaspack$export(module.exports, "default"'));
 
     contents = await outputFS.readFile(
       path.join(
@@ -342,7 +342,7 @@ describe.v2('monorepos', function () {
         path.join(distDir, '/pkg-a/src/index.js'),
         'utf8',
       );
-      assert(contents.includes('$parcel$export(module.exports, "default"'));
+      assert(contents.includes('$atlaspack$export(module.exports, "default"'));
 
       contents = await outputFS.readFile(
         path.join(distDir, '/pkg-b/src/index.js'),
@@ -394,7 +394,7 @@ describe.v2('monorepos', function () {
         path.join(distDir, '/pkg-a/src/index.js'),
         'utf8',
       );
-      assert(contents.includes('$parcel$export(module.exports, "default"'));
+      assert(contents.includes('$atlaspack$export(module.exports, "default"'));
 
       contents = await outputFS.readFile(
         path.join(distDir, '/pkg-b/src/index.js'),
@@ -443,7 +443,7 @@ describe.v2('monorepos', function () {
         ),
         'utf8',
       );
-      assert(contents.includes('$parcel$export(module.exports, "default"'));
+      assert(contents.includes('$atlaspack$export(module.exports, "default"'));
 
       contents = await outputFS.readFile(
         path.join(
@@ -492,7 +492,7 @@ describe.v2('monorepos', function () {
         ),
         'utf8',
       );
-      assert(contents.includes('$parcel$export(module.exports, "default"'));
+      assert(contents.includes('$atlaspack$export(module.exports, "default"'));
 
       contents = await outputFS.readFile(
         path.join(
@@ -551,7 +551,7 @@ describe.v2('monorepos', function () {
       ),
       'utf8',
     );
-    assert(contents.includes('$parcel$export(module.exports, "default"'));
+    assert(contents.includes('$atlaspack$export(module.exports, "default"'));
 
     contents = await outputFS.readFile(
       path.join(
@@ -832,7 +832,7 @@ describe.v2('monorepos', function () {
       ),
       'utf8',
     );
-    assert(contents.includes('$parcel$export(module.exports, "default"'));
+    assert(contents.includes('$atlaspack$export(module.exports, "default"'));
     assert(contents.includes('require("./pkg-a.cjs.css")'));
 
     contents = await outputFS.readFile(

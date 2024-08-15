@@ -143,7 +143,7 @@ if (navigator.serviceWorker) {
 
     let {port1, port2} = new MessageChannel();
 
-    // sw <-> port1 <-> port2 <-> parcel worker thread
+    // sw <-> port1 <-> port2 <-> atlaspack worker thread
     // sw <-> main thread
 
     sw.addEventListener('message', (evt: MessageEvent) => {

@@ -83,7 +83,7 @@ describe.v2('watcher', function () {
     await ncp(path.join(__dirname, 'integration.atlaspackrc-custom'), inDir);
     await ncp(
       path.dirname(require.resolve('@atlaspack/config-default')),
-      path.join(inDir, 'node_modules', '@parcel', 'config-default'),
+      path.join(inDir, 'node_modules', '@atlaspack', 'config-default'),
     );
     let copyPath = path.join(inDir, 'configCopy');
     let configPath = path.join(inDir, '.atlaspackrc');

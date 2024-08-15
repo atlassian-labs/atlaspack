@@ -29,7 +29,7 @@ import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {ATLASPACK_VERSION} from './constants';
 
 // Default cache directory name
-const DEFAULT_CACHE_DIRNAME = '.parcel-cache';
+const DEFAULT_CACHE_DIRNAME = '.atlaspack-cache';
 const LOCK_FILE_NAMES = ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'];
 
 // Generate a unique instanceId, will change on every run of parcel
@@ -224,7 +224,7 @@ export default async function resolveOptions(
       isLibrary: initialOptions?.defaultTargetOptions?.isLibrary,
     },
     featureFlags: {...DEFAULT_FEATURE_FLAGS, ...initialOptions?.featureFlags},
-    parcelVersion: ATLASPACK_VERSION,
+    atlaspackVersion: ATLASPACK_VERSION,
   };
 }
 

@@ -156,7 +156,7 @@ export async function loadGraphs(cacheDir: string): Promise<{|
   try {
     invariant(requestTracker);
     let buildRequestId = requestTracker.graph.getNodeIdByContentKey(
-      'parcel_build_request',
+      'atlaspack_build_request',
     );
     let buildRequestNode = nullthrows(
       requestTracker.graph.getNode(buildRequestId),

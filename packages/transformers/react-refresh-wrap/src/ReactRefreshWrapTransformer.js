@@ -38,7 +38,7 @@ export default (new Transformer({
 
     let code = await asset.getCode();
     let map = await asset.getMap();
-    let name = `$parcel$ReactRefreshHelpers$${asset.id.slice(-4)}`;
+    let name = `$atlaspack$ReactRefreshHelpers$${asset.id.slice(-4)}`;
 
     code = `var ${name} = require(${JSON.stringify(wrapperPath)});
 var prevRefreshReg = window.$RefreshReg$;

@@ -40,7 +40,7 @@ export default async function generateCertificate(
   const attrs = [
     {
       name: 'commonName',
-      value: 'parceljs.org',
+      value: 'atlaspackjs.org',
     },
     {
       name: 'countryName',
@@ -56,7 +56,7 @@ export default async function generateCertificate(
     },
     {
       name: 'organizationName',
-      value: 'parcelBundler',
+      value: 'atlaspackBundler',
     },
     {
       shortName: 'OU',

@@ -38,7 +38,7 @@ export default class Validation {
   dedicatedThread: boolean;
   impactfulOptions: $Shape<ParcelOptions>;
   options: ParcelOptions;
-  parcelConfig: ParcelConfig;
+  atlaspackConfig: ParcelConfig;
   report: ReportFn;
   requests: AssetGroup[];
   workerApi: ?WorkerApi;
@@ -53,7 +53,7 @@ export default class Validation {
   }: ValidationOpts) {
     this.dedicatedThread = dedicatedThread ?? false;
     this.options = options;
-    this.parcelConfig = config;
+    this.atlaspackConfig = config;
     this.report = report;
     this.requests = requests;
     this.workerApi = workerApi;
@@ -151,7 +151,7 @@ export default class Validation {
 
         let asset = await this.loadAsset(request);
 
-        let validators = await this.parcelConfig.getValidators(
+        let validators = await this.atlaspackConfig.getValidators(
           request.filePath,
         );
 
