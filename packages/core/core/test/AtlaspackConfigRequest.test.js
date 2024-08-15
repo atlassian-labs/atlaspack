@@ -820,7 +820,7 @@ describe('ParcelConfigRequest', () => {
                   codeHighlights: [
                     {
                       message:
-                        '"./.parclrc-node-modules" does not exist, did you mean "./.atlaspackrc-node-modules"?',
+                        '"./.atlaspckrc-node-modules" does not exist, did you mean "./.atlaspackrc-node-modules"?',
                       start: {line: 2, column: 14},
                       end: {line: 2, column: 38},
                     },
@@ -859,7 +859,7 @@ describe('ParcelConfigRequest', () => {
                   codeHighlights: [
                     {
                       message:
-                        '"./.parclrc-node-modules" does not exist, did you mean "./.atlaspackrc-node-modules"?',
+                        '"./.atlaspckrc-node-modules" does not exist, did you mean "./.atlaspackrc-node-modules"?',
                       start: {line: 2, column: 12},
                       end: {line: 2, column: 36},
                     },
@@ -956,7 +956,7 @@ describe('ParcelConfigRequest', () => {
                   codeHighlights: [
                     {
                       message:
-                        '"./.parclrc" does not exist, did you mean "./.atlaspackrc"?',
+                        '"./.atlaspckrc" does not exist, did you mean "./.atlaspackrc"?',
                       start: {line: 2, column: 39},
                       end: {line: 2, column: 50},
                     },

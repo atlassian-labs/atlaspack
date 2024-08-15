@@ -1,3 +1,3 @@
 {
-  "extends": "./.parclrc-node-modules"
+  "extends": "./.atlaspckrc-node-modules"
 }
