@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use indexmap::IndexMap;
 use atlaspack_core::diagnostic;
+use indexmap::IndexMap;
 use swc_core::atoms::Atom;
 
 use atlaspack_core::plugin::{PluginOptions, TransformResult};
