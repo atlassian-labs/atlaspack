@@ -72,10 +72,6 @@
     "*.{js,json,md,ts}": "prettier --write",
     "*.rs": "rustfmt"
   },
-  "collective": {
-    "type": "opencollective",
-    "url": "https://opencollective.com/parcel"
-  },
   "packageManager": "yarn@1.22.19",
   "browser": {
     "react-dom": "preact/compat",
