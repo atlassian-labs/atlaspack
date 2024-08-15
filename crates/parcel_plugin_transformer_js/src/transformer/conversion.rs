@@ -2,12 +2,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use indexmap::IndexMap;
-use parcel_core::diagnostic;
+use atlaspack_core::diagnostic;
 use swc_core::atoms::Atom;
 
-use parcel_core::plugin::{PluginOptions, TransformResult};
-use parcel_core::types::engines::EnvironmentFeature;
-use parcel_core::types::{
+use atlaspack_core::plugin::{PluginOptions, TransformResult};
+use atlaspack_core::types::engines::EnvironmentFeature;
+use atlaspack_core::types::{
   Asset, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, Diagnostic, DiagnosticBuilder,
   Environment, EnvironmentContext, File, FileType, IncludeNodeModules, OutputFormat,
   SourceLocation, SourceType, SpecifierType, Symbol,
@@ -27,8 +27,8 @@ mod symbol;
 
 pub(crate) fn convert_result(
   mut asset: Asset,
-  transformer_config: &parcel_js_swc_core::Config,
-  result: parcel_js_swc_core::TransformResult,
+  transformer_config: &atlaspack_js_swc_core::Config,
+  result: atlaspack_js_swc_core::TransformResult,
   options: &PluginOptions,
 ) -> Result<TransformResult, Vec<Diagnostic>> {
   let asset_file_path = asset.file_path.to_path_buf();
@@ -279,7 +279,7 @@ pub(crate) fn convert_result(
 /// ```
 ///
 /// See [`HoistResult::re_exports`]
-pub(crate) fn is_re_export_all_symbol(symbol: &parcel_js_swc_core::ImportedSymbol) -> bool {
+pub(crate) fn is_re_export_all_symbol(symbol: &atlaspack_js_swc_core::ImportedSymbol) -> bool {
   symbol.local == "*" && symbol.imported == "*"
 }
 
@@ -291,8 +291,8 @@ pub(crate) fn is_re_export_all_symbol(symbol: &parcel_js_swc_core::ImportedSymbo
 ///
 /// This will be used to find dependencies corresponding to imported symbols' `local` mangled names.
 pub(crate) fn convert_dependencies(
-  transformer_config: &parcel_js_swc_core::Config,
-  dependencies: Vec<parcel_js_swc_core::DependencyDescriptor>,
+  transformer_config: &atlaspack_js_swc_core::Config,
+  dependencies: Vec<atlaspack_js_swc_core::DependencyDescriptor>,
   asset: &Asset,
   asset_id: u64,
 ) -> Result<(IndexMap<Atom, Dependency>, Vec<PathBuf>), Vec<Diagnostic>> {
@@ -341,12 +341,12 @@ fn make_esm_helpers_dependency(
 ) -> Dependency {
   Dependency {
     source_asset_id: Some(format!("{:016x}", asset_id)),
-    specifier: "@parcel/transformer-js/src/esmodule-helpers.js".into(),
+    specifier: "@atlaspack/transformer-js/src/esmodule-helpers.js".into(),
     specifier_type: SpecifierType::Esm,
     source_path: Some(asset_file_path.clone()),
     env: Environment {
       include_node_modules: IncludeNodeModules::Map(
-        [("@parcel/transformer-js".to_string(), true)]
+        [("@atlaspack/transformer-js".to_string(), true)]
           .into_iter()
           .collect(),
       ),
@@ -375,20 +375,20 @@ fn make_export_all_symbol(loc: Option<SourceLocation>) -> Symbol {
 
 enum DependencyConversionResult {
   Dependency(Dependency),
-  /// Only for [`parcel_js_swc_core::DependencyKind::File`] dependencies, the output will not be a
+  /// Only for [`atlaspack_js_swc_core::DependencyKind::File`] dependencies, the output will not be a
   /// [`Dependency`] but just an invalidation.
   InvalidateOnFileChange(PathBuf),
 }
 
-/// Convert dependency from the transformer `parcel_js_swc_core::DependencyDescriptor` into a
+/// Convert dependency from the transformer `atlaspack_js_swc_core::DependencyDescriptor` into a
 /// `DependencyConversionResult`.
 fn convert_dependency(
-  transformer_config: &parcel_js_swc_core::Config,
+  transformer_config: &atlaspack_js_swc_core::Config,
   asset: &Asset,
   asset_id: u64,
-  transformer_dependency: parcel_js_swc_core::DependencyDescriptor,
+  transformer_dependency: atlaspack_js_swc_core::DependencyDescriptor,
 ) -> Result<DependencyConversionResult, Vec<Diagnostic>> {
-  use parcel_js_swc_core::DependencyKind;
+  use atlaspack_js_swc_core::DependencyKind;
 
   let loc = convert_loc(asset.file_path.clone(), &transformer_dependency.loc);
   let mut base_dependency = Dependency {
@@ -428,7 +428,7 @@ fn convert_dependency(
       if output_format == OutputFormat::EsModule
         && matches!(
           transformer_dependency.source_type,
-          Some(parcel_js_swc_core::SourceType::Module)
+          Some(atlaspack_js_swc_core::SourceType::Module)
         )
         && transformer_config.supports_module_workers
       {
@@ -595,8 +595,8 @@ fn convert_dependency(
   }
 }
 
-fn convert_source_type(source_type: &Option<parcel_js_swc_core::SourceType>) -> SourceType {
-  if matches!(source_type, Some(parcel_js_swc_core::SourceType::Module)) {
+fn convert_source_type(source_type: &Option<atlaspack_js_swc_core::SourceType>) -> SourceType {
+  if matches!(source_type, Some(atlaspack_js_swc_core::SourceType::Module)) {
     SourceType::Module
   } else {
     SourceType::Script

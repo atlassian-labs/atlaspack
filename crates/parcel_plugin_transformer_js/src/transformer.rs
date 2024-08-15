@@ -4,13 +4,13 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
 
-use parcel_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
-use parcel_core::plugin::{TransformResult, TransformationInput};
-use parcel_core::types::engines::EnvironmentFeature;
-use parcel_core::types::{
+use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
+use atlaspack_core::plugin::{TransformResult, TransformationInput};
+use atlaspack_core::types::engines::EnvironmentFeature;
+use atlaspack_core::types::{
   Asset, BuildMode, Diagnostic, ErrorKind, FileType, LogLevel, OutputFormat, SourceType,
 };
-use parcel_filesystem::FileSystemRef;
+use atlaspack_filesystem::FileSystemRef;
 
 use crate::ts_config::{Jsx, Target, TsConfig};
 
@@ -112,8 +112,8 @@ impl TransformerPlugin for ParcelJsTransformerPlugin {
       }
     }
 
-    let transformation_result = parcel_js_swc_core::transform(
-      parcel_js_swc_core::Config {
+    let transformation_result = atlaspack_js_swc_core::transform(
+      atlaspack_js_swc_core::Config {
         // TODO: Infer from package.json
         automatic_jsx_runtime: compiler_options
           .map(|co| {
@@ -169,8 +169,8 @@ impl TransformerPlugin for ParcelJsTransformerPlugin {
         scope_hoist: env.should_scope_hoist && env.source_type != SourceType::Script,
         source_maps: env.source_map.is_some(),
         source_type: match env.source_type {
-          SourceType::Module => parcel_js_swc_core::SourceType::Module,
-          SourceType::Script => parcel_js_swc_core::SourceType::Script,
+          SourceType::Module => atlaspack_js_swc_core::SourceType::Module,
+          SourceType::Script => atlaspack_js_swc_core::SourceType::Script,
         },
         supports_module_workers: env.should_scope_hoist
           && env.engines.supports(EnvironmentFeature::WorkerModule),
@@ -187,7 +187,7 @@ impl TransformerPlugin for ParcelJsTransformerPlugin {
             })
           })
           .unwrap_or_default(),
-        ..parcel_js_swc_core::Config::default()
+        ..atlaspack_js_swc_core::Config::default()
       },
       None,
     )?;
@@ -213,7 +213,7 @@ impl TransformerPlugin for ParcelJsTransformerPlugin {
       ..Asset::default()
     };
 
-    let config = parcel_js_swc_core::Config::default();
+    let config = atlaspack_js_swc_core::Config::default();
     let result = conversion::convert_result(asset, &config, transformation_result, &self.options)
       // TODO handle errors properly
       .map_err(|_err| anyhow!("Failed to transform"))?;
@@ -226,12 +226,12 @@ impl TransformerPlugin for ParcelJsTransformerPlugin {
 mod test {
   use std::path::PathBuf;
 
-  use parcel_core::{
+  use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::PluginLogger,
     types::{Code, Dependency, Location, SourceLocation, SpecifierType, Symbol},
   };
-  use parcel_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
   use super::*;
 

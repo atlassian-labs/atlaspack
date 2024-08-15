@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use parcel_config::parcel_config_fixtures::default_config;
-use parcel_core::{
+use atlaspack_config::atlaspack_config_fixtures::default_config;
+use atlaspack_core::{
   config_loader::ConfigLoader,
   plugin::{PluginContext, PluginLogger, PluginOptions},
   types::ParcelOptions,
 };
-use parcel_filesystem::{in_memory_file_system::InMemoryFileSystem, FileSystemRef};
+use atlaspack_filesystem::{in_memory_file_system::InMemoryFileSystem, FileSystemRef};
 
 use crate::{
   plugins::{config_plugins::ConfigPlugins, PluginsRef},
@@ -32,7 +32,7 @@ pub(crate) fn make_test_plugin_context() -> PluginContext {
 pub(crate) fn config_plugins(ctx: PluginContext) -> PluginsRef {
   let fixture = default_config(Arc::new(PathBuf::default()));
 
-  Arc::new(ConfigPlugins::new(fixture.parcel_config, ctx))
+  Arc::new(ConfigPlugins::new(fixture.atlaspack_config, ctx))
 }
 
 pub struct RequestTrackerTestOptions {
@@ -40,7 +40,7 @@ pub struct RequestTrackerTestOptions {
   pub plugins: Option<PluginsRef>,
   pub project_root: PathBuf,
   pub search_path: PathBuf,
-  pub parcel_options: ParcelOptions,
+  pub atlaspack_options: ParcelOptions,
 }
 
 impl Default for RequestTrackerTestOptions {
@@ -50,7 +50,7 @@ impl Default for RequestTrackerTestOptions {
       plugins: None,
       project_root: PathBuf::default(),
       search_path: PathBuf::default(),
-      parcel_options: ParcelOptions::default(),
+      atlaspack_options: ParcelOptions::default(),
     }
   }
 }
@@ -61,7 +61,7 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
     plugins,
     project_root,
     search_path,
-    parcel_options,
+    atlaspack_options,
   } = options;
 
   let config_loader = Arc::new(ConfigLoader {
@@ -75,10 +75,10 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
       config: Arc::clone(&config_loader),
       file_system: fs.clone(),
       options: Arc::new(PluginOptions {
-        core_path: parcel_options.core_path.clone(),
-        env: parcel_options.env.clone(),
-        log_level: parcel_options.log_level.clone(),
-        mode: parcel_options.mode.clone(),
+        core_path: atlaspack_options.core_path.clone(),
+        env: atlaspack_options.env.clone(),
+        log_level: atlaspack_options.log_level.clone(),
+        mode: atlaspack_options.mode.clone(),
         project_root: project_root.clone(),
       }),
       logger: PluginLogger::default(),
@@ -88,7 +88,7 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
   RequestTracker::new(
     Arc::clone(&config_loader),
     fs,
-    Arc::new(parcel_options),
+    Arc::new(atlaspack_options),
     plugins,
     project_root,
   )

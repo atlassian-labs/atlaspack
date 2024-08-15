@@ -52,10 +52,10 @@ impl TracerMode {
   pub fn file() -> Self {
     Self::File {
       directory: std::env::temp_dir()
-        .join("parcel_trace")
+        .join("atlaspack_trace")
         .to_string_lossy()
         .to_string(),
-      prefix: "parcel-tracing".to_string(),
+      prefix: "atlaspack-tracing".to_string(),
       max_files: 4,
     }
   }

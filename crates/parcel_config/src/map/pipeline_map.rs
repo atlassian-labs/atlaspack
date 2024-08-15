@@ -7,7 +7,7 @@ use serde::Serialize;
 use super::pattern_matcher;
 use crate::PluginNode;
 
-/// Represents fields in .parcelrc that map a pattern to a single plugin name
+/// Represents fields in .atlaspackrc that map a pattern to a single plugin name
 ///
 /// # Examples
 ///
@@ -16,12 +16,12 @@ use crate::PluginNode;
 /// use std::sync::Arc;
 ///
 /// use indexmap::indexmap;
-/// use parcel_config::map::PipelineMap;
-/// use parcel_config::PluginNode;
+/// use atlaspack_config::map::PipelineMap;
+/// use atlaspack_config::PluginNode;
 ///
 /// PipelineMap::new(indexmap! {
 ///   String::from("*.{js,mjs,cjs}") => PluginNode {
-///     package_name: String::from("@parcel/packager-js"),
+///     package_name: String::from("@atlaspack/packager-js"),
 ///     resolve_from: Arc::new(PathBuf::default()),
 ///   }
 /// });
@@ -48,12 +48,12 @@ impl PipelineMap {
   /// use std::sync::Arc;
   ///
   /// use indexmap::indexmap;
-  /// use parcel_config::map::PipelineMap;
-  /// use parcel_config::PluginNode;
+  /// use atlaspack_config::map::PipelineMap;
+  /// use atlaspack_config::PluginNode;
   ///
   /// let pipeline_map = PipelineMap::new(indexmap! {
   ///   String::from("*.{js,mjs,cjs}") => PluginNode {
-  ///     package_name: String::from("@parcel/packager-js"),
+  ///     package_name: String::from("@atlaspack/packager-js"),
   ///     resolve_from: Arc::new(PathBuf::default()),
   ///   }
   /// });
@@ -88,7 +88,7 @@ mod tests {
 
     fn pipeline(name: &str) -> PluginNode {
       PluginNode {
-        package_name: format!("@parcel/plugin-{}", name),
+        package_name: format!("@atlaspack/plugin-{}", name),
         resolve_from: Arc::new(PathBuf::default()),
       }
     }

@@ -5,16 +5,16 @@ use std::u64;
 
 #[cfg(test)]
 use mockall::automock;
-use parcel_core::plugin::BundlerPlugin;
-use parcel_core::plugin::CompressorPlugin;
-use parcel_core::plugin::NamerPlugin;
-use parcel_core::plugin::OptimizerPlugin;
-use parcel_core::plugin::PackagerPlugin;
-use parcel_core::plugin::ReporterPlugin;
-use parcel_core::plugin::ResolverPlugin;
-use parcel_core::plugin::RuntimePlugin;
-use parcel_core::plugin::TransformerPlugin;
-use parcel_core::plugin::ValidatorPlugin;
+use atlaspack_core::plugin::BundlerPlugin;
+use atlaspack_core::plugin::CompressorPlugin;
+use atlaspack_core::plugin::NamerPlugin;
+use atlaspack_core::plugin::OptimizerPlugin;
+use atlaspack_core::plugin::PackagerPlugin;
+use atlaspack_core::plugin::ReporterPlugin;
+use atlaspack_core::plugin::ResolverPlugin;
+use atlaspack_core::plugin::RuntimePlugin;
+use atlaspack_core::plugin::TransformerPlugin;
+use atlaspack_core::plugin::ValidatorPlugin;
 
 pub type PluginsRef = Arc<dyn Plugins + Send + Sync>;
 

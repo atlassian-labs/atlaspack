@@ -14,7 +14,7 @@ pub struct Engines {
   pub browsers: Browsers,
   pub electron: Option<Version>,
   pub node: Option<Version>,
-  pub parcel: Option<Version>,
+  pub atlaspack: Option<Version>,
 }
 
 /// List of environment features that may be supported by an engine

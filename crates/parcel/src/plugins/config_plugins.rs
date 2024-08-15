@@ -3,32 +3,32 @@ use std::hash::Hasher;
 use std::path::Path;
 use std::sync::Arc;
 
-use parcel_config::map::NamedPattern;
-use parcel_config::ParcelConfig;
-use parcel_core::diagnostic_error;
-use parcel_core::plugin::composite_reporter_plugin::CompositeReporterPlugin;
-use parcel_core::plugin::BundlerPlugin;
-use parcel_core::plugin::CompressorPlugin;
-use parcel_core::plugin::NamerPlugin;
-use parcel_core::plugin::OptimizerPlugin;
-use parcel_core::plugin::PackagerPlugin;
-use parcel_core::plugin::PluginContext;
-use parcel_core::plugin::ReporterPlugin;
-use parcel_core::plugin::ResolverPlugin;
-use parcel_core::plugin::RuntimePlugin;
-use parcel_core::plugin::TransformerPlugin;
-use parcel_core::plugin::ValidatorPlugin;
-use parcel_plugin_resolver::ParcelResolver;
-use parcel_plugin_rpc::plugin::RpcBundlerPlugin;
-use parcel_plugin_rpc::plugin::RpcCompressorPlugin;
-use parcel_plugin_rpc::plugin::RpcNamerPlugin;
-use parcel_plugin_rpc::plugin::RpcOptimizerPlugin;
-use parcel_plugin_rpc::plugin::RpcPackagerPlugin;
-use parcel_plugin_rpc::plugin::RpcReporterPlugin;
-use parcel_plugin_rpc::plugin::RpcResolverPlugin;
-use parcel_plugin_rpc::plugin::RpcRuntimePlugin;
-use parcel_plugin_rpc::plugin::RpcTransformerPlugin;
-use parcel_plugin_transformer_js::ParcelJsTransformerPlugin;
+use atlaspack_config::map::NamedPattern;
+use atlaspack_config::ParcelConfig;
+use atlaspack_core::diagnostic_error;
+use atlaspack_core::plugin::composite_reporter_plugin::CompositeReporterPlugin;
+use atlaspack_core::plugin::BundlerPlugin;
+use atlaspack_core::plugin::CompressorPlugin;
+use atlaspack_core::plugin::NamerPlugin;
+use atlaspack_core::plugin::OptimizerPlugin;
+use atlaspack_core::plugin::PackagerPlugin;
+use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::ReporterPlugin;
+use atlaspack_core::plugin::ResolverPlugin;
+use atlaspack_core::plugin::RuntimePlugin;
+use atlaspack_core::plugin::TransformerPlugin;
+use atlaspack_core::plugin::ValidatorPlugin;
+use atlaspack_plugin_resolver::ParcelResolver;
+use atlaspack_plugin_rpc::plugin::RpcBundlerPlugin;
+use atlaspack_plugin_rpc::plugin::RpcCompressorPlugin;
+use atlaspack_plugin_rpc::plugin::RpcNamerPlugin;
+use atlaspack_plugin_rpc::plugin::RpcOptimizerPlugin;
+use atlaspack_plugin_rpc::plugin::RpcPackagerPlugin;
+use atlaspack_plugin_rpc::plugin::RpcReporterPlugin;
+use atlaspack_plugin_rpc::plugin::RpcResolverPlugin;
+use atlaspack_plugin_rpc::plugin::RpcRuntimePlugin;
+use atlaspack_plugin_rpc::plugin::RpcTransformerPlugin;
+use atlaspack_plugin_transformer_js::ParcelJsTransformerPlugin;
 
 use super::Plugins;
 use super::TransformerPipeline;
@@ -150,7 +150,7 @@ impl Plugins for ConfigPlugins {
     let mut resolvers: Vec<Box<dyn ResolverPlugin>> = Vec::new();
 
     for resolver in self.config.resolvers.iter() {
-      if resolver.package_name == "@parcel/resolver-default" {
+      if resolver.package_name == "@atlaspack/resolver-default" {
         resolvers.push(Box::new(ParcelResolver::new(&self.ctx)));
         continue;
       }
@@ -184,12 +184,12 @@ impl Plugins for ConfigPlugins {
       use_fallback: false,
     });
 
-    let mut hasher = parcel_core::hash::IdentifierHasher::default();
+    let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
 
     for transformer in self.config.transformers.get(path, named_pattern).iter() {
       transformer.hash(&mut hasher);
-      if transformer.package_name == "@parcel/transformer-babel"
-        || transformer.package_name == "@parcel/transformer-react-refresh-wrap"
+      if transformer.package_name == "@atlaspack/transformer-babel"
+        || transformer.package_name == "@atlaspack/transformer-react-refresh-wrap"
       {
         // Currently JS plugins don't work and it's easier to just skip these.
         // We also will probably remove babel from the defaults and support
@@ -197,7 +197,7 @@ impl Plugins for ConfigPlugins {
         continue;
       }
 
-      if transformer.package_name == "@parcel/transformer-js" {
+      if transformer.package_name == "@atlaspack/transformer-js" {
         transformers.push(Box::new(ParcelJsTransformerPlugin::new(&self.ctx)?));
         continue;
       }

@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
-use parcel_core::types::{Location, SourceLocation};
+use atlaspack_core::types::{Location, SourceLocation};
 
 pub(crate) fn convert_loc(
   file_path: PathBuf,
-  loc: &parcel_js_swc_core::SourceLocation,
+  loc: &atlaspack_js_swc_core::SourceLocation,
 ) -> SourceLocation {
   SourceLocation {
     file_path,

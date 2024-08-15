@@ -1,3 +1,3 @@
-mod parcel_resolver;
+mod atlaspack_resolver;
 
-pub use parcel_resolver::*;
+pub use atlaspack_resolver::*;

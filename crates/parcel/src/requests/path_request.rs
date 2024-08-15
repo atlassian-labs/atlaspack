@@ -2,15 +2,15 @@ use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use parcel_core::diagnostic_error;
-use parcel_core::plugin::BuildProgressEvent;
-use parcel_core::plugin::ReporterEvent;
-use parcel_core::plugin::Resolution;
-use parcel_core::plugin::ResolveContext;
-use parcel_core::plugin::ResolvedResolution;
-use parcel_core::plugin::ResolvingEvent;
-use parcel_core::types::Dependency;
-use parcel_resolver::parse_scheme;
+use atlaspack_core::diagnostic_error;
+use atlaspack_core::plugin::BuildProgressEvent;
+use atlaspack_core::plugin::ReporterEvent;
+use atlaspack_core::plugin::Resolution;
+use atlaspack_core::plugin::ResolveContext;
+use atlaspack_core::plugin::ResolvedResolution;
+use atlaspack_core::plugin::ResolvingEvent;
+use atlaspack_core::types::Dependency;
+use atlaspack_resolver::parse_scheme;
 
 use crate::request_tracker::Request;
 use crate::request_tracker::ResultAndInvalidations;
@@ -151,7 +151,7 @@ impl Request for PathRequest {
 mod tests {
   use std::fmt::Debug;
 
-  use parcel_core::plugin::{
+  use atlaspack_core::plugin::{
     composite_reporter_plugin::CompositeReporterPlugin, Resolved, ResolverPlugin,
   };
 

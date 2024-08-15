@@ -107,17 +107,17 @@ mod tests {
 
     fs.create_directory(Path::new("srcs")).unwrap();
 
-    fs.create_directory(Path::new("packages/parcel/srcs"))
+    fs.create_directory(Path::new("packages/atlaspack/srcs"))
       .unwrap();
 
-    fs.create_directory(Path::new("packages/parcel/descendent/src"))
+    fs.create_directory(Path::new("packages/atlaspack/descendent/src"))
       .unwrap();
 
     assert_eq!(
       find_ancestor_directory(
         &fs,
         &["src"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
       None
@@ -131,12 +131,12 @@ mod tests {
     fs.write_file(Path::new("packages.json"), String::from("{}"));
 
     fs.write_file(
-      Path::new("packages/parcel/packages.json"),
+      Path::new("packages/atlaspack/packages.json"),
       String::from("{}"),
     );
 
     fs.write_file(
-      Path::new("packages/parcel/descendent/package.json"),
+      Path::new("packages/atlaspack/descendent/package.json"),
       String::from("{}"),
     );
 
@@ -144,7 +144,7 @@ mod tests {
       find_ancestor_file(
         &fs,
         &["package.json"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
       None
@@ -155,13 +155,13 @@ mod tests {
   fn returns_none_when_ancestor_directory_is_a_file() {
     let fs = InMemoryFileSystem::default();
 
-    fs.write_file(Path::new("packages/parcel/src.js"), String::default());
+    fs.write_file(Path::new("packages/atlaspack/src.js"), String::default());
 
     assert_eq!(
       find_ancestor_directory(
         &fs,
         &["src"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
       None
@@ -172,14 +172,14 @@ mod tests {
   fn returns_none_when_ancestor_file_is_a_directory() {
     let fs = InMemoryFileSystem::default();
 
-    fs.create_directory(Path::new("packages/parcel/package.json"))
+    fs.create_directory(Path::new("packages/atlaspack/package.json"))
       .unwrap();
 
     assert_eq!(
       find_ancestor_file(
         &fs,
         &["package.json"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
       None
@@ -196,7 +196,7 @@ mod tests {
       find_ancestor_directory(
         &fs,
         &["src"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::from("packages")
       ),
       None
@@ -213,7 +213,7 @@ mod tests {
       find_ancestor_file(
         &fs,
         &["package.json"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::from("packages")
       ),
       None
@@ -226,52 +226,52 @@ mod tests {
 
     fs.create_directory(Path::new("dist")).unwrap();
     fs.create_directory(Path::new("packages/dist")).unwrap();
-    fs.create_directory(Path::new("packages/parcel/dist"))
+    fs.create_directory(Path::new("packages/atlaspack/dist"))
       .unwrap();
 
     fs.create_directory(Path::new("src")).unwrap();
     fs.create_directory(Path::new("packages/src")).unwrap();
-    fs.create_directory(Path::new("packages/parcel/src"))
+    fs.create_directory(Path::new("packages/atlaspack/src"))
       .unwrap();
 
     assert_eq!(
       find_ancestor_directory(
         &fs,
         &["dist"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/dist"))
+      Some(PathBuf::from("packages/atlaspack/dist"))
     );
 
     assert_eq!(
       find_ancestor_directory(
         &fs,
         &["src"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/src"))
+      Some(PathBuf::from("packages/atlaspack/src"))
     );
 
     assert_eq!(
       find_ancestor_directory(
         &fs,
         &["dist", "src"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/dist"))
+      Some(PathBuf::from("packages/atlaspack/dist"))
     );
 
     assert_eq!(
       find_ancestor_directory(
         &fs,
         &["src", "dist"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/src"))
+      Some(PathBuf::from("packages/atlaspack/src"))
     );
   }
 
@@ -281,13 +281,13 @@ mod tests {
 
     fs.create_directory(Path::new("src")).unwrap();
     fs.create_directory(Path::new("packages/src")).unwrap();
-    fs.create_directory(Path::new("packages/parcel/src"))
+    fs.create_directory(Path::new("packages/atlaspack/src"))
       .unwrap();
 
     fs.write_file(Path::new("package.json"), String::from("{}"));
     fs.write_file(Path::new("packages/package.json"), String::from("{}"));
     fs.write_file(
-      Path::new("packages/parcel/package.json"),
+      Path::new("packages/atlaspack/package.json"),
       String::from("{}"),
     );
 
@@ -295,40 +295,40 @@ mod tests {
       find_ancestor(
         &fs,
         &[Entry::Directory("src")],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/src"))
+      Some(PathBuf::from("packages/atlaspack/src"))
     );
 
     assert_eq!(
       find_ancestor(
         &fs,
         &[Entry::File("package.json")],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/package.json"))
+      Some(PathBuf::from("packages/atlaspack/package.json"))
     );
 
     assert_eq!(
       find_ancestor(
         &fs,
         &[Entry::Directory("src"), Entry::File("package.json")],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/src"))
+      Some(PathBuf::from("packages/atlaspack/src"))
     );
 
     assert_eq!(
       find_ancestor(
         &fs,
         &[Entry::File("package.json"), Entry::Directory("src")],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/package.json"))
+      Some(PathBuf::from("packages/atlaspack/package.json"))
     );
   }
 
@@ -339,14 +339,14 @@ mod tests {
     fs.write_file(Path::new("package.json"), String::from("{}"));
     fs.write_file(Path::new("packages/package.json"), String::from("{}"));
     fs.write_file(
-      Path::new("packages/parcel/package.json"),
+      Path::new("packages/atlaspack/package.json"),
       String::from("{}"),
     );
 
     fs.write_file(Path::new("package-lock.json"), String::from("{}"));
     fs.write_file(Path::new("packages/package-lock.json"), String::from("{}"));
     fs.write_file(
-      Path::new("packages/parcel/package-lock.json"),
+      Path::new("packages/atlaspack/package-lock.json"),
       String::from("{}"),
     );
 
@@ -354,40 +354,40 @@ mod tests {
       find_ancestor_file(
         &fs,
         &["package.json"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/package.json"))
+      Some(PathBuf::from("packages/atlaspack/package.json"))
     );
 
     assert_eq!(
       find_ancestor_file(
         &fs,
         &["package-lock.json"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/package-lock.json"))
+      Some(PathBuf::from("packages/atlaspack/package-lock.json"))
     );
 
     assert_eq!(
       find_ancestor_file(
         &fs,
         &["package.json", "package-lock.json"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/package.json"))
+      Some(PathBuf::from("packages/atlaspack/package.json"))
     );
 
     assert_eq!(
       find_ancestor_file(
         &fs,
         &["package-lock.json", "package.json"],
-        PathBuf::from("packages/parcel"),
+        PathBuf::from("packages/atlaspack"),
         PathBuf::default()
       ),
-      Some(PathBuf::from("packages/parcel/package-lock.json"))
+      Some(PathBuf::from("packages/atlaspack/package-lock.json"))
     );
   }
 }

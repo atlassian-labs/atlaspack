@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use parcel_filesystem::search::find_ancestor_file;
-use parcel_filesystem::FileSystemRef;
+use atlaspack_filesystem::search::find_ancestor_file;
+use atlaspack_filesystem::FileSystemRef;
 use serde::de::DeserializeOwned;
 
 use crate::{
@@ -77,7 +77,7 @@ impl ConfigLoader {
 
 #[cfg(test)]
 mod tests {
-  use parcel_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
   use super::*;
 
@@ -230,7 +230,7 @@ mod tests {
       String::from(
         r#"
         {
-          "name": "parcel",
+          "name": "atlaspack",
           "version": "1.0.0",
           "plugin": {
             "enabled": true

@@ -4,10 +4,10 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use parcel_core::config_loader::ConfigLoaderRef;
-use parcel_core::diagnostic_error;
-use parcel_core::types::ParcelOptions;
-use parcel_filesystem::FileSystemRef;
+use atlaspack_core::config_loader::ConfigLoaderRef;
+use atlaspack_core::diagnostic_error;
+use atlaspack_core::types::ParcelOptions;
+use atlaspack_filesystem::FileSystemRef;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
 
@@ -23,7 +23,7 @@ use super::ResultAndInvalidations;
 use super::RunRequestError;
 use super::{RunRequestContext, RunRequestMessage};
 
-/// [`RequestTracker`] runs parcel work items and constructs a graph of their dependencies.
+/// [`RequestTracker`] runs atlaspack work items and constructs a graph of their dependencies.
 ///
 /// Whenever a [`Request`] implementation needs to get the result of another piece of work, it'll
 /// make a call into [`RequestTracker`] through its [`RunRequestContext`] abstraction. The request
@@ -99,7 +99,7 @@ impl RequestTracker {
       .thread_name(|count| format!("RequestTracker-{}", count))
       .num_threads(num_cpus::get() + 4)
       .panic_handler(|failure| {
-        tracing::error!("Lost thread from thread-pool. This is a bug in parcel. Builds may stall.");
+        tracing::error!("Lost thread from thread-pool. This is a bug in atlaspack. Builds may stall.");
         std::process::exit(1);
       })
       .build()?;

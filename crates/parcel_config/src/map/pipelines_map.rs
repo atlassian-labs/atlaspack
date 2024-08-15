@@ -7,7 +7,7 @@ use serde::Serialize;
 use super::pattern_matcher;
 use crate::PluginNode;
 
-/// Represents fields in .parcelrc that map a pattern to a list of plugin names
+/// Represents fields in .atlaspackrc that map a pattern to a list of plugin names
 ///
 /// # Examples
 ///
@@ -16,12 +16,12 @@ use crate::PluginNode;
 /// use std::sync::Arc;
 ///
 /// use indexmap::indexmap;
-/// use parcel_config::map::PipelinesMap;
-/// use parcel_config::PluginNode;
+/// use atlaspack_config::map::PipelinesMap;
+/// use atlaspack_config::PluginNode;
 ///
 /// PipelinesMap::new(indexmap! {
 ///   String::from("*") => vec![PluginNode {
-///     package_name: String::from("@parcel/compressor-raw"),
+///     package_name: String::from("@atlaspack/compressor-raw"),
 ///     resolve_from: Arc::new(PathBuf::default()),
 ///   }]
 /// });
@@ -48,12 +48,12 @@ impl PipelinesMap {
   /// use std::sync::Arc;
   ///
   /// use indexmap::indexmap;
-  /// use parcel_config::map::PipelinesMap;
-  /// use parcel_config::PluginNode;
+  /// use atlaspack_config::map::PipelinesMap;
+  /// use atlaspack_config::PluginNode;
   ///
   /// let pipelines_map = PipelinesMap::new(indexmap! {
   ///   String::from("*") => vec![PluginNode {
-  ///     package_name: String::from("@parcel/compressor-raw"),
+  ///     package_name: String::from("@atlaspack/compressor-raw"),
   ///     resolve_from: Arc::new(PathBuf::default()),
   ///   }]
   /// });
@@ -84,7 +84,7 @@ mod tests {
 
   fn pipelines(name: &str) -> Vec<PluginNode> {
     vec![PluginNode {
-      package_name: format!("@parcel/plugin-{}", name),
+      package_name: format!("@atlaspack/plugin-{}", name),
       resolve_from: Arc::new(PathBuf::default()),
     }]
   }

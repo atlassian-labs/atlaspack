@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use serde::Serialize;
 
-use parcel_filesystem::FileSystemRef;
+use atlaspack_filesystem::FileSystemRef;
 
 use crate::types::{Asset, Code, Dependency, Environment, FileType, SpecifierType};
 

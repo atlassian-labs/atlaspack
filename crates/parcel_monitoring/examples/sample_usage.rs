@@ -2,7 +2,7 @@
 
 use minidumper::Server;
 
-use parcel_monitoring::{
+use atlaspack_monitoring::{
   initialize_monitoring, CrashReporterOptions, MonitoringOptions, MONITORING_GUARD,
 };
 

@@ -15,7 +15,7 @@ use super::OutputFormat;
 pub struct ParcelOptions {
   pub config: Option<String>,
 
-  /// Path to the parcel core node_module. This will be used to resolve built-ins or runtime files.
+  /// Path to the atlaspack core node_module. This will be used to resolve built-ins or runtime files.
   ///
   /// In the future this may be replaced with embedding those files into the rust binary.
   pub core_path: PathBuf,

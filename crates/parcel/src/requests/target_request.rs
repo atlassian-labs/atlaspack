@@ -12,22 +12,22 @@ use package_json::PackageJson;
 use package_json::SourceField;
 use package_json::SourceMapField;
 use package_json::TargetDescriptor;
-use parcel_core::config_loader::ConfigFile;
-use parcel_core::diagnostic_error;
-use parcel_core::types::engines::Engines;
-use parcel_core::types::BuildMode;
-use parcel_core::types::CodeFrame;
-use parcel_core::types::DefaultTargetOptions;
-use parcel_core::types::Diagnostic;
-use parcel_core::types::DiagnosticBuilder;
-use parcel_core::types::Environment;
-use parcel_core::types::EnvironmentContext;
-use parcel_core::types::ErrorKind;
-use parcel_core::types::OutputFormat;
-use parcel_core::types::SourceType;
-use parcel_core::types::Target;
-use parcel_core::types::TargetSourceMapOptions;
-use parcel_resolver::IncludeNodeModules;
+use atlaspack_core::config_loader::ConfigFile;
+use atlaspack_core::diagnostic_error;
+use atlaspack_core::types::engines::Engines;
+use atlaspack_core::types::BuildMode;
+use atlaspack_core::types::CodeFrame;
+use atlaspack_core::types::DefaultTargetOptions;
+use atlaspack_core::types::Diagnostic;
+use atlaspack_core::types::DiagnosticBuilder;
+use atlaspack_core::types::Environment;
+use atlaspack_core::types::EnvironmentContext;
+use atlaspack_core::types::ErrorKind;
+use atlaspack_core::types::OutputFormat;
+use atlaspack_core::types::SourceType;
+use atlaspack_core::types::Target;
+use atlaspack_core::types::TargetSourceMapOptions;
+use atlaspack_resolver::IncludeNodeModules;
 
 use crate::request_tracker::Request;
 use crate::request_tracker::ResultAndInvalidations;
@@ -592,8 +592,8 @@ mod tests {
 
   use regex::Regex;
 
-  use parcel_core::types::{browsers::Browsers, version::Version};
-  use parcel_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_core::types::{browsers::Browsers, version::Version};
+  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
 

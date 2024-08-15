@@ -1,11 +1,11 @@
 use std::fmt;
 use std::fmt::Debug;
 
-use parcel_config::PluginNode;
-use parcel_core::plugin::PackageContext;
-use parcel_core::plugin::PackagedBundle;
-use parcel_core::plugin::PackagerPlugin;
-use parcel_core::plugin::PluginContext;
+use atlaspack_config::PluginNode;
+use atlaspack_core::plugin::PackageContext;
+use atlaspack_core::plugin::PackagedBundle;
+use atlaspack_core::plugin::PackagerPlugin;
+use atlaspack_core::plugin::PluginContext;
 
 pub struct RpcPackagerPlugin {
   _name: String,

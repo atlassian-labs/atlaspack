@@ -1,21 +1,21 @@
 use std::{borrow::Cow, path::PathBuf};
 
 use anyhow::anyhow;
-use parcel_filesystem::FileSystemRef;
-use parcel_resolver::{Resolution, SpecifierType};
+use atlaspack_filesystem::FileSystemRef;
+use atlaspack_resolver::{Resolution, SpecifierType};
 
 use crate::PackageManager;
 
 pub struct NodePackageManager<'a> {
-  resolver: parcel_resolver::Resolver<'a>,
+  resolver: atlaspack_resolver::Resolver<'a>,
 }
 
 impl<'a> NodePackageManager<'a> {
   pub fn new(project_root: PathBuf, fs: FileSystemRef) -> Self {
     Self {
-      resolver: parcel_resolver::Resolver::node(
+      resolver: atlaspack_resolver::Resolver::node(
         Cow::Owned(project_root),
-        parcel_resolver::CacheCow::Owned(parcel_resolver::Cache::new(fs)),
+        atlaspack_resolver::CacheCow::Owned(atlaspack_resolver::Cache::new(fs)),
       ),
     }
   }

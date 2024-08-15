@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use parcel_core::types::Symbol;
+use atlaspack_core::types::Symbol;
 
 use crate::transformer::conversion::loc::convert_loc;
 
@@ -19,7 +19,7 @@ macro_rules! convert_symbol {
 /// Convert from `[CollectImportedSymbol]` to `[Symbol]`
 pub(crate) fn transformer_collect_imported_symbol_to_symbol(
   asset_file_path: &Path,
-  symbol: &parcel_js_swc_core::CollectImportedSymbol,
+  symbol: &atlaspack_js_swc_core::CollectImportedSymbol,
 ) -> Symbol {
   convert_symbol!(asset_file_path, symbol)
 }
@@ -29,7 +29,7 @@ pub(crate) fn transformer_collect_imported_symbol_to_symbol(
 /// `ImportedSymbol` corresponds to `x`, `y` in `import { x, y } from 'other';`
 pub(crate) fn transformer_imported_symbol_to_symbol(
   asset_file_path: &Path,
-  symbol: &parcel_js_swc_core::ImportedSymbol,
+  symbol: &atlaspack_js_swc_core::ImportedSymbol,
 ) -> Symbol {
   convert_symbol!(asset_file_path, symbol)
 }
@@ -37,7 +37,7 @@ pub(crate) fn transformer_imported_symbol_to_symbol(
 /// Convert from `[ExportedSymbol]` to `[Symbol]`
 pub(crate) fn transformer_exported_symbol_into_symbol(
   asset_file_path: &Path,
-  symbol: &parcel_js_swc_core::ExportedSymbol,
+  symbol: &atlaspack_js_swc_core::ExportedSymbol,
 ) -> Symbol {
   Symbol {
     exported: symbol.exported.as_ref().into(),
@@ -52,7 +52,7 @@ pub(crate) fn transformer_exported_symbol_into_symbol(
 mod test {
   use std::path::PathBuf;
 
-  use parcel_core::types::{Location, SourceLocation};
+  use atlaspack_core::types::{Location, SourceLocation};
 
   use crate::transformer::test_helpers::{make_test_swc_config, run_swc_core_transform};
 
@@ -60,10 +60,10 @@ mod test {
 
   #[test]
   fn test_convert_collect_imported_symbol_to_symbol() {
-    use parcel_core::types::Symbol;
+    use atlaspack_core::types::Symbol;
 
-    let result = parcel_js_swc_core::transform(
-      parcel_js_swc_core::Config {
+    let result = atlaspack_js_swc_core::transform(
+      atlaspack_js_swc_core::Config {
         scope_hoist: false,
         ..make_test_swc_config(
           r#"
@@ -76,7 +76,7 @@ mod test {
     )
     .unwrap();
     let collect_result = result.symbol_result.unwrap();
-    let import: parcel_js_swc_core::CollectImportedSymbol = collect_result.imports[0].clone();
+    let import: atlaspack_js_swc_core::CollectImportedSymbol = collect_result.imports[0].clone();
 
     let result = transformer_collect_imported_symbol_to_symbol(&Path::new("test.js"), &import);
     assert_eq!(

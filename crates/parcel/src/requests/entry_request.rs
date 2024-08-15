@@ -57,7 +57,7 @@ impl Request for EntryRequest {
 mod tests {
   use std::sync::Arc;
 
-  use parcel_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
 
@@ -80,7 +80,7 @@ mod tests {
   #[test]
   fn returns_file_entry_from_project_root() {
     let fs = Arc::new(InMemoryFileSystem::default());
-    let project_root = PathBuf::from("parcel");
+    let project_root = PathBuf::from("atlaspack");
     let request = EntryRequest {
       entry: String::from("src/a.js"),
     };
@@ -126,7 +126,7 @@ mod tests {
 
     let entry = request_tracker(RequestTrackerTestOptions {
       fs,
-      project_root: PathBuf::from("parcel"),
+      project_root: PathBuf::from("atlaspack"),
       ..RequestTrackerTestOptions::default()
     })
     .run_request(request);

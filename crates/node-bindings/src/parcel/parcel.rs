@@ -9,14 +9,14 @@ use napi::JsObject;
 use napi::JsUnknown;
 use napi_derive::napi;
 
-use parcel::file_system::FileSystemRef;
-use parcel::rpc::nodejs::NodejsWorker;
-use parcel::rpc::nodejs::RpcHostNodejs;
-use parcel::rpc::RpcHostRef;
-use parcel::Parcel;
-use parcel_core::types::ParcelOptions;
-use parcel_napi_helpers::JsTransferable;
-use parcel_package_manager::PackageManagerRef;
+use atlaspack::file_system::FileSystemRef;
+use atlaspack::rpc::nodejs::NodejsWorker;
+use atlaspack::rpc::nodejs::RpcHostNodejs;
+use atlaspack::rpc::RpcHostRef;
+use atlaspack::Parcel;
+use atlaspack_core::types::ParcelOptions;
+use atlaspack_napi_helpers::JsTransferable;
+use atlaspack_package_manager::PackageManagerRef;
 
 use crate::file_system::FileSystemNapi;
 
@@ -54,7 +54,7 @@ impl ParcelNapi {
   #[napi(constructor)]
   pub fn new(napi_options: ParcelNapiOptions, env: Env) -> napi::Result<Self> {
     let thread_id = std::thread::current().id();
-    tracing::trace!(?thread_id, "parcel-napi initialize");
+    tracing::trace!(?thread_id, "atlaspack-napi initialize");
 
     // Wrap the JavaScript-supplied FileSystem
     let fs: Option<FileSystemRef> = if let Some(fs) = napi_options.fs {
@@ -102,7 +102,7 @@ impl ParcelNapi {
 
     self.register_workers(&options)?;
 
-    // Both the parcel initialization and build must be run a dedicated system thread so that
+    // Both the atlaspack initialization and build must be run a dedicated system thread so that
     // the napi threadsafe functions do not panic
     thread::spawn({
       let fs = self.fs.clone();
@@ -111,12 +111,12 @@ impl ParcelNapi {
       let rpc = self.rpc.clone();
 
       move || {
-        let parcel = Parcel::new(fs, options, package_manager, rpc);
+        let atlaspack = Parcel::new(fs, options, package_manager, rpc);
         let to_napi_error = |error| napi::Error::from_reason(format!("{:?}", error));
 
-        match parcel {
+        match atlaspack {
           Err(error) => deferred.reject(to_napi_error(error)),
-          Ok(mut parcel) => match parcel.build() {
+          Ok(mut atlaspack) => match atlaspack.build() {
             Ok(build_result) => deferred.resolve(move |env| env.to_js_value(&build_result)),
             Err(error) => deferred.reject(to_napi_error(error)),
           },
@@ -137,7 +137,7 @@ impl ParcelNapi {
 
     self.register_workers(&options)?;
 
-    // Both the parcel initialisation and build must be run a dedicated system thread so that
+    // Both the atlaspack initialisation and build must be run a dedicated system thread so that
     // the napi threadsafe functions do not panic
     thread::spawn({
       let fs = self.fs.clone();
@@ -146,12 +146,12 @@ impl ParcelNapi {
       let rpc = self.rpc.clone();
 
       move || {
-        let parcel = Parcel::new(fs, options, package_manager, rpc);
+        let atlaspack = Parcel::new(fs, options, package_manager, rpc);
         let to_napi_error = |error| napi::Error::from_reason(format!("{:?}", error));
 
-        match parcel {
+        match atlaspack {
           Err(error) => deferred.reject(to_napi_error(error)),
-          Ok(mut parcel) => match parcel.build_asset_graph() {
+          Ok(mut atlaspack) => match atlaspack.build_asset_graph() {
             Ok(asset_graph) => deferred.resolve(move |env| env.to_js_value(&asset_graph)),
             Err(error) => deferred.reject(to_napi_error(error)),
           },

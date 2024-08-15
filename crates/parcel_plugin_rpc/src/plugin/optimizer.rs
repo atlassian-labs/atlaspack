@@ -1,11 +1,11 @@
 use std::fmt;
 use std::fmt::Debug;
 
-use parcel_config::PluginNode;
-use parcel_core::plugin::OptimizeContext;
-use parcel_core::plugin::OptimizedBundle;
-use parcel_core::plugin::OptimizerPlugin;
-use parcel_core::plugin::PluginContext;
+use atlaspack_config::PluginNode;
+use atlaspack_core::plugin::OptimizeContext;
+use atlaspack_core::plugin::OptimizedBundle;
+use atlaspack_core::plugin::OptimizerPlugin;
+use atlaspack_core::plugin::PluginContext;
 
 pub struct RpcOptimizerPlugin {
   _name: String,

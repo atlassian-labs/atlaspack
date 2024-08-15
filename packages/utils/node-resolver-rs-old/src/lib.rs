@@ -8,7 +8,7 @@ use once_cell::unsync::OnceCell;
 use package_json::AliasValue;
 use package_json::ExportsResolution;
 use package_json::PackageJson;
-pub use parcel_core::types::IncludeNodeModules;
+pub use atlaspack_core::types::IncludeNodeModules;
 use tsconfig::TsConfig;
 
 mod builtins;
@@ -30,8 +30,8 @@ pub use package_json::Fields;
 pub use package_json::ModuleType;
 pub use package_json::PackageJsonError;
 #[cfg(not(target_arch = "wasm32"))]
-pub use parcel_filesystem::os_file_system::OsFileSystem;
-pub use parcel_filesystem::FileSystem;
+pub use atlaspack_filesystem::os_file_system::OsFileSystem;
+pub use atlaspack_filesystem::FileSystem;
 pub use specifier::parse_package_specifier;
 pub use specifier::parse_scheme;
 pub use specifier::Specifier;
@@ -158,7 +158,7 @@ impl<'a> Resolver<'a> {
     }
   }
 
-  pub fn parcel(project_root: Cow<'a, Path>, cache: CacheCow<'a>) -> Self {
+  pub fn atlaspack(project_root: Cow<'a, Path>, cache: CacheCow<'a>) -> Self {
     Self {
       project_root,
       extensions: Extensions::Borrowed(&["mjs", "js", "jsx", "cjs", "json"]),
@@ -1213,7 +1213,7 @@ mod tests {
   }
 
   fn test_resolver<'a>() -> Resolver<'a> {
-    Resolver::parcel(
+    Resolver::atlaspack(
       root().into(),
       CacheCow::Owned(Cache::new(Arc::new(OsFileSystem))),
     )

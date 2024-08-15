@@ -1,6 +1,6 @@
 use std::path::{Component, Components, Path, PathBuf};
 
-use parcel_filesystem::{
+use atlaspack_filesystem::{
   search::{find_ancestor_directory, find_ancestor_file},
   FileSystemRef,
 };
@@ -107,8 +107,8 @@ pub fn infer_project_root(
 mod tests {
   use std::sync::Arc;
 
-  use parcel_filesystem::in_memory_file_system::InMemoryFileSystem;
-  use parcel_resolver::FileSystem;
+  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_resolver::FileSystem;
 
   use super::*;
 
@@ -222,7 +222,7 @@ mod tests {
   }
 
   fn cwd() -> PathBuf {
-    root().join("parcel")
+    root().join("atlaspack")
   }
 
   #[test]

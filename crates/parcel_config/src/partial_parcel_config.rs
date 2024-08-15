@@ -3,12 +3,12 @@ use std::sync::Arc;
 
 use derive_builder::Builder;
 use indexmap::IndexMap;
-use parcel_core::types::DiagnosticError;
+use atlaspack_core::types::DiagnosticError;
 
-use super::parcel_config::PluginNode;
-use super::parcel_rc::ParcelRcFile;
+use super::atlaspack_config::PluginNode;
+use super::atlaspack_rc::ParcelRcFile;
 
-/// An intermediate representation of the .parcelrc config
+/// An intermediate representation of the .atlaspackrc config
 ///
 /// This data structure is used to perform configuration merging, to eventually create a compelete ParcelConfig.
 ///

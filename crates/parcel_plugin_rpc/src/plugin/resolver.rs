@@ -1,11 +1,11 @@
 use std::fmt;
 use std::fmt::Debug;
 
-use parcel_config::PluginNode;
-use parcel_core::plugin::PluginContext;
-use parcel_core::plugin::ResolveContext;
-use parcel_core::plugin::Resolved;
-use parcel_core::plugin::ResolverPlugin;
+use atlaspack_config::PluginNode;
+use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::ResolveContext;
+use atlaspack_core::plugin::Resolved;
+use atlaspack_core::plugin::ResolverPlugin;
 
 #[derive(Hash)]
 pub struct RpcResolverPlugin {}

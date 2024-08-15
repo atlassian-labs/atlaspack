@@ -2,10 +2,10 @@ use std::fmt;
 use std::fmt::Debug;
 use std::fs::File;
 
-use parcel_config::PluginNode;
-use parcel_core::plugin::CompressedFile;
-use parcel_core::plugin::CompressorPlugin;
-use parcel_core::plugin::PluginContext;
+use atlaspack_config::PluginNode;
+use atlaspack_core::plugin::CompressedFile;
+use atlaspack_core::plugin::CompressorPlugin;
+use atlaspack_core::plugin::PluginContext;
 
 pub struct RpcCompressorPlugin {
   _name: String,

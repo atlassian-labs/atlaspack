@@ -1,9 +1,9 @@
-use parcel_core::types::{Priority, SpecifierType};
+use atlaspack_core::types::{Priority, SpecifierType};
 
 pub(crate) fn convert_priority(
-  transformer_dependency: &parcel_js_swc_core::DependencyDescriptor,
+  transformer_dependency: &atlaspack_js_swc_core::DependencyDescriptor,
 ) -> Priority {
-  use parcel_js_swc_core::DependencyKind;
+  use atlaspack_js_swc_core::DependencyKind;
 
   match transformer_dependency.kind {
     DependencyKind::DynamicImport => Priority::Lazy,
@@ -19,9 +19,9 @@ pub(crate) fn convert_priority(
 }
 
 pub(crate) fn convert_specifier_type(
-  transformer_dependency: &parcel_js_swc_core::DependencyDescriptor,
+  transformer_dependency: &atlaspack_js_swc_core::DependencyDescriptor,
 ) -> SpecifierType {
-  use parcel_js_swc_core::DependencyKind;
+  use atlaspack_js_swc_core::DependencyKind;
 
   match transformer_dependency.kind {
     DependencyKind::Require => SpecifierType::CommonJS,
@@ -39,7 +39,7 @@ pub(crate) fn convert_specifier_type(
 #[cfg(test)]
 mod test {
   use crate::transformer::test_helpers::run_swc_core_transform;
-  use parcel_js_swc_core::DependencyKind;
+  use atlaspack_js_swc_core::DependencyKind;
 
   use super::*;
 
@@ -142,7 +142,7 @@ mod test {
   }
 
   // This test-case can't be written right now because in order to parse inline-fs
-  // declarations, parcel needs to canonicalize paths, meaning that it does not work
+  // declarations, atlaspack needs to canonicalize paths, meaning that it does not work
   // unless the source/project and read files exist on disk.
   //
   // Running this test at the moment will fail because the `import fs` will be returned
@@ -163,7 +163,7 @@ mod test {
   }
 
   /// Run the SWC transformer and return the last dependency descriptor listed.
-  fn get_last_dependency(source: &str) -> parcel_js_swc_core::DependencyDescriptor {
+  fn get_last_dependency(source: &str) -> atlaspack_js_swc_core::DependencyDescriptor {
     let swc_output = run_swc_core_transform(source);
     swc_output.dependencies.last().unwrap().clone()
   }

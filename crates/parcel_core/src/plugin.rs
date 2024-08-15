@@ -18,7 +18,7 @@ mod packager_plugin;
 pub use packager_plugin::*;
 
 mod reporter_plugin;
-use parcel_filesystem::FileSystemRef;
+use atlaspack_filesystem::FileSystemRef;
 pub use reporter_plugin::*;
 
 mod resolver_plugin;

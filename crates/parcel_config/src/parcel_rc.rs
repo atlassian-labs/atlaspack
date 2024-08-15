@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use indexmap::IndexMap;
-use parcel_core::types::File;
+use atlaspack_core::types::File;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -11,7 +11,7 @@ pub enum Extends {
   Many(Vec<String>),
 }
 
-/// Deserialized .parcel_rc config
+/// Deserialized .atlaspack_rc config
 #[derive(Debug, Deserialize)]
 pub struct ParcelRc {
   pub extends: Option<Extends>,
@@ -27,7 +27,7 @@ pub struct ParcelRc {
   pub validators: Option<IndexMap<String, Vec<String>>>,
 }
 
-/// Represents the .parcel_rc config file
+/// Represents the .atlaspack_rc config file
 #[derive(Debug)]
 pub struct ParcelRcFile {
   pub contents: ParcelRc,
@@ -36,10 +36,10 @@ pub struct ParcelRcFile {
 }
 
 impl From<&ParcelRcFile> for File {
-  fn from(parcel_rc: &ParcelRcFile) -> Self {
+  fn from(atlaspack_rc: &ParcelRcFile) -> Self {
     File {
-      contents: parcel_rc.raw.clone(),
-      path: parcel_rc.path.clone(),
+      contents: atlaspack_rc.raw.clone(),
+      path: atlaspack_rc.path.clone(),
     }
   }
 }

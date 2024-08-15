@@ -5,31 +5,31 @@ use std::hash::Hash;
 use std::path::Path;
 use std::sync::Arc;
 
-use parcel_core::diagnostic_error;
-use parcel_core::plugin::PluginContext;
-use parcel_core::plugin::PluginOptions;
-use parcel_core::plugin::Resolution;
-use parcel_core::plugin::ResolveContext;
-use parcel_core::plugin::Resolved;
-use parcel_core::plugin::ResolvedResolution;
-use parcel_core::plugin::ResolverPlugin;
-use parcel_core::types::BuildMode;
-use parcel_core::types::CodeFrame;
-use parcel_core::types::CodeHighlight;
-use parcel_core::types::DiagnosticBuilder;
-use parcel_core::types::EnvironmentContext;
-use parcel_core::types::ErrorKind;
-use parcel_core::types::SpecifierType;
-use parcel_resolver::Cache;
-use parcel_resolver::CacheCow;
-use parcel_resolver::ExportsCondition;
-use parcel_resolver::Fields;
-use parcel_resolver::IncludeNodeModules;
-use parcel_resolver::PackageJsonError;
-use parcel_resolver::ResolveOptions;
-use parcel_resolver::Resolver;
-use parcel_resolver::ResolverError;
-use parcel_resolver::SpecifierError;
+use atlaspack_core::diagnostic_error;
+use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::PluginOptions;
+use atlaspack_core::plugin::Resolution;
+use atlaspack_core::plugin::ResolveContext;
+use atlaspack_core::plugin::Resolved;
+use atlaspack_core::plugin::ResolvedResolution;
+use atlaspack_core::plugin::ResolverPlugin;
+use atlaspack_core::types::BuildMode;
+use atlaspack_core::types::CodeFrame;
+use atlaspack_core::types::CodeHighlight;
+use atlaspack_core::types::DiagnosticBuilder;
+use atlaspack_core::types::EnvironmentContext;
+use atlaspack_core::types::ErrorKind;
+use atlaspack_core::types::SpecifierType;
+use atlaspack_resolver::Cache;
+use atlaspack_resolver::CacheCow;
+use atlaspack_resolver::ExportsCondition;
+use atlaspack_resolver::Fields;
+use atlaspack_resolver::IncludeNodeModules;
+use atlaspack_resolver::PackageJsonError;
+use atlaspack_resolver::ResolveOptions;
+use atlaspack_resolver::Resolver;
+use atlaspack_resolver::ResolverError;
+use atlaspack_resolver::SpecifierError;
 
 pub struct ParcelResolver {
   cache: Cache,
@@ -245,7 +245,7 @@ impl Hash for ParcelResolver {
 
 impl ResolverPlugin for ParcelResolver {
   fn resolve(&self, ctx: ResolveContext) -> anyhow::Result<Resolved> {
-    let mut resolver = Resolver::parcel(
+    let mut resolver = Resolver::atlaspack(
       Cow::Borrowed(&self.options.project_root),
       CacheCow::Borrowed(&self.cache),
     );
@@ -305,16 +305,16 @@ impl ResolverPlugin for ParcelResolver {
       &ctx.specifier,
       &resolve_from,
       match ctx.dependency.specifier_type {
-        SpecifierType::CommonJS => parcel_resolver::SpecifierType::Cjs,
-        SpecifierType::Esm => parcel_resolver::SpecifierType::Esm,
-        SpecifierType::Url => parcel_resolver::SpecifierType::Url,
+        SpecifierType::CommonJS => atlaspack_resolver::SpecifierType::Cjs,
+        SpecifierType::Esm => atlaspack_resolver::SpecifierType::Esm,
+        SpecifierType::Url => atlaspack_resolver::SpecifierType::Url,
         // TODO: what should specifier custom map to?
-        SpecifierType::Custom => parcel_resolver::SpecifierType::Esm,
+        SpecifierType::Custom => atlaspack_resolver::SpecifierType::Esm,
       },
       resolve_options,
     );
 
-    let side_effects = if let Ok((parcel_resolver::Resolution::Path(p), _)) = &res.result {
+    let side_effects = if let Ok((atlaspack_resolver::Resolution::Path(p), _)) = &res.result {
       match resolver.resolve_side_effects(p, &res.invalidations) {
         Ok(side_effects) => side_effects,
         Err(err) => {
@@ -333,7 +333,7 @@ impl ResolverPlugin for ParcelResolver {
       .map_err(|err| self.to_diagnostic_error(&ctx.specifier, err))?;
 
     match resolution {
-      (parcel_resolver::Resolution::Path(path), _invalidations) => Ok(Resolved {
+      (atlaspack_resolver::Resolution::Path(path), _invalidations) => Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Resolved(ResolvedResolution {
           file_path: path,
@@ -341,10 +341,10 @@ impl ResolverPlugin for ParcelResolver {
           ..ResolvedResolution::default()
         }),
       }),
-      (parcel_resolver::Resolution::Builtin(builtin), _invalidations) => {
+      (atlaspack_resolver::Resolution::Builtin(builtin), _invalidations) => {
         self.resolve_builtin(&ctx, builtin)
       }
-      (parcel_resolver::Resolution::Empty, _invalidations) => Ok(Resolved {
+      (atlaspack_resolver::Resolution::Empty, _invalidations) => Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Resolved(ResolvedResolution {
           file_path: self
@@ -355,7 +355,7 @@ impl ResolverPlugin for ParcelResolver {
           ..ResolvedResolution::default()
         }),
       }),
-      (parcel_resolver::Resolution::External, _invalidations) => {
+      (atlaspack_resolver::Resolution::External, _invalidations) => {
         if let Some(_source_path) = &ctx.dependency.source_path {
           if ctx.dependency.env.is_library && ctx.dependency.specifier_type != SpecifierType::Url {
             todo!("check excluded dependency for libraries");
@@ -367,7 +367,7 @@ impl ResolverPlugin for ParcelResolver {
           resolution: Resolution::Excluded,
         })
       }
-      (parcel_resolver::Resolution::Global(global), _invalidations) => Ok(Resolved {
+      (atlaspack_resolver::Resolution::Global(global), _invalidations) => Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Resolved(ResolvedResolution {
           code: Some(format!("module.exports={};", global)),
@@ -384,14 +384,14 @@ fn should_include_node_module(include_node_modules: &IncludeNodeModules, name: &
   match include_node_modules {
     IncludeNodeModules::Bool(b) => *b,
     IncludeNodeModules::Array(arr) => {
-      let Ok((module, _)) = parcel_resolver::parse_package_specifier(name) else {
+      let Ok((module, _)) = atlaspack_resolver::parse_package_specifier(name) else {
         return true;
       };
 
       arr.iter().any(|m| m.as_str() == module)
     }
     IncludeNodeModules::Map(map) => {
-      let Ok((module, _)) = parcel_resolver::parse_package_specifier(name) else {
+      let Ok((module, _)) = atlaspack_resolver::parse_package_specifier(name) else {
         return true;
       };
 
@@ -403,12 +403,12 @@ fn should_include_node_module(include_node_modules: &IncludeNodeModules, name: &
 #[cfg(test)]
 mod test {
   use super::*;
-  use parcel_core::{
+  use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::PluginLogger,
     types::{Dependency, Diagnostic, ErrorKind},
   };
-  use parcel_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use std::path::PathBuf;
 
   fn plugin_context(fs: InMemoryFileSystem) -> PluginContext {
@@ -455,7 +455,7 @@ mod test {
         kind: ErrorKind::NotFound,
         hints: Vec::new(),
         message: String::from("Cannot find module 'foo.js'"),
-        origin: Some(String::from("parcel_plugin_resolver::parcel_resolver"))
+        origin: Some(String::from("atlaspack_plugin_resolver::atlaspack_resolver"))
       }
     );
   }
@@ -488,7 +488,7 @@ mod test {
         hints: Vec::new(),
         kind: ErrorKind::Unknown,
         message: String::from("Module 'foo/bar' is not exported from the 'foo' package"),
-        origin: Some(String::from("parcel_plugin_resolver::parcel_resolver"))
+        origin: Some(String::from("atlaspack_plugin_resolver::atlaspack_resolver"))
       }
     );
   }

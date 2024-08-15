@@ -1,21 +1,21 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use parcel_config::parcel_rc_config_loader::LoadConfigOptions;
-use parcel_config::parcel_rc_config_loader::ParcelRcConfigLoader;
-use parcel_core::asset_graph::AssetGraph;
-use parcel_core::config_loader::ConfigLoader;
-use parcel_core::plugin::PluginContext;
-use parcel_core::plugin::PluginLogger;
-use parcel_core::plugin::PluginOptions;
-use parcel_core::plugin::ReporterEvent;
-use parcel_core::types::ParcelOptions;
-use parcel_filesystem::os_file_system::OsFileSystem;
-use parcel_filesystem::FileSystemRef;
-use parcel_package_manager::NodePackageManager;
-use parcel_package_manager::PackageManagerRef;
-use parcel_plugin_rpc::RpcHostRef;
-use parcel_plugin_rpc::RpcWorkerRef;
+use atlaspack_config::atlaspack_rc_config_loader::LoadConfigOptions;
+use atlaspack_config::atlaspack_rc_config_loader::ParcelRcConfigLoader;
+use atlaspack_core::asset_graph::AssetGraph;
+use atlaspack_core::config_loader::ConfigLoader;
+use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::PluginLogger;
+use atlaspack_core::plugin::PluginOptions;
+use atlaspack_core::plugin::ReporterEvent;
+use atlaspack_core::types::ParcelOptions;
+use atlaspack_filesystem::os_file_system::OsFileSystem;
+use atlaspack_filesystem::FileSystemRef;
+use atlaspack_package_manager::NodePackageManager;
+use atlaspack_package_manager::PackageManagerRef;
+use atlaspack_plugin_rpc::RpcHostRef;
+use atlaspack_plugin_rpc::RpcWorkerRef;
 
 use crate::plugins::config_plugins::ConfigPlugins;
 use crate::plugins::PluginsRef;

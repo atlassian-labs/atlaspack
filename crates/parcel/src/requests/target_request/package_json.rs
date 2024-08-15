@@ -3,11 +3,11 @@ use std::ffi::OsStr;
 use std::fmt::Display;
 use std::path::PathBuf;
 
-use parcel_core::types::engines::Engines;
-use parcel_core::types::EnvironmentContext;
-use parcel_core::types::OutputFormat;
-use parcel_core::types::TargetSourceMapOptions;
-use parcel_resolver::IncludeNodeModules;
+use atlaspack_core::types::engines::Engines;
+use atlaspack_core::types::EnvironmentContext;
+use atlaspack_core::types::OutputFormat;
+use atlaspack_core::types::TargetSourceMapOptions;
+use atlaspack_resolver::IncludeNodeModules;
 use serde::Deserialize;
 use serde::Deserializer;
 

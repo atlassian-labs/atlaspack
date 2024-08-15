@@ -200,7 +200,7 @@ mod test {
 
   #[test]
   fn test_is_file() {
-    let cwd = PathBuf::from("parcel");
+    let cwd = PathBuf::from("atlaspack");
     let fs = InMemoryFileSystem::default();
 
     fs.write_file(&PathBuf::from("/foo/bar"), String::default());

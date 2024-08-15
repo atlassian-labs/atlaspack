@@ -6,26 +6,26 @@ use indexmap::indexmap;
 use indexmap::IndexMap;
 
 use super::map::NamedPipelinesMap;
-use super::parcel_config::ParcelConfig;
+use super::atlaspack_config::ParcelConfig;
 use crate::map::PipelineMap;
 use crate::map::PipelinesMap;
-use crate::parcel_config::PluginNode;
+use crate::atlaspack_config::PluginNode;
 
 pub struct ConfigFixture {
-  pub parcel_config: ParcelConfig,
-  pub parcel_rc: String,
+  pub atlaspack_config: ParcelConfig,
+  pub atlaspack_rc: String,
   pub path: PathBuf,
 }
 
 pub struct PartialConfigFixture {
-  pub parcel_rc: String,
+  pub atlaspack_rc: String,
   pub path: PathBuf,
 }
 
 pub struct ExtendedConfigFixture {
   pub base_config: PartialConfigFixture,
   pub extended_config: PartialConfigFixture,
-  pub parcel_config: ParcelConfig,
+  pub atlaspack_config: ParcelConfig,
 }
 
 pub fn config(project_root: &Path) -> (String, ConfigFixture) {
@@ -42,11 +42,11 @@ pub fn config(project_root: &Path) -> (String, ConfigFixture) {
 
 pub fn fallback_config(project_root: &Path) -> (String, ConfigFixture) {
   (
-    String::from("@parcel/config-default"),
+    String::from("@atlaspack/config-default"),
     default_config(Arc::new(
       project_root
         .join("node_modules")
-        .join("@parcel/config-default")
+        .join("@atlaspack/config-default")
         .join("index.json"),
     )),
   )
@@ -54,73 +54,73 @@ pub fn fallback_config(project_root: &Path) -> (String, ConfigFixture) {
 
 pub fn default_config(resolve_from: Arc<PathBuf>) -> ConfigFixture {
   ConfigFixture {
-    parcel_config: ParcelConfig {
+    atlaspack_config: ParcelConfig {
       bundler: PluginNode {
-        package_name: String::from("@parcel/bundler-default"),
+        package_name: String::from("@atlaspack/bundler-default"),
         resolve_from: resolve_from.clone(),
       },
       compressors: PipelinesMap::new(indexmap! {
         String::from("*") => vec!(PluginNode {
-          package_name: String::from("@parcel/compressor-raw"),
+          package_name: String::from("@atlaspack/compressor-raw"),
           resolve_from: resolve_from.clone(),
         })
       }),
       namers: vec![PluginNode {
-        package_name: String::from("@parcel/namer-default"),
+        package_name: String::from("@atlaspack/namer-default"),
         resolve_from: resolve_from.clone(),
       }],
       optimizers: NamedPipelinesMap::new(indexmap! {
         String::from("*.{js,mjs,cjs}") => vec!(PluginNode {
-          package_name: String::from("@parcel/optimizer-swc"),
+          package_name: String::from("@atlaspack/optimizer-swc"),
           resolve_from: resolve_from.clone(),
         })
       }),
       packagers: PipelineMap::new(indexmap! {
         String::from("*.{js,mjs,cjs}") => PluginNode {
-          package_name: String::from("@parcel/packager-js"),
+          package_name: String::from("@atlaspack/packager-js"),
           resolve_from: resolve_from.clone(),
         }
       }),
       reporters: vec![PluginNode {
-        package_name: String::from("@parcel/reporter-dev-server"),
+        package_name: String::from("@atlaspack/reporter-dev-server"),
         resolve_from: resolve_from.clone(),
       }],
       resolvers: vec![PluginNode {
-        package_name: String::from("@parcel/resolver-default"),
+        package_name: String::from("@atlaspack/resolver-default"),
         resolve_from: resolve_from.clone(),
       }],
       runtimes: vec![PluginNode {
-        package_name: String::from("@parcel/runtime-js"),
+        package_name: String::from("@atlaspack/runtime-js"),
         resolve_from: resolve_from.clone(),
       }],
       transformers: NamedPipelinesMap::new(indexmap! {
         String::from("*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}") => vec!(PluginNode {
-          package_name: String::from("@parcel/transformer-js"),
+          package_name: String::from("@atlaspack/transformer-js"),
           resolve_from: resolve_from.clone(),
         })
       }),
       validators: PipelinesMap::new(IndexMap::new()),
     },
-    parcel_rc: String::from(
+    atlaspack_rc: String::from(
       r#"
         {
-          "bundler": "@parcel/bundler-default",
+          "bundler": "@atlaspack/bundler-default",
           "compressors": {
-            "*": ["@parcel/compressor-raw"]
+            "*": ["@atlaspack/compressor-raw"]
           },
-          "namers": ["@parcel/namer-default"],
+          "namers": ["@atlaspack/namer-default"],
           "optimizers": {
-            "*.{js,mjs,cjs}": ["@parcel/optimizer-swc"]
+            "*.{js,mjs,cjs}": ["@atlaspack/optimizer-swc"]
           },
           "packagers": {
-            "*.{js,mjs,cjs}": "@parcel/packager-js"
+            "*.{js,mjs,cjs}": "@atlaspack/packager-js"
           },
-          "reporters": ["@parcel/reporter-dev-server"],
-          "resolvers": ["@parcel/resolver-default"],
-          "runtimes": ["@parcel/runtime-js"],
+          "reporters": ["@atlaspack/reporter-dev-server"],
+          "resolvers": ["@atlaspack/resolver-default"],
+          "runtimes": ["@atlaspack/runtime-js"],
           "transformers": {
             "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": [
-              "@parcel/transformer-js"
+              "@atlaspack/transformer-js"
             ],
           }
         }
@@ -137,65 +137,65 @@ fn extended_config_from(
   let extended_resolve_from = Arc::new(
     project_root
       .join("node_modules")
-      .join("@parcel/config-default")
+      .join("@atlaspack/config-default")
       .join("index.json"),
   );
 
   let extended_config = default_config(extended_resolve_from.clone());
 
   ExtendedConfigFixture {
-    parcel_config: ParcelConfig {
+    atlaspack_config: ParcelConfig {
       bundler: PluginNode {
-        package_name: String::from("@parcel/bundler-default"),
+        package_name: String::from("@atlaspack/bundler-default"),
         resolve_from: extended_resolve_from.clone(),
       },
       compressors: PipelinesMap::new(indexmap! {
         String::from("*") => vec!(PluginNode {
-          package_name: String::from("@parcel/compressor-raw"),
+          package_name: String::from("@atlaspack/compressor-raw"),
           resolve_from: extended_resolve_from.clone(),
         })
       }),
       namers: vec![PluginNode {
-        package_name: String::from("@parcel/namer-default"),
+        package_name: String::from("@atlaspack/namer-default"),
         resolve_from: extended_resolve_from.clone(),
       }],
       optimizers: NamedPipelinesMap::new(indexmap! {
         String::from("*.{js,mjs,cjs}") => vec!(PluginNode {
-          package_name: String::from("@parcel/optimizer-swc"),
+          package_name: String::from("@atlaspack/optimizer-swc"),
           resolve_from: extended_resolve_from.clone(),
         })
       }),
       packagers: PipelineMap::new(indexmap! {
         String::from("*.{js,mjs,cjs}") => PluginNode {
-          package_name: String::from("@parcel/packager-js"),
+          package_name: String::from("@atlaspack/packager-js"),
           resolve_from: extended_resolve_from.clone(),
         }
       }),
       reporters: vec![
         PluginNode {
-          package_name: String::from("@parcel/reporter-dev-server"),
+          package_name: String::from("@atlaspack/reporter-dev-server"),
           resolve_from: extended_resolve_from.clone(),
         },
         PluginNode {
-          package_name: String::from("@scope/parcel-metrics-reporter"),
+          package_name: String::from("@scope/atlaspack-metrics-reporter"),
           resolve_from: base_resolve_from.clone(),
         },
       ],
       resolvers: vec![PluginNode {
-        package_name: String::from("@parcel/resolver-default"),
+        package_name: String::from("@atlaspack/resolver-default"),
         resolve_from: extended_resolve_from.clone(),
       }],
       runtimes: vec![PluginNode {
-        package_name: String::from("@parcel/runtime-js"),
+        package_name: String::from("@atlaspack/runtime-js"),
         resolve_from: extended_resolve_from.clone(),
       }],
       transformers: NamedPipelinesMap::new(indexmap! {
         String::from("*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}") => vec!(PluginNode {
-          package_name: String::from("@parcel/transformer-js"),
+          package_name: String::from("@atlaspack/transformer-js"),
           resolve_from: extended_resolve_from.clone(),
         }),
         String::from("*.{ts,tsx}") => vec!(PluginNode {
-          package_name: String::from("@scope/parcel-transformer-ts"),
+          package_name: String::from("@scope/atlaspack-transformer-ts"),
           resolve_from: base_resolve_from.clone(),
         }),
       }),
@@ -203,14 +203,14 @@ fn extended_config_from(
     },
     base_config: PartialConfigFixture {
       path: PathBuf::from(base_resolve_from.as_os_str()),
-      parcel_rc: String::from(
+      atlaspack_rc: String::from(
         r#"
           {
-            "extends": "@parcel/config-default",
-            "reporters": ["...", "@scope/parcel-metrics-reporter"],
+            "extends": "@atlaspack/config-default",
+            "reporters": ["...", "@scope/atlaspack-metrics-reporter"],
             "transformers": {
               "*.{ts,tsx}": [
-                "@scope/parcel-transformer-ts",
+                "@scope/atlaspack-transformer-ts",
                 "..."
               ]
             }
@@ -220,13 +220,13 @@ fn extended_config_from(
     },
     extended_config: PartialConfigFixture {
       path: extended_config.path,
-      parcel_rc: extended_config.parcel_rc,
+      atlaspack_rc: extended_config.atlaspack_rc,
     },
   }
 }
 
 pub fn default_extended_config(project_root: &Path) -> ExtendedConfigFixture {
-  let base_resolve_from = Arc::from(project_root.join(".parcelrc"));
+  let base_resolve_from = Arc::from(project_root.join(".atlaspackrc"));
 
   extended_config_from(project_root, base_resolve_from)
 }

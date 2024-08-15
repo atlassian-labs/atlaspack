@@ -1,23 +1,23 @@
 use std::path::Path;
 use std::path::PathBuf;
 
-use parcel_core::diagnostic_error;
-use parcel_core::types::CodeFrame;
-use parcel_core::types::CodeHighlight;
-use parcel_core::types::DiagnosticBuilder;
-use parcel_core::types::DiagnosticError;
-use parcel_core::types::File;
-use parcel_filesystem::search::find_ancestor_file;
-use parcel_filesystem::FileSystemRef;
-use parcel_package_manager::PackageManagerRef;
+use atlaspack_core::diagnostic_error;
+use atlaspack_core::types::CodeFrame;
+use atlaspack_core::types::CodeHighlight;
+use atlaspack_core::types::DiagnosticBuilder;
+use atlaspack_core::types::DiagnosticError;
+use atlaspack_core::types::File;
+use atlaspack_filesystem::search::find_ancestor_file;
+use atlaspack_filesystem::FileSystemRef;
+use atlaspack_package_manager::PackageManagerRef;
 use pathdiff::diff_paths;
 use serde_json5::Location;
 
-use super::parcel_config::ParcelConfig;
-use super::parcel_config::PluginNode;
-use super::parcel_rc::Extends;
-use super::parcel_rc::ParcelRcFile;
-use super::partial_parcel_config::PartialParcelConfig;
+use super::atlaspack_config::ParcelConfig;
+use super::atlaspack_config::PluginNode;
+use super::atlaspack_rc::Extends;
+use super::atlaspack_rc::ParcelRcFile;
+use super::partial_atlaspack_config::PartialParcelConfig;
 
 #[derive(Default)]
 pub struct LoadConfigOptions<'a> {
@@ -26,11 +26,11 @@ pub struct LoadConfigOptions<'a> {
   /// A file path or package specifier that will be used to load the config from
   pub config: Option<&'a str>,
   /// A file path or package specifier that will be used to load the config from when no other
-  /// .parcelrc can be found
+  /// .atlaspackrc can be found
   pub fallback_config: Option<&'a str>,
 }
 
-/// Loads and validates .parcel_rc config
+/// Loads and validates .atlaspack_rc config
 pub struct ParcelRcConfigLoader {
   fs: FileSystemRef,
   package_manager: PackageManagerRef,
@@ -47,8 +47,8 @@ impl ParcelRcConfigLoader {
   fn find_config(&self, project_root: &Path, path: &Path) -> Result<PathBuf, DiagnosticError> {
     let from = path.parent().unwrap_or(path);
 
-    find_ancestor_file(&*self.fs, &[".parcelrc"], from, project_root)
-      .ok_or_else(|| diagnostic_error!("Unable to locate .parcelrc from {}", from.display()))
+    find_ancestor_file(&*self.fs, &[".atlaspackrc"], from, project_root)
+      .ok_or_else(|| diagnostic_error!("Unable to locate .atlaspackrc from {}", from.display()))
   }
 
   fn resolve_from(&self, project_root: &Path) -> PathBuf {
@@ -95,26 +95,26 @@ impl ParcelRcConfigLoader {
 
   fn resolve_extends(
     &self,
-    parcel_rc_file: &ParcelRcFile,
+    atlaspack_rc_file: &ParcelRcFile,
     extend: &str,
   ) -> Result<PathBuf, DiagnosticError> {
     let path = if extend.starts_with(".") {
-      parcel_rc_file
+      atlaspack_rc_file
         .path
         .parent()
-        .unwrap_or(&parcel_rc_file.path)
+        .unwrap_or(&atlaspack_rc_file.path)
         .join(extend)
     } else {
       self
         .package_manager
-        .resolve(extend, &parcel_rc_file.path)
+        .resolve(extend, &atlaspack_rc_file.path)
         .map_err(|source| {
           source.context(diagnostic_error!(DiagnosticBuilder::default()
             .message(format!(
               "Failed to resolve extended config {extend} from {}",
-              parcel_rc_file.path.display()
+              atlaspack_rc_file.path.display()
             ))
-            .code_frames(vec![CodeFrame::from(File::from(parcel_rc_file))])))
+            .code_frames(vec![CodeFrame::from(File::from(atlaspack_rc_file))])))
         })?
         .resolved
     };
@@ -123,13 +123,13 @@ impl ParcelRcConfigLoader {
       diagnostic_error!("{}", source).context(diagnostic_error!(DiagnosticBuilder::default()
         .message(format!(
           "Failed to resolve extended config {extend} from {}",
-          parcel_rc_file.path.display()
+          atlaspack_rc_file.path.display()
         ))
-        .code_frames(vec![CodeFrame::from(File::from(parcel_rc_file))])))
+        .code_frames(vec![CodeFrame::from(File::from(atlaspack_rc_file))])))
     })
   }
 
-  /// Processes a .parcelrc file by loading and merging "extends" configurations into a single
+  /// Processes a .atlaspackrc file by loading and merging "extends" configurations into a single
   /// PartialParcelConfig struct
   ///
   /// Configuration merging will be applied to all "extends" configurations, before being merged
@@ -138,10 +138,10 @@ impl ParcelRcConfigLoader {
   ///
   fn process_config(
     &self,
-    parcel_rc_file: ParcelRcFile,
+    atlaspack_rc_file: ParcelRcFile,
   ) -> Result<(PartialParcelConfig, Vec<PathBuf>), DiagnosticError> {
-    let mut files = vec![parcel_rc_file.path.clone()];
-    let extends = parcel_rc_file.contents.extends.as_ref();
+    let mut files = vec![atlaspack_rc_file.path.clone()];
+    let extends = atlaspack_rc_file.contents.extends.as_ref();
     let extends = match extends {
       None => Vec::new(),
       Some(extends) => match extends {
@@ -151,12 +151,12 @@ impl ParcelRcConfigLoader {
     };
 
     if extends.is_empty() {
-      return Ok((PartialParcelConfig::try_from(parcel_rc_file)?, files));
+      return Ok((PartialParcelConfig::try_from(atlaspack_rc_file)?, files));
     }
 
     let mut merged_config: Option<PartialParcelConfig> = None;
     for extend in extends {
-      let extended_file_path = self.resolve_extends(&parcel_rc_file, &extend)?;
+      let extended_file_path = self.resolve_extends(&atlaspack_rc_file, &extend)?;
       let (extended_config, mut extended_file_paths) = self.load_config(extended_file_path)?;
 
       merged_config = match merged_config {
@@ -168,16 +168,16 @@ impl ParcelRcConfigLoader {
     }
 
     let config = PartialParcelConfig::merge(
-      PartialParcelConfig::try_from(parcel_rc_file)?,
+      PartialParcelConfig::try_from(atlaspack_rc_file)?,
       merged_config.unwrap(),
     );
 
     Ok((config, files))
   }
 
-  /// Finds and loads a .parcelrc file
+  /// Finds and loads a .atlaspackrc file
   ///
-  /// By default the nearest .parcelrc ancestor file from the current working directory will be
+  /// By default the nearest .atlaspackrc ancestor file from the current working directory will be
   /// loaded, unless the config or fallback_config option are specified. In cases where the
   /// current working directory does not live within the project root, the default config will be
   /// loaded from the project root.
@@ -218,15 +218,15 @@ impl ParcelRcConfigLoader {
     }
 
     let config_path = config_path?;
-    let (mut parcel_config, files) = self.load_config(config_path)?;
+    let (mut atlaspack_config, files) = self.load_config(config_path)?;
 
     if options.additional_reporters.len() > 0 {
-      parcel_config.reporters.extend(options.additional_reporters);
+      atlaspack_config.reporters.extend(options.additional_reporters);
     }
 
-    let parcel_config = ParcelConfig::try_from(parcel_config)?;
+    let atlaspack_config = ParcelConfig::try_from(atlaspack_config)?;
 
-    Ok((parcel_config, files))
+    Ok((atlaspack_config, files))
   }
 }
 
@@ -257,11 +257,11 @@ mod tests {
 
   use anyhow::anyhow;
   use mockall::predicate::eq;
-  use parcel_filesystem::in_memory_file_system::InMemoryFileSystem;
-  use parcel_filesystem::FileSystem;
-  use parcel_package_manager::MockPackageManager;
-  use parcel_package_manager::PackageManager;
-  use parcel_package_manager::Resolution;
+  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::FileSystem;
+  use atlaspack_package_manager::MockPackageManager;
+  use atlaspack_package_manager::PackageManager;
+  use atlaspack_package_manager::Resolution;
 
   use super::*;
 
@@ -323,13 +323,13 @@ mod tests {
   }
 
   mod empty_config_and_fallback {
-    use crate::parcel_config_fixtures::default_config;
-    use crate::parcel_config_fixtures::default_extended_config;
+    use crate::atlaspack_config_fixtures::default_config;
+    use crate::atlaspack_config_fixtures::default_extended_config;
 
     use super::*;
 
     #[test]
-    fn errors_on_missing_parcelrc_file() {
+    fn errors_on_missing_atlaspackrc_file() {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap();
 
@@ -340,20 +340,20 @@ mod tests {
       assert_eq!(
         err,
         Err(format!(
-          "Unable to locate .parcelrc from {}",
+          "Unable to locate .atlaspackrc from {}",
           project_root.display()
         ))
       );
     }
 
     #[test]
-    fn errors_on_failed_extended_parcelrc_resolution() {
+    fn errors_on_failed_extended_atlaspackrc_resolution() {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap();
 
       let config = default_extended_config(&project_root);
 
-      fs.write_file(&config.base_config.path, config.base_config.parcel_rc);
+      fs.write_file(&config.base_config.path, config.base_config.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
@@ -367,66 +367,66 @@ mod tests {
       assert_eq!(
         err,
         Err(format!(
-          "Failed to resolve extended config @parcel/config-default from {}",
+          "Failed to resolve extended config @atlaspack/config-default from {}",
           config.base_config.path.display()
         ))
       );
     }
 
     #[test]
-    fn returns_default_parcel_config() {
+    fn returns_default_atlaspack_config() {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap();
 
-      let default_config = default_config(Arc::new(project_root.join(".parcelrc")));
+      let default_config = default_config(Arc::new(project_root.join(".atlaspackrc")));
       let files = vec![default_config.path.clone()];
 
-      fs.write_file(&default_config.path, default_config.parcel_rc);
+      fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
-      let parcel_config = ParcelRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
+      let atlaspack_config = ParcelRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
-      assert_eq!(parcel_config, Ok((default_config.parcel_config, files)));
+      assert_eq!(atlaspack_config, Ok((default_config.atlaspack_config, files)));
     }
 
     #[test]
-    fn returns_default_parcel_config_from_project_root() {
+    fn returns_default_atlaspack_config_from_project_root() {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap().join("src").join("packages").join("root");
 
-      let default_config = default_config(Arc::new(project_root.join(".parcelrc")));
+      let default_config = default_config(Arc::new(project_root.join(".atlaspackrc")));
       let files = vec![default_config.path.clone()];
 
-      fs.write_file(&default_config.path, default_config.parcel_rc);
+      fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
-      let parcel_config = ParcelRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
+      let atlaspack_config = ParcelRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
-      assert_eq!(parcel_config, Ok((default_config.parcel_config, files)));
+      assert_eq!(atlaspack_config, Ok((default_config.atlaspack_config, files)));
     }
 
     #[test]
-    fn returns_default_parcel_config_from_project_root_when_outside_cwd() {
+    fn returns_default_atlaspack_config_from_project_root_when_outside_cwd() {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = PathBuf::from("/root");
 
-      let default_config = default_config(Arc::new(project_root.join(".parcelrc")));
+      let default_config = default_config(Arc::new(project_root.join(".atlaspackrc")));
       let files = vec![default_config.path.clone()];
 
       fs.set_current_working_directory(Path::new("/cwd"));
-      fs.write_file(&default_config.path, default_config.parcel_rc);
+      fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
-      let parcel_config = ParcelRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
+      let atlaspack_config = ParcelRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
-      assert_eq!(parcel_config, Ok((default_config.parcel_config, files)));
+      assert_eq!(atlaspack_config, Ok((default_config.atlaspack_config, files)));
     }
 
     #[test]
-    fn returns_merged_default_parcel_config() {
+    fn returns_merged_default_atlaspack_config() {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap();
 
@@ -438,12 +438,12 @@ mod tests {
 
       fs.write_file(
         &default_config.base_config.path,
-        default_config.base_config.parcel_rc,
+        default_config.base_config.atlaspack_rc,
       );
 
       fs.write_file(
         &default_config.extended_config.path,
-        default_config.extended_config.parcel_rc,
+        default_config.extended_config.atlaspack_rc,
       );
 
       let fs: FileSystemRef = fs;
@@ -451,19 +451,19 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let parcel_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
-      assert_eq!(parcel_config, Ok((default_config.parcel_config, files)));
+      assert_eq!(atlaspack_config, Ok((default_config.atlaspack_config, files)));
     }
   }
 
   mod config {
-    use parcel_core::types::Diagnostic;
+    use atlaspack_core::types::Diagnostic;
 
-    use crate::parcel_config_fixtures::config;
-    use crate::parcel_config_fixtures::extended_config;
+    use crate::atlaspack_config_fixtures::config;
+    use crate::atlaspack_config_fixtures::extended_config;
 
     use super::*;
 
@@ -504,7 +504,7 @@ mod tests {
 
       let (specifier, config) = extended_config(&project_root);
 
-      fs.write_file(&config.base_config.path, config.base_config.parcel_rc);
+      fs.write_file(&config.base_config.path, config.base_config.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
@@ -525,7 +525,7 @@ mod tests {
       assert_eq!(
         err,
         Err(format!(
-          "Failed to resolve extended config @parcel/config-default from {}",
+          "Failed to resolve extended config @atlaspack/config-default from {}",
           config.base_config.path.display()
         ))
       );
@@ -537,7 +537,7 @@ mod tests {
       let mut package_manager = MockPackageManager::new();
       let project_root = fs.cwd().unwrap();
 
-      fs.write_file(&project_root.join(".parcelrc"), String::from("{}"));
+      fs.write_file(&project_root.join(".atlaspackrc"), String::from("{}"));
 
       let config_path = package_manager_resolution(
         &mut package_manager,
@@ -566,7 +566,7 @@ mod tests {
         DiagnosticBuilder::default()
           .code_frames(vec![CodeFrame::from(config_path)])
           .message("File not found")
-          .origin(Some(String::from("parcel_config::parcel_rc_config_loader")))
+          .origin(Some(String::from("atlaspack_config::atlaspack_rc_config_loader")))
           .build()
           .unwrap()
       );
@@ -580,15 +580,15 @@ mod tests {
       let (specifier, specified_config) = config(&project_root);
       let files = vec![specified_config.path.clone()];
 
-      fs.write_file(&project_root.join(".parcelrc"), String::from("{}"));
-      fs.write_file(&specified_config.path, specified_config.parcel_rc);
+      fs.write_file(&project_root.join(".atlaspackrc"), String::from("{}"));
+      fs.write_file(&specified_config.path, specified_config.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
         fs: Arc::clone(&fs),
       });
 
-      let parcel_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -599,16 +599,16 @@ mod tests {
         )
         .map_err(|e| e.to_string());
 
-      assert_eq!(parcel_config, Ok((specified_config.parcel_config, files)));
+      assert_eq!(atlaspack_config, Ok((specified_config.atlaspack_config, files)));
     }
   }
 
   mod fallback_config {
-    use parcel_core::types::Diagnostic;
+    use atlaspack_core::types::Diagnostic;
 
-    use crate::parcel_config_fixtures::default_config;
-    use crate::parcel_config_fixtures::extended_config;
-    use crate::parcel_config_fixtures::fallback_config;
+    use crate::atlaspack_config_fixtures::default_config;
+    use crate::atlaspack_config_fixtures::extended_config;
+    use crate::atlaspack_config_fixtures::fallback_config;
 
     use super::*;
 
@@ -628,7 +628,7 @@ mod tests {
           LoadConfigOptions {
             additional_reporters: Vec::new(),
             config: None,
-            fallback_config: Some("@parcel/config-default"),
+            fallback_config: Some("@atlaspack/config-default"),
           },
         )
         .map_err(|e| e.to_string());
@@ -636,7 +636,7 @@ mod tests {
       assert_eq!(
         err,
         Err(format!(
-          "Failed to resolve fallback @parcel/config-default from {}",
+          "Failed to resolve fallback @atlaspack/config-default from {}",
           project_root.join("index").display()
         ))
       );
@@ -649,7 +649,7 @@ mod tests {
 
       let (fallback_specifier, fallback) = extended_config(&project_root);
 
-      fs.write_file(&fallback.base_config.path, fallback.base_config.parcel_rc);
+      fs.write_file(&fallback.base_config.path, fallback.base_config.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
@@ -670,7 +670,7 @@ mod tests {
       assert_eq!(
         err,
         Err(format!(
-          "Failed to resolve extended config @parcel/config-default from {}",
+          "Failed to resolve extended config @atlaspack/config-default from {}",
           fallback.base_config.path.display()
         ))
       );
@@ -684,7 +684,7 @@ mod tests {
 
       let fallback_config_path = package_manager_resolution(
         &mut package_manager,
-        String::from("@parcel/config-default"),
+        String::from("@atlaspack/config-default"),
         project_root.join("index"),
       );
 
@@ -696,7 +696,7 @@ mod tests {
           LoadConfigOptions {
             additional_reporters: Vec::new(),
             config: None,
-            fallback_config: Some("@parcel/config-default"),
+            fallback_config: Some("@atlaspack/config-default"),
           },
         )
         .unwrap_err()
@@ -708,21 +708,21 @@ mod tests {
         DiagnosticBuilder::default()
           .code_frames(vec![CodeFrame::from(fallback_config_path)])
           .message("File not found")
-          .origin(Some(String::from("parcel_config::parcel_rc_config_loader")))
+          .origin(Some(String::from("atlaspack_config::atlaspack_rc_config_loader")))
           .build()
           .unwrap()
       );
     }
 
     #[test]
-    fn returns_project_root_parcel_rc() {
+    fn returns_project_root_atlaspack_rc() {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap();
 
       let (fallback_specifier, fallback) = fallback_config(&project_root);
-      let project_root_config = default_config(Arc::new(project_root.join(".parcelrc")));
+      let project_root_config = default_config(Arc::new(project_root.join(".atlaspackrc")));
 
-      fs.write_file(&project_root_config.path, project_root_config.parcel_rc);
+      fs.write_file(&project_root_config.path, project_root_config.atlaspack_rc);
       fs.write_file(&fallback.path, String::from("{}"));
 
       let fs: FileSystemRef = fs;
@@ -730,7 +730,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let parcel_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -742,30 +742,30 @@ mod tests {
         .map_err(|e| e.to_string());
 
       assert_eq!(
-        parcel_config,
+        atlaspack_config,
         Ok((
-          project_root_config.parcel_config,
+          project_root_config.atlaspack_config,
           vec!(project_root_config.path)
         ))
       );
     }
 
     #[test]
-    fn returns_fallback_config_when_parcel_rc_is_missing() {
+    fn returns_fallback_config_when_atlaspack_rc_is_missing() {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap();
 
       let (fallback_specifier, fallback) = fallback_config(&project_root);
       let files = vec![fallback.path.clone()];
 
-      fs.write_file(&fallback.path, fallback.parcel_rc);
+      fs.write_file(&fallback.path, fallback.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
         fs: Arc::clone(&fs),
       });
 
-      let parcel_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -776,13 +776,13 @@ mod tests {
         )
         .map_err(|e| e.to_string());
 
-      assert_eq!(parcel_config, Ok((fallback.parcel_config, files)));
+      assert_eq!(atlaspack_config, Ok((fallback.atlaspack_config, files)));
     }
   }
 
   mod fallback_with_config {
-    use crate::parcel_config_fixtures::config;
-    use crate::parcel_config_fixtures::fallback_config;
+    use crate::atlaspack_config_fixtures::config;
+    use crate::atlaspack_config_fixtures::fallback_config;
 
     use super::*;
 
@@ -796,15 +796,15 @@ mod tests {
 
       let files = vec![config.path.clone()];
 
-      fs.write_file(&config.path, config.parcel_rc);
-      fs.write_file(&fallback_config.path, fallback_config.parcel_rc);
+      fs.write_file(&config.path, config.atlaspack_rc);
+      fs.write_file(&fallback_config.path, fallback_config.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
         fs: Arc::clone(&fs),
       });
 
-      let parcel_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -815,7 +815,7 @@ mod tests {
         )
         .map_err(|e| e.to_string());
 
-      assert_eq!(parcel_config, Ok((config.parcel_config, files)));
+      assert_eq!(atlaspack_config, Ok((config.atlaspack_config, files)));
     }
 
     #[test]
@@ -828,14 +828,14 @@ mod tests {
 
       let files = vec![fallback.path.clone()];
 
-      fs.write_file(&fallback.path, fallback.parcel_rc);
+      fs.write_file(&fallback.path, fallback.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
         fs: Arc::clone(&fs),
       });
 
-      let parcel_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = ParcelRcConfigLoader::new(Arc::clone(&fs), package_manager)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -846,7 +846,7 @@ mod tests {
         )
         .map_err(|e| e.to_string());
 
-      assert_eq!(parcel_config, Ok((fallback.parcel_config, files)));
+      assert_eq!(atlaspack_config, Ok((fallback.atlaspack_config, files)));
     }
   }
 }

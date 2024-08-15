@@ -3,8 +3,8 @@ use std::path::Path;
 use anyhow::anyhow;
 use napi::{Env, JsObject};
 
-use parcel_napi_helpers::js_callable::JsCallable;
-use parcel_package_manager::{PackageManager, Resolution};
+use atlaspack_napi_helpers::js_callable::JsCallable;
+use atlaspack_package_manager::{PackageManager, Resolution};
 
 pub struct PackageManagerNapi {
   resolve_fn: JsCallable,

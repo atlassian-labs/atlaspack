@@ -1,10 +1,10 @@
 use std::fmt;
 use std::fmt::Debug;
 
-use parcel_config::PluginNode;
-use parcel_core::plugin::PluginContext;
-use parcel_core::plugin::ReporterEvent;
-use parcel_core::plugin::ReporterPlugin;
+use atlaspack_config::PluginNode;
+use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::ReporterEvent;
+use atlaspack_core::plugin::ReporterPlugin;
 
 pub struct RpcReporterPlugin {
   _name: String,

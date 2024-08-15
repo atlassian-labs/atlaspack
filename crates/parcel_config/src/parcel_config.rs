@@ -2,12 +2,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use indexmap::IndexMap;
-use parcel_core::diagnostic_error;
-use parcel_core::types::DiagnosticError;
+use atlaspack_core::diagnostic_error;
+use atlaspack_core::types::DiagnosticError;
 use serde::Deserialize;
 use serde::Serialize;
 
-use super::partial_parcel_config::PartialParcelConfig;
+use super::partial_atlaspack_config::PartialParcelConfig;
 use crate::map::NamedPipelinesMap;
 use crate::map::PipelineMap;
 use crate::map::PipelinesMap;
@@ -19,7 +19,7 @@ pub struct PluginNode {
   pub resolve_from: Arc<PathBuf>,
 }
 
-/// Represents a fully merged and validated .parcel_rc config
+/// Represents a fully merged and validated .atlaspack_rc config
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct ParcelConfig {
   pub bundler: PluginNode,
@@ -98,7 +98,7 @@ mod tests {
   use super::*;
   mod try_from {
     use super::*;
-    use crate::partial_parcel_config::PartialParcelConfigBuilder;
+    use crate::partial_atlaspack_config::PartialParcelConfigBuilder;
 
     #[test]
     fn returns_an_error_when_required_phases_are_optional() {

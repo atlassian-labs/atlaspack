@@ -6,8 +6,8 @@ use anyhow::anyhow;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 
-use parcel_core::asset_graph::{AssetGraph, DependencyNode, DependencyState};
-use parcel_core::types::Dependency;
+use atlaspack_core::asset_graph::{AssetGraph, DependencyNode, DependencyState};
+use atlaspack_core::types::Dependency;
 
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
@@ -348,9 +348,9 @@ mod test {
 
   use tracing::Level;
 
-  use parcel_core::types::{Code, ParcelOptions};
-  use parcel_filesystem::in_memory_file_system::InMemoryFileSystem;
-  use parcel_filesystem::FileSystem;
+  use atlaspack_core::types::{Code, ParcelOptions};
+  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::FileSystem;
 
   use crate::requests::{AssetGraphRequest, RequestResult};
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
@@ -381,14 +381,14 @@ mod test {
     let mut options = RequestTrackerTestOptions::default();
     let fs = InMemoryFileSystem::default();
     #[cfg(not(target_os = "windows"))]
-    let temporary_dir = PathBuf::from("/parcel_tests");
+    let temporary_dir = PathBuf::from("/atlaspack_tests");
     #[cfg(target_os = "windows")]
-    let temporary_dir = PathBuf::from("c:/windows/parcel_tests");
+    let temporary_dir = PathBuf::from("c:/windows/atlaspack_tests");
     assert!(temporary_dir.is_absolute());
     fs.create_directory(&temporary_dir).unwrap();
     fs.set_current_working_directory(&temporary_dir); // <- resolver is broken without this
     options
-      .parcel_options
+      .atlaspack_options
       .entries
       .push(temporary_dir.join("entry.js").to_str().unwrap().to_string());
     options.project_root = temporary_dir.clone();
@@ -450,11 +450,11 @@ console.log('hello world');
   #[test]
   fn test_asset_graph_request_with_a_couple_of_entries() {
     #[cfg(not(target_os = "windows"))]
-    let temporary_dir = PathBuf::from("/parcel_tests");
+    let temporary_dir = PathBuf::from("/atlaspack_tests");
     #[cfg(target_os = "windows")]
-    let temporary_dir = PathBuf::from("C:\\windows\\parcel_tests");
+    let temporary_dir = PathBuf::from("C:\\windows\\atlaspack_tests");
 
-    let core_path = temporary_dir.join("parcel_core");
+    let core_path = temporary_dir.join("atlaspack_core");
     let fs = InMemoryFileSystem::default();
 
     fs.create_directory(&temporary_dir).unwrap();
@@ -493,7 +493,7 @@ console.log('hello world');
 
     let mut request_tracker = request_tracker(RequestTrackerTestOptions {
       fs: Arc::new(fs),
-      parcel_options: ParcelOptions {
+      atlaspack_options: ParcelOptions {
         core_path,
         entries: vec![temporary_dir.join("entry.js").to_str().unwrap().to_string()],
         ..ParcelOptions::default()
@@ -532,7 +532,7 @@ console.log('hello world');
   fn setup_core_modules(fs: &InMemoryFileSystem, core_path: &Path) {
     let transformer_path = core_path
       .join("node_modules")
-      .join("@parcel/transformer-js");
+      .join("@atlaspack/transformer-js");
 
     fs.write_file(&transformer_path.join("package.json"), String::from("{}"));
     fs.write_file(

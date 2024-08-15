@@ -6,14 +6,14 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use dyn_hash::DynHash;
-use parcel_core::config_loader::ConfigLoaderRef;
-use parcel_core::types::ParcelOptions;
+use atlaspack_core::config_loader::ConfigLoaderRef;
+use atlaspack_core::types::ParcelOptions;
 
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
-use parcel_core::plugin::ReporterEvent;
-use parcel_core::types::Invalidation;
-use parcel_filesystem::FileSystemRef;
+use atlaspack_core::plugin::ReporterEvent;
+use atlaspack_core::types::Invalidation;
+use atlaspack_filesystem::FileSystemRef;
 
 #[derive(Debug)]
 pub struct RunRequestMessage {
@@ -103,7 +103,7 @@ pub type RequestId = u64;
 
 pub trait Request: DynHash + Send + Debug + 'static {
   fn id(&self) -> RequestId {
-    let mut hasher = parcel_core::hash::IdentifierHasher::default();
+    let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
     std::any::type_name::<Self>().hash(&mut hasher);
     self.dyn_hash(&mut hasher);
     hasher.finish()

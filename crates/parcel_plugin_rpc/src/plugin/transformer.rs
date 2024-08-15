@@ -3,10 +3,10 @@ use std::fmt::Debug;
 
 use anyhow::Error;
 
-use parcel_config::PluginNode;
-use parcel_core::plugin::PluginContext;
-use parcel_core::plugin::TransformerPlugin;
-use parcel_core::plugin::{TransformResult, TransformationInput};
+use atlaspack_config::PluginNode;
+use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::TransformerPlugin;
+use atlaspack_core::plugin::{TransformResult, TransformationInput};
 
 pub struct RpcTransformerPlugin {
   _name: String,

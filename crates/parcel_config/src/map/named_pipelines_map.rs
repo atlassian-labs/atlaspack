@@ -21,7 +21,7 @@ pub struct NamedPattern<'a> {
   pub use_fallback: bool,
 }
 
-/// Represents fields in .parcelrc that map a pattern or named pattern to a list of plugin names
+/// Represents fields in .atlaspackrc that map a pattern or named pattern to a list of plugin names
 ///
 /// # Examples
 ///
@@ -30,12 +30,12 @@ pub struct NamedPattern<'a> {
 /// use std::sync::Arc;
 ///
 /// use indexmap::indexmap;
-/// use parcel_config::map::NamedPipelinesMap;
-/// use parcel_config::PluginNode;
+/// use atlaspack_config::map::NamedPipelinesMap;
+/// use atlaspack_config::PluginNode;
 ///
 /// NamedPipelinesMap::new(indexmap! {
 ///   String::from("*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}") => vec![PluginNode {
-///     package_name: String::from("@parcel/transformer-js"),
+///     package_name: String::from("@atlaspack/transformer-js"),
 ///     resolve_from: Arc::new(PathBuf::default()),
 ///   }]
 /// });
@@ -75,17 +75,17 @@ impl NamedPipelinesMap {
   /// use std::sync::Arc;
   ///
   /// use indexmap::indexmap;
-  /// use parcel_config::map::NamedPattern;
-  /// use parcel_config::map::NamedPipelinesMap;
-  /// use parcel_config::PluginNode;
+  /// use atlaspack_config::map::NamedPattern;
+  /// use atlaspack_config::map::NamedPipelinesMap;
+  /// use atlaspack_config::PluginNode;
   ///
   /// let pipelines_map = NamedPipelinesMap::new(indexmap! {
   ///   String::from("types:*.{ts,tsx}") => vec![PluginNode {
-  ///     package_name: String::from("@parcel/transformer-typescript-types"),
+  ///     package_name: String::from("@atlaspack/transformer-typescript-types"),
   ///     resolve_from: Arc::new(PathBuf::default()),
   ///   }],
   ///   String::from("*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}") => vec![PluginNode {
-  ///     package_name: String::from("@parcel/transformer-js"),
+  ///     package_name: String::from("@atlaspack/transformer-js"),
   ///     resolve_from: Arc::new(PathBuf::default()),
   ///   }],
   /// });
@@ -166,7 +166,7 @@ mod tests {
 
   fn pipelines(name: &str) -> Vec<PluginNode> {
     vec![PluginNode {
-      package_name: format!("@parcel/plugin-{}", name),
+      package_name: format!("@atlaspack/plugin-{}", name),
       resolve_from: Arc::new(PathBuf::default()),
     }]
   }

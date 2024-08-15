@@ -1,5 +1,5 @@
 // Re-export this from core, probably want to move this type here
-pub use parcel_filesystem::FileSystem;
+pub use atlaspack_filesystem::FileSystem;
 
 pub use self::asset::*;
 pub use self::bundle::*;
@@ -11,7 +11,7 @@ pub use self::file_type::*;
 pub use self::invalidation::*;
 pub use self::json::*;
 pub use self::package_json::*;
-pub use self::parcel_options::*;
+pub use self::atlaspack_options::*;
 pub use self::source::*;
 pub use self::symbol::*;
 pub use self::target::*;
@@ -26,7 +26,7 @@ mod file_type;
 mod invalidation;
 mod json;
 mod package_json;
-mod parcel_options;
+mod atlaspack_options;
 mod source;
 mod symbol;
 mod target;
