@@ -1,20 +1,16 @@
 {
-  "name": "parcel",
+  "name": "atlaspack",
   "version": "2.12.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
   },
-  "funding": {
-    "type": "opencollective",
-    "url": "https://opencollective.com/parcel"
-  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/parcel-bundler/parcel.git"
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "bin": "bin/parcel.js",
+  "bin": "bin/atlaspack.js",
   "main": "lib/bin.js",
   "source": "src/bin.js",
   "scripts": {

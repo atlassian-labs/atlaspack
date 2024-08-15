@@ -1,10 +1,10 @@
 {
   "name": "@atlaspack/link",
-  "description": "A CLI for linking a dev version of Parcel into a project",
+  "description": "A CLI for linking a dev version of atlaspack into a project",
   "version": "2.12.0",
   "private": true,
   "bin": {
-    "parcel-link": "bin.js"
+    "atlaspack-link": "bin.js"
   },
   "scripts": {
     "test": "cd ../../.. && yarn test:integration --grep @atlaspack/link"

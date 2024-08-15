@@ -52,11 +52,15 @@ export function deactivate(): Thenable<void> | undefined {
     return undefined;
   }
 
-  const LSP_SENTINEL_FILEPATH = path.join(fs.realpathSync(os.tmpdir()), 'parcel-lsp', 'lsp-server');
+  const LSP_SENTINEL_FILEPATH = path.join(
+    fs.realpathSync(os.tmpdir()),
+    'parcel-lsp',
+    'lsp-server',
+  );
 
   if (fs.existsSync(LSP_SENTINEL_FILEPATH)) {
     fs.rmSync(LSP_SENTINEL_FILEPATH);
-  } 
+  }
 
   return client.stop();
 }

@@ -5,7 +5,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/parcel-bundler/parcel.git"
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "index.json",
   "scripts": {

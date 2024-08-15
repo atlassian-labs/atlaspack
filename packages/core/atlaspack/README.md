@@ -25,9 +25,9 @@ Parcel is a zero configuration build tool for the web. It combines a great out-o
 
 See the following guides in our documentation on how to get started with Parcel.
 
-* [Building a webapp with Parcel](https://parceljs.org/getting-started/webapp/)
-* [Building a library with Parcel](https://parceljs.org/getting-started/library/)
-* [Migrating from Parcel v1](https://parceljs.org/getting-started/migration/)
+- [Building a webapp with Parcel](https://parceljs.org/getting-started/webapp/)
+- [Building a library with Parcel](https://parceljs.org/getting-started/library/)
+- [Migrating from Parcel v1](https://parceljs.org/getting-started/migration/)
 
 ## Documentation
 
