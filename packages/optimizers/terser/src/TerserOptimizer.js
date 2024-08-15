@@ -4,7 +4,7 @@ import nullthrows from 'nullthrows';
 import {minify} from 'terser';
 import {Optimizer} from '@atlaspack/plugin';
 import {blobToString} from '@atlaspack/utils';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import ThrowableDiagnostic, {escapeMarkdown} from '@atlaspack/diagnostic';
 
 import path from 'path';

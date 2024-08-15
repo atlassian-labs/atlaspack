@@ -1,6 +1,6 @@
 // @flow
 import {Transformer} from '@atlaspack/plugin';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import coffee from 'coffeescript';
 import {relativeUrl} from '@atlaspack/utils';
 

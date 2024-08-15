@@ -9,7 +9,7 @@ import type {
   NamedBundle as NamedBundleType,
   Async,
 } from '@atlaspack/types';
-import type SourceMap from '@atlaspack/source-map';
+import type SourceMap from '@parcel/source-map';
 import type {
   Bundle as InternalBundle,
   Config,
@@ -39,7 +39,7 @@ import BundleGraph, {
 } from './public/BundleGraph';
 import PluginOptions from './public/PluginOptions';
 import PublicConfig from './public/Config';
-import {PARCEL_VERSION, HASH_REF_PREFIX, HASH_REF_REGEX} from './constants';
+import {ATLASPACK_VERSION, HASH_REF_PREFIX, HASH_REF_REGEX} from './constants';
 import {
   fromProjectPath,
   toProjectPathUnsafe,
@@ -658,7 +658,7 @@ export default class PackagerRunner {
     );
 
     return hashString(
-      PARCEL_VERSION +
+      ATLASPACK_VERSION +
         devDepHashes +
         invalidationHash +
         bundle.target.publicUrl +

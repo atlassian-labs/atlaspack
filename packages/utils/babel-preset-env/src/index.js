@@ -1,6 +1,6 @@
 const semver = require('semver');
 
-const COMPATIBLE_PARCEL_BABEL_TRANSFORMER_SEMVER = '^2.0.0-beta.1';
+const COMPATIBLE_ATLASPACK_BABEL_TRANSFORMER_SEMVER = '^2.0.0-beta.1';
 
 module.exports = function parcelBabelPresetEnv(api, opts) {
   let name = api.caller(caller => caller && caller.name);
@@ -9,7 +9,7 @@ module.exports = function parcelBabelPresetEnv(api, opts) {
   if (
     name === 'parcel' &&
     typeof version === 'string' &&
-    semver.satisfies(version, COMPATIBLE_PARCEL_BABEL_TRANSFORMER_SEMVER)
+    semver.satisfies(version, COMPATIBLE_ATLASPACK_BABEL_TRANSFORMER_SEMVER)
   ) {
     let targets = api.caller(caller => caller && caller.targets);
     if (typeof targets !== 'string') {

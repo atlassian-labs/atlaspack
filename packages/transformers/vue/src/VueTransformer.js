@@ -10,7 +10,7 @@ import ThrowableDiagnostic, {
   escapeMarkdown,
   md,
 } from '@atlaspack/diagnostic';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import semver from 'semver';
 import {basename, extname, relative, dirname} from 'path';
 // $FlowFixMe

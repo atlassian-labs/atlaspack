@@ -15,7 +15,7 @@ import {
   countLines,
   normalizeSeparators,
 } from '@atlaspack/utils';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import nullthrows from 'nullthrows';
 import invariant, {AssertionError} from 'assert';
 import ThrowableDiagnostic, {

@@ -1,6 +1,6 @@
 // @flow
 import type {BundleGraph, Dependency, NamedBundle} from '@atlaspack/types';
-import type SourceMap from '@atlaspack/source-map';
+import type SourceMap from '@parcel/source-map';
 import nullthrows from 'nullthrows';
 
 // This replaces __parcel__require__ references left by the transformer with

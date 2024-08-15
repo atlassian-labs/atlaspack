@@ -186,24 +186,24 @@ describe('CLIReporter', () => {
     assert.equal(stdoutOutput, 'Bundling...\n');
   });
 
-  it('writes phase timings to stdout when PARCEL_SHOW_PHASE_TIMES is set', async () => {
-    let oldPhaseTimings = process.env['PARCEL_SHOW_PHASE_TIMES'];
+  it('writes phase timings to stdout when ATLASPACK_SHOW_PHASE_TIMES is set', async () => {
+    let oldPhaseTimings = process.env['ATLASPACK_SHOW_PHASE_TIMES'];
     const bundleReportStub = sinon.stub(bundleReport, 'default');
     const persistSpinnerStub = sinon.stub(render, 'persistSpinner');
 
     after(() => {
       bundleReportStub.restore();
       persistSpinnerStub.restore();
-      process.env['PARCEL_SHOW_PHASE_TIMES'] = oldPhaseTimings;
+      process.env['ATLASPACK_SHOW_PHASE_TIMES'] = oldPhaseTimings;
     });
 
     // emit a buildSuccess event to reset the timings and seen phases
     // from the previous test
-    process.env['PARCEL_SHOW_PHASE_TIMES'] = undefined;
+    process.env['ATLASPACK_SHOW_PHASE_TIMES'] = undefined;
     // $FlowFixMe
     await _report({type: 'buildSuccess'}, EMPTY_OPTIONS);
 
-    process.env['PARCEL_SHOW_PHASE_TIMES'] = 'true';
+    process.env['ATLASPACK_SHOW_PHASE_TIMES'] = 'true';
     await _report(
       {type: 'buildProgress', phase: 'transforming', filePath: 'foo.js'},
       EMPTY_OPTIONS,

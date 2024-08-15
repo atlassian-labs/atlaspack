@@ -14,7 +14,7 @@ import typeof {Priority} from '@atlaspack/core/src/types.js';
 import typeof {fromProjectPathRelative} from '@atlaspack/core/src/projectPath.js';
 
 const v =
-  process.env.PARCEL_BUILD_ENV === 'production'
+  process.env.ATLASPACK_BUILD_ENV === 'production'
     ? {
         // Split up require specifier to outsmart packages/dev/babel-register/babel-plugin-module-translate.js
         // $FlowFixMe(unsupported-syntax)

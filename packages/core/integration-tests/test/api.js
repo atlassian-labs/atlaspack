@@ -12,7 +12,7 @@ import {
   overlayFS,
 } from '@atlaspack/test-utils';
 
-import {PARCEL_VERSION} from '../../core/src/constants';
+import {ATLASPACK_VERSION} from '../../core/src/constants';
 
 describe.v2('JS API', function () {
   it('should respect distEntry', async function () {
@@ -104,7 +104,7 @@ describe.v2('JS API', function () {
 
       assert.equal(
         await overlayFS.readFile(path.join(dir, 'parcel-version.txt')),
-        PARCEL_VERSION,
+        ATLASPACK_VERSION,
       );
     });
   });

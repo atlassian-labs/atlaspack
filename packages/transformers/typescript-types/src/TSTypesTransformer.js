@@ -2,7 +2,7 @@
 
 import {Transformer} from '@atlaspack/plugin';
 import path from 'path';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import type {DiagnosticCodeFrame} from '@atlaspack/diagnostic';
 import type {CompilerOptions} from 'typescript';
 

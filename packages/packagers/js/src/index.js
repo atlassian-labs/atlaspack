@@ -1,6 +1,6 @@
 // @flow strict-local
 import type {Async} from '@atlaspack/types';
-import type SourceMap from '@atlaspack/source-map';
+import type SourceMap from '@parcel/source-map';
 import {Packager} from '@atlaspack/plugin';
 import {
   replaceInlineReferences,

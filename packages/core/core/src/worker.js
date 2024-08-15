@@ -23,7 +23,7 @@ import Validation, {type ValidationOpts} from './Validation';
 import ParcelConfig from './ParcelConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {clearBuildCaches} from './buildCache';
-import {init as initSourcemaps} from '@atlaspack/source-map';
+import {init as initSourcemaps} from '@parcel/source-map';
 import {init as initRust} from '@atlaspack/rust';
 import WorkerFarm from '@atlaspack/workers';
 import {setFeatureFlags} from '@atlaspack/feature-flags';
@@ -33,7 +33,7 @@ import '@atlaspack/package-manager';
 import '@atlaspack/fs';
 
 // $FlowFixMe
-if (process.env.PARCEL_BUILD_REPL && process.browser) {
+if (process.env.ATLASPACK_BUILD_REPL && process.browser) {
   /* eslint-disable import/no-extraneous-dependencies, monorepo/no-internal-import */
   require('@atlaspack/repl/src/parcel/BrowserPackageManager.js');
   // $FlowFixMe
@@ -167,7 +167,7 @@ export async function childInit() {
 const PKG_RE =
   /node_modules[/\\]((?:@[^/\\]+[/\\][^/\\]+)|[^/\\]+)(?!.*[/\\]node_modules[/\\])/;
 export function invalidateRequireCache(workerApi: WorkerApi, file: string) {
-  if (process.env.PARCEL_BUILD_ENV === 'test') {
+  if (process.env.ATLASPACK_BUILD_ENV === 'test') {
     // Delete this module and all children in the same node_modules folder
     let module = require.cache[file];
     if (module) {

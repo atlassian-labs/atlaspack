@@ -551,7 +551,7 @@ async function normalizeOptions(
     lazyIncludes: normalizeIncludeExcludeList(command.lazy),
     lazyExcludes: normalizeIncludeExcludeList(command.lazyExclude),
     shouldBundleIncrementally:
-      process.env.PARCEL_INCREMENTAL_BUNDLING === 'false' ? false : true,
+      process.env.ATLASPACK_INCREMENTAL_BUNDLING === 'false' ? false : true,
     detailedReport:
       command.detailedReport != null
         ? {

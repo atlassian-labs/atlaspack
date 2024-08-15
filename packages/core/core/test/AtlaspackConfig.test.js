@@ -10,23 +10,23 @@ import {parseAndProcessConfig} from '../src/requests/ParcelConfigRequest';
 import {DEFAULT_OPTIONS} from './test-utils';
 import {toProjectPath} from '../src/projectPath';
 
-const PARCELRC_PATH = toProjectPath('/', '/.atlaspackrc');
+const ATLASPACKRC_PATH = toProjectPath('/', '/.atlaspackrc');
 
 describe('ParcelConfig', () => {
   describe('matchGlobMap', () => {
     let config = new ParcelConfig(
       {
-        filePath: PARCELRC_PATH,
+        filePath: ATLASPACKRC_PATH,
         bundler: undefined,
         packagers: {
           '*.css': {
             packageName: 'parcel-packager-css',
-            resolveFrom: PARCELRC_PATH,
+            resolveFrom: ATLASPACKRC_PATH,
             keyPath: '/packagers/*.css',
           },
           '*.js': {
             packageName: 'parcel-packager-js',
-            resolveFrom: PARCELRC_PATH,
+            resolveFrom: ATLASPACKRC_PATH,
             keyPath: '/packagers/*.js',
           },
         },
@@ -49,7 +49,7 @@ describe('ParcelConfig', () => {
       );
       assert.deepEqual(result, {
         packageName: 'parcel-packager-js',
-        resolveFrom: PARCELRC_PATH,
+        resolveFrom: ATLASPACKRC_PATH,
         keyPath: '/packagers/*.js',
       });
     });
@@ -58,13 +58,13 @@ describe('ParcelConfig', () => {
   describe('matchGlobMapPipelines', () => {
     let config = new ParcelConfig(
       {
-        filePath: PARCELRC_PATH,
+        filePath: ATLASPACKRC_PATH,
         bundler: undefined,
         transformers: {
           '*.jsx': [
             {
               packageName: 'parcel-transform-jsx',
-              resolveFrom: PARCELRC_PATH,
+              resolveFrom: ATLASPACKRC_PATH,
               keyPath: '/transformers/*.jsx/0',
             },
             '...',
@@ -72,7 +72,7 @@ describe('ParcelConfig', () => {
           '*.{js,jsx}': [
             {
               packageName: 'parcel-transform-js',
-              resolveFrom: PARCELRC_PATH,
+              resolveFrom: ATLASPACKRC_PATH,
               keyPath: '/transformers/*.{js,jsx}/0',
             },
           ],
@@ -97,7 +97,7 @@ describe('ParcelConfig', () => {
       assert.deepEqual(pipeline, [
         {
           packageName: 'parcel-transform-js',
-          resolveFrom: PARCELRC_PATH,
+          resolveFrom: ATLASPACKRC_PATH,
           keyPath: '/transformers/*.{js,jsx}/0',
         },
       ]);
@@ -111,12 +111,12 @@ describe('ParcelConfig', () => {
       assert.deepEqual(pipeline, [
         {
           packageName: 'parcel-transform-jsx',
-          resolveFrom: PARCELRC_PATH,
+          resolveFrom: ATLASPACKRC_PATH,
           keyPath: '/transformers/*.jsx/0',
         },
         {
           packageName: 'parcel-transform-js',
-          resolveFrom: PARCELRC_PATH,
+          resolveFrom: ATLASPACKRC_PATH,
           keyPath: '/transformers/*.{js,jsx}/0',
         },
       ]);

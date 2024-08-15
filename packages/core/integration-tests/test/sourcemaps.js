@@ -2,7 +2,7 @@
 import assert from 'assert';
 import invariant from 'assert';
 import path from 'path';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import type {InitialParcelOptions} from '@atlaspack/types';
 import {
   bundle as _bundle,

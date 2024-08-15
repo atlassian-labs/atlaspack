@@ -1,7 +1,7 @@
 // @flow
 import type {SourceLocation} from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import path from 'path';
 import {normalizeSeparators, isAbsolute} from './path';
 

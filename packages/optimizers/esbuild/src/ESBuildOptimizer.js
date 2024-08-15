@@ -3,7 +3,7 @@
 import {transform} from 'esbuild';
 import {Optimizer} from '@atlaspack/plugin';
 import {blobToString, normalizePath} from '@atlaspack/utils';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import path from 'path';
 import invariant from 'assert';
 

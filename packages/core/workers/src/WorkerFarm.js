@@ -658,8 +658,8 @@ export default class WorkerFarm extends EventEmitter {
   }
 
   static getNumWorkers(): number {
-    return process.env.PARCEL_WORKERS
-      ? parseInt(process.env.PARCEL_WORKERS, 10)
+    return process.env.ATLASPACK_WORKERS
+      ? parseInt(process.env.ATLASPACK_WORKERS, 10)
       : Math.min(4, Math.ceil(cpuCount() / 2));
   }
 
@@ -688,7 +688,7 @@ export default class WorkerFarm extends EventEmitter {
     defaultValue?: number = DEFAULT_MAX_CONCURRENT_CALLS,
   ): number {
     return (
-      parseInt(process.env.PARCEL_MAX_CONCURRENT_CALLS, 10) || defaultValue
+      parseInt(process.env.ATLASPACK_MAX_CONCURRENT_CALLS, 10) || defaultValue
     );
   }
 }

@@ -30,7 +30,7 @@ import {unique, setDifference} from '@atlaspack/utils';
 import {hashString} from '@atlaspack/rust';
 import PluginOptions from '../public/PluginOptions';
 import applyRuntimes from '../applyRuntimes';
-import {PARCEL_VERSION, OPTION_CHANGE} from '../constants';
+import {ATLASPACK_VERSION, OPTION_CHANGE} from '../constants';
 import {assertSignalNotAborted, optionsProxy} from '../utils';
 import createParcelConfigRequest, {
   getCachedParcelConfig,
@@ -199,7 +199,7 @@ class BundlerRunner {
     );
     this.cacheKey =
       hashString(
-        `${PARCEL_VERSION}:BundleGraph:${
+        `${ATLASPACK_VERSION}:BundleGraph:${
           JSON.stringify(options.entries) ?? ''
         }${options.mode}${options.shouldBuildLazily ? 'lazy' : 'eager'}`,
       ) + '-BundleGraph';

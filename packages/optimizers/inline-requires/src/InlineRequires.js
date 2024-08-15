@@ -3,7 +3,7 @@ import {Optimizer} from '@atlaspack/plugin';
 import {parse, print} from '@swc/core';
 import {RequireInliningVisitor} from './RequireInliningVisitor';
 import nullthrows from 'nullthrows';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 
 let assetPublicIdsWithSideEffects = null;
 

@@ -22,7 +22,7 @@
   "dependencies": {
     "@atlaspack/diagnostic": "2.12.0",
     "@atlaspack/plugin": "2.12.0",
-    "@atlaspack/source-map": "^2.1.1",
+    "@parcel/source-map": "^2.1.1",
     "@atlaspack/utils": "2.12.0",
     "esbuild": "^0.13.0",
     "nullthrows": "^1.1.1"

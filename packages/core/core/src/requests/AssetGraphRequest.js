@@ -25,7 +25,7 @@ import {hashString} from '@atlaspack/rust';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import {Priority} from '../types';
 import AssetGraph from '../AssetGraph';
-import {PARCEL_VERSION} from '../constants';
+import {ATLASPACK_VERSION} from '../constants';
 import createEntryRequest from './EntryRequest';
 import createTargetRequest from './TargetRequest';
 import createAssetRequest from './AssetRequest';
@@ -163,7 +163,7 @@ export class AssetGraphBuilder {
     this.lazyExcludes = lazyExcludes ?? [];
     this.cacheKey =
       hashString(
-        `${PARCEL_VERSION}${name}${JSON.stringify(entries) ?? ''}${
+        `${ATLASPACK_VERSION}${name}${JSON.stringify(entries) ?? ''}${
           options.mode
         }${options.shouldBuildLazily ? 'lazy' : 'eager'}`,
       ) + '-AssetGraph';

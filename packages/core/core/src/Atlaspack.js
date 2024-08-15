@@ -45,7 +45,7 @@ import createPathRequest from './requests/PathRequest';
 import {createEnvironment} from './Environment';
 import {createDependency} from './Dependency';
 import {Disposable} from '@atlaspack/events';
-import {init as initSourcemaps} from '@atlaspack/source-map';
+import {init as initSourcemaps} from '@parcel/source-map';
 import {
   init as initRust,
   initializeMonitoring,

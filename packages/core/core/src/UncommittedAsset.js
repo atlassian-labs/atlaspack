@@ -13,7 +13,7 @@ import type {Asset, Dependency, ParcelOptions, Invalidations} from './types';
 
 import invariant from 'assert';
 import {Readable} from 'stream';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import {
   blobToStream,
   bufferStream,
@@ -26,7 +26,7 @@ import {hashString, hashBuffer, Hash} from '@atlaspack/rust';
 import {serializeRaw} from './serializer';
 import {createDependency, mergeDependencies} from './Dependency';
 import {mergeEnvironments} from './Environment';
-import {PARCEL_VERSION} from './constants';
+import {ATLASPACK_VERSION} from './constants';
 import {createAsset, createAssetIdFromOptions} from './assetUtils';
 import {BundleBehaviorNames} from './types';
 import {invalidateOnFileCreateToInternal, createInvalidations} from './utils';
@@ -296,7 +296,7 @@ export default class UncommittedAsset {
   }
 
   getCacheKey(key: string): string {
-    return hashString(PARCEL_VERSION + key + this.value.id);
+    return hashString(ATLASPACK_VERSION + key + this.value.id);
   }
 
   addDependency(opts: DependencyOptions): string {

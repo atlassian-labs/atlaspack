@@ -8,7 +8,7 @@ import init, {bundleAsync} from 'lightningcss';
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import {Packager} from '@atlaspack/plugin';
 import {convertSourceLocationToHighlight} from '@atlaspack/diagnostic';
 import {

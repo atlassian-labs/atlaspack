@@ -228,7 +228,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
       }
     };
     ws.onclose = function (e) {
-      if (process.env.PARCEL_BUILD_ENV !== 'test') {
+      if (process.env.ATLASPACK_BUILD_ENV !== 'test') {
         console.warn('[parcel] 🚨 Connection to the HMR server was lost');
       }
     };

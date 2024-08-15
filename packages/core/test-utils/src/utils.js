@@ -107,7 +107,7 @@ If you don't know how, check here: https://bit.ly/2UmWsbD
   );
 }
 
-export const isParcelV3 = process.env.PARCEL_V3 === 'true';
+export const isParcelV3 = process.env.ATLASPACK_V3 === 'true';
 
 export function getParcelOptions(
   entries: FilePath | Array<FilePath>,
@@ -1167,7 +1167,7 @@ export async function assertNoFilePathInCache(
 
       // For debugging purposes, log all instances of the projectRoot in the cache.
       // Otherwise, fail the test if one is found.
-      if (process.env.PARCEL_DEBUG_CACHE_FILEPATH != null) {
+      if (process.env.ATLASPACK_DEBUG_CACHE_FILEPATH != null) {
         if (contents.includes(projectRoot)) {
           let deserialized;
           try {

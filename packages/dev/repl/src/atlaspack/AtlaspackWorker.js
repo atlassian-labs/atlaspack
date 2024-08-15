@@ -71,13 +71,13 @@ function resetSWPromise() {
 }
 
 let sw: MessagePort;
-global.PARCEL_SERVICE_WORKER = async (type, data) => {
+global.ATLASPACK_SERVICE_WORKER = async (type, data) => {
   await sendMsg(sw, type, data);
   if (type === 'setFS') {
     resolveSWFSPromise();
   }
 };
-global.PARCEL_SERVICE_WORKER_REGISTER = (type, cb) => {
+global.ATLASPACK_SERVICE_WORKER_REGISTER = (type, cb) => {
   // $FlowFixMe[incompatible-type]
   let wrapper: EventHandler = async (evt: ExtendableMessageEvent) => {
     if (evt.data.type === type) {
@@ -242,9 +242,9 @@ async function setup(assets, options) {
   let graphs = options.renderGraphs ? [] : null;
   if (graphs && options.renderGraphs) {
     // $FlowFixMe
-    globalThis.PARCEL_DUMP_GRAPHVIZ = (name, content) =>
+    globalThis.ATLASPACK_DUMP_GRAPHVIZ = (name, content) =>
       graphs.push({name, content});
-    globalThis.PARCEL_DUMP_GRAPHVIZ.mode = options.renderGraphs;
+    globalThis.ATLASPACK_DUMP_GRAPHVIZ.mode = options.renderGraphs;
   }
 
   // TODO only create new instance if options/entries changed

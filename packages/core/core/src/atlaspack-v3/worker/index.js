@@ -1,6 +1,6 @@
 if (
-  process.env.PARCEL_BUILD_ENV !== 'production' ||
-  process.env.PARCEL_SELF_BUILD
+  process.env.ATLASPACK_BUILD_ENV !== 'production' ||
+  process.env.ATLASPACK_SELF_BUILD
 ) {
   require('@atlaspack/babel-register');
 }

@@ -27,7 +27,7 @@
         "@atlaspack/rust": false,
         "@atlaspack/logger": false,
         "@atlaspack/markdown-ansi": false,
-        "@atlaspack/source-map": false,
+        "@parcel/source-map": false,
         "chalk": false
       }
     }
@@ -38,7 +38,7 @@
     "@atlaspack/logger": "2.12.0",
     "@atlaspack/markdown-ansi": "2.12.0",
     "@atlaspack/rust": "2.12.0",
-    "@atlaspack/source-map": "^2.1.1",
+    "@parcel/source-map": "^2.1.1",
     "chalk": "^4.1.0",
     "nullthrows": "^1.1.1"
   },

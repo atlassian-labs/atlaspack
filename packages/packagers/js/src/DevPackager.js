@@ -7,7 +7,7 @@ import {
   countLines,
   normalizeSeparators,
 } from '@atlaspack/utils';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import invariant from 'assert';
 import path from 'path';
 import fs from 'fs';

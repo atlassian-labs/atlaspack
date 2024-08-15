@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import {Optimizer} from '@atlaspack/plugin';
 // $FlowFixMe - init for browser build.
 import init, {

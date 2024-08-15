@@ -480,7 +480,7 @@ describe.v2('babel', function () {
             cwd: fixtureDir,
             env: {
               ...process.env,
-              PARCEL_WORKERS: '0',
+              ATLASPACK_WORKERS: '0',
             },
           },
         );
@@ -517,7 +517,7 @@ describe.v2('babel', function () {
             cwd: inputDir,
             env: {
               ...process.env,
-              PARCEL_WORKERS: '0',
+              ATLASPACK_WORKERS: '0',
             },
           },
         );

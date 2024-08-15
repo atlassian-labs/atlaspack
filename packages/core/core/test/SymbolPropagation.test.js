@@ -405,8 +405,8 @@ function changeAsset(
   return [[node.id, node.value]];
 }
 
-// process.env.PARCEL_DUMP_GRAPHVIZ = '';
-// process.env.PARCEL_DUMP_GRAPHVIZ = 'symbols';
+// process.env.ATLASPACK_DUMP_GRAPHVIZ = '';
+// process.env.ATLASPACK_DUMP_GRAPHVIZ = 'symbols';
 
 describe('SymbolPropagation', () => {
   it('basic tree', async () => {

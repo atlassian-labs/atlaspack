@@ -58,9 +58,9 @@ describe.v2('elm', function () {
     assert(!js.includes('elm$browser$Debugger'));
   });
 
-  it('should remove debugger when environment variable `PARCEL_ELM_NO_DEBUG` is set to true', async function () {
+  it('should remove debugger when environment variable `ATLASPACK_ELM_NO_DEBUG` is set to true', async function () {
     let b = await bundle(path.join(__dirname, '/integration/elm/index.js'), {
-      env: {PARCEL_ELM_NO_DEBUG: true},
+      env: {ATLASPACK_ELM_NO_DEBUG: true},
     });
 
     await run(b);

@@ -8,7 +8,7 @@ import type {
 } from '@atlaspack/types';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
-import SourceMap from '@atlaspack/source-map';
+import SourceMap from '@parcel/source-map';
 import {Transformer} from '@atlaspack/plugin';
 import {transform, transformAsync} from '@atlaspack/rust';
 import browserslist from 'browserslist';
@@ -377,8 +377,8 @@ export default (new Transformer({
         env.NODE_ENV = options.env.NODE_ENV;
       }
 
-      if (process.env.PARCEL_BUILD_ENV === 'test') {
-        env.PARCEL_BUILD_ENV = 'test';
+      if (process.env.ATLASPACK_BUILD_ENV === 'test') {
+        env.ATLASPACK_BUILD_ENV = 'test';
       }
     } else if (Array.isArray(config?.inlineEnvironment)) {
       for (let match of globMatch(

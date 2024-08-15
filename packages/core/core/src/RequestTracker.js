@@ -26,7 +26,7 @@ import type WorkerFarm from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 
 import {
-  PARCEL_VERSION,
+  ATLASPACK_VERSION,
   VALID,
   INITIAL_BUILD,
   FILE_CREATE,
@@ -1552,7 +1552,7 @@ export function getWatcherOptions({
 
 function getCacheKey(options) {
   return hashString(
-    `${PARCEL_VERSION}:${JSON.stringify(options.entries)}:${options.mode}:${
+    `${ATLASPACK_VERSION}:${JSON.stringify(options.entries)}:${options.mode}:${
       options.shouldBuildLazily ? 'lazy' : 'eager'
     }:${options.watchBackend ?? ''}`,
   );

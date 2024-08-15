@@ -26,7 +26,7 @@ import {toProjectPath} from './projectPath';
 import {getResolveFrom} from './requests/ParcelConfigRequest';
 
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
-import {PARCEL_VERSION} from './constants';
+import {ATLASPACK_VERSION} from './constants';
 
 // Default cache directory name
 const DEFAULT_CACHE_DIRNAME = '.parcel-cache';
@@ -224,7 +224,7 @@ export default async function resolveOptions(
       isLibrary: initialOptions?.defaultTargetOptions?.isLibrary,
     },
     featureFlags: {...DEFAULT_FEATURE_FLAGS, ...initialOptions?.featureFlags},
-    parcelVersion: PARCEL_VERSION,
+    parcelVersion: ATLASPACK_VERSION,
   };
 }
 

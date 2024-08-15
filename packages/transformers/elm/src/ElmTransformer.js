@@ -31,11 +31,12 @@ export default (new Transformer({
       spawn,
       cwd: path.dirname(asset.filePath),
       // $FlowFixMe[sketchy-null-string]
-      debug: !options.env.PARCEL_ELM_NO_DEBUG && options.mode !== 'production',
+      debug:
+        !options.env.ATLASPACK_ELM_NO_DEBUG && options.mode !== 'production',
       optimize: asset.env.shouldOptimize,
       report: 'json',
     };
-    asset.invalidateOnEnvChange('PARCEL_ELM_NO_DEBUG');
+    asset.invalidateOnEnvChange('ATLASPACK_ELM_NO_DEBUG');
 
     const extraSources = resolveExtraSources({asset, logger});
 

@@ -138,7 +138,7 @@ export async function _report(
         pendingIncrementalBuild = true;
       }
 
-      if (process.env.PARCEL_SHOW_PHASE_TIMES) {
+      if (process.env.ATLASPACK_SHOW_PHASE_TIMES) {
         phaseReport(phaseStartTimes);
       }
       break;
