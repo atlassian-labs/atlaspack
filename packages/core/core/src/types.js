@@ -31,9 +31,9 @@ import type {FileSystem} from '@atlaspack/fs';
 import type {Cache} from '@atlaspack/cache';
 import type {PackageManager} from '@atlaspack/package-manager';
 import type {ProjectPath} from './projectPath';
-import type {Event} from '@atlaspack/watcher';
+import type {Event} from '@parcel/watcher';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
-import type {BackendType} from '@atlaspack/watcher';
+import type {BackendType} from '@parcel/watcher';
 
 export type ParcelPluginNode = {|
   packageName: PackageName,

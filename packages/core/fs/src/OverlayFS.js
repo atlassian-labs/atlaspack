@@ -13,7 +13,7 @@ import type {
   Event,
   Options as WatcherOptions,
   AsyncSubscription,
-} from '@atlaspack/watcher';
+} from '@parcel/watcher';
 
 import {registerSerializableClass} from '@atlaspack/core';
 import WorkerFarm from '@atlaspack/workers';

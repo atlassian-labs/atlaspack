@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@atlaspack/lsp-protocol": "2.12.0",
-    "@atlaspack/watcher": "^2.0.7",
+    "@parcel/watcher": "^2.0.7",
     "common-path-prefix": "^3.0.0",
     "nullthrows": "^1.1.1",
     "vscode-jsonrpc": "^8.0.2",

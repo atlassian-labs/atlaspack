@@ -29,8 +29,8 @@
         "@atlaspack/rust": false,
         "@atlaspack/types-internal": false,
         "@atlaspack/utils": false,
-        "@atlaspack/watcher": false,
         "@atlaspack/watcher-watchman-js": false,
+        "@parcel/watcher": false,
         "@atlaspack/workers": false
       }
     },
@@ -41,8 +41,8 @@
         "@atlaspack/rust": false,
         "@atlaspack/types-internal": false,
         "@atlaspack/utils": false,
-        "@atlaspack/watcher": false,
         "@atlaspack/watcher-watchman-js": false,
+        "@parcel/watcher": false,
         "@atlaspack/workers": false
       }
     }
@@ -56,7 +56,7 @@
     "@atlaspack/rust": "2.12.0",
     "@atlaspack/types-internal": "2.12.0",
     "@atlaspack/utils": "2.12.0",
-    "@atlaspack/watcher": "^2.0.7",
+    "@parcel/watcher": "^2.0.7",
     "@atlaspack/workers": "2.12.0"
   },
   "devDependencies": {

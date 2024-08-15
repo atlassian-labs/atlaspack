@@ -5,10 +5,7 @@ function resolveSource(specifier, from) {
   return resolve.sync(specifier, {
     basedir: path.dirname(from),
     packageFilter(pkg) {
-      if (
-        pkg.name.startsWith('@atlaspack/') &&
-        pkg.name !== '@atlaspack/watcher'
-      ) {
+      if (pkg.name.startsWith('@atlaspack/')) {
         if (pkg.source) {
           pkg.main = pkg.source;
         }

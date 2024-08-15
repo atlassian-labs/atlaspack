@@ -8,7 +8,7 @@ import type {
   DiagnosticWithoutOrigin,
 } from '@atlaspack/diagnostic';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
-import type {Event, BackendType} from '@atlaspack/watcher';
+import type {Event, BackendType} from '@parcel/watcher';
 
 import type {Cache} from './Cache';
 import type {

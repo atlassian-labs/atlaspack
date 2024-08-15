@@ -9,13 +9,13 @@ import type {
   Event,
   SubscribeCallback,
   AsyncSubscription,
-} from '@atlaspack/watcher';
+} from '@parcel/watcher';
 
 type WatchmanArgs = any;
 type FilePath = string;
 type GlobPattern = string;
 
-// Matches the Watcher API from "@atlaspack/watcher"
+// Matches the Watcher API from "@parcel/watcher"
 export interface Watcher {
   getEventsSince(
     dir: FilePath,
@@ -95,7 +95,7 @@ export class ParcelWatcherWatchmanJS implements Watcher {
     return this.initPromise;
   }
 
-  // Types should match @atlaspack/watcher/index.js.flow
+  // Types should match @parcel/watcher/index.js.flow
   async writeSnapshot(dir: string, snapshot: FilePath): Promise<string> {
     await this.init(dir);
 

@@ -11,7 +11,7 @@ import type {
   Event,
   Options as WatcherOptions,
   AsyncSubscription,
-} from '@atlaspack/watcher';
+} from '@parcel/watcher';
 
 import fs from 'graceful-fs';
 import nativeFS from 'fs';
@@ -22,7 +22,7 @@ import {promisify} from 'util';
 import {registerSerializableClass} from '@atlaspack/core';
 import {hashFile} from '@atlaspack/utils';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
-import watcher from '@atlaspack/watcher';
+import watcher from '@parcel/watcher';
 import packageJSON from '../package.json';
 
 import * as searchNative from '@atlaspack/rust';

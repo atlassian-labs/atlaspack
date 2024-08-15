@@ -13,6 +13,6 @@
     "fb-watchman": "^2.0.2"
   },
   "devDependencies": {
-    "@atlaspack/watcher": "^2.4.1"
+    "@parcel/watcher": "^2.4.1"
   }
 }

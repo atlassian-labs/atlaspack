@@ -11,7 +11,7 @@ import type {
   Event,
   Options as WatcherOptions,
   AsyncSubscription,
-} from '@atlaspack/watcher';
+} from '@parcel/watcher';
 
 import path from 'path';
 import {Readable, Writable} from 'stream';

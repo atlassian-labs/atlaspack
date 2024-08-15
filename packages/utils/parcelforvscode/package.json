@@ -93,7 +93,7 @@
       "isLibrary": false,
       "optimize": false,
       "includeNodeModules": {
-        "@atlaspack/watcher": false
+        "@parcel/watcher": false
       },
       "context": "node"
     }
@@ -124,6 +124,6 @@
     "vscode-test": "^1.5.0"
   },
   "dependencies": {
-    "@atlaspack/watcher": "^2.0.7"
+    "@parcel/watcher": "^2.0.7"
   }
 }

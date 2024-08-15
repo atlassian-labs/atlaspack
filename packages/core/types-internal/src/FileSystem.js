@@ -5,7 +5,7 @@ import type {
   Event,
   Options as WatcherOptions,
   AsyncSubscription,
-} from '@atlaspack/watcher';
+} from '@parcel/watcher';
 
 export type FileOptions = {mode?: number, ...};
 export type ReaddirOptions =

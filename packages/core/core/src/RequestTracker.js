@@ -21,7 +21,7 @@ import {
   makeDeferredWithPromise,
   PromiseQueue,
 } from '@atlaspack/utils';
-import type {Options as WatcherOptions, Event} from '@atlaspack/watcher';
+import type {Options as WatcherOptions, Event} from '@parcel/watcher';
 import type WorkerFarm from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 

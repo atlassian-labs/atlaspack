@@ -157,7 +157,7 @@ export class BrowserPackageManager implements PackageManager {
       saveDev?: boolean,
     |},
   ): Promise<ResolveResult> {
-    if (name.startsWith('@atlaspack/') && name !== '@atlaspack/watcher') {
+    if (name.startsWith('@atlaspack/')) {
       return Promise.resolve({
         resolved: name,
         pkg: {
