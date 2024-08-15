@@ -29,7 +29,7 @@ pub enum TracerMode {
 
 impl TracerMode {
   pub fn from_env() -> Result<Option<Self>, FromEnvError> {
-    let Some(mode) = optional_var("PARCEL_TRACING_MODE") else {
+    let Some(mode) = optional_var("ATLASPACK_TRACING_MODE") else {
       return Ok(None);
     };
 
@@ -37,7 +37,7 @@ impl TracerMode {
       "file" => Ok(Some(Self::file())),
       "stdout" => Ok(Some(Self::stdout())),
       value => Err(FromEnvError::InvalidKey(
-        String::from("PARCEL_TRACING_MODE"),
+        String::from("ATLASPACK_TRACING_MODE"),
         anyhow!("Invalid value: {}", value),
       )),
     }
@@ -117,7 +117,7 @@ mod test {
   #[test]
   fn test_tracing_options_sets_to_none_if_no_mode_is_set() {
     let _guard = TEST_LOCK.lock();
-    std::env::remove_var("PARCEL_TRACING_MODE");
+    std::env::remove_var("ATLASPACK_TRACING_MODE");
     let options = TracerMode::from_env().unwrap();
     assert!(options.is_none());
   }
@@ -125,7 +125,7 @@ mod test {
   #[test]
   fn test_tracing_options_sets_to_file() {
     let _guard = TEST_LOCK.lock();
-    std::env::set_var("PARCEL_TRACING_MODE", "stdout");
+    std::env::set_var("ATLASPACK_TRACING_MODE", "stdout");
     let options = TracerMode::from_env().unwrap().unwrap();
     assert!(matches!(options, TracerMode::Stdout));
   }
@@ -133,7 +133,7 @@ mod test {
   #[test]
   fn test_tracing_options_sets_to_stdout() {
     let _guard = TEST_LOCK.lock();
-    std::env::set_var("PARCEL_TRACING_MODE", "file");
+    std::env::set_var("ATLASPACK_TRACING_MODE", "file");
     let options = TracerMode::from_env().unwrap().unwrap();
     assert!(matches!(options, TracerMode::File { .. }));
   }

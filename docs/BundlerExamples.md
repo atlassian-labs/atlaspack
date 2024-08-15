@@ -361,4 +361,4 @@ dumpGraphToGraphViz(
 
 and run your example test case with the command below.
 
-` PARCEL_DUMP_GRAPHVIZ=1yarn test test/<testsuite>`
+` ATLASPACK_DUMP_GRAPHVIZ=1yarn test test/<testsuite>`

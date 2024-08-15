@@ -21,8 +21,8 @@ Parcel uses [`tracing`](https://github.com/tokio-rs/tracing) for logging and tra
 fixing.
 
 - By default, traces/logs won't be written
-- `PARCEL_TRACING_MODE=stdout` will write to standard-output
-- `PARCEL_TRACING_MODE=file` will write to a temporary log file, with log rotation this file will be under
+- `ATLASPACK_TRACING_MODE=stdout` will write to standard-output
+- `ATLASPACK_TRACING_MODE=file` will write to a temporary log file, with log rotation this file will be under
   `$TMPDIR/parcel_trace`
 
 ## Sentry integration
@@ -31,9 +31,9 @@ Sentry integration is turned off by default.
 
 Parcel uses [sentry](https://sentry.io/) only on `canary` nightly releases for error monitoring.
 
-- `PARCEL_ENABLE_SENTRY` will enable sentry integration
-- `PARCEL_SENTRY_TAGS` should contain a JSON string with a dictionary of tags to add to sentry
-- `PARCEL_SENTRY_DSN` should contain the Sentry DSN
+- `ATLASPACK_ENABLE_SENTRY` will enable sentry integration
+- `ATLASPACK_SENTRY_TAGS` should contain a JSON string with a dictionary of tags to add to sentry
+- `ATLASPACK_SENTRY_DSN` should contain the Sentry DSN
 
 ## Crash reporting
 
@@ -49,6 +49,6 @@ and report the crash.
 
 A default server implementation is not provided, but an example can be seen on `examples/sample_usage.rs`.
 
-- `PARCEL_ENABLE_MINIDUMPER` will enable the minidumper client
-- `PARCEL_MINIDUMPER_SERVER_PID_FILE` should contain a file path to a pid-file with the PID of the server process
-- `PARCEL_MINIDUMPER_SERVER_SOCKET_NAME` should contain the path to the socket to use
+- `ATLASPACK_ENABLE_MINIDUMPER` will enable the minidumper client
+- `ATLASPACK_MINIDUMPER_SERVER_PID_FILE` should contain a file path to a pid-file with the PID of the server process
+- `ATLASPACK_MINIDUMPER_SERVER_SOCKET_NAME` should contain the path to the socket to use
