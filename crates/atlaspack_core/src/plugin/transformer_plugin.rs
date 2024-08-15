@@ -104,7 +104,7 @@ pub struct TransformResult {
 /// Compile a single asset, discover dependencies, or convert the asset to a different format
 ///
 /// Many transformers are wrappers around other tools such as compilers and preprocessors, and are
-/// designed to integrate with Parcel.
+/// designed to integrate with Atlaspack.
 ///
 pub trait TransformerPlugin: Debug + Send + Sync {
   /// Transform the asset and/or add new assets

@@ -1,9 +1,9 @@
 use std::sync::mpsc::Sender;
 
-use napi::{Env, JsObject, JsUndefined};
-use napi_derive::napi;
 use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack_napi_helpers::JsTransferable;
+use napi::{Env, JsObject, JsUndefined};
+use napi_derive::napi;
 
 /// This function is run in the Nodejs worker context upon initialization
 /// to notify the main thread that a Nodejs worker thread has started

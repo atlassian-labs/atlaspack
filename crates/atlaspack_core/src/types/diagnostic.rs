@@ -19,7 +19,7 @@ pub enum ErrorKind {
   Unknown,
 }
 
-/// This is a user facing error for Parcel.
+/// This is a user facing error for Atlaspack.
 ///
 /// Usually but not always this is linked to a source-code location.
 #[derive(Builder, Debug, Deserialize, PartialEq, Serialize)]

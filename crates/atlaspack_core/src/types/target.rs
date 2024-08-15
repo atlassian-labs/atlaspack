@@ -23,7 +23,7 @@ pub struct Target {
 
   /// The environment the code will run in
   ///
-  /// This influences how Parcel compiles your code, including what syntax to transpile.
+  /// This influences how Atlaspack compiles your code, including what syntax to transpile.
   ///
   pub env: Arc<Environment>,
 

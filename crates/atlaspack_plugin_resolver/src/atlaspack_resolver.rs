@@ -31,18 +31,18 @@ use atlaspack_resolver::Resolver;
 use atlaspack_resolver::ResolverError;
 use atlaspack_resolver::SpecifierError;
 
-pub struct ParcelResolver {
+pub struct AtlaspackResolver {
   cache: Cache,
   options: Arc<PluginOptions>,
 }
 
-impl Debug for ParcelResolver {
+impl Debug for AtlaspackResolver {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "ParcelResolver")
+    write!(f, "AtlaspackResolver")
   }
 }
 
-impl ParcelResolver {
+impl AtlaspackResolver {
   pub fn new(ctx: &PluginContext) -> Self {
     Self {
       cache: Cache::new(ctx.config.fs.clone()),
@@ -235,7 +235,7 @@ impl ParcelResolver {
   }
 }
 
-impl Hash for ParcelResolver {
+impl Hash for AtlaspackResolver {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
     env!("CARGO_PKG_VERSION").hash(state);
     self.options.mode.hash(state);
@@ -243,7 +243,7 @@ impl Hash for ParcelResolver {
   }
 }
 
-impl ResolverPlugin for ParcelResolver {
+impl ResolverPlugin for AtlaspackResolver {
   fn resolve(&self, ctx: ResolveContext) -> anyhow::Result<Resolved> {
     let mut resolver = Resolver::atlaspack(
       Cow::Borrowed(&self.options.project_root),
@@ -438,7 +438,7 @@ mod test {
   #[test]
   fn returns_module_not_found_error_diagnostic() {
     let plugin_context = plugin_context(InMemoryFileSystem::default());
-    let resolver = ParcelResolver::new(&plugin_context);
+    let resolver = AtlaspackResolver::new(&plugin_context);
     let ctx = resolve_context("foo.js");
 
     let err = resolver
@@ -455,7 +455,9 @@ mod test {
         kind: ErrorKind::NotFound,
         hints: Vec::new(),
         message: String::from("Cannot find module 'foo.js'"),
-        origin: Some(String::from("atlaspack_plugin_resolver::atlaspack_resolver"))
+        origin: Some(String::from(
+          "atlaspack_plugin_resolver::atlaspack_resolver"
+        ))
       }
     );
   }
@@ -471,7 +473,7 @@ mod test {
     );
 
     let plugin_context = plugin_context(fs);
-    let resolver = ParcelResolver::new(&plugin_context);
+    let resolver = AtlaspackResolver::new(&plugin_context);
     let ctx = resolve_context("foo/bar");
 
     let err = resolver
@@ -488,7 +490,9 @@ mod test {
         hints: Vec::new(),
         kind: ErrorKind::Unknown,
         message: String::from("Module 'foo/bar' is not exported from the 'foo' package"),
-        origin: Some(String::from("atlaspack_plugin_resolver::atlaspack_resolver"))
+        origin: Some(String::from(
+          "atlaspack_plugin_resolver::atlaspack_resolver"
+        ))
       }
     );
   }
@@ -511,7 +515,7 @@ mod test {
       options: Arc::new(PluginOptions::default()),
     };
 
-    let resolver = ParcelResolver::new(&plugin_context);
+    let resolver = AtlaspackResolver::new(&plugin_context);
     let specifier = String::from("./something.js");
 
     let ctx = ResolveContext {

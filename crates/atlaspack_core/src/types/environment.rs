@@ -23,7 +23,7 @@ pub struct EnvironmentId(pub NonZeroU32);
 
 /// The environment the built code will run in
 ///
-/// This influences how Parcel compiles your code, including what syntax to transpile.
+/// This influences how Atlaspack compiles your code, including what syntax to transpile.
 ///
 #[derive(Clone, Debug, Default, Deserialize, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -102,7 +102,7 @@ impl PartialEq for Environment {
 
 /// The environment the output should run in
 ///
-/// This informs Parcel what environment-specific APIs are available.
+/// This informs Atlaspack what environment-specific APIs are available.
 ///
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -210,7 +210,7 @@ pub struct TargetSourceMapOptions {
 
   /// The URL to load the original source code from
   ///
-  /// This is set automatically in development when using the builtin Parcel development server.
+  /// This is set automatically in development when using the builtin Atlaspack development server.
   /// Otherwise, it defaults to a relative path to the bundle from the project root.
   ///
   source_root: Option<String>,

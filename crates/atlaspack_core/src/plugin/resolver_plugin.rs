@@ -19,7 +19,7 @@ pub struct ResolveContext {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ResolvedResolution {
-  /// Whether this dependency can be deferred by Parcel itself
+  /// Whether this dependency can be deferred by Atlaspack itself
   pub can_defer: bool,
 
   /// The code of the resolved asset

@@ -29,13 +29,13 @@ mod test_helpers;
 ///  `Dependency` as well as exported, imported and re-exported symbols (as `Symbol`, usually
 ///   mapping to a mangled name that the SWC transformer replaced in the source file + the source
 ///   module and the source name that has been imported)
-pub struct ParcelJsTransformerPlugin {
+pub struct AtlaspackJsTransformerPlugin {
   file_system: FileSystemRef,
   options: Arc<PluginOptions>,
   ts_config: Option<TsConfig>,
 }
 
-impl ParcelJsTransformerPlugin {
+impl AtlaspackJsTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Result<Self, Error> {
     let ts_config = ctx
       .config
@@ -60,15 +60,15 @@ impl ParcelJsTransformerPlugin {
   }
 }
 
-impl fmt::Debug for ParcelJsTransformerPlugin {
+impl fmt::Debug for AtlaspackJsTransformerPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    f.debug_struct("ParcelJsTransformerPlugin")
+    f.debug_struct("AtlaspackJsTransformerPlugin")
       .field("options", &self.options)
       .finish()
   }
 }
 
-impl TransformerPlugin for ParcelJsTransformerPlugin {
+impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does a lot of equivalent work to `JSTransformer::transform` in
   /// `packages/transformers/js`
   fn transform(&mut self, input: TransformationInput) -> Result<TransformResult, Error> {
@@ -403,7 +403,7 @@ exports.hello = function() {};
       options: Arc::new(PluginOptions::default()),
     };
 
-    let mut transformer = ParcelJsTransformerPlugin::new(&ctx).expect("Expected transformer");
+    let mut transformer = AtlaspackJsTransformerPlugin::new(&ctx).expect("Expected transformer");
 
     let result = transformer.transform(TransformationInput::Asset(asset))?;
     Ok(result)

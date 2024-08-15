@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use atlaspack_config::atlaspack_rc_config_loader::AtlaspackRcConfigLoader;
 use atlaspack_config::atlaspack_rc_config_loader::LoadConfigOptions;
-use atlaspack_config::atlaspack_rc_config_loader::ParcelRcConfigLoader;
 use atlaspack_core::asset_graph::AssetGraph;
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::PluginLogger;
 use atlaspack_core::plugin::PluginOptions;
 use atlaspack_core::plugin::ReporterEvent;
-use atlaspack_core::types::ParcelOptions;
+use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_filesystem::os_file_system::OsFileSystem;
 use atlaspack_filesystem::FileSystemRef;
 use atlaspack_package_manager::NodePackageManager;
@@ -25,24 +25,24 @@ use crate::requests::AssetGraphRequest;
 use crate::requests::RequestResult;
 
 #[derive(Clone)]
-struct ParcelState {
+struct AtlaspackState {
   config: Arc<ConfigLoader>,
   plugins: PluginsRef,
 }
 
-pub struct Parcel {
+pub struct Atlaspack {
   pub fs: FileSystemRef,
-  pub options: ParcelOptions,
+  pub options: AtlaspackOptions,
   pub package_manager: PackageManagerRef,
   pub project_root: PathBuf,
   pub rpc: Option<RpcHostRef>,
-  state: Option<ParcelState>,
+  state: Option<AtlaspackState>,
 }
 
-impl Parcel {
+impl Atlaspack {
   pub fn new(
     fs: Option<FileSystemRef>,
-    options: ParcelOptions,
+    options: AtlaspackOptions,
     package_manager: Option<PackageManagerRef>,
     rpc: Option<RpcHostRef>,
   ) -> Result<Self, anyhow::Error> {
@@ -65,8 +65,8 @@ impl Parcel {
 
 pub struct BuildResult;
 
-impl Parcel {
-  fn state(&mut self) -> anyhow::Result<ParcelState> {
+impl Atlaspack {
+  fn state(&mut self) -> anyhow::Result<AtlaspackState> {
     if let Some(state) = self.state.clone() {
       return Ok(state);
     }
@@ -78,7 +78,7 @@ impl Parcel {
     }
 
     let (config, _files) =
-      ParcelRcConfigLoader::new(Arc::clone(&self.fs), Arc::clone(&self.package_manager)).load(
+      AtlaspackRcConfigLoader::new(Arc::clone(&self.fs), Arc::clone(&self.package_manager)).load(
         &self.project_root,
         LoadConfigOptions {
           additional_reporters: vec![], // TODO
@@ -110,7 +110,7 @@ impl Parcel {
       },
     ));
 
-    let state = ParcelState {
+    let state = AtlaspackState {
       config: config_loader,
       plugins,
     };
@@ -121,7 +121,7 @@ impl Parcel {
   }
 
   pub fn build(&mut self) -> anyhow::Result<()> {
-    let ParcelState { config, plugins } = self.state()?;
+    let AtlaspackState { config, plugins } = self.state()?;
 
     plugins.reporter().report(&ReporterEvent::BuildStart)?;
 
@@ -137,7 +137,7 @@ impl Parcel {
   }
 
   pub fn build_asset_graph(&mut self) -> anyhow::Result<AssetGraph> {
-    let ParcelState { config, plugins } = self.state()?;
+    let AtlaspackState { config, plugins } = self.state()?;
 
     let mut request_tracker = RequestTracker::new(
       config.clone(),

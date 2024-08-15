@@ -5,7 +5,7 @@ use atlaspack_config::atlaspack_config_fixtures::default_config;
 use atlaspack_core::{
   config_loader::ConfigLoader,
   plugin::{PluginContext, PluginLogger, PluginOptions},
-  types::ParcelOptions,
+  types::AtlaspackOptions,
 };
 use atlaspack_filesystem::{in_memory_file_system::InMemoryFileSystem, FileSystemRef};
 
@@ -40,7 +40,7 @@ pub struct RequestTrackerTestOptions {
   pub plugins: Option<PluginsRef>,
   pub project_root: PathBuf,
   pub search_path: PathBuf,
-  pub atlaspack_options: ParcelOptions,
+  pub atlaspack_options: AtlaspackOptions,
 }
 
 impl Default for RequestTrackerTestOptions {
@@ -50,7 +50,7 @@ impl Default for RequestTrackerTestOptions {
       plugins: None,
       project_root: PathBuf::default(),
       search_path: PathBuf::default(),
-      atlaspack_options: ParcelOptions::default(),
+      atlaspack_options: AtlaspackOptions::default(),
     }
   }
 }

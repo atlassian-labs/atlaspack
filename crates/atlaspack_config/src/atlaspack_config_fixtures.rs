@@ -5,14 +5,14 @@ use std::sync::Arc;
 use indexmap::indexmap;
 use indexmap::IndexMap;
 
+use super::atlaspack_config::AtlaspackConfig;
 use super::map::NamedPipelinesMap;
-use super::atlaspack_config::ParcelConfig;
+use crate::atlaspack_config::PluginNode;
 use crate::map::PipelineMap;
 use crate::map::PipelinesMap;
-use crate::atlaspack_config::PluginNode;
 
 pub struct ConfigFixture {
-  pub atlaspack_config: ParcelConfig,
+  pub atlaspack_config: AtlaspackConfig,
   pub atlaspack_rc: String,
   pub path: PathBuf,
 }
@@ -25,7 +25,7 @@ pub struct PartialConfigFixture {
 pub struct ExtendedConfigFixture {
   pub base_config: PartialConfigFixture,
   pub extended_config: PartialConfigFixture,
-  pub atlaspack_config: ParcelConfig,
+  pub atlaspack_config: AtlaspackConfig,
 }
 
 pub fn config(project_root: &Path) -> (String, ConfigFixture) {
@@ -54,7 +54,7 @@ pub fn fallback_config(project_root: &Path) -> (String, ConfigFixture) {
 
 pub fn default_config(resolve_from: Arc<PathBuf>) -> ConfigFixture {
   ConfigFixture {
-    atlaspack_config: ParcelConfig {
+    atlaspack_config: AtlaspackConfig {
       bundler: PluginNode {
         package_name: String::from("@atlaspack/bundler-default"),
         resolve_from: resolve_from.clone(),
@@ -144,7 +144,7 @@ fn extended_config_from(
   let extended_config = default_config(extended_resolve_from.clone());
 
   ExtendedConfigFixture {
-    atlaspack_config: ParcelConfig {
+    atlaspack_config: AtlaspackConfig {
       bundler: PluginNode {
         package_name: String::from("@atlaspack/bundler-default"),
         resolve_from: extended_resolve_from.clone(),

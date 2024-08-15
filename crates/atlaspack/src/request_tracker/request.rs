@@ -5,9 +5,9 @@ use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
-use dyn_hash::DynHash;
 use atlaspack_core::config_loader::ConfigLoaderRef;
-use atlaspack_core::types::ParcelOptions;
+use atlaspack_core::types::AtlaspackOptions;
+use dyn_hash::DynHash;
 
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
@@ -31,7 +31,7 @@ type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send>;
 pub struct RunRequestContext {
   config_loader: ConfigLoaderRef,
   file_system: FileSystemRef,
-  pub options: Arc<ParcelOptions>,
+  pub options: Arc<AtlaspackOptions>,
   parent_request_id: Option<u64>,
   plugins: PluginsRef,
   pub project_root: PathBuf,
@@ -42,7 +42,7 @@ impl RunRequestContext {
   pub(crate) fn new(
     config_loader: ConfigLoaderRef,
     file_system: FileSystemRef,
-    options: Arc<ParcelOptions>,
+    options: Arc<AtlaspackOptions>,
     parent_request_id: Option<u64>,
     plugins: PluginsRef,
     project_root: PathBuf,

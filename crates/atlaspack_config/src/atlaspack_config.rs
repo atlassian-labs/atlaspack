@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use indexmap::IndexMap;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::types::DiagnosticError;
+use indexmap::IndexMap;
 use serde::Deserialize;
 use serde::Serialize;
 
-use super::partial_atlaspack_config::PartialParcelConfig;
+use super::partial_atlaspack_config::PartialAtlaspackConfig;
 use crate::map::NamedPipelinesMap;
 use crate::map::PipelineMap;
 use crate::map::PipelinesMap;
@@ -21,7 +21,7 @@ pub struct PluginNode {
 
 /// Represents a fully merged and validated .atlaspack_rc config
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct ParcelConfig {
+pub struct AtlaspackConfig {
   pub bundler: PluginNode,
   pub compressors: PipelinesMap,
   pub namers: Vec<PluginNode>,
@@ -34,10 +34,10 @@ pub struct ParcelConfig {
   pub validators: PipelinesMap,
 }
 
-impl TryFrom<PartialParcelConfig> for ParcelConfig {
+impl TryFrom<PartialAtlaspackConfig> for AtlaspackConfig {
   type Error = DiagnosticError;
 
-  fn try_from(config: PartialParcelConfig) -> Result<Self, Self::Error> {
+  fn try_from(config: PartialAtlaspackConfig) -> Result<Self, Self::Error> {
     // The final stage of merging filters out any ... extensions as they are a noop
     fn filter_out_extends(pipelines: Vec<PluginNode>) -> Vec<PluginNode> {
       pipelines
@@ -78,7 +78,7 @@ impl TryFrom<PartialParcelConfig> for ParcelConfig {
       ));
     }
 
-    Ok(ParcelConfig {
+    Ok(AtlaspackConfig {
       bundler: config.bundler.unwrap(),
       compressors: PipelinesMap::new(filter_out_extends_from_map(config.compressors)),
       namers,
@@ -98,12 +98,12 @@ mod tests {
   use super::*;
   mod try_from {
     use super::*;
-    use crate::partial_atlaspack_config::PartialParcelConfigBuilder;
+    use crate::partial_atlaspack_config::PartialAtlaspackConfigBuilder;
 
     #[test]
     fn returns_an_error_when_required_phases_are_optional() {
       assert_eq!(
-        ParcelConfig::try_from(PartialParcelConfig::default()).map_err(|e| e.to_string()),
+        AtlaspackConfig::try_from(PartialAtlaspackConfig::default()).map_err(|e| e.to_string()),
         Err(
           diagnostic_error!(
             "Missing plugins for the following phases: {:?}",
@@ -130,14 +130,14 @@ mod tests {
         }
       }
 
-      let partial_config = PartialParcelConfigBuilder::default()
+      let partial_config = PartialAtlaspackConfigBuilder::default()
         .bundler(Some(plugin()))
         .namers(vec![plugin()])
         .resolvers(vec![extension(), plugin()])
         .build()
         .unwrap();
 
-      let config = ParcelConfig::try_from(partial_config);
+      let config = AtlaspackConfig::try_from(partial_config);
 
       assert!(config.is_ok_and(|c| !c.resolvers.contains(&extension())));
     }

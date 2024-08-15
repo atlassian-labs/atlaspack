@@ -1,6 +1,6 @@
 #![deny(unused_crate_dependencies)]
 
-pub use transformer::ParcelJsTransformerPlugin;
+pub use transformer::AtlaspackJsTransformerPlugin;
 
 mod transformer;
 mod ts_config;

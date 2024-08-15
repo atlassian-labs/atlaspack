@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use atlaspack_config::map::NamedPattern;
-use atlaspack_config::ParcelConfig;
+use atlaspack_config::AtlaspackConfig;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::plugin::composite_reporter_plugin::CompositeReporterPlugin;
 use atlaspack_core::plugin::BundlerPlugin;
@@ -18,7 +18,7 @@ use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::plugin::ValidatorPlugin;
-use atlaspack_plugin_resolver::ParcelResolver;
+use atlaspack_plugin_resolver::AtlaspackResolver;
 use atlaspack_plugin_rpc::plugin::RpcBundlerPlugin;
 use atlaspack_plugin_rpc::plugin::RpcCompressorPlugin;
 use atlaspack_plugin_rpc::plugin::RpcNamerPlugin;
@@ -28,15 +28,15 @@ use atlaspack_plugin_rpc::plugin::RpcReporterPlugin;
 use atlaspack_plugin_rpc::plugin::RpcResolverPlugin;
 use atlaspack_plugin_rpc::plugin::RpcRuntimePlugin;
 use atlaspack_plugin_rpc::plugin::RpcTransformerPlugin;
-use atlaspack_plugin_transformer_js::ParcelJsTransformerPlugin;
+use atlaspack_plugin_transformer_js::AtlaspackJsTransformerPlugin;
 
 use super::Plugins;
 use super::TransformerPipeline;
 
-/// Loads plugins based on the Parcel config
+/// Loads plugins based on the Atlaspack config
 pub struct ConfigPlugins {
-  /// The Parcel config that determines what plugins will be loaded
-  config: ParcelConfig,
+  /// The Atlaspack config that determines what plugins will be loaded
+  config: AtlaspackConfig,
 
   /// Dependencies available to all plugin types
   ctx: PluginContext,
@@ -46,7 +46,7 @@ pub struct ConfigPlugins {
 }
 
 impl ConfigPlugins {
-  pub fn new(config: ParcelConfig, ctx: PluginContext) -> Self {
+  pub fn new(config: AtlaspackConfig, ctx: PluginContext) -> Self {
     let mut reporters: Vec<Box<dyn ReporterPlugin>> = Vec::new();
 
     for reporter in config.reporters.iter() {
@@ -151,7 +151,7 @@ impl Plugins for ConfigPlugins {
 
     for resolver in self.config.resolvers.iter() {
       if resolver.package_name == "@atlaspack/resolver-default" {
-        resolvers.push(Box::new(ParcelResolver::new(&self.ctx)));
+        resolvers.push(Box::new(AtlaspackResolver::new(&self.ctx)));
         continue;
       }
 
@@ -198,7 +198,7 @@ impl Plugins for ConfigPlugins {
       }
 
       if transformer.package_name == "@atlaspack/transformer-js" {
-        transformers.push(Box::new(ParcelJsTransformerPlugin::new(&self.ctx)?));
+        transformers.push(Box::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?));
         continue;
       }
 
@@ -291,7 +291,7 @@ mod tests {
       .resolvers()
       .expect("Not to panic");
 
-    assert_eq!(format!("{:?}", resolvers), "[ParcelResolver]")
+    assert_eq!(format!("{:?}", resolvers), "[AtlaspackResolver]")
   }
 
   #[test]
@@ -315,7 +315,7 @@ mod tests {
         "{:?}",
         TransformerPipeline {
           transformers: vec![Box::new(
-            ParcelJsTransformerPlugin::new(&make_test_plugin_context()).unwrap()
+            AtlaspackJsTransformerPlugin::new(&make_test_plugin_context()).unwrap()
           )],
           hash: 1
         }

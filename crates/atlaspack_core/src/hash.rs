@@ -1,7 +1,7 @@
 use xxhash_rust::xxh3::xxh3_64;
 use xxhash_rust::xxh3::Xxh3;
 
-/// Parcel needs to use a hasher for generating certain identifiers used in caches.
+/// Atlaspack needs to use a hasher for generating certain identifiers used in caches.
 ///
 /// The hashes don't need to be incredibly fast, but they should be stable across
 /// runs, machines, platforms and versions.

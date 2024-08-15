@@ -9,10 +9,10 @@ use serde::Serialize;
 use super::engines::Engines;
 use super::OutputFormat;
 
-/// The options passed into Parcel either through the CLI or the programmatic API
+/// The options passed into Atlaspack either through the CLI or the programmatic API
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ParcelOptions {
+pub struct AtlaspackOptions {
   pub config: Option<String>,
 
   /// Path to the atlaspack core node_module. This will be used to resolve built-ins or runtime files.

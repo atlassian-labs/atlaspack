@@ -13,8 +13,8 @@ use atlaspack::file_system::FileSystemRef;
 use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack::rpc::nodejs::RpcHostNodejs;
 use atlaspack::rpc::RpcHostRef;
-use atlaspack::Parcel;
-use atlaspack_core::types::ParcelOptions;
+use atlaspack::Atlaspack;
+use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
 
@@ -23,15 +23,15 @@ use crate::file_system::FileSystemNapi;
 use super::package_manager_napi::PackageManagerNapi;
 
 #[napi(object)]
-pub struct ParcelNapiBuildOptions {
+pub struct AtlaspackNapiBuildOptions {
   pub register_worker: JsFunction,
 }
 
 #[napi(object)]
-pub struct ParcelNapiBuildResult {}
+pub struct AtlaspackNapiBuildResult {}
 
 #[napi(object)]
-pub struct ParcelNapiOptions {
+pub struct AtlaspackNapiOptions {
   pub fs: Option<JsObject>,
   pub node_workers: Option<u32>,
   pub options: JsObject,
@@ -40,19 +40,19 @@ pub struct ParcelNapiOptions {
 }
 
 #[napi]
-pub struct ParcelNapi {
+pub struct AtlaspackNapi {
   pub node_worker_count: u32,
   fs: Option<FileSystemRef>,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   package_manager: Option<PackageManagerRef>,
   rpc: Option<RpcHostRef>,
   tx_worker: Sender<NodejsWorker>,
 }
 
 #[napi]
-impl ParcelNapi {
+impl AtlaspackNapi {
   #[napi(constructor)]
-  pub fn new(napi_options: ParcelNapiOptions, env: Env) -> napi::Result<Self> {
+  pub fn new(napi_options: AtlaspackNapiOptions, env: Env) -> napi::Result<Self> {
     let thread_id = std::thread::current().id();
     tracing::trace!(?thread_id, "atlaspack-napi initialize");
 
@@ -97,7 +97,7 @@ impl ParcelNapi {
   }
 
   #[napi]
-  pub fn build(&self, env: Env, options: ParcelNapiBuildOptions) -> napi::Result<JsObject> {
+  pub fn build(&self, env: Env, options: AtlaspackNapiBuildOptions) -> napi::Result<JsObject> {
     let (deferred, promise) = env.create_deferred()?;
 
     self.register_workers(&options)?;
@@ -111,7 +111,7 @@ impl ParcelNapi {
       let rpc = self.rpc.clone();
 
       move || {
-        let atlaspack = Parcel::new(fs, options, package_manager, rpc);
+        let atlaspack = Atlaspack::new(fs, options, package_manager, rpc);
         let to_napi_error = |error| napi::Error::from_reason(format!("{:?}", error));
 
         match atlaspack {
@@ -131,7 +131,7 @@ impl ParcelNapi {
   pub fn build_asset_graph(
     &self,
     env: Env,
-    options: ParcelNapiBuildOptions,
+    options: AtlaspackNapiBuildOptions,
   ) -> napi::Result<JsObject> {
     let (deferred, promise) = env.create_deferred()?;
 
@@ -146,7 +146,7 @@ impl ParcelNapi {
       let rpc = self.rpc.clone();
 
       move || {
-        let atlaspack = Parcel::new(fs, options, package_manager, rpc);
+        let atlaspack = Atlaspack::new(fs, options, package_manager, rpc);
         let to_napi_error = |error| napi::Error::from_reason(format!("{:?}", error));
 
         match atlaspack {
@@ -162,7 +162,7 @@ impl ParcelNapi {
     Ok(promise)
   }
 
-  fn register_workers(&self, options: &ParcelNapiBuildOptions) -> napi::Result<()> {
+  fn register_workers(&self, options: &AtlaspackNapiBuildOptions) -> napi::Result<()> {
     for _ in 0..self.node_worker_count {
       let transferable = JsTransferable::new(self.tx_worker.clone());
 

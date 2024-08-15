@@ -6,7 +6,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use atlaspack_core::config_loader::ConfigLoaderRef;
 use atlaspack_core::diagnostic_error;
-use atlaspack_core::types::ParcelOptions;
+use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_filesystem::FileSystemRef;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
@@ -38,7 +38,7 @@ pub struct RequestTracker {
   config_loader: ConfigLoaderRef,
   file_system: FileSystemRef,
   graph: RequestGraph<RequestResult>,
-  options: Arc<ParcelOptions>,
+  options: Arc<AtlaspackOptions>,
   plugins: PluginsRef,
   project_root: PathBuf,
   request_index: HashMap<u64, NodeIndex>,
@@ -49,7 +49,7 @@ impl RequestTracker {
   pub fn new(
     config_loader: ConfigLoaderRef,
     file_system: FileSystemRef,
-    options: Arc<ParcelOptions>,
+    options: Arc<AtlaspackOptions>,
     plugins: PluginsRef,
     project_root: PathBuf,
   ) -> Self {
@@ -99,7 +99,9 @@ impl RequestTracker {
       .thread_name(|count| format!("RequestTracker-{}", count))
       .num_threads(num_cpus::get() + 4)
       .panic_handler(|failure| {
-        tracing::error!("Lost thread from thread-pool. This is a bug in atlaspack. Builds may stall.");
+        tracing::error!(
+          "Lost thread from thread-pool. This is a bug in atlaspack. Builds may stall."
+        );
         std::process::exit(1);
       })
       .build()?;

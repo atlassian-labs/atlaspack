@@ -348,7 +348,7 @@ mod test {
 
   use tracing::Level;
 
-  use atlaspack_core::types::{Code, ParcelOptions};
+  use atlaspack_core::types::{AtlaspackOptions, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
 
@@ -493,10 +493,10 @@ console.log('hello world');
 
     let mut request_tracker = request_tracker(RequestTrackerTestOptions {
       fs: Arc::new(fs),
-      atlaspack_options: ParcelOptions {
+      atlaspack_options: AtlaspackOptions {
         core_path,
         entries: vec![temporary_dir.join("entry.js").to_str().unwrap().to_string()],
-        ..ParcelOptions::default()
+        ..AtlaspackOptions::default()
       },
       project_root: temporary_dir.clone(),
       search_path: temporary_dir.clone(),

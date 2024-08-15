@@ -1,20 +1,20 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use atlaspack_core::types::DiagnosticError;
 use derive_builder::Builder;
 use indexmap::IndexMap;
-use atlaspack_core::types::DiagnosticError;
 
 use super::atlaspack_config::PluginNode;
-use super::atlaspack_rc::ParcelRcFile;
+use super::atlaspack_rc::AtlaspackRcFile;
 
 /// An intermediate representation of the .atlaspackrc config
 ///
-/// This data structure is used to perform configuration merging, to eventually create a compelete ParcelConfig.
+/// This data structure is used to perform configuration merging, to eventually create a compelete AtlaspackConfig.
 ///
 #[derive(Clone, Debug, Default, Builder, PartialEq)]
 #[builder(default)]
-pub struct PartialParcelConfig {
+pub struct PartialAtlaspackConfig {
   pub bundler: Option<PluginNode>,
   pub compressors: IndexMap<String, Vec<PluginNode>>,
   pub namers: Vec<PluginNode>,
@@ -27,10 +27,10 @@ pub struct PartialParcelConfig {
   pub validators: IndexMap<String, Vec<PluginNode>>,
 }
 
-impl TryFrom<ParcelRcFile> for PartialParcelConfig {
+impl TryFrom<AtlaspackRcFile> for PartialAtlaspackConfig {
   type Error = DiagnosticError;
 
-  fn try_from(file: ParcelRcFile) -> Result<PartialParcelConfig, Self::Error> {
+  fn try_from(file: AtlaspackRcFile) -> Result<PartialAtlaspackConfig, Self::Error> {
     // TODO Add validation here: multiple ..., plugin name format, reserved pipelines, etc
 
     let resolve_from = Arc::new(file.path.clone());
@@ -73,7 +73,7 @@ impl TryFrom<ParcelRcFile> for PartialParcelConfig {
         .unwrap_or(IndexMap::new())
     };
 
-    Ok(PartialParcelConfig {
+    Ok(PartialAtlaspackConfig {
       bundler: file
         .contents
         .bundler
@@ -95,7 +95,7 @@ impl TryFrom<ParcelRcFile> for PartialParcelConfig {
   }
 }
 
-impl PartialParcelConfig {
+impl PartialAtlaspackConfig {
   fn merge_map<T: Clone>(
     map: IndexMap<String, T>,
     extend_map: IndexMap<String, T>,
@@ -137,14 +137,18 @@ impl PartialParcelConfig {
     map: IndexMap<String, PluginNode>,
     extend_map: IndexMap<String, PluginNode>,
   ) -> IndexMap<String, PluginNode> {
-    PartialParcelConfig::merge_map(map, extend_map, |map, _extend_map| map)
+    PartialAtlaspackConfig::merge_map(map, extend_map, |map, _extend_map| map)
   }
 
   fn merge_pipelines_map(
     from_map: IndexMap<String, Vec<PluginNode>>,
     extend_map: IndexMap<String, Vec<PluginNode>>,
   ) -> IndexMap<String, Vec<PluginNode>> {
-    PartialParcelConfig::merge_map(from_map, extend_map, PartialParcelConfig::merge_pipelines)
+    PartialAtlaspackConfig::merge_map(
+      from_map,
+      extend_map,
+      PartialAtlaspackConfig::merge_pipelines,
+    )
   }
 
   fn merge_pipelines(
@@ -178,36 +182,39 @@ impl PartialParcelConfig {
     }
   }
 
-  pub fn merge(from_config: PartialParcelConfig, extend_config: PartialParcelConfig) -> Self {
-    PartialParcelConfig {
+  pub fn merge(from_config: PartialAtlaspackConfig, extend_config: PartialAtlaspackConfig) -> Self {
+    PartialAtlaspackConfig {
       bundler: from_config.bundler.or(extend_config.bundler),
-      compressors: PartialParcelConfig::merge_pipelines_map(
+      compressors: PartialAtlaspackConfig::merge_pipelines_map(
         from_config.compressors,
         extend_config.compressors,
       ),
-      namers: PartialParcelConfig::merge_pipelines(from_config.namers, extend_config.namers),
-      optimizers: PartialParcelConfig::merge_pipelines_map(
+      namers: PartialAtlaspackConfig::merge_pipelines(from_config.namers, extend_config.namers),
+      optimizers: PartialAtlaspackConfig::merge_pipelines_map(
         from_config.optimizers,
         extend_config.optimizers,
       ),
-      packagers: PartialParcelConfig::merge_pipeline_map(
+      packagers: PartialAtlaspackConfig::merge_pipeline_map(
         from_config.packagers,
         extend_config.packagers,
       ),
-      reporters: PartialParcelConfig::merge_pipelines(
+      reporters: PartialAtlaspackConfig::merge_pipelines(
         from_config.reporters,
         extend_config.reporters,
       ),
-      resolvers: PartialParcelConfig::merge_pipelines(
+      resolvers: PartialAtlaspackConfig::merge_pipelines(
         from_config.resolvers,
         extend_config.resolvers,
       ),
-      runtimes: PartialParcelConfig::merge_pipelines(from_config.runtimes, extend_config.runtimes),
-      transformers: PartialParcelConfig::merge_pipelines_map(
+      runtimes: PartialAtlaspackConfig::merge_pipelines(
+        from_config.runtimes,
+        extend_config.runtimes,
+      ),
+      transformers: PartialAtlaspackConfig::merge_pipelines_map(
         from_config.transformers,
         extend_config.transformers,
       ),
-      validators: PartialParcelConfig::merge_pipelines_map(
+      validators: PartialAtlaspackConfig::merge_pipelines_map(
         from_config.validators,
         extend_config.validators,
       ),
@@ -230,7 +237,7 @@ mod tests {
 
       #[test]
       fn uses_from_when_extend_missing() {
-        let from = PartialParcelConfigBuilder::default()
+        let from = PartialAtlaspackConfigBuilder::default()
           .bundler(Some(PluginNode {
             package_name: String::from("a"),
             resolve_from: Arc::new(PathBuf::from("/")),
@@ -238,16 +245,16 @@ mod tests {
           .build()
           .unwrap();
 
-        let extend = PartialParcelConfig::default();
+        let extend = PartialAtlaspackConfig::default();
         let expected = from.clone();
 
-        assert_eq!(PartialParcelConfig::merge(from, extend), expected);
+        assert_eq!(PartialAtlaspackConfig::merge(from, extend), expected);
       }
 
       #[test]
       fn uses_extend_when_from_missing() {
-        let from = PartialParcelConfig::default();
-        let extend = PartialParcelConfigBuilder::default()
+        let from = PartialAtlaspackConfig::default();
+        let extend = PartialAtlaspackConfigBuilder::default()
           .bundler(Some(PluginNode {
             package_name: String::from("a"),
             resolve_from: Arc::new(PathBuf::from("/")),
@@ -257,12 +264,12 @@ mod tests {
 
         let expected = extend.clone();
 
-        assert_eq!(PartialParcelConfig::merge(from, extend), expected);
+        assert_eq!(PartialAtlaspackConfig::merge(from, extend), expected);
       }
 
       #[test]
       fn merges_using_from() {
-        let from = PartialParcelConfigBuilder::default()
+        let from = PartialAtlaspackConfigBuilder::default()
           .bundler(Some(PluginNode {
             package_name: String::from("a"),
             resolve_from: Arc::new(PathBuf::from("/")),
@@ -270,7 +277,7 @@ mod tests {
           .build()
           .unwrap();
 
-        let extend = PartialParcelConfigBuilder::default()
+        let extend = PartialAtlaspackConfigBuilder::default()
           .bundler(Some(PluginNode {
             package_name: String::from("b"),
             resolve_from: Arc::new(PathBuf::from("/")),
@@ -280,7 +287,7 @@ mod tests {
 
         let expected = from.clone();
 
-        assert_eq!(PartialParcelConfig::merge(from, extend), expected);
+        assert_eq!(PartialAtlaspackConfig::merge(from, extend), expected);
       }
     }
 
@@ -296,7 +303,7 @@ mod tests {
 
           #[test]
           fn uses_from_when_extend_missing() {
-            let from = PartialParcelConfigBuilder::default()
+            let from = PartialAtlaspackConfigBuilder::default()
               .$property(indexmap! {
                 String::from("*.js") => vec!(PluginNode {
                   package_name: String::from("a"),
@@ -306,16 +313,16 @@ mod tests {
               .build()
               .unwrap();
 
-            let extend = PartialParcelConfig::default();
+            let extend = PartialAtlaspackConfig::default();
             let expected = from.clone();
 
-            assert_eq!(PartialParcelConfig::merge(from, extend), expected);
+            assert_eq!(PartialAtlaspackConfig::merge(from, extend), expected);
           }
 
           #[test]
           fn uses_extend_when_from_missing() {
-            let from = PartialParcelConfig::default();
-            let extend = PartialParcelConfigBuilder::default()
+            let from = PartialAtlaspackConfig::default();
+            let extend = PartialAtlaspackConfigBuilder::default()
               .$property(indexmap! {
                 String::from("*.js") => vec!(PluginNode {
                   package_name: String::from("a"),
@@ -327,12 +334,12 @@ mod tests {
 
             let expected = extend.clone();
 
-            assert_eq!(PartialParcelConfig::merge(from, extend), expected);
+            assert_eq!(PartialAtlaspackConfig::merge(from, extend), expected);
           }
 
           #[test]
           fn merges_patterns() {
-            let from = PartialParcelConfigBuilder::default()
+            let from = PartialAtlaspackConfigBuilder::default()
               .$property(indexmap! {
                 String::from("*.js") => vec!(PluginNode {
                   package_name: String::from("a"),
@@ -342,7 +349,7 @@ mod tests {
               .build()
               .unwrap();
 
-            let extend = PartialParcelConfigBuilder::default()
+            let extend = PartialAtlaspackConfigBuilder::default()
               .$property(indexmap! {
                 String::from("*.{cjs,js,mjs}") => vec!(PluginNode {
                   package_name: String::from("b"),
@@ -353,8 +360,8 @@ mod tests {
               .unwrap();
 
             assert_eq!(
-              PartialParcelConfig::merge(from, extend),
-              PartialParcelConfigBuilder::default()
+              PartialAtlaspackConfig::merge(from, extend),
+              PartialAtlaspackConfigBuilder::default()
                 .$property(indexmap! {
                   String::from("*.js") => vec!(PluginNode {
                     package_name: String::from("a"),
@@ -372,7 +379,7 @@ mod tests {
 
           #[test]
           fn merges_pipelines_with_missing_dot_dot_dot() {
-            let from = PartialParcelConfigBuilder::default()
+            let from = PartialAtlaspackConfigBuilder::default()
               .$property(indexmap! {
                 String::from("*.js") => vec!(PluginNode {
                   package_name: String::from("a"),
@@ -385,7 +392,7 @@ mod tests {
               .build()
               .unwrap();
 
-            let extend = PartialParcelConfigBuilder::default()
+            let extend = PartialAtlaspackConfigBuilder::default()
               .$property(indexmap! {
                 String::from("*.js") => vec!(PluginNode {
                   package_name: String::from("c"),
@@ -397,12 +404,12 @@ mod tests {
 
             let expected = from.clone();
 
-            assert_eq!(PartialParcelConfig::merge(from, extend), expected);
+            assert_eq!(PartialAtlaspackConfig::merge(from, extend), expected);
           }
 
           #[test]
           fn merges_pipelines_with_dot_dot_dot() {
-            let from = PartialParcelConfigBuilder::default()
+            let from = PartialAtlaspackConfigBuilder::default()
               .$property(indexmap! {
                 String::from("*.js") => vec!(PluginNode {
                   package_name: String::from("a"),
@@ -420,7 +427,7 @@ mod tests {
               .build()
               .unwrap();
 
-            let extend = PartialParcelConfigBuilder::default()
+            let extend = PartialAtlaspackConfigBuilder::default()
               .$property(indexmap! {
                 String::from("*.js") => vec!(PluginNode {
                   package_name: String::from("b"),
@@ -431,8 +438,8 @@ mod tests {
               .unwrap();
 
             assert_eq!(
-              PartialParcelConfig::merge(from, extend),
-              PartialParcelConfigBuilder::default()
+              PartialAtlaspackConfig::merge(from, extend),
+              PartialAtlaspackConfigBuilder::default()
                 .$property(indexmap! {
                   String::from("*.js") => vec!(PluginNode {
                     package_name: String::from("a"),
@@ -454,7 +461,7 @@ mod tests {
 
           #[test]
           fn merges_pipelines_with_dot_dot_dot_match_in_grandparent() {
-            let from = PartialParcelConfigBuilder::default()
+            let from = PartialAtlaspackConfigBuilder::default()
               .$property(indexmap! {
                 String::from("*.js") => vec!(PluginNode {
                   package_name: String::from("a"),
@@ -472,8 +479,8 @@ mod tests {
               .build()
               .unwrap();
 
-            let extend_1 = PartialParcelConfig::default();
-            let extend_2 = PartialParcelConfigBuilder::default()
+            let extend_1 = PartialAtlaspackConfig::default();
+            let extend_2 = PartialAtlaspackConfigBuilder::default()
               .$property(indexmap! {
                 String::from("*.js") => vec!(PluginNode {
                   package_name: String::from("b"),
@@ -484,8 +491,11 @@ mod tests {
               .unwrap();
 
             assert_eq!(
-              PartialParcelConfig::merge(PartialParcelConfig::merge(from, extend_1), extend_2),
-              PartialParcelConfigBuilder::default()
+              PartialAtlaspackConfig::merge(
+                PartialAtlaspackConfig::merge(from, extend_1),
+                extend_2
+              ),
+              PartialAtlaspackConfigBuilder::default()
                 .$property(indexmap! {
                   String::from("*.js") => vec!(PluginNode {
                     package_name: String::from("a"),
@@ -518,7 +528,7 @@ mod tests {
 
           #[test]
           fn uses_from_when_extend_missing() {
-            let from = PartialParcelConfigBuilder::default()
+            let from = PartialAtlaspackConfigBuilder::default()
               .$property(vec![PluginNode {
                 package_name: String::from("a"),
                 resolve_from: Arc::new(PathBuf::from("/")),
@@ -526,16 +536,16 @@ mod tests {
               .build()
               .unwrap();
 
-            let extend = PartialParcelConfig::default();
+            let extend = PartialAtlaspackConfig::default();
             let expected = from.clone();
 
-            assert_eq!(PartialParcelConfig::merge(from, extend), expected);
+            assert_eq!(PartialAtlaspackConfig::merge(from, extend), expected);
           }
 
           #[test]
           fn uses_extend_when_from_missing() {
-            let from = PartialParcelConfig::default();
-            let extend = PartialParcelConfigBuilder::default()
+            let from = PartialAtlaspackConfig::default();
+            let extend = PartialAtlaspackConfigBuilder::default()
               .$property(vec![PluginNode {
                 package_name: String::from("a"),
                 resolve_from: Arc::new(PathBuf::from("/")),
@@ -545,12 +555,12 @@ mod tests {
 
             let expected = extend.clone();
 
-            assert_eq!(PartialParcelConfig::merge(from, extend), expected);
+            assert_eq!(PartialAtlaspackConfig::merge(from, extend), expected);
           }
 
           #[test]
           fn merges_pipelines_with_missing_dot_dot_dot() {
-            let from = PartialParcelConfigBuilder::default()
+            let from = PartialAtlaspackConfigBuilder::default()
               .$property(vec![
                 PluginNode {
                   package_name: String::from("a"),
@@ -564,7 +574,7 @@ mod tests {
               .build()
               .unwrap();
 
-            let extend = PartialParcelConfigBuilder::default()
+            let extend = PartialAtlaspackConfigBuilder::default()
               .$property(vec![PluginNode {
                 package_name: String::from("c"),
                 resolve_from: Arc::new(PathBuf::from("/")),
@@ -574,12 +584,12 @@ mod tests {
 
             let expected = from.clone();
 
-            assert_eq!(PartialParcelConfig::merge(from, extend), expected);
+            assert_eq!(PartialAtlaspackConfig::merge(from, extend), expected);
           }
 
           #[test]
           fn merges_pipelines_with_dot_dot_dot() {
-            let from = PartialParcelConfigBuilder::default()
+            let from = PartialAtlaspackConfigBuilder::default()
               .$property(vec![
                 PluginNode {
                   package_name: String::from("a"),
@@ -597,7 +607,7 @@ mod tests {
               .build()
               .unwrap();
 
-            let extend = PartialParcelConfigBuilder::default()
+            let extend = PartialAtlaspackConfigBuilder::default()
               .$property(vec![PluginNode {
                 package_name: String::from("b"),
                 resolve_from: Arc::new(PathBuf::from("~")),
@@ -606,8 +616,8 @@ mod tests {
               .unwrap();
 
             assert_eq!(
-              PartialParcelConfig::merge(from, extend),
-              PartialParcelConfigBuilder::default()
+              PartialAtlaspackConfig::merge(from, extend),
+              PartialAtlaspackConfigBuilder::default()
                 .$property(vec!(
                   PluginNode {
                     package_name: String::from("a"),
@@ -629,7 +639,7 @@ mod tests {
 
           #[test]
           fn merges_pipelines_with_dot_dot_dot_match_in_grandparent() {
-            let from = PartialParcelConfigBuilder::default()
+            let from = PartialAtlaspackConfigBuilder::default()
               .$property(vec![
                 PluginNode {
                   package_name: String::from("a"),
@@ -647,8 +657,8 @@ mod tests {
               .build()
               .unwrap();
 
-            let extend_1 = PartialParcelConfig::default();
-            let extend_2 = PartialParcelConfigBuilder::default()
+            let extend_1 = PartialAtlaspackConfig::default();
+            let extend_2 = PartialAtlaspackConfigBuilder::default()
               .$property(vec![PluginNode {
                 package_name: String::from("b"),
                 resolve_from: Arc::new(PathBuf::from("~")),
@@ -657,8 +667,11 @@ mod tests {
               .unwrap();
 
             assert_eq!(
-              PartialParcelConfig::merge(PartialParcelConfig::merge(from, extend_1), extend_2),
-              PartialParcelConfigBuilder::default()
+              PartialAtlaspackConfig::merge(
+                PartialAtlaspackConfig::merge(from, extend_1),
+                extend_2
+              ),
+              PartialAtlaspackConfigBuilder::default()
                 .$property(vec!(
                   PluginNode {
                     package_name: String::from("a"),

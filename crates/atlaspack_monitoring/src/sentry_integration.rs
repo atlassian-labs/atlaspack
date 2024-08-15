@@ -86,7 +86,7 @@ pub fn init_sentry(options: SentryOptions) -> anyhow::Result<ClientInitGuard> {
       scope.set_tag(&key, val);
     }
   });
-  tracing::info!("Parcel Sentry for rust setup done!");
+  tracing::info!("Atlaspack Sentry for rust setup done!");
 
   Ok(guard)
 }

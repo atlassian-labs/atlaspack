@@ -4,14 +4,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use package_json::BrowserField;
-use package_json::BrowsersList;
-use package_json::BuiltInTargetDescriptor;
-use package_json::ModuleFormat;
-use package_json::PackageJson;
-use package_json::SourceField;
-use package_json::SourceMapField;
-use package_json::TargetDescriptor;
 use atlaspack_core::config_loader::ConfigFile;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::types::engines::Engines;
@@ -28,6 +20,14 @@ use atlaspack_core::types::SourceType;
 use atlaspack_core::types::Target;
 use atlaspack_core::types::TargetSourceMapOptions;
 use atlaspack_resolver::IncludeNodeModules;
+use package_json::BrowserField;
+use package_json::BrowsersList;
+use package_json::BuiltInTargetDescriptor;
+use package_json::ModuleFormat;
+use package_json::PackageJson;
+use package_json::SourceField;
+use package_json::SourceMapField;
+use package_json::TargetDescriptor;
 
 use crate::request_tracker::Request;
 use crate::request_tracker::ResultAndInvalidations;
@@ -41,7 +41,7 @@ mod package_json;
 
 /// Infers how and where source code is outputted
 ///
-/// Targets will be generated from the project package.json file and input Parcel options.
+/// Targets will be generated from the project package.json file and input Atlaspack options.
 ///
 #[derive(Debug)]
 pub struct TargetRequest {

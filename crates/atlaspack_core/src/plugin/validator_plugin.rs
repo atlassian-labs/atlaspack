@@ -14,8 +14,8 @@ pub struct Validation {
 /// to verify linting, type safety, etc and are run after a build has completed. This enables more
 /// important compilation errors to occur first.
 ///
-/// When Parcel runs in watch mode, the built bundles are served even if a validator throws an
-/// error. But when running a build, Parcel exits with a failure and status code to ensure code is
+/// When Atlaspack runs in watch mode, the built bundles are served even if a validator throws an
+/// error. But when running a build, Atlaspack exits with a failure and status code to ensure code is
 /// not deployed for assets that do not meet the validation criteria. This ensures developers
 /// remain productive, and do not have to worry about every small typing or linting issue while
 /// trying to solve a problem.
@@ -40,7 +40,7 @@ pub trait ValidatorPlugin: Debug {
   /// Validates all assets
   ///
   /// Some validators may wish to maintain a project-wide state or cache for efficiency. For these
-  /// cases, it is appropriate to use a different interface where Parcel passses all the changed
+  /// cases, it is appropriate to use a different interface where Atlaspack passses all the changed
   /// files to the validator at the same time.
   ///
   /// This type of validator is slower than a stateless validator, as it runs everything on a

@@ -121,7 +121,7 @@ pub struct DependencyDescriptor {
   pub placeholder: Option<String>,
 }
 
-/// This pass collects dependencies in a module and compiles references as needed to work with Parcel's JSRuntime.
+/// This pass collects dependencies in a module and compiles references as needed to work with Atlaspack's JSRuntime.
 pub fn dependency_collector<'a>(
   source_map: Lrc<SourceMap>,
   items: &'a mut Vec<DependencyDescriptor>,
@@ -546,7 +546,7 @@ impl<'a> Fold for DependencyCollector<'a> {
             } else {
               let was_in_promise = self.in_promise;
 
-              // Match compiled dynamic imports (Parcel)
+              // Match compiled dynamic imports (Atlaspack)
               // Promise.resolve(require('foo'))
               if match_member_expr(member, vec!["Promise", "resolve"], self.unresolved_mark) {
                 if let Some(expr) = node.args.first() {
