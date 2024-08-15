@@ -1,14 +1,14 @@
 [package]
-name = "parcel_core"
+name = "atlaspack_core"
 version = "0.1.0"
 edition = "2021"
-description = "Core logic and types for the parcel bundler"
+description = "Core logic and types for the atlaspack bundler"
 
 [features]
 default = []
 
 [dependencies]
-parcel_filesystem = { path = "../parcel_filesystem" }
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 
 anyhow = "1.0.82"
 bitflags = "2.5.0"

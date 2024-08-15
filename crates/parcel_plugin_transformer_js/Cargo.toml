@@ -1,15 +1,15 @@
 [package]
-name = "parcel_plugin_transformer_js"
+name = "atlaspack_plugin_transformer_js"
 version = "0.1.0"
 edition = "2021"
 description = "JavaScript Transformer Plugin for the Parcel Bundler"
 
 [dependencies]
-parcel_core = { path = "../parcel_core" }
-parcel_filesystem = { path = "../parcel_filesystem" }
+atlaspack_core = { path = "../atlaspack_core" }
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 
 anyhow = "1"
 indexmap = "2.2.6"
-parcel-js-swc-core = { path = "../../packages/transformers/js/core" }
+atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 serde = { version = "1.0.200", features = ["derive"] }
 swc_core = { version = "0.96", features = ["ecma_ast"] }

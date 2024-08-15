@@ -3,14 +3,14 @@ authors = [
   "Monica Olejniczak <monica.j.olejniczak@gmail.com>",
   "Devon Govett <devongovett@gmail.com>",
 ]
-name = "parcel_config"
+name = "atlaspack_config"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-parcel_core = { path = "../parcel_core" }
-parcel_filesystem = { path = "../parcel_filesystem" }
-parcel_package_manager = { path = "../parcel_package_manager" }
+atlaspack_core = { path = "../atlaspack_core" }
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+atlaspack_package_manager = { path = "../atlaspack_package_manager" }
 
 derive_builder = "0.20.0"
 glob-match = "0.2.1"

@@ -1,6 +1,6 @@
 [package]
-name = "parcel_monitoring"
-description = "Provides tracing, error and crash reporting system for parcel"
+name = "atlaspack_monitoring"
+description = "Provides tracing, error and crash reporting system for atlaspack"
 version = "0.1.0"
 edition = "2021"
 

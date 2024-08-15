@@ -1,16 +1,16 @@
 [package]
-name = "parcel_plugin_rpc"
+name = "atlaspack_plugin_rpc"
 version = "0.1.0"
 edition = "2021"
 description = "Parcel Bundler"
 
 [features]
-nodejs = ["dep:napi", "dep:serde", "dep:parking_lot", "dep:once_cell", "dep:parcel_napi_helpers"]
+nodejs = ["dep:napi", "dep:serde", "dep:parking_lot", "dep:once_cell", "dep:atlaspack_napi_helpers"]
 
 [dependencies]
-parcel_config = { path = "../parcel_config" }
-parcel_core = { path = "../parcel_core" }
-parcel_napi_helpers = { path = "../parcel_napi_helpers", optional = true }
+atlaspack_config = { path = "../atlaspack_config" }
+atlaspack_core = { path = "../atlaspack_core" }
+atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers", optional = true }
 
 anyhow = "1.0.82"
 napi = { version = "2.16.4", features = ["serde"], optional = true }

@@ -1,5 +1,5 @@
 [package]
-name = "parcel_filesystem"
+name = "atlaspack_filesystem"
 version = "0.1.0"
 edition = "2021"
 description = "FileSystem wrapper trait for use in Parcel codebase."

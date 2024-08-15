@@ -1,21 +1,21 @@
 [package]
-name = "parcel"
+name = "atlaspack"
 version = "0.1.0"
 edition = "2021"
 description = "Parcel Bundler"
 
 [features]
-nodejs = ["parcel_plugin_rpc/nodejs"]
+nodejs = ["atlaspack_plugin_rpc/nodejs"]
 
 [dependencies]
-parcel_config = { path = "../parcel_config" }
-parcel_core = { path = "../parcel_core" }
-parcel_filesystem = { path = "../parcel_filesystem" }
-parcel_package_manager = { path = "../parcel_package_manager" }
-parcel_plugin_resolver = { path = "../parcel_plugin_resolver" }
-parcel_plugin_transformer_js = { path = "../parcel_plugin_transformer_js" }
-parcel_plugin_rpc = { path = "../parcel_plugin_rpc" }
-parcel-resolver = { path = "../../packages/utils/node-resolver-rs" }
+atlaspack_config = { path = "../atlaspack_config" }
+atlaspack_core = { path = "../atlaspack_core" }
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+atlaspack_package_manager = { path = "../atlaspack_package_manager" }
+atlaspack_plugin_resolver = { path = "../atlaspack_plugin_resolver" }
+atlaspack_plugin_transformer_js = { path = "../atlaspack_plugin_transformer_js" }
+atlaspack_plugin_rpc = { path = "../atlaspack_plugin_rpc" }
+atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 
 anyhow = "1.0.82"
 dyn-hash = "0.x"
