@@ -1,7 +1,7 @@
 // @flow strict-local
 
-import type {InitialParcelOptions} from '@parcel/types';
-import WorkerFarm from '@parcel/workers';
+import type {InitialParcelOptions} from '@atlaspack/types';
+import WorkerFarm from '@atlaspack/workers';
 // flowlint-next-line untyped-import:off
 import sinon from 'sinon';
 import assert from 'assert';
@@ -133,7 +133,7 @@ function createParcel(opts?: InitialParcelOptions) {
     entries: [path.join(__dirname, 'fixtures/parcel/index.js')],
     logLevel: 'info',
     defaultConfig: path.join(
-      path.dirname(require.resolve('@parcel/test-utils')),
+      path.dirname(require.resolve('@atlaspack/test-utils')),
       '.parcelrc-no-reporters',
     ),
     shouldDisableCache: true,

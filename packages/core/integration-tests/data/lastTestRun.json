@@ -123,7 +123,7 @@
     {
       "fileName": "babel",
       "link": "https://github.com/parcel-bundler/parcel/tree/v2/packages/core/integration-tests/test/babel.js",
-      "title": "should support multitarget builds using a custom babel config with @parcel/babel-preset-env",
+      "title": "should support multitarget builds using a custom babel config with @atlaspack/babel-preset-env",
       "status": "passing"
     },
     {

@@ -4,7 +4,7 @@ import {
   loadSourceMapUrl,
   loadSourceMap,
 } from '../src/sourcemap';
-import {NodeFS} from '@parcel/fs';
+import {NodeFS} from '@atlaspack/fs';
 import path from 'path';
 
 const fs = new NodeFS();

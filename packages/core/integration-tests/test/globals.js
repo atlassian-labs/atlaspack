@@ -8,7 +8,7 @@ import {
   it,
   overlayFS,
   run,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 import sinon from 'sinon';
 
 describe.v2('globals', function () {

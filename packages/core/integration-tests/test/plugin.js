@@ -16,9 +16,9 @@ import {
   outputFS as fs,
   overlayFS,
   run,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 import * as wasmmap from 'wasm-sourcemap';
-import {relativePath} from '@parcel/utils';
+import {relativePath} from '@atlaspack/utils';
 
 describe.v2('plugin', function () {
   it("continue transformer pipeline on type change that doesn't change the pipeline", async function () {
@@ -269,7 +269,7 @@ parcel-transformer-b`,
         diagnostics: [
           {
             message,
-            origin: '@parcel/core',
+            origin: '@atlaspack/core',
             codeFrames: [
               {
                 filePath: source,

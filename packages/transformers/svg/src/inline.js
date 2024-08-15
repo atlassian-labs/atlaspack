@@ -1,7 +1,7 @@
 // @flow
 
-import type {AST, MutableAsset, TransformerResult} from '@parcel/types';
-import {hashString} from '@parcel/rust';
+import type {AST, MutableAsset, TransformerResult} from '@atlaspack/types';
+import {hashString} from '@atlaspack/rust';
 import type {PostHTMLNode} from 'posthtml';
 
 import PostHTML from 'posthtml';

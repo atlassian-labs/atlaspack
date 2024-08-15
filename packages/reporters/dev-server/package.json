@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/reporter-dev-server",
+  "name": "@atlaspack/reporter-dev-server",
   "version": "2.12.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "MIT",
@@ -23,18 +23,18 @@
   "targets": {
     "main": {
       "includeNodeModules": {
-        "@parcel/plugin": false,
-        "@parcel/utils": false
+        "@atlaspack/plugin": false,
+        "@atlaspack/utils": false
       }
     }
   },
   "dependencies": {
-    "@parcel/plugin": "2.12.0",
-    "@parcel/utils": "2.12.0"
+    "@atlaspack/plugin": "2.12.0",
+    "@atlaspack/utils": "2.12.0"
   },
   "devDependencies": {
-    "@parcel/babel-preset": "2.12.0",
-    "@parcel/types": "2.12.0",
+    "@atlaspack/babel-preset": "2.12.0",
+    "@atlaspack/types": "2.12.0",
     "connect": "^3.7.0",
     "ejs": "^3.1.6",
     "fresh": "^0.5.2",

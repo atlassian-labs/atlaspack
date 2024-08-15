@@ -10,7 +10,7 @@ import {
   outputFS,
   overlayFS,
   run,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 const config = path.join(
   __dirname,
@@ -49,7 +49,7 @@ describe.v2('ts-validator', function () {
       );
       assert(!!entryDiagnostic);
       assert(!!entryDiagnostic.codeFrames);
-      assert.equal(entryDiagnostic.origin, '@parcel/validator-typescript');
+      assert.equal(entryDiagnostic.origin, '@atlaspack/validator-typescript');
       assert.equal(
         entryDiagnostic.message,
         `Argument of type 'string' is not assignable to parameter of type 'Params'.`,
@@ -61,7 +61,10 @@ describe.v2('ts-validator', function () {
       );
       assert(!!testFileDiagnostic);
       assert(!!testFileDiagnostic.codeFrames);
-      assert.equal(testFileDiagnostic.origin, '@parcel/validator-typescript');
+      assert.equal(
+        testFileDiagnostic.origin,
+        '@atlaspack/validator-typescript',
+      );
       assert.equal(
         testFileDiagnostic.message,
         `Property 'world' does not exist on type 'Params'.`,

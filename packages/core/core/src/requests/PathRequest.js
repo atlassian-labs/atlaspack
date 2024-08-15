@@ -1,11 +1,11 @@
 // @flow strict-local
-import type {Diagnostic} from '@parcel/diagnostic';
+import type {Diagnostic} from '@atlaspack/diagnostic';
 import type {
   Async,
   FileCreateInvalidation,
   FilePath,
   Resolver,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {StaticRunOpts} from '../RequestTracker';
 import type {
   AssetGroup,
@@ -20,11 +20,11 @@ import ThrowableDiagnostic, {
   convertSourceLocationToHighlight,
   errorToDiagnostic,
   md,
-} from '@parcel/diagnostic';
-import {PluginLogger} from '@parcel/logger';
+} from '@atlaspack/diagnostic';
+import {PluginLogger} from '@atlaspack/logger';
 import nullthrows from 'nullthrows';
 import path from 'path';
-import {normalizePath} from '@parcel/utils';
+import {normalizePath} from '@atlaspack/utils';
 import {report} from '../ReporterRunner';
 import {getPublicDependency} from '../public/Dependency';
 import PluginOptions from '../public/PluginOptions';
@@ -50,7 +50,7 @@ import {
   invalidateDevDeps,
   runDevDepRequest,
 } from './DevDepRequest';
-import {tracer, PluginTracer} from '@parcel/profiler';
+import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 
 export type PathRequest = {|
@@ -181,7 +181,7 @@ export class ResolverRunner {
   ): Async<Diagnostic> {
     let diagnostic: Diagnostic = {
       message,
-      origin: '@parcel/core',
+      origin: '@atlaspack/core',
     };
 
     if (dependency.loc && dependency.sourcePath != null) {

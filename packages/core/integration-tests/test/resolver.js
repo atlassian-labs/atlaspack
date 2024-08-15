@@ -9,7 +9,7 @@ import {
   ncp,
   overlayFS,
   outputFS,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 describe.v2('resolver', function () {
   it('should support resolving tilde in monorepo packages', async function () {

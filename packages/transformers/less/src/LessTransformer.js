@@ -1,8 +1,8 @@
 // @flow
 import {typeof default as Less} from 'less';
 import path from 'path';
-import {Transformer} from '@parcel/plugin';
-import SourceMap from '@parcel/source-map';
+import {Transformer} from '@atlaspack/plugin';
+import SourceMap from '@atlaspack/source-map';
 import less from 'less';
 
 import {load} from './loadConfig';

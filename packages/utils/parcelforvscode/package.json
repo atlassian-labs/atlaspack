@@ -93,7 +93,7 @@
       "isLibrary": false,
       "optimize": false,
       "includeNodeModules": {
-        "@parcel/watcher": false
+        "@atlaspack/watcher": false
       },
       "context": "node"
     }
@@ -107,8 +107,8 @@
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
-    "@parcel/lsp": "2.12.0",
-    "@parcel/lsp-protocol": "2.12.0",
+    "@atlaspack/lsp": "2.12.0",
+    "@atlaspack/lsp-protocol": "2.12.0",
     "@types/glob": "^7.1.3",
     "@types/mocha": "^8.0.4",
     "@types/node": ">= 18",
@@ -124,6 +124,6 @@
     "vscode-test": "^1.5.0"
   },
   "dependencies": {
-    "@parcel/watcher": "^2.0.7"
+    "@atlaspack/watcher": "^2.0.7"
   }
 }

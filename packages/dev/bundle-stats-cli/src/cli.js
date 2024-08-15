@@ -1,7 +1,7 @@
 /* eslint-disable no-console, monorepo/no-internal-import */
 // @flow strict-local
-import type {PackagedBundle} from '@parcel/types';
-import type {ParcelOptions} from '@parcel/core/src/types';
+import type {PackagedBundle} from '@atlaspack/types';
+import type {ParcelOptions} from '@atlaspack/core/src/types';
 import type {commander$Command} from 'commander';
 
 // $FlowFixMe[untyped-import]
@@ -10,7 +10,7 @@ import {version} from '../package.json';
 import commander from 'commander';
 import fs from 'fs';
 import path from 'path';
-import {DefaultMap} from '@parcel/utils';
+import {DefaultMap} from '@atlaspack/utils';
 
 const {
   loadGraphs,

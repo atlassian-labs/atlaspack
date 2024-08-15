@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/html-example",
+  "name": "@atlaspack/html-example",
   "version": "2.12.0",
   "license": "MIT",
   "private": true,
@@ -13,7 +13,7 @@
   ],
   "devDependencies": {
     "@babel/core": "^7.22.11",
-    "@parcel/babel-register": "2.12.0",
+    "@atlaspack/babel-register": "2.12.0",
     "parcel": "2.12.0"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/config-webextension",
+  "name": "@atlaspack/config-webextension",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {
@@ -15,13 +15,13 @@
   },
   "main": "index.json",
   "dependencies": {
-    "@parcel/config-default": "2.12.0",
-    "@parcel/packager-webextension": "2.12.0",
-    "@parcel/runtime-webextension": "2.12.0",
-    "@parcel/transformer-raw": "2.12.0",
-    "@parcel/transformer-webextension": "2.12.0"
+    "@atlaspack/config-default": "2.12.0",
+    "@atlaspack/packager-webextension": "2.12.0",
+    "@atlaspack/runtime-webextension": "2.12.0",
+    "@atlaspack/transformer-raw": "2.12.0",
+    "@atlaspack/transformer-webextension": "2.12.0"
   },
   "peerDependencies": {
-    "@parcel/core": "^2.12.0"
+    "@atlaspack/core": "^2.12.0"
   }
 }

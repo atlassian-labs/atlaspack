@@ -6,7 +6,7 @@ import type {
   MutableDependencySymbols as IMutableDependencySymbols,
   SourceLocation,
   Meta,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {Asset, Dependency, ParcelOptions} from '../types';
 
 import nullthrows from 'nullthrows';

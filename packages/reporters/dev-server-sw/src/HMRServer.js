@@ -7,12 +7,12 @@ import type {
   BundleGraph,
   PackagedBundle,
   Asset,
-} from '@parcel/types';
-import type {Diagnostic} from '@parcel/diagnostic';
-import type {AnsiDiagnosticResult} from '@parcel/utils';
+} from '@atlaspack/types';
+import type {Diagnostic} from '@atlaspack/diagnostic';
+import type {AnsiDiagnosticResult} from '@atlaspack/utils';
 
 import invariant from 'assert';
-import {ansiHtml, prettyDiagnostic, PromiseQueue} from '@parcel/utils';
+import {ansiHtml, prettyDiagnostic, PromiseQueue} from '@atlaspack/utils';
 
 const HMR_ENDPOINT = '/__parcel_hmr/';
 

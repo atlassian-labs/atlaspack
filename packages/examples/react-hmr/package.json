@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/react-hmr-example",
+  "name": "@atlaspack/react-hmr-example",
   "version": "2.12.0",
   "license": "MIT",
   "private": true,

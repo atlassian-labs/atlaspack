@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/codeframe",
+  "name": "@atlaspack/codeframe",
   "version": "2.12.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "MIT",

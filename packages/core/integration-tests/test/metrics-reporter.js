@@ -2,7 +2,7 @@
 
 import assert from 'assert';
 import path from 'path';
-import {bundler, describe, it, outputFS} from '@parcel/test-utils';
+import {bundler, describe, it, outputFS} from '@atlaspack/test-utils';
 
 const config = path.join(
   __dirname,

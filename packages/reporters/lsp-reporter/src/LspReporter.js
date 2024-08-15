@@ -1,7 +1,7 @@
 // @flow strict-local
 
-import type {Diagnostic as ParcelDiagnostic} from '@parcel/diagnostic';
-import type {BundleGraph, FilePath, PackagedBundle} from '@parcel/types';
+import type {Diagnostic as ParcelDiagnostic} from '@atlaspack/diagnostic';
+import type {BundleGraph, FilePath, PackagedBundle} from '@atlaspack/types';
 import type {Program, Query} from 'ps-node';
 import type {Diagnostic, DocumentUri} from 'vscode-languageserver';
 import type {MessageConnection} from 'vscode-jsonrpc/node';
@@ -11,8 +11,8 @@ import {
   DefaultMap,
   getProgressMessage,
   makeDeferredWithPromise,
-} from '@parcel/utils';
-import {Reporter} from '@parcel/plugin';
+} from '@atlaspack/utils';
+import {Reporter} from '@atlaspack/plugin';
 import path from 'path';
 import os from 'os';
 import url from 'url';
@@ -28,7 +28,7 @@ import {
   NotificationWorkspaceDiagnostics,
   RequestDocumentDiagnostics,
   RequestImporters,
-} from '@parcel/lsp-protocol';
+} from '@atlaspack/lsp-protocol';
 
 import {
   DiagnosticSeverity,
@@ -344,7 +344,7 @@ function getDiagnosticsUnusedExports(
           character: loc.end.column,
         },
       },
-      source: '@parcel/core',
+      source: '@atlaspack/core',
       severity: DiagnosticSeverity.Hint,
       message: `Unused ${type}.`,
       tags: [DiagnosticTag.Unnecessary],
@@ -371,7 +371,7 @@ function getDiagnosticsUnusedExports(
       //         character: 1,
       //       },
       //     },
-      //     source: '@parcel/core',
+      //     source: '@atlaspack/core',
       //     severity: DiagnosticSeverity.Warning,
       //     message: `Asset has no used exports, but is not marked as sideEffect-free so it cannot be excluded automatically.`,
       //   });

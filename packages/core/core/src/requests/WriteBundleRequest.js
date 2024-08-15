@@ -1,8 +1,8 @@
 // @flow strict-local
 
-import type {FileSystem, FileOptions} from '@parcel/fs';
-import type {ContentKey} from '@parcel/graph';
-import type {Async, FilePath, Compressor} from '@parcel/types';
+import type {FileSystem, FileOptions} from '@atlaspack/fs';
+import type {ContentKey} from '@atlaspack/graph';
+import type {Async, FilePath, Compressor} from '@atlaspack/types';
 
 import type {RunAPI, StaticRunOpts} from '../RequestTracker';
 import type {Bundle, PackagedBundleInfo, ParcelOptions} from '../types';
@@ -16,7 +16,7 @@ import {HASH_REF_HASH_LEN, HASH_REF_PREFIX} from '../constants';
 import nullthrows from 'nullthrows';
 import path from 'path';
 import {NamedBundle} from '../public/Bundle';
-import {blobToStream, TapStream} from '@parcel/utils';
+import {blobToStream, TapStream} from '@atlaspack/utils';
 import {Readable, Transform, pipeline} from 'stream';
 import {
   fromProjectPath,
@@ -29,7 +29,7 @@ import createParcelConfigRequest, {
   getCachedParcelConfig,
 } from './ParcelConfigRequest';
 import PluginOptions from '../public/PluginOptions';
-import {PluginLogger} from '@parcel/logger';
+import {PluginLogger} from '@atlaspack/logger';
 import {
   getDevDepRequests,
   invalidateDevDeps,
@@ -37,8 +37,8 @@ import {
   runDevDepRequest,
 } from './DevDepRequest';
 import ParcelConfig from '../ParcelConfig';
-import ThrowableDiagnostic, {errorToDiagnostic} from '@parcel/diagnostic';
-import {PluginTracer, tracer} from '@parcel/profiler';
+import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
+import {PluginTracer, tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 
 const HASH_REF_PREFIX_LEN = HASH_REF_PREFIX.length;

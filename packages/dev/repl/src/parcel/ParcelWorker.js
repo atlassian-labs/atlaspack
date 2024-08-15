@@ -1,21 +1,21 @@
 // @flow
-import type {Diagnostic} from '@parcel/diagnostic';
+import type {Diagnostic} from '@atlaspack/diagnostic';
 import type {FSList, CodeMirrorDiagnostic, REPLOptions} from '../utils';
-import type {MemoryFS} from '@parcel/fs';
-import type {BuildSuccessEvent} from '@parcel/types';
-import type WorkerFarm from '@parcel/workers';
+import type {MemoryFS} from '@atlaspack/fs';
+import type {BuildSuccessEvent} from '@atlaspack/types';
+import type WorkerFarm from '@atlaspack/workers';
 
 import {expose, proxy} from 'comlink';
-import Parcel, {createWorkerFarm} from '@parcel/core';
-// import {MemoryFS} from '@parcel/fs';
+import Parcel, {createWorkerFarm} from '@atlaspack/core';
+// import {MemoryFS} from '@atlaspack/fs';
 import {
   makeDeferredWithPromise,
   DefaultMap,
   prettyDiagnostic,
-} from '@parcel/utils';
+} from '@atlaspack/utils';
 // import SimplePackageInstaller from './SimplePackageInstaller';
-// import {NodePackageManager} from '@parcel/package-manager';
-import configRepl from '@parcel/config-repl';
+// import {NodePackageManager} from '@atlaspack/package-manager';
+import configRepl from '@atlaspack/config-repl';
 
 import {ExtendedMemoryFS} from './ExtendedMemoryFS';
 import {generatePackageJson, nthIndex} from '../utils/';

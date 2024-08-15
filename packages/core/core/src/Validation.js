@@ -1,14 +1,14 @@
 // @flow strict-local
 
-import type {WorkerApi} from '@parcel/workers';
+import type {WorkerApi} from '@atlaspack/workers';
 import type {AssetGroup, ParcelOptions, ReportFn} from './types';
-import type {Validator, ValidateResult} from '@parcel/types';
-import type {Diagnostic} from '@parcel/diagnostic';
+import type {Validator, ValidateResult} from '@atlaspack/types';
+import type {Diagnostic} from '@atlaspack/diagnostic';
 
 import path from 'path';
-import {resolveConfig} from '@parcel/utils';
-import logger, {PluginLogger} from '@parcel/logger';
-import ThrowableDiagnostic, {errorToDiagnostic} from '@parcel/diagnostic';
+import {resolveConfig} from '@atlaspack/utils';
+import logger, {PluginLogger} from '@atlaspack/logger';
+import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import ParcelConfig from './ParcelConfig';
 import UncommittedAsset from './UncommittedAsset';
 import {createAsset} from './assetUtils';
@@ -16,8 +16,8 @@ import {Asset} from './public/Asset';
 import PluginOptions from './public/PluginOptions';
 import summarizeRequest from './summarizeRequest';
 import {fromProjectPath, fromProjectPathRelative} from './projectPath';
-import {PluginTracer} from '@parcel/profiler';
-import {hashString} from '@parcel/rust';
+import {PluginTracer} from '@atlaspack/profiler';
+import {hashString} from '@atlaspack/rust';
 
 export type ValidationOpts = {|
   config: ParcelConfig,

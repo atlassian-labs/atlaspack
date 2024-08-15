@@ -1,15 +1,15 @@
 // @flow strict-local
 
-import type {FileSystem} from '@parcel/rust';
+import type {FileSystem} from '@atlaspack/rust';
 import type {
   Encoding,
   FilePath,
   FileSystem as ClassicFileSystem,
-} from '@parcel/types-internal';
+} from '@atlaspack/types-internal';
 
 import {jsCallable} from './jsCallable';
 
-// Move to @parcel/utils or a dedicated v3 / migration package later
+// Move to @atlaspack/utils or a dedicated v3 / migration package later
 export function toFileSystemV3(fs: ClassicFileSystem): FileSystem {
   return {
     canonicalize: jsCallable((path: FilePath) => fs.realpathSync(path)),

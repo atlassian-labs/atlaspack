@@ -2,8 +2,8 @@
 
 import invariant from 'assert';
 
-import ThrowableDiagnostic from '@parcel/diagnostic';
-import type {Async} from '@parcel/types';
+import ThrowableDiagnostic from '@atlaspack/diagnostic';
+import type {Async} from '@atlaspack/types';
 
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {ParcelV3} from '../parcel-v3';

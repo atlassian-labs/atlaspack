@@ -2,7 +2,7 @@
 
 import * as babel from '@babel/core';
 import assert from 'assert';
-import preset from '@parcel/babel-preset-env';
+import preset from '@atlaspack/babel-preset-env';
 
 const input = `
 export function Foo(x) {
@@ -13,7 +13,7 @@ export function Foo(x) {
 
 const plugin = require.resolve('../src/index.js');
 
-describe('@parcel/plugin-transform-runtime', () => {
+describe('@atlaspack/plugin-transform-runtime', () => {
   it('compiles against targets passed through caller with env = esmodule', () => {
     let {code: transformed} = babel.transformSync(input, {
       configFile: false,

@@ -8,7 +8,7 @@ import type {
   Dependency as IDependency,
   MutableBundleGraph as IMutableBundleGraph,
   Target,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {
   ParcelOptions,
   BundleGroup as InternalBundleGroup,
@@ -17,7 +17,7 @@ import type {
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
-import {hashString} from '@parcel/rust';
+import {hashString} from '@atlaspack/rust';
 import BundleGraph from './BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from '../BundleGraph';
 import {Bundle, bundleToInternalBundle} from './Bundle';

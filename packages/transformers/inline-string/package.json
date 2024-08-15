@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/transformer-inline-string",
+  "name": "@atlaspack/transformer-inline-string",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {
@@ -20,6 +20,6 @@
     "parcel": "^2.12.0"
   },
   "dependencies": {
-    "@parcel/plugin": "2.12.0"
+    "@atlaspack/plugin": "2.12.0"
   }
 }

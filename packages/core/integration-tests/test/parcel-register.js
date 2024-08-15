@@ -4,7 +4,7 @@ import {execSync} from 'child_process';
 import assert from 'assert';
 import path from 'path';
 
-describe.skip('@parcel/register', () => {
+describe.skip('@atlaspack/register', () => {
   it('can be required at an entry script and transform following requires', () => {
     assert.equal(
       execSync(
@@ -22,7 +22,7 @@ describe.skip('@parcel/register', () => {
   it('can transform with --r and --require', () => {
     assert.equal(
       execSync(
-        `node -r @parcel/register ${path.join(
+        `node -r @atlaspack/register ${path.join(
           __dirname,
           'integration',
           'parcel-register',
@@ -35,7 +35,7 @@ describe.skip('@parcel/register', () => {
 
   it("enables Parcel's resolver in node", () => {
     let [foo, resolved] = execSync(
-      `node -r @parcel/register ${path.join(
+      `node -r @atlaspack/register ${path.join(
         __dirname,
         'integration',
         'parcel-register',

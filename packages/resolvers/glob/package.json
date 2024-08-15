@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/resolver-glob",
+  "name": "@atlaspack/resolver-glob",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {
@@ -20,10 +20,10 @@
     "parcel": "^2.12.0"
   },
   "dependencies": {
-    "@parcel/diagnostic": "2.12.0",
-    "@parcel/node-resolver-core": "3.3.0",
-    "@parcel/plugin": "2.12.0",
-    "@parcel/utils": "2.12.0",
+    "@atlaspack/diagnostic": "2.12.0",
+    "@atlaspack/node-resolver-core": "3.3.0",
+    "@atlaspack/plugin": "2.12.0",
+    "@atlaspack/utils": "2.12.0",
     "nullthrows": "^1.1.1"
   }
 }

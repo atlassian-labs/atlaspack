@@ -1,4 +1,4 @@
-import {MemoryFS} from '@parcel/fs';
+import {MemoryFS} from '@atlaspack/fs';
 import assert from 'assert';
 import path from 'path';
 

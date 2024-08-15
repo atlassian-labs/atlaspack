@@ -2,7 +2,7 @@
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
 import path from 'path';
-import {Reporter} from '@parcel/plugin';
+import {Reporter} from '@atlaspack/plugin';
 import {Tracer} from 'chrome-trace-event';
 
 // We need to maintain some state here to ensure we write to the same output, there should only be one

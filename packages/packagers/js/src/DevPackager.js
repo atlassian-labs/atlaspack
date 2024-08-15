@@ -1,13 +1,13 @@
 // @flow strict-local
-import type {BundleGraph, PluginOptions, NamedBundle} from '@parcel/types';
+import type {BundleGraph, PluginOptions, NamedBundle} from '@atlaspack/types';
 
 import {
   PromiseQueue,
   relativeBundlePath,
   countLines,
   normalizeSeparators,
-} from '@parcel/utils';
-import SourceMap from '@parcel/source-map';
+} from '@atlaspack/utils';
+import SourceMap from '@atlaspack/source-map';
 import invariant from 'assert';
 import path from 'path';
 import fs from 'fs';

@@ -1,15 +1,15 @@
 // @flow strict-local
-import type {Async} from '@parcel/types';
-import type SourceMap from '@parcel/source-map';
-import {Packager} from '@parcel/plugin';
+import type {Async} from '@atlaspack/types';
+import type SourceMap from '@atlaspack/source-map';
+import {Packager} from '@atlaspack/plugin';
 import {
   replaceInlineReferences,
   replaceURLReferences,
   validateSchema,
   type SchemaEntity,
-} from '@parcel/utils';
-import {encodeJSONKeyComponent} from '@parcel/diagnostic';
-import {hashString} from '@parcel/rust';
+} from '@atlaspack/utils';
+import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
+import {hashString} from '@atlaspack/rust';
 import nullthrows from 'nullthrows';
 import {DevPackager} from './DevPackager';
 import {ScopeHoistingPackager} from './ScopeHoistingPackager';
@@ -31,7 +31,7 @@ const CONFIG_SCHEMA: SchemaEntity = {
 
 export default (new Packager({
   async loadConfig({config, options}): Promise<JSPackagerConfig> {
-    let packageKey = '@parcel/packager-js';
+    let packageKey = '@atlaspack/packager-js';
     let conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
       packageKey,
     });

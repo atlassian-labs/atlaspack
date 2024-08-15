@@ -1,5 +1,5 @@
 // @flow strict-local
-import type {Environment} from '@parcel/types';
+import type {Environment} from '@atlaspack/types';
 
 export const prelude = (parcelRequireName: string): string => `
 var $parcel$modules = {};

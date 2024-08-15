@@ -2,7 +2,7 @@
 import type {
   BundleGroup as IBundleGroup,
   Target as ITarget,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {BundleGroup as InternalBundleGroup, ParcelOptions} from '../types';
 
 import nullthrows from 'nullthrows';

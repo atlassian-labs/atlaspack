@@ -11,7 +11,7 @@ import type {
   Symbol,
   SourceLocation,
   Transformer,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {
   Asset,
   RequestInvalidation,
@@ -21,14 +21,14 @@ import type {
 } from './types';
 
 import {Readable} from 'stream';
-import {PluginLogger} from '@parcel/logger';
+import {PluginLogger} from '@atlaspack/logger';
 import nullthrows from 'nullthrows';
 import CommittedAsset from './CommittedAsset';
 import UncommittedAsset from './UncommittedAsset';
 import loadPlugin from './loadParcelPlugin';
 import {Asset as PublicAsset} from './public/Asset';
 import PluginOptions from './public/PluginOptions';
-import {blobToStream, hashFile} from '@parcel/utils';
+import {blobToStream, hashFile} from '@atlaspack/utils';
 import {hashFromOption, toInternalSourceLocation} from './utils';
 import {createBuildCache} from './buildCache';
 import {
@@ -36,9 +36,9 @@ import {
   fromProjectPath,
   fromProjectPathRelative,
 } from './projectPath';
-import {hashString} from '@parcel/rust';
+import {hashString} from '@atlaspack/rust';
 import {BundleBehavior as BundleBehaviorMap} from './types';
-import {PluginTracer} from '@parcel/profiler';
+import {PluginTracer} from '@atlaspack/profiler';
 
 type AssetOptions = {|
   id?: string,

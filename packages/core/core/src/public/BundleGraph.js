@@ -13,14 +13,14 @@ import type {
   Symbol,
   SymbolResolution,
   Target,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {Bundle as InternalBundle, ParcelOptions} from '../types';
 import type InternalBundleGraph from '../BundleGraph';
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
 
-import {mapVisitor} from '@parcel/graph';
+import {mapVisitor} from '@atlaspack/graph';
 import {assetFromValue, assetToAssetValue, Asset} from './Asset';
 import {bundleToInternalBundle} from './Bundle';
 import Dependency, {

@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/transformer-toml",
+  "name": "@atlaspack/transformer-toml",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {
@@ -21,6 +21,6 @@
   },
   "dependencies": {
     "@iarna/toml": "^2.2.3",
-    "@parcel/plugin": "2.12.0"
+    "@atlaspack/plugin": "2.12.0"
   }
 }

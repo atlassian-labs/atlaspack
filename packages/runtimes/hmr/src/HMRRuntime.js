@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import {Runtime} from '@parcel/plugin';
+import {Runtime} from '@atlaspack/plugin';
 import fs from 'fs';
 import path from 'path';
 

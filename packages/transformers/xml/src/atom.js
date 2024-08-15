@@ -1,5 +1,5 @@
 // @flow
-import type {MutableAsset, TransformerResult} from '@parcel/types';
+import type {MutableAsset, TransformerResult} from '@atlaspack/types';
 import {XMLSerializer} from '@xmldom/xmldom';
 import {urlHandler} from './utils';
 

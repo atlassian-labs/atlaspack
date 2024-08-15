@@ -21,16 +21,24 @@ describe('ParcelConfigRequest', () => {
   describe('validatePackageName', () => {
     it('should error on an invalid official package', () => {
       assert.throws(() => {
-        validatePackageName('@parcel/foo-bar', 'transform', 'transformers');
+        validatePackageName('@atlaspack/foo-bar', 'transform', 'transformers');
       }, /Official parcel transform packages must be named according to "@parcel\/transform-{name}"/);
 
       assert.throws(() => {
-        validatePackageName('@parcel/transformer', 'transform', 'transformers');
+        validatePackageName(
+          '@atlaspack/transformer',
+          'transform',
+          'transformers',
+        );
       }, /Official parcel transform packages must be named according to "@parcel\/transform-{name}"/);
     });
 
     it('should succeed on a valid official package', () => {
-      validatePackageName('@parcel/transform-bar', 'transform', 'transformers');
+      validatePackageName(
+        '@atlaspack/transform-bar',
+        'transform',
+        'transformers',
+      );
     });
 
     it('should error on an invalid community package', () => {
@@ -182,7 +190,7 @@ describe('ParcelConfigRequest', () => {
           {
             filePath: '.parcelrc',
             transformers: {
-              'types:*.{ts,tsx}': ['@parcel/transformer-typescript-types'],
+              'types:*.{ts,tsx}': ['@atlaspack/transformer-typescript-types'],
               'bundle-text:*': ['-inline-string', '...'],
             },
           },
@@ -277,8 +285,8 @@ describe('ParcelConfigRequest', () => {
           validateConfigFile(
             // $FlowExpectedError
             {
-              extends: '@parcel/config-default',
-              '@parcel/transformer-js': {
+              extends: '@atlaspack/config-default',
+              '@atlaspack/transformer-js': {
                 inlineEnvironment: false,
               },
             },
@@ -682,21 +690,21 @@ describe('ParcelConfigRequest', () => {
 
     it('should resolve a package name', async () => {
       let resolved = await resolveExtends(
-        '@parcel/config-default',
+        '@atlaspack/config-default',
         path.join(__dirname, 'fixtures', 'config', 'subfolder', '.parcelrc'),
         '/extends',
         DEFAULT_OPTIONS,
       );
-      assert.equal(resolved, require.resolve('@parcel/config-default'));
+      assert.equal(resolved, require.resolve('@atlaspack/config-default'));
     });
   });
 
   describe('parseAndProcessConfig', () => {
     it('should load and merge configs', async () => {
-      let defaultConfigPath = require.resolve('@parcel/config-default');
+      let defaultConfigPath = require.resolve('@atlaspack/config-default');
       let defaultConfig = await processConfig(
         {
-          ...require('@parcel/config-default'),
+          ...require('@atlaspack/config-default'),
           filePath: defaultConfigPath,
         },
         DEFAULT_OPTIONS,
@@ -765,7 +773,7 @@ describe('ParcelConfigRequest', () => {
           diagnostics: [
             {
               message: 'Failed to parse .parcelrc',
-              origin: '@parcel/core',
+              origin: '@atlaspack/core',
               codeFrames: [
                 {
                   filePath: configFilePath,
@@ -803,7 +811,7 @@ describe('ParcelConfigRequest', () => {
           diagnostics: [
             {
               message: 'Cannot find extended parcel config',
-              origin: '@parcel/core',
+              origin: '@atlaspack/core',
               codeFrames: [
                 {
                   filePath: configFilePath,
@@ -842,7 +850,7 @@ describe('ParcelConfigRequest', () => {
           diagnostics: [
             {
               message: 'Cannot find extended parcel config',
-              origin: '@parcel/core',
+              origin: '@atlaspack/core',
               codeFrames: [
                 {
                   filePath: configFilePath,
@@ -881,7 +889,7 @@ describe('ParcelConfigRequest', () => {
           diagnostics: [
             {
               message: 'Cannot find extended parcel config',
-              origin: '@parcel/core',
+              origin: '@atlaspack/core',
               codeFrames: [
                 {
                   filePath: configFilePath,
@@ -890,7 +898,7 @@ describe('ParcelConfigRequest', () => {
                   codeHighlights: [
                     {
                       message:
-                        'Cannot find module "@parcel/config-deflt", did you mean "@parcel/config-default"?',
+                        'Cannot find module "@atlaspack/config-deflt", did you mean "@atlaspack/config-default"?',
                       start: {line: 2, column: 14},
                       end: {line: 2, column: 35},
                     },
@@ -920,7 +928,7 @@ describe('ParcelConfigRequest', () => {
           diagnostics: [
             {
               message: 'Cannot find extended parcel config',
-              origin: '@parcel/core',
+              origin: '@atlaspack/core',
               codeFrames: [
                 {
                   filePath: configFilePath,
@@ -929,7 +937,7 @@ describe('ParcelConfigRequest', () => {
                   codeHighlights: [
                     {
                       message:
-                        'Cannot find module "@parcel/config-deflt", did you mean "@parcel/config-default"?',
+                        'Cannot find module "@atlaspack/config-deflt", did you mean "@atlaspack/config-default"?',
                       start: {line: 2, column: 15},
                       end: {line: 2, column: 36},
                     },
@@ -939,7 +947,7 @@ describe('ParcelConfigRequest', () => {
             },
             {
               message: 'Cannot find extended parcel config',
-              origin: '@parcel/core',
+              origin: '@atlaspack/core',
               codeFrames: [
                 {
                   filePath: configFilePath,

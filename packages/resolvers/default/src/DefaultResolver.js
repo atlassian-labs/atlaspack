@@ -1,7 +1,7 @@
 // @flow
 
-import {Resolver} from '@parcel/plugin';
-import NodeResolver from '@parcel/node-resolver-core';
+import {Resolver} from '@atlaspack/plugin';
+import NodeResolver from '@atlaspack/node-resolver-core';
 
 // Throw user friendly errors on special webpack loader syntax
 // ex. `imports-loader?$=jquery!./example.js`
@@ -10,7 +10,7 @@ const WEBPACK_IMPORT_REGEX = /^\w+-loader(?:\?\S*)?!/;
 export default (new Resolver({
   async loadConfig({config, options, logger}) {
     let conf = await config.getConfig([], {
-      packageKey: '@parcel/resolver-default',
+      packageKey: '@atlaspack/resolver-default',
     });
 
     return new NodeResolver({

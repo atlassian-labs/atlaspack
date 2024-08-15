@@ -15,7 +15,7 @@ import type {
   SemverRange,
   Validator,
   FilePath,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {
   ProcessedParcelConfig,
   ParcelPluginNode,
@@ -26,10 +26,10 @@ import type {
 import ThrowableDiagnostic, {
   md,
   generateJSONCodeHighlights,
-} from '@parcel/diagnostic';
+} from '@atlaspack/diagnostic';
 import json5 from 'json5';
 
-import {globToRegex} from '@parcel/utils';
+import {globToRegex} from '@atlaspack/utils';
 import {basename} from 'path';
 import loadPlugin from './loadParcelPlugin';
 import {
@@ -469,9 +469,9 @@ export default class ParcelConfig {
     return new ThrowableDiagnostic({
       diagnostic: {
         message,
-        origin: '@parcel/core',
+        origin: '@atlaspack/core',
         codeFrames,
-        hints: !seenKey ? ['Try extending __@parcel/config-default__'] : [],
+        hints: !seenKey ? ['Try extending __@atlaspack/config-default__'] : [],
       },
     });
   }

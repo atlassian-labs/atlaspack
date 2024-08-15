@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/kitchen-sink-example",
+  "name": "@atlaspack/kitchen-sink-example",
   "version": "2.12.0",
   "license": "MIT",
   "private": true,
@@ -9,11 +9,11 @@
   },
   "devDependencies": {
     "@babel/core": "^7.22.11",
-    "@parcel/babel-register": "2.12.0",
-    "@parcel/config-default": "2.12.0",
-    "@parcel/core": "2.12.0",
-    "@parcel/optimizer-esbuild": "2.12.0",
-    "@parcel/reporter-sourcemap-visualiser": "2.12.0",
+    "@atlaspack/babel-register": "2.12.0",
+    "@atlaspack/config-default": "2.12.0",
+    "@atlaspack/core": "2.12.0",
+    "@atlaspack/optimizer-esbuild": "2.12.0",
+    "@atlaspack/reporter-sourcemap-visualiser": "2.12.0",
     "parcel": "2.12.0"
   },
   "targets": {

@@ -1,20 +1,25 @@
 // @flow
-import type {FilePath, PackageName, Semver, SemverRange} from '@parcel/types';
+import type {
+  FilePath,
+  PackageName,
+  Semver,
+  SemverRange,
+} from '@atlaspack/types';
 import type {ParcelOptions} from './types';
 
 import path from 'path';
 import semver from 'semver';
-import logger from '@parcel/logger';
+import logger from '@atlaspack/logger';
 import nullthrows from 'nullthrows';
 import ThrowableDiagnostic, {
   generateJSONCodeHighlights,
   md,
-} from '@parcel/diagnostic';
+} from '@atlaspack/diagnostic';
 import {
   findAlternativeNodeModules,
   loadConfig,
   resolveConfig,
-} from '@parcel/utils';
+} from '@atlaspack/utils';
 import {type ProjectPath, toProjectPath} from './projectPath';
 import {version as PARCEL_VERSION} from '../package.json';
 
@@ -42,7 +47,7 @@ export default async function loadPlugin<T>(
       throw new ThrowableDiagnostic({
         diagnostic: {
           message: md`Local plugins are not supported in Parcel config packages. Please publish "${pluginName}" as a separate npm package.`,
-          origin: '@parcel/core',
+          origin: '@atlaspack/core',
           codeFrames: keyPath
             ? [
                 {
@@ -87,7 +92,7 @@ export default async function loadPlugin<T>(
               process.cwd(),
               resolveFrom,
             )}. Either include it in "dependencies" or "parcelDependencies".`,
-            origin: '@parcel/core',
+            origin: '@atlaspack/core',
             codeFrames:
               configPkg.config.dependencies ||
               configPkg.config.parcelDependencies
@@ -140,7 +145,7 @@ export default async function loadPlugin<T>(
     throw new ThrowableDiagnostic({
       diagnostic: {
         message: md`Cannot find Parcel plugin "${pluginName}"`,
-        origin: '@parcel/core',
+        origin: '@atlaspack/core',
         codeFrames: keyPath
           ? [
               {
@@ -172,7 +177,7 @@ export default async function loadPlugin<T>(
       let parcelVersionRange = pkg && pkg.engines && pkg.engines.parcel;
       if (!parcelVersionRange) {
         logger.warn({
-          origin: '@parcel/core',
+          origin: '@atlaspack/core',
           message: `The plugin "${pluginName}" needs to specify a \`package.json#engines.parcel\` field with the supported Parcel version range.`,
         });
       }
@@ -193,7 +198,7 @@ export default async function loadPlugin<T>(
         throw new ThrowableDiagnostic({
           diagnostic: {
             message: md`The plugin "${pluginName}" is not compatible with the current version of Parcel. Requires "${parcelVersionRange}" but the current version is "${PARCEL_VERSION}".`,
-            origin: '@parcel/core',
+            origin: '@atlaspack/core',
             codeFrames: [
               {
                 filePath: pkgFile,

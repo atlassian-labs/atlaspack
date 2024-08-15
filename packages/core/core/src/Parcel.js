@@ -10,30 +10,30 @@ import type {
   ParcelTransformOptions,
   ParcelResolveOptions,
   ParcelResolveResult,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import path from 'path';
 import type {ParcelOptions} from './types';
 // eslint-disable-next-line no-unused-vars
-import type {FarmOptions, SharedReference} from '@parcel/workers';
-import type {Diagnostic} from '@parcel/diagnostic';
+import type {FarmOptions, SharedReference} from '@atlaspack/workers';
+import type {Diagnostic} from '@atlaspack/diagnostic';
 
 import invariant from 'assert';
-import ThrowableDiagnostic, {anyToDiagnostic} from '@parcel/diagnostic';
+import ThrowableDiagnostic, {anyToDiagnostic} from '@atlaspack/diagnostic';
 import {assetFromValue} from './public/Asset';
 import {PackagedBundle} from './public/Bundle';
 import BundleGraph from './public/BundleGraph';
-import WorkerFarm from '@parcel/workers';
+import WorkerFarm from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 import {BuildAbortError} from './utils';
 import {loadParcelConfig} from './requests/ParcelConfigRequest';
 import ReporterRunner from './ReporterRunner';
 import dumpGraphToGraphViz from './dumpGraphToGraphViz';
 import resolveOptions from './resolveOptions';
-import {ValueEmitter} from '@parcel/events';
+import {ValueEmitter} from '@atlaspack/events';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
-import {PromiseQueue} from '@parcel/utils';
+import {PromiseQueue} from '@atlaspack/utils';
 import ParcelConfig from './ParcelConfig';
-import logger from '@parcel/logger';
+import logger from '@atlaspack/logger';
 import RequestTracker, {
   getWatcherOptions,
   requestGraphEdgeTypes,
@@ -44,20 +44,20 @@ import createAssetRequest from './requests/AssetRequest';
 import createPathRequest from './requests/PathRequest';
 import {createEnvironment} from './Environment';
 import {createDependency} from './Dependency';
-import {Disposable} from '@parcel/events';
-import {init as initSourcemaps} from '@parcel/source-map';
+import {Disposable} from '@atlaspack/events';
+import {init as initSourcemaps} from '@atlaspack/source-map';
 import {
   init as initRust,
   initializeMonitoring,
   closeMonitoring,
-} from '@parcel/rust';
+} from '@atlaspack/rust';
 import {
   fromProjectPath,
   toProjectPath,
   fromProjectPathRelative,
 } from './projectPath';
-import {tracer} from '@parcel/profiler';
-import {setFeatureFlags} from '@parcel/feature-flags';
+import {tracer} from '@atlaspack/profiler';
+import {setFeatureFlags} from '@atlaspack/feature-flags';
 import {ParcelV3, toFileSystemV3} from './parcel-v3';
 
 registerCoreWithSerializer();
@@ -183,7 +183,7 @@ export default class Parcel {
     this.#disposable.add(this.#reporterRunner);
 
     logger.verbose({
-      origin: '@parcel/core',
+      origin: '@atlaspack/core',
       message: 'Intializing request tracker...',
     });
 
@@ -508,7 +508,7 @@ export default class Parcel {
       throw new Error('Parcel is already profiling');
     }
 
-    logger.info({origin: '@parcel/core', message: 'Starting profiling...'});
+    logger.info({origin: '@atlaspack/core', message: 'Starting profiling...'});
     this.isProfiling = true;
     await this.#farm.startProfile();
   }
@@ -518,13 +518,16 @@ export default class Parcel {
       throw new Error('Parcel is not profiling');
     }
 
-    logger.info({origin: '@parcel/core', message: 'Stopping profiling...'});
+    logger.info({origin: '@atlaspack/core', message: 'Stopping profiling...'});
     this.isProfiling = false;
     return this.#farm.endProfile();
   }
 
   takeHeapSnapshot(): Promise<void> {
-    logger.info({origin: '@parcel/core', message: 'Taking heap snapshot...'});
+    logger.info({
+      origin: '@atlaspack/core',
+      message: 'Taking heap snapshot...',
+    });
     return this.#farm.takeHeapSnapshot();
   }
 
@@ -623,7 +626,7 @@ export function createWorkerFarm(
     ...options,
     // $FlowFixMe
     workerPath: process.browser
-      ? '@parcel/core/src/worker.js'
+      ? '@atlaspack/core/src/worker.js'
       : require.resolve('./worker'),
   });
 }

@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import type SourceMap from '@parcel/source-map';
+import type SourceMap from '@atlaspack/source-map';
 import type {
   Async,
   Blob,
@@ -8,7 +8,7 @@ import type {
   BundleGraph,
   Dependency,
   NamedBundle,
-} from '@parcel/types';
+} from '@atlaspack/types';
 
 import {Readable} from 'stream';
 import nullthrows from 'nullthrows';

@@ -1,8 +1,8 @@
 // @flow strict-local
 
-import type {ContentKey} from '@parcel/graph';
-import type {Async} from '@parcel/types';
-import type {SharedReference} from '@parcel/workers';
+import type {ContentKey} from '@atlaspack/graph';
+import type {Async} from '@atlaspack/types';
+import type {SharedReference} from '@atlaspack/workers';
 
 import type {StaticRunOpts} from '../RequestTracker';
 import {requestTypes} from '../RequestTracker';

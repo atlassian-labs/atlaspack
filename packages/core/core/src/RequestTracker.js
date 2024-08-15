@@ -3,26 +3,26 @@
 import invariant, {AssertionError} from 'assert';
 import path from 'path';
 
-import type {Cache} from '@parcel/cache';
-import {ContentGraph} from '@parcel/graph';
+import type {Cache} from '@atlaspack/cache';
+import {ContentGraph} from '@atlaspack/graph';
 import type {
   ContentGraphOpts,
   ContentKey,
   NodeId,
   SerializedContentGraph,
-} from '@parcel/graph';
-import logger from '@parcel/logger';
-import {hashString} from '@parcel/rust';
-import type {Async, EnvMap} from '@parcel/types';
+} from '@atlaspack/graph';
+import logger from '@atlaspack/logger';
+import {hashString} from '@atlaspack/rust';
+import type {Async, EnvMap} from '@atlaspack/types';
 import {
   type Deferred,
   isGlobMatch,
   isDirectoryInside,
   makeDeferredWithPromise,
   PromiseQueue,
-} from '@parcel/utils';
-import type {Options as WatcherOptions, Event} from '@parcel/watcher';
-import type WorkerFarm from '@parcel/workers';
+} from '@atlaspack/utils';
+import type {Options as WatcherOptions, Event} from '@atlaspack/watcher';
+import type WorkerFarm from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 
 import {
@@ -885,7 +885,7 @@ export class RequestGraph extends ContentGraph<
         predictedTime = duration * (events.length >> 8);
         if (predictedTime > threshold) {
           logger.warn({
-            origin: '@parcel/core',
+            origin: '@atlaspack/core',
             message:
               'Building with clean cache. Cache invalidation took too long.',
             meta: {
@@ -909,7 +909,7 @@ export class RequestGraph extends ContentGraph<
       // re-run all requests.
       if (type === 'create' && filePath === '') {
         logger.verbose({
-          origin: '@parcel/core',
+          origin: '@atlaspack/core',
           message:
             'Watcher reported project root create event. Invalidate all nodes.',
           meta: {
@@ -1044,7 +1044,7 @@ export class RequestGraph extends ContentGraph<
 
     let duration = Date.now() - startTime;
     logger.verbose({
-      origin: '@parcel/core',
+      origin: '@atlaspack/core',
       message: `RequestGraph.respondToFSEvents duration: ${duration}`,
       meta: {
         trackableEvent: 'fsevent_response_time',
@@ -1281,7 +1281,7 @@ export default class RequestTracker {
         request.type === requestTypes.dev_dep_request
       ) {
         logger.verbose({
-          origin: '@parcel/core',
+          origin: '@atlaspack/core',
           message: `Failed DevDepRequest`,
           meta: {
             trackableEvent: 'failed_dev_dep_request',
@@ -1620,7 +1620,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
 
       timeout = setTimeout(() => {
         logger.warn({
-          origin: '@parcel/core',
+          origin: '@atlaspack/core',
           message: `Retrieving file system events since last build...\nThis can take upto a minute after branch changes or npm/yarn installs.`,
         });
       }, 5000);
@@ -1633,7 +1633,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
       clearTimeout(timeout);
 
       logger.verbose({
-        origin: '@parcel/core',
+        origin: '@atlaspack/core',
         message: `File system event count: ${events.length}`,
         meta: {
           trackableEvent: 'watcher_events_count',
@@ -1676,7 +1676,7 @@ function logErrorOnBailout(
       'utf-8',
     );
     logger.warn({
-      origin: '@parcel/core',
+      origin: '@atlaspack/core',
       message: `Error reading clockspec from snapshot, building with clean cache.`,
       meta: {
         snapshotContents: snapshotContents,
@@ -1685,7 +1685,7 @@ function logErrorOnBailout(
     });
   } else if (!(e instanceof FSBailoutError)) {
     logger.warn({
-      origin: '@parcel/core',
+      origin: '@atlaspack/core',
       message: `Unexpected error loading cache from disk, building with clean cache.`,
       meta: {
         errorMessage: e.message,

@@ -7,7 +7,7 @@ import type {
   PackageJSON,
   ConfigResultWithFilePath,
   DevDepOptions,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {Config, ParcelOptions} from '../types';
 
 import invariant from 'assert';
@@ -17,7 +17,7 @@ import {
   resolveConfig,
   readConfig,
   relativePath,
-} from '@parcel/utils';
+} from '@atlaspack/utils';
 import Environment from './Environment';
 import {fromProjectPath, toProjectPath} from '../projectPath';
 

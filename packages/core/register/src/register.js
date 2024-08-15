@@ -1,16 +1,16 @@
 // @flow strict-local
 
-import type {IDisposable, InitialParcelOptions} from '@parcel/types';
+import type {IDisposable, InitialParcelOptions} from '@atlaspack/types';
 
-import {NodePackageManager} from '@parcel/package-manager';
-import {NodeFS} from '@parcel/fs';
+import {NodePackageManager} from '@atlaspack/package-manager';
+import {NodeFS} from '@atlaspack/fs';
 // flowlint-next-line untyped-import:off
-import defaultConfigContents from '@parcel/config-default';
+import defaultConfigContents from '@atlaspack/config-default';
 // $FlowFixMe Flow can't resolve this
 import Module from 'module';
 import path from 'path';
 import {addHook} from 'pirates';
-import Parcel, {INTERNAL_RESOLVE, INTERNAL_TRANSFORM} from '@parcel/core';
+import Parcel, {INTERNAL_RESOLVE, INTERNAL_TRANSFORM} from '@atlaspack/core';
 
 import syncPromise from './syncPromise';
 
@@ -19,7 +19,7 @@ let lastDisposable;
 let packageManager = new NodePackageManager(new NodeFS(), '/');
 let defaultConfig = {
   ...defaultConfigContents,
-  filePath: packageManager.resolveSync('@parcel/config-default', __filename)
+  filePath: packageManager.resolveSync('@atlaspack/config-default', __filename)
     .resolved,
 };
 
@@ -74,7 +74,7 @@ function register(inputOpts?: InitialParcelOptions): IDisposable {
       }
     } catch (e) {
       /* eslint-disable no-console */
-      console.error('@parcel/register failed to process: ', filePath);
+      console.error('@atlaspack/register failed to process: ', filePath);
       console.error(e);
       /* eslint-enable */
     } finally {

@@ -11,7 +11,7 @@ import {
   outputFS,
   fsFixture,
   assertBundles,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 import nullthrows from 'nullthrows';
 
 describe.v2('library bundler', function () {
@@ -32,8 +32,8 @@ describe.v2('library bundler', function () {
 
       .parcelrc:
         {
-          "extends": "@parcel/config-default",
-          "bundler": "@parcel/bundler-library"
+          "extends": "@atlaspack/config-default",
+          "bundler": "@atlaspack/bundler-library"
         }
 
       package.json:
@@ -128,8 +128,8 @@ describe.v2('library bundler', function () {
 
       .parcelrc:
         {
-          "extends": "@parcel/config-default",
-          "bundler": "@parcel/bundler-library"
+          "extends": "@atlaspack/config-default",
+          "bundler": "@atlaspack/bundler-library"
         }
 
       package.json:
@@ -198,8 +198,8 @@ describe.v2('library bundler', function () {
 
       .parcelrc:
         {
-          "extends": "@parcel/config-default",
-          "bundler": "@parcel/bundler-library"
+          "extends": "@atlaspack/config-default",
+          "bundler": "@atlaspack/bundler-library"
         }
 
       package.json:
@@ -278,8 +278,8 @@ describe.v2('library bundler', function () {
 
       .parcelrc:
         {
-          "extends": "@parcel/config-default",
-          "bundler": "@parcel/bundler-library"
+          "extends": "@atlaspack/config-default",
+          "bundler": "@atlaspack/bundler-library"
         }
 
       package.json:
@@ -377,8 +377,8 @@ describe.v2('library bundler', function () {
 
       .parcelrc:
         {
-          "extends": "@parcel/config-default",
-          "bundler": "@parcel/bundler-library"
+          "extends": "@atlaspack/config-default",
+          "bundler": "@atlaspack/bundler-library"
         }
 
       package.json:
@@ -427,8 +427,8 @@ describe.v2('library bundler', function () {
 
       .parcelrc:
         {
-          "extends": "@parcel/config-default",
-          "bundler": "@parcel/bundler-library"
+          "extends": "@atlaspack/config-default",
+          "bundler": "@atlaspack/bundler-library"
         }
 
       package.json:
@@ -500,8 +500,8 @@ describe.v2('library bundler', function () {
 
       .parcelrc:
         {
-          "extends": "@parcel/config-default",
-          "bundler": "@parcel/bundler-library"
+          "extends": "@atlaspack/config-default",
+          "bundler": "@atlaspack/bundler-library"
         }
 
       packages/a/package.json:
@@ -587,8 +587,8 @@ describe.v2('library bundler', function () {
 
       .parcelrc:
         {
-          "extends": "@parcel/config-default",
-          "bundler": "@parcel/bundler-library"
+          "extends": "@atlaspack/config-default",
+          "bundler": "@atlaspack/bundler-library"
         }
 
       package.json:

@@ -6,13 +6,13 @@ import type {
   PluginOptions,
   PluginTracer,
   PluginLogger,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import typeof * as BabelCore from '@babel/core';
 
 import invariant from 'assert';
 import path from 'path';
-import {md} from '@parcel/diagnostic';
-import {relativeUrl} from '@parcel/utils';
+import {md} from '@atlaspack/diagnostic';
+import {relativeUrl} from '@atlaspack/utils';
 import {remapAstLocations} from './remapAstLocations';
 
 import packageJson from '../package.json';

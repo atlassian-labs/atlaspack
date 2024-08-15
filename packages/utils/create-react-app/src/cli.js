@@ -108,7 +108,7 @@ async function createApp(packageName: string, tempPath: string) {
 
   log(chalk.green(emoji.progress, 'Creating initial commit...'));
   await git.add('.');
-  await git.commit('Initial commit created with @parcel/create-react-app');
+  await git.commit('Initial commit created with @atlaspack/create-react-app');
 }
 
 async function fsExists(filePath: string): Promise<boolean> {

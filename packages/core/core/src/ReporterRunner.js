@@ -1,7 +1,7 @@
 // @flow strict-local
 
-import type {ReporterEvent, Reporter} from '@parcel/types';
-import type {WorkerApi} from '@parcel/workers';
+import type {ReporterEvent, Reporter} from '@atlaspack/types';
+import type {WorkerApi} from '@atlaspack/workers';
 import type {Bundle as InternalBundle, ParcelOptions} from './types';
 import type {LoadedPlugin} from './ParcelConfig';
 
@@ -11,17 +11,17 @@ import {
   bundleToInternalBundleGraph,
   NamedBundle,
 } from './public/Bundle';
-import WorkerFarm, {bus} from '@parcel/workers';
+import WorkerFarm, {bus} from '@atlaspack/workers';
 import logger, {
   patchConsole,
   unpatchConsole,
   PluginLogger,
   INTERNAL_ORIGINAL_CONSOLE,
-} from '@parcel/logger';
+} from '@atlaspack/logger';
 import PluginOptions from './public/PluginOptions';
 import BundleGraph from './BundleGraph';
-import {tracer, PluginTracer} from '@parcel/profiler';
-import {anyToDiagnostic} from '@parcel/diagnostic';
+import {tracer, PluginTracer} from '@atlaspack/profiler';
+import {anyToDiagnostic} from '@atlaspack/diagnostic';
 
 type Opts = {|
   options: ParcelOptions,

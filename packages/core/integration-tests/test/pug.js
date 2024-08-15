@@ -7,7 +7,7 @@ import {
   it,
   outputFS,
   distDir,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 describe.v2('pug', function () {
   it('should support bundling HTML', async function () {

@@ -1,18 +1,18 @@
 // @flow
 
-import type {InitialParcelOptions} from '@parcel/types';
-import {BuildError} from '@parcel/core';
-import {NodeFS} from '@parcel/fs';
-import ThrowableDiagnostic from '@parcel/diagnostic';
-import {prettyDiagnostic, openInBrowser} from '@parcel/utils';
-import {Disposable} from '@parcel/events';
-import {INTERNAL_ORIGINAL_CONSOLE} from '@parcel/logger';
+import type {InitialParcelOptions} from '@atlaspack/types';
+import {BuildError} from '@atlaspack/core';
+import {NodeFS} from '@atlaspack/fs';
+import ThrowableDiagnostic from '@atlaspack/diagnostic';
+import {prettyDiagnostic, openInBrowser} from '@atlaspack/utils';
+import {Disposable} from '@atlaspack/events';
+import {INTERNAL_ORIGINAL_CONSOLE} from '@atlaspack/logger';
 import chalk from 'chalk';
 import commander from 'commander';
 import path from 'path';
 import getPort from 'get-port';
 import {version} from '../package.json';
-import {DEFAULT_FEATURE_FLAGS} from '@parcel/feature-flags';
+import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 
 const program = new commander.Command();
 
@@ -284,12 +284,12 @@ async function run(
 
   entries = entries.map(entry => path.resolve(entry));
 
-  let Parcel = require('@parcel/core').default;
+  let Parcel = require('@atlaspack/core').default;
   let fs = new NodeFS();
   let options = await normalizeOptions(command, fs);
   let parcel = new Parcel({
     entries,
-    defaultConfig: require.resolve('@parcel/config-default', {
+    defaultConfig: require.resolve('@atlaspack/config-default', {
       paths: [fs.cwd(), __dirname],
     }),
     shouldPatchConsole: false,
@@ -510,7 +510,7 @@ async function normalizeOptions(
   }
 
   let additionalReporters = [
-    {packageName: '@parcel/reporter-cli', resolveFrom: __filename},
+    {packageName: '@atlaspack/reporter-cli', resolveFrom: __filename},
     ...(command.reporter: Array<string>).map(packageName => ({
       packageName,
       resolveFrom: path.join(inputFS.cwd(), 'index'),
@@ -519,7 +519,7 @@ async function normalizeOptions(
 
   if (command.trace) {
     additionalReporters.unshift({
-      packageName: '@parcel/reporter-tracer',
+      packageName: '@atlaspack/reporter-tracer',
       resolveFrom: __filename,
     });
   }

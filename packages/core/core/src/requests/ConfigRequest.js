@@ -7,8 +7,8 @@ import type {
   PluginTracer as IPluginTracer,
   NamedBundle as INamedBundle,
   BundleGraph as IBundleGraph,
-} from '@parcel/types';
-import {readConfig, hashObject} from '@parcel/utils';
+} from '@atlaspack/types';
+import {readConfig, hashObject} from '@atlaspack/utils';
 import type {
   Config,
   ParcelOptions,
@@ -19,14 +19,14 @@ import type {RequestResult, RunAPI} from '../RequestTracker';
 import type {ProjectPath} from '../projectPath';
 
 import {serializeRaw} from '../serializer.js';
-import {PluginLogger} from '@parcel/logger';
+import {PluginLogger} from '@atlaspack/logger';
 import PluginOptions from '../public/PluginOptions';
-import ThrowableDiagnostic, {errorToDiagnostic} from '@parcel/diagnostic';
+import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import PublicConfig from '../public/Config';
 import {optionsProxy} from '../utils';
 import {getInvalidationHash} from '../assetUtils';
-import {hashString, Hash} from '@parcel/rust';
-import {PluginTracer} from '@parcel/profiler';
+import {hashString, Hash} from '@atlaspack/rust';
+import {PluginTracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 import {fromProjectPath, fromProjectPathRelative} from '../projectPath';
 import {createBuildCache} from '../buildCache';

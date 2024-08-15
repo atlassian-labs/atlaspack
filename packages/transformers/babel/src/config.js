@@ -1,14 +1,14 @@
 // @flow
 
-import type {Config, PluginOptions, PluginLogger} from '@parcel/types';
+import type {Config, PluginOptions, PluginLogger} from '@atlaspack/types';
 import typeof * as BabelCore from '@babel/core';
-import type {Diagnostic} from '@parcel/diagnostic';
+import type {Diagnostic} from '@atlaspack/diagnostic';
 import type {BabelConfig} from './types';
 
 import json5 from 'json5';
 import path from 'path';
-import {hashObject, relativePath, resolveConfig} from '@parcel/utils';
-import {md, generateJSONCodeHighlights} from '@parcel/diagnostic';
+import {hashObject, relativePath, resolveConfig} from '@atlaspack/utils';
+import {md, generateJSONCodeHighlights} from '@atlaspack/diagnostic';
 import {BABEL_CORE_RANGE} from './constants';
 
 import isJSX from './jsx';
@@ -277,7 +277,7 @@ const redundantPresets = new Set([
   '@babel/preset-env',
   '@babel/preset-react',
   '@babel/preset-typescript',
-  '@parcel/babel-preset-env',
+  '@atlaspack/babel-preset-env',
 ]);
 
 async function warnOnRedundantPlugins(fs, babelConfig, logger) {
@@ -365,7 +365,7 @@ async function warnOnRedundantPlugins(fs, babelConfig, logger) {
         },
       ],
       hints: [
-        `Either remove __@babel/preset-env__ to use Parcel's builtin transpilation, or replace with __@parcel/babel-preset-env__`,
+        `Either remove __@babel/preset-env__ to use Parcel's builtin transpilation, or replace with __@atlaspack/babel-preset-env__`,
       ],
       documentationURL:
         'https://parceljs.org/languages/javascript/#custom-plugins',

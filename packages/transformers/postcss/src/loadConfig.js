@@ -4,9 +4,9 @@ import type {
   FilePath,
   PluginOptions,
   PluginLogger,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import path from 'path';
-import {md, generateJSONCodeHighlights} from '@parcel/diagnostic';
+import {md, generateJSONCodeHighlights} from '@atlaspack/diagnostic';
 import nullthrows from 'nullthrows';
 import clone from 'clone';
 import {POSTCSS_RANGE} from './constants';

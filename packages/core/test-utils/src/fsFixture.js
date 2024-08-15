@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import type {FileSystem} from '@parcel/fs';
+import type {FileSystem} from '@atlaspack/fs';
 
 import assert from 'assert';
 import nullthrows from 'nullthrows';

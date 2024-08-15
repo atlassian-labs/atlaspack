@@ -6,11 +6,11 @@ import {PassThrough} from 'stream';
 import {_report} from '../src/CLIReporter';
 import * as render from '../src/render';
 import {_setStdio} from '../src/render';
-import {inputFS, outputFS} from '@parcel/test-utils';
-import {NodePackageManager} from '@parcel/package-manager';
+import {inputFS, outputFS} from '@atlaspack/test-utils';
+import {NodePackageManager} from '@atlaspack/package-manager';
 import stripAnsi from 'strip-ansi';
 import * as bundleReport from '../src/bundleReport';
-import {DEFAULT_FEATURE_FLAGS} from '@parcel/feature-flags';
+import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 
 const EMPTY_OPTIONS = {
   cacheDir: '.parcel-cache',

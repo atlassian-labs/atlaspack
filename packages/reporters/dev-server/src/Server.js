@@ -7,10 +7,10 @@ import type {
   FilePath,
   PluginOptions,
   PackagedBundle,
-} from '@parcel/types';
-import type {Diagnostic} from '@parcel/diagnostic';
-import type {FileSystem} from '@parcel/fs';
-import type {HTTPServer, FormattedCodeFrame} from '@parcel/utils';
+} from '@atlaspack/types';
+import type {Diagnostic} from '@atlaspack/diagnostic';
+import type {FileSystem} from '@atlaspack/fs';
+import type {HTTPServer, FormattedCodeFrame} from '@atlaspack/utils';
 
 import invariant from 'assert';
 import path from 'path';
@@ -22,7 +22,7 @@ import {
   readConfig,
   prettyDiagnostic,
   relativePath,
-} from '@parcel/utils';
+} from '@atlaspack/utils';
 import serverErrors from './serverErrors';
 import fs from 'fs';
 import ejs from 'ejs';

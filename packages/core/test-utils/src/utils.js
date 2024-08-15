@@ -9,18 +9,18 @@ import type {
   FilePath,
   InitialParcelOptions,
   PackagedBundle,
-} from '@parcel/types';
-import type {FileSystem} from '@parcel/fs';
-import type WorkerFarm from '@parcel/workers';
+} from '@atlaspack/types';
+import type {FileSystem} from '@atlaspack/fs';
+import type WorkerFarm from '@atlaspack/workers';
 import type {IncomingMessage} from 'http';
 
 import invariant from 'assert';
 import util from 'util';
-import Parcel, {createWorkerFarm} from '@parcel/core';
+import Parcel, {createWorkerFarm} from '@atlaspack/core';
 import assert from 'assert';
 import vm from 'vm';
 import v8 from 'v8';
-import {NodeFS, MemoryFS, OverlayFS, ncp as _ncp} from '@parcel/fs';
+import {NodeFS, MemoryFS, OverlayFS, ncp as _ncp} from '@atlaspack/fs';
 import path from 'path';
 import url from 'url';
 import WebSocket from 'ws';
@@ -31,7 +31,7 @@ import EventEmitter from 'events';
 import http from 'http';
 import https from 'https';
 
-import {makeDeferredWithPromise, normalizeSeparators} from '@parcel/utils';
+import {makeDeferredWithPromise, normalizeSeparators} from '@atlaspack/utils';
 import _chalk from 'chalk';
 import resolve from 'resolve';
 

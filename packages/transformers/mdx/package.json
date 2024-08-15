@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/transformer-mdx",
+  "name": "@atlaspack/transformer-mdx",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@mdx-js/mdx": "^1.6.22",
-    "@parcel/plugin": "2.12.0"
+    "@atlaspack/plugin": "2.12.0"
   },
   "peerDependencies": {
     "@mdx-js/react": "^1.6.22"

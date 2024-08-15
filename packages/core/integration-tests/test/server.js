@@ -14,10 +14,10 @@ import {
   ncp,
   request as get,
   requestRaw as getRaw,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 import https from 'https';
 import getPort from 'get-port';
-import type {BuildEvent} from '@parcel/types';
+import type {BuildEvent} from '@atlaspack/types';
 
 const distDir = path.resolve(__dirname, '.parcel-cache/dist');
 const config = path.join(

@@ -1,7 +1,7 @@
 // @flow strict-local
 
 import type {CmdOptions} from './utils';
-import type {FileSystem} from '@parcel/fs';
+import type {FileSystem} from '@atlaspack/fs';
 
 import {ParcelLinkConfig} from './ParcelLinkConfig';
 import {
@@ -14,7 +14,7 @@ import {
 } from './utils';
 
 import path from 'path';
-import {NodeFS} from '@parcel/fs';
+import {NodeFS} from '@atlaspack/fs';
 import commander from 'commander';
 
 export type UnlinkOptions = {|
@@ -48,7 +48,7 @@ export async function unlink(
 
   let parcelPackages = await findParcelPackages(config.fs, packageRoot);
 
-  // Step 2: Delete all official packages (`@parcel/*`) from node_modules
+  // Step 2: Delete all official packages (`@atlaspack/*`) from node_modules
   // This is very brute-force, but should ensure that we catch all linked packages.
   // --------------------------------------------------------------------------------
 

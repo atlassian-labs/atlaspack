@@ -8,8 +8,8 @@ import {
   it,
   outputFS,
   run,
-} from '@parcel/test-utils';
-import {md} from '@parcel/diagnostic';
+} from '@atlaspack/test-utils';
+import {md} from '@atlaspack/diagnostic';
 
 describe.v2('less', function () {
   it('should support requiring less files', async function () {

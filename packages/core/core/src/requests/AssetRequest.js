@@ -1,7 +1,7 @@
 // @flow strict-local
 
-import type {ContentKey} from '@parcel/graph';
-import type {Async} from '@parcel/types';
+import type {ContentKey} from '@atlaspack/graph';
+import type {Async} from '@atlaspack/types';
 import type {StaticRunOpts} from '../RequestTracker';
 import type {
   AssetRequestInput,
@@ -12,8 +12,8 @@ import type {ConfigAndCachePath} from './ParcelConfigRequest';
 import type {TransformationResult} from '../Transformation';
 
 import nullthrows from 'nullthrows';
-import ThrowableDiagnostic from '@parcel/diagnostic';
-import {hashString} from '@parcel/rust';
+import ThrowableDiagnostic from '@atlaspack/diagnostic';
+import {hashString} from '@atlaspack/rust';
 import createParcelConfigRequest from './ParcelConfigRequest';
 import {runDevDepRequest} from './DevDepRequest';
 import {runConfigRequest} from './ConfigRequest';

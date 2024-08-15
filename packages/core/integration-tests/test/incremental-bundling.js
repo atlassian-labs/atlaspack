@@ -8,13 +8,13 @@ import {
   overlayFS,
   run,
   fsFixture,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 import assert from 'assert';
 import path from 'path';
 import sinon from 'sinon';
-import {NodePackageManager} from '@parcel/package-manager';
+import {NodePackageManager} from '@atlaspack/package-manager';
 
-import {type Asset} from '@parcel/types';
+import {type Asset} from '@atlaspack/types';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 let packageManager = new NodePackageManager(inputFS, '/');
@@ -42,7 +42,7 @@ describe.v2('incremental bundling', function () {
   };
   beforeEach(async () => {
     let Bundler = (
-      await packageManager.require('@parcel/bundler-default', __filename)
+      await packageManager.require('@atlaspack/bundler-default', __filename)
     ).default;
     let CustomBundler = await packageManager.require(
       './integration/incremental-bundling/node_modules/parcel-bundler-test',
@@ -686,7 +686,7 @@ console.log('index.js');`,
         await overlayFS.writeFile(
           path.join(fixture, '.parcelrc'),
           JSON.stringify({
-            extends: '@parcel/config-default',
+            extends: '@atlaspack/config-default',
             bundler: 'parcel-bundler-test',
           }),
         );
@@ -722,7 +722,7 @@ console.log('index.js');`,
 
           package.json:
             {
-              "@parcel/bundler-default": {
+              "@atlaspack/bundler-default": {
                 "http": 2
               }
             }
@@ -747,7 +747,7 @@ console.log('index.js');`,
           pkgFile,
           JSON.stringify({
             ...pkg,
-            '@parcel/bundler-default': {
+            '@atlaspack/bundler-default': {
               http: 1,
             },
           }),
@@ -786,7 +786,7 @@ console.log('index.js');`,
       await overlayFS.writeFile(
         path.join(fixture, '.parcelrc'),
         JSON.stringify({
-          extends: '@parcel/config-default',
+          extends: '@atlaspack/config-default',
           namers: ['parcel-namer-test'],
         }),
       );
@@ -830,7 +830,7 @@ console.log('index.js');`,
       await overlayFS.writeFile(
         path.join(fixture, '.parcelrc'),
         JSON.stringify({
-          extends: '@parcel/config-default',
+          extends: '@atlaspack/config-default',
           runtimes: ['parcel-runtime-test'],
         }),
       );

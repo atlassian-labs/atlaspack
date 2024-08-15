@@ -1,5 +1,5 @@
 // @flow strict-local
-import type {NamedBundle, PluginLogger} from '@parcel/types';
+import type {NamedBundle, PluginLogger} from '@atlaspack/types';
 
 import type {
   CallExpression,
@@ -88,7 +88,7 @@ export class RequireInliningVisitor extends Visitor {
         ((init.callee.type === 'Identifier' &&
           init.callee.value === 'require') ||
           init.callee.value === 'parcelRequire') &&
-        decl.id.value !== 'parcelHelpers' && // ignore var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+        decl.id.value !== 'parcelHelpers' && // ignore var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
         init.arguments[0].expression.type === 'StringLiteral' &&
         typeof decl.id.value === 'string' &&
         decl.id.value.startsWith('$')

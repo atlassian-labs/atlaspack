@@ -1,5 +1,5 @@
 // @flow
-import {Graph} from '@parcel/graph';
+import {Graph} from '@atlaspack/graph';
 import {registerSerializableClass} from './serializer';
 import AssetGraph from './AssetGraph';
 import BundleGraph from './BundleGraph';

@@ -40,7 +40,7 @@ module.exports = {
     },
   ],
   rules: {
-    '@parcel/no-self-package-imports': 'error',
+    '@atlaspack/no-self-package-imports': 'error',
     'import/first': 'error',
     'import/newline-after-import': 'error',
     'import/no-extraneous-dependencies': 'error',

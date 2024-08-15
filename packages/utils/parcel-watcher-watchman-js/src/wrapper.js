@@ -2,20 +2,20 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as watchman from 'fb-watchman';
-import {isGlob} from '@parcel/utils';
-import logger from '@parcel/logger';
+import {isGlob} from '@atlaspack/utils';
+import logger from '@atlaspack/logger';
 import type {
   Options,
   Event,
   SubscribeCallback,
   AsyncSubscription,
-} from '@parcel/watcher';
+} from '@atlaspack/watcher';
 
 type WatchmanArgs = any;
 type FilePath = string;
 type GlobPattern = string;
 
-// Matches the Watcher API from "@parcel/watcher"
+// Matches the Watcher API from "@atlaspack/watcher"
 export interface Watcher {
   getEventsSince(
     dir: FilePath,
@@ -95,7 +95,7 @@ export class ParcelWatcherWatchmanJS implements Watcher {
     return this.initPromise;
   }
 
-  // Types should match @parcel/watcher/index.js.flow
+  // Types should match @atlaspack/watcher/index.js.flow
   async writeSnapshot(dir: string, snapshot: FilePath): Promise<string> {
     await this.init(dir);
 

@@ -2,7 +2,7 @@
 
 import path from 'path';
 import {Worker} from 'worker_threads';
-import {ParcelNapi, type ParcelNapiOptions} from '@parcel/rust';
+import {ParcelNapi, type ParcelNapiOptions} from '@atlaspack/rust';
 
 const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
 

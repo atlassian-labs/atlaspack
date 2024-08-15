@@ -1,8 +1,8 @@
 // @flow strict-local
 
-import type {ContentKey} from '@parcel/graph';
-import type {Dependency, NamedBundle as INamedBundle} from '@parcel/types';
-import type {SharedReference} from '@parcel/workers';
+import type {ContentKey} from '@atlaspack/graph';
+import type {Dependency, NamedBundle as INamedBundle} from '@atlaspack/types';
+import type {SharedReference} from '@atlaspack/workers';
 import type {
   Asset,
   AssetGroup,
@@ -23,15 +23,15 @@ import {nodeFromAssetGroup} from './AssetGraph';
 import BundleGraph from './public/BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from './BundleGraph';
 import {NamedBundle} from './public/Bundle';
-import {PluginLogger} from '@parcel/logger';
-import {hashString} from '@parcel/rust';
-import ThrowableDiagnostic, {errorToDiagnostic} from '@parcel/diagnostic';
+import {PluginLogger} from '@atlaspack/logger';
+import {hashString} from '@atlaspack/rust';
+import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {dependencyToInternalDependency} from './public/Dependency';
 import {mergeEnvironments} from './Environment';
 import createAssetGraphRequest from './requests/AssetGraphRequest';
 import {createDevDependency, runDevDepRequest} from './requests/DevDepRequest';
 import {toProjectPath, fromProjectPathRelative} from './projectPath';
-import {tracer, PluginTracer} from '@parcel/profiler';
+import {tracer, PluginTracer} from '@atlaspack/profiler';
 
 type RuntimeConnection = {|
   bundle: InternalBundle,

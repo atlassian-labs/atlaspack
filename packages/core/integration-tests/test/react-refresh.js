@@ -12,9 +12,9 @@ import {
   sleep,
   run,
   getNextBuildSuccess,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 import getPort from 'get-port';
-import type {BuildEvent, Asset} from '@parcel/types';
+import type {BuildEvent, Asset} from '@atlaspack/types';
 // flowlint-next-line untyped-import:off
 import JSDOM from 'jsdom';
 import nullthrows from 'nullthrows';
@@ -293,7 +293,7 @@ if (MessageChannel) {
           assert(
             !node.value.specifier.startsWith('react-refresh/runtime') &&
               !node.value.specifier.startsWith(
-                '@parcel/transformer-react-refresh-wrap',
+                '@atlaspack/transformer-react-refresh-wrap',
               ),
           );
         }

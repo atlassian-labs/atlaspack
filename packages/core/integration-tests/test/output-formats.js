@@ -12,7 +12,7 @@ import {
   outputFS,
   run,
   runBundle,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 import * as react from 'react';
 import * as lodash from 'lodash';
 import * as lodashFP from 'lodash/fp';
@@ -378,7 +378,7 @@ describe.v2('output formats', function () {
           diagnostics: [
             {
               message,
-              origin: '@parcel/core',
+              origin: '@atlaspack/core',
               codeFrames: [
                 {
                   filePath: source,
@@ -893,7 +893,7 @@ describe.v2('output formats', function () {
           diagnostics: [
             {
               message,
-              origin: '@parcel/core',
+              origin: '@atlaspack/core',
               codeFrames: [
                 {
                   filePath: source,
@@ -1221,7 +1221,7 @@ describe.v2('output formats', function () {
         diagnostics: [
           {
             message,
-            origin: '@parcel/packager-js',
+            origin: '@atlaspack/packager-js',
             codeFrames: [
               {
                 filePath: source,
@@ -1584,7 +1584,7 @@ describe.v2('output formats', function () {
         diagnostics: [
           {
             message,
-            origin: '@parcel/packager-js',
+            origin: '@atlaspack/packager-js',
             codeFrames: [
               {
                 filePath: source,

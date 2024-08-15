@@ -9,7 +9,7 @@ import {
   it,
   outputFS,
   run,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 const config = path.join(__dirname, '/integration/typescript-config/.parcelrc');
 

@@ -6,13 +6,13 @@ import type {
   Symbol,
   TraversalActions,
   BundleBehavior as IBundleBehavior,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {
   ContentKey,
   ContentGraphOpts,
   NodeId,
   SerializedContentGraph,
-} from '@parcel/graph';
+} from '@atlaspack/graph';
 
 import type {
   Asset,
@@ -33,9 +33,13 @@ import type {ProjectPath} from './projectPath';
 import assert from 'assert';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
-import {ContentGraph, ALL_EDGE_TYPES, mapVisitor} from '@parcel/graph';
-import {Hash, hashString} from '@parcel/rust';
-import {DefaultMap, objectSortedEntriesDeep, getRootDir} from '@parcel/utils';
+import {ContentGraph, ALL_EDGE_TYPES, mapVisitor} from '@atlaspack/graph';
+import {Hash, hashString} from '@atlaspack/rust';
+import {
+  DefaultMap,
+  objectSortedEntriesDeep,
+  getRootDir,
+} from '@atlaspack/utils';
 
 import {Priority, BundleBehavior, SpecifierType} from './types';
 import {getBundleGroupId, getPublicId} from './utils';

@@ -1,8 +1,8 @@
 // @flow strict-local
 
-import type {NodeId} from '@parcel/graph';
-import type {Async} from '@parcel/types';
-import type {SharedReference} from '@parcel/workers';
+import type {NodeId} from '@atlaspack/graph';
+import type {Async} from '@atlaspack/types';
+import type {SharedReference} from '@atlaspack/workers';
 import type {
   Asset,
   AssetGroup,
@@ -15,14 +15,14 @@ import type {
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
 import type {EntryRequestResult} from './EntryRequest';
 import type {PathRequestInput} from './PathRequest';
-import type {Diagnostic} from '@parcel/diagnostic';
-import logger from '@parcel/logger';
+import type {Diagnostic} from '@atlaspack/diagnostic';
+import logger from '@atlaspack/logger';
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
-import {PromiseQueue, setEqual} from '@parcel/utils';
-import {hashString} from '@parcel/rust';
-import ThrowableDiagnostic from '@parcel/diagnostic';
+import {PromiseQueue, setEqual} from '@atlaspack/utils';
+import {hashString} from '@atlaspack/rust';
+import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import {Priority} from '../types';
 import AssetGraph from '../AssetGraph';
 import {PARCEL_VERSION} from '../constants';
@@ -241,7 +241,7 @@ export class AssetGraphBuilder {
     await this.queue.run();
 
     logger.verbose({
-      origin: '@parcel/core',
+      origin: '@atlaspack/core',
       message: 'Asset graph walked',
       meta: {
         visitedAssetGroupsCount: visitedAssetGroups.size,

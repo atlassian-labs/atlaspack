@@ -8,8 +8,8 @@ import type {
   PackageName,
   ResolveOptions,
   SemverRange,
-} from '@parcel/types';
-import type {WorkerApi} from '@parcel/workers';
+} from '@atlaspack/types';
+import type {WorkerApi} from '@atlaspack/workers';
 import type {
   Asset as AssetValue,
   TransformationRequest,
@@ -24,16 +24,16 @@ import type {LoadedPlugin} from './ParcelConfig';
 import path from 'path';
 import {Readable} from 'stream';
 import nullthrows from 'nullthrows';
-import logger, {PluginLogger} from '@parcel/logger';
+import logger, {PluginLogger} from '@atlaspack/logger';
 import ThrowableDiagnostic, {
   anyToDiagnostic,
   errorToDiagnostic,
   escapeMarkdown,
   md,
   type Diagnostic,
-} from '@parcel/diagnostic';
-import {SOURCEMAP_EXTENSIONS} from '@parcel/utils';
-import {hashString} from '@parcel/rust';
+} from '@atlaspack/diagnostic';
+import {SOURCEMAP_EXTENSIONS} from '@atlaspack/utils';
+import {hashString} from '@atlaspack/rust';
 
 import {createDependency} from './Dependency';
 import ParcelConfig from './ParcelConfig';
@@ -69,7 +69,7 @@ import {
 } from './projectPath';
 import {invalidateOnFileCreateToInternal, createInvalidations} from './utils';
 import invariant from 'assert';
-import {tracer, PluginTracer} from '@parcel/profiler';
+import {tracer, PluginTracer} from '@atlaspack/profiler';
 
 type GenerateFunc = (input: UncommittedAsset) => Promise<GenerateOutput>;
 
@@ -143,13 +143,13 @@ export default class Transformation {
       } catch (err) {
         logger.verbose([
           {
-            origin: '@parcel/core',
+            origin: '@atlaspack/core',
             message: md`Could not load existing source map for ${fromProjectPathRelative(
               asset.value.filePath,
             )}`,
           },
           {
-            origin: '@parcel/core',
+            origin: '@atlaspack/core',
             message: escapeMarkdown(err.message),
           },
         ]);

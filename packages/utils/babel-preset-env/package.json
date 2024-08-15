@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/babel-preset-env",
+  "name": "@atlaspack/babel-preset-env",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {

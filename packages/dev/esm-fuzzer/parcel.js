@@ -1,10 +1,10 @@
-import Parcel, {createWorkerFarm} from '@parcel/core';
-import {NodeFS, MemoryFS, OverlayFS} from '@parcel/fs';
+import Parcel, {createWorkerFarm} from '@atlaspack/core';
+import {NodeFS, MemoryFS, OverlayFS} from '@atlaspack/fs';
 import path from 'path';
 
 const DIST_DIR = path.join(__dirname, './dist');
 
-module.exports = async function({
+module.exports = async function ({
   inputFS,
   entries,
   outputFormat = 'esmodule',
@@ -64,10 +64,10 @@ module.exports = async function({
   return {distDir: DIST_DIR, output};
 };
 
-module.exports.start = function() {
+module.exports.start = function () {
   module.exports.workerFarm = createWorkerFarm();
 };
 
-module.exports.stop = async function() {
+module.exports.stop = async function () {
   await module.exports.workerFarm.end();
 };

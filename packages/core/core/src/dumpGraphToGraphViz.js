@@ -1,13 +1,13 @@
 // @flow
 
-import type {Asset, BundleBehavior} from '@parcel/types';
-import type {Graph} from '@parcel/graph';
+import type {Asset, BundleBehavior} from '@atlaspack/types';
+import type {Graph} from '@atlaspack/graph';
 import type {AssetGraphNode, BundleGraphNode, Environment} from './types';
 import {bundleGraphEdgeTypes} from './BundleGraph';
 import {requestGraphEdgeTypes} from './RequestTracker';
 
 import path from 'path';
-import {fromNodeId} from '@parcel/graph';
+import {fromNodeId} from '@atlaspack/graph';
 import {fromProjectPathRelative} from './projectPath';
 import {SpecifierType, Priority} from './types';
 

@@ -1,8 +1,8 @@
 // @flow
 
-import type {Bundle, BundleGraph, NamedBundle} from '@parcel/types';
+import type {Bundle, BundleGraph, NamedBundle} from '@atlaspack/types';
 import assert from 'assert';
-import {Packager} from '@parcel/plugin';
+import {Packager} from '@atlaspack/plugin';
 import posthtml from 'posthtml';
 import {
   blobToString,
@@ -10,7 +10,7 @@ import {
   replaceURLReferences,
   urlJoin,
   setDifference,
-} from '@parcel/utils';
+} from '@atlaspack/utils';
 
 export default (new Packager({
   async package({bundle, bundleGraph, getInlineBundleContents}) {

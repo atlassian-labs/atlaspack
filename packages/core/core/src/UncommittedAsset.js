@@ -8,12 +8,12 @@ import type {
   GenerateOutput,
   PackageName,
   TransformerResult,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {Asset, Dependency, ParcelOptions, Invalidations} from './types';
 
 import invariant from 'assert';
 import {Readable} from 'stream';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {
   blobToStream,
   bufferStream,
@@ -21,8 +21,8 @@ import {
   TapStream,
   loadSourceMap,
   SOURCEMAP_RE,
-} from '@parcel/utils';
-import {hashString, hashBuffer, Hash} from '@parcel/rust';
+} from '@atlaspack/utils';
+import {hashString, hashBuffer, Hash} from '@atlaspack/rust';
 import {serializeRaw} from './serializer';
 import {createDependency, mergeDependencies} from './Dependency';
 import {mergeEnvironments} from './Environment';

@@ -1,7 +1,7 @@
 // @flow
 
 import path from 'path';
-import {Transformer} from '@parcel/plugin';
+import {Transformer} from '@atlaspack/plugin';
 
 function shouldExclude(asset, options) {
   return (
@@ -32,7 +32,7 @@ export default (new Transformer({
       return [asset];
     }
 
-    let wrapperPath = `@parcel/transformer-react-refresh-wrap/${path.basename(
+    let wrapperPath = `@atlaspack/transformer-react-refresh-wrap/${path.basename(
       __dirname,
     )}/helpers/helpers.js`;
 

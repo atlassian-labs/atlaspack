@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/service-worker",
+  "name": "@atlaspack/service-worker",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {

@@ -1,7 +1,7 @@
 // @flow strict-local
 
-import {Runtime} from '@parcel/plugin';
-import {loadConfig} from '@parcel/utils';
+import {Runtime} from '@atlaspack/plugin';
+import {loadConfig} from '@atlaspack/utils';
 // $FlowFixMe Package json is untyped
 import {version} from 'react-refresh/package.json';
 

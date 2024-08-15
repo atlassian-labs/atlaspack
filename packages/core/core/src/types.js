@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import type {ContentKey} from '@parcel/graph';
+import type {ContentKey} from '@atlaspack/graph';
 import type {
   ASTGenerator,
   BuildMode,
@@ -25,15 +25,15 @@ import type {
   TargetDescriptor,
   HMROptions,
   DetailedReportOptions,
-} from '@parcel/types';
-import type {SharedReference} from '@parcel/workers';
-import type {FileSystem} from '@parcel/fs';
-import type {Cache} from '@parcel/cache';
-import type {PackageManager} from '@parcel/package-manager';
+} from '@atlaspack/types';
+import type {SharedReference} from '@atlaspack/workers';
+import type {FileSystem} from '@atlaspack/fs';
+import type {Cache} from '@atlaspack/cache';
+import type {PackageManager} from '@atlaspack/package-manager';
 import type {ProjectPath} from './projectPath';
-import type {Event} from '@parcel/watcher';
-import type {FeatureFlags} from '@parcel/feature-flags';
-import type {BackendType} from '@parcel/watcher';
+import type {Event} from '@atlaspack/watcher';
+import type {FeatureFlags} from '@atlaspack/feature-flags';
+import type {BackendType} from '@atlaspack/watcher';
 
 export type ParcelPluginNode = {|
   packageName: PackageName,

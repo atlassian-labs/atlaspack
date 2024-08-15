@@ -6,7 +6,7 @@
 'use strict';
 
 // $FlowFixMe[untyped-import]
-require('@parcel/babel-register');
+require('@atlaspack/babel-register');
 
 let program = require('./src/cli').createProgram();
 

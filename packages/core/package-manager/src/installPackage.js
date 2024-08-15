@@ -1,13 +1,13 @@
 // @flow
 
-import type {FilePath, PackageJSON} from '@parcel/types';
+import type {FilePath, PackageJSON} from '@atlaspack/types';
 import type {
   ModuleRequest,
   PackageManager,
   PackageInstaller,
   InstallOptions,
-} from '@parcel/types';
-import type {FileSystem} from '@parcel/fs';
+} from '@atlaspack/types';
+import type {FileSystem} from '@atlaspack/fs';
 
 import invariant from 'assert';
 import path from 'path';
@@ -17,10 +17,10 @@ import ThrowableDiagnostic, {
   generateJSONCodeHighlights,
   encodeJSONKeyComponent,
   md,
-} from '@parcel/diagnostic';
-import logger from '@parcel/logger';
-import {loadConfig, PromiseQueue, resolveConfig} from '@parcel/utils';
-import WorkerFarm from '@parcel/workers';
+} from '@atlaspack/diagnostic';
+import logger from '@atlaspack/logger';
+import {loadConfig, PromiseQueue, resolveConfig} from '@atlaspack/utils';
+import WorkerFarm from '@atlaspack/workers';
 
 import {Npm} from './Npm';
 import {Yarn} from './Yarn';
@@ -113,7 +113,7 @@ async function installPeerDependencies(
         throw new ThrowableDiagnostic({
           diagnostic: {
             message: md`Could not install the peer dependency "${name}" for "${module.name}", installed version ${pkg.version} is incompatible with ${range}`,
-            origin: '@parcel/package-manager',
+            origin: '@atlaspack/package-manager',
             codeFrames: [
               {
                 filePath: conflicts.filePath,

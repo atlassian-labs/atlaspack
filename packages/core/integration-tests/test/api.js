@@ -10,7 +10,7 @@ import {
   it,
   outputFS,
   overlayFS,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 import {PARCEL_VERSION} from '../../core/src/constants';
 
@@ -44,7 +44,7 @@ describe.v2('JS API', function () {
       {
         additionalReporters: [
           {
-            packageName: '@parcel/reporter-bundle-buddy',
+            packageName: '@atlaspack/reporter-bundle-buddy',
             resolveFrom: __dirname,
           },
         ],
@@ -73,7 +73,7 @@ describe.v2('JS API', function () {
 
       .parcelrc:
         {
-          extends: "@parcel/config-default",
+          extends: "@atlaspack/config-default",
           reporters: ["./reporter-plugin.js", "..."],
         }
 
@@ -85,7 +85,7 @@ describe.v2('JS API', function () {
       yarn.lock:
 
       reporter-plugin.js:
-        import {Reporter} from '@parcel/plugin';
+        import {Reporter} from '@atlaspack/plugin';
         import path from 'node:path';
 
         export default new Reporter({

@@ -44,7 +44,7 @@
           "$ref": "#/$defs/plugins"
         }
       ],
-      "default": "@parcel/extends-default"
+      "default": "@atlaspack/extends-default"
     },
     "bundler": {
       "description": "Transform the entire asset graph by grouping the assets into the output bundles.",
@@ -89,6 +89,6 @@
   },
   "additionalProperties": false,
   "default": {
-    "extends": "@parcel/config-default"
+    "extends": "@atlaspack/config-default"
   }
 }

@@ -14,7 +14,7 @@ import {
   overlayFS,
   getNextBuild,
   runBundle,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 const distDir = path.join(__dirname, '/integration/monorepo/dist/default');
 

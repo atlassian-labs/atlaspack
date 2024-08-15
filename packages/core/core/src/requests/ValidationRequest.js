@@ -1,6 +1,6 @@
 // @flow strict-local
-import type {Async} from '@parcel/types';
-import type {SharedReference} from '@parcel/workers';
+import type {Async} from '@atlaspack/types';
+import type {SharedReference} from '@atlaspack/workers';
 import type {StaticRunOpts} from '../RequestTracker';
 import type {AssetGroup} from '../types';
 import type {ConfigAndCachePath} from './ParcelConfigRequest';

@@ -7,7 +7,7 @@ import {
   it,
   mergeParcelOptions,
   overlayFS,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 const runBundler = (name, opts = {}) => {
   return _bundle(

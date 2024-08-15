@@ -21,7 +21,7 @@ export default class Foo {
 
 const preset = require.resolve('../src');
 
-describe('@parcel/babel-preset-env', () => {
+describe('@atlaspack/babel-preset-env', () => {
   it('compiles against targets passed through caller when the caller is parcel 2.x', () => {
     let {code: transformed} = babel.transformSync(input, {
       configFile: false,

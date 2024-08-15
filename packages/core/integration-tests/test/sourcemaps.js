@@ -2,8 +2,8 @@
 import assert from 'assert';
 import invariant from 'assert';
 import path from 'path';
-import SourceMap from '@parcel/source-map';
-import type {InitialParcelOptions} from '@parcel/types';
+import SourceMap from '@atlaspack/source-map';
+import type {InitialParcelOptions} from '@atlaspack/types';
 import {
   bundle as _bundle,
   describe,
@@ -14,8 +14,8 @@ import {
   shallowEqual,
   distDir,
   mergeParcelOptions,
-} from '@parcel/test-utils';
-import {loadSourceMapUrl} from '@parcel/utils';
+} from '@atlaspack/test-utils';
+import {loadSourceMapUrl} from '@atlaspack/utils';
 import nullthrows from 'nullthrows';
 
 const bundle = (name, opts?: InitialParcelOptions) => {

@@ -8,8 +8,8 @@ import type {
   BundleGraph as BundleGraphType,
   NamedBundle as NamedBundleType,
   Async,
-} from '@parcel/types';
-import type SourceMap from '@parcel/source-map';
+} from '@atlaspack/types';
+import type SourceMap from '@atlaspack/source-map';
 import type {
   Bundle as InternalBundle,
   Config,
@@ -24,14 +24,14 @@ import type {ConfigRequest} from './requests/ConfigRequest';
 import type {DevDepSpecifier} from './requests/DevDepRequest';
 
 import invariant from 'assert';
-import {blobToStream, TapStream} from '@parcel/utils';
-import {PluginLogger} from '@parcel/logger';
-import ThrowableDiagnostic, {errorToDiagnostic} from '@parcel/diagnostic';
+import {blobToStream, TapStream} from '@atlaspack/utils';
+import {PluginLogger} from '@atlaspack/logger';
+import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {Readable} from 'stream';
 import nullthrows from 'nullthrows';
 import path from 'path';
 import url from 'url';
-import {hashString, hashBuffer, Hash} from '@parcel/rust';
+import {hashString, hashBuffer, Hash} from '@atlaspack/rust';
 
 import {NamedBundle, bundleToInternalBundle} from './public/Bundle';
 import BundleGraph, {
@@ -61,7 +61,7 @@ import {createBuildCache} from './buildCache';
 import {getInvalidationId, getInvalidationHash} from './assetUtils';
 import {optionsProxy} from './utils';
 import {invalidateDevDeps} from './requests/DevDepRequest';
-import {tracer, PluginTracer} from '@parcel/profiler';
+import {tracer, PluginTracer} from '@atlaspack/profiler';
 
 type Opts = {|
   config: ParcelConfig,

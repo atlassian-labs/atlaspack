@@ -10,7 +10,7 @@ import type {
   SourceLocation,
   SourceType,
   TargetSourceMapOptions,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {Environment as InternalEnvironment, ParcelOptions} from '../types';
 import nullthrows from 'nullthrows';
 import browserslist from 'browserslist';

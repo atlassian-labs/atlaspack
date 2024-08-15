@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/transformer-less",
+  "name": "@atlaspack/transformer-less",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {
@@ -20,8 +20,8 @@
     "parcel": "^2.12.0"
   },
   "dependencies": {
-    "@parcel/plugin": "2.12.0",
-    "@parcel/source-map": "^2.1.1",
+    "@atlaspack/plugin": "2.12.0",
+    "@atlaspack/source-map": "^2.1.1",
     "less": "^4.1.1"
   }
 }

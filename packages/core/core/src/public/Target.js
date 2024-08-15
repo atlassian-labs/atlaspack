@@ -4,7 +4,7 @@ import type {
   Target as ITarget,
   Environment as IEnvironment,
   SourceLocation,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {Target as TargetValue, ParcelOptions} from '../types';
 
 import nullthrows from 'nullthrows';

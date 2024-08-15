@@ -1,7 +1,7 @@
 // @flow strict-local
 
 import type {CmdOptions} from './utils';
-import type {FileSystem} from '@parcel/fs';
+import type {FileSystem} from '@atlaspack/fs';
 
 import {ParcelLinkConfig} from './ParcelLinkConfig';
 import {
@@ -15,7 +15,7 @@ import {
 
 import nullthrows from 'nullthrows';
 import path from 'path';
-import {NodeFS} from '@parcel/fs';
+import {NodeFS} from '@atlaspack/fs';
 import commander from 'commander';
 
 export type LinkOptions = {|
@@ -48,7 +48,7 @@ export async function link(
 
   let parcelPackages = await findParcelPackages(config.fs, packageRoot);
 
-  // Step 2: Delete all official packages (`@parcel/*`) from node_modules
+  // Step 2: Delete all official packages (`@atlaspack/*`) from node_modules
   // --------------------------------------------------------------------------------
 
   for (let nodeModules of nodeModulesPaths) {
@@ -85,7 +85,7 @@ export async function link(
       parcelPackages,
     );
 
-    // Step 5.1: In .parcelrc, rewrite all references to official plugins to `@parcel/*`
+    // Step 5.1: In .parcelrc, rewrite all references to official plugins to `@atlaspack/*`
     // --------------------------------------------------------------------------------
 
     let parcelConfigPath = path.join(appRoot, '.parcelrc');
@@ -101,7 +101,7 @@ export async function link(
       );
     }
 
-    // Step 5.2: In the root package.json, rewrite all references to official plugins to @parcel/...
+    // Step 5.2: In the root package.json, rewrite all references to official plugins to @atlaspack/...
     // For configs like "@namespace/parcel-bundler-default":{"maxParallelRequests": 10}
     // --------------------------------------------------------------------------------
 

@@ -1,5 +1,5 @@
 // @flow
-import type {MutableAsset, TransformerResult} from '@parcel/types';
+import type {MutableAsset, TransformerResult} from '@atlaspack/types';
 import {urlHandler} from './utils';
 
 // Handlers for elements defined by the RSS spec.

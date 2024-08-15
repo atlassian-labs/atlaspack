@@ -8,7 +8,7 @@ import {
   run,
   overlayFS,
   fsFixture,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 describe.v2('feature flags', () => {
   let dir = path.join(__dirname, 'feature-flags-fixture');
@@ -30,7 +30,7 @@ describe.v2('feature flags', () => {
 
     .parcelrc:
         {
-            extends: "@parcel/config-default",
+            extends: "@atlaspack/config-default",
             transformers: {
                 '*.js': ['./transformer.js', '...']
             },
@@ -38,14 +38,14 @@ describe.v2('feature flags', () => {
 
     .parcelrc-2:
       {
-          extends: "@parcel/config-default",
+          extends: "@atlaspack/config-default",
           transformers: {
               '*.js': ['./transformer-client.js', '...']
           },
       }
 
     transformer.js:
-        const {Transformer} = require('@parcel/plugin');
+        const {Transformer} = require('@atlaspack/plugin');
         module.exports = new Transformer({
             async transform({asset, options}) {
                 const code = await asset.getCode();
@@ -57,8 +57,8 @@ describe.v2('feature flags', () => {
         });
 
     transformer-client.js:
-        const {Transformer} = require('@parcel/plugin');
-        const {getFeatureFlag} = require('@parcel/feature-flags');
+        const {Transformer} = require('@atlaspack/plugin');
+        const {getFeatureFlag} = require('@atlaspack/feature-flags');
         module.exports = new Transformer({
             async transform({asset, options}) {
                 const code = await asset.getCode();

@@ -13,7 +13,7 @@ import {
   sleep,
   run,
   request,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 import WebSocket from 'ws';
 import json5 from 'json5';
 import getPort from 'get-port';

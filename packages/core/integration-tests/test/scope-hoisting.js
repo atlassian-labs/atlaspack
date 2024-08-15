@@ -1,9 +1,9 @@
 import assert from 'assert';
 import path from 'path';
 import nullthrows from 'nullthrows';
-import {normalizePath} from '@parcel/utils';
-import {createWorkerFarm} from '@parcel/core';
-import {md} from '@parcel/diagnostic';
+import {normalizePath} from '@atlaspack/utils';
+import {createWorkerFarm} from '@atlaspack/core';
+import {md} from '@atlaspack/diagnostic';
 import {
   assertBundles,
   bundle as _bundle,
@@ -20,7 +20,7 @@ import {
   run,
   runBundle,
   fsFixture,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 const bundle = (name, opts = {}) => {
   return _bundle(
@@ -657,7 +657,7 @@ describe.v2('scope hoisting', function () {
         diagnostics: [
           {
             message,
-            origin: '@parcel/core',
+            origin: '@atlaspack/core',
             codeFrames: [
               {
                 filePath: path.join(__dirname, source),
@@ -697,7 +697,7 @@ describe.v2('scope hoisting', function () {
         diagnostics: [
           {
             message,
-            origin: '@parcel/core',
+            origin: '@atlaspack/core',
             codeFrames: [
               {
                 filePath: path.join(
@@ -737,7 +737,7 @@ describe.v2('scope hoisting', function () {
         diagnostics: [
           {
             message,
-            origin: '@parcel/core',
+            origin: '@atlaspack/core',
             codeFrames: [
               {
                 filePath: path.join(__dirname, entry),
@@ -1868,7 +1868,7 @@ describe.v2('scope hoisting', function () {
             diagnostics: [
               {
                 message,
-                origin: '@parcel/core',
+                origin: '@atlaspack/core',
                 codeFrames: [
                   {
                     filePath: source,
@@ -1915,7 +1915,7 @@ describe.v2('scope hoisting', function () {
             diagnostics: [
               {
                 message,
-                origin: '@parcel/core',
+                origin: '@atlaspack/core',
                 codeFrames: [
                   {
                     filePath: source,
@@ -1963,7 +1963,7 @@ describe.v2('scope hoisting', function () {
             diagnostics: [
               {
                 message,
-                origin: '@parcel/core',
+                origin: '@atlaspack/core',
                 codeFrames: [
                   {
                     filePath: source,
@@ -2011,7 +2011,7 @@ describe.v2('scope hoisting', function () {
             diagnostics: [
               {
                 message,
-                origin: '@parcel/core',
+                origin: '@atlaspack/core',
                 codeFrames: [
                   {
                     filePath: source,
@@ -2059,7 +2059,7 @@ describe.v2('scope hoisting', function () {
             diagnostics: [
               {
                 message,
-                origin: '@parcel/core',
+                origin: '@atlaspack/core',
                 codeFrames: [
                   {
                     filePath: source,
@@ -2616,7 +2616,7 @@ describe.v2('scope hoisting', function () {
           assert.deepEqual(bundleEvent.diagnostics, [
             {
               message,
-              origin: '@parcel/core',
+              origin: '@atlaspack/core',
               codeFrames: [
                 {
                   filePath: path.join(testDir, 'a.js'),
@@ -3194,7 +3194,7 @@ describe.v2('scope hoisting', function () {
         diagnostics: [
           {
             message: 'Assignment to an import specifier is not allowed',
-            origin: '@parcel/transformer-js',
+            origin: '@atlaspack/transformer-js',
             codeFrames: [
               {
                 filePath: source,
@@ -3242,7 +3242,7 @@ describe.v2('scope hoisting', function () {
         diagnostics: [
           {
             message: 'Assignment to an import specifier is not allowed',
-            origin: '@parcel/transformer-js',
+            origin: '@atlaspack/transformer-js',
             codeFrames: [
               {
                 filePath: source,
@@ -3290,7 +3290,7 @@ describe.v2('scope hoisting', function () {
         diagnostics: [
           {
             message: 'Assignment to an import specifier is not allowed',
-            origin: '@parcel/transformer-js',
+            origin: '@atlaspack/transformer-js',
             codeFrames: [
               {
                 filePath: source,
@@ -3338,7 +3338,7 @@ describe.v2('scope hoisting', function () {
         diagnostics: [
           {
             message: 'Assignment to an import specifier is not allowed',
-            origin: '@parcel/transformer-js',
+            origin: '@atlaspack/transformer-js',
             codeFrames: [
               {
                 filePath: source,
@@ -3386,7 +3386,7 @@ describe.v2('scope hoisting', function () {
         diagnostics: [
           {
             message: 'Assignment to an import specifier is not allowed',
-            origin: '@parcel/transformer-js',
+            origin: '@atlaspack/transformer-js',
             codeFrames: [
               {
                 filePath: source,
@@ -4356,7 +4356,7 @@ describe.v2('scope hoisting', function () {
         diagnostics: [
           {
             message,
-            origin: '@parcel/packager-js',
+            origin: '@atlaspack/packager-js',
             codeFrames: [
               {
                 filePath: source,
@@ -6069,10 +6069,10 @@ describe.v2('scope hoisting', function () {
 
         package.json:
           {
-              "@parcel/bundler-default": {
+              "@atlaspack/bundler-default": {
                   "minBundleSize": 0
               },
-              "@parcel/packager-js": {
+              "@atlaspack/packager-js": {
                   "unstable_asyncBundleRuntime": true
               }
           }
@@ -6123,7 +6123,7 @@ describe.v2('scope hoisting', function () {
 
         package.json:
           {
-              "@parcel/bundler-default": {
+              "@atlaspack/bundler-default": {
                   "minBundleSize": 0,
                   "manualSharedBundles": [{
                     "name": "shared",
@@ -6131,7 +6131,7 @@ describe.v2('scope hoisting', function () {
                     "assets": ["shared.js"]
                   }]
               },
-              "@parcel/packager-js": {
+              "@atlaspack/packager-js": {
                   "unstable_asyncBundleRuntime": true
               }
           }
@@ -6202,7 +6202,7 @@ describe.v2('scope hoisting', function () {
           // Just a comment
         package.json:
           {
-             "@parcel/packager-js": {
+             "@atlaspack/packager-js": {
                   "unstable_asyncBundleRuntime": true
               }
           }

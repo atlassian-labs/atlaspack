@@ -1,4 +1,4 @@
-const parcelBabelPreset = require('@parcel/babel-preset');
+const parcelBabelPreset = require('@atlaspack/babel-preset');
 const path = require('path');
 
 require('@babel/register')({

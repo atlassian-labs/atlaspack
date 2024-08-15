@@ -1,11 +1,11 @@
 // @flow strict-local
 
-import type {AST, Blob} from '@parcel/types';
+import type {AST, Blob} from '@atlaspack/types';
 import type {Asset, Dependency, ParcelOptions} from './types';
 
 import {Readable} from 'stream';
-import SourceMap from '@parcel/source-map';
-import {bufferStream, blobToStream, streamFromPromise} from '@parcel/utils';
+import SourceMap from '@atlaspack/source-map';
+import {bufferStream, blobToStream, streamFromPromise} from '@atlaspack/utils';
 import {generateFromAST} from './assetUtils';
 import {deserializeRaw} from './serializer';
 

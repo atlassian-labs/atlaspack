@@ -1,9 +1,9 @@
 // @flow strict-local
 
-import type {PackagedBundle, PluginOptions} from '@parcel/types';
+import type {PackagedBundle, PluginOptions} from '@atlaspack/types';
 
-import {Reporter} from '@parcel/plugin';
-import {DefaultMap} from '@parcel/utils';
+import {Reporter} from '@atlaspack/plugin';
+import {DefaultMap} from '@atlaspack/utils';
 
 import assert from 'assert';
 import path from 'path';

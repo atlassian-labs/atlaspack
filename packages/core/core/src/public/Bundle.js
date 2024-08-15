@@ -17,15 +17,15 @@ import type {
   Stats,
   Target as ITarget,
   BundleBehavior,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type BundleGraph from '../BundleGraph';
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
-import {DefaultWeakMap} from '@parcel/utils';
+import {DefaultWeakMap} from '@atlaspack/utils';
 
 import {assetToAssetValue, assetFromValue} from './Asset';
-import {mapVisitor} from '@parcel/graph';
+import {mapVisitor} from '@atlaspack/graph';
 import Environment from './Environment';
 import {
   dependencyToInternalDependency,

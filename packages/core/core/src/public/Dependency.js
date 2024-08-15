@@ -9,7 +9,7 @@ import type {
   SpecifierType,
   DependencyPriority,
   BundleBehavior,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {Dependency as InternalDependency, ParcelOptions} from '../types';
 import {BundleBehaviorNames} from '../types';
 

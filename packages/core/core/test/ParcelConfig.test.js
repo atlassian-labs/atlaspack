@@ -4,8 +4,8 @@ import ParcelConfig from '../src/ParcelConfig';
 import assert from 'assert';
 import path from 'path';
 import sinon from 'sinon';
-import logger from '@parcel/logger';
-import {inputFS} from '@parcel/test-utils';
+import logger from '@atlaspack/logger';
+import {inputFS} from '@atlaspack/test-utils';
 import {parseAndProcessConfig} from '../src/requests/ParcelConfigRequest';
 import {DEFAULT_OPTIONS} from './test-utils';
 import {toProjectPath} from '../src/projectPath';
@@ -157,7 +157,7 @@ describe('ParcelConfig', () => {
       assert.equal(typeof plugin.transform, 'function');
       assert(warnStub.calledOnce);
       assert.deepEqual(warnStub.getCall(0).args[0], {
-        origin: '@parcel/core',
+        origin: '@atlaspack/core',
         message:
           'The plugin "parcel-transformer-no-engines" needs to specify a `package.json#engines.parcel` field with the supported Parcel version range.',
       });
@@ -211,7 +211,7 @@ describe('ParcelConfig', () => {
           diagnostics: [
             {
               message: `The plugin "parcel-transformer-bad-engines" is not compatible with the current version of Parcel. Requires "5.x" but the current version is "${parcelVersion}".`,
-              origin: '@parcel/core',
+              origin: '@atlaspack/core',
               codeFrames: [
                 {
                   filePath: pkgJSON,
@@ -252,8 +252,8 @@ describe('ParcelConfig', () => {
         name: 'Error',
         diagnostics: [
           {
-            message: 'Cannot find Parcel plugin "@parcel/transformer-jj"',
-            origin: '@parcel/core',
+            message: 'Cannot find Parcel plugin "@atlaspack/transformer-jj"',
+            origin: '@atlaspack/core',
             codeFrames: [
               {
                 filePath: configFilePath,
@@ -263,7 +263,7 @@ describe('ParcelConfig', () => {
                   {
                     start: {line: 4, column: 14},
                     end: {line: 4, column: 37},
-                    message: `Cannot find module "@parcel/transformer-jj", did you mean "@parcel/transformer-js"?`,
+                    message: `Cannot find module "@atlaspack/transformer-jj", did you mean "@atlaspack/transformer-js"?`,
                   },
                 ],
               },
@@ -290,7 +290,7 @@ describe('ParcelConfig', () => {
           diagnostics: [
             {
               message: "Named pipeline 'node:' is reserved.",
-              origin: '@parcel/core',
+              origin: '@atlaspack/core',
               codeFrames: [
                 {
                   filePath: configFilePath,
@@ -379,7 +379,7 @@ describe('ParcelConfig', () => {
           {
             message:
               'Local plugins are not supported in Parcel config packages. Please publish "./local-plugin" as a separate npm package.',
-            origin: '@parcel/core',
+            origin: '@atlaspack/core',
             codeFrames: [
               {
                 filePath: extendedConfigPath,

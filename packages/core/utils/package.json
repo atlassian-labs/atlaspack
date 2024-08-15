@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/utils",
+  "name": "@atlaspack/utils",
   "version": "2.12.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "MIT",
@@ -22,23 +22,23 @@
   "targets": {
     "main": {
       "includeNodeModules": {
-        "@parcel/codeframe": false,
-        "@parcel/diagnostic": false,
-        "@parcel/rust": false,
-        "@parcel/logger": false,
-        "@parcel/markdown-ansi": false,
-        "@parcel/source-map": false,
+        "@atlaspack/codeframe": false,
+        "@atlaspack/diagnostic": false,
+        "@atlaspack/rust": false,
+        "@atlaspack/logger": false,
+        "@atlaspack/markdown-ansi": false,
+        "@atlaspack/source-map": false,
         "chalk": false
       }
     }
   },
   "dependencies": {
-    "@parcel/codeframe": "2.12.0",
-    "@parcel/diagnostic": "2.12.0",
-    "@parcel/logger": "2.12.0",
-    "@parcel/markdown-ansi": "2.12.0",
-    "@parcel/rust": "2.12.0",
-    "@parcel/source-map": "^2.1.1",
+    "@atlaspack/codeframe": "2.12.0",
+    "@atlaspack/diagnostic": "2.12.0",
+    "@atlaspack/logger": "2.12.0",
+    "@atlaspack/markdown-ansi": "2.12.0",
+    "@atlaspack/rust": "2.12.0",
+    "@atlaspack/source-map": "^2.1.1",
     "chalk": "^4.1.0",
     "nullthrows": "^1.1.1"
   },
@@ -65,6 +65,6 @@
     "./src/generateCertificate.js": false,
     "./src/http-server.js": false,
     "./src/openInBrowser.js": false,
-    "@parcel/markdown-ansi": false
+    "@atlaspack/markdown-ansi": false
   }
 }

@@ -5,27 +5,27 @@ import type {
   InitialParcelOptions,
   DependencySpecifier,
   InitialServerOptions,
-} from '@parcel/types';
-import type {FileSystem} from '@parcel/fs';
+} from '@atlaspack/types';
+import type {FileSystem} from '@atlaspack/fs';
 import type {ParcelOptions} from './types';
 
 import path from 'path';
-import {hashString} from '@parcel/rust';
-import {NodeFS} from '@parcel/fs';
-import {LMDBCache, FSCache} from '@parcel/cache';
-import {NodePackageManager} from '@parcel/package-manager';
+import {hashString} from '@atlaspack/rust';
+import {NodeFS} from '@atlaspack/fs';
+import {LMDBCache, FSCache} from '@atlaspack/cache';
+import {NodePackageManager} from '@atlaspack/package-manager';
 import {
   getRootDir,
   relativePath,
   resolveConfig,
   isGlob,
   globToRegex,
-} from '@parcel/utils';
+} from '@atlaspack/utils';
 import loadDotEnv from './loadDotEnv';
 import {toProjectPath} from './projectPath';
 import {getResolveFrom} from './requests/ParcelConfigRequest';
 
-import {DEFAULT_FEATURE_FLAGS} from '@parcel/feature-flags';
+import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {PARCEL_VERSION} from './constants';
 
 // Default cache directory name

@@ -5,8 +5,8 @@ import type {
   PackageName,
   RawParcelConfig,
   ResolvedParcelConfigFile,
-} from '@parcel/types';
-import type {FileSystem} from '@parcel/fs';
+} from '@atlaspack/types';
+import type {FileSystem} from '@atlaspack/fs';
 import type {StaticRunOpts} from '../RequestTracker';
 import type {
   ExtendableParcelConfigPipeline,
@@ -22,13 +22,13 @@ import {
   validateSchema,
   findAlternativeNodeModules,
   findAlternativeFiles,
-} from '@parcel/utils';
+} from '@atlaspack/utils';
 import ThrowableDiagnostic, {
   generateJSONCodeHighlights,
   escapeMarkdown,
   md,
   errorToDiagnostic,
-} from '@parcel/diagnostic';
+} from '@atlaspack/diagnostic';
 import {parse} from 'json5';
 import path from 'path';
 import invariant from 'assert';
@@ -178,7 +178,7 @@ export async function resolveParcelConfig(
           options.projectRoot,
           configPath,
         )}`,
-        origin: '@parcel/core',
+        origin: '@atlaspack/core',
       },
     });
   }
@@ -226,7 +226,7 @@ export async function parseAndProcessConfig(
     throw new ThrowableDiagnostic({
       diagnostic: {
         message: `Failed to parse .parcelrc`,
-        origin: '@parcel/core',
+        origin: '@atlaspack/core',
 
         codeFrames: [
           {
@@ -297,7 +297,7 @@ async function processMap(
       throw new ThrowableDiagnostic({
         diagnostic: {
           message: `Named pipeline '${k.slice(0, i + 1)}' is reserved.`,
-          origin: '@parcel/core',
+          origin: '@atlaspack/core',
           codeFrames: [
             {
               filePath: filePath,
@@ -500,7 +500,7 @@ export async function resolveExtends(
       throw new ThrowableDiagnostic({
         diagnostic: {
           message: `Cannot find extended parcel config`,
-          origin: '@parcel/core',
+          origin: '@atlaspack/core',
           codeFrames: [
             {
               filePath: configPath,
@@ -549,7 +549,7 @@ async function processExtendedConfig(
     throw new ThrowableDiagnostic({
       diagnostic: {
         message: 'Cannot find extended parcel config',
-        origin: '@parcel/core',
+        origin: '@atlaspack/core',
         codeFrames: [
           {
             filePath: configPath,
@@ -583,7 +583,7 @@ export function validateConfigFile(
     throw new ThrowableDiagnostic({
       diagnostic: {
         message: e.message,
-        origin: '@parcel/core',
+        origin: '@atlaspack/core',
       },
     });
   }
@@ -591,7 +591,7 @@ export function validateConfigFile(
   validateSchema.diagnostic(
     ParcelConfigSchema,
     {data: config, filePath: relativePath},
-    '@parcel/core',
+    '@atlaspack/core',
     'Invalid Parcel Config',
   );
 }

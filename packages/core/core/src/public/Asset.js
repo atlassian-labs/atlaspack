@@ -1,8 +1,8 @@
 // @flow strict-local
 
-import type SourceMap from '@parcel/source-map';
+import type SourceMap from '@atlaspack/source-map';
 import type {Readable} from 'stream';
-import type {FileSystem} from '@parcel/fs';
+import type {FileSystem} from '@atlaspack/fs';
 
 import type {
   Asset as IAsset,
@@ -20,7 +20,7 @@ import type {
   MutableAssetSymbols as IMutableAssetSymbols,
   AssetSymbols as IAssetSymbols,
   BundleBehavior,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type {Asset as AssetValue, ParcelOptions} from '../types';
 
 import nullthrows from 'nullthrows';

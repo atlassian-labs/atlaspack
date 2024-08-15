@@ -1,17 +1,17 @@
 // @flow strict-local
-import type {Bundle, BundleGraph, NamedBundle} from '@parcel/types';
+import type {Bundle, BundleGraph, NamedBundle} from '@atlaspack/types';
 
 import assert from 'assert';
 import {Readable} from 'stream';
-import {Packager} from '@parcel/plugin';
-import {setDifference} from '@parcel/utils';
+import {Packager} from '@atlaspack/plugin';
+import {setDifference} from '@atlaspack/utils';
 import posthtml from 'posthtml';
 import {
   bufferStream,
   replaceInlineReferences,
   replaceURLReferences,
   urlJoin,
-} from '@parcel/utils';
+} from '@atlaspack/utils';
 import nullthrows from 'nullthrows';
 
 // https://www.w3.org/TR/html5/dom.html#metadata-content-2

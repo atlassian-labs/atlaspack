@@ -1,8 +1,8 @@
 // @flow
 
-import type {FileSystem} from '@parcel/fs';
+import type {FileSystem} from '@atlaspack/fs';
 
-import {globSync} from '@parcel/utils';
+import {globSync} from '@atlaspack/utils';
 
 import assert from 'assert';
 import nullthrows from 'nullthrows';

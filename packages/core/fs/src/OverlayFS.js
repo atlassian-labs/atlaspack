@@ -8,15 +8,15 @@ import type {
   FileSystem,
   ReaddirOptions,
   FileStats,
-} from '@parcel/types-internal';
+} from '@atlaspack/types-internal';
 import type {
   Event,
   Options as WatcherOptions,
   AsyncSubscription,
-} from '@parcel/watcher';
+} from '@atlaspack/watcher';
 
-import {registerSerializableClass} from '@parcel/core';
-import WorkerFarm from '@parcel/workers';
+import {registerSerializableClass} from '@atlaspack/core';
+import WorkerFarm from '@atlaspack/workers';
 import packageJSON from '../package.json';
 import {findAncestorFile, findNodeModule, findFirstFile} from './find';
 import {MemoryFS} from './MemoryFS';

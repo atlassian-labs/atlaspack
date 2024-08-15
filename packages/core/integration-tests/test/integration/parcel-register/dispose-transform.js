@@ -1,4 +1,4 @@
-let {dispose} = require('@parcel/register');
+let {dispose} = require('@atlaspack/register');
 let indexPath = require.resolve('./index');
 require('./index');
 dispose();

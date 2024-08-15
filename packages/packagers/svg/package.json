@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/packager-svg",
+  "name": "@atlaspack/packager-svg",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {
@@ -20,9 +20,9 @@
     "parcel": "^2.12.0"
   },
   "dependencies": {
-    "@parcel/plugin": "2.12.0",
-    "@parcel/types": "2.12.0",
-    "@parcel/utils": "2.12.0",
+    "@atlaspack/plugin": "2.12.0",
+    "@atlaspack/types": "2.12.0",
+    "@atlaspack/utils": "2.12.0",
     "posthtml": "^0.16.4"
   }
 }

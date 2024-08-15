@@ -1,2 +1,2 @@
-require('@parcel/register');
+require('@atlaspack/register');
 require('./index');

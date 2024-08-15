@@ -1,7 +1,7 @@
 // @flow
-import type {FilePath} from '@parcel/types';
-import type {FileSystem} from '@parcel/fs';
-import type {PackageInstaller, ModuleRequest} from '@parcel/package-manager';
+import type {FilePath} from '@atlaspack/types';
+import type {FileSystem} from '@atlaspack/fs';
+import type {PackageInstaller, ModuleRequest} from '@atlaspack/package-manager';
 
 import fetch from 'isomorphic-fetch';
 import path from 'path';

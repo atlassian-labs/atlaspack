@@ -11,8 +11,8 @@ import {
   FixtureFile,
   FixtureLink,
 } from '../src/fsFixture';
-import {MemoryFS} from '@parcel/fs';
-import WorkerFarm from '@parcel/workers';
+import {MemoryFS} from '@atlaspack/fs';
+import WorkerFarm from '@atlaspack/workers';
 
 import assert from 'assert';
 import path from 'path';
@@ -496,7 +496,7 @@ describe('fsFixture', () => {
 
   beforeEach(() => {
     workerFarm = new WorkerFarm({
-      workerPath: require.resolve('@parcel/core/src/worker.js'),
+      workerPath: require.resolve('@atlaspack/core/src/worker.js'),
     });
     fs = new MemoryFS(workerFarm);
   });
@@ -531,7 +531,7 @@ describe('fsFixture', () => {
           @parcel
             core -> ${path.resolve(__dirname, '../../core')}
         .parcelrc: ${{
-          extends: '@parcel/config-default',
+          extends: '@atlaspack/config-default',
           transforms: ['parcel-transformer-custom', '...'],
         }}
     `;
@@ -543,7 +543,7 @@ describe('fsFixture', () => {
     assert.equal(
       fs.readFileSync('/app/.parcelrc', 'utf8'),
       JSON.stringify({
-        extends: '@parcel/config-default',
+        extends: '@atlaspack/config-default',
         transforms: ['parcel-transformer-custom', '...'],
       }),
     );
@@ -561,7 +561,7 @@ describe('fsFixture', () => {
     );
 
     assert.equal(
-      fs.realpathSync('/app/node_modules/@parcel/core'),
+      fs.realpathSync('/app/node_modules/@atlaspack/core'),
       path.resolve(__dirname, '../../core'),
     );
   });
@@ -608,7 +608,7 @@ describe('toFixture', () => {
 
   beforeEach(() => {
     workerFarm = new WorkerFarm({
-      workerPath: require.resolve('@parcel/core/src/worker.js'),
+      workerPath: require.resolve('@atlaspack/core/src/worker.js'),
     });
     fs = new MemoryFS(workerFarm);
   });

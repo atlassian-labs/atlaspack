@@ -8,15 +8,15 @@ import type {
   PluginOptions,
   NamedBundle,
   RuntimeAsset,
-} from '@parcel/types';
+} from '@atlaspack/types';
 
-import {Runtime} from '@parcel/plugin';
+import {Runtime} from '@atlaspack/plugin';
 import {
   relativeBundlePath,
   validateSchema,
   type SchemaEntity,
-} from '@parcel/utils';
-import {encodeJSONKeyComponent} from '@parcel/diagnostic';
+} from '@atlaspack/utils';
+import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
 import path from 'path';
 import nullthrows from 'nullthrows';
 
@@ -90,7 +90,7 @@ const CONFIG_SCHEMA: SchemaEntity = {
 
 export default (new Runtime({
   async loadConfig({config, options}): Promise<JSRuntimeConfig> {
-    let packageKey = '@parcel/runtime-js';
+    let packageKey = '@atlaspack/runtime-js';
     let conf = await config.getConfig<JSRuntimeConfig>([], {
       packageKey,
     });

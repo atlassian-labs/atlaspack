@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/monorepo",
+  "name": "@atlaspack/monorepo",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "MIT",
   "repository": {
@@ -18,7 +18,7 @@
     "build-native-release": "node scripts/build-native.js --release",
     "build-native-canary": "node scripts/build-native.js --canary",
     "build-native-wasm": "node scripts/build-native.js --release --wasm",
-    "build-repl": "yarn build-native-release && yarn build-native-wasm && yarn workspace @parcel/repl build",
+    "build-repl": "yarn build-native-release && yarn build-native-wasm && yarn workspace @atlaspack/repl build",
     "clean-test": "rimraf packages/core/integration-tests/.parcel-cache && rimraf packages/core/integration-tests/dist",
     "clean": "yarn clean-test && lerna clean --yes && lerna exec -- rimraf ./lib && yarn",
     "format": "prettier --write \"./packages/*/*/{src,bin,test}/**/*.{js,json,md}\" && cargo +nightly fmt --all",
@@ -28,8 +28,8 @@
     "lint": "eslint . && prettier \"./packages/*/*/{src,bin,test}/**/*.{js,json,md}\" --list-different && cargo fmt --all -- --check",
     "prepublishOnly": "yarn adjust-versions && yarn build && yarn build-ts",
     "test:unit": "cross-env NODE_ENV=test mocha --timeout 5000 && cargo test",
-    "test:integration": "yarn workspace @parcel/integration-tests test",
-    "test:integration-ci": "yarn workspace @parcel/integration-tests test-ci",
+    "test:integration": "yarn workspace @atlaspack/integration-tests test",
+    "test:integration-ci": "yarn workspace @atlaspack/integration-tests test-ci",
     "test": "yarn test:unit && yarn test:integration",
     "dev:release": "SKIP_PLUGIN_COMPATIBILITY_CHECK=true lerna publish -y --canary --preid dev --dist-tag=dev --exact --force-publish=* --no-git-tag-version --no-push",
     "canary:release": "SKIP_PLUGIN_COMPATIBILITY_CHECK=true lerna publish -y --canary --preid canary --dist-tag=canary --exact --force-publish=* --no-git-tag-version --no-push",
@@ -44,7 +44,7 @@
     "@babel/core": "^7.22.11",
     "@khanacademy/flow-to-ts": "^0.5.2",
     "@napi-rs/cli": "^2.18.3",
-    "@parcel/babel-register": "*",
+    "@atlaspack/babel-register": "*",
     "@types/node": ">= 18",
     "buffer": "mischnic/buffer#b8a4fa94",
     "cross-env": "^7.0.0",
@@ -88,7 +88,7 @@
   "_": "See issue #9405 for the Vue problem",
   "__": "The watcher complains about non-existing dirs in the integration tests on >=2.3.0",
   "resolutions": {
-    "@parcel/watcher": "~2.2.0",
+    "@atlaspack/watcher": "~2.2.0",
     "@vue/compiler-sfc": "~3.2.47",
     "vue": "~3.2.47"
   }

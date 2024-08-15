@@ -1,6 +1,6 @@
 // @flow
 import type {REPLOptions} from '../utils';
-import type {MemoryFS} from '@parcel/fs';
+import type {MemoryFS} from '@atlaspack/fs';
 import {openDB} from 'idb';
 import {Buffer} from 'buffer';
 

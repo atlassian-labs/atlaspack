@@ -1,21 +1,21 @@
 // @flow
 
 import type {Root} from 'postcss';
-import type {Asset, Dependency} from '@parcel/types';
+import type {Asset, Dependency} from '@atlaspack/types';
 import typeof PostCSS from 'postcss';
 // $FlowFixMe - init for browser build.
 import init, {bundleAsync} from 'lightningcss';
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
-import SourceMap from '@parcel/source-map';
-import {Packager} from '@parcel/plugin';
-import {convertSourceLocationToHighlight} from '@parcel/diagnostic';
+import SourceMap from '@atlaspack/source-map';
+import {Packager} from '@atlaspack/plugin';
+import {convertSourceLocationToHighlight} from '@atlaspack/diagnostic';
 import {
   PromiseQueue,
   replaceInlineReferences,
   replaceURLReferences,
-} from '@parcel/utils';
+} from '@atlaspack/utils';
 
 export default (new Packager({
   async package({

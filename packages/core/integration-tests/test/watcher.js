@@ -16,7 +16,7 @@ import {
   symlinkPrivilegeWarning,
   outputFS,
   overlayFS,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 import {symlinkSync} from 'fs';
 
 const inputDir = path.join(__dirname, '/watcher');
@@ -82,7 +82,7 @@ describe.v2('watcher', function () {
 
     await ncp(path.join(__dirname, 'integration/parcelrc-custom'), inDir);
     await ncp(
-      path.dirname(require.resolve('@parcel/config-default')),
+      path.dirname(require.resolve('@atlaspack/config-default')),
       path.join(inDir, 'node_modules', '@parcel', 'config-default'),
     );
     let copyPath = path.join(inDir, 'configCopy');

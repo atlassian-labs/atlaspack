@@ -3,7 +3,7 @@ import type {
   DependencySpecifier,
   SemverRange,
   Invalidations,
-} from '@parcel/types';
+} from '@atlaspack/types';
 import type ParcelConfig from '../ParcelConfig';
 import type {
   DevDepRequest,

@@ -2,9 +2,15 @@
 
 import {join} from 'path';
 
-import {ParcelV3, toFileSystemV3} from '@parcel/core';
-import {NodePackageManager} from '@parcel/package-manager';
-import {describe, fsFixture, inputFS, it, overlayFS} from '@parcel/test-utils';
+import {ParcelV3, toFileSystemV3} from '@atlaspack/core';
+import {NodePackageManager} from '@atlaspack/package-manager';
+import {
+  describe,
+  fsFixture,
+  inputFS,
+  it,
+  overlayFS,
+} from '@atlaspack/test-utils';
 
 describe('ParcelV3', function () {
   it('builds', async () => {
@@ -14,9 +20,9 @@ describe('ParcelV3', function () {
 
       .parcelrc:
         {
-          "extends": "@parcel/config-default",
+          "extends": "@atlaspack/config-default",
           "transformers": {
-            "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": ["@parcel/transformer-js"]
+            "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": ["@atlaspack/transformer-js"]
           }
         }
 

@@ -1,73 +1,77 @@
 // @flow
-import type {FilePath, DependencySpecifier, SemverRange} from '@parcel/types';
-import type {FileSystem} from '@parcel/fs';
+import type {
+  FilePath,
+  DependencySpecifier,
+  SemverRange,
+} from '@atlaspack/types';
+import type {FileSystem} from '@atlaspack/fs';
 import type {
   PackageManager,
   Invalidations,
   ResolveResult,
-} from '@parcel/package-manager';
-import {registerSerializableClass} from '@parcel/core';
+} from '@atlaspack/package-manager';
+import {registerSerializableClass} from '@atlaspack/core';
 // $FlowFixMe[untyped-import]
 import packageJson from '../../package.json';
 
 import path from 'path';
 import nullthrows from 'nullthrows';
-import {ResolverBase, init} from '@parcel/node-resolver-core';
+import {ResolverBase, init} from '@atlaspack/node-resolver-core';
 
-import bundlerDefault from '@parcel/bundler-default';
-import compressorRaw from '@parcel/compressor-raw';
-import namerDefault from '@parcel/namer-default';
-import optimizerCSS from '@parcel/optimizer-css';
-import optimizerTerser from '@parcel/optimizer-terser';
-import packagerCss from '@parcel/packager-css';
-import packagerHtml from '@parcel/packager-html';
-import packagerJs from '@parcel/packager-js';
-import packagerRaw from '@parcel/packager-raw';
-import reporterJson from '@parcel/reporter-json';
-import reporterServer from '@parcel/reporter-dev-server-sw';
-import resolverDefault from '@parcel/resolver-default';
-import resolverREPLRuntimes from '@parcel/resolver-repl-runtimes';
-import runtimeHMR from '@parcel/runtime-browser-hmr';
-import runtimeJs from '@parcel/runtime-js';
-import runtimeReactRefresh from '@parcel/runtime-react-refresh';
-import transformerBabel from '@parcel/transformer-babel';
-import transformerCss from '@parcel/transformer-css';
-import transformerHtml from '@parcel/transformer-html';
-import transformerInlineString from '@parcel/transformer-inline-string';
-import transformerJs from '@parcel/transformer-js';
-import transformerJson from '@parcel/transformer-json';
-import transformerPostcss from '@parcel/transformer-postcss';
-import transformerPosthtml from '@parcel/transformer-posthtml';
-import transformerRaw from '@parcel/transformer-raw';
-import transformerReactRefreshWrap from '@parcel/transformer-react-refresh-wrap';
+import bundlerDefault from '@atlaspack/bundler-default';
+import compressorRaw from '@atlaspack/compressor-raw';
+import namerDefault from '@atlaspack/namer-default';
+import optimizerCSS from '@atlaspack/optimizer-css';
+import optimizerTerser from '@atlaspack/optimizer-terser';
+import packagerCss from '@atlaspack/packager-css';
+import packagerHtml from '@atlaspack/packager-html';
+import packagerJs from '@atlaspack/packager-js';
+import packagerRaw from '@atlaspack/packager-raw';
+import reporterJson from '@atlaspack/reporter-json';
+import reporterServer from '@atlaspack/reporter-dev-server-sw';
+import resolverDefault from '@atlaspack/resolver-default';
+import resolverREPLRuntimes from '@atlaspack/resolver-repl-runtimes';
+import runtimeHMR from '@atlaspack/runtime-browser-hmr';
+import runtimeJs from '@atlaspack/runtime-js';
+import runtimeReactRefresh from '@atlaspack/runtime-react-refresh';
+import transformerBabel from '@atlaspack/transformer-babel';
+import transformerCss from '@atlaspack/transformer-css';
+import transformerHtml from '@atlaspack/transformer-html';
+import transformerInlineString from '@atlaspack/transformer-inline-string';
+import transformerJs from '@atlaspack/transformer-js';
+import transformerJson from '@atlaspack/transformer-json';
+import transformerPostcss from '@atlaspack/transformer-postcss';
+import transformerPosthtml from '@atlaspack/transformer-posthtml';
+import transformerRaw from '@atlaspack/transformer-raw';
+import transformerReactRefreshWrap from '@atlaspack/transformer-react-refresh-wrap';
 
 export const BUILTINS = {
-  '@parcel/bundler-default': bundlerDefault,
-  '@parcel/compressor-raw': compressorRaw,
-  '@parcel/namer-default': namerDefault,
-  '@parcel/optimizer-css': optimizerCSS,
-  '@parcel/optimizer-terser': optimizerTerser,
-  '@parcel/packager-css': packagerCss,
-  '@parcel/packager-html': packagerHtml,
-  '@parcel/packager-js': packagerJs,
-  '@parcel/packager-raw': packagerRaw,
-  '@parcel/reporter-dev-server-sw': reporterServer,
-  '@parcel/reporter-json': reporterJson,
-  '@parcel/resolver-default': resolverDefault,
-  '@parcel/resolver-repl-runtimes': resolverREPLRuntimes,
-  '@parcel/runtime-browser-hmr': runtimeHMR,
-  '@parcel/runtime-js': runtimeJs,
-  '@parcel/runtime-react-refresh': runtimeReactRefresh,
-  '@parcel/transformer-babel': transformerBabel,
-  '@parcel/transformer-css': transformerCss,
-  '@parcel/transformer-html': transformerHtml,
-  '@parcel/transformer-inline-string': transformerInlineString,
-  '@parcel/transformer-js': transformerJs,
-  '@parcel/transformer-json': transformerJson,
-  '@parcel/transformer-postcss': transformerPostcss,
-  '@parcel/transformer-posthtml': transformerPosthtml,
-  '@parcel/transformer-raw': transformerRaw,
-  '@parcel/transformer-react-refresh-wrap': transformerReactRefreshWrap,
+  '@atlaspack/bundler-default': bundlerDefault,
+  '@atlaspack/compressor-raw': compressorRaw,
+  '@atlaspack/namer-default': namerDefault,
+  '@atlaspack/optimizer-css': optimizerCSS,
+  '@atlaspack/optimizer-terser': optimizerTerser,
+  '@atlaspack/packager-css': packagerCss,
+  '@atlaspack/packager-html': packagerHtml,
+  '@atlaspack/packager-js': packagerJs,
+  '@atlaspack/packager-raw': packagerRaw,
+  '@atlaspack/reporter-dev-server-sw': reporterServer,
+  '@atlaspack/reporter-json': reporterJson,
+  '@atlaspack/resolver-default': resolverDefault,
+  '@atlaspack/resolver-repl-runtimes': resolverREPLRuntimes,
+  '@atlaspack/runtime-browser-hmr': runtimeHMR,
+  '@atlaspack/runtime-js': runtimeJs,
+  '@atlaspack/runtime-react-refresh': runtimeReactRefresh,
+  '@atlaspack/transformer-babel': transformerBabel,
+  '@atlaspack/transformer-css': transformerCss,
+  '@atlaspack/transformer-html': transformerHtml,
+  '@atlaspack/transformer-inline-string': transformerInlineString,
+  '@atlaspack/transformer-js': transformerJs,
+  '@atlaspack/transformer-json': transformerJson,
+  '@atlaspack/transformer-postcss': transformerPostcss,
+  '@atlaspack/transformer-posthtml': transformerPosthtml,
+  '@atlaspack/transformer-raw': transformerRaw,
+  '@atlaspack/transformer-react-refresh-wrap': transformerReactRefreshWrap,
 };
 
 // Package.json fields. Must match package_json.rs.
@@ -153,7 +157,7 @@ export class BrowserPackageManager implements PackageManager {
       saveDev?: boolean,
     |},
   ): Promise<ResolveResult> {
-    if (name.startsWith('@parcel/') && name !== '@parcel/watcher') {
+    if (name.startsWith('@atlaspack/') && name !== '@atlaspack/watcher') {
       return Promise.resolve({
         resolved: name,
         pkg: {

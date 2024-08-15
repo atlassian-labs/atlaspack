@@ -6,7 +6,7 @@ import type {
   Dependency,
   PluginOptions,
   NamedBundle,
-} from '@parcel/types';
+} from '@atlaspack/types';
 
 import {
   DefaultMap,
@@ -14,13 +14,13 @@ import {
   relativeBundlePath,
   countLines,
   normalizeSeparators,
-} from '@parcel/utils';
-import SourceMap from '@parcel/source-map';
+} from '@atlaspack/utils';
+import SourceMap from '@atlaspack/source-map';
 import nullthrows from 'nullthrows';
 import invariant, {AssertionError} from 'assert';
 import ThrowableDiagnostic, {
   convertSourceLocationToHighlight,
-} from '@parcel/diagnostic';
+} from '@atlaspack/diagnostic';
 import globals from 'globals';
 import path from 'path';
 

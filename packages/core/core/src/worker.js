@@ -6,8 +6,8 @@ import type {
   ProcessedParcelConfig,
   RequestInvalidation,
 } from './types';
-import type {SharedReference, WorkerApi} from '@parcel/workers';
-import {loadConfig as configCache} from '@parcel/utils';
+import type {SharedReference, WorkerApi} from '@atlaspack/workers';
+import {loadConfig as configCache} from '@atlaspack/utils';
 import type {DevDepSpecifier} from './requests/DevDepRequest';
 
 import invariant from 'assert';
@@ -23,21 +23,21 @@ import Validation, {type ValidationOpts} from './Validation';
 import ParcelConfig from './ParcelConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {clearBuildCaches} from './buildCache';
-import {init as initSourcemaps} from '@parcel/source-map';
-import {init as initRust} from '@parcel/rust';
-import WorkerFarm from '@parcel/workers';
-import {setFeatureFlags} from '@parcel/feature-flags';
+import {init as initSourcemaps} from '@atlaspack/source-map';
+import {init as initRust} from '@atlaspack/rust';
+import WorkerFarm from '@atlaspack/workers';
+import {setFeatureFlags} from '@atlaspack/feature-flags';
 
-import '@parcel/cache'; // register with serializer
-import '@parcel/package-manager';
-import '@parcel/fs';
+import '@atlaspack/cache'; // register with serializer
+import '@atlaspack/package-manager';
+import '@atlaspack/fs';
 
 // $FlowFixMe
 if (process.env.PARCEL_BUILD_REPL && process.browser) {
   /* eslint-disable import/no-extraneous-dependencies, monorepo/no-internal-import */
-  require('@parcel/repl/src/parcel/BrowserPackageManager.js');
+  require('@atlaspack/repl/src/parcel/BrowserPackageManager.js');
   // $FlowFixMe
-  require('@parcel/repl/src/parcel/ExtendedMemoryFS.js');
+  require('@atlaspack/repl/src/parcel/ExtendedMemoryFS.js');
   /* eslint-enable import/no-extraneous-dependencies, monorepo/no-internal-import */
 }
 

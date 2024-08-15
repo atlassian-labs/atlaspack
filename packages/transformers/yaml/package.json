@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/transformer-yaml",
+  "name": "@atlaspack/transformer-yaml",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {
@@ -20,7 +20,7 @@
     "parcel": "^2.12.0"
   },
   "dependencies": {
-    "@parcel/plugin": "2.12.0",
+    "@atlaspack/plugin": "2.12.0",
     "js-yaml": "^3.10.0"
   }
 }

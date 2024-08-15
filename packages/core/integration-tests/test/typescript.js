@@ -11,7 +11,7 @@ import {
   it,
   outputFS,
   run,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 const tscConfig = path.join(
   __dirname,

@@ -1,6 +1,6 @@
 // @flow strict-local
-import type {PackageName} from '@parcel/types';
-import type {SchemaEntity} from '@parcel/utils';
+import type {PackageName} from '@atlaspack/types';
+import type {SchemaEntity} from '@atlaspack/utils';
 import assert from 'assert';
 
 // Reasoning behind this validation:
@@ -20,7 +20,7 @@ export function validatePackageName(
   if (pkg.startsWith('@parcel')) {
     assert(
       pkg.replace(/^@parcel\//, '').startsWith(`${pluginType}-`),
-      `Official parcel ${pluginType} packages must be named according to "@parcel/${pluginType}-{name}"`,
+      `Official parcel ${pluginType} packages must be named according to "@atlaspack/${pluginType}-{name}"`,
     );
   } else if (pkg.startsWith('@')) {
     let [scope, name] = pkg.split('/');

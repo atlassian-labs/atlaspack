@@ -1,5 +1,5 @@
 // @flow
-import type {DiagnosticLogEvent, FilePath} from '@parcel/types';
+import type {DiagnosticLogEvent, FilePath} from '@atlaspack/types';
 import type {ODiagnosticSeverity} from 'vscode-languageserver';
 
 import path from 'path';

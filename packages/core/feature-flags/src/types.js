@@ -8,7 +8,7 @@ export type FeatureFlags = {|
    */
   +parcelV3: boolean,
   /**
-   * Use node.js implementation of @parcel/watcher watchman backend
+   * Use node.js implementation of @atlaspack/watcher watchman backend
    */
   +useWatchmanWatcher: boolean,
   /**

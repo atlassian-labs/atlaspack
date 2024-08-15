@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/validator-eslint",
+  "name": "@atlaspack/validator-eslint",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {
@@ -20,9 +20,9 @@
     "parcel": "^2.12.0"
   },
   "dependencies": {
-    "@parcel/diagnostic": "2.12.0",
-    "@parcel/plugin": "2.12.0",
-    "@parcel/utils": "2.12.0",
+    "@atlaspack/diagnostic": "2.12.0",
+    "@atlaspack/plugin": "2.12.0",
+    "@atlaspack/utils": "2.12.0",
     "chalk": "^4.1.0"
   },
   "devDependencies": {

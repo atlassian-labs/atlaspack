@@ -6,12 +6,12 @@ import type {
   Encoding,
   FileOptions,
   FileSystem,
-} from '@parcel/types-internal';
+} from '@atlaspack/types-internal';
 import type {
   Event,
   Options as WatcherOptions,
   AsyncSubscription,
-} from '@parcel/watcher';
+} from '@atlaspack/watcher';
 
 import fs from 'graceful-fs';
 import nativeFS from 'fs';
@@ -19,13 +19,13 @@ import ncp from 'ncp';
 import path from 'path';
 import {tmpdir} from 'os';
 import {promisify} from 'util';
-import {registerSerializableClass} from '@parcel/core';
-import {hashFile} from '@parcel/utils';
-import {getFeatureFlag} from '@parcel/feature-flags';
-import watcher from '@parcel/watcher';
+import {registerSerializableClass} from '@atlaspack/core';
+import {hashFile} from '@atlaspack/utils';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+import watcher from '@atlaspack/watcher';
 import packageJSON from '../package.json';
 
-import * as searchNative from '@parcel/rust';
+import * as searchNative from '@atlaspack/rust';
 import * as searchJS from './find';
 
 // Most of this can go away once we only support Node 10+, which includes

@@ -1,7 +1,7 @@
 // @flow strict-local
 
-import type {Async, Bundle as IBundle, Namer} from '@parcel/types';
-import type {SharedReference} from '@parcel/workers';
+import type {Async, Bundle as IBundle, Namer} from '@atlaspack/types';
+import type {SharedReference} from '@atlaspack/workers';
 import type ParcelConfig, {LoadedPlugin} from '../ParcelConfig';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
 import type {
@@ -17,8 +17,8 @@ import type {ConfigAndCachePath} from './ParcelConfigRequest';
 import invariant from 'assert';
 import assert from 'assert';
 import nullthrows from 'nullthrows';
-import {PluginLogger} from '@parcel/logger';
-import ThrowableDiagnostic, {errorToDiagnostic} from '@parcel/diagnostic';
+import {PluginLogger} from '@atlaspack/logger';
+import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import AssetGraph from '../AssetGraph';
 import BundleGraph from '../public/BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from '../BundleGraph';
@@ -26,8 +26,8 @@ import MutableBundleGraph from '../public/MutableBundleGraph';
 import {Bundle, NamedBundle} from '../public/Bundle';
 import {report} from '../ReporterRunner';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
-import {unique, setDifference} from '@parcel/utils';
-import {hashString} from '@parcel/rust';
+import {unique, setDifference} from '@atlaspack/utils';
+import {hashString} from '@atlaspack/rust';
 import PluginOptions from '../public/PluginOptions';
 import applyRuntimes from '../applyRuntimes';
 import {PARCEL_VERSION, OPTION_CHANGE} from '../constants';
@@ -54,7 +54,7 @@ import {
 } from '../projectPath';
 import createAssetGraphRequestJS from './AssetGraphRequest';
 import {createAssetGraphRequestRust} from './AssetGraphRequestRust';
-import {tracer, PluginTracer} from '@parcel/profiler';
+import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 
 type BundleGraphRequestInput = {|

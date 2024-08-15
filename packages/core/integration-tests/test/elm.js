@@ -8,7 +8,7 @@ import {
   it,
   run,
   outputFS,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 describe.v2('elm', function () {
   it('should produce a basic Elm bundle', async function () {
@@ -115,7 +115,7 @@ describe.v2('elm', function () {
               '    **String**\n' +
               '\n' +
               '__Hint__: Try using **String.fromInt** to convert it to a string?',
-            origin: '@parcel/elm-transformer',
+            origin: '@atlaspack/elm-transformer',
             stack: '',
           },
           {
@@ -128,7 +128,7 @@ describe.v2('elm', function () {
               '7|     Html.text 5 "Hello, world!"\n' +
               '       **^^^^^^^^^**\n' +
               'Are there any missing commas? Or missing parentheses?',
-            origin: '@parcel/elm-transformer',
+            origin: '@atlaspack/elm-transformer',
             stack: '',
           },
         ],

@@ -1,7 +1,12 @@
 // @flow
 
-import {Transformer} from '@parcel/plugin';
-import {createDependencyLocation, isGlob, glob, globSync} from '@parcel/utils';
+import {Transformer} from '@atlaspack/plugin';
+import {
+  createDependencyLocation,
+  isGlob,
+  glob,
+  globSync,
+} from '@atlaspack/utils';
 import path from 'path';
 import nativeFS from 'fs';
 import stylus from 'stylus';

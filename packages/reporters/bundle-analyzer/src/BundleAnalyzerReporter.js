@@ -1,10 +1,10 @@
 // @flow strict-local
 
-import type {FilePath, PackagedBundle, PluginOptions} from '@parcel/types';
+import type {FilePath, PackagedBundle, PluginOptions} from '@atlaspack/types';
 
 import invariant from 'assert';
-import {Reporter} from '@parcel/plugin';
-import {DefaultMap, generateBuildMetrics} from '@parcel/utils';
+import {Reporter} from '@atlaspack/plugin';
+import {DefaultMap, generateBuildMetrics} from '@atlaspack/utils';
 import path from 'path';
 import nullthrows from 'nullthrows';
 

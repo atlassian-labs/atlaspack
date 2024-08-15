@@ -1,10 +1,10 @@
 // @flow strict-local
 
-import {Transformer} from '@parcel/plugin';
+import {Transformer} from '@atlaspack/plugin';
 import spawn from 'cross-spawn';
 import path from 'path';
 import {minify} from 'terser';
-import ThrowableDiagnostic, {md} from '@parcel/diagnostic';
+import ThrowableDiagnostic, {md} from '@atlaspack/diagnostic';
 // $FlowFixMe
 import elm from 'node-elm-compiler';
 // $FlowFixMe
@@ -181,7 +181,7 @@ function formatElmError(problem, relativePath) {
 
   return {
     message,
-    origin: '@parcel/elm-transformer',
+    origin: '@atlaspack/elm-transformer',
     stack: '', // set stack to empty since it is not useful
   };
 }

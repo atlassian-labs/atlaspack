@@ -1,6 +1,6 @@
 // @flow
 
-import type {Environment} from '@parcel/types';
+import type {Environment} from '@atlaspack/types';
 import type {Targets as BabelTargets} from '@babel/preset-env';
 
 import invariant from 'assert';

@@ -14,12 +14,12 @@ import {
   removeDistDirectory,
   run,
   sleep,
-} from '@parcel/test-utils';
-import Logger from '@parcel/logger';
+} from '@atlaspack/test-utils';
+import Logger from '@atlaspack/logger';
 import os from 'os';
 import {spawnSync} from 'child_process';
 import tempy from 'tempy';
-import {md} from '@parcel/diagnostic';
+import {md} from '@atlaspack/diagnostic';
 
 const parcelCli = require.resolve('parcel/src/bin.js');
 const inputDir = path.join(__dirname, '/input');
@@ -197,7 +197,7 @@ describe.v2('babel', function () {
     assert(file.match(/return \d+;/));
   });
 
-  it('should support multitarget builds using a custom babel config with @parcel/babel-preset-env', async function () {
+  it('should support multitarget builds using a custom babel config with @atlaspack/babel-preset-env', async function () {
     let fixtureDir = path.join(
       __dirname,
       '/integration/babel-config-js-multitarget',
@@ -219,7 +219,7 @@ describe.v2('babel', function () {
     await outputFS.rimraf(path.join(fixtureDir, 'dist'));
   });
 
-  it('should support multitarget builds using a custom babel config with @parcel/babel-plugin-transform-runtime', async function () {
+  it('should support multitarget builds using a custom babel config with @atlaspack/babel-plugin-transform-runtime', async function () {
     let fixtureDir = path.join(
       __dirname,
       '/integration/babel-config-js-multitarget-transform-runtime',
@@ -551,7 +551,7 @@ describe.v2('babel', function () {
     });
   });
 
-  it('should enable shippedProposals with @parcel/babel-preset-env in custom babelrc', async function () {
+  it('should enable shippedProposals with @atlaspack/babel-preset-env in custom babelrc', async function () {
     let b = await bundle(
       path.join(
         __dirname,
@@ -637,7 +637,7 @@ describe.v2('babel', function () {
         level: 'warn',
         diagnostics: [
           {
-            origin: '@parcel/transformer-babel',
+            origin: '@atlaspack/transformer-babel',
             message: md`Parcel includes transpilation by default. Babel config __${path.relative(
               process.cwd(),
               babelrcPath,
@@ -667,7 +667,7 @@ describe.v2('babel', function () {
               'https://parceljs.org/languages/javascript/#default-presets',
           },
           {
-            origin: '@parcel/transformer-babel',
+            origin: '@atlaspack/transformer-babel',
             message:
               "@babel/preset-env does not support Parcel's targets, which will likely result in unnecessary transpilation and larger bundle sizes.",
             codeFrames: [
@@ -689,7 +689,7 @@ describe.v2('babel', function () {
               },
             ],
             hints: [
-              "Either remove __@babel/preset-env__ to use Parcel's builtin transpilation, or replace with __@parcel/babel-preset-env__",
+              "Either remove __@babel/preset-env__ to use Parcel's builtin transpilation, or replace with __@atlaspack/babel-preset-env__",
             ],
             documentationURL:
               'https://parceljs.org/languages/javascript/#custom-plugins',
@@ -720,11 +720,11 @@ describe.v2('babel', function () {
         level: 'warn',
         diagnostics: [
           {
-            origin: '@parcel/transformer-babel',
+            origin: '@atlaspack/transformer-babel',
             message: md`Parcel includes transpilation by default. Babel config __${path.relative(
               process.cwd(),
               babelrcPath,
-            )}__ includes the following redundant presets: __@parcel/babel-preset-env__. Removing these may improve build performance.`,
+            )}__ includes the following redundant presets: __@atlaspack/babel-preset-env__. Removing these may improve build performance.`,
             codeFrames: [
               {
                 filePath: babelrcPath,
@@ -778,11 +778,11 @@ describe.v2('babel', function () {
         level: 'warn',
         diagnostics: [
           {
-            origin: '@parcel/transformer-babel',
+            origin: '@atlaspack/transformer-babel',
             message: md`Parcel includes transpilation by default. Babel config __${path.relative(
               process.cwd(),
               babelrcPath,
-            )}__ includes the following redundant presets: __@parcel/babel-preset-env__. Removing these may improve build performance.`,
+            )}__ includes the following redundant presets: __@atlaspack/babel-preset-env__. Removing these may improve build performance.`,
             codeFrames: [
               {
                 filePath: babelrcPath,

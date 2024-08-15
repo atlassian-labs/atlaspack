@@ -1,6 +1,6 @@
 // @flow
 
-import {Transformer} from '@parcel/plugin';
+import {Transformer} from '@atlaspack/plugin';
 
 import path from 'path';
 import posthtml from 'posthtml';

@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/register",
+  "name": "@atlaspack/register",
   "version": "2.12.0",
   "private": true,
   "license": "MIT",
@@ -24,10 +24,10 @@
     "clean": "rimraf .parcel-cache"
   },
   "dependencies": {
-    "@parcel/config-default": "2.12.0",
-    "@parcel/core": "2.12.0",
-    "@parcel/fs": "2.12.0",
-    "@parcel/package-manager": "2.12.0",
+    "@atlaspack/config-default": "2.12.0",
+    "@atlaspack/core": "2.12.0",
+    "@atlaspack/fs": "2.12.0",
+    "@atlaspack/package-manager": "2.12.0",
     "pirates": "^4.0.0"
   }
 }

@@ -7,7 +7,7 @@ import {
   distDir,
   it,
   outputFS,
-} from '@parcel/test-utils';
+} from '@atlaspack/test-utils';
 
 describe.v2('webextension', function () {
   it('should resolve a full webextension bundle', async function () {

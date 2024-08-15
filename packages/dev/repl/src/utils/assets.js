@@ -394,7 +394,7 @@ document.body.innerHTML = greeter(user);`,
   //       name: '.parcelrc',
   //       content: JSON.stringify(
   //         {
-  //           extends: '@parcel/config-repl',
+  //           extends: '@atlaspack/config-repl',
   //           optimizers: {
   //             '*.js': [],
   //           },

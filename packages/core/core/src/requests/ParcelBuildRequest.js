@@ -1,8 +1,8 @@
 // @flow strict-local
 
-import type {ContentKey} from '@parcel/graph';
-import type {Async} from '@parcel/types';
-import type {SharedReference} from '@parcel/workers';
+import type {ContentKey} from '@atlaspack/graph';
+import type {Async} from '@atlaspack/types';
+import type {SharedReference} from '@atlaspack/workers';
 
 import type {StaticRunOpts} from '../RequestTracker';
 import type {Asset, AssetGroup, PackagedBundleInfo} from '../types';
@@ -20,7 +20,7 @@ import IBundleGraph from '../public/BundleGraph';
 import {NamedBundle} from '../public/Bundle';
 import {assetFromValue} from '../public/Asset';
 
-import {tracer} from '@parcel/profiler';
+import {tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 
 type ParcelBuildRequestInput = {|

@@ -1,5 +1,5 @@
 // @flow
-import * as napi from '@parcel/rust';
+import * as napi from '@atlaspack/rust';
 import {workerData} from 'worker_threads';
 import type {ResolverNapi} from '../plugins/Resolver';
 

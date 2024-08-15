@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/ts-utils",
+  "name": "@atlaspack/ts-utils",
   "version": "2.12.0",
   "license": "MIT",
   "publishConfig": {

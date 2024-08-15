@@ -1,5 +1,5 @@
 {
-  "name": "@parcel/three-js-stresstest",
+  "name": "@atlaspack/three-js-stresstest",
   "version": "2.12.0",
   "license": "MIT",
   "private": true,
@@ -27,9 +27,9 @@
     }
   },
   "devDependencies": {
-    "@parcel/config-default": "2.12.0",
-    "@parcel/core": "2.12.0",
-    "@parcel/optimizer-esbuild": "2.12.0",
+    "@atlaspack/config-default": "2.12.0",
+    "@atlaspack/core": "2.12.0",
+    "@atlaspack/optimizer-esbuild": "2.12.0",
     "parcel": "2.12.0"
   }
 }

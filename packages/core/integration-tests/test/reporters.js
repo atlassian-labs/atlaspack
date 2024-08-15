@@ -4,7 +4,7 @@ import assert from 'assert';
 import {execSync} from 'child_process';
 import path from 'path';
 
-import {bundler, describe, it} from '@parcel/test-utils';
+import {bundler, describe, it} from '@atlaspack/test-utils';
 
 describe.v2('reporters', () => {
   let successfulEntry = path.join(

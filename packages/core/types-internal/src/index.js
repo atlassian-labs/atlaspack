@@ -1,14 +1,14 @@
 // @flow strict-local
 
 import type {Readable} from 'stream';
-import type SourceMap from '@parcel/source-map';
+import type SourceMap from '@atlaspack/source-map';
 import type {
   Diagnostic,
   Diagnostifiable,
   DiagnosticWithoutOrigin,
-} from '@parcel/diagnostic';
-import type {FeatureFlags} from '@parcel/feature-flags';
-import type {Event, BackendType} from '@parcel/watcher';
+} from '@atlaspack/diagnostic';
+import type {FeatureFlags} from '@atlaspack/feature-flags';
+import type {Event, BackendType} from '@atlaspack/watcher';
 
 import type {Cache} from './Cache';
 import type {

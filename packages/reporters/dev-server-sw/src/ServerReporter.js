@@ -1,5 +1,5 @@
 // @flow
-import {Reporter} from '@parcel/plugin';
+import {Reporter} from '@atlaspack/plugin';
 import HMRServer, {getHotAssetContents} from './HMRServer';
 
 let hmrServer;

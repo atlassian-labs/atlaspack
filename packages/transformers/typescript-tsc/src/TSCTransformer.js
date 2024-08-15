@@ -2,10 +2,10 @@
 
 import type {TranspileOptions} from 'typescript';
 
-import {Transformer} from '@parcel/plugin';
-import {loadTSConfig} from '@parcel/ts-utils';
+import {Transformer} from '@atlaspack/plugin';
+import {loadTSConfig} from '@atlaspack/ts-utils';
 import typescript from 'typescript';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 
 export default (new Transformer({
   loadConfig({config, options}) {

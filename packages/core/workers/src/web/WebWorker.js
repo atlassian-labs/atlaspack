@@ -7,8 +7,11 @@ import type {
   ExitHandler,
   WorkerMessage,
 } from '../types';
-import {prepareForSerialization, restoreDeserializedObject} from '@parcel/core';
-import {makeDeferredWithPromise} from '@parcel/utils';
+import {
+  prepareForSerialization,
+  restoreDeserializedObject,
+} from '@atlaspack/core';
+import {makeDeferredWithPromise} from '@atlaspack/utils';
 
 let id = 0;
 

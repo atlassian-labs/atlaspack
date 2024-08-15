@@ -8,11 +8,11 @@ import type {
   ServerOptions,
   HMROptions,
   DetailedReportOptions,
-} from '@parcel/types';
-import type {FileSystem} from '@parcel/fs';
-import type {PackageManager} from '@parcel/package-manager';
+} from '@atlaspack/types';
+import type {FileSystem} from '@atlaspack/fs';
+import type {PackageManager} from '@atlaspack/package-manager';
 import type {ParcelOptions} from '../types';
-import {type FeatureFlags} from '@parcel/feature-flags';
+import {type FeatureFlags} from '@atlaspack/feature-flags';
 
 let parcelOptionsToPluginOptions: WeakMap<ParcelOptions, PluginOptions> =
   new WeakMap();

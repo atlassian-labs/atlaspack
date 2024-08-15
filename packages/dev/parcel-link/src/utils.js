@@ -4,7 +4,7 @@ import assert from 'assert';
 import child_process from 'child_process';
 import path from 'path';
 
-import type {FileSystem} from '@parcel/fs';
+import type {FileSystem} from '@atlaspack/fs';
 
 export type CmdOptions = {|
   appRoot: string,
