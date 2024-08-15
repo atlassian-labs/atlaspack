@@ -30,7 +30,7 @@ describe.v2('library bundler', function () {
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
-      .parcelrc:
+      .atlaspackrc:
         {
           "extends": "@atlaspack/config-default",
           "bundler": "@atlaspack/bundler-library"
@@ -126,7 +126,7 @@ describe.v2('library bundler', function () {
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
-      .parcelrc:
+      .atlaspackrc:
         {
           "extends": "@atlaspack/config-default",
           "bundler": "@atlaspack/bundler-library"
@@ -196,7 +196,7 @@ describe.v2('library bundler', function () {
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
-      .parcelrc:
+      .atlaspackrc:
         {
           "extends": "@atlaspack/config-default",
           "bundler": "@atlaspack/bundler-library"
@@ -276,7 +276,7 @@ describe.v2('library bundler', function () {
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
-      .parcelrc:
+      .atlaspackrc:
         {
           "extends": "@atlaspack/config-default",
           "bundler": "@atlaspack/bundler-library"
@@ -375,7 +375,7 @@ describe.v2('library bundler', function () {
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
-      .parcelrc:
+      .atlaspackrc:
         {
           "extends": "@atlaspack/config-default",
           "bundler": "@atlaspack/bundler-library"
@@ -425,7 +425,7 @@ describe.v2('library bundler', function () {
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
-      .parcelrc:
+      .atlaspackrc:
         {
           "extends": "@atlaspack/config-default",
           "bundler": "@atlaspack/bundler-library"
@@ -498,7 +498,7 @@ describe.v2('library bundler', function () {
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
-      .parcelrc:
+      .atlaspackrc:
         {
           "extends": "@atlaspack/config-default",
           "bundler": "@atlaspack/bundler-library"
@@ -585,7 +585,7 @@ describe.v2('library bundler', function () {
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
-      .parcelrc:
+      .atlaspackrc:
         {
           "extends": "@atlaspack/config-default",
           "bundler": "@atlaspack/bundler-library"

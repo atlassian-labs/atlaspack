@@ -5,7 +5,7 @@ import {bundle, describe, it} from '@atlaspack/test-utils';
 
 const config = path.join(
   __dirname,
-  './integration/custom-configs/.parcelrc-eslint',
+  './integration/custom-configs/.atlaspackrc-eslint',
 );
 
 describe.v2('eslint-validator', function () {

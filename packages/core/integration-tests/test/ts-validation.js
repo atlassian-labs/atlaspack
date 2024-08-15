@@ -14,7 +14,7 @@ import {
 
 const config = path.join(
   __dirname,
-  './integration/custom-configs/.parcelrc-typescript-validation',
+  './integration/custom-configs/.atlaspackrc-typescript-validation',
 );
 
 describe.v2('ts-validator', function () {

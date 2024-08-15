@@ -9,7 +9,7 @@ describe.v2('svg-react', function () {
       {
         defaultConfig: path.join(
           __dirname,
-          'integration/custom-configs/.parcelrc-svg-react',
+          'integration/custom-configs/.atlaspackrc-svg-react',
         ),
       },
     );
@@ -26,7 +26,7 @@ describe.v2('svg-react', function () {
       {
         defaultConfig: path.join(
           __dirname,
-          'integration/custom-configs/.parcelrc-svg-react',
+          'integration/custom-configs/.atlaspackrc-svg-react',
         ),
       },
     );
@@ -44,7 +44,7 @@ describe.v2('svg-react', function () {
       {
         defaultConfig: path.join(
           __dirname,
-          'integration/custom-configs/.parcelrc-svg-react',
+          'integration/custom-configs/.atlaspackrc-svg-react',
         ),
       },
     );

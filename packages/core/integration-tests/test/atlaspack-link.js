@@ -200,7 +200,7 @@ describe.v2('@atlaspack/link', () => {
       }}
         app
           yarn.lock:
-          .parcelrc: ${{
+          .atlaspackrc: ${{
             extends: '@namespace/parcel-config-namespace',
             transformers: {
               '*': [
@@ -222,7 +222,7 @@ describe.v2('@atlaspack/link', () => {
       assert(overlayFS.existsSync('.parcel-link'));
 
       assert.equal(
-        overlayFS.readFileSync('.parcelrc', 'utf8'),
+        overlayFS.readFileSync('.atlaspackrc', 'utf8'),
         JSON.stringify({
           extends: '@atlaspack/config-namespace',
           transformers: {
@@ -431,7 +431,7 @@ describe.v2('@atlaspack/link', () => {
     it.skip('updates config for custom namespace', async () => {
       await fsFixture(overlayFS)`
         yarn.lock:
-        .parcelrc: ${{
+        .atlaspackrc: ${{
           extends: '@atlaspack/config-namespace',
           transformers: {
             '*': [
@@ -464,7 +464,7 @@ describe.v2('@atlaspack/link', () => {
       assert(!overlayFS.existsSync('.parcel-link'));
 
       assert.equal(
-        overlayFS.readFileSync('.parcelrc', 'utf8'),
+        overlayFS.readFileSync('.atlaspackrc', 'utf8'),
         JSON.stringify({
           extends: '@namespace/parcel-config-namespace',
           transformers: {

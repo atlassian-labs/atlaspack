@@ -23,7 +23,7 @@ import nullthrows from 'nullthrows';
 
 const config = path.join(
   __dirname,
-  './integration/custom-configs/.parcelrc-dev-server',
+  './integration/custom-configs/.atlaspackrc-dev-server',
 );
 
 async function closeSocket(ws: WebSocket) {

@@ -71,7 +71,7 @@ describe.v2('JS API', function () {
       index.js:
         export default 'Hi';
 
-      .parcelrc:
+      .atlaspackrc:
         {
           extends: "@atlaspack/config-default",
           reporters: ["./reporter-plugin.js", "..."],

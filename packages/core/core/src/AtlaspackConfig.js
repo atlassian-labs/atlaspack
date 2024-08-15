@@ -161,7 +161,7 @@ export default class ParcelConfig {
     if (this.resolvers.length === 0) {
       throw await this.missingPluginError(
         this.resolvers,
-        'No resolver plugins specified in .parcelrc config',
+        'No resolver plugins specified in .atlaspackrc config',
         '/resolvers',
       );
     }
@@ -223,7 +223,7 @@ export default class ParcelConfig {
     if (!this.bundler) {
       throw await this.missingPluginError(
         [],
-        'No bundler specified in .parcelrc config',
+        'No bundler specified in .atlaspackrc config',
         '/bundler',
       );
     }
@@ -235,7 +235,7 @@ export default class ParcelConfig {
     if (this.namers.length === 0) {
       throw await this.missingPluginError(
         this.namers,
-        'No namer plugins specified in .parcelrc config',
+        'No namer plugins specified in .atlaspackrc config',
         '/namers',
       );
     }

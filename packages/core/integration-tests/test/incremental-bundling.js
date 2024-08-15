@@ -684,7 +684,7 @@ console.log('index.js');`,
         assertTimesBundled(customBundlerSpy.callCount, 0);
 
         await overlayFS.writeFile(
-          path.join(fixture, '.parcelrc'),
+          path.join(fixture, '.atlaspackrc'),
           JSON.stringify({
             extends: '@atlaspack/config-default',
             bundler: 'parcel-bundler-test',
@@ -784,7 +784,7 @@ console.log('index.js');`,
       assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
       await overlayFS.writeFile(
-        path.join(fixture, '.parcelrc'),
+        path.join(fixture, '.atlaspackrc'),
         JSON.stringify({
           extends: '@atlaspack/config-default',
           namers: ['parcel-namer-test'],
@@ -828,7 +828,7 @@ console.log('index.js');`,
       assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
       await overlayFS.writeFile(
-        path.join(fixture, '.parcelrc'),
+        path.join(fixture, '.atlaspackrc'),
         JSON.stringify({
           extends: '@atlaspack/config-default',
           runtimes: ['parcel-runtime-test'],

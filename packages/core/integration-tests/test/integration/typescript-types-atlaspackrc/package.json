@@ -1,5 +1,5 @@
 {
-    "name": "typescript-types-parcelrc",
+    "name": "typescript-types.atlaspackrc",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "private": true

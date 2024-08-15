@@ -106,7 +106,7 @@ export type HMROptions = {
   ...
 };
 
-/** The format of .parcelrc  */
+/** The format of .atlaspackrc  */
 export type RawParcelConfig = {|
   extends?: PackageName | FilePath | Array<PackageName | FilePath>,
   resolvers?: RawParcelConfigPipeline,
@@ -121,7 +121,7 @@ export type RawParcelConfig = {|
   validators?: {[Glob]: RawParcelConfigPipeline, ...},
 |};
 
-/** A .parcelrc where all package names are resolved */
+/** A .atlaspackrc where all package names are resolved */
 export type ResolvedParcelConfigFile = {|
   ...RawParcelConfig,
   +filePath: FilePath,
@@ -594,7 +594,7 @@ export type DependencyOptions = {|
   +packageConditions?: Array<string>,
   /** Plugin-specific metadata for the dependency. */
   +meta?: Meta,
-  /** The pipeline defined in .parcelrc that the dependency should be processed with. */
+  /** The pipeline defined in .atlaspackrc that the dependency should be processed with. */
   +pipeline?: string,
   /**
    * The file path where the dependency should be resolved from.
@@ -688,7 +688,7 @@ export interface Dependency {
   +resolveFrom: ?FilePath;
   /** The semver version range expected for the dependency. */
   +range: ?SemverRange;
-  /** The pipeline defined in .parcelrc that the dependency should be processed with. */
+  /** The pipeline defined in .atlaspackrc that the dependency should be processed with. */
   +pipeline: ?string;
 
   // TODO make immutable
@@ -787,7 +787,7 @@ export interface BaseAsset {
   +uniqueKey: ?string;
   /** The type of the AST. */
   +astGenerator: ?ASTGenerator;
-  /** The pipeline defined in .parcelrc that the asset should be processed with. */
+  /** The pipeline defined in .atlaspackrc that the asset should be processed with. */
   +pipeline: ?string;
   /** The symbols that the asset exports. */
   +symbols: AssetSymbols;
@@ -1020,7 +1020,7 @@ export type TransformerResult = {|
   +isBundleSplittable?: boolean,
   /** Plugin-specific metadata for the asset. */
   +meta?: Meta,
-  /** The pipeline defined in .parcelrc that the asset should be processed with. */
+  /** The pipeline defined in .atlaspackrc that the asset should be processed with. */
   +pipeline?: ?string,
   /**
    * Whether this asset can be omitted if none of its exports are being used.

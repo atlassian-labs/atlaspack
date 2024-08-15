@@ -134,7 +134,7 @@ function createParcel(opts?: InitialParcelOptions) {
     logLevel: 'info',
     defaultConfig: path.join(
       path.dirname(require.resolve('@atlaspack/test-utils')),
-      '.parcelrc-no-reporters',
+      '.atlaspackrc-no-reporters',
     ),
     shouldDisableCache: true,
     ...opts,

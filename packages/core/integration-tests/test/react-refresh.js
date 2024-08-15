@@ -329,7 +329,7 @@ async function setup(entry) {
     },
     defaultConfig: path.join(
       __dirname,
-      'integration/custom-configs/.parcelrc-dev-server',
+      'integration/custom-configs/.atlaspackrc-dev-server',
     ),
   });
 

@@ -231,8 +231,8 @@ async function renderDiagnostics(
 }
 
 async function setup(assets, options) {
-  if (!(await fs.exists('/.parcelrc'))) {
-    await fs.writeFile('/.parcelrc', JSON.stringify(configRepl, null, 2));
+  if (!(await fs.exists('/.atlaspackrc'))) {
+    await fs.writeFile('/.atlaspackrc', JSON.stringify(configRepl, null, 2));
   }
   // TODO for NodeResolver
   if (!(await fs.exists('/_empty.js'))) {
@@ -264,7 +264,7 @@ async function setup(assets, options) {
     logLevel: 'verbose',
     shouldPatchConsole: false,
     workerFarm,
-    defaultConfig: '/.parcelrc',
+    defaultConfig: '/.atlaspackrc',
     inputFS: fs,
     outputFS: fs,
     // cache: new IDBCache(),

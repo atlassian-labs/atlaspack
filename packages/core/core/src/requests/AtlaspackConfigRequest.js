@@ -96,7 +96,7 @@ export default function createParcelConfigRequest(): ParcelConfigRequest {
       if (usedDefault) {
         let resolveFrom = getResolveFrom(options.inputFS, options.projectRoot);
         api.invalidateOnFileCreate({
-          fileName: '.parcelrc',
+          fileName: '.atlaspackrc',
           aboveFilePath: toProjectPath(options.projectRoot, resolveFrom),
         });
       }
@@ -135,7 +135,7 @@ export async function loadParcelConfig(
   let parcelConfig = await resolveParcelConfig(options);
 
   if (!parcelConfig) {
-    throw new Error('Could not find a .parcelrc');
+    throw new Error('Could not find a .atlaspackrc');
   }
 
   return parcelConfig;
@@ -152,7 +152,7 @@ export async function resolveParcelConfig(
       : await resolveConfig(
           options.inputFS,
           resolveFrom,
-          ['.parcelrc'],
+          ['.atlaspackrc'],
           options.projectRoot,
         );
 
@@ -225,7 +225,7 @@ export async function parseAndProcessConfig(
     };
     throw new ThrowableDiagnostic({
       diagnostic: {
-        message: `Failed to parse .parcelrc`,
+        message: `Failed to parse .atlaspackrc`,
         origin: '@atlaspack/core',
 
         codeFrames: [

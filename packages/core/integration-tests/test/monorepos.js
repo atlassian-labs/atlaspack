@@ -882,10 +882,10 @@ describe.v2('monorepos', function () {
     assert(contents.includes('import "./pkg-b.module.css"'));
   });
 
-  it('should search for .parcelrc at cwd in monorepos', async () => {
+  it('should search for .atlaspackrc at cwd in monorepos', async () => {
     let fixture = path.join(
       __dirname,
-      '/integration/parcelrc-monorepo/app/index.js',
+      '/integration.atlaspackrc-monorepo/app/index.js',
     );
 
     let oldcwd = inputFS.cwd();

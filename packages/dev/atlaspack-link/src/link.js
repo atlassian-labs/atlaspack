@@ -85,10 +85,10 @@ export async function link(
       parcelPackages,
     );
 
-    // Step 5.1: In .parcelrc, rewrite all references to official plugins to `@atlaspack/*`
+    // Step 5.1: In .atlaspackrc, rewrite all references to official plugins to `@atlaspack/*`
     // --------------------------------------------------------------------------------
 
-    let parcelConfigPath = path.join(appRoot, '.parcelrc');
+    let parcelConfigPath = path.join(appRoot, '.atlaspackrc');
     if (config.fs.existsSync(parcelConfigPath)) {
       let parcelConfig = config.fs.readFileSync(parcelConfigPath, 'utf8');
       await fsWrite(

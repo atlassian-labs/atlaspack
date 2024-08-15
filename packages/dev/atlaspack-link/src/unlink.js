@@ -73,10 +73,10 @@ export async function unlink(
       parcelPackages,
     );
 
-    // Step 3.2: In .parcelrc, restore all references to namespaced plugins.
+    // Step 3.2: In .atlaspackrc, restore all references to namespaced plugins.
     // --------------------------------------------------------------------------------
 
-    let parcelConfigPath = path.join(appRoot, '.parcelrc');
+    let parcelConfigPath = path.join(appRoot, '.atlaspackrc');
     if (config.fs.existsSync(parcelConfigPath)) {
       let parcelConfig = config.fs.readFileSync(parcelConfigPath, 'utf8');
       for (let [alias, parcel] of namespacePackages) {

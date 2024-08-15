@@ -6,7 +6,7 @@ import {bundler, describe, it, outputFS} from '@atlaspack/test-utils';
 
 const config = path.join(
   __dirname,
-  './integration/custom-configs/.parcelrc-build-metrics',
+  './integration/custom-configs/.atlaspackrc-build-metrics',
 );
 
 describe.v2('Build Metrics Reporter', () => {

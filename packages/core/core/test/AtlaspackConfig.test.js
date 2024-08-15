@@ -10,7 +10,7 @@ import {parseAndProcessConfig} from '../src/requests/ParcelConfigRequest';
 import {DEFAULT_OPTIONS} from './test-utils';
 import {toProjectPath} from '../src/projectPath';
 
-const PARCELRC_PATH = toProjectPath('/', '/.parcelrc');
+const PARCELRC_PATH = toProjectPath('/', '/.atlaspackrc');
 
 describe('ParcelConfig', () => {
   describe('matchGlobMap', () => {
@@ -128,7 +128,7 @@ describe('ParcelConfig', () => {
       let projectRoot = path.join(__dirname, 'fixtures', 'plugins');
       let configFilePath = toProjectPath(
         projectRoot,
-        path.join(__dirname, 'fixtures', 'plugins', '.parcelrc'),
+        path.join(__dirname, 'fixtures', 'plugins', '.atlaspackrc'),
       );
       let config = new ParcelConfig(
         {
@@ -168,7 +168,7 @@ describe('ParcelConfig', () => {
       let projectRoot = path.join(__dirname, 'fixtures', 'plugins');
       let configFilePath = toProjectPath(
         projectRoot,
-        path.join(__dirname, 'fixtures', 'plugins', '.parcelrc'),
+        path.join(__dirname, 'fixtures', 'plugins', '.atlaspackrc'),
       );
       let config = new ParcelConfig(
         {
@@ -237,7 +237,7 @@ describe('ParcelConfig', () => {
         __dirname,
         'fixtures',
         'config-plugin-not-found',
-        '.parcelrc',
+        '.atlaspackrc',
       );
       let code = await DEFAULT_OPTIONS.inputFS.readFile(configFilePath, 'utf8');
       let {config} = await parseAndProcessConfig(
@@ -278,7 +278,7 @@ describe('ParcelConfig', () => {
         __dirname,
         'fixtures',
         'config-node-pipeline',
-        '.parcelrc',
+        '.atlaspackrc',
       );
       let code = await DEFAULT_OPTIONS.inputFS.readFile(configFilePath, 'utf8');
 
@@ -323,7 +323,7 @@ describe('ParcelConfig', () => {
       let projectRoot = path.join(__dirname, 'fixtures', 'plugins');
       let configFilePath = toProjectPath(
         projectRoot,
-        path.join(__dirname, 'fixtures', 'plugins', '.parcelrc'),
+        path.join(__dirname, 'fixtures', 'plugins', '.atlaspackrc'),
       );
       let config = new ParcelConfig(
         {
@@ -354,7 +354,7 @@ describe('ParcelConfig', () => {
         __dirname,
         'fixtures',
         'local-plugin-config-pkg',
-        '.parcelrc',
+        '.atlaspackrc',
       );
       let code = await DEFAULT_OPTIONS.inputFS.readFile(configFilePath, 'utf8');
       let {config} = await parseAndProcessConfig(

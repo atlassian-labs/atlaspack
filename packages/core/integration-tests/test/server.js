@@ -22,7 +22,7 @@ import type {BuildEvent} from '@atlaspack/types';
 const distDir = path.resolve(__dirname, '.parcel-cache/dist');
 const config = path.join(
   __dirname,
-  './integration/custom-configs/.parcelrc-dev-server',
+  './integration/custom-configs/.atlaspackrc-dev-server',
 );
 
 describe.v2('server', function () {

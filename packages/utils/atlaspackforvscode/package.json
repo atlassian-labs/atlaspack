@@ -29,8 +29,8 @@
   "contributes": {
     "jsonValidation": [
       {
-        "fileMatch": ".parcelrc",
-        "url": "./schemas/parcelrc.schema.json"
+        "fileMatch": ".atlaspackrc",
+        "url": "./schemas.atlaspackrc.schema.json"
       },
       {
         "fileMatch": "package.json",
@@ -41,8 +41,8 @@
       {
         "id": "jsonc",
         "filenames": [
-          ".parcelrc",
-          ".parcelrc*"
+          ".atlaspackrc",
+          ".atlaspackrc*"
         ]
       }
     ],

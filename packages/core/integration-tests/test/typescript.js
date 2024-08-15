@@ -15,7 +15,7 @@ import {
 
 const tscConfig = path.join(
   __dirname,
-  '/integration/typescript-config/.parcelrc',
+  '/integration/typescript-config/.atlaspackrc',
 );
 
 describe.v2('typescript', function () {

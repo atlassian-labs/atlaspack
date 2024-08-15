@@ -1,5 +1,5 @@
 {
-  "title": "JSON schema for .parcelrc files",
+  "title": "JSON schema for .atlaspackrc files",
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
   "allowTrailingCommas": true,

@@ -13,7 +13,7 @@ import getPort from 'get-port';
 
 const config = path.join(
   __dirname,
-  './integration/custom-configs/.parcelrc-dev-server',
+  './integration/custom-configs/.atlaspackrc-dev-server',
 );
 
 function apiServer() {
