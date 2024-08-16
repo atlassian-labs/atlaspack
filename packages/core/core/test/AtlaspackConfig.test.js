@@ -12,7 +12,7 @@ import {toProjectPath} from '../src/projectPath';
 
 const ATLASPACKRC_PATH = toProjectPath('/', '/.atlaspackrc');
 
-describe('AtlaspackConfig', () => {
+describe.only('AtlaspackConfig', () => {
   describe('matchGlobMap', () => {
     let config = new AtlaspackConfig(
       {

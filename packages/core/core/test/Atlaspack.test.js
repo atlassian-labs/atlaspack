@@ -89,7 +89,7 @@ describe('AtlaspackAPI', function () {
     it('should transform simple file', async () => {
       let atlaspack = createAtlaspack({workerFarm});
       let res = await atlaspack.unstable_transform({
-        filePath: path.join(__dirname, 'fixtures/parcel/index.js'),
+        filePath: path.join(__dirname, 'fixtures/atlaspack/index.js'),
       });
       let code = await res[0].getCode();
       assert(code.includes(`exports.default = 'test'`));
@@ -98,7 +98,7 @@ describe('AtlaspackAPI', function () {
     it('should transform with standalone mode', async () => {
       let atlaspack = createAtlaspack({workerFarm});
       let res = await atlaspack.unstable_transform({
-        filePath: path.join(__dirname, 'fixtures/parcel/other.js'),
+        filePath: path.join(__dirname, 'fixtures/atlaspack/other.js'),
         query: 'standalone=true',
       });
       let code = await res[0].getCode();
@@ -115,11 +115,11 @@ describe('AtlaspackAPI', function () {
       let res = await atlaspack.unstable_resolve({
         specifier: './other',
         specifierType: 'esm',
-        resolveFrom: path.join(__dirname, 'fixtures/parcel/index.js'),
+        resolveFrom: path.join(__dirname, 'fixtures/atlaspack/index.js'),
       });
 
       assert.deepEqual(res, {
-        filePath: path.join(__dirname, 'fixtures/parcel/other.js'),
+        filePath: path.join(__dirname, 'fixtures/atlaspack/other.js'),
         code: undefined,
         query: undefined,
         sideEffects: true,
@@ -130,7 +130,7 @@ describe('AtlaspackAPI', function () {
 
 function createAtlaspack(opts?: InitialAtlaspackOptions) {
   return new Atlaspack({
-    entries: [path.join(__dirname, 'fixtures/parcel/index.js')],
+    entries: [path.join(__dirname, 'fixtures/atlaspack/index.js')],
     logLevel: 'info',
     defaultConfig: path.join(
       path.dirname(require.resolve('@atlaspack/test-utils')),

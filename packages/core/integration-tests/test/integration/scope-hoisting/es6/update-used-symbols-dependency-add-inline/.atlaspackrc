@@ -1,5 +1,5 @@
 {
-  "extends": "@parcel/config-default",
+  "extends": "@atlaspack/config-default",
   "transformers": {
     "*.js": ["parcel-transformer-test", "..."]
   }

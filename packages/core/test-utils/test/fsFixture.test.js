@@ -526,9 +526,12 @@ describe('fsFixture', () => {
         yarn.lock:
         node_modules
           .bin
-            atlaspack -> ${path.resolve(__dirname, '../../parcel/src/bin.js')}
-          atlaspack -> ${path.resolve(__dirname, '../../parcel')}
-          @parcel
+            atlaspack -> ${path.resolve(
+              __dirname,
+              '../../atlaspack/src/bin.js',
+            )}
+          atlaspack -> ${path.resolve(__dirname, '../../atlaspack')}
+          @atlaspack
             core -> ${path.resolve(__dirname, '../../core')}
         .atlaspackrc: ${{
           extends: '@atlaspack/config-default',
@@ -551,13 +554,13 @@ describe('fsFixture', () => {
     assert(fs.existsSync('/app/node_modules'));
 
     assert.equal(
-      fs.realpathSync('/app/node_modules/.bin/parcel'),
-      path.resolve(__dirname, '../../parcel/src/bin.js'),
+      fs.realpathSync('/app/node_modules/.bin/atlaspack'),
+      path.resolve(__dirname, '../../atlaspack/src/bin.js'),
     );
 
     assert.equal(
-      fs.realpathSync('/app/node_modules/parcel'),
-      path.resolve(__dirname, '../../parcel'),
+      fs.realpathSync('/app/node_modules/atlaspack'),
+      path.resolve(__dirname, '../../atlaspack'),
     );
 
     assert.equal(

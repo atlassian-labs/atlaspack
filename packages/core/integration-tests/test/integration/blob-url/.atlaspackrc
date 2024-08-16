@@ -1,6 +1,6 @@
 
 {
-  "extends": "@parcel/config-default",
+  "extends": "@atlaspack/config-default",
   "transformers": {
     "blob-url:*": ["@parcel/transformer-inline", "..."]
   },
