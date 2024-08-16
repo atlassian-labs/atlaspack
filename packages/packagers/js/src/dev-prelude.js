@@ -96,7 +96,7 @@
     this.exports = {};
   }
 
-  newRequire.isParcelRequire = true;
+  newRequire.isAtlaspackRequire = true;
   newRequire.Module = Module;
   newRequire.modules = modules;
   newRequire.cache = cache;

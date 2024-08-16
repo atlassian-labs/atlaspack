@@ -39,7 +39,7 @@ export interface Watcher {
   ): Promise<FilePath>;
 }
 
-export class ParcelWatcherWatchmanJS implements Watcher {
+export class AtlaspackWatcherWatchmanJS implements Watcher {
   subscriptionName: string;
   client: watchman.Client;
   initPromise: Promise<void> | void;

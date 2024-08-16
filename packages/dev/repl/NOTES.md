@@ -12,7 +12,7 @@
 - Preview
   - JS preview: use util.inspect
   - JS Preview: show error (Uncaught ReferenceError: ... is not defined)
-  - use Parcel's devserver middleware in SW
+  - use Atlaspack's devserver middleware in SW
 - Lazy load plugins types
 - install pkg using Yarn (via custom PackageInstaller)
 - Add a "Show more"/”Expand" pull tab to options box

@@ -1,20 +1,20 @@
 // @flow strict-local
 
-import ParcelConfig from '../src/ParcelConfig';
+import AtlaspackConfig from '../src/AtlaspackConfig';
 import assert from 'assert';
 import path from 'path';
 import sinon from 'sinon';
 import logger from '@atlaspack/logger';
 import {inputFS} from '@atlaspack/test-utils';
-import {parseAndProcessConfig} from '../src/requests/ParcelConfigRequest';
+import {parseAndProcessConfig} from '../src/requests/AtlaspackConfigRequest';
 import {DEFAULT_OPTIONS} from './test-utils';
 import {toProjectPath} from '../src/projectPath';
 
 const ATLASPACKRC_PATH = toProjectPath('/', '/.atlaspackrc');
 
-describe('ParcelConfig', () => {
+describe('AtlaspackConfig', () => {
   describe('matchGlobMap', () => {
-    let config = new ParcelConfig(
+    let config = new AtlaspackConfig(
       {
         filePath: ATLASPACKRC_PATH,
         bundler: undefined,
@@ -56,7 +56,7 @@ describe('ParcelConfig', () => {
   });
 
   describe('matchGlobMapPipelines', () => {
-    let config = new ParcelConfig(
+    let config = new AtlaspackConfig(
       {
         filePath: ATLASPACKRC_PATH,
         bundler: undefined,
@@ -130,7 +130,7 @@ describe('ParcelConfig', () => {
         projectRoot,
         path.join(__dirname, 'fixtures', 'plugins', '.atlaspackrc'),
       );
-      let config = new ParcelConfig(
+      let config = new AtlaspackConfig(
         {
           filePath: configFilePath,
           bundler: undefined,
@@ -159,7 +159,7 @@ describe('ParcelConfig', () => {
       assert.deepEqual(warnStub.getCall(0).args[0], {
         origin: '@atlaspack/core',
         message:
-          'The plugin "atlaspack-transformer-no-engines" needs to specify a `package.json#engines.atlaspack` field with the supported Parcel version range.',
+          'The plugin "atlaspack-transformer-no-engines" needs to specify a `package.json#engines.atlaspack` field with the supported Atlaspack version range.',
       });
       warnStub.restore();
     });
@@ -170,7 +170,7 @@ describe('ParcelConfig', () => {
         projectRoot,
         path.join(__dirname, 'fixtures', 'plugins', '.atlaspackrc'),
       );
-      let config = new ParcelConfig(
+      let config = new AtlaspackConfig(
         {
           filePath: configFilePath,
           bundler: undefined,
@@ -210,7 +210,7 @@ describe('ParcelConfig', () => {
           name: 'Error',
           diagnostics: [
             {
-              message: `The plugin "atlaspack-transformer-bad-engines" is not compatible with the current version of Parcel. Requires "5.x" but the current version is "${atlaspackVersion}".`,
+              message: `The plugin "atlaspack-transformer-bad-engines" is not compatible with the current version of Atlaspack. Requires "5.x" but the current version is "${atlaspackVersion}".`,
               origin: '@atlaspack/core',
               codeFrames: [
                 {
@@ -245,14 +245,14 @@ describe('ParcelConfig', () => {
         code,
         DEFAULT_OPTIONS,
       );
-      let atlaspackConfig = new ParcelConfig(config, DEFAULT_OPTIONS);
+      let atlaspackConfig = new AtlaspackConfig(config, DEFAULT_OPTIONS);
 
       // $FlowFixMe
       await assert.rejects(() => atlaspackConfig.getTransformers('test.js'), {
         name: 'Error',
         diagnostics: [
           {
-            message: 'Cannot find Parcel plugin "@atlaspack/transformer-jj"',
+            message: 'Cannot find Atlaspack plugin "@atlaspack/transformer-jj"',
             origin: '@atlaspack/core',
             codeFrames: [
               {
@@ -325,7 +325,7 @@ describe('ParcelConfig', () => {
         projectRoot,
         path.join(__dirname, 'fixtures', 'plugins', '.atlaspackrc'),
       );
-      let config = new ParcelConfig(
+      let config = new AtlaspackConfig(
         {
           filePath: configFilePath,
           bundler: undefined,
@@ -362,7 +362,7 @@ describe('ParcelConfig', () => {
         code,
         DEFAULT_OPTIONS,
       );
-      let atlaspackConfig = new ParcelConfig(config, DEFAULT_OPTIONS);
+      let atlaspackConfig = new AtlaspackConfig(config, DEFAULT_OPTIONS);
       let extendedConfigPath = path.join(
         __dirname,
         'fixtures',
@@ -378,7 +378,7 @@ describe('ParcelConfig', () => {
         diagnostics: [
           {
             message:
-              'Local plugins are not supported in Parcel config packages. Please publish "./local-plugin" as a separate npm package.',
+              'Local plugins are not supported in Atlaspack config packages. Please publish "./local-plugin" as a separate npm package.',
             origin: '@atlaspack/core',
             codeFrames: [
               {

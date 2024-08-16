@@ -1,6 +1,6 @@
 # `atlaspack-query`
 
-A REPL to investigate the Parcel graphs in the cache ("offline", after the build).
+A REPL to investigate the Atlaspack graphs in the cache ("offline", after the build).
 
 ## Installation
 

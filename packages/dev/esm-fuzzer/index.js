@@ -64,7 +64,7 @@ async function run(example) {
 
   if ((nativeOutput.error == null) != (atlaspackBundles.error == null)) {
     console.error('Native error:', nativeOutput.error);
-    console.error('Parcel error:', atlaspackBundles.error);
+    console.error('Atlaspack error:', atlaspackBundles.error);
     throw new Error();
   } else {
     if (nativeOutput.error != null) {

@@ -11,7 +11,7 @@ import path from 'path';
 const LOCK_FILE_NAMES = ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'];
 const SCM_FILE_NAMES = ['.git', '.hg'];
 
-export class ParcelLinkConfig {
+export class AtlaspackLinkConfig {
   fs: FileSystem;
   appRoot: string;
   packageRoot: string;
@@ -22,11 +22,11 @@ export class ParcelLinkConfig {
   static load(
     appRoot: string,
     {fs, filename = '.atlaspack-link'}: {|fs: FileSystem, filename?: string|},
-  ): ParcelLinkConfig {
+  ): AtlaspackLinkConfig {
     let manifest = JSON.parse(
       fs.readFileSync(path.join(appRoot, filename), 'utf8'),
     );
-    return new ParcelLinkConfig({...manifest, fs});
+    return new AtlaspackLinkConfig({...manifest, fs});
   }
 
   constructor(options: {|

@@ -70,7 +70,7 @@ describe.v2('reporters', () => {
         assert.equal(err.name, 'Error');
         assert.deepEqual(
           err.diagnostics.map(d => d.message),
-          ['Cannot find Parcel plugin "./test-reporter"'],
+          ['Cannot find Atlaspack plugin "./test-reporter"'],
         );
       }
     });

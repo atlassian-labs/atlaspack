@@ -14,7 +14,7 @@ import {
   findDependency,
   getNextBuild,
   it,
-  mergeParcelOptions,
+  mergeAtlaspackOptions,
   outputFS,
   overlayFS,
   run,
@@ -26,7 +26,7 @@ const bundle = (name, opts = {}) => {
   return _bundle(
     name,
     // $FlowFixMe
-    mergeParcelOptions(
+    mergeAtlaspackOptions(
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -41,7 +41,7 @@ const bundler = (name, opts = {}) => {
   return _bundler(
     name,
     // $FlowFixMe
-    mergeParcelOptions(
+    mergeAtlaspackOptions(
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,

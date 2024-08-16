@@ -1,13 +1,13 @@
 // @flow
 import type {FS, REPLOptions} from '../utils';
-import type {BundleOutput} from './ParcelWorker';
+import type {BundleOutput} from './AtlaspackWorker';
 
 import {proxy, wrap, transfer} from 'comlink';
 
 const worker = wrap(
   // $FlowFixMe
-  new Worker(new URL('./ParcelWorker.js', import /*:: ("") */.meta.url), {
-    name: 'Parcel Worker Main',
+  new Worker(new URL('./AtlaspackWorker.js', import /*:: ("") */.meta.url), {
+    name: 'Atlaspack Worker Main',
     type: 'module',
   }),
 );

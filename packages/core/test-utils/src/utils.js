@@ -7,7 +7,7 @@ import type {
   BundleGraph,
   Dependency,
   FilePath,
-  InitialParcelOptions,
+  InitialAtlaspackOptions,
   PackagedBundle,
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
@@ -16,7 +16,7 @@ import type {IncomingMessage} from 'http';
 
 import invariant from 'assert';
 import util from 'util';
-import Parcel, {createWorkerFarm} from '@atlaspack/core';
+import Atlaspack, {createWorkerFarm} from '@atlaspack/core';
 import assert from 'assert';
 import vm from 'vm';
 import v8 from 'v8';
@@ -107,13 +107,13 @@ If you don't know how, check here: https://bit.ly/2UmWsbD
   );
 }
 
-export const isParcelV3 = process.env.ATLASPACK_V3 === 'true';
+export const isAtlaspackV3 = process.env.ATLASPACK_V3 === 'true';
 
-export function getParcelOptions(
+export function getAtlaspackOptions(
   entries: FilePath | Array<FilePath>,
-  opts?: $Shape<InitialParcelOptions>,
-): InitialParcelOptions {
-  return mergeParcelOptions(
+  opts?: $Shape<InitialAtlaspackOptions>,
+): InitialAtlaspackOptions {
+  return mergeAtlaspackOptions(
     {
       entries,
       shouldDisableCache: true,
@@ -133,7 +133,7 @@ export function getParcelOptions(
         },
       },
       featureFlags: {
-        atlaspackV3: isParcelV3,
+        atlaspackV3: isAtlaspackV3,
       },
     },
     opts,
@@ -142,9 +142,9 @@ export function getParcelOptions(
 
 export function bundler(
   entries: FilePath | Array<FilePath>,
-  opts?: $Shape<InitialParcelOptions>,
-): Parcel {
-  return new Parcel(getParcelOptions(entries, opts));
+  opts?: $Shape<InitialAtlaspackOptions>,
+): Atlaspack {
+  return new Atlaspack(getAtlaspackOptions(entries, opts));
 }
 
 export function findAsset(
@@ -191,10 +191,10 @@ export function findDependency(
   return dependency;
 }
 
-export function mergeParcelOptions(
-  optsOne: InitialParcelOptions,
-  optsTwo?: InitialParcelOptions | null,
-): InitialParcelOptions {
+export function mergeAtlaspackOptions(
+  optsOne: InitialAtlaspackOptions,
+  optsTwo?: InitialAtlaspackOptions | null,
+): InitialAtlaspackOptions {
   if (!optsTwo) {
     return optsOne;
   }
@@ -231,12 +231,12 @@ export function assertDependencyWasExcluded(
 
 export async function bundle(
   entries: FilePath | Array<FilePath>,
-  opts?: InitialParcelOptions,
+  opts?: InitialAtlaspackOptions,
 ): Promise<BundleGraph<PackagedBundle>> {
   return (await bundler(entries, opts).run()).bundleGraph;
 }
 
-export function getNextBuild(b: Parcel): Promise<BuildEvent> {
+export function getNextBuild(b: Atlaspack): Promise<BuildEvent> {
   return new Promise((resolve, reject) => {
     let subscriptionPromise = b
       .watch((err, buildEvent) => {
@@ -263,7 +263,7 @@ export function getNextBuild(b: Parcel): Promise<BuildEvent> {
 }
 
 export async function getNextBuildSuccess(
-  b: Parcel,
+  b: Atlaspack,
 ): Promise<BuildSuccessEvent> {
   let evt = await getNextBuild(b);
   invariant(evt.type === 'buildSuccess');
@@ -1286,28 +1286,28 @@ describe.skip = function (...args: mixed[]) {
 
 describe.v2 = function (...args: mixed[]) {
   atlaspackVersion = 'v2';
-  if (!isParcelV3) {
+  if (!isAtlaspackV3) {
     origDescribe.apply(this, args);
   }
 };
 
 describe.v2.only = function (...args: mixed[]) {
   atlaspackVersion = 'v2';
-  if (!isParcelV3) {
+  if (!isAtlaspackV3) {
     origDescribe.only.apply(this, args);
   }
 };
 
 describe.v3 = function (...args: mixed[]) {
   atlaspackVersion = 'v3';
-  if (isParcelV3) {
+  if (isAtlaspackV3) {
     origDescribe.apply(this, args);
   }
 };
 
 describe.v3.only = function (...args: mixed[]) {
   atlaspackVersion = 'v3';
-  if (isParcelV3) {
+  if (isAtlaspackV3) {
     origDescribe.only.apply(this, args);
   }
 };
@@ -1316,8 +1316,8 @@ let origIt = globalThis.it;
 export function it(...args: mixed[]) {
   if (
     atlaspackVersion == null ||
-    (atlaspackVersion == 'v2' && !isParcelV3) ||
-    (atlaspackVersion == 'v3' && isParcelV3)
+    (atlaspackVersion == 'v2' && !isAtlaspackV3) ||
+    (atlaspackVersion == 'v3' && isAtlaspackV3)
   ) {
     origIt.apply(this, args);
   }
@@ -1332,25 +1332,25 @@ it.skip = function (...args: mixed[]) {
 };
 
 it.v2 = function (...args: mixed[]) {
-  if (!isParcelV3) {
+  if (!isAtlaspackV3) {
     origIt.apply(this, args);
   }
 };
 
 it.v2.only = function (...args: mixed[]) {
-  if (!isParcelV3) {
+  if (!isAtlaspackV3) {
     origIt.only.apply(this, args);
   }
 };
 
 it.v3 = function (...args: mixed[]) {
-  if (isParcelV3) {
+  if (isAtlaspackV3) {
     origIt.apply(this, args);
   }
 };
 
 it.v3.only = function (...args: mixed[]) {
-  if (isParcelV3) {
+  if (isAtlaspackV3) {
     origIt.only.apply(this, args);
   }
 };

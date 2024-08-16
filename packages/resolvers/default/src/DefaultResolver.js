@@ -26,7 +26,7 @@ export default (new Resolver({
   resolve({dependency, specifier, config: resolver}) {
     if (WEBPACK_IMPORT_REGEX.test(dependency.specifier)) {
       throw new Error(
-        `The import path: ${dependency.specifier} is using webpack specific loader import syntax, which isn't supported by Parcel.`,
+        `The import path: ${dependency.specifier} is using webpack specific loader import syntax, which isn't supported by Atlaspack.`,
       );
     }
 

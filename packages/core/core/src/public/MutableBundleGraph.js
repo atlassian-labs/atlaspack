@@ -10,7 +10,7 @@ import type {
   Target,
 } from '@atlaspack/types';
 import type {
-  ParcelOptions,
+  AtlaspackOptions,
   BundleGroup as InternalBundleGroup,
   BundleNode,
 } from '../types';
@@ -36,10 +36,10 @@ export default class MutableBundleGraph
   implements IMutableBundleGraph
 {
   #graph /*: InternalBundleGraph */;
-  #options /*: ParcelOptions */;
+  #options /*: AtlaspackOptions */;
   #bundlePublicIds /*: Set<string> */ = new Set<string>();
 
-  constructor(graph: InternalBundleGraph, options: ParcelOptions) {
+  constructor(graph: InternalBundleGraph, options: AtlaspackOptions) {
     super(graph, Bundle.get.bind(Bundle), options);
     this.#graph = graph;
     this.#options = options;

@@ -5,7 +5,7 @@
 - Press `F5` to open a new window with your extension loaded.
 - Set breakpoints in your code inside `src/extension.ts` to debug your extension.
 - Find output from your extension in the debug console.
-- Run Parcel in a project with `--reporter @parcel/reporter-lsp`
+- Run Atlaspack in a project with `--reporter @parcel/reporter-lsp`
 
 ## Make changes
 

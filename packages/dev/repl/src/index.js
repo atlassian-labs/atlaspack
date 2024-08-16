@@ -15,7 +15,7 @@ import {
   FileBrowser,
   Notes,
   Options,
-  ParcelError,
+  AtlaspackError,
   PresetSelector,
   Preview,
   Tabs,
@@ -250,7 +250,7 @@ function Output({state, dispatch}: {|state: State, dispatch: Function|}) {
           </Tabs>
         )}
         {buildOutput?.type === 'failure' && (
-          <ParcelError output={buildOutput} />
+          <AtlaspackError output={buildOutput} />
         )}
       </div>
     </div>

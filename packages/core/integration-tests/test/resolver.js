@@ -111,7 +111,7 @@ describe.v2('resolver', function () {
       didThrow = true;
       assert.equal(
         e.diagnostics[1].message,
-        `The import path: node-loader!./index.js is using webpack specific loader import syntax, which isn't supported by Parcel.`,
+        `The import path: node-loader!./index.js is using webpack specific loader import syntax, which isn't supported by Atlaspack.`,
       );
     }
 

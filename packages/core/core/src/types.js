@@ -35,28 +35,28 @@ import type {Event} from '@parcel/watcher';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
 import type {BackendType} from '@parcel/watcher';
 
-export type ParcelPluginNode = {|
+export type AtlaspackPluginNode = {|
   packageName: PackageName,
   resolveFrom: ProjectPath,
   keyPath?: string,
 |};
 
-export type PureParcelConfigPipeline = $ReadOnlyArray<ParcelPluginNode>;
-export type ExtendableParcelConfigPipeline = $ReadOnlyArray<
-  ParcelPluginNode | '...',
+export type PureAtlaspackConfigPipeline = $ReadOnlyArray<AtlaspackPluginNode>;
+export type ExtendableAtlaspackConfigPipeline = $ReadOnlyArray<
+  AtlaspackPluginNode | '...',
 >;
 
-export type ProcessedParcelConfig = {|
-  resolvers?: PureParcelConfigPipeline,
-  transformers?: {[Glob]: ExtendableParcelConfigPipeline, ...},
-  bundler: ?ParcelPluginNode,
-  namers?: PureParcelConfigPipeline,
-  runtimes?: PureParcelConfigPipeline,
-  packagers?: {[Glob]: ParcelPluginNode, ...},
-  optimizers?: {[Glob]: ExtendableParcelConfigPipeline, ...},
-  compressors?: {[Glob]: ExtendableParcelConfigPipeline, ...},
-  reporters?: PureParcelConfigPipeline,
-  validators?: {[Glob]: ExtendableParcelConfigPipeline, ...},
+export type ProcessedAtlaspackConfig = {|
+  resolvers?: PureAtlaspackConfigPipeline,
+  transformers?: {[Glob]: ExtendableAtlaspackConfigPipeline, ...},
+  bundler: ?AtlaspackPluginNode,
+  namers?: PureAtlaspackConfigPipeline,
+  runtimes?: PureAtlaspackConfigPipeline,
+  packagers?: {[Glob]: AtlaspackPluginNode, ...},
+  optimizers?: {[Glob]: ExtendableAtlaspackConfigPipeline, ...},
+  compressors?: {[Glob]: ExtendableAtlaspackConfigPipeline, ...},
+  reporters?: PureAtlaspackConfigPipeline,
+  validators?: {[Glob]: ExtendableAtlaspackConfigPipeline, ...},
   filePath: ProjectPath,
   resolveFrom?: ProjectPath,
 |};
@@ -269,7 +269,7 @@ export type DevDepRequest = {|
 
 declare type GlobPattern = string;
 
-export type ParcelOptions = {|
+export type AtlaspackOptions = {|
   entries: Array<ProjectPath>,
   config?: DependencySpecifier,
   defaultConfig?: DependencySpecifier,

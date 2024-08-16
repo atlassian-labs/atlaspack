@@ -28,7 +28,7 @@
       "type": "object",
       "properties": {
         "context": {
-          "description": "The context property defines what type of environment to build for. This tells Parcel what environment-specific APIs are available, e.g. the DOM, Node filesystem APIs.",
+          "description": "The context property defines what type of environment to build for. This tells Atlaspack what environment-specific APIs are available, e.g. the DOM, Node filesystem APIs.",
           "type": "string",
           "enum": [
             "node",
@@ -144,7 +144,7 @@
   "properties": {
     "targets": {
       "type": "object",
-      "description": "Parcel can compile your source code in multiple different ways (targets) simultaneously.",
+      "description": "Atlaspack can compile your source code in multiple different ways (targets) simultaneously.",
       "properties": {
         "main": {
           "$ref": "#/$defs/commonTarget"

@@ -3,9 +3,9 @@
 import type {CmdOptions} from './utils';
 import type {FileSystem} from '@atlaspack/fs';
 
-import {ParcelLinkConfig} from './ParcelLinkConfig';
+import {AtlaspackLinkConfig} from './AtlaspackLinkConfig';
 import {
-  findParcelPackages,
+  findAtlaspackPackages,
   mapNamespacePackageAliases,
   cleanupBin,
   cleanupNodeModules,
@@ -32,7 +32,7 @@ export type LinkCommandOptions = {|
 const NOOP: (...data: mixed[]) => void = () => {};
 
 export async function link(
-  config: ParcelLinkConfig,
+  config: AtlaspackLinkConfig,
   {dryRun = false, log = NOOP}: LinkOptions,
 ): Promise<void> {
   config.validate();
@@ -43,10 +43,10 @@ export async function link(
 
   let opts: CmdOptions = {appRoot, packageRoot, dryRun, log, fs: config.fs};
 
-  // Step 1: Determine all Parcel packages to link
+  // Step 1: Determine all Atlaspack packages to link
   // --------------------------------------------------------------------------------
 
-  let atlaspackPackages = await findParcelPackages(config.fs, packageRoot);
+  let atlaspackPackages = await findAtlaspackPackages(config.fs, packageRoot);
 
   // Step 2: Delete all official packages (`@atlaspack/*`) from node_modules
   // --------------------------------------------------------------------------------
@@ -60,7 +60,7 @@ export async function link(
     );
   }
 
-  // Step 3: Link the Parcel packages into node_modules
+  // Step 3: Link the Atlaspack packages into node_modules
   // --------------------------------------------------------------------------------
 
   for (let [packageName, p] of atlaspackPackages) {
@@ -130,7 +130,7 @@ export async function link(
       );
     }
 
-    // Step 5.4: Link the Parcel packages into node_modules as `@namespace/parcel-*`
+    // Step 5.4: Link the Atlaspack packages into node_modules as `@namespace/parcel-*`
     // --------------------------------------------------------------------------------
 
     for (let [alias, atlaspackName] of namespacePackages) {
@@ -150,9 +150,9 @@ export function createLinkCommand(
 
   return new commander.Command('link')
     .arguments('[packageRoot]')
-    .description('Link a dev copy of Parcel into an app', {
+    .description('Link a dev copy of Atlaspack into an app', {
       packageRoot:
-        'Path to the Parcel package root\nDefaults to the package root containing this package',
+        'Path to the Atlaspack package root\nDefaults to the package root containing this package',
     })
     .option('-d, --dry-run', 'Do not write any changes')
     .option(
@@ -173,18 +173,18 @@ export function createLinkCommand(
       let atlaspackLinkConfig;
 
       try {
-        atlaspackLinkConfig = await ParcelLinkConfig.load(appRoot, {fs});
+        atlaspackLinkConfig = await AtlaspackLinkConfig.load(appRoot, {fs});
       } catch (e) {
         // boop!
       }
 
       if (atlaspackLinkConfig) {
         throw new Error(
-          'A Parcel link already exists! Try `atlaspack-link unlink` to re-link.',
+          'A Atlaspack link already exists! Try `atlaspack-link unlink` to re-link.',
         );
       }
 
-      atlaspackLinkConfig = new ParcelLinkConfig({
+      atlaspackLinkConfig = new AtlaspackLinkConfig({
         fs,
         appRoot,
         packageRoot: packageRoot ?? path.join(__dirname, '../../../'),

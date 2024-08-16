@@ -1,11 +1,11 @@
 // @flow strict-local
 
-import type {Diagnostic as ParcelDiagnostic} from '@atlaspack/diagnostic';
+import type {Diagnostic as AtlaspackDiagnostic} from '@atlaspack/diagnostic';
 import type {BundleGraph, FilePath, PackagedBundle} from '@atlaspack/types';
 import type {Program, Query} from 'ps-node';
 import type {Diagnostic, DocumentUri} from 'vscode-languageserver';
 import type {MessageConnection} from 'vscode-jsonrpc/node';
-import type {ParcelSeverity} from './utils';
+import type {AtlaspackSeverity} from './utils';
 
 import {
   DefaultMap,
@@ -241,8 +241,8 @@ function sendDiagnostics() {
 }
 
 function updateDiagnostics(
-  atlaspackDiagnostics: Array<ParcelDiagnostic>,
-  atlaspackSeverity: ParcelSeverity,
+  atlaspackDiagnostics: Array<AtlaspackDiagnostic>,
+  atlaspackSeverity: AtlaspackSeverity,
   projectRoot: FilePath,
 ): void {
   for (let diagnostic of atlaspackDiagnostics) {
@@ -258,7 +258,7 @@ function updateDiagnostics(
     }
 
     // We use the first highlight of the first codeFrame as the main Diagnostic,
-    // and we place everything else in the current Parcel diagnostic
+    // and we place everything else in the current Atlaspack diagnostic
     // in relatedInformation
     // https://code.visualstudio.com/api/references/vscode-api#DiagnosticRelatedInformation
     const firstFrameHighlight = codeFrames[0].codeHighlights[0];

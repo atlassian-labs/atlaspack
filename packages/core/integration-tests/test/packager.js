@@ -5,7 +5,7 @@ import {
   bundle as _bundle,
   describe,
   it,
-  mergeParcelOptions,
+  mergeAtlaspackOptions,
   overlayFS,
 } from '@atlaspack/test-utils';
 
@@ -13,7 +13,7 @@ const runBundler = (name, opts = {}) => {
   return _bundle(
     name,
     // $FlowFixMe
-    mergeParcelOptions({}, opts),
+    mergeAtlaspackOptions({}, opts),
   );
 };
 

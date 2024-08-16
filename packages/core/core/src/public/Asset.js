@@ -21,7 +21,7 @@ import type {
   AssetSymbols as IAssetSymbols,
   BundleBehavior,
 } from '@atlaspack/types';
-import type {Asset as AssetValue, ParcelOptions} from '../types';
+import type {Asset as AssetValue, AtlaspackOptions} from '../types';
 
 import nullthrows from 'nullthrows';
 import Environment from './Environment';
@@ -66,7 +66,7 @@ export function mutableAssetToUncommittedAsset(
 
 export function assetFromValue(
   value: AssetValue,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Asset {
   return new Asset(
     value.committed

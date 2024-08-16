@@ -1,4 +1,4 @@
-import Parcel, {createWorkerFarm} from '@atlaspack/core';
+import Atlaspack, {createWorkerFarm} from '@atlaspack/core';
 import {NodeFS, MemoryFS, OverlayFS} from '@atlaspack/fs';
 import path from 'path';
 
@@ -21,7 +21,7 @@ module.exports = async function ({
     }
   }
 
-  let b = new Parcel({
+  let b = new Atlaspack({
     entries,
     shouldDisableCache: true,
     defaultConfig: `${__dirname}/config.json`,

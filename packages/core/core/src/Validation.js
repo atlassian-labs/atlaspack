@@ -1,7 +1,7 @@
 // @flow strict-local
 
 import type {WorkerApi} from '@atlaspack/workers';
-import type {AssetGroup, ParcelOptions, ReportFn} from './types';
+import type {AssetGroup, AtlaspackOptions, ReportFn} from './types';
 import type {Validator, ValidateResult} from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 
@@ -9,7 +9,7 @@ import path from 'path';
 import {resolveConfig} from '@atlaspack/utils';
 import logger, {PluginLogger} from '@atlaspack/logger';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
-import ParcelConfig from './ParcelConfig';
+import AtlaspackConfig from './AtlaspackConfig';
 import UncommittedAsset from './UncommittedAsset';
 import {createAsset} from './assetUtils';
 import {Asset} from './public/Asset';
@@ -20,13 +20,13 @@ import {PluginTracer} from '@atlaspack/profiler';
 import {hashString} from '@atlaspack/rust';
 
 export type ValidationOpts = {|
-  config: ParcelConfig,
+  config: AtlaspackConfig,
   /**
    * If true, this Validation instance will run all validators that implement the single-threaded "validateAll" method.
    * If falsy, it will run validators that implement the one-asset-at-a-time "validate" method.
    */
   dedicatedThread?: boolean,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   requests: AssetGroup[],
   report: ReportFn,
   workerApi?: WorkerApi,
@@ -36,9 +36,9 @@ export default class Validation {
   allAssets: {[validatorName: string]: UncommittedAsset[], ...} = {};
   allValidators: {[validatorName: string]: Validator, ...} = {};
   dedicatedThread: boolean;
-  impactfulOptions: $Shape<ParcelOptions>;
-  options: ParcelOptions;
-  atlaspackConfig: ParcelConfig;
+  impactfulOptions: $Shape<AtlaspackOptions>;
+  options: AtlaspackOptions;
+  atlaspackConfig: AtlaspackConfig;
   report: ReportFn;
   requests: AssetGroup[];
   workerApi: ?WorkerApi;

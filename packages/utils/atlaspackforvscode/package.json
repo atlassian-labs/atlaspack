@@ -4,7 +4,7 @@
   "license": "MIT",
   "publisher": "atlaspack",
   "icon": "logo.png",
-  "displayName": "Parcel for VS Code",
+  "displayName": "Atlaspack for VS Code",
   "atlaspack-lsp.trace.server": "verbose",
   "description": "",
   "private": true,

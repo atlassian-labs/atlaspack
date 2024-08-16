@@ -288,11 +288,11 @@ export class NodePackageManager implements PackageManager {
               diagnostic: {
                 message: escapeMarkdown(e.message),
                 hints: [
-                  'Autoinstall is disabled, please install this package manually and restart Parcel.',
+                  'Autoinstall is disabled, please install this package manually and restart Atlaspack.',
                 ],
               },
             });
-            // $FlowFixMe - needed for loadParcelPlugin
+            // $FlowFixMe - needed for loadAtlaspackPlugin
             err.code = 'MODULE_NOT_FOUND';
             throw err;
           } else {
@@ -521,7 +521,7 @@ export class NodePackageManager implements PackageManager {
             message: md`${path.relative(
               this.projectRoot,
               resolved.resolved,
-            )} contains non-statically analyzable dependencies in its module graph. This causes Parcel to invalidate the cache on startup.`,
+            )} contains non-statically analyzable dependencies in its module graph. This causes Atlaspack to invalidate the cache on startup.`,
             origin: '@atlaspack/package-manager',
           });
         }

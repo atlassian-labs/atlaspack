@@ -1521,7 +1521,7 @@
     {
       "fileName": "atlaspack-register",
       "link": "https://github.com/parcel-bundler/parcel/tree/v2/packages/core/integration-tests/test/parcel-register.js",
-      "title": "enables Parcel's resolver in node",
+      "title": "enables Atlaspack's resolver in node",
       "status": "pending"
     },
     {

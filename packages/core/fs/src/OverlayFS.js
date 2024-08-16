@@ -92,7 +92,7 @@ export class OverlayFS implements FileSystem {
       ) {
         return true;
       } else {
-        // HACK: Parcel fs does not provide `lstatSync`,
+        // HACK: Atlaspack fs does not provide `lstatSync`,
         // so we use `readdirSync` to check if the path is a symlink.
         let parent = path.resolve(filePath, '..');
         if (parent === filePath) {

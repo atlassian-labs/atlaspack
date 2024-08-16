@@ -16,7 +16,7 @@ Add this optimizer to run _first_ (before minification), for JS bundles.
 
 ## Background and motivation
 
-When Parcel produces modules in bundles, where a dependency wasn't brought in by scope hoisting, it includes calls to require those dependencies at the top of the module function. For example, prior to minification, a module might look something like this:
+When Atlaspack produces modules in bundles, where a dependency wasn't brought in by scope hoisting, it includes calls to require those dependencies at the top of the module function. For example, prior to minification, a module might look something like this:
 
 ```js
 atlaspackRegister('abc123', function (require, module, exports) {
@@ -62,7 +62,7 @@ atlaspackRegister('abc123', function (require, module, exports) {
 
 The minifier will remove the uninitialised variables, and it will also simplify the `(0, ...)` sequence expressions where possible.
 
-It is important to note, that Parcel will only execute the factory function once. Subseqent calls to `require` will return the module as returned from the original factory. See the `require` code in `packages/packagers/js/src/helpers.js` for how this works.
+It is important to note, that Atlaspack will only execute the factory function once. Subseqent calls to `require` will return the module as returned from the original factory. See the `require` code in `packages/packagers/js/src/helpers.js` for how this works.
 
 ## Caveats
 
@@ -72,4 +72,4 @@ So the main caveat here is that we're now turning a simple variable access into 
 
 ### Side-effects
 
-A module may have side-effects when it is initialised (e.g. setting an event handler on the `window` for example). For assets that Parcel has identified as having side-effects (whether through `package.json` `sideEffects` field, or other heuristics), these modules will _not_ have their `require` calls deferred.
+A module may have side-effects when it is initialised (e.g. setting an event handler on the `window` for example). For assets that Atlaspack has identified as having side-effects (whether through `package.json` `sideEffects` field, or other heuristics), these modules will _not_ have their `require` calls deferred.

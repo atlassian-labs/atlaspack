@@ -4,10 +4,10 @@ import type {ODiagnosticSeverity} from 'vscode-languageserver';
 
 import path from 'path';
 
-export type ParcelSeverity = DiagnosticLogEvent['level'];
+export type AtlaspackSeverity = DiagnosticLogEvent['level'];
 
 export function atlaspackSeverityToLspSeverity(
-  atlaspackSeverity: ParcelSeverity,
+  atlaspackSeverity: AtlaspackSeverity,
 ): ODiagnosticSeverity {
   switch (atlaspackSeverity) {
     case 'error':

@@ -66,7 +66,7 @@ export default (new Transformer({
       if (compilerDiagnostics.type === 'compile-errors') {
         throw new ThrowableDiagnostic({
           diagnostic: compilerDiagnostics.errors.flatMap(
-            elmCompileErrorToParcelDiagnostics,
+            elmCompileErrorToAtlaspackDiagnostics,
           ),
         });
       }
@@ -162,7 +162,7 @@ function formatMessagePiece(piece) {
   return md`${piece}`;
 }
 
-function elmCompileErrorToParcelDiagnostics(error) {
+function elmCompileErrorToAtlaspackDiagnostics(error) {
   const relativePath = path.relative(process.cwd(), error.path);
   return error.problems.map(problem => formatElmError(problem, relativePath));
 }

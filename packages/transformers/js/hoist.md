@@ -6,7 +6,7 @@ This document describes how the SWC-based scope hoisting implementation works, i
 
 Scope hoisting is the process of combining multiple JavaScript modules together into a single scope. This enables dead code elimination (aka tree shaking) to be more effective, and improves runtime performance by making cross-module references static rather than dynamic property lookups.
 
-Parcel has historically implemented scope hoisting in JavaScript on top of Babel ASTs. It operated in 3 phases:
+Atlaspack has historically implemented scope hoisting in JavaScript on top of Babel ASTs. It operated in 3 phases:
 
 1. Hoist - on an individual module, rename all top-level variables to be unique, and perform static analysis on imports and exports to produce symbol data. This prepares the module to be concatenated safely with other modules.
 2. Concat - concatenate all modules together into a single scope, following the order of `$parcel$require` calls inserted by the hoist phase. This also handled wrapping modules that were required from a non-top-level statement to preserve side effect ordering. Operates on module ASTs.
@@ -41,7 +41,7 @@ In the second pass, we transform:
 5. References to imports/requires are replaced with a renamed variable, and added to the symbols. If we previously determined in the first phase that the import was accessed non-statically, a member expression is used for all references to that dependency.
 6. All top-level variables are renamed to include the module id so that they can be concatenated together safely. This is skipped if the module needs to be wrapped, e.g. used `eval`.
 
-The output from Rust is an object which is used by the JSTransformer Parcel plugin to add symbols to dependencies and the asset itself, along with some metadata that is used by the packager.
+The output from Rust is an object which is used by the JSTransformer Atlaspack plugin to add symbols to dependencies and the asset itself, along with some metadata that is used by the packager.
 
 ## Packaging
 
@@ -49,7 +49,7 @@ The packager operates purely on strings now rather than ASTs. This makes it much
 
 The packager visits dependencies recursively, starting from the bundle entries, and following the `import` statements left by the hoist transform. It resolves the import specifiers to dependencies, follows the dependency to a resolved asset, and then recursively processes that asset. The `import` statement is replaced by the processed code of the dependency.
 
-For each asset, we look at the symbols used by each dependency and resolve them to their final location, following re-exports. This is done by Parcel core in the bundle graph. We perform a string replacement for each temporary import name to the final resolved symbol. If the resolved asset is wrapped, we use `parcelRequire` to load it, and if it has non-static exports, we use a member expression on the namespace object.
+For each asset, we look at the symbols used by each dependency and resolve them to their final location, following re-exports. This is done by Atlaspack core in the bundle graph. We perform a string replacement for each temporary import name to the final resolved symbol. If the resolved asset is wrapped, we use `parcelRequire` to load it, and if it has non-static exports, we use a member expression on the namespace object.
 
 The packager also synthesizes the exports object when needed. If the namespace is used, the asset has non-static exports, or it is wrapped, a namespace is declared, and each used symbol is added to the namespace using the `$parcel$export` helper. This is different from the previous implemetation, which added the exports object in the link phase, and then _removed_ it if unnecessary in the link phase. Now we do the opposite, which makes it possible to operate on strings rather than ASTs.
 

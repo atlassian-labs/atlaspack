@@ -32,7 +32,7 @@ export class Npm implements PackageInstaller {
       modules.map(npmSpecifierFromModuleRequest),
     );
 
-    // When Parcel is run by npm (e.g. via package.json scripts), several environment variables are
+    // When Atlaspack is run by npm (e.g. via package.json scripts), several environment variables are
     // added. When atlaspack in turn calls npm again, these can cause npm to behave stragely, so we
     // filter them out when installing packages.
     let env = {};

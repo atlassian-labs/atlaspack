@@ -9,9 +9,9 @@ import type {
   Bundle as InternalBundle,
   Config,
   DevDepRequest,
-  ParcelOptions,
+  AtlaspackOptions,
 } from './types';
-import type ParcelConfig from './ParcelConfig';
+import type AtlaspackConfig from './AtlaspackConfig';
 import type PluginOptions from './public/PluginOptions';
 import type {RequestResult, RunAPI} from './RequestTracker';
 
@@ -72,8 +72,8 @@ export default async function applyRuntimes<TResult: RequestResult>({
   configs,
 }: {|
   bundleGraph: InternalBundleGraph,
-  config: ParcelConfig,
-  options: ParcelOptions,
+  config: AtlaspackConfig,
+  options: AtlaspackOptions,
   optionsRef: SharedReference,
   pluginOptions: PluginOptions,
   api: RunAPI<TResult>,

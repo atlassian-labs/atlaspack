@@ -5,11 +5,11 @@ import type {ContentKey} from '@atlaspack/graph';
 import type {Async, FilePath, Compressor} from '@atlaspack/types';
 
 import type {RunAPI, StaticRunOpts} from '../RequestTracker';
-import type {Bundle, PackagedBundleInfo, ParcelOptions} from '../types';
+import type {Bundle, PackagedBundleInfo, AtlaspackOptions} from '../types';
 import type BundleGraph from '../BundleGraph';
 import type {BundleInfo} from '../PackagerRunner';
-import type {ConfigAndCachePath} from './ParcelConfigRequest';
-import type {LoadedPlugin} from '../ParcelConfig';
+import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
+import type {LoadedPlugin} from '../AtlaspackConfig';
 import type {ProjectPath} from '../projectPath';
 
 import {HASH_REF_HASH_LEN, HASH_REF_PREFIX} from '../constants';
@@ -25,9 +25,9 @@ import {
   joinProjectPath,
   toProjectPathUnsafe,
 } from '../projectPath';
-import createParcelConfigRequest, {
-  getCachedParcelConfig,
-} from './ParcelConfigRequest';
+import createAtlaspackConfigRequest, {
+  getCachedAtlaspackConfig,
+} from './AtlaspackConfigRequest';
 import PluginOptions from '../public/PluginOptions';
 import {PluginLogger} from '@atlaspack/logger';
 import {
@@ -36,7 +36,7 @@ import {
   createDevDependency,
   runDevDepRequest,
 } from './DevDepRequest';
-import ParcelConfig from '../ParcelConfig';
+import AtlaspackConfig from '../AtlaspackConfig';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {PluginTracer, tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
@@ -145,9 +145,11 @@ async function run({input, options, api}) {
   );
 
   let configResult = nullthrows(
-    await api.runRequest<null, ConfigAndCachePath>(createParcelConfigRequest()),
+    await api.runRequest<null, ConfigAndCachePath>(
+      createAtlaspackConfigRequest(),
+    ),
   );
-  let config = getCachedParcelConfig(configResult, options);
+  let config = getCachedAtlaspackConfig(configResult, options);
 
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);
   invalidateDevDeps(invalidDevDeps, options, config);
@@ -202,8 +204,8 @@ async function writeFiles(
   inputStream: stream$Readable,
   info: BundleInfo,
   hashRefToNameHash: Map<string, string>,
-  options: ParcelOptions,
-  config: ParcelConfig,
+  options: AtlaspackOptions,
+  config: AtlaspackConfig,
   outputFS: FileSystem,
   filePath: ProjectPath,
   writeOptions: ?FileOptions,
@@ -241,7 +243,7 @@ async function writeFiles(
 async function runCompressor(
   compressor: LoadedPlugin<Compressor>,
   stream: stream$Readable,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   outputFS: FileSystem,
   filePath: FilePath,
   writeOptions: ?FileOptions,

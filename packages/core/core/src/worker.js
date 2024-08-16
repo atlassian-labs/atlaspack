@@ -2,8 +2,8 @@
 
 import type {
   Bundle,
-  ParcelOptions,
-  ProcessedParcelConfig,
+  AtlaspackOptions,
+  ProcessedAtlaspackConfig,
   RequestInvalidation,
 } from './types';
 import type {SharedReference, WorkerApi} from '@atlaspack/workers';
@@ -20,7 +20,7 @@ import Transformation, {
 import {reportWorker, report} from './ReporterRunner';
 import PackagerRunner, {type RunPackagerRunnerResult} from './PackagerRunner';
 import Validation, {type ValidationOpts} from './Validation';
-import ParcelConfig from './ParcelConfig';
+import AtlaspackConfig from './AtlaspackConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {clearBuildCaches} from './buildCache';
 import {init as initSourcemaps} from '@parcel/source-map';
@@ -46,12 +46,12 @@ registerCoreWithSerializer();
 // Remove the workerApi type from the TransformationOpts and ValidationOpts types:
 // https://github.com/facebook/flow/issues/2835
 type WorkerTransformationOpts = {|
-  ...$Diff<TransformationOpts, {|workerApi: mixed, options: ParcelOptions|}>,
+  ...$Diff<TransformationOpts, {|workerApi: mixed, options: AtlaspackOptions|}>,
   optionsRef: SharedReference,
   configCachePath: string,
 |};
 type WorkerValidationOpts = {|
-  ...$Diff<ValidationOpts, {|workerApi: mixed, options: ParcelOptions|}>,
+  ...$Diff<ValidationOpts, {|workerApi: mixed, options: AtlaspackOptions|}>,
   optionsRef: SharedReference,
   configCachePath: string,
 |};
@@ -64,7 +64,7 @@ function loadOptions(ref, workerApi) {
     ((workerApi.getSharedReference(
       ref,
       // $FlowFixMe
-    ): any): ParcelOptions),
+    ): any): AtlaspackOptions),
   );
 }
 
@@ -75,9 +75,9 @@ async function loadConfig(cachePath, options) {
   }
 
   let processedConfig = nullthrows(
-    await options.cache.get<ProcessedParcelConfig>(cachePath),
+    await options.cache.get<ProcessedAtlaspackConfig>(cachePath),
   );
-  config = new ParcelConfig(processedConfig, options);
+  config = new AtlaspackConfig(processedConfig, options);
   atlaspackConfigCache.set(cachePath, config);
 
   setFeatureFlags(options.featureFlags);

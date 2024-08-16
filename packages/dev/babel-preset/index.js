@@ -5,7 +5,7 @@ module.exports = api => {
       presets: [require('@babel/preset-flow')],
       plugins: [
         // Inline the value of ATLASPACK_BUILD_ENV during self builds.
-        // Parcel does not do this itself for node targets...
+        // Atlaspack does not do this itself for node targets...
         [
           'babel-plugin-transform-inline-environment-variables',
           {include: ['ATLASPACK_BUILD_ENV']},

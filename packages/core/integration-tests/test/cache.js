@@ -1,5 +1,8 @@
 // @flow
-import type {InitialParcelOptions, BuildSuccessEvent} from '@atlaspack/types';
+import type {
+  InitialAtlaspackOptions,
+  BuildSuccessEvent,
+} from '@atlaspack/types';
 import assert from 'assert';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
@@ -16,11 +19,11 @@ import {
   inputFS,
   ncp,
   workerFarm,
-  mergeParcelOptions,
+  mergeAtlaspackOptions,
   sleep,
   getNextBuild,
   distDir,
-  getParcelOptions,
+  getAtlaspackOptions,
   assertNoFilePathInCache,
   findAsset,
   bundle,
@@ -47,7 +50,7 @@ function getEntries(entries = 'src/index.js') {
 }
 
 function getOptions(opts) {
-  return mergeParcelOptions(
+  return mergeAtlaspackOptions(
     {
       inputFS: overlayFS,
       shouldDisableCache: false,
@@ -61,10 +64,10 @@ function runBundle(entries = 'src/index.js', opts) {
 }
 
 type UpdateFn = BuildSuccessEvent =>
-  | ?InitialParcelOptions
-  | Promise<?InitialParcelOptions>;
+  | ?InitialAtlaspackOptions
+  | Promise<?InitialAtlaspackOptions>;
 type TestConfig = {|
-  ...InitialParcelOptions,
+  ...InitialAtlaspackOptions,
   entries?: Array<string>,
   setup?: () => void | Promise<void>,
   update: UpdateFn,
@@ -78,7 +81,7 @@ async function testCache(update: UpdateFn | TestConfig, integration) {
   );
 
   let entries;
-  let options: ?InitialParcelOptions;
+  let options: ?InitialAtlaspackOptions;
   if (typeof update === 'object') {
     let setup;
     ({entries, setup, update, ...options} = update);
@@ -89,7 +92,7 @@ async function testCache(update: UpdateFn | TestConfig, integration) {
   }
 
   let resolvedOptions = await resolveOptions(
-    getParcelOptions(getEntries(entries), getOptions(options)),
+    getAtlaspackOptions(getEntries(entries), getOptions(options)),
   );
 
   let b = await runBundle(entries, options);
@@ -102,13 +105,13 @@ async function testCache(update: UpdateFn | TestConfig, integration) {
 
   // update
   let newOptions = await update(b);
-  options = mergeParcelOptions(options || {}, newOptions);
+  options = mergeAtlaspackOptions(options || {}, newOptions);
 
   // Run cached build
   b = await runBundle(entries, options);
 
   resolvedOptions = await resolveOptions(
-    getParcelOptions(getEntries(entries), getOptions(options)),
+    getAtlaspackOptions(getEntries(entries), getOptions(options)),
   );
   await assertNoFilePathInCache(
     resolvedOptions.outputFS,
@@ -4623,7 +4626,7 @@ describe.v2('cache', function () {
                   {
                     message: md`${path.normalize(
                       'node_modules/parcel-transformer-esm/index.js',
-                    )} contains non-statically analyzable dependencies in its module graph. This causes Parcel to invalidate the cache on startup.`,
+                    )} contains non-statically analyzable dependencies in its module graph. This causes Atlaspack to invalidate the cache on startup.`,
                     origin: '@atlaspack/package-manager',
                   },
                 ]),
@@ -6400,7 +6403,7 @@ describe.v2('cache', function () {
       await assert.rejects(() => bundle(entries, options));
 
       let resolvedOptions = await resolveOptions(
-        getParcelOptions(entries, options),
+        getAtlaspackOptions(entries, options),
       );
 
       let bundleGraphCacheKey =

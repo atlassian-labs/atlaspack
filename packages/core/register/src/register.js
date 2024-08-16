@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import type {IDisposable, InitialParcelOptions} from '@atlaspack/types';
+import type {IDisposable, InitialAtlaspackOptions} from '@atlaspack/types';
 
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {NodeFS} from '@atlaspack/fs';
@@ -10,7 +10,7 @@ import defaultConfigContents from '@atlaspack/config-default';
 import Module from 'module';
 import path from 'path';
 import {addHook} from 'pirates';
-import Parcel, {INTERNAL_RESOLVE, INTERNAL_TRANSFORM} from '@atlaspack/core';
+import Atlaspack, {INTERNAL_RESOLVE, INTERNAL_TRANSFORM} from '@atlaspack/core';
 
 import syncPromise from './syncPromise';
 
@@ -23,8 +23,8 @@ let defaultConfig = {
     .resolved,
 };
 
-function register(inputOpts?: InitialParcelOptions): IDisposable {
-  let opts: InitialParcelOptions = {
+function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
+  let opts: InitialAtlaspackOptions = {
     ...defaultConfig,
     ...(inputOpts || {}),
   };
@@ -34,7 +34,7 @@ function register(inputOpts?: InitialParcelOptions): IDisposable {
     lastDisposable.dispose();
   }
 
-  let atlaspack = new Parcel({
+  let atlaspack = new Atlaspack({
     logLevel: 'error',
     ...opts,
   });
@@ -50,7 +50,7 @@ function register(inputOpts?: InitialParcelOptions): IDisposable {
 
   let isProcessing = false;
 
-  // As Parcel is pretty much fully asynchronous, create an async function and wrap it in a syncPromise later...
+  // As Atlaspack is pretty much fully asynchronous, create an async function and wrap it in a syncPromise later...
   async function fileProcessor(code, filePath) {
     if (isProcessing) {
       return code;

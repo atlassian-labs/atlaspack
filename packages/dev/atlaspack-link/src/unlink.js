@@ -3,12 +3,12 @@
 import type {CmdOptions} from './utils';
 import type {FileSystem} from '@atlaspack/fs';
 
-import {ParcelLinkConfig} from './ParcelLinkConfig';
+import {AtlaspackLinkConfig} from './AtlaspackLinkConfig';
 import {
   cleanupBin,
   cleanupNodeModules,
   execSync,
-  findParcelPackages,
+  findAtlaspackPackages,
   fsWrite,
   mapNamespacePackageAliases,
 } from './utils';
@@ -32,7 +32,7 @@ export type UnlinkCommandOptions = {|
 const NOOP: (...data: mixed[]) => void = () => {};
 
 export async function unlink(
-  config: ParcelLinkConfig,
+  config: AtlaspackLinkConfig,
   {dryRun = false, forceInstall = false, log = NOOP}: UnlinkOptions,
 ) {
   config.validate();
@@ -43,10 +43,10 @@ export async function unlink(
 
   let opts: CmdOptions = {appRoot, packageRoot, dryRun, log, fs: config.fs};
 
-  // Step 1: Determine all Parcel packages that could be linked
+  // Step 1: Determine all Atlaspack packages that could be linked
   // --------------------------------------------------------------------------------
 
-  let atlaspackPackages = await findParcelPackages(config.fs, packageRoot);
+  let atlaspackPackages = await findAtlaspackPackages(config.fs, packageRoot);
 
   // Step 2: Delete all official packages (`@atlaspack/*`) from node_modules
   // This is very brute-force, but should ensure that we catch all linked packages.
@@ -138,7 +138,7 @@ export function createUnlinkCommand(
   let fs = opts?.fs ?? new NodeFS();
 
   return new commander.Command('unlink')
-    .description('Unlink a dev copy of Parcel from an app')
+    .description('Unlink a dev copy of Atlaspack from an app')
     .option('-d, --dry-run', 'Do not write any changes')
     .option('-f, --force-install', 'Force a reinstall after unlinking')
     .action(async options => {
@@ -147,7 +147,7 @@ export function createUnlinkCommand(
 
       let atlaspackLinkConfig;
       try {
-        atlaspackLinkConfig = await ParcelLinkConfig.load(appRoot, {fs});
+        atlaspackLinkConfig = await AtlaspackLinkConfig.load(appRoot, {fs});
       } catch (e) {
         // boop!
       }
@@ -161,7 +161,7 @@ export function createUnlinkCommand(
 
         if (!options.dryRun) await atlaspackLinkConfig.delete();
       } else {
-        throw new Error('A Parcel link could not be found!');
+        throw new Error('A Atlaspack link could not be found!');
       }
 
       log('🎉 Unlinking successful');

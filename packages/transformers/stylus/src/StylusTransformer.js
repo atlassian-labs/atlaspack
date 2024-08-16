@@ -177,7 +177,7 @@ async function getDependencies(
           importedPath += '.styl';
         }
 
-        // Patch the native FS so we use Parcel's FS, and track files that are
+        // Patch the native FS so we use Atlaspack's FS, and track files that are
         // checked so we invalidate the cache when they are created.
         let restore = patchNativeFS(asset.fs, nativeGlob);
 
@@ -277,7 +277,7 @@ async function createEvaluator(
         }
       }
 
-      // Patch the native FS so stylus uses Parcel's FS to read the file.
+      // Patch the native FS so stylus uses Atlaspack's FS to read the file.
       let restore = patchNativeFS(asset.fs, nativeGlob);
 
       // Done. Let stylus do its thing.
@@ -314,7 +314,7 @@ function patchNativeFS(fs, nativeGlob) {
     }
   };
 
-  // Patch the `glob` module as well so we use the Parcel FS and track invalidations.
+  // Patch the `glob` module as well so we use the Atlaspack FS and track invalidations.
   let glob = nativeGlob.sync;
   nativeGlob.sync = p => {
     let res = globSync(p, fs);

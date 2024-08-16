@@ -1,5 +1,5 @@
 import type {
-  InitialParcelOptions,
+  InitialAtlaspackOptions,
   BuildEvent,
   BuildSuccessEvent,
   AsyncSubscription,
@@ -7,8 +7,8 @@ import type {
 import type {FarmOptions} from '@parcel/workers';
 import type WorkerFarm from '@parcel/workers';
 
-export class Parcel {
-  constructor(options: InitialParcelOptions);
+export class Atlaspack {
+  constructor(options: InitialAtlaspackOptions);
   run(): Promise<BuildSuccessEvent>;
   watch(
     cb?: (err: Error | null | undefined, buildEvent?: BuildEvent) => unknown,
@@ -19,4 +19,4 @@ export declare function createWorkerFarm(
   options?: Partial<FarmOptions>,
 ): WorkerFarm;
 
-export default Parcel;
+export default Atlaspack;

@@ -6,18 +6,18 @@ import type {
   HMRAsset,
   HMRMessage,
 } from '@atlaspack/reporter-dev-server/src/HMRServer.js';
-interface ParcelRequire {
+interface AtlaspackRequire {
   (string): mixed;
-  cache: {|[string]: ParcelModule|};
+  cache: {|[string]: AtlaspackModule|};
   hotData: {|[string]: mixed|};
   Module: any;
-  parent: ?ParcelRequire;
-  isParcelRequire: true;
+  parent: ?AtlaspackRequire;
+  isAtlaspackRequire: true;
   modules: {|[string]: [Function, {|[string]: string|}]|};
   HMR_BUNDLE_ID: string;
-  root: ParcelRequire;
+  root: AtlaspackRequire;
 }
-interface ParcelModule {
+interface AtlaspackModule {
   hot: {|
     data: mixed,
     accept(cb: (Function) => void): void,
@@ -35,7 +35,7 @@ interface ExtensionContext {
     getManifest(): {manifest_version: number, ...};
   |};
 }
-declare var module: {bundle: ParcelRequire, ...};
+declare var module: {bundle: AtlaspackRequire, ...};
 declare var HMR_HOST: string;
 declare var HMR_PORT: string;
 declare var HMR_ENV_HASH: string;
@@ -72,8 +72,8 @@ module.bundle.Module = Module;
 module.bundle.hotData = {};
 
 var checkedAssets /*: {|[string]: boolean|} */,
-  assetsToDispose /*: Array<[ParcelRequire, string]> */,
-  assetsToAccept /*: Array<[ParcelRequire, string]> */;
+  assetsToDispose /*: Array<[AtlaspackRequire, string]> */,
+  assetsToAccept /*: Array<[AtlaspackRequire, string]> */;
 
 function getHostname() {
   return (
@@ -88,7 +88,10 @@ function getPort() {
 
 // eslint-disable-next-line no-redeclare
 var parent = module.bundle.parent;
-if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
+if (
+  (!parent || !parent.isAtlaspackRequire) &&
+  typeof WebSocket !== 'undefined'
+) {
   var hostname = getHostname();
   var port = getPort();
   var protocol =
@@ -296,7 +299,7 @@ function fullReload() {
   }
 }
 
-function getParents(bundle, id) /*: Array<[ParcelRequire, string]> */ {
+function getParents(bundle, id) /*: Array<[AtlaspackRequire, string]> */ {
   var modules = bundle.modules;
   if (!modules) {
     return [];
@@ -454,7 +457,7 @@ async function hmrApplyUpdates(assets) {
   }
 }
 
-function hmrApply(bundle /*: ParcelRequire */, asset /*:  HMRAsset */) {
+function hmrApply(bundle /*: AtlaspackRequire */, asset /*:  HMRAsset */) {
   var modules = bundle.modules;
   if (!modules) {
     return;
@@ -526,7 +529,7 @@ function hmrDelete(bundle, id) {
 }
 
 function hmrAcceptCheck(
-  bundle /*: ParcelRequire */,
+  bundle /*: AtlaspackRequire */,
   id /*: string */,
   depsByBundle /*: ?{ [string]: { [string]: string } }*/,
 ) {
@@ -559,7 +562,7 @@ function hmrAcceptCheck(
 }
 
 function hmrAcceptCheckOne(
-  bundle /*: ParcelRequire */,
+  bundle /*: AtlaspackRequire */,
   id /*: string */,
   depsByBundle /*: ?{ [string]: { [string]: string } }*/,
 ) {
@@ -593,7 +596,7 @@ function hmrAcceptCheckOne(
   }
 }
 
-function hmrDispose(bundle /*: ParcelRequire */, id /*: string */) {
+function hmrDispose(bundle /*: AtlaspackRequire */, id /*: string */) {
   var cached = bundle.cache[id];
   bundle.hotData[id] = {};
   if (cached && cached.hot) {
@@ -609,7 +612,7 @@ function hmrDispose(bundle /*: ParcelRequire */, id /*: string */) {
   delete bundle.cache[id];
 }
 
-function hmrAccept(bundle /*: ParcelRequire */, id /*: string */) {
+function hmrAccept(bundle /*: AtlaspackRequire */, id /*: string */) {
   // Execute the module.
   bundle(id);
 

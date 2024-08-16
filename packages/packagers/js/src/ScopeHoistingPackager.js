@@ -562,7 +562,7 @@ export class ScopeHoistingPackager {
               // after the dependency is declared. This handles the case where the resulting asset
               // is wrapped, but the dependency in this asset is not marked as wrapped. This means
               // that it was imported/required at the top-level, so its side effects should run immediately.
-              let [res, lines] = this.getHoistedParcelRequires(
+              let [res, lines] = this.getHoistedAtlaspackRequires(
                 asset,
                 dep,
                 resolved,
@@ -1069,7 +1069,7 @@ ${code}
     }
   }
 
-  getHoistedParcelRequires(
+  getHoistedAtlaspackRequires(
     parentAsset: Asset,
     dep: Dependency,
     resolved: Asset,

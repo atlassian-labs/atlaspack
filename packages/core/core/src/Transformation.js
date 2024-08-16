@@ -15,11 +15,11 @@ import type {
   TransformationRequest,
   Config,
   DevDepRequest,
-  ParcelOptions,
+  AtlaspackOptions,
   InternalDevDepOptions,
   Invalidations,
 } from './types';
-import type {LoadedPlugin} from './ParcelConfig';
+import type {LoadedPlugin} from './AtlaspackConfig';
 
 import path from 'path';
 import {Readable} from 'stream';
@@ -36,7 +36,7 @@ import {SOURCEMAP_EXTENSIONS} from '@atlaspack/utils';
 import {hashString} from '@atlaspack/rust';
 
 import {createDependency} from './Dependency';
-import ParcelConfig from './ParcelConfig';
+import AtlaspackConfig from './AtlaspackConfig';
 // TODO: eventually call path request as sub requests
 import {ResolverRunner} from './requests/PathRequest';
 import {
@@ -78,8 +78,8 @@ type PostProcessFunc = (
 ) => Promise<Array<UncommittedAsset> | null>;
 
 export type TransformationOpts = {|
-  options: ParcelOptions,
-  config: ParcelConfig,
+  options: AtlaspackOptions,
+  config: AtlaspackConfig,
   request: TransformationRequest,
   workerApi: WorkerApi,
 |};
@@ -97,10 +97,10 @@ export default class Transformation {
   configs: Map<string, Config>;
   devDepRequests: Map<string, DevDepRequest>;
   pluginDevDeps: Array<InternalDevDepOptions>;
-  options: ParcelOptions;
+  options: AtlaspackOptions;
   pluginOptions: PluginOptions;
   workerApi: WorkerApi;
-  atlaspackConfig: ParcelConfig;
+  atlaspackConfig: AtlaspackConfig;
   invalidations: Invalidations;
   resolverRunner: ResolverRunner;
 
@@ -567,7 +567,7 @@ export default class Transformation {
     transformerName: string,
     preloadedConfig: ?Config,
     configKeyPath?: string,
-    atlaspackConfig: ParcelConfig,
+    atlaspackConfig: AtlaspackConfig,
   ): Promise<$ReadOnlyArray<TransformerResult | UncommittedAsset>> {
     const logger = new PluginLogger({origin: transformerName});
     const tracer = new PluginTracer({
@@ -722,7 +722,7 @@ export default class Transformation {
 type Pipeline = {|
   id: string,
   transformers: Array<TransformerWithNameAndConfig>,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   pluginOptions: PluginOptions,
   workerApi: WorkerApi,
   postProcess?: PostProcessFunc,

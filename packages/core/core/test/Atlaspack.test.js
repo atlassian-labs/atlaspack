@@ -1,14 +1,14 @@
 // @flow strict-local
 
-import type {InitialParcelOptions} from '@atlaspack/types';
+import type {InitialAtlaspackOptions} from '@atlaspack/types';
 import WorkerFarm from '@atlaspack/workers';
 // flowlint-next-line untyped-import:off
 import sinon from 'sinon';
 import assert from 'assert';
 import path from 'path';
-import Parcel, {createWorkerFarm} from '../src/Parcel';
+import Atlaspack, {createWorkerFarm} from '../src/Atlaspack';
 
-describe('Parcel', function () {
+describe('Atlaspack', function () {
   this.timeout(75000);
 
   let workerFarm;
@@ -20,7 +20,7 @@ describe('Parcel', function () {
 
   it('does not initialize when passed an ending farm', async () => {
     workerFarm.ending = true;
-    let atlaspack = createParcel({workerFarm});
+    let atlaspack = createAtlaspack({workerFarm});
 
     // $FlowFixMe
     await assert.rejects(() => atlaspack.run(), {
@@ -42,13 +42,13 @@ describe('Parcel', function () {
     });
 
     it('ends any WorkerFarm it creates', async () => {
-      let atlaspack = createParcel();
+      let atlaspack = createAtlaspack();
       await atlaspack.run();
       assert.equal(endSpy.callCount, 1);
     });
 
     it('runs and constructs another farm for subsequent builds', async () => {
-      let atlaspack = createParcel();
+      let atlaspack = createAtlaspack();
 
       await atlaspack.run();
       await atlaspack.run();
@@ -57,7 +57,7 @@ describe('Parcel', function () {
     });
 
     it('does not end passed WorkerFarms', async () => {
-      let atlaspack = createParcel({workerFarm});
+      let atlaspack = createAtlaspack({workerFarm});
       await atlaspack.run();
       assert.equal(endSpy.callCount, 0);
 
@@ -65,7 +65,7 @@ describe('Parcel', function () {
     });
 
     it('removes shared references it creates', async () => {
-      let atlaspack = createParcel({workerFarm});
+      let atlaspack = createAtlaspack({workerFarm});
       await atlaspack.run();
 
       assert.equal(workerFarm.sharedReferences.size, 0);
@@ -75,7 +75,7 @@ describe('Parcel', function () {
   });
 });
 
-describe('ParcelAPI', function () {
+describe('AtlaspackAPI', function () {
   this.timeout(75000);
 
   let workerFarm;
@@ -87,7 +87,7 @@ describe('ParcelAPI', function () {
 
   describe('atlaspack.unstable_transform()', () => {
     it('should transform simple file', async () => {
-      let atlaspack = createParcel({workerFarm});
+      let atlaspack = createAtlaspack({workerFarm});
       let res = await atlaspack.unstable_transform({
         filePath: path.join(__dirname, 'fixtures/parcel/index.js'),
       });
@@ -96,7 +96,7 @@ describe('ParcelAPI', function () {
     });
 
     it('should transform with standalone mode', async () => {
-      let atlaspack = createParcel({workerFarm});
+      let atlaspack = createAtlaspack({workerFarm});
       let res = await atlaspack.unstable_transform({
         filePath: path.join(__dirname, 'fixtures/parcel/other.js'),
         query: 'standalone=true',
@@ -111,7 +111,7 @@ describe('ParcelAPI', function () {
 
   describe('atlaspack.resolve()', () => {
     it('should resolve dependencies', async () => {
-      let atlaspack = createParcel({workerFarm});
+      let atlaspack = createAtlaspack({workerFarm});
       let res = await atlaspack.unstable_resolve({
         specifier: './other',
         specifierType: 'esm',
@@ -128,8 +128,8 @@ describe('ParcelAPI', function () {
   });
 });
 
-function createParcel(opts?: InitialParcelOptions) {
-  return new Parcel({
+function createAtlaspack(opts?: InitialAtlaspackOptions) {
+  return new Atlaspack({
     entries: [path.join(__dirname, 'fixtures/parcel/index.js')],
     logLevel: 'info',
     defaultConfig: path.join(

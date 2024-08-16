@@ -8,7 +8,7 @@ import {
   bundle as _bundle,
   describe,
   it,
-  mergeParcelOptions,
+  mergeAtlaspackOptions,
   outputFS,
   run,
   runBundle,
@@ -20,7 +20,7 @@ import * as lodashFP from 'lodash/fp';
 const bundle = (name, opts = {}) => {
   return _bundle(
     name,
-    mergeParcelOptions(
+    mergeAtlaspackOptions(
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,

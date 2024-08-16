@@ -1,7 +1,7 @@
 /* eslint-disable no-console, monorepo/no-internal-import */
 // @flow strict-local
 import type {PackagedBundle} from '@atlaspack/types';
-import type {ParcelOptions} from '@atlaspack/core/src/types';
+import type {AtlaspackOptions} from '@atlaspack/core/src/types';
 import type {commander$Command} from 'commander';
 
 // $FlowFixMe[untyped-import]
@@ -40,7 +40,7 @@ async function run({cacheDir, outDir}) {
   let projectRoot = process.cwd();
 
   // $FlowFixMe[unclear-type]
-  let atlaspackOptions: ParcelOptions = ({projectRoot}: any);
+  let atlaspackOptions: AtlaspackOptions = ({projectRoot}: any);
 
   let bundlesByTarget: DefaultMap<
     string /* target name */,
@@ -69,7 +69,7 @@ async function run({cacheDir, outDir}) {
 
 export const command: commander$Command = new commander.Command()
   .version(version, '-V, --version')
-  .description('Generate a stats report for a Parcel build')
+  .description('Generate a stats report for a Atlaspack build')
   .option('-v, --verbose', 'Print verbose output')
   .option(
     '-c, --cache-dir <path>',

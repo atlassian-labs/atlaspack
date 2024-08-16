@@ -2,12 +2,12 @@
 
 import type {
   FilePath,
-  InitialParcelOptions,
+  InitialAtlaspackOptions,
   DependencySpecifier,
   InitialServerOptions,
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
-import type {ParcelOptions} from './types';
+import type {AtlaspackOptions} from './types';
 
 import path from 'path';
 import {hashString} from '@atlaspack/rust';
@@ -23,7 +23,7 @@ import {
 } from '@atlaspack/utils';
 import loadDotEnv from './loadDotEnv';
 import {toProjectPath} from './projectPath';
-import {getResolveFrom} from './requests/ParcelConfigRequest';
+import {getResolveFrom} from './requests/AtlaspackConfigRequest';
 
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {ATLASPACK_VERSION} from './constants';
@@ -45,8 +45,8 @@ function compileGlobs(globs: string[]): RegExp[] {
 }
 
 export default async function resolveOptions(
-  initialOptions: InitialParcelOptions,
-): Promise<ParcelOptions> {
+  initialOptions: InitialAtlaspackOptions,
+): Promise<AtlaspackOptions> {
   let inputFS = initialOptions.inputFS || new NodeFS();
   let outputFS = initialOptions.outputFS || new NodeFS();
 

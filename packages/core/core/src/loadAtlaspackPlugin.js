@@ -5,7 +5,7 @@ import type {
   Semver,
   SemverRange,
 } from '@atlaspack/types';
-import type {ParcelOptions} from './types';
+import type {AtlaspackOptions} from './types';
 
 import path from 'path';
 import semver from 'semver';
@@ -30,7 +30,7 @@ export default async function loadPlugin<T>(
   pluginName: PackageName,
   configPath: FilePath,
   keyPath?: string,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Promise<{|
   plugin: T,
   version: Semver,
@@ -46,7 +46,7 @@ export default async function loadPlugin<T>(
       let configContents = await options.inputFS.readFile(configPath, 'utf8');
       throw new ThrowableDiagnostic({
         diagnostic: {
-          message: md`Local plugins are not supported in Parcel config packages. Please publish "${pluginName}" as a separate npm package.`,
+          message: md`Local plugins are not supported in Atlaspack config packages. Please publish "${pluginName}" as a separate npm package.`,
           origin: '@atlaspack/core',
           codeFrames: keyPath
             ? [
@@ -144,7 +144,7 @@ export default async function loadPlugin<T>(
     );
     throw new ThrowableDiagnostic({
       diagnostic: {
-        message: md`Cannot find Parcel plugin "${pluginName}"`,
+        message: md`Cannot find Atlaspack plugin "${pluginName}"`,
         origin: '@atlaspack/core',
         codeFrames: keyPath
           ? [
@@ -178,7 +178,7 @@ export default async function loadPlugin<T>(
       if (!atlaspackVersionRange) {
         logger.warn({
           origin: '@atlaspack/core',
-          message: `The plugin "${pluginName}" needs to specify a \`package.json#engines.atlaspack\` field with the supported Parcel version range.`,
+          message: `The plugin "${pluginName}" needs to specify a \`package.json#engines.atlaspack\` field with the supported Atlaspack version range.`,
         });
       }
 
@@ -197,7 +197,7 @@ export default async function loadPlugin<T>(
         let pkgContents = await options.inputFS.readFile(pkgFile, 'utf8');
         throw new ThrowableDiagnostic({
           diagnostic: {
-            message: md`The plugin "${pluginName}" is not compatible with the current version of Parcel. Requires "${atlaspackVersionRange}" but the current version is "${ATLASPACK_VERSION}".`,
+            message: md`The plugin "${pluginName}" is not compatible with the current version of Atlaspack. Requires "${atlaspackVersionRange}" but the current version is "${ATLASPACK_VERSION}".`,
             origin: '@atlaspack/core',
             codeFrames: [
               {
@@ -227,7 +227,7 @@ export default async function loadPlugin<T>(
   plugin = plugin[CONFIG];
   if (!plugin) {
     throw new Error(
-      `Plugin ${pluginName} is not a valid Parcel plugin, should export an instance of a Parcel plugin ex. "export default new Reporter({ ... })".`,
+      `Plugin ${pluginName} is not a valid Atlaspack plugin, should export an instance of a Atlaspack plugin ex. "export default new Reporter({ ... })".`,
     );
   }
   return {

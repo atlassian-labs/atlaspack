@@ -329,7 +329,7 @@ export default class NodeResolver {
               documentationURL:
                 'https://parceljs.org/features/node-emulation/#polyfilling-%26-excluding-builtin-node-modules',
               hints: [
-                md`Install the "${packageName}" package with your package manager, and run Parcel again.`,
+                md`Install the "${packageName}" package with your package manager, and run Atlaspack again.`,
               ],
             },
           });

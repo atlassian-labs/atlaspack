@@ -113,7 +113,7 @@ function resolvePathPlugin({asset, resolve}) {
           if (WEBPACK_ALIAS_RE.test(filename)) {
             let correctPath = filename.replace(/^~/, '');
             throw new Error(
-              `The @import path "${filename}" is using webpack specific syntax, which isn't supported by Parcel.\n\nTo @import files from node_modules, use "${correctPath}"`,
+              `The @import path "${filename}" is using webpack specific syntax, which isn't supported by Atlaspack.\n\nTo @import files from node_modules, use "${correctPath}"`,
             );
           }
 

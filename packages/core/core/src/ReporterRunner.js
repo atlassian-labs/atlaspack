@@ -2,8 +2,8 @@
 
 import type {ReporterEvent, Reporter} from '@atlaspack/types';
 import type {WorkerApi} from '@atlaspack/workers';
-import type {Bundle as InternalBundle, ParcelOptions} from './types';
-import type {LoadedPlugin} from './ParcelConfig';
+import type {Bundle as InternalBundle, AtlaspackOptions} from './types';
+import type {LoadedPlugin} from './AtlaspackConfig';
 
 import invariant from 'assert';
 import {
@@ -24,7 +24,7 @@ import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {anyToDiagnostic} from '@atlaspack/diagnostic';
 
 type Opts = {|
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   reporters: Array<LoadedPlugin<Reporter>>,
   workerFarm: WorkerFarm,
 |};
@@ -34,7 +34,7 @@ const instances: Set<ReporterRunner> = new Set();
 export default class ReporterRunner {
   workerFarm: WorkerFarm;
   errors: Error[];
-  options: ParcelOptions;
+  options: AtlaspackOptions;
   pluginOptions: PluginOptions;
   reporters: Array<LoadedPlugin<Reporter>>;
 

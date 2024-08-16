@@ -2,7 +2,7 @@
 import assert from 'assert';
 import nullthrows from 'nullthrows';
 import path from 'path';
-import ParcelConfig from '../src/ParcelConfig';
+import AtlaspackConfig from '../src/AtlaspackConfig';
 import {
   validateConfigFile,
   mergePipelines,
@@ -10,14 +10,14 @@ import {
   mergeConfigs,
   resolveExtends,
   parseAndProcessConfig,
-  resolveParcelConfig,
+  resolveAtlaspackConfig,
   processConfig,
-} from '../src/requests/ParcelConfigRequest';
-import {validatePackageName} from '../src/ParcelConfig.schema';
+} from '../src/requests/AtlaspackConfigRequest';
+import {validatePackageName} from '../src/AtlaspackConfig.schema';
 import {DEFAULT_OPTIONS, relative} from './test-utils';
 import {toProjectPath} from '../src/projectPath';
 
-describe('ParcelConfigRequest', () => {
+describe('AtlaspackConfigRequest', () => {
   describe('validatePackageName', () => {
     it('should error on an invalid official package', () => {
       assert.throws(() => {
@@ -44,15 +44,15 @@ describe('ParcelConfigRequest', () => {
     it('should error on an invalid community package', () => {
       assert.throws(() => {
         validatePackageName('foo-bar', 'transform', 'transformers');
-      }, /Parcel transform packages must be named according to "atlaspack-transform-{name}"/);
+      }, /Atlaspack transform packages must be named according to "atlaspack-transform-{name}"/);
 
       assert.throws(() => {
         validatePackageName('atlaspack-foo-bar', 'transform', 'transformers');
-      }, /Parcel transform packages must be named according to "atlaspack-transform-{name}"/);
+      }, /Atlaspack transform packages must be named according to "atlaspack-transform-{name}"/);
 
       assert.throws(() => {
         validatePackageName('atlaspack-transform', 'transform', 'transformers');
-      }, /Parcel transform packages must be named according to "atlaspack-transform-{name}"/);
+      }, /Atlaspack transform packages must be named according to "atlaspack-transform-{name}"/);
     });
 
     it('should succeed on a valid community package', () => {
@@ -567,7 +567,7 @@ describe('ParcelConfigRequest', () => {
 
   describe('mergeConfigs', () => {
     it('should merge configs', () => {
-      let base = new ParcelConfig(
+      let base = new AtlaspackConfig(
         {
           filePath: toProjectPath('/', '/.atlaspackrc'),
           resolvers: [
@@ -976,12 +976,12 @@ describe('ParcelConfigRequest', () => {
 
   describe('resolve', () => {
     it('should return null if there is no .atlaspackrc file found', async () => {
-      let resolved = await resolveParcelConfig(DEFAULT_OPTIONS);
+      let resolved = await resolveAtlaspackConfig(DEFAULT_OPTIONS);
       assert.equal(resolved, null);
     });
 
     it('should resolve a config if a .atlaspackrc file is found', async () => {
-      let resolved = await resolveParcelConfig({
+      let resolved = await resolveAtlaspackConfig({
         ...DEFAULT_OPTIONS,
         projectRoot: path.join(__dirname, 'fixtures', 'config', 'subfolder'),
       });
