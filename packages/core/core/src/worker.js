@@ -35,9 +35,9 @@ import '@atlaspack/fs';
 // $FlowFixMe
 if (process.env.ATLASPACK_BUILD_REPL && process.browser) {
   /* eslint-disable import/no-extraneous-dependencies, monorepo/no-internal-import */
-  require('@atlaspack/repl/src/parcel/BrowserPackageManager.js');
+  require('@atlaspack/repl/src/atlaspack/BrowserPackageManager.js');
   // $FlowFixMe
-  require('@atlaspack/repl/src/parcel/ExtendedMemoryFS.js');
+  require('@atlaspack/repl/src/atlaspack/ExtendedMemoryFS.js');
   /* eslint-enable import/no-extraneous-dependencies, monorepo/no-internal-import */
 }
 

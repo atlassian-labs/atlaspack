@@ -36,7 +36,7 @@ export function hashFile(fs: FileSystem, filePath: string): Promise<string> {
   if (process.env.ATLASPACK_BUILD_ENV === 'test') {
     // Development builds of these native modules are especially big and slow to hash.
     if (
-      /parcel-swc\.[^\\/]+\.node$|lightningcss.[^\\/]+.node$/.test(filePath)
+      /atlaspack-swc\.[^\\/]+\.node$|lightningcss.[^\\/]+.node$/.test(filePath)
     ) {
       let cacheEntry = testCache[filePath];
       if (cacheEntry) return cacheEntry;
