@@ -20,7 +20,7 @@
 4. Perform the replacements with `REPLACEMENT_RE` matching one of
    - `import "id";`
      - will be replaced with the source code of the asset (call `buildAsset()` recursively ). If the referenced asset is wrapped, don't inline but place it after the current asset (into `depContent`).
-     - calls `getHoistedParcelRequires` to read the `hoistedRequires` list from `getSymbolResolution` and prepend needed requires.
+     - calls `getHoistedAtlaspackRequires` to read the `hoistedRequires` list from `getSymbolResolution` and prepend needed requires.
    - `$id$exports`
      - `module.exports` inside the asset gets replaced with `$id$exports` in the transformer, but for wrapped assets, this has to be replaced back to `module.exports`
    - `$id$import|importAsync|require$foo`

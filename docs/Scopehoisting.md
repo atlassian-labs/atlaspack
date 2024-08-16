@@ -4,7 +4,7 @@
 
 ### Tree Shaking and Scope Hoisting
 
-Tree shaking refers to the general principle of removing dead code. With a naive browserify-style bundling (= what Parcel does in development builds), exports that are never used in the project are still "used" in a syntactical sense (= not dead), but not in a runtime code coverage sense (= unused).
+Tree shaking refers to the general principle of removing dead code. With a naive browserify-style bundling (= what Atlaspack does in development builds), exports that are never used in the project are still "used" in a syntactical sense (= not dead), but not in a runtime code coverage sense (= unused).
 
 Some ways to improve this are:
 
@@ -103,7 +103,7 @@ Both assets and dependencies have attached symbol information. These are maps th
 
 Core (so symbol propagation and `getSymbolResolution`) rely on the following convention (plugins can store custom information in the per-symbol meta properties):
 
-- `asset.symbols` is a map of export names (= what the export was called in the source) to the local names (whatever Parcel renamed the variable to, e.g. `$id$export$foo`). `*` represents the namespace object and is only set for CJS assets (which makes `getSymbolResolution` fall back to a property access).
+- `asset.symbols` is a map of export names (= what the export was called in the source) to the local names (whatever Atlaspack renamed the variable to, e.g. `$id$export$foo`). `*` represents the namespace object and is only set for CJS assets (which makes `getSymbolResolution` fall back to a property access).
 
 - `dependency.symbols` is a map of import names (= which binding was imported) to the local name (= the identifier that the imported binding got replaced by, e.g. `$id$import$bar`). The whole namespace can be imported by using `*` as the import name. A dependency with a `* -> *` mapping corresponds to `export * from`.
 
@@ -267,4 +267,4 @@ function interopRequireDefault(obj) {
 var _x = interopRequireDefault(require('./x'));
 ```
 
-With scope hoisting, Parcel can omit this call in many cases when the importee was determined to be ESM or ESM-transpiled-to-CommonJS via static analysis.
+With scope hoisting, Atlaspack can omit this call in many cases when the importee was determined to be ESM or ESM-transpiled-to-CommonJS via static analysis.

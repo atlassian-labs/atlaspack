@@ -59,7 +59,7 @@ So instead, reading `module.exports` is expressed just like it is in ESM: by add
 
 ## Identifier Names
 
-There are names to uniquely identify an import, the actual format doesn't actually matter for the code, as long as its used consistently (Parcel never re-parses these names to retrieve the parts again):
+There are names to uniquely identify an import, the actual format doesn't actually matter for the code, as long as its used consistently (Atlaspack never re-parses these names to retrieve the parts again):
 
 - `$x$import$y` = Asset with id `x` imported the namespace of the dependency with hashed source `y`
 - `$x$import$y$z` = Asset with id `x` imported the hashed export `z` of the dependency with hashed source `y`
