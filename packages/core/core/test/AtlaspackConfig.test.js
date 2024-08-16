@@ -12,7 +12,7 @@ import {toProjectPath} from '../src/projectPath';
 
 const ATLASPACKRC_PATH = toProjectPath('/', '/.atlaspackrc');
 
-describe.only('AtlaspackConfig', () => {
+describe('AtlaspackConfig', () => {
   describe('matchGlobMap', () => {
     let config = new AtlaspackConfig(
       {
@@ -220,7 +220,7 @@ describe.only('AtlaspackConfig', () => {
                   codeHighlights: [
                     {
                       start: {line: 5, column: 5},
-                      end: {line: 5, column: 19},
+                      end: {line: 5, column: 22},
                       message: undefined,
                     },
                   ],
@@ -262,7 +262,7 @@ describe.only('AtlaspackConfig', () => {
                 codeHighlights: [
                   {
                     start: {line: 4, column: 14},
-                    end: {line: 4, column: 37},
+                    end: {line: 4, column: 40},
                     message: `Cannot find module "@atlaspack/transformer-jj", did you mean "@atlaspack/transformer-js"?`,
                   },
                 ],

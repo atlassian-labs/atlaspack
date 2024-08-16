@@ -23,12 +23,15 @@ export function validatePackageName(
       `Official atlaspack ${pluginType} packages must be named according to "@atlaspack/${pluginType}-{name}"`,
     );
   } else if (pkg.startsWith('@')) {
-    let [scope, name] = pkg.split('/');
-    assert(
-      name.startsWith(`atlaspack-${pluginType}-`) ||
-        name === `atlaspack-${pluginType}`,
-      `Scoped atlaspack ${pluginType} packages must be named according to "${scope}/parcel-${pluginType}[-{name}]"`,
-    );
+    // Disabling this validation to allow for migration to atlaspack
+    // let [scope, name] = pkg.split('/');
+    // assert(
+    //   name.startsWith(`atlaspack-${pluginType}-`) ||
+    //     name === `atlaspack-${pluginType}` ||
+    //     name.startsWith(`parcel-${pluginType}-`) ||
+    //     name === `parcel-${pluginType}`,
+    //   `Scoped atlaspack ${pluginType} packages must be named according to "${scope}/atlaspack-${pluginType}[-{name}]"`,
+    // );
   } else if (!pkg.startsWith('.')) {
     assert(
       pkg.startsWith(`atlaspack-${pluginType}-`),

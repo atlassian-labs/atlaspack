@@ -104,7 +104,7 @@ export default async function loadPlugin<T>(
                       codeHighlights: generateJSONCodeHighlights(contents, [
                         {
                           key: configPkg.config.atlaspackDependencies
-                            ? '/parcelDependencies'
+                            ? '/atlaspackDependencies'
                             : '/dependencies',
                           type: 'key',
                         },
@@ -206,7 +206,7 @@ export default async function loadPlugin<T>(
                 code: pkgContents,
                 codeHighlights: generateJSONCodeHighlights(pkgContents, [
                   {
-                    key: '/engines/parcel',
+                    key: '/engines/atlaspack',
                   },
                 ]),
               },
