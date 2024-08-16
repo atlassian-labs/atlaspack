@@ -21,7 +21,7 @@ import {spawnSync} from 'child_process';
 import tempy from 'tempy';
 import {md} from '@atlaspack/diagnostic';
 
-const atlaspackCli = require.resolve('parcel/src/bin.js');
+const atlaspackCli = require.resolve('atlaspack/src/bin.js');
 const inputDir = path.join(__dirname, '/input');
 
 describe.v2('babel', function () {
@@ -743,7 +743,7 @@ describe.v2('babel', function () {
                     },
                     end: {
                       line: 2,
-                      column: 40,
+                      column: 43,
                     },
                   },
                 ],
@@ -801,7 +801,7 @@ describe.v2('babel', function () {
                     },
                     end: {
                       line: 2,
-                      column: 38,
+                      column: 41,
                     },
                   },
                 ],

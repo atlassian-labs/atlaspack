@@ -1,6 +1,6 @@
 {
   "extends": ["@atlaspack/config-default"],
   "compressors": {
-    "*": ["...", "@parcel/compressor-gzip", "@parcel/compressor-brotli"]
+    "*": ["...", "@atlaspack/compressor-gzip", "@atlaspack/compressor-brotli"]
   }
 }

@@ -1,6 +1,6 @@
 {
   "extends": ["@atlaspack/config-default"],
   "compressors": {
-    "*": ["@parcel/compressor-brotli"]
+    "*": ["@atlaspack/compressor-brotli"]
   }
 }

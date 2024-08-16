@@ -1,6 +1,6 @@
 {
   "extends": ["@atlaspack/config-default"],
   "reporters": [
-    '@parcel/reporter-dev-server'
+    '@atlaspack/reporter-dev-server'
   ]
 }

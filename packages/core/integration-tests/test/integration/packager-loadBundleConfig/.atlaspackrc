@@ -1,9 +1,9 @@
 {
   "extends": "@atlaspack/config-default",
   "transformers": {
-    "*.txt": ["@parcel/transformer-raw"]
+    "*.txt": ["@atlaspack/transformer-raw"]
   },
   "packagers": {
-    "*.txt": "parcel-packager-config"
+    "*.txt": "atlaspack-packager-config"
   }
 }

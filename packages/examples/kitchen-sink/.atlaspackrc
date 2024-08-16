@@ -1,7 +1,7 @@
 {
   "extends": "@atlaspack/config-default",
   "transformers": {
-    "*.js": ["@parcel/transformer-babel", "..."]
+    "*.js": ["@atlaspack/transformer-babel", "..."]
   },
-  "reporters": ["...", "@parcel/reporter-sourcemap-visualiser"]
+  "reporters": ["...", "@atlaspack/reporter-sourcemap-visualiser"]
 }

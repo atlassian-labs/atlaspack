@@ -1170,7 +1170,7 @@ describe.v2('scope hoisting', function () {
         'utf8',
       );
       assert.strictEqual(
-        contents.match(/parcelRegister\(/g).length,
+        contents.match(/atlaspackRegister\(/g).length,
         2 /* once for parent asset, once for child wrapped asset */,
       );
 

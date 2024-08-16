@@ -47,7 +47,7 @@ describe.v2('typescript tsc', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/typescript-types.atlaspackrc/index.ts',
+        '/integration/typescript-types-atlaspackrc/index.ts',
       ),
     );
 

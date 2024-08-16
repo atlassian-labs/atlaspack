@@ -2,7 +2,7 @@
     "extends": "@atlaspack/config-default",
     "transformers": {
       "*.ts": [
-        "@parcel/transformer-typescript-tsc"
+        "@atlaspack/transformer-typescript-tsc"
       ]
     }
   }

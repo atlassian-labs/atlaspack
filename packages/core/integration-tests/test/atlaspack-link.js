@@ -84,7 +84,7 @@ describe.v2('@atlaspack/link', () => {
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
-          parcel
+          atlaspack
           @atlaspack/core`;
 
       let cli = createProgram({fs: overlayFS});
@@ -98,13 +98,13 @@ describe.v2('@atlaspack/link', () => {
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/parcel'),
-        path.resolve(__dirname, '../../parcel'),
+        overlayFS.realpathSync('node_modules/atlaspack'),
+        path.resolve(__dirname, '../../atlaspack'),
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
-        path.resolve(__dirname, '../../parcel/src/bin.js'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
+        path.resolve(__dirname, '../../atlaspack/src/bin.js'),
       );
     });
 
@@ -113,12 +113,12 @@ describe.v2('@atlaspack/link', () => {
         app
           yarn.lock:
           node_modules
-            parcel
+            atlaspack
             @atlaspack/core
         package-root
           core
             core/package.json: ${{name: '@atlaspack/core'}}
-            parcel
+            atlaspack
               package.json: ${{name: 'atlaspack'}}
               src/bin.js:`;
 
@@ -135,13 +135,16 @@ describe.v2('@atlaspack/link', () => {
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/parcel'),
-        path.resolve(overlayFS.cwd(), '../package-root/core/parcel'),
+        overlayFS.realpathSync('node_modules/atlaspack'),
+        path.resolve(overlayFS.cwd(), '../package-root/core/atlaspack'),
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
-        path.resolve(overlayFS.cwd(), '../package-root/core/parcel/src/bin.js'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
+        path.resolve(
+          overlayFS.cwd(),
+          '../package-root/core/atlaspack/src/bin.js',
+        ),
       );
     });
 
@@ -149,9 +152,9 @@ describe.v2('@atlaspack/link', () => {
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
-          .bin/parcel:
+          .bin/atlaspack:
           @namespace
-            parcel
+            atlaspack
             atlaspack-core`;
 
       let cli = createProgram({fs: overlayFS});
@@ -160,12 +163,12 @@ describe.v2('@atlaspack/link', () => {
       assert(overlayFS.existsSync('.atlaspack-link'));
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
-        path.resolve(__dirname, '../../parcel/src/bin.js'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
+        path.resolve(__dirname, '../../atlaspack/src/bin.js'),
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/@namespace/parcel-core'),
+        overlayFS.realpathSync('node_modules/@namespace/atlaspack-core'),
         path.resolve(__dirname, '../../core'),
       );
 
@@ -175,18 +178,18 @@ describe.v2('@atlaspack/link', () => {
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/@namespace/parcel'),
-        path.resolve(__dirname, '../../parcel'),
+        overlayFS.realpathSync('node_modules/@namespace/atlaspack'),
+        path.resolve(__dirname, '../../atlaspack'),
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/parcel'),
-        path.resolve(__dirname, '../../parcel'),
+        overlayFS.realpathSync('node_modules/atlaspack'),
+        path.resolve(__dirname, '../../atlaspack'),
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
-        path.resolve(__dirname, '../../parcel/src/bin.js'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
+        path.resolve(__dirname, '../../atlaspack/src/bin.js'),
       );
     });
 
@@ -201,17 +204,17 @@ describe.v2('@atlaspack/link', () => {
         app
           yarn.lock:
           .atlaspackrc: ${{
-            extends: '@namespace/parcel-config-namespace',
+            extends: '@namespace/atlaspack-config-namespace',
             transformers: {
               '*': [
-                '@namespace/parcel-transformer-js',
-                '@namespace/parcel-transformer-local',
+                '@namespace/atlaspack-transformer-js',
+                '@namespace/atlaspack-transformer-local',
               ],
             },
           }}
           package.json: ${{
-            ['@namespace/parcel-transformer-js']: {},
-            ['@namespace/parcel-transformer-local']: {},
+            ['@namespace/atlaspack-transformer-js']: {},
+            ['@namespace/atlaspack-transformer-local']: {},
           }}`;
 
       overlayFS.chdir('/app');
@@ -228,7 +231,7 @@ describe.v2('@atlaspack/link', () => {
           transformers: {
             '*': [
               '@atlaspack/transformer-js',
-              '@namespace/parcel-transformer-local',
+              '@namespace/atlaspack-transformer-local',
             ],
           },
         }),
@@ -238,7 +241,7 @@ describe.v2('@atlaspack/link', () => {
         overlayFS.readFileSync('package.json', 'utf8'),
         JSON.stringify({
           ['@atlaspack/transformer-js']: {},
-          ['@namespace/parcel-transformer-local']: {},
+          ['@namespace/atlaspack-transformer-local']: {},
         }),
       );
     });
@@ -247,7 +250,7 @@ describe.v2('@atlaspack/link', () => {
       await fsFixture(overlayFS)`
         yarn.lock:
         tools
-          test/node_modules/parcel
+          test/node_modules/atlaspack
           test2/node_modules/@atlaspack/core`;
 
       let cli = createProgram({fs: overlayFS});
@@ -256,19 +259,19 @@ describe.v2('@atlaspack/link', () => {
       assert(overlayFS.existsSync('.atlaspack-link'));
 
       assert(overlayFS.existsSync('tools/test/node_modules'));
-      assert(!overlayFS.existsSync('tools/test/node_modules/parcel'));
+      assert(!overlayFS.existsSync('tools/test/node_modules/atlaspack'));
 
       assert(overlayFS.existsSync('tools/test2/node_modules'));
       assert(!overlayFS.existsSync('tools/test2/node_modules/@atlaspack/core'));
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/parcel'),
-        path.resolve(__dirname, '../../parcel'),
+        overlayFS.realpathSync('node_modules/atlaspack'),
+        path.resolve(__dirname, '../../atlaspack'),
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
-        path.resolve(__dirname, '../../parcel/src/bin.js'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
+        path.resolve(__dirname, '../../atlaspack/src/bin.js'),
       );
 
       assert.equal(
@@ -281,7 +284,7 @@ describe.v2('@atlaspack/link', () => {
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
-          parcel
+          atlaspack
           @atlaspack/core`;
 
       let cli = createProgram({fs: overlayFS});
@@ -295,11 +298,11 @@ describe.v2('@atlaspack/link', () => {
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/parcel'),
-        path.resolve('/app/node_modules/parcel'),
+        overlayFS.realpathSync('node_modules/atlaspack'),
+        path.resolve('/app/node_modules/atlaspack'),
       );
 
-      assert(!overlayFS.existsSync('node_modules/.bin/parcel'));
+      assert(!overlayFS.existsSync('node_modules/.bin/atlaspack'));
     });
   });
 
@@ -349,8 +352,11 @@ describe.v2('@atlaspack/link', () => {
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
-          .bin/parcel -> ${path.resolve(__dirname, '../../parcel/src/bin.js')}
-          atlaspack -> ${path.resolve(__dirname, '../../parcel')}
+          .bin/atlaspack -> ${path.resolve(
+            __dirname,
+            '../../atlaspack/src/bin.js',
+          )}
+          atlaspack -> ${path.resolve(__dirname, '../../atlaspack')}
           @atlaspack/core -> ${path.resolve(__dirname, '../../core')}
         .atlaspack-link: ${{
           appRoot: '/app',
@@ -361,16 +367,16 @@ describe.v2('@atlaspack/link', () => {
 
       assert(overlayFS.existsSync('.atlaspack-link'));
       assert(overlayFS.existsSync('node_modules/@atlaspack/core'));
-      assert(overlayFS.existsSync('node_modules/parcel'));
-      assert(overlayFS.existsSync('node_modules/.bin/parcel'));
+      assert(overlayFS.existsSync('node_modules/atlaspack'));
+      assert(overlayFS.existsSync('node_modules/.bin/atlaspack'));
 
       let cli = createProgram({fs: overlayFS});
       await cli('unlink');
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/core'));
-      assert(!overlayFS.existsSync('node_modules/parcel'));
-      assert(!overlayFS.existsSync('node_modules/.bin/parcel'));
+      assert(!overlayFS.existsSync('node_modules/atlaspack'));
+      assert(!overlayFS.existsSync('node_modules/.bin/atlaspack'));
     });
 
     it('unlinks from a custom package root', async () => {
@@ -382,22 +388,22 @@ describe.v2('@atlaspack/link', () => {
           nodeModulesGlobs: ['node_modules'],
           namespace: '@atlaspack',
         }}
-        node_modules/parcel -> package-root/core/parcel
+        node_modules/atlaspack -> package-root/core/atlaspack
         node_modules/@atlaspack/core -> package-root/core/core
-        node_modules/.bin/parcel -> package-root/core/parcel/src/bin.js`;
+        node_modules/.bin/atlaspack -> package-root/core/atlaspack/src/bin.js`;
 
       await fsFixture(overlayFS, '/')`
         package-root/core/core/package.json: ${{name: '@atlaspack/core'}}
-        package-root/core/parcel/package.json: ${{name: 'atlaspack'}}
-        package-root/core/parcel/src/bin.js:`;
+        package-root/core/atlaspack/package.json: ${{name: 'atlaspack'}}
+        package-root/core/atlaspack/src/bin.js:`;
 
       let cli = createProgram({fs: overlayFS});
       await cli('unlink');
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/core'));
-      assert(!overlayFS.existsSync('node_modules/parcel'));
-      assert(!overlayFS.existsSync('node_modules/.bin/parcel'));
+      assert(!overlayFS.existsSync('node_modules/atlaspack'));
+      assert(!overlayFS.existsSync('node_modules/.bin/atlaspack'));
     });
 
     it('unlinks with a custom namespace', async () => {
@@ -410,21 +416,27 @@ describe.v2('@atlaspack/link', () => {
           namespace: '@namespace',
         }}
         node_modules
-          .bin/parcel -> ${path.resolve(__dirname, '../../parcel/src/bin.js')}
-          atlaspack -> ${path.resolve(__dirname, '../../parcel')}
-          @namespace/parcel -> ${path.resolve(__dirname, '../../parcel')}
-          parcel/core -> ${path.resolve(__dirname, '../../core')}
-          @namespace/parcel-core -> ${path.resolve(__dirname, '../../core')}`;
+          .bin/atlaspack -> ${path.resolve(
+            __dirname,
+            '../../atlaspack/src/bin.js',
+          )}
+          atlaspack -> ${path.resolve(__dirname, '../../atlaspack')}
+          @namespace/atlaspack -> ${path.resolve(__dirname, '../../atlaspack')}
+          atlaspack/core -> ${path.resolve(__dirname, '../../core')}
+          @namespace/atlaspack-core -> ${path.resolve(
+            __dirname,
+            '../../core',
+          )}`;
 
       let cli = createProgram({fs: overlayFS});
       await cli('unlink');
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/core'));
-      assert(!overlayFS.existsSync('node_modules/parcel'));
-      assert(!overlayFS.existsSync('node_modules/.bin/parcel'));
-      assert(!overlayFS.existsSync('node_modules/@namespace/parcel-core'));
-      assert(!overlayFS.existsSync('node_modules/@namespace/parcel'));
+      assert(!overlayFS.existsSync('node_modules/atlaspack'));
+      assert(!overlayFS.existsSync('node_modules/.bin/atlaspack'));
+      assert(!overlayFS.existsSync('node_modules/@namespace/atlaspack-core'));
+      assert(!overlayFS.existsSync('node_modules/@namespace/atlaspack'));
     });
 
     // FIXME: this test fails on windows
@@ -436,13 +448,13 @@ describe.v2('@atlaspack/link', () => {
           transformers: {
             '*': [
               '@atlaspack/transformer-js',
-              '@namespace/parcel-transformer-local',
+              '@namespace/atlaspack-transformer-local',
             ],
           },
         }}
         package.json: ${{
           ['@atlaspack/transformer-js']: {},
-          ['@namespace/parcel-transformer-local']: {},
+          ['@namespace/atlaspack-transformer-local']: {},
         }}
         .atlaspack-link: ${{
           appRoot: '/app',
@@ -466,11 +478,11 @@ describe.v2('@atlaspack/link', () => {
       assert.equal(
         overlayFS.readFileSync('.atlaspackrc', 'utf8'),
         JSON.stringify({
-          extends: '@namespace/parcel-config-namespace',
+          extends: '@namespace/atlaspack-config-namespace',
           transformers: {
             '*': [
-              '@namespace/parcel-transformer-js',
-              '@namespace/parcel-transformer-local',
+              '@namespace/atlaspack-transformer-js',
+              '@namespace/atlaspack-transformer-local',
             ],
           },
         }),
@@ -479,8 +491,8 @@ describe.v2('@atlaspack/link', () => {
       assert.equal(
         overlayFS.readFileSync('package.json', 'utf8'),
         JSON.stringify({
-          ['@namespace/parcel-transformer-js']: {},
-          ['@namespace/parcel-transformer-local']: {},
+          ['@namespace/atlaspack-transformer-js']: {},
+          ['@namespace/atlaspack-transformer-local']: {},
         }),
       );
     });
@@ -495,11 +507,17 @@ describe.v2('@atlaspack/link', () => {
           namespace: '@atlaspack',
         }}
         node_modules
-          atlaspack -> ${path.resolve(__dirname, '../../parcel')}
+          atlaspack -> ${path.resolve(__dirname, '../../atlaspack')}
           @atlaspack/core -> ${path.resolve(__dirname, '../../core')}
-          .bin/parcel -> ${path.resolve(__dirname, '../../parcel/src/bin.js')}
+          .bin/atlaspack -> ${path.resolve(
+            __dirname,
+            '../../atlaspack/src/bin.js',
+          )}
         tools
-          test/node_modules/parcel -> ${path.resolve(__dirname, '../../parcel')}
+          test/node_modules/atlaspack -> ${path.resolve(
+            __dirname,
+            '../../atlaspack',
+          )}
           test2/node_modules/@atlaspack/core -> ${path.resolve(
             __dirname,
             '../../core',
@@ -510,9 +528,9 @@ describe.v2('@atlaspack/link', () => {
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/core'));
-      assert(!overlayFS.existsSync('node_modules/parcel'));
-      assert(!overlayFS.existsSync('node_modules/.bin/parcel'));
-      assert(!overlayFS.existsSync('tools/test/node_modules/parcel'));
+      assert(!overlayFS.existsSync('node_modules/atlaspack'));
+      assert(!overlayFS.existsSync('node_modules/.bin/atlaspack'));
+      assert(!overlayFS.existsSync('tools/test/node_modules/atlaspack'));
       assert(!overlayFS.existsSync('tools/test2/node_modules/@atlaspack/core'));
     });
 
@@ -520,8 +538,11 @@ describe.v2('@atlaspack/link', () => {
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
-          .bin/parcel -> ${path.resolve(__dirname, '../../parcel/src/bin.js')}
-          atlaspack -> ${path.resolve(__dirname, '../../parcel')}
+          .bin/atlaspack -> ${path.resolve(
+            __dirname,
+            '../../atlaspack/src/bin.js',
+          )}
+          atlaspack -> ${path.resolve(__dirname, '../../atlaspack')}
           @atlaspack/core -> ${path.resolve(__dirname, '../../core')}
         .atlaspack-link: ${{
           appRoot: '/app',
@@ -542,13 +563,13 @@ describe.v2('@atlaspack/link', () => {
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/parcel'),
-        path.resolve(__dirname, '../../parcel'),
+        overlayFS.realpathSync('node_modules/atlaspack'),
+        path.resolve(__dirname, '../../atlaspack'),
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
-        path.resolve(__dirname, '../../parcel/src/bin.js'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
+        path.resolve(__dirname, '../../atlaspack/src/bin.js'),
       );
     });
   });

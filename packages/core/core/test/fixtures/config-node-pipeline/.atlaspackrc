@@ -1,6 +1,6 @@
 {
   "extends": "@atlaspack/config-default",
   "transformers": {
-    "node:*.js": ["@parcel/transformer-js"]
+    "node:*.js": ["@atlaspack/transformer-js"]
   }
 }

@@ -4625,7 +4625,7 @@ describe.v2('cache', function () {
                 spy.calledWith([
                   {
                     message: md`${path.normalize(
-                      'node_modules/parcel-transformer-esm/index.js',
+                      'node_modules/atlaspack-transformer-esm/index.js',
                     )} contains non-statically analyzable dependencies in its module graph. This causes Atlaspack to invalidate the cache on startup.`,
                     origin: '@atlaspack/package-manager',
                   },

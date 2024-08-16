@@ -45,7 +45,7 @@ describe.v2('incremental bundling', function () {
       await packageManager.require('@atlaspack/bundler-default', __filename)
     ).default;
     let CustomBundler = await packageManager.require(
-      './integration/incremental-bundling/node_modules/parcel-bundler-test',
+      './integration/incremental-bundling/node_modules/atlaspack-bundler-test',
       __filename,
     );
 

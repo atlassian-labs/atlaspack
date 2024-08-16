@@ -1,6 +1,6 @@
 {
   "extends": "@atlaspack/config-default",
   "optimizers": {
-    "*.js": ["@parcel/optimizer-esbuild"]
+    "*.js": ["@atlaspack/optimizer-esbuild"]
   }
 }

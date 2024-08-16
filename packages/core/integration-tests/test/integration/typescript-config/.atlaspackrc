@@ -1,6 +1,6 @@
 {
   "extends": "@atlaspack/config-default",
   "transformers": {
-    "*.{ts,tsx}": ["@parcel/transformer-typescript-tsc"]
+    "*.{ts,tsx}": ["@atlaspack/transformer-typescript-tsc"]
   }
 }

@@ -1,6 +1,6 @@
 {
   "extends": "@atlaspack/config-default",
   "validators": {
-    "*.{ts,tsx}": ["@parcel/validator-typescript"]
+    "*.{ts,tsx}": ["@atlaspack/validator-typescript"]
   }
 }

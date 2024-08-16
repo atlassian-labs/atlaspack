@@ -1,10 +1,10 @@
 {
     "extends": "@atlaspack/config-default",
     "transformers": {
-        "*.js": ["@parcel/transformer-raw"]
+        "*.js": ["@atlaspack/transformer-raw"]
     },    
     "packagers": {
-        "*.js": "@parcel/packager-raw"
+        "*.js": "@atlaspack/packager-raw"
     }
 
 }

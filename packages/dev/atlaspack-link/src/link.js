@@ -67,12 +67,12 @@ export async function link(
     await fsSymlink(p, path.join(appRoot, 'node_modules', packageName), opts);
   }
 
-  // Step 4: Point `atlaspack` bin symlink to linked `packages/core/parcel/src/bin.js`
+  // Step 4: Point `atlaspack` bin symlink to linked `packages/core/atlaspack/src/bin.js`
   // --------------------------------------------------------------------------------
 
   await fsSymlink(
-    path.join(packageRoot, 'core/parcel/src/bin.js'),
-    path.join(appRoot, 'node_modules/.bin/parcel'),
+    path.join(packageRoot, 'core/atlaspack/src/bin.js'),
+    path.join(appRoot, 'node_modules/.bin/atlaspack'),
     opts,
   );
 
@@ -94,7 +94,7 @@ export async function link(
       await fsWrite(
         atlaspackConfigPath,
         atlaspackConfig.replace(
-          new RegExp(`"(${namespace}/parcel-[^"]*)"`, 'g'),
+          new RegExp(`"(${namespace}/atlaspack-[^"]*)"`, 'g'),
           (_, match) => `"${namespacePackages.get(match) ?? match}"`,
         ),
         opts,
@@ -102,7 +102,7 @@ export async function link(
     }
 
     // Step 5.2: In the root package.json, rewrite all references to official plugins to @atlaspack/...
-    // For configs like "@namespace/parcel-bundler-default":{"maxParallelRequests": 10}
+    // For configs like "@namespace/atlaspack-bundler-default":{"maxParallelRequests": 10}
     // --------------------------------------------------------------------------------
 
     let rootPkgPath = path.join(appRoot, 'package.json');
@@ -111,7 +111,7 @@ export async function link(
       await fsWrite(
         rootPkgPath,
         rootPkg.replace(
-          new RegExp(`"(${namespace}/parcel-[^"]*)"(\\s*:\\s*{)`, 'g'),
+          new RegExp(`"(${namespace}/atlaspack-[^"]*)"(\\s*:\\s*{)`, 'g'),
           (_, match, suffix) =>
             `"${namespacePackages.get(match) ?? match}"${suffix}`,
         ),
@@ -119,7 +119,7 @@ export async function link(
       );
     }
 
-    // Step 5.3: Delete namespaced packages (`@namespace/parcel-*`) from node_modules
+    // Step 5.3: Delete namespaced packages (`@namespace/atlaspack-*`) from node_modules
     // --------------------------------------------------------------------------------
 
     for (let nodeModules of nodeModulesPaths) {
@@ -130,7 +130,7 @@ export async function link(
       );
     }
 
-    // Step 5.4: Link the Atlaspack packages into node_modules as `@namespace/parcel-*`
+    // Step 5.4: Link the Atlaspack packages into node_modules as `@namespace/atlaspack-*`
     // --------------------------------------------------------------------------------
 
     for (let [alias, atlaspackName] of namespacePackages) {

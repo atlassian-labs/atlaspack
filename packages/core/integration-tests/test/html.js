@@ -2781,11 +2781,11 @@ describe.v2('html', function () {
                 {
                   message: 'Did you mean "minBundleSize", "minBundles"?',
                   start: {
-                    column: 30,
+                    column: 33,
                     line: 3,
                   },
                   end: {
-                    column: 45,
+                    column: 48,
                     line: 3,
                   },
                 },

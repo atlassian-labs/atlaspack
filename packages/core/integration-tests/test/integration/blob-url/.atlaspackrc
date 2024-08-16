@@ -2,9 +2,9 @@
 {
   "extends": "@atlaspack/config-default",
   "transformers": {
-    "blob-url:*": ["@parcel/transformer-inline", "..."]
+    "blob-url:*": ["@atlaspack/transformer-inline", "..."]
   },
   "optimizers": {
-    "blob-url:*": ["...", "@parcel/optimizer-blob-url"]
+    "blob-url:*": ["...", "@atlaspack/optimizer-blob-url"]
   }
 }

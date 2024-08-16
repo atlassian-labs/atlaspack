@@ -1,6 +1,6 @@
 {
   "extends": "@atlaspack/config-default",
   "transformers": {
-    "*.txt": ["parcel-transformer-included"]
+    "*.txt": ["atlaspack-transformer-included"]
   }
 }

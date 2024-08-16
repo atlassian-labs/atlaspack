@@ -30,8 +30,8 @@ describe.v2('plugin', function () {
     assert.equal(
       output,
       `INPUT
-parcel-transformer-a
-parcel-transformer-b`,
+atlaspack-transformer-a
+atlaspack-transformer-b`,
     );
   });
 

@@ -1,5 +1,5 @@
 {
   "extends": "@atlaspack/config-default",
-  "resolvers": ["parcel-resolver-no-defer"],
-  "bundler": "parcel-bundler-no-defer"
+  "resolvers": ["atlaspack-resolver-no-defer"],
+  "bundler": "atlaspack-bundler-no-defer"
 }
