@@ -1,7 +1,7 @@
 .cache/
 .idea/
 .nyc_output/
-.parcel-cache/
+.atlaspack-cache/
 .verdaccio_storage/
 .vscode/*
 !.vscode/extensions.json
