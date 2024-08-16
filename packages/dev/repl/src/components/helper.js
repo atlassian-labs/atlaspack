@@ -1,5 +1,5 @@
 // @flow
-import type {BundleOutputError} from '../parcel/AtlaspackWorker';
+import type {BundleOutputError} from '../atlaspack/AtlaspackWorker';
 import {useCallback, useState, useEffect, useRef, memo} from 'react';
 import {ctrlKey} from '../utils';
 import renderGraph from '../graphs/index.js';

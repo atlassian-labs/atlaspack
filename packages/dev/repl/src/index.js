@@ -8,7 +8,7 @@ import {useMedia} from 'react-use';
 // $FlowFixMe
 import atlaspackLogo from 'url:./assets/logo.svg';
 // $FlowFixMe
-import atlaspackText from 'url:./assets/parcel.png';
+import atlaspackText from 'url:./assets/atlaspack.png';
 
 import {
   Editor,
@@ -37,7 +37,7 @@ import {
   workerReady,
   waitForFS,
   clientID as clientIDPromise,
-} from './parcel/';
+} from './atlaspack/';
 
 const STATUS_LOADING = Symbol('STATUS_LOADING');
 const STATUS_RUNNING = Symbol('STATUS_RUNNING');
