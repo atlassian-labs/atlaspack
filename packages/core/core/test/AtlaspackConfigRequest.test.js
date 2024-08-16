@@ -67,26 +67,26 @@ describe('AtlaspackConfigRequest', () => {
     it.skip('should error on an invalid scoped package', () => {
       assert.throws(() => {
         validatePackageName('@test/foo-bar', 'transform', 'transformers');
-      }, /Scoped atlaspack transform packages must be named according to "@test\/parcel-transform\[-{name}\]"/);
+      }, /Scoped atlaspack transform packages must be named according to "@test\/atlaspack-transform\[-{name}\]"/);
 
       assert.throws(() => {
         validatePackageName(
-          '@test/parcel-foo-bar',
+          '@test/atlaspack-foo-bar',
           'transform',
           'transformers',
         );
-      }, /Scoped atlaspack transform packages must be named according to "@test\/parcel-transform\[-{name}\]"/);
+      }, /Scoped atlaspack transform packages must be named according to "@test\/atlaspack-transform\[-{name}\]"/);
     });
 
     it('should succeed on a valid scoped package', () => {
       validatePackageName(
-        '@test/parcel-transform-bar',
+        '@test/atlaspack-transform-bar',
         'transform',
         'transformers',
       );
 
       validatePackageName(
-        '@test/parcel-transform',
+        '@test/atlaspack-transform',
         'transform',
         'transformers',
       );
@@ -94,7 +94,7 @@ describe('AtlaspackConfigRequest', () => {
 
     it('should succeed on a local package', () => {
       validatePackageName(
-        './parcel-transform-bar',
+        './atlaspack-transform-bar',
         'transform',
         'transformers',
       );

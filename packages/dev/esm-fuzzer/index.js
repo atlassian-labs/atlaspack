@@ -3,7 +3,7 @@ import assert from 'assert';
 import path from 'path';
 
 const runESM = require('./runESM');
-const atlaspack = require('./parcel');
+const atlaspack = require('./atlaspack');
 const generateExample = require('./generateExample');
 
 async function run(example) {
