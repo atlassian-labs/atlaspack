@@ -21,7 +21,7 @@ function createProgram(opts: ProgramOptions) {
 
 // This test suite has been broken since the rename but it's not obvious why.
 // Parking for later.
-describe.skip('@atlaspack/link', () => {
+describe.v2('@atlaspack/link', () => {
   let _cwd;
   let _stdout;
 
