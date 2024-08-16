@@ -2,7 +2,7 @@
 name = "atlaspack_plugin_transformer_js"
 version = "0.1.0"
 edition = "2021"
-description = "JavaScript Transformer Plugin for the Parcel Bundler"
+description = "JavaScript Transformer Plugin for the Atlaspack Bundler"
 
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }

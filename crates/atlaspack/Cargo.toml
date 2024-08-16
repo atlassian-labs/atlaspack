@@ -2,7 +2,7 @@
 name = "atlaspack"
 version = "0.1.0"
 edition = "2021"
-description = "Parcel Bundler"
+description = "Atlaspack Bundler"
 
 [features]
 nodejs = ["atlaspack_plugin_rpc/nodejs"]

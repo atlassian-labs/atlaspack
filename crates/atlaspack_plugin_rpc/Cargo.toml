@@ -2,7 +2,7 @@
 name = "atlaspack_plugin_rpc"
 version = "0.1.0"
 edition = "2021"
-description = "Parcel Bundler"
+description = "Atlaspack Bundler"
 
 [features]
 nodejs = ["dep:napi", "dep:serde", "dep:parking_lot", "dep:once_cell", "dep:atlaspack_napi_helpers"]

@@ -2,7 +2,7 @@
 name = "atlaspack_plugin_resolver"
 version = "0.1.0"
 edition = "2021"
-description = "Resolver Plugin for the Parcel Bundler"
+description = "Resolver Plugin for the Atlaspack Bundler"
 
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }

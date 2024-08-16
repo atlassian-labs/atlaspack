@@ -17,7 +17,7 @@ system.
 
 Tracing is turned off by default.
 
-Parcel uses [`tracing`](https://github.com/tokio-rs/tracing) for logging and traces. This aims to aid debugging and bug
+Atlaspack uses [`tracing`](https://github.com/tokio-rs/tracing) for logging and traces. This aims to aid debugging and bug
 fixing.
 
 - By default, traces/logs won't be written
@@ -29,7 +29,7 @@ fixing.
 
 Sentry integration is turned off by default.
 
-Parcel uses [sentry](https://sentry.io/) only on `canary` nightly releases for error monitoring.
+Atlaspack uses [sentry](https://sentry.io/) only on `canary` nightly releases for error monitoring.
 
 - `ATLASPACK_ENABLE_SENTRY` will enable sentry integration
 - `ATLASPACK_SENTRY_TAGS` should contain a JSON string with a dictionary of tags to add to sentry
@@ -39,7 +39,7 @@ Parcel uses [sentry](https://sentry.io/) only on `canary` nightly releases for e
 
 Crash reporting is disabled by default.
 
-Parcel uses
+Atlaspack uses
 [crash-handling](https://github.com/EmbarkStudios/crash-handling/blob/e2891a4c6a8d43374ec63d791c7e6d42ff2e6545/README.md)
 utilities to write [minidumps](https://github.com/EmbarkStudios/crash-handling/tree/main/minidumper) on crashes.
 
