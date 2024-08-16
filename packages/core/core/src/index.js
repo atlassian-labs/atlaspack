@@ -19,4 +19,4 @@ export {
   INTERNAL_TRANSFORM,
 } from './Atlaspack';
 
-export * from './parcel-v3';
+export * from './atlaspack-v3';

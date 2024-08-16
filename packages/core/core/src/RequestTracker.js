@@ -37,7 +37,7 @@ import {
   STARTUP,
   ERROR,
 } from './constants';
-import type {AtlaspackV3} from './parcel-v3/AtlaspackV3';
+import type {AtlaspackV3} from './atlaspack-v3/AtlaspackV3';
 import {
   type ProjectPath,
   fromProjectPathRelative,

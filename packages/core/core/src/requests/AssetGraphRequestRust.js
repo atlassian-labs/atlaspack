@@ -6,7 +6,7 @@ import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Async} from '@atlaspack/types';
 
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
-import type {AtlaspackV3} from '../parcel-v3';
+import type {AtlaspackV3} from '../atlaspack-v3';
 import {toProjectPath} from '../projectPath';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';

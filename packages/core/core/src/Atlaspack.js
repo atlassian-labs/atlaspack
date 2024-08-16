@@ -58,7 +58,7 @@ import {
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags} from '@atlaspack/feature-flags';
-import {AtlaspackV3, toFileSystemV3} from './parcel-v3';
+import {AtlaspackV3, toFileSystemV3} from './atlaspack-v3';
 
 registerCoreWithSerializer();
 
