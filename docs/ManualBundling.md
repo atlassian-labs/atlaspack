@@ -12,7 +12,7 @@ First, we generate a look up, `manualAssetToConfig`, which contains an Asset Nod
 
 ```json
 {
-  "@parcel/bundler-default": {
+  "@atlaspack/bundler-default": {
     "unstable_manualSharedBundles": [
       {
         "name": "",

@@ -254,7 +254,7 @@ Manual Bundles override Parcel's automatic code splitting. Consider the code bel
 ```json
 package.json:
     {
-      "@parcel/bundler-default": {
+      "@atlaspack/bundler-default": {
         "manualSharedBundles": [{
           "name": "vendor",
           "root": "math/math.js",

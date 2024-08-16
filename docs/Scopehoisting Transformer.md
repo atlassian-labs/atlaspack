@@ -4,7 +4,7 @@
 
 ("Non-static" refers to a variable being used in a way that cannot be optimized, such as `module.exports[someVariable] = 2`, or `import * as x from "..:"; console.log(x[someVariable]);`.)
 
-The task of the hoist transformer is, in the simplest case, rewriting imports and exports, renaming the uses of the imports. The packager can then detect these `import "id:...";` statements to inline dependencies, replace `$id$import$foo` with the resolved expression, and generate necessary `$parcel$export(..., () => $id$export$b)` statements.
+The task of the hoist transformer is, in the simplest case, rewriting imports and exports, renaming the uses of the imports. The packager can then detect these `import "id:...";` statements to inline dependencies, replace `$id$import$foo` with the resolved expression, and generate necessary `$atlaspack$export(..., () => $id$export$b)` statements.
 
 <table>
 <tr><td>
@@ -39,7 +39,7 @@ In addition to the code, it sets the symbols and various meta properties on both
 - `asset.meta.id`: depending on which transformers run after the JS transformer, the value of `asset.id` will be different in packager from the id used for the various variables like `$id$export$foo`. The current asset id in the JS transformer is therefore stored.
 - `asset.meta.hasCJSExports`: true if there is at least one CJS export
 - `asset.meta.staticExports`: true if there is at least one CJS export that doesn't follow the pattern `module.exports.foo = ...`
-- `asset.meta.shouldWrap`: Some constructs require this asset being wrapped in a `parcelRequire.register` block: top-level returns, non-static uses of `module`, eval, reassigning `module` or `exports`
+- `asset.meta.shouldWrap`: Some constructs require this asset being wrapped in a `atlaspackRequire.register` block: top-level returns, non-static uses of `module`, eval, reassigning `module` or `exports`
 - `dep.meta.shouldWrap`: this is a conditional require
 - `dep.meta.promiseSymbol`: see the "Dynamic Imports" section
 

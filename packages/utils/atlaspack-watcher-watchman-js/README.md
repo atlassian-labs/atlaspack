@@ -1,4 +1,4 @@
-# @parcel/watcher-watchman-js
+# @atlaspack/watcher-watchman-js
 
 This package acts as a drop-in replacements for `@parcel/watcher` but only for
 watchman. It's a temporary workaround for some bugs and feature gaps with the

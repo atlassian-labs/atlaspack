@@ -8,12 +8,12 @@ Tree shaking refers to the general principle of removing dead code. With a naive
 
 Some ways to improve this are:
 
-- Determine which exports are used, and drop the `export` statement during the build. Then the exported value becomes an unused variable and a minifier can remove it. This is what symbol propagation and the conditional generation of only used `$parcel$export()` calls achieves.
+- Determine which exports are used, and drop the `export` statement during the build. Then the exported value becomes an unused variable and a minifier can remove it. This is what symbol propagation and the conditional generation of only used `$atlaspack$export()` calls achieves.
   This is also why `/*#__PURE__*/` comments are important:
 
 ```js
 function Button() {...}
-$parcelRequire(exports, "Button"; () => Button); // was: export { Button };
+$atlaspackRequire(exports, "Button"; () => Button); // was: export { Button };
 
 // The export was removed during the build, and the function will be dropped by the minifier:
 function Select() {...}
@@ -27,7 +27,7 @@ const MyContext = /*#__PURE__*/ React.createContext();
 
 - Determining used exports covers almost all tree shaking needs, but it would still leave the module registry ("prelude").
 
-  By concatenating assets into a single scope, the function calls for `parcelRequire("id").foo` can be replaced with a regular variable access `$id$export$foo` (ESM import are live bindings, so accessing an imported value in a function would perform this function call every single time, though it's just an object lookup anyway). And these `parcelRequire.register(() => {...})` wrappers plus `parcelRequire` calls also have some bundle size overhead.
+  By concatenating assets into a single scope, the function calls for `atlaspackRequire("id").foo` can be replaced with a regular variable access `$id$export$foo` (ESM import are live bindings, so accessing an imported value in a function would perform this function call every single time, though it's just an object lookup anyway). And these `atlaspackRequire.register(() => {...})` wrappers plus `atlaspackRequire` calls also have some bundle size overhead.
 
   It can also improve the effectiveness of the minifier, especially regarding function inlining and constant evaluation, but this really depends on the actual code.
 
@@ -193,7 +193,7 @@ The used symbols are determined by symbol propagation, and have slightly differe
 - `getUsedSymbols(asset)` is the set of symbols that were resolved to this specific asset (so excluding eventual reexports).
 - `getUsedSymbols(dependency)` is the set of symbols that are imported through the dependency (so both including reexports). So for an `export {a, b} from "...";` it is a subset of `a,b` and for `export * from "...";` it is the set of symbols that are actually resolved through that reexport.
 
-### Integrating ESM and CJS with parcelRequire: Circular Imports and Conditional Requires
+### Integrating ESM and CJS with atlaspackRequire: Circular Imports and Conditional Requires
 
 #### ESM
 
@@ -212,15 +212,15 @@ export function func() {
 }
 ```
 
-If `value` were instead a function, calling it would work correctly (functions are still hoisted). So circular imports are why `$parcel$export` calls also have to be hoisted to the top of the asset.
+If `value` were instead a function, calling it would work correctly (functions are still hoisted). So circular imports are why `$atlaspack$export` calls also have to be hoisted to the top of the asset.
 
 #### Limitations
 
-The reasons why the `parcelRequire` registry is needed are assets being accessed from other bundles (and potentially being duplicated), and conditional requires (which are impossible with pure ESM declarations).
+The reasons why the `atlaspackRequire` registry is needed are assets being accessed from other bundles (and potentially being duplicated), and conditional requires (which are impossible with pure ESM declarations).
 
-So assets that have at least one conditional incoming dependency or are used by some other bundle, are wrapped in a `parcelRequire.register`. `require("foo")` calls inside ifs or functions are replaced with the appropriate `parcelRequire("id")` call.
+So assets that have at least one conditional incoming dependency or are used by some other bundle, are wrapped in a `atlaspackRequire.register`. `require("foo")` calls inside ifs or functions are replaced with the appropriate `atlaspackRequire("id")` call.
 
-But since the whole subgraph is conditionally executed, all assets have to be wrapped and inside of that subgraph, imports cannot be replaced with the top level variables anymore, but instead get replaced with the CommonJS equivalent (so `var $id = parcelRequire("id");` and then `$id.foo`) which also runs the side effects.
+But since the whole subgraph is conditionally executed, all assets have to be wrapped and inside of that subgraph, imports cannot be replaced with the top level variables anymore, but instead get replaced with the CommonJS equivalent (so `var $id = atlaspackRequire("id");` and then `$id.foo`) which also runs the side effects.
 
 ### Runtime Deduplication
 

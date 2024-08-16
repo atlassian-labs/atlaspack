@@ -1,4 +1,4 @@
-# @parcel/transformer-babel
+# @atlaspack/transformer-babel
 
 This Parcel transformer plugin is responsible for transforming assets with Babel. It uses `@babel/core` to resolve babel config the same way Babel does and uses that if found. If no filesystem config is found it uses a default config that supports the most common cases.
 

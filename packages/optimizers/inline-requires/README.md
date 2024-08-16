@@ -9,7 +9,7 @@ Add this optimizer to run _first_ (before minification), for JS bundles.
 ```json
 {
   "optimizers": {
-    "*.js": ["@parcel/optimizer-inline-requires", "..."]
+    "*.js": ["@atlaspack/optimizer-inline-requires", "..."]
   }
 }
 ```
@@ -19,7 +19,7 @@ Add this optimizer to run _first_ (before minification), for JS bundles.
 When Parcel produces modules in bundles, where a dependency wasn't brought in by scope hoisting, it includes calls to require those dependencies at the top of the module function. For example, prior to minification, a module might look something like this:
 
 ```js
-parcelRegister('abc123', function (require, module, exports) {
+atlaspackRegister('abc123', function (require, module, exports) {
   var $def456 = require('def456');
   var $ghi789 = require('ghi789');
 
@@ -47,7 +47,7 @@ element.addEventListener('click', () => {
 What this plugin does, is it turns those `require` calls into "lazy" or "deferred" evaluation requires - that is, the factory function will only be executed when the module is first used. For the first example, the resulting code (pre-minification) will look like this:
 
 ```js
-parcelRegister('abc123', function (require, module, exports) {
+atlaspackRegister('abc123', function (require, module, exports) {
   var $def456;
   var $ghi789;
 

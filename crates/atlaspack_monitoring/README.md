@@ -1,4 +1,4 @@
-# parcel_monitoring
+# atlaspack_monitoring
 
 This crate wraps functionality provided to:
 
@@ -23,7 +23,7 @@ fixing.
 - By default, traces/logs won't be written
 - `ATLASPACK_TRACING_MODE=stdout` will write to standard-output
 - `ATLASPACK_TRACING_MODE=file` will write to a temporary log file, with log rotation this file will be under
-  `$TMPDIR/parcel_trace`
+  `$TMPDIR/atlaspack_trace`
 
 ## Sentry integration
 
@@ -43,7 +43,7 @@ Parcel uses
 [crash-handling](https://github.com/EmbarkStudios/crash-handling/blob/e2891a4c6a8d43374ec63d791c7e6d42ff2e6545/README.md)
 utilities to write [minidumps](https://github.com/EmbarkStudios/crash-handling/tree/main/minidumper) on crashes.
 
-When this feature is enabled, the parcel process will try to IPC with a server process using the
+When this feature is enabled, the atlaspack process will try to IPC with a server process using the
 [`minidumper`](https://github.com/EmbarkStudios/crash-handling/tree/main/minidumper) library. The server should write
 and report the crash.
 
