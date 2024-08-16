@@ -5,10 +5,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "funding": {
-    "type": "opencollective",
-    "url": "https://opencollective.com/parcel"
-  },
   "scripts": {
     "prepack": "./ensure-no-dev-lib.sh",
     "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
