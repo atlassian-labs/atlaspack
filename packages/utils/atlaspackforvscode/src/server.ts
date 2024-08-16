@@ -1,1 +1,1 @@
-import '@parcel/lsp';
+import '@atlaspack/lsp';

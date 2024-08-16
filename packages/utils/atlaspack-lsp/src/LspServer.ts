@@ -34,7 +34,7 @@ import {
   NotificationWorkspaceDiagnostics,
   RequestDocumentDiagnostics,
   RequestImporters,
-} from '@parcel/lsp-protocol';
+} from '@atlaspack/lsp-protocol';
 
 type Metafile = {
   projectRoot: string;

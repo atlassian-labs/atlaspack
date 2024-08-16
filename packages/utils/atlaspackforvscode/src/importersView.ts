@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import {LanguageClient, DocumentUri} from 'vscode-languageclient/node';
-import {NotificationBuild, RequestImporters} from '@parcel/lsp-protocol';
+import {NotificationBuild, RequestImporters} from '@atlaspack/lsp-protocol';
 
 export function addImportersView(
   context: vscode.ExtensionContext,

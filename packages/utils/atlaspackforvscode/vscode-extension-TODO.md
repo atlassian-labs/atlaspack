@@ -2,8 +2,8 @@ Packages:
 
 - [@parcel/reporter-lsp](./packages/reporters/lsp-reporter/)
 - [parcel-for-vscode](./packages/utils/parcelforvscode/)
-- [@parcel/lsp](./packages/utils/parcel-lsp/)
-- [@parcel/lsp-protocol](./packages/utils/parcel-lsp-protocol)
+- [@atlaspack/lsp](./packages/utils/parcel-lsp/)
+- [@atlaspack/lsp-protocol](./packages/utils/parcel-lsp-protocol)
 
 TODO:
 
@@ -24,7 +24,7 @@ TODO:
 
 Ideas:
 
-- a `parcel lsp` cli command to replace/subsume the standalone `@parcel/lsp` server
+- a `atlaspack lsp` cli command to replace/subsume the standalone `@atlaspack/lsp` server
   - this could take on the complexities of decision making like automatically
     starting a Atlaspack build if one isn’t running, or sharing an LSP server
     for the same parcel project with multiple workspaces/instances, etc.
