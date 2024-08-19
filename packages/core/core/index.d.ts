@@ -3,9 +3,9 @@ import type {
   BuildEvent,
   BuildSuccessEvent,
   AsyncSubscription,
-} from '@parcel/types';
-import type {FarmOptions} from '@parcel/workers';
-import type WorkerFarm from '@parcel/workers';
+} from '@atlaspack/types';
+import type {FarmOptions} from '@atlaspack/workers';
+import type WorkerFarm from '@atlaspack/workers';
 
 export class Atlaspack {
   constructor(options: InitialAtlaspackOptions);

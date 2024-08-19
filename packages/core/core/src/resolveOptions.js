@@ -32,7 +32,7 @@ import {ATLASPACK_VERSION} from './constants';
 const DEFAULT_CACHE_DIRNAME = '.atlaspack-cache';
 const LOCK_FILE_NAMES = ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'];
 
-// Generate a unique instanceId, will change on every run of parcel
+// Generate a unique instanceId, will change on every run of atlaspack
 function generateInstanceId(entries: Array<FilePath>): string {
   return hashString(
     `${entries.join(',')}-${Date.now()}-${Math.round(Math.random() * 100)}`,

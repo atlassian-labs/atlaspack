@@ -1,5 +1,5 @@
 import type {FileSystem} from '@atlaspack/types-internal';
-import type WorkerFarm from '@parcel/workers';
+import type WorkerFarm from '@atlaspack/workers';
 
 export type {
   FileSystem,
