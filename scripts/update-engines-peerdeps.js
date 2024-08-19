@@ -13,21 +13,21 @@ let packageVersions = new Map(
     {version: pkg.version, location: pkg.location},
   ]),
 );
-let coreVersion = packageVersions.get('@parcel/core').version;
+let coreVersion = packageVersions.get('@atlaspack/core').version;
 let coreRange =
-  coreVersion.includes('nightly') || process.argv.includes('--exact')
+  coreVersion.includes('canary') || process.argv.includes('--exact')
     ? coreVersion
     : `^${coreVersion}`;
 
 for (let [, {location}] of packageVersions) {
   let pkgPath = path.join(location, 'package.json');
   let pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-  if (pkg.engines?.parcel != null) {
-    pkg.engines.parcel = coreRange;
+  if (pkg.engines?.atlaspack != null) {
+    pkg.engines.atlaspack = coreRange;
     fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
   }
-  if (pkg.peerDependencies?.['@parcel/core'] != null) {
-    pkg.peerDependencies['@parcel/core'] = coreRange;
+  if (pkg.peerDependencies?.['@atlaspack/core'] != null) {
+    pkg.peerDependencies['@atlaspack/core'] = coreRange;
     fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
   }
 }
