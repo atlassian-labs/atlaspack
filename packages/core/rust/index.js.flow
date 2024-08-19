@@ -5,7 +5,7 @@ import type {
   FilePath,
   InitialAtlaspackOptions,
   PackageManager,
-} from '@parcel/types';
+} from '@atlaspack/types';
 
 declare export var init: void | (() => void);
 

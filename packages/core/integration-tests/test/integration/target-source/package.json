@@ -7,7 +7,7 @@
   "scripts": {
     "clean": "rm -rf ../.atlaspack-cache dist",
     "demo": "yarn clean && ATLASPACK_WORKERS=0 atlaspack build packages/package-a",
-    "debug": "yarn clean && ATLASPACK_WORKERS=0 node --inspect-brk ../../core/parcel/src/bin.js build packages/*",
+    "debug": "yarn clean && ATLASPACK_WORKERS=0 node --inspect-brk ../../core/atlaspack/src/bin.js build packages/*",
     "watch": "nodemon -w ../../ -i packages/package-a/dist -i packages/package-b/dist -i ../.atlaspack-cache -d 2 -x yarn demo"
   }
 }
