@@ -1,0 +1,4 @@
+{
+  "extends": ".mocharc.json",
+  "retries": 2
+}
