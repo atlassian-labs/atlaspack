@@ -73,15 +73,6 @@ jobs:
       - run: yarn --frozen-lockfile
       - run: yarn build-native-release
       - run: yarn test:unit
-      - name: Upload @atlaspack/rust artifacts on Linux with Node v20
-        if: ${{ runner.os == 'Linux' && matrix.node == 20 }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: Rust Linux Binaries
-          path: |
-            packages/core/rust/index.d.ts
-            packages/core/rust/index.js
-            packages/core/rust/*.node
 
   integration_tests:
     name: Integration tests (${{ matrix.version == 'v3' && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
