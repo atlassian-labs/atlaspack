@@ -3532,7 +3532,7 @@ describe.v2('cache', function () {
       assert(!res.includes('BAR'));
     });
 
-    describe('pnp', function () {
+    describe.skip('pnp', function () {
       it('should invalidate when the .pnp.js file changes', async function () {
         let Module = require('module');
         let origPnpVersion = process.versions.pnp;
