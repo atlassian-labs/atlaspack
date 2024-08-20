@@ -1510,7 +1510,7 @@ export default class RequestTracker {
       let opts = getWatcherOptions(this.options);
       let snapshotPath = path.join(this.options.cacheDir, snapshotKey + '.txt');
 
-      await this.options.inputFS.writeSnapshot(
+      await this.options.outputFS.writeSnapshot(
         this.options.watchDir,
         snapshotPath,
         opts,

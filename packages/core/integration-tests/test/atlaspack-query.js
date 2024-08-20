@@ -1,7 +1,13 @@
 // @flow
 import assert from 'assert';
 import path from 'path';
-import {bundle, describe, fsFixture, overlayFS} from '@atlaspack/test-utils';
+import {
+  bundle,
+  describe,
+  fsFixture,
+  overlayFS,
+  inputFS,
+} from '@atlaspack/test-utils';
 import {loadGraphs} from '../../../dev/query/src';
 
 describe.v2('atlaspack-query', () => {
@@ -14,6 +20,9 @@ describe.v2('atlaspack-query', () => {
       },
       shouldDisableCache: false,
       inputFS: overlayFS,
+      // We need to write to the default inputFS (NodeFS) as `loadGraphs` doesn't
+      // support custom FS's
+      outputFS: inputFS,
       cacheDir: path.join(__dirname, '.atlaspack-cache'),
     };
 
