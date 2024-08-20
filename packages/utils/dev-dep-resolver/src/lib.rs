@@ -3,10 +3,6 @@ use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
 
-use dashmap::DashMap;
-use dashmap::DashSet;
-use es_module_lexer::lex;
-use es_module_lexer::ImportKind;
 use atlaspack_resolver::CacheCow;
 use atlaspack_resolver::Invalidations;
 use atlaspack_resolver::ModuleType;
@@ -17,6 +13,10 @@ use atlaspack_resolver::ResolverError;
 use atlaspack_resolver::Specifier;
 use atlaspack_resolver::SpecifierError;
 use atlaspack_resolver::SpecifierType;
+use dashmap::DashMap;
+use dashmap::DashSet;
+use es_module_lexer::lex;
+use es_module_lexer::ImportKind;
 // use rayon::prelude::{ParallelBridge, ParallelIterator};
 
 #[derive(Debug)]

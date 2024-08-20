@@ -49,12 +49,10 @@ export default (new Runtime({
           !!(options.serveOptions && options.serveOptions.https),
         )};` +
         `var HMR_ENV_HASH = "${bundle.env.id}";` +
-        `var HMR_USE_SSE = ${
+        `var HMR_USE_SSE = ${JSON.stringify(
           // $FlowFixMe
-          JSON.stringify(
-            !!(process.env.ATLASPACK_BUILD_REPL && process.browser),
-          )
-        };` +
+          !!(process.env.ATLASPACK_BUILD_REPL && process.browser),
+        )};` +
         `module.bundle.HMR_BUNDLE_ID = ${JSON.stringify(bundle.id)};` +
         HMR_RUNTIME,
       isEntry: true,

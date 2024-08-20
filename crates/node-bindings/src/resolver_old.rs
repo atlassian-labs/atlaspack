@@ -504,7 +504,9 @@ fn convert_invalidations(
   (invalidate_on_file_change, invalidate_on_file_create)
 }
 
-fn get_resolve_options(mut custom_conditions: Vec<String>) -> atlaspack_resolver_old::ResolveOptions {
+fn get_resolve_options(
+  mut custom_conditions: Vec<String>,
+) -> atlaspack_resolver_old::ResolveOptions {
   let mut conditions = ExportsCondition::empty();
   custom_conditions.retain(|condition| {
     if let Ok(cond) = ExportsCondition::try_from(condition.as_ref()) {

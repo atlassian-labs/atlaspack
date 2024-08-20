@@ -52,7 +52,8 @@ impl<'a> VisitMut for NodeReplacer<'a> {
         match id.sym.to_string().as_str() {
           "__filename" => {
             let path_module_specifier = swc_core::ecma::atoms::JsWord::from("path");
-            let replace_me_value = swc_core::ecma::atoms::JsWord::from("$atlaspack$filenameReplace");
+            let replace_me_value =
+              swc_core::ecma::atoms::JsWord::from("$atlaspack$filenameReplace");
 
             let unresolved_mark = self.unresolved_mark;
             let expr = |this: &NodeReplacer| {
