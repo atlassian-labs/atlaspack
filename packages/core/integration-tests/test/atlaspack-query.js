@@ -11,7 +11,7 @@ import {
 import {loadGraphs} from '../../../dev/query/src';
 
 describe.v2('atlaspack-query', () => {
-  it.skip('loadGraphs', async function () {
+  it('loadGraphs', async function () {
     let entries = 'index.js';
     let options = {
       mode: 'production',
