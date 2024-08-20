@@ -1,1 +1,1 @@
-./packages/core/atlaspack/README.md
+packages/core/cli/README.md

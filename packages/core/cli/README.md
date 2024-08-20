@@ -20,7 +20,7 @@ Special thanks to [Devon](https://github.com/devongovett) for his invaluable con
 ## Installation
 
 ```sh
-npm install --save-dev atlaspack
+npm install --save-dev @atlaspack/cli
 ```
 
 ## Usage

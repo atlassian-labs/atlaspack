@@ -13,4 +13,4 @@ tmp
 # Ignoring main README for now because generated Table of Contents adds a line that prettier removes
 # in precommit hook, causing `yarn lint:readme` to fail
 /README.md
-/packages/core/atlaspack/README.md
+/packages/core/cli/README.md
