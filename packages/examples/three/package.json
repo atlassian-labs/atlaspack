@@ -27,9 +27,9 @@
     }
   },
   "devDependencies": {
+    "@atlaspack/cli": "2.12.0",
     "@atlaspack/config-default": "2.12.0",
     "@atlaspack/core": "2.12.0",
-    "@atlaspack/optimizer-esbuild": "2.12.0",
-    "atlaspack": "2.12.0"
+    "@atlaspack/optimizer-esbuild": "2.12.0"
   }
 }
