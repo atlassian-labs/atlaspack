@@ -28,7 +28,6 @@
       "@atlaspack/transformer-postcss",
       "@atlaspack/transformer-css"
     ],
-    "*.sss": ["@atlaspack/transformer-sugarss"],
     "*.{htm,html,xhtml}": [
       "@atlaspack/transformer-posthtml",
       "@atlaspack/transformer-html"
