@@ -67,11 +67,11 @@ export async function link(
     await fsSymlink(p, path.join(appRoot, 'node_modules', packageName), opts);
   }
 
-  // Step 4: Point `atlaspack` bin symlink to linked `packages/core/atlaspack/src/bin.js`
+  // Step 4: Point `atlaspack` bin symlink to linked `packages/core/cli/src/bin.js`
   // --------------------------------------------------------------------------------
 
   await fsSymlink(
-    path.join(packageRoot, 'core/atlaspack/src/bin.js'),
+    path.join(packageRoot, 'core/cli/src/bin.js'),
     path.join(appRoot, 'node_modules/.bin/atlaspack'),
     opts,
   );

@@ -7,7 +7,7 @@
     "demo": "atlaspack serve src/index.html --no-cache --https"
   },
   "devDependencies": {
-    "atlaspack": "2.12.0"
+    "@atlaspack/cli": "2.12.0"
   },
   "targets": {
     "browserModern": {
