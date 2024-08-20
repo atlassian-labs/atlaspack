@@ -2,7 +2,7 @@
 edition = "2021"
 name = "lmdb-js-lite"
 version = "0.1.5"
-repository = "https://github.com/yamadapc/lmdb-js-lite"
+repository = "https://github.com/atlassian-labs/atlaspack"
 
 [[bench]]
 name = "lmdb_js_safe_benchmark"

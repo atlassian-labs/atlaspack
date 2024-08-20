@@ -3,7 +3,7 @@
   "version": "0.1.5",
   "main": "typescript/compat.ts",
   "types": "compat.d.ts",
-  "repository": "https://github.com/yamadapc/lmdb-js-lite",
+  "repository": "https://github.com/atlassian-labs/atlaspack",
   "os": [
     "darwin",
     "linux"
@@ -20,7 +20,7 @@
       ]
     }
   },
-  "license": "MIT",
+  "license": "APACHE-2",
   "devDependencies": {
     "@napi-rs/cli": "^2.18.4",
     "@parcel/cache": "*",
