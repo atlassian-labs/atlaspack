@@ -3,10 +3,10 @@ use std::sync::Arc;
 use std::thread::JoinHandle;
 
 use crossbeam::channel::{Receiver, Sender};
-use heed::{Env, RoTxn, RwTxn};
+use heed::types::{Bytes, Str};
 use heed::EnvFlags;
 use heed::EnvOpenOptions;
-use heed::types::{Bytes, Str};
+use heed::{Env, RoTxn, RwTxn};
 use napi_derive::napi;
 use rayon::prelude::*;
 
@@ -36,7 +36,7 @@ pub struct LMDBOptions {
   /// * MAP_ASYNC - "use asynchronous msync when MDB_WRITEMAP is used"
   /// * NO_SYNC - "don't fsync after commit"
   /// * NO_META_SYNC - "don't fsync metapage after commit"
-  /// 
+  ///
   /// `MDB_WRITEMAP` is on by default.
   pub async_writes: bool,
   /// The mmap size, this corresponds to [`mdb_env_set_mapsize`](http://www.lmdb.tech/doc/group__mdb.html#gaa2506ec8dab3d969b0e609cd82e619e5)
@@ -73,7 +73,7 @@ impl Drop for DatabaseWriterHandle {
 ///
 /// * A raw DB handle that can be used for synchronous reads
 /// * A writer handle that can be used to send messages to the writer thread
-/// 
+///
 /// The writer handle should be used to create write transactions shared across
 /// Node.js threads.
 pub fn start_make_database_writer(
