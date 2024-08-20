@@ -3,8 +3,6 @@ use std::path::Path;
 use std::sync::Arc;
 use std::u64;
 
-#[cfg(test)]
-use mockall::automock;
 use atlaspack_core::plugin::BundlerPlugin;
 use atlaspack_core::plugin::CompressorPlugin;
 use atlaspack_core::plugin::NamerPlugin;
@@ -15,6 +13,8 @@ use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::plugin::ValidatorPlugin;
+#[cfg(test)]
+use mockall::automock;
 
 pub type PluginsRef = Arc<dyn Plugins + Send + Sync>;
 

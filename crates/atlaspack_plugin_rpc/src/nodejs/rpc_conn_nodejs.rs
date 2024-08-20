@@ -1,6 +1,6 @@
-use napi::{JsObject, JsUnknown};
 use atlaspack_napi_helpers::anyhow_from_napi;
 use atlaspack_napi_helpers::js_callable::JsCallable;
+use napi::{JsObject, JsUnknown};
 
 use crate::RpcWorker;
 

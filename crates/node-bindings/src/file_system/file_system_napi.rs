@@ -3,8 +3,8 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use napi::{Env, JsObject};
 use atlaspack::file_system::FileSystem;
+use napi::{Env, JsObject};
 
 use atlaspack_napi_helpers::js_callable::JsCallable;
 

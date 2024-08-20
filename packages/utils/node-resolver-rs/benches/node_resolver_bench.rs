@@ -192,7 +192,9 @@ fn criterion_benchmark(c: &mut Criterion) {
   let make_resolver = || {
     atlaspack_resolver_old::Resolver::atlaspack(
       root().into(),
-      atlaspack_resolver_old::CacheCow::Owned(atlaspack_resolver_old::Cache::new(Arc::new(OsFileSystem))),
+      atlaspack_resolver_old::CacheCow::Owned(atlaspack_resolver_old::Cache::new(Arc::new(
+        OsFileSystem,
+      ))),
     )
   };
 
