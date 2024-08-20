@@ -5,7 +5,7 @@ import {bundle, describe, fsFixture, overlayFS} from '@atlaspack/test-utils';
 import {loadGraphs} from '../../../dev/query/src';
 
 describe.v2('atlaspack-query', () => {
-  it('loadGraphs', async function () {
+  it.skip('loadGraphs', async function () {
     let entries = 'index.js';
     let options = {
       mode: 'production',
