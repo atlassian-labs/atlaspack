@@ -1,6 +1,8 @@
-require('./paragraphs.css');
+import './paragraphs.css';
 
-console.log(require('react'));
+import React from 'react';
+
+console.log('react', React);
 require('lodash');
 
 class Foo {}

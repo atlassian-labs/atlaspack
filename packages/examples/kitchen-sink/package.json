@@ -4,17 +4,16 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "serve": "atlaspack serve src/index.html --https --open",
-    "build": "rm -rf dist && atlaspack build src/index.html --no-cache"
+    "start": "atlaspack src/index.html --https --open"
+  },
+  "dependencies": {
+    "@swc/helpers": "^0.5.0",
+    "lodash": "^4.17.11",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.11",
-    "@atlaspack/babel-register": "2.12.0",
-    "@atlaspack/cli": "2.12.0",
-    "@atlaspack/config-default": "2.12.0",
-    "@atlaspack/core": "2.12.0",
-    "@atlaspack/optimizer-esbuild": "2.12.0",
-    "@atlaspack/reporter-sourcemap-visualiser": "2.12.0"
+    "@atlaspack/cli": "^2.12.0"
   },
   "targets": {
     "browserModern": {
@@ -33,10 +32,5 @@
         ]
       }
     }
-  },
-  "dependencies": {
-    "lodash": "^4.17.11",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
   }
 }

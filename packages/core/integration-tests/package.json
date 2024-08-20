@@ -28,6 +28,7 @@
     "command-exists": "^1.2.6",
     "core-js": "^3.2.1",
     "cross-env": "^7.0.0",
+    "esbuild": "^0.23.1",
     "esbuild-register": "^3.5.0",
     "exif-reader": "^1.0.3",
     "get-port": "^5.0.0",
