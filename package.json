@@ -8,6 +8,7 @@
   },
   "private": true,
   "workspaces": [
+    "crates/lmdb-js-lite",
     "packages/*/*"
   ],
   "scripts": {
