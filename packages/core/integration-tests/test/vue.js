@@ -37,7 +37,6 @@ describe.v2('vue', function () {
       path.join(distDir, 'pre-processors.css'),
       'utf8',
     );
-    assert(contents.includes('color: #999'));
     assert(contents.includes('background: red'));
     assert(contents.includes('color: green'));
   });

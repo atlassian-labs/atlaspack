@@ -1,11 +1,3 @@
-<style lang="stylus">
-font-stack = Helvetica, sans-serif
-primary-color = #999
-body
-  font 100% font-stack
-  color primary-color
-</style>
-
 <style lang="scss">
 $red: red;
 h1 {
