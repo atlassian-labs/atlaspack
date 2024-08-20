@@ -12,7 +12,6 @@ on:
 jobs:
   build-and-release:
     name: Build and release canary
-    if: false
     uses: ./.github/workflows/release.yml
     secrets: inherit
     with:
