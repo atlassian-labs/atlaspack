@@ -100,6 +100,7 @@ export class AtlaspackWatcherWatchmanJS implements Watcher {
     await this.init(dir);
 
     const response = await this.commandAsync(['clock', dir]);
+    fs.mkdirSync(path.dirname(snapshot), {recursive: true});
     fs.writeFileSync(snapshot, response.clock, {
       encoding: 'utf-8',
     });
