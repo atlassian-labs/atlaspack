@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "JavaScript Transformer Plugin for the Atlaspack Bundler"
 
+[dev-dependencies]
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
 
