@@ -9,6 +9,7 @@ let packages = JSON.parse(
 );
 let packageVersions = new Map(packages.map(pkg => [pkg.name, pkg.version]));
 
+console.log('in update config deps');
 let configsDir = path.join(__dirname, '..', 'packages', 'configs');
 let configs = fs.readdirSync(configsDir);
 for (let config of configs) {
@@ -21,6 +22,7 @@ for (let config of configs) {
         throw new Error(`Unknown atlaspack dependency ${dep}`);
       }
 
+      console.log('updating dep with version', version);
       pkg.atlaspackDependencies[dep] = version;
     }
 

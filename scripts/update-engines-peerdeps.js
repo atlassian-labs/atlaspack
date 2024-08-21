@@ -19,14 +19,17 @@ let coreRange =
     ? coreVersion
     : `^${coreVersion}`;
 
+console.log('in engines peer deps');
 for (let [, {location}] of packageVersions) {
   let pkgPath = path.join(location, 'package.json');
   let pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
   if (pkg.engines?.atlaspack != null) {
     pkg.engines.atlaspack = coreRange;
+    console.log('updating atlaspack engine', pkg.name, coreRange);
     fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
   }
   if (pkg.peerDependencies?.['@atlaspack/core'] != null) {
+    console.log('updating atlaspack peer dep', pkg.name, coreRange);
     pkg.peerDependencies['@atlaspack/core'] = coreRange;
     fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
   }

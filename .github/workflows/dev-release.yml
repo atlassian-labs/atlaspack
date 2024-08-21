@@ -4,6 +4,9 @@
 name: Development Release
 
 on:
+  push:
+    branches:
+      - monica/yarn2
   workflow_dispatch:
 
 jobs:
