@@ -6386,7 +6386,7 @@ describe.v2('cache', function () {
           import {Bundler} from '@atlaspack/plugin'
           import DefaultBundler from '@atlaspack/bundler-default'
 
-          const CONFIG = Symbol.for('atlaspack-plugin-config');
+          const CONFIG = Symbol.for('parcel-plugin-config');
 
           export default new Bundler({
             loadConfig({config, options}) {
