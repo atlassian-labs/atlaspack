@@ -222,7 +222,8 @@ jobs:
           path: debug-symbols/**
       - name: Debug
         run: ls -l packages/*/*/*.node
-      - run: echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > .npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Npm
+        run: |
+          npm config set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
+          npm config set registry https://registry.npmjs.org/
       - run: ${{ inputs.release-command }}
