@@ -24,7 +24,7 @@ import {type ProjectPath, toProjectPath} from './projectPath';
 import {version as ATLASPACK_VERSION} from '../package.json';
 
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
-const CONFIG = Symbol.for('atlaspack-plugin-config');
+const CONFIG = Symbol.for('parcel-plugin-config');
 
 export default async function loadPlugin<T>(
   pluginName: PackageName,

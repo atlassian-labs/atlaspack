@@ -16,7 +16,7 @@ import {NodePackageManager} from '@atlaspack/package-manager';
 
 import {type Asset} from '@atlaspack/types';
 
-const CONFIG = Symbol.for('atlaspack-plugin-config');
+const CONFIG = Symbol.for('parcel-plugin-config');
 let packageManager = new NodePackageManager(inputFS, '/');
 
 describe.v2('incremental bundling', function () {

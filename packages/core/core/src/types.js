@@ -124,7 +124,6 @@ export const ExportsCondition = {
   style: 1 << 12,
   sass: 1 << 13,
   less: 1 << 14,
-  stylus: 1 << 15,
 };
 
 export type Dependency = {|

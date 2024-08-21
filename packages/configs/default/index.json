@@ -21,14 +21,11 @@
     "*.{yaml,yml}": ["@atlaspack/transformer-yaml"],
     "*.{glsl,vert,frag}": ["@atlaspack/transformer-glsl"],
     "*.{gql,graphql}": ["@atlaspack/transformer-graphql"],
-    "*.{styl,stylus}": ["@atlaspack/transformer-stylus"],
     "*.{sass,scss}": ["@atlaspack/transformer-sass"],
-    "*.less": ["@atlaspack/transformer-less"],
     "*.{css,pcss}": [
       "@atlaspack/transformer-postcss",
       "@atlaspack/transformer-css"
     ],
-    "*.sss": ["@atlaspack/transformer-sugarss"],
     "*.{htm,html,xhtml}": [
       "@atlaspack/transformer-posthtml",
       "@atlaspack/transformer-html"
