@@ -22,7 +22,6 @@
     "*.{glsl,vert,frag}": ["@atlaspack/transformer-glsl"],
     "*.{gql,graphql}": ["@atlaspack/transformer-graphql"],
     "*.{sass,scss}": ["@atlaspack/transformer-sass"],
-    "*.less": ["@atlaspack/transformer-less"],
     "*.{css,pcss}": [
       "@atlaspack/transformer-postcss",
       "@atlaspack/transformer-css"

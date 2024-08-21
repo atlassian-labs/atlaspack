@@ -153,7 +153,7 @@ function resolvePathPlugin({asset, resolve}) {
 
           if (!contents) {
             filePath = await resolve(asset.filePath, filename, {
-              packageConditions: ['less', 'style'],
+              packageConditions: ['style'],
             });
             contents = await asset.fs.readFile(filePath, 'utf8');
           }

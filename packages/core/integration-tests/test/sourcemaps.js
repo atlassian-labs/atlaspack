@@ -7,6 +7,7 @@ import type {InitialAtlaspackOptions} from '@atlaspack/types';
 import {
   bundle as _bundle,
   describe,
+  fsFixture,
   inputFS,
   it,
   outputFS,
@@ -914,16 +915,30 @@ describe.v2('sourcemaps', function () {
 
   it('should create a valid sourcemap for a LESS asset', async function () {
     async function test(shouldOptimize) {
-      let inputFilePath = path.join(
-        __dirname,
-        '/integration/sourcemap-less/style.less',
-      );
+      await fsFixture(overlayFS, __dirname)`
+        .atlaspackrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "transformers": {
+              "*.less": ["@atlaspack/transformer-less"]
+            }
+          }
 
-      await bundle(inputFilePath, {
+        style.less:
+          @value: 100px * 2;
+
+          div {
+            width: @value;
+          }
+      `;
+
+      await bundle(path.join(__dirname, 'style.less'), {
         defaultTargetOptions: {
           shouldOptimize,
         },
+        inputFS: overlayFS,
       });
+
       let distDir = path.join(__dirname, '../dist/');
       let filename = path.join(distDir, 'style.css');
       let raw = await outputFS.readFile(filename, 'utf8');
@@ -941,7 +956,7 @@ describe.v2('sourcemaps', function () {
 
       let mapData = sourceMap.getMap();
       assert(mapData.sources.includes('style.less'));
-      let input = await inputFS.readFile(
+      let input = await overlayFS.readFile(
         path.join(path.dirname(filename), map.sourceRoot, 'style.less'),
         'utf-8',
       );
