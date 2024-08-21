@@ -1,6 +1,6 @@
-import { randomBytes } from "node:crypto";
-import { open as openLMDBUnsafe } from "lmdb";
-import { mkdirSync, rmSync } from "node:fs";
+import {randomBytes} from 'node:crypto';
+import {open as openLMDBUnsafe} from 'lmdb';
+import {mkdirSync, rmSync} from 'node:fs';
 
 const KEY_SIZE = 64;
 const ENTRY_SIZE = 64 * 1024; // 64KB
@@ -16,61 +16,65 @@ function generateEntry() {
 }
 
 async function main() {
-  rmSync("./databases", {
+  rmSync('./databases', {
     recursive: true,
     force: true,
   });
-  mkdirSync("./databases", {
+  mkdirSync('./databases', {
     recursive: true,
   });
   const unsafeDB = openLMDBUnsafe({
-    path: "./databases/unsafe",
-    encoding: "binary",
+    path: './databases/unsafe',
+    encoding: 'binary',
     compression: ENABLE_COMPRESSION,
     eventTurnBatching: true,
   });
 
-  console.log("Generating 1 million entries for testing");
+  console.log('Generating 1 million entries for testing');
   const entries = [...Array(NUM_ENTRIES)].map(() => {
     return generateEntry();
   });
 
   {
-    console.log("Without transaction wrapper (parcel usage)", MAX_TIME, "ms");
+    console.log(
+      'Without transaction wrapper (atlaspack usage)',
+      MAX_TIME,
+      'ms',
+    );
     const start = Date.now();
     let numEntriesInserted = 0;
     while (Date.now() - start < MAX_TIME) {
       const entry = entries.pop();
       if (!entry) break;
-      const { key, value } = entry;
+      const {key, value} = entry;
       await unsafeDB.put(key, value);
       numEntriesInserted += 1;
     }
     const duration = Date.now() - start;
     const throughput = numEntriesInserted / duration;
-    console.log("Throughput:", throughput, "entries / second");
+    console.log('Throughput:', throughput, 'entries / second');
   }
 
   {
-    console.log("Writing entries for", MAX_TIME, "ms");
+    console.log('Writing entries for', MAX_TIME, 'ms');
     const start = Date.now();
     let numEntriesInserted = 0;
     await unsafeDB.transaction(async () => {
       while (Date.now() - start < MAX_TIME) {
         const entry = entries.pop();
         if (!entry) break;
-        const { key, value } = entry;
+        const {key, value} = entry;
         await unsafeDB.put(key, value);
         numEntriesInserted += 1;
       }
     });
     const duration = Date.now() - start;
     const throughput = numEntriesInserted / duration;
-    console.log("Unsafe Throughput:", throughput, "entries / second");
+    console.log('Unsafe Throughput:', throughput, 'entries / second');
   }
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error(err);
   process.exitCode = 1;
 });
