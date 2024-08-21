@@ -10,4 +10,5 @@ yarn.lock
 *.node
 .yarn
 __test__
+__benchmarks__
 renovate.json
