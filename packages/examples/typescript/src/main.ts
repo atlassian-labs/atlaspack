@@ -8,4 +8,5 @@ export interface Params {
 
 export var a = 2,
   b = 5;
-export default function() {}
+
+export default function () {}
