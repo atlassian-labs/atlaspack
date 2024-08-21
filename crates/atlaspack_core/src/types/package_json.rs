@@ -20,7 +20,6 @@ bitflags! {
     const STYLE = 1 << 12;
     const SASS = 1 << 13;
     const LESS = 1 << 14;
-    const STYLUS = 1 << 15;
   }
 }
 
@@ -69,7 +68,6 @@ impl TryFrom<&str> for ExportsCondition {
       "style" => ExportsCondition::STYLE,
       "sass" => ExportsCondition::SASS,
       "less" => ExportsCondition::LESS,
-      "stylus" => ExportsCondition::STYLUS,
       _ => return Err(()),
     })
   }

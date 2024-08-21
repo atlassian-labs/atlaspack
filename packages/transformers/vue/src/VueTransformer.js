@@ -353,7 +353,6 @@ ${
           }
           switch (style.lang) {
             case 'less':
-            case 'stylus':
             case 'styl':
             case 'scss':
             case 'sass':
