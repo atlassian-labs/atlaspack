@@ -1,7 +1,7 @@
 {
   "name": "lmdb-js-lite",
   "version": "0.1.5",
-  "main": "typescript/compat.ts",
+  "main": "dist/compat.js",
   "types": "compat.d.ts",
   "repository": "https://github.com/atlassian-labs/atlaspack",
   "os": [

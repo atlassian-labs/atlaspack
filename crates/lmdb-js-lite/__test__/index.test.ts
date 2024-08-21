@@ -52,7 +52,7 @@ describe("lmdb", () => {
       await db.put("key", v8.serialize(value));
       const result = await db.get("key");
       const resultValue = result && v8.deserialize(result);
-      expect(value).toEqual(resultValue);
+      expect(resultValue).toEqual(value);
     }
     {
       await db.put("key", v8.serialize({ myObject: "here", something: true }));
@@ -135,7 +135,7 @@ describe("lmdb", () => {
             await unsafeDB?.put(`${i}`, v8.serialize(i));
           }
         });
-      }, 40000);
+      });
 
       it("read many entries", () => {
         for (let i = 0; i < numEntriesToTest; i += 1) {
