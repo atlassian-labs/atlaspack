@@ -13,6 +13,8 @@ import type {
   Validator as ValidatorOpts,
 } from '@atlaspack/types';
 
+// This uses the `parcel-plugin-config` symbol so it's backwards compatible with
+// parcel plugins.
 const CONFIG = Symbol.for('parcel-plugin-config');
 
 export class Transformer {
