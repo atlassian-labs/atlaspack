@@ -30,7 +30,6 @@
       "@atlaspack/transformer-posthtml",
       "@atlaspack/transformer-html"
     ],
-    "*.pug": ["@atlaspack/transformer-pug"],
     "*.coffee": ["@atlaspack/transformer-coffeescript"],
     "*.mdx": ["@atlaspack/transformer-mdx"],
     "*.vue": ["@atlaspack/transformer-vue"],

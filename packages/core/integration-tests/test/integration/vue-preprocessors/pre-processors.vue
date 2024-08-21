@@ -12,13 +12,6 @@ h1 {
 }
 </style>
 
-<template lang="pug">
-div
-  h1 This is the app
-  comp-a
-  comp-b
-</template>
-
 <script lang="coffee">
 module.exports =
   data: ->

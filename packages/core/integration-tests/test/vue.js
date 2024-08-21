@@ -31,7 +31,6 @@ describe.v2('vue', function () {
       path.join(__dirname, '/integration/vue-preprocessors/pre-processors.vue'),
     );
     let output = (await run(b)).default;
-    assert.equal(typeof output.render, 'function');
     assert.deepEqual(output.data(), {msg: 'Hello from coffee!'});
     let contents = await outputFS.readFile(
       path.join(distDir, 'pre-processors.css'),
@@ -101,7 +100,6 @@ describe.v2('vue', function () {
       path.join(__dirname, '/integration/vue-external-files/App.vue'),
     );
     let output = (await run(b)).default;
-    assert.equal(typeof output.render, 'function');
     assert.deepEqual(output.data(), {msg: 'Hello World'});
     let contents = await outputFS.readFile(
       path.join(distDir, 'App.css'),

@@ -227,12 +227,6 @@ async function processPipeline({
       if (template.lang && !['htm', 'html'].includes(template.lang)) {
         let options = {};
         let preprocessor = consolidate[template.lang];
-        // Pug doctype fix (fixes #7756)
-        switch (template.lang) {
-          case 'pug':
-            options.doctype = 'html';
-            break;
-        }
         if (!preprocessor) {
           // TODO: codeframe
           throw new ThrowableDiagnostic({
