@@ -15,9 +15,9 @@
     "atlaspack": "^2.12.0"
   },
   "dependencies": {
-    "@mischnic/json-sourcemap": "^0.1.0",
     "@atlaspack/diagnostic": "2.12.0",
     "@atlaspack/plugin": "2.12.0",
-    "@atlaspack/utils": "2.12.0"
+    "@atlaspack/utils": "2.12.0",
+    "@mischnic/json-sourcemap": "^0.1.0"
   }
 }

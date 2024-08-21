@@ -5,6 +5,13 @@
 .parcel-cache/
 .vscode/*
 !.vscode/extensions.json
+.yarn/*
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
 coverage/
 dist/
 lib/

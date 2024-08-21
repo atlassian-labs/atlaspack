@@ -41,10 +41,10 @@
     "postinstall": "patch-package"
   },
   "devDependencies": {
+    "@atlaspack/babel-register": "*",
     "@babel/core": "^7.22.11",
     "@khanacademy/flow-to-ts": "^0.5.2",
     "@napi-rs/cli": "^2.18.3",
-    "@atlaspack/babel-register": "*",
     "@types/node": ">= 18",
     "buffer": "mischnic/buffer#b8a4fa94",
     "cross-env": "^7.0.0",
@@ -72,10 +72,10 @@
     "*.{js,json,md,ts}": "prettier --write",
     "*.rs": "rustfmt"
   },
-  "packageManager": "yarn@1.22.19",
+  "packageManager": "yarn@4.4.0",
   "browser": {
-    "react-dom": "preact/compat",
     "react": "preact/compat",
+    "react-dom": "preact/compat",
     "scheduler": false
   },
   "dependencies": {
