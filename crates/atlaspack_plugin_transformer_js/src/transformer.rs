@@ -4,13 +4,12 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
 
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
-use atlaspack_core::plugin::{TransformResult, TransformationInput};
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
   Asset, BuildMode, Diagnostic, ErrorKind, FileType, LogLevel, OutputFormat, SourceType,
 };
-use atlaspack_filesystem::FileSystemRef;
 
 use crate::ts_config::{Jsx, Target, TsConfig};
 
@@ -30,7 +29,6 @@ mod test_helpers;
 ///   mapping to a mangled name that the SWC transformer replaced in the source file + the source
 ///   module and the source name that has been imported)
 pub struct AtlaspackJsTransformerPlugin {
-  file_system: FileSystemRef,
   options: Arc<PluginOptions>,
   ts_config: Option<TsConfig>,
 }
@@ -53,7 +51,6 @@ impl AtlaspackJsTransformerPlugin {
       .ok();
 
     Ok(Self {
-      file_system: ctx.file_system.clone(),
       options: ctx.options.clone(),
       ts_config,
     })
@@ -71,16 +68,16 @@ impl fmt::Debug for AtlaspackJsTransformerPlugin {
 impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does a lot of equivalent work to `JSTransformer::transform` in
   /// `packages/transformers/js`
-  fn transform(&mut self, input: TransformationInput) -> Result<TransformResult, Error> {
+  fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
     let compiler_options = self
       .ts_config
       .as_ref()
       .and_then(|ts| ts.compiler_options.as_ref());
 
-    let env = input.env();
-    let file_type = input.file_type();
+    let env = asset.env;
+    let file_type = asset.file_type;
     let is_node = env.context.is_node();
-    let source_code = input.read_code(self.file_system.clone())?;
+    let source_code = asset.code;
 
     let mut targets: HashMap<String, String> = HashMap::new();
     if env.context.is_browser() {
@@ -135,8 +132,8 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
           .iter()
           .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
           .collect(),
-        filename: input
-          .file_path()
+        filename: asset
+          .file_path
           .to_str()
           .ok_or_else(|| anyhow!("Invalid non UTF-8 file-path"))?
           .to_string(),
@@ -197,7 +194,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       return Err(anyhow!(format!("{:#?}", errors)));
     }
 
-    let file_path = input.file_path();
+    let file_path = asset.file_path;
     let file_type = FileType::from_extension(
       file_path
         .extension()
@@ -405,7 +402,7 @@ exports.hello = function() {};
 
     let mut transformer = AtlaspackJsTransformerPlugin::new(&ctx).expect("Expected transformer");
 
-    let result = transformer.transform(TransformationInput::Asset(asset))?;
+    let result = transformer.transform(asset)?;
     Ok(result)
   }
 }

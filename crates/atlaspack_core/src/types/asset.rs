@@ -3,7 +3,9 @@ use std::hash::{Hash, Hasher};
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::u64;
 
+use atlaspack_filesystem::FileSystemRef;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -45,6 +47,24 @@ impl From<String> for Code {
   }
 }
 
+fn create_asset_id(
+  env: &Environment,
+  file_path: &PathBuf,
+  pipeline: &Option<String>,
+  query: &Option<String>,
+  unique_key: &Option<String>,
+) -> u64 {
+  let mut hasher = crate::hash::IdentifierHasher::default();
+
+  env.hash(&mut hasher);
+  file_path.hash(&mut hasher);
+  pipeline.hash(&mut hasher);
+  query.hash(&mut hasher);
+  unique_key.hash(&mut hasher);
+
+  hasher.finish()
+}
+
 /// An asset is a file or part of a file that may represent any data type including source code, binary data, etc.
 ///
 /// Note that assets may exist in the file system or virtually.
@@ -52,6 +72,10 @@ impl From<String> for Code {
 #[derive(Default, PartialEq, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Asset {
+  /// The main identify hash for the asset. It is consistent for the entire
+  /// build and between builds.
+  pub id: u64,
+
   /// Controls which bundle the asset is placed into
   pub bundle_behavior: BundleBehavior,
 
@@ -143,6 +167,36 @@ pub struct Asset {
 }
 
 impl Asset {
+  pub fn new(
+    env: Arc<Environment>,
+    file_path: PathBuf,
+    resolver_code: Option<String>,
+    pipeline: Option<String>,
+    side_effects: bool,
+    query: Option<String>,
+    fs: FileSystemRef,
+  ) -> anyhow::Result<Self> {
+    let file_type =
+      FileType::from_extension(file_path.extension().and_then(|s| s.to_str()).unwrap_or(""));
+
+    let code = if let Some(code) = resolver_code {
+      Code::from(code)
+    } else {
+      let code_from_disk = fs.read_to_string(&file_path)?;
+      Code::from(code_from_disk)
+    };
+
+    Ok(Self {
+      id: create_asset_id(&env, &file_path, &pipeline, &query, &None),
+      file_path,
+      env,
+      code: Arc::new(code),
+      side_effects,
+      file_type,
+      ..Asset::default()
+    })
+  }
+
   pub fn id(&self) -> u64 {
     let mut hasher = crate::hash::IdentifierHasher::default();
 

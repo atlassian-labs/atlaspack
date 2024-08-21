@@ -6,7 +6,6 @@ description = "JavaScript Transformer Plugin for the Atlaspack Bundler"
 
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
-atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 
 anyhow = "1"
 indexmap = "2.2.6"

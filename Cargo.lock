@@ -421,7 +421,6 @@ dependencies = [
  "anyhow",
  "atlaspack-js-swc-core",
  "atlaspack_core",
- "atlaspack_filesystem",
  "indexmap 2.2.6",
  "serde",
  "swc_core",
