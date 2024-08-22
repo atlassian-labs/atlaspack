@@ -197,19 +197,6 @@ impl Asset {
     })
   }
 
-  pub fn id(&self) -> u64 {
-    let mut hasher = crate::hash::IdentifierHasher::default();
-
-    self.env.hash(&mut hasher);
-    self.file_path.hash(&mut hasher);
-    self.file_type.hash(&mut hasher);
-    self.pipeline.hash(&mut hasher);
-    self.query.hash(&mut hasher);
-    self.unique_key.hash(&mut hasher);
-
-    hasher.finish()
-  }
-
   pub fn set_interpreter(&mut self, shebang: impl Into<serde_json::Value>) {
     self.meta.insert("interpreter".into(), shebang.into());
   }

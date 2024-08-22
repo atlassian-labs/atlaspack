@@ -294,7 +294,7 @@ impl serde::Serialize for AssetGraph {
 
           SerializedAssetGraphNode::Asset {
             value: SerializedAsset {
-              id: asset.id().to_string(),
+              id: asset.id.to_string(),
               asset,
             },
           }
@@ -349,7 +349,7 @@ impl std::hash::Hash for AssetGraph {
     for node in self.graph.node_weights() {
       std::mem::discriminant(node).hash(state);
       match node {
-        AssetGraphNode::Asset(idx) => self.assets[*idx].asset.id().hash(state),
+        AssetGraphNode::Asset(idx) => self.assets[*idx].asset.id.hash(state),
         AssetGraphNode::Dependency(idx) => self.dependencies[*idx].dependency.id().hash(state),
         _ => {}
       }
