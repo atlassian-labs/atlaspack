@@ -35,7 +35,9 @@ export function validatePackageName(
     // );
   } else if (!pkg.startsWith('.')) {
     assert(
-      pkg.startsWith(`parcel-${pluginType}-`),
+      pkg.startsWith(`parcel-${pluginType}-`) ||
+        pkg.startsWith(`atlaspack-${pluginType}`),
+      // let the error message be wrong for now
       `Atlaspack ${pluginType} packages must be named according to "parcel-${pluginType}-{name}"`,
     );
   }
