@@ -11,10 +11,10 @@ import type {
 import {readConfig, hashObject} from '@atlaspack/utils';
 import type {
   Config,
-  AtlaspackOptions,
+  ParcelOptions,
   InternalFileCreateInvalidation,
 } from '../types';
-import type {LoadedPlugin} from '../AtlaspackConfig';
+import type {LoadedPlugin} from '../ParcelConfig';
 import type {RequestResult, RunAPI} from '../RequestTracker';
 import type {ProjectPath} from '../projectPath';
 
@@ -79,7 +79,7 @@ export type ConfigRequestResult = void;
 export async function loadPluginConfig<T: PluginWithLoadConfig>(
   loadedPlugin: LoadedPlugin<T>,
   config: Config,
-  options: AtlaspackOptions,
+  options: ParcelOptions,
 ): Promise<void> {
   let loadConfig = loadedPlugin.plugin.loadConfig;
   if (!loadConfig) {
@@ -114,7 +114,7 @@ const configKeyCache = createBuildCache();
 export async function getConfigKeyContentHash(
   filePath: ProjectPath,
   configKey: string,
-  options: AtlaspackOptions,
+  options: ParcelOptions,
 ): Async<string> {
   let cacheKey = `${fromProjectPathRelative(filePath)}:${configKey}`;
   let cachedValue = configKeyCache.get(cacheKey);
@@ -216,7 +216,7 @@ export async function runConfigRequest<TResult: RequestResult>(
 export async function getConfigHash(
   config: Config,
   pluginName: string,
-  options: AtlaspackOptions,
+  options: ParcelOptions,
 ): Promise<string> {
   if (config.result == null) {
     return '';

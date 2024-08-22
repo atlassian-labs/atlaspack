@@ -9,12 +9,12 @@ import {requestTypes} from '../RequestTracker';
 import type {Bundle} from '../types';
 import type BundleGraph from '../BundleGraph';
 import type {BundleInfo, RunPackagerRunnerResult} from '../PackagerRunner';
-import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
+import type {ConfigAndCachePath} from './ParcelConfigRequest';
 
 import nullthrows from 'nullthrows';
 import {runConfigRequest} from './ConfigRequest';
 import {getDevDepRequests, runDevDepRequest} from './DevDepRequest';
-import createAtlaspackConfigRequest from './AtlaspackConfigRequest';
+import createParcelConfigRequest from './ParcelConfigRequest';
 
 type PackageRequestInput = {|
   bundleGraph: BundleGraph,
@@ -56,9 +56,7 @@ async function run({input, api, farm}) {
   let start = Date.now();
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);
   let {cachePath} = nullthrows(
-    await api.runRequest<null, ConfigAndCachePath>(
-      createAtlaspackConfigRequest(),
-    ),
+    await api.runRequest<null, ConfigAndCachePath>(createParcelConfigRequest()),
   );
 
   let {devDepRequests, configRequests, bundleInfo, invalidations} =

@@ -1,4 +1,4 @@
-import atlaspack from 'url:./atlaspack.webp';
+import parcel from 'url:./parcel.webp';
 import {message} from './message';
 
 import('./async');
@@ -9,7 +9,7 @@ new Worker(new URL('worker.js', import.meta.url), {type: 'module'});
 console.log(message);
 
 let icon = document.createElement('img');
-icon.src = atlaspack;
+icon.src = parcel;
 icon.width = 100;
 
 document.body.prepend(icon);

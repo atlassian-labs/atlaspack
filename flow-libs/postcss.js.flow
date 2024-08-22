@@ -1,6 +1,6 @@
 // @flow
 
-// (Only covers the API that Atlaspack uses)
+// (Only covers the API that Parcel uses)
 // Derived from the PostCSS docs available at
 // http://api.postcss.org/postcss.html.
 

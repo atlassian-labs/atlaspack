@@ -102,7 +102,7 @@ describe.v2('pug', function () {
     ]);
 
     const html = await outputFS.readFile(path.join(distDir, 'index.html'));
-    assert(html.includes('Greetings, Atlaspack'));
+    assert(html.includes('Greetings, Parcel'));
   });
 
   it('should support filters', async function () {

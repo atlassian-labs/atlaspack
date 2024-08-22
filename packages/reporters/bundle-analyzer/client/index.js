@@ -12,7 +12,7 @@ let tooltip;
 
 // Foam Tree docs:
 // https://get.carrotsearch.com/foamtree/demo/api/index.html
-// Some options from Atlaspack 1 Visualizer:
+// Some options from Parcel 1 Visualizer:
 // https://github.com/gregtillbrook/parcel-plugin-bundle-visualiser/blob/ca5440fc61c85e40e7abc220ad99e274c7c104c6/src/buildReportAssets/init.js#L4
 // and Webpack Bundle Analyzer:
 // https://github.com/webpack-contrib/webpack-bundle-analyzer/blob/4a232f0cf7bbfed907a5c554879edd5d6f4b48ce/client/components/Treemap.jsx

@@ -1,6 +1,6 @@
 {
-  "extends": "../.atlaspackrc",
+  "extends": "../.parcelrc",
   "transformers": {
-    "*.js": ["atlaspack-transformer-sub", "..."]
+    "*.js": ["parcel-transformer-sub", "..."]
   }
 }

@@ -7,7 +7,7 @@ import type {
 } from '@atlaspack/types';
 import type {
   BundleGroup,
-  AtlaspackOptions,
+  ParcelOptions,
   InternalFileCreateInvalidation,
   InternalSourceLocation,
   InternalDevDepOptions,
@@ -73,10 +73,10 @@ const ignoreOptions = new Set([
 ]);
 
 export function optionsProxy(
-  options: AtlaspackOptions,
+  options: ParcelOptions,
   invalidateOnOptionChange: string => void,
   addDevDependency?: (devDep: InternalDevDepOptions) => void,
-): AtlaspackOptions {
+): ParcelOptions {
   let packageManager = addDevDependency
     ? proxyPackageManager(
         options.projectRoot,

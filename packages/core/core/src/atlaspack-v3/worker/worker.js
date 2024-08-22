@@ -3,7 +3,7 @@ import * as napi from '@atlaspack/rust';
 import {workerData} from 'worker_threads';
 import type {ResolverNapi} from '../plugins/Resolver';
 
-export class AtlaspackWorker {
+export class ParcelWorker {
   #resolvers: Map<string, ResolverNapi>;
 
   ping() {
@@ -11,4 +11,4 @@ export class AtlaspackWorker {
   }
 }
 
-napi.registerWorker(workerData.tx_worker, new AtlaspackWorker());
+napi.registerWorker(workerData.tx_worker, new ParcelWorker());

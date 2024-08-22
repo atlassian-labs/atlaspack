@@ -7,7 +7,7 @@ export type FeatureFlags = _FeatureFlags;
 
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   exampleFeature: false,
-  atlaspackV3: false,
+  parcelV3: false,
   useWatchmanWatcher: false,
   importRetry: false,
   ownedResolverStructures: false,

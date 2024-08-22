@@ -20,7 +20,7 @@ module.exports = {
     node: true,
   },
   globals: {
-    atlaspackRequire: true,
+    parcelRequire: true,
     define: true,
     SharedArrayBuffer: true,
   },

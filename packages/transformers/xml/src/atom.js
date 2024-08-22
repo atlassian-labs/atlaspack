@@ -47,17 +47,17 @@ export function content(
   }
 
   if (contents) {
-    let atlaspackKey = `${asset.id}:${parts.length}`;
+    let parcelKey = `${asset.id}:${parts.length}`;
     let el = element.ownerDocument.createElementNS(
       'https://parceljs.org',
       'inline',
     );
-    el.setAttribute('key', atlaspackKey);
+    el.setAttribute('key', parcelKey);
     el.setAttribute('type', type);
     element.appendChild(el);
 
     asset.addDependency({
-      specifier: atlaspackKey,
+      specifier: parcelKey,
       specifierType: 'esm',
       bundleBehavior: 'inline',
     });
@@ -65,7 +65,7 @@ export function content(
     parts.push({
       type,
       content: contents,
-      uniqueKey: atlaspackKey,
+      uniqueKey: parcelKey,
       bundleBehavior: 'inline',
     });
   }

@@ -1,6 +1,6 @@
 {
   "extends": "@atlaspack/config-default",
   "transformers": {
-    "*.{txt,ini}": ["atlaspack-transformer-a", "atlaspack-transformer-b"]
+    "*.{txt,ini}": ["parcel-transformer-a", "parcel-transformer-b"]
   }
 }

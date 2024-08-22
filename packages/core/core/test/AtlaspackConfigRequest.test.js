@@ -2,7 +2,7 @@
 import assert from 'assert';
 import nullthrows from 'nullthrows';
 import path from 'path';
-import AtlaspackConfig from '../src/AtlaspackConfig';
+import ParcelConfig from '../src/ParcelConfig';
 import {
   validateConfigFile,
   mergePipelines,
@@ -10,19 +10,19 @@ import {
   mergeConfigs,
   resolveExtends,
   parseAndProcessConfig,
-  resolveAtlaspackConfig,
+  resolveParcelConfig,
   processConfig,
-} from '../src/requests/AtlaspackConfigRequest';
-import {validatePackageName} from '../src/AtlaspackConfig.schema';
+} from '../src/requests/ParcelConfigRequest';
+import {validatePackageName} from '../src/ParcelConfig.schema';
 import {DEFAULT_OPTIONS, relative} from './test-utils';
 import {toProjectPath} from '../src/projectPath';
 
-describe('AtlaspackConfigRequest', () => {
+describe('ParcelConfigRequest', () => {
   describe('validatePackageName', () => {
     it('should error on an invalid official package', () => {
       assert.throws(() => {
         validatePackageName('@atlaspack/foo-bar', 'transform', 'transformers');
-      }, /Official atlaspack transform packages must be named according to "@atlaspack\/transform-{name}"/);
+      }, /Official parcel transform packages must be named according to "@atlaspack\/transform-{name}"/);
 
       assert.throws(() => {
         validatePackageName(
@@ -30,7 +30,7 @@ describe('AtlaspackConfigRequest', () => {
           'transform',
           'transformers',
         );
-      }, /Official atlaspack transform packages must be named according to "@atlaspack\/transform-{name}"/);
+      }, /Official parcel transform packages must be named according to "@atlaspack\/transform-{name}"/);
     });
 
     it('should succeed on a valid official package', () => {
@@ -44,49 +44,45 @@ describe('AtlaspackConfigRequest', () => {
     it('should error on an invalid community package', () => {
       assert.throws(() => {
         validatePackageName('foo-bar', 'transform', 'transformers');
-      }, /Atlaspack transform packages must be named according to "atlaspack-transform-{name}"/);
+      }, /Parcel transform packages must be named according to "parcel-transform-{name}"/);
 
       assert.throws(() => {
-        validatePackageName('atlaspack-foo-bar', 'transform', 'transformers');
-      }, /Atlaspack transform packages must be named according to "atlaspack-transform-{name}"/);
+        validatePackageName('parcel-foo-bar', 'transform', 'transformers');
+      }, /Parcel transform packages must be named according to "parcel-transform-{name}"/);
 
       assert.throws(() => {
-        validatePackageName('atlaspack-transform', 'transform', 'transformers');
-      }, /Atlaspack transform packages must be named according to "atlaspack-transform-{name}"/);
+        validatePackageName('parcel-transform', 'transform', 'transformers');
+      }, /Parcel transform packages must be named according to "parcel-transform-{name}"/);
     });
 
     it('should succeed on a valid community package', () => {
-      validatePackageName(
-        'atlaspack-transform-bar',
-        'transform',
-        'transformers',
-      );
+      validatePackageName('parcel-transform-bar', 'transform', 'transformers');
     });
 
-    // Skipping this while the migration to atlaspack occurs
+    // Skipping this while the migration to parcel occurs
     it.skip('should error on an invalid scoped package', () => {
       assert.throws(() => {
         validatePackageName('@test/foo-bar', 'transform', 'transformers');
-      }, /Scoped atlaspack transform packages must be named according to "@test\/atlaspack-transform\[-{name}\]"/);
+      }, /Scoped parcel transform packages must be named according to "@test\/parcel-transform\[-{name}\]"/);
 
       assert.throws(() => {
         validatePackageName(
-          '@test/atlaspack-foo-bar',
+          '@test/parcel-foo-bar',
           'transform',
           'transformers',
         );
-      }, /Scoped atlaspack transform packages must be named according to "@test\/atlaspack-transform\[-{name}\]"/);
+      }, /Scoped parcel transform packages must be named according to "@test\/parcel-transform\[-{name}\]"/);
     });
 
     it('should succeed on a valid scoped package', () => {
       validatePackageName(
-        '@test/atlaspack-transform-bar',
+        '@test/parcel-transform-bar',
         'transform',
         'transformers',
       );
 
       validatePackageName(
-        '@test/atlaspack-transform',
+        '@test/parcel-transform',
         'transform',
         'transformers',
       );
@@ -94,7 +90,7 @@ describe('AtlaspackConfigRequest', () => {
 
     it('should succeed on a local package', () => {
       validatePackageName(
-        './atlaspack-transform-bar',
+        './parcel-transform-bar',
         'transform',
         'transformers',
       );
@@ -107,13 +103,13 @@ describe('AtlaspackConfigRequest', () => {
       assert.throws(() => {
         validateConfigFile(
           {
-            filePath: '.atlaspackrc',
-            extends: 'atlaspack-config-foo',
+            filePath: '.parcelrc',
+            extends: 'parcel-config-foo',
             transformers: {
-              '*.js': ['atlaspack-invalid-plugin'],
+              '*.js': ['parcel-invalid-plugin'],
             },
           },
-          '.atlaspackrc',
+          '.parcelrc',
         );
       });
     });
@@ -123,10 +119,10 @@ describe('AtlaspackConfigRequest', () => {
         validateConfigFile(
           // $FlowExpectedError[incompatible-call]
           {
-            filePath: '.atlaspackrc',
+            filePath: '.parcelrc',
             resolvers: '123',
           },
-          '.atlaspackrc',
+          '.parcelrc',
         );
       });
     });
@@ -135,11 +131,11 @@ describe('AtlaspackConfigRequest', () => {
       assert.throws(() => {
         validateConfigFile(
           {
-            filePath: '.atlaspackrc',
+            filePath: '.parcelrc',
             // $FlowExpectedError[incompatible-call]
             resolvers: [1, '123', 5],
           },
-          '.atlaspackrc',
+          '.parcelrc',
         );
       });
     });
@@ -148,10 +144,10 @@ describe('AtlaspackConfigRequest', () => {
       assert.throws(() => {
         validateConfigFile(
           {
-            filePath: '.atlaspackrc',
-            resolvers: ['atlaspack-foo-bar'],
+            filePath: '.parcelrc',
+            resolvers: ['parcel-foo-bar'],
           },
-          '.atlaspackrc',
+          '.parcelrc',
         );
       });
     });
@@ -159,20 +155,20 @@ describe('AtlaspackConfigRequest', () => {
     it('should succeed with an array of valid package names', () => {
       validateConfigFile(
         {
-          filePath: '.atlaspackrc',
-          resolvers: ['atlaspack-resolver-test'],
+          filePath: '.parcelrc',
+          resolvers: ['parcel-resolver-test'],
         },
-        '.atlaspackrc',
+        '.parcelrc',
       );
     });
 
     it('should support spread elements', () => {
       validateConfigFile(
         {
-          filePath: '.atlaspackrc',
-          resolvers: ['atlaspack-resolver-test', '...'],
+          filePath: '.parcelrc',
+          resolvers: ['parcel-resolver-test', '...'],
         },
-        '.atlaspackrc',
+        '.parcelrc',
       );
     });
 
@@ -180,11 +176,11 @@ describe('AtlaspackConfigRequest', () => {
       assert.throws(() => {
         validateConfigFile(
           {
-            filePath: '.atlaspackrc',
+            filePath: '.parcelrc',
             // $FlowExpectedError[incompatible-call]
-            transformers: ['atlaspack-transformer-test', '...'],
+            transformers: ['parcel-transformer-test', '...'],
           },
-          '.atlaspackrc',
+          '.parcelrc',
         );
       });
     });
@@ -193,13 +189,13 @@ describe('AtlaspackConfigRequest', () => {
       assert.throws(() => {
         validateConfigFile(
           {
-            filePath: '.atlaspackrc',
+            filePath: '.parcelrc',
             transformers: {
               'types:*.{ts,tsx}': ['@atlaspack/transformer-typescript-types'],
               'bundle-text:*': ['-inline-string', '...'],
             },
           },
-          '.atlaspackrc',
+          '.parcelrc',
         );
       });
     });
@@ -209,21 +205,21 @@ describe('AtlaspackConfigRequest', () => {
         validateConfigFile(
           // $FlowExpectedError[incompatible-call]
           {
-            filePath: '.atlaspackrc',
+            filePath: '.parcelrc',
             extends: 2,
           },
-          '.atlaspackrc',
+          '.parcelrc',
         );
       });
 
       assert.throws(() => {
         validateConfigFile(
           {
-            filePath: '.atlaspackrc',
+            filePath: '.parcelrc',
             // $FlowExpectedError[incompatible-call]
             extends: [2, 7],
           },
-          '.atlaspackrc',
+          '.parcelrc',
         );
       });
     });
@@ -231,18 +227,18 @@ describe('AtlaspackConfigRequest', () => {
     it('should support relative paths', () => {
       validateConfigFile(
         {
-          filePath: '.atlaspackrc',
+          filePath: '.parcelrc',
           extends: './foo',
         },
-        '.atlaspackrc',
+        '.parcelrc',
       );
 
       validateConfigFile(
         {
-          filePath: '.atlaspackrc',
+          filePath: '.parcelrc',
           extends: ['./foo', './bar'],
         },
-        '.atlaspackrc',
+        '.parcelrc',
       );
     });
 
@@ -250,37 +246,37 @@ describe('AtlaspackConfigRequest', () => {
       assert.throws(() => {
         validateConfigFile(
           {
-            filePath: '.atlaspackrc',
+            filePath: '.parcelrc',
             extends: 'foo',
           },
-          '.atlaspackrc',
+          '.parcelrc',
         );
       });
 
       assert.throws(() => {
         validateConfigFile(
           {
-            filePath: '.atlaspackrc',
+            filePath: '.parcelrc',
             extends: ['foo', 'bar'],
           },
-          '.atlaspackrc',
+          '.parcelrc',
         );
       });
 
       validateConfigFile(
         {
-          filePath: '.atlaspackrc',
-          extends: 'atlaspack-config-foo',
+          filePath: '.parcelrc',
+          extends: 'parcel-config-foo',
         },
-        '.atlaspackrc',
+        '.parcelrc',
       );
 
       validateConfigFile(
         {
-          filePath: '.atlaspackrc',
-          extends: ['atlaspack-config-foo', 'atlaspack-config-bar'],
+          filePath: '.parcelrc',
+          extends: ['parcel-config-foo', 'parcel-config-bar'],
         },
-        '.atlaspackrc',
+        '.parcelrc',
       );
     });
 
@@ -295,7 +291,7 @@ describe('AtlaspackConfigRequest', () => {
                 inlineEnvironment: false,
               },
             },
-            '.atlaspackrc',
+            '.parcelrc',
           );
         },
         e => {
@@ -311,22 +307,22 @@ describe('AtlaspackConfigRequest', () => {
     it('should succeed on valid config', () => {
       validateConfigFile(
         {
-          filePath: '.atlaspackrc',
-          extends: 'atlaspack-config-foo',
+          filePath: '.parcelrc',
+          extends: 'parcel-config-foo',
           transformers: {
-            '*.js': ['atlaspack-transformer-foo'],
+            '*.js': ['parcel-transformer-foo'],
           },
         },
-        '.atlaspackrc',
+        '.parcelrc',
       );
     });
 
     it('should throw error on empty config file', () => {
       assert.throws(
         () => {
-          validateConfigFile({}, '.atlaspackrc');
+          validateConfigFile({}, '.parcelrc');
         },
-        {name: 'Error', message: ".atlaspackrc can't be empty"},
+        {name: 'Error', message: ".parcelrc can't be empty"},
       );
     });
   });
@@ -341,8 +337,8 @@ describe('AtlaspackConfigRequest', () => {
         mergePipelines(
           [
             {
-              packageName: 'atlaspack-transform-foo',
-              resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+              packageName: 'parcel-transform-foo',
+              resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
           ],
@@ -350,8 +346,8 @@ describe('AtlaspackConfigRequest', () => {
         ),
         [
           {
-            packageName: 'atlaspack-transform-foo',
-            resolveFrom: '.atlaspackrc',
+            packageName: 'parcel-transform-foo',
+            resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
         ],
@@ -362,15 +358,15 @@ describe('AtlaspackConfigRequest', () => {
       assert.deepEqual(
         mergePipelines(null, [
           {
-            packageName: 'atlaspack-transform-bar',
-            resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+            packageName: 'parcel-transform-bar',
+            resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/transformers/*.js/0',
           },
         ]),
         [
           {
-            packageName: 'atlaspack-transform-bar',
-            resolveFrom: '.atlaspackrc',
+            packageName: 'parcel-transform-bar',
+            resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
         ],
@@ -382,23 +378,23 @@ describe('AtlaspackConfigRequest', () => {
         mergePipelines(
           [
             {
-              packageName: 'atlaspack-transform-foo',
-              resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+              packageName: 'parcel-transform-foo',
+              resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
           ],
           [
             {
-              packageName: 'atlaspack-transform-bar',
-              resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+              packageName: 'parcel-transform-bar',
+              resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
           ],
         ),
         [
           {
-            packageName: 'atlaspack-transform-bar',
-            resolveFrom: '.atlaspackrc',
+            packageName: 'parcel-transform-bar',
+            resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
         ],
@@ -410,39 +406,39 @@ describe('AtlaspackConfigRequest', () => {
         mergePipelines(
           [
             {
-              packageName: 'atlaspack-transform-foo',
-              resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+              packageName: 'parcel-transform-foo',
+              resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
           ],
           [
             {
-              packageName: 'atlaspack-transform-bar',
-              resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+              packageName: 'parcel-transform-bar',
+              resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
             '...',
             {
-              packageName: 'atlaspack-transform-baz',
-              resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+              packageName: 'parcel-transform-baz',
+              resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/2',
             },
           ],
         ),
         [
           {
-            packageName: 'atlaspack-transform-bar',
-            resolveFrom: '.atlaspackrc',
+            packageName: 'parcel-transform-bar',
+            resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
           {
-            packageName: 'atlaspack-transform-foo',
-            resolveFrom: '.atlaspackrc',
+            packageName: 'parcel-transform-foo',
+            resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
           {
-            packageName: 'atlaspack-transform-baz',
-            resolveFrom: '.atlaspackrc',
+            packageName: 'parcel-transform-baz',
+            resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/2',
           },
         ],
@@ -454,21 +450,21 @@ describe('AtlaspackConfigRequest', () => {
         mergePipelines(
           [
             {
-              packageName: 'atlaspack-transform-foo',
-              resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+              packageName: 'parcel-transform-foo',
+              resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
           ],
           [
             {
-              packageName: 'atlaspack-transform-bar',
-              resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+              packageName: 'parcel-transform-bar',
+              resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
             '...',
             {
-              packageName: 'atlaspack-transform-baz',
-              resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+              packageName: 'parcel-transform-baz',
+              resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/2',
             },
             '...',
@@ -481,26 +477,26 @@ describe('AtlaspackConfigRequest', () => {
       assert.deepEqual(
         mergePipelines(null, [
           {
-            packageName: 'atlaspack-transform-bar',
-            resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+            packageName: 'parcel-transform-bar',
+            resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/transformers/*.js/0',
           },
           '...',
           {
-            packageName: 'atlaspack-transform-baz',
-            resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+            packageName: 'parcel-transform-baz',
+            resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/transformers/*.js/2',
           },
         ]),
         [
           {
-            packageName: 'atlaspack-transform-bar',
-            resolveFrom: '.atlaspackrc',
+            packageName: 'parcel-transform-bar',
+            resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
           {
-            packageName: 'atlaspack-transform-baz',
-            resolveFrom: '.atlaspackrc',
+            packageName: 'parcel-transform-baz',
+            resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/2',
           },
         ],
@@ -511,14 +507,14 @@ describe('AtlaspackConfigRequest', () => {
       assert.throws(() => {
         mergePipelines(null, [
           {
-            packageName: 'atlaspack-transform-bar',
-            resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+            packageName: 'parcel-transform-bar',
+            resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/transformers/*.js/0',
           },
           '...',
           {
-            packageName: 'atlaspack-transform-baz',
-            resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+            packageName: 'parcel-transform-baz',
+            resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/transformers/*.js/2',
           },
           '...',
@@ -568,35 +564,35 @@ describe('AtlaspackConfigRequest', () => {
 
   describe('mergeConfigs', () => {
     it('should merge configs', () => {
-      let base = new AtlaspackConfig(
+      let base = new ParcelConfig(
         {
-          filePath: toProjectPath('/', '/.atlaspackrc'),
+          filePath: toProjectPath('/', '/.parcelrc'),
           resolvers: [
             {
-              packageName: 'atlaspack-resolver-base',
-              resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+              packageName: 'parcel-resolver-base',
+              resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/resolvers/0',
             },
           ],
           transformers: {
             '*.js': [
               {
-                packageName: 'atlaspack-transform-base',
-                resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+                packageName: 'parcel-transform-base',
+                resolveFrom: toProjectPath('/', '/.parcelrc'),
                 keyPath: '/transformers/*.js/0',
               },
             ],
             '*.css': [
               {
-                packageName: 'atlaspack-transform-css',
-                resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+                packageName: 'parcel-transform-css',
+                resolveFrom: toProjectPath('/', '/.parcelrc'),
                 keyPath: '/transformers/*.css/0',
               },
             ],
           },
           bundler: {
-            packageName: 'atlaspack-bundler-base',
-            resolveFrom: toProjectPath('/', '/.atlaspackrc'),
+            packageName: 'parcel-bundler-base',
+            resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/bundler',
           },
         },
@@ -604,11 +600,11 @@ describe('AtlaspackConfigRequest', () => {
       );
 
       let ext = {
-        filePath: '.atlaspackrc',
+        filePath: '.parcelrc',
         resolvers: [
           {
-            packageName: 'atlaspack-resolver-ext',
-            resolveFrom: '.atlaspackrc',
+            packageName: 'parcel-resolver-ext',
+            resolveFrom: '.parcelrc',
             keyPath: '/resolvers/0',
           },
           '...',
@@ -616,8 +612,8 @@ describe('AtlaspackConfigRequest', () => {
         transformers: {
           '*.js': [
             {
-              packageName: 'atlaspack-transform-ext',
-              resolveFrom: '.atlaspackrc',
+              packageName: 'parcel-transform-ext',
+              resolveFrom: '.parcelrc',
               keyPath: '/transformers/*.js/0',
             },
             '...',
@@ -626,43 +622,43 @@ describe('AtlaspackConfigRequest', () => {
       };
 
       let merged = {
-        filePath: '.atlaspackrc',
+        filePath: '.parcelrc',
         resolvers: [
           {
-            packageName: 'atlaspack-resolver-ext',
-            resolveFrom: '.atlaspackrc',
+            packageName: 'parcel-resolver-ext',
+            resolveFrom: '.parcelrc',
             keyPath: '/resolvers/0',
           },
           {
-            packageName: 'atlaspack-resolver-base',
-            resolveFrom: '.atlaspackrc',
+            packageName: 'parcel-resolver-base',
+            resolveFrom: '.parcelrc',
             keyPath: '/resolvers/0',
           },
         ],
         transformers: {
           '*.js': [
             {
-              packageName: 'atlaspack-transform-ext',
-              resolveFrom: '.atlaspackrc',
+              packageName: 'parcel-transform-ext',
+              resolveFrom: '.parcelrc',
               keyPath: '/transformers/*.js/0',
             },
             {
-              packageName: 'atlaspack-transform-base',
-              resolveFrom: '.atlaspackrc',
+              packageName: 'parcel-transform-base',
+              resolveFrom: '.parcelrc',
               keyPath: '/transformers/*.js/0',
             },
           ],
           '*.css': [
             {
-              packageName: 'atlaspack-transform-css',
-              resolveFrom: '.atlaspackrc',
+              packageName: 'parcel-transform-css',
+              resolveFrom: '.parcelrc',
               keyPath: '/transformers/*.css/0',
             },
           ],
         },
         bundler: {
-          packageName: 'atlaspack-bundler-base',
-          resolveFrom: '.atlaspackrc',
+          packageName: 'parcel-bundler-base',
+          resolveFrom: '.parcelrc',
           keyPath: '/bundler',
         },
         runtimes: [],
@@ -682,21 +678,21 @@ describe('AtlaspackConfigRequest', () => {
   describe('resolveExtends', () => {
     it('should resolve a relative path', async () => {
       let resolved = await resolveExtends(
-        '../.atlaspackrc',
-        path.join(__dirname, 'fixtures', 'config', 'subfolder', '.atlaspackrc'),
+        '../.parcelrc',
+        path.join(__dirname, 'fixtures', 'config', 'subfolder', '.parcelrc'),
         '/extends',
         DEFAULT_OPTIONS,
       );
       assert.equal(
         resolved,
-        path.join(__dirname, 'fixtures', 'config', '.atlaspackrc'),
+        path.join(__dirname, 'fixtures', 'config', '.parcelrc'),
       );
     });
 
     it('should resolve a package name', async () => {
       let resolved = await resolveExtends(
         '@atlaspack/config-default',
-        path.join(__dirname, 'fixtures', 'config', 'subfolder', '.atlaspackrc'),
+        path.join(__dirname, 'fixtures', 'config', 'subfolder', '.parcelrc'),
         '/extends',
         DEFAULT_OPTIONS,
       );
@@ -718,14 +714,14 @@ describe('AtlaspackConfigRequest', () => {
         __dirname,
         'fixtures',
         'config',
-        '.atlaspackrc',
+        '.parcelrc',
       );
       let subConfigFilePath = path.join(
         __dirname,
         'fixtures',
         'config',
         'subfolder',
-        '.atlaspackrc',
+        '.parcelrc',
       );
       let {config} = await parseAndProcessConfig(
         subConfigFilePath,
@@ -736,12 +732,12 @@ describe('AtlaspackConfigRequest', () => {
       let transformers = nullthrows(config.transformers);
       assert.deepEqual(transformers['*.js'], [
         {
-          packageName: 'atlaspack-transformer-sub',
+          packageName: 'parcel-transformer-sub',
           resolveFrom: relative(subConfigFilePath),
           keyPath: '/transformers/*.js/0',
         },
         {
-          packageName: 'atlaspack-transformer-base',
+          packageName: 'parcel-transformer-base',
           resolveFrom: relative(configFilePath),
           keyPath: '/transformers/*.js/0',
         },
@@ -756,12 +752,12 @@ describe('AtlaspackConfigRequest', () => {
       assert.deepEqual(config.reporters, defaultConfig.reporters || []);
     });
 
-    it('should emit a codeframe.codeHighlights when a malformed .atlaspackrc was found', async () => {
+    it('should emit a codeframe.codeHighlights when a malformed .parcelrc was found', async () => {
       let configFilePath = path.join(
         __dirname,
         'fixtures',
         'config-malformed',
-        '.atlaspackrc',
+        '.parcelrc',
       );
       let code = await DEFAULT_OPTIONS.inputFS.readFile(configFilePath, 'utf8');
 
@@ -777,7 +773,7 @@ describe('AtlaspackConfigRequest', () => {
           name: 'Error',
           diagnostics: [
             {
-              message: 'Failed to parse .atlaspackrc',
+              message: 'Failed to parse .parcelrc',
               origin: '@atlaspack/core',
               codeFrames: [
                 {
@@ -799,12 +795,12 @@ describe('AtlaspackConfigRequest', () => {
       );
     });
 
-    it('should emit a codeframe when an extended atlaspack config file is not found', async () => {
+    it('should emit a codeframe when an extended parcel config file is not found', async () => {
       let configFilePath = path.join(
         __dirname,
         'fixtures',
         'config-extends-not-found',
-        '.atlaspackrc',
+        '.parcelrc',
       );
       let code = await DEFAULT_OPTIONS.inputFS.readFile(configFilePath, 'utf8');
 
@@ -815,7 +811,7 @@ describe('AtlaspackConfigRequest', () => {
           name: 'Error',
           diagnostics: [
             {
-              message: 'Cannot find extended atlaspack config',
+              message: 'Cannot find extended parcel config',
               origin: '@atlaspack/core',
               codeFrames: [
                 {
@@ -825,7 +821,7 @@ describe('AtlaspackConfigRequest', () => {
                   codeHighlights: [
                     {
                       message:
-                        '"./.atlaspckrc-node-modules" does not exist, did you mean "./.atlaspackrc-node-modules"?',
+                        '"./.atlaspckrc-node-modules" does not exist, did you mean "./.parcelrc-node-modules"?',
                       start: {line: 2, column: 14},
                       end: {line: 2, column: 41},
                     },
@@ -838,12 +834,12 @@ describe('AtlaspackConfigRequest', () => {
       );
     });
 
-    it('should emit a codeframe when an extended atlaspack config file is not found in JSON5', async () => {
+    it('should emit a codeframe when an extended parcel config file is not found in JSON5', async () => {
       let configFilePath = path.join(
         __dirname,
         'fixtures',
         'config-extends-not-found',
-        '.atlaspackrc-json5',
+        '.parcelrc-json5',
       );
       let code = await DEFAULT_OPTIONS.inputFS.readFile(configFilePath, 'utf8');
 
@@ -854,7 +850,7 @@ describe('AtlaspackConfigRequest', () => {
           name: 'Error',
           diagnostics: [
             {
-              message: 'Cannot find extended atlaspack config',
+              message: 'Cannot find extended parcel config',
               origin: '@atlaspack/core',
               codeFrames: [
                 {
@@ -864,7 +860,7 @@ describe('AtlaspackConfigRequest', () => {
                   codeHighlights: [
                     {
                       message:
-                        '"./.atlaspckrc-node-modules" does not exist, did you mean "./.atlaspackrc-node-modules"?',
+                        '"./.atlaspckrc-node-modules" does not exist, did you mean "./.parcelrc-node-modules"?',
                       start: {line: 2, column: 12},
                       end: {line: 2, column: 39},
                     },
@@ -877,12 +873,12 @@ describe('AtlaspackConfigRequest', () => {
       );
     });
 
-    it('should emit a codeframe when an extended atlaspack config node module is not found', async () => {
+    it('should emit a codeframe when an extended parcel config node module is not found', async () => {
       let configFilePath = path.join(
         __dirname,
         'fixtures',
         'config-extends-not-found',
-        '.atlaspackrc-node-modules',
+        '.parcelrc-node-modules',
       );
       let code = await DEFAULT_OPTIONS.inputFS.readFile(configFilePath, 'utf8');
 
@@ -893,7 +889,7 @@ describe('AtlaspackConfigRequest', () => {
           name: 'Error',
           diagnostics: [
             {
-              message: 'Cannot find extended atlaspack config',
+              message: 'Cannot find extended parcel config',
               origin: '@atlaspack/core',
               codeFrames: [
                 {
@@ -921,7 +917,7 @@ describe('AtlaspackConfigRequest', () => {
         __dirname,
         'fixtures',
         'config-extends-not-found',
-        '.atlaspackrc-multiple',
+        '.parcelrc-multiple',
       );
       let code = await DEFAULT_OPTIONS.inputFS.readFile(configFilePath, 'utf8');
 
@@ -932,7 +928,7 @@ describe('AtlaspackConfigRequest', () => {
           name: 'Error',
           diagnostics: [
             {
-              message: 'Cannot find extended atlaspack config',
+              message: 'Cannot find extended parcel config',
               origin: '@atlaspack/core',
               codeFrames: [
                 {
@@ -951,7 +947,7 @@ describe('AtlaspackConfigRequest', () => {
               ],
             },
             {
-              message: 'Cannot find extended atlaspack config',
+              message: 'Cannot find extended parcel config',
               origin: '@atlaspack/core',
               codeFrames: [
                 {
@@ -961,7 +957,7 @@ describe('AtlaspackConfigRequest', () => {
                   codeHighlights: [
                     {
                       message:
-                        '"./.atlaspckrc" does not exist, did you mean "./.atlaspackrc"?',
+                        '"./.atlaspckrc" does not exist, did you mean "./.parcelrc"?',
                       start: {line: 2, column: 42},
                       end: {line: 2, column: 56},
                     },
@@ -976,13 +972,13 @@ describe('AtlaspackConfigRequest', () => {
   });
 
   describe('resolve', () => {
-    it('should return null if there is no .atlaspackrc file found', async () => {
-      let resolved = await resolveAtlaspackConfig(DEFAULT_OPTIONS);
+    it('should return null if there is no .parcelrc file found', async () => {
+      let resolved = await resolveParcelConfig(DEFAULT_OPTIONS);
       assert.equal(resolved, null);
     });
 
-    it('should resolve a config if a .atlaspackrc file is found', async () => {
-      let resolved = await resolveAtlaspackConfig({
+    it('should resolve a config if a .parcelrc file is found', async () => {
+      let resolved = await resolveParcelConfig({
         ...DEFAULT_OPTIONS,
         projectRoot: path.join(__dirname, 'fixtures', 'config', 'subfolder'),
       });

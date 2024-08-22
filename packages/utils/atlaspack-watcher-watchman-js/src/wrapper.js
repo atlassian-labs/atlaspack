@@ -39,13 +39,13 @@ export interface Watcher {
   ): Promise<FilePath>;
 }
 
-export class AtlaspackWatcherWatchmanJS implements Watcher {
+export class ParcelWatcherWatchmanJS implements Watcher {
   subscriptionName: string;
   client: watchman.Client;
   initPromise: Promise<void> | void;
 
   constructor() {
-    this.subscriptionName = 'atlaspack-watcher-subscription-' + Date.now();
+    this.subscriptionName = 'parcel-watcher-subscription-' + Date.now();
     this.client = new watchman.Client();
   }
 

@@ -9,7 +9,7 @@ export default (() =>
     wrap(
       // $FlowFixMe
       new Worker(new URL('./worker.js', import /*:: ("") */.meta.url), {
-        name: 'Atlaspack Graph Renderer',
+        name: 'Parcel Graph Renderer',
         type: 'module',
       }),
     ).render): () => Promise<(dot: string) => Promise<string>>);

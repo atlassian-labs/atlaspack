@@ -2,20 +2,20 @@
 
 import path from 'path';
 import {Worker} from 'worker_threads';
-import {AtlaspackNapi, type AtlaspackNapiOptions} from '@atlaspack/rust';
+import {ParcelNapi, type ParcelNapiOptions} from '@atlaspack/rust';
 
 const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
 
-export type AtlaspackV3Options = {|
-  fs?: AtlaspackNapiOptions['fs'],
+export type ParcelV3Options = {|
+  fs?: ParcelNapiOptions['fs'],
   nodeWorkers?: number,
-  packageManager?: AtlaspackNapiOptions['packageManager'],
+  packageManager?: ParcelNapiOptions['packageManager'],
   threads?: number,
-  ...AtlaspackNapiOptions['options'],
+  ...ParcelNapiOptions['options'],
 |};
 
-export class AtlaspackV3 {
-  _internal: AtlaspackNapi;
+export class ParcelV3 {
+  _internal: ParcelNapi;
 
   constructor({
     fs,
@@ -23,8 +23,8 @@ export class AtlaspackV3 {
     packageManager,
     threads,
     ...options
-  }: AtlaspackV3Options) {
-    this._internal = new AtlaspackNapi({
+  }: ParcelV3Options) {
+    this._internal = new ParcelNapi({
       fs,
       nodeWorkers,
       packageManager,

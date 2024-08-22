@@ -11,22 +11,22 @@ import path from 'path';
 const LOCK_FILE_NAMES = ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'];
 const SCM_FILE_NAMES = ['.git', '.hg'];
 
-export class AtlaspackLinkConfig {
+export class ParcelLinkConfig {
   fs: FileSystem;
   appRoot: string;
   packageRoot: string;
   namespace: string = '@atlaspack';
   nodeModulesGlobs: string[] = ['node_modules'];
-  filename: string = '.atlaspack-link';
+  filename: string = '.parcel-link';
 
   static load(
     appRoot: string,
-    {fs, filename = '.atlaspack-link'}: {|fs: FileSystem, filename?: string|},
-  ): AtlaspackLinkConfig {
+    {fs, filename = '.parcel-link'}: {|fs: FileSystem, filename?: string|},
+  ): ParcelLinkConfig {
     let manifest = JSON.parse(
       fs.readFileSync(path.join(appRoot, filename), 'utf8'),
     );
-    return new AtlaspackLinkConfig({...manifest, fs});
+    return new ParcelLinkConfig({...manifest, fs});
   }
 
   constructor(options: {|

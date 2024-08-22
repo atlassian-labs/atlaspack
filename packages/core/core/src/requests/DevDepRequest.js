@@ -4,10 +4,10 @@ import type {
   SemverRange,
   Invalidations,
 } from '@atlaspack/types';
-import type AtlaspackConfig from '../AtlaspackConfig';
+import type ParcelConfig from '../ParcelConfig';
 import type {
   DevDepRequest,
-  AtlaspackOptions,
+  ParcelOptions,
   InternalDevDepOptions,
 } from '../types';
 import type {RequestResult, RunAPI} from '../RequestTracker';
@@ -33,7 +33,7 @@ const devDepRequestCache: WeakMap<Invalidations, DevDepRequest> = new WeakMap();
 export async function createDevDependency(
   opts: InternalDevDepOptions,
   requestDevDeps: Map<string, string>,
-  options: AtlaspackOptions,
+  options: ParcelOptions,
 ): Promise<DevDepRequest> {
   let {specifier, resolveFrom, additionalInvalidations} = opts;
   let key = `${specifier}:${fromProjectPathRelative(resolveFrom)}`;
@@ -160,8 +160,8 @@ const invalidatedDevDeps = createBuildCache();
 
 export function invalidateDevDeps(
   invalidDevDeps: Array<DevDepSpecifier>,
-  options: AtlaspackOptions,
-  config: AtlaspackConfig,
+  options: ParcelOptions,
+  config: ParcelConfig,
 ) {
   for (let {specifier, resolveFrom} of invalidDevDeps) {
     let key = `${specifier}:${fromProjectPathRelative(resolveFrom)}`;

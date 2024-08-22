@@ -10,10 +10,7 @@ import type {
   DependencyPriority,
   BundleBehavior,
 } from '@atlaspack/types';
-import type {
-  Dependency as InternalDependency,
-  AtlaspackOptions,
-} from '../types';
+import type {Dependency as InternalDependency, ParcelOptions} from '../types';
 import {BundleBehaviorNames} from '../types';
 
 import nullthrows from 'nullthrows';
@@ -47,7 +44,7 @@ export function dependencyToInternalDependency(
 
 export function getPublicDependency(
   dep: InternalDependency,
-  options: AtlaspackOptions,
+  options: ParcelOptions,
 ): Dependency {
   let existing = internalDependencyToDependency.get(dep);
   if (existing != null) {
@@ -59,9 +56,9 @@ export function getPublicDependency(
 
 export default class Dependency implements IDependency {
   #dep /*: InternalDependency */;
-  #options /*: AtlaspackOptions */;
+  #options /*: ParcelOptions */;
 
-  constructor(dep: InternalDependency, options: AtlaspackOptions): Dependency {
+  constructor(dep: InternalDependency, options: ParcelOptions): Dependency {
     this.#dep = dep;
     this.#options = options;
     _dependencyToInternalDependency.set(this, dep);

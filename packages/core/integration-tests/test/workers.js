@@ -12,7 +12,7 @@ import {
   runBundle,
 } from '@atlaspack/test-utils';
 
-describe.v2('atlaspack', function () {
+describe.v2('parcel', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });

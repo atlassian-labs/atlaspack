@@ -14,7 +14,7 @@ import {
   findDependency,
   getNextBuild,
   it,
-  mergeAtlaspackOptions,
+  mergeParcelOptions,
   outputFS,
   overlayFS,
   run,
@@ -26,7 +26,7 @@ const bundle = (name, opts = {}) => {
   return _bundle(
     name,
     // $FlowFixMe
-    mergeAtlaspackOptions(
+    mergeParcelOptions(
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -41,7 +41,7 @@ const bundler = (name, opts = {}) => {
   return _bundler(
     name,
     // $FlowFixMe
-    mergeAtlaspackOptions(
+    mergeParcelOptions(
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -548,9 +548,7 @@ describe.v2('scope hoisting', function () {
         [
           ...contents.matchAll(
             new RegExp(
-              'atlaspackRequires*\\(s*"' +
-                b.getAssetPublicId(assetB) +
-                '"s*\\)',
+              'parcelRequires*\\(s*"' + b.getAssetPublicId(assetB) + '"s*\\)',
               'g',
             ),
           ),
@@ -1060,7 +1058,7 @@ describe.v2('scope hoisting', function () {
       );
 
       let dist = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-      assert(dist.includes('$atlaspack$interopDefault'));
+      assert(dist.includes('$parcel$interopDefault'));
 
       let output = await run(b);
       assert.deepEqual(output, 'foobar:foo:bar');
@@ -1170,7 +1168,7 @@ describe.v2('scope hoisting', function () {
         'utf8',
       );
       assert.strictEqual(
-        contents.match(/atlaspackRegister\(/g).length,
+        contents.match(/parcelRegister\(/g).length,
         2 /* once for parent asset, once for child wrapped asset */,
       );
 
@@ -1385,7 +1383,7 @@ describe.v2('scope hoisting', function () {
         b.getBundles()[0].filePath,
         'utf8',
       );
-      assert(!contents.includes('$atlaspack$exportWildcard'));
+      assert(!contents.includes('$parcel$exportWildcard'));
 
       let output = await run(b);
       assert.deepEqual(output, 1);
@@ -3482,7 +3480,7 @@ describe.v2('scope hoisting', function () {
       assert.equal(test({foo: 2}), 2);
     });
 
-    it('should not include default when reexporting * without $atlaspack$exportWildcard', async () => {
+    it('should not include default when reexporting * without $parcel$exportWildcard', async () => {
       let b = await bundle(
         path.join(
           __dirname,
@@ -3493,7 +3491,7 @@ describe.v2('scope hoisting', function () {
       assert.equal(await run(b), 42);
     });
 
-    it('should not include __esModule when reexporting * without $atlaspack$exportWildcard', async () => {
+    it('should not include __esModule when reexporting * without $parcel$exportWildcard', async () => {
       let b = await bundle(
         path.join(
           __dirname,
@@ -4033,7 +4031,7 @@ describe.v2('scope hoisting', function () {
       assert.equal(output.foo, 'b');
     });
 
-    it("doesn't insert atlaspackRequire for missing non-js assets", async function () {
+    it("doesn't insert parcelRequire for missing non-js assets", async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -5439,7 +5437,7 @@ describe.v2('scope hoisting', function () {
       .getBundles()
       .sort((a, b) => b.stats.size - a.stats.size)[0];
     let contents = await outputFS.readFile(sharedBundle.filePath, 'utf8');
-    assert(contents.includes(`if (atlaspackRequire == null) {`));
+    assert(contents.includes(`if (parcelRequire == null) {`));
   });
 
   it.skip('does not include prelude if child bundles are isolated', async function () {
@@ -5450,7 +5448,7 @@ describe.v2('scope hoisting', function () {
     let mainBundle = b.getBundles().find(b => b.name === 'index.js');
     let contents = await outputFS.readFile(mainBundle.filePath, 'utf8');
     // We wrap for other reasons now, so this is broken
-    assert(!contents.includes(`if (atlaspackRequire == null) {`));
+    assert(!contents.includes(`if (parcelRequire == null) {`));
   });
 
   it('should include prelude in shared worker bundles', async function () {
@@ -5469,7 +5467,7 @@ describe.v2('scope hoisting', function () {
       .sort((a, b) => b.stats.size - a.stats.size)
       .find(b => b.name !== 'index.js');
     let contents = await outputFS.readFile(sharedBundle.filePath, 'utf8');
-    assert(contents.includes(`if (atlaspackRequire == null) {`));
+    assert(contents.includes(`if (parcelRequire == null) {`));
 
     let workerBundle = b.getBundles().find(b => b.name.startsWith('worker-b'));
     contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
@@ -6100,7 +6098,7 @@ describe.v2('scope hoisting', function () {
       b.getBundles().find(b => /index.*\.js/.test(b.filePath)).filePath,
       'utf8',
     );
-    assert(contents.includes('$atlaspack$global.rwr('));
+    assert(contents.includes('$parcel$global.rwr('));
 
     let result;
     await run(b, {
@@ -6178,12 +6176,12 @@ describe.v2('scope hoisting', function () {
     );
 
     assert(
-      sharedBundleContents.includes('$atlaspack$global.rlb('),
+      sharedBundleContents.includes('$parcel$global.rlb('),
       'Shared bundle should include register loaded bundle runtime',
     );
 
     assert(
-      entryContents.includes('$atlaspack$global.rwr('),
+      entryContents.includes('$parcel$global.rwr('),
       'Entry should include run when ready runtime',
     );
 
@@ -6230,7 +6228,7 @@ describe.v2('scope hoisting', function () {
     );
 
     assert(
-      !contents.includes('$atlaspack$global.rlb('),
+      !contents.includes('$parcel$global.rlb('),
       "Empty bundle should not include 'runLoadedBundle' code",
     );
 

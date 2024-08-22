@@ -11,7 +11,7 @@ describe.skip('@atlaspack/register', () => {
         `node ${path.join(
           __dirname,
           'integration',
-          'atlaspack-register',
+          'parcel-register',
           'entry.js',
         )}`,
       ),
@@ -25,7 +25,7 @@ describe.skip('@atlaspack/register', () => {
         `node -r @atlaspack/register ${path.join(
           __dirname,
           'integration',
-          'atlaspack-register',
+          'parcel-register',
           'index.js',
         )}`,
       ),
@@ -33,22 +33,22 @@ describe.skip('@atlaspack/register', () => {
     );
   });
 
-  it("enables Atlaspack's resolver in node", () => {
+  it("enables Parcel's resolver in node", () => {
     let [foo, resolved] = execSync(
       `node -r @atlaspack/register ${path.join(
         __dirname,
         'integration',
-        'atlaspack-register',
+        'parcel-register',
         'resolver.js',
       )}`,
-      {cwd: path.join(__dirname, 'integration', 'atlaspack-register')},
+      {cwd: path.join(__dirname, 'integration', 'parcel-register')},
     )
       .toString()
       .split('\n');
     assert.equal(foo, 'foo');
     assert.equal(
       resolved,
-      path.join(__dirname, 'integration', 'atlaspack-register', 'foo.js'),
+      path.join(__dirname, 'integration', 'parcel-register', 'foo.js'),
     );
   });
 
@@ -58,11 +58,11 @@ describe.skip('@atlaspack/register', () => {
         `node ${path.join(
           __dirname,
           'integration',
-          'atlaspack-register',
+          'parcel-register',
           'dispose-resolve.js',
         )}`,
         {
-          cwd: path.join(__dirname, 'integration', 'atlaspack-register'),
+          cwd: path.join(__dirname, 'integration', 'parcel-register'),
           stdio: 'pipe',
         },
       )
@@ -71,7 +71,7 @@ describe.skip('@atlaspack/register', () => {
     } catch (e) {
       assert.equal(
         e.stdout.toString().trim(),
-        path.join(__dirname, 'integration', 'atlaspack-register', 'foo.js'),
+        path.join(__dirname, 'integration', 'parcel-register', 'foo.js'),
       );
       assert(e.stderr.includes("Error: Cannot find module '~foo.js'"));
       return;
@@ -87,11 +87,11 @@ describe.skip('@atlaspack/register', () => {
         `node ${path.join(
           __dirname,
           'integration',
-          'atlaspack-register',
+          'parcel-register',
           'dispose-transform.js',
         )}`,
         {
-          cwd: path.join(__dirname, 'integration', 'atlaspack-register'),
+          cwd: path.join(__dirname, 'integration', 'parcel-register'),
           stdio: 'pipe',
         },
       )

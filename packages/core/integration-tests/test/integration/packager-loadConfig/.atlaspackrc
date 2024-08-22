@@ -4,6 +4,6 @@
     "*.txt": ["@atlaspack/transformer-raw"]
   },
   "packagers": {
-    "*.txt": "atlaspack-packager-config"
+    "*.txt": "parcel-packager-config"
   }
 }

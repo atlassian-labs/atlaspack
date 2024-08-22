@@ -5,7 +5,7 @@ import type {
   Semver,
   SemverRange,
 } from '@atlaspack/types';
-import type {AtlaspackOptions} from './types';
+import type {ParcelOptions} from './types';
 
 import path from 'path';
 import semver from 'semver';
@@ -30,7 +30,7 @@ export default async function loadPlugin<T>(
   pluginName: PackageName,
   configPath: FilePath,
   keyPath?: string,
-  options: AtlaspackOptions,
+  options: ParcelOptions,
 ): Promise<{|
   plugin: T,
   version: Semver,
@@ -46,7 +46,7 @@ export default async function loadPlugin<T>(
       let configContents = await options.inputFS.readFile(configPath, 'utf8');
       throw new ThrowableDiagnostic({
         diagnostic: {
-          message: md`Local plugins are not supported in Atlaspack config packages. Please publish "${pluginName}" as a separate npm package.`,
+          message: md`Local plugins are not supported in Parcel config packages. Please publish "${pluginName}" as a separate npm package.`,
           origin: '@atlaspack/core',
           codeFrames: keyPath
             ? [
@@ -78,8 +78,8 @@ export default async function loadPlugin<T>(
       configPkg.config.dependencies?.[pluginName] == null
     ) {
       // If not in the config's dependencies, the plugin will be auto installed with
-      // the version declared in "atlaspackDependencies".
-      range = configPkg.config.atlaspackDependencies?.[pluginName];
+      // the version declared in "parcelDependencies".
+      range = configPkg.config.parcelDependencies?.[pluginName];
 
       if (range == null) {
         let contents = await options.inputFS.readFile(
@@ -91,11 +91,11 @@ export default async function loadPlugin<T>(
             message: md`Could not determine version of ${pluginName} in ${path.relative(
               process.cwd(),
               resolveFrom,
-            )}. Either include it in "dependencies" or "atlaspackDependencies".`,
+            )}. Either include it in "dependencies" or "parcelDependencies".`,
             origin: '@atlaspack/core',
             codeFrames:
               configPkg.config.dependencies ||
-              configPkg.config.atlaspackDependencies
+              configPkg.config.parcelDependencies
                 ? [
                     {
                       filePath: configPkg.files[0].filePath,
@@ -103,8 +103,8 @@ export default async function loadPlugin<T>(
                       code: contents,
                       codeHighlights: generateJSONCodeHighlights(contents, [
                         {
-                          key: configPkg.config.atlaspackDependencies
-                            ? '/atlaspackDependencies'
+                          key: configPkg.config.parcelDependencies
+                            ? '/parcelDependencies'
                             : '/dependencies',
                           type: 'key',
                         },
@@ -144,7 +144,7 @@ export default async function loadPlugin<T>(
     );
     throw new ThrowableDiagnostic({
       diagnostic: {
-        message: md`Cannot find Atlaspack plugin "${pluginName}"`,
+        message: md`Cannot find Parcel plugin "${pluginName}"`,
         origin: '@atlaspack/core',
         codeFrames: keyPath
           ? [
@@ -173,18 +173,18 @@ export default async function loadPlugin<T>(
   // Remove plugin version compatiblility validation in canary builds as they don't use semver
   if (!process.env.SKIP_PLUGIN_COMPATIBILITY_CHECK) {
     if (!pluginName.startsWith('.')) {
-      // Validate the engines.atlaspack field in the plugin's package.json
-      let atlaspackVersionRange = pkg && pkg.engines && pkg.engines.atlaspack;
-      if (!atlaspackVersionRange) {
+      // Validate the engines.parcel field in the plugin's package.json
+      let parcelVersionRange = pkg && pkg.engines && pkg.engines.parcel;
+      if (!parcelVersionRange) {
         logger.warn({
           origin: '@atlaspack/core',
-          message: `The plugin "${pluginName}" needs to specify a \`package.json#engines.atlaspack\` field with the supported Atlaspack version range.`,
+          message: `The plugin "${pluginName}" needs to specify a \`package.json#engines.parcel\` field with the supported Parcel version range.`,
         });
       }
 
       if (
-        atlaspackVersionRange &&
-        !semver.satisfies(ATLASPACK_VERSION, atlaspackVersionRange)
+        parcelVersionRange &&
+        !semver.satisfies(ATLASPACK_VERSION, parcelVersionRange)
       ) {
         let pkgFile = nullthrows(
           await resolveConfig(
@@ -197,7 +197,7 @@ export default async function loadPlugin<T>(
         let pkgContents = await options.inputFS.readFile(pkgFile, 'utf8');
         throw new ThrowableDiagnostic({
           diagnostic: {
-            message: md`The plugin "${pluginName}" is not compatible with the current version of Atlaspack. Requires "${atlaspackVersionRange}" but the current version is "${ATLASPACK_VERSION}".`,
+            message: md`The plugin "${pluginName}" is not compatible with the current version of Parcel. Requires "${parcelVersionRange}" but the current version is "${ATLASPACK_VERSION}".`,
             origin: '@atlaspack/core',
             codeFrames: [
               {
@@ -206,7 +206,7 @@ export default async function loadPlugin<T>(
                 code: pkgContents,
                 codeHighlights: generateJSONCodeHighlights(pkgContents, [
                   {
-                    key: '/engines/atlaspack',
+                    key: '/engines/parcel',
                   },
                 ]),
               },
@@ -227,7 +227,7 @@ export default async function loadPlugin<T>(
   plugin = plugin[CONFIG];
   if (!plugin) {
     throw new Error(
-      `Plugin ${pluginName} is not a valid Atlaspack plugin, should export an instance of a Atlaspack plugin ex. "export default new Reporter({ ... })".`,
+      `Plugin ${pluginName} is not a valid Parcel plugin, should export an instance of a Parcel plugin ex. "export default new Reporter({ ... })".`,
     );
   }
   return {

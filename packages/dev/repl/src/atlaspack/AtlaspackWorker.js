@@ -6,7 +6,7 @@ import type {BuildSuccessEvent} from '@atlaspack/types';
 import type WorkerFarm from '@atlaspack/workers';
 
 import {expose, proxy} from 'comlink';
-import Atlaspack, {createWorkerFarm} from '@atlaspack/core';
+import Parcel, {createWorkerFarm} from '@atlaspack/core';
 // import {MemoryFS} from '@atlaspack/fs';
 import {
   makeDeferredWithPromise,
@@ -116,7 +116,7 @@ expose({
 const PathUtils = {
   APP_DIR: '/app',
   DIST_DIR: '/app/dist',
-  CACHE_DIR: '/.atlaspack-cache',
+  CACHE_DIR: '/.parcel-cache',
   fromAssetPath(str) {
     return path.join('/app', str);
   },
@@ -231,8 +231,8 @@ async function renderDiagnostics(
 }
 
 async function setup(assets, options) {
-  if (!(await fs.exists('/.atlaspackrc'))) {
-    await fs.writeFile('/.atlaspackrc', JSON.stringify(configRepl, null, 2));
+  if (!(await fs.exists('/.parcelrc'))) {
+    await fs.writeFile('/.parcelrc', JSON.stringify(configRepl, null, 2));
   }
   // TODO for NodeResolver
   if (!(await fs.exists('/_empty.js'))) {
@@ -251,7 +251,7 @@ async function setup(assets, options) {
   let entries = assets
     .filter(([, data]) => data.isEntry)
     .map(([name]) => PathUtils.fromAssetPath(name));
-  const bundler = new Atlaspack({
+  const bundler = new Parcel({
     entries,
     // https://github.com/parcel-bundler/parcel/pull/4290
     shouldDisableCache: false,
@@ -264,7 +264,7 @@ async function setup(assets, options) {
     logLevel: 'verbose',
     shouldPatchConsole: false,
     workerFarm,
-    defaultConfig: '/.atlaspackrc',
+    defaultConfig: '/.parcelrc',
     inputFS: fs,
     outputFS: fs,
     // cache: new IDBCache(),

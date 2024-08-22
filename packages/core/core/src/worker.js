@@ -2,8 +2,8 @@
 
 import type {
   Bundle,
-  AtlaspackOptions,
-  ProcessedAtlaspackConfig,
+  ParcelOptions,
+  ProcessedParcelConfig,
   RequestInvalidation,
 } from './types';
 import type {SharedReference, WorkerApi} from '@atlaspack/workers';
@@ -20,7 +20,7 @@ import Transformation, {
 import {reportWorker, report} from './ReporterRunner';
 import PackagerRunner, {type RunPackagerRunnerResult} from './PackagerRunner';
 import Validation, {type ValidationOpts} from './Validation';
-import AtlaspackConfig from './AtlaspackConfig';
+import ParcelConfig from './ParcelConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {clearBuildCaches} from './buildCache';
 import {init as initSourcemaps} from '@parcel/source-map';
@@ -35,9 +35,9 @@ import '@atlaspack/fs';
 // $FlowFixMe
 if (process.env.ATLASPACK_BUILD_REPL && process.browser) {
   /* eslint-disable import/no-extraneous-dependencies, monorepo/no-internal-import */
-  require('@atlaspack/repl/src/atlaspack/BrowserPackageManager.js');
+  require('@atlaspack/repl/src/parcel/BrowserPackageManager.js');
   // $FlowFixMe
-  require('@atlaspack/repl/src/atlaspack/ExtendedMemoryFS.js');
+  require('@atlaspack/repl/src/parcel/ExtendedMemoryFS.js');
   /* eslint-enable import/no-extraneous-dependencies, monorepo/no-internal-import */
 }
 
@@ -46,39 +46,39 @@ registerCoreWithSerializer();
 // Remove the workerApi type from the TransformationOpts and ValidationOpts types:
 // https://github.com/facebook/flow/issues/2835
 type WorkerTransformationOpts = {|
-  ...$Diff<TransformationOpts, {|workerApi: mixed, options: AtlaspackOptions|}>,
+  ...$Diff<TransformationOpts, {|workerApi: mixed, options: ParcelOptions|}>,
   optionsRef: SharedReference,
   configCachePath: string,
 |};
 type WorkerValidationOpts = {|
-  ...$Diff<ValidationOpts, {|workerApi: mixed, options: AtlaspackOptions|}>,
+  ...$Diff<ValidationOpts, {|workerApi: mixed, options: ParcelOptions|}>,
   optionsRef: SharedReference,
   configCachePath: string,
 |};
 
 // TODO: this should eventually be replaced by an in memory cache layer
-let atlaspackConfigCache = new Map();
+let parcelConfigCache = new Map();
 
 function loadOptions(ref, workerApi) {
   return nullthrows(
     ((workerApi.getSharedReference(
       ref,
       // $FlowFixMe
-    ): any): AtlaspackOptions),
+    ): any): ParcelOptions),
   );
 }
 
 async function loadConfig(cachePath, options) {
-  let config = atlaspackConfigCache.get(cachePath);
+  let config = parcelConfigCache.get(cachePath);
   if (config && config.options === options) {
     return config;
   }
 
   let processedConfig = nullthrows(
-    await options.cache.get<ProcessedAtlaspackConfig>(cachePath),
+    await options.cache.get<ProcessedParcelConfig>(cachePath),
   );
-  config = new AtlaspackConfig(processedConfig, options);
-  atlaspackConfigCache.set(cachePath, config);
+  config = new ParcelConfig(processedConfig, options);
+  parcelConfigCache.set(cachePath, config);
 
   setFeatureFlags(options.featureFlags);
 
@@ -146,10 +146,10 @@ export async function runPackage(
   let bundleGraph = workerApi.getSharedReference(bundleGraphReference);
   invariant(bundleGraph instanceof BundleGraph);
   let options = loadOptions(optionsRef, workerApi);
-  let atlaspackConfig = await loadConfig(configCachePath, options);
+  let parcelConfig = await loadConfig(configCachePath, options);
 
   let runner = new PackagerRunner({
-    config: atlaspackConfig,
+    config: parcelConfig,
     options,
     report: WorkerFarm.isWorker() ? reportWorker.bind(null, workerApi) : report,
     previousDevDeps,
@@ -181,7 +181,7 @@ export function invalidateRequireCache(workerApi: WorkerApi, file: string) {
       }
     }
 
-    atlaspackConfigCache.clear();
+    parcelConfigCache.clear();
     return;
   }
 

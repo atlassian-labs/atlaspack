@@ -5,14 +5,14 @@ import type {
   AsyncSubscription,
   BuildEvent,
   BuildSuccessEvent,
-  InitialAtlaspackOptions,
+  InitialParcelOptions,
   PackagedBundle as IPackagedBundle,
-  AtlaspackTransformOptions,
-  AtlaspackResolveOptions,
-  AtlaspackResolveResult,
+  ParcelTransformOptions,
+  ParcelResolveOptions,
+  ParcelResolveResult,
 } from '@atlaspack/types';
 import path from 'path';
-import type {AtlaspackOptions} from './types';
+import type {ParcelOptions} from './types';
 // eslint-disable-next-line no-unused-vars
 import type {FarmOptions, SharedReference} from '@atlaspack/workers';
 import type {Diagnostic} from '@atlaspack/diagnostic';
@@ -25,21 +25,21 @@ import BundleGraph from './public/BundleGraph';
 import WorkerFarm from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 import {BuildAbortError} from './utils';
-import {loadAtlaspackConfig} from './requests/AtlaspackConfigRequest';
+import {loadParcelConfig} from './requests/ParcelConfigRequest';
 import ReporterRunner from './ReporterRunner';
 import dumpGraphToGraphViz from './dumpGraphToGraphViz';
 import resolveOptions from './resolveOptions';
 import {ValueEmitter} from '@atlaspack/events';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {PromiseQueue} from '@atlaspack/utils';
-import AtlaspackConfig from './AtlaspackConfig';
+import ParcelConfig from './ParcelConfig';
 import logger from '@atlaspack/logger';
 import RequestTracker, {
   getWatcherOptions,
   requestGraphEdgeTypes,
 } from './RequestTracker';
 import createValidationRequest from './requests/ValidationRequest';
-import createAtlaspackBuildRequest from './requests/AtlaspackBuildRequest';
+import createParcelBuildRequest from './requests/ParcelBuildRequest';
 import createAssetRequest from './requests/AssetRequest';
 import createPathRequest from './requests/PathRequest';
 import {createEnvironment} from './Environment';
@@ -58,23 +58,23 @@ import {
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags} from '@atlaspack/feature-flags';
-import {AtlaspackV3, toFileSystemV3} from './atlaspack-v3';
+import {ParcelV3, toFileSystemV3} from './parcel-v3';
 
 registerCoreWithSerializer();
 
 export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
 
-export default class Atlaspack {
+export default class Parcel {
   #requestTracker /*: RequestTracker*/;
-  #config /*: AtlaspackConfig*/;
+  #config /*: ParcelConfig*/;
   #farm /*: WorkerFarm*/;
   #initialized /*: boolean*/ = false;
   #disposable /*: Disposable */;
-  #initialOptions /*: InitialAtlaspackOptions */;
-  #atlaspackV3: AtlaspackV3;
+  #initialOptions /*: InitialParcelOptions */;
+  #parcelV3: ParcelV3;
   #reporterRunner /*: ReporterRunner*/;
-  #resolvedOptions /*: ?AtlaspackOptions*/ = null;
+  #resolvedOptions /*: ?ParcelOptions*/ = null;
   #optionsRef /*: SharedReference */;
   #watchAbortController /*: AbortController*/;
   #watchQueue /*: PromiseQueue<?BuildEvent>*/ = new PromiseQueue<?BuildEvent>({
@@ -96,7 +96,7 @@ export default class Atlaspack {
 
   isProfiling /*: boolean */;
 
-  constructor(options: InitialAtlaspackOptions) {
+  constructor(options: InitialParcelOptions) {
     this.#initialOptions = options;
   }
 
@@ -117,17 +117,17 @@ export default class Atlaspack {
       logger.warn(e);
     }
 
-    let resolvedOptions: AtlaspackOptions = await resolveOptions(
+    let resolvedOptions: ParcelOptions = await resolveOptions(
       this.#initialOptions,
     );
     this.#resolvedOptions = resolvedOptions;
 
-    let rustAtlaspack: AtlaspackV3;
-    if (resolvedOptions.featureFlags.atlaspackV3) {
+    let rustParcel: ParcelV3;
+    if (resolvedOptions.featureFlags.parcelV3) {
       // eslint-disable-next-line no-unused-vars
       let {entries, inputFS, outputFS, ...options} = this.#initialOptions;
 
-      rustAtlaspack = new AtlaspackV3({
+      rustParcel = new ParcelV3({
         ...options,
         corePath: path.join(__dirname, '..'),
         entries: Array.isArray(entries)
@@ -139,8 +139,8 @@ export default class Atlaspack {
       });
     }
 
-    let {config} = await loadAtlaspackConfig(resolvedOptions);
-    this.#config = new AtlaspackConfig(config, resolvedOptions);
+    let {config} = await loadParcelConfig(resolvedOptions);
+    this.#config = new ParcelConfig(config, resolvedOptions);
 
     setFeatureFlags(resolvedOptions.featureFlags);
 
@@ -165,7 +165,7 @@ export default class Atlaspack {
     this.#disposable = new Disposable();
     if (this.#initialOptions.workerFarm) {
       // If we don't own the farm, dispose of only these references when
-      // Atlaspack ends.
+      // Parcel ends.
       this.#disposable.add(disposeOptions);
     } else {
       // Otherwise, when shutting down, end the entire farm we created.
@@ -190,7 +190,7 @@ export default class Atlaspack {
     this.#requestTracker = await RequestTracker.init({
       farm: this.#farm,
       options: resolvedOptions,
-      rustAtlaspack,
+      rustParcel,
     });
 
     this.#initialized = true;
@@ -345,7 +345,7 @@ export default class Atlaspack {
 
       this.#requestTracker.graph.invalidateOnBuildNodes();
 
-      let request = createAtlaspackBuildRequest({
+      let request = createParcelBuildRequest({
         optionsRef: this.#optionsRef,
         requestedAssetIds: this.#requestedAssetIds,
         signal,
@@ -496,16 +496,16 @@ export default class Atlaspack {
   }
 
   // This is mainly for integration tests and it not public api!
-  _getResolvedAtlaspackOptions(): AtlaspackOptions {
+  _getResolvedParcelOptions(): ParcelOptions {
     return nullthrows(
       this.#resolvedOptions,
-      'Resolved options is null, please let atlaspack initialize before accessing this.',
+      'Resolved options is null, please let parcel initialize before accessing this.',
     );
   }
 
   async startProfiling(): Promise<void> {
     if (this.isProfiling) {
-      throw new Error('Atlaspack is already profiling');
+      throw new Error('Parcel is already profiling');
     }
 
     logger.info({origin: '@atlaspack/core', message: 'Starting profiling...'});
@@ -515,7 +515,7 @@ export default class Atlaspack {
 
   stopProfiling(): Promise<void> {
     if (!this.isProfiling) {
-      throw new Error('Atlaspack is not profiling');
+      throw new Error('Parcel is not profiling');
     }
 
     logger.info({origin: '@atlaspack/core', message: 'Stopping profiling...'});
@@ -532,7 +532,7 @@ export default class Atlaspack {
   }
 
   async unstable_transform(
-    options: AtlaspackTransformOptions,
+    options: ParcelTransformOptions,
   ): Promise<Array<Asset>> {
     if (!this.#initialized) {
       await this._init();
@@ -564,8 +564,8 @@ export default class Atlaspack {
   }
 
   async unstable_resolve(
-    request: AtlaspackResolveOptions,
-  ): Promise<?AtlaspackResolveResult> {
+    request: ParcelResolveOptions,
+  ): Promise<?ParcelResolveResult> {
     if (!this.#initialized) {
       await this._init();
     }

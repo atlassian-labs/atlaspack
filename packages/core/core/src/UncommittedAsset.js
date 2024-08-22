@@ -9,7 +9,7 @@ import type {
   PackageName,
   TransformerResult,
 } from '@atlaspack/types';
-import type {Asset, Dependency, AtlaspackOptions, Invalidations} from './types';
+import type {Asset, Dependency, ParcelOptions, Invalidations} from './types';
 
 import invariant from 'assert';
 import {Readable} from 'stream';
@@ -34,7 +34,7 @@ import {type ProjectPath, fromProjectPath} from './projectPath';
 
 type UncommittedAssetOptions = {|
   value: Asset,
-  options: AtlaspackOptions,
+  options: ParcelOptions,
   content?: ?Blob,
   mapBuffer?: ?Buffer,
   ast?: ?AST,
@@ -45,7 +45,7 @@ type UncommittedAssetOptions = {|
 
 export default class UncommittedAsset {
   value: Asset;
-  options: AtlaspackOptions;
+  options: ParcelOptions;
   content: ?(Blob | Promise<Buffer>);
   mapBuffer: ?Buffer;
   sourceContent: ?string;

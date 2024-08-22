@@ -1,7 +1,7 @@
 import * as React from 'react';
-import Atlaspack from './atlaspack';
+import Parcel from './parcel';
 import './App.css';
 
 export default function App() {
-  return <Atlaspack />;
+  return <Parcel />;
 }

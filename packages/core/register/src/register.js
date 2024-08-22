@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import type {IDisposable, InitialAtlaspackOptions} from '@atlaspack/types';
+import type {IDisposable, InitialParcelOptions} from '@atlaspack/types';
 
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {NodeFS} from '@atlaspack/fs';
@@ -10,7 +10,7 @@ import defaultConfigContents from '@atlaspack/config-default';
 import Module from 'module';
 import path from 'path';
 import {addHook} from 'pirates';
-import Atlaspack, {INTERNAL_RESOLVE, INTERNAL_TRANSFORM} from '@atlaspack/core';
+import Parcel, {INTERNAL_RESOLVE, INTERNAL_TRANSFORM} from '@atlaspack/core';
 
 import syncPromise from './syncPromise';
 
@@ -23,8 +23,8 @@ let defaultConfig = {
     .resolved,
 };
 
-function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
-  let opts: InitialAtlaspackOptions = {
+function register(inputOpts?: InitialParcelOptions): IDisposable {
+  let opts: InitialParcelOptions = {
     ...defaultConfig,
     ...(inputOpts || {}),
   };
@@ -34,7 +34,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
     lastDisposable.dispose();
   }
 
-  let atlaspack = new Atlaspack({
+  let parcel = new Parcel({
     logLevel: 'error',
     ...opts,
   });
@@ -46,11 +46,11 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
     },
   };
 
-  syncPromise(atlaspack._init());
+  syncPromise(parcel._init());
 
   let isProcessing = false;
 
-  // As Atlaspack is pretty much fully asynchronous, create an async function and wrap it in a syncPromise later...
+  // As Parcel is pretty much fully asynchronous, create an async function and wrap it in a syncPromise later...
   async function fileProcessor(code, filePath) {
     if (isProcessing) {
       return code;
@@ -59,7 +59,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
     try {
       isProcessing = true;
       // $FlowFixMe
-      let result = await atlaspack[INTERNAL_TRANSFORM]({
+      let result = await parcel[INTERNAL_TRANSFORM]({
         filePath,
         env,
       });
@@ -92,7 +92,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
 
       let resolved = syncPromise(
         // $FlowFixMe
-        atlaspack[INTERNAL_RESOLVE]({
+        parcel[INTERNAL_RESOLVE]({
           specifier: targetFile,
           sourcePath: currFile,
           env,
@@ -126,11 +126,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
   // $FlowFixMe[prop-missing]
   const originalResolveFilename = Module._resolveFilename;
   // $FlowFixMe[prop-missing]
-  Module._resolveFilename = function atlaspackResolveFilename(
-    to,
-    from,
-    ...rest
-  ) {
+  Module._resolveFilename = function parcelResolveFilename(to, from, ...rest) {
     return isProcessing || disposed
       ? originalResolveFilename(to, from, ...rest)
       : resolveFile(from?.filename, to);

@@ -14,11 +14,11 @@ import type {
   Bundle as InternalBundle,
   Config,
   DevDepRequest,
-  AtlaspackOptions,
+  ParcelOptions,
   ReportFn,
   RequestInvalidation,
 } from './types';
-import type AtlaspackConfig, {LoadedPlugin} from './AtlaspackConfig';
+import type ParcelConfig, {LoadedPlugin} from './ParcelConfig';
 import type InternalBundleGraph from './BundleGraph';
 import type {ConfigRequest} from './requests/ConfigRequest';
 import type {DevDepSpecifier} from './requests/DevDepRequest';
@@ -64,8 +64,8 @@ import {invalidateDevDeps} from './requests/DevDepRequest';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 
 type Opts = {|
-  config: AtlaspackConfig,
-  options: AtlaspackOptions,
+  config: ParcelConfig,
+  options: ParcelOptions,
   report: ReportFn,
   previousDevDeps: Map<string, string>,
   previousInvalidations: Array<RequestInvalidation>,
@@ -101,8 +101,8 @@ const BOUNDARY_LENGTH = HASH_REF_PREFIX.length + 32 - 1;
 const pluginConfigs = createBuildCache();
 
 export default class PackagerRunner {
-  config: AtlaspackConfig;
-  options: AtlaspackOptions;
+  config: ParcelConfig;
+  options: ParcelOptions;
   pluginOptions: PluginOptions;
   distDir: FilePath;
   distExists: Set<FilePath>;
@@ -586,7 +586,7 @@ export default class PackagerRunner {
         this.options.serveOptions &&
         bundle.target.env.context === 'browser'
       ) {
-        sourceRoot = '/__atlaspack_source_root';
+        sourceRoot = '/__parcel_source_root';
       }
 
       if (

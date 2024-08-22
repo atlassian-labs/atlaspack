@@ -3,13 +3,13 @@ import type {Async} from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
 import type {StaticRunOpts} from '../RequestTracker';
 import type {AssetGroup} from '../types';
-import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
+import type {ConfigAndCachePath} from './ParcelConfigRequest';
 
 import nullthrows from 'nullthrows';
-import AtlaspackConfig from '../AtlaspackConfig';
+import ParcelConfig from '../ParcelConfig';
 import {report} from '../ReporterRunner';
 import Validation from '../Validation';
-import createAtlaspackConfigRequest from './AtlaspackConfigRequest';
+import createParcelConfigRequest from './ParcelConfigRequest';
 import {requestTypes} from '../RequestTracker';
 
 type ValidationRequest = {|
@@ -38,11 +38,11 @@ export default function createValidationRequest(
     run: async ({input: {assetRequests, optionsRef}, api, options, farm}) => {
       let {config: processedConfig, cachePath} = nullthrows(
         await api.runRequest<null, ConfigAndCachePath>(
-          createAtlaspackConfigRequest(),
+          createParcelConfigRequest(),
         ),
       );
 
-      let config = new AtlaspackConfig(processedConfig, options);
+      let config = new ParcelConfig(processedConfig, options);
       let trackedRequestsDesc = assetRequests.filter(request => {
         return config.getValidatorNames(request.filePath).length > 0;
       });

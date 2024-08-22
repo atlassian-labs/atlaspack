@@ -21,7 +21,7 @@ import {spawnSync} from 'child_process';
 import tempy from 'tempy';
 import {md} from '@atlaspack/diagnostic';
 
-const atlaspackCli = require.resolve('@atlaspack/cli/src/bin.js');
+const parcelCli = require.resolve('@atlaspack/cli/src/bin.js');
 const inputDir = path.join(__dirname, '/input');
 
 describe.v2('babel', function () {
@@ -244,7 +244,7 @@ describe.v2('babel', function () {
     await outputFS.rimraf(path.join(fixtureDir, 'dist'));
   });
 
-  it('should support building with custom babel config when running atlaspack globally', async function () {
+  it('should support building with custom babel config when running parcel globally', async function () {
     let tmpDir = tempy.directory();
     let distDir = path.join(tmpDir, 'dist');
     await fs.ncp(
@@ -349,7 +349,7 @@ describe.v2('babel', function () {
       assert(file.includes('class Foo'));
     });
 
-    it('should be "production" if Atlaspack is run in production mode', async () => {
+    it('should be "production" if Parcel is run in production mode', async () => {
       await bundle(
         path.join(__dirname, '/integration/babel-env-name/index.js'),
         {
@@ -461,7 +461,7 @@ describe.v2('babel', function () {
 
       let fixtureDir = path.join(__dirname, '/integration/babel-config-js');
       let distDir = path.resolve(fixtureDir, './dist');
-      let cacheDir = path.resolve(fixtureDir, '.atlaspack-cache');
+      let cacheDir = path.resolve(fixtureDir, '.parcel-cache');
       await fs.rimraf(distDir);
       await fs.rimraf(cacheDir);
       await fs.rimraf(path.resolve(fixtureDir, './node_modules/.cache'));
@@ -470,7 +470,7 @@ describe.v2('babel', function () {
         spawnSync(
           'node',
           [
-            atlaspackCli,
+            parcelCli,
             'build',
             'src/index.js',
             '--no-optimize',
@@ -507,18 +507,12 @@ describe.v2('babel', function () {
         '/integration/babel-plugin-upgrade',
       );
       await fs.ncp(path.join(fixtureDir), inputDir);
-      await fs.rimraf(path.join(__dirname, '.atlaspack-cache'));
+      await fs.rimraf(path.join(__dirname, '.parcel-cache'));
 
       let build = () =>
         spawnSync(
           'node',
-          [
-            atlaspackCli,
-            'build',
-            'index.js',
-            '--no-optimize',
-            '--no-scope-hoist',
-          ],
+          [parcelCli, 'build', 'index.js', '--no-optimize', '--no-scope-hoist'],
           {
             cwd: inputDir,
             env: {
@@ -644,7 +638,7 @@ describe.v2('babel', function () {
         diagnostics: [
           {
             origin: '@atlaspack/transformer-babel',
-            message: md`Atlaspack includes transpilation by default. Babel config __${path.relative(
+            message: md`Parcel includes transpilation by default. Babel config __${path.relative(
               process.cwd(),
               babelrcPath,
             )}__ contains only redundant presets. Deleting it may significantly improve build performance.`,
@@ -675,7 +669,7 @@ describe.v2('babel', function () {
           {
             origin: '@atlaspack/transformer-babel',
             message:
-              "@babel/preset-env does not support Atlaspack's targets, which will likely result in unnecessary transpilation and larger bundle sizes.",
+              "@babel/preset-env does not support Parcel's targets, which will likely result in unnecessary transpilation and larger bundle sizes.",
             codeFrames: [
               {
                 filePath: path.resolve(path.dirname(filePath), '.babelrc'),
@@ -695,7 +689,7 @@ describe.v2('babel', function () {
               },
             ],
             hints: [
-              "Either remove __@babel/preset-env__ to use Atlaspack's builtin transpilation, or replace with __@atlaspack/babel-preset-env__",
+              "Either remove __@babel/preset-env__ to use Parcel's builtin transpilation, or replace with __@atlaspack/babel-preset-env__",
             ],
             documentationURL:
               'https://parceljs.org/languages/javascript/#custom-plugins',
@@ -727,7 +721,7 @@ describe.v2('babel', function () {
         diagnostics: [
           {
             origin: '@atlaspack/transformer-babel',
-            message: md`Atlaspack includes transpilation by default. Babel config __${path.relative(
+            message: md`Parcel includes transpilation by default. Babel config __${path.relative(
               process.cwd(),
               babelrcPath,
             )}__ includes the following redundant presets: __@atlaspack/babel-preset-env__. Removing these may improve build performance.`,
@@ -785,7 +779,7 @@ describe.v2('babel', function () {
         diagnostics: [
           {
             origin: '@atlaspack/transformer-babel',
-            message: md`Atlaspack includes transpilation by default. Babel config __${path.relative(
+            message: md`Parcel includes transpilation by default. Babel config __${path.relative(
               process.cwd(),
               babelrcPath,
             )}__ includes the following redundant presets: __@atlaspack/babel-preset-env__. Removing these may improve build performance.`,

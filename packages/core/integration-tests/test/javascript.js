@@ -540,7 +540,7 @@ describe('javascript', function () {
   });
 
   // TODO: re-enable when this actually works
-  it.skip('Should not run atlaspack over external modules', async function () {
+  it.skip('Should not run parcel over external modules', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/dynamic-external/index.js'),
     );
@@ -3225,16 +3225,16 @@ describe('javascript', function () {
     assert.equal(await run(b), 1337);
   });
 
-  it('should detect atlaspack style async requires in commonjs', async () => {
+  it('should detect parcel style async requires in commonjs', async () => {
     let b = await bundle(
-      path.join(__dirname, '/integration/require-async/atlaspack.js'),
+      path.join(__dirname, '/integration/require-async/parcel.js'),
     );
 
     assertBundles(b, [
       {
-        name: 'atlaspack.js',
+        name: 'parcel.js',
         assets: [
-          'atlaspack.js',
+          'parcel.js',
           'bundle-url.js',
           'cacheLoader.js',
           'js-loader.js',
@@ -5129,8 +5129,8 @@ describe('javascript', function () {
       for (let bundle of b.getBundles()) {
         let contents = await outputFS.readFile(bundle.filePath, 'utf8');
         assert(
-          !contents.includes('atlaspackRequire'),
-          'should not include atlaspackRequire',
+          !contents.includes('parcelRequire'),
+          'should not include parcelRequire',
         );
       }
     },

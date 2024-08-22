@@ -2,7 +2,7 @@
 
 import type {Async, FilePath, PackageJSON, Glob} from '@atlaspack/types';
 import type {StaticRunOpts} from '../RequestTracker';
-import type {Entry, InternalFile, AtlaspackOptions} from '../types';
+import type {Entry, InternalFile, ParcelOptions} from '../types';
 import type {FileSystem} from '@atlaspack/fs';
 
 import {
@@ -91,7 +91,7 @@ async function assertFile(
   relativeSource: FilePath,
   pkgFilePath: FilePath,
   keyPath: string,
-  options: AtlaspackOptions,
+  options: ParcelOptions,
 ) {
   let source = path.join(entry, relativeSource);
   let stat;
@@ -151,9 +151,9 @@ async function assertFile(
 }
 
 export class EntryResolver {
-  options: AtlaspackOptions;
+  options: ParcelOptions;
 
-  constructor(options: AtlaspackOptions) {
+  constructor(options: ParcelOptions) {
     this.options = options;
   }
 

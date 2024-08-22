@@ -1,23 +1,23 @@
 // @flow
-/* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __atlaspack__import__, __atlaspack__importScripts__, ServiceWorkerGlobalScope */
+/* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope */
 
 /*::
 import type {
   HMRAsset,
   HMRMessage,
 } from '@atlaspack/reporter-dev-server/src/HMRServer.js';
-interface AtlaspackRequire {
+interface ParcelRequire {
   (string): mixed;
-  cache: {|[string]: AtlaspackModule|};
+  cache: {|[string]: ParcelModule|};
   hotData: {|[string]: mixed|};
   Module: any;
-  parent: ?AtlaspackRequire;
-  isAtlaspackRequire: true;
+  parent: ?ParcelRequire;
+  isParcelRequire: true;
   modules: {|[string]: [Function, {|[string]: string|}]|};
   HMR_BUNDLE_ID: string;
-  root: AtlaspackRequire;
+  root: ParcelRequire;
 }
-interface AtlaspackModule {
+interface ParcelModule {
   hot: {|
     data: mixed,
     accept(cb: (Function) => void): void,
@@ -35,7 +35,7 @@ interface ExtensionContext {
     getManifest(): {manifest_version: number, ...};
   |};
 }
-declare var module: {bundle: AtlaspackRequire, ...};
+declare var module: {bundle: ParcelRequire, ...};
 declare var HMR_HOST: string;
 declare var HMR_PORT: string;
 declare var HMR_ENV_HASH: string;
@@ -43,13 +43,13 @@ declare var HMR_SECURE: boolean;
 declare var HMR_USE_SSE: boolean;
 declare var chrome: ExtensionContext;
 declare var browser: ExtensionContext;
-declare var __atlaspack__import__: (string) => Promise<void>;
-declare var __atlaspack__importScripts__: (string) => Promise<void>;
+declare var __parcel__import__: (string) => Promise<void>;
+declare var __parcel__importScripts__: (string) => Promise<void>;
 declare var globalThis: typeof self;
 declare var ServiceWorkerGlobalScope: Object;
 */
 
-var OVERLAY_ID = '__atlaspack__error__overlay__';
+var OVERLAY_ID = '__parcel__error__overlay__';
 
 var OldModule = module.bundle.Module;
 
@@ -72,8 +72,8 @@ module.bundle.Module = Module;
 module.bundle.hotData = {};
 
 var checkedAssets /*: {|[string]: boolean|} */,
-  assetsToDispose /*: Array<[AtlaspackRequire, string]> */,
-  assetsToAccept /*: Array<[AtlaspackRequire, string]> */;
+  assetsToDispose /*: Array<[ParcelRequire, string]> */,
+  assetsToAccept /*: Array<[ParcelRequire, string]> */;
 
 function getHostname() {
   return (
@@ -88,10 +88,7 @@ function getPort() {
 
 // eslint-disable-next-line no-redeclare
 var parent = module.bundle.parent;
-if (
-  (!parent || !parent.isAtlaspackRequire) &&
-  typeof WebSocket !== 'undefined'
-) {
+if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = getHostname();
   var port = getPort();
   var protocol =
@@ -103,7 +100,7 @@ if (
 
   var ws;
   if (HMR_USE_SSE) {
-    ws = new EventSource('/__atlaspack_hmr');
+    ws = new EventSource('/__parcel_hmr');
   } else {
     try {
       ws = new WebSocket(
@@ -169,7 +166,7 @@ if (
           typeof window !== 'undefined' &&
           typeof CustomEvent !== 'undefined'
         ) {
-          window.dispatchEvent(new CustomEvent('atlaspackhmraccept'));
+          window.dispatchEvent(new CustomEvent('parcelhmraccept'));
         }
 
         await hmrApplyUpdates(assets);
@@ -199,14 +196,14 @@ if (
     }
 
     if (data.type === 'error') {
-      // Log atlaspack errors to console
+      // Log parcel errors to console
       for (let ansiDiagnostic of data.diagnostics.ansi) {
         let stack = ansiDiagnostic.codeframe
           ? ansiDiagnostic.codeframe
           : ansiDiagnostic.stack;
 
         console.error(
-          '🚨 [atlaspack]: ' +
+          '🚨 [parcel]: ' +
             ansiDiagnostic.message +
             '\n' +
             stack +
@@ -232,7 +229,7 @@ if (
     };
     ws.onclose = function (e) {
       if (process.env.ATLASPACK_BUILD_ENV !== 'test') {
-        console.warn('[atlaspack] 🚨 Connection to the HMR server was lost');
+        console.warn('[parcel] 🚨 Connection to the HMR server was lost');
       }
     };
   }
@@ -242,7 +239,7 @@ function removeErrorOverlay() {
   var overlay = document.getElementById(OVERLAY_ID);
   if (overlay) {
     overlay.remove();
-    console.log('[atlaspack] ✨ Error resolved');
+    console.log('[parcel] ✨ Error resolved');
   }
 }
 
@@ -257,7 +254,7 @@ function createErrorOverlay(diagnostics) {
     let stack = diagnostic.frames.length
       ? diagnostic.frames.reduce((p, frame) => {
           return `${p}
-<a href="/__atlaspack_launch_editor?file=${encodeURIComponent(
+<a href="/__parcel_launch_editor?file=${encodeURIComponent(
             frame.location,
           )}" style="text-decoration: underline; color: #888" onclick="fetch(this.href); return false">${
             frame.location
@@ -299,7 +296,7 @@ function fullReload() {
   }
 }
 
-function getParents(bundle, id) /*: Array<[AtlaspackRequire, string]> */ {
+function getParents(bundle, id) /*: Array<[ParcelRequire, string]> */ {
   var modules = bundle.modules;
   if (!modules) {
     return [];
@@ -394,11 +391,11 @@ function hmrDownload(asset) {
     } else if (typeof importScripts === 'function') {
       // Worker scripts
       if (asset.outputFormat === 'esmodule') {
-        return __atlaspack__import__(asset.url + '?t=' + Date.now());
+        return __parcel__import__(asset.url + '?t=' + Date.now());
       } else {
         return new Promise((resolve, reject) => {
           try {
-            __atlaspack__importScripts__(asset.url + '?t=' + Date.now());
+            __parcel__importScripts__(asset.url + '?t=' + Date.now());
             resolve();
           } catch (err) {
             reject(err);
@@ -410,7 +407,7 @@ function hmrDownload(asset) {
 }
 
 async function hmrApplyUpdates(assets) {
-  global.atlaspackHotUpdate = Object.create(null);
+  global.parcelHotUpdate = Object.create(null);
 
   let scriptsToRemove;
   try {
@@ -445,7 +442,7 @@ async function hmrApplyUpdates(assets) {
       hmrApply(module.bundle.root, asset);
     });
   } finally {
-    delete global.atlaspackHotUpdate;
+    delete global.parcelHotUpdate;
 
     if (scriptsToRemove) {
       scriptsToRemove.forEach(script => {
@@ -457,7 +454,7 @@ async function hmrApplyUpdates(assets) {
   }
 }
 
-function hmrApply(bundle /*: AtlaspackRequire */, asset /*:  HMRAsset */) {
+function hmrApply(bundle /*: ParcelRequire */, asset /*:  HMRAsset */) {
   var modules = bundle.modules;
   if (!modules) {
     return;
@@ -490,7 +487,7 @@ function hmrApply(bundle /*: AtlaspackRequire */, asset /*:  HMRAsset */) {
       }
 
       // $FlowFixMe
-      let fn = global.atlaspackHotUpdate[asset.id];
+      let fn = global.parcelHotUpdate[asset.id];
       modules[asset.id] = [fn, deps];
     } else if (bundle.parent) {
       hmrApply(bundle.parent, asset);
@@ -529,7 +526,7 @@ function hmrDelete(bundle, id) {
 }
 
 function hmrAcceptCheck(
-  bundle /*: AtlaspackRequire */,
+  bundle /*: ParcelRequire */,
   id /*: string */,
   depsByBundle /*: ?{ [string]: { [string]: string } }*/,
 ) {
@@ -562,7 +559,7 @@ function hmrAcceptCheck(
 }
 
 function hmrAcceptCheckOne(
-  bundle /*: AtlaspackRequire */,
+  bundle /*: ParcelRequire */,
   id /*: string */,
   depsByBundle /*: ?{ [string]: { [string]: string } }*/,
 ) {
@@ -596,7 +593,7 @@ function hmrAcceptCheckOne(
   }
 }
 
-function hmrDispose(bundle /*: AtlaspackRequire */, id /*: string */) {
+function hmrDispose(bundle /*: ParcelRequire */, id /*: string */) {
   var cached = bundle.cache[id];
   bundle.hotData[id] = {};
   if (cached && cached.hot) {
@@ -612,7 +609,7 @@ function hmrDispose(bundle /*: AtlaspackRequire */, id /*: string */) {
   delete bundle.cache[id];
 }
 
-function hmrAccept(bundle /*: AtlaspackRequire */, id /*: string */) {
+function hmrAccept(bundle /*: ParcelRequire */, id /*: string */) {
   // Execute the module.
   bundle(id);
 

@@ -37,7 +37,7 @@ import {
   STARTUP,
   ERROR,
 } from './constants';
-import type {AtlaspackV3} from './atlaspack-v3/AtlaspackV3';
+import type {ParcelV3} from './parcel-v3/ParcelV3';
 import {
   type ProjectPath,
   fromProjectPathRelative,
@@ -54,14 +54,14 @@ import type {WriteBundlesRequestResult} from './requests/WriteBundlesRequest';
 import type {WriteBundleRequestResult} from './requests/WriteBundleRequest';
 import type {TargetRequestResult} from './requests/TargetRequest';
 import type {PathRequestResult} from './requests/PathRequest';
-import type {AtlaspackConfigRequestResult} from './requests/AtlaspackConfigRequest';
-import type {AtlaspackBuildRequestResult} from './requests/AtlaspackBuildRequest';
+import type {ParcelConfigRequestResult} from './requests/ParcelConfigRequest';
+import type {ParcelBuildRequestResult} from './requests/ParcelBuildRequest';
 import type {EntryRequestResult} from './requests/EntryRequest';
 import type {BundleGraphResult} from './requests/BundleGraphRequest';
 import {deserialize, serialize} from './serializer';
 import type {
   AssetRequestResult,
-  AtlaspackOptions,
+  ParcelOptions,
   RequestInvalidation,
   InternalFileCreateInvalidation,
   InternalGlob,
@@ -161,8 +161,8 @@ export type RequestResult =
   | WriteBundleRequestResult
   | TargetRequestResult
   | PathRequestResult
-  | AtlaspackConfigRequestResult
-  | AtlaspackBuildRequestResult
+  | ParcelConfigRequestResult
+  | ParcelBuildRequestResult
   | EntryRequestResult
   | BundleGraphResult
   | AssetRequestResult;
@@ -179,12 +179,12 @@ type RequestNode = {|
 |};
 
 export const requestTypes = {
-  atlaspack_build_request: 1,
+  parcel_build_request: 1,
   bundle_graph_request: 2,
   asset_graph_request: 3,
   entry_request: 4,
   target_request: 5,
-  atlaspack_config_request: 6,
+  parcel_config_request: 6,
   path_request: 7,
   dev_dep_request: 8,
   asset_request: 9,
@@ -241,8 +241,8 @@ export type StaticRunOpts<TResult> = {|
   api: RunAPI<TResult>,
   farm: WorkerFarm,
   invalidateReason: InvalidateReason,
-  options: AtlaspackOptions,
-  rustAtlaspack: ?AtlaspackV3,
+  options: ParcelOptions,
+  rustParcel: ?ParcelV3,
 |};
 
 const nodeFromFilePath = (filePath: ProjectPath): RequestGraphNode => ({
@@ -310,7 +310,7 @@ export class RequestGraph extends ContentGraph<
   envNodeIds: Set<NodeId> = new Set();
   optionNodeIds: Set<NodeId> = new Set();
   // Unpredictable nodes are requests that cannot be predicted whether they should rerun based on
-  // filesystem changes alone. They should rerun on each startup of Atlaspack.
+  // filesystem changes alone. They should rerun on each startup of Parcel.
   unpredicatableNodeIds: Set<NodeId> = new Set();
   invalidateOnBuildNodeIds: Set<NodeId> = new Set();
   cachedRequestChunks: Set<number> = new Set();
@@ -476,7 +476,7 @@ export class RequestGraph extends ContentGraph<
     }
   }
 
-  invalidateOptionNodes(options: AtlaspackOptions) {
+  invalidateOptionNodes(options: ParcelOptions) {
     for (let nodeId of this.optionNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === OPTION);
@@ -871,7 +871,7 @@ export class RequestGraph extends ContentGraph<
 
   async respondToFSEvents(
     events: Array<Event>,
-    options: AtlaspackOptions,
+    options: ParcelOptions,
     threshold: number,
   ): Async<boolean> {
     let didInvalidate = false;
@@ -1072,8 +1072,8 @@ export class RequestGraph extends ContentGraph<
 export default class RequestTracker {
   graph: RequestGraph;
   farm: WorkerFarm;
-  options: AtlaspackOptions;
-  rustAtlaspack: ?AtlaspackV3;
+  options: ParcelOptions;
+  rustParcel: ?ParcelV3;
   signal: ?AbortSignal;
   stats: Map<RequestType, number> = new Map();
 
@@ -1081,17 +1081,17 @@ export default class RequestTracker {
     graph,
     farm,
     options,
-    rustAtlaspack,
+    rustParcel,
   }: {|
     graph?: RequestGraph,
     farm: WorkerFarm,
-    options: AtlaspackOptions,
-    rustAtlaspack?: AtlaspackV3,
+    options: ParcelOptions,
+    rustParcel?: ParcelV3,
   |}) {
     this.graph = graph || new RequestGraph();
     this.farm = farm;
     this.options = options;
-    this.rustAtlaspack = rustAtlaspack;
+    this.rustParcel = rustParcel;
   }
 
   // TODO: refactor (abortcontroller should be created by RequestTracker)
@@ -1267,7 +1267,7 @@ export default class RequestTracker {
         farm: this.farm,
         invalidateReason: node.invalidateReason,
         options: this.options,
-        rustAtlaspack: this.rustAtlaspack,
+        rustParcel: this.rustParcel,
       });
 
       assertSignalNotAborted(this.signal);
@@ -1526,14 +1526,14 @@ export default class RequestTracker {
   static async init({
     farm,
     options,
-    rustAtlaspack,
+    rustParcel,
   }: {|
     farm: WorkerFarm,
-    options: AtlaspackOptions,
-    rustAtlaspack?: AtlaspackV3,
+    options: ParcelOptions,
+    rustParcel?: ParcelV3,
   |}): Async<RequestTracker> {
     let graph = await loadRequestGraph(options);
-    return new RequestTracker({farm, graph, options, rustAtlaspack});
+    return new RequestTracker({farm, graph, options, rustParcel});
   }
 }
 
@@ -1542,7 +1542,7 @@ export function getWatcherOptions({
   cacheDir,
   watchDir,
   watchBackend,
-}: AtlaspackOptions): WatcherOptions {
+}: ParcelOptions): WatcherOptions {
   const vcsDirs = ['.git', '.hg'];
   const uniqueDirs = [...new Set([...watchIgnore, ...vcsDirs, cacheDir])];
   const ignore = uniqueDirs.map(dir => path.resolve(watchDir, dir));
@@ -1593,7 +1593,7 @@ export async function readAndDeserializeRequestGraph(
       ...serializedRequestGraph,
       nodes: (await Promise.all(nodePromises)).flat(),
     }),
-    // This is used inside atlaspack query for `.inspectCache`
+    // This is used inside parcel query for `.inspectCache`
     bufferLength,
   };
 }
@@ -1666,7 +1666,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
   return new RequestGraph();
 }
 function logErrorOnBailout(
-  options: AtlaspackOptions,
+  options: ParcelOptions,
   snapshotPath: string,
   e: Error,
 ): void {

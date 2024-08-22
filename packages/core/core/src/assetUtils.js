@@ -17,7 +17,7 @@ import type {
   RequestInvalidation,
   Dependency,
   Environment,
-  AtlaspackOptions,
+  ParcelOptions,
 } from './types';
 
 import {Readable} from 'stream';
@@ -25,7 +25,7 @@ import {PluginLogger} from '@atlaspack/logger';
 import nullthrows from 'nullthrows';
 import CommittedAsset from './CommittedAsset';
 import UncommittedAsset from './UncommittedAsset';
-import loadPlugin from './loadAtlaspackPlugin';
+import loadPlugin from './loadParcelPlugin';
 import {Asset as PublicAsset} from './public/Asset';
 import PluginOptions from './public/PluginOptions';
 import {blobToStream, hashFile} from '@atlaspack/utils';
@@ -211,7 +211,7 @@ const hashCache = createBuildCache();
 
 export async function getInvalidationHash(
   invalidations: Array<RequestInvalidation>,
-  options: AtlaspackOptions,
+  options: ParcelOptions,
 ): Promise<string> {
   if (invalidations.length === 0) {
     return '';

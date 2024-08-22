@@ -8,7 +8,7 @@ import type {
   ConfigResultWithFilePath,
   DevDepOptions,
 } from '@atlaspack/types';
-import type {Config, AtlaspackOptions} from '../types';
+import type {Config, ParcelOptions} from '../types';
 
 import invariant from 'assert';
 import path from 'path';
@@ -22,7 +22,7 @@ import Environment from './Environment';
 import {fromProjectPath, toProjectPath} from '../projectPath';
 
 const internalConfigToConfig: DefaultWeakMap<
-  AtlaspackOptions,
+  ParcelOptions,
   WeakMap<Config, PublicConfig>,
 > = new DefaultWeakMap(() => new WeakMap());
 
@@ -30,9 +30,9 @@ export default class PublicConfig implements IConfig {
   #config /*: Config */;
   #pkg /*: ?PackageJSON */;
   #pkgFilePath /*: ?FilePath */;
-  #options /*: AtlaspackOptions */;
+  #options /*: ParcelOptions */;
 
-  constructor(config: Config, options: AtlaspackOptions): PublicConfig {
+  constructor(config: Config, options: ParcelOptions): PublicConfig {
     let existing = internalConfigToConfig.get(options).get(config);
     if (existing != null) {
       return existing;

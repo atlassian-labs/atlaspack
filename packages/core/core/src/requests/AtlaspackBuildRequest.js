@@ -23,13 +23,13 @@ import {assetFromValue} from '../public/Asset';
 import {tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 
-type AtlaspackBuildRequestInput = {|
+type ParcelBuildRequestInput = {|
   optionsRef: SharedReference,
   requestedAssetIds: Set<string>,
   signal?: AbortSignal,
 |};
 
-export type AtlaspackBuildRequestResult = {|
+export type ParcelBuildRequestResult = {|
   bundleGraph: BundleGraph,
   bundleInfo: Map<string, PackagedBundleInfo>,
   changedAssets: Map<string, Asset>,
@@ -37,25 +37,23 @@ export type AtlaspackBuildRequestResult = {|
 |};
 
 type RunInput<TResult> = {|
-  input: AtlaspackBuildRequestInput,
+  input: ParcelBuildRequestInput,
   ...StaticRunOpts<TResult>,
 |};
 
-export type AtlaspackBuildRequest = {|
+export type ParcelBuildRequest = {|
   id: ContentKey,
-  +type: typeof requestTypes.atlaspack_build_request,
-  run: (
-    RunInput<AtlaspackBuildRequestResult>,
-  ) => Async<AtlaspackBuildRequestResult>,
-  input: AtlaspackBuildRequestInput,
+  +type: typeof requestTypes.parcel_build_request,
+  run: (RunInput<ParcelBuildRequestResult>) => Async<ParcelBuildRequestResult>,
+  input: ParcelBuildRequestInput,
 |};
 
-export default function createAtlaspackBuildRequest(
-  input: AtlaspackBuildRequestInput,
-): AtlaspackBuildRequest {
+export default function createParcelBuildRequest(
+  input: ParcelBuildRequestInput,
+): ParcelBuildRequest {
   return {
-    type: requestTypes.atlaspack_build_request,
-    id: 'atlaspack_build_request',
+    type: requestTypes.parcel_build_request,
+    id: 'parcel_build_request',
     run,
     input,
   };

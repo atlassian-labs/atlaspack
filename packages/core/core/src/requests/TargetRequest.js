@@ -12,8 +12,8 @@ import type {
   OutputFormat,
 } from '@atlaspack/types';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
-import type {Entry, AtlaspackOptions, Target} from '../types';
-import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
+import type {Entry, ParcelOptions, Target} from '../types';
+import type {ConfigAndCachePath} from './ParcelConfigRequest';
 
 import ThrowableDiagnostic, {
   convertSourceLocationToHighlight,
@@ -31,9 +31,9 @@ import {
 } from '@atlaspack/utils';
 import logger from '@atlaspack/logger';
 import {createEnvironment} from '../Environment';
-import createAtlaspackConfigRequest, {
-  getCachedAtlaspackConfig,
-} from './AtlaspackConfigRequest';
+import createParcelConfigRequest, {
+  getCachedParcelConfig,
+} from './ParcelConfigRequest';
 // $FlowFixMe
 import browserslist from 'browserslist';
 import {parse} from '@mischnic/json-sourcemap';
@@ -135,14 +135,12 @@ async function run({input, api, options}) {
   assertTargetsAreNotEntries(targets, input, options);
 
   let configResult = nullthrows(
-    await api.runRequest<null, ConfigAndCachePath>(
-      createAtlaspackConfigRequest(),
-    ),
+    await api.runRequest<null, ConfigAndCachePath>(createParcelConfigRequest()),
   );
-  let atlaspackConfig = getCachedAtlaspackConfig(configResult, options);
+  let parcelConfig = getCachedParcelConfig(configResult, options);
 
   // Find named pipelines for each target.
-  let pipelineNames = new Set(atlaspackConfig.getNamedPipelines());
+  let pipelineNames = new Set(parcelConfig.getNamedPipelines());
   for (let target of targets) {
     if (pipelineNames.has(target.name)) {
       target.pipeline = target.name;
@@ -189,10 +187,10 @@ type TargetKeyInfo =
 export class TargetResolver {
   fs: FileSystem;
   api: RunAPI<Array<Target>>;
-  options: AtlaspackOptions;
+  options: ParcelOptions;
   targetInfo: Map<string, TargetInfo>;
 
-  constructor(api: RunAPI<Array<Target>>, options: AtlaspackOptions) {
+  constructor(api: RunAPI<Array<Target>>, options: ParcelOptions) {
     this.api = api;
     this.fs = options.inputFS;
     this.options = options;
@@ -1400,7 +1398,7 @@ function assertNoDuplicateTargets(options, targets, pkgFilePath, pkgContents) {
   }
 }
 
-function normalizeSourceMap(options: AtlaspackOptions, sourceMap) {
+function normalizeSourceMap(options: ParcelOptions, sourceMap) {
   if (options.defaultTargetOptions.sourceMaps) {
     if (typeof sourceMap === 'boolean') {
       return sourceMap ? {} : undefined;
@@ -1415,7 +1413,7 @@ function normalizeSourceMap(options: AtlaspackOptions, sourceMap) {
 function assertTargetsAreNotEntries(
   targets: Array<Target>,
   input: Entry,
-  options: AtlaspackOptions,
+  options: ParcelOptions,
 ) {
   for (const target of targets) {
     if (

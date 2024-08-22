@@ -5,7 +5,7 @@ import type {
   Environment as IEnvironment,
   SourceLocation,
 } from '@atlaspack/types';
-import type {Target as TargetValue, AtlaspackOptions} from '../types';
+import type {Target as TargetValue, ParcelOptions} from '../types';
 
 import nullthrows from 'nullthrows';
 import Environment from './Environment';
@@ -22,9 +22,9 @@ export function targetToInternalTarget(target: ITarget): TargetValue {
 
 export default class Target implements ITarget {
   #target /*: TargetValue */;
-  #options /*: AtlaspackOptions */;
+  #options /*: ParcelOptions */;
 
-  constructor(target: TargetValue, options: AtlaspackOptions): Target {
+  constructor(target: TargetValue, options: ParcelOptions): Target {
     let existing = internalTargetToTarget.get(target);
     if (existing != null) {
       return existing;

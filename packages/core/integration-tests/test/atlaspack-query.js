@@ -10,7 +10,7 @@ import {
 } from '@atlaspack/test-utils';
 import {loadGraphs} from '../../../dev/query/src';
 
-describe.v2('atlaspack-query', () => {
+describe.v2('parcel-query', () => {
   it('loadGraphs', async function () {
     let entries = 'index.js';
     let options = {
@@ -23,7 +23,7 @@ describe.v2('atlaspack-query', () => {
       // We need to write to the default inputFS (NodeFS) as `loadGraphs` doesn't
       // support custom FS's
       outputFS: inputFS,
-      cacheDir: path.join(__dirname, '.atlaspack-cache'),
+      cacheDir: path.join(__dirname, '.parcel-cache'),
     };
 
     await fsFixture(overlayFS)`

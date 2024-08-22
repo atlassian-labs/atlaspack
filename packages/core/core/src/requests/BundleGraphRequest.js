@@ -2,7 +2,7 @@
 
 import type {Async, Bundle as IBundle, Namer} from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
-import type AtlaspackConfig, {LoadedPlugin} from '../AtlaspackConfig';
+import type ParcelConfig, {LoadedPlugin} from '../ParcelConfig';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
 import type {
   Asset,
@@ -10,9 +10,9 @@ import type {
   Bundle as InternalBundle,
   Config,
   DevDepRequest,
-  AtlaspackOptions,
+  ParcelOptions,
 } from '../types';
-import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
+import type {ConfigAndCachePath} from './ParcelConfigRequest';
 
 import invariant from 'assert';
 import assert from 'assert';
@@ -32,9 +32,9 @@ import PluginOptions from '../public/PluginOptions';
 import applyRuntimes from '../applyRuntimes';
 import {ATLASPACK_VERSION, OPTION_CHANGE} from '../constants';
 import {assertSignalNotAborted, optionsProxy} from '../utils';
-import createAtlaspackConfigRequest, {
-  getCachedAtlaspackConfig,
-} from './AtlaspackConfigRequest';
+import createParcelConfigRequest, {
+  getCachedParcelConfig,
+} from './ParcelConfigRequest';
 import {
   createDevDependency,
   getDevDepRequests,
@@ -97,8 +97,8 @@ export default function createBundleGraphRequest(
       let {optionsRef, requestedAssetIds, signal} = input.input;
       let measurement = tracer.createMeasurement('building');
 
-      let createAssetGraphRequest = input.rustAtlaspack
-        ? createAssetGraphRequestRust(input.rustAtlaspack)
+      let createAssetGraphRequest = input.rustParcel
+        ? createAssetGraphRequestRust(input.rustParcel)
         : createAssetGraphRequestJS;
 
       let request = createAssetGraphRequest({
@@ -136,21 +136,18 @@ export default function createBundleGraphRequest(
 
       let configResult = nullthrows(
         await input.api.runRequest<null, ConfigAndCachePath>(
-          createAtlaspackConfigRequest(),
+          createParcelConfigRequest(),
         ),
       );
 
       assertSignalNotAborted(signal);
 
-      let atlaspackConfig = getCachedAtlaspackConfig(
-        configResult,
-        input.options,
-      );
+      let parcelConfig = getCachedParcelConfig(configResult, input.options);
       let {devDeps, invalidDevDeps} = await getDevDepRequests(input.api);
-      invalidateDevDeps(invalidDevDeps, input.options, atlaspackConfig);
+      invalidateDevDeps(invalidDevDeps, input.options, parcelConfig);
 
       let bundlingMeasurement = tracer.createMeasurement('bundling');
-      let builder = new BundlerRunner(input, atlaspackConfig, devDeps);
+      let builder = new BundlerRunner(input, parcelConfig, devDeps);
       let res: BundleGraphResult = await builder.bundle({
         graph: assetGraph,
         changedAssets: changedAssets,
@@ -175,9 +172,9 @@ export default function createBundleGraphRequest(
 }
 
 class BundlerRunner {
-  options: AtlaspackOptions;
+  options: ParcelOptions;
   optionsRef: SharedReference;
-  config: AtlaspackConfig;
+  config: ParcelConfig;
   pluginOptions: PluginOptions;
   api: RunAPI<BundleGraphResult>;
   previousDevDeps: Map<string, string>;
@@ -187,7 +184,7 @@ class BundlerRunner {
 
   constructor(
     {input, api, options}: RunInput,
-    config: AtlaspackConfig,
+    config: ParcelConfig,
     previousDevDeps: Map<string, string>,
   ) {
     this.options = options;

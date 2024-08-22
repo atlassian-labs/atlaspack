@@ -12,7 +12,7 @@ describe('@atlaspack/config-default', () => {
   before(() => {
     packageJsonDependencyNames = new Set([
       ...Object.keys(packageJson.dependencies || {}),
-      ...Object.keys(packageJson.atlaspackDependencies || {}),
+      ...Object.keys(packageJson.parcelDependencies || {}),
     ]);
     configPackageReferences = collectConfigPackageReferences(config);
   });
@@ -63,7 +63,7 @@ function collectConfigPackageReferences(
       collectConfigPackageReferences(value, references);
     } else {
       throw new Error(
-        'Atlaspack configs must contain only strings, arrays, or objects in value positions',
+        'Parcel configs must contain only strings, arrays, or objects in value positions',
       );
     }
   }

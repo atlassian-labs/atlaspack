@@ -12,9 +12,9 @@ import type {
   Config,
   Dependency,
   DevDepRequest,
-  AtlaspackOptions,
+  ParcelOptions,
 } from '../types';
-import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
+import type {ConfigAndCachePath} from './ParcelConfigRequest';
 
 import ThrowableDiagnostic, {
   convertSourceLocationToHighlight,
@@ -28,10 +28,10 @@ import {normalizePath} from '@atlaspack/utils';
 import {report} from '../ReporterRunner';
 import {getPublicDependency} from '../public/Dependency';
 import PluginOptions from '../public/PluginOptions';
-import AtlaspackConfig from '../AtlaspackConfig';
-import createAtlaspackConfigRequest, {
-  getCachedAtlaspackConfig,
-} from './AtlaspackConfigRequest';
+import ParcelConfig from '../ParcelConfig';
+import createParcelConfigRequest, {
+  getCachedParcelConfig,
+} from './ParcelConfigRequest';
 import {invalidateOnFileCreateToInternal} from '../utils';
 import {
   fromProjectPath,
@@ -41,7 +41,7 @@ import {
 } from '../projectPath';
 import {Priority} from '../types';
 import {createBuildCache} from '../buildCache';
-import type {LoadedPlugin} from '../AtlaspackConfig';
+import type {LoadedPlugin} from '../ParcelConfig';
 import {createConfig} from '../InternalConfig';
 import {loadPluginConfig, runConfigRequest} from './ConfigRequest';
 import {
@@ -87,11 +87,9 @@ export default function createPathRequest(
 
 async function run({input, api, options}): Promise<PathRequestResult> {
   let configResult = nullthrows(
-    await api.runRequest<null, ConfigAndCachePath>(
-      createAtlaspackConfigRequest(),
-    ),
+    await api.runRequest<null, ConfigAndCachePath>(createParcelConfigRequest()),
   );
-  let config = getCachedAtlaspackConfig(configResult, options);
+  let config = getCachedParcelConfig(configResult, options);
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);
   invalidateDevDeps(invalidDevDeps, options, config);
   let resolverRunner = new ResolverRunner({
@@ -145,8 +143,8 @@ async function run({input, api, options}): Promise<PathRequestResult> {
 }
 
 type ResolverRunnerOpts = {|
-  config: AtlaspackConfig,
-  options: AtlaspackOptions,
+  config: ParcelConfig,
+  options: ParcelOptions,
   previousDevDeps: Map<string, string>,
 |};
 
@@ -161,8 +159,8 @@ type ResolverResult = {|
 const configCache = createBuildCache();
 
 export class ResolverRunner {
-  config: AtlaspackConfig;
-  options: AtlaspackOptions;
+  config: ParcelConfig;
+  options: ParcelOptions;
   pluginOptions: PluginOptions;
   previousDevDeps: Map<string, string>;
   devDepRequests: Map<string, DevDepRequest>;

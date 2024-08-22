@@ -7,7 +7,7 @@ import type {
   AssetNode,
   DependencyNode,
   InternalSourceLocation,
-  AtlaspackOptions,
+  ParcelOptions,
 } from './types';
 import {type default as AssetGraph} from './AssetGraph';
 
@@ -26,7 +26,7 @@ export function propagateSymbols({
   assetGroupsWithRemovedParents,
   previousErrors,
 }: {|
-  options: AtlaspackOptions,
+  options: ParcelOptions,
   assetGraph: AssetGraph,
   changedAssetsPropagation: Set<string>,
   assetGroupsWithRemovedParents: Set<NodeId>,

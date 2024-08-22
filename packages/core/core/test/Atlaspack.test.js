@@ -1,14 +1,14 @@
 // @flow strict-local
 
-import type {InitialAtlaspackOptions} from '@atlaspack/types';
+import type {InitialParcelOptions} from '@atlaspack/types';
 import WorkerFarm from '@atlaspack/workers';
 // flowlint-next-line untyped-import:off
 import sinon from 'sinon';
 import assert from 'assert';
 import path from 'path';
-import Atlaspack, {createWorkerFarm} from '../src/Atlaspack';
+import Parcel, {createWorkerFarm} from '../src/Parcel';
 
-describe('Atlaspack', function () {
+describe('Parcel', function () {
   this.timeout(75000);
 
   let workerFarm;
@@ -20,10 +20,10 @@ describe('Atlaspack', function () {
 
   it('does not initialize when passed an ending farm', async () => {
     workerFarm.ending = true;
-    let atlaspack = createAtlaspack({workerFarm});
+    let parcel = createParcel({workerFarm});
 
     // $FlowFixMe
-    await assert.rejects(() => atlaspack.run(), {
+    await assert.rejects(() => parcel.run(), {
       name: 'Error',
       message: 'Supplied WorkerFarm is ending',
     });
@@ -31,7 +31,7 @@ describe('Atlaspack', function () {
     workerFarm.ending = false;
   });
 
-  describe('atlaspack.end()', () => {
+  describe('parcel.end()', () => {
     let endSpy;
     beforeEach(() => {
       endSpy = sinon.spy(WorkerFarm.prototype, 'end');
@@ -42,31 +42,31 @@ describe('Atlaspack', function () {
     });
 
     it('ends any WorkerFarm it creates', async () => {
-      let atlaspack = createAtlaspack();
-      await atlaspack.run();
+      let parcel = createParcel();
+      await parcel.run();
       assert.equal(endSpy.callCount, 1);
     });
 
     it('runs and constructs another farm for subsequent builds', async () => {
-      let atlaspack = createAtlaspack();
+      let parcel = createParcel();
 
-      await atlaspack.run();
-      await atlaspack.run();
+      await parcel.run();
+      await parcel.run();
 
       assert.equal(endSpy.callCount, 2);
     });
 
     it('does not end passed WorkerFarms', async () => {
-      let atlaspack = createAtlaspack({workerFarm});
-      await atlaspack.run();
+      let parcel = createParcel({workerFarm});
+      await parcel.run();
       assert.equal(endSpy.callCount, 0);
 
       await workerFarm.end();
     });
 
     it('removes shared references it creates', async () => {
-      let atlaspack = createAtlaspack({workerFarm});
-      await atlaspack.run();
+      let parcel = createParcel({workerFarm});
+      await parcel.run();
 
       assert.equal(workerFarm.sharedReferences.size, 0);
       assert.equal(workerFarm.sharedReferencesByValue.size, 0);
@@ -75,7 +75,7 @@ describe('Atlaspack', function () {
   });
 });
 
-describe('AtlaspackAPI', function () {
+describe('ParcelAPI', function () {
   this.timeout(75000);
 
   let workerFarm;
@@ -85,20 +85,20 @@ describe('AtlaspackAPI', function () {
 
   afterEach(() => workerFarm.end());
 
-  describe('atlaspack.unstable_transform()', () => {
+  describe('parcel.unstable_transform()', () => {
     it('should transform simple file', async () => {
-      let atlaspack = createAtlaspack({workerFarm});
-      let res = await atlaspack.unstable_transform({
-        filePath: path.join(__dirname, 'fixtures/atlaspack/index.js'),
+      let parcel = createParcel({workerFarm});
+      let res = await parcel.unstable_transform({
+        filePath: path.join(__dirname, 'fixtures/parcel/index.js'),
       });
       let code = await res[0].getCode();
       assert(code.includes(`exports.default = 'test'`));
     });
 
     it('should transform with standalone mode', async () => {
-      let atlaspack = createAtlaspack({workerFarm});
-      let res = await atlaspack.unstable_transform({
-        filePath: path.join(__dirname, 'fixtures/atlaspack/other.js'),
+      let parcel = createParcel({workerFarm});
+      let res = await parcel.unstable_transform({
+        filePath: path.join(__dirname, 'fixtures/parcel/other.js'),
         query: 'standalone=true',
       });
       let code = await res[0].getCode();
@@ -109,17 +109,17 @@ describe('AtlaspackAPI', function () {
     });
   });
 
-  describe('atlaspack.resolve()', () => {
+  describe('parcel.resolve()', () => {
     it('should resolve dependencies', async () => {
-      let atlaspack = createAtlaspack({workerFarm});
-      let res = await atlaspack.unstable_resolve({
+      let parcel = createParcel({workerFarm});
+      let res = await parcel.unstable_resolve({
         specifier: './other',
         specifierType: 'esm',
-        resolveFrom: path.join(__dirname, 'fixtures/atlaspack/index.js'),
+        resolveFrom: path.join(__dirname, 'fixtures/parcel/index.js'),
       });
 
       assert.deepEqual(res, {
-        filePath: path.join(__dirname, 'fixtures/atlaspack/other.js'),
+        filePath: path.join(__dirname, 'fixtures/parcel/other.js'),
         code: undefined,
         query: undefined,
         sideEffects: true,
@@ -128,13 +128,13 @@ describe('AtlaspackAPI', function () {
   });
 });
 
-function createAtlaspack(opts?: InitialAtlaspackOptions) {
-  return new Atlaspack({
-    entries: [path.join(__dirname, 'fixtures/atlaspack/index.js')],
+function createParcel(opts?: InitialParcelOptions) {
+  return new Parcel({
+    entries: [path.join(__dirname, 'fixtures/parcel/index.js')],
     logLevel: 'info',
     defaultConfig: path.join(
       path.dirname(require.resolve('@atlaspack/test-utils')),
-      '.atlaspackrc-no-reporters',
+      '.parcelrc-no-reporters',
     ),
     shouldDisableCache: true,
     ...opts,

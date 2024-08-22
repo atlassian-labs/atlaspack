@@ -12,11 +12,11 @@ export {
 
 export {
   default,
-  default as Atlaspack,
+  default as Parcel,
   BuildError,
   createWorkerFarm,
   INTERNAL_RESOLVE,
   INTERNAL_TRANSFORM,
-} from './Atlaspack';
+} from './Parcel';
 
-export * from './atlaspack-v3';
+export * from './parcel-v3';

@@ -3,7 +3,7 @@ import {Graph} from '@atlaspack/graph';
 import {registerSerializableClass} from './serializer';
 import AssetGraph from './AssetGraph';
 import BundleGraph from './BundleGraph';
-import AtlaspackConfig from './AtlaspackConfig';
+import ParcelConfig from './ParcelConfig';
 import {RequestGraph} from './RequestTracker';
 import Config from './public/Config';
 import packageJson from '../package.json';
@@ -24,7 +24,7 @@ export function registerCoreWithSerializer() {
     Config,
     BundleGraph,
     Graph,
-    AtlaspackConfig,
+    ParcelConfig,
     RequestGraph,
     // $FlowFixMe[unclear-type]
   }): Array<[string, Class<any>]>)) {

@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import type {Environment, AtlaspackOptions, Target} from '../src/types';
+import type {Environment, ParcelOptions, Target} from '../src/types';
 
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {FSCache} from '@atlaspack/cache';
@@ -15,9 +15,9 @@ let cacheDir = tempy.directory();
 export let cache: FSCache = new FSCache(outputFS, cacheDir);
 cache.ensure();
 
-export const DEFAULT_OPTIONS: AtlaspackOptions = {
+export const DEFAULT_OPTIONS: ParcelOptions = {
   cacheDir,
-  atlaspackVersion: '',
+  parcelVersion: '',
   watchDir: __dirname,
   watchIgnore: undefined,
   watchBackend: undefined,

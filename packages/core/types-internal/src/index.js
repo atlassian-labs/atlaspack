@@ -98,7 +98,7 @@ export type Semver = string;
 /** A pipeline as specified in the config mapping to <code>T</code>  */
 export type GlobMap<T> = {[Glob]: T, ...};
 
-export type RawAtlaspackConfigPipeline = Array<PackageName>;
+export type RawParcelConfigPipeline = Array<PackageName>;
 
 export type HMROptions = {
   port?: number,
@@ -106,24 +106,24 @@ export type HMROptions = {
   ...
 };
 
-/** The format of .atlaspackrc  */
-export type RawAtlaspackConfig = {|
+/** The format of .parcelrc  */
+export type RawParcelConfig = {|
   extends?: PackageName | FilePath | Array<PackageName | FilePath>,
-  resolvers?: RawAtlaspackConfigPipeline,
-  transformers?: {[Glob]: RawAtlaspackConfigPipeline, ...},
+  resolvers?: RawParcelConfigPipeline,
+  transformers?: {[Glob]: RawParcelConfigPipeline, ...},
   bundler?: PackageName,
-  namers?: RawAtlaspackConfigPipeline,
-  runtimes?: RawAtlaspackConfigPipeline,
+  namers?: RawParcelConfigPipeline,
+  runtimes?: RawParcelConfigPipeline,
   packagers?: {[Glob]: PackageName, ...},
-  optimizers?: {[Glob]: RawAtlaspackConfigPipeline, ...},
-  compressors?: {[Glob]: RawAtlaspackConfigPipeline, ...},
-  reporters?: RawAtlaspackConfigPipeline,
-  validators?: {[Glob]: RawAtlaspackConfigPipeline, ...},
+  optimizers?: {[Glob]: RawParcelConfigPipeline, ...},
+  compressors?: {[Glob]: RawParcelConfigPipeline, ...},
+  reporters?: RawParcelConfigPipeline,
+  validators?: {[Glob]: RawParcelConfigPipeline, ...},
 |};
 
-/** A .atlaspackrc where all package names are resolved */
-export type ResolvedAtlaspackConfigFile = {|
-  ...RawAtlaspackConfig,
+/** A .parcelrc where all package names are resolved */
+export type ResolvedParcelConfigFile = {|
+  ...RawParcelConfig,
   +filePath: FilePath,
   +resolveFrom?: FilePath,
 |};
@@ -133,7 +133,7 @@ export type Engines = {
   +browsers?: string | Array<string>,
   +electron?: SemverRange,
   +node?: SemverRange,
-  +atlaspack?: SemverRange,
+  +parcel?: SemverRange,
   ...
 };
 
@@ -339,7 +339,7 @@ export type DetailedReportOptions = {|
 
 declare type GlobPattern = string;
 
-export type InitialAtlaspackOptionsInternal<WorkerFarm> = {|
+export type InitialParcelOptionsInternal<WorkerFarm> = {|
   +entries?: FilePath | Array<FilePath>,
   +config?: DependencySpecifier,
   +defaultConfig?: DependencySpecifier,
@@ -404,7 +404,7 @@ export type InitialServerOptions = {|
 
 export interface PluginOptions {
   +mode: BuildMode;
-  +atlaspackVersion: string;
+  +parcelVersion: string;
   +env: EnvMap;
   +hmrOptions: ?HMROptions;
   +serveOptions: ServerOptions | false;
@@ -594,7 +594,7 @@ export type DependencyOptions = {|
   +packageConditions?: Array<string>,
   /** Plugin-specific metadata for the dependency. */
   +meta?: Meta,
-  /** The pipeline defined in .atlaspackrc that the dependency should be processed with. */
+  /** The pipeline defined in .parcelrc that the dependency should be processed with. */
   +pipeline?: string,
   /**
    * The file path where the dependency should be resolved from.
@@ -688,7 +688,7 @@ export interface Dependency {
   +resolveFrom: ?FilePath;
   /** The semver version range expected for the dependency. */
   +range: ?SemverRange;
-  /** The pipeline defined in .atlaspackrc that the dependency should be processed with. */
+  /** The pipeline defined in .parcelrc that the dependency should be processed with. */
   +pipeline: ?string;
 
   // TODO make immutable
@@ -711,21 +711,21 @@ export type ASTGenerator = {|
 
 export type BundleBehavior = 'inline' | 'isolated';
 
-export type AtlaspackTransformOptions = {|
+export type ParcelTransformOptions = {|
   filePath: FilePath,
   code?: string,
   env?: EnvironmentOptions,
   query?: ?string,
 |};
 
-export type AtlaspackResolveOptions = {|
+export type ParcelResolveOptions = {|
   specifier: DependencySpecifier,
   specifierType: SpecifierType,
   env?: EnvironmentOptions,
   resolveFrom?: FilePath,
 |};
 
-export type AtlaspackResolveResult = {|
+export type ParcelResolveResult = {|
   filePath: FilePath,
   code?: string,
   query?: ?string,
@@ -787,7 +787,7 @@ export interface BaseAsset {
   +uniqueKey: ?string;
   /** The type of the AST. */
   +astGenerator: ?ASTGenerator;
-  /** The pipeline defined in .atlaspackrc that the asset should be processed with. */
+  /** The pipeline defined in .parcelrc that the asset should be processed with. */
   +pipeline: ?string;
   /** The symbols that the asset exports. */
   +symbols: AssetSymbols;
@@ -858,7 +858,7 @@ export interface MutableAsset extends BaseAsset {
   invalidateOnFileCreate(FileCreateInvalidation): void;
   /** Invalidates the transformation when the given environment variable changes. */
   invalidateOnEnvChange(string): void;
-  /** Invalidates the transformation only when Atlaspack restarts. */
+  /** Invalidates the transformation only when Parcel restarts. */
   invalidateOnStartup(): void;
   /** Invalidates the transformation on every build. */
   invalidateOnBuild(): void;
@@ -892,7 +892,7 @@ export type DevDepOptions = {|
   range?: ?SemverRange,
   /**
    * When this dev dependency is invalidated, also invalidate these dependencies.
-   * This is useful if the atlaspack plugin or another parent dependency
+   * This is useful if the parcel plugin or another parent dependency
    * has its own cache for this dev dependency other than Node's require cache.
    */
   additionalInvalidations?: Array<{|
@@ -922,7 +922,7 @@ export interface Config {
   invalidateOnFileCreate(FileCreateInvalidation): void;
   /** Invalidates the config when the given environment variable changes. */
   invalidateOnEnvChange(string): void;
-  /** Invalidates the config only when Atlaspack restarts. */
+  /** Invalidates the config only when Parcel restarts. */
   invalidateOnStartup(): void;
   /** Invalidates the config on every build. */
   invalidateOnBuild(): void;
@@ -1020,7 +1020,7 @@ export type TransformerResult = {|
   +isBundleSplittable?: boolean,
   /** Plugin-specific metadata for the asset. */
   +meta?: Meta,
-  /** The pipeline defined in .atlaspackrc that the asset should be processed with. */
+  /** The pipeline defined in .parcelrc that the asset should be processed with. */
   +pipeline?: ?string,
   /**
    * Whether this asset can be omitted if none of its exports are being used.
@@ -1648,7 +1648,7 @@ export type ResolveResult = {|
   +sideEffects?: boolean,
   /** The code of the resolved asset. If provided, this is used rather than reading the file from disk. */
   +code?: string,
-  /** Whether this dependency can be deferred by Atlaspack itself (true by default). */
+  /** Whether this dependency can be deferred by Parcel itself (true by default). */
   +canDefer?: boolean,
   /** A resolver might return diagnostics to also run subsequent resolvers while still providing a reason why it failed. */
   +diagnostics?: Diagnostic | Array<Diagnostic>,

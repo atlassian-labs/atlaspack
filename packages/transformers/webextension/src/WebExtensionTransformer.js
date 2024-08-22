@@ -183,7 +183,7 @@ async function collectDependencies(
   if (program.web_accessible_resources) {
     let war = [];
     for (let i = 0; i < program.web_accessible_resources.length; ++i) {
-      // TODO: this doesn't support Atlaspack resolution
+      // TODO: this doesn't support Parcel resolution
       const currentEntry = program.web_accessible_resources[i];
       const files = isMV2 ? [currentEntry] : currentEntry.resources;
       let currentFiles = [];

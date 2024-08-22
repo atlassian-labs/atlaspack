@@ -66,7 +66,7 @@ describe.v2('webextension', function () {
     assert(
       (
         await outputFS.readFile(path.join(distDir, scripts[0]), 'utf-8')
-      ).includes('Hello Atlaspack!'),
+      ).includes('Hello Parcel!'),
     );
   });
 

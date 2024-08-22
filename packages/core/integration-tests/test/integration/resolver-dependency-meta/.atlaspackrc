@@ -1,5 +1,5 @@
 {
   "extends": "@atlaspack/config-default",
-  "resolvers": ["atlaspack-resolver-meta", "..."],
-  "runtimes": ["atlaspack-runtime-meta", "..."]
+  "resolvers": ["parcel-resolver-meta", "..."],
+  "runtimes": ["parcel-runtime-meta", "..."]
 }

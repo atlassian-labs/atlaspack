@@ -268,7 +268,7 @@ if (MessageChannel) {
 
     it('does not apply to library targets', async () => {
       let port = await getPort();
-      let atlaspack = await bundler(
+      let parcel = await bundler(
         path.join(
           __dirname,
           '/integration/react-refresh-library-target/index.js',
@@ -279,7 +279,7 @@ if (MessageChannel) {
           },
         },
       );
-      let result = await getNextBuildSuccess(atlaspack);
+      let result = await getNextBuildSuccess(parcel);
       let bundle = nullthrows(
         result.bundleGraph.getBundles().find(b => b.type === 'js'),
       );
@@ -329,7 +329,7 @@ async function setup(entry) {
     },
     defaultConfig: path.join(
       __dirname,
-      'integration/custom-configs/.atlaspackrc-dev-server',
+      'integration/custom-configs/.parcelrc-dev-server',
     ),
   });
 
@@ -356,11 +356,11 @@ async function setup(entry) {
   root = window.document.getElementById('root');
 
   let bundle = nullthrows(bundleGraph.getBundles().find(b => b.type === 'js'));
-  let atlaspackRequire = Object.keys(window).find(k =>
-    k.startsWith('atlaspackRequire'),
+  let parcelRequire = Object.keys(window).find(k =>
+    k.startsWith('parcelRequire'),
   );
   // ReactDOM.render
-  await window[atlaspackRequire](
+  await window[parcelRequire](
     bundleGraph.getAssetPublicId(bundle.getEntryAssets().pop()),
   ).default();
   await sleep(100);

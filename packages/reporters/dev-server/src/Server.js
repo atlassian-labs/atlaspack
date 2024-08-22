@@ -48,8 +48,8 @@ export function setHeaders(res: Response) {
 
 const SLASH_REGEX = /\//g;
 
-export const SOURCES_ENDPOINT = '/__atlaspack_source_root';
-const EDITOR_ENDPOINT = '/__atlaspack_launch_editor';
+export const SOURCES_ENDPOINT = '/__parcel_source_root';
+const EDITOR_ENDPOINT = '/__parcel_launch_editor';
 const TEMPLATE_404 = fs.readFileSync(
   path.join(__dirname, 'templates/404.html'),
   'utf8',
@@ -146,7 +146,7 @@ export default class Server {
       let query = new URLSearchParams(search);
       let file = query.get('file');
       if (file) {
-        // File location might start with /__atlaspack_source_root if it came from a source map.
+        // File location might start with /__parcel_source_root if it came from a source map.
         if (file.startsWith(SOURCES_ENDPOINT)) {
           file = file.slice(SOURCES_ENDPOINT.length + 1);
         }
@@ -482,7 +482,7 @@ export default class Server {
     const finalHandler = (req: Request, res: Response) => {
       this.logAccessIfVerbose(req);
 
-      // Wait for the atlaspackInstance to finish bundling if needed
+      // Wait for the parcelInstance to finish bundling if needed
       if (this.pending) {
         this.pendingRequests.push([req, res]);
       } else {
@@ -497,7 +497,7 @@ export default class Server {
     });
 
     app.use((req, res, next) => {
-      if (req.url === '/__atlaspack_healthcheck') {
+      if (req.url === '/__parcel_healthcheck') {
         res.statusCode = 200;
         res.write(`${Date.now()}`);
         res.end();

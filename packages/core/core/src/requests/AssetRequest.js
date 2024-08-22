@@ -8,13 +8,13 @@ import type {
   AssetRequestResult,
   TransformationRequest,
 } from '../types';
-import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
+import type {ConfigAndCachePath} from './ParcelConfigRequest';
 import type {TransformationResult} from '../Transformation';
 
 import nullthrows from 'nullthrows';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import {hashString} from '@atlaspack/rust';
-import createAtlaspackConfigRequest from './AtlaspackConfigRequest';
+import createParcelConfigRequest from './ParcelConfigRequest';
 import {runDevDepRequest} from './DevDepRequest';
 import {runConfigRequest} from './ConfigRequest';
 import {fromProjectPath, fromProjectPathRelative} from '../projectPath';
@@ -75,9 +75,7 @@ async function run({input, api, farm, invalidateReason, options}) {
   let start = Date.now();
   let {optionsRef, ...rest} = input;
   let {cachePath} = nullthrows(
-    await api.runRequest<null, ConfigAndCachePath>(
-      createAtlaspackConfigRequest(),
-    ),
+    await api.runRequest<null, ConfigAndCachePath>(createParcelConfigRequest()),
   );
 
   let previousDevDepRequests: Map<string, DevDepRequestResult> = new Map(

@@ -45,7 +45,7 @@ describe.v2('incremental bundling', function () {
       await packageManager.require('@atlaspack/bundler-default', __filename)
     ).default;
     let CustomBundler = await packageManager.require(
-      './integration/incremental-bundling/node_modules/atlaspack-bundler-test',
+      './integration/incremental-bundling/node_modules/parcel-bundler-test',
       __filename,
     );
 
@@ -272,7 +272,7 @@ console.log(a);`,
         }
       });
 
-      // this case is similar to applying a patch or restarting atlaspack with changes
+      // this case is similar to applying a patch or restarting parcel with changes
       it('adds multiple non-dependency related changes', async () => {
         let subscription;
         let fixture = path.join(__dirname, '/integration/incremental-bundling');
@@ -614,7 +614,7 @@ console.log(a, b);
           'utf8',
         );
         assert(
-          dynamicContent.includes(`atlaspackHelpers.export(exports, "b", ()=>b);
+          dynamicContent.includes(`parcelHelpers.export(exports, "b", ()=>b);
 const b = 'b';`),
         );
       } finally {
@@ -666,7 +666,7 @@ console.log('index.js');`,
   });
 
   describe('other changes that would for a re-bundle', () => {
-    it('changing the bundler in atlaspack configs', async () => {
+    it('changing the bundler in parcel configs', async () => {
       let subscription;
       let fixture = path.join(__dirname, '/integration/incremental-bundling');
       try {
@@ -684,10 +684,10 @@ console.log('index.js');`,
         assertTimesBundled(customBundlerSpy.callCount, 0);
 
         await overlayFS.writeFile(
-          path.join(fixture, '.atlaspackrc'),
+          path.join(fixture, '.parcelrc'),
           JSON.stringify({
             extends: '@atlaspack/config-default',
-            bundler: 'atlaspack-bundler-test',
+            bundler: 'parcel-bundler-test',
           }),
         );
 
@@ -784,10 +784,10 @@ console.log('index.js');`,
       assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
       await overlayFS.writeFile(
-        path.join(fixture, '.atlaspackrc'),
+        path.join(fixture, '.parcelrc'),
         JSON.stringify({
           extends: '@atlaspack/config-default',
-          namers: ['atlaspack-namer-test'],
+          namers: ['parcel-namer-test'],
         }),
       );
 
@@ -828,10 +828,10 @@ console.log('index.js');`,
       assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
       await overlayFS.writeFile(
-        path.join(fixture, '.atlaspackrc'),
+        path.join(fixture, '.parcelrc'),
         JSON.stringify({
           extends: '@atlaspack/config-default',
-          runtimes: ['atlaspack-runtime-test'],
+          runtimes: ['parcel-runtime-test'],
         }),
       );
 

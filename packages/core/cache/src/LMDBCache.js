@@ -36,7 +36,7 @@ export class LMDBCache implements Cache {
     this.fsCache = new FSCache(this.fs, cacheDir);
 
     this.store = lmdb.open(cacheDir, {
-      name: 'atlaspack-cache',
+      name: 'parcel-cache',
       encoding: 'binary',
       compression: true,
     });

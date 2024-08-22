@@ -526,13 +526,13 @@ describe('fsFixture', () => {
         yarn.lock:
         node_modules
           .bin
-            atlaspack -> ${path.resolve(__dirname, '../../cli/src/bin.js')}
+            parcel -> ${path.resolve(__dirname, '../../cli/src/bin.js')}
           @atlaspack
             cli -> ${path.resolve(__dirname, '../../cli')}
             core -> ${path.resolve(__dirname, '../../core')}
-        .atlaspackrc: ${{
+        .parcelrc: ${{
           extends: '@atlaspack/config-default',
-          transforms: ['atlaspack-transformer-custom', '...'],
+          transforms: ['parcel-transformer-custom', '...'],
         }}
     `;
 
@@ -541,17 +541,17 @@ describe('fsFixture', () => {
     assert.equal(fs.readFileSync('/app/yarn.lock', 'utf8'), '');
 
     assert.equal(
-      fs.readFileSync('/app/.atlaspackrc', 'utf8'),
+      fs.readFileSync('/app/.parcelrc', 'utf8'),
       JSON.stringify({
         extends: '@atlaspack/config-default',
-        transforms: ['atlaspack-transformer-custom', '...'],
+        transforms: ['parcel-transformer-custom', '...'],
       }),
     );
 
     assert(fs.existsSync('/app/node_modules'));
 
     assert.equal(
-      fs.realpathSync('/app/node_modules/.bin/atlaspack'),
+      fs.realpathSync('/app/node_modules/.bin/parcel'),
       path.resolve(__dirname, '../../cli/src/bin.js'),
     );
 
