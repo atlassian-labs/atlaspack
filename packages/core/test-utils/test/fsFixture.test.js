@@ -551,7 +551,7 @@ describe('fsFixture', () => {
     assert(fs.existsSync('/app/node_modules'));
 
     assert.equal(
-      fs.realpathSync('/app/node_modules/.bin/parcel'),
+      fs.realpathSync('/app/node_modules/.bin/atlaspack'),
       path.resolve(__dirname, '../../cli/src/bin.js'),
     );
 

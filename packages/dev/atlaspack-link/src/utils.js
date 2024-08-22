@@ -90,11 +90,11 @@ export function mapNamespacePackageAliases(
       continue;
     }
     aliasesToParcelPackages.set(
-      packageName === 'parcel'
-        ? `${ns}/parcel`
-        : packageName === 'parcelforvscode'
-        ? `${ns}/parcelforvscode`
-        : packageName.replace(/^@atlaspack\//, `${ns}/parcel-`),
+      packageName === '@atlaspack/cli'
+        ? `${ns}/atlaspack-cli`
+        : packageName === 'atlaspackforvscode'
+        ? `${ns}/atlaspackforvscode`
+        : packageName.replace(/^@atlaspack\//, `${ns}/atlaspack-`),
       packageName,
     );
   }
@@ -102,7 +102,7 @@ export function mapNamespacePackageAliases(
 }
 
 export async function cleanupBin(root: string, opts: CmdOptions) {
-  let binSymlink = path.join(root, '.bin/parcel');
+  let binSymlink = path.join(root, '.bin/atlaspack');
   try {
     await fsDelete(binSymlink, opts);
   } catch (e) {

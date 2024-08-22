@@ -242,7 +242,7 @@ program.on('--help', function () {
   INTERNAL_ORIGINAL_CONSOLE.log('');
   INTERNAL_ORIGINAL_CONSOLE.log(
     '  Run `' +
-      chalk.bold('parcel help <command>') +
+      chalk.bold('atlaspack help <command>') +
       '` for more information on specific commands',
   );
   INTERNAL_ORIGINAL_CONSOLE.log('');

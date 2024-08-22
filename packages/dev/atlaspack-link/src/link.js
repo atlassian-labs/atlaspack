@@ -47,7 +47,6 @@ export async function link(
   // --------------------------------------------------------------------------------
 
   let parcelPackages = await findParcelPackages(config.fs, packageRoot);
-  console.log(parcelPackages);
 
   // Step 2: Delete all official packages (`@atlaspack/*`) from node_modules
   // --------------------------------------------------------------------------------
@@ -73,7 +72,7 @@ export async function link(
 
   await fsSymlink(
     path.join(packageRoot, 'core/cli/src/bin.js'),
-    path.join(appRoot, 'node_modules/.bin/parcel'),
+    path.join(appRoot, 'node_modules/.bin/atlaspack'),
     opts,
   );
 
