@@ -3,7 +3,7 @@
 import type {CmdOptions} from './utils';
 import type {FileSystem} from '@atlaspack/fs';
 
-import {ParcelLinkConfig} from './AtlaspackLinkConfig';
+import {AtlaspackLinkConfig} from './AtlaspackLinkConfig';
 import {
   cleanupBin,
   cleanupNodeModules,
@@ -32,7 +32,7 @@ export type UnlinkCommandOptions = {|
 const NOOP: (...data: mixed[]) => void = () => {};
 
 export async function unlink(
-  config: ParcelLinkConfig,
+  config: AtlaspackLinkConfig,
   {dryRun = false, forceInstall = false, log = NOOP}: UnlinkOptions,
 ) {
   config.validate();
@@ -147,7 +147,7 @@ export function createUnlinkCommand(
 
       let parcelLinkConfig;
       try {
-        parcelLinkConfig = await ParcelLinkConfig.load(appRoot, {fs});
+        parcelLinkConfig = await AtlaspackLinkConfig.load(appRoot, {fs});
       } catch (e) {
         // boop!
       }

@@ -3,7 +3,7 @@
 import type {CmdOptions} from './utils';
 import type {FileSystem} from '@atlaspack/fs';
 
-import {ParcelLinkConfig} from './AtlaspackLinkConfig';
+import {AtlaspackLinkConfig} from './AtlaspackLinkConfig';
 import {
   findParcelPackages,
   mapNamespacePackageAliases,
@@ -32,7 +32,7 @@ export type LinkCommandOptions = {|
 const NOOP: (...data: mixed[]) => void = () => {};
 
 export async function link(
-  config: ParcelLinkConfig,
+  config: AtlaspackLinkConfig,
   {dryRun = false, log = NOOP}: LinkOptions,
 ): Promise<void> {
   config.validate();
@@ -173,7 +173,7 @@ export function createLinkCommand(
       let parcelLinkConfig;
 
       try {
-        parcelLinkConfig = await ParcelLinkConfig.load(appRoot, {fs});
+        parcelLinkConfig = await AtlaspackLinkConfig.load(appRoot, {fs});
       } catch (e) {
         // boop!
       }
@@ -184,7 +184,7 @@ export function createLinkCommand(
         );
       }
 
-      parcelLinkConfig = new ParcelLinkConfig({
+      parcelLinkConfig = new AtlaspackLinkConfig({
         fs,
         appRoot,
         packageRoot: packageRoot ?? path.join(__dirname, '../../../'),
