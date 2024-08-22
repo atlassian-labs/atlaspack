@@ -6416,35 +6416,32 @@ describe('javascript', function () {
       assert.equal(res.output, 123);
     });
 
-    it.v2(
-      `duplicate assets should share module scope  ${
-        shouldScopeHoist ? 'with' : 'without'
-      } scope-hoisting`,
-      async function () {
-        let b = await bundle(
-          [
-            path.join(
-              __dirname,
-              '/integration/scope-hoisting/es6/multi-entry-duplicates/one.js',
-            ),
-            path.join(
-              __dirname,
-              '/integration/scope-hoisting/es6/multi-entry-duplicates/two.js',
-            ),
-          ],
-          options,
-        );
+    it(`duplicate assets should share module scope ${
+      shouldScopeHoist ? 'with' : 'without'
+    } scope-hoisting`, async function () {
+      let b = await bundle(
+        [
+          path.join(
+            __dirname,
+            '/integration/scope-hoisting/es6/multi-entry-duplicates/one.js',
+          ),
+          path.join(
+            __dirname,
+            '/integration/scope-hoisting/es6/multi-entry-duplicates/two.js',
+          ),
+        ],
+        {...options, outputFS: inputFS},
+      );
 
-        let result = await runBundle(
-          b,
-          b.getBundles()[0],
-          {},
-          {require: false},
-        );
+      let result = await runBundle(
+        b,
+        b.getBundles().find(b => b.name.includes('one.js')),
+        {},
+        {require: false},
+      );
 
-        assert.equal(await result.output, 2);
-      },
-    );
+      assert.equal(await result.output, 2);
+    });
 
     it(`should work correctly with export called hasOwnProperty ${
       shouldScopeHoist ? 'with' : 'without'
