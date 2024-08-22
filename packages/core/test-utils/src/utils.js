@@ -107,7 +107,7 @@ If you don't know how, check here: https://bit.ly/2UmWsbD
   );
 }
 
-export const isParcelV3 = process.env.ATLASPACK_V3 === 'true';
+export const isAtlaspackV3 = process.env.ATLASPACK_V3 === 'true';
 
 export function getParcelOptions(
   entries: FilePath | Array<FilePath>,
@@ -133,7 +133,7 @@ export function getParcelOptions(
         },
       },
       featureFlags: {
-        parcelV3: isParcelV3,
+        atlaspackV3: isAtlaspackV3,
       },
     },
     opts,
@@ -1286,28 +1286,28 @@ describe.skip = function (...args: mixed[]) {
 
 describe.v2 = function (...args: mixed[]) {
   parcelVersion = 'v2';
-  if (!isParcelV3) {
+  if (!isAtlaspackV3) {
     origDescribe.apply(this, args);
   }
 };
 
 describe.v2.only = function (...args: mixed[]) {
   parcelVersion = 'v2';
-  if (!isParcelV3) {
+  if (!isAtlaspackV3) {
     origDescribe.only.apply(this, args);
   }
 };
 
 describe.v3 = function (...args: mixed[]) {
   parcelVersion = 'v3';
-  if (isParcelV3) {
+  if (isAtlaspackV3) {
     origDescribe.apply(this, args);
   }
 };
 
 describe.v3.only = function (...args: mixed[]) {
   parcelVersion = 'v3';
-  if (isParcelV3) {
+  if (isAtlaspackV3) {
     origDescribe.only.apply(this, args);
   }
 };
@@ -1316,8 +1316,8 @@ let origIt = globalThis.it;
 export function it(...args: mixed[]) {
   if (
     parcelVersion == null ||
-    (parcelVersion == 'v2' && !isParcelV3) ||
-    (parcelVersion == 'v3' && isParcelV3)
+    (parcelVersion == 'v2' && !isAtlaspackV3) ||
+    (parcelVersion == 'v3' && isAtlaspackV3)
   ) {
     origIt.apply(this, args);
   }
@@ -1332,25 +1332,25 @@ it.skip = function (...args: mixed[]) {
 };
 
 it.v2 = function (...args: mixed[]) {
-  if (!isParcelV3) {
+  if (!isAtlaspackV3) {
     origIt.apply(this, args);
   }
 };
 
 it.v2.only = function (...args: mixed[]) {
-  if (!isParcelV3) {
+  if (!isAtlaspackV3) {
     origIt.only.apply(this, args);
   }
 };
 
 it.v3 = function (...args: mixed[]) {
-  if (isParcelV3) {
+  if (isAtlaspackV3) {
     origIt.apply(this, args);
   }
 };
 
 it.v3.only = function (...args: mixed[]) {
-  if (isParcelV3) {
+  if (isAtlaspackV3) {
     origIt.only.apply(this, args);
   }
 };

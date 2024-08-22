@@ -7,9 +7,9 @@ import type {
   BuildSuccessEvent,
   InitialAtlaspackOptions,
   PackagedBundle as IPackagedBundle,
-  ParcelTransformOptions,
-  ParcelResolveOptions,
-  ParcelResolveResult,
+  AtlaspackTransformOptions,
+  AtlaspackResolveOptions,
+  AtlaspackResolveResult,
 } from '@atlaspack/types';
 import path from 'path';
 import type {AtlaspackOptions} from './types';
@@ -65,14 +65,14 @@ registerCoreWithSerializer();
 export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
 
-export default class Parcel {
+export default class Atlaspack {
   #requestTracker /*: RequestTracker*/;
   #config /*: AtlaspackConfig*/;
   #farm /*: WorkerFarm*/;
   #initialized /*: boolean*/ = false;
   #disposable /*: Disposable */;
   #initialOptions /*: InitialAtlaspackOptions */;
-  #parcelV3: AtlaspackV3;
+  #atlaspackV3: AtlaspackV3;
   #reporterRunner /*: ReporterRunner*/;
   #resolvedOptions /*: ?AtlaspackOptions*/ = null;
   #optionsRef /*: SharedReference */;
@@ -122,12 +122,12 @@ export default class Parcel {
     );
     this.#resolvedOptions = resolvedOptions;
 
-    let rustParcel: AtlaspackV3;
-    if (resolvedOptions.featureFlags.parcelV3) {
+    let rustAtlaspack: AtlaspackV3;
+    if (resolvedOptions.featureFlags.atlaspackV3) {
       // eslint-disable-next-line no-unused-vars
       let {entries, inputFS, outputFS, ...options} = this.#initialOptions;
 
-      rustParcel = new AtlaspackV3({
+      rustAtlaspack = new AtlaspackV3({
         ...options,
         corePath: path.join(__dirname, '..'),
         entries: Array.isArray(entries)
@@ -165,7 +165,7 @@ export default class Parcel {
     this.#disposable = new Disposable();
     if (this.#initialOptions.workerFarm) {
       // If we don't own the farm, dispose of only these references when
-      // Parcel ends.
+      // Atlaspack ends.
       this.#disposable.add(disposeOptions);
     } else {
       // Otherwise, when shutting down, end the entire farm we created.
@@ -190,7 +190,7 @@ export default class Parcel {
     this.#requestTracker = await RequestTracker.init({
       farm: this.#farm,
       options: resolvedOptions,
-      rustParcel,
+      rustAtlaspack,
     });
 
     this.#initialized = true;
@@ -496,7 +496,7 @@ export default class Parcel {
   }
 
   // This is mainly for integration tests and it not public api!
-  _getResolvedParcelOptions(): AtlaspackOptions {
+  _getResolvedAtlaspackOptions(): AtlaspackOptions {
     return nullthrows(
       this.#resolvedOptions,
       'Resolved options is null, please let parcel initialize before accessing this.',
@@ -532,7 +532,7 @@ export default class Parcel {
   }
 
   async unstable_transform(
-    options: ParcelTransformOptions,
+    options: AtlaspackTransformOptions,
   ): Promise<Array<Asset>> {
     if (!this.#initialized) {
       await this._init();
@@ -564,8 +564,8 @@ export default class Parcel {
   }
 
   async unstable_resolve(
-    request: ParcelResolveOptions,
-  ): Promise<?ParcelResolveResult> {
+    request: AtlaspackResolveOptions,
+  ): Promise<?AtlaspackResolveResult> {
     if (!this.#initialized) {
       await this._init();
     }

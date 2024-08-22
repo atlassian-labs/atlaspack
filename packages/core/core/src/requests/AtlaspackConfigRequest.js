@@ -54,7 +54,7 @@ type RunOpts<TResult> = {|
 
 export type AtlaspackConfigRequest = {|
   id: string,
-  type: typeof requestTypes.parcel_config_request,
+  type: typeof requestTypes.atlaspack_config_request,
   input: null,
   run: (
     RunOpts<AtlaspackConfigRequestResult>,
@@ -68,7 +68,7 @@ type AtlaspackConfigChain = {|
   extendedFiles: Array<FilePath>,
 |};
 
-const type = 'parcel_config_request';
+const type = 'atlaspack_config_request';
 
 export default function createAtlaspackConfigRequest(): AtlaspackConfigRequest {
   return {
@@ -114,33 +114,33 @@ export default function createAtlaspackConfigRequest(): AtlaspackConfigRequest {
   };
 }
 
-const parcelConfigCache = createBuildCache();
+const atlaspackConfigCache = createBuildCache();
 export function getCachedAtlaspackConfig(
   result: ConfigAndCachePath,
   options: AtlaspackOptions,
 ): AtlaspackConfig {
   let {config: processedConfig, cachePath} = result;
-  let config = parcelConfigCache.get(cachePath);
+  let config = atlaspackConfigCache.get(cachePath);
   if (config) {
     return config;
   }
 
   config = new AtlaspackConfig(processedConfig, options);
 
-  parcelConfigCache.set(cachePath, config);
+  atlaspackConfigCache.set(cachePath, config);
   return config;
 }
 
 export async function loadAtlaspackConfig(
   options: AtlaspackOptions,
 ): Promise<{|...AtlaspackConfigChain, usedDefault: boolean|}> {
-  let parcelConfig = await resolveAtlaspackConfig(options);
+  let atlaspackConfig = await resolveAtlaspackConfig(options);
 
-  if (!parcelConfig) {
+  if (!atlaspackConfig) {
     throw new Error('Could not find a .parcelrc');
   }
 
-  return parcelConfig;
+  return atlaspackConfig;
 }
 
 export async function resolveAtlaspackConfig(

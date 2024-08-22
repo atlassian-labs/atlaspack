@@ -88,12 +88,12 @@ export async function link(
     // Step 5.1: In .parcelrc, rewrite all references to official plugins to `@atlaspack/*`
     // --------------------------------------------------------------------------------
 
-    let parcelConfigPath = path.join(appRoot, '.parcelrc');
-    if (config.fs.existsSync(parcelConfigPath)) {
-      let parcelConfig = config.fs.readFileSync(parcelConfigPath, 'utf8');
+    let atlaspackConfigPath = path.join(appRoot, '.parcelrc');
+    if (config.fs.existsSync(atlaspackConfigPath)) {
+      let atlaspackConfig = config.fs.readFileSync(atlaspackConfigPath, 'utf8');
       await fsWrite(
-        parcelConfigPath,
-        parcelConfig.replace(
+        atlaspackConfigPath,
+        atlaspackConfig.replace(
           new RegExp(`"(${namespace}/atlaspack-[^"]*)"`, 'g'),
           (_, match) => `"${namespacePackages.get(match) ?? match}"`,
         ),

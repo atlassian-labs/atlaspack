@@ -245,10 +245,10 @@ describe('AtlaspackConfig', () => {
         code,
         DEFAULT_OPTIONS,
       );
-      let parcelConfig = new AtlaspackConfig(config, DEFAULT_OPTIONS);
+      let atlaspackConfig = new AtlaspackConfig(config, DEFAULT_OPTIONS);
 
       // $FlowFixMe
-      await assert.rejects(() => parcelConfig.getTransformers('test.js'), {
+      await assert.rejects(() => atlaspackConfig.getTransformers('test.js'), {
         name: 'Error',
         diagnostics: [
           {
@@ -362,7 +362,7 @@ describe('AtlaspackConfig', () => {
         code,
         DEFAULT_OPTIONS,
       );
-      let parcelConfig = new AtlaspackConfig(config, DEFAULT_OPTIONS);
+      let atlaspackConfig = new AtlaspackConfig(config, DEFAULT_OPTIONS);
       let extendedConfigPath = path.join(
         __dirname,
         'fixtures',
@@ -373,7 +373,7 @@ describe('AtlaspackConfig', () => {
       );
 
       // $FlowFixMe
-      await assert.rejects(() => parcelConfig.getTransformers('test.js'), {
+      await assert.rejects(() => atlaspackConfig.getTransformers('test.js'), {
         name: 'Error',
         diagnostics: [
           {

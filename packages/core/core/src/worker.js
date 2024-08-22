@@ -57,7 +57,7 @@ type WorkerValidationOpts = {|
 |};
 
 // TODO: this should eventually be replaced by an in memory cache layer
-let parcelConfigCache = new Map();
+let atlaspackConfigCache = new Map();
 
 function loadOptions(ref, workerApi) {
   return nullthrows(
@@ -69,7 +69,7 @@ function loadOptions(ref, workerApi) {
 }
 
 async function loadConfig(cachePath, options) {
-  let config = parcelConfigCache.get(cachePath);
+  let config = atlaspackConfigCache.get(cachePath);
   if (config && config.options === options) {
     return config;
   }
@@ -78,7 +78,7 @@ async function loadConfig(cachePath, options) {
     await options.cache.get<ProcessedAtlaspackConfig>(cachePath),
   );
   config = new AtlaspackConfig(processedConfig, options);
-  parcelConfigCache.set(cachePath, config);
+  atlaspackConfigCache.set(cachePath, config);
 
   setFeatureFlags(options.featureFlags);
 
@@ -146,10 +146,10 @@ export async function runPackage(
   let bundleGraph = workerApi.getSharedReference(bundleGraphReference);
   invariant(bundleGraph instanceof BundleGraph);
   let options = loadOptions(optionsRef, workerApi);
-  let parcelConfig = await loadConfig(configCachePath, options);
+  let atlaspackConfig = await loadConfig(configCachePath, options);
 
   let runner = new PackagerRunner({
-    config: parcelConfig,
+    config: atlaspackConfig,
     options,
     report: WorkerFarm.isWorker() ? reportWorker.bind(null, workerApi) : report,
     previousDevDeps,
@@ -181,7 +181,7 @@ export function invalidateRequireCache(workerApi: WorkerApi, file: string) {
       }
     }
 
-    parcelConfigCache.clear();
+    atlaspackConfigCache.clear();
     return;
   }
 

@@ -18,7 +18,7 @@
 //     };
 
 //     let packagerRunner = new PackagerRunner({
-//       parcelConfig: config,
+//       atlaspackConfig: config,
 //       options: {}
 //     });
 

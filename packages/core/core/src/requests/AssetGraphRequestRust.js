@@ -29,7 +29,7 @@ type AssetGraphRequest = {|
 |};
 
 export function createAssetGraphRequestRust(
-  rustParcel: AtlaspackV3,
+  rustAtlaspack: AtlaspackV3,
 ): (input: AssetGraphRequestInput) => AssetGraphRequest {
   return input => ({
     type: requestTypes.asset_graph_request,
@@ -38,7 +38,7 @@ export function createAssetGraphRequestRust(
       let options = input.options;
       let serializedAssetGraph;
       try {
-        serializedAssetGraph = await rustParcel.buildAssetGraph();
+        serializedAssetGraph = await rustAtlaspack.buildAssetGraph();
       } catch (err) {
         throw new ThrowableDiagnostic({
           diagnostic: err,

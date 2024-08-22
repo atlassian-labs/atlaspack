@@ -1323,7 +1323,7 @@ describe.v2('cache', function () {
         let b = await testCache({
           featureFlags: {
             exampleFeature: false,
-            parcelV3: false,
+            atlaspackV3: false,
           },
           async setup() {
             let pkgFile = path.join(inputDir, 'package.json');
@@ -1383,7 +1383,7 @@ describe.v2('cache', function () {
         let b = await testCache({
           featureFlags: {
             exampleFeature: false,
-            parcelV3: false,
+            atlaspackV3: false,
           },
           async setup() {
             let pkgFile = path.join(inputDir, 'package.json');
@@ -1443,7 +1443,7 @@ describe.v2('cache', function () {
         let b = await testCache({
           featureFlags: {
             exampleFeature: false,
-            parcelV3: false,
+            atlaspackV3: false,
           },
           async setup() {
             let pkgFile = path.join(inputDir, 'package.json');

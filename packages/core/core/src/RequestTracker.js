@@ -179,12 +179,12 @@ type RequestNode = {|
 |};
 
 export const requestTypes = {
-  parcel_build_request: 1,
+  atlaspack_build_request: 1,
   bundle_graph_request: 2,
   asset_graph_request: 3,
   entry_request: 4,
   target_request: 5,
-  parcel_config_request: 6,
+  atlaspack_config_request: 6,
   path_request: 7,
   dev_dep_request: 8,
   asset_request: 9,
@@ -242,7 +242,7 @@ export type StaticRunOpts<TResult> = {|
   farm: WorkerFarm,
   invalidateReason: InvalidateReason,
   options: AtlaspackOptions,
-  rustParcel: ?AtlaspackV3,
+  rustAtlaspack: ?AtlaspackV3,
 |};
 
 const nodeFromFilePath = (filePath: ProjectPath): RequestGraphNode => ({
@@ -1073,7 +1073,7 @@ export default class RequestTracker {
   graph: RequestGraph;
   farm: WorkerFarm;
   options: AtlaspackOptions;
-  rustParcel: ?AtlaspackV3;
+  rustAtlaspack: ?AtlaspackV3;
   signal: ?AbortSignal;
   stats: Map<RequestType, number> = new Map();
 
@@ -1081,17 +1081,17 @@ export default class RequestTracker {
     graph,
     farm,
     options,
-    rustParcel,
+    rustAtlaspack,
   }: {|
     graph?: RequestGraph,
     farm: WorkerFarm,
     options: AtlaspackOptions,
-    rustParcel?: AtlaspackV3,
+    rustAtlaspack?: AtlaspackV3,
   |}) {
     this.graph = graph || new RequestGraph();
     this.farm = farm;
     this.options = options;
-    this.rustParcel = rustParcel;
+    this.rustAtlaspack = rustAtlaspack;
   }
 
   // TODO: refactor (abortcontroller should be created by RequestTracker)
@@ -1267,7 +1267,7 @@ export default class RequestTracker {
         farm: this.farm,
         invalidateReason: node.invalidateReason,
         options: this.options,
-        rustParcel: this.rustParcel,
+        rustAtlaspack: this.rustAtlaspack,
       });
 
       assertSignalNotAborted(this.signal);
@@ -1526,14 +1526,14 @@ export default class RequestTracker {
   static async init({
     farm,
     options,
-    rustParcel,
+    rustAtlaspack,
   }: {|
     farm: WorkerFarm,
     options: AtlaspackOptions,
-    rustParcel?: AtlaspackV3,
+    rustAtlaspack?: AtlaspackV3,
   |}): Async<RequestTracker> {
     let graph = await loadRequestGraph(options);
-    return new RequestTracker({farm, graph, options, rustParcel});
+    return new RequestTracker({farm, graph, options, rustAtlaspack});
   }
 }
 

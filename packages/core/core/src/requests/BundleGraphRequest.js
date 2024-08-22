@@ -97,8 +97,8 @@ export default function createBundleGraphRequest(
       let {optionsRef, requestedAssetIds, signal} = input.input;
       let measurement = tracer.createMeasurement('building');
 
-      let createAssetGraphRequest = input.rustParcel
-        ? createAssetGraphRequestRust(input.rustParcel)
+      let createAssetGraphRequest = input.rustAtlaspack
+        ? createAssetGraphRequestRust(input.rustAtlaspack)
         : createAssetGraphRequestJS;
 
       let request = createAssetGraphRequest({
@@ -142,12 +142,15 @@ export default function createBundleGraphRequest(
 
       assertSignalNotAborted(signal);
 
-      let parcelConfig = getCachedAtlaspackConfig(configResult, input.options);
+      let atlaspackConfig = getCachedAtlaspackConfig(
+        configResult,
+        input.options,
+      );
       let {devDeps, invalidDevDeps} = await getDevDepRequests(input.api);
-      invalidateDevDeps(invalidDevDeps, input.options, parcelConfig);
+      invalidateDevDeps(invalidDevDeps, input.options, atlaspackConfig);
 
       let bundlingMeasurement = tracer.createMeasurement('bundling');
-      let builder = new BundlerRunner(input, parcelConfig, devDeps);
+      let builder = new BundlerRunner(input, atlaspackConfig, devDeps);
       let res: BundleGraphResult = await builder.bundle({
         graph: assetGraph,
         changedAssets: changedAssets,

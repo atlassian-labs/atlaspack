@@ -139,10 +139,10 @@ async function run({input, api, options}) {
       createAtlaspackConfigRequest(),
     ),
   );
-  let parcelConfig = getCachedAtlaspackConfig(configResult, options);
+  let atlaspackConfig = getCachedAtlaspackConfig(configResult, options);
 
   // Find named pipelines for each target.
-  let pipelineNames = new Set(parcelConfig.getNamedPipelines());
+  let pipelineNames = new Set(atlaspackConfig.getNamedPipelines());
   for (let target of targets) {
     if (pipelineNames.has(target.name)) {
       target.pipeline = target.name;

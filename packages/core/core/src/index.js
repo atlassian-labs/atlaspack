@@ -12,6 +12,7 @@ export {
 
 export {
   default,
+  default as Atlaspack,
   default as Parcel,
   BuildError,
   createWorkerFarm,
