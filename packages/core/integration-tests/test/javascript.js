@@ -3227,7 +3227,7 @@ describe('javascript', function () {
 
   it('should detect parcel style async requires in commonjs', async () => {
     let b = await bundle(
-      path.join(__dirname, '/integration/require-async/parcel.js'),
+      path.join(__dirname, '/integration/require-async/atlaspack.js'),
     );
 
     assertBundles(b, [

@@ -77,10 +77,10 @@ describe.v2('watcher', function () {
   });
 
   it('should rebuild on a config file change', async function () {
-    let inDir = path.join(__dirname, 'integration/parcelrc-custom');
+    let inDir = path.join(__dirname, 'integration/atlaspackrc-custom');
     let outDir = path.join(inDir, 'dist');
 
-    await ncp(path.join(__dirname, 'integration/parcelrc-custom'), inDir);
+    await ncp(path.join(__dirname, 'integration/atlaspackrc-custom'), inDir);
     await ncp(
       path.dirname(require.resolve('@atlaspack/config-default')),
       path.join(inDir, 'node_modules', '@atlaspack', 'config-default'),
