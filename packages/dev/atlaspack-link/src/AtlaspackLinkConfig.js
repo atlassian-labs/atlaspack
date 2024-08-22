@@ -17,11 +17,11 @@ export class ParcelLinkConfig {
   packageRoot: string;
   namespace: string = '@atlaspack';
   nodeModulesGlobs: string[] = ['node_modules'];
-  filename: string = '.parcel-link';
+  filename: string = '.atlaspack-link';
 
   static load(
     appRoot: string,
-    {fs, filename = '.parcel-link'}: {|fs: FileSystem, filename?: string|},
+    {fs, filename = '.atlaspack-link'}: {|fs: FileSystem, filename?: string|},
   ): ParcelLinkConfig {
     let manifest = JSON.parse(
       fs.readFileSync(path.join(appRoot, filename), 'utf8'),

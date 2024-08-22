@@ -3303,7 +3303,7 @@ describe.v2('cache', function () {
             path.join(inputDir, '.parcelrc'),
             JSON.stringify({
               extends: '@atlaspack/config-default',
-              resolvers: ['parcel-resolver-test'],
+              resolvers: ['atlaspack-resolver-test'],
             }),
           );
         },
@@ -3338,7 +3338,7 @@ describe.v2('cache', function () {
             path.join(inputDir, '.parcelrc'),
             JSON.stringify({
               extends: '@atlaspack/config-default',
-              resolvers: ['parcel-resolver-test'],
+              resolvers: ['atlaspack-resolver-test'],
             }),
           );
         },
@@ -3353,7 +3353,7 @@ describe.v2('cache', function () {
           let resolver = path.join(
             inputDir,
             'node_modules',
-            'parcel-resolver-test',
+            'atlaspack-resolver-test',
             'index.js',
           );
           await overlayFS.writeFile(
@@ -3395,7 +3395,7 @@ describe.v2('cache', function () {
             path.join(inputDir, '.parcelrc'),
             JSON.stringify({
               extends: '@atlaspack/config-default',
-              resolvers: ['parcel-resolver-test'],
+              resolvers: ['atlaspack-resolver-test'],
             }),
           );
         },
@@ -3444,7 +3444,7 @@ describe.v2('cache', function () {
             path.join(inputDir, '.parcelrc'),
             JSON.stringify({
               extends: '@atlaspack/config-default',
-              resolvers: ['parcel-resolver-test'],
+              resolvers: ['atlaspack-resolver-test'],
             }),
           );
 
@@ -3498,7 +3498,7 @@ describe.v2('cache', function () {
             path.join(inputDir, '.parcelrc'),
             JSON.stringify({
               extends: '@atlaspack/config-default',
-              resolvers: ['parcel-resolver-test'],
+              resolvers: ['atlaspack-resolver-test'],
             }),
           );
 
@@ -4796,7 +4796,7 @@ describe.v2('cache', function () {
             path.join(inputDir, '.parcelrc'),
             JSON.stringify({
               extends: '@atlaspack/config-default',
-              bundler: 'parcel-bundler-test',
+              bundler: 'atlaspack-bundler-test',
             }),
           );
         },
@@ -4812,7 +4812,7 @@ describe.v2('cache', function () {
             path.join(inputDir, '.parcelrc'),
             JSON.stringify({
               extends: '@atlaspack/config-default',
-              bundler: 'parcel-bundler-test',
+              bundler: 'atlaspack-bundler-test',
             }),
           );
         },
@@ -4823,7 +4823,7 @@ describe.v2('cache', function () {
           let bundler = path.join(
             inputDir,
             'node_modules',
-            'parcel-bundler-test',
+            'atlaspack-bundler-test',
             'index.js',
           );
           await overlayFS.writeFile(
@@ -4849,7 +4849,7 @@ describe.v2('cache', function () {
             path.join(inputDir, '.parcelrc'),
             JSON.stringify({
               extends: '@atlaspack/config-default',
-              namers: ['parcel-namer-test'],
+              namers: ['atlaspack-namer-test'],
             }),
           );
         },
@@ -4869,7 +4869,7 @@ describe.v2('cache', function () {
             path.join(inputDir, '.parcelrc'),
             JSON.stringify({
               extends: '@atlaspack/config-default',
-              namers: ['parcel-namer-test'],
+              namers: ['atlaspack-namer-test'],
             }),
           );
         },
@@ -4883,7 +4883,7 @@ describe.v2('cache', function () {
           let namer = path.join(
             inputDir,
             'node_modules',
-            'parcel-namer-test',
+            'atlaspack-namer-test',
             'index.js',
           );
           await overlayFS.writeFile(
@@ -4912,7 +4912,7 @@ describe.v2('cache', function () {
             path.join(inputDir, '.parcelrc'),
             JSON.stringify({
               extends: '@atlaspack/config-default',
-              runtimes: ['parcel-runtime-test'],
+              runtimes: ['atlaspack-runtime-test'],
             }),
           );
         },
@@ -4929,7 +4929,7 @@ describe.v2('cache', function () {
             path.join(inputDir, '.parcelrc'),
             JSON.stringify({
               extends: '@atlaspack/config-default',
-              runtimes: ['parcel-runtime-test'],
+              runtimes: ['atlaspack-runtime-test'],
             }),
           );
         },
@@ -4941,7 +4941,7 @@ describe.v2('cache', function () {
           let namer = path.join(
             inputDir,
             'node_modules',
-            'parcel-runtime-test',
+            'atlaspack-runtime-test',
             'index.js',
           );
           await overlayFS.writeFile(
@@ -5420,7 +5420,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               optimizers: {
-                '*.js': ['parcel-optimizer-test'],
+                '*.js': ['atlaspack-optimizer-test'],
               },
             }),
           );
@@ -5442,7 +5442,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               optimizers: {
-                '*.js': ['parcel-optimizer-test'],
+                '*.js': ['atlaspack-optimizer-test'],
               },
             }),
           );
@@ -5481,7 +5481,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               optimizers: {
-                '*.js': ['parcel-optimizer-test'],
+                '*.js': ['atlaspack-optimizer-test'],
               },
             }),
           );
@@ -5496,7 +5496,7 @@ describe.v2('cache', function () {
           let optimizer = path.join(
             inputDir,
             'node_modules',
-            'parcel-optimizer-test',
+            'atlaspack-optimizer-test',
             'index.js',
           );
           await overlayFS.writeFile(
@@ -5523,7 +5523,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               optimizers: {
-                '*.js': ['parcel-optimizer-test'],
+                '*.js': ['atlaspack-optimizer-test'],
               },
             }),
           );
@@ -5557,7 +5557,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               optimizers: {
-                '*.js': ['parcel-optimizer-test'],
+                '*.js': ['atlaspack-optimizer-test'],
               },
             }),
           );
@@ -5596,7 +5596,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               optimizers: {
-                '*.js': ['parcel-optimizer-test'],
+                '*.js': ['atlaspack-optimizer-test'],
               },
             }),
           );
@@ -5886,7 +5886,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               optimizers: {
-                '*.txt': ['parcel-optimizer-test'],
+                '*.txt': ['atlaspack-optimizer-test'],
               },
             }),
           );
@@ -5915,7 +5915,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               optimizers: {
-                '*.txt': ['parcel-optimizer-test'],
+                '*.txt': ['atlaspack-optimizer-test'],
               },
             }),
           );
@@ -5927,7 +5927,7 @@ describe.v2('cache', function () {
           let optimizer = path.join(
             inputDir,
             'node_modules',
-            'parcel-optimizer-test',
+            'atlaspack-optimizer-test',
             'index.js',
           );
           await overlayFS.writeFile(
@@ -5961,7 +5961,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               optimizers: {
-                '*.txt': ['parcel-optimizer-test'],
+                '*.txt': ['atlaspack-optimizer-test'],
               },
             }),
           );
@@ -5999,7 +5999,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               optimizers: {
-                '*.txt': ['parcel-optimizer-test'],
+                '*.txt': ['atlaspack-optimizer-test'],
               },
             }),
           );
@@ -6042,7 +6042,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               optimizers: {
-                '*.txt': ['parcel-optimizer-test'],
+                '*.txt': ['atlaspack-optimizer-test'],
               },
             }),
           );
@@ -6135,7 +6135,7 @@ describe.v2('cache', function () {
         packageManager: overlayFSPackageManager,
         shouldDisableCache: false,
         inputFS: overlayFS,
-        cacheDir: path.join(__dirname, '.parcel-cache'),
+        cacheDir: path.join(__dirname, '.atlaspack-cache'),
       };
 
       await fsFixture(overlayFS)`
@@ -6156,7 +6156,7 @@ describe.v2('cache', function () {
           import {Bundler} from '@atlaspack/plugin'
           import DefaultBundler from '@atlaspack/bundler-default'
 
-          const CONFIG = Symbol.for('parcel-plugin-config');
+          const CONFIG = Symbol.for('atlaspack-plugin-config');
 
           export default new Bundler({
             loadConfig({config, options}) {
@@ -6298,7 +6298,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               compressors: {
-                '*.js': ['...', 'parcel-compressor-test'],
+                '*.js': ['...', 'atlaspack-compressor-test'],
               },
             }),
           );
@@ -6314,7 +6314,7 @@ describe.v2('cache', function () {
           let compressor = path.join(
             inputDir,
             'node_modules',
-            'parcel-compressor-test',
+            'atlaspack-compressor-test',
             'index.js',
           );
           await overlayFS.writeFile(
@@ -6765,7 +6765,7 @@ describe.v2('cache', function () {
       shouldContentHash: false,
       shouldDisableCache: false,
       inputFS: overlayFS,
-      cacheDir: path.join(__dirname, '.parcel-cache'),
+      cacheDir: path.join(__dirname, '.atlaspack-cache'),
     };
 
     await fsFixture(overlayFS)`

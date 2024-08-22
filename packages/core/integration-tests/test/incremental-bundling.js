@@ -16,7 +16,7 @@ import {NodePackageManager} from '@atlaspack/package-manager';
 
 import {type Asset} from '@atlaspack/types';
 
-const CONFIG = Symbol.for('parcel-plugin-config');
+const CONFIG = Symbol.for('atlaspack-plugin-config');
 let packageManager = new NodePackageManager(inputFS, '/');
 
 describe.v2('incremental bundling', function () {
@@ -687,7 +687,7 @@ console.log('index.js');`,
           path.join(fixture, '.parcelrc'),
           JSON.stringify({
             extends: '@atlaspack/config-default',
-            bundler: 'parcel-bundler-test',
+            bundler: 'atlaspack-bundler-test',
           }),
         );
 
@@ -787,7 +787,7 @@ console.log('index.js');`,
         path.join(fixture, '.parcelrc'),
         JSON.stringify({
           extends: '@atlaspack/config-default',
-          namers: ['parcel-namer-test'],
+          namers: ['atlaspack-namer-test'],
         }),
       );
 
@@ -831,7 +831,7 @@ console.log('index.js');`,
         path.join(fixture, '.parcelrc'),
         JSON.stringify({
           extends: '@atlaspack/config-default',
-          runtimes: ['parcel-runtime-test'],
+          runtimes: ['atlaspack-runtime-test'],
         }),
       );
 

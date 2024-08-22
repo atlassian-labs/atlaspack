@@ -180,7 +180,7 @@ export function createLinkCommand(
 
       if (parcelLinkConfig) {
         throw new Error(
-          'A Parcel link already exists! Try `parcel-link unlink` to re-link.',
+          'A Parcel link already exists! Try `atlaspack-link unlink` to re-link.',
         );
       }
 

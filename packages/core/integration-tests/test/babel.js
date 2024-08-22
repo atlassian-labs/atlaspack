@@ -461,7 +461,7 @@ describe.v2('babel', function () {
 
       let fixtureDir = path.join(__dirname, '/integration/babel-config-js');
       let distDir = path.resolve(fixtureDir, './dist');
-      let cacheDir = path.resolve(fixtureDir, '.parcel-cache');
+      let cacheDir = path.resolve(fixtureDir, '.atlaspack-cache');
       await fs.rimraf(distDir);
       await fs.rimraf(cacheDir);
       await fs.rimraf(path.resolve(fixtureDir, './node_modules/.cache'));
@@ -507,7 +507,7 @@ describe.v2('babel', function () {
         '/integration/babel-plugin-upgrade',
       );
       await fs.ncp(path.join(fixtureDir), inputDir);
-      await fs.rimraf(path.join(__dirname, '.parcel-cache'));
+      await fs.rimraf(path.join(__dirname, '.atlaspack-cache'));
 
       let build = () =>
         spawnSync(

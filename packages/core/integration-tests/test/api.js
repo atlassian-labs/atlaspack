@@ -63,7 +63,7 @@ describe.v2('JS API', function () {
 
   describe('Reporter API', () => {
     it('should pass the parcel version to plugins', async () => {
-      const dir = path.join(__dirname, 'plugin-parcel-version');
+      const dir = path.join(__dirname, 'plugin-atlaspack-version');
 
       overlayFS.mkdirp(dir);
 
@@ -91,7 +91,7 @@ describe.v2('JS API', function () {
         export default new Reporter({
           async report({event, options}) {
             if (event.type === 'buildSuccess') {
-              await options.outputFS.writeFile(path.join(options.projectRoot, 'parcel-version.txt'), options.parcelVersion);
+              await options.outputFS.writeFile(path.join(options.projectRoot, 'atlaspack-version.txt'), options.parcelVersion);
             }
           }
         })
@@ -103,7 +103,7 @@ describe.v2('JS API', function () {
       });
 
       assert.equal(
-        await overlayFS.readFile(path.join(dir, 'parcel-version.txt')),
+        await overlayFS.readFile(path.join(dir, 'atlaspack-version.txt')),
         ATLASPACK_VERSION,
       );
     });
