@@ -6452,12 +6452,10 @@ describe('javascript', function () {
       },
     );
 
-    it.v2(
-      `should work correctly with export called hasOwnProperty ${
-        shouldScopeHoist ? 'with' : 'without'
-      } scope-hoisting`,
-      async () => {
-        await fsFixture(overlayFS, __dirname)`
+    it(`should work correctly with export called hasOwnProperty ${
+      shouldScopeHoist ? 'with' : 'without'
+    } scope-hoisting`, async () => {
+      await fsFixture(overlayFS, __dirname)`
         js-export-all-hasOwnProperty
           a.js:
             export function hasOwnProperty() {
@@ -6474,16 +6472,15 @@ describe('javascript', function () {
             import * as x from './library';
             output = sideEffectNoop(x).other;`;
 
-        let b = await bundle(
-          path.join(__dirname, 'js-export-all-hasOwnProperty/index.js'),
-          {
-            ...options,
-            inputFS: overlayFS,
-          },
-        );
-        let res = await run(b, null, {require: false});
-        assert.equal(res.output, 123);
-      },
-    );
+      let b = await bundle(
+        path.join(__dirname, 'js-export-all-hasOwnProperty/index.js'),
+        {
+          ...options,
+          inputFS: overlayFS,
+        },
+      );
+      let res = await run(b, null, {require: false});
+      assert.equal(res.output, 123);
+    });
   }
 });
