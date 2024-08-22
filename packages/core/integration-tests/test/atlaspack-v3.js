@@ -2,7 +2,7 @@
 
 import {join} from 'path';
 
-import {ParcelV3, toFileSystemV3} from '@atlaspack/core';
+import {AtlaspackV3, toFileSystemV3} from '@atlaspack/core';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {
   describe,
@@ -29,7 +29,7 @@ describe('AtlaspackV3', function () {
       yarn.lock: {}
     `;
 
-    let parcel = new ParcelV3({
+    let parcel = new AtlaspackV3({
       corePath: '',
       entries: [join(__dirname, 'index.js')],
       fs: toFileSystemV3(overlayFS),

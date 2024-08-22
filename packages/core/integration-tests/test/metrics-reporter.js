@@ -17,7 +17,7 @@ describe.v2('Build Metrics Reporter', () => {
     });
     await b.run();
 
-    let projectRoot: string = b._getResolvedParcelOptions().projectRoot;
+    let projectRoot: string = b._getResolvedAtlaspackOptions().projectRoot;
     let dirContent = await outputFS.readdir(projectRoot);
 
     assert(
