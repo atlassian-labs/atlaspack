@@ -31,7 +31,7 @@ import {
 } from '@atlaspack/utils';
 import logger from '@atlaspack/logger';
 import {createEnvironment} from '../Environment';
-import createParcelConfigRequest, {
+import createAtlaspackConfigRequest, {
   getCachedParcelConfig,
 } from './AtlaspackConfigRequest';
 // $FlowFixMe
@@ -135,7 +135,9 @@ async function run({input, api, options}) {
   assertTargetsAreNotEntries(targets, input, options);
 
   let configResult = nullthrows(
-    await api.runRequest<null, ConfigAndCachePath>(createParcelConfigRequest()),
+    await api.runRequest<null, ConfigAndCachePath>(
+      createAtlaspackConfigRequest(),
+    ),
   );
   let parcelConfig = getCachedParcelConfig(configResult, options);
 

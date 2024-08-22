@@ -39,7 +39,7 @@ import RequestTracker, {
   requestGraphEdgeTypes,
 } from './RequestTracker';
 import createValidationRequest from './requests/ValidationRequest';
-import createParcelBuildRequest from './requests/AtlaspackBuildRequest';
+import createAtlaspackBuildRequest from './requests/AtlaspackBuildRequest';
 import createAssetRequest from './requests/AssetRequest';
 import createPathRequest from './requests/PathRequest';
 import {createEnvironment} from './Environment';
@@ -345,7 +345,7 @@ export default class Parcel {
 
       this.#requestTracker.graph.invalidateOnBuildNodes();
 
-      let request = createParcelBuildRequest({
+      let request = createAtlaspackBuildRequest({
         optionsRef: this.#optionsRef,
         requestedAssetIds: this.#requestedAssetIds,
         signal,

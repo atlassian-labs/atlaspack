@@ -14,7 +14,7 @@ import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 import nullthrows from 'nullthrows';
 import {runConfigRequest} from './ConfigRequest';
 import {getDevDepRequests, runDevDepRequest} from './DevDepRequest';
-import createParcelConfigRequest from './AtlaspackConfigRequest';
+import createAtlaspackConfigRequest from './AtlaspackConfigRequest';
 
 type PackageRequestInput = {|
   bundleGraph: BundleGraph,
@@ -56,7 +56,9 @@ async function run({input, api, farm}) {
   let start = Date.now();
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);
   let {cachePath} = nullthrows(
-    await api.runRequest<null, ConfigAndCachePath>(createParcelConfigRequest()),
+    await api.runRequest<null, ConfigAndCachePath>(
+      createAtlaspackConfigRequest(),
+    ),
   );
 
   let {devDepRequests, configRequests, bundleInfo, invalidations} =

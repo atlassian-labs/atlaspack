@@ -32,7 +32,7 @@ import PluginOptions from '../public/PluginOptions';
 import applyRuntimes from '../applyRuntimes';
 import {ATLASPACK_VERSION, OPTION_CHANGE} from '../constants';
 import {assertSignalNotAborted, optionsProxy} from '../utils';
-import createParcelConfigRequest, {
+import createAtlaspackConfigRequest, {
   getCachedParcelConfig,
 } from './AtlaspackConfigRequest';
 import {
@@ -136,7 +136,7 @@ export default function createBundleGraphRequest(
 
       let configResult = nullthrows(
         await input.api.runRequest<null, ConfigAndCachePath>(
-          createParcelConfigRequest(),
+          createAtlaspackConfigRequest(),
         ),
       );
 

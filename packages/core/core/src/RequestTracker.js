@@ -54,8 +54,8 @@ import type {WriteBundlesRequestResult} from './requests/WriteBundlesRequest';
 import type {WriteBundleRequestResult} from './requests/WriteBundleRequest';
 import type {TargetRequestResult} from './requests/TargetRequest';
 import type {PathRequestResult} from './requests/PathRequest';
-import type {ParcelConfigRequestResult} from './requests/AtlaspackConfigRequest';
-import type {ParcelBuildRequestResult} from './requests/AtlaspackBuildRequest';
+import type {AtlaspackConfigRequestResult} from './requests/AtlaspackConfigRequest';
+import type {AtlaspackBuildRequestResult} from './requests/AtlaspackBuildRequest';
 import type {EntryRequestResult} from './requests/EntryRequest';
 import type {BundleGraphResult} from './requests/BundleGraphRequest';
 import {deserialize, serialize} from './serializer';
@@ -161,8 +161,8 @@ export type RequestResult =
   | WriteBundleRequestResult
   | TargetRequestResult
   | PathRequestResult
-  | ParcelConfigRequestResult
-  | ParcelBuildRequestResult
+  | AtlaspackConfigRequestResult
+  | AtlaspackBuildRequestResult
   | EntryRequestResult
   | BundleGraphResult
   | AssetRequestResult;

@@ -29,7 +29,7 @@ import {report} from '../ReporterRunner';
 import {getPublicDependency} from '../public/Dependency';
 import PluginOptions from '../public/PluginOptions';
 import ParcelConfig from '../AtlaspackConfig';
-import createParcelConfigRequest, {
+import createAtlaspackConfigRequest, {
   getCachedParcelConfig,
 } from './AtlaspackConfigRequest';
 import {invalidateOnFileCreateToInternal} from '../utils';
@@ -87,7 +87,9 @@ export default function createPathRequest(
 
 async function run({input, api, options}): Promise<PathRequestResult> {
   let configResult = nullthrows(
-    await api.runRequest<null, ConfigAndCachePath>(createParcelConfigRequest()),
+    await api.runRequest<null, ConfigAndCachePath>(
+      createAtlaspackConfigRequest(),
+    ),
   );
   let config = getCachedParcelConfig(configResult, options);
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);

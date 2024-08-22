@@ -52,14 +52,16 @@ type RunOpts<TResult> = {|
   ...StaticRunOpts<TResult>,
 |};
 
-export type ParcelConfigRequest = {|
+export type AtlaspackConfigRequest = {|
   id: string,
   type: typeof requestTypes.parcel_config_request,
   input: null,
-  run: (RunOpts<ParcelConfigRequestResult>) => Async<ParcelConfigRequestResult>,
+  run: (
+    RunOpts<AtlaspackConfigRequestResult>,
+  ) => Async<AtlaspackConfigRequestResult>,
 |};
 
-export type ParcelConfigRequestResult = ConfigAndCachePath;
+export type AtlaspackConfigRequestResult = ConfigAndCachePath;
 
 type ParcelConfigChain = {|
   config: ProcessedParcelConfig,
@@ -68,7 +70,7 @@ type ParcelConfigChain = {|
 
 const type = 'parcel_config_request';
 
-export default function createParcelConfigRequest(): ParcelConfigRequest {
+export default function createAtlaspackConfigRequest(): AtlaspackConfigRequest {
   return {
     id: type,
     type: requestTypes[type],

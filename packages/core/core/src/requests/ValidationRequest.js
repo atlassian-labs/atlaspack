@@ -9,7 +9,7 @@ import nullthrows from 'nullthrows';
 import ParcelConfig from '../AtlaspackConfig';
 import {report} from '../ReporterRunner';
 import Validation from '../Validation';
-import createParcelConfigRequest from './AtlaspackConfigRequest';
+import createAtlaspackConfigRequest from './AtlaspackConfigRequest';
 import {requestTypes} from '../RequestTracker';
 
 type ValidationRequest = {|
@@ -38,7 +38,7 @@ export default function createValidationRequest(
     run: async ({input: {assetRequests, optionsRef}, api, options, farm}) => {
       let {config: processedConfig, cachePath} = nullthrows(
         await api.runRequest<null, ConfigAndCachePath>(
-          createParcelConfigRequest(),
+          createAtlaspackConfigRequest(),
         ),
       );
 

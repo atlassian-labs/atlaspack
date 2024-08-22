@@ -25,7 +25,7 @@ import {
   joinProjectPath,
   toProjectPathUnsafe,
 } from '../projectPath';
-import createParcelConfigRequest, {
+import createAtlaspackConfigRequest, {
   getCachedParcelConfig,
 } from './AtlaspackConfigRequest';
 import PluginOptions from '../public/PluginOptions';
@@ -145,7 +145,9 @@ async function run({input, options, api}) {
   );
 
   let configResult = nullthrows(
-    await api.runRequest<null, ConfigAndCachePath>(createParcelConfigRequest()),
+    await api.runRequest<null, ConfigAndCachePath>(
+      createAtlaspackConfigRequest(),
+    ),
   );
   let config = getCachedParcelConfig(configResult, options);
 
