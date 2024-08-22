@@ -169,7 +169,9 @@ export default class AtlaspackConfig {
     return this.loadPlugins<Resolver<mixed>>(this.resolvers);
   }
 
-  _getValidatorNodes(filePath: ProjectPath): $ReadOnlyArray<ParcelPluginNode> {
+  _getValidatorNodes(
+    filePath: ProjectPath,
+  ): $ReadOnlyArray<AtlaspackPluginNode> {
     let validators: PureAtlaspackConfigPipeline =
       this.matchGlobMapPipelines(filePath, this.validators) || [];
 
