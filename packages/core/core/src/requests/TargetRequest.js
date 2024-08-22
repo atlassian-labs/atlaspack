@@ -32,7 +32,7 @@ import {
 import logger from '@atlaspack/logger';
 import {createEnvironment} from '../Environment';
 import createAtlaspackConfigRequest, {
-  getCachedParcelConfig,
+  getCachedAtlaspackConfig,
 } from './AtlaspackConfigRequest';
 // $FlowFixMe
 import browserslist from 'browserslist';
@@ -139,7 +139,7 @@ async function run({input, api, options}) {
       createAtlaspackConfigRequest(),
     ),
   );
-  let parcelConfig = getCachedParcelConfig(configResult, options);
+  let parcelConfig = getCachedAtlaspackConfig(configResult, options);
 
   // Find named pipelines for each target.
   let pipelineNames = new Set(parcelConfig.getNamedPipelines());

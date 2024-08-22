@@ -41,22 +41,22 @@ export type ParcelPluginNode = {|
   keyPath?: string,
 |};
 
-export type PureParcelConfigPipeline = $ReadOnlyArray<ParcelPluginNode>;
-export type ExtendableParcelConfigPipeline = $ReadOnlyArray<
+export type PureAtlaspackConfigPipeline = $ReadOnlyArray<ParcelPluginNode>;
+export type ExtendableAtlaspackConfigPipeline = $ReadOnlyArray<
   ParcelPluginNode | '...',
 >;
 
-export type ProcessedParcelConfig = {|
-  resolvers?: PureParcelConfigPipeline,
-  transformers?: {[Glob]: ExtendableParcelConfigPipeline, ...},
+export type ProcessedAtlaspackConfig = {|
+  resolvers?: PureAtlaspackConfigPipeline,
+  transformers?: {[Glob]: ExtendableAtlaspackConfigPipeline, ...},
   bundler: ?ParcelPluginNode,
-  namers?: PureParcelConfigPipeline,
-  runtimes?: PureParcelConfigPipeline,
+  namers?: PureAtlaspackConfigPipeline,
+  runtimes?: PureAtlaspackConfigPipeline,
   packagers?: {[Glob]: ParcelPluginNode, ...},
-  optimizers?: {[Glob]: ExtendableParcelConfigPipeline, ...},
-  compressors?: {[Glob]: ExtendableParcelConfigPipeline, ...},
-  reporters?: PureParcelConfigPipeline,
-  validators?: {[Glob]: ExtendableParcelConfigPipeline, ...},
+  optimizers?: {[Glob]: ExtendableAtlaspackConfigPipeline, ...},
+  compressors?: {[Glob]: ExtendableAtlaspackConfigPipeline, ...},
+  reporters?: PureAtlaspackConfigPipeline,
+  validators?: {[Glob]: ExtendableAtlaspackConfigPipeline, ...},
   filePath: ProjectPath,
   resolveFrom?: ProjectPath,
 |};

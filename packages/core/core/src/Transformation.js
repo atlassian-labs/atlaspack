@@ -36,7 +36,7 @@ import {SOURCEMAP_EXTENSIONS} from '@atlaspack/utils';
 import {hashString} from '@atlaspack/rust';
 
 import {createDependency} from './Dependency';
-import ParcelConfig from './AtlaspackConfig';
+import AtlaspackConfig from './AtlaspackConfig';
 // TODO: eventually call path request as sub requests
 import {ResolverRunner} from './requests/PathRequest';
 import {
@@ -79,7 +79,7 @@ type PostProcessFunc = (
 
 export type TransformationOpts = {|
   options: AtlaspackOptions,
-  config: ParcelConfig,
+  config: AtlaspackConfig,
   request: TransformationRequest,
   workerApi: WorkerApi,
 |};
@@ -100,7 +100,7 @@ export default class Transformation {
   options: AtlaspackOptions;
   pluginOptions: PluginOptions;
   workerApi: WorkerApi;
-  parcelConfig: ParcelConfig;
+  parcelConfig: AtlaspackConfig;
   invalidations: Invalidations;
   resolverRunner: ResolverRunner;
 
@@ -567,7 +567,7 @@ export default class Transformation {
     transformerName: string,
     preloadedConfig: ?Config,
     configKeyPath?: string,
-    parcelConfig: ParcelConfig,
+    parcelConfig: AtlaspackConfig,
   ): Promise<$ReadOnlyArray<TransformerResult | UncommittedAsset>> {
     const logger = new PluginLogger({origin: transformerName});
     const tracer = new PluginTracer({

@@ -28,9 +28,9 @@ import {normalizePath} from '@atlaspack/utils';
 import {report} from '../ReporterRunner';
 import {getPublicDependency} from '../public/Dependency';
 import PluginOptions from '../public/PluginOptions';
-import ParcelConfig from '../AtlaspackConfig';
+import AtlaspackConfig from '../AtlaspackConfig';
 import createAtlaspackConfigRequest, {
-  getCachedParcelConfig,
+  getCachedAtlaspackConfig,
 } from './AtlaspackConfigRequest';
 import {invalidateOnFileCreateToInternal} from '../utils';
 import {
@@ -91,7 +91,7 @@ async function run({input, api, options}): Promise<PathRequestResult> {
       createAtlaspackConfigRequest(),
     ),
   );
-  let config = getCachedParcelConfig(configResult, options);
+  let config = getCachedAtlaspackConfig(configResult, options);
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);
   invalidateDevDeps(invalidDevDeps, options, config);
   let resolverRunner = new ResolverRunner({
@@ -145,7 +145,7 @@ async function run({input, api, options}): Promise<PathRequestResult> {
 }
 
 type ResolverRunnerOpts = {|
-  config: ParcelConfig,
+  config: AtlaspackConfig,
   options: AtlaspackOptions,
   previousDevDeps: Map<string, string>,
 |};
@@ -161,7 +161,7 @@ type ResolverResult = {|
 const configCache = createBuildCache();
 
 export class ResolverRunner {
-  config: ParcelConfig;
+  config: AtlaspackConfig;
   options: AtlaspackOptions;
   pluginOptions: PluginOptions;
   previousDevDeps: Map<string, string>;

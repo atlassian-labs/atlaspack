@@ -2,7 +2,7 @@
 
 import type {Async, Bundle as IBundle, Namer} from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
-import type ParcelConfig, {LoadedPlugin} from '../AtlaspackConfig';
+import type AtlaspackConfig, {LoadedPlugin} from '../AtlaspackConfig';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
 import type {
   Asset,
@@ -33,7 +33,7 @@ import applyRuntimes from '../applyRuntimes';
 import {ATLASPACK_VERSION, OPTION_CHANGE} from '../constants';
 import {assertSignalNotAborted, optionsProxy} from '../utils';
 import createAtlaspackConfigRequest, {
-  getCachedParcelConfig,
+  getCachedAtlaspackConfig,
 } from './AtlaspackConfigRequest';
 import {
   createDevDependency,
@@ -142,7 +142,7 @@ export default function createBundleGraphRequest(
 
       assertSignalNotAborted(signal);
 
-      let parcelConfig = getCachedParcelConfig(configResult, input.options);
+      let parcelConfig = getCachedAtlaspackConfig(configResult, input.options);
       let {devDeps, invalidDevDeps} = await getDevDepRequests(input.api);
       invalidateDevDeps(invalidDevDeps, input.options, parcelConfig);
 
@@ -174,7 +174,7 @@ export default function createBundleGraphRequest(
 class BundlerRunner {
   options: AtlaspackOptions;
   optionsRef: SharedReference;
-  config: ParcelConfig;
+  config: AtlaspackConfig;
   pluginOptions: PluginOptions;
   api: RunAPI<BundleGraphResult>;
   previousDevDeps: Map<string, string>;
@@ -184,7 +184,7 @@ class BundlerRunner {
 
   constructor(
     {input, api, options}: RunInput,
-    config: ParcelConfig,
+    config: AtlaspackConfig,
     previousDevDeps: Map<string, string>,
   ) {
     this.options = options;

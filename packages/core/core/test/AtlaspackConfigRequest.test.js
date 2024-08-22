@@ -2,7 +2,7 @@
 import assert from 'assert';
 import nullthrows from 'nullthrows';
 import path from 'path';
-import ParcelConfig from '../src/AtlaspackConfig';
+import AtlaspackConfig from '../src/AtlaspackConfig';
 import {
   validateConfigFile,
   mergePipelines,
@@ -10,7 +10,7 @@ import {
   mergeConfigs,
   resolveExtends,
   parseAndProcessConfig,
-  resolveParcelConfig,
+  resolveAtlaspackConfig,
   processConfig,
 } from '../src/requests/AtlaspackConfigRequest';
 import {validatePackageName} from '../src/AtlaspackConfig.schema';
@@ -568,7 +568,7 @@ describe('AtlaspackConfigRequest', () => {
 
   describe('mergeConfigs', () => {
     it('should merge configs', () => {
-      let base = new ParcelConfig(
+      let base = new AtlaspackConfig(
         {
           filePath: toProjectPath('/', '/.parcelrc'),
           resolvers: [
@@ -977,12 +977,12 @@ describe('AtlaspackConfigRequest', () => {
 
   describe('resolve', () => {
     it('should return null if there is no .parcelrc file found', async () => {
-      let resolved = await resolveParcelConfig(DEFAULT_OPTIONS);
+      let resolved = await resolveAtlaspackConfig(DEFAULT_OPTIONS);
       assert.equal(resolved, null);
     });
 
     it('should resolve a config if a .parcelrc file is found', async () => {
-      let resolved = await resolveParcelConfig({
+      let resolved = await resolveAtlaspackConfig({
         ...DEFAULT_OPTIONS,
         projectRoot: path.join(__dirname, 'fixtures', 'config', 'subfolder'),
       });

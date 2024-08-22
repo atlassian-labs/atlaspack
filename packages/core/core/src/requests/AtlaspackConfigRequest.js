@@ -3,16 +3,16 @@ import type {
   Async,
   FilePath,
   PackageName,
-  RawParcelConfig,
-  ResolvedParcelConfigFile,
+  RawAtlaspackConfig,
+  ResolvedAtlaspackConfigFile,
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
 import type {StaticRunOpts} from '../RequestTracker';
 import type {
-  ExtendableParcelConfigPipeline,
-  PureParcelConfigPipeline,
+  ExtendableAtlaspackConfigPipeline,
+  PureAtlaspackConfigPipeline,
   AtlaspackOptions,
-  ProcessedParcelConfig,
+  ProcessedAtlaspackConfig,
 } from '../types';
 
 import {
@@ -33,9 +33,9 @@ import {parse} from 'json5';
 import path from 'path';
 import invariant from 'assert';
 
-import ParcelConfigSchema from '../AtlaspackConfig.schema';
+import AtlaspackConfigSchema from '../AtlaspackConfig.schema';
 import {optionsProxy} from '../utils';
-import ParcelConfig from '../AtlaspackConfig';
+import AtlaspackConfig from '../AtlaspackConfig';
 import {createBuildCache} from '../buildCache';
 import {toProjectPath} from '../projectPath';
 import {requestTypes} from '../RequestTracker';
@@ -43,7 +43,7 @@ import {requestTypes} from '../RequestTracker';
 type ConfigMap<K, V> = {[K]: V, ...};
 
 export type ConfigAndCachePath = {|
-  config: ProcessedParcelConfig,
+  config: ProcessedAtlaspackConfig,
   cachePath: string,
 |};
 
@@ -63,8 +63,8 @@ export type AtlaspackConfigRequest = {|
 
 export type AtlaspackConfigRequestResult = ConfigAndCachePath;
 
-type ParcelConfigChain = {|
-  config: ProcessedParcelConfig,
+type AtlaspackConfigChain = {|
+  config: ProcessedAtlaspackConfig,
   extendedFiles: Array<FilePath>,
 |};
 
@@ -80,9 +80,9 @@ export default function createAtlaspackConfigRequest(): AtlaspackConfigRequest {
         extendedFiles,
         usedDefault,
       }: {|
-        ...ParcelConfigChain,
+        ...AtlaspackConfigChain,
         usedDefault: boolean,
-      |} = await loadParcelConfig(
+      |} = await loadAtlaspackConfig(
         optionsProxy(options, api.invalidateOnOptionChange),
       );
 
@@ -115,26 +115,26 @@ export default function createAtlaspackConfigRequest(): AtlaspackConfigRequest {
 }
 
 const parcelConfigCache = createBuildCache();
-export function getCachedParcelConfig(
+export function getCachedAtlaspackConfig(
   result: ConfigAndCachePath,
   options: AtlaspackOptions,
-): ParcelConfig {
+): AtlaspackConfig {
   let {config: processedConfig, cachePath} = result;
   let config = parcelConfigCache.get(cachePath);
   if (config) {
     return config;
   }
 
-  config = new ParcelConfig(processedConfig, options);
+  config = new AtlaspackConfig(processedConfig, options);
 
   parcelConfigCache.set(cachePath, config);
   return config;
 }
 
-export async function loadParcelConfig(
+export async function loadAtlaspackConfig(
   options: AtlaspackOptions,
-): Promise<{|...ParcelConfigChain, usedDefault: boolean|}> {
-  let parcelConfig = await resolveParcelConfig(options);
+): Promise<{|...AtlaspackConfigChain, usedDefault: boolean|}> {
+  let parcelConfig = await resolveAtlaspackConfig(options);
 
   if (!parcelConfig) {
     throw new Error('Could not find a .parcelrc');
@@ -143,9 +143,9 @@ export async function loadParcelConfig(
   return parcelConfig;
 }
 
-export async function resolveParcelConfig(
+export async function resolveAtlaspackConfig(
   options: AtlaspackOptions,
-): Promise<?{|...ParcelConfigChain, usedDefault: boolean|}> {
+): Promise<?{|...AtlaspackConfigChain, usedDefault: boolean|}> {
   let resolveFrom = getResolveFrom(options.inputFS, options.projectRoot);
   let configPath =
     options.config != null
@@ -185,11 +185,8 @@ export async function resolveParcelConfig(
     });
   }
 
-  let {config, extendedFiles}: ParcelConfigChain = await parseAndProcessConfig(
-    configPath,
-    contents,
-    options,
-  );
+  let {config, extendedFiles}: AtlaspackConfigChain =
+    await parseAndProcessConfig(configPath, contents, options);
 
   if (options.additionalReporters.length > 0) {
     config.reporters = [
@@ -205,9 +202,9 @@ export async function resolveParcelConfig(
 }
 
 export function create(
-  config: ResolvedParcelConfigFile,
+  config: ResolvedAtlaspackConfigFile,
   options: AtlaspackOptions,
-): Promise<ParcelConfigChain> {
+): Promise<AtlaspackConfigChain> {
   return processConfigChain(config, config.filePath, options);
 }
 
@@ -216,8 +213,8 @@ export async function parseAndProcessConfig(
   configPath: FilePath,
   contents: string,
   options: AtlaspackOptions,
-): Promise<ParcelConfigChain> {
-  let config: RawParcelConfig;
+): Promise<AtlaspackConfigChain> {
+  let config: RawAtlaspackConfig;
   try {
     config = parse(contents);
   } catch (e) {
@@ -334,9 +331,9 @@ async function processMap(
 }
 
 export async function processConfig(
-  configFile: ResolvedParcelConfigFile,
+  configFile: ResolvedAtlaspackConfigFile,
   options: AtlaspackOptions,
-): Promise<ProcessedParcelConfig> {
+): Promise<ProcessedAtlaspackConfig> {
   return {
     filePath: toProjectPath(options.projectRoot, configFile.filePath),
     ...(configFile.resolveFrom != null
@@ -418,16 +415,16 @@ export async function processConfig(
 }
 
 export async function processConfigChain(
-  configFile: RawParcelConfig | ResolvedParcelConfigFile,
+  configFile: RawAtlaspackConfig | ResolvedAtlaspackConfigFile,
   filePath: FilePath,
   options: AtlaspackOptions,
-): Promise<ParcelConfigChain> {
+): Promise<AtlaspackConfigChain> {
   // Validate config...
   let relativePath = path.relative(options.inputFS.cwd(), filePath);
   validateConfigFile(configFile, relativePath);
 
   // Process config...
-  let config: ProcessedParcelConfig = await processConfig(
+  let config: ProcessedAtlaspackConfig = await processConfig(
     {
       filePath,
       ...configFile,
@@ -533,7 +530,7 @@ async function processExtendedConfig(
   extendsSpecifier: string,
   resolvedExtendedConfigPath: FilePath,
   options: AtlaspackOptions,
-): Promise<ParcelConfigChain> {
+): Promise<AtlaspackConfigChain> {
   let contents;
   try {
     contents = await options.inputFS.readFile(
@@ -576,7 +573,7 @@ async function processExtendedConfig(
 }
 
 export function validateConfigFile(
-  config: RawParcelConfig | ResolvedParcelConfigFile,
+  config: RawAtlaspackConfig | ResolvedAtlaspackConfigFile,
   relativePath: FilePath,
 ) {
   try {
@@ -591,7 +588,7 @@ export function validateConfigFile(
   }
 
   validateSchema.diagnostic(
-    ParcelConfigSchema,
+    AtlaspackConfigSchema,
     {data: config, filePath: relativePath},
     '@atlaspack/core',
     'Invalid Parcel Config',
@@ -599,16 +596,16 @@ export function validateConfigFile(
 }
 
 export function validateNotEmpty(
-  config: RawParcelConfig | ResolvedParcelConfigFile,
+  config: RawAtlaspackConfig | ResolvedAtlaspackConfigFile,
   relativePath: FilePath,
 ) {
   invariant.notDeepStrictEqual(config, {}, `${relativePath} can't be empty`);
 }
 
 export function mergeConfigs(
-  base: ProcessedParcelConfig,
-  ext: ProcessedParcelConfig,
-): ProcessedParcelConfig {
+  base: ProcessedAtlaspackConfig,
+  ext: ProcessedAtlaspackConfig,
+): ProcessedAtlaspackConfig {
   return {
     filePath: ext.filePath,
     resolvers: assertPurePipeline(
@@ -642,8 +639,8 @@ export function getResolveFrom(
 }
 
 function assertPurePipeline(
-  pipeline: ExtendableParcelConfigPipeline,
-): PureParcelConfigPipeline {
+  pipeline: ExtendableAtlaspackConfigPipeline,
+): PureAtlaspackConfigPipeline {
   return pipeline.map(s => {
     invariant(typeof s !== 'string');
     return s;
@@ -651,9 +648,9 @@ function assertPurePipeline(
 }
 
 export function mergePipelines(
-  base: ?ExtendableParcelConfigPipeline,
-  ext: ?ExtendableParcelConfigPipeline,
-): ExtendableParcelConfigPipeline {
+  base: ?ExtendableAtlaspackConfigPipeline,
+  ext: ?ExtendableAtlaspackConfigPipeline,
+): ExtendableAtlaspackConfigPipeline {
   if (ext == null) {
     return base ?? [];
   }

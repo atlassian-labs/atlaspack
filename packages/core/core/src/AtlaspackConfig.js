@@ -17,10 +17,10 @@ import type {
   FilePath,
 } from '@atlaspack/types';
 import type {
-  ProcessedParcelConfig,
+  ProcessedAtlaspackConfig,
   ParcelPluginNode,
-  PureParcelConfigPipeline,
-  ExtendableParcelConfigPipeline,
+  PureAtlaspackConfigPipeline,
+  ExtendableAtlaspackConfigPipeline,
   AtlaspackOptions,
 } from './types';
 import ThrowableDiagnostic, {
@@ -40,9 +40,9 @@ import {
 } from './projectPath';
 
 type GlobMap<T> = {[Glob]: T, ...};
-type SerializedParcelConfig = {|
+type SerializedAtlaspackConfig = {|
   $$raw: boolean,
-  config: ProcessedParcelConfig,
+  config: ProcessedAtlaspackConfig,
   options: AtlaspackOptions,
 |};
 
@@ -55,23 +55,23 @@ export type LoadedPlugin<T> = {|
   range?: ?SemverRange,
 |};
 
-export default class ParcelConfig {
+export default class AtlaspackConfig {
   options: AtlaspackOptions;
   filePath: ProjectPath;
-  resolvers: PureParcelConfigPipeline;
-  transformers: GlobMap<ExtendableParcelConfigPipeline>;
+  resolvers: PureAtlaspackConfigPipeline;
+  transformers: GlobMap<ExtendableAtlaspackConfigPipeline>;
   bundler: ?ParcelPluginNode;
-  namers: PureParcelConfigPipeline;
-  runtimes: PureParcelConfigPipeline;
+  namers: PureAtlaspackConfigPipeline;
+  runtimes: PureAtlaspackConfigPipeline;
   packagers: GlobMap<ParcelPluginNode>;
-  validators: GlobMap<ExtendableParcelConfigPipeline>;
-  optimizers: GlobMap<ExtendableParcelConfigPipeline>;
-  compressors: GlobMap<ExtendableParcelConfigPipeline>;
-  reporters: PureParcelConfigPipeline;
+  validators: GlobMap<ExtendableAtlaspackConfigPipeline>;
+  optimizers: GlobMap<ExtendableAtlaspackConfigPipeline>;
+  compressors: GlobMap<ExtendableAtlaspackConfigPipeline>;
+  reporters: PureAtlaspackConfigPipeline;
   pluginCache: Map<PackageName, any>;
   regexCache: Map<string, RegExp>;
 
-  constructor(config: ProcessedParcelConfig, options: AtlaspackOptions) {
+  constructor(config: ProcessedAtlaspackConfig, options: AtlaspackOptions) {
     this.options = options;
     this.filePath = config.filePath;
     this.resolvers = config.resolvers || [];
@@ -88,11 +88,11 @@ export default class ParcelConfig {
     this.regexCache = new Map();
   }
 
-  static deserialize(serialized: SerializedParcelConfig): ParcelConfig {
-    return new ParcelConfig(serialized.config, serialized.options);
+  static deserialize(serialized: SerializedAtlaspackConfig): AtlaspackConfig {
+    return new AtlaspackConfig(serialized.config, serialized.options);
   }
 
-  getConfig(): ProcessedParcelConfig {
+  getConfig(): ProcessedAtlaspackConfig {
     return {
       filePath: this.filePath,
       resolvers: this.resolvers,
@@ -108,7 +108,7 @@ export default class ParcelConfig {
     };
   }
 
-  serialize(): SerializedParcelConfig {
+  serialize(): SerializedAtlaspackConfig {
     return {
       $$raw: false,
       config: this.getConfig(),
@@ -152,7 +152,7 @@ export default class ParcelConfig {
   }
 
   loadPlugins<T>(
-    plugins: PureParcelConfigPipeline,
+    plugins: PureAtlaspackConfigPipeline,
   ): Promise<Array<LoadedPlugin<T>>> {
     return Promise.all(plugins.map(p => this.loadPlugin<T>(p)));
   }
@@ -170,14 +170,14 @@ export default class ParcelConfig {
   }
 
   _getValidatorNodes(filePath: ProjectPath): $ReadOnlyArray<ParcelPluginNode> {
-    let validators: PureParcelConfigPipeline =
+    let validators: PureAtlaspackConfigPipeline =
       this.matchGlobMapPipelines(filePath, this.validators) || [];
 
     return validators;
   }
 
   getValidatorNames(filePath: ProjectPath): Array<string> {
-    let validators: PureParcelConfigPipeline =
+    let validators: PureAtlaspackConfigPipeline =
       this._getValidatorNodes(filePath);
     return validators.map(v => v.packageName);
   }
@@ -200,7 +200,7 @@ export default class ParcelConfig {
     pipeline?: ?string,
     allowEmpty?: boolean,
   ): Promise<Array<LoadedPlugin<Transformer<mixed>>>> {
-    let transformers: PureParcelConfigPipeline | null =
+    let transformers: PureAtlaspackConfigPipeline | null =
       this.matchGlobMapPipelines(filePath, this.transformers, pipeline);
     if (!transformers || transformers.length === 0) {
       if (allowEmpty) {
@@ -271,7 +271,7 @@ export default class ParcelConfig {
   _getOptimizerNodes(
     filePath: FilePath,
     pipeline: ?string,
-  ): PureParcelConfigPipeline {
+  ): PureAtlaspackConfigPipeline {
     // If a pipeline is specified, but it doesn't exist in the optimizers config, ignore it.
     // Pipelines for bundles come from their entry assets, so the pipeline likely exists in transformers.
     if (pipeline) {
@@ -369,9 +369,9 @@ export default class ParcelConfig {
 
   matchGlobMapPipelines(
     filePath: ProjectPath,
-    globMap: {|[Glob]: ExtendableParcelConfigPipeline|},
+    globMap: {|[Glob]: ExtendableAtlaspackConfigPipeline|},
     pipeline?: ?string,
-  ): PureParcelConfigPipeline {
+  ): PureAtlaspackConfigPipeline {
     let matches = [];
     if (pipeline) {
       // If a pipeline is requested, a the glob needs to match exactly
@@ -422,9 +422,9 @@ export default class ParcelConfig {
 
   async missingPluginError(
     plugins:
-      | GlobMap<ExtendableParcelConfigPipeline>
+      | GlobMap<ExtendableAtlaspackConfigPipeline>
       | GlobMap<ParcelPluginNode>
-      | PureParcelConfigPipeline,
+      | PureAtlaspackConfigPipeline,
     message: string,
     key: string,
   ): Promise<ThrowableDiagnostic> {

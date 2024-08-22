@@ -18,7 +18,7 @@ import type {
   ReportFn,
   RequestInvalidation,
 } from './types';
-import type ParcelConfig, {LoadedPlugin} from './AtlaspackConfig';
+import type AtlaspackConfig, {LoadedPlugin} from './AtlaspackConfig';
 import type InternalBundleGraph from './BundleGraph';
 import type {ConfigRequest} from './requests/ConfigRequest';
 import type {DevDepSpecifier} from './requests/DevDepRequest';
@@ -64,7 +64,7 @@ import {invalidateDevDeps} from './requests/DevDepRequest';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 
 type Opts = {|
-  config: ParcelConfig,
+  config: AtlaspackConfig,
   options: AtlaspackOptions,
   report: ReportFn,
   previousDevDeps: Map<string, string>,
@@ -101,7 +101,7 @@ const BOUNDARY_LENGTH = HASH_REF_PREFIX.length + 32 - 1;
 const pluginConfigs = createBuildCache();
 
 export default class PackagerRunner {
-  config: ParcelConfig;
+  config: AtlaspackConfig;
   options: AtlaspackOptions;
   pluginOptions: PluginOptions;
   distDir: FilePath;

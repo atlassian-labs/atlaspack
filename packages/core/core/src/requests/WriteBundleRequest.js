@@ -26,7 +26,7 @@ import {
   toProjectPathUnsafe,
 } from '../projectPath';
 import createAtlaspackConfigRequest, {
-  getCachedParcelConfig,
+  getCachedAtlaspackConfig,
 } from './AtlaspackConfigRequest';
 import PluginOptions from '../public/PluginOptions';
 import {PluginLogger} from '@atlaspack/logger';
@@ -36,7 +36,7 @@ import {
   createDevDependency,
   runDevDepRequest,
 } from './DevDepRequest';
-import ParcelConfig from '../AtlaspackConfig';
+import AtlaspackConfig from '../AtlaspackConfig';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {PluginTracer, tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
@@ -149,7 +149,7 @@ async function run({input, options, api}) {
       createAtlaspackConfigRequest(),
     ),
   );
-  let config = getCachedParcelConfig(configResult, options);
+  let config = getCachedAtlaspackConfig(configResult, options);
 
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);
   invalidateDevDeps(invalidDevDeps, options, config);
@@ -205,7 +205,7 @@ async function writeFiles(
   info: BundleInfo,
   hashRefToNameHash: Map<string, string>,
   options: AtlaspackOptions,
-  config: ParcelConfig,
+  config: AtlaspackConfig,
   outputFS: FileSystem,
   filePath: ProjectPath,
   writeOptions: ?FileOptions,

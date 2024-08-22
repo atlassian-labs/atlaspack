@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import ParcelConfig from '../src/AtlaspackConfig';
+import AtlaspackConfig from '../src/AtlaspackConfig';
 import assert from 'assert';
 import path from 'path';
 import sinon from 'sinon';
@@ -14,7 +14,7 @@ const ATLASPACKRC_PATH = toProjectPath('/', '/.parcelrc');
 
 describe('AtlaspackConfig', () => {
   describe('matchGlobMap', () => {
-    let config = new ParcelConfig(
+    let config = new AtlaspackConfig(
       {
         filePath: ATLASPACKRC_PATH,
         bundler: undefined,
@@ -56,7 +56,7 @@ describe('AtlaspackConfig', () => {
   });
 
   describe('matchGlobMapPipelines', () => {
-    let config = new ParcelConfig(
+    let config = new AtlaspackConfig(
       {
         filePath: ATLASPACKRC_PATH,
         bundler: undefined,
@@ -130,7 +130,7 @@ describe('AtlaspackConfig', () => {
         projectRoot,
         path.join(__dirname, 'fixtures', 'plugins', '.parcelrc'),
       );
-      let config = new ParcelConfig(
+      let config = new AtlaspackConfig(
         {
           filePath: configFilePath,
           bundler: undefined,
@@ -170,7 +170,7 @@ describe('AtlaspackConfig', () => {
         projectRoot,
         path.join(__dirname, 'fixtures', 'plugins', '.parcelrc'),
       );
-      let config = new ParcelConfig(
+      let config = new AtlaspackConfig(
         {
           filePath: configFilePath,
           bundler: undefined,
@@ -245,7 +245,7 @@ describe('AtlaspackConfig', () => {
         code,
         DEFAULT_OPTIONS,
       );
-      let parcelConfig = new ParcelConfig(config, DEFAULT_OPTIONS);
+      let parcelConfig = new AtlaspackConfig(config, DEFAULT_OPTIONS);
 
       // $FlowFixMe
       await assert.rejects(() => parcelConfig.getTransformers('test.js'), {
@@ -325,7 +325,7 @@ describe('AtlaspackConfig', () => {
         projectRoot,
         path.join(__dirname, 'fixtures', 'plugins', '.parcelrc'),
       );
-      let config = new ParcelConfig(
+      let config = new AtlaspackConfig(
         {
           filePath: configFilePath,
           bundler: undefined,
@@ -362,7 +362,7 @@ describe('AtlaspackConfig', () => {
         code,
         DEFAULT_OPTIONS,
       );
-      let parcelConfig = new ParcelConfig(config, DEFAULT_OPTIONS);
+      let parcelConfig = new AtlaspackConfig(config, DEFAULT_OPTIONS);
       let extendedConfigPath = path.join(
         __dirname,
         'fixtures',

@@ -25,14 +25,14 @@ import BundleGraph from './public/BundleGraph';
 import WorkerFarm from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 import {BuildAbortError} from './utils';
-import {loadParcelConfig} from './requests/AtlaspackConfigRequest';
+import {loadAtlaspackConfig} from './requests/AtlaspackConfigRequest';
 import ReporterRunner from './ReporterRunner';
 import dumpGraphToGraphViz from './dumpGraphToGraphViz';
 import resolveOptions from './resolveOptions';
 import {ValueEmitter} from '@atlaspack/events';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {PromiseQueue} from '@atlaspack/utils';
-import ParcelConfig from './AtlaspackConfig';
+import AtlaspackConfig from './AtlaspackConfig';
 import logger from '@atlaspack/logger';
 import RequestTracker, {
   getWatcherOptions,
@@ -67,7 +67,7 @@ export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
 
 export default class Parcel {
   #requestTracker /*: RequestTracker*/;
-  #config /*: ParcelConfig*/;
+  #config /*: AtlaspackConfig*/;
   #farm /*: WorkerFarm*/;
   #initialized /*: boolean*/ = false;
   #disposable /*: Disposable */;
@@ -139,8 +139,8 @@ export default class Parcel {
       });
     }
 
-    let {config} = await loadParcelConfig(resolvedOptions);
-    this.#config = new ParcelConfig(config, resolvedOptions);
+    let {config} = await loadAtlaspackConfig(resolvedOptions);
+    this.#config = new AtlaspackConfig(config, resolvedOptions);
 
     setFeatureFlags(resolvedOptions.featureFlags);
 

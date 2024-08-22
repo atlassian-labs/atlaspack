@@ -4,7 +4,7 @@ import type {
   SemverRange,
   Invalidations,
 } from '@atlaspack/types';
-import type ParcelConfig from '../AtlaspackConfig';
+import type AtlaspackConfig from '../AtlaspackConfig';
 import type {
   DevDepRequest,
   AtlaspackOptions,
@@ -161,7 +161,7 @@ const invalidatedDevDeps = createBuildCache();
 export function invalidateDevDeps(
   invalidDevDeps: Array<DevDepSpecifier>,
   options: AtlaspackOptions,
-  config: ParcelConfig,
+  config: AtlaspackConfig,
 ) {
   for (let {specifier, resolveFrom} of invalidDevDeps) {
     let key = `${specifier}:${fromProjectPathRelative(resolveFrom)}`;

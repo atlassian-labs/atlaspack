@@ -3,7 +3,7 @@
 import type {
   Bundle,
   AtlaspackOptions,
-  ProcessedParcelConfig,
+  ProcessedAtlaspackConfig,
   RequestInvalidation,
 } from './types';
 import type {SharedReference, WorkerApi} from '@atlaspack/workers';
@@ -20,7 +20,7 @@ import Transformation, {
 import {reportWorker, report} from './ReporterRunner';
 import PackagerRunner, {type RunPackagerRunnerResult} from './PackagerRunner';
 import Validation, {type ValidationOpts} from './Validation';
-import ParcelConfig from './AtlaspackConfig';
+import AtlaspackConfig from './AtlaspackConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {clearBuildCaches} from './buildCache';
 import {init as initSourcemaps} from '@parcel/source-map';
@@ -75,9 +75,9 @@ async function loadConfig(cachePath, options) {
   }
 
   let processedConfig = nullthrows(
-    await options.cache.get<ProcessedParcelConfig>(cachePath),
+    await options.cache.get<ProcessedAtlaspackConfig>(cachePath),
   );
-  config = new ParcelConfig(processedConfig, options);
+  config = new AtlaspackConfig(processedConfig, options);
   parcelConfigCache.set(cachePath, config);
 
   setFeatureFlags(options.featureFlags);

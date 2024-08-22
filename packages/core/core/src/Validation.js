@@ -9,7 +9,7 @@ import path from 'path';
 import {resolveConfig} from '@atlaspack/utils';
 import logger, {PluginLogger} from '@atlaspack/logger';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
-import ParcelConfig from './AtlaspackConfig';
+import AtlaspackConfig from './AtlaspackConfig';
 import UncommittedAsset from './UncommittedAsset';
 import {createAsset} from './assetUtils';
 import {Asset} from './public/Asset';
@@ -20,7 +20,7 @@ import {PluginTracer} from '@atlaspack/profiler';
 import {hashString} from '@atlaspack/rust';
 
 export type ValidationOpts = {|
-  config: ParcelConfig,
+  config: AtlaspackConfig,
   /**
    * If true, this Validation instance will run all validators that implement the single-threaded "validateAll" method.
    * If falsy, it will run validators that implement the one-asset-at-a-time "validate" method.
@@ -38,7 +38,7 @@ export default class Validation {
   dedicatedThread: boolean;
   impactfulOptions: $Shape<AtlaspackOptions>;
   options: AtlaspackOptions;
-  parcelConfig: ParcelConfig;
+  parcelConfig: AtlaspackConfig;
   report: ReportFn;
   requests: AssetGroup[];
   workerApi: ?WorkerApi;
