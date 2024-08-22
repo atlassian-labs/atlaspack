@@ -22,7 +22,7 @@ describe('AtlaspackConfigRequest', () => {
     it('should error on an invalid official package', () => {
       assert.throws(() => {
         validatePackageName('@atlaspack/foo-bar', 'transform', 'transformers');
-      }, /Official parcel transform packages must be named according to "@atlaspack\/transform-{name}"/);
+      }, /Official atlaspack transform packages must be named according to "@atlaspack\/transform-{name}"/);
 
       assert.throws(() => {
         validatePackageName(
@@ -30,7 +30,7 @@ describe('AtlaspackConfigRequest', () => {
           'transform',
           'transformers',
         );
-      }, /Official parcel transform packages must be named according to "@atlaspack\/transform-{name}"/);
+      }, /Official atlaspack transform packages must be named according to "@atlaspack\/transform-{name}"/);
     });
 
     it('should succeed on a valid official package', () => {
@@ -44,30 +44,26 @@ describe('AtlaspackConfigRequest', () => {
     it('should error on an invalid community package', () => {
       assert.throws(() => {
         validatePackageName('foo-bar', 'transform', 'transformers');
-      }, /Parcel transform packages must be named according to "atlaspack-transform-{name}"/);
+      }, /Atlaspack transform packages must be named according to "parcel-transform-{name}"/);
 
       assert.throws(() => {
-        validatePackageName('atlaspack-foo-bar', 'transform', 'transformers');
-      }, /Parcel transform packages must be named according to "atlaspack-transform-{name}"/);
+        validatePackageName('parcel-foo-bar', 'transform', 'transformers');
+      }, /Atlaspack transform packages must be named according to "parcel-transform-{name}"/);
 
       assert.throws(() => {
-        validatePackageName('atlaspack-transform', 'transform', 'transformers');
-      }, /Parcel transform packages must be named according to "atlaspack-transform-{name}"/);
+        validatePackageName('parcel-transform', 'transform', 'transformers');
+      }, /Atlaspack transform packages must be named according to "parcel-transform-{name}"/);
     });
 
     it('should succeed on a valid community package', () => {
-      validatePackageName(
-        'atlaspack-transform-bar',
-        'transform',
-        'transformers',
-      );
+      validatePackageName('parcel-transform-bar', 'transform', 'transformers');
     });
 
     // Skipping this while the migration to parcel occurs
     it.skip('should error on an invalid scoped package', () => {
       assert.throws(() => {
         validatePackageName('@test/foo-bar', 'transform', 'transformers');
-      }, /Scoped parcel transform packages must be named according to "@test\/atlaspack-transform\[-{name}\]"/);
+      }, /Scoped atlaspack transform packages must be named according to "@test\/parcel-transform\[-{name}\]"/);
 
       assert.throws(() => {
         validatePackageName(
@@ -75,7 +71,7 @@ describe('AtlaspackConfigRequest', () => {
           'transform',
           'transformers',
         );
-      }, /Scoped parcel transform packages must be named according to "@test\/atlaspack-transform\[-{name}\]"/);
+      }, /Scoped atlaspack transform packages must be named according to "@test\/parcel-transform\[-{name}\]"/);
     });
 
     it('should succeed on a valid scoped package', () => {
@@ -108,9 +104,9 @@ describe('AtlaspackConfigRequest', () => {
         validateConfigFile(
           {
             filePath: '.parcelrc',
-            extends: 'atlaspack-config-foo',
+            extends: 'parcel-config-foo',
             transformers: {
-              '*.js': ['atlaspack-invalid-plugin'],
+              '*.js': ['parcel-invalid-plugin'],
             },
           },
           '.parcelrc',
@@ -149,7 +145,7 @@ describe('AtlaspackConfigRequest', () => {
         validateConfigFile(
           {
             filePath: '.parcelrc',
-            resolvers: ['atlaspack-foo-bar'],
+            resolvers: ['parcel-foo-bar'],
           },
           '.parcelrc',
         );
@@ -160,7 +156,7 @@ describe('AtlaspackConfigRequest', () => {
       validateConfigFile(
         {
           filePath: '.parcelrc',
-          resolvers: ['atlaspack-resolver-test'],
+          resolvers: ['parcel-resolver-test'],
         },
         '.parcelrc',
       );
@@ -170,7 +166,7 @@ describe('AtlaspackConfigRequest', () => {
       validateConfigFile(
         {
           filePath: '.parcelrc',
-          resolvers: ['atlaspack-resolver-test', '...'],
+          resolvers: ['parcel-resolver-test', '...'],
         },
         '.parcelrc',
       );
@@ -182,7 +178,7 @@ describe('AtlaspackConfigRequest', () => {
           {
             filePath: '.parcelrc',
             // $FlowExpectedError[incompatible-call]
-            transformers: ['atlaspack-transformer-test', '...'],
+            transformers: ['parcel-transformer-test', '...'],
           },
           '.parcelrc',
         );
@@ -270,7 +266,7 @@ describe('AtlaspackConfigRequest', () => {
       validateConfigFile(
         {
           filePath: '.parcelrc',
-          extends: 'atlaspack-config-foo',
+          extends: 'parcel-config-foo',
         },
         '.parcelrc',
       );
@@ -278,7 +274,7 @@ describe('AtlaspackConfigRequest', () => {
       validateConfigFile(
         {
           filePath: '.parcelrc',
-          extends: ['atlaspack-config-foo', 'atlaspack-config-bar'],
+          extends: ['parcel-config-foo', 'parcel-config-bar'],
         },
         '.parcelrc',
       );
@@ -312,9 +308,9 @@ describe('AtlaspackConfigRequest', () => {
       validateConfigFile(
         {
           filePath: '.parcelrc',
-          extends: 'atlaspack-config-foo',
+          extends: 'parcel-config-foo',
           transformers: {
-            '*.js': ['atlaspack-transformer-foo'],
+            '*.js': ['parcel-transformer-foo'],
           },
         },
         '.parcelrc',
@@ -341,7 +337,7 @@ describe('AtlaspackConfigRequest', () => {
         mergePipelines(
           [
             {
-              packageName: 'atlaspack-transform-foo',
+              packageName: 'parcel-transform-foo',
               resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
@@ -350,7 +346,7 @@ describe('AtlaspackConfigRequest', () => {
         ),
         [
           {
-            packageName: 'atlaspack-transform-foo',
+            packageName: 'parcel-transform-foo',
             resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
@@ -362,14 +358,14 @@ describe('AtlaspackConfigRequest', () => {
       assert.deepEqual(
         mergePipelines(null, [
           {
-            packageName: 'atlaspack-transform-bar',
+            packageName: 'parcel-transform-bar',
             resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/transformers/*.js/0',
           },
         ]),
         [
           {
-            packageName: 'atlaspack-transform-bar',
+            packageName: 'parcel-transform-bar',
             resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
@@ -382,14 +378,14 @@ describe('AtlaspackConfigRequest', () => {
         mergePipelines(
           [
             {
-              packageName: 'atlaspack-transform-foo',
+              packageName: 'parcel-transform-foo',
               resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
           ],
           [
             {
-              packageName: 'atlaspack-transform-bar',
+              packageName: 'parcel-transform-bar',
               resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
@@ -397,7 +393,7 @@ describe('AtlaspackConfigRequest', () => {
         ),
         [
           {
-            packageName: 'atlaspack-transform-bar',
+            packageName: 'parcel-transform-bar',
             resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
@@ -410,20 +406,20 @@ describe('AtlaspackConfigRequest', () => {
         mergePipelines(
           [
             {
-              packageName: 'atlaspack-transform-foo',
+              packageName: 'parcel-transform-foo',
               resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
           ],
           [
             {
-              packageName: 'atlaspack-transform-bar',
+              packageName: 'parcel-transform-bar',
               resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
             '...',
             {
-              packageName: 'atlaspack-transform-baz',
+              packageName: 'parcel-transform-baz',
               resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/2',
             },
@@ -431,17 +427,17 @@ describe('AtlaspackConfigRequest', () => {
         ),
         [
           {
-            packageName: 'atlaspack-transform-bar',
+            packageName: 'parcel-transform-bar',
             resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
           {
-            packageName: 'atlaspack-transform-foo',
+            packageName: 'parcel-transform-foo',
             resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
           {
-            packageName: 'atlaspack-transform-baz',
+            packageName: 'parcel-transform-baz',
             resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/2',
           },
@@ -454,20 +450,20 @@ describe('AtlaspackConfigRequest', () => {
         mergePipelines(
           [
             {
-              packageName: 'atlaspack-transform-foo',
+              packageName: 'parcel-transform-foo',
               resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
           ],
           [
             {
-              packageName: 'atlaspack-transform-bar',
+              packageName: 'parcel-transform-bar',
               resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/0',
             },
             '...',
             {
-              packageName: 'atlaspack-transform-baz',
+              packageName: 'parcel-transform-baz',
               resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/transformers/*.js/2',
             },
@@ -481,25 +477,25 @@ describe('AtlaspackConfigRequest', () => {
       assert.deepEqual(
         mergePipelines(null, [
           {
-            packageName: 'atlaspack-transform-bar',
+            packageName: 'parcel-transform-bar',
             resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/transformers/*.js/0',
           },
           '...',
           {
-            packageName: 'atlaspack-transform-baz',
+            packageName: 'parcel-transform-baz',
             resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/transformers/*.js/2',
           },
         ]),
         [
           {
-            packageName: 'atlaspack-transform-bar',
+            packageName: 'parcel-transform-bar',
             resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/0',
           },
           {
-            packageName: 'atlaspack-transform-baz',
+            packageName: 'parcel-transform-baz',
             resolveFrom: '.parcelrc',
             keyPath: '/transformers/*.js/2',
           },
@@ -511,13 +507,13 @@ describe('AtlaspackConfigRequest', () => {
       assert.throws(() => {
         mergePipelines(null, [
           {
-            packageName: 'atlaspack-transform-bar',
+            packageName: 'parcel-transform-bar',
             resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/transformers/*.js/0',
           },
           '...',
           {
-            packageName: 'atlaspack-transform-baz',
+            packageName: 'parcel-transform-baz',
             resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/transformers/*.js/2',
           },
@@ -573,7 +569,7 @@ describe('AtlaspackConfigRequest', () => {
           filePath: toProjectPath('/', '/.parcelrc'),
           resolvers: [
             {
-              packageName: 'atlaspack-resolver-base',
+              packageName: 'parcel-resolver-base',
               resolveFrom: toProjectPath('/', '/.parcelrc'),
               keyPath: '/resolvers/0',
             },
@@ -581,21 +577,21 @@ describe('AtlaspackConfigRequest', () => {
           transformers: {
             '*.js': [
               {
-                packageName: 'atlaspack-transform-base',
+                packageName: 'parcel-transform-base',
                 resolveFrom: toProjectPath('/', '/.parcelrc'),
                 keyPath: '/transformers/*.js/0',
               },
             ],
             '*.css': [
               {
-                packageName: 'atlaspack-transform-css',
+                packageName: 'parcel-transform-css',
                 resolveFrom: toProjectPath('/', '/.parcelrc'),
                 keyPath: '/transformers/*.css/0',
               },
             ],
           },
           bundler: {
-            packageName: 'atlaspack-bundler-base',
+            packageName: 'parcel-bundler-base',
             resolveFrom: toProjectPath('/', '/.parcelrc'),
             keyPath: '/bundler',
           },
@@ -607,7 +603,7 @@ describe('AtlaspackConfigRequest', () => {
         filePath: '.parcelrc',
         resolvers: [
           {
-            packageName: 'atlaspack-resolver-ext',
+            packageName: 'parcel-resolver-ext',
             resolveFrom: '.parcelrc',
             keyPath: '/resolvers/0',
           },
@@ -616,7 +612,7 @@ describe('AtlaspackConfigRequest', () => {
         transformers: {
           '*.js': [
             {
-              packageName: 'atlaspack-transform-ext',
+              packageName: 'parcel-transform-ext',
               resolveFrom: '.parcelrc',
               keyPath: '/transformers/*.js/0',
             },
@@ -629,12 +625,12 @@ describe('AtlaspackConfigRequest', () => {
         filePath: '.parcelrc',
         resolvers: [
           {
-            packageName: 'atlaspack-resolver-ext',
+            packageName: 'parcel-resolver-ext',
             resolveFrom: '.parcelrc',
             keyPath: '/resolvers/0',
           },
           {
-            packageName: 'atlaspack-resolver-base',
+            packageName: 'parcel-resolver-base',
             resolveFrom: '.parcelrc',
             keyPath: '/resolvers/0',
           },
@@ -642,26 +638,26 @@ describe('AtlaspackConfigRequest', () => {
         transformers: {
           '*.js': [
             {
-              packageName: 'atlaspack-transform-ext',
+              packageName: 'parcel-transform-ext',
               resolveFrom: '.parcelrc',
               keyPath: '/transformers/*.js/0',
             },
             {
-              packageName: 'atlaspack-transform-base',
+              packageName: 'parcel-transform-base',
               resolveFrom: '.parcelrc',
               keyPath: '/transformers/*.js/0',
             },
           ],
           '*.css': [
             {
-              packageName: 'atlaspack-transform-css',
+              packageName: 'parcel-transform-css',
               resolveFrom: '.parcelrc',
               keyPath: '/transformers/*.css/0',
             },
           ],
         },
         bundler: {
-          packageName: 'atlaspack-bundler-base',
+          packageName: 'parcel-bundler-base',
           resolveFrom: '.parcelrc',
           keyPath: '/bundler',
         },
@@ -736,12 +732,12 @@ describe('AtlaspackConfigRequest', () => {
       let transformers = nullthrows(config.transformers);
       assert.deepEqual(transformers['*.js'], [
         {
-          packageName: 'atlaspack-transformer-sub',
+          packageName: 'parcel-transformer-sub',
           resolveFrom: relative(subConfigFilePath),
           keyPath: '/transformers/*.js/0',
         },
         {
-          packageName: 'atlaspack-transformer-base',
+          packageName: 'parcel-transformer-base',
           resolveFrom: relative(configFilePath),
           keyPath: '/transformers/*.js/0',
         },
