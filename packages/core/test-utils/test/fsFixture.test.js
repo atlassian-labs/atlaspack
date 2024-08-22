@@ -526,7 +526,7 @@ describe('fsFixture', () => {
         yarn.lock:
         node_modules
           .bin
-            parcel -> ${path.resolve(__dirname, '../../cli/src/bin.js')}
+            atlaspack -> ${path.resolve(__dirname, '../../cli/src/bin.js')}
           @atlaspack
             cli -> ${path.resolve(__dirname, '../../cli')}
             core -> ${path.resolve(__dirname, '../../core')}
