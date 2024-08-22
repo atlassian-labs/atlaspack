@@ -11,7 +11,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "bin": {
-    "atlaspack": "bin/atlaspack.js"
+    "parcel": "bin/atlaspack.js"
   },
   "main": "lib/bin.js",
   "source": "src/bin.js",

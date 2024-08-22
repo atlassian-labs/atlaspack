@@ -532,7 +532,7 @@ describe('fsFixture', () => {
             core -> ${path.resolve(__dirname, '../../core')}
         .parcelrc: ${{
           extends: '@atlaspack/config-default',
-          transforms: ['parcel-transformer-custom', '...'],
+          transforms: ['atlaspack-transformer-custom', '...'],
         }}
     `;
 
@@ -544,7 +544,7 @@ describe('fsFixture', () => {
       fs.readFileSync('/app/.parcelrc', 'utf8'),
       JSON.stringify({
         extends: '@atlaspack/config-default',
-        transforms: ['parcel-transformer-custom', '...'],
+        transforms: ['atlaspack-transformer-custom', '...'],
       }),
     );
 

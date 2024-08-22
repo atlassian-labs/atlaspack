@@ -1017,7 +1017,7 @@ describe.v2('cache', function () {
           JSON.stringify({
             extends: '@atlaspack/config-default',
             transformers: {
-              '*.js': ['parcel-transformer-mock'],
+              '*.js': ['atlaspack-transformer-mock'],
             },
           }),
         );
@@ -1038,7 +1038,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               transformers: {
-                '*.js': ['parcel-transformer-mock'],
+                '*.js': ['atlaspack-transformer-mock'],
               },
             }),
           );
@@ -1076,7 +1076,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               transformers: {
-                '*.js': ['parcel-transformer-mock'],
+                '*.js': ['atlaspack-transformer-mock'],
               },
             }),
           );
@@ -1124,7 +1124,7 @@ describe.v2('cache', function () {
                 JSON.stringify({
                   extends: '@atlaspack/config-default',
                   transformers: {
-                    '*.js': ['parcel-transformer-mock'],
+                    '*.js': ['atlaspack-transformer-mock'],
                   },
                 }),
               );
@@ -1159,7 +1159,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               transformers: {
-                '*.js': ['parcel-transformer-mock'],
+                '*.js': ['atlaspack-transformer-mock'],
               },
             }),
           );
@@ -2802,7 +2802,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               transformers: {
-                '*.js': ['parcel-transformer-mock'],
+                '*.js': ['atlaspack-transformer-mock'],
               },
             }),
           );
@@ -2834,7 +2834,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               transformers: {
-                '*.js': ['parcel-transformer-mock'],
+                '*.js': ['atlaspack-transformer-mock'],
               },
             }),
           );
@@ -3852,7 +3852,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               transformers: {
-                '*.js': ['parcel-transformer-mock'],
+                '*.js': ['atlaspack-transformer-mock'],
               },
             }),
           );
@@ -3867,7 +3867,7 @@ describe.v2('cache', function () {
           let transformerDir = path.join(
             inputDir,
             'node_modules',
-            'parcel-transformer-mock',
+            'atlaspack-transformer-mock',
           );
           await overlayFS.writeFile(
             path.join(transformerDir, 'constants.js'),
@@ -3891,14 +3891,14 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               transformers: {
-                '*.js': ['parcel-transformer-mock'],
+                '*.js': ['atlaspack-transformer-mock'],
               },
             }),
           );
           let transformer = path.join(
             inputDir,
             'node_modules',
-            'parcel-transformer-mock',
+            'atlaspack-transformer-mock',
             'index.js',
           );
           let contents = await overlayFS.readFile(transformer, 'utf8');
@@ -3944,7 +3944,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               transformers: {
-                '*.js': ['parcel-transformer-mock'],
+                '*.js': ['atlaspack-transformer-mock'],
               },
             }),
           );
@@ -3959,7 +3959,7 @@ describe.v2('cache', function () {
           let transformerDir = path.join(
             inputDir,
             'node_modules',
-            'parcel-transformer-mock',
+            'atlaspack-transformer-mock',
           );
           await overlayFS.writeFile(
             path.join(transformerDir, 'MockTransformer.js'),
@@ -3996,7 +3996,7 @@ describe.v2('cache', function () {
       let transformerDir = path.join(
         inputDir,
         'node_modules',
-        'parcel-transformer-mock',
+        'atlaspack-transformer-mock',
       );
       let b = await testCache({
         async setup() {
@@ -4005,7 +4005,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               transformers: {
-                '*.js': ['parcel-transformer-mock'],
+                '*.js': ['atlaspack-transformer-mock'],
               },
             }),
           );
@@ -4079,7 +4079,12 @@ describe.v2('cache', function () {
             );
 
             await inputFS.writeFile(
-              path.join(inputDir, 'pnp', 'parcel-transformer-mock', 'index.js'),
+              path.join(
+                inputDir,
+                'pnp',
+                'atlaspack-transformer-mock',
+                'index.js',
+              ),
               `
                 const Transformer = require('@atlaspack/plugin').Transformer;
                 module.exports = new Transformer({
@@ -4099,7 +4104,7 @@ describe.v2('cache', function () {
               path.join(
                 inputDir,
                 'pnp2',
-                'parcel-transformer-mock',
+                'atlaspack-transformer-mock',
                 'index.js',
               ),
               `
@@ -4122,11 +4127,11 @@ describe.v2('cache', function () {
               `
                 const path = require('path');
                 const resolve = request => {
-                  if (request === 'parcel-transformer-mock/' || request === 'foo/') {
+                  if (request === 'atlaspack-transformer-mock/' || request === 'foo/') {
                     return path.join(__dirname, 'pnp', request);
                   } else if (request === 'pnpapi') {
                     return __filename;
-                  } else if (request.startsWith('@atlaspack/')) {
+                  } else if (request.startsWith('@atlaspack/') || request.startsWith('@parcel/')) {
                     // Use node_modules path for parcel packages so source field is used.
                     return path.join(__dirname, '../../../../../../node_modules/', request);
                   } else if (/^((@[^/]+\\/[^/]+)|[^/]+)\\/?$/.test(request)) {
@@ -4150,7 +4155,7 @@ describe.v2('cache', function () {
               JSON.stringify({
                 extends: '@atlaspack/config-default',
                 transformers: {
-                  '*.js': ['parcel-transformer-mock'],
+                  '*.js': ['atlaspack-transformer-mock'],
                 },
               }),
             );
@@ -4167,11 +4172,11 @@ describe.v2('cache', function () {
               `
                 const path = require('path');
                 const resolve = request => {
-                  if (request === 'parcel-transformer-mock/' || request === 'foo/') {
+                  if (request === 'atlaspack-transformer-mock/' || request === 'foo/') {
                     return path.join(__dirname, 'pnp2', request);
                   } else if (request === 'pnpapi') {
                     return __filename;
-                  } else if (request.startsWith('@atlaspack/')) {
+                  } else if (request.startsWith('@atlaspack/') || request.startsWith('@parcel/')) {
                     // Use node_modules path for parcel packages so source field is used.
                     return path.join(__dirname, '../../../../../../node_modules/', request);
                   } else if (/^((@[^/]+\\/[^/]+)|[^/]+)\\/?$/.test(request)) {
@@ -4212,7 +4217,7 @@ describe.v2('cache', function () {
           JSON.stringify({
             extends: '@atlaspack/config-default',
             transformers: {
-              '*.js': ['parcel-transformer-esm'],
+              '*.js': ['atlaspack-transformer-esm'],
             },
           }),
         );
@@ -4243,7 +4248,7 @@ describe.v2('cache', function () {
               let transformerDir = path.join(
                 inputDir,
                 'node_modules',
-                'parcel-transformer-esm',
+                'atlaspack-transformer-esm',
               );
               await inputFS.writeFile(
                 path.join(transformerDir, 'constants.js'),
@@ -4333,7 +4338,7 @@ describe.v2('cache', function () {
               let dir = path.join(
                 inputDir,
                 'node_modules',
-                'parcel-transformer-esm',
+                'atlaspack-transformer-esm',
               );
               await inputFS.writeFile(
                 path.join(dir, 'data/a.js'),
@@ -4374,7 +4379,7 @@ describe.v2('cache', function () {
                 path.join(
                   inputDir,
                   'node_modules',
-                  'parcel-transformer-esm',
+                  'atlaspack-transformer-esm',
                   'dep.cjs',
                 ),
                 'var dep = "foo";exports.value = require(dep);',
@@ -4390,7 +4395,7 @@ describe.v2('cache', function () {
                 spy.calledWith([
                   {
                     message: md`${path.normalize(
-                      'node_modules/parcel-transformer-esm/index.js',
+                      'node_modules/atlaspack-transformer-esm/index.js',
                     )} contains non-statically analyzable dependencies in its module graph. This causes Parcel to invalidate the cache on startup.`,
                     origin: '@atlaspack/package-manager',
                   },
@@ -5236,7 +5241,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               packagers: {
-                '*.js': 'parcel-packager-test',
+                '*.js': 'atlaspack-packager-test',
               },
             }),
           );
@@ -5258,7 +5263,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               packagers: {
-                '*.js': 'parcel-packager-test',
+                '*.js': 'atlaspack-packager-test',
               },
             }),
           );
@@ -5273,7 +5278,7 @@ describe.v2('cache', function () {
           let packager = path.join(
             inputDir,
             'node_modules',
-            'parcel-packager-test',
+            'atlaspack-packager-test',
             'index.js',
           );
           await overlayFS.writeFile(
@@ -5300,7 +5305,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               packagers: {
-                '*.js': 'parcel-packager-test',
+                '*.js': 'atlaspack-packager-test',
               },
             }),
           );
@@ -5334,7 +5339,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               packagers: {
-                '*.js': 'parcel-packager-test',
+                '*.js': 'atlaspack-packager-test',
               },
             }),
           );
@@ -5373,7 +5378,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               packagers: {
-                '*.js': 'parcel-packager-test',
+                '*.js': 'atlaspack-packager-test',
               },
             }),
           );
@@ -5681,7 +5686,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               packagers: {
-                '*.txt': 'parcel-packager-test',
+                '*.txt': 'atlaspack-packager-test',
               },
             }),
           );
@@ -5710,7 +5715,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               packagers: {
-                '*.txt': 'parcel-packager-test',
+                '*.txt': 'atlaspack-packager-test',
               },
             }),
           );
@@ -5722,7 +5727,7 @@ describe.v2('cache', function () {
           let packager = path.join(
             inputDir,
             'node_modules',
-            'parcel-packager-test',
+            'atlaspack-packager-test',
             'index.js',
           );
           await overlayFS.writeFile(
@@ -5756,7 +5761,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               packagers: {
-                '*.txt': 'parcel-packager-test',
+                '*.txt': 'atlaspack-packager-test',
               },
             }),
           );
@@ -5794,7 +5799,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               packagers: {
-                '*.txt': 'parcel-packager-test',
+                '*.txt': 'atlaspack-packager-test',
               },
             }),
           );
@@ -5837,7 +5842,7 @@ describe.v2('cache', function () {
             JSON.stringify({
               extends: '@atlaspack/config-default',
               packagers: {
-                '*.txt': 'parcel-packager-test',
+                '*.txt': 'atlaspack-packager-test',
               },
             }),
           );

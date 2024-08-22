@@ -208,14 +208,14 @@ describe.v2('@atlaspack/link', () => {
             extends: '@namespace/parcel-config-namespace',
             transformers: {
               '*': [
-                '@namespace/parcel-transformer-js',
-                '@namespace/parcel-transformer-local',
+                '@namespace/atlaspack-transformer-js',
+                '@namespace/atlaspack-transformer-local',
               ],
             },
           }}
           package.json: ${{
-            ['@namespace/parcel-transformer-js']: {},
-            ['@namespace/parcel-transformer-local']: {},
+            ['@namespace/atlaspack-transformer-js']: {},
+            ['@namespace/atlaspack-transformer-local']: {},
           }}`;
 
       overlayFS.chdir('/app');
@@ -232,7 +232,7 @@ describe.v2('@atlaspack/link', () => {
           transformers: {
             '*': [
               '@atlaspack/transformer-js',
-              '@namespace/parcel-transformer-local',
+              '@namespace/atlaspack-transformer-local',
             ],
           },
         }),
@@ -242,7 +242,7 @@ describe.v2('@atlaspack/link', () => {
         overlayFS.readFileSync('package.json', 'utf8'),
         JSON.stringify({
           ['@atlaspack/transformer-js']: {},
-          ['@namespace/parcel-transformer-local']: {},
+          ['@namespace/atlaspack-transformer-local']: {},
         }),
       );
     });
@@ -444,13 +444,13 @@ describe.v2('@atlaspack/link', () => {
           transformers: {
             '*': [
               '@atlaspack/transformer-js',
-              '@namespace/parcel-transformer-local',
+              '@namespace/atlaspack-transformer-local',
             ],
           },
         }}
         package.json: ${{
           ['@atlaspack/transformer-js']: {},
-          ['@namespace/parcel-transformer-local']: {},
+          ['@namespace/atlaspack-transformer-local']: {},
         }}
         .parcel-link: ${{
           appRoot: '/app',
@@ -477,8 +477,8 @@ describe.v2('@atlaspack/link', () => {
           extends: '@namespace/parcel-config-namespace',
           transformers: {
             '*': [
-              '@namespace/parcel-transformer-js',
-              '@namespace/parcel-transformer-local',
+              '@namespace/atlaspack-transformer-js',
+              '@namespace/atlaspack-transformer-local',
             ],
           },
         }),
@@ -487,8 +487,8 @@ describe.v2('@atlaspack/link', () => {
       assert.equal(
         overlayFS.readFileSync('package.json', 'utf8'),
         JSON.stringify({
-          ['@namespace/parcel-transformer-js']: {},
-          ['@namespace/parcel-transformer-local']: {},
+          ['@namespace/atlaspack-transformer-js']: {},
+          ['@namespace/atlaspack-transformer-local']: {},
         }),
       );
     });

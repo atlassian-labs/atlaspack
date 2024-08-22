@@ -17,6 +17,7 @@ export function validatePackageName(
 
   assert(typeof pkg === 'string', `"${key}" must be a string`);
 
+  // Probably all of these need to be removed
   if (pkg.startsWith('@atlaspack')) {
     assert(
       pkg.replace(/^@atlaspack\//, '').startsWith(`${pluginType}-`),
@@ -34,8 +35,8 @@ export function validatePackageName(
     // );
   } else if (!pkg.startsWith('.')) {
     assert(
-      pkg.startsWith(`parcel-${pluginType}-`),
-      `Parcel ${pluginType} packages must be named according to "parcel-${pluginType}-{name}"`,
+      pkg.startsWith(`atlaspack-${pluginType}-`),
+      `Parcel ${pluginType} packages must be named according to "atlaspack-${pluginType}-{name}"`,
     );
   }
 }

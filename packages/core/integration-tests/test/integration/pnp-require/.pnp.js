@@ -5,7 +5,7 @@ const resolve = request => {
     return path.join(__dirname, 'zipfs', 'pnp', 'testmodule');
   } else if (request === 'pnpapi') {
     return __filename;
-  } else if (request.startsWith('@atlaspack/')) {
+  } else if (request.startsWith('@atlaspack/') || request.startsWith('@parcel/')) {
     // Use node_modules path for parcel packages so source field is used.
     return path.join(__dirname, '../../../../../../node_modules/', request);
   } else if (/^((@[^/]+\/[^/]+)|[^/]+)\/?$/.test(request)) {
