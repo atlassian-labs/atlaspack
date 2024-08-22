@@ -3,13 +3,13 @@ import type {Async} from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
 import type {StaticRunOpts} from '../RequestTracker';
 import type {AssetGroup} from '../types';
-import type {ConfigAndCachePath} from './ParcelConfigRequest';
+import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
 import nullthrows from 'nullthrows';
-import ParcelConfig from '../ParcelConfig';
+import ParcelConfig from '../AtlaspackConfig';
 import {report} from '../ReporterRunner';
 import Validation from '../Validation';
-import createParcelConfigRequest from './ParcelConfigRequest';
+import createParcelConfigRequest from './AtlaspackConfigRequest';
 import {requestTypes} from '../RequestTracker';
 
 type ValidationRequest = {|

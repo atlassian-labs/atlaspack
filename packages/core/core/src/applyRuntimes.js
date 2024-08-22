@@ -11,7 +11,7 @@ import type {
   DevDepRequest,
   ParcelOptions,
 } from './types';
-import type ParcelConfig from './ParcelConfig';
+import type ParcelConfig from './AtlaspackConfig';
 import type PluginOptions from './public/PluginOptions';
 import type {RequestResult, RunAPI} from './RequestTracker';
 

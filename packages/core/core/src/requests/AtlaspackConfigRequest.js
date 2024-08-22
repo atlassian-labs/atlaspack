@@ -33,9 +33,9 @@ import {parse} from 'json5';
 import path from 'path';
 import invariant from 'assert';
 
-import ParcelConfigSchema from '../ParcelConfig.schema';
+import ParcelConfigSchema from '../AtlaspackConfig.schema';
 import {optionsProxy} from '../utils';
-import ParcelConfig from '../ParcelConfig';
+import ParcelConfig from '../AtlaspackConfig';
 import {createBuildCache} from '../buildCache';
 import {toProjectPath} from '../projectPath';
 import {requestTypes} from '../RequestTracker';

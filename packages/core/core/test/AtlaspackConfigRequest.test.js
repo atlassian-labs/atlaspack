@@ -2,7 +2,7 @@
 import assert from 'assert';
 import nullthrows from 'nullthrows';
 import path from 'path';
-import ParcelConfig from '../src/ParcelConfig';
+import ParcelConfig from '../src/AtlaspackConfig';
 import {
   validateConfigFile,
   mergePipelines,
@@ -12,8 +12,8 @@ import {
   parseAndProcessConfig,
   resolveParcelConfig,
   processConfig,
-} from '../src/requests/ParcelConfigRequest';
-import {validatePackageName} from '../src/ParcelConfig.schema';
+} from '../src/requests/AtlaspackConfigRequest';
+import {validatePackageName} from '../src/AtlaspackConfig.schema';
 import {DEFAULT_OPTIONS, relative} from './test-utils';
 import {toProjectPath} from '../src/projectPath';
 

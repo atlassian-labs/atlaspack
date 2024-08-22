@@ -14,7 +14,7 @@ import type {
   ParcelOptions,
   InternalFileCreateInvalidation,
 } from '../types';
-import type {LoadedPlugin} from '../ParcelConfig';
+import type {LoadedPlugin} from '../AtlaspackConfig';
 import type {RequestResult, RunAPI} from '../RequestTracker';
 import type {ProjectPath} from '../projectPath';
 

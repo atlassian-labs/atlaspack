@@ -9,12 +9,12 @@ import {requestTypes} from '../RequestTracker';
 import type {Bundle} from '../types';
 import type BundleGraph from '../BundleGraph';
 import type {BundleInfo, RunPackagerRunnerResult} from '../PackagerRunner';
-import type {ConfigAndCachePath} from './ParcelConfigRequest';
+import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
 import nullthrows from 'nullthrows';
 import {runConfigRequest} from './ConfigRequest';
 import {getDevDepRequests, runDevDepRequest} from './DevDepRequest';
-import createParcelConfigRequest from './ParcelConfigRequest';
+import createParcelConfigRequest from './AtlaspackConfigRequest';
 
 type PackageRequestInput = {|
   bundleGraph: BundleGraph,

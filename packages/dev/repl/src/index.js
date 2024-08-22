@@ -37,7 +37,7 @@ import {
   workerReady,
   waitForFS,
   clientID as clientIDPromise,
-} from './parcel/';
+} from './atlaspack/';
 
 const STATUS_LOADING = Symbol('STATUS_LOADING');
 const STATUS_RUNNING = Symbol('STATUS_RUNNING');

@@ -1,12 +1,12 @@
 // @flow strict-local
 
-import ParcelConfig from '../src/ParcelConfig';
+import ParcelConfig from '../src/AtlaspackConfig';
 import assert from 'assert';
 import path from 'path';
 import sinon from 'sinon';
 import logger from '@atlaspack/logger';
 import {inputFS} from '@atlaspack/test-utils';
-import {parseAndProcessConfig} from '../src/requests/ParcelConfigRequest';
+import {parseAndProcessConfig} from '../src/requests/AtlaspackConfigRequest';
 import {DEFAULT_OPTIONS} from './test-utils';
 import {toProjectPath} from '../src/projectPath';
 

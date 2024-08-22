@@ -7,4 +7,4 @@ export type {UnlinkOptions} from './unlink';
 export {createProgram} from './cli';
 export {link} from './link';
 export {unlink} from './unlink';
-export {ParcelLinkConfig} from './ParcelLinkConfig';
+export {ParcelLinkConfig} from './AtlaspackLinkConfig';

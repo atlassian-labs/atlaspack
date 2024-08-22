@@ -13,7 +13,7 @@ import type {
 } from '@atlaspack/types';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
 import type {Entry, ParcelOptions, Target} from '../types';
-import type {ConfigAndCachePath} from './ParcelConfigRequest';
+import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
 import ThrowableDiagnostic, {
   convertSourceLocationToHighlight,
@@ -33,7 +33,7 @@ import logger from '@atlaspack/logger';
 import {createEnvironment} from '../Environment';
 import createParcelConfigRequest, {
   getCachedParcelConfig,
-} from './ParcelConfigRequest';
+} from './AtlaspackConfigRequest';
 // $FlowFixMe
 import browserslist from 'browserslist';
 import {parse} from '@mischnic/json-sourcemap';

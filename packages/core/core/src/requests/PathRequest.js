@@ -14,7 +14,7 @@ import type {
   DevDepRequest,
   ParcelOptions,
 } from '../types';
-import type {ConfigAndCachePath} from './ParcelConfigRequest';
+import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
 import ThrowableDiagnostic, {
   convertSourceLocationToHighlight,
@@ -28,10 +28,10 @@ import {normalizePath} from '@atlaspack/utils';
 import {report} from '../ReporterRunner';
 import {getPublicDependency} from '../public/Dependency';
 import PluginOptions from '../public/PluginOptions';
-import ParcelConfig from '../ParcelConfig';
+import ParcelConfig from '../AtlaspackConfig';
 import createParcelConfigRequest, {
   getCachedParcelConfig,
-} from './ParcelConfigRequest';
+} from './AtlaspackConfigRequest';
 import {invalidateOnFileCreateToInternal} from '../utils';
 import {
   fromProjectPath,
@@ -41,7 +41,7 @@ import {
 } from '../projectPath';
 import {Priority} from '../types';
 import {createBuildCache} from '../buildCache';
-import type {LoadedPlugin} from '../ParcelConfig';
+import type {LoadedPlugin} from '../AtlaspackConfig';
 import {createConfig} from '../InternalConfig';
 import {loadPluginConfig, runConfigRequest} from './ConfigRequest';
 import {

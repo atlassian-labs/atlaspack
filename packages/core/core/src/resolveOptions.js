@@ -23,7 +23,7 @@ import {
 } from '@atlaspack/utils';
 import loadDotEnv from './loadDotEnv';
 import {toProjectPath} from './projectPath';
-import {getResolveFrom} from './requests/ParcelConfigRequest';
+import {getResolveFrom} from './requests/AtlaspackConfigRequest';
 
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {ATLASPACK_VERSION} from './constants';

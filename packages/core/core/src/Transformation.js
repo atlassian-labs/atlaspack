@@ -19,7 +19,7 @@ import type {
   InternalDevDepOptions,
   Invalidations,
 } from './types';
-import type {LoadedPlugin} from './ParcelConfig';
+import type {LoadedPlugin} from './AtlaspackConfig';
 
 import path from 'path';
 import {Readable} from 'stream';
@@ -36,7 +36,7 @@ import {SOURCEMAP_EXTENSIONS} from '@atlaspack/utils';
 import {hashString} from '@atlaspack/rust';
 
 import {createDependency} from './Dependency';
-import ParcelConfig from './ParcelConfig';
+import ParcelConfig from './AtlaspackConfig';
 // TODO: eventually call path request as sub requests
 import {ResolverRunner} from './requests/PathRequest';
 import {

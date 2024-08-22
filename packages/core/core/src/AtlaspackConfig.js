@@ -31,7 +31,7 @@ import json5 from 'json5';
 
 import {globToRegex} from '@atlaspack/utils';
 import {basename} from 'path';
-import loadPlugin from './loadParcelPlugin';
+import loadPlugin from './loadAtlaspackPlugin';
 import {
   type ProjectPath,
   fromProjectPath,

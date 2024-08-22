@@ -3,7 +3,7 @@ import {Graph} from '@atlaspack/graph';
 import {registerSerializableClass} from './serializer';
 import AssetGraph from './AssetGraph';
 import BundleGraph from './BundleGraph';
-import ParcelConfig from './ParcelConfig';
+import ParcelConfig from './AtlaspackConfig';
 import {RequestGraph} from './RequestTracker';
 import Config from './public/Config';
 import packageJson from '../package.json';

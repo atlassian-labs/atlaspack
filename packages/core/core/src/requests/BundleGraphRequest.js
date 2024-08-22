@@ -2,7 +2,7 @@
 
 import type {Async, Bundle as IBundle, Namer} from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
-import type ParcelConfig, {LoadedPlugin} from '../ParcelConfig';
+import type ParcelConfig, {LoadedPlugin} from '../AtlaspackConfig';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
 import type {
   Asset,
@@ -12,7 +12,7 @@ import type {
   DevDepRequest,
   ParcelOptions,
 } from '../types';
-import type {ConfigAndCachePath} from './ParcelConfigRequest';
+import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
 import invariant from 'assert';
 import assert from 'assert';
@@ -34,7 +34,7 @@ import {ATLASPACK_VERSION, OPTION_CHANGE} from '../constants';
 import {assertSignalNotAborted, optionsProxy} from '../utils';
 import createParcelConfigRequest, {
   getCachedParcelConfig,
-} from './ParcelConfigRequest';
+} from './AtlaspackConfigRequest';
 import {
   createDevDependency,
   getDevDepRequests,

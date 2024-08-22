@@ -1,6 +1,6 @@
 // @flow
 import type {FS, REPLOptions} from '../utils';
-import type {BundleOutput} from './ParcelWorker';
+import type {BundleOutput} from './AtlaspackWorker';
 
 import {proxy, wrap, transfer} from 'comlink';
 

@@ -17,6 +17,6 @@ export {
   createWorkerFarm,
   INTERNAL_RESOLVE,
   INTERNAL_TRANSFORM,
-} from './Parcel';
+} from './Atlaspack';
 
-export * from './parcel-v3';
+export * from './atlaspack-v3';

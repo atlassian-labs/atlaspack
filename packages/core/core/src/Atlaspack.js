@@ -25,21 +25,21 @@ import BundleGraph from './public/BundleGraph';
 import WorkerFarm from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 import {BuildAbortError} from './utils';
-import {loadParcelConfig} from './requests/ParcelConfigRequest';
+import {loadParcelConfig} from './requests/AtlaspackConfigRequest';
 import ReporterRunner from './ReporterRunner';
 import dumpGraphToGraphViz from './dumpGraphToGraphViz';
 import resolveOptions from './resolveOptions';
 import {ValueEmitter} from '@atlaspack/events';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {PromiseQueue} from '@atlaspack/utils';
-import ParcelConfig from './ParcelConfig';
+import ParcelConfig from './AtlaspackConfig';
 import logger from '@atlaspack/logger';
 import RequestTracker, {
   getWatcherOptions,
   requestGraphEdgeTypes,
 } from './RequestTracker';
 import createValidationRequest from './requests/ValidationRequest';
-import createParcelBuildRequest from './requests/ParcelBuildRequest';
+import createParcelBuildRequest from './requests/AtlaspackBuildRequest';
 import createAssetRequest from './requests/AssetRequest';
 import createPathRequest from './requests/PathRequest';
 import {createEnvironment} from './Environment';
@@ -58,7 +58,7 @@ import {
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags} from '@atlaspack/feature-flags';
-import {ParcelV3, toFileSystemV3} from './parcel-v3';
+import {ParcelV3, toFileSystemV3} from './atlaspack-v3';
 
 registerCoreWithSerializer();
 

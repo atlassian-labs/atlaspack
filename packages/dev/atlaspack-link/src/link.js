@@ -3,7 +3,7 @@
 import type {CmdOptions} from './utils';
 import type {FileSystem} from '@atlaspack/fs';
 
-import {ParcelLinkConfig} from './ParcelLinkConfig';
+import {ParcelLinkConfig} from './AtlaspackLinkConfig';
 import {
   findParcelPackages,
   mapNamespacePackageAliases,

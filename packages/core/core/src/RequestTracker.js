@@ -37,7 +37,7 @@ import {
   STARTUP,
   ERROR,
 } from './constants';
-import type {ParcelV3} from './parcel-v3/ParcelV3';
+import type {ParcelV3} from './atlaspack-v3/AtlaspackV3';
 import {
   type ProjectPath,
   fromProjectPathRelative,
@@ -54,8 +54,8 @@ import type {WriteBundlesRequestResult} from './requests/WriteBundlesRequest';
 import type {WriteBundleRequestResult} from './requests/WriteBundleRequest';
 import type {TargetRequestResult} from './requests/TargetRequest';
 import type {PathRequestResult} from './requests/PathRequest';
-import type {ParcelConfigRequestResult} from './requests/ParcelConfigRequest';
-import type {ParcelBuildRequestResult} from './requests/ParcelBuildRequest';
+import type {ParcelConfigRequestResult} from './requests/AtlaspackConfigRequest';
+import type {ParcelBuildRequestResult} from './requests/AtlaspackBuildRequest';
 import type {EntryRequestResult} from './requests/EntryRequest';
 import type {BundleGraphResult} from './requests/BundleGraphRequest';
 import {deserialize, serialize} from './serializer';

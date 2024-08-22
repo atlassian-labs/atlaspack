@@ -6,7 +6,7 @@ import WorkerFarm from '@atlaspack/workers';
 import sinon from 'sinon';
 import assert from 'assert';
 import path from 'path';
-import Parcel, {createWorkerFarm} from '../src/Parcel';
+import Parcel, {createWorkerFarm} from '../src/Atlaspack';
 
 describe('Parcel', function () {
   this.timeout(75000);

@@ -8,13 +8,13 @@ import type {
   AssetRequestResult,
   TransformationRequest,
 } from '../types';
-import type {ConfigAndCachePath} from './ParcelConfigRequest';
+import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 import type {TransformationResult} from '../Transformation';
 
 import nullthrows from 'nullthrows';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import {hashString} from '@atlaspack/rust';
-import createParcelConfigRequest from './ParcelConfigRequest';
+import createParcelConfigRequest from './AtlaspackConfigRequest';
 import {runDevDepRequest} from './DevDepRequest';
 import {runConfigRequest} from './ConfigRequest';
 import {fromProjectPath, fromProjectPathRelative} from '../projectPath';

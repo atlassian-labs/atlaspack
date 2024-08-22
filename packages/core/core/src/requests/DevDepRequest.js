@@ -4,7 +4,7 @@ import type {
   SemverRange,
   Invalidations,
 } from '@atlaspack/types';
-import type ParcelConfig from '../ParcelConfig';
+import type ParcelConfig from '../AtlaspackConfig';
 import type {
   DevDepRequest,
   ParcelOptions,

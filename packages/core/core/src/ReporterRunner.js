@@ -3,7 +3,7 @@
 import type {ReporterEvent, Reporter} from '@atlaspack/types';
 import type {WorkerApi} from '@atlaspack/workers';
 import type {Bundle as InternalBundle, ParcelOptions} from './types';
-import type {LoadedPlugin} from './ParcelConfig';
+import type {LoadedPlugin} from './AtlaspackConfig';
 
 import invariant from 'assert';
 import {
