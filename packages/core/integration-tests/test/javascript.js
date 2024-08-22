@@ -6390,37 +6390,31 @@ describe('javascript', function () {
       });
     });
 
-    it.v2(
-      `ignores missing unused import specifiers in source assets ${
-        shouldScopeHoist ? 'with' : 'without'
-      } scope-hoisting`,
-      async function () {
-        let b = await bundle(
-          path.join(__dirname, 'integration/js-unused-import-specifier/a.js'),
-          options,
-        );
-        let res = await run(b, null, {require: false});
-        assert.equal(res.output, 123);
-      },
-    );
+    it(`ignores missing unused import specifiers in source assets ${
+      shouldScopeHoist ? 'with' : 'without'
+    } scope-hoisting`, async function () {
+      let b = await bundle(
+        path.join(__dirname, 'integration/js-unused-import-specifier/a.js'),
+        options,
+      );
+      let res = await run(b, null, {require: false});
+      assert.equal(res.output, 123);
+    });
 
-    it.v2(
-      `ignores missing unused import specifiers in node-modules ${
-        shouldScopeHoist ? 'with' : 'without'
-      } scope-hoisting`,
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/js-unused-import-specifier-node-modules/a.js',
-          ),
-          options,
-        );
+    it(`ignores missing unused import specifiers in node-modules ${
+      shouldScopeHoist ? 'with' : 'without'
+    } scope-hoisting`, async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/js-unused-import-specifier-node-modules/a.js',
+        ),
+        options,
+      );
 
-        let res = await run(b, null, {require: false});
-        assert.equal(res.output, 123);
-      },
-    );
+      let res = await run(b, null, {require: false});
+      assert.equal(res.output, 123);
+    });
 
     it.v2(
       `duplicate assets should share module scope  ${
