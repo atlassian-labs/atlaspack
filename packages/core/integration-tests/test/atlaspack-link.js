@@ -21,7 +21,7 @@ function createProgram(opts: ProgramOptions) {
 
 // This test suite has been broken since the rename but it's not obvious why.
 // Parking for later.
-describe.v2('@atlaspack/link', () => {
+describe.v2.only('@atlaspack/link', () => {
   let _cwd;
   let _stdout;
 
@@ -105,7 +105,7 @@ describe.v2('@atlaspack/link', () => {
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
         path.resolve(__dirname, '../../cli/src/bin.js'),
       );
     });
@@ -143,7 +143,7 @@ describe.v2('@atlaspack/link', () => {
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
         path.resolve(overlayFS.cwd(), '../package-root/core/cli/src/bin.js'),
       );
     });
@@ -164,7 +164,7 @@ describe.v2('@atlaspack/link', () => {
       assert(overlayFS.existsSync('.atlaspack-link'));
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
         path.resolve(__dirname, '../../cli/src/bin.js'),
       );
 
@@ -189,7 +189,7 @@ describe.v2('@atlaspack/link', () => {
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
         path.resolve(__dirname, '../../cli/src/bin.js'),
       );
     });
@@ -272,7 +272,7 @@ describe.v2('@atlaspack/link', () => {
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
         path.resolve(__dirname, '../../cli/src/bin.js'),
       );
 
@@ -305,7 +305,7 @@ describe.v2('@atlaspack/link', () => {
         path.resolve('/app/node_modules/@atlaspack/cli'),
       );
 
-      assert(!overlayFS.existsSync('node_modules/.bin/parcel'));
+      assert(!overlayFS.existsSync('node_modules/.bin/atlaspack'));
     });
   });
 
@@ -366,7 +366,7 @@ describe.v2('@atlaspack/link', () => {
         }}`;
 
       assert(overlayFS.existsSync('.atlaspack-link'));
-      assert(overlayFS.existsSync('node_modules/.bin/parcel'));
+      assert(overlayFS.existsSync('node_modules/.bin/atlaspack'));
       assert(overlayFS.existsSync('node_modules/@atlaspack/cli'));
       assert(overlayFS.existsSync('node_modules/@atlaspack/core'));
 
@@ -374,7 +374,7 @@ describe.v2('@atlaspack/link', () => {
       await cli('unlink');
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
-      assert(!overlayFS.existsSync('node_modules/.bin/parcel'));
+      assert(!overlayFS.existsSync('node_modules/.bin/atlaspack'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/cli'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/core'));
     });
@@ -388,7 +388,7 @@ describe.v2('@atlaspack/link', () => {
           nodeModulesGlobs: ['node_modules'],
           namespace: '@atlaspack',
         }}
-        node_modules/.bin/parcel -> package-root/core/cli/src/bin.js
+        node_modules/.bin/atlaspack -> package-root/core/cli/src/bin.js
         node_modules/@atlaspack/cli -> package-root/core/cli
         node_modules/@atlaspack/core -> package-root/core/core
       `;
@@ -405,7 +405,7 @@ describe.v2('@atlaspack/link', () => {
       assert(!overlayFS.existsSync('.atlaspack-link'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/cli'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/core'));
-      assert(!overlayFS.existsSync('node_modules/.bin/parcel'));
+      assert(!overlayFS.existsSync('node_modules/.bin/atlaspack'));
     });
 
     it('unlinks with a custom namespace', async () => {
@@ -433,7 +433,7 @@ describe.v2('@atlaspack/link', () => {
       assert(!overlayFS.existsSync('.atlaspack-link'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/core'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/cli'));
-      assert(!overlayFS.existsSync('node_modules/.bin/parcel'));
+      assert(!overlayFS.existsSync('node_modules/.bin/atlaspack'));
       assert(!overlayFS.existsSync('node_modules/@namespace/atlaspack-core'));
       assert(!overlayFS.existsSync('node_modules/@namespace/atlaspack-cli'));
     });
@@ -522,7 +522,7 @@ describe.v2('@atlaspack/link', () => {
       assert(!overlayFS.existsSync('.atlaspack-link'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/core'));
       assert(!overlayFS.existsSync('node_modules/parcel'));
-      assert(!overlayFS.existsSync('node_modules/.bin/parcel'));
+      assert(!overlayFS.existsSync('node_modules/.bin/atlaspack'));
       assert(!overlayFS.existsSync('tools/test/node_modules/parcel'));
       assert(!overlayFS.existsSync('tools/test2/node_modules/@atlaspack/core'));
     });
@@ -558,7 +558,7 @@ describe.v2('@atlaspack/link', () => {
       );
 
       assert.equal(
-        overlayFS.realpathSync('node_modules/.bin/parcel'),
+        overlayFS.realpathSync('node_modules/.bin/atlaspack'),
         path.resolve(__dirname, '../../cli/src/bin.js'),
       );
     });

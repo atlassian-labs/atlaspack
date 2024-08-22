@@ -47,6 +47,7 @@ export async function link(
   // --------------------------------------------------------------------------------
 
   let parcelPackages = await findParcelPackages(config.fs, packageRoot);
+  console.log(parcelPackages);
 
   // Step 2: Delete all official packages (`@atlaspack/*`) from node_modules
   // --------------------------------------------------------------------------------
@@ -94,7 +95,7 @@ export async function link(
       await fsWrite(
         parcelConfigPath,
         parcelConfig.replace(
-          new RegExp(`"(${namespace}/parcel-[^"]*)"`, 'g'),
+          new RegExp(`"(${namespace}/atlaspack-[^"]*)"`, 'g'),
           (_, match) => `"${namespacePackages.get(match) ?? match}"`,
         ),
         opts,
@@ -111,7 +112,7 @@ export async function link(
       await fsWrite(
         rootPkgPath,
         rootPkg.replace(
-          new RegExp(`"(${namespace}/parcel-[^"]*)"(\\s*:\\s*{)`, 'g'),
+          new RegExp(`"(${namespace}/atlaspack-[^"]*)"(\\s*:\\s*{)`, 'g'),
           (_, match, suffix) =>
             `"${namespacePackages.get(match) ?? match}"${suffix}`,
         ),
