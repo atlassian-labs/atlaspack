@@ -3232,9 +3232,9 @@ describe('javascript', function () {
 
     assertBundles(b, [
       {
-        name: 'parcel.js',
+        name: 'atlaspack.js',
         assets: [
-          'parcel.js',
+          'atlaspack.js',
           'bundle-url.js',
           'cacheLoader.js',
           'js-loader.js',
