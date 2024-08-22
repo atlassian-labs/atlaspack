@@ -105,7 +105,7 @@ module.exports = new Optimizer<empty, BundleConfig>({
       }
     } catch (err) {
       logger.warn({
-        origin: 'parcel-optimizer-experimental-inline-requires',
+        origin: 'atlaspack-optimizer-experimental-inline-requires',
         message: `Unable to optimise requires for ${bundle.name}: ${err.message}`,
         stack: err.stack,
       });

@@ -465,7 +465,7 @@ async function normalizeOptions(
       throw new ThrowableDiagnostic({
         diagnostic: {
           message: `Could not get available port: ${err.message}`,
-          origin: 'parcel',
+          origin: 'atlaspack',
           stack: err.stack,
         },
       });
