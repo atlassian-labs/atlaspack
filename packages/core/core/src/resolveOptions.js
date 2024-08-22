@@ -7,7 +7,7 @@ import type {
   InitialServerOptions,
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
-import type {ParcelOptions} from './types';
+import type {AtlaspackOptions} from './types';
 
 import path from 'path';
 import {hashString} from '@atlaspack/rust';
@@ -46,7 +46,7 @@ function compileGlobs(globs: string[]): RegExp[] {
 
 export default async function resolveOptions(
   initialOptions: InitialAtlaspackOptions,
-): Promise<ParcelOptions> {
+): Promise<AtlaspackOptions> {
   let inputFS = initialOptions.inputFS || new NodeFS();
   let outputFS = initialOptions.outputFS || new NodeFS();
 

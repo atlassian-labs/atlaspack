@@ -9,7 +9,7 @@ import type {
   Bundle as InternalBundle,
   Config,
   DevDepRequest,
-  ParcelOptions,
+  AtlaspackOptions,
 } from './types';
 import type ParcelConfig from './AtlaspackConfig';
 import type PluginOptions from './public/PluginOptions';
@@ -73,7 +73,7 @@ export default async function applyRuntimes<TResult: RequestResult>({
 }: {|
   bundleGraph: InternalBundleGraph,
   config: ParcelConfig,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   optionsRef: SharedReference,
   pluginOptions: PluginOptions,
   api: RunAPI<TResult>,

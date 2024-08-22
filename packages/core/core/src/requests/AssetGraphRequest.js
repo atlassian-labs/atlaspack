@@ -9,7 +9,7 @@ import type {
   AssetRequestInput,
   Dependency,
   Entry,
-  ParcelOptions,
+  AtlaspackOptions,
   Target,
 } from '../types';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
@@ -111,7 +111,7 @@ export class AssetGraphBuilder {
   changedAssetsPropagation: Set<string>;
   prevChangedAssetsPropagation: ?Set<string>;
   optionsRef: SharedReference;
-  options: ParcelOptions;
+  options: AtlaspackOptions;
   api: RunAPI<AssetGraphRequestResult>;
   name: string;
   cacheKey: string;

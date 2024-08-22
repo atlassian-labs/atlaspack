@@ -11,7 +11,7 @@ import type {StaticRunOpts} from '../RequestTracker';
 import type {
   ExtendableParcelConfigPipeline,
   PureParcelConfigPipeline,
-  ParcelOptions,
+  AtlaspackOptions,
   ProcessedParcelConfig,
 } from '../types';
 
@@ -117,7 +117,7 @@ export default function createAtlaspackConfigRequest(): AtlaspackConfigRequest {
 const parcelConfigCache = createBuildCache();
 export function getCachedParcelConfig(
   result: ConfigAndCachePath,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): ParcelConfig {
   let {config: processedConfig, cachePath} = result;
   let config = parcelConfigCache.get(cachePath);
@@ -132,7 +132,7 @@ export function getCachedParcelConfig(
 }
 
 export async function loadParcelConfig(
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Promise<{|...ParcelConfigChain, usedDefault: boolean|}> {
   let parcelConfig = await resolveParcelConfig(options);
 
@@ -144,7 +144,7 @@ export async function loadParcelConfig(
 }
 
 export async function resolveParcelConfig(
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Promise<?{|...ParcelConfigChain, usedDefault: boolean|}> {
   let resolveFrom = getResolveFrom(options.inputFS, options.projectRoot);
   let configPath =
@@ -206,7 +206,7 @@ export async function resolveParcelConfig(
 
 export function create(
   config: ResolvedParcelConfigFile,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Promise<ParcelConfigChain> {
   return processConfigChain(config, config.filePath, options);
 }
@@ -215,7 +215,7 @@ export function create(
 export async function parseAndProcessConfig(
   configPath: FilePath,
   contents: string,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Promise<ParcelConfigChain> {
   let config: RawParcelConfig;
   try {
@@ -251,7 +251,7 @@ export async function parseAndProcessConfig(
 }
 
 function processPipeline(
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   pipeline: ?Array<PackageName>,
   keyPath: string,
   filePath: FilePath,
@@ -285,7 +285,7 @@ async function processMap(
   map: ?ConfigMap<any, any>,
   keyPath: string,
   filePath: FilePath,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   // $FlowFixMe
 ): Promise<ConfigMap<any, any> | typeof undefined> {
   if (!map) return undefined;
@@ -335,7 +335,7 @@ async function processMap(
 
 export async function processConfig(
   configFile: ResolvedParcelConfigFile,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Promise<ProcessedParcelConfig> {
   return {
     filePath: toProjectPath(options.projectRoot, configFile.filePath),
@@ -420,7 +420,7 @@ export async function processConfig(
 export async function processConfigChain(
   configFile: RawParcelConfig | ResolvedParcelConfigFile,
   filePath: FilePath,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Promise<ParcelConfigChain> {
   // Validate config...
   let relativePath = path.relative(options.inputFS.cwd(), filePath);
@@ -484,7 +484,7 @@ export async function resolveExtends(
   ext: string,
   configPath: FilePath,
   extendsKey: string,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Promise<FilePath> {
   if (ext.startsWith('.')) {
     return path.resolve(path.dirname(configPath), ext);
@@ -532,7 +532,7 @@ async function processExtendedConfig(
   extendsKey: string,
   extendsSpecifier: string,
   resolvedExtendedConfigPath: FilePath,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Promise<ParcelConfigChain> {
   let contents;
   try {

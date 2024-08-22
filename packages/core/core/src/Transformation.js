@@ -15,7 +15,7 @@ import type {
   TransformationRequest,
   Config,
   DevDepRequest,
-  ParcelOptions,
+  AtlaspackOptions,
   InternalDevDepOptions,
   Invalidations,
 } from './types';
@@ -78,7 +78,7 @@ type PostProcessFunc = (
 ) => Promise<Array<UncommittedAsset> | null>;
 
 export type TransformationOpts = {|
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   config: ParcelConfig,
   request: TransformationRequest,
   workerApi: WorkerApi,
@@ -97,7 +97,7 @@ export default class Transformation {
   configs: Map<string, Config>;
   devDepRequests: Map<string, DevDepRequest>;
   pluginDevDeps: Array<InternalDevDepOptions>;
-  options: ParcelOptions;
+  options: AtlaspackOptions;
   pluginOptions: PluginOptions;
   workerApi: WorkerApi;
   parcelConfig: ParcelConfig;
@@ -722,7 +722,7 @@ export default class Transformation {
 type Pipeline = {|
   id: string,
   transformers: Array<TransformerWithNameAndConfig>,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   pluginOptions: PluginOptions,
   workerApi: WorkerApi,
   postProcess?: PostProcessFunc,

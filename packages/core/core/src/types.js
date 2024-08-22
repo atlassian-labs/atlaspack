@@ -268,7 +268,7 @@ export type DevDepRequest = {|
 
 declare type GlobPattern = string;
 
-export type ParcelOptions = {|
+export type AtlaspackOptions = {|
   entries: Array<ProjectPath>,
   config?: DependencySpecifier,
   defaultConfig?: DependencySpecifier,
@@ -321,6 +321,7 @@ export type ParcelOptions = {|
 
   +featureFlags: FeatureFlags,
 |};
+export type ParcelOptions = AtlaspackOptions;
 
 export type AssetNode = {|
   id: ContentKey,

@@ -12,7 +12,7 @@ import type {
   OutputFormat,
 } from '@atlaspack/types';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
-import type {Entry, ParcelOptions, Target} from '../types';
+import type {Entry, AtlaspackOptions, Target} from '../types';
 import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
 import ThrowableDiagnostic, {
@@ -189,10 +189,10 @@ type TargetKeyInfo =
 export class TargetResolver {
   fs: FileSystem;
   api: RunAPI<Array<Target>>;
-  options: ParcelOptions;
+  options: AtlaspackOptions;
   targetInfo: Map<string, TargetInfo>;
 
-  constructor(api: RunAPI<Array<Target>>, options: ParcelOptions) {
+  constructor(api: RunAPI<Array<Target>>, options: AtlaspackOptions) {
     this.api = api;
     this.fs = options.inputFS;
     this.options = options;
@@ -1400,7 +1400,7 @@ function assertNoDuplicateTargets(options, targets, pkgFilePath, pkgContents) {
   }
 }
 
-function normalizeSourceMap(options: ParcelOptions, sourceMap) {
+function normalizeSourceMap(options: AtlaspackOptions, sourceMap) {
   if (options.defaultTargetOptions.sourceMaps) {
     if (typeof sourceMap === 'boolean') {
       return sourceMap ? {} : undefined;
@@ -1415,7 +1415,7 @@ function normalizeSourceMap(options: ParcelOptions, sourceMap) {
 function assertTargetsAreNotEntries(
   targets: Array<Target>,
   input: Entry,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ) {
   for (const target of targets) {
     if (

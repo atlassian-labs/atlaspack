@@ -1,7 +1,7 @@
 // @flow strict-local
 
 import type {WorkerApi} from '@atlaspack/workers';
-import type {AssetGroup, ParcelOptions, ReportFn} from './types';
+import type {AssetGroup, AtlaspackOptions, ReportFn} from './types';
 import type {Validator, ValidateResult} from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 
@@ -26,7 +26,7 @@ export type ValidationOpts = {|
    * If falsy, it will run validators that implement the one-asset-at-a-time "validate" method.
    */
   dedicatedThread?: boolean,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   requests: AssetGroup[],
   report: ReportFn,
   workerApi?: WorkerApi,
@@ -36,8 +36,8 @@ export default class Validation {
   allAssets: {[validatorName: string]: UncommittedAsset[], ...} = {};
   allValidators: {[validatorName: string]: Validator, ...} = {};
   dedicatedThread: boolean;
-  impactfulOptions: $Shape<ParcelOptions>;
-  options: ParcelOptions;
+  impactfulOptions: $Shape<AtlaspackOptions>;
+  options: AtlaspackOptions;
   parcelConfig: ParcelConfig;
   report: ReportFn;
   requests: AssetGroup[];

@@ -2,7 +2,7 @@
 
 import type {
   Bundle,
-  ParcelOptions,
+  AtlaspackOptions,
   ProcessedParcelConfig,
   RequestInvalidation,
 } from './types';
@@ -46,12 +46,12 @@ registerCoreWithSerializer();
 // Remove the workerApi type from the TransformationOpts and ValidationOpts types:
 // https://github.com/facebook/flow/issues/2835
 type WorkerTransformationOpts = {|
-  ...$Diff<TransformationOpts, {|workerApi: mixed, options: ParcelOptions|}>,
+  ...$Diff<TransformationOpts, {|workerApi: mixed, options: AtlaspackOptions|}>,
   optionsRef: SharedReference,
   configCachePath: string,
 |};
 type WorkerValidationOpts = {|
-  ...$Diff<ValidationOpts, {|workerApi: mixed, options: ParcelOptions|}>,
+  ...$Diff<ValidationOpts, {|workerApi: mixed, options: AtlaspackOptions|}>,
   optionsRef: SharedReference,
   configCachePath: string,
 |};
@@ -64,7 +64,7 @@ function loadOptions(ref, workerApi) {
     ((workerApi.getSharedReference(
       ref,
       // $FlowFixMe
-    ): any): ParcelOptions),
+    ): any): AtlaspackOptions),
   );
 }
 

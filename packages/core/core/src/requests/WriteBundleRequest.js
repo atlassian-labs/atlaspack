@@ -5,7 +5,7 @@ import type {ContentKey} from '@atlaspack/graph';
 import type {Async, FilePath, Compressor} from '@atlaspack/types';
 
 import type {RunAPI, StaticRunOpts} from '../RequestTracker';
-import type {Bundle, PackagedBundleInfo, ParcelOptions} from '../types';
+import type {Bundle, PackagedBundleInfo, AtlaspackOptions} from '../types';
 import type BundleGraph from '../BundleGraph';
 import type {BundleInfo} from '../PackagerRunner';
 import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
@@ -204,7 +204,7 @@ async function writeFiles(
   inputStream: stream$Readable,
   info: BundleInfo,
   hashRefToNameHash: Map<string, string>,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   config: ParcelConfig,
   outputFS: FileSystem,
   filePath: ProjectPath,
@@ -243,7 +243,7 @@ async function writeFiles(
 async function runCompressor(
   compressor: LoadedPlugin<Compressor>,
   stream: stream$Readable,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   outputFS: FileSystem,
   filePath: FilePath,
   writeOptions: ?FileOptions,

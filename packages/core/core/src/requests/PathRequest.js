@@ -12,7 +12,7 @@ import type {
   Config,
   Dependency,
   DevDepRequest,
-  ParcelOptions,
+  AtlaspackOptions,
 } from '../types';
 import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
@@ -146,7 +146,7 @@ async function run({input, api, options}): Promise<PathRequestResult> {
 
 type ResolverRunnerOpts = {|
   config: ParcelConfig,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   previousDevDeps: Map<string, string>,
 |};
 
@@ -162,7 +162,7 @@ const configCache = createBuildCache();
 
 export class ResolverRunner {
   config: ParcelConfig;
-  options: ParcelOptions;
+  options: AtlaspackOptions;
   pluginOptions: PluginOptions;
   previousDevDeps: Map<string, string>;
   devDepRequests: Map<string, DevDepRequest>;

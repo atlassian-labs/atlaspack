@@ -12,7 +12,7 @@ import type {
   ParcelResolveResult,
 } from '@atlaspack/types';
 import path from 'path';
-import type {ParcelOptions} from './types';
+import type {AtlaspackOptions} from './types';
 // eslint-disable-next-line no-unused-vars
 import type {FarmOptions, SharedReference} from '@atlaspack/workers';
 import type {Diagnostic} from '@atlaspack/diagnostic';
@@ -74,7 +74,7 @@ export default class Parcel {
   #initialOptions /*: InitialAtlaspackOptions */;
   #parcelV3: AtlaspackV3;
   #reporterRunner /*: ReporterRunner*/;
-  #resolvedOptions /*: ?ParcelOptions*/ = null;
+  #resolvedOptions /*: ?AtlaspackOptions*/ = null;
   #optionsRef /*: SharedReference */;
   #watchAbortController /*: AbortController*/;
   #watchQueue /*: PromiseQueue<?BuildEvent>*/ = new PromiseQueue<?BuildEvent>({
@@ -117,7 +117,7 @@ export default class Parcel {
       logger.warn(e);
     }
 
-    let resolvedOptions: ParcelOptions = await resolveOptions(
+    let resolvedOptions: AtlaspackOptions = await resolveOptions(
       this.#initialOptions,
     );
     this.#resolvedOptions = resolvedOptions;
@@ -496,7 +496,7 @@ export default class Parcel {
   }
 
   // This is mainly for integration tests and it not public api!
-  _getResolvedParcelOptions(): ParcelOptions {
+  _getResolvedParcelOptions(): AtlaspackOptions {
     return nullthrows(
       this.#resolvedOptions,
       'Resolved options is null, please let parcel initialize before accessing this.',

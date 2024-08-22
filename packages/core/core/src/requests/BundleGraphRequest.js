@@ -10,7 +10,7 @@ import type {
   Bundle as InternalBundle,
   Config,
   DevDepRequest,
-  ParcelOptions,
+  AtlaspackOptions,
 } from '../types';
 import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
@@ -172,7 +172,7 @@ export default function createBundleGraphRequest(
 }
 
 class BundlerRunner {
-  options: ParcelOptions;
+  options: AtlaspackOptions;
   optionsRef: SharedReference;
   config: ParcelConfig;
   pluginOptions: PluginOptions;

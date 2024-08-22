@@ -17,7 +17,7 @@ import type {
   RequestInvalidation,
   Dependency,
   Environment,
-  ParcelOptions,
+  AtlaspackOptions,
 } from './types';
 
 import {Readable} from 'stream';
@@ -211,7 +211,7 @@ const hashCache = createBuildCache();
 
 export async function getInvalidationHash(
   invalidations: Array<RequestInvalidation>,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Promise<string> {
   if (invalidations.length === 0) {
     return '';

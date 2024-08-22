@@ -11,16 +11,16 @@ import type {
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
 import type {PackageManager} from '@atlaspack/package-manager';
-import type {ParcelOptions} from '../types';
+import type {AtlaspackOptions} from '../types';
 import {type FeatureFlags} from '@atlaspack/feature-flags';
 
-let parcelOptionsToPluginOptions: WeakMap<ParcelOptions, PluginOptions> =
+let parcelOptionsToPluginOptions: WeakMap<AtlaspackOptions, PluginOptions> =
   new WeakMap();
 
 export default class PluginOptions implements IPluginOptions {
-  #options /*: ParcelOptions */;
+  #options /*: AtlaspackOptions */;
 
-  constructor(options: ParcelOptions): PluginOptions {
+  constructor(options: AtlaspackOptions): PluginOptions {
     let existing = parcelOptionsToPluginOptions.get(options);
     if (existing != null) {
       return existing;

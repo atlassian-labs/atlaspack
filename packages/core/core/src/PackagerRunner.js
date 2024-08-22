@@ -14,7 +14,7 @@ import type {
   Bundle as InternalBundle,
   Config,
   DevDepRequest,
-  ParcelOptions,
+  AtlaspackOptions,
   ReportFn,
   RequestInvalidation,
 } from './types';
@@ -65,7 +65,7 @@ import {tracer, PluginTracer} from '@atlaspack/profiler';
 
 type Opts = {|
   config: ParcelConfig,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   report: ReportFn,
   previousDevDeps: Map<string, string>,
   previousInvalidations: Array<RequestInvalidation>,
@@ -102,7 +102,7 @@ const pluginConfigs = createBuildCache();
 
 export default class PackagerRunner {
   config: ParcelConfig;
-  options: ParcelOptions;
+  options: AtlaspackOptions;
   pluginOptions: PluginOptions;
   distDir: FilePath;
   distExists: Set<FilePath>;

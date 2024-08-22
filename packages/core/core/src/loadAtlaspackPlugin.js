@@ -5,7 +5,7 @@ import type {
   Semver,
   SemverRange,
 } from '@atlaspack/types';
-import type {ParcelOptions} from './types';
+import type {AtlaspackOptions} from './types';
 
 import path from 'path';
 import semver from 'semver';
@@ -30,7 +30,7 @@ export default async function loadPlugin<T>(
   pluginName: PackageName,
   configPath: FilePath,
   keyPath?: string,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 ): Promise<{|
   plugin: T,
   version: Semver,

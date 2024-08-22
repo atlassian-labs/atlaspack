@@ -61,7 +61,7 @@ import type {BundleGraphResult} from './requests/BundleGraphRequest';
 import {deserialize, serialize} from './serializer';
 import type {
   AssetRequestResult,
-  ParcelOptions,
+  AtlaspackOptions,
   RequestInvalidation,
   InternalFileCreateInvalidation,
   InternalGlob,
@@ -241,7 +241,7 @@ export type StaticRunOpts<TResult> = {|
   api: RunAPI<TResult>,
   farm: WorkerFarm,
   invalidateReason: InvalidateReason,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   rustParcel: ?AtlaspackV3,
 |};
 
@@ -476,7 +476,7 @@ export class RequestGraph extends ContentGraph<
     }
   }
 
-  invalidateOptionNodes(options: ParcelOptions) {
+  invalidateOptionNodes(options: AtlaspackOptions) {
     for (let nodeId of this.optionNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === OPTION);
@@ -871,7 +871,7 @@ export class RequestGraph extends ContentGraph<
 
   async respondToFSEvents(
     events: Array<Event>,
-    options: ParcelOptions,
+    options: AtlaspackOptions,
     threshold: number,
   ): Async<boolean> {
     let didInvalidate = false;
@@ -1072,7 +1072,7 @@ export class RequestGraph extends ContentGraph<
 export default class RequestTracker {
   graph: RequestGraph;
   farm: WorkerFarm;
-  options: ParcelOptions;
+  options: AtlaspackOptions;
   rustParcel: ?AtlaspackV3;
   signal: ?AbortSignal;
   stats: Map<RequestType, number> = new Map();
@@ -1085,7 +1085,7 @@ export default class RequestTracker {
   }: {|
     graph?: RequestGraph,
     farm: WorkerFarm,
-    options: ParcelOptions,
+    options: AtlaspackOptions,
     rustParcel?: AtlaspackV3,
   |}) {
     this.graph = graph || new RequestGraph();
@@ -1529,7 +1529,7 @@ export default class RequestTracker {
     rustParcel,
   }: {|
     farm: WorkerFarm,
-    options: ParcelOptions,
+    options: AtlaspackOptions,
     rustParcel?: AtlaspackV3,
   |}): Async<RequestTracker> {
     let graph = await loadRequestGraph(options);
@@ -1542,7 +1542,7 @@ export function getWatcherOptions({
   cacheDir,
   watchDir,
   watchBackend,
-}: ParcelOptions): WatcherOptions {
+}: AtlaspackOptions): WatcherOptions {
   const vcsDirs = ['.git', '.hg'];
   const uniqueDirs = [...new Set([...watchIgnore, ...vcsDirs, cacheDir])];
   const ignore = uniqueDirs.map(dir => path.resolve(watchDir, dir));
@@ -1666,7 +1666,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
   return new RequestGraph();
 }
 function logErrorOnBailout(
-  options: ParcelOptions,
+  options: AtlaspackOptions,
   snapshotPath: string,
   e: Error,
 ): void {

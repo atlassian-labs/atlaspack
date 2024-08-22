@@ -21,7 +21,7 @@ import type {
   ParcelPluginNode,
   PureParcelConfigPipeline,
   ExtendableParcelConfigPipeline,
-  ParcelOptions,
+  AtlaspackOptions,
 } from './types';
 import ThrowableDiagnostic, {
   md,
@@ -43,7 +43,7 @@ type GlobMap<T> = {[Glob]: T, ...};
 type SerializedParcelConfig = {|
   $$raw: boolean,
   config: ProcessedParcelConfig,
-  options: ParcelOptions,
+  options: AtlaspackOptions,
 |};
 
 export type LoadedPlugin<T> = {|
@@ -56,7 +56,7 @@ export type LoadedPlugin<T> = {|
 |};
 
 export default class ParcelConfig {
-  options: ParcelOptions;
+  options: AtlaspackOptions;
   filePath: ProjectPath;
   resolvers: PureParcelConfigPipeline;
   transformers: GlobMap<ExtendableParcelConfigPipeline>;
@@ -71,7 +71,7 @@ export default class ParcelConfig {
   pluginCache: Map<PackageName, any>;
   regexCache: Map<string, RegExp>;
 
-  constructor(config: ProcessedParcelConfig, options: ParcelOptions) {
+  constructor(config: ProcessedParcelConfig, options: AtlaspackOptions) {
     this.options = options;
     this.filePath = config.filePath;
     this.resolvers = config.resolvers || [];
