@@ -290,7 +290,7 @@ fs.mkdirSync(BASEDIR, {recursive: true});
 
 fs.writeFileSync(path.join(BASEDIR, LSP_SENTINEL_FILENAME), '');
 
-// Search for currently running Parcel processes in the parcel-lsp dir.
+// Search for currently running Atlaspack processes in the parcel-lsp dir.
 // Create an IPC client connection for each running process.
 for (let filename of fs.readdirSync(BASEDIR)) {
   if (!filename.endsWith('.json')) continue;
@@ -303,8 +303,8 @@ for (let filename of fs.readdirSync(BASEDIR)) {
   }
 }
 
-// Watch for new Parcel processes in the parcel-lsp dir, and disconnect the
-// client for each corresponding connection when a Parcel process ends
+// Watch for new Atlaspack processes in the parcel-lsp dir, and disconnect the
+// client for each corresponding connection when a Atlaspack process ends
 watcher.subscribe(BASEDIR, async (err, events) => {
   if (err) {
     throw err;
