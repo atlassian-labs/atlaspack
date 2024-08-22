@@ -505,7 +505,7 @@ export default class Parcel {
 
   async startProfiling(): Promise<void> {
     if (this.isProfiling) {
-      throw new Error('Parcel is already profiling');
+      throw new Error('Atlaspack is already profiling');
     }
 
     logger.info({origin: '@atlaspack/core', message: 'Starting profiling...'});
@@ -515,7 +515,7 @@ export default class Parcel {
 
   stopProfiling(): Promise<void> {
     if (!this.isProfiling) {
-      throw new Error('Parcel is not profiling');
+      throw new Error('Atlaspack is not profiling');
     }
 
     logger.info({origin: '@atlaspack/core', message: 'Stopping profiling...'});

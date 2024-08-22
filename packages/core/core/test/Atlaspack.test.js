@@ -8,7 +8,7 @@ import assert from 'assert';
 import path from 'path';
 import Parcel, {createWorkerFarm} from '../src/Atlaspack';
 
-describe('Parcel', function () {
+describe('Atlaspack', function () {
   this.timeout(75000);
 
   let workerFarm;
@@ -75,7 +75,7 @@ describe('Parcel', function () {
   });
 });
 
-describe('ParcelAPI', function () {
+describe('AtlaspackAPI', function () {
   this.timeout(75000);
 
   let workerFarm;

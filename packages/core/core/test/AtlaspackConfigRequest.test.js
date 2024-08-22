@@ -17,7 +17,7 @@ import {validatePackageName} from '../src/AtlaspackConfig.schema';
 import {DEFAULT_OPTIONS, relative} from './test-utils';
 import {toProjectPath} from '../src/projectPath';
 
-describe('ParcelConfigRequest', () => {
+describe('AtlaspackConfigRequest', () => {
   describe('validatePackageName', () => {
     it('should error on an invalid official package', () => {
       assert.throws(() => {

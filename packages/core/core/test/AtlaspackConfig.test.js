@@ -12,7 +12,7 @@ import {toProjectPath} from '../src/projectPath';
 
 const ATLASPACKRC_PATH = toProjectPath('/', '/.parcelrc');
 
-describe('ParcelConfig', () => {
+describe('AtlaspackConfig', () => {
   describe('matchGlobMap', () => {
     let config = new ParcelConfig(
       {

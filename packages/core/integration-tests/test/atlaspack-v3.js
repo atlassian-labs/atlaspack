@@ -12,7 +12,7 @@ import {
   overlayFS,
 } from '@atlaspack/test-utils';
 
-describe('ParcelV3', function () {
+describe('AtlaspackV3', function () {
   it('builds', async () => {
     await fsFixture(overlayFS, __dirname)`
       index.js:

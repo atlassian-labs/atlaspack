@@ -166,7 +166,7 @@ class ProgressReporter {
   begin() {
     this.progressReporterPromise = (async () => {
       let reporter = await connection.window.createWorkDoneProgress();
-      reporter.begin('Parcel');
+      reporter.begin('Atlaspack');
       return reporter;
     })();
     this.progressReporterPromise.then(reporter => {
