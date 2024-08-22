@@ -3,7 +3,7 @@ import assert from 'assert';
 import invariant from 'assert';
 import path from 'path';
 import SourceMap from '@parcel/source-map';
-import type {InitialParcelOptions} from '@atlaspack/types';
+import type {InitialAtlaspackOptions} from '@atlaspack/types';
 import {
   bundle as _bundle,
   describe,
@@ -19,7 +19,7 @@ import {
 import {loadSourceMapUrl} from '@atlaspack/utils';
 import nullthrows from 'nullthrows';
 
-const bundle = (name, opts?: InitialParcelOptions) => {
+const bundle = (name, opts?: InitialAtlaspackOptions) => {
   return _bundle(
     name,
     mergeParcelOptions(

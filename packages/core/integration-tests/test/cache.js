@@ -1,5 +1,8 @@
 // @flow
-import type {InitialParcelOptions, BuildSuccessEvent} from '@atlaspack/types';
+import type {
+  InitialAtlaspackOptions,
+  BuildSuccessEvent,
+} from '@atlaspack/types';
 import assert from 'assert';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
@@ -61,10 +64,10 @@ function runBundle(entries = 'src/index.js', opts) {
 }
 
 type UpdateFn = BuildSuccessEvent =>
-  | ?InitialParcelOptions
-  | Promise<?InitialParcelOptions>;
+  | ?InitialAtlaspackOptions
+  | Promise<?InitialAtlaspackOptions>;
 type TestConfig = {|
-  ...InitialParcelOptions,
+  ...InitialAtlaspackOptions,
   entries?: Array<string>,
   setup?: () => void | Promise<void>,
   update: UpdateFn,
@@ -78,7 +81,7 @@ async function testCache(update: UpdateFn | TestConfig, integration) {
   );
 
   let entries;
-  let options: ?InitialParcelOptions;
+  let options: ?InitialAtlaspackOptions;
   if (typeof update === 'object') {
     let setup;
     ({entries, setup, update, ...options} = update);

@@ -7,7 +7,7 @@ import type {
   BundleGraph,
   Dependency,
   FilePath,
-  InitialParcelOptions,
+  InitialAtlaspackOptions,
   PackagedBundle,
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
@@ -111,8 +111,8 @@ export const isParcelV3 = process.env.ATLASPACK_V3 === 'true';
 
 export function getParcelOptions(
   entries: FilePath | Array<FilePath>,
-  opts?: $Shape<InitialParcelOptions>,
-): InitialParcelOptions {
+  opts?: $Shape<InitialAtlaspackOptions>,
+): InitialAtlaspackOptions {
   return mergeParcelOptions(
     {
       entries,
@@ -142,7 +142,7 @@ export function getParcelOptions(
 
 export function bundler(
   entries: FilePath | Array<FilePath>,
-  opts?: $Shape<InitialParcelOptions>,
+  opts?: $Shape<InitialAtlaspackOptions>,
 ): Parcel {
   return new Parcel(getParcelOptions(entries, opts));
 }
@@ -192,9 +192,9 @@ export function findDependency(
 }
 
 export function mergeParcelOptions(
-  optsOne: InitialParcelOptions,
-  optsTwo?: InitialParcelOptions | null,
-): InitialParcelOptions {
+  optsOne: InitialAtlaspackOptions,
+  optsTwo?: InitialAtlaspackOptions | null,
+): InitialAtlaspackOptions {
   if (!optsTwo) {
     return optsOne;
   }
@@ -231,7 +231,7 @@ export function assertDependencyWasExcluded(
 
 export async function bundle(
   entries: FilePath | Array<FilePath>,
-  opts?: InitialParcelOptions,
+  opts?: InitialAtlaspackOptions,
 ): Promise<BundleGraph<PackagedBundle>> {
   return (await bundler(entries, opts).run()).bundleGraph;
 }

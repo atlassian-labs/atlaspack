@@ -98,7 +98,8 @@ export type Semver = string;
 /** A pipeline as specified in the config mapping to <code>T</code>  */
 export type GlobMap<T> = {[Glob]: T, ...};
 
-export type RawParcelConfigPipeline = Array<PackageName>;
+export type RawAtlaspackConfigPipeline = Array<PackageName>;
+export type RawParcelConfigPipeline = RawAtlaspackConfigPipeline;
 
 export type HMROptions = {
   port?: number,
@@ -107,26 +108,28 @@ export type HMROptions = {
 };
 
 /** The format of .parcelrc  */
-export type RawParcelConfig = {|
+export type RawAtlaspackConfig = {|
   extends?: PackageName | FilePath | Array<PackageName | FilePath>,
-  resolvers?: RawParcelConfigPipeline,
-  transformers?: {[Glob]: RawParcelConfigPipeline, ...},
+  resolvers?: RawAtlaspackConfigPipeline,
+  transformers?: {[Glob]: RawAtlaspackConfigPipeline, ...},
   bundler?: PackageName,
-  namers?: RawParcelConfigPipeline,
-  runtimes?: RawParcelConfigPipeline,
+  namers?: RawAtlaspackConfigPipeline,
+  runtimes?: RawAtlaspackConfigPipeline,
   packagers?: {[Glob]: PackageName, ...},
-  optimizers?: {[Glob]: RawParcelConfigPipeline, ...},
-  compressors?: {[Glob]: RawParcelConfigPipeline, ...},
-  reporters?: RawParcelConfigPipeline,
-  validators?: {[Glob]: RawParcelConfigPipeline, ...},
+  optimizers?: {[Glob]: RawAtlaspackConfigPipeline, ...},
+  compressors?: {[Glob]: RawAtlaspackConfigPipeline, ...},
+  reporters?: RawAtlaspackConfigPipeline,
+  validators?: {[Glob]: RawAtlaspackConfigPipeline, ...},
 |};
+export type RawParcelConfig = RawAtlaspackConfig;
 
 /** A .parcelrc where all package names are resolved */
-export type ResolvedParcelConfigFile = {|
-  ...RawParcelConfig,
+export type ResolvedAtlaspackConfigFile = {|
+  ...RawAtlaspackConfig,
   +filePath: FilePath,
   +resolveFrom?: FilePath,
 |};
+export type ResolvedParcelConfigFile = ResolvedAtlaspackConfigFile;
 
 /** Corresponds to <code>pkg#engines</code> */
 export type Engines = {
@@ -339,7 +342,7 @@ export type DetailedReportOptions = {|
 
 declare type GlobPattern = string;
 
-export type InitialParcelOptionsInternal<WorkerFarm> = {|
+export type InitialAtlaspackOptionsInternal<WorkerFarm> = {|
   +entries?: FilePath | Array<FilePath>,
   +config?: DependencySpecifier,
   +defaultConfig?: DependencySpecifier,
@@ -394,6 +397,8 @@ export type InitialParcelOptionsInternal<WorkerFarm> = {|
   // throwErrors
   // global?
 |};
+export type InitialParcelOptionsInternal<WorkerFarm> =
+  InitialAtlaspackOptionsInternal<WorkerFarm>;
 
 export type InitialServerOptions = {|
   +publicUrl?: string,
@@ -711,26 +716,29 @@ export type ASTGenerator = {|
 
 export type BundleBehavior = 'inline' | 'isolated';
 
-export type ParcelTransformOptions = {|
+export type AtlaspackTransformOptions = {|
   filePath: FilePath,
   code?: string,
   env?: EnvironmentOptions,
   query?: ?string,
 |};
+export type ParcelTransformOptions = AtlaspackTransformOptions;
 
-export type ParcelResolveOptions = {|
+export type AtlaspackResolveOptions = {|
   specifier: DependencySpecifier,
   specifierType: SpecifierType,
   env?: EnvironmentOptions,
   resolveFrom?: FilePath,
 |};
+export type ParcelResolveOptions = AtlaspackResolveOptions;
 
-export type ParcelResolveResult = {|
+export type AtlaspackResolveResult = {|
   filePath: FilePath,
   code?: string,
   query?: ?string,
   sideEffects?: boolean,
 |};
+export type ParcelResolveResult = AtlaspackResolveResult;
 
 /**
  * An asset represents a file or part of a file. It may represent any data type, including source code,
@@ -858,7 +866,7 @@ export interface MutableAsset extends BaseAsset {
   invalidateOnFileCreate(FileCreateInvalidation): void;
   /** Invalidates the transformation when the given environment variable changes. */
   invalidateOnEnvChange(string): void;
-  /** Invalidates the transformation only when Parcel restarts. */
+  /** Invalidates the transformation only when Atlaspack restarts. */
   invalidateOnStartup(): void;
   /** Invalidates the transformation on every build. */
   invalidateOnBuild(): void;
@@ -922,7 +930,7 @@ export interface Config {
   invalidateOnFileCreate(FileCreateInvalidation): void;
   /** Invalidates the config when the given environment variable changes. */
   invalidateOnEnvChange(string): void;
-  /** Invalidates the config only when Parcel restarts. */
+  /** Invalidates the config only when Atlaspack restarts. */
   invalidateOnStartup(): void;
   /** Invalidates the config on every build. */
   invalidateOnBuild(): void;
@@ -1648,7 +1656,7 @@ export type ResolveResult = {|
   +sideEffects?: boolean,
   /** The code of the resolved asset. If provided, this is used rather than reading the file from disk. */
   +code?: string,
-  /** Whether this dependency can be deferred by Parcel itself (true by default). */
+  /** Whether this dependency can be deferred by Atlaspack itself (true by default). */
   +canDefer?: boolean,
   /** A resolver might return diagnostics to also run subsequent resolvers while still providing a reason why it failed. */
   +diagnostics?: Diagnostic | Array<Diagnostic>,

@@ -1,6 +1,6 @@
 // @flow
 
-import type {InitialParcelOptions} from '@atlaspack/types';
+import type {InitialAtlaspackOptions} from '@atlaspack/types';
 import {BuildError} from '@atlaspack/core';
 import {NodeFS} from '@atlaspack/fs';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
@@ -430,7 +430,7 @@ function parseOptionInt(value) {
 async function normalizeOptions(
   command,
   inputFS,
-): Promise<InitialParcelOptions> {
+): Promise<InitialAtlaspackOptions> {
   let nodeEnv;
   if (command.name() === 'build') {
     nodeEnv = process.env.NODE_ENV || 'production';

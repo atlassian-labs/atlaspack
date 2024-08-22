@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import type {IDisposable, InitialParcelOptions} from '@atlaspack/types';
+import type {IDisposable, InitialAtlaspackOptions} from '@atlaspack/types';
 
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {NodeFS} from '@atlaspack/fs';
@@ -23,8 +23,8 @@ let defaultConfig = {
     .resolved,
 };
 
-function register(inputOpts?: InitialParcelOptions): IDisposable {
-  let opts: InitialParcelOptions = {
+function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
+  let opts: InitialAtlaspackOptions = {
     ...defaultConfig,
     ...(inputOpts || {}),
   };

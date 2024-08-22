@@ -5,7 +5,7 @@ import type {
   AsyncSubscription,
   BuildEvent,
   BuildSuccessEvent,
-  InitialParcelOptions,
+  InitialAtlaspackOptions,
   PackagedBundle as IPackagedBundle,
   ParcelTransformOptions,
   ParcelResolveOptions,
@@ -71,7 +71,7 @@ export default class Parcel {
   #farm /*: WorkerFarm*/;
   #initialized /*: boolean*/ = false;
   #disposable /*: Disposable */;
-  #initialOptions /*: InitialParcelOptions */;
+  #initialOptions /*: InitialAtlaspackOptions */;
   #parcelV3: AtlaspackV3;
   #reporterRunner /*: ReporterRunner*/;
   #resolvedOptions /*: ?ParcelOptions*/ = null;
@@ -96,7 +96,7 @@ export default class Parcel {
 
   isProfiling /*: boolean */;
 
-  constructor(options: InitialParcelOptions) {
+  constructor(options: InitialAtlaspackOptions) {
     this.#initialOptions = options;
   }
 
