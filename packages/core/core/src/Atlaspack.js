@@ -58,7 +58,7 @@ import {
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags} from '@atlaspack/feature-flags';
-import {ParcelV3, toFileSystemV3} from './atlaspack-v3';
+import {AtlaspackV3, toFileSystemV3} from './atlaspack-v3';
 
 registerCoreWithSerializer();
 
@@ -72,7 +72,7 @@ export default class Parcel {
   #initialized /*: boolean*/ = false;
   #disposable /*: Disposable */;
   #initialOptions /*: InitialParcelOptions */;
-  #parcelV3: ParcelV3;
+  #parcelV3: AtlaspackV3;
   #reporterRunner /*: ReporterRunner*/;
   #resolvedOptions /*: ?ParcelOptions*/ = null;
   #optionsRef /*: SharedReference */;
@@ -122,12 +122,12 @@ export default class Parcel {
     );
     this.#resolvedOptions = resolvedOptions;
 
-    let rustParcel: ParcelV3;
+    let rustParcel: AtlaspackV3;
     if (resolvedOptions.featureFlags.parcelV3) {
       // eslint-disable-next-line no-unused-vars
       let {entries, inputFS, outputFS, ...options} = this.#initialOptions;
 
-      rustParcel = new ParcelV3({
+      rustParcel = new AtlaspackV3({
         ...options,
         corePath: path.join(__dirname, '..'),
         entries: Array.isArray(entries)

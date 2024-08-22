@@ -6,7 +6,7 @@ import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Async} from '@atlaspack/types';
 
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
-import type {ParcelV3} from '../atlaspack-v3';
+import type {AtlaspackV3} from '../atlaspack-v3';
 import {toProjectPath} from '../projectPath';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
@@ -29,7 +29,7 @@ type AssetGraphRequest = {|
 |};
 
 export function createAssetGraphRequestRust(
-  rustParcel: ParcelV3,
+  rustParcel: AtlaspackV3,
 ): (input: AssetGraphRequestInput) => AssetGraphRequest {
   return input => ({
     type: requestTypes.asset_graph_request,
