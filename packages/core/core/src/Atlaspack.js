@@ -499,7 +499,7 @@ export default class Atlaspack {
   _getResolvedAtlaspackOptions(): AtlaspackOptions {
     return nullthrows(
       this.#resolvedOptions,
-      'Resolved options is null, please let parcel initialize before accessing this.',
+      'Resolved options is null, please let atlaspack initialize before accessing this.',
     );
   }
 

@@ -18,7 +18,7 @@ import type {
 } from '@atlaspack/types';
 import type {
   ProcessedAtlaspackConfig,
-  ParcelPluginNode,
+  AtlaspackPluginNode,
   PureAtlaspackConfigPipeline,
   ExtendableAtlaspackConfigPipeline,
   AtlaspackOptions,
@@ -60,10 +60,10 @@ export default class AtlaspackConfig {
   filePath: ProjectPath;
   resolvers: PureAtlaspackConfigPipeline;
   transformers: GlobMap<ExtendableAtlaspackConfigPipeline>;
-  bundler: ?ParcelPluginNode;
+  bundler: ?AtlaspackPluginNode;
   namers: PureAtlaspackConfigPipeline;
   runtimes: PureAtlaspackConfigPipeline;
-  packagers: GlobMap<ParcelPluginNode>;
+  packagers: GlobMap<AtlaspackPluginNode>;
   validators: GlobMap<ExtendableAtlaspackConfigPipeline>;
   optimizers: GlobMap<ExtendableAtlaspackConfigPipeline>;
   compressors: GlobMap<ExtendableAtlaspackConfigPipeline>;
@@ -116,7 +116,7 @@ export default class AtlaspackConfig {
     };
   }
 
-  _loadPlugin<T>(node: ParcelPluginNode): Promise<{|
+  _loadPlugin<T>(node: AtlaspackPluginNode): Promise<{|
     plugin: T,
     version: Semver,
     resolveFrom: ProjectPath,

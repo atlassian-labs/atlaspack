@@ -128,7 +128,7 @@ type IdealGraph = {|
  * First, we enter `bundle({bundleGraph, config})`. Here, "bundleGraph" is actually just the
  * assetGraph turned into a type `MutableBundleGraph`, which will then be mutated in decorate,
  * and turned into what we expect the bundleGraph to be as per the old (default) bundler structure
- *  & what the rest of Parcel expects a BundleGraph to be.
+ *  & what the rest of Atlaspack expects a BundleGraph to be.
  *
  * `bundle({bundleGraph, config})` First gets a Mapping of target to entries, In most cases there is
  *  only one target, and one or more entries. (Targets are pertinent in monorepos or projects where you

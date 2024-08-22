@@ -69,7 +69,7 @@ declare module 'less' {
     isEvald: boolean;
   }
 
-  // This is very ad-hoc, based on current Parcel usage instead of the actual
+  // This is very ad-hoc, based on current Atlaspack usage instead of the actual
   // class in Less.
   declare class visitors$Visitor {
     constructor({

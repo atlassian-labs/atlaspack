@@ -21,7 +21,7 @@ export function validatePackageName(
   if (pkg.startsWith('@atlaspack')) {
     assert(
       pkg.replace(/^@atlaspack\//, '').startsWith(`${pluginType}-`),
-      `Official parcel ${pluginType} packages must be named according to "@atlaspack/${pluginType}-{name}"`,
+      `Official atlaspack ${pluginType} packages must be named according to "@atlaspack/${pluginType}-{name}"`,
     );
   } else if (pkg.startsWith('@')) {
     // Disabling this validation to allow for migration to parcel
@@ -35,8 +35,9 @@ export function validatePackageName(
     // );
   } else if (!pkg.startsWith('.')) {
     assert(
-      pkg.startsWith(`atlaspack-${pluginType}-`),
-      `Parcel ${pluginType} packages must be named according to "atlaspack-${pluginType}-{name}"`,
+      pkg.startsWith(`atlaspack-${pluginType}-`) ||
+        pkg.startsWith(`parcel-${pluginType}`),
+      `Atlaspack ${pluginType} packages must be named according to "(atlaspack|parcel)-${pluginType}-{name}"`,
     );
   }
 }

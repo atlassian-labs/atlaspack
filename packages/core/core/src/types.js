@@ -35,15 +35,16 @@ import type {Event} from '@parcel/watcher';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
 import type {BackendType} from '@parcel/watcher';
 
-export type ParcelPluginNode = {|
+export type AtlaspackPluginNode = {|
   packageName: PackageName,
   resolveFrom: ProjectPath,
   keyPath?: string,
 |};
+export type ParcelPluginNode = AtlaspackPluginNode;
 
-export type PureAtlaspackConfigPipeline = $ReadOnlyArray<ParcelPluginNode>;
+export type PureAtlaspackConfigPipeline = $ReadOnlyArray<AtlaspackPluginNode>;
 export type ExtendableAtlaspackConfigPipeline = $ReadOnlyArray<
-  ParcelPluginNode | '...',
+  AtlaspackPluginNode | '...',
 >;
 
 export type ProcessedAtlaspackConfig = {|

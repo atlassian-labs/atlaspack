@@ -6,7 +6,7 @@ import {AtlaspackNapi, type AtlaspackNapiOptions} from '@atlaspack/rust';
 
 const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
 
-export type ParcelV3Options = {|
+export type AtlaspackV3Options = {|
   fs?: AtlaspackNapiOptions['fs'],
   nodeWorkers?: number,
   packageManager?: AtlaspackNapiOptions['packageManager'],
@@ -23,7 +23,7 @@ export class AtlaspackV3 {
     packageManager,
     threads,
     ...options
-  }: ParcelV3Options) {
+  }: AtlaspackV3Options) {
     this._internal = new AtlaspackNapi({
       fs,
       nodeWorkers,

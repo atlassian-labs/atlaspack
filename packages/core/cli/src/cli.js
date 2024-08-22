@@ -284,10 +284,10 @@ async function run(
 
   entries = entries.map(entry => path.resolve(entry));
 
-  let Parcel = require('@atlaspack/core').default;
+  let Atlaspack = require('@atlaspack/core').default;
   let fs = new NodeFS();
   let options = await normalizeOptions(command, fs);
-  let parcel = new Parcel({
+  let atlaspack = new Atlaspack({
     entries,
     defaultConfig: require.resolve('@atlaspack/config-default', {
       paths: [fs.cwd(), __dirname],
@@ -307,8 +307,8 @@ async function run(
     isExiting = true;
     if (unsubscribe != null) {
       await unsubscribe();
-    } else if (parcel.isProfiling) {
-      await parcel.stopProfiling();
+    } else if (atlaspack.isProfiling) {
+      await atlaspack.stopProfiling();
     }
 
     if (process.stdin.isTTY && process.stdin.isRaw) {
@@ -334,26 +334,26 @@ async function run(
       switch (key.name) {
         case 'c':
           // Detect the ctrl+c key, and gracefully exit after writing the asset graph to the cache.
-          // This is mostly for tools that wrap Parcel as a child process like yarn and npm.
+          // This is mostly for tools that wrap Atlaspack as a child process like yarn and npm.
           //
           // Setting raw mode prevents SIGINT from being sent in response to ctrl-c:
           // https://nodejs.org/api/tty.html#tty_readstream_setrawmode_mode
           //
           // We don't use the SIGINT event for this because when run inside yarn, the parent
-          // yarn process ends before Parcel and it appears that Parcel has ended while it may still
+          // yarn process ends before Atlaspack and it appears that Atlaspack has ended while it may still
           // be cleaning up. Handling events from stdin prevents this impression.
           //
-          // When watching, a 0 success code is acceptable when Parcel is interrupted with ctrl-c.
+          // When watching, a 0 success code is acceptable when Atlaspack is interrupted with ctrl-c.
           // When building, fail with a code as if we received a SIGINT.
           await exit(isWatching ? 0 : SIGINT_EXIT_CODE);
           break;
         case 'e':
-          await (parcel.isProfiling
-            ? parcel.stopProfiling()
-            : parcel.startProfiling());
+          await (atlaspack.isProfiling
+            ? atlaspack.stopProfiling()
+            : atlaspack.startProfiling());
           break;
         case 'y':
-          await parcel.takeHeapSnapshot();
+          await atlaspack.takeHeapSnapshot();
           break;
       }
     });
@@ -364,7 +364,7 @@ async function run(
   }
 
   if (isWatching) {
-    ({unsubscribe} = await parcel.watch(err => {
+    ({unsubscribe} = await atlaspack.watch(err => {
       if (err) {
         throw err;
       }
@@ -394,9 +394,9 @@ async function run(
     process.on('SIGTERM', () => exit());
   } else {
     try {
-      await parcel.run();
+      await atlaspack.run();
     } catch (err) {
-      // If an exception is thrown during Parcel.build, it is given to reporters in a
+      // If an exception is thrown during Atlaspack.build, it is given to reporters in a
       // buildFailure event, and has been shown to the user.
       if (!(err instanceof BuildError)) {
         await logUncaughtError(err);
@@ -477,7 +477,7 @@ async function normalizeOptions(
         // Throw the error if the user defined a custom port
         throw new Error(errorMessage);
       } else {
-        // Parcel logger is not set up at this point, so just use native INTERNAL_ORIGINAL_CONSOLE
+        // Atlaspack logger is not set up at this point, so just use native INTERNAL_ORIGINAL_CONSOLE
         INTERNAL_ORIGINAL_CONSOLE.warn(errorMessage);
       }
     }

@@ -310,7 +310,7 @@ export class RequestGraph extends ContentGraph<
   envNodeIds: Set<NodeId> = new Set();
   optionNodeIds: Set<NodeId> = new Set();
   // Unpredictable nodes are requests that cannot be predicted whether they should rerun based on
-  // filesystem changes alone. They should rerun on each startup of Parcel.
+  // filesystem changes alone. They should rerun on each startup of Atlaspack.
   unpredicatableNodeIds: Set<NodeId> = new Set();
   invalidateOnBuildNodeIds: Set<NodeId> = new Set();
   cachedRequestChunks: Set<number> = new Set();
@@ -1593,7 +1593,7 @@ export async function readAndDeserializeRequestGraph(
       ...serializedRequestGraph,
       nodes: (await Promise.all(nodePromises)).flat(),
     }),
-    // This is used inside parcel query for `.inspectCache`
+    // This is used inside atlaspack query for `.inspectCache`
     bufferLength,
   };
 }
