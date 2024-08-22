@@ -885,7 +885,7 @@ describe.v2('monorepos', function () {
   it('should search for .parcelrc at cwd in monorepos', async () => {
     let fixture = path.join(
       __dirname,
-      '/integration/atlaspackrc-monorepo/app/index.js',
+      '/integration/parcelrc-monorepo/app/index.js',
     );
 
     let oldcwd = inputFS.cwd();

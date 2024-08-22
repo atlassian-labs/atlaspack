@@ -26,7 +26,7 @@ pub struct LoadConfigOptions<'a> {
   /// A file path or package specifier that will be used to load the config from
   pub config: Option<&'a str>,
   /// A file path or package specifier that will be used to load the config from when no other
-  /// .atlaspackrc can be found
+  /// .parcelrc can be found
   pub fallback_config: Option<&'a str>,
 }
 
@@ -47,8 +47,8 @@ impl AtlaspackRcConfigLoader {
   fn find_config(&self, project_root: &Path, path: &Path) -> Result<PathBuf, DiagnosticError> {
     let from = path.parent().unwrap_or(path);
 
-    find_ancestor_file(&*self.fs, &[".atlaspackrc"], from, project_root)
-      .ok_or_else(|| diagnostic_error!("Unable to locate .atlaspackrc from {}", from.display()))
+    find_ancestor_file(&*self.fs, &[".parcelrc"], from, project_root)
+      .ok_or_else(|| diagnostic_error!("Unable to locate .parcelrc from {}", from.display()))
   }
 
   fn resolve_from(&self, project_root: &Path) -> PathBuf {
@@ -129,7 +129,7 @@ impl AtlaspackRcConfigLoader {
     })
   }
 
-  /// Processes a .atlaspackrc file by loading and merging "extends" configurations into a single
+  /// Processes a .parcelrc file by loading and merging "extends" configurations into a single
   /// PartialAtlaspackConfig struct
   ///
   /// Configuration merging will be applied to all "extends" configurations, before being merged
@@ -175,9 +175,9 @@ impl AtlaspackRcConfigLoader {
     Ok((config, files))
   }
 
-  /// Finds and loads a .atlaspackrc file
+  /// Finds and loads a .parcelrc file
   ///
-  /// By default the nearest .atlaspackrc ancestor file from the current working directory will be
+  /// By default the nearest .parcelrc ancestor file from the current working directory will be
   /// loaded, unless the config or fallback_config option are specified. In cases where the
   /// current working directory does not live within the project root, the default config will be
   /// loaded from the project root.
@@ -331,7 +331,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn errors_on_missing_atlaspackrc_file() {
+    fn errors_on_missing_parcelrc_file() {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap();
 
@@ -342,14 +342,14 @@ mod tests {
       assert_eq!(
         err,
         Err(format!(
-          "Unable to locate .atlaspackrc from {}",
+          "Unable to locate .parcelrc from {}",
           project_root.display()
         ))
       );
     }
 
     #[test]
-    fn errors_on_failed_extended_atlaspackrc_resolution() {
+    fn errors_on_failed_extended_parcelrc_resolution() {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap();
 
@@ -380,7 +380,7 @@ mod tests {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap();
 
-      let default_config = default_config(Arc::new(project_root.join(".atlaspackrc")));
+      let default_config = default_config(Arc::new(project_root.join(".parcelrc")));
       let files = vec![default_config.path.clone()];
 
       fs.write_file(&default_config.path, default_config.atlaspack_rc);
@@ -401,7 +401,7 @@ mod tests {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap().join("src").join("packages").join("root");
 
-      let default_config = default_config(Arc::new(project_root.join(".atlaspackrc")));
+      let default_config = default_config(Arc::new(project_root.join(".parcelrc")));
       let files = vec![default_config.path.clone()];
 
       fs.write_file(&default_config.path, default_config.atlaspack_rc);
@@ -422,7 +422,7 @@ mod tests {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = PathBuf::from("/root");
 
-      let default_config = default_config(Arc::new(project_root.join(".atlaspackrc")));
+      let default_config = default_config(Arc::new(project_root.join(".parcelrc")));
       let files = vec![default_config.path.clone()];
 
       fs.set_current_working_directory(Path::new("/cwd"));
@@ -554,7 +554,7 @@ mod tests {
       let mut package_manager = MockPackageManager::new();
       let project_root = fs.cwd().unwrap();
 
-      fs.write_file(&project_root.join(".atlaspackrc"), String::from("{}"));
+      fs.write_file(&project_root.join(".parcelrc"), String::from("{}"));
 
       let config_path = package_manager_resolution(
         &mut package_manager,
@@ -599,7 +599,7 @@ mod tests {
       let (specifier, specified_config) = config(&project_root);
       let files = vec![specified_config.path.clone()];
 
-      fs.write_file(&project_root.join(".atlaspackrc"), String::from("{}"));
+      fs.write_file(&project_root.join(".parcelrc"), String::from("{}"));
       fs.write_file(&specified_config.path, specified_config.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
@@ -747,7 +747,7 @@ mod tests {
       let project_root = fs.cwd().unwrap();
 
       let (fallback_specifier, fallback) = fallback_config(&project_root);
-      let project_root_config = default_config(Arc::new(project_root.join(".atlaspackrc")));
+      let project_root_config = default_config(Arc::new(project_root.join(".parcelrc")));
 
       fs.write_file(&project_root_config.path, project_root_config.atlaspack_rc);
       fs.write_file(&fallback.path, String::from("{}"));

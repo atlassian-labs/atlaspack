@@ -7,7 +7,7 @@ use serde::Serialize;
 use super::pattern_matcher;
 use crate::PluginNode;
 
-/// Represents fields in .atlaspackrc that map a pattern to a list of plugin names
+/// Represents fields in .parcelrc that map a pattern to a list of plugin names
 ///
 /// # Examples
 ///
