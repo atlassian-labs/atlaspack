@@ -138,7 +138,7 @@ export default class AtlaspackConfig {
     return plugin;
   }
 
-  async loadPlugin<T>(node: ParcelPluginNode): Promise<LoadedPlugin<T>> {
+  async loadPlugin<T>(node: AtlaspackPluginNode): Promise<LoadedPlugin<T>> {
     let plugin = await this._loadPlugin(node);
     return {
       ...plugin,
