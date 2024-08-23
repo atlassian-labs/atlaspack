@@ -5,11 +5,11 @@ packages/*/*/test/input
 packages/*/*/test/dist
 packages/*/*/test/mochareporters.json
 packages/*/*/test/fixtures
-packages/*/*/test/.parcel-cache
+packages/*/*/test/.atlaspack-cache
 packages/*/*/test/.parcel-cache
 vendor
 tmp
-.parcel-cache
+.atlaspack-cache
 .parcel-cache
 
 # Ignoring main README for now because generated Table of Contents adds a line that prettier removes
