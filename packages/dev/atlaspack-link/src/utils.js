@@ -57,7 +57,7 @@ export async function fsSymlink(
   );
 }
 
-export async function findAtlaspackPackages(
+export async function findParcelPackages(
   fs: FileSystem,
   rootDir: string,
   files: Map<string, string> = new Map(),
@@ -73,7 +73,7 @@ export async function findAtlaspackPackages(
           files.set(pack.name, projectPath);
         }
       } else {
-        await findAtlaspackPackages(fs, projectPath, files);
+        await findParcelPackages(fs, projectPath, files);
       }
     }
   }
@@ -82,23 +82,23 @@ export async function findAtlaspackPackages(
 
 export function mapNamespacePackageAliases(
   ns: string,
-  atlaspackPackages: Map<string, string>,
+  parcelPackages: Map<string, string>,
 ): Map<string, string> {
-  let aliasesToAtlaspackPackages = new Map();
-  for (let packageName of atlaspackPackages.keys()) {
+  let aliasesToParcelPackages = new Map();
+  for (let packageName of parcelPackages.keys()) {
     if (packageName.startsWith(ns)) {
       continue;
     }
-    aliasesToAtlaspackPackages.set(
-      packageName === 'atlaspack'
-        ? `${ns}/atlaspack`
+    aliasesToParcelPackages.set(
+      packageName === '@atlaspack/cli'
+        ? `${ns}/atlaspack-cli`
         : packageName === 'atlaspackforvscode'
         ? `${ns}/atlaspackforvscode`
         : packageName.replace(/^@atlaspack\//, `${ns}/atlaspack-`),
       packageName,
     );
   }
-  return aliasesToAtlaspackPackages;
+  return aliasesToParcelPackages;
 }
 
 export async function cleanupBin(root: string, opts: CmdOptions) {

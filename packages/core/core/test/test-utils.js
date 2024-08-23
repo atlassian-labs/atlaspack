@@ -17,7 +17,7 @@ cache.ensure();
 
 export const DEFAULT_OPTIONS: AtlaspackOptions = {
   cacheDir,
-  atlaspackVersion: '',
+  parcelVersion: '',
   watchDir: __dirname,
   watchIgnore: undefined,
   watchBackend: undefined,

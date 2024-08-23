@@ -1,11 +1,11 @@
 // @flow strict-local
 
-import type {Diagnostic as AtlaspackDiagnostic} from '@atlaspack/diagnostic';
+import type {Diagnostic as ParcelDiagnostic} from '@atlaspack/diagnostic';
 import type {BundleGraph, FilePath, PackagedBundle} from '@atlaspack/types';
 import type {Program, Query} from 'ps-node';
 import type {Diagnostic, DocumentUri} from 'vscode-languageserver';
 import type {MessageConnection} from 'vscode-jsonrpc/node';
-import type {AtlaspackSeverity} from './utils';
+import type {ParcelSeverity} from './utils';
 
 import {
   DefaultMap,
@@ -34,7 +34,7 @@ import {
   DiagnosticSeverity,
   DiagnosticTag,
   normalizeFilePath,
-  atlaspackSeverityToLspSeverity,
+  parcelSeverityToLspSeverity,
 } from './utils';
 import type {FSWatcher} from 'fs';
 
@@ -48,9 +48,9 @@ const ignoreFail = func => {
   }
 };
 
-const BASEDIR = fs.realpathSync(path.join(os.tmpdir(), 'atlaspack-lsp'));
-const SOCKET_FILE = path.join(BASEDIR, `atlaspack-${process.pid}`);
-const META_FILE = path.join(BASEDIR, `atlaspack-${process.pid}.json`);
+const BASEDIR = fs.realpathSync(path.join(os.tmpdir(), 'parcel-lsp'));
+const SOCKET_FILE = path.join(BASEDIR, `parcel-${process.pid}`);
+const META_FILE = path.join(BASEDIR, `parcel-${process.pid}.json`);
 
 let workspaceDiagnostics: DefaultMap<
   string,
@@ -108,7 +108,7 @@ async function doWatchStart(options) {
   // by a process that quit unexpectedly.
   for (let filename of fs.readdirSync(BASEDIR)) {
     if (filename.endsWith('.json')) continue;
-    let pid = parseInt(filename.slice('atlaspack-'.length), 10);
+    let pid = parseInt(filename.slice('parcel-'.length), 10);
     let resultList = await lookupPid({pid});
     if (resultList.length > 0) continue;
     fs.unlinkSync(path.join(BASEDIR, filename));
@@ -241,11 +241,11 @@ function sendDiagnostics() {
 }
 
 function updateDiagnostics(
-  atlaspackDiagnostics: Array<AtlaspackDiagnostic>,
-  atlaspackSeverity: AtlaspackSeverity,
+  parcelDiagnostics: Array<ParcelDiagnostic>,
+  parcelSeverity: ParcelSeverity,
   projectRoot: FilePath,
 ): void {
-  for (let diagnostic of atlaspackDiagnostics) {
+  for (let diagnostic of parcelDiagnostics) {
     const codeFrames = diagnostic.codeFrames;
     if (codeFrames == null) {
       continue;
@@ -258,7 +258,7 @@ function updateDiagnostics(
     }
 
     // We use the first highlight of the first codeFrame as the main Diagnostic,
-    // and we place everything else in the current Atlaspack diagnostic
+    // and we place everything else in the current Parcel diagnostic
     // in relatedInformation
     // https://code.visualstudio.com/api/references/vscode-api#DiagnosticRelatedInformation
     const firstFrameHighlight = codeFrames[0].codeHighlights[0];
@@ -307,7 +307,7 @@ function updateDiagnostics(
           },
         },
         source: diagnostic.origin,
-        severity: atlaspackSeverityToLspSeverity(atlaspackSeverity),
+        severity: parcelSeverityToLspSeverity(parcelSeverity),
         message:
           diagnostic.message +
           (firstFrameHighlight.message == null

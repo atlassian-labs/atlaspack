@@ -1,1 +1,1 @@
-Hello Atlaspack WebExt (VERSION B)!
+Hello Parcel WebExt (VERSION B)!

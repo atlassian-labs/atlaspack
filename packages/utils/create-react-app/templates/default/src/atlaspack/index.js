@@ -4,22 +4,22 @@ import frontUrl from 'url:./front.png';
 import backUrl from 'url:./back.png';
 import './index.css';
 
-export default function Atlaspack() {
+export default function Parcel() {
   return (
-    <div className="atlaspack-container">
-      <div className="atlaspack-heading">
+    <div className="parcel-container">
+      <div className="parcel-heading">
         <div>
           <h1>Welcome to</h1>
-          <img src={logoUrl} className="atlaspack-logo" alt="Atlaspack logo" />
+          <img src={logoUrl} className="parcel-logo" alt="Parcel logo" />
         </div>
 
-        <div className="atlaspack-box">
+        <div className="parcel-box">
           <img src={backUrl} alt="" height="474" />
           <div id="icons" />
           <img
             src={frontUrl}
-            className="atlaspack-box-front"
-            alt="Atlaspack box"
+            className="parcel-box-front"
+            alt="Parcel box"
             height="474"
           />
         </div>

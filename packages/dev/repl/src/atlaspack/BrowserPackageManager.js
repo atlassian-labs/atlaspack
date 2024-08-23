@@ -157,14 +157,14 @@ export class BrowserPackageManager implements PackageManager {
       saveDev?: boolean,
     |},
   ): Promise<ResolveResult> {
-    if (name.startsWith('@atlaspack/')) {
+    if (name.startsWith('@atlaspack/') || name.startsWith('@parcel/')) {
       return Promise.resolve({
         resolved: name,
         pkg: {
           name: name,
           version: '2.0.0',
           engines: {
-            atlaspack: '^2.0.0',
+            parcel: '^2.0.0',
           },
         },
         invalidateOnFileChange: new Set(),

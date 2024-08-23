@@ -6,7 +6,7 @@ import {proxy, wrap, transfer} from 'comlink';
 
 const worker = wrap(
   // $FlowFixMe
-  new Worker(new URL('./AtlaspackWorker.js', import /*:: ("") */.meta.url), {
+  new Worker(new URL('./ParcelWorker.js', import /*:: ("") */.meta.url), {
     name: 'Atlaspack Worker Main',
     type: 'module',
   }),
@@ -143,7 +143,7 @@ if (navigator.serviceWorker) {
 
     let {port1, port2} = new MessageChannel();
 
-    // sw <-> port1 <-> port2 <-> atlaspack worker thread
+    // sw <-> port1 <-> port2 <-> parcel worker thread
     // sw <-> main thread
 
     sw.addEventListener('message', (evt: MessageEvent) => {

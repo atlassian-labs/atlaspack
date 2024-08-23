@@ -23,7 +23,7 @@ describe.v2('atlaspack-query', () => {
       // We need to write to the default inputFS (NodeFS) as `loadGraphs` doesn't
       // support custom FS's
       outputFS: inputFS,
-      cacheDir: path.join(__dirname, '.atlaspack-cache'),
+      cacheDir: path.join(__dirname, '.parcel-cache'),
     };
 
     await fsFixture(overlayFS)`

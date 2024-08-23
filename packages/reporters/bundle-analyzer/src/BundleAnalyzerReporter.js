@@ -22,7 +22,7 @@ export default (new Reporter({
       bundlesByTarget.get(bundle.target.name).push(bundle);
     }
 
-    let reportsDir = path.join(options.projectRoot, 'atlaspack-bundle-reports');
+    let reportsDir = path.join(options.projectRoot, 'parcel-bundle-reports');
     await options.outputFS.mkdirp(reportsDir);
 
     await Promise.all(
@@ -33,7 +33,7 @@ export default (new Reporter({
           <html>
             <head>
               <meta charset="utf-8">
-              <title>📦Atlaspack Bundle Analyzer | ${targetName}</title>
+              <title>Atlaspack Bundle Analyzer | ${targetName}</title>
               <style>
                 body {
                   margin: 0;

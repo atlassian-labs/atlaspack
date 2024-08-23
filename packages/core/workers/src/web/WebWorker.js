@@ -38,7 +38,7 @@ export default class WebWorker implements WorkerImpl {
   start(): Promise<void> {
     // $FlowFixMe[incompatible-call]
     this.worker = new Worker(new URL('./WebChild.js', import.meta.url), {
-      name: `Atlaspack Worker ${id++}`,
+      name: `Parcel Worker ${id++}`,
       type: 'module',
     });
 

@@ -7,3 +7,4 @@ export type * from '@atlaspack/types-internal';
 
 export type InitialAtlaspackOptions =
   InitialAtlaspackOptionsInternal<WorkerFarm>;
+export type InitialParcelOptions = InitialAtlaspackOptions;

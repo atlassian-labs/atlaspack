@@ -1,6 +1,6 @@
 async function load(id) {
-  if (!atlaspackRequire.retryState) {
-    atlaspackRequire.retryState = {};
+  if (!parcelRequire.retryState) {
+    parcelRequire.retryState = {};
   }
 
   if (!globalThis.navigator.onLine) {
@@ -11,15 +11,15 @@ async function load(id) {
 
   let url = require('../bundle-manifest').resolve(id);
 
-  if (atlaspackRequire.retryState[id] != undefined) {
-    url = `${url}?retry=${atlaspackRequire.retryState[id]}`;
+  if (parcelRequire.retryState[id] != undefined) {
+    url = `${url}?retry=${parcelRequire.retryState[id]}`;
   }
 
   try {
     // eslint-disable-next-line no-undef
-    return await __atlaspack__import__(url);
+    return await __parcel__import__(url);
   } catch (error) {
-    atlaspackRequire.retryState[id] = Date.now();
+    parcelRequire.retryState[id] = Date.now();
   }
 }
 

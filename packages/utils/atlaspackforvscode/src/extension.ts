@@ -59,7 +59,7 @@ export function deactivate(): Thenable<void> | undefined {
 
   const LSP_SENTINEL_FILEPATH = path.join(
     fs.realpathSync(os.tmpdir()),
-    'atlaspack-lsp',
+    'parcel-lsp',
     'lsp-server',
   );
 

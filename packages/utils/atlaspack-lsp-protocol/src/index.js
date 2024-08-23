@@ -34,28 +34,28 @@ import type {Diagnostic, DocumentUri} from 'vscode-languageserver';
  */
 // Request: LSP Server -> Reporter
 export const RequestImporters /*: RequestType<DocumentUri, Array<DocumentUri> | null, void> */ =
-  new RequestType('atlaspack/request-importers');
+  new RequestType('parcel/request-importers');
 
 /**
  * @type {RequestType<DocumentUri, Array<Diagnostic> | undefined, void>}
  */
 // Request: LSP Server -> Reporter
 export const RequestDocumentDiagnostics /*: RequestType<DocumentUri, Array<Diagnostic> | void, void> */ =
-  new RequestType('atlaspack/request-document-diagnostics');
+  new RequestType('parcel/request-document-diagnostics');
 
 /**
  * @type {NotificationType<Array<PublishDiagnostic>>}
  */
 // Notification: Reporter -> LSP Server
 export const NotificationWorkspaceDiagnostics /*: NotificationType<Array<PublishDiagnostic>> */ =
-  new NotificationType('atlaspack/notification-workspace-diagnostics');
+  new NotificationType('parcel/notification-workspace-diagnostics');
 
 /**
  * @type {NotificationType2<'start' | 'progress' | 'end', string | void>}
  */
 // Notification: Reporter -> LSP Server
 export const NotificationBuildStatus /*: NotificationType2<'start' | 'progress' | 'end', string | void> */ =
-  new NotificationType2('atlaspack/notification-build-status');
+  new NotificationType2('parcel/notification-build-status');
 
 // --------------------------------
 
@@ -64,5 +64,5 @@ export const NotificationBuildStatus /*: NotificationType2<'start' | 'progress' 
  * @type {import('vscode-languageserver').NotificationType0}
  */
 export const NotificationBuild /*: mixed */ = new NotificationType0(
-  'atlaspack/notification-build',
+  'parcel/notification-build',
 );

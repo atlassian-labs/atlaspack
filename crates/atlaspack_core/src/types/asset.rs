@@ -96,7 +96,7 @@ pub struct Asset {
   /// Plugin specific metadata for the asset
   pub meta: JSONObject,
 
-  /// The pipeline defined in .atlaspackrc that the asset should be processed with
+  /// The pipeline defined in .parcelrc that the asset should be processed with
   pub pipeline: Option<String>,
 
   /// The transformer options for the asset from the dependency query string

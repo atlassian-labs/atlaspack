@@ -1366,7 +1366,7 @@ describe.v2('bundler', function () {
           }
         }
 
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {

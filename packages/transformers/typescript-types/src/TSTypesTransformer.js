@@ -93,7 +93,7 @@ export default (new Transformer({
       }
     }
 
-    let atlaspackDiagnostics = deduplicatedDiagnostics.map(diagnostic => {
+    let parcelDiagnostics = deduplicatedDiagnostics.map(diagnostic => {
       let filename = asset.filePath;
       let {file} = diagnostic;
 
@@ -156,9 +156,9 @@ export default (new Transformer({
     });
 
     if (host.outputCode == null) {
-      throw new ThrowableDiagnostic({diagnostic: atlaspackDiagnostics});
+      throw new ThrowableDiagnostic({diagnostic: parcelDiagnostics});
     } else {
-      for (let d of atlaspackDiagnostics) {
+      for (let d of parcelDiagnostics) {
         logger.warn(d);
       }
     }

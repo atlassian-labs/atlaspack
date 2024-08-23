@@ -4,12 +4,12 @@ import type {ODiagnosticSeverity} from 'vscode-languageserver';
 
 import path from 'path';
 
-export type AtlaspackSeverity = DiagnosticLogEvent['level'];
+export type ParcelSeverity = DiagnosticLogEvent['level'];
 
-export function atlaspackSeverityToLspSeverity(
-  atlaspackSeverity: AtlaspackSeverity,
+export function parcelSeverityToLspSeverity(
+  parcelSeverity: ParcelSeverity,
 ): ODiagnosticSeverity {
-  switch (atlaspackSeverity) {
+  switch (parcelSeverity) {
     case 'error':
       return DiagnosticSeverity.Error;
     case 'warn':

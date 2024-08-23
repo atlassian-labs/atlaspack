@@ -1,1 +1,1 @@
-console.log('Hello Atlaspack!')
+console.log('Hello Parcel!')

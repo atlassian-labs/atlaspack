@@ -24,7 +24,7 @@ const {
 
 export async function run(input: string[]) {
   let args = input;
-  let cacheDir = path.join(process.cwd(), '.atlaspack-cache');
+  let cacheDir = path.join(process.cwd(), '.parcel-cache');
   if (args[0] === '--cache') {
     cacheDir = path.resolve(process.cwd(), args[1]);
     args = args.slice(2);
@@ -931,7 +931,7 @@ export async function run(input: string[]) {
     const server = repl.start({useColors: true, useGlobal: true});
     // $FlowFixMe[prop-missing]
     server.setupHistory(
-      path.join(os.homedir(), '.atlaspack_query_history'),
+      path.join(os.homedir(), '.parcel_query_history'),
       () => {},
     );
 

@@ -138,7 +138,7 @@ function tryCreateLanguageService(
   }
 }
 
-/** Translates semantic diagnostics (from TypeScript) into a ValidateResult that Atlaspack understands. */
+/** Translates semantic diagnostics (from TypeScript) into a ValidateResult that Parcel understands. */
 function getValidateResultFromDiagnostics(
   filePath: string,
   diagnostics: $ReadOnlyArray<Diagnostic>,

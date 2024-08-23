@@ -73,8 +73,8 @@ export class Yarn implements PackageInstaller {
       }
     }
 
-    // When Atlaspack is run by Yarn (e.g. via package.json scripts), several environment variables are
-    // added. When atlaspack in turn calls Yarn again, these can cause Yarn to behave stragely, so we
+    // When Parcel is run by Yarn (e.g. via package.json scripts), several environment variables are
+    // added. When parcel in turn calls Yarn again, these can cause Yarn to behave stragely, so we
     // filter them out when installing packages.
     let env = {};
     for (let key in process.env) {

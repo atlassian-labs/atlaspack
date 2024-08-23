@@ -7,7 +7,7 @@ import {ASSET_PRESETS, extractZIP} from '../utils';
 import {type FSMap} from '../utils/assets';
 /* eslint-disable react/jsx-no-bind */
 
-export function AtlaspackError({
+export function ParcelError({
   output: {error},
 }: {|
   output: BundleOutputError,

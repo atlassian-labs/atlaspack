@@ -8,7 +8,7 @@ Tree shaking refers to the general principle of removing dead code. With a naive
 
 Some ways to improve this are:
 
-- Determine which exports are used, and drop the `export` statement during the build. Then the exported value becomes an unused variable and a minifier can remove it. This is what symbol propagation and the conditional generation of only used `$atlaspack$export()` calls achieves.
+- Determine which exports are used, and drop the `export` statement during the build. Then the exported value becomes an unused variable and a minifier can remove it. This is what symbol propagation and the conditional generation of only used `$parcel$export()` calls achieves.
   This is also why `/*#__PURE__*/` comments are important:
 
 ```js
@@ -212,7 +212,7 @@ export function func() {
 }
 ```
 
-If `value` were instead a function, calling it would work correctly (functions are still hoisted). So circular imports are why `$atlaspack$export` calls also have to be hoisted to the top of the asset.
+If `value` were instead a function, calling it would work correctly (functions are still hoisted). So circular imports are why `$parcel$export` calls also have to be hoisted to the top of the asset.
 
 #### Limitations
 

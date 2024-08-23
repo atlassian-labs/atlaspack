@@ -4,7 +4,7 @@
 
 ("Non-static" refers to a variable being used in a way that cannot be optimized, such as `module.exports[someVariable] = 2`, or `import * as x from "..:"; console.log(x[someVariable]);`.)
 
-The task of the hoist transformer is, in the simplest case, rewriting imports and exports, renaming the uses of the imports. The packager can then detect these `import "id:...";` statements to inline dependencies, replace `$id$import$foo` with the resolved expression, and generate necessary `$atlaspack$export(..., () => $id$export$b)` statements.
+The task of the hoist transformer is, in the simplest case, rewriting imports and exports, renaming the uses of the imports. The packager can then detect these `import "id:...";` statements to inline dependencies, replace `$id$import$foo` with the resolved expression, and generate necessary `$parcel$export(..., () => $id$export$b)` statements.
 
 <table>
 <tr><td>

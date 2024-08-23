@@ -22,18 +22,18 @@ export class DevPackager {
   options: PluginOptions;
   bundleGraph: BundleGraph<NamedBundle>;
   bundle: NamedBundle;
-  atlaspackRequireName: string;
+  parcelRequireName: string;
 
   constructor(
     options: PluginOptions,
     bundleGraph: BundleGraph<NamedBundle>,
     bundle: NamedBundle,
-    atlaspackRequireName: string,
+    parcelRequireName: string,
   ) {
     this.options = options;
     this.bundleGraph = bundleGraph;
     this.bundle = bundle;
-    this.atlaspackRequireName = atlaspackRequireName;
+    this.parcelRequireName = parcelRequireName;
   }
 
   async package(): Promise<{|contents: string, map: ?SourceMap|}> {
@@ -132,8 +132,8 @@ export class DevPackager {
               path.dirname(asset.filePath),
             ),
           );
-          wrapped = wrapped.replace('$atlaspack$dirnameReplace', relPath);
-          wrapped = wrapped.replace('$atlaspack$filenameReplace', relPath);
+          wrapped = wrapped.replace('$parcel$dirnameReplace', relPath);
+          wrapped = wrapped.replace('$parcel$filenameReplace', relPath);
         }
 
         if (this.bundle.env.sourceMap) {
@@ -183,13 +183,13 @@ export class DevPackager {
         mainEntry ? this.bundleGraph.getAssetPublicId(mainEntry) : null,
       ) +
       ', ' +
-      JSON.stringify(this.atlaspackRequireName) +
+      JSON.stringify(this.parcelRequireName) +
       ')' +
       '\n';
 
     // The entry asset of a script bundle gets hoisted outside the bundle wrapper function
     // so that its variables become globals. We need to replace any require calls for
-    // runtimes with a atlaspackRequire call.
+    // runtimes with a parcelRequire call.
     if (this.bundle.env.sourceType === 'script' && script) {
       let entryMap;
       let mapBuffer = script.mapBuffer;
@@ -201,7 +201,7 @@ export class DevPackager {
         this.bundle,
         script.code,
         entryMap,
-        this.atlaspackRequireName,
+        this.parcelRequireName,
       );
       if (this.bundle.env.sourceMap && entryMap) {
         map.addSourceMap(entryMap, lineOffset);

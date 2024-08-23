@@ -1,3 +1,3 @@
 module.exports = function () {
-  return 'Hello, Atlaspack.js!';
+  return 'Hello, Parcel.js!';
 };

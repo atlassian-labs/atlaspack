@@ -11,10 +11,7 @@ import {
   run,
 } from '@atlaspack/test-utils';
 
-const config = path.join(
-  __dirname,
-  '/integration/typescript-config/.atlaspackrc',
-);
+const config = path.join(__dirname, '/integration/typescript-config/.parcelrc');
 
 describe.v2('typescript tsc', function () {
   it('should support loading tsconfig.json', async () => {
@@ -45,10 +42,7 @@ describe.v2('typescript tsc', function () {
 
   it('should produce a type declaration file when overriding the ts pipeline', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '/integration/typescript-types-atlaspackrc/index.ts',
-      ),
+      path.join(__dirname, '/integration/typescript-types-parcelrc/index.ts'),
     );
 
     assertBundles(b, [

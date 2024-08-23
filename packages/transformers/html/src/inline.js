@@ -31,7 +31,7 @@ export default function extractInlineAssets(
   let parts: Array<TransformerResult> = [];
   let hasModuleScripts = false;
   PostHTML().walk.call(program, (node: PostHTMLNode) => {
-    let atlaspackKey = hashString(`${asset.id}:${key++}`);
+    let parcelKey = hashString(`${asset.id}:${key++}`);
     if (node.tag === 'script' || node.tag === 'style') {
       let value = node.content && node.content.join('');
       if (value != null) {
@@ -108,8 +108,8 @@ export default function extractInlineAssets(
         }
 
         // allow a script/style tag to declare its key
-        if (node.attrs['data-atlaspack-key']) {
-          atlaspackKey = node.attrs['data-atlaspack-key'];
+        if (node.attrs['data-parcel-key']) {
+          parcelKey = node.attrs['data-parcel-key'];
         }
 
         // Inform packager to remove type, since CSS and JS are the defaults.
@@ -117,19 +117,19 @@ export default function extractInlineAssets(
           delete node.attrs.type;
         }
 
-        // insert atlaspackId to allow us to retrieve node during packaging
-        node.attrs['data-atlaspack-key'] = atlaspackKey;
+        // insert parcelId to allow us to retrieve node during packaging
+        node.attrs['data-parcel-key'] = parcelKey;
         asset.setAST(ast); // mark dirty
 
         asset.addDependency({
-          specifier: atlaspackKey,
+          specifier: parcelKey,
           specifierType: 'esm',
         });
 
         parts.push({
           type,
           content: value,
-          uniqueKey: atlaspackKey,
+          uniqueKey: parcelKey,
           bundleBehavior: 'inline',
           env,
           meta: {
@@ -151,7 +151,7 @@ export default function extractInlineAssets(
     let style = attrs?.style;
     if (attrs != null && style != null) {
       attrs.style = asset.addDependency({
-        specifier: atlaspackKey,
+        specifier: parcelKey,
         specifierType: 'esm',
       });
       asset.setAST(ast); // mark dirty
@@ -159,7 +159,7 @@ export default function extractInlineAssets(
       parts.push({
         type: 'css',
         content: style,
-        uniqueKey: atlaspackKey,
+        uniqueKey: parcelKey,
         bundleBehavior: 'inline',
         meta: {
           type: 'attr',
