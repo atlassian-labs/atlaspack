@@ -1,6 +1,6 @@
 {
   "extends": "@atlaspack/config-default",
   "transformers": {
-    "*.js": ["parcel-transformer-mock"]
+    "*.js": ["atlaspack-transformer-mock"]
   }
 }

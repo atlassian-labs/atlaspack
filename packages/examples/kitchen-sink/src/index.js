@@ -1,4 +1,4 @@
-import parcel from 'url:./parcel.webp';
+import parcel from 'url:./atlaspack.webp';
 import {message} from './message';
 
 import('./async');

@@ -19,7 +19,7 @@ import https from 'https';
 import getPort from 'get-port';
 import type {BuildEvent} from '@atlaspack/types';
 
-const distDir = path.resolve(__dirname, '.atlaspack-cache/dist');
+const distDir = path.resolve(__dirname, '.parcel-cache/dist');
 const config = path.join(
   __dirname,
   './integration/custom-configs/.parcelrc-dev-server',

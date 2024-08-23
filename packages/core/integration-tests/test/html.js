@@ -89,7 +89,7 @@ describe.v2('html', function () {
     assert(html.includes('#hash_link'));
     assert(html.includes('mailto:someone@acme.com'));
     assert(html.includes('tel:+33636757575'));
-    assert(html.includes('https://unpkg.com/atlaspack-bundler'));
+    assert(html.includes('https://unpkg.com/parcel-bundler'));
 
     let iconsBundle = b.getBundles().find(b => b.name.startsWith('icons'));
     assert(
@@ -710,9 +710,7 @@ describe.v2('html', function () {
       'utf8',
     );
     assert(
-      html.includes(
-        '<script src="https://unpkg.com/atlaspack-bundler"></script>',
-      ),
+      html.includes('<script src="https://unpkg.com/parcel-bundler"></script>'),
     );
   });
 

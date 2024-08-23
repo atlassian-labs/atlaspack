@@ -469,7 +469,7 @@ describe.v2('sourcemaps', function () {
       source: inputs[1],
       generated: raw,
       str: 'exports.a',
-      generatedStr: 't.a',
+      generatedStr: 'o.a',
       sourcePath: 'local.js',
     });
 
@@ -478,7 +478,7 @@ describe.v2('sourcemaps', function () {
       source: inputs[2],
       generated: raw,
       str: 'exports.count = function(a, b) {',
-      generatedStr: 't.count=function(e,n){',
+      generatedStr: 'o.count=function(e,n){',
       sourcePath: 'utils/util.js',
     });
   });
