@@ -33,7 +33,7 @@ pub(crate) fn convert_result(
 ) -> Result<TransformResult, Vec<Diagnostic>> {
   let asset_file_path = asset.file_path.to_path_buf();
   let asset_environment = asset.env.clone();
-  let asset_id = asset.id();
+  let asset_id = asset.id;
 
   if let Some(shebang) = result.shebang {
     asset.set_interpreter(shebang);
@@ -75,6 +75,7 @@ pub(crate) fn convert_result(
     for symbol in hoist_result.imported_symbols {
       if let Some(dependency) = dependency_by_specifier.get_mut(&symbol.source) {
         let symbol = transformer_imported_symbol_to_symbol(&asset_file_path, &symbol);
+        dependency.has_symbols = true;
         dependency.symbols.push(symbol);
       }
     }
@@ -83,6 +84,7 @@ pub(crate) fn convert_result(
       if let Some(dependency) = dependency_by_specifier.get_mut(&symbol.source) {
         if is_re_export_all_symbol(&symbol) {
           let loc = Some(convert_loc(asset_file_path.clone(), &symbol.loc));
+          dependency.has_symbols = true;
           dependency.symbols.push(make_export_all_symbol(loc));
           // TODO: Why isn't this added to the asset.symbols array?
         } else {
@@ -109,6 +111,7 @@ pub(crate) fn convert_result(
             ..Symbol::default()
           };
 
+          dependency.has_symbols = true;
           dependency.symbols.push(symbol.clone());
           asset.symbols.push(symbol);
         }
