@@ -6,7 +6,7 @@ import type {BuildSuccessEvent} from '@atlaspack/types';
 import type WorkerFarm from '@atlaspack/workers';
 
 import {expose, proxy} from 'comlink';
-import Parcel, {createWorkerFarm} from '@atlaspack/core';
+import Atlaspack, {createWorkerFarm} from '@atlaspack/core';
 // import {MemoryFS} from '@atlaspack/fs';
 import {
   makeDeferredWithPromise,
@@ -251,7 +251,7 @@ async function setup(assets, options) {
   let entries = assets
     .filter(([, data]) => data.isEntry)
     .map(([name]) => PathUtils.fromAssetPath(name));
-  const bundler = new Parcel({
+  const bundler = new Atlaspack({
     entries,
     // https://github.com/parcel-bundler/parcel/pull/4290
     shouldDisableCache: false,

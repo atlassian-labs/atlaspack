@@ -37,7 +37,7 @@ const realpath = promisify(
 const isPnP = process.versions.pnp != null;
 
 function getWatchmanWatcher(): typeof watcher {
-  // This is here to trick parcel into ignoring this require...
+  // This is here to trick atlaspack into ignoring this require...
   const packageName = ['@atlaspack', 'watcher-watchman-js'].join('/');
 
   // $FlowFixMe

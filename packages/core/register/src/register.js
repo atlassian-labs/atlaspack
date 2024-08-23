@@ -10,7 +10,7 @@ import defaultConfigContents from '@atlaspack/config-default';
 import Module from 'module';
 import path from 'path';
 import {addHook} from 'pirates';
-import Parcel, {INTERNAL_RESOLVE, INTERNAL_TRANSFORM} from '@atlaspack/core';
+import Atlaspack, {INTERNAL_RESOLVE, INTERNAL_TRANSFORM} from '@atlaspack/core';
 
 import syncPromise from './syncPromise';
 
@@ -34,7 +34,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
     lastDisposable.dispose();
   }
 
-  let parcel = new Parcel({
+  let atlaspack = new Atlaspack({
     logLevel: 'error',
     ...opts,
   });
@@ -46,11 +46,11 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
     },
   };
 
-  syncPromise(parcel._init());
+  syncPromise(atlaspack._init());
 
   let isProcessing = false;
 
-  // As Parcel is pretty much fully asynchronous, create an async function and wrap it in a syncPromise later...
+  // As Atlaspack is pretty much fully asynchronous, create an async function and wrap it in a syncPromise later...
   async function fileProcessor(code, filePath) {
     if (isProcessing) {
       return code;
@@ -59,7 +59,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
     try {
       isProcessing = true;
       // $FlowFixMe
-      let result = await parcel[INTERNAL_TRANSFORM]({
+      let result = await atlaspack[INTERNAL_TRANSFORM]({
         filePath,
         env,
       });
@@ -92,7 +92,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
 
       let resolved = syncPromise(
         // $FlowFixMe
-        parcel[INTERNAL_RESOLVE]({
+        atlaspack[INTERNAL_RESOLVE]({
           specifier: targetFile,
           sourcePath: currFile,
           env,
@@ -126,7 +126,11 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
   // $FlowFixMe[prop-missing]
   const originalResolveFilename = Module._resolveFilename;
   // $FlowFixMe[prop-missing]
-  Module._resolveFilename = function parcelResolveFilename(to, from, ...rest) {
+  Module._resolveFilename = function atlaspackResolveFilename(
+    to,
+    from,
+    ...rest
+  ) {
     return isProcessing || disposed
       ? originalResolveFilename(to, from, ...rest)
       : resolveFile(from?.filename, to);

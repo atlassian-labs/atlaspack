@@ -33,7 +33,7 @@ describe.skip('@atlaspack/register', () => {
     );
   });
 
-  it("enables Parcel's resolver in node", () => {
+  it("enables Atlaspacks's resolver in node", () => {
     let [foo, resolved] = execSync(
       `node -r @atlaspack/register ${path.join(
         __dirname,

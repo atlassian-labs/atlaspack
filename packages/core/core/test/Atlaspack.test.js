@@ -6,7 +6,7 @@ import WorkerFarm from '@atlaspack/workers';
 import sinon from 'sinon';
 import assert from 'assert';
 import path from 'path';
-import Parcel, {createWorkerFarm} from '../src/Atlaspack';
+import Atlaspack, {createWorkerFarm} from '../src/Atlaspack';
 
 describe('Atlaspack', function () {
   this.timeout(75000);
@@ -20,10 +20,10 @@ describe('Atlaspack', function () {
 
   it('does not initialize when passed an ending farm', async () => {
     workerFarm.ending = true;
-    let parcel = createAtlaspack({workerFarm});
+    let atlaspack = createAtlaspack({workerFarm});
 
     // $FlowFixMe
-    await assert.rejects(() => parcel.run(), {
+    await assert.rejects(() => atlaspack.run(), {
       name: 'Error',
       message: 'Supplied WorkerFarm is ending',
     });
@@ -31,7 +31,7 @@ describe('Atlaspack', function () {
     workerFarm.ending = false;
   });
 
-  describe('parcel.end()', () => {
+  describe('atlaspack.end()', () => {
     let endSpy;
     beforeEach(() => {
       endSpy = sinon.spy(WorkerFarm.prototype, 'end');
@@ -42,31 +42,31 @@ describe('Atlaspack', function () {
     });
 
     it('ends any WorkerFarm it creates', async () => {
-      let parcel = createAtlaspack();
-      await parcel.run();
+      let atlaspack = createAtlaspack();
+      await atlaspack.run();
       assert.equal(endSpy.callCount, 1);
     });
 
     it('runs and constructs another farm for subsequent builds', async () => {
-      let parcel = createAtlaspack();
+      let atlaspack = createAtlaspack();
 
-      await parcel.run();
-      await parcel.run();
+      await atlaspack.run();
+      await atlaspack.run();
 
       assert.equal(endSpy.callCount, 2);
     });
 
     it('does not end passed WorkerFarms', async () => {
-      let parcel = createAtlaspack({workerFarm});
-      await parcel.run();
+      let atlaspack = createAtlaspack({workerFarm});
+      await atlaspack.run();
       assert.equal(endSpy.callCount, 0);
 
       await workerFarm.end();
     });
 
     it('removes shared references it creates', async () => {
-      let parcel = createAtlaspack({workerFarm});
-      await parcel.run();
+      let atlaspack = createAtlaspack({workerFarm});
+      await atlaspack.run();
 
       assert.equal(workerFarm.sharedReferences.size, 0);
       assert.equal(workerFarm.sharedReferencesByValue.size, 0);
@@ -85,10 +85,10 @@ describe('AtlaspackAPI', function () {
 
   afterEach(() => workerFarm.end());
 
-  describe('parcel.unstable_transform()', () => {
+  describe('atlaspack.unstable_transform()', () => {
     it('should transform simple file', async () => {
-      let parcel = createAtlaspack({workerFarm});
-      let res = await parcel.unstable_transform({
+      let atlaspack = createAtlaspack({workerFarm});
+      let res = await atlaspack.unstable_transform({
         filePath: path.join(__dirname, 'fixtures/atlaspack/index.js'),
       });
       let code = await res[0].getCode();
@@ -96,8 +96,8 @@ describe('AtlaspackAPI', function () {
     });
 
     it('should transform with standalone mode', async () => {
-      let parcel = createAtlaspack({workerFarm});
-      let res = await parcel.unstable_transform({
+      let atlaspack = createAtlaspack({workerFarm});
+      let res = await atlaspack.unstable_transform({
         filePath: path.join(__dirname, 'fixtures/atlaspack/other.js'),
         query: 'standalone=true',
       });
@@ -109,10 +109,10 @@ describe('AtlaspackAPI', function () {
     });
   });
 
-  describe('parcel.resolve()', () => {
+  describe('atlaspack.resolve()', () => {
     it('should resolve dependencies', async () => {
-      let parcel = createAtlaspack({workerFarm});
-      let res = await parcel.unstable_resolve({
+      let atlaspack = createAtlaspack({workerFarm});
+      let res = await atlaspack.unstable_resolve({
         specifier: './other',
         specifierType: 'esm',
         resolveFrom: path.join(__dirname, 'fixtures/atlaspack/index.js'),
@@ -129,7 +129,7 @@ describe('AtlaspackAPI', function () {
 });
 
 function createAtlaspack(opts?: InitialAtlaspackOptions) {
-  return new Parcel({
+  return new Atlaspack({
     entries: [path.join(__dirname, 'fixtures/atlaspack/index.js')],
     logLevel: 'info',
     defaultConfig: path.join(

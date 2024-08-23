@@ -21,7 +21,7 @@ import {spawnSync} from 'child_process';
 import tempy from 'tempy';
 import {md} from '@atlaspack/diagnostic';
 
-const parcelCli = require.resolve('@atlaspack/cli/src/bin.js');
+const atlaspackCli = require.resolve('@atlaspack/cli/src/bin.js');
 const inputDir = path.join(__dirname, '/input');
 
 describe.v2('babel', function () {
@@ -244,7 +244,7 @@ describe.v2('babel', function () {
     await outputFS.rimraf(path.join(fixtureDir, 'dist'));
   });
 
-  it('should support building with custom babel config when running parcel globally', async function () {
+  it('should support building with custom babel config when running atlaspack globally', async function () {
     let tmpDir = tempy.directory();
     let distDir = path.join(tmpDir, 'dist');
     await fs.ncp(
@@ -349,7 +349,7 @@ describe.v2('babel', function () {
       assert(file.includes('class Foo'));
     });
 
-    it('should be "production" if Parcel is run in production mode', async () => {
+    it('should be "production" if Atlaspack is run in production mode', async () => {
       await bundle(
         path.join(__dirname, '/integration/babel-env-name/index.js'),
         {
@@ -470,7 +470,7 @@ describe.v2('babel', function () {
         spawnSync(
           'node',
           [
-            parcelCli,
+            atlaspackCli,
             'build',
             'src/index.js',
             '--no-optimize',
@@ -512,7 +512,13 @@ describe.v2('babel', function () {
       let build = () =>
         spawnSync(
           'node',
-          [parcelCli, 'build', 'index.js', '--no-optimize', '--no-scope-hoist'],
+          [
+            atlaspackCli,
+            'build',
+            'index.js',
+            '--no-optimize',
+            '--no-scope-hoist',
+          ],
           {
             cwd: inputDir,
             env: {

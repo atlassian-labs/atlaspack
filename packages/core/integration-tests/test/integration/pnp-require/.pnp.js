@@ -6,7 +6,7 @@ const resolve = request => {
   } else if (request === 'pnpapi') {
     return __filename;
   } else if (request.startsWith('@atlaspack/') || request.startsWith('@parcel/')) {
-    // Use node_modules path for parcel packages so source field is used.
+    // Use node_modules path for atlaspack and parcel packages so source field is used.
     return path.join(__dirname, '../../../../../../node_modules/', request);
   } else if (/^((@[^/]+\/[^/]+)|[^/]+)\/?$/.test(request)) {
     return path.dirname(require.resolve(path.join(request, 'package.json')));

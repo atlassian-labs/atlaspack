@@ -33,7 +33,7 @@ export default (new Reporter({
           <html>
             <head>
               <meta charset="utf-8">
-              <title>📦Parcel Bundle Analyzer | ${targetName}</title>
+              <title>Atlaspack Bundle Analyzer | ${targetName}</title>
               <style>
                 body {
                   margin: 0;
