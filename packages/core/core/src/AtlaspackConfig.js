@@ -425,7 +425,7 @@ export default class AtlaspackConfig {
   async missingPluginError(
     plugins:
       | GlobMap<ExtendableAtlaspackConfigPipeline>
-      | GlobMap<ParcelPluginNode>
+      | GlobMap<AtlaspackPluginNode>
       | PureAtlaspackConfigPipeline,
     message: string,
     key: string,
