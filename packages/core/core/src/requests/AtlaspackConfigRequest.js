@@ -98,7 +98,7 @@ export default function createAtlaspackConfigRequest(): AtlaspackConfigRequest {
       if (usedDefault) {
         let resolveFrom = getResolveFrom(options.inputFS, options.projectRoot);
         api.invalidateOnFileCreate({
-          fileName: '.atlaspackrc',
+          fileName: '.parcelrc',
           aboveFilePath: toProjectPath(options.projectRoot, resolveFrom),
         });
       }
@@ -137,7 +137,7 @@ export async function loadAtlaspackConfig(
   let atlaspackConfig = await resolveAtlaspackConfig(options);
 
   if (!atlaspackConfig) {
-    throw new Error('Could not find a .atlaspackrc');
+    throw new Error('Could not find a .parcelrc');
   }
 
   return atlaspackConfig;
@@ -154,7 +154,7 @@ export async function resolveAtlaspackConfig(
       : await resolveConfig(
           options.inputFS,
           resolveFrom,
-          ['.atlaspackrc'],
+          ['.parcelrc'],
           options.projectRoot,
         );
 
@@ -176,7 +176,7 @@ export async function resolveAtlaspackConfig(
   } catch (e) {
     throw new ThrowableDiagnostic({
       diagnostic: {
-        message: md`Could not find atlaspack config at ${path.relative(
+        message: md`Could not find parcel config at ${path.relative(
           options.projectRoot,
           configPath,
         )}`,
@@ -224,7 +224,7 @@ export async function parseAndProcessConfig(
     };
     throw new ThrowableDiagnostic({
       diagnostic: {
-        message: `Failed to parse .atlaspackrc`,
+        message: `Failed to parse .parcelrc`,
         origin: '@atlaspack/core',
 
         codeFrames: [
@@ -498,7 +498,7 @@ export async function resolveExtends(
       );
       throw new ThrowableDiagnostic({
         diagnostic: {
-          message: `Cannot find extended atlaspack config`,
+          message: `Cannot find extended parcel config`,
           origin: '@atlaspack/core',
           codeFrames: [
             {
@@ -547,7 +547,7 @@ async function processExtendedConfig(
     );
     throw new ThrowableDiagnostic({
       diagnostic: {
-        message: 'Cannot find extended atlaspack config',
+        message: 'Cannot find extended parcel config',
         origin: '@atlaspack/core',
         codeFrames: [
           {
@@ -591,7 +591,7 @@ export function validateConfigFile(
     AtlaspackConfigSchema,
     {data: config, filePath: relativePath},
     '@atlaspack/core',
-    'Invalid Atlaspack Config',
+    'Invalid Parcel Config',
   );
 }
 

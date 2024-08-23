@@ -21,7 +21,7 @@ pub struct NamedPattern<'a> {
   pub use_fallback: bool,
 }
 
-/// Represents fields in .atlaspackrc that map a pattern or named pattern to a list of plugin names
+/// Represents fields in .parcelrc that map a pattern or named pattern to a list of plugin names
 ///
 /// # Examples
 ///

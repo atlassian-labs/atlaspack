@@ -8,7 +8,7 @@ use indexmap::IndexMap;
 use super::atlaspack_config::PluginNode;
 use super::atlaspack_rc::AtlaspackRcFile;
 
-/// An intermediate representation of the .atlaspackrc config
+/// An intermediate representation of the .parcelrc config
 ///
 /// This data structure is used to perform configuration merging, to eventually create a compelete AtlaspackConfig.
 ///

@@ -73,27 +73,27 @@ export default function extractInlineAssets(
       // Inform packager to remove type, since CSS and JS are the defaults.
       delete attrs.type;
 
-      let atlaspackKey;
+      let parcelKey;
       // allow a script/style tag to declare its key
-      if (attrs['data-atlaspack-key']) {
-        atlaspackKey = attrs['data-atlaspack-key'];
+      if (attrs['data-parcel-key']) {
+        parcelKey = attrs['data-parcel-key'];
       } else {
-        atlaspackKey = hashString(`${asset.id}:${key++}`);
+        parcelKey = hashString(`${asset.id}:${key++}`);
       }
 
-      // insert atlaspackId to allow us to retrieve node during packaging
-      attrs['data-atlaspack-key'] = atlaspackKey;
+      // insert parcelId to allow us to retrieve node during packaging
+      attrs['data-parcel-key'] = parcelKey;
       asset.setAST(ast); // mark dirty
 
       asset.addDependency({
-        specifier: atlaspackKey,
+        specifier: parcelKey,
         specifierType: 'esm',
       });
 
       parts.push({
         type,
         content: value,
-        uniqueKey: atlaspackKey,
+        uniqueKey: parcelKey,
         bundleBehavior: 'inline',
         env,
         meta: {
@@ -109,9 +109,9 @@ export default function extractInlineAssets(
     let attrs = node.attrs;
     let style = attrs?.style;
     if (attrs != null && style != null) {
-      let atlaspackKey = hashString(`${asset.id}:${key++}`);
+      let parcelKey = hashString(`${asset.id}:${key++}`);
       attrs.style = asset.addDependency({
-        specifier: atlaspackKey,
+        specifier: parcelKey,
         specifierType: 'esm',
       });
       asset.setAST(ast); // mark dirty
@@ -119,7 +119,7 @@ export default function extractInlineAssets(
       parts.push({
         type: 'css',
         content: style,
-        uniqueKey: atlaspackKey,
+        uniqueKey: parcelKey,
         bundleBehavior: 'inline',
         meta: {
           type: 'attr',

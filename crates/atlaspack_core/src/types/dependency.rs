@@ -46,7 +46,7 @@ pub struct Dependency {
   #[serde(default)]
   pub package_conditions: ExportsCondition,
 
-  /// The pipeline defined in .atlaspackrc that the dependency should be processed with
+  /// The pipeline defined in .parcelrc that the dependency should be processed with
   #[serde(default)]
   pub pipeline: Option<String>,
 

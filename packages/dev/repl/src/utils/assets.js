@@ -384,14 +384,14 @@ document.body.innerHTML = greeter(user);`,
       ]),
     },
   ],
-  //  .atlaspackrc: [
+  //  .parcelrc: [
   //     {
   //       name: 'src/index.js',
   //       content: `const x = 1;\nconsole.log(x);`,
   //       isEntry: true,
   //     },
   //     {
-  //       name: '.atlaspackrc',
+  //       name: '.parcelrc',
   //       content: JSON.stringify(
   //         {
   //           extends: '@atlaspack/config-repl',

@@ -20,14 +20,14 @@ window.$RefreshSig$ = function() {
 
 ErrorOverlay.setEditorHandler(function editorHandler(errorLocation) {
   let file = \`\${errorLocation.fileName}:\${errorLocation.lineNumber || 1}:\${errorLocation.colNumber || 1}\`;
-  fetch(\`/__atlaspack_launch_editor?file=\${encodeURIComponent(file)}\`);
+  fetch(\`/__parcel_launch_editor?file=\${encodeURIComponent(file)}\`);
 });
 
 ErrorOverlay.startReportingRuntimeErrors({
   onError: function () {},
 });
 
-window.addEventListener('atlaspackhmraccept', () => {
+window.addEventListener('parcelhmraccept', () => {
   ErrorOverlay.dismissRuntimeErrors();
 });
 `;

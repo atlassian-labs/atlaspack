@@ -69,7 +69,7 @@ export default async function babel7(
       ],
     },
     caller: {
-      name: 'atlaspack',
+      name: 'parcel',
       version: transformerVersion,
       targets: JSON.stringify(babelOptions.targets),
       outputFormat: asset.env.outputFormat,
@@ -120,7 +120,7 @@ export default async function babel7(
           opts.logger.warn({
             message: md`Ignoring non-absolute Babel external dependency: ${f}`,
             hints: [
-              'Please report this to the corresponding Babel plugin and/or to Atlaspack.',
+              'Please report this to the corresponding Babel plugin and/or to Parcel.',
             ],
           });
         } else {

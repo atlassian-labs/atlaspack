@@ -1,24 +1,22 @@
 // @flow strict-local
 import type {Environment} from '@atlaspack/types';
 
-export const prelude = (atlaspackRequireName: string): string => `
-var $atlaspack$modules = {};
-var $atlaspack$inits = {};
+export const prelude = (parcelRequireName: string): string => `
+var $parcel$modules = {};
+var $parcel$inits = {};
 
-var atlaspackRequire = $atlaspack$global[${JSON.stringify(
-  atlaspackRequireName,
-)}];
+var parcelRequire = $parcel$global[${JSON.stringify(parcelRequireName)}];
 
-if (atlaspackRequire == null) {
-  atlaspackRequire = function(id) {
-    if (id in $atlaspack$modules) {
-      return $atlaspack$modules[id].exports;
+if (parcelRequire == null) {
+  parcelRequire = function(id) {
+    if (id in $parcel$modules) {
+      return $parcel$modules[id].exports;
     }
-    if (id in $atlaspack$inits) {
-      var init = $atlaspack$inits[id];
-      delete $atlaspack$inits[id];
+    if (id in $parcel$inits) {
+      var init = $parcel$inits[id];
+      delete $parcel$inits[id];
       var module = {id: id, exports: {}};
-      $atlaspack$modules[id] = module;
+      $parcel$modules[id] = module;
       init.call(module.exports, module, module.exports);
       return module.exports;
     }
@@ -27,14 +25,14 @@ if (atlaspackRequire == null) {
     throw err;
   };
 
-  atlaspackRequire.register = function register(id, init) {
-    $atlaspack$inits[id] = init;
+  parcelRequire.register = function register(id, init) {
+    $parcel$inits[id] = init;
   };
 
-  $atlaspack$global[${JSON.stringify(atlaspackRequireName)}] = atlaspackRequire;
+  $parcel$global[${JSON.stringify(parcelRequireName)}] = parcelRequire;
 }
 
-var atlaspackRegister = atlaspackRequire.register;
+var parcelRegister = parcelRequire.register;
 `;
 
 export const fnExpr = (
@@ -52,67 +50,67 @@ export const fnExpr = (
 };
 
 export const bundleQueuePrelude = (env: Environment): string => `
-if (!$atlaspack$global.lb) {
+if (!$parcel$global.lb) {
   // Set of loaded bundles
-  $atlaspack$global.lb = new Set();
+  $parcel$global.lb = new Set();
   // Queue of bundles to execute once they're dep bundles are loaded
-  $atlaspack$global.bq = [];
+  $parcel$global.bq = [];
 
   // Register loaded bundle
-  $atlaspack$global.rlb = ${fnExpr(
+  $parcel$global.rlb = ${fnExpr(
     env,
     ['bundle'],
-    ['$atlaspack$global.lb.add(bundle);', '$atlaspack$global.pq();'],
+    ['$parcel$global.lb.add(bundle);', '$parcel$global.pq();'],
   )}
 
   // Run when ready
-  $atlaspack$global.rwr = ${fnExpr(
+  $parcel$global.rwr = ${fnExpr(
     env,
     // b = bundle public id
     // r = run function to execute the bundle entry
     // d = list of dependent bundles this bundle requires before executing
     ['b', 'r', 'd'],
-    ['$atlaspack$global.bq.push({b, r, d});', '$atlaspack$global.pq();'],
+    ['$parcel$global.bq.push({b, r, d});', '$parcel$global.pq();'],
   )}
 
   // Process queue
-  $atlaspack$global.pq = ${fnExpr(
+  $parcel$global.pq = ${fnExpr(
     env,
     [],
     [
-      `var runnableEntry = $atlaspack$global.bq.find(${fnExpr(
+      `var runnableEntry = $parcel$global.bq.find(${fnExpr(
         env,
         ['i'],
         [
           `return i.d.every(${fnExpr(
             env,
             ['dep'],
-            ['return $atlaspack$global.lb.has(dep);'],
+            ['return $parcel$global.lb.has(dep);'],
           )});`,
         ],
       )});`,
       'if (runnableEntry) {',
-      `$atlaspack$global.bq = $atlaspack$global.bq.filter(${fnExpr(
+      `$parcel$global.bq = $parcel$global.bq.filter(${fnExpr(
         env,
         ['i'],
         ['return i.b !== runnableEntry.b;'],
       )});`,
       'runnableEntry.r();',
-      '$atlaspack$global.pq();',
+      '$parcel$global.pq();',
       '}',
     ],
   )}
 }
 `;
 
-const $atlaspack$export = `
-function $atlaspack$export(e, n, v, s) {
+const $parcel$export = `
+function $parcel$export(e, n, v, s) {
   Object.defineProperty(e, n, {get: v, set: s, enumerable: true, configurable: true});
 }
 `;
 
-const $atlaspack$exportWildcard = `
-function $atlaspack$exportWildcard(dest, source) {
+const $parcel$exportWildcard = `
+function $parcel$exportWildcard(dest, source) {
   Object.keys(source).forEach(function(key) {
     if (key === 'default' || key === '__esModule' || Object.prototype.hasOwnProperty.call(dest, key)) {
       return;
@@ -130,20 +128,20 @@ function $atlaspack$exportWildcard(dest, source) {
 }
 `;
 
-const $atlaspack$interopDefault = `
-function $atlaspack$interopDefault(a) {
+const $parcel$interopDefault = `
+function $parcel$interopDefault(a) {
   return a && a.__esModule ? a.default : a;
 }
 `;
 
-const $atlaspack$global = (env: Environment): string => {
+const $parcel$global = (env: Environment): string => {
   if (env.supports('global-this')) {
     return `
-      var $atlaspack$global = globalThis;
+      var $parcel$global = globalThis;
     `;
   }
   return `
-      var $atlaspack$global =
+      var $parcel$global =
         typeof globalThis !== 'undefined'
           ? globalThis
           : typeof self !== 'undefined'
@@ -156,16 +154,16 @@ const $atlaspack$global = (env: Environment): string => {
   `;
 };
 
-const $atlaspack$defineInteropFlag = `
-function $atlaspack$defineInteropFlag(a) {
+const $parcel$defineInteropFlag = `
+function $parcel$defineInteropFlag(a) {
   Object.defineProperty(a, '__esModule', {value: true, configurable: true});
 }
 `;
 
 export const helpers = {
-  $atlaspack$export,
-  $atlaspack$exportWildcard,
-  $atlaspack$interopDefault,
-  $atlaspack$global,
-  $atlaspack$defineInteropFlag,
+  $parcel$export,
+  $parcel$exportWildcard,
+  $parcel$interopDefault,
+  $parcel$global,
+  $parcel$defineInteropFlag,
 };

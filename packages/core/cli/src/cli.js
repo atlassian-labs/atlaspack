@@ -95,8 +95,7 @@ const commonOptions = {
   '--no-cache': 'disable the filesystem cache',
   '--config <path>':
     'specify which config to use. can be a path or a package name',
-  '--cache-dir <path>':
-    'set the cache directory. defaults to ".atlaspack-cache"',
+  '--cache-dir <path>': 'set the cache directory. defaults to ".parcel-cache"',
   '--watch-dir <path>':
     'set the root watch directory. defaults to nearest lockfile or source control dir.',
   '--watch-ignore [path]': [

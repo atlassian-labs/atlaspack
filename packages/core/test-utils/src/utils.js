@@ -16,7 +16,7 @@ import type {IncomingMessage} from 'http';
 
 import invariant from 'assert';
 import util from 'util';
-import Atlaspack, {createWorkerFarm} from '@atlaspack/core';
+import Parcel, {createWorkerFarm} from '@atlaspack/core';
 import assert from 'assert';
 import vm from 'vm';
 import v8 from 'v8';
@@ -109,18 +109,18 @@ If you don't know how, check here: https://bit.ly/2UmWsbD
 
 export const isAtlaspackV3 = process.env.ATLASPACK_V3 === 'true';
 
-export function getAtlaspackOptions(
+export function getParcelOptions(
   entries: FilePath | Array<FilePath>,
   opts?: $Shape<InitialAtlaspackOptions>,
 ): InitialAtlaspackOptions {
-  return mergeAtlaspackOptions(
+  return mergeParcelOptions(
     {
       entries,
       shouldDisableCache: true,
       logLevel: 'none',
       shouldBundleIncrementally:
         process.env.NO_INCREMENTAL == null ? true : false,
-      defaultConfig: path.join(__dirname, '.atlaspackrc-no-reporters'),
+      defaultConfig: path.join(__dirname, '.parcelrc-no-reporters'),
       inputFS,
       outputFS,
       workerFarm,
@@ -143,8 +143,8 @@ export function getAtlaspackOptions(
 export function bundler(
   entries: FilePath | Array<FilePath>,
   opts?: $Shape<InitialAtlaspackOptions>,
-): Atlaspack {
-  return new Atlaspack(getAtlaspackOptions(entries, opts));
+): Parcel {
+  return new Parcel(getParcelOptions(entries, opts));
 }
 
 export function findAsset(
@@ -191,7 +191,7 @@ export function findDependency(
   return dependency;
 }
 
-export function mergeAtlaspackOptions(
+export function mergeParcelOptions(
   optsOne: InitialAtlaspackOptions,
   optsTwo?: InitialAtlaspackOptions | null,
 ): InitialAtlaspackOptions {
@@ -236,7 +236,7 @@ export async function bundle(
   return (await bundler(entries, opts).run()).bundleGraph;
 }
 
-export function getNextBuild(b: Atlaspack): Promise<BuildEvent> {
+export function getNextBuild(b: Parcel): Promise<BuildEvent> {
   return new Promise((resolve, reject) => {
     let subscriptionPromise = b
       .watch((err, buildEvent) => {
@@ -263,7 +263,7 @@ export function getNextBuild(b: Atlaspack): Promise<BuildEvent> {
 }
 
 export async function getNextBuildSuccess(
-  b: Atlaspack,
+  b: Parcel,
 ): Promise<BuildSuccessEvent> {
   let evt = await getNextBuild(b);
   invariant(evt.type === 'buildSuccess');
@@ -371,7 +371,7 @@ export async function runBundles(
     esmOutput = bundles.length === 1 ? res[0] : res;
   } else {
     for (let [code, b] of bundles) {
-      // require, atlaspackRequire was set up in prepare*Context
+      // require, parcelRequire was set up in prepare*Context
       new vm.Script((opts.strict ? '"use strict";\n' : '') + code, {
         filename:
           b.bundleBehavior === 'inline'
@@ -405,7 +405,7 @@ export async function runBundles(
           return typeof ctx.output !== 'undefined' ? ctx.output : undefined;
         } else {
           for (let key in ctx) {
-            if (key.startsWith('atlaspackRequire')) {
+            if (key.startsWith('parcelRequire')) {
               // $FlowFixMe[incompatible-use]
               return ctx[key](bundleGraph.getAssetPublicId(entryAsset));
             }
@@ -657,7 +657,7 @@ function prepareBrowserContext(
     },
 
     getElementById(id) {
-      if (id !== '__atlaspack__error__overlay__') return fakeElement;
+      if (id !== '__parcel__error__overlay__') return fakeElement;
     },
 
     body: {
@@ -1113,7 +1113,7 @@ export async function assertESMExports(
   // $FlowFixMe[unclear-type]
   evaluate: ?({|[string]: any|}) => mixed,
 ) {
-  let atlaspackResult = await run(b, undefined, undefined, externalModules);
+  let parcelResult = await run(b, undefined, undefined, externalModules);
 
   let entry = nullthrows(
     b
@@ -1131,19 +1131,19 @@ export async function assertESMExports(
   );
 
   if (evaluate) {
-    atlaspackResult = await evaluate(atlaspackResult);
+    parcelResult = await evaluate(parcelResult);
     nodeResult = await evaluate(nodeResult);
   }
   assert.deepEqual(
-    atlaspackResult,
+    parcelResult,
     nodeResult,
     "Bundle exports don't match Node's native behaviour",
   );
 
   if (!evaluate) {
-    atlaspackResult = {...atlaspackResult};
+    parcelResult = {...parcelResult};
   }
-  assert.deepEqual(atlaspackResult, expected);
+  assert.deepEqual(parcelResult, expected);
 }
 
 export async function assertNoFilePathInCache(
@@ -1268,45 +1268,45 @@ export function request(
 
 // $FlowFixMe
 let origDescribe = globalThis.describe;
-let atlaspackVersion: string | void;
+let parcelVersion: string | void;
 export function describe(...args: mixed[]) {
-  atlaspackVersion = undefined;
+  parcelVersion = undefined;
   origDescribe.apply(this, args);
 }
 
 describe.only = function (...args: mixed[]) {
-  atlaspackVersion = undefined;
+  parcelVersion = undefined;
   origDescribe.only.apply(this, args);
 };
 
 describe.skip = function (...args: mixed[]) {
-  atlaspackVersion = undefined;
+  parcelVersion = undefined;
   origDescribe.skip.apply(this, args);
 };
 
 describe.v2 = function (...args: mixed[]) {
-  atlaspackVersion = 'v2';
+  parcelVersion = 'v2';
   if (!isAtlaspackV3) {
     origDescribe.apply(this, args);
   }
 };
 
 describe.v2.only = function (...args: mixed[]) {
-  atlaspackVersion = 'v2';
+  parcelVersion = 'v2';
   if (!isAtlaspackV3) {
     origDescribe.only.apply(this, args);
   }
 };
 
 describe.v3 = function (...args: mixed[]) {
-  atlaspackVersion = 'v3';
+  parcelVersion = 'v3';
   if (isAtlaspackV3) {
     origDescribe.apply(this, args);
   }
 };
 
 describe.v3.only = function (...args: mixed[]) {
-  atlaspackVersion = 'v3';
+  parcelVersion = 'v3';
   if (isAtlaspackV3) {
     origDescribe.only.apply(this, args);
   }
@@ -1315,9 +1315,9 @@ describe.v3.only = function (...args: mixed[]) {
 let origIt = globalThis.it;
 export function it(...args: mixed[]) {
   if (
-    atlaspackVersion == null ||
-    (atlaspackVersion == 'v2' && !isAtlaspackV3) ||
-    (atlaspackVersion == 'v3' && isAtlaspackV3)
+    parcelVersion == null ||
+    (parcelVersion == 'v2' && !isAtlaspackV3) ||
+    (parcelVersion == 'v3' && isAtlaspackV3)
   ) {
     origIt.apply(this, args);
   }

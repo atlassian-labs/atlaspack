@@ -226,7 +226,7 @@ fn extended_config_from(
 }
 
 pub fn default_extended_config(project_root: &Path) -> ExtendedConfigFixture {
-  let base_resolve_from = Arc::from(project_root.join(".atlaspackrc"));
+  let base_resolve_from = Arc::from(project_root.join(".parcelrc"));
 
   extended_config_from(project_root, base_resolve_from)
 }

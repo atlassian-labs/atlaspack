@@ -6,6 +6,7 @@
 <PROJECT_ROOT>/.nyc_output/.*
 .*/tmp/**/.*
 .*/.atlaspack-cache/.*
+.*/.parcel-cache/.*
 <PROJECT_ROOT>/packages/core/integration-tests/dist/**
 <PROJECT_ROOT>/packages/core/integration-tests/test/input/**
 <PROJECT_ROOT>/packages/core/integration-tests/test/integration/babel-strip-flow-types/**

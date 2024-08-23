@@ -99,6 +99,7 @@ export type Semver = string;
 export type GlobMap<T> = {[Glob]: T, ...};
 
 export type RawAtlaspackConfigPipeline = Array<PackageName>;
+export type RawParcelConfigPipeline = RawAtlaspackConfigPipeline;
 
 export type HMROptions = {
   port?: number,
@@ -106,7 +107,7 @@ export type HMROptions = {
   ...
 };
 
-/** The format of .atlaspackrc  */
+/** The format of .parcelrc  */
 export type RawAtlaspackConfig = {|
   extends?: PackageName | FilePath | Array<PackageName | FilePath>,
   resolvers?: RawAtlaspackConfigPipeline,
@@ -120,20 +121,22 @@ export type RawAtlaspackConfig = {|
   reporters?: RawAtlaspackConfigPipeline,
   validators?: {[Glob]: RawAtlaspackConfigPipeline, ...},
 |};
+export type RawParcelConfig = RawAtlaspackConfig;
 
-/** A .atlaspackrc where all package names are resolved */
+/** A .parcelrc where all package names are resolved */
 export type ResolvedAtlaspackConfigFile = {|
   ...RawAtlaspackConfig,
   +filePath: FilePath,
   +resolveFrom?: FilePath,
 |};
+export type ResolvedParcelConfigFile = ResolvedAtlaspackConfigFile;
 
 /** Corresponds to <code>pkg#engines</code> */
 export type Engines = {
   +browsers?: string | Array<string>,
   +electron?: SemverRange,
   +node?: SemverRange,
-  +atlaspack?: SemverRange,
+  +parcel?: SemverRange,
   ...
 };
 
@@ -394,6 +397,8 @@ export type InitialAtlaspackOptionsInternal<WorkerFarm> = {|
   // throwErrors
   // global?
 |};
+export type InitialParcelOptionsInternal<WorkerFarm> =
+  InitialAtlaspackOptionsInternal<WorkerFarm>;
 
 export type InitialServerOptions = {|
   +publicUrl?: string,
@@ -404,7 +409,7 @@ export type InitialServerOptions = {|
 
 export interface PluginOptions {
   +mode: BuildMode;
-  +atlaspackVersion: string;
+  +parcelVersion: string;
   +env: EnvMap;
   +hmrOptions: ?HMROptions;
   +serveOptions: ServerOptions | false;
@@ -594,7 +599,7 @@ export type DependencyOptions = {|
   +packageConditions?: Array<string>,
   /** Plugin-specific metadata for the dependency. */
   +meta?: Meta,
-  /** The pipeline defined in .atlaspackrc that the dependency should be processed with. */
+  /** The pipeline defined in .parcelrc that the dependency should be processed with. */
   +pipeline?: string,
   /**
    * The file path where the dependency should be resolved from.
@@ -688,7 +693,7 @@ export interface Dependency {
   +resolveFrom: ?FilePath;
   /** The semver version range expected for the dependency. */
   +range: ?SemverRange;
-  /** The pipeline defined in .atlaspackrc that the dependency should be processed with. */
+  /** The pipeline defined in .parcelrc that the dependency should be processed with. */
   +pipeline: ?string;
 
   // TODO make immutable
@@ -717,6 +722,7 @@ export type AtlaspackTransformOptions = {|
   env?: EnvironmentOptions,
   query?: ?string,
 |};
+export type ParcelTransformOptions = AtlaspackTransformOptions;
 
 export type AtlaspackResolveOptions = {|
   specifier: DependencySpecifier,
@@ -724,6 +730,7 @@ export type AtlaspackResolveOptions = {|
   env?: EnvironmentOptions,
   resolveFrom?: FilePath,
 |};
+export type ParcelResolveOptions = AtlaspackResolveOptions;
 
 export type AtlaspackResolveResult = {|
   filePath: FilePath,
@@ -731,6 +738,7 @@ export type AtlaspackResolveResult = {|
   query?: ?string,
   sideEffects?: boolean,
 |};
+export type ParcelResolveResult = AtlaspackResolveResult;
 
 /**
  * An asset represents a file or part of a file. It may represent any data type, including source code,
@@ -787,7 +795,7 @@ export interface BaseAsset {
   +uniqueKey: ?string;
   /** The type of the AST. */
   +astGenerator: ?ASTGenerator;
-  /** The pipeline defined in .atlaspackrc that the asset should be processed with. */
+  /** The pipeline defined in .parcelrc that the asset should be processed with. */
   +pipeline: ?string;
   /** The symbols that the asset exports. */
   +symbols: AssetSymbols;
@@ -892,7 +900,7 @@ export type DevDepOptions = {|
   range?: ?SemverRange,
   /**
    * When this dev dependency is invalidated, also invalidate these dependencies.
-   * This is useful if the atlaspack plugin or another parent dependency
+   * This is useful if the parcel plugin or another parent dependency
    * has its own cache for this dev dependency other than Node's require cache.
    */
   additionalInvalidations?: Array<{|
@@ -1020,7 +1028,7 @@ export type TransformerResult = {|
   +isBundleSplittable?: boolean,
   /** Plugin-specific metadata for the asset. */
   +meta?: Meta,
-  /** The pipeline defined in .atlaspackrc that the asset should be processed with. */
+  /** The pipeline defined in .parcelrc that the asset should be processed with. */
   +pipeline?: ?string,
   /**
    * Whether this asset can be omitted if none of its exports are being used.

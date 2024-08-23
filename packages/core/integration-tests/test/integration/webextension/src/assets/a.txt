@@ -1,1 +1,1 @@
-Hello Atlaspack WebExt!
+Hello Parcel WebExt!

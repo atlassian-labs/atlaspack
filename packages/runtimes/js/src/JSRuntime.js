@@ -400,7 +400,7 @@ function getLoaderRuntime({
     // Use esmodule loader if possible
     if (to.type === 'js' && to.env.outputFormat === 'esmodule') {
       if (!needsDynamicImportPolyfill) {
-        loaderModules.push(`__atlaspack__import__("./" + ${relativePathExpr})`);
+        loaderModules.push(`__parcel__import__("./" + ${relativePathExpr})`);
         continue;
       }
 
@@ -410,7 +410,7 @@ function getLoaderRuntime({
       );
     } else if (to.type === 'js' && to.env.outputFormat === 'commonjs') {
       loaderModules.push(
-        `Promise.resolve(__atlaspack__require__("./" + ${relativePathExpr}))`,
+        `Promise.resolve(__parcel__require__("./" + ${relativePathExpr}))`,
       );
       continue;
     }
@@ -476,10 +476,10 @@ function getLoaderRuntime({
   }
 
   if (mainBundle.type === 'js') {
-    let atlaspackRequire = bundle.env.shouldScopeHoist
-      ? 'atlaspackRequire'
+    let parcelRequire = bundle.env.shouldScopeHoist
+      ? 'parcelRequire'
       : 'module.bundle.root';
-    loaderCode += `.then(() => ${atlaspackRequire}('${bundleGraph.getAssetPublicId(
+    loaderCode += `.then(() => ${parcelRequire}('${bundleGraph.getAssetPublicId(
       bundleGraph.getAssetById(bundleGroup.entryAssetId),
     )}'))`;
   }
@@ -615,7 +615,7 @@ function getURLRuntime(
       from.env.outputFormat === 'esmodule' &&
       from.env.supports('import-meta-url')
     ) {
-      code += `let url = new __atlaspack__URL__(${relativePathExpr});\n`;
+      code += `let url = new __parcel__URL__(${relativePathExpr});\n`;
       code += `module.exports = workerURL(url.toString(), url.origin, ${String(
         from.env.outputFormat === 'esmodule',
       )});`;
@@ -675,7 +675,7 @@ function getRegisterCode(
   let baseUrl =
     entryBundle.env.outputFormat === 'esmodule' &&
     entryBundle.env.supports('import-meta-url')
-      ? 'new __atlaspack__URL__("").toString()' // <-- this isn't ideal. We should use `import.meta.url` directly but it gets replaced currently
+      ? 'new __parcel__URL__("").toString()' // <-- this isn't ideal. We should use `import.meta.url` directly but it gets replaced currently
       : `require('./helpers/bundle-url').getBundleURL('${entryBundle.publicId}')`;
 
   return `require('./helpers/bundle-manifest').register(${baseUrl},JSON.parse(${JSON.stringify(
@@ -704,7 +704,7 @@ function getAbsoluteUrlExpr(relativePathExpr: string, bundle: NamedBundle) {
     bundle.env.outputFormat === 'commonjs'
   ) {
     // This will be compiled to new URL(url, import.meta.url) or new URL(url, 'file:' + __filename).
-    return `new __atlaspack__URL__(${relativePathExpr}).toString()`;
+    return `new __parcel__URL__(${relativePathExpr}).toString()`;
   } else {
     return `require('./helpers/bundle-url').getBundleURL('${bundle.publicId}') + ${relativePathExpr}`;
   }
