@@ -15,7 +15,13 @@ export class Atlaspack {
   ): Promise<AsyncSubscription>;
 }
 
-export const Parcel = Atlaspack;
+export class Parcel {
+  constructor(options: InitialAtlaspackOptions);
+  run(): Promise<BuildSuccessEvent>;
+  watch(
+    cb?: (err: Error | null | undefined, buildEvent?: BuildEvent) => unknown,
+  ): Promise<AsyncSubscription>;
+}
 
 export declare function createWorkerFarm(
   options?: Partial<FarmOptions>,
