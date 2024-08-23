@@ -295,7 +295,7 @@ async function createLoader(
     'postcss-modules/build/css-loader-core/loader',
     asset.filePath,
   );
-  return class ParcelFileSystemLoader extends FileSystemLoader {
+  return class AtlaspackFileSystemLoader extends FileSystemLoader {
     async fetch(composesPath, relativeTo) {
       let importPath = composesPath.replace(/^["']|["']$/g, '');
       let resolved = await resolve(relativeTo, importPath);
