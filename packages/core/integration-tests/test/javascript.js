@@ -262,7 +262,7 @@ describe('javascript', function () {
     assert.equal(output(), 3);
   });
 
-  it.v2('should bundle builtins for a browser environment', async function () {
+  it('should bundle builtins for a browser environment', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/include_builtins-browser/main.js'),
     );
@@ -288,27 +288,24 @@ describe('javascript', function () {
     assert.deepEqual(Object.keys(fs), Object.keys({}));
   });
 
-  it.v2(
-    'should not bundle builtins for a node environment if includeNodeModules is specified',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/include_builtins-node/main.js'),
-      );
+  it('should not bundle builtins for a node environment if includeNodeModules is specified', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/include_builtins-node/main.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'main.js',
-          assets: ['esmodule-helpers.js', 'main.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'main.js',
+        assets: ['esmodule-helpers.js', 'main.js'],
+      },
+    ]);
 
-      let output = await run(b);
-      assert.equal(typeof output, 'function');
-      let [fs, filepath] = output();
-      assert.equal(filepath, path.join('app', 'index.js'));
-      assert.equal(typeof fs.readFile, 'function');
-    },
-  );
+    let output = await run(b);
+    assert.equal(typeof output, 'function');
+    let [fs, filepath] = output();
+    assert.equal(filepath, path.join('app', 'index.js'));
+    assert.equal(typeof fs.readFile, 'function');
+  });
 
   it.skip('should bundle node_modules on --target=electron and --bundle-node-modules', async function () {
     let b = await bundle(
@@ -579,37 +576,34 @@ describe('javascript', function () {
     assert(headChildren[0].href === headChildren[1].src);
   });
 
-  it.v2(
-    'should deduplicate and remove an unnecessary async bundle when it contains a cyclic reference to its entry',
-    async () => {
-      let b = await bundle(
-        path.join(
-          __dirname,
-          '/integration/deduplicate-from-async-cyclic-bundle-entry/index.js',
-        ),
-      );
+  it('should deduplicate and remove an unnecessary async bundle when it contains a cyclic reference to its entry', async () => {
+    let b = await bundle(
+      path.join(
+        __dirname,
+        '/integration/deduplicate-from-async-cyclic-bundle-entry/index.js',
+      ),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bar.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'esmodule-helpers.js',
-            'foo.js',
-            'js-loader.js',
-          ],
-        },
-        {
-          assets: ['async.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: [
+          'index.js',
+          'bar.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'esmodule-helpers.js',
+          'foo.js',
+          'js-loader.js',
+        ],
+      },
+      {
+        assets: ['async.js'],
+      },
+    ]);
 
-      assert.deepEqual(await Promise.all((await run(b)).default), [5, 4]);
-    },
-  );
+    assert.deepEqual(await Promise.all((await run(b)).default), [5, 4]);
+  });
 
   it('does not create bundles for dynamic imports when assets are available up the graph', async () => {
     let b = await bundle(
@@ -657,34 +651,31 @@ describe('javascript', function () {
     },
   );
 
-  it.v2(
-    'should return all exports as an object when using ES modules',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/dynamic-esm/index.js'),
-      );
+  it('should return all exports as an object when using ES modules', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/dynamic-esm/index.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'esmodule-helpers.js',
-            'js-loader.js',
-          ],
-        },
-        {
-          assets: ['local.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: [
+          'index.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'esmodule-helpers.js',
+          'js-loader.js',
+        ],
+      },
+      {
+        assets: ['local.js'],
+      },
+    ]);
 
-      let output = (await run(b)).default;
-      assert.equal(typeof output, 'function');
-      assert.equal(await output(), 3);
-    },
-  );
+    let output = (await run(b)).default;
+    assert.equal(typeof output, 'function');
+    assert.equal(await output(), 3);
+  });
 
   it('should duplicate small modules across multiple bundles', async function () {
     let b = await bundle(
@@ -709,76 +700,70 @@ describe('javascript', function () {
     assert.equal(await output(), 7);
   });
 
-  it.v2(
-    'should create a separate bundle for large modules shared between bundles',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/dynamic-common-large/index.js'),
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            shouldScopeHoist: false,
-          },
+  it('should create a separate bundle for large modules shared between bundles', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/dynamic-common-large/index.js'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: false,
         },
-      );
+      },
+    );
 
-      assertBundles(b, [
-        {
-          assets: ['a.js'],
-        },
-        {
-          assets: ['b.js'],
-        },
-        {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'c.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'js-loader.js',
-            'bundle-manifest.js',
-          ],
-        },
-        {
-          assets: ['common.js', 'lodash.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        assets: ['a.js'],
+      },
+      {
+        assets: ['b.js'],
+      },
+      {
+        name: 'index.js',
+        assets: [
+          'index.js',
+          'c.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      {
+        assets: ['common.js', 'lodash.js'],
+      },
+    ]);
 
-      let output = await run(b);
-      assert.equal(typeof output, 'function');
-      assert.equal(await output(), 7);
-    },
-  );
+    let output = await run(b);
+    assert.equal(typeof output, 'function');
+    assert.equal(await output(), 7);
+  });
 
-  it.v2(
-    'should not duplicate a module which is already in a parent bundle',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/dynamic-hoist-dup/index.js'),
-      );
+  it('should not duplicate a module which is already in a parent bundle', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/dynamic-hoist-dup/index.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'common.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'js-loader.js',
-          ],
-        },
-        {
-          assets: ['a.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: [
+          'index.js',
+          'common.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+        ],
+      },
+      {
+        assets: ['a.js'],
+      },
+    ]);
 
-      let output = await run(b);
-      assert.equal(typeof output, 'function');
-      assert.equal(await output(), 5);
-    },
-  );
+    let output = await run(b);
+    assert.equal(typeof output, 'function');
+    assert.equal(await output(), 5);
+  });
 
   it('should duplicate an asset if it is not present in every parent bundle', async function () {
     let b = await bundle(
@@ -808,47 +793,44 @@ describe('javascript', function () {
     ]);
   });
 
-  it.v2(
-    'should duplicate an asset if it is not available in all possible ancestries',
-    async () => {
-      let b = await bundle(
-        path.join(
-          __dirname,
-          '/integration/dynamic-hoist-no-dedupe-ancestry/index.js',
-        ),
-      );
+  it('should duplicate an asset if it is not available in all possible ancestries', async () => {
+    let b = await bundle(
+      path.join(
+        __dirname,
+        '/integration/dynamic-hoist-no-dedupe-ancestry/index.js',
+      ),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'js-loader.js',
-            'esmodule-helpers.js',
-          ],
-        },
-        {
-          assets: ['a.js', 'common.js'],
-        },
-        {
-          assets: ['b.js'],
-        },
-        {
-          assets: ['c.js'],
-        },
-        {
-          assets: ['d.js', 'common.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: [
+          'index.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'esmodule-helpers.js',
+        ],
+      },
+      {
+        assets: ['a.js', 'common.js'],
+      },
+      {
+        assets: ['b.js'],
+      },
+      {
+        assets: ['c.js'],
+      },
+      {
+        assets: ['d.js', 'common.js'],
+      },
+    ]);
 
-      let {default: promise} = await run(b);
-      assert.equal(await promise, 42);
-    },
-  );
+    let {default: promise} = await run(b);
+    assert.equal(await promise, 42);
+  });
 
-  it.v2('should support shared modules with async imports', async function () {
+  it('should support shared modules with async imports', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/dynamic-hoist-deep/index.js'),
     );
@@ -1139,7 +1121,7 @@ describe('javascript', function () {
     assert(!js.includes('// This is a comment'));
   });
 
-  it.v2('should insert global variables when needed', async function () {
+  it('should insert global variables when needed', async function () {
     let b = await bundle(path.join(__dirname, '/integration/globals/index.js'));
 
     let output = await run(b);
@@ -1151,168 +1133,159 @@ describe('javascript', function () {
     });
   });
 
-  it.v2(
-    'should replace __dirname and __filename with path relative to asset.filePath',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-node-replacements/index.js'),
-      );
+  it('should replace __dirname and __filename with path relative to asset.filePath', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-node-replacements/index.js'),
+    );
 
-      let dist = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-      assert(
-        dist.includes(
-          'resolve(__dirname, "../test/integration/env-node-replacements")',
-        ),
-      );
-      assert(
-        dist.includes(
-          'resolve(__dirname, "../test/integration/env-node-replacements/other")',
-        ),
-      );
-      assert(
-        dist.includes(
-          'resolve(__dirname, "../test/integration/env-node-replacements", "index.js")',
-        ),
-      );
-      assert(
-        dist.includes(
-          'resolve(__dirname, "../test/integration/env-node-replacements/sub")',
-        ),
-      );
-      assert(
-        dist.includes(
-          'resolve(__dirname, "../test/integration/env-node-replacements/sub", "index.js")',
-        ),
-      );
-      let f = await run(b);
-      let output = f();
-      assert.equal(output.data, 'hello');
-      assert.equal(output.other, 'hello');
-      assert.equal(
-        output.firstDirnameTest,
-        path.join(__dirname, '/integration/env-node-replacements/data'),
-      );
-      assert.equal(
-        output.secondDirnameTest,
-        path.join(__dirname, '/integration/env-node-replacements/other-data'),
-      );
-      assert.equal(
-        output.firstFilenameTest,
-        path.join(__dirname, '/integration/env-node-replacements/index.js'),
-      );
-      assert.equal(
-        output.secondFilenameTest,
-        path.join(
-          __dirname,
-          '/integration/env-node-replacements/index.js?query-string=test',
-        ),
-      );
-      assert.equal(
-        output.sub.dirname,
-        path.join(__dirname, '/integration/env-node-replacements/sub'),
-      );
-      assert.equal(
-        output.sub.filename,
-        path.join(__dirname, '/integration/env-node-replacements/sub/index.js'),
-      );
-    },
-  );
+    let dist = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(
+      dist.includes(
+        'resolve(__dirname, "../test/integration/env-node-replacements")',
+      ),
+    );
+    assert(
+      dist.includes(
+        'resolve(__dirname, "../test/integration/env-node-replacements/other")',
+      ),
+    );
+    assert(
+      dist.includes(
+        'resolve(__dirname, "../test/integration/env-node-replacements", "index.js")',
+      ),
+    );
+    assert(
+      dist.includes(
+        'resolve(__dirname, "../test/integration/env-node-replacements/sub")',
+      ),
+    );
+    assert(
+      dist.includes(
+        'resolve(__dirname, "../test/integration/env-node-replacements/sub", "index.js")',
+      ),
+    );
+    let f = await run(b);
+    let output = f();
+    assert.equal(output.data, 'hello');
+    assert.equal(output.other, 'hello');
+    assert.equal(
+      output.firstDirnameTest,
+      path.join(__dirname, '/integration/env-node-replacements/data'),
+    );
+    assert.equal(
+      output.secondDirnameTest,
+      path.join(__dirname, '/integration/env-node-replacements/other-data'),
+    );
+    assert.equal(
+      output.firstFilenameTest,
+      path.join(__dirname, '/integration/env-node-replacements/index.js'),
+    );
+    assert.equal(
+      output.secondFilenameTest,
+      path.join(
+        __dirname,
+        '/integration/env-node-replacements/index.js?query-string=test',
+      ),
+    );
+    assert.equal(
+      output.sub.dirname,
+      path.join(__dirname, '/integration/env-node-replacements/sub'),
+    );
+    assert.equal(
+      output.sub.filename,
+      path.join(__dirname, '/integration/env-node-replacements/sub/index.js'),
+    );
+  });
 
-  it.v2(
-    'should replace __dirname and __filename with path relative to asset.filePath with scope hoisting',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-node-replacements/index.js'),
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            shouldScopeHoist: true,
-            shouldOptimize: false,
-          },
+  it('should replace __dirname and __filename with path relative to asset.filePath with scope hoisting', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-node-replacements/index.js'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+          shouldOptimize: false,
         },
-      );
+      },
+    );
 
-      let dist = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-      assert(
-        dist.includes(
-          'path.resolve(__dirname, "../test/integration/env-node-replacements")',
-        ),
-      );
-      assert(
-        dist.includes(
-          'path.resolve(__dirname, "../test/integration/env-node-replacements/other")',
-        ),
-      );
-      assert(
-        dist.includes(
-          'path.resolve(__dirname, "../test/integration/env-node-replacements", "index.js")',
-        ),
-      );
-      assert(
-        dist.includes(
-          'path.resolve(__dirname, "../test/integration/env-node-replacements/sub")',
-        ),
-      );
-      assert(
-        dist.includes(
-          'path.resolve(__dirname, "../test/integration/env-node-replacements/sub", "index.js")',
-        ),
-      );
-      let f = await run(b);
-      let output = f();
-      assert.equal(output.data, 'hello');
-      assert.equal(output.other, 'hello');
-      assert.equal(
-        output.firstDirnameTest,
-        path.join(__dirname, '/integration/env-node-replacements/data'),
-      );
-      assert.equal(
-        output.secondDirnameTest,
-        path.join(__dirname, '/integration/env-node-replacements/other-data'),
-      );
-      assert.equal(
-        output.firstFilenameTest,
-        path.join(__dirname, '/integration/env-node-replacements/index.js'),
-      );
-      assert.equal(
-        output.secondFilenameTest,
-        path.join(
-          __dirname,
-          '/integration/env-node-replacements/index.js?query-string=test',
-        ),
-      );
-      assert.equal(
-        output.sub.dirname,
-        path.join(__dirname, '/integration/env-node-replacements/sub'),
-      );
-      assert.equal(
-        output.sub.filename,
-        path.join(__dirname, '/integration/env-node-replacements/sub/index.js'),
-      );
-    },
-  );
+    let dist = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(
+      dist.includes(
+        'path.resolve(__dirname, "../test/integration/env-node-replacements")',
+      ),
+    );
+    assert(
+      dist.includes(
+        'path.resolve(__dirname, "../test/integration/env-node-replacements/other")',
+      ),
+    );
+    assert(
+      dist.includes(
+        'path.resolve(__dirname, "../test/integration/env-node-replacements", "index.js")',
+      ),
+    );
+    assert(
+      dist.includes(
+        'path.resolve(__dirname, "../test/integration/env-node-replacements/sub")',
+      ),
+    );
+    assert(
+      dist.includes(
+        'path.resolve(__dirname, "../test/integration/env-node-replacements/sub", "index.js")',
+      ),
+    );
+    let f = await run(b);
+    let output = f();
+    assert.equal(output.data, 'hello');
+    assert.equal(output.other, 'hello');
+    assert.equal(
+      output.firstDirnameTest,
+      path.join(__dirname, '/integration/env-node-replacements/data'),
+    );
+    assert.equal(
+      output.secondDirnameTest,
+      path.join(__dirname, '/integration/env-node-replacements/other-data'),
+    );
+    assert.equal(
+      output.firstFilenameTest,
+      path.join(__dirname, '/integration/env-node-replacements/index.js'),
+    );
+    assert.equal(
+      output.secondFilenameTest,
+      path.join(
+        __dirname,
+        '/integration/env-node-replacements/index.js?query-string=test',
+      ),
+    );
+    assert.equal(
+      output.sub.dirname,
+      path.join(__dirname, '/integration/env-node-replacements/sub'),
+    );
+    assert.equal(
+      output.sub.filename,
+      path.join(__dirname, '/integration/env-node-replacements/sub/index.js'),
+    );
+  });
 
-  it.v2(
-    'should work when multiple files use globals with scope hoisting',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/globals/multiple.js'),
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            shouldScopeHoist: true,
-            shouldOptimize: false,
-          },
+  it('should work when multiple files use globals with scope hoisting', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/globals/multiple.js'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+          shouldOptimize: false,
         },
-      );
+      },
+    );
 
-      let output = await run(b);
-      assert.deepEqual(output, {
-        file: 'integration/globals/multiple.js',
-        other: 'integration/globals/index.js',
-      });
-    },
-  );
+    let output = await run(b);
+    assert.deepEqual(output, {
+      file: 'integration/globals/multiple.js',
+      other: 'integration/globals/index.js',
+    });
+  });
 
   it('should not insert global variables when used in a module specifier', async function () {
     let b = await bundle(
@@ -1378,17 +1351,14 @@ describe('javascript', function () {
     assert.equal(output(), 'test:test');
   });
 
-  it.v2(
-    'should not replace process.env.hasOwnProperty with undefined',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-hasOwnProperty/index.js'),
-      );
+  it('should not replace process.env.hasOwnProperty with undefined', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-hasOwnProperty/index.js'),
+    );
 
-      let output = await run(b);
-      assert.strictEqual(output, false);
-    },
-  );
+    let output = await run(b);
+    assert.strictEqual(output, false);
+  });
 
   it.v2(
     'should not insert environment variables in electron-main environment',
@@ -1489,62 +1459,47 @@ describe('javascript', function () {
     },
   );
 
-  it.v2(
-    "should insert the user's NODE_ENV as process.env.NODE_ENV if passed",
-    async function () {
-      let b = await bundle(path.join(__dirname, '/integration/env/index.js'), {
-        env: {
-          NODE_ENV: 'production',
-        },
-      });
+  it("should insert the user's NODE_ENV as process.env.NODE_ENV if passed", async function () {
+    let b = await bundle(path.join(__dirname, '/integration/env/index.js'), {
+      env: {
+        NODE_ENV: 'production',
+      },
+    });
 
-      let output = await run(b);
-      assert.ok(!output.toString().includes('process.env'));
-      assert.equal(output(), 'production:production');
-    },
-  );
+    let output = await run(b);
+    assert.ok(!output.toString().includes('process.env'));
+    assert.equal(output(), 'production:production');
+  });
 
-  it.v2(
-    'should not inline computed accesses to process.env',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-computed/index.js'),
-        {
-          env: {ABC: 'abc'},
-        },
-      );
+  it('should not inline computed accesses to process.env', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-computed/index.js'),
+      {
+        env: {ABC: 'abc'},
+      },
+    );
 
-      let contents = await outputFS.readFile(
-        b.getBundles()[0].filePath,
-        'utf8',
-      );
-      assert(contents.includes('process.env'));
+    let contents = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(contents.includes('process.env'));
 
-      let output = await run(b);
-      assert.strictEqual(output, undefined);
-    },
-  );
+    let output = await run(b);
+    assert.strictEqual(output, undefined);
+  });
 
-  it.v2(
-    'should inline computed accesses with string literals to process.env',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-computed-string/index.js'),
-        {
-          env: {ABC: 'XYZ'},
-        },
-      );
+  it('should inline computed accesses with string literals to process.env', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-computed-string/index.js'),
+      {
+        env: {ABC: 'XYZ'},
+      },
+    );
 
-      let contents = await outputFS.readFile(
-        b.getBundles()[0].filePath,
-        'utf8',
-      );
-      assert(!contents.includes('process.env'));
+    let contents = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(!contents.includes('process.env'));
 
-      let output = await run(b);
-      assert.strictEqual(output, 'XYZ');
-    },
-  );
+    let output = await run(b);
+    assert.strictEqual(output, 'XYZ');
+  });
 
   it.v2(
     'should inline environment variables when destructured in a variable declaration',
@@ -1904,7 +1859,7 @@ describe('javascript', function () {
     },
   );
 
-  it.v2('should replace process.browser for target browser', async function () {
+  it('should replace process.browser for target browser', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/process/index.js'),
       {
@@ -2798,42 +2753,36 @@ describe('javascript', function () {
     await run(b);
   });
 
-  it.v2(
-    'should support async importing the same module from different bundles',
-    async () => {
-      let b = await bundle(
-        path.join(__dirname, '/integration/shared-bundlegroup/index.js'),
-      );
+  it('should support async importing the same module from different bundles', async () => {
+    let b = await bundle(
+      path.join(__dirname, '/integration/shared-bundlegroup/index.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'esmodule-helpers.js',
-            'js-loader.js',
-          ],
-        },
-        {
-          assets: ['a.js'],
-        },
-        {
-          assets: ['b.js'],
-        },
-        {
-          assets: ['c.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: [
+          'index.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'esmodule-helpers.js',
+          'js-loader.js',
+        ],
+      },
+      {
+        assets: ['a.js'],
+      },
+      {
+        assets: ['b.js'],
+      },
+      {
+        assets: ['c.js'],
+      },
+    ]);
 
-      let {default: promise} = await run(b);
-      assert.deepEqual(await promise, [
-        'hello from a test',
-        'hello from b test',
-      ]);
-    },
-  );
+    let {default: promise} = await run(b);
+    assert.deepEqual(await promise, ['hello from a test', 'hello from b test']);
+  });
 
   it('should not create shared bundles from contents of entries', async () => {
     let b = await bundle(
