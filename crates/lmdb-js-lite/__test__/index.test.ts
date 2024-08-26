@@ -1,9 +1,10 @@
 import { initTracingSubscriber, Lmdb } from "../index.js";
 import { type Database as UnsafeDatabase, open as openLMDBUnsafe } from "lmdb";
 import * as v8 from "node:v8";
+import * as assert from "node:assert";
 import { mkdirSync, rmSync } from "node:fs";
 
-beforeAll(() => {
+before(() => {
   initTracingSubscriber();
 });
 
@@ -18,7 +19,6 @@ beforeEach(() => {
   });
 });
 
-jest.setTimeout(40000);
 describe("lmdb", () => {
   let db: Lmdb | null = null;
   const asyncWrites = true;
@@ -52,13 +52,13 @@ describe("lmdb", () => {
       await db.put("key", v8.serialize(value));
       const result = await db.get("key");
       const resultValue = result && v8.deserialize(result);
-      expect(resultValue).toEqual(value);
+      assert.equal(resultValue, value);
     }
     {
       await db.put("key", v8.serialize({ myObject: "here", something: true }));
       const result = await db.get("key");
       const resultValue = result && v8.deserialize(result);
-      expect(resultValue).toEqual({ myObject: "here", something: true });
+      assert.deepEqual(resultValue, { myObject: "here", something: true });
     }
   });
 
@@ -82,7 +82,7 @@ describe("lmdb", () => {
     for (let i = 0; i < values.length; i += 1) {
       const result = values[i];
       const resultValue = result != null && v8.deserialize(result);
-      expect(resultValue).toEqual(i);
+      assert.equal(resultValue, i);
     }
   });
 
@@ -109,7 +109,7 @@ describe("lmdb", () => {
       for (let i = 0; i < numEntriesToTest; i += 1) {
         const result = await db?.get(`${i}`);
         const resultValue = result && v8.deserialize(result);
-        expect(resultValue).toEqual(i);
+        assert.equal(resultValue, i);
       }
     });
 
@@ -117,7 +117,7 @@ describe("lmdb", () => {
       for (let i = 0; i < numEntriesToTest; i += 1) {
         const result = db?.getSync(`${i}`);
         const resultValue = result && v8.deserialize(result);
-        expect(resultValue).toEqual(i);
+        assert.equal(resultValue, i);
       }
     });
 
@@ -141,7 +141,7 @@ describe("lmdb", () => {
         for (let i = 0; i < numEntriesToTest; i += 1) {
           const result = unsafeDB?.get(`${i}`);
           const resultValue = v8.deserialize(result);
-          expect(resultValue).toEqual(i);
+          assert.equal(resultValue, i);
         }
       });
     });
@@ -162,7 +162,7 @@ describe("lmdb", () => {
         for (let i = 0; i < numEntriesToTest; i += 1) {
           const result = unsafeDB.get(`${i}`);
           const resultValue = v8.deserialize(result);
-          expect(resultValue).toEqual(i);
+          assert.equal(resultValue, i);
         }
       });
     });

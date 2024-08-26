@@ -27,13 +27,10 @@
     "@atlaspack/core": "*",
     "@atlaspack/fs": "*",
     "@atlaspack/types": "*",
-    "@types/jest": "^29.5.12",
     "@types/node": "^22.3.0",
     "bench-node": "^0.0.1-beta.0",
-    "jest": "^29.7.0",
     "lmdb": "^3.0.13",
     "prettier": "^3.3.3",
-    "ts-jest": "^29.2.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
   },
@@ -45,7 +42,7 @@
     "build": "tsc && napi build --platform --release",
     "build:debug": "tsc && napi build --platform",
     "prepublishOnly": "tsc && napi prepublish -t npm",
-    "test": "jest",
+    "test": "mocha",
     "universal": "napi universal",
     "version": "napi version"
   },
@@ -55,6 +52,5 @@
     "@atlaspack/fs": "*",
     "@atlaspack/types": "*"
   },
-  "packageManager": "yarn@4.4.0",
   "stableVersion": "0.0.0"
 }
