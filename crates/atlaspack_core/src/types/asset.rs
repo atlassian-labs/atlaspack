@@ -186,6 +186,8 @@ impl Asset {
       Code::from(code_from_disk)
     };
 
+    let is_source = !file_path.ancestors().any(|p| p.ends_with("/node_modules"));
+
     Ok(Self {
       id: create_asset_id(&env, &file_path, &pipeline, &query, &None),
       file_path,
@@ -193,6 +195,8 @@ impl Asset {
       code: Arc::new(code),
       side_effects,
       file_type,
+      is_source,
+      is_bundle_splittable: true,
       ..Asset::default()
     })
   }
