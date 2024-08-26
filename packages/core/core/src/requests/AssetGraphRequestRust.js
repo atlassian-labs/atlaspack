@@ -95,8 +95,6 @@ function getAssetGraph(serializedGraph, options) {
 
   graph.safeToIncrementallyBundle = false;
 
-  // See crates/atlaspack_core/src/types/bundle.rs
-  let bundleBehaviorLookup = {'255': null, '0': 'inline', '1': 'isolated'};
   // See crates/atlaspack_core/src/types/environment.rs
   let sourceTypeLookup = {'0': 'module', '1': 'script'};
   let cachedAssets = new Map();
@@ -131,7 +129,8 @@ function getAssetGraph(serializedGraph, options) {
           ...asset.env,
           sourceType: sourceTypeLookup[asset.env.sourceType],
         },
-        bundleBehavior: bundleBehaviorLookup[asset.bundleBehavior],
+        bundleBehavior:
+          asset.bundleBehavior === 255 ? null : asset.bundleBehavior,
         committed: true,
         contentKey: id,
         filePath: toProjectPath(options.projectRoot, asset.filePath),
@@ -164,7 +163,8 @@ function getAssetGraph(serializedGraph, options) {
           ...dependency.env,
           sourceType: sourceTypeLookup[dependency.env.sourceType],
         },
-        bundleBehavior: bundleBehaviorLookup[dependency.bundleBehavior],
+        bundleBehavior:
+          dependency.bundleBehavior === 255 ? null : dependency.bundleBehavior,
         contentKey: id,
         sourcePath: dependency.sourcePath
           ? toProjectPath(options.projectRoot, dependency.sourcePath)
