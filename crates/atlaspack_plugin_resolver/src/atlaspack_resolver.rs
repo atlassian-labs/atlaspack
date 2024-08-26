@@ -221,8 +221,11 @@ impl AtlaspackResolver {
       _ => {
         return Ok(Resolved {
           invalidations: Vec::new(),
-          resolution: Resolution::Excluded,
-        })
+          resolution: Resolution::Resolved(ResolvedResolution {
+            file_path: self.options.core_path.join("_empty.js"),
+            ..ResolvedResolution::default()
+          }),
+        });
       }
     };
 
@@ -347,10 +350,7 @@ impl ResolverPlugin for AtlaspackResolver {
       (atlaspack_resolver::Resolution::Empty, _invalidations) => Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Resolved(ResolvedResolution {
-          file_path: self
-            .options
-            .project_root
-            .join("packages/utils/node-resolver-core/src/_empty.js"),
+          file_path: self.options.core_path.join("_empty.js"),
           side_effects,
           ..ResolvedResolution::default()
         }),
