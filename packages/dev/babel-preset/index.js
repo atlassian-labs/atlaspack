@@ -1,11 +1,11 @@
 module.exports = api => {
   let name = api.caller(caller => caller && caller.name);
-  if (name === 'atlaspack') {
+  if (name === 'parcel') {
     return {
       presets: [require('@babel/preset-flow')],
       plugins: [
         // Inline the value of ATLASPACK_BUILD_ENV during self builds.
-        // Atlaspack does not do this itself for node targets...
+        // Parcel does not do this itself for node targets...
         [
           'babel-plugin-transform-inline-environment-variables',
           {include: ['ATLASPACK_BUILD_ENV']},

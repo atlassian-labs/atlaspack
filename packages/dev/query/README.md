@@ -11,7 +11,7 @@ globally available.
 
 Call `.help` to view a list of commands.
 
-In a project root containing a `.atlaspack-cache` folder:
+In a project root containing a `.parcel-cache` folder:
 
 ```sh
 $ atlaspack-query

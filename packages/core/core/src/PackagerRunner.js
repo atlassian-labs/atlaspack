@@ -586,7 +586,7 @@ export default class PackagerRunner {
         this.options.serveOptions &&
         bundle.target.env.context === 'browser'
       ) {
-        sourceRoot = '/__atlaspack_source_root';
+        sourceRoot = '/__parcel_source_root';
       }
 
       if (

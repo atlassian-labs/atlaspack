@@ -1269,7 +1269,7 @@
     {
       "fileName": "metrics-reporter",
       "link": "https://github.com/parcel-bundler/parcel/tree/v2/packages/core/integration-tests/test/metrics-reporter.js",
-      "title": "Should dump bundle metrics to atlaspack-metrics.json",
+      "title": "Should dump bundle metrics to parcel-metrics.json",
       "status": "passing"
     },
     {

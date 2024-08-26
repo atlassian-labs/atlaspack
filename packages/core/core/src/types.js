@@ -40,6 +40,7 @@ export type AtlaspackPluginNode = {|
   resolveFrom: ProjectPath,
   keyPath?: string,
 |};
+export type ParcelPluginNode = AtlaspackPluginNode;
 
 export type PureAtlaspackConfigPipeline = $ReadOnlyArray<AtlaspackPluginNode>;
 export type ExtendableAtlaspackConfigPipeline = $ReadOnlyArray<
@@ -49,10 +50,10 @@ export type ExtendableAtlaspackConfigPipeline = $ReadOnlyArray<
 export type ProcessedAtlaspackConfig = {|
   resolvers?: PureAtlaspackConfigPipeline,
   transformers?: {[Glob]: ExtendableAtlaspackConfigPipeline, ...},
-  bundler: ?AtlaspackPluginNode,
+  bundler: ?ParcelPluginNode,
   namers?: PureAtlaspackConfigPipeline,
   runtimes?: PureAtlaspackConfigPipeline,
-  packagers?: {[Glob]: AtlaspackPluginNode, ...},
+  packagers?: {[Glob]: ParcelPluginNode, ...},
   optimizers?: {[Glob]: ExtendableAtlaspackConfigPipeline, ...},
   compressors?: {[Glob]: ExtendableAtlaspackConfigPipeline, ...},
   reporters?: PureAtlaspackConfigPipeline,
@@ -273,7 +274,7 @@ export type AtlaspackOptions = {|
   config?: DependencySpecifier,
   defaultConfig?: DependencySpecifier,
   env: EnvMap,
-  atlaspackVersion: string,
+  parcelVersion: string,
   targets: ?(Array<string> | {+[string]: TargetDescriptor, ...}),
   shouldDisableCache: boolean,
   cacheDir: FilePath,
@@ -321,6 +322,7 @@ export type AtlaspackOptions = {|
 
   +featureFlags: FeatureFlags,
 |};
+export type ParcelOptions = AtlaspackOptions;
 
 export type AssetNode = {|
   id: ContentKey,

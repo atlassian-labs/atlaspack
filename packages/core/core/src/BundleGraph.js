@@ -246,11 +246,11 @@ export default class BundleGraph {
           // code being generated).
           !node.usedSymbolsUp.has('*') &&
           // TODO We currently can't rename imports in async imports, e.g. from
-          //      (atlaspackRequire("...")).then(({ a }) => a);
+          //      (parcelRequire("...")).then(({ a }) => a);
           // to
-          //      (atlaspackRequire("...")).then(({ a: b }) => a);
+          //      (parcelRequire("...")).then(({ a: b }) => a);
           // or
-          //      (atlaspackRequire("...")).then((a)=>a);
+          //      (parcelRequire("...")).then((a)=>a);
           // if the reexporting asset did `export {a as b}` or `export * as a`
           node.value.priority === Priority.sync &&
           // For every asset, no symbol is imported multiple times (with a different local name).

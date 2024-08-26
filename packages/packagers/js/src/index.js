@@ -15,7 +15,7 @@ import {DevPackager} from './DevPackager';
 import {ScopeHoistingPackager} from './ScopeHoistingPackager';
 
 type JSPackagerConfig = {|
-  atlaspackRequireName: string,
+  parcelRequireName: string,
   unstable_asyncBundleRuntime: boolean,
 |};
 
@@ -50,8 +50,8 @@ export default (new Packager({
       );
     }
 
-    // Generate a name for the global atlaspackRequire function that is unique to this project.
-    // This allows multiple atlaspack builds to coexist on the same page.
+    // Generate a name for the global parcelRequire function that is unique to this project.
+    // This allows multiple parcel builds to coexist on the same page.
     let packageName = await config.getConfigFrom(
       options.projectRoot + '/index',
       [],
@@ -62,7 +62,7 @@ export default (new Packager({
 
     let name = packageName?.contents?.name ?? '';
     return {
-      atlaspackRequireName: 'atlaspackRequire' + hashString(name).slice(-4),
+      parcelRequireName: 'parcelRequire' + hashString(name).slice(-4),
       unstable_asyncBundleRuntime: Boolean(
         conf?.contents?.unstable_asyncBundleRuntime,
       ),
@@ -96,14 +96,14 @@ export default (new Packager({
             options,
             bundleGraph,
             bundle,
-            nullthrows(config).atlaspackRequireName,
+            nullthrows(config).parcelRequireName,
             nullthrows(config).unstable_asyncBundleRuntime,
           )
         : new DevPackager(
             options,
             bundleGraph,
             bundle,
-            nullthrows(config).atlaspackRequireName,
+            nullthrows(config).parcelRequireName,
           );
 
       ({contents, map} = await packager.package());

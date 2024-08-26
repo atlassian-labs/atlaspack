@@ -18,7 +18,7 @@ describe('AtlaspackV3', function () {
       index.js:
         console.log('hello world');
 
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {

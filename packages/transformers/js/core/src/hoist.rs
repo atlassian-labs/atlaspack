@@ -1099,7 +1099,7 @@ impl<'a> Fold for Hoist<'a> {
     }
 
     if node.sym == js_word!("global") && is_unresolved(&node, self.unresolved_mark) {
-      return Ident::new("$atlaspack$global".into(), node.span);
+      return Ident::new("$parcel$global".into(), node.span);
     }
 
     if node.span.has_mark(self.collect.global_mark)

@@ -19,8 +19,6 @@ function createProgram(opts: ProgramOptions) {
   return cli;
 }
 
-// This test suite has been broken since the rename but it's not obvious why.
-// Parking for later.
 describe.v2('@atlaspack/link', () => {
   let _cwd;
   let _stdout;
@@ -86,7 +84,7 @@ describe.v2('@atlaspack/link', () => {
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
-          atlaspack
+          @atlaspack/cli
           @atlaspack/core`;
 
       let cli = createProgram({fs: overlayFS});
@@ -204,7 +202,7 @@ describe.v2('@atlaspack/link', () => {
       }}
         app
           yarn.lock:
-          .atlaspackrc: ${{
+          .parcelrc: ${{
             extends: '@namespace/atlaspack-config-namespace',
             transformers: {
               '*': [
@@ -226,7 +224,7 @@ describe.v2('@atlaspack/link', () => {
       assert(overlayFS.existsSync('.atlaspack-link'));
 
       assert.equal(
-        overlayFS.readFileSync('.atlaspackrc', 'utf8'),
+        overlayFS.readFileSync('.parcelrc', 'utf8'),
         JSON.stringify({
           extends: '@atlaspack/config-namespace',
           transformers: {
@@ -419,9 +417,9 @@ describe.v2('@atlaspack/link', () => {
         }}
         node_modules
           .bin/atlaspack -> ${path.resolve(__dirname, '../../cli/src/bin.js')}
-          atlaspack/cli -> ${path.resolve(__dirname, '../../cli')}
+          @atlaspack/cli -> ${path.resolve(__dirname, '../../cli')}
           @namespace/atlaspack-cli -> ${path.resolve(__dirname, '../../cli')}
-          atlaspack/core -> ${path.resolve(__dirname, '../../core')}
+          @atlaspack/core -> ${path.resolve(__dirname, '../../core')}
           @namespace/atlaspack-core -> ${path.resolve(
             __dirname,
             '../../core',
@@ -442,7 +440,7 @@ describe.v2('@atlaspack/link', () => {
     it.skip('updates config for custom namespace', async () => {
       await fsFixture(overlayFS)`
         yarn.lock:
-        .atlaspackrc: ${{
+        .parcelrc: ${{
           extends: '@atlaspack/config-namespace',
           transformers: {
             '*': [
@@ -475,7 +473,7 @@ describe.v2('@atlaspack/link', () => {
       assert(!overlayFS.existsSync('.atlaspack-link'));
 
       assert.equal(
-        overlayFS.readFileSync('.atlaspackrc', 'utf8'),
+        overlayFS.readFileSync('.parcelrc', 'utf8'),
         JSON.stringify({
           extends: '@namespace/atlaspack-config-namespace',
           transformers: {
@@ -510,9 +508,9 @@ describe.v2('@atlaspack/link', () => {
           @atlaspack/cli -> ${path.resolve(__dirname, '../../cli')}
           @atlaspack/core -> ${path.resolve(__dirname, '../../core')}
         tools
-          test/node_modules/atlaspack -> ${path.resolve(
+          test/node_modules/@atlaspack/cli -> ${path.resolve(
             __dirname,
-            '../../atlaspack',
+            '../../cli',
           )}
           test2/node_modules/@atlaspack/core -> ${path.resolve(
             __dirname,
@@ -524,9 +522,9 @@ describe.v2('@atlaspack/link', () => {
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
       assert(!overlayFS.existsSync('node_modules/@atlaspack/core'));
-      assert(!overlayFS.existsSync('node_modules/atlaspack'));
+      assert(!overlayFS.existsSync('node_modules/@atlaspack/cli'));
       assert(!overlayFS.existsSync('node_modules/.bin/atlaspack'));
-      assert(!overlayFS.existsSync('tools/test/node_modules/atlaspack'));
+      assert(!overlayFS.existsSync('tools/test/node_modules/@atlaspack/cli'));
       assert(!overlayFS.existsSync('tools/test2/node_modules/@atlaspack/core'));
     });
 

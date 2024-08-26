@@ -5,7 +5,7 @@ import {
   bundle as _bundle,
   describe,
   it,
-  mergeAtlaspackOptions,
+  mergeParcelOptions,
   overlayFS,
 } from '@atlaspack/test-utils';
 
@@ -13,12 +13,12 @@ const runBundler = (name, opts = {}) => {
   return _bundle(
     name,
     // $FlowFixMe
-    mergeAtlaspackOptions({}, opts),
+    mergeParcelOptions({}, opts),
   );
 };
 
 function hasPolyfill(code) {
-  const noPolyfill = `var $atlaspack$global = globalThis;`;
+  const noPolyfill = `var $parcel$global = globalThis;`;
   const polyfill = `typeof globalThis !== 'undefined'`;
   return code.includes(polyfill) && !code.includes(noPolyfill);
 }

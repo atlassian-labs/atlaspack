@@ -4,13 +4,12 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
 
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
-use atlaspack_core::plugin::{TransformResult, TransformationInput};
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
   Asset, BuildMode, Diagnostic, ErrorKind, FileType, LogLevel, OutputFormat, SourceType,
 };
-use atlaspack_filesystem::FileSystemRef;
 
 use crate::ts_config::{Jsx, Target, TsConfig};
 
@@ -30,7 +29,6 @@ mod test_helpers;
 ///   mapping to a mangled name that the SWC transformer replaced in the source file + the source
 ///   module and the source name that has been imported)
 pub struct AtlaspackJsTransformerPlugin {
-  file_system: FileSystemRef,
   options: Arc<PluginOptions>,
   ts_config: Option<TsConfig>,
 }
@@ -53,7 +51,6 @@ impl AtlaspackJsTransformerPlugin {
       .ok();
 
     Ok(Self {
-      file_system: ctx.file_system.clone(),
       options: ctx.options.clone(),
       ts_config,
     })
@@ -71,16 +68,16 @@ impl fmt::Debug for AtlaspackJsTransformerPlugin {
 impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does a lot of equivalent work to `JSTransformer::transform` in
   /// `packages/transformers/js`
-  fn transform(&mut self, input: TransformationInput) -> Result<TransformResult, Error> {
+  fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
     let compiler_options = self
       .ts_config
       .as_ref()
       .and_then(|ts| ts.compiler_options.as_ref());
 
-    let env = input.env();
-    let file_type = input.file_type();
+    let env = asset.env.clone();
+    let file_type = asset.file_type.clone();
     let is_node = env.context.is_node();
-    let source_code = input.read_code(self.file_system.clone())?;
+    let source_code = asset.code.clone();
 
     let mut targets: HashMap<String, String> = HashMap::new();
     if env.context.is_browser() {
@@ -135,8 +132,8 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
           .iter()
           .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
           .collect(),
-        filename: input
-          .file_path()
+        filename: asset
+          .file_path
           .to_str()
           .ok_or_else(|| anyhow!("Invalid non UTF-8 file-path"))?
           .to_string(),
@@ -152,6 +149,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         jsx_import_source: compiler_options.and_then(|co| co.jsx_import_source.clone()),
         jsx_pragma: compiler_options.and_then(|co| co.jsx_factory.clone()),
         jsx_pragma_frag: compiler_options.and_then(|co| co.jsx_fragment_factory.clone()),
+        module_id: asset.id.to_string(),
         node_replacer: is_node,
         project_root: self.options.project_root.to_string_lossy().into_owned(),
         // TODO: Boolean(
@@ -197,22 +195,6 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       return Err(anyhow!(format!("{:#?}", errors)));
     }
 
-    let file_path = input.file_path();
-    let file_type = FileType::from_extension(
-      file_path
-        .extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or_default(),
-    );
-
-    let asset = Asset {
-      code: source_code,
-      env: env.clone(),
-      file_path: file_path.to_path_buf(),
-      file_type,
-      ..Asset::default()
-    };
-
     let config = atlaspack_js_swc_core::Config::default();
     let result = conversion::convert_result(asset, &config, transformation_result, &self.options)
       // TODO handle errors properly
@@ -224,12 +206,13 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
 #[cfg(test)]
 mod test {
+  use pretty_assertions::assert_eq;
   use std::path::PathBuf;
 
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::PluginLogger,
-    types::{Code, Dependency, Location, SourceLocation, SpecifierType, Symbol},
+    types::{Code, Dependency, Environment, Location, SourceLocation, SpecifierType, Symbol},
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
@@ -242,37 +225,36 @@ mod test {
     }
   }
 
+  fn create_asset(file_path: &str, code: &str) -> Asset {
+    let file_system = Arc::new(InMemoryFileSystem::default());
+    let env = Arc::new(Environment::default());
+
+    Asset::new(
+      env.clone(),
+      file_path.into(),
+      Some(String::from(code)),
+      None,
+      false,
+      None,
+      file_system.clone(),
+    )
+    .unwrap()
+  }
+
   #[test]
   fn test_asset_id_is_stable() {
-    let source_code = Arc::new(Code::from(String::from("function hello() {}")));
-
-    let asset_1 = Asset {
-      code: source_code.clone(),
-      file_path: "mock_path".into(),
-      ..Asset::default()
-    };
-
-    let asset_2 = Asset {
-      code: source_code,
-      file_path: "mock_path".into(),
-      ..Asset::default()
-    };
+    let asset_1 = create_asset("mock_path", "function hello() {}");
+    let asset_2 = create_asset("mock_path", "function helloButDifferent() {}");
 
     // This nº should not change across runs / compilation
-    assert_eq!(asset_1.id(), 12098957784286304761);
-    assert_eq!(asset_1.id(), asset_2.id());
+    assert_eq!(asset_1.id, 6312461515062137255);
+    assert_eq!(asset_1.id, asset_2.id);
   }
 
   #[test]
   fn test_transformer_on_noop_asset() {
-    let source_code = Arc::new(Code::from(String::from("function hello() {}")));
-    let target_asset = Asset {
-      code: source_code,
-      file_path: "mock_path.js".into(),
-      ..Asset::default()
-    };
-    let asset_id = target_asset.id();
-    let result = run_test(target_asset).unwrap();
+    let target_asset = create_asset("mock_path.js", "function hello() {}");
+    let result = run_test(target_asset.clone()).unwrap();
 
     assert_eq!(
       result,
@@ -284,8 +266,8 @@ mod test {
           code: Arc::new(Code::from(String::from("function hello() {}\n"))),
           symbols: vec![],
           has_symbols: true,
-          unique_key: Some(format!("{:016x}", asset_id)),
-          ..empty_asset()
+          unique_key: Some(format!("{:016x}", target_asset.id)),
+          ..target_asset
         },
         dependencies: vec![],
         invalidate_on_file_change: vec![]
@@ -295,18 +277,13 @@ mod test {
 
   #[test]
   fn test_transformer_on_asset_that_requires_other() {
-    let source_code = Arc::new(Code::from(String::from(
-      r#"
+    let source_code = r#"
 const x = require('other');
 exports.hello = function() {};
-    "#,
-    )));
-    let target_asset = Asset {
-      code: source_code,
-      file_path: "mock_path.js".into(),
-      ..Asset::default()
-    };
-    let asset_id = target_asset.id();
+    "#;
+
+    let target_asset = create_asset("mock_path.js", source_code);
+    let asset_id = target_asset.id;
     let result = run_test(target_asset).unwrap();
 
     let mut expected_dependencies = vec![Dependency {
@@ -342,6 +319,7 @@ exports.hello = function() {};
       result,
       TransformResult {
         asset: Asset {
+          id: asset_id,
           file_path: "mock_path.js".into(),
           file_type: FileType::Js,
           // SWC inserts a newline here
@@ -405,7 +383,7 @@ exports.hello = function() {};
 
     let mut transformer = AtlaspackJsTransformerPlugin::new(&ctx).expect("Expected transformer");
 
-    let result = transformer.transform(TransformationInput::Asset(asset))?;
+    let result = transformer.transform(asset)?;
     Ok(result)
   }
 }

@@ -10,7 +10,7 @@ import sinon from 'sinon';
 
 const config = path.join(
   __dirname,
-  './integration/custom-configs/.atlaspackrc-json-reporter',
+  './integration/custom-configs/.parcelrc-json-reporter',
 );
 
 describe.v2('json reporter', () => {

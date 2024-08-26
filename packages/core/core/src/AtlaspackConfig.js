@@ -161,7 +161,7 @@ export default class AtlaspackConfig {
     if (this.resolvers.length === 0) {
       throw await this.missingPluginError(
         this.resolvers,
-        'No resolver plugins specified in .atlaspackrc config',
+        'No resolver plugins specified in .parcelrc config',
         '/resolvers',
       );
     }
@@ -225,7 +225,7 @@ export default class AtlaspackConfig {
     if (!this.bundler) {
       throw await this.missingPluginError(
         [],
-        'No bundler specified in .atlaspackrc config',
+        'No bundler specified in .parcelrc config',
         '/bundler',
       );
     }
@@ -237,7 +237,7 @@ export default class AtlaspackConfig {
     if (this.namers.length === 0) {
       throw await this.missingPluginError(
         this.namers,
-        'No namer plugins specified in .atlaspackrc config',
+        'No namer plugins specified in .parcelrc config',
         '/namers',
       );
     }

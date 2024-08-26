@@ -14,7 +14,7 @@ import {
   overlayFS,
   shallowEqual,
   distDir,
-  mergeAtlaspackOptions,
+  mergeParcelOptions,
 } from '@atlaspack/test-utils';
 import {loadSourceMapUrl} from '@atlaspack/utils';
 import nullthrows from 'nullthrows';
@@ -22,7 +22,7 @@ import nullthrows from 'nullthrows';
 const bundle = (name, opts?: InitialAtlaspackOptions) => {
   return _bundle(
     name,
-    mergeAtlaspackOptions(
+    mergeParcelOptions(
       {
         defaultTargetOptions: {
           sourceMaps: true,
@@ -221,7 +221,7 @@ describe.v2('sourcemaps', function () {
 
     let sourceMap = new SourceMap('/');
     sourceMap.addVLQMap(map);
-    assert.strictEqual(map.sourceRoot, '/__atlaspack_source_root/');
+    assert.strictEqual(map.sourceRoot, '/__parcel_source_root/');
     let input = await inputFS.readFile(
       path.join(fixture, map.sources[0]),
       'utf8',
@@ -469,7 +469,7 @@ describe.v2('sourcemaps', function () {
       source: inputs[1],
       generated: raw,
       str: 'exports.a',
-      generatedStr: 't.a',
+      generatedStr: 'o.a',
       sourcePath: 'local.js',
     });
 
@@ -478,7 +478,7 @@ describe.v2('sourcemaps', function () {
       source: inputs[2],
       generated: raw,
       str: 'exports.count = function(a, b) {',
-      generatedStr: 't.count=function(e,n){',
+      generatedStr: 'o.count=function(e,n){',
       sourcePath: 'utils/util.js',
     });
   });
@@ -501,7 +501,7 @@ describe.v2('sourcemaps', function () {
 
     assert.equal(map.file, 'index.js.map');
     assert(raw.includes('//# sourceMappingURL=index.js.map'));
-    // assert.equal(map.sourceRoot, '/__atlaspack_source_root/');
+    // assert.equal(map.sourceRoot, '/__parcel_source_root/');
 
     let sourceMap = new SourceMap('/');
     sourceMap.addVLQMap(map);
@@ -598,7 +598,7 @@ describe.v2('sourcemaps', function () {
 
     assert.equal(map.file, 'index.js.map');
     assert(raw.includes('//# sourceMappingURL=index.js.map'));
-    // assert.equal(map.sourceRoot, '/__atlaspack_source_root/');
+    // assert.equal(map.sourceRoot, '/__parcel_source_root/');
 
     let sourceMap = new SourceMap('/');
     sourceMap.addVLQMap(map);
@@ -916,7 +916,7 @@ describe.v2('sourcemaps', function () {
   it('should create a valid sourcemap for a LESS asset', async function () {
     async function test(shouldOptimize) {
       await fsFixture(overlayFS, __dirname)`
-        .atlaspackrc:
+        .parcelrc:
           {
             "extends": "@atlaspack/config-default",
             "transformers": {

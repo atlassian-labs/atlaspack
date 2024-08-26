@@ -13,7 +13,7 @@
   "source": "src/JSONLDTransformer.js",
   "engines": {
     "node": ">= 16.0.0",
-    "atlaspack": "^2.12.0"
+    "parcel": "^2.12.0"
   },
   "scripts": {
     "test": "yarn workspace @atlaspack/integration-tests test -g jsonld"

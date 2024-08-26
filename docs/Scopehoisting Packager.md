@@ -15,8 +15,8 @@
    - The dependency map which is used to resolve `import "...";` declarations inserted by the transformer: `${assetId}:${specifier}${specifiertype} -> Dependency`
    - Import replacements: the local part of a dependency symbol (`$id$import$foo`) -> result of `getSymbolResolution` (e.g. `$id$export$bar` or `atlaspackRequire("id").bar`)
 3. Call `buildAssetPrelude()`:
-   - generates `$atlaspack$defineInteropFlag($id$exports)` call for this asset if needed.
-   - synthesizes the exports object if needed (including generation of the `$atlaspack$export` and `$atlaspack$exportWildcard` calls only for used re/exports)
+   - generates `$parcel$defineInteropFlag($id$exports)` call for this asset if needed.
+   - synthesizes the exports object if needed (including generation of the `$parcel$export` and `$parcel$exportWildcard` calls only for used re/exports)
 4. Perform the replacements with `REPLACEMENT_RE` matching one of
    - `import "id";`
      - will be replaced with the source code of the asset (call `buildAsset()` recursively ). If the referenced asset is wrapped, don't inline but place it after the current asset (into `depContent`).
@@ -40,7 +40,7 @@ Compared to the bundle graph's method, the `parentAsset` is used to make wrapped
   - `$id$exports` (e.g. same-bundle ESM import),
   - `id$exports.bar` (e.g. non statically analyzable exports) or
   - `atlaspackRequire("id").bar` (wrapped/in another bundle)
-  - `$atlaspack$interopDefault` (if an ESM default import resolved to a non-statically analyzable CJS asset)
+  - `$parcel$interopDefault` (if an ESM default import resolved to a non-statically analyzable CJS asset)
 - also handles interop (if the default symbol is imported and the resolved asset is CJS, use the namespace instead)
 - tracks imports of wrapped assets (which will need `atlaspackRequire` call) by mutating the `hoistedRequires` list
 

@@ -6,7 +6,7 @@
 // anything defined in a previous bundle is accessed via the
 // orig method which is the require for previous bundles
 
-(function (modules, entry, mainEntry, atlaspackRequireName, globalName) {
+(function (modules, entry, mainEntry, parcelRequireName, globalName) {
   /* eslint-disable no-undef */
   var globalObject =
     typeof globalThis !== 'undefined'
@@ -22,8 +22,8 @@
 
   // Save the require from previous bundle to this closure if any
   var previousRequire =
-    typeof globalObject[atlaspackRequireName] === 'function' &&
-    globalObject[atlaspackRequireName];
+    typeof globalObject[parcelRequireName] === 'function' &&
+    globalObject[parcelRequireName];
 
   var cache = previousRequire.cache || {};
   // Do not use `require` to prevent Webpack from trying to bundle this call
@@ -39,8 +39,8 @@
         // cache jump to the current global require ie. the last bundle
         // that was added to the page.
         var currentRequire =
-          typeof globalObject[atlaspackRequireName] === 'function' &&
-          globalObject[atlaspackRequireName];
+          typeof globalObject[parcelRequireName] === 'function' &&
+          globalObject[parcelRequireName];
         if (!jumped && currentRequire) {
           return currentRequire(name, true);
         }
@@ -96,7 +96,7 @@
     this.exports = {};
   }
 
-  newRequire.isAtlaspackRequire = true;
+  newRequire.isParcelRequire = true;
   newRequire.Module = Module;
   newRequire.modules = modules;
   newRequire.cache = cache;
@@ -112,11 +112,11 @@
 
   Object.defineProperty(newRequire, 'root', {
     get: function () {
-      return globalObject[atlaspackRequireName];
+      return globalObject[parcelRequireName];
     },
   });
 
-  globalObject[atlaspackRequireName] = newRequire;
+  globalObject[parcelRequireName] = newRequire;
 
   for (var i = 0; i < entry.length; i++) {
     newRequire(entry[i]);

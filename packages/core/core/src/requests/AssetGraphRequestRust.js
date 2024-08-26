@@ -118,6 +118,7 @@ function getAssetGraph(serializedGraph, options) {
     } else if (node.type === 'asset') {
       let id = node.value.id;
       let asset = node.value.asset;
+      asset.meta.id = id;
 
       asset = {
         ...asset,

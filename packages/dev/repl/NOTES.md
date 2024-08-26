@@ -4,7 +4,7 @@
 
 - babel shims out all file access in the browser -> babelrc is ignored
 - glob doesn't work
-- `extends` in a.atlaspackrc are read from fs, not `require`d
+- `extends` in a.parcelrc are read from fs, not `require`d
 - removing an asset can make it look as though one of the remaining assets is an entry, but it actually isn't
 
 **Improvements**:

@@ -16,7 +16,7 @@ import {md} from '@atlaspack/diagnostic';
 describe.v2('less', function () {
   it('should support requiring less files', async function () {
     await fsFixture(overlayFS)`
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {
@@ -54,7 +54,7 @@ describe.v2('less', function () {
 
   it('should support less imports', async function () {
     await fsFixture(overlayFS)`
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {
@@ -132,7 +132,7 @@ describe.v2('less', function () {
           "main": "main.less"
         }
 
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {
@@ -177,7 +177,7 @@ describe.v2('less', function () {
 
   it('should support requiring empty less files', async function () {
     await fsFixture(overlayFS)`
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {
@@ -212,7 +212,7 @@ describe.v2('less', function () {
     await fsFixture(overlayFS)`
       fonts/test.woff2: test
 
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {
@@ -258,7 +258,7 @@ describe.v2('less', function () {
 
   it('should support less url rewrites', async function () {
     await fsFixture(overlayFS)`
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {
@@ -319,7 +319,7 @@ describe.v2('less', function () {
 
   it('should support css modules in less', async function () {
     await fsFixture(overlayFS)`
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {
@@ -373,7 +373,7 @@ describe.v2('less', function () {
     await fsFixture(overlayFS)`
       node_modules/library/styles.less:
 
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {
@@ -386,7 +386,7 @@ describe.v2('less', function () {
     `;
 
     await assert.rejects(() => bundle('index.less', {inputFS: overlayFS}), {
-      message: md`The @import path "${'~library/style.less'}" is using webpack specific syntax, which isn't supported by Atlaspack.\n\nTo @import files from ${'node_modules'}, use "${'library/style.less'}"`,
+      message: md`The @import path "${'~library/style.less'}" is using webpack specific syntax, which isn't supported by Parcel.\n\nTo @import files from ${'node_modules'}, use "${'library/style.less'}"`,
     });
   });
 
@@ -405,7 +405,7 @@ describe.v2('less', function () {
       index.js:
         require('./index.less');
 
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {
@@ -448,7 +448,7 @@ describe.v2('less', function () {
 
   it('should ignore url() with IE behavior specifiers', async function () {
     await fsFixture(overlayFS)`
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {
@@ -478,7 +478,7 @@ describe.v2('less', function () {
 
   it('preserves quotes around data urls that require them', async () => {
     await fsFixture(overlayFS)`
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {
@@ -525,7 +525,7 @@ describe.v2('less', function () {
           }
         }
 
-      .atlaspackrc:
+      .parcelrc:
         {
           "extends": "@atlaspack/config-default",
           "transformers": {

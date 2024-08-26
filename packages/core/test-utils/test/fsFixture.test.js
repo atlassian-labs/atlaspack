@@ -530,7 +530,7 @@ describe('fsFixture', () => {
           @atlaspack
             cli -> ${path.resolve(__dirname, '../../cli')}
             core -> ${path.resolve(__dirname, '../../core')}
-        .atlaspackrc: ${{
+        .parcelrc: ${{
           extends: '@atlaspack/config-default',
           transforms: ['atlaspack-transformer-custom', '...'],
         }}
@@ -541,7 +541,7 @@ describe('fsFixture', () => {
     assert.equal(fs.readFileSync('/app/yarn.lock', 'utf8'), '');
 
     assert.equal(
-      fs.readFileSync('/app/.atlaspackrc', 'utf8'),
+      fs.readFileSync('/app/.parcelrc', 'utf8'),
       JSON.stringify({
         extends: '@atlaspack/config-default',
         transforms: ['atlaspack-transformer-custom', '...'],

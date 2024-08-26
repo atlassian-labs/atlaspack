@@ -1,6 +1,6 @@
 ## `bundle()`
 
-During the bundling phase, we hand over control to the bundler plugin via `bundle()`. This mutative function is called in the `BundleGraphRequest`, and is passed in a stripped version of the AssetGraph, called the `mutableBundleGraph`. Users can specify custom bundler plugins in their `.atlaspackrc`. In this document we will go through the default bundler plugin.
+During the bundling phase, we hand over control to the bundler plugin via `bundle()`. This mutative function is called in the `BundleGraphRequest`, and is passed in a stripped version of the AssetGraph, called the `mutableBundleGraph`. Users can specify custom bundler plugins in their `.parcelrc`. In this document we will go through the default bundler plugin.
 
 ```
 await bundler.bundle({

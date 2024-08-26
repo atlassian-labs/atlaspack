@@ -20,7 +20,7 @@ export class IDBCache implements Cache {
   store: any;
 
   constructor() {
-    this.store = openDB('REPL-atlaspack-cache', 1, {
+    this.store = openDB('REPL-parcel-cache', 1, {
       upgrade(db) {
         db.createObjectStore(STORE_NAME);
       },

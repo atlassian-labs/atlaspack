@@ -37,7 +37,7 @@ export default (new Optimizer({
       let message;
       if (filename === 'package.json') {
         message = md`
-Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cssnano" key was found in **package.json**. Either remove this configuration, or configure Atlaspack to use @atlaspack/optimizer-cssnano instead.
+Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cssnano" key was found in **package.json**. Either remove this configuration, or configure Parcel to use @atlaspack/optimizer-cssnano instead.
         `;
         let contents = await options.inputFS.readFile(
           configFile.filePath,
@@ -47,7 +47,7 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
           {key: '/cssnano', type: 'key'},
         ]);
       } else {
-        message = md`Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a __${filename}__ config file was found. Either remove this config file, or configure Atlaspack to use @atlaspack/optimizer-cssnano instead.`;
+        message = md`Parcel\'s default CSS minifer changed from cssnano to lightningcss, but a __${filename}__ config file was found. Either remove this config file, or configure Parcel to use @atlaspack/optimizer-cssnano instead.`;
         codeHighlights = [
           {
             start: {line: 1, column: 1},

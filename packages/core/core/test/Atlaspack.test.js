@@ -134,7 +134,7 @@ function createAtlaspack(opts?: InitialAtlaspackOptions) {
     logLevel: 'info',
     defaultConfig: path.join(
       path.dirname(require.resolve('@atlaspack/test-utils')),
-      '.atlaspackrc-no-reporters',
+      '.parcelrc-no-reporters',
     ),
     shouldDisableCache: true,
     ...opts,

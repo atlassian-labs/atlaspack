@@ -17,7 +17,7 @@ describe.v2('feature flags', () => {
     await overlayFS.mkdirp(dir);
     await fsFixture(overlayFS, dir)`
     yarn.lock:
-        // required for .atlaspackrc to work
+        // required for .parcelrc to work
 
     package.json:
         {
@@ -28,7 +28,7 @@ describe.v2('feature flags', () => {
     index.js:
         module.exports = "MARKER";
 
-    .atlaspackrc:
+    .parcelrc:
         {
             extends: "@atlaspack/config-default",
             transformers: {
@@ -36,7 +36,7 @@ describe.v2('feature flags', () => {
             },
         }
 
-    .atlaspackrc-2:
+    .parcelrc-2:
       {
           extends: "@atlaspack/config-default",
           transformers: {
@@ -133,7 +133,7 @@ describe.v2('feature flags', () => {
     const b = await bundle(path.join(dir, 'index.js'), {
       inputFS: overlayFS,
       featureFlags: {exampleFeature: true},
-      config: path.join(dir, '.atlaspackrc-2'),
+      config: path.join(dir, '.parcelrc-2'),
     });
     const output = await run(b);
 

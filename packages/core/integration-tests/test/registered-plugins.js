@@ -27,7 +27,7 @@ describe.v2('plugins with "registered" languages', () => {
       index.js:
         console.log("Hi, mum!");
 
-      .atlaspackrc:
+      .parcelrc:
         {
           extends: "@atlaspack/config-default",
           reporters: ["...", "./reporter-plugin.js"],

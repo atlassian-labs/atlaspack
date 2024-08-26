@@ -5,8 +5,9 @@ use anyhow::Error;
 
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
-use atlaspack_core::plugin::{TransformResult, TransformationInput};
+use atlaspack_core::types::Asset;
 
 pub struct RpcTransformerPlugin {
   _name: String,
@@ -27,7 +28,7 @@ impl RpcTransformerPlugin {
 }
 
 impl TransformerPlugin for RpcTransformerPlugin {
-  fn transform(&mut self, _asset: TransformationInput) -> Result<TransformResult, Error> {
+  fn transform(&mut self, _asset: Asset) -> Result<TransformResult, Error> {
     todo!()
   }
 }
