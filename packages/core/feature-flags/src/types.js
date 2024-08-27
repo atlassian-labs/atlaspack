@@ -16,6 +16,12 @@ export type FeatureFlags = {|
    */
   importRetry: boolean,
   /**
+   * Enable fast path for needsDefaultInterop.
+   *
+   * This improves bundling performance of large applications very significantly.
+   */
+  fastNeedsDefaultInterop: boolean,
+  /**
    * Enable resolver refactor into owned data structures.
    */
   ownedResolverStructures: boolean,
