@@ -1,0 +1,56 @@
+{
+  "name": "lmdb-js-lite",
+  "version": "0.1.5",
+  "main": "dist/compat.js",
+  "types": "compat.d.ts",
+  "repository": "https://github.com/atlassian-labs/atlaspack",
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "napi": {
+    "name": "lmdb-js-lite",
+    "triples": {
+      "defaults": false,
+      "additional": [
+        "x86_64-apple-darwin",
+        "x86_64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
+        "universal-apple-darwin"
+      ]
+    }
+  },
+  "license": "APACHE-2",
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.4",
+    "@atlaspack/cache": "*",
+    "@atlaspack/core": "*",
+    "@atlaspack/fs": "*",
+    "@atlaspack/types": "*",
+    "@types/node": "^22.3.0",
+    "bench-node": "^0.0.1-beta.0",
+    "lmdb": "^3.0.13",
+    "prettier": "^3.3.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">= 16"
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "tsc && napi build --platform --release",
+    "build:debug": "tsc && napi build --platform",
+    "prepublishOnly": "tsc && napi prepublish -t npm",
+    "test": "mocha",
+    "universal": "napi universal",
+    "version": "napi version"
+  },
+  "peerDependencies": {
+    "@atlaspack/cache": "*",
+    "@atlaspack/core": "*",
+    "@atlaspack/fs": "*",
+    "@atlaspack/types": "*"
+  },
+  "stableVersion": "0.0.0"
+}
