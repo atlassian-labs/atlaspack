@@ -247,10 +247,25 @@ impl AssetGraphBuilder {
       .insert(request_id, asset_node_index);
 
     // Connect dependencies of the Asset
-    for dependency in &dependencies {
-      let _ = self
-        .graph
-        .add_dependency(asset_node_index, dependency.clone());
+    let mut unique_deps: HashMap<u64, Dependency> = HashMap::new();
+
+    for mut dependency in dependencies {
+      unique_deps
+        .entry(dependency.id())
+        .and_modify(|d| {
+          // This code is an incomplete version of mergeDependencies in packages/core/core/src/Dependency.js
+          // Duplicate dependencies can occur when node globals are polyfilled
+          // e.g. 'process'. I think ideally we wouldn't end up with two
+          // dependencies post-transform but that needs further investigation to
+          // resolve and understand...
+          d.meta.append(&mut dependency.meta);
+          d.symbols.extend(dependency.symbols.clone());
+        })
+        .or_insert(dependency.clone());
+    }
+
+    for (_id, dependency) in unique_deps.into_iter() {
+      let _ = self.graph.add_dependency(asset_node_index, dependency);
     }
 
     self.graph.propagate_requested_symbols(

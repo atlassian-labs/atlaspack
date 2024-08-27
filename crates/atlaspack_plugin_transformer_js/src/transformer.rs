@@ -221,6 +221,8 @@ mod test {
   fn empty_asset() -> Asset {
     Asset {
       file_type: FileType::Js,
+      is_bundle_splittable: true,
+      is_source: true,
       ..Default::default()
     }
   }
