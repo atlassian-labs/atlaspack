@@ -195,8 +195,8 @@ impl Asset {
       code: Arc::new(code),
       side_effects,
       file_type,
-      is_source,
       is_bundle_splittable: true,
+      is_source,
       ..Asset::default()
     })
   }
