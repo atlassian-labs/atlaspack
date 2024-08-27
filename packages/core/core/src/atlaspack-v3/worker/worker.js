@@ -1,13 +1,26 @@
 // @flow
 import * as napi from '@atlaspack/rust';
+import type {Transformer} from '@atlaspack/types';
 import {workerData} from 'worker_threads';
-import type {ResolverNapi} from '../plugins/Resolver';
+import * as module from 'module';
 
 export class AtlaspackWorker {
-  #resolvers: Map<string, ResolverNapi>;
+  #transformers: Map<string, Transformer<any>>;
+
+  constructor() {
+    this.#transformers = new Map();
+  }
 
   ping() {
     // console.log('Hi');
+  }
+
+  async transformerRegister(resolve_from: string, specifier: string) {
+    let customRequire = module.createRequire(resolve_from);
+    let resolvedPath = customRequire.resolve(specifier);
+    // $FlowFixMe
+    let transformer = await import(resolvedPath);
+    this.#transformers.set(`${resolve_from}:${specifier}`, transformer);
   }
 }
 

@@ -33,17 +33,6 @@ export class AtlaspackV3 {
     });
   }
 
-  async build(): Promise<any> {
-    const [workers, registerWorker] = this.#createWorkers();
-
-    let result = await this._internal.build({
-      registerWorker,
-    });
-
-    for (const worker of workers) worker.terminate();
-    return result;
-  }
-
   async buildAssetGraph(): Promise<any> {
     const [workers, registerWorker] = this.#createWorkers();
 

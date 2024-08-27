@@ -97,37 +97,6 @@ impl AtlaspackNapi {
   }
 
   #[napi]
-  pub fn build(&self, env: Env, options: AtlaspackNapiBuildOptions) -> napi::Result<JsObject> {
-    let (deferred, promise) = env.create_deferred()?;
-
-    self.register_workers(&options)?;
-
-    // Both the atlaspack initialization and build must be run a dedicated system thread so that
-    // the napi threadsafe functions do not panic
-    thread::spawn({
-      let fs = self.fs.clone();
-      let options = self.options.clone();
-      let package_manager = self.package_manager.clone();
-      let rpc = self.rpc.clone();
-
-      move || {
-        let atlaspack = Atlaspack::new(fs, options, package_manager, rpc);
-        let to_napi_error = |error| napi::Error::from_reason(format!("{:?}", error));
-
-        match atlaspack {
-          Err(error) => deferred.reject(to_napi_error(error)),
-          Ok(mut atlaspack) => match atlaspack.build() {
-            Ok(build_result) => deferred.resolve(move |env| env.to_js_value(&build_result)),
-            Err(error) => deferred.reject(to_napi_error(error)),
-          },
-        }
-      }
-    });
-
-    Ok(promise)
-  }
-
-  #[napi]
   pub fn build_asset_graph(
     &self,
     env: Env,

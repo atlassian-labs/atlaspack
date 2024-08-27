@@ -9,26 +9,40 @@ use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::types::Asset;
 
+use crate::RpcWorkerRef;
+
 pub struct RpcTransformerPlugin {
-  _name: String,
+  _rpc_worker: RpcWorkerRef,
+  name: String,
 }
 
 impl Debug for RpcTransformerPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "RpcTransformerPlugin")
+    write!(f, "RpcTransformerPlugin({})", self.name)
   }
 }
 
 impl RpcTransformerPlugin {
-  pub fn new(_ctx: &PluginContext, plugin: &PluginNode) -> Result<Self, anyhow::Error> {
+  pub fn new(
+    rpc_worker: RpcWorkerRef,
+    _ctx: &PluginContext,
+    plugin: &PluginNode,
+  ) -> Result<Self, anyhow::Error> {
+    rpc_worker.transformer_register(&plugin.resolve_from, &plugin.package_name)?;
+
     Ok(RpcTransformerPlugin {
-      _name: plugin.package_name.clone(),
+      _rpc_worker: rpc_worker,
+      name: plugin.package_name.clone(),
     })
   }
 }
 
 impl TransformerPlugin for RpcTransformerPlugin {
-  fn transform(&mut self, _asset: Asset) -> Result<TransformResult, Error> {
-    todo!()
+  fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
+    Ok(TransformResult {
+      asset,
+      dependencies: vec![],
+      invalidate_on_file_change: vec![],
+    })
   }
 }
