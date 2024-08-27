@@ -178,6 +178,15 @@ impl AtlaspackResolver {
     todo!()
   }
 
+  fn resolve_empty(&self, side_effects: bool) -> ResolvedResolution {
+    ResolvedResolution {
+      code: Some(String::default()),
+      file_path: self.options.core_path.join("_empty.js"),
+      side_effects,
+      ..ResolvedResolution::default()
+    }
+  }
+
   fn resolve_builtin(&self, ctx: &ResolveContext, builtin: String) -> anyhow::Result<Resolved> {
     let dep = &ctx.dependency;
     if dep.env.context.is_node() {
@@ -221,10 +230,7 @@ impl AtlaspackResolver {
       _ => {
         return Ok(Resolved {
           invalidations: Vec::new(),
-          resolution: Resolution::Resolved(ResolvedResolution {
-            file_path: self.options.core_path.join("_empty.js"),
-            ..ResolvedResolution::default()
-          }),
+          resolution: Resolution::Resolved(self.resolve_empty(false)),
         });
       }
     };
@@ -349,11 +355,7 @@ impl ResolverPlugin for AtlaspackResolver {
       }
       (atlaspack_resolver::Resolution::Empty, _invalidations) => Ok(Resolved {
         invalidations: Vec::new(),
-        resolution: Resolution::Resolved(ResolvedResolution {
-          file_path: self.options.core_path.join("_empty.js"),
-          side_effects,
-          ..ResolvedResolution::default()
-        }),
+        resolution: Resolution::Resolved(self.resolve_empty(side_effects)),
       }),
       (atlaspack_resolver::Resolution::External, _invalidations) => {
         if let Some(_source_path) = &ctx.dependency.source_path {
