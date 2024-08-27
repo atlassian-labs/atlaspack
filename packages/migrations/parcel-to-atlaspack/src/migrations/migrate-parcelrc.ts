@@ -44,7 +44,11 @@ export async function migrateParcelRc({cwd, dryRun}: MigrateParcelRcOptions) {
         }
       }
 
-      const atlaspackrcPath = join(dirname(parcelrcPath), '.atlaspackrc');
+      const atlaspackrcPath = join(
+        dirname(parcelrcPath),
+        basename(parcelrcPath).replace('.parcelrc', '.atlaspackrc'),
+      );
+
       if (dryRun) {
         console.log(
           chalk.blue('[INFO]'),
