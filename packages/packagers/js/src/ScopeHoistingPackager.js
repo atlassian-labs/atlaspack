@@ -23,6 +23,7 @@ import ThrowableDiagnostic, {
 } from '@atlaspack/diagnostic';
 import globals from 'globals';
 import path from 'path';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 import {ESMOutputFormat} from './ESMOutputFormat';
 import {CJSOutputFormat} from './CJSOutputFormat';
@@ -1430,6 +1431,10 @@ ${code}
       asset.symbols.hasExportSymbol('*') &&
       !asset.symbols.hasExportSymbol('default')
     ) {
+      if (getFeatureFlag('fastNeedsDefaultInterop')) {
+        return true;
+      }
+
       let deps = this.bundleGraph.getIncomingDependencies(asset);
       return deps.some(
         dep =>
