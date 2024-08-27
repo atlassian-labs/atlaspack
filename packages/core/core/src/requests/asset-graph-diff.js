@@ -1,4 +1,4 @@
-const deepClone = require('deep-clone');
+const deepClone = require('rfdc/default');
 const diff = require('./diff');
 
 function filterNode(node) {

@@ -49,7 +49,7 @@
   "devDependencies": {
     "@atlaspack/babel-register": "2.12.0",
     "@types/node": ">= 18",
-    "deep-clone": "3",
+    "rfdc": "1",
     "graphviz": "^0.0.9",
     "tempy": "^0.2.1"
   },
