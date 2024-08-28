@@ -15,7 +15,11 @@ export class AtlaspackWorker {
     // console.log('Hi');
   }
 
-  async transformerRegister(resolve_from: string, specifier: string) {
+  transformTransformer(key: string, asset: any) {
+    console.log({key, asset});
+  }
+
+  async registerTransformer(resolve_from: string, specifier: string) {
     let customRequire = module.createRequire(resolve_from);
     let resolvedPath = customRequire.resolve(specifier);
     // $FlowFixMe

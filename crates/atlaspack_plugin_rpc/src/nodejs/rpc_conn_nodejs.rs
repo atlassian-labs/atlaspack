@@ -1,7 +1,9 @@
 use std::path::Path;
 
 use anyhow::Context;
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_napi_helpers::anyhow_from_napi;
+use atlaspack_napi_helpers::js_callable;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use napi::{JsObject, JsUnknown};
 
@@ -11,15 +13,20 @@ use crate::RpcWorker;
 /// single Nodejs worker thread
 pub struct NodejsWorker {
   ping_fn: JsCallable,
-  transformer_register_fn: JsCallable,
+  register_transformer_fn: JsCallable,
+  transform_transformer_fn: JsCallable,
 }
 
 impl NodejsWorker {
   pub fn new(delegate: JsObject) -> napi::Result<Self> {
     Ok(Self {
       ping_fn: JsCallable::new_from_object_prop_bound("ping", &delegate)?,
-      transformer_register_fn: JsCallable::new_from_object_prop_bound(
-        "transformerRegister",
+      register_transformer_fn: JsCallable::new_from_object_prop_bound(
+        "registerTransformer",
+        &delegate,
+      )?,
+      transform_transformer_fn: JsCallable::new_from_object_prop_bound(
+        "transformTransformer",
         &delegate,
       )?,
     })
@@ -40,7 +47,7 @@ impl RpcWorker for NodejsWorker {
 
   fn register_transformer(&self, resolve_from: &Path, specifier: &str) -> anyhow::Result<()> {
     self
-      .transformer_register_fn
+      .register_transformer_fn
       .call_with_return(
         {
           let specifier = specifier.to_string();
@@ -56,5 +63,16 @@ impl RpcWorker for NodejsWorker {
       )
       .map_err(anyhow_from_napi)?;
     Ok(())
+  }
+
+  fn transform_transformer(
+    &self,
+    key: &str,
+    asset: &atlaspack_core::types::Asset,
+  ) -> anyhow::Result<TransformResult> {
+    Ok(self.transform_transformer_fn.call_with_return(
+      js_callable::map_params_serde((key.to_string(), asset.clone())),
+      js_callable::map_return_serde::<TransformResult>(),
+    )?)
   }
 }

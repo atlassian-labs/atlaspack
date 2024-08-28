@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::path::PathBuf;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::types::{Asset, Dependency, SpecifierType};
 
@@ -15,7 +15,7 @@ pub struct ResolveOptions {
 /// A function that enables transformers to resolve a dependency specifier
 pub type Resolve = dyn Fn(PathBuf, String, ResolveOptions) -> Result<PathBuf, anyhow::Error>;
 
-#[derive(Debug, Serialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct TransformResult {
   pub asset: Asset,
   pub dependencies: Vec<Dependency>,

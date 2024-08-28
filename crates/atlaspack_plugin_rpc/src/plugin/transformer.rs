@@ -1,5 +1,6 @@
 use std::fmt;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use anyhow::Error;
 
@@ -8,17 +9,19 @@ use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::types::Asset;
+use once_cell::sync::OnceCell;
 
 use crate::RpcWorkerRef;
 
 pub struct RpcTransformerPlugin {
-  _rpc_worker: RpcWorkerRef,
-  name: String,
+  key: Arc<OnceCell<String>>,
+  rpc_worker: RpcWorkerRef,
+  plugin: PluginNode,
 }
 
 impl Debug for RpcTransformerPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "RpcTransformerPlugin({})", self.name)
+    write!(f, "RpcTransformerPlugin({})", self.plugin.package_name)
   }
 }
 
@@ -28,17 +31,33 @@ impl RpcTransformerPlugin {
     _ctx: &PluginContext,
     plugin: &PluginNode,
   ) -> Result<Self, anyhow::Error> {
-    rpc_worker.register_transformer(&plugin.resolve_from, &plugin.package_name)?;
-
     Ok(RpcTransformerPlugin {
-      _rpc_worker: rpc_worker,
-      name: plugin.package_name.clone(),
+      key: Default::default(),
+      rpc_worker,
+      plugin: plugin.clone(),
+    })
+  }
+
+  fn get_key(&self) -> anyhow::Result<&String> {
+    self.key.get_or_try_init(move || {
+      (&self.rpc_worker)
+        .register_transformer(&self.plugin.resolve_from, &self.plugin.package_name)?;
+      Ok(format!(
+        "{}:{}",
+        &self.plugin.resolve_from.to_str().unwrap(),
+        &self.plugin.package_name
+      ))
     })
   }
 }
 
 impl TransformerPlugin for RpcTransformerPlugin {
   fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
+    let key = self.get_key()?;
+
+    println!("{:?} {}", self, key);
+    self.rpc_worker.transform_transformer(key, &asset)?;
+
     Ok(TransformResult {
       asset,
       dependencies: vec![],
