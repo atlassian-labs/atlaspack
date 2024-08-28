@@ -1,11 +1,12 @@
+/* eslint-disable */
 const deepClone = require('rfdc/default');
-const diff = require('./diff');
+const diff = require('jest-diff').diff;
 
 function filterNode(node) {
   let clone = deepClone(node);
 
   // Clean up anything you don't want to see in the diff
-  delete clone.id;
+  // delete clone.id;
   delete clone.value.id;
   delete clone.value.meta.id;
   delete clone.value.sourceAssetId;
@@ -20,6 +21,9 @@ function filterNode(node) {
   delete clone.value.isConstantModule;
   delete clone.value.hasNodeReplacements;
   delete clone.value.stats;
+  delete clone.value.astKey;
+  delete clone.value.astGenerator;
+  delete clone.value.dependencies;
 
   return clone;
 }
@@ -49,14 +53,12 @@ function assetGraphDiff(jsAssetGraph, rustAssetGraph) {
     let rustNode = rustNodes[key];
 
     if (!rustNode) {
-      // eslint-disable-next-line
       console.log('Missing', key);
       continue;
     }
 
-    // eslint-disable-next-line
     console.log(key);
-    diff(jsNode, rustNode);
+    console.log(diff(jsNode, rustNode));
   }
 }
 

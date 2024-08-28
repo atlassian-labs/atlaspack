@@ -50,6 +50,7 @@
     "@atlaspack/babel-register": "2.12.0",
     "@types/node": ">= 18",
     "rfdc": "1",
+    "jest-diff": "*",
     "graphviz": "^0.0.9",
     "tempy": "^0.2.1"
   },
