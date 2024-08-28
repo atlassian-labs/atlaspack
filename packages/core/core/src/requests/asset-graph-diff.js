@@ -36,8 +36,8 @@ function assetGraphDiff(jsAssetGraph, rustAssetGraph) {
       let node = graph.getNode(nodeId);
 
       if (node.type === 'dependency') {
-        nodes[`dep:${node.value.sourcePath}:${node.value.specifier}`] =
-          filterNode(node);
+        let sourcePath = node.value.sourcePath ?? 'entry';
+        nodes[`dep:${sourcePath}:${node.value.specifier}`] = filterNode(node);
       } else if (node.type === 'asset') {
         nodes[`asset:${node.value.filePath}`] = filterNode(node);
       }
@@ -49,17 +49,29 @@ function assetGraphDiff(jsAssetGraph, rustAssetGraph) {
   const jsNodes = getNodes(jsAssetGraph);
   const rustNodes = getNodes(rustAssetGraph);
 
-  for (const [key, jsNode] of Object.entries(jsNodes)) {
+  const all = new Set([...Object.keys(jsNodes), ...Object.keys(rustNodes)]);
+  const missing = [];
+  const extra = [];
+
+  for (const key of all.keys()) {
+    let jsNode = jsNodes[key];
     let rustNode = rustNodes[key];
 
     if (!rustNode) {
-      console.log('Missing', key);
+      missing.push(key);
+      continue;
+    }
+    if (!jsNode) {
+      extra.push(key);
       continue;
     }
 
     console.log(key);
     console.log(diff(jsNode, rustNode));
   }
+
+  console.log('Missing', missing);
+  console.log('Extra', extra);
 }
 
 module.exports = assetGraphDiff;
