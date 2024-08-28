@@ -38,7 +38,7 @@ impl RpcWorker for NodejsWorker {
     Ok(())
   }
 
-  fn transformer_register(&self, resolve_from: &Path, specifier: &str) -> anyhow::Result<()> {
+  fn register_transformer(&self, resolve_from: &Path, specifier: &str) -> anyhow::Result<()> {
     self
       .transformer_register_fn
       .call_with_return(

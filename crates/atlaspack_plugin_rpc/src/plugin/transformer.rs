@@ -28,7 +28,7 @@ impl RpcTransformerPlugin {
     _ctx: &PluginContext,
     plugin: &PluginNode,
   ) -> Result<Self, anyhow::Error> {
-    rpc_worker.transformer_register(&plugin.resolve_from, &plugin.package_name)?;
+    rpc_worker.register_transformer(&plugin.resolve_from, &plugin.package_name)?;
 
     Ok(RpcTransformerPlugin {
       _rpc_worker: rpc_worker,

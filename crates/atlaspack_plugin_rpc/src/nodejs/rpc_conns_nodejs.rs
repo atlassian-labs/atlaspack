@@ -14,7 +14,7 @@ pub struct NodejsWorkerFarm {
 }
 
 impl NodejsWorkerFarm {
-  pub fn new(conns: Vec<NodejsWorker>) -> Self {
+  pub fn new(workers: Vec<NodejsWorker>) -> Self {
     Self {
       current_index: Default::default(),
       workers,
@@ -41,9 +41,9 @@ impl RpcWorker for NodejsWorkerFarm {
     Ok(())
   }
 
-  fn transformer_register(&self, resolve_from: &Path, specifier: &str) -> anyhow::Result<()> {
+  fn register_transformer(&self, resolve_from: &Path, specifier: &str) -> anyhow::Result<()> {
     for worker in &self.workers {
-      worker.transformer_register(resolve_from, specifier)?;
+      worker.register_transformer(resolve_from, specifier)?;
     }
     Ok(())
   }

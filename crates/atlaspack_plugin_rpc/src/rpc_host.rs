@@ -10,5 +10,5 @@ pub trait RpcHost: Send + Sync {
 
 pub trait RpcWorker: Send + Sync {
   fn ping(&self) -> anyhow::Result<()>;
-  fn transformer_register(&self, resolve_from: &Path, specifier: &str) -> anyhow::Result<()>;
+  fn register_transformer(&self, resolve_from: &Path, specifier: &str) -> anyhow::Result<()>;
 }
