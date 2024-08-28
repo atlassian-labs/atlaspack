@@ -84,12 +84,15 @@ impl TargetRequest {
     name: Option<String>,
   ) -> BuiltInTarget {
     BuiltInTarget {
-      descriptor: descriptor.unwrap_or_else(|| {
-        BuiltInTargetDescriptor::TargetDescriptor(TargetDescriptor {
-          context: Some(EnvironmentContext::Browser),
-          ..builtin_target_descriptor()
+      descriptor: descriptor
+        .map(|d| {
+          merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Browser))
         })
-      }),
+        .unwrap_or_else(|| {
+          BuiltInTargetDescriptor::TargetDescriptor(builtin_target_descriptor(
+            EnvironmentContext::Browser,
+          ))
+        }),
       dist: dist.and_then(|browser| match browser {
         BrowserField::EntryPoint(entrypoint) => Some(entrypoint.clone()),
         BrowserField::ReplacementBySpecifier(replacements) => {
@@ -106,12 +109,13 @@ impl TargetRequest {
     dist: Option<PathBuf>,
   ) -> BuiltInTarget {
     BuiltInTarget {
-      descriptor: descriptor.unwrap_or_else(|| {
-        BuiltInTargetDescriptor::TargetDescriptor(TargetDescriptor {
-          context: Some(EnvironmentContext::Node),
-          ..builtin_target_descriptor()
-        })
-      }),
+      descriptor: descriptor
+        .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))
+        .unwrap_or_else(|| {
+          BuiltInTargetDescriptor::TargetDescriptor(builtin_target_descriptor(
+            EnvironmentContext::Node,
+          ))
+        }),
       dist,
       name: "main",
     }
@@ -123,12 +127,13 @@ impl TargetRequest {
     dist: Option<PathBuf>,
   ) -> BuiltInTarget {
     BuiltInTarget {
-      descriptor: descriptor.unwrap_or_else(|| {
-        BuiltInTargetDescriptor::TargetDescriptor(TargetDescriptor {
-          context: Some(EnvironmentContext::Node),
-          ..builtin_target_descriptor()
-        })
-      }),
+      descriptor: descriptor
+        .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))
+        .unwrap_or_else(|| {
+          BuiltInTargetDescriptor::TargetDescriptor(builtin_target_descriptor(
+            EnvironmentContext::Node,
+          ))
+        }),
       dist,
       name: "module",
     }
@@ -140,12 +145,13 @@ impl TargetRequest {
     dist: Option<PathBuf>,
   ) -> BuiltInTarget {
     BuiltInTarget {
-      descriptor: descriptor.unwrap_or_else(|| {
-        BuiltInTargetDescriptor::TargetDescriptor(TargetDescriptor {
-          context: Some(EnvironmentContext::Node),
-          ..builtin_target_descriptor()
-        })
-      }),
+      descriptor: descriptor
+        .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))
+        .unwrap_or_else(|| {
+          BuiltInTargetDescriptor::TargetDescriptor(builtin_target_descriptor(
+            EnvironmentContext::Node,
+          ))
+        }),
       dist,
       name: "types",
     }
@@ -510,7 +516,7 @@ impl TargetRequest {
         loc: None, // TODO
         output_format,
         should_optimize: self.default_target_options.should_optimize
-          && if is_library {
+          || if is_library {
             // Libraries are not optimized by default, users must explicitly configure this.
             target_descriptor.optimize.is_some_and(|o| o == true)
           } else {
@@ -545,8 +551,37 @@ impl TargetRequest {
   }
 }
 
-fn builtin_target_descriptor() -> TargetDescriptor {
+fn merge_builtin_descriptors(
+  descriptor: BuiltInTargetDescriptor,
+  default_descriptor: TargetDescriptor,
+) -> BuiltInTargetDescriptor {
+  if let BuiltInTargetDescriptor::TargetDescriptor(descriptor) = descriptor {
+    return BuiltInTargetDescriptor::TargetDescriptor(TargetDescriptor {
+      context: descriptor.context.or(default_descriptor.context),
+      dist_dir: descriptor.dist_dir.or(default_descriptor.dist_dir),
+      dist_entry: descriptor.dist_entry.or(default_descriptor.dist_entry),
+      engines: descriptor.engines.or(default_descriptor.engines),
+      include_node_modules: descriptor
+        .include_node_modules
+        .or(default_descriptor.include_node_modules),
+      is_library: descriptor.is_library.or(default_descriptor.is_library),
+      optimize: descriptor.optimize.or(default_descriptor.optimize),
+      output_format: descriptor
+        .output_format
+        .or(default_descriptor.output_format),
+      public_url: descriptor.public_url.or(default_descriptor.public_url),
+      scope_hoist: descriptor.scope_hoist.or(default_descriptor.scope_hoist),
+      source: descriptor.source.or(default_descriptor.source),
+      source_map: descriptor.source_map.or(default_descriptor.source_map),
+    });
+  }
+
+  descriptor
+}
+
+fn builtin_target_descriptor(context: EnvironmentContext) -> TargetDescriptor {
   TargetDescriptor {
+    context: Some(context),
     include_node_modules: Some(IncludeNodeModules::Bool(false)),
     is_library: Some(true),
     scope_hoist: Some(true),
@@ -870,7 +905,7 @@ mod tests {
   }
 
   #[test]
-  fn returns_builtin_browser_target() {
+  fn returns_default_builtin_browser_target() {
     let targets = targets_from_package_json(String::from(r#"{ "browser": "build/browser.js" }"#));
 
     assert_eq!(
@@ -893,7 +928,41 @@ mod tests {
   }
 
   #[test]
-  fn returns_builtin_main_target() {
+  fn returns_builtin_browser_target() {
+    let targets = targets_from_package_json(String::from(
+      r#"
+        {
+          "browser": "build/browser.js",
+          "targets": {
+            "browser": {
+              "outputFormat": "esmodule"
+            }
+          }
+        }
+      "#,
+    ));
+
+    assert_eq!(
+      targets.map_err(|e| e.to_string()),
+      Ok(RequestResult::Target(TargetRequestOutput {
+        entry: PathBuf::default(),
+        targets: vec![Target {
+          dist_dir: package_dir().join("build"),
+          dist_entry: Some(PathBuf::from("browser.js")),
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Browser,
+            output_format: OutputFormat::EsModule,
+            ..builtin_default_env()
+          }),
+          name: String::from("browser"),
+          ..Target::default()
+        }]
+      }))
+    );
+  }
+
+  #[test]
+  fn returns_default_builtin_main_target() {
     let targets = targets_from_package_json(String::from(r#"{ "main": "./build/main.js" }"#));
 
     assert_eq!(
@@ -916,7 +985,42 @@ mod tests {
   }
 
   #[test]
-  fn returns_builtin_module_target() {
+  fn returns_builtin_main_target() {
+    let targets = targets_from_package_json(String::from(
+      r#"
+        {
+          "main": "./build/main.js",
+          "targets": {
+            "main": {
+              "optimize": true
+            }
+          }
+        }
+      "#,
+    ));
+
+    assert_eq!(
+      targets.map_err(|e| e.to_string()),
+      Ok(RequestResult::Target(TargetRequestOutput {
+        entry: PathBuf::default(),
+        targets: vec![Target {
+          dist_dir: package_dir().join("build"),
+          dist_entry: Some(PathBuf::from("main.js")),
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Node,
+            output_format: OutputFormat::CommonJS,
+            should_optimize: true,
+            ..builtin_default_env()
+          }),
+          name: String::from("main"),
+          ..Target::default()
+        }]
+      }))
+    );
+  }
+
+  #[test]
+  fn returns_default_builtin_module_target() {
     let targets = targets_from_package_json(String::from(r#"{ "module": "module.js" }"#));
 
     assert_eq!(
@@ -939,7 +1043,76 @@ mod tests {
   }
 
   #[test]
+  fn returns_builtin_module_target() {
+    let targets = targets_from_package_json(String::from(
+      r#"
+        {
+          "module": "module.js",
+          "targets": {
+            "module": {
+              "optimize": true
+            }
+          }
+        }
+      "#,
+    ));
+
+    assert_eq!(
+      targets.map_err(|e| e.to_string()),
+      Ok(RequestResult::Target(TargetRequestOutput {
+        entry: PathBuf::default(),
+        targets: vec![Target {
+          dist_dir: package_dir(),
+          dist_entry: Some(PathBuf::from("module.js")),
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Node,
+            output_format: OutputFormat::EsModule,
+            should_optimize: true,
+            ..builtin_default_env()
+          }),
+          name: String::from("module"),
+          ..Target::default()
+        }]
+      }))
+    );
+  }
+
+  #[test]
   fn returns_builtin_types_target() {
+    let targets = targets_from_package_json(String::from(
+      r#"
+        {
+          "types": "./types.d.ts",
+          "targets": {
+            "types": {
+              "outputFormat": "esmodule"
+            }
+          }
+        }
+      "#,
+    ));
+
+    assert_eq!(
+      targets.map_err(|e| e.to_string()),
+      Ok(RequestResult::Target(TargetRequestOutput {
+        entry: PathBuf::default(),
+        targets: vec![Target {
+          dist_dir: package_dir(),
+          dist_entry: Some(PathBuf::from("types.d.ts")),
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Node,
+            output_format: OutputFormat::EsModule,
+            ..builtin_default_env()
+          }),
+          name: String::from("types"),
+          ..Target::default()
+        }]
+      }))
+    );
+  }
+
+  #[test]
+  fn returns_default_builtin_types_target() {
     let targets = targets_from_package_json(String::from(r#"{ "types": "./types.d.ts" }"#));
 
     assert_eq!(
@@ -1057,7 +1230,7 @@ mod tests {
             context: EnvironmentContext::Browser,
             is_library: false,
             output_format: OutputFormat::Global,
-            should_optimize: false,
+            should_optimize: true,
             should_scope_hoist: false,
             ..Environment::default()
           }),
@@ -1097,6 +1270,7 @@ mod tests {
             include_node_modules: IncludeNodeModules::Bool(true),
             is_library: false,
             output_format: OutputFormat::CommonJS,
+            should_optimize: true,
             ..Environment::default()
           }),
           name: String::from("custom"),
@@ -1139,6 +1313,7 @@ mod tests {
             },
             include_node_modules: IncludeNodeModules::Bool(true),
             output_format: OutputFormat::Global,
+            should_optimize: true,
             ..Environment::default()
           }),
           name: String::from("custom"),
@@ -1163,6 +1338,7 @@ mod tests {
               engines,
               include_node_modules: IncludeNodeModules::Bool(false),
               output_format: OutputFormat::CommonJS,
+              should_optimize: true,
               ..Environment::default()
             }),
             name: String::from("custom"),
@@ -1240,6 +1416,7 @@ mod tests {
             dist_entry: Some(PathBuf::from(format!("custom.{ext}"))),
             env: Arc::new(Environment {
               output_format,
+              should_optimize: true,
               ..Environment::default()
             }),
             name: String::from("custom"),
