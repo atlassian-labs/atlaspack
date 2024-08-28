@@ -54,6 +54,14 @@ function assetGraphDiff(jsAssetGraph, rustAssetGraph) {
   const extra = [];
 
   for (const key of all.keys()) {
+    if (
+      !(
+        process.env.NATIVE_COMPARE === 'true' ||
+        key.includes(process.env.NATIVE_COMPARE)
+      )
+    ) {
+      continue;
+    }
     let jsNode = jsNodes[key];
     let rustNode = rustNodes[key];
 
@@ -67,7 +75,7 @@ function assetGraphDiff(jsAssetGraph, rustAssetGraph) {
     }
 
     console.log(key);
-    console.log(diff(jsNode, rustNode));
+    console.log(diff(rustNode, jsNode));
   }
 
   console.log('Missing', missing);
