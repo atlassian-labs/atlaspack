@@ -17,7 +17,7 @@ impl NodejsWorkerFarm {
   pub fn new(conns: Vec<NodejsWorker>) -> Self {
     Self {
       current_index: Default::default(),
-      workers: conns,
+      workers,
     }
   }
 
