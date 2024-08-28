@@ -380,9 +380,9 @@ impl TargetRequest {
             .output_format
             .unwrap_or_else(|| fallback_output_format(context)),
           should_optimize: self.default_target_options.should_optimize,
-          should_scope_hoist: self.default_target_options.should_scope_hoist
-            && self.mode == BuildMode::Production
-            && !self.default_target_options.is_library,
+          // TODO: Handle defaulting for unset values, currently this value can
+          // only be true or false so we need to honour it.
+          should_scope_hoist: self.default_target_options.should_scope_hoist,
           source_map: self
             .default_target_options
             .source_maps
