@@ -95,6 +95,30 @@ function getAssetGraph(serializedGraph, options) {
 
   graph.safeToIncrementallyBundle = false;
 
+  function mapSymbols({exported, ...symbol}) {
+    let jsSymbol = {
+      local: symbol.local,
+      loc: symbol.loc,
+    };
+
+    if (symbol.isWeak) {
+      // $FlowFixMe
+      jsSymbol.isWeak = symbol.isWeak;
+    }
+
+    if (symbol.exported) {
+      // $FlowFixMe
+      jsSymbol.exported = symbol.exported;
+    }
+
+    if (symbol.isEsmExport) {
+      // $FlowFixMe
+      jsSymbol.meta = {
+        isEsm: true,
+      };
+    }
+    return [exported, jsSymbol];
+  }
   // See crates/atlaspack_core/src/types/environment.rs
   let sourceTypeLookup = {'0': 'module', '1': 'script'};
   let cachedAssets = new Map();
@@ -135,9 +159,7 @@ function getAssetGraph(serializedGraph, options) {
         contentKey: id,
         filePath: toProjectPath(options.projectRoot, asset.filePath),
         symbols: asset.hasSymbols
-          ? new Map(
-              asset.symbols.map(({exported, ...symbol}) => [exported, symbol]),
-            )
+          ? new Map(asset.symbols.map(mapSymbols))
           : null,
       };
 
@@ -169,14 +191,22 @@ function getAssetGraph(serializedGraph, options) {
         sourcePath: dependency.sourcePath
           ? toProjectPath(options.projectRoot, dependency.sourcePath)
           : null,
-        symbols: dependency.hasSymbols
-          ? new Map(
-              dependency.symbols.map(({exported, ...symbol}) => [
-                exported,
-                symbol,
-              ]),
-            )
-          : null,
+        symbols:
+          // Dependency.symbols are always set to an empty map when scope hoisting
+          // is enabled. Some tests will fail if this is not the case. We should
+          // make this consistant when we re-visit packaging.
+          dependency.hasSymbols || dependency.env.shouldScopeHoist
+            ? new Map(dependency.symbols.map(mapSymbols))
+            : undefined,
+        loc: dependency.loc
+          ? {
+              ...dependency.loc,
+              filePath: toProjectPath(
+                options.projectRoot,
+                dependency.loc.filePath,
+              ),
+            }
+          : undefined,
       };
       let usedSymbolsDown = new Set();
       let usedSymbolsUp = new Map();
