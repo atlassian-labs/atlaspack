@@ -32,7 +32,7 @@ pub(crate) fn make_test_plugin_context() -> PluginContext {
 pub(crate) fn config_plugins(ctx: PluginContext) -> PluginsRef {
   let fixture = default_config(Arc::new(PathBuf::default()));
 
-  Arc::new(ConfigPlugins::new(fixture.atlaspack_config, ctx))
+  Arc::new(ConfigPlugins::new(None, fixture.atlaspack_config, ctx))
 }
 
 pub struct RequestTrackerTestOptions {
