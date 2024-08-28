@@ -10,6 +10,7 @@ import type {AtlaspackV3} from '../atlaspack-v3';
 import {toProjectPath} from '../projectPath';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
+import type {Environment} from '../types';
 
 import type {
   AssetGraphRequestInput,
@@ -125,6 +126,31 @@ function getAssetGraph(serializedGraph, options) {
   let changedAssets = new Map();
   let entry = 0;
 
+  let envs = new Map();
+  let getEnvId = (env: Environment) => {
+    let envKey = [
+      env.context,
+      env.engines.atlaspack,
+      env.engines.browsers,
+      env.engines.electron,
+      env.engines.node,
+      env.includeNodeModules,
+      env.isLibrary,
+      env.outputFormat,
+      env.shouldScopeHoist,
+      env.shouldOptimize,
+      env.sourceType,
+    ].join(':');
+
+    let envId = envs.get(envKey);
+    if (envId == null) {
+      envId = envs.size;
+      envs.set(envKey, envId);
+    }
+
+    return envId;
+  };
+
   for (let node of serializedGraph.nodes) {
     if (node.type === 'root') {
       let index = graph.addNodeByContentKey('@@root', {
@@ -152,6 +178,7 @@ function getAssetGraph(serializedGraph, options) {
         ...asset,
         env: {
           ...asset.env,
+          id: getEnvId(asset.env),
           sourceType: sourceTypeLookup[asset.env.sourceType],
         },
         bundleBehavior:
@@ -184,6 +211,7 @@ function getAssetGraph(serializedGraph, options) {
         id,
         env: {
           ...dependency.env,
+          id: getEnvId(dependency.env),
           sourceType: sourceTypeLookup[dependency.env.sourceType],
         },
         bundleBehavior:

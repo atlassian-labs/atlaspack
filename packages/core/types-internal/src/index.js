@@ -133,6 +133,7 @@ export type ResolvedParcelConfigFile = ResolvedAtlaspackConfigFile;
 
 /** Corresponds to <code>pkg#engines</code> */
 export type Engines = {
+  +atlaspack?: SemverRange,
   +browsers?: string | Array<string>,
   +electron?: SemverRange,
   +node?: SemverRange,
