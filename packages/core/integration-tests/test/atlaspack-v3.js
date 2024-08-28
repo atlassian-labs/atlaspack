@@ -37,6 +37,6 @@ describe('AtlaspackV3', function () {
       packageManager: new NodePackageManager(inputFS, __dirname),
     });
 
-    await atlaspack.build();
+    await atlaspack.buildAssetGraph();
   });
 });

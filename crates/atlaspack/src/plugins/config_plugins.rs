@@ -28,6 +28,7 @@ use atlaspack_plugin_rpc::plugin::RpcReporterPlugin;
 use atlaspack_plugin_rpc::plugin::RpcResolverPlugin;
 use atlaspack_plugin_rpc::plugin::RpcRuntimePlugin;
 use atlaspack_plugin_rpc::plugin::RpcTransformerPlugin;
+use atlaspack_plugin_rpc::RpcWorkerRef;
 use atlaspack_plugin_transformer_js::AtlaspackJsTransformerPlugin;
 
 use super::Plugins;
@@ -35,6 +36,8 @@ use super::TransformerPipeline;
 
 /// Loads plugins based on the Atlaspack config
 pub struct ConfigPlugins {
+  rpc_worker: Option<RpcWorkerRef>,
+
   /// The Atlaspack config that determines what plugins will be loaded
   config: AtlaspackConfig,
 
@@ -46,7 +49,11 @@ pub struct ConfigPlugins {
 }
 
 impl ConfigPlugins {
-  pub fn new(config: AtlaspackConfig, ctx: PluginContext) -> Self {
+  pub fn new(
+    rpc_worker: Option<RpcWorkerRef>,
+    config: AtlaspackConfig,
+    ctx: PluginContext,
+  ) -> Self {
     let mut reporters: Vec<Box<dyn ReporterPlugin>> = Vec::new();
 
     for reporter in config.reporters.iter() {
@@ -56,6 +63,7 @@ impl ConfigPlugins {
     let reporter = Arc::new(CompositeReporterPlugin::new(reporters));
 
     ConfigPlugins {
+      rpc_worker,
       config,
       ctx,
       reporter,
@@ -202,7 +210,15 @@ impl Plugins for ConfigPlugins {
         continue;
       }
 
-      transformers.push(Box::new(RpcTransformerPlugin::new(&self.ctx, transformer)?));
+      let Some(rpc_worker) = &self.rpc_worker else {
+        anyhow::bail!("Unable to initialize JavaScript plugin")
+      };
+
+      transformers.push(Box::new(RpcTransformerPlugin::new(
+        rpc_worker.clone(),
+        &self.ctx,
+        transformer,
+      )?));
     }
 
     if transformers.is_empty() {

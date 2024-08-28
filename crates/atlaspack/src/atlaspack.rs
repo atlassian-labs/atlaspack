@@ -8,7 +8,6 @@ use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::PluginLogger;
 use atlaspack_core::plugin::PluginOptions;
-use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_filesystem::os_file_system::OsFileSystem;
 use atlaspack_filesystem::FileSystemRef;
@@ -71,10 +70,9 @@ impl Atlaspack {
       return Ok(state);
     }
 
-    let mut _rpc_connection = None::<RpcWorkerRef>;
-
+    let mut rpc_worker = None::<RpcWorkerRef>;
     if let Some(rpc_host) = &self.rpc {
-      _rpc_connection = Some(rpc_host.start()?);
+      rpc_worker = Some(rpc_host.start()?);
     }
 
     let (config, _files) =
@@ -94,6 +92,7 @@ impl Atlaspack {
     });
 
     let plugins = Arc::new(ConfigPlugins::new(
+      rpc_worker,
       config,
       PluginContext {
         config: Arc::clone(&config_loader),
@@ -118,22 +117,6 @@ impl Atlaspack {
     self.state = Some(state.clone());
 
     Ok(state)
-  }
-
-  pub fn build(&mut self) -> anyhow::Result<()> {
-    let AtlaspackState { config, plugins } = self.state()?;
-
-    plugins.reporter().report(&ReporterEvent::BuildStart)?;
-
-    let mut _request_tracker = RequestTracker::new(
-      config.clone(),
-      self.fs.clone(),
-      Arc::new(self.options.clone()),
-      plugins.clone(),
-      self.project_root.clone(),
-    );
-
-    Ok(())
   }
 
   pub fn build_asset_graph(&mut self) -> anyhow::Result<AssetGraph> {
