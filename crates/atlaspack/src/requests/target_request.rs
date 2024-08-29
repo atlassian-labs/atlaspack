@@ -380,9 +380,12 @@ impl TargetRequest {
             .output_format
             .unwrap_or_else(|| fallback_output_format(context)),
           should_optimize: self.default_target_options.should_optimize,
-          should_scope_hoist: self.default_target_options.should_scope_hoist
-            && self.mode == BuildMode::Production
-            && !self.default_target_options.is_library,
+          should_scope_hoist: self
+            .default_target_options
+            .should_scope_hoist
+            .unwrap_or_else(|| {
+              self.mode == BuildMode::Production && !self.default_target_options.is_library
+            }),
           source_map: self
             .default_target_options
             .source_maps
@@ -514,7 +517,11 @@ impl TargetRequest {
             target_descriptor.optimize.is_none()
               || target_descriptor.optimize.is_some_and(|o| o != false)
           },
-        should_scope_hoist: (is_library || self.default_target_options.should_scope_hoist)
+        should_scope_hoist: (is_library
+          || self
+            .default_target_options
+            .should_scope_hoist
+            .unwrap_or(false))
           && (target_descriptor.scope_hoist.is_none()
             || target_descriptor.scope_hoist.is_some_and(|s| s != false)),
         source_map: match self.default_target_options.source_maps {
