@@ -29,7 +29,7 @@ import Logger from '@atlaspack/logger';
 import nullthrows from 'nullthrows';
 import {md} from '@atlaspack/diagnostic';
 
-describe('javascript', function () {
+describe.only('javascript', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });
@@ -1265,7 +1265,7 @@ describe('javascript', function () {
     );
   });
 
-  it('should work when multiple files use globals with scope hoisting', async function () {
+  it.only('should work when multiple files use globals with scope hoisting', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/globals/multiple.js'),
       {

@@ -385,7 +385,10 @@ impl TargetRequest {
             .default_target_options
             .output_format
             .unwrap_or_else(|| fallback_output_format(context)),
-          should_optimize: self.default_target_options.should_optimize,
+          should_optimize: self
+            .default_target_options
+            .should_optimize
+            .unwrap_or_default(),
           should_scope_hoist: self
             .default_target_options
             .should_scope_hoist
@@ -515,7 +518,10 @@ impl TargetRequest {
         is_library,
         loc: None, // TODO
         output_format,
-        should_optimize: self.default_target_options.should_optimize
+        should_optimize: self
+          .default_target_options
+          .should_optimize
+          .unwrap_or_default()
           || if is_library {
             // Libraries are not optimized by default, users must explicitly configure this.
             target_descriptor.optimize.is_some_and(|o| o == true)
