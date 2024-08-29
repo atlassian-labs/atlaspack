@@ -507,6 +507,7 @@ mod tests {
   #[test]
   fn strip_in_place() {
     let mut json = String::from(r#"{/* Comment */"hi": /** abc */ "bye"}"#);
+    #[allow(deprecated)]
     strip_comments_in_place(&mut json, Default::default(), false).unwrap();
     assert_eq!(json, r#"{             "hi":            "bye"}"#);
   }
@@ -528,6 +529,7 @@ mod tests {
             # another
         }"#,
     );
+    #[allow(deprecated)]
     strip_comments_in_place(&mut json, Default::default(), true).unwrap();
 
     let expected = r#"{
