@@ -133,6 +133,7 @@ dependencies = [
  "atlaspack_plugin_rpc",
  "atlaspack_plugin_transformer_js",
  "dyn-hash",
+ "indexmap 2.2.6",
  "mockall",
  "num_cpus",
  "pathdiff",
