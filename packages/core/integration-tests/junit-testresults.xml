@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="Mocha Tests" time="1.424" tests="1" failures="0">
-  <testsuite name="Root Suite" timestamp="2024-08-29T06:48:17" tests="0" time="0.000" failures="0">
+<testsuites name="Mocha Tests" time="1.265" tests="1" failures="0">
+  <testsuite name="Root Suite" timestamp="2024-08-29T06:57:39" tests="0" time="0.000" failures="0">
   </testsuite>
-  <testsuite name="javascript" timestamp="2024-08-29T06:48:17" tests="1" file="/Users/molejniczak/atlassian/atlaspack/packages/core/integration-tests/test/BundleGraph.js" time="1.423" failures="0">
-    <testcase name="javascript should work when multiple files use globals with scope hoisting" time="1.421" classname="should work when multiple files use globals with scope hoisting">
+  <testsuite name="javascript" timestamp="2024-08-29T06:57:39" tests="1" file="/Users/molejniczak/atlassian/atlaspack/packages/core/integration-tests/test/BundleGraph.js" time="1.263" failures="0">
+    <testcase name="javascript should work when multiple files use globals with scope hoisting" time="1.262" classname="should work when multiple files use globals with scope hoisting">
     </testcase>
   </testsuite>
 </testsuites>
