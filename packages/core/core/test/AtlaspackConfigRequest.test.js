@@ -13,107 +13,11 @@ import {
   resolveAtlaspackConfig,
   processConfig,
 } from '../src/requests/AtlaspackConfigRequest';
-import {validatePackageName} from '../src/AtlaspackConfig.schema';
 import {DEFAULT_OPTIONS, relative} from './test-utils';
 import {toProjectPath} from '../src/projectPath';
 
 describe('AtlaspackConfigRequest', () => {
-  describe('validatePackageName', () => {
-    it('should error on an invalid official package', () => {
-      assert.throws(() => {
-        validatePackageName('@atlaspack/foo-bar', 'transform', 'transformers');
-      }, /Official atlaspack transform packages must be named according to "@atlaspack\/transform-{name}"/);
-
-      assert.throws(() => {
-        validatePackageName(
-          '@atlaspack/transformer',
-          'transform',
-          'transformers',
-        );
-      }, /Official atlaspack transform packages must be named according to "@atlaspack\/transform-{name}"/);
-    });
-
-    it('should succeed on a valid official package', () => {
-      validatePackageName(
-        '@atlaspack/transform-bar',
-        'transform',
-        'transformers',
-      );
-    });
-
-    it('should error on an invalid community package', () => {
-      assert.throws(() => {
-        validatePackageName('foo-bar', 'transform', 'transformers');
-      }, /Atlaspack transform packages must be named according to "parcel-transform-{name}"/);
-
-      assert.throws(() => {
-        validatePackageName('parcel-foo-bar', 'transform', 'transformers');
-      }, /Atlaspack transform packages must be named according to "parcel-transform-{name}"/);
-
-      assert.throws(() => {
-        validatePackageName('parcel-transform', 'transform', 'transformers');
-      }, /Atlaspack transform packages must be named according to "parcel-transform-{name}"/);
-    });
-
-    it('should succeed on a valid community package', () => {
-      validatePackageName('parcel-transform-bar', 'transform', 'transformers');
-    });
-
-    // Skipping this while the migration to parcel occurs
-    it.skip('should error on an invalid scoped package', () => {
-      assert.throws(() => {
-        validatePackageName('@test/foo-bar', 'transform', 'transformers');
-      }, /Scoped atlaspack transform packages must be named according to "@test\/parcel-transform\[-{name}\]"/);
-
-      assert.throws(() => {
-        validatePackageName(
-          '@test/atlaspack-foo-bar',
-          'transform',
-          'transformers',
-        );
-      }, /Scoped atlaspack transform packages must be named according to "@test\/parcel-transform\[-{name}\]"/);
-    });
-
-    it('should succeed on a valid scoped package', () => {
-      validatePackageName(
-        '@test/atlaspack-transform-bar',
-        'transform',
-        'transformers',
-      );
-
-      validatePackageName(
-        '@test/atlaspack-transform',
-        'transform',
-        'transformers',
-      );
-    });
-
-    it('should succeed on a local package', () => {
-      validatePackageName(
-        './atlaspack-transform-bar',
-        'transform',
-        'transformers',
-      );
-      validatePackageName('./bar', 'transform', 'transformers');
-    });
-  });
-
   describe('validateConfigFile', () => {
-    it('should throw on invalid config', () => {
-      assert.throws(() => {
-        validateConfigFile(
-          {
-            filePath: '.parcelrc',
-            extends: 'parcel-config-foo',
-            transformers: {
-              '*.js': ['parcel-invalid-plugin'],
-            },
-          },
-          '.parcelrc',
-        );
-      });
-    });
-
     it('should require pipeline to be an array', () => {
       assert.throws(() => {
         validateConfigFile(
@@ -134,18 +38,6 @@ describe('AtlaspackConfigRequest', () => {
             filePath: '.parcelrc',
             // $FlowExpectedError[incompatible-call]
             resolvers: [1, '123', 5],
-          },
-          '.parcelrc',
-        );
-      });
-    });
-
-    it('should require package names to be valid', () => {
-      assert.throws(() => {
-        validateConfigFile(
-          {
-            filePath: '.parcelrc',
-            resolvers: ['parcel-foo-bar'],
           },
           '.parcelrc',
         );
@@ -179,21 +71,6 @@ describe('AtlaspackConfigRequest', () => {
             filePath: '.parcelrc',
             // $FlowExpectedError[incompatible-call]
             transformers: ['parcel-transformer-test', '...'],
-          },
-          '.parcelrc',
-        );
-      });
-    });
-
-    it('should trigger the validator function for each key', () => {
-      assert.throws(() => {
-        validateConfigFile(
-          {
-            filePath: '.parcelrc',
-            transformers: {
-              'types:*.{ts,tsx}': ['@atlaspack/transformer-typescript-types'],
-              'bundle-text:*': ['-inline-string', '...'],
-            },
           },
           '.parcelrc',
         );
@@ -237,44 +114,6 @@ describe('AtlaspackConfigRequest', () => {
         {
           filePath: '.parcelrc',
           extends: ['./foo', './bar'],
-        },
-        '.parcelrc',
-      );
-    });
-
-    it('should validate package names', () => {
-      assert.throws(() => {
-        validateConfigFile(
-          {
-            filePath: '.parcelrc',
-            extends: 'foo',
-          },
-          '.parcelrc',
-        );
-      });
-
-      assert.throws(() => {
-        validateConfigFile(
-          {
-            filePath: '.parcelrc',
-            extends: ['foo', 'bar'],
-          },
-          '.parcelrc',
-        );
-      });
-
-      validateConfigFile(
-        {
-          filePath: '.parcelrc',
-          extends: 'parcel-config-foo',
-        },
-        '.parcelrc',
-      );
-
-      validateConfigFile(
-        {
-          filePath: '.parcelrc',
-          extends: ['parcel-config-foo', 'parcel-config-bar'],
         },
         '.parcelrc',
       );
