@@ -301,7 +301,7 @@ exports.hello = function() {};
         },
       }),
       placeholder: Some("e83f3db3d6f57ea6".to_string()),
-      source_asset_id: Some(format!("{:016x}", asset_id)),
+      source_asset_id: Some(asset_id.to_string()),
       source_path: Some(PathBuf::from("mock_path.js")),
       specifier: String::from("other"),
       specifier_type: SpecifierType::CommonJS,
@@ -355,7 +355,7 @@ exports.hello = function() {};
             Symbol {
               exported: String::from("*"),
               loc: None,
-              local: format!("${:016x}$exports", asset_id),
+              local: format!("${}$exports", asset_id),
               ..Default::default()
             }
           ],
