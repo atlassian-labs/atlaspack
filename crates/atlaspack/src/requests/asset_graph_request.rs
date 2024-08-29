@@ -1,3 +1,4 @@
+use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
@@ -247,7 +248,7 @@ impl AssetGraphBuilder {
       .insert(request_id, asset_node_index);
 
     // Connect dependencies of the Asset
-    let mut unique_deps: HashMap<u64, Dependency> = HashMap::new();
+    let mut unique_deps: IndexMap<u64, Dependency> = IndexMap::new();
 
     for mut dependency in dependencies {
       unique_deps
