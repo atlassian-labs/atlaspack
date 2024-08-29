@@ -1,47 +1,24 @@
 // @flow strict-local
 import type {PackageName} from '@atlaspack/types';
 import type {SchemaEntity} from '@atlaspack/utils';
-import assert from 'assert';
 
-// Reasoning behind this validation:
-// https://github.com/parcel-bundler/parcel/issues/3397#issuecomment-521353931
+// Parcel validates plugin package names due to:
+//
+// * https://github.com/parcel-bundler/parcel/issues/3397#issuecomment-521353931
+//
+// Ultimately:
+//
+// * We do not care about package names
+// * Validation makes interop between parcel/atlaspack confusing.
+//
 export function validatePackageName(
+  // eslint-disable-next-line no-unused-vars
   pkg: ?PackageName,
+  // eslint-disable-next-line no-unused-vars
   pluginType: string,
+  // eslint-disable-next-line no-unused-vars
   key: string,
-) {
-  // $FlowFixMe
-  if (!pkg) {
-    return;
-  }
-
-  assert(typeof pkg === 'string', `"${key}" must be a string`);
-
-  // Probably all of these need to be removed
-  if (pkg.startsWith('@atlaspack') || pkg.startsWith('@parcel')) {
-    assert(
-      pkg.replace(/^@(atlaspack|parcel)\//, '').startsWith(`${pluginType}-`),
-      `Official atlaspack ${pluginType} packages must be named according to "@atlaspack/${pluginType}-{name}"`,
-    );
-  } else if (pkg.startsWith('@')) {
-    // Disabling this validation to allow for migration to parcel
-    // let [scope, name] = pkg.split('/');
-    // assert(
-    //   name.startsWith(`parcel-${pluginType}-`) ||
-    //     name === `parcel-${pluginType}` ||
-    //     name.startsWith(`parcel-${pluginType}-`) ||
-    //     name === `parcel-${pluginType}`,
-    //   `Scoped parcel ${pluginType} packages must be named according to "${scope}/parcel-${pluginType}[-{name}]"`,
-    // );
-  } else if (!pkg.startsWith('.')) {
-    assert(
-      pkg.startsWith(`parcel-${pluginType}-`) ||
-        pkg.startsWith(`atlaspack-${pluginType}`),
-      // let the error message be wrong for now
-      `Atlaspack ${pluginType} packages must be named according to "parcel-${pluginType}-{name}"`,
-    );
-  }
-}
+) {}
 
 const validatePluginName = (pluginType: string, key: string) => {
   return (val: string) => {
