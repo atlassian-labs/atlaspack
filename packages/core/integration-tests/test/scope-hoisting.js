@@ -138,42 +138,36 @@ describe('scope hoisting', function () {
       assert.equal(output, 2);
     });
 
-    it.v2(
-      'supports named exports of variables with a different name when wrapped',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/named-export-variable-rename-wrapped/a.js',
-          ),
-        );
+    it('supports named exports of variables with a different name when wrapped', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/named-export-variable-rename-wrapped/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.equal(output, 2);
-      },
-    );
+      let output = await run(b);
+      assert.equal(output, 2);
+    });
 
-    it.v2(
-      'supports dependency rewriting for import * as from a library that has export *',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/scope-hoisting/es6/rewrite-export-star/index.js',
-          ),
-          {mode: 'production'},
-        );
-        let output = await run(b);
-        assert.equal(output, 2);
+    it('supports dependency rewriting for import * as from a library that has export *', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'integration/scope-hoisting/es6/rewrite-export-star/index.js',
+        ),
+        {mode: 'production'},
+      );
+      let output = await run(b);
+      assert.equal(output, 2);
 
-        assert.deepStrictEqual(
-          new Set(
-            b.getUsedSymbols(findDependency(b, 'index.js', './library/a.js')),
-          ),
-          new Set(['bar']),
-        );
-      },
-    );
+      assert.deepStrictEqual(
+        new Set(
+          b.getUsedSymbols(findDependency(b, 'index.js', './library/a.js')),
+        ),
+        new Set(['bar']),
+      );
+    });
 
     it('supports renaming non-ASCII identifiers', async function () {
       let b = await bundle(
@@ -254,20 +248,17 @@ describe('scope hoisting', function () {
       assert.equal(output, 2);
     });
 
-    it.v2(
-      'supports importing from a reexporting asset in an anchestor (1)',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/ancestor-reexport/a.js',
-          ),
-        );
+    it('supports importing from a reexporting asset in an anchestor (1)', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/ancestor-reexport/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.deepEqual(output, ['index', 'async']);
-      },
-    );
+      let output = await run(b);
+      assert.deepEqual(output, ['index', 'async']);
+    });
 
     it('supports importing from a reexporting asset in an anchestor (2)', async function () {
       let b = await bundle(
@@ -351,20 +342,17 @@ describe('scope hoisting', function () {
       assert.equal(output, 6);
     });
 
-    it.v2(
-      'supports re-exporting all when falling back to namespace at runtime 1',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-all-fallback-1/index.js',
-          ),
-        );
+    it('supports re-exporting all when falling back to namespace at runtime 1', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-all-fallback-1/index.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.strictEqual(output, 2);
-      },
-    );
+      let output = await run(b);
+      assert.strictEqual(output, 2);
+    });
 
     it('supports re-exporting all when falling back to namespace at runtime 2', async function () {
       let b = await bundle(
@@ -430,23 +418,20 @@ describe('scope hoisting', function () {
       },
     );
 
-    it.v2(
-      'supports re-exporting all with ambiguous CJS and non-renaming and renaming dependency retargeting',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-all-ambiguous/entry.js',
-          ),
-          {
-            mode: 'production',
-          },
-        );
+    it('supports re-exporting all with ambiguous CJS and non-renaming and renaming dependency retargeting', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-all-ambiguous/entry.js',
+        ),
+        {
+          mode: 'production',
+        },
+      );
 
-        let output = await run(b);
-        assert.strictEqual(output, '123 999');
-      },
-    );
+      let output = await run(b);
+      assert.strictEqual(output, '123 999');
+    });
 
     it('supports re-exporting all exports from an external module', async function () {
       let b = await bundle(
@@ -612,59 +597,50 @@ describe('scope hoisting', function () {
       assert.equal(output, 3);
     });
 
-    it.v2(
-      'supports re-exporting default exports from another module',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-default/a.js',
-          ),
-        );
+    it('supports re-exporting default exports from another module', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-default/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.equal(output, 3);
-      },
-    );
+      let output = await run(b);
+      assert.equal(output, 3);
+    });
 
-    it.v2(
-      'supports re-exporting a namespace from another module',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-namespace/a.js',
-          ),
-        );
+    it('supports re-exporting a namespace from another module', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-namespace/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.equal(output, 6);
-      },
-    );
+      let output = await run(b);
+      assert.equal(output, 6);
+    });
 
-    it.v2(
-      'supports re-exporting a namespace from another module (chained)',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-namespace-chained/a.js',
-          ),
-        );
+    it('supports re-exporting a namespace from another module (chained)', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-namespace-chained/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.deepEqual(output, {
-          Bar: {
-            A: 1,
-            B: 2,
-          },
-          Foo: {
-            A: 1,
-            B: 2,
-          },
-        });
-      },
-    );
+      let output = await run(b);
+      assert.deepEqual(output, {
+        Bar: {
+          A: 1,
+          B: 2,
+        },
+        Foo: {
+          A: 1,
+          B: 2,
+        },
+      });
+    });
 
     it('has the correct order with namespace re-exports', async function () {
       let b = await bundle(
@@ -944,7 +920,7 @@ describe('scope hoisting', function () {
       assert.deepEqual(output, ['test']);
     });
 
-    it.v2('should default export classes when wrapped', async function () {
+    it('should default export classes when wrapped', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -956,7 +932,7 @@ describe('scope hoisting', function () {
       assert.strictEqual(output.VERSION, 1234);
     });
 
-    it.v2('should default export functions when wrapped', async function () {
+    it('should default export functions when wrapped', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -1104,54 +1080,48 @@ describe('scope hoisting', function () {
       assert.deepEqual(output, 'foobar:foo:bar');
     });
 
-    it.v2(
-      'supports import default CommonJS interop (individual exports)',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/import-commonjs-export-individual-default/a.js',
-          ),
-        );
+    it('supports import default CommonJS interop (individual exports)', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/import-commonjs-export-individual-default/a.js',
+        ),
+      );
 
-        assert.deepStrictEqual(
-          new Set(nullthrows(findAsset(b, 'b1.js')).symbols.exportSymbols()),
-          new Set(['*', 'default', 'foo']),
-        );
+      assert.deepStrictEqual(
+        new Set(nullthrows(findAsset(b, 'b1.js')).symbols.exportSymbols()),
+        new Set(['*', 'default', 'foo']),
+      );
 
-        assert.deepStrictEqual(
-          new Set(nullthrows(findAsset(b, 'b2.js')).symbols.exportSymbols()),
-          new Set(['*', 'foo', 'default', '__esModule']),
-        );
+      assert.deepStrictEqual(
+        new Set(nullthrows(findAsset(b, 'b2.js')).symbols.exportSymbols()),
+        new Set(['*', 'foo', 'default', '__esModule']),
+      );
 
-        assert.deepStrictEqual(
-          new Set(nullthrows(findAsset(b, 'b3.js')).symbols.exportSymbols()),
-          new Set(['*']),
-        );
+      assert.deepStrictEqual(
+        new Set(nullthrows(findAsset(b, 'b3.js')).symbols.exportSymbols()),
+        new Set(['*']),
+      );
 
-        let output = await run(b);
-        assert.deepEqual(output, {
-          x: {foo: 1, default: 2},
-          y: 4,
-          z: 6,
-        });
-      },
-    );
+      let output = await run(b);
+      assert.deepEqual(output, {
+        x: {foo: 1, default: 2},
+        y: 4,
+        z: 6,
+      });
+    });
 
-    it.v2(
-      'falls back when importing missing symbols from CJS',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/import-commonjs-missing/a.js',
-          ),
-        );
+    it('falls back when importing missing symbols from CJS', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/import-commonjs-missing/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.strictEqual(output, undefined);
-      },
-    );
+      let output = await run(b);
+      assert.strictEqual(output, undefined);
+    });
 
     it('does not export reassigned CommonJS exports references', async function () {
       let b = await bundle(
@@ -1189,7 +1159,7 @@ describe('scope hoisting', function () {
       assert.deepEqual(output, 'foobar');
     });
 
-    it.v2('supports importing from a wrapped asset', async function () {
+    it('supports importing from a wrapped asset', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -1201,44 +1171,38 @@ describe('scope hoisting', function () {
       assert.deepEqual(output, ['a', true]);
     });
 
-    it.v2(
-      'wraps an asset if any of its ancestors is wrapped, even if one is not',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/multiple-ancestors-wrap/index.js',
-          ),
-        );
+    it('wraps an asset if any of its ancestors is wrapped, even if one is not', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/multiple-ancestors-wrap/index.js',
+        ),
+      );
 
-        let contents = await outputFS.readFile(
-          b.getBundles()[0].filePath,
-          'utf8',
-        );
-        assert.strictEqual(
-          contents.match(/parcelRegister\(/g).length,
-          2 /* once for parent asset, once for child wrapped asset */,
-        );
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+      assert.strictEqual(
+        contents.match(/parcelRegister\(/g).length,
+        2 /* once for parent asset, once for child wrapped asset */,
+      );
 
-        let output = await run(b);
-        assert.deepEqual(output, [42, 43]);
-      },
-    );
+      let output = await run(b);
+      assert.deepEqual(output, [42, 43]);
+    });
 
-    it.v2(
-      'supports importing from a wrapped asset with multiple bailouts',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-wrapped-bailout/a.js',
-          ),
-        );
+    it('supports importing from a wrapped asset with multiple bailouts', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-wrapped-bailout/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.deepEqual(output, ['b', true]);
-      },
-    );
+      let output = await run(b);
+      assert.deepEqual(output, ['b', true]);
+    });
 
     for (let shouldScopeHoist of [false, true]) {
       it(`unused and missing pseudo re-exports doesn't fail the build with${
@@ -1257,55 +1221,46 @@ describe('scope hoisting', function () {
       });
     }
 
-    it.v2(
-      'supports requiring a re-exported and renamed ES6 import',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-renamed/a.js',
-          ),
-        );
+    it('supports requiring a re-exported and renamed ES6 import', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-renamed/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.deepEqual(output, 'foobar');
-      },
-    );
+      let output = await run(b);
+      assert.deepEqual(output, 'foobar');
+    });
 
-    it.v2(
-      'supports requiring a re-exported and renamed ES6 import (reversed order)',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-renamed2/a.js',
-          ),
-        );
+    it('supports requiring a re-exported and renamed ES6 import (reversed order)', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-renamed2/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.deepEqual(output, 'foobar');
-      },
-    );
+      let output = await run(b);
+      assert.deepEqual(output, 'foobar');
+    });
 
-    it.v2(
-      'supports requiring a re-exported and renamed ES6 namespace import',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-renamed-namespace/a.js',
-          ),
-        );
+    it('supports requiring a re-exported and renamed ES6 namespace import', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-renamed-namespace/a.js',
+        ),
+      );
 
-        assert.deepStrictEqual(
-          new Set(b.getUsedSymbols(findDependency(b, 'a.js', './b.js'))),
-          new Set(['default', 'x']),
-        );
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(findDependency(b, 'a.js', './b.js'))),
+        new Set(['default', 'x']),
+      );
 
-        let output = await run(b);
-        assert.deepEqual(output, [123, 123]);
-      },
-    );
+      let output = await run(b);
+      assert.deepEqual(output, [123, 123]);
+    });
 
     it.v2(
       'supports reexporting an asset from a shared bundle inside a shared bundle',
@@ -1360,64 +1315,55 @@ describe('scope hoisting', function () {
       },
     );
 
-    it.v2(
-      'supports simultaneous import and re-export of a symbol',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-import/a.js',
-          ),
-        );
+    it('supports simultaneous import and re-export of a symbol', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-import/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.deepEqual(output, 5 * 123);
+      let output = await run(b);
+      assert.deepEqual(output, 5 * 123);
 
-        assert.deepStrictEqual(
-          new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'e.js')))),
-          new Set(['default']),
-        );
-        assert.deepStrictEqual(
-          new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'e2.js')))),
-          new Set(['default']),
-        );
-      },
-    );
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'e.js')))),
+        new Set(['default']),
+      );
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'e2.js')))),
+        new Set(['default']),
+      );
+    });
 
-    it.v2(
-      'supports importing a namespace from a commonjs module when code split',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/import-namespace-commonjs/a.js',
-          ),
-        );
+    it('supports importing a namespace from a commonjs module when code split', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/import-namespace-commonjs/a.js',
+        ),
+      );
 
-        assert.deepEqual(await run(b), 4);
-      },
-    );
+      assert.deepEqual(await run(b), 4);
+    });
 
-    it.v2(
-      'supports resolving a static member access on a namespace',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/import-namespace-static-member/a.js',
-          ),
-        );
+    it('supports resolving a static member access on a namespace', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/import-namespace-static-member/a.js',
+        ),
+      );
 
-        let calls = [];
-        let output = await run(b, {
-          sideEffect: v => {
-            calls.push(v);
-          },
-        });
-        assert.deepEqual(output, 'foofoobar');
-        assert.deepEqual(calls, ['c1', 'c3']);
-      },
-    );
+      let calls = [];
+      let output = await run(b, {
+        sideEffect: v => {
+          calls.push(v);
+        },
+      });
+      assert.deepEqual(output, 'foofoobar');
+      assert.deepEqual(calls, ['c1', 'c3']);
+    });
 
     it('should bailout with a non-static member access on a namespace', async function () {
       let b = await bundle(
@@ -2179,20 +2125,17 @@ describe('scope hoisting', function () {
       assert.strictEqual(typeof output[3], 'undefined');
     });
 
-    it.v2(
-      'support exporting a ES6 module exported as CommonJS',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-commonjs/a.js',
-          ),
-        );
+    it('support exporting a ES6 module exported as CommonJS', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-commonjs/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.deepEqual(output, 'foo');
-      },
-    );
+      let output = await run(b);
+      assert.deepEqual(output, 'foo');
+    });
 
     it.v2(
       'concatenates in the correct order when re-exporting assets were excluded',
@@ -2224,35 +2167,29 @@ describe('scope hoisting', function () {
       },
     );
 
-    it.v2(
-      'should support chained reexports from hybrid modules',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-hybrid/a.js',
-          ),
-        );
-        let output = await run(b);
-        assert.strictEqual(output, 2);
-      },
-    );
+    it('should support chained reexports from hybrid modules', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-hybrid/a.js',
+        ),
+      );
+      let output = await run(b);
+      assert.strictEqual(output, 2);
+    });
 
-    it.v2(
-      'should support chained reexports as default from hybrid modules',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-default-hybrid/a.js',
-          ),
-        );
-        let output = await run(b);
-        assert.strictEqual(output, 2);
-      },
-    );
+    it('should support chained reexports as default from hybrid modules', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-default-hybrid/a.js',
+        ),
+      );
+      let output = await run(b);
+      assert.strictEqual(output, 2);
+    });
 
-    it.v2('support chained namespace reexports of CommonJS', async function () {
+    it('support chained namespace reexports of CommonJS', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -2276,7 +2213,7 @@ describe('scope hoisting', function () {
       assert.strictEqual(output, 4);
     });
 
-    it.v2('should support named imports on wrapped modules', async function () {
+    it('should support named imports on wrapped modules', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -2423,43 +2360,40 @@ describe('scope hoisting', function () {
       assert.deepEqual(output.foo, 'bar');
     });
 
-    it.v2(
-      'should correctly codesplit even with reexporting library index',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/codesplit-reexports/src/entry.js',
-          ),
-          {mode: 'production'},
-        );
+    it('should correctly codesplit even with reexporting library index', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/codesplit-reexports/src/entry.js',
+        ),
+        {mode: 'production'},
+      );
 
-        assertBundles(b, [
-          {
-            type: 'js',
-            assets: [
-              'entry.js',
-              'foo.js',
-              'bar.js',
-              'bundle-manifest.js',
-              'bundle-url.js',
-              'cacheLoader.js',
-              'js-loader.js',
-            ],
-          },
-          {
-            type: 'js',
-            assets: ['async.js', 'foo2.js', 'bar2.js'],
-          },
-        ]);
+      assertBundles(b, [
+        {
+          type: 'js',
+          assets: [
+            'entry.js',
+            'foo.js',
+            'bar.js',
+            'bundle-manifest.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          type: 'js',
+          assets: ['async.js', 'foo2.js', 'bar2.js'],
+        },
+      ]);
 
-        let output = await run(b);
-        assert.deepEqual(output, [
-          [20, 30],
-          [2, 3],
-        ]);
-      },
-    );
+      let output = await run(b);
+      assert.deepEqual(output, [
+        [20, 30],
+        [2, 3],
+      ]);
+    });
 
     it('should correctly retarget dependencies when both namespace and indvidual export are used', async function () {
       let b = await bundle(
@@ -2525,49 +2459,43 @@ describe('scope hoisting', function () {
       assert.strictEqual(output, 'b:foo:foo');
     });
 
-    it.v2(
-      'should correctly handle circular dependencies (3)',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/circular3/a.mjs',
-          ),
-        );
+    it('should correctly handle circular dependencies (3)', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/scope-hoisting/es6/circular3/a.mjs'),
+      );
 
-        assert.deepStrictEqual(
-          new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'b.mjs')))),
-          new Set([]),
-        );
-        assert.deepStrictEqual(
-          new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'c.mjs')))),
-          new Set(['a']),
-        );
-        assert.deepStrictEqual(
-          new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'd.mjs')))),
-          new Set([]),
-        );
-        assert.deepStrictEqual(
-          new Set(b.getUsedSymbols(findDependency(b, 'a.mjs', './b.mjs'))),
-          new Set(['h']),
-        );
-        assert.deepStrictEqual(
-          new Set(b.getUsedSymbols(findDependency(b, 'b.mjs', './c.mjs'))),
-          new Set(['a', 'd', 'g']),
-        );
-        assert.deepStrictEqual(
-          new Set(b.getUsedSymbols(findDependency(b, 'c.mjs', './d.mjs'))),
-          new Set(['c', 'f']),
-        );
-        assert.deepStrictEqual(
-          new Set(b.getUsedSymbols(findDependency(b, 'd.mjs', './b.mjs'))),
-          new Set(['b', 'e']),
-        );
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'b.mjs')))),
+        new Set([]),
+      );
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'c.mjs')))),
+        new Set(['a']),
+      );
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'd.mjs')))),
+        new Set([]),
+      );
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(findDependency(b, 'a.mjs', './b.mjs'))),
+        new Set(['h']),
+      );
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(findDependency(b, 'b.mjs', './c.mjs'))),
+        new Set(['a', 'd', 'g']),
+      );
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(findDependency(b, 'c.mjs', './d.mjs'))),
+        new Set(['c', 'f']),
+      );
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(findDependency(b, 'd.mjs', './b.mjs'))),
+        new Set(['b', 'e']),
+      );
 
-        let output = await run(b);
-        assert.strictEqual(output, 123);
-      },
-    );
+      let output = await run(b);
+      assert.strictEqual(output, 123);
+    });
 
     it('should handle circular dependencies with wrapped assets', async () => {
       let b = await bundle(
@@ -3586,33 +3514,27 @@ describe('scope hoisting', function () {
       assert.equal(test({foo: 2}), 2);
     });
 
-    it.v2(
-      'should not include default when reexporting * without $parcel$exportWildcard',
-      async () => {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/scope-hoisting/es6/no-reexport-default/index.js',
-          ),
-        );
+    it('should not include default when reexporting * without $parcel$exportWildcard', async () => {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'integration/scope-hoisting/es6/no-reexport-default/index.js',
+        ),
+      );
 
-        assert.equal(await run(b), 42);
-      },
-    );
+      assert.equal(await run(b), 42);
+    });
 
-    it.v2(
-      'should not include __esModule when reexporting * without $parcel$exportWildcard',
-      async () => {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/scope-hoisting/es6/no-reexport-esmodule/index.js',
-          ),
-        );
+    it('should not include __esModule when reexporting * without $parcel$exportWildcard', async () => {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'integration/scope-hoisting/es6/no-reexport-esmodule/index.js',
+        ),
+      );
 
-        assert.equal(await run(b), undefined);
-      },
-    );
+      assert.equal(await run(b), undefined);
+    });
 
     it.v2('should handle interop with a re-export namespace', async () => {
       let b = await bundle(
