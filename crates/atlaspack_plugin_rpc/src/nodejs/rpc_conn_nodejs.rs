@@ -2,6 +2,7 @@ use std::path::Path;
 
 use anyhow::Context;
 use atlaspack_core::plugin::TransformResult;
+use atlaspack_core::types::Asset;
 use atlaspack_napi_helpers::anyhow_from_napi;
 use atlaspack_napi_helpers::js_callable;
 use atlaspack_napi_helpers::js_callable::JsCallable;
@@ -65,11 +66,7 @@ impl RpcWorker for NodejsWorker {
     Ok(())
   }
 
-  fn transform_transformer(
-    &self,
-    key: &str,
-    asset: &atlaspack_core::types::Asset,
-  ) -> anyhow::Result<TransformResult> {
+  fn transform_transformer(&self, key: &str, asset: &Asset) -> anyhow::Result<TransformResult> {
     Ok(self.transform_transformer_fn.call_with_return(
       js_callable::map_params_serde((key.to_string(), asset.clone())),
       js_callable::map_return_serde::<TransformResult>(),

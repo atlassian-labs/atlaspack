@@ -14,6 +14,8 @@ use super::environment::Environment;
 use super::file_type::FileType;
 use super::json::JSONObject;
 use super::symbol::Symbol;
+use crate::serde::de_from_str;
+use crate::serde::se_to_string;
 
 #[derive(PartialEq, Hash, Clone, Copy, Debug)]
 pub struct AssetId(pub NonZeroU32);
@@ -74,6 +76,8 @@ fn create_asset_id(
 pub struct Asset {
   /// The main identify hash for the asset. It is consistent for the entire
   /// build and between builds.
+  #[serde(serialize_with = "se_to_string")]
+  #[serde(deserialize_with = "de_from_str")]
   pub id: u64,
 
   /// Controls which bundle the asset is placed into

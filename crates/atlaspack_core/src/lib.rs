@@ -4,4 +4,5 @@ pub mod cache;
 pub mod config_loader;
 pub mod hash;
 pub mod plugin;
+pub mod serde;
 pub mod types;

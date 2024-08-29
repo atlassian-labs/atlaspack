@@ -54,14 +54,6 @@ impl RpcTransformerPlugin {
 impl TransformerPlugin for RpcTransformerPlugin {
   fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
     let key = self.get_key()?;
-
-    println!("{:?} {}", self, key);
-    self.rpc_worker.transform_transformer(key, &asset)?;
-
-    Ok(TransformResult {
-      asset,
-      dependencies: vec![],
-      invalidate_on_file_change: vec![],
-    })
+    self.rpc_worker.transform_transformer(key, &asset)
   }
 }

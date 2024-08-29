@@ -16,6 +16,7 @@ pub struct ResolveOptions {
 pub type Resolve = dyn Fn(PathBuf, String, ResolveOptions) -> Result<PathBuf, anyhow::Error>;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct TransformResult {
   pub asset: Asset,
   pub dependencies: Vec<Dependency>,
