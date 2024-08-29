@@ -40,7 +40,7 @@ pub(crate) fn convert_result(
   }
 
   let (mut dependency_by_specifier, invalidate_on_file_change) =
-    convert_dependencies(transformer_config, result.dependencies, &asset, asset_id)?;
+    convert_dependencies(transformer_config, result.dependencies, &asset)?;
 
   if result.needs_esm_helpers {
     let has_symbols = result.hoist_result.is_some() || result.symbol_result.is_some();
@@ -102,18 +102,25 @@ pub(crate) fn convert_result(
           // TODO: Move this into the SWC transformer
           let re_export_fake_local_key = existing
             .map(|sym| sym.local.clone())
-            .unwrap_or_else(|| format!("${:016x}$re_export${}", asset_id, symbol.local).into());
-          let symbol = Symbol {
+            .unwrap_or_else(|| format!("${}$re_export${}", asset_id, symbol.local).into());
+          let dep_symbol = Symbol {
             exported: symbol.imported.as_ref().into(),
             local: re_export_fake_local_key.clone(),
             loc: Some(convert_loc(asset_file_path.clone(), &symbol.loc)),
             is_weak: existing.map(|e| e.is_weak).unwrap_or(true),
             ..Symbol::default()
           };
-
           dependency.has_symbols = true;
-          dependency.symbols.push(symbol.clone());
-          asset.symbols.push(symbol);
+          dependency.symbols.push(dep_symbol);
+
+          let asset_symbol = Symbol {
+            exported: symbol.local.as_ref().into(),
+            local: re_export_fake_local_key.clone(),
+            loc: Some(convert_loc(asset_file_path.clone(), &symbol.loc)),
+            is_weak: false,
+            ..Symbol::default()
+          };
+          asset.symbols.push(asset_symbol);
         }
       }
     }
@@ -178,7 +185,7 @@ pub(crate) fn convert_result(
           .as_ref()
           .and_then(|source| dependency_by_specifier.get_mut(source))
         {
-          let local = format!("${:016x}${}", dep.id(), sym.local);
+          let local = format!("${}${}", dep.id(), sym.local);
           dep.symbols.push(Symbol {
             exported: sym.local.as_ref().into(),
             local: local.clone(),
@@ -297,7 +304,6 @@ pub(crate) fn convert_dependencies(
   transformer_config: &atlaspack_js_swc_core::Config,
   dependencies: Vec<atlaspack_js_swc_core::DependencyDescriptor>,
   asset: &Asset,
-  asset_id: u64,
 ) -> Result<(IndexMap<Atom, Dependency>, Vec<PathBuf>), Vec<Diagnostic>> {
   let mut dependency_by_specifier = IndexMap::new();
   let mut invalidate_on_file_change = Vec::new();
@@ -308,7 +314,7 @@ pub(crate) fn convert_dependencies(
       .map(|d| d.as_str().into())
       .unwrap_or_else(|| transformer_dependency.specifier.clone());
 
-    let result = convert_dependency(transformer_config, &asset, asset_id, transformer_dependency)?;
+    let result = convert_dependency(transformer_config, &asset, transformer_dependency)?;
 
     match result {
       DependencyConversionResult::Dependency(dependency) => {
@@ -328,8 +334,7 @@ pub(crate) fn convert_dependencies(
 fn make_export_star_symbol(asset_id: u64) -> Symbol {
   Symbol {
     exported: "*".into(),
-    // This is the mangled exports name
-    local: format!("${:016x}$exports", asset_id).into(),
+    local: format!("${}$exports", asset_id),
     loc: None,
     ..Default::default()
   }
@@ -343,7 +348,7 @@ fn make_esm_helpers_dependency(
   asset_id: u64,
 ) -> Dependency {
   Dependency {
-    source_asset_id: Some(format!("{:016x}", asset_id)),
+    source_asset_id: Some(asset_id.to_string()),
     specifier: "@atlaspack/transformer-js/src/esmodule-helpers.js".into(),
     specifier_type: SpecifierType::Esm,
     source_path: Some(asset_file_path.clone()),
@@ -388,7 +393,6 @@ enum DependencyConversionResult {
 fn convert_dependency(
   transformer_config: &atlaspack_js_swc_core::Config,
   asset: &Asset,
-  asset_id: u64,
   transformer_dependency: atlaspack_js_swc_core::DependencyDescriptor,
 ) -> Result<DependencyConversionResult, Vec<Diagnostic>> {
   use atlaspack_js_swc_core::DependencyKind;
@@ -398,7 +402,7 @@ fn convert_dependency(
     env: asset.env.clone(),
     loc: Some(loc.clone()),
     priority: convert_priority(&transformer_dependency),
-    source_asset_id: Some(format!("{:016x}", asset_id)),
+    source_asset_id: Some(asset.id.to_string()),
     source_path: Some(asset.file_path.clone()),
     specifier: transformer_dependency.specifier.as_ref().into(),
     specifier_type: convert_specifier_type(&transformer_dependency),

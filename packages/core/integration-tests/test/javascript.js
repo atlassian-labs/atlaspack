@@ -3511,7 +3511,15 @@ describe('javascript', function () {
       {assets: ['async.js']},
     ]);
 
-    assert.equal(await (await run(b)).default, 43);
+    assert.equal(
+      await (
+        await runBundle(
+          b,
+          b.getBundles().find(bundle => bundle.name.includes('index.js')),
+        )
+      ).default,
+      43,
+    );
   });
 
   it('can run an async bundle whose entry asset is present in another bundle', async () => {
