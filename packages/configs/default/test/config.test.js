@@ -12,7 +12,7 @@ describe('@atlaspack/config-default', () => {
   before(() => {
     packageJsonDependencyNames = new Set([
       ...Object.keys(packageJson.dependencies || {}),
-      ...Object.keys(packageJson.atlaspackDependencies || {}),
+      ...Object.keys(packageJson.parcelDependencies || {}),
     ]);
     configPackageReferences = collectConfigPackageReferences(config);
   });
