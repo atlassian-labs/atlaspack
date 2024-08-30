@@ -107,6 +107,28 @@ impl FileSystem for JsFileSystem {
     canonicalize().map_err(|err| std::io::Error::new(std::io::ErrorKind::NotFound, err.to_string()))
   }
 
+  fn is_file(&self, path: &Path) -> bool {
+    let is_file = || -> napi::Result<_> {
+      let path = path.to_string_lossy();
+      let p = self.is_file.env.create_string(path.as_ref())?;
+      let res: JsBoolean = self.is_file.get()?.call(None, &[p])?.try_into()?;
+      res.get_value()
+    };
+
+    is_file().unwrap_or(false)
+  }
+
+  fn is_dir(&self, path: &Path) -> bool {
+    let is_dir = || -> napi::Result<_> {
+      let path = path.to_string_lossy();
+      let path = self.is_dir.env.create_string(path.as_ref())?;
+      let res: JsBoolean = self.is_dir.get()?.call(None, &[path])?.try_into()?;
+      res.get_value()
+    };
+
+    is_dir().unwrap_or(false)
+  }
+
   fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
     let read = || -> napi::Result<_> {
       let path = path.to_string_lossy();

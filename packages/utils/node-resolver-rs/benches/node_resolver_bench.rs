@@ -19,8 +19,8 @@ use std::sync::Arc;
 use criterion::{criterion_group, criterion_main, Criterion};
 use parking_lot::RwLock;
 
+use atlaspack_filesystem::FileSystem;
 use atlaspack_filesystem::OsFileSystem;
-use atlaspack_filesystem::{FileSystem, Metadata};
 use atlaspack_resolver::{Cache, CacheCow, Resolver, SpecifierType};
 
 #[derive(Clone)]
@@ -120,29 +120,16 @@ impl FileSystem for PreloadingFileSystem {
     }
   }
 
-  fn metadata(&self, path: &Path) -> std::io::Result<Box<dyn Metadata>> {
+  fn is_file(&self, path: &Path) -> bool {
     let files = self.files.read();
     let file = files.get(path);
-
-    Ok(Box::new(PreloadingFileSystemMetadata {
-      inner_is_file: matches!(file, Some(FileEntry::File(_))),
-      inner_is_dir: matches!(file, Some(FileEntry::Directory)),
-    }))
-  }
-}
-
-struct PreloadingFileSystemMetadata {
-  inner_is_file: bool,
-  inner_is_dir: bool,
-}
-
-impl Metadata for PreloadingFileSystemMetadata {
-  fn is_dir(&self) -> bool {
-    self.inner_is_dir
+    matches!(file, Some(FileEntry::File(_)))
   }
 
-  fn is_file(&self) -> bool {
-    self.inner_is_file
+  fn is_dir(&self, path: &Path) -> bool {
+    let files = self.files.read();
+    let file = files.get(path);
+    matches!(file, Some(FileEntry::Directory))
   }
 }
 
