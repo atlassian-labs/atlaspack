@@ -359,6 +359,7 @@ impl TargetRequest {
     if targets.is_empty() {
       let context = self.infer_environment_context(&package_json.contents);
 
+      let is_library = self.default_target_options.is_library.unwrap_or(false);
       targets.push(Some(Target {
         dist_dir: self
           .default_target_options
@@ -373,7 +374,7 @@ impl TargetRequest {
             .engines
             .unwrap_or_else(|| self.default_target_options.engines.clone()),
           include_node_modules: IncludeNodeModules::from(context),
-          is_library: self.default_target_options.is_library,
+          is_library,
           loc: None,
           output_format: self
             .default_target_options
@@ -383,9 +384,7 @@ impl TargetRequest {
           should_scope_hoist: self
             .default_target_options
             .should_scope_hoist
-            .unwrap_or_else(|| {
-              self.mode == BuildMode::Production && !self.default_target_options.is_library
-            }),
+            .unwrap_or_else(|| self.mode == BuildMode::Production && !is_library),
           source_map: self
             .default_target_options
             .source_maps
@@ -464,7 +463,7 @@ impl TargetRequest {
 
     let is_library = target_descriptor
       .is_library
-      .unwrap_or_else(|| self.default_target_options.is_library);
+      .unwrap_or_else(|| self.default_target_options.is_library.unwrap_or(false));
 
     Ok(Some(Target {
       dist_dir: match dist.as_ref() {
