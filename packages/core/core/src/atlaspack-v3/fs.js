@@ -2,7 +2,6 @@
 
 import type {FileSystem} from '@atlaspack/rust';
 import type {
-  Encoding,
   FilePath,
   FileSystem as ClassicFileSystem,
 } from '@atlaspack/types-internal';
@@ -13,11 +12,11 @@ import {jsCallable} from './jsCallable';
 export function toFileSystemV3(fs: ClassicFileSystem): FileSystem {
   return {
     canonicalize: jsCallable((path: FilePath) => fs.realpathSync(path)),
-    createDirectory: jsCallable((path: FilePath) => fs.mkdirp(path)),
+    createDirAll: jsCallable((path: FilePath) => fs.mkdirp(path)),
     cwd: jsCallable(() => fs.cwd()),
-    readFile: jsCallable((path: string, encoding?: Encoding) =>
-      fs.readFileSync(path, encoding ?? 'utf8'),
-    ),
+    readToString: jsCallable((path: string) => fs.readFileSync(path, 'utf8')),
+    read: jsCallable((path: string) => fs.readFileSync(path)),
+    exists: jsCallable((path: string) => fs.existsSync(path)),
     isFile: (path: string) => {
       try {
         return fs.statSync(path).isFile();

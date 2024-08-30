@@ -1,6 +1,5 @@
 // @flow
 import type {
-  Encoding,
   FileCreateInvalidation,
   FilePath,
   InitialAtlaspackOptions,
@@ -26,10 +25,13 @@ export interface RequestOptions {}
 
 export interface FileSystem {
   canonicalize(path: FilePath): FilePath;
+  createDirAll(path: FilePath): Promise<void>;
   cwd(): FilePath;
-  isDir(path: FilePath): boolean;
+  exists(path: FilePath): boolean;
+  readToString(path: FilePath): string;
+  read(path: FilePath): Buffer;
   isFile(path: FilePath): boolean;
-  readFile(path: FilePath, encoding?: Encoding): string;
+  isDir(path: FilePath): boolean;
 }
 
 export type AtlaspackNapiOptions = {|
