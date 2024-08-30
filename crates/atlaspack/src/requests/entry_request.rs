@@ -88,7 +88,7 @@ mod tests {
 
     let entry_path = project_root.join("src").join("a.js");
 
-    fs.write(&entry_path, String::default().as_bytes()).unwrap();
+    fs.write_file(&entry_path, String::default());
 
     let entry = request_tracker(RequestTrackerTestOptions {
       fs,
@@ -123,7 +123,7 @@ mod tests {
       entry: root.join("src/a.js").to_string_lossy().into_owned(),
     };
 
-    fs.write(&entry_path, String::default().as_bytes()).unwrap();
+    fs.write_file(&entry_path, String::default());
 
     let entry = request_tracker(RequestTrackerTestOptions {
       fs,

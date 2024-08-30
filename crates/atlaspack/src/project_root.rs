@@ -233,8 +233,7 @@ mod tests {
       let root = root();
 
       fs.set_current_working_directory(&cwd());
-      fs.write(&root.join(lockfile), String::from("{}").as_bytes())
-        .unwrap();
+      fs.write_file(&root.join(lockfile), String::from("{}"));
 
       assert_eq!(
         infer_project_root(fs, entries).map_err(|e| e.to_string()),
@@ -258,10 +257,8 @@ mod tests {
         let fs = Arc::new(InMemoryFileSystem::default());
 
         fs.set_current_working_directory(&cwd);
-        fs.write(&root().join(lockfile), String::from("{}").as_bytes())
-          .unwrap();
-        fs.write(&cwd.join(lockfile), String::from("{}").as_bytes())
-          .unwrap();
+        fs.write_file(&root().join(lockfile), String::from("{}"));
+        fs.write_file(&cwd.join(lockfile), String::from("{}"));
 
         assert_eq!(
           infer_project_root(fs, entries).map_err(|e| e.to_string()),
@@ -287,13 +284,11 @@ mod tests {
         let fs = Arc::new(InMemoryFileSystem::default());
 
         fs.set_current_working_directory(&cwd);
-        fs.write(&root().join(lockfile), String::from("{}").as_bytes())
-          .unwrap();
-        fs.write(
+        fs.write_file(&root().join(lockfile), String::from("{}"));
+        fs.write_file(
           &cwd.join("packages").join("foo").join(lockfile),
-          String::from("{}").as_bytes(),
-        )
-        .unwrap();
+          String::from("{}"),
+        );
 
         assert_eq!(
           infer_project_root(fs, entries).map_err(|e| e.to_string()),

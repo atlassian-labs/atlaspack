@@ -470,11 +470,10 @@ mod test {
     let fs = InMemoryFileSystem::default();
     let package_path = Path::new("node_modules").join("foo").join("package.json");
 
-    fs.write(
+    fs.write_file(
       &package_path,
-      String::from(r#"{ "name": "foo", "exports": {} }"#).as_bytes(),
-    )
-    .unwrap();
+      String::from(r#"{ "name": "foo", "exports": {} }"#),
+    );
 
     let plugin_context = plugin_context(fs);
     let resolver = AtlaspackResolver::new(&plugin_context);
@@ -505,10 +504,8 @@ mod test {
   fn returns_resolution() {
     let fs = Arc::new(InMemoryFileSystem::default());
 
-    fs.write(Path::new("/foo/index.js"), String::default().as_bytes())
-      .unwrap();
-    fs.write(Path::new("/foo/something.js"), String::default().as_bytes())
-      .unwrap();
+    fs.write_file(Path::new("/foo/index.js"), String::default());
+    fs.write_file(Path::new("/foo/something.js"), String::default());
 
     let plugin_context = PluginContext {
       config: Arc::new(ConfigLoader {

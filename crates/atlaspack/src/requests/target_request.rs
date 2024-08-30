@@ -629,11 +629,10 @@ mod tests {
     let project_root = PathBuf::default();
     let package_dir = package_dir();
 
-    fs.write(
+    fs.write_file(
       &project_root.join(&package_dir).join("package.json"),
-      package_json.as_bytes(),
-    )
-    .unwrap();
+      package_json,
+    );
 
     let request = TargetRequest {
       default_target_options: DefaultTargetOptions::default(),
