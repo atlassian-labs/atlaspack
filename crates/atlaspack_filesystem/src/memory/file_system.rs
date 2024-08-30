@@ -60,9 +60,9 @@ impl FileSystem for InMemoryFileSystem {
     Ok(self.current_working_directory.read().clone())
   }
 
-  fn canonicalize<P: AsRef<Path>>(
+  fn canonicalize(
     &self,
-    path: P,
+    path: &dyn AsRef<Path>,
   ) -> io::Result<PathBuf> {
     Ok(canonicalize_impl(
       &self.current_working_directory,
@@ -70,9 +70,9 @@ impl FileSystem for InMemoryFileSystem {
     ))
   }
 
-  fn create_dir_all<P: AsRef<Path>>(
+  fn create_dir_all(
     &self,
-    path: P,
+    path: &dyn AsRef<Path>,
   ) -> io::Result<()> {
     let mut files = self.files.write();
     let path = canonicalize_impl(&self.current_working_directory, path.as_ref());
@@ -80,9 +80,9 @@ impl FileSystem for InMemoryFileSystem {
     Ok(())
   }
 
-  fn read<P: AsRef<Path>>(
+  fn read(
     &self,
-    path: P,
+    path: &dyn AsRef<Path>,
   ) -> io::Result<Vec<u8>> {
     let path = canonicalize_impl(&self.current_working_directory, path.as_ref());
     let files = self.files.read();
@@ -99,18 +99,18 @@ impl FileSystem for InMemoryFileSystem {
     }
   }
 
-  fn read_to_string<P: AsRef<Path>>(
+  fn read_to_string(
     &self,
-    path: P,
+    path: &dyn AsRef<Path>,
   ) -> io::Result<String> {
     let path = canonicalize_impl(&self.current_working_directory, path.as_ref());
     let bytes = self.read(&path)?;
     String::from_utf8(bytes).map_err(|_| std::io::Error::other("Unable to read file as string"))
   }
 
-  fn metadata<P: AsRef<Path>>(
+  fn metadata(
     &self,
-    path: P,
+    path: &dyn AsRef<Path>,
   ) -> io::Result<Box<dyn Metadata>> {
     let path = canonicalize_impl(&self.current_working_directory, path.as_ref());
     let files = self.files.read();
@@ -124,7 +124,7 @@ impl FileSystem for InMemoryFileSystem {
 
   fn write<P: AsRef<Path>, C: AsRef<[u8]>>(
     &self,
-    path: P,
+    path: &dyn AsRef<Path>,
     contents: C,
   ) -> io::Result<()> {
     let path = canonicalize_impl(&self.current_working_directory, path.as_ref());

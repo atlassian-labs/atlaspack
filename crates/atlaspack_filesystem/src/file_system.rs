@@ -17,125 +17,125 @@ pub trait FileSystem {
     unimplemented!()
   }
 
-  fn canonicalize<P: AsRef<Path>>(
+  fn canonicalize(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<PathBuf> {
     unimplemented!()
   }
 
-  fn read_link<P: AsRef<Path>>(
+  fn read_link(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<PathBuf> {
     unimplemented!()
   }
 
-  fn copy<P: AsRef<Path>, Q: AsRef<Path>>(
+  fn copy(
     &self,
-    _from: P,
-    _to: Q,
+    _from: &dyn AsRef<Path>,
+    _to: &dyn AsRef<Path>,
   ) -> io::Result<u64> {
     unimplemented!()
   }
 
-  fn create_dir<P: AsRef<Path>>(
+  fn create_dir(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn create_dir_all<P: AsRef<Path>>(
+  fn create_dir_all(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn hard_link<P: AsRef<Path>, Q: AsRef<Path>>(
+  fn hard_link(
     &self,
-    _original: P,
-    _link: Q,
+    _original: &dyn AsRef<Path>,
+    _link: &dyn AsRef<Path>,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn metadata<P: AsRef<Path>>(
+  fn metadata(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<Box<dyn Metadata>> {
     unimplemented!()
   }
 
-  fn read<P: AsRef<Path>>(
+  fn read(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<Vec<u8>> {
     unimplemented!()
   }
 
-  fn read_dir<P: AsRef<Path>>(
+  fn read_dir(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<fs::ReadDir> {
     unimplemented!()
   }
 
-  fn read_to_string<P: AsRef<Path>>(
+  fn read_to_string(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<String> {
     unimplemented!()
   }
 
-  fn remove_dir<P: AsRef<Path>>(
+  fn remove_dir(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn remove_dir_all<P: AsRef<Path>>(
+  fn remove_dir_all(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn remove_file<P: AsRef<Path>>(
+  fn remove_file(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn rename<P: AsRef<Path>, Q: AsRef<Path>>(
+  fn rename(
     &self,
-    _from: P,
-    _to: Q,
+    _from: &dyn AsRef<Path>,
+    _to: &dyn AsRef<Path>,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
   fn set_permissions<P: AsRef<Path>, T: Permissions>(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
     _perm: T,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn symlink_metadata<P: AsRef<Path>>(
+  fn symlink_metadata(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
   ) -> io::Result<Box<dyn Metadata>> {
     unimplemented!()
   }
 
   fn write<P: AsRef<Path>, C: AsRef<[u8]>>(
     &self,
-    _path: P,
+    _path: &dyn AsRef<Path>,
     _contents: C,
   ) -> io::Result<()> {
     unimplemented!()
