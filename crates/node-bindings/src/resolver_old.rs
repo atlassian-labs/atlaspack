@@ -107,6 +107,18 @@ impl FileSystem for JsFileSystem {
     canonicalize().map_err(|err| std::io::Error::new(std::io::ErrorKind::NotFound, err.to_string()))
   }
 
+  fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
+    let read = || -> napi::Result<_> {
+      let path = path.to_string_lossy();
+      let path = self.read.env.create_string(path.as_ref())?;
+      let res: JsBuffer = self.read.get()?.call(None, &[path])?.try_into()?;
+      let value = res.into_value()?;
+      Ok(unsafe { String::from_utf8_unchecked(value.to_vec()) })
+    };
+
+    read().map_err(|err| std::io::Error::new(std::io::ErrorKind::NotFound, err.to_string()))
+  }
+
   fn is_file(&self, path: &Path) -> bool {
     let is_file = || -> napi::Result<_> {
       let path = path.to_string_lossy();
@@ -127,18 +139,6 @@ impl FileSystem for JsFileSystem {
     };
 
     is_dir().unwrap_or(false)
-  }
-
-  fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
-    let read = || -> napi::Result<_> {
-      let path = path.to_string_lossy();
-      let path = self.read.env.create_string(path.as_ref())?;
-      let res: JsBuffer = self.read.get()?.call(None, &[path])?.try_into()?;
-      let value = res.into_value()?;
-      Ok(unsafe { String::from_utf8_unchecked(value.to_vec()) })
-    };
-
-    read().map_err(|err| std::io::Error::new(std::io::ErrorKind::NotFound, err.to_string()))
   }
 
   fn metadata(&self, path: &Path) -> std::io::Result<Box<dyn Metadata>> {
