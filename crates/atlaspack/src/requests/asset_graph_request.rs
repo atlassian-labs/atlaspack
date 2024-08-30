@@ -365,7 +365,7 @@ mod test {
   use tracing::Level;
 
   use atlaspack_core::types::{AtlaspackOptions, Code};
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::memory::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
 
   use crate::requests::{AssetGraphRequest, RequestResult};
@@ -401,7 +401,7 @@ mod test {
     #[cfg(target_os = "windows")]
     let temporary_dir = PathBuf::from("c:/windows/atlaspack_tests");
     assert!(temporary_dir.is_absolute());
-    fs.create_directory(&temporary_dir).unwrap();
+    fs.create_dir_all(&temporary_dir).unwrap();
     fs.set_current_working_directory(&temporary_dir); // <- resolver is broken without this
     options
       .atlaspack_options
@@ -409,14 +409,16 @@ mod test {
       .push(temporary_dir.join("entry.js").to_str().unwrap().to_string());
     options.project_root = temporary_dir.clone();
     options.search_path = temporary_dir.clone();
-    fs.write_file(
+    fs.write(
       &temporary_dir.join("entry.js"),
       String::from(
         r#"
 console.log('hello world');
         "#,
-      ),
-    );
+      )
+      .as_bytes(),
+    )
+    .unwrap();
     options.fs = Arc::new(fs);
 
     let mut request_tracker = request_tracker(options);
@@ -473,10 +475,10 @@ console.log('hello world');
     let core_path = temporary_dir.join("atlaspack_core");
     let fs = InMemoryFileSystem::default();
 
-    fs.create_directory(&temporary_dir).unwrap();
+    fs.create_dir_all(&temporary_dir).unwrap();
     fs.set_current_working_directory(&temporary_dir);
 
-    fs.write_file(
+    fs.write(
       &temporary_dir.join("entry.js"),
       String::from(
         r#"
@@ -484,26 +486,32 @@ console.log('hello world');
           import {y} from './b';
           console.log(x + y);
         "#,
-      ),
-    );
+      )
+      .as_bytes(),
+    )
+    .unwrap();
 
-    fs.write_file(
+    fs.write(
       &temporary_dir.join("a.js"),
       String::from(
         r#"
           export const x = 15;
         "#,
-      ),
-    );
+      )
+      .as_bytes(),
+    )
+    .unwrap();
 
-    fs.write_file(
+    fs.write(
       &temporary_dir.join("b.js"),
       String::from(
         r#"
           export const y = 27;
         "#,
-      ),
-    );
+      )
+      .as_bytes(),
+    )
+    .unwrap();
 
     setup_core_modules(&fs, &core_path);
 
@@ -550,10 +558,15 @@ console.log('hello world');
       .join("node_modules")
       .join("@atlaspack/transformer-js");
 
-    fs.write_file(&transformer_path.join("package.json"), String::from("{}"));
-    fs.write_file(
+    fs.write(
+      &transformer_path.join("package.json"),
+      String::from("{}").as_bytes(),
+    )
+    .unwrap();
+    fs.write(
       &transformer_path.join("src").join("esmodule-helpers.js"),
-      String::from("/* helpers */"),
-    );
+      String::from("/* helpers */").as_bytes(),
+    )
+    .unwrap();
   }
 }

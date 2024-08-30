@@ -28,129 +28,73 @@ impl FileSystem for OsFileSystem {
     std::env::current_dir()
   }
 
-  fn canonicalize(
-    &self,
-    path: &Path,
-  ) -> io::Result<PathBuf> {
+  fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
     canonicalize(path.as_ref(), &self.cache)
   }
 
-  fn read_link(
-    &self,
-    path: &Path,
-  ) -> io::Result<PathBuf> {
+  fn read_link(&self, path: &Path) -> io::Result<PathBuf> {
     fs::read_link(path)
   }
 
-  fn copy(
-    &self,
-    from: &Path,
-    to: &Path,
-  ) -> io::Result<u64> {
+  fn copy(&self, from: &Path, to: &Path) -> io::Result<u64> {
     fs::copy(from, to)
   }
 
-  fn create_dir(
-    &self,
-    path: &Path,
-  ) -> io::Result<()> {
+  fn create_dir(&self, path: &Path) -> io::Result<()> {
     fs::create_dir(path)
   }
 
-  fn create_dir_all(
-    &self,
-    path: &Path,
-  ) -> io::Result<()> {
+  fn create_dir_all(&self, path: &Path) -> io::Result<()> {
     fs::create_dir_all(path)
   }
 
-  fn hard_link(
-    &self,
-    original: &Path,
-    link: &Path,
-  ) -> io::Result<()> {
+  fn hard_link(&self, original: &Path, link: &Path) -> io::Result<()> {
     fs::hard_link(original, link)
   }
 
-  fn metadata(
-    &self,
-    path: &Path,
-  ) -> io::Result<Box<dyn Metadata>> {
+  fn metadata(&self, path: &Path) -> io::Result<Box<dyn Metadata>> {
     let metadata = fs::metadata(path)?;
     Ok(Box::new(OsMetadata::from(metadata)))
   }
 
-  fn read(
-    &self,
-    path: &Path,
-  ) -> io::Result<Vec<u8>> {
+  fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
     fs::read(path)
   }
 
-  fn read_dir(
-    &self,
-    path: &Path,
-  ) -> io::Result<std::fs::ReadDir> {
+  fn read_dir(&self, path: &Path) -> io::Result<std::fs::ReadDir> {
     fs::read_dir(path)
   }
 
-  fn read_to_string(
-    &self,
-    path: &Path,
-  ) -> io::Result<String> {
+  fn read_to_string(&self, path: &Path) -> io::Result<String> {
     fs::read_to_string(path)
   }
 
-  fn remove_dir(
-    &self,
-    path: &Path,
-  ) -> io::Result<()> {
+  fn remove_dir(&self, path: &Path) -> io::Result<()> {
     fs::remove_dir(path)
   }
 
-  fn remove_dir_all(
-    &self,
-    path: &Path,
-  ) -> io::Result<()> {
+  fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     fs::remove_dir_all(path)
   }
 
-  fn remove_file(
-    &self,
-    path: &Path,
-  ) -> io::Result<()> {
+  fn remove_file(&self, path: &Path) -> io::Result<()> {
     fs::remove_file(path)
   }
 
-  fn rename(
-    &self,
-    from: &Path,
-    to: &Path,
-  ) -> io::Result<()> {
+  fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
     fs::rename(from, to)
   }
 
-  fn set_permissions(
-    &self,
-    path: &Path,
-    perm: &dyn Permissions,
-  ) -> io::Result<()> {
+  fn set_permissions(&self, path: &Path, perm: &dyn Permissions) -> io::Result<()> {
     fs::set_permissions(path, fs::Permissions::from_mode(perm.mode()))
   }
 
-  fn symlink_metadata(
-    &self,
-    path: &Path,
-  ) -> io::Result<Box<dyn Metadata>> {
+  fn symlink_metadata(&self, path: &Path) -> io::Result<Box<dyn Metadata>> {
     let metadata = fs::symlink_metadata(path)?;
     Ok(Box::new(OsMetadata::from(metadata)))
   }
 
-  fn write(
-    &self,
-    path: &Path,
-    contents: &dyn AsRef<[u8]>,
-  ) -> io::Result<()> {
+  fn write(&self, path: &Path, contents: &[u8]) -> io::Result<()> {
     fs::write(path, contents)
   }
 }

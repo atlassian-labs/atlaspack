@@ -36,7 +36,11 @@ impl Request for EntryRequest {
       entry_path = request_context.project_root.join(entry_path);
     };
 
-    if request_context.file_system().is_file(&entry_path) {
+    if request_context
+      .file_system()
+      .metadata(&entry_path)?
+      .is_file()
+    {
       return Ok(ResultAndInvalidations {
         result: RequestResult::Entry(EntryRequestOutput {
           entries: vec![Entry {
@@ -57,7 +61,8 @@ impl Request for EntryRequest {
 mod tests {
   use std::sync::Arc;
 
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::memory::InMemoryFileSystem;
+  use atlaspack_resolver::FileSystem;
 
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
 
@@ -87,7 +92,7 @@ mod tests {
 
     let entry_path = project_root.join("src").join("a.js");
 
-    fs.write_file(&entry_path, String::default());
+    fs.write(&entry_path, String::default().as_bytes()).unwrap();
 
     let entry = request_tracker(RequestTrackerTestOptions {
       fs,
@@ -122,7 +127,7 @@ mod tests {
       entry: root.join("src/a.js").to_string_lossy().into_owned(),
     };
 
-    fs.write_file(&entry_path, String::default());
+    fs.write(&entry_path, String::default().as_bytes()).unwrap();
 
     let entry = request_tracker(RequestTrackerTestOptions {
       fs,

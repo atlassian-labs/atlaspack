@@ -9,7 +9,7 @@ use once_cell::unsync::OnceCell;
 
 pub use atlaspack_core::types::IncludeNodeModules;
 #[cfg(not(target_arch = "wasm32"))]
-pub use atlaspack_filesystem::os_file_system::OsFileSystem;
+pub use atlaspack_filesystem::os::OsFileSystem;
 pub use atlaspack_filesystem::FileSystem;
 pub use cache::Cache;
 pub use cache::CacheCow;
@@ -1128,7 +1128,7 @@ impl<'a> ResolveRequest<'a> {
                 absolute_path.push("tsconfig.json");
               }
 
-              let mut exists = self.resolver.cache.fs.is_file(&absolute_path);
+              let mut exists = self.resolver.cache.fs.metadata(&absolute_path)?.is_file();
 
               // If the file doesn't exist, and doesn't end with `.json`, try appending the extension.
               if !exists {
@@ -1141,7 +1141,7 @@ impl<'a> ResolveRequest<'a> {
                   let mut os_str = absolute_path.into_os_string();
                   os_str.push(".json");
                   absolute_path = PathBuf::from(os_str);
-                  exists = self.resolver.cache.fs.is_file(&absolute_path)
+                  exists = self.resolver.cache.fs.metadata(&absolute_path)?.is_file()
                 }
               }
 
@@ -1226,14 +1226,14 @@ mod tests {
   fn test_resolver<'a>() -> Resolver<'a> {
     Resolver::atlaspack(
       root().into(),
-      CacheCow::Owned(Cache::new(Arc::new(OsFileSystem))),
+      CacheCow::Owned(Cache::new(Arc::new(OsFileSystem::default()))),
     )
   }
 
   fn node_resolver<'a>() -> Resolver<'a> {
     Resolver::node(
       root().into(),
-      CacheCow::Owned(Cache::new(Arc::new(OsFileSystem))),
+      CacheCow::Owned(Cache::new(Arc::new(OsFileSystem::default()))),
     )
   }
 

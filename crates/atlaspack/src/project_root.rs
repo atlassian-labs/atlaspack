@@ -1,7 +1,7 @@
 use std::path::{Component, Components, Path, PathBuf};
 
 use atlaspack_filesystem::{
-  search::{find_ancestor_directory, find_ancestor_file},
+  utils::{find_ancestor_directory, find_ancestor_file},
   FileSystemRef,
 };
 
@@ -107,7 +107,7 @@ pub fn infer_project_root(
 mod tests {
   use std::sync::Arc;
 
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::memory::InMemoryFileSystem;
   use atlaspack_resolver::FileSystem;
 
   use super::*;
@@ -233,7 +233,8 @@ mod tests {
       let root = root();
 
       fs.set_current_working_directory(&cwd());
-      fs.write_file(&root.join(lockfile), String::from("{}"));
+      fs.write(&root.join(lockfile), String::from("{}").as_bytes())
+        .unwrap();
 
       assert_eq!(
         infer_project_root(fs, entries).map_err(|e| e.to_string()),
@@ -257,8 +258,10 @@ mod tests {
         let fs = Arc::new(InMemoryFileSystem::default());
 
         fs.set_current_working_directory(&cwd);
-        fs.write_file(&root().join(lockfile), String::from("{}"));
-        fs.write_file(&cwd.join(lockfile), String::from("{}"));
+        fs.write(&root().join(lockfile), String::from("{}").as_bytes())
+          .unwrap();
+        fs.write(&cwd.join(lockfile), String::from("{}").as_bytes())
+          .unwrap();
 
         assert_eq!(
           infer_project_root(fs, entries).map_err(|e| e.to_string()),
@@ -284,11 +287,13 @@ mod tests {
         let fs = Arc::new(InMemoryFileSystem::default());
 
         fs.set_current_working_directory(&cwd);
-        fs.write_file(&root().join(lockfile), String::from("{}"));
-        fs.write_file(
+        fs.write(&root().join(lockfile), String::from("{}").as_bytes())
+          .unwrap();
+        fs.write(
           &cwd.join("packages").join("foo").join(lockfile),
-          String::from("{}"),
-        );
+          String::from("{}").as_bytes(),
+        )
+        .unwrap();
 
         assert_eq!(
           infer_project_root(fs, entries).map_err(|e| e.to_string()),
@@ -311,7 +316,7 @@ mod tests {
       let vcs = root.join(vcs);
 
       fs.set_current_working_directory(&cwd());
-      fs.create_directory(&vcs)
+      fs.create_dir_all(&vcs)
         .expect(format!("Expected {} directory to be created", vcs.display()).as_str());
 
       assert_eq!(

@@ -17,127 +17,71 @@ pub trait FileSystem {
     unimplemented!()
   }
 
-  fn canonicalize(
-    &self,
-    _path: &Path,
-  ) -> io::Result<PathBuf> {
+  fn canonicalize(&self, _path: &Path) -> io::Result<PathBuf> {
     unimplemented!()
   }
 
-  fn read_link(
-    &self,
-    _path: &Path,
-  ) -> io::Result<PathBuf> {
+  fn read_link(&self, _path: &Path) -> io::Result<PathBuf> {
     unimplemented!()
   }
 
-  fn copy(
-    &self,
-    _from: &Path,
-    _to: &Path,
-  ) -> io::Result<u64> {
+  fn copy(&self, _from: &Path, _to: &Path) -> io::Result<u64> {
     unimplemented!()
   }
 
-  fn create_dir(
-    &self,
-    _path: &Path,
-  ) -> io::Result<()> {
+  fn create_dir(&self, _path: &Path) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn create_dir_all(
-    &self,
-    _path: &Path,
-  ) -> io::Result<()> {
+  fn create_dir_all(&self, _path: &Path) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn hard_link(
-    &self,
-    _original: &Path,
-    _link: &Path,
-  ) -> io::Result<()> {
+  fn hard_link(&self, _original: &Path, _link: &Path) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn metadata(
-    &self,
-    _path: &Path,
-  ) -> io::Result<Box<dyn Metadata>> {
+  fn metadata(&self, _path: &Path) -> io::Result<Box<dyn Metadata>> {
     unimplemented!()
   }
 
-  fn read(
-    &self,
-    _path: &Path,
-  ) -> io::Result<Vec<u8>> {
+  fn read(&self, _path: &Path) -> io::Result<Vec<u8>> {
     unimplemented!()
   }
 
-  fn read_dir(
-    &self,
-    _path: &Path,
-  ) -> io::Result<fs::ReadDir> {
+  fn read_dir(&self, _path: &Path) -> io::Result<fs::ReadDir> {
     unimplemented!()
   }
 
-  fn read_to_string(
-    &self,
-    _path: &Path,
-  ) -> io::Result<String> {
+  fn read_to_string(&self, _path: &Path) -> io::Result<String> {
     unimplemented!()
   }
 
-  fn remove_dir(
-    &self,
-    _path: &Path,
-  ) -> io::Result<()> {
+  fn remove_dir(&self, _path: &Path) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn remove_dir_all(
-    &self,
-    _path: &Path,
-  ) -> io::Result<()> {
+  fn remove_dir_all(&self, _path: &Path) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn remove_file(
-    &self,
-    _path: &Path,
-  ) -> io::Result<()> {
+  fn remove_file(&self, _path: &Path) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn rename(
-    &self,
-    _from: &Path,
-    _to: &Path,
-  ) -> io::Result<()> {
+  fn rename(&self, _from: &Path, _to: &Path) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn set_permissions(
-    &self,
-    _path: &Path,
-    _perm: &dyn Permissions,
-  ) -> io::Result<()> {
+  fn set_permissions(&self, _path: &Path, _perm: &dyn Permissions) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn symlink_metadata(
-    &self,
-    _path: &Path,
-  ) -> io::Result<Box<dyn Metadata>> {
+  fn symlink_metadata(&self, _path: &Path) -> io::Result<Box<dyn Metadata>> {
     unimplemented!()
   }
 
-  fn write(
-    &self,
-    _path: &Path,
-    _contents: &dyn AsRef<[u8]>,
-  ) -> io::Result<()> {
+  fn write(&self, _path: &Path, _contents: &[u8]) -> io::Result<()> {
     unimplemented!()
   }
 }
@@ -185,10 +129,7 @@ pub trait Permissions {
     unimplemented!()
   }
 
-  fn set_readonly(
-    &mut self,
-    _readonly: bool,
-  ) {
+  fn set_readonly(&mut self, _readonly: bool) {
     unimplemented!()
   }
 
@@ -198,10 +139,7 @@ pub trait Permissions {
   }
 
   #[cfg(target_family = "unix")]
-  fn set_mode(
-    &mut self,
-    _mode: u32,
-  ) {
+  fn set_mode(&mut self, _mode: u32) {
     unimplemented!()
   }
 }

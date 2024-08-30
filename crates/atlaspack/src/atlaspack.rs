@@ -9,7 +9,7 @@ use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::PluginLogger;
 use atlaspack_core::plugin::PluginOptions;
 use atlaspack_core::types::AtlaspackOptions;
-use atlaspack_filesystem::os_file_system::OsFileSystem;
+use atlaspack_filesystem::os::OsFileSystem;
 use atlaspack_filesystem::FileSystemRef;
 use atlaspack_package_manager::NodePackageManager;
 use atlaspack_package_manager::PackageManagerRef;

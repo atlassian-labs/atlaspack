@@ -214,7 +214,7 @@ mod test {
     plugin::PluginLogger,
     types::{Code, Dependency, Environment, Location, SourceLocation, SpecifierType, Symbol},
   };
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::memory::InMemoryFileSystem;
 
   use super::*;
 

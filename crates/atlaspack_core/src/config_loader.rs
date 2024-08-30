@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use atlaspack_filesystem::search::find_ancestor_file;
+use atlaspack_filesystem::utils::find_ancestor_file;
 use atlaspack_filesystem::FileSystemRef;
 use serde::de::DeserializeOwned;
 
@@ -77,13 +77,14 @@ impl ConfigLoader {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::memory::InMemoryFileSystem;
 
   use super::*;
 
   mod load_json_config {
     use std::sync::Arc;
 
+    use atlaspack_filesystem::FileSystem;
     use serde::Deserialize;
 
     use super::*;
@@ -119,10 +120,11 @@ mod tests {
       let project_root = PathBuf::from("/project-root");
       let search_path = project_root.join("index");
 
-      fs.write_file(
+      fs.write(
         &search_path.join("packages").join("config.json"),
-        String::from("{}"),
-      );
+        String::from("{}").as_bytes(),
+      )
+      .unwrap();
 
       let config = ConfigLoader {
         fs,
@@ -147,7 +149,8 @@ mod tests {
       let project_root = PathBuf::from("/project-root");
       let search_path = project_root.join("index");
 
-      fs.write_file(&PathBuf::from("config.json"), String::from("{}"));
+      fs.write(&PathBuf::from("config.json"), String::from("{}").as_bytes())
+        .unwrap();
 
       let config = ConfigLoader {
         fs,
@@ -173,7 +176,8 @@ mod tests {
       let search_path = project_root.join("index");
       let config_path = search_path.join("config.json");
 
-      fs.write_file(&config_path, String::from("{}"));
+      fs.write(&config_path, String::from("{}").as_bytes())
+        .unwrap();
 
       let config = ConfigLoader {
         fs,
@@ -200,7 +204,8 @@ mod tests {
       let search_path = project_root.join("index");
       let config_path = project_root.join("config.json");
 
-      fs.write_file(&config_path, String::from("{}"));
+      fs.write(&config_path, String::from("{}").as_bytes())
+        .unwrap();
 
       let config = ConfigLoader {
         fs,
@@ -223,6 +228,8 @@ mod tests {
 
   mod load_package_json_config {
     use std::sync::Arc;
+
+    use atlaspack_filesystem::FileSystem;
 
     use super::*;
 
@@ -285,8 +292,13 @@ mod tests {
       let search_path = project_root.join("index");
       let package_path = search_path.join("package.json");
 
-      fs.write_file(&package_path, String::from("{}"));
-      fs.write_file(&project_root.join("package.json"), package_json());
+      fs.write(&package_path, String::from("{}").as_bytes())
+        .unwrap();
+      fs.write(
+        &project_root.join("package.json"),
+        package_json().as_bytes(),
+      )
+      .unwrap();
 
       let config = ConfigLoader {
         fs,
@@ -312,7 +324,8 @@ mod tests {
       let search_path = project_root.join("index");
       let package_path = project_root.join("package.json");
 
-      fs.write_file(&package_path, String::from("{}"));
+      fs.write(&package_path, String::from("{}").as_bytes())
+        .unwrap();
 
       let config = ConfigLoader {
         fs,
@@ -338,7 +351,7 @@ mod tests {
       let search_path = project_root.join("index");
       let package_path = search_path.join("package.json");
 
-      fs.write_file(&package_path, package_json());
+      fs.write(&package_path, package_json().as_bytes()).unwrap();
 
       let config = ConfigLoader {
         fs,
@@ -365,7 +378,7 @@ mod tests {
       let search_path = project_root.join("index");
       let package_path = project_root.join("package.json");
 
-      fs.write_file(&package_path, package_json());
+      fs.write(&package_path, package_json().as_bytes()).unwrap();
 
       let config = ConfigLoader {
         fs,

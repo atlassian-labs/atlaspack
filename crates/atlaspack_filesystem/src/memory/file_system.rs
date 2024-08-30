@@ -45,10 +45,7 @@ impl Default for InMemoryFileSystem {
 
 impl InMemoryFileSystem {
   /// Change the current working directory. Used for resolving relative paths.
-  pub fn set_current_working_directory(
-    &self,
-    cwd: &Path,
-  ) {
+  pub fn set_current_working_directory(&self, cwd: &Path) {
     let cwd = canonicalize_impl(&self.current_working_directory, cwd);
     let mut state = self.current_working_directory.write();
     *state = cwd;
@@ -60,30 +57,21 @@ impl FileSystem for InMemoryFileSystem {
     Ok(self.current_working_directory.read().clone())
   }
 
-  fn canonicalize(
-    &self,
-    path: &Path,
-  ) -> io::Result<PathBuf> {
+  fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
     Ok(canonicalize_impl(
       &self.current_working_directory,
       path.as_ref(),
     ))
   }
 
-  fn create_dir_all(
-    &self,
-    path: &Path,
-  ) -> io::Result<()> {
+  fn create_dir_all(&self, path: &Path) -> io::Result<()> {
     let mut files = self.files.write();
     let path = canonicalize_impl(&self.current_working_directory, path.as_ref());
     files.insert(path.into(), InMemoryFileSystemEntry::Directory);
     Ok(())
   }
 
-  fn read(
-    &self,
-    path: &Path,
-  ) -> io::Result<Vec<u8>> {
+  fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
     let path = canonicalize_impl(&self.current_working_directory, path.as_ref());
     let files = self.files.read();
     match files.get(&path) {
@@ -99,19 +87,13 @@ impl FileSystem for InMemoryFileSystem {
     }
   }
 
-  fn read_to_string(
-    &self,
-    path: &Path,
-  ) -> io::Result<String> {
+  fn read_to_string(&self, path: &Path) -> io::Result<String> {
     let path = canonicalize_impl(&self.current_working_directory, path.as_ref());
     let bytes = self.read(&path)?;
     String::from_utf8(bytes).map_err(|_| std::io::Error::other("Unable to read file as string"))
   }
 
-  fn metadata(
-    &self,
-    path: &Path,
-  ) -> io::Result<Box<dyn Metadata>> {
+  fn metadata(&self, path: &Path) -> io::Result<Box<dyn Metadata>> {
     let path = canonicalize_impl(&self.current_working_directory, path.as_ref());
     let files = self.files.read();
     let file = files.get(&path);
@@ -122,18 +104,14 @@ impl FileSystem for InMemoryFileSystem {
     }))
   }
 
-  fn write(
-    &self,
-    path: &Path,
-    contents: &dyn AsRef<[u8]>,
-  ) -> io::Result<()> {
+  fn write(&self, path: &Path, contents: &[u8]) -> io::Result<()> {
     let path = canonicalize_impl(&self.current_working_directory, path.as_ref());
     let mut files = self.files.write();
 
     files.insert(
       path.clone(),
       InMemoryFileSystemEntry::File {
-        contents: contents.as_ref().to_vec(),
+        contents: contents.to_vec(),
       },
     );
 

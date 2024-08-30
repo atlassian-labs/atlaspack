@@ -597,10 +597,11 @@ impl Request for TargetRequest {
 mod tests {
   use std::{num::NonZeroU16, sync::Arc};
 
+  use atlaspack_resolver::FileSystem;
   use regex::Regex;
 
   use atlaspack_core::types::{browsers::Browsers, version::Version};
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::memory::InMemoryFileSystem;
 
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
 
@@ -629,10 +630,11 @@ mod tests {
     let project_root = PathBuf::default();
     let package_dir = package_dir();
 
-    fs.write_file(
+    fs.write(
       &project_root.join(&package_dir).join("package.json"),
-      package_json,
-    );
+      package_json.as_bytes(),
+    )
+    .unwrap();
 
     let request = TargetRequest {
       default_target_options: DefaultTargetOptions::default(),

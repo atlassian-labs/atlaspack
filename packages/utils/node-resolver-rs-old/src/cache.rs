@@ -10,7 +10,7 @@ use parking_lot::Mutex;
 use typed_arena::Arena;
 
 use atlaspack_core::types::File;
-use atlaspack_filesystem::{FileSystemRealPathCache, FileSystemRef};
+use atlaspack_filesystem::FileSystemRef;
 
 use crate::package_json::PackageJson;
 use crate::package_json::SourceField;
@@ -30,7 +30,6 @@ pub struct Cache {
   tsconfigs: FrozenMap<PathBuf, Box<Result<TsConfigWrapper<'static>, ResolverError>>>,
   is_file_cache: DashMap<PathBuf, bool>,
   is_dir_cache: DashMap<PathBuf, bool>,
-  realpath_cache: FileSystemRealPathCache,
 }
 
 impl fmt::Debug for Cache {
@@ -85,7 +84,6 @@ impl Cache {
       tsconfigs: FrozenMap::new(),
       is_file_cache: DashMap::new(),
       is_dir_cache: DashMap::new(),
-      realpath_cache: FileSystemRealPathCache::default(),
     }
   }
 
@@ -94,7 +92,7 @@ impl Cache {
       return *is_file;
     }
 
-    let is_file = self.fs.is_file(path);
+    let is_file = self.fs.metadata(path).unwrap().is_file();
     self.is_file_cache.insert(path.to_path_buf(), is_file);
     is_file
   }
@@ -104,13 +102,13 @@ impl Cache {
       return *is_file;
     }
 
-    let is_file = self.fs.is_dir(path);
+    let is_file = self.fs.metadata(path).unwrap().is_file();
     self.is_dir_cache.insert(path.to_path_buf(), is_file);
     is_file
   }
 
   pub fn canonicalize(&self, path: &Path) -> Result<PathBuf, ResolverError> {
-    Ok(self.fs.canonicalize(path, &self.realpath_cache)?)
+    Ok(self.fs.canonicalize(path)?)
   }
 
   pub fn read_package<'a>(&'a self, path: Cow<Path>) -> Result<&'a PackageJson<'a>, ResolverError> {
@@ -120,7 +118,6 @@ impl Cache {
 
     fn read_package(
       fs: &FileSystemRef,
-      realpath_cache: &FileSystemRealPathCache,
       arena: &Mutex<Arena<Box<str>>>,
       path: PathBuf,
     ) -> Result<PackageJson<'static>, ResolverError> {
@@ -141,7 +138,7 @@ impl Cache {
       // Since such package is likely a pre-compiled module
       // installed with package managers, rather than including a source code.
       if !matches!(pkg.source, SourceField::None) {
-        let realpath = fs.canonicalize(&pkg.path, realpath_cache)?;
+        let realpath = fs.canonicalize(&pkg.path)?;
         if realpath == pkg.path
           || realpath
             .components()
@@ -157,12 +154,7 @@ impl Cache {
     let path = path.into_owned();
     let pkg = self.packages.insert(
       path.clone(),
-      Box::new(read_package(
-        &self.fs,
-        &self.realpath_cache,
-        &self.arena,
-        path,
-      )),
+      Box::new(read_package(&self.fs, &self.arena, path)),
     );
 
     clone_result(pkg)

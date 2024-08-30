@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 use atlaspack_core::types::File;
-use atlaspack_filesystem::{FileSystemRealPathCache, FileSystemRef};
+use atlaspack_filesystem::FileSystemRef;
 
 use crate::package_json::PackageJson;
 use crate::package_json::SourceField;
@@ -30,7 +30,6 @@ pub struct Cache {
   // hashing paths. Instead of using a hashmap we should try a trie here.
   is_dir_cache: RwLock<HashMap<PathBuf, bool, DefaultHasher>>,
   is_file_cache: RwLock<HashMap<PathBuf, bool, DefaultHasher>>,
-  realpath_cache: FileSystemRealPathCache,
 }
 
 impl<'a> fmt::Debug for Cache {
@@ -96,7 +95,6 @@ impl Cache {
       tsconfigs: RwLock::new(HashMap::with_hasher(DefaultHasher::default())),
       is_file_cache: RwLock::new(HashMap::with_hasher(DefaultHasher::default())),
       is_dir_cache: RwLock::new(HashMap::with_hasher(DefaultHasher::default())),
-      realpath_cache: FileSystemRealPathCache::default(),
     }
   }
 
@@ -105,7 +103,7 @@ impl Cache {
       return *is_file;
     }
 
-    let is_file = self.fs.is_file(path);
+    let is_file = self.fs.metadata(path).unwrap().is_file();
     self
       .is_file_cache
       .write()
@@ -119,7 +117,7 @@ impl Cache {
       return *is_file;
     }
 
-    let is_file = self.fs.is_dir(path);
+    let is_file = self.fs.metadata(path).unwrap().is_file();
     self
       .is_dir_cache
       .write()
@@ -129,7 +127,7 @@ impl Cache {
   }
 
   pub fn canonicalize(&self, path: &Path) -> Result<PathBuf, ResolverError> {
-    Ok(self.fs.canonicalize(path, &self.realpath_cache)?)
+    Ok(self.fs.canonicalize(path)?)
   }
 
   pub fn read_package(&self, path: Cow<Path>) -> Arc<Result<Arc<PackageJson>, ResolverError>> {
@@ -139,11 +137,7 @@ impl Cache {
     }
     drop(read);
 
-    fn read_package<'a>(
-      fs: &'a FileSystemRef,
-      realpath_cache: &'a FileSystemRealPathCache,
-      path: &Path,
-    ) -> Result<PackageJson, ResolverError> {
+    fn read_package<'a>(fs: &'a FileSystemRef, path: &Path) -> Result<PackageJson, ResolverError> {
       let contents: String = fs.read_to_string(&path)?;
       let mut pkg = PackageJson::parse(PathBuf::from(path), &contents).map_err(|e| {
         JsonError::new(
@@ -161,7 +155,7 @@ impl Cache {
       // Since such package is likely a pre-compiled module
       // installed with package managers, rather than including a source code.
       if !matches!(pkg.source, SourceField::None) {
-        let realpath = fs.canonicalize(&pkg.path, realpath_cache)?;
+        let realpath = fs.canonicalize(&pkg.path)?;
         if realpath == pkg.path
           || realpath
             .components()
@@ -175,8 +169,7 @@ impl Cache {
     }
 
     let path = path.into_owned();
-    let package: Result<PackageJson, ResolverError> =
-      read_package(&self.fs, &self.realpath_cache, &path);
+    let package: Result<PackageJson, ResolverError> = read_package(&self.fs, &path);
 
     // Since we have exclusive access to packages,
     let entry = Arc::new(package.map(|pkg| Arc::new(pkg)));

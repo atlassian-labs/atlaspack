@@ -15,7 +15,7 @@ fn main() {
   let deps = pkg.get("dependencies").unwrap().as_object().unwrap();
   let cwd = std::env::current_dir().unwrap();
 
-  let cache = Cache::new(Arc::new(OsFileSystem));
+  let cache = Cache::new(Arc::new(OsFileSystem::default()));
   let cjs_resolver = Resolver::node(Cow::Borrowed(&cwd), CacheCow::Borrowed(&cache));
   let esm_graph_cache = atlaspack_dev_dep_resolver_old::Cache::default();
 
