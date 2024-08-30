@@ -198,8 +198,8 @@ version = "0.1.0"
 dependencies = [
  "crossbeam-channel",
  "indexmap 1.9.3",
- "napi 2.16.6",
- "napi-derive 2.16.5",
+ "napi",
+ "napi-derive",
  "serde",
  "swc_core",
 ]
@@ -227,13 +227,14 @@ dependencies = [
  "indexmap 1.9.3",
  "jemallocator",
  "libc",
+ "lmdb-js-lite",
  "log",
  "mimalloc",
  "mockall",
  "mozjpeg-sys",
- "napi 2.16.6",
+ "napi",
  "napi-build",
- "napi-derive 2.16.5",
+ "napi-derive",
  "num_cpus",
  "once_cell",
  "oxipng",
@@ -374,7 +375,7 @@ name = "atlaspack_napi_helpers"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "napi 2.16.6",
+ "napi",
  "napi-build",
  "once_cell",
  "serde",
@@ -409,7 +410,7 @@ dependencies = [
  "atlaspack_config",
  "atlaspack_core",
  "atlaspack_napi_helpers",
- "napi 2.16.6",
+ "napi",
  "once_cell",
  "parking_lot",
  "serde",
@@ -1886,9 +1887,9 @@ dependencies = [
  "heed",
  "lazy_static",
  "lz4_flex",
- "napi 3.0.0-alpha.8",
+ "napi",
  "napi-build",
- "napi-derive 3.0.0-alpha.7",
+ "napi-derive",
  "rand 0.9.0-alpha.2",
  "rayon",
  "thiserror",
@@ -2134,25 +2135,11 @@ checksum = "dfc300228808a0e6aea5a58115c82889240bcf8dab16fc25ad675b33e454b368"
 dependencies = [
  "bitflags 2.6.0",
  "ctor",
- "napi-derive 2.16.5",
+ "napi-derive",
  "napi-sys",
  "once_cell",
  "serde",
  "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "napi"
-version = "3.0.0-alpha.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "743b5a7769f54c95e20a26d9e66d1b43d5622b7dc8ec8f97b51ed8c58633841f"
-dependencies = [
- "bitflags 2.6.0",
- "ctor",
- "napi-build",
- "napi-sys",
- "once_cell",
  "tokio",
 ]
 
@@ -2170,21 +2157,7 @@ checksum = "e0e034ddf6155192cf83f267ede763fe6c164dfa9971585436b16173718d94c4"
 dependencies = [
  "cfg-if",
  "convert_case",
- "napi-derive-backend 1.0.67",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "napi-derive"
-version = "3.0.0-alpha.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7619cfcc3985e1ed73d147d6950caabaedabcf5c98133502f9d18c3d0061320"
-dependencies = [
- "cfg-if",
- "convert_case",
- "napi-derive-backend 2.0.0-alpha.7",
+ "napi-derive-backend",
  "proc-macro2",
  "quote",
  "syn",
@@ -2195,21 +2168,6 @@ name = "napi-derive-backend"
 version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bff2c00437f3b3266391eb5e6aa25d0029187daf5caf05b8e3271468fb5ae73e"
-dependencies = [
- "convert_case",
- "once_cell",
- "proc-macro2",
- "quote",
- "regex",
- "semver 1.0.23",
- "syn",
-]
-
-[[package]]
-name = "napi-derive-backend"
-version = "2.0.0-alpha.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "584f6a91c05e8c6bf80622fcc2675c7d27934754d4f1141cfd422d531a3f51fb"
 dependencies = [
  "convert_case",
  "once_cell",

@@ -154,3 +154,43 @@ declare export class ResolverOld {
   resolveAsync(options: ResolveOptions): Promise<ResolveResult>;
   getInvalidations(path: string): JsInvalidations;
 }
+
+export interface LmdbOptions {
+  /** The database directory path */
+  path: string;
+  /**
+   * If enabled, the database writer will set the following flags:
+   *
+   * * MAP_ASYNC - "use asynchronous msync when MDB_WRITEMAP is used"
+   * * NO_SYNC - "don't fsync after commit"
+   * * NO_META_SYNC - "don't fsync metapage after commit"
+   *
+   * `MDB_WRITEMAP` is on by default.
+   */
+  asyncWrites: boolean;
+  /**
+   * The mmap size, this corresponds to [`mdb_env_set_mapsize`](http://www.lmdb.tech/doc/group__mdb.html#gaa2506ec8dab3d969b0e609cd82e619e5)
+   * if this isn't set it'll default to around 10MB.
+   */
+  mapSize?: number;
+}
+
+export interface LmdbEntry {
+  key: string;
+  value: Buffer;
+}
+
+declare export class Lmdb {
+  constructor(options: LmdbOptions): Lmdb;
+  get(key: string): Promise<Buffer | null | void>;
+  getSync(key: string): Buffer | null;
+  getManySync(keys: Array<string>): Array<Buffer | void | null>;
+  putMany(entries: Array<LmdbEntry>): Promise<void>;
+  put(key: string, data: Buffer): Promise<void>;
+  putNoConfirm(key: string, data: Buffer): void;
+  startReadTransaction(): void;
+  commitReadTransaction(): void;
+  startWriteTransaction(): Promise<void>;
+  commitWriteTransaction(): Promise<void>;
+  close(): void;
+}
