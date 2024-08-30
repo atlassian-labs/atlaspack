@@ -5,7 +5,10 @@ use std::path::{Component, Path};
 use crate::FileSystemRealPathCache;
 
 /// A reimplementation of std::fs::canonicalize with intermediary caching.
-pub fn canonicalize(path: &Path, cache: &FileSystemRealPathCache) -> std::io::Result<PathBuf> {
+pub fn canonicalize(
+  path: &Path,
+  cache: &FileSystemRealPathCache,
+) -> std::io::Result<PathBuf> {
   let mut ret = PathBuf::new();
   let mut seen_links = 0;
   let mut queue = VecDeque::new();

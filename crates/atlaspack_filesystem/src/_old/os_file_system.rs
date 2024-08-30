@@ -3,7 +3,8 @@ use std::path::PathBuf;
 
 use canonicalize::canonicalize;
 
-use crate::{FileSystem, FileSystemRealPathCache};
+use crate::FileSystem;
+use crate::FileSystemRealPathCache;
 
 mod canonicalize;
 
@@ -15,24 +16,40 @@ impl FileSystem for OsFileSystem {
     std::env::current_dir()
   }
 
-  fn canonicalize(&self, path: &Path, cache: &FileSystemRealPathCache) -> std::io::Result<PathBuf> {
+  fn canonicalize(
+    &self,
+    path: &Path,
+    cache: &FileSystemRealPathCache,
+  ) -> std::io::Result<PathBuf> {
     canonicalize(path, cache)
   }
 
-  fn create_directory(&self, path: &Path) -> std::io::Result<()> {
+  fn create_directory(
+    &self,
+    path: &Path,
+  ) -> std::io::Result<()> {
     std::fs::create_dir_all(path)
   }
 
-  fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
+  fn read_to_string(
+    &self,
+    path: &Path,
+  ) -> std::io::Result<String> {
     std::fs::read_to_string(path)
   }
 
-  fn is_file(&self, path: &Path) -> bool {
+  fn is_file(
+    &self,
+    path: &Path,
+  ) -> bool {
     let path: &Path = path.as_ref();
     path.is_file()
   }
 
-  fn is_dir(&self, path: &Path) -> bool {
+  fn is_dir(
+    &self,
+    path: &Path,
+  ) -> bool {
     let path: &Path = path.as_ref();
     path.is_dir()
   }

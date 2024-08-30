@@ -134,7 +134,7 @@ dependencies = [
  "atlaspack_plugin_transformer_js",
  "dyn-hash",
  "indexmap 2.2.6",
- "mockall",
+ "mockall 0.12.1",
  "num_cpus",
  "pathdiff",
  "petgraph",
@@ -229,7 +229,7 @@ dependencies = [
  "libc",
  "log",
  "mimalloc",
- "mockall",
+ "mockall 0.12.1",
  "mozjpeg-sys",
  "napi 2.16.6",
  "napi-build",
@@ -314,7 +314,7 @@ dependencies = [
  "derive_builder",
  "glob-match",
  "indexmap 2.2.6",
- "mockall",
+ "mockall 0.12.1",
  "pathdiff",
  "serde",
  "serde_json5",
@@ -330,7 +330,7 @@ dependencies = [
  "browserslist-rs",
  "derive_builder",
  "dyn-hash",
- "mockall",
+ "mockall 0.12.1",
  "nodejs-semver",
  "petgraph",
  "serde",
@@ -347,7 +347,8 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "is_elevated",
- "mockall",
+ "mockall 0.13.0",
+ "parking_lot",
  "xxhash-rust",
 ]
 
@@ -387,7 +388,7 @@ dependencies = [
  "anyhow",
  "atlaspack-resolver",
  "atlaspack_filesystem",
- "mockall",
+ "mockall 0.12.1",
  "serde",
 ]
 
@@ -2097,7 +2098,21 @@ dependencies = [
  "downcast",
  "fragile",
  "lazy_static",
- "mockall_derive",
+ "mockall_derive 0.12.1",
+ "predicates",
+ "predicates-tree",
+]
+
+[[package]]
+name = "mockall"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4c28b3fb6d753d28c20e826cd46ee611fda1cf3cde03a443a974043247c065a"
+dependencies = [
+ "cfg-if",
+ "downcast",
+ "fragile",
+ "mockall_derive 0.13.0",
  "predicates",
  "predicates-tree",
 ]
@@ -2107,6 +2122,18 @@ name = "mockall_derive"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af7cbce79ec385a1d4f54baa90a76401eb15d9cab93685f62e7e9f942aa00ae2"
+dependencies = [
+ "cfg-if",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "mockall_derive"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "341014e7f530314e9a1fdbc7400b244efea7122662c96bfa248c31da5bfb2020"
 dependencies = [
  "cfg-if",
  "proc-macro2",

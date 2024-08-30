@@ -5,9 +5,10 @@ edition = "2021"
 description = "FileSystem wrapper trait for use in Atlaspack codebase."
 
 [dependencies]
-mockall = "0.12.1"
+mockall = "0.13"
 xxhash-rust = { version = "0.8.2", features = ["xxh3"] }
 anyhow = "1.0.86"
+parking_lot = "0.12"
 
 [dev-dependencies]
 assert_fs = "1.1.1"

@@ -9,7 +9,7 @@ use crate::FileSystem;
 /// In memory implementation of a file-system entry
 #[derive(Debug)]
 enum InMemoryFileSystemEntry {
-  File { contents: String },
+  File { contents: Vec<u8> },
   Directory,
 }
 
@@ -22,26 +22,37 @@ pub struct InMemoryFileSystem {
 
 impl InMemoryFileSystem {
   /// Change the current working directory. Used for resolving relative paths.
-  pub fn set_current_working_directory(&self, cwd: &Path) {
+  pub fn set_current_working_directory(
+    &self,
+    cwd: &Path,
+  ) {
     let cwd = self.canonicalize_impl(cwd);
     let mut state = self.current_working_directory.write().unwrap();
     *state = cwd;
   }
 
   /// Write a file at path.
-  pub fn write_file(&self, path: &Path, contents: String) {
-    let path = self.canonicalize_impl(path);
-    let mut files = self.files.write().unwrap();
-    files.insert(path.clone(), InMemoryFileSystemEntry::File { contents });
+  pub fn write_file(
+    &self,
+    path: &Path,
+    contents: String,
+  ) {
+    todo!();
+    // let path = self.canonicalize_impl(path);
+    // let mut files = self.files.write().unwrap();
+    // files.insert(path.clone(), InMemoryFileSystemEntry::File { contents });
 
-    let mut dir = path.parent();
-    while let Some(path) = dir {
-      files.insert(path.to_path_buf(), InMemoryFileSystemEntry::Directory);
-      dir = path.parent();
-    }
+    // let mut dir = path.parent();
+    // while let Some(path) = dir {
+    //   files.insert(path.to_path_buf(), InMemoryFileSystemEntry::Directory);
+    //   dir = path.parent();
+    // }
   }
 
-  fn canonicalize_impl(&self, path: &Path) -> PathBuf {
+  fn canonicalize_impl(
+    &self,
+    path: &Path,
+  ) -> PathBuf {
     let cwd = self.current_working_directory.read().unwrap();
     let mut result = if path.is_absolute() {
       vec![]
@@ -96,45 +107,63 @@ impl FileSystem for InMemoryFileSystem {
     Ok(self.current_working_directory.read().unwrap().clone())
   }
 
-  fn canonicalize_base(&self, path: &Path) -> std::io::Result<PathBuf> {
+  fn canonicalize_base(
+    &self,
+    path: &Path,
+  ) -> std::io::Result<PathBuf> {
     Ok(self.canonicalize_impl(path))
   }
 
-  fn create_directory(&self, path: &Path) -> std::io::Result<()> {
+  fn create_directory(
+    &self,
+    path: &Path,
+  ) -> std::io::Result<()> {
     let mut files = self.files.write().unwrap();
     let path = self.canonicalize_impl(path);
     files.insert(path.into(), InMemoryFileSystemEntry::Directory);
     Ok(())
   }
 
-  fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
-    let path = self.canonicalize_impl(path);
-    let files = self.files.read().unwrap();
-    files.get(&path).map_or_else(
-      || {
-        Err(std::io::Error::new(
-          std::io::ErrorKind::NotFound,
-          "File not found",
-        ))
-      },
-      |entry| match entry {
-        InMemoryFileSystemEntry::File { contents } => Ok(contents.clone()),
-        InMemoryFileSystemEntry::Directory => Err(std::io::Error::new(
-          std::io::ErrorKind::InvalidInput,
-          "Path is a directory",
-        )),
-      },
-    )
+  fn read_to_string(
+    &self,
+    path: &Path,
+  ) -> std::io::Result<String> {
+    todo!()
+    // let path = self.canonicalize_impl(path);
+    // String::from_utf8(self.read(&path)?)
+    //   .map_err(|_| std::io::Error::other("Unable to read file as string"))
   }
 
-  fn is_file(&self, path: &Path) -> bool {
+  // fn read(&self, path: &Path) -> std::io::Result<Vec<u8>> {
+  //   let path = self.canonicalize_impl(path);
+  //   let files = self.files.read().unwrap();
+  //   match files.get(&path) {
+  //     None => Err(std::io::Error::new(
+  //       std::io::ErrorKind::NotFound,
+  //       "File not found",
+  //     )),
+  //     Some(InMemoryFileSystemEntry::File { contents }) => Ok(contents.clone()),
+  //     Some(InMemoryFileSystemEntry::Directory) => Err(std::io::Error::new(
+  //       std::io::ErrorKind::InvalidInput,
+  //       "Path is a directory",
+  //     )),
+  //   }
+  // }
+
+  fn is_file(
+    &self,
+    path: &Path,
+  ) -> bool {
     let path = self.canonicalize_impl(path);
     let files = self.files.read().unwrap();
     let file = files.get(&path);
     matches!(file, Some(InMemoryFileSystemEntry::File { .. }))
   }
 
-  fn is_dir(&self, path: &Path) -> bool {
+  fn is_dir(
+    &self,
+    path: &Path,
+  ) -> bool {
     let path = self.canonicalize_impl(path);
     let files = self.files.read().unwrap();
     let file = files.get(&path);
