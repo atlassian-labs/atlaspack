@@ -36,11 +36,7 @@ impl Request for EntryRequest {
       entry_path = request_context.project_root.join(entry_path);
     };
 
-    if request_context
-      .file_system()
-      .metadata(&entry_path)?
-      .is_file()
-    {
+    if request_context.file_system().is_file(&entry_path) {
       return Ok(ResultAndInvalidations {
         result: RequestResult::Entry(EntryRequestOutput {
           entries: vec![Entry {

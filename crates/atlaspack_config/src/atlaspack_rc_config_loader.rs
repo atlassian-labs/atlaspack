@@ -291,7 +291,7 @@ mod tests {
         _ => PathBuf::from("Not found"),
       };
 
-      if !self.fs.metadata(&path)?.is_file() {
+      if !self.fs.is_file(&path) {
         return Err(anyhow!("File was missing"));
       }
 

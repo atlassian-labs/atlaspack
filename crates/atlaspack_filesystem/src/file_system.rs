@@ -17,8 +17,29 @@ pub trait FileSystem {
     unimplemented!()
   }
 
-  fn exists(&self, _path: &Path) -> io::Result<bool> {
-    unimplemented!()
+  fn exists(&self, path: &Path) -> io::Result<bool> {
+    let Ok(metadata) = self.metadata(path) else {
+      return Ok(false);
+    };
+    Ok(metadata.is_dir() || metadata.is_file())
+  }
+
+  #[deprecated]
+  fn is_file(&self, path: &Path) -> bool {
+    if let Ok(md) = self.metadata(path) {
+      md.is_file()
+    } else {
+      false
+    }
+  }
+
+  #[deprecated]
+  fn is_dir(&self, path: &Path) -> bool {
+    if let Ok(md) = self.metadata(path) {
+      md.is_dir()
+    } else {
+      false
+    }
   }
 
   // Rust std::fs below

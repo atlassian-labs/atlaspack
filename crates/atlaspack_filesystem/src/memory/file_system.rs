@@ -56,13 +56,6 @@ impl FileSystem for InMemoryFileSystem {
     Ok(self.current_working_directory.read().clone())
   }
 
-  fn exists(&self, path: &Path) -> io::Result<bool> {
-    let Ok(metadata) = self.metadata(path) else {
-      return Ok(false);
-    };
-    Ok(metadata.is_dir() || metadata.is_file())
-  }
-
   fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
     Ok(canonicalize_impl(
       &self.current_working_directory,
