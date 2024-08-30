@@ -389,31 +389,27 @@ describe('scope hoisting', function () {
       assert.strictEqual(output, '2 4');
     });
 
-    it.v2(
-      'supports re-exporting all from an empty module without side effects',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-all-empty-no-side-effects/index.js',
-          ),
-          {
-            mode: 'production',
-          },
-        );
+    it('supports re-exporting all from an empty module without side effects', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-all-empty-no-side-effects/index.js',
+        ),
+        {
+          mode: 'production',
+        },
+      );
 
-        let output = await run(b);
-        assert.strictEqual(output, 'foo bar');
+      let output = await run(b);
+      assert.strictEqual(output, 'foo bar');
 
-        let contents = await outputFS.readFile(
-          b
-            .getBundles()
-            .find(b => b.getMainEntry().filePath.endsWith('index.js')).filePath,
-          'utf8',
-        );
-        assert.match(contents, /output="foo bar"/);
-      },
-    );
+      let contents = await outputFS.readFile(
+        b.getBundles().find(b => b.getMainEntry().filePath.endsWith('index.js'))
+          .filePath,
+        'utf8',
+      );
+      assert.match(contents, /output="foo bar"/);
+    });
 
     it('supports re-exporting all with ambiguous CJS and non-renaming and renaming dependency retargeting', async function () {
       let b = await bundle(

@@ -75,7 +75,7 @@ impl<'de> Deserialize<'de> for BuildMode {
 pub struct DefaultTargetOptions {
   pub dist_dir: Option<PathBuf>,
   pub engines: Engines,
-  pub is_library: bool,
+  pub is_library: Option<bool>,
   pub output_format: Option<OutputFormat>,
   pub public_url: String,
   pub should_optimize: bool,
@@ -88,7 +88,7 @@ impl Default for DefaultTargetOptions {
     Self {
       dist_dir: None,
       engines: Engines::default(),
-      is_library: false,
+      is_library: None,
       output_format: None,
       public_url: String::from("/"),
       should_optimize: false,
