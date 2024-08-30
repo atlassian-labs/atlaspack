@@ -28,6 +28,10 @@ impl FileSystem for OsFileSystem {
     std::env::current_dir()
   }
 
+  fn exists(&self, path: &Path) -> io::Result<bool> {
+    path.try_exists()
+  }
+
   fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
     canonicalize(path.as_ref(), &self.cache)
   }

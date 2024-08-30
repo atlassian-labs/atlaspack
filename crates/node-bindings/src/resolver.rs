@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use atlaspack::file_system::Metadata;
 use napi::bindgen_prelude::Either3;
 use napi::Env;
 use napi::JsBoolean;
@@ -18,7 +19,7 @@ use napi::Ref;
 use napi::Result;
 use napi_derive::napi;
 
-use atlaspack::file_system::{FileSystemRealPathCache, FileSystemRef};
+use atlaspack::file_system::FileSystemRef;
 use atlaspack_resolver::ExportsCondition;
 use atlaspack_resolver::Extensions;
 use atlaspack_resolver::Fields;
@@ -94,11 +95,7 @@ pub struct JsFileSystem {
 }
 
 impl FileSystem for JsFileSystem {
-  fn canonicalize(
-    &self,
-    path: &Path,
-    _cache: &FileSystemRealPathCache,
-  ) -> std::io::Result<std::path::PathBuf> {
+  fn canonicalize(&self, path: &Path) -> std::io::Result<std::path::PathBuf> {
     let canonicalize = || -> napi::Result<_> {
       let path = path.to_string_lossy();
       let path = self.canonicalize.env.create_string(path.as_ref())?;
@@ -122,26 +119,38 @@ impl FileSystem for JsFileSystem {
     read().map_err(|err| std::io::Error::new(std::io::ErrorKind::NotFound, err.to_string()))
   }
 
-  fn is_file(&self, path: &Path) -> bool {
-    let is_file = || -> napi::Result<_> {
-      let path = path.to_string_lossy();
-      let p = self.is_file.env.create_string(path.as_ref())?;
-      let res: JsBoolean = self.is_file.get()?.call(None, &[p])?.try_into()?;
-      res.get_value()
-    };
+  fn metadata(&self, path: &Path) -> std::io::Result<Box<dyn Metadata>> {
+    Ok(Box::new(JsFsMetadata {
+      inner_is_dir: (|| -> napi::Result<_> {
+        let path = path.to_string_lossy();
+        let path = self.is_dir.env.create_string(path.as_ref())?;
+        let res: JsBoolean = self.is_dir.get()?.call(None, &[path])?.try_into()?;
+        res.get_value()
+      })()
+      .unwrap_or(false),
+      inner_is_file: (|| -> napi::Result<_> {
+        let path = path.to_string_lossy();
+        let p = self.is_file.env.create_string(path.as_ref())?;
+        let res: JsBoolean = self.is_file.get()?.call(None, &[p])?.try_into()?;
+        res.get_value()
+      })()
+      .unwrap_or(false),
+    }))
+  }
+}
 
-    is_file().unwrap_or(false)
+pub struct JsFsMetadata {
+  inner_is_file: bool,
+  inner_is_dir: bool,
+}
+
+impl Metadata for JsFsMetadata {
+  fn is_dir(&self) -> bool {
+    self.inner_is_file
   }
 
-  fn is_dir(&self, path: &Path) -> bool {
-    let is_dir = || -> napi::Result<_> {
-      let path = path.to_string_lossy();
-      let path = self.is_dir.env.create_string(path.as_ref())?;
-      let res: JsBoolean = self.is_dir.get()?.call(None, &[path])?.try_into()?;
-      res.get_value()
-    };
-
-    is_dir().unwrap_or(false)
+  fn is_file(&self) -> bool {
+    self.inner_is_dir
   }
 }
 
@@ -213,7 +222,7 @@ impl Resolver {
       })
     } else {
       supports_async = true;
-      Arc::new(OsFileSystem)
+      Arc::new(OsFileSystem::default())
     };
     #[cfg(target_arch = "wasm32")]
     let fs = {

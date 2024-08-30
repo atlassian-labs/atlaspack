@@ -36,45 +36,45 @@ impl FileSystemNapi {
 }
 
 impl FileSystem for FileSystemNapi {
-  fn canonicalize_base(&self, path: &Path) -> io::Result<PathBuf> {
-    self
-      .canonicalize_fn
-      .call_with_return_serde(path.to_path_buf())
-      .map_err(|e| io::Error::other(e))
-  }
+  // fn canonicalize_base(&self, path: &Path) -> io::Result<PathBuf> {
+  //   self
+  //     .canonicalize_fn
+  //     .call_with_return_serde(path.to_path_buf())
+  //     .map_err(|e| io::Error::other(e))
+  // }
 
-  fn create_directory(&self, path: &Path) -> std::io::Result<()> {
-    self
-      .create_directory_fn
-      .call_with_return_serde(path.to_path_buf())
-      .map_err(|e| io::Error::other(e))
-  }
+  // fn create_directory(&self, path: &Path) -> std::io::Result<()> {
+  //   self
+  //     .create_directory_fn
+  //     .call_with_return_serde(path.to_path_buf())
+  //     .map_err(|e| io::Error::other(e))
+  // }
 
-  fn cwd(&self) -> io::Result<PathBuf> {
-    self
-      .cwd_fn
-      .call_with_return_serde(None::<bool>)
-      .map_err(|e| io::Error::other(e))
-  }
+  // fn cwd(&self) -> io::Result<PathBuf> {
+  //   self
+  //     .cwd_fn
+  //     .call_with_return_serde(None::<bool>)
+  //     .map_err(|e| io::Error::other(e))
+  // }
 
-  fn read_to_string(&self, path: &Path) -> io::Result<String> {
-    self
-      .read_file_fn
-      .call_with_return_serde((path.to_path_buf(), "utf8"))
-      .map_err(|e| io::Error::other(e))
-  }
+  // fn read_to_string(&self, path: &Path) -> io::Result<String> {
+  //   self
+  //     .read_file_fn
+  //     .call_with_return_serde((path.to_path_buf(), "utf8"))
+  //     .map_err(|e| io::Error::other(e))
+  // }
 
-  fn is_file(&self, path: &Path) -> bool {
-    self
-      .is_file_fn
-      .call_with_return_serde(path.to_path_buf())
-      .expect("TODO handle error case")
-  }
+  // fn is_file(&self, path: &Path) -> bool {
+  //   self
+  //     .is_file_fn
+  //     .call_with_return_serde(path.to_path_buf())
+  //     .expect("TODO handle error case")
+  // }
 
-  fn is_dir(&self, path: &Path) -> bool {
-    self
-      .is_dir_fn
-      .call_with_return_serde(path.to_path_buf())
-      .expect("TODO handle error case")
-  }
+  // fn is_dir(&self, path: &Path) -> bool {
+  //   self
+  //     .is_dir_fn
+  //     .call_with_return_serde(path.to_path_buf())
+  //     .expect("TODO handle error case")
+  // }
 }

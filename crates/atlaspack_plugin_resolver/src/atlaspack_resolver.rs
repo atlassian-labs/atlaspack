@@ -410,7 +410,8 @@ mod test {
     plugin::PluginLogger,
     types::{Dependency, Diagnostic, ErrorKind},
   };
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::memory::InMemoryFileSystem;
+  use atlaspack_resolver::FileSystem;
   use std::path::PathBuf;
 
   fn plugin_context(fs: InMemoryFileSystem) -> PluginContext {
@@ -469,10 +470,11 @@ mod test {
     let fs = InMemoryFileSystem::default();
     let package_path = Path::new("node_modules").join("foo").join("package.json");
 
-    fs.write_file(
+    fs.write(
       &package_path,
-      String::from(r#"{ "name": "foo", "exports": {} }"#),
-    );
+      String::from(r#"{ "name": "foo", "exports": {} }"#).as_bytes(),
+    )
+    .unwrap();
 
     let plugin_context = plugin_context(fs);
     let resolver = AtlaspackResolver::new(&plugin_context);
@@ -503,8 +505,10 @@ mod test {
   fn returns_resolution() {
     let fs = Arc::new(InMemoryFileSystem::default());
 
-    fs.write_file(Path::new("/foo/index.js"), String::default());
-    fs.write_file(Path::new("/foo/something.js"), String::default());
+    fs.write(Path::new("/foo/index.js"), String::default().as_bytes())
+      .unwrap();
+    fs.write(Path::new("/foo/something.js"), String::default().as_bytes())
+      .unwrap();
 
     let plugin_context = PluginContext {
       config: Arc::new(ConfigLoader {

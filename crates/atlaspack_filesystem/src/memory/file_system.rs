@@ -28,7 +28,6 @@ enum InMemoryFileSystemEntry {
 }
 
 /// In memory implementation of the `FileSystem` trait, for testing purposes.
-#[derive(Debug)]
 pub struct InMemoryFileSystem {
   files: RwLock<HashMap<PathBuf, InMemoryFileSystemEntry>>,
   current_working_directory: RwLock<PathBuf>,
@@ -55,6 +54,13 @@ impl InMemoryFileSystem {
 impl FileSystem for InMemoryFileSystem {
   fn cwd(&self) -> io::Result<PathBuf> {
     Ok(self.current_working_directory.read().clone())
+  }
+
+  fn exists(&self, path: &Path) -> io::Result<bool> {
+    let Ok(metadata) = self.metadata(path) else {
+      return Ok(false);
+    };
+    Ok(metadata.is_dir() || metadata.is_file())
   }
 
   fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
@@ -122,6 +128,25 @@ impl FileSystem for InMemoryFileSystem {
     }
 
     Ok(())
+  }
+}
+
+impl std::fmt::Debug for InMemoryFileSystem {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let files = self.files.read();
+    let mut files_debug = HashMap::<String, String>::new();
+    for (file_path, entry) in files.iter() {
+      if let InMemoryFileSystemEntry::File { contents } = entry {
+        files_debug.insert(
+          file_path.to_str().unwrap().to_string(),
+          format!("size({})", contents.len()),
+        );
+      }
+    }
+    f.debug_struct("InMemoryFileSystem")
+      .field("files", &files_debug)
+      .field("current_working_directory", &self.current_working_directory)
+      .finish()
   }
 }
 

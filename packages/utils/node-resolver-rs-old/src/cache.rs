@@ -92,7 +92,11 @@ impl Cache {
       return *is_file;
     }
 
-    let is_file = self.fs.metadata(path).unwrap().is_file();
+    let is_file = if let Ok(md) = self.fs.metadata(path) {
+      md.is_file()
+    } else {
+      false
+    };
     self.is_file_cache.insert(path.to_path_buf(), is_file);
     is_file
   }
@@ -102,7 +106,11 @@ impl Cache {
       return *is_file;
     }
 
-    let is_file = self.fs.metadata(path).unwrap().is_file();
+    let is_file = if let Ok(md) = self.fs.metadata(path) {
+      md.is_dir()
+    } else {
+      false
+    };
     self.is_dir_cache.insert(path.to_path_buf(), is_file);
     is_file
   }

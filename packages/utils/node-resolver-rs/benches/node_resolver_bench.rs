@@ -19,8 +19,8 @@ use std::sync::Arc;
 use criterion::{criterion_group, criterion_main, Criterion};
 use parking_lot::RwLock;
 
-use atlaspack_filesystem::os_file_system::OsFileSystem;
-use atlaspack_filesystem::FileSystem;
+use atlaspack_filesystem::os::OsFileSystem;
+use atlaspack_filesystem::{FileSystem, Metadata};
 use atlaspack_resolver::{Cache, CacheCow, Resolver, SpecifierType};
 
 #[derive(Clone)]
@@ -71,7 +71,7 @@ impl FileSystem for PreloadingFileSystem {
     todo!()
   }
 
-  fn canonicalize_base(&self, path: &Path) -> std::io::Result<PathBuf> {
+  fn canonicalize(&self, path: &Path) -> std::io::Result<PathBuf> {
     let cwd = Path::new("/");
     let mut result = if path.is_absolute() {
       vec![]
@@ -101,7 +101,7 @@ impl FileSystem for PreloadingFileSystem {
     Ok(PathBuf::from_iter(result))
   }
 
-  fn create_directory(&self, path: &Path) -> std::io::Result<()> {
+  fn create_dir_all(&self, path: &Path) -> std::io::Result<()> {
     self
       .files
       .write()
@@ -120,16 +120,29 @@ impl FileSystem for PreloadingFileSystem {
     }
   }
 
-  fn is_file(&self, path: &Path) -> bool {
+  fn metadata(&self, path: &Path) -> std::io::Result<Box<dyn Metadata>> {
     let files = self.files.read();
     let file = files.get(path);
-    matches!(file, Some(FileEntry::File(_)))
+
+    Ok(Box::new(PreloadingFileSystemMetadata {
+      inner_is_file: matches!(file, Some(FileEntry::File(_))),
+      inner_is_dir: matches!(file, Some(FileEntry::Directory)),
+    }))
+  }
+}
+
+struct PreloadingFileSystemMetadata {
+  inner_is_file: bool,
+  inner_is_dir: bool,
+}
+
+impl Metadata for PreloadingFileSystemMetadata {
+  fn is_dir(&self) -> bool {
+    self.inner_is_dir
   }
 
-  fn is_dir(&self, path: &Path) -> bool {
-    let files = self.files.read();
-    let file = files.get(path);
-    matches!(file, Some(FileEntry::Directory))
+  fn is_file(&self) -> bool {
+    self.inner_is_file
   }
 }
 
@@ -144,7 +157,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   let make_resolver = || {
     Resolver::atlaspack(
       root().into(),
-      CacheCow::Owned(Cache::new(Arc::new(OsFileSystem))),
+      CacheCow::Owned(Cache::new(Arc::new(OsFileSystem::default()))),
     )
   };
   c.bench_function(
@@ -193,7 +206,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     atlaspack_resolver_old::Resolver::atlaspack(
       root().into(),
       atlaspack_resolver_old::CacheCow::Owned(atlaspack_resolver_old::Cache::new(Arc::new(
-        OsFileSystem,
+        OsFileSystem::default(),
       ))),
     )
   };

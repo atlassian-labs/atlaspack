@@ -19,10 +19,7 @@ impl Permissions for OsPermissions {
     self.inner.readonly()
   }
 
-  fn set_readonly(
-    &mut self,
-    readonly: bool,
-  ) {
+  fn set_readonly(&mut self, readonly: bool) {
     self.inner.set_readonly(readonly)
   }
 
@@ -32,10 +29,7 @@ impl Permissions for OsPermissions {
   }
 
   #[cfg(target_family = "unix")]
-  fn set_mode(
-    &mut self,
-    mode: u32,
-  ) {
+  fn set_mode(&mut self, mode: u32) {
     self.inner.set_mode(mode)
   }
 }

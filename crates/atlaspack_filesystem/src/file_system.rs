@@ -17,6 +17,11 @@ pub trait FileSystem {
     unimplemented!()
   }
 
+  fn exists(&self, _path: &Path) -> io::Result<bool> {
+    unimplemented!()
+  }
+
+  // Rust std::fs below
   fn canonicalize(&self, _path: &Path) -> io::Result<PathBuf> {
     unimplemented!()
   }
