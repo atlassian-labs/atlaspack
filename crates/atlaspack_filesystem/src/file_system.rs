@@ -1,7 +1,7 @@
 //! Abstraction of the file system
 //!
-//! This module contains traits and implementations that replicate
-//! the functionality of the Rust standard library file system
+//! This module contains traits that map the functionality of
+//! the Rust standard library FileSystem to trait methods
 
 use std::fs;
 use std::io;
@@ -13,10 +13,16 @@ use std::time::SystemTime;
 pub type FileSystemRef = Arc<dyn FileSystem + Send + Sync>;
 
 pub trait FileSystem {
+  // -----------------------------------
+  // Custom methods on top of std::fs::*
+  // -----------------------------------
+
+  /// Get the current working directory of the process
   fn cwd(&self) -> io::Result<PathBuf> {
     unimplemented!()
   }
 
+  /// Check if the filepath exists
   fn exists(&self, path: &Path) -> io::Result<bool> {
     let Ok(metadata) = self.metadata(path) else {
       return Ok(false);
@@ -24,7 +30,14 @@ pub trait FileSystem {
     Ok(metadata.is_dir() || metadata.is_file())
   }
 
-  // #[deprecated] // todo
+  /// Open a handle to a file
+  fn open(&self, _path: &Path) -> io::Result<Box<dyn File>> {
+    unimplemented!()
+  }
+
+  // #[deprecated] // TODO: remove usages
+  /// Check if target path is a file.
+  /// Will return false if target does not exist
   fn is_file(&self, path: &Path) -> bool {
     if let Ok(md) = self.metadata(path) {
       md.is_file()
@@ -33,7 +46,9 @@ pub trait FileSystem {
     }
   }
 
-  // #[deprecated] // todo
+  // #[deprecated] // TODO: remove usages
+  /// Check if target path is a directory.
+  /// Will return false if target does not exist
   fn is_dir(&self, path: &Path) -> bool {
     if let Ok(md) = self.metadata(path) {
       md.is_dir()
@@ -42,12 +57,15 @@ pub trait FileSystem {
     }
   }
 
-  // #[deprecated] // todo
+  // #[deprecated] // TODO: remove usages
+  /// Write a String to a file
   fn write_file(&self, path: &Path, data: String) {
     self.write(path, data.as_bytes()).unwrap()
   }
 
-  // Rust std::fs below
+  // ------------------------
+  // Trait mapping std::fs::*
+  // ------------------------
   fn canonicalize(&self, _path: &Path) -> io::Result<PathBuf> {
     unimplemented!()
   }
@@ -188,3 +206,5 @@ pub trait FileType {
     unimplemented!()
   }
 }
+
+pub trait File: io::Read + io::Write {}

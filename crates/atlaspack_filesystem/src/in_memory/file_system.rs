@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io;
+use std::io::Cursor;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -9,6 +10,7 @@ use super::canonicalize::canonicalize_impl;
 use super::MemoryMetadata;
 use crate::file_system::FileSystem;
 use crate::file_system::Metadata;
+use crate::File;
 
 #[cfg(not(target_os = "windows"))]
 fn root_dir() -> PathBuf {
@@ -54,6 +56,10 @@ impl InMemoryFileSystem {
 impl FileSystem for InMemoryFileSystem {
   fn cwd(&self) -> io::Result<PathBuf> {
     Ok(self.current_working_directory.read().clone())
+  }
+
+  fn open(&self, path: &Path) -> io::Result<Box<dyn crate::File>> {
+    Ok(Box::new(Cursor::new(self.read(path)?)))
   }
 
   fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
@@ -142,6 +148,8 @@ impl std::fmt::Debug for InMemoryFileSystem {
       .finish()
   }
 }
+
+impl File for Cursor<Vec<u8>> {}
 
 #[cfg(test)]
 mod test {

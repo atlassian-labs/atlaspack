@@ -10,6 +10,7 @@ use super::OsMetadata;
 use crate::file_system::FileSystem;
 use crate::file_system::Metadata;
 use crate::file_system::Permissions;
+use crate::File;
 
 pub struct OsFileSystem {
   cache: FileSystemRealPathCache,
@@ -26,6 +27,10 @@ impl Default for OsFileSystem {
 impl FileSystem for OsFileSystem {
   fn cwd(&self) -> io::Result<PathBuf> {
     std::env::current_dir()
+  }
+
+  fn open(&self, path: &Path) -> io::Result<Box<dyn crate::File>> {
+    Ok(Box::new(fs::File::open(path)?))
   }
 
   fn exists(&self, path: &Path) -> io::Result<bool> {
@@ -102,3 +107,5 @@ impl FileSystem for OsFileSystem {
     fs::write(path, contents)
   }
 }
+
+impl File for fs::File {}

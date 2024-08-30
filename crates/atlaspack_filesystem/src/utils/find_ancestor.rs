@@ -66,7 +66,7 @@ pub fn find_ancestor_file<P: AsRef<Path>>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::memory::InMemoryFileSystem;
+  use crate::in_memory::InMemoryFileSystem;
 
   #[test]
   fn returns_none_when_there_are_no_ancestor_directories() {
