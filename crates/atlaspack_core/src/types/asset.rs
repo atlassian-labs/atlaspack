@@ -53,7 +53,7 @@ fn create_asset_id(
   pipeline: &Option<String>,
   query: &Option<String>,
   unique_key: &Option<String>,
-) -> u64 {
+) -> String {
   let mut hasher = crate::hash::IdentifierHasher::default();
 
   env.hash(&mut hasher);
@@ -62,7 +62,8 @@ fn create_asset_id(
   query.hash(&mut hasher);
   unique_key.hash(&mut hasher);
 
-  hasher.finish()
+  // Ids must be 16 characters for scope hoisting to replace imports correctly in REPLACEMENT_RE
+  format!("{:016x}", hasher.finish())
 }
 
 /// An asset is a file or part of a file that may represent any data type including source code, binary data, etc.
@@ -74,7 +75,7 @@ fn create_asset_id(
 pub struct Asset {
   /// The main identify hash for the asset. It is consistent for the entire
   /// build and between builds.
-  pub id: u64,
+  pub id: String,
 
   /// Controls which bundle the asset is placed into
   pub bundle_behavior: BundleBehavior,

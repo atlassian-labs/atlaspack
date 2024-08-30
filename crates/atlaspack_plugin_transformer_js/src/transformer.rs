@@ -249,7 +249,7 @@ mod test {
     let asset_2 = create_asset("mock_path", "function helloButDifferent() {}");
 
     // This nº should not change across runs / compilation
-    assert_eq!(asset_1.id, 6312461515062137255);
+    assert_eq!(asset_1.id, "579a5e4d979a51a7");
     assert_eq!(asset_1.id, asset_2.id);
   }
 
@@ -268,7 +268,7 @@ mod test {
           code: Arc::new(Code::from(String::from("function hello() {}\n"))),
           symbols: vec![],
           has_symbols: true,
-          unique_key: Some(format!("{:016x}", target_asset.id)),
+          unique_key: Some(target_asset.id.clone()),
           ..target_asset
         },
         dependencies: vec![],
@@ -285,7 +285,7 @@ exports.hello = function() {};
     "#;
 
     let target_asset = create_asset("mock_path.js", source_code);
-    let asset_id = target_asset.id;
+    let asset_id = target_asset.id.clone();
     let result = run_test(target_asset).unwrap();
 
     let mut expected_dependencies = vec![Dependency {
@@ -301,7 +301,7 @@ exports.hello = function() {};
         },
       }),
       placeholder: Some("e83f3db3d6f57ea6".to_string()),
-      source_asset_id: Some(asset_id.to_string()),
+      source_asset_id: Some(asset_id.clone()),
       source_path: Some(PathBuf::from("mock_path.js")),
       specifier: String::from("other"),
       specifier_type: SpecifierType::CommonJS,
@@ -321,7 +321,7 @@ exports.hello = function() {};
       result,
       TransformResult {
         asset: Asset {
-          id: asset_id,
+          id: asset_id.clone(),
           file_path: "mock_path.js".into(),
           file_type: FileType::Js,
           // SWC inserts a newline here
@@ -355,12 +355,12 @@ exports.hello = function() {};
             Symbol {
               exported: String::from("*"),
               loc: None,
-              local: format!("${}$exports", asset_id),
+              local: format!("${asset_id}$exports"),
               ..Default::default()
             }
           ],
           has_symbols: true,
-          unique_key: Some(format!("{:016x}", asset_id)),
+          unique_key: Some(asset_id),
           ..empty_asset()
         },
         dependencies: expected_dependencies,
