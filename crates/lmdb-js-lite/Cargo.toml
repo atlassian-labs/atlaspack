@@ -9,7 +9,7 @@ name = "lmdb_js_safe_benchmark"
 harness = false
 
 [lib]
-crate-type = ["cdylib", "lib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "1.0.86"

@@ -25,6 +25,7 @@ mod image;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod atlaspack;
+#[cfg(not(test))]
 pub mod lmdb;
 mod resolver;
 mod resolver_old;
