@@ -33,7 +33,6 @@ pub(crate) fn convert_result(
 ) -> Result<TransformResult, Vec<Diagnostic>> {
   let asset_file_path = asset.file_path.to_path_buf();
   let asset_environment = asset.env.clone();
-  let asset_id = asset.id;
 
   if let Some(shebang) = result.shebang {
     asset.set_interpreter(shebang);
@@ -49,7 +48,7 @@ pub(crate) fn convert_result(
       &asset_file_path,
       (*asset_environment).clone(),
       has_symbols,
-      asset_id,
+      &asset.id,
     );
     dependency_by_specifier.insert(dependency.specifier.as_str().into(), dependency);
   }
@@ -102,7 +101,7 @@ pub(crate) fn convert_result(
           // TODO: Move this into the SWC transformer
           let re_export_fake_local_key = existing
             .map(|sym| sym.local.clone())
-            .unwrap_or_else(|| format!("${}$re_export${}", asset_id, symbol.local).into());
+            .unwrap_or_else(|| format!("${}$re_export${}", asset.id, symbol.local).into());
           let dep_symbol = Symbol {
             exported: symbol.imported.as_ref().into(),
             local: re_export_fake_local_key.clone(),
@@ -169,7 +168,7 @@ pub(crate) fn convert_result(
       || hoist_result.should_wrap)
       && !asset.symbols.as_slice().iter().any(|s| s.exported == "*")
     {
-      asset.symbols.push(make_export_star_symbol(asset_id));
+      asset.symbols.push(make_export_star_symbol(&asset.id));
     }
 
     asset.set_has_cjs_exports(hoist_result.has_cjs_exports);
@@ -235,11 +234,11 @@ pub(crate) fn convert_result(
         || (symbol_result.should_wrap
           && !asset.symbols.as_slice().iter().any(|s| s.exported == "*"))
       {
-        asset.symbols.push(make_export_star_symbol(asset_id));
+        asset.symbols.push(make_export_star_symbol(&asset.id));
       }
     } else {
       // If the asset is wrapped, add * as a fallback
-      asset.symbols.push(make_export_star_symbol(asset_id));
+      asset.symbols.push(make_export_star_symbol(&asset.id));
     }
 
     // For all other imports and requires, mark everything as imported (this covers both dynamic
@@ -260,7 +259,7 @@ pub(crate) fn convert_result(
   asset.set_is_constant_module(result.is_constant_module);
 
   if asset.unique_key.is_none() {
-    asset.unique_key = Some(format!("{:016x}", asset_id));
+    asset.unique_key = Some(asset.id.clone());
   }
   asset.file_type = FileType::Js;
 
@@ -331,10 +330,10 @@ pub(crate) fn convert_dependencies(
 /// "Export star" symbol is added as a placeholder for assets that may have symbols that aren't
 /// explicitly listed. This is used to avoid errors if a symbol that hasn't been statically
 /// analyzed is accessed.
-fn make_export_star_symbol(asset_id: u64) -> Symbol {
+fn make_export_star_symbol(asset_id: &str) -> Symbol {
   Symbol {
     exported: "*".into(),
-    local: format!("${}$exports", asset_id),
+    local: format!("${asset_id}$exports"),
     loc: None,
     ..Default::default()
   }
@@ -345,7 +344,7 @@ fn make_esm_helpers_dependency(
   asset_file_path: &PathBuf,
   asset_environment: Environment,
   has_symbols: bool,
-  asset_id: u64,
+  asset_id: &str,
 ) -> Dependency {
   Dependency {
     source_asset_id: Some(asset_id.to_string()),
