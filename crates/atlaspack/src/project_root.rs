@@ -107,7 +107,7 @@ pub fn infer_project_root(
 mod tests {
   use std::sync::Arc;
 
-  use atlaspack_filesystem::memory::InMemoryFileSystem;
+  use atlaspack_filesystem::InMemoryFileSystem;
   use atlaspack_resolver::FileSystem;
 
   use super::*;

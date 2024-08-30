@@ -258,8 +258,8 @@ mod tests {
   use std::sync::Arc;
 
   use anyhow::anyhow;
-  use atlaspack_filesystem::memory::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
+  use atlaspack_filesystem::InMemoryFileSystem;
   use atlaspack_package_manager::MockPackageManager;
   use atlaspack_package_manager::PackageManager;
   use atlaspack_package_manager::Resolution;

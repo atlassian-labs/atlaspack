@@ -77,7 +77,7 @@ impl ConfigLoader {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_filesystem::memory::InMemoryFileSystem;
+  use atlaspack_filesystem::InMemoryFileSystem;
 
   use super::*;
 

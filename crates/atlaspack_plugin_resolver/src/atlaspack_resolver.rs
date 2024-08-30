@@ -410,7 +410,7 @@ mod test {
     plugin::PluginLogger,
     types::{Dependency, Diagnostic, ErrorKind},
   };
-  use atlaspack_filesystem::memory::InMemoryFileSystem;
+  use atlaspack_filesystem::InMemoryFileSystem;
   use atlaspack_resolver::FileSystem;
   use std::path::PathBuf;
 

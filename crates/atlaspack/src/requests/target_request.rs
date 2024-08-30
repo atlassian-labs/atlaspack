@@ -600,7 +600,7 @@ mod tests {
   use regex::Regex;
 
   use atlaspack_core::types::{browsers::Browsers, version::Version};
-  use atlaspack_filesystem::memory::InMemoryFileSystem;
+  use atlaspack_filesystem::InMemoryFileSystem;
 
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
 

@@ -61,7 +61,7 @@ impl Request for EntryRequest {
 mod tests {
   use std::sync::Arc;
 
-  use atlaspack_filesystem::memory::InMemoryFileSystem;
+  use atlaspack_filesystem::InMemoryFileSystem;
   use atlaspack_resolver::FileSystem;
 
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};

@@ -21,9 +21,9 @@ mod specifier;
 mod tsconfig;
 mod url_to_path;
 
-#[cfg(not(target_arch = "wasm32"))]
-pub use atlaspack_filesystem::os::OsFileSystem;
 pub use atlaspack_filesystem::FileSystem;
+#[cfg(not(target_arch = "wasm32"))]
+pub use atlaspack_filesystem::OsFileSystem;
 pub use cache::Cache;
 pub use cache::CacheCow;
 pub use error::ResolverError;

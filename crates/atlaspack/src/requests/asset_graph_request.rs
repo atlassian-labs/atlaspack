@@ -365,8 +365,8 @@ mod test {
   use tracing::Level;
 
   use atlaspack_core::types::{AtlaspackOptions, Code};
-  use atlaspack_filesystem::memory::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
+  use atlaspack_filesystem::InMemoryFileSystem;
 
   use crate::requests::{AssetGraphRequest, RequestResult};
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};

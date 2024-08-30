@@ -7,7 +7,7 @@ use atlaspack_core::{
   plugin::{PluginContext, PluginLogger, PluginOptions},
   types::AtlaspackOptions,
 };
-use atlaspack_filesystem::{memory::InMemoryFileSystem, FileSystemRef};
+use atlaspack_filesystem::{FileSystemRef, InMemoryFileSystem};
 
 use crate::{
   plugins::{config_plugins::ConfigPlugins, PluginsRef},

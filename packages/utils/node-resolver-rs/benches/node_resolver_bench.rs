@@ -19,7 +19,7 @@ use std::sync::Arc;
 use criterion::{criterion_group, criterion_main, Criterion};
 use parking_lot::RwLock;
 
-use atlaspack_filesystem::os::OsFileSystem;
+use atlaspack_filesystem::OsFileSystem;
 use atlaspack_filesystem::{FileSystem, Metadata};
 use atlaspack_resolver::{Cache, CacheCow, Resolver, SpecifierType};
 
