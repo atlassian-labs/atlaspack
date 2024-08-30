@@ -47,7 +47,7 @@ use napi::JsUnknown;
 use napi_derive::napi;
 use tracing::Level;
 
-use crate::writer::LMDBOptions;
+pub use crate::writer::LMDBOptions;
 use crate::writer::{
   start_make_database_writer, DatabaseWriter, DatabaseWriterError, DatabaseWriterHandle,
   DatabaseWriterMessage,

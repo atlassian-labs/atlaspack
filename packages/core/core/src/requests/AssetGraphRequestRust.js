@@ -124,6 +124,7 @@ function getAssetGraph(serializedGraph, options) {
   let cachedAssets = new Map();
   let changedAssets = new Map();
   let entry = 0;
+
   for (let node of serializedGraph.nodes) {
     if (node.type === 'root') {
       let index = graph.addNodeByContentKey('@@root', {
@@ -142,13 +143,13 @@ function getAssetGraph(serializedGraph, options) {
         value: null,
       });
     } else if (node.type === 'asset') {
-      let id = node.value.id;
-      let asset = node.value.asset;
+      let asset = node.value;
+      let id = asset.id;
+
       asset.meta.id = id;
 
       asset = {
         ...asset,
-        id,
         env: {
           ...asset.env,
           sourceType: sourceTypeLookup[asset.env.sourceType],

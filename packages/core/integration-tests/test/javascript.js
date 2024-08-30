@@ -1272,10 +1272,8 @@ describe('javascript', function () {
     let b = await bundle(
       path.join(__dirname, '/integration/globals/multiple.js'),
       {
-        mode: 'production',
         defaultTargetOptions: {
           shouldScopeHoist: true,
-          shouldOptimize: false,
         },
       },
     );

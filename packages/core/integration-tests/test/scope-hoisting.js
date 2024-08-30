@@ -366,19 +366,16 @@ describe('scope hoisting', function () {
       assert.strictEqual(output, 2);
     });
 
-    it.v2(
-      'supports re-exporting all when falling back to namespace at runtime 3',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/scope-hoisting/es6/re-export-all-fallback-3/entry.js',
-          ),
-        );
-        let output = await run(b);
-        assert.strictEqual(output, 'FOOBAR!');
-      },
-    );
+    it('supports re-exporting all when falling back to namespace at runtime 3', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'integration/scope-hoisting/es6/re-export-all-fallback-3/entry.ts',
+        ),
+      );
+      let output = await run(b);
+      assert.strictEqual(output, 'FOOBAR!');
+    });
 
     it('supports nested re-exporting all when falling back to namespace at runtime', async function () {
       let b = await bundle(
@@ -392,31 +389,27 @@ describe('scope hoisting', function () {
       assert.strictEqual(output, '2 4');
     });
 
-    it.v2(
-      'supports re-exporting all from an empty module without side effects',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-all-empty-no-side-effects/index.js',
-          ),
-          {
-            mode: 'production',
-          },
-        );
+    it('supports re-exporting all from an empty module without side effects', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/re-export-all-empty-no-side-effects/index.js',
+        ),
+        {
+          mode: 'production',
+        },
+      );
 
-        let output = await run(b);
-        assert.strictEqual(output, 'foo bar');
+      let output = await run(b);
+      assert.strictEqual(output, 'foo bar');
 
-        let contents = await outputFS.readFile(
-          b
-            .getBundles()
-            .find(b => b.getMainEntry().filePath.endsWith('index.js')).filePath,
-          'utf8',
-        );
-        assert.match(contents, /output="foo bar"/);
-      },
-    );
+      let contents = await outputFS.readFile(
+        b.getBundles().find(b => b.getMainEntry().filePath.endsWith('index.js'))
+          .filePath,
+        'utf8',
+      );
+      assert.match(contents, /output="foo bar"/);
+    });
 
     it('supports re-exporting all with ambiguous CJS and non-renaming and renaming dependency retargeting', async function () {
       let b = await bundle(
@@ -1435,7 +1428,7 @@ describe('scope hoisting', function () {
       });
     });
 
-    it.v2('removes unused exports', async function () {
+    it('removes unused exports', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -1510,7 +1503,7 @@ describe('scope hoisting', function () {
         },
       };
 
-      describe.v2('cross bundle tree shaking: ' + outputFormat, () => {
+      describe('cross bundle tree shaking: ' + outputFormat, () => {
         it('removes unused exports across bundles', async () => {
           let b = await bundle(
             path.join(
@@ -3662,7 +3655,7 @@ describe('scope hoisting', function () {
     });
   });
 
-  describe.v2('commonjs', function () {
+  describe('commonjs', function () {
     it('should wrap when this could refer to an export', async function () {
       let b = await bundle(
         path.join(
@@ -4065,19 +4058,22 @@ describe('scope hoisting', function () {
       assert.equal(output.foo, 'b');
     });
 
-    it("doesn't insert parcelRequire for missing non-js assets", async function () {
-      let b = await bundle(
-        path.join(
-          __dirname,
-          '/integration/scope-hoisting/commonjs/missing-non-js/a.js',
-        ),
-      );
+    it.v2(
+      "doesn't insert parcelRequire for missing non-js assets",
+      async function () {
+        let b = await bundle(
+          path.join(
+            __dirname,
+            '/integration/scope-hoisting/commonjs/missing-non-js/a.js',
+          ),
+        );
 
-      let output = await run(b);
-      assert.equal(output, 27);
-    });
+        let output = await run(b);
+        assert.equal(output, 27);
+      },
+    );
 
-    it('define exports in the outermost scope', async function () {
+    it.v2('define exports in the outermost scope', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -4251,7 +4247,7 @@ describe('scope hoisting', function () {
       assert.deepEqual(output, 'foo');
     });
 
-    it('supports using this in arrow functions', async function () {
+    it.v2('supports using this in arrow functions', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -4290,7 +4286,7 @@ describe('scope hoisting', function () {
       assert.deepEqual(output, [6, undefined, 4]);
     });
 
-    it('supports using exports self reference', async function () {
+    it.v2('supports using exports self reference', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -4305,7 +4301,7 @@ describe('scope hoisting', function () {
       assert.strictEqual(output, 'Say other');
     });
 
-    it('supports using module.exports self reference', async function () {
+    it.v2('supports using module.exports self reference', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -4332,28 +4328,31 @@ describe('scope hoisting', function () {
       assert.strictEqual(output.b, 2);
     });
 
-    it('support url imports in wrapped modules with interop', async function () {
-      let b = await bundle(
-        path.join(
-          __dirname,
-          '/integration/scope-hoisting/commonjs/wrap-interop-url-import/a.js',
-        ),
-      );
+    it.v2(
+      'support url imports in wrapped modules with interop',
+      async function () {
+        let b = await bundle(
+          path.join(
+            __dirname,
+            '/integration/scope-hoisting/commonjs/wrap-interop-url-import/a.js',
+          ),
+        );
 
-      assertBundles(b, [
-        {
-          type: 'js',
-          assets: ['a.js', 'b.js', 'bundle-url.js'],
-        },
-        {
-          type: 'txt',
-          assets: ['data.txt'],
-        },
-      ]);
+        assertBundles(b, [
+          {
+            type: 'js',
+            assets: ['a.js', 'b.js', 'bundle-url.js'],
+          },
+          {
+            type: 'txt',
+            assets: ['data.txt'],
+          },
+        ]);
 
-      let output = await run(b);
-      assert(output.endsWith('.txt'));
-    });
+        let output = await run(b);
+        assert(output.endsWith('.txt'));
+      },
+    );
 
     it('supports module object properties', async function () {
       let b = await bundle(
@@ -4822,7 +4821,7 @@ describe('scope hoisting', function () {
       await run(b);
     });
 
-    it('should support two aliases to the same module', async function () {
+    it.v2('should support two aliases to the same module', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -4851,7 +4850,7 @@ describe('scope hoisting', function () {
       assert.deepStrictEqual(calls, [1, 2, 3, 4, 5, 6, 7]);
     });
 
-    it('should support optional requires', async function () {
+    it.v2('should support optional requires', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -5379,7 +5378,7 @@ describe('scope hoisting', function () {
     });
   });
 
-  it('should not throw with JS included from HTML', async function () {
+  it.v2('should not throw with JS included from HTML', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/html-js/index.html'),
     );
@@ -5408,71 +5407,77 @@ describe('scope hoisting', function () {
     assert.deepEqual(value, ['other']);
   });
 
-  it('should not throw with JS dynamic imports included from HTML', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/html-js-dynamic/index.html'),
-    );
+  it.v2(
+    'should not throw with JS dynamic imports included from HTML',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/html-js-dynamic/index.html'),
+      );
 
-    assertBundles(b, [
-      {
-        name: 'index.html',
-        assets: ['index.html'],
-      },
-      {
-        type: 'js',
-        assets: ['index.js'],
-      },
-      {
-        type: 'js',
-        assets: ['local.js'],
-      },
-    ]);
-
-    let res = await run(b, {output: null}, {require: false});
-    assert.equal(typeof res.output, 'function');
-    assert.equal(await res.output(), 'Imported: foobar');
-  });
-
-  it('should include the prelude in shared entry bundles', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/html-shared/index.html'),
-      {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldOptimize: false,
+      assertBundles(b, [
+        {
+          name: 'index.html',
+          assets: ['index.html'],
         },
-      },
-    );
+        {
+          type: 'js',
+          assets: ['index.js'],
+        },
+        {
+          type: 'js',
+          assets: ['local.js'],
+        },
+      ]);
 
-    assertBundles(b, [
-      {
-        name: 'index.html',
-        assets: ['index.html'],
-      },
-      {
-        type: 'js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'iframe.html',
-        assets: ['iframe.html'],
-      },
-      {
-        type: 'js',
-        assets: ['iframe.js'],
-      },
-      {
-        type: 'js',
-        assets: ['lodash.js'],
-      },
-    ]);
+      let res = await run(b, {output: null}, {require: false});
+      assert.equal(typeof res.output, 'function');
+      assert.equal(await res.output(), 'Imported: foobar');
+    },
+  );
 
-    let sharedBundle = b
-      .getBundles()
-      .sort((a, b) => b.stats.size - a.stats.size)[0];
-    let contents = await outputFS.readFile(sharedBundle.filePath, 'utf8');
-    assert(contents.includes(`if (parcelRequire == null) {`));
-  });
+  it.v2(
+    'should include the prelude in shared entry bundles',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/html-shared/index.html'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+          },
+        },
+      );
+
+      assertBundles(b, [
+        {
+          name: 'index.html',
+          assets: ['index.html'],
+        },
+        {
+          type: 'js',
+          assets: ['index.js'],
+        },
+        {
+          name: 'iframe.html',
+          assets: ['iframe.html'],
+        },
+        {
+          type: 'js',
+          assets: ['iframe.js'],
+        },
+        {
+          type: 'js',
+          assets: ['lodash.js'],
+        },
+      ]);
+
+      let sharedBundle = b
+        .getBundles()
+        .sort((a, b) => b.stats.size - a.stats.size)[0];
+      let contents = await outputFS.readFile(sharedBundle.filePath, 'utf8');
+      assert(contents.includes(`if (parcelRequire == null) {`));
+    },
+  );
 
   it.skip('does not include prelude if child bundles are isolated', async function () {
     let b = await bundle(
@@ -5549,7 +5554,7 @@ describe('scope hoisting', function () {
     assert.strictEqual(await run(b), 3);
   });
 
-  it('should wrap imports inside arrow functions', async function () {
+  it.v2('should wrap imports inside arrow functions', async function () {
     let b = await bundle(
       path.join(
         __dirname,
@@ -5743,25 +5748,28 @@ describe('scope hoisting', function () {
     assert.deepEqual(await run(b), ['a', 'b', 'c']);
   });
 
-  it('can run an entry bundle whose entry asset is present in another bundle', async () => {
-    let b = await bundle(
-      ['index.js', 'value.js'].map(basename =>
-        path.join(__dirname, '/integration/sync-entry-shared', basename),
-      ),
-      {targets: {main: {context: 'node', distDir, isLibrary: true}}},
-    );
+  it.v2(
+    'can run an entry bundle whose entry asset is present in another bundle',
+    async () => {
+      let b = await bundle(
+        ['index.js', 'value.js'].map(basename =>
+          path.join(__dirname, '/integration/sync-entry-shared', basename),
+        ),
+        {targets: {main: {context: 'node', distDir, isLibrary: true}}},
+      );
 
-    assertBundles(b, [
-      {
-        name: 'index.js',
-        assets: ['index.js'],
-      },
-      {name: 'value.js', assets: ['value.js']},
-      {assets: ['async.js']},
-    ]);
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          assets: ['index.js'],
+        },
+        {name: 'value.js', assets: ['value.js']},
+        {assets: ['async.js']},
+      ]);
 
-    assert.equal(await (await run(b)).default, 43);
-  });
+      assert.equal(await (await run(b)).default, 43);
+    },
+  );
 
   it('can run an async bundle whose entry asset is present in another bundle', async () => {
     let b = await bundle(
@@ -5822,37 +5830,40 @@ describe('scope hoisting', function () {
     assert.deepEqual(await run(b), 43);
   });
 
-  it('correctly updates dependencies when a specifier is added', async function () {
-    let testDir = path.join(
-      __dirname,
-      '/integration/scope-hoisting/es6/cache-add-specifier',
-    );
+  it.v2(
+    'correctly updates dependencies when a specifier is added',
+    async function () {
+      let testDir = path.join(
+        __dirname,
+        '/integration/scope-hoisting/es6/cache-add-specifier',
+      );
 
-    let b = bundler(path.join(testDir, 'a.js'), {
-      inputFS: overlayFS,
-      outputFS: overlayFS,
-    });
+      let b = bundler(path.join(testDir, 'a.js'), {
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+      });
 
-    let subscription = await b.watch();
+      let subscription = await b.watch();
 
-    let bundleEvent = await getNextBuild(b);
-    assert(bundleEvent.type === 'buildSuccess');
-    let output = await run(bundleEvent.bundleGraph);
-    assert.deepEqual(output, 'foo');
+      let bundleEvent = await getNextBuild(b);
+      assert(bundleEvent.type === 'buildSuccess');
+      let output = await run(bundleEvent.bundleGraph);
+      assert.deepEqual(output, 'foo');
 
-    await overlayFS.mkdirp(testDir);
-    await overlayFS.copyFile(
-      path.join(testDir, 'a.1.js'),
-      path.join(testDir, 'a.js'),
-    );
+      await overlayFS.mkdirp(testDir);
+      await overlayFS.copyFile(
+        path.join(testDir, 'a.1.js'),
+        path.join(testDir, 'a.js'),
+      );
 
-    bundleEvent = await getNextBuild(b);
-    assert(bundleEvent.type === 'buildSuccess');
-    output = await run(bundleEvent.bundleGraph);
-    assert.deepEqual(output, 'foobar');
+      bundleEvent = await getNextBuild(b);
+      assert(bundleEvent.type === 'buildSuccess');
+      output = await run(bundleEvent.bundleGraph);
+      assert.deepEqual(output, 'foobar');
 
-    await subscription.unsubscribe();
-  });
+      await subscription.unsubscribe();
+    },
+  );
 
   it('should not rewrite this in arrow function class properties', async function () {
     let b = await bundle(
@@ -5879,16 +5890,19 @@ describe('scope hoisting', function () {
     });
   });
 
-  it('should insert the prelude for sibling bundles referenced in HTML', async function () {
-    let b = await bundle(
-      path.join(
-        __dirname,
-        'integration/scope-hoisting/es6/sibling-dependencies/index.html',
-      ),
-    );
-    let res = await run(b, {output: null}, {require: false});
-    assert.equal(res.output, 'a');
-  });
+  it.v2(
+    'should insert the prelude for sibling bundles referenced in HTML',
+    async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'integration/scope-hoisting/es6/sibling-dependencies/index.html',
+        ),
+      );
+      let res = await run(b, {output: null}, {require: false});
+      assert.equal(res.output, 'a');
+    },
+  );
 
   it('should unmark dependency as deferred when dependency becomes used', async function () {
     let testDir = path.join(
@@ -5922,52 +5936,55 @@ describe('scope hoisting', function () {
     });
   });
 
-  it('unmark an asset group as deferred when it becomes used', async function () {
-    let testDir = path.join(
-      __dirname,
-      'integration/scope-hoisting/es6/unmarks-defer-for-assetgroup',
-    );
+  it.v2(
+    'unmark an asset group as deferred when it becomes used',
+    async function () {
+      let testDir = path.join(
+        __dirname,
+        'integration/scope-hoisting/es6/unmarks-defer-for-assetgroup',
+      );
 
-    await overlayFS.mkdirp(testDir);
-    await overlayFS.copyFile(
-      path.join(testDir, 'index1.js'),
-      path.join(testDir, 'index.js'),
-    );
+      await overlayFS.mkdirp(testDir);
+      await overlayFS.copyFile(
+        path.join(testDir, 'index1.js'),
+        path.join(testDir, 'index.js'),
+      );
 
-    let b = await bundle(path.join(testDir, 'index.js'), {
-      inputFS: overlayFS,
-      outputFS: overlayFS,
-      shouldDisableCache: true,
-    });
+      let b = await bundle(path.join(testDir, 'index.js'), {
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        shouldDisableCache: true,
+      });
 
-    assert.strictEqual(await run(b), 'bar');
+      assert.strictEqual(await run(b), 'bar');
 
-    await overlayFS.copyFile(
-      path.join(testDir, 'index2.js'),
-      path.join(testDir, 'index.js'),
-    );
+      await overlayFS.copyFile(
+        path.join(testDir, 'index2.js'),
+        path.join(testDir, 'index.js'),
+      );
 
-    b = await bundle(path.join(testDir, 'index.js'), {
-      inputFS: overlayFS,
-      outputFS: overlayFS,
-      shouldDisableCache: false,
-    });
+      b = await bundle(path.join(testDir, 'index.js'), {
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        shouldDisableCache: false,
+      });
 
-    assert.strictEqual(await run(b), 'bar foo');
+      assert.strictEqual(await run(b), 'bar foo');
 
-    await overlayFS.copyFile(
-      path.join(testDir, 'index3.js'),
-      path.join(testDir, 'index.js'),
-    );
+      await overlayFS.copyFile(
+        path.join(testDir, 'index3.js'),
+        path.join(testDir, 'index.js'),
+      );
 
-    b = await bundle(path.join(testDir, 'index.js'), {
-      inputFS: overlayFS,
-      outputFS: overlayFS,
-      shouldDisableCache: false,
-    });
+      b = await bundle(path.join(testDir, 'index.js'), {
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        shouldDisableCache: false,
+      });
 
-    assert.strictEqual(await run(b), 'bar foo bar');
-  });
+      assert.strictEqual(await run(b), 'bar foo bar');
+    },
+  );
 
   it("not insert unused requires that aren't registered anywhere", async function () {
     let b = await bundle(
@@ -5981,105 +5998,110 @@ describe('scope hoisting', function () {
     assert.strictEqual(output, 'foo');
   });
 
-  it('produce the same bundle hash regardless of transformation order', async function () {
-    let testDir = path.join(
-      __dirname,
-      'integration/scope-hoisting/es6/non-deterministic-bundle-hashes',
-    );
-
-    const waitHandler = (fileToDelay, fileToWaitFor) => {
-      const waitMap = new Map();
-
-      function wait(filePath) {
-        if (waitMap.has(filePath)) {
-          return Promise.resolve();
-        }
-        return new Promise(resolve => {
-          waitMap.set(filePath, resolve);
-        });
-      }
-      // a set of filepaths that have been read
-      function seen(filePath) {
-        // check map of things we're waiting for to resolved promises
-        let promisesToResolve = waitMap.get(filePath);
-        if (promisesToResolve) {
-          // if we find any, we call it
-          promisesToResolve();
-        }
-        waitMap.set(filePath, null);
-      }
-
-      return {
-        get(target, prop) {
-          let original = Reflect.get(...arguments);
-          if (prop === 'readFile') {
-            return async function (...args) {
-              if (args[0].includes(fileToDelay)) {
-                await wait(fileToWaitFor);
-              }
-              let result = await original.apply(this, args);
-              seen(path.basename(args[0]));
-              return result;
-            };
-          }
-          return original;
-        },
-      };
-    };
-
-    let workerFarm = createWorkerFarm({
-      maxConcurrentWorkers: 0,
-    });
-
-    let slowFooFS = new Proxy(overlayFS, waitHandler('foo.js', 'bar.js'));
-
-    try {
-      let b = await bundle(path.join(testDir, 'index.html'), {
-        inputFS: slowFooFS,
-        outputFS: slowFooFS,
-        shouldDisableCache: true,
-        workerFarm,
-      });
-
-      let bundleHashDelayFoo = b
-        .getBundles()
-        .find(b => b.filePath.endsWith('.js') && b.filePath.includes('index'))
-        .filePath.split('.')[1];
-
-      let slowBarFS = new Proxy(overlayFS, waitHandler('bar.js', 'foo.js'));
-
-      let b2 = await bundle(path.join(testDir, 'index.html'), {
-        inputFS: slowBarFS,
-        outputFS: slowBarFS,
-        shouldDisableCache: true,
-        workerFarm,
-      });
-
-      let bundleHashDelayBar = b2
-        .getBundles()
-        .find(b => b.filePath.endsWith('.js') && b.filePath.includes('index'))
-        .filePath.split('.')[1];
-
-      assert.strictEqual(bundleHashDelayFoo, bundleHashDelayBar);
-    } finally {
-      await workerFarm.end();
-    }
-
-    it('should not deduplicate an asset if it will become unreachable', async function () {
-      let b = await bundle(
-        path.join(
-          __dirname,
-          'integration/sibling-deduplicate-unreachable/index.js',
-        ),
-        {mode: 'production'},
+  it.v2(
+    'produce the same bundle hash regardless of transformation order',
+    async function () {
+      let testDir = path.join(
+        __dirname,
+        'integration/scope-hoisting/es6/non-deterministic-bundle-hashes',
       );
-      let res = await run(b);
-      assert.equal(res, 'target');
-    });
-  });
 
-  it('should add experimental bundle queue runtime for out of order bundle execution', async function () {
-    await fsFixture(overlayFS, __dirname)`
+      const waitHandler = (fileToDelay, fileToWaitFor) => {
+        const waitMap = new Map();
+
+        function wait(filePath) {
+          if (waitMap.has(filePath)) {
+            return Promise.resolve();
+          }
+          return new Promise(resolve => {
+            waitMap.set(filePath, resolve);
+          });
+        }
+        // a set of filepaths that have been read
+        function seen(filePath) {
+          // check map of things we're waiting for to resolved promises
+          let promisesToResolve = waitMap.get(filePath);
+          if (promisesToResolve) {
+            // if we find any, we call it
+            promisesToResolve();
+          }
+          waitMap.set(filePath, null);
+        }
+
+        return {
+          get(target, prop) {
+            let original = Reflect.get(...arguments);
+            if (prop === 'readFile') {
+              return async function (...args) {
+                if (args[0].includes(fileToDelay)) {
+                  await wait(fileToWaitFor);
+                }
+                let result = await original.apply(this, args);
+                seen(path.basename(args[0]));
+                return result;
+              };
+            }
+            return original;
+          },
+        };
+      };
+
+      let workerFarm = createWorkerFarm({
+        maxConcurrentWorkers: 0,
+      });
+
+      let slowFooFS = new Proxy(overlayFS, waitHandler('foo.js', 'bar.js'));
+
+      try {
+        let b = await bundle(path.join(testDir, 'index.html'), {
+          inputFS: slowFooFS,
+          outputFS: slowFooFS,
+          shouldDisableCache: true,
+          workerFarm,
+        });
+
+        let bundleHashDelayFoo = b
+          .getBundles()
+          .find(b => b.filePath.endsWith('.js') && b.filePath.includes('index'))
+          .filePath.split('.')[1];
+
+        let slowBarFS = new Proxy(overlayFS, waitHandler('bar.js', 'foo.js'));
+
+        let b2 = await bundle(path.join(testDir, 'index.html'), {
+          inputFS: slowBarFS,
+          outputFS: slowBarFS,
+          shouldDisableCache: true,
+          workerFarm,
+        });
+
+        let bundleHashDelayBar = b2
+          .getBundles()
+          .find(b => b.filePath.endsWith('.js') && b.filePath.includes('index'))
+          .filePath.split('.')[1];
+
+        assert.strictEqual(bundleHashDelayFoo, bundleHashDelayBar);
+      } finally {
+        await workerFarm.end();
+      }
+
+      it('should not deduplicate an asset if it will become unreachable', async function () {
+        let b = await bundle(
+          path.join(
+            __dirname,
+            'integration/sibling-deduplicate-unreachable/index.js',
+          ),
+          {mode: 'production'},
+        );
+        let res = await run(b);
+        assert.equal(res, 'target');
+      });
+    },
+  );
+
+  it.v2(
+    'should add experimental bundle queue runtime for out of order bundle execution',
+    async function () {
+      await fsFixture(overlayFS, __dirname)`
       bundle-queue-runtime
         a.html:
           <script type="module" src="./a.js"></script>
@@ -6112,40 +6134,43 @@ describe('scope hoisting', function () {
           }
         yarn.lock:`;
 
-    let b = await bundle(
-      [
-        path.join(__dirname, 'bundle-queue-runtime/index.html'),
-        path.join(__dirname, 'bundle-queue-runtime/a.html'),
-      ],
-      {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
-          shouldOptimize: false,
-          outputFormat: 'esmodule',
+      let b = await bundle(
+        [
+          path.join(__dirname, 'bundle-queue-runtime/index.html'),
+          path.join(__dirname, 'bundle-queue-runtime/a.html'),
+        ],
+        {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+            shouldOptimize: false,
+            outputFormat: 'esmodule',
+          },
+          inputFS: overlayFS,
         },
-        inputFS: overlayFS,
-      },
-    );
+      );
 
-    let contents = await outputFS.readFile(
-      b.getBundles().find(b => /index.*\.js/.test(b.filePath)).filePath,
-      'utf8',
-    );
-    assert(contents.includes('$parcel$global.rwr('));
+      let contents = await outputFS.readFile(
+        b.getBundles().find(b => /index.*\.js/.test(b.filePath)).filePath,
+        'utf8',
+      );
+      assert(contents.includes('$parcel$global.rwr('));
 
-    let result;
-    await run(b, {
-      result: r => {
-        result = r;
-      },
-    });
+      let result;
+      await run(b, {
+        result: r => {
+          result = r;
+        },
+      });
 
-    assert.deepEqual(await result, ['a', 'b', 'c']);
-  });
+      assert.deepEqual(await result, ['a', 'b', 'c']);
+    },
+  );
 
-  it('should add experimental bundle queue runtime to manual shared bundles', async function () {
-    await fsFixture(overlayFS, __dirname)`
+  it.v2(
+    'should add experimental bundle queue runtime to manual shared bundles',
+    async function () {
+      await fsFixture(overlayFS, __dirname)`
       bundle-queue-runtime
         index.html:
           <script type="module" src="./index.js"></script>
@@ -6171,63 +6196,64 @@ describe('scope hoisting', function () {
           }
         yarn.lock:`;
 
-    let b = await bundle(
-      [path.join(__dirname, 'bundle-queue-runtime/index.html')],
-      {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
-          shouldOptimize: false,
-          outputFormat: 'esmodule',
+      let b = await bundle(
+        [path.join(__dirname, 'bundle-queue-runtime/index.html')],
+        {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+            shouldOptimize: false,
+            outputFormat: 'esmodule',
+          },
+          inputFS: overlayFS,
         },
-        inputFS: overlayFS,
-      },
-    );
-    function hasAsset(bundle, assetName) {
-      let result = false;
+      );
+      function hasAsset(bundle, assetName) {
+        let result = false;
 
-      bundle.traverseAssets(asset => {
-        if (asset.filePath.includes(assetName)) {
-          result = true;
-        }
+        bundle.traverseAssets(asset => {
+          if (asset.filePath.includes(assetName)) {
+            result = true;
+          }
+        });
+
+        return result;
+      }
+      let sharedBundleContents = await outputFS.readFile(
+        nullthrows(
+          b.getBundles().find(b => hasAsset(b, 'shared.js')),
+          'No shared bundle',
+        ).filePath,
+        'utf8',
+      );
+      let entryContents = await outputFS.readFile(
+        nullthrows(
+          b.getBundles().find(b => hasAsset(b, 'index.js')),
+          'No entry bundle',
+        ).filePath,
+        'utf8',
+      );
+
+      assert(
+        sharedBundleContents.includes('$parcel$global.rlb('),
+        'Shared bundle should include register loaded bundle runtime',
+      );
+
+      assert(
+        entryContents.includes('$parcel$global.rwr('),
+        'Entry should include run when ready runtime',
+      );
+
+      let result;
+      await run(b, {
+        result: r => {
+          result = r;
+        },
       });
 
-      return result;
-    }
-    let sharedBundleContents = await outputFS.readFile(
-      nullthrows(
-        b.getBundles().find(b => hasAsset(b, 'shared.js')),
-        'No shared bundle',
-      ).filePath,
-      'utf8',
-    );
-    let entryContents = await outputFS.readFile(
-      nullthrows(
-        b.getBundles().find(b => hasAsset(b, 'index.js')),
-        'No entry bundle',
-      ).filePath,
-      'utf8',
-    );
-
-    assert(
-      sharedBundleContents.includes('$parcel$global.rlb('),
-      'Shared bundle should include register loaded bundle runtime',
-    );
-
-    assert(
-      entryContents.includes('$parcel$global.rwr('),
-      'Entry should include run when ready runtime',
-    );
-
-    let result;
-    await run(b, {
-      result: r => {
-        result = r;
-      },
-    });
-
-    assert.deepEqual(await result, ['index', 'shared']);
-  });
+      assert.deepEqual(await result, ['index', 'shared']);
+    },
+  );
 
   it('should not add experimental bundle queue runtime to empty bundles', async function () {
     await fsFixture(overlayFS, __dirname)`

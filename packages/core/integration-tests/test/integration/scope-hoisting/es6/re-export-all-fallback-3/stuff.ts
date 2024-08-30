@@ -1,5 +1,3 @@
-//@flow
-
 import {fooBar} from './other'
 import {FOO, BAR, type MyString} from './re-exports'
 import("./async");

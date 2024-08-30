@@ -1,8 +1,5 @@
 {
-  "dependencies": {
-    "flow-bin": "0.157.0"
-  },
   "sideEffects": [
-    "entry.js"
+    "entry.ts"
   ]
 }

@@ -136,6 +136,17 @@ export default class Atlaspack {
           ? undefined
           : [entries],
         fs: inputFS && toFileSystemV3(inputFS),
+        defaultTargetOptions: {
+          // $FlowFixMe projectPath is just a string
+          distDir: resolvedOptions.defaultTargetOptions.distDir,
+          engines: resolvedOptions.defaultTargetOptions.engines,
+          isLibrary: resolvedOptions.defaultTargetOptions.isLibrary,
+          outputFormat: resolvedOptions.defaultTargetOptions.outputFormat,
+          sourceMaps: resolvedOptions.defaultTargetOptions.sourceMaps,
+          shouldOptimize: resolvedOptions.defaultTargetOptions.shouldOptimize,
+          shouldScopeHoist:
+            resolvedOptions.defaultTargetOptions.shouldScopeHoist,
+        },
       });
     }
 
