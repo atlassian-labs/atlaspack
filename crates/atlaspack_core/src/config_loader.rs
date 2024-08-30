@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use atlaspack_filesystem::search::find_ancestor_file;
+use atlaspack_filesystem::utils::find_ancestor_file;
 use atlaspack_filesystem::FileSystemRef;
 use serde::de::DeserializeOwned;
 
@@ -77,13 +77,14 @@ impl ConfigLoader {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_filesystem::InMemoryFileSystem;
 
   use super::*;
 
   mod load_json_config {
     use std::sync::Arc;
 
+    use atlaspack_filesystem::FileSystem;
     use serde::Deserialize;
 
     use super::*;
@@ -223,6 +224,8 @@ mod tests {
 
   mod load_package_json_config {
     use std::sync::Arc;
+
+    use atlaspack_filesystem::FileSystem;
 
     use super::*;
 

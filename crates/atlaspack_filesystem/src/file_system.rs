@@ -24,7 +24,7 @@ pub trait FileSystem {
     Ok(metadata.is_dir() || metadata.is_file())
   }
 
-  #[deprecated]
+  // #[deprecated] // todo
   fn is_file(&self, path: &Path) -> bool {
     if let Ok(md) = self.metadata(path) {
       md.is_file()
@@ -33,13 +33,18 @@ pub trait FileSystem {
     }
   }
 
-  #[deprecated]
+  // #[deprecated] // todo
   fn is_dir(&self, path: &Path) -> bool {
     if let Ok(md) = self.metadata(path) {
       md.is_dir()
     } else {
       false
     }
+  }
+
+  // #[deprecated] // todo
+  fn write_file(&self, path: &Path, data: String) {
+    self.write(path, data.as_bytes()).unwrap()
   }
 
   // Rust std::fs below

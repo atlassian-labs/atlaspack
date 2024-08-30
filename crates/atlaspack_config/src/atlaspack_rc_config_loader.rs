@@ -7,7 +7,7 @@ use atlaspack_core::types::CodeHighlight;
 use atlaspack_core::types::DiagnosticBuilder;
 use atlaspack_core::types::DiagnosticError;
 use atlaspack_core::types::File;
-use atlaspack_filesystem::search::find_ancestor_file;
+use atlaspack_filesystem::utils::find_ancestor_file;
 use atlaspack_filesystem::FileSystemRef;
 use atlaspack_package_manager::PackageManagerRef;
 use pathdiff::diff_paths;
@@ -119,7 +119,7 @@ impl AtlaspackRcConfigLoader {
         .resolved
     };
 
-    self.fs.canonicalize_base(&path).map_err(|source| {
+    self.fs.canonicalize(&path).map_err(|source| {
       diagnostic_error!("{}", source).context(diagnostic_error!(DiagnosticBuilder::default()
         .message(format!(
           "Failed to resolve extended config {extend} from {}",
@@ -258,8 +258,8 @@ mod tests {
   use std::sync::Arc;
 
   use anyhow::anyhow;
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
+  use atlaspack_filesystem::InMemoryFileSystem;
   use atlaspack_package_manager::MockPackageManager;
   use atlaspack_package_manager::PackageManager;
   use atlaspack_package_manager::Resolution;
