@@ -7,7 +7,7 @@ use atlaspack_core::types::CodeHighlight;
 use atlaspack_core::types::DiagnosticBuilder;
 use atlaspack_core::types::DiagnosticError;
 use atlaspack_core::types::File;
-use atlaspack_filesystem::utils::find_ancestor_file;
+use atlaspack_filesystem::search::find_ancestor_file;
 use atlaspack_filesystem::FileSystemRef;
 use atlaspack_package_manager::PackageManagerRef;
 use pathdiff::diff_paths;
@@ -119,7 +119,7 @@ impl AtlaspackRcConfigLoader {
         .resolved
     };
 
-    self.fs.canonicalize(&path).map_err(|source| {
+    self.fs.canonicalize_base(&path).map_err(|source| {
       diagnostic_error!("{}", source).context(diagnostic_error!(DiagnosticBuilder::default()
         .message(format!(
           "Failed to resolve extended config {extend} from {}",
@@ -258,8 +258,8 @@ mod tests {
   use std::sync::Arc;
 
   use anyhow::anyhow;
+  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
-  use atlaspack_filesystem::InMemoryFileSystem;
   use atlaspack_package_manager::MockPackageManager;
   use atlaspack_package_manager::PackageManager;
   use atlaspack_package_manager::Resolution;
@@ -355,11 +355,7 @@ mod tests {
 
       let config = default_extended_config(&project_root);
 
-      fs.write(
-        &config.base_config.path,
-        config.base_config.atlaspack_rc.as_bytes(),
-      )
-      .unwrap();
+      fs.write_file(&config.base_config.path, config.base_config.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
@@ -387,8 +383,7 @@ mod tests {
       let default_config = default_config(Arc::new(project_root.join(".parcelrc")));
       let files = vec![default_config.path.clone()];
 
-      fs.write(&default_config.path, default_config.atlaspack_rc.as_bytes())
-        .unwrap();
+      fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
       let atlaspack_config =
         AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
@@ -409,8 +404,7 @@ mod tests {
       let default_config = default_config(Arc::new(project_root.join(".parcelrc")));
       let files = vec![default_config.path.clone()];
 
-      fs.write(&default_config.path, default_config.atlaspack_rc.as_bytes())
-        .unwrap();
+      fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
       let atlaspack_config =
         AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
@@ -432,8 +426,7 @@ mod tests {
       let files = vec![default_config.path.clone()];
 
       fs.set_current_working_directory(Path::new("/cwd"));
-      fs.write(&default_config.path, default_config.atlaspack_rc.as_bytes())
-        .unwrap();
+      fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
       let atlaspack_config =
         AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
@@ -457,17 +450,15 @@ mod tests {
         default_config.extended_config.path.clone(),
       ];
 
-      fs.write(
+      fs.write_file(
         &default_config.base_config.path,
-        default_config.base_config.atlaspack_rc.as_bytes(),
-      )
-      .unwrap();
+        default_config.base_config.atlaspack_rc,
+      );
 
-      fs.write(
+      fs.write_file(
         &default_config.extended_config.path,
-        default_config.extended_config.atlaspack_rc.as_bytes(),
-      )
-      .unwrap();
+        default_config.extended_config.atlaspack_rc,
+      );
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
@@ -530,11 +521,7 @@ mod tests {
 
       let (specifier, config) = extended_config(&project_root);
 
-      fs.write(
-        &config.base_config.path,
-        config.base_config.atlaspack_rc.as_bytes(),
-      )
-      .unwrap();
+      fs.write_file(&config.base_config.path, config.base_config.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
@@ -567,11 +554,7 @@ mod tests {
       let mut package_manager = MockPackageManager::new();
       let project_root = fs.cwd().unwrap();
 
-      fs.write(
-        &project_root.join(".parcelrc"),
-        String::from("{}").as_bytes(),
-      )
-      .unwrap();
+      fs.write_file(&project_root.join(".parcelrc"), String::from("{}"));
 
       let config_path = package_manager_resolution(
         &mut package_manager,
@@ -616,16 +599,8 @@ mod tests {
       let (specifier, specified_config) = config(&project_root);
       let files = vec![specified_config.path.clone()];
 
-      fs.write(
-        &project_root.join(".parcelrc"),
-        String::from("{}").as_bytes(),
-      )
-      .unwrap();
-      fs.write(
-        &specified_config.path,
-        specified_config.atlaspack_rc.as_bytes(),
-      )
-      .unwrap();
+      fs.write_file(&project_root.join(".parcelrc"), String::from("{}"));
+      fs.write_file(&specified_config.path, specified_config.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
@@ -696,11 +671,10 @@ mod tests {
 
       let (fallback_specifier, fallback) = extended_config(&project_root);
 
-      fs.write(
+      fs.write_file(
         &fallback.base_config.path,
-        fallback.base_config.atlaspack_rc.as_bytes(),
-      )
-      .unwrap();
+        fallback.base_config.atlaspack_rc,
+      );
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
@@ -775,13 +749,8 @@ mod tests {
       let (fallback_specifier, fallback) = fallback_config(&project_root);
       let project_root_config = default_config(Arc::new(project_root.join(".parcelrc")));
 
-      fs.write(
-        &project_root_config.path,
-        project_root_config.atlaspack_rc.as_bytes(),
-      )
-      .unwrap();
-      fs.write(&fallback.path, String::from("{}").as_bytes())
-        .unwrap();
+      fs.write_file(&project_root_config.path, project_root_config.atlaspack_rc);
+      fs.write_file(&fallback.path, String::from("{}"));
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
@@ -816,8 +785,7 @@ mod tests {
       let (fallback_specifier, fallback) = fallback_config(&project_root);
       let files = vec![fallback.path.clone()];
 
-      fs.write(&fallback.path, fallback.atlaspack_rc.as_bytes())
-        .unwrap();
+      fs.write_file(&fallback.path, fallback.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
@@ -855,13 +823,8 @@ mod tests {
 
       let files = vec![config.path.clone()];
 
-      fs.write(&config.path, config.atlaspack_rc.as_bytes())
-        .unwrap();
-      fs.write(
-        &fallback_config.path,
-        fallback_config.atlaspack_rc.as_bytes(),
-      )
-      .unwrap();
+      fs.write_file(&config.path, config.atlaspack_rc);
+      fs.write_file(&fallback_config.path, fallback_config.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
@@ -892,8 +855,7 @@ mod tests {
 
       let files = vec![fallback.path.clone()];
 
-      fs.write(&fallback.path, fallback.atlaspack_rc.as_bytes())
-        .unwrap();
+      fs.write_file(&fallback.path, fallback.atlaspack_rc);
 
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
