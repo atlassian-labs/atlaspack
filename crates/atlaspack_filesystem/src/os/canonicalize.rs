@@ -1,8 +1,13 @@
+use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::path::Component;
+use std::path::Path;
 use std::path::PathBuf;
-use std::path::{Component, Path};
 
-use crate::FileSystemRealPathCache;
+use parking_lot::RwLock;
+
+pub type FileSystemRealPathCache =
+  RwLock<HashMap<PathBuf, Option<PathBuf>, xxhash_rust::xxh3::Xxh3Builder>>;
 
 /// A reimplementation of std::fs::canonicalize with intermediary caching.
 pub fn canonicalize(
@@ -31,7 +36,7 @@ pub fn canonicalize(
           ret.push(c);
 
           // First, check the cache for the path up to this point.
-          let read = cache.read().unwrap();
+          let read = cache.read();
           let cached = read.get(&ret).cloned();
           drop(read);
           let link = if let Some(cached) = cached {
@@ -43,15 +48,12 @@ pub fn canonicalize(
           } else {
             let stat = std::fs::symlink_metadata(&ret)?;
             if !stat.is_symlink() {
-              cache.write().unwrap().insert(ret.clone(), None);
+              cache.write().insert(ret.clone(), None);
               continue;
             }
 
             let link = std::fs::read_link(&ret)?;
-            cache
-              .write()
-              .unwrap()
-              .insert(ret.clone(), Some(link.clone()));
+            cache.write().insert(ret.clone(), Some(link.clone()));
             link
           };
 

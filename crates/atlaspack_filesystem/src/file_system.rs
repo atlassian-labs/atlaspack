@@ -1,30 +1,37 @@
+//! Abstraction of the file system
+//!
+//! This module contains traits and implementations that replicate
+//! the functionality of the Rust standard library file system
+
 use std::fs;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::SystemTime;
 
-#[mockall::automock]
+pub type FileSystemRef = Arc<dyn FileSystem + Send + Sync>;
+
 pub trait FileSystem {
-  fn cwd() -> io::Result<PathBuf> {
+  fn cwd(&self) -> io::Result<PathBuf> {
     unimplemented!()
   }
 
-  fn canonicalize<P: AsRef<Path> + 'static>(
+  fn canonicalize<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<PathBuf> {
     unimplemented!()
   }
 
-  fn read_link<P: AsRef<Path> + 'static>(
+  fn read_link<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<PathBuf> {
     unimplemented!()
   }
 
-  fn copy<P: AsRef<Path> + 'static, Q: AsRef<Path> + 'static>(
+  fn copy<P: AsRef<Path>, Q: AsRef<Path>>(
     &self,
     _from: P,
     _to: Q,
@@ -32,21 +39,21 @@ pub trait FileSystem {
     unimplemented!()
   }
 
-  fn create_dir<P: AsRef<Path> + 'static>(
+  fn create_dir<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn create_dir_all<P: AsRef<Path> + 'static>(
+  fn create_dir_all<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn hard_link<P: AsRef<Path> + 'static, Q: AsRef<Path> + 'static>(
+  fn hard_link<P: AsRef<Path>, Q: AsRef<Path>>(
     &self,
     _original: P,
     _link: Q,
@@ -54,56 +61,56 @@ pub trait FileSystem {
     unimplemented!()
   }
 
-  fn metadata<P: AsRef<Path> + 'static>(
+  fn metadata<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<Box<dyn Metadata>> {
     unimplemented!()
   }
 
-  fn read<P: AsRef<Path> + 'static>(
+  fn read<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<Vec<u8>> {
     unimplemented!()
   }
 
-  fn read_dir<P: AsRef<Path> + 'static>(
+  fn read_dir<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<fs::ReadDir> {
     unimplemented!()
   }
 
-  fn read_to_string<P: AsRef<Path> + 'static>(
+  fn read_to_string<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<String> {
     unimplemented!()
   }
 
-  fn remove_dir<P: AsRef<Path> + 'static>(
+  fn remove_dir<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn remove_dir_all<P: AsRef<Path> + 'static>(
+  fn remove_dir_all<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn remove_file<P: AsRef<Path> + 'static>(
+  fn remove_file<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<()> {
     unimplemented!()
   }
 
-  fn rename<P: AsRef<Path> + 'static, Q: AsRef<Path> + 'static>(
+  fn rename<P: AsRef<Path>, Q: AsRef<Path>>(
     &self,
     _from: P,
     _to: Q,
@@ -111,7 +118,7 @@ pub trait FileSystem {
     unimplemented!()
   }
 
-  fn set_permissions<P: AsRef<Path> + 'static, T: Permissions + 'static>(
+  fn set_permissions<P: AsRef<Path>, T: Permissions>(
     &self,
     _path: P,
     _perm: T,
@@ -119,14 +126,14 @@ pub trait FileSystem {
     unimplemented!()
   }
 
-  fn symlink_metadata<P: AsRef<Path> + 'static>(
+  fn symlink_metadata<P: AsRef<Path>>(
     &self,
     _path: P,
   ) -> io::Result<Box<dyn Metadata>> {
     unimplemented!()
   }
 
-  fn write<P: AsRef<Path> + 'static, C: AsRef<[u8]> + 'static>(
+  fn write<P: AsRef<Path>, C: AsRef<[u8]>>(
     &self,
     _path: P,
     _contents: C,
@@ -135,7 +142,6 @@ pub trait FileSystem {
   }
 }
 
-#[mockall::automock]
 pub trait Metadata {
   fn accessed(&self) -> io::Result<SystemTime> {
     unimplemented!()
@@ -174,7 +180,6 @@ pub trait Metadata {
   }
 }
 
-#[mockall::automock]
 pub trait Permissions {
   fn readonly(&self) -> bool {
     unimplemented!()
@@ -201,7 +206,6 @@ pub trait Permissions {
   }
 }
 
-#[mockall::automock]
 pub trait FileType {
   fn is_dir(&self) -> bool {
     unimplemented!()

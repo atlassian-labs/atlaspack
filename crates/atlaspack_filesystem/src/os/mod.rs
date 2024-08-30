@@ -1,3 +1,4 @@
+mod canonicalize;
 mod file_system;
 mod file_type;
 mod metadata;
