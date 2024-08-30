@@ -168,14 +168,13 @@ function getAssetGraph(serializedGraph, options) {
         value: null,
       });
     } else if (node.type === 'asset') {
-      let id = node.value.id;
-      let asset = node.value.asset;
+      let asset = node.value;
+      let id = asset.id;
 
       asset.meta.id = id;
 
       asset = {
         ...asset,
-        id,
         env: {
           ...asset.env,
           id: getEnvId(asset.env),

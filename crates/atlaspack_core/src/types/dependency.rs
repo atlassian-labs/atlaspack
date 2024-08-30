@@ -153,10 +153,10 @@ impl Dependency {
     }
   }
 
-  pub fn id(&self) -> u64 {
+  pub fn id(&self) -> String {
     let mut hasher = crate::hash::IdentifierHasher::default();
     self.hash(&mut hasher);
-    hasher.finish()
+    format!("{:016x}", hasher.finish())
   }
 
   pub fn set_placeholder(&mut self, placeholder: impl Into<serde_json::Value>) {

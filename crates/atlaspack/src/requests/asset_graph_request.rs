@@ -248,7 +248,7 @@ impl AssetGraphBuilder {
       .insert(request_id, asset_node_index);
 
     // Connect dependencies of the Asset
-    let mut unique_deps: IndexMap<u64, Dependency> = IndexMap::new();
+    let mut unique_deps: IndexMap<String, Dependency> = IndexMap::new();
 
     for mut dependency in dependencies {
       unique_deps
