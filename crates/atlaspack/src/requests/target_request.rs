@@ -261,6 +261,7 @@ impl TargetRequest {
       None => {}
       Some(browserslist) => {
         let browserslist = match browserslist {
+          BrowsersList::Browser(browser) => vec![browser],
           BrowsersList::Browsers(browsers) => browsers,
           BrowsersList::BrowsersByEnv(browsers_by_env) => browsers_by_env
             .get(&env)
