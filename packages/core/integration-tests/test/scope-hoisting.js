@@ -5836,7 +5836,15 @@ describe('scope hoisting', function () {
       {assets: ['b.js']},
     ]);
 
-    assert.deepEqual(await run(b), 43);
+    assert.deepEqual(
+      await runBundle(
+        b,
+        b
+          .getBundles()
+          .find(bundle => bundle.name.includes('scope-hoisting.js')),
+      ),
+      43,
+    );
   });
 
   it.v2(
