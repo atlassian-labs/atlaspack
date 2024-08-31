@@ -2278,17 +2278,19 @@ describe('scope hoisting', function () {
       assert.strictEqual(contents.trim().length, 0);
     });
 
-    it.v2('should support the jsx pragma', async function () {
+    it('should support the jsx pragma', async function () {
       let b = await bundle(
-        path.join(__dirname, '/integration/scope-hoisting/es6/jsx-pragma/a.js'),
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/jsx-pragma/a.jsx',
+        ),
       );
 
       let output = await run(b);
-      assert.deepEqual(output, {
-        children: 'Test',
-        props: null,
-        type: 'span',
-      });
+
+      assert.equal(output.children, 'Test');
+      assert.equal(output.type, 'span');
+      assert.equal(output.props.test, 'working');
     });
 
     it('should not nameclash with internal variables', async function () {
