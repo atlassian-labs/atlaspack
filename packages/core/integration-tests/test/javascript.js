@@ -200,24 +200,21 @@ describe('javascript', function () {
     assert.equal(output(), 7);
   });
 
-  it.v2(
-    'should preserve hashbangs in bundles and preserve executable file mode',
-    async () => {
-      let fixturePath = path.join(__dirname, '/integration/node_hashbang');
-      await bundle(path.join(fixturePath, 'main.js'));
+  it('should preserve hashbangs in bundles and preserve executable file mode', async () => {
+    let fixturePath = path.join(__dirname, '/integration/node_hashbang');
+    await bundle(path.join(fixturePath, 'main.js'));
 
-      let mainPath = path.join(fixturePath, 'dist', 'node', 'main.js');
-      let main = await outputFS.readFile(mainPath, 'utf8');
-      assert.equal(main.lastIndexOf('#!/usr/bin/env node\n'), 0);
-      assert.equal(
-        (await outputFS.stat(mainPath)).mode,
-        (await inputFS.stat(path.join(fixturePath, 'main.js'))).mode,
-      );
-      await outputFS.rimraf(path.join(fixturePath, 'dist'));
-    },
-  );
+    let mainPath = path.join(fixturePath, 'dist', 'node', 'main.js');
+    let main = await outputFS.readFile(mainPath, 'utf8');
+    assert.equal(main.lastIndexOf('#!/usr/bin/env node\n'), 0);
+    assert.equal(
+      (await outputFS.stat(mainPath)).mode,
+      (await inputFS.stat(path.join(fixturePath, 'main.js'))).mode,
+    );
+    await outputFS.rimraf(path.join(fixturePath, 'dist'));
+  });
 
-  it.v2('should not preserve hashbangs in browser bundles', async () => {
+  it('should not preserve hashbangs in browser bundles', async () => {
     let fixturePath = path.join(__dirname, '/integration/node_hashbang');
     await bundle(path.join(fixturePath, 'main.js'));
 
@@ -229,7 +226,7 @@ describe('javascript', function () {
     await outputFS.rimraf(path.join(fixturePath, 'dist'));
   });
 
-  it.v2('should preserve hashbangs in scopehoisted bundles', async () => {
+  it('should preserve hashbangs in scopehoisted bundles', async () => {
     let fixturePath = path.join(__dirname, '/integration/node_hashbang');
     await bundle(path.join(__dirname, '/integration/node_hashbang/main.js'), {
       defaultTargetOptions: {
