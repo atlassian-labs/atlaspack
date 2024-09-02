@@ -424,6 +424,8 @@ dependencies = [
  "atlaspack-js-swc-core",
  "atlaspack_core",
  "atlaspack_filesystem",
+ "criterion",
+ "glob-match",
  "indexmap 2.2.6",
  "pretty_assertions",
  "serde",

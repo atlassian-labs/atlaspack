@@ -135,6 +135,7 @@ export default class Atlaspack {
           : entries == null
           ? undefined
           : [entries],
+        env: resolvedOptions.env,
         fs: inputFS && toFileSystemV3(inputFS),
         defaultTargetOptions: {
           // $FlowFixMe projectPath is just a string

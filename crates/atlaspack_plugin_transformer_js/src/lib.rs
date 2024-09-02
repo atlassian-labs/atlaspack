@@ -1,6 +1,5 @@
-#![deny(unused_crate_dependencies)]
+pub use js_transformer::AtlaspackJsTransformerPlugin;
 
-pub use transformer::AtlaspackJsTransformerPlugin;
-
-mod transformer;
+mod js_transformer;
+pub mod js_transformer_config;
 mod ts_config;

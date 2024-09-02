@@ -10,7 +10,11 @@ use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
   Asset, BuildMode, Diagnostic, ErrorKind, FileType, LogLevel, OutputFormat, SourceType,
 };
+use glob_match::glob_match;
+use serde::Deserialize;
+use swc_core::atoms::Atom;
 
+use crate::js_transformer_config::{InlineEnvironment, JsTransformerConfig};
 use crate::ts_config::{Jsx, Target, TsConfig};
 
 mod conversion;
@@ -29,12 +33,34 @@ mod test_helpers;
 ///   mapping to a mangled name that the SWC transformer replaced in the source file + the source
 ///   module and the source name that has been imported)
 pub struct AtlaspackJsTransformerPlugin {
+  cache: Cache,
+  config: JsTransformerConfig,
   options: Arc<PluginOptions>,
   ts_config: Option<TsConfig>,
 }
 
+#[derive(Default)]
+struct Cache {
+  env_variables: EnvVariablesCache,
+}
+
+#[derive(Default)]
+struct EnvVariablesCache {
+  allowlist: Option<HashMap<Atom, Atom>>,
+  disabled: Option<HashMap<Atom, Atom>>,
+  enabled: Option<HashMap<Atom, Atom>>,
+}
+
+#[derive(Deserialize)]
+struct PackageJson {
+  #[serde(rename = "@atlaspack/transformer-js")]
+  config: Option<JsTransformerConfig>,
+}
+
 impl AtlaspackJsTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Result<Self, Error> {
+    let package_json = ctx.config.load_package_json::<PackageJson>()?;
+
     let ts_config = ctx
       .config
       .load_json_config::<TsConfig>("tsconfig.json")
@@ -51,9 +77,89 @@ impl AtlaspackJsTransformerPlugin {
       .ok();
 
     Ok(Self {
+      cache: Cache::default(),
+      config: package_json.contents.config.unwrap_or_default(),
       options: ctx.options.clone(),
       ts_config,
     })
+  }
+
+  fn env_variables(&mut self, asset: &Asset) -> HashMap<Atom, Atom> {
+    if self.options.env.is_none()
+      || self
+        .options
+        .env
+        .as_ref()
+        .is_some_and(|vars| vars.is_empty())
+    {
+      return HashMap::new();
+    }
+
+    let env_vars = self.options.env.clone().unwrap_or_default();
+    let inline_environment = self
+      .config
+      .inline_environment
+      .clone()
+      .unwrap_or(InlineEnvironment::Enabled(asset.is_source));
+
+    match inline_environment {
+      InlineEnvironment::Enabled(enabled) => match enabled {
+        false => {
+          if let Some(vars) = self.cache.env_variables.disabled.as_ref() {
+            return vars.clone();
+          }
+
+          let mut vars: HashMap<Atom, Atom> = HashMap::new();
+
+          if let Some(node_env) = env_vars.get("NODE_ENV") {
+            vars.insert("NODE_ENV".into(), node_env.as_str().into());
+          }
+
+          if let Some(build_env) = env_vars.get("ATLASPACK_BUILD_ENV") {
+            if build_env == "test" {
+              vars.insert("ATLASPACK_BUILD_ENV".into(), "test".into());
+            }
+          }
+
+          self.cache.env_variables.disabled = Some(vars.clone());
+
+          vars
+        }
+        true => {
+          if let Some(vars) = self.cache.env_variables.enabled.as_ref() {
+            return vars.clone();
+          }
+
+          let vars = env_vars
+            .iter()
+            .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
+            .collect::<HashMap<Atom, Atom>>();
+
+          self.cache.env_variables.enabled = Some(vars.clone());
+
+          vars
+        }
+      },
+      InlineEnvironment::Environments(environments) => {
+        if let Some(vars) = self.cache.env_variables.allowlist.as_ref() {
+          return vars.clone();
+        }
+
+        let mut vars: HashMap<Atom, Atom> = HashMap::new();
+        for env_glob in environments {
+          for (env_var, value) in env_vars
+            .iter()
+            .filter(|(key, _value)| glob_match(&env_glob, key))
+          {
+            vars.insert(env_var.as_str().into(), value.as_str().into());
+          }
+        }
+
+        self.cache.env_variables.allowlist = Some(vars.clone());
+
+        vars
+      }
+    }
   }
 }
 
@@ -69,11 +175,6 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does a lot of equivalent work to `JSTransformer::transform` in
   /// `packages/transformers/js`
   fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
-    let compiler_options = self
-      .ts_config
-      .as_ref()
-      .and_then(|ts| ts.compiler_options.as_ref());
-
     let env = asset.env.clone();
     let file_type = asset.file_type.clone();
     let is_node = env.context.is_node();
@@ -109,6 +210,13 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       }
     }
 
+    let env_vars = self.env_variables(&asset);
+
+    let compiler_options = self
+      .ts_config
+      .as_ref()
+      .and_then(|ts| ts.compiler_options.as_ref());
+
     let transformation_result = atlaspack_js_swc_core::transform(
       atlaspack_js_swc_core::Config {
         // TODO: Infer from package.json
@@ -124,19 +232,14 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         decorators: compiler_options
           .and_then(|co| co.experimental_decorators)
           .unwrap_or_default(),
-        env: self
-          .options
-          .env
-          .clone()
-          .unwrap_or_default()
-          .iter()
-          .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
-          .collect(),
+        env: env_vars,
         filename: asset
           .file_path
           .to_str()
           .ok_or_else(|| anyhow!("Invalid non UTF-8 file-path"))?
           .to_string(),
+        inline_constants: self.config.inline_constants.unwrap_or_default(),
+        inline_fs: self.config.inline_fs.unwrap_or_default() && !env.context.is_node(),
         insert_node_globals: !is_node && env.source_type != SourceType::Script,
         is_browser: env.context.is_browser(),
         is_development: self.options.mode == BuildMode::Development,
@@ -371,12 +474,15 @@ exports.hello = function() {};
 
   fn run_test(asset: Asset) -> anyhow::Result<TransformResult> {
     let file_system = Arc::new(InMemoryFileSystem::default());
+    let project_root = PathBuf::default();
+
+    file_system.write_file(&project_root.join("package.json"), String::from("{}"));
 
     let ctx = PluginContext {
       config: Arc::new(ConfigLoader {
         fs: file_system.clone(),
-        project_root: PathBuf::default(),
-        search_path: PathBuf::default(),
+        project_root: project_root.clone(),
+        search_path: project_root.clone(),
       }),
       file_system,
       logger: PluginLogger::default(),

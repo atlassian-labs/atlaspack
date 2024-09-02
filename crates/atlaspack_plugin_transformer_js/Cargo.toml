@@ -4,16 +4,22 @@ version = "0.1.0"
 edition = "2021"
 description = "JavaScript Transformer Plugin for the Atlaspack Bundler"
 
-[dev-dependencies]
-atlaspack_filesystem = { path = "../atlaspack_filesystem" }
-
-pretty_assertions = "1.4.0"
+[[bench]]
+name = "env_variables_benchmark"
+harness = false
 
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
+atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 
 anyhow = "1"
+glob-match = "0.2.1"
 indexmap = "2.2.6"
-atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 serde = { version = "1.0.200", features = ["derive"] }
 swc_core = { version = "0.96", features = ["ecma_ast"] }
+
+[dev-dependencies]
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+
+criterion = "0.5.1"
+pretty_assertions = "1.4.0"

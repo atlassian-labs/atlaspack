@@ -390,36 +390,42 @@ mod test {
 
   #[test]
   fn test_asset_graph_request_with_a_single_entry_with_no_dependencies() {
-    let _ = tracing_subscriber::FmtSubscriber::builder()
-      .with_max_level(Level::DEBUG)
-      .try_init();
-
-    let mut options = RequestTrackerTestOptions::default();
-    let fs = InMemoryFileSystem::default();
     #[cfg(not(target_os = "windows"))]
     let temporary_dir = PathBuf::from("/atlaspack_tests");
     #[cfg(target_os = "windows")]
     let temporary_dir = PathBuf::from("c:/windows/atlaspack_tests");
+
     assert!(temporary_dir.is_absolute());
+
+    let _ = tracing_subscriber::FmtSubscriber::builder()
+      .with_max_level(Level::DEBUG)
+      .try_init();
+
+    let fs = InMemoryFileSystem::default();
+
     fs.create_directory(&temporary_dir).unwrap();
     fs.set_current_working_directory(&temporary_dir); // <- resolver is broken without this
-    options
-      .atlaspack_options
-      .entries
-      .push(temporary_dir.join("entry.js").to_str().unwrap().to_string());
-    options.project_root = temporary_dir.clone();
-    options.search_path = temporary_dir.clone();
     fs.write_file(
       &temporary_dir.join("entry.js"),
       String::from(
         r#"
-console.log('hello world');
+          console.log('hello world');
         "#,
       ),
     );
-    options.fs = Arc::new(fs);
 
-    let mut request_tracker = request_tracker(options);
+    fs.write_file(&temporary_dir.join("package.json"), String::from("{}"));
+
+    let mut request_tracker = request_tracker(RequestTrackerTestOptions {
+      atlaspack_options: AtlaspackOptions {
+        entries: vec![temporary_dir.join("entry.js").to_str().unwrap().to_string()],
+        ..AtlaspackOptions::default()
+      },
+      fs: Arc::new(fs),
+      project_root: temporary_dir.clone(),
+      search_path: temporary_dir.clone(),
+      ..RequestTrackerTestOptions::default()
+    });
 
     let asset_graph_request = AssetGraphRequest {};
     let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
@@ -453,7 +459,7 @@ console.log('hello world');
       Arc::new(Code::from(
         String::from(
           r#"
-console.log('hello world');
+            console.log('hello world');
         "#
         )
         .trim_start()
@@ -504,6 +510,8 @@ console.log('hello world');
         "#,
       ),
     );
+
+    fs.write_file(&temporary_dir.join("package.json"), String::from("{}"));
 
     setup_core_modules(&fs, &core_path);
 

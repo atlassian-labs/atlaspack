@@ -2,7 +2,7 @@ use std::path::Path;
 
 use atlaspack_core::types::Symbol;
 
-use crate::transformer::conversion::loc::convert_loc;
+use crate::js_transformer::conversion::loc::convert_loc;
 
 /// Convert `CollectImportedSymbol`, `ImportedSymbol` and into `Symbol`
 macro_rules! convert_symbol {
@@ -54,7 +54,7 @@ mod test {
 
   use atlaspack_core::types::{Location, SourceLocation};
 
-  use crate::transformer::test_helpers::{make_test_swc_config, run_swc_core_transform};
+  use crate::js_transformer::test_helpers::{make_test_swc_config, run_swc_core_transform};
 
   use super::*;
 

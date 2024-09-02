@@ -1378,50 +1378,41 @@ describe('javascript', function () {
     },
   );
 
-  it.v2(
-    'should not insert environment variables in browser environment if disabled',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-disabled/index.js'),
-        {
-          env: {FOOBAR: 'abc'},
-        },
-      );
+  it('should not insert environment variables in browser environment if disabled', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-disabled/index.js'),
+      {
+        env: {FOOBAR: 'abc'},
+      },
+    );
 
-      let output = await run(b);
-      assert.ok(!output.toString().includes('process.env'));
-      assert.equal(output(), 'undefined:undefined:undefined');
-    },
-  );
+    let output = await run(b);
+    assert.ok(!output.toString().includes('process.env'));
+    assert.equal(output(), 'undefined:undefined:undefined');
+  });
 
-  it.v2(
-    'should only insert environment variables in browser environment matching the glob',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-disabled-glob/index.js'),
-        {
-          env: {A_1: 'abc', B_1: 'def', B_2: 'ghi'},
-        },
-      );
+  it('should only insert environment variables in browser environment matching the glob', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-disabled-glob/index.js'),
+      {
+        env: {A_1: 'abc', B_1: 'def', B_2: 'ghi'},
+      },
+    );
 
-      let output = await run(b);
-      assert.ok(!output.toString().includes('process.env'));
-      assert.equal(output(), 'undefined:def:ghi');
-    },
-  );
+    let output = await run(b);
+    assert.ok(!output.toString().includes('process.env'));
+    assert.equal(output(), 'undefined:def:ghi');
+  });
 
-  it.v2(
-    'should be able to inline environment variables in browser environment',
-    async function () {
-      let b = await bundle(path.join(__dirname, '/integration/env/index.js'), {
-        env: {NODE_ENV: 'abc'},
-      });
+  it('should be able to inline environment variables in browser environment', async function () {
+    let b = await bundle(path.join(__dirname, '/integration/env/index.js'), {
+      env: {NODE_ENV: 'abc'},
+    });
 
-      let output = await run(b);
-      assert.ok(!output.toString().includes('process.env'));
-      assert.equal(output(), 'abc:abc');
-    },
-  );
+    let output = await run(b);
+    assert.ok(!output.toString().includes('process.env'));
+    assert.equal(output(), 'abc:abc');
+  });
 
   it("should insert the user's NODE_ENV as process.env.NODE_ENV if passed", async function () {
     let b = await bundle(path.join(__dirname, '/integration/env/index.js'), {
@@ -1465,104 +1456,86 @@ describe('javascript', function () {
     assert.strictEqual(output, 'XYZ');
   });
 
-  it.v2(
-    'should inline environment variables when destructured in a variable declaration',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-destructuring/index.js'),
-        {
-          env: {TEST: 'XYZ'},
-          defaultTargetOptions: {
-            engines: {
-              browsers: '>= 0.25%',
-            },
+  it('should inline environment variables when destructured in a variable declaration', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-destructuring/index.js'),
+      {
+        env: {TEST: 'XYZ'},
+        defaultTargetOptions: {
+          engines: {
+            browsers: '>= 0.25%',
           },
         },
-      );
+      },
+    );
 
-      let contents = await outputFS.readFile(
-        b.getBundles()[0].filePath,
-        'utf8',
-      );
-      assert(!contents.includes('process.env'));
+    let contents = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(!contents.includes('process.env'));
 
-      let output = await run(b);
-      assert.deepEqual(output, {
-        env: {},
-        NODE_ENV: 'test',
-        renamed: 'XYZ',
-        computed: undefined,
-        fallback: 'yo',
-        rest: {},
-        other: 'hi',
-      });
-    },
-  );
+    let output = await run(b);
+    assert.deepEqual(output, {
+      env: {},
+      NODE_ENV: 'test',
+      renamed: 'XYZ',
+      computed: undefined,
+      fallback: 'yo',
+      rest: {},
+      other: 'hi',
+    });
+  });
 
-  it.v2(
-    'should inline environment variables when destructured in an assignment',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-destructuring/assign.js'),
-        {
-          env: {TEST: 'XYZ'},
-          defaultTargetOptions: {
-            engines: {
-              browsers: '>= 0.25%',
-            },
+  it('should inline environment variables when destructured in an assignment', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-destructuring/assign.js'),
+      {
+        env: {TEST: 'XYZ'},
+        defaultTargetOptions: {
+          engines: {
+            browsers: '>= 0.25%',
           },
         },
-      );
+      },
+    );
 
-      let contents = await outputFS.readFile(
-        b.getBundles()[0].filePath,
-        'utf8',
-      );
-      assert(!contents.includes('process.env'));
+    let contents = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(!contents.includes('process.env'));
 
-      let output = await run(b);
-      assert.deepEqual(output, {
-        env: {},
-        NODE_ENV: 'test',
-        renamed: 'XYZ',
-        computed: undefined,
-        fallback: 'yo',
-        rest: {},
-        result: {},
-      });
-    },
-  );
+    let output = await run(b);
+    assert.deepEqual(output, {
+      env: {},
+      NODE_ENV: 'test',
+      renamed: 'XYZ',
+      computed: undefined,
+      fallback: 'yo',
+      rest: {},
+      result: {},
+    });
+  });
 
-  it.v2(
-    'should inline environment variables with in binary expression whose right branch is process.env and left branch is string literal',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-binary-in-expression/index.js'),
-        {
-          env: {ABC: 'any'},
-          defaultTargetOptions: {
-            engines: {
-              browsers: '>= 0.25%',
-            },
+  it('should inline environment variables with in binary expression whose right branch is process.env and left branch is string literal', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-binary-in-expression/index.js'),
+      {
+        env: {ABC: 'any'},
+        defaultTargetOptions: {
+          engines: {
+            browsers: '>= 0.25%',
           },
         },
-      );
+      },
+    );
 
-      let contents = await outputFS.readFile(
-        b.getBundles()[0].filePath,
-        'utf8',
-      );
-      assert(!contents.includes('process.env'));
+    let contents = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(!contents.includes('process.env'));
 
-      let output = await run(b);
-      assert.deepEqual(output, {
-        existVar: 'correct',
-        notExistVar: 'correct',
-      });
-    },
-  );
+    let output = await run(b);
+    assert.deepEqual(output, {
+      existVar: 'correct',
+      notExistVar: 'correct',
+    });
+  });
 
-  it.v2('should insert environment variables from a file', async function () {
+  it('should insert environment variables from a file', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/env-file/index.js'),
     );
@@ -1574,31 +1547,25 @@ describe('javascript', function () {
     assert.equal(output, 'bartest');
   });
 
-  it.v2(
-    "should insert environment variables matching the user's NODE_ENV if passed",
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-file/index.js'),
-        {env: {NODE_ENV: 'production'}},
-      );
+  it("should insert environment variables matching the user's NODE_ENV if passed", async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-file/index.js'),
+      {env: {NODE_ENV: 'production'}},
+    );
 
-      let output = await run(b);
-      assert.equal(output, 'productiontest');
-    },
-  );
+    let output = await run(b);
+    assert.equal(output, 'productiontest');
+  });
 
-  it.v2(
-    'should overwrite environment variables from a file if passed',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-file/index.js'),
-        {env: {BAR: 'baz'}},
-      );
+  it('should overwrite environment variables from a file if passed', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-file/index.js'),
+      {env: {BAR: 'baz'}},
+    );
 
-      let output = await run(b);
-      assert.equal(output, 'barbaz');
-    },
-  );
+    let output = await run(b);
+    assert.equal(output, 'barbaz');
+  });
 
   it.v2(
     'should insert environment variables from a file even if entry file is specified with source value in package.json',
@@ -2170,24 +2137,21 @@ describe('javascript', function () {
     },
   );
 
-  it.v2(
-    'should support excluding dependencies in falsy branches',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/falsy-dep/index.js'),
-      );
+  it('should support excluding dependencies in falsy branches', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/falsy-dep/index.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: ['index.js', 'true-alternate.js', 'true-consequent.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: ['index.js', 'true-alternate.js', 'true-consequent.js'],
+      },
+    ]);
 
-      let output = await run(b);
-      assert.equal(output, 2);
-    },
-  );
+    let output = await run(b);
+    assert.equal(output, 2);
+  });
 
   it.skip('should not autoinstall if resolve failed on installed module', async function () {
     let error;
