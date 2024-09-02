@@ -1587,7 +1587,7 @@ describe('scope hoisting', function () {
       });
     });
 
-    describe.v2('tree shaking dynamic imports', function () {
+    describe('tree shaking dynamic imports', function () {
       it.skip('supports tree shaking statically analyzable dynamic import: destructued await assignment', async function () {
         let b = await bundle(
           path.join(
@@ -1905,197 +1905,209 @@ describe('scope hoisting', function () {
         );
       });
 
-      it('throws an error for missing exports for dynamic import: destructured await declaration', async function () {
-        let source = path.join(
-          __dirname,
-          'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
-          'await-declaration-error.js',
-        );
-        let message = `async.js does not export 'missing'`;
-        await assert.rejects(
-          () =>
-            bundle(
-              path.join(
-                __dirname,
-                'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
-                'await-declaration-error.js',
+      it.v2(
+        'throws an error for missing exports for dynamic import: destructured await declaration',
+        async function () {
+          let source = path.join(
+            __dirname,
+            'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+            'await-declaration-error.js',
+          );
+          let message = `async.js does not export 'missing'`;
+          await assert.rejects(
+            () =>
+              bundle(
+                path.join(
+                  __dirname,
+                  'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+                  'await-declaration-error.js',
+                ),
               ),
-            ),
-          {
-            name: 'BuildError',
-            message,
-            diagnostics: [
-              {
-                message,
-                origin: '@atlaspack/core',
-                codeFrames: [
-                  {
-                    filePath: source,
-                    language: 'js',
-                    codeHighlights: [
-                      {
-                        message: undefined,
-                        start: {
-                          column: 8,
-                          line: 2,
+            {
+              name: 'BuildError',
+              message,
+              diagnostics: [
+                {
+                  message,
+                  origin: '@atlaspack/core',
+                  codeFrames: [
+                    {
+                      filePath: source,
+                      language: 'js',
+                      codeHighlights: [
+                        {
+                          message: undefined,
+                          start: {
+                            column: 8,
+                            line: 2,
+                          },
+                          end: {
+                            column: 14,
+                            line: 2,
+                          },
                         },
-                        end: {
-                          column: 14,
-                          line: 2,
-                        },
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        );
-      });
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          );
+        },
+      );
 
-      it('throws an error for missing exports for dynamic import: namespace await declaration', async function () {
-        let source = path.join(
-          __dirname,
-          'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
-          'await-declaration-namespace-error.js',
-        );
-        let message = `async.js does not export 'missing'`;
-        await assert.rejects(
-          () =>
-            bundle(
-              path.join(
-                __dirname,
-                'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
-                'await-declaration-namespace-error.js',
+      it.v2(
+        'throws an error for missing exports for dynamic import: namespace await declaration',
+        async function () {
+          let source = path.join(
+            __dirname,
+            'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+            'await-declaration-namespace-error.js',
+          );
+          let message = `async.js does not export 'missing'`;
+          await assert.rejects(
+            () =>
+              bundle(
+                path.join(
+                  __dirname,
+                  'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+                  'await-declaration-namespace-error.js',
+                ),
               ),
-            ),
-          {
-            name: 'BuildError',
-            message,
-            diagnostics: [
-              {
-                message,
-                origin: '@atlaspack/core',
-                codeFrames: [
-                  {
-                    filePath: source,
-                    language: 'js',
-                    codeHighlights: [
-                      {
-                        message: undefined,
-                        start: {
-                          column: 10,
-                          line: 3,
+            {
+              name: 'BuildError',
+              message,
+              diagnostics: [
+                {
+                  message,
+                  origin: '@atlaspack/core',
+                  codeFrames: [
+                    {
+                      filePath: source,
+                      language: 'js',
+                      codeHighlights: [
+                        {
+                          message: undefined,
+                          start: {
+                            column: 10,
+                            line: 3,
+                          },
+                          end: {
+                            column: 19,
+                            line: 3,
+                          },
                         },
-                        end: {
-                          column: 19,
-                          line: 3,
-                        },
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        );
-      });
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          );
+        },
+      );
 
-      it('throws an error for missing exports for dynamic import: destructured then', async function () {
-        let source = path.join(
-          __dirname,
-          'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
-          'then-error.js',
-        );
-        let message = `async.js does not export 'missing'`;
-        await assert.rejects(
-          () =>
-            bundle(
-              path.join(
-                __dirname,
-                'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
-                'then-error.js',
+      it.v2(
+        'throws an error for missing exports for dynamic import: destructured then',
+        async function () {
+          let source = path.join(
+            __dirname,
+            'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+            'then-error.js',
+          );
+          let message = `async.js does not export 'missing'`;
+          await assert.rejects(
+            () =>
+              bundle(
+                path.join(
+                  __dirname,
+                  'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+                  'then-error.js',
+                ),
               ),
-            ),
-          {
-            name: 'BuildError',
-            message,
-            diagnostics: [
-              {
-                message,
-                origin: '@atlaspack/core',
-                codeFrames: [
-                  {
-                    filePath: source,
-                    language: 'js',
-                    codeHighlights: [
-                      {
-                        message: undefined,
-                        start: {
-                          column: 38,
-                          line: 1,
+            {
+              name: 'BuildError',
+              message,
+              diagnostics: [
+                {
+                  message,
+                  origin: '@atlaspack/core',
+                  codeFrames: [
+                    {
+                      filePath: source,
+                      language: 'js',
+                      codeHighlights: [
+                        {
+                          message: undefined,
+                          start: {
+                            column: 38,
+                            line: 1,
+                          },
+                          end: {
+                            column: 44,
+                            line: 1,
+                          },
                         },
-                        end: {
-                          column: 44,
-                          line: 1,
-                        },
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        );
-      });
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          );
+        },
+      );
 
-      it('throws an error for missing exports for dynamic import: namespace then', async function () {
-        let source = path.join(
-          __dirname,
-          'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
-          'then-namespace-error.js',
-        );
-        let message = `async.js does not export 'missing'`;
-        await assert.rejects(
-          () =>
-            bundle(
-              path.join(
-                __dirname,
-                'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
-                'then-namespace-error.js',
+      it.v2(
+        'throws an error for missing exports for dynamic import: namespace then',
+        async function () {
+          let source = path.join(
+            __dirname,
+            'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+            'then-namespace-error.js',
+          );
+          let message = `async.js does not export 'missing'`;
+          await assert.rejects(
+            () =>
+              bundle(
+                path.join(
+                  __dirname,
+                  'integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+                  'then-namespace-error.js',
+                ),
               ),
-            ),
-          {
-            name: 'BuildError',
-            message,
-            diagnostics: [
-              {
-                message,
-                origin: '@atlaspack/core',
-                codeFrames: [
-                  {
-                    filePath: source,
-                    language: 'js',
-                    codeHighlights: [
-                      {
-                        message: undefined,
-                        start: {
-                          column: 45,
-                          line: 1,
+            {
+              name: 'BuildError',
+              message,
+              diagnostics: [
+                {
+                  message,
+                  origin: '@atlaspack/core',
+                  codeFrames: [
+                    {
+                      filePath: source,
+                      language: 'js',
+                      codeHighlights: [
+                        {
+                          message: undefined,
+                          start: {
+                            column: 45,
+                            line: 1,
+                          },
+                          end: {
+                            column: 54,
+                            line: 1,
+                          },
                         },
-                        end: {
-                          column: 54,
-                          line: 1,
-                        },
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        );
-      });
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          );
+        },
+      );
     });
 
     it('keeps member expression with computed properties that are variables', async function () {
@@ -2130,35 +2142,32 @@ describe('scope hoisting', function () {
       assert.deepEqual(output, 'foo');
     });
 
-    it.v2(
-      'concatenates in the correct order when re-exporting assets were excluded',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/side-effects-false-order/index.js',
-          ),
-        );
+    it('concatenates in the correct order when re-exporting assets were excluded', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/side-effects-false-order/index.js',
+        ),
+      );
 
-        let contents = await outputFS.readFile(
-          b.getBundles()[0].filePath,
-          'utf8',
-        );
-        assert(/\s+class\s+/.test(contents));
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+      assert(/\s+class\s+/.test(contents));
 
-        let called = false;
-        let output = await run(b, {
-          sideEffect: () => {
-            called = true;
-          },
-        });
+      let called = false;
+      let output = await run(b, {
+        sideEffect: () => {
+          called = true;
+        },
+      });
 
-        assert(!called, 'side effect called');
-        assert.strictEqual(output[0], 'a');
-        assert.strictEqual(output[1], 'b');
-        assert(new output[3]() instanceof output[2]);
-      },
-    );
+      assert(!called, 'side effect called');
+      assert.strictEqual(output[0], 'a');
+      assert.strictEqual(output[1], 'b');
+      assert(new output[3]() instanceof output[2]);
+    });
 
     it('should support chained reexports from hybrid modules', async function () {
       let b = await bundle(
@@ -5827,7 +5836,15 @@ describe('scope hoisting', function () {
       {assets: ['b.js']},
     ]);
 
-    assert.deepEqual(await run(b), 43);
+    assert.deepEqual(
+      await runBundle(
+        b,
+        b
+          .getBundles()
+          .find(bundle => bundle.name.includes('scope-hoisting.js')),
+      ),
+      43,
+    );
   });
 
   it.v2(

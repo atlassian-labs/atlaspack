@@ -22,6 +22,7 @@ pub enum BrowserField {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub enum BrowsersList {
+  Browser(String),
   Browsers(Vec<String>),
   BrowsersByEnv(HashMap<String, Vec<String>>),
 }
