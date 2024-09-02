@@ -24,7 +24,6 @@ import {
   isAtlaspackV3,
 } from '@atlaspack/test-utils';
 import {makeDeferredWithPromise, normalizePath} from '@atlaspack/utils';
-import vm from 'vm';
 import Logger from '@atlaspack/logger';
 import nullthrows from 'nullthrows';
 import {md} from '@atlaspack/diagnostic';
@@ -440,7 +439,7 @@ describe('javascript', function () {
     'targetting esmodule, should modulepreload bundles when declared as an import attribute statically',
   );
 
-  it.v2('should remove import attributes', async () => {
+  it('should remove import attributes', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/dynamic-import-attributes/index.js'),
     );
@@ -856,36 +855,6 @@ describe('javascript', function () {
 
     let {default: promise} = await run(b);
     assert.ok(await promise);
-  });
-
-  it.v2('should support requiring JSON files', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/json/index.js'));
-
-    assertBundles(b, [
-      {
-        name: 'index.js',
-        assets: ['index.js', 'local.json'],
-      },
-    ]);
-
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-    assert.equal(output(), 3);
-  });
-
-  it.v2('should support requiring JSON5 files', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/json5/index.js'));
-
-    assertBundles(b, [
-      {
-        name: 'index.js',
-        assets: ['index.js', 'local.json5'],
-      },
-    ]);
-
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-    assert.equal(output(), 3);
   });
 
   it.v2('should support importing a URL to a raw asset', async function () {
@@ -1965,46 +1934,6 @@ describe('javascript', function () {
     assert.equal(output(), 3);
   });
 
-  it.v2('should support requiring YAML files', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/yaml/index.js'));
-
-    assertBundles(b, [
-      {
-        name: 'index.js',
-        assets: ['index.js', 'local.yaml'],
-        childBundles: [
-          {
-            type: 'map',
-          },
-        ],
-      },
-    ]);
-
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-    assert.equal(output(), 3);
-  });
-
-  it.v2('should support requiring TOML files', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/toml/index.js'));
-
-    assertBundles(b, [
-      {
-        name: 'index.js',
-        assets: ['index.js', 'local.toml'],
-        childBundles: [
-          {
-            type: 'map',
-          },
-        ],
-      },
-    ]);
-
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-    assert.equal(output(), 3);
-  });
-
   it.v2('should support requiring CoffeeScript files', async function () {
     let b = await bundle(path.join(__dirname, '/integration/coffee/index.js'));
 
@@ -2214,74 +2143,6 @@ describe('javascript', function () {
 
     assert.equal(typeof output.test, 'function');
     assert.equal(output.test(), 'pkg-main-module');
-  });
-
-  it.v2('should minify JSON files', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/uglify-json/index.json'),
-      {
-        defaultTargetOptions: {
-          shouldOptimize: true,
-          shouldScopeHoist: false,
-        },
-      },
-    );
-
-    let json = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(json.includes('{"test":"test"}'));
-
-    let output = await run(b);
-    assert.deepEqual(output, {test: 'test'});
-  });
-
-  it.v2('should minify JSON5 files', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/uglify-json5/index.json5'),
-      {
-        defaultTargetOptions: {
-          shouldOptimize: true,
-          shouldScopeHoist: false,
-        },
-      },
-    );
-
-    let json = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(json.includes('{"test":"test"}'));
-
-    let output = await run(b);
-    assert.deepEqual(output, {test: 'test'});
-  });
-
-  it.skip('should minify YAML for production', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/yaml/index.js'), {
-      defaultTargetOptions: {
-        shouldOptimize: true,
-        shouldScopeHoist: false,
-      },
-    });
-
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-    assert.equal(output(), 3);
-
-    let json = await outputFS.readFile('dist/index.js', 'utf8');
-    assert(json.includes('{a:1,b:{c:2}}'));
-  });
-
-  it.v2('should minify TOML for production', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/toml/index.js'), {
-      defaultTargetOptions: {
-        shouldOptimize: true,
-        shouldScopeHoist: false,
-      },
-    });
-
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-    assert.equal(output(), 3);
-
-    let json = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(json.includes('{a:1,b:{c:2}}'));
   });
 
   it.v2(
@@ -2809,182 +2670,6 @@ describe('javascript', function () {
 
     await run(b);
   });
-
-  it.v2(
-    "should inline a bundle's compiled text with `bundle-text`",
-    async () => {
-      let b = await bundle(
-        path.join(__dirname, '/integration/bundle-text/index.js'),
-      );
-
-      let cssBundleContent = (await run(b)).default;
-
-      assert(
-        cssBundleContent.startsWith(
-          `body {
-  background-color: #000;
-}
-
-.svg-img {
-  background-image: url("data:image/svg+xml,%3Csvg%3E%0A%0A%3C%2Fsvg%3E%0A");
-}`,
-        ),
-      );
-
-      assert(!cssBundleContent.includes('sourceMappingURL'));
-    },
-  );
-
-  it.v2(
-    'should not include the runtime manifest for `bundle-text`',
-    async () => {
-      let b = await bundle(
-        path.join(__dirname, '/integration/bundle-text/index.js'),
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            shouldScopeHoist: false,
-            shouldOptimize: false,
-          },
-        },
-      );
-
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          type: 'js',
-          assets: ['esmodule-helpers.js', 'index.js'],
-        },
-        {
-          type: 'svg',
-          assets: ['img.svg'],
-        },
-        {
-          type: 'css',
-          assets: ['text.scss'],
-        },
-      ]);
-
-      let cssBundleContent = (await run(b)).default;
-
-      assert(
-        cssBundleContent.startsWith(
-          `body {
-  background-color: #000;
-}
-
-.svg-img {
-  background-image: url("data:image/svg+xml,%3Csvg%3E%0A%0A%3C%2Fsvg%3E%0A");
-}`,
-        ),
-      );
-
-      assert(!cssBundleContent.includes('sourceMappingURL'));
-    },
-  );
-
-  it.v2(
-    "should inline an HTML bundle's compiled text with `bundle-text`",
-    async () => {
-      let b = await bundle(
-        path.join(__dirname, '/integration/bundle-text/index.html'),
-      );
-
-      let res = await run(b);
-      assert.equal(res.default, '<p>test</p>\n');
-    },
-  );
-
-  it.v2(
-    'should inline an HTML bundle and inline scripts with `bundle-text`',
-    async () => {
-      let b = await bundle(
-        path.join(__dirname, '/integration/bundle-text/inline.js'),
-      );
-
-      let res = await run(b);
-      assert.equal(
-        res.default,
-        `<p>test</p>\n<script>console.log('hi');\n\n</script>\n`,
-      );
-    },
-  );
-
-  it.v2(
-    "should inline a JS bundle's compiled text with `bundle-text` and HMR enabled",
-    async () => {
-      let b = await bundle(
-        path.join(__dirname, '/integration/bundle-text/javascript.js'),
-        {
-          hmrOptions: {},
-        },
-      );
-
-      let res = await run(b);
-      let log;
-      let ctx = vm.createContext({
-        console: {
-          log(x) {
-            log = x;
-          },
-        },
-      });
-      vm.runInContext(res.default, ctx);
-      assert.equal(log, 'hi');
-    },
-  );
-
-  it.v2(
-    "should inline a JS bundle's compiled text with `bundle-text` with symbol propagation",
-    async () => {
-      let b = await bundle(
-        path.join(__dirname, '/integration/bundle-text/javascript.js'),
-        {
-          mode: 'production',
-        },
-      );
-
-      let res = await run(b);
-      let log;
-      let ctx = vm.createContext({
-        console: {
-          log(x) {
-            log = x;
-          },
-        },
-      });
-      vm.runInContext(res, ctx);
-      assert.equal(log, 'hi');
-    },
-  );
-
-  it.v2(
-    "should inline a bundle's compiled text with `bundle-text` asynchronously",
-    async () => {
-      let b = await bundle(
-        path.join(__dirname, '/integration/bundle-text/async.js'),
-      );
-
-      let promise = (await run(b)).default;
-      assert.equal(typeof promise.then, 'function');
-
-      let cssBundleContent = await promise;
-
-      assert(
-        cssBundleContent.startsWith(
-          `body {
-  background-color: #000;
-}
-
-.svg-img {
-  background-image: url("data:image/svg+xml,%3Csvg%3E%0A%0A%3C%2Fsvg%3E%0A");
-}`,
-        ),
-      );
-
-      assert(!cssBundleContent.includes('sourceMappingURL'));
-    },
-  );
 
   it.v2(
     'should inline text content as url-encoded text and mime type with `data-url:*` imports',
