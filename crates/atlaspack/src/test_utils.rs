@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_config_fixtures::default_config;
@@ -16,6 +16,8 @@ use crate::{
 
 pub(crate) fn make_test_plugin_context() -> PluginContext {
   let fs = Arc::new(InMemoryFileSystem::default());
+
+  fs.write_file(Path::new("package.json"), String::from("{}"));
 
   PluginContext {
     config: Arc::new(ConfigLoader {

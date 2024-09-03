@@ -13,9 +13,11 @@ use atlaspack_core::types::{
   SourceLocation, SourceType, SpecifierType, Symbol,
 };
 
-use crate::transformer::conversion::dependency_kind::{convert_priority, convert_specifier_type};
-use crate::transformer::conversion::loc::convert_loc;
-use crate::transformer::conversion::symbol::{
+use crate::js_transformer::conversion::dependency_kind::{
+  convert_priority, convert_specifier_type,
+};
+use crate::js_transformer::conversion::loc::convert_loc;
+use crate::js_transformer::conversion::symbol::{
   transformer_collect_imported_symbol_to_symbol, transformer_exported_symbol_into_symbol,
   transformer_imported_symbol_to_symbol,
 };
@@ -611,7 +613,7 @@ fn convert_source_type(source_type: &Option<atlaspack_js_swc_core::SourceType>) 
 
 #[cfg(test)]
 mod test {
-  use crate::transformer::test_helpers::run_swc_core_transform;
+  use crate::js_transformer::test_helpers::run_swc_core_transform;
 
   use super::*;
 

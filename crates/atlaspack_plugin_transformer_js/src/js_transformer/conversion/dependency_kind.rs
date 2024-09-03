@@ -38,7 +38,7 @@ pub(crate) fn convert_specifier_type(
 
 #[cfg(test)]
 mod test {
-  use crate::transformer::test_helpers::run_swc_core_transform;
+  use crate::js_transformer::test_helpers::run_swc_core_transform;
   use atlaspack_js_swc_core::DependencyKind;
 
   use super::*;
