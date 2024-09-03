@@ -131,6 +131,7 @@ dependencies = [
  "atlaspack_package_manager",
  "atlaspack_plugin_resolver",
  "atlaspack_plugin_rpc",
+ "atlaspack_plugin_transformer_inline_string",
  "atlaspack_plugin_transformer_js",
  "dyn-hash",
  "indexmap 2.2.6",
@@ -414,6 +415,14 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "serde",
+]
+
+[[package]]
+name = "atlaspack_plugin_transformer_inline_string"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_core",
 ]
 
 [[package]]

@@ -21,7 +21,6 @@ import {
   outputFS,
   inputFS,
   fsFixture,
-  isAtlaspackV3,
 } from '@atlaspack/test-utils';
 import {makeDeferredWithPromise, normalizePath} from '@atlaspack/utils';
 import Logger from '@atlaspack/logger';
@@ -3404,22 +3403,19 @@ describe('javascript', function () {
     assert.deepEqual(res, {a: 4});
   });
 
-  it.v2(
-    'should not use arrow functions for reexport declarations unless supported',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, 'integration/js-export-arrow-support/index.js'),
-        {
-          // Remove comments containing "=>"
-          defaultTargetOptions: {
-            shouldOptimize: true,
-          },
+  it('should not use arrow functions for reexport declarations unless supported', async function () {
+    let b = await bundle(
+      path.join(__dirname, 'integration/js-export-arrow-support/index.js'),
+      {
+        // Remove comments containing "=>"
+        defaultTargetOptions: {
+          shouldOptimize: true,
         },
-      );
-      let content = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-      assert(!content.includes('=>'));
-    },
-  );
+      },
+    );
+    let content = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(!content.includes('=>'));
+  });
 
   it('should support import namespace declarations of other ES modules', async function () {
     let b = await bundle(
@@ -3690,39 +3686,36 @@ describe('javascript', function () {
     assert.equal(await res, true);
   });
 
-  it.v2(
-    'should support runtime module deduplication with scope hoisting',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, 'integration/js-runtime-dedup/index.js'),
-        {
-          mode: 'production',
-        },
-      );
+  it('should support runtime module deduplication with scope hoisting', async function () {
+    let b = await bundle(
+      path.join(__dirname, 'integration/js-runtime-dedup/index.js'),
+      {
+        mode: 'production',
+      },
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'js-loader.js',
-            'bundle-manifest.js',
-          ],
-        },
-        {
-          assets: ['async1.js', 'shared.js'],
-        },
-        {
-          assets: ['async2.js', 'shared.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: [
+          'index.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      {
+        assets: ['async1.js', 'shared.js'],
+      },
+      {
+        assets: ['async2.js', 'shared.js'],
+      },
+    ]);
 
-      let res = await run(b);
-      assert.equal(await res, true);
-    },
-  );
+    let res = await run(b);
+    assert.equal(await res, true);
+  });
 
   it.v2(
     'should remap locations in diagnostics using the input source map',
@@ -4097,36 +4090,33 @@ describe('javascript', function () {
       assert.equal(res.Foo, await res.LazyFoo);
     });
 
-    it.v2(
-      'supports both static and dynamic imports to the same specifier in the same file with scope hoisting',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/multiple-import-types/static-dynamic.js',
-          ),
-          {
-            defaultTargetOptions: {
-              outputFormat: 'esmodule',
-              isLibrary: true,
-              shouldScopeHoist: true,
-            },
+    it('supports both static and dynamic imports to the same specifier in the same file with scope hoisting', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'integration/multiple-import-types/static-dynamic.js',
+        ),
+        {
+          defaultTargetOptions: {
+            outputFormat: 'esmodule',
+            isLibrary: true,
+            shouldScopeHoist: true,
           },
-        );
+        },
+      );
 
-        assertBundles(b, [
-          {
-            type: 'js',
-            assets: ['static-dynamic.js', 'other.js'],
-          },
-        ]);
+      assertBundles(b, [
+        {
+          type: 'js',
+          assets: ['static-dynamic.js', 'other.js'],
+        },
+      ]);
 
-        let res = await run(b);
-        assert.equal(typeof res.Foo, 'function');
-        assert.equal(typeof res.LazyFoo, 'object');
-        assert.equal(res.Foo, await res.LazyFoo);
-      },
-    );
+      let res = await run(b);
+      assert.equal(typeof res.Foo, 'function');
+      assert.equal(typeof res.LazyFoo, 'object');
+      assert.equal(res.Foo, await res.LazyFoo);
+    });
 
     it('supports static, dynamic, and url to the same specifier in the same file', async function () {
       let b = await bundle(
@@ -4164,44 +4154,41 @@ describe('javascript', function () {
       );
     });
 
-    it.v2(
-      'supports static, dynamic, and url to the same specifier in the same file with scope hoisting',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/multiple-import-types/static-dynamic-url.js',
-          ),
-          {
-            defaultTargetOptions: {
-              outputFormat: 'esmodule',
-              isLibrary: true,
-              shouldScopeHoist: true,
-            },
+    it('supports static, dynamic, and url to the same specifier in the same file with scope hoisting', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'integration/multiple-import-types/static-dynamic-url.js',
+        ),
+        {
+          defaultTargetOptions: {
+            outputFormat: 'esmodule',
+            isLibrary: true,
+            shouldScopeHoist: true,
           },
-        );
+        },
+      );
 
-        assertBundles(b, [
-          {
-            type: 'js',
-            assets: ['static-dynamic-url.js', 'other.js'],
-          },
-          {
-            type: 'js',
-            assets: ['other.js'],
-          },
-        ]);
+      assertBundles(b, [
+        {
+          type: 'js',
+          assets: ['static-dynamic-url.js', 'other.js'],
+        },
+        {
+          type: 'js',
+          assets: ['other.js'],
+        },
+      ]);
 
-        let res = await run(b);
-        assert.equal(typeof res.Foo, 'function');
-        assert.equal(typeof res.LazyFoo, 'object');
-        assert.equal(res.Foo, await res.LazyFoo);
-        assert.equal(
-          res.url,
-          'http://localhost/' + path.basename(b.getBundles()[1].filePath),
-        );
-      },
-    );
+      let res = await run(b);
+      assert.equal(typeof res.Foo, 'function');
+      assert.equal(typeof res.LazyFoo, 'object');
+      assert.equal(res.Foo, await res.LazyFoo);
+      assert.equal(
+        res.url,
+        'http://localhost/' + path.basename(b.getBundles()[1].filePath),
+      );
+    });
 
     it('supports dynamic import and url to the same specifier in the same file', async function () {
       let b = await bundle(
@@ -4236,181 +4223,40 @@ describe('javascript', function () {
       );
     });
 
-    it.v2(
-      'supports dynamic import and url to the same specifier in the same file with scope hoisting',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/multiple-import-types/dynamic-url.js',
-          ),
-          {
-            defaultTargetOptions: {
-              outputFormat: 'esmodule',
-              isLibrary: true,
-              shouldScopeHoist: true,
-            },
+    it('supports dynamic import and url to the same specifier in the same file with scope hoisting', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'integration/multiple-import-types/dynamic-url.js',
+        ),
+        {
+          defaultTargetOptions: {
+            outputFormat: 'esmodule',
+            isLibrary: true,
+            shouldScopeHoist: true,
           },
-        );
+        },
+      );
 
-        assertBundles(b, [
-          {
-            type: 'js',
-            assets: ['dynamic-url.js'],
-          },
-          {
-            type: 'js',
-            assets: ['other.js'],
-          },
-        ]);
+      assertBundles(b, [
+        {
+          type: 'js',
+          assets: ['dynamic-url.js'],
+        },
+        {
+          type: 'js',
+          assets: ['other.js'],
+        },
+      ]);
 
-        let res = await run(b);
-        assert.equal(typeof res.lazy, 'object');
-        assert.equal(typeof (await res.lazy), 'function');
-        assert.equal(
-          res.url,
-          'http://localhost/' + path.basename(b.getBundles()[1].filePath),
-        );
-      },
-    );
-
-    it.v2(
-      'supports static import and inline bundle for the same asset',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/multiple-import-types/static-inline.js',
-          ),
-        );
-
-        assertBundles(b, [
-          {
-            type: 'js',
-            assets: ['static-inline.js', 'other.js', 'esmodule-helpers.js'],
-          },
-          {
-            type: 'js',
-            assets: ['other.js', 'esmodule-helpers.js'],
-          },
-        ]);
-
-        let res = await run(b);
-        assert.equal(typeof res.Foo, 'function');
-        assert.equal(typeof res.text, 'string');
-      },
-    );
-
-    it.v2(
-      'supports static import and inline bundle for the same asset with scope hoisting',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/multiple-import-types/static-inline.js',
-          ),
-          {
-            defaultTargetOptions: {
-              outputFormat: 'esmodule',
-              isLibrary: true,
-              shouldScopeHoist: true,
-            },
-          },
-        );
-
-        assertBundles(b, [
-          {
-            type: 'js',
-            assets: ['static-inline.js', 'other.js'],
-          },
-          {
-            type: 'js',
-            assets: ['other.js'],
-          },
-        ]);
-
-        let res = await run(b);
-        assert.equal(typeof res.Foo, 'function');
-        assert.equal(typeof res.text, 'string');
-      },
-    );
-
-    it.v2(
-      'supports dynamic import and inline bundle for the same asset',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/multiple-import-types/dynamic-inline.js',
-          ),
-        );
-
-        assertBundles(b, [
-          {
-            type: 'js',
-            assets: [
-              'dynamic-inline.js',
-              'esmodule-helpers.js',
-              'bundle-url.js',
-              'cacheLoader.js',
-              'js-loader.js',
-            ],
-          },
-          {
-            type: 'js',
-            assets: ['other.js'],
-          },
-          {
-            type: 'js',
-            assets: ['other.js', 'esmodule-helpers.js'],
-          },
-        ]);
-
-        let res = await run(b);
-        assert.equal(typeof res.lazy, 'object');
-        assert.equal(typeof (await res.lazy), 'function');
-        assert.equal(typeof res.text, 'string');
-      },
-    );
-
-    it.v2(
-      'supports dynamic import and inline bundle for the same asset with scope hoisting',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/multiple-import-types/dynamic-inline.js',
-          ),
-          {
-            defaultTargetOptions: {
-              outputFormat: 'esmodule',
-              isLibrary: true,
-              shouldScopeHoist: true,
-            },
-          },
-        );
-
-        assertBundles(b, [
-          {
-            type: 'js',
-            assets: ['dynamic-inline.js'],
-          },
-          {
-            type: 'js',
-            assets: ['other.js'],
-          },
-          {
-            type: 'js',
-            assets: ['other.js'],
-          },
-        ]);
-
-        let res = await run(b);
-        assert.equal(typeof res.lazy, 'object');
-        assert.equal(typeof (await res.lazy), 'function');
-        assert.equal(typeof res.text, 'string');
-      },
-    );
+      let res = await run(b);
+      assert.equal(typeof res.lazy, 'object');
+      assert.equal(typeof (await res.lazy), 'function');
+      assert.equal(
+        res.url,
+        'http://localhost/' + path.basename(b.getBundles()[1].filePath),
+      );
+    });
   });
 
   it('should avoid creating a bundle for lazy dependencies already available in a shared bundle', async function () {
@@ -5060,11 +4906,6 @@ describe('javascript', function () {
             // A different dependency order, but this is deemed acceptable as it's sideeffect free
             assert.deepEqual(calls, ['foo', 'key', 'index']);
           }
-        } else if (isAtlaspackV3) {
-          // Native AssetGraph doesn't skip the unused asset when
-          // transforming. We may choose to add this later, but it's not
-          // functionally broken.
-          assert.deepEqual(calls, ['key', 'foo', 'bar', 'types', 'index']);
         } else {
           assert.deepEqual(calls, ['key', 'foo', 'types', 'index']);
         }
@@ -5555,13 +5396,7 @@ describe('javascript', function () {
           {require: false},
         );
 
-        // Native AssetGraph doesn't skip the unused asset when
-        // transforming. We may choose to add this later, but it's not
-        // functionally broken.
-        let expectedCalls =
-          isAtlaspackV3 && !usesSymbolPropagation
-            ? ['other', 'index']
-            : ['index'];
+        let expectedCalls = ['index'];
 
         assert.deepEqual(calls, expectedCalls);
         assert.deepEqual(res.output, 'Message 1');
@@ -5877,12 +5712,7 @@ describe('javascript', function () {
           {require: false},
         );
 
-        // Native AssetGraph doesn't skip the unused asset when
-        // transforming. We may choose to add this later, but it's not
-        // functionally broken.
-        let devCalls = isAtlaspackV3
-          ? ['esm1', 'other', 'esm2', 'index']
-          : ['esm1', 'index'];
+        let devCalls = ['esm1', 'index'];
 
         assert.deepEqual(calls, shouldScopeHoist ? ['esm1'] : devCalls);
         assert.deepEqual(res.output, 'Message 1');

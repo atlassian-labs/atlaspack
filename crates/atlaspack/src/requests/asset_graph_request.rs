@@ -153,7 +153,11 @@ impl AssetGraphBuilder {
         query,
         can_defer,
       } => {
-        if !side_effects && can_defer && requested_symbols.is_empty() && dependency.has_symbols {
+        if !side_effects
+          && can_defer
+          && requested_symbols.is_empty()
+          && !dependency.symbols.is_none()
+        {
           *state = DependencyState::Deferred;
           return;
         }
@@ -260,7 +264,13 @@ impl AssetGraphBuilder {
           // dependencies post-transform but that needs further investigation to
           // resolve and understand...
           d.meta.append(&mut dependency.meta);
-          d.symbols.extend(dependency.symbols.clone());
+          if let Some(symbols) = d.symbols.as_mut() {
+            if let Some(merge_symbols) = dependency.symbols.as_ref() {
+              symbols.extend(merge_symbols.clone());
+            }
+          } else {
+            d.symbols = dependency.symbols.clone();
+          }
         })
         .or_insert(dependency.clone());
     }

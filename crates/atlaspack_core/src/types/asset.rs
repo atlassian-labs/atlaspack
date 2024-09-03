@@ -107,7 +107,7 @@ pub struct Asset {
   pub stats: AssetStats,
 
   /// The symbols that the asset exports
-  pub symbols: Vec<Symbol>,
+  pub symbols: Option<Vec<Symbol>>,
 
   /// A unique key that identifies an asset
   ///
@@ -161,10 +161,6 @@ pub struct Asset {
   /// export const MY_CONSTANT = 'some-value';
   /// ```
   pub is_constant_module: bool,
-
-  /// True if `Asset::symbols` has been populated. This field is deprecated and should be phased
-  /// out.
-  pub has_symbols: bool,
 }
 
 impl Asset {
@@ -190,14 +186,15 @@ impl Asset {
     let is_source = !file_path.ancestors().any(|p| p.ends_with("/node_modules"));
 
     Ok(Self {
-      id: create_asset_id(&env, &file_path, &pipeline, &query, &None),
-      file_path,
-      env,
       code: Arc::new(code),
-      side_effects,
+      id: create_asset_id(&env, &file_path, &pipeline, &query, &None),
+      env,
+      file_path,
       file_type,
       is_bundle_splittable: true,
       is_source,
+      pipeline,
+      side_effects,
       ..Asset::default()
     })
   }
@@ -220,6 +217,7 @@ impl Asset {
     self.meta.insert("shouldWrap".into(), value.into());
     self.should_wrap = value;
   }
+
   pub fn set_is_constant_module(&mut self, is_constant_module: bool) {
     self.is_constant_module = is_constant_module;
     if is_constant_module {
