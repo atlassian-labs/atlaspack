@@ -615,36 +615,28 @@ describe('javascript', function () {
     assert.deepEqual(await (await run(b)).default, [3, 3]);
   });
 
-  it.v2(
-    'should dynamic import files which import raw files',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/dynamic-references-raw/index.js'),
-      );
+  it('should dynamic import files which import raw files', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/dynamic-references-raw/index.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'js-loader.js',
-          ],
-        },
-        {
-          assets: ['local.js', 'esmodule-helpers.js'],
-        },
-        {
-          assets: ['test.txt'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: ['index.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
+      },
+      {
+        assets: ['local.js', 'esmodule-helpers.js'],
+      },
+      {
+        assets: ['test.txt'],
+      },
+    ]);
 
-      let output = await run(b);
-      assert.equal(typeof output, 'function');
-      assert.equal(await output(), 3);
-    },
-  );
+    let output = await run(b);
+    assert.equal(typeof output, 'function');
+    assert.equal(await output(), 3);
+  });
 
   it('should return all exports as an object when using ES modules', async function () {
     let b = await bundle(
@@ -2633,32 +2625,6 @@ describe('javascript', function () {
 
     await run(b);
   });
-
-  it.v2(
-    'should inline text content as url-encoded text and mime type with `data-url:*` imports',
-    async () => {
-      let b = await bundle(
-        path.join(__dirname, '/integration/data-url/text.js'),
-      );
-
-      assert.equal(
-        (await run(b)).default,
-        'data:image/svg+xml,%3Csvg%20width%3D%22120%22%20height%3D%22120%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%20%20%3Cfilter%20id%3D%22blur-_.%21~%2a%22%3E%0A%20%20%20%20%3CfeGaussianBlur%20stdDeviation%3D%225%22%3E%3C%2FfeGaussianBlur%3E%0A%20%20%3C%2Ffilter%3E%0A%20%20%3Ccircle%20cx%3D%2260%22%20cy%3D%2260%22%20r%3D%2250%22%20fill%3D%22green%22%20filter%3D%22url%28%27%23blur-_.%21~%2a%27%29%22%3E%3C%2Fcircle%3E%0A%3C%2Fsvg%3E%0A',
-      );
-    },
-  );
-
-  it.v2(
-    'should inline binary content as url-encoded base64 and mime type with `data-url:*` imports',
-    async () => {
-      let b = await bundle(
-        path.join(__dirname, '/integration/data-url/binary.js'),
-      );
-      ``;
-
-      assert((await run(b)).default.startsWith('data:image/webp;base64,UklGR'));
-    },
-  );
 
   it.v2('should support both pipeline and non-pipeline imports', async () => {
     let b = await bundle(

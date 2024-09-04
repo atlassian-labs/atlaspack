@@ -1,8 +1,8 @@
 [package]
-name = "atlaspack_plugin_transformer_inline_string"
+name = "atlaspack_plugin_transformer_raw"
 version = "0.1.0"
 edition = "2021"
-description = "Inline string transformer plugin for the Atlaspack Bundler"
+description = "Raw transformer plugin for the Atlaspack Bundler"
 
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }

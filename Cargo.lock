@@ -133,6 +133,7 @@ dependencies = [
  "atlaspack_plugin_rpc",
  "atlaspack_plugin_transformer_inline_string",
  "atlaspack_plugin_transformer_js",
+ "atlaspack_plugin_transformer_raw",
  "dyn-hash",
  "indexmap 2.2.6",
  "mockall",
@@ -423,6 +424,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack_core",
+ "atlaspack_filesystem",
 ]
 
 [[package]]
@@ -439,6 +441,15 @@ dependencies = [
  "pretty_assertions",
  "serde",
  "swc_core",
+]
+
+[[package]]
+name = "atlaspack_plugin_transformer_raw"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_core",
+ "atlaspack_filesystem",
 ]
 
 [[package]]

@@ -2,7 +2,7 @@
 name = "atlaspack_plugin_transformer_js"
 version = "0.1.0"
 edition = "2021"
-description = "JavaScript Transformer Plugin for the Atlaspack Bundler"
+description = "JavaScript transformer plugin for the Atlaspack Bundler"
 
 [[bench]]
 name = "env_variables_benchmark"
