@@ -459,6 +459,7 @@ export default (new Transformer({
       is_swc_helpers: /@swc[/\\]helpers/.test(asset.filePath),
       standalone: asset.query.has('standalone'),
       inline_constants: config.inlineConstants,
+      conditional_bundling: options.featureFlags.conditionalBundlingApi,
       callMacro: asset.isSource
         ? async (err, src, exportName, args, loc) => {
             let mod;
