@@ -5,6 +5,8 @@ type ErrorMessage =
 type ConditionalImport<CondT, CondF> = CondT | CondF;
 
 /**
+ * **IMPORTANT: This API is currently a no-op. Do not use until this message is removed.**
+ *
  * Conditionally import a dependency, based on the specified condition.
  *
  * This is a synchronous import that differs from conditionally loading a dynamic import (`import()`)
