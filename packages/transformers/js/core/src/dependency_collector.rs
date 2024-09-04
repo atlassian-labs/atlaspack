@@ -1,5 +1,6 @@
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -12,6 +13,7 @@ use swc_core::common::sync::Lrc;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
 use swc_core::common::Span;
+use swc_core::common::Spanned;
 use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::Callee;
 use swc_core::ecma::ast::MemberProp;
@@ -56,6 +58,11 @@ pub enum DependencyKind {
   /// const {x} = require('./dependency');
   /// ```
   Require,
+  /// Corresponds to conditional import statements
+  /// ```skip
+  /// const {x} = importCond('condition', './true-dep', './false-dep');
+  /// ```
+  ConditionalImport,
   /// Corresponds to Worker URL statements
   /// ```skip
   /// const worker = new Worker(
@@ -121,6 +128,13 @@ pub struct DependencyDescriptor {
   pub placeholder: Option<String>,
 }
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+pub struct Condition {
+  pub key: JsWord,
+  pub if_true_placeholder: Option<JsWord>,
+  pub if_false_placeholder: Option<JsWord>,
+}
+
 /// This pass collects dependencies in a module and compiles references as needed to work with Atlaspack's JSRuntime.
 pub fn dependency_collector<'a>(
   source_map: Lrc<SourceMap>,
@@ -129,6 +143,7 @@ pub fn dependency_collector<'a>(
   unresolved_mark: swc_core::common::Mark,
   config: &'a Config,
   diagnostics: &'a mut Vec<Diagnostic>,
+  conditions: &'a mut HashSet<Condition>,
 ) -> impl Fold + 'a {
   DependencyCollector {
     source_map,
@@ -141,6 +156,7 @@ pub fn dependency_collector<'a>(
     config,
     diagnostics,
     import_meta: None,
+    conditions,
   }
 }
 
@@ -155,6 +171,7 @@ struct DependencyCollector<'a> {
   config: &'a Config,
   diagnostics: &'a mut Vec<Diagnostic>,
   import_meta: Option<ast::VarDecl>,
+  conditions: &'a mut HashSet<Condition>,
 }
 
 impl<'a> DependencyCollector<'a> {
@@ -422,14 +439,36 @@ impl<'a> Fold for DependencyCollector<'a> {
     }
   }
 
-  fn fold_call_expr(&mut self, node: ast::CallExpr) -> ast::CallExpr {
+  fn fold_call_expr(&mut self, src_node: ast::CallExpr) -> ast::CallExpr {
     use ast::Expr::*;
     use ast::Ident;
+
+    let mut node = src_node.clone();
 
     let kind = match &node.callee {
       Callee::Import(_) => DependencyKind::DynamicImport,
       Callee::Expr(expr) => {
         match &**expr {
+          Ident(ident) if ident.sym.to_string().as_str() == "importCond" => {
+            if !self.config.conditional_bundling {
+              // Conditional bundling disabled, treat like a require import
+
+              // Change false dep to the require arg
+              node.args[0] = node.args[2].clone();
+              node.args.truncate(1);
+
+              // Rewrite call expression to a require
+              node.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
+                "require".into(),
+                DUMMY_SP.apply_mark(self.unresolved_mark),
+              ))));
+
+              // Then continue like we just encountered a require for the rest of the transform
+              DependencyKind::Require
+            } else {
+              DependencyKind::ConditionalImport
+            }
+          }
           Ident(ident) => {
             // Bail if defined in scope
             if !is_unresolved(&ident, self.unresolved_mark) {
@@ -571,10 +610,10 @@ impl<'a> Fold for DependencyCollector<'a> {
                 if let Callee::Expr(e) = &call.callee {
                   if let Member(m) = &**e {
                     if match_member_expr(m, vec!["Promise", "resolve"], self.unresolved_mark) &&
-                        // Make sure the arglist is empty.
-                        // I.e. do not proceed with the below unless Promise.resolve has an empty arglist
-                        // because build_promise_chain() will not work in this case.
-                        call.args.is_empty()
+                      // Make sure the arglist is empty.
+                      // I.e. do not proceed with the below unless Promise.resolve has an empty arglist
+                      // because build_promise_chain() will not work in this case.
+                      call.args.is_empty()
                     {
                       if let MemberProp::Ident(id) = &member.prop {
                         if id.sym.to_string().as_str() == "then" {
@@ -711,25 +750,29 @@ impl<'a> Fold for DependencyCollector<'a> {
           return node;
         }
 
-        let placeholder = self.add_dependency(
-          specifier,
-          span,
-          kind.clone(),
-          attributes,
-          kind == DependencyKind::Require && self.in_try,
-          self.config.source_type,
-        );
-
-        if let Some(placeholder) = placeholder {
-          let mut node = node.clone();
-          node.args[0].expr = Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
-            value: placeholder,
-            span,
-            raw: None,
-          })));
+        if self.config.conditional_bundling && kind == DependencyKind::ConditionalImport {
           node
         } else {
-          node
+          let placeholder = self.add_dependency(
+            specifier,
+            span,
+            kind.clone(),
+            attributes,
+            kind == DependencyKind::Require && self.in_try,
+            self.config.source_type,
+          );
+
+          if let Some(placeholder) = placeholder {
+            let mut node = node.clone();
+            node.args[0].expr = Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
+              value: placeholder,
+              span,
+              raw: None,
+            })));
+            node
+          } else {
+            node
+          }
         }
       } else {
         node
@@ -762,6 +805,67 @@ impl<'a> Fold for DependencyCollector<'a> {
     } else if kind == DependencyKind::Require {
       // Don't continue traversing so that the `require` isn't replaced with undefined
       rewrite_require_specifier(node, self.unresolved_mark)
+    } else if kind == DependencyKind::ConditionalImport {
+      let mut call = node;
+
+      if call.args.len() != 3 {
+        // FIXME make this a diagnostic
+        panic!("importCond requires 3 arguments");
+      }
+
+      // If we're not scope hoisting, then change this `importCond` to a `require`
+      if !self.config.scope_hoist {
+        call.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
+          "require".into(),
+          DUMMY_SP,
+        ))));
+      }
+
+      let mut placeholders = Vec::new();
+      // For the if_true and if_false arms of the conditional import, create a dependency for each arm
+      for arg in &call.args[1..] {
+        let specifier = match_str(&arg.expr).unwrap().0;
+        let placeholder = self.add_dependency(
+          specifier.clone(),
+          arg.span(),
+          DependencyKind::ConditionalImport,
+          None,
+          false,
+          self.config.source_type,
+        );
+
+        placeholders.push(placeholder.unwrap());
+      }
+
+      // Create a condition we pass back to JS
+      let condition = Condition {
+        key: match_str(&call.args[0].expr).unwrap().0,
+        if_true_placeholder: Some(placeholders[0].clone()),
+        if_false_placeholder: Some(placeholders[1].clone()),
+      };
+      self.conditions.insert(condition);
+
+      // write out code like importCond(depIfTrue, depIfFalse) - while we use the first dep as the link to the conditions
+      // we need both deps to ensure scope hoisting can make sure both arms are treated as "used"
+      call.args[0] = ast::ExprOrSpread {
+        spread: None,
+        expr: Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
+          value: format!("{}", placeholders[0]).into(),
+          span: DUMMY_SP,
+          raw: None,
+        }))),
+      };
+      call.args[1] = ast::ExprOrSpread {
+        spread: None,
+        expr: Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
+          value: format!("{}", placeholders[1]).into(),
+          span: DUMMY_SP,
+          raw: None,
+        }))),
+      };
+      call.args.truncate(2);
+
+      call
     } else {
       node.fold_children_with(self)
     }
@@ -1479,6 +1583,7 @@ mod test {
     items: &'a mut Vec<DependencyDescriptor>,
     diagnostics: &'a mut Vec<Diagnostic>,
     config: &'a Config,
+    conditions: &'a mut HashSet<Condition>,
   ) -> DependencyCollector<'a> {
     DependencyCollector {
       source_map: context.source_map.clone(),
@@ -1491,6 +1596,7 @@ mod test {
       config,
       diagnostics,
       import_meta: None,
+      conditions,
     }
   }
 
@@ -1515,9 +1621,16 @@ mod test {
     let input_code = r#"
       const { x } = await import('other');
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::DynamicImport);
@@ -1556,9 +1669,16 @@ mod test {
     let input_code = r#"
       import { x } from 'other';
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let expected_code = r#"
@@ -1592,9 +1712,16 @@ mod test {
     let input_code = r#"
       export { x } from 'other';
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let expected_code = r#"
@@ -1628,9 +1755,16 @@ mod test {
     let input_code = r#"
       export * from 'other';
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let expected_code = r#"
@@ -1664,9 +1798,16 @@ mod test {
     let input_code = r#"
       const { x } = require('other');
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::Require);
@@ -1707,9 +1848,16 @@ try {
     const { x } = require('other');
 } catch (err) {}
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::Require);
@@ -1751,9 +1899,16 @@ try {{
     let input_code = r#"
 Promise.resolve().then(() => require('other'));
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::DynamicImport);
@@ -1793,9 +1948,16 @@ Promise.resolve().then(()=>require("{}"));
     let input_code = r#"
 Promise.resolve().then(() => doSomething(require('other')));
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::DynamicImport);
@@ -1837,9 +1999,16 @@ Promise.resolve().then(function() {{
     let input_code = r#"
 Promise.resolve().then(function() { return doSomething(require('other')); });
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::DynamicImport);
@@ -1883,9 +2052,16 @@ Promise.resolve().then(function() {{
     let input_code = r#"
 new Promise((resolve) => resolve(require("other")));
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::DynamicImport);
@@ -1925,9 +2101,16 @@ new Promise((resolve)=>resolve(require("{}")));
     let input_code = r#"
 new Promise(function(resolve) { return resolve(require("other")) });
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::DynamicImport);
@@ -1969,9 +2152,16 @@ new Promise(function(resolve) {{
     let input_code = r#"
 Promise.resolve(require("other"));
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::DynamicImport);
@@ -2010,9 +2200,16 @@ Promise.resolve(require("{}"));
     let input_code = r#"
       new Worker(new URL('other', import.meta.url), {type: 'module'});
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::WebWorker);
@@ -2051,9 +2248,16 @@ Promise.resolve(require("{}"));
     let input_code = r#"
       navigator.serviceWorker.register(new URL('other', import.meta.url), {type: 'module'});
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::ServiceWorker);
@@ -2092,9 +2296,16 @@ Promise.resolve(require("{}"));
     let input_code = r#"
       CSS.paintWorklet.addModule(new URL('other', import.meta.url));
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("other", DependencyKind::Worklet);
@@ -2135,9 +2346,16 @@ let img = document.createElement('img');
 img.src = new URL('hero.jpg', import.meta.url);
 document.body.appendChild(img);
     "#;
+    let mut conditions = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
     });
 
     let hash = make_placeholder_hash("hero.jpg", DependencyKind::Url);
@@ -2167,6 +2385,117 @@ document.body.appendChild(img);
         placeholder: Some(hash),
         ..items[0].clone()
       }]
+    );
+  }
+
+  #[test]
+  fn test_import_cond_disabled_dependency() {
+    let mut items = vec![];
+    let mut diagnostics = vec![];
+    let mut config = make_config();
+    config.conditional_bundling = false;
+    let input_code = r#"
+      const x = importCond('condition', 'a', 'b');
+    "#;
+    let mut conditions = HashSet::new();
+
+    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
+    });
+
+    let hash = make_placeholder_hash("b", DependencyKind::Require);
+    let expected_code = format!(
+      r#"
+      const x = require("{}");
+    "#,
+      hash
+    );
+    let expected_code = expected_code
+      .trim_start()
+      .trim_end_matches(|p: char| p == ' ');
+
+    assert_eq!(output_code, expected_code);
+    assert_eq!(diagnostics, []);
+    assert_eq!(
+      items,
+      [DependencyDescriptor {
+        kind: DependencyKind::Require,
+        specifier: "b".into(),
+        attributes: None,
+        is_optional: false,
+        is_helper: false,
+        source_type: Some(SourceType::Module),
+        placeholder: Some(hash),
+        ..items[0].clone()
+      }]
+    );
+  }
+
+  #[test]
+  fn test_import_cond_enabled_dependency() {
+    let mut items = vec![];
+    let mut diagnostics = vec![];
+    let mut config = make_config();
+    config.conditional_bundling = true;
+    let input_code = r#"
+      const x = importCond('condition', 'a', 'b');
+    "#;
+    let mut conditions = HashSet::new();
+
+    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
+    });
+
+    let hash_a = make_placeholder_hash("a", DependencyKind::ConditionalImport);
+    let hash_b = make_placeholder_hash("b", DependencyKind::ConditionalImport);
+    let expected_code = format!(
+      r#"
+      const x = require("{}", "{}");
+    "#,
+      hash_a, hash_b
+    );
+    let expected_code = expected_code
+      .trim_start()
+      .trim_end_matches(|p: char| p == ' ');
+
+    assert_eq!(output_code, expected_code);
+    assert_eq!(diagnostics, []);
+    assert_eq!(
+      items,
+      [
+        DependencyDescriptor {
+          kind: DependencyKind::ConditionalImport,
+          specifier: "a".into(),
+          attributes: None,
+          is_optional: false,
+          is_helper: false,
+          source_type: Some(SourceType::Module),
+          placeholder: Some(hash_a),
+          ..items[0].clone()
+        },
+        DependencyDescriptor {
+          kind: DependencyKind::ConditionalImport,
+          specifier: "b".into(),
+          attributes: None,
+          is_optional: false,
+          is_helper: false,
+          source_type: Some(SourceType::Module),
+          placeholder: Some(hash_b),
+          ..items[1].clone()
+        }
+      ]
     );
   }
 }

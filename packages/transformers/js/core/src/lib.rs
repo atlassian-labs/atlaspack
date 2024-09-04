@@ -26,6 +26,7 @@ pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
 use constant_module::ConstantModule;
 pub use dependency_collector::dependency_collector;
+use dependency_collector::Condition;
 pub use dependency_collector::DependencyDescriptor;
 pub use dependency_collector::DependencyKind;
 use env_replacer::*;
@@ -127,6 +128,7 @@ pub struct Config {
   pub is_swc_helpers: bool,
   pub standalone: bool,
   pub inline_constants: bool,
+  pub conditional_bundling: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -144,6 +146,7 @@ pub struct TransformResult {
   pub used_env: HashSet<swc_core::ecma::atoms::JsWord>,
   pub has_node_replacements: bool,
   pub is_constant_module: bool,
+  pub conditions: HashSet<Condition>,
 }
 
 fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Versions> {
@@ -467,6 +470,7 @@ pub fn transform(
                   unresolved_mark,
                   &config,
                   &mut diagnostics,
+                  &mut result.conditions,
                 ),
               );
 

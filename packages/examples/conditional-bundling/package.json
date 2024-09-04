@@ -1,0 +1,24 @@
+{
+  "name": "@atlaspack/conditional-bundling-example",
+  "version": "2.12.0",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build:on": "atlaspack build --feature-flag conditionalBundlingApi=true src/index.html",
+    "build:off": "atlaspack build --feature-flag conditionalBundlingApi=false src/index.html",
+    "build:inspect:on": "PARCEL_WORKERS=0 node --inspect-brk $(yarn bin atlaspack) build --feature-flag conditionalBundlingApi=true src/index.html",
+    "build:inspect:off": "PARCEL_WORKERS=0 node --inspect-brk $(yarn bin atlaspack) build --feature-flag conditionalBundlingApi=false src/index.html",
+    "dev:on": "yarn build:on && npx nodemon serve.js",
+    "dev:off": "yarn build:off && npx nodemon serve.js"
+  },
+  "dependencies": {
+    "@atlaskit/button": "*",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "express": "*",
+    "@atlaspack/cli": "^2.12.0",
+    "@atlaspack/reporter-conditional-manifest": "^2.12.0"
+  }
+}

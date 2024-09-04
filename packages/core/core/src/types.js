@@ -115,6 +115,7 @@ export const Priority = {
   sync: 0,
   parallel: 1,
   lazy: 2,
+  conditional: 3,
 };
 
 // Must match package_json.rs in node-resolver-rs.
@@ -542,6 +543,7 @@ export type Bundle = {|
   displayName: ?string,
   pipeline: ?string,
   manualSharedBundle?: ?string,
+  conditions?: Map<string, string>,
 |};
 
 export type BundleNode = {|
@@ -580,3 +582,17 @@ export type ValidationOpts = {|
 |};
 
 export type ReportFn = (event: ReporterEvent) => void | Promise<void>;
+
+export type Condition = {|
+  publicId: string,
+  assets: Set<Asset>,
+  key: string,
+  ifTrueDependency: Dependency,
+  ifFalseDependency: Dependency,
+|};
+
+export type ConditionMeta = {|
+  key: string,
+  ifTruePlaceholder: string,
+  ifFalsePlaceholder: string,
+|};

@@ -20,6 +20,7 @@ use crate::utils::is_unresolved;
 use crate::utils::match_export_name;
 use crate::utils::match_export_name_ident;
 use crate::utils::match_import;
+use crate::utils::match_import_cond;
 use crate::utils::match_member_expr;
 use crate::utils::match_property_name;
 use crate::utils::match_require;
@@ -46,6 +47,7 @@ pub enum ImportKind {
   Require,
   Import,
   DynamicImport,
+  ConditionalImport,
 }
 
 #[derive(Debug)]
@@ -768,6 +770,16 @@ impl Visit for Collect {
       self.add_bailout(span, BailoutReason::NonStaticDynamicImport);
     }
 
+    if let Some((source_true, source_false)) = match_import_cond(node, self.ignore_mark) {
+      self.wrapped_requires.insert(source_true.to_string());
+      self.wrapped_requires.insert(source_false.to_string());
+      let span = match node {
+        Expr::Call(c) => c.span,
+        _ => unreachable!(),
+      };
+      self.add_bailout(span, BailoutReason::NonStaticDynamicImport);
+    }
+
     match node {
       Expr::Ident(ident) => {
         // Bail if `module` or `exports` are accessed non-statically.
@@ -979,11 +991,11 @@ impl Collect {
         ImportKind::Import => self
           .wrapped_requires
           .insert(format!("{}{}", src.clone(), "esm")),
-        ImportKind::DynamicImport | ImportKind::Require => {
+        ImportKind::DynamicImport | ImportKind::Require | ImportKind::ConditionalImport => {
           self.wrapped_requires.insert(src.to_string())
         }
       };
-      if kind != ImportKind::DynamicImport {
+      if kind != ImportKind::DynamicImport && kind != ImportKind::ConditionalImport {
         self.non_static_requires.insert(src.clone());
         let span = match node {
           Pat::Ident(id) => id.id.span,

@@ -12,6 +12,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   importRetry: false,
   fastNeedsDefaultInterop: false,
   ownedResolverStructures: false,
+  conditionalBundlingApi: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

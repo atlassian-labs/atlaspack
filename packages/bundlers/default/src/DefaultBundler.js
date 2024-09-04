@@ -23,6 +23,7 @@ import {validateSchema, DefaultMap, globToRegex} from '@atlaspack/utils';
 import nullthrows from 'nullthrows';
 import path from 'path';
 import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type Glob = string;
 
@@ -95,6 +96,7 @@ const dependencyPriorityEdges = {
   sync: 1,
   parallel: 2,
   lazy: 3,
+  conditional: 4,
 };
 
 type DependencyBundleGraph = ContentGraph<
@@ -495,7 +497,9 @@ function createIdealGraph(
 
         if (
           node.type === 'dependency' &&
-          node.value.priority === 'lazy' &&
+          (node.value.priority === 'lazy' ||
+            (getFeatureFlag('conditionalBundlingApi') &&
+              node.value.priority === 'conditional')) &&
           parentAsset
         ) {
           // Don't walk past the bundle group assets
@@ -576,7 +580,7 @@ function createIdealGraph(
             }
 
             if (
-              // MSB Step 3: If a bundle for these globs already exsits, use it
+              // MSB Step 3: If a bundle for these globs already exists, use it
               manualSharedBundleKey != null &&
               manualSharedMap.has(manualSharedBundleKey)
             ) {
@@ -584,6 +588,8 @@ function createIdealGraph(
             }
             if (
               dependency.priority === 'lazy' ||
+              (getFeatureFlag('conditionalBundlingApi') &&
+                node.value.priority === 'conditional') ||
               childAsset.bundleBehavior === 'isolated' // An isolated Dependency, or Bundle must contain all assets it needs to load.
             ) {
               if (bundleId == null) {

@@ -539,7 +539,7 @@ export interface MutableDependencySymbols // eslint-disable-next-line no-undef
   delete(exportSymbol: Symbol): void;
 }
 
-export type DependencyPriority = 'sync' | 'parallel' | 'lazy';
+export type DependencyPriority = 'sync' | 'parallel' | 'lazy' | 'conditional';
 export type SpecifierType = 'commonjs' | 'esm' | 'url' | 'custom';
 
 /**
@@ -1307,6 +1307,7 @@ export type CreateBundleOpts =
       +bundleBehavior?: ?BundleBehavior,
       /** Name of the manual shared bundle config that caused this bundle to be created */
       +manualSharedBundle?: ?string,
+      +conditions?: Array<string>,
     |}
   // If an entryAsset is not provided, a bundle id, type, and environment must
   // be provided.
@@ -1342,6 +1343,7 @@ export type CreateBundleOpts =
       +pipeline?: ?string,
       /** Name of the manual shared bundle config that caused this bundle to be created */
       +manualSharedBundle?: ?string,
+      +conditions?: Array<string>,
     |};
 
 /**
@@ -1626,6 +1628,14 @@ export interface BundleGraph<TBundle: Bundle> {
   getUsedSymbols(Asset | Dependency): ?$ReadOnlySet<Symbol>;
   /** Returns the common root directory for the entry assets of a target. */
   getEntryRoot(target: Target): FilePath;
+  unstable_getConditionPublicId(condition: string): ?string;
+  unstable_getConditionalBundleMapping(): {|
+    [string]: {|
+      bundlesWithCondition: Array<TBundle>,
+      ifTrueBundles: Array<TBundle>,
+      ifFalseBundles: Array<TBundle>,
+    |},
+  |};
 }
 
 /**
