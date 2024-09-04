@@ -78,7 +78,7 @@ pub struct Dependency {
   ///
   /// We might want to split this information from this type.
   #[serde(default)]
-  pub symbols: Vec<Symbol>,
+  pub symbols: Option<Vec<Symbol>>,
 
   /// The target associated with an entry, if any
   #[serde(default)]
@@ -109,31 +109,27 @@ pub struct Dependency {
   /// import expression.
   pub is_esm: bool,
 
-  /// Whether the symbols vector of this dependency has had symbols added to it.
-  pub has_symbols: bool,
-
   pub placeholder: Option<String>,
 }
 
 impl Dependency {
   pub fn entry(entry: String, target: Target) -> Dependency {
     let is_library = target.env.is_library;
-    let mut symbols = Vec::new();
+    let mut symbols = None;
 
     if is_library {
-      symbols.push(Symbol {
+      symbols = Some(vec![Symbol {
         exported: "*".into(),
         is_esm_export: false,
         is_weak: true,
         loc: None,
         local: "*".into(),
         self_referenced: false,
-      });
+      }]);
     }
 
     Dependency {
       env: target.env.clone(),
-      has_symbols: is_library,
       is_entry: true,
       needs_stable_name: true,
       specifier: entry,
@@ -202,7 +198,7 @@ impl Hash for Dependency {
     self.package_conditions.hash(state);
     self.pipeline.hash(state);
     self.priority.hash(state);
-    self.source_path.hash(state);
+    self.source_asset_id.hash(state);
     self.specifier.hash(state);
     self.specifier_type.hash(state);
   }

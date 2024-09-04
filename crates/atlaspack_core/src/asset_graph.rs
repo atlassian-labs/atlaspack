@@ -182,12 +182,14 @@ impl AssetGraph {
     let star = String::from("*");
 
     if requested_symbols.contains(&star) {
-      // If the requested symbols includes the "*" namespace,
-      // we need to include all of the asset's exported symbols.
-      for sym in &asset.symbols {
-        if asset_requested_symbols.insert(sym.exported.clone()) && sym.is_weak {
-          // Propagate re-exported symbol to dependency.
-          re_exports.insert(sym.local.clone());
+      // If the requested symbols includes the "*" namespace, we need to include all of the asset's
+      // exported symbols.
+      if let Some(symbols) = &asset.symbols {
+        for sym in symbols {
+          if asset_requested_symbols.insert(sym.exported.clone()) && sym.is_weak {
+            // Propagate re-exported symbol to dependency.
+            re_exports.insert(sym.local.clone());
+          }
         }
       }
 
@@ -197,7 +199,11 @@ impl AssetGraph {
       // Otherwise, add each of the requested symbols to the asset.
       for sym in requested_symbols.iter() {
         if asset_requested_symbols.insert(sym.clone()) {
-          if let Some(asset_symbol) = asset.symbols.iter().find(|s| s.exported == *sym) {
+          if let Some(asset_symbol) = asset
+            .symbols
+            .as_ref()
+            .and_then(|symbols| symbols.iter().find(|s| s.exported == *sym))
+          {
             if asset_symbol.is_weak {
               // Propagate re-exported symbol to dependency.
               re_exports.insert(asset_symbol.local.clone());
@@ -225,24 +231,26 @@ impl AssetGraph {
       } = &mut self.dependencies[dep_index];
 
       let mut updated = false;
-      for sym in &dependency.symbols {
-        if sym.is_weak {
-          // This is a re-export. If it is a wildcard, add all unmatched symbols
-          // to this dependency, otherwise attempt to match a named re-export.
-          if sym.local == "*" {
-            for wildcard in &wildcards {
-              if requested_symbols.insert(wildcard.clone()) {
-                updated = true;
+      if let Some(symbols) = &dependency.symbols {
+        for sym in symbols {
+          if sym.is_weak {
+            // This is a re-export. If it is a wildcard, add all unmatched symbols
+            // to this dependency, otherwise attempt to match a named re-export.
+            if sym.local == "*" {
+              for wildcard in &wildcards {
+                if requested_symbols.insert(wildcard.clone()) {
+                  updated = true;
+                }
               }
+            } else if re_exports.contains(&sym.local)
+              && requested_symbols.insert(sym.exported.clone())
+            {
+              updated = true;
             }
-          } else if re_exports.contains(&sym.local)
-            && requested_symbols.insert(sym.exported.clone())
-          {
+          } else if requested_symbols.insert(sym.exported.clone()) {
+            // This is a normal import. Add the requested symbol.
             updated = true;
           }
-        } else if requested_symbols.insert(sym.exported.clone()) {
-          // This is a normal import. Add the requested symbol.
-          updated = true;
         }
       }
 
@@ -379,7 +387,7 @@ mod test {
   ) -> NodeIndex {
     let index_asset = Asset {
       file_path: PathBuf::from(file_path),
-      symbols: symbols.iter().map(symbol).collect(),
+      symbols: Some(symbols.iter().map(symbol).collect()),
       ..Asset::default()
     };
     graph.add_asset(parent_node, index_asset)
@@ -391,7 +399,7 @@ mod test {
     symbols: Vec<TestSymbol>,
   ) -> NodeIndex {
     let dep = Dependency {
-      symbols: symbols.iter().map(symbol).collect(),
+      symbols: Some(symbols.iter().map(symbol).collect()),
       ..Dependency::default()
     };
     graph.add_dependency(parent_node, dep)

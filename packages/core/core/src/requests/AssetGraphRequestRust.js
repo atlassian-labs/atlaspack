@@ -186,9 +186,8 @@ function getAssetGraph(serializedGraph, options) {
         committed: true,
         contentKey: id,
         filePath: toProjectPath(options.projectRoot, asset.filePath),
-        symbols: asset.hasSymbols
-          ? new Map(asset.symbols.map(mapSymbols))
-          : null,
+        symbols:
+          asset.symbols != null ? new Map(asset.symbols.map(mapSymbols)) : null,
       };
 
       cachedAssets.set(id, asset.code);
@@ -217,16 +216,6 @@ function getAssetGraph(serializedGraph, options) {
         bundleBehavior:
           dependency.bundleBehavior === 255 ? null : dependency.bundleBehavior,
         contentKey: id,
-        sourcePath: dependency.sourcePath
-          ? toProjectPath(options.projectRoot, dependency.sourcePath)
-          : null,
-        symbols:
-          // Dependency.symbols are always set to an empty map when scope hoisting
-          // is enabled. Some tests will fail if this is not the case. We should
-          // make this consistant when we re-visit packaging.
-          dependency.hasSymbols || dependency.env.shouldScopeHoist
-            ? new Map(dependency.symbols.map(mapSymbols))
-            : undefined,
         loc: dependency.loc
           ? {
               ...dependency.loc,
@@ -236,6 +225,16 @@ function getAssetGraph(serializedGraph, options) {
               ),
             }
           : undefined,
+        sourcePath: dependency.sourcePath
+          ? toProjectPath(options.projectRoot, dependency.sourcePath)
+          : null,
+        symbols:
+          // Dependency.symbols are always set to an empty map when scope hoisting
+          // is enabled. Some tests will fail if this is not the case. We should
+          // make this consistant when we re-visit packaging.
+          dependency.symbols != null || dependency.env.shouldScopeHoist
+            ? new Map(dependency.symbols?.map(mapSymbols))
+            : undefined,
       };
       let usedSymbolsDown = new Set();
       let usedSymbolsUp = new Map();

@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use atlaspack_core::diagnostic;
 use indexmap::IndexMap;
-use swc_core::atoms::Atom;
+use swc_core::atoms::{Atom, JsWord};
 
 use atlaspack_core::plugin::{PluginOptions, TransformResult};
 use atlaspack_core::types::engines::EnvironmentFeature;
@@ -44,40 +44,36 @@ pub(crate) fn convert_result(
     convert_dependencies(transformer_config, result.dependencies, &asset)?;
 
   if result.needs_esm_helpers {
-    let has_symbols = result.hoist_result.is_some() || result.symbol_result.is_some();
     let dependency = make_esm_helpers_dependency(
       options,
       &asset_file_path,
       (*asset_environment).clone(),
-      has_symbols,
       &asset.id,
     );
     dependency_by_specifier.insert(dependency.specifier.as_str().into(), dependency);
   }
 
+  let mut asset_symbols = Vec::new();
+
   if let Some(hoist_result) = result.hoist_result {
-    // Has symbols is currently needed to differentiate between assets with no symbols vs assets
-    // which haven't had symbols analyzed yet.
-    // TODO: replace `asset.symbols` with `Option<Vec<...>>`
-    asset.has_symbols = true;
-
     // Pre-allocate expected symbols
-    asset
-      .symbols
-      .reserve(hoist_result.exported_symbols.len() + hoist_result.re_exports.len() + 1);
+    asset_symbols.reserve(hoist_result.exported_symbols.len() + hoist_result.re_exports.len() + 1);
 
-    // Collect all exported variable names into `asset.symbols`
+    // Collect all exported variable names
     for symbol in &hoist_result.exported_symbols {
       let symbol = transformer_exported_symbol_into_symbol(&asset_file_path, &symbol);
-      asset.symbols.push(symbol);
+      asset_symbols.push(symbol);
     }
 
     // Collect all imported symbols into each of the corresponding dependencies' symbols array
     for symbol in hoist_result.imported_symbols {
       if let Some(dependency) = dependency_by_specifier.get_mut(&symbol.source) {
         let symbol = transformer_imported_symbol_to_symbol(&asset_file_path, &symbol);
-        dependency.has_symbols = true;
-        dependency.symbols.push(symbol);
+        if let Some(symbols) = dependency.symbols.as_mut() {
+          symbols.push(symbol);
+        } else {
+          dependency.symbols = Some(vec![symbol]);
+        }
       }
     }
 
@@ -85,15 +81,23 @@ pub(crate) fn convert_result(
       if let Some(dependency) = dependency_by_specifier.get_mut(&symbol.source) {
         if is_re_export_all_symbol(&symbol) {
           let loc = Some(convert_loc(asset_file_path.clone(), &symbol.loc));
-          dependency.has_symbols = true;
-          dependency.symbols.push(make_export_all_symbol(loc));
+          let symbol = make_export_all_symbol(loc);
+
+          if let Some(symbols) = dependency.symbols.as_mut() {
+            symbols.push(symbol);
+          } else {
+            dependency.symbols = Some(vec![symbol]);
+          }
           // TODO: Why isn't this added to the asset.symbols array?
         } else {
-          let existing = dependency
-            .symbols
-            .as_slice()
-            .iter()
-            .find(|candidate| candidate.exported == &*symbol.imported);
+          let existing = if let Some(symbols) = dependency.symbols.as_ref() {
+            symbols
+              .as_slice()
+              .iter()
+              .find(|candidate| candidate.exported == &*symbol.imported)
+          } else {
+            None
+          };
 
           // `re_export_fake_local_key` is a generated mangled identifier only for purposes of
           // keying this `Symbol`. It is not actually inserted onto the file.
@@ -104,45 +108,48 @@ pub(crate) fn convert_result(
           let re_export_fake_local_key = existing
             .map(|sym| sym.local.clone())
             .unwrap_or_else(|| format!("${}$re_export${}", asset.id, symbol.local).into());
-          let dep_symbol = Symbol {
+
+          let dependency_symbol = Symbol {
             exported: symbol.imported.as_ref().into(),
             local: re_export_fake_local_key.clone(),
             loc: Some(convert_loc(asset_file_path.clone(), &symbol.loc)),
             is_weak: existing.map(|e| e.is_weak).unwrap_or(true),
             ..Symbol::default()
           };
-          dependency.has_symbols = true;
-          dependency.symbols.push(dep_symbol);
 
-          let asset_symbol = Symbol {
+          if let Some(symbols) = dependency.symbols.as_mut() {
+            symbols.push(dependency_symbol);
+          } else {
+            dependency.symbols = Some(vec![dependency_symbol]);
+          }
+
+          asset_symbols.push(Symbol {
             exported: symbol.local.as_ref().into(),
             local: re_export_fake_local_key.clone(),
             loc: Some(convert_loc(asset_file_path.clone(), &symbol.loc)),
             is_weak: false,
             ..Symbol::default()
-          };
-          asset.symbols.push(asset_symbol);
+          });
         }
       }
     }
 
     for specifier in hoist_result.wrapped_requires {
-      if let Some(dep) = dependency_by_specifier.get_mut(&swc_core::atoms::JsWord::new(specifier)) {
-        dep.set_should_wrap(true);
+      if let Some(dependency) = dependency_by_specifier.get_mut(&JsWord::new(specifier)) {
+        dependency.set_should_wrap(true);
       }
     }
 
     for (name, specifier) in hoist_result.dynamic_imports {
-      if let Some(dep) = dependency_by_specifier.get_mut(&specifier) {
-        dep.set_promise_symbol(&*name);
+      if let Some(dependency) = dependency_by_specifier.get_mut(&specifier) {
+        dependency.set_promise_symbol(&*name);
       }
     }
 
     for name in hoist_result.self_references {
       // Do not create a self-reference for the `default` symbol unless we have seen an __esModule flag.
       if &*name == "default"
-        && !asset
-          .symbols
+        && !asset_symbols
           .as_slice()
           .iter()
           .any(|s| &*s.exported == "__esModule")
@@ -150,8 +157,7 @@ pub(crate) fn convert_result(
         continue;
       }
 
-      let symbol = asset
-        .symbols
+      let symbol = asset_symbols
         .iter_mut()
         .find(|s| s.exported.as_str() == name.as_str())
         .unwrap();
@@ -168,9 +174,9 @@ pub(crate) fn convert_result(
         && dependency_by_specifier.is_empty()
         && hoist_result.exported_symbols.is_empty())
       || hoist_result.should_wrap)
-      && !asset.symbols.as_slice().iter().any(|s| s.exported == "*")
+      && !asset_symbols.as_slice().iter().any(|s| s.exported == "*")
     {
-      asset.symbols.push(make_export_star_symbol(&asset.id));
+      asset_symbols.push(make_export_star_symbol(&asset.id));
     }
 
     asset.set_has_cjs_exports(hoist_result.has_cjs_exports);
@@ -178,28 +184,34 @@ pub(crate) fn convert_result(
     asset.set_should_wrap(hoist_result.should_wrap);
   } else {
     if let Some(symbol_result) = result.symbol_result {
-      asset.has_symbols = true;
-      asset.symbols.reserve(symbol_result.exports.len() + 1);
+      asset_symbols.reserve(symbol_result.exports.len() + 1);
       for sym in &symbol_result.exports {
-        let (local, is_weak) = if let Some(dep) = sym
+        let (local, is_weak) = if let Some(dependency) = sym
           .source
           .as_ref()
           .and_then(|source| dependency_by_specifier.get_mut(source))
         {
-          let local = format!("${}${}", dep.id(), sym.local);
-          dep.symbols.push(Symbol {
+          let local = format!("${}${}", dependency.id(), sym.local);
+          let symbol = Symbol {
             exported: sym.local.as_ref().into(),
             local: local.clone(),
             loc: Some(convert_loc(asset_file_path.clone(), &sym.loc)),
             is_weak: true,
             ..Symbol::default()
-          });
+          };
+
+          if let Some(symbols) = dependency.symbols.as_mut() {
+            symbols.push(symbol);
+          } else {
+            dependency.symbols = Some(vec![symbol]);
+          }
+
           (local, true)
         } else {
           (format!("${}", sym.local).into(), false)
         };
 
-        asset.symbols.push(Symbol {
+        asset_symbols.push(Symbol {
           exported: sym.exported.as_ref().into(),
           local,
           loc: Some(convert_loc(asset_file_path.clone(), &sym.loc)),
@@ -209,20 +221,25 @@ pub(crate) fn convert_result(
       }
 
       for sym in symbol_result.imports {
-        if let Some(dep) = dependency_by_specifier.get_mut(&sym.source) {
-          dep
-            .symbols
-            .push(transformer_collect_imported_symbol_to_symbol(
-              &asset_file_path,
-              &sym,
-            ));
+        if let Some(dependency) = dependency_by_specifier.get_mut(&sym.source) {
+          let symbol = transformer_collect_imported_symbol_to_symbol(&asset_file_path, &sym);
+          if let Some(symbols) = dependency.symbols.as_mut() {
+            symbols.push(symbol);
+          } else {
+            dependency.symbols = Some(vec![symbol]);
+          }
         }
       }
 
       for sym in symbol_result.exports_all {
-        if let Some(dep) = dependency_by_specifier.get_mut(&sym.source) {
+        if let Some(dependency) = dependency_by_specifier.get_mut(&sym.source) {
           let loc = Some(convert_loc(asset_file_path.clone(), &sym.loc));
-          dep.symbols.push(make_export_all_symbol(loc));
+          let symbol = make_export_all_symbol(loc);
+          if let Some(symbols) = dependency.symbols.as_mut() {
+            symbols.push(symbol);
+          } else {
+            dependency.symbols = Some(vec![symbol]);
+          }
         }
       }
 
@@ -234,27 +251,39 @@ pub(crate) fn convert_result(
           && dependency_by_specifier.is_empty()
           && symbol_result.exports.is_empty())
         || (symbol_result.should_wrap
-          && !asset.symbols.as_slice().iter().any(|s| s.exported == "*"))
+          && !asset_symbols.as_slice().iter().any(|s| s.exported == "*"))
       {
-        asset.symbols.push(make_export_star_symbol(&asset.id));
+        asset_symbols.push(make_export_star_symbol(&asset.id));
       }
     } else {
       // If the asset is wrapped, add * as a fallback
-      asset.symbols.push(make_export_star_symbol(&asset.id));
+      asset_symbols.push(make_export_star_symbol(&asset.id));
     }
 
     // For all other imports and requires, mark everything as imported (this covers both dynamic
-    // imports and non-top-level requires.)
-    for dep in dependency_by_specifier.values_mut() {
-      if dep.symbols.is_empty() {
-        dep.symbols.push(Symbol {
-          exported: "*".into(),
-          local: format!("${}$", dep.specifier), // TODO: coalesce with dep.placeholder
-          loc: None,
-          ..Default::default()
-        });
+    // imports and non-top-level requires)
+    for dependency in dependency_by_specifier.values_mut() {
+      let symbol = Symbol {
+        exported: "*".into(),
+        local: format!("${}$", dependency.specifier), // TODO: coalesce with dep.placeholder
+        loc: None,
+        ..Default::default()
+      };
+
+      if let Some(symbols) = dependency.symbols.as_mut() {
+        if symbols.is_empty() {
+          symbols.push(symbol);
+        }
+      } else {
+        dependency.symbols = Some(vec![symbol]);
       }
     }
+  }
+
+  if let Some(symbols) = asset.symbols.as_mut() {
+    symbols.extend(asset_symbols);
+  } else {
+    asset.symbols = Some(asset_symbols);
   }
 
   asset.set_has_node_replacements(result.has_node_replacements);
@@ -345,7 +374,6 @@ fn make_esm_helpers_dependency(
   options: &PluginOptions,
   asset_file_path: &PathBuf,
   asset_environment: Environment,
-  has_symbols: bool,
   asset_id: &str,
 ) -> Dependency {
   Dependency {
@@ -363,7 +391,6 @@ fn make_esm_helpers_dependency(
     }
     .into(),
     resolve_from: Some(options.core_path.as_path().into()),
-    has_symbols,
     ..Default::default()
   }
 }
@@ -400,6 +427,7 @@ fn convert_dependency(
 
   let loc = convert_loc(asset.file_path.clone(), &transformer_dependency.loc);
   let mut base_dependency = Dependency {
+    bundle_behavior: asset.bundle_behavior.clone(),
     env: asset.env.clone(),
     loc: Some(loc.clone()),
     priority: convert_priority(&transformer_dependency),
@@ -494,7 +522,6 @@ fn convert_dependency(
           source_type: SourceType::Module,
           ..*asset.env.clone()
         }),
-        // flags: dep_flags,
         // placeholder: dep.placeholder.map(|s| s.into()),
         // promise_symbol: None,
         ..base_dependency
@@ -506,7 +533,6 @@ fn convert_dependency(
       let dependency = Dependency {
         env: asset.env.clone(),
         bundle_behavior: BundleBehavior::Isolated,
-        // flags: dep_flags,
         // placeholder: dep.placeholder.map(|s| s.into()),
         ..base_dependency
       };

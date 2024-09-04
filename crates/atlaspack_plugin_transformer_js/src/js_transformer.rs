@@ -369,8 +369,7 @@ mod test {
           file_type: FileType::Js,
           // SWC inserts a newline here
           code: Arc::new(Code::from(String::from("function hello() {}\n"))),
-          symbols: vec![],
-          has_symbols: true,
+          symbols: Some(Vec::new()),
           unique_key: Some(target_asset.id.clone()),
           ..target_asset
         },
@@ -408,12 +407,12 @@ exports.hello = function() {};
       source_path: Some(PathBuf::from("mock_path.js")),
       specifier: String::from("other"),
       specifier_type: SpecifierType::CommonJS,
-      symbols: vec![Symbol {
+      symbols: Some(vec![Symbol {
         exported: String::from("*"),
         loc: None,
         local: String::from("$other$"),
         ..Symbol::default()
-      }],
+      }]),
       ..Default::default()
     }];
     expected_dependencies[0].set_placeholder("e83f3db3d6f57ea6");
@@ -431,7 +430,7 @@ exports.hello = function() {};
           code: Arc::new(Code::from(String::from(
             "var x = require(\"e83f3db3d6f57ea6\");\nexports.hello = function() {};\n"
           ))),
-          symbols: vec![
+          symbols: Some(vec![
             Symbol {
               exported: String::from("hello"),
               loc: Some(SourceLocation {
@@ -461,8 +460,7 @@ exports.hello = function() {};
               local: format!("${asset_id}$exports"),
               ..Default::default()
             }
-          ],
-          has_symbols: true,
+          ]),
           unique_key: Some(asset_id),
           ..empty_asset()
         },
