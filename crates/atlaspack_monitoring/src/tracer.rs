@@ -7,6 +7,7 @@ use anyhow::anyhow;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_subscriber::EnvFilter;
 
 use crate::from_env::{optional_var, FromEnvError};
 
@@ -70,9 +71,13 @@ impl Tracer {
   pub fn new(options: TracerMode) -> anyhow::Result<Self> {
     let worker_guard = match options {
       TracerMode::Stdout => {
-        tracing_subscriber::fmt().try_init().map_err(|err| {
-          anyhow::anyhow!(err).context("Failed to setup stdout tracing, is another tracer running?")
-        })?;
+        tracing_subscriber::fmt()
+          .with_env_filter(EnvFilter::from_default_env())
+          .try_init()
+          .map_err(|err| {
+            anyhow::anyhow!(err)
+              .context("Failed to setup stdout tracing, is another tracer running?")
+          })?;
         None
       }
       TracerMode::File {
