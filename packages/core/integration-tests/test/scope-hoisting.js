@@ -6317,4 +6317,91 @@ describe('scope hoisting', function () {
       assert.fail('Expected the empty bundle to still run');
     }
   });
+
+  it('should allow force skipping of wrapping assets in async bundles', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      force-skip-wrap
+        index.html:
+          <script type="module" src="./index.js"></script>
+        one.js:
+          export default { name: 'one', value: 1 };
+        two.js:
+          export default { name: 'two', value: 2 };
+        obj-factory.js:
+          import one from './one';
+          import two from './two';
+          const obj = {
+            one,
+            two,
+          }
+          export default () => obj;
+        async-root.js:
+          import getObj from './obj-factory';
+          export default () => getObj();
+        index.js:
+          async function main() {
+            const asyncRoot = await import('./async-root');
+            result(asyncRoot.default());
+          }
+          main();
+
+        package.json:
+          {
+              "@atlaspack/packager-js": {
+                  "unstable_forceSkipWrapAssets": [
+                    "obj-factory.js"
+                  ]
+              }
+          }
+        yarn.lock:`;
+
+    let b = await bundle([path.join(__dirname, 'force-skip-wrap/index.html')], {
+      mode: 'production',
+      defaultTargetOptions: {
+        shouldScopeHoist: true,
+        shouldOptimize: true,
+        outputFormat: 'esmodule',
+      },
+      inputFS: overlayFS,
+    });
+    function hasAsset(bundle, assetName) {
+      let result = false;
+
+      bundle.traverseAssets(asset => {
+        if (asset.filePath.includes(assetName)) {
+          result = true;
+        }
+      });
+
+      return result;
+    }
+    let asyncBundleContents = await outputFS.readFile(
+      nullthrows(
+        b.getBundles().find(b => hasAsset(b, 'async-root.js')),
+        'No async bundle',
+      ).filePath,
+      'utf8',
+    );
+    assert(
+      asyncBundleContents.includes(
+        '{one:{name:"one",value:1},two:{name:"two",value:2}}',
+      ),
+      "Async bundle should directly reference the 'one' asset into the base asset",
+    );
+
+    let resolve;
+    let p = new Promise(r => {
+      resolve = r;
+    });
+    await run(b, {
+      result: r => {
+        resolve(r);
+      },
+    });
+    const result = await p;
+    assert.deepEqual(result, {
+      one: {name: 'one', value: 1},
+      two: {name: 'two', value: 2},
+    });
+  });
 });
