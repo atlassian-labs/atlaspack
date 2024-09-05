@@ -61,7 +61,6 @@
     "@atlaspack/transformer-sass": "2.12.0",
     "@atlaspack/transformer-toml": "2.12.0",
     "@atlaspack/transformer-typescript-types": "2.12.0",
-    "@atlaspack/transformer-vue": "2.12.0",
     "@atlaspack/transformer-webmanifest": "2.12.0",
     "@atlaspack/transformer-worklet": "2.12.0",
     "@atlaspack/transformer-xml": "2.12.0",

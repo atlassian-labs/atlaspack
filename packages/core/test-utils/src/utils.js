@@ -652,7 +652,6 @@ function prepareBrowserContext(
     },
 
     createEvent() {
-      // For Vue
       return {timeStamp: Date.now()};
     },
 
