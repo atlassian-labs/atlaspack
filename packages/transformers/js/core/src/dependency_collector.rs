@@ -1469,7 +1469,7 @@ fn match_worker_type(expr: Option<&ast::ExprOrSpread>) -> (SourceType, Option<as
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use super::*;
   use crate::test_utils::{run_fold, RunTestContext, RunVisitResult};
   use crate::DependencyDescriptor;

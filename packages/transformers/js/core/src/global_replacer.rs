@@ -205,7 +205,7 @@ impl GlobalReplacer<'_> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use std::path::Path;
 
   use swc_core::ecma::atoms::JsWord;

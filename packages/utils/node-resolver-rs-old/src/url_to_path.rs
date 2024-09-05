@@ -33,7 +33,7 @@ fn os_str_from_bytes(slice: &[u8]) -> &OsStr {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use std::path::PathBuf;
 
   use url::Url;

@@ -81,7 +81,7 @@ impl VisitMut for TypeofReplacer {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use crate::test_utils::run_visit;
 
   use super::*;

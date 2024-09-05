@@ -308,7 +308,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use pretty_assertions::assert_eq;
   use std::path::PathBuf;
 

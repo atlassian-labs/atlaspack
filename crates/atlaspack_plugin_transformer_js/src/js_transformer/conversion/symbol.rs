@@ -49,7 +49,7 @@ pub(crate) fn transformer_exported_symbol_into_symbol(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use std::path::PathBuf;
 
   use atlaspack_core::types::{Location, SourceLocation};

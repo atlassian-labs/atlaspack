@@ -115,7 +115,7 @@ fn run_with_transformation<R>(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use swc_core::ecma::ast::{Lit, Str};
   use swc_core::ecma::visit::VisitMut;
 

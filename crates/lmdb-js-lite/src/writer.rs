@@ -327,7 +327,7 @@ impl DatabaseWriter {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use std::env::temp_dir;
   use std::sync::mpsc::channel;
 

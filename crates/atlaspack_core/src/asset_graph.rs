@@ -354,7 +354,7 @@ impl std::hash::Hash for AssetGraph {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use std::path::PathBuf;
 
   use crate::types::{Symbol, Target};

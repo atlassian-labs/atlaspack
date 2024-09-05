@@ -109,7 +109,7 @@ impl Tracer {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use super::*;
 
   static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());

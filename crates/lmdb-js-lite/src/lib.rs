@@ -347,7 +347,7 @@ impl LMDB {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use super::*;
   use rand::random;
   use std::env::temp_dir;

@@ -403,7 +403,7 @@ fn should_include_node_module(include_node_modules: &IncludeNodeModules, name: &
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use super::*;
   use atlaspack_core::{
     config_loader::ConfigLoader,

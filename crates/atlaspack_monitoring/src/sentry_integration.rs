@@ -92,7 +92,7 @@ pub fn init_sentry(options: SentryOptions) -> anyhow::Result<ClientInitGuard> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use super::*;
 
   static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());

@@ -84,7 +84,7 @@ pub fn canonicalize(path: &Path, cache: &FileSystemRealPathCache) -> std::io::Re
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use assert_fs::prelude::*;
 
   use super::*;
