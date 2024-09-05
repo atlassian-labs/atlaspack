@@ -13,13 +13,13 @@ import {
   run,
 } from '@atlaspack/test-utils';
 
-describe.v2('json', function () {
+describe('json', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });
 
   it('files can be required in JavaScript', async function () {
-    await fsFixture(overlayFS)`
+    await fsFixture(overlayFS, __dirname)`
       index.js:
         const test = require('./test.json');
 
@@ -34,7 +34,7 @@ describe.v2('json', function () {
         }
     `;
 
-    let b = await bundle('index.js', {inputFS: overlayFS});
+    let b = await bundle(join(__dirname, 'index.js'), {inputFS: overlayFS});
 
     assertBundles(b, [
       {
@@ -49,14 +49,14 @@ describe.v2('json', function () {
   });
 
   it('files are minified', async function () {
-    await fsFixture(overlayFS)`
+    await fsFixture(overlayFS, __dirname)`
       index.json:
         {
           "test": "test"
         }
     `;
 
-    let b = await bundle('index.json', {
+    let b = await bundle(join(__dirname, 'index.json'), {
       defaultTargetOptions: {
         shouldOptimize: true,
         shouldScopeHoist: false,
@@ -65,7 +65,7 @@ describe.v2('json', function () {
     });
 
     let json = await outputFS.readFile(join(distDir, 'index.js'), 'utf8');
-    assert(json.includes('{"test":"test"}'));
+    assert(json.includes(`JSON.parse('{"test":"test"}')`));
 
     let output = await run(b);
     assert.deepEqual(output, {test: 'test'});
