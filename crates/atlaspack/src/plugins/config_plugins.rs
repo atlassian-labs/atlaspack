@@ -31,6 +31,7 @@ use atlaspack_plugin_rpc::plugin::RpcTransformerPlugin;
 use atlaspack_plugin_rpc::RpcWorkerRef;
 use atlaspack_plugin_transformer_inline_string::AtlaspackInlineStringTransformerPlugin;
 use atlaspack_plugin_transformer_js::AtlaspackJsTransformerPlugin;
+use atlaspack_plugin_transformer_raw::AtlaspackRawTransformerPlugin;
 
 use super::Plugins;
 use super::TransformerPipeline;
@@ -215,6 +216,11 @@ impl Plugins for ConfigPlugins {
         transformers.push(Box::new(AtlaspackInlineStringTransformerPlugin::new(
           &self.ctx,
         )?));
+        continue;
+      }
+
+      if transformer.package_name == "@atlaspack/transformer-raw" {
+        transformers.push(Box::new(AtlaspackRawTransformerPlugin::new(&self.ctx)?));
         continue;
       }
 

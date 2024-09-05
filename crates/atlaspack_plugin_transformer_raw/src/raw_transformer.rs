@@ -4,22 +4,19 @@ use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::types::{Asset, BundleBehavior};
 
 #[derive(Debug)]
-pub struct AtlaspackInlineStringTransformerPlugin {}
+pub struct AtlaspackRawTransformerPlugin {}
 
-impl AtlaspackInlineStringTransformerPlugin {
+impl AtlaspackRawTransformerPlugin {
   pub fn new(_ctx: &PluginContext) -> Result<Self, Error> {
-    Ok(AtlaspackInlineStringTransformerPlugin {})
+    Ok(AtlaspackRawTransformerPlugin {})
   }
 }
 
-impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
+impl TransformerPlugin for AtlaspackRawTransformerPlugin {
   fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
-    asset.bundle_behavior = BundleBehavior::Inline;
-    asset
-      .meta
-      .insert(String::from("inlineType"), "string".into());
+    asset.bundle_behavior = BundleBehavior::Isolated;
 
     Ok(TransformResult {
       asset,
@@ -36,16 +33,15 @@ mod test {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::{PluginLogger, PluginOptions},
-    types::JSONObject,
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
   use super::*;
 
   #[test]
-  fn returns_inline_string_asset() {
+  fn returns_raw_asset() {
     let file_system = Arc::new(InMemoryFileSystem::default());
-    let mut plugin = AtlaspackInlineStringTransformerPlugin::new(&PluginContext {
+    let mut plugin = AtlaspackRawTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
         fs: file_system.clone(),
         project_root: PathBuf::default(),
@@ -55,17 +51,16 @@ mod test {
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
     })
-    .expect("Expected inline string transformer to initialize");
+    .expect("Expected raw transformer to initialize");
 
     let asset = Asset::default();
 
-    assert_ne!(asset.bundle_behavior, BundleBehavior::Inline);
+    assert_ne!(asset.bundle_behavior, BundleBehavior::Isolated);
     assert_eq!(
       plugin.transform(asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
-          bundle_behavior: BundleBehavior::Inline,
-          meta: JSONObject::from_iter([(String::from("inlineType"), "string".into())]),
+          bundle_behavior: BundleBehavior::Isolated,
           ..Asset::default()
         },
         dependencies: Vec::new(),
