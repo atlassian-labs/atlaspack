@@ -33,11 +33,6 @@
     "*.pug": ["@atlaspack/transformer-pug"],
     "*.coffee": ["@atlaspack/transformer-coffeescript"],
     "*.mdx": ["@atlaspack/transformer-mdx"],
-    "*.vue": ["@atlaspack/transformer-vue"],
-    "template:*.vue": ["@atlaspack/transformer-vue"],
-    "script:*.vue": ["@atlaspack/transformer-vue"],
-    "style:*.vue": ["@atlaspack/transformer-vue"],
-    "custom:*.vue": ["@atlaspack/transformer-vue"],
     "*.{png,jpg,jpeg,webp,gif,tiff,avif,heic,heif}": [
       "@atlaspack/transformer-image"
     ],
