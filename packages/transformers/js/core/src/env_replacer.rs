@@ -350,7 +350,7 @@ impl<'a> EnvReplacer<'a> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use crate::test_utils::{run_visit, RunTestContext, RunVisitResult};
 
   use super::*;

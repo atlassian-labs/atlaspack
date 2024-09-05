@@ -143,7 +143,7 @@ impl FileSystem for InMemoryFileSystem {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use super::*;
 
   #[test]

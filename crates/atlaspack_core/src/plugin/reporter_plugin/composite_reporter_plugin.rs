@@ -53,7 +53,7 @@ impl ReporterPlugin for CompositeReporterPlugin {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use crate::plugin::reporter_plugin::MockReporterPlugin;
   use anyhow::anyhow;
 

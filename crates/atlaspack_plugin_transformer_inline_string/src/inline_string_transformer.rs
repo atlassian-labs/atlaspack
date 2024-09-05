@@ -30,7 +30,7 @@ impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use std::{path::PathBuf, sync::Arc};
 
   use atlaspack_core::{

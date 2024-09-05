@@ -116,7 +116,7 @@ fn try_to_connect_to_server(options: &CrashReporterOptions) -> anyhow::Result<Cl
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use std::env::temp_dir;
 
   use super::*;

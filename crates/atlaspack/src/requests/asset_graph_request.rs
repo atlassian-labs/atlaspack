@@ -368,7 +368,7 @@ impl AssetGraphBuilder {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
   use std::path::{Path, PathBuf};
   use std::sync::Arc;
 
