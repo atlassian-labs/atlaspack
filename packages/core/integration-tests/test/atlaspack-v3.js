@@ -1,5 +1,6 @@
 // @flow
 
+import assert from 'assert';
 import {join} from 'path';
 
 import {AtlaspackV3, toFileSystemV3} from '@atlaspack/core';
@@ -10,6 +11,8 @@ import {
   inputFS,
   it,
   overlayFS,
+  bundle,
+  run,
 } from '@atlaspack/test-utils';
 
 describe('AtlaspackV3', function () {
@@ -38,5 +41,29 @@ describe('AtlaspackV3', function () {
     });
 
     await atlaspack.buildAssetGraph();
+  });
+
+  it.only('should build with html entry', async function () {
+    await fsFixture(overlayFS, __dirname)`
+        index.html:
+          <script src="./index.js" />
+
+        index.js:
+          output = "it's working";
+      `;
+
+    let b = await bundle(join(__dirname, 'index.html'), {
+      inputFS: overlayFS,
+      outputFS: inputFS,
+    });
+
+    let res = await run(
+      b,
+      {
+        output: null,
+      },
+      {require: false},
+    );
+    assert(res.output, "it's working");
   });
 });

@@ -45,11 +45,8 @@ type DependencyOpts = {|
   pipeline?: ?string,
 |};
 
-export function createDependency(
-  projectRoot: FilePath,
-  opts: DependencyOpts,
-): Dependency {
-  let id =
+export function createDependencyId(opts: DependencyOpts): string {
+  return (
     opts.id ||
     hashString(
       (opts.sourceAssetId ?? '') +
@@ -61,7 +58,15 @@ export function createDependency(
         (opts.bundleBehavior ?? '') +
         (opts.priority ?? 'sync') +
         (opts.packageConditions ? JSON.stringify(opts.packageConditions) : ''),
-    );
+    )
+  );
+}
+
+export function createDependency(
+  projectRoot: FilePath,
+  opts: DependencyOpts,
+): Dependency {
+  let id = createDependencyId(opts);
 
   let dep: Dependency = {
     id,

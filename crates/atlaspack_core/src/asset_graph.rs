@@ -299,7 +299,7 @@ impl serde::Serialize for AssetGraph {
           let dependency = self.dependencies[*idx].dependency.clone();
           SerializedAssetGraphNode::Dependency {
             value: SerializedDependency {
-              id: dependency.id(),
+              id: dependency.id.clone(),
               dependency: dependency.as_ref().clone(),
             },
             has_deferred: self.dependencies[*idx].state == DependencyState::Deferred,
@@ -346,7 +346,7 @@ impl std::hash::Hash for AssetGraph {
       std::mem::discriminant(node).hash(state);
       match node {
         AssetGraphNode::Asset(idx) => self.assets[*idx].asset.id.hash(state),
-        AssetGraphNode::Dependency(idx) => self.dependencies[*idx].dependency.id().hash(state),
+        AssetGraphNode::Dependency(idx) => self.dependencies[*idx].dependency.id.hash(state),
         _ => {}
       }
     }

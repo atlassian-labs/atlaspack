@@ -256,7 +256,7 @@ impl AssetGraphBuilder {
 
     for mut dependency in dependencies {
       unique_deps
-        .entry(dependency.id())
+        .entry(dependency.id.clone())
         .and_modify(|d| {
           // This code is an incomplete version of mergeDependencies in packages/core/core/src/Dependency.js
           // Duplicate dependencies can occur when node globals are polyfilled

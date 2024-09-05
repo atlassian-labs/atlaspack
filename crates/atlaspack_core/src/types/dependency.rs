@@ -9,6 +9,7 @@ use serde::Serialize;
 use serde_repr::Deserialize_repr;
 use serde_repr::Serialize_repr;
 
+use crate::types::target;
 use crate::types::ExportsCondition;
 
 use super::bundle::BundleBehavior;
@@ -22,6 +23,8 @@ use super::target::Target;
 #[derive(PartialEq, Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Dependency {
+  pub id: String,
+
   /// Controls the behavior of the bundle the resolved asset is placed into
   ///
   /// This option is used in combination with priority to determine when the bundle is loaded.
@@ -112,6 +115,33 @@ pub struct Dependency {
   pub placeholder: Option<String>,
 }
 
+fn create_dependency_id(
+  env: &Environment,
+  pipeline: &Option<String>,
+  source_asset_id: &Option<String>,
+  specifier: &String,
+  target: &Option<Box<Target>>,
+  specifier_type: &SpecifierType,
+  bundle_behavior: &BundleBehavior,
+  priority: &Priority,
+  package_conditions: &ExportsCondition,
+) -> String {
+  let mut hasher = crate::hash::IdentifierHasher::default();
+
+  env.hash(&mut hasher);
+  source_asset_id.hash(&mut hasher);
+  specifier.hash(&mut hasher);
+  target.hash(&mut hasher);
+  specifier_type.hash(&mut hasher);
+  pipeline.hash(&mut hasher);
+  bundle_behavior.hash(&mut hasher);
+  priority.hash(&mut hasher);
+  package_conditions.hash(&mut hasher);
+
+  // Ids must be 16 characters for scope hoisting to replace imports correctly in REPLACEMENT_RE
+  format!("{:016x}", hasher.finish())
+}
+
 impl Dependency {
   pub fn entry(entry: String, target: Target) -> Dependency {
     let is_library = target.env.is_library;
@@ -128,32 +158,49 @@ impl Dependency {
       }]);
     }
 
+    let env = target.env.clone();
+    let dep_target = Some(Box::new(target));
     Dependency {
-      env: target.env.clone(),
+      id: create_dependency_id(
+        &env,
+        &None,
+        &None,
+        &entry,
+        &dep_target,
+        &SpecifierType::Url,
+        &BundleBehavior::default(),
+        &Priority::default(),
+        &ExportsCondition::default(),
+      ),
+      env,
       is_entry: true,
       needs_stable_name: true,
       specifier: entry,
       specifier_type: SpecifierType::Url,
       symbols,
-      target: Some(Box::new(target)),
+      target: dep_target,
       ..Dependency::default()
     }
   }
 
   pub fn new(specifier: String, env: Arc<Environment>) -> Dependency {
     Dependency {
+      id: create_dependency_id(
+        &env,
+        &None,
+        &None,
+        &specifier,
+        &None,
+        &SpecifierType::default(),
+        &BundleBehavior::default(),
+        &Priority::default(),
+        &ExportsCondition::default(),
+      ),
       env,
       meta: JSONObject::new(),
       specifier,
       ..Dependency::default()
     }
-  }
-
-  pub fn id(&self) -> String {
-    let mut hasher = crate::hash::IdentifierHasher::default();
-    self.hash(&mut hasher);
-    // Ids must be 16 characters for scope hoisting to replace imports correctly in REPLACEMENT_RE
-    format!("{:016x}", hasher.finish())
   }
 
   pub fn set_placeholder(&mut self, placeholder: impl Into<serde_json::Value>) {

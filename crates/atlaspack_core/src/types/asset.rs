@@ -3,7 +3,6 @@ use std::hash::{Hash, Hasher};
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::u64;
 
 use atlaspack_filesystem::FileSystemRef;
 use serde::Deserialize;
@@ -32,6 +31,10 @@ impl Code {
 
   pub fn bytes(&self) -> &[u8] {
     &self.inner
+  }
+
+  pub fn string(&self) -> String {
+    self.inner.clone()
   }
 
   pub fn size(&self) -> u32 {

@@ -191,7 +191,7 @@ pub(crate) fn convert_result(
           .as_ref()
           .and_then(|source| dependency_by_specifier.get_mut(source))
         {
-          let local = format!("${}${}", dependency.id(), sym.local);
+          let local = format!("${}${}", dependency.id, sym.local);
           let symbol = Symbol {
             exported: sym.local.as_ref().into(),
             local: local.clone(),
