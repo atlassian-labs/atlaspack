@@ -1,8 +1,15 @@
-type ModuleRef<_> = string;
-type ErrorMessage =
-  "You must annotate type with \"<typeof import('a'), typeof import('b')>\"";
+type ModuleRef<_PhantomModuleType> = string;
 
-type ConditionalImport<CondT, CondF> = CondT | CondF;
+type NoImportErrorMessage =
+  "You must annotate type with \"<typeof import('a'), typeof import('b')>\"";
+type NoDefaultErrorMessage = 'Conditional imports must have a default export';
+
+type ESModuleWithDefaultExport = {[key: string]: any; default: any};
+
+type ConditionalImport<
+  CondT extends ESModuleWithDefaultExport,
+  CondF extends ESModuleWithDefaultExport,
+> = CondT['default'] | CondF['default'];
 
 /**
  * **IMPORTANT: This API is currently a no-op. Do not use until this message is removed.**
@@ -19,10 +26,18 @@ type ConditionalImport<CondT, CondF> = CondT | CondF;
  */
 declare function importCond<CondT, CondF>(
   condition: string,
-  ifTrueDependency: CondT extends void ? ErrorMessage : ModuleRef<CondT>,
-  ifFalseDependency: CondF extends void ? ErrorMessage : ModuleRef<CondF>,
-): CondT extends void
-  ? never
-  : CondF extends void
-  ? never
-  : ConditionalImport<CondT, CondF>;
+  ifTrueDependency: CondT extends void
+    ? NoImportErrorMessage
+    : CondT extends ESModuleWithDefaultExport
+    ? ModuleRef<CondT>
+    : NoDefaultErrorMessage,
+  ifFalseDependency: CondF extends void
+    ? NoImportErrorMessage
+    : CondF extends ESModuleWithDefaultExport
+    ? ModuleRef<CondF>
+    : NoDefaultErrorMessage,
+): CondT extends ESModuleWithDefaultExport
+  ? CondF extends ESModuleWithDefaultExport
+    ? ConditionalImport<CondT, CondF>
+    : never
+  : never;

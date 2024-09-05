@@ -1,1 +1,1 @@
-export const Feature = () => 'The feature is ENABLED';
+export default () => 'The feature is ENABLED';

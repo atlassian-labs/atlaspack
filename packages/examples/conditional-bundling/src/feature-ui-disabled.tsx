@@ -1,3 +1,3 @@
-export function Component() {
-    return <button>No fancy</button>;
+export default function Component() {
+  return <button>No fancy</button>;
 }

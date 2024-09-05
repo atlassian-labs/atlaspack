@@ -3,11 +3,11 @@ import ReactDOM from 'react-dom';
 import RegularExport from './regular-import';
 console.log(RegularExport);
 
-const feature = importCond<
+const Feature = importCond<
   typeof import('./feature-enabled'),
   typeof import('./feature-disabled')
 >('my.feature', './feature-enabled', './feature-disabled');
-const featureWithUI = importCond<
+const FeatureWithUI = importCond<
   typeof import('./feature-ui-enabled'),
   typeof import('./feature-ui-disabled')
 >('feature.ui', './feature-ui-enabled', './feature-ui-disabled');
@@ -24,15 +24,15 @@ function LazyComponentContainer() {
 const App = () => {
   const [showLazyComponent, setShowLazyComponent] = useState(false);
 
-  console.log(feature, featureWithUI);
+  console.log(Feature, FeatureWithUI);
   return (
     <div>
       <p>Hello from React</p>
       <button onClick={() => setShowLazyComponent(!showLazyComponent)}>
         Toggle lazy component
       </button>
-      <p>Conditional Feature: {feature.Feature()}</p>
-      <featureWithUI.Component />
+      <p>Conditional Feature: {Feature()}</p>
+      <FeatureWithUI />
       {showLazyComponent ? <LazyComponentContainer /> : null}
     </div>
   );
