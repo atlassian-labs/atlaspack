@@ -7,7 +7,6 @@ import * as module from 'module';
 
 import {AssetCompat} from './compat';
 import type {InnerAsset} from './compat';
-import {transform} from '@babel/core';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 
