@@ -1,0 +1,16 @@
+[package]
+name = "atlaspack_plugin_transformer_json"
+version = "0.1.0"
+edition = "2021"
+description = "Json transformer plugin for the Atlaspack Bundler"
+
+[dependencies]
+atlaspack_core = { path = "../atlaspack_core" }
+
+anyhow = "1"
+json = "0.12.4"
+json5 = "0.4.1"
+serde_json = "1.0.116"
+
+[dev-dependencies]
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }

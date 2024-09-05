@@ -133,6 +133,7 @@ dependencies = [
  "atlaspack_plugin_rpc",
  "atlaspack_plugin_transformer_inline_string",
  "atlaspack_plugin_transformer_js",
+ "atlaspack_plugin_transformer_json",
  "atlaspack_plugin_transformer_raw",
  "dyn-hash",
  "indexmap 2.2.6",
@@ -441,6 +442,18 @@ dependencies = [
  "pretty_assertions",
  "serde",
  "swc_core",
+]
+
+[[package]]
+name = "atlaspack_plugin_transformer_json"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_core",
+ "atlaspack_filesystem",
+ "json",
+ "json5",
+ "serde_json",
 ]
 
 [[package]]
@@ -1834,6 +1847,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29c15563dc2726973df627357ce0c9ddddbea194836909d655df6a75d2cf296d"
 dependencies = [
  "wasm-bindgen",
+]
+
+[[package]]
+name = "json"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "078e285eafdfb6c4b434e0d31e8cfcb5115b651496faca5749b88fafd4f23bfd"
+
+[[package]]
+name = "json5"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96b0db21af676c1ce64250b5f40f3ce2cf27e4e47cb91ed91eb6fe9350b430c1"
+dependencies = [
+ "pest",
+ "pest_derive",
+ "serde",
 ]
 
 [[package]]

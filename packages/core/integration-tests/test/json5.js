@@ -13,13 +13,13 @@ import {
   removeDistDirectory,
 } from '@atlaspack/test-utils';
 
-describe.v2('json5', function () {
+describe('json5', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });
 
   it('files can be required in JavaScript', async function () {
-    await fsFixture(overlayFS)`
+    await fsFixture(overlayFS, __dirname)`
       index.js:
         const test = require('./test.json5');
 
@@ -38,7 +38,7 @@ describe.v2('json5', function () {
         /* end */
     `;
 
-    let b = await bundle('index.js', {inputFS: overlayFS});
+    let b = await bundle(join(__dirname, 'index.js'), {inputFS: overlayFS});
 
     assertBundles(b, [
       {
@@ -53,7 +53,7 @@ describe.v2('json5', function () {
   });
 
   it('files are minified', async function () {
-    await fsFixture(overlayFS)`
+    await fsFixture(overlayFS, __dirname)`
       index.json5:
         /*
          * comment
@@ -64,7 +64,7 @@ describe.v2('json5', function () {
         /* end */
     `;
 
-    let b = await bundle(join('index.json5'), {
+    let b = await bundle(join(__dirname, 'index.json5'), {
       defaultTargetOptions: {
         shouldOptimize: true,
         shouldScopeHoist: false,
@@ -73,7 +73,7 @@ describe.v2('json5', function () {
     });
 
     let json = await outputFS.readFile(join(distDir, 'index.js'), 'utf8');
-    assert(json.includes('{"test":"test"}'));
+    assert(json.includes(`JSON.parse('{"test":"test"}')`));
 
     let output = await run(b);
     assert.deepEqual(output, {test: 'test'});
