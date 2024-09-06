@@ -22,12 +22,16 @@ pub struct AssetId(pub NonZeroU32);
 #[derive(PartialEq, Default, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", transparent)]
 pub struct Code {
-  inner: String,
+  inner: Vec<u8>,
 }
 
 impl Code {
+  pub fn new(bytes: Vec<u8>) -> Self {
+    Self { inner: bytes }
+  }
+
   pub fn bytes(&self) -> &[u8] {
-    self.inner.as_bytes()
+    &self.inner
   }
 
   pub fn size(&self) -> u32 {
@@ -37,13 +41,15 @@ impl Code {
 
 impl Display for Code {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.inner)
+    write!(f, "{:?}", self.inner)
   }
 }
 
 impl From<String> for Code {
   fn from(value: String) -> Self {
-    Self { inner: value }
+    Self {
+      inner: value.into_bytes(),
+    }
   }
 }
 
@@ -179,8 +185,8 @@ impl Asset {
     let code = if let Some(code) = resolver_code {
       Code::from(code)
     } else {
-      let code_from_disk = fs.read_to_string(&file_path)?;
-      Code::from(code_from_disk)
+      let code_from_disk = fs.read(&file_path)?;
+      Code::new(code_from_disk)
     };
 
     let is_source = !file_path.ancestors().any(|p| p.ends_with("/node_modules"));
@@ -194,6 +200,7 @@ impl Asset {
       is_bundle_splittable: true,
       is_source,
       pipeline,
+      query,
       side_effects,
       ..Asset::default()
     })

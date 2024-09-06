@@ -15,9 +15,14 @@ export function toFileSystemV3(fs: ClassicFileSystem): FileSystem {
     canonicalize: jsCallable((path: FilePath) => fs.realpathSync(path)),
     createDirectory: jsCallable((path: FilePath) => fs.mkdirp(path)),
     cwd: jsCallable(() => fs.cwd()),
-    readFile: jsCallable((path: string, encoding?: Encoding) =>
-      fs.readFileSync(path, encoding ?? 'utf8'),
-    ),
+    readFile: jsCallable((path: string, encoding?: Encoding) => {
+      if (!encoding) {
+        // $FlowFixMe
+        return [...fs.readFileSync(path)];
+      } else {
+        return fs.readFileSync(path, encoding);
+      }
+    }),
     isFile: (path: string) => {
       try {
         return fs.statSync(path).isFile();

@@ -164,12 +164,12 @@ impl AssetGraphBuilder {
 
         *state = DependencyState::Resolved;
         AssetRequest {
-          file_path: path,
           code: code.clone(),
-          pipeline: pipeline.clone(),
-          side_effects,
           env: dependency.env.clone(),
+          file_path: path,
+          pipeline: pipeline.clone(),
           query,
+          side_effects,
         }
       }
       PathRequestOutput::Excluded => {

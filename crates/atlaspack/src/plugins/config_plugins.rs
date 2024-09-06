@@ -29,6 +29,7 @@ use atlaspack_plugin_rpc::plugin::RpcResolverPlugin;
 use atlaspack_plugin_rpc::plugin::RpcRuntimePlugin;
 use atlaspack_plugin_rpc::plugin::RpcTransformerPlugin;
 use atlaspack_plugin_rpc::RpcWorkerRef;
+use atlaspack_plugin_transformer_image::AtlaspackImageTransformerPlugin;
 use atlaspack_plugin_transformer_inline_string::AtlaspackInlineStringTransformerPlugin;
 use atlaspack_plugin_transformer_js::AtlaspackJsTransformerPlugin;
 use atlaspack_plugin_transformer_json::AtlaspackJsonTransformerPlugin;
@@ -217,6 +218,11 @@ impl Plugins for ConfigPlugins {
         transformers.push(Box::new(AtlaspackInlineStringTransformerPlugin::new(
           &self.ctx,
         )?));
+        continue;
+      }
+
+      if transformer.package_name == "@atlaspack/transformer-image" {
+        transformers.push(Box::new(AtlaspackImageTransformerPlugin::new(&self.ctx)?));
         continue;
       }
 

@@ -8,14 +8,20 @@ use serde::Serialize;
 /// Defaults to `FileType::Js` for convenience.
 #[derive(Default, Debug, Clone, PartialEq, Hash)]
 pub enum FileType {
+  Avif,
   Css,
+  Gif,
   Html,
   #[default]
   Js,
   Json,
+  Jpeg,
+  Png,
   Jsx,
+  Tiff,
   Ts,
   Tsx,
+  WebP,
   Other(String),
 }
 
@@ -42,12 +48,18 @@ impl FileType {
   pub fn extension(&self) -> &str {
     match self {
       FileType::Js => "js",
-      FileType::Json => "json",
       FileType::Jsx => "jsx",
       FileType::Ts => "ts",
       FileType::Tsx => "tsx",
       FileType::Css => "css",
+      FileType::Json => "json",
+      FileType::Jpeg => "jpeg",
+      FileType::Png => "png",
+      FileType::Gif => "gif",
       FileType::Html => "html",
+      FileType::Avif => "avif",
+      FileType::Tiff => "tiff",
+      FileType::WebP => "webp",
       FileType::Other(s) => s.as_str(),
     }
   }
@@ -60,9 +72,17 @@ impl FileType {
       "jsx" => FileType::Jsx,
       "ts" => FileType::Ts,
       "tsx" => FileType::Tsx,
-      "json" => FileType::Json,
       "css" => FileType::Css,
+      "json" => FileType::Json,
+      "jpg" => FileType::Jpeg,
+      "jpeg" => FileType::Jpeg,
+      "png" => FileType::Png,
+      "gif" => FileType::Gif,
       "html" => FileType::Html,
+      "avif" => FileType::Avif,
+      "avifs" => FileType::Avif,
+      "tiff" => FileType::Tiff,
+      "webp" => FileType::WebP,
       ext => FileType::Other(ext.to_string()),
     }
   }

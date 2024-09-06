@@ -52,9 +52,7 @@ describe('data-url:', function () {
     }
   });
 
-  // TODO: I believe we need to change the code type to handle binary data / bytes over string for
-  // this to succeed
-  it.v2('inlines binary content as a data url', async () => {
+  it('inlines binary content as a data url', async () => {
     let b = await bundle(join(__dirname, '/integration/data-url/binary.js'));
     let binary = (await run(b)).default;
 

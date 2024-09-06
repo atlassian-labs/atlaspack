@@ -18,8 +18,7 @@ use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
 
-use crate::file_system::FileSystemNapi;
-
+use super::file_system_napi::FileSystemNapi;
 use super::package_manager_napi::PackageManagerNapi;
 
 #[napi(object)]

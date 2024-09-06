@@ -60,6 +60,7 @@ pub trait FileSystem {
     ))
   }
 
+  fn read(&self, path: &Path) -> std::io::Result<Vec<u8>>;
   fn read_to_string(&self, path: &Path) -> std::io::Result<String>;
   fn is_file(&self, path: &Path) -> bool;
   fn is_dir(&self, path: &Path) -> bool;

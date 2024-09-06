@@ -1,4 +1,6 @@
 import assert from 'assert';
+import {extname, join} from 'path';
+
 import {
   bundle,
   describe,
@@ -6,118 +8,116 @@ import {
   inputFS,
   it,
   outputFS,
+  removeDistDirectory,
 } from '@atlaspack/test-utils';
 import exifReader from 'exif-reader';
-import path from 'path';
 import sharp from 'sharp';
 
-describe.v2('image', function () {
+describe('images', function () {
   this.timeout(10000);
 
-  it('Should be able to resize images', async () => {
-    await bundle(path.join(__dirname, '/integration/image/resized.js'));
+  beforeEach(async () => {
+    await removeDistDirectory();
+  });
 
-    let dirContent = await outputFS.readdir(distDir);
-    let imagePath = '';
-    let foundExtensions = [];
-    for (let filename of dirContent) {
-      let ext = path.extname(filename);
-      foundExtensions.push(ext);
-      if (ext === '.jpeg') {
-        imagePath = path.join(distDir, filename);
-      }
-    }
-    assert.deepStrictEqual(
-      foundExtensions.sort(),
-      ['.jpeg', '.js', '.map'].sort(),
+  it('can be resized with a query string', async () => {
+    await bundle(join(__dirname, '/integration/image/resized.js'));
+
+    let filenames = await outputFS.readdir(distDir);
+    let exts = filenames.map(f => extname(f)).filter(ext => ext !== '.map');
+
+    assert.deepStrictEqual(exts.sort(), ['.jpeg', '.js']);
+
+    let filename = filenames.find(
+      f => f.endsWith('.jpeg') || f.endsWith('.jpg'),
     );
 
-    let buffer = await outputFS.readFile(imagePath);
+    let buffer = await outputFS.readFile(join(distDir, filename));
     let image = await sharp(buffer).metadata();
+
     assert.equal(image.width, 600);
+    assert.equal(image.height, 400);
   });
 
-  it('Should be able to import an image using multiple varying query parameters', async () => {
-    await bundle(
-      path.join(__dirname, '/integration/image-multiple-queries/index.html'),
-    );
-
-    let dirContent = await outputFS.readdir(distDir);
-    let foundExtensions = [];
-    for (let filename of dirContent) {
-      const foundExt = path.extname(filename);
-      if (foundExt !== '.map') {
-        foundExtensions.push(foundExt);
-      }
-    }
-
-    assert.deepStrictEqual(
-      foundExtensions.sort(),
-      ['.jpeg', '.jpeg', '.webp', '.html'].sort(),
-    );
-  });
-
-  describe('Should be able to change image format', () => {
+  describe('can be resized and reformatted with a query string', () => {
     function testCase(ext) {
       return async () => {
         await bundle(
-          path.join(__dirname, `/integration/image/reformat.${ext}`),
+          join(__dirname, `/integration/image-multiple-queries/index.${ext}`),
         );
 
-        let dirContent = await outputFS.readdir(distDir);
-        let foundExtensions = [];
-        for (let filename of dirContent) {
-          const foundExt = path.extname(filename);
-          if (foundExt !== '.map') {
-            foundExtensions.push(foundExt);
-          }
-        }
+        let filenames = await outputFS.readdir(distDir);
+        let exts = filenames.map(f => extname(f)).filter(ext => ext !== '.map');
+
         assert.deepStrictEqual(
-          foundExtensions.sort(),
-          ['.webp', `.${ext}`].sort(),
+          exts.sort(),
+          [`.${ext}`, '.jpeg', '.jpeg', '.webp'].sort(),
         );
       };
     }
 
-    it('from JS', testCase('js'));
-    it('from HTML', testCase('html'));
-    it('from CSS', testCase('css'));
+    it('from javascript', testCase('js'));
+    it.v2('from html', testCase('html'));
+    it.v2('from css', testCase('css'));
+  });
 
-    it('all formats', async () => {
+  it.v2(
+    'can be resized and reformatted from html with a query string',
+    async () => {},
+  );
+
+  describe('can change image format with a query string', () => {
+    function testCase(ext) {
+      return async () => {
+        await bundle(join(__dirname, `/integration/image/reformat.${ext}`));
+
+        let filenames = await outputFS.readdir(distDir);
+        let exts = filenames.map(f => extname(f)).filter(ext => ext !== '.map');
+
+        assert.deepStrictEqual(exts.sort(), [`.${ext}`, '.webp'].sort());
+      };
+    }
+
+    it('from javascript', testCase('js'));
+    it.v2('from html', testCase('html'));
+    it.v2('from css', testCase('css'));
+
+    it.v2('all formats', async () => {
       let b = await bundle(
-        path.join(__dirname, `/integration/image/reformat-all.html`),
+        join(__dirname, `/integration/image/reformat-all.html`),
       );
 
-      let foundExtensions = new Set(b.getBundles().map(({type}) => type));
+      let exts = new Set(b.getBundles().map(({type}) => type));
 
       assert.deepStrictEqual(
-        foundExtensions,
+        exts,
         new Set(['html', 'webp', 'avif', 'jpeg', 'png', 'tiff']),
       );
     });
   });
 
-  it('should lossless optimise JPEGs', async function () {
-    let img = path.join(__dirname, '/integration/image/image.jpg');
+  it('are optimised as lossless jpg', async () => {
+    let img = join(__dirname, '/integration/image/image.jpg');
     let b = await bundle(img, {
       defaultTargetOptions: {
         shouldOptimize: true,
       },
     });
 
-    const imagePath = b.getBundles().find(b => b.type === 'jpg').filePath;
+    let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
 
     let input = await inputFS.readFile(img);
     let inputRaw = await sharp(input).toFormat('raw').toBuffer();
-    let output = await outputFS.readFile(imagePath);
+
+    let output = await outputFS.readFile(filePath);
     let outputRaw = await sharp(output).toFormat('raw').toBuffer();
 
     assert(outputRaw.equals(inputRaw));
     assert(output.length < input.length);
   });
 
-  it('should lossless optimise progressive JPEGs', async function () {
-    let img = path.join(__dirname, '/integration/image/banana.jpg');
+  it('are optimised as lossless progressive jpgs', async function () {
+    let img = join(__dirname, '/integration/image/banana.jpg');
     let b = await bundle(img, {
       defaultTargetOptions: {
         shouldOptimize: true,
@@ -125,92 +125,50 @@ describe.v2('image', function () {
       logLevel: 'verbose',
     });
 
-    const imagePath = b.getBundles().find(b => b.type === 'jpg').filePath;
+    let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
 
     // let input = await inputFS.readFile(img);
     // let inputRaw = await sharp(input)
     //   .toFormat('raw')
     //   .toBuffer();
+
     // Check validity of image
-    let output = await outputFS.readFile(imagePath);
+    let output = await outputFS.readFile(filePath);
     await sharp(output).toFormat('raw').toBuffer();
 
     // assert(outputRaw.equals(inputRaw));
     // assert(output.length < input.length);
   });
 
-  it('should lossless optimise PNGs', async function () {
-    let img = path.join(__dirname, '/integration/image/clock.png');
+  it('are optimised as lossless pngs', async function () {
+    let img = join(__dirname, '/integration/image/clock.png');
     let b = await bundle(img, {
       defaultTargetOptions: {
         shouldOptimize: true,
       },
     });
 
-    const imagePath = b.getBundles().find(b => b.type === 'png').filePath;
+    let {filePath} = b.getBundles().find(b => b.type === 'png');
 
     let input = await inputFS.readFile(img);
     let inputRaw = await sharp(input).toFormat('raw').toBuffer();
-    let output = await outputFS.readFile(imagePath);
+
+    let output = await outputFS.readFile(filePath);
     let outputRaw = await sharp(output).toFormat('raw').toBuffer();
 
     assert(outputRaw.equals(inputRaw));
     assert(output.length < input.length);
   });
 
-  it('support config files for jpeg files', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/image-config/image.jpg'),
-      {
-        defaultTargetOptions: {
-          shouldOptimize: false,
-        },
-      },
-    );
+  it.v2('retain EXIF data when resized with a query string', async () => {
+    let b = await bundle(join(__dirname, '/integration/image-exif/resized.js'));
 
-    const originalSize = 549196;
+    let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
 
-    const imagePath = b.getBundles().find(b => b.type === 'jpeg').filePath;
+    let buffer = await outputFS.readFile(filePath);
+    let image = await sharp(buffer).metadata();
 
-    const buffer = await outputFS.readFile(imagePath);
-    const image = await sharp(buffer).metadata();
-
-    assert.strictEqual(image.width, 1920);
-    assert.strictEqual(image.chromaSubsampling, '4:4:4');
-    assert(image.size < originalSize);
-  });
-
-  it('support config files for png files', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/image-config/clock.png'),
-      {
-        defaultTargetOptions: {
-          shouldOptimize: false,
-        },
-      },
-    );
-
-    const originalSize = 84435;
-    const imagePath = b.getBundles().find(b => b.type === 'png').filePath;
-    const buffer = await outputFS.readFile(imagePath);
-    const image = await sharp(buffer).metadata();
-
-    assert.strictEqual(image.width, 200);
-    assert.strictEqual(image.paletteBitDepth, 8);
-    assert(image.size < originalSize);
-  });
-
-  it('should retain EXIF data', async () => {
-    const b = await bundle(
-      path.join(__dirname, '/integration/image-exif/resized.html'),
-    );
-
-    const imagePath = b.getBundles().find(b => b.type === 'jpeg').filePath;
-
-    const buffer = await outputFS.readFile(imagePath);
-    const image = await sharp(buffer).metadata();
-
-    const {exif} = exifReader(image.exif);
+    let {exif} = exifReader(image.exif);
 
     assert.strictEqual(
       exif.UserComment.toString(),
@@ -218,9 +176,9 @@ describe.v2('image', function () {
     );
   });
 
-  it('should remove EXIF data when optimizing', async () => {
-    const b = await bundle(
-      path.join(__dirname, '/integration/image-exif/resized.html'),
+  it('removes EXIF data when optimizing', async () => {
+    let b = await bundle(
+      join(__dirname, '/integration/image-exif/resized.js'),
       {
         defaultTargetOptions: {
           shouldOptimize: true,
@@ -228,26 +186,66 @@ describe.v2('image', function () {
       },
     );
 
-    const imagePath = b.getBundles().find(b => b.type === 'jpeg').filePath;
+    let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
 
-    const buffer = await outputFS.readFile(imagePath);
-    const image = await sharp(buffer).metadata();
+    let buffer = await outputFS.readFile(filePath);
+    let image = await sharp(buffer).metadata();
 
     assert.strictEqual(image.exif, undefined);
   });
 
-  it('should use the EXIF orientation tag when resizing', async () => {
-    const b = await bundle(
-      path.join(__dirname, '/integration/image-exif/resized.html'),
-    );
+  it.v2('uses the EXIF orientation tag when resizing', async () => {
+    let b = await bundle(join(__dirname, '/integration/image-exif/resized.js'));
 
-    const imagePath = b.getBundles().find(b => b.type === 'jpeg').filePath;
+    let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
 
-    const buffer = await outputFS.readFile(imagePath);
-    const image = await sharp(buffer).metadata();
+    let buffer = await outputFS.readFile(filePath);
+    let image = await sharp(buffer).metadata();
 
     assert.strictEqual(image.orientation, 1);
     assert.strictEqual(image.width, 240);
     assert.strictEqual(image.height, 320);
+  });
+
+  it.v2('support sharp config file for jpegs', async function () {
+    let b = await bundle(
+      join(__dirname, '/integration/image-config/image.jpg'),
+      {
+        defaultTargetOptions: {
+          shouldOptimize: false,
+        },
+      },
+    );
+
+    let {filePath} = b.getBundles().find(b => b.type === 'jpeg');
+
+    let buffer = await outputFS.readFile(filePath);
+    let image = await sharp(buffer).metadata();
+    let originalSize = 549196;
+
+    assert.strictEqual(image.width, 1920);
+    assert.strictEqual(image.chromaSubsampling, '4:4:4');
+    assert(image.size < originalSize);
+  });
+
+  it.v2('support sharp config files for pngs', async function () {
+    let b = await bundle(
+      join(__dirname, '/integration/image-config/clock.png'),
+      {
+        defaultTargetOptions: {
+          shouldOptimize: false,
+        },
+      },
+    );
+
+    let {filePath} = b.getBundles().find(b => b.type === 'png');
+
+    let buffer = await outputFS.readFile(filePath);
+    let image = await sharp(buffer).metadata();
+    let originalSize = 84435;
+
+    assert.strictEqual(image.width, 200);
+    assert.strictEqual(image.paletteBitDepth, 8);
+    assert(image.size < originalSize);
   });
 });

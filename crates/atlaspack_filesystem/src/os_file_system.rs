@@ -23,6 +23,10 @@ impl FileSystem for OsFileSystem {
     std::fs::create_dir_all(path)
   }
 
+  fn read(&self, path: &Path) -> std::io::Result<Vec<u8>> {
+    std::fs::read(path)
+  }
+
   fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
     std::fs::read_to_string(path)
   }

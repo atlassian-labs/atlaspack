@@ -342,22 +342,23 @@ impl ResolverPlugin for AtlaspackResolver {
       .map_err(|err| self.to_diagnostic_error(&ctx.specifier, err))?;
 
     match resolution {
-      (atlaspack_resolver::Resolution::Path(path), _invalidations) => Ok(Resolved {
+      (atlaspack_resolver::Resolution::Path(path), query) => Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Resolved(ResolvedResolution {
           file_path: path,
+          query,
           side_effects,
           ..ResolvedResolution::default()
         }),
       }),
-      (atlaspack_resolver::Resolution::Builtin(builtin), _invalidations) => {
+      (atlaspack_resolver::Resolution::Builtin(builtin), _query) => {
         self.resolve_builtin(&ctx, builtin)
       }
       (atlaspack_resolver::Resolution::Empty, _invalidations) => Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Resolved(self.resolve_empty(side_effects)),
       }),
-      (atlaspack_resolver::Resolution::External, _invalidations) => {
+      (atlaspack_resolver::Resolution::External, _query) => {
         if let Some(_source_path) = &ctx.dependency.source_path {
           if ctx.dependency.env.is_library && ctx.dependency.specifier_type != SpecifierType::Url {
             todo!("check excluded dependency for libraries");
@@ -369,11 +370,12 @@ impl ResolverPlugin for AtlaspackResolver {
           resolution: Resolution::Excluded,
         })
       }
-      (atlaspack_resolver::Resolution::Global(global), _invalidations) => Ok(Resolved {
+      (atlaspack_resolver::Resolution::Global(global), query) => Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Resolved(ResolvedResolution {
           code: Some(format!("module.exports={};", global)),
           file_path: format!("{}.js", global).into(),
+          query,
           side_effects,
           ..ResolvedResolution::default()
         }),

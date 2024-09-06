@@ -57,6 +57,15 @@ impl FileSystem for FileSystemNapi {
       .map_err(|e| io::Error::other(e))
   }
 
+  fn read(&self, path: &Path) -> std::io::Result<Vec<u8>> {
+    let result = self
+      .read_file_fn
+      .call_with_return_serde(path.to_path_buf())
+      .map_err(|e| io::Error::other(e));
+
+    result
+  }
+
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
     self
       .read_file_fn
