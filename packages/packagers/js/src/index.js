@@ -17,6 +17,7 @@ import {ScopeHoistingPackager} from './ScopeHoistingPackager';
 type JSPackagerConfig = {|
   parcelRequireName: string,
   unstable_asyncBundleRuntime: boolean,
+  unstable_forceSkipWrapAssets: Array<string>,
 |};
 
 const CONFIG_SCHEMA: SchemaEntity = {
@@ -24,6 +25,12 @@ const CONFIG_SCHEMA: SchemaEntity = {
   properties: {
     unstable_asyncBundleRuntime: {
       type: 'boolean',
+    },
+    unstable_forceSkipWrapAssets: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
     },
   },
   additionalProperties: false,
@@ -66,6 +73,8 @@ export default (new Packager({
       unstable_asyncBundleRuntime: Boolean(
         conf?.contents?.unstable_asyncBundleRuntime,
       ),
+      unstable_forceSkipWrapAssets:
+        conf?.contents?.unstable_forceSkipWrapAssets ?? [],
     };
   },
   async package({
@@ -75,6 +84,7 @@ export default (new Packager({
     getSourceMapReference,
     config,
     options,
+    logger,
   }) {
     // If this is a non-module script, and there is only one asset with no dependencies,
     // then we don't need to package at all and can pass through the original code un-wrapped.
@@ -98,6 +108,8 @@ export default (new Packager({
             bundle,
             nullthrows(config).parcelRequireName,
             nullthrows(config).unstable_asyncBundleRuntime,
+            nullthrows(config).unstable_forceSkipWrapAssets,
+            logger,
           )
         : new DevPackager(
             options,

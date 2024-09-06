@@ -6,6 +6,7 @@ import type {
   Dependency,
   PluginOptions,
   NamedBundle,
+  PluginLogger,
 } from '@atlaspack/types';
 
 import {
@@ -35,6 +36,7 @@ import {
   isValidIdentifier,
   makeValidIdentifier,
 } from './utils';
+
 // General regex used to replace imports with the resolved code, references with resolutions,
 // and count the number of newlines in the file for source maps.
 const REPLACEMENT_RE =
@@ -96,6 +98,8 @@ export class ScopeHoistingPackager {
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
   externalAssets: Set<Asset> = new Set();
+  forceSkipWrapAssets: Array<string> = [];
+  logger: PluginLogger;
 
   constructor(
     options: PluginOptions,
@@ -103,12 +107,16 @@ export class ScopeHoistingPackager {
     bundle: NamedBundle,
     parcelRequireName: string,
     useAsyncBundleRuntime: boolean,
+    forceSkipWrapAssets: Array<string>,
+    logger: PluginLogger,
   ) {
     this.options = options;
     this.bundleGraph = bundleGraph;
     this.bundle = bundle;
     this.parcelRequireName = parcelRequireName;
     this.useAsyncBundleRuntime = useAsyncBundleRuntime;
+    this.forceSkipWrapAssets = forceSkipWrapAssets ?? [];
+    this.logger = logger;
 
     let OutputFormat = OUTPUT_FORMATS[this.bundle.env.outputFormat];
     this.outputFormat = new OutputFormat(this);
@@ -338,6 +346,26 @@ export class ScopeHoistingPackager {
         }
 
         if (this.wrappedAssets.has(asset.id)) {
+          actions.skipChildren();
+          return;
+        }
+        // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation
+        // that should only be used when you know (or think you know) what you're doing.
+        //
+        // In particular this can force an async bundle to be scope hoisted where it previously would not be
+        // due to the entry asset being wrapped.
+        if (
+          this.forceSkipWrapAssets.length > 0 &&
+          this.forceSkipWrapAssets.some(
+            p => p === path.relative(this.options.projectRoot, asset.filePath),
+          )
+        ) {
+          this.logger.verbose({
+            message: `Force skipping wrapping of ${path.relative(
+              this.options.projectRoot,
+              asset.filePath,
+            )}`,
+          });
           actions.skipChildren();
           return;
         }
