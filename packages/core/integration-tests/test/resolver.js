@@ -11,7 +11,7 @@ import {
   outputFS,
 } from '@atlaspack/test-utils';
 
-describe.v2('resolver', function () {
+describe('resolver', function () {
   it('should support resolving tilde in monorepo packages', async function () {
     let b = await bundle(
       path.join(
@@ -66,39 +66,42 @@ describe.v2('resolver', function () {
     assert.strictEqual(output.default, 42);
   });
 
-  it('should print a diagnostic when a configured target field will overwrite an entry', async function () {
-    let errorThrows = 0;
-    const overwriteDirs = ['browser', 'app', 'main', 'module'];
-    for (const currDir of overwriteDirs) {
-      try {
-        await bundle(
-          path.join(
-            __dirname,
-            `integration/target-overwrite-source/${currDir}`,
-          ),
-        );
-      } catch (e) {
-        errorThrows++;
-        let pkg = JSON.parse(
-          await overlayFS.readFile(
+  it.v2(
+    'should print a diagnostic when a configured target field will overwrite an entry',
+    async function () {
+      let errorThrows = 0;
+      const overwriteDirs = ['browser', 'app', 'main', 'module'];
+      for (const currDir of overwriteDirs) {
+        try {
+          await bundle(
             path.join(
               __dirname,
-              `integration/target-overwrite-source/${currDir}/package.json`,
+              `integration/target-overwrite-source/${currDir}`,
             ),
-          ),
-        );
-        assert.deepEqual(
-          e.diagnostics[0].message,
-          `Target "${currDir}" is configured to overwrite entry "${path.normalize(
-            `test/integration/target-overwrite-source/${currDir}/${pkg.source}`,
-          )}".`,
-        );
+          );
+        } catch (e) {
+          errorThrows++;
+          let pkg = JSON.parse(
+            await overlayFS.readFile(
+              path.join(
+                __dirname,
+                `integration/target-overwrite-source/${currDir}/package.json`,
+              ),
+            ),
+          );
+          assert.deepEqual(
+            e.diagnostics[0].message,
+            `Target "${currDir}" is configured to overwrite entry "${path.normalize(
+              `test/integration/target-overwrite-source/${currDir}/${pkg.source}`,
+            )}".`,
+          );
+        }
       }
-    }
-    assert.deepEqual(errorThrows, overwriteDirs.length);
-  });
+      assert.deepEqual(errorThrows, overwriteDirs.length);
+    },
+  );
 
-  it('should throw an error on Webpack loader imports', async function () {
+  it.v2('should throw an error on Webpack loader imports', async function () {
     let didThrow = false;
     try {
       await bundle(
@@ -118,169 +121,193 @@ describe.v2('resolver', function () {
     assert(didThrow);
   });
 
-  it('should throw an error with codeframe on invalid js import', async function () {
-    let didThrow = false;
-    try {
-      await bundle(
-        path.join(__dirname, '/integration/js-invalid-import/index.js'),
-      );
-    } catch (e) {
-      didThrow = true;
+  it.v2(
+    'should throw an error with codeframe on invalid js import',
+    async function () {
+      let didThrow = false;
+      try {
+        await bundle(
+          path.join(__dirname, '/integration/js-invalid-import/index.js'),
+        );
+      } catch (e) {
+        didThrow = true;
 
-      assert(
-        e.diagnostics[0].message.startsWith(
-          `Failed to resolve './doesnotexisstt' from `,
-        ),
-      );
+        assert(
+          e.diagnostics[0].message.startsWith(
+            `Failed to resolve './doesnotexisstt' from `,
+          ),
+        );
 
-      assert.deepEqual(e.diagnostics[0].codeFrames[0].codeHighlights[0], {
-        message: undefined,
-        start: {line: 1, column: 8},
-        end: {line: 1, column: 25},
-      });
-    }
+        assert.deepEqual(e.diagnostics[0].codeFrames[0].codeHighlights[0], {
+          message: undefined,
+          start: {line: 1, column: 8},
+          end: {line: 1, column: 25},
+        });
+      }
 
-    assert(didThrow);
-  });
+      assert(didThrow);
+    },
+  );
 
-  it('should throw an error with codeframe on invalid css import', async function () {
-    let didThrow = false;
-    try {
-      await bundle(
-        path.join(__dirname, '/integration/css-invalid-import/index.css'),
-      );
-    } catch (e) {
-      didThrow = true;
+  it.v2(
+    'should throw an error with codeframe on invalid css import',
+    async function () {
+      let didThrow = false;
+      try {
+        await bundle(
+          path.join(__dirname, '/integration/css-invalid-import/index.css'),
+        );
+      } catch (e) {
+        didThrow = true;
 
-      assert(
-        e.diagnostics[0].message.startsWith(
-          `Failed to resolve './thisdoesnotexist.css' from `,
-        ),
-      );
+        assert(
+          e.diagnostics[0].message.startsWith(
+            `Failed to resolve './thisdoesnotexist.css' from `,
+          ),
+        );
 
-      assert.deepEqual(e.diagnostics[0].codeFrames[0].codeHighlights[0], {
-        message: undefined,
-        start: {line: 1, column: 9},
-        end: {line: 1, column: 32},
-      });
-    }
+        assert.deepEqual(e.diagnostics[0].codeFrames[0].codeHighlights[0], {
+          message: undefined,
+          start: {line: 1, column: 9},
+          end: {line: 1, column: 32},
+        });
+      }
 
-    assert(didThrow);
-  });
+      assert(didThrow);
+    },
+  );
 
-  it('Should return codeframe with hints when package.json is invalid', async function () {
-    let didThrow = false;
-    try {
-      await bundle(
-        path.join(__dirname, '/integration/resolver-invalid-pkgjson/index.js'),
-      );
-    } catch (e) {
-      didThrow = true;
+  it.v2(
+    'Should return codeframe with hints when package.json is invalid',
+    async function () {
+      let didThrow = false;
+      try {
+        await bundle(
+          path.join(
+            __dirname,
+            '/integration/resolver-invalid-pkgjson/index.js',
+          ),
+        );
+      } catch (e) {
+        didThrow = true;
 
-      assert.equal(
-        e.diagnostics[1].message,
-        `Could not load './entryx.js' from module 'invalid-module' found in package.json#main`,
-      );
+        assert.equal(
+          e.diagnostics[1].message,
+          `Could not load './entryx.js' from module 'invalid-module' found in package.json#main`,
+        );
 
-      assert.deepEqual(e.diagnostics[1].codeFrames[0].codeHighlights[0], {
-        end: {
-          column: 25,
-          line: 4,
-        },
-        message: "'./entryx.js' does not exist, did you mean './entry.js'?'",
-        start: {
-          column: 13,
-          line: 4,
-        },
-      });
-    }
+        assert.deepEqual(e.diagnostics[1].codeFrames[0].codeHighlights[0], {
+          end: {
+            column: 25,
+            line: 4,
+          },
+          message: "'./entryx.js' does not exist, did you mean './entry.js'?'",
+          start: {
+            column: 13,
+            line: 4,
+          },
+        });
+      }
 
-    assert(didThrow);
-  });
+      assert(didThrow);
+    },
+  );
 
-  it('Should suggest alternative filenames for relative imports', async function () {
-    let threw = 0;
+  it.v2(
+    'Should suggest alternative filenames for relative imports',
+    async function () {
+      let threw = 0;
 
-    try {
-      await bundle(
-        path.join(__dirname, '/integration/resolver-alternative-relative/a.js'),
-      );
-    } catch (e) {
-      threw++;
+      try {
+        await bundle(
+          path.join(
+            __dirname,
+            '/integration/resolver-alternative-relative/a.js',
+          ),
+        );
+      } catch (e) {
+        threw++;
 
-      assert.equal(
-        e.diagnostics[1].message,
-        `Cannot load file './test/teste.js' in './integration/resolver-alternative-relative'.`,
-      );
+        assert.equal(
+          e.diagnostics[1].message,
+          `Cannot load file './test/teste.js' in './integration/resolver-alternative-relative'.`,
+        );
 
-      assert.equal(
-        e.diagnostics[1].hints[0],
-        `Did you mean '__./test/test.js__'?`,
-      );
-    }
+        assert.equal(
+          e.diagnostics[1].hints[0],
+          `Did you mean '__./test/test.js__'?`,
+        );
+      }
 
-    try {
-      await bundle(
-        path.join(__dirname, '/integration/resolver-alternative-relative/b.js'),
-      );
-    } catch (e) {
-      threw++;
+      try {
+        await bundle(
+          path.join(
+            __dirname,
+            '/integration/resolver-alternative-relative/b.js',
+          ),
+        );
+      } catch (e) {
+        threw++;
 
-      assert.equal(
-        e.diagnostics[1].message,
-        `Cannot load file './aa.js' in './integration/resolver-alternative-relative'.`,
-      );
+        assert.equal(
+          e.diagnostics[1].message,
+          `Cannot load file './aa.js' in './integration/resolver-alternative-relative'.`,
+        );
 
-      assert.equal(e.diagnostics[1].hints[0], `Did you mean '__./a.js__'?`);
-    }
+        assert.equal(e.diagnostics[1].hints[0], `Did you mean '__./a.js__'?`);
+      }
 
-    try {
-      await bundle(
-        path.join(
-          __dirname,
-          '/integration/resolver-alternative-relative/test/test.js',
-        ),
-      );
-    } catch (e) {
-      threw++;
+      try {
+        await bundle(
+          path.join(
+            __dirname,
+            '/integration/resolver-alternative-relative/test/test.js',
+          ),
+        );
+      } catch (e) {
+        threw++;
 
-      assert.equal(
-        e.diagnostics[1].message,
-        `Cannot load file '../../a.js' in './integration/resolver-alternative-relative/test'.`,
-      );
+        assert.equal(
+          e.diagnostics[1].message,
+          `Cannot load file '../../a.js' in './integration/resolver-alternative-relative/test'.`,
+        );
 
-      assert.equal(e.diagnostics[1].hints[0], `Did you mean '__../a.js__'?`);
-    }
+        assert.equal(e.diagnostics[1].hints[0], `Did you mean '__../a.js__'?`);
+      }
 
-    assert.equal(threw, 3);
-  });
+      assert.equal(threw, 3);
+    },
+  );
 
-  it('Should suggest alternative modules for module imports', async function () {
-    let threw = false;
+  it.v2(
+    'Should suggest alternative modules for module imports',
+    async function () {
+      let threw = false;
 
-    try {
-      await bundle(
-        path.join(
-          __dirname,
-          '/integration/resolver-alternative-module/index.js',
-        ),
-      );
-    } catch (e) {
-      threw = true;
+      try {
+        await bundle(
+          path.join(
+            __dirname,
+            '/integration/resolver-alternative-module/index.js',
+          ),
+        );
+      } catch (e) {
+        threw = true;
 
-      assert.equal(
-        e.diagnostics[1].message,
-        `Cannot find module '@baebal/core'`,
-      );
+        assert.equal(
+          e.diagnostics[1].message,
+          `Cannot find module '@baebal/core'`,
+        );
 
-      assert.equal(
-        e.diagnostics[1].hints[0],
-        `Did you mean '__@babel/core__'?`,
-      );
-    }
+        assert.equal(
+          e.diagnostics[1].hints[0],
+          `Did you mean '__@babel/core__'?`,
+        );
+      }
 
-    assert(threw);
-  });
+      assert(threw);
+    },
+  );
 
   it('should resolve packages to packages through the alias field', async function () {
     let b = await bundle(
@@ -360,7 +387,7 @@ describe.v2('resolver', function () {
     assert.strictEqual(output.default, 42);
   });
 
-  it('should support symlinked monorepos structure', async function () {
+  it.v2('should support symlinked monorepos structure', async function () {
     const rootDir = path.join(
       __dirname,
       'integration/resolve-symlinked-monorepos',
@@ -413,7 +440,7 @@ describe.v2('resolver', function () {
     });
   });
 
-  it('should support empty dependency specifiers', async function () {
+  it.v2('should support empty dependency specifiers', async function () {
     // $FlowFixMe[prop-missing];
     await assert.rejects(
       () =>

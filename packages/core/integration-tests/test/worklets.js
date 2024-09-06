@@ -10,7 +10,7 @@ import {
   runBundle,
 } from '@atlaspack/test-utils';
 
-describe.v2('atlaspack', function () {
+describe('atlaspack', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });
@@ -164,7 +164,7 @@ describe.v2('atlaspack', function () {
     assert.equal(name, 'checkerboard');
   });
 
-  it('errors on dynamic import() inside worklets', async function () {
+  it.v2('errors on dynamic import() inside worklets', async function () {
     let errored = false;
     try {
       await bundle(
@@ -225,7 +225,7 @@ describe.v2('atlaspack', function () {
     assert(errored);
   });
 
-  it('supports audio worklets via a pipeline', async function () {
+  it.v2('supports audio worklets via a pipeline', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/worklet/worklet-pipeline.js'),
       {
@@ -262,45 +262,51 @@ describe.v2('atlaspack', function () {
     assert.equal(name, 'checkerboard');
   });
 
-  it('errors on dynamic import() inside worklets imported via a pipeline', async function () {
-    let errored = false;
-    try {
-      await bundle(
-        path.join(__dirname, '/integration/worklet/worklet-pipeline-error.js'),
-      );
-    } catch (err) {
-      errored = true;
-      assert.equal(err.message, 'import() is not allowed in worklets.');
-      assert.deepEqual(err.diagnostics, [
-        {
-          message: 'import() is not allowed in worklets.',
-          origin: '@atlaspack/transformer-js',
-          codeFrames: [
-            {
-              filePath: path.join(
-                __dirname,
-                '/integration/worklet/worklet-error.js',
-              ),
-              codeHighlights: [
-                {
-                  message: undefined,
-                  start: {
-                    line: 1,
-                    column: 8,
+  it.v2(
+    'errors on dynamic import() inside worklets imported via a pipeline',
+    async function () {
+      let errored = false;
+      try {
+        await bundle(
+          path.join(
+            __dirname,
+            '/integration/worklet/worklet-pipeline-error.js',
+          ),
+        );
+      } catch (err) {
+        errored = true;
+        assert.equal(err.message, 'import() is not allowed in worklets.');
+        assert.deepEqual(err.diagnostics, [
+          {
+            message: 'import() is not allowed in worklets.',
+            origin: '@atlaspack/transformer-js',
+            codeFrames: [
+              {
+                filePath: path.join(
+                  __dirname,
+                  '/integration/worklet/worklet-error.js',
+                ),
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 1,
+                      column: 8,
+                    },
+                    end: {
+                      line: 1,
+                      column: 18,
+                    },
                   },
-                  end: {
-                    line: 1,
-                    column: 18,
-                  },
-                },
-              ],
-            },
-          ],
-          hints: ['Try using a static `import`.'],
-        },
-      ]);
-    }
+                ],
+              },
+            ],
+            hints: ['Try using a static `import`.'],
+          },
+        ]);
+      }
 
-    assert(errored);
-  });
+      assert(errored);
+    },
+  );
 });

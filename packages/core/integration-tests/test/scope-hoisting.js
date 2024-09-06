@@ -192,25 +192,22 @@ describe('scope hoisting', function () {
       assert.equal(output, 2);
     });
 
-    it.v2(
-      'supports renaming helpers inserted during transpiling',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/rename-helpers/a.js',
-          ),
-        );
-        let contents = await outputFS.readFile(
-          b.getBundles()[0].filePath,
-          'utf8',
-        );
-        assert(/let \S* = Symbol.toStringTag;/.test(contents));
+    it('supports renaming helpers inserted during transpiling', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/es6/rename-helpers/a.js',
+        ),
+      );
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+      assert(/let \S* = Symbol.toStringTag;/.test(contents));
 
-        let output = await run(b);
-        assert.deepEqual(output, ['1', '2']);
-      },
-    );
+      let output = await run(b);
+      assert.deepEqual(output, ['1', '2']);
+    });
 
     it('correctly renames member expression properties', async function () {
       let b = await bundle(
@@ -3123,7 +3120,7 @@ describe('scope hoisting', function () {
       await run(b);
     });
 
-    it.v2('can import urls to raw assets', async () => {
+    it('can import urls to raw assets', async () => {
       let b = await bundle(
         path.join(
           __dirname,
@@ -3144,7 +3141,7 @@ describe('scope hoisting', function () {
       assert(/foo\.[a-f0-9]+\.png$/.test(output));
     });
 
-    it.v2('can reexport urls to raw assets', async () => {
+    it('can reexport urls to raw assets', async () => {
       let b = await bundle(
         path.join(
           __dirname,
@@ -3602,7 +3599,7 @@ describe('scope hoisting', function () {
       assert.deepEqual(res, {foo: 2});
     });
 
-    it.v2('supports constant inlining', async function () {
+    it('supports constant inlining', async function () {
       let b = await bundle(
         path.join(__dirname, 'integration/inline-constants/index.js'),
         {
@@ -4069,20 +4066,17 @@ describe('scope hoisting', function () {
       assert.equal(output.foo, 'b');
     });
 
-    it.v2(
-      "doesn't insert parcelRequire for missing non-js assets",
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/commonjs/missing-non-js/a.js',
-          ),
-        );
+    it("doesn't insert parcelRequire for missing non-js assets", async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/commonjs/missing-non-js/a.js',
+        ),
+      );
 
-        let output = await run(b);
-        assert.equal(output, 27);
-      },
-    );
+      let output = await run(b);
+      assert.equal(output, 27);
+    });
 
     it.v2('define exports in the outermost scope', async function () {
       let b = await bundle(
@@ -4258,7 +4252,7 @@ describe('scope hoisting', function () {
       assert.deepEqual(output, 'foo');
     });
 
-    it.v2('supports using this in arrow functions', async function () {
+    it('supports using this in arrow functions', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -4297,7 +4291,7 @@ describe('scope hoisting', function () {
       assert.deepEqual(output, [6, undefined, 4]);
     });
 
-    it.v2('supports using exports self reference', async function () {
+    it('supports using exports self reference', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -4312,7 +4306,7 @@ describe('scope hoisting', function () {
       assert.strictEqual(output, 'Say other');
     });
 
-    it.v2('supports using module.exports self reference', async function () {
+    it('supports using module.exports self reference', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -4339,31 +4333,28 @@ describe('scope hoisting', function () {
       assert.strictEqual(output.b, 2);
     });
 
-    it.v2(
-      'support url imports in wrapped modules with interop',
-      async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/commonjs/wrap-interop-url-import/a.js',
-          ),
-        );
+    it('support url imports in wrapped modules with interop', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/scope-hoisting/commonjs/wrap-interop-url-import/a.js',
+        ),
+      );
 
-        assertBundles(b, [
-          {
-            type: 'js',
-            assets: ['a.js', 'b.js', 'bundle-url.js'],
-          },
-          {
-            type: 'txt',
-            assets: ['data.txt'],
-          },
-        ]);
+      assertBundles(b, [
+        {
+          type: 'js',
+          assets: ['a.js', 'b.js', 'bundle-url.js'],
+        },
+        {
+          type: 'txt',
+          assets: ['data.txt'],
+        },
+      ]);
 
-        let output = await run(b);
-        assert(output.endsWith('.txt'));
-      },
-    );
+      let output = await run(b);
+      assert(output.endsWith('.txt'));
+    });
 
     it('supports module object properties', async function () {
       let b = await bundle(
@@ -5565,7 +5556,7 @@ describe('scope hoisting', function () {
     assert.strictEqual(await run(b), 3);
   });
 
-  it.v2('should wrap imports inside arrow functions', async function () {
+  it('should wrap imports inside arrow functions', async function () {
     let b = await bundle(
       path.join(
         __dirname,
