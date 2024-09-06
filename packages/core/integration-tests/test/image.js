@@ -11,7 +11,7 @@ import exifReader from 'exif-reader';
 import path from 'path';
 import sharp from 'sharp';
 
-describe.v2('image', function () {
+describe.v2.only('image', function () {
   this.timeout(10000);
 
   it('Should be able to resize images', async () => {

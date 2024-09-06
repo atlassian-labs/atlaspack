@@ -46,10 +46,10 @@ atlaspack-macros = { path = "../macros", features = ["napi"] }
 crossbeam-channel = "0.5.6"
 indexmap = "1.9.2"
 libc = "0.2"
-mozjpeg-sys = "1.0.0"
+mozjpeg = "0.10.9"
 napi = { version = "2.16.4", features = ["async", "napi4", "napi5", "serde-json"] }
 once_cell = { version = "1.19.0" }
-oxipng = "8.0.0"
+oxipng = "9.1.2"
 rayon = "1.7.0"
 
 # Crash reporting dependencies
