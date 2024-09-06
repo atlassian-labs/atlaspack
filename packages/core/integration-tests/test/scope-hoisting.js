@@ -6318,7 +6318,6 @@ describe('scope hoisting', function () {
     }
   });
 
-  // Will work in v3 once HTML entries are supported
   it('should allow force skipping of wrapping assets in async bundles', async function () {
     await fsFixture(overlayFS, __dirname)`
       force-skip-wrap
