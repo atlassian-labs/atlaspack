@@ -1,0 +1,15 @@
+[package]
+name = "atlaspack_plugin_transformer_image"
+version = "0.1.0"
+edition = "2021"
+description = "Image transformer plugin for the Atlaspack Bundler"
+
+[dependencies]
+atlaspack_core = { path = "../atlaspack_core" }
+
+anyhow = "1"
+image = "0.25.2"
+url-search-params = "12.0.0"
+
+[dev-dependencies]
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }

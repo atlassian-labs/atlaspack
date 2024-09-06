@@ -107,6 +107,11 @@ impl FileSystem for InMemoryFileSystem {
     Ok(())
   }
 
+  fn read(&self, path: &Path) -> std::io::Result<Vec<u8>> {
+    let str = self.read_to_string(path)?;
+    Ok(str.as_bytes().to_vec())
+  }
+
   fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
     let path = self.canonicalize_impl(path);
     let files = self.files.read().unwrap();

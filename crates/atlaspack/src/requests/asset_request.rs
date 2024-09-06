@@ -24,12 +24,12 @@ use super::RequestResult;
 /// - Finally, returns the complete Asset and it's discovered Dependencies
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct AssetRequest {
+  pub code: Option<String>,
   pub env: Arc<Environment>,
   pub file_path: PathBuf,
-  pub code: Option<String>,
   pub pipeline: Option<String>,
-  pub side_effects: bool,
   pub query: Option<String>,
+  pub side_effects: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

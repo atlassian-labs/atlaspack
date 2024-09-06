@@ -143,6 +143,10 @@ impl FileSystem for JsFileSystem {
 
     is_dir().unwrap_or(false)
   }
+
+  fn read(&self, _path: &Path) -> std::io::Result<Vec<u8>> {
+    todo!()
+  }
 }
 
 #[napi(object)]
