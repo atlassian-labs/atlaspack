@@ -23,7 +23,7 @@ function hasPolyfill(code) {
   return code.includes(polyfill) && !code.includes(noPolyfill);
 }
 
-describe.v2('packager', function () {
+describe('packager', function () {
   describe('globalThis polyfill', function () {
     it('should exclude globalThis polyfill in modern builds', async function () {
       const entryPoint = path.join(
@@ -72,28 +72,31 @@ describe.v2('packager', function () {
       }
     });
 
-    it('should exclude globalThis polyfill in node builds', async function () {
-      const entryPoint = path.join(
-        __dirname,
-        'integration/packager-global-this/index.js',
-      );
-      const options = {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldOptimize: false,
-          engines: {
-            browsers: 'node 18',
+    it.v2(
+      'should exclude globalThis polyfill in node builds',
+      async function () {
+        const entryPoint = path.join(
+          __dirname,
+          'integration/packager-global-this/index.js',
+        );
+        const options = {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+            engines: {
+              browsers: 'node 18',
+            },
           },
-        },
-      };
+        };
 
-      const bundleGraph = await runBundler(entryPoint, options);
+        const bundleGraph = await runBundler(entryPoint, options);
 
-      for (const b of bundleGraph.getBundles()) {
-        if (b.type !== 'js') continue;
-        let code = await overlayFS.readFile(nullthrows(b.filePath), 'utf8');
-        assert.ok(!hasPolyfill(code));
-      }
-    });
+        for (const b of bundleGraph.getBundles()) {
+          if (b.type !== 'js') continue;
+          let code = await overlayFS.readFile(nullthrows(b.filePath), 'utf8');
+          assert.ok(!hasPolyfill(code));
+        }
+      },
+    );
   });
 });

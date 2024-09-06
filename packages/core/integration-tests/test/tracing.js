@@ -3,7 +3,7 @@ import assert from 'assert';
 import path from 'path';
 import {bundle, describe, distDir, it, outputFS} from '@atlaspack/test-utils';
 
-describe.v2('tracing', function () {
+describe('tracing', function () {
   it('should produce a trace', async function () {
     await bundle(
       path.join(__dirname, '/integration/typescript-jsx/index.tsx'),

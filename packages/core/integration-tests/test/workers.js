@@ -12,7 +12,7 @@ import {
   runBundle,
 } from '@atlaspack/test-utils';
 
-describe.v2('parcel', function () {
+describe('atlaspack', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });
@@ -251,7 +251,7 @@ describe.v2('parcel', function () {
     await run(b);
   });
 
-  it('bundles workers of type module', async function () {
+  it.v2('bundles workers of type module', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/workers-module/index.js'),
       {
@@ -308,142 +308,146 @@ describe.v2('parcel', function () {
   });
 
   for (let shouldScopeHoist of [true, false]) {
-    it(`compiles workers to non modules if ${
-      shouldScopeHoist
-        ? 'browsers do not support it'
-        : 'shouldScopeHoist = false'
-    }`, async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/workers-module/index.js'),
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            shouldOptimize: false,
-            shouldScopeHoist,
-            engines: {
-              browsers: '>= 0.25%',
+    it.v2(
+      `compiles workers to non modules if ${
+        shouldScopeHoist
+          ? 'browsers do not support it'
+          : 'shouldScopeHoist = false'
+      }`,
+      async function () {
+        let b = await bundle(
+          path.join(__dirname, '/integration/workers-module/index.js'),
+          {
+            mode: 'production',
+            defaultTargetOptions: {
+              shouldOptimize: false,
+              shouldScopeHoist,
+              engines: {
+                browsers: '>= 0.25%',
+              },
             },
           },
-        },
-      );
+        );
 
-      assertBundles(b, [
-        {
-          assets: ['dedicated-worker.js'],
-        },
-        {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bundle-url.js',
-            'get-worker-url.js',
-            'bundle-manifest.js',
-          ],
-        },
-        {
-          assets: [
-            !shouldScopeHoist && 'esmodule-helpers.js',
-            'index.js',
-          ].filter(Boolean),
-        },
-        {
-          assets: ['shared-worker.js'],
-        },
-      ]);
+        assertBundles(b, [
+          {
+            assets: ['dedicated-worker.js'],
+          },
+          {
+            name: 'index.js',
+            assets: [
+              'index.js',
+              'bundle-url.js',
+              'get-worker-url.js',
+              'bundle-manifest.js',
+            ],
+          },
+          {
+            assets: [
+              !shouldScopeHoist && 'esmodule-helpers.js',
+              'index.js',
+            ].filter(Boolean),
+          },
+          {
+            assets: ['shared-worker.js'],
+          },
+        ]);
 
-      let dedicated, shared;
-      b.traverseBundles((bundle, ctx, traversal) => {
-        let mainEntry = bundle.getMainEntry();
-        if (mainEntry && mainEntry.filePath.endsWith('shared-worker.js')) {
-          shared = bundle;
-        } else if (
-          mainEntry &&
-          mainEntry.filePath.endsWith('dedicated-worker.js')
-        ) {
-          dedicated = bundle;
-        }
-        if (dedicated && shared) traversal.stop();
-      });
+        let dedicated, shared;
+        b.traverseBundles((bundle, ctx, traversal) => {
+          let mainEntry = bundle.getMainEntry();
+          if (mainEntry && mainEntry.filePath.endsWith('shared-worker.js')) {
+            shared = bundle;
+          } else if (
+            mainEntry &&
+            mainEntry.filePath.endsWith('dedicated-worker.js')
+          ) {
+            dedicated = bundle;
+          }
+          if (dedicated && shared) traversal.stop();
+        });
 
-      assert(dedicated);
-      assert(shared);
+        assert(dedicated);
+        assert(shared);
 
-      let main = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-      dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
-      shared = await outputFS.readFile(shared.filePath, 'utf8');
-      assert(/new Worker([^,]*?)/.test(main));
-      assert(/new SharedWorker([^,]*?)/.test(main));
-      assert(!/export var foo/.test(dedicated));
-      assert(!/export var foo/.test(shared));
-    });
+        let main = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+        dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
+        shared = await outputFS.readFile(shared.filePath, 'utf8');
+        assert(/new Worker([^,]*?)/.test(main));
+        assert(/new SharedWorker([^,]*?)/.test(main));
+        assert(!/export var foo/.test(dedicated));
+        assert(!/export var foo/.test(shared));
+      },
+    );
   }
 
   for (let supported of [false, true]) {
-    it(`compiles workers to ${
-      supported ? '' : 'non '
-    }modules when browsers do ${
-      supported ? '' : 'not '
-    }support it with esmodule parent script`, async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/workers-module/index.js'),
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            engines: {browsers: supported ? 'Chrome 80' : 'Chrome 75'},
-            outputFormat: 'esmodule',
-            shouldScopeHoist: true,
-            shouldOptimize: false,
+    it.v2(
+      `compiles workers to ${supported ? '' : 'non '}modules when browsers do ${
+        supported ? '' : 'not '
+      }support it with esmodule parent script`,
+      async function () {
+        let b = await bundle(
+          path.join(__dirname, '/integration/workers-module/index.js'),
+          {
+            mode: 'production',
+            defaultTargetOptions: {
+              engines: {browsers: supported ? 'Chrome 80' : 'Chrome 75'},
+              outputFormat: 'esmodule',
+              shouldScopeHoist: true,
+              shouldOptimize: false,
+            },
           },
-        },
-      );
+        );
 
-      assertBundles(b, [
-        {
-          type: 'js',
-          assets: ['dedicated-worker.js'],
-        },
-        {
-          name: 'index.js',
-          assets: ['index.js', 'bundle-manifest.js', 'get-worker-url.js'],
-        },
-        {
-          type: 'js',
-          assets: ['shared-worker.js'],
-        },
-        {
-          type: 'js',
-          assets: ['index.js'],
-        },
-      ]);
+        assertBundles(b, [
+          {
+            type: 'js',
+            assets: ['dedicated-worker.js'],
+          },
+          {
+            name: 'index.js',
+            assets: ['index.js', 'bundle-manifest.js', 'get-worker-url.js'],
+          },
+          {
+            type: 'js',
+            assets: ['shared-worker.js'],
+          },
+          {
+            type: 'js',
+            assets: ['index.js'],
+          },
+        ]);
 
-      let dedicated, shared;
-      b.traverseBundles((bundle, ctx, traversal) => {
-        if (bundle.getMainEntry()?.filePath.endsWith('shared-worker.js')) {
-          shared = bundle;
-        } else if (
-          bundle.getMainEntry()?.filePath.endsWith('dedicated-worker.js')
-        ) {
-          dedicated = bundle;
-        }
-        if (dedicated && shared) traversal.stop();
-      });
+        let dedicated, shared;
+        b.traverseBundles((bundle, ctx, traversal) => {
+          if (bundle.getMainEntry()?.filePath.endsWith('shared-worker.js')) {
+            shared = bundle;
+          } else if (
+            bundle.getMainEntry()?.filePath.endsWith('dedicated-worker.js')
+          ) {
+            dedicated = bundle;
+          }
+          if (dedicated && shared) traversal.stop();
+        });
 
-      assert(dedicated);
-      assert(shared);
+        assert(dedicated);
+        assert(shared);
 
-      let main = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-      assert(/new Worker([^,]*?)/.test(main));
-      assert(/new SharedWorker([^,]*?)/.test(main));
+        let main = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+        assert(/new Worker([^,]*?)/.test(main));
+        assert(/new SharedWorker([^,]*?)/.test(main));
 
-      dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
-      shared = await outputFS.readFile(shared.filePath, 'utf8');
-      let importRegex = supported ? /importScripts\s*\(/ : /import\s*("|')/;
-      assert(!importRegex.test(dedicated));
-      assert(!importRegex.test(shared));
-    });
+        dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
+        shared = await outputFS.readFile(shared.filePath, 'utf8');
+        let importRegex = supported ? /importScripts\s*\(/ : /import\s*("|')/;
+        assert(!importRegex.test(dedicated));
+        assert(!importRegex.test(shared));
+      },
+    );
   }
 
-  it('preserves the worker name option', async function () {
+  it.v2('preserves the worker name option', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/workers-module/named.js'),
       {
@@ -461,79 +465,82 @@ describe.v2('parcel', function () {
     assert(/new SharedWorker(.*?, {[\n\s]+name: 'shared'[\n\s]+})/.test(main));
   });
 
-  it('errors when importing in a worker without type: module', async function () {
-    let errored = false;
-    try {
-      await bundle(
-        path.join(__dirname, '/integration/workers-module/error.js'),
-        {
-          defaultTargetOptions: {
-            shouldScopeHoist: true,
+  it.v2(
+    'errors when importing in a worker without type: module',
+    async function () {
+      let errored = false;
+      try {
+        await bundle(
+          path.join(__dirname, '/integration/workers-module/error.js'),
+          {
+            defaultTargetOptions: {
+              shouldScopeHoist: true,
+            },
           },
-        },
-      );
-    } catch (err) {
-      errored = true;
-      assert.equal(
-        err.message,
-        'Web workers cannot have imports or exports without the `type: "module"` option.',
-      );
-      assert.deepEqual(err.diagnostics, [
-        {
-          message:
-            'Web workers cannot have imports or exports without the `type: "module"` option.',
-          origin: '@atlaspack/transformer-js',
-          codeFrames: [
-            {
-              filePath: path.join(
-                __dirname,
-                '/integration/workers-module/dedicated-worker.js',
-              ),
-              codeHighlights: [
-                {
-                  message: undefined,
-                  start: {
-                    line: 1,
-                    column: 1,
+        );
+      } catch (err) {
+        errored = true;
+        assert.equal(
+          err.message,
+          'Web workers cannot have imports or exports without the `type: "module"` option.',
+        );
+        assert.deepEqual(err.diagnostics, [
+          {
+            message:
+              'Web workers cannot have imports or exports without the `type: "module"` option.',
+            origin: '@atlaspack/transformer-js',
+            codeFrames: [
+              {
+                filePath: path.join(
+                  __dirname,
+                  '/integration/workers-module/dedicated-worker.js',
+                ),
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 1,
+                      column: 1,
+                    },
+                    end: {
+                      line: 1,
+                      column: 22,
+                    },
                   },
-                  end: {
-                    line: 1,
-                    column: 22,
+                ],
+              },
+              {
+                filePath: path.join(
+                  __dirname,
+                  '/integration/workers-module/error.js',
+                ),
+                codeHighlights: [
+                  {
+                    message: 'The environment was originally created here',
+                    start: {
+                      line: 1,
+                      column: 20,
+                    },
+                    end: {
+                      line: 1,
+                      column: 40,
+                    },
                   },
-                },
-              ],
-            },
-            {
-              filePath: path.join(
-                __dirname,
-                '/integration/workers-module/error.js',
-              ),
-              codeHighlights: [
-                {
-                  message: 'The environment was originally created here',
-                  start: {
-                    line: 1,
-                    column: 20,
-                  },
-                  end: {
-                    line: 1,
-                    column: 40,
-                  },
-                },
-              ],
-            },
-          ],
-          hints: [
-            "Add {type: 'module'} as a second argument to the Worker constructor.",
-          ],
-          documentationURL:
-            'https://parceljs.org/languages/javascript/#classic-scripts',
-        },
-      ]);
-    }
+                ],
+              },
+            ],
+            hints: [
+              "Add {type: 'module'} as a second argument to the Worker constructor.",
+            ],
+            documentationURL:
+              'https://parceljs.org/languages/javascript/#classic-scripts',
+          },
+        ]);
+      }
 
-    assert(errored);
-  });
+      assert(errored);
+    },
+  );
 
   it('bundles workers with different order', async function () {
     let b = await bundle(
@@ -565,80 +572,83 @@ describe.v2('parcel', function () {
   });
 
   for (let workerType of ['webworker', 'serviceworker']) {
-    it(`should error when ${workerType}s use importScripts`, async function () {
-      let filePath = path.join(
-        __dirname,
-        `/integration/worker-import-scripts/index-${workerType}.js`,
-      );
-      let errored = false;
-      try {
-        await bundle(filePath);
-      } catch (err) {
-        errored = true;
-        assert.equal(
-          err.message,
-          'Argument to importScripts() must be a fully qualified URL.',
+    it.v2(
+      `should error when ${workerType}s use importScripts`,
+      async function () {
+        let filePath = path.join(
+          __dirname,
+          `/integration/worker-import-scripts/index-${workerType}.js`,
         );
-        assert.deepEqual(err.diagnostics, [
-          {
-            message:
-              'Argument to importScripts() must be a fully qualified URL.',
-            origin: '@atlaspack/transformer-js',
-            codeFrames: [
-              {
-                filePath: path.join(
-                  __dirname,
-                  `/integration/worker-import-scripts/importScripts.js`,
-                ),
-                codeHighlights: [
-                  {
-                    message: undefined,
-                    start: {
-                      line: 1,
-                      column: 15,
+        let errored = false;
+        try {
+          await bundle(filePath);
+        } catch (err) {
+          errored = true;
+          assert.equal(
+            err.message,
+            'Argument to importScripts() must be a fully qualified URL.',
+          );
+          assert.deepEqual(err.diagnostics, [
+            {
+              message:
+                'Argument to importScripts() must be a fully qualified URL.',
+              origin: '@atlaspack/transformer-js',
+              codeFrames: [
+                {
+                  filePath: path.join(
+                    __dirname,
+                    `/integration/worker-import-scripts/importScripts.js`,
+                  ),
+                  codeHighlights: [
+                    {
+                      message: undefined,
+                      start: {
+                        line: 1,
+                        column: 15,
+                      },
+                      end: {
+                        line: 1,
+                        column: 27,
+                      },
                     },
-                    end: {
-                      line: 1,
-                      column: 27,
+                  ],
+                },
+                {
+                  filePath: path.join(
+                    __dirname,
+                    `integration/worker-import-scripts/index-${workerType}.js`,
+                  ),
+                  codeHighlights: [
+                    {
+                      message: 'The environment was originally created here',
+                      start: {
+                        line: 1,
+                        column: workerType === 'webworker' ? 20 : 42,
+                      },
+                      end: {
+                        line: 1,
+                        column: workerType === 'webworker' ? 37 : 59,
+                      },
                     },
-                  },
-                ],
-              },
-              {
-                filePath: path.join(
-                  __dirname,
-                  `integration/worker-import-scripts/index-${workerType}.js`,
-                ),
-                codeHighlights: [
-                  {
-                    message: 'The environment was originally created here',
-                    start: {
-                      line: 1,
-                      column: workerType === 'webworker' ? 20 : 42,
-                    },
-                    end: {
-                      line: 1,
-                      column: workerType === 'webworker' ? 37 : 59,
-                    },
-                  },
-                ],
-              },
-            ],
-            hints: [
-              'Use a static `import`, or dynamic `import()` instead.',
-              "Add {type: 'module'} as a second argument to the " +
-                (workerType === 'webworker'
-                  ? 'Worker constructor.'
-                  : 'navigator.serviceWorker.register() call.'),
-            ],
-            documentationURL:
-              'https://parceljs.org/languages/javascript/#classic-script-workers',
-          },
-        ]);
-      }
+                  ],
+                },
+              ],
+              hints: [
+                'Use a static `import`, or dynamic `import()` instead.',
+                "Add {type: 'module'} as a second argument to the " +
+                  (workerType === 'webworker'
+                    ? 'Worker constructor.'
+                    : 'navigator.serviceWorker.register() call.'),
+              ],
+              documentationURL:
+                'https://parceljs.org/languages/javascript/#classic-script-workers',
+            },
+          ]);
+        }
 
-      assert(errored);
-    });
+        assert(errored);
+      },
+    );
   }
 
   it('ignores importScripts when not in a worker context', async function () {
@@ -784,81 +794,84 @@ describe.v2('parcel', function () {
     );
   });
 
-  it('errors when importing in a service worker without type: module', async function () {
-    let errored = false;
-    try {
-      await bundle(
-        path.join(__dirname, '/integration/service-worker/error.js'),
-        {
-          defaultTargetOptions: {
-            shouldScopeHoist: true,
+  it.v2(
+    'errors when importing in a service worker without type: module',
+    async function () {
+      let errored = false;
+      try {
+        await bundle(
+          path.join(__dirname, '/integration/service-worker/error.js'),
+          {
+            defaultTargetOptions: {
+              shouldScopeHoist: true,
+            },
           },
-        },
-      );
-    } catch (err) {
-      errored = true;
-      assert.equal(
-        err.message,
-        'Service workers cannot have imports or exports without the `type: "module"` option.',
-      );
-      assert.deepEqual(err.diagnostics, [
-        {
-          message:
-            'Service workers cannot have imports or exports without the `type: "module"` option.',
-          origin: '@atlaspack/transformer-js',
-          codeFrames: [
-            {
-              filePath: path.join(
-                __dirname,
-                '/integration/service-worker/module-worker.js',
-              ),
-              codeHighlights: [
-                {
-                  message: undefined,
-                  start: {
-                    line: 1,
-                    column: 1,
+        );
+      } catch (err) {
+        errored = true;
+        assert.equal(
+          err.message,
+          'Service workers cannot have imports or exports without the `type: "module"` option.',
+        );
+        assert.deepEqual(err.diagnostics, [
+          {
+            message:
+              'Service workers cannot have imports or exports without the `type: "module"` option.',
+            origin: '@atlaspack/transformer-js',
+            codeFrames: [
+              {
+                filePath: path.join(
+                  __dirname,
+                  '/integration/service-worker/module-worker.js',
+                ),
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 1,
+                      column: 1,
+                    },
+                    end: {
+                      line: 1,
+                      column: 19,
+                    },
                   },
-                  end: {
-                    line: 1,
-                    column: 19,
+                ],
+              },
+              {
+                filePath: path.join(
+                  __dirname,
+                  'integration/service-worker/error.js',
+                ),
+                codeHighlights: [
+                  {
+                    message: 'The environment was originally created here',
+                    start: {
+                      line: 1,
+                      column: 42,
+                    },
+                    end: {
+                      line: 1,
+                      column: 59,
+                    },
                   },
-                },
-              ],
-            },
-            {
-              filePath: path.join(
-                __dirname,
-                'integration/service-worker/error.js',
-              ),
-              codeHighlights: [
-                {
-                  message: 'The environment was originally created here',
-                  start: {
-                    line: 1,
-                    column: 42,
-                  },
-                  end: {
-                    line: 1,
-                    column: 59,
-                  },
-                },
-              ],
-            },
-          ],
-          hints: [
-            "Add {type: 'module'} as a second argument to the navigator.serviceWorker.register() call.",
-          ],
-          documentationURL:
-            'https://parceljs.org/languages/javascript/#classic-scripts',
-        },
-      ]);
-    }
+                ],
+              },
+            ],
+            hints: [
+              "Add {type: 'module'} as a second argument to the navigator.serviceWorker.register() call.",
+            ],
+            documentationURL:
+              'https://parceljs.org/languages/javascript/#classic-scripts',
+          },
+        ]);
+      }
 
-    assert(errored);
-  });
+      assert(errored);
+    },
+  );
 
-  it('exposes a manifest to service workers', async function () {
+  it.v2('exposes a manifest to service workers', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/service-worker/manifest.js'),
       {
@@ -913,48 +926,51 @@ describe.v2('parcel', function () {
     assert(!contents.includes('import.meta.url'));
   });
 
-  it('throws a codeframe for a missing file in serviceWorker.register with URL and import.meta.url', async function () {
-    let fixture = path.join(
-      __dirname,
-      'integration/service-worker-import-meta-url/missing.js',
-    );
-    let code = await inputFS.readFileSync(fixture, 'utf8');
-    await assert.rejects(() => bundle(fixture), {
-      name: 'BuildError',
-      diagnostics: [
-        {
-          codeFrames: [
-            {
-              filePath: fixture,
-              code,
-              codeHighlights: [
-                {
-                  message: undefined,
-                  end: {
-                    column: 55,
-                    line: 1,
+  it.v2(
+    'throws a codeframe for a missing file in serviceWorker.register with URL and import.meta.url',
+    async function () {
+      let fixture = path.join(
+        __dirname,
+        'integration/service-worker-import-meta-url/missing.js',
+      );
+      let code = await inputFS.readFileSync(fixture, 'utf8');
+      await assert.rejects(() => bundle(fixture), {
+        name: 'BuildError',
+        diagnostics: [
+          {
+            codeFrames: [
+              {
+                filePath: fixture,
+                code,
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    end: {
+                      column: 55,
+                      line: 1,
+                    },
+                    start: {
+                      column: 42,
+                      line: 1,
+                    },
                   },
-                  start: {
-                    column: 42,
-                    line: 1,
-                  },
-                },
-              ],
-            },
-          ],
-          message: "Failed to resolve './invalid.js' from './missing.js'",
-          origin: '@atlaspack/core',
-        },
-        {
-          hints: ["Did you mean '__./index.js__'?"],
-          message: "Cannot load file './invalid.js' in './'.",
-          origin: '@atlaspack/resolver-default',
-        },
-      ],
-    });
-  });
+                ],
+              },
+            ],
+            message: "Failed to resolve './invalid.js' from './missing.js'",
+            origin: '@atlaspack/core',
+          },
+          {
+            hints: ["Did you mean '__./index.js__'?"],
+            message: "Cannot load file './invalid.js' in './'.",
+            origin: '@atlaspack/resolver-default',
+          },
+        ],
+      });
+    },
+  );
 
-  it('errors on dynamic import() inside service workers', async function () {
+  it.v2('errors on dynamic import() inside service workers', async function () {
     let errored = false;
     try {
       await bundle(
@@ -1085,49 +1101,52 @@ describe.v2('parcel', function () {
     assert(contents.includes('import.meta.url'));
   });
 
-  it('throws a codeframe for a missing file in worker constructor with URL and import.meta.url', async function () {
-    let fixture = path.join(
-      __dirname,
-      'integration/worker-import-meta-url/missing.js',
-    );
-    let code = await inputFS.readFileSync(fixture, 'utf8');
-    await assert.rejects(() => bundle(fixture), {
-      name: 'BuildError',
-      diagnostics: [
-        {
-          codeFrames: [
-            {
-              filePath: fixture,
-              code,
-              codeHighlights: [
-                {
-                  message: undefined,
-                  end: {
-                    column: 33,
-                    line: 1,
+  it.v2(
+    'throws a codeframe for a missing file in worker constructor with URL and import.meta.url',
+    async function () {
+      let fixture = path.join(
+        __dirname,
+        'integration/worker-import-meta-url/missing.js',
+      );
+      let code = await inputFS.readFileSync(fixture, 'utf8');
+      await assert.rejects(() => bundle(fixture), {
+        name: 'BuildError',
+        diagnostics: [
+          {
+            codeFrames: [
+              {
+                filePath: fixture,
+                code,
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    end: {
+                      column: 33,
+                      line: 1,
+                    },
+                    start: {
+                      column: 20,
+                      line: 1,
+                    },
                   },
-                  start: {
-                    column: 20,
-                    line: 1,
-                  },
-                },
-              ],
-            },
-          ],
-          message: "Failed to resolve './invalid.js' from './missing.js'",
-          origin: '@atlaspack/core',
-        },
-        {
-          hints: [
-            "Did you mean '__./dynamic.js__'?",
-            "Did you mean '__./index.js__'?",
-          ],
-          message: "Cannot load file './invalid.js' in './'.",
-          origin: '@atlaspack/resolver-default',
-        },
-      ],
-    });
-  });
+                ],
+              },
+            ],
+            message: "Failed to resolve './invalid.js' from './missing.js'",
+            origin: '@atlaspack/core',
+          },
+          {
+            hints: [
+              "Did you mean '__./dynamic.js__'?",
+              "Did you mean '__./index.js__'?",
+            ],
+            message: "Cannot load file './invalid.js' in './'.",
+            origin: '@atlaspack/resolver-default',
+          },
+        ],
+      });
+    },
+  );
 
   it.skip('bundles in workers with other loaders', async function () {
     let b = await bundle(
@@ -1216,123 +1235,129 @@ describe.v2('parcel', function () {
     );
   });
 
-  it('creates a shared bundle between browser and worker contexts', async () => {
-    let b = await bundle(
-      path.join(__dirname, '/integration/html-shared-worker/index.html'),
-      {mode: 'production', defaultTargetOptions: {shouldScopeHoist: false}},
-    );
+  it.v2(
+    'creates a shared bundle between browser and worker contexts',
+    async () => {
+      let b = await bundle(
+        path.join(__dirname, '/integration/html-shared-worker/index.html'),
+        {mode: 'production', defaultTargetOptions: {shouldScopeHoist: false}},
+      );
 
-    assertBundles(b, [
-      {
-        name: 'index.html',
-        assets: ['index.html'],
-      },
-      {
-        assets: [
-          'index.js',
-          'get-worker-url.js',
-          'lodash.js',
-          'esmodule-helpers.js',
-        ],
-      },
-      {
-        assets: ['bundle-manifest.js', 'bundle-url.js'],
-      },
-      {
-        assets: ['worker.js', 'lodash.js', 'esmodule-helpers.js'],
-      },
-    ]);
-
-    // let sharedBundle = b
-    //   .getBundles()
-    //   .sort((a, b) => b.stats.size - a.stats.size)
-    //   .find(b => b.name !== 'index.js');
-    let workerBundle = b.getBundles().find(b => b.name.startsWith('worker'));
-    // let contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
-    // assert(
-    //   contents.includes(
-    //     `importScripts("./${path.basename(sharedBundle.filePath)}")`,
-    //   ),
-    // );
-
-    let outputArgs = [];
-    let workerArgs = [];
-    await run(b, {
-      Worker: class {
-        constructor(url) {
-          workerArgs.push(url);
-        }
-      },
-      output: (ctx, val) => {
-        outputArgs.push([ctx, val]);
-      },
-    });
-
-    assert.deepStrictEqual(outputArgs, [['main', 3]]);
-    assert.deepStrictEqual(workerArgs, [
-      `http://localhost/${path.basename(workerBundle.filePath)}`,
-    ]);
-  });
-
-  it('supports workers with shared assets between page and worker with async imports', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/worker-shared-page/index.html'),
-      {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldOptimize: false,
+      assertBundles(b, [
+        {
+          name: 'index.html',
+          assets: ['index.html'],
         },
-      },
-    );
+        {
+          assets: [
+            'index.js',
+            'get-worker-url.js',
+            'lodash.js',
+            'esmodule-helpers.js',
+          ],
+        },
+        {
+          assets: ['bundle-manifest.js', 'bundle-url.js'],
+        },
+        {
+          assets: ['worker.js', 'lodash.js', 'esmodule-helpers.js'],
+        },
+      ]);
 
-    assertBundles(b, [
-      {
-        name: 'index.html',
-        assets: ['index.html'],
-      },
-      {
-        assets: [
-          'bundle-manifest.js',
-          'bundle-url.js',
-          'cacheLoader.js',
-          'get-worker-url.js',
-          'index.js',
-          'js-loader.js',
-          'large.js',
-        ],
-      },
-      {
-        assets: [
-          'bundle-manifest.js',
-          'bundle-url.js',
-          'cacheLoader.js',
-          'js-loader.js',
-          'large.js',
-          'worker.js',
-        ],
-      },
-      {
-        assets: [
-          'bundle-manifest.js',
-          'esm-js-loader.js',
-          'get-worker-url.js',
-          'index.js',
-          'large.js',
-        ],
-      },
-      {
-        assets: ['async.js'],
-      },
-      {
-        assets: ['async.js'],
-      },
-      {
-        assets: ['async.js'],
-      },
-    ]);
+      // let sharedBundle = b
+      //   .getBundles()
+      //   .sort((a, b) => b.stats.size - a.stats.size)
+      //   .find(b => b.name !== 'index.js');
+      let workerBundle = b.getBundles().find(b => b.name.startsWith('worker'));
+      // let contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
+      // assert(
+      //   contents.includes(
+      //     `importScripts("./${path.basename(sharedBundle.filePath)}")`,
+      //   ),
+      // );
 
-    await run(b);
-  });
+      let outputArgs = [];
+      let workerArgs = [];
+      await run(b, {
+        Worker: class {
+          constructor(url) {
+            workerArgs.push(url);
+          }
+        },
+        output: (ctx, val) => {
+          outputArgs.push([ctx, val]);
+        },
+      });
+
+      assert.deepStrictEqual(outputArgs, [['main', 3]]);
+      assert.deepStrictEqual(workerArgs, [
+        `http://localhost/${path.basename(workerBundle.filePath)}`,
+      ]);
+    },
+  );
+
+  it.v2(
+    'supports workers with shared assets between page and worker with async imports',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/worker-shared-page/index.html'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+          },
+        },
+      );
+
+      assertBundles(b, [
+        {
+          name: 'index.html',
+          assets: ['index.html'],
+        },
+        {
+          assets: [
+            'bundle-manifest.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'get-worker-url.js',
+            'index.js',
+            'js-loader.js',
+            'large.js',
+          ],
+        },
+        {
+          assets: [
+            'bundle-manifest.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+            'large.js',
+            'worker.js',
+          ],
+        },
+        {
+          assets: [
+            'bundle-manifest.js',
+            'esm-js-loader.js',
+            'get-worker-url.js',
+            'index.js',
+            'large.js',
+          ],
+        },
+        {
+          assets: ['async.js'],
+        },
+        {
+          assets: ['async.js'],
+        },
+        {
+          assets: ['async.js'],
+        },
+      ]);
+
+      await run(b);
+    },
+  );
 
   it('async dependency internalization successfully removes unneeded bundlegroups and their bundles', async () => {
     let b = await bundle(

@@ -15,7 +15,7 @@ import {
   distDir,
 } from '@atlaspack/test-utils';
 
-describe.v2('fs', function () {
+describe('fs', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });
@@ -45,13 +45,13 @@ describe.v2('fs', function () {
       await assert.rejects(() => run(b), /\.readFileSync is not a function/);
     });
 
-    it('should inline a file as a string', async function () {
+    it.v2('should inline a file as a string', async function () {
       let b = await bundle(path.join(__dirname, '/integration/fs/index.js'));
       let output = await run(b);
       assert.equal(output, 'hello');
     });
 
-    it('should inline a file as a buffer', async function () {
+    it.v2('should inline a file as a buffer', async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-buffer/index.js'),
       );
@@ -61,7 +61,7 @@ describe.v2('fs', function () {
       assert.equal(output.length, 5);
     });
 
-    it('should inline a file with fs require alias', async function () {
+    it.v2('should inline a file with fs require alias', async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-alias/index.js'),
       );
@@ -69,7 +69,7 @@ describe.v2('fs', function () {
       assert.equal(output, 'hello');
     });
 
-    it('should inline a file with fs require inline', async function () {
+    it.v2('should inline a file with fs require inline', async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-inline/index.js'),
       );
@@ -93,13 +93,16 @@ describe.v2('fs', function () {
       assert.equal(output, 'hello');
     });
 
-    it('should inline a file with fs require destructure', async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/fs-destructure/index.js'),
-      );
-      let output = await run(b);
-      assert.equal(output, 'hello');
-    });
+    it.v2(
+      'should inline a file with fs require destructure',
+      async function () {
+        let b = await bundle(
+          path.join(__dirname, '/integration/fs-destructure/index.js'),
+        );
+        let output = await run(b);
+        assert.equal(output, 'hello');
+      },
+    );
 
     it.skip('should inline a file with fs require destructure assignment', async function () {
       let b = await bundle(
@@ -109,7 +112,7 @@ describe.v2('fs', function () {
       assert.equal(output, 'hello');
     });
 
-    it('should inline a file with fs ES6 import', async function () {
+    it.v2('should inline a file with fs ES6 import', async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-import/index.js'),
       );
@@ -118,14 +121,17 @@ describe.v2('fs', function () {
       assert.equal(output.default, 'hello');
     });
 
-    it('should inline a file with fs ES6 import and path.join', async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/fs-import-path-join/index.js'),
-      );
-      let output = await run(b);
-      invariant(typeof output === 'object' && output != null);
-      assert.equal(output.default, 'hello');
-    });
+    it.v2(
+      'should inline a file with fs ES6 import and path.join',
+      async function () {
+        let b = await bundle(
+          path.join(__dirname, '/integration/fs-import-path-join/index.js'),
+        );
+        let output = await run(b);
+        invariant(typeof output === 'object' && output != null);
+        assert.equal(output.default, 'hello');
+      },
+    );
 
     it('should not evaluate fs calls when package.browser.fs is false', async function () {
       let b = await bundle(

@@ -6,7 +6,7 @@ import path from 'path';
 
 import {bundler, describe, it} from '@atlaspack/test-utils';
 
-describe.v2('reporters', () => {
+describe('reporters', () => {
   let successfulEntry = path.join(
     __dirname,
     'integration',
@@ -64,7 +64,7 @@ describe.v2('reporters', () => {
   });
 
   describe('running on the programmatic api', () => {
-    it('resolves when no errors are emitted', async () => {
+    it.v2('resolves when no errors are emitted', async () => {
       let buildEvent = await bundler(successfulEntry).run();
 
       assert.equal(buildEvent.type, 'buildSuccess');
@@ -84,7 +84,7 @@ describe.v2('reporters', () => {
       }
     });
 
-    it('rejects when a reporter emits an error', async () => {
+    it.v2('rejects when a reporter emits an error', async () => {
       try {
         let buildEvent = await bundler(failingReporterEntry).run();
 
