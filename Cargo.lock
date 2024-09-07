@@ -420,6 +420,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "atlaspack_plugin_optimizer_inline_requires"
+version = "0.1.0"
+dependencies = [
+ "atlaspack-js-swc-core",
+ "swc_core",
+]
+
+[[package]]
 name = "atlaspack_plugin_resolver"
 version = "0.1.0"
 dependencies = [

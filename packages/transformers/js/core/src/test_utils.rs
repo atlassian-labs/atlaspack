@@ -9,7 +9,7 @@ use swc_core::ecma::parser::Parser;
 use swc_core::ecma::transforms::base::resolver;
 use swc_core::ecma::visit::{Fold, FoldWith, VisitMut, VisitMutWith};
 
-pub(crate) struct RunTestContext {
+pub struct RunTestContext {
   /// Source-map in use
   pub source_map: Lrc<SourceMap>,
   /// Global mark from SWC resolver
@@ -18,7 +18,7 @@ pub(crate) struct RunTestContext {
   pub unresolved_mark: Mark,
 }
 
-pub(crate) struct RunVisitResult<V> {
+pub struct RunVisitResult<V> {
   pub output_code: String,
   #[allow(unused)]
   pub visitor: V,
@@ -30,7 +30,7 @@ pub(crate) struct RunVisitResult<V> {
 /// * Run a visitor over it
 /// * Return the result
 ///
-pub(crate) fn run_visit<V: VisitMut>(
+pub fn run_visit<V: VisitMut>(
   code: &str,
   make_visit: impl FnOnce(RunTestContext) -> V,
 ) -> RunVisitResult<V> {
@@ -50,7 +50,7 @@ pub(crate) fn run_visit<V: VisitMut>(
 
 /// Same as `run_visit` but for `Fold` instances
 #[allow(unused)]
-pub(crate) fn run_fold<V: Fold>(
+pub fn run_fold<V: Fold>(
   code: &str,
   make_fold: impl FnOnce(RunTestContext) -> V,
 ) -> RunVisitResult<V> {
