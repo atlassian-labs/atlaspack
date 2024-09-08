@@ -7,6 +7,7 @@ mod global_replacer;
 mod hoist;
 mod modules;
 mod node_replacer;
+pub mod runner;
 pub mod test_utils;
 mod typeof_replacer;
 mod utils;

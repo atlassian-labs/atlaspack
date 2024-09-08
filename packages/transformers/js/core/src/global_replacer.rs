@@ -211,7 +211,7 @@ mod tests {
   use swc_core::ecma::atoms::JsWord;
 
   use crate::global_replacer::GlobalReplacer;
-  use crate::test_utils::{run_visit, RunTestContext, RunVisitResult};
+  use crate::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
   use crate::{DependencyDescriptor, DependencyKind};
 
   fn make_global_replacer(
@@ -234,7 +234,7 @@ mod tests {
   fn test_globals_visitor_with_require_process() {
     let mut items = vec![];
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 console.log(process.test);
     "#,
@@ -255,7 +255,7 @@ console.log(process.test);
   fn test_transforms_computed_property() {
     let mut items = vec![];
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 object[process.test];
 object[__dirname];
@@ -276,7 +276,7 @@ object[__dirname];
   fn test_does_not_transform_member_property() {
     let mut items = vec![];
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 object.process.test;
 object.__filename;

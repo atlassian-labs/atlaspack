@@ -1,7 +1,7 @@
 mod inlining_visitor;
 
-use std::collections::HashSet;
 use crate::inlining_visitor::IdentifierReplacementVisitor;
+use std::collections::HashSet;
 use swc_core::atoms::atom;
 use swc_core::atoms::Atom;
 use swc_core::common::Mark;
@@ -330,7 +330,7 @@ impl VisitMut for InlineRequiresOptimizer {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_js_swc_core::test_utils::{run_visit, RunVisitResult};
+  use atlaspack_js_swc_core::test_utils::{run_test_visit, RunVisitResult};
 
   use super::*;
 
@@ -344,7 +344,7 @@ function doWork() {
     "#
     .trim();
 
-    let RunVisitResult { output_code, .. } = run_visit(code, |ctx| InlineRequiresOptimizer {
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
       unresolved_mark: ctx.unresolved_mark,
       ..Default::default()
     });
@@ -373,7 +373,7 @@ parcelRequire.register('moduleId', function(require, module, exports) {
     "#
     .trim();
 
-    let RunVisitResult { output_code, .. } = run_visit(code, |ctx| InlineRequiresOptimizer {
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
       unresolved_mark: ctx.unresolved_mark,
       ..Default::default()
     });
@@ -397,7 +397,7 @@ const parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js
     "#
     .trim();
 
-    let RunVisitResult { output_code, .. } = run_visit(code, |ctx| InlineRequiresOptimizer {
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
       unresolved_mark: ctx.unresolved_mark,
       ..Default::default()
     });
@@ -416,7 +416,7 @@ const sideEffects = require("side-effects");
     "#
     .trim();
 
-    let RunVisitResult { output_code, .. } = run_visit(code, |ctx| InlineRequiresOptimizer {
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
       unresolved_mark: ctx.unresolved_mark,
       ignore_patterns: vec![IgnorePattern::ModuleId(atom!("side-effects"))],
       ..Default::default()
@@ -441,7 +441,7 @@ function run() {
     "#
     .trim();
 
-    let RunVisitResult { output_code, .. } = run_visit(code, |ctx| InlineRequiresOptimizer {
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
       unresolved_mark: ctx.unresolved_mark,
       ..Default::default()
     });

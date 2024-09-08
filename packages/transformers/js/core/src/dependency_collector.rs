@@ -1471,11 +1471,11 @@ fn match_worker_type(expr: Option<&ast::ExprOrSpread>) -> (SourceType, Option<as
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::test_utils::{run_fold, RunTestContext, RunVisitResult};
+  use crate::test_utils::{run_test_fold, RunContext, RunVisitResult};
   use crate::DependencyDescriptor;
 
   fn make_dependency_collector<'a>(
-    context: RunTestContext,
+    context: RunContext,
     items: &'a mut Vec<DependencyDescriptor>,
     diagnostics: &'a mut Vec<Diagnostic>,
     config: &'a Config,
@@ -1516,7 +1516,7 @@ mod tests {
       const { x } = await import('other');
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -1557,7 +1557,7 @@ mod tests {
       import { x } from 'other';
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -1593,7 +1593,7 @@ mod tests {
       export { x } from 'other';
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -1629,7 +1629,7 @@ mod tests {
       export * from 'other';
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -1665,7 +1665,7 @@ mod tests {
       const { x } = require('other');
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -1708,7 +1708,7 @@ try {
 } catch (err) {}
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -1752,7 +1752,7 @@ try {{
 Promise.resolve().then(() => require('other'));
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -1794,7 +1794,7 @@ Promise.resolve().then(()=>require("{}"));
 Promise.resolve().then(() => doSomething(require('other')));
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -1838,7 +1838,7 @@ Promise.resolve().then(function() {{
 Promise.resolve().then(function() { return doSomething(require('other')); });
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -1884,7 +1884,7 @@ Promise.resolve().then(function() {{
 new Promise((resolve) => resolve(require("other")));
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -1926,7 +1926,7 @@ new Promise((resolve)=>resolve(require("{}")));
 new Promise(function(resolve) { return resolve(require("other")) });
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -1970,7 +1970,7 @@ new Promise(function(resolve) {{
 Promise.resolve(require("other"));
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -2011,7 +2011,7 @@ Promise.resolve(require("{}"));
       new Worker(new URL('other', import.meta.url), {type: 'module'});
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -2052,7 +2052,7 @@ Promise.resolve(require("{}"));
       navigator.serviceWorker.register(new URL('other', import.meta.url), {type: 'module'});
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -2093,7 +2093,7 @@ Promise.resolve(require("{}"));
       CSS.paintWorklet.addModule(new URL('other', import.meta.url));
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
@@ -2136,7 +2136,7 @@ img.src = new URL('hero.jpg', import.meta.url);
 document.body.appendChild(img);
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
