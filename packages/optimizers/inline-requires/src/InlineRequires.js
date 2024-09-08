@@ -1,5 +1,7 @@
 // @flow strict-local
 import {Optimizer} from '@atlaspack/plugin';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {runInlineRequiresOptimizer} from '@atlaspack/rust';
 import {parse, print} from '@swc/core';
 import {RequireInliningVisitor} from './RequireInliningVisitor';
 import nullthrows from 'nullthrows';
@@ -57,6 +59,26 @@ module.exports = new Optimizer<empty, BundleConfig>({
     }
 
     try {
+      if (getFeatureFlag('fastOptimizeInlineRequires')) {
+        let sourceMap = null;
+        const result = runInlineRequiresOptimizer({
+          inputCode: contents.toString(),
+          sourceMaps: !!bundle.env.sourceMap,
+          assetsToIgnore: Array.from(
+            bundleConfig.assetPublicIdsWithSideEffects,
+          ),
+        });
+        const sourceMapResult = result.sourceMap;
+        if (sourceMapResult != null) {
+          sourceMap = new SourceMap(options.projectRoot);
+          sourceMap.addVLQMap(JSON.parse(sourceMapResult));
+          if (originalMap) {
+            sourceMap.extends(originalMap);
+          }
+        }
+        return {contents: result.outputCode, map: originalMap};
+      }
+
       let measurement = tracer.createMeasurement(
         '@atlaspack/optimizer-inline-requires',
         'parse',

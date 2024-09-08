@@ -10,6 +10,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   atlaspackV3: false,
   useWatchmanWatcher: false,
   importRetry: false,
+  fastOptimizeInlineRequires: false,
   fastNeedsDefaultInterop: false,
   ownedResolverStructures: false,
 };

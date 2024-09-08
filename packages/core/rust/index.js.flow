@@ -194,3 +194,15 @@ declare export class Lmdb {
   commitWriteTransaction(): Promise<void>;
   close(): void;
 }
+
+export interface InlineRequiresOptimizerInput {
+  inputCode: string;
+  sourceMaps: boolean;
+  assetsToIgnore: Array<string>;
+}
+export interface InlineRequiresOptimizerResult {
+  outputCode: string;
+  sourceMap?: string;
+}
+
+declare export function runInlineRequiresOptimizer(input: InlineRequiresOptimizerInput): InlineRequiresOptimizerResult;

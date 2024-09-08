@@ -1,9 +1,9 @@
 // @flow strict-local
 
+import assert from 'assert';
 import {runInlineRequiresOptimizer} from '..';
-import assert from 'node:assert';
 
-describe.only('runInlineRequiresOptimizer', () => {
+describe('runInlineRequiresOptimizer', () => {
   it('replaces inline code on source', () => {
     const result = runInlineRequiresOptimizer({
       inputCode: `
@@ -25,6 +25,7 @@ function main() {
 }
 `.trimStart(),
     );
+    // $FlowFixMe
     const sourceMap = JSON.parse(result.sourceMap);
     assert.ok(sourceMap);
   });
