@@ -39,7 +39,7 @@ pub fn run_inline_requires_optimizer(
     output_code: result.output_code,
     source_map: if input.source_maps {
       let source_map = String::from_utf8(result.source_map).map_err(|err| {
-        napi::Error::from_reason(format!("[napi] Non-utf8 source-map output: {}", err))
+        napi::Error::from_reason(format!("[napi] Invalid utf-8 source map output: {}", err))
       })?;
       Some(source_map)
     } else {
