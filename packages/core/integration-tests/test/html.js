@@ -1288,7 +1288,7 @@ describe.v2('html', function () {
     assert(!html.includes('sourceMappingURL'));
   });
 
-  it('should process inline non-js scripts', async function () {
+  it.v2('should process inline non-js scripts', async function () {
     await fsFixture(overlayFS, __dirname)`
       index.html:
         <!doctype html>

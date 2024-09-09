@@ -208,6 +208,7 @@ impl Plugins for ConfigPlugins {
         // before releasing native asset graph
         "@atlaspack/transformer-babel" => continue,
         "@atlaspack/transformer-react-refresh-wrap" => continue,
+        "@atlaspack/transformer-posthtml" => continue,
         "@atlaspack/transformer-js" => Box::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?),
         "@atlaspack/transformer-inline-string" => {
           Box::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
