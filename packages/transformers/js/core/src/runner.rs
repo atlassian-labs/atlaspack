@@ -50,7 +50,6 @@ pub fn run_visit<V: VisitMut>(
 }
 
 /// Same as `run_visit` but for `Fold` instances
-#[allow(unused)]
 pub fn run_fold<V: Fold>(
   code: &str,
   make_fold: impl FnOnce(RunContext) -> V,
