@@ -9,7 +9,6 @@ use serde::Serialize;
 use serde_repr::Deserialize_repr;
 use serde_repr::Serialize_repr;
 
-use crate::types::target;
 use crate::types::ExportsCondition;
 
 use super::bundle::BundleBehavior;
