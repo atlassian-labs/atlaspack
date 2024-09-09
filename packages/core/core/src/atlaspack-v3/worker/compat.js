@@ -18,7 +18,7 @@ import {
 export type InnerAsset = {|
   id: string,
   filePath: string,
-  code: string,
+  code: Array<number>,
   type: string,
   bundleBehavior: number | null,
   env: any,
@@ -63,10 +63,10 @@ export class AssetCompat {
   }
 
   getCode(): string {
-    return this._inner.code;
+    return Buffer.from(this._inner.code).toString();
   }
   setCode(code: string) {
-    this._inner.code = code;
+    this._inner.code = Array.from(new TextEncoder().encode(code));
   }
 
   getAST(): ?AST {

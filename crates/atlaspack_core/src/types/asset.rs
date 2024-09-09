@@ -33,10 +33,6 @@ impl Code {
     &self.inner
   }
 
-  pub fn string(&self) -> String {
-    self.inner.clone()
-  }
-
   pub fn size(&self) -> u32 {
     self.inner.len() as u32
   }
