@@ -7,7 +7,7 @@ use serde::Serialize;
 use serde::Serializer;
 
 /// Minimum semantic version range for browsers and engines
-#[derive(PartialEq, Clone, Copy, PartialOrd, Ord, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash)]
 pub struct Version(NonZeroU16);
 
 impl Version {
@@ -83,6 +83,10 @@ impl<'de> Deserialize<'de> for Version {
     D: serde::Deserializer<'de>,
   {
     let v: String = Deserialize::deserialize(deserializer)?;
+    if v == "*" {
+      return Ok(Version(NonZeroU16::new(1 as u16).unwrap()));
+    }
+
     if let Some(version) = SemVerRange::parse(v.as_str())
       .ok()
       .and_then(|r| r.min_version())
