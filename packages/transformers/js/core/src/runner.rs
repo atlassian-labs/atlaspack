@@ -76,7 +76,7 @@ pub enum RunWithTransformationError {
   IoError(#[from] std::io::Error),
   #[error("Non-utf 8 output: {0}")]
   NonUtfOutput(#[from] FromUtf8Error),
-  #[error("Source-map failure")]
+  #[error("Failed to generate source map")]
   SourceMap(#[from] sourcemap::Error),
 }
 
