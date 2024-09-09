@@ -31,7 +31,6 @@
       "@atlaspack/transformer-html"
     ],
     "*.pug": ["@atlaspack/transformer-pug"],
-    "*.coffee": ["@atlaspack/transformer-coffeescript"],
     "*.mdx": ["@atlaspack/transformer-mdx"],
     "*.{png,jpg,jpeg,webp,gif,tiff,avif,heic,heif}": [
       "@atlaspack/transformer-image"

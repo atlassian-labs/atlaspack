@@ -3,7 +3,7 @@
   "file": "sum.js",
   "sourceRoot": "",
   "sources": [
-    "sum.coffee"
+    "sum.ts"
   ],
   "names": [],
   "mappings": ";AAAA;EAAA,MAAM,CAAC,OAAP,GAAiB,CAAA,SAAA,KAAA;WAAA,SAAC,CAAD,EAAI,CAAJ;aAAU,CAAA,GAAI;IAAd;EAAA,CAAA,CAAA,CAAA,IAAA;AAAjB",

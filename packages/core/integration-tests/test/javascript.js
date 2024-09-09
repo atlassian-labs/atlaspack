@@ -1889,21 +1889,6 @@ describe('javascript', function () {
     assert.equal(output(), 3);
   });
 
-  it.v2('should support requiring CoffeeScript files', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/coffee/index.js'));
-
-    assertBundles(b, [
-      {
-        name: 'index.js',
-        assets: ['index.js', 'local.coffee'],
-      },
-    ]);
-
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-    assert.equal(output(), 3);
-  });
-
   it('should resolve the browser field before main', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/resolve-entries/browser.js'),

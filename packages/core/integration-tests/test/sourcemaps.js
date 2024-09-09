@@ -1090,9 +1090,14 @@ describe.v2('sourcemaps', function () {
 
     let map = sourcemapData.map;
     assert.equal(map.sourceRoot, '../test/');
-    assert.equal(map.sources.length, 3);
+    assert.deepEqual(map.sources, [
+      'integration/sourcemap-existing/index.js',
+      'integration/sourcemap-existing/sum.js',
+      'integration/sourcemap-existing/sum.ts',
+    ]);
+
     for (let source of map.sources) {
-      if (path.extname(source) !== '.coffee') {
+      if (path.extname(source) !== '.ts') {
         assert(
           await inputFS.exists(
             path.join(path.basename(filename), map.sourceRoot, source),
@@ -1121,9 +1126,14 @@ describe.v2('sourcemaps', function () {
 
     let map = sourcemapData.map;
     assert.equal(map.sourceRoot, '../test/');
-    assert.equal(map.sources.length, 3);
+    assert.deepEqual(map.sources, [
+      'integration/sourcemap-inline/index.js',
+      'integration/sourcemap-inline/sum.js',
+      'integration/sourcemap-inline/sum.ts',
+    ]);
+
     for (let source of map.sources) {
-      if (path.extname(source) !== '.coffee') {
+      if (path.extname(source) !== '.ts') {
         assert(
           await inputFS.exists(
             path.join(path.basename(filename), map.sourceRoot, source),
