@@ -6,18 +6,18 @@ import {runInlineRequiresOptimizer} from '..';
 describe('runInlineRequiresOptimizer', () => {
   it('replaces inline code on source', () => {
     const result = runInlineRequiresOptimizer({
-      inputCode: `
+      code: `
 const fs = require('fs');
 
 function main() {
     return fs.readFile('./something');
 }`,
-      assetsToIgnore: [],
+      ignoreModuleIds: [],
       sourceMaps: true,
     });
 
     assert.equal(
-      result.outputCode,
+      result.code,
       `
 const fs;
 function main() {
