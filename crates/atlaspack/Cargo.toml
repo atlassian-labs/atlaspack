@@ -14,6 +14,7 @@ atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 atlaspack_package_manager = { path = "../atlaspack_package_manager" }
 atlaspack_plugin_resolver = { path = "../atlaspack_plugin_resolver" }
 atlaspack_plugin_transformer_image = { path = "../atlaspack_plugin_transformer_image" }
+atlaspack_plugin_transformer_inline = { path = "../atlaspack_plugin_transformer_inline" }
 atlaspack_plugin_transformer_inline_string = { path = "../atlaspack_plugin_transformer_inline_string" }
 atlaspack_plugin_transformer_js = { path = "../atlaspack_plugin_transformer_js" }
 atlaspack_plugin_transformer_json = { path = "../atlaspack_plugin_transformer_json" }

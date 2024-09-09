@@ -1,6 +1,7 @@
 [package]
 name = "atlaspack_plugin_transformer_image"
 version = "0.1.0"
+authors = ["Monica Olejniczak <monica.j.olejniczak@gmail.com>"]
 edition = "2021"
 description = "Image transformer plugin for the Atlaspack Bundler"
 

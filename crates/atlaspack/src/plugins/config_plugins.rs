@@ -30,6 +30,7 @@ use atlaspack_plugin_rpc::plugin::RpcRuntimePlugin;
 use atlaspack_plugin_rpc::plugin::RpcTransformerPlugin;
 use atlaspack_plugin_rpc::RpcWorkerRef;
 use atlaspack_plugin_transformer_image::AtlaspackImageTransformerPlugin;
+use atlaspack_plugin_transformer_inline::AtlaspackInlineTransformerPlugin;
 use atlaspack_plugin_transformer_inline_string::AtlaspackInlineStringTransformerPlugin;
 use atlaspack_plugin_transformer_js::AtlaspackJsTransformerPlugin;
 use atlaspack_plugin_transformer_json::AtlaspackJsonTransformerPlugin;
@@ -200,51 +201,37 @@ impl Plugins for ConfigPlugins {
 
     for transformer in self.config.transformers.get(path, named_pattern).iter() {
       transformer.hash(&mut hasher);
-      if transformer.package_name == "@atlaspack/transformer-babel"
-        || transformer.package_name == "@atlaspack/transformer-react-refresh-wrap"
-      {
+
+      let transformer: Box<dyn TransformerPlugin> = match transformer.package_name.as_str() {
         // Currently JS plugins don't work and it's easier to just skip these.
-        // We also will probably remove babel from the defaults and support
-        // react refresh in Rust before releasing native asset graph
-        continue;
-      }
+        // We also will probably remove babel from the defaults and support react refresh in Rust
+        // before releasing native asset graph
+        "@atlaspack/transformer-babel" => continue,
+        "@atlaspack/transformer-react-refresh-wrap" => continue,
+        "@atlaspack/transformer-js" => Box::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?),
+        "@atlaspack/transformer-inline-string" => {
+          Box::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
+        }
+        "@atlaspack/transformer-inline" => {
+          Box::new(AtlaspackInlineTransformerPlugin::new(&self.ctx))
+        }
+        "@atlaspack/transformer-image" => Box::new(AtlaspackImageTransformerPlugin::new(&self.ctx)),
+        "@atlaspack/transformer-raw" => Box::new(AtlaspackRawTransformerPlugin::new(&self.ctx)),
+        "@atlaspack/transformer-json" => Box::new(AtlaspackJsonTransformerPlugin::new(&self.ctx)),
+        _ => {
+          let Some(rpc_worker) = &self.rpc_worker else {
+            anyhow::bail!("Unable to initialize JavaScript plugin")
+          };
 
-      if transformer.package_name == "@atlaspack/transformer-js" {
-        transformers.push(Box::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?));
-        continue;
-      }
-
-      if transformer.package_name == "@atlaspack/transformer-inline-string" {
-        transformers.push(Box::new(AtlaspackInlineStringTransformerPlugin::new(
-          &self.ctx,
-        )?));
-        continue;
-      }
-
-      if transformer.package_name == "@atlaspack/transformer-image" {
-        transformers.push(Box::new(AtlaspackImageTransformerPlugin::new(&self.ctx)?));
-        continue;
-      }
-
-      if transformer.package_name == "@atlaspack/transformer-raw" {
-        transformers.push(Box::new(AtlaspackRawTransformerPlugin::new(&self.ctx)?));
-        continue;
-      }
-
-      if transformer.package_name == "@atlaspack/transformer-json" {
-        transformers.push(Box::new(AtlaspackJsonTransformerPlugin::new(&self.ctx)?));
-        continue;
-      }
-
-      let Some(rpc_worker) = &self.rpc_worker else {
-        anyhow::bail!("Unable to initialize JavaScript plugin")
+          Box::new(RpcTransformerPlugin::new(
+            rpc_worker.clone(),
+            &self.ctx,
+            transformer,
+          )?)
+        }
       };
 
-      transformers.push(Box::new(RpcTransformerPlugin::new(
-        rpc_worker.clone(),
-        &self.ctx,
-        transformer,
-      )?));
+      transformers.push(transformer);
     }
 
     if transformers.is_empty() {

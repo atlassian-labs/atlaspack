@@ -14,8 +14,8 @@ use url_search_params::parse_url_search_params;
 pub struct AtlaspackImageTransformerPlugin {}
 
 impl AtlaspackImageTransformerPlugin {
-  pub fn new(_ctx: &PluginContext) -> Result<Self, Error> {
-    Ok(AtlaspackImageTransformerPlugin {})
+  pub fn new(_ctx: &PluginContext) -> Self {
+    AtlaspackImageTransformerPlugin {}
   }
 }
 
@@ -117,8 +117,7 @@ mod tests {
       file_system,
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
-    })
-    .expect("Expected image transformer to initialize");
+    });
 
     let asset = Asset::default();
 

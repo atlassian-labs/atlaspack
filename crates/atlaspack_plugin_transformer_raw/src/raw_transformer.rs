@@ -7,8 +7,8 @@ use atlaspack_core::types::{Asset, BundleBehavior};
 pub struct AtlaspackRawTransformerPlugin {}
 
 impl AtlaspackRawTransformerPlugin {
-  pub fn new(_ctx: &PluginContext) -> Result<Self, Error> {
-    Ok(AtlaspackRawTransformerPlugin {})
+  pub fn new(_ctx: &PluginContext) -> Self {
+    AtlaspackRawTransformerPlugin {}
   }
 }
 
@@ -50,8 +50,7 @@ mod tests {
       file_system,
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
-    })
-    .expect("Expected raw transformer to initialize");
+    });
 
     let asset = Asset::default();
 

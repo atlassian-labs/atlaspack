@@ -9,8 +9,8 @@ use atlaspack_core::types::{Asset, Code, FileType};
 pub struct AtlaspackJsonTransformerPlugin {}
 
 impl AtlaspackJsonTransformerPlugin {
-  pub fn new(_ctx: &PluginContext) -> Result<Self, Error> {
-    Ok(AtlaspackJsonTransformerPlugin {})
+  pub fn new(_ctx: &PluginContext) -> Self {
+    AtlaspackJsonTransformerPlugin {}
   }
 }
 
@@ -59,7 +59,6 @@ mod tests {
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
     })
-    .expect("Expected json transformer to initialize")
   }
 
   #[test]

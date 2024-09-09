@@ -1,6 +1,10 @@
 [package]
 name = "atlaspack_plugin_transformer_js"
 version = "0.1.0"
+authors = [
+  "Pedro Tacla Yamada <tacla.yamada@gmail.com>",
+  "Monica Olejniczak <monica.j.olejniczak@gmail.com>"
+]
 edition = "2021"
 description = "JavaScript transformer plugin for the Atlaspack Bundler"
 
