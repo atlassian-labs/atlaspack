@@ -239,7 +239,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
           .ok_or_else(|| anyhow!("Invalid non UTF-8 file-path"))?
           .to_string(),
         inline_constants: self.config.inline_constants.unwrap_or_default(),
-        inline_fs: self.config.inline_fs.unwrap_or_default() && !env.context.is_node(),
+        inline_fs: !env.context.is_node() && self.config.inline_fs.unwrap_or(true),
         insert_node_globals: !is_node && env.source_type != SourceType::Script,
         is_browser: env.context.is_browser(),
         is_development: self.options.mode == BuildMode::Development,

@@ -1,8 +1,9 @@
 [package]
 name = "atlaspack_monitoring"
-description = "Provides tracing, error and crash reporting system for atlaspack"
+authors = ["Pedro Tacla Yamada <tacla.yamada@gmail.com>"]
 version = "0.1.0"
 edition = "2021"
+description = "Provides tracing, error and crash reporting system for atlaspack"
 
 [features]
 canary = ["sentry", "whoami", "rustls", "minidumper", "crash-handler"]

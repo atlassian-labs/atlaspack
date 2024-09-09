@@ -1,24 +1,23 @@
 use anyhow::Error;
-use atlaspack_core::plugin::{PluginContext, TransformResult, TransformerPlugin};
+use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::TransformResult;
+use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::types::{Asset, BundleBehavior};
 
 #[derive(Debug)]
-pub struct AtlaspackInlineStringTransformerPlugin {}
+pub struct AtlaspackInlineTransformerPlugin {}
 
-impl AtlaspackInlineStringTransformerPlugin {
+impl AtlaspackInlineTransformerPlugin {
   pub fn new(_ctx: &PluginContext) -> Self {
-    AtlaspackInlineStringTransformerPlugin {}
+    AtlaspackInlineTransformerPlugin {}
   }
 }
 
-impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
+impl TransformerPlugin for AtlaspackInlineTransformerPlugin {
   fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     asset.bundle_behavior = BundleBehavior::Inline;
-    asset
-      .meta
-      .insert(String::from("inlineType"), "string".into());
 
     Ok(TransformResult {
       asset,
@@ -35,7 +34,6 @@ mod tests {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::{PluginLogger, PluginOptions},
-    types::JSONObject,
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
@@ -44,7 +42,7 @@ mod tests {
   #[test]
   fn returns_inline_string_asset() {
     let file_system = Arc::new(InMemoryFileSystem::default());
-    let mut plugin = AtlaspackInlineStringTransformerPlugin::new(&PluginContext {
+    let mut plugin = AtlaspackInlineTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
         fs: file_system.clone(),
         project_root: PathBuf::default(),
@@ -63,7 +61,6 @@ mod tests {
       Ok(TransformResult {
         asset: Asset {
           bundle_behavior: BundleBehavior::Inline,
-          meta: JSONObject::from_iter([(String::from("inlineType"), "string".into())]),
           ..Asset::default()
         },
         dependencies: Vec::new(),

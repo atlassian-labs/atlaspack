@@ -9,7 +9,8 @@ use serde::Serialize;
 use super::named_pattern_matcher;
 use crate::PluginNode;
 
-//
+// Represents a named pattern pipeline in the .parcelrc file
+#[derive(Debug, Clone)]
 pub struct NamedPattern<'a> {
   /// The name of the pipeline
   ///

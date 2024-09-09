@@ -155,6 +155,7 @@ dependencies = [
  "atlaspack_plugin_resolver",
  "atlaspack_plugin_rpc",
  "atlaspack_plugin_transformer_image",
+ "atlaspack_plugin_transformer_inline",
  "atlaspack_plugin_transformer_inline_string",
  "atlaspack_plugin_transformer_js",
  "atlaspack_plugin_transformer_json",
@@ -452,6 +453,15 @@ dependencies = [
  "atlaspack_filesystem",
  "image 0.25.2",
  "url-search-params",
+]
+
+[[package]]
+name = "atlaspack_plugin_transformer_inline"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_core",
+ "atlaspack_filesystem",
 ]
 
 [[package]]

@@ -13,5 +13,7 @@ pub struct JsTransformerConfig {
   #[serde(rename = "unstable_inlineConstants")]
   pub inline_constants: Option<bool>,
   pub inline_environment: Option<InlineEnvironment>,
+
+  #[serde(rename = "inlineFS")]
   pub inline_fs: Option<bool>,
 }

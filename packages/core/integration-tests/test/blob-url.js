@@ -1,7 +1,7 @@
 // @flow strict-local
 
 import assert from 'assert';
-import path from 'path';
+import {join} from 'path';
 import {
   bundle,
   describe,
@@ -25,11 +25,11 @@ const URL = {
   },
 };
 
-describe.v2('blob urls', () => {
-  it('should inline compiled content as a blob url with `blob-url:*` imports', async () => {
-    let b = await bundle(
-      path.join(__dirname, '/integration/blob-url/index.js'),
-    );
+describe('blob-url:', () => {
+  it('inlines and compiles content as a blob url', async () => {
+    let b = await bundle(join(__dirname, '/integration/blob-url/index.js'));
+
+    let created = [];
 
     class Worker {
       constructor(src) {
@@ -38,41 +38,38 @@ describe.v2('blob urls', () => {
       postMessage() {}
     }
 
-    let created = [];
     await run(b, {
       Worker,
       Blob,
       URL,
     });
+
     assert.equal(created.length, 1);
     assert(created[0].startsWith('data:application/javascript,'));
 
-    let bundleContent = await outputFS.readFile(
-      path.join(distDir, 'index.js'),
-      'utf8',
-    );
-    assert(bundleContent.includes('new Worker(require('));
+    let content = await outputFS.readFile(join(distDir, 'index.js'), 'utf8');
+
+    assert(content.includes('new Worker(require('));
     assert(
-      bundleContent.includes(
+      content.includes(
         'module.exports = URL.createObjectURL(new Blob(["// modules are defined as an array\\n',
       ),
     );
     assert(
-      bundleContent.includes(
+      content.includes(
         'self.postMessage(\\"this should appear in the bundle\\\\n\\")',
       ),
     );
   });
 
-  it('should inline minified content as a blob url with `blob-url:*` imports', async () => {
-    let b = await bundle(
-      path.join(__dirname, '/integration/blob-url/index.js'),
-      {
-        defaultTargetOptions: {
-          shouldOptimize: true,
-        },
+  it('inlines, compiles, and minifies content as a blob url', async () => {
+    let b = await bundle(join(__dirname, '/integration/blob-url/index.js'), {
+      defaultTargetOptions: {
+        shouldOptimize: true,
       },
-    );
+    });
+
+    let created = [];
 
     class Worker {
       constructor(src) {
@@ -81,27 +78,23 @@ describe.v2('blob urls', () => {
       postMessage() {}
     }
 
-    let created = [];
     await run(b, {
       Worker,
       Blob,
       URL,
     });
+
     assert.equal(created.length, 1);
     assert(created[0].startsWith('data:application/javascript,'));
 
-    let bundleContent = await outputFS.readFile(
-      path.join(distDir, 'index.js'),
-      'utf8',
-    );
-    assert(bundleContent.includes('new Worker('));
+    let content = await outputFS.readFile(join(distDir, 'index.js'), 'utf8');
+
+    assert(content.includes('new Worker('));
     assert(
-      bundleContent.includes(
-        ".exports=URL.createObjectURL(new Blob(['!function(",
-      ),
+      content.includes(".exports=URL.createObjectURL(new Blob(['!function("),
     );
     assert(
-      bundleContent.includes(
+      content.includes(
         'self.postMessage("this should appear in the bundle\\\\n")',
       ),
     );
