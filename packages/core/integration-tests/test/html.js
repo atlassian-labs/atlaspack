@@ -4,6 +4,7 @@ import {
   bundle,
   bundler,
   describe,
+  fsFixture,
   it,
   distDir,
   getNextBuild,
@@ -1248,14 +1249,28 @@ describe.v2('html', function () {
   });
 
   it('should process inline non-js scripts', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/html-inline-coffeescript/index.html'),
-      {
-        defaultTargetOptions: {
-          shouldOptimize: true,
-        },
+    await fsFixture(overlayFS, __dirname)`
+      index.html:
+        <!doctype html>
+        <html lang="en">
+        <head></head>
+        <body>
+          <script type="application/ts">
+            const hello: string = 'Hello, World!';
+            alert(hello);
+          </script>
+        </body>
+        </html>
+
+      yarn.lock: {}
+    `;
+
+    let b = await bundle(path.join(__dirname, 'index.html'), {
+      defaultTargetOptions: {
+        shouldOptimize: true,
       },
-    );
+      inputFS: overlayFS,
+    });
 
     assertBundles(b, [
       {
