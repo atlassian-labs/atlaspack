@@ -70,7 +70,7 @@ pub fn run_fold<V: Fold>(
 
 #[derive(Debug, thiserror::Error)]
 pub enum RunWithTransformationError {
-  #[error("Failed to parse")]
+  #[error("Failed to parse module")]
   SwcParse(swc_ecma_parser::error::Error),
   #[error("IO Error: {0}")]
   IoError(#[from] std::io::Error),
