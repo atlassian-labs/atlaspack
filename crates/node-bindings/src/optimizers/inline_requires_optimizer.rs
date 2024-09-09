@@ -33,7 +33,12 @@ pub fn run_inline_requires_optimizer(
       .build();
     visitor
   })
-  .map_err(|err| napi::Error::from_reason(format!("[napi] Failed to run inline require optimizer: {}", err)))?;
+  .map_err(|err| {
+    napi::Error::from_reason(format!(
+      "[napi] Failed to run inline require optimizer: {}",
+      err
+    ))
+  })?;
 
   Ok(InlineRequiresOptimizerResult {
     output_code: result.output_code,
