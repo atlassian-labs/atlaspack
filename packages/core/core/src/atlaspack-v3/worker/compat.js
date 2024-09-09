@@ -7,6 +7,7 @@ import type {
 } from '@atlaspack/types';
 
 import {createDependencyId} from '../../Dependency';
+import {getEnvironmentHash} from '../../Environment';
 import Environment from '../../public/Environment';
 import {
   BundleBehaviorNames,
@@ -81,18 +82,17 @@ export class AssetCompat {
       module: 0,
       script: 1,
     };
-    const env = opts.env
-      ? {
-          ...opts.env,
-          sourceType: opts.env.sourceType
-            ? sourceTypes[opts.env.sourceType]
-            : null,
-        }
-      : null;
+    const env = {
+      ...this._inner.env,
+      ...opts.env,
+      sourceType: opts.env?.sourceType
+        ? sourceTypes[opts.env.sourceType]
+        : null,
+    };
+    env.id = getEnvironmentHash(env);
+
     const dependency = {
       ...opts,
-      // $FlowFixMe
-      id: createDependencyId(opts),
       env,
       specifierType: SpecifierType[opts.specifierType],
       priority: Priority[opts.priority ?? 'sync'],
@@ -100,8 +100,12 @@ export class AssetCompat {
         ? BundleBehaviorMap[opts.bundleBehavior]
         : null,
     };
+    // $FlowFixMe
+    dependency.id = createDependencyId(dependency);
+
     this._dependencies.push(dependency);
 
+    // $FlowFixMe
     return dependency.id;
   }
 
