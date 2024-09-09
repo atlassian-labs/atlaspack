@@ -62,9 +62,9 @@ module.exports = new Optimizer<empty, BundleConfig>({
       if (getFeatureFlag('fastOptimizeInlineRequires')) {
         let sourceMap = null;
         const result = runInlineRequiresOptimizer({
-          inputCode: contents.toString(),
+          code: contents.toString(),
           sourceMaps: !!bundle.env.sourceMap,
-          assetsToIgnore: Array.from(
+          ignoreModuleIds: Array.from(
             bundleConfig.assetPublicIdsWithSideEffects,
           ),
         });
@@ -76,7 +76,7 @@ module.exports = new Optimizer<empty, BundleConfig>({
             sourceMap.extends(originalMap);
           }
         }
-        return {contents: result.outputCode, map: originalMap};
+        return {contents: result.code, map: originalMap};
       }
 
       let measurement = tracer.createMeasurement(

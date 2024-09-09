@@ -196,12 +196,12 @@ declare export class Lmdb {
 }
 
 export interface InlineRequiresOptimizerInput {
-  inputCode: string;
+  code: string;
   sourceMaps: boolean;
-  assetsToIgnore: Array<string>;
+  ignoreModuleIds: Array<string>;
 }
 export interface InlineRequiresOptimizerResult {
-  outputCode: string;
+  code: string;
   sourceMap?: string;
 }
 

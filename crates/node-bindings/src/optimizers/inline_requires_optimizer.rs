@@ -5,14 +5,14 @@ use swc_core::atoms::Atom;
 
 #[napi(object)]
 pub struct InlineRequiresOptimizerInput {
-  pub input_code: String,
+  pub code: String,
   pub source_maps: bool,
-  pub assets_to_ignore: Vec<String>,
+  pub ignore_module_ids: Vec<String>,
 }
 
 #[napi(object)]
 pub struct InlineRequiresOptimizerResult {
-  pub output_code: String,
+  pub code: String,
   pub source_map: Option<String>,
 }
 
@@ -20,12 +20,12 @@ pub struct InlineRequiresOptimizerResult {
 pub fn run_inline_requires_optimizer(
   input: InlineRequiresOptimizerInput,
 ) -> napi::Result<InlineRequiresOptimizerResult> {
-  let result = run_visit(&input.input_code, |ctx| {
+  let result = run_visit(&input.code, |ctx| {
     let visitor = atlaspack_plugin_optimizer_inline_requires::InlineRequiresOptimizer::builder()
       .unresolved_mark(ctx.unresolved_mark)
       .add_ignore_pattern(IgnorePattern::ModuleIdHashSet(
         input
-          .assets_to_ignore
+          .ignore_module_ids
           .into_iter()
           .map(|s| Atom::new(s))
           .collect(),
@@ -41,7 +41,7 @@ pub fn run_inline_requires_optimizer(
   })?;
 
   Ok(InlineRequiresOptimizerResult {
-    output_code: result.output_code,
+    code: result.output_code,
     source_map: if input.source_maps {
       let source_map = String::from_utf8(result.source_map).map_err(|err| {
         napi::Error::from_reason(format!("[napi] Invalid utf-8 source map output: {}", err))
