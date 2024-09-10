@@ -1,7 +1,6 @@
 {
   "name": "atlaspack-sourcemap-integration-test",
   "version": "1.0.0",
-  "license": "MIT",
   "private": true,
   "browser": "dist/index.js",
   "targets": {

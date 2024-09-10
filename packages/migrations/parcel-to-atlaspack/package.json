@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "license": "MIT",
+  "license": "(MIT OR Apache-2.0)",
   "main": "dist/cli.js",
   "bin": {
     "parcel-to-atlaspack": "dist/bin.js"

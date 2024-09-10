@@ -1,7 +1,7 @@
 {
   "name": "atlaspack-for-vscode",
   "version": "2.12.0",
-  "license": "MIT",
+  "license": "(MIT OR Apache-2.0)",
   "publisher": "atlaspack",
   "icon": "logo.png",
   "displayName": "Atlaspack for VS Code",

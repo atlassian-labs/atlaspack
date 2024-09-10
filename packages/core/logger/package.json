@@ -2,7 +2,7 @@
   "name": "@atlaspack/logger",
   "version": "2.12.0",
   "description": "Blazing fast, zero configuration web application bundler",
-  "license": "MIT",
+  "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
   },
