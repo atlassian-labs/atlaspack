@@ -113,6 +113,12 @@ impl NamedPipelinesMap {
     let is_match = named_pattern_matcher(path);
     let mut matches: Vec<PluginNode> = Vec::new();
 
+    for (pattern, pipelines) in self.inner.iter() {
+      if is_match(&pattern, "") {
+        matches.extend(pipelines.iter().cloned());
+      }
+    }
+
     // If a named pipeline is requested, the glob needs to match exactly
     if let Some(named_pattern) = named_pattern {
       let exact_match = self
@@ -124,12 +130,6 @@ impl NamedPipelinesMap {
         matches.extend(pipelines.iter().cloned());
       } else if !named_pattern.use_fallback {
         return Vec::new();
-      }
-    }
-
-    for (pattern, pipelines) in self.inner.iter() {
-      if is_match(&pattern, "") {
-        matches.extend(pipelines.iter().cloned());
       }
     }
 
