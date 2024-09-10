@@ -182,24 +182,18 @@ impl Dependency {
     }
   }
 
-  pub fn new(specifier: String, env: Arc<Environment>) -> Dependency {
-    Dependency {
-      id: create_dependency_id(
-        &env,
-        &None,
-        &None,
-        &specifier,
-        &None,
-        &SpecifierType::default(),
-        &BundleBehavior::default(),
-        &Priority::default(),
-        &ExportsCondition::default(),
-      ),
-      env,
-      meta: JSONObject::new(),
-      specifier,
-      ..Dependency::default()
-    }
+  pub fn assign_id(&mut self) {
+    self.id = create_dependency_id(
+      &self.env,
+      &self.pipeline,
+      &self.source_asset_id,
+      &self.specifier,
+      &self.target,
+      &self.specifier_type,
+      &self.bundle_behavior,
+      &self.priority,
+      &self.package_conditions,
+    );
   }
 
   pub fn set_placeholder(&mut self, placeholder: impl Into<serde_json::Value>) {

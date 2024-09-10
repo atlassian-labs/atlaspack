@@ -44,12 +44,14 @@ pub(crate) fn convert_result(
     convert_dependencies(transformer_config, result.dependencies, &asset)?;
 
   if result.needs_esm_helpers {
-    let dependency = make_esm_helpers_dependency(
+    let mut dependency = make_esm_helpers_dependency(
       options,
       &asset_file_path,
       (*asset_environment).clone(),
       &asset.id,
     );
+    dependency.assign_id();
+
     dependency_by_specifier.insert(dependency.specifier.as_str().into(), dependency);
   }
 
@@ -344,10 +346,12 @@ pub(crate) fn convert_dependencies(
       .map(|d| d.as_str().into())
       .unwrap_or_else(|| transformer_dependency.specifier.clone());
 
-    let result = convert_dependency(transformer_config, &asset, transformer_dependency)?;
+    let result = convert_dependency(transformer_config, asset, transformer_dependency)?;
 
     match result {
-      DependencyConversionResult::Dependency(dependency) => {
+      DependencyConversionResult::Dependency(mut dependency) => {
+        // Calculate and assign the id to the dep now it is finalised
+        dependency.assign_id();
         dependency_by_specifier.insert(placeholder, dependency);
       }
       DependencyConversionResult::InvalidateOnFileChange(file_path) => {
