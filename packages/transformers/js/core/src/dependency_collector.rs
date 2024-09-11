@@ -422,14 +422,35 @@ impl<'a> Fold for DependencyCollector<'a> {
     }
   }
 
-  fn fold_call_expr(&mut self, node: ast::CallExpr) -> ast::CallExpr {
+  fn fold_call_expr(&mut self, src_node: ast::CallExpr) -> ast::CallExpr {
     use ast::Expr::*;
     use ast::Ident;
+
+    let mut node = src_node.clone();
 
     let kind = match &node.callee {
       Callee::Import(_) => DependencyKind::DynamicImport,
       Callee::Expr(expr) => {
         match &**expr {
+          Ident(ident)
+            if !self.config.conditional_bundling
+              && ident.sym.to_string().as_str() == "importCond" =>
+          {
+            // Conditional bundling disabled, treat like a require import
+
+            // Change false dep to the require arg
+            node.args[0] = node.args[2].clone();
+            node.args.truncate(1);
+
+            // Rewrite call expression to a require
+            node.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
+              "require".into(),
+              DUMMY_SP.apply_mark(self.unresolved_mark),
+            ))));
+
+            // Then continue like we just encountered a require for the rest of the transform
+            DependencyKind::Require
+          }
           Ident(ident) => {
             // Bail if defined in scope
             if !is_unresolved(&ident, self.unresolved_mark) {
@@ -571,10 +592,10 @@ impl<'a> Fold for DependencyCollector<'a> {
                 if let Callee::Expr(e) = &call.callee {
                   if let Member(m) = &**e {
                     if match_member_expr(m, vec!["Promise", "resolve"], self.unresolved_mark) &&
-                        // Make sure the arglist is empty.
-                        // I.e. do not proceed with the below unless Promise.resolve has an empty arglist
-                        // because build_promise_chain() will not work in this case.
-                        call.args.is_empty()
+                      // Make sure the arglist is empty.
+                      // I.e. do not proceed with the below unless Promise.resolve has an empty arglist
+                      // because build_promise_chain() will not work in this case.
+                      call.args.is_empty()
                     {
                       if let MemberProp::Ident(id) = &member.prop {
                         if id.sym.to_string().as_str() == "then" {
@@ -2160,6 +2181,48 @@ document.body.appendChild(img);
       [DependencyDescriptor {
         kind: DependencyKind::Url,
         specifier: "hero.jpg".into(),
+        attributes: None,
+        is_optional: false,
+        is_helper: false,
+        source_type: Some(SourceType::Module),
+        placeholder: Some(hash),
+        ..items[0].clone()
+      }]
+    );
+  }
+
+  #[test]
+  fn test_import_cond_disabled_dependency() {
+    let mut items = vec![];
+    let mut diagnostics = vec![];
+    let mut config = make_config();
+    config.conditional_bundling = false;
+    let input_code = r#"
+      const x = importCond('condition', 'a', 'b');
+    "#;
+
+    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
+    });
+
+    let hash = make_placeholder_hash("b", DependencyKind::Require);
+    let expected_code = format!(
+      r#"
+      const x = require("{}");
+    "#,
+      hash
+    );
+    let expected_code = expected_code
+      .trim_start()
+      .trim_end_matches(|p: char| p == ' ');
+
+    assert_eq!(output_code, expected_code);
+    assert_eq!(diagnostics, []);
+    assert_eq!(
+      items,
+      [DependencyDescriptor {
+        kind: DependencyKind::Require,
+        specifier: "b".into(),
         attributes: None,
         is_optional: false,
         is_helper: false,
