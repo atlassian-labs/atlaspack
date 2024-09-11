@@ -24,6 +24,7 @@ mod image;
 mod atlaspack;
 #[cfg(not(test))]
 pub mod lmdb;
+mod optimizers;
 mod resolver;
 mod resolver_old;
 mod transformer;

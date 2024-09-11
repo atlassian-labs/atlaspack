@@ -109,6 +109,11 @@ impl FileSystem for PreloadingFileSystem {
     Ok(())
   }
 
+  fn read(&self, path: &Path) -> std::io::Result<Vec<u8>> {
+    #[allow(unreachable_code)]
+    todo!()
+  }
+
   fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
     let files = self.files.read();
     let file = files.get(path);

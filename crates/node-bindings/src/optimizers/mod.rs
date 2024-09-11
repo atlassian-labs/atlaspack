@@ -1,0 +1,1 @@
+mod inline_requires_optimizer;

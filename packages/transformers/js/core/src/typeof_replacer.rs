@@ -82,7 +82,7 @@ impl VisitMut for TypeofReplacer {
 
 #[cfg(test)]
 mod tests {
-  use crate::test_utils::run_visit;
+  use crate::test_utils::run_test_visit;
 
   use super::*;
 
@@ -94,7 +94,7 @@ const m = typeof module;
 const e = typeof exports;
 "#;
 
-    let output_code = run_visit(code, |context| TypeofReplacer {
+    let output_code = run_test_visit(code, |context| TypeofReplacer {
       unresolved_mark: context.unresolved_mark,
     })
     .output_code;
@@ -114,7 +114,7 @@ const e = "object";
 const x = typeof require === 'function';
 "#;
 
-    let output_code = run_visit(code, |context| TypeofReplacer {
+    let output_code = run_test_visit(code, |context| TypeofReplacer {
       unresolved_mark: context.unresolved_mark,
     })
     .output_code;
@@ -136,7 +136,7 @@ function wrapper({ require, exports }) {
 }
     "#;
 
-    let output_code = run_visit(code, |context| TypeofReplacer {
+    let output_code = run_test_visit(code, |context| TypeofReplacer {
       unresolved_mark: context.unresolved_mark,
     })
     .output_code;

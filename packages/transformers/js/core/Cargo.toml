@@ -8,6 +8,7 @@ edition = "2021"
 crate-type = ["rlib"]
 
 [dependencies]
+thiserror = "1.0.63"
 swc_core = { version = "0.96", features = [
   "common",
   "common_ahash",
@@ -26,6 +27,8 @@ swc_core = { version = "0.96", features = [
   "ecma_visit",
   "stacker"
 ] }
+sourcemap = "*"
+swc_ecma_parser = "*"
 indoc = "1.0.3"
 serde = "1.0.123"
 serde_bytes = "0.11.5"

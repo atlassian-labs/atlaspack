@@ -223,7 +223,7 @@ impl NodeReplacer<'_> {
 
 #[cfg(test)]
 mod tests {
-  use crate::test_utils::run_visit;
+  use crate::test_utils::run_test_visit;
 
   use super::*;
 
@@ -236,7 +236,7 @@ mod tests {
 const filename = __filename;
 console.log(__filename);
     "#;
-    let output_code = run_visit(code, |context| NodeReplacer {
+    let output_code = run_test_visit(code, |context| NodeReplacer {
       source_map: context.source_map.clone(),
       global_mark: context.global_mark,
       globals: HashMap::new(),
@@ -270,7 +270,7 @@ console.log($parcel$__filename);
 const dirname = __dirname;
 console.log(__dirname);
     "#;
-    let output_code = run_visit(code, |context| NodeReplacer {
+    let output_code = run_test_visit(code, |context| NodeReplacer {
       source_map: context.source_map.clone(),
       global_mark: context.global_mark,
       globals: HashMap::new(),
@@ -307,7 +307,7 @@ function something(__filename, __dirname) {
     console.log(__dirname);
 }
     "#;
-    let output_code = run_visit(code, |context| NodeReplacer {
+    let output_code = run_test_visit(code, |context| NodeReplacer {
       source_map: context.source_map.clone(),
       global_mark: context.global_mark,
       globals: HashMap::new(),
@@ -339,7 +339,7 @@ function something(__filename, __dirname) {
     let code = r#"
 const filename = obj.__filename;
     "#;
-    let output_code = run_visit(code, |context| NodeReplacer {
+    let output_code = run_test_visit(code, |context| NodeReplacer {
       source_map: context.source_map.clone(),
       global_mark: context.global_mark,
       globals: HashMap::new(),
@@ -367,7 +367,7 @@ const filename = obj.__filename;
     let code = r#"
 const filename = obj[__filename];
     "#;
-    let output_code = run_visit(code, |context| NodeReplacer {
+    let output_code = run_test_visit(code, |context| NodeReplacer {
       source_map: context.source_map.clone(),
       global_mark: context.global_mark,
       globals: HashMap::new(),

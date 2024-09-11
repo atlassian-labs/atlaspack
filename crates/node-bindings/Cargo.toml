@@ -18,6 +18,7 @@ atlaspack_monitoring = { path = "../atlaspack_monitoring" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 atlaspack-resolver-old = { path = "../../packages/utils/node-resolver-rs-old" }
 atlaspack_package_manager = { path = "../atlaspack_package_manager" }
+atlaspack_plugin_optimizer_inline_requires = { path = "../atlaspack_plugin_optimizer_inline_requires" }
 atlaspack_plugin_transformer_js = { path = "../atlaspack_plugin_transformer_js" }
 atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
@@ -51,6 +52,7 @@ napi = { version = "2.16.4", features = ["async", "napi4", "napi5", "serde-json"
 once_cell = { version = "1.19.0" }
 oxipng = "8.0.0"
 rayon = "1.7.0"
+swc_core = { version = "0.96" }
 
 # Crash reporting dependencies
 

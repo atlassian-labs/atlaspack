@@ -1,0 +1,26 @@
+[package]
+name = "atlaspack_plugin_optimizer_inline_requires"
+authors = ["Pedro Tacla Yamada <tacla.yamada@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+swc_core = { version = "0.96", features = [
+    "common",
+    "common_ahash",
+    "common_sourcemap",
+    "ecma_ast",
+    "ecma_codegen",
+    "ecma_parser",
+    "ecma_preset_env",
+    "ecma_transforms",
+    "ecma_transforms_compat",
+    "ecma_transforms_optimization",
+    "ecma_transforms_proposal",
+    "ecma_transforms_react",
+    "ecma_transforms_typescript",
+    "ecma_utils",
+    "ecma_visit",
+    "stacker"
+] }
+atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }

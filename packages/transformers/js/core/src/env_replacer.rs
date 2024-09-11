@@ -351,7 +351,7 @@ impl<'a> EnvReplacer<'a> {
 
 #[cfg(test)]
 mod tests {
-  use crate::test_utils::{run_visit, RunTestContext, RunVisitResult};
+  use crate::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
 
   use super::*;
 
@@ -378,7 +378,7 @@ mod tests {
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"process.browser = '1234';
 console.log('thing' in process.env);
 const isTest = process.env.IS_TEST === "true";
@@ -414,7 +414,7 @@ const { package, IS_TEST: isTest2, ...other } = process.env;
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 process.browser = '1234';
 other = '1234';
@@ -446,7 +446,7 @@ console.log(other = false);
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 process.env = {};
     "#,
@@ -472,7 +472,7 @@ process.env = {};
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 process.env.PROP = 'other';
 delete process.env.PROP;
@@ -516,7 +516,7 @@ undefined;
 
     env.insert("foo".into(), "foo".into());
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 console.log(foo = process.env);
 const x = ({ foo, ...others } = process.env);
@@ -544,7 +544,7 @@ const x = (foo = "foo", others = {}, {});
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 console.log(process.browser);
 function run(enabled = process.browser) {}
@@ -574,7 +574,7 @@ function run(enabled = true) {}
 
     env.insert("thing".into(), "here".into());
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 console.log('thing' in process.env);
 console.log('other' in process.env);
@@ -602,7 +602,7 @@ console.log(false);
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 const isTest = process.something;
 const version = process.env.hasOwnProperty('version');
@@ -634,7 +634,7 @@ const version = process.env.hasOwnProperty('version');
     env.insert("VERSION".into(), "1.2.3".into());
     env.insert("package".into(), "atlaspack".into());
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 const isTest = process.env.IS_TEST === "true";
 const version = process.env['VERSION'];
@@ -672,7 +672,7 @@ const package = "atlaspack", isTest2 = "true";
 
     env.insert("package".into(), "atlaspack".into());
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 const { package, ...other } = process.env;
     "#,
@@ -702,7 +702,7 @@ const { package, ...other } = process.env;
     env.insert("B".into(), "B".into());
     env.insert("C".into(), "C".into());
 
-    let RunVisitResult { output_code, .. } = run_visit(
+    let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
 const env = process.env;
     "#,

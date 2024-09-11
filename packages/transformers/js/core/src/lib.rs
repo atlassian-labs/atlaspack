@@ -7,8 +7,8 @@ mod global_replacer;
 mod hoist;
 mod modules;
 mod node_replacer;
-#[cfg(test)]
-mod test_utils;
+pub mod runner;
+pub mod test_utils;
 mod typeof_replacer;
 mod utils;
 

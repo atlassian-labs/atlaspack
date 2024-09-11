@@ -16,6 +16,10 @@ export type FeatureFlags = {|
    */
   importRetry: boolean,
   /**
+   * Enable rust based inline requires optimization
+   */
+  fastOptimizeInlineRequires: boolean,
+  /**
    * Enable fast path for needsDefaultInterop.
    *
    * This improves bundling performance of large applications very significantly.
