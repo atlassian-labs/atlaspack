@@ -12,7 +12,8 @@ import type {AtlaspackOptions} from './types';
 import path from 'path';
 import {hashString} from '@atlaspack/rust';
 import {NodeFS} from '@atlaspack/fs';
-import {LMDBCache, FSCache} from '@atlaspack/cache';
+import {LMDBCache, LMDBLiteCache, FSCache} from '@atlaspack/cache';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {
   getRootDir,
@@ -108,10 +109,17 @@ export default async function resolveOptions(
       ? path.resolve(initialOptions.watchDir)
       : projectRoot;
 
+  const makeLMDBCache = () => {
+    if (getFeatureFlag('useLmdbJsLite')) {
+      return new LMDBLiteCache(cacheDir);
+    }
+    return new LMDBCache(cacheDir);
+  };
+
   let cache =
     initialOptions.cache ??
     (outputFS instanceof NodeFS
-      ? new LMDBCache(cacheDir)
+      ? makeLMDBCache()
       : new FSCache(outputFS, cacheDir));
 
   let mode = initialOptions.mode ?? 'development';

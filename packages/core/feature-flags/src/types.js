@@ -16,6 +16,10 @@ export type FeatureFlags = {|
    */
   importRetry: boolean,
   /**
+   * Enable Rust based LMDB wrapper library
+   */
+  useLmdbJsLite: boolean,
+  /**
    * Enable rust based inline requires optimization
    */
   fastOptimizeInlineRequires: boolean,
