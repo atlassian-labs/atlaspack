@@ -2201,7 +2201,7 @@ document.body.appendChild(img);
       const x = importCond('condition', 'a', 'b');
     "#;
 
-    let RunVisitResult { output_code, .. } = run_fold(input_code, |context| {
+    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
       make_dependency_collector(context, &mut items, &mut diagnostics, &config)
     });
 
