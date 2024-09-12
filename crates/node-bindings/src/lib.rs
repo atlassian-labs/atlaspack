@@ -26,7 +26,6 @@ mod atlaspack;
 pub mod lmdb;
 mod optimizers;
 mod resolver;
-mod resolver_old;
 mod transformer;
 
 #[cfg(target_arch = "wasm32")]

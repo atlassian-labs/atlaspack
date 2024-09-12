@@ -11,10 +11,9 @@ import type {
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
 import type {PackageManager} from '@atlaspack/package-manager';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import {NodeFS} from '@atlaspack/fs';
-import {init, Resolver as ResolverNew, ResolverOld} from '@atlaspack/rust';
+import {init, Resolver} from '@atlaspack/rust';
 import builtins, {empty} from './builtins';
 import path from 'path';
 import {
@@ -83,9 +82,6 @@ export default class NodeResolver {
     let resolver = this.resolversByEnv.get(options.env.id);
     if (!resolver) {
       await init?.();
-      const Resolver = getFeatureFlag('ownedResolverStructures')
-        ? ResolverNew
-        : ResolverOld;
       resolver = new Resolver(this.options.projectRoot, {
         fs:
           this.options.fs instanceof NodeFS &&
