@@ -27,6 +27,8 @@ import {getResolveFrom} from './requests/AtlaspackConfigRequest';
 
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {ATLASPACK_VERSION} from './constants';
+import {getFeatureFlag} from '../../feature-flags/src';
+import {LMDBLiteCache} from '../../cache/src/LMDBLiteCache';
 
 // Default cache directory name
 const DEFAULT_CACHE_DIRNAME = '.parcel-cache';
@@ -108,10 +110,17 @@ export default async function resolveOptions(
       ? path.resolve(initialOptions.watchDir)
       : projectRoot;
 
+  const makeLMDBCache = () => {
+    if (getFeatureFlag('useLmdbJsLite')) {
+      return new LMDBLiteCache(cacheDir);
+    }
+    return new LMDBCache(cacheDir);
+  };
+
   let cache =
     initialOptions.cache ??
     (outputFS instanceof NodeFS
-      ? new LMDBCache(cacheDir)
+      ? makeLMDBCache()
       : new FSCache(outputFS, cacheDir));
 
   let mode = initialOptions.mode ?? 'development';

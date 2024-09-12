@@ -11,6 +11,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   useWatchmanWatcher: false,
   importRetry: false,
   fastOptimizeInlineRequires: false,
+  useLmdbJsLite: false,
   fastNeedsDefaultInterop: false,
   ownedResolverStructures: false,
   conditionalBundlingApi: false,
