@@ -16,7 +16,6 @@ atlaspack_core = { path = "../atlaspack_core" }
 atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 atlaspack_monitoring = { path = "../atlaspack_monitoring" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
-atlaspack-resolver-old = { path = "../../packages/utils/node-resolver-rs-old" }
 atlaspack_package_manager = { path = "../atlaspack_package_manager" }
 atlaspack_plugin_optimizer_inline_requires = { path = "../atlaspack_plugin_optimizer_inline_requires" }
 atlaspack_plugin_transformer_js = { path = "../atlaspack_plugin_transformer_js" }
@@ -41,7 +40,6 @@ xxhash-rust = { version = "0.8.2", features = ["xxh3"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 atlaspack = { path = "../atlaspack", features = ["nodejs"] }
 atlaspack-dev-dep-resolver = { path = "../../packages/utils/dev-dep-resolver" }
-atlaspack-dev-dep-resolver-old = { path = "../../packages/utils/dev-dep-resolver-old" }
 atlaspack-macros = { path = "../macros", features = ["napi"] }
 
 crossbeam-channel = "0.5.6"

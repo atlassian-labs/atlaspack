@@ -12,7 +12,6 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   importRetry: false,
   fastOptimizeInlineRequires: false,
   fastNeedsDefaultInterop: false,
-  ownedResolverStructures: false,
   conditionalBundlingApi: false,
 };
 
