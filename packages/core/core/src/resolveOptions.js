@@ -12,7 +12,8 @@ import type {AtlaspackOptions} from './types';
 import path from 'path';
 import {hashString} from '@atlaspack/rust';
 import {NodeFS} from '@atlaspack/fs';
-import {LMDBCache, FSCache} from '@atlaspack/cache';
+import {LMDBCache, LMDBLiteCache, FSCache} from '@atlaspack/cache';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {
   getRootDir,
@@ -27,8 +28,6 @@ import {getResolveFrom} from './requests/AtlaspackConfigRequest';
 
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {ATLASPACK_VERSION} from './constants';
-import {getFeatureFlag} from '../../feature-flags/src';
-import {LMDBLiteCache} from '../../cache/src/LMDBLiteCache';
 
 // Default cache directory name
 const DEFAULT_CACHE_DIRNAME = '.parcel-cache';
