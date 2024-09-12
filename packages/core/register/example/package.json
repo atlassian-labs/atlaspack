@@ -2,7 +2,7 @@
   "name": "register-example",
   "version": "2.0.0-beta.1",
   "main": "./index.js",
-  "license": "MIT",
+  "license": "(MIT OR Apache-2.0)",
   "scripts": {
     "start": "node ./index.js"
   },

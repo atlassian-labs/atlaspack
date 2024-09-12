@@ -1,7 +1,6 @@
 {
   "name": "@atlaspack/target-source-package-b",
   "version": "2.0.0-beta.1",
-  "license": "MIT",
   "private": true,
   "source": "src/index.js",
   "devDependencies": {
