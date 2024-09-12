@@ -1,4 +1,5 @@
 mod collect;
+mod conditional_imports_fallback;
 mod constant_module;
 mod dependency_collector;
 mod env_replacer;
@@ -24,6 +25,7 @@ use atlaspack_macros::Macros;
 use collect::Collect;
 pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
+use conditional_imports_fallback::ConditionalImportsFallback;
 use constant_module::ConstantModule;
 pub use dependency_collector::dependency_collector;
 pub use dependency_collector::DependencyDescriptor;
@@ -79,6 +81,7 @@ use swc_core::ecma::transforms::optimization::simplify::expr_simplifier;
 use swc_core::ecma::transforms::proposal::decorators;
 use swc_core::ecma::transforms::react;
 use swc_core::ecma::transforms::typescript;
+use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
 use swc_core::ecma::visit::{as_folder, FoldWith};
 use typeof_replacer::*;
@@ -351,6 +354,12 @@ pub fn transform(
                 module.visit_with(&mut constant_module);
                 result.is_constant_module = constant_module.is_constant_module;
               }
+
+              // Replace conditional imports with requires when flag is off
+              module.visit_mut_children_with(&mut ConditionalImportsFallback {
+                config: &config,
+                unresolved_mark,
+              });
 
               let module = {
                 let mut passes = chain!(

@@ -30,7 +30,10 @@ app.get('/', (req, res, next) => {
     }
   }
   const pos = index.indexOf('<script');
-  index = `${index.slice(0, pos)}<script>window.__conditions = ${JSON.stringify(
+  index = `${index.slice(
+    0,
+    pos,
+  )}<script>globalThis.__MOD_COND = ${JSON.stringify(
     FEATURES,
   )}</script>${scripts.join('\n')}${index.slice(pos)}`;
   index.slice(pos);

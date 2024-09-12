@@ -202,6 +202,7 @@ dependencies = [
  "parking_lot",
  "path-slash",
  "pathdiff",
+ "regex",
  "serde",
  "serde_bytes",
  "sha-1",

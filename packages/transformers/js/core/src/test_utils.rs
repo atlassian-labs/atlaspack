@@ -1,3 +1,4 @@
+use regex::Regex;
 use swc_core::ecma::visit::{Fold, VisitMut};
 
 use crate::runner::{run_fold, run_visit};
@@ -26,4 +27,11 @@ pub fn run_test_fold<V: Fold>(
   make_fold: impl FnOnce(RunTestContext) -> V,
 ) -> RunVisitResult<V> {
   run_fold(code, make_fold).unwrap()
+}
+
+/// Remove whitespace from line starts and ends
+#[allow(unused)]
+pub fn remove_code_whitespace(code: &str) -> String {
+  let re = Regex::new(r"\s*\n\s*").unwrap();
+  re.replace_all(code, "\n").trim().to_string()
 }
