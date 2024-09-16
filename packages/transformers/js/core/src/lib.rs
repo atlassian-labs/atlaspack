@@ -356,7 +356,7 @@ pub fn transform(
               }
 
               // Replace conditional imports with requires when flag is off
-              module.visit_mut_children_with(&mut ConditionalImportsFallback {
+              module.visit_mut_with(&mut ConditionalImportsFallback {
                 config: &config,
                 unresolved_mark,
               });
