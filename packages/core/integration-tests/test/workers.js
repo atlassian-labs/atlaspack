@@ -1254,6 +1254,7 @@ describe('atlaspack', function () {
             'get-worker-url.js',
             'lodash.js',
             'esmodule-helpers.js',
+            'bundle-url.js',
           ],
         },
         {
