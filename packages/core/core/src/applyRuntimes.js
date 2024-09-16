@@ -32,6 +32,7 @@ import createAssetGraphRequest from './requests/AssetGraphRequest';
 import {createDevDependency, runDevDepRequest} from './requests/DevDepRequest';
 import {toProjectPath, fromProjectPathRelative} from './projectPath';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
+import {DefaultMap} from '@atlaspack/utils';
 
 type RuntimeConnection = {|
   bundle: InternalBundle,
@@ -82,7 +83,6 @@ export default async function applyRuntimes<TResult: RequestResult>({
   configs: Map<string, Config>,
 |}): Promise<Map<string, Asset>> {
   let runtimes = await config.getRuntimes();
-  let connections: Array<RuntimeConnection> = [];
 
   // As manifest bundles may be added during runtimes we process them in reverse topological
   // sort order. This allows bundles to be added to their bundle groups before they are referenced
@@ -93,6 +93,8 @@ export default async function applyRuntimes<TResult: RequestResult>({
       bundles.push(bundle);
     },
   });
+
+  let connectionMap = new DefaultMap(() => []);
 
   for (let bundle of bundles) {
     for (let runtime of runtimes) {
@@ -172,7 +174,7 @@ export default async function applyRuntimes<TResult: RequestResult>({
               nameRuntimeBundle(connectionBundle, bundle);
             }
 
-            connections.push({
+            connectionMap.get(connectionBundle).push({
               bundle: connectionBundle,
               assetGroup,
               dependency,
@@ -192,8 +194,14 @@ export default async function applyRuntimes<TResult: RequestResult>({
     }
   }
 
-  // Correct connection order after generating runtimes in reverse order
-  connections.reverse();
+  // Correct connection order after generating runtimes in reverse topological order
+  let connections: Array<RuntimeConnection> = [];
+
+  bundleGraph.traverseBundles({
+    enter(bundle) {
+      connections.push(...connectionMap.get(bundle));
+    },
+  });
 
   // Add dev deps for runtime plugins AFTER running them, to account for lazy require().
   for (let runtime of runtimes) {
