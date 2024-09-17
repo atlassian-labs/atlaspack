@@ -15,10 +15,13 @@ use super::file_type::FileType;
 use super::json::JSONObject;
 use super::symbol::Symbol;
 
-#[derive(PartialEq, Hash, Clone, Copy, Debug)]
+#[derive(PartialEq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct AssetId(pub NonZeroU32);
 
 /// The source code for an asset.
+///
+/// TODO: This should be called contents now that it's bytes
+/// TODO: This should be an enum and represent cases where the bytes are on disk
 #[derive(PartialEq, Default, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", transparent)]
 pub struct Code {
