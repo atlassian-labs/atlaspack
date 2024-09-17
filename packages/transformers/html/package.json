@@ -5,6 +5,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "scripts": {
+    "test": "mocha"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
@@ -25,5 +28,8 @@
     "posthtml-render": "^3.0.0",
     "semver": "^7.5.2",
     "srcset": "4"
+  },
+  "devDependencies": {
+    "@atlaspack/core": "2.12.0"
   }
 }

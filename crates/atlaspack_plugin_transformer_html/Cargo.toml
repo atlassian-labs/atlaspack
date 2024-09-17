@@ -1,0 +1,14 @@
+[package]
+name = "atlaspack_plugin_transformer_raw"
+version = "0.1.0"
+authors = ["Monica Olejniczak <monica.j.olejniczak@gmail.com>"]
+edition = "2021"
+description = "Raw transformer plugin for the Atlaspack Bundler"
+
+[dependencies]
+atlaspack_core = { path = "../atlaspack_core" }
+
+anyhow = "1"
+
+[dev-dependencies]
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
