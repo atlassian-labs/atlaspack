@@ -1,9 +1,9 @@
-use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 
@@ -189,20 +189,7 @@ impl AssetGraphBuilder {
       // We have already completed this AssetRequest so we can connect the
       // Dependency to the Asset immediately
       self.graph.add_edge(&node, asset_node_index);
-      self.graph.propagate_requested_symbols(
-        *asset_node_index,
-        node,
-        &mut |dependency_node_index: NodeIndex, dependency: Arc<Dependency>| {
-          Self::on_undeferred(
-            &mut self.request_id_to_dep_node_index,
-            &mut self.work_count,
-            &mut self.request_context,
-            &self.sender,
-            dependency_node_index,
-            dependency,
-          );
-        },
-      );
+      self.propagate_requested_symbols(*asset_node_index, node);
     } else {
       // The AssetRequest has already been kicked off but is yet to
       // complete. Register this Dependency to be connected once it
@@ -279,6 +266,23 @@ impl AssetGraphBuilder {
       let _ = self.graph.add_dependency(asset_node_index, dependency);
     }
 
+    self.propagate_requested_symbols(asset_node_index, incoming_dep_node_index);
+
+    // Connect any previously discovered Dependencies that were waiting
+    // for this AssetNode to be created
+    if let Some(waiting) = self.waiting_asset_requests.remove(&request_id) {
+      for dep in waiting {
+        self.graph.add_edge(&dep, &asset_node_index);
+        self.propagate_requested_symbols(asset_node_index, dep);
+      }
+    }
+  }
+
+  fn propagate_requested_symbols(
+    &mut self,
+    asset_node_index: NodeIndex,
+    incoming_dep_node_index: NodeIndex,
+  ) {
     self.graph.propagate_requested_symbols(
       asset_node_index,
       incoming_dep_node_index,
@@ -293,28 +297,6 @@ impl AssetGraphBuilder {
         );
       },
     );
-
-    // Connect any previously discovered Dependencies that were waiting
-    // for this AssetNode to be created
-    if let Some(waiting) = self.waiting_asset_requests.remove(&request_id) {
-      for dep in waiting {
-        self.graph.add_edge(&dep, &asset_node_index);
-        self.graph.propagate_requested_symbols(
-          asset_node_index,
-          dep,
-          &mut |dependency_node_index: NodeIndex, dependency: Arc<Dependency>| {
-            Self::on_undeferred(
-              &mut self.request_id_to_dep_node_index,
-              &mut self.work_count,
-              &mut self.request_context,
-              &self.sender,
-              dependency_node_index,
-              dependency,
-            );
-          },
-        );
-      }
-    }
   }
 
   fn handle_target_request_result(&mut self, result: TargetRequestOutput) {
