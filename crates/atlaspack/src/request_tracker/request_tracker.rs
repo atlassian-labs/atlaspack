@@ -4,12 +4,13 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use petgraph::graph::NodeIndex;
+use petgraph::stable_graph::StableDiGraph;
+
 use atlaspack_core::config_loader::ConfigLoaderRef;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_filesystem::FileSystemRef;
-use petgraph::graph::NodeIndex;
-use petgraph::stable_graph::StableDiGraph;
 
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
@@ -37,7 +38,7 @@ use super::{RunRequestContext, RunRequestMessage};
 pub struct RequestTracker {
   config_loader: ConfigLoaderRef,
   file_system: FileSystemRef,
-  graph: RequestGraph<RequestResult>,
+  graph: RequestGraph,
   options: Arc<AtlaspackOptions>,
   plugins: PluginsRef,
   project_root: PathBuf,
@@ -45,7 +46,6 @@ pub struct RequestTracker {
 }
 
 impl RequestTracker {
-  #[allow(unused)]
   pub fn new(
     config_loader: ConfigLoaderRef,
     file_system: FileSystemRef,
@@ -53,7 +53,7 @@ impl RequestTracker {
     plugins: PluginsRef,
     project_root: PathBuf,
   ) -> Self {
-    let mut graph = StableDiGraph::<RequestNode<RequestResult>, RequestEdgeType>::new();
+    let mut graph = StableDiGraph::<RequestNode, RequestEdgeType>::new();
 
     graph.add_node(RequestNode::Root);
     RequestTracker {
@@ -93,13 +93,13 @@ impl RequestTracker {
   ///     these will run on the main-thread, therefore it'll be simpler to implement queueing
   ///     without stalls and locks/channels
   ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
-  #[allow(unused)]
   pub fn run_request(&mut self, request: impl Request) -> anyhow::Result<RequestResult> {
     let thread_pool = rayon::ThreadPoolBuilder::new()
       .thread_name(|count| format!("RequestTracker-{}", count))
       .num_threads(num_cpus::get() + 4)
       .panic_handler(|failure| {
         tracing::error!(
+          ?failure,
           "Lost thread from thread-pool. This is a bug in atlaspack. Builds may stall."
         );
         std::process::exit(1);
@@ -192,7 +192,6 @@ impl RequestTracker {
   }
 
   /// Before a request is run, a 'pending' [`RequestNode::Incomplete`] entry is added to the graph.
-  #[allow(unused)]
   fn prepare_request(&mut self, request_id: u64) -> anyhow::Result<bool> {
     let node_index = self
       .request_index
@@ -205,7 +204,7 @@ impl RequestTracker {
       .ok_or_else(|| diagnostic_error!("Failed to find request node"))?;
 
     // Don't run if already run
-    if let RequestNode::<RequestResult>::Valid(_) = request_node {
+    if let RequestNode::Valid(_) = request_node {
       return Ok(false);
     }
 
@@ -214,7 +213,6 @@ impl RequestTracker {
   }
 
   /// Once a request finishes, its result is stored under its [`RequestNode`] entry on the graph
-  #[allow(unused)]
   fn store_request(
     &mut self,
     request_id: u64,
@@ -230,12 +228,12 @@ impl RequestTracker {
       .node_weight_mut(*node_index)
       .ok_or_else(|| diagnostic_error!("Failed to find request"))?;
 
-    if let RequestNode::<RequestResult>::Valid(_) = request_node {
+    if let RequestNode::Valid(_) = request_node {
       return Ok(());
     }
 
     *request_node = match result {
-      Ok(result) => RequestNode::Valid(result.result.clone()),
+      Ok(result) => RequestNode::Valid(result.clone()),
       Err(error) => RequestNode::Error(anyhow!(error.to_string())),
     };
 
@@ -244,7 +242,6 @@ impl RequestTracker {
 
   /// Get a request result and call [`RequestTracker::link_request_to_parent`] to create a
   /// dependency link between the source request and this sub-request.
-  #[allow(unused)]
   fn get_request(
     &mut self,
     parent_request_hash: Option<u64>,
@@ -263,12 +260,11 @@ impl RequestTracker {
       RequestNode::Root => Err(diagnostic_error!("Impossible")),
       RequestNode::Incomplete => Err(diagnostic_error!("Impossible")),
       RequestNode::Error(error) => Err(anyhow!(error.to_string())),
-      RequestNode::Valid(value) => Ok(value.clone()),
+      RequestNode::Valid(value) => Ok(value.result.clone()),
     }
   }
 
   /// Create an edge between a parent request and the target request.
-  #[allow(unused)]
   fn link_request_to_parent(
     &mut self,
     request_id: u64,

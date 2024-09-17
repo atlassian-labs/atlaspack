@@ -1,15 +1,15 @@
 use petgraph::stable_graph::StableDiGraph;
 
-use crate::request_tracker::RunRequestError;
+use crate::request_tracker::{ResultAndInvalidations, RunRequestError};
 
-pub type RequestGraph<T> = StableDiGraph<RequestNode<T>, RequestEdgeType>;
+pub type RequestGraph = StableDiGraph<RequestNode, RequestEdgeType>;
 
 #[derive(Debug)]
-pub enum RequestNode<T> {
+pub enum RequestNode {
   Error(RunRequestError),
   Root,
   Incomplete,
-  Valid(T),
+  Valid(ResultAndInvalidations),
 }
 
 #[derive(Debug)]
