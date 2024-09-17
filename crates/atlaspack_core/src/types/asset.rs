@@ -1,13 +1,13 @@
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
-use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::u64;
 
-use atlaspack_filesystem::FileSystemRef;
 use serde::Deserialize;
 use serde::Serialize;
+
+use atlaspack_filesystem::FileSystemRef;
 
 use super::bundle::BundleBehavior;
 use super::environment::Environment;
@@ -15,8 +15,7 @@ use super::file_type::FileType;
 use super::json::JSONObject;
 use super::symbol::Symbol;
 
-#[derive(PartialEq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct AssetId(pub NonZeroU32);
+pub type AssetId = String;
 
 /// The source code for an asset.
 ///
@@ -84,7 +83,7 @@ fn create_asset_id(
 pub struct Asset {
   /// The main identify hash for the asset. It is consistent for the entire
   /// build and between builds.
-  pub id: String,
+  pub id: AssetId,
 
   /// Controls which bundle the asset is placed into
   pub bundle_behavior: BundleBehavior,
