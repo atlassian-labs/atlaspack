@@ -1,7 +1,7 @@
 // @flow
 
 import {Transformer} from '@atlaspack/plugin';
-import type {AST} from '@atlaspack/types';
+import type {AST, Transformer as TransformerOpts} from '@atlaspack/types';
 import {parser as parse} from 'posthtml-parser';
 import nullthrows from 'nullthrows';
 import type {PostHTMLExpression, PostHTMLNode} from 'posthtml';
@@ -12,22 +12,28 @@ import collectDependencies from './dependencies';
 import extractInlineAssets from './inline';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 
-export default (new Transformer({
+export function parseHTML(code: string, xmlMode: boolean): AST {
+  return {
+    type: 'posthtml',
+    version: '0.4.1',
+    program: parse(code, {
+      lowerCaseTags: true,
+      lowerCaseAttributeNames: true,
+      sourceLocations: true,
+      xmlMode,
+    }),
+  };
+}
+
+export const transformerOpts: TransformerOpts<void> = {
   canReuseAST({ast}) {
     return ast.type === 'posthtml' && semver.satisfies(ast.version, '^0.4.0');
   },
 
   async parse({asset}) {
-    return {
-      type: 'posthtml',
-      version: '0.4.1',
-      program: parse(await asset.getCode(), {
-        lowerCaseTags: true,
-        lowerCaseAttributeNames: true,
-        sourceLocations: true,
-        xmlMode: asset.type === 'xhtml',
-      }),
-    };
+    const code = await asset.getCode();
+    const xmlMode = asset.type === 'xhtml';
+    return parseHTML(code, xmlMode);
   },
 
   async transform({asset, options}) {
@@ -106,7 +112,8 @@ export default (new Transformer({
       }),
     };
   },
-}): Transformer);
+};
+export default (new Transformer(transformerOpts): Transformer);
 
 function findFirstMatch(
   ast: AST,
