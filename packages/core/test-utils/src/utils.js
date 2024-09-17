@@ -1338,9 +1338,11 @@ function itImpl(
         try {
           await builder.call(this);
         } catch (err) {
+          // eslint-disable-next-line no-console
           console.error(`TEST: ${title} failed for V3`, err);
           return;
         }
+        // eslint-disable-next-line no-console
         console.error(`TEST: ${title} is green for V3 but skipped`);
       },
       args,
