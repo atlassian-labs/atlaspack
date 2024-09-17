@@ -11,16 +11,17 @@ import type {
   PackagedBundle,
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
+import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '@atlaspack/fs';
 import type WorkerFarm from '@atlaspack/workers';
 import type {IncomingMessage} from 'http';
+import http from 'http';
 
 import invariant from 'assert';
+import assert from 'assert';
 import util from 'util';
 import Parcel, {createWorkerFarm} from '@atlaspack/core';
-import assert from 'assert';
 import vm from 'vm';
 import v8 from 'v8';
-import {NodeFS, MemoryFS, OverlayFS, ncp as _ncp} from '@atlaspack/fs';
 import path from 'path';
 import url from 'url';
 import WebSocket from 'ws';
@@ -28,7 +29,6 @@ import nullthrows from 'nullthrows';
 import {parser as postHtmlParse} from 'posthtml-parser';
 import postHtml from 'posthtml';
 import EventEmitter from 'events';
-import http from 'http';
 import https from 'https';
 
 import {makeDeferredWithPromise, normalizeSeparators} from '@atlaspack/utils';
@@ -712,7 +712,10 @@ function prepareBrowserContext(
       WebSocket,
       TextEncoder,
       TextDecoder,
-      console: {...console, clear: () => {}},
+      console: {
+        ...console,
+        clear: () => {},
+      },
       location: {
         hostname: 'localhost',
         origin: 'http://localhost',
@@ -863,6 +866,7 @@ function prepareWorkerContext(
 }
 
 const nodeCache = new Map();
+
 // no filepath = ESM
 function prepareNodeContext(
   filePath,
@@ -983,6 +987,7 @@ function prepareNodeContext(
 }
 
 let instanceId = 0;
+
 export async function runESM(
   baseDir: FilePath,
   entries: Array<[string, string]>,
@@ -993,6 +998,7 @@ export async function runESM(
 ): Promise<Array<{|[string]: mixed|}>> {
   let id = instanceId++;
   let cache = new Map();
+
   function load(inputSpecifier, referrer, code = null) {
     // ESM can request bundles with an absolute URL. Normalize this to the baseDir.
     let specifier = inputSpecifier.replace('http://localhost', baseDir);
@@ -1081,6 +1087,7 @@ export async function runESM(
   }
 
   let entryPromises = new Map();
+
   function entry(specifier, referrer, code) {
     let m = load(specifier, referrer, code);
     let promise = entryPromises.get(m);
@@ -1267,89 +1274,145 @@ export function request(
 
 // $FlowFixMe
 let origDescribe = globalThis.describe;
-let parcelVersion: string | void;
+let testVersionContext: string | void;
+
 export function describe(...args: mixed[]) {
-  parcelVersion = undefined;
   origDescribe.apply(this, args);
 }
 
 describe.only = function (...args: mixed[]) {
-  parcelVersion = undefined;
   origDescribe.only.apply(this, args);
 };
 
 describe.skip = function (...args: mixed[]) {
-  parcelVersion = undefined;
   origDescribe.skip.apply(this, args);
 };
 
 describe.v2 = function (...args: mixed[]) {
-  parcelVersion = 'v2';
-  if (!isAtlaspackV3) {
-    origDescribe.apply(this, args);
-  }
+  testVersionContext = 'v2';
+  origDescribe.apply(this, args);
 };
 
 describe.v2.only = function (...args: mixed[]) {
-  parcelVersion = 'v2';
-  if (!isAtlaspackV3) {
-    origDescribe.only.apply(this, args);
-  }
+  testVersionContext = 'v2';
+  origDescribe.only.apply(this, args);
 };
 
 describe.v3 = function (...args: mixed[]) {
-  parcelVersion = 'v3';
+  testVersionContext = 'v3';
   if (isAtlaspackV3) {
     origDescribe.apply(this, args);
   }
 };
 
 describe.v3.only = function (...args: mixed[]) {
-  parcelVersion = 'v3';
+  testVersionContext = 'v3';
   if (isAtlaspackV3) {
     origDescribe.only.apply(this, args);
   }
 };
 
 let origIt = globalThis.it;
-export function it(...args: mixed[]) {
+
+type TestCase = () => void | Promise<void>;
+
+function itImpl(
+  only: boolean,
+  title: string,
+  builder: TestCase,
+  ...args: mixed[]
+) {
+  const fn = only ? origIt.only : origIt;
+  console.log({testVersionContext, isAtlaspackV3, only, title});
   if (
-    parcelVersion == null ||
-    (parcelVersion == 'v2' && !isAtlaspackV3) ||
-    (parcelVersion == 'v3' && isAtlaspackV3)
+    testVersionContext == null ||
+    (testVersionContext === 'v2' && !isAtlaspackV3) ||
+    (testVersionContext === 'v3' && isAtlaspackV3)
   ) {
-    origIt.apply(this, args);
+    fn.call(this, title, builder, ...args);
+  }
+  if (testVersionContext === 'v2' && isAtlaspackV3) {
+    fn.call(
+      this,
+      title,
+      async function () {
+        try {
+          await builder.call(this);
+        } catch (err) {
+          console.error(`TEST: ${title} failed for V3`, err);
+          return;
+        }
+        console.error(`TEST: ${title} is green for V3 but skipped`);
+      },
+      args,
+    );
   }
 }
 
-it.only = function (...args: mixed[]) {
-  origIt.only.apply(this, args);
+export function it(
+  title: string,
+  builder: () => void | Promise<void>,
+  ...args: mixed[]
+) {
+  itImpl.call(this, false, title, builder, ...args);
+}
+
+it.only = function (title: string, builder: TestCase, ...args: mixed[]) {
+  itImpl.call(this, true, title, builder, ...args);
 };
 
-it.skip = function (...args: mixed[]) {
-  origIt.skip.apply(this, args);
+it.skip = function (
+  title: string,
+  builder: () => void | Promise<void>,
+  ...args: mixed[]
+) {
+  origIt.skip.call(this, title, builder, ...args);
 };
 
-it.v2 = function (...args: mixed[]) {
-  if (!isAtlaspackV3) {
-    origIt.apply(this, args);
-  }
+it.v2 = function (
+  title: string,
+  builder: () => void | Promise<void>,
+  ...args: mixed[]
+) {
+  const previous = testVersionContext;
+  testVersionContext = 'v2';
+  itImpl.call(this, false, title, builder, ...args);
+  testVersionContext = previous;
 };
 
-it.v2.only = function (...args: mixed[]) {
-  if (!isAtlaspackV3) {
-    origIt.only.apply(this, args);
-  }
+it.v2.only = function (
+  title: string,
+  builder: () => void | Promise<void>,
+  ...args: mixed[]
+) {
+  const previous = testVersionContext;
+  testVersionContext = 'v2';
+  itImpl.call(this, true, title, builder, ...args);
+  testVersionContext = previous;
 };
 
-it.v3 = function (...args: mixed[]) {
+it.v3 = function (
+  title: string,
+  builder: () => void | Promise<void>,
+  ...args: mixed[]
+) {
+  const previous = testVersionContext;
+  testVersionContext = 'v3';
   if (isAtlaspackV3) {
-    origIt.apply(this, args);
+    itImpl.call(this, false, title, builder, ...args);
   }
+  testVersionContext = previous;
 };
 
-it.v3.only = function (...args: mixed[]) {
+it.v3.only = function (
+  title: string,
+  builder: () => void | Promise<void>,
+  ...args: mixed[]
+) {
+  const previous = testVersionContext;
+  testVersionContext = 'v3';
   if (isAtlaspackV3) {
-    origIt.only.apply(this, args);
+    itImpl.call(this, true, title, builder, ...args);
   }
+  testVersionContext = previous;
 };
