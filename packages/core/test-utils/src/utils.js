@@ -1323,7 +1323,6 @@ function itImpl(
   ...args: mixed[]
 ) {
   const fn = only ? origIt.only : origIt;
-  console.log({testVersionContext, isAtlaspackV3, only, title});
   if (
     testVersionContext == null ||
     (testVersionContext === 'v2' && !isAtlaspackV3) ||
