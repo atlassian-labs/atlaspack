@@ -9,7 +9,10 @@ import {relativePath, normalizeSeparators} from '@atlaspack/utils';
 export opaque type ProjectPath = string;
 
 function toProjectPath_(projectRoot: FilePath, p: FilePath): ProjectPath {
-  if (p == null) {
+  let firstChar = p[0];
+  // If the file path is not provided, is already relative, or already absolute,
+  // then there's no work to do
+  if (p == null && firstChar !== '.' && firstChar !== '/') {
     return p;
   }
 
