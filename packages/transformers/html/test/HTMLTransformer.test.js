@@ -82,6 +82,7 @@ function normalizeDependencies(dependencies) {
 function normalizeAssets(assets) {
   return assets.map(asset => {
     return {
+      // $FlowFixMe
       ...asset,
       env: null,
       meta: null,
