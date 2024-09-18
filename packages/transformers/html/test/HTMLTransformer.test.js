@@ -128,7 +128,7 @@ describe('HTMLTransformer', () => {
     assert.deepEqual(transformResult, [inputAsset]);
   });
 
-  it.only('transforms simple inline script', async () => {
+  it('transforms simple inline script', async () => {
     const code = `
 <html>
   <body>
