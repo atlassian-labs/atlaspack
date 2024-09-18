@@ -361,7 +361,9 @@ impl ResolverPlugin for AtlaspackResolver {
       (atlaspack_resolver::Resolution::External, _query) => {
         if let Some(_source_path) = &ctx.dependency.source_path {
           if ctx.dependency.env.is_library && ctx.dependency.specifier_type != SpecifierType::Url {
-            todo!("check excluded dependency for libraries");
+            return Err(anyhow::anyhow!(
+              "Not implemented: We need to check excluded dependency for libraries"
+            ));
           }
         }
 
