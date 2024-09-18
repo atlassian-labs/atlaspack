@@ -317,7 +317,10 @@ atlaspack-transformer-b`,
 
   it('should output sourcemaps when packaging Wasm', async () => {
     let b = await bundle(
-      path.join(__dirname, '../integration/wasm-sourcemap-transformer/index.js'),
+      path.join(
+        __dirname,
+        '../integration/wasm-sourcemap-transformer/index.js',
+      ),
     );
     let wasmPath = nullthrows(
       b.getBundles().find(b => b.type === 'wasm'),

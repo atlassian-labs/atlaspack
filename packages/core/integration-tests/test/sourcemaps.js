@@ -569,7 +569,10 @@ describe.v2('sourcemaps', function () {
     });
 
     let local = await inputFS.readFile(
-      path.join(__dirname, '../integration/sourcemap-typescript-nested/local.ts'),
+      path.join(
+        __dirname,
+        '../integration/sourcemap-typescript-nested/local.ts',
+      ),
       'utf-8',
     );
     checkSourceMapping({

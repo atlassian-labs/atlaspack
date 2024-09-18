@@ -161,7 +161,9 @@ describe('images', function () {
   });
 
   it.v2('retain EXIF data when resized with a query string', async () => {
-    let b = await bundle(join(__dirname, '../integration/image-exif/resized.js'));
+    let b = await bundle(
+      join(__dirname, '../integration/image-exif/resized.js'),
+    );
 
     let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
 
@@ -195,7 +197,9 @@ describe('images', function () {
   });
 
   it.v2('uses the EXIF orientation tag when resizing', async () => {
-    let b = await bundle(join(__dirname, '../integration/image-exif/resized.js'));
+    let b = await bundle(
+      join(__dirname, '../integration/image-exif/resized.js'),
+    );
 
     let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
 

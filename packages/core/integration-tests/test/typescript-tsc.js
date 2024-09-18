@@ -11,7 +11,10 @@ import {
   run,
 } from '@atlaspack/test-utils';
 
-const config = path.join(__dirname, '../integration/typescript-config/.parcelrc');
+const config = path.join(
+  __dirname,
+  '../integration/typescript-config/.parcelrc',
+);
 
 describe.v2('typescript tsc', function () {
   it('should support loading tsconfig.json', async () => {

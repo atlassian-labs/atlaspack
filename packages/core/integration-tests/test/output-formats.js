@@ -43,7 +43,10 @@ describe('output formats', function () {
 
     it('should support commonjs output (module.exports)', async function () {
       let b = await bundle(
-        path.join(__dirname, '../integration/formats/commonjs/module-exports.js'),
+        path.join(
+          __dirname,
+          '../integration/formats/commonjs/module-exports.js',
+        ),
       );
 
       let dist = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
@@ -460,7 +463,10 @@ describe('output formats', function () {
 
     it.v2('should support commonjs input', async function () {
       let b = await bundle(
-        path.join(__dirname, '../integration/formats/commonjs-dynamic/index.js'),
+        path.join(
+          __dirname,
+          '../integration/formats/commonjs-dynamic/index.js',
+        ),
       );
 
       let dist = await outputFS.readFile(
@@ -632,7 +638,10 @@ describe('output formats', function () {
 
     it.v2('should work with SWC helpers', async function () {
       let b = await bundle(
-        path.join(__dirname, '../integration/formats/commonjs-helpers/index.js'),
+        path.join(
+          __dirname,
+          '../integration/formats/commonjs-helpers/index.js',
+        ),
       );
 
       let out = [];
@@ -771,7 +780,10 @@ describe('output formats', function () {
       'should support esmodule output with external modules (default import)',
       async function () {
         let b = await bundle(
-          path.join(__dirname, '../integration/formats/esm-external/default.js'),
+          path.join(
+            __dirname,
+            '../integration/formats/esm-external/default.js',
+          ),
         );
 
         await assertESMExports(
@@ -788,7 +800,10 @@ describe('output formats', function () {
       'should support esmodule output with external modules (multiple specifiers)',
       async function () {
         let b = await bundle(
-          path.join(__dirname, '../integration/formats/esm-external/multiple.js'),
+          path.join(
+            __dirname,
+            '../integration/formats/esm-external/multiple.js',
+          ),
         );
 
         await assertESMExports(
@@ -1325,7 +1340,10 @@ describe('output formats', function () {
 
     it('should support re-assigning to module.exports', async function () {
       let b = await bundle(
-        path.join(__dirname, '../integration/formats/commonjs-esm/re-assign.js'),
+        path.join(
+          __dirname,
+          '../integration/formats/commonjs-esm/re-assign.js',
+        ),
       );
 
       let ns = await run(b);
@@ -1402,7 +1420,10 @@ describe('output formats', function () {
       'should rename shadowed imported specifiers to something unique',
       async function () {
         let b = await bundle(
-          path.join(__dirname, '../integration/formats/esm-import-shadow/a.mjs'),
+          path.join(
+            __dirname,
+            '../integration/formats/esm-import-shadow/a.mjs',
+          ),
         );
 
         let _b = await import(
@@ -1454,7 +1475,10 @@ describe('output formats', function () {
       'should support outputting ESM in .js files with "type": "module"',
       async function () {
         let b = await bundle(
-          path.join(__dirname, '../integration/formats/esm-type-module/index.js'),
+          path.join(
+            __dirname,
+            '../integration/formats/esm-type-module/index.js',
+          ),
         );
 
         let filePath = b.getBundles()[0].filePath;

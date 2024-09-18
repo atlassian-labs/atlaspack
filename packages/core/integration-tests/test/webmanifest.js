@@ -217,7 +217,10 @@ describe.v2('webmanifest', function () {
     await assert.rejects(
       () =>
         bundle(
-          path.join(__dirname, '../integration/webmanifest-not-found/index.html'),
+          path.join(
+            __dirname,
+            '../integration/webmanifest-not-found/index.html',
+          ),
         ),
       {
         name: 'BuildError',

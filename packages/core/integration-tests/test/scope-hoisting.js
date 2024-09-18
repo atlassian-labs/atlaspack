@@ -2301,7 +2301,10 @@ describe('scope hoisting', function () {
 
     it('should not nameclash with internal variables', async function () {
       let b = await bundle(
-        path.join(__dirname, '../integration/scope-hoisting/es6/name-clash/a.js'),
+        path.join(
+          __dirname,
+          '../integration/scope-hoisting/es6/name-clash/a.js',
+        ),
       );
 
       let output = await run(b);
@@ -2409,7 +2412,10 @@ describe('scope hoisting', function () {
 
     it('should correctly handle circular dependencies', async function () {
       let b = await bundle(
-        path.join(__dirname, '../integration/scope-hoisting/es6/circular/a.mjs'),
+        path.join(
+          __dirname,
+          '../integration/scope-hoisting/es6/circular/a.mjs',
+        ),
       );
 
       assert.deepStrictEqual(
@@ -2435,7 +2441,10 @@ describe('scope hoisting', function () {
 
     it('should correctly handle circular dependencies (2)', async function () {
       let b = await bundle(
-        path.join(__dirname, '../integration/scope-hoisting/es6/circular2/a.mjs'),
+        path.join(
+          __dirname,
+          '../integration/scope-hoisting/es6/circular2/a.mjs',
+        ),
       );
 
       assert.deepStrictEqual(
@@ -2462,7 +2471,10 @@ describe('scope hoisting', function () {
 
     it('should correctly handle circular dependencies (3)', async function () {
       let b = await bundle(
-        path.join(__dirname, '../integration/scope-hoisting/es6/circular3/a.mjs'),
+        path.join(
+          __dirname,
+          '../integration/scope-hoisting/es6/circular3/a.mjs',
+        ),
       );
 
       assert.deepStrictEqual(
@@ -5744,7 +5756,10 @@ describe('scope hoisting', function () {
 
   it('deduplicates shared sibling assets between bundle groups', async () => {
     let b = await bundle(
-      path.join(__dirname, '../integration/shared-sibling-scope-hoist/index.js'),
+      path.join(
+        __dirname,
+        '../integration/shared-sibling-scope-hoist/index.js',
+      ),
     );
 
     assert.deepEqual(await run(b), ['a', 'b', 'c']);
@@ -5775,7 +5790,10 @@ describe('scope hoisting', function () {
 
   it('can run an async bundle whose entry asset is present in another bundle', async () => {
     let b = await bundle(
-      path.join(__dirname, '../integration/async-entry-shared/scope-hoisting.js'),
+      path.join(
+        __dirname,
+        '../integration/async-entry-shared/scope-hoisting.js',
+      ),
     );
 
     assertBundles(b, [

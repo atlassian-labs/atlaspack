@@ -85,7 +85,9 @@ describe.v2('sass', function () {
 
   it('should support scss imports in html for >1 target', async function () {
     //Repro copied from https://github.com/parcel-bundler/parcel/issues/8754
-    let b = await bundle(path.join(__dirname, '../integration/scss-html-import'));
+    let b = await bundle(
+      path.join(__dirname, '../integration/scss-html-import'),
+    );
 
     assertBundles(b, [
       {
@@ -256,7 +258,10 @@ describe.v2('sass', function () {
 
   it('should support using the custom webpack/sass node_modules syntax', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/sass-webpack-import-error/index.sass'),
+      path.join(
+        __dirname,
+        '../integration/sass-webpack-import-error/index.sass',
+      ),
     );
 
     assertBundles(b, [
@@ -272,7 +277,10 @@ describe.v2('sass', function () {
 
   it('should support node_modules imports', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/sass-node-modules-import/index.sass'),
+      path.join(
+        __dirname,
+        '../integration/sass-node-modules-import/index.sass',
+      ),
     );
 
     assertBundles(b, [
@@ -288,7 +296,10 @@ describe.v2('sass', function () {
 
   it('should support imports from includePaths', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/sass-include-paths-import/index.sass'),
+      path.join(
+        __dirname,
+        '../integration/sass-include-paths-import/index.sass',
+      ),
     );
 
     assertBundles(b, [

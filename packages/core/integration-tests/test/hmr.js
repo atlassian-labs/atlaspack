@@ -924,7 +924,10 @@ module.hot.dispose((data) => {
       let testDir = path.join(__dirname, '/input');
       await overlayFS.rimraf(testDir);
       await overlayFS.mkdirp(testDir);
-      await ncp(path.join(__dirname, '../integration/hmr-css-modules'), testDir);
+      await ncp(
+        path.join(__dirname, '../integration/hmr-css-modules'),
+        testDir,
+      );
 
       let port = await getPort();
       let b = bundler(path.join(testDir, 'index.html'), {

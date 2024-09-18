@@ -11,7 +11,9 @@ import {
 
 describe.v2('pug', function () {
   it('should support bundling HTML', async function () {
-    const b = await bundle(path.join(__dirname, '../integration/pug/index.pug'));
+    const b = await bundle(
+      path.join(__dirname, '../integration/pug/index.pug'),
+    );
 
     assertBundles(b, [
       {

@@ -5,7 +5,9 @@ import {parse, print} from 'graphql/language';
 
 describe.v2('graphql', function () {
   it('should support requiring graphql files', async function () {
-    let b = await bundle(path.join(__dirname, '../integration/graphql/index.js'));
+    let b = await bundle(
+      path.join(__dirname, '../integration/graphql/index.js'),
+    );
 
     let output = await run(b);
     assert.equal(typeof output, 'function');

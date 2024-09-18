@@ -538,19 +538,22 @@ describe.v2('server', function () {
 
   it('should support lazy bundling sibling css files of dynamic import', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '../integration/dynamic-css/index.js'), {
-      defaultTargetOptions: {
-        distDir,
+    let b = bundler(
+      path.join(__dirname, '../integration/dynamic-css/index.js'),
+      {
+        defaultTargetOptions: {
+          distDir,
+        },
+        config,
+        serveOptions: {
+          https: false,
+          port: port,
+          host: 'localhost',
+        },
+        shouldBuildLazily: true,
+        shouldContentHash: false,
       },
-      config,
-      serveOptions: {
-        https: false,
-        port: port,
-        host: 'localhost',
-      },
-      shouldBuildLazily: true,
-      shouldContentHash: false,
-    });
+    );
 
     await outputFS.mkdirp(distDir);
 

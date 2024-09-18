@@ -102,11 +102,14 @@ describe.v2('svg', function () {
   });
 
   it('should minify SVG bundles', async function () {
-    let b = await bundle(path.join(__dirname, '../integration/svg/circle.svg'), {
-      defaultTargetOptions: {
-        shouldOptimize: true,
+    let b = await bundle(
+      path.join(__dirname, '../integration/svg/circle.svg'),
+      {
+        defaultTargetOptions: {
+          shouldOptimize: true,
+        },
       },
-    });
+    );
 
     let file = await outputFS.readFile(
       b.getBundles().find(b => b.type === 'svg').filePath,

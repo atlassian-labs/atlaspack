@@ -413,7 +413,10 @@ describe.v2('monorepos', function () {
   });
 
   it('should build a single package with an entry file and cwd at a package', async function () {
-    let fixture = path.join(__dirname, '../integration/monorepo/packages/pkg-a');
+    let fixture = path.join(
+      __dirname,
+      '../integration/monorepo/packages/pkg-a',
+    );
     let oldcwd = inputFS.cwd();
     inputFS.chdir(fixture);
 

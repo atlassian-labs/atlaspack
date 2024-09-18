@@ -19,12 +19,15 @@ const inputDir = path.join(__dirname, '/input');
 
 describe.v2('transpilation', function () {
   it('should not transpile if no targets are defined', async function () {
-    await bundle(path.join(__dirname, '../integration/babel-default/index.js'), {
-      defaultTargetOptions: {
-        engines: undefined,
-        shouldOptimize: false,
+    await bundle(
+      path.join(__dirname, '../integration/babel-default/index.js'),
+      {
+        defaultTargetOptions: {
+          engines: undefined,
+          shouldOptimize: false,
+        },
       },
-    });
+    );
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
     assert(file.includes('class Foo'));
     assert(file.includes('class Bar'));
@@ -133,7 +136,9 @@ describe.v2('transpilation', function () {
   });
 
   it('should support compiling JSX in JS files with React aliased to Preact', async function () {
-    await bundle(path.join(__dirname, '../integration/jsx-react-alias/index.js'));
+    await bundle(
+      path.join(__dirname, '../integration/jsx-react-alias/index.js'),
+    );
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
     assert(file.includes('React.createElement("div"'));
@@ -230,7 +235,10 @@ describe.v2('transpilation', function () {
 
   it('should support the automatic JSX runtime with experimental React versions', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/jsx-automatic-experimental/index.js'),
+      path.join(
+        __dirname,
+        '../integration/jsx-automatic-experimental/index.js',
+      ),
     );
 
     let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');

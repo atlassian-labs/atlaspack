@@ -42,7 +42,9 @@ describe.v2('css', () => {
   });
 
   it('should bundle css dependencies in the correct, postorder traversal order', async () => {
-    let b = await bundle(path.join(__dirname, '../integration/css-order/a.css'));
+    let b = await bundle(
+      path.join(__dirname, '../integration/css-order/a.css'),
+    );
 
     // Given a tree of css with imports:
     //      A
@@ -172,7 +174,9 @@ describe.v2('css', () => {
   });
 
   it('should support linking to assets with url() from CSS', async function () {
-    let b = await bundle(path.join(__dirname, '../integration/css-url/index.js'));
+    let b = await bundle(
+      path.join(__dirname, '../integration/css-url/index.js'),
+    );
 
     assertBundles(b, [
       {
@@ -257,8 +261,14 @@ describe.v2('css', () => {
   it('should support linking to assets in parent folders with url() from CSS', async function () {
     let b = await bundle(
       [
-        path.join(__dirname, '../integration/css-url-relative/src/a/style1.css'),
-        path.join(__dirname, '../integration/css-url-relative/src/b/style2.css'),
+        path.join(
+          __dirname,
+          '../integration/css-url-relative/src/a/style1.css',
+        ),
+        path.join(
+          __dirname,
+          '../integration/css-url-relative/src/b/style2.css',
+        ),
       ],
       {
         defaultTargetOptions: {
@@ -298,7 +308,9 @@ describe.v2('css', () => {
   });
 
   it('should handle quote in CSS URL correctly', async function () {
-    await bundle(path.join(__dirname, '../integration/css-url-quote/index.css'));
+    await bundle(
+      path.join(__dirname, '../integration/css-url-quote/index.css'),
+    );
 
     let css = await outputFS.readFile(path.join(distDir, 'index.css'), 'utf8');
 
@@ -561,9 +573,12 @@ describe.v2('css', () => {
   });
 
   it('should support @layer', async function () {
-    let b = await bundle(path.join(__dirname, '../integration/css-layer/a.css'), {
-      mode: 'production',
-    });
+    let b = await bundle(
+      path.join(__dirname, '../integration/css-layer/a.css'),
+      {
+        mode: 'production',
+      },
+    );
 
     let res = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
     assert(

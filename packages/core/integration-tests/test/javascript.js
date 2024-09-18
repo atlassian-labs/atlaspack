@@ -68,12 +68,9 @@ describe('javascript', function () {
   });
 
   it('should produce a basic JS bundle with ES6 imports', async function () {
-    let b = await bundle(
-      path.join(__dirname, '../integration/es6/index.js'),
-      {
-        outputFS: inputFS,
-      },
-    );
+    let b = await bundle(path.join(__dirname, '../integration/es6/index.js'), {
+      outputFS: inputFS,
+    });
 
     // assert.equal(b.assets.size, 8);
     // assert.equal(b.childBundles.size, 1);
@@ -232,14 +229,11 @@ describe('javascript', function () {
 
   it('should preserve hashbangs in scopehoisted bundles', async () => {
     let fixturePath = path.join(__dirname, '../integration/node_hashbang');
-    await bundle(
-      path.join(__dirname, '../integration/node_hashbang/main.js'),
-      {
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
-        },
+    await bundle(path.join(__dirname, '../integration/node_hashbang/main.js'), {
+      defaultTargetOptions: {
+        shouldScopeHoist: true,
       },
-    );
+    });
 
     let main = await outputFS.readFile(
       path.join(fixturePath, 'dist', 'node', 'main.js'),
@@ -268,10 +262,7 @@ describe('javascript', function () {
 
   it('should bundle builtins for a browser environment', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/include_builtins-browser/main.js',
-      ),
+      path.join(__dirname, '../integration/include_builtins-browser/main.js'),
     );
 
     assertBundles(b, [
@@ -371,10 +362,7 @@ describe('javascript', function () {
     'should prefetch bundles when declared as an import attribute statically',
     async function () {
       let b = await bundle(
-        path.join(
-          __dirname,
-          '../integration/dynamic-static-prefetch/index.js',
-        ),
+        path.join(__dirname, '../integration/dynamic-static-prefetch/index.js'),
       );
 
       let output = await run(b);
@@ -430,10 +418,7 @@ describe('javascript', function () {
     'should preload bundles when declared as an import attribute statically',
     async function () {
       let b = await bundle(
-        path.join(
-          __dirname,
-          '../integration/dynamic-static-preload/index.js',
-        ),
+        path.join(__dirname, '../integration/dynamic-static-preload/index.js'),
       );
 
       let output = await run(b);
@@ -460,10 +445,7 @@ describe('javascript', function () {
 
   it('should remove import attributes', async () => {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/dynamic-import-attributes/index.js',
-      ),
+      path.join(__dirname, '../integration/dynamic-import-attributes/index.js'),
     );
 
     let mainBundle = b.getBundles()[0];
@@ -496,10 +478,7 @@ describe('javascript', function () {
 
   it('should split bundles when a dynamic import is used with an electron-main environment', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/dynamic-electron-main/index.js',
-      ),
+      path.join(__dirname, '../integration/dynamic-electron-main/index.js'),
     );
 
     assertBundles(b, [
@@ -519,10 +498,7 @@ describe('javascript', function () {
 
   it('should split bundles when a dynamic import is used with an electron-renderer environment', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/dynamic-electron-renderer/index.js',
-      ),
+      path.join(__dirname, '../integration/dynamic-electron-renderer/index.js'),
     );
 
     assertBundles(b, [
@@ -577,10 +553,7 @@ describe('javascript', function () {
 
   it('dynamic imports loaded as high-priority scripts when not all engines support esmodules natively', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/dynamic-imports-high-prio/index.js',
-      ),
+      path.join(__dirname, '../integration/dynamic-imports-high-prio/index.js'),
       {
         defaultTargetOptions: {
           engines: {
@@ -652,10 +625,7 @@ describe('javascript', function () {
 
   it('should dynamic import files which import raw files', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/dynamic-references-raw/index.js',
-      ),
+      path.join(__dirname, '../integration/dynamic-references-raw/index.js'),
     );
 
     assertBundles(b, [
@@ -793,11 +763,7 @@ describe('javascript', function () {
   it('should duplicate an asset if it is not present in every parent bundle', async function () {
     let b = await bundle(
       ['a.js', 'b.js'].map(entry =>
-        path.join(
-          __dirname,
-          '../integration/dynamic-hoist-no-dedupe',
-          entry,
-        ),
+        path.join(__dirname, '../integration/dynamic-hoist-no-dedupe', entry),
       ),
     );
     assertBundles(b, [
@@ -1145,10 +1111,7 @@ describe('javascript', function () {
 
   it('should replace __dirname and __filename with path relative to asset.filePath', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/env-node-replacements/index.js',
-      ),
+      path.join(__dirname, '../integration/env-node-replacements/index.js'),
     );
 
     let dist = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
@@ -1187,17 +1150,11 @@ describe('javascript', function () {
     );
     assert.equal(
       output.secondDirnameTest,
-      path.join(
-        __dirname,
-        '../integration/env-node-replacements/other-data',
-      ),
+      path.join(__dirname, '../integration/env-node-replacements/other-data'),
     );
     assert.equal(
       output.firstFilenameTest,
-      path.join(
-        __dirname,
-        '../integration/env-node-replacements/index.js',
-      ),
+      path.join(__dirname, '../integration/env-node-replacements/index.js'),
     );
     assert.equal(
       output.secondFilenameTest,
@@ -1212,19 +1169,13 @@ describe('javascript', function () {
     );
     assert.equal(
       output.sub.filename,
-      path.join(
-        __dirname,
-        '../integration/env-node-replacements/sub/index.js',
-      ),
+      path.join(__dirname, '../integration/env-node-replacements/sub/index.js'),
     );
   });
 
   it('should replace __dirname and __filename with path relative to asset.filePath with scope hoisting', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/env-node-replacements/index.js',
-      ),
+      path.join(__dirname, '../integration/env-node-replacements/index.js'),
       {
         mode: 'production',
         defaultTargetOptions: {
@@ -1270,17 +1221,11 @@ describe('javascript', function () {
     );
     assert.equal(
       output.secondDirnameTest,
-      path.join(
-        __dirname,
-        '../integration/env-node-replacements/other-data',
-      ),
+      path.join(__dirname, '../integration/env-node-replacements/other-data'),
     );
     assert.equal(
       output.firstFilenameTest,
-      path.join(
-        __dirname,
-        '../integration/env-node-replacements/index.js',
-      ),
+      path.join(__dirname, '../integration/env-node-replacements/index.js'),
     );
     assert.equal(
       output.secondFilenameTest,
@@ -1295,10 +1240,7 @@ describe('javascript', function () {
     );
     assert.equal(
       output.sub.filename,
-      path.join(
-        __dirname,
-        '../integration/env-node-replacements/sub/index.js',
-      ),
+      path.join(__dirname, '../integration/env-node-replacements/sub/index.js'),
     );
   });
 
@@ -1362,10 +1304,7 @@ describe('javascript', function () {
     'should insert environment variables inserted by a prior transform',
     async () => {
       let b = await bundle(
-        path.join(
-          __dirname,
-          '../integration/env-prior-transform/index.js',
-        ),
+        path.join(__dirname, '../integration/env-prior-transform/index.js'),
       );
 
       let jsBundle = b.getBundles()[0];
@@ -1479,12 +1418,9 @@ describe('javascript', function () {
   });
 
   it('should be able to inline environment variables in browser environment', async function () {
-    let b = await bundle(
-      path.join(__dirname, '../integration/env/index.js'),
-      {
-        env: {NODE_ENV: 'abc'},
-      },
-    );
+    let b = await bundle(path.join(__dirname, '../integration/env/index.js'), {
+      env: {NODE_ENV: 'abc'},
+    });
 
     let output = await run(b);
     assert.ok(!output.toString().includes('process.env'));
@@ -1492,14 +1428,11 @@ describe('javascript', function () {
   });
 
   it("should insert the user's NODE_ENV as process.env.NODE_ENV if passed", async function () {
-    let b = await bundle(
-      path.join(__dirname, '../integration/env/index.js'),
-      {
-        env: {
-          NODE_ENV: 'production',
-        },
+    let b = await bundle(path.join(__dirname, '../integration/env/index.js'), {
+      env: {
+        NODE_ENV: 'production',
       },
-    );
+    });
 
     let output = await run(b);
     assert.ok(!output.toString().includes('process.env'));
@@ -1594,10 +1527,7 @@ describe('javascript', function () {
 
   it('should inline environment variables with in binary expression whose right branch is process.env and left branch is string literal', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/env-binary-in-expression/index.js',
-      ),
+      path.join(__dirname, '../integration/env-binary-in-expression/index.js'),
       {
         env: {ABC: 'any'},
         defaultTargetOptions: {
@@ -1654,10 +1584,7 @@ describe('javascript', function () {
     'should insert environment variables from a file even if entry file is specified with source value in package.json',
     async function () {
       let b = await bundle(
-        path.join(
-          __dirname,
-          '../integration/env-file-with-package-source',
-        ),
+        path.join(__dirname, '../integration/env-file-with-package-source'),
       );
 
       let output = await run(b);
@@ -1666,10 +1593,7 @@ describe('javascript', function () {
   );
 
   it.v2('should error on process.env mutations', async function () {
-    let filePath = path.join(
-      __dirname,
-      '../integration/env-mutate/index.js',
-    );
+    let filePath = path.join(__dirname, '../integration/env-mutate/index.js');
     await assert.rejects(bundle(filePath), {
       diagnostics: [
         {
@@ -1886,10 +1810,7 @@ describe('javascript', function () {
         targets: {
           main: {
             context: 'browser',
-            distDir: path.join(
-              __dirname,
-              '../integration/process/dist.js',
-            ),
+            distDir: path.join(__dirname, '../integration/process/dist.js'),
           },
         },
       },
@@ -1907,10 +1828,7 @@ describe('javascript', function () {
         targets: {
           main: {
             context: 'node',
-            distDir: path.join(
-              __dirname,
-              '../integration/process/dist.js',
-            ),
+            distDir: path.join(__dirname, '../integration/process/dist.js'),
           },
         },
       },
@@ -1930,10 +1848,7 @@ describe('javascript', function () {
           targets: {
             main: {
               context: 'electron-main',
-              distDir: path.join(
-                __dirname,
-                '../integration/process/dist.js',
-              ),
+              distDir: path.join(__dirname, '../integration/process/dist.js'),
             },
           },
         },
@@ -1954,10 +1869,7 @@ describe('javascript', function () {
           targets: {
             main: {
               context: 'electron-renderer',
-              distDir: path.join(
-                __dirname,
-                '../integration/process/dist.js',
-              ),
+              distDir: path.join(__dirname, '../integration/process/dist.js'),
             },
           },
         },
@@ -1973,18 +1885,15 @@ describe('javascript', function () {
   );
 
   it.skip('should support adding implicit dependencies', async function () {
-    let b = await bundle(
-      path.join(__dirname, '../integration/json/index.js'),
-      {
-        delegate: {
-          getImplicitDependencies(asset) {
-            if (asset.basename === 'index.js') {
-              return [{name: '../css/index.css'}];
-            }
-          },
+    let b = await bundle(path.join(__dirname, '../integration/json/index.js'), {
+      delegate: {
+        getImplicitDependencies(asset) {
+          if (asset.basename === 'index.js') {
+            return [{name: '../css/index.css'}];
+          }
         },
       },
-    );
+    });
 
     assertBundles(b, {
       name: 'index.js',
@@ -2145,10 +2054,7 @@ describe('javascript', function () {
 
   it.skip('should resolve the module field before main if scope-hoisting is enabled', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/resolve-entries/module-field.js',
-      ),
+      path.join(__dirname, '../integration/resolve-entries/module-field.js'),
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -2171,10 +2077,7 @@ describe('javascript', function () {
 
   it.skip('should resolve the module field before main if scope-hoisting is enabled', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/resolve-entries/both-fields.js',
-      ),
+      path.join(__dirname, '../integration/resolve-entries/both-fields.js'),
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -2813,10 +2716,7 @@ describe('javascript', function () {
 
   it('should detect typescript style async requires in commonjs with esModuleInterop flag and arrow functions', async () => {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/require-async/ts-interop-arrow.js',
-      ),
+      path.join(__dirname, '../integration/require-async/ts-interop-arrow.js'),
     );
 
     assertBundles(b, [
@@ -2881,10 +2781,7 @@ describe('javascript', function () {
 
   it('should properly chain a dynamic import wrapped in a Promise.resolve()', async () => {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/require-async/resolve-chain.js',
-      ),
+      path.join(__dirname, '../integration/require-async/resolve-chain.js'),
     );
 
     assertBundles(b, [
@@ -2967,10 +2864,7 @@ describe('javascript', function () {
   });
 
   it('only updates bundle names of changed bundles for browsers', async () => {
-    let fixtureDir = path.join(
-      __dirname,
-      '../integration/name-invalidation',
-    );
+    let fixtureDir = path.join(__dirname, '../integration/name-invalidation');
     let _bundle = () =>
       bundle(path.join(fixtureDir, 'index.js'), {
         inputFS: overlayFS,
@@ -3371,10 +3265,7 @@ describe('javascript', function () {
   });
 
   it.v2('should throw a diagnostic for unknown pipelines', async function () {
-    let fixture = path.join(
-      __dirname,
-      '../integration/pipeline-unknown/a.js',
-    );
+    let fixture = path.join(__dirname, '../integration/pipeline-unknown/a.js');
     let code = await inputFS.readFileSync(fixture, 'utf8');
     await assert.rejects(() => bundle(fixture), {
       name: 'BuildError',
@@ -3425,10 +3316,7 @@ describe('javascript', function () {
 
   it('should not automatically name bundle files starting with a dot', async function () {
     await bundle(
-      path.join(
-        __dirname,
-        '../integration/bundle-naming/.invisible/index.js',
-      ),
+      path.join(__dirname, '../integration/bundle-naming/.invisible/index.js'),
     );
     let bundleFiles = await outputFS.readdir(distDir);
     let renamedSomeFiles = bundleFiles.some(currFile =>
@@ -3443,10 +3331,7 @@ describe('javascript', function () {
 
   it('should support duplicate re-exports without scope hoisting', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/js-duplicate-re-exports/index.js',
-      ),
+      path.join(__dirname, '../integration/js-duplicate-re-exports/index.js'),
     );
     let res = await run(b);
     assert.equal(res.a, 'a');
@@ -3488,10 +3373,7 @@ describe('javascript', function () {
 
   it('should not use arrow functions for reexport declarations unless supported', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/js-export-arrow-support/index.js',
-      ),
+      path.join(__dirname, '../integration/js-export-arrow-support/index.js'),
       {
         // Remove comments containing "=>"
         defaultTargetOptions: {
@@ -3537,10 +3419,7 @@ describe('javascript', function () {
 
   it('should support export declarations with destructuring', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/js-export-destructuring/index.js',
-      ),
+      path.join(__dirname, '../integration/js-export-destructuring/index.js'),
     );
     let res = await run(b);
     assert.deepEqual(res, {foo: 1, bar: 2});
@@ -3622,10 +3501,7 @@ describe('javascript', function () {
 
   it('should handle simultaneous import and reexports of the same identifier', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/js-export-import-same/index.js',
-      ),
+      path.join(__dirname, '../integration/js-export-import-same/index.js'),
     );
     let res = await run(b);
     assert.deepEqual(res, {foo: '123', bar: '1234'});
@@ -3641,10 +3517,7 @@ describe('javascript', function () {
 
   it('should not replace identifier with a var declaration inside a for loop', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/js-import-shadow-for-var/index.js',
-      ),
+      path.join(__dirname, '../integration/js-import-shadow-for-var/index.js'),
     );
     let res = await run(b);
     assert.deepEqual(res.baz(), [0, 1, 2, 3]);
@@ -3652,10 +3525,7 @@ describe('javascript', function () {
 
   it('should replace an imported identifier with function locals of the same name', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/js-import-shadow-func-var/index.js',
-      ),
+      path.join(__dirname, '../integration/js-import-shadow-func-var/index.js'),
     );
     let res = await run(b);
     assert.deepEqual(res.default, 123);
@@ -3688,10 +3558,7 @@ describe('javascript', function () {
 
   it('should not freeze live default imports', async function () {
     let b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/js-import-default-live/index.js',
-      ),
+      path.join(__dirname, '../integration/js-import-default-live/index.js'),
     );
     let res = await run(b);
     assert.deepEqual(res.default, [123, 789]);
@@ -4498,10 +4365,7 @@ describe('javascript', function () {
 
   it('should not affect ESM import order', async function () {
     const b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/js-import-initialization/a.mjs',
-      ),
+      path.join(__dirname, '../integration/js-import-initialization/a.mjs'),
     );
 
     await assert.rejects(
@@ -4512,10 +4376,7 @@ describe('javascript', function () {
 
   it('should not affect ESM import order with scope hoisting', async function () {
     const b = await bundle(
-      path.join(
-        __dirname,
-        '../integration/js-import-initialization/a.mjs',
-      ),
+      path.join(__dirname, '../integration/js-import-initialization/a.mjs'),
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -5861,10 +5722,7 @@ describe('javascript', function () {
       shouldScopeHoist ? 'with' : 'without'
     } scope-hoisting`, async function () {
       let b = await bundle(
-        path.join(
-          __dirname,
-          '../integration/js-unused-import-specifier/a.js',
-        ),
+        path.join(__dirname, '../integration/js-unused-import-specifier/a.js'),
         options,
       );
       let res = await run(b, null, {require: false});

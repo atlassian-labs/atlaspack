@@ -36,7 +36,10 @@ describe.v2('compressors', function () {
 
   it('should be able to disable raw output', async function () {
     await bundle(
-      path.join(__dirname, '../integration/compressors-disable-default/index.js'),
+      path.join(
+        __dirname,
+        '../integration/compressors-disable-default/index.js',
+      ),
       {
         mode: 'production',
       },

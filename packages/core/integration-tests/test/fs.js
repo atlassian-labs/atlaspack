@@ -180,7 +180,10 @@ describe('fs', function () {
 
     it('should ignore fs calls when the options are not evaluable', async function () {
       let b = await bundle(
-        path.join(__dirname, '../integration/fs-options-non-evaluable/index.js'),
+        path.join(
+          __dirname,
+          '../integration/fs-options-non-evaluable/index.js',
+        ),
       );
 
       // $FlowFixMe

@@ -31,7 +31,9 @@ describe.v2('html', function () {
   });
 
   it('should support bundling HTML', async () => {
-    let b = await bundle(path.join(__dirname, '../integration/html/index.html'));
+    let b = await bundle(
+      path.join(__dirname, '../integration/html/index.html'),
+    );
 
     assertBundles(b, [
       {
@@ -604,7 +606,10 @@ describe.v2('html', function () {
   });
 
   it('should work with an empty html file', async function () {
-    let inputFile = path.join(__dirname, '../integration/html-empty/index.html');
+    let inputFile = path.join(
+      __dirname,
+      '../integration/html-empty/index.html',
+    );
     await bundle(inputFile, {
       defaultTargetOptions: {
         shouldOptimize: false,
@@ -1759,7 +1764,10 @@ describe.v2('html', function () {
               ],
             },
             {
-              filePath: path.join(__dirname, '../integration/html-js/error.html'),
+              filePath: path.join(
+                __dirname,
+                '../integration/html-js/error.html',
+              ),
               codeHighlights: [
                 {
                   message: 'The environment was originally created here',
@@ -2452,7 +2460,10 @@ describe.v2('html', function () {
 
   it('should not add CSS to a worker bundle group', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/shared-sibling-worker-css/index.html'),
+      path.join(
+        __dirname,
+        '../integration/shared-sibling-worker-css/index.html',
+      ),
     );
 
     assertBundles(b, [
@@ -2576,11 +2587,14 @@ describe.v2('html', function () {
   });
 
   it('should support split bundles with many pages with esmodule output', async function () {
-    await bundle(path.join(__dirname, '../integration/shared-many-esm/*.html'), {
-      defaultTargetOptions: {
-        shouldScopeHoist: true,
+    await bundle(
+      path.join(__dirname, '../integration/shared-many-esm/*.html'),
+      {
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+        },
       },
-    });
+    );
 
     let checkHtml = async filename => {
       // Find all scripts referenced in the HTML file
@@ -2953,7 +2967,10 @@ describe.v2('html', function () {
     await assert.rejects(
       () =>
         bundle(
-          path.join(__dirname, '../integration/html-empty-reference/index.html'),
+          path.join(
+            __dirname,
+            '../integration/html-empty-reference/index.html',
+          ),
           {
             mode: 'production',
           },

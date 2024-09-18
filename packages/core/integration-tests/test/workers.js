@@ -18,7 +18,9 @@ describe('atlaspack', function () {
   });
 
   it('bundles workers and service workers', async function () {
-    let b = await bundle(path.join(__dirname, '../integration/workers/index.js'));
+    let b = await bundle(
+      path.join(__dirname, '../integration/workers/index.js'),
+    );
 
     assertBundles(b, [
       {
@@ -1087,7 +1089,10 @@ describe('atlaspack', function () {
 
   it('ignores worker constructors with local URL binding and import.meta.url', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/worker-import-meta-url/local-url.js'),
+      path.join(
+        __dirname,
+        '../integration/worker-import-meta-url/local-url.js',
+      ),
     );
 
     assertBundles(b, [
@@ -1150,7 +1155,10 @@ describe('atlaspack', function () {
 
   it.skip('bundles in workers with other loaders', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/workers-with-other-loaders/index.js'),
+      path.join(
+        __dirname,
+        '../integration/workers-with-other-loaders/index.js',
+      ),
     );
 
     assertBundles(b, {

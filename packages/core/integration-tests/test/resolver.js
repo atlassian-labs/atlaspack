@@ -445,7 +445,10 @@ describe('resolver', function () {
     await assert.rejects(
       () =>
         bundle(
-          path.join(__dirname, '../integration/resolve-empty-specifier/index.js'),
+          path.join(
+            __dirname,
+            '../integration/resolve-empty-specifier/index.js',
+          ),
         ),
       {
         message: `Failed to resolve '' from './integration/resolve-empty-specifier/index.js'`,
