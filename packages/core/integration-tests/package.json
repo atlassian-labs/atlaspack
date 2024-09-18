@@ -8,8 +8,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "scripts": {
-    "build": "babel test --presets @atlaspack/babel-preset --ignore=test/integration --copy-files --out-dir built-tests",
-    "test": "yarn run clear && cross-env ATLASPACK_WORKERS=1 NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --experimental-vm-modules ./built-tests",
+    "test": "yarn run clear && cross-env ATLASPACK_WORKERS=1 NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --experimental-vm-modules ./test",
     "clear": "rm -rf ./test/.parcel-cache && rm -rf ./test/input",
     "test-ci": "yarn test --config .mocharc.ci.json"
   },

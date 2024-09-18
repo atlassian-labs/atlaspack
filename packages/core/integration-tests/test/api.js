@@ -85,10 +85,10 @@ describe('JS API', function () {
       yarn.lock:
 
       reporter-plugin.js:
-        import {Reporter} from '@atlaspack/plugin';
-        import path from 'node:path';
+        const {Reporter} = require('@atlaspack/plugin');
+        const path = require('node:path');
 
-        export default new Reporter({
+        module.exports = new Reporter({
           async report({event, options}) {
             if (event.type === 'buildSuccess') {
               await options.outputFS.writeFile(path.join(options.projectRoot, 'atlaspack-version.txt'), options.parcelVersion);

@@ -13,7 +13,6 @@ import {
   outputFS,
   removeDistDirectory,
   run,
-  sleep,
 } from '@atlaspack/test-utils';
 import Logger from '@atlaspack/logger';
 import os from 'os';
@@ -27,10 +26,7 @@ const inputDir = path.join(__dirname, '/input');
 describe.v2('babel', function () {
   let subscription;
   beforeEach(async function () {
-    // TODO maybe don't do this for all tests
-    await sleep(100);
     await outputFS.rimraf(inputDir);
-    await sleep(100);
   });
 
   afterEach(async () => {
@@ -93,9 +89,7 @@ describe.v2('babel', function () {
   });
 
   it('should support compiling with babel using .babelrc config', async function () {
-    await bundle(
-      path.join(__dirname, 'integration/babelrc-custom/index.js'),
-    );
+    await bundle(path.join(__dirname, 'integration/babelrc-custom/index.js'));
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
     assert(!file.includes('REPLACE_ME'));
@@ -191,10 +185,7 @@ describe.v2('babel', function () {
 
   it('should support compiling with babel using babel.config.js config with a require in it', async function () {
     await bundle(
-      path.join(
-        __dirname,
-        'integration/babel-config-js-require/src/index.js',
-      ),
+      path.join(__dirname, 'integration/babel-config-js-require/src/index.js'),
     );
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
@@ -637,10 +628,7 @@ describe.v2('babel', function () {
         messages.push(message);
       }
     });
-    let filePath = path.join(
-      __dirname,
-      'integration/babel-warn-all/index.js',
-    );
+    let filePath = path.join(__dirname, 'integration/babel-warn-all/index.js');
     await bundle(filePath);
     loggerDisposable.dispose();
 
