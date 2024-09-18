@@ -130,6 +130,7 @@ export default class Atlaspack {
       rustAtlaspack = new AtlaspackV3({
         ...options,
         corePath: path.join(__dirname, '..'),
+        threads: process.env.NODE_ENV === 'test' ? 2 : undefined,
         entries: Array.isArray(entries)
           ? entries
           : entries == null

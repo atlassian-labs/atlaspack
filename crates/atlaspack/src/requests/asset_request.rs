@@ -6,10 +6,10 @@ use atlaspack_core::plugin::AssetBuildEvent;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::plugin::TransformResult;
-use atlaspack_core::types::Asset;
 use atlaspack_core::types::AssetStats;
 use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Environment;
+use atlaspack_core::types::{Asset, Invalidation};
 
 use crate::plugins::PluginsRef;
 use crate::plugins::TransformerPipeline;
@@ -77,8 +77,11 @@ impl Request for AssetRequest {
         },
         dependencies: result.dependencies,
       }),
-      // TODO: Support invalidations
-      invalidations: vec![],
+      invalidations: result
+        .invalidate_on_file_change
+        .into_iter()
+        .map(|path| Invalidation::FileChange(path))
+        .collect(),
     })
   }
 }
