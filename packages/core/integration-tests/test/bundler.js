@@ -890,7 +890,12 @@ describe('bundler', function () {
         assets: ['b.html'],
       },
       {
-        assets: ['a.js', 'cacheLoader.js', 'js-loader.js'],
+        assets: [
+          'a.js',
+          'bundle-manifest.js',
+          'cacheLoader.js',
+          'js-loader.js',
+        ],
       },
       {
         assets: ['bundle-manifest.js', 'bundle-url.js'], // manifest bundle
@@ -901,6 +906,7 @@ describe('bundler', function () {
           'cacheLoader.js',
           'js-loader.js',
           'esmodule-helpers.js',
+          'bundle-manifest.js',
         ],
       },
       {

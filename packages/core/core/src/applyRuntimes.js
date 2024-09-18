@@ -32,6 +32,7 @@ import createAssetGraphRequest from './requests/AssetGraphRequest';
 import {createDevDependency, runDevDepRequest} from './requests/DevDepRequest';
 import {toProjectPath, fromProjectPathRelative} from './projectPath';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
+import {DefaultMap} from '@atlaspack/utils';
 
 type RuntimeConnection = {|
   bundle: InternalBundle,
@@ -60,6 +61,35 @@ function nameRuntimeBundle(
   bundle.displayName = name.replace(hashReference, '[hash]');
 }
 
+/**
+ * The applyRuntimes function is responsible for generating all the runtimes
+ * (assets created during the build that don't actually exist on disk) and then
+ * linking them into the bundle graph.
+ *
+ * Usually, the assets returned from a runtime will go in the same bundle. It is
+ * possible though, for a runtime to return an asset with a `parallel` priority,
+ * which allows it to be moved to a separate bundle. In practice, this is
+ * usually used to generate application manifest files.
+ *
+ * When adding a manifest bundle (a whole new separate bundle) during a runtime,
+ * it needs to be added to a bundle group which will be potentially referenced
+ * by another bundle group. To avoid trying to reference a manifest entry which
+ * hasn't been created yet, we process the bundles from the bottom up, so that
+ * children will always be available when parents try to reference them.
+ *
+ * However, when merging those connections in to the bundle graph, the reversed
+ * order can create a situation where the child bundles thought they were coming
+ * first and so take responsibility for loading in shared bundles. When the
+ * parents actually load first, they're expecting bundles to be loaded which
+ * aren't yet, creating module not found errors.
+ *
+ * To fix that, we restore the forward topological order once all the
+ * connections are created.
+ *
+ * Introduction of manifest bundles: https://github.com/parcel-bundler/parcel/pull/8837
+ * Introduction of reverse topology: https://github.com/parcel-bundler/parcel/pull/8981
+ */
+
 export default async function applyRuntimes<TResult: RequestResult>({
   bundleGraph,
   config,
@@ -82,17 +112,16 @@ export default async function applyRuntimes<TResult: RequestResult>({
   configs: Map<string, Config>,
 |}): Promise<Map<string, Asset>> {
   let runtimes = await config.getRuntimes();
-  let connections: Array<RuntimeConnection> = [];
 
-  // As manifest bundles may be added during runtimes we process them in reverse topological
-  // sort order. This allows bundles to be added to their bundle groups before they are referenced
-  // by other bundle groups by loader runtimes
+  // Sort bundles into reverse topological order
   let bundles = [];
   bundleGraph.traverseBundles({
     exit(bundle) {
       bundles.push(bundle);
     },
   });
+
+  let connectionMap = new DefaultMap(() => []);
 
   for (let bundle of bundles) {
     for (let runtime of runtimes) {
@@ -172,7 +201,7 @@ export default async function applyRuntimes<TResult: RequestResult>({
               nameRuntimeBundle(connectionBundle, bundle);
             }
 
-            connections.push({
+            connectionMap.get(connectionBundle).push({
               bundle: connectionBundle,
               assetGroup,
               dependency,
@@ -192,8 +221,14 @@ export default async function applyRuntimes<TResult: RequestResult>({
     }
   }
 
-  // Correct connection order after generating runtimes in reverse order
-  connections.reverse();
+  // Sort the bundles back into forward topological order
+  let connections: Array<RuntimeConnection> = [];
+
+  bundleGraph.traverseBundles({
+    enter(bundle) {
+      connections.push(...connectionMap.get(bundle));
+    },
+  });
 
   // Add dev deps for runtime plugins AFTER running them, to account for lazy require().
   for (let runtime of runtimes) {

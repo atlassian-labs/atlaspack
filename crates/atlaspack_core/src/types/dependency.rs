@@ -9,7 +9,7 @@ use serde::Serialize;
 use serde_repr::Deserialize_repr;
 use serde_repr::Serialize_repr;
 
-use crate::types::ExportsCondition;
+use crate::types::{AssetId, ExportsCondition};
 
 use super::bundle::BundleBehavior;
 use super::environment::Environment;
@@ -63,7 +63,7 @@ pub struct Dependency {
   pub resolve_from: Option<PathBuf>,
 
   /// The id of the asset with this dependency
-  pub source_asset_id: Option<String>,
+  pub source_asset_id: Option<AssetId>,
 
   /// The file path of the asset with this dependency
   pub source_path: Option<PathBuf>,
