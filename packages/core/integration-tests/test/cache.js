@@ -122,6 +122,8 @@ async function testCache(update: UpdateFn | TestConfig, integration) {
   return b;
 }
 
+describe('', () => {});
+
 describe.v2('cache', function () {
   before(async () => {
     await inputFS.rimraf(path.join(__dirname, 'input'));

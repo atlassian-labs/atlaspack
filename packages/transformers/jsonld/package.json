@@ -16,7 +16,7 @@
     "parcel": "^2.12.0"
   },
   "scripts": {
-    "test": "yarn workspace @atlaspack/integration-tests test -g jsonld"
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib"
   },
   "dependencies": {
     "@atlaspack/plugin": "2.12.0",

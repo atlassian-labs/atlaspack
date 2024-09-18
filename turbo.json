@@ -1,0 +1,30 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "Cargo.toml",
+    "package.json",
+    "yarn.lock",
+    "Cargo.lock"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**/*", "test/**/*", "package.json", "Cargo.toml"],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "lib/**",
+        "*.node",
+        "**/*.d.ts",
+        "lib/**/*.ts",
+        "src/**/*.ts"
+      ]
+    },
+    "test": {
+      "dependsOn": ["^build", "build"],
+      "env": ["NODE_ENV", "ATLASPACK_BUILD_ENV", "ATLASPACK_V3"],
+      "inputs": ["src/**/*", "lib/**/*", "test/**/*", "package.json"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    }
+  }
+}

@@ -1,5 +1,6 @@
 {
-  "spec": "packages/*/!(integration-tests)/test/{*.js,**/*.{test,spec}.js}",
+  "$schema": "https://json.schemastore.org/mocharc",
+  "spec": "test/{*.js,**/*.{test,spec}.js}",
   "require": [
     "@atlaspack/babel-register",
     "@atlaspack/test-utils/src/mochaSetup.js"

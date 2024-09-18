@@ -11,6 +11,9 @@
   },
   "main": "lib/WebExtensionTransformer.js",
   "source": "src/WebExtensionTransformer.js",
+  "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib"
+  },
   "engines": {
     "parcel": "^2.12.0"
   },

@@ -49,7 +49,7 @@ describe('NodePackageManager', function () {
 
   beforeEach(() => {
     workerFarm = new WorkerFarm({
-      workerPath: require.resolve('@atlaspack/core/src/worker.js'),
+      workerPath: require.resolve('@atlaspack/core/lib/worker.js'),
     });
     fs = new OverlayFS(new MemoryFS(workerFarm), new NodeFS());
     packageInstaller = new MockPackageInstaller();

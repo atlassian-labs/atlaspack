@@ -97,6 +97,7 @@
   "scripts": {
     "vscode:prepublish": "rm -rf lib; atlaspack build --no-cache",
     "package": "vsce package --yarn",
+    "build": "tsc -p ./",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "yarn run compile && yarn run lint",

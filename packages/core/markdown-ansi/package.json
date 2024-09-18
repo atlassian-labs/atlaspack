@@ -12,6 +12,10 @@
   },
   "main": "lib/markdown-ansi.js",
   "source": "src/markdown-ansi.js",
+  "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
+    "test": "mocha"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

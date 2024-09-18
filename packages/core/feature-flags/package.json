@@ -14,6 +14,8 @@
   "source": "src/index.js",
   "types": "lib/types.d.ts",
   "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
+    "test": "mocha test",
     "build-ts": "mkdir -p lib && flow-to-ts src/types.js > lib/types.d.ts",
     "check-ts": "tsc --noEmit lib/types.d.ts"
   },

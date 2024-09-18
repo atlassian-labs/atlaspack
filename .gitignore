@@ -11,6 +11,7 @@ lib/
 logs/
 node_modules/
 tmp
+.turbo
 
 /target/
 

@@ -11,6 +11,7 @@
   },
   "main": "index.json",
   "scripts": {
+    "test": "mocha",
     "test-ci": "mocha"
   },
   "dependencies": {

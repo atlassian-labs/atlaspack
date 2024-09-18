@@ -10,7 +10,15 @@ const filename = __filename;
 
 new RuleTester({
   parser: require.resolve('@babel/eslint-parser'),
-  parserOptions: {ecmaVersion: 2018, sourceType: 'module'},
+  parserOptions: {
+    ecmaVersion: 2018,
+    sourceType: 'module',
+    requireConfigFile: false,
+    babelOptions: {
+      babelrc: false,
+      configFile: false,
+    },
+  },
 }).run('no-self-package-imports', rule, {
   valid: [
     {code: "require('path');", filename},

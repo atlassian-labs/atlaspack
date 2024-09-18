@@ -4,7 +4,7 @@
   "license": "(MIT OR Apache-2.0)",
   "private": true,
   "scripts": {
-    "build": "atlaspack build src/index.js"
+    "build:example": "atlaspack build src/index.js"
   },
   "devDependencies": {
     "@atlaspack/cli": "^2.12.0",

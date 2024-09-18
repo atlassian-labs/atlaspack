@@ -3,7 +3,7 @@
   "version": "2.12.0",
   "private": true,
   "scripts": {
-    "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules -r @atlaspack/babel-register index.js"
+    "test:fuzz": "NODE_NO_WARNINGS=1 node --experimental-vm-modules -r @atlaspack/babel-register index.js"
   },
   "dependencies": {
     "@babel/core": "^7.22.11",

@@ -7,6 +7,7 @@
     "atlaspack-link": "bin.js"
   },
   "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
     "test": "cd ../../.. && yarn test:integration --grep @atlaspack/link"
   },
   "main": "src/index.js",

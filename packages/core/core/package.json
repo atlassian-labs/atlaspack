@@ -15,6 +15,7 @@
     "node": ">= 16.0.0"
   },
   "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
     "test": "mocha",
     "test-ci": "mocha",
     "check-ts": "tsc --noEmit index.d.ts"

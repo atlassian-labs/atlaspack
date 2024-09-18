@@ -16,6 +16,7 @@
     "node": ">= 16.0.0"
   },
   "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
     "check-ts": "tsc --noEmit src/PluginAPI.d.ts"
   },
   "dependencies": {

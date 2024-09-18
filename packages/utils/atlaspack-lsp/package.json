@@ -13,6 +13,7 @@
   "source": "src/LspServer.ts",
   "types": "src/LspServer.ts",
   "scripts": {
+    "build": "tsc -p .",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts"
   },

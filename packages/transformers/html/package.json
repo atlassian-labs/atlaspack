@@ -6,6 +6,7 @@
     "access": "public"
   },
   "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
     "test": "mocha"
   },
   "repository": {

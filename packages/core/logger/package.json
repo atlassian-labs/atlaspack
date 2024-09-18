@@ -18,5 +18,9 @@
   "dependencies": {
     "@atlaspack/diagnostic": "2.12.0",
     "@atlaspack/events": "2.12.0"
+  },
+  "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
+    "test": "mocha"
   }
 }

@@ -62,5 +62,9 @@
     "./src/http-server.js": false,
     "./src/openInBrowser.js": false,
     "@atlaspack/markdown-ansi": false
+  },
+  "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
+    "test": "mocha"
   }
 }

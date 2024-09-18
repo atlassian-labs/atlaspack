@@ -11,6 +11,9 @@
   },
   "main": "lib/PugTransformer.js",
   "source": "src/PugTransformer.js",
+  "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib"
+  },
   "engines": {
     "node": ">= 16.0.0",
     "parcel": "^2.12.0"

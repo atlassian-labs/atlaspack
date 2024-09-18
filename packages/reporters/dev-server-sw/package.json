@@ -8,6 +8,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib"
+  },
   "main": "lib/ServerReporter.js",
   "source": "src/ServerReporter.js",
   "engines": {

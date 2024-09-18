@@ -1,7 +1,7 @@
 // @flow
 
 import {OverlayFS} from '../src/OverlayFS';
-import {fsFixture} from '@atlaspack/test-utils/src/fsFixture';
+import {fsFixture} from '@atlaspack/test-utils/lib/fsFixture';
 import {MemoryFS} from '../src/MemoryFS';
 import WorkerFarm from '@atlaspack/workers';
 
@@ -15,7 +15,7 @@ describe('OverlayFS', () => {
 
   beforeEach(() => {
     workerFarm = new WorkerFarm({
-      workerPath: require.resolve('@atlaspack/core/src/worker.js'),
+      workerPath: require.resolve('@atlaspack/core/lib/worker.js'),
     });
     underlayFS = new MemoryFS(workerFarm);
     fs = new OverlayFS(workerFarm, underlayFS);

@@ -8,9 +8,6 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "index.json",
-  "scripts": {
-    "test-ci": "mocha"
-  },
   "dependencies": {
     "@atlaspack/bundler-default": "2.12.0",
     "@atlaspack/compressor-raw": "2.12.0",

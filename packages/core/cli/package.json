@@ -17,6 +17,7 @@
   "source": "src/bin.js",
   "scripts": {
     "prepack": "./ensure-no-dev-lib.sh",
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
     "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
   },
   "engines": {

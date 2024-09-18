@@ -30,10 +30,11 @@
     "napi-wasm": "^1.0.1"
   },
   "scripts": {
-    "build": "napi build --platform --cargo-cwd ../../../crates/node-bindings",
-    "build-canary": "napi build --platform --profile canary --features canary --cargo-cwd ../../../crates/node-bindings",
-    "build-release": "napi build --platform --release --cargo-cwd ../../../crates/node-bindings",
     "test": "mocha",
+    "build": "napi build --platform --release --cargo-cwd ../../../crates/node-bindings",
+    "build-debug": "napi build --platform --cargo-cwd ../../../crates/node-bindings",
+    "build-release": "yarn run build",
+    "build-canary": "napi build --platform --profile canary --features canary --cargo-cwd ../../../crates/node-bindings",
     "wasm:build": "cargo build -p atlaspack-node-bindings --target wasm32-unknown-unknown && cp ../../../target/wasm32-unknown-unknown/debug/atlaspack_node_bindings.wasm .",
     "wasm:build-release": "CARGO_PROFILE_RELEASE_LTO=true cargo build -p atlaspack-node-bindings --target wasm32-unknown-unknown --release && wasm-opt --strip-debug -O ../../../target/wasm32-unknown-unknown/release/atlaspack_node_bindings.wasm -o atlaspack_node_bindings.wasm"
   }

@@ -14,6 +14,7 @@
     "dist"
   ],
   "scripts": {
+    "build": "tsc --project src/tsconfig.json && chmod +x dist/bin.js",
     "prepack": "tsc --project src/tsconfig.json && chmod +x dist/bin.js",
     "start": "ts-node src/bin.ts"
   },

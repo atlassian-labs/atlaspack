@@ -15,6 +15,7 @@
     "atlaspack-bundle-stats": "bin/bundle-stats.js"
   },
   "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
     "prepack": "./ensure-no-dev-lib.sh",
     "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
   },

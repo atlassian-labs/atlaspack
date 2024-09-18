@@ -11,6 +11,9 @@
   },
   "main": "lib/index.js",
   "source": "src/index.js",
+  "scripts": {
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },
