@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt::Display;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use atlaspack_core::types::engines::Engines;
 use atlaspack_core::types::EnvironmentContext;
@@ -10,13 +10,14 @@ use atlaspack_core::types::TargetSourceMapOptions;
 use atlaspack_resolver::IncludeNodeModules;
 use serde::Deserialize;
 use serde::Deserializer;
+use serde_json::Value;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub enum BrowserField {
   EntryPoint(PathBuf),
   // TODO false value
-  ReplacementBySpecifier(HashMap<String, PathBuf>),
+  ReplacementBySpecifier(HashMap<String, serde_json::Value>),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -120,13 +121,17 @@ where
 
   if let Some(browser_field) = browser.as_ref() {
     let allowed_extensions = vec!["cjs", "js", "mjs"];
+
     match browser_field {
       BrowserField::EntryPoint(dist) => {
         validate_extension::<D>("browser", &dist, &allowed_extensions)?;
       }
       BrowserField::ReplacementBySpecifier(replacements) => {
         for dist in replacements.values() {
-          validate_extension::<D>("browser", &dist, &allowed_extensions)?;
+          // skip on false
+          if let Value::String(dist) = dist {
+            validate_extension::<D>("browser", Path::new(dist.as_str()), &allowed_extensions)?;
+          }
         }
       }
     };
@@ -264,7 +269,7 @@ where
 
 fn validate_extension<'de, D>(
   target: &str,
-  dist: &PathBuf,
+  dist: &Path,
   allowed_extensions: &Vec<&str>,
 ) -> Result<(), D::Error>
 where
