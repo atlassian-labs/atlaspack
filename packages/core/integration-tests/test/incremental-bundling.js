@@ -65,7 +65,7 @@ describe.v2('incremental bundling', function () {
         let subscription;
         let fixture = path.join(
           __dirname,
-          '../integration/incremental-bundling',
+          'integration/incremental-bundling',
         );
         try {
           let b = bundler(path.join(fixture, 'index.js'), {
@@ -109,7 +109,7 @@ console.log('adding a new console');`,
         let subscription;
         let fixture = path.join(
           __dirname,
-          '../integration/incremental-bundling',
+          'integration/incremental-bundling',
         );
         try {
           let b = bundler(path.join(fixture, 'index.js'), {
@@ -154,7 +154,7 @@ console.log('adding a new console');`,
         let subscription;
         let fixture = path.join(
           __dirname,
-          '../integration/incremental-bundling',
+          'integration/incremental-bundling',
         );
         try {
           let b = bundler(path.join(fixture, 'index.js'), {
@@ -199,7 +199,7 @@ console.log('adding a new console');`,
         let subscription;
         let fixture = path.join(
           __dirname,
-          '../integration/incremental-bundling',
+          'integration/incremental-bundling',
         );
         try {
           let b = bundler(path.join(fixture, 'index.js'), {
@@ -246,7 +246,7 @@ console.log(a);
         let subscription;
         let fixture = path.join(
           __dirname,
-          '../integration/incremental-bundling',
+          'integration/incremental-bundling',
         );
         try {
           let b = bundler(path.join(fixture, 'index.js'), {
@@ -292,7 +292,7 @@ console.log(a);`,
         let subscription;
         let fixture = path.join(
           __dirname,
-          '../integration/incremental-bundling',
+          'integration/incremental-bundling',
         );
         try {
           let b = bundler(path.join(fixture, 'index-export.js'), {
@@ -344,7 +344,7 @@ module.exports = a;`,
 
     it('update an imported css file', async () => {
       let subscription;
-      let fixture = path.join(__dirname, '../integration/incremental-bundling');
+      let fixture = path.join(__dirname, 'integration/incremental-bundling');
       try {
         let b = bundler(path.join(fixture, 'index-with-css.js'), {
           inputFS: overlayFS,
@@ -386,7 +386,7 @@ module.exports = a;`,
 
     it('update both the js and imported css file', async () => {
       let subscription;
-      let fixture = path.join(__dirname, '../integration/incremental-bundling');
+      let fixture = path.join(__dirname, 'integration/incremental-bundling');
       try {
         let b = bundler(path.join(fixture, 'index-with-css.js'), {
           inputFS: overlayFS,
@@ -442,7 +442,7 @@ console.log(a, 'updated');`,
 
     it('update the bundles if entry is html and js asset is modified', async () => {
       let subscription;
-      let fixture = path.join(__dirname, '../integration/incremental-bundling');
+      let fixture = path.join(__dirname, 'integration/incremental-bundling');
       try {
         let b = bundler(path.join(fixture, 'index.html'), {
           inputFS: overlayFS,
@@ -493,7 +493,7 @@ console.log(a);`,
   describe('dependency based changes should run the bundler', () => {
     it('adding a new dependency', async () => {
       let subscription;
-      let fixture = path.join(__dirname, '../integration/incremental-bundling');
+      let fixture = path.join(__dirname, 'integration/incremental-bundling');
       try {
         let b = bundler(path.join(fixture, 'index.js'), {
           inputFS: overlayFS,
@@ -536,7 +536,7 @@ console.log(a);
 
     it('adding a new dependency of a different type', async () => {
       let subscription;
-      let fixture = path.join(__dirname, '../integration/incremental-bundling');
+      let fixture = path.join(__dirname, 'integration/incremental-bundling');
       try {
         let b = bundler(path.join(fixture, 'index.js'), {
           inputFS: overlayFS,
@@ -587,7 +587,7 @@ console.log(a);
 
     it('adding a new dynamic import', async () => {
       let subscription;
-      let fixture = path.join(__dirname, '../integration/incremental-bundling');
+      let fixture = path.join(__dirname, 'integration/incremental-bundling');
       try {
         let b = bundler(path.join(fixture, 'index.js'), {
           inputFS: overlayFS,
@@ -645,7 +645,7 @@ const b = 'b';`),
 
     it('removing a dependency', async () => {
       let subscription;
-      let fixture = path.join(__dirname, '../integration/incremental-bundling');
+      let fixture = path.join(__dirname, 'integration/incremental-bundling');
       try {
         let b = bundler(path.join(fixture, 'index.js'), {
           inputFS: overlayFS,
@@ -686,7 +686,7 @@ console.log('index.js');`,
   describe('other changes that would for a re-bundle', () => {
     it('changing the bundler in parcel configs', async () => {
       let subscription;
-      let fixture = path.join(__dirname, '../integration/incremental-bundling');
+      let fixture = path.join(__dirname, 'integration/incremental-bundling');
       try {
         let b = bundler(path.join(fixture, 'index.js'), {
           inputFS: overlayFS,
@@ -787,7 +787,7 @@ console.log('index.js');`,
 
   it('changing the namer', async () => {
     let subscription;
-    let fixture = path.join(__dirname, '../integration/incremental-bundling');
+    let fixture = path.join(__dirname, 'integration/incremental-bundling');
     try {
       let b = bundler(path.join(fixture, 'index.js'), {
         inputFS: overlayFS,
@@ -831,7 +831,7 @@ console.log('index.js');`,
 
   it('changing the runtimes', async () => {
     let subscription;
-    let fixture = path.join(__dirname, '../integration/incremental-bundling');
+    let fixture = path.join(__dirname, 'integration/incremental-bundling');
     try {
       let b = bundler(path.join(fixture, 'index.js'), {
         inputFS: overlayFS,
@@ -873,7 +873,7 @@ console.log('index.js');`,
 
   it('changing target options', async () => {
     let subscription;
-    let fixture = path.join(__dirname, '../integration/incremental-bundling');
+    let fixture = path.join(__dirname, 'integration/incremental-bundling');
     try {
       let b = bundler(path.join(fixture, 'index.js'), {
         inputFS: overlayFS,
@@ -921,7 +921,7 @@ console.log('index.js');`,
 
   it('adding a new the entry', async () => {
     let subscription;
-    let fixture = path.join(__dirname, '../integration/incremental-bundling');
+    let fixture = path.join(__dirname, 'integration/incremental-bundling');
     try {
       let b = bundler(path.join(fixture, '*.html'), {
         inputFS: overlayFS,
@@ -955,7 +955,7 @@ console.log('index.js');`,
   });
   it('changing symbols (adding a new dependency via one symbol)', async () => {
     let subscription;
-    let fixture = path.join(__dirname, '../integration/incremental-bundling');
+    let fixture = path.join(__dirname, 'integration/incremental-bundling');
     try {
       let b = bundler(path.join(fixture, 'index-multi-symbol.js'), {
         inputFS: overlayFS,
@@ -1005,7 +1005,7 @@ console.log('index.js');`,
   });
   it('changing symbols (removing a dependency via one symbol)', async () => {
     let subscription;
-    let fixture = path.join(__dirname, '../integration/incremental-bundling');
+    let fixture = path.join(__dirname, 'integration/incremental-bundling');
     try {
       let b = bundler(path.join(fixture, 'index-multi-symbol.js'), {
         inputFS: overlayFS,

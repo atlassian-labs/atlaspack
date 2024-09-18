@@ -77,10 +77,10 @@ describe.v2('watcher', function () {
   });
 
   it('should rebuild on a config file change', async function () {
-    let inDir = path.join(__dirname, '../integration/parcelrc-custom');
+    let inDir = path.join(__dirname, 'integration/parcelrc-custom');
     let outDir = path.join(inDir, 'dist');
 
-    await ncp(path.join(__dirname, '../integration/parcelrc-custom'), inDir);
+    await ncp(path.join(__dirname, 'integration/parcelrc-custom'), inDir);
     await ncp(
       path.dirname(require.resolve('@atlaspack/config-default')),
       path.join(inDir, 'node_modules', '@atlaspack', 'config-default'),
@@ -109,7 +109,7 @@ describe.v2('watcher', function () {
   });
 
   it('should rebuild properly when a dependency is removed', async function () {
-    await ncp(path.join(__dirname, '../integration/babel-default'), inputDir);
+    await ncp(path.join(__dirname, 'integration/babel-default'), inputDir);
 
     let b = bundler(path.join(inputDir, 'index.js'), {
       inputFS: overlayFS,
@@ -140,7 +140,7 @@ describe.v2('watcher', function () {
   });
 
   it.skip('should re-generate bundle tree when files change', async function () {
-    await ncp(path.join(__dirname, '../integration/dynamic-hoist'), inputDir);
+    await ncp(path.join(__dirname, 'integration/dynamic-hoist'), inputDir);
 
     let b = bundler(path.join(inputDir, '/index.js'), {watch: true});
     let bundle = await b.bundle();
@@ -218,7 +218,7 @@ describe.v2('watcher', function () {
   });
 
   it.skip('should only re-package bundles that changed', async function () {
-    await ncp(path.join(__dirname, '../integration/dynamic-hoist'), inputDir);
+    await ncp(path.join(__dirname, 'integration/dynamic-hoist'), inputDir);
     let b = bundler(path.join(inputDir, '/index.js'), {watch: true});
 
     await b.bundle();
@@ -247,7 +247,7 @@ describe.v2('watcher', function () {
   });
 
   it.skip('should unload assets that are orphaned', async function () {
-    await ncp(path.join(__dirname, '../integration/dynamic-hoist'), inputDir);
+    await ncp(path.join(__dirname, 'integration/dynamic-hoist'), inputDir);
     let b = bundler(path.join(inputDir, '/index.js'), {watch: true});
 
     let bundle = await b.bundle();
@@ -333,7 +333,7 @@ describe.v2('watcher', function () {
   });
 
   it.skip('should recompile all assets when a config file changes', async function () {
-    await ncp(path.join(__dirname, '../integration/babel'), inputDir);
+    await ncp(path.join(__dirname, 'integration/babel'), inputDir);
     let b = bundler(path.join(inputDir, 'index.js'), {watch: true});
 
     await b.bundle();
@@ -361,7 +361,7 @@ describe.v2('watcher', function () {
 
   it.skip('should rebuild if the file behind a symlink changes', async function () {
     await ncp(
-      path.join(__dirname, '../integration/commonjs-with-symlinks/'),
+      path.join(__dirname, 'integration/commonjs-with-symlinks/'),
       inputDir,
     );
 
@@ -401,7 +401,7 @@ describe.v2('watcher', function () {
   });
 
   it('should add and remove necessary runtimes to bundles', async () => {
-    await ncp(path.join(__dirname, '../integration/dynamic'), inputDir);
+    await ncp(path.join(__dirname, 'integration/dynamic'), inputDir);
 
     let indexPath = path.join(inputDir, 'index.js');
 

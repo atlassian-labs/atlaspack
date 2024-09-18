@@ -12,7 +12,7 @@ import {
 describe.v2('pug', function () {
   it('should support bundling HTML', async function () {
     const b = await bundle(
-      path.join(__dirname, '../integration/pug/index.pug'),
+      path.join(__dirname, 'integration/pug/index.pug'),
     );
 
     assertBundles(b, [
@@ -51,7 +51,7 @@ describe.v2('pug', function () {
 
   it('should support include and extends files, connect files', async function () {
     const b = await bundle(
-      path.join(__dirname, '../integration/pug-include-extends/index.pug'),
+      path.join(__dirname, 'integration/pug-include-extends/index.pug'),
     );
 
     assertBundles(b, [
@@ -71,7 +71,7 @@ describe.v2('pug', function () {
 
   it('should support variables', async function () {
     const b = await bundle(
-      path.join(__dirname, '../integration/pug-var/index.pug'),
+      path.join(__dirname, 'integration/pug-var/index.pug'),
     );
 
     assertBundles(b, [
@@ -92,7 +92,7 @@ describe.v2('pug', function () {
 
   it('should support mixins', async function () {
     const b = await bundle(
-      path.join(__dirname, '../integration/pug-mixins/index.pug'),
+      path.join(__dirname, 'integration/pug-mixins/index.pug'),
     );
 
     assertBundles(b, [
@@ -109,7 +109,7 @@ describe.v2('pug', function () {
 
   it('should support filters', async function () {
     const b = await bundle(
-      path.join(__dirname, '../integration/pug-filters/index.pug'),
+      path.join(__dirname, 'integration/pug-filters/index.pug'),
     );
 
     assertBundles(b, [
@@ -126,7 +126,7 @@ describe.v2('pug', function () {
 
   it('should support locals with config file', async function () {
     const b = await bundle(
-      path.join(__dirname, '../integration/pug-locals/index.pug'),
+      path.join(__dirname, 'integration/pug-locals/index.pug'),
     );
 
     assertBundles(b, [
@@ -143,7 +143,7 @@ describe.v2('pug', function () {
 
   it('should minify HTML in production mode', async function () {
     const b = await bundle(
-      path.join(__dirname, '../integration/pug-minify/index.pug'),
+      path.join(__dirname, 'integration/pug-minify/index.pug'),
     );
 
     assertBundles(b, [

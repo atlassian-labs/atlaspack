@@ -600,7 +600,7 @@ describe('bundler', function () {
     'should not create a shared bundle from an asset if that asset is shared by less than minBundles bundles',
     async function () {
       let b = await bundle(
-        path.join(__dirname, '../integration/min-bundles/index.js'),
+        path.join(__dirname, 'integration/min-bundles/index.js'),
         {
           mode: 'production',
           defaultTargetOptions: {
@@ -652,7 +652,7 @@ describe('bundler', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../integration/shared-bundle-reused-bundle-remove-reuse/index.js',
+          'integration/shared-bundle-reused-bundle-remove-reuse/index.js',
         ),
         {
           mode: 'production',
@@ -704,7 +704,7 @@ describe('bundler', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../integration/shared-bundle-reused-bundle-remove-shared/index.js',
+          'integration/shared-bundle-reused-bundle-remove-shared/index.js',
         ),
         {
           mode: 'production',
@@ -759,7 +759,7 @@ describe('bundler', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../integration/shared-bundle-remove-from-one-group-only/index.js',
+          'integration/shared-bundle-remove-from-one-group-only/index.js',
         ),
         {
           mode: 'production',
@@ -813,7 +813,7 @@ describe('bundler', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../integration/shared-bundle-between-reused-bundle-removal/index.js',
+          'integration/shared-bundle-between-reused-bundle-removal/index.js',
         ),
         {
           mode: 'production',
@@ -869,8 +869,8 @@ describe('bundler', function () {
   it.v2('should split manifest bundle', async function () {
     let b = await bundle(
       [
-        path.join(__dirname, '../integration/split-manifest-bundle/a.html'),
-        path.join(__dirname, '../integration/split-manifest-bundle/b.html'),
+        path.join(__dirname, 'integration/split-manifest-bundle/a.html'),
+        path.join(__dirname, 'integration/split-manifest-bundle/b.html'),
       ],
       {
         mode: 'production',
@@ -947,7 +947,7 @@ describe('bundler', function () {
 
   it('should not split manifest bundle for stable entries', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/split-manifest-bundle/a.js'),
+      path.join(__dirname, 'integration/split-manifest-bundle/a.js'),
       {
         mode: 'production',
         defaultTargetOptions: {

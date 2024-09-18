@@ -19,7 +19,7 @@ describe.v2('css', () => {
   });
 
   it('should produce two bundles when importing a CSS file', async () => {
-    let b = await bundle(path.join(__dirname, '../integration/css/index.js'));
+    let b = await bundle(path.join(__dirname, 'integration/css/index.js'));
 
     assertBundles(b, [
       {
@@ -43,7 +43,7 @@ describe.v2('css', () => {
 
   it('should bundle css dependencies in the correct, postorder traversal order', async () => {
     let b = await bundle(
-      path.join(__dirname, '../integration/css-order/a.css'),
+      path.join(__dirname, 'integration/css-order/a.css'),
     );
 
     // Given a tree of css with imports:
@@ -74,7 +74,7 @@ describe.v2('css', () => {
   });
   it('should place one css bundle per bundlegroup for naming reasons', async () => {
     let b = await bundle(
-      path.join(__dirname, '../integration/multi-css-bug/src/entry.js'),
+      path.join(__dirname, 'integration/multi-css-bug/src/entry.js'),
     );
 
     assertBundles(b, [
@@ -94,7 +94,7 @@ describe.v2('css', () => {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../integration/multi-css-multi-entry-bug/src/entry.js',
+        '/integration/multi-css-multi-entry-bug/src/entry.js',
       ),
     );
 
@@ -120,7 +120,7 @@ describe.v2('css', () => {
   });
   it('should support loading a CSS bundle along side dynamic imports', async () => {
     let b = await bundle(
-      path.join(__dirname, '../integration/dynamic-css/index.js'),
+      path.join(__dirname, 'integration/dynamic-css/index.js'),
     );
 
     assertBundles(b, [
@@ -146,7 +146,7 @@ describe.v2('css', () => {
 
   it('should support importing CSS from a CSS file', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/css-import/index.js'),
+      path.join(__dirname, 'integration/css-import/index.js'),
     );
 
     assertBundles(b, [
@@ -175,7 +175,7 @@ describe.v2('css', () => {
 
   it('should support linking to assets with url() from CSS', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/css-url/index.js'),
+      path.join(__dirname, 'integration/css-url/index.js'),
     );
 
     assertBundles(b, [
@@ -215,7 +215,7 @@ describe.v2('css', () => {
 
   it('should support linking to assets with url() from CSS in production', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/css-url/index.js'),
+      path.join(__dirname, 'integration/css-url/index.js'),
       {
         defaultTargetOptions: {
           shouldOptimize: true,
@@ -263,11 +263,11 @@ describe.v2('css', () => {
       [
         path.join(
           __dirname,
-          '../integration/css-url-relative/src/a/style1.css',
+          'integration/css-url-relative/src/a/style1.css',
         ),
         path.join(
           __dirname,
-          '../integration/css-url-relative/src/b/style2.css',
+          'integration/css-url-relative/src/b/style2.css',
         ),
       ],
       {
@@ -309,7 +309,7 @@ describe.v2('css', () => {
 
   it('should handle quote in CSS URL correctly', async function () {
     await bundle(
-      path.join(__dirname, '../integration/css-url-quote/index.css'),
+      path.join(__dirname, 'integration/css-url-quote/index.css'),
     );
 
     let css = await outputFS.readFile(path.join(distDir, 'index.css'), 'utf8');
@@ -323,7 +323,7 @@ describe.v2('css', () => {
 
   it('should ignore url() with IE behavior specifiers', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/css-url-behavior/index.css'),
+      path.join(__dirname, 'integration/css-url-behavior/index.css'),
     );
 
     assertBundles(b, [
@@ -341,7 +341,7 @@ describe.v2('css', () => {
   it('should throw a diagnostic for relative url() dependencies in custom properties', async function () {
     let fixture = path.join(
       __dirname,
-      '../integration/css-url-custom-property/index.css',
+      'integration/css-url-custom-property/index.css',
     );
     let code = await inputFS.readFileSync(fixture, 'utf8');
     // $FlowFixMe
@@ -391,7 +391,7 @@ describe.v2('css', () => {
 
   it('should minify CSS when minify is set', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/cssnano/index.js'),
+      path.join(__dirname, 'integration/cssnano/index.js'),
       {
         defaultTargetOptions: {
           shouldOptimize: true,
@@ -412,7 +412,7 @@ describe.v2('css', () => {
   });
 
   it('should produce a sourcemap when sourceMaps are used', async function () {
-    await bundle(path.join(__dirname, '../integration/cssnano/index.js'), {
+    await bundle(path.join(__dirname, 'integration/cssnano/index.js'), {
       defaultTargetOptions: {
         shouldOptimize: true,
       },
@@ -430,12 +430,12 @@ describe.v2('css', () => {
       await outputFS.readFile(path.join(distDir, 'index.css.map'), 'utf8'),
     );
     assert.equal(map.file, 'index.css.map');
-    assert(map.sources.includes('../integration/cssnano/local.css'));
-    assert(map.sources.includes('../integration/cssnano/index.css'));
+    assert(map.sources.includes('integration/cssnano/local.css'));
+    assert(map.sources.includes('integration/cssnano/index.css'));
   });
 
   it('should inline data-urls for text-encoded files', async () => {
-    await bundle(path.join(__dirname, '../integration/data-url/text.css'), {
+    await bundle(path.join(__dirname, 'integration/data-url/text.css'), {
       defaultTargetOptions: {
         sourceMaps: false,
       },
@@ -450,7 +450,7 @@ describe.v2('css', () => {
   });
 
   it('should inline data-urls for binary files', async () => {
-    await bundle(path.join(__dirname, '../integration/data-url/binary.css'));
+    await bundle(path.join(__dirname, 'integration/data-url/binary.css'));
     let css = await outputFS.readFile(path.join(distDir, 'binary.css'), 'utf8');
     assert(
       css.startsWith(`.webp-img {
@@ -461,7 +461,7 @@ describe.v2('css', () => {
   it('should remap locations in diagnostics using the input source map', async () => {
     let fixture = path.join(
       __dirname,
-      '../integration/diagnostic-sourcemap/index.scss',
+      'integration/diagnostic-sourcemap/index.scss',
     );
     let code = await inputFS.readFileSync(fixture, 'utf8');
     // $FlowFixMe
@@ -510,7 +510,7 @@ describe.v2('css', () => {
 
   it('should support importing CSS from node_modules with the npm: scheme', async () => {
     let b = await bundle(
-      path.join(__dirname, '../integration/css-node-modules/index.css'),
+      path.join(__dirname, 'integration/css-node-modules/index.css'),
     );
 
     assertBundles(b, [
@@ -523,7 +523,7 @@ describe.v2('css', () => {
 
   it('should support the style package exports condition', async () => {
     let b = await bundle(
-      path.join(__dirname, '../integration/css-exports/index.css'),
+      path.join(__dirname, 'integration/css-exports/index.css'),
     );
 
     assertBundles(b, [
@@ -536,7 +536,7 @@ describe.v2('css', () => {
 
   it('should support external CSS imports', async () => {
     let b = await bundle(
-      path.join(__dirname, '../integration/css-external/a.css'),
+      path.join(__dirname, 'integration/css-external/a.css'),
     );
 
     assertBundles(b, [
@@ -560,7 +560,7 @@ describe.v2('css', () => {
 
   it('should support css nesting with lightningcss', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/css-nesting/a.css'),
+      path.join(__dirname, 'integration/css-nesting/a.css'),
       {
         defaultTargetOptions: {
           engines: {},
@@ -574,7 +574,7 @@ describe.v2('css', () => {
 
   it('should support @layer', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/css-layer/a.css'),
+      path.join(__dirname, 'integration/css-layer/a.css'),
       {
         mode: 'production',
       },

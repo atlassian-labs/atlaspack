@@ -14,7 +14,7 @@ import sinon from 'sinon';
 describe.v2('globals', function () {
   it('should support global alias syntax', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/global-alias/index.js'),
+      path.join(__dirname, 'integration/global-alias/index.js'),
     );
 
     assert.equal(

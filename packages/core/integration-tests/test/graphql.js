@@ -6,7 +6,7 @@ import {parse, print} from 'graphql/language';
 describe.v2('graphql', function () {
   it('should support requiring graphql files', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/graphql/index.js'),
+      path.join(__dirname, 'integration/graphql/index.js'),
     );
 
     let output = await run(b);
@@ -30,7 +30,7 @@ describe.v2('graphql', function () {
 
   it('should support importing other graphql files from a graphql file', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/graphql-import/index.js'),
+      path.join(__dirname, 'integration/graphql-import/index.js'),
     );
 
     let output = await run(b);
@@ -60,7 +60,7 @@ describe.v2('graphql', function () {
 
   it('should support importing fragments in other graphql files by name', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/graphql-named-import/index.js'),
+      path.join(__dirname, 'integration/graphql-named-import/index.js'),
     );
 
     let output = await run(b);

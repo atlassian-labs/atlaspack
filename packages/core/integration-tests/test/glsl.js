@@ -11,10 +11,10 @@ import {
 
 describe.v2('glsl', function () {
   it('should support requiring GLSL files via glslify', async function () {
-    let b = await bundle(path.join(__dirname, '../integration/glsl/index.js'));
+    let b = await bundle(path.join(__dirname, 'integration/glsl/index.js'));
 
     let shader = fs.readFileSync(
-      path.join(__dirname, '../integration/glsl/compiled.glsl'),
+      path.join(__dirname, 'integration/glsl/compiled.glsl'),
       'utf8',
     );
 
@@ -31,7 +31,7 @@ describe.v2('glsl', function () {
 
   it('should correctly resolve relative GLSL imports', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/glsl-relative-import/index.js'),
+      path.join(__dirname, 'integration/glsl-relative-import/index.js'),
     );
 
     let output = await run(b);

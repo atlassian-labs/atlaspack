@@ -74,7 +74,7 @@ describe.v2('proxy', function () {
   });
 
   it('should handle proxy table written in .proxyrc', async function () {
-    let dir = path.join(__dirname, '../integration/proxyrc');
+    let dir = path.join(__dirname, 'integration/proxyrc');
     inputFS.chdir(dir);
 
     let port = await getPort();
@@ -100,7 +100,7 @@ describe.v2('proxy', function () {
   });
 
   it('should handle proxy table written in .proxyrc.json', async function () {
-    let dir = path.join(__dirname, '../integration/proxyrc-json');
+    let dir = path.join(__dirname, 'integration/proxyrc-json');
     inputFS.chdir(dir);
 
     let port = await getPort();
@@ -126,7 +126,7 @@ describe.v2('proxy', function () {
   });
 
   it('should handle proxy table written in .proxyrc.js', async function () {
-    let dir = path.join(__dirname, '../integration/proxyrc-js');
+    let dir = path.join(__dirname, 'integration/proxyrc-js');
     inputFS.chdir(dir);
 
     let port = await getPort();
@@ -152,7 +152,7 @@ describe.v2('proxy', function () {
   });
 
   it('should handle proxy table written in .proxyrc.cjs', async function () {
-    let dir = path.join(__dirname, '../integration/proxyrc-cjs');
+    let dir = path.join(__dirname, 'integration/proxyrc-cjs');
     inputFS.chdir(dir);
 
     let port = await getPort();
@@ -178,7 +178,7 @@ describe.v2('proxy', function () {
   });
 
   it('should handle proxy table written in .proxyrc.mjs', async function () {
-    let dir = path.join(__dirname, '../integration/proxyrc-mjs');
+    let dir = path.join(__dirname, 'integration/proxyrc-mjs');
     inputFS.chdir(dir);
 
     let port = await getPort();
@@ -204,7 +204,7 @@ describe.v2('proxy', function () {
   });
 
   it('should handle proxy table written in .proxyrc.ts', async function () {
-    let dir = path.join(__dirname, '../integration/proxyrc-ts');
+    let dir = path.join(__dirname, 'integration/proxyrc-ts');
     inputFS.chdir(dir);
 
     let port = await getPort();

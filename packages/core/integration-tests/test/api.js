@@ -19,7 +19,7 @@ describe('JS API', function () {
     const NAME = 'custom-name.js';
 
     let b = await bundle(
-      path.join(__dirname, '../integration/js-comment/index.js'),
+      path.join(__dirname, 'integration/js-comment/index.js'),
       {
         targets: {
           default: {distDir, distEntry: NAME},
@@ -40,7 +40,7 @@ describe('JS API', function () {
 
   it('should run additional reports from the options', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/js-comment/index.js'),
+      path.join(__dirname, 'integration/js-comment/index.js'),
       {
         additionalReporters: [
           {

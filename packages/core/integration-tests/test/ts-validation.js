@@ -29,10 +29,10 @@ describe.v2('ts-validator', function () {
   it('should throw validation error on typescript typing errors across multiple files', async function () {
     let didThrow = false;
     let entry = normalizeFilePath(
-      path.join(__dirname, '../integration/ts-validation-error/index.ts'),
+      path.join(__dirname, 'integration/ts-validation-error/index.ts'),
     );
     let testFile = normalizeFilePath(
-      path.join(__dirname, '../integration/ts-validation-error/test.ts'),
+      path.join(__dirname, 'integration/ts-validation-error/test.ts'),
     );
     try {
       await bundle(entry, {

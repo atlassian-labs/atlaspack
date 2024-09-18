@@ -14,7 +14,7 @@ import {
 
 describe.v2('sass', function () {
   it('should support requiring sass files', async function () {
-    let b = await bundle(path.join(__dirname, '../integration/sass/index.js'));
+    let b = await bundle(path.join(__dirname, 'integration/sass/index.js'));
 
     assertBundles(b, [
       {
@@ -36,7 +36,7 @@ describe.v2('sass', function () {
   });
 
   it('should support requiring scss files', async function () {
-    let b = await bundle(path.join(__dirname, '../integration/scss/index.js'));
+    let b = await bundle(path.join(__dirname, 'integration/scss/index.js'));
 
     assertBundles(b, [
       {
@@ -59,7 +59,7 @@ describe.v2('sass', function () {
 
   it('should support scss imports', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/scss-import/index.js'),
+      path.join(__dirname, 'integration/scss-import/index.js'),
     );
 
     assertBundles(b, [
@@ -86,7 +86,7 @@ describe.v2('sass', function () {
   it('should support scss imports in html for >1 target', async function () {
     //Repro copied from https://github.com/parcel-bundler/parcel/issues/8754
     let b = await bundle(
-      path.join(__dirname, '../integration/scss-html-import'),
+      path.join(__dirname, 'integration/scss-html-import'),
     );
 
     assertBundles(b, [
@@ -115,7 +115,7 @@ describe.v2('sass', function () {
 
   it('should support requiring empty scss files', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/scss-empty/index.js'),
+      path.join(__dirname, 'integration/scss-empty/index.js'),
     );
 
     assertBundles(b, [
@@ -139,7 +139,7 @@ describe.v2('sass', function () {
 
   it('should support linking to assets with url() from scss', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/scss-url/index.js'),
+      path.join(__dirname, 'integration/scss-url/index.js'),
     );
 
     assertBundles(b, [
@@ -179,7 +179,7 @@ describe.v2('sass', function () {
 
   it('should support transforming scss with postcss', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/scss-postcss/index.js'),
+      path.join(__dirname, 'integration/scss-postcss/index.js'),
     );
 
     assertBundles(b, [
@@ -204,7 +204,7 @@ describe.v2('sass', function () {
 
   it('should support advanced import syntax', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/sass-advanced-import/index.sass'),
+      path.join(__dirname, 'integration/sass-advanced-import/index.sass'),
     );
 
     assertBundles(b, [
@@ -223,7 +223,7 @@ describe.v2('sass', function () {
 
   it('should support absolute imports', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/scss-absolute-imports/style.scss'),
+      path.join(__dirname, 'integration/scss-absolute-imports/style.scss'),
     );
 
     assertBundles(b, [
@@ -240,7 +240,7 @@ describe.v2('sass', function () {
 
   it('should merge global data property from .sassrc.js', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/scss-global-data/index.scss'),
+      path.join(__dirname, 'integration/scss-global-data/index.scss'),
     );
 
     assertBundles(b, [
@@ -260,7 +260,7 @@ describe.v2('sass', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '../integration/sass-webpack-import-error/index.sass',
+        'integration/sass-webpack-import-error/index.sass',
       ),
     );
 
@@ -279,7 +279,7 @@ describe.v2('sass', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '../integration/sass-node-modules-import/index.sass',
+        'integration/sass-node-modules-import/index.sass',
       ),
     );
 
@@ -298,7 +298,7 @@ describe.v2('sass', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '../integration/sass-include-paths-import/index.sass',
+        'integration/sass-include-paths-import/index.sass',
       ),
     );
 
@@ -315,7 +315,7 @@ describe.v2('sass', function () {
 
   it('should support package.json exports', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/sass-exports/index.sass'),
+      path.join(__dirname, 'integration/sass-exports/index.sass'),
     );
 
     assertBundles(b, [

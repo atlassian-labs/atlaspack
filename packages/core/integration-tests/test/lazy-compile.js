@@ -52,7 +52,7 @@ const distDirIncludes = async matches => {
 describe.v2('lazy compile', function () {
   it('should lazy compile', async function () {
     const b = await bundler(
-      path.join(__dirname, '../integration/lazy-compile/index.js'),
+      path.join(__dirname, 'integration/lazy-compile/index.js'),
       {
         shouldBuildLazily: true,
         mode: 'development',
@@ -103,7 +103,7 @@ describe.v2('lazy compile', function () {
 
   it('should lazy compile properly when same module is used sync/async', async () => {
     const b = await bundler(
-      path.join(__dirname, '../integration/lazy-compile/index-sync-async.js'),
+      path.join(__dirname, 'integration/lazy-compile/index-sync-async.js'),
       {
         shouldBuildLazily: true,
         mode: 'development',
@@ -138,7 +138,7 @@ describe.v2('lazy compile', function () {
 
   it('should support includes for lazy compile', async () => {
     const b = await bundler(
-      path.join(__dirname, '../integration/lazy-compile/index.js'),
+      path.join(__dirname, 'integration/lazy-compile/index.js'),
       {
         shouldBuildLazily: true,
         lazyIncludes: ['**/lazy-1*'],
@@ -200,7 +200,7 @@ describe.v2('lazy compile', function () {
 
   it('should support excludes for lazy compile', async () => {
     const b = await bundler(
-      path.join(__dirname, '../integration/lazy-compile/index.js'),
+      path.join(__dirname, 'integration/lazy-compile/index.js'),
       {
         shouldBuildLazily: true,
         lazyExcludes: ['**/lazy-*'],
@@ -244,7 +244,7 @@ describe.v2('lazy compile', function () {
 
   it('should lazy compile properly when same module is used sync/async', async () => {
     const b = await bundler(
-      path.join(__dirname, '../integration/lazy-compile/index-sync-async.js'),
+      path.join(__dirname, 'integration/lazy-compile/index-sync-async.js'),
       {
         shouldBuildLazily: true,
         mode: 'development',

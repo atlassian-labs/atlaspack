@@ -27,7 +27,7 @@ const URL = {
 
 describe('blob-url:', () => {
   it('inlines and compiles content as a blob url', async () => {
-    let b = await bundle(join(__dirname, '../integration/blob-url/index.js'));
+    let b = await bundle(join(__dirname, 'integration/blob-url/index.js'));
 
     let created = [];
 
@@ -63,7 +63,7 @@ describe('blob-url:', () => {
   });
 
   it('inlines, compiles, and minifies content as a blob url', async () => {
-    let b = await bundle(join(__dirname, '../integration/blob-url/index.js'), {
+    let b = await bundle(join(__dirname, 'integration/blob-url/index.js'), {
       defaultTargetOptions: {
         shouldOptimize: true,
       },

@@ -11,7 +11,7 @@ const config = path.join(
 describe.v2('eslint-validator', function () {
   it('should throw validation error with eslint errors', async function () {
     let didThrow = false;
-    let entry = path.join(__dirname, '../integration/eslint-error/index.js');
+    let entry = path.join(__dirname, 'integration/eslint-error/index.js');
     try {
       await bundle(entry, {
         defaultConfig: config,
@@ -51,7 +51,7 @@ describe.v2('eslint-validator', function () {
     let didThrow = false;
     let entry = path.join(
       __dirname,
-      '/../integration/eslint-parse-error/index.js',
+      '/integration/eslint-parse-error/index.js',
     );
     try {
       await bundle(entry, {

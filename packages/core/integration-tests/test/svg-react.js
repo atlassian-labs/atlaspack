@@ -5,11 +5,11 @@ import path from 'path';
 describe.v2('svg-react', function () {
   it('should support transforming SVGs to react components', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/svg-react/react.js'),
+      path.join(__dirname, 'integration/svg-react/react.js'),
       {
         defaultConfig: path.join(
           __dirname,
-          '../integration/custom-configs/.parcelrc-svg-react',
+          'integration/custom-configs/.parcelrc-svg-react',
         ),
       },
     );
@@ -22,11 +22,11 @@ describe.v2('svg-react', function () {
 
   it('should support transforming SVGs to typescript react components', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/svg-react-typescript/react.ts'),
+      path.join(__dirname, 'integration/svg-react-typescript/react.ts'),
       {
         defaultConfig: path.join(
           __dirname,
-          '../integration/custom-configs/.parcelrc-svg-react',
+          'integration/custom-configs/.parcelrc-svg-react',
         ),
       },
     );
@@ -40,11 +40,11 @@ describe.v2('svg-react', function () {
 
   it('should find and use a .svgrrc and .svgorc config file', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/svg-react-config/react.js'),
+      path.join(__dirname, 'integration/svg-react-config/react.js'),
       {
         defaultConfig: path.join(
           __dirname,
-          '../integration/custom-configs/.parcelrc-svg-react',
+          'integration/custom-configs/.parcelrc-svg-react',
         ),
       },
     );

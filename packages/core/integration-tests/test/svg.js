@@ -11,7 +11,7 @@ import path from 'path';
 
 describe.v2('svg', function () {
   it('should support bundling SVG', async () => {
-    let b = await bundle(path.join(__dirname, '../integration/svg/circle.svg'));
+    let b = await bundle(path.join(__dirname, 'integration/svg/circle.svg'));
 
     assertBundles(b, [
       {
@@ -103,7 +103,7 @@ describe.v2('svg', function () {
 
   it('should minify SVG bundles', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/svg/circle.svg'),
+      path.join(__dirname, 'integration/svg/circle.svg'),
       {
         defaultTargetOptions: {
           shouldOptimize: true,
@@ -120,7 +120,7 @@ describe.v2('svg', function () {
 
   it('support SVGO config files', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/svgo-config/index.html'),
+      path.join(__dirname, 'integration/svgo-config/index.html'),
       {
         defaultTargetOptions: {
           shouldOptimize: true,
@@ -138,7 +138,7 @@ describe.v2('svg', function () {
 
   it('should detect xml-stylesheet processing instructions', async function () {
     let b = await bundle(
-      path.join(__dirname, '../integration/svg-xml-stylesheet/img.svg'),
+      path.join(__dirname, 'integration/svg-xml-stylesheet/img.svg'),
     );
 
     assertBundles(b, [
@@ -167,7 +167,7 @@ describe.v2('svg', function () {
 
   it('should handle inline CSS with @imports', async function () {
     const b = await bundle(
-      path.join(__dirname, '../integration/svg-inline-css-import/img.svg'),
+      path.join(__dirname, 'integration/svg-inline-css-import/img.svg'),
     );
 
     assertBundles(b, [
@@ -211,7 +211,7 @@ describe.v2('svg', function () {
 
   it('should process inline styles using lang', async function () {
     const b = await bundle(
-      path.join(__dirname, '../integration/svg-inline-sass/img.svg'),
+      path.join(__dirname, 'integration/svg-inline-sass/img.svg'),
       {
         defaultTargetOptions: {
           shouldOptimize: true,
@@ -237,7 +237,7 @@ describe.v2('svg', function () {
 
   it('should be in separate bundles', async function () {
     const b = await bundle(
-      path.join(__dirname, '../integration/svg-multiple/index.js'),
+      path.join(__dirname, 'integration/svg-multiple/index.js'),
     );
 
     assertBundles(b, [
