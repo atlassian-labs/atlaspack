@@ -2543,7 +2543,10 @@ describe.v2('cache', function () {
 
           return {
             defaultTargetOptions: {
-              distDir: path.join(__dirname, '../data/integration/cache/dist/test'),
+              distDir: path.join(
+                __dirname,
+                '../data/integration/cache/dist/test',
+              ),
             },
           };
         },
@@ -4216,7 +4219,10 @@ describe.v2('cache', function () {
     describe('esm', function () {
       async function setup() {
         await inputFS.mkdirp(inputDir);
-        await inputFS.ncp(path.join(__dirname, '../data/integration/cache'), inputDir);
+        await inputFS.ncp(
+          path.join(__dirname, '../data/integration/cache'),
+          inputDir,
+        );
         await inputFS.writeFile(
           path.join(inputDir, '.parcelrc'),
           JSON.stringify({
@@ -4527,7 +4533,10 @@ describe.v2('cache', function () {
             async setup() {
               await inputFS.mkdirp(path.join(inputDir, 'node_modules'));
               await inputFS.ncp(
-                path.join(__dirname, '../data/integration/postcss-autoinstall/npm'),
+                path.join(
+                  __dirname,
+                  '../data/integration/postcss-autoinstall/npm',
+                ),
                 inputDir,
               );
               await inputFS.ncp(
@@ -4598,7 +4607,10 @@ describe.v2('cache', function () {
               async setup() {
                 await inputFS.mkdirp(inputDir);
                 await inputFS.ncp(
-                  path.join(__dirname, '../data/integration/postcss-esm-config'),
+                  path.join(
+                    __dirname,
+                    '../data/integration/postcss-esm-config',
+                  ),
                   inputDir,
                 );
               },
@@ -4706,7 +4718,7 @@ describe.v2('cache', function () {
                 path.join(
                   path.join(
                     __dirname,
-                    'integration',
+                    '../data/integration',
                     'posthtml-autoinstall',
                     'posthtml-test',
                   ),
@@ -6536,7 +6548,10 @@ describe.v2('cache', function () {
   });
 
   it('should correctly reuse intermediate pipeline results when transforming', async function () {
-    await ncp(path.join(__dirname, '../data/integration/json'), path.join(inputDir));
+    await ncp(
+      path.join(__dirname, '../data/integration/json'),
+      path.join(inputDir),
+    );
 
     let entry = path.join(inputDir, 'index.js');
     let original = await overlayFS.readFile(entry, 'utf8');
@@ -6721,7 +6736,10 @@ describe.v2('cache', function () {
       outputFS: inputFS,
       async setup() {
         await inputFS.mkdirp(inputDir);
-        await inputFS.ncp(path.join(__dirname, '../data/integration/cache'), inputDir);
+        await inputFS.ncp(
+          path.join(__dirname, '../data/integration/cache'),
+          inputDir,
+        );
       },
       update: async b => {
         assert.equal(await run(b.bundleGraph), 4);
@@ -6742,7 +6760,10 @@ describe.v2('cache', function () {
   it('supports multiple empty JS assets', async function () {
     // Try to store multiple empty assets using LMDB
     let build = await runBundle(
-      path.join(__dirname, '../data/integration/multiple-empty-js-assets/index.js'),
+      path.join(
+        __dirname,
+        '../data/integration/multiple-empty-js-assets/index.js',
+      ),
       {
         inputFS,
         outputFS: inputFS,
