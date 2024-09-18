@@ -1907,33 +1907,42 @@ describe('javascript', function () {
     assert.equal(output.test(), 'pkg-browser');
   });
 
-  it.only('should exclude resolving specifiers that map to false in the browser field in browser builds', async () => {
-    let b = await bundle(
-      path.join(
-        __dirname,
-        '/integration/resolve-entries/pkg-ignore-browser/index.js',
-      ),
-      {
-        targets: ['browsers'],
-      },
-    );
+  it.v2(
+    'should exclude resolving specifiers that map to false in the browser field in browser builds',
+    async () => {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/resolve-entries/pkg-ignore-browser/index.js',
+        ),
+        {
+          targets: ['browsers'],
+        },
+      );
 
-    assert.deepEqual(await run(b), {});
-  });
+      assert.deepEqual(await run(b), {});
+    },
+  );
 
-  it.only('should not exclude resolving specifiers that map to false in the browser field in node builds', async () => {
-    let b = await bundle(
-      path.join(
-        __dirname,
-        '/integration/resolve-entries/pkg-ignore-browser/index.js',
-      ),
-      {
-        targets: ['node'],
-      },
-    );
+  it.v2(
+    'should not exclude resolving specifiers that map to false in the browser field in node builds',
+    async () => {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/resolve-entries/pkg-ignore-browser/index.js',
+        ),
+        {
+          targets: ['node'],
+        },
+      );
 
-    assert.equal(await run(b), 'this should only exist in non-browser builds');
-  });
+      assert.equal(
+        await run(b),
+        'this should only exist in non-browser builds',
+      );
+    },
+  );
 
   it.skip('should not resolve the browser field for --target=node', async function () {
     let b = await bundle(
