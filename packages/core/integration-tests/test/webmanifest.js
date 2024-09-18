@@ -13,7 +13,7 @@ import {md} from '@atlaspack/diagnostic';
 describe.v2('webmanifest', function () {
   it('should support .webmanifest', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/webmanifest/index.html'),
+      path.join(__dirname, '../integration/webmanifest/index.html'),
     );
 
     await assertBundles(b, [
@@ -55,7 +55,7 @@ describe.v2('webmanifest', function () {
 
   it('should support .json', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/webmanifest-json/index.html'),
+      path.join(__dirname, '../integration/webmanifest-json/index.html'),
     );
 
     await assertBundles(b, [
@@ -98,14 +98,14 @@ describe.v2('webmanifest', function () {
   it('should throw on malformed icons, screenshots, shortcuts, and file handlers', async function () {
     let manifestPath = path.join(
       __dirname,
-      '/../data/integration/webmanifest-schema/manifest.webmanifest',
+      '/../integration/webmanifest-schema/manifest.webmanifest',
     );
     let manifest = await inputFS.readFileSync(manifestPath, 'utf8');
 
     await assert.rejects(
       () =>
         bundle(
-          path.join(__dirname, '../data/integration/webmanifest-schema/index.html'),
+          path.join(__dirname, '../integration/webmanifest-schema/index.html'),
         ),
       {
         name: 'BuildError',
@@ -217,7 +217,7 @@ describe.v2('webmanifest', function () {
     await assert.rejects(
       () =>
         bundle(
-          path.join(__dirname, '../data/integration/webmanifest-not-found/index.html'),
+          path.join(__dirname, '../integration/webmanifest-not-found/index.html'),
         ),
       {
         name: 'BuildError',
@@ -260,7 +260,7 @@ describe.v2('webmanifest', function () {
 
   it('should work when there is a target in package.json', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/webmanifest-targets/index.html'),
+      path.join(__dirname, '../integration/webmanifest-targets/index.html'),
     );
 
     await assertBundles(b, [

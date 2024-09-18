@@ -14,7 +14,7 @@ import nullthrows from 'nullthrows';
 
 describe.v2('glob', function () {
   it('should require a glob of files', async function () {
-    let b = await bundle(path.join(__dirname, '../data/integration/glob/index.js'));
+    let b = await bundle(path.join(__dirname, '../integration/glob/index.js'));
 
     assertBundles(b, [
       {
@@ -30,7 +30,7 @@ describe.v2('glob', function () {
 
   it('should require nested directories with a glob', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/glob-deep/index.js'),
+      path.join(__dirname, '../integration/glob-deep/index.js'),
     );
 
     assertBundles(b, [
@@ -47,7 +47,7 @@ describe.v2('glob', function () {
 
   it('should support importing a glob of CSS files', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/glob-css/index.js'),
+      path.join(__dirname, '../integration/glob-css/index.js'),
     );
 
     assertBundles(b, [
@@ -76,7 +76,7 @@ describe.v2('glob', function () {
 
   it('should require a glob using a pipeline', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/glob-pipeline/index.js'),
+      path.join(__dirname, '../integration/glob-pipeline/index.js'),
     );
 
     assertBundles(b, [
@@ -107,7 +107,7 @@ describe.v2('glob', function () {
 
   it('should import a glob with dynamic import', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/glob-async/index.js'),
+      path.join(__dirname, '../integration/glob-async/index.js'),
     );
 
     assertBundles(b, [
@@ -136,7 +136,7 @@ describe.v2('glob', function () {
   });
 
   it('should error when an unsupported asset type imports a glob', async function () {
-    let filePath = path.join(__dirname, '../data/integration/glob-error/index.html');
+    let filePath = path.join(__dirname, '../integration/glob-error/index.html');
     // $FlowFixMe[prop-missing]
     await assert.rejects(() => bundle(filePath), {
       name: 'BuildError',
@@ -155,7 +155,7 @@ describe.v2('glob', function () {
   });
 
   it('should error when a URL dependency imports a glob', async function () {
-    let filePath = path.join(__dirname, '../data/integration/glob-error/index.css');
+    let filePath = path.join(__dirname, '../integration/glob-error/index.css');
     // $FlowFixMe[prop-missing]
     await assert.rejects(() => bundle(filePath), {
       name: 'BuildError',
@@ -210,7 +210,7 @@ describe.v2('glob', function () {
 
   it('should require a glob of files from a package', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/glob-package/index.js'),
+      path.join(__dirname, '../integration/glob-package/index.js'),
     );
     assertBundles(b, [
       {
@@ -226,7 +226,7 @@ describe.v2('glob', function () {
 
   it('should require a glob of files from a package async', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/glob-package-async/index.js'),
+      path.join(__dirname, '../integration/glob-package-async/index.js'),
     );
     assertBundles(b, [
       {
@@ -253,7 +253,7 @@ describe.v2('glob', function () {
 
   it('should resolve a glob with ~', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/glob-tilde/packages/child/index.js'),
+      path.join(__dirname, '../integration/glob-tilde/packages/child/index.js'),
     );
     assertBundles(b, [
       {
@@ -269,7 +269,7 @@ describe.v2('glob', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/glob-absolute/packages/child/index.js',
+        '/../integration/glob-absolute/packages/child/index.js',
       ),
     );
     assertBundles(b, [

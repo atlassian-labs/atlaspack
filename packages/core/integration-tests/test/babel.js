@@ -43,10 +43,10 @@ describe.v2('babel', function () {
 
   it.skip('should auto install @babel/core v7', async function () {
     let originalPkg = await fs.readFile(
-      __dirname + '/../data/integration/babel-7-autoinstall/package.json',
+      __dirname + '/../integration/babel-7-autoinstall/package.json',
     );
     let b = await bundle(
-      __dirname + '/../data/integration/babel-7-autoinstall/index.js',
+      __dirname + '/../integration/babel-7-autoinstall/index.js',
     );
 
     let output = await run(b);
@@ -55,21 +55,21 @@ describe.v2('babel', function () {
     assert.equal(output.default(), 3);
 
     let pkg = await fs.readFile(
-      __dirname + '/../data/integration/babel-7-autoinstall/package.json',
+      __dirname + '/../integration/babel-7-autoinstall/package.json',
     );
     assert(JSON.parse(pkg).devDependencies['@babel/core']);
     await fs.writeFile(
-      __dirname + '/../data/integration/babel-7-autoinstall/package.json',
+      __dirname + '/../integration/babel-7-autoinstall/package.json',
       originalPkg,
     );
   });
 
   it.skip('should auto install babel plugins', async function () {
     let originalPkg = await fs.readFile(
-      __dirname + '/../data/integration/babel-plugin-autoinstall/package.json',
+      __dirname + '/../integration/babel-plugin-autoinstall/package.json',
     );
     let b = await bundle(
-      __dirname + '/../data/integration/babel-plugin-autoinstall/index.js',
+      __dirname + '/../integration/babel-plugin-autoinstall/index.js',
     );
 
     let output = await run(b);
@@ -78,7 +78,7 @@ describe.v2('babel', function () {
     assert.equal(output.default(), 3);
 
     let pkg = await fs.readFile(
-      __dirname + '/../data/integration/babel-plugin-autoinstall/package.json',
+      __dirname + '/../integration/babel-plugin-autoinstall/package.json',
     );
     assert(JSON.parse(pkg).devDependencies['@babel/core']);
     assert(
@@ -87,13 +87,13 @@ describe.v2('babel', function () {
       ],
     );
     await fs.writeFile(
-      __dirname + '/../data/integration/babel-plugin-autoinstall/package.json',
+      __dirname + '/../integration/babel-plugin-autoinstall/package.json',
       originalPkg,
     );
   });
 
   it('should support compiling with babel using .babelrc config', async function () {
-    await bundle(path.join(__dirname, '../data/integration/babelrc-custom/index.js'));
+    await bundle(path.join(__dirname, '../integration/babelrc-custom/index.js'));
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
     assert(!file.includes('REPLACE_ME'));
@@ -108,7 +108,7 @@ describe.v2('babel', function () {
       }
     });
     await bundle(
-      path.join(__dirname, '../data/integration/babel-config-json-custom/index.js'),
+      path.join(__dirname, '../integration/babel-config-json-custom/index.js'),
     );
     loggerDisposable.dispose();
 
@@ -144,10 +144,10 @@ describe.v2('babel', function () {
     }
 
     await testBrowserListMultipleEnv(
-      '/../data/integration/babel-browserslist-multiple-env',
+      '/../integration/babel-browserslist-multiple-env',
     );
     await testBrowserListMultipleEnv(
-      '/../data/integration/babel-browserslist-multiple-env-as-string',
+      '/../integration/babel-browserslist-multiple-env-as-string',
     );
   });
 
@@ -155,7 +155,7 @@ describe.v2('babel', function () {
     await bundle(
       path.join(
         __dirname,
-        '/../data/integration/babel-node-modules-browserslist/index.js',
+        '/../integration/babel-node-modules-browserslist/index.js',
       ),
     );
 
@@ -166,7 +166,7 @@ describe.v2('babel', function () {
 
   it('should strip away flow types', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/babel-strip-flow-types/index.js'),
+      path.join(__dirname, '../integration/babel-strip-flow-types/index.js'),
     );
 
     let output = await run(b);
@@ -179,7 +179,7 @@ describe.v2('babel', function () {
 
   it('should support compiling with babel using babel.config.js config', async function () {
     await bundle(
-      path.join(__dirname, '../data/integration/babel-config-js/src/index.js'),
+      path.join(__dirname, '../integration/babel-config-js/src/index.js'),
     );
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
@@ -189,7 +189,7 @@ describe.v2('babel', function () {
 
   it('should support compiling with babel using babel.config.js config with a require in it', async function () {
     await bundle(
-      path.join(__dirname, '../data/integration/babel-config-js-require/src/index.js'),
+      path.join(__dirname, '../integration/babel-config-js-require/src/index.js'),
     );
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
@@ -200,7 +200,7 @@ describe.v2('babel', function () {
   it('should support multitarget builds using a custom babel config with @atlaspack/babel-preset-env', async function () {
     let fixtureDir = path.join(
       __dirname,
-      '/../data/integration/babel-config-js-multitarget',
+      '/../integration/babel-config-js-multitarget',
     );
 
     await bundle(path.join(fixtureDir, 'src/index.js'));
@@ -222,7 +222,7 @@ describe.v2('babel', function () {
   it('should support multitarget builds using a custom babel config with @atlaspack/babel-plugin-transform-runtime', async function () {
     let fixtureDir = path.join(
       __dirname,
-      '/../data/integration/babel-config-js-multitarget-transform-runtime',
+      '/../integration/babel-config-js-multitarget-transform-runtime',
     );
 
     await bundle(path.join(fixtureDir, 'src/index.js'), {
@@ -248,7 +248,7 @@ describe.v2('babel', function () {
     let tmpDir = tempy.directory();
     let distDir = path.join(tmpDir, 'dist');
     await fs.ncp(
-      path.join(__dirname, '../data/integration/babelrc-custom'),
+      path.join(__dirname, '../integration/babelrc-custom'),
       path.join(tmpDir, '/input'),
     );
     await bundle(path.join(tmpDir, '/input/index.js'), {
@@ -271,7 +271,7 @@ describe.v2('babel', function () {
     await bundle(
       path.join(
         __dirname,
-        '/../data/integration/babel-config-monorepo/packages/pkg-a/src/index.js',
+        '/../integration/babel-config-monorepo/packages/pkg-a/src/index.js',
       ),
     );
 
@@ -287,7 +287,7 @@ describe.v2('babel', function () {
   describe('Babel envName', () => {
     it('should prefer BABEL_ENV to NODE_ENV', async () => {
       await bundle(
-        path.join(__dirname, '../data/integration/babel-env-name/index.js'),
+        path.join(__dirname, '../integration/babel-env-name/index.js'),
         {
           targets: {main: {distDir, engines: {browsers: ['ie 11']}}},
           env: {BABEL_ENV: 'production', NODE_ENV: 'development'},
@@ -302,7 +302,7 @@ describe.v2('babel', function () {
 
     it('should invalidate when BABEL_ENV changes', async () => {
       await bundle(
-        path.join(__dirname, '../data/integration/babel-env-name/index.js'),
+        path.join(__dirname, '../integration/babel-env-name/index.js'),
         {
           targets: {main: {distDir, engines: {}}},
           shouldDisableCache: false,
@@ -315,7 +315,7 @@ describe.v2('babel', function () {
       assert(file.includes('class Foo'));
 
       await bundle(
-        path.join(__dirname, '../data/integration/babel-env-name/index.js'),
+        path.join(__dirname, '../integration/babel-env-name/index.js'),
         {shouldDisableCache: false, env: {BABEL_ENV: 'production'}},
       );
       file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
@@ -324,7 +324,7 @@ describe.v2('babel', function () {
 
     it('should invalidate when NODE_ENV changes from BABEL_ENV', async () => {
       await bundle(
-        path.join(__dirname, '../data/integration/babel-env-name/index.js'),
+        path.join(__dirname, '../integration/babel-env-name/index.js'),
         {
           targets: {main: {distDir, engines: {}}},
           shouldDisableCache: false,
@@ -338,7 +338,7 @@ describe.v2('babel', function () {
       assert(!file.includes('class Foo'));
 
       await bundle(
-        path.join(__dirname, '../data/integration/babel-env-name/index.js'),
+        path.join(__dirname, '../integration/babel-env-name/index.js'),
         {
           targets: {main: {distDir, engines: {}}},
           shouldDisableCache: false,
@@ -351,7 +351,7 @@ describe.v2('babel', function () {
 
     it('should be "production" if Atlaspack is run in production mode', async () => {
       await bundle(
-        path.join(__dirname, '../data/integration/babel-env-name/index.js'),
+        path.join(__dirname, '../integration/babel-env-name/index.js'),
         {
           targets: {main: {distDir, engines: {browsers: ['ie 11']}}},
           mode: 'production',
@@ -388,7 +388,7 @@ describe.v2('babel', function () {
       let configPath = path.join(inputDir, '.babelrc');
 
       await fs.ncp(
-        path.join(__dirname, '../data/integration/babelrc-custom'),
+        path.join(__dirname, '../integration/babelrc-custom'),
         inputDir,
       );
 
@@ -423,7 +423,7 @@ describe.v2('babel', function () {
       let filepathFallback = path.join(inputDir, 'fallback.txt');
 
       await fs.ncp(
-        path.join(__dirname, '../data/integration/babel-external-deps'),
+        path.join(__dirname, '../integration/babel-external-deps'),
         inputDir,
       );
 
@@ -459,7 +459,7 @@ describe.v2('babel', function () {
     it('should invalidate babel.config.js across runs', async function () {
       let dateRe = /return (\d+);/;
 
-      let fixtureDir = path.join(__dirname, '../data/integration/babel-config-js');
+      let fixtureDir = path.join(__dirname, '../integration/babel-config-js');
       let distDir = path.resolve(fixtureDir, './dist');
       let cacheDir = path.resolve(fixtureDir, '.parcel-cache');
       await fs.rimraf(distDir);
@@ -504,7 +504,7 @@ describe.v2('babel', function () {
     it('should invalidate when babel plugins are upgraded across runs', async function () {
       let fixtureDir = path.join(
         __dirname,
-        '/../data/integration/babel-plugin-upgrade',
+        '/../integration/babel-plugin-upgrade',
       );
       await fs.ncp(path.join(fixtureDir), inputDir);
       await fs.rimraf(path.join(__dirname, '.parcel-cache'));
@@ -561,7 +561,7 @@ describe.v2('babel', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/babel-preset-env-shippedProposals/index.js',
+        '/../integration/babel-preset-env-shippedProposals/index.js',
       ),
     );
 
@@ -575,7 +575,7 @@ describe.v2('babel', function () {
 
   it('should compile with custom babel plugin plus default transforms', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/babel-custom/index.js'),
+      path.join(__dirname, '../integration/babel-custom/index.js'),
     );
 
     let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
@@ -590,7 +590,7 @@ describe.v2('babel', function () {
 
   it('should compile with custom babel plugin and jsx', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/babel-custom/jsx.js'),
+      path.join(__dirname, '../integration/babel-custom/jsx.js'),
     );
 
     let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
@@ -600,7 +600,7 @@ describe.v2('babel', function () {
 
   it('should compile with custom babel plugin and typescript', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/babel-custom/ts.ts'),
+      path.join(__dirname, '../integration/babel-custom/ts.ts'),
     );
 
     let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
@@ -616,7 +616,7 @@ describe.v2('babel', function () {
 
   it('should compile with custom babel plugin and tsx', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/babel-custom/tsx.tsx'),
+      path.join(__dirname, '../integration/babel-custom/tsx.tsx'),
     );
 
     let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
@@ -632,7 +632,7 @@ describe.v2('babel', function () {
         messages.push(message);
       }
     });
-    let filePath = path.join(__dirname, '../data/integration/babel-warn-all/index.js');
+    let filePath = path.join(__dirname, '../integration/babel-warn-all/index.js');
     await bundle(filePath);
     loggerDisposable.dispose();
 
@@ -714,7 +714,7 @@ describe.v2('babel', function () {
     });
     let filePath = path.join(
       __dirname,
-      '/../data/integration/babel-warn-some/index.js',
+      '/../integration/babel-warn-some/index.js',
     );
     await bundle(filePath);
     loggerDisposable.dispose();
@@ -772,7 +772,7 @@ describe.v2('babel', function () {
     });
     let filePath = path.join(
       __dirname,
-      '/../data/integration/babel-warn-some-json5/index.js',
+      '/../integration/babel-warn-some-json5/index.js',
     );
     await bundle(filePath);
     loggerDisposable.dispose();

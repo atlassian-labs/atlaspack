@@ -4,7 +4,7 @@ import {bundle, describe, it, outputFS} from '@atlaspack/test-utils';
 
 describe.v2('tailwind', function () {
   it('should support tailwind from SCSS', async function () {
-    let fixture = path.join(__dirname, '../data/integration/tailwind-scss');
+    let fixture = path.join(__dirname, '../integration/tailwind-scss');
     let b = await bundle(path.join(fixture, 'index.html'));
 
     let css = await outputFS.readFile(

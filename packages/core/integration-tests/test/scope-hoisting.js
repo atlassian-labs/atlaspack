@@ -58,7 +58,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/default-export-expression/a.js',
+          '/../integration/scope-hoisting/es6/default-export-expression/a.js',
         ),
       );
 
@@ -70,7 +70,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/default-export-declaration/a.js',
+          '/../integration/scope-hoisting/es6/default-export-declaration/a.js',
         ),
       );
 
@@ -82,7 +82,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/default-export-anonymous/a.js',
+          '/../integration/scope-hoisting/es6/default-export-anonymous/a.js',
         ),
       );
 
@@ -94,7 +94,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/default-export-variable/a.js',
+          '/../integration/scope-hoisting/es6/default-export-variable/a.js',
         ),
       );
 
@@ -106,7 +106,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/named-export-declaration/a.js',
+          '/../integration/scope-hoisting/es6/named-export-declaration/a.js',
         ),
       );
 
@@ -118,7 +118,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/named-export-variable/a.js',
+          '/../integration/scope-hoisting/es6/named-export-variable/a.js',
         ),
       );
 
@@ -130,7 +130,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/named-export-variable-rename/a.js',
+          '/../integration/scope-hoisting/es6/named-export-variable-rename/a.js',
         ),
       );
 
@@ -142,7 +142,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/named-export-variable-rename-wrapped/a.js',
+          '/../integration/scope-hoisting/es6/named-export-variable-rename-wrapped/a.js',
         ),
       );
 
@@ -154,7 +154,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/rewrite-export-star/index.js',
+          '../integration/scope-hoisting/es6/rewrite-export-star/index.js',
         ),
         {mode: 'production'},
       );
@@ -173,7 +173,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/non-ascii-identifiers/a.js',
+          '/../integration/scope-hoisting/es6/non-ascii-identifiers/a.js',
         ),
       );
 
@@ -185,7 +185,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/rename-superclass/a.js',
+          '/../integration/scope-hoisting/es6/rename-superclass/a.js',
         ),
       );
       let output = await run(b);
@@ -196,7 +196,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/rename-helpers/a.js',
+          '/../integration/scope-hoisting/es6/rename-helpers/a.js',
         ),
       );
       let contents = await outputFS.readFile(
@@ -213,7 +213,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/rename-member-prop/a.js',
+          '/../integration/scope-hoisting/es6/rename-member-prop/a.js',
         ),
       );
 
@@ -225,7 +225,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/renamed-import/a.js',
+          '/../integration/scope-hoisting/es6/renamed-import/a.js',
         ),
       );
 
@@ -237,7 +237,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/renamed-export/a.js',
+          '/../integration/scope-hoisting/es6/renamed-export/a.js',
         ),
       );
 
@@ -249,7 +249,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/ancestor-reexport/a.js',
+          '/../integration/scope-hoisting/es6/ancestor-reexport/a.js',
         ),
       );
 
@@ -261,7 +261,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/ancestor-reexport2/a.js',
+          '/../integration/scope-hoisting/es6/ancestor-reexport2/a.js',
         ),
       );
 
@@ -273,7 +273,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/ancestor-reexport2/b.js',
+          '/../integration/scope-hoisting/es6/ancestor-reexport2/b.js',
         ),
       );
 
@@ -285,7 +285,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/async-internalize-unused/a.js',
+          '/../integration/scope-hoisting/es6/async-internalize-unused/a.js',
         ),
       );
 
@@ -297,7 +297,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-namespace/a.js',
+          '/../integration/scope-hoisting/es6/import-namespace/a.js',
         ),
       );
 
@@ -311,7 +311,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/import-namespace-external/a.js',
+            '/../integration/scope-hoisting/es6/import-namespace-external/a.js',
           ),
         );
 
@@ -331,7 +331,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-all/a.js',
+          '/../integration/scope-hoisting/es6/re-export-all/a.js',
         ),
       );
 
@@ -343,7 +343,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-all-fallback-1/index.js',
+          '/../integration/scope-hoisting/es6/re-export-all-fallback-1/index.js',
         ),
       );
 
@@ -355,7 +355,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-all-fallback-2/index.js',
+          '/../integration/scope-hoisting/es6/re-export-all-fallback-2/index.js',
         ),
       );
 
@@ -367,7 +367,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/re-export-all-fallback-3/entry.ts',
+          '../integration/scope-hoisting/es6/re-export-all-fallback-3/entry.ts',
         ),
       );
       let output = await run(b);
@@ -378,7 +378,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-all-fallback-nested/index.js',
+          '/../integration/scope-hoisting/es6/re-export-all-fallback-nested/index.js',
         ),
       );
 
@@ -390,7 +390,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-all-empty-no-side-effects/index.js',
+          '/../integration/scope-hoisting/es6/re-export-all-empty-no-side-effects/index.js',
         ),
         {
           mode: 'production',
@@ -412,7 +412,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-all-ambiguous/entry.js',
+          '/../integration/scope-hoisting/es6/re-export-all-ambiguous/entry.js',
         ),
         {
           mode: 'production',
@@ -427,7 +427,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-all-external/a.js',
+          '/../integration/scope-hoisting/es6/re-export-all-external/a.js',
         ),
       );
 
@@ -452,7 +452,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-all-multiple/a.js',
+          '/../integration/scope-hoisting/es6/re-export-all-multiple/a.js',
         ),
       );
 
@@ -464,7 +464,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-all-override/index.js',
+          '/../integration/scope-hoisting/es6/re-export-all-override/index.js',
         ),
       );
 
@@ -476,7 +476,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-bundle-boundary/index.js',
+          '/../integration/scope-hoisting/es6/re-export-bundle-boundary/index.js',
         ),
       );
 
@@ -488,7 +488,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-bundle-boundary2/index.js',
+          '/../integration/scope-hoisting/es6/re-export-bundle-boundary2/index.js',
         ),
       );
 
@@ -500,7 +500,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-bundle-boundary3/index.js',
+          '/../integration/scope-hoisting/es6/re-export-bundle-boundary3/index.js',
         ),
       );
 
@@ -512,7 +512,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-multiple-wildcards/a.js',
+          '/../integration/scope-hoisting/es6/import-multiple-wildcards/a.js',
         ),
       );
 
@@ -524,7 +524,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-multiple-wrapped/index.js',
+          '/../integration/scope-hoisting/es6/import-multiple-wrapped/index.js',
         ),
       );
 
@@ -539,7 +539,7 @@ describe('scope hoisting', function () {
             a.filePath ===
             path.join(
               __dirname,
-              '/../data/integration/scope-hoisting/es6/import-multiple-wrapped/b.js',
+              '/../integration/scope-hoisting/es6/import-multiple-wrapped/b.js',
             )
           ) {
             actions.stop();
@@ -567,7 +567,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-multiple/a.js',
+          '/../integration/scope-hoisting/es6/re-export-multiple/a.js',
         ),
       );
 
@@ -579,7 +579,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-named/a.js',
+          '/../integration/scope-hoisting/es6/re-export-named/a.js',
         ),
       );
 
@@ -591,7 +591,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-default/a.js',
+          '/../integration/scope-hoisting/es6/re-export-default/a.js',
         ),
       );
 
@@ -603,7 +603,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-namespace/a.js',
+          '/../integration/scope-hoisting/es6/re-export-namespace/a.js',
         ),
       );
 
@@ -615,7 +615,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-namespace-chained/a.js',
+          '/../integration/scope-hoisting/es6/re-export-namespace-chained/a.js',
         ),
       );
 
@@ -636,7 +636,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-namespace-order/index.js',
+          '/../integration/scope-hoisting/es6/re-export-namespace-order/index.js',
         ),
       );
 
@@ -646,10 +646,10 @@ describe('scope hoisting', function () {
 
     it.v2('excludes default when re-exporting a module', async function () {
       let source = path.normalize(
-        '../data/integration/scope-hoisting/es6/re-export-exclude-default/a.js',
+        '../integration/scope-hoisting/es6/re-export-exclude-default/a.js',
       );
       let message = md`${normalizePath(
-        '../data/integration/scope-hoisting/es6/re-export-exclude-default/b.js',
+        '../integration/scope-hoisting/es6/re-export-exclude-default/b.js',
         false,
       )} does not export 'default'`;
 
@@ -687,10 +687,10 @@ describe('scope hoisting', function () {
 
     it.v2('throws when reexporting a missing symbol', async function () {
       let source = path.normalize(
-        '../data/integration/scope-hoisting/es6/re-export-missing/a.js',
+        '../integration/scope-hoisting/es6/re-export-missing/a.js',
       );
       let message = md`${normalizePath(
-        '../data/integration/scope-hoisting/es6/re-export-missing/c.js',
+        '../integration/scope-hoisting/es6/re-export-missing/c.js',
         false,
       )} does not export 'foo'`;
       // $FlowFixMe[prop-missing]
@@ -705,7 +705,7 @@ describe('scope hoisting', function () {
               {
                 filePath: path.join(
                   __dirname,
-                  '../data/integration/scope-hoisting/es6/re-export-missing/b.js',
+                  '../integration/scope-hoisting/es6/re-export-missing/b.js',
                 ),
                 language: 'js',
                 codeHighlights: [
@@ -731,9 +731,9 @@ describe('scope hoisting', function () {
     it.v2(
       'throws when importing a missing symbol on cached builds without changes',
       async function () {
-        let entry = '../data/integration/scope-hoisting/es6/import-missing/a.js';
+        let entry = '../integration/scope-hoisting/es6/import-missing/a.js';
         let message = md`${normalizePath(
-          '../data/integration/scope-hoisting/es6/import-missing/b.js',
+          '../integration/scope-hoisting/es6/import-missing/b.js',
           false,
         )} does not export 'foo'`;
         let error = {
@@ -794,7 +794,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/multi-export/a.js',
+          '/../integration/scope-hoisting/es6/multi-export/a.js',
         ),
       );
 
@@ -806,7 +806,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/live-bindings/a.js',
+          '/../integration/scope-hoisting/es6/live-bindings/a.js',
         ),
       );
 
@@ -818,7 +818,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/live-bindings-reexports-namespace/a.js',
+          '/../integration/scope-hoisting/es6/live-bindings-reexports-namespace/a.js',
         ),
       );
 
@@ -831,7 +831,7 @@ describe('scope hoisting', function () {
         ['a.html', 'b.html'].map(f =>
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/live-bindings-cross-bundle',
+            '/../integration/scope-hoisting/es6/live-bindings-cross-bundle',
             f,
           ),
         ),
@@ -852,7 +852,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/export-default-live/a.js',
+          '/../integration/scope-hoisting/es6/export-default-live/a.js',
         ),
       );
 
@@ -869,7 +869,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/dynamic-import/a.js',
+          '/../integration/scope-hoisting/es6/dynamic-import/a.js',
         ),
       );
 
@@ -880,7 +880,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/dynamic-import-dynamic/a.js',
+          '/../integration/scope-hoisting/es6/dynamic-import-dynamic/a.js',
         ),
       );
 
@@ -891,7 +891,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/export-before-declaration/a.js',
+          '/../integration/scope-hoisting/es6/export-before-declaration/a.js',
         ),
       );
 
@@ -902,7 +902,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/export-binding-identifiers/a.js',
+          '/../integration/scope-hoisting/es6/export-binding-identifiers/a.js',
         ),
       );
 
@@ -914,7 +914,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/export-default-class-wrapped/a.js',
+          '/../integration/scope-hoisting/es6/export-default-class-wrapped/a.js',
         ),
       );
 
@@ -926,7 +926,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/export-default-function-wrapped/a.js',
+          '/../integration/scope-hoisting/es6/export-default-function-wrapped/a.js',
         ),
       );
 
@@ -938,7 +938,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/export-default-global/a.js',
+          '/../integration/scope-hoisting/es6/export-default-global/a.js',
         ),
       );
 
@@ -952,7 +952,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/export-default-js-global/a.js',
+          '/../integration/scope-hoisting/es6/export-default-js-global/a.js',
         ),
       );
 
@@ -964,7 +964,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/export-named-empty/a.js',
+          '/../integration/scope-hoisting/es6/export-named-empty/a.js',
         ),
       );
 
@@ -981,7 +981,7 @@ describe('scope hoisting', function () {
         await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/export-undefined/a.js',
+            '/../integration/scope-hoisting/es6/export-undefined/a.js',
           ),
         );
       } catch (err) {
@@ -1000,7 +1000,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-commonjs-export-individual/a.js',
+          '/../integration/scope-hoisting/es6/import-commonjs-export-individual/a.js',
         ),
       );
 
@@ -1017,7 +1017,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-commonjs-export-object/a.js',
+          '/../integration/scope-hoisting/es6/import-commonjs-export-object/a.js',
         ),
       );
 
@@ -1034,7 +1034,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-commonjs-export-object-default/a.js',
+          '/../integration/scope-hoisting/es6/import-commonjs-export-object-default/a.js',
         ),
       );
 
@@ -1059,7 +1059,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-commonjs-default/a.js',
+          '/../integration/scope-hoisting/es6/import-commonjs-default/a.js',
         ),
       );
 
@@ -1074,7 +1074,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-commonjs-export-individual-default/a.js',
+          '/../integration/scope-hoisting/es6/import-commonjs-export-individual-default/a.js',
         ),
       );
 
@@ -1105,7 +1105,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-commonjs-missing/a.js',
+          '/../integration/scope-hoisting/es6/import-commonjs-missing/a.js',
         ),
       );
 
@@ -1117,7 +1117,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/commonjs-exports-reassign/a.js',
+          '/../integration/scope-hoisting/es6/commonjs-exports-reassign/a.js',
         ),
       );
 
@@ -1130,7 +1130,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/dynamic-default-interop/a.js',
+          '/../integration/scope-hoisting/es6/dynamic-default-interop/a.js',
         ),
       );
 
@@ -1141,7 +1141,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-var/a.js',
+          '/../integration/scope-hoisting/es6/re-export-var/a.js',
         ),
       );
 
@@ -1153,7 +1153,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-wrapped/a.js',
+          '/../integration/scope-hoisting/es6/re-export-wrapped/a.js',
         ),
       );
 
@@ -1165,7 +1165,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/multiple-ancestors-wrap/index.js',
+          '/../integration/scope-hoisting/es6/multiple-ancestors-wrap/index.js',
         ),
       );
 
@@ -1186,7 +1186,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-wrapped-bailout/a.js',
+          '/../integration/scope-hoisting/es6/re-export-wrapped-bailout/a.js',
         ),
       );
 
@@ -1201,7 +1201,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/re-export-pseudo/a.js',
+            '/../integration/scope-hoisting/es6/re-export-pseudo/a.js',
           ),
           {defaultTargetOptions: {shouldScopeHoist}},
         );
@@ -1215,7 +1215,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-renamed/a.js',
+          '/../integration/scope-hoisting/es6/re-export-renamed/a.js',
         ),
       );
 
@@ -1227,7 +1227,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-renamed2/a.js',
+          '/../integration/scope-hoisting/es6/re-export-renamed2/a.js',
         ),
       );
 
@@ -1239,7 +1239,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-renamed-namespace/a.js',
+          '/../integration/scope-hoisting/es6/re-export-renamed-namespace/a.js',
         ),
       );
 
@@ -1258,7 +1258,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/shared-bundle-reexport/*.html',
+            '/../integration/scope-hoisting/es6/shared-bundle-reexport/*.html',
           ),
           {mode: 'production'},
         );
@@ -1309,7 +1309,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-import/a.js',
+          '/../integration/scope-hoisting/es6/re-export-import/a.js',
         ),
       );
 
@@ -1330,7 +1330,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-namespace-commonjs/a.js',
+          '/../integration/scope-hoisting/es6/import-namespace-commonjs/a.js',
         ),
       );
 
@@ -1341,7 +1341,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-namespace-static-member/a.js',
+          '/../integration/scope-hoisting/es6/import-namespace-static-member/a.js',
         ),
       );
 
@@ -1359,7 +1359,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-namespace-static-member/b.js',
+          '/../integration/scope-hoisting/es6/import-namespace-static-member/b.js',
         ),
       );
 
@@ -1384,7 +1384,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-namespace-wrapped/a.js',
+          '/../integration/scope-hoisting/es6/import-namespace-wrapped/a.js',
         ),
       );
 
@@ -1402,7 +1402,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-namespace-wrapped-self/a.js',
+          '/../integration/scope-hoisting/es6/import-namespace-wrapped-self/a.js',
         ),
       );
 
@@ -1414,7 +1414,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-namespace-commonjs-transpiled/a.js',
+          '/../integration/scope-hoisting/es6/import-namespace-commonjs-transpiled/a.js',
         ),
       );
 
@@ -1429,7 +1429,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/tree-shaking/a.js',
+          '/../integration/scope-hoisting/es6/tree-shaking/a.js',
         ),
         {mode: 'production'},
       );
@@ -1449,7 +1449,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/tree-shaking-functions/a.js',
+          '/../integration/scope-hoisting/es6/tree-shaking-functions/a.js',
         ),
         {
           defaultTargetOptions: {
@@ -1473,7 +1473,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/tree-shaking-classes-babel/a.js',
+          '/../integration/scope-hoisting/es6/tree-shaking-classes-babel/a.js',
         ),
         {
           defaultTargetOptions: {
@@ -1505,7 +1505,7 @@ describe('scope hoisting', function () {
           let b = await bundle(
             path.join(
               __dirname,
-              '/../data/integration/scope-hoisting/es6/tree-shaking-cross-bundle/a.js',
+              '/../integration/scope-hoisting/es6/tree-shaking-cross-bundle/a.js',
             ),
             {targets, mode: 'production'},
           );
@@ -1532,7 +1532,7 @@ describe('scope hoisting', function () {
           let b = await bundle(
             path.join(
               __dirname,
-              '/../data/integration/scope-hoisting/es6/tree-shaking-cross-bundle-re-export/a.js',
+              '/../integration/scope-hoisting/es6/tree-shaking-cross-bundle-re-export/a.js',
             ),
             {targets, mode: 'production'},
           );
@@ -1559,7 +1559,7 @@ describe('scope hoisting', function () {
           let b = await bundle(
             path.join(
               __dirname,
-              '/../data/integration/scope-hoisting/es6/tree-shaking-cross-bundle-re-export-wildcard/a.js',
+              '/../integration/scope-hoisting/es6/tree-shaking-cross-bundle-re-export-wildcard/a.js',
             ),
             {targets, mode: 'production'},
           );
@@ -1589,7 +1589,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import/await-assignment.js',
+            '/../integration/scope-hoisting/es6/tree-shaking-dynamic-import/await-assignment.js',
           ),
         );
 
@@ -1620,7 +1620,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import/await-declaration.js',
+            '/../integration/scope-hoisting/es6/tree-shaking-dynamic-import/await-declaration.js',
           ),
           {mode: 'production'},
         );
@@ -1652,7 +1652,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import/await-declaration-namespace.js',
+            '/../integration/scope-hoisting/es6/tree-shaking-dynamic-import/await-declaration-namespace.js',
           ),
           {mode: 'production'},
         );
@@ -1684,7 +1684,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import/await-declaration-namespace-bailout.js',
+            '/../integration/scope-hoisting/es6/tree-shaking-dynamic-import/await-declaration-namespace-bailout.js',
           ),
         );
 
@@ -1715,7 +1715,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import/await-declaration-namespace-bailout-eval.js',
+            '/../integration/scope-hoisting/es6/tree-shaking-dynamic-import/await-declaration-namespace-bailout-eval.js',
           ),
         );
 
@@ -1740,7 +1740,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import/then.js',
+            '/../integration/scope-hoisting/es6/tree-shaking-dynamic-import/then.js',
           ),
           {mode: 'production'},
         );
@@ -1768,7 +1768,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import/then-namespace.js',
+            '/../integration/scope-hoisting/es6/tree-shaking-dynamic-import/then-namespace.js',
           ),
           {mode: 'production'},
         );
@@ -1800,7 +1800,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import/then-namespace-bailout.js',
+            '/../integration/scope-hoisting/es6/tree-shaking-dynamic-import/then-namespace-bailout.js',
           ),
         );
 
@@ -1827,7 +1827,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import/then.js',
+            '/../integration/scope-hoisting/es6/tree-shaking-dynamic-import/then.js',
           ),
           {
             mode: 'production',
@@ -1867,7 +1867,7 @@ describe('scope hoisting', function () {
             bundle(
               path.join(
                 __dirname,
-                '../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+                '../integration/scope-hoisting/es6/tree-shaking-dynamic-import',
                 source,
               ),
             ),
@@ -1907,7 +1907,7 @@ describe('scope hoisting', function () {
         async function () {
           let source = path.join(
             __dirname,
-            '../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+            '../integration/scope-hoisting/es6/tree-shaking-dynamic-import',
             'await-declaration-error.js',
           );
           let message = `async.js does not export 'missing'`;
@@ -1916,7 +1916,7 @@ describe('scope hoisting', function () {
               bundle(
                 path.join(
                   __dirname,
-                  '../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+                  '../integration/scope-hoisting/es6/tree-shaking-dynamic-import',
                   'await-declaration-error.js',
                 ),
               ),
@@ -1958,7 +1958,7 @@ describe('scope hoisting', function () {
         async function () {
           let source = path.join(
             __dirname,
-            '../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+            '../integration/scope-hoisting/es6/tree-shaking-dynamic-import',
             'await-declaration-namespace-error.js',
           );
           let message = `async.js does not export 'missing'`;
@@ -1967,7 +1967,7 @@ describe('scope hoisting', function () {
               bundle(
                 path.join(
                   __dirname,
-                  '../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+                  '../integration/scope-hoisting/es6/tree-shaking-dynamic-import',
                   'await-declaration-namespace-error.js',
                 ),
               ),
@@ -2009,7 +2009,7 @@ describe('scope hoisting', function () {
         async function () {
           let source = path.join(
             __dirname,
-            '../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+            '../integration/scope-hoisting/es6/tree-shaking-dynamic-import',
             'then-error.js',
           );
           let message = `async.js does not export 'missing'`;
@@ -2018,7 +2018,7 @@ describe('scope hoisting', function () {
               bundle(
                 path.join(
                   __dirname,
-                  '../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+                  '../integration/scope-hoisting/es6/tree-shaking-dynamic-import',
                   'then-error.js',
                 ),
               ),
@@ -2060,7 +2060,7 @@ describe('scope hoisting', function () {
         async function () {
           let source = path.join(
             __dirname,
-            '../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+            '../integration/scope-hoisting/es6/tree-shaking-dynamic-import',
             'then-namespace-error.js',
           );
           let message = `async.js does not export 'missing'`;
@@ -2069,7 +2069,7 @@ describe('scope hoisting', function () {
               bundle(
                 path.join(
                   __dirname,
-                  '../data/integration/scope-hoisting/es6/tree-shaking-dynamic-import',
+                  '../integration/scope-hoisting/es6/tree-shaking-dynamic-import',
                   'then-namespace-error.js',
                 ),
               ),
@@ -2111,7 +2111,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/tree-shaking-export-computed-prop/a.js',
+          '/../integration/scope-hoisting/es6/tree-shaking-export-computed-prop/a.js',
         ),
         {
           defaultTargetOptions: {
@@ -2131,7 +2131,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-commonjs/a.js',
+          '/../integration/scope-hoisting/es6/re-export-commonjs/a.js',
         ),
       );
 
@@ -2143,7 +2143,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/side-effects-false-order/index.js',
+          '/../integration/scope-hoisting/es6/side-effects-false-order/index.js',
         ),
       );
 
@@ -2170,7 +2170,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-hybrid/a.js',
+          '/../integration/scope-hoisting/es6/re-export-hybrid/a.js',
         ),
       );
       let output = await run(b);
@@ -2181,7 +2181,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-default-hybrid/a.js',
+          '/../integration/scope-hoisting/es6/re-export-default-hybrid/a.js',
         ),
       );
       let output = await run(b);
@@ -2192,7 +2192,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/re-export-commonjs-wildcard/a.js',
+          '/../integration/scope-hoisting/es6/re-export-commonjs-wildcard/a.js',
         ),
       );
 
@@ -2204,7 +2204,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-self/a.js',
+          '/../integration/scope-hoisting/es6/import-self/a.js',
         ),
       );
 
@@ -2216,7 +2216,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-wrapped/a.js',
+          '/../integration/scope-hoisting/es6/import-wrapped/a.js',
         ),
       );
 
@@ -2228,7 +2228,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/import-wrapped-bundle-unused/a.js',
+          '/../integration/scope-hoisting/es6/import-wrapped-bundle-unused/a.js',
         ),
       );
 
@@ -2247,7 +2247,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/interop-async/index.html',
+            '/../integration/scope-hoisting/es6/interop-async/index.html',
           ),
           {
             mode: 'production',
@@ -2266,7 +2266,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/interop-pure/a.js',
+          '/../integration/scope-hoisting/es6/interop-pure/a.js',
         ),
         {
           mode: 'production',
@@ -2288,7 +2288,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/jsx-pragma/a.jsx',
+          '/../integration/scope-hoisting/es6/jsx-pragma/a.jsx',
         ),
       );
 
@@ -2301,7 +2301,7 @@ describe('scope hoisting', function () {
 
     it('should not nameclash with internal variables', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/scope-hoisting/es6/name-clash/a.js'),
+        path.join(__dirname, '../integration/scope-hoisting/es6/name-clash/a.js'),
       );
 
       let output = await run(b);
@@ -2312,7 +2312,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/non-identifier-symbol-name/a.js',
+          '/../integration/scope-hoisting/es6/non-identifier-symbol-name/a.js',
         ),
       );
 
@@ -2324,7 +2324,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/pure-assignment/a.js',
+          '/../integration/scope-hoisting/es6/pure-assignment/a.js',
         ),
       );
 
@@ -2342,7 +2342,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/default-export-class-rename/a.js',
+          '/../integration/scope-hoisting/es6/default-export-class-rename/a.js',
         ),
       );
 
@@ -2354,7 +2354,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/class-selfreference/a.js',
+          '/../integration/scope-hoisting/es6/class-selfreference/a.js',
         ),
       );
       let output = await run(b);
@@ -2365,7 +2365,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/codesplit-reexports/src/entry.js',
+          '/../integration/scope-hoisting/es6/codesplit-reexports/src/entry.js',
         ),
         {mode: 'production'},
       );
@@ -2400,7 +2400,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/retarget-namespace-single/index.js',
+          '/../integration/scope-hoisting/es6/retarget-namespace-single/index.js',
         ),
       );
       let output = await run(b);
@@ -2409,7 +2409,7 @@ describe('scope hoisting', function () {
 
     it('should correctly handle circular dependencies', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/scope-hoisting/es6/circular/a.mjs'),
+        path.join(__dirname, '../integration/scope-hoisting/es6/circular/a.mjs'),
       );
 
       assert.deepStrictEqual(
@@ -2435,7 +2435,7 @@ describe('scope hoisting', function () {
 
     it('should correctly handle circular dependencies (2)', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/scope-hoisting/es6/circular2/a.mjs'),
+        path.join(__dirname, '../integration/scope-hoisting/es6/circular2/a.mjs'),
       );
 
       assert.deepStrictEqual(
@@ -2462,7 +2462,7 @@ describe('scope hoisting', function () {
 
     it('should correctly handle circular dependencies (3)', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/scope-hoisting/es6/circular3/a.mjs'),
+        path.join(__dirname, '../integration/scope-hoisting/es6/circular3/a.mjs'),
       );
 
       assert.deepStrictEqual(
@@ -2502,7 +2502,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/circular-wrap/index.mjs',
+          '/../integration/scope-hoisting/es6/circular-wrap/index.mjs',
         ),
       );
 
@@ -2520,7 +2520,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/tree-shaking-no-unknown-objects/index.js',
+          '/../integration/scope-hoisting/es6/tree-shaking-no-unknown-objects/index.js',
         ),
       );
 
@@ -2531,7 +2531,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/conditional-import-reference/index.js',
+          '/../integration/scope-hoisting/es6/conditional-import-reference/index.js',
         ),
       );
 
@@ -2543,7 +2543,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/async-interop-conditional/index.js',
+          '/../integration/scope-hoisting/es6/async-interop-conditional/index.js',
         ),
       );
 
@@ -2573,7 +2573,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/side-effects-package-redirect-up/index.js',
+            '/../integration/scope-hoisting/es6/side-effects-package-redirect-up/index.js',
           ),
         );
 
@@ -2589,7 +2589,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '/../data/integration/scope-hoisting/es6/side-effects-package-redirect-down/index.js',
+            '/../integration/scope-hoisting/es6/side-effects-package-redirect-down/index.js',
           ),
         );
 
@@ -2606,7 +2606,7 @@ describe('scope hoisting', function () {
       it('throws after removing an export', async function () {
         let testDir = path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/update-used-symbols-remove-export',
+          '/../integration/scope-hoisting/es6/update-used-symbols-remove-export',
         );
 
         let b = bundler(path.join(testDir, 'a.js'), {
@@ -2636,7 +2636,7 @@ describe('scope hoisting', function () {
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildFailure');
           let message = md`${normalizePath(
-            '../data/integration/scope-hoisting/es6/update-used-symbols-remove-export/b.js',
+            '../integration/scope-hoisting/es6/update-used-symbols-remove-export/b.js',
             false,
           )} does not export 'foo'`;
           assert.deepEqual(bundleEvent.diagnostics, [
@@ -2691,7 +2691,7 @@ describe('scope hoisting', function () {
       it('dependency symbols change', async function () {
         let testDir = path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/update-used-symbols-dependency-symbols',
+          '/../integration/scope-hoisting/es6/update-used-symbols-dependency-symbols',
         );
 
         let b = bundler(path.join(testDir, 'index.js'), {
@@ -2751,7 +2751,7 @@ describe('scope hoisting', function () {
       it('add and remove dependency (keep asset)', async function () {
         let testDir = path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/update-used-symbols-dependency-add',
+          '/../integration/scope-hoisting/es6/update-used-symbols-dependency-add',
         );
 
         let b = bundler(path.join(testDir, 'index.js'), {
@@ -2832,7 +2832,7 @@ describe('scope hoisting', function () {
       it('add and remove dependency (remove asset)', async function () {
         let testDir = path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/update-used-symbols-dependency-add',
+          '/../integration/scope-hoisting/es6/update-used-symbols-dependency-add',
         );
 
         let b = bundler(path.join(testDir, 'index.js'), {
@@ -2933,7 +2933,7 @@ describe('scope hoisting', function () {
       it('add and remove dependency with inline asset', async function () {
         let testDir = path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/update-used-symbols-dependency-add-inline',
+          '/../integration/scope-hoisting/es6/update-used-symbols-dependency-add-inline',
         );
 
         let b = bundler(path.join(testDir, 'index.js'), {
@@ -3007,7 +3007,7 @@ describe('scope hoisting', function () {
       it('add and remove dependency with namespace', async function () {
         let testDir = path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/update-used-symbols-dependency-add-namespace',
+          '/../integration/scope-hoisting/es6/update-used-symbols-dependency-add-namespace',
         );
 
         let b = bundler(path.join(testDir, 'index.html'), {
@@ -3105,7 +3105,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/tree-shaking-increment-object/a.js',
+          '/../integration/scope-hoisting/es6/tree-shaking-increment-object/a.js',
         ),
         {
           defaultTargetOptions: {
@@ -3124,7 +3124,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/raw-url/index-import.js',
+          '/../integration/scope-hoisting/es6/raw-url/index-import.js',
         ),
       );
 
@@ -3145,7 +3145,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/es6/raw-url/index-reexport.js',
+          '/../integration/scope-hoisting/es6/raw-url/index-reexport.js',
         ),
       );
 
@@ -3173,7 +3173,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/shared-bundle-side-effect-order/index.js',
+          '../integration/scope-hoisting/es6/shared-bundle-side-effect-order/index.js',
         ),
         {mode: 'production'},
       );
@@ -3193,7 +3193,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/shared-bundle-side-effect-duplication/index.js',
+          '../integration/scope-hoisting/es6/shared-bundle-side-effect-duplication/index.js',
         ),
         {mode: 'production'},
       );
@@ -3211,7 +3211,7 @@ describe('scope hoisting', function () {
     it.v2('should error when assigning to a named import', async function () {
       let source = path.join(
         __dirname,
-        '../data/integration/scope-hoisting/es6/import-local-assign/named.js',
+        '../integration/scope-hoisting/es6/import-local-assign/named.js',
       );
 
       await assert.rejects(() => bundle(source), {
@@ -3259,7 +3259,7 @@ describe('scope hoisting', function () {
     it.v2('should error when assigning to a default import', async function () {
       let source = path.join(
         __dirname,
-        '../data/integration/scope-hoisting/es6/import-local-assign/default.js',
+        '../integration/scope-hoisting/es6/import-local-assign/default.js',
       );
 
       await assert.rejects(() => bundle(source), {
@@ -3309,7 +3309,7 @@ describe('scope hoisting', function () {
       async function () {
         let source = path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/import-local-assign/namespace.js',
+          '../integration/scope-hoisting/es6/import-local-assign/namespace.js',
         );
 
         await assert.rejects(() => bundle(source), {
@@ -3360,7 +3360,7 @@ describe('scope hoisting', function () {
       async function () {
         let source = path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/import-local-assign/destructure-assign.js',
+          '../integration/scope-hoisting/es6/import-local-assign/destructure-assign.js',
         );
 
         await assert.rejects(() => bundle(source), {
@@ -3411,7 +3411,7 @@ describe('scope hoisting', function () {
       async function () {
         let source = path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/import-local-assign/multiple.js',
+          '../integration/scope-hoisting/es6/import-local-assign/multiple.js',
         );
 
         await assert.rejects(() => bundle(source), {
@@ -3472,7 +3472,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/double-esmodule/index.js',
+          '../integration/scope-hoisting/es6/double-esmodule/index.js',
         ),
       );
 
@@ -3484,7 +3484,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/conditional-import-side-effect-free-reexport/index.mjs',
+          '../integration/scope-hoisting/es6/conditional-import-side-effect-free-reexport/index.mjs',
         ),
       );
 
@@ -3495,7 +3495,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/export-intermediate-wrapped-reexports/index.mjs',
+          '../integration/scope-hoisting/es6/export-intermediate-wrapped-reexports/index.mjs',
         ),
       );
 
@@ -3507,7 +3507,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/empty-ts/index.ts',
+          '../integration/scope-hoisting/es6/empty-ts/index.ts',
         ),
       );
 
@@ -3519,7 +3519,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/no-reexport-default/index.js',
+          '../integration/scope-hoisting/es6/no-reexport-default/index.js',
         ),
       );
 
@@ -3530,7 +3530,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/no-reexport-esmodule/index.js',
+          '../integration/scope-hoisting/es6/no-reexport-esmodule/index.js',
         ),
       );
 
@@ -3541,7 +3541,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/re-export-interop/a.js',
+          '../integration/scope-hoisting/es6/re-export-interop/a.js',
         ),
       );
 
@@ -3555,7 +3555,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/re-export-priority/entry-a.mjs',
+          '../integration/scope-hoisting/es6/re-export-priority/entry-a.mjs',
         ),
       );
 
@@ -3567,7 +3567,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/re-export-priority/entry-b.mjs',
+          '../integration/scope-hoisting/es6/re-export-priority/entry-b.mjs',
         ),
       );
 
@@ -3579,7 +3579,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/re-export-priority/namespace-a.mjs',
+          '../integration/scope-hoisting/es6/re-export-priority/namespace-a.mjs',
         ),
       );
 
@@ -3591,7 +3591,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/re-export-priority/namespace-b.mjs',
+          '../integration/scope-hoisting/es6/re-export-priority/namespace-b.mjs',
         ),
       );
 
@@ -3601,7 +3601,7 @@ describe('scope hoisting', function () {
 
     it('supports constant inlining', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/inline-constants/index.js'),
+        path.join(__dirname, '../integration/inline-constants/index.js'),
         {
           mode: 'production',
           defaultTargetOptions: {
@@ -3631,11 +3631,11 @@ describe('scope hoisting', function () {
         [
           path.join(
             __dirname,
-            '../data/integration/inline-constants-shared-bundles/a.html',
+            '../integration/inline-constants-shared-bundles/a.html',
           ),
           path.join(
             __dirname,
-            '../data/integration/inline-constants-shared-bundles/b.html',
+            '../integration/inline-constants-shared-bundles/b.html',
           ),
         ],
         {
@@ -3668,7 +3668,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-this/a.js',
+          '/../integration/scope-hoisting/commonjs/exports-this/a.js',
         ),
       );
 
@@ -3685,7 +3685,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require/a.js',
+          '/../integration/scope-hoisting/commonjs/require/a.js',
         ),
       );
 
@@ -3697,7 +3697,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/concat-order/a.js',
+          '/../integration/scope-hoisting/commonjs/concat-order/a.js',
         ),
       );
 
@@ -3709,7 +3709,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/default-import/a.js',
+          '/../integration/scope-hoisting/commonjs/default-import/a.js',
         ),
       );
 
@@ -3721,7 +3721,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/concat-order-globals/a.js',
+          '/../integration/scope-hoisting/commonjs/concat-order-globals/a.js',
         ),
       );
 
@@ -3733,7 +3733,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/named-import/a.js',
+          '/../integration/scope-hoisting/commonjs/named-import/a.js',
         ),
       );
 
@@ -3745,7 +3745,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/import-namespace/a.js',
+          '/../integration/scope-hoisting/commonjs/import-namespace/a.js',
         ),
       );
 
@@ -3757,7 +3757,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-default-export-expression/a.js',
+          '/../integration/scope-hoisting/commonjs/require-default-export-expression/a.js',
         ),
       );
 
@@ -3769,7 +3769,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-default-export-declaration/a.js',
+          '/../integration/scope-hoisting/commonjs/require-default-export-declaration/a.js',
         ),
       );
 
@@ -3781,7 +3781,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-default-export-variable/a.js',
+          '/../integration/scope-hoisting/commonjs/require-default-export-variable/a.js',
         ),
       );
 
@@ -3793,7 +3793,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-named-export-declaration/a.js',
+          '/../integration/scope-hoisting/commonjs/require-named-export-declaration/a.js',
         ),
       );
 
@@ -3805,7 +3805,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-named-export-variable/a.js',
+          '/../integration/scope-hoisting/commonjs/require-named-export-variable/a.js',
         ),
       );
 
@@ -3817,7 +3817,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-renamed-export/a.js',
+          '/../integration/scope-hoisting/commonjs/require-renamed-export/a.js',
         ),
       );
 
@@ -3829,7 +3829,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-re-export-all/a.js',
+          '/../integration/scope-hoisting/commonjs/require-re-export-all/a.js',
         ),
       );
 
@@ -3841,7 +3841,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-re-export-multiple/a.js',
+          '/../integration/scope-hoisting/commonjs/require-re-export-multiple/a.js',
         ),
       );
 
@@ -3853,7 +3853,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-re-export-named/a.js',
+          '/../integration/scope-hoisting/commonjs/require-re-export-named/a.js',
         ),
       );
 
@@ -3865,7 +3865,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-re-export-default/a.js',
+          '/../integration/scope-hoisting/commonjs/require-re-export-default/a.js',
         ),
       );
 
@@ -3877,7 +3877,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-re-export-namespace/a.js',
+          '/../integration/scope-hoisting/commonjs/require-re-export-namespace/a.js',
         ),
       );
 
@@ -3889,7 +3889,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-re-export-exclude-default/a.js',
+          '/../integration/scope-hoisting/commonjs/require-re-export-exclude-default/a.js',
         ),
       );
 
@@ -3901,7 +3901,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/es6-commonjs-hybrid/a.js',
+          '/../integration/scope-hoisting/commonjs/es6-commonjs-hybrid/a.js',
         ),
       );
 
@@ -3913,7 +3913,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/export-order/a.js',
+          '/../integration/scope-hoisting/commonjs/export-order/a.js',
         ),
       );
 
@@ -3925,7 +3925,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-access-bailout/exports-assign.js',
+          '/../integration/scope-hoisting/commonjs/exports-access-bailout/exports-assign.js',
         ),
       );
 
@@ -3937,7 +3937,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-access-bailout/exports-define.js',
+          '/../integration/scope-hoisting/commonjs/exports-access-bailout/exports-define.js',
         ),
       );
 
@@ -3949,7 +3949,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-access-bailout/module-exports-assign.js',
+          '/../integration/scope-hoisting/commonjs/exports-access-bailout/module-exports-assign.js',
         ),
       );
 
@@ -3961,7 +3961,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-access-bailout/module-exports-define.js',
+          '/../integration/scope-hoisting/commonjs/exports-access-bailout/module-exports-define.js',
         ),
       );
 
@@ -3973,7 +3973,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-access-bailout/exports-assign-entry.js',
+          '/../integration/scope-hoisting/commonjs/exports-access-bailout/exports-assign-entry.js',
         ),
       );
 
@@ -3985,7 +3985,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-access-bailout/exports-define-entry.js',
+          '/../integration/scope-hoisting/commonjs/exports-access-bailout/exports-define-entry.js',
         ),
       );
 
@@ -3997,7 +3997,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-access-bailout/module-exports-assign-entry.js',
+          '/../integration/scope-hoisting/commonjs/exports-access-bailout/module-exports-assign-entry.js',
         ),
       );
 
@@ -4009,7 +4009,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-access-bailout/module-exports-define-entry.js',
+          '/../integration/scope-hoisting/commonjs/exports-access-bailout/module-exports-define-entry.js',
         ),
       );
 
@@ -4021,7 +4021,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-access-bailout/exports-assign-reexport-entry.js',
+          '/../integration/scope-hoisting/commonjs/exports-access-bailout/exports-assign-reexport-entry.js',
         ),
       );
 
@@ -4033,7 +4033,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-before-module-exports/a.js',
+          '/../integration/scope-hoisting/commonjs/exports-before-module-exports/a.js',
         ),
       );
 
@@ -4045,7 +4045,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/module-exports-before-exports/a.js',
+          '/../integration/scope-hoisting/commonjs/module-exports-before-exports/a.js',
         ),
       );
 
@@ -4058,7 +4058,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/module-exports-default-assignment/index.js',
+          '/../integration/scope-hoisting/commonjs/module-exports-default-assignment/index.js',
         ),
       );
 
@@ -4070,7 +4070,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/missing-non-js/a.js',
+          '/../integration/scope-hoisting/commonjs/missing-non-js/a.js',
         ),
       );
 
@@ -4082,7 +4082,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/define-exports/a.js',
+          '/../integration/scope-hoisting/commonjs/define-exports/a.js',
         ),
       );
 
@@ -4099,7 +4099,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/non-identifier-symbol-name/a.js',
+          '/../integration/scope-hoisting/commonjs/non-identifier-symbol-name/a.js',
         ),
       );
 
@@ -4111,7 +4111,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/live-bindings/a.js',
+          '/../integration/scope-hoisting/commonjs/live-bindings/a.js',
         ),
       );
 
@@ -4123,7 +4123,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-eval/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-eval/a.js',
         ),
       );
 
@@ -4135,7 +4135,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-return/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-return/a.js',
         ),
       );
 
@@ -4147,7 +4147,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-unused/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-unused/a.js',
         ),
       );
 
@@ -4159,7 +4159,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-var-hoisting/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-var-hoisting/a.js',
         ),
       );
 
@@ -4185,7 +4185,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-module/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-module/a.js',
         ),
       );
 
@@ -4196,7 +4196,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-module-codesplit/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-module-codesplit/a.js',
         ),
       );
 
@@ -4207,7 +4207,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-module-computed/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-module-computed/a.js',
         ),
       );
 
@@ -4219,7 +4219,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-module-obj-literal-require/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-module-obj-literal-require/a.js',
         ),
       );
 
@@ -4232,7 +4232,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-typeof-require/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-typeof-require/a.js',
         ),
       );
 
@@ -4244,7 +4244,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/keep-local-function-var/a.js',
+          '/../integration/scope-hoisting/commonjs/keep-local-function-var/a.js',
         ),
       );
 
@@ -4256,7 +4256,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/this-arrow-function/a.js',
+          '/../integration/scope-hoisting/commonjs/this-arrow-function/a.js',
         ),
       );
 
@@ -4271,7 +4271,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/this-reference/a.js',
+          '/../integration/scope-hoisting/commonjs/this-reference/a.js',
         ),
       );
 
@@ -4283,7 +4283,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/this-reference-wrapped/a.js',
+          '/../integration/scope-hoisting/commonjs/this-reference-wrapped/a.js',
         ),
       );
 
@@ -4295,7 +4295,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/exports-self-reference/a.js',
+          '/../integration/scope-hoisting/commonjs/exports-self-reference/a.js',
         ),
       );
 
@@ -4310,7 +4310,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/module-exports-self-reference/a.js',
+          '/../integration/scope-hoisting/commonjs/module-exports-self-reference/a.js',
         ),
       );
 
@@ -4325,7 +4325,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/module-require/a.js',
+          '/../integration/scope-hoisting/commonjs/module-require/a.js',
         ),
       );
 
@@ -4337,7 +4337,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-interop-url-import/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-interop-url-import/a.js',
         ),
       );
 
@@ -4360,7 +4360,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/module-object/a.js',
+          '/../integration/scope-hoisting/commonjs/module-object/a.js',
         ),
       );
 
@@ -4383,7 +4383,7 @@ describe('scope hoisting', function () {
         "'require.resolve' calls for bundled modules or bundled assets aren't supported with scope hoisting";
       let source = path.join(
         __dirname,
-        '/../data/integration/scope-hoisting/commonjs/require-resolve/a.js',
+        '/../integration/scope-hoisting/commonjs/require-resolve/a.js',
       );
       await assert.rejects(() => bundle(source), {
         name: 'BuildError',
@@ -4419,7 +4419,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/mutated-exports-object-importer/index.js',
+          '/../integration/scope-hoisting/commonjs/mutated-exports-object-importer/index.js',
         ),
       );
 
@@ -4430,7 +4430,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/mutated-exports-object-different/index.js',
+          '/../integration/scope-hoisting/commonjs/mutated-exports-object-different/index.js',
         ),
       );
 
@@ -4441,7 +4441,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/mutated-exports-object-expression/index.js',
+          '/../integration/scope-hoisting/commonjs/mutated-exports-object-expression/index.js',
         ),
       );
 
@@ -4453,7 +4453,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/mutated-non-static-require/index.js',
+          '/../integration/scope-hoisting/commonjs/mutated-non-static-require/index.js',
         ),
       );
 
@@ -4464,7 +4464,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/mutated-exports-mixed-module/index.js',
+          '/../integration/scope-hoisting/commonjs/mutated-exports-mixed-module/index.js',
         ),
       );
 
@@ -4479,7 +4479,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-resolve-excluded/a.js',
+          '/../integration/scope-hoisting/commonjs/require-resolve-excluded/a.js',
         ),
       );
 
@@ -4495,7 +4495,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-self/a.js',
+          '/../integration/scope-hoisting/commonjs/require-self/a.js',
         ),
       );
 
@@ -4507,7 +4507,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/re-export-var/a.js',
+          '/../integration/scope-hoisting/commonjs/re-export-var/a.js',
         ),
       );
 
@@ -4519,7 +4519,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/object-pattern/a.js',
+          '/../integration/scope-hoisting/commonjs/object-pattern/a.js',
         ),
       );
 
@@ -4531,7 +4531,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/eliminate-exports/a.js',
+          '/../integration/scope-hoisting/commonjs/eliminate-exports/a.js',
         ),
       );
 
@@ -4543,7 +4543,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/multi-assign/a.js',
+          '/../integration/scope-hoisting/commonjs/multi-assign/a.js',
         ),
       );
 
@@ -4555,7 +4555,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-circular/a.js',
+          '/../integration/scope-hoisting/commonjs/require-circular/a.js',
         ),
       );
 
@@ -4567,7 +4567,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-execution-order/a.js',
+          '/../integration/scope-hoisting/commonjs/require-execution-order/a.js',
         ),
       );
 
@@ -4585,7 +4585,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-conditional/a.js',
+          '/../integration/scope-hoisting/commonjs/require-conditional/a.js',
         ),
       );
 
@@ -4614,7 +4614,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-css/a.js',
+          '/../integration/scope-hoisting/commonjs/require-css/a.js',
         ),
       );
 
@@ -4636,7 +4636,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-in-function/a.js',
+          '/../integration/scope-hoisting/commonjs/require-in-function/a.js',
         ),
       );
 
@@ -4654,7 +4654,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-in-function-import/a.js',
+          '/../integration/scope-hoisting/commonjs/require-in-function-import/a.js',
         ),
       );
 
@@ -4672,7 +4672,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-in-function-import-hoist/a.js',
+          '/../integration/scope-hoisting/commonjs/require-in-function-import-hoist/a.js',
         ),
       );
 
@@ -4690,7 +4690,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-in-function-reexport/a.js',
+          '/../integration/scope-hoisting/commonjs/require-in-function-reexport/a.js',
         ),
       );
 
@@ -4708,7 +4708,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/stream-module/a.js',
+          '/../integration/scope-hoisting/commonjs/stream-module/a.js',
         ),
       );
 
@@ -4722,7 +4722,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/empty-module/a.js',
+          '/../integration/scope-hoisting/commonjs/empty-module/a.js',
         ),
       );
 
@@ -4734,7 +4734,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/tree-shaking/a.js',
+          '/../integration/scope-hoisting/commonjs/tree-shaking/a.js',
         ),
         {mode: 'production'},
       );
@@ -4754,7 +4754,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/tree-shaking-string/a.js',
+          '/../integration/scope-hoisting/commonjs/tree-shaking-string/a.js',
         ),
         {mode: 'production'},
       );
@@ -4776,7 +4776,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/export-local/a.js',
+          '/../integration/scope-hoisting/commonjs/export-local/a.js',
         ),
         {
           defaultTargetOptions: {
@@ -4793,7 +4793,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/side-effects-false/a.js',
+          '/../integration/scope-hoisting/commonjs/side-effects-false/a.js',
         ),
       );
 
@@ -4805,7 +4805,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/browserify-compat/index.js',
+          '/../integration/scope-hoisting/commonjs/browserify-compat/index.js',
         ),
       );
 
@@ -4816,7 +4816,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-extensions/index.js',
+          '/../integration/scope-hoisting/commonjs/require-extensions/index.js',
         ),
       );
 
@@ -4827,7 +4827,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-aliases/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-aliases/a.js',
         ),
       );
 
@@ -4839,7 +4839,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-concat-order/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-concat-order/a.js',
         ),
       );
 
@@ -4856,7 +4856,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-optional/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-optional/a.js',
         ),
       );
 
@@ -4868,7 +4868,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/interop-require-es-module/a.js',
+          '/../integration/scope-hoisting/commonjs/interop-require-es-module/a.js',
         ),
       );
 
@@ -4881,7 +4881,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/interop-require-es-module-code-split/main.js',
+          '/../integration/scope-hoisting/commonjs/interop-require-es-module-code-split/main.js',
         ),
       );
 
@@ -4892,7 +4892,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/interop-require-es-module-code-split-intermediate/main.js',
+          '/../integration/scope-hoisting/commonjs/interop-require-es-module-code-split-intermediate/main.js',
         ),
       );
 
@@ -4903,7 +4903,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/interop-require-commonjs/a.js',
+          '/../integration/scope-hoisting/commonjs/interop-require-commonjs/a.js',
         ),
       );
 
@@ -4919,7 +4919,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/interop-commonjs-hybrid/a.js',
+          '/../integration/scope-hoisting/commonjs/interop-commonjs-hybrid/a.js',
         ),
       );
 
@@ -4931,7 +4931,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/interop-commonjs-hybrid-dynamic/a.js',
+          '/../integration/scope-hoisting/commonjs/interop-commonjs-hybrid-dynamic/a.js',
         ),
       );
 
@@ -4943,7 +4943,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/interop-require-commonjs-wrapped/a.js',
+          '/../integration/scope-hoisting/commonjs/interop-require-commonjs-wrapped/a.js',
         ),
       );
 
@@ -4955,7 +4955,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-multiple/a.js',
+          '/../integration/scope-hoisting/commonjs/require-multiple/a.js',
         ),
       );
 
@@ -4967,7 +4967,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/export-assign-scope/a.js',
+          '/../integration/scope-hoisting/commonjs/export-assign-scope/a.js',
         ),
       );
 
@@ -4979,7 +4979,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/globals-polyfills/a.js',
+          '/../integration/scope-hoisting/commonjs/globals-polyfills/a.js',
         ),
       );
 
@@ -4991,7 +4991,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-destructuring-array/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-destructuring-array/a.js',
         ),
       );
 
@@ -5003,7 +5003,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-destructuring-object/a.js',
+          '/../integration/scope-hoisting/commonjs/wrap-destructuring-object/a.js',
         ),
       );
 
@@ -5015,7 +5015,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/tree-shaking-no-unknown-objects/index.js',
+          '/../integration/scope-hoisting/commonjs/tree-shaking-no-unknown-objects/index.js',
         ),
       );
 
@@ -5026,7 +5026,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/conditional-import-reference/index.js',
+          '/../integration/scope-hoisting/commonjs/conditional-import-reference/index.js',
         ),
       );
 
@@ -5038,7 +5038,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-assign/a.js',
+          '/../integration/scope-hoisting/commonjs/require-assign/a.js',
         ),
       );
 
@@ -5050,7 +5050,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/non-static-exports/a.js',
+          '/../integration/scope-hoisting/commonjs/non-static-exports/a.js',
         ),
       );
 
@@ -5066,7 +5066,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/self-reference-assignment/a.js',
+          '/../integration/scope-hoisting/commonjs/self-reference-assignment/a.js',
         ),
       );
 
@@ -5082,7 +5082,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-member-wrapped/a.js',
+          '/../integration/scope-hoisting/commonjs/require-member-wrapped/a.js',
         ),
       );
 
@@ -5097,7 +5097,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/self-reference-default/a.js',
+          '/../integration/scope-hoisting/commonjs/self-reference-default/a.js',
         ),
       );
 
@@ -5110,7 +5110,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/commonjs/wrap-expressions/a.js',
+          '../integration/scope-hoisting/commonjs/wrap-expressions/a.js',
         ),
       );
 
@@ -5129,7 +5129,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/commonjs/wrap-expressions/b.js',
+          '../integration/scope-hoisting/commonjs/wrap-expressions/b.js',
         ),
       );
 
@@ -5148,7 +5148,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/commonjs/wrap-default-interop/index.js',
+          '../integration/scope-hoisting/commonjs/wrap-default-interop/index.js',
         ),
       );
 
@@ -5167,7 +5167,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/export-non-object/index.js',
+          '/../integration/scope-hoisting/commonjs/export-non-object/index.js',
         ),
       );
 
@@ -5178,7 +5178,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-local-assign/basic.js',
+          '/../integration/scope-hoisting/commonjs/require-local-assign/basic.js',
         ),
       );
 
@@ -5199,7 +5199,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-local-assign/in-function.js',
+          '/../integration/scope-hoisting/commonjs/require-local-assign/in-function.js',
         ),
       );
 
@@ -5220,7 +5220,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-local-assign/member.js',
+          '/../integration/scope-hoisting/commonjs/require-local-assign/member.js',
         ),
       );
 
@@ -5241,7 +5241,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-local-assign/destructure.js',
+          '/../integration/scope-hoisting/commonjs/require-local-assign/destructure.js',
         ),
       );
 
@@ -5262,7 +5262,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-local-assign/destructure.js',
+          '/../integration/scope-hoisting/commonjs/require-local-assign/destructure.js',
         ),
       );
 
@@ -5283,7 +5283,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-new/a.js',
+          '/../integration/scope-hoisting/commonjs/require-new/a.js',
         ),
       );
 
@@ -5295,7 +5295,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-non-const-export/destructure.js',
+          '/../integration/scope-hoisting/commonjs/require-non-const-export/destructure.js',
         ),
       );
 
@@ -5313,7 +5313,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-non-const-export/member.js',
+          '/../integration/scope-hoisting/commonjs/require-non-const-export/member.js',
         ),
       );
 
@@ -5331,7 +5331,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/require-non-const-export/live.js',
+          '/../integration/scope-hoisting/commonjs/require-non-const-export/live.js',
         ),
       );
 
@@ -5349,7 +5349,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/scope-hoisting/commonjs/wrap-deps-circular/index.js',
+          '/../integration/scope-hoisting/commonjs/wrap-deps-circular/index.js',
         ),
       );
 
@@ -5382,7 +5382,7 @@ describe('scope hoisting', function () {
 
   it.v2('should not throw with JS included from HTML', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/html-js/index.html'),
+      path.join(__dirname, '../integration/html-js/index.html'),
     );
 
     assertBundles(b, [
@@ -5413,7 +5413,7 @@ describe('scope hoisting', function () {
     'should not throw with JS dynamic imports included from HTML',
     async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/html-js-dynamic/index.html'),
+        path.join(__dirname, '../integration/html-js-dynamic/index.html'),
       );
 
       assertBundles(b, [
@@ -5441,7 +5441,7 @@ describe('scope hoisting', function () {
     'should include the prelude in shared entry bundles',
     async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/html-shared/index.html'),
+        path.join(__dirname, '../integration/html-shared/index.html'),
         {
           mode: 'production',
           defaultTargetOptions: {
@@ -5483,7 +5483,7 @@ describe('scope hoisting', function () {
 
   it.skip('does not include prelude if child bundles are isolated', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/worker-shared/index.js'),
+      path.join(__dirname, '../integration/worker-shared/index.js'),
     );
 
     let mainBundle = b.getBundles().find(b => b.name === 'index.js');
@@ -5494,7 +5494,7 @@ describe('scope hoisting', function () {
 
   it('should include prelude in shared worker bundles', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/worker-shared/index.js'),
+      path.join(__dirname, '../integration/worker-shared/index.js'),
       {
         mode: 'production',
         defaultTargetOptions: {
@@ -5522,13 +5522,13 @@ describe('scope hoisting', function () {
   // Mirrors the equivalent test in javascript.js
   it('should insert global variables when needed', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/globals/scope-hoisting.js'),
+      path.join(__dirname, '../integration/globals/scope-hoisting.js'),
     );
 
     let output = await run(b);
     assert.deepEqual(output(), {
-      dir: '../data/integration/globals',
-      file: '../data/integration/globals/index.js',
+      dir: '../integration/globals',
+      file: '../integration/globals/index.js',
       buf: Buffer.from('browser').toString('base64'),
       global: true,
     });
@@ -5538,7 +5538,7 @@ describe('scope hoisting', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/scope-hoisting/es6/async-named-import-ns-reexport/index.js',
+        '/../integration/scope-hoisting/es6/async-named-import-ns-reexport/index.js',
       ),
     );
 
@@ -5549,7 +5549,7 @@ describe('scope hoisting', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/scope-hoisting/es6/used-assignmentexpression/a.js',
+        '/../integration/scope-hoisting/es6/used-assignmentexpression/a.js',
       ),
     );
 
@@ -5560,7 +5560,7 @@ describe('scope hoisting', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/scope-hoisting/es6/wrap-import-arrowfunction/a.js',
+        '/../integration/scope-hoisting/es6/wrap-import-arrowfunction/a.js',
       ),
     );
 
@@ -5583,7 +5583,7 @@ describe('scope hoisting', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/sync-async/same-bundle-scope-hoisting.js',
+        '/../integration/sync-async/same-bundle-scope-hoisting.js',
       ),
       {mode: 'production'},
     );
@@ -5607,7 +5607,7 @@ describe('scope hoisting', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/sync-async/same-ancestry-scope-hoisting.js',
+        '/../integration/sync-async/same-ancestry-scope-hoisting.js',
       ),
       {mode: 'production'},
     );
@@ -5634,7 +5634,7 @@ describe('scope hoisting', function () {
 
   it('loads another bundle from a dynamic import with a shared dependency only when necessary', async () => {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/sync-async-when-needed/index.js'),
+      path.join(__dirname, '../integration/sync-async-when-needed/index.js'),
       {mode: 'production'},
     );
 
@@ -5662,7 +5662,7 @@ describe('scope hoisting', function () {
   it('can static import and dynamic import in the same bundle when another bundle requires async', async () => {
     let b = await bundle(
       ['same-bundle-scope-hoisting.js', 'get-dep-scope-hoisting.js'].map(
-        entry => path.join(__dirname, '../data/integration/sync-async/', entry),
+        entry => path.join(__dirname, '../integration/sync-async/', entry),
       ),
       {mode: 'production'},
     );
@@ -5706,7 +5706,7 @@ describe('scope hoisting', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/shared-exports-for-sibling-descendant/scope-hoisting.js',
+        '/../integration/shared-exports-for-sibling-descendant/scope-hoisting.js',
       ),
       {mode: 'production'},
     );
@@ -5744,7 +5744,7 @@ describe('scope hoisting', function () {
 
   it('deduplicates shared sibling assets between bundle groups', async () => {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/shared-sibling-scope-hoist/index.js'),
+      path.join(__dirname, '../integration/shared-sibling-scope-hoist/index.js'),
     );
 
     assert.deepEqual(await run(b), ['a', 'b', 'c']);
@@ -5755,7 +5755,7 @@ describe('scope hoisting', function () {
     async () => {
       let b = await bundle(
         ['index.js', 'value.js'].map(basename =>
-          path.join(__dirname, '../data/integration/sync-entry-shared', basename),
+          path.join(__dirname, '../integration/sync-entry-shared', basename),
         ),
         {targets: {main: {context: 'node', distDir, isLibrary: true}}},
       );
@@ -5775,7 +5775,7 @@ describe('scope hoisting', function () {
 
   it('can run an async bundle whose entry asset is present in another bundle', async () => {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/async-entry-shared/scope-hoisting.js'),
+      path.join(__dirname, '../integration/async-entry-shared/scope-hoisting.js'),
     );
 
     assertBundles(b, [
@@ -5800,7 +5800,7 @@ describe('scope hoisting', function () {
       ['scope-hoisting.js', 'other-entry.js'].map(basename =>
         path.join(
           __dirname,
-          '/../data/integration/async-entry-shared-sibling',
+          '/../integration/async-entry-shared-sibling',
           basename,
         ),
       ),
@@ -5845,7 +5845,7 @@ describe('scope hoisting', function () {
     async function () {
       let testDir = path.join(
         __dirname,
-        '/../data/integration/scope-hoisting/es6/cache-add-specifier',
+        '/../integration/scope-hoisting/es6/cache-add-specifier',
       );
 
       let b = bundler(path.join(testDir, 'a.js'), {
@@ -5877,7 +5877,7 @@ describe('scope hoisting', function () {
 
   it('should not rewrite this in arrow function class properties', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/js-class-this-esm/a.js'),
+      path.join(__dirname, '../integration/js-class-this-esm/a.js'),
     );
     let res = await run(b);
     assert.deepEqual(res, 'x: 123');
@@ -5885,7 +5885,7 @@ describe('scope hoisting', function () {
 
   it('should call named imports without this context', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/js-import-this/index.js'),
+      path.join(__dirname, '../integration/js-import-this/index.js'),
     );
     let res = await run(b, {output: null}, {strict: true});
     assert.deepEqual(res, {
@@ -5906,7 +5906,7 @@ describe('scope hoisting', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '../data/integration/scope-hoisting/es6/sibling-dependencies/index.html',
+          '../integration/scope-hoisting/es6/sibling-dependencies/index.html',
         ),
       );
       let res = await run(b, {output: null}, {require: false});
@@ -5917,7 +5917,7 @@ describe('scope hoisting', function () {
   it('should unmark dependency as deferred when dependency becomes used', async function () {
     let testDir = path.join(
       __dirname,
-      '../data/integration/scope-hoisting/es6/unmarks-defer-for-new-deps',
+      '../integration/scope-hoisting/es6/unmarks-defer-for-new-deps',
     );
 
     let packageDir = path.join(testDir, '/package');
@@ -5951,7 +5951,7 @@ describe('scope hoisting', function () {
     async function () {
       let testDir = path.join(
         __dirname,
-        '../data/integration/scope-hoisting/es6/unmarks-defer-for-assetgroup',
+        '../integration/scope-hoisting/es6/unmarks-defer-for-assetgroup',
       );
 
       await overlayFS.mkdirp(testDir);
@@ -6000,7 +6000,7 @@ describe('scope hoisting', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/scope-hoisting/es6/unused-require/index.js',
+        '/../integration/scope-hoisting/es6/unused-require/index.js',
       ),
     );
 
@@ -6013,7 +6013,7 @@ describe('scope hoisting', function () {
     async function () {
       let testDir = path.join(
         __dirname,
-        '../data/integration/scope-hoisting/es6/non-deterministic-bundle-hashes',
+        '../integration/scope-hoisting/es6/non-deterministic-bundle-hashes',
       );
 
       const waitHandler = (fileToDelay, fileToWaitFor) => {
@@ -6098,7 +6098,7 @@ describe('scope hoisting', function () {
         let b = await bundle(
           path.join(
             __dirname,
-            '../data/integration/sibling-deduplicate-unreachable/index.js',
+            '../integration/sibling-deduplicate-unreachable/index.js',
           ),
           {mode: 'production'},
         );

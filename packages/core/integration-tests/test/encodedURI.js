@@ -4,7 +4,7 @@ import {bundle, describe, it, outputFS, distDir} from '@atlaspack/test-utils';
 
 describe.v2('encodedURI', function () {
   it('should support bundling files which names in encoded URI', async function () {
-    await bundle(path.join(__dirname, '../data/integration/encodedURI/index.html'));
+    await bundle(path.join(__dirname, '../integration/encodedURI/index.html'));
 
     let files = await outputFS.readdir(distDir);
     let html = await outputFS.readFile(path.join(distDir, 'index.html'));

@@ -155,11 +155,11 @@ describe.v2('sourcemaps', function () {
   it('Should create a basic browser sourcemap', async function () {
     let sourceFilename = path.join(
       __dirname,
-      '/../data/integration/sourcemap/index.js',
+      '/../integration/sourcemap/index.js',
     );
     await bundle(sourceFilename);
 
-    let distDir = path.join(__dirname, '../data/integration/sourcemap/dist/');
+    let distDir = path.join(__dirname, '../integration/sourcemap/dist/');
 
     let filename = path.join(distDir, 'index.js');
     let raw = await outputFS.readFile(filename, 'utf8');
@@ -207,7 +207,7 @@ describe.v2('sourcemaps', function () {
   });
 
   it('Should create a basic browser sourcemap when serving', async function () {
-    let fixture = path.join(__dirname, '../data/integration/sourcemap');
+    let fixture = path.join(__dirname, '../integration/sourcemap');
     let sourceFilename = path.join(fixture, 'index.js');
     await bundle(sourceFilename, {serveOptions: {port: 1234}});
 
@@ -255,11 +255,11 @@ describe.v2('sourcemaps', function () {
   it('Should create a basic node sourcemap', async function () {
     let sourceFilename = path.join(
       __dirname,
-      '/../data/integration/sourcemap-node/index.js',
+      '/../integration/sourcemap-node/index.js',
     );
     await bundle(sourceFilename);
 
-    let distDir = path.join(__dirname, '../data/integration/sourcemap-node/dist/');
+    let distDir = path.join(__dirname, '../integration/sourcemap-node/dist/');
     let filename = path.join(distDir, 'index.js');
     let raw = await outputFS.readFile(filename, 'utf8');
     let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
@@ -313,11 +313,11 @@ describe.v2('sourcemaps', function () {
   });
 
   it('should create a valid sourcemap for a js file with requires', async function () {
-    let sourceDir = path.join(__dirname, '../data/integration/sourcemap-nested/');
+    let sourceDir = path.join(__dirname, '../integration/sourcemap-nested/');
     let sourceFilename = path.join(sourceDir, '/index.js');
     await bundle(sourceFilename);
 
-    let distDir = path.join(__dirname, '../data/integration/sourcemap-nested/dist/');
+    let distDir = path.join(__dirname, '../integration/sourcemap-nested/dist/');
     let filename = path.join(distDir, 'index.js');
     let raw = await outputFS.readFile(filename, 'utf8');
     let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
@@ -396,7 +396,7 @@ describe.v2('sourcemaps', function () {
   it('should create a valid sourcemap for a minified js bundle with requires', async function () {
     let sourceDir = path.join(
       __dirname,
-      '/../data/integration/sourcemap-nested-minified/',
+      '/../integration/sourcemap-nested-minified/',
     );
     let sourceFilename = path.join(sourceDir, '/index.js');
     await bundle(sourceFilename, {
@@ -407,7 +407,7 @@ describe.v2('sourcemaps', function () {
 
     let distDir = path.join(
       __dirname,
-      '/../data/integration/sourcemap-nested-minified/dist/',
+      '/../integration/sourcemap-nested-minified/dist/',
     );
     let filename = path.join(distDir, 'index.js');
     let raw = await outputFS.readFile(filename, 'utf8');
@@ -486,7 +486,7 @@ describe.v2('sourcemaps', function () {
   it('should create a valid sourcemap as a child of a TS bundle', async function () {
     let inputFilePath = path.join(
       __dirname,
-      '/../data/integration/sourcemap-typescript/index.ts',
+      '/../integration/sourcemap-typescript/index.ts',
     );
 
     await bundle(inputFilePath);
@@ -529,7 +529,7 @@ describe.v2('sourcemaps', function () {
   it('should create a valid sourcemap as a child of a nested TS bundle', async function () {
     let inputFilePath = path.join(
       __dirname,
-      '/../data/integration/sourcemap-typescript-nested/index.ts',
+      '/../integration/sourcemap-typescript-nested/index.ts',
     );
 
     await bundle(inputFilePath);
@@ -569,7 +569,7 @@ describe.v2('sourcemaps', function () {
     });
 
     let local = await inputFS.readFile(
-      path.join(__dirname, '../data/integration/sourcemap-typescript-nested/local.ts'),
+      path.join(__dirname, '../integration/sourcemap-typescript-nested/local.ts'),
       'utf-8',
     );
     checkSourceMapping({
@@ -584,7 +584,7 @@ describe.v2('sourcemaps', function () {
   it('should create a valid sourcemap when using the Typescript tsc transformer', async function () {
     let inputFilePath = path.join(
       __dirname,
-      '/../data/integration/sourcemap-typescript-tsc/src/index.ts',
+      '/../integration/sourcemap-typescript-tsc/src/index.ts',
     );
 
     let b = await bundle(inputFilePath);
@@ -624,7 +624,7 @@ describe.v2('sourcemaps', function () {
     async function test(minify) {
       let inputFilePath = path.join(
         __dirname,
-        '/../data/integration/sourcemap-css/style.css',
+        '/../integration/sourcemap-css/style.css',
       );
 
       await bundle(inputFilePath, {
@@ -672,7 +672,7 @@ describe.v2('sourcemaps', function () {
     async function test(minify) {
       let inputFilePath = path.join(
         __dirname,
-        '/../data/integration/sourcemap-css-import/style.css',
+        '/../integration/sourcemap-css-import/style.css',
       );
 
       await bundle(inputFilePath, {
@@ -760,7 +760,7 @@ describe.v2('sourcemaps', function () {
     async function test(shouldOptimize) {
       let inputFilePath = path.join(
         __dirname,
-        '/../data/integration/sourcemap-sass/style.scss',
+        '/../integration/sourcemap-sass/style.scss',
       );
 
       await bundle(inputFilePath, {
@@ -810,7 +810,7 @@ describe.v2('sourcemaps', function () {
   it('should create a valid sourcemap for a Sass asset w/ imports', async function () {
     let inputFilePath = path.join(
       __dirname,
-      '/../data/integration/scss-sourcemap-imports/style.scss',
+      '/../integration/scss-sourcemap-imports/style.scss',
     );
 
     await bundle(inputFilePath);
@@ -833,7 +833,7 @@ describe.v2('sourcemaps', function () {
     // This should actually just be `./integration/scss-sourcemap-imports/with_url.scss`
     // but this is a small bug in the extend utility of the source-map library
     assert.deepEqual(mapData.sources, [
-      '../data/integration/scss-sourcemap-imports/with_url.scss',
+      '../integration/scss-sourcemap-imports/with_url.scss',
     ]);
 
     let input = await inputFS.readFile(
@@ -846,7 +846,7 @@ describe.v2('sourcemaps', function () {
       source: input,
       generated: raw,
       str: 'body',
-      sourcePath: '../data/integration/scss-sourcemap-imports/with_url.scss',
+      sourcePath: '../integration/scss-sourcemap-imports/with_url.scss',
     });
   });
 
@@ -854,7 +854,7 @@ describe.v2('sourcemaps', function () {
     async function test(shouldOptimize) {
       let inputFilePath = path.join(
         __dirname,
-        '/../data/integration/sourcemap-sass-imported/style.css',
+        '/../integration/sourcemap-sass-imported/style.css',
       );
 
       await bundle(inputFilePath, {
@@ -978,13 +978,13 @@ describe.v2('sourcemaps', function () {
   it('Should be able to create a sourcemap with inlined sources', async function () {
     let sourceFilename = path.join(
       __dirname,
-      '/../data/integration/sourcemap-inline-sources/index.js',
+      '/../integration/sourcemap-inline-sources/index.js',
     );
     await bundle(sourceFilename);
 
     let distDir = path.join(
       __dirname,
-      '/../data/integration/sourcemap-inline-sources/dist/',
+      '/../integration/sourcemap-inline-sources/dist/',
     );
 
     let filename = path.join(distDir, 'index.js');
@@ -1009,13 +1009,13 @@ describe.v2('sourcemaps', function () {
   it('Should be able to create inline sourcemaps', async function () {
     let sourceFilename = path.join(
       __dirname,
-      '/../data/integration/sourcemap-generate-inline/index.js',
+      '/../integration/sourcemap-generate-inline/index.js',
     );
     await bundle(sourceFilename);
 
     let distDir = path.join(
       __dirname,
-      '/../data/integration/sourcemap-generate-inline/dist/',
+      '/../integration/sourcemap-generate-inline/dist/',
     );
 
     let filename = path.join(distDir, 'index.js');
@@ -1041,7 +1041,7 @@ describe.v2('sourcemaps', function () {
 
   it('should respect --no-source-maps', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/sourcemap/index.js'),
+      path.join(__dirname, '../integration/sourcemap/index.js'),
       {
         defaultTargetOptions: {
           sourceMaps: false,
@@ -1058,7 +1058,7 @@ describe.v2('sourcemaps', function () {
   it('Should just skip invalid inlined sourcemaps', async function () {
     let sourceFilename = path.join(
       __dirname,
-      '/../data/integration/sourcemap-invalid-existing/index.js',
+      '/../integration/sourcemap-invalid-existing/index.js',
     );
     let b = await bundle(sourceFilename);
 
@@ -1077,7 +1077,7 @@ describe.v2('sourcemaps', function () {
   it('should load existing sourcemaps of libraries', async function () {
     let sourceFilename = path.join(
       __dirname,
-      '/../data/integration/sourcemap-existing/index.js',
+      '/../integration/sourcemap-existing/index.js',
     );
     let b = await bundle(sourceFilename);
 
@@ -1091,9 +1091,9 @@ describe.v2('sourcemaps', function () {
     let map = sourcemapData.map;
     assert.equal(map.sourceRoot, '../test/');
     assert.deepEqual(map.sources, [
-      '../data/integration/sourcemap-existing/index.js',
-      '../data/integration/sourcemap-existing/sum.js',
-      '../data/integration/sourcemap-existing/sum.ts',
+      '../integration/sourcemap-existing/index.js',
+      '../integration/sourcemap-existing/sum.js',
+      '../integration/sourcemap-existing/sum.ts',
     ]);
 
     for (let source of map.sources) {
@@ -1113,7 +1113,7 @@ describe.v2('sourcemaps', function () {
   it('should load inline sourcemaps of libraries', async function () {
     let sourceFilename = path.join(
       __dirname,
-      '/../data/integration/sourcemap-inline/index.js',
+      '/../integration/sourcemap-inline/index.js',
     );
     let b = await bundle(sourceFilename);
 
@@ -1127,9 +1127,9 @@ describe.v2('sourcemaps', function () {
     let map = sourcemapData.map;
     assert.equal(map.sourceRoot, '../test/');
     assert.deepEqual(map.sources, [
-      '../data/integration/sourcemap-inline/index.js',
-      '../data/integration/sourcemap-inline/sum.js',
-      '../data/integration/sourcemap-inline/sum.ts',
+      '../integration/sourcemap-inline/index.js',
+      '../integration/sourcemap-inline/sum.js',
+      '../integration/sourcemap-inline/sum.ts',
     ]);
 
     for (let source of map.sources) {
@@ -1148,7 +1148,7 @@ describe.v2('sourcemaps', function () {
   it('should load referenced contents of sourcemaps', async function () {
     let sourceFilename = path.join(
       __dirname,
-      '/../data/integration/sourcemap-external-contents/index.js',
+      '/../integration/sourcemap-external-contents/index.js',
     );
     let b = await bundle(sourceFilename);
 
@@ -1176,7 +1176,7 @@ describe.v2('sourcemaps', function () {
     async function test(minify) {
       let sourceFilename = path.join(
         __dirname,
-        '/../data/integration/sourcemap-css-existing/style.css',
+        '/../integration/sourcemap-css-existing/style.css',
       );
       let b = await bundle(sourceFilename, {
         defaultTargetOptions: {shouldOptimize: minify},
@@ -1256,7 +1256,7 @@ describe.v2('sourcemaps', function () {
   it('should handle comments correctly in sourcemaps', async function () {
     let sourceFilename = path.join(
       __dirname,
-      '/../data/integration/sourcemap-comments/index.js',
+      '/../integration/sourcemap-comments/index.js',
     );
     let b = await bundle(sourceFilename, {
       defaultTargetOptions: {
@@ -1321,7 +1321,7 @@ describe.v2('sourcemaps', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '../data/integration/sourcemap-original-sourcecontents/index.js',
+        '../integration/sourcemap-original-sourcecontents/index.js',
       ),
       {
         defaultTargetOptions: {
@@ -1366,7 +1366,7 @@ describe.v2('sourcemaps', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '../data/integration/sourcemap-original-sourcecontents-ts/index.tsx',
+        '../integration/sourcemap-original-sourcecontents-ts/index.tsx',
       ),
       {
         defaultTargetOptions: {
@@ -1410,7 +1410,7 @@ describe.v2('sourcemaps', function () {
   it('retains sourcesContent from the original sources from a large text file', async () => {
     let testDir = path.join(
       __dirname,
-      '../data/integration/sourcemap-original-sourcecontents-large',
+      '../integration/sourcemap-original-sourcecontents-large',
     );
 
     await outputFS.mkdirp(testDir);

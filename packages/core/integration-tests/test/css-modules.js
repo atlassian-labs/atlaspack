@@ -17,7 +17,7 @@ import postcss from 'postcss';
 describe.v2('css modules', () => {
   it('should support transforming css modules (require)', async () => {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/postcss-modules-cjs/index.js'),
+      path.join(__dirname, '../integration/postcss-modules-cjs/index.js'),
     );
 
     assertBundles(b, [
@@ -47,7 +47,7 @@ describe.v2('css modules', () => {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/postcss-modules-import-default/index.js',
+        '/../integration/postcss-modules-import-default/index.js',
       ),
       {mode: 'production'},
     );
@@ -82,7 +82,7 @@ describe.v2('css modules', () => {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/postcss-modules-import-namespace/index.js',
+        '/../integration/postcss-modules-import-namespace/index.js',
       ),
       {mode: 'production'},
     );
@@ -125,7 +125,7 @@ describe.v2('css modules', () => {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/postcss-modules-import-namespace/index.js',
+        '/../integration/postcss-modules-import-namespace/index.js',
       ),
       {
         mode: 'production',
@@ -166,7 +166,7 @@ describe.v2('css modules', () => {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/postcss-modules-import-namespace-whole/index.js',
+        '/../integration/postcss-modules-import-namespace-whole/index.js',
       ),
       {mode: 'production'},
     );
@@ -208,7 +208,7 @@ describe.v2('css modules', () => {
 
   it('should support css modules composes imports', async () => {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/postcss-composes/index.js'),
+      path.join(__dirname, '../integration/postcss-composes/index.js'),
     );
 
     assertBundles(b, [
@@ -251,7 +251,7 @@ describe.v2('css modules', () => {
 
   it('should not include css twice for composes imports', async () => {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/postcss-composes/index.js'),
+      path.join(__dirname, '../integration/postcss-composes/index.js'),
     );
 
     await run(b);
@@ -265,7 +265,7 @@ describe.v2('css modules', () => {
 
   it('should support composes imports for sass', async () => {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/postcss-composes/index2.js'),
+      path.join(__dirname, '../integration/postcss-composes/index2.js'),
     );
 
     assertBundles(b, [
@@ -293,7 +293,7 @@ describe.v2('css modules', () => {
 
   it('should support composes imports with custom path names', async () => {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/postcss-composes/index3.js'),
+      path.join(__dirname, '../integration/postcss-composes/index3.js'),
     );
 
     assertBundles(b, [
@@ -321,7 +321,7 @@ describe.v2('css modules', () => {
 
   it('should support deep nested composes imports', async () => {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/postcss-composes/index4.js'),
+      path.join(__dirname, '../integration/postcss-composes/index4.js'),
     );
 
     assertBundles(b, [
@@ -362,7 +362,7 @@ describe.v2('css modules', () => {
 
   it('should support composes imports for multiple selectors', async () => {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/postcss-composes/index5.js'),
+      path.join(__dirname, '../integration/postcss-composes/index5.js'),
     );
 
     assertBundles(b, [
@@ -392,7 +392,7 @@ describe.v2('css modules', () => {
         bundle(
           path.join(
             __dirname,
-            '/../data/integration/no-export-error-with-correct-filetype/src/App.jsx',
+            '/../integration/no-export-error-with-correct-filetype/src/App.jsx',
           ),
           {
             shouldDisableCache: true,
@@ -409,7 +409,7 @@ describe.v2('css modules', () => {
               {
                 filePath: path.join(
                   __dirname,
-                  '/../data/integration/no-export-error-with-correct-filetype/src/App.jsx',
+                  '/../integration/no-export-error-with-correct-filetype/src/App.jsx',
                 ),
                 language: 'js',
                 codeHighlights: [
@@ -438,7 +438,7 @@ describe.v2('css modules', () => {
 
   it('should fall back to postcss for legacy css modules', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/css-modules-legacy/index.js'),
+      path.join(__dirname, '../integration/css-modules-legacy/index.js'),
     );
 
     assertBundles(b, [
@@ -458,7 +458,7 @@ describe.v2('css modules', () => {
 
   it('should fall back to postcss for legacy css modules with :export', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/css-modules-legacy/b.js'),
+      path.join(__dirname, '../integration/css-modules-legacy/b.js'),
     );
 
     assertBundles(b, [
@@ -478,7 +478,7 @@ describe.v2('css modules', () => {
 
   it('should optimize away unused @keyframes', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/css-modules-keyframes/index.js'),
+      path.join(__dirname, '../integration/css-modules-keyframes/index.js'),
       {
         mode: 'production',
       },
@@ -502,7 +502,7 @@ describe.v2('css modules', () => {
 
   it('should not double optimize css modules processed with postcss', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/postcss-modules-optimize/index.js'),
+      path.join(__dirname, '../integration/postcss-modules-optimize/index.js'),
       {
         mode: 'production',
       },
@@ -526,7 +526,7 @@ describe.v2('css modules', () => {
 
   it('should compile css modules for multiple targets', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/css-modules-targets/index.html'),
+      path.join(__dirname, '../integration/css-modules-targets/index.html'),
       {
         mode: 'production',
       },
@@ -554,7 +554,7 @@ describe.v2('css modules', () => {
 
   it('should not fail with many css modules', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/css-modules-bug/src/index.html'),
+      path.join(__dirname, '../integration/css-modules-bug/src/index.html'),
     );
 
     assertBundles(b, [
@@ -582,8 +582,8 @@ describe.v2('css modules', () => {
   it('should handle @import in css modules', async function () {
     let b = await bundle(
       [
-        path.join(__dirname, '../data/integration/css-modules-import/page1.html'),
-        path.join(__dirname, '../data/integration/css-modules-import/page2.html'),
+        path.join(__dirname, '../integration/css-modules-import/page1.html'),
+        path.join(__dirname, '../integration/css-modules-import/page2.html'),
       ],
       {mode: 'production'},
     );
@@ -640,7 +640,7 @@ describe.v2('css modules', () => {
 
   it('should not process inline <style> elements as a CSS module', async function () {
     await bundle(
-      path.join(__dirname, '../data/integration/css-modules-style/index.html'),
+      path.join(__dirname, '../integration/css-modules-style/index.html'),
     );
     let contents = await outputFS.readFile(
       path.join(distDir, 'index.html'),
@@ -651,7 +651,7 @@ describe.v2('css modules', () => {
 
   it('should support global css modules via boolean config', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/css-modules-global/a/index.js'),
+      path.join(__dirname, '../integration/css-modules-global/a/index.js'),
       {mode: 'production'},
     );
     let res = await run(b);
@@ -667,7 +667,7 @@ describe.v2('css modules', () => {
 
   it('should support global css modules via object config', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/css-modules-global/b/index.js'),
+      path.join(__dirname, '../integration/css-modules-global/b/index.js'),
       {mode: 'production'},
     );
     let res = await run(b);
@@ -682,7 +682,7 @@ describe.v2('css modules', () => {
 
   it('should optimize away unused variables when dashedIdents option is used', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/css-modules-vars/index.js'),
+      path.join(__dirname, '../integration/css-modules-vars/index.js'),
       {mode: 'production'},
     );
     let contents = await outputFS.readFile(
@@ -699,7 +699,7 @@ describe.v2('css modules', () => {
 
   it('should group together css and css modules into one bundle', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/css-module-css-siblings/index.html'),
+      path.join(__dirname, '../integration/css-module-css-siblings/index.html'),
     );
 
     let res = [];
@@ -721,7 +721,7 @@ describe.v2('css modules', () => {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/css-modules-merging-siblings/index.html',
+        '/../integration/css-modules-merging-siblings/index.html',
       ),
     );
     let res = [];
@@ -739,8 +739,8 @@ describe.v2('css modules', () => {
 
   it('should duplicate css modules between targets', async function () {
     let b = await bundle([
-      path.join(__dirname, '../data/integration/css-module-self-references/a'),
-      path.join(__dirname, '../data/integration/css-module-self-references/b'),
+      path.join(__dirname, '../integration/css-module-self-references/a'),
+      path.join(__dirname, '../integration/css-module-self-references/b'),
     ]);
 
     assertBundles(b, [

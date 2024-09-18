@@ -15,7 +15,7 @@ import {
 
 const tscConfig = path.join(
   __dirname,
-  '/../data/integration/typescript-config/.parcelrc',
+  '/../integration/typescript-config/.parcelrc',
 );
 
 describe.v2('typescript', function () {
@@ -31,7 +31,7 @@ describe.v2('typescript', function () {
   ]) {
     it('should produce a ts bundle using ES6 imports', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/typescript/index.ts'),
+        path.join(__dirname, '../integration/typescript/index.ts'),
         {config},
       );
 
@@ -49,7 +49,7 @@ describe.v2('typescript', function () {
 
     it('should produce a ts bundle using commonJS require', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/typescript-require/index.ts'),
+        path.join(__dirname, '../integration/typescript-require/index.ts'),
         {config},
       );
 
@@ -67,7 +67,7 @@ describe.v2('typescript', function () {
 
     it('should support json require', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/typescript-json/index.ts'),
+        path.join(__dirname, '../integration/typescript-json/index.ts'),
       );
 
       // assert.equal(b.assets.size, 2);
@@ -80,7 +80,7 @@ describe.v2('typescript', function () {
 
     it('should support env variables', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/typescript-env/index.ts'),
+        path.join(__dirname, '../integration/typescript-env/index.ts'),
         {config},
       );
 
@@ -98,7 +98,7 @@ describe.v2('typescript', function () {
 
     it('should support importing a URL to a raw asset', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/typescript-raw/index.ts'),
+        path.join(__dirname, '../integration/typescript-raw/index.ts'),
         {config},
       );
 
@@ -125,7 +125,7 @@ describe.v2('typescript', function () {
 
     it('should minify with minify enabled', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/typescript-require/index.ts'),
+        path.join(__dirname, '../integration/typescript-require/index.ts'),
         {
           config,
           defaultTargetOptions: {
@@ -151,7 +151,7 @@ describe.v2('typescript', function () {
 
     it('should support compiling JSX', async function () {
       await bundle(
-        path.join(__dirname, '../data/integration/typescript-jsx/index.tsx'),
+        path.join(__dirname, '../integration/typescript-jsx/index.tsx'),
         {config},
       );
 
@@ -164,7 +164,7 @@ describe.v2('typescript', function () {
 
     it('should use esModuleInterop by default', async function () {
       let b = await bundle(
-        path.join(__dirname, '../data/integration/typescript-interop/index.ts'),
+        path.join(__dirname, '../integration/typescript-interop/index.ts'),
         {config},
       );
 
@@ -185,7 +185,7 @@ describe.v2('typescript', function () {
         return;
       }
       let b = await bundle(
-        path.join(__dirname, '../data/integration/typescript-fs/index.ts'),
+        path.join(__dirname, '../integration/typescript-fs/index.ts'),
         {config},
       );
 
@@ -203,7 +203,7 @@ describe.v2('typescript', function () {
         return;
       }
       await bundle(
-        path.join(__dirname, '../data/integration/typescript-legacy-cast/index.ts'),
+        path.join(__dirname, '../integration/typescript-legacy-cast/index.ts'),
         {config},
       );
     });
@@ -213,7 +213,7 @@ describe.v2('typescript', function () {
         return;
       }
       let b = await bundle(
-        path.join(__dirname, '../data/integration/typescript-enum/index.ts'),
+        path.join(__dirname, '../integration/typescript-enum/index.ts'),
         {config},
       );
 
@@ -246,7 +246,7 @@ describe.v2('typescript', function () {
       let b = await bundle(
         path.join(
           __dirname,
-          '/../data/integration/typescript-import-type-reexport/index.ts',
+          '/../integration/typescript-import-type-reexport/index.ts',
         ),
         {config},
       );

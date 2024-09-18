@@ -17,7 +17,7 @@ describe.v2('json reporter', () => {
   it('logs bundling a commonjs bundle to stdout as json', async () => {
     let consoleStub = sinon.stub(console, 'log');
     try {
-      await bundle(path.join(__dirname, '../data/integration/commonjs/index.js'), {
+      await bundle(path.join(__dirname, '../integration/commonjs/index.js'), {
         config,
         logLevel: 'info',
       });

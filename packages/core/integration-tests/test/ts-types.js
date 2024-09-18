@@ -17,7 +17,7 @@ import {normalizeSeparators} from '@atlaspack/utils';
 describe.v2('typescript types', function () {
   it('should generate a typescript declaration file', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/ts-types/main/index.ts'),
+      path.join(__dirname, '../integration/ts-types/main/index.ts'),
     );
 
     assertBundles(b, [
@@ -33,12 +33,12 @@ describe.v2('typescript types', function () {
 
     let dist = (
       await outputFS.readFile(
-        path.join(__dirname, '../data/integration/ts-types/main/dist/types.d.ts'),
+        path.join(__dirname, '../integration/ts-types/main/dist/types.d.ts'),
         'utf8',
       )
     ).replace(/\r\n/g, '\n');
     let expected = await inputFS.readFile(
-      path.join(__dirname, '../data/integration/ts-types/main/expected.d.ts'),
+      path.join(__dirname, '../integration/ts-types/main/expected.d.ts'),
       'utf8',
     );
     assert.equal(dist, expected);
@@ -46,7 +46,7 @@ describe.v2('typescript types', function () {
 
   it('should generate ts declarations with imports', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/ts-types/importing/index.ts'),
+      path.join(__dirname, '../integration/ts-types/importing/index.ts'),
     );
 
     assertBundles(b, [
@@ -62,12 +62,12 @@ describe.v2('typescript types', function () {
 
     let dist = (
       await outputFS.readFile(
-        path.join(__dirname, '../data/integration/ts-types/importing/dist/types.d.ts'),
+        path.join(__dirname, '../integration/ts-types/importing/dist/types.d.ts'),
         'utf8',
       )
     ).replace(/\r\n/g, '\n');
     let expected = await inputFS.readFile(
-      path.join(__dirname, '../data/integration/ts-types/importing/expected.d.ts'),
+      path.join(__dirname, '../integration/ts-types/importing/expected.d.ts'),
       'utf8',
     );
     assert.equal(dist, expected);
@@ -77,7 +77,7 @@ describe.v2('typescript types', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/ts-types/importing-collision/index.ts',
+        '/../integration/ts-types/importing-collision/index.ts',
       ),
     );
 
@@ -96,7 +96,7 @@ describe.v2('typescript types', function () {
       await outputFS.readFile(
         path.join(
           __dirname,
-          '/../data/integration/ts-types/importing-collision/dist/types.d.ts',
+          '/../integration/ts-types/importing-collision/dist/types.d.ts',
         ),
         'utf8',
       )
@@ -104,7 +104,7 @@ describe.v2('typescript types', function () {
     let expected = await inputFS.readFile(
       path.join(
         __dirname,
-        '/../data/integration/ts-types/importing-collision/expected.d.ts',
+        '/../integration/ts-types/importing-collision/expected.d.ts',
       ),
       'utf8',
     );
@@ -113,7 +113,7 @@ describe.v2('typescript types', function () {
 
   it('should generate ts declarations with exports', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/ts-types/exporting/index.ts'),
+      path.join(__dirname, '../integration/ts-types/exporting/index.ts'),
     );
 
     assertBundles(b, [
@@ -129,12 +129,12 @@ describe.v2('typescript types', function () {
 
     let dist = (
       await outputFS.readFile(
-        path.join(__dirname, '../data/integration/ts-types/exporting/dist/types.d.ts'),
+        path.join(__dirname, '../integration/ts-types/exporting/dist/types.d.ts'),
         'utf8',
       )
     ).replace(/\r\n/g, '\n');
     let expected = await inputFS.readFile(
-      path.join(__dirname, '../data/integration/ts-types/exporting/expected.d.ts'),
+      path.join(__dirname, '../integration/ts-types/exporting/expected.d.ts'),
       'utf8',
     );
     assert.equal(dist, expected);
@@ -142,7 +142,7 @@ describe.v2('typescript types', function () {
 
   it('should generate ts declarations with export of an overloaded function signature', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/ts-types/exporting-overload/index.ts'),
+      path.join(__dirname, '../integration/ts-types/exporting-overload/index.ts'),
     );
 
     assertBundles(b, [
@@ -160,7 +160,7 @@ describe.v2('typescript types', function () {
       await outputFS.readFile(
         path.join(
           __dirname,
-          '/../data/integration/ts-types/exporting-overload/dist/types.d.ts',
+          '/../integration/ts-types/exporting-overload/dist/types.d.ts',
         ),
         'utf8',
       )
@@ -168,7 +168,7 @@ describe.v2('typescript types', function () {
     let expected = await inputFS.readFile(
       path.join(
         __dirname,
-        '/../data/integration/ts-types/exporting-overload/expected.d.ts',
+        '/../integration/ts-types/exporting-overload/expected.d.ts',
       ),
       'utf8',
     );
@@ -177,7 +177,7 @@ describe.v2('typescript types', function () {
 
   it('should generate ts declarations with externals', async function () {
     let b = await bundle(
-      path.join(__dirname, '../data/integration/ts-types/externals/index.tsx'),
+      path.join(__dirname, '../integration/ts-types/externals/index.tsx'),
     );
 
     assertBundles(b, [
@@ -193,12 +193,12 @@ describe.v2('typescript types', function () {
 
     let dist = (
       await outputFS.readFile(
-        path.join(__dirname, '../data/integration/ts-types/externals/dist/types.d.ts'),
+        path.join(__dirname, '../integration/ts-types/externals/dist/types.d.ts'),
         'utf8',
       )
     ).replace(/\r\n/g, '\n');
     let expected = await inputFS.readFile(
-      path.join(__dirname, '../data/integration/ts-types/externals/expected.d.ts'),
+      path.join(__dirname, '../integration/ts-types/externals/expected.d.ts'),
       'utf8',
     );
     assert.equal(dist, expected);
@@ -208,7 +208,7 @@ describe.v2('typescript types', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/../data/integration/ts-types/import-export-collision/index.ts',
+        '/../integration/ts-types/import-export-collision/index.ts',
       ),
     );
 
@@ -227,7 +227,7 @@ describe.v2('typescript types', function () {
       await outputFS.readFile(
         path.join(
           __dirname,
-          '/../data/integration/ts-types/import-export-collision/dist/types.d.ts',
+          '/../integration/ts-types/import-export-collision/dist/types.d.ts',
         ),
         'utf8',
       )
@@ -235,7 +235,7 @@ describe.v2('typescript types', function () {
     let expected = await inputFS.readFile(
       path.join(
         __dirname,
-        '/../data/integration/ts-types/import-export-collision/expected.d.ts',
+        '/../integration/ts-types/import-export-collision/expected.d.ts',
       ),
       'utf8',
     );
@@ -244,17 +244,17 @@ describe.v2('typescript types', function () {
 
   it('should remove private properties', async function () {
     await bundle(
-      path.join(__dirname, '../data/integration/ts-types/private/index.ts'),
+      path.join(__dirname, '../integration/ts-types/private/index.ts'),
     );
 
     let dist = (
       await outputFS.readFile(
-        path.join(__dirname, '../data/integration/ts-types/private/dist/types.d.ts'),
+        path.join(__dirname, '../integration/ts-types/private/dist/types.d.ts'),
         'utf8',
       )
     ).replace(/\r\n/g, '\n');
     let expected = await inputFS.readFile(
-      path.join(__dirname, '../data/integration/ts-types/private/expected.d.ts'),
+      path.join(__dirname, '../integration/ts-types/private/expected.d.ts'),
       'utf8',
     );
     assert.equal(dist, expected);
@@ -262,14 +262,14 @@ describe.v2('typescript types', function () {
 
   it('should not throw errors on typing of a callback which returns a promise or value', async function () {
     await bundle(
-      path.join(__dirname, '../data/integration/ts-types/promise-or-value/index.ts'),
+      path.join(__dirname, '../integration/ts-types/promise-or-value/index.ts'),
     );
 
     let dist = (
       await outputFS.readFile(
         path.join(
           __dirname,
-          '/../data/integration/ts-types/promise-or-value/dist/types.d.ts',
+          '/../integration/ts-types/promise-or-value/dist/types.d.ts',
         ),
         'utf8',
       )
@@ -278,7 +278,7 @@ describe.v2('typescript types', function () {
     let expected = await inputFS.readFile(
       path.join(
         __dirname,
-        '/../data/integration/ts-types/promise-or-value/expected.d.ts',
+        '/../integration/ts-types/promise-or-value/expected.d.ts',
       ),
       'utf8',
     );
@@ -286,7 +286,7 @@ describe.v2('typescript types', function () {
   });
 
   it('should correctly reference unbuilt monorepo packages', async function () {
-    let fixtureDir = path.join(__dirname, '../data/integration/ts-types/monorepo');
+    let fixtureDir = path.join(__dirname, '../integration/ts-types/monorepo');
     await outputFS.mkdirp(path.join(fixtureDir, 'node_modules'));
     await ncp(fixtureDir, fixtureDir);
     await outputFS.symlink(
@@ -313,17 +313,17 @@ describe.v2('typescript types', function () {
 
   it('should generate a typescript declaration file even when composite and incremental are true', async function () {
     await bundle(
-      path.join(__dirname, '../data/integration/ts-types/composite/index.ts'),
+      path.join(__dirname, '../integration/ts-types/composite/index.ts'),
     );
 
     let dist = (
       await outputFS.readFile(
-        path.join(__dirname, '../data/integration/ts-types/composite/dist/index.d.ts'),
+        path.join(__dirname, '../integration/ts-types/composite/dist/index.d.ts'),
         'utf8',
       )
     ).replace(/\r\n/g, '\n');
     let expected = await inputFS.readFile(
-      path.join(__dirname, '../data/integration/ts-types/composite/expected.d.ts'),
+      path.join(__dirname, '../integration/ts-types/composite/expected.d.ts'),
       'utf8',
     );
     assert.equal(dist, expected);
@@ -331,11 +331,11 @@ describe.v2('typescript types', function () {
 
   it('should throw a diagnostic on fatal errors', async function () {
     let message = md`Return type of exported function has or is using name 'Snapshot' from external module "${normalizeSeparators(
-      path.join(__dirname, '../data/integration/ts-types/error/file2'),
+      path.join(__dirname, '../integration/ts-types/error/file2'),
     )}" but cannot be named.`;
     await assert.rejects(
       () =>
-        bundle(path.join(__dirname, '../data/integration/ts-types/error/index.ts')),
+        bundle(path.join(__dirname, '../integration/ts-types/error/index.ts')),
       {
         name: 'BuildError',
         message,
@@ -345,10 +345,10 @@ describe.v2('typescript types', function () {
             codeFrames: [
               {
                 filePath: normalizeSeparators(
-                  path.join(__dirname, '../data/integration/ts-types/error/index.ts'),
+                  path.join(__dirname, '../integration/ts-types/error/index.ts'),
                 ),
                 code: await inputFS.readFile(
-                  path.join(__dirname, '../data/integration/ts-types/error/index.ts'),
+                  path.join(__dirname, '../integration/ts-types/error/index.ts'),
                   'utf8',
                 ),
                 codeHighlights: [
@@ -368,7 +368,7 @@ describe.v2('typescript types', function () {
   });
 
   it('should work with module augmentation', async function () {
-    let fixtureDir = path.join(__dirname, '../data/integration/ts-types/augmentation');
+    let fixtureDir = path.join(__dirname, '../integration/ts-types/augmentation');
     await outputFS.mkdirp(path.join(fixtureDir, 'node_modules'));
     await ncp(fixtureDir, fixtureDir);
     await outputFS.symlink(
@@ -409,7 +409,7 @@ describe.v2('typescript types', function () {
     await bundle(
       path.join(
         __dirname,
-        '/../data/integration/ts-types/re-exporting-aggregating/index.ts',
+        '/../integration/ts-types/re-exporting-aggregating/index.ts',
       ),
     );
 
@@ -417,7 +417,7 @@ describe.v2('typescript types', function () {
       await outputFS.readFile(
         path.join(
           __dirname,
-          '/../data/integration/ts-types/re-exporting-aggregating/dist/types.d.ts',
+          '/../integration/ts-types/re-exporting-aggregating/dist/types.d.ts',
         ),
         'utf8',
       )
@@ -425,7 +425,7 @@ describe.v2('typescript types', function () {
     let expected = await inputFS.readFile(
       path.join(
         __dirname,
-        '/../data/integration/ts-types/re-exporting-aggregating/expected.d.ts',
+        '/../integration/ts-types/re-exporting-aggregating/expected.d.ts',
       ),
       'utf8',
     );
@@ -434,21 +434,21 @@ describe.v2('typescript types', function () {
 
   it('should handle a tsconfig file with paths on windows', async function () {
     await bundle(
-      path.join(__dirname, '../data/integration/ts-types/windows-paths/index.ts'),
+      path.join(__dirname, '../integration/ts-types/windows-paths/index.ts'),
     );
 
     let dist = (
       await outputFS.readFile(
         path.join(
           __dirname,
-          '/../data/integration/ts-types/windows-paths/dist/types.d.ts',
+          '/../integration/ts-types/windows-paths/dist/types.d.ts',
         ),
         'utf8',
       )
     ).replace(/\r\n/g, '\n');
 
     let expected = await inputFS.readFile(
-      path.join(__dirname, '../data/integration/ts-types/windows-paths/expected.d.ts'),
+      path.join(__dirname, '../integration/ts-types/windows-paths/expected.d.ts'),
       'utf8',
     );
     assert.equal(dist, expected);

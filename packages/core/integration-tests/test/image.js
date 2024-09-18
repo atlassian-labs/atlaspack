@@ -21,7 +21,7 @@ describe('images', function () {
   });
 
   it('can be resized with a query string', async () => {
-    await bundle(join(__dirname, '../data/integration/image/resized.js'));
+    await bundle(join(__dirname, '../integration/image/resized.js'));
 
     let filenames = await outputFS.readdir(distDir);
     let exts = filenames.map(f => extname(f)).filter(ext => ext !== '.map');
@@ -97,7 +97,7 @@ describe('images', function () {
   });
 
   it('are optimised as lossless jpg', async () => {
-    let img = join(__dirname, '../data/integration/image/image.jpg');
+    let img = join(__dirname, '../integration/image/image.jpg');
     let b = await bundle(img, {
       defaultTargetOptions: {
         shouldOptimize: true,
@@ -117,7 +117,7 @@ describe('images', function () {
   });
 
   it('are optimised as lossless progressive jpgs', async function () {
-    let img = join(__dirname, '../data/integration/image/banana.jpg');
+    let img = join(__dirname, '../integration/image/banana.jpg');
     let b = await bundle(img, {
       defaultTargetOptions: {
         shouldOptimize: true,
@@ -141,7 +141,7 @@ describe('images', function () {
   });
 
   it('are optimised as lossless pngs', async function () {
-    let img = join(__dirname, '../data/integration/image/clock.png');
+    let img = join(__dirname, '../integration/image/clock.png');
     let b = await bundle(img, {
       defaultTargetOptions: {
         shouldOptimize: true,
@@ -161,7 +161,7 @@ describe('images', function () {
   });
 
   it.v2('retain EXIF data when resized with a query string', async () => {
-    let b = await bundle(join(__dirname, '../data/integration/image-exif/resized.js'));
+    let b = await bundle(join(__dirname, '../integration/image-exif/resized.js'));
 
     let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
 
@@ -178,7 +178,7 @@ describe('images', function () {
 
   it('removes EXIF data when optimizing', async () => {
     let b = await bundle(
-      join(__dirname, '../data/integration/image-exif/resized.js'),
+      join(__dirname, '../integration/image-exif/resized.js'),
       {
         defaultTargetOptions: {
           shouldOptimize: true,
@@ -195,7 +195,7 @@ describe('images', function () {
   });
 
   it.v2('uses the EXIF orientation tag when resizing', async () => {
-    let b = await bundle(join(__dirname, '../data/integration/image-exif/resized.js'));
+    let b = await bundle(join(__dirname, '../integration/image-exif/resized.js'));
 
     let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
 
@@ -209,7 +209,7 @@ describe('images', function () {
 
   it.v2('support sharp config file for jpegs', async function () {
     let b = await bundle(
-      join(__dirname, '../data/integration/image-config/image.jpg'),
+      join(__dirname, '../integration/image-config/image.jpg'),
       {
         defaultTargetOptions: {
           shouldOptimize: false,
@@ -230,7 +230,7 @@ describe('images', function () {
 
   it.v2('support sharp config files for pngs', async function () {
     let b = await bundle(
-      join(__dirname, '../data/integration/image-config/clock.png'),
+      join(__dirname, '../integration/image-config/clock.png'),
       {
         defaultTargetOptions: {
           shouldOptimize: false,
