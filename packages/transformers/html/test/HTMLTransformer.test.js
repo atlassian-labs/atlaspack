@@ -47,6 +47,10 @@ async function runTestTransform(
         return options.supportsEsmodules;
       },
     },
+    addDependency(specifier, specifierType) {
+      dependencies.push({specifier, specifierType});
+      return 'dependency-id';
+    },
   };
 
   const transformInput = {
@@ -73,6 +77,16 @@ function normalizeDependencies(dependencies) {
       },
     },
   }));
+}
+
+function normalizeAssets(assets) {
+  return assets.map(asset => {
+    return {
+      ...asset,
+      env: null,
+      meta: null,
+    };
+  });
 }
 
 describe('HTMLTransformer', () => {
@@ -112,6 +126,27 @@ describe('HTMLTransformer', () => {
     ]);
 
     assert.deepEqual(transformResult, [inputAsset]);
+  });
+
+  it.only('transforms simple inline script', async () => {
+    const code = `
+<html>
+  <body>
+    <script>console.log('blah'); require('path');</script>
+  </body>
+</html>
+    `;
+    const {transformResult, inputAsset} = await runTestTransform(code);
+    assert(transformResult.includes(inputAsset));
+    const assets = normalizeAssets(transformResult);
+    assert.deepEqual(assets[1], {
+      type: 'js',
+      content: "console.log('blah'); require('path');",
+      uniqueKey: 'a8a37984d2e520b9',
+      bundleBehavior: 'inline',
+      env: null,
+      meta: null,
+    });
   });
 
   it('we will get one dependency per asset', async () => {
