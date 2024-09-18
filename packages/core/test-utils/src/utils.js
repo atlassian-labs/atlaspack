@@ -1335,8 +1335,20 @@ function itImpl(
       this,
       title,
       async function () {
+        // Timeout mocha after 3s when running V2 tests over V3, but also self
+        // timeout after 2s to avoid hanging the test suite.
+        this.timeout(3000);
+        this.retries(0);
+
         try {
-          await builder.call(this);
+          await Promise.race([
+            builder.call(this),
+            new Promise((_, reject) => {
+              setTimeout(() => {
+                reject(new Error('TEST: Timeout'));
+              }, 2000);
+            }),
+          ]);
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error(`TEST: ${title} failed for V3`, err);
