@@ -13,7 +13,7 @@ describe.skip('parser', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/parser-case-insensitive-ext/index.html',
+        '/../data/integration/parser-case-insensitive-ext/index.html',
       ),
     );
 

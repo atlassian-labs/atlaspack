@@ -8,7 +8,7 @@ import {
   overlayFS,
   inputFS,
 } from '@atlaspack/test-utils';
-import {loadGraphs} from '../../../dev/query/src';
+import {loadGraphs} from '@atlaspack/query';
 
 describe.v2('atlaspack-query', () => {
   it('loadGraphs', async function () {

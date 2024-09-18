@@ -5,11 +5,11 @@ import path from 'path';
 describe.v2('config merging', function () {
   it('should merge incomplete config packages', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/config-merging/index.js'),
+      path.join(__dirname, '../data/integration/config-merging/index.js'),
     );
     let content = (
       await outputFS.readFile(
-        path.join(__dirname, '/integration/config-merging/dist/index.js'),
+        path.join(__dirname, '../data/integration/config-merging/dist/index.js'),
       )
     ).toString();
     assert(content.includes('runtime injected'));

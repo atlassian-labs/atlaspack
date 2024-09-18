@@ -494,7 +494,8 @@ describe('fsFixture', () => {
   let fs;
   let workerFarm;
 
-  beforeEach(() => {
+  beforeEach(function () {
+    this.timeout(10000);
     workerFarm = new WorkerFarm({
       workerPath: require.resolve('@atlaspack/core/lib/worker.js'),
     });

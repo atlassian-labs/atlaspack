@@ -64,7 +64,7 @@
     "@atlaspack/markdown-ansi": false
   },
   "scripts": {
-    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
+    "build": "NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SELF_BUILD=true atlaspack build --no-cache .",
     "test": "mocha"
   }
 }

@@ -20,7 +20,7 @@ describe.skip('rust', function () {
 
   it('should generate a wasm file from a rust file with rustc with --target=browser', async function () {
     this.timeout(500000);
-    let b = await bundle(path.join(__dirname, '/integration/rust/index.js'));
+    let b = await bundle(path.join(__dirname, '../data/integration/rust/index.js'));
 
     await assertBundleTree(b, {
       name: 'index.js',
@@ -53,7 +53,7 @@ describe.skip('rust', function () {
 
   it('should generate a wasm file from a rust file with rustc with --target=node', async function () {
     this.timeout(500000);
-    let b = await bundle(path.join(__dirname, '/integration/rust/index.js'), {
+    let b = await bundle(path.join(__dirname, '../data/integration/rust/index.js'), {
       target: 'node',
     });
 
@@ -88,7 +88,7 @@ describe.skip('rust', function () {
 
   it('should support rust files with dependencies via rustc', async function () {
     this.timeout(500000);
-    let b = bundler(path.join(__dirname, '/integration/rust-deps/index.js'));
+    let b = bundler(path.join(__dirname, '../data/integration/rust-deps/index.js'));
     let bundle = await b.bundle();
 
     await assertBundleTree(bundle, {
@@ -118,7 +118,7 @@ describe.skip('rust', function () {
   it('should generate a wasm file from a rust file with cargo', async function () {
     this.timeout(500000);
     let b = await bundle(
-      path.join(__dirname, '/integration/rust-cargo/src/index.js'),
+      path.join(__dirname, '../data/integration/rust-cargo/src/index.js'),
     );
 
     await assertBundleTree(b, {
@@ -150,7 +150,7 @@ describe.skip('rust', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/rust-cargo-workspace/member/src/index.js',
+        '/../data/integration/rust-cargo-workspace/member/src/index.js',
       ),
     );
 

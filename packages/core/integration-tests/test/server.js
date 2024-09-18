@@ -37,7 +37,7 @@ describe.v2('server', function () {
 
   it('should serve files', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
+    let b = bundler(path.join(__dirname, '../data/integration/commonjs/index.js'), {
       defaultTargetOptions: {
         distDir,
       },
@@ -63,7 +63,7 @@ describe.v2('server', function () {
 
   it('should include content length for HEAD requests', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
+    let b = bundler(path.join(__dirname, '../data/integration/commonjs/index.js'), {
       defaultTargetOptions: {
         distDir,
       },
@@ -89,7 +89,7 @@ describe.v2('server', function () {
 
   it('should serve source files', async function () {
     let port = await getPort();
-    let inputPath = path.join(__dirname, '/integration/commonjs/index.js');
+    let inputPath = path.join(__dirname, '../data/integration/commonjs/index.js');
     let b = bundler(inputPath, {
       defaultTargetOptions: {
         distDir,
@@ -116,7 +116,7 @@ describe.v2('server', function () {
 
   it('should serve sourcemaps', async function () {
     let port = await getPort();
-    let inputPath = path.join(__dirname, '/integration/commonjs/index.js');
+    let inputPath = path.join(__dirname, '../data/integration/commonjs/index.js');
     let b = bundler(inputPath, {
       defaultTargetOptions: {
         distDir,
@@ -143,7 +143,7 @@ describe.v2('server', function () {
 
   it('should serve a default page if the main bundle is an HTML asset', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/html/index.html'), {
+    let b = bundler(path.join(__dirname, '../data/integration/html/index.html'), {
       defaultTargetOptions: {
         distDir,
       },
@@ -188,7 +188,7 @@ describe.v2('server', function () {
 
   it('should serve a default page if the single HTML bundle is not called index', async function () {
     let port = await getPort();
-    let inputPath = path.join(__dirname, '/integration/html/other.html');
+    let inputPath = path.join(__dirname, '../data/integration/html/other.html');
     let b = bundler(inputPath, {
       defaultTargetOptions: {
         distDir,
@@ -221,7 +221,7 @@ describe.v2('server', function () {
 
   it('should serve a default page if the main bundle is an HTML asset with package.json#source', async function () {
     let port = await getPort();
-    let inputPath = path.join(__dirname, '/integration/html-pkg-source/');
+    let inputPath = path.join(__dirname, '../data/integration/html-pkg-source/');
     let b = bundler(inputPath, {
       defaultTargetOptions: {
         distDir,
@@ -253,7 +253,7 @@ describe.v2('server', function () {
 
   it('should serve a 404 if the file does not exist', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
+    let b = bundler(path.join(__dirname, '../data/integration/commonjs/index.js'), {
       config,
       serveOptions: {
         https: false,
@@ -278,7 +278,7 @@ describe.v2('server', function () {
   it('should serve a 500 if the bundler errored', async function () {
     let port = await getPort();
     let inputDir = path.join(__dirname, '/input/server-500');
-    await ncp(path.join(__dirname, '/integration/babel'), inputDir);
+    await ncp(path.join(__dirname, '../data/integration/babel'), inputDir);
     let entry = path.join(inputDir, 'index.js');
 
     let b = bundler(entry, {
@@ -315,7 +315,7 @@ describe.v2('server', function () {
 
   it('should support HTTPS', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
+    let b = bundler(path.join(__dirname, '../data/integration/commonjs/index.js'), {
       defaultTargetOptions: {
         distDir,
       },
@@ -339,15 +339,15 @@ describe.v2('server', function () {
 
   it('should support HTTPS via custom certificate', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
+    let b = bundler(path.join(__dirname, '../data/integration/commonjs/index.js'), {
       defaultTargetOptions: {
         distDir,
       },
       config,
       serveOptions: {
         https: {
-          key: path.join(__dirname, '/integration/https/private.pem'),
-          cert: path.join(__dirname, '/integration/https/primary.crt'),
+          key: path.join(__dirname, '../data/integration/https/private.pem'),
+          cert: path.join(__dirname, '../data/integration/https/primary.crt'),
         },
         port: port,
         host: 'localhost',
@@ -366,7 +366,7 @@ describe.v2('server', function () {
 
   it('should support setting a public url', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
+    let b = bundler(path.join(__dirname, '../data/integration/commonjs/index.js'), {
       defaultTargetOptions: {
         distDir,
       },
@@ -391,7 +391,7 @@ describe.v2('server', function () {
 
   it('should work with query parameters that contain a dot', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
+    let b = bundler(path.join(__dirname, '../data/integration/commonjs/index.js'), {
       defaultTargetOptions: {
         distDir,
       },
@@ -415,7 +415,7 @@ describe.v2('server', function () {
 
   it('should work with paths that contain a dot', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/html/index.html'), {
+    let b = bundler(path.join(__dirname, '../data/integration/html/index.html'), {
       defaultTargetOptions: {
         distDir,
       },
@@ -439,7 +439,7 @@ describe.v2('server', function () {
 
   it('should support lazy bundling', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/html/index.html'), {
+    let b = bundler(path.join(__dirname, '../data/integration/html/index.html'), {
       defaultTargetOptions: {
         distDir,
       },
@@ -538,7 +538,7 @@ describe.v2('server', function () {
 
   it('should support lazy bundling sibling css files of dynamic import', async function () {
     let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/dynamic-css/index.js'), {
+    let b = bundler(path.join(__dirname, '../data/integration/dynamic-css/index.js'), {
       defaultTargetOptions: {
         distDir,
       },

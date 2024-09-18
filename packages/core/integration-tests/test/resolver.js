@@ -16,7 +16,7 @@ describe('resolver', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/resolve-tilde-monorepo/client/src/index.js',
+        '/../data/integration/resolve-tilde-monorepo/client/src/index.js',
       ),
     );
 
@@ -26,7 +26,7 @@ describe('resolver', function () {
 
   it('should support node: prefix for node_modules', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/resolve-node-prefix/src/index.js'),
+      path.join(__dirname, '../data/integration/resolve-node-prefix/src/index.js'),
     );
 
     let output = await run(b);
@@ -38,7 +38,7 @@ describe('resolver', function () {
 
   it('should correctly resolve tilde in node_modules', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/resolve-tilde-nodemodules/index.js'),
+      path.join(__dirname, '../data/integration/resolve-tilde-nodemodules/index.js'),
     );
 
     let output = await run(b);
@@ -49,7 +49,7 @@ describe('resolver', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/resolve-index-fallback/incorrect-entry.js',
+        '/../data/integration/resolve-index-fallback/incorrect-entry.js',
       ),
     );
 
@@ -59,7 +59,7 @@ describe('resolver', function () {
 
   it('should fall back to index.js if there is no `main` field at all', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/resolve-index-fallback/no-entry.js'),
+      path.join(__dirname, '../data/integration/resolve-index-fallback/no-entry.js'),
     );
 
     let output = await run(b);
@@ -107,7 +107,7 @@ describe('resolver', function () {
       await bundle(
         path.join(
           __dirname,
-          '/integration/webpack-import-syntax-error/index.js',
+          '/../data/integration/webpack-import-syntax-error/index.js',
         ),
       );
     } catch (e) {
@@ -127,7 +127,7 @@ describe('resolver', function () {
       let didThrow = false;
       try {
         await bundle(
-          path.join(__dirname, '/integration/js-invalid-import/index.js'),
+          path.join(__dirname, '../data/integration/js-invalid-import/index.js'),
         );
       } catch (e) {
         didThrow = true;
@@ -155,7 +155,7 @@ describe('resolver', function () {
       let didThrow = false;
       try {
         await bundle(
-          path.join(__dirname, '/integration/css-invalid-import/index.css'),
+          path.join(__dirname, '../data/integration/css-invalid-import/index.css'),
         );
       } catch (e) {
         didThrow = true;
@@ -185,7 +185,7 @@ describe('resolver', function () {
         await bundle(
           path.join(
             __dirname,
-            '/integration/resolver-invalid-pkgjson/index.js',
+            '/../data/integration/resolver-invalid-pkgjson/index.js',
           ),
         );
       } catch (e) {
@@ -222,7 +222,7 @@ describe('resolver', function () {
         await bundle(
           path.join(
             __dirname,
-            '/integration/resolver-alternative-relative/a.js',
+            '/../data/integration/resolver-alternative-relative/a.js',
           ),
         );
       } catch (e) {
@@ -243,7 +243,7 @@ describe('resolver', function () {
         await bundle(
           path.join(
             __dirname,
-            '/integration/resolver-alternative-relative/b.js',
+            '/../data/integration/resolver-alternative-relative/b.js',
           ),
         );
       } catch (e) {
@@ -261,7 +261,7 @@ describe('resolver', function () {
         await bundle(
           path.join(
             __dirname,
-            '/integration/resolver-alternative-relative/test/test.js',
+            '/../data/integration/resolver-alternative-relative/test/test.js',
           ),
         );
       } catch (e) {
@@ -288,7 +288,7 @@ describe('resolver', function () {
         await bundle(
           path.join(
             __dirname,
-            '/integration/resolver-alternative-module/index.js',
+            '/../data/integration/resolver-alternative-module/index.js',
           ),
         );
       } catch (e) {
@@ -311,7 +311,7 @@ describe('resolver', function () {
 
   it('should resolve packages to packages through the alias field', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/alias/package-to-package.js'),
+      path.join(__dirname, '../data/integration/alias/package-to-package.js'),
     );
 
     let output = await run(b);
@@ -320,7 +320,7 @@ describe('resolver', function () {
 
   it('should resolve packages to local files through the alias field', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/alias/package-to-local.js'),
+      path.join(__dirname, '../data/integration/alias/package-to-local.js'),
     );
 
     let output = await run(b);
@@ -329,7 +329,7 @@ describe('resolver', function () {
 
   it('should exclude local files using the alias field', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/alias/exclude-local.js'),
+      path.join(__dirname, '../data/integration/alias/exclude-local.js'),
     );
 
     let output = await run(b);
@@ -338,7 +338,7 @@ describe('resolver', function () {
 
   it('should exclude packages using the alias field', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/alias/exclude-package.js'),
+      path.join(__dirname, '../data/integration/alias/exclude-package.js'),
     );
 
     let output = await run(b);
@@ -348,7 +348,7 @@ describe('resolver', function () {
   it('should support symlinked node_modules structure', async function () {
     const rootDir = path.join(
       __dirname,
-      'integration/resolve-symlinked-node_modules-structure',
+      '../data/integration/resolve-symlinked-node_modules-structure',
     );
 
     await overlayFS.mkdirp(rootDir);
@@ -375,7 +375,7 @@ describe('resolver', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/resolve-symlinked-node_modules-structure/index.js',
+        '/../data/integration/resolve-symlinked-node_modules-structure/index.js',
       ),
       {
         inputFS: overlayFS,
@@ -390,7 +390,7 @@ describe('resolver', function () {
   it.v2('should support symlinked monorepos structure', async function () {
     const rootDir = path.join(
       __dirname,
-      'integration/resolve-symlinked-monorepos',
+      '../data/integration/resolve-symlinked-monorepos',
     );
 
     await overlayFS.mkdirp(rootDir);
@@ -412,7 +412,7 @@ describe('resolver', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/resolve-symlinked-monorepos/packages/app/index.js',
+        '/../data/integration/resolve-symlinked-monorepos/packages/app/index.js',
       ),
       {
         inputFS: overlayFS,
@@ -445,7 +445,7 @@ describe('resolver', function () {
     await assert.rejects(
       () =>
         bundle(
-          path.join(__dirname, '/integration/resolve-empty-specifier/index.js'),
+          path.join(__dirname, '../data/integration/resolve-empty-specifier/index.js'),
         ),
       {
         message: `Failed to resolve '' from './integration/resolve-empty-specifier/index.js'`,
@@ -455,7 +455,7 @@ describe('resolver', function () {
 
   it('should support package exports config option', async () => {
     let b = await bundle(
-      path.join(__dirname, '/integration/resolve-exports/index.js'),
+      path.join(__dirname, '../data/integration/resolve-exports/index.js'),
     );
 
     let output = await run(b);
@@ -464,7 +464,7 @@ describe('resolver', function () {
 
   it('should support the development and production import conditions', async () => {
     let b = await bundle(
-      path.join(__dirname, '/integration/resolve-mode-condition/index.js'),
+      path.join(__dirname, '../data/integration/resolve-mode-condition/index.js'),
       {mode: 'development'},
     );
 
@@ -472,7 +472,7 @@ describe('resolver', function () {
     assert.strictEqual(output.default, 'development');
 
     b = await bundle(
-      path.join(__dirname, '/integration/resolve-mode-condition/index.js'),
+      path.join(__dirname, '../data/integration/resolve-mode-condition/index.js'),
       {mode: 'production'},
     );
 

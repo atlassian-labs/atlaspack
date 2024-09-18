@@ -53,7 +53,7 @@ describe('data-url:', function () {
   });
 
   it('inlines binary content as a data url', async () => {
-    let b = await bundle(join(__dirname, '/integration/data-url/binary.js'));
+    let b = await bundle(join(__dirname, '../data/integration/data-url/binary.js'));
     let binary = (await run(b)).default;
 
     assert(binary.startsWith('data:image/webp;base64,UklGR'));

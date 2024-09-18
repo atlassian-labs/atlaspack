@@ -11,7 +11,7 @@ import {
 describe.skip('markdown', function () {
   it('should support bundling Markdown', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/markdown/index.md'),
+      path.join(__dirname, '../data/integration/markdown/index.md'),
     );
 
     await assertBundleTree(b, {

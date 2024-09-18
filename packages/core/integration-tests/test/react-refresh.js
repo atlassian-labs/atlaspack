@@ -34,7 +34,7 @@ if (MessageChannel) {
     describe('synchronous (automatic runtime)', () => {
       const testDir = path.join(
         __dirname,
-        '/integration/react-refresh-automatic',
+        '/../data/integration/react-refresh-automatic',
       );
 
       let b,
@@ -75,7 +75,7 @@ if (MessageChannel) {
     });
 
     describe('synchronous', () => {
-      const testDir = path.join(__dirname, '/integration/react-refresh');
+      const testDir = path.join(__dirname, '../data/integration/react-refresh');
 
       let b,
         root,
@@ -159,7 +159,7 @@ if (MessageChannel) {
     describe('lazy child component', () => {
       const testDir = path.join(
         __dirname,
-        '/integration/react-refresh-lazy-child',
+        '/../data/integration/react-refresh-lazy-child',
       );
 
       let b,
@@ -204,7 +204,7 @@ if (MessageChannel) {
     describe('circular context dependency', () => {
       const testDir = path.join(
         __dirname,
-        '/integration/react-refresh-circular',
+        '/../data/integration/react-refresh-circular',
       );
 
       let b,
@@ -255,7 +255,7 @@ if (MessageChannel) {
       let b = await bundle(
         path.join(
           __dirname,
-          'integration/react-refresh-inline-script/index.html',
+          '../data/integration/react-refresh-inline-script/index.html',
         ),
         {
           hmrOptions: {
@@ -271,7 +271,7 @@ if (MessageChannel) {
       let parcel = await bundler(
         path.join(
           __dirname,
-          '/integration/react-refresh-library-target/index.js',
+          '/../data/integration/react-refresh-library-target/index.js',
         ),
         {
           hmrOptions: {
@@ -329,7 +329,7 @@ async function setup(entry) {
     },
     defaultConfig: path.join(
       __dirname,
-      'integration/custom-configs/.parcelrc-dev-server',
+      '../data/integration/custom-configs/.parcelrc-dev-server',
     ),
   });
 

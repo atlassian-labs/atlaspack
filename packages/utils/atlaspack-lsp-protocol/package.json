@@ -13,7 +13,7 @@
   "source": "src/index.js",
   "types": "src/index.js",
   "scripts": {
-    "build": "tsc -p .",
+    "build": "NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SELF_BUILD=true atlaspack build --no-cache .",
     "watch": "tsc -watch -p ./"
   },
   "engines": {

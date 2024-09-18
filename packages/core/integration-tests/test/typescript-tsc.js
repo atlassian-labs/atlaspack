@@ -11,12 +11,12 @@ import {
   run,
 } from '@atlaspack/test-utils';
 
-const config = path.join(__dirname, '/integration/typescript-config/.parcelrc');
+const config = path.join(__dirname, '../data/integration/typescript-config/.parcelrc');
 
 describe.v2('typescript tsc', function () {
   it('should support loading tsconfig.json', async () => {
     let b = await bundle(
-      path.join(__dirname, '/integration/typescript-config/index.ts'),
+      path.join(__dirname, '../data/integration/typescript-config/index.ts'),
       {config},
     );
 
@@ -29,7 +29,7 @@ describe.v2('typescript tsc', function () {
 
   it('should support loading tsconfig.json with extends', async () => {
     let b = await bundle(
-      path.join(__dirname, '/integration/typescript-config-extends/index.ts'),
+      path.join(__dirname, '../data/integration/typescript-config-extends/index.ts'),
       {config},
     );
 
@@ -42,7 +42,7 @@ describe.v2('typescript tsc', function () {
 
   it('should produce a type declaration file when overriding the ts pipeline', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/typescript-types-parcelrc/index.ts'),
+      path.join(__dirname, '../data/integration/typescript-types-parcelrc/index.ts'),
     );
 
     assertBundles(b, [

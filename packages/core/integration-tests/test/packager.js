@@ -28,7 +28,7 @@ describe('packager', function () {
     it('should exclude globalThis polyfill in modern builds', async function () {
       const entryPoint = path.join(
         __dirname,
-        'integration/html-js-dynamic/index.html',
+        '../data/integration/html-js-dynamic/index.html',
       );
       const options = {
         mode: 'production',
@@ -51,7 +51,7 @@ describe('packager', function () {
     it('should include globalThis polyfill in ie11 builds', async function () {
       const entryPoint = path.join(
         __dirname,
-        'integration/packager-global-this/index.html',
+        '../data/integration/packager-global-this/index.html',
       );
       const options = {
         mode: 'production',
@@ -77,7 +77,7 @@ describe('packager', function () {
       async function () {
         const entryPoint = path.join(
           __dirname,
-          'integration/packager-global-this/index.js',
+          '../data/integration/packager-global-this/index.js',
         );
         const options = {
           mode: 'production',

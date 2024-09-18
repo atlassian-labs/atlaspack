@@ -18,7 +18,7 @@ describe.skip('wasm', function () {
     describe(`--target=${target}`, function () {
       it('should preload a wasm file for a sync require', async function () {
         let b = await bundle(
-          path.join(__dirname, '/integration/wasm-sync/index.js'),
+          path.join(__dirname, '../data/integration/wasm-sync/index.js'),
           {
             target,
           },
@@ -51,7 +51,7 @@ describe.skip('wasm', function () {
 
       it('should load a wasm file asynchronously with dynamic import', async function () {
         let b = await bundle(
-          path.join(__dirname, '/integration/wasm-async/index.js'),
+          path.join(__dirname, '../data/integration/wasm-async/index.js'),
           {
             target,
           },
@@ -83,7 +83,7 @@ describe.skip('wasm', function () {
 
       it('should load a wasm file in parallel with a dynamic JS import', async function () {
         let b = await bundle(
-          path.join(__dirname, '/integration/wasm-dynamic/index.js'),
+          path.join(__dirname, '../data/integration/wasm-dynamic/index.js'),
           {
             target,
           },

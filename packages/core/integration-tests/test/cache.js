@@ -33,11 +33,11 @@ import {md} from '@atlaspack/diagnostic';
 import fs from 'fs';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {createWorkerFarm} from '@atlaspack/core';
-import resolveOptions from '@atlaspack/core/src/resolveOptions';
+import resolveOptions from '@atlaspack/core/lib/resolveOptions';
 import logger from '@atlaspack/logger';
 import sinon from 'sinon';
 import {version} from '@atlaspack/core/package.json';
-import {deserialize} from '@atlaspack/core/src/serializer';
+import {deserialize} from '@atlaspack/core/lib/serializer';
 import {hashString} from '@atlaspack/rust';
 
 let inputDir: string;
@@ -76,7 +76,7 @@ type TestConfig = {|
 async function testCache(update: UpdateFn | TestConfig, integration) {
   await overlayFS.rimraf(path.join(__dirname, '/input'));
   await ncp(
-    path.join(__dirname, '/integration', integration ?? 'cache'),
+    path.join(__dirname, '../data/integration', integration ?? 'cache'),
     path.join(inputDir),
   );
 
@@ -268,7 +268,7 @@ describe.v2('cache', function () {
             async setup() {
               await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
-                path.join(__dirname, '/integration/cache'),
+                path.join(__dirname, '../data/integration/cache'),
                 inputDir,
               );
             },
@@ -315,7 +315,7 @@ describe.v2('cache', function () {
             async setup() {
               await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
-                path.join(__dirname, '/integration/cache'),
+                path.join(__dirname, '../data/integration/cache'),
                 inputDir,
               );
               await inputFS.writeFile(
@@ -366,7 +366,7 @@ describe.v2('cache', function () {
             async setup() {
               await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
-                path.join(__dirname, '/integration/cache'),
+                path.join(__dirname, '../data/integration/cache'),
                 inputDir,
               );
               await inputFS.writeFile(
@@ -410,7 +410,7 @@ describe.v2('cache', function () {
             async setup() {
               await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
-                path.join(__dirname, '/integration/cache'),
+                path.join(__dirname, '../data/integration/cache'),
                 inputDir,
               );
               await inputFS.writeFile(
@@ -468,7 +468,7 @@ describe.v2('cache', function () {
               async setup() {
                 await inputFS.mkdirp(inputDir);
                 await inputFS.ncp(
-                  path.join(__dirname, '/integration/cache'),
+                  path.join(__dirname, '../data/integration/cache'),
                   inputDir,
                 );
               },
@@ -523,7 +523,7 @@ describe.v2('cache', function () {
               async setup() {
                 await inputFS.mkdirp(inputDir);
                 await inputFS.ncp(
-                  path.join(__dirname, '/integration/cache'),
+                  path.join(__dirname, '../data/integration/cache'),
                   inputDir,
                 );
                 await inputFS.writeFile(
@@ -582,7 +582,7 @@ describe.v2('cache', function () {
               async setup() {
                 await inputFS.mkdirp(inputDir);
                 await inputFS.ncp(
-                  path.join(__dirname, '/integration/cache'),
+                  path.join(__dirname, '../data/integration/cache'),
                   inputDir,
                 );
                 await inputFS.writeFile(
@@ -637,7 +637,7 @@ describe.v2('cache', function () {
           async setup() {
             await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
-              path.join(__dirname, '/integration/cache'),
+              path.join(__dirname, '../data/integration/cache'),
               inputDir,
             );
             await inputFS.writeFile(
@@ -692,7 +692,7 @@ describe.v2('cache', function () {
           async setup() {
             await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
-              path.join(__dirname, '/integration/cache'),
+              path.join(__dirname, '../data/integration/cache'),
               inputDir,
             );
             await inputFS.writeFile(
@@ -747,7 +747,7 @@ describe.v2('cache', function () {
           async setup() {
             await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
-              path.join(__dirname, '/integration/cache'),
+              path.join(__dirname, '../data/integration/cache'),
               inputDir,
             );
             await inputFS.writeFile(
@@ -801,7 +801,7 @@ describe.v2('cache', function () {
           async setup() {
             await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
-              path.join(__dirname, '/integration/cache'),
+              path.join(__dirname, '../data/integration/cache'),
               inputDir,
             );
             await inputFS.mkdirp(
@@ -820,7 +820,7 @@ describe.v2('cache', function () {
             await inputFS.copyFile(
               path.join(
                 __dirname,
-                '/integration/babelrc-custom/babel-plugin-dummy.js',
+                '/../data/integration/babelrc-custom/babel-plugin-dummy.js',
               ),
               path.join(inputDir, '/node_modules/babel-plugin-dummy/index.js'),
             );
@@ -874,13 +874,13 @@ describe.v2('cache', function () {
           async setup() {
             await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
-              path.join(__dirname, '/integration/cache'),
+              path.join(__dirname, '../data/integration/cache'),
               inputDir,
             );
             await inputFS.copyFile(
               path.join(
                 __dirname,
-                '/integration/babelrc-custom/babel-plugin-dummy.js',
+                '/../data/integration/babelrc-custom/babel-plugin-dummy.js',
               ),
               path.join(inputDir, 'babel-plugin-dummy.js'),
             );
@@ -937,7 +937,7 @@ describe.v2('cache', function () {
           async setup() {
             await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
-              path.join(__dirname, '/integration/cache'),
+              path.join(__dirname, '../data/integration/cache'),
               inputDir,
             );
             await inputFS.mkdirp(
@@ -958,7 +958,7 @@ describe.v2('cache', function () {
             await inputFS.copyFile(
               path.join(
                 __dirname,
-                '/integration/babelrc-custom/babel-plugin-dummy.js',
+                '/../data/integration/babelrc-custom/babel-plugin-dummy.js',
               ),
               path.join(inputDir, 'packages/babel-plugin-dummy/index.js'),
             );
@@ -1199,7 +1199,7 @@ describe.v2('cache', function () {
         async setup() {
           await inputFS.mkdirp(inputDir);
           await inputFS.ncp(
-            path.join(__dirname, '/integration/cache'),
+            path.join(__dirname, '../data/integration/cache'),
             inputDir,
           );
           await inputFS.writeFile(path.join(inputDir, 'src/test.txt'), 'hi');
@@ -2543,7 +2543,7 @@ describe.v2('cache', function () {
 
           return {
             defaultTargetOptions: {
-              distDir: path.join(__dirname, 'integration/cache/dist/test'),
+              distDir: path.join(__dirname, '../data/integration/cache/dist/test'),
             },
           };
         },
@@ -3547,7 +3547,7 @@ describe.v2('cache', function () {
               async setup() {
                 await inputFS.mkdirp(inputDir);
                 await inputFS.ncp(
-                  path.join(__dirname, '/integration/pnp-require'),
+                  path.join(__dirname, '../data/integration/pnp-require'),
                   inputDir,
                 );
 
@@ -4066,7 +4066,7 @@ describe.v2('cache', function () {
           async setup() {
             await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
-              path.join(__dirname, '/integration/cache'),
+              path.join(__dirname, '../data/integration/cache'),
               inputDir,
             );
 
@@ -4216,7 +4216,7 @@ describe.v2('cache', function () {
     describe('esm', function () {
       async function setup() {
         await inputFS.mkdirp(inputDir);
-        await inputFS.ncp(path.join(__dirname, '/integration/cache'), inputDir);
+        await inputFS.ncp(path.join(__dirname, '../data/integration/cache'), inputDir);
         await inputFS.writeFile(
           path.join(inputDir, '.parcelrc'),
           JSON.stringify({
@@ -4488,7 +4488,7 @@ describe.v2('cache', function () {
             async setup() {
               await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
-                path.join(__dirname, '/integration/postcss-js-config-7'),
+                path.join(__dirname, '../data/integration/postcss-js-config-7'),
                 inputDir,
               );
             },
@@ -4527,7 +4527,7 @@ describe.v2('cache', function () {
             async setup() {
               await inputFS.mkdirp(path.join(inputDir, 'node_modules'));
               await inputFS.ncp(
-                path.join(__dirname, '/integration/postcss-autoinstall/npm'),
+                path.join(__dirname, '../data/integration/postcss-autoinstall/npm'),
                 inputDir,
               );
               await inputFS.ncp(
@@ -4598,7 +4598,7 @@ describe.v2('cache', function () {
               async setup() {
                 await inputFS.mkdirp(inputDir);
                 await inputFS.ncp(
-                  path.join(__dirname, '/integration/postcss-esm-config'),
+                  path.join(__dirname, '../data/integration/postcss-esm-config'),
                   inputDir,
                 );
               },
@@ -4753,7 +4753,7 @@ describe.v2('cache', function () {
             async setup() {
               await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
-                path.join(__dirname, '/integration/posthtml'),
+                path.join(__dirname, '../data/integration/posthtml'),
                 inputDir,
               );
 
@@ -6379,7 +6379,7 @@ describe.v2('cache', function () {
             let contents = await overlayFS.readFile(
               path.join(
                 __dirname,
-                'integration/scope-hoisting/commonjs/require-conditional/a.js',
+                '../data/integration/scope-hoisting/commonjs/require-conditional/a.js',
               ),
               'utf8',
             );
@@ -6460,7 +6460,7 @@ describe.v2('cache', function () {
 
   it('should correctly read additional child assets from cache', async function () {
     await ncp(
-      path.join(__dirname, '/integration/postcss-modules-cjs'),
+      path.join(__dirname, '../data/integration/postcss-modules-cjs'),
       path.join(inputDir),
     );
 
@@ -6494,7 +6494,7 @@ describe.v2('cache', function () {
 
   it('should correctly read additional child assets from cache 2', async function () {
     await ncp(
-      path.join(__dirname, '/integration/postcss-modules-cjs'),
+      path.join(__dirname, '../data/integration/postcss-modules-cjs'),
       path.join(inputDir),
     );
 
@@ -6536,7 +6536,7 @@ describe.v2('cache', function () {
   });
 
   it('should correctly reuse intermediate pipeline results when transforming', async function () {
-    await ncp(path.join(__dirname, '/integration/json'), path.join(inputDir));
+    await ncp(path.join(__dirname, '../data/integration/json'), path.join(inputDir));
 
     let entry = path.join(inputDir, 'index.js');
     let original = await overlayFS.readFile(entry, 'utf8');
@@ -6565,7 +6565,7 @@ describe.v2('cache', function () {
   it('properly watches included files even after resaving them without changes', async function () {
     this.timeout(15000);
     let subscription;
-    let fixture = path.join(__dirname, '/integration/included-file');
+    let fixture = path.join(__dirname, '../data/integration/included-file');
     try {
       let b = bundler(path.join(fixture, 'index.txt'), {
         inputFS: overlayFS,
@@ -6622,7 +6622,7 @@ describe.v2('cache', function () {
   it('properly handles included files even after when changing back to a cached state', async function () {
     this.timeout(15000);
     let subscription;
-    let fixture = path.join(__dirname, '/integration/included-file');
+    let fixture = path.join(__dirname, '../data/integration/included-file');
     try {
       let b = bundler(path.join(fixture, 'index.txt'), {
         inputFS: overlayFS,
@@ -6669,7 +6669,7 @@ describe.v2('cache', function () {
   it('properly watches included files after a transformer error', async function () {
     this.timeout(15000);
     let subscription;
-    let fixture = path.join(__dirname, '/integration/included-file');
+    let fixture = path.join(__dirname, '../data/integration/included-file');
     try {
       let b = bundler(path.join(fixture, 'index.txt'), {
         inputFS: overlayFS,
@@ -6721,7 +6721,7 @@ describe.v2('cache', function () {
       outputFS: inputFS,
       async setup() {
         await inputFS.mkdirp(inputDir);
-        await inputFS.ncp(path.join(__dirname, '/integration/cache'), inputDir);
+        await inputFS.ncp(path.join(__dirname, '../data/integration/cache'), inputDir);
       },
       update: async b => {
         assert.equal(await run(b.bundleGraph), 4);
@@ -6742,7 +6742,7 @@ describe.v2('cache', function () {
   it('supports multiple empty JS assets', async function () {
     // Try to store multiple empty assets using LMDB
     let build = await runBundle(
-      path.join(__dirname, 'integration/multiple-empty-js-assets/index.js'),
+      path.join(__dirname, '../data/integration/multiple-empty-js-assets/index.js'),
       {
         inputFS,
         outputFS: inputFS,

@@ -122,6 +122,7 @@ export function getParcelOptions(
         process.env.NO_INCREMENTAL == null ? true : false,
       defaultConfig: path.join(__dirname, '.parcelrc-no-reporters'),
       inputFS,
+      cacheDir: path.join('.parcel-cache', String(process.pid)),
       outputFS,
       workerFarm,
       shouldContentHash: true,

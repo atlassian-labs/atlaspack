@@ -12,7 +12,7 @@ import {
 describe.v2('webextension', function () {
   it('should resolve a full webextension bundle', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/webextension/manifest.json'),
+      path.join(__dirname, '../data/integration/webextension/manifest.json'),
     );
     assertBundles(b, [
       {
@@ -74,7 +74,7 @@ describe.v2('webextension', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/webextension-resolve-web-accessible-resources/manifest.json',
+        '/../data/integration/webextension-resolve-web-accessible-resources/manifest.json',
       ),
     );
     assertBundles(b, [
@@ -110,7 +110,7 @@ describe.v2('webextension', function () {
   });
   it('should support web extension manifest v3', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/webextension-mv3/manifest.json'),
+      path.join(__dirname, '../data/integration/webextension-mv3/manifest.json'),
     );
     assertBundles(b, [
       {

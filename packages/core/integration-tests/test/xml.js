@@ -10,7 +10,7 @@ import {
 
 describe.v2('xml', function () {
   it('should transform an atom feed', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/xml/atom.xml'), {
+    let b = await bundle(path.join(__dirname, '../data/integration/xml/atom.xml'), {
       defaultTargetOptions: {
         publicUrl: 'http://example.org/',
       },
@@ -59,7 +59,7 @@ describe.v2('xml', function () {
 
   it('should transform an atom feed with namespaced elements', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/xml/atom-namespace.xml'),
+      path.join(__dirname, '../data/integration/xml/atom-namespace.xml'),
       {
         defaultTargetOptions: {
           publicUrl: 'http://example.org/',
@@ -111,7 +111,7 @@ describe.v2('xml', function () {
   });
 
   it('should transform an rss feed', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/xml/rss.xml'), {
+    let b = await bundle(path.join(__dirname, '../data/integration/xml/rss.xml'), {
       defaultTargetOptions: {
         publicUrl: 'http://example.org/',
       },

@@ -8,9 +8,10 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "src/utils.js",
+  "main": "lib/utils.js",
+  "source": "src/utils.js",
   "scripts": {
-    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib",
+    "build": "babel --presets=@atlaspack/babel-preset src --out-dir lib && cp ./src/.babelrc ./src/.parcelrc* ./lib/",
     "test": "mocha"
   },
   "engines": {

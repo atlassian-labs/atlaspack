@@ -1,9 +1,10 @@
 // @flow
 
-import {OverlayFS} from '../src/OverlayFS';
-import {fsFixture} from '@atlaspack/test-utils/lib/fsFixture';
-import {MemoryFS} from '../src/MemoryFS';
+import {fsFixture} from '@atlaspack/test-utils';
 import WorkerFarm from '@atlaspack/workers';
+
+import {OverlayFS} from '../src/OverlayFS';
+import {MemoryFS} from '../src/MemoryFS';
 
 import assert from 'assert';
 import path from 'path';

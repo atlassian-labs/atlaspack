@@ -17,7 +17,7 @@ describe('atlaspack', function () {
 
   it('supports paint worklets', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worklet/worklet.js'),
+      path.join(__dirname, '../data/integration/worklet/worklet.js'),
     );
 
     assertBundles(b, [
@@ -45,7 +45,7 @@ describe('atlaspack', function () {
 
   it('supports paint worklets registered with new URL()', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worklet/url-worklet.js'),
+      path.join(__dirname, '../data/integration/worklet/url-worklet.js'),
     );
 
     assertBundles(b, [
@@ -88,7 +88,7 @@ describe('atlaspack', function () {
 
   it('supports paint worklets registered with a url: import', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worklet/pipeline.js'),
+      path.join(__dirname, '../data/integration/worklet/pipeline.js'),
       {
         mode: 'production',
       },
@@ -133,7 +133,7 @@ describe('atlaspack', function () {
   });
 
   it('supports new URL() referencing a paint worklet', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/worklet/url.js'));
+    let b = await bundle(path.join(__dirname, '../data/integration/worklet/url.js'));
 
     assertBundles(b, [
       {
@@ -168,7 +168,7 @@ describe('atlaspack', function () {
     let errored = false;
     try {
       await bundle(
-        path.join(__dirname, '/integration/worklet/url-worklet-error.js'),
+        path.join(__dirname, '../data/integration/worklet/url-worklet-error.js'),
       );
     } catch (err) {
       errored = true;
@@ -181,7 +181,7 @@ describe('atlaspack', function () {
             {
               filePath: path.join(
                 __dirname,
-                '/integration/worklet/worklet-error.js',
+                '/../data/integration/worklet/worklet-error.js',
               ),
               codeHighlights: [
                 {
@@ -200,7 +200,7 @@ describe('atlaspack', function () {
             {
               filePath: path.join(
                 __dirname,
-                'integration/worklet/url-worklet-error.js',
+                '../data/integration/worklet/url-worklet-error.js',
               ),
               codeHighlights: [
                 {
@@ -227,7 +227,7 @@ describe('atlaspack', function () {
 
   it.v2('supports audio worklets via a pipeline', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worklet/worklet-pipeline.js'),
+      path.join(__dirname, '../data/integration/worklet/worklet-pipeline.js'),
       {
         mode: 'production',
       },
@@ -270,7 +270,7 @@ describe('atlaspack', function () {
         await bundle(
           path.join(
             __dirname,
-            '/integration/worklet/worklet-pipeline-error.js',
+            '/../data/integration/worklet/worklet-pipeline-error.js',
           ),
         );
       } catch (err) {
@@ -284,7 +284,7 @@ describe('atlaspack', function () {
               {
                 filePath: path.join(
                   __dirname,
-                  '/integration/worklet/worklet-error.js',
+                  '/../data/integration/worklet/worklet-error.js',
                 ),
                 codeHighlights: [
                   {

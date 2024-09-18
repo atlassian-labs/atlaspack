@@ -12,7 +12,7 @@ import assert from 'assert';
 describe.v2('jsonld', function () {
   it('Should parse a LD+JSON schema and collect dependencies', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/schema-jsonld/index.html'),
+      path.join(__dirname, '../data/integration/schema-jsonld/index.html'),
       {
         publicURL: 'https://place.holder/',
       },

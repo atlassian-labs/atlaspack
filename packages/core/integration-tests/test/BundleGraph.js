@@ -14,7 +14,7 @@ import type {BundleGraph, BundleGroup, PackagedBundle} from '@atlaspack/types';
 describe('BundleGraph', () => {
   it('can traverse assets across bundles and contexts', async () => {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-shared/index.js'),
+      path.join(__dirname, '../data/integration/worker-shared/index.js'),
     );
 
     let assets = [];

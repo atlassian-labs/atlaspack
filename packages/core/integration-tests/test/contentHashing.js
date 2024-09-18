@@ -28,7 +28,7 @@ describe('content hashing', function () {
 
   it.v2('should update content hash when content changes', async function () {
     await ncp(
-      path.join(__dirname, '/integration/html-css'),
+      path.join(__dirname, '../data/integration/html-css'),
       path.join(__dirname, '/input'),
     );
 
@@ -61,7 +61,7 @@ describe('content hashing', function () {
 
   it.v2('should update content hash when raw asset changes', async function () {
     await ncp(
-      path.join(__dirname, '/integration/import-raw'),
+      path.join(__dirname, '../data/integration/import-raw'),
       path.join(__dirname, '/input'),
     );
 
@@ -89,7 +89,7 @@ describe('content hashing', function () {
     await _bundle(
       path.join(
         __dirname,
-        'integration/same-contents-different-filepaths/index.js',
+        '../data/integration/same-contents-different-filepaths/index.js',
       ),
     );
   });
@@ -98,11 +98,11 @@ describe('content hashing', function () {
     'should generate the same hash for the same distDir inside separate projects',
     async () => {
       let a = await _bundle(
-        path.join(__dirname, 'integration/hash-distDir/a/index.html'),
+        path.join(__dirname, '../data/integration/hash-distDir/a/index.html'),
         {sourceMaps: true},
       );
       let b = await _bundle(
-        path.join(__dirname, 'integration/hash-distDir/b/index.html'),
+        path.join(__dirname, '../data/integration/hash-distDir/b/index.html'),
         {sourceMaps: true},
       );
 

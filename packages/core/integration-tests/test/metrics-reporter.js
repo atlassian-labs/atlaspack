@@ -11,7 +11,7 @@ const config = path.join(
 
 describe.v2('Build Metrics Reporter', () => {
   it('Should dump bundle metrics to parcel-metrics.json', async () => {
-    let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
+    let b = bundler(path.join(__dirname, '../data/integration/commonjs/index.js'), {
       config,
       logLevel: 'info',
     });

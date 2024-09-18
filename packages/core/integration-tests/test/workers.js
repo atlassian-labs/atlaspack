@@ -18,7 +18,7 @@ describe('atlaspack', function () {
   });
 
   it('bundles workers and service workers', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/workers/index.js'));
+    let b = await bundle(path.join(__dirname, '../data/integration/workers/index.js'));
 
     assertBundles(b, [
       {
@@ -46,7 +46,7 @@ describe('atlaspack', function () {
 
   it('bundles a dynamic import in a worker', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-dynamic/index.js'),
+      path.join(__dirname, '../data/integration/worker-dynamic/index.js'),
     );
 
     assertBundles(b, [
@@ -77,7 +77,7 @@ describe('atlaspack', function () {
 
   it('bundles a dynamic import in a worker using legacy browser targets', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-dynamic/index.js'),
+      path.join(__dirname, '../data/integration/worker-dynamic/index.js'),
       {
         defaultTargetOptions: {
           outputFormat: 'esmodule',
@@ -117,7 +117,7 @@ describe('atlaspack', function () {
 
   it('bundles a dynamic import in a nested worker', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-dynamic/index-nested.js'),
+      path.join(__dirname, '../data/integration/worker-dynamic/index-nested.js'),
     );
 
     assertBundles(b, [
@@ -157,7 +157,7 @@ describe('atlaspack', function () {
 
   it('bundles dynamic imports in both the page and worker', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-dynamic/index-async.js'),
+      path.join(__dirname, '../data/integration/worker-dynamic/index-async.js'),
     );
 
     assertBundles(b, [
@@ -197,7 +197,7 @@ describe('atlaspack', function () {
 
   it('should support workers pointing to themselves', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-self/index.js'),
+      path.join(__dirname, '../data/integration/worker-self/index.js'),
     );
 
     assertBundles(b, [
@@ -226,7 +226,7 @@ describe('atlaspack', function () {
 
   it('bundles workers pointing to themselves with import.meta.url', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-self/import-meta.js'),
+      path.join(__dirname, '../data/integration/worker-self/import-meta.js'),
     );
 
     assertBundles(b, [
@@ -253,7 +253,7 @@ describe('atlaspack', function () {
 
   it.v2('bundles workers of type module', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/workers-module/index.js'),
+      path.join(__dirname, '../data/integration/workers-module/index.js'),
       {
         mode: 'production',
         defaultTargetOptions: {
@@ -316,7 +316,7 @@ describe('atlaspack', function () {
       }`,
       async function () {
         let b = await bundle(
-          path.join(__dirname, '/integration/workers-module/index.js'),
+          path.join(__dirname, '../data/integration/workers-module/index.js'),
           {
             mode: 'production',
             defaultTargetOptions: {
@@ -388,7 +388,7 @@ describe('atlaspack', function () {
       }support it with esmodule parent script`,
       async function () {
         let b = await bundle(
-          path.join(__dirname, '/integration/workers-module/index.js'),
+          path.join(__dirname, '../data/integration/workers-module/index.js'),
           {
             mode: 'production',
             defaultTargetOptions: {
@@ -449,7 +449,7 @@ describe('atlaspack', function () {
 
   it.v2('preserves the worker name option', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/workers-module/named.js'),
+      path.join(__dirname, '../data/integration/workers-module/named.js'),
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -471,7 +471,7 @@ describe('atlaspack', function () {
       let errored = false;
       try {
         await bundle(
-          path.join(__dirname, '/integration/workers-module/error.js'),
+          path.join(__dirname, '../data/integration/workers-module/error.js'),
           {
             defaultTargetOptions: {
               shouldScopeHoist: true,
@@ -493,7 +493,7 @@ describe('atlaspack', function () {
               {
                 filePath: path.join(
                   __dirname,
-                  '/integration/workers-module/dedicated-worker.js',
+                  '/../data/integration/workers-module/dedicated-worker.js',
                 ),
                 codeHighlights: [
                   {
@@ -512,7 +512,7 @@ describe('atlaspack', function () {
               {
                 filePath: path.join(
                   __dirname,
-                  '/integration/workers-module/error.js',
+                  '/../data/integration/workers-module/error.js',
                 ),
                 codeHighlights: [
                   {
@@ -544,7 +544,7 @@ describe('atlaspack', function () {
 
   it('bundles workers with different order', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/workers/index-alternative.js'),
+      path.join(__dirname, '../data/integration/workers/index-alternative.js'),
     );
 
     assertBundles(b, [
@@ -655,7 +655,7 @@ describe('atlaspack', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/worker-import-scripts/importScripts.js',
+        '/../data/integration/worker-import-scripts/importScripts.js',
       ),
     );
 
@@ -674,7 +674,7 @@ describe('atlaspack', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/worker-import-scripts/index-variable.js',
+        '/../data/integration/worker-import-scripts/index-variable.js',
       ),
     );
 
@@ -697,7 +697,7 @@ describe('atlaspack', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/worker-import-scripts/index-external.js',
+        '/../data/integration/worker-import-scripts/index-external.js',
       ),
     );
 
@@ -718,7 +718,7 @@ describe('atlaspack', function () {
 
   it('bundles service workers', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/service-worker/a/index.js'),
+      path.join(__dirname, '../data/integration/service-worker/a/index.js'),
     );
 
     assertBundles(b, [
@@ -737,7 +737,7 @@ describe('atlaspack', function () {
 
   it('bundles service workers with type: module', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/service-worker/module.js'),
+      path.join(__dirname, '../data/integration/service-worker/module.js'),
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -766,7 +766,7 @@ describe('atlaspack', function () {
 
   it('preserves the scope option for service workers', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/service-worker/scope.js'),
+      path.join(__dirname, '../data/integration/service-worker/scope.js'),
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -800,7 +800,7 @@ describe('atlaspack', function () {
       let errored = false;
       try {
         await bundle(
-          path.join(__dirname, '/integration/service-worker/error.js'),
+          path.join(__dirname, '../data/integration/service-worker/error.js'),
           {
             defaultTargetOptions: {
               shouldScopeHoist: true,
@@ -822,7 +822,7 @@ describe('atlaspack', function () {
               {
                 filePath: path.join(
                   __dirname,
-                  '/integration/service-worker/module-worker.js',
+                  '/../data/integration/service-worker/module-worker.js',
                 ),
                 codeHighlights: [
                   {
@@ -841,7 +841,7 @@ describe('atlaspack', function () {
               {
                 filePath: path.join(
                   __dirname,
-                  'integration/service-worker/error.js',
+                  '../data/integration/service-worker/error.js',
                 ),
                 codeHighlights: [
                   {
@@ -873,7 +873,7 @@ describe('atlaspack', function () {
 
   it.v2('exposes a manifest to service workers', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/service-worker/manifest.js'),
+      path.join(__dirname, '../data/integration/service-worker/manifest.js'),
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -908,7 +908,7 @@ describe('atlaspack', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/service-worker-import-meta-url/index.js',
+        '/../data/integration/service-worker-import-meta-url/index.js',
       ),
     );
 
@@ -931,7 +931,7 @@ describe('atlaspack', function () {
     async function () {
       let fixture = path.join(
         __dirname,
-        'integration/service-worker-import-meta-url/missing.js',
+        '../data/integration/service-worker-import-meta-url/missing.js',
       );
       let code = await inputFS.readFileSync(fixture, 'utf8');
       await assert.rejects(() => bundle(fixture), {
@@ -976,7 +976,7 @@ describe('atlaspack', function () {
       await bundle(
         path.join(
           __dirname,
-          '/integration/service-worker/dynamic-import-index.js',
+          '/../data/integration/service-worker/dynamic-import-index.js',
         ),
       );
     } catch (err) {
@@ -990,7 +990,7 @@ describe('atlaspack', function () {
             {
               filePath: path.join(
                 __dirname,
-                '/integration/service-worker/dynamic-import.js',
+                '/../data/integration/service-worker/dynamic-import.js',
               ),
               codeHighlights: [
                 {
@@ -1009,7 +1009,7 @@ describe('atlaspack', function () {
             {
               filePath: path.join(
                 __dirname,
-                'integration/service-worker/dynamic-import-index.js',
+                '../data/integration/service-worker/dynamic-import-index.js',
               ),
               codeHighlights: [
                 {
@@ -1036,7 +1036,7 @@ describe('atlaspack', function () {
 
   it('bundles workers with circular dependencies', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-circular/index.js'),
+      path.join(__dirname, '../data/integration/worker-circular/index.js'),
     );
 
     assertBundles(b, [
@@ -1052,7 +1052,7 @@ describe('atlaspack', function () {
 
   it('recognizes worker constructor with static URL and import.meta.url', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-import-meta-url/index.js'),
+      path.join(__dirname, '../data/integration/worker-import-meta-url/index.js'),
     );
 
     assertBundles(b, [
@@ -1071,7 +1071,7 @@ describe('atlaspack', function () {
 
   it('ignores worker constructors with dynamic URL and import.meta.url', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-import-meta-url/dynamic.js'),
+      path.join(__dirname, '../data/integration/worker-import-meta-url/dynamic.js'),
     );
 
     assertBundles(b, [
@@ -1087,7 +1087,7 @@ describe('atlaspack', function () {
 
   it('ignores worker constructors with local URL binding and import.meta.url', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-import-meta-url/local-url.js'),
+      path.join(__dirname, '../data/integration/worker-import-meta-url/local-url.js'),
     );
 
     assertBundles(b, [
@@ -1106,7 +1106,7 @@ describe('atlaspack', function () {
     async function () {
       let fixture = path.join(
         __dirname,
-        'integration/worker-import-meta-url/missing.js',
+        '../data/integration/worker-import-meta-url/missing.js',
       );
       let code = await inputFS.readFileSync(fixture, 'utf8');
       await assert.rejects(() => bundle(fixture), {
@@ -1150,7 +1150,7 @@ describe('atlaspack', function () {
 
   it.skip('bundles in workers with other loaders', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/workers-with-other-loaders/index.js'),
+      path.join(__dirname, '../data/integration/workers-with-other-loaders/index.js'),
     );
 
     assertBundles(b, {
@@ -1185,7 +1185,7 @@ describe('atlaspack', function () {
 
   it('creates a shared bundle to deduplicate assets in workers', async () => {
     let b = await bundle(
-      path.join(__dirname, '/integration/worker-shared/index.js'),
+      path.join(__dirname, '../data/integration/worker-shared/index.js'),
       {
         mode: 'production',
         defaultTargetOptions: {
@@ -1239,7 +1239,7 @@ describe('atlaspack', function () {
     'creates a shared bundle between browser and worker contexts',
     async () => {
       let b = await bundle(
-        path.join(__dirname, '/integration/html-shared-worker/index.html'),
+        path.join(__dirname, '../data/integration/html-shared-worker/index.html'),
         {mode: 'production', defaultTargetOptions: {shouldScopeHoist: false}},
       );
 
@@ -1301,7 +1301,7 @@ describe('atlaspack', function () {
     'supports workers with shared assets between page and worker with async imports',
     async function () {
       let b = await bundle(
-        path.join(__dirname, '/integration/worker-shared-page/index.html'),
+        path.join(__dirname, '../data/integration/worker-shared-page/index.html'),
         {
           mode: 'production',
           defaultTargetOptions: {
@@ -1364,7 +1364,7 @@ describe('atlaspack', function () {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/internalize-remove-bundlegroup/index.js',
+        '/../data/integration/internalize-remove-bundlegroup/index.js',
       ),
     );
 

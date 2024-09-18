@@ -23,7 +23,7 @@ import {relativePath} from '@atlaspack/utils';
 describe.v2('plugin', function () {
   it("continue transformer pipeline on type change that doesn't change the pipeline", async function () {
     await bundle(
-      path.join(__dirname, '/integration/pipeline-type-change/index.ini'),
+      path.join(__dirname, '../data/integration/pipeline-type-change/index.ini'),
     );
 
     let output = await fs.readFile(path.join(distDir, 'index.txt'), 'utf8');
@@ -37,7 +37,7 @@ atlaspack-transformer-b`,
 
   it('should allow optimizer plugins to change the output file type', async function () {
     await bundle(
-      path.join(__dirname, '/integration/optimizer-changing-type/index.js'),
+      path.join(__dirname, '../data/integration/optimizer-changing-type/index.js'),
     );
 
     assert.deepEqual(fs.readdirSync(distDir), ['index.test']);
@@ -45,7 +45,7 @@ atlaspack-transformer-b`,
 
   it('should allow resolver plugins to disable deferring', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/resolver-canDefer/index.js'),
+      path.join(__dirname, '../data/integration/resolver-canDefer/index.js'),
       {mode: 'production'},
     );
 
@@ -59,7 +59,7 @@ atlaspack-transformer-b`,
 
   it('should allow resolvers to return changes for dependency.meta', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/resolver-dependency-meta/a.js'),
+      path.join(__dirname, '../data/integration/resolver-dependency-meta/a.js'),
       {shouldDisableCache: false, shouldContentHash: false, inputFS: overlayFS},
     );
 
@@ -72,15 +72,15 @@ atlaspack-transformer-b`,
     assert.deepEqual(calls, [1234]);
 
     await overlayFS.writeFile(
-      path.join(__dirname, '/integration/resolver-dependency-meta/a.js'),
+      path.join(__dirname, '../data/integration/resolver-dependency-meta/a.js'),
       (await overlayFS.readFile(
-        path.join(__dirname, '/integration/resolver-dependency-meta/a.js'),
+        path.join(__dirname, '../data/integration/resolver-dependency-meta/a.js'),
         'utf8',
       )) + '\n// abc',
     );
 
     b = await bundle(
-      path.join(__dirname, '/integration/resolver-dependency-meta/a.js'),
+      path.join(__dirname, '../data/integration/resolver-dependency-meta/a.js'),
       {shouldDisableCache: false, shouldContentHash: false, inputFS: overlayFS},
     );
 
@@ -96,7 +96,7 @@ atlaspack-transformer-b`,
   it('invalidate the cache based on loadBundleConfig in a packager', async function () {
     let fixture = path.join(
       __dirname,
-      '/integration/packager-loadBundleConfig',
+      '/../data/integration/packager-loadBundleConfig',
     );
     let entry = path.join(fixture, 'index.html');
 
@@ -155,7 +155,7 @@ atlaspack-transformer-b`,
   });
 
   it('invalidate the cache based on loadConfig in a packager', async function () {
-    let fixture = path.join(__dirname, '/integration/packager-loadConfig');
+    let fixture = path.join(__dirname, '../data/integration/packager-loadConfig');
     let entry = path.join(fixture, 'index.txt');
     let config = path.join(fixture, 'foo.config.json');
     let b = await bundle(entry, {
@@ -182,7 +182,7 @@ atlaspack-transformer-b`,
 
   it('merges symbol information when applying runtime assets', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/runtime-symbol-merging/entry.js'),
+      path.join(__dirname, '../data/integration/runtime-symbol-merging/entry.js'),
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -212,7 +212,7 @@ atlaspack-transformer-b`,
 
   it('properly excludes assets that are excluded and deferred by both app code and runtimes', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/runtime-deferred-excluded/index.js'),
+      path.join(__dirname, '../data/integration/runtime-deferred-excluded/index.js'),
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -237,7 +237,7 @@ atlaspack-transformer-b`,
 
   it('handles multiple assets returned by a transformer', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/multi-asset-transformer/index.js'),
+      path.join(__dirname, '../data/integration/multi-asset-transformer/index.js'),
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -251,7 +251,7 @@ atlaspack-transformer-b`,
   it('throws when multiple assets returned by a transformer import a missing symbol', async function () {
     let source = path.join(
       __dirname,
-      '/integration/multi-asset-transformer-export/index.js',
+      '/../data/integration/multi-asset-transformer-export/index.js',
     );
     let message = `index.js does not export 'foo'`;
 
@@ -300,7 +300,7 @@ atlaspack-transformer-b`,
       let b = await bundle(
         path.join(
           __dirname,
-          '/integration/resolver-can-invalidateonenvchange/index.js',
+          '/../data/integration/resolver-can-invalidateonenvchange/index.js',
         ),
         {
           shouldDisableCache: false,
@@ -317,7 +317,7 @@ atlaspack-transformer-b`,
 
   it('should output sourcemaps when packaging Wasm', async () => {
     let b = await bundle(
-      path.join(__dirname, '/integration/wasm-sourcemap-transformer/index.js'),
+      path.join(__dirname, '../data/integration/wasm-sourcemap-transformer/index.js'),
     );
     let wasmPath = nullthrows(
       b.getBundles().find(b => b.type === 'wasm'),

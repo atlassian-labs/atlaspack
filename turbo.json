@@ -7,6 +7,9 @@
     "Cargo.lock"
   ],
   "tasks": {
+    "@atlaspack/core#build": {
+      "dependsOn": ["^build", "@atlaspack/compressor-raw#build"]
+    },
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["src/**/*", "test/**/*", "package.json", "Cargo.toml"],
@@ -14,6 +17,8 @@
         ".next/**",
         "!.next/cache/**",
         "lib/**",
+        "dist/**",
+        "built-tests/**",
         "*.node",
         "**/*.d.ts",
         "lib/**/*.ts",
@@ -23,7 +28,13 @@
     "test": {
       "dependsOn": ["^build", "build"],
       "env": ["NODE_ENV", "ATLASPACK_BUILD_ENV", "ATLASPACK_V3"],
-      "inputs": ["src/**/*", "lib/**/*", "test/**/*", "package.json"],
+      "inputs": [
+        "src/**/*",
+        "lib/**/*",
+        "test/**/*",
+        "package.json",
+        "data/**/*"
+      ],
       "outputs": [".next/**", "!.next/cache/**"]
     }
   }

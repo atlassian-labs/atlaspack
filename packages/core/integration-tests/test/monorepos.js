@@ -16,7 +16,7 @@ import {
   runBundle,
 } from '@atlaspack/test-utils';
 
-const distDir = path.join(__dirname, '/integration/monorepo/dist/default');
+const distDir = path.join(__dirname, '../data/integration/monorepo/dist/default');
 
 describe.v2('monorepos', function () {
   beforeEach(async () => {
@@ -32,7 +32,7 @@ describe.v2('monorepos', function () {
   });
 
   it('should compile packages with target source overrides', async function () {
-    let fixture = path.join(__dirname, '/integration/target-source');
+    let fixture = path.join(__dirname, '../data/integration/target-source');
     let oldcwd = inputFS.cwd();
     inputFS.chdir(fixture);
 
@@ -96,7 +96,7 @@ describe.v2('monorepos', function () {
   });
 
   it('should compile packages with target source overrides and --target option', async function () {
-    let fixture = path.join(__dirname, '/integration/target-source');
+    let fixture = path.join(__dirname, '../data/integration/target-source');
     let oldcwd = inputFS.cwd();
     inputFS.chdir(fixture);
 
@@ -147,7 +147,7 @@ describe.v2('monorepos', function () {
   });
 
   it('should compile packages with target source overrides and --target option in serve mode', async function () {
-    let fixture = path.join(__dirname, '/integration/target-source');
+    let fixture = path.join(__dirname, '../data/integration/target-source');
     let oldcwd = inputFS.cwd();
     inputFS.chdir(fixture);
 
@@ -169,7 +169,7 @@ describe.v2('monorepos', function () {
   });
 
   it('should build using root targets with entry files inside packages and cwd at project root', async function () {
-    let fixture = path.join(__dirname, '/integration/monorepo');
+    let fixture = path.join(__dirname, '../data/integration/monorepo');
     let oldcwd = inputFS.cwd();
     inputFS.chdir(fixture);
 
@@ -227,8 +227,8 @@ describe.v2('monorepos', function () {
   it('should build multiple packages in a monorepo at once, pointing at directories with "source" field in package.json', async function () {
     let b = await bundle(
       [
-        path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
-        path.join(__dirname, '/integration/monorepo/packages/pkg-b'),
+        path.join(__dirname, '../data/integration/monorepo/packages/pkg-a'),
+        path.join(__dirname, '../data/integration/monorepo/packages/pkg-b'),
       ],
       {
         defaultTargetOptions: {
@@ -267,7 +267,7 @@ describe.v2('monorepos', function () {
     let contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
+        '/../data/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
       ),
       'utf8',
     );
@@ -276,7 +276,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
+        '/../data/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
       ),
       'utf8',
     );
@@ -285,7 +285,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.js',
+        '/../data/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.js',
       ),
       'utf8',
     );
@@ -294,7 +294,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.css',
+        '/../data/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.css',
       ),
       'utf8',
     );
@@ -303,7 +303,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.module.js',
+        '/../data/integration/monorepo/packages/pkg-b/dist/pkg-b.module.js',
       ),
       'utf8',
     );
@@ -311,7 +311,7 @@ describe.v2('monorepos', function () {
   });
 
   it('should build using root targets with a glob pointing at files inside packages and cwd at project root', async function () {
-    let fixture = path.join(__dirname, '/integration/monorepo');
+    let fixture = path.join(__dirname, '../data/integration/monorepo');
     let oldcwd = inputFS.cwd();
     inputFS.chdir(fixture);
 
@@ -362,11 +362,11 @@ describe.v2('monorepos', function () {
 
   it('should build using root targets with a glob pointing at files inside packages and cwd outside project root', async function () {
     let oldcwd = inputFS.cwd();
-    inputFS.chdir(path.join(__dirname, '/integration'));
+    inputFS.chdir(path.join(__dirname, '../data/integration'));
 
     try {
       let b = await bundle(
-        path.join(__dirname, '/integration/monorepo/packages/*/src/index.js'),
+        path.join(__dirname, '../data/integration/monorepo/packages/*/src/index.js'),
         {
           defaultTargetOptions: {
             shouldScopeHoist: true,
@@ -413,7 +413,7 @@ describe.v2('monorepos', function () {
   });
 
   it('should build a single package with an entry file and cwd at a package', async function () {
-    let fixture = path.join(__dirname, '/integration/monorepo/packages/pkg-a');
+    let fixture = path.join(__dirname, '../data/integration/monorepo/packages/pkg-a');
     let oldcwd = inputFS.cwd();
     inputFS.chdir(fixture);
 
@@ -439,7 +439,7 @@ describe.v2('monorepos', function () {
       let contents = await outputFS.readFile(
         path.join(
           __dirname,
-          '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
+          '/../data/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
         ),
         'utf8',
       );
@@ -448,7 +448,7 @@ describe.v2('monorepos', function () {
       contents = await outputFS.readFile(
         path.join(
           __dirname,
-          '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
+          '/../data/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
         ),
         'utf8',
       );
@@ -461,7 +461,7 @@ describe.v2('monorepos', function () {
   it('should build a single package with an entry file and cwd inside a package', async function () {
     let fixture = path.join(
       __dirname,
-      '/integration/monorepo/packages/pkg-a/src',
+      '/../data/integration/monorepo/packages/pkg-a/src',
     );
     let oldcwd = inputFS.cwd();
     inputFS.chdir(fixture);
@@ -488,7 +488,7 @@ describe.v2('monorepos', function () {
       let contents = await outputFS.readFile(
         path.join(
           __dirname,
-          '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
+          '/../data/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
         ),
         'utf8',
       );
@@ -497,7 +497,7 @@ describe.v2('monorepos', function () {
       contents = await outputFS.readFile(
         path.join(
           __dirname,
-          '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
+          '/../data/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
         ),
         'utf8',
       );
@@ -509,7 +509,7 @@ describe.v2('monorepos', function () {
 
   it('should build multiple packages in a monorepo at once, pointing at a glob of directories', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/monorepo/packages/*'),
+      path.join(__dirname, '../data/integration/monorepo/packages/*'),
       {
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -547,7 +547,7 @@ describe.v2('monorepos', function () {
     let contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
+        '/../data/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
       ),
       'utf8',
     );
@@ -556,7 +556,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
+        '/../data/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
       ),
       'utf8',
     );
@@ -565,7 +565,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.js',
+        '/../data/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.js',
       ),
       'utf8',
     );
@@ -574,7 +574,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.css',
+        '/../data/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.css',
       ),
       'utf8',
     );
@@ -583,7 +583,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.module.js',
+        '/../data/integration/monorepo/packages/pkg-b/dist/pkg-b.module.js',
       ),
       'utf8',
     );
@@ -593,7 +593,7 @@ describe.v2('monorepos', function () {
   it('should watch glob entries and build new packages that are added', async function () {
     // copy into memory fs
     await ncp(
-      path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
+      path.join(__dirname, '../data/integration/monorepo/packages/pkg-a'),
       path.join(__dirname, '/monorepo/packages/pkg-a'),
     );
 
@@ -619,7 +619,7 @@ describe.v2('monorepos', function () {
     ]);
 
     await ncp(
-      path.join(__dirname, '/integration/monorepo/packages/pkg-b'),
+      path.join(__dirname, '../data/integration/monorepo/packages/pkg-b'),
       path.join(__dirname, '/monorepo/packages/pkg-b'),
     );
 
@@ -655,7 +655,7 @@ describe.v2('monorepos', function () {
   it('should watch package.json containing "source" field for changes', async function () {
     // copy into memory fs
     await ncp(
-      path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
+      path.join(__dirname, '../data/integration/monorepo/packages/pkg-a'),
       path.join(__dirname, '/monorepo/packages/pkg-a'),
     );
 
@@ -716,7 +716,7 @@ describe.v2('monorepos', function () {
   it('should watch package.json containing targets for changes', async function () {
     // copy into memory fs
     await ncp(
-      path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
+      path.join(__dirname, '../data/integration/monorepo/packages/pkg-a'),
       path.join(__dirname, '/monorepo/packages/pkg-a'),
     );
 
@@ -780,8 +780,8 @@ describe.v2('monorepos', function () {
   it('should not share bundles between targets', async function () {
     let b = await bundle(
       [
-        path.join(__dirname, '/integration/monorepo-shared/packages/pkg-a'),
-        path.join(__dirname, '/integration/monorepo-shared/packages/pkg-b'),
+        path.join(__dirname, '../data/integration/monorepo-shared/packages/pkg-a'),
+        path.join(__dirname, '../data/integration/monorepo-shared/packages/pkg-b'),
       ],
       {
         defaultTargetOptions: {
@@ -828,7 +828,7 @@ describe.v2('monorepos', function () {
     let contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo-shared/packages/pkg-a/dist/pkg-a.cjs.js',
+        '/../data/integration/monorepo-shared/packages/pkg-a/dist/pkg-a.cjs.js',
       ),
       'utf8',
     );
@@ -838,7 +838,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo-shared/packages/pkg-a/dist/pkg-a.module.js',
+        '/../data/integration/monorepo-shared/packages/pkg-a/dist/pkg-a.module.js',
       ),
       'utf8',
     );
@@ -848,7 +848,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo-shared/packages/pkg-a/dist/pkg-a.cjs.css',
+        '/../data/integration/monorepo-shared/packages/pkg-a/dist/pkg-a.cjs.css',
       ),
       'utf8',
     );
@@ -857,7 +857,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo-shared/packages/pkg-b/dist/pkg-b.cjs.js',
+        '/../data/integration/monorepo-shared/packages/pkg-b/dist/pkg-b.cjs.js',
       ),
       'utf8',
     );
@@ -866,7 +866,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo-shared/packages/pkg-b/dist/pkg-b.cjs.css',
+        '/../data/integration/monorepo-shared/packages/pkg-b/dist/pkg-b.cjs.css',
       ),
       'utf8',
     );
@@ -875,7 +875,7 @@ describe.v2('monorepos', function () {
     contents = await outputFS.readFile(
       path.join(
         __dirname,
-        '/integration/monorepo-shared/packages/pkg-b/dist/pkg-b.module.js',
+        '/../data/integration/monorepo-shared/packages/pkg-b/dist/pkg-b.module.js',
       ),
       'utf8',
     );
@@ -885,7 +885,7 @@ describe.v2('monorepos', function () {
   it('should search for .parcelrc at cwd in monorepos', async () => {
     let fixture = path.join(
       __dirname,
-      '/integration/parcelrc-monorepo/app/index.js',
+      '/../data/integration/parcelrc-monorepo/app/index.js',
     );
 
     let oldcwd = inputFS.cwd();

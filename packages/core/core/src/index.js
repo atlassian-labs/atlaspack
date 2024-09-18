@@ -20,4 +20,6 @@ export {
   INTERNAL_TRANSFORM,
 } from './Atlaspack';
 
+export {ATLASPACK_VERSION} from './constants';
+
 export * from './atlaspack-v3';

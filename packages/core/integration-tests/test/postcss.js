@@ -22,7 +22,7 @@ import {
 describe.v2('postcss', () => {
   it('should build successfully with only postcss-modules config', async () => {
     let b = await bundle(
-      path.join(__dirname, '/integration/postcss-modules-config/index.js'),
+      path.join(__dirname, '../data/integration/postcss-modules-config/index.js'),
     );
 
     assertBundles(b, [
@@ -52,7 +52,7 @@ describe.v2('postcss', () => {
     let b = await bundle(
       path.join(
         __dirname,
-        '/integration/postcss-modules-config-package/index.js',
+        '/../data/integration/postcss-modules-config-package/index.js',
       ),
     );
 
@@ -81,10 +81,10 @@ describe.v2('postcss', () => {
 
   it('should support transforming with postcss twice with the same result', async () => {
     let b = await bundle(
-      path.join(__dirname, '/integration/postcss-plugins/index.js'),
+      path.join(__dirname, '../data/integration/postcss-plugins/index.js'),
     );
     let c = await bundle(
-      path.join(__dirname, '/integration/postcss-plugins/index2.js'),
+      path.join(__dirname, '../data/integration/postcss-plugins/index2.js'),
     );
 
     let [run1, run2] = await Promise.all([run(b), run(c)]);
@@ -94,7 +94,7 @@ describe.v2('postcss', () => {
 
   it('should support transforming declarations with missing source', async () => {
     await bundle(
-      path.join(__dirname, '/integration/postcss-plugins-decl/index.css'),
+      path.join(__dirname, '../data/integration/postcss-plugins-decl/index.css'),
     );
 
     let css = await outputFS.readFile(path.join(distDir, 'index.css'), 'utf8');
@@ -106,7 +106,7 @@ describe.v2('postcss', () => {
     let inputDir = path.join(__dirname, '/input');
     await outputFS.rimraf(inputDir);
     await ncp(
-      path.join(__dirname, '/integration/postcss-autoinstall/npm'),
+      path.join(__dirname, '../data/integration/postcss-autoinstall/npm'),
       inputDir,
     );
 
@@ -114,7 +114,7 @@ describe.v2('postcss', () => {
     packageInstaller.register(
       'postcss-test',
       inputFS,
-      path.join(__dirname, '/integration/postcss-autoinstall/postcss-test'),
+      path.join(__dirname, '../data/integration/postcss-autoinstall/postcss-test'),
     );
 
     // The package manager uses an overlay filesystem, which performs writes to
@@ -157,7 +157,7 @@ describe.v2('postcss', () => {
 
   it('should support using postcss for importing', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/postcss-import/style.css'),
+      path.join(__dirname, '../data/integration/postcss-import/style.css'),
     );
 
     assertBundles(b, [
@@ -173,7 +173,7 @@ describe.v2('postcss', () => {
 
   it('should support using a postcss config in package.json', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/postcss-config-package/style.css'),
+      path.join(__dirname, '../data/integration/postcss-config-package/style.css'),
     );
 
     assertBundles(b, [
@@ -190,7 +190,7 @@ describe.v2('postcss', () => {
 
   it('Should support postcss.config.js config file with PostCSS 7 plugin', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/postcss-js-config-7/style.css'),
+      path.join(__dirname, '../data/integration/postcss-js-config-7/style.css'),
     );
 
     assertBundles(b, [
@@ -206,7 +206,7 @@ describe.v2('postcss', () => {
 
   it('Should support postcss.config.js config file with PostCSS 8 plugin', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/postcss-js-config-8/style.css'),
+      path.join(__dirname, '../data/integration/postcss-js-config-8/style.css'),
     );
 
     assertBundles(b, [
@@ -225,7 +225,7 @@ describe.v2('postcss', () => {
     );
     await inputFS.mkdirp(inputDir);
     await inputFS.ncp(
-      path.join(__dirname, '/integration/postcss-dir-dependency'),
+      path.join(__dirname, '../data/integration/postcss-dir-dependency'),
       inputDir,
     );
 
@@ -305,7 +305,7 @@ describe.v2('postcss', () => {
   it('should throw an error with code frame when .postcssrc is invalid', async function () {
     let configFilePath = path.join(
       __dirname,
-      '/integration/postcss-modules-config-invalid/.postcssrc',
+      '/../data/integration/postcss-modules-config-invalid/.postcssrc',
     );
     let code = await inputFS.readFile(configFilePath, 'utf8');
     await assert.rejects(
@@ -313,7 +313,7 @@ describe.v2('postcss', () => {
         bundle(
           path.join(
             __dirname,
-            '/integration/postcss-modules-config-invalid/src/index.css',
+            '/../data/integration/postcss-modules-config-invalid/src/index.css',
           ),
         ),
       {

@@ -24,7 +24,7 @@ describe.v2('posthtml', function () {
 
   it('should support transforming HTML with posthtml', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/posthtml/index.html'),
+      path.join(__dirname, '../data/integration/posthtml/index.html'),
     );
 
     assertBundles(b, [
@@ -40,7 +40,7 @@ describe.v2('posthtml', function () {
 
   it('should find assets inside posthtml', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/posthtml-assets/index.html'),
+      path.join(__dirname, '../data/integration/posthtml-assets/index.html'),
     );
 
     assertBundles(b, [
@@ -57,7 +57,7 @@ describe.v2('posthtml', function () {
 
   it('Should be able to process an html file with plugins without any params for plugin', async function () {
     let b = await bundle(
-      path.join(__dirname, '/integration/posthtml-plugins/index.html'),
+      path.join(__dirname, '../data/integration/posthtml-plugins/index.html'),
     );
 
     assertBundles(b, [
@@ -81,12 +81,12 @@ describe.v2('posthtml', function () {
 
   it.skip('should add dependencies referenced by posthtml-include', async () => {
     const b = await bundle(
-      path.join(__dirname, '/integration/posthtml-assets/index.html'),
+      path.join(__dirname, '../data/integration/posthtml-assets/index.html'),
     );
     const asset = b.assets.values().next().value;
     const other = path.join(
       __dirname,
-      '/integration/posthtml-assets/other.html',
+      '/../data/integration/posthtml-assets/other.html',
     );
     assert(asset.dependencies.has(other));
     assert(asset.dependencies.get(other).includedInParent);
@@ -94,12 +94,12 @@ describe.v2('posthtml', function () {
 
   it.skip('should add dependencies referenced by plugins', async () => {
     const b = await bundle(
-      path.join(__dirname, '/integration/posthtml-plugin-deps/index.html'),
+      path.join(__dirname, '../data/integration/posthtml-plugin-deps/index.html'),
     );
     const asset = b.assets.values().next().value;
     const other = path.join(
       __dirname,
-      '/integration/posthtml-plugin-deps/base.html',
+      '/../data/integration/posthtml-plugin-deps/base.html',
     );
     assert(asset.dependencies.has(other));
     assert(asset.dependencies.get(other).includedInParent);
@@ -109,7 +109,7 @@ describe.v2('posthtml', function () {
     let inputDir = path.join(__dirname, '/input');
     await outputFS.rimraf(inputDir);
     await ncp(
-      path.join(__dirname, '/integration/posthtml-autoinstall'),
+      path.join(__dirname, '../data/integration/posthtml-autoinstall'),
       inputDir,
     );
 
@@ -117,7 +117,7 @@ describe.v2('posthtml', function () {
     packageInstaller.register(
       'posthtml-test',
       inputFS,
-      path.join(__dirname, '/integration/posthtml-autoinstall/posthtml-test'),
+      path.join(__dirname, '../data/integration/posthtml-autoinstall/posthtml-test'),
     );
 
     // The package manager uses an overlay filesystem, which performs writes to

@@ -15,7 +15,7 @@ const ZIPFS = `${path.sep}zipfs`;
 
 describe.v2('pnp', function () {
   it('should defer to the pnp resolution when needed', async function () {
-    let dir = path.join(__dirname, 'integration/pnp-require');
+    let dir = path.join(__dirname, '../data/integration/pnp-require');
 
     let origPnpVersion = process.versions.pnp;
     process.versions.pnp = 42;
@@ -64,7 +64,7 @@ describe.v2('pnp', function () {
   });
 
   it('should support importing Node builtin modules from npm when requested', async function () {
-    let dir = path.join(__dirname, 'integration/pnp-builtin');
+    let dir = path.join(__dirname, '../data/integration/pnp-builtin');
 
     let origPnpVersion = process.versions.pnp;
     process.versions.pnp = 42;

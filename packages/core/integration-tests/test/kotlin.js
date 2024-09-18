@@ -18,7 +18,7 @@ describe.skip('kotlin', function () {
   }
 
   it('should produce a basic kotlin bundle', async function () {
-    let b = await bundle(__dirname + '/integration/kotlin/index.js');
+    let b = await bundle(__dirname + '/../data/integration/kotlin/index.js');
 
     await assertBundleTree(b, {
       type: 'js',

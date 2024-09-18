@@ -62,7 +62,7 @@ describe.v2('hmr', function () {
       | Array<(Array<any>) => {[string]: string}>,
   ) {
     await ncp(
-      path.join(__dirname, '/integration/', name),
+      path.join(__dirname, '../data/integration/', name),
       path.join(__dirname, '/input'),
     );
 
@@ -133,7 +133,7 @@ describe.v2('hmr', function () {
     beforeEach(async function () {
       await outputFS.rimraf(path.join(__dirname, '/input'));
       await ncp(
-        path.join(__dirname, '/integration/commonjs'),
+        path.join(__dirname, '../data/integration/commonjs'),
         path.join(__dirname, '/input'),
       );
     });
@@ -310,8 +310,8 @@ describe.v2('hmr', function () {
       let b = bundler(path.join(__dirname, '/input/index.js'), {
         serveOptions: {
           https: {
-            key: path.join(__dirname, '/integration/https/private.pem'),
-            cert: path.join(__dirname, '/integration/https/primary.crt'),
+            key: path.join(__dirname, '../data/integration/https/private.pem'),
+            cert: path.join(__dirname, '../data/integration/https/primary.crt'),
           },
           port,
           host: 'localhost',
@@ -651,7 +651,7 @@ module.hot.dispose((data) => {
 
     it.skip('should call dispose and accept callbacks', async function() {
       await ncp(
-        path.join(__dirname, '/integration/hmr-callbacks'),
+        path.join(__dirname, '../data/integration/hmr-callbacks'),
         path.join(__dirname, '/input'),
       );
 
@@ -705,7 +705,7 @@ module.hot.dispose((data) => {
 
     it.skip('should trigger a page reload when a new bundle is created', async function() {
       await ncp(
-        path.join(__dirname, '/integration/hmr-new-bundle'),
+        path.join(__dirname, '../data/integration/hmr-new-bundle'),
         path.join(__dirname, '/input'),
       );
 
@@ -739,7 +739,7 @@ module.hot.dispose((data) => {
 
     it.skip('should log emitted errors and show an error overlay', async function() {
       await ncp(
-        path.join(__dirname, '/integration/commonjs'),
+        path.join(__dirname, '../data/integration/commonjs'),
         path.join(__dirname, '/input'),
       );
 
@@ -791,7 +791,7 @@ module.hot.dispose((data) => {
 
     it.skip('should log when errors resolve', async function() {
       await ncp(
-        path.join(__dirname, '/integration/commonjs'),
+        path.join(__dirname, '../data/integration/commonjs'),
         path.join(__dirname, '/input'),
       );
 
@@ -861,7 +861,7 @@ module.hot.dispose((data) => {
       let testDir = path.join(__dirname, '/input');
       await overlayFS.rimraf(testDir);
       await overlayFS.mkdirp(testDir);
-      await ncp(path.join(__dirname, '/integration/hmr-css'), testDir);
+      await ncp(path.join(__dirname, '../data/integration/hmr-css'), testDir);
 
       let port = await getPort();
       let b = bundler(path.join(testDir, 'index.html'), {
@@ -924,7 +924,7 @@ module.hot.dispose((data) => {
       let testDir = path.join(__dirname, '/input');
       await overlayFS.rimraf(testDir);
       await overlayFS.mkdirp(testDir);
-      await ncp(path.join(__dirname, '/integration/hmr-css-modules'), testDir);
+      await ncp(path.join(__dirname, '../data/integration/hmr-css-modules'), testDir);
 
       let port = await getPort();
       let b = bundler(path.join(testDir, 'index.html'), {
