@@ -290,10 +290,10 @@ mod tests {
         );
       };
 
-      assert_plugins("a.ts", "types", [pipelines("2"), pipelines("1")].concat());
+      assert_plugins("a.ts", "types", [pipelines("1"), pipelines("2")].concat());
       assert_plugins("a.tsx", "types", pipelines("2"));
 
-      assert_plugins("a.js", "url", [pipelines("3"), pipelines("1")].concat());
+      assert_plugins("a.js", "url", [pipelines("1"), pipelines("3")].concat());
       assert_plugins("a.url", "url", pipelines("3"));
     }
 
@@ -318,12 +318,12 @@ mod tests {
         );
       };
 
-      assert_plugins("a.ts", "types", [pipelines("2"), pipelines("1")].concat());
+      assert_plugins("a.ts", "types", [pipelines("1"), pipelines("2")].concat());
       assert_plugins("a.tsx", "types", pipelines("2"));
       assert_plugins("a.ts", "typesa", pipelines("1"));
 
       assert_plugins("a.url", "url", pipelines("3"));
-      assert_plugins("a.js", "url", [pipelines("3"), pipelines("1")].concat());
+      assert_plugins("a.js", "url", [pipelines("1"), pipelines("3")].concat());
       assert_plugins("a.js", "urla", pipelines("1"));
     }
   }
