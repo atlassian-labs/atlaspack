@@ -1,9 +1,8 @@
-use swc_core::common::{Mark, Spanned};
-use swc_core::ecma::ast::{
-  BinExpr, BinaryOp, CallExpr, Callee, ComputedPropName, CondExpr, Expr, ExprOrSpread, Ident, Lit,
-  MemberExpr, MemberProp, ParenExpr, Str,
-};
+use swc_core::atoms::{atom, Atom};
+use swc_core::common::{Mark, Span, DUMMY_SP};
+use swc_core::ecma::ast::{CallExpr, Callee, Expr, ExprOrSpread, Ident, Lit, Str};
 use swc_core::ecma::visit::VisitMut;
+use swc_core::quote;
 
 use crate::utils::match_str;
 use crate::Config;
@@ -15,109 +14,68 @@ pub struct ConditionalImportsFallback<'a> {
 
 impl<'a> VisitMut for ConditionalImportsFallback<'a> {
   fn visit_mut_expr(&mut self, node: &mut Expr) {
-    match node {
-      Expr::Call(call) => match &call.callee {
-        Callee::Expr(expr) => match &**expr {
-          Expr::Ident(ident) if ident.sym.to_string().as_str() == "importCond" => {
-            match (match_str(&call.args[1].expr), match_str(&call.args[2].expr)) {
-              (Some((if_true, if_true_span)), Some((if_false, if_false_span))) => {
-                if !self.config.conditional_bundling {
-                  // Found importCond, if flag off replace an inline require import
-                  // importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
-                  // =>
-                  // (globalThis.__MOD_COND && globalThis.__MOD_COND['CONDITION'] ? require('IF_TRUE') : require('IF_FALSE')).default;
-                  *node = Expr::Member(MemberExpr {
-                    obj: ParenExpr {
-                      expr: CondExpr {
-                        test: Box::new(
-                          BinExpr {
-                            op: BinaryOp::LogicalAnd,
-                            left: MemberExpr {
-                              obj: Box::new(Expr::Ident("globalThis".into())),
-                              prop: MemberProp::Ident("__MOD_COND".into()),
-                              span: call.span(),
-                            }
-                            .into(),
-                            right: MemberExpr {
-                              obj: Box::new(
-                                MemberExpr {
-                                  obj: Box::new(Expr::Ident("globalThis".into())),
-                                  prop: MemberProp::Ident("__MOD_COND".into()),
-                                  span: call.span(),
-                                }
-                                .into(),
-                              ),
-                              prop: MemberProp::Computed(ComputedPropName {
-                                expr: call.args[0].expr.clone(),
-                                span: call.args[0].expr.span(),
-                              }),
-                              span: call.span(),
-                            }
-                            .into(),
-                            span: call.span(),
-                          }
-                          .into(),
-                        ),
-                        cons: Box::new(
-                          CallExpr {
-                            callee: Callee::Expr(Box::new(Expr::Ident(Ident::new(
-                              "require".into(),
-                              if_true_span.apply_mark(self.unresolved_mark),
-                            )))),
-                            args: vec![ExprOrSpread {
-                              expr: Box::new(Expr::Lit(Lit::Str(Str {
-                                value: if_true,
-                                // This span is important to avoid getting marked as a helper
-                                span: if_true_span,
-                                raw: None,
-                              }))),
-                              spread: None,
-                            }],
-                            span: if_true_span,
-                            type_args: None,
-                          }
-                          .into(),
-                        ),
-                        alt: Box::new(
-                          CallExpr {
-                            callee: Callee::Expr(Box::new(Expr::Ident(Ident::new(
-                              "require".into(),
-                              if_false_span.apply_mark(self.unresolved_mark),
-                            )))),
-                            args: vec![ExprOrSpread {
-                              expr: Box::new(Expr::Lit(Lit::Str(Str {
-                                value: if_false,
-                                // This span is important to avoid getting marked as a helper
-                                span: if_false_span,
-                                raw: None,
-                              }))),
-                              spread: None,
-                            }],
-                            span: if_false_span,
-                            type_args: None,
-                          }
-                          .into(),
-                        ),
-                        span: call.span(),
-                      }
-                      .into(),
-                      span: call.span(),
-                    }
-                    .into(),
-                    prop: MemberProp::Ident("default".into()),
-                    span: call.span(),
-                  })
-                }
-              }
-              _ => {}
-            };
-          }
-          _ => {}
-        },
-        _ => {}
-      },
-      _ => {}
+    // When flag is off, we want to replace the import
+    if self.config.conditional_bundling {
+      return;
     }
+
+    let Expr::Call(call) = node else {
+      return;
+    };
+
+    let Callee::Expr(callee_expr) = &call.callee else {
+      return;
+    };
+
+    let Expr::Ident(callee_ident) = &**callee_expr else {
+      return;
+    };
+
+    if callee_ident.sym != atom!("importCond") && call.args.len() != 3 {
+      return;
+    }
+
+    let (Some((cond, _cond_span)), Some((if_true, if_true_span)), Some((if_false, if_false_span))) = (
+      match_str(&call.args[0].expr),
+      match_str(&call.args[1].expr),
+      match_str(&call.args[2].expr),
+    ) else {
+      return;
+    };
+
+    let build_import = |atom: Atom, span: Span| -> Expr {
+      CallExpr {
+        callee: Callee::Expr(Box::new(Expr::Ident(Ident::new(
+          "require".into(),
+          // Required so that we resolve the new dependency
+          span.apply_mark(self.unresolved_mark),
+        )))),
+        args: vec![ExprOrSpread {
+          expr: Box::new(Expr::Lit(Lit::Str(Str {
+            value: atom,
+            // This span is important to avoid getting marked as a helper
+            span: span,
+            raw: None,
+          }))),
+          spread: None,
+        }],
+        span: DUMMY_SP,
+        type_args: None,
+      }
+      .into()
+    };
+
+    // importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
+    // =>
+    // (globalThis.__MOD_COND && globalThis.__MOD_COND['CONDITION'] ? require('IF_TRUE') : require('IF_FALSE')).default;
+    let new_node = quote!(
+      "(globalThis.__MOD_COND && globalThis.__MOD_COND[$cond] ? $if_true : $if_false).default" as Expr,
+      cond: Expr = Expr::Lit(Lit::Str(cond.into())),
+      if_true: Expr = build_import(if_true, if_true_span),
+      if_false: Expr = build_import(if_false, if_false_span)
+    );
+
+    *node = new_node;
   }
 }
 
@@ -156,8 +114,8 @@ mod tests {
     });
 
     let expected_code = r#"
-      const x = (globalThis.__MOD_COND && globalThis.__MOD_COND['condition-1'] ? require("a") : require("b")).default;
-      const y = (globalThis.__MOD_COND && globalThis.__MOD_COND['condition-2'] ? require("c") : require("d")).default;
+      const x = (globalThis.__MOD_COND && globalThis.__MOD_COND["condition-1"] ? require("a") : require("b")).default;
+      const y = (globalThis.__MOD_COND && globalThis.__MOD_COND["condition-2"] ? require("c") : require("d")).default;
     "#;
 
     assert_eq!(

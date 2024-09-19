@@ -25,6 +25,7 @@ swc_core = { version = "0.96", features = [
   "ecma_transforms_typescript",
   "ecma_utils",
   "ecma_visit",
+  "ecma_quote",
   "stacker"
 ] }
 sourcemap = "*"
