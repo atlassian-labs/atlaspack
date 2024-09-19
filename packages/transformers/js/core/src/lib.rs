@@ -356,10 +356,9 @@ pub fn transform(
               }
 
               // Replace conditional imports with requires when flag is off
-              module.visit_mut_with(&mut ConditionalImportsFallback {
-                config: &config,
-                unresolved_mark,
-              });
+              if !config.conditional_bundling {
+                module.visit_mut_with(&mut ConditionalImportsFallback { unresolved_mark });
+              }
 
               let module = {
                 let mut passes = chain!(
