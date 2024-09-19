@@ -94,6 +94,7 @@ mod tests {
           file_type: FileType::Js,
           ..Asset::default()
         },
+        discovered_assets: Vec::new(),
         dependencies: Vec::new(),
         invalidate_on_file_change: Vec::new()
       })
