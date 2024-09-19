@@ -66,30 +66,9 @@ function nameRuntimeBundle(
  * (assets created during the build that don't actually exist on disk) and then
  * linking them into the bundle graph.
  *
- * Usually, the assets returned from a runtime will go in the same bundle. It is
- * possible though, for a runtime to return an asset with a `parallel` priority,
- * which allows it to be moved to a separate bundle. In practice, this is
- * usually used to generate application manifest files.
- *
- * When adding a manifest bundle (a whole new separate bundle) during a runtime,
- * it needs to be added to a bundle group which will be potentially referenced
- * by another bundle group. To avoid trying to reference a manifest entry which
- * hasn't been created yet, we process the bundles from the bottom up, so that
- * children will always be available when parents try to reference them.
- *
- * However, when merging those connections in to the bundle graph, the reversed
- * order can create a situation where the child bundles thought they were coming
- * first and so take responsibility for loading in shared bundles. When the
- * parents actually load first, they're expecting bundles to be loaded which
- * aren't yet, creating module not found errors.
- *
- * To fix that, we restore the forward topological order once all the
- * connections are created.
- *
  * Introduction of manifest bundles: https://github.com/parcel-bundler/parcel/pull/8837
  * Introduction of reverse topology: https://github.com/parcel-bundler/parcel/pull/8981
  */
-
 export default async function applyRuntimes<TResult: RequestResult>({
   bundleGraph,
   config,
@@ -113,7 +92,19 @@ export default async function applyRuntimes<TResult: RequestResult>({
 |}): Promise<Map<string, Asset>> {
   let runtimes = await config.getRuntimes();
 
-  // Sort bundles into reverse topological order
+  /**
+   * Usually, the assets returned from a runtime will go in the same bundle. It is
+   * possible though, for a runtime to return an asset with a `parallel` priority,
+   * which allows it to be moved to a separate bundle. In practice, this is
+   * usually used to generate application manifest files.
+   *
+   * When adding a manifest bundle (a whole new separate bundle) during a runtime,
+   * it needs to be added to a bundle group which will be potentially referenced
+   * by another bundle group. To avoid trying to reference a manifest entry which
+   * hasn't been created yet, we process the bundles from the bottom up (topological
+   * order), so that children will always be available when parents try to reference
+   * them.
+   */
   let bundles = [];
   bundleGraph.traverseBundles({
     exit(bundle) {
@@ -175,6 +166,11 @@ export default async function applyRuntimes<TResult: RequestResult>({
 
             let connectionBundle = bundle;
 
+            /**
+             * If a runtime asset is marked with a priority of `parallel` this
+             * means we need to create a new bundle for the asset and add it to
+             * all the same bundle groups.
+             */
             if (priority === 'parallel' && !bundle.needsStableName) {
               let bundleGroups =
                 bundleGraph.getBundleGroupsContainingBundle(bundle);
@@ -198,6 +194,8 @@ export default async function applyRuntimes<TResult: RequestResult>({
               }
               bundleGraph.createBundleReference(bundle, connectionBundle);
 
+              // Ensure we name the bundle now as all other bundles have already
+              // been named as this point.
               nameRuntimeBundle(connectionBundle, bundle);
             }
 
@@ -221,9 +219,23 @@ export default async function applyRuntimes<TResult: RequestResult>({
     }
   }
 
-  // Sort the bundles back into forward topological order
+  /**
+   * When merging the connections in to the bundle graph, the topological
+   * order can create module not found errors in some situations, often when HMR
+   * is enabled. To fix this, we put the connections into DFS order.
+   *
+   * Note: While DFS order seems to be the most reliable order to process the
+   * connections, this is likely due to it being close to the order that the bundles were
+   * inserted into the graph. There is a known issue where runtime assets marked
+   * as `isEntry` can create scenarios where there is no correct load order that
+   * won't error, as the entry runtime assets are added to many bundles in a
+   * single bundle group but their dependencies are not.
+   *
+   * This issue is almost exclusive to HMR scenarios as the two HMR runtime
+   * plugins (@atlaspack/runtime-browser-hmr and @atlaspack/runtime-react-refresh)
+   * are the only known cases where a runtime asset is marked as `isEntry`.
+   */
   let connections: Array<RuntimeConnection> = [];
-
   bundleGraph.traverseBundles({
     enter(bundle) {
       connections.push(...connectionMap.get(bundle));
@@ -249,23 +261,31 @@ export default async function applyRuntimes<TResult: RequestResult>({
     await runDevDepRequest(api, devDepRequest);
   }
 
+  // Create a new AssetGraph from the generated runtime assets which also runs
+  // transforms and resolves all dependencies.
   let {assetGraph: runtimesAssetGraph, changedAssets} =
     await reconcileNewRuntimes(api, connections, optionsRef);
 
-  let runtimesGraph = InternalBundleGraph.fromAssetGraph(
+  // Convert the runtime AssetGraph into a BundleGraph, this includes assigning
+  // the assets their public ids
+  let runtimesBundleGraph = InternalBundleGraph.fromAssetGraph(
     runtimesAssetGraph,
     options.mode === 'production',
     bundleGraph._publicIdByAssetId,
     bundleGraph._assetPublicIds,
   );
 
-  // Merge the runtimes graph into the main bundle graph.
-  bundleGraph.merge(runtimesGraph);
-  for (let [assetId, publicId] of runtimesGraph._publicIdByAssetId) {
+  // Merge the runtimes bundle graph into the main bundle graph.
+  bundleGraph.merge(runtimesBundleGraph);
+
+  // Add the public id mappings from the runtumes bundlegraph to the main bundle graph
+  for (let [assetId, publicId] of runtimesBundleGraph._publicIdByAssetId) {
     bundleGraph._publicIdByAssetId.set(assetId, publicId);
     bundleGraph._assetPublicIds.add(publicId);
   }
 
+  // Connect each of the generated runtime assets to bundles in the main bundle
+  // graph. This is like a mini-bundling algorithm for runtime assets.
   for (let {bundle, assetGroup, dependency, isEntry} of connections) {
     let assetGroupNode = nodeFromAssetGroup(assetGroup);
     let assetGroupAssetNodeIds = runtimesAssetGraph.getNodeIdsConnectedFrom(
@@ -276,6 +296,8 @@ export default async function applyRuntimes<TResult: RequestResult>({
     let runtimeNode = nullthrows(runtimesAssetGraph.getNode(runtimeNodeId));
     invariant(runtimeNode.type === 'asset');
 
+    // Find the asset that the runtime asset should be connected from by resolving
+    // it's dependency.
     let resolution =
       dependency &&
       bundleGraph.getResolvedAsset(
@@ -283,20 +305,25 @@ export default async function applyRuntimes<TResult: RequestResult>({
         bundle,
       );
 
-    let runtimesGraphRuntimeNodeId = runtimesGraph._graph.getNodeIdByContentKey(
-      runtimeNode.id,
-    );
+    // Walk all the dependencies of the runtime assets and check if they are
+    // already reachable from the bundle that the runtime asset is assigned to.
+    // If so, we add them to `duplicatedContentKeys` to be skipped when assigning
+    // assets to bundles.
+    let runtimesBundleGraphRuntimeNodeId =
+      runtimesBundleGraph._graph.getNodeIdByContentKey(runtimeNode.id);
     let duplicatedContentKeys: Set<ContentKey> = new Set();
-    runtimesGraph._graph.traverse((nodeId, _, actions) => {
-      let node = nullthrows(runtimesGraph._graph.getNode(nodeId));
+    runtimesBundleGraph._graph.traverse((nodeId, _, actions) => {
+      let node = nullthrows(runtimesBundleGraph._graph.getNode(nodeId));
       if (node.type !== 'dependency') {
         return;
       }
 
-      let assets = runtimesGraph._graph
+      let assets = runtimesBundleGraph._graph
         .getNodeIdsConnectedFrom(nodeId)
         .map(assetNodeId => {
-          let assetNode = nullthrows(runtimesGraph._graph.getNode(assetNodeId));
+          let assetNode = nullthrows(
+            runtimesBundleGraph._graph.getNode(assetNodeId),
+          );
           invariant(assetNode.type === 'asset');
           return assetNode.value;
         });
@@ -310,15 +337,17 @@ export default async function applyRuntimes<TResult: RequestResult>({
           actions.skipChildren();
         }
       }
-    }, runtimesGraphRuntimeNodeId);
+    }, runtimesBundleGraphRuntimeNodeId);
 
     let bundleNodeId = bundleGraph._graph.getNodeIdByContentKey(bundle.id);
     let bundleGraphRuntimeNodeId = bundleGraph._graph.getNodeIdByContentKey(
       runtimeNode.id,
     ); // the node id is not constant between graphs
 
-    runtimesGraph._graph.traverse((nodeId, _, actions) => {
-      let node = nullthrows(runtimesGraph._graph.getNode(nodeId));
+    // Assign the runtime assets and all of it's depepdencies to the bundle unless
+    // we have detected it as already being reachable from this bundle via `duplicatedContentKeys`.
+    runtimesBundleGraph._graph.traverse((nodeId, _, actions) => {
+      let node = nullthrows(runtimesBundleGraph._graph.getNode(nodeId));
       if (node.type === 'asset' || node.type === 'dependency') {
         if (duplicatedContentKeys.has(node.id)) {
           actions.skipChildren();
@@ -334,7 +363,7 @@ export default async function applyRuntimes<TResult: RequestResult>({
           bundleGraphEdgeTypes.contains,
         );
       }
-    }, runtimesGraphRuntimeNodeId);
+    }, runtimesBundleGraphRuntimeNodeId);
 
     if (isEntry) {
       bundleGraph._graph.addEdge(bundleNodeId, bundleGraphRuntimeNodeId);
