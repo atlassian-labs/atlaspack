@@ -72,6 +72,7 @@ function normalizeDependencies(dependencies) {
     opts: {
       ...dependency.opts,
       env: {
+        // $FlowFixMe
         ...dependency.opts.env,
         loc: null,
       },
@@ -81,8 +82,8 @@ function normalizeDependencies(dependencies) {
 
 function normalizeAssets(assets) {
   return assets.map(asset => {
+    // $FlowFixMe
     return {
-      // $FlowFixMe
       ...asset,
       env: null,
       meta: null,
