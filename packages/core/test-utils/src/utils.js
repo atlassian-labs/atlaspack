@@ -1335,9 +1335,9 @@ function itImpl(
       this,
       title,
       async function () {
-        // Timeout mocha after 3s when running V2 tests over V3, but also self
-        // timeout after 2s to avoid hanging the test suite.
-        this.timeout(3000);
+        // Timeout mocha after 10s when running V2 tests over V3, but also self
+        // timeout after 9s to avoid hanging the test suite.
+        this.timeout(10000);
         this.retries(0);
 
         try {
@@ -1346,7 +1346,7 @@ function itImpl(
             new Promise((_, reject) => {
               setTimeout(() => {
                 reject(new Error('TEST: Timeout'));
-              }, 2000);
+              }, 9000);
             }),
           ]);
         } catch (err) {

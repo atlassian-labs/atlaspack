@@ -86,11 +86,12 @@ describe('BundleGraph', () => {
   });
 
   describe.v2('getBundlesInBundleGroup', () => {
-    let bundleGraph: BundleGraph<PackagedBundle>;
-    let bundleGroup: BundleGroup;
     let dir = path.join(__dirname, 'get-bundles-in-bundle-group');
 
-    before(async () => {
+    async function setupTest(): Promise<{
+      bundleGraph: BundleGraph<PackagedBundle>,
+      bundleGroup: BundleGroup,
+    }> {
       await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
@@ -103,20 +104,21 @@ describe('BundleGraph', () => {
         yarn.lock: {}
       `;
 
-      bundleGraph = await bundle(path.join(dir, 'index.jsx'), {
+      const bundleGraph = await bundle(path.join(dir, 'index.jsx'), {
         inputFS: overlayFS,
       });
-
-      bundleGroup = bundleGraph.getBundleGroupsContainingBundle(
+      const bundleGroup = bundleGraph.getBundleGroupsContainingBundle(
         bundleGraph.getBundles({includeInline: true})[0],
       )[0];
-    });
+      return {bundleGraph, bundleGroup};
+    }
 
     after(async () => {
       await overlayFS.rimraf(dir);
     });
 
-    it('does not return inlineAssets by default', () => {
+    it('does not return inlineAssets by default', async () => {
+      const {bundleGraph, bundleGroup} = await setupTest();
       const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup);
 
       assert.deepEqual(
@@ -125,7 +127,8 @@ describe('BundleGraph', () => {
       );
     });
 
-    it('does not return inlineAssets when requested', () => {
+    it('does not return inlineAssets when requested', async () => {
+      const {bundleGraph, bundleGroup} = await setupTest();
       const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup, {
         includeInline: false,
       });
@@ -136,7 +139,8 @@ describe('BundleGraph', () => {
       );
     });
 
-    it('returns inlineAssets when requested', () => {
+    it('returns inlineAssets when requested', async () => {
+      const {bundleGraph, bundleGroup} = await setupTest();
       const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup, {
         includeInline: true,
       });
