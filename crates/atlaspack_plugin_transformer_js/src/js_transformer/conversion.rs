@@ -302,6 +302,7 @@ pub(crate) fn convert_result(
 
   Ok(TransformResult {
     asset,
+    discovered_assets: Vec::new(),
     dependencies: dependency_by_specifier.into_values().collect(),
     // map: result.map,
     // shebang: result.shebang,

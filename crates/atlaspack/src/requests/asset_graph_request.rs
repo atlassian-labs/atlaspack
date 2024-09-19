@@ -224,6 +224,7 @@ impl AssetGraphBuilder {
   fn handle_asset_result(&mut self, result: AssetRequestOutput, request_id: u64) {
     let AssetRequestOutput {
       asset,
+      discovered_assets: _,
       dependencies,
     } = result;
     let incoming_dep_node_index = *self

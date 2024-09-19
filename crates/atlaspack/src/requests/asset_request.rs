@@ -1,7 +1,3 @@
-use std::hash::Hash;
-use std::path::PathBuf;
-use std::sync::Arc;
-
 use atlaspack_core::plugin::AssetBuildEvent;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
@@ -10,6 +6,9 @@ use atlaspack_core::types::AssetStats;
 use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Environment;
 use atlaspack_core::types::{Asset, Invalidation};
+use std::hash::Hash;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::plugins::PluginsRef;
 use crate::plugins::TransformerPipeline;
@@ -35,6 +34,7 @@ pub struct AssetRequest {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssetRequestOutput {
   pub asset: Asset,
+  pub discovered_assets: Vec<Asset>, // TODO: model this better
   pub dependencies: Vec<Dependency>,
 }
 
@@ -75,6 +75,7 @@ impl Request for AssetRequest {
           },
           ..result.asset
         },
+        discovered_assets: Vec::new(),
         dependencies: result.dependencies,
       }),
       invalidations: result
@@ -93,15 +94,15 @@ fn run_pipeline(
 ) -> anyhow::Result<TransformResult> {
   let mut dependencies = vec![];
   let mut invalidations = vec![];
-
+  let mut discovered_assets: Vec<Asset> = vec![];
   let mut transform_input = input;
   let original_asset_type = transform_input.file_type.clone();
 
   let pipeline_hash = pipeline.hash();
+
   for transformer in &mut pipeline.transformers {
     let transform_result = transformer.transform(transform_input)?;
     let is_different_asset_type = transform_result.asset.file_type != original_asset_type;
-
     transform_input = transform_result.asset;
 
     // If the Asset has changed type then we may need to trigger a different pipeline
@@ -115,10 +116,15 @@ fn run_pipeline(
 
     dependencies.extend(transform_result.dependencies);
     invalidations.extend(transform_result.invalidate_on_file_change);
+
+    for asset in transform_result.discovered_assets {
+      discovered_assets.push(asset);
+    }
   }
 
   Ok(TransformResult {
     asset: transform_input,
+    discovered_assets,
     dependencies,
     invalidate_on_file_change: invalidations,
   })

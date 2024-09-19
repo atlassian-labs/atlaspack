@@ -21,6 +21,7 @@ impl TransformerPlugin for AtlaspackInlineTransformerPlugin {
 
     Ok(TransformResult {
       asset,
+      discovered_assets: Vec::new(),
       dependencies: Vec::new(),
       invalidate_on_file_change: Vec::new(),
     })
