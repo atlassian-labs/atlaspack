@@ -80,12 +80,10 @@ impl TransformerPlugin for RpcTransformerPlugin {
     };
 
     Ok(TransformResult {
-      asset: transformed_asset,
       // Adding dependencies from Node plugins isn't yet supported
-      discovered_assets: Vec::new(),
-      dependencies: Vec::new(),
       // TODO: Handle invalidations
-      invalidate_on_file_change: Vec::new(),
+      asset: transformed_asset,
+      ..Default::default()
     })
   }
 }
