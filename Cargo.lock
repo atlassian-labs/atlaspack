@@ -154,6 +154,7 @@ dependencies = [
  "atlaspack_package_manager",
  "atlaspack_plugin_resolver",
  "atlaspack_plugin_rpc",
+ "atlaspack_plugin_transformer_html",
  "atlaspack_plugin_transformer_image",
  "atlaspack_plugin_transformer_inline",
  "atlaspack_plugin_transformer_inline_string",
@@ -413,6 +414,7 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "serde",
+ "tracing",
 ]
 
 [[package]]

@@ -1,4 +1,5 @@
 import assert from 'assert';
+import expect from 'expect';
 import path from 'path';
 import url from 'url';
 import {
@@ -11,6 +12,7 @@ import {
   findAsset,
   findDependency,
   fsFixture,
+  getBundleData,
   getNextBuild,
   inputFS,
   it,
@@ -33,12 +35,26 @@ describe('javascript', function () {
   });
 
   it('should produce a basic JS bundle with CommonJS requires', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/commonjs/index.js'),
-    );
+    const inputDir = path.join(__dirname, 'integration/commonjs');
+    let b = await bundle(path.join(inputDir, '/index.js'));
 
-    // assert.equal(b.assets.size, 8);
-    // assert.equal(b.childBundles.size, 1);
+    const bundleData = getBundleData(b, inputDir);
+    expect(bundleData).toEqual([
+      {
+        assets: [
+          '../../../../../../node_modules/querystring-es3/decode.js',
+          '../../../../../../node_modules/querystring-es3/encode.js',
+          '../../../../../../node_modules/querystring-es3/index.js',
+          '../../../../../../node_modules/url/node_modules/punycode/punycode.js',
+          '../../../../../../node_modules/url/url.js',
+          '../../../../../../node_modules/url/util.js',
+          'index.js',
+          'local.js',
+        ],
+        name: 'index.js',
+        type: 'js',
+      },
+    ]);
 
     let output = await run(b);
     assert.equal(typeof output, 'function');
@@ -2290,9 +2306,11 @@ describe('javascript', function () {
     );
 
     let output;
+
     function result(v) {
       output = v;
     }
+
     await run(b, {result});
     assert.deepEqual(output, [{foo: 2}, 1234]);
   });
@@ -2308,9 +2326,11 @@ describe('javascript', function () {
     );
 
     let output;
+
     function result(v) {
       output = v;
     }
+
     await run(b, {result});
     assert.deepEqual(output, [{foo: 2}, 1234]);
   });
@@ -2319,9 +2339,11 @@ describe('javascript', function () {
     let b = await bundle(path.join(__dirname, '/integration/js-this-es6/a.js'));
 
     let output;
+
     function result(v) {
       output = v;
     }
+
     await run(b, {result});
     assert.deepEqual(output, [undefined, 1234]);
   });
@@ -2337,9 +2359,11 @@ describe('javascript', function () {
     );
 
     let output;
+
     function result(v) {
       output = v;
     }
+
     await run(b, {result});
     assert.deepEqual(output, [undefined, 1234]);
   });
@@ -3403,9 +3427,11 @@ describe('javascript', function () {
     );
 
     let output;
+
     function result(v) {
       output = v;
     }
+
     await run(b, {result});
     assert.deepEqual(output, 'b1');
   });
@@ -3419,9 +3445,11 @@ describe('javascript', function () {
     );
 
     let output;
+
     function result(v) {
       output = v;
     }
+
     await run(b, {result});
     assert.deepEqual(output, 'b1');
   });

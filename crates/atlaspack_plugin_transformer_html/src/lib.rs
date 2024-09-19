@@ -1,6 +1,7 @@
 use std::cell::RefMut;
 use std::io::BufReader;
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -9,27 +10,35 @@ use html5ever::serialize::SerializeOpts;
 use html5ever::tendril::fmt::UTF8;
 use html5ever::tendril::TendrilSink;
 use html5ever::{serialize, ParseOpts};
-use markup5ever::interface::ElemName;
 use markup5ever::tendril::Tendril;
 use markup5ever::{
   expanded_name, local_name, namespace_url, ns, Attribute, ExpandedName, QualName,
 };
 use markup5ever_rcdom::{Node, NodeData, RcDom, SerializableHandle};
 
-use atlaspack_core::plugin::{TransformResult, TransformerPlugin};
+use atlaspack_core::plugin::{PluginContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{
   Asset, AssetId, BundleBehavior, Code, Dependency, Environment, OutputFormat, Priority,
   SourceType, SpecifierType,
 };
 
 #[derive(Debug)]
-struct AtlaspackHtmlTransformerPlugin {}
+pub struct AtlaspackHtmlTransformerPlugin {}
+
+impl AtlaspackHtmlTransformerPlugin {
+  pub fn new(_ctx: &PluginContext) -> Self {
+    AtlaspackHtmlTransformerPlugin {}
+  }
+}
 
 impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
   fn transform(&mut self, input: Asset) -> Result<TransformResult, Error> {
     let bytes: &[u8] = input.code.bytes();
     let mut dom = parse_html(bytes)?;
-    extract_dependencies(&mut dom);
+    let context = ExtractDependenciesContext {
+      source_path: Some(input.file_path.clone()),
+    };
+    let ExtractDependenciesOutput { dependencies, .. } = extract_dependencies(context, &mut dom);
     let output_bytes = serialize_html(dom)?;
 
     let mut asset = input;
@@ -37,7 +46,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
 
     Ok(TransformResult {
       asset,
-      dependencies: Vec::new(),
+      dependencies,
       invalidate_on_file_change: Vec::new(),
     })
   }
@@ -46,7 +55,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
 fn serialize_html(dom: RcDom) -> Result<Vec<u8>, Error> {
   let document: SerializableHandle = dom.document.clone().into();
   let mut output_bytes = vec![];
-  let mut options = SerializeOpts::default();
+  let options = SerializeOpts::default();
   serialize(&mut output_bytes, &document, options)?;
   Ok(output_bytes)
 }
@@ -121,10 +130,20 @@ impl<'a> AttrWrapper<'a> {
 
 #[derive(Default)]
 struct ExtractDependencies {
+  context: ExtractDependenciesContext,
   should_scope_hoist: bool,
   dependencies: Vec<Dependency>,
   source_asset_id: Option<AssetId>,
   env: Arc<Environment>,
+}
+
+impl ExtractDependencies {
+  fn new(context: ExtractDependenciesContext) -> Self {
+    ExtractDependencies {
+      context,
+      ..Default::default()
+    }
+  }
 }
 
 impl DomVisitor for ExtractDependencies {
@@ -150,9 +169,9 @@ impl DomVisitor for ExtractDependencies {
               SourceType::Script
             };
 
-            let mut output_format = OutputFormat::Global;
+            let mut _output_format = OutputFormat::Global;
             if self.should_scope_hoist {
-              output_format = OutputFormat::EsModule;
+              _output_format = OutputFormat::EsModule;
             } else {
               if source_type == SourceType::Module {
                 attrs.set(expanded_name!("", "defer"), "");
@@ -168,8 +187,8 @@ impl DomVisitor for ExtractDependencies {
               priority: Priority::Parallel,
               source_asset_id: self.source_asset_id.clone(),
               env: self.env.clone(),
-              // TODO: Set this
-              source_path: None,
+              source_path: self.context.source_path.clone(),
+              is_esm: source_type == SourceType::Module,
               bundle_behavior: if source_type == SourceType::Script
                 && attrs.get(expanded_name!("", "async")).is_some()
               {
@@ -191,10 +210,25 @@ impl DomVisitor for ExtractDependencies {
   }
 }
 
-fn extract_dependencies(dom: &mut RcDom) {
+struct ExtractDependenciesOutput {
+  dependencies: Vec<Dependency>,
+}
+
+#[derive(Default)]
+struct ExtractDependenciesContext {
+  source_path: Option<PathBuf>,
+}
+
+fn extract_dependencies(
+  context: ExtractDependenciesContext,
+  dom: &mut RcDom,
+) -> ExtractDependenciesOutput {
   let node = dom.document.clone();
-  let mut visitor = ExtractDependencies::default();
+  let mut visitor = ExtractDependencies::new(context);
   walk(node, &mut visitor);
+  ExtractDependenciesOutput {
+    dependencies: visitor.dependencies,
+  }
 }
 
 #[cfg(test)]
