@@ -118,6 +118,25 @@ export default function createBundleGraphRequest(
         },
       );
 
+      if (input.rustAtlaspack && process.env.NATIVE_COMPARE) {
+        let {assetGraph: jsAssetGraph} = await api.runRequest(
+          createAssetGraphRequestJS({
+            name: 'Main',
+            entries: options.entries,
+            optionsRef,
+            shouldBuildLazily: options.shouldBuildLazily,
+            lazyIncludes: options.lazyIncludes,
+            lazyExcludes: options.lazyExcludes,
+            requestedAssetIds,
+          }),
+          {
+            force: true,
+          },
+        );
+
+        require('./asset-graph-diff.js')(jsAssetGraph, assetGraph);
+      }
+
       measurement && measurement.end();
       assertSignalNotAborted(signal);
 
