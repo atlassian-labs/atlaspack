@@ -135,6 +135,19 @@ export function mergeEnvironments(
 }
 
 function getEnvironmentHash(env: Environment): string {
+  console.log(
+    JSON.stringify([
+      env.context,
+      env.engines,
+      env.includeNodeModules,
+      env.outputFormat,
+      env.sourceType,
+      env.isLibrary,
+      env.shouldOptimize,
+      env.shouldScopeHoist,
+      env.sourceMap,
+    ]),
+  );
   return hashString(
     JSON.stringify([
       env.context,

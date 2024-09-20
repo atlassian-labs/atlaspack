@@ -6,9 +6,8 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 use serde::Serialize;
-use serde_repr::Deserialize_repr;
-use serde_repr::Serialize_repr;
 
+use crate::hash::hash_string;
 use crate::types::{AssetId, ExportsCondition};
 
 use super::bundle::BundleBehavior;
@@ -150,10 +149,29 @@ impl Dependency {
   }
 
   pub fn id(&self) -> String {
-    let mut hasher = crate::hash::IdentifierHasher::default();
-    self.hash(&mut hasher);
-    // Ids must be 16 characters for scope hoisting to replace imports correctly in REPLACEMENT_RE
-    format!("{:016x}", hasher.finish())
+    fn serialize(v: &impl Serialize) -> String {
+      serde_json::to_string(v)
+        .ok()
+        .unwrap_or_else(|| String::from(""))
+    };
+    let mut dependency_id_string = String::from("");
+    dependency_id_string += self
+      .source_asset_id
+      .as_ref()
+      .map(|s| s.as_str())
+      .unwrap_or("");
+    dependency_id_string += &*self.specifier;
+    dependency_id_string += &self.env.id();
+    dependency_id_string += &self
+      .target
+      .as_ref()
+      .and_then(|s| serde_json::to_string(s).ok())
+      .unwrap_or_else(|| String::from(""));
+    dependency_id_string += self.pipeline.as_ref().map(|s| s.as_str()).unwrap_or("");
+    dependency_id_string += &serialize(&self.specifier_type);
+    dependency_id_string += &serialize(&self.bundle_behavior);
+    dependency_id_string += &serialize(&self.priority);
+    hash_string(dependency_id_string)
   }
 
   pub fn set_placeholder(&mut self, placeholder: impl Into<serde_json::Value>) {
@@ -211,9 +229,8 @@ pub struct ImportAttribute {
 }
 
 /// Determines when a dependency should load
-#[derive(Clone, Copy, Debug, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
-#[repr(u8)]
 pub enum Priority {
   /// Resolves the dependency synchronously, placing the resolved asset in the same bundle as the parent or another bundle that is already on the page
   Sync = 0,
@@ -230,7 +247,7 @@ impl Default for Priority {
 }
 
 /// The type of the import specifier
-#[derive(Clone, Copy, Debug, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 #[repr(u8)]
 pub enum SpecifierType {

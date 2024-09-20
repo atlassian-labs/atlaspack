@@ -7,13 +7,23 @@ use super::browsers::Browsers;
 use super::version::Version;
 use super::OutputFormat;
 
+/// The browsers list as it appears on the engines field.
+#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(transparent)]
+struct EnginesBrowsers {
+  browser_list: Vec<String>,
+}
+
 /// The engines field in package.json
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct Engines {
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub atlaspack: Option<Version>,
   #[serde(default)]
-  pub browsers: Browsers,
+  pub browsers: EnginesBrowsers,
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub electron: Option<Version>,
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub node: Option<Version>,
 }
 
@@ -21,7 +31,7 @@ pub struct Engines {
 pub enum EnvironmentFeature {
   ArrowFunctions,
   DynamicImport,
-  Esmodules,
+  EsModules,
   GlobalThis,
   ImportMetaUrl,
   ServiceWorkerModule,
@@ -29,33 +39,41 @@ pub enum EnvironmentFeature {
 }
 
 impl EnvironmentFeature {
-  pub fn engines(&self) -> Engines {
+  pub fn browsers(&self) -> Browsers {
     match self {
-      EnvironmentFeature::WorkerModule => Engines {
-        browsers: Browsers {
-          edge: Some(Version::new(NonZeroU16::new(80).unwrap(), 0)),
-          chrome: Some(Version::new(NonZeroU16::new(80).unwrap(), 0)),
-          opera: Some(Version::new(NonZeroU16::new(67).unwrap(), 0)),
-          android: Some(Version::new(NonZeroU16::new(81).unwrap(), 0)),
-          ..Default::default()
-        },
+      EnvironmentFeature::WorkerModule => Browsers {
+        edge: Some(Version::new(NonZeroU16::new(80).unwrap(), 0)),
+        chrome: Some(Version::new(NonZeroU16::new(80).unwrap(), 0)),
+        opera: Some(Version::new(NonZeroU16::new(67).unwrap(), 0)),
+        android: Some(Version::new(NonZeroU16::new(81).unwrap(), 0)),
         ..Default::default()
       },
-      EnvironmentFeature::DynamicImport => Engines {
-        browsers: Browsers {
-          edge: Some(Version::new(NonZeroU16::new(76).unwrap(), 0)),
-          firefox: Some(Version::new(NonZeroU16::new(67).unwrap(), 0)),
-          chrome: Some(Version::new(NonZeroU16::new(63).unwrap(), 0)),
-          safari: Some(Version::new(NonZeroU16::new(11).unwrap(), 1)),
-          opera: Some(Version::new(NonZeroU16::new(50).unwrap(), 0)),
-          ios_saf: Some(Version::new(NonZeroU16::new(11).unwrap(), 3)),
-          android: Some(Version::new(NonZeroU16::new(63).unwrap(), 0)),
-          samsung: Some(Version::new(NonZeroU16::new(8).unwrap(), 0)),
-          ..Default::default()
-        },
+      EnvironmentFeature::DynamicImport => Browsers {
+        edge: Some(Version::new(NonZeroU16::new(76).unwrap(), 0)),
+        firefox: Some(Version::new(NonZeroU16::new(67).unwrap(), 0)),
+        chrome: Some(Version::new(NonZeroU16::new(63).unwrap(), 0)),
+        safari: Some(Version::new(NonZeroU16::new(11).unwrap(), 1)),
+        opera: Some(Version::new(NonZeroU16::new(50).unwrap(), 0)),
+        ios_saf: Some(Version::new(NonZeroU16::new(11).unwrap(), 3)),
+        android: Some(Version::new(NonZeroU16::new(63).unwrap(), 0)),
+        samsung: Some(Version::new(NonZeroU16::new(8).unwrap(), 0)),
         ..Default::default()
       },
-      _ => todo!(),
+      EnvironmentFeature::ArrowFunctions => Browsers {
+        android: None,
+        chrome: None,
+        edge: None,
+        firefox: None,
+        ie: None,
+        ios_saf: None,
+        opera: None,
+        safari: None,
+        samsung: None,
+      },
+      EnvironmentFeature::EsModules => {}
+      EnvironmentFeature::GlobalThis => {}
+      EnvironmentFeature::ImportMetaUrl => {}
+      EnvironmentFeature::ServiceWorkerModule => {}
     }
   }
 }
@@ -98,7 +116,13 @@ impl Engines {
   }
 
   pub fn supports(&self, feature: EnvironmentFeature) -> bool {
-    let min = feature.engines();
+    let distribs =
+      browserslist::resolve(&self.browsers.browser_list, &Default::default()).unwrap_or(Vec::new());
+    let min = feature.browsers();
+
+    for distrib in distribs {
+      distrib
+    }
     macro_rules! check {
       ($p: ident$(. $x: ident)*) => {{
         if let Some(v) = self.$p$(.$x)* {

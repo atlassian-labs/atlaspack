@@ -72,17 +72,16 @@ pub struct Bundle {
 }
 
 /// Determines when the bundle loads
-#[derive(Clone, Copy, Debug, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
-#[repr(u8)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum BundleBehavior {
   /// Embeds an asset into the parent bundle by creating an inline bundle
-  Inline = 0,
+  Inline,
 
   /// The asset will be isolated from its parents in a separate bundle, and shared assets will be duplicated
-  Isolated = 1,
+  Isolated,
 
   /// Unspecified bundling behavior
-  None = 255,
+  None,
 }
 
 impl Default for BundleBehavior {

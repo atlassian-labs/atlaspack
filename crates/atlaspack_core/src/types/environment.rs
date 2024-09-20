@@ -5,18 +5,19 @@ use std::num::NonZeroU32;
 
 use serde::Deserialize;
 use serde::Serialize;
-use serde_repr::Deserialize_repr;
-use serde_repr::Serialize_repr;
+
+pub use output_format::OutputFormat;
+
+use crate::hash::hash_string;
+
+use super::source::SourceLocation;
 
 use self::engines::Engines;
-use super::source::SourceLocation;
 
 pub mod browsers;
 pub mod engines;
 mod output_format;
 pub mod version;
-
-pub use output_format::OutputFormat;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct EnvironmentId(pub NonZeroU32);
@@ -68,6 +69,27 @@ pub struct Environment {
   pub source_map: Option<TargetSourceMapOptions>,
 
   pub source_type: SourceType,
+}
+
+impl Environment {
+  pub fn id(&self) -> String {
+    let s = serde_json::to_string(&(
+      &self.context,
+      &self.engines,
+      &self.include_node_modules,
+      &self.output_format,
+      &self.source_type,
+      &self.is_library,
+      &self.should_optimize,
+      &self.should_scope_hoist,
+      &self.source_map,
+    ))
+    .unwrap();
+    // ["browser",{"browsers":""},true,"global","module",false,false,false,null]
+    // ["browser",{"browsers":["> 0.25%"]},true,"global","module",false,false,false,null]
+    println!("{s}");
+    hash_string(s)
+  }
 }
 
 impl Hash for Environment {
@@ -187,12 +209,13 @@ impl Hash for IncludeNodeModules {
   }
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
-#[repr(u8)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum SourceType {
   #[default]
-  Module = 0,
-  Script = 1,
+  #[serde(rename = "module")]
+  Module,
+  #[serde(rename = "script")]
+  Script,
 }
 
 /// Source map options for the target output
@@ -214,4 +237,16 @@ pub struct TargetSourceMapOptions {
   /// Otherwise, it defaults to a relative path to the bundle from the project root.
   ///
   source_root: Option<String>,
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  #[test]
+  fn test_environment() {
+    let environment = Environment::default();
+    let id = environment.id();
+    assert_eq!(id, "");
+  }
 }

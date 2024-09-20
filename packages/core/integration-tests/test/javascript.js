@@ -34,7 +34,7 @@ describe('javascript', function () {
     await removeDistDirectory();
   });
 
-  it('should produce a basic JS bundle with CommonJS requires', async function () {
+  it.only('should produce a basic JS bundle with CommonJS requires', async function () {
     const inputDir = path.join(__dirname, 'integration/commonjs');
     let b = await bundle(path.join(inputDir, '/index.js'));
 

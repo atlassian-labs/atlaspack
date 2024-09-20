@@ -120,6 +120,7 @@ function getAssetGraph(serializedGraph, options) {
     }
     return [exported, jsSymbol];
   }
+
   // See crates/atlaspack_core/src/types/environment.rs
   let sourceTypeLookup = {'0': 'module', '1': 'script'};
   let cachedAssets = new Map();
@@ -176,8 +177,15 @@ function getAssetGraph(serializedGraph, options) {
 
       asset = {
         ...asset,
+        loc: asset.loc ?? undefined,
+        uniqueKey: asset.uniqueKey ?? undefined,
+        pipeline: asset.pipeline ?? undefined,
+        range: asset.range ?? undefined,
+        resolveFrom: asset.resolveFrom ?? undefined,
+        target: asset.target ?? undefined,
         env: {
           ...asset.env,
+          loc: asset.env.loc ?? undefined,
           id: getEnvId(asset.env),
           sourceType: sourceTypeLookup[asset.env.sourceType],
         },
@@ -213,6 +221,10 @@ function getAssetGraph(serializedGraph, options) {
           id: getEnvId(dependency.env),
           sourceType: sourceTypeLookup[dependency.env.sourceType],
         },
+        pipeline: dependency.pipeline ?? undefined,
+        range: dependency.range ?? undefined,
+        resolveFrom: dependency.resolveFrom ?? undefined,
+        target: dependency.target ?? undefined,
         bundleBehavior:
           dependency.bundleBehavior === 255 ? null : dependency.bundleBehavior,
         contentKey: id,
