@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "generate": "zx ./generate.mjs > ./src/generated.rs"
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "^3.0.0-beta2",
+    "zx": "*"
+  }
+}
