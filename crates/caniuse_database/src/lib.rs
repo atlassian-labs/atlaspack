@@ -13,6 +13,8 @@
 //!
 //! Check if Chrome 92 supports the WebUSB API.
 //!
+//! See [`check_browser_support`].
+//!
 //! ```rust
 //! use caniuse_database::{BrowserFeature, BrowserAgent, Version, check_browser_support};
 //!
@@ -28,6 +30,8 @@
 //!
 //! Use [`browserlist::resolve`] to check for feature support against a certain
 //! browserlist query.
+//!
+//! See [`check_browserslist_support`].
 //!
 //! ```rust
 //! use caniuse_database::{BrowserFeature, check_browserslist_support};
