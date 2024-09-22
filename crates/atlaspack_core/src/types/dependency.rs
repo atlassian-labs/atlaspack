@@ -8,6 +8,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::hash::hash_string;
+use crate::hash::IdentifierHasher;
 use crate::types::{AssetId, ExportsCondition};
 
 use super::bundle::BundleBehavior;
@@ -16,6 +17,33 @@ use super::json::JSONObject;
 use super::source::SourceLocation;
 use super::symbol::Symbol;
 use super::target::Target;
+
+pub fn create_dependency_id(
+  source_asset_id: Option<&AssetId>,
+  specifier: &str,
+  env: &Environment,
+  target: Option<&Target>,
+  pipeline: Option<&str>,
+  specifier_type: &SpecifierType,
+  bundle_behavior: &BundleBehavior,
+  priority: &Priority,
+  package_conditions: &ExportsCondition,
+) -> String {
+  let mut hasher = IdentifierHasher::new();
+
+  source_asset_id.hash(&mut hasher);
+  specifier.hash(&mut hasher);
+  env.hash(&mut hasher);
+  target.hash(&mut hasher);
+  pipeline.hash(&mut hasher);
+  specifier_type.hash(&mut hasher);
+  bundle_behavior.hash(&mut hasher);
+  priority.hash(&mut hasher);
+  package_conditions.hash(&mut hasher);
+
+  let hash = hasher.finish();
+  format!("{:016x}", hash)
+}
 
 /// A dependency denotes a connection between two assets
 #[derive(PartialEq, Clone, Debug, Default, Deserialize, Serialize)]
@@ -153,7 +181,7 @@ impl Dependency {
       serde_json::to_string(v)
         .ok()
         .unwrap_or_else(|| String::from(""))
-    };
+    }
     let mut dependency_id_string = String::from("");
     dependency_id_string += self
       .source_asset_id

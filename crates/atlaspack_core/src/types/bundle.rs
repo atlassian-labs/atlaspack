@@ -1,7 +1,5 @@
 use serde::Deserialize;
 use serde::Serialize;
-use serde_repr::Deserialize_repr;
-use serde_repr::Serialize_repr;
 
 use super::environment::Environment;
 use super::file_type::FileType;

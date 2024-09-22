@@ -9,7 +9,7 @@ import type {
   SemverRange,
 } from '@atlaspack/types';
 import type {Dependency, Environment, Target} from './types';
-import {hashString} from '@atlaspack/rust';
+import {createDependencyId as createDependencyIdRust} from '@atlaspack/rust';
 import {
   SpecifierType,
   Priority,
@@ -45,23 +45,46 @@ type DependencyOpts = {|
   pipeline?: ?string,
 |};
 
+export function createDependencyId({
+  sourceAssetId,
+  specifier,
+  env,
+  target,
+  pipeline,
+  specifierType,
+  bundleBehavior,
+  priority,
+  packageConditions,
+}: {
+  sourceAssetId?: string,
+  specifier: DependencySpecifier,
+  env: Environment,
+  target: ?Target,
+  pipeline?: ?string,
+  specifierType: $Keys<typeof SpecifierType>,
+  bundleBehavior?: ?IBundleBehavior,
+  priority?: $Keys<typeof Priority>,
+  packageConditions?: Array<string>,
+  ...
+}) {
+  return createDependencyIdRust({
+    sourceAssetId,
+    specifier,
+    env,
+    target,
+    pipeline,
+    specifierType,
+    bundleBehavior,
+    priority,
+    packageConditions,
+  });
+}
+
 export function createDependency(
   projectRoot: FilePath,
   opts: DependencyOpts,
 ): Dependency {
-  let id =
-    opts.id ||
-    hashString(
-      (opts.sourceAssetId ?? '') +
-        opts.specifier +
-        opts.env.id +
-        (opts.target ? JSON.stringify(opts.target) : '') +
-        (opts.pipeline ?? '') +
-        opts.specifierType +
-        (opts.bundleBehavior ?? '') +
-        (opts.priority ?? 'sync') +
-        (opts.packageConditions ? JSON.stringify(opts.packageConditions) : ''),
-    );
+  let id = opts.id || createDependencyId(opts);
 
   let dep: Dependency = {
     id,

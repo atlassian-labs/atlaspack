@@ -8,7 +8,7 @@ use serde::Serialize;
 
 pub use output_format::OutputFormat;
 
-use crate::hash::hash_string;
+use crate::hash::IdentifierHasher;
 
 use super::source::SourceLocation;
 
@@ -71,9 +71,35 @@ pub struct Environment {
   pub source_type: SourceType,
 }
 
+pub fn create_environment_id(
+  context: &EnvironmentContext,
+  engines: &Engines,
+  include_node_modules: &IncludeNodeModules,
+  output_format: &OutputFormat,
+  source_type: &SourceType,
+  is_library: &bool,
+  should_optimize: &bool,
+  should_scope_hoist: &bool,
+  source_map: &Option<TargetSourceMapOptions>,
+) -> String {
+  let mut hasher = IdentifierHasher::new();
+  context.hash(&mut hasher);
+  engines.hash(&mut hasher);
+  include_node_modules.hash(&mut hasher);
+  output_format.hash(&mut hasher);
+  source_type.hash(&mut hasher);
+  is_library.hash(&mut hasher);
+  should_optimize.hash(&mut hasher);
+  should_scope_hoist.hash(&mut hasher);
+  source_map.hash(&mut hasher);
+
+  let hash = hasher.finish(); // We can simply expose this as a nº too
+  format!("{:016x}", hash)
+}
+
 impl Environment {
   pub fn id(&self) -> String {
-    let s = serde_json::to_string(&(
+    let s = create_environment_id(
       &self.context,
       &self.engines,
       &self.include_node_modules,
@@ -83,12 +109,8 @@ impl Environment {
       &self.should_optimize,
       &self.should_scope_hoist,
       &self.source_map,
-    ))
-    .unwrap();
-    // ["browser",{"browsers":""},true,"global","module",false,false,false,null]
-    // ["browser",{"browsers":["> 0.25%"]},true,"global","module",false,false,false,null]
-    println!("{s}");
-    hash_string(s)
+    );
+    s
   }
 }
 
@@ -241,12 +263,32 @@ pub struct TargetSourceMapOptions {
 
 #[cfg(test)]
 mod test {
+  use std::str::FromStr;
+
+  use version::Version;
+
   use super::*;
 
+  // This is here to check that the default environment hash will match
+  // the one in Node.js - packages/core/core/test/Environment.test.js
   #[test]
   fn test_environment() {
+    tracing_subscriber::fmt::init();
     let environment = Environment::default();
     let id = environment.id();
-    assert_eq!(id, "");
+    assert_eq!(id, "bb871c88ce058724");
+
+    let mut environment = Environment {
+      context: EnvironmentContext::Node,
+      engines: Engines {
+        browsers: None,
+        node: Some(Version::from_str("8.0.0").unwrap()),
+        ..Default::default()
+      },
+      output_format: OutputFormat::CommonJS,
+      ..Default::default()
+    };
+    let id = environment.id();
+    assert_eq!(id, "4cd03fc1419b4a5d");
   }
 }

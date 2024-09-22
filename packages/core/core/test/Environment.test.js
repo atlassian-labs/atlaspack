@@ -1,12 +1,14 @@
 // @flow strict-local
 
 import assert from 'assert';
+import expect from 'expect';
 import {createEnvironment} from '../src/Environment';
+import {initializeMonitoring} from '../../rust';
 
 describe('Environment', () => {
   it('assigns a default environment with nothing passed', () => {
     assert.deepEqual(createEnvironment(), {
-      id: 'c242f987e3544367',
+      id: 'b3520b7bb1354733',
       context: 'browser',
       engines: {
         browsers: ['> 0.25%'],
@@ -24,7 +26,7 @@ describe('Environment', () => {
 
   it('assigns a node context if a node engine is given', () => {
     assert.deepEqual(createEnvironment({engines: {node: '>= 10.0.0'}}), {
-      id: '69e0ab7220ee8f7a',
+      id: 'c9c83c954254833b',
       context: 'node',
       engines: {
         node: '>= 10.0.0',
@@ -44,7 +46,7 @@ describe('Environment', () => {
     assert.deepEqual(
       createEnvironment({engines: {browsers: ['last 1 version']}}),
       {
-        id: '4b5c9005af8c5b19',
+        id: '9e3193fe9c7301c3',
         context: 'browser',
         engines: {
           browsers: ['last 1 version'],
@@ -63,7 +65,7 @@ describe('Environment', () => {
 
   it('assigns default engines for node', () => {
     assert.deepEqual(createEnvironment({context: 'node'}), {
-      id: 'f7c9644283a8698f',
+      id: '6a2f66a2bf8af810',
       context: 'node',
       engines: {
         node: '>= 8.0.0',
@@ -81,7 +83,7 @@ describe('Environment', () => {
 
   it('assigns default engines for browsers', () => {
     assert.deepEqual(createEnvironment({context: 'browser'}), {
-      id: 'c242f987e3544367',
+      id: 'b3520b7bb1354733',
       context: 'browser',
       engines: {
         browsers: ['> 0.25%'],
@@ -95,5 +97,13 @@ describe('Environment', () => {
       loc: undefined,
       sourceType: 'module',
     });
+  });
+});
+
+describe('createEnvironment', function () {
+  it('returns a stable hash', () => {
+    initializeMonitoring();
+    const environment = createEnvironment({});
+    expect(environment.id).toEqual('b3520b7bb1354733');
   });
 });

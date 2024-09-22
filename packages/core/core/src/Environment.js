@@ -5,7 +5,7 @@ import type {
   FilePath,
 } from '@atlaspack/types';
 import type {Environment, InternalSourceLocation} from './types';
-import {hashString} from '@atlaspack/rust';
+import {createEnvironmentId} from '@atlaspack/rust';
 import {toInternalSourceLocation} from './utils';
 import PublicEnvironment from './public/Environment';
 import {environmentToInternalEnvironment} from './public/Environment';
@@ -135,30 +135,15 @@ export function mergeEnvironments(
 }
 
 function getEnvironmentHash(env: Environment): string {
-  console.log(
-    JSON.stringify([
-      env.context,
-      env.engines,
-      env.includeNodeModules,
-      env.outputFormat,
-      env.sourceType,
-      env.isLibrary,
-      env.shouldOptimize,
-      env.shouldScopeHoist,
-      env.sourceMap,
-    ]),
-  );
-  return hashString(
-    JSON.stringify([
-      env.context,
-      env.engines,
-      env.includeNodeModules,
-      env.outputFormat,
-      env.sourceType,
-      env.isLibrary,
-      env.shouldOptimize,
-      env.shouldScopeHoist,
-      env.sourceMap,
-    ]),
-  );
+  return createEnvironmentId({
+    context: env.context,
+    engines: env.engines,
+    includeNodeModules: env.includeNodeModules,
+    outputFormat: env.outputFormat,
+    sourceType: env.sourceType,
+    isLibrary: env.isLibrary,
+    shouldOptimize: env.shouldOptimize,
+    shouldScopeHoist: env.shouldScopeHoist,
+    sourceMap: env.sourceMap,
+  });
 }

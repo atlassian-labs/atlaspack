@@ -6,6 +6,7 @@ use anyhow::{anyhow, Error};
 
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
+use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
   Asset, BuildMode, Diagnostic, ErrorKind, FileType, LogLevel, OutputFormat, SourceType,
@@ -182,13 +183,13 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     let mut targets: HashMap<String, String> = HashMap::new();
     if env.context.is_browser() {
-      for (name, version) in env.engines.browsers.iter() {
-        if let Some(version) = version {
-          targets.insert(
-            String::from(name),
-            format!("{}.{}", version.major(), version.minor()),
-          );
-        }
+      let browsers = env.engines.browsers.clone().unwrap_or_default();
+      let browsers = Browsers::from(browsers);
+      for (name, version) in browsers.iter() {
+        targets.insert(
+          String::from(name),
+          format!("{}.{}", version.major(), version.minor()),
+        );
       }
     }
 

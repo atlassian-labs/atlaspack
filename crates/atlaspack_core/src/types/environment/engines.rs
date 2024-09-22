@@ -1,5 +1,3 @@
-use std::num::NonZeroU16;
-
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -8,10 +6,32 @@ use super::version::Version;
 use super::OutputFormat;
 
 /// The browsers list as it appears on the engines field.
-#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
-struct EnginesBrowsers {
+pub struct EnginesBrowsers {
   browser_list: Vec<String>,
+}
+
+impl Default for EnginesBrowsers {
+  fn default() -> Self {
+    Self {
+      browser_list: vec![String::from("> 0.25%")],
+    }
+  }
+}
+
+impl EnginesBrowsers {
+  pub fn new(browser_list: Vec<String>) -> Self {
+    Self { browser_list }
+  }
+}
+
+impl From<EnginesBrowsers> for Browsers {
+  fn from(engines_browsers: EnginesBrowsers) -> Self {
+    let distribs = browserslist::resolve(engines_browsers.browser_list, &Default::default())
+      .unwrap_or(Vec::new());
+    Browsers::from(distribs)
+  }
 }
 
 /// The engines field in package.json
@@ -20,7 +40,7 @@ pub struct Engines {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub atlaspack: Option<Version>,
   #[serde(default)]
-  pub browsers: EnginesBrowsers,
+  pub browsers: Option<EnginesBrowsers>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub electron: Option<Version>,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -29,51 +49,15 @@ pub struct Engines {
 
 /// List of environment features that may be supported by an engine
 pub enum EnvironmentFeature {
-  ArrowFunctions,
   DynamicImport,
-  EsModules,
-  GlobalThis,
-  ImportMetaUrl,
-  ServiceWorkerModule,
   WorkerModule,
 }
 
-impl EnvironmentFeature {
-  pub fn browsers(&self) -> Browsers {
-    match self {
-      EnvironmentFeature::WorkerModule => Browsers {
-        edge: Some(Version::new(NonZeroU16::new(80).unwrap(), 0)),
-        chrome: Some(Version::new(NonZeroU16::new(80).unwrap(), 0)),
-        opera: Some(Version::new(NonZeroU16::new(67).unwrap(), 0)),
-        android: Some(Version::new(NonZeroU16::new(81).unwrap(), 0)),
-        ..Default::default()
-      },
-      EnvironmentFeature::DynamicImport => Browsers {
-        edge: Some(Version::new(NonZeroU16::new(76).unwrap(), 0)),
-        firefox: Some(Version::new(NonZeroU16::new(67).unwrap(), 0)),
-        chrome: Some(Version::new(NonZeroU16::new(63).unwrap(), 0)),
-        safari: Some(Version::new(NonZeroU16::new(11).unwrap(), 1)),
-        opera: Some(Version::new(NonZeroU16::new(50).unwrap(), 0)),
-        ios_saf: Some(Version::new(NonZeroU16::new(11).unwrap(), 3)),
-        android: Some(Version::new(NonZeroU16::new(63).unwrap(), 0)),
-        samsung: Some(Version::new(NonZeroU16::new(8).unwrap(), 0)),
-        ..Default::default()
-      },
-      EnvironmentFeature::ArrowFunctions => Browsers {
-        android: None,
-        chrome: None,
-        edge: None,
-        firefox: None,
-        ie: None,
-        ios_saf: None,
-        opera: None,
-        safari: None,
-        samsung: None,
-      },
-      EnvironmentFeature::EsModules => {}
-      EnvironmentFeature::GlobalThis => {}
-      EnvironmentFeature::ImportMetaUrl => {}
-      EnvironmentFeature::ServiceWorkerModule => {}
+impl From<EnvironmentFeature> for caniuse_database::BrowserFeature {
+  fn from(feature: EnvironmentFeature) -> Self {
+    match feature {
+      EnvironmentFeature::DynamicImport => caniuse_database::BrowserFeature::Es6ModuleDynamicImport,
+      EnvironmentFeature::WorkerModule => caniuse_database::BrowserFeature::Webworkers,
     }
   }
 }
@@ -116,34 +100,19 @@ impl Engines {
   }
 
   pub fn supports(&self, feature: EnvironmentFeature) -> bool {
-    let distribs =
-      browserslist::resolve(&self.browsers.browser_list, &Default::default()).unwrap_or(Vec::new());
-    let min = feature.browsers();
+    let distribs = browserslist::resolve(
+      &self
+        .browsers
+        .as_ref()
+        .unwrap_or(&EnginesBrowsers::default())
+        .browser_list,
+      &Default::default(),
+    )
+    .unwrap_or(Vec::new());
 
-    for distrib in distribs {
-      distrib
-    }
-    macro_rules! check {
-      ($p: ident$(. $x: ident)*) => {{
-        if let Some(v) = self.$p$(.$x)* {
-          match min.$p$(.$x)* {
-            None => return false,
-            Some(v2) if v < v2 => return false,
-            _ => {}
-          }
-        }
-      }};
-    }
-
-    check!(browsers.android);
-    check!(browsers.chrome);
-    check!(browsers.edge);
-    check!(browsers.firefox);
-    check!(browsers.ie);
-    check!(browsers.ios_saf);
-    check!(browsers.opera);
-    check!(browsers.safari);
-    check!(browsers.samsung);
-    true
+    caniuse_database::check_browserslist_support(
+      &caniuse_database::BrowserFeature::from(feature),
+      &distribs,
+    )
   }
 }

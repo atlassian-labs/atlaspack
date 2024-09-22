@@ -246,7 +246,8 @@ mod test {
     "#
     .trim();
     let mut dom = parse_html(bytes.as_bytes()).unwrap();
-    extract_dependencies(&mut dom);
+    let context = ExtractDependenciesContext::default();
+    extract_dependencies(context, &mut dom);
     let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
     assert_eq!(
       &normalize_html(&html),

@@ -321,6 +321,7 @@ dependencies = [
  "atlaspack_filesystem",
  "bitflags 2.6.0",
  "browserslist-rs",
+ "caniuse_database",
  "derive_builder",
  "dyn-hash",
  "mockall",
@@ -330,6 +331,8 @@ dependencies = [
  "serde-value",
  "serde_json",
  "serde_repr",
+ "tracing",
+ "tracing-subscriber",
  "xxhash-rust",
 ]
 
