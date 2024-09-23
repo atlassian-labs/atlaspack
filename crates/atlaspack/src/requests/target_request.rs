@@ -369,6 +369,12 @@ impl TargetRequest {
       let context = self.infer_environment_context(&package_json.contents);
 
       let is_library = self.default_target_options.is_library.unwrap_or(false);
+      let package_json_engines = package_json
+        .contents
+        .engines
+        .unwrap_or_else(|| self.get_default_engines_for_context(context));
+
+      tracing::debug!("Package JSON engines: {:?}", package_json_engines);
       targets.push(Some(Target {
         dist_dir: self
           .default_target_options
@@ -378,10 +384,7 @@ impl TargetRequest {
         dist_entry: None,
         env: Arc::new(Environment {
           context,
-          engines: package_json
-            .contents
-            .engines
-            .unwrap_or_else(|| self.default_target_options.engines.clone()),
+          engines: package_json_engines,
           include_node_modules: IncludeNodeModules::from(context),
           is_library,
           loc: None,
@@ -407,6 +410,23 @@ impl TargetRequest {
     }
 
     Ok(targets)
+  }
+
+  fn get_default_engines_for_context(&self, context: EnvironmentContext) -> Engines {
+    let defaults = self.default_target_options.engines.clone();
+    if context.is_browser() {
+      Engines {
+        browsers: defaults.browsers,
+        ..Engines::default()
+      }
+    } else if context.is_node() {
+      Engines {
+        node: defaults.node,
+        ..Engines::default()
+      }
+    } else {
+      defaults
+    }
   }
 
   fn skip_target(&self, target_name: &str, source: &Option<SourceField>) -> bool {
@@ -474,6 +494,8 @@ impl TargetRequest {
       .is_library
       .unwrap_or_else(|| self.default_target_options.is_library.unwrap_or(false));
 
+    let target_descriptor_engines = target_descriptor.engines.clone();
+    tracing::debug!("Target descriptor engines: {:?}", target_descriptor_engines);
     Ok(Some(Target {
       dist_dir: match dist.as_ref() {
         None => self
@@ -506,9 +528,7 @@ impl TargetRequest {
       dist_entry,
       env: Arc::new(Environment {
         context,
-        engines: target_descriptor
-          .engines
-          .clone()
+        engines: target_descriptor_engines
           .or_else(|| package_json.contents.engines.clone())
           .unwrap_or_else(|| self.default_target_options.engines.clone()),
         include_node_modules: target_descriptor
@@ -1152,7 +1172,7 @@ mod tests {
 
     let env = || Environment {
       engines: Engines {
-        browsers: EnginesBrowsers::new(vec![String::from("chrome 20")]),
+        browsers: Some(EnginesBrowsers::new(vec![String::from("chrome 20")])),
         ..Engines::default()
       },
       ..builtin_default_env()
@@ -1303,10 +1323,10 @@ mod tests {
           env: Arc::new(Environment {
             context: EnvironmentContext::Browser,
             engines: Engines {
-              browsers: EnginesBrowsers::new(vec![
+              browsers: Some(EnginesBrowsers::new(vec![
                 String::from("chrome 20"),
                 String::from("firefox > 1"),
-              ]),
+              ])),
               ..Engines::default()
             },
             include_node_modules: IncludeNodeModules::Bool(true),
@@ -1374,7 +1394,7 @@ mod tests {
         "#,
       )),
       Engines {
-        browsers: EnginesBrowsers::new(vec![String::from("chrome 20")]),
+        browsers: Some(EnginesBrowsers::new(vec![String::from("chrome 20")])),
         node: Some(Version::new(NonZeroU16::new(1).unwrap(), 0)),
         ..Engines::default()
       },

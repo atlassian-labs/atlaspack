@@ -2,7 +2,8 @@ use anyhow::Error;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
-use atlaspack_core::types::{Asset, BundleBehavior};
+use atlaspack_core::types::Asset;
+use atlaspack_core::types::BundleBehavior;
 
 #[derive(Debug)]
 pub struct AtlaspackInlineTransformerPlugin {}
@@ -17,7 +18,7 @@ impl TransformerPlugin for AtlaspackInlineTransformerPlugin {
   fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
-    asset.bundle_behavior = BundleBehavior::Inline;
+    asset.bundle_behavior = Some(BundleBehavior::Inline);
 
     Ok(TransformResult {
       asset,
@@ -55,12 +56,12 @@ mod tests {
 
     let asset = Asset::default();
 
-    assert_ne!(asset.bundle_behavior, BundleBehavior::Inline);
+    assert_ne!(asset.bundle_behavior, MaybeBundleBehavior::Inline);
     assert_eq!(
       plugin.transform(asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
-          bundle_behavior: BundleBehavior::Inline,
+          bundle_behavior: MaybeBundleBehavior::Inline,
           ..Asset::default()
         },
         dependencies: Vec::new(),

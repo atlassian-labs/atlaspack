@@ -18,7 +18,7 @@ import {
 } from '@atlaspack/test-utils';
 import path from 'path';
 
-describe.only('html', function () {
+describe('html', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });
@@ -1691,7 +1691,8 @@ describe.only('html', function () {
     assert(html.includes('<script src='));
   });
 
-  it.only('should not add a nomodule version when all browsers support esmodules', async function () {
+  // .only
+  it('should not add a nomodule version when all browsers support esmodules', async function () {
     const inputDir = path.join(__dirname, '/integration/html-js');
     let b = await bundle(path.join(inputDir, '/index.html'), {
       defaultTargetOptions: {

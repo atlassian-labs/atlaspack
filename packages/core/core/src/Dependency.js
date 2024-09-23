@@ -59,7 +59,7 @@ export function createDependencyId({
   sourceAssetId?: string,
   specifier: DependencySpecifier,
   env: Environment,
-  target: ?Target,
+  target?: ?Target,
   pipeline?: ?string,
   specifierType: $Keys<typeof SpecifierType>,
   bundleBehavior?: ?IBundleBehavior,
@@ -73,9 +73,9 @@ export function createDependencyId({
     env,
     target,
     pipeline,
-    specifierType,
+    specifierType: SpecifierType[specifierType],
     bundleBehavior,
-    priority,
+    priority: priority ? Priority[priority] : null,
     packageConditions,
   });
 }

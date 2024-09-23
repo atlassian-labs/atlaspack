@@ -192,9 +192,9 @@ impl DomVisitor for ExtractDependencies {
               bundle_behavior: if source_type == SourceType::Script
                 && attrs.get(expanded_name!("", "async")).is_some()
               {
-                BundleBehavior::Isolated
+                Some(BundleBehavior::Isolated)
               } else {
-                BundleBehavior::None
+                None
               },
               ..Default::default()
             };

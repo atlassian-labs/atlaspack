@@ -311,7 +311,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 #[cfg(test)]
 mod tests {
   use pretty_assertions::assert_eq;
-  use std::path::PathBuf;
+  use std::path::{Path, PathBuf};
 
   use atlaspack_core::{
     config_loader::ConfigLoader,
@@ -331,11 +331,12 @@ mod tests {
     }
   }
 
-  fn create_asset(file_path: &str, code: &str) -> Asset {
+  fn create_asset(project_root: &Path, file_path: &str, code: &str) -> Asset {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let env = Arc::new(Environment::default());
 
     Asset::new(
+      project_root,
       env.clone(),
       file_path.into(),
       Some(String::from(code)),
@@ -349,8 +350,9 @@ mod tests {
 
   #[test]
   fn test_asset_id_is_stable() {
-    let asset_1 = create_asset("mock_path", "function hello() {}");
-    let asset_2 = create_asset("mock_path", "function helloButDifferent() {}");
+    let project_root = Path::new("/root");
+    let asset_1 = create_asset(project_root, "mock_path", "function hello() {}");
+    let asset_2 = create_asset(project_root, "mock_path", "function helloButDifferent() {}");
 
     // This nº should not change across runs / compilation
     assert_eq!(asset_1.id, "579a5e4d979a51a7");
@@ -359,7 +361,8 @@ mod tests {
 
   #[test]
   fn test_transformer_on_noop_asset() {
-    let target_asset = create_asset("mock_path.js", "function hello() {}");
+    let project_root = Path::new("/root");
+    let target_asset = create_asset(project_root, "mock_path.js", "function hello() {}");
     let result = run_test(target_asset.clone()).unwrap();
 
     assert_eq!(
@@ -387,7 +390,8 @@ const x = require('other');
 exports.hello = function() {};
     "#;
 
-    let target_asset = create_asset("mock_path.js", source_code);
+    let project_root = Path::new("/root");
+    let target_asset = create_asset(project_root, "mock_path.js", source_code);
     let asset_id = target_asset.id.clone();
     let result = run_test(target_asset).unwrap();
 

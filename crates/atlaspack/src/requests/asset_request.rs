@@ -24,6 +24,7 @@ use super::RequestResult;
 /// - Finally, returns the complete Asset and it's discovered Dependencies
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct AssetRequest {
+  pub project_root: PathBuf,
   pub code: Option<String>,
   pub env: Arc<Environment>,
   pub file_path: PathBuf,
@@ -55,6 +56,7 @@ impl Request for AssetRequest {
       .transformers(&self.file_path, self.pipeline.clone())?;
 
     let asset = Asset::new(
+      &self.project_root,
       self.env.clone(),
       self.file_path.clone(),
       self.code.clone(),
@@ -64,17 +66,16 @@ impl Request for AssetRequest {
       request_context.file_system().clone(),
     )?;
 
-    let result = run_pipeline(pipeline, asset, request_context.plugins().clone())?;
+    let mut result = run_pipeline(pipeline, asset, request_context.plugins().clone())?;
+
+    result.asset.stats = AssetStats {
+      size: result.asset.code.size(),
+      time: 0,
+    };
 
     Ok(ResultAndInvalidations {
       result: RequestResult::Asset(AssetRequestOutput {
-        asset: Asset {
-          stats: AssetStats {
-            size: result.asset.code.size(),
-            time: 0,
-          },
-          ..result.asset
-        },
+        asset: result.asset,
         dependencies: result.dependencies,
       }),
       invalidations: result

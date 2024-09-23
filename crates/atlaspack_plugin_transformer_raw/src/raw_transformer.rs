@@ -16,7 +16,7 @@ impl TransformerPlugin for AtlaspackRawTransformerPlugin {
   fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
-    asset.bundle_behavior = BundleBehavior::Isolated;
+    asset.bundle_behavior = Some(BundleBehavior::Isolated);
 
     Ok(TransformResult {
       asset,
@@ -54,14 +54,14 @@ mod tests {
 
     let asset = Asset::default();
 
-    assert_ne!(asset.bundle_behavior, BundleBehavior::Isolated);
+    assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Isolated));
+    let mut asset = asset;
+    asset.bundle_behavior = Some(BundleBehavior::Isolated);
+
     assert_eq!(
-      plugin.transform(asset).map_err(|e| e.to_string()),
+      plugin.transform(asset.clone()).map_err(|e| e.to_string()),
       Ok(TransformResult {
-        asset: Asset {
-          bundle_behavior: BundleBehavior::Isolated,
-          ..Asset::default()
-        },
+        asset,
         dependencies: Vec::new(),
         invalidate_on_file_change: Vec::new()
       })

@@ -227,7 +227,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
         // The passed project path is ignored in this case, because there is no `loc`
         createDependency('', {
           specifier: fromProjectPathRelative(entry.filePath),
-          specifierType: 'esm', // ???
+          specifierType: 'url',
           pipeline: target.pipeline,
           target: target,
           env: target.env,

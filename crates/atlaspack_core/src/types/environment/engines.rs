@@ -1,3 +1,4 @@
+use browserslist::Distrib;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -7,29 +8,43 @@ use super::OutputFormat;
 
 /// The browsers list as it appears on the engines field.
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(transparent)]
-pub struct EnginesBrowsers {
-  browser_list: Vec<String>,
+#[serde(untagged)]
+pub enum EnginesBrowsers {
+  List(Vec<String>),
+  String(String),
 }
 
 impl Default for EnginesBrowsers {
   fn default() -> Self {
-    Self {
-      browser_list: vec![String::from("> 0.25%")],
-    }
+    Self::List(vec![String::from("> 0.25%")])
   }
 }
 
 impl EnginesBrowsers {
   pub fn new(browser_list: Vec<String>) -> Self {
-    Self { browser_list }
+    Self::List(browser_list)
+  }
+
+  pub fn list(&self) -> Vec<String> {
+    match self {
+      Self::List(list) => list.clone(),
+      Self::String(string) => vec![string.clone()],
+    }
+  }
+
+  pub fn resolve(&self) -> Vec<Distrib> {
+    let list = self.list();
+    browserslist::resolve(list, &Default::default()).unwrap_or(Vec::new())
   }
 }
 
 impl From<EnginesBrowsers> for Browsers {
   fn from(engines_browsers: EnginesBrowsers) -> Self {
-    let distribs = browserslist::resolve(engines_browsers.browser_list, &Default::default())
-      .unwrap_or(Vec::new());
+    let list = match engines_browsers {
+      EnginesBrowsers::List(list) => list,
+      EnginesBrowsers::String(string) => vec![string],
+    };
+    let distribs = browserslist::resolve(list, &Default::default()).unwrap_or(Vec::new());
     Browsers::from(distribs)
   }
 }
@@ -48,6 +63,7 @@ pub struct Engines {
 }
 
 /// List of environment features that may be supported by an engine
+#[derive(Debug)]
 pub enum EnvironmentFeature {
   DynamicImport,
   WorkerModule,
@@ -99,17 +115,13 @@ impl Engines {
     todo!()
   }
 
+  #[tracing::instrument(level = "debug", skip(self))]
   pub fn supports(&self, feature: EnvironmentFeature) -> bool {
-    let distribs = browserslist::resolve(
-      &self
-        .browsers
-        .as_ref()
-        .unwrap_or(&EnginesBrowsers::default())
-        .browser_list,
-      &Default::default(),
-    )
-    .unwrap_or(Vec::new());
-
+    let distribs = self
+      .browsers
+      .as_ref()
+      .unwrap_or(&Default::default())
+      .resolve();
     caniuse_database::check_browserslist_support(
       &caniuse_database::BrowserFeature::from(feature),
       &distribs,

@@ -237,10 +237,11 @@ export default class Transformation {
     if (code != null) {
       idBase += hashString(code);
     }
+    console.log({idBase, code});
     return new UncommittedAsset({
       idBase,
       value: createAsset(this.options.projectRoot, {
-        idBase,
+        code,
         filePath,
         isSource,
         type: path.extname(fromProjectPathRelative(filePath)).slice(1),

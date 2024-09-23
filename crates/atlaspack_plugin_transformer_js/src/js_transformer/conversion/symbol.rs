@@ -6,11 +6,15 @@ use crate::js_transformer::conversion::loc::convert_loc;
 
 /// Convert `CollectImportedSymbol`, `ImportedSymbol` and into `Symbol`
 macro_rules! convert_symbol {
-  ($asset_file_path: ident, $symbol: ident) => {
+  ($project_root: ident, $asset_file_path: ident, $symbol: ident) => {
     Symbol {
       exported: $symbol.imported.as_ref().into(),
       local: $symbol.local.as_ref().into(),
-      loc: Some(convert_loc($asset_file_path.to_owned(), &$symbol.loc)),
+      loc: Some(convert_loc(
+        $project_root,
+        $asset_file_path.to_owned(),
+        &$symbol.loc,
+      )),
       ..Default::default()
     }
   };
@@ -18,31 +22,38 @@ macro_rules! convert_symbol {
 
 /// Convert from `[CollectImportedSymbol]` to `[Symbol]`
 pub(crate) fn transformer_collect_imported_symbol_to_symbol(
+  project_root: &Path,
   asset_file_path: &Path,
   symbol: &atlaspack_js_swc_core::CollectImportedSymbol,
 ) -> Symbol {
-  convert_symbol!(asset_file_path, symbol)
+  convert_symbol!(project_root, asset_file_path, symbol)
 }
 
 /// Convert from `[ImportedSymbol]` to `[Symbol]`
 ///
 /// `ImportedSymbol` corresponds to `x`, `y` in `import { x, y } from 'other';`
 pub(crate) fn transformer_imported_symbol_to_symbol(
+  project_root: &Path,
   asset_file_path: &Path,
   symbol: &atlaspack_js_swc_core::ImportedSymbol,
 ) -> Symbol {
-  convert_symbol!(asset_file_path, symbol)
+  convert_symbol!(project_root, asset_file_path, symbol)
 }
 
 /// Convert from `[ExportedSymbol]` to `[Symbol]`
 pub(crate) fn transformer_exported_symbol_into_symbol(
+  project_root: &Path,
   asset_file_path: &Path,
   symbol: &atlaspack_js_swc_core::ExportedSymbol,
 ) -> Symbol {
   Symbol {
     exported: symbol.exported.as_ref().into(),
     local: symbol.local.as_ref().into(),
-    loc: Some(convert_loc(asset_file_path.to_owned(), &symbol.loc)),
+    loc: Some(convert_loc(
+      project_root,
+      asset_file_path.to_owned(),
+      &symbol.loc,
+    )),
     is_esm_export: symbol.is_esm,
     ..Default::default()
   }
@@ -77,8 +88,10 @@ mod tests {
     .unwrap();
     let collect_result = result.symbol_result.unwrap();
     let import: atlaspack_js_swc_core::CollectImportedSymbol = collect_result.imports[0].clone();
+    let project_root = Path::new("");
 
-    let result = transformer_collect_imported_symbol_to_symbol(&Path::new("test.js"), &import);
+    let result =
+      transformer_collect_imported_symbol_to_symbol(project_root, &Path::new("test.js"), &import);
     assert_eq!(
       result,
       Symbol {
@@ -112,7 +125,8 @@ export function test() {
     "#;
     let swc_output = run_swc_core_transform(source);
     let import = &swc_output.hoist_result.unwrap().imported_symbols[0];
-    let output = transformer_imported_symbol_to_symbol(Path::new("path"), import);
+    let project_root = Path::new("");
+    let output = transformer_imported_symbol_to_symbol(project_root, Path::new("path"), import);
 
     assert_eq!(
       output,
@@ -143,7 +157,8 @@ export function test() {
     "#;
     let swc_output = run_swc_core_transform(source);
     let import = &swc_output.hoist_result.unwrap().exported_symbols[0];
-    let output = transformer_exported_symbol_into_symbol(Path::new("path"), import);
+    let project_root = Path::new("");
+    let output = transformer_exported_symbol_into_symbol(project_root, Path::new("path"), import);
 
     assert_eq!(
       output,

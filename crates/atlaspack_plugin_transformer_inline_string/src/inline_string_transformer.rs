@@ -15,7 +15,7 @@ impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
   fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
-    asset.bundle_behavior = BundleBehavior::Inline;
+    asset.bundle_behavior = Some(BundleBehavior::Inline);
     asset
       .meta
       .insert(String::from("inlineType"), "string".into());

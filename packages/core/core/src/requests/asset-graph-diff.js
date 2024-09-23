@@ -28,6 +28,43 @@ function filterNode(node) {
   return clone;
 }
 
+function compactDeep(obj) {
+  if (obj instanceof Map) {
+    const copy = {};
+    Array.from(obj.entries()).forEach(([k, v]) => {
+      if (v != null) {
+        copy[k] = compactDeep(v);
+      }
+    });
+    return copy;
+  } else if (Array.isArray(obj)) {
+    return obj.map(v => compactDeep(v));
+  } else if (typeof obj === 'object') {
+    const copy = {};
+    Object.entries(obj ?? {}).forEach(([key, value]) => {
+      // We won't be exposing this ; this is used for persistence on js side
+      if (key === 'mapKey') {
+        return;
+      }
+      // We won't be exposing this
+      if (key === 'correspondingRequest') {
+        return;
+      }
+      // Equivalent false == null
+      if (key === 'isWeak' && value === false) {
+        return;
+      }
+
+      if (value != null) {
+        copy[key] = compactDeep(value);
+      }
+    });
+    return copy;
+  } else if (obj != null) {
+    return obj;
+  }
+}
+
 function assetGraphDiff(jsAssetGraph, rustAssetGraph) {
   const getNodes = graph => {
     let nodes = {};
@@ -75,7 +112,7 @@ function assetGraphDiff(jsAssetGraph, rustAssetGraph) {
     }
 
     console.log(key);
-    console.log(diff(rustNode, jsNode));
+    console.log(diff(compactDeep(rustNode), compactDeep(jsNode)));
   }
 
   console.log('Missing', missing);

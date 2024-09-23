@@ -1,3 +1,4 @@
+pub mod asset;
 pub mod atlaspack;
 pub mod dependency;
 pub mod environment;

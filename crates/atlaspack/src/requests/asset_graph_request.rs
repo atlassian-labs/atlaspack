@@ -167,6 +167,7 @@ impl AssetGraphBuilder {
           code: code.clone(),
           env: dependency.env.clone(),
           file_path: path,
+          project_root: self.request_context.project_root.clone(),
           pipeline: pipeline.clone(),
           query,
           side_effects,

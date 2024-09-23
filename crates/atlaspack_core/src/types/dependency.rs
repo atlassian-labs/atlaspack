@@ -6,17 +6,19 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 use serde::Serialize;
+use serde_repr::Deserialize_repr;
+use serde_repr::Serialize_repr;
 
-use crate::hash::hash_string;
 use crate::hash::IdentifierHasher;
 use crate::types::{AssetId, ExportsCondition};
 
-use super::bundle::BundleBehavior;
+use super::bundle::MaybeBundleBehavior;
 use super::environment::Environment;
 use super::json::JSONObject;
 use super::source::SourceLocation;
 use super::symbol::Symbol;
 use super::target::Target;
+use super::FileType;
 
 pub fn create_dependency_id(
   source_asset_id: Option<&AssetId>,
@@ -25,7 +27,7 @@ pub fn create_dependency_id(
   target: Option<&Target>,
   pipeline: Option<&str>,
   specifier_type: &SpecifierType,
-  bundle_behavior: &BundleBehavior,
+  bundle_behavior: &MaybeBundleBehavior,
   priority: &Priority,
   package_conditions: &ExportsCondition,
 ) -> String {
@@ -46,14 +48,14 @@ pub fn create_dependency_id(
 }
 
 /// A dependency denotes a connection between two assets
-#[derive(PartialEq, Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Hash, PartialEq, Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Dependency {
   /// Controls the behavior of the bundle the resolved asset is placed into
   ///
   /// This option is used in combination with priority to determine when the bundle is loaded.
   ///
-  pub bundle_behavior: BundleBehavior,
+  pub bundle_behavior: MaybeBundleBehavior,
 
   /// The environment of the dependency
   pub env: Arc<Environment>,
@@ -70,7 +72,7 @@ pub struct Dependency {
   ///
   /// This will be combined with the conditions from the environment. However, it overrides the default "import" and "require" conditions inferred from the specifierType. To include those in addition to custom conditions, explicitly add them to this list.
   ///
-  #[serde(default)]
+  #[serde(default, skip_serializing_if = "ExportsCondition::is_empty")]
   pub package_conditions: ExportsCondition,
 
   /// The pipeline defined in .parcelrc that the dependency should be processed with
@@ -100,6 +102,9 @@ pub struct Dependency {
 
   /// How the specifier should be interpreted
   pub specifier_type: SpecifierType,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub source_asset_type: Option<FileType>,
 
   /// These are the "Symbols" this dependency has which are used in import sites.
   ///
@@ -140,6 +145,20 @@ pub struct Dependency {
 }
 
 impl Dependency {
+  pub fn id(&self) -> String {
+    create_dependency_id(
+      self.source_asset_id.as_ref(),
+      &self.specifier,
+      &self.env,
+      self.target.as_ref().map(|t| &**t),
+      self.pipeline.as_ref().map(|s| s.as_str()),
+      &self.specifier_type,
+      &self.bundle_behavior,
+      &self.priority,
+      &self.package_conditions,
+    )
+  }
+
   pub fn entry(entry: String, target: Target) -> Dependency {
     let is_library = target.env.is_library;
     let mut symbols = None;
@@ -160,6 +179,7 @@ impl Dependency {
       is_entry: true,
       needs_stable_name: true,
       specifier: entry,
+      // By default in JS this is set to ESM, even though it is resolved as Url
       specifier_type: SpecifierType::Url,
       symbols,
       target: Some(Box::new(target)),
@@ -174,32 +194,6 @@ impl Dependency {
       specifier,
       ..Dependency::default()
     }
-  }
-
-  pub fn id(&self) -> String {
-    fn serialize(v: &impl Serialize) -> String {
-      serde_json::to_string(v)
-        .ok()
-        .unwrap_or_else(|| String::from(""))
-    }
-    let mut dependency_id_string = String::from("");
-    dependency_id_string += self
-      .source_asset_id
-      .as_ref()
-      .map(|s| s.as_str())
-      .unwrap_or("");
-    dependency_id_string += &*self.specifier;
-    dependency_id_string += &self.env.id();
-    dependency_id_string += &self
-      .target
-      .as_ref()
-      .and_then(|s| serde_json::to_string(s).ok())
-      .unwrap_or_else(|| String::from(""));
-    dependency_id_string += self.pipeline.as_ref().map(|s| s.as_str()).unwrap_or("");
-    dependency_id_string += &serialize(&self.specifier_type);
-    dependency_id_string += &serialize(&self.bundle_behavior);
-    dependency_id_string += &serialize(&self.priority);
-    hash_string(dependency_id_string)
   }
 
   pub fn set_placeholder(&mut self, placeholder: impl Into<serde_json::Value>) {
@@ -237,19 +231,6 @@ impl Dependency {
   }
 }
 
-impl Hash for Dependency {
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    self.bundle_behavior.hash(state);
-    self.env.hash(state);
-    self.package_conditions.hash(state);
-    self.pipeline.hash(state);
-    self.priority.hash(state);
-    self.source_asset_id.hash(state);
-    self.specifier.hash(state);
-    self.specifier_type.hash(state);
-  }
-}
-
 #[derive(Clone, Debug, Deserialize, Hash, Serialize)]
 pub struct ImportAttribute {
   pub key: String,
@@ -257,8 +238,9 @@ pub struct ImportAttribute {
 }
 
 /// Determines when a dependency should load
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
 #[serde(rename_all = "lowercase")]
+#[repr(u32)]
 pub enum Priority {
   /// Resolves the dependency synchronously, placing the resolved asset in the same bundle as the parent or another bundle that is already on the page
   Sync = 0,
@@ -275,7 +257,7 @@ impl Default for Priority {
 }
 
 /// The type of the import specifier
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
 #[serde(rename_all = "lowercase")]
 #[repr(u8)]
 pub enum SpecifierType {

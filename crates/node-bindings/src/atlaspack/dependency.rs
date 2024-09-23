@@ -1,5 +1,5 @@
 use atlaspack_core::types::{
-  AssetId, BundleBehavior, Environment, Priority, SpecifierType, Target,
+  AssetId, Environment, MaybeBundleBehavior, Priority, SpecifierType, Target,
 };
 use atlaspack_resolver::ExportsCondition;
 use napi::{Env, JsUnknown};
@@ -15,7 +15,7 @@ struct DependencyIdParams {
   target: Option<Target>,
   pipeline: Option<String>,
   specifier_type: Option<SpecifierType>,
-  bundle_behavior: Option<BundleBehavior>,
+  bundle_behavior: Option<MaybeBundleBehavior>,
   priority: Option<Priority>,
   package_conditions: Option<ExportsCondition>,
 }

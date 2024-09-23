@@ -245,12 +245,14 @@ pub enum SourceType {
 #[serde(rename_all = "camelCase")]
 pub struct TargetSourceMapOptions {
   /// Inlines the source map as a data URL into the bundle, rather than link to it as a separate output file
+  #[serde(skip_serializing_if = "Option::is_none")]
   inline: Option<bool>,
 
   /// Inlines the original source code into the source map, rather than loading them from the source root
   ///
   /// This is set to true by default when building browser targets for production.
   ///
+  #[serde(skip_serializing_if = "Option::is_none")]
   inline_sources: Option<bool>,
 
   /// The URL to load the original source code from
@@ -258,6 +260,7 @@ pub struct TargetSourceMapOptions {
   /// This is set automatically in development when using the builtin Atlaspack development server.
   /// Otherwise, it defaults to a relative path to the bundle from the project root.
   ///
+  #[serde(skip_serializing_if = "Option::is_none")]
   source_root: Option<String>,
 }
 
@@ -278,7 +281,7 @@ mod test {
     let id = environment.id();
     assert_eq!(id, "bb871c88ce058724");
 
-    let mut environment = Environment {
+    let environment = Environment {
       context: EnvironmentContext::Node,
       engines: Engines {
         browsers: None,
