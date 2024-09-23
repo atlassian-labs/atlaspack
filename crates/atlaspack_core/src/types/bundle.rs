@@ -1,5 +1,7 @@
 use serde::Deserialize;
 use serde::Serialize;
+use serde_repr::Deserialize_repr;
+use serde_repr::Serialize_repr;
 
 use super::environment::Environment;
 use super::file_type::FileType;
@@ -70,8 +72,8 @@ pub struct Bundle {
 }
 
 /// Determines when the bundle loads
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(rename_all = "lowercase")]
+#[derive(Clone, Copy, Debug, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
+#[repr(u32)]
 pub enum BundleBehavior {
   /// Embeds an asset into the parent bundle by creating an inline bundle
   Inline,

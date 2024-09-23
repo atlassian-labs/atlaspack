@@ -419,11 +419,7 @@ fn make_esm_helpers_dependency(
     specifier_type: SpecifierType::Esm,
     source_path: Some(asset_file_path.clone()),
     env: Environment {
-      include_node_modules: IncludeNodeModules::Map(
-        [("@atlaspack/transformer-js".to_string(), true)]
-          .into_iter()
-          .collect(),
-      ),
+      include_node_modules: IncludeNodeModules::Bool(true),
       ..asset_environment.clone()
     }
     .into(),
