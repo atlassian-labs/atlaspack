@@ -42,6 +42,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
     let output_bytes = serialize_html(dom)?;
 
     let mut asset = input;
+    asset.bundle_behavior = Some(BundleBehavior::Isolated);
     asset.code = Arc::new(Code::new(output_bytes));
 
     Ok(TransformResult {
