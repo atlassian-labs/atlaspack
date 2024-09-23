@@ -1,9 +1,8 @@
 use std::{path::PathBuf, sync::Arc};
 
 use atlaspack_core::types::{
-  engines::Engines, Asset, BundleBehavior, Code, EnvironmentContext, ExportsCondition, FileType,
-  IncludeNodeModules, JSONObject, OutputFormat, Priority, SourceLocation, SourceType,
-  SpecifierType, Symbol,
+  engines::Engines, Asset, BundleBehavior, Code, EnvironmentContext, FileType, IncludeNodeModules,
+  JSONObject, OutputFormat, SourceLocation, SourceType, Symbol,
 };
 use serde::{Deserialize, Serialize};
 
@@ -66,33 +65,6 @@ pub struct RpcEnvironmentResult {
   pub source_type: Option<SourceType>,
 }
 
-/// This Dependency mostly replicates the core Dependency type however it only features
-/// fields that can be modified by transformers and some properties are
-/// optional as they will be merged into the Asset later
-/// Similar to packages/core/types-internal/src/index.js#DependencyOptions
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RpcDependencyResult {
-  pub id: String,
-  pub bundle_behavior: Option<BundleBehavior>,
-  pub env: Option<RpcEnvironmentResult>,
-  #[serde(default)]
-  pub loc: Option<SourceLocation>,
-  #[serde(default)]
-  pub meta: JSONObject,
-  #[serde(default)]
-  pub package_conditions: Option<ExportsCondition>,
-  #[serde(default)]
-  pub pipeline: Option<String>,
-  pub priority: Option<Priority>,
-  pub range: Option<String>,
-  pub resolve_from: Option<PathBuf>,
-  pub specifier: String,
-  pub specifier_type: SpecifierType,
-  #[serde(default)]
-  pub symbols: Option<Vec<Symbol>>,
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RpcTransformerOpts {
@@ -106,7 +78,6 @@ pub struct RpcTransformerOpts {
 #[serde(rename_all = "camelCase")]
 pub struct RpcTransformerResult {
   pub asset: RpcAssetResult,
-  pub dependencies: Vec<RpcDependencyResult>,
 }
 
 pub trait RpcWorker: Send + Sync {
