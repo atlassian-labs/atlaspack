@@ -75,7 +75,7 @@ impl TransformerPlugin for RpcTransformerPlugin {
       side_effects: result.asset.side_effects,
       is_bundle_splittable: result.asset.is_bundle_splittable,
       is_source: result.asset.is_source,
-      // TODO: Fix or remove the duplicate meta fields. I vote we remove these fields as they're just duplicates of meta
+      // TODO: Fix or remove the duplicate meta fields.
       ..Default::default()
     };
 
