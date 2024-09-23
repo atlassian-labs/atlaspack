@@ -38,7 +38,8 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
     let context = ExtractDependenciesContext {
       source_path: Some(input.file_path.clone()),
     };
-    let ExtractDependenciesOutput { dependencies, .. } = extract_dependencies(context, &mut dom);
+    let ExtractDependenciesOutput { dependencies, .. } =
+      run_html_transformations(context, &mut dom);
     let output_bytes = serialize_html(dom)?;
 
     let mut asset = input;
@@ -71,14 +72,23 @@ fn parse_html(bytes: &[u8]) -> Result<RcDom, Error> {
   Ok(dom)
 }
 
+#[derive(PartialEq, Eq)]
+enum DomTraversalOperation {
+  Continue,
+  Stop,
+}
+
 trait DomVisitor {
-  fn visit_node(&mut self, node: &Node);
+  fn visit_node(&mut self, node: &Node) -> DomTraversalOperation;
 }
 
 fn walk(node: Rc<Node>, visitor: &mut impl DomVisitor) {
   let mut queue = vec![node.clone()];
   while let Some(node) = queue.pop() {
-    visitor.visit_node(&node);
+    let operation = visitor.visit_node(&node);
+    if operation == DomTraversalOperation::Stop {
+      break;
+    }
     let borrow = node.children.borrow();
     for child in borrow.iter() {
       queue.push(child.clone());
@@ -129,6 +139,8 @@ impl<'a> AttrWrapper<'a> {
   }
 }
 
+/// Find all <script ...>, <link ...>, <a ...> etc. tags and create dependencies
+/// that correspond to them.
 #[derive(Default)]
 struct ExtractDependencies {
   context: ExtractDependenciesContext,
@@ -148,7 +160,7 @@ impl ExtractDependencies {
 }
 
 impl DomVisitor for ExtractDependencies {
-  fn visit_node(&mut self, node: &Node) {
+  fn visit_node(&mut self, node: &Node) -> DomTraversalOperation {
     match &node.data {
       NodeData::Document => {}
       NodeData::Doctype { .. } => {}
@@ -209,6 +221,8 @@ impl DomVisitor for ExtractDependencies {
       },
       NodeData::ProcessingInstruction { .. } => {}
     }
+
+    DomTraversalOperation::Continue
   }
 }
 
@@ -221,13 +235,46 @@ struct ExtractDependenciesContext {
   source_path: Option<PathBuf>,
 }
 
-fn extract_dependencies(
+/// Insert a tag for HMR and create its dependency/asset
+struct HMRVisitor {}
+
+impl HMRVisitor {
+  fn new() -> Self {
+    HMRVisitor {}
+  }
+}
+
+impl DomVisitor for HMRVisitor {
+  fn visit_node(&mut self, node: &Node) -> DomTraversalOperation {
+    match &node.data {
+      NodeData::Element { name, .. } => {
+        if name.expanded() == expanded_name!(html "body") {
+          DomTraversalOperation::Stop
+        } else {
+          DomTraversalOperation::Continue
+        }
+      }
+      _ => DomTraversalOperation::Continue,
+    }
+  }
+}
+
+/// 'Purer' entry-point for all HTML transformations. Do split transformations
+/// into smaller functions/visitors rather than doing everything in one pass.
+fn run_html_transformations(
   context: ExtractDependenciesContext,
   dom: &mut RcDom,
 ) -> ExtractDependenciesOutput {
   let node = dom.document.clone();
+
+  // Note that HTML5EVER rc-dom uses interior mutability, so these Rc<...>
+  // values are actually mutable and changing at each step.
   let mut visitor = ExtractDependencies::new(context);
-  walk(node, &mut visitor);
+  walk(node.clone(), &mut visitor);
+
+  let mut hmr_visitor = HMRVisitor::new();
+  walk(node, &mut hmr_visitor);
+
   ExtractDependenciesOutput {
     dependencies: visitor.dependencies,
   }
@@ -249,7 +296,7 @@ mod test {
     .trim();
     let mut dom = parse_html(bytes.as_bytes()).unwrap();
     let context = ExtractDependenciesContext::default();
-    extract_dependencies(context, &mut dom);
+    run_html_transformations(context, &mut dom);
     let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
     assert_eq!(
       &normalize_html(&html),
