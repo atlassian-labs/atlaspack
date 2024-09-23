@@ -113,23 +113,23 @@ impl NamedPipelinesMap {
     let is_match = named_pattern_matcher(path);
     let mut matches: Vec<PluginNode> = Vec::new();
 
+    for (pattern, pipelines) in self.inner.iter() {
+      if is_match(pattern, "") {
+        matches.extend(pipelines.iter().cloned());
+      }
+    }
+
     // If a named pipeline is requested, the glob needs to match exactly
     if let Some(named_pattern) = named_pattern {
       let exact_match = self
         .inner
         .iter()
-        .find(|(pattern, _)| is_match(pattern, named_pattern.pipeline.as_ref()));
+        .find(|(pattern, _)| is_match(pattern, named_pattern.pipeline));
 
       if let Some((_, pipelines)) = exact_match {
         matches.extend(pipelines.iter().cloned());
       } else if !named_pattern.use_fallback {
         return Vec::new();
-      }
-    }
-
-    for (pattern, pipelines) in self.inner.iter() {
-      if is_match(&pattern, "") {
-        matches.extend(pipelines.iter().cloned());
       }
     }
 
@@ -290,10 +290,10 @@ mod tests {
         );
       };
 
-      assert_plugins("a.ts", "types", [pipelines("2"), pipelines("1")].concat());
+      assert_plugins("a.ts", "types", [pipelines("1"), pipelines("2")].concat());
       assert_plugins("a.tsx", "types", pipelines("2"));
 
-      assert_plugins("a.js", "url", [pipelines("3"), pipelines("1")].concat());
+      assert_plugins("a.js", "url", [pipelines("1"), pipelines("3")].concat());
       assert_plugins("a.url", "url", pipelines("3"));
     }
 
@@ -318,12 +318,12 @@ mod tests {
         );
       };
 
-      assert_plugins("a.ts", "types", [pipelines("2"), pipelines("1")].concat());
+      assert_plugins("a.ts", "types", [pipelines("1"), pipelines("2")].concat());
       assert_plugins("a.tsx", "types", pipelines("2"));
       assert_plugins("a.ts", "typesa", pipelines("1"));
 
       assert_plugins("a.url", "url", pipelines("3"));
-      assert_plugins("a.js", "url", [pipelines("3"), pipelines("1")].concat());
+      assert_plugins("a.js", "url", [pipelines("1"), pipelines("3")].concat());
       assert_plugins("a.js", "urla", pipelines("1"));
     }
   }
