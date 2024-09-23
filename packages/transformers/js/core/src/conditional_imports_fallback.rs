@@ -65,9 +65,9 @@ impl VisitMut for ConditionalImportsFallback {
 
     // importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
     // =>
-    // (globalThis.__MOD_COND && globalThis.__MOD_COND['CONDITION'] ? require('IF_TRUE') : require('IF_FALSE')).default;
+    // (globalThis.__MCOND && globalThis.__MCOND['CONDITION'] ? require('IF_TRUE') : require('IF_FALSE')).default;
     let new_node = quote!(
-      "(globalThis.__MOD_COND && globalThis.__MOD_COND[$cond] ? $if_true : $if_false).default" as Expr,
+      "globalThis.__MCOND && globalThis.__MCOND($cond) ? $if_true.default : $if_false.default" as Expr,
       cond: Expr = Expr::Lit(Lit::Str(cond.into())),
       if_true: Expr = build_import(if_true, if_true_span),
       if_false: Expr = build_import(if_false, if_false_span)
@@ -100,9 +100,9 @@ mod tests {
       run_test_visit(input_code, |context| make_conditional_imports(context));
 
     let expected_code = r#"
-      const x = (globalThis.__MOD_COND && globalThis.__MOD_COND["condition-1"] ? require("a") : require("b")).default;
-      const y = (globalThis.__MOD_COND && globalThis.__MOD_COND["condition-2"] ? require("c") : require("d")).default;
-      const z = (globalThis.__MOD_COND && globalThis.__MOD_COND["condition-2"] ? require("c") : require("d")).default;
+      const x = globalThis.__MCOND && globalThis.__MCOND("condition-1") ? require("a").default : require("b").default;
+      const y = globalThis.__MCOND && globalThis.__MCOND("condition-2") ? require("c").default : require("d").default;
+      const z = globalThis.__MCOND && globalThis.__MCOND("condition-2") ? require("c").default : require("d").default;
     "#;
 
     assert_eq!(

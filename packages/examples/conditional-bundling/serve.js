@@ -45,12 +45,11 @@ app.get('/', (req, res, next) => {
   }
 
   const pos = index.indexOf('<script');
-  index = `${index.slice(
-    0,
-    pos,
-  )}<script>globalThis.__MOD_COND = ${JSON.stringify(
+  index = `${index.slice(0, pos)}<script>const features = ${JSON.stringify(
     FEATURES,
-  )}</script>${scripts.join('\n')}${index.slice(pos)}`;
+  )};globalThis.__MCOND = (key) => features[key];</script>${scripts.join(
+    '\n',
+  )}${index.slice(pos)}`;
   index.slice(pos);
   res.contentType = 'text/html';
   res.send(index);
