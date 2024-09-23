@@ -96,7 +96,10 @@ impl TargetRequest {
       dist: dist.and_then(|browser| match browser {
         BrowserField::EntryPoint(entrypoint) => Some(entrypoint.clone()),
         BrowserField::ReplacementBySpecifier(replacements) => {
-          name.and_then(|name| replacements.get(&name).map(|v| v.into()))
+          let name = name?;
+          let replacements = replacements.get(&name)?;
+          let path = replacements.as_str()?;
+          Some(path.into())
         }
       }),
       name: "browser",

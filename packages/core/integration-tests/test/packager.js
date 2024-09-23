@@ -25,52 +25,58 @@ function hasPolyfill(code) {
 
 describe('packager', function () {
   describe('globalThis polyfill', function () {
-    it('should exclude globalThis polyfill in modern builds', async function () {
-      const entryPoint = path.join(
-        __dirname,
-        'integration/html-js-dynamic/index.html',
-      );
-      const options = {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldOptimize: false,
-          engines: {
-            browsers: 'last 2 Chrome version',
+    it.v2(
+      'should exclude globalThis polyfill in modern builds',
+      async function () {
+        const entryPoint = path.join(
+          __dirname,
+          'integration/html-js-dynamic/index.html',
+        );
+        const options = {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+            engines: {
+              browsers: 'last 2 Chrome version',
+            },
           },
-        },
-      };
-      const bundleGraph = await runBundler(entryPoint, options);
+        };
+        const bundleGraph = await runBundler(entryPoint, options);
 
-      for (const b of bundleGraph.getBundles()) {
-        if (b.type !== 'js') continue;
-        let code = await overlayFS.readFile(nullthrows(b.filePath), 'utf8');
-        assert.ok(!hasPolyfill(code));
-      }
-    });
+        for (const b of bundleGraph.getBundles()) {
+          if (b.type !== 'js') continue;
+          let code = await overlayFS.readFile(nullthrows(b.filePath), 'utf8');
+          assert.ok(!hasPolyfill(code));
+        }
+      },
+    );
 
-    it('should include globalThis polyfill in ie11 builds', async function () {
-      const entryPoint = path.join(
-        __dirname,
-        'integration/packager-global-this/index.html',
-      );
-      const options = {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldOptimize: false,
-          engines: {
-            browsers: 'ie 11',
+    it.v2(
+      'should include globalThis polyfill in ie11 builds',
+      async function () {
+        const entryPoint = path.join(
+          __dirname,
+          'integration/packager-global-this/index.html',
+        );
+        const options = {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+            engines: {
+              browsers: 'ie 11',
+            },
           },
-        },
-      };
+        };
 
-      const bundleGraph = await runBundler(entryPoint, options);
+        const bundleGraph = await runBundler(entryPoint, options);
 
-      for (const b of bundleGraph.getBundles()) {
-        if (b.type !== 'js') continue;
-        let code = await overlayFS.readFile(nullthrows(b.filePath), 'utf8');
-        assert.ok(hasPolyfill(code));
-      }
-    });
+        for (const b of bundleGraph.getBundles()) {
+          if (b.type !== 'js') continue;
+          let code = await overlayFS.readFile(nullthrows(b.filePath), 'utf8');
+          assert.ok(hasPolyfill(code));
+        }
+      },
+    );
 
     it.v2(
       'should exclude globalThis polyfill in node builds',

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt::Display;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use atlaspack_core::types::engines::Engines;
 use atlaspack_core::types::EnvironmentContext;
@@ -10,16 +10,17 @@ use atlaspack_core::types::TargetSourceMapOptions;
 use atlaspack_resolver::IncludeNodeModules;
 use serde::Deserialize;
 use serde::Deserializer;
+use serde_json::Value;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum BrowserField {
   EntryPoint(PathBuf),
   // TODO false value
-  ReplacementBySpecifier(HashMap<String, PathBuf>),
+  ReplacementBySpecifier(HashMap<String, serde_json::Value>),
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum BrowsersList {
   Browser(String),
@@ -27,14 +28,14 @@ pub enum BrowsersList {
   BrowsersByEnv(HashMap<String, Vec<String>>),
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum BuiltInTargetDescriptor {
   Disabled(serde_bool::False),
   TargetDescriptor(TargetDescriptor),
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, PartialEq)]
 #[serde(default, rename_all = "camelCase")]
 pub struct TargetDescriptor {
   pub context: Option<EnvironmentContext>,
@@ -51,7 +52,7 @@ pub struct TargetDescriptor {
   pub source_map: Option<SourceMapField>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ModuleFormat {
   CommonJS,
@@ -67,7 +68,7 @@ impl Display for ModuleFormat {
   }
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, PartialEq)]
 pub struct PackageJson {
   pub name: Option<String>,
 
@@ -98,7 +99,7 @@ pub struct PackageJson {
   pub fields: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub enum SourceField {
   #[allow(unused)]
   Source(String),
@@ -106,7 +107,7 @@ pub enum SourceField {
   Sources(Vec<String>),
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub enum SourceMapField {
   Bool(bool),
   Options(TargetSourceMapOptions),
@@ -120,13 +121,17 @@ where
 
   if let Some(browser_field) = browser.as_ref() {
     let allowed_extensions = vec!["cjs", "js", "mjs"];
+
     match browser_field {
       BrowserField::EntryPoint(dist) => {
         validate_extension::<D>("browser", &dist, &allowed_extensions)?;
       }
       BrowserField::ReplacementBySpecifier(replacements) => {
         for dist in replacements.values() {
-          validate_extension::<D>("browser", &dist, &allowed_extensions)?;
+          // skip on false
+          if let Value::String(dist) = dist {
+            validate_extension::<D>("browser", Path::new(dist.as_str()), &allowed_extensions)?;
+          }
         }
       }
     };
@@ -135,7 +140,7 @@ where
   Ok(browser)
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, PartialEq)]
 pub struct TargetsField {
   #[serde(default, deserialize_with = "browser_target")]
   pub browser: Option<BuiltInTargetDescriptor>,
@@ -264,7 +269,7 @@ where
 
 fn validate_extension<'de, D>(
   target: &str,
-  dist: &PathBuf,
+  dist: &Path,
   allowed_extensions: &Vec<&str>,
 ) -> Result<(), D::Error>
 where
@@ -304,4 +309,56 @@ where
   }
 
   Ok(())
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  #[test]
+  fn test_parse_package_json() {
+    let raw_package_json = r#"
+{
+  "name": "example-package",
+  "type": "module",
+  "browser": {
+    "main": "./browser-main.js",
+    "module": "./browser-module.js"
+  },
+  "main": "./index.js",
+  "module": "./index.mjs",
+  "types": "./index.d.ts",
+  "engines": {
+     "npm": ">=6.0.0"
+  },
+  "browserslist": [
+    "> 1%"
+  ]
+}"#;
+    let package_json: PackageJson = serde_json::from_str(raw_package_json).unwrap();
+
+    assert_eq!(
+      package_json,
+      PackageJson {
+        name: Some(String::from("example-package"),),
+        module_format: Some(ModuleFormat::Module),
+        browser: Some(BrowserField::ReplacementBySpecifier(HashMap::from([
+          (String::from("main"), Value::from("./browser-main.js")),
+          (String::from("module"), Value::from("./browser-module.js")),
+        ])),),
+        main: Some(PathBuf::from("./index.js"),),
+        module: Some(PathBuf::from("./index.mjs"),),
+        types: Some(PathBuf::from("./index.d.ts"),),
+        engines: Some(Engines {
+          atlaspack: None,
+          browsers: Default::default(),
+          electron: None,
+          node: None,
+        },),
+        browserslist: Some(BrowsersList::Browsers(vec![String::from("> 1%")],),),
+        targets: TargetsField::default(),
+        ..Default::default()
+      }
+    )
+  }
 }
