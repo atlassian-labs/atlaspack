@@ -465,7 +465,10 @@ fn convert_dependency(
     &transformer_dependency.loc,
   );
   let mut base_dependency = Dependency {
-    bundle_behavior: asset.bundle_behavior.clone(),
+    bundle_behavior: match transformer_dependency.kind {
+      DependencyKind::Url => Some(BundleBehavior::Isolated),
+      _ => None,
+    },
     env: asset.env.clone(),
     loc: Some(loc.clone()),
     priority: convert_priority(&transformer_dependency),

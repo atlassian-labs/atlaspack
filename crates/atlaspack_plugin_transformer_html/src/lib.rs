@@ -18,7 +18,7 @@ use markup5ever_rcdom::{Node, NodeData, RcDom, SerializableHandle};
 
 use atlaspack_core::plugin::{PluginContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{
-  Asset, AssetId, BundleBehavior, Code, Dependency, Environment, OutputFormat, Priority,
+  Asset, AssetId, BundleBehavior, Code, Dependency, Environment, FileType, OutputFormat, Priority,
   SourceType, SpecifierType,
 };
 
@@ -188,6 +188,7 @@ impl DomVisitor for ExtractDependencies {
               priority: Priority::Parallel,
               source_asset_id: self.source_asset_id.clone(),
               env: self.env.clone(),
+              source_asset_type: Some(FileType::Html),
               source_path: self.context.source_path.clone(),
               is_esm: source_type == SourceType::Module,
               bundle_behavior: if source_type == SourceType::Script

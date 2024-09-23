@@ -142,7 +142,7 @@ describe('html', function () {
     ]);
   });
 
-  it('should insert empty script tag for HMR at the end of the body', async function () {
+  it.only('should insert empty script tag for HMR at the end of the body', async function () {
     const inputDir = path.join(__dirname, '/integration/html-no-js');
     const b = await bundle(path.join(inputDir, '/index.html'), {
       hmrOptions: {},

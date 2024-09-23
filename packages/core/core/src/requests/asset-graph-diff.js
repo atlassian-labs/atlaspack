@@ -28,26 +28,22 @@ function filterNode(node) {
   return clone;
 }
 
-function compactDeep(obj) {
+function compactDeep(obj, ignoredPatterns = [], currentPath = '$') {
   if (obj instanceof Map) {
     const copy = {};
     Array.from(obj.entries()).forEach(([k, v]) => {
       if (v != null) {
-        copy[k] = compactDeep(v);
+        copy[k] = compactDeep(v, ignoredPatterns, `${currentPath}.${k}`);
       }
     });
     return copy;
   } else if (Array.isArray(obj)) {
-    return obj.map(v => compactDeep(v));
+    return obj.map(v => compactDeep(v, ignoredPatterns, `${currentPath}[]`));
   } else if (typeof obj === 'object') {
     const copy = {};
     Object.entries(obj ?? {}).forEach(([key, value]) => {
-      // We won't be exposing this ; this is used for persistence on js side
-      if (key === 'mapKey') {
-        return;
-      }
-      // We won't be exposing this
-      if (key === 'correspondingRequest') {
+      const path = `${currentPath}.${key}`;
+      if (ignoredPatterns.some(pattern => path.includes(pattern))) {
         return;
       }
       // Equivalent false == null
@@ -56,7 +52,7 @@ function compactDeep(obj) {
       }
 
       if (value != null) {
-        copy[key] = compactDeep(value);
+        copy[key] = compactDeep(value, ignoredPatterns, path);
       }
     });
     return copy;
@@ -112,7 +108,24 @@ function assetGraphDiff(jsAssetGraph, rustAssetGraph) {
     }
 
     console.log(key);
-    console.log(diff(compactDeep(rustNode), compactDeep(jsNode)));
+    const ignoredPatterns = [
+      // ignored because we don't copy the environment ID back from rust
+      // in the target value
+      '$.value.target.env.id',
+      // ignore asset.mapKey because we don't do persistence on rust yet
+      '$.value.mapKey',
+      // ignore this because it's just the output hash. We don't need to compute
+      // this yet
+      '$.value.outputHash',
+      // ignore correspondingRequest from all nodes
+      '$.correspondingRequest',
+    ];
+    console.log(
+      diff(
+        compactDeep(rustNode, ignoredPatterns),
+        compactDeep(jsNode, ignoredPatterns),
+      ),
+    );
   }
 
   console.log('Missing', missing);
