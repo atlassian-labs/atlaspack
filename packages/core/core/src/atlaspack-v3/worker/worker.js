@@ -34,46 +34,54 @@ export class AtlaspackWorker {
 
     let assetCompat = new AssetCompat(asset, options);
 
-    if (transformer.parse) {
-      // $FlowFixMe
-      let ast = await transformer.parse({asset: assetCompat});
-      // $FlowFixMe
-      assetCompat.setAST(ast);
-    }
+    try {
+      if (transformer.parse) {
+        // $FlowFixMe
+        let ast = await transformer.parse({asset: assetCompat});
+        // $FlowFixMe
+        assetCompat.setAST(ast);
+      }
 
-    // $FlowFixMe
-    let result = await transformer.transform({
       // $FlowFixMe
-      asset: assetCompat,
-      options,
-      config: null,
-    });
-
-    if (transformer.generate) {
-      // $FlowFixMe
-      let output = await transformer.generate({
+      let result = await transformer.transform({
         // $FlowFixMe
         asset: assetCompat,
-        // $FlowFixMe
-        ast: assetCompat.getAST(),
+        options,
+        config: null,
       });
-      // $FlowFixMe
-      assetCompat.setCode(output.content);
+
+      if (transformer.generate) {
+        // $FlowFixMe
+        let output = await transformer.generate({
+          // $FlowFixMe
+          asset: assetCompat,
+          // $FlowFixMe
+          ast: assetCompat.getAST(),
+        });
+        // $FlowFixMe
+        assetCompat.setCode(output.content);
+      }
+
+      assert(
+        result.length === 1,
+        '[V3] Unimplemented: Multiple asset return from Node transformer',
+      );
+      assert(
+        result[0] === assetCompat,
+        '[V3] Unimplemented: New asset returned from Node transformer',
+      );
+
+      return {
+        asset,
+        dependencies: assetCompat._dependencies,
+      };
+    } catch (e) {
+      // TODO: Improve error logging from JS plugins. Without this you currently
+      // only see the error message, no stack trace.
+      // eslint-disable-next-line no-console
+      console.error(e);
+      throw e;
     }
-
-    assert(
-      result.length === 1,
-      '[V3] Unimplemented: Multiple asset return from Node transformer',
-    );
-    assert(
-      result[0] === assetCompat,
-      '[V3] Unimplemented: New asset returned from Node transformer',
-    );
-
-    return {
-      asset,
-      dependencies: assetCompat._dependencies,
-    };
   }
 }
 
