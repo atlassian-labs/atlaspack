@@ -4066,17 +4066,20 @@ describe('scope hoisting', function () {
       assert.equal(output.foo, 'b');
     });
 
-    it("doesn't insert parcelRequire for missing non-js assets", async function () {
-      let b = await bundle(
-        path.join(
-          __dirname,
-          '/integration/scope-hoisting/commonjs/missing-non-js/a.js',
-        ),
-      );
+    it.v2(
+      "doesn't insert parcelRequire for missing non-js assets",
+      async function () {
+        let b = await bundle(
+          path.join(
+            __dirname,
+            '/integration/scope-hoisting/commonjs/missing-non-js/a.js',
+          ),
+        );
 
-      let output = await run(b);
-      assert.equal(output, 27);
-    });
+        let output = await run(b);
+        assert.equal(output, 27);
+      },
+    );
 
     it.v2('define exports in the outermost scope', async function () {
       let b = await bundle(
@@ -4610,7 +4613,7 @@ describe('scope hoisting', function () {
       assert.deepEqual(out, ['a', 'b', 'c', 'd']);
     });
 
-    it('supports requiring a CSS asset', async function () {
+    it.v2('supports requiring a CSS asset', async function () {
       let b = await bundle(
         path.join(
           __dirname,

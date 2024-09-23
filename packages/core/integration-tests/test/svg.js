@@ -9,8 +9,8 @@ import {
 } from '@atlaspack/test-utils';
 import path from 'path';
 
-describe.v2('svg', function () {
-  it('should support bundling SVG', async () => {
+describe('svg', function () {
+  it.v2('should support bundling SVG', async () => {
     let b = await bundle(path.join(__dirname, '/integration/svg/circle.svg'));
 
     assertBundles(b, [
@@ -101,7 +101,7 @@ describe.v2('svg', function () {
     );
   });
 
-  it('should minify SVG bundles', async function () {
+  it.v2('should minify SVG bundles', async function () {
     let b = await bundle(path.join(__dirname, '/integration/svg/circle.svg'), {
       defaultTargetOptions: {
         shouldOptimize: true,
@@ -115,7 +115,7 @@ describe.v2('svg', function () {
     assert(!file.includes('comment'));
   });
 
-  it('support SVGO config files', async function () {
+  it.v2('support SVGO config files', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/svgo-config/index.html'),
       {
@@ -133,36 +133,39 @@ describe.v2('svg', function () {
     assert(file.includes('comment'));
   });
 
-  it('should detect xml-stylesheet processing instructions', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/svg-xml-stylesheet/img.svg'),
-    );
+  it.v2(
+    'should detect xml-stylesheet processing instructions',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/svg-xml-stylesheet/img.svg'),
+      );
 
-    assertBundles(b, [
-      {
-        name: 'img.svg',
-        assets: ['img.svg'],
-      },
-      {
-        type: 'css',
-        assets: ['style1.css'],
-      },
-      {
-        type: 'css',
-        assets: ['style3.css'],
-      },
-    ]);
+      assertBundles(b, [
+        {
+          name: 'img.svg',
+          assets: ['img.svg'],
+        },
+        {
+          type: 'css',
+          assets: ['style1.css'],
+        },
+        {
+          type: 'css',
+          assets: ['style3.css'],
+        },
+      ]);
 
-    let file = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'svg').filePath,
-      'utf-8',
-    );
+      let file = await outputFS.readFile(
+        b.getBundles().find(b => b.type === 'svg').filePath,
+        'utf-8',
+      );
 
-    assert(file.includes('<?xml-stylesheet'));
-    assert(file.includes('<?xml-not-a-stylesheet'));
-  });
+      assert(file.includes('<?xml-stylesheet'));
+      assert(file.includes('<?xml-not-a-stylesheet'));
+    },
+  );
 
-  it('should handle inline CSS with @imports', async function () {
+  it.v2('should handle inline CSS with @imports', async function () {
     const b = await bundle(
       path.join(__dirname, '/integration/svg-inline-css-import/img.svg'),
     );
@@ -206,7 +209,7 @@ describe.v2('svg', function () {
     assert(!svg.includes('import '));
   });
 
-  it('should process inline styles using lang', async function () {
+  it.v2('should process inline styles using lang', async function () {
     const b = await bundle(
       path.join(__dirname, '/integration/svg-inline-sass/img.svg'),
       {

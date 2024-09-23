@@ -861,17 +861,20 @@ describe('output formats', function () {
       },
     );
 
-    it('should support importing sibling bundles in library mode', async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/formats/esm-siblings/a.js'),
-      );
+    it.v2(
+      'should support importing sibling bundles in library mode',
+      async function () {
+        let b = await bundle(
+          path.join(__dirname, '/integration/formats/esm-siblings/a.js'),
+        );
 
-      let dist = await outputFS.readFile(
-        b.getBundles().find(b => b.type === 'js').filePath,
-        'utf8',
-      );
-      assert(dist.includes('import "./index.css"'));
-    });
+        let dist = await outputFS.readFile(
+          b.getBundles().find(b => b.type === 'js').filePath,
+          'utf8',
+        );
+        assert(dist.includes('import "./index.css"'));
+      },
+    );
 
     it('should support esmodule output (skipped exports)', async function () {
       let b = await bundle(
@@ -1695,7 +1698,7 @@ describe('output formats', function () {
       assert.strictEqual(res.output, 30);
     });
 
-    it('should support async split bundles for workers', async function () {
+    it.v2('should support async split bundles for workers', async function () {
       await bundle(
         path.join(
           __dirname,

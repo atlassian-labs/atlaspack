@@ -1,11 +1,8 @@
-use std::path::Path;
-
-use anyhow::Context;
 use atlaspack_napi_helpers::anyhow_from_napi;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use napi::{JsObject, JsUnknown};
 
-use crate::RpcWorker;
+use crate::{RpcTransformerOpts, RpcTransformerResult, RpcWorker};
 
 /// RpcConnectionNodejs wraps the communication with a
 /// single Nodejs worker thread
@@ -18,10 +15,7 @@ impl NodejsWorker {
   pub fn new(delegate: JsObject) -> napi::Result<Self> {
     Ok(Self {
       ping_fn: JsCallable::new_from_object_prop_bound("ping", &delegate)?,
-      transformer_register_fn: JsCallable::new_from_object_prop_bound(
-        "transformerRegister",
-        &delegate,
-      )?,
+      transformer_register_fn: JsCallable::new_from_object_prop_bound("runTransformer", &delegate)?,
     })
   }
 }
@@ -38,23 +32,10 @@ impl RpcWorker for NodejsWorker {
     Ok(())
   }
 
-  fn register_transformer(&self, resolve_from: &Path, specifier: &str) -> anyhow::Result<()> {
+  fn run_transformer(&self, opts: RpcTransformerOpts) -> anyhow::Result<RpcTransformerResult> {
     self
       .transformer_register_fn
-      .call_with_return(
-        {
-          let specifier = specifier.to_string();
-          let resolve_from = resolve_from.to_str().context("")?.to_string();
-          move |env| {
-            Ok(vec![
-              env.create_string(&resolve_from)?.into_unknown(),
-              env.create_string(&specifier)?.into_unknown(),
-            ])
-          }
-        },
-        |_env, _| Ok(Vec::<()>::new()),
-      )
-      .map_err(anyhow_from_napi)?;
-    Ok(())
+      .call_with_return_serde(opts)
+      .map_err(anyhow_from_napi)
   }
 }

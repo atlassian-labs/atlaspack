@@ -424,7 +424,7 @@ describe('resolver', function () {
     assert.strictEqual(output.default, 2);
   });
 
-  it('should support very long dependency specifiers', async function () {
+  it.v2('should support very long dependency specifiers', async function () {
     this.timeout(8000);
 
     let inputDir = path.join(__dirname, 'input');
