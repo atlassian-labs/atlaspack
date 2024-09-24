@@ -30,7 +30,8 @@ impl VisitMut for ConditionalImportsFallback {
     }
 
     if callee_ident.span.ctxt.outer() != self.unresolved_mark {
-      // Don't process importCond more than once
+      // Don't process if the `importCond` identifier is shadowed
+      return;
     }
 
     let (Some((cond, _cond_span)), Some((if_true, if_true_span)), Some((if_false, if_false_span))) = (
@@ -103,6 +104,33 @@ mod tests {
       const x = globalThis.__MCOND && globalThis.__MCOND("condition-1") ? require("a").default : require("b").default;
       const y = globalThis.__MCOND && globalThis.__MCOND("condition-2") ? require("c").default : require("d").default;
       const z = globalThis.__MCOND && globalThis.__MCOND("condition-2") ? require("c").default : require("d").default;
+    "#;
+
+    assert_eq!(
+      remove_code_whitespace(output_code.as_str()),
+      remove_code_whitespace(expected_code)
+    );
+  }
+
+  #[test]
+  fn test_import_cond_shadowed_variable() {
+    let input_code = r#"
+      importCond('condition', 'a', 'b');
+
+      function some_function(importCond) {
+        importCond('condition', 'a', 'b');
+      }
+    "#;
+
+    let RunVisitResult { output_code, .. } =
+      run_test_visit(input_code, |context| make_conditional_imports(context));
+
+    let expected_code = r#"
+      globalThis.__MCOND && globalThis.__MCOND("condition") ? require("a").default : require("b").default;
+
+      function some_function(importCond) {
+        importCond('condition', 'a', 'b');
+      }
     "#;
 
     assert_eq!(
