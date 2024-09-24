@@ -1,5 +1,6 @@
 use std::fmt;
 use std::fmt::Debug;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use anyhow::Error;
