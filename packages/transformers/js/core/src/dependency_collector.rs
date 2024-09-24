@@ -426,31 +426,12 @@ impl<'a> Fold for DependencyCollector<'a> {
     use ast::Expr::*;
     use ast::Ident;
 
-    let mut node = src_node.clone();
+    let node = src_node.clone();
 
     let kind = match &node.callee {
       Callee::Import(_) => DependencyKind::DynamicImport,
       Callee::Expr(expr) => {
         match &**expr {
-          Ident(ident)
-            if !self.config.conditional_bundling
-              && ident.sym.to_string().as_str() == "importCond" =>
-          {
-            // Conditional bundling disabled, treat like a require import
-
-            // Change false dep to the require arg
-            node.args[0] = node.args[2].clone();
-            node.args.truncate(1);
-
-            // Rewrite call expression to a require
-            node.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
-              "require".into(),
-              DUMMY_SP.apply_mark(self.unresolved_mark),
-            ))));
-
-            // Then continue like we just encountered a require for the rest of the transform
-            DependencyKind::Require
-          }
           Ident(ident) => {
             // Bail if defined in scope
             if !is_unresolved(&ident, self.unresolved_mark) {
@@ -2181,48 +2162,6 @@ document.body.appendChild(img);
       [DependencyDescriptor {
         kind: DependencyKind::Url,
         specifier: "hero.jpg".into(),
-        attributes: None,
-        is_optional: false,
-        is_helper: false,
-        source_type: Some(SourceType::Module),
-        placeholder: Some(hash),
-        ..items[0].clone()
-      }]
-    );
-  }
-
-  #[test]
-  fn test_import_cond_disabled_dependency() {
-    let mut items = vec![];
-    let mut diagnostics = vec![];
-    let mut config = make_config();
-    config.conditional_bundling = false;
-    let input_code = r#"
-      const x = importCond('condition', 'a', 'b');
-    "#;
-
-    let RunVisitResult { output_code, .. } = run_test_fold(input_code, |context| {
-      make_dependency_collector(context, &mut items, &mut diagnostics, &config)
-    });
-
-    let hash = make_placeholder_hash("b", DependencyKind::Require);
-    let expected_code = format!(
-      r#"
-      const x = require("{}");
-    "#,
-      hash
-    );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
-
-    assert_eq!(output_code, expected_code);
-    assert_eq!(diagnostics, []);
-    assert_eq!(
-      items,
-      [DependencyDescriptor {
-        kind: DependencyKind::Require,
-        specifier: "b".into(),
         attributes: None,
         is_optional: false,
         is_helper: false,

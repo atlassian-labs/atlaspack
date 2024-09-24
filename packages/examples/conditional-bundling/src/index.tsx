@@ -13,6 +13,7 @@ const FeatureWithUI = importCond<
 >('feature.ui', './feature-ui-enabled', './feature-ui-disabled');
 
 const LazyComponent = lazy(() => import('./lazy-component'));
+
 function LazyComponentContainer() {
   return (
     <Suspense fallback={<p>Loading...</p>}>
@@ -24,7 +25,8 @@ function LazyComponentContainer() {
 const App = () => {
   const [showLazyComponent, setShowLazyComponent] = useState(false);
 
-  console.log(Feature, FeatureWithUI);
+  console.log('FeatureWithUI', FeatureWithUI);
+  console.log('Feature', Feature);
   return (
     <div>
       <p>Hello from React</p>

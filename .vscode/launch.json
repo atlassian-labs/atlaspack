@@ -5,8 +5,17 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "type": "lldb",
+      "request": "attach",
+      "name": "Attach",
+      "pid": "${command:pickMyProcess}" // use ${command:pickProcess} to pick other users' processes
+    },
+    {
       "name": "Run Integration Tests (lldb)",
-      "args": ["${workspaceFolder}/node_modules/.bin/_mocha"],
+      "args": [
+        "${workspaceFolder}/node_modules/.bin/_mocha",
+        "${input:integration-tests-args}"
+      ],
       "cwd": "${workspaceFolder}/packages/core/integration-tests",
       "program": "node",
       "request": "launch",
@@ -24,6 +33,14 @@
       "preLaunchTask": "Watch VSCode Extension",
       "request": "launch",
       "type": "extensionHost"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "integration-tests-args",
+      "type": "promptString",
+      "description": "Command args",
+      "default": ""
     }
   ]
 }
