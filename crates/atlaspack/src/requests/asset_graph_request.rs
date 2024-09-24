@@ -235,6 +235,11 @@ impl AssetGraphBuilder {
     // Connect the incoming DependencyNode to the new AssetNode
     let asset_node_index = self.graph.add_asset(incoming_dep_node_index, asset.clone());
 
+    // TODO: Stitch discovered assets to the AssetGraph
+    // for asset in discovered_assets {
+    //   self.graph.add_asset(asset_node_index, asset);
+    // }
+
     self
       .asset_request_to_asset
       .insert(request_id, asset_node_index);
