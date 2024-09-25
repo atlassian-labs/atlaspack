@@ -373,6 +373,7 @@ mod tests {
           unique_key: Some(target_asset.id.clone()),
           ..target_asset
         },
+        discovered_assets: vec![],
         dependencies: vec![],
         invalidate_on_file_change: vec![]
       }
@@ -464,6 +465,7 @@ exports.hello = function() {};
           unique_key: Some(asset_id),
           ..empty_asset()
         },
+        discovered_assets: vec![],
         dependencies: expected_dependencies,
         invalidate_on_file_change: vec![]
       }

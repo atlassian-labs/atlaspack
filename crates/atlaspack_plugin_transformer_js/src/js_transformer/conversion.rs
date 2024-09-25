@@ -309,6 +309,7 @@ pub(crate) fn convert_result(
     // diagnostics: result.diagnostics,
     // used_env: result.used_env.into_iter().map(|v| v.to_string()).collect(),
     invalidate_on_file_change,
+    ..Default::default()
   })
 }
 

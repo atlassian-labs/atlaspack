@@ -21,8 +21,7 @@ impl TransformerPlugin for AtlaspackInlineTransformerPlugin {
 
     Ok(TransformResult {
       asset,
-      dependencies: Vec::new(),
-      invalidate_on_file_change: Vec::new(),
+      ..Default::default()
     })
   }
 }
@@ -63,8 +62,7 @@ mod tests {
           bundle_behavior: BundleBehavior::Inline,
           ..Asset::default()
         },
-        dependencies: Vec::new(),
-        invalidate_on_file_change: Vec::new()
+        ..Default::default()
       })
     );
   }

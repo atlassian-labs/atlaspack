@@ -1,5 +1,3 @@
-use std::hash::Hash;
-use std::hash::Hasher;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -197,11 +195,7 @@ impl Plugins for ConfigPlugins {
       use_fallback: false,
     });
 
-    let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
-
     for transformer in self.config.transformers.get(path, named_pattern).iter() {
-      transformer.hash(&mut hasher);
-
       let transformer: Box<dyn TransformerPlugin> = match transformer.package_name.as_str() {
         // Currently JS plugins don't work and it's easier to just skip these.
         // We also will probably remove babel from the defaults and support react refresh in Rust
@@ -241,10 +235,7 @@ impl Plugins for ConfigPlugins {
       };
     }
 
-    Ok(TransformerPipeline {
-      transformers,
-      hash: hasher.finish(),
-    })
+    Ok(TransformerPipeline::new(transformers))
   }
 
   #[allow(unused)]
@@ -342,12 +333,9 @@ mod tests {
       format!("{:?}", pipeline),
       format!(
         "{:?}",
-        TransformerPipeline {
-          transformers: vec![Box::new(
-            AtlaspackJsTransformerPlugin::new(&make_test_plugin_context()).unwrap()
-          )],
-          hash: 1
-        }
+        TransformerPipeline::new(vec![Box::new(
+          AtlaspackJsTransformerPlugin::new(&make_test_plugin_context()).unwrap()
+        )]),
       )
     );
   }
