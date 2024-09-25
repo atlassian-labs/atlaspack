@@ -297,7 +297,7 @@ describe('HTMLTransformer', () => {
     assert.deepEqual(transformResult, [inputAsset]);
   });
 
-  it.only('adds an HMR tag if there are HMR options set', async () => {
+  it('adds an HMR tag if there are HMR options set', async () => {
     const code = `
 <html>
   <body>

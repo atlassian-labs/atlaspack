@@ -142,7 +142,7 @@ describe('html', function () {
     ]);
   });
 
-  it.only('should insert empty script tag for HMR at the end of the body', async function () {
+  it('should insert empty script tag for HMR at the end of the body', async function () {
     const inputDir = path.join(__dirname, '/integration/html-no-js');
     const b = await bundle(path.join(inputDir, '/index.html'), {
       hmrOptions: {},
@@ -1691,7 +1691,6 @@ describe('html', function () {
     assert(html.includes('<script src='));
   });
 
-  // .only
   it('should not add a nomodule version when all browsers support esmodules', async function () {
     const inputDir = path.join(__dirname, '/integration/html-js');
     let b = await bundle(path.join(inputDir, '/index.html'), {
