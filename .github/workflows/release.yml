@@ -128,7 +128,7 @@ jobs:
             arch: armhf
             strip: arm-linux-gnueabihf-strip
             objcopy: arm-linux-gnueabihf-objcopy
-            cflags: -mfpu=neon
+            cflags: ''
           - target: aarch64-unknown-linux-gnu
             arch: arm64
             strip: aarch64-linux-gnu-strip
