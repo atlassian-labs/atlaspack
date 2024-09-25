@@ -39,8 +39,11 @@ import {
 
 // General regex used to replace imports with the resolved code, references with resolutions,
 // and count the number of newlines in the file for source maps.
-const REPLACEMENT_RE =
-  /\n|import\s+"([0-9a-f]{16,20}:.+?)";|(?:\$[0-9a-f]{16,20}\$exports)|(?:\$[0-9a-f]{16,20}\$(?:import|importAsync|require)\$[0-9a-f]+(?:\$[0-9a-f]+)?)/g;
+//
+// For conditional bundling the only difference in this regex is adding `importCond` where we have `importAsync` etc..
+const REPLACEMENT_RE = getFeatureFlag('conditionalBundlingApi')
+  ? /\n|import\s+"([0-9a-f]{16,20}:.+?)";|(?:\$[0-9a-f]{16,20}\$exports)|(?:\$[0-9a-f]{16,20}\$(?:import|importAsync|require|importCond)\$[0-9a-f]+(?:\$[0-9a-f]+)?)/g
+  : /\n|import\s+"([0-9a-f]{16,20}:.+?)";|(?:\$[0-9a-f]{16,20}\$exports)|(?:\$[0-9a-f]{16,20}\$(?:import|importAsync|require)\$[0-9a-f]+(?:\$[0-9a-f]+)?)/g;
 
 const BUILTINS = Object.keys(globals.builtin);
 const GLOBALS_BY_CONTEXT = {
@@ -772,7 +775,10 @@ ${code}
       // Async dependencies need a namespace object even if all used symbols were statically analyzed.
       // This is recorded in the promiseSymbol meta property set by the transformer rather than in
       // symbols so that we don't mark all symbols as used.
-      if (dep.priority === 'lazy' && dep.meta.promiseSymbol) {
+      if (
+        (dep.priority === 'lazy' || dep.priority === 'conditional') &&
+        dep.meta.promiseSymbol
+      ) {
         let promiseSymbol = dep.meta.promiseSymbol;
         invariant(typeof promiseSymbol === 'string');
         let symbol = this.getSymbolResolution(asset, resolved, '*', dep);
@@ -1405,7 +1411,9 @@ ${code}
           .getBundleGroupsContainingBundle(this.bundle)
           .some(g => this.bundleGraph.isEntryBundleGroup(g)) ||
         this.bundle.env.isIsolated() ||
-        this.bundle.bundleBehavior === 'isolated';
+        this.bundle.bundleBehavior === 'isolated' ||
+        // Conditional deps may be loaded before entrypoints on the server
+        this.hasConditionalDependency();
 
       if (mightBeFirstJS) {
         let preludeCode = prelude(this.parcelRequireName);
@@ -1499,5 +1507,19 @@ ${code}
     return this.bundle.env.supports('arrow-functions', true)
       ? `(${args.join(', ')}) => ${expr}`
       : `function (${args.join(', ')}) { return ${expr}; }`;
+  }
+
+  hasConditionalDependency(): boolean {
+    if (!getFeatureFlag('conditionalBundlingApi')) {
+      return false;
+    }
+
+    return this.bundle
+      .getEntryAssets()
+      .some(entry =>
+        this.bundleGraph
+          .getIncomingDependencies(entry)
+          .some(dep => dep.priority === 'conditional'),
+      );
   }
 }

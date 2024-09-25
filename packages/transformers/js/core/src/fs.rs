@@ -28,6 +28,7 @@ pub fn inline_fs<'a>(
   project_root: &'a str,
   deps: &'a mut Vec<DependencyDescriptor>,
   is_module: bool,
+  conditional_bundling: bool,
 ) -> impl Fold + 'a {
   InlineFS {
     filename: Path::new(filename).to_path_buf(),
@@ -38,6 +39,7 @@ pub fn inline_fs<'a>(
       global_mark,
       false,
       is_module,
+      conditional_bundling,
     ),
     project_root,
     deps,

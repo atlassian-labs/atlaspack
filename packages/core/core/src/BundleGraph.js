@@ -6,6 +6,7 @@ import type {
   Symbol,
   TraversalActions,
   BundleBehavior as IBundleBehavior,
+  ConditionMeta,
 } from '@atlaspack/types';
 import type {
   ContentKey,
@@ -26,6 +27,7 @@ import type {
   Environment,
   InternalSourceLocation,
   Target,
+  Condition,
 } from './types';
 import type AssetGraph from './AssetGraph';
 import type {ProjectPath} from './projectPath';
@@ -46,6 +48,7 @@ import {getBundleGroupId, getPublicId} from './utils';
 import {ISOLATED_ENVS} from './public/Environment';
 import {fromProjectPath, fromProjectPathRelative} from './projectPath';
 import {HASH_REF_PREFIX} from './constants';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 export const bundleGraphEdgeTypes = {
   // A lack of an edge type indicates to follow the edge while traversing
@@ -91,6 +94,7 @@ type BundleGraphOpts = {|
   bundleContentHashes: Map<string, string>,
   assetPublicIds: Set<string>,
   publicIdByAssetId: Map<string, string>,
+  conditions: Map<string, Condition>,
 |};
 
 type SerializedBundleGraph = {|
@@ -99,6 +103,7 @@ type SerializedBundleGraph = {|
   bundleContentHashes: Map<string, string>,
   assetPublicIds: Set<string>,
   publicIdByAssetId: Map<string, string>,
+  conditions: Map<string, Condition>,
 |};
 
 function makeReadOnlySet<T>(set: Set<T>): $ReadOnlySet<T> {
@@ -139,22 +144,26 @@ export default class BundleGraph {
   /** The internal core Graph structure */
   _graph: ContentGraph<BundleGraphNode, BundleGraphEdgeType>;
   _bundlePublicIds /*: Set<string> */ = new Set<string>();
+  _conditions /*: Map<string, Condition> */ = new Map<string, Condition>();
 
   constructor({
     graph,
     publicIdByAssetId,
     assetPublicIds,
     bundleContentHashes,
+    conditions,
   }: {|
     graph: ContentGraph<BundleGraphNode, BundleGraphEdgeType>,
     publicIdByAssetId: Map<string, string>,
     assetPublicIds: Set<string>,
     bundleContentHashes: Map<string, string>,
+    conditions: Map<string, Condition>,
   |}) {
     this._graph = graph;
     this._assetPublicIds = assetPublicIds;
     this._publicIdByAssetId = publicIdByAssetId;
     this._bundleContentHashes = bundleContentHashes;
+    this._conditions = conditions;
   }
 
   /**
@@ -171,6 +180,9 @@ export default class BundleGraph {
     let assetGroupIds = new Map();
     let dependencies = new Map();
     let assetGraphNodeIdToBundleGraphNodeId = new Map<NodeId, NodeId>();
+    let conditions = new Map<string, Condition>();
+
+    let placeholderToDependency = new Map<string, Dependency>();
 
     let assetGraphRootNode =
       assetGraph.rootNodeId != null
@@ -195,6 +207,20 @@ export default class BundleGraph {
         }
       } else if (node != null && node.type === 'asset_group') {
         assetGroupIds.set(nodeId, assetGraph.getNodeIdsConnectedFrom(nodeId));
+      } else if (
+        getFeatureFlag('conditionalBundlingApi') &&
+        node != null &&
+        node.type === 'dependency'
+      ) {
+        // The dependency placeholders in the `importCond` calls that will be in the transformed
+        // code need to be mapped to the "real" dependencies, so we need access to a map of placeholders
+        // to dependencies
+        const dep = node.value;
+        // $FlowFixMe[incompatible-type] Meta is untyped
+        const placeholder: string | void = dep.meta?.placeholder;
+        if (placeholder != null) {
+          placeholderToDependency.set(placeholder, dep);
+        }
       }
     });
 
@@ -204,6 +230,51 @@ export default class BundleGraph {
       walkVisited.add(nodeId);
 
       let node = nullthrows(assetGraph.getNode(nodeId));
+
+      if (getFeatureFlag('conditionalBundlingApi') && node.type === 'asset') {
+        const asset = node.value;
+        if (Array.isArray(asset.meta.conditions)) {
+          // $FlowFixMe
+          for (const condition of (asset.meta.conditions: ConditionMeta[])) {
+            // Resolve the placeholders that were attached to the asset in JSTransformer to dependencies,
+            // as well as create a public id for the condition.
+            const {
+              key,
+              ifTruePlaceholder,
+              ifFalsePlaceholder,
+            }: {
+              key: string,
+              ifTruePlaceholder: string,
+              ifFalsePlaceholder: string,
+              ...
+            } = condition;
+
+            const condHash = hashString(
+              `${key}:${ifTruePlaceholder}:${ifFalsePlaceholder}`,
+            );
+            const condPublicId = getPublicId(condHash, v => conditions.has(v));
+
+            if (conditions.has(condHash)) {
+              throw new Error('Unexpected duplicate asset');
+            } else {
+              conditions.set(condHash, {
+                publicId: condPublicId,
+                assets: new Set([asset]),
+                key,
+                ifTrueDependency: nullthrows(
+                  placeholderToDependency.get(ifTruePlaceholder),
+                  'ifTruePlaceholder was undefined',
+                ),
+                ifFalseDependency: nullthrows(
+                  placeholderToDependency.get(ifFalsePlaceholder),
+                  'ifFalsePlaceholder was undefined',
+                ),
+              });
+            }
+          }
+        }
+      }
+
       if (
         node.type === 'dependency' &&
         node.value.symbols != null &&
@@ -440,11 +511,13 @@ export default class BundleGraph {
         );
       }
     }
+
     return new BundleGraph({
       graph,
       assetPublicIds,
       bundleContentHashes: new Map(),
       publicIdByAssetId,
+      conditions,
     });
   }
 
@@ -455,6 +528,7 @@ export default class BundleGraph {
       assetPublicIds: this._assetPublicIds,
       bundleContentHashes: this._bundleContentHashes,
       publicIdByAssetId: this._publicIdByAssetId,
+      conditions: this._conditions,
     };
   }
 
@@ -464,6 +538,7 @@ export default class BundleGraph {
       assetPublicIds: serialized.assetPublicIds,
       bundleContentHashes: serialized.bundleContentHashes,
       publicIdByAssetId: serialized.publicIdByAssetId,
+      conditions: serialized.conditions,
     });
   }
 
@@ -1215,7 +1290,8 @@ export default class BundleGraph {
         .some(
           node =>
             node?.type === 'dependency' &&
-            node.value.priority === Priority.lazy &&
+            (node.value.priority === Priority.lazy ||
+              node.value.priority === Priority.conditional) &&
             node.value.specifierType !== SpecifierType.url,
         )
     ) {

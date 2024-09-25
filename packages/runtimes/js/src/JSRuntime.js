@@ -19,6 +19,7 @@ import {
 import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
 import path from 'path';
 import nullthrows from 'nullthrows';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 // Used for as="" in preload/prefetch
 const TYPE_TO_RESOURCE_PRIORITY = {
@@ -66,6 +67,7 @@ let bundleDependencies = new WeakMap<
   NamedBundle,
   {|
     asyncDependencies: Array<Dependency>,
+    conditionalDependencies: Array<Dependency>,
     otherDependencies: Array<Dependency>,
   |},
 >();
@@ -127,7 +129,8 @@ export default (new Runtime({
       return;
     }
 
-    let {asyncDependencies, otherDependencies} = getDependencies(bundle);
+    let {asyncDependencies, conditionalDependencies, otherDependencies} =
+      getDependencies(bundle);
 
     let assets = [];
     for (let dependency of asyncDependencies) {
@@ -183,6 +186,33 @@ export default (new Runtime({
         if (loaderRuntime != null) {
           assets.push(loaderRuntime);
         }
+      }
+    }
+
+    if (getFeatureFlag('conditionalBundlingApi')) {
+      // For any conditions that are used in this bundle, we want to produce a runtime asset that is used to
+      // select the correct dependency that condition maps to at runtime - the conditions in the bundle will then be
+      // replaced with a reference to this asset to implement the selection.
+      const conditions = bundleGraph.getConditionsForDependencies(
+        conditionalDependencies,
+      );
+      for (const cond of conditions) {
+        const requireName = bundle.env.shouldScopeHoist
+          ? 'parcelRequire'
+          : '__parcel__require__';
+
+        const assetCode = `module.exports = require('../helpers/conditional-loader${
+          options.mode === 'development' ? '-dev' : ''
+        }')('${cond.key}', function (){return ${requireName}('${
+          cond.ifTrueAssetId
+        }')}, function (){return ${requireName}('${cond.ifFalseAssetId}')})`;
+
+        assets.push({
+          filePath: path.join(__dirname, `/conditions/${cond.publicId}.js`),
+          code: assetCode,
+          dependency: cond.ifTrueDependency,
+          env: {sourceType: 'module'},
+        });
       }
     }
 
@@ -299,6 +329,7 @@ export default (new Runtime({
 
 function getDependencies(bundle: NamedBundle): {|
   asyncDependencies: Array<Dependency>,
+  conditionalDependencies: Array<Dependency>,
   otherDependencies: Array<Dependency>,
 |} {
   let cachedDependencies = bundleDependencies.get(bundle);
@@ -308,6 +339,7 @@ function getDependencies(bundle: NamedBundle): {|
   } else {
     let asyncDependencies = [];
     let otherDependencies = [];
+    let conditionalDependencies = [];
     bundle.traverse(node => {
       if (node.type !== 'dependency') {
         return;
@@ -319,12 +351,18 @@ function getDependencies(bundle: NamedBundle): {|
         dependency.specifierType !== 'url'
       ) {
         asyncDependencies.push(dependency);
+      } else if (dependency.priority === 'conditional') {
+        conditionalDependencies.push(dependency);
       } else {
         otherDependencies.push(dependency);
       }
     });
-    bundleDependencies.set(bundle, {asyncDependencies, otherDependencies});
-    return {asyncDependencies, otherDependencies};
+    bundleDependencies.set(bundle, {
+      asyncDependencies,
+      conditionalDependencies,
+      otherDependencies,
+    });
+    return {asyncDependencies, conditionalDependencies, otherDependencies};
   }
 }
 
@@ -378,10 +416,13 @@ function getLoaderRuntime({
   let needsEsmLoadPrelude = false;
   let loaderModules = [];
 
-  for (let to of externalBundles) {
+  function getLoaderForBundle(
+    bundle: NamedBundle,
+    to: NamedBundle,
+  ): string | void {
     let loader = loaders[to.type];
     if (!loader) {
-      continue;
+      return;
     }
 
     if (
@@ -390,9 +431,8 @@ function getLoaderRuntime({
       !needsDynamicImportPolyfill &&
       shouldUseRuntimeManifest(bundle, options)
     ) {
-      loaderModules.push(`load(${JSON.stringify(to.publicId)})`);
       needsEsmLoadPrelude = true;
-      continue;
+      return `load(${JSON.stringify(to.publicId)})`;
     }
 
     let relativePathExpr = getRelativePathExpr(bundle, to, options);
@@ -400,8 +440,7 @@ function getLoaderRuntime({
     // Use esmodule loader if possible
     if (to.type === 'js' && to.env.outputFormat === 'esmodule') {
       if (!needsDynamicImportPolyfill) {
-        loaderModules.push(`__parcel__import__("./" + ${relativePathExpr})`);
-        continue;
+        return `__parcel__import__("./" + ${relativePathExpr})`;
       }
 
       loader = nullthrows(
@@ -409,10 +448,7 @@ function getLoaderRuntime({
         `No import() polyfill available for context '${bundle.env.context}'`,
       );
     } else if (to.type === 'js' && to.env.outputFormat === 'commonjs') {
-      loaderModules.push(
-        `Promise.resolve(__parcel__require__("./" + ${relativePathExpr}))`,
-      );
-      continue;
+      return `Promise.resolve(__parcel__require__("./" + ${relativePathExpr}))`;
     }
 
     let absoluteUrlExpr = shouldUseRuntimeManifest(bundle, options)
@@ -431,7 +467,42 @@ function getLoaderRuntime({
       code +=
         '.catch(err => {delete module.bundle.cache[module.id]; throw err;})';
     }
-    loaderModules.push(code);
+    return code;
+  }
+
+  if (getFeatureFlag('conditionalBundlingApi')) {
+    let conditionalDependencies = externalBundles.flatMap(
+      to => getDependencies(to).conditionalDependencies,
+    );
+    for (const cond of bundleGraph.getConditionsForDependencies(
+      conditionalDependencies,
+    )) {
+      // This bundle has a conditional dependency, we need to load it as it may not be present
+      let ifTrueBundle = nullthrows(
+        bundleGraph.getReferencedBundle(cond.ifTrueDependency, bundle),
+        'ifTrueBundle was null',
+      );
+      let ifFalseBundle = nullthrows(
+        bundleGraph.getReferencedBundle(cond.ifFalseDependency, bundle),
+        'ifFalseBundle was null',
+      );
+
+      // Load conditional bundles with helper (and a dev mode with additional hints)
+      loaderModules.push(
+        `require('./helpers/conditional-loader${
+          options.mode === 'development' ? '-dev' : ''
+        }')('${cond.key}', function (){return ${
+          getLoaderForBundle(bundle, ifTrueBundle) ?? `Promise.resolve()`
+        }}, function (){return ${
+          getLoaderForBundle(bundle, ifFalseBundle) ?? `Promise.resolve()`
+        }})`,
+      );
+    }
+  }
+
+  for (let to of externalBundles) {
+    let loaderModule = getLoaderForBundle(bundle, to);
+    if (loaderModule !== undefined) loaderModules.push(loaderModule);
   }
 
   // Similar to the comment above, this also used to be skipped when shouldBuildLazily was true,

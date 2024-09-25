@@ -16,7 +16,7 @@ import nullthrows from 'nullthrows';
 import {setEqual} from '@atlaspack/utils';
 import logger from '@atlaspack/logger';
 import {md, convertSourceLocationToHighlight} from '@atlaspack/diagnostic';
-import {BundleBehavior} from './types';
+import {BundleBehavior, Priority} from './types';
 import {fromProjectPathRelative, fromProjectPath} from './projectPath';
 
 export function propagateSymbols({
@@ -101,7 +101,10 @@ export function propagateSymbols({
         namespaceReexportedSymbols.add('*');
       } else {
         for (let incomingDep of incomingDeps) {
-          if (incomingDep.value.symbols == null) {
+          if (
+            incomingDep.value.symbols == null ||
+            incomingDep.value.priority === Priority.conditional
+          ) {
             if (incomingDep.value.sourceAssetId == null) {
               // The root dependency on non-library builds
               isEntry = true;
