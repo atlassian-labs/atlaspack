@@ -56,7 +56,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
     Ok(TransformResult {
       asset,
       dependencies,
-      invalidate_on_file_change: Vec::new(),
+      ..Default::default()
     })
   }
 }

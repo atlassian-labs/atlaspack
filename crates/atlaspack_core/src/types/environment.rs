@@ -292,6 +292,6 @@ mod test {
       ..Default::default()
     };
     let id = environment.id();
-    assert_eq!(id, "4cd03fc1419b4a5d");
+    assert_eq!(id, "a6b5b2b967541b7a");
   }
 }

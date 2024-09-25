@@ -1394,8 +1394,8 @@ mod tests {
         "#,
       )),
       Engines {
-        browsers: Some(EnginesBrowsers::new(vec![String::from("chrome 20")])),
         node: Some(Version::new(NonZeroU16::new(1).unwrap(), 0)),
+        browsers: None,
         ..Engines::default()
       },
     );

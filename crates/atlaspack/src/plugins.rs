@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::sync::Arc;
 use std::u64;
@@ -50,14 +51,32 @@ pub trait Plugins {
   fn validators(&self, _path: &Path) -> Result<Vec<Box<dyn ValidatorPlugin>>, anyhow::Error>;
 }
 
+#[derive(Default)]
 pub struct TransformerPipeline {
-  pub transformers: Vec<Box<dyn TransformerPlugin>>,
-  hash: u64,
+  transformers: Vec<Box<dyn TransformerPlugin>>,
+  pipeline_id: u64,
 }
 
+#[cfg_attr(test, automock)]
 impl TransformerPipeline {
-  pub fn hash(&self) -> u64 {
-    self.hash
+  pub fn new(transformers: Vec<Box<dyn TransformerPlugin>>) -> Self {
+    let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
+
+    for transformer in &transformers {
+      transformer.id().hash(&mut hasher);
+    }
+
+    Self {
+      transformers,
+      pipeline_id: hasher.finish(),
+    }
+  }
+  pub fn id(&self) -> u64 {
+    self.pipeline_id
+  }
+
+  pub fn transformers_mut(&mut self) -> &mut [Box<dyn TransformerPlugin>] {
+    &mut self.transformers
   }
 }
 

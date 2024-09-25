@@ -225,6 +225,7 @@ impl AssetGraphBuilder {
   fn handle_asset_result(&mut self, result: AssetRequestOutput, request_id: u64) {
     let AssetRequestOutput {
       asset,
+      discovered_assets: _,
       dependencies,
     } = result;
     let incoming_dep_node_index = *self
@@ -234,6 +235,11 @@ impl AssetGraphBuilder {
 
     // Connect the incoming DependencyNode to the new AssetNode
     let asset_node_index = self.graph.add_asset(incoming_dep_node_index, asset.clone());
+
+    // TODO: Stitch discovered assets to the AssetGraph
+    // for asset in discovered_assets {
+    //   self.graph.add_asset(asset_node_index, asset);
+    // }
 
     self
       .asset_request_to_asset

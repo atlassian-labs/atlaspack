@@ -76,8 +76,7 @@ impl TransformerPlugin for AtlaspackImageTransformerPlugin {
 
     Ok(TransformResult {
       asset,
-      dependencies: Vec::new(),
-      invalidate_on_file_change: Vec::new(),
+      ..Default::default()
     })
   }
 }
@@ -124,17 +123,17 @@ mod tests {
     });
 
     let asset = Asset::default();
+    let context = TransformContext::default();
 
-    assert_ne!(asset.bundle_behavior, MaybeBundleBehavior::Isolated);
+    assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Isolated));
     assert_eq!(
-      plugin.transform(asset).map_err(|e| e.to_string()),
+      plugin.transform(context, asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
-          bundle_behavior: MaybeBundleBehavior::Isolated,
+          bundle_behavior: Some(BundleBehavior::Isolated),
           ..Asset::default()
         },
-        dependencies: Vec::new(),
-        invalidate_on_file_change: Vec::new()
+        ..Default::default()
       })
     );
   }

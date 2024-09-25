@@ -1,10 +1,8 @@
-use std::path::Path;
-
 use parking_lot::Mutex;
 
 use super::NodejsWorker;
 
-use crate::RpcWorker;
+use crate::{RpcTransformerOpts, RpcTransformerResult, RpcWorker};
 
 /// Connection to multiple Nodejs Workers
 /// Implements round robin messaging
@@ -41,10 +39,8 @@ impl RpcWorker for NodejsWorkerFarm {
     Ok(())
   }
 
-  fn register_transformer(&self, resolve_from: &Path, specifier: &str) -> anyhow::Result<()> {
-    for worker in &self.workers {
-      worker.register_transformer(resolve_from, specifier)?;
-    }
-    Ok(())
+  fn run_transformer(&self, opts: RpcTransformerOpts) -> anyhow::Result<RpcTransformerResult> {
+    let worker = &self.workers[self.next_index()];
+    worker.run_transformer(opts)
   }
 }

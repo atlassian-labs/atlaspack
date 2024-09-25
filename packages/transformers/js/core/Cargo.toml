@@ -25,6 +25,7 @@ swc_core = { version = "0.96", features = [
   "ecma_transforms_typescript",
   "ecma_utils",
   "ecma_visit",
+  "ecma_quote",
   "stacker"
 ] }
 sourcemap = "*"
@@ -41,3 +42,4 @@ path-slash = "0.1.4"
 indexmap = "1.9.2"
 atlaspack-macros = { path = "../../../../crates/macros" }
 parking_lot = "0.12"
+regex = "1.10.5"

@@ -144,7 +144,9 @@ pub struct Asset {
   /// This can be used to find assets during packaging, or to create dependencies between multiple
   /// assets returned by a transformer by using the unique key as the dependency specifier.
   ///
-  /// TODO: Make this non-nullable and disallow creating assets without it.
+  /// This is optional because only when transformers add identifiable assets we should add this.
+  ///
+  /// We should not add this set to the asset ID.
   #[serde(skip_serializing_if = "Option::is_none")]
   pub unique_key: Option<String>,
 

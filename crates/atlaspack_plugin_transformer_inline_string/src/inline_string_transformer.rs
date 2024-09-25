@@ -26,8 +26,7 @@ impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
 
     Ok(TransformResult {
       asset,
-      dependencies: Vec::new(),
-      invalidate_on_file_change: Vec::new(),
+      ..Default::default()
     })
   }
 }
@@ -60,18 +59,18 @@ mod tests {
     });
 
     let asset = Asset::default();
+    let context = TransformContext::default();
 
-    assert_ne!(asset.bundle_behavior, BundleBehavior::Inline);
+    assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Inline));
     assert_eq!(
-      plugin.transform(asset).map_err(|e| e.to_string()),
+      plugin.transform(context, asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
-          bundle_behavior: BundleBehavior::Inline,
+          bundle_behavior: Some(BundleBehavior::Inline),
           meta: JSONObject::from_iter([(String::from("inlineType"), "string".into())]),
           ..Asset::default()
         },
-        dependencies: Vec::new(),
-        invalidate_on_file_change: Vec::new()
+        ..Default::default()
       })
     );
   }

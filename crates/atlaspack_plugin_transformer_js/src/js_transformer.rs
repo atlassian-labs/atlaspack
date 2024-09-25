@@ -359,7 +359,7 @@ mod tests {
     let asset_2 = create_asset(project_root, "mock_path", "function helloButDifferent() {}");
 
     // This nº should not change across runs / compilation
-    assert_eq!(asset_1.id, "579a5e4d979a51a7");
+    assert_eq!(asset_1.id, "e7c63625cbf6f3ca");
     assert_eq!(asset_1.id, asset_2.id);
   }
 
@@ -378,9 +378,10 @@ mod tests {
           // SWC inserts a newline here
           code: Arc::new(Code::from(String::from("function hello() {}\n"))),
           symbols: Some(Vec::new()),
-          unique_key: Some(target_asset.id.clone()),
+          unique_key: None,
           ..target_asset
         },
+        discovered_assets: vec![],
         dependencies: vec![],
         invalidate_on_file_change: vec![]
       }
@@ -414,12 +415,13 @@ exports.hello = function() {};
       placeholder: Some("e83f3db3d6f57ea6".to_string()),
       source_asset_id: Some(asset_id.clone()),
       source_path: Some(PathBuf::from("mock_path.js")),
+      source_asset_type: Some(FileType::Js),
       specifier: String::from("other"),
       specifier_type: SpecifierType::CommonJS,
       symbols: Some(vec![Symbol {
         exported: String::from("*"),
         loc: None,
-        local: String::from("$other$"),
+        local: String::from("96ae2ad2de5d364f$"),
         ..Symbol::default()
       }]),
       ..Default::default()
@@ -470,9 +472,10 @@ exports.hello = function() {};
               ..Default::default()
             }
           ]),
-          unique_key: Some(asset_id),
+          unique_key: None,
           ..empty_asset()
         },
+        discovered_assets: vec![],
         dependencies: expected_dependencies,
         invalidate_on_file_change: vec![]
       }
@@ -497,8 +500,9 @@ exports.hello = function() {};
     };
 
     let mut transformer = AtlaspackJsTransformerPlugin::new(&ctx).expect("Expected transformer");
+    let context = TransformContext::default();
 
-    let result = transformer.transform(asset)?;
+    let result = transformer.transform(context, asset)?;
     Ok(result)
   }
 }

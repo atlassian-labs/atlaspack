@@ -24,8 +24,7 @@ impl TransformerPlugin for AtlaspackRawTransformerPlugin {
 
     Ok(TransformResult {
       asset,
-      dependencies: Vec::new(),
-      invalidate_on_file_change: Vec::new(),
+      ..Default::default()
     })
   }
 }
@@ -61,13 +60,15 @@ mod tests {
     assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Isolated));
     let mut asset = asset;
     asset.bundle_behavior = Some(BundleBehavior::Isolated);
+    let context = TransformContext::default();
 
     assert_eq!(
-      plugin.transform(asset.clone()).map_err(|e| e.to_string()),
+      plugin
+        .transform(context, asset.clone())
+        .map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset,
-        dependencies: Vec::new(),
-        invalidate_on_file_change: Vec::new()
+        ..Default::default()
       })
     );
   }

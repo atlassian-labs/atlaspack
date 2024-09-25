@@ -32,8 +32,7 @@ impl TransformerPlugin for AtlaspackJsonTransformerPlugin {
 
     Ok(TransformResult {
       asset,
-      dependencies: Vec::new(),
-      invalidate_on_file_change: Vec::new(),
+      ..Default::default()
     })
   }
 }
@@ -85,9 +84,10 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
+    let context = TransformContext::default();
 
     assert_eq!(
-      plugin.transform(asset).map_err(|e| e.to_string()),
+      plugin.transform(context, asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
           code: Arc::new(Code::from(
@@ -97,8 +97,7 @@ mod tests {
           file_type: FileType::Js,
           ..Asset::default()
         },
-        dependencies: Vec::new(),
-        invalidate_on_file_change: Vec::new()
+        ..Default::default()
       })
     );
   }
@@ -127,9 +126,10 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
+    let context = TransformContext::default();
 
     assert_eq!(
-      plugin.transform(asset).map_err(|e| e.to_string()),
+      plugin.transform(context, asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
           code: Arc::new(Code::from(
@@ -139,8 +139,7 @@ mod tests {
           file_type: FileType::Js,
           ..Asset::default()
         },
-        dependencies: Vec::new(),
-        invalidate_on_file_change: Vec::new()
+        ..Default::default()
       })
     );
   }
