@@ -27,6 +27,7 @@ mod resolver_plugin;
 mod runtime_plugin;
 mod transformer_plugin;
 mod validator_plugin;
+
 pub struct PluginContext {
   pub config: ConfigLoaderRef,
   pub file_system: FileSystemRef,
@@ -45,4 +46,10 @@ pub struct PluginOptions {
   pub log_level: LogLevel,
   pub mode: BuildMode,
   pub project_root: PathBuf,
+}
+
+impl PluginOptions {
+  pub fn should_scope_hoist(&self) -> bool {
+    self.mode == BuildMode::Production
+  }
 }

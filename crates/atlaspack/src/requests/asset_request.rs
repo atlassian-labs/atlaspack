@@ -5,6 +5,7 @@ use std::sync::Arc;
 use atlaspack_core::plugin::AssetBuildEvent;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
+use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::types::AssetStats;
 use atlaspack_core::types::Dependency;
@@ -66,7 +67,13 @@ impl Request for AssetRequest {
       request_context.file_system().clone(),
     )?;
 
-    let mut result = run_pipeline(pipeline, asset, request_context.plugins().clone())?;
+    let transform_context = TransformContext::new(self.env.clone());
+    let mut result = run_pipeline(
+      transform_context,
+      pipeline,
+      asset,
+      request_context.plugins().clone(),
+    )?;
 
     result.asset.stats = AssetStats {
       size: result.asset.code.size(),
@@ -88,6 +95,7 @@ impl Request for AssetRequest {
 }
 
 fn run_pipeline(
+  transform_context: TransformContext,
   mut pipeline: TransformerPipeline,
   input: Asset,
   plugins: PluginsRef,
@@ -100,7 +108,7 @@ fn run_pipeline(
 
   let pipeline_hash = pipeline.hash();
   for transformer in &mut pipeline.transformers {
-    let transform_result = transformer.transform(transform_input)?;
+    let transform_result = transformer.transform(transform_context.clone(), transform_input)?;
     let is_different_asset_type = transform_result.asset.file_type != original_asset_type;
 
     transform_input = transform_result.asset;
@@ -110,7 +118,12 @@ fn run_pipeline(
       let next_pipeline = plugins.transformers(&transform_input.file_path, None)?;
 
       if next_pipeline.hash() != pipeline_hash {
-        return run_pipeline(next_pipeline, transform_input, plugins);
+        return run_pipeline(
+          transform_context.clone(),
+          next_pipeline,
+          transform_input,
+          plugins,
+        );
       };
     }
 

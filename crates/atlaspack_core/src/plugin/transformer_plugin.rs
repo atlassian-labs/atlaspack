@@ -1,9 +1,9 @@
-use std::fmt::Debug;
 use std::path::PathBuf;
+use std::{fmt::Debug, sync::Arc};
 
 use serde::Serialize;
 
-use crate::types::{Asset, Dependency, SpecifierType};
+use crate::types::{Asset, Dependency, Environment, SpecifierType};
 
 pub struct ResolveOptions {
   /// A list of custom conditions to use when resolving package.json "exports" and "imports"
@@ -24,12 +24,30 @@ pub struct TransformResult {
   pub invalidate_on_file_change: Vec<PathBuf>,
 }
 
+#[derive(Clone)]
+pub struct TransformContext {
+  environment: Arc<Environment>,
+}
+
+impl TransformContext {
+  pub fn new(environment: Arc<Environment>) -> Self {
+    Self { environment }
+  }
+
+  pub fn env(&self) -> &Arc<Environment> {
+    &self.environment
+  }
+}
+
 /// Compile a single asset, discover dependencies, or convert the asset to a different format
 ///
 /// Many transformers are wrappers around other tools such as compilers and preprocessors, and are
 /// designed to integrate with Atlaspack.
-///
 pub trait TransformerPlugin: Debug + Send + Sync {
   /// Transform the asset and/or add new assets
-  fn transform(&mut self, input: Asset) -> Result<TransformResult, anyhow::Error>;
+  fn transform(
+    &mut self,
+    context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, anyhow::Error>;
 }

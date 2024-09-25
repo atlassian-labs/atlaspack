@@ -32,6 +32,14 @@ pub struct JsCallable {
   threadsafe_function: ThreadsafeFunction<MapJsParams, ErrorStrategy::Fatal>,
 }
 
+impl std::fmt::Debug for JsCallable {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("JsCallable")
+      .field("name", &self.name)
+      .finish()
+  }
+}
+
 impl JsCallable {
   pub fn new(callback: JsFunction, name: String) -> napi::Result<Self> {
     // Store the threadsafe function on the struct

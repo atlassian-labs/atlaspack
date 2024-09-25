@@ -1,5 +1,5 @@
 use anyhow::Error;
-use atlaspack_core::plugin::{PluginContext, TransformResult, TransformerPlugin};
+use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{Asset, BundleBehavior};
 
 #[derive(Debug)]
@@ -12,7 +12,11 @@ impl AtlaspackInlineStringTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
-  fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
+  fn transform(
+    &mut self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     asset.bundle_behavior = Some(BundleBehavior::Inline);

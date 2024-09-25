@@ -5,6 +5,7 @@ use anyhow::Error;
 
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::types::Asset;
@@ -38,7 +39,11 @@ impl RpcTransformerPlugin {
 }
 
 impl TransformerPlugin for RpcTransformerPlugin {
-  fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
+  fn transform(
+    &mut self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     Ok(TransformResult {
       asset,
       dependencies: vec![],

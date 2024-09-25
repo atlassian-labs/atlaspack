@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
 
-use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
+use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
@@ -175,7 +175,11 @@ impl fmt::Debug for AtlaspackJsTransformerPlugin {
 impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does a lot of equivalent work to `JSTransformer::transform` in
   /// `packages/transformers/js`
-  fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
+  fn transform(
+    &mut self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let file_type = asset.file_type.clone();
     let is_node = env.context.is_node();

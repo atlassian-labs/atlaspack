@@ -93,6 +93,12 @@ pub struct JsFileSystem {
   pub is_dir: FunctionRef,
 }
 
+impl std::fmt::Debug for JsFileSystem {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("JsFileSystem").finish()
+  }
+}
+
 impl FileSystem for JsFileSystem {
   fn canonicalize(
     &self,

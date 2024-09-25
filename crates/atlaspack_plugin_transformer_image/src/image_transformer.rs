@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use atlaspack_core::diagnostic_error;
-use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
+use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, BundleBehavior, Code, FileType};
 use image::imageops::FilterType;
 use image::{ImageFormat, ImageReader};
@@ -20,7 +20,11 @@ impl AtlaspackImageTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackImageTransformerPlugin {
-  fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
+  fn transform(
+    &mut self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     if asset.bundle_behavior.is_none() {
