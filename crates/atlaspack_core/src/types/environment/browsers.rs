@@ -21,14 +21,14 @@ impl Browsers {
   }
 }
 
+// TODO: Versions like "all" are not supported.
 impl From<Vec<Distrib>> for Browsers {
   fn from(distribs: Vec<Distrib>) -> Self {
     let mut browsers = Browsers::default();
     for distrib in distribs {
-      browsers.data.insert(
-        distrib.name().to_string(),
-        Version::from_str(&*distrib.version()).unwrap(),
-      );
+      if let Ok(version) = Version::from_str(&*distrib.version()) {
+        browsers.data.insert(distrib.name().to_string(), version);
+      }
     }
 
     browsers
