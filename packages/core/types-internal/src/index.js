@@ -386,6 +386,7 @@ export type InitialAtlaspackOptionsInternal<WorkerFarm> = {|
     +engines?: Engines,
     +outputFormat?: OutputFormat,
     +isLibrary?: boolean,
+    +engines?: Engines,
   |},
 
   +additionalReporters?: Array<{|
