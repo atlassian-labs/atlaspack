@@ -125,7 +125,7 @@ describe('TargetResolver', () => {
           publicUrl: '/',
           distDir: normalizeSeparators(path.resolve('customA')),
           env: {
-            id: '1d40417b63734b32',
+            id: '56dcbe19cf46b713',
             context: 'browser',
             includeNodeModules: true,
             engines: {
@@ -146,7 +146,7 @@ describe('TargetResolver', () => {
           distEntry: 'b.js',
           distDir: normalizeSeparators(path.resolve('customB')),
           env: {
-            id: '928f0d1c941b2e57',
+            id: '6a2f66a2bf8af810',
             context: 'node',
             includeNodeModules: false,
             engines: {
@@ -177,7 +177,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/',
           env: {
-            id: 'b552bd32da37fa8b',
+            id: '6a2f66a2bf8af810',
             context: 'node',
             engines: {
               node: '>= 8.0.0',
@@ -211,7 +211,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/',
           env: {
-            id: '8804e4eb97e2703e',
+            id: '5a77bfc8ca81ae35',
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],
@@ -247,7 +247,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/assets',
           env: {
-            id: 'a7ed3e73c53f1923',
+            id: '5a77bfc8ca81ae35',
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],
@@ -293,7 +293,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/',
           env: {
-            id: 'f7c9644283a8698f',
+            id: '6a2f66a2bf8af810',
             context: 'node',
             engines: {
               node: '>= 8.0.0',
@@ -336,7 +336,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/',
           env: {
-            id: 'b552bd32da37fa8b',
+            id: '6a2f66a2bf8af810',
             context: 'node',
             engines: {
               node: '>= 8.0.0',
@@ -404,7 +404,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/',
           env: {
-            id: '767bf6e6b675c4f3',
+            id: '2b84c8b6a10f347f',
             context: 'browser',
             engines: {
               browsers: ['ie11'],
@@ -455,7 +455,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/',
           env: {
-            id: 'b552bd32da37fa8b',
+            id: '6a2f66a2bf8af810',
             context: 'node',
             engines: {
               node: '>= 8.0.0',
@@ -489,7 +489,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/',
           env: {
-            id: 'ed7c0e65adee71c9',
+            id: '5a77bfc8ca81ae35',
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],
@@ -523,7 +523,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/',
           env: {
-            id: 'f7692543e59e4c0a',
+            id: '2b84c8b6a10f347f',
             context: 'browser',
             engines: {
               browsers: ['ie11'],
@@ -566,7 +566,7 @@ describe('TargetResolver', () => {
           distEntry: undefined,
           publicUrl: 'www',
           env: {
-            id: 'ddb6ac7c9a3a9178',
+            id: 'b3520b7bb1354733',
             context: 'browser',
             engines: {
               browsers: '> 0.25%',
@@ -621,7 +621,7 @@ describe('TargetResolver', () => {
           distDir: normalizeSeparators(path.resolve('customB')),
           publicUrl: '/',
           env: {
-            id: '1d40417b63734b32',
+            id: '56dcbe19cf46b713',
             context: 'browser',
             engines: {
               browsers: ['> 0.25%'],
@@ -663,7 +663,7 @@ describe('TargetResolver', () => {
           distDir: normalizeSeparators(path.resolve('customA')),
           publicUrl: '/',
           env: {
-            id: '1d40417b63734b32',
+            id: '56dcbe19cf46b713',
             context: 'browser',
             engines: {
               browsers: ['> 0.25%'],
@@ -692,7 +692,7 @@ describe('TargetResolver', () => {
         distEntry: 'index.js',
         publicUrl: '/',
         env: {
-          id: '6aafdb9eaa4a3812',
+          id: '74b6c953e3007b32',
           context: 'node',
           engines: {
             browsers: [
@@ -1070,7 +1070,7 @@ describe('TargetResolver', () => {
         distEntry: 'index.mjs',
         publicUrl: '/',
         env: {
-          id: '439701173a9199ea',
+          id: '866800bb0c6fb087',
           context: 'browser',
           engines: {
             browsers: [
@@ -1115,7 +1115,7 @@ describe('TargetResolver', () => {
         distEntry: 'index.js',
         publicUrl: '/',
         env: {
-          id: '439701173a9199ea',
+          id: '866800bb0c6fb087',
           context: 'browser',
           engines: {
             browsers: [
@@ -1164,7 +1164,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/',
           env: {
-            id: 'b552bd32da37fa8b',
+            id: '6a2f66a2bf8af810',
             context: 'node',
             engines: {
               node: '>= 8.0.0',
@@ -1198,7 +1198,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/assets',
           env: {
-            id: 'a7ed3e73c53f1923',
+            id: '5a77bfc8ca81ae35',
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],
@@ -1246,7 +1246,7 @@ describe('TargetResolver', () => {
           distDir: serveDistDir,
           publicUrl: '/',
           env: {
-            id: 'd6ea1d42532a7575',
+            id: '866800bb0c6fb087',
             context: 'browser',
             engines: {
               browsers: [
@@ -1283,7 +1283,7 @@ describe('TargetResolver', () => {
           ),
           publicUrl: '/',
           env: {
-            id: 'a9c07d094d038c73',
+            id: 'cb948b03d10a5cf8',
             context: 'browser',
             engines: {
               browsers: ['Chrome 80'],
@@ -1316,7 +1316,7 @@ describe('TargetResolver', () => {
           distEntry: undefined,
           publicUrl: '/',
           env: {
-            id: 'a9c07d094d038c73',
+            id: 'cb948b03d10a5cf8',
             context: 'browser',
             engines: {
               browsers: ['Chrome 80'],
@@ -1366,7 +1366,7 @@ describe('TargetResolver', () => {
           distEntry: undefined,
           publicUrl: '/',
           env: {
-            id: '1f28e9ceaf633d83',
+            id: '5a77bfc8ca81ae35',
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],

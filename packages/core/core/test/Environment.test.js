@@ -9,7 +9,7 @@ import {initializeMonitoring} from '../../rust';
 describe('Environment', () => {
   it('assigns a default environment with nothing passed', () => {
     assert.deepEqual(createEnvironment(), {
-      id: 'b3520b7bb1354733',
+      id: '56dcbe19cf46b713',
       context: 'browser',
       engines: {
         browsers: ['> 0.25%'],
@@ -47,7 +47,7 @@ describe('Environment', () => {
     assert.deepEqual(
       createEnvironment({engines: {browsers: ['last 1 version']}}),
       {
-        id: '9e3193fe9c7301c3',
+        id: '5a77bfc8ca81ae35',
         context: 'browser',
         engines: {
           browsers: ['last 1 version'],
@@ -84,7 +84,7 @@ describe('Environment', () => {
 
   it('assigns default engines for browsers', () => {
     assert.deepEqual(createEnvironment({context: 'browser'}), {
-      id: 'b3520b7bb1354733',
+      id: '56dcbe19cf46b713',
       context: 'browser',
       engines: {
         browsers: ['> 0.25%'],
@@ -105,6 +105,6 @@ describe('createEnvironment', function () {
   it('returns a stable hash', () => {
     initializeMonitoring();
     const environment = createEnvironment({});
-    expect(environment.id).toEqual('b3520b7bb1354733');
+    expect(environment.id).toEqual('56dcbe19cf46b713');
   });
 });

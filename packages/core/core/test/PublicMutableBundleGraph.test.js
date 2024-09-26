@@ -142,14 +142,14 @@ function createMockAssetGraph() {
 
   let dep1 = createDependency({
     specifier: 'path/to/index/src/main.js',
-    specifierType: 'esm',
+    specifierType: 'url',
     needsStableName: true,
     env: DEFAULT_ENV,
     target: DEFAULT_TARGETS[0],
   });
   let dep2 = createDependency({
     specifier: 'path/to/index/src/main2.js',
-    specifierType: 'esm',
+    specifierType: 'url',
     needsStableName: true,
     env: DEFAULT_ENV,
     target: DEFAULT_TARGETS[0],

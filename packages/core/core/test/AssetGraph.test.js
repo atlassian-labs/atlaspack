@@ -137,7 +137,7 @@ describe('AssetGraph', () => {
       graph.hasContentKey(
         createDependency({
           specifier: 'path/to/index1/src/main.js',
-          specifierType: 'esm',
+          specifierType: 'url',
           target: DEFAULT_TARGETS[0],
           env: DEFAULT_ENV,
         }).id,
@@ -147,7 +147,7 @@ describe('AssetGraph', () => {
       graph.hasContentKey(
         createDependency({
           specifier: 'path/to/index2/src/main.js',
-          specifierType: 'esm',
+          specifierType: 'url',
           target: DEFAULT_TARGETS[0],
           env: DEFAULT_ENV,
         }).id,
@@ -194,7 +194,7 @@ describe('AssetGraph', () => {
         to: graph.getNodeIdByContentKey(
           createDependency({
             specifier: 'path/to/index1/src/main.js',
-            specifierType: 'esm',
+            specifierType: 'url',
             target: DEFAULT_TARGETS[0],
             env: DEFAULT_ENV,
           }).id,
@@ -211,7 +211,7 @@ describe('AssetGraph', () => {
         to: graph.getNodeIdByContentKey(
           createDependency({
             specifier: 'path/to/index2/src/main.js',
-            specifierType: 'esm',
+            specifierType: 'url',
             target: DEFAULT_TARGETS[0],
             env: DEFAULT_ENV,
           }).id,
@@ -249,7 +249,7 @@ describe('AssetGraph', () => {
 
     let dep = createDependency({
       specifier: 'path/to/index/src/main.js',
-      specifierType: 'esm',
+      specifierType: 'url',
       target: DEFAULT_TARGETS[0],
       env: DEFAULT_ENV,
     });
@@ -313,7 +313,7 @@ describe('AssetGraph', () => {
 
     let dep = createDependency({
       specifier: 'path/to/index/src/main.js',
-      specifierType: 'esm',
+      specifierType: 'url',
       target: DEFAULT_TARGETS[0],
       env: DEFAULT_ENV,
       sourcePath: '',
@@ -481,7 +481,7 @@ describe('AssetGraph', () => {
 
     let dep = createDependency({
       specifier: 'path/to/index/src/main.js',
-      specifierType: 'esm',
+      specifierType: 'url',
       env: DEFAULT_ENV,
       target: DEFAULT_TARGETS[0],
     });
