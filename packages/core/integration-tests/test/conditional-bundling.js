@@ -18,10 +18,10 @@ import sinon from 'sinon';
 
 describe('conditional bundling', function () {
   beforeEach(async () => {
-    await overlayFS.rimraf(distDir);
+    await removeDistDirectory();
   });
 
-  it.skip(`when disabled, should treat importCond as a sync import`, async function () {
+  it(`when disabled, should treat importCond as a sync import`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond');
     overlayFS.mkdirp(dir);
 
@@ -49,7 +49,7 @@ describe('conditional bundling', function () {
     assert.deepEqual(output?.default, 'module-a');
   });
 
-  it.skip(`when disabled, should transform types in importCond`, async function () {
+  it(`when disabled, should transform types in importCond`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond');
     overlayFS.mkdirp(dir);
 
@@ -77,7 +77,7 @@ describe('conditional bundling', function () {
     assert.deepEqual(output?.default, 'module-a');
   });
 
-  it.skip(`should have true and false deps as bundles in conditional manifest`, async function () {
+  it(`should have true and false deps as bundles in conditional manifest`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond');
     overlayFS.mkdirp(dir);
 
@@ -133,7 +133,7 @@ describe('conditional bundling', function () {
     assert.ok(ifFalseBundle, 'ifFalse bundle not found');
   });
 
-  it.skip(`should use true bundle when condition is true`, async function () {
+  it(`should use true bundle when condition is true`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond');
     overlayFS.mkdirp(dir);
 
@@ -205,36 +205,31 @@ describe('conditional bundling', function () {
     overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
-            package.json:
-              {
-                "name": "app",
-                "sideEffects": true
-              }
-            .parcelrc:
-              {
-                "extends": "@atlaspack/config-default",
-                "reporters": [
-                  "@atlaspack/reporter-conditional-manifest",
-                  "..."
-                ]
-              }
-            index.js:
-              const conditions = { 'cond': false };
-              globalThis.__MCOND = function(key) { return conditions[key]; }
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "reporters": [
+            "@atlaspack/reporter-conditional-manifest",
+            "..."
+          ]
+        }
+      index.js:
+        const conditions = { 'cond': false };
+        globalThis.__MCOND = function(key) { return conditions[key]; }
 
-              globalThis.lazyImport = import('./lazy');
+        globalThis.lazyImport = import('./lazy');
 
-            lazy.js:
-              const result = importCond('cond', './a', './b');
+      lazy.js:
+        const result = importCond('cond', './a', './b');
 
-              export default result;
+        export default result;
 
-            a.js:
-              export default 'module-a';
+      a.js:
+        export default 'module-a';
 
-            b.js:
-              export default 'module-b';
-          `;
+      b.js:
+        export default 'module-b';
+    `;
 
     let bundleGraph = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
@@ -251,33 +246,28 @@ describe('conditional bundling', function () {
       'index.js bundle not found',
     );
 
-    try {
-      let output = await runBundles(
-        bundleGraph,
-        entry,
-        [[overlayFS.readFileSync(entry.filePath).toString(), entry]],
-        undefined,
-        {
-          require: false,
-        },
-      );
+    let output = await runBundles(
+      bundleGraph,
+      entry,
+      [[overlayFS.readFileSync(entry.filePath).toString(), entry]],
+      undefined,
+      {
+        require: false,
+      },
+    );
 
-      let lazyImported = await nullthrows(
-        typeof output === 'object' ? output?.lazyImport : null,
-        'Lazy import was not found on globalThis',
-      );
+    let lazyImported = await nullthrows(
+      typeof output === 'object' ? output?.lazyImport : null,
+      'Lazy import was not found on globalThis',
+    );
 
-      assert.deepEqual(
-        typeof lazyImported === 'object' && lazyImported?.default,
-        'module-b',
-      );
-    } catch (e) {
-      debugger;
-      throw e;
-    }
+    assert.deepEqual(
+      typeof lazyImported === 'object' && lazyImported?.default,
+      'module-b',
+    );
   });
 
-  it.skip(`should load dev warning when bundle isn't loaded`, async function () {
+  it(`should load dev warning when bundle isn't loaded`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond');
 
     overlayFS.mkdirp(dir);
@@ -328,7 +318,7 @@ describe('conditional bundling', function () {
     }
   });
 
-  it.skip(`should handle loading conditional bundles when imported in different bundles`, async function () {
+  it(`should handle loading conditional bundles when imported in different bundles`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond');
     overlayFS.mkdirp(dir);
 
