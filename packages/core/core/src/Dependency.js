@@ -59,14 +59,14 @@ export function createDependencyId({
   sourceAssetId?: string,
   specifier: DependencySpecifier,
   env: Environment,
-  target?: ?Target,
+  target?: Target,
   pipeline?: ?string,
   specifierType: $Keys<typeof SpecifierType>,
   bundleBehavior?: ?IBundleBehavior,
   priority?: $Keys<typeof Priority>,
   packageConditions?: Array<string>,
   ...
-}) {
+}): string {
   return createDependencyIdRust({
     sourceAssetId,
     specifier,
