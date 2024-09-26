@@ -343,7 +343,7 @@ mod test {
         r#"
 <html>
   <body>
-    <script src="c12316c6b1382ee9"></script>
+    <script src="58210649f694bf7e"></script>
   </body>
 </html>
     "#
@@ -372,7 +372,7 @@ mod test {
         r#"
 <html>
   <body>
-    <script src="69a8a442a8ef0f1d"></script>
+    <script src="e4b9d27bade2678d"></script>
   </body>
 </html>
     "#

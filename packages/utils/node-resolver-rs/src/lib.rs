@@ -1212,7 +1212,7 @@ impl<'a> ResolveRequest<'a> {
 
 #[cfg(test)]
 mod tests {
-  use std::collections::{HashMap, HashSet};
+  use std::collections::{BTreeMap, HashSet};
 
   use super::*;
 
@@ -2819,7 +2819,7 @@ mod tests {
       Resolution::External
     );
 
-    resolver.include_node_modules = Cow::Owned(IncludeNodeModules::Map(HashMap::from([
+    resolver.include_node_modules = Cow::Owned(IncludeNodeModules::Map(BTreeMap::from([
       ("foo".into(), false),
       ("@scope/pkg".into(), true),
     ])));

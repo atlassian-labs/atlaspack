@@ -359,7 +359,7 @@ mod tests {
     let asset_2 = create_asset(project_root, "mock_path", "function helloButDifferent() {}");
 
     // This nº should not change across runs / compilation
-    assert_eq!(asset_1.id, "e7c63625cbf6f3ca");
+    assert_eq!(asset_1.id, "4711cac63cb78f2f");
     assert_eq!(asset_1.id, asset_2.id);
   }
 
@@ -421,7 +421,7 @@ exports.hello = function() {};
       symbols: Some(vec![Symbol {
         exported: String::from("*"),
         loc: None,
-        local: String::from("96ae2ad2de5d364f$"),
+        local: String::from("1771c4e2ff9f2ce7$"),
         ..Symbol::default()
       }]),
       ..Default::default()

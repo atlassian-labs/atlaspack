@@ -192,7 +192,7 @@ mod tests {
     }
   }
 
-  #[derive(Debug, Hash)]
+  #[derive(Hash)]
   struct ResolvedResolverPlugin {
     resolution: ResolvedResolution,
   }

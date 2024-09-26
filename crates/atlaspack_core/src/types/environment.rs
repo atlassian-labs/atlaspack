@@ -239,7 +239,7 @@ mod test {
     tracing_subscriber::fmt::init();
     let environment = Environment::default();
     let id = environment.id();
-    assert_eq!(id, "bb871c88ce058724");
+    assert_eq!(id, "fe4d1585daa1b9c5");
 
     let environment = Environment {
       context: EnvironmentContext::Node,
@@ -252,6 +252,6 @@ mod test {
       ..Default::default()
     };
     let id = environment.id();
-    assert_eq!(id, "a6b5b2b967541b7a");
+    assert_eq!(id, "9602bef6237ef34c");
   }
 }
