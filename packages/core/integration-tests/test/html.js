@@ -4,17 +4,16 @@ import {
   bundle,
   bundler,
   describe,
-  distDir,
-  expectBundles,
   fsFixture,
-  getNextBuild,
-  inputFS,
   it,
-  ncp,
-  outputFS,
-  overlayFS,
+  distDir,
+  getNextBuild,
   removeDistDirectory,
   run,
+  inputFS,
+  outputFS,
+  overlayFS,
+  ncp,
 } from '@atlaspack/test-utils';
 import path from 'path';
 
@@ -32,50 +31,48 @@ describe.v2('html', function () {
   });
 
   it('should support bundling HTML', async () => {
-    const inputDir = path.join(__dirname, 'integration/html');
-    const inputPath = path.join(inputDir, '/index.html');
-    const b = await bundle(inputPath);
+    let b = await bundle(path.join(__dirname, '/integration/html/index.html'));
 
-    expectBundles(inputDir, b, [
+    assertBundles(b, [
       {
-        name: 'index.html',
-        type: 'html',
+        type: 'css',
         assets: ['index.html'],
       },
       {
-        assets: ['100x100.png'],
-        name: '100x100.png',
-        type: 'png',
+        // index.html
+        name: 'index.html',
+        assets: ['index.html'],
       },
       {
-        assets: ['other.html'],
+        // foo/index.html
+        name: 'index.html',
+        assets: ['index.html'],
+      },
+      {
+        // other.html
         name: 'other.html',
-        type: 'html',
+        assets: ['other.html'],
       },
       {
-        assets: ['index.css'],
-        name: 'index.HASH_REF_b45591309237f734.css',
-        type: 'css',
+        // foo/other.html
+        name: 'other.html',
+        assets: ['other.html'],
       },
       {
-        assets: ['index.js'],
-        name: 'index.HASH_REF_92d76ffefeac9e6d.js',
-        type: 'js',
-      },
-      {
-        assets: ['foo/index.html'],
-        name: 'foo/index.html',
-        type: 'html',
-      },
-      {
-        assets: ['foo/other.html'],
-        name: 'foo/other.html',
-        type: 'html',
-      },
-      {
-        assets: ['icons.svg'],
-        name: 'icons.HASH_REF_ad958b0411e6fb56.svg',
         type: 'svg',
+        assets: ['icons.svg'],
+      },
+      {
+        type: 'png',
+        assets: ['100x100.png'],
+      },
+      {
+        type: 'js',
+        assets: ['index.js'],
+      },
+      {
+        type: 'css',
+        assets: ['index.css'],
       },
     ]);
 
@@ -108,10 +105,11 @@ describe.v2('html', function () {
   });
 
   it('should support pkg#source array as entrypoints', async () => {
-    const inputDir = path.join(__dirname, '/integration/html-pkg-source-array');
-    let b = await bundle(inputDir);
+    let b = await bundle(
+      path.join(__dirname, '/integration/html-pkg-source-array'),
+    );
 
-    expectBundles(inputDir, b, [
+    assertBundles(b, [
       {
         name: 'a.html',
         assets: ['a.html'],
@@ -127,10 +125,11 @@ describe.v2('html', function () {
   });
 
   it('should find href attr when not first', async function () {
-    const inputDir = path.join(__dirname, '/integration/html-attr-order');
-    let b = await bundle(path.join(inputDir, '/index.html'));
+    let b = await bundle(
+      path.join(__dirname, '/integration/html-attr-order/index.html'),
+    );
 
-    expectBundles(inputDir, b, [
+    assertBundles(b, [
       {
         name: 'index.html',
         assets: ['index.html'],
@@ -143,12 +142,14 @@ describe.v2('html', function () {
   });
 
   it('should insert empty script tag for HMR at the end of the body', async function () {
-    const inputDir = path.join(__dirname, '/integration/html-no-js');
-    const b = await bundle(path.join(inputDir, '/index.html'), {
-      hmrOptions: {},
-    });
+    const b = await bundle(
+      path.join(__dirname, '/integration/html-no-js/index.html'),
+      {
+        hmrOptions: {},
+      },
+    );
 
-    expectBundles(inputDir, b, [
+    assertBundles(b, [
       {
         type: 'js',
         assets: ['index.html'],
@@ -168,12 +169,14 @@ describe.v2('html', function () {
   });
 
   it('should insert empty script tag for HMR at the implied </body>', async function () {
-    const inputDir = path.join(__dirname, '/integration/html-no-js');
-    const b = await bundle(path.join(inputDir, '/no-body.html'), {
-      hmrOptions: {},
-    });
+    const b = await bundle(
+      path.join(__dirname, '/integration/html-no-js/no-body.html'),
+      {
+        hmrOptions: {},
+      },
+    );
 
-    expectBundles(inputDir, b, [
+    assertBundles(b, [
       {
         type: 'js',
         assets: ['no-body.html'],
@@ -701,9 +704,7 @@ describe.v2('html', function () {
   });
 
   it('should not prepend the public path to assets with remote URLs', async function () {
-    const inputDir = path.join(__dirname, 'integration/html');
-    const inputPath = path.join(inputDir, '/index.html');
-    await bundle(inputPath);
+    await bundle(path.join(__dirname, '/integration/html/index.html'));
 
     let html = await outputFS.readFile(
       path.join(distDir, 'index.html'),
@@ -715,9 +716,7 @@ describe.v2('html', function () {
   });
 
   it('should not prepend the public path to hash links', async function () {
-    const inputDir = path.join(__dirname, 'integration/html');
-    const inputPath = path.join(inputDir, '/index.html');
-    await bundle(inputPath);
+    await bundle(path.join(__dirname, '/integration/html/index.html'));
 
     let html = await outputFS.readFile(
       path.join(distDir, 'index.html'),
@@ -757,9 +756,7 @@ describe.v2('html', function () {
   });
 
   it('should preserve the spacing in the HTML tags', async function () {
-    const inputDir = path.join(__dirname, 'integration/html');
-    const inputPath = path.join(inputDir, '/index.html');
-    await bundle(inputPath);
+    await bundle(path.join(__dirname, '/integration/html/index.html'));
 
     let html = await outputFS.readFile(
       path.join(distDir, 'index.html'),
@@ -1623,18 +1620,20 @@ describe.v2('html', function () {
   });
 
   it('should compile a module and nomodule script when not all engines support esmodules natively', async function () {
-    const inputDir = path.join(__dirname, '/integration/html-js');
-    let b = await bundle(path.join(inputDir, 'index.html'), {
-      defaultTargetOptions: {
-        mode: 'production',
-        shouldScopeHoist: true,
-        engines: {
-          browsers: '>= 0.25%',
+    let b = await bundle(
+      path.join(__dirname, '/integration/html-js/index.html'),
+      {
+        defaultTargetOptions: {
+          mode: 'production',
+          shouldScopeHoist: true,
+          engines: {
+            browsers: '>= 0.25%',
+          },
         },
       },
-    });
+    );
 
-    await expectBundles(inputDir, b, [
+    await assertBundles(b, [
       {
         type: 'js',
         assets: ['index.js', 'other.js'],
@@ -1645,7 +1644,6 @@ describe.v2('html', function () {
       },
       {
         name: 'index.html',
-        type: 'html',
         assets: ['index.html'],
       },
     ]);
@@ -1698,26 +1696,26 @@ describe.v2('html', function () {
   });
 
   it('should not add a nomodule version when all browsers support esmodules', async function () {
-    const inputDir = path.join(__dirname, '/integration/html-js');
-    let b = await bundle(path.join(inputDir, '/index.html'), {
-      defaultTargetOptions: {
-        mode: 'production',
-        shouldScopeHoist: false,
-        engines: {
-          browsers: 'last 1 Chrome version',
+    let b = await bundle(
+      path.join(__dirname, '/integration/html-js/index.html'),
+      {
+        defaultTargetOptions: {
+          mode: 'production',
+          shouldScopeHoist: true,
+          engines: {
+            browsers: 'last 1 Chrome version',
+          },
         },
       },
-    });
+    );
 
-    await expectBundles(inputDir, b, [
+    await assertBundles(b, [
       {
         type: 'js',
-        name: 'index.HASH_REF_a4474d0dafa9dd5e.js',
         assets: ['index.js', 'other.js'],
       },
       {
         name: 'index.html',
-        type: 'html',
         assets: ['index.html'],
       },
     ]);
