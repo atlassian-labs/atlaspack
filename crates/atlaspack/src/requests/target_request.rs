@@ -379,10 +379,12 @@ impl TargetRequest {
         dist_entry: None,
         env: Arc::new(Environment {
           context,
-          engines: package_json
-            .contents
-            .engines
-            .unwrap_or_else(|| self.default_target_options.engines.clone()),
+          engines: package_json.contents.engines.unwrap_or_else(|| {
+            match self.default_target_options.engines.as_ref() {
+              Some(value) => value.clone(),
+              None => Default::default(),
+            }
+          }),
           include_node_modules: IncludeNodeModules::from(context),
           is_library,
           loc: None,
@@ -511,7 +513,10 @@ impl TargetRequest {
           .engines
           .clone()
           .or_else(|| package_json.contents.engines.clone())
-          .unwrap_or_else(|| self.default_target_options.engines.clone()),
+          .unwrap_or_else(|| match self.default_target_options.engines.as_ref() {
+            Some(value) => value.clone(),
+            None => Default::default(),
+          }),
         include_node_modules: target_descriptor
           .include_node_modules
           .unwrap_or_else(|| IncludeNodeModules::from(context)),
