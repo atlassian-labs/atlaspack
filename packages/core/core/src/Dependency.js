@@ -67,7 +67,7 @@ export function createDependencyId({
   packageConditions?: Array<string>,
   ...
 }): string {
-  return createDependencyIdRust({
+  const params = {
     sourceAssetId,
     specifier,
     env,
@@ -77,7 +77,8 @@ export function createDependencyId({
     bundleBehavior,
     priority: priority ? Priority[priority] : null,
     packageConditions,
-  });
+  };
+  return createDependencyIdRust(params);
 }
 
 export function createDependency(

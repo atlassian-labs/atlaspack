@@ -370,7 +370,7 @@ describe('TargetResolver', () => {
           distEntry: 'index.js',
           publicUrl: '/',
           env: {
-            id: '1f28e9ceaf633d83',
+            id: '5a77bfc8ca81ae35',
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],
@@ -1406,7 +1406,7 @@ describe('TargetResolver', () => {
           distEntry: undefined,
           publicUrl: '/',
           env: {
-            id: '824e113c03cab3c8',
+            id: '344fc5a061f84d01',
             context: 'browser',
             engines: {
               browsers: ['IE 11'],
