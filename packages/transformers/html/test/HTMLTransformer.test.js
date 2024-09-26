@@ -115,7 +115,7 @@ describe('HTMLTransformer', () => {
       `
 <html>
   <body>
-    <script src="dependency-id"></script>
+    <script src="dependency-id::input.js"></script>
   </body>
 </html>
     `,
