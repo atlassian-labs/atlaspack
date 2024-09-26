@@ -18,7 +18,7 @@ import {
 } from '@atlaspack/test-utils';
 import path from 'path';
 
-describe('html', function () {
+describe.v2('html', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });
