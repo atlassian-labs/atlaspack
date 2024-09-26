@@ -9,7 +9,7 @@ import {initializeMonitoring} from '../../rust';
 describe('Environment', () => {
   it('assigns a default environment with nothing passed', () => {
     assert.deepEqual(createEnvironment(), {
-      id: '56dcbe19cf46b713',
+      id: 'd821e85f6b50315e',
       context: 'browser',
       engines: {
         browsers: ['> 0.25%'],
@@ -27,7 +27,7 @@ describe('Environment', () => {
 
   it('assigns a node context if a node engine is given', () => {
     assert.deepEqual(createEnvironment({engines: {node: '>= 10.0.0'}}), {
-      id: 'c9c83c954254833b',
+      id: '2320af923a717577',
       context: 'node',
       engines: {
         node: '>= 10.0.0',
@@ -47,7 +47,7 @@ describe('Environment', () => {
     assert.deepEqual(
       createEnvironment({engines: {browsers: ['last 1 version']}}),
       {
-        id: '5a77bfc8ca81ae35',
+        id: '75603271034eff15',
         context: 'browser',
         engines: {
           browsers: ['last 1 version'],
@@ -66,7 +66,7 @@ describe('Environment', () => {
 
   it('assigns default engines for node', () => {
     assert.deepEqual(createEnvironment({context: 'node'}), {
-      id: '6a2f66a2bf8af810',
+      id: 'e45cc12216f7857d',
       context: 'node',
       engines: {
         node: '>= 8.0.0',
@@ -84,7 +84,7 @@ describe('Environment', () => {
 
   it('assigns default engines for browsers', () => {
     assert.deepEqual(createEnvironment({context: 'browser'}), {
-      id: '56dcbe19cf46b713',
+      id: 'd821e85f6b50315e',
       context: 'browser',
       engines: {
         browsers: ['> 0.25%'],
@@ -105,6 +105,6 @@ describe('createEnvironment', function () {
   it('returns a stable hash', () => {
     initializeMonitoring();
     const environment = createEnvironment({});
-    expect(environment.id).toEqual('56dcbe19cf46b713');
+    expect(environment.id).toEqual('d821e85f6b50315e');
   });
 });
