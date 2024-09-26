@@ -192,6 +192,7 @@ mod tests {
     }
   }
 
+  #[derive(Debug, Hash)]
   struct ResolvedResolverPlugin {
     resolution: ResolvedResolution,
   }
@@ -200,10 +201,6 @@ mod tests {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       write!(f, "ResolvedResolverPlugin")
     }
-  }
-
-  impl Hash for ResolvedResolverPlugin {
-    fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {}
   }
 
   impl ResolverPlugin for ResolvedResolverPlugin {

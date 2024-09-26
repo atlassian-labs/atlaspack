@@ -109,7 +109,7 @@ export function createEnvironment({
   };
 
   res.id = getEnvironmentHash(res);
-  return res;
+  return Object.freeze(res);
 }
 
 export function mergeEnvironments(

@@ -258,7 +258,6 @@ impl Default for Priority {
 
 /// The type of the import specifier
 #[derive(Clone, Copy, Debug, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
-#[serde(rename_all = "lowercase")]
 #[repr(u8)]
 pub enum SpecifierType {
   /// An ES Module specifier

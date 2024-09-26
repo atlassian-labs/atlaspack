@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::hash::Hash;
 use std::path::Path;
 use std::path::PathBuf;
@@ -45,20 +45,12 @@ mod package_json;
 ///
 /// Targets will be generated from the project package.json file and input Atlaspack options.
 ///
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct TargetRequest {
   pub default_target_options: DefaultTargetOptions,
   pub entry: Entry,
-  pub env: Option<HashMap<String, String>>,
+  pub env: Option<BTreeMap<String, String>>,
   pub mode: BuildMode,
-}
-
-impl Hash for TargetRequest {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    self.default_target_options.hash(state);
-    self.entry.hash(state);
-    self.mode.hash(state);
-  }
 }
 
 #[derive(Debug, Clone, PartialEq)]

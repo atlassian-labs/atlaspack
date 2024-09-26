@@ -19,6 +19,8 @@ import {
 
 import {toInternalSourceLocation} from './utils';
 import {toProjectPath} from './projectPath';
+import assert from 'assert';
+import {createEnvironmentId} from '../../rust';
 
 type DependencyOpts = {|
   id?: string,
@@ -55,18 +57,19 @@ export function createDependencyId({
   bundleBehavior,
   priority,
   packageConditions,
-}: {
-  sourceAssetId?: string,
+}: {|
+  sourceAssetId: string | void,
   specifier: DependencySpecifier,
   env: Environment,
-  target?: Target,
-  pipeline?: ?string,
+  target: Target | void,
+  pipeline: ?string,
   specifierType: $Keys<typeof SpecifierType>,
-  bundleBehavior?: ?IBundleBehavior,
-  priority?: $Keys<typeof Priority>,
-  packageConditions?: Array<string>,
-  ...
-}): string {
+  bundleBehavior: ?IBundleBehavior,
+  priority: $Keys<typeof Priority> | void,
+  packageConditions: Array<string> | void,
+|}): string {
+  assert(typeof specifierType === 'string');
+  assert(typeof priority === 'string' || priority == null);
   const params = {
     sourceAssetId,
     specifier,
@@ -75,7 +78,7 @@ export function createDependencyId({
     pipeline,
     specifierType: SpecifierType[specifierType],
     bundleBehavior,
-    priority: priority ? Priority[priority] : null,
+    priority: priority ? Priority[priority] : Priority.sync,
     packageConditions,
   };
   return createDependencyIdRust(params);
@@ -85,7 +88,19 @@ export function createDependency(
   projectRoot: FilePath,
   opts: DependencyOpts,
 ): Dependency {
-  let id = opts.id || createDependencyId(opts);
+  let id =
+    opts.id ||
+    createDependencyId({
+      bundleBehavior: opts.bundleBehavior,
+      env: opts.env,
+      packageConditions: opts.packageConditions,
+      pipeline: opts.pipeline,
+      priority: opts.priority,
+      sourceAssetId: opts.sourceAssetId,
+      specifier: opts.specifier,
+      specifierType: opts.specifierType,
+      target: opts.target,
+    });
 
   let dep: Dependency = {
     id,

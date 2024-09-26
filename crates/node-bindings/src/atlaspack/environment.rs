@@ -4,10 +4,10 @@ use atlaspack_core::types::{
 use atlaspack_resolver::IncludeNodeModules;
 use napi::{Env, JsUnknown};
 use napi_derive::napi;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct EnvironmentIdParams {
   #[serde(default)]
   context: EnvironmentContext,
@@ -31,8 +31,7 @@ struct EnvironmentIdParams {
 
 #[napi]
 pub fn create_environment_id(env: Env, params: JsUnknown) -> napi::Result<String> {
-  let params = env.from_js_value(params)?;
-
+  let params: EnvironmentIdParams = env.from_js_value(params)?;
   let EnvironmentIdParams {
     context,
     engines,

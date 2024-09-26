@@ -65,6 +65,7 @@ pub struct CreateAssetIdParams<'a> {
   pub file_path: &'a str,
   pub code: Option<&'a str>,
   pub pipeline: Option<&'a str>,
+  pub file_type: FileType,
   pub query: Option<&'a str>,
   /// This should be set to None if it's equal to the asset-id and set by the
   /// constructor otherwise the values will differ. See [`Asset::new`] for more.
@@ -79,6 +80,7 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
     file_path,
     code,
     pipeline,
+    file_type,
     query,
     unique_key,
   } = params;
@@ -89,6 +91,7 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
   pipeline.hash(&mut hasher);
   code.hash(&mut hasher);
   query.hash(&mut hasher);
+  file_type.hash(&mut hasher);
   unique_key.hash(&mut hasher);
 
   // Ids must be 16 characters for scope hoisting to replace imports correctly in REPLACEMENT_RE
@@ -235,6 +238,7 @@ impl Asset {
       pipeline: pipeline.as_deref(),
       query: query.as_deref(),
       unique_key: None,
+      file_type: file_type.clone(),
     });
     Ok(Self {
       code: Arc::new(code),

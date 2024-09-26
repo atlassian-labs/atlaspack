@@ -76,6 +76,7 @@ export function createAssetIdFromOptions(options: AssetOptions): string {
     pipeline: options.pipeline,
     query: options.query,
     uniqueKey: options.uniqueKey,
+    fileType: options.type,
   });
 }
 

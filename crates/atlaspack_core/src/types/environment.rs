@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::num::NonZeroU32;
@@ -26,7 +26,7 @@ pub struct EnvironmentId(pub NonZeroU32);
 ///
 /// This influences how Atlaspack compiles your code, including what syntax to transpile.
 ///
-#[derive(Clone, Debug, Default, Deserialize, Eq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Hash, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Environment {
   /// The environment the output should run in
@@ -91,8 +91,7 @@ pub fn create_environment_id(
   is_library.hash(&mut hasher);
   should_optimize.hash(&mut hasher);
   should_scope_hoist.hash(&mut hasher);
-  source_map.hash(&mut hasher);
-
+  flatten_source_map(source_map).hash(&mut hasher);
   let hash = hasher.finish(); // We can simply expose this as a nº too
   format!("{:016x}", hash)
 }
@@ -111,36 +110,6 @@ impl Environment {
       &self.source_map,
     );
     s
-  }
-}
-
-impl Hash for Environment {
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    // Hashing intentionally does not include loc
-    self.context.hash(state);
-    self.engines.hash(state);
-    self.include_node_modules.hash(state);
-    self.is_library.hash(state);
-    self.output_format.hash(state);
-    self.should_scope_hoist.hash(state);
-    self.should_optimize.hash(state);
-    self.source_map.hash(state);
-    self.source_type.hash(state);
-  }
-}
-
-impl PartialEq for Environment {
-  fn eq(&self, other: &Self) -> bool {
-    // Equality intentionally does not include loc
-    self.context == other.context
-      && self.engines == other.engines
-      && self.include_node_modules == other.include_node_modules
-      && self.is_library == other.is_library
-      && self.output_format == other.output_format
-      && self.should_scope_hoist == other.should_scope_hoist
-      && self.should_optimize == other.should_optimize
-      && self.source_map == other.source_map
-      && self.source_type == other.source_type
   }
 }
 
@@ -191,12 +160,13 @@ impl EnvironmentContext {
   }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Hash, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum IncludeNodeModules {
   Bool(bool),
   Array(Vec<String>),
-  Map(HashMap<String, bool>),
+  // We can't hash a HashMap because we need to iterate in order
+  Map(BTreeMap<String, bool>),
 }
 
 impl Default for IncludeNodeModules {
@@ -212,21 +182,6 @@ impl From<EnvironmentContext> for IncludeNodeModules {
       EnvironmentContext::ServiceWorker => IncludeNodeModules::Bool(true),
       EnvironmentContext::WebWorker => IncludeNodeModules::Bool(true),
       _ => IncludeNodeModules::Bool(false),
-    }
-  }
-}
-
-impl Hash for IncludeNodeModules {
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    match self {
-      IncludeNodeModules::Bool(b) => b.hash(state),
-      IncludeNodeModules::Array(a) => a.hash(state),
-      IncludeNodeModules::Map(m) => {
-        for (k, v) in m {
-          k.hash(state);
-          v.hash(state);
-        }
-      }
     }
   }
 }
@@ -262,6 +217,11 @@ pub struct TargetSourceMapOptions {
   ///
   #[serde(skip_serializing_if = "Option::is_none")]
   source_root: Option<String>,
+}
+
+/// We must consider { None, None, None } equal to None for all intents and purposes
+pub fn flatten_source_map(source_map: &Option<TargetSourceMapOptions>) -> TargetSourceMapOptions {
+  source_map.clone().unwrap_or_default()
 }
 
 #[cfg(test)]

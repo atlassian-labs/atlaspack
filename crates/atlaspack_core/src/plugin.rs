@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -42,7 +42,7 @@ pub struct PluginLogger {}
 pub struct PluginOptions {
   pub core_path: PathBuf,
   /// Environment variables
-  pub env: Option<HashMap<String, String>>,
+  pub env: Option<BTreeMap<String, String>>,
   pub log_level: LogLevel,
   pub mode: BuildMode,
   pub project_root: PathBuf,

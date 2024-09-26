@@ -7,14 +7,14 @@ use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 
 /// Permissive parsing of bundle behavior that works with both u32 and string
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 enum JSBundleBehavior {
   String(BundleBehaviorStr),
   Int(BundleBehavior),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum BundleBehaviorStr {
   Inline,
@@ -31,7 +31,7 @@ impl From<JSBundleBehavior> for BundleBehavior {
   }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct DependencyIdParams {
   source_asset_id: Option<AssetId>,
@@ -47,7 +47,7 @@ struct DependencyIdParams {
 
 #[napi]
 fn create_dependency_id(env: Env, params: JsUnknown) -> napi::Result<String> {
-  let params = env.from_js_value(params)?;
+  let params: DependencyIdParams = env.from_js_value(params)?;
 
   let DependencyIdParams {
     source_asset_id,

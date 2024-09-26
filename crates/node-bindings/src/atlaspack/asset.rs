@@ -1,4 +1,4 @@
-use atlaspack_core::types::Environment;
+use atlaspack_core::types::{Environment, FileType};
 use napi::{Env, JsUnknown};
 use napi_derive::napi;
 use serde::Deserialize;
@@ -12,6 +12,7 @@ pub struct AssetIdParams {
   pipeline: Option<String>,
   query: Option<String>,
   unique_key: Option<String>,
+  file_type: FileType,
 }
 
 #[napi]
@@ -22,11 +23,13 @@ pub fn create_asset_id(env: Env, params: JsUnknown) -> napi::Result<String> {
     code,
     pipeline,
     query,
+    file_type,
     unique_key,
   } = env.from_js_value(params)?;
 
   let asset_id =
     atlaspack_core::types::create_asset_id(atlaspack_core::types::CreateAssetIdParams {
+      file_type,
       env: &env,
       file_path: &file_path,
       code: code.as_deref(),
