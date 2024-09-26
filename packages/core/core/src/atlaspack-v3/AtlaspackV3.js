@@ -26,7 +26,7 @@ export class AtlaspackV3 {
   }: AtlaspackV3Options) {
     options.logLevel = options.logLevel || 'error';
     options.defaultTargetOptions = options.defaultTargetOptions || {};
-    // $FlowFixMe engines is readonly
+    // $FlowFixMe "engines" are readonly
     options.defaultTargetOptions.engines = options.defaultTargetOptions
       .engines || {
       browsers: [],
