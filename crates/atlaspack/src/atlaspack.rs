@@ -100,10 +100,7 @@ impl Atlaspack {
         options: Arc::new(PluginOptions {
           core_path: self.options.core_path.clone(),
           env: self.options.env.clone(),
-          log_level: match self.options.log_level.as_ref() {
-            Some(value) => value.clone(),
-            None => Default::default(),
-          },
+          log_level: self.options.log_level.clone(),
           mode: self.options.mode.clone(),
           project_root: self.project_root.clone(),
         }),

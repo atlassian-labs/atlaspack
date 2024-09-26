@@ -24,6 +24,12 @@ export class AtlaspackV3 {
     threads,
     ...options
   }: AtlaspackV3Options) {
+    options.logLevel = options.logLevel || 'error';
+    options.defaultTargetOptions.engines = options.defaultTargetOptions
+      .engines || {
+      browsers: [],
+    };
+
     this._internal = new AtlaspackNapi({
       fs,
       nodeWorkers,

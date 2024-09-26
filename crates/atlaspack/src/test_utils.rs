@@ -79,10 +79,7 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
       options: Arc::new(PluginOptions {
         core_path: atlaspack_options.core_path.clone(),
         env: atlaspack_options.env.clone(),
-        log_level: match atlaspack_options.log_level.as_ref() {
-          Some(value) => value.clone(),
-          None => Default::default(),
-        },
+        log_level: atlaspack_options.log_level.clone(),
         mode: atlaspack_options.mode.clone(),
         project_root: project_root.clone(),
       }),

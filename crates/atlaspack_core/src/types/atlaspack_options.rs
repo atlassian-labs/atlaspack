@@ -30,7 +30,7 @@ pub struct AtlaspackOptions {
   pub fallback_config: Option<String>,
 
   #[serde(default)]
-  pub log_level: Option<LogLevel>,
+  pub log_level: LogLevel,
 
   #[serde(default)]
   pub mode: BuildMode,
@@ -74,7 +74,7 @@ impl<'de> Deserialize<'de> for BuildMode {
 #[serde(default, rename_all = "camelCase")]
 pub struct DefaultTargetOptions {
   pub dist_dir: Option<PathBuf>,
-  pub engines: Option<Engines>,
+  pub engines: Engines,
   pub is_library: Option<bool>,
   pub output_format: Option<OutputFormat>,
   pub public_url: String,
@@ -87,7 +87,7 @@ impl Default for DefaultTargetOptions {
   fn default() -> Self {
     Self {
       dist_dir: None,
-      engines: None,
+      engines: Engines::default(),
       is_library: None,
       output_format: None,
       public_url: String::from("/"),
