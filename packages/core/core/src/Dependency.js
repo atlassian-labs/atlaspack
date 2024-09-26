@@ -20,7 +20,6 @@ import {
 import {toInternalSourceLocation} from './utils';
 import {toProjectPath} from './projectPath';
 import assert from 'assert';
-import {createEnvironmentId} from '../../rust';
 
 type DependencyOpts = {|
   id?: string,
