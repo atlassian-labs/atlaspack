@@ -383,7 +383,6 @@ export type InitialAtlaspackOptionsInternal<WorkerFarm> = {|
     +sourceMaps?: boolean,
     +publicUrl?: string,
     +distDir?: FilePath,
-    +engines?: Engines,
     +outputFormat?: OutputFormat,
     +isLibrary?: boolean,
     +engines?: Engines,
