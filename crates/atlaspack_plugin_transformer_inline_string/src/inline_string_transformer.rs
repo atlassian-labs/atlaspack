@@ -22,8 +22,7 @@ impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
 
     Ok(TransformResult {
       asset,
-      dependencies: Vec::new(),
-      invalidate_on_file_change: Vec::new(),
+      ..Default::default()
     })
   }
 }
@@ -66,8 +65,7 @@ mod tests {
           meta: JSONObject::from_iter([(String::from("inlineType"), "string".into())]),
           ..Asset::default()
         },
-        dependencies: Vec::new(),
-        invalidate_on_file_change: Vec::new()
+        ..Default::default()
       })
     );
   }

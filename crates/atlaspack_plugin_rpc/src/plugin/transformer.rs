@@ -1,10 +1,12 @@
 use std::fmt;
 use std::fmt::Debug;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use anyhow::Error;
 
 use atlaspack_config::PluginNode;
+use atlaspack_core::hash::IdentifierHasher;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
@@ -45,6 +47,12 @@ impl RpcTransformerPlugin {
 }
 
 impl TransformerPlugin for RpcTransformerPlugin {
+  fn id(&self) -> u64 {
+    let mut hasher = IdentifierHasher::new();
+    self.plugin.hash(&mut hasher);
+    hasher.finish()
+  }
+
   fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
@@ -80,11 +88,10 @@ impl TransformerPlugin for RpcTransformerPlugin {
     };
 
     Ok(TransformResult {
-      asset: transformed_asset,
       // Adding dependencies from Node plugins isn't yet supported
-      dependencies: Vec::new(),
       // TODO: Handle invalidations
-      invalidate_on_file_change: Vec::new(),
+      asset: transformed_asset,
+      ..Default::default()
     })
   }
 }
