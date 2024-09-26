@@ -40,10 +40,10 @@ import {hashString, createAssetId as createAssetIdRust} from '@atlaspack/rust';
 import {BundleBehavior as BundleBehaviorMap} from './types';
 import {PluginTracer} from '@atlaspack/profiler';
 
-type AssetOptions = {|
+export type AssetOptions = {|
   id?: string,
   committed?: boolean,
-  code?: ?string,
+  code: string | void | null,
   filePath: ProjectPath,
   query?: ?string,
   type: string,
@@ -77,24 +77,6 @@ export function createAssetIdFromOptions(options: AssetOptions): string {
     query: options.query,
     uniqueKey: options.uniqueKey,
   });
-
-  // let uniqueKey = options.uniqueKey ?? '';
-  // let idBase =
-  //   options.idBase != null
-  //     ? options.idBase
-  //     : fromProjectPathRelative(options.filePath);
-  // console.log({idBase, uniqueKey, options});
-
-  // return hashString(
-  //   idBase +
-  //     options.type +
-  //     options.env.id +
-  //     uniqueKey +
-  //     ':' +
-  //     (options.pipeline ?? '') +
-  //     ':' +
-  //     (options.query ?? ''),
-  // );
 }
 
 export function createAsset(

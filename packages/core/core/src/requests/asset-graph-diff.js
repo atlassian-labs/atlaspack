@@ -1,6 +1,13 @@
-/* eslint-disable */
-const deepClone = require('rfdc/default');
-const diff = require('jest-diff').diff;
+/* eslint-disable no-console */
+// @flow strict-local
+
+// $FlowFixMe
+import deepClone from 'rfdc/default';
+// $FlowFixMe
+import {diff} from 'jest-diff';
+import AssetGraph from '../AssetGraph';
+import type {AssetGraphNode} from '../types';
+import {fromProjectPathRelative, toProjectPath} from '../projectPath';
 
 function filterNode(node) {
   let clone = deepClone(node);
@@ -28,7 +35,11 @@ function filterNode(node) {
   return clone;
 }
 
-function compactDeep(obj, ignoredPatterns = [], currentPath = '$') {
+function compactDeep(
+  obj: mixed,
+  ignoredPatterns: Array<string> = [],
+  currentPath: string = '$',
+) {
   if (obj instanceof Map) {
     const copy = {};
     Array.from(obj.entries()).forEach(([k, v]) => {
@@ -61,18 +72,22 @@ function compactDeep(obj, ignoredPatterns = [], currentPath = '$') {
   }
 }
 
-function assetGraphDiff(jsAssetGraph, rustAssetGraph) {
+function assetGraphDiff(jsAssetGraph: AssetGraph, rustAssetGraph: AssetGraph) {
   const getNodes = graph => {
     let nodes = {};
 
     graph.traverse(nodeId => {
-      let node = graph.getNode(nodeId);
+      let node: AssetGraphNode | null = graph.getNode(nodeId) ?? null;
+      if (!node) return;
 
       if (node.type === 'dependency') {
-        let sourcePath = node.value.sourcePath ?? 'entry';
-        nodes[`dep:${sourcePath}:${node.value.specifier}`] = filterNode(node);
+        let sourcePath = node.value.sourcePath ?? toProjectPath('', 'entry');
+        nodes[
+          `dep:${fromProjectPathRelative(sourcePath)}:${node.value.specifier}`
+        ] = filterNode(node);
       } else if (node.type === 'asset') {
-        nodes[`asset:${node.value.filePath}`] = filterNode(node);
+        nodes[`asset:${fromProjectPathRelative(node.value.filePath)}`] =
+          filterNode(node);
       }
     });
 
@@ -87,12 +102,7 @@ function assetGraphDiff(jsAssetGraph, rustAssetGraph) {
   const extra = [];
 
   for (const key of all.keys()) {
-    if (
-      !(
-        process.env.NATIVE_COMPARE === 'true' ||
-        key.includes(process.env.NATIVE_COMPARE)
-      )
-    ) {
+    if (process.env.NATIVE_COMPARE !== 'true') {
       continue;
     }
     let jsNode = jsNodes[key];

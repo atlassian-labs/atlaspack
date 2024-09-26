@@ -118,7 +118,7 @@ export default function createBundleGraphRequest(
         },
       );
 
-      if (input.rustAtlaspack && process.env.NATIVE_COMPARE) {
+      if (input.rustAtlaspack && process.env.NATIVE_COMPARE === 'true') {
         let {assetGraph: jsAssetGraph} = await api.runRequest(
           createAssetGraphRequestJS({
             name: 'Main',

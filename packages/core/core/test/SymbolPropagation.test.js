@@ -128,6 +128,7 @@ function createAssetGraph(
     let asset = nodeFromAsset(
       createAsset({
         id: String(assetId),
+        code: null,
         filePath: toProjectPath(filePath),
         type: 'js',
         isSource: true,

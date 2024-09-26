@@ -15,6 +15,7 @@ import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '@atlaspack/fs';
 import type WorkerFarm from '@atlaspack/workers';
 import type {IncomingMessage} from 'http';
 import http from 'http';
+// $FlowFixMe
 import expect from 'expect';
 
 import invariant from 'assert';
@@ -497,7 +498,10 @@ export function run(
   return runBundle(bundleGraph, bundle, globals, opts, externalModules);
 }
 
-export function getBundleData(bundleGraph, inputDir) {
+export function getBundleData(
+  bundleGraph: BundleGraph<PackagedBundle>,
+  inputDir: string,
+): {|name: string, type: string, assets: string[]|}[] {
   const byAlphabet = (a, b) => (a.toLowerCase() < b.toLowerCase() ? -1 : 1);
   const bundles = bundleGraph.getBundles();
   const bundleData = bundles.map(bundle => {
