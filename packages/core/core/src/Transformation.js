@@ -33,7 +33,6 @@ import ThrowableDiagnostic, {
   type Diagnostic,
 } from '@atlaspack/diagnostic';
 import {SOURCEMAP_EXTENSIONS} from '@atlaspack/utils';
-import {hashString} from '@atlaspack/rust';
 
 import {createDependency} from './Dependency';
 import AtlaspackConfig from './AtlaspackConfig';

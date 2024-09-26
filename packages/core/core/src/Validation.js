@@ -17,7 +17,6 @@ import PluginOptions from './public/PluginOptions';
 import summarizeRequest from './summarizeRequest';
 import {fromProjectPath, fromProjectPathRelative} from './projectPath';
 import {PluginTracer} from '@atlaspack/profiler';
-import {hashString} from '@atlaspack/rust';
 
 export type ValidationOpts = {|
   config: AtlaspackConfig,

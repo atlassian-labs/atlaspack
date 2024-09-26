@@ -701,6 +701,8 @@ describe('html', function () {
   });
 
   it('should not prepend the public path to assets with remote URLs', async function () {
+    const inputDir = path.join(__dirname, 'integration/html');
+    const inputPath = path.join(inputDir, '/index.html');
     await bundle(inputPath);
 
     let html = await outputFS.readFile(
@@ -713,6 +715,8 @@ describe('html', function () {
   });
 
   it('should not prepend the public path to hash links', async function () {
+    const inputDir = path.join(__dirname, 'integration/html');
+    const inputPath = path.join(inputDir, '/index.html');
     await bundle(inputPath);
 
     let html = await outputFS.readFile(
@@ -753,6 +757,8 @@ describe('html', function () {
   });
 
   it('should preserve the spacing in the HTML tags', async function () {
+    const inputDir = path.join(__dirname, 'integration/html');
+    const inputPath = path.join(inputDir, '/index.html');
     await bundle(inputPath);
 
     let html = await outputFS.readFile(
