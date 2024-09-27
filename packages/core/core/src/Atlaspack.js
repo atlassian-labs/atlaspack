@@ -46,7 +46,6 @@ import {createEnvironment} from './Environment';
 import {createDependency} from './Dependency';
 import {Disposable} from '@atlaspack/events';
 import {NodeFS} from '@atlaspack/fs';
-import {NodePackageManager} from '@atlaspack/package-manager';
 import {init as initSourcemaps} from '@parcel/source-map';
 import {
   init as initRust,
