@@ -77,11 +77,13 @@ describe('conditional bundling', function () {
     assert.deepEqual(output?.default, 'module-a');
   });
 
-  it(`should have true and false deps as bundles in conditional manifest`, async function () {
-    const dir = path.join(__dirname, 'disabled-import-cond');
-    overlayFS.mkdirp(dir);
+  it.v2(
+    `should have true and false deps as bundles in conditional manifest`,
+    async function () {
+      const dir = path.join(__dirname, 'disabled-import-cond');
+      overlayFS.mkdirp(dir);
 
-    await fsFixture(overlayFS, dir)`
+      await fsFixture(overlayFS, dir)`
         .parcelrc:
           {
             "extends": "@atlaspack/config-default",
@@ -102,38 +104,39 @@ describe('conditional bundling', function () {
           export default 'module-b';
       `;
 
-    let bundleGraph = await bundle(path.join(dir, '/index.js'), {
-      inputFS: overlayFS,
-      featureFlags: {conditionalBundlingApi: true},
-      defaultConfig: path.join(dir, '.parcelrc'),
-    });
+      let bundleGraph = await bundle(path.join(dir, '/index.js'), {
+        inputFS: overlayFS,
+        featureFlags: {conditionalBundlingApi: true},
+        defaultConfig: path.join(dir, '.parcelrc'),
+      });
 
-    // Load the generated manifest
-    let conditionalManifest = JSON.parse(
-      overlayFS
-        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
-        .toString(),
-    );
+      // Load the generated manifest
+      let conditionalManifest = JSON.parse(
+        overlayFS
+          .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+          .toString(),
+      );
 
-    // Get the corresponding bundle paths
-    let ifTrueBundlePath =
-      conditionalManifest?.['index.js']?.cond?.ifTrueBundles?.[0];
-    let ifFalseBundlePath =
-      conditionalManifest?.['index.js']?.cond?.ifFalseBundles?.[0];
-    assert.ok(ifTrueBundlePath, 'ifTrue bundle path not set in manifest');
-    assert.ok(ifFalseBundlePath, 'ifFalse bundle path not set in manifest');
+      // Get the corresponding bundle paths
+      let ifTrueBundlePath =
+        conditionalManifest?.['index.js']?.cond?.ifTrueBundles?.[0];
+      let ifFalseBundlePath =
+        conditionalManifest?.['index.js']?.cond?.ifFalseBundles?.[0];
+      assert.ok(ifTrueBundlePath, 'ifTrue bundle path not set in manifest');
+      assert.ok(ifFalseBundlePath, 'ifFalse bundle path not set in manifest');
 
-    let ifTrueBundle = bundleGraph
-      .getBundles()
-      .find(b => b.filePath === path.join(distDir, ifTrueBundlePath));
-    let ifFalseBundle = bundleGraph
-      .getBundles()
-      .find(b => b.filePath === path.join(distDir, ifFalseBundlePath));
-    assert.ok(ifTrueBundle, 'ifTrue bundle not found');
-    assert.ok(ifFalseBundle, 'ifFalse bundle not found');
-  });
+      let ifTrueBundle = bundleGraph
+        .getBundles()
+        .find(b => b.filePath === path.join(distDir, ifTrueBundlePath));
+      let ifFalseBundle = bundleGraph
+        .getBundles()
+        .find(b => b.filePath === path.join(distDir, ifFalseBundlePath));
+      assert.ok(ifTrueBundle, 'ifTrue bundle not found');
+      assert.ok(ifFalseBundle, 'ifFalse bundle not found');
+    },
+  );
 
-  it(`should use true bundle when condition is true`, async function () {
+  it.v2(`should use true bundle when condition is true`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond');
     overlayFS.mkdirp(dir);
 
@@ -200,11 +203,13 @@ describe('conditional bundling', function () {
     assert.deepEqual(typeof output === 'object' && output?.default, 'module-a');
   });
 
-  it(`should load false bundle when importing dynamic bundles`, async function () {
-    const dir = path.join(__dirname, 'disabled-import-cond');
-    overlayFS.mkdirp(dir);
+  it.v2(
+    `should load false bundle when importing dynamic bundles`,
+    async function () {
+      const dir = path.join(__dirname, 'disabled-import-cond');
+      overlayFS.mkdirp(dir);
 
-    await fsFixture(overlayFS, dir)`
+      await fsFixture(overlayFS, dir)`
       .parcelrc:
         {
           "extends": "@atlaspack/config-default",
@@ -231,43 +236,44 @@ describe('conditional bundling', function () {
         export default 'module-b';
     `;
 
-    let bundleGraph = await bundle(path.join(dir, '/index.js'), {
-      inputFS: overlayFS,
-      outputFS: overlayFS,
-      featureFlags: {conditionalBundlingApi: true},
-      defaultConfig: path.join(dir, '.parcelrc'),
-      defaultTargetOptions: {
-        shouldScopeHoist: true,
-      },
-    });
+      let bundleGraph = await bundle(path.join(dir, '/index.js'), {
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        featureFlags: {conditionalBundlingApi: true},
+        defaultConfig: path.join(dir, '.parcelrc'),
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+        },
+      });
 
-    let entry = nullthrows(
-      bundleGraph.getBundles().find(b => b.name === 'index.js'),
-      'index.js bundle not found',
-    );
+      let entry = nullthrows(
+        bundleGraph.getBundles().find(b => b.name === 'index.js'),
+        'index.js bundle not found',
+      );
 
-    let output = await runBundles(
-      bundleGraph,
-      entry,
-      [[overlayFS.readFileSync(entry.filePath).toString(), entry]],
-      undefined,
-      {
-        require: false,
-      },
-    );
+      let output = await runBundles(
+        bundleGraph,
+        entry,
+        [[overlayFS.readFileSync(entry.filePath).toString(), entry]],
+        undefined,
+        {
+          require: false,
+        },
+      );
 
-    let lazyImported = await nullthrows(
-      typeof output === 'object' ? output?.lazyImport : null,
-      'Lazy import was not found on globalThis',
-    );
+      let lazyImported = await nullthrows(
+        typeof output === 'object' ? output?.lazyImport : null,
+        'Lazy import was not found on globalThis',
+      );
 
-    assert.deepEqual(
-      typeof lazyImported === 'object' && lazyImported?.default,
-      'module-b',
-    );
-  });
+      assert.deepEqual(
+        typeof lazyImported === 'object' && lazyImported?.default,
+        'module-b',
+      );
+    },
+  );
 
-  it(`should load dev warning when bundle isn't loaded`, async function () {
+  it.v2(`should load dev warning when bundle isn't loaded`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond');
 
     overlayFS.mkdirp(dir);
@@ -318,11 +324,13 @@ describe('conditional bundling', function () {
     }
   });
 
-  it(`should handle loading conditional bundles when imported in different bundles`, async function () {
-    const dir = path.join(__dirname, 'disabled-import-cond');
-    overlayFS.mkdirp(dir);
+  it.v2(
+    `should handle loading conditional bundles when imported in different bundles`,
+    async function () {
+      const dir = path.join(__dirname, 'disabled-import-cond');
+      overlayFS.mkdirp(dir);
 
-    await fsFixture(overlayFS, dir)`
+      await fsFixture(overlayFS, dir)`
         .parcelrc:
           {
             "extends": "@atlaspack/config-default",
@@ -355,42 +363,46 @@ describe('conditional bundling', function () {
           export default 'module-b';
       `;
 
-    let bundleGraph = await bundle(path.join(dir, '/index.js'), {
-      inputFS: overlayFS,
-      featureFlags: {conditionalBundlingApi: true},
-      defaultConfig: path.join(dir, '.parcelrc'),
-    });
+      let bundleGraph = await bundle(path.join(dir, '/index.js'), {
+        inputFS: overlayFS,
+        featureFlags: {conditionalBundlingApi: true},
+        defaultConfig: path.join(dir, '.parcelrc'),
+      });
 
-    let entry = nullthrows(
-      bundleGraph.getBundles().find(b => b.name === 'index.js'),
-      'index.js bundle not found',
-    );
+      let entry = nullthrows(
+        bundleGraph.getBundles().find(b => b.name === 'index.js'),
+        'index.js bundle not found',
+      );
 
-    // Load the generated manifest
-    let conditionalManifest = JSON.parse(
-      overlayFS
-        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
-        .toString(),
-    );
+      // Load the generated manifest
+      let conditionalManifest = JSON.parse(
+        overlayFS
+          .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+          .toString(),
+      );
 
-    // Get the true bundle path
-    let ifTrueBundlePath = path.join(
-      distDir,
-      nullthrows(
-        conditionalManifest['index.js']?.cond1?.ifTrueBundles?.[0],
-        'ifTrue bundle not found in manifest',
-      ),
-    );
-    let ifTrueBundle = nullthrows(
-      bundleGraph.getBundles().find(b => b.filePath === ifTrueBundlePath),
-    );
+      // Get the true bundle path
+      let ifTrueBundlePath = path.join(
+        distDir,
+        nullthrows(
+          conditionalManifest['index.js']?.cond1?.ifTrueBundles?.[0],
+          'ifTrue bundle not found in manifest',
+        ),
+      );
+      let ifTrueBundle = nullthrows(
+        bundleGraph.getBundles().find(b => b.filePath === ifTrueBundlePath),
+      );
 
-    // Run the bundles and act like the webserver included the ifTrue bundles already
-    let output = await runBundles(bundleGraph, entry, [
-      [overlayFS.readFileSync(ifTrueBundlePath).toString(), ifTrueBundle],
-      [overlayFS.readFileSync(entry.filePath).toString(), entry],
-    ]);
+      // Run the bundles and act like the webserver included the ifTrue bundles already
+      let output = await runBundles(bundleGraph, entry, [
+        [overlayFS.readFileSync(ifTrueBundlePath).toString(), ifTrueBundle],
+        [overlayFS.readFileSync(entry.filePath).toString(), entry],
+      ]);
 
-    assert.deepEqual(typeof output === 'object' && output?.default, 'module-a');
-  });
+      assert.deepEqual(
+        typeof output === 'object' && output?.default,
+        'module-a',
+      );
+    },
+  );
 });

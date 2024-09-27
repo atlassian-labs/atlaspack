@@ -6,6 +6,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::Path;
 
+use atlaspack_core::types::Condition;
 use path_slash::PathBufExt;
 use serde::Deserialize;
 use serde::Serialize;
@@ -128,13 +129,6 @@ pub struct DependencyDescriptor {
   pub is_helper: bool,
   pub source_type: Option<SourceType>,
   pub placeholder: Option<String>,
-}
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
-pub struct Condition {
-  pub key: JsWord,
-  pub if_true_placeholder: Option<JsWord>,
-  pub if_false_placeholder: Option<JsWord>,
 }
 
 /// This pass collects dependencies in a module and compiles references as needed to work with Atlaspack's JSRuntime.
@@ -837,9 +831,9 @@ impl<'a> Fold for DependencyCollector<'a> {
 
       // Create a condition we pass back to JS
       let condition = Condition {
-        key: match_str(&call.args[0].expr).unwrap().0,
-        if_true_placeholder: Some(placeholders[0].clone()),
-        if_false_placeholder: Some(placeholders[1].clone()),
+        key: match_str(&call.args[0].expr).unwrap().0.to_string(),
+        if_true_placeholder: Some(placeholders[0].to_string()),
+        if_false_placeholder: Some(placeholders[1].to_string()),
       };
       self.conditions.insert(condition);
 

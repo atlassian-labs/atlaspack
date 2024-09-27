@@ -19,6 +19,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use atlaspack_core::types::Condition;
 use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
 use atlaspack_macros::Macros;
@@ -28,7 +29,6 @@ use collect::CollectResult;
 use conditional_imports_fallback::ConditionalImportsFallback;
 use constant_module::ConstantModule;
 pub use dependency_collector::dependency_collector;
-use dependency_collector::Condition;
 pub use dependency_collector::DependencyDescriptor;
 pub use dependency_collector::DependencyKind;
 use env_replacer::*;
