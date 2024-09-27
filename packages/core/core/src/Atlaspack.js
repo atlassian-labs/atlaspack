@@ -45,6 +45,8 @@ import createPathRequest from './requests/PathRequest';
 import {createEnvironment} from './Environment';
 import {createDependency} from './Dependency';
 import {Disposable} from '@atlaspack/events';
+import {NodeFS} from '@atlaspack/fs';
+import {NodePackageManager} from '@atlaspack/package-manager';
 import {init as initSourcemaps} from '@parcel/source-map';
 import {
   init as initRust,
@@ -98,6 +100,14 @@ export default class Atlaspack {
 
   constructor(options: InitialAtlaspackOptions) {
     this.#initialOptions = options;
+
+    // TEMP [dalsh]: Force V3 to use the NodeFS
+    // Will replace them when the native implementation is complete
+    if (this.#initialOptions.featureFlags?.atlaspackV3) {
+      // $FlowFixMe "inputFS" is readonly
+      this.#initialOptions.inputFS =
+        this.#initialOptions.inputFS || new NodeFS();
+    }
   }
 
   async _init(): Promise<void> {
