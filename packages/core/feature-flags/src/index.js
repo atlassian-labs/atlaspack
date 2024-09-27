@@ -10,6 +10,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   atlaspackV3: false,
   useWatchmanWatcher: false,
   importRetry: false,
+  fixQuadraticCacheInvalidation: false,
   fastOptimizeInlineRequires: false,
   useLmdbJsLite: false,
   fastNeedsDefaultInterop: false,
