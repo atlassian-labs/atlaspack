@@ -42,8 +42,26 @@ impl<'de> serde::Deserialize<'de> for ExportsCondition {
   where
     D: serde::Deserializer<'de>,
   {
-    let bits = Deserialize::deserialize(deserializer)?;
-    Ok(ExportsCondition::from_bits_truncate(bits))
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum JSExportsCondition {
+      StringArray(Vec<String>),
+      Int(u16),
+    }
+
+    let condition: JSExportsCondition = Deserialize::deserialize(deserializer)?;
+    match condition {
+      JSExportsCondition::Int(bits) => Ok(ExportsCondition::from_bits_truncate(bits)),
+      JSExportsCondition::StringArray(array) => {
+        let mut bits = ExportsCondition::empty();
+        for item in array {
+          let condition = ExportsCondition::try_from(item.as_str())
+            .map_err(|_| serde::de::Error::custom(format!("Invalid export condition {item}")))?;
+          bits |= condition;
+        }
+        Ok(bits)
+      }
+    }
   }
 }
 
@@ -68,5 +86,22 @@ impl TryFrom<&str> for ExportsCondition {
       "sass" => ExportsCondition::SASS,
       _ => return Err(()),
     })
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  #[test]
+  fn test_deserialize_from_bits() {
+    let condition: ExportsCondition = serde_json::from_str("1").unwrap();
+    assert_eq!(condition, ExportsCondition::IMPORT);
+  }
+
+  #[test]
+  fn test_deserialize_from_strings() {
+    let condition: ExportsCondition = serde_json::from_str("[\"import\", \"sass\"]").unwrap();
+    assert_eq!(condition, ExportsCondition::IMPORT | ExportsCondition::SASS);
   }
 }
