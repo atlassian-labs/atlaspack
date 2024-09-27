@@ -2,7 +2,11 @@
 
 import assert from 'assert';
 import nullthrows from 'nullthrows';
-import RequestTracker, {type RunAPI} from '../src/RequestTracker';
+import RequestTracker, {
+  type RunAPI,
+  cleanUpOrphans,
+} from '../src/RequestTracker';
+import {Graph} from '@atlaspack/graph';
 import WorkerFarm from '@atlaspack/workers';
 import {DEFAULT_OPTIONS} from './test-utils';
 import {INITIAL_BUILD} from '../src/constants';
@@ -444,5 +448,45 @@ describe('RequestTracker', () => {
     tracker = await RequestTracker.init({farm, options});
 
     assert.equal(tracker.graph.getNode(nodeId)?.invalidateReason, 1);
+  });
+});
+
+describe.only('cleanUpOrphans', () => {
+  it('cleans-up unreachable nodes', () => {
+    const graph: Graph<string, number> = new Graph();
+    const root = graph.addNode('root');
+    graph.setRootNodeId(root);
+    const node1 = graph.addNode('node1');
+    const node2 = graph.addNode('node2');
+    const node3 = graph.addNode('node3');
+    const orphan1 = graph.addNode('orphan1');
+    const orphan2 = graph.addNode('orphan2');
+
+    /*
+
+root --- node1 --- node2 ----------- orphan1 --- orphan2
+     \---- node3          (^ remove)
+
+     */
+
+    const getNonNullNodes = graph => graph.nodes.filter(node => node != null);
+
+    graph.addEdge(root, node1);
+    graph.addEdge(node1, node2);
+    graph.addEdge(node2, orphan1);
+    graph.addEdge(orphan1, orphan2);
+    graph.addEdge(root, node3);
+
+    assert.deepEqual(cleanUpOrphans(graph), []);
+    assert.equal(getNonNullNodes(graph).length, 6);
+    assert.equal(Array.from(graph.getAllEdges()).length, 5);
+
+    graph.removeEdge(node2, orphan1, 1, false);
+    assert.equal(getNonNullNodes(graph).length, 6);
+    assert.equal(Array.from(graph.getAllEdges()).length, 4);
+
+    assert.deepEqual(cleanUpOrphans(graph), [orphan1, orphan2]);
+    assert.equal(getNonNullNodes(graph).length, 4);
+    assert.equal(Array.from(graph.getAllEdges()).length, 3);
   });
 });

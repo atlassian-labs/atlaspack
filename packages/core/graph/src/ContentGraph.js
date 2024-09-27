@@ -86,11 +86,11 @@ export default class ContentGraph<TNode, TEdgeType: number = 1> extends Graph<
     return this._contentKeyToNodeId.has(contentKey);
   }
 
-  removeNode(nodeId: NodeId): void {
+  removeNode(nodeId: NodeId, removeOrphans: boolean = true): void {
     this._assertHasNodeId(nodeId);
     let contentKey = nullthrows(this._nodeIdToContentKey.get(nodeId));
     this._contentKeyToNodeId.delete(contentKey);
     this._nodeIdToContentKey.delete(nodeId);
-    super.removeNode(nodeId);
+    super.removeNode(nodeId, removeOrphans);
   }
 }
