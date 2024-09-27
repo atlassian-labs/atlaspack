@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use dyn_hash::DynHash;
+use serde::Deserialize;
 
 use crate::types::Dependency;
 use crate::types::Invalidation;
@@ -17,7 +18,8 @@ pub struct ResolveContext {
   pub specifier: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ResolvedResolution {
   /// Whether this dependency can be deferred by Atlaspack itself
   pub can_defer: bool,
@@ -47,7 +49,8 @@ pub struct ResolvedResolution {
   pub side_effects: bool,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum Resolution {
   /// Indicates the dependency was not resolved
   Unresolved,

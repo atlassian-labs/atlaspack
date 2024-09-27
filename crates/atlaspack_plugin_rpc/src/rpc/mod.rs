@@ -4,6 +4,7 @@ mod transformer;
 
 use std::sync::Arc;
 
+use atlaspack_core::plugin::Resolution;
 pub use plugins::*;
 pub use resolver::*;
 pub use transformer::*;
@@ -18,5 +19,6 @@ pub trait RpcHost: Send + Sync {
 pub trait RpcWorker: Send + Sync {
   fn ping(&self) -> anyhow::Result<()>;
   fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()>;
+  fn run_resolver_resolve(&self, opts: RunResolverResolve) -> anyhow::Result<Resolution>;
   fn run_transformer(&self, opts: RpcTransformerOpts) -> anyhow::Result<RpcTransformerResult>;
 }

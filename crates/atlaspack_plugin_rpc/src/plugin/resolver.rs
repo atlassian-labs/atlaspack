@@ -12,6 +12,7 @@ use atlaspack_core::plugin::ResolverPlugin;
 use crate::LoadPluginKind;
 use crate::LoadPluginOptions;
 use crate::RpcWorkerRef;
+use crate::RunResolverResolve;
 
 pub struct RpcResolverPlugin {
   resolve_from: PathBuf,
@@ -50,7 +51,7 @@ impl RpcResolverPlugin {
 }
 
 impl ResolverPlugin for RpcResolverPlugin {
-  fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+  fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
     if !self.started {
       self.rpc_worker.load_plugin(LoadPluginOptions {
         kind: LoadPluginKind::Resolver,
@@ -58,6 +59,12 @@ impl ResolverPlugin for RpcResolverPlugin {
         resolve_from: self.resolve_from.clone(),
       })?;
     }
+
+    self.rpc_worker.run_resolver_resolve(RunResolverResolve {
+      key: self.specifier.clone(),
+      dependency: (&*ctx.dependency).clone(),
+      specifier: (&*ctx.specifier).to_owned(),
+    })?;
 
     return Ok(Resolved {
       invalidations: vec![],

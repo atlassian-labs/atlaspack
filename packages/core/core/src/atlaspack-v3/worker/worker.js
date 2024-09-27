@@ -7,7 +7,6 @@ import type {
   PluginOptions,
   Dependency,
   FilePath,
-  ResolveResult,
 } from '@atlaspack/types';
 import {workerData} from 'worker_threads';
 import * as module from 'module';
@@ -18,18 +17,6 @@ import {jsCallable} from '../jsCallable';
 import type {JsCallable} from '../jsCallable';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
-
-type LoadPluginOptions = {|
-  kind: 'resolver',
-  specifier: string,
-  resolveFrom: string,
-|};
-
-type RunResolverResolveOptions = {|
-  key: string,
-  dependency: Dependency,
-  specifier: FilePath,
-|};
 
 export class AtlaspackWorker {
   #resolvers: Map<string, Resolver<*>>;
@@ -47,7 +34,7 @@ export class AtlaspackWorker {
 
       switch (kind) {
         case 'resolver':
-          this.#resolvers.set(specifier, resolvedModule);
+          this.#resolvers.set(specifier, resolvedModule.default[CONFIG]);
           break;
       }
     },
@@ -55,7 +42,7 @@ export class AtlaspackWorker {
 
   runResolverResolve: JsCallable<
     [RunResolverResolveOptions],
-    Promise<?ResolveResult>,
+    Promise<RunResolverResolveResult>,
   > = jsCallable(async ({key, dependency, specifier}) => {
     const resolver = this.#resolvers.get(key);
     if (!resolver) {
@@ -66,23 +53,37 @@ export class AtlaspackWorker {
       specifier,
       dependency,
       get options() {
-        throw new Error('TODO: ResolverArgs.options');
+        throw new Error('TODO: Resolver.resolve.options');
       },
       get logger() {
-        throw new Error('TODO: ResolverArgs.options');
+        throw new Error('TODO: Resolver.resolve.logger');
       },
       get tracer() {
-        throw new Error('TODO: ResolverArgs.options');
+        throw new Error('TODO: Resolver.resolve.tracer');
       },
       get pipeline() {
-        throw new Error('TODO: ResolverArgs.options');
+        throw new Error('TODO: Resolver.resolve.pipeline');
       },
       get config() {
-        throw new Error('TODO: ResolverArgs.options');
+        throw new Error('TODO: Resolver.resolve.config');
       },
     });
 
-    return result;
+    if (!result) {
+      return {type: 'unresolved'};
+    }
+
+    return {
+      type: 'resolved',
+      filePath: '',
+      canDefer: result.canDefer || false,
+      sideEffects: result.sideEffects || false,
+      code: result.code || undefined,
+      meta: result.meta || undefined,
+      pipeline: result.pipeline || undefined,
+      priority: result.priority && PriorityMap[result.priority],
+      query: result.query && result.query.toString(),
+    };
   });
 
   ping() {
@@ -160,3 +161,36 @@ export class AtlaspackWorker {
 }
 
 napi.registerWorker(workerData.tx_worker, new AtlaspackWorker());
+
+type LoadPluginOptions = {|
+  kind: 'resolver',
+  specifier: string,
+  resolveFrom: string,
+|};
+
+type RunResolverResolveOptions = {|
+  key: string,
+  dependency: Dependency,
+  specifier: FilePath,
+|};
+
+type RunResolverResolveResult =
+  | {|type: 'unresolved'|}
+  | {|type: 'excluded'|}
+  | {|
+      type: 'resolved',
+      canDefer: boolean,
+      filePath: string,
+      sideEffects: boolean,
+      code?: string,
+      meta?: mixed,
+      pipeline?: string,
+      priority?: number,
+      query?: string,
+    |};
+
+const PriorityMap = {
+  sync: 0,
+  parallel: 1,
+  lazy: 2,
+};
