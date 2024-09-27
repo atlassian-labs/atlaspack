@@ -1597,8 +1597,6 @@ fn match_worker_type(expr: Option<&ast::ExprOrSpread>) -> (SourceType, Option<as
 
 #[cfg(test)]
 mod tests {
-  use swc_core::ecma::atoms::Atom;
-
   use super::*;
   use crate::test_utils::{run_test_fold, RunContext, RunVisitResult};
   use crate::DependencyDescriptor;
@@ -2477,8 +2475,8 @@ document.body.appendChild(img);
       conditions,
       HashSet::from([Condition {
         key: "condition".into(),
-        if_true_placeholder: Some(Atom::new(hash_a)),
-        if_false_placeholder: Some(Atom::new(hash_b))
+        if_true_placeholder: Some(hash_a),
+        if_false_placeholder: Some(hash_b)
       }])
     );
   }
