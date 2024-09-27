@@ -11,7 +11,7 @@ import {
 } from '@atlaspack/test-utils';
 import type {BundleGraph, BundleGroup, PackagedBundle} from '@atlaspack/types';
 
-describe.v2('BundleGraph', () => {
+describe('BundleGraph', () => {
   it('can traverse assets across bundles and contexts', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/worker-shared/index.js'),
@@ -85,12 +85,13 @@ describe.v2('BundleGraph', () => {
     ]);
   });
 
-  describe('getBundlesInBundleGroup', () => {
-    let bundleGraph: BundleGraph<PackagedBundle>;
-    let bundleGroup: BundleGroup;
+  describe.v2('getBundlesInBundleGroup', () => {
     let dir = path.join(__dirname, 'get-bundles-in-bundle-group');
 
-    before(async () => {
+    async function setupTest(): Promise<{
+      bundleGraph: BundleGraph<PackagedBundle>,
+      bundleGroup: BundleGroup,
+    }> {
       await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
@@ -103,20 +104,21 @@ describe.v2('BundleGraph', () => {
         yarn.lock: {}
       `;
 
-      bundleGraph = await bundle(path.join(dir, 'index.jsx'), {
+      const bundleGraph = await bundle(path.join(dir, 'index.jsx'), {
         inputFS: overlayFS,
       });
-
-      bundleGroup = bundleGraph.getBundleGroupsContainingBundle(
+      const bundleGroup = bundleGraph.getBundleGroupsContainingBundle(
         bundleGraph.getBundles({includeInline: true})[0],
       )[0];
-    });
+      return {bundleGraph, bundleGroup};
+    }
 
     after(async () => {
       await overlayFS.rimraf(dir);
     });
 
-    it('does not return inlineAssets by default', () => {
+    it('does not return inlineAssets by default', async () => {
+      const {bundleGraph, bundleGroup} = await setupTest();
       const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup);
 
       assert.deepEqual(
@@ -125,7 +127,8 @@ describe.v2('BundleGraph', () => {
       );
     });
 
-    it('does not return inlineAssets when requested', () => {
+    it('does not return inlineAssets when requested', async () => {
+      const {bundleGraph, bundleGroup} = await setupTest();
       const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup, {
         includeInline: false,
       });
@@ -136,7 +139,8 @@ describe.v2('BundleGraph', () => {
       );
     });
 
-    it('returns inlineAssets when requested', () => {
+    it('returns inlineAssets when requested', async () => {
+      const {bundleGraph, bundleGroup} = await setupTest();
       const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup, {
         includeInline: true,
       });

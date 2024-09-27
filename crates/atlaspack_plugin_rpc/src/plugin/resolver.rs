@@ -1,11 +1,11 @@
-use std::fmt;
-use std::fmt::Debug;
-
+use anyhow::anyhow;
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::ResolveContext;
 use atlaspack_core::plugin::Resolved;
 use atlaspack_core::plugin::ResolverPlugin;
+use std::fmt;
+use std::fmt::Debug;
 
 #[derive(Hash)]
 pub struct RpcResolverPlugin {}
@@ -24,6 +24,6 @@ impl RpcResolverPlugin {
 
 impl ResolverPlugin for RpcResolverPlugin {
   fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
-    todo!()
+    Err(anyhow!("Not implemented"))
   }
 }

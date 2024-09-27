@@ -14,8 +14,8 @@ import {
 
 import {ATLASPACK_VERSION} from '../../core/src/constants';
 
-describe.v2('JS API', function () {
-  it('should respect distEntry', async function () {
+describe('JS API', function () {
+  it.v2('should respect distEntry', async function () {
     const NAME = 'custom-name.js';
 
     let b = await bundle(
