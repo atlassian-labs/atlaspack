@@ -186,7 +186,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
   }
 
   // Removes node and any edges coming from or to that node
-  removeNode(nodeId: NodeId) {
+  removeNode(nodeId: NodeId, removeOrphans: boolean = true) {
     if (!this.hasNode(nodeId)) {
       return;
     }
@@ -203,7 +203,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
     }
 
     for (let {type, to} of this.adjacencyList.getOutboundEdgesByType(nodeId)) {
-      this._removeEdge(nodeId, to, type);
+      this._removeEdge(nodeId, to, type, removeOrphans);
     }
 
     this.nodes[nodeId] = null;
