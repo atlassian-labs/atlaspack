@@ -451,7 +451,7 @@ describe('RequestTracker', () => {
   });
 });
 
-describe.only('cleanUpOrphans', () => {
+describe('cleanUpOrphans', () => {
   it('cleans-up unreachable nodes', () => {
     const graph: Graph<string, number> = new Graph();
     const root = graph.addNode('root');
