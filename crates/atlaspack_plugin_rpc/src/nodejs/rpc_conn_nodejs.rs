@@ -2,12 +2,13 @@ use atlaspack_napi_helpers::anyhow_from_napi;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use napi::{JsObject, JsUnknown};
 
-use crate::{RpcTransformerOpts, RpcTransformerResult, RpcWorker};
+use crate::{LoadPluginOptions, RpcTransformerOpts, RpcTransformerResult, RpcWorker};
 
 /// RpcConnectionNodejs wraps the communication with a
 /// single Nodejs worker thread
 pub struct NodejsWorker {
   ping_fn: JsCallable,
+  load_plugin_fn: JsCallable,
   transformer_register_fn: JsCallable,
 }
 
@@ -15,6 +16,7 @@ impl NodejsWorker {
   pub fn new(delegate: JsObject) -> napi::Result<Self> {
     Ok(Self {
       ping_fn: JsCallable::new_from_object_prop_bound("ping", &delegate)?,
+      load_plugin_fn: JsCallable::new_from_object_prop_bound("loadPlugin", &delegate)?,
       transformer_register_fn: JsCallable::new_from_object_prop_bound("runTransformer", &delegate)?,
     })
   }
@@ -30,6 +32,13 @@ impl RpcWorker for NodejsWorker {
       )
       .map_err(anyhow_from_napi)?;
     Ok(())
+  }
+
+  fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
+    self
+      .load_plugin_fn
+      .call_with_return_serde(opts)
+      .map_err(anyhow_from_napi)
   }
 
   fn run_transformer(&self, opts: RpcTransformerOpts) -> anyhow::Result<RpcTransformerResult> {

@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 
 use super::NodejsWorker;
 
-use crate::{RpcTransformerOpts, RpcTransformerResult, RpcWorker};
+use crate::{LoadPluginOptions, RpcTransformerOpts, RpcTransformerResult, RpcWorker};
 
 /// Connection to multiple Nodejs Workers
 /// Implements round robin messaging
@@ -35,6 +35,13 @@ impl RpcWorker for NodejsWorkerFarm {
   fn ping(&self) -> anyhow::Result<()> {
     for worker in &self.workers {
       worker.ping()?;
+    }
+    Ok(())
+  }
+
+  fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
+    for worker in &self.workers {
+      worker.load_plugin(opts.clone())?;
     }
     Ok(())
   }

@@ -1,14 +1,32 @@
 use std::fmt;
 use std::fmt::Debug;
+use std::path::PathBuf;
 
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::Resolution;
 use atlaspack_core::plugin::ResolveContext;
 use atlaspack_core::plugin::Resolved;
 use atlaspack_core::plugin::ResolverPlugin;
 
-#[derive(Hash)]
-pub struct RpcResolverPlugin {}
+use crate::LoadPluginKind;
+use crate::LoadPluginOptions;
+use crate::RpcWorkerRef;
+
+pub struct RpcResolverPlugin {
+  resolve_from: PathBuf,
+  specifier: String,
+  started: bool,
+  rpc_worker: RpcWorkerRef,
+}
+
+impl std::hash::Hash for RpcResolverPlugin {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.resolve_from.hash(state);
+    self.specifier.hash(state);
+    self.started.hash(state);
+  }
+}
 
 impl Debug for RpcResolverPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -17,13 +35,33 @@ impl Debug for RpcResolverPlugin {
 }
 
 impl RpcResolverPlugin {
-  pub fn new(_ctx: &PluginContext, _plugin: &PluginNode) -> Result<Self, anyhow::Error> {
-    Ok(RpcResolverPlugin {})
+  pub fn new(
+    _ctx: &PluginContext,
+    plugin: &PluginNode,
+    rpc_worker: RpcWorkerRef,
+  ) -> Result<Self, anyhow::Error> {
+    Ok(RpcResolverPlugin {
+      resolve_from: plugin.resolve_from.to_path_buf(),
+      specifier: plugin.package_name.clone(),
+      rpc_worker,
+      started: false,
+    })
   }
 }
 
 impl ResolverPlugin for RpcResolverPlugin {
   fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
-    todo!()
+    if !self.started {
+      self.rpc_worker.load_plugin(LoadPluginOptions {
+        kind: LoadPluginKind::Resolver,
+        specifier: self.specifier.clone(),
+        resolve_from: self.resolve_from.clone(),
+      })?;
+    }
+
+    return Ok(Resolved {
+      invalidations: vec![],
+      resolution: Resolution::Unresolved,
+    });
   }
 }

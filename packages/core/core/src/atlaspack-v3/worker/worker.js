@@ -1,16 +1,90 @@
 // @flow
 import assert from 'assert';
 import * as napi from '@atlaspack/rust';
-import type {Transformer, PluginOptions} from '@atlaspack/types';
+import type {
+  Resolver,
+  Transformer,
+  PluginOptions,
+  Dependency,
+  FilePath,
+  ResolveResult,
+} from '@atlaspack/types';
 import {workerData} from 'worker_threads';
 import * as module from 'module';
 
 import {AssetCompat} from './compat';
 import type {InnerAsset} from './compat';
+import {jsCallable} from '../jsCallable';
+import type {JsCallable} from '../jsCallable';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 
+type LoadPluginOptions = {|
+  kind: 'resolver',
+  specifier: string,
+  resolveFrom: string,
+|};
+
+type RunResolverResolveOptions = {|
+  key: string,
+  dependency: Dependency,
+  specifier: FilePath,
+|};
+
 export class AtlaspackWorker {
+  #resolvers: Map<string, Resolver<*>>;
+
+  constructor() {
+    this.#resolvers = new Map();
+  }
+
+  loadPlugin: JsCallable<[LoadPluginOptions], Promise<void>> = jsCallable(
+    async ({kind, specifier, resolveFrom}) => {
+      let customRequire = module.createRequire(resolveFrom);
+      let resolvedPath = customRequire.resolve(specifier);
+      // $FlowFixMe
+      let resolvedModule = await import(resolvedPath);
+
+      switch (kind) {
+        case 'resolver':
+          this.#resolvers.set(specifier, resolvedModule);
+          break;
+      }
+    },
+  );
+
+  runResolverResolve: JsCallable<
+    [RunResolverResolveOptions],
+    Promise<?ResolveResult>,
+  > = jsCallable(async ({key, dependency, specifier}) => {
+    const resolver = this.#resolvers.get(key);
+    if (!resolver) {
+      throw new Error('Resolver not found');
+    }
+
+    const result = await resolver.resolve({
+      specifier,
+      dependency,
+      get options() {
+        throw new Error('TODO: ResolverArgs.options');
+      },
+      get logger() {
+        throw new Error('TODO: ResolverArgs.options');
+      },
+      get tracer() {
+        throw new Error('TODO: ResolverArgs.options');
+      },
+      get pipeline() {
+        throw new Error('TODO: ResolverArgs.options');
+      },
+      get config() {
+        throw new Error('TODO: ResolverArgs.options');
+      },
+    });
+
+    return result;
+  });
+
   ping() {
     // console.log('Hi');
   }
