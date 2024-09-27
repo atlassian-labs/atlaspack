@@ -1,4 +1,4 @@
-use atlaspack_core::plugin::Resolution;
+use atlaspack_core::plugin::Resolved;
 use atlaspack_napi_helpers::anyhow_from_napi;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use napi::{JsObject, JsUnknown};
@@ -49,7 +49,7 @@ impl RpcWorker for NodejsWorker {
       .map_err(anyhow_from_napi)
   }
 
-  fn run_resolver_resolve(&self, opts: RunResolverResolve) -> anyhow::Result<Resolution> {
+  fn run_resolver_resolve(&self, opts: RunResolverResolve) -> anyhow::Result<Resolved> {
     self
       .run_resolver_resolve_fn
       .call_with_return_serde(opts)

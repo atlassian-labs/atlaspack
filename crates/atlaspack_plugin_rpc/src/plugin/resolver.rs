@@ -64,11 +64,6 @@ impl ResolverPlugin for RpcResolverPlugin {
       key: self.specifier.clone(),
       dependency: (&*ctx.dependency).clone(),
       specifier: (&*ctx.specifier).to_owned(),
-    })?;
-
-    return Ok(Resolved {
-      invalidations: vec![],
-      resolution: Resolution::Unresolved,
-    });
+    })
   }
 }

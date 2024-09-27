@@ -61,7 +61,8 @@ pub enum Resolution {
   Resolved(ResolvedResolution),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Resolved {
   pub invalidations: Vec<Invalidation>,
   pub resolution: Resolution,

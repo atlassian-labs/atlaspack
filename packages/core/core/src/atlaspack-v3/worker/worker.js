@@ -70,19 +70,25 @@ export class AtlaspackWorker {
     });
 
     if (!result) {
-      return {type: 'unresolved'};
+      return {
+        invalidations: [],
+        resolution: {type: 'unresolved'},
+      };
     }
 
     return {
-      type: 'resolved',
-      filePath: '',
-      canDefer: result.canDefer || false,
-      sideEffects: result.sideEffects || false,
-      code: result.code || undefined,
-      meta: result.meta || undefined,
-      pipeline: result.pipeline || undefined,
-      priority: result.priority && PriorityMap[result.priority],
-      query: result.query && result.query.toString(),
+      invalidations: [],
+      resolution: {
+        type: 'resolved',
+        filePath: '',
+        canDefer: result.canDefer || false,
+        sideEffects: result.sideEffects || false,
+        code: result.code || undefined,
+        meta: result.meta || undefined,
+        pipeline: result.pipeline || undefined,
+        priority: result.priority && PriorityMap[result.priority],
+        query: result.query && result.query.toString(),
+      },
     };
   });
 
@@ -174,20 +180,23 @@ type RunResolverResolveOptions = {|
   specifier: FilePath,
 |};
 
-type RunResolverResolveResult =
-  | {|type: 'unresolved'|}
-  | {|type: 'excluded'|}
-  | {|
-      type: 'resolved',
-      canDefer: boolean,
-      filePath: string,
-      sideEffects: boolean,
-      code?: string,
-      meta?: mixed,
-      pipeline?: string,
-      priority?: number,
-      query?: string,
-    |};
+type RunResolverResolveResult = {|
+  invalidations: Array<*>,
+  resolution:
+    | {|type: 'unresolved'|}
+    | {|type: 'excluded'|}
+    | {|
+        type: 'resolved',
+        canDefer: boolean,
+        filePath: string,
+        sideEffects: boolean,
+        code?: string,
+        meta?: mixed,
+        pipeline?: string,
+        priority?: number,
+        query?: string,
+      |},
+|};
 
 const PriorityMap = {
   sync: 0,

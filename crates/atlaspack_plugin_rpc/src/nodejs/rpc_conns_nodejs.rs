@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use atlaspack_core::plugin::Resolution;
+use atlaspack_core::plugin::Resolved;
 
 use super::NodejsWorker;
 
@@ -50,7 +50,7 @@ impl RpcWorker for NodejsWorkerFarm {
     Ok(())
   }
 
-  fn run_resolver_resolve(&self, opts: crate::RunResolverResolve) -> anyhow::Result<Resolution> {
+  fn run_resolver_resolve(&self, opts: crate::RunResolverResolve) -> anyhow::Result<Resolved> {
     self.next_worker().run_resolver_resolve(opts)
   }
 
