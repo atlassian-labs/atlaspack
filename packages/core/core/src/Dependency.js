@@ -80,7 +80,6 @@ export function createDependencyId({
     priority: priority ? Priority[priority] : Priority.sync,
     packageConditions,
   };
-  console.log(params);
   return createDependencyIdRust(params);
 }
 

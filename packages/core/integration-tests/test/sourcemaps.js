@@ -151,7 +151,7 @@ function checkSourceMapping({
   );
 }
 
-describe.only('sourcemaps', function () {
+describe.v2('sourcemaps', function () {
   it('Should create a basic browser sourcemap', async function () {
     let sourceFilename = path.join(
       __dirname,
