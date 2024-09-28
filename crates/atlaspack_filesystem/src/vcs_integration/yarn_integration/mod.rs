@@ -1,0 +1,188 @@
+use std::{
+  collections::HashMap,
+  path::{Path, PathBuf},
+};
+
+use serde::{Deserialize, Serialize};
+
+pub mod yarn_lock_parser;
+
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum YarnLockEntry {
+  Resolution(YarnResolution),
+  #[allow(unused)]
+  Other(serde_yaml::Value),
+}
+
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+pub struct YarnResolution {
+  resolution: String,
+  checksum: Option<String>,
+}
+
+impl YarnResolution {
+  pub fn resolution(&self) -> &str {
+    &self.resolution
+  }
+
+  pub fn checksum(&self) -> Option<&str> {
+    self.checksum.as_deref()
+  }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct YarnLock {
+  inner: HashMap<String, YarnLockEntry>,
+}
+
+impl YarnLock {
+  pub fn inner(&self) -> &HashMap<String, YarnLockEntry> {
+    &self.inner
+  }
+}
+
+pub fn parse_yarn_lock(contents: &str) -> anyhow::Result<YarnLock> {
+  let yarn_lock: YarnLock = serde_yaml::from_str(&contents)?;
+  yarn_lock.validate()?;
+  Ok(yarn_lock)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct YarnDependencyState {
+  locations: Vec<String>,
+}
+
+impl YarnDependencyState {
+  pub fn locations(&self) -> &[String] {
+    &self.locations
+  }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+enum YarnStateFileEntry {
+  Dependency(YarnDependencyState),
+  #[allow(unused)]
+  Other(serde_yaml::Value),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(transparent)]
+pub struct YarnStateFile {
+  inner: HashMap<String, YarnStateFileEntry>,
+}
+
+impl YarnStateFile {
+  pub fn validate(&self) -> anyhow::Result<()> {
+    for (key, value) in &self.inner {
+      if matches!(value, YarnStateFileEntry::Other(_)) && key != "__metadata" {
+        return Err(anyhow::anyhow!("Invalid yarn-state.yml entry: {}", key));
+      }
+    }
+    Ok(())
+  }
+
+  pub fn get(&self, key: &str) -> Option<&YarnDependencyState> {
+    match self.inner.get(key) {
+      Some(YarnStateFileEntry::Dependency(dependency_state)) => Some(dependency_state),
+      _ => None,
+    }
+  }
+}
+
+impl YarnLock {
+  pub fn validate(&self) -> anyhow::Result<()> {
+    for (key, value) in &self.inner {
+      if matches!(value, YarnLockEntry::Other(_)) && key != "__metadata" {
+        return Err(anyhow::anyhow!("Invalid yarn.lock entry: {}", key));
+      }
+    }
+    Ok(())
+  }
+
+  pub fn get(&self, key: &str) -> Option<&YarnResolution> {
+    match self.inner.get(key) {
+      Some(YarnLockEntry::Resolution(resolution)) => Some(resolution),
+      _ => None,
+    }
+  }
+
+  pub fn iter(&self) -> impl Iterator<Item = (&String, &YarnResolution)> {
+    self.inner.iter().filter_map(|(key, value)| match value {
+      YarnLockEntry::Resolution(resolution) => Some((key, resolution)),
+      _ => None,
+    })
+  }
+}
+
+pub fn parse_yarn_state_file(node_modules_directory: &Path) -> anyhow::Result<YarnStateFile> {
+  let state: YarnStateFile = serde_yaml::from_str(&std::fs::read_to_string(
+    node_modules_directory.join(".yarn-state.yml"),
+  )?)?;
+  state.validate()?;
+  Ok(state)
+}
+
+pub fn generate_events(
+  node_modules_path: &Path,
+  old_yarn_lock: &YarnLock,
+  new_yarn_lock: &YarnLock,
+  state: &YarnStateFile,
+) -> Vec<PathBuf> {
+  let changed_resolutions = new_yarn_lock
+    .iter()
+    .filter_map(|(package_name, new_resolution)| {
+      let Some(old_resolution) = old_yarn_lock.get(package_name) else {
+        return Some(new_resolution);
+      };
+
+      if old_resolution.resolution != new_resolution.resolution {
+        Some(new_resolution)
+      } else {
+        None
+      }
+    });
+
+  let mut changed_paths = vec![];
+  for resolution in changed_resolutions {
+    if let Some(dependency_state) = state.get(&resolution.resolution) {
+      for location in &dependency_state.locations {
+        changed_paths.push(node_modules_path.join(location));
+      }
+    }
+  }
+
+  changed_paths
+}
+
+#[cfg(test)]
+mod test {
+  use std::path::PathBuf;
+
+  use super::*;
+
+  fn get_git_root() -> PathBuf {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    while !path.join(".git").exists() {
+      path = path.parent().unwrap().to_path_buf();
+    }
+    path
+  }
+
+  #[test]
+  fn test_parse_yarn_lock() -> anyhow::Result<()> {
+    let repository_root = get_git_root();
+    let path = repository_root.join("yarn.lock");
+    let result = parse_yarn_lock(&std::fs::read_to_string(&path)?)?;
+
+    let node_modules_path = repository_root.join("node_modules");
+    let state_file = parse_yarn_state_file(&node_modules_path)?;
+
+    assert!(result.iter().collect::<Vec<_>>().len() > 1);
+    assert!(state_file.inner.len() > 1);
+
+    Ok(())
+  }
+}

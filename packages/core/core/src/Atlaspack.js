@@ -57,7 +57,7 @@ import {
   fromProjectPathRelative,
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
-import {setFeatureFlags} from '@atlaspack/feature-flags';
+import {getFeatureFlag, setFeatureFlags} from '@atlaspack/feature-flags';
 import {AtlaspackV3, toFileSystemV3} from './atlaspack-v3';
 
 registerCoreWithSerializer();
@@ -492,7 +492,9 @@ export default class Atlaspack {
 
         let isInvalid = await this.#requestTracker.respondToFSEvents(
           events,
-          Number.POSITIVE_INFINITY,
+          getFeatureFlag('fixQuadraticCacheInvalidation')
+            ? 20000
+            : Number.POSITIVE_INFINITY,
         );
         if (isInvalid && this.#watchQueue.getNumWaiting() === 0) {
           if (this.#watchAbortController) {
