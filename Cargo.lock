@@ -382,17 +382,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_fs",
- "clap 4.5.11",
- "git2",
- "hex",
  "is_elevated",
  "mockall",
- "nom",
- "serde",
- "serde_json",
- "serde_yaml",
- "tracing",
- "tracing-subscriber",
  "xxhash-rust",
 ]
 
@@ -544,6 +535,22 @@ dependencies = [
  "anyhow",
  "atlaspack_core",
  "atlaspack_filesystem",
+]
+
+[[package]]
+name = "atlaspack_vcs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 4.5.11",
+ "git2",
+ "hex",
+ "nom",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

@@ -1,4 +1,4 @@
-use atlaspack_filesystem::vcs_integration::{get_changed_files, FailureMode, VCSState};
+use atlaspack_vcs::{get_changed_files, FailureMode, VCSState};
 use clap::Parser;
 
 #[derive(Debug, clap::Parser)]

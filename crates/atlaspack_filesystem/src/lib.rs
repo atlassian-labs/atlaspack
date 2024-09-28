@@ -11,9 +11,6 @@ pub mod search;
 /// File-system implementation using std::fs and a canonicalize cache
 pub mod os_file_system;
 
-/// Integration with Git for listing changes since a certain time
-pub mod vcs_integration;
-
 /// FileSystem abstraction instance
 ///
 /// This should be `OsFileSystem` for non-testing environments and `InMemoryFileSystem` for testing.

@@ -126,7 +126,7 @@ pub fn parse_yarn_state_file(node_modules_directory: &Path) -> anyhow::Result<Ya
 }
 
 pub fn generate_events(
-  node_modules_path: &Path,
+  node_modules_parent_path: &Path,
   old_yarn_lock: &YarnLock,
   new_yarn_lock: &YarnLock,
   state: &YarnStateFile,
@@ -149,7 +149,7 @@ pub fn generate_events(
   for resolution in changed_resolutions {
     if let Some(dependency_state) = state.get(&resolution.resolution) {
       for location in &dependency_state.locations {
-        changed_paths.push(node_modules_path.join(location));
+        changed_paths.push(node_modules_parent_path.join(location));
       }
     }
   }
@@ -182,6 +182,37 @@ mod test {
 
     assert!(result.iter().collect::<Vec<_>>().len() > 1);
     assert!(state_file.inner.len() > 1);
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_generate_events() -> anyhow::Result<()> {
+    let node_modules_parent_path = PathBuf::from("");
+    let cargo_path = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let samples_path = cargo_path.join("samples");
+    let old_yarn_lock_path = samples_path.join("old/yarn-lock");
+    let new_yarn_lock_path = samples_path.join("new/yarn-lock");
+    let yarn_state_path = samples_path.join("new/yarn-state.yml");
+
+    let old_yarn_lock = parse_yarn_lock(&std::fs::read_to_string(old_yarn_lock_path)?)?;
+    let new_yarn_lock = parse_yarn_lock(&std::fs::read_to_string(new_yarn_lock_path)?)?;
+    let yarn_state: YarnStateFile =
+      serde_yaml::from_str(&std::fs::read_to_string(yarn_state_path)?)?;
+    yarn_state.validate()?;
+
+    let events = generate_events(
+      &node_modules_parent_path,
+      &old_yarn_lock,
+      &new_yarn_lock,
+      &yarn_state,
+    );
+    let events = events
+      .iter()
+      .map(|path| path.to_str().unwrap())
+      .collect::<Vec<_>>();
+
+    assert_eq!(events, vec!["node_modules/lodash"]);
 
     Ok(())
   }

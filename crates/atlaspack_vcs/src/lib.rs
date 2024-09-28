@@ -187,7 +187,7 @@ pub fn get_changed_files(
       node_modules_path.display()
     );
     let node_modules_changes = yarn_integration::generate_events(
-      &node_modules_path,
+      &node_modules_path.parent().unwrap(),
       &old_yarn_lock,
       &new_yarn_lock,
       &yarn_state,
