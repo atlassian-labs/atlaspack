@@ -3,14 +3,9 @@
 import path from 'path';
 import Git from 'nodegit';
 import {NodeFS} from './NodeFS';
+import {getVcsStateSnapshot, getEventsSince} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types-internal';
 import type {Event, Options as WatcherOptions} from '@parcel/watcher';
-
-interface VCSState {}
-
-function getVCSState(): VCSState {
-  return {};
-}
 
 export class NodeVCSAwareFS extends NodeFS {
   getEventsSince(
@@ -26,6 +21,8 @@ export class NodeVCSAwareFS extends NodeFS {
       nativeSnapshotPath,
       opts,
     );
+    // TODO: we need the git repo path
+    const vcsEventsSince = getEventsSince();
 
     return watcherEventsSince;
   }
@@ -43,7 +40,8 @@ export class NodeVCSAwareFS extends NodeFS {
     );
     await this.watcher().writeSnapshot(dir, nativeSnapshotPath, opts);
 
-    const vcsState = await getVCSState();
+    // TODO: we need the git repo path, pass the exclude patterns
+    const vcsState = await getVcsStateSnapshot();
 
     const snapshotContents = {
       vcsState,

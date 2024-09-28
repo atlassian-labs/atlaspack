@@ -283,6 +283,7 @@ dependencies = [
  "atlaspack_package_manager",
  "atlaspack_plugin_optimizer_inline_requires",
  "atlaspack_plugin_transformer_js",
+ "atlaspack_vcs",
  "crossbeam-channel",
  "getrandom",
  "glob",
