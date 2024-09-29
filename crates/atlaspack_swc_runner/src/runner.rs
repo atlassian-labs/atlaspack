@@ -106,7 +106,7 @@ fn run_with_transformation<R>(
   transform: impl FnOnce(RunContext, &mut Module) -> R,
 ) -> Result<RunWithTransformationOutput<R>, RunWithTransformationError> {
   let source_map = Lrc::new(SourceMap::default());
-  let source_file = source_map.new_source_file(FileName::Anon, code.into());
+  let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), code.into());
 
   let lexer = Lexer::new(
     Default::default(),

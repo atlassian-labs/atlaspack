@@ -565,6 +565,7 @@ impl<'a> Fold for Hoist<'a> {
                   declare: false,
                   kind: VarDeclKind::Var,
                   span: DUMMY_SP,
+                  ctxt: SyntaxContext::empty(),
                   decls: vec![VarDeclarator {
                     definite: false,
                     span: DUMMY_SP,
@@ -633,6 +634,7 @@ impl<'a> Fold for Hoist<'a> {
                           if !decls.is_empty() {
                             let var = VarDecl {
                               span: var.span,
+                              ctxt: var.ctxt,
                               kind: var.kind,
                               declare: var.declare,
                               decls: std::mem::take(&mut decls),
@@ -676,6 +678,7 @@ impl<'a> Fold for Hoist<'a> {
                             if !decls.is_empty() {
                               let var = VarDecl {
                                 span: var.span,
+                                ctxt: var.ctxt,
                                 kind: var.kind,
                                 declare: var.declare,
                                 decls: std::mem::take(&mut decls),
@@ -717,6 +720,7 @@ impl<'a> Fold for Hoist<'a> {
                     if self.module_items.len() > items_len && !decls.is_empty() {
                       let var = VarDecl {
                         span: var.span,
+                        ctxt: var.ctxt,
                         kind: var.kind,
                         declare: var.declare,
                         decls: std::mem::take(&mut decls),
@@ -733,6 +737,7 @@ impl<'a> Fold for Hoist<'a> {
                   if !decls.is_empty() {
                     let var = VarDecl {
                       span: var.span,
+                      ctxt: var.ctxt,
                       kind: var.kind,
                       declare: var.declare,
                       decls,
@@ -938,7 +943,7 @@ impl<'a> Fold for Hoist<'a> {
           ));
         }
 
-        if let Some(source) = match_import(&node, self.collect.ignore_mark) {
+        if let Some(source) = match_import(&node) {
           self.add_require(&source, ImportKind::DynamicImport);
           let name: JsWord = format!("${}$importAsync${:x}", self.module_id, hash!(source)).into();
           self.dynamic_imports.insert(name.clone(), source.clone());
@@ -951,7 +956,7 @@ impl<'a> Fold for Hoist<'a> {
               kind: ImportKind::DynamicImport,
             });
           }
-          return Expr::Ident(Ident::new(name, call.span));
+          return Expr::Ident(Ident::new(name, call.span, call.ctxt));
         }
 
         if let Some((source_true, source_false)) =
@@ -1135,15 +1140,15 @@ impl<'a> Fold for Hoist<'a> {
     }
 
     if node.sym == js_word!("global") && is_unresolved(&node, self.unresolved_mark) {
-      return Ident::new("$parcel$global".into(), node.span);
+      return Ident::new("$parcel$global".into(), node.span, node.ctxt);
     }
 
-    if node.span.has_mark(self.collect.global_mark)
+    if node.ctxt.has_mark(self.collect.global_mark)
       && !is_unresolved(&node, self.unresolved_mark)
       && !self.collect.should_wrap
     {
       let new_name: JsWord = format!("${}$var${}", self.module_id, node.sym).into();
-      return Ident::new(new_name, node.span);
+      return Ident::new(new_name, node.span, node.ctxt);
     }
 
     node
@@ -1195,12 +1200,14 @@ impl<'a> Fold for Hoist<'a> {
               declare: false,
               kind: VarDeclKind::Var,
               span: node.span,
+              ctxt: ident.ctxt,
               decls: vec![VarDeclarator {
                 definite: false,
                 span: node.span,
                 name: Pat::Ident(BindingIdent::from(Ident::new(
                   ident.id.sym.clone(),
                   DUMMY_SP,
+                  ident.ctxt,
                 ))),
                 init: None,
               }],
@@ -1231,7 +1238,7 @@ impl<'a> Fold for Hoist<'a> {
   fn fold_prop(&mut self, node: Prop) -> Prop {
     match node {
       Prop::Shorthand(ident) => Prop::KeyValue(KeyValueProp {
-        key: PropName::Ident(Ident::new(ident.sym.clone(), DUMMY_SP)),
+        key: PropName::Ident(IdentName::new(ident.sym.clone(), DUMMY_SP)),
         value: Box::new(Expr::Ident(ident.fold_with(self))),
       }),
       _ => node.fold_children_with(self),
@@ -1253,7 +1260,7 @@ impl<'a> Fold for Hoist<'a> {
     // var {a, b} = foo; -> var {a: $id$var$a, b: $id$var$b} = foo;
     match node {
       ObjectPatProp::Assign(assign) => ObjectPatProp::KeyValue(KeyValuePatProp {
-        key: PropName::Ident(Ident::new(assign.key.sym.clone(), DUMMY_SP)),
+        key: PropName::Ident(IdentName::new(assign.key.sym.clone(), DUMMY_SP)),
         value: Box::new(match assign.value {
           Some(value) => Pat::Assign(AssignPat {
             left: Box::new(Pat::Ident(assign.key.fold_with(self))),
@@ -1318,11 +1325,11 @@ impl<'a> Hoist<'a> {
       loc,
       kind,
     });
-    Ident::new(new_name, span)
+    Ident::new_no_ctxt(new_name, span)
   }
 
   fn get_require_ident(&self, local: &JsWord) -> Ident {
-    Ident::new(
+    Ident::new_no_ctxt(
       format!("${}$require${}", self.module_id, local).into(),
       DUMMY_SP,
     )
@@ -1347,9 +1354,7 @@ impl<'a> Hoist<'a> {
       is_esm,
     });
 
-    let mut span = span;
-    span.ctxt = SyntaxContext::empty();
-    Ident::new(new_name, span)
+    Ident::new_no_ctxt(new_name, span)
   }
 
   fn handle_non_const_require(&mut self, v: &VarDeclarator, source: &JsWord) {
@@ -1381,6 +1386,7 @@ impl<'a> Hoist<'a> {
             declare: false,
             kind: VarDeclKind::Var,
             span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
             decls: vec![VarDeclarator {
               definite: false,
               span: DUMMY_SP,
@@ -1417,7 +1423,7 @@ mod tests {
 
   fn parse(code: &str) -> (Collect, String, HoistResult) {
     let source_map = Lrc::new(SourceMap::default());
-    let source_file = source_map.new_source_file(FileName::Anon, code.into());
+    let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), code.into());
 
     let comments = SingleThreadedComments::default();
     let lexer = Lexer::new(
