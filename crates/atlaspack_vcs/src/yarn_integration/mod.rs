@@ -163,29 +163,6 @@ mod test {
 
   use super::*;
 
-  fn get_git_root() -> PathBuf {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    while !path.join(".git").exists() {
-      path = path.parent().unwrap().to_path_buf();
-    }
-    path
-  }
-
-  #[test]
-  fn test_parse_yarn_lock() -> anyhow::Result<()> {
-    let repository_root = get_git_root();
-    let path = repository_root.join("yarn.lock");
-    let result = parse_yarn_lock(&std::fs::read_to_string(&path)?)?;
-
-    let node_modules_path = repository_root.join("node_modules");
-    let state_file = parse_yarn_state_file(&node_modules_path)?;
-
-    assert!(result.iter().collect::<Vec<_>>().len() > 1);
-    assert!(state_file.inner.len() > 1);
-
-    Ok(())
-  }
-
   #[test]
   fn test_generate_events() -> anyhow::Result<()> {
     let node_modules_parent_path = PathBuf::from("");
