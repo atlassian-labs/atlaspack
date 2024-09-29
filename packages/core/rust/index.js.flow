@@ -198,4 +198,33 @@ export interface InlineRequiresOptimizerResult {
   sourceMap?: string;
 }
 
-declare export function runInlineRequiresOptimizer(input: InlineRequiresOptimizerInput): InlineRequiresOptimizerResult;
+declare export function runInlineRequiresOptimizer(
+  input: InlineRequiresOptimizerInput,
+): InlineRequiresOptimizerResult;
+
+export interface VCSFile {
+  path: string;
+  hash: number;
+}
+
+export interface YarnState {
+  yarnLockPath: string;
+  yarnLock: mixed;
+  yarnState: mixed;
+}
+
+export interface VCSState {
+  gitHash: string;
+  dirtyFiles: VCSFile[];
+  yarnStates: YarnState[];
+}
+
+declare export function getVcsStateSnapshot(
+  path: string,
+  excludePatterns: Array<string>,
+): VCSState;
+declare export function getEventsSince(
+  repoPath: string,
+  oldRev: string,
+  newRev?: string | void | null,
+): Array<string>;
