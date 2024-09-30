@@ -47,9 +47,3 @@ pub struct PluginOptions {
   pub mode: BuildMode,
   pub project_root: PathBuf,
 }
-
-impl PluginOptions {
-  pub fn should_scope_hoist(&self) -> bool {
-    self.mode == BuildMode::Production
-  }
-}
