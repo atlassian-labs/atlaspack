@@ -13,10 +13,6 @@ pub struct NodejsWorkerFarm {
   workers: Vec<NodejsWorker>,
 }
 
-impl std::hash::Hash for NodejsWorkerFarm {
-  fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {}
-}
-
 impl NodejsWorkerFarm {
   pub fn new(workers: Vec<NodejsWorker>) -> Self {
     Self {

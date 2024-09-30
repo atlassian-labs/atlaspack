@@ -13,7 +13,6 @@ use crate::LoadPluginOptions;
 use crate::RpcWorkerRef;
 use crate::RunResolverResolve;
 
-#[derive(Hash)]
 pub struct RpcResolverPlugin {
   resolve_from: PathBuf,
   specifier: String,

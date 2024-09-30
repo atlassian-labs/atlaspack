@@ -1,10 +1,13 @@
+use std::any::Any;
 use std::fmt::Debug;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use dyn_hash::DynHash;
 use serde::Deserialize;
 
+use crate::hash::IdentifierHasher;
 use crate::types::Dependency;
 use crate::types::Invalidation;
 use crate::types::JSONObject;
@@ -72,12 +75,16 @@ pub struct Resolved {
 ///
 /// Resolvers run in a pipeline until one of them return a result.
 ///
-pub trait ResolverPlugin: Debug + DynHash + Send + Sync {
+pub trait ResolverPlugin: Any + Debug + Send + Sync {
+  /// Unique ID for this resolver
+  fn id(&self) -> u64 {
+    let mut hasher = IdentifierHasher::new();
+    self.type_id().hash(&mut hasher);
+    hasher.finish()
+  }
   /// Determines what the dependency specifier resolves to
   fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error>;
 }
-
-dyn_hash::hash_trait_object!(ResolverPlugin);
 
 #[cfg(test)]
 mod tests {
