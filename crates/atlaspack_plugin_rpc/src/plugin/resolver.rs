@@ -4,7 +4,6 @@ use std::path::PathBuf;
 
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::PluginContext;
-use atlaspack_core::plugin::Resolution;
 use atlaspack_core::plugin::ResolveContext;
 use atlaspack_core::plugin::Resolved;
 use atlaspack_core::plugin::ResolverPlugin;
@@ -14,19 +13,12 @@ use crate::LoadPluginOptions;
 use crate::RpcWorkerRef;
 use crate::RunResolverResolve;
 
+#[derive(Hash)]
 pub struct RpcResolverPlugin {
   resolve_from: PathBuf,
   specifier: String,
   started: bool,
   rpc_worker: RpcWorkerRef,
-}
-
-impl std::hash::Hash for RpcResolverPlugin {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    self.resolve_from.hash(state);
-    self.specifier.hash(state);
-    self.started.hash(state);
-  }
 }
 
 impl Debug for RpcResolverPlugin {

@@ -15,6 +15,10 @@ pub struct RpcHostNodejs {
   rx_worker: Mutex<Receiver<NodejsWorker>>,
 }
 
+impl std::hash::Hash for RpcHostNodejs {
+  fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {}
+}
+
 impl RpcHostNodejs {
   pub fn new(node_workers: usize, rx_worker: Receiver<NodejsWorker>) -> napi::Result<Self> {
     Ok(Self {

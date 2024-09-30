@@ -80,7 +80,7 @@ export class AtlaspackWorker {
       invalidations: [],
       resolution: {
         type: 'resolved',
-        filePath: result.filePath,
+        filePath: result.filePath || '',
         canDefer: result.canDefer || false,
         sideEffects: result.sideEffects || false,
         code: result.code || undefined,

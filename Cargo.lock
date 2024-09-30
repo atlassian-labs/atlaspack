@@ -410,6 +410,7 @@ dependencies = [
  "atlaspack_config",
  "atlaspack_core",
  "atlaspack_napi_helpers",
+ "dyn-hash",
  "napi",
  "once_cell",
  "parking_lot",

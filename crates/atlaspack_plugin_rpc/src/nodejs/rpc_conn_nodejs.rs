@@ -16,6 +16,10 @@ pub struct NodejsWorker {
   transformer_register_fn: JsCallable,
 }
 
+impl std::hash::Hash for NodejsWorker {
+  fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {}
+}
+
 impl NodejsWorker {
   pub fn new(delegate: JsObject) -> napi::Result<Self> {
     Ok(Self {
