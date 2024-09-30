@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-#[derive(Debug, PartialEq, Clone)]
+use serde::Deserialize;
+
+#[derive(Debug, PartialEq, Clone, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum Invalidation {
   FileChange(PathBuf),
 }

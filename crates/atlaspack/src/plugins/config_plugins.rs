@@ -166,7 +166,15 @@ impl Plugins for ConfigPlugins {
         continue;
       }
 
-      resolvers.push(Box::new(RpcResolverPlugin::new(&self.ctx, resolver)?));
+      let Some(rpc_worker) = &self.rpc_worker else {
+        anyhow::bail!("Unable to initialize JavaScript plugin")
+      };
+
+      resolvers.push(Box::new(RpcResolverPlugin::new(
+        &self.ctx,
+        resolver,
+        rpc_worker.clone(),
+      )?));
     }
 
     Ok(resolvers)
