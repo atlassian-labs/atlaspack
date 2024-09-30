@@ -1,6 +1,7 @@
+use std::ffi::OsStr;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::u64;
 
@@ -9,7 +10,7 @@ use serde::Serialize;
 
 use atlaspack_filesystem::FileSystemRef;
 
-use super::bundle::BundleBehavior;
+use super::bundle::MaybeBundleBehavior;
 use super::environment::Environment;
 use super::file_type::FileType;
 use super::json::JSONObject;
@@ -55,19 +56,42 @@ impl From<String> for Code {
   }
 }
 
-fn create_asset_id(
-  env: &Environment,
-  file_path: &PathBuf,
-  pipeline: &Option<String>,
-  query: &Option<String>,
-  unique_key: &Option<String>,
-) -> String {
-  let mut hasher = crate::hash::IdentifierHasher::default();
+#[derive(Debug)]
+pub struct CreateAssetIdParams<'a> {
+  pub env: &'a Environment,
+  /// This is str because we need to hashes are ran against project relative paths
+  /// equal canonical paths, but with different representations will not be
+  /// considered the same. All paths should be normalized to be project relative.
+  pub file_path: &'a str,
+  pub code: Option<&'a str>,
+  pub pipeline: Option<&'a str>,
+  pub file_type: FileType,
+  pub query: Option<&'a str>,
+  /// This should be set to None if it's equal to the asset-id and set by the
+  /// constructor otherwise the values will differ. See [`Asset::new`] for more.
+  pub unique_key: Option<&'a str>,
+}
 
-  env.hash(&mut hasher);
+pub fn create_asset_id(params: CreateAssetIdParams) -> String {
+  tracing::debug!(?params, "Creating asset id");
+
+  let CreateAssetIdParams {
+    env,
+    file_path,
+    code,
+    pipeline,
+    file_type,
+    query,
+    unique_key,
+  } = params;
+  let environment_id = env.id();
+  let mut hasher = crate::hash::IdentifierHasher::default();
+  environment_id.hash(&mut hasher);
   file_path.hash(&mut hasher);
   pipeline.hash(&mut hasher);
+  code.hash(&mut hasher);
   query.hash(&mut hasher);
+  file_type.hash(&mut hasher);
   unique_key.hash(&mut hasher);
 
   // Ids must be 16 characters for scope hoisting to replace imports correctly in REPLACEMENT_RE
@@ -86,7 +110,7 @@ pub struct Asset {
   pub id: AssetId,
 
   /// Controls which bundle the asset is placed into
-  pub bundle_behavior: BundleBehavior,
+  pub bundle_behavior: MaybeBundleBehavior,
 
   /// The environment of the asset
   pub env: Arc<Environment>,
@@ -123,7 +147,10 @@ pub struct Asset {
   /// This can be used to find assets during packaging, or to create dependencies between multiple
   /// assets returned by a transformer by using the unique key as the dependency specifier.
   ///
-  /// TODO: Make this non-nullable and disallow creating assets without it.
+  /// This is optional because only when transformers add identifiable assets we should add this.
+  ///
+  /// We should not add this set to the asset ID.
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub unique_key: Option<String>,
 
   /// Whether this asset can be omitted if none of its exports are being used
@@ -169,10 +196,14 @@ pub struct Asset {
   /// export const MY_CONSTANT = 'some-value';
   /// ```
   pub is_constant_module: bool,
+
+  pub config_path: Option<String>,
+  pub config_key_path: Option<String>,
 }
 
 impl Asset {
   pub fn new(
+    project_root: &Path,
     env: Arc<Environment>,
     file_path: PathBuf,
     resolver_code: Option<String>,
@@ -191,11 +222,28 @@ impl Asset {
       Code::new(code_from_disk)
     };
 
-    let is_source = !file_path.ancestors().any(|p| p.ends_with("/node_modules"));
+    let is_source = !file_path
+      .ancestors()
+      .any(|p| p.file_name() == Some(&OsStr::new("node_modules")));
 
+    let asset_id = create_asset_id(CreateAssetIdParams {
+      env: &env,
+      file_path: file_path
+        .strip_prefix(project_root)
+        .unwrap_or_else(|_| file_path.as_path())
+        .as_os_str()
+        .to_str()
+        .unwrap(),
+      code: None,
+      pipeline: pipeline.as_deref(),
+      query: query.as_deref(),
+      unique_key: None,
+      file_type: file_type.clone(),
+    });
     Ok(Self {
       code: Arc::new(code),
-      id: create_asset_id(&env, &file_path, &pipeline, &query, &None),
+      id: asset_id.clone(),
+      unique_key: None,
       env,
       file_path,
       file_type,

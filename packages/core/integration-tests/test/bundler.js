@@ -1806,16 +1806,16 @@ describe.v2('bundler', function () {
           assets: ['index.html'],
         },
         {
-          assets: ['a.js', 'i.js'],
-        },
-        {
-          assets: ['vendor.js', 'b.js', 'j.js'],
-        },
-        {
-          assets: ['c.js', 'd.js', 'e.js', 'f.js', 'g.js', 'h.js'],
-        },
-        {
           assets: ['esmodule-helpers.js', 'index.js'],
+        },
+        {
+          assets: ['b.js', 'f.js', 'g.js', 'h.js', 'i.js', 'j.js'],
+        },
+        {
+          assets: ['a.js', 'c.js'],
+        },
+        {
+          assets: ['d.js', 'e.js', 'vendor.js'],
         },
       ]);
     });

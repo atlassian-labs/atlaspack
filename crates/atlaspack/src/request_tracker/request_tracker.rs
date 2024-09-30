@@ -120,7 +120,6 @@ impl RequestTracker {
       drop(tx);
 
       while let Ok(request_queue_message) = rx.recv() {
-        tracing::debug!("Received message {:?}", request_queue_message);
         match request_queue_message {
           RequestQueueMessage::RunRequest {
             message:
@@ -132,6 +131,8 @@ impl RequestTracker {
             tx,
           } => {
             let request_id = request.id();
+            tracing::trace!(?request_id, ?parent_request_id, "Run request");
+
             if self.prepare_request(request_id)? {
               let context = RunRequestContext::new(
                 self.config_loader.clone(),
@@ -177,6 +178,7 @@ impl RequestTracker {
             result,
             response_tx,
           } => {
+            tracing::trace!(?request_id, ?parent_request_id, "Request result");
             self.store_request(request_id, &result)?;
             self.link_request_to_parent(request_id, parent_request_id)?;
 

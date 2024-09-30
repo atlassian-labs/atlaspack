@@ -3,6 +3,7 @@
 import {type PostHTMLNode, render} from 'posthtml-render';
 import {parseHTML, transformerOpts} from '../src/HTMLTransformer';
 import assert from 'assert';
+import type {PluginOptions} from '../../../core/types-internal/src';
 
 function normalizeHTML(code: string): string {
   const ast = parseHTML(code, true);
@@ -23,9 +24,14 @@ function renderHTML(newAST: {|program: PostHTMLNode|}): string {
 
 async function runTestTransform(
   code: string,
-  options: {|shouldScopeHoist: boolean, supportsEsmodules: boolean|} = {
+  options: {|
+    shouldScopeHoist: boolean,
+    supportsEsmodules: boolean,
+    hmrOptions: PluginOptions['hmrOptions'],
+  |} = {
     shouldScopeHoist: true,
     supportsEsmodules: true,
+    hmrOptions: null,
   },
 ) {
   const dependencies = [];
@@ -37,7 +43,7 @@ async function runTestTransform(
     },
     addURLDependency(url, opts) {
       dependencies.push({url, opts});
-      return 'dependency-id';
+      return `dependency-id::${url}`;
     },
     env: {
       shouldScopeHoist: options.shouldScopeHoist,
@@ -55,7 +61,9 @@ async function runTestTransform(
 
   const transformInput = {
     asset,
-    options: {},
+    options: {
+      hmrOptions: options.hmrOptions,
+    },
   };
   // $FlowFixMe
   const transformResult = await transformerOpts.transform(transformInput);
@@ -107,7 +115,7 @@ describe('HTMLTransformer', () => {
       `
 <html>
   <body>
-    <script src="dependency-id"></script>
+    <script src="dependency-id::input.js"></script>
   </body>
 </html>
     `,
@@ -167,8 +175,8 @@ describe('HTMLTransformer', () => {
       `
 <html>
   <body>
-    <script src="dependency-id"></script>
-    <script src="dependency-id"></script>
+    <script src="dependency-id::input1.js"></script>
+    <script src="dependency-id::input2.js"></script>
   </body>
 </html>
     `,
@@ -211,7 +219,7 @@ describe('HTMLTransformer', () => {
       `
 <html>
   <body>
-    <script src="dependency-id" type="module"></script>
+    <script src="dependency-id::input.js" type="module"></script>
   </body>
 </html>
     `,
@@ -246,14 +254,15 @@ describe('HTMLTransformer', () => {
       await runTestTransform(code, {
         shouldScopeHoist: true,
         supportsEsmodules: false,
+        hmrOptions: null,
       });
     assert.equal(
       normalizeHTML(outputCode),
       normalizeHTML(`
 <html>
   <body>
-    <script src="dependency-id" type="module"></script>
-    <script src="dependency-id" nomodule="" defer=""></script>
+    <script src="dependency-id::input.js" type="module"></script>
+    <script src="dependency-id::input.js" nomodule="" defer=""></script>
   </body>
 </html>
     `),
@@ -286,5 +295,67 @@ describe('HTMLTransformer', () => {
     ]);
 
     assert.deepEqual(transformResult, [inputAsset]);
+  });
+
+  it('adds an HMR tag if there are HMR options set', async () => {
+    const code = `
+<html>
+  <body>
+    <script src="input.js"></script>
+  </body>
+</html>
+    `;
+    const {dependencies, outputCode, transformResult, inputAsset} =
+      await runTestTransform(code, {
+        shouldScopeHoist: true,
+        supportsEsmodules: true,
+        hmrOptions: {
+          port: 1234,
+          host: 'localhost',
+        },
+      });
+    assert.equal(
+      normalizeHTML(outputCode),
+      normalizeHTML(`
+<html>
+  <body>
+    <script src="dependency-id::input.js"></script>
+    <script src="dependency-id::hmr.js"></script>
+  </body>
+</html>
+    `),
+    );
+    assert.deepEqual(normalizeDependencies(dependencies), [
+      {
+        url: 'input.js',
+        opts: {
+          bundleBehavior: 'isolated',
+          env: {
+            loc: null,
+            outputFormat: 'global',
+            sourceType: 'script',
+          },
+          priority: 'parallel',
+        },
+      },
+      {
+        url: 'hmr.js',
+        opts: {
+          env: {
+            loc: null,
+          },
+          priority: 'parallel',
+        },
+      },
+    ]);
+
+    assert.deepEqual(transformResult, [
+      inputAsset,
+      {
+        content: '',
+        type: 'js',
+        uniqueKey: 'hmr.js',
+      },
+    ]);
   });
 });

@@ -1,22 +1,23 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::num::NonZeroU32;
 
 use serde::Deserialize;
 use serde::Serialize;
-use serde_repr::Deserialize_repr;
-use serde_repr::Serialize_repr;
+
+pub use output_format::OutputFormat;
+
+use crate::hash::IdentifierHasher;
+
+use super::source::SourceLocation;
 
 use self::engines::Engines;
-use super::source::SourceLocation;
 
 pub mod browsers;
 pub mod engines;
 mod output_format;
 pub mod version;
-
-pub use output_format::OutputFormat;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct EnvironmentId(pub NonZeroU32);
@@ -25,7 +26,7 @@ pub struct EnvironmentId(pub NonZeroU32);
 ///
 /// This influences how Atlaspack compiles your code, including what syntax to transpile.
 ///
-#[derive(Clone, Debug, Default, Deserialize, Eq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Hash, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Environment {
   /// The environment the output should run in
@@ -70,33 +71,45 @@ pub struct Environment {
   pub source_type: SourceType,
 }
 
-impl Hash for Environment {
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    // Hashing intentionally does not include loc
-    self.context.hash(state);
-    self.engines.hash(state);
-    self.include_node_modules.hash(state);
-    self.is_library.hash(state);
-    self.output_format.hash(state);
-    self.should_scope_hoist.hash(state);
-    self.should_optimize.hash(state);
-    self.source_map.hash(state);
-    self.source_type.hash(state);
-  }
+pub fn create_environment_id(
+  context: &EnvironmentContext,
+  engines: &Engines,
+  include_node_modules: &IncludeNodeModules,
+  output_format: &OutputFormat,
+  source_type: &SourceType,
+  is_library: &bool,
+  should_optimize: &bool,
+  should_scope_hoist: &bool,
+  source_map: &Option<TargetSourceMapOptions>,
+) -> String {
+  let mut hasher = IdentifierHasher::new();
+  context.hash(&mut hasher);
+  engines.hash(&mut hasher);
+  include_node_modules.hash(&mut hasher);
+  output_format.hash(&mut hasher);
+  source_type.hash(&mut hasher);
+  is_library.hash(&mut hasher);
+  should_optimize.hash(&mut hasher);
+  should_scope_hoist.hash(&mut hasher);
+  flatten_source_map(source_map).hash(&mut hasher);
+  let hash = hasher.finish(); // We can simply expose this as a nº too
+  format!("{:016x}", hash)
 }
 
-impl PartialEq for Environment {
-  fn eq(&self, other: &Self) -> bool {
-    // Equality intentionally does not include loc
-    self.context == other.context
-      && self.engines == other.engines
-      && self.include_node_modules == other.include_node_modules
-      && self.is_library == other.is_library
-      && self.output_format == other.output_format
-      && self.should_scope_hoist == other.should_scope_hoist
-      && self.should_optimize == other.should_optimize
-      && self.source_map == other.source_map
-      && self.source_type == other.source_type
+impl Environment {
+  pub fn id(&self) -> String {
+    let s = create_environment_id(
+      &self.context,
+      &self.engines,
+      &self.include_node_modules,
+      &self.output_format,
+      &self.source_type,
+      &self.is_library,
+      &self.should_optimize,
+      &self.should_scope_hoist,
+      &self.source_map,
+    );
+    s
   }
 }
 
@@ -147,12 +160,13 @@ impl EnvironmentContext {
   }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Hash, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum IncludeNodeModules {
   Bool(bool),
   Array(Vec<String>),
-  Map(HashMap<String, bool>),
+  // We can't hash a HashMap because we need to iterate in order
+  Map(BTreeMap<String, bool>),
 }
 
 impl Default for IncludeNodeModules {
@@ -172,27 +186,13 @@ impl From<EnvironmentContext> for IncludeNodeModules {
   }
 }
 
-impl Hash for IncludeNodeModules {
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    match self {
-      IncludeNodeModules::Bool(b) => b.hash(state),
-      IncludeNodeModules::Array(a) => a.hash(state),
-      IncludeNodeModules::Map(m) => {
-        for (k, v) in m {
-          k.hash(state);
-          v.hash(state);
-        }
-      }
-    }
-  }
-}
-
-#[derive(Clone, Copy, Debug, Default, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
-#[repr(u8)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum SourceType {
   #[default]
-  Module = 0,
-  Script = 1,
+  #[serde(rename = "module")]
+  Module,
+  #[serde(rename = "script")]
+  Script,
 }
 
 /// Source map options for the target output
@@ -200,12 +200,14 @@ pub enum SourceType {
 #[serde(rename_all = "camelCase")]
 pub struct TargetSourceMapOptions {
   /// Inlines the source map as a data URL into the bundle, rather than link to it as a separate output file
+  #[serde(skip_serializing_if = "Option::is_none")]
   inline: Option<bool>,
 
   /// Inlines the original source code into the source map, rather than loading them from the source root
   ///
   /// This is set to true by default when building browser targets for production.
   ///
+  #[serde(skip_serializing_if = "Option::is_none")]
   inline_sources: Option<bool>,
 
   /// The URL to load the original source code from
@@ -213,5 +215,43 @@ pub struct TargetSourceMapOptions {
   /// This is set automatically in development when using the builtin Atlaspack development server.
   /// Otherwise, it defaults to a relative path to the bundle from the project root.
   ///
+  #[serde(skip_serializing_if = "Option::is_none")]
   source_root: Option<String>,
+}
+
+/// We must consider { None, None, None } equal to None for all intents and purposes
+pub fn flatten_source_map(source_map: &Option<TargetSourceMapOptions>) -> TargetSourceMapOptions {
+  source_map.clone().unwrap_or_default()
+}
+
+#[cfg(test)]
+mod test {
+  use std::str::FromStr;
+
+  use version::Version;
+
+  use super::*;
+
+  // This is here to check that the default environment hash will match
+  // the one in Node.js - packages/core/core/test/Environment.test.js
+  #[test]
+  fn test_environment() {
+    tracing_subscriber::fmt::init();
+    let environment = Environment::default();
+    let id = environment.id();
+    assert_eq!(id, "fe4d1585daa1b9c5");
+
+    let environment = Environment {
+      context: EnvironmentContext::Node,
+      engines: Engines {
+        browsers: None,
+        node: Some(Version::from_str("8.0.0").unwrap()),
+        ..Default::default()
+      },
+      output_format: OutputFormat::CommonJS,
+      ..Default::default()
+    };
+    let id = environment.id();
+    assert_eq!(id, "9602bef6237ef34c");
+  }
 }

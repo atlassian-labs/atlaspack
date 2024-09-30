@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::path::PathBuf;
 
@@ -24,7 +24,7 @@ pub struct AtlaspackOptions {
   pub default_target_options: DefaultTargetOptions,
 
   pub entries: Vec<String>,
-  pub env: Option<HashMap<String, String>>,
+  pub env: Option<BTreeMap<String, String>>,
 
   #[serde(rename = "defaultConfig")]
   pub fallback_config: Option<String>,

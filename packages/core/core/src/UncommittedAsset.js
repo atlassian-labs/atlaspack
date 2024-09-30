@@ -39,7 +39,7 @@ type UncommittedAssetOptions = {|
   mapBuffer?: ?Buffer,
   ast?: ?AST,
   isASTDirty?: ?boolean,
-  idBase?: ?string,
+  code?: ?string,
   invalidations?: Invalidations,
 |};
 
@@ -52,7 +52,7 @@ export default class UncommittedAsset {
   map: ?SourceMap;
   ast: ?AST;
   isASTDirty: boolean;
-  idBase: ?string;
+  code: ?string;
   invalidations: Invalidations;
   generate: ?() => Promise<GenerateOutput>;
 
@@ -63,7 +63,7 @@ export default class UncommittedAsset {
     mapBuffer,
     ast,
     isASTDirty,
-    idBase,
+    code,
     invalidations,
   }: UncommittedAssetOptions) {
     this.value = value;
@@ -72,7 +72,7 @@ export default class UncommittedAsset {
     this.mapBuffer = mapBuffer;
     this.ast = ast;
     this.isASTDirty = isASTDirty || false;
-    this.idBase = idBase;
+    this.code = code;
     this.invalidations = invalidations || createInvalidations();
   }
 
@@ -358,7 +358,7 @@ export default class UncommittedAsset {
 
     let asset = new UncommittedAsset({
       value: createAsset(this.options.projectRoot, {
-        idBase: this.idBase,
+        code: this.code,
         filePath: this.value.filePath,
         type: result.type,
         bundleBehavior:
@@ -405,7 +405,7 @@ export default class UncommittedAsset {
       ast: result.ast,
       isASTDirty: result.ast === this.ast ? this.isASTDirty : true,
       mapBuffer: result.map ? result.map.toBuffer() : null,
-      idBase: this.idBase,
+      code: this.code,
       invalidations: this.invalidations,
     });
 

@@ -4,11 +4,14 @@ import assert from 'assert';
 import BundleGraph from '../src/BundleGraph';
 import {DEFAULT_ENV, DEFAULT_TARGETS} from './test-utils';
 import AssetGraph, {nodeFromAssetGroup} from '../src/AssetGraph';
-import {createAsset as _createAsset} from '../src/assetUtils';
+import {
+  createAsset as _createAsset,
+  type AssetOptions,
+} from '../src/assetUtils';
 import {createDependency as _createDependency} from '../src/Dependency';
 import {toProjectPath} from '../src/projectPath';
 
-function createAsset(opts) {
+function createAsset(opts: AssetOptions) {
   return _createAsset('/', opts);
 }
 
@@ -79,7 +82,7 @@ function createMockAssetGraph(ids: [string, string]) {
 
   let dep = createDependency({
     specifier: 'path/to/index/src/main.js',
-    specifierType: 'esm',
+    specifierType: 'url',
     env: DEFAULT_ENV,
     target: DEFAULT_TARGETS[0],
   });
@@ -98,6 +101,7 @@ function createMockAssetGraph(ids: [string, string]) {
   let assets = [
     createAsset({
       id: ids[0],
+      code: null,
       filePath,
       type: 'js',
       isSource: true,
@@ -107,6 +111,7 @@ function createMockAssetGraph(ids: [string, string]) {
     }),
     createAsset({
       id: ids[1],
+      code: null,
       filePath,
       type: 'js',
       isSource: true,

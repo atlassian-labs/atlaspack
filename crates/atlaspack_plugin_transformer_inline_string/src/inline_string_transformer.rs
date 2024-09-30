@@ -1,5 +1,5 @@
 use anyhow::Error;
-use atlaspack_core::plugin::{PluginContext, TransformResult, TransformerPlugin};
+use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{Asset, BundleBehavior};
 
 #[derive(Debug)]
@@ -12,10 +12,14 @@ impl AtlaspackInlineStringTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
-  fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
+  fn transform(
+    &mut self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
-    asset.bundle_behavior = BundleBehavior::Inline;
+    asset.bundle_behavior = Some(BundleBehavior::Inline);
     asset
       .meta
       .insert(String::from("inlineType"), "string".into());
@@ -55,13 +59,14 @@ mod tests {
     });
 
     let asset = Asset::default();
+    let context = TransformContext::default();
 
-    assert_ne!(asset.bundle_behavior, BundleBehavior::Inline);
+    assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Inline));
     assert_eq!(
-      plugin.transform(asset).map_err(|e| e.to_string()),
+      plugin.transform(context, asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
-          bundle_behavior: BundleBehavior::Inline,
+          bundle_behavior: Some(BundleBehavior::Inline),
           meta: JSONObject::from_iter([(String::from("inlineType"), "string".into())]),
           ..Asset::default()
         },

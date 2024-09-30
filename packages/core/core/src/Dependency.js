@@ -9,7 +9,7 @@ import type {
   SemverRange,
 } from '@atlaspack/types';
 import type {Dependency, Environment, Target} from './types';
-import {hashString} from '@atlaspack/rust';
+import {createDependencyId as createDependencyIdRust} from '@atlaspack/rust';
 import {
   SpecifierType,
   Priority,
@@ -19,6 +19,7 @@ import {
 
 import {toInternalSourceLocation} from './utils';
 import {toProjectPath} from './projectPath';
+import assert from 'assert';
 
 type DependencyOpts = {|
   id?: string,
@@ -45,23 +46,60 @@ type DependencyOpts = {|
   pipeline?: ?string,
 |};
 
+export function createDependencyId({
+  sourceAssetId,
+  specifier,
+  env,
+  target,
+  pipeline,
+  specifierType,
+  bundleBehavior,
+  priority,
+  packageConditions,
+}: {|
+  sourceAssetId: string | void,
+  specifier: DependencySpecifier,
+  env: Environment,
+  target: Target | void,
+  pipeline: ?string,
+  specifierType: $Keys<typeof SpecifierType>,
+  bundleBehavior: ?IBundleBehavior,
+  priority: $Keys<typeof Priority> | void,
+  packageConditions: Array<string> | void,
+|}): string {
+  assert(typeof specifierType === 'string');
+  assert(typeof priority === 'string' || priority == null);
+  const params = {
+    sourceAssetId,
+    specifier,
+    env,
+    target,
+    pipeline,
+    specifierType: SpecifierType[specifierType],
+    bundleBehavior,
+    priority: priority ? Priority[priority] : Priority.sync,
+    packageConditions,
+  };
+  return createDependencyIdRust(params);
+}
+
 export function createDependency(
   projectRoot: FilePath,
   opts: DependencyOpts,
 ): Dependency {
   let id =
     opts.id ||
-    hashString(
-      (opts.sourceAssetId ?? '') +
-        opts.specifier +
-        opts.env.id +
-        (opts.target ? JSON.stringify(opts.target) : '') +
-        (opts.pipeline ?? '') +
-        opts.specifierType +
-        (opts.bundleBehavior ?? '') +
-        (opts.priority ?? 'sync') +
-        (opts.packageConditions ? JSON.stringify(opts.packageConditions) : ''),
-    );
+    createDependencyId({
+      bundleBehavior: opts.bundleBehavior,
+      env: opts.env,
+      packageConditions: opts.packageConditions,
+      pipeline: opts.pipeline,
+      priority: opts.priority,
+      sourceAssetId: opts.sourceAssetId,
+      specifier: opts.specifier,
+      specifierType: opts.specifierType,
+      target: opts.target,
+    });
 
   let dep: Dependency = {
     id,

@@ -17,7 +17,7 @@ export default class CommittedAsset {
   mapBuffer: ?Promise<?Buffer>;
   map: ?Promise<?SourceMap>;
   ast: ?Promise<AST>;
-  idBase: ?string;
+  code: ?string;
   generatingPromise: ?Promise<void>;
 
   constructor(value: Asset, options: AtlaspackOptions) {

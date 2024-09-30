@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use anyhow::Error;
-use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
+use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, Code, FileType};
 
 #[derive(Debug)]
@@ -15,7 +15,11 @@ impl AtlaspackJsonTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackJsonTransformerPlugin {
-  fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
+  fn transform(
+    &mut self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     let code = std::str::from_utf8(asset.code.bytes())?;
@@ -80,9 +84,10 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
+    let context = TransformContext::default();
 
     assert_eq!(
-      plugin.transform(asset).map_err(|e| e.to_string()),
+      plugin.transform(context, asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
           code: Arc::new(Code::from(
@@ -121,9 +126,10 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
+    let context = TransformContext::default();
 
     assert_eq!(
-      plugin.transform(asset).map_err(|e| e.to_string()),
+      plugin.transform(context, asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
           code: Arc::new(Code::from(

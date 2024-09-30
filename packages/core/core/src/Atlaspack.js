@@ -152,10 +152,10 @@ export default class Atlaspack {
       });
     }
 
+    setFeatureFlags(resolvedOptions.featureFlags);
+
     let {config} = await loadAtlaspackConfig(resolvedOptions);
     this.#config = new AtlaspackConfig(config, resolvedOptions);
-
-    setFeatureFlags(resolvedOptions.featureFlags);
 
     if (this.#initialOptions.workerFarm) {
       if (this.#initialOptions.workerFarm.ending) {

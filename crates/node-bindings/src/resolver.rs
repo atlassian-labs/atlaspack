@@ -93,6 +93,12 @@ pub struct JsFileSystem {
   pub is_dir: FunctionRef,
 }
 
+impl std::fmt::Debug for JsFileSystem {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("JsFileSystem").finish()
+  }
+}
+
 impl FileSystem for JsFileSystem {
   fn canonicalize(
     &self,
@@ -246,7 +252,7 @@ impl Resolver {
       resolver.include_node_modules = Cow::Owned(match include_node_modules {
         Either3::A(b) => IncludeNodeModules::Bool(b),
         Either3::B(v) => IncludeNodeModules::Array(v),
-        Either3::C(v) => IncludeNodeModules::Map(v),
+        Either3::C(v) => IncludeNodeModules::Map(v.into_iter().collect()),
       });
     }
 

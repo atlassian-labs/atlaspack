@@ -13,6 +13,7 @@ use crate::{
 pub type ConfigLoaderRef = Arc<ConfigLoader>;
 
 /// Enables config to be loaded in various formats
+#[derive(Debug)]
 pub struct ConfigLoader {
   pub fs: FileSystemRef,
   pub project_root: PathBuf,
