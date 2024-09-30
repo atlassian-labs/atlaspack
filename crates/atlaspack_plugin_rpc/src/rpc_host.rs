@@ -29,7 +29,7 @@ pub struct RpcPluginOptions {
 
 /// This Asset mostly replicates the core Asset type however it only features
 /// fields that can be modified by transformers
-#[derive(Default, PartialEq, Clone, Debug, Deserialize, Serialize)]
+#[derive(PartialEq, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RpcAssetResult {
   pub id: String,

@@ -82,10 +82,4 @@ pub enum BundleBehavior {
   Isolated,
 }
 
-impl Default for BundleBehavior {
-  fn default() -> Self {
-    BundleBehavior::Inline
-  }
-}
-
 pub type MaybeBundleBehavior = Option<BundleBehavior>;
