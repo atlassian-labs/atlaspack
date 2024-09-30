@@ -1,8 +1,12 @@
+use std::any::Any;
 use std::fmt;
 use std::fmt::Debug;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::path::PathBuf;
 
 use atlaspack_config::PluginNode;
+use atlaspack_core::hash::IdentifierHasher;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::ResolveContext;
 use atlaspack_core::plugin::Resolved;
@@ -42,6 +46,15 @@ impl RpcResolverPlugin {
 }
 
 impl ResolverPlugin for RpcResolverPlugin {
+  fn id(&self) -> u64 {
+    let mut hasher = IdentifierHasher::new();
+    self.type_id().hash(&mut hasher);
+    self.resolve_from.hash(&mut hasher);
+    self.specifier.hash(&mut hasher);
+    self.started.hash(&mut hasher);
+    hasher.finish()
+  }
+
   fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
     if !self.started {
       self.rpc_worker.load_plugin(LoadPluginOptions {
