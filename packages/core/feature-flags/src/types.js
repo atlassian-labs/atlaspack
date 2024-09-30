@@ -20,6 +20,10 @@ export type FeatureFlags = {|
    */
   useLmdbJsLite: boolean,
   /**
+   * Fixes quadratic cache invalidation issue
+   */
+  fixQuadraticCacheInvalidation: boolean,
+  /**
    * Enable rust based inline requires optimization
    */
   fastOptimizeInlineRequires: boolean,

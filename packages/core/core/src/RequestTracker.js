@@ -4,12 +4,14 @@ import invariant, {AssertionError} from 'assert';
 import path from 'path';
 
 import type {Cache} from '@atlaspack/cache';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {ContentGraph} from '@atlaspack/graph';
 import type {
   ContentGraphOpts,
   ContentKey,
   NodeId,
   SerializedContentGraph,
+  Graph,
 } from '@atlaspack/graph';
 import logger from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
@@ -370,7 +372,7 @@ export class RequestGraph extends ContentGraph<
     return nodeId;
   }
 
-  removeNode(nodeId: NodeId): void {
+  removeNode(nodeId: NodeId, removeOrphans: boolean = true): void {
     this.invalidNodeIds.delete(nodeId);
     this.incompleteNodeIds.delete(nodeId);
     this.incompleteNodePromises.delete(nodeId);
@@ -388,7 +390,7 @@ export class RequestGraph extends ContentGraph<
         configKeyNodes.delete(nodeId);
       }
     }
-    return super.removeNode(nodeId);
+    return super.removeNode(nodeId, removeOrphans);
   }
 
   getRequestNode(nodeId: NodeId): RequestNode {
@@ -878,6 +880,7 @@ export class RequestGraph extends ContentGraph<
     let count = 0;
     let predictedTime = 0;
     let startTime = Date.now();
+    const removeOrphans = !getFeatureFlag('fixQuadraticCacheInvalidation');
 
     for (let {path: _path, type} of events) {
       if (++count === 256) {
@@ -1004,7 +1007,7 @@ export class RequestGraph extends ContentGraph<
         // Delete the file node since it doesn't exist anymore.
         // This ensures that files that don't exist aren't sent
         // to requests as invalidations for future requests.
-        this.removeNode(nodeId);
+        this.removeNode(nodeId, removeOrphans);
       }
 
       let configKeyNodes = this.configKeyNodes.get(_filePath);
@@ -1036,10 +1039,14 @@ export class RequestGraph extends ContentGraph<
               );
             }
             didInvalidate = true;
-            this.removeNode(nodeId);
+            this.removeNode(nodeId, removeOrphans);
           }
         }
       }
+    }
+
+    if (getFeatureFlag('fixQuadraticCacheInvalidation')) {
+      cleanUpOrphans(this);
     }
 
     let duration = Date.now() - startTime;
@@ -1665,6 +1672,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
 
   return new RequestGraph();
 }
+
 function logErrorOnBailout(
   options: AtlaspackOptions,
   snapshotPath: string,
@@ -1694,4 +1702,21 @@ function logErrorOnBailout(
       },
     });
   }
+}
+
+export function cleanUpOrphans<N, E: number>(graph: Graph<N, E>): NodeId[] {
+  const reachableNodes = new Set();
+  graph.traverse(nodeId => {
+    reachableNodes.add(nodeId);
+  });
+
+  const removedNodeIds = [];
+  graph.nodes.forEach((_node, nodeId) => {
+    if (!reachableNodes.has(nodeId)) {
+      removedNodeIds.push(nodeId);
+      graph.removeNode(nodeId);
+    }
+  });
+
+  return removedNodeIds;
 }
