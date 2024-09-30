@@ -1,11 +1,12 @@
 use crate::hash::IdentifierHasher;
-use crate::types::{Asset, Dependency, SpecifierType};
+use crate::types::{Asset, Dependency, Environment, SpecifierType};
 use mockall::automock;
 use serde::Serialize;
 use std::any::Any;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 pub struct ResolveOptions {
   /// A list of custom conditions to use when resolving package.json "exports" and "imports"
@@ -27,6 +28,29 @@ pub struct TransformResult {
   pub invalidate_on_file_change: Vec<PathBuf>,
 }
 
+#[derive(Clone)]
+pub struct TransformContext {
+  environment: Arc<Environment>,
+}
+
+impl Default for TransformContext {
+  fn default() -> Self {
+    Self {
+      environment: Arc::new(Environment::default()),
+    }
+  }
+}
+
+impl TransformContext {
+  pub fn new(environment: Arc<Environment>) -> Self {
+    Self { environment }
+  }
+
+  pub fn env(&self) -> &Arc<Environment> {
+    &self.environment
+  }
+}
+
 /// Compile a single asset, discover dependencies, or convert the asset to a different format
 ///
 /// Many transformers are wrappers around other tools such as compilers and preprocessors, and are
@@ -41,5 +65,9 @@ pub trait TransformerPlugin: Any + Debug + Send + Sync {
     hasher.finish()
   }
   /// Transform the asset and/or add new assets
-  fn transform(&mut self, input: Asset) -> Result<TransformResult, anyhow::Error>;
+  fn transform(
+    &mut self,
+    context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, anyhow::Error>;
 }

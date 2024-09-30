@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use atlaspack_core::diagnostic;
@@ -40,8 +40,12 @@ pub(crate) fn convert_result(
     asset.set_interpreter(shebang);
   }
 
-  let (mut dependency_by_specifier, invalidate_on_file_change) =
-    convert_dependencies(transformer_config, result.dependencies, &asset)?;
+  let (mut dependency_by_specifier, invalidate_on_file_change) = convert_dependencies(
+    &options.project_root,
+    transformer_config,
+    result.dependencies,
+    &asset,
+  )?;
 
   if result.needs_esm_helpers {
     let dependency = make_esm_helpers_dependency(
@@ -61,14 +65,16 @@ pub(crate) fn convert_result(
 
     // Collect all exported variable names
     for symbol in &hoist_result.exported_symbols {
-      let symbol = transformer_exported_symbol_into_symbol(&asset_file_path, &symbol);
+      let symbol =
+        transformer_exported_symbol_into_symbol(&options.project_root, &asset_file_path, &symbol);
       asset_symbols.push(symbol);
     }
 
     // Collect all imported symbols into each of the corresponding dependencies' symbols array
     for symbol in hoist_result.imported_symbols {
       if let Some(dependency) = dependency_by_specifier.get_mut(&symbol.source) {
-        let symbol = transformer_imported_symbol_to_symbol(&asset_file_path, &symbol);
+        let symbol =
+          transformer_imported_symbol_to_symbol(&options.project_root, &asset_file_path, &symbol);
         if let Some(symbols) = dependency.symbols.as_mut() {
           symbols.push(symbol);
         } else {
@@ -80,7 +86,11 @@ pub(crate) fn convert_result(
     for symbol in hoist_result.re_exports {
       if let Some(dependency) = dependency_by_specifier.get_mut(&symbol.source) {
         if is_re_export_all_symbol(&symbol) {
-          let loc = Some(convert_loc(asset_file_path.clone(), &symbol.loc));
+          let loc = Some(convert_loc(
+            &options.project_root,
+            asset_file_path.clone(),
+            &symbol.loc,
+          ));
           let symbol = make_export_all_symbol(loc);
 
           if let Some(symbols) = dependency.symbols.as_mut() {
@@ -112,7 +122,11 @@ pub(crate) fn convert_result(
           let dependency_symbol = Symbol {
             exported: symbol.imported.as_ref().into(),
             local: re_export_fake_local_key.clone(),
-            loc: Some(convert_loc(asset_file_path.clone(), &symbol.loc)),
+            loc: Some(convert_loc(
+              &options.project_root,
+              asset_file_path.clone(),
+              &symbol.loc,
+            )),
             is_weak: existing.map(|e| e.is_weak).unwrap_or(true),
             ..Symbol::default()
           };
@@ -126,7 +140,11 @@ pub(crate) fn convert_result(
           asset_symbols.push(Symbol {
             exported: symbol.local.as_ref().into(),
             local: re_export_fake_local_key.clone(),
-            loc: Some(convert_loc(asset_file_path.clone(), &symbol.loc)),
+            loc: Some(convert_loc(
+              &options.project_root,
+              asset_file_path.clone(),
+              &symbol.loc,
+            )),
             is_weak: false,
             ..Symbol::default()
           });
@@ -195,7 +213,11 @@ pub(crate) fn convert_result(
           let symbol = Symbol {
             exported: sym.local.as_ref().into(),
             local: local.clone(),
-            loc: Some(convert_loc(asset_file_path.clone(), &sym.loc)),
+            loc: Some(convert_loc(
+              &options.project_root,
+              asset_file_path.clone(),
+              &sym.loc,
+            )),
             is_weak: true,
             ..Symbol::default()
           };
@@ -214,7 +236,11 @@ pub(crate) fn convert_result(
         asset_symbols.push(Symbol {
           exported: sym.exported.as_ref().into(),
           local,
-          loc: Some(convert_loc(asset_file_path.clone(), &sym.loc)),
+          loc: Some(convert_loc(
+            &options.project_root,
+            asset_file_path.clone(),
+            &sym.loc,
+          )),
           is_weak,
           ..Symbol::default()
         });
@@ -222,7 +248,11 @@ pub(crate) fn convert_result(
 
       for sym in symbol_result.imports {
         if let Some(dependency) = dependency_by_specifier.get_mut(&sym.source) {
-          let symbol = transformer_collect_imported_symbol_to_symbol(&asset_file_path, &sym);
+          let symbol = transformer_collect_imported_symbol_to_symbol(
+            &options.project_root,
+            &asset_file_path,
+            &sym,
+          );
           if let Some(symbols) = dependency.symbols.as_mut() {
             symbols.push(symbol);
           } else {
@@ -233,7 +263,11 @@ pub(crate) fn convert_result(
 
       for sym in symbol_result.exports_all {
         if let Some(dependency) = dependency_by_specifier.get_mut(&sym.source) {
-          let loc = Some(convert_loc(asset_file_path.clone(), &sym.loc));
+          let loc = Some(convert_loc(
+            &options.project_root,
+            asset_file_path.clone(),
+            &sym.loc,
+          ));
           let symbol = make_export_all_symbol(loc);
           if let Some(symbols) = dependency.symbols.as_mut() {
             symbols.push(symbol);
@@ -265,7 +299,7 @@ pub(crate) fn convert_result(
     for dependency in dependency_by_specifier.values_mut() {
       let symbol = Symbol {
         exported: "*".into(),
-        local: format!("${}$", dependency.specifier), // TODO: coalesce with dep.placeholder
+        local: format!("{}$", dependency.id()), // TODO: coalesce with dep.placeholder
         loc: None,
         ..Default::default()
       };
@@ -289,9 +323,6 @@ pub(crate) fn convert_result(
   asset.set_has_node_replacements(result.has_node_replacements);
   asset.set_is_constant_module(result.is_constant_module);
 
-  if asset.unique_key.is_none() {
-    asset.unique_key = Some(asset.id.clone());
-  }
   asset.file_type = FileType::Js;
 
   // Overwrite the source-code with SWC output
@@ -332,6 +363,7 @@ pub(crate) fn is_re_export_all_symbol(symbol: &atlaspack_js_swc_core::ImportedSy
 ///
 /// This will be used to find dependencies corresponding to imported symbols' `local` mangled names.
 pub(crate) fn convert_dependencies(
+  project_root: &Path,
   transformer_config: &atlaspack_js_swc_core::Config,
   dependencies: Vec<atlaspack_js_swc_core::DependencyDescriptor>,
   asset: &Asset,
@@ -345,7 +377,12 @@ pub(crate) fn convert_dependencies(
       .map(|d| d.as_str().into())
       .unwrap_or_else(|| transformer_dependency.specifier.clone());
 
-    let result = convert_dependency(transformer_config, &asset, transformer_dependency)?;
+    let result = convert_dependency(
+      project_root,
+      transformer_config,
+      &asset,
+      transformer_dependency,
+    )?;
 
     match result {
       DependencyConversionResult::Dependency(dependency) => {
@@ -383,11 +420,7 @@ fn make_esm_helpers_dependency(
     specifier_type: SpecifierType::Esm,
     source_path: Some(asset_file_path.clone()),
     env: Environment {
-      include_node_modules: IncludeNodeModules::Map(
-        [("@atlaspack/transformer-js".to_string(), true)]
-          .into_iter()
-          .collect(),
-      ),
+      include_node_modules: IncludeNodeModules::Bool(true),
       ..asset_environment.clone()
     }
     .into(),
@@ -420,19 +453,28 @@ enum DependencyConversionResult {
 /// Convert dependency from the transformer `atlaspack_js_swc_core::DependencyDescriptor` into a
 /// `DependencyConversionResult`.
 fn convert_dependency(
+  project_root: &Path,
   transformer_config: &atlaspack_js_swc_core::Config,
   asset: &Asset,
   transformer_dependency: atlaspack_js_swc_core::DependencyDescriptor,
 ) -> Result<DependencyConversionResult, Vec<Diagnostic>> {
   use atlaspack_js_swc_core::DependencyKind;
 
-  let loc = convert_loc(asset.file_path.clone(), &transformer_dependency.loc);
+  let loc = convert_loc(
+    project_root,
+    asset.file_path.clone(),
+    &transformer_dependency.loc,
+  );
   let mut base_dependency = Dependency {
-    bundle_behavior: asset.bundle_behavior.clone(),
+    bundle_behavior: match transformer_dependency.kind {
+      DependencyKind::Url => Some(BundleBehavior::Isolated),
+      _ => None,
+    },
     env: asset.env.clone(),
     loc: Some(loc.clone()),
     priority: convert_priority(&transformer_dependency),
     source_asset_id: Some(asset.id.to_string()),
+    source_asset_type: Some(asset.file_type.clone()),
     source_path: Some(asset.file_path.clone()),
     specifier: transformer_dependency.specifier.as_ref().into(),
     specifier_type: convert_specifier_type(&transformer_dependency),
@@ -533,7 +575,7 @@ fn convert_dependency(
     DependencyKind::Url => {
       let dependency = Dependency {
         env: asset.env.clone(),
-        bundle_behavior: BundleBehavior::Isolated,
+        bundle_behavior: Some(BundleBehavior::Isolated),
         // placeholder: dep.placeholder.map(|s| s.into()),
         ..base_dependency
       };

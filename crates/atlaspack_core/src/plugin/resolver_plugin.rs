@@ -21,7 +21,7 @@ pub struct ResolveContext {
   pub specifier: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+#[derive(Clone, Debug, Hash, Default, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolvedResolution {
   /// Whether this dependency can be deferred by Atlaspack itself

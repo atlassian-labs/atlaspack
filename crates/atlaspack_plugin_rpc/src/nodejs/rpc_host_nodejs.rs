@@ -26,6 +26,7 @@ impl RpcHostNodejs {
 
 // Forward events to Nodejs
 impl RpcHost for RpcHostNodejs {
+  #[tracing::instrument(level = "debug", skip(self))]
   fn start(&self) -> anyhow::Result<RpcWorkerRef> {
     let rx_worker = self.rx_worker.lock();
     let mut connections = vec![];

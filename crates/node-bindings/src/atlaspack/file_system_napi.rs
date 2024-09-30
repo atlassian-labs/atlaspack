@@ -10,6 +10,7 @@ use atlaspack_napi_helpers::js_callable::JsCallable;
 
 // TODO error handling
 
+#[derive(Debug)]
 pub struct FileSystemNapi {
   canonicalize_fn: JsCallable,
   create_directory_fn: JsCallable,

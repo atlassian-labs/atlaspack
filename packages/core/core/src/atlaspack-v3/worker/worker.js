@@ -107,24 +107,25 @@ export class AtlaspackWorker {
     options: PluginOptions,
     asset: InnerAsset,
   |}): any {
-    let customRequire = module.createRequire(resolveFrom);
-    let resolvedPath = customRequire.resolve(specifier);
+    const customRequire = module.createRequire(resolveFrom);
+    const resolvedPath = customRequire.resolve(specifier);
     // $FlowFixMe
-    let transformerModule = await import(resolvedPath);
-    let transformer: Transformer<*> = transformerModule.default.default[CONFIG];
+    const transformerModule = await import(resolvedPath);
+    const transformer: Transformer<*> =
+      transformerModule.default.default[CONFIG];
 
     let assetCompat = new AssetCompat(asset, options);
 
     try {
       if (transformer.parse) {
         // $FlowFixMe
-        let ast = await transformer.parse({asset: assetCompat});
+        const ast = await transformer.parse({asset: assetCompat}); // missing "config"
         // $FlowFixMe
         assetCompat.setAST(ast);
       }
 
       // $FlowFixMe
-      let result = await transformer.transform({
+      const result = await transformer.transform({
         // $FlowFixMe
         asset: assetCompat,
         options,

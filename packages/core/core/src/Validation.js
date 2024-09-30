@@ -17,7 +17,6 @@ import PluginOptions from './public/PluginOptions';
 import summarizeRequest from './summarizeRequest';
 import {fromProjectPath, fromProjectPathRelative} from './projectPath';
 import {PluginTracer} from '@atlaspack/profiler';
-import {hashString} from '@atlaspack/rust';
 
 export type ValidationOpts = {|
   config: AtlaspackConfig,
@@ -197,14 +196,9 @@ export default class Validation {
       },
     );
 
-    // If the transformer request passed code rather than a filename,
-    // use a hash as the base for the id to ensure it is unique.
-    let idBase =
-      code != null ? hashString(code) : fromProjectPathRelative(filePath);
     return new UncommittedAsset({
-      idBase,
       value: createAsset(this.options.projectRoot, {
-        idBase,
+        code,
         filePath: filePath,
         isSource,
         type: path.extname(fromProjectPathRelative(filePath)).slice(1),

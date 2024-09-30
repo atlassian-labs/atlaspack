@@ -29,7 +29,7 @@ pub type FileSystemRealPathCache =
 /// * [ ] Do not use io results, instead use anyhow or this error
 ///
 #[mockall::automock]
-pub trait FileSystem {
+pub trait FileSystem: std::fmt::Debug {
   fn cwd(&self) -> std::io::Result<PathBuf> {
     Err(std::io::Error::new(
       std::io::ErrorKind::Other,

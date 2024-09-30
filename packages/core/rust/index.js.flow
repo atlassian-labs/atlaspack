@@ -198,4 +198,10 @@ export interface InlineRequiresOptimizerResult {
   sourceMap?: string;
 }
 
-declare export function runInlineRequiresOptimizer(input: InlineRequiresOptimizerInput): InlineRequiresOptimizerResult;
+declare export function runInlineRequiresOptimizer(
+  input: InlineRequiresOptimizerInput,
+): InlineRequiresOptimizerResult;
+
+declare export function createAssetId(params: mixed): string;
+declare export function createDependencyId(params: mixed): string;
+declare export function createEnvironmentId(params: mixed): string;

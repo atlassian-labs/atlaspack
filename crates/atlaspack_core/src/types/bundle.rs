@@ -11,7 +11,7 @@ use super::target::Target;
 #[serde(rename_all = "camelCase")]
 pub struct Bundle {
   /// Controls the behavior of the bundle to determine when the bundle loads
-  pub bundle_behavior: BundleBehavior,
+  pub bundle_behavior: MaybeBundleBehavior,
 
   /// The type of the bundle
   #[serde(rename = "type")]
@@ -73,20 +73,13 @@ pub struct Bundle {
 
 /// Determines when the bundle loads
 #[derive(Clone, Copy, Debug, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
-#[repr(u8)]
+#[repr(u32)]
 pub enum BundleBehavior {
   /// Embeds an asset into the parent bundle by creating an inline bundle
-  Inline = 0,
+  Inline,
 
   /// The asset will be isolated from its parents in a separate bundle, and shared assets will be duplicated
-  Isolated = 1,
-
-  /// Unspecified bundling behavior
-  None = 255,
+  Isolated,
 }
 
-impl Default for BundleBehavior {
-  fn default() -> Self {
-    BundleBehavior::None
-  }
-}
+pub type MaybeBundleBehavior = Option<BundleBehavior>;

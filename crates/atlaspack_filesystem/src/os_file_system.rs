@@ -7,7 +7,7 @@ use crate::{FileSystem, FileSystemRealPathCache};
 
 mod canonicalize;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct OsFileSystem;
 
 impl FileSystem for OsFileSystem {

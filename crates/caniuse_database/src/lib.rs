@@ -231,13 +231,11 @@ pub fn check_browserslist_support(
   feature: &BrowserFeature,
   list: &[browserslist::Distrib],
 ) -> bool {
-  println!("list {:?}", list);
   for distrib in list {
     let browser = BrowserAgent::from_key(distrib.name());
     let Ok(version) = Version::try_from(distrib.version()) else {
       return false;
     };
-    println!("Checking support for {:?} {:?}", browser, version);
     if !check_browser_support(feature, &browser, &version) {
       return false;
     }

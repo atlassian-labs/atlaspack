@@ -8,6 +8,7 @@ use anyhow::Error;
 use atlaspack_config::PluginNode;
 use atlaspack_core::hash::IdentifierHasher;
 use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::types::Asset;
@@ -53,7 +54,11 @@ impl TransformerPlugin for RpcTransformerPlugin {
     hasher.finish()
   }
 
-  fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
+  fn transform(
+    &mut self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
     let run_transformer_opts = RpcTransformerOpts {
@@ -70,7 +75,7 @@ impl TransformerPlugin for RpcTransformerPlugin {
     let transformed_asset = Asset {
       id: result.asset.id,
       code: Arc::new(result.asset.code),
-      bundle_behavior: result.asset.bundle_behavior,
+      bundle_behavior: Some(result.asset.bundle_behavior),
       env: asset_env.clone(),
       file_path: result.asset.file_path,
       file_type: result.asset.file_type,
