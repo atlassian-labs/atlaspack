@@ -6,7 +6,7 @@ import type {PackageInstaller, ModuleRequest} from '@atlaspack/package-manager';
 import fetch from 'isomorphic-fetch';
 import path from 'path';
 import semver from 'semver';
-import untar from './untar.js';
+import untar from './untar';
 
 async function findPackage(fs, dir) {
   while (dir !== '/' && path.basename(dir) !== 'node_modules') {

@@ -18,7 +18,7 @@ import type {LoadedPlugin} from '../AtlaspackConfig';
 import type {RequestResult, RunAPI} from '../RequestTracker';
 import type {ProjectPath} from '../projectPath';
 
-import {serializeRaw} from '../serializer.js';
+import {serializeRaw} from '../serializer';
 import {PluginLogger} from '@atlaspack/logger';
 import PluginOptions from '../public/PluginOptions';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';

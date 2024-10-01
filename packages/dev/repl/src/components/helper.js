@@ -2,7 +2,7 @@
 import type {BundleOutputError} from '../atlaspack/AtlaspackWorker';
 import {useCallback, useState, useEffect, useRef, memo} from 'react';
 import {ctrlKey} from '../utils';
-import renderGraph from '../graphs/index.js';
+import renderGraph from '../graphs/index';
 import {ASSET_PRESETS, extractZIP} from '../utils';
 import {type FSMap} from '../utils/assets';
 /* eslint-disable react/jsx-no-bind */

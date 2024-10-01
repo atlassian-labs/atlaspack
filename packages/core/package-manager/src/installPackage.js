@@ -24,7 +24,7 @@ import WorkerFarm from '@atlaspack/workers';
 
 import {Npm} from './Npm';
 import {Yarn} from './Yarn';
-import {Pnpm} from './Pnpm.js';
+import {Pnpm} from './Pnpm';
 import {getConflictingLocalDependencies} from './utils';
 import getCurrentPackageManager from './getCurrentPackageManager';
 import validateModuleSpecifier from './validateModuleSpecifier';
