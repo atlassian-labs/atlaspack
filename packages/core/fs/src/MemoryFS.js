@@ -852,11 +852,15 @@ class Stat {
   }
 }
 
+interface IEntry {
+  mode: number;
+}
+
 class Dirent {
   name: string;
   #mode: number;
 
-  constructor(name: string, entry: interface {mode: number}) {
+  constructor(name: string, entry: IEntry) {
     this.name = name;
     this.#mode = entry.mode;
   }

@@ -1,9 +1,10 @@
 // @flow
 
 export default function createDependencyLocation(
-  start: interface {
+  start: {
     line: number,
     column: number,
+    ...
   },
   specifier: string,
   lineOffset: number = 0,

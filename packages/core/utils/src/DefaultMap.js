@@ -22,9 +22,11 @@ export class DefaultMap<K, V> extends Map<K, V> {
   }
 }
 
+interface IKey {}
+
 // Duplicated from DefaultMap implementation for Flow
 // Roughly mirrors https://github.com/facebook/flow/blob/2eb5a78d92c167117ba9caae070afd2b9f598599/lib/core.js#L617
-export class DefaultWeakMap<K: interface {}, V> extends WeakMap<K, V> {
+export class DefaultWeakMap<K: IKey, V> extends WeakMap<K, V> {
   _getDefault: K => V;
 
   constructor(getDefault: K => V, entries?: Iterable<[K, V]>) {
