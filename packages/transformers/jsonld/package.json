@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/JSONLDTransformer.js",
+  "types": "src/JSONLDTransformer.ts",
   "source": "src/JSONLDTransformer.ts",
   "engines": {
     "node": ">= 16.0.0",

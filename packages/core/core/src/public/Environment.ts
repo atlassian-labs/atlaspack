@@ -155,17 +155,18 @@ export function environmentToInternalEnvironment(
 }
 
 export default class Environment implements IEnvironment {
-  #environment /*: InternalEnvironment */;
-  #options /*: AtlaspackOptions */;
+  #environment: InternalEnvironment;
+  #options: AtlaspackOptions;
 
   constructor(env: InternalEnvironment, options: AtlaspackOptions) {
+    this.#environment = env;
+    this.#options = options;
+
     let existing = internalEnvironmentToEnvironment.get(env);
     if (existing != null) {
       return existing;
     }
 
-    this.#environment = env;
-    this.#options = options;
     _environmentToInternalEnvironment.set(this, env);
     internalEnvironmentToEnvironment.set(env, this);
     return this;

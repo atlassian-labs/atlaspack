@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/EslintValidator.js",
+  "types": "src/EslintValidator.ts",
   "source": "src/EslintValidator.ts",
   "engines": {
     "node": ">= 16.0.0",

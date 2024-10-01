@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/GraphQLTransformer.js",
+  "types": "src/GraphQLTransformer.ts",
   "source": "src/GraphQLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0",

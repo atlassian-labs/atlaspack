@@ -10,8 +10,8 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/PluginAPI.js",
+  "types": "src/PluginAPI.ts",
   "source": "src/PluginAPI.ts",
-  "types": "src/PluginAPI.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/JSONReporter.js",
+  "types": "src/JSONReporter.ts",
   "source": "src/JSONReporter.ts",
   "engines": {
     "node": ">= 16.0.0",

@@ -5,6 +5,7 @@
     "access": "public"
   },
   "main": "lib/BundleStatsReporter.js",
+  "types": "src/BundleStatsReporter.ts",
   "source": "src/BundleStatsReporter.ts",
   "bin": {
     "atlaspack-bundle-stats": "bin.js"

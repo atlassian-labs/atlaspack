@@ -11,8 +11,8 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/diagnostic.js",
+  "types": "src/diagnostic.ts",
   "source": "src/diagnostic.ts",
-  "types": "lib/diagnostic.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

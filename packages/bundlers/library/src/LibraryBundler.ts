@@ -1,4 +1,5 @@
 import {Bundler} from '@atlaspack/plugin';
+import {Asset, Dependency, Target} from '@atlaspack/types';
 import nullthrows from 'nullthrows';
 
 // This bundler plugin is designed specifically for library builds. It outputs a bundle for
@@ -8,8 +9,8 @@ export default new Bundler({
   bundle({bundleGraph}) {
     // Collect dependencies from the graph.
     // We do not want to mutate the graph while traversing, so this must be done first.
-    let dependencies: Array<Array<Target | Dependency>> = [];
-    bundleGraph.traverse((node, context) => {
+    let dependencies: Array<[Dependency, Target]> = [];
+    bundleGraph.traverse<Target>((node, context) => {
       if (node.type === 'dependency') {
         let dependency = node.value;
         if (bundleGraph.isDependencySkipped(dependency)) {

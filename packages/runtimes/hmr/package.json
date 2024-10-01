@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/HMRRuntime.js",
+  "types": "src/HMRRuntime.ts",
   "source": "src/HMRRuntime.ts",
   "engines": {
     "node": ">= 16.0.0",

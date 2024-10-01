@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/CSSPackager.js",
+  "types": "src/CSSPackager.ts",
   "source": "src/CSSPackager.ts",
   "engines": {
     "node": ">= 16.0.0",

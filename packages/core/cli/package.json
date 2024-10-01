@@ -14,6 +14,7 @@
     "atlaspack": "bin/atlaspack.js"
   },
   "main": "lib/bin.js",
+  "types": "src/bin.ts",
   "source": "src/bin.ts",
   "scripts": {
     "prepack": "./ensure-no-dev-lib.sh",

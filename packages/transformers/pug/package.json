@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/PugTransformer.js",
+  "types": "src/PugTransformer.ts",
   "source": "src/PugTransformer.ts",
   "engines": {
     "node": ">= 16.0.0",

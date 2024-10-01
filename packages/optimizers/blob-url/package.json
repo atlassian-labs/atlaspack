@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/BlobURLOptimizer.js",
+  "types": "src/BlobURLOptimizer.ts",
   "source": "src/BlobURLOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0",

@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/GLSLTransformer.js",
+  "types": "src/GLSLTransformer.ts",
   "source": "src/GLSLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0",

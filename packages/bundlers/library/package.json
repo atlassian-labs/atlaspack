@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/LibraryBundler.js",
+  "types": "src/LibraryBundler.ts",
   "source": "src/LibraryBundler.ts",
   "engines": {
     "node": ">= 16.0.0",

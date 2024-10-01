@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/MDXTransformer.js",
+  "types": "src/MDXTransformer.ts",
   "source": "src/MDXTransformer.ts",
   "engines": {
     "node": ">= 16.0.0",

@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/SassTransformer.js",
+  "types": "src/SassTransformer.ts",
   "source": "src/SassTransformer.ts",
   "engines": {
     "node": ">= 16.0.0",

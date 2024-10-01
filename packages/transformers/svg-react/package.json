@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/SvgReactTransformer.js",
+  "types": "src/SvgReactTransformer.ts",
   "source": "src/SvgReactTransformer.ts",
   "engines": {
     "node": ">= 16.0.0",

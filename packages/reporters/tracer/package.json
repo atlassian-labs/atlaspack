@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/TracerReporter.js",
+  "types": "src/TracerReporter.ts",
   "source": "src/TracerReporter.ts",
   "engines": {
     "node": ">= 16.0.0",

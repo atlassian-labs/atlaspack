@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/TSCTransformer.js",
+  "types": "src/TSCTransformer.ts",
   "source": "src/TSCTransformer.ts",
   "engines": {
     "node": ">= 16.0.0",

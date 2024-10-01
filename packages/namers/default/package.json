@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/DefaultNamer.js",
+  "types": "src/DefaultNamer.ts",
   "source": "src/DefaultNamer.ts",
   "engines": {
     "node": ">= 16.0.0",

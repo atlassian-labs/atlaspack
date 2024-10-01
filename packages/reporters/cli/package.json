@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/CLIReporter.js",
+  "types": "src/CLIReporter.ts",
   "source": "src/CLIReporter.ts",
   "engines": {
     "node": ">= 16.0.0",

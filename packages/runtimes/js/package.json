@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/JSRuntime.js",
+  "types": "src/JSRuntime.ts",
   "source": "src/JSRuntime.ts",
   "engines": {
     "node": ">= 16.0.0",

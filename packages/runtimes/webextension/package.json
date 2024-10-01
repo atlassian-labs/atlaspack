@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/WebExtensionRuntime.js",
+  "types": "src/WebExtensionRuntime.ts",
   "source": "src/WebExtensionRuntime.ts",
   "engines": {
     "node": ">= 16.0.0",

@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/RawCompressor.js",
+  "types": "src/RawCompressor.ts",
   "source": "src/RawCompressor.ts",
   "engines": {
     "node": ">= 16.0.0",

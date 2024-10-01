@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/XMLTransformer.js",
+  "types": "src/XMLTransformer.ts",
   "source": "src/XMLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0",

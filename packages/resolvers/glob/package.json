@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/GlobResolver.js",
+  "types": "src/GlobResolver.ts",
   "source": "src/GlobResolver.ts",
   "engines": {
     "node": ">= 16.0.0",

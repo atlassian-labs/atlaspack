@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/BundleBuddyReporter.js",
+  "types": "src/BundleBuddyReporter.ts",
   "source": "src/BundleBuddyReporter.ts",
   "engines": {
     "node": ">= 16.0.0",

@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/SourceMapVisualiser.js",
+  "types": "src/SourceMapVisualiser.ts",
   "source": "src/SourceMapVisualiser.ts",
   "engines": {
     "node": ">= 16.0.0",

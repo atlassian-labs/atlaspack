@@ -258,10 +258,10 @@ export class NamedBundle extends Bundle implements INamedBundle {
 }
 
 export class PackagedBundle extends NamedBundle implements IPackagedBundle {
-  #bundle /*: InternalBundle */;
-  #bundleGraph /*: BundleGraph */;
-  #options /*: AtlaspackOptions */;
-  #bundleInfo /*: ?PackagedBundleInfo */;
+  #bundle: InternalBundle;
+  #bundleGraph: BundleGraph;
+  #options: AtlaspackOptions;
+  #bundleInfo: PackagedBundleInfo | null | undefined;
 
   constructor(
     sentinel: unknown,

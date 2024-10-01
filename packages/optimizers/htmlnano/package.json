@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/HTMLNanoOptimizer.js",
+  "types": "src/HTMLNanoOptimizer.ts",
   "source": "src/HTMLNanoOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0",

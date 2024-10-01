@@ -1,6 +1,7 @@
 {
   "name": "source",
   "main": "lib/test.js",
+  "types": "src/test.ts",
   "source": {
     "./lib/*": "./src/$1"
   }

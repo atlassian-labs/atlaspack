@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/RawUrlPackager.js",
+  "types": "src/RawUrlPackager.ts",
   "source": "src/RawUrlPackager.ts",
   "engines": {
     "node": ">= 16.0.0",

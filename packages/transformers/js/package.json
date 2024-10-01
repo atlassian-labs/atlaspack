@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/JSTransformer.js",
+  "types": "src/JSTransformer.ts",
   "source": "src/JSTransformer.ts",
   "scripts": {
     "test": "mocha"

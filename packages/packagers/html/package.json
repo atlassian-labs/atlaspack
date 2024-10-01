@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/HTMLPackager.js",
+  "types": "src/HTMLPackager.ts",
   "source": "src/HTMLPackager.ts",
   "engines": {
     "node": ">= 16.0.0",

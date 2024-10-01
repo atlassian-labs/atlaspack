@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/WorkletTransformer.js",
+  "types": "src/WorkletTransformer.ts",
   "source": "src/WorkletTransformer.ts",
   "engines": {
     "node": ">= 16.0.0",

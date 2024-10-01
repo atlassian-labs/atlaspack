@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/WasmPackager.js",
+  "types": "src/WasmPackager.ts",
   "source": "src/WasmPackager.ts",
   "engines": {
     "node": ">=16.0.0",

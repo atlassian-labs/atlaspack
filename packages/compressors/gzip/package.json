@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/GzipCompressor.js",
+  "types": "src/GzipCompressor.ts",
   "source": "src/GzipCompressor.ts",
   "engines": {
     "node": ">= 16.0.0",
