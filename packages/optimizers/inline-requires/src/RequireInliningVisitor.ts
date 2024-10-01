@@ -86,12 +86,17 @@ export class RequireInliningVisitor extends Visitor {
       if (
         ((init.callee.type === 'Identifier' &&
           init.callee.value === 'require') ||
+          // @ts-expect-error - TS2339 - Property 'value' does not exist on type 'Expression | Super | Import'.
           init.callee.value === 'parcelRequire') &&
+        // @ts-expect-error - TS2339 - Property 'value' does not exist on type 'Pattern'.
         decl.id.value !== 'parcelHelpers' && // ignore var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
         init.arguments[0].expression.type === 'StringLiteral' &&
+        // @ts-expect-error - TS2339 - Property 'value' does not exist on type 'Pattern'.
         typeof decl.id.value === 'string' &&
+        // @ts-expect-error - TS2339 - Property 'value' does not exist on type 'Pattern'.
         decl.id.value.startsWith('$')
       ) {
+        // @ts-expect-error - TS2339 - Property 'value' does not exist on type 'Pattern'.
         const variable = decl.id.value;
         const assetPublicId = variable.substring(1);
 
@@ -189,6 +194,7 @@ export class RequireInliningVisitor extends Visitor {
     // console.log((0, require("abc")).foo);
     //
     if (this.moduleVariables.has(n.value)) {
+      // @ts-expect-error - TS2739 - Type 'ParenthesisExpression' is missing the following properties from type 'Identifier': value, optional
       return this.getReplacementExpression(n.value);
     }
     return super.visitIdentifier(n);

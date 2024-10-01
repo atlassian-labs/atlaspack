@@ -48,6 +48,7 @@ export class TSModuleGraph {
     module.used.add(name);
 
     // Visit all child nodes of the original binding and mark any referenced types as used.
+    // @ts-expect-error - TS7023 - 'visit' implicitly has return type 'any' because it does not have a return type annotation and is referenced directly or indirectly in one of its return expressions.
     let visit = (node: any) => {
       if (ts.isQualifiedName(node) && ts.isIdentifier(node.left)) {
         let resolved = this.resolveImport(
@@ -84,16 +85,20 @@ export class TSModuleGraph {
       }
     | null
     | undefined {
+    // @ts-expect-error - TS2339 - Property 'name' does not exist on type 'Export'.
     invariant(e.name != null);
+    // @ts-expect-error - TS2339 - Property 'name' does not exist on type 'Export'.
     let exportName = e.name;
 
     // Re-export
+    // @ts-expect-error - TS2339 - Property 'imported' does not exist on type 'Export'.
     if (e.specifier && e.imported) {
       let m = this.getModule(e.specifier);
       if (!m) {
         return null;
       }
 
+      // @ts-expect-error - TS2339 - Property 'imported' does not exist on type 'Export'.
       let exp = this.resolveExport(m, e.imported);
       if (!exp) {
         return null;
@@ -120,6 +125,7 @@ export class TSModuleGraph {
     return {
       module: m,
       name: exportName,
+      // @ts-expect-error - TS2339 - Property 'imported' does not exist on type 'Export'. | TS2339 - Property 'imported' does not exist on type 'Export'.
       imported: e.imported != null ? m.getName(e.imported) : exportName,
     };
   }
@@ -162,6 +168,7 @@ export class TSModuleGraph {
     | null
     | undefined {
     for (let e of module.exports) {
+      // @ts-expect-error - TS2339 - Property 'name' does not exist on type 'Export'.
       if (e.name === name) {
         return this.getExport(module, e);
       } else if (e.specifier) {
@@ -190,6 +197,7 @@ export class TSModuleGraph {
       name: string;
     }> = [];
     for (let e of module.exports) {
+      // @ts-expect-error - TS2339 - Property 'name' does not exist on type 'Export'. | TS2339 - Property 'name' does not exist on type 'Export'.
       if (e.name && (!excludeDefault || e.name !== 'default')) {
         let exp = this.getExport(module, e);
         if (exp) {
@@ -268,11 +276,14 @@ export class TSModuleGraph {
     let imports = new Map();
 
     for (let [m, orig] of importedSymbolsToUpdate) {
+      // @ts-expect-error - TS2339 - Property 'imports' does not exist on type 'string | TSModule'.
       let imp = nullthrows(m.imports.get(orig));
+      // @ts-expect-error - TS2345 - Argument of type 'string | TSModule' is not assignable to parameter of type 'TSModule'.
       let imported = nullthrows(this.resolveImport(m, orig));
 
       // If the module is bundled, map the local name to the original exported name.
       if (this.modules.has(imp.specifier)) {
+        // @ts-expect-error - TS2339 - Property 'names' does not exist on type 'string | TSModule'.
         m.names.set(orig, imported.imported);
         continue;
       }
@@ -297,6 +308,7 @@ export class TSModuleGraph {
         importedNames.set(imported.imported, name);
       }
 
+      // @ts-expect-error - TS2339 - Property 'names' does not exist on type 'string | TSModule'.
       m.names.set(orig, name);
     }
 

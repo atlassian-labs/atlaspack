@@ -31,6 +31,7 @@ export default new Transformer({
 
     const jsx = await transform(
       code,
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'. | TS2571 - Object is of type 'unknown'.
       {svgoConfig: config.svgo, ...config.svgr, runtimeConfig: false},
       {
         caller: {
@@ -41,6 +42,7 @@ export default new Transformer({
       },
     );
 
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     asset.type = config.svgr?.typescript ? 'tsx' : 'jsx';
     asset.bundleBehavior = null;
     asset.setCode(jsx);

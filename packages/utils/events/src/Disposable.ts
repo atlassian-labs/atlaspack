@@ -45,6 +45,7 @@ export default class Disposable implements IDisposable {
       ),
     );
 
+    // @ts-expect-error - TS2322 - Type 'null' is not assignable to type 'Set<DisposableLike>'.
     this.#disposables = null;
   }
 }

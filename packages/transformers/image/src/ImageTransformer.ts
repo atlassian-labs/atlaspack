@@ -2,6 +2,7 @@ import {validateConfig} from './validateConfig';
 import {Transformer} from '@atlaspack/plugin';
 import nullthrows from 'nullthrows';
 import WorkerFarm from '@atlaspack/workers';
+// @ts-expect-error - TS1192 - Module '"/home/ubuntu/parcel/packages/transformers/image/src/loadSharp"' has no default export.
 import loadSharp from './loadSharp';
 
 // from https://github.com/lovell/sharp/blob/df7b8ba73808fc494be413e88cfb621b6279218c/lib/output.js#L6-L17
@@ -45,14 +46,18 @@ export default new Transformer({
     }
 
     const width = asset.query.has('width')
-      ? parseInt(asset.query.get('width'), 10)
+      ? // @ts-expect-error - TS2345 - Argument of type 'string | null' is not assignable to parameter of type 'string'.
+        parseInt(asset.query.get('width'), 10)
       : null;
     const height = asset.query.has('height')
-      ? parseInt(asset.query.get('height'), 10)
+      ? // @ts-expect-error - TS2345 - Argument of type 'string | null' is not assignable to parameter of type 'string'.
+        parseInt(asset.query.get('height'), 10)
       : null;
     const quality = asset.query.has('quality')
-      ? parseInt(asset.query.get('quality'), 10)
-      : config.quality;
+      ? // @ts-expect-error - TS2345 - Argument of type 'string | null' is not assignable to parameter of type 'string'.
+        parseInt(asset.query.get('quality'), 10)
+      : // @ts-expect-error - TS2571 - Object is of type 'unknown'.
+        config.quality;
     let targetFormat = asset.query.get('as')?.toLowerCase().trim();
     if (targetFormat && !FORMATS.has(targetFormat)) {
       throw new Error(
@@ -61,12 +66,15 @@ export default new Transformer({
     }
 
     const format = nullthrows(FORMATS.get(targetFormat || originalFormat));
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     const outputOptions = config[format];
 
     if (width || height || quality || targetFormat || outputOptions) {
       // Sharp must be required from the main thread as well to prevent errors when workers exit
       // See https://sharp.pixelplumbing.com/install#worker-threads and https://github.com/lovell/sharp/issues/2263
+      // @ts-expect-error - TS2339 - Property 'isWorker' does not exist on type 'typeof WorkerFarm'.
       if (WorkerFarm.isWorker() && !isSharpLoadedOnMainThread) {
+        // @ts-expect-error - TS2339 - Property 'getWorkerApi' does not exist on type 'typeof WorkerFarm'.
         let api = WorkerFarm.getWorkerApi();
         await api.callMaster({
           location: __dirname + '/loadSharp.js',

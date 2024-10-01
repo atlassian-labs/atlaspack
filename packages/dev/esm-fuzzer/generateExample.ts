@@ -151,6 +151,7 @@ function appendToModule(
 }
 
 let getNewExportNameNext = 'a';
+// @ts-expect-error - TS7023 - 'getNewExportName' implicitly has return type 'any' because it does not have a return type annotation and is referenced directly or indirectly in one of its return expressions.
 function getNewExportName() /*: string*/ {
   for (let i = getNewExportNameNext.length - 1; i >= 0; i--) {
     if (getNewExportNameNext[i] !== 'z') {
@@ -239,6 +240,7 @@ const ACTIONS /*: Array<[number, (State) => State]> */ = [
           [nOld]: {
             ...modOld,
             exported: [
+              // @ts-expect-error - TS7006 - Parameter '_' implicitly has an 'any' type. | TS7006 - Parameter 'i' implicitly has an 'any' type.
               ...modOld.exported.filter((_, i) => i != oldExportIndex),
               {
                 symbol: movedExport.as,
@@ -310,6 +312,7 @@ const ACTIONS /*: Array<[number, (State) => State]> */ = [
 ];
 
 invariant.deepEqual(
+  // @ts-expect-error - TS2769 - No overload matches this call.
   ACTIONS.reduce((acc, [p]: [any]) => acc + p * 100, 0),
   100,
   'invalid weights for actions',
@@ -327,12 +330,14 @@ function mutate(state: State /*: State */) /*: State*/ {
         action = a;
         break;
       } else {
+        // @ts-expect-error - TS2363 - The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
         random -= p;
       }
     }
     invariant(action);
   }
 
+  // @ts-expect-error - TS2349 - This expression is not callable. | TS2722 - Cannot invoke an object which is possibly 'undefined'.
   return action(state);
 }
 
@@ -353,6 +358,7 @@ function linearizeState(state: State /*: State */) /* : Fixture */ {
           for (let s of imported) {
             if (s.symbol === '*') {
               importStatements.push(
+                // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly mjs: { readonly IMPORT_NAMED: any; readonly IMPORT_NAMESPACE: any; readonly EXPORT_CONST: any; readonly EXPORT_NAMED: any; readonly CONST: any; readonly REEXPORT_NAMED: any; readonly REEXPORT_NAMESPACE: any; readonly REEXPORT_NAMESPACE_AS: any; }; }'.
                 TEMPLATES[type].IMPORT_NAMESPACE({
                   local: t.identifier(s.as),
                   source: t.stringLiteral(
@@ -362,6 +368,7 @@ function linearizeState(state: State /*: State */) /* : Fixture */ {
               );
             } else {
               importStatements.push(
+                // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly mjs: { readonly IMPORT_NAMED: any; readonly IMPORT_NAMESPACE: any; readonly EXPORT_CONST: any; readonly EXPORT_NAMED: any; readonly CONST: any; readonly REEXPORT_NAMED: any; readonly REEXPORT_NAMESPACE: any; readonly REEXPORT_NAMESPACE_AS: any; }; }'.
                 TEMPLATES[type].IMPORT_NAMED({
                   name: t.identifier(s.symbol),
                   local: t.identifier(s.as),
@@ -376,6 +383,7 @@ function linearizeState(state: State /*: State */) /* : Fixture */ {
             if (s.from == null) {
               if (s.symbol === s.as) {
                 exportStatements.push(
+                  // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly mjs: { readonly IMPORT_NAMED: any; readonly IMPORT_NAMESPACE: any; readonly EXPORT_CONST: any; readonly EXPORT_NAMED: any; readonly CONST: any; readonly REEXPORT_NAMED: any; readonly REEXPORT_NAMESPACE: any; readonly REEXPORT_NAMESPACE_AS: any; }; }'.
                   TEMPLATES[type].EXPORT_CONST({
                     name: t.identifier(s.symbol),
                     value: t.stringLiteral(nanoid(5)),
@@ -383,12 +391,14 @@ function linearizeState(state: State /*: State */) /* : Fixture */ {
                 );
               } else {
                 otherStatements.push(
+                  // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly mjs: { readonly IMPORT_NAMED: any; readonly IMPORT_NAMESPACE: any; readonly EXPORT_CONST: any; readonly EXPORT_NAMED: any; readonly CONST: any; readonly REEXPORT_NAMED: any; readonly REEXPORT_NAMESPACE: any; readonly REEXPORT_NAMESPACE_AS: any; }; }'.
                   TEMPLATES[type].CONST({
                     name: t.identifier(s.symbol),
                     value: t.stringLiteral(nanoid(5)),
                   }),
                 );
                 exportStatements.push(
+                  // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly mjs: { readonly IMPORT_NAMED: any; readonly IMPORT_NAMESPACE: any; readonly EXPORT_CONST: any; readonly EXPORT_NAMED: any; readonly CONST: any; readonly REEXPORT_NAMED: any; readonly REEXPORT_NAMESPACE: any; readonly REEXPORT_NAMESPACE_AS: any; }; }'.
                   TEMPLATES[type].EXPORT_NAMED({
                     local: t.identifier(s.symbol),
                     name: t.identifier(s.as),
@@ -400,6 +410,7 @@ function linearizeState(state: State /*: State */) /* : Fixture */ {
               if (s.symbol === '*') {
                 if (s.as === '*') {
                   exportStatements.push(
+                    // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly mjs: { readonly IMPORT_NAMED: any; readonly IMPORT_NAMESPACE: any; readonly EXPORT_CONST: any; readonly EXPORT_NAMED: any; readonly CONST: any; readonly REEXPORT_NAMED: any; readonly REEXPORT_NAMESPACE: any; readonly REEXPORT_NAMESPACE_AS: any; }; }'.
                     TEMPLATES[type].REEXPORT_NAMESPACE({
                       source: t.stringLiteral(
                         './' + numberToFilename(from, state.modules[from].type),
@@ -408,6 +419,7 @@ function linearizeState(state: State /*: State */) /* : Fixture */ {
                   );
                 } else {
                   exportStatements.push(
+                    // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly mjs: { readonly IMPORT_NAMED: any; readonly IMPORT_NAMESPACE: any; readonly EXPORT_CONST: any; readonly EXPORT_NAMED: any; readonly CONST: any; readonly REEXPORT_NAMED: any; readonly REEXPORT_NAMESPACE: any; readonly REEXPORT_NAMESPACE_AS: any; }; }'.
                     TEMPLATES[type].REEXPORT_NAMESPACE_AS({
                       name: t.identifier(s.as),
                       source: t.stringLiteral(
@@ -418,6 +430,7 @@ function linearizeState(state: State /*: State */) /* : Fixture */ {
                 }
               } else {
                 exportStatements.push(
+                  // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly mjs: { readonly IMPORT_NAMED: any; readonly IMPORT_NAMESPACE: any; readonly EXPORT_CONST: any; readonly EXPORT_NAMED: any; readonly CONST: any; readonly REEXPORT_NAMED: any; readonly REEXPORT_NAMESPACE: any; readonly REEXPORT_NAMESPACE_AS: any; }; }'.
                   TEMPLATES[type].REEXPORT_NAMED({
                     local: t.identifier(s.symbol),
                     name: t.identifier(s.as),
@@ -459,6 +472,7 @@ function linearizeState(state: State /*: State */) /* : Fixture */ {
           ],
         ]),
     ),
+    // @ts-expect-error - TS7006 - Parameter 'n' implicitly has an 'any' type.
     entries: state.entries.map((n) =>
       numberToFilename(n, state.modules[n].type),
     ),

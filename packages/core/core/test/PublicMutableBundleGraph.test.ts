@@ -77,6 +77,7 @@ describe('PublicMutableBundleGraph', () => {
       }
     });
 
+    // @ts-expect-error - TS2454 - Variable 'dependency' is used before being assigned.
     invariant(dependency != null);
 
     let target = nullthrows(dependency.target);

@@ -7,6 +7,7 @@ import type {
 import path from 'path';
 import {md, generateJSONCodeHighlights} from '@atlaspack/diagnostic';
 import nullthrows from 'nullthrows';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'clone'. '/home/ubuntu/parcel/node_modules/clone/clone.js' implicitly has an 'any' type.
 import clone from 'clone';
 import {POSTCSS_RANGE} from './constants';
 
@@ -81,14 +82,18 @@ async function configHydrator(
     let message;
     let hints: Array<string> = [];
     if (!isPackageJson && redundantPlugins.length === pluginArray.length) {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       message = md`Parcel includes CSS transpilation and vendor prefixing by default. PostCSS config __${filename}__ contains only redundant plugins. Deleting it may significantly improve build performance.`;
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       hints.push(md`Delete __${filename}__`);
     } else {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       message = md`Parcel includes CSS transpilation and vendor prefixing by default. PostCSS config __${filename}__ contains the following redundant plugins: ${[
         ...redundantPlugins,
       ].map((p) =>
         md.underline(p),
       )}. Removing these may improve build performance.`;
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       hints.push(md`Remove the above plugins from __${filename}__`);
     }
 

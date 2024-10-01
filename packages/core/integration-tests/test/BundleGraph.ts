@@ -97,6 +97,7 @@ describe.v2('BundleGraph', () => {
     before(async () => {
       await overlayFS.mkdirp(dir);
 
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS, dir)`
         logo.svg:
           <svg></svg>

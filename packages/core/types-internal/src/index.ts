@@ -398,6 +398,7 @@ export type InitialAtlaspackOptionsInternal<WorkerFarm> = {
     packageName: DependencySpecifier;
     resolveFrom: FilePath;
   }>;
+  // @ts-expect-error - TS2552 - Cannot find name '$Partial'. Did you mean 'Partial'?
   readonly featureFlags?: $Partial<FeatureFlags>;
 
   // throwErrors
@@ -633,6 +634,7 @@ export type DependencyOptions = {
   /** The semver version range expected for the dependency. */
   readonly range?: SemverRange;
   /** The symbols within the resolved module that the source file depends on. */
+  // @ts-expect-error - TS2552 - Cannot find name '$ReadOnlyMap'. Did you mean 'ReadonlyMap'?
   readonly symbols?: $ReadOnlyMap<
     symbol,
     {
@@ -1061,6 +1063,7 @@ export type TransformerResult = {
    */
   readonly sideEffects?: boolean;
   /** The symbols that the asset exports. */
+  // @ts-expect-error - TS2552 - Cannot find name '$ReadOnlyMap'. Did you mean 'ReadonlyMap'?
   readonly symbols?: $ReadOnlyMap<
     symbol,
     {
@@ -1684,6 +1687,7 @@ export interface BundleGraph<TBundle extends Bundle> {
    */
   getUsedSymbols(
     arg1: Asset | Dependency,
+    // @ts-expect-error - TS2552 - Cannot find name '$ReadOnlySet'. Did you mean 'ReadonlySet'?
   ): $ReadOnlySet<symbol> | null | undefined;
   /** Returns the common root directory for the entry assets of a target. */
   getEntryRoot(target: Target): FilePath;

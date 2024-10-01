@@ -13,6 +13,7 @@ import {
   restoreDeserializedObject,
 } from '@atlaspack/core';
 
+// @ts-expect-error - TS2420 - Class 'WebChild' incorrectly implements interface 'ChildImpl'.
 export default class WebChild implements ChildImpl {
   onMessage: MessageHandler;
   onExit: ExitHandler;

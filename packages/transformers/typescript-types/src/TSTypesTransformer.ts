@@ -24,6 +24,7 @@ export default new Transformer({
       // which many TypeScript users will already have for typechecking, etc.
       jsx: ts.JsxEmit.React,
       moduleResolution: ts.ModuleResolutionKind.NodeJs,
+      // @ts-expect-error - TS2698 - Spread types may only be created from object types.
       ...config,
       // Always emit output
       noEmit: false,
@@ -39,6 +40,7 @@ export default new Transformer({
     };
 
     let host = new CompilerHost(options.inputFS, ts, logger);
+    // @ts-expect-error - TS2345 - Argument of type 'import("/home/ubuntu/parcel/packages/utils/ts-utils/src/CompilerHost").CompilerHost' is not assignable to parameter of type 'import("/home/ubuntu/parcel/node_modules/typescript/lib/typescript").CompilerHost'.
     let program = ts.createProgram([asset.filePath], opts, host);
 
     for (let file of program.getSourceFiles()) {
@@ -51,6 +53,7 @@ export default new Transformer({
 
     let mainModuleName = normalizeSeparators(
       path
+        // @ts-expect-error - TS2339 - Property 'getCommonSourceDirectory' does not exist on type 'Program'.
         .relative(program.getCommonSourceDirectory(), asset.filePath)
         .slice(0, -path.extname(asset.filePath).length),
     );
@@ -163,6 +166,7 @@ export default new Transformer({
     code = code.substring(0, code.lastIndexOf('//# sourceMappingURL'));
 
     let map = JSON.parse(nullthrows(host.outputMap));
+    // @ts-expect-error - TS7006 - Parameter 'source' implicitly has an 'any' type.
     map.sources = map.sources.map((source) =>
       path.join(path.dirname(asset.filePath), source),
     );

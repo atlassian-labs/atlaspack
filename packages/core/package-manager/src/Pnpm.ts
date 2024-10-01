@@ -2,15 +2,19 @@ import type {PackageInstaller, InstallerOptions} from '@atlaspack/types';
 
 import path from 'path';
 import fs from 'fs';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'command-exists'. '/home/ubuntu/parcel/node_modules/command-exists/index.js' implicitly has an 'any' type.
 import commandExists from 'command-exists';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'cross-spawn'. '/home/ubuntu/parcel/packages/core/package-manager/node_modules/cross-spawn/index.js' implicitly has an 'any' type.
 import spawn from 'cross-spawn';
 import logger from '@atlaspack/logger';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'split2'. '/home/ubuntu/parcel/node_modules/split2/index.js' implicitly has an 'any' type.
 import split from 'split2';
 import JSONParseStream from './JSONParseStream';
 import promiseFromProcess from './promiseFromProcess';
 import {registerSerializableClass} from '@atlaspack/core';
 import {exec, npmSpecifierFromModuleRequest} from './utils';
 
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import pkg from '../package.json';
 
 const PNPM_CMD = 'pnpm';
@@ -98,6 +102,7 @@ export class Pnpm implements PackageInstaller {
   }: InstallerOptions): Promise<void> {
     if (pnpmVersion == null) {
       let version = await exec('pnpm --version');
+      // @ts-expect-error - TS2345 - Argument of type 'string | Buffer' is not assignable to parameter of type 'string'.
       pnpmVersion = parseInt(version.stdout, 10);
     }
 
@@ -132,7 +137,9 @@ export class Pnpm implements PackageInstaller {
     });
     installProcess.stdout
       .pipe(split())
+      // @ts-expect-error - TS2554 - Expected 1 arguments, but got 0.
       .pipe(new JSONParseStream())
+      // @ts-expect-error - TS7006 - Parameter 'e' implicitly has an 'any' type.
       .on('error', (e) => {
         logger.warn({
           origin: '@atlaspack/package-manager',
@@ -160,9 +167,11 @@ export class Pnpm implements PackageInstaller {
 
     let stderr: Array<any> = [];
     installProcess.stderr
+      // @ts-expect-error - TS7006 - Parameter 'str' implicitly has an 'any' type.
       .on('data', (str) => {
         stderr.push(str.toString());
       })
+      // @ts-expect-error - TS7006 - Parameter 'e' implicitly has an 'any' type.
       .on('error', (e) => {
         logger.warn({
           origin: '@atlaspack/package-manager',

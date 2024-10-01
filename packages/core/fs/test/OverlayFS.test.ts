@@ -12,6 +12,7 @@ describe('OverlayFS', () => {
   let workerFarm: any;
 
   beforeEach(() => {
+    // @ts-expect-error - TS2345 - Argument of type '{ workerPath: string; }' is not assignable to parameter of type 'FarmOptions'.
     workerFarm = new WorkerFarm({
       workerPath: require.resolve('@atlaspack/core/src/worker.js'),
     });
@@ -24,6 +25,7 @@ describe('OverlayFS', () => {
   });
 
   it('copies on write', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo: foo
     `;
@@ -37,6 +39,7 @@ describe('OverlayFS', () => {
   });
 
   it('copies on write with dir', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo/foo: foo
     `;
@@ -50,6 +53,7 @@ describe('OverlayFS', () => {
   });
 
   it('copies on write when copying', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo: foo
     `;
@@ -62,6 +66,7 @@ describe('OverlayFS', () => {
   });
 
   it('copies on write when copying with dir', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo/foo: foo
       bar
@@ -82,6 +87,7 @@ describe('OverlayFS', () => {
   });
 
   it('symlinks in memory', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo: foo
     `;
@@ -97,6 +103,7 @@ describe('OverlayFS', () => {
   });
 
   it('tracks deletes', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo: bar
       baz -> foo`;
@@ -115,6 +122,7 @@ describe('OverlayFS', () => {
   });
 
   it('tracks unlinks', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo: bar
       baz -> foo`;
@@ -134,6 +142,7 @@ describe('OverlayFS', () => {
   });
 
   it('tracks nested deletes', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo/bar: baz
       foo/bat/baz: qux
@@ -161,6 +170,7 @@ describe('OverlayFS', () => {
   });
 
   it('supports changing to a dir that is only on the readable fs', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo/bar: baz
     `;
@@ -171,6 +181,7 @@ describe('OverlayFS', () => {
   });
 
   it('supports changing to a dir that is only on the writable fs', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo/bar: bar
     `;
@@ -184,6 +195,7 @@ describe('OverlayFS', () => {
   });
 
   it('supports changing dir relative to cwd', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo/bar: bar
     `;
@@ -194,6 +206,7 @@ describe('OverlayFS', () => {
   });
 
   it('changes dir without changing underlying fs dir', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo/bar: baz
       foo/bat/baz: qux
@@ -209,6 +222,7 @@ describe('OverlayFS', () => {
   });
 
   it('errors when changing to a dir that does not exist on either fs', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo/bar: bar
     `;
@@ -217,6 +231,7 @@ describe('OverlayFS', () => {
   });
 
   it('errors when changing to a deleted dir', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(underlayFS)`
       foo/bar: bar
     `;

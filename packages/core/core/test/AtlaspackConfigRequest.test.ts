@@ -23,6 +23,7 @@ describe('AtlaspackConfigRequest', () => {
           // $FlowExpectedError[incompatible-call]
           {
             filePath: '.parcelrc',
+            // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'RawAtlaspackConfigPipeline | undefined'.
             resolvers: '123',
           },
           '.parcelrc',
@@ -36,6 +37,7 @@ describe('AtlaspackConfigRequest', () => {
           {
             filePath: '.parcelrc',
             // $FlowExpectedError[incompatible-call]
+            // @ts-expect-error - TS2322 - Type 'number' is not assignable to type 'string'. | TS2322 - Type 'number' is not assignable to type 'string'.
             resolvers: [1, '123', 5],
           },
           '.parcelrc',
@@ -69,6 +71,7 @@ describe('AtlaspackConfigRequest', () => {
           {
             filePath: '.parcelrc',
             // $FlowExpectedError[incompatible-call]
+            // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'RawAtlaspackConfigPipeline | undefined'. | TS2322 - Type 'string' is not assignable to type 'RawAtlaspackConfigPipeline | undefined'.
             transformers: ['parcel-transformer-test', '...'],
           },
           '.parcelrc',
@@ -82,6 +85,7 @@ describe('AtlaspackConfigRequest', () => {
           // $FlowExpectedError[incompatible-call]
           {
             filePath: '.parcelrc',
+            // @ts-expect-error - TS2322 - Type 'number' is not assignable to type 'string | string[] | undefined'.
             extends: 2,
           },
           '.parcelrc',
@@ -93,6 +97,7 @@ describe('AtlaspackConfigRequest', () => {
           {
             filePath: '.parcelrc',
             // $FlowExpectedError[incompatible-call]
+            // @ts-expect-error - TS2322 - Type 'number' is not assignable to type 'string'. | TS2322 - Type 'number' is not assignable to type 'string'.
             extends: [2, 7],
           },
           '.parcelrc',
@@ -125,6 +130,7 @@ describe('AtlaspackConfigRequest', () => {
             // $FlowExpectedError
             {
               extends: '@atlaspack/config-default',
+              // @ts-expect-error - TS2345 - Argument of type '{ extends: string; '@atlaspack/transformer-js': { inlineEnvironment: boolean; }; }' is not assignable to parameter of type 'RawAtlaspackConfig | ResolvedAtlaspackConfigFile'.
               '@atlaspack/transformer-js': {
                 inlineEnvironment: false,
               },
@@ -394,6 +400,7 @@ describe('AtlaspackConfigRequest', () => {
     it('should call a merger function if provided', () => {
       let merger = (a: any, b: any) => [a, b];
       assert.deepEqual(
+        // @ts-expect-error - TS2345 - Argument of type '(a: any, b: any) => any[]' is not assignable to parameter of type '(a: string, b: string) => string'.
         mergeMaps({'*.js': 'base-js'}, {'*.js': 'ext-js'}, merger),
         {'*.js': ['base-js', 'ext-js']},
       );
@@ -508,6 +515,7 @@ describe('AtlaspackConfigRequest', () => {
         validators: {},
       };
 
+      // @ts-expect-error - TS2345 - Argument of type '{ filePath: string; resolvers: (string | { packageName: string; resolveFrom: string; keyPath: string; })[]; transformers: { '*.js': (string | { packageName: string; resolveFrom: string; keyPath: string; })[]; }; }' is not assignable to parameter of type 'ProcessedAtlaspackConfig'.
       assert.deepEqual(mergeConfigs(base, ext), merged);
     });
   });

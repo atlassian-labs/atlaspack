@@ -1,8 +1,10 @@
 /* eslint-disable no-console, monorepo/no-internal-import */
 import type {PackagedBundle} from '@atlaspack/types';
 import type {ParcelOptions} from '@atlaspack/core/src/types';
+// @ts-expect-error - TS2305 - Module '"commander"' has no exported member 'commander$Command'.
 import type {commander$Command} from 'commander';
 
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import {version} from '../package.json';
 
 import commander from 'commander';
@@ -16,6 +18,7 @@ const {
   PackagedBundleClass,
 } = require('./deep-imports.js');
 
+// @ts-expect-error - TS7031 - Binding element 'cacheDir' implicitly has an 'any' type. | TS7031 - Binding element 'outDir' implicitly has an 'any' type.
 async function run({cacheDir, outDir}) {
   // 1. load bundle graph and info via parcel~query
   let {bundleGraph, bundleInfo} = await loadGraphs(cacheDir);

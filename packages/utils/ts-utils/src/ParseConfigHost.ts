@@ -8,6 +8,7 @@ export class ParseConfigHost extends FSHost implements IParseConfigHost {
   filesRead: Set<FilePath>;
   useCaseSensitiveFileNames: boolean;
 
+  // @ts-expect-error - TS2709 - Cannot use namespace 'TypeScriptModule' as a type.
   constructor(fs: FileSystem, ts: TypeScriptModule) {
     super(fs, ts);
     this.filesRead = new Set();

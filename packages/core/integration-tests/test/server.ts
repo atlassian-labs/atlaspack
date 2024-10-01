@@ -25,10 +25,13 @@ const config = path.join(
 );
 
 describe.v2('server', function () {
+  // @ts-expect-error - TS7034 - Variable 'subscription' implicitly has type 'any' in some locations where its type cannot be determined.
   let subscription;
 
   afterEach(async () => {
+    // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type.
     if (subscription) {
+      // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type.
       await subscription.unsubscribe();
     }
     subscription = null;
@@ -484,6 +487,7 @@ describe.v2('server', function () {
     );
 
     assert.equal(builds.length, 2);
+    // @ts-expect-error - TS2322 - Type 'BuildEvent | undefined' is not assignable to type 'BuildEvent'.
     build = builds[1];
     invariant(build?.type === 'buildSuccess');
     assertBundles(build.bundleGraph, [
@@ -579,6 +583,7 @@ describe.v2('server', function () {
     );
 
     assert.equal(builds.length, 2);
+    // @ts-expect-error - TS2322 - Type 'BuildEvent | undefined' is not assignable to type 'BuildEvent'.
     build = builds[1];
     invariant(build?.type === 'buildSuccess');
     assertBundles(build.bundleGraph, [
@@ -619,6 +624,7 @@ describe.v2('server', function () {
     );
 
     assert.equal(builds.length, 3);
+    // @ts-expect-error - TS2322 - Type 'BuildEvent | undefined' is not assignable to type 'BuildEvent'.
     build = builds[2];
     invariant(build?.type === 'buildSuccess');
     assertBundles(build.bundleGraph, [

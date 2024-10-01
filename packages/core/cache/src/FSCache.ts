@@ -13,6 +13,7 @@ import {
   registerSerializableClass,
 } from '@atlaspack/core';
 // flowlint-next-line untyped-import:off
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import packageJson from '../package.json';
 import {WRITE_LIMIT_CHUNK} from './constants';
 
@@ -38,6 +39,7 @@ export class FSCache implements Cache {
     let dirPromises: Array<Promise<undefined>> = [];
     for (let i = 0; i < 256; i++) {
       dirPromises.push(
+        // @ts-expect-error - TS2345 - Argument of type 'Promise<void>' is not assignable to parameter of type 'Promise<undefined>'.
         this.fs.mkdirp(path.join(this.dir, ('00' + i.toString(16)).slice(-2))),
       );
     }
@@ -88,6 +90,7 @@ export class FSCache implements Cache {
     return path.join(this.dir, `${key}-${index}`);
   }
 
+  // @ts-expect-error - TS2355 - A function whose declared type is neither 'void' nor 'any' must return a value.
   async #unlinkChunks(key: string, index: number): Promise<undefined> {
     try {
       await this.fs.unlink(this.#getFilePath(key, index));
@@ -125,13 +128,16 @@ export class FSCache implements Cache {
     if (chunks === 1) {
       // If there's one chunk, don't slice the content
       writePromises.push(
+        // @ts-expect-error - TS2345 - Argument of type 'Promise<void>' is not assignable to parameter of type 'Promise<undefined>'.
         this.fs.writeFile(this.#getFilePath(key, 0), contents, {
+          // @ts-expect-error - TS2345 - Argument of type '{ signal: AbortSignal | undefined; }' is not assignable to parameter of type 'FileOptions'.
           signal: options?.signal,
         }),
       );
     } else {
       for (let i = 0; i < chunks; i += 1) {
         writePromises.push(
+          // @ts-expect-error - TS2345 - Argument of type 'Promise<void>' is not assignable to parameter of type 'Promise<undefined>'.
           this.fs.writeFile(
             this.#getFilePath(key, i),
             typeof contents === 'string'
@@ -143,6 +149,7 @@ export class FSCache implements Cache {
                   i * WRITE_LIMIT_CHUNK,
                   (i + 1) * WRITE_LIMIT_CHUNK,
                 ),
+            // @ts-expect-error - TS2345 - Argument of type '{ signal: AbortSignal | undefined; }' is not assignable to parameter of type 'FileOptions'.
             {signal: options?.signal},
           ),
         );
@@ -162,6 +169,7 @@ export class FSCache implements Cache {
     let filePath = this.#getFilePath(key, i);
 
     while (await this.fs.exists(filePath)) {
+      // @ts-expect-error - TS2345 - Argument of type 'Promise<void>' is not assignable to parameter of type 'Promise<undefined>'.
       deletePromises.push(this.fs.rimraf(filePath));
       i += 1;
       filePath = this.#getFilePath(key, i);

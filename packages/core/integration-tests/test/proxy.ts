@@ -33,6 +33,7 @@ function get(file: string, port: number, client = http) {
       resolve: (result: Promise<string> | string) => void,
       reject: (error?: any) => void,
     ) => {
+      // @ts-expect-error - TS2769 - No overload matches this call.
       client.get(
         {
           hostname: 'localhost',
@@ -58,20 +59,28 @@ function get(file: string, port: number, client = http) {
 }
 
 describe.v2('proxy', function () {
+  // @ts-expect-error - TS7034 - Variable 'subscription' implicitly has type 'any' in some locations where its type cannot be determined.
   let subscription;
+  // @ts-expect-error - TS7034 - Variable 'cwd' implicitly has type 'any' in some locations where its type cannot be determined.
   let cwd;
+  // @ts-expect-error - TS7034 - Variable 'server' implicitly has type 'any' in some locations where its type cannot be determined.
   let server;
   beforeEach(function () {
     cwd = inputFS.cwd();
   });
 
   afterEach(async () => {
+    // @ts-expect-error - TS7005 - Variable 'cwd' implicitly has an 'any' type.
     inputFS.chdir(cwd);
+    // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type.
     if (subscription) {
+      // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type.
       await subscription.unsubscribe();
     }
     subscription = null;
+    // @ts-expect-error - TS7005 - Variable 'server' implicitly has an 'any' type.
     if (server) {
+      // @ts-expect-error - TS7005 - Variable 'server' implicitly has an 'any' type.
       await server.close();
     }
     server = null;

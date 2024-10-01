@@ -1,4 +1,5 @@
 import assert from 'assert';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
 import throttle from '../src/throttle';
 
@@ -33,6 +34,7 @@ describe('throttle', () => {
   it('preserves the `this` when throttled functions are invoked', () => {
     let result: any;
     let throttled = throttle(function () {
+      // @ts-expect-error - TS2683 - 'this' implicitly has type 'any' because it does not have a type annotation.
       result = this.bar;
     }, 100);
 

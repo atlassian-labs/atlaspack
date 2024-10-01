@@ -39,16 +39,20 @@ export default new Packager({
     for (const contentScript of manifest.content_scripts || []) {
       const srcBundles = deps
         .filter(
+          // @ts-expect-error - TS7006 - Parameter 'd' implicitly has an 'any' type.
           (d) =>
             contentScript.js?.includes(d.id) ||
             contentScript.css?.includes(d.id),
         )
+        // @ts-expect-error - TS7006 - Parameter 'd' implicitly has an 'any' type.
         .map((d) => nullthrows(bundleGraph.getReferencedBundle(d, bundle)));
 
       contentScript.css = [
         ...new Set(
           srcBundles
+            // @ts-expect-error - TS7006 - Parameter 'b' implicitly has an 'any' type.
             .flatMap((b) => bundleGraph.getReferencedBundles(b))
+            // @ts-expect-error - TS7006 - Parameter 'b' implicitly has an 'any' type.
             .filter((b) => b.type == 'css')
             .map(relPath)
             .concat(contentScript.css || []),
@@ -58,7 +62,9 @@ export default new Packager({
       contentScript.js = [
         ...new Set(
           srcBundles
+            // @ts-expect-error - TS7006 - Parameter 'b' implicitly has an 'any' type.
             .flatMap((b) => bundleGraph.getReferencedBundles(b))
+            // @ts-expect-error - TS7006 - Parameter 'b' implicitly has an 'any' type.
             .filter((b) => b.type == 'js')
             .map(relPath)
             .concat(contentScript.js || []),
@@ -66,6 +72,7 @@ export default new Packager({
       ];
 
       const resources = srcBundles
+        // @ts-expect-error - TS7006 - Parameter 'b' implicitly has an 'any' type.
         .flatMap((b) => {
           const children: Array<NamedBundle> = [];
           const siblings = bundleGraph.getReferencedBundles(b);
@@ -80,6 +87,7 @@ export default new Packager({
 
       if (resources.length > 0) {
         war.push({
+          // @ts-expect-error - TS7006 - Parameter 'match' implicitly has an 'any' type.
           matches: contentScript.matches.map((match) => {
             if (/^(((http|ws)s?)|ftp|\*):\/\//.test(match)) {
               let pathIndex = match.indexOf('/', match.indexOf('://') + 3);

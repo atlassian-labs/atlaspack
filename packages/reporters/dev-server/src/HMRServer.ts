@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2307 - Cannot find module 'flow-to-typescript-codemod' or its corresponding type declarations.
 import {Flow} from 'flow-to-typescript-codemod';
 import type {
   Asset,
@@ -14,12 +15,15 @@ import type {
   HMRServerOptions,
   Request,
   Response,
+  // @ts-expect-error - TS2307 - Cannot find module './types.js.flow' or its corresponding type declarations.
 } from './types.js.flow';
 import {setHeaders, SOURCES_ENDPOINT} from './Server';
 
 import nullthrows from 'nullthrows';
 import url from 'url';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'mime-types'. '/home/ubuntu/parcel/node_modules/mime-types/index.js' implicitly has an 'any' type.
 import mime from 'mime-types';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'ws'. '/home/ubuntu/parcel/node_modules/ws/index.js' implicitly has an 'any' type.
 import WebSocket from 'ws';
 import invariant from 'assert';
 import {
@@ -78,6 +82,7 @@ export default class HMRServer {
   options: HMRServerOptions;
   bundleGraph: BundleGraph<PackagedBundle> | BundleGraph<NamedBundle> | null =
     null;
+  // @ts-expect-error - TS2564 - Property 'stopServer' has no initializer and is not definitely assigned in the constructor.
   stopServer: () => Promise<void> | null | undefined;
 
   constructor(options: HMRServerOptions) {
@@ -110,12 +115,14 @@ export default class HMRServer {
     }
     this.wss = new WebSocket.Server({server});
 
+    // @ts-expect-error - TS7006 - Parameter 'ws' implicitly has an 'any' type.
     this.wss.on('connection', (ws) => {
       if (this.unresolvedError) {
         ws.send(JSON.stringify(this.unresolvedError));
       }
     });
 
+    // @ts-expect-error - TS7006 - Parameter 'err' implicitly has an 'any' type.
     this.wss.on('error', (err) => this.handleSocketError(err));
   }
 
@@ -137,6 +144,7 @@ export default class HMRServer {
   async stop() {
     if (this.stopServer != null) {
       await this.stopServer();
+      // @ts-expect-error - TS2322 - Type 'null' is not assignable to type '() => Promise<void> | null | undefined'.
       this.stopServer = null;
     }
     this.wss.close();
@@ -202,6 +210,7 @@ export default class HMRServer {
 
         if (isOnlyReferencedByRuntimes) {
           for (let runtime of runtimes) {
+            // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'Asset'.
             changedAssets.add(runtime);
           }
 
@@ -246,6 +255,7 @@ export default class HMRServer {
     } else {
       this.broadcast({
         type: 'update',
+        // @ts-expect-error - TS2322 - Type 'unknown[]' is not assignable to type 'HMRAsset[]'.
         assets,
       });
     }

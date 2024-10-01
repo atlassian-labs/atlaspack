@@ -19,6 +19,7 @@ describe.v2('typescript tsc', function () {
       {config},
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(output, 2);
 
@@ -32,6 +33,7 @@ describe.v2('typescript tsc', function () {
       {config},
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(output, 2);
 
@@ -55,6 +57,7 @@ describe.v2('typescript tsc', function () {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(new output.Foo().run(), 'bar');
   });

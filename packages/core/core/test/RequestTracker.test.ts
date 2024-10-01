@@ -8,6 +8,7 @@ import {INITIAL_BUILD} from '../src/constants';
 import {makeDeferredWithPromise} from '@atlaspack/utils';
 
 const options = DEFAULT_OPTIONS;
+// @ts-expect-error - TS2345 - Argument of type '{ workerPath: string; }' is not assignable to parameter of type 'FarmOptions'.
 const farm = new WorkerFarm({workerPath: require.resolve('../src/worker.js')});
 
 describe('RequestTracker', () => {
@@ -52,6 +53,7 @@ describe('RequestTracker', () => {
       },
       input: null,
     });
+    // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'false' and 'true' have no overlap.
     assert(called === true);
   });
 
@@ -144,6 +146,7 @@ describe('RequestTracker', () => {
       id: 'abc',
       type: 7,
       // $FlowFixMe string isn't a valid result
+      // @ts-expect-error - TS2322 - Type '({ api }: { api: RunAPI<string | undefined>; }) => Promise<void>' is not assignable to type '(arg1: { input: null; } & StaticRunOpts<string | undefined>) => Async<string | undefined>'.
       run: async ({api}: {api: RunAPI<string | undefined>}) => {
         let result = await Promise.resolve('hello');
         api.storeResult(result);
@@ -156,6 +159,7 @@ describe('RequestTracker', () => {
       run: async () => {},
       input: null,
     });
+    // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'void' and 'string' have no overlap.
     assert(result === 'hello');
   });
 
@@ -173,6 +177,7 @@ describe('RequestTracker', () => {
       .then(null, () => {
         /* do nothing */
       });
+    // @ts-expect-error - TS2345 - Argument of type '{ aborted: true; }' is not assignable to parameter of type 'AbortSignal'.
     tracker.setSignal({aborted: true});
     await p;
     assert(
@@ -190,8 +195,10 @@ describe('RequestTracker', () => {
       id: 'abc',
       type: 7,
       // $FlowFixMe string isn't a valid result
+      // @ts-expect-error - TS2322 - Type '({ api }: { api: RunAPI<string | undefined>; }) => Promise<void>' is not assignable to type '(arg1: { input: null; } & StaticRunOpts<string | undefined>) => Async<string | undefined>'.
       run: async ({api}: {api: RunAPI<string | undefined>}) => {
         let result = await Promise.resolve();
+        // @ts-expect-error - TS2345 - Argument of type 'void' is not assignable to parameter of type 'string | undefined'.
         api.storeResult(result);
       },
       input: null,
@@ -245,7 +252,9 @@ describe('RequestTracker', () => {
       input: null,
     });
 
+    // @ts-expect-error - TS2554 - Expected 1 arguments, but got 0.
     lockA.deferred.resolve();
+    // @ts-expect-error - TS2554 - Expected 1 arguments, but got 0.
     lockB.deferred.resolve();
     let resultA = await requestA;
     let resultB = await requestB;
@@ -286,6 +295,7 @@ describe('RequestTracker', () => {
       id: 'abc',
       type: 7,
       // $FlowFixMe string isn't a valid result
+      // @ts-expect-error - TS2322 - Type '({ api }: { api: RunAPI<string | undefined>; }) => Promise<void>' is not assignable to type '(arg1: { input: null; } & StaticRunOpts<string | undefined>) => Async<string | undefined>'.
       run: async ({api}: {api: RunAPI<string | undefined>}) => {
         await lockB.promise;
         api.storeResult('b');
@@ -293,7 +303,9 @@ describe('RequestTracker', () => {
       input: null,
     });
 
+    // @ts-expect-error - TS2554 - Expected 1 arguments, but got 0.
     lockA.deferred.resolve();
+    // @ts-expect-error - TS2554 - Expected 1 arguments, but got 0.
     lockB.deferred.resolve();
     await requestA;
     await requestB;
@@ -389,6 +401,7 @@ describe('RequestTracker', () => {
       id: contentKey,
       type: 7,
       // $FlowFixMe string isn't a valid result
+      // @ts-expect-error - TS2322 - Type '({ api }: { api: RunAPI<string | undefined>; }) => Promise<void>' is not assignable to type '(arg1: { input: null; } & StaticRunOpts<string | undefined>) => Async<string | undefined>'.
       run: async ({api}: {api: RunAPI<string | undefined>}) => {
         let result = await Promise.resolve('a');
         api.storeResult(result);
@@ -403,6 +416,7 @@ describe('RequestTracker', () => {
         id: contentKey,
         type: 7,
         // $FlowFixMe string isn't a valid result
+        // @ts-expect-error - TS2322 - Type '({ api }: { api: RunAPI<string | undefined>; }) => Promise<void>' is not assignable to type '(arg1: { input: null; } & StaticRunOpts<string | undefined>) => Async<string | undefined>'.
         run: async ({api}: {api: RunAPI<string | undefined>}) => {
           let result = await Promise.resolve('b');
           api.storeResult(result);
@@ -431,16 +445,19 @@ describe('RequestTracker', () => {
       input: null,
     });
     let nodeId = tracker.graph.getNodeIdByContentKey(contentKey);
+    // @ts-expect-error - TS2339 - Property 'invalidateReason' does not exist on type 'RequestGraphNode'.
     assert.equal(tracker.graph.getNode(nodeId)?.invalidateReason, 0);
     await tracker.writeToCache();
 
     tracker.graph.invalidateNode(nodeId, 1);
+    // @ts-expect-error - TS2339 - Property 'invalidateReason' does not exist on type 'RequestGraphNode'.
     assert.equal(tracker.graph.getNode(nodeId)?.invalidateReason, 1);
     await tracker.writeToCache();
 
     // Create a new tracker from cache
     tracker = await RequestTracker.init({farm, options});
 
+    // @ts-expect-error - TS2339 - Property 'invalidateReason' does not exist on type 'RequestGraphNode'.
     assert.equal(tracker.graph.getNode(nodeId)?.invalidateReason, 1);
   });
 });
@@ -474,14 +491,17 @@ root --- node1 --- node2 ----------- orphan1 --- orphan2
 
     assert.deepEqual(cleanUpOrphans(graph), []);
     assert.equal(getNonNullNodes(graph).length, 6);
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.equal(Array.from(graph.getAllEdges()).length, 5);
 
     graph.removeEdge(node2, orphan1, 1, false);
     assert.equal(getNonNullNodes(graph).length, 6);
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.equal(Array.from(graph.getAllEdges()).length, 4);
 
     assert.deepEqual(cleanUpOrphans(graph), [orphan1, orphan2]);
     assert.equal(getNonNullNodes(graph).length, 4);
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.equal(Array.from(graph.getAllEdges()).length, 3);
   });
 });

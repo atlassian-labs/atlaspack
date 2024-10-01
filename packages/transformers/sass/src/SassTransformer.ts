@@ -2,6 +2,7 @@ import {Transformer} from '@atlaspack/plugin';
 import path from 'path';
 import {EOL} from 'os';
 import SourceMap from '@parcel/source-map';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sass'. '/home/ubuntu/parcel/node_modules/sass/sass.dart.js' implicitly has an 'any' type.
 import sass from 'sass';
 import {promisify} from 'util';
 
@@ -27,23 +28,34 @@ export default new Transformer({
     }
 
     // Resolve relative paths from config file
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     if (configFile && configResult.includePaths) {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'. | TS2571 - Object is of type 'unknown'. | TS7006 - Parameter 'p' implicitly has an 'any' type.
       configResult.includePaths = configResult.includePaths.map((p) =>
+        // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
         path.resolve(path.dirname(configFile.filePath), p),
       );
     }
 
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     if (configResult.importer === undefined) {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       configResult.importer = [];
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     } else if (!Array.isArray(configResult.importer)) {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'. | TS2571 - Object is of type 'unknown'.
       configResult.importer = [configResult.importer];
     }
 
     // Always emit sourcemap
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     configResult.sourceMap = true;
     // sources are created relative to the directory of outFile
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     configResult.outFile = path.join(options.projectRoot, 'style.css.map');
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     configResult.omitSourceMapUrl = true;
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     configResult.sourceMapContents = false;
 
     return configResult;
@@ -56,21 +68,27 @@ export default new Transformer({
     try {
       let code = await asset.getCode();
       let result = await sassRender({
+        // @ts-expect-error - TS2698 - Spread types may only be created from object types.
         ...rawConfig,
         file: asset.filePath,
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'. | TS2571 - Object is of type 'unknown'.
         data: rawConfig.data ? rawConfig.data + EOL + code : code,
         importer: [
+          // @ts-expect-error - TS2571 - Object is of type 'unknown'.
           ...rawConfig.importer,
           resolvePathImporter({
             asset,
             resolve,
+            // @ts-expect-error - TS2571 - Object is of type 'unknown'.
             includePaths: rawConfig.includePaths,
             options,
           }),
         ],
         indentedSyntax:
+          // @ts-expect-error - TS2571 - Object is of type 'unknown'.
           typeof rawConfig.indentedSyntax === 'boolean'
-            ? rawConfig.indentedSyntax
+            ? // @ts-expect-error - TS2571 - Object is of type 'unknown'.
+              rawConfig.indentedSyntax
             : asset.type === 'sass',
       });
 
@@ -103,6 +121,7 @@ export default new Transformer({
   },
 }) as Transformer;
 
+// @ts-expect-error - TS7031 - Binding element 'asset' implicitly has an 'any' type. | TS7031 - Binding element 'resolve' implicitly has an 'any' type. | TS7031 - Binding element 'includePaths' implicitly has an 'any' type. | TS7031 - Binding element 'options' implicitly has an 'any' type.
 function resolvePathImporter({asset, resolve, includePaths, options}) {
   // This is a reimplementation of the Sass resolution algorithm that uses Atlaspack's
   // FS and tracks all tried files so they are watched for creation.
@@ -138,6 +157,7 @@ function resolvePathImporter({asset, resolve, includePaths, options}) {
       paths.push(
         ...options.env.SASS_PATH.split(
           process.platform === 'win32' ? ';' : ':',
+          // @ts-expect-error - TS7006 - Parameter 'p' implicitly has an 'any' type.
         ).map((p) => path.resolve(options.projectRoot, p)),
       );
     }

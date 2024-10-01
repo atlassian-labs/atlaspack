@@ -14,11 +14,13 @@ import {
 
 const WORKER_PATH = path.join(__dirname, 'ThreadsChild.ts');
 
+// @ts-expect-error - TS2420 - Class 'ThreadsWorker' incorrectly implements interface 'WorkerImpl'.
 export default class ThreadsWorker implements WorkerImpl {
   execArgv: any;
   onMessage: MessageHandler;
   onError: ErrorHandler;
   onExit: ExitHandler;
+  // @ts-expect-error - TS2564 - Property 'worker' has no initializer and is not definitely assigned in the constructor.
   worker: Worker;
 
   constructor(
@@ -53,6 +55,7 @@ export default class ThreadsWorker implements WorkerImpl {
   stop(): Promise<void> {
     // In node 12, this returns a promise, but previously it accepted a callback
     // TODO: Pass a callback in earlier versions of Node
+    // @ts-expect-error - TS2322 - Type 'Promise<number>' is not assignable to type 'Promise<void>'.
     return Promise.resolve(this.worker.terminate());
   }
 

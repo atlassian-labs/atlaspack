@@ -17,6 +17,7 @@ export default new Transformer({
 
   async transform({asset, config, logger, options, tracer}) {
     try {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       if (config?.config) {
         if (
           asset.meta.babelPlugins != null &&
@@ -83,6 +84,7 @@ export default new Transformer({
     if (originalSourceMap) {
       // The babel AST already contains the correct mappings, but not the source contents.
       // We need to copy over the source contents from the original map.
+      // @ts-expect-error - TS2339 - Property 'getSourcesContentMap' does not exist on type 'SourceMap'.
       let sourcesContent = originalSourceMap.getSourcesContentMap();
       for (let filePath in sourcesContent) {
         let content = sourcesContent[filePath];

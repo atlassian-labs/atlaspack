@@ -66,6 +66,7 @@ describe.v2('JS API', function () {
 
       overlayFS.mkdirp(dir);
 
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS, dir)`
       index.js:
         export default 'Hi';

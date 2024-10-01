@@ -14,6 +14,7 @@ describe.v2('plugins with "registered" languages', () => {
     const dir = path.join(__dirname, 'esbuild-register-plugin');
     overlayFS.mkdirp(dir);
 
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       package.json:
         {
@@ -61,6 +62,7 @@ describe.v2('plugins with "registered" languages', () => {
       ],
     });
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     await run(b);
 
     // Tests that the plugin actually loaded properly by validating that it output

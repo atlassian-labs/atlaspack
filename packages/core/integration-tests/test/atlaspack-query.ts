@@ -25,6 +25,7 @@ describe.v2('atlaspack-query', () => {
       cacheDir: path.join(__dirname, '.parcel-cache'),
     };
 
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS)`
         index.js:
             export default 1;`;

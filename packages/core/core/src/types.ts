@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2307 - Cannot find module 'flow-to-typescript-codemod' or its corresponding type declarations.
 import {Flow} from 'flow-to-typescript-codemod';
 
 import type {ContentKey} from '@atlaspack/graph';
@@ -26,6 +27,7 @@ import type {
   HMROptions,
   DetailedReportOptions,
 } from '@atlaspack/types';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'SharedReference'. Did you mean to use 'import SharedReference from "@atlaspack/workers"' instead?
 import type {SharedReference} from '@atlaspack/workers';
 import type {FileSystem} from '@atlaspack/fs';
 import type {Cache} from '@atlaspack/cache';
@@ -171,6 +173,7 @@ export const BundleBehavior = {
   isolated: 1,
 } as const;
 
+// @ts-expect-error - TS2322 - Type 'string[]' is not assignable to type '("inline" | "isolated")[]'.
 export const BundleBehaviorNames: Array<keyof typeof BundleBehavior> =
   Object.keys(BundleBehavior);
 

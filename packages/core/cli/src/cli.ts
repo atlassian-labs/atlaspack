@@ -9,6 +9,7 @@ import chalk from 'chalk';
 import commander from 'commander';
 import path from 'path';
 import getPort from 'get-port';
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import {version} from '../package.json';
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 
@@ -141,6 +142,7 @@ const commonOptions = {
       let [name, val] = value.split('=');
       if (name in DEFAULT_FEATURE_FLAGS) {
         let featureFlagValue;
+        // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'FeatureFlags'.
         if (typeof DEFAULT_FEATURE_FLAGS[name] === 'boolean') {
           if (val !== 'true' && val !== 'false') {
             throw new Error(
@@ -176,6 +178,7 @@ var hmrOptions = {
   '--hmr-host <host>': ['hot module replacement host', process.env.HMR_HOST],
 };
 
+// @ts-expect-error - TS7006 - Parameter 'options' implicitly has an 'any' type.
 function applyOptions(cmd: commander.Command, options) {
   for (let opt in options) {
     const option = options[opt];
@@ -269,7 +272,9 @@ if (!args[2] || !program.commands.some((c) => c.name() === args[2])) {
 
 program.parse(args);
 
+// @ts-expect-error - TS7019 - Rest parameter 'args' implicitly has an 'any[]' type.
 function runCommand(...args) {
+  // @ts-expect-error - TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
   run(...args).catch(handleUncaughtException);
 }
 
@@ -298,8 +303,10 @@ async function run(
 
   let disposable = new Disposable();
   let unsubscribe: () => Promise<unknown>;
+  // @ts-expect-error - TS7034 - Variable 'isExiting' implicitly has type 'any' in some locations where its type cannot be determined.
   let isExiting;
   async function exit(exitCode: number = 0) {
+    // @ts-expect-error - TS7005 - Variable 'isExiting' implicitly has an 'any' type.
     if (isExiting) {
       return;
     }
@@ -362,6 +369,7 @@ async function run(
   }
 
   if (isWatching) {
+    // @ts-expect-error - TS7006 - Parameter 'err' implicitly has an 'any' type.
     ({unsubscribe} = await atlaspack.watch((err) => {
       if (err) {
         throw err;
@@ -427,6 +435,7 @@ function parseOptionInt(value: any) {
 
 async function normalizeOptions(
   command: any,
+  // @ts-expect-error - TS2749 - 'NodeFS' refers to a value, but is being used as a type here. Did you mean 'typeof NodeFS'?
   inputFS: NodeFS,
 ): Promise<InitialAtlaspackOptions> {
   let nodeEnv;
@@ -444,6 +453,7 @@ async function normalizeOptions(
 
   let https = !!command.https;
   if (command.cert && command.key) {
+    // @ts-expect-error - TS2322 - Type '{ cert: any; key: any; }' is not assignable to type 'boolean'.
     https = {
       cert: command.cert,
       key: command.key,
@@ -484,6 +494,7 @@ async function normalizeOptions(
   if (command.name() === 'serve') {
     let {publicUrl} = command;
 
+    // @ts-expect-error - TS2322 - Type '{ https: boolean; port: number; host: any; publicUrl: any; }' is not assignable to type 'boolean'.
     serveOptions = {
       https,
       port,
@@ -539,6 +550,7 @@ async function normalizeOptions(
     mode,
     hmrOptions,
     shouldContentHash: hmrOptions ? false : command.contentHash,
+    // @ts-expect-error - TS2322 - Type 'boolean' is not assignable to type 'false | InitialServerOptions | undefined'.
     serveOptions,
     targets: command.target.length > 0 ? command.target : null,
     shouldAutoInstall: command.autoinstall ?? true,

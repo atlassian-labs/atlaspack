@@ -1,4 +1,5 @@
 import type {Async, Bundle as IBundle, Namer} from '@atlaspack/types';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'SharedReference'. Did you mean to use 'import SharedReference from "@atlaspack/workers"' instead?
 import type {SharedReference} from '@atlaspack/workers';
 import type AtlaspackConfig from '../AtlaspackConfig';
 import type {LoadedPlugin} from '../AtlaspackConfig';
@@ -179,6 +180,7 @@ export default function createBundleGraphRequest(
 
       await dumpGraphToGraphViz(
         // $FlowFixMe Added in Flow 0.121.0 upgrade in #4381 (Windows only)
+        // @ts-expect-error - TS2345 - Argument of type 'ContentGraph<BundleGraphNode, BundleGraphEdgeType>' is not assignable to parameter of type 'Graph<AssetGraphNode, 1> | Graph<{ assets: Set<Asset>; sourceBundles: Set<number>; bundleBehavior?: BundleBehavior | null | undefined; }, 1> | Graph<...>'.
         res.bundleGraph._graph,
         'BundleGraph',
         bundleGraphEdgeTypes,
@@ -299,6 +301,7 @@ class BundlerRunner {
       graph.safeToIncrementallyBundle = false;
     }
 
+    // @ts-expect-error - TS7034 - Variable 'internalBundleGraph' implicitly has type 'any' in some locations where its type cannot be determined.
     let internalBundleGraph;
 
     let logger = new PluginLogger({origin: name});
@@ -326,6 +329,7 @@ class BundlerRunner {
 
         await dumpGraphToGraphViz(
           // $FlowFixMe
+          // @ts-expect-error - TS2345 - Argument of type 'ContentGraph<BundleGraphNode, BundleGraphEdgeType>' is not assignable to parameter of type 'Graph<AssetGraphNode, 1> | Graph<{ assets: Set<Asset>; sourceBundles: Set<number>; bundleBehavior?: BundleBehavior | null | undefined; }, 1> | Graph<...>'.
           internalBundleGraph._graph,
           'before_bundle',
           bundleGraphEdgeTypes,
@@ -386,6 +390,7 @@ class BundlerRunner {
             optimizeMeasurement && optimizeMeasurement.end();
             await dumpGraphToGraphViz(
               // $FlowFixMe[incompatible-call]
+              // @ts-expect-error - TS2345 - Argument of type 'ContentGraph<BundleGraphNode, BundleGraphEdgeType>' is not assignable to parameter of type 'Graph<AssetGraphNode, 1> | Graph<{ assets: Set<Asset>; sourceBundles: Set<number>; bundleBehavior?: BundleBehavior | null | undefined; }, 1> | Graph<...>'.
               internalBundleGraph._graph,
               'after_optimize',
             );
@@ -425,6 +430,7 @@ class BundlerRunner {
       invariant(internalBundleGraph != null); // ensures the graph was created
       await dumpGraphToGraphViz(
         // $FlowFixMe[incompatible-call]
+        // @ts-expect-error - TS2345 - Argument of type 'ContentGraph<BundleGraphNode, BundleGraphEdgeType>' is not assignable to parameter of type 'Graph<AssetGraphNode, 1> | Graph<{ assets: Set<Asset>; sourceBundles: Set<number>; bundleBehavior?: BundleBehavior | null | undefined; }, 1> | Graph<...>'.
         internalBundleGraph._graph,
         'after_bundle',
         bundleGraphEdgeTypes,
@@ -439,6 +445,7 @@ class BundlerRunner {
       let bundles = internalBundleGraph.getBundles({includeInline: true});
       await Promise.all(
         bundles.map((bundle) =>
+          // @ts-expect-error - TS7005 - Variable 'internalBundleGraph' implicitly has an 'any' type.
           this.nameBundle(namers, bundle, internalBundleGraph),
         ),
       );
@@ -476,6 +483,7 @@ class BundlerRunner {
 
     await dumpGraphToGraphViz(
       // $FlowFixMe
+      // @ts-expect-error - TS2345 - Argument of type 'ContentGraph<BundleGraphNode, BundleGraphEdgeType>' is not assignable to parameter of type 'Graph<AssetGraphNode, 1> | Graph<{ assets: Set<Asset>; sourceBundles: Set<number>; bundleBehavior?: BundleBehavior | null | undefined; }, 1> | Graph<...>'.
       internalBundleGraph._graph,
       'after_runtimes',
       bundleGraphEdgeTypes,

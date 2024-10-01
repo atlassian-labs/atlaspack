@@ -66,6 +66,7 @@ describe.v2('transpilation', function () {
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
     assert(!/class \S+ \{/.test(file));
     assert(file.includes('function Bar'));
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let res = await run(b);
     assert.equal(res.t, 'function');
   });
@@ -126,6 +127,7 @@ describe.v2('transpilation', function () {
       file.includes('/*#__PURE__*/ (0, _reactDefault.default).createElement'),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let res = await run(b);
     assert(res.Foo());
   });
@@ -158,6 +160,7 @@ describe.v2('transpilation', function () {
       path.join(__dirname, '/integration/jsx-preact-ts/index.tsx'),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     assert(typeof (await run(b)) === 'object');
   });
 
@@ -308,6 +311,7 @@ describe.v2('transpilation', function () {
 
     let output: Array<any> = [];
     await run(b, {
+      // @ts-expect-error - TS7019 - Rest parameter 'o' implicitly has an 'any[]' type.
       output(...o) {
         output.push(...o);
       },
@@ -324,6 +328,7 @@ describe.v2('transpilation', function () {
     let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
     assert(!file.includes('?.'));
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'object');
     assert.deepEqual(output.default, [undefined, undefined]);
@@ -392,6 +397,7 @@ describe.v2('transpilation', function () {
 
     let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
     assert(file.includes('@swc/helpers/cjs/_class_call_check.cjs'));
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     await run(b);
   });
 
@@ -469,6 +475,7 @@ describe.v2('transpilation', function () {
 
     it('should compile node_modules when symlinked with a source field in package.json', async function () {
       if (process.platform === 'win32') {
+        // @ts-expect-error - TS2683 - 'this' implicitly has type 'any' because it does not have a type annotation.
         this.skip();
         return;
       }

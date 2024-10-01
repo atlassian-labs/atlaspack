@@ -5,7 +5,9 @@ import type {
 } from 'http';
 import type {
   Server as HTTPSServer,
+  // @ts-expect-error - TS2305 - Module '"https"' has no exported member 'IncomingMessage'.
   IncomingMessage as HTTPSRequest,
+  // @ts-expect-error - TS2305 - Module '"https"' has no exported member 'ServerResponse'.
   ServerResponse as HTTPSResponse,
 } from 'https';
 import type {Socket} from 'net';
@@ -41,6 +43,7 @@ export async function createHTTPServer(options: CreateHTTPServerOpts): Promise<{
   stop: () => Promise<void>;
   server: HTTPServer;
 }> {
+  // @ts-expect-error - TS7034 - Variable 'server' implicitly has type 'any' in some locations where its type cannot be determined.
   let server;
   if (!options.https) {
     server = http.createServer(options.listener);
@@ -82,12 +85,14 @@ export async function createHTTPServer(options: CreateHTTPServerOpts): Promise<{
           }
           sockets = new Set();
 
+          // @ts-expect-error - TS7005 - Variable 'server' implicitly has an 'any' type. | TS7006 - Parameter 'err' implicitly has an 'any' type.
           server.close((err) => {
             if (err != null) {
               reject(err);
               return;
             }
 
+            // @ts-expect-error - TS2794 - Expected 1 arguments, but got 0. Did you forget to include 'void' in your type argument to 'Promise'?
             resolve();
           });
         },

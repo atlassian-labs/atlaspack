@@ -22,6 +22,7 @@ describe('tracing', function () {
     );
 
     const files = outputFS.readdirSync(__dirname);
+    // @ts-expect-error - TS7006 - Parameter 'file' implicitly has an 'any' type.
     const profileFile = files.find((file) => file.startsWith('parcel-trace'));
     assert(profileFile !== null);
     const content = await outputFS.readFile(

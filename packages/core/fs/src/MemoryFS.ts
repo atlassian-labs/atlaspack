@@ -15,7 +15,9 @@ import path from 'path';
 import {Readable, Writable} from 'stream';
 import {registerSerializableClass} from '@atlaspack/core';
 import {SharedBuffer} from '@atlaspack/utils';
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import packageJSON from '../package.json';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'Handle'. Did you mean to use 'import Handle from "@atlaspack/workers"' instead?
 import WorkerFarm, {Handle} from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 import EventEmitter from 'events';
@@ -53,6 +55,7 @@ export class MemoryFS implements FileSystem {
   farm: WorkerFarm;
   _cwd: FilePath;
   _eventQueue: Array<Event>;
+  // @ts-expect-error - TS2564 - Property '_watcherTimer' has no initializer and is not definitely assigned in the constructor.
   _watcherTimer: number;
   _numWorkerInstances: number = 0;
   _workerHandles: Array<Handle>;
@@ -83,6 +86,7 @@ export class MemoryFS implements FileSystem {
     let existing = instances.get(opts.id);
     if (existing != null) {
       // Correct the count of worker instances since serialization assumes a new instance is created
+      // @ts-expect-error - TS2339 - Property 'getWorkerApi' does not exist on type 'typeof WorkerFarm'.
       WorkerFarm.getWorkerApi().runHandle(opts.handle, [
         'decrementWorkerInstance',
         [],
@@ -99,8 +103,10 @@ export class MemoryFS implements FileSystem {
 
   serialize(): SerializedMemoryFS {
     if (!this.handle) {
+      // @ts-expect-error - TS2339 - Property 'createReverseHandle' does not exist on type 'WorkerFarm'.
       this.handle = this.farm.createReverseHandle(
         (fn: string, args: Array<unknown>) => {
+          // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'MemoryFS'.
           return this[fn](...args);
         },
       );
@@ -110,6 +116,7 @@ export class MemoryFS implements FileSystem {
     this._numWorkerInstances++;
 
     return {
+      // @ts-expect-error - TS2322 - Type '{ $$raw: boolean; id: number; handle: Handle; dirs: Map<string, Directory>; files: Map<string, File>; symlinks: Map<string, string>; }' is not assignable to type 'SerializedMemoryFS'.
       $$raw: false,
       id: this.id,
       handle: this.handle,
@@ -539,6 +546,7 @@ export class MemoryFS implements FileSystem {
     this._eventQueue.push(event);
     clearTimeout(this._watcherTimer);
 
+    // @ts-expect-error - TS2322 - Type 'Timeout' is not assignable to type 'number'.
     this._watcherTimer = setTimeout(() => {
       let events = this._eventQueue;
       this._eventQueue = [];
@@ -569,12 +577,14 @@ export class MemoryFS implements FileSystem {
     while (this._workerHandles.length < this._numWorkerInstances) {
       await new Promise(
         (resolve: (result: Promise<undefined> | undefined) => void) =>
+          // @ts-expect-error - TS2345 - Argument of type '(result: Promise<undefined> | undefined) => void' is not assignable to parameter of type 'ResolveFunction'.
           this._workerRegisterResolves.push(resolve),
       );
     }
 
     await Promise.all(
       this._workerHandles.map((workerHandle) =>
+        // @ts-expect-error - TS2339 - Property 'workerApi' does not exist on type 'WorkerFarm'.
         this.farm.workerApi.runHandle(workerHandle, [event]),
       ),
     );
@@ -620,6 +630,7 @@ export class MemoryFS implements FileSystem {
     let ignore = opts.ignore;
     if (ignore) {
       events = events.filter(
+        // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
         (event) => !ignore.some((i) => event.path.startsWith(i + path.sep)),
       );
     }
@@ -667,6 +678,7 @@ class Watcher {
     let ignore = this.options.ignore;
     if (ignore) {
       events = events.filter(
+        // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
         (event) => !ignore.some((i) => event.path.startsWith(i + path.sep)),
       );
     }
@@ -752,6 +764,7 @@ class WriteStream extends Writable {
   _final(callback: (error?: Error) => void) {
     this.fs
       .writeFile(this.filePath, this.buffer, this.options)
+      // @ts-expect-error - TS2345 - Argument of type '(error?: Error | undefined) => void' is not assignable to parameter of type '(value: void) => void | PromiseLike<void>'.
       .then(callback)
       .catch(callback);
   }
@@ -937,6 +950,7 @@ export function makeShared(contents: Buffer | string): Buffer {
   }
 
   let contentsBuffer: Buffer | string = contents;
+  // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
   if (process.browser) {
     // For the polyfilled buffer module, it's faster to always convert once so that the subsequent
     // operations are fast (.byteLength and using .set instead of .write)
@@ -966,12 +980,15 @@ class WorkerFS extends MemoryFS {
 
   constructor(id: number, handle: Handle) {
     // TODO Make this not a subclass
+    // @ts-expect-error - TS2554 - Expected 1 arguments, but got 0.
     super();
     this.id = id;
     this.handleFn = (methodName: any, args: any) =>
+      // @ts-expect-error - TS2339 - Property 'getWorkerApi' does not exist on type 'typeof WorkerFarm'.
       WorkerFarm.getWorkerApi().runHandle(handle, [methodName, args]);
 
     this.handleFn('_registerWorker', [
+      // @ts-expect-error - TS2339 - Property 'getWorkerApi' does not exist on type 'typeof WorkerFarm'. | TS7006 - Parameter 'event' implicitly has an 'any' type.
       WorkerFarm.getWorkerApi().createReverseHandle((event) => {
         switch (event.type) {
           case 'writeFile':
@@ -998,6 +1015,7 @@ class WorkerFS extends MemoryFS {
   }
 
   serialize(): SerializedMemoryFS {
+    // @ts-expect-error - TS2739 - Type '{ id: number; }' is missing the following properties from type 'SerializedMemoryFS': handle, dirs, files, symlinks
     return {
       id: this.id,
     };

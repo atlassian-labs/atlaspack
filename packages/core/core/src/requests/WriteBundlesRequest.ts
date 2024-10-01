@@ -1,5 +1,6 @@
 import type {ContentKey} from '@atlaspack/graph';
 import type {Async} from '@atlaspack/types';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'SharedReference'. Did you mean to use 'import SharedReference from "@atlaspack/workers"' instead?
 import type {SharedReference} from '@atlaspack/workers';
 import type {StaticRunOpts} from '../RequestTracker';
 import {requestTypes} from '../RequestTracker';
@@ -48,6 +49,7 @@ export default function createWriteBundlesRequest(
   };
 }
 
+// @ts-expect-error - TS7031 - Binding element 'input' implicitly has an 'any' type. | TS7031 - Binding element 'api' implicitly has an 'any' type. | TS7031 - Binding element 'farm' implicitly has an 'any' type. | TS7031 - Binding element 'options' implicitly has an 'any' type.
 async function run({input, api, farm, options}) {
   let {bundleGraph, optionsRef} = input;
   let {ref, dispose} = await farm.createSharedReference(bundleGraph);
@@ -60,6 +62,7 @@ async function run({input, api, farm, options}) {
   } = {};
   let writeEarlyPromises: Record<string, any> = {};
   let hashRefToNameHash = new Map();
+  // @ts-expect-error - TS7006 - Parameter 'bundle' implicitly has an 'any' type.
   let bundles = bundleGraph.getBundles().filter((bundle) => {
     // Do not package and write placeholder bundles to disk. We just
     // need to update the name so other bundles can reference it.
@@ -88,11 +91,13 @@ async function run({input, api, farm, options}) {
   // This avoids the cost of serializing the bundle graph for single file change builds.
   let useMainThread =
     bundles.length === 1 ||
+    // @ts-expect-error - TS7006 - Parameter 'b' implicitly has an 'any' type.
     bundles.filter((b) => !api.canSkipSubrequest(bundleGraph.getHash(b)))
       .length === 1;
 
   try {
     await Promise.all(
+      // @ts-expect-error - TS7006 - Parameter 'bundle' implicitly has an 'any' type.
       bundles.map(async (bundle) => {
         let request = createPackageRequest({
           bundle,
@@ -139,6 +144,7 @@ async function run({input, api, farm, options}) {
     );
     assignComplexNameHashes(hashRefToNameHash, bundles, bundleInfoMap, options);
     await Promise.all(
+      // @ts-expect-error - TS7006 - Parameter 'bundle' implicitly has an 'any' type.
       bundles.map((bundle) => {
         let promise =
           writeEarlyPromises[bundle.id] ??
@@ -151,6 +157,7 @@ async function run({input, api, farm, options}) {
             }),
           );
 
+        // @ts-expect-error - TS7006 - Parameter 'r' implicitly has an 'any' type.
         return promise.then((r) => res.set(bundle.id, r));
       }),
     );
@@ -179,6 +186,7 @@ function assignComplexNameHashes(
       options.shouldContentHash
         ? hashString(
             [...getBundlesIncludedInHash(bundle.id, bundleInfoMap)]
+              // @ts-expect-error - TS2538 - Type 'unknown' cannot be used as an index type.
               .map((bundleId) => bundleInfoMap[bundleId].hash)
               .join(':'),
           ).slice(-8)

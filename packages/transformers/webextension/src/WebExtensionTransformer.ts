@@ -69,7 +69,9 @@ async function collectDependencies(
                 filePath,
                 codeHighlights: [
                   {
+                    // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type '"key" | "value" | null | undefined'.
                     ...getJSONHighlightLocation(ptrs['/default_locale'], err),
+                    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
                     message: md`Localization ${
                       err == 'value'
                         ? 'file for ' + program.default_locale

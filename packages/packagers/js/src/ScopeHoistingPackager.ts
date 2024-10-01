@@ -78,6 +78,7 @@ export class ScopeHoistingPackager {
   outputFormat: OutputFormat;
   isAsyncBundle: boolean;
   globalNames: $ReadOnlySet<string>;
+  // @ts-expect-error - TS2564 - Property 'assetOutputs' has no initializer and is not definitely assigned in the constructor.
   assetOutputs: Map<
     string,
     {
@@ -158,10 +159,13 @@ export class ScopeHoistingPackager {
 
     let res = '';
     let lineCount = 0;
+    // @ts-expect-error - TS7034 - Variable 'sourceMap' implicitly has type 'any' in some locations where its type cannot be determined.
     let sourceMap = null;
     let processAsset = (asset: Asset) => {
       let [content, map, lines] = this.visitAsset(asset);
+      // @ts-expect-error - TS7005 - Variable 'sourceMap' implicitly has an 'any' type.
       if (sourceMap && map) {
+        // @ts-expect-error - TS7005 - Variable 'sourceMap' implicitly has an 'any' type.
         sourceMap.addSourceMap(map, lineCount);
       } else if (this.bundle.env.sourceMap) {
         sourceMap = map;
@@ -194,6 +198,7 @@ export class ScopeHoistingPackager {
     let [prelude, preludeLines] = this.buildBundlePrelude();
     res = prelude + res;
     lineCount += preludeLines;
+    // @ts-expect-error - TS2339 - Property 'offsetLines' does not exist on type 'never'.
     sourceMap?.offsetLines(1, preludeLines);
 
     let entries = this.bundle.getEntryAssets();
@@ -214,17 +219,20 @@ export class ScopeHoistingPackager {
           this.bundleGraph.getAssetPublicId(entry),
         )});\n`;
 
+        // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         let entryExports = entry.symbols.get('*')?.local;
 
         if (
           entryExports &&
           entry === mainEntry &&
+          // @ts-expect-error - TS2345 - Argument of type 'symbol' is not assignable to parameter of type 'string'.
           this.exportedSymbols.has(entryExports)
         ) {
           invariant(
             !needsBundleQueue,
             'Entry exports are not yet compaitble with async bundles',
           );
+          // @ts-expect-error - TS2731 - Implicit conversion of a 'symbol' to a 'string' will fail at runtime. Consider wrapping this expression in 'String(...)'.
           res += `\nvar ${entryExports} = ${parcelRequire}`;
         } else {
           if (needsBundleQueue) {
@@ -268,6 +276,7 @@ export class ScopeHoistingPackager {
         this.parcelRequireName,
       );
       if (sourceMap && map) {
+        // @ts-expect-error - TS2339 - Property 'addSourceMap' does not exist on type 'never'.
         sourceMap.addSourceMap(map, lineCount);
       }
     }
@@ -384,6 +393,7 @@ export class ScopeHoistingPackager {
       }, wrappedAssetRoot);
     }
 
+    // @ts-expect-error - TS2769 - No overload matches this call.
     this.assetOutputs = new Map(await queue.run());
     return wrapped;
   }
@@ -399,6 +409,7 @@ export class ScopeHoistingPackager {
     // TODO: handle ESM exports of wrapped entry assets...
     let entry = this.bundle.getMainEntry();
     if (entry && !this.wrappedAssets.has(entry.id)) {
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       let hasNamespace = entry.symbols.hasExportSymbol('*');
 
       for (let {
@@ -416,6 +427,7 @@ export class ScopeHoistingPackager {
           }
 
           let symbols = this.exportedSymbols.get(
+            // @ts-expect-error - TS2345 - Argument of type 'symbol' is not assignable to parameter of type 'string'. | TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
             symbol === '*' ? nullthrows(entry.symbols.get('*')?.local) : symbol,
           )?.exportAs;
 
@@ -423,6 +435,7 @@ export class ScopeHoistingPackager {
             symbols = [];
             this.exportedSymbols.set(symbol, {
               asset,
+              // @ts-expect-error - TS2322 - Type 'string | symbol' is not assignable to type 'string'.
               exportSymbol,
               local: symbol,
               exportAs: symbols,
@@ -433,6 +446,7 @@ export class ScopeHoistingPackager {
             exportAs = 'default';
           }
 
+          // @ts-expect-error - TS2345 - Argument of type 'string | symbol' is not assignable to parameter of type 'string'.
           symbols.push(exportAs);
         } else if (symbol === null) {
           // TODO `meta.exportsIdentifier[exportSymbol]` should be exported
@@ -525,6 +539,7 @@ export class ScopeHoistingPackager {
           let [code, map, lines] = this.visitAsset(resolved);
           depCode += code + '\n';
           if (sourceMap && map) {
+            // @ts-expect-error - TS2551 - Property 'addSourceMap' does not exist on type 'SourceMap'. Did you mean 'addSources'?
             sourceMap.addSourceMap(map, lineCount);
           }
           lineCount += lines + 1;
@@ -632,6 +647,7 @@ export class ScopeHoistingPackager {
                 }
 
                 if (map) {
+                  // @ts-expect-error - TS2551 - Property 'addSourceMap' does not exist on type 'SourceMap'. Did you mean 'addSources'?
                   sourceMap.addSourceMap(map, lineCount);
                 }
               }
@@ -682,6 +698,7 @@ ${code}
         if (!depCode) continue;
         code += depCode + '\n';
         if (sourceMap && map) {
+          // @ts-expect-error - TS2551 - Property 'addSourceMap' does not exist on type 'SourceMap'. Did you mean 'addSources'?
           sourceMap.addSourceMap(map, lineCount);
         }
         lineCount += lines + 1;
@@ -764,10 +781,12 @@ ${code}
       }
 
       for (let [imported, {local}] of dep.symbols) {
+        // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
         if (local === '*') {
           continue;
         }
 
+        // @ts-expect-error - TS2345 - Argument of type 'symbol' is not assignable to parameter of type 'string'.
         let symbol = this.getSymbolResolution(asset, resolved, imported, dep);
         replacements.set(
           local,
@@ -801,6 +820,7 @@ ${code}
       (this.bundle.env.outputFormat === 'commonjs' &&
         asset === this.bundle.getMainEntry())
     ) {
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       let exportsName = asset.symbols.get('*')?.local || `$${assetId}$exports`;
       replacements.set(exportsName, 'module.exports');
     }
@@ -844,8 +864,11 @@ ${code}
 
     for (let [imported, {local}] of dep.symbols) {
       // If already imported, just add the already renamed variable to the mapping.
+      // @ts-expect-error - TS2345 - Argument of type 'symbol' is not assignable to parameter of type 'string'.
       let renamed = external.get(imported);
+      // @ts-expect-error - TS2367 - This condition will always return 'true' since the types 'symbol' and 'string' have no overlap.
       if (renamed && local !== '*' && replacements) {
+        // @ts-expect-error - TS2345 - Argument of type 'symbol' is not assignable to parameter of type 'string'.
         replacements.set(local, renamed);
         continue;
       }
@@ -857,7 +880,9 @@ ${code}
         if (!renamed) {
           if (referencedBundle) {
             let entry = nullthrows(referencedBundle.getMainEntry());
+            // @ts-expect-error - TS2322 - Type 'string | symbol' is not assignable to type 'string | undefined'.
             renamed =
+              // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
               entry.symbols.get('*')?.local ??
               `$${String(entry.meta.id)}$exports`;
           } else {
@@ -866,13 +891,17 @@ ${code}
             );
           }
 
+          // @ts-expect-error - TS2345 - Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
           external.set('*', renamed);
         }
 
+        // @ts-expect-error - TS2367 - This condition will always return 'true' since the types 'symbol' and 'string' have no overlap.
         if (local !== '*' && replacements) {
           let replacement;
+          // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
           if (imported === '*') {
             replacement = renamed;
+            // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
           } else if (imported === 'default') {
             let needsDefaultInterop = true;
             if (referencedBundle) {
@@ -886,36 +915,44 @@ ${code}
               replacement = `${renamed}.default`;
             }
           } else {
+            // @ts-expect-error - TS2345 - Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
             replacement = this.getPropertyAccess(renamed, imported);
           }
 
+          // @ts-expect-error - TS2345 - Argument of type 'symbol' is not assignable to parameter of type 'string'.
           replacements.set(local, replacement);
         }
       } else {
         let property;
         if (referencedBundle) {
           let entry = nullthrows(referencedBundle.getMainEntry());
+          // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
           if (entry.symbols.hasExportSymbol('*')) {
             // If importing * and the referenced module has a * export (e.g. CJS), use default instead.
             // This mirrors the logic in buildExportedSymbols.
             property = imported;
+            // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'.
             imported =
               referencedBundle?.env.outputFormat === 'esmodule'
                 ? 'default'
                 : '*';
           } else {
+            // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
             if (imported === '*') {
               let exportedSymbols = this.bundleGraph.getExportedSymbols(entry);
+              // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
               if (local === '*') {
                 // Re-export all symbols.
                 for (let exported of exportedSymbols) {
                   if (exported.symbol) {
+                    // @ts-expect-error - TS2345 - Argument of type 'string | symbol' is not assignable to parameter of type 'string'.
                     external.set(exported.exportSymbol, exported.symbol);
                   }
                 }
                 continue;
               }
             }
+            // @ts-expect-error - TS2322 - Type 'false | symbol | null | undefined' is not assignable to type 'string | undefined'.
             renamed = this.bundleGraph.getSymbolResolution(
               entry,
               imported,
@@ -928,30 +965,40 @@ ${code}
         // are deduplicated. We have to prefix the imported name with the bundle id so that
         // local variables do not shadow it.
         if (!renamed) {
+          // @ts-expect-error - TS2345 - Argument of type 'symbol' is not assignable to parameter of type 'string'.
           if (this.exportedSymbols.has(local)) {
+            // @ts-expect-error - TS2322 - Type 'symbol' is not assignable to type 'string | undefined'.
             renamed = local;
+            // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap. | TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
           } else if (imported === 'default' || imported === '*') {
             renamed = this.getTopLevelName(
               `$${this.bundle.publicId}$${specifier}`,
             );
           } else {
             renamed = this.getTopLevelName(
+              // @ts-expect-error - TS2731 - Implicit conversion of a 'symbol' to a 'string' will fail at runtime. Consider wrapping this expression in 'String(...)'.
               `$${this.bundle.publicId}$${imported}`,
             );
           }
         }
 
+        // @ts-expect-error - TS2345 - Argument of type 'symbol' is not assignable to parameter of type 'string'.
         external.set(imported, renamed);
+        // @ts-expect-error - TS2367 - This condition will always return 'true' since the types 'symbol' and 'string' have no overlap.
         if (local !== '*' && replacements) {
           let replacement = renamed;
+          // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol | undefined' and 'string' have no overlap.
           if (property === '*') {
             replacement = renamed;
+            // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol | undefined' and 'string' have no overlap.
           } else if (property === 'default') {
             replacement = `($parcel$interopDefault(${renamed}))`;
             this.usedHelpers.add('$parcel$interopDefault');
           } else if (property) {
+            // @ts-expect-error - TS2345 - Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
             replacement = this.getPropertyAccess(renamed, property);
           }
+          // @ts-expect-error - TS2345 - Argument of type 'symbol' is not assignable to parameter of type 'string'.
           replacements.set(local, replacement);
         }
       }
@@ -990,6 +1037,7 @@ ${code}
       asset: resolvedAsset,
       exportSymbol,
       symbol,
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
     } = this.bundleGraph.getSymbolResolution(resolved, imported, this.bundle);
 
     if (
@@ -1048,8 +1096,11 @@ ${code}
       staticExports &&
       !isWrapped &&
       (dep?.meta.kind === 'Import' || dep?.meta.kind === 'Export') &&
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       resolvedAsset.symbols.hasExportSymbol('*') &&
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       resolvedAsset.symbols.hasExportSymbol('default') &&
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       !resolvedAsset.symbols.hasExportSymbol('__esModule');
 
     // Find the namespace object for the resolved module. If wrapped and this
@@ -1065,7 +1116,9 @@ ${code}
     } else if (isWrapped && dep) {
       obj = `$${publicId}`;
     } else {
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       obj = resolvedAsset.symbols.get('*')?.local || `$${assetId}$exports`;
+      // @ts-expect-error - TS2345 - Argument of type 'string | symbol' is not assignable to parameter of type 'string'.
       obj = replacements?.get(obj) || obj;
     }
 
@@ -1078,6 +1131,7 @@ ${code}
         // Directly use module.exports for wrapped assets importing themselves.
         return 'module.exports';
       } else {
+        // @ts-expect-error - TS2322 - Type 'string | symbol' is not assignable to type 'string'.
         return obj;
       }
     } else if (
@@ -1092,17 +1146,21 @@ ${code}
       if (
         (!dep || kind === 'Import' || kind === 'Export') &&
         exportSymbol === 'default' &&
+        // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         resolvedAsset.symbols.hasExportSymbol('*') &&
         this.needsDefaultInterop(resolvedAsset)
       ) {
         this.usedHelpers.add('$parcel$interopDefault');
+        // @ts-expect-error - TS2731 - Implicit conversion of a 'symbol' to a 'string' will fail at runtime. Consider wrapping this expression in 'String(...)'.
         return `(/*@__PURE__*/$parcel$interopDefault(${obj}))`;
       } else {
+        // @ts-expect-error - TS2345 - Argument of type 'string | symbol' is not assignable to parameter of type 'string'.
         return this.getPropertyAccess(obj, exportSymbol);
       }
     } else if (!symbol) {
       invariant(false, 'Asset was skipped or not found.');
     } else {
+      // @ts-expect-error - TS2322 - Type 'string | symbol' is not assignable to type 'string'. | TS2345 - Argument of type 'symbol' is not assignable to parameter of type 'string'.
       return replacements?.get(symbol) || symbol;
     }
   }
@@ -1165,8 +1223,10 @@ ${code}
     // If there's no __esModule flag, and default is a used symbol, we need
     // to insert an interop helper.
     let defaultInterop =
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       asset.symbols.hasExportSymbol('*') &&
       usedSymbols.has('default') &&
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       !asset.symbols.hasExportSymbol('__esModule');
 
     let usedNamespace =
@@ -1188,6 +1248,7 @@ ${code}
             ))) ||
       // If a symbol is imported (used) from a CJS asset but isn't listed in the symbols,
       // we fallback on the namespace object.
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       (asset.symbols.hasExportSymbol('*') &&
         [...usedSymbols].some((s) => !asset.symbols.hasExportSymbol(s))) ||
       // If the exports has this asset's namespace (e.g. ESM output from CJS input),
@@ -1223,6 +1284,7 @@ ${code}
       // Insert the __esModule interop flag for this module if it has a `default` export
       // and the namespace symbol is used.
       // TODO: only if required by CJS?
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       if (asset.symbols.hasExportSymbol('default') && usedSymbols.has('*')) {
         prepend += `\n$parcel$defineInteropFlag($${assetId}$exports);\n`;
         prependLineCount += 2;
@@ -1241,6 +1303,7 @@ ${code}
         let isWrapped = resolved && resolved.meta.shouldWrap;
 
         for (let [imported, {local}] of dep.symbols) {
+          // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap. | TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
           if (imported === '*' && local === '*') {
             if (!resolved) {
               // Re-exporting an external module. This should have already been handled in buildReplacements.
@@ -1261,6 +1324,7 @@ ${code}
               nullthrows(this.bundleGraph.getUsedSymbols(resolved)).has('*') ||
               // an empty asset
               (!resolved.meta.hasCJSExports &&
+                // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
                 resolved.symbols.hasExportSymbol('*'))
             ) {
               let obj = this.getSymbolResolution(
@@ -1311,6 +1375,7 @@ ${code}
       // re-exported symbols rather than only symbols declared in this asset.
       let incomingDeps = this.bundleGraph.getIncomingDependencies(asset);
       let usedExports = [...asset.symbols.exportSymbols()].filter((symbol) => {
+        // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
         if (symbol === '*') {
           return false;
         }
@@ -1338,6 +1403,7 @@ ${code}
             let resolved = this.getSymbolResolution(
               asset,
               asset,
+              // @ts-expect-error - TS2345 - Argument of type 'symbol' is not assignable to parameter of type 'string'.
               exp,
               undefined,
               replacements,
@@ -1393,8 +1459,10 @@ ${code}
     }
 
     for (let helper of this.usedHelpers) {
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly $parcel$export: "\nfunction $parcel$export(e, n, v, s) {\n  Object.defineProperty(e, n, {get: v, set: s, enumerable: true, configurable: true});\n}\n"; readonly $parcel$exportWildcard: "\nfunction $parcel$exportWildcard(dest, source) {\n  Object.keys(source).forEach(function(key) {\n    if (key === 'defau...'.
       let currentHelper = helpers[helper];
       if (typeof currentHelper === 'function') {
+        // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly $parcel$export: "\nfunction $parcel$export(e, n, v, s) {\n  Object.defineProperty(e, n, {get: v, set: s, enumerable: true, configurable: true});\n}\n"; readonly $parcel$exportWildcard: "\nfunction $parcel$exportWildcard(dest, source) {\n  Object.keys(source).forEach(function(key) {\n    if (key === 'defau...'.
         currentHelper = helpers[helper](this.bundle.env);
       }
       res += currentHelper;
@@ -1465,7 +1533,9 @@ ${code}
 
   needsDefaultInterop(asset: Asset): boolean {
     if (
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       asset.symbols.hasExportSymbol('*') &&
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       !asset.symbols.hasExportSymbol('default')
     ) {
       if (getFeatureFlag('fastNeedsDefaultInterop')) {
@@ -1477,6 +1547,7 @@ ${code}
         (dep) =>
           this.bundle.hasDependency(dep) &&
           // dep.meta.isES6Module &&
+          // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
           dep.symbols.hasExportSymbol('default'),
       );
     }

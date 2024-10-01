@@ -46,9 +46,11 @@ export default new Packager({
     } as const;
 
     let {html: svg} = await posthtml([
+      // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type 'NamedBundle[]'.
       (tree: any) => insertBundleReferences(referencedBundles, tree),
       (tree: any) =>
         replaceInlineAssetContent(bundleGraph, getInlineBundleContents, tree),
+      // @ts-expect-error - TS2559 - Type '{ readonly directives: readonly [{ readonly name: RegExp; readonly start: "<"; readonly end: ">"; }]; readonly xmlMode: true; }' has no properties in common with type 'Options'.
     ]).process(code, options);
 
     const {contents, map} = replaceURLReferences({
@@ -84,6 +86,7 @@ async function replaceInlineAssetContent(
   tree: any,
 ) {
   const inlineNodes: Array<any> = [];
+  // @ts-expect-error - TS7006 - Parameter 'node' implicitly has an 'any' type.
   tree.walk((node) => {
     if (node.attrs && node.attrs['data-parcel-key']) {
       inlineNodes.push(node);
@@ -178,6 +181,7 @@ function insertBundleReferences(siblingBundles: Array<NamedBundle>, tree: any) {
 
   tree.unshift(...stylesheets);
   if (scripts.length > 0) {
+    // @ts-expect-error - TS7006 - Parameter 'node' implicitly has an 'any' type.
     tree.match({tag: 'svg'}, (node) => {
       node.content.unshift(...scripts);
     });

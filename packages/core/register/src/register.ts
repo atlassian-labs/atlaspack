@@ -3,6 +3,7 @@ import type {IDisposable, InitialAtlaspackOptions} from '@atlaspack/types';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {NodeFS} from '@atlaspack/fs';
 // flowlint-next-line untyped-import:off
+// @ts-expect-error - TS2307 - Cannot find module '@atlaspack/config-default' or its corresponding type declarations.
 import defaultConfigContents from '@atlaspack/config-default';
 import Module from 'module';
 import path from 'path';
@@ -12,10 +13,12 @@ import Atlaspack, {INTERNAL_RESOLVE, INTERNAL_TRANSFORM} from '@atlaspack/core';
 import syncPromise from './syncPromise';
 
 let hooks: Record<string, any> = {};
+// @ts-expect-error - TS7034 - Variable 'lastDisposable' implicitly has type 'any' in some locations where its type cannot be determined.
 let lastDisposable;
 let packageManager = new NodePackageManager(new NodeFS(), '/');
 let defaultConfig = {
   ...defaultConfigContents,
+  // @ts-expect-error - TS2339 - Property 'resolveSync' does not exist on type 'PackageManager'.
   filePath: packageManager.resolveSync('@atlaspack/config-default', __filename)
     .resolved,
 };
@@ -27,7 +30,9 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
   };
 
   // Replace old hook, as this one likely contains options.
+  // @ts-expect-error - TS7005 - Variable 'lastDisposable' implicitly has an 'any' type.
   if (lastDisposable) {
+    // @ts-expect-error - TS7005 - Variable 'lastDisposable' implicitly has an 'any' type.
     lastDisposable.dispose();
   }
 
@@ -55,6 +60,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
 
     try {
       isProcessing = true;
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'symbol' can't be used to index type 'Atlaspack'.
       let result = await atlaspack[INTERNAL_TRANSFORM]({
         filePath,
         env,
@@ -62,6 +68,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
 
       if (result.assets && result.assets.length >= 1) {
         let output = '';
+        // @ts-expect-error - TS7006 - Parameter 'a' implicitly has an 'any' type.
         let asset = result.assets.find((a) => a.type === 'js');
         if (asset) {
           output = await asset.getCode();
@@ -80,6 +87,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
     return '';
   }
 
+  // @ts-expect-error - TS7019 - Rest parameter 'args' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
   let hookFunction = (...args) => syncPromise(fileProcessor(...args));
 
   function resolveFile(currFile: any, targetFile: any) {
@@ -88,6 +96,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
 
       let resolved = syncPromise(
         // $FlowFixMe
+        // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'symbol' can't be used to index type 'Atlaspack'.
         atlaspack[INTERNAL_RESOLVE]({
           specifier: targetFile,
           sourcePath: currFile,
@@ -95,6 +104,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
         }),
       );
 
+      // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'string'.
       let targetFileExtension = path.extname(resolved);
       if (!hooks[targetFileExtension]) {
         hooks[targetFileExtension] = addHook(hookFunction, {
@@ -114,17 +124,22 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
     ignoreNodeModules: false,
   });
 
+  // @ts-expect-error - TS7034 - Variable 'disposed' implicitly has type 'any' in some locations where its type cannot be determined.
   let disposed;
 
   // Patching Module._resolveFilename takes care of patching the underlying
   // resolver in both `require` and `require.resolve`:
   // https://github.com/nodejs/node-v0.x-archive/issues/1125#issuecomment-10748203
+  // @ts-expect-error - TS2339 - Property '_resolveFilename' does not exist on type 'typeof Module'.
   const originalResolveFilename = Module._resolveFilename;
+  // @ts-expect-error - TS2339 - Property '_resolveFilename' does not exist on type 'typeof Module'.
   Module._resolveFilename = function atlaspackResolveFilename(
     to: any,
     from: any,
+    // @ts-expect-error - TS7019 - Rest parameter 'rest' implicitly has an 'any[]' type.
     ...rest
   ) {
+    // @ts-expect-error - TS7005 - Variable 'disposed' implicitly has an 'any' type.
     return isProcessing || disposed
       ? originalResolveFilename(to, from, ...rest)
       : resolveFile(from?.filename, to);
@@ -132,6 +147,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
 
   let disposable = (lastDisposable = {
     dispose() {
+      // @ts-expect-error - TS7005 - Variable 'disposed' implicitly has an 'any' type.
       if (disposed) {
         return;
       }

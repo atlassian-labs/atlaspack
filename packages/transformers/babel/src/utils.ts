@@ -1,4 +1,5 @@
 import type {Environment} from '@atlaspack/types';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module '@babel/preset-env'. '/home/ubuntu/parcel/node_modules/@babel/preset-env/lib/index.js' implicitly has an 'any' type.
 import type {Targets as BabelTargets} from '@babel/preset-env';
 
 import invariant from 'assert';
@@ -51,6 +52,7 @@ export function enginesToBabelTargets(env: Environment): BabelTargets {
   // versions, not semver ranges, of its targets.
   let targets: Record<string, any> = {};
   for (let engineName of Object.keys(env.engines)) {
+    // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'Engines'.
     let engineValue = env.engines[engineName];
 
     // if the engineValue is a string, it might be a semver range. Use the minimum

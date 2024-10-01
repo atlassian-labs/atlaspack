@@ -58,8 +58,10 @@ export default class MutableBundleGraph
     this.#graph.addAssetGraphToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
+      // @ts-expect-error - TS2345 - Argument of type '((d: Dependency) => boolean) | undefined' is not assignable to parameter of type '((arg1: Dependency) => boolean) | undefined'.
       shouldSkipDependency
         ? (d: Dependency) =>
+            // @ts-expect-error - TS2345 - Argument of type 'import("/home/ubuntu/parcel/packages/core/core/src/public/Dependency").default' is not assignable to parameter of type 'import("/home/ubuntu/parcel/packages/core/core/src/types").Dependency'.
             shouldSkipDependency(new Dependency(d, this.#options))
         : undefined,
     );
@@ -73,8 +75,10 @@ export default class MutableBundleGraph
     this.#graph.addEntryToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
+      // @ts-expect-error - TS2345 - Argument of type '((d: Dependency) => boolean) | undefined' is not assignable to parameter of type '((arg1: Dependency) => boolean) | undefined'.
       shouldSkipDependency
         ? (d: Dependency) =>
+            // @ts-expect-error - TS2345 - Argument of type 'import("/home/ubuntu/parcel/packages/core/core/src/public/Dependency").default' is not assignable to parameter of type 'import("/home/ubuntu/parcel/packages/core/core/src/types").Dependency'.
             shouldSkipDependency(new Dependency(d, this.#options))
         : undefined,
     );
@@ -176,13 +180,16 @@ export default class MutableBundleGraph
   }
 
   createBundle(opts: CreateBundleOpts): Bundle {
+    // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'.
     let entryAsset = opts.entryAsset
-      ? assetToAssetValue(opts.entryAsset)
+      ? // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'.
+        assetToAssetValue(opts.entryAsset)
       : null;
 
     let target = targetToInternalTarget(opts.target);
     let bundleId = hashString(
       'bundle:' +
+        // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'. | TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'. | TS2339 - Property 'uniqueKey' does not exist on type 'CreateBundleOpts'.
         (opts.entryAsset ? opts.entryAsset.id : opts.uniqueKey) +
         fromProjectPathRelative(target.distDir) +
         (opts.bundleBehavior ?? ''),
@@ -216,21 +223,28 @@ export default class MutableBundleGraph
         hashReference: this.#options.shouldContentHash
           ? HASH_REF_PREFIX + bundleId
           : bundleId.slice(-8),
+        // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'. | TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'. | TS2339 - Property 'type' does not exist on type 'CreateBundleOpts'.
         type: opts.entryAsset ? opts.entryAsset.type : opts.type,
+        // @ts-expect-error - TS2339 - Property 'env' does not exist on type 'CreateBundleOpts'.
         env: opts.env
-          ? environmentToInternalEnvironment(opts.env)
+          ? // @ts-expect-error - TS2339 - Property 'env' does not exist on type 'CreateBundleOpts'.
+            environmentToInternalEnvironment(opts.env)
           : nullthrows(entryAsset).env,
         entryAssetIds: entryAsset ? [entryAsset.id] : [],
         mainEntryId: entryAsset?.id,
+        // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'. | TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'. | TS2339 - Property 'pipeline' does not exist on type 'CreateBundleOpts'.
         pipeline: opts.entryAsset ? opts.entryAsset.pipeline : opts.pipeline,
         needsStableName: opts.needsStableName,
         bundleBehavior:
           opts.bundleBehavior != null
             ? BundleBehavior[opts.bundleBehavior]
             : null,
+        // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'.
         isSplittable: opts.entryAsset
-          ? opts.entryAsset.isBundleSplittable
-          : opts.isSplittable,
+          ? // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'.
+            opts.entryAsset.isBundleSplittable
+          : // @ts-expect-error - TS2339 - Property 'isSplittable' does not exist on type 'CreateBundleOpts'.
+            opts.isSplittable,
         isPlaceholder,
         target,
         name: null,
@@ -245,9 +259,11 @@ export default class MutableBundleGraph
       bundleNode,
     );
 
+    // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'.
     if (opts.entryAsset) {
       this.#graph._graph.addEdge(
         bundleNodeId,
+        // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type 'CreateBundleOpts'.
         this.#graph._graph.getNodeIdByContentKey(opts.entryAsset.id),
       );
     }

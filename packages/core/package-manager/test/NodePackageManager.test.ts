@@ -2,6 +2,7 @@ import {MemoryFS, NodeFS, OverlayFS} from '@atlaspack/fs';
 import assert from 'assert';
 import invariant from 'assert';
 import path from 'path';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import {loadConfig} from '@atlaspack/utils';
@@ -46,6 +47,7 @@ describe('NodePackageManager', function () {
   this.timeout(20000);
 
   beforeEach(() => {
+    // @ts-expect-error - TS2345 - Argument of type '{ workerPath: string; }' is not assignable to parameter of type 'FarmOptions'.
     workerFarm = new WorkerFarm({
       workerPath: require.resolve('@atlaspack/core/src/worker.js'),
     });

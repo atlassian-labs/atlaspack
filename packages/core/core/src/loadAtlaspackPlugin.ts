@@ -20,6 +20,7 @@ import {
   resolveConfig,
 } from '@atlaspack/utils';
 import {ProjectPath, toProjectPath} from './projectPath';
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import {version as ATLASPACK_VERSION} from '../package.json';
 
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
@@ -45,6 +46,7 @@ export default async function loadPlugin<T>(
       let configContents = await options.inputFS.readFile(configPath, 'utf8');
       throw new ThrowableDiagnostic({
         diagnostic: {
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           message: md`Local plugins are not supported in Atlaspack config packages. Please publish "${pluginName}" as a separate npm package.`,
           origin: '@atlaspack/core',
           codeFrames: keyPath
@@ -87,6 +89,7 @@ export default async function loadPlugin<T>(
         );
         throw new ThrowableDiagnostic({
           diagnostic: {
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`Could not determine version of ${pluginName} in ${path.relative(
               process.cwd(),
               resolveFrom,
@@ -143,6 +146,7 @@ export default async function loadPlugin<T>(
     );
     throw new ThrowableDiagnostic({
       diagnostic: {
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         message: md`Cannot find Atlaspack plugin "${pluginName}"`,
         origin: '@atlaspack/core',
         codeFrames: keyPath
@@ -155,6 +159,7 @@ export default async function loadPlugin<T>(
                   {
                     key: keyPath,
                     type: 'value',
+                    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
                     message: md`Cannot find module "${pluginName}"${
                       alternatives[0]
                         ? `, did you mean "${alternatives[0]}"?`
@@ -196,6 +201,7 @@ export default async function loadPlugin<T>(
         let pkgContents = await options.inputFS.readFile(pkgFile, 'utf8');
         throw new ThrowableDiagnostic({
           diagnostic: {
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`The plugin "${pluginName}" is not compatible with the current version of Atlaspack. Requires "${parcelVersionRange}" but the current version is "${ATLASPACK_VERSION}".`,
             origin: '@atlaspack/core',
             codeFrames: [

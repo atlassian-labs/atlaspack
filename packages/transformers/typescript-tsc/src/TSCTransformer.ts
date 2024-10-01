@@ -21,6 +21,7 @@ export default new Transformer({
         // React is the default. Users can override this by supplying their own tsconfig,
         // which many TypeScript users will already have for typechecking, etc.
         jsx: typescript.JsxEmit.React,
+        // @ts-expect-error - TS2698 - Spread types may only be created from object types.
         ...config,
         // Always emit output
         noEmit: false,
@@ -44,6 +45,7 @@ export default new Transformer({
       let map = new SourceMap(options.projectRoot);
       map.addVLQMap(JSON.parse(sourceMapText));
       if (originalMap) {
+        // @ts-expect-error - TS2345 - Argument of type 'SourceMap' is not assignable to parameter of type 'Buffer'.
         map.extends(originalMap);
       }
       asset.setMap(map);

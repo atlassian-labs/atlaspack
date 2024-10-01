@@ -117,8 +117,10 @@ const MAX_LINK_TRIES: 3 = 3;
  */
 export default class AdjacencyList<TEdgeType extends number = 1> {
   #nodes /*: NodeTypeMap<TEdgeType | NullEdgeType> */;
+  // @ts-expect-error - TS7022 - '#edges' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
   #edges /*: EdgeTypeMap<TEdgeType | NullEdgeType> */;
 
+  // @ts-expect-error - TS7022 - '#params' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
   #params /*: AdjacencyListParams */;
 
   /**
@@ -134,7 +136,9 @@ export default class AdjacencyList<TEdgeType extends number = 1> {
     let nodes;
     let edges;
 
+    // @ts-expect-error - TS2339 - Property 'nodes' does not exist on type 'SerializedAdjacencyList<1 | TEdgeType> | AdjacencyListOptions<1 | TEdgeType>'.
     if (opts?.nodes) {
+      // @ts-expect-error - TS2339 - Property 'nodes' does not exist on type 'SerializedAdjacencyList<1 | TEdgeType> | AdjacencyListOptions<1 | TEdgeType>'. | TS2339 - Property 'edges' does not exist on type 'SerializedAdjacencyList<1 | TEdgeType> | AdjacencyListOptions<1 | TEdgeType>'.
       ({nodes, edges} = opts);
       this.#nodes = new NodeTypeMap(nodes);
       this.#edges = new EdgeTypeMap(edges);
@@ -142,6 +146,7 @@ export default class AdjacencyList<TEdgeType extends number = 1> {
     } else {
       this.#params = {...DEFAULT_PARAMS, ...opts};
 
+      // @ts-expect-error - TS7022 - 'initialCapacity' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
       let {initialCapacity} = this.#params;
 
       // TODO: Find a heuristic for right-sizing nodes.
@@ -219,6 +224,7 @@ export default class AdjacencyList<TEdgeType extends number = 1> {
   } {
     let edgeTypes = new Set();
     let buckets = new Map();
+    // @ts-expect-error - TS2488 - Type 'Iterator<{ type: 1 | TEdgeType; from: number; to: number; }, any, undefined>' must have a '[Symbol.iterator]()' method that returns an iterator.
     for (let {from, to, type} of this.getAllEdges()) {
       let hash = this.#edges.hash(from, to, type);
       let bucket = buckets.get(hash) || new Set();
@@ -300,11 +306,13 @@ export default class AdjacencyList<TEdgeType extends number = 1> {
     // Copy the existing edges into the new array.
     nodes.nextId = this.#nodes.nextId;
     this.#edges.forEach(
+      // @ts-expect-error - TS7006 - Parameter 'edge' implicitly has an 'any' type.
       (edge) =>
         void link(
           this.#edges.from(edge),
           this.#edges.to(edge),
           this.#edges.typeOf(edge),
+          // @ts-expect-error - TS2345 - Argument of type 'EdgeTypeMap<unknown>' is not assignable to parameter of type 'EdgeTypeMap<number>'.
           edges,
           nodes,
           this.#params.unloadFactor,
@@ -379,6 +387,7 @@ export default class AdjacencyList<TEdgeType extends number = 1> {
         to,
         type,
         this.#edges,
+        // @ts-expect-error - TS2345 - Argument of type 'NodeTypeMap<unknown>' is not assignable to parameter of type 'NodeTypeMap<number>'.
         this.#nodes,
         this.#params.unloadFactor,
       );
@@ -528,6 +537,7 @@ export default class AdjacencyList<TEdgeType extends number = 1> {
       let edge = this.#nodes.firstIn(node);
       while (edge !== null) {
         let from = this.#edges.from(edge);
+        // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type '1 | TEdgeType'.
         edges.push({from, type});
         edge = this.#edges.nextIn(edge);
       }
@@ -554,6 +564,7 @@ export default class AdjacencyList<TEdgeType extends number = 1> {
       let edge = this.#nodes.firstOut(node);
       while (edge !== null) {
         let to = this.#edges.to(edge);
+        // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type '1 | TEdgeType'.
         edges.push({to, type});
         edge = this.#edges.nextOut(edge);
       }
@@ -580,7 +591,8 @@ export default class AdjacencyList<TEdgeType extends number = 1> {
     let matches = (node: number) =>
       type === ALL_EDGE_TYPES ||
       (Array.isArray(type)
-        ? type.includes(this.#nodes.typeOf(node))
+        ? // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type '1 | TEdgeType'.
+          type.includes(this.#nodes.typeOf(node))
         : type === this.#nodes.typeOf(node));
     let nodes: Array<NodeId> = [];
     let seen = new Set<NodeId>();
@@ -638,7 +650,8 @@ export default class AdjacencyList<TEdgeType extends number = 1> {
     let matches = (node: number) =>
       type === ALL_EDGE_TYPES ||
       (Array.isArray(type)
-        ? type.includes(this.#nodes.typeOf(node))
+        ? // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type '1 | TEdgeType'.
+          type.includes(this.#nodes.typeOf(node))
         : type === this.#nodes.typeOf(node));
 
     let nodes: Array<NodeId> = [];
@@ -748,6 +761,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
   static #TYPE: 1 = 1;
 
   /** The largest possible capacity. */
+  // @ts-expect-error - TS1094 - An accessor cannot have type parameters.
   static get MAX_CAPACITY<TItemType, THash, TAddress extends number>(): number {
     return Math.floor(
       // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Invalid_array_length#what_went_wrong
@@ -786,6 +800,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
 
   /** The address of the first item in the map. */
   get addressableLimit(): number {
+    // @ts-expect-error - TS2339 - Property 'HEADER_SIZE' does not exist on type 'Function'.
     return this.constructor.HEADER_SIZE + this.capacity;
   }
 
@@ -824,6 +839,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
    * and is expected to be of equal or smaller capacity to this map.
    */
   set(data: Uint32Array): void {
+    // @ts-expect-error - TS2339 - Property 'HEADER_SIZE' does not exist on type 'Function'. | TS2339 - Property 'ITEM_SIZE' does not exist on type 'Function'.
     let {HEADER_SIZE, ITEM_SIZE} = this.constructor;
     let NEXT = SharedTypeMap.#NEXT;
     let COUNT = SharedTypeMap.#COUNT;
@@ -872,18 +888,21 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
    * get the length of the map, in bytes.
    */
   getLength(capacity: number = this.capacity): number {
+    // @ts-expect-error - TS2339 - Property 'HEADER_SIZE' does not exist on type 'Function'. | TS2339 - Property 'ITEM_SIZE' does not exist on type 'Function'.
     let {HEADER_SIZE, ITEM_SIZE} = this.constructor;
     return capacity + HEADER_SIZE + ITEM_SIZE * capacity;
   }
 
   /** Get the next available address in the map. */
   getNextAddress(): TAddress {
+    // @ts-expect-error - TS2339 - Property 'HEADER_SIZE' does not exist on type 'Function'. | TS2339 - Property 'ITEM_SIZE' does not exist on type 'Function'.
     let {HEADER_SIZE, ITEM_SIZE} = this.constructor;
     return (HEADER_SIZE + this.capacity + this.count * ITEM_SIZE) as any;
   }
 
   /** Get the address of the first item with the given hash. */
   head(hash: THash): TAddress | null {
+    // @ts-expect-error - TS2339 - Property 'HEADER_SIZE' does not exist on type 'Function'.
     let {HEADER_SIZE} = this.constructor;
     return (this.data[HEADER_SIZE + (hash as any)] as any) || null;
   }
@@ -907,6 +926,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
     let COUNT = SharedTypeMap.#COUNT;
     let NEXT = SharedTypeMap.#NEXT;
     let TYPE = SharedTypeMap.#TYPE;
+    // @ts-expect-error - TS2339 - Property 'HEADER_SIZE' does not exist on type 'Function'.
     let {HEADER_SIZE} = this.constructor;
 
     this.data[item + TYPE] = type as any;
@@ -933,6 +953,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
     let COUNT = SharedTypeMap.#COUNT;
     let NEXT = SharedTypeMap.#NEXT;
     let TYPE = SharedTypeMap.#TYPE;
+    // @ts-expect-error - TS2339 - Property 'HEADER_SIZE' does not exist on type 'Function'.
     let {HEADER_SIZE} = this.constructor;
 
     this.data[item + TYPE] = 0;
@@ -946,6 +967,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
     let candidate = head;
     while (candidate !== null && candidate !== item) {
       prev = candidate;
+      // @ts-expect-error - TS2322 - Type 'TAddress | null' is not assignable to type 'TAddress'.
       candidate = this.next(candidate);
     }
     if (prev !== null && next !== null) {
@@ -964,6 +986,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
   forEach(cb: (item: TAddress) => void): void {
     let max = this.count;
     let len = this.length;
+    // @ts-expect-error - TS2339 - Property 'ITEM_SIZE' does not exist on type 'Function'.
     let {ITEM_SIZE} = this.constructor;
     for (
       let i = this.addressableLimit, count = 0;
@@ -985,6 +1008,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
   *[Symbol.iterator](): Iterator<TAddress> {
     let max = this.count;
     let len = this.length;
+    // @ts-expect-error - TS2339 - Property 'ITEM_SIZE' does not exist on type 'Function'.
     let {ITEM_SIZE} = this.constructor;
     for (
       let i = this.addressableLimit, count = 0;
@@ -1003,6 +1027,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
     table: Uint32Array;
     data: Uint32Array;
   } {
+    // @ts-expect-error - TS2339 - Property 'HEADER_SIZE' does not exist on type 'Function'.
     const {HEADER_SIZE} = this.constructor;
     let min = this.addressableLimit;
 
@@ -1344,6 +1369,7 @@ export class EdgeTypeMap<TEdgeType> extends SharedTypeMap<
 
   /** Get the next available address in the map. */
   getNextAddress(): EdgeAddress {
+    // @ts-expect-error - TS2339 - Property 'ITEM_SIZE' does not exist on type 'Function'.
     let {ITEM_SIZE} = this.constructor;
     return this.addressableLimit + (this.count + this.deletes) * ITEM_SIZE;
   }

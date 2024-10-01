@@ -93,6 +93,7 @@ function getAssetGraph(serializedGraph: any, options: AtlaspackOptions) {
 
   graph.safeToIncrementallyBundle = false;
 
+  // @ts-expect-error - TS7031 - Binding element 'exported' implicitly has an 'any' type.
   function mapSymbols({exported, ...symbol}) {
     let jsSymbol = {
       local: symbol.local ?? undefined,
@@ -102,10 +103,12 @@ function getAssetGraph(serializedGraph: any, options: AtlaspackOptions) {
     };
 
     if (symbol.exported) {
+      // @ts-expect-error - TS2339 - Property 'exported' does not exist on type '{ local: any; loc: any; meta: undefined; isWeak: any; }'.
       jsSymbol.exported = symbol.exported;
     }
 
     if (symbol.isEsmExport) {
+      // @ts-expect-error - TS2322 - Type '{ isEsm: boolean; }' is not assignable to type 'undefined'.
       jsSymbol.meta = {
         isEsm: true,
       };
@@ -259,6 +262,7 @@ function getAssetGraph(serializedGraph: any, options: AtlaspackOptions) {
         deferred: false,
         excluded: false,
         hasDeferred: node.has_deferred,
+        // @ts-expect-error - TS2322 - Type 'Set<unknown>' is not assignable to type 'Set<symbol>'.
         usedSymbolsDown,
         usedSymbolsDownDirty: true,
         usedSymbolsUp,

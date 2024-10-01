@@ -12,6 +12,7 @@ import type {
 import path from 'path';
 import type {AtlaspackOptions} from './types';
 // eslint-disable-next-line no-unused-vars
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'SharedReference'. Did you mean to use 'import SharedReference from "@atlaspack/workers"' instead?
 import type {FarmOptions, SharedReference} from '@atlaspack/workers';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 
@@ -45,6 +46,7 @@ import {createDependency} from './Dependency';
 import {Disposable} from '@atlaspack/events';
 import {init as initSourcemaps} from '@parcel/source-map';
 import {
+  // @ts-expect-error - TS2305 - Module '"@atlaspack/rust"' has no exported member 'init'.
   init as initRust,
   initializeMonitoring,
   closeMonitoring,
@@ -64,22 +66,31 @@ export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
 
 export default class Atlaspack {
+  // @ts-expect-error - TS7008 - Member '#requestTracker' implicitly has an 'any' type.
   #requestTracker /*: RequestTracker*/;
+  // @ts-expect-error - TS7008 - Member '#config' implicitly has an 'any' type.
   #config /*: AtlaspackConfig*/;
+  // @ts-expect-error - TS7008 - Member '#farm' implicitly has an 'any' type.
   #farm /*: WorkerFarm*/;
   #initialized /*: boolean*/ = false;
+  // @ts-expect-error - TS7008 - Member '#disposable' implicitly has an 'any' type.
   #disposable /*: Disposable */;
   #initialOptions /*: InitialAtlaspackOptions */;
+  // @ts-expect-error - TS2564 - Property '#atlaspackV3' has no initializer and is not definitely assigned in the constructor.
   #atlaspackV3: AtlaspackV3;
+  // @ts-expect-error - TS7008 - Member '#reporterRunner' implicitly has an 'any' type.
   #reporterRunner /*: ReporterRunner*/;
   #resolvedOptions /*: ?AtlaspackOptions*/ = null;
+  // @ts-expect-error - TS7008 - Member '#optionsRef' implicitly has an 'any' type.
   #optionsRef /*: SharedReference */;
+  // @ts-expect-error - TS7008 - Member '#watchAbortController' implicitly has an 'any' type.
   #watchAbortController /*: AbortController*/;
   #watchQueue /*: PromiseQueue<?BuildEvent>*/ = new PromiseQueue<
     BuildEvent | null | undefined
   >({
     maxConcurrent: 1,
   });
+  // @ts-expect-error - TS7008 - Member '#watchEvents' implicitly has an 'any' type.
   #watchEvents /*: ValueEmitter<
     | {|
         +error: Error,
@@ -90,10 +101,12 @@ export default class Atlaspack {
         +error?: void,
       |},
   > */;
+  // @ts-expect-error - TS7008 - Member '#watcherSubscription' implicitly has an 'any' type.
   #watcherSubscription /*: ?AsyncSubscription*/;
   #watcherCount /*: number*/ = 0;
   #requestedAssetIds /*: Set<string>*/ = new Set();
 
+  // @ts-expect-error - TS7008 - Member 'isProfiling' implicitly has an 'any' type.
   isProfiling /*: boolean */;
 
   constructor(options: InitialAtlaspackOptions) {
@@ -120,6 +133,7 @@ export default class Atlaspack {
     let resolvedOptions: AtlaspackOptions = await resolveOptions(
       this.#initialOptions,
     );
+    // @ts-expect-error - TS2322 - Type 'AtlaspackOptions' is not assignable to type 'null'.
     this.#resolvedOptions = resolvedOptions;
 
     let rustAtlaspack: AtlaspackV3;
@@ -129,6 +143,7 @@ export default class Atlaspack {
 
       rustAtlaspack = new AtlaspackV3({
         ...options,
+        // @ts-expect-error - TS2345 - Argument of type '{ corePath: string; threads: number | undefined; entries: string[] | undefined; env: NodeJS.ProcessEnv; fs: FileSystem | undefined; defaultTargetOptions: { distDir: string | undefined; ... 5 more ...; shouldScopeHoist: boolean | undefined; }; ... 27 more ...; featureFlags?: any; }' is not assignable to parameter of type '{ fs?: unknown; nodeWorkers?: number | undefined; packageManager?: unknown; threads?: number | undefined; }'.
         corePath: path.join(__dirname, '..'),
         threads: process.env.NODE_ENV === 'test' ? 2 : undefined,
         entries: Array.isArray(entries)
@@ -158,6 +173,7 @@ export default class Atlaspack {
     this.#config = new AtlaspackConfig(config, resolvedOptions);
 
     if (this.#initialOptions.workerFarm) {
+      // @ts-expect-error - TS2339 - Property 'ending' does not exist on type 'WorkerFarm'.
       if (this.#initialOptions.workerFarm.ending) {
         throw new Error('Supplied WorkerFarm is ending');
       }
@@ -203,6 +219,7 @@ export default class Atlaspack {
     this.#requestTracker = await RequestTracker.init({
       farm: this.#farm,
       options: resolvedOptions,
+      // @ts-expect-error - TS2454 - Variable 'rustAtlaspack' is used before being assigned.
       rustAtlaspack,
     });
 
@@ -287,9 +304,11 @@ export default class Atlaspack {
       await this._init();
     }
 
+    // @ts-expect-error - TS7034 - Variable 'watchEventsDisposable' implicitly has type 'any' in some locations where its type cannot be determined.
     let watchEventsDisposable;
     if (cb) {
       watchEventsDisposable = this.#watchEvents.addListener(
+        // @ts-expect-error - TS7031 - Binding element 'error' implicitly has an 'any' type. | TS7031 - Binding element 'buildEvent' implicitly has an 'any' type.
         ({error, buildEvent}) => cb(error, buildEvent),
       );
     }
@@ -306,9 +325,12 @@ export default class Atlaspack {
 
     this.#watcherCount++;
 
+    // @ts-expect-error - TS7034 - Variable 'unsubscribePromise' implicitly has type 'any' in some locations where its type cannot be determined.
     let unsubscribePromise;
     const unsubscribe = async () => {
+      // @ts-expect-error - TS7005 - Variable 'watchEventsDisposable' implicitly has an 'any' type.
       if (watchEventsDisposable) {
+        // @ts-expect-error - TS7005 - Variable 'watchEventsDisposable' implicitly has an 'any' type.
         watchEventsDisposable.dispose();
       }
 
@@ -325,10 +347,12 @@ export default class Atlaspack {
 
     return {
       unsubscribe() {
+        // @ts-expect-error - TS7005 - Variable 'unsubscribePromise' implicitly has an 'any' type.
         if (unsubscribePromise == null) {
           unsubscribePromise = unsubscribe();
         }
 
+        // @ts-expect-error - TS7005 - Variable 'unsubscribePromise' implicitly has an 'any' type.
         return unsubscribePromise;
       },
     };
@@ -346,9 +370,11 @@ export default class Atlaspack {
     this.#requestTracker.setSignal(signal);
     let options = nullthrows(this.#resolvedOptions);
     try {
+      // @ts-expect-error - TS2531 - Object is possibly 'null'.
       if (options.shouldProfile) {
         await this.startProfiling();
       }
+      // @ts-expect-error - TS2531 - Object is possibly 'null'.
       if (options.shouldTrace) {
         tracer.enable();
       }
@@ -360,6 +386,7 @@ export default class Atlaspack {
 
       let request = createAtlaspackBuildRequest({
         optionsRef: this.#optionsRef,
+        // @ts-expect-error - TS2322 - Type 'Set<unknown>' is not assignable to type 'Set<string>'.
         requestedAssetIds: this.#requestedAssetIds,
         signal,
       });
@@ -379,8 +406,10 @@ export default class Atlaspack {
       let event = {
         type: 'buildSuccess',
         changedAssets: new Map(
+          // @ts-expect-error - TS2345 - Argument of type '([id, asset]: [any, any]) => [any, Asset]' is not assignable to parameter of type '(value: unknown, index: number, array: unknown[]) => [any, Asset]'.
           Array.from(changedAssets).map(([id, asset]: [any, any]) => [
             id,
+            // @ts-expect-error - TS2345 - Argument of type 'null' is not assignable to parameter of type 'AtlaspackOptions'.
             assetFromValue(asset, options),
           ]),
         ),
@@ -388,6 +417,7 @@ export default class Atlaspack {
           bundleGraph,
           (
             bundle: Bundle,
+            // @ts-expect-error - TS2314 - Generic type 'BundleGraph<TBundle>' requires 1 type argument(s).
             bundleGraph: BundleGraph,
             options: AtlaspackOptions,
           ) =>
@@ -397,9 +427,11 @@ export default class Atlaspack {
               options,
               bundleInfo.get(bundle.id),
             ),
+          // @ts-expect-error - TS2345 - Argument of type 'null' is not assignable to parameter of type 'AtlaspackOptions'.
           options,
         ),
         buildTime: Date.now() - startTime,
+        // @ts-expect-error - TS7006 - Parameter 'bundle' implicitly has an 'any' type.
         requestBundle: async (bundle) => {
           let bundleNode = bundleGraph._graph.getNodeByContentKey(bundle.id);
           invariant(bundleNode?.type === 'bundle', 'Bundle does not exist');
@@ -430,7 +462,9 @@ export default class Atlaspack {
 
           let results = await this.#watchQueue.run();
           let result = results.filter(Boolean).pop();
+          // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
           if (result.type === 'buildFailure') {
+            // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'. | TS2339 - Property 'diagnostics' does not exist on type 'BuildEvent'.
             throw new BuildError(result.diagnostics);
           }
 
@@ -449,6 +483,7 @@ export default class Atlaspack {
         throw this.#reporterRunner.errors;
       }
 
+      // @ts-expect-error - TS2322 - Type '{ type: string; changedAssets: Map<any, Asset>; bundleGraph: BundleGraph<PackagedBundle>; buildTime: number; requestBundle: (bundle: any) => Promise<...>; unstable_requestStats: any; }' is not assignable to type 'BuildEvent'.
       return event;
     } catch (e: any) {
       if (e instanceof BuildAbortError) {
@@ -463,6 +498,7 @@ export default class Atlaspack {
       };
 
       await this.#reporterRunner.report(event);
+      // @ts-expect-error - TS2322 - Type '{ type: string; diagnostics: Diagnostic[]; unstable_requestStats: any; }' is not assignable to type 'BuildEvent'.
       return event;
     } finally {
       if (this.isProfiling) {
@@ -477,9 +513,13 @@ export default class Atlaspack {
     invariant(this.#watcherSubscription == null);
 
     let resolvedOptions = nullthrows(this.#resolvedOptions);
+    // @ts-expect-error - TS2345 - Argument of type 'null' is not assignable to parameter of type 'AtlaspackOptions'.
     let opts = getWatcherOptions(resolvedOptions);
+    // @ts-expect-error - TS2531 - Object is possibly 'null'.
     let sub = await resolvedOptions.inputFS.watch(
+      // @ts-expect-error - TS2531 - Object is possibly 'null'.
       resolvedOptions.watchDir,
+      // @ts-expect-error - TS7006 - Parameter 'err' implicitly has an 'any' type. | TS7006 - Parameter 'events' implicitly has an 'any' type.
       async (err, events) => {
         if (err) {
           logger.verbose({
@@ -514,6 +554,7 @@ export default class Atlaspack {
 
   // This is mainly for integration tests and it not public api!
   _getResolvedAtlaspackOptions(): AtlaspackOptions {
+    // @ts-expect-error - TS2322 - Type 'null' is not assignable to type 'AtlaspackOptions'.
     return nullthrows(
       this.#resolvedOptions,
       'Resolved options is null, please let atlaspack initialize before accessing this.',
@@ -555,6 +596,7 @@ export default class Atlaspack {
       await this._init();
     }
 
+    // @ts-expect-error - TS2531 - Object is possibly 'null'.
     let projectRoot = nullthrows(this.#resolvedOptions).projectRoot;
     let request = createAssetRequest({
       ...options,
@@ -575,7 +617,9 @@ export default class Atlaspack {
     let res = await this.#requestTracker.runRequest(request, {
       force: true,
     });
+    // @ts-expect-error - TS7006 - Parameter 'asset' implicitly has an 'any' type.
     return res.map((asset) =>
+      // @ts-expect-error - TS2345 - Argument of type 'null' is not assignable to parameter of type 'AtlaspackOptions'.
       assetFromValue(asset, nullthrows(this.#resolvedOptions)),
     );
   }
@@ -587,6 +631,7 @@ export default class Atlaspack {
       await this._init();
     }
 
+    // @ts-expect-error - TS2531 - Object is possibly 'null'.
     let projectRoot = nullthrows(this.#resolvedOptions).projectRoot;
     if (request.resolveFrom == null && path.isAbsolute(request.specifier)) {
       request.specifier = fromProjectPathRelative(
@@ -639,9 +684,11 @@ export class BuildError extends ThrowableDiagnostic {
 export function createWorkerFarm(
   options: Partial<FarmOptions> = {},
 ): WorkerFarm {
+  // @ts-expect-error - TS2345 - Argument of type '{ workerPath: string; maxConcurrentWorkers?: number | undefined; maxConcurrentCallsPerWorker?: number | undefined; forcedKillTime?: number | undefined; useLocalWorker?: boolean | undefined; warmWorkers?: boolean | undefined; backend?: BackendType | undefined; shouldPatchConsole?: boolean | undefined; shouldTrace?: b...' is not assignable to parameter of type 'FarmOptions'.
   return new WorkerFarm({
     ...options,
     // $FlowFixMe
+    // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
     workerPath: process.browser
       ? '@atlaspack/core/src/worker.js'
       : require.resolve('./worker'),

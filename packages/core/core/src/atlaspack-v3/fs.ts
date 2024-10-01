@@ -10,6 +10,7 @@ import {jsCallable} from './jsCallable';
 // Move to @atlaspack/utils or a dedicated v3 / migration package later
 export function toFileSystemV3(fs: ClassicFileSystem): FileSystem {
   return {
+    // @ts-expect-error - TS2322 - Type '{ canonicalize: (path: string) => string; createDirectory: (path: string) => Promise<void>; cwd: () => string; readFile: (path: string, encoding?: Encoding | undefined) => string | number[]; isFile: (path: string) => boolean; isDir: (path: string) => boolean; }' is not assignable to type 'FileSystem'.
     canonicalize: jsCallable((path: FilePath) => fs.realpathSync(path)),
     createDirectory: jsCallable((path: FilePath) => fs.mkdirp(path)),
     cwd: jsCallable(() => fs.cwd()),

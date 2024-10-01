@@ -10,6 +10,7 @@ import type {AtlaspackOptions} from './types';
 import path from 'path';
 import {hashString} from '@atlaspack/rust';
 import {NodeFS} from '@atlaspack/fs';
+// @ts-expect-error - TS2305 - Module '"@atlaspack/cache"' has no exported member 'LMDBLiteCache'.
 import {LMDBCache, LMDBLiteCache, FSCache} from '@atlaspack/cache';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {NodePackageManager} from '@atlaspack/package-manager';
@@ -118,7 +119,8 @@ export default async function resolveOptions(
     initialOptions.cache ??
     (outputFS instanceof NodeFS
       ? makeLMDBCache()
-      : new FSCache(outputFS, cacheDir));
+      : // @ts-expect-error - TS2554 - Expected 1 arguments, but got 2.
+        new FSCache(outputFS, cacheDir));
 
   let mode = initialOptions.mode ?? 'development';
   let shouldOptimize =

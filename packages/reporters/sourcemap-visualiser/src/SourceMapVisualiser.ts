@@ -24,6 +24,7 @@ export default new Reporter({
             );
 
             let mappedSources = await Promise.all(
+              // @ts-expect-error - TS7006 - Parameter 'sourceName' implicitly has an 'any' type. | TS7006 - Parameter 'index' implicitly has an 'any' type.
               map.sources.map(async (sourceName, index) => {
                 let sourceContent = map.sourcesContent?.[index];
                 if (sourceContent != null) {
@@ -51,6 +52,7 @@ export default new Reporter({
               name: fileName,
               mappings: map.mappings,
               names: map.names,
+              // @ts-expect-error - TS2322 - Type 'any[]' is not assignable to type 'never'.
               sources: mappedSources,
               content: await options.outputFS.readFile(
                 nullthrows(bundle.filePath),

@@ -1,12 +1,14 @@
 import type {PackageInstaller, InstallerOptions} from '@atlaspack/types';
 
 import path from 'path';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'cross-spawn'. '/home/ubuntu/parcel/packages/core/package-manager/node_modules/cross-spawn/index.js' implicitly has an 'any' type.
 import spawn from 'cross-spawn';
 import logger from '@atlaspack/logger';
 import promiseFromProcess from './promiseFromProcess';
 import {registerSerializableClass} from '@atlaspack/core';
 import {npmSpecifierFromModuleRequest} from './utils';
 
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import pkg from '../package.json';
 
 const NPM_CMD = 'npm';

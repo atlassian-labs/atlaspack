@@ -31,6 +31,7 @@ import nullthrows from 'nullthrows';
 import {getModuleParts} from '@atlaspack/utils';
 import {getConflictingLocalDependencies} from './utils';
 import {installPackage} from './installPackage';
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import pkg from '../package.json';
 import {ResolverBase} from '@atlaspack/node-resolver-core';
 import {pathToFileURL} from 'url';
@@ -63,6 +64,7 @@ export class NodePackageManager implements PackageManager {
   fs: FileSystem;
   projectRoot: FilePath;
   installer: PackageInstaller | null | undefined;
+  // @ts-expect-error - TS2749 - 'ResolverBase' refers to a value, but is being used as a type here. Did you mean 'typeof ResolverBase'?
   resolver: ResolverBase;
   currentExtensions: Array<string>;
 
@@ -75,11 +77,13 @@ export class NodePackageManager implements PackageManager {
     this.projectRoot = projectRoot;
     this.installer = installer;
 
+    // @ts-expect-error - TS2339 - Property '_extensions' does not exist on type 'typeof Module'.
     this.currentExtensions = Object.keys(Module._extensions).map((e) =>
       e.substring(1),
     );
   }
 
+  // @ts-expect-error - TS2749 - 'ResolverBase' refers to a value, but is being used as a type here. Did you mean 'typeof ResolverBase'?
   _createResolver(): ResolverBase {
     return new ResolverBase(this.projectRoot, {
       fs:
@@ -97,6 +101,7 @@ export class NodePackageManager implements PackageManager {
       moduleDirResolver:
         process.versions.pnp != null
           ? (module: any, from: any) => {
+              // @ts-expect-error - TS2339 - Property 'findPnpApi' does not exist on type 'typeof Module'.
               let pnp = Module.findPnpApi(path.dirname(from));
 
               return pnp.resolveToUnqualified(
@@ -153,6 +158,7 @@ export class NodePackageManager implements PackageManager {
 
       // On Windows, Node requires absolute paths to be file URLs.
       if (process.platform === 'win32' && path.isAbsolute(resolved)) {
+        // @ts-expect-error - TS2322 - Type 'URL' is not assignable to type 'string'.
         resolved = pathToFileURL(resolved);
       }
 
@@ -172,13 +178,16 @@ export class NodePackageManager implements PackageManager {
       return require(filePath);
     }
 
+    // @ts-expect-error - TS2339 - Property '_cache' does not exist on type 'typeof Module'.
     const cachedModule = Module._cache[filePath];
     if (cachedModule !== undefined) {
       return cachedModule.exports;
     }
 
+    // @ts-expect-error - TS2339 - Property '_cache' does not exist on type 'typeof Module'.
     let m = new Module(filePath, Module._cache[from] || module.parent);
 
+    // @ts-expect-error - TS2339 - Property '_extensions' does not exist on type 'typeof Module'.
     const extensions = Object.keys(Module._extensions);
     // This handles supported extensions changing due to, for example, esbuild/register being used
     // We assume that the extension list will change in size - as these tools usually add support for
@@ -188,19 +197,23 @@ export class NodePackageManager implements PackageManager {
       this.resolver = this._createResolver();
     }
 
+    // @ts-expect-error - TS2339 - Property '_cache' does not exist on type 'typeof Module'.
     Module._cache[filePath] = m;
 
     // Patch require within this module so it goes through our require
+    // @ts-expect-error - TS2739 - Type '(id: any) => any' is missing the following properties from type 'Require': resolve, cache, extensions, main
     m.require = (id: any) => {
       return this.requireSync(id, filePath);
     };
 
     // Patch `fs.readFileSync` temporarily so that it goes through our file system
     let {readFileSync, statSync} = nativeFS;
+    // @ts-expect-error - TS2322 - Type '(filename: any, encoding: any) => string' is not assignable to type '{ (path: PathOrFileDescriptor, options?: { encoding?: null | undefined; flag?: string | undefined; } | null | undefined): Buffer; (path: PathOrFileDescriptor, options: BufferEncoding | { ...; }): string; (path: PathOrFileDescriptor, options?: BufferEncoding | ... 2 more ... | undefined): string | Buffer; }'.
     nativeFS.readFileSync = (filename: any, encoding: any) => {
       return this.fs.readFileSync(filename, encoding);
     };
 
+    // @ts-expect-error - TS2540 - Cannot assign to 'statSync' because it is a read-only property.
     nativeFS.statSync = (filename: any) => {
       return this.fs.statSync(filename);
     };
@@ -213,28 +226,37 @@ export class NodePackageManager implements PackageManager {
           extname === '.mts' ||
           extname === '.cts') &&
         // $FlowFixMe
+        // @ts-expect-error - TS2339 - Property '_extensions' does not exist on type 'typeof Module'.
         !Module._extensions[extname]
       ) {
+        // @ts-expect-error - TS2339 - Property '_compile' does not exist on type 'Module'.
         let compile = m._compile;
+        // @ts-expect-error - TS2339 - Property '_compile' does not exist on type 'Module'.
         m._compile = (code: any, filename: any) => {
           let out = transformSync(code, {filename, module: {type: 'commonjs'}});
           compile.call(m, out.code, filename);
         };
 
+        // @ts-expect-error - TS2339 - Property '_extensions' does not exist on type 'typeof Module'.
         Module._extensions[extname] = (m: any, filename: any) => {
+          // @ts-expect-error - TS2339 - Property '_extensions' does not exist on type 'typeof Module'.
           delete Module._extensions[extname];
+          // @ts-expect-error - TS2339 - Property '_extensions' does not exist on type 'typeof Module'.
           Module._extensions['.js'](m, filename);
         };
       }
     }
 
     try {
+      // @ts-expect-error - TS2339 - Property 'load' does not exist on type 'Module'.
       m.load(filePath);
     } catch (err: any) {
+      // @ts-expect-error - TS2339 - Property '_cache' does not exist on type 'typeof Module'.
       delete Module._cache[filePath];
       throw err;
     } finally {
       nativeFS.readFileSync = readFileSync;
+      // @ts-expect-error - TS2540 - Cannot assign to 'statSync' because it is a read-only property.
       nativeFS.statSync = statSync;
     }
 
@@ -275,6 +297,7 @@ export class NodePackageManager implements PackageManager {
                 ],
               },
             });
+            // @ts-expect-error - TS2339 - Property 'code' does not exist on type 'ThrowableDiagnostic'.
             err.code = 'MODULE_NOT_FOUND';
             throw err;
           } else {
@@ -303,13 +326,17 @@ export class NodePackageManager implements PackageManager {
 
         throw new ThrowableDiagnostic({
           diagnostic: conflicts.fields.map((field) => ({
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`Could not find module "${name}", but it was listed in package.json. Run your package manager first.`,
             origin: '@atlaspack/package-manager',
             codeFrames: [
               {
+                // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
                 filePath: conflicts.filePath,
                 language: 'json',
+                // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
                 code: conflicts.json,
+                // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
                 codeHighlights: generateJSONCodeHighlights(conflicts.json, [
                   {
                     key: `/${field}/${encodeJSONKeyComponent(name)}`,
@@ -344,6 +371,7 @@ export class NodePackageManager implements PackageManager {
           } else if (conflicts != null) {
             throw new ThrowableDiagnostic({
               diagnostic: {
+                // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
                 message: md`Could not find module "${name}" satisfying ${range}.`,
                 origin: '@atlaspack/package-manager',
                 codeFrames: [
@@ -366,8 +394,10 @@ export class NodePackageManager implements PackageManager {
           }
 
           let version = pkg?.version;
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           let message = md`Could not resolve package "${name}" that satisfies ${range}.`;
           if (version != null) {
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message += md` Found ${version}.`;
           }
 
@@ -473,6 +503,7 @@ export class NodePackageManager implements PackageManager {
           return;
         }
 
+        // @ts-expect-error - TS2345 - Argument of type 'FileCreateInvalidation' is not assignable to parameter of type 'never'.
         res.invalidateOnFileCreate.push(...resolved.invalidateOnFileCreate);
         res.invalidateOnFileChange.add(resolved.resolved);
 
@@ -494,15 +525,19 @@ export class NodePackageManager implements PackageManager {
       // cannot be intercepted. Instead, ask the resolver to parse the file and recursively analyze the deps.
       if (resolved.type === 2) {
         let invalidations = this.resolver.getInvalidations(resolved.resolved);
+        // @ts-expect-error - TS7006 - Parameter 'i' implicitly has an 'any' type.
         invalidations.invalidateOnFileChange.forEach((i) =>
           res.invalidateOnFileChange.add(i),
         );
+        // @ts-expect-error - TS7006 - Parameter 'i' implicitly has an 'any' type.
         invalidations.invalidateOnFileCreate.forEach((i) =>
+          // @ts-expect-error - TS2345 - Argument of type 'any' is not assignable to parameter of type 'never'.
           res.invalidateOnFileCreate.push(i),
         );
         res.invalidateOnStartup ||= invalidations.invalidateOnStartup;
         if (res.invalidateOnStartup) {
           logger.warn({
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`${path.relative(
               this.projectRoot,
               resolved.resolved,
@@ -512,7 +547,9 @@ export class NodePackageManager implements PackageManager {
         }
       }
 
+      // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate: never[]; invalidateOnFileChange: Set<unknown>; invalidateOnStartup: boolean; }' is not assignable to parameter of type 'Invalidations'.
       invalidationsCache.set(resolved.resolved, res);
+      // @ts-expect-error - TS2322 - Type '{ invalidateOnFileCreate: never[]; invalidateOnFileChange: Set<unknown>; invalidateOnStartup: boolean; }' is not assignable to type 'Invalidations'.
       return res;
     }
 
@@ -544,8 +581,10 @@ export class NodePackageManager implements PackageManager {
 
       invalidationsCache.delete(resolved.resolved);
 
+      // @ts-expect-error - TS2339 - Property '_cache' does not exist on type 'typeof Module'.
       let module = Module._cache[resolved.resolved];
       if (module) {
+        // @ts-expect-error - TS2339 - Property '_cache' does not exist on type 'typeof Module'.
         delete Module._cache[resolved.resolved];
       }
 
@@ -578,15 +617,18 @@ export class NodePackageManager implements PackageManager {
     // Invalidate whenever the .pnp.js file changes.
     // TODO: only when we actually resolve a node_modules package?
     if (process.versions.pnp != null && res.invalidateOnFileChange) {
+      // @ts-expect-error - TS2339 - Property 'findPnpApi' does not exist on type 'typeof Module'.
       let pnp = Module.findPnpApi(path.dirname(from));
       res.invalidateOnFileChange.push(pnp.resolveToUnqualified('pnpapi', null));
     }
 
     if (res.error) {
       let e = new Error(`Could not resolve module "${name}" from "${from}"`);
+      // @ts-expect-error - TS2339 - Property 'code' does not exist on type 'Error'.
       e.code = 'MODULE_NOT_FOUND';
       throw e;
     }
+    // @ts-expect-error - TS7034 - Variable 'getPkg' implicitly has type 'any' in some locations where its type cannot be determined.
     let getPkg;
     switch (res.resolution.type) {
       case 'Path':
@@ -608,6 +650,7 @@ export class NodePackageManager implements PackageManager {
           invalidateOnFileCreate: res.invalidateOnFileCreate,
           type: res.moduleType,
           get pkg() {
+            // @ts-expect-error - TS7005 - Variable 'getPkg' implicitly has an 'any' type.
             return getPkg();
           },
         };

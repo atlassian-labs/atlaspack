@@ -10,17 +10,16 @@ function shouldExclude(asset: MutableAsset, options: PluginOptions) {
     asset.env.isWorker() ||
     asset.env.isWorklet() ||
     options.mode !== 'development' ||
-    !asset
-      .getDependencies()
-      .find(
-        (v) =>
-          v.specifier === 'react' ||
-          v.specifier === 'react/jsx-runtime' ||
-          v.specifier === 'react/jsx-dev-runtime' ||
-          v.specifier === '@emotion/react' ||
-          v.specifier === '@emotion/react/jsx-runtime' ||
-          v.specifier === '@emotion/react/jsx-dev-runtime',
-      )
+    !asset.getDependencies().find(
+      // @ts-expect-error - TS7006 - Parameter 'v' implicitly has an 'any' type.
+      (v) =>
+        v.specifier === 'react' ||
+        v.specifier === 'react/jsx-runtime' ||
+        v.specifier === 'react/jsx-dev-runtime' ||
+        v.specifier === '@emotion/react' ||
+        v.specifier === '@emotion/react/jsx-runtime' ||
+        v.specifier === '@emotion/react/jsx-dev-runtime',
+    )
   );
 }
 

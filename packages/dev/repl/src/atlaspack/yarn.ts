@@ -3,6 +3,7 @@ import type {MemoryFS} from '@atlaspack/fs';
 import {openDB} from 'idb';
 import {Buffer} from 'buffer';
 
+// @ts-expect-error - TS2307 - Cannot find module '@mischnic/yarn-browser' or its corresponding type declarations.
 import {run} from '@mischnic/yarn-browser';
 
 let previousDependencies: REPLOptions['dependencies'] | null | undefined;
@@ -28,6 +29,7 @@ function shouldRunYarn(
 
 export async function yarnInstall(
   options: REPLOptions,
+  // @ts-expect-error - TS2749 - 'MemoryFS' refers to a value, but is being used as a type here. Did you mean 'typeof MemoryFS'?
   fs: MemoryFS,
   dir: string,
   progress: (arg1: {
@@ -102,7 +104,9 @@ const YARN_CACHE_DIR = '/app/.yarn/cache';
 const YARN_LOCKFILE = '/app/yarn.lock';
 // const YARN_CACHE_STALE = /* 7 Days: */ 7 * 24 * 60 * 60 * 1000;
 const Cache = {
+  // @ts-expect-error - TS2749 - 'MemoryFS' refers to a value, but is being used as a type here. Did you mean 'typeof MemoryFS'?
   async saveCache(fs: MemoryFS) {
+    // @ts-expect-error - TS7006 - Parameter 'name' implicitly has an 'any' type.
     const files = (await fs.readdir(YARN_CACHE_DIR)).map((name) => [
       name,
       fs.readFileSync(YARN_CACHE_DIR + '/' + name),
@@ -139,6 +143,7 @@ const Cache = {
     //   ]);
     // }
   },
+  // @ts-expect-error - TS2749 - 'MemoryFS' refers to a value, but is being used as a type here. Did you mean 'typeof MemoryFS'?
   async restoreCache(fs: MemoryFS) {
     await fs.mkdirp(YARN_CACHE_DIR);
     const db = await getDB();
@@ -148,6 +153,7 @@ const Cache = {
     }
   },
 
+  // @ts-expect-error - TS2749 - 'MemoryFS' refers to a value, but is being used as a type here. Did you mean 'typeof MemoryFS'?
   async saveLockfile(fs: MemoryFS) {
     const data = await fs.readFile(YARN_LOCKFILE);
 
@@ -157,6 +163,7 @@ const Cache = {
       data,
     });
   },
+  // @ts-expect-error - TS2749 - 'MemoryFS' refers to a value, but is being used as a type here. Did you mean 'typeof MemoryFS'?
   async restoreLockfile(fs: MemoryFS) {
     const db = await getDB();
     const result = await db.get(IDB_STORE_LOCK, 'yarn.lock');

@@ -9,6 +9,7 @@ import type {
   PackagedBundle,
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
+// @ts-expect-error - TS2305 - Module '"@atlaspack/fs"' has no exported member 'ncp'.
 import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '@atlaspack/fs';
 import type WorkerFarm from '@atlaspack/workers';
 import type {IncomingMessage} from 'http';
@@ -23,6 +24,7 @@ import vm from 'vm';
 import v8 from 'v8';
 import path from 'path';
 import url from 'url';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'ws'. '/home/ubuntu/parcel/node_modules/ws/index.js' implicitly has an 'any' type.
 import WebSocket from 'ws';
 import nullthrows from 'nullthrows';
 import {parser as postHtmlParse} from 'posthtml-parser';
@@ -32,13 +34,17 @@ import https from 'https';
 
 import {makeDeferredWithPromise, normalizeSeparators} from '@atlaspack/utils';
 import _chalk from 'chalk';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'resolve'. '/home/ubuntu/parcel/node_modules/resolve/index.js' implicitly has an 'any' type.
 import resolve from 'resolve';
 
 export {fsFixture} from './fsFixture';
 
 export const workerFarm = createWorkerFarm() as WorkerFarm;
+// @ts-expect-error - TS2749 - 'NodeFS' refers to a value, but is being used as a type here. Did you mean 'typeof NodeFS'?
 export const inputFS: NodeFS = new NodeFS();
+// @ts-expect-error - TS2749 - 'MemoryFS' refers to a value, but is being used as a type here. Did you mean 'typeof MemoryFS'?
 export let outputFS: MemoryFS = new MemoryFS(workerFarm);
+// @ts-expect-error - TS2749 - 'OverlayFS' refers to a value, but is being used as a type here. Did you mean 'typeof OverlayFS'?
 export let overlayFS: OverlayFS = new OverlayFS(outputFS, inputFS);
 
 beforeEach(() => {
@@ -154,6 +160,7 @@ export function findAsset(
   bundleGraph: BundleGraph<PackagedBundle>,
   assetFileName: string,
 ): Asset | null | undefined {
+  // @ts-expect-error - TS2345 - Argument of type '(bundle: PackagedBundle, context: Asset | null | undefined, actions: TraversalActions) => unknown' is not assignable to parameter of type 'GraphVisitor<PackagedBundle, Asset>'.
   return bundleGraph.traverseBundles((bundle, context, actions) => {
     let asset = bundle.traverseAssets((asset, context, actions) => {
       if (path.basename(asset.filePath) === assetFileName) {
@@ -316,6 +323,7 @@ export async function runBundles(
   let target = env.context;
   let outputFormat = env.outputFormat;
 
+  // @ts-expect-error - TS7034 - Variable 'ctx' implicitly has type 'any' in some locations where its type cannot be determined.
   let ctx, promises;
   switch (target) {
     case 'browser': {
@@ -386,12 +394,14 @@ export async function runBundles(
           b.bundleBehavior === 'inline'
             ? b.name
             : normalizeSeparators(path.relative(b.target.distDir, b.filePath)),
+        // @ts-expect-error - TS2322 - Type '(specifier: any) => Promise<{ [key: string]: unknown; }>' is not assignable to type '(specifier: string, script: Script, importAttributes: ImportAttributes) => Module'.
         async importModuleDynamically(specifier: any) {
           let filePath = path.resolve(path.dirname(parent.filePath), specifier);
           let code = await overlayFS.readFile(filePath, 'utf8');
           let modules = await runESM(
             b.target.distDir,
             [[code, filePath]],
+            // @ts-expect-error - TS7005 - Variable 'ctx' implicitly has an 'any' type.
             ctx,
             overlayFS,
             externalModules,
@@ -450,6 +460,7 @@ export async function runBundle(
 
     let bundles = bundleGraph.getBundles({includeInline: true});
     let scripts: Array<[string, PackagedBundle]> = [];
+    // @ts-expect-error - TS2339 - Property 'walk' does not exist on type 'PostHTML<unknown, unknown>'. | TS7006 - Parameter 'node' implicitly has an 'any' type.
     postHtml().walk.call(ast, (node) => {
       if (node.attrs?.nomodule != null) {
         return node;
@@ -663,6 +674,7 @@ function prepareBrowserContext(
   const head = {
     children: [],
     appendChild(el: any) {
+      // @ts-expect-error - TS2339 - Property 'push' does not exist on type 'readonly []'.
       head.children.push(el);
 
       if (el.tag === 'script') {
@@ -670,17 +682,20 @@ function prepareBrowserContext(
         promises.push(promise);
         setTimeout(function () {
           let pathname = url.parse(el.src).pathname;
+          // @ts-expect-error - TS2345 - Argument of type 'string | null' is not assignable to parameter of type 'string'.
           let file = path.join(bundle.target.distDir, pathname);
 
           new vm.Script(
             // '"use strict";\n' +
             overlayFS.readFileSync(file, 'utf8'),
             {
+              // @ts-expect-error - TS2531 - Object is possibly 'null'.
               filename: pathname.slice(1),
             },
           ).runInContext(ctx);
 
           el.onload();
+          // @ts-expect-error - TS2554 - Expected 1 arguments, but got 0.
           deferred.resolve();
         }, 0);
       } else if (typeof el.onload === 'function') {
@@ -722,10 +737,15 @@ function prepareBrowserContext(
 
   function PatchedError(message: any) {
     const patchedError = new Error(message);
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     const stackStart = patchedError.stack.match(/at (new )?Error/)?.index;
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     const stackEnd = patchedError.stack.includes('at Script.runInContext')
-      ? patchedError.stack.indexOf('at Script.runInContext')
-      : patchedError.stack.indexOf('at runNextTicks');
+      ? // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
+        patchedError.stack.indexOf('at Script.runInContext')
+      : // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
+        patchedError.stack.indexOf('at runNextTicks');
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     const stack = patchedError.stack.slice(stackStart, stackEnd).split('\n');
     stack.shift();
     stack.pop();
@@ -740,6 +760,7 @@ function prepareBrowserContext(
       );
     }
     patchedError.stack =
+      // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
       patchedError.stack.slice(0, stackStart).replace(/ +$/, '') +
       stack.join('\n');
 
@@ -807,6 +828,7 @@ function prepareBrowserContext(
     globals,
   );
 
+  // @ts-expect-error - TS2339 - Property 'window' does not exist on type '{ Error: { (message: any): Error; prototype: any; }; exports: Record<string, any>; module: { exports: Record<string, any>; }; document: { readonly head: { readonly children: readonly []; readonly appendChild: (el: any) => void; }; ... 5 more ...; readonly currentScript: null; }; ... 12 more ...; removeEventListener(...'. | TS2339 - Property 'self' does not exist on type '{ Error: { (message: any): Error; prototype: any; }; exports: Record<string, any>; module: { exports: Record<string, any>; }; document: { readonly head: { readonly children: readonly []; readonly appendChild: (el: any) => void; }; ... 5 more ...; readonly currentScript: null; }; ... 12 more ...; removeEventListener(...'.
   ctx.window = ctx.self = ctx;
   return {ctx, promises};
 }
@@ -822,6 +844,7 @@ function createWorkerClass(filePath: FilePath) {
       let u = new URL(url);
       let filename = path.join(path.dirname(filePath), u.pathname);
       let {ctx, promises} = prepareWorkerContext(filename, {
+        // @ts-expect-error - TS7006 - Parameter 'msg' implicitly has an 'any' type.
         postMessage: (msg) => {
           this.emit('message', msg);
         },
@@ -867,14 +890,17 @@ function prepareWorkerContext(
       TextEncoder,
       TextDecoder,
       location: {hostname: 'localhost', origin: 'http://localhost'},
+      // @ts-expect-error - TS7019 - Rest parameter 'urls' implicitly has an 'any[]' type.
       importScripts(...urls) {
         for (let u of urls) {
           new vm.Script(
             overlayFS.readFileSync(
+              // @ts-expect-error - TS2345 - Argument of type 'string | null' is not assignable to parameter of type 'string'.
               path.join(path.dirname(filePath), url.parse(u).pathname),
               'utf8',
             ),
             {
+              // @ts-expect-error - TS2345 - Argument of type 'string | null' is not assignable to parameter of type 'string'.
               filename: path.basename(url.parse(u).pathname),
             },
           ).runInContext(ctx);
@@ -911,6 +937,7 @@ function prepareWorkerContext(
     globals,
   );
 
+  // @ts-expect-error - TS2339 - Property 'window' does not exist on type '{ exports: Record<string, any>; module: { exports: Record<string, any>; }; WebSocket: any; console: Console; TextEncoder: { new (): TextEncoder; prototype: TextEncoder; }; ... 7 more ...; Worker: typeof Worker; }'. | TS2339 - Property 'self' does not exist on type '{ exports: Record<string, any>; module: { exports: Record<string, any>; }; WebSocket: any; console: Console; TextEncoder: { new (): TextEncoder; prototype: TextEncoder; }; ... 7 more ...; Worker: typeof Worker; }'.
   ctx.window = ctx.self = ctx;
   return {ctx, promises};
 }
@@ -919,6 +946,7 @@ const nodeCache = new Map();
 
 // no filepath = ESM
 function prepareNodeContext(
+  // @ts-expect-error - TS7006 - Parameter 'filePath' implicitly has an 'any' type.
   filePath,
   globals: unknown,
   // $FlowFixMe
@@ -937,9 +965,11 @@ function prepareNodeContext(
         basedir: path.dirname(filePath),
         preserveSymlinks: true,
         extensions: ['.js', '.json'],
+        // @ts-expect-error - TS7019 - Rest parameter 'args' implicitly has an 'any[]' type.
         readFileSync: (...args) => {
           return overlayFS.readFileSync(...args);
         },
+        // @ts-expect-error - TS7006 - Parameter 'file' implicitly has an 'any' type.
         isFile: (file) => {
           try {
             var stat = overlayFS.statSync(file);
@@ -948,6 +978,7 @@ function prepareNodeContext(
           }
           return stat.isFile();
         },
+        // @ts-expect-error - TS7006 - Parameter 'file' implicitly has an 'any' type.
         isDirectory: (file) => {
           try {
             var stat = overlayFS.statSync(file);
@@ -961,10 +992,12 @@ function prepareNodeContext(
       // Shim FS module using overlayFS
       if (res === 'fs') {
         return {
+          // @ts-expect-error - TS7006 - Parameter 'file' implicitly has an 'any' type. | TS7006 - Parameter 'encoding' implicitly has an 'any' type. | TS7006 - Parameter 'cb' implicitly has an 'any' type.
           readFile: async (file, encoding, cb) => {
             let res = await overlayFS.readFile(file, encoding);
             cb(null, res);
           },
+          // @ts-expect-error - TS7006 - Parameter 'file' implicitly has an 'any' type. | TS7006 - Parameter 'encoding' implicitly has an 'any' type.
           readFileSync: (file, encoding) => {
             return overlayFS.readFileSync(file, encoding);
           },
@@ -985,6 +1018,7 @@ function prepareNodeContext(
       }
 
       let g = {
+        // @ts-expect-error - TS2698 - Spread types may only be created from object types.
         ...globals,
       };
 
@@ -1051,6 +1085,7 @@ export async function runESM(
   let id = instanceId++;
   let cache = new Map();
 
+  // @ts-expect-error - TS7006 - Parameter 'inputSpecifier' implicitly has an 'any' type. | TS7006 - Parameter 'referrer' implicitly has an 'any' type.
   function load(inputSpecifier, referrer, code = null) {
     // ESM can request bundles with an absolute URL. Normalize this to the baseDir.
     let specifier = inputSpecifier.replace('http://localhost', baseDir);
@@ -1090,6 +1125,7 @@ export async function runESM(
           path.relative(baseDir, filename),
         )}?id=${id}`,
         importModuleDynamically: (specifier, referrer) =>
+          // @ts-expect-error - TS2554 - Expected 3 arguments, but got 2.
           entry(specifier, referrer),
         context,
         initializeImportMeta(meta: any) {
@@ -1128,6 +1164,7 @@ export async function runESM(
 
   async function _entry(m: any) {
     if (m.status === 'unlinked') {
+      // @ts-expect-error - TS7006 - Parameter 'specifier' implicitly has an 'any' type. | TS7006 - Parameter 'referrer' implicitly has an 'any' type.
       await m.link((specifier, referrer) => load(specifier, referrer));
     }
     if (m.status === 'linked') {
@@ -1145,6 +1182,7 @@ export async function runESM(
     },
     code: undefined | string,
   ) {
+    // @ts-expect-error - TS2345 - Argument of type 'string | undefined' is not assignable to parameter of type 'null | undefined'.
     let m = load(specifier, referrer, code);
     let promise = entryPromises.get(m);
     if (!promise) {
@@ -1156,15 +1194,19 @@ export async function runESM(
 
   let modules: Array<never> = [];
   for (let [code, f] of entries) {
+    // @ts-expect-error - TS2345 - Argument of type 'any' is not assignable to parameter of type 'never'.
     modules.push(await entry(f, {identifier: ''}, code));
   }
 
   for (let m of modules) {
+    // @ts-expect-error - TS2339 - Property 'status' does not exist on type 'never'.
     if (m.status === 'errored') {
+      // @ts-expect-error - TS2339 - Property 'error' does not exist on type 'never'.
       throw m.error;
     }
   }
 
+  // @ts-expect-error - TS2339 - Property 'namespace' does not exist on type 'never'.
   return modules.map((m) => m.namespace);
 }
 
@@ -1194,6 +1236,7 @@ export async function assertESMExports(
 
   if (evaluate) {
     parcelResult = await evaluate(parcelResult);
+    // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type '{ [key: string]: unknown; }'.
     nodeResult = await evaluate(nodeResult);
   }
   assert.deepEqual(
@@ -1340,29 +1383,35 @@ let parcelVersion: string | undefined;
 
 export function describe(...args: unknown[]) {
   parcelVersion = undefined;
+  // @ts-expect-error - TS2683 - 'this' implicitly has type 'any' because it does not have a type annotation. | TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string]'.
   origDescribe.apply(this, args);
 }
 
 describe.only = function (...args: unknown[]) {
   parcelVersion = undefined;
+  // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string]'.
   origDescribe.only.apply(this, args);
 };
 
 describe.skip = function (...args: unknown[]) {
   parcelVersion = undefined;
+  // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string, fn: (this: Suite) => void]'.
   origDescribe.skip.apply(this, args);
 };
 
 describe.v2 = function (...args: unknown[]) {
   parcelVersion = 'v2';
   if (!isAtlaspackV3) {
+    // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string]'.
     origDescribe.apply(this, args);
   }
 };
 
+// @ts-expect-error - TS2339 - Property 'only' does not exist on type '(...args: unknown[]) => void'.
 describe.v2.only = function (...args: unknown[]) {
   parcelVersion = 'v2';
   if (!isAtlaspackV3) {
+    // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string]'.
     origDescribe.only.apply(this, args);
   }
 };
@@ -1370,13 +1419,16 @@ describe.v2.only = function (...args: unknown[]) {
 describe.v3 = function (...args: unknown[]) {
   parcelVersion = 'v3';
   if (isAtlaspackV3) {
+    // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string]'.
     origDescribe.apply(this, args);
   }
 };
 
+// @ts-expect-error - TS2339 - Property 'only' does not exist on type '(...args: unknown[]) => void'.
 describe.v3.only = function (...args: unknown[]) {
   parcelVersion = 'v3';
   if (isAtlaspackV3) {
+    // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string]'.
     origDescribe.only.apply(this, args);
   }
 };
@@ -1389,38 +1441,47 @@ export function it(...args: unknown[]) {
     (parcelVersion == 'v2' && !isAtlaspackV3) ||
     (parcelVersion == 'v3' && isAtlaspackV3)
   ) {
+    // @ts-expect-error - TS2683 - 'this' implicitly has type 'any' because it does not have a type annotation. | TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string, fn?: AsyncFunc | undefined]'.
     origIt.apply(this, args);
   }
 }
 
 it.only = function (...args: unknown[]) {
+  // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string, fn?: AsyncFunc | undefined]'.
   origIt.only.apply(this, args);
 };
 
 it.skip = function (...args: unknown[]) {
+  // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string, fn?: AsyncFunc | undefined]'.
   origIt.skip.apply(this, args);
 };
 
 it.v2 = function (...args: unknown[]) {
   if (!isAtlaspackV3) {
+    // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string, fn?: AsyncFunc | undefined]'.
     origIt.apply(this, args);
   }
 };
 
+// @ts-expect-error - TS2339 - Property 'only' does not exist on type '(...args: unknown[]) => void'.
 it.v2.only = function (...args: unknown[]) {
   if (!isAtlaspackV3) {
+    // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string, fn?: AsyncFunc | undefined]'.
     origIt.only.apply(this, args);
   }
 };
 
 it.v3 = function (...args: unknown[]) {
   if (isAtlaspackV3) {
+    // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string, fn?: AsyncFunc | undefined]'.
     origIt.apply(this, args);
   }
 };
 
+// @ts-expect-error - TS2339 - Property 'only' does not exist on type '(...args: unknown[]) => void'.
 it.v3.only = function (...args: unknown[]) {
   if (isAtlaspackV3) {
+    // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type '[title: string, fn?: AsyncFunc | undefined]'.
     origIt.only.apply(this, args);
   }
 };

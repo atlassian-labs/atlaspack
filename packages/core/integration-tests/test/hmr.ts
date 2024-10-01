@@ -13,10 +13,12 @@ import {
   run,
   request,
 } from '@atlaspack/test-utils';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'ws'. '/home/ubuntu/parcel/node_modules/ws/index.js' implicitly has an 'any' type.
 import WebSocket from 'ws';
 import json5 from 'json5';
 import getPort from 'get-port';
 // flowlint-next-line untyped-import:off
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'jsdom'. '/home/ubuntu/parcel/node_modules/jsdom/lib/api.js' implicitly has an 'any' type.
 import JSDOM from 'jsdom';
 import nullthrows from 'nullthrows';
 
@@ -57,6 +59,7 @@ async function nextWSMessage(ws: WebSocket) {
 }
 
 describe.v2('hmr', function () {
+  // @ts-expect-error - TS7034 - Variable 'subscription' implicitly has type 'any' in some locations where its type cannot be determined. | TS7034 - Variable 'ws' implicitly has type 'any' in some locations where its type cannot be determined.
   let subscription, ws;
 
   async function testHMRClient(
@@ -83,6 +86,7 @@ describe.v2('hmr', function () {
     let port = await getPort();
     let b = bundler(path.join(__dirname, '/input/index.js'), {
       hmrOptions: {
+        // @ts-expect-error - TS2322 - Type '{ https: false; port: number; host: string; }' is not assignable to type 'HMROptions'.
         https: false,
         port,
         host: 'localhost',
@@ -93,12 +97,14 @@ describe.v2('hmr', function () {
 
     subscription = await b.watch();
     let {bundleGraph} = await getNextBuildSuccess(b);
+    // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
     ws = await openSocket('ws://localhost:' + port);
 
     let outputs: Array<never> = [];
     let reloaded = false;
     await run(bundleGraph, {
       output(o: any) {
+        // @ts-expect-error - TS2345 - Argument of type 'any' is not assignable to parameter of type 'never'.
         outputs.push(o);
       },
       location: {
@@ -109,8 +115,10 @@ describe.v2('hmr', function () {
       },
     });
 
+    // @ts-expect-error - TS2769 - No overload matches this call.
     for (let update of [].concat(updates)) {
       // Fixup the prototypes so that strict assertions work
+      // @ts-expect-error - TS2349 - This expression is not callable.
       let fsUpdates = update(JSON.parse(JSON.stringify(outputs)));
       for (let f in fsUpdates) {
         await overlayFS.writeFile(
@@ -132,12 +140,16 @@ describe.v2('hmr', function () {
   }
 
   afterEach(async () => {
+    // @ts-expect-error - TS7005 - Variable 'ws' implicitly has an 'any' type.
     if (ws) {
+      // @ts-expect-error - TS7005 - Variable 'ws' implicitly has an 'any' type.
       await closeSocket(ws);
       ws = null;
     }
 
+    // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type.
     if (subscription) {
+      // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type.
       await subscription.unsubscribe();
       subscription = null;
     }
@@ -163,6 +175,7 @@ describe.v2('hmr', function () {
       subscription = await b.watch();
       await getNextBuild(b);
 
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       ws = await openSocket('ws://localhost:' + port);
 
       outputFS.writeFile(
@@ -175,6 +188,7 @@ describe.v2('hmr', function () {
       assert.equal(message.type, 'update');
 
       // Figure out why output doesn't change...
+      // @ts-expect-error - TS7006 - Parameter 'asset' implicitly has an 'any' type.
       let localAsset = message.assets.find((asset) =>
         asset.output.includes('exports.a = 5;\nexports.b = 5;\n'),
       );
@@ -194,6 +208,7 @@ describe.v2('hmr', function () {
       subscription = await b.watch();
       await getNextBuild(b);
 
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       ws = await openSocket('ws://localhost:' + port);
 
       outputFS.writeFile(
@@ -219,6 +234,7 @@ describe.v2('hmr', function () {
       subscription = await b.watch();
       await getNextBuild(b);
 
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       ws = await openSocket('ws://localhost:' + port);
 
       outputFS.writeFile(
@@ -251,6 +267,7 @@ describe.v2('hmr', function () {
         'require("fs"; exports.a = 5; exports.b = 5;',
       );
 
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       ws = await openSocket('ws://localhost:' + port);
       let message = await nextWSMessage(ws);
 
@@ -268,6 +285,7 @@ describe.v2('hmr', function () {
       subscription = await b.watch();
       await getNextBuild(b);
 
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       ws = await openSocket('ws://localhost:' + port);
 
       await outputFS.writeFile(
@@ -364,6 +382,7 @@ describe.v2('hmr', function () {
       subscription = await b.watch();
       let event = await getNextBuild(b);
 
+      // @ts-expect-error - TS2339 - Property 'bundleGraph' does not exist on type 'BuildEvent'.
       let bundleGraph = nullthrows(event.bundleGraph);
       let asset = nullthrows(bundleGraph.getBundles()[0].getMainEntry());
       let contents = await request('/__parcel_hmr/' + asset.id, port);
@@ -549,6 +568,7 @@ module.hot.dispose((data) => {
         assert.equal(outputs.length, 1);
         let url = new URL(outputs[0]);
         assert(/test\.[0-9a-f]+\.txt/, url.pathname);
+        // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'number'.
         assert(!isNaN(url.search.slice(1)));
         search = url.search;
         return {
@@ -559,6 +579,7 @@ module.hot.dispose((data) => {
       assert.equal(outputs.length, 2);
       let url = new URL(outputs[1]);
       assert(/test\.[0-9a-f]+\.txt/, url.pathname);
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'number'.
       assert(!isNaN(url.search.slice(1)));
       assert.notEqual(url.search, search);
     });
@@ -570,6 +591,7 @@ module.hot.dispose((data) => {
           assert.equal(outputs.length, 1);
           let url = new URL(outputs[0]);
           assert(/test\.[0-9a-f]+\.txt/, url.pathname);
+          // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'number'.
           assert(!isNaN(url.search.slice(1)));
           search = url.search;
           return {
@@ -589,6 +611,7 @@ module.hot.dispose((data) => {
       assert.equal(outputs.length, 3);
       let url = new URL(outputs[2]);
       assert(/test\.[0-9a-f]+\.txt/, url.pathname);
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'number'.
       assert(!isNaN(url.search.slice(1)));
       assert.notEqual(url.search, search);
     });
@@ -613,6 +636,7 @@ module.hot.dispose((data) => {
         });
 
       let stack = outputs.pop();
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       assert(stack.includes('/__parcel_hmr/' + nullthrows(asset).id));
     });
 
@@ -910,6 +934,7 @@ module.hot.dispose((data) => {
         await new Promise(
           (res: (result: Promise<undefined> | undefined) => void) =>
             dom.window.document.addEventListener('load', () => {
+              // @ts-expect-error - TS2794 - Expected 1 arguments, but got 0. Did you forget to include 'void' in your type argument to 'Promise'?
               res();
             }),
         );
@@ -974,6 +999,7 @@ module.hot.dispose((data) => {
         await new Promise(
           (res: (result: Promise<undefined> | undefined) => void) =>
             dom.window.document.addEventListener('load', () => {
+              // @ts-expect-error - TS2794 - Expected 1 arguments, but got 0. Did you forget to include 'void' in your type argument to 'Promise'?
               res();
             }),
         );

@@ -1,5 +1,6 @@
 import type {ContentKey} from '@atlaspack/graph';
 import type {Async} from '@atlaspack/types';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'SharedReference'. Did you mean to use 'import SharedReference from "@atlaspack/workers"' instead?
 import type {SharedReference} from '@atlaspack/workers';
 
 import type {StaticRunOpts} from '../RequestTracker';
@@ -58,6 +59,7 @@ export default function createAtlaspackBuildRequest(
   };
 }
 
+// @ts-expect-error - TS7031 - Binding element 'input' implicitly has an 'any' type. | TS7031 - Binding element 'api' implicitly has an 'any' type. | TS7031 - Binding element 'options' implicitly has an 'any' type.
 async function run({input, api, options}) {
   let {optionsRef, requestedAssetIds, signal} = input;
 
@@ -72,6 +74,7 @@ async function run({input, api, options}) {
       force: options.shouldBuildLazily && requestedAssetIds.size > 0,
     });
 
+  // @ts-expect-error - TS2345 - Argument of type 'ContentGraph<BundleGraphNode, BundleGraphEdgeType>' is not assignable to parameter of type 'Graph<AssetGraphNode, 1> | Graph<{ assets: Set<Asset>; sourceBundles: Set<number>; bundleBehavior?: BundleBehavior | null | undefined; }, 1> | Graph<...>'.
   dumpGraphToGraphViz(bundleGraph._graph, 'BundleGraph', bundleGraphEdgeTypes);
 
   await report({

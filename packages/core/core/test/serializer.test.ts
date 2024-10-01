@@ -5,6 +5,7 @@ import {
   unregisterSerializableClass,
 } from '../src/serializer';
 import assert from 'assert';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
 
 describe('serializer', () => {
@@ -87,6 +88,7 @@ describe('serializer', () => {
     let res = deserialize(serialize(x));
     assert(res instanceof Test);
     assert.equal(res.x, x.x);
+    // @ts-expect-error - TS2551 - Property 'serialized' does not exist on type 'Test'. Did you mean 'serialize'?
     assert.equal(res.serialized, true);
 
     unregisterSerializableClass('Test', Test);
@@ -290,6 +292,7 @@ describe('serializer', () => {
       let res = deserialize(serialize(new Outer(new Inner(42))));
       assert(res instanceof Outer);
       assert(!(res.inner instanceof Inner));
+      // @ts-expect-error - TS2339 - Property 'x' does not exist on type 'never'.
       assert.equal(res.inner.x, 42);
     });
 

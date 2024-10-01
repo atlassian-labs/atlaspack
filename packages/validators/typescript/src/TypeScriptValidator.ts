@@ -65,6 +65,7 @@ export default new Validator({
 
       let filesToCheck = program.getSourceFiles();
       filesToCheck.forEach((sourceFile) => {
+        // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
         let diagnostics = program.getSemanticDiagnostics(sourceFile);
         validatorResults.push(
           getValidateResultFromDiagnostics(sourceFile.fileName, diagnostics),
@@ -204,8 +205,11 @@ function getValidateResultFromDiagnostics(
       }
 
       validatorResult.errors.push({
+        // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'never'.
         origin: '@atlaspack/validator-typescript',
+        // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'never'.
         message: diagnosticMessage,
+        // @ts-expect-error - TS2322 - Type 'DiagnosticCodeFrame[] | undefined' is not assignable to type 'never'.
         codeFrames: codeframe ? [codeframe] : undefined,
       });
     }

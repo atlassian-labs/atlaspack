@@ -1,5 +1,6 @@
 import {Command} from 'commander';
 
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import packageJson from '../package.json';
 
 import {migratePackageJson} from './migrations/migrate-package-json';

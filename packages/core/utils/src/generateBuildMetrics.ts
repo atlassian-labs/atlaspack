@@ -116,6 +116,7 @@ async function createBundleStats(
   let assetsReport: Array<AssetStats> = [];
   if (sourcemapSizes && sourcemapSizes.size) {
     assetsReport = Array.from(sourcemapSizes.keys()).map((filePath: string) => {
+      // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
       let foundSize = sourcemapSizes.get(filePath) || 0;
       let stats = assets.get(filePath) || {
         filePath,

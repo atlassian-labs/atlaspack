@@ -20,6 +20,7 @@ export const SOURCEMAP_EXTENSIONS: Set<string> = new Set<string>([
 
 export function matchSourceMappingURL(
   contents: string,
+  // @ts-expect-error - TS2702 - 'RegExp' only refers to a type, but is being used as a namespace here.
 ): null | RegExp.matchResult {
   return contents.match(SOURCEMAP_RE);
 }
@@ -85,6 +86,7 @@ export async function loadSourceMap(
     let sourcemapInstance = new SourceMap(options.projectRoot);
     sourcemapInstance.addVLQMap({
       ...foundMap.map,
+      // @ts-expect-error - TS7006 - Parameter 's' implicitly has an 'any' type.
       sources: foundMap.map.sources.map((s) => {
         return path.join(mapSourceRoot, s);
       }),

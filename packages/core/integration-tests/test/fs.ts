@@ -27,6 +27,7 @@ describe('fs', function () {
         },
       );
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       await assert.rejects(() => run(b), /\.readFileSync is not a function/);
     });
 
@@ -38,11 +39,13 @@ describe('fs', function () {
         },
       );
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       await assert.rejects(() => run(b), /\.readFileSync is not a function/);
     });
 
     it('should inline a file as a string', async function () {
       let b = await bundle(path.join(__dirname, '/integration/fs/index.js'));
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(output, 'hello');
     });
@@ -51,6 +54,7 @@ describe('fs', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-buffer/index.js'),
       );
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       invariant(typeof output === 'object' && output != null);
       assert(output.constructor.name.includes('Buffer'));
@@ -61,6 +65,7 @@ describe('fs', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-alias/index.js'),
       );
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(output, 'hello');
     });
@@ -69,6 +74,7 @@ describe('fs', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-inline/index.js'),
       );
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(output, 'hello');
     });
@@ -77,6 +83,7 @@ describe('fs', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-assign/index.js'),
       );
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(output, 'hello');
     });
@@ -85,6 +92,7 @@ describe('fs', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-assign-alias/index.js'),
       );
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(output, 'hello');
     });
@@ -93,6 +101,7 @@ describe('fs', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-destructure/index.js'),
       );
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(output, 'hello');
     });
@@ -101,6 +110,7 @@ describe('fs', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-destructure-assign/index.js'),
       );
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(output, 'hello');
     });
@@ -109,6 +119,7 @@ describe('fs', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-import/index.js'),
       );
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       invariant(typeof output === 'object' && output != null);
       assert.equal(output.default, 'hello');
@@ -118,6 +129,7 @@ describe('fs', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/fs-import-path-join/index.js'),
       );
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       invariant(typeof output === 'object' && output != null);
       assert.equal(output.default, 'hello');
@@ -144,6 +156,7 @@ describe('fs', function () {
             ],
           },
         ]);
+        // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
         let output = await run(b);
 
         assert.equal(typeof output.test, 'function');
@@ -157,6 +170,7 @@ describe('fs', function () {
         path.join(__dirname, '/integration/fs-file-non-evaluable/index.js'),
       );
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       await assert.rejects(() => run(b), /\.readFileSync is not a function/);
     });
 
@@ -168,6 +182,7 @@ describe('fs', function () {
         ),
       );
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       await assert.rejects(() => run(b), /\.readFileSync is not a function/);
     });
 
@@ -176,6 +191,7 @@ describe('fs', function () {
         path.join(__dirname, '/integration/fs-options-non-evaluable/index.js'),
       );
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       await assert.rejects(() => run(b), /\.readFileSync is not a function/);
     });
   });
@@ -203,6 +219,7 @@ describe('fs', function () {
         path.join(__dirname, '/integration/fs-node/', 'test.txt'),
         'hey',
       );
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(output, 'hey');
     });
@@ -229,6 +246,7 @@ describe('fs', function () {
       assert(contents.includes('readFileSync'));
 
       await outputFS.writeFile(path.join(distDir, 'test.txt'), 'hey');
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(output, 'hey');
     });

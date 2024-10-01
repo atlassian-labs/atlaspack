@@ -1,5 +1,6 @@
 import type {ContentKey} from '@atlaspack/graph';
 import type {Dependency, NamedBundle as INamedBundle} from '@atlaspack/types';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'SharedReference'. Did you mean to use 'import SharedReference from "@atlaspack/workers"' instead?
 import type {SharedReference} from '@atlaspack/workers';
 import type {
   Asset,
@@ -198,9 +199,13 @@ export default async function applyRuntimes<TResult extends RequestResult>({
             }
 
             connectionMap.get(connectionBundle).push({
+              // @ts-expect-error - TS2322 - Type 'Bundle' is not assignable to type 'never'.
               bundle: connectionBundle,
+              // @ts-expect-error - TS2322 - Type '{ code: string; filePath: string; env: Environment; isSource: boolean; }' is not assignable to type 'never'.
               assetGroup,
+              // @ts-expect-error - TS2322 - Type 'Dependency | undefined' is not assignable to type 'never'.
               dependency,
+              // @ts-expect-error - TS2322 - Type 'boolean | undefined' is not assignable to type 'never'.
               isEntry,
             });
           }

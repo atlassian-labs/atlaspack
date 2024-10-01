@@ -41,8 +41,10 @@ export class FS implements Iterable<[string, File | FSMap]> {
     let parts = path.slice(1).split('/');
     let f = this.files;
     for (let p of parts) {
+      // @ts-expect-error - TS2322 - Type 'File | FSMap | undefined' is not assignable to type 'FSMap'.
       f = f?.get(p);
     }
+    // @ts-expect-error - TS2741 - Property 'value' is missing in type 'Map<string, File | FSMap>' but required in type 'File'.
     return f;
   }
 
@@ -56,6 +58,7 @@ export class FS implements Iterable<[string, File | FSMap]> {
         result.push([p, data]);
       }
     }
+    // @ts-expect-error - TS2769 - No overload matches this call.
     return new Map(result);
   }
 
@@ -70,6 +73,7 @@ export class FS implements Iterable<[string, File | FSMap]> {
 
     let f = result;
     for (let p of parts.slice(0, -1)) {
+      // @ts-expect-error - TS2769 - No overload matches this call.
       let copy = new Map(f.get(p) ?? []);
       f.set(p, copy);
       f = copy;
@@ -84,6 +88,7 @@ export class FS implements Iterable<[string, File | FSMap]> {
 
     let f = result;
     for (let p of parts.slice(0, -1)) {
+      // @ts-expect-error - TS2769 - No overload matches this call.
       let copy = new Map(f.get(p) ?? []);
       f.set(p, copy);
       f = copy;
@@ -173,6 +178,7 @@ export const ASSET_PRESETS: Map<
         [
           'package.json',
           {
+            // @ts-expect-error - TS2769 - No overload matches this call.
             value: `{\n  "devDependencies": {\n    "flow-bin": "*"\n  }\n}`,
             isEntry: true,
           },
@@ -352,6 +358,7 @@ document.body.append(document.createTextNode(func()))`,
             ],
           ]),
         ],
+        // @ts-expect-error - TS2769 - No overload matches this call.
         ['.env', {value: 'SOMETHING=124'}],
       ]),
     },
@@ -501,6 +508,7 @@ export function App() {
         [
           'package.json',
           {
+            // @ts-expect-error - TS2769 - No overload matches this call.
             value: JSON.stringify(
               {
                 name: 'repl',
@@ -607,6 +615,7 @@ export function App() {
         [
           'package.json',
           {
+            // @ts-expect-error - TS2769 - No overload matches this call.
             value: JSON.stringify(
               {
                 name: 'repl',

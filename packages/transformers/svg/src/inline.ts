@@ -1,5 +1,6 @@
 import type {AST, MutableAsset, TransformerResult} from '@atlaspack/types';
 import {hashString} from '@atlaspack/rust';
+// @ts-expect-error - TS2305 - Module '"posthtml"' has no exported member 'PostHTMLNode'.
 import type {PostHTMLNode} from 'posthtml';
 
 import PostHTML from 'posthtml';
@@ -20,6 +21,7 @@ export default function extractInlineAssets(
 
   // Extract <style> elements for processing.
   const parts: Array<TransformerResult> = [];
+  // @ts-expect-error - TS2339 - Property 'walk' does not exist on type 'PostHTML<unknown, unknown>'.
   PostHTML().walk.call(program, (node: PostHTMLNode) => {
     if (node.tag === 'style' || node.tag === 'script') {
       const value = node.content && node.content.join('');
@@ -35,7 +37,9 @@ export default function extractInlineAssets(
           type = 'css';
         }
       } else if (node.tag === 'script') {
+        // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly 'application/ecmascript': "js"; readonly 'application/javascript': "js"; readonly 'text/javascript': "js"; readonly module: "js"; }'.
         if (node.attrs && SCRIPT_TYPES[node.attrs.type]) {
+          // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly 'application/ecmascript': "js"; readonly 'application/javascript': "js"; readonly 'text/javascript': "js"; readonly module: "js"; }'.
           type = SCRIPT_TYPES[node.attrs.type];
         } else if (node.attrs) {
           type = node.attrs.type.split('/')[1];
@@ -93,6 +97,7 @@ export default function extractInlineAssets(
         content: value,
         uniqueKey: parcelKey,
         bundleBehavior: 'inline',
+        // @ts-expect-error - TS2322 - Type '{ sourceType: string; outputFormat: string; loc: { filePath: string; start: any; end: any; } | undefined; }' is not assignable to type 'Environment | EnvironmentOptions | undefined'.
         env,
         meta: {
           type: 'tag',

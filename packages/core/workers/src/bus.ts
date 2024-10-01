@@ -7,6 +7,7 @@ class Bus extends EventEmitter {
       child.workerApi.callMaster(
         {
           // $FlowFixMe
+          // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
           location: process.browser
             ? '@atlaspack/workers/src/bus.js'
             : __filename,

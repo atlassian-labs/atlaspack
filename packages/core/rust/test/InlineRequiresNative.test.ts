@@ -23,6 +23,7 @@ function main() {
 }
 `.trimStart(),
     );
+    // @ts-expect-error - TS2345 - Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
     const sourceMap = JSON.parse(result.sourceMap);
     assert.ok(sourceMap);
   });

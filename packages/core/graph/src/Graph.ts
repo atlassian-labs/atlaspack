@@ -375,6 +375,7 @@ export default class Graph<TNode, TEdgeType extends number = 1> {
     );
     this._assertHasNodeId(traversalStartNode);
 
+    // @ts-expect-error - TS7034 - Variable 'visited' implicitly has type 'any' in some locations where its type cannot be determined.
     let visited;
     if (!this._visited || this._visited.capacity < this.nodes.length) {
       this._visited = new BitSet(this.nodes.length);
@@ -399,6 +400,7 @@ export default class Graph<TNode, TEdgeType extends number = 1> {
 
     let queue = [{nodeId: traversalStartNode, context: null}];
     while (queue.length !== 0) {
+      // @ts-expect-error - TS2339 - Property 'nodeId' does not exist on type '{ nodeId: number; context: null; } | undefined'. | TS2339 - Property 'context' does not exist on type '{ nodeId: number; context: null; } | undefined'.
       let {nodeId, context} = queue.pop();
       if (!this.hasNode(nodeId) || visited.has(nodeId)) continue;
       visited.add(nodeId);
@@ -419,6 +421,7 @@ export default class Graph<TNode, TEdgeType extends number = 1> {
       }
 
       this.adjacencyList.forEachNodeIdConnectedFromReverse(nodeId, (child) => {
+        // @ts-expect-error - TS7005 - Variable 'visited' implicitly has an 'any' type.
         if (!visited.has(child)) {
           queue.push({nodeId: child, context});
         }
@@ -441,6 +444,7 @@ export default class Graph<TNode, TEdgeType extends number = 1> {
     );
     this._assertHasNodeId(traversalStartNode);
 
+    // @ts-expect-error - TS7034 - Variable 'visited' implicitly has type 'any' in some locations where its type cannot be determined.
     let visited;
     if (!this._visited || this._visited.capacity < this.nodes.length) {
       this._visited = new BitSet(this.nodes.length);
@@ -473,6 +477,7 @@ export default class Graph<TNode, TEdgeType extends number = 1> {
         this.adjacencyList.forEachNodeIdConnectedFromReverse(
           nodeId,
           (child) => {
+            // @ts-expect-error - TS7005 - Variable 'visited' implicitly has an 'any' type.
             if (!visited.has(child)) {
               queue.push(child);
             }
@@ -539,8 +544,11 @@ export default class Graph<TNode, TEdgeType extends number = 1> {
     while (queue.length !== 0) {
       const command = queue.pop();
 
+      // @ts-expect-error - TS2532 - Object is possibly 'undefined'. | TS2339 - Property 'exit' does not exist on type 'DFSCommand<TContext>'.
       if (command.exit != null) {
+        // @ts-expect-error - TS2339 - Property 'nodeId' does not exist on type 'DFSCommand<TContext> | undefined'. | TS2339 - Property 'context' does not exist on type 'DFSCommand<TContext> | undefined'. | TS2339 - Property 'exit' does not exist on type 'DFSCommand<TContext> | undefined'.
         let {nodeId, context, exit} = command;
+        // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
         let newContext = exit(nodeId, command.context, actions);
         if (typeof newContext !== 'undefined') {
           context = newContext;
@@ -555,6 +563,7 @@ export default class Graph<TNode, TEdgeType extends number = 1> {
           return context;
         }
       } else {
+        // @ts-expect-error - TS2339 - Property 'nodeId' does not exist on type 'DFSCommand<TContext> | undefined'. | TS2339 - Property 'context' does not exist on type 'DFSCommand<TContext> | undefined'.
         let {nodeId, context} = command;
         if (!this.hasNode(nodeId) || visited.has(nodeId)) continue;
         visited.add(nodeId);
@@ -618,6 +627,7 @@ export default class Graph<TNode, TEdgeType extends number = 1> {
         return node;
       }
 
+      // @ts-expect-error - TS2345 - Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
       for (let child of this.getNodeIdsConnectedFrom(node)) {
         if (!visited.has(child)) {
           visited.add(child);

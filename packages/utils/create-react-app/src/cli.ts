@@ -1,16 +1,21 @@
 import program from 'commander';
 // flowlint-next-line untyped-import:off
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import {version} from '../package.json';
 // flowlint-next-line untyped-import:off
 import simpleGit from 'simple-git';
 import fs from 'fs';
 import path from 'path';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'ncp'. '/home/ubuntu/parcel/node_modules/ncp/lib/ncp.js' implicitly has an 'any' type.
 import _ncp from 'ncp';
 import {promisify} from 'util';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'command-exists'. '/home/ubuntu/parcel/node_modules/command-exists/index.js' implicitly has an 'any' type.
 import commandExists from 'command-exists';
 // flowlint-next-line untyped-import:off
+// @ts-expect-error - TS7016 - Could not find a declaration file for module '@npmcli/promise-spawn'. '/home/ubuntu/parcel/packages/utils/create-react-app/node_modules/@npmcli/promise-spawn/index.js' implicitly has an 'any' type.
 import _spawn from '@npmcli/promise-spawn';
 import rimraf from 'rimraf';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'tempy'. '/home/ubuntu/parcel/node_modules/tempy/index.js' implicitly has an 'any' type.
 import tempy from 'tempy';
 import chalk from 'chalk';
 import * as emoji from './emoji';
@@ -47,6 +52,7 @@ async function run(packagePath: string) {
   try {
     await createApp(path.basename(packagePath), tempPath);
   } catch (e: any) {
+    // @ts-expect-error - TS2349 - This expression is not callable.
     await rimraf(tempPath);
     throw e;
   }
@@ -60,6 +66,7 @@ async function run(packagePath: string) {
     chalk`${
       emoji.info
     }  {dim Run} {bold cd ${packagePath}} {dim and then} {bold ${
+      // @ts-expect-error - TS7005 - Variable 'usesYarn' implicitly has an 'any' type.
       usesYarn ? 'yarn' : 'npm run'
     } start} {dim to start developing with Parcel.}`,
   );
@@ -117,6 +124,7 @@ async function fsExists(filePath: string): Promise<boolean> {
   }
 }
 
+// @ts-expect-error - TS7034 - Variable 'usesYarn' implicitly has type 'any' in some locations where its type cannot be determined.
 let usesYarn;
 async function installPackages(
   packageExpressions: Array<string>,
@@ -131,6 +139,7 @@ async function installPackages(
     chalk.bold(...packageExpressions),
   );
 
+  // @ts-expect-error - TS7005 - Variable 'usesYarn' implicitly has an 'any' type.
   if (usesYarn == null) {
     usesYarn = await commandExists('yarn');
     if (!usesYarn && !(await commandExists('npm'))) {
@@ -138,6 +147,7 @@ async function installPackages(
     }
   }
 
+  // @ts-expect-error - TS7005 - Variable 'usesYarn' implicitly has an 'any' type.
   if (usesYarn) {
     return spawn(
       'yarn',

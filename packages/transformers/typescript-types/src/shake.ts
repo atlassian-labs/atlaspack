@@ -36,6 +36,7 @@ export function shake(
   let _currentModule: TSModule | null | undefined;
   let visit = (node: any): any => {
     if (ts.isBundle(node)) {
+      // @ts-expect-error - TS2345 - Argument of type 'readonly SourceFile[]' is not assignable to parameter of type 'NodeArray<any>'.
       return factory.updateBundle(node, ts.visitNodes(node.sourceFiles, visit));
     }
 
@@ -45,9 +46,12 @@ export function shake(
       if (moduleStack.length >= 1) {
         // Since we are hoisting them to the top-level scope, we need to add a "declare" keyword to make them ambient.
         // we also want the declare keyword to come after the export keyword to guarantee a valid typings file.
+        // @ts-expect-error - TS2540 - Cannot assign to 'modifiers' because it is a read-only property.
         node.modifiers ??= [];
         const index =
+          // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
           node.modifiers[0]?.kind === ts.SyntaxKind.ExportKeyword ? 1 : 0;
+        // @ts-expect-error - TS2532 - Object is possibly 'undefined'. | TS2551 - Property 'splice' does not exist on type 'NodeArray<ModifierLike>'. Did you mean 'slice'?
         node.modifiers.splice(
           index,
           0,
@@ -59,6 +63,7 @@ export function shake(
       moduleStack.push(_currentModule);
       let isFirstModule = !_currentModule;
       _currentModule = moduleGraph.getModule(node.name.text);
+      // @ts-expect-error - TS2532 - Object is possibly 'undefined'. | TS2339 - Property 'statements' does not exist on type 'ModuleBody'.
       let statements = ts.visitEachChild(node, visit, context).body.statements;
       _currentModule = moduleStack.pop();
 
@@ -84,11 +89,13 @@ export function shake(
     if (ts.isExportDeclaration(node)) {
       if (
         !node.moduleSpecifier ||
+        // @ts-expect-error - TS2339 - Property 'text' does not exist on type 'Expression'.
         moduleGraph.getModule(node.moduleSpecifier.text)
       ) {
         if (!node.moduleSpecifier && node.exportClause) {
           // Filter exported elements to only external re-exports
           let exported: Array<any> = [];
+          // @ts-expect-error - TS2339 - Property 'elements' does not exist on type 'NamedExportBindings'.
           for (let element of node.exportClause.elements) {
             let name = (element.propertyName ?? element.name).text;
             if (
@@ -134,6 +141,7 @@ export function shake(
 
       // Remove original export modifiers
       node.modifiers = (node.modifiers || []).filter(
+        // @ts-expect-error - TS7006 - Parameter 'm' implicitly has an 'any' type.
         (m) =>
           m.kind !== ts.SyntaxKind.ExportKeyword &&
           m.kind !== ts.SyntaxKind.DefaultKeyword,
@@ -160,6 +168,7 @@ export function shake(
         ts.isFunctionDeclaration(node) ||
         ts.isClassDeclaration(node)
       ) {
+        // @ts-expect-error - TS2532 - Object is possibly 'undefined'. | TS2339 - Property 'unshift' does not exist on type 'NodeArray<ModifierLike>'.
         node.modifiers.unshift(
           factory.createModifier(ts.SyntaxKind.DeclareKeyword),
         );
@@ -176,6 +185,7 @@ export function shake(
 
       // Remove original export modifiers
       node.modifiers = (node.modifiers || []).filter(
+        // @ts-expect-error - TS7006 - Parameter 'm' implicitly has an 'any' type.
         (m) =>
           m.kind !== ts.SyntaxKind.ExportKeyword &&
           m.kind !== ts.SyntaxKind.DeclareKeyword,
@@ -183,6 +193,7 @@ export function shake(
 
       // Add export modifier if all declarations are exported.
       let isExported = node.declarationList.declarations.every(
+        // @ts-expect-error - TS7006 - Parameter 'd' implicitly has an 'any' type.
         (d) => exportedNames.get(d.name.text) === currentModule,
       );
       if (isExported) {
@@ -201,6 +212,7 @@ export function shake(
 
     if (ts.isVariableDeclaration(node)) {
       // Remove unused variables
+      // @ts-expect-error - TS2339 - Property 'text' does not exist on type 'BindingName'.
       if (!currentModule.used.has(node.name.text)) {
         return null;
       }

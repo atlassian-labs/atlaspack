@@ -319,6 +319,7 @@ const keyFromOptionContentKey = (contentKey: ContentKey): string =>
 // The goal is to free up the event loop periodically to allow interruption by the user.
 const NODES_PER_BLOB = 2 ** 14;
 
+// @ts-expect-error - TS2417 - Class static side 'typeof RequestGraph' incorrectly extends base class static side 'typeof ContentGraph'.
 export class RequestGraph extends ContentGraph<
   RequestGraphNode,
   RequestGraphEdgeType
@@ -500,6 +501,7 @@ export class RequestGraph extends ContentGraph<
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === OPTION);
       if (
+        // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'AtlaspackOptions'.
         hashFromOption(options[keyFromOptionContentKey(node.id)]) !== node.hash
       ) {
         let parentNodes = this.getNodeIdsConnectedTo(
@@ -588,9 +590,13 @@ export class RequestGraph extends ContentGraph<
     input: InternalFileCreateInvalidation,
   ) {
     let node;
+    // @ts-expect-error - TS2339 - Property 'glob' does not exist on type 'InternalFileCreateInvalidation'.
     if (input.glob != null) {
+      // @ts-expect-error - TS2339 - Property 'glob' does not exist on type 'InternalFileCreateInvalidation'.
       node = nodeFromGlob(input.glob);
+      // @ts-expect-error - TS2339 - Property 'fileName' does not exist on type 'InternalFileCreateInvalidation'. | TS2339 - Property 'aboveFilePath' does not exist on type 'InternalFileCreateInvalidation'.
     } else if (input.fileName != null && input.aboveFilePath != null) {
+      // @ts-expect-error - TS2339 - Property 'aboveFilePath' does not exist on type 'InternalFileCreateInvalidation'.
       let aboveFilePath = input.aboveFilePath;
 
       // Create nodes and edges for each part of the filename pattern.
@@ -598,6 +604,7 @@ export class RequestGraph extends ContentGraph<
       // This creates a sort of trie structure within the graph that can be
       // quickly matched by following the edges. This is also memory efficient
       // since common sub-paths (e.g. 'node_modules') are deduplicated.
+      // @ts-expect-error - TS2339 - Property 'fileName' does not exist on type 'InternalFileCreateInvalidation'.
       let parts = input.fileName.split('/').reverse();
       let lastNodeId;
       for (let part of parts) {
@@ -666,7 +673,9 @@ export class RequestGraph extends ContentGraph<
           requestGraphEdgeTypes.invalidated_by_create_above,
         );
       }
+      // @ts-expect-error - TS2339 - Property 'filePath' does not exist on type 'InternalFileCreateInvalidation'.
     } else if (input.filePath != null) {
+      // @ts-expect-error - TS2339 - Property 'filePath' does not exist on type 'InternalFileCreateInvalidation'.
       node = nodeFromFilePath(input.filePath);
     } else {
       throw new Error('Invalid invalidation');
@@ -773,6 +782,7 @@ export class RequestGraph extends ContentGraph<
       requestNodeId,
       requestGraphEdgeTypes.invalidated_by_update,
     );
+    // @ts-expect-error - TS2322 - Type '({ type: string; filePath: string; key?: undefined; } | { type: string; key: string; filePath?: undefined; } | undefined)[]' is not assignable to type 'RequestInvalidation[]'.
     return invalidations
       .map((nodeId) => {
         let node = nullthrows(this.getNode(nodeId));
@@ -1138,6 +1148,7 @@ export default class RequestTracker {
     this.graph.invalidNodeIds.delete(requestNodeId);
 
     let {promise, deferred} = makeDeferredWithPromise();
+    // @ts-expect-error - TS2345 - Argument of type 'Promise<unknown>' is not assignable to parameter of type 'Promise<boolean>'.
     this.graph.incompleteNodePromises.set(requestNodeId, promise);
 
     return {requestNodeId, deferred};
@@ -1207,6 +1218,7 @@ export default class RequestTracker {
   }
 
   respondToFSEvents(events: Array<Event>, threshold: number): Async<boolean> {
+    // @ts-expect-error - TS2322 - Type 'Promise<Async<boolean>>' is not assignable to type 'Async<boolean>'.
     return this.graph.respondToFSEvents(events, this.options, threshold);
   }
 
@@ -1242,6 +1254,7 @@ export default class RequestTracker {
     let hasValidResult = requestId != null && this.hasValidResult(requestId);
 
     if (!opts?.force && hasValidResult) {
+      // @ts-expect-error - TS2322 - Type 'TResult | null | undefined' is not assignable to type 'TResult'.
       return this.getRequestResult<TResult>(request.id);
     }
 
@@ -1251,6 +1264,7 @@ export default class RequestTracker {
         // There is a another instance of this request already running, wait for its completion and reuse its result
         try {
           if (await incompletePromise) {
+            // @ts-expect-error - TS2322 - Type 'TResult | null | undefined' is not assignable to type 'TResult'.
             return this.getRequestResult<TResult>(request.id);
           }
         } catch (e: any) {
@@ -1367,6 +1381,7 @@ export default class RequestTracker {
         this.graph.invalidateOnOptionChange(
           requestId,
           option,
+          // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'AtlaspackOptions'.
           this.options[option],
         ),
       getInvalidations: () => previousInvalidations,
@@ -1382,6 +1397,7 @@ export default class RequestTracker {
         return this.getRequestResult<T>(contentKey, ifMatch);
       },
       getRequestResult: <T extends RequestResult>(
+        // @ts-expect-error - TS7006 - Parameter 'id' implicitly has an 'any' type.
         id,
       ): Async<T | null | undefined> => this.getRequestResult<T>(id),
       canSkipSubrequest: (contentKey) => {
@@ -1467,6 +1483,7 @@ export default class RequestTracker {
     for (let i = 0; i < serialisedGraph.nodes.length; i += 1) {
       let node = serialisedGraph.nodes[i];
 
+      // @ts-expect-error - TS2339 - Property 'resultCacheKey' does not exist on type 'RequestGraphNode'.
       let resultCacheKey = node?.resultCacheKey;
       if (
         node?.type === REQUEST &&
@@ -1474,6 +1491,7 @@ export default class RequestTracker {
         node?.result != null
       ) {
         queue
+          // @ts-expect-error - TS2531 - Object is possibly 'null'. | TS2339 - Property 'result' does not exist on type 'RequestGraphNode'.
           .add(() => serialiseAndSet(resultCacheKey, node.result))
           .catch(() => {
             // Handle promise rejection
@@ -1607,6 +1625,7 @@ export async function readAndDeserializeRequestGraph(
   let serializedRequestGraph = await getAndDeserialize(requestGraphKey);
 
   let nodePromises = serializedRequestGraph.nodeCountsPerBlob.map(
+    // @ts-expect-error - TS7006 - Parameter 'nodesCount' implicitly has an 'any' type. | TS7006 - Parameter 'i' implicitly has an 'any' type.
     async (nodesCount, i) => {
       let nodes = await getAndDeserialize(getRequestGraphNodeKey(i, cacheKey));
       invariant.equal(

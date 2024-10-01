@@ -170,7 +170,9 @@ function convertConditions(conditions: Array<string>, dep: Dependency) {
   let packageConditions = 0;
   let customConditions: Array<string> = [];
   for (let condition of conditions) {
+    // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly import: number; readonly require: number; readonly module: number; readonly style: number; readonly sass: number; readonly less: number; }'.
     if (ExportsCondition[condition]) {
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly import: number; readonly require: number; readonly module: number; readonly style: number; readonly sass: number; readonly less: number; }'.
       packageConditions |= ExportsCondition[condition];
     } else {
       customConditions.push(condition);

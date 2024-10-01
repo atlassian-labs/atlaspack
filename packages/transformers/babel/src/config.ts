@@ -1,4 +1,5 @@
 import type {Config, PluginOptions, PluginLogger} from '@atlaspack/types';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module '@babel/core'. '/home/ubuntu/parcel/node_modules/@babel/core/lib/index.js' implicitly has an 'any' type.
 import * as BabelCore from '@babel/core';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import type {BabelConfig} from './types';
@@ -195,6 +196,7 @@ export async function load(
       config.setCacheKey(JSON.stringify(Date.now()));
       config.invalidateOnStartup();
     } else {
+      // @ts-expect-error - TS2345 - Argument of type 'import("/home/ubuntu/parcel/packages/core/types-internal/src/FileSystem").FileSystem' is not assignable to parameter of type 'FileSystem'.
       await warnOnRedundantPlugins(options.inputFS, partialConfig, logger);
       definePluginDependencies(config, partialConfig.options, options);
       config.setCacheKey(hashObject(partialConfig.options));
@@ -305,6 +307,7 @@ async function warnOnRedundantPlugins(
   let plugins = babelConfig.options.plugins || [];
   let foundRedundantPresets = new Set();
 
+  // @ts-expect-error - TS7006 - Parameter 'preset' implicitly has an 'any' type.
   let filteredPresets = presets.filter((preset) => {
     if (redundantPresets.has(preset.file.request)) {
       foundRedundantPresets.add(preset.file.request);
@@ -323,6 +326,7 @@ async function warnOnRedundantPlugins(
     plugins.length === 0
   ) {
     diagnostics.push({
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       message: md`Parcel includes transpilation by default. Babel config __${filePath}__ contains only redundant presets. Deleting it may significantly improve build performance.`,
       codeFrames: [
         {
@@ -334,12 +338,14 @@ async function warnOnRedundantPlugins(
           ),
         },
       ],
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       hints: [md`Delete __${filePath}__`],
       documentationURL:
         'https://parceljs.org/languages/javascript/#default-presets',
     });
   } else if (foundRedundantPresets.size > 0) {
     diagnostics.push({
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       message: md`Parcel includes transpilation by default. Babel config __${filePath}__ includes the following redundant presets: ${[
         ...foundRedundantPresets,
       ].map((p) =>
@@ -355,6 +361,7 @@ async function warnOnRedundantPlugins(
           ),
         },
       ],
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       hints: [md`Remove the above presets from __${filePath}__`],
       documentationURL:
         'https://parceljs.org/languages/javascript/#default-presets',
@@ -395,6 +402,7 @@ async function getCodeHighlights(
 ) {
   let ext = path.extname(filePath);
   if (ext !== '.js' && ext !== '.cjs' && ext !== '.mjs') {
+    // @ts-expect-error - TS2339 - Property 'readFile' does not exist on type 'FileSystem'.
     let contents = await fs.readFile(filePath, 'utf8');
     let json = json5.parse(contents);
 

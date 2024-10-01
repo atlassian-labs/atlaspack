@@ -42,10 +42,12 @@ export default class BundleGroup implements IBundleGroup {
   }
 
   get target(): ITarget {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'. | TS2345 - Argument of type 'AtlaspackOptions | undefined' is not assignable to parameter of type 'AtlaspackOptions'.
     return new Target(this.#bundleGroup.target, this.#options);
   }
 
   get entryAssetId(): string {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#bundleGroup.entryAssetId;
   }
 }

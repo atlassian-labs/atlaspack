@@ -15,6 +15,7 @@ import nullthrows from 'nullthrows';
 
 describe.v2('library bundler', function () {
   let count = 0;
+  // @ts-expect-error - TS7034 - Variable 'dir' implicitly has type 'any' in some locations where its type cannot be determined.
   let dir;
   beforeEach(async () => {
     dir = path.join(__dirname, 'libraries', '' + ++count);
@@ -26,6 +27,7 @@ describe.v2('library bundler', function () {
   });
 
   it('should support named imports', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
@@ -64,11 +66,13 @@ describe.v2('library bundler', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
     });
 
+    // @ts-expect-error - TS2554 - Expected 3-5 arguments, but got 2.
     let esm: any = await runBundle(
       b,
       nullthrows(b.getBundles().find((b) => b.name === 'module.js')),
@@ -76,6 +80,7 @@ describe.v2('library bundler', function () {
     assert.equal(esm.foo(), 'foobaz');
     assert.equal(esm.bar(), 'barbaz');
 
+    // @ts-expect-error - TS2554 - Expected 3-5 arguments, but got 2.
     let cjs: any = await runBundle(
       b,
       nullthrows(b.getBundles().find((b) => b.name === 'main.js')),
@@ -122,6 +127,7 @@ describe.v2('library bundler', function () {
   });
 
   it('should merge multiple assets in the same file together', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
@@ -156,6 +162,7 @@ describe.v2('library bundler', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -192,6 +199,7 @@ describe.v2('library bundler', function () {
   });
 
   it('should work with CSS modules', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
@@ -220,6 +228,7 @@ describe.v2('library bundler', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -258,12 +267,14 @@ describe.v2('library bundler', function () {
       }
     }
 
+    // @ts-expect-error - TS2554 - Expected 3-5 arguments, but got 2.
     let esm: any = await runBundle(
       b,
       nullthrows(b.getBundles().find((b) => b.name === 'module.js')),
     );
     assert.equal(esm.test(), 'Qe6WCq_bar');
 
+    // @ts-expect-error - TS2554 - Expected 3-5 arguments, but got 2.
     let cjs: any = await runBundle(
       b,
       nullthrows(b.getBundles().find((b) => b.name === 'main.js')),
@@ -272,6 +283,7 @@ describe.v2('library bundler', function () {
   });
 
   it('should support re-exporting external modules', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
@@ -309,6 +321,7 @@ describe.v2('library bundler', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -371,6 +384,7 @@ describe.v2('library bundler', function () {
   });
 
   it('should export CJS namespaces as default', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
@@ -396,6 +410,7 @@ describe.v2('library bundler', function () {
         exports['foo-bar'] = 'foo';
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -411,16 +426,19 @@ describe.v2('library bundler', function () {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let res = await run(b);
     assert.equal(res.test(), 'foo');
 
     // foo.js should only export default, to avoid non-identifier symbols.
+    // @ts-expect-error - TS2554 - Expected 3-5 arguments, but got 2.
     let foo: any = await runBundle(b, b.getBundles()[1]);
     assert.deepEqual(Object.keys(foo), ['default']);
     assert.deepEqual(foo.default, {'foo-bar': 'foo'});
   });
 
   it('should allow bundles to be reused between targets in the same package', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
@@ -461,6 +479,7 @@ describe.v2('library bundler', function () {
         export default 'shared';
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(dir, {
       inputFS: overlayFS,
       mode: 'production',
@@ -478,6 +497,7 @@ describe.v2('library bundler', function () {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 3-5 arguments, but got 2.
     let res: any = await runBundle(
       b,
       nullthrows(b.getBundles().find((b) => b.name === 'a.js')),
@@ -485,6 +505,7 @@ describe.v2('library bundler', function () {
 
     assert.equal(res.default, 'shared-a');
 
+    // @ts-expect-error - TS2554 - Expected 3-5 arguments, but got 2.
     let res2: any = await runBundle(
       b,
       nullthrows(b.getBundles().find((b) => b.name === 'b.js')),
@@ -494,6 +515,7 @@ describe.v2('library bundler', function () {
   });
 
   it('should not share bundles with circular references in different targets', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
@@ -544,6 +566,7 @@ describe.v2('library bundler', function () {
         .bar { background: pink }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(dir + '/packages/*', {
       inputFS: overlayFS,
       mode: 'production',
@@ -581,6 +604,7 @@ describe.v2('library bundler', function () {
   });
 
   it('should support export default in CJS', async () => {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       yarn.lock:
 
@@ -609,17 +633,20 @@ describe.v2('library bundler', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(dir + '/index.js', {
       inputFS: overlayFS,
       mode: 'production',
     });
 
+    // @ts-expect-error - TS2554 - Expected 3-5 arguments, but got 2.
     let esm: any = await runBundle(
       b,
       nullthrows(b.getBundles().find((b) => b.name === 'module.js')),
     );
     assert.equal(esm.test(), 'test:foo');
 
+    // @ts-expect-error - TS2554 - Expected 3-5 arguments, but got 2.
     let cjs: any = await runBundle(
       b,
       nullthrows(b.getBundles().find((b) => b.name === 'main.js')),

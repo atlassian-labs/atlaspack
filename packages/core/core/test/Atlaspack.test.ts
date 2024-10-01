@@ -1,6 +1,7 @@
 import type {InitialAtlaspackOptions} from '@atlaspack/types';
 import WorkerFarm from '@atlaspack/workers';
 // flowlint-next-line untyped-import:off
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
 import assert from 'assert';
 import path from 'path';

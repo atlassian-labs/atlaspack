@@ -116,6 +116,7 @@ export async function getConfigKeyContentHash(
   let cachedValue = configKeyCache.get(cacheKey);
 
   if (cachedValue) {
+    // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type 'string'.
     return cachedValue;
   }
 
@@ -169,6 +170,7 @@ export async function runConfigRequest<TResult extends RequestResult>(
   await api.runRequest<null, undefined>({
     id: 'config_request:' + configRequest.id,
     type: requestTypes.config_request,
+    // @ts-expect-error - TS2322 - Type '({ api, options }: { input: null; } & StaticRunOpts<undefined>) => Promise<void>' is not assignable to type '(arg1: { input: null; } & StaticRunOpts<undefined>) => Async<undefined>'.
     run: async ({api, options}) => {
       for (let filePath of invalidateOnFileChange) {
         api.invalidateOnFileUpdate(filePath);

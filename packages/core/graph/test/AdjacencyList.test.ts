@@ -62,6 +62,7 @@ describe('AdjacencyList', () => {
     let c = graph.addNode();
     graph.addEdge(a, b);
     graph.addEdge(a, c);
+    // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(a, b, 2);
     assert.deepEqual(graph.getNodeIdsConnectedFrom(a, -1), [b, c]);
     assert.deepEqual(graph.getNodeIdsConnectedTo(b, -1), [a]);
@@ -74,16 +75,23 @@ describe('AdjacencyList', () => {
     let c = graph.addNode();
     let d = graph.addNode();
     graph.addEdge(a, b);
+    // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(a, b, 2);
+    // @ts-expect-error - TS2345 - Argument of type '3' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(a, b, 3);
     graph.addEdge(a, c);
+    // @ts-expect-error - TS2345 - Argument of type '3' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(a, d, 3);
     assert.equal(graph.stats.edges, 5);
     assert.ok(graph.hasEdge(a, b));
+    // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | 1[] | undefined'.
     assert.ok(graph.hasEdge(a, b, 2));
+    // @ts-expect-error - TS2345 - Argument of type '3' is not assignable to parameter of type '1 | 1[] | undefined'.
     assert.ok(graph.hasEdge(a, b, 3));
     assert.ok(graph.hasEdge(a, c));
+    // @ts-expect-error - TS2345 - Argument of type '3' is not assignable to parameter of type '1 | 1[] | undefined'.
     assert.ok(graph.hasEdge(a, d, 3));
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.deepEqual(Array.from(graph.getAllEdges()), [
       {from: a, to: b, type: 1},
       {from: a, to: b, type: 2},
@@ -92,13 +100,18 @@ describe('AdjacencyList', () => {
       {from: a, to: d, type: 3},
     ]);
 
+    // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
     graph.removeEdge(a, b, 2);
     assert.equal(graph.stats.edges, 4);
     assert.ok(graph.hasEdge(a, b));
+    // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | 1[] | undefined'.
     assert.equal(graph.hasEdge(a, b, 2), false);
+    // @ts-expect-error - TS2345 - Argument of type '3' is not assignable to parameter of type '1 | 1[] | undefined'.
     assert.ok(graph.hasEdge(a, b, 3));
     assert.ok(graph.hasEdge(a, c));
+    // @ts-expect-error - TS2345 - Argument of type '3' is not assignable to parameter of type '1 | 1[] | undefined'.
     assert.ok(graph.hasEdge(a, d, 3));
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.deepEqual(Array.from(graph.getAllEdges()), [
       {from: a, to: b, type: 1},
       {from: a, to: b, type: 3},
@@ -148,9 +161,12 @@ describe('AdjacencyList', () => {
     let b = graph.addNode();
     graph.addEdge(a, b);
     graph.addEdge(a, b, 1);
+    // @ts-expect-error - TS2345 - Argument of type '4' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(a, b, 4);
+    // @ts-expect-error - TS2345 - Argument of type '3' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(a, b, 3);
     assert.deepEqual(graph.getNodeIdsConnectedFrom(a), [b]);
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.deepEqual(Array.from(graph.getAllEdges()), [
       {from: a, to: b, type: 1},
       {from: a, to: b, type: 4},
@@ -172,8 +188,11 @@ describe('AdjacencyList', () => {
     let b = graph.addNode();
     let size = graph.serialize().nodes.byteLength;
     graph.addEdge(a, b, 1);
+    // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(a, b, 2);
+    // @ts-expect-error - TS2345 - Argument of type '3' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(a, b, 3);
+    // @ts-expect-error - TS2345 - Argument of type '4' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(a, b, 4);
     assert(size < graph.serialize().nodes.byteLength);
   });
@@ -184,7 +203,9 @@ describe('AdjacencyList', () => {
     let a = graph.addNode();
     let b = graph.addNode();
     graph.addEdge(a, b, 1);
+    // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(a, b, 2);
+    // @ts-expect-error - TS2345 - Argument of type '3' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(a, b, 3);
     assert(size < graph.serialize().edges.byteLength);
   });
@@ -203,14 +224,18 @@ describe('AdjacencyList', () => {
     let graph = new AdjacencyList();
     let a = graph.addNode();
     let b = graph.addNode();
+    // @ts-expect-error - TS2345 - Argument of type '0' is not assignable to parameter of type '1 | undefined'.
     assert.throws(() => graph.addEdge(a, b, 0));
+    // @ts-expect-error - TS2345 - Argument of type '-1' is not assignable to parameter of type '1 | undefined'.
     assert.throws(() => graph.addEdge(a, b, -1));
     assert.doesNotThrow(() => graph.addEdge(a, b, 1));
   });
 
   it('addEdge should not replace a deleted edge if the edge was already added', () => {
     // Mock hash fn to generate collisions
+    // @ts-expect-error - TS2339 - Property 'hash' does not exist on type 'AdjacencyList<any>'.
     let originalHash = AdjacencyList.prototype.hash;
+    // @ts-expect-error - TS2339 - Property 'hash' does not exist on type 'AdjacencyList<any>'.
     AdjacencyList.prototype.hash = () => 1;
 
     let graph = new AdjacencyList();
@@ -223,28 +248,36 @@ describe('AdjacencyList', () => {
     assert(graph.addEdge(n0, n1, 1) === false);
     assert(graph.stats.edges === 1);
 
+    // @ts-expect-error - TS2339 - Property 'hash' does not exist on type 'AdjacencyList<any>'.
     AdjacencyList.prototype.hash = originalHash;
   });
 
   it('addEdge should replace a deleted edge', () => {
     // Mock hash fn to generate collisions
+    // @ts-expect-error - TS2339 - Property 'hash' does not exist on type 'AdjacencyList<any>'.
     let originalHash = AdjacencyList.prototype.hash;
+    // @ts-expect-error - TS2339 - Property 'hash' does not exist on type 'AdjacencyList<any>'.
     AdjacencyList.prototype.hash = () => 1;
 
     try {
       let graph = new AdjacencyList({initialCapacity: 3});
       let n0 = graph.addNode();
       let n1 = graph.addNode();
+      // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
       graph.addEdge(n0, n1, 2);
+      // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
       graph.removeEdge(n0, n1, 2);
+      // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
       assert(graph.addEdge(n0, n1, 2));
       assert(graph.stats.edges === 1);
       assert(graph.stats.deleted === 1);
       // Resize to reclaim deleted edge space.
       graph.resizeEdges(2);
       assert(graph.stats.edges === 1);
+      // @ts-expect-error - TS2367 - This condition will always return 'false' since the types '1' and '0' have no overlap.
       assert(graph.stats.deleted === 0);
     } finally {
+      // @ts-expect-error - TS2339 - Property 'hash' does not exist on type 'AdjacencyList<any>'.
       AdjacencyList.prototype.hash = originalHash;
     }
   });
@@ -256,11 +289,16 @@ describe('AdjacencyList', () => {
     let c = graph.addNode();
 
     graph.addEdge(a, b, 1);
+    // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(b, c, 2);
 
+    // @ts-expect-error - TS2322 - Type '2' is not assignable to type '1'. | TS2322 - Type '3' is not assignable to type '1'.
     assert.ok(!graph.hasEdge(a, b, [2, 3]));
+    // @ts-expect-error - TS2322 - Type '2' is not assignable to type '1'.
     assert.ok(graph.hasEdge(a, b, [1, 2]));
+    // @ts-expect-error - TS2322 - Type '3' is not assignable to type '1'.
     assert.ok(!graph.hasEdge(b, c, [1, 3]));
+    // @ts-expect-error - TS2322 - Type '2' is not assignable to type '1'. | TS2322 - Type '3' is not assignable to type '1'.
     assert.ok(graph.hasEdge(b, c, [2, 3]));
   });
 
@@ -272,6 +310,7 @@ describe('AdjacencyList', () => {
       let n0 = graph.addNode();
       let n1 = graph.addNode();
       graph.addEdge(n0, n1, 1);
+      // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
       graph.addEdge(n0, n1, 2);
 
       let worker = new Worker(
@@ -283,6 +322,7 @@ describe('AdjacencyList', () => {
       let originalEdges = [...originalSerialized.edges];
       let work = new Promise((resolve: any) => worker.on('message', resolve));
       worker.postMessage(originalSerialized);
+      // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'SerializedAdjacencyList<1>'.
       let received = AdjacencyList.deserialize(await work);
       // eslint-disable-next-line no-unused-vars
       const _terminatePromise = worker.terminate();

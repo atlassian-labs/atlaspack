@@ -75,10 +75,12 @@ export default new Transformer({
       return [asset];
     }
 
+    // @ts-expect-error - TS2709 - Cannot use namespace 'Postcss' as a type.
     const postcss: Postcss = await loadPostcss(options, asset.filePath);
     let ast = nullthrows(await asset.getAST());
     let program = postcss.fromJSON(ast.program);
 
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     let plugins = [...config.hydrated.plugins];
     let cssModules:
       | {
@@ -86,27 +88,35 @@ export default new Transformer({
         }
       | null
       | undefined = null;
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     if (config.hydrated.modules) {
       asset.meta.cssModulesCompiled = 'postcss';
 
       let code = asset.isASTDirty() ? null : await asset.getCode();
       if (
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'.
         Object.keys(config.hydrated.modules).length === 0 &&
         code &&
         !isLegacy &&
         !LEGACY_MODULE_RE.test(code)
       ) {
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'.
         let filename = path.basename(config.filePath);
         let message;
         let configKey;
         let hint;
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'.
         if (config.raw.modules) {
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           message = md`The "modules" option in __${filename}__ can be replaced with configuration for @atlaspack/transformer-css to improve build performance.`;
           configKey = '/modules';
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           hint = md`Remove the "modules" option from __${filename}__`;
         } else {
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           message = md`The "postcss-modules" plugin in __${filename}__ can be replaced with configuration for @atlaspack/transformer-css to improve build performance.`;
           configKey = '/plugins/postcss-modules';
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           hint = md`Remove the "postcss-modules" plugin from __${filename}__`;
         }
         if (filename === 'package.json') {
@@ -117,7 +127,9 @@ export default new Transformer({
           'Enable the "cssModules" option for "@atlaspack/transformer-css" in your package.json',
         ];
         if (plugins.length === 0) {
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           message += md` Since there are no other plugins, __${filename}__ can be deleted safely.`;
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           hints.push(md`Delete __${filename}__`);
         } else {
           hints.push(hint);
@@ -125,10 +137,12 @@ export default new Transformer({
 
         let codeFrames;
         if (path.extname(filename) !== '.js') {
+          // @ts-expect-error - TS2571 - Object is of type 'unknown'.
           let contents = await asset.fs.readFile(config.filePath, 'utf8');
           codeFrames = [
             {
               language: 'json',
+              // @ts-expect-error - TS2571 - Object is of type 'unknown'.
               filePath: config.filePath,
               code: contents,
               codeHighlights: generateJSONCodeHighlights(contents, [
@@ -142,6 +156,7 @@ export default new Transformer({
         } else {
           codeFrames = [
             {
+              // @ts-expect-error - TS2571 - Object is of type 'unknown'.
               filePath: config.filePath,
               codeHighlights: [
                 {
@@ -175,17 +190,21 @@ export default new Transformer({
 
       plugins.push(
         postcssModules({
+          // @ts-expect-error - TS7006 - Parameter 'filename' implicitly has an 'any' type. | TS7006 - Parameter 'json' implicitly has an 'any' type.
           getJSON: (filename, json) => (cssModules = json),
           Loader: await createLoader(asset, resolve, options),
+          // @ts-expect-error - TS7006 - Parameter 'name' implicitly has an 'any' type. | TS7006 - Parameter 'filename' implicitly has an 'any' type.
           generateScopedName: (name, filename) =>
             `${name}_${hashString(
               path.relative(options.projectRoot, filename),
             ).substr(0, 6)}`,
+          // @ts-expect-error - TS2571 - Object is of type 'unknown'.
           ...config.hydrated.modules,
         }),
       );
 
       if (code == null || COMPOSES_RE.test(code)) {
+        // @ts-expect-error - TS7006 - Parameter 'decl' implicitly has an 'any' type.
         program.walkDecls((decl) => {
           let [, importPath] = FROM_IMPORT_RE.exec(decl.value) || [];
           if (decl.prop === 'composes' && importPath != null) {
@@ -214,6 +233,7 @@ export default new Transformer({
 
     let {messages, root} = await postcss(plugins).process(
       program,
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       config.hydrated,
     );
     asset.setAST({
@@ -263,12 +283,15 @@ export default new Transformer({
 
       asset.symbols.ensure();
       for (let [k, v] of cssModulesList) {
+        // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         asset.symbols.set(k, v);
       }
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       asset.symbols.set('default', 'default');
 
       assets.push({
         type: 'js',
+        // @ts-expect-error - TS2345 - Argument of type '{ type: string; content: string; }' is not assignable to parameter of type 'MutableAsset'.
         content: code,
       });
     }
@@ -276,9 +299,11 @@ export default new Transformer({
   },
 
   async generate({asset, ast, options}) {
+    // @ts-expect-error - TS2709 - Cannot use namespace 'Postcss' as a type.
     const postcss: Postcss = await loadPostcss(options, asset.filePath);
 
     let code = '';
+    // @ts-expect-error - TS7006 - Parameter 'c' implicitly has an 'any' type.
     postcss.stringify(postcss.fromJSON(ast.program), (c) => {
       code += c;
     });
@@ -299,6 +324,7 @@ async function createLoader(
     asset.filePath,
   );
   return class AtlaspackFileSystemLoader extends FileSystemLoader {
+    // @ts-expect-error - TS7023 - 'fetch' implicitly has return type 'any' because it does not have a return type annotation and is referenced directly or indirectly in one of its return expressions.
     async fetch(composesPath: any, relativeTo: any) {
       let importPath = composesPath.replace(/^["']|["']$/g, '');
       let resolved = await resolve(relativeTo, importPath);
@@ -311,6 +337,7 @@ async function createLoader(
       }
 
       let source = await asset.fs.readFile(resolved, 'utf-8');
+      // @ts-expect-error - TS7022 - 'exportTokens' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
       let {exportTokens} = await this.core.load(
         source,
         rootRelativePath,
@@ -327,6 +354,7 @@ async function createLoader(
   };
 }
 
+// @ts-expect-error - TS2709 - Cannot use namespace 'Postcss' as a type.
 function loadPostcss(options: PluginOptions, from: FilePath): Promise<Postcss> {
   return options.packageManager.require('postcss', from, {
     range: POSTCSS_RANGE,

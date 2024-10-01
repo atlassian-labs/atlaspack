@@ -10,6 +10,7 @@ import {
 } from '@atlaspack/test-utils';
 import assert from 'assert';
 import path from 'path';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
 import {NodePackageManager} from '@atlaspack/package-manager';
 
@@ -19,6 +20,7 @@ const CONFIG = Symbol.for('parcel-plugin-config');
 let packageManager = new NodePackageManager(inputFS, '/');
 
 describe.v2('incremental bundling', function () {
+  // @ts-expect-error - TS7034 - Variable 'defaultBundlerSpy' implicitly has type 'any' in some locations where its type cannot be determined. | TS7034 - Variable 'customBundlerSpy' implicitly has type 'any' in some locations where its type cannot be determined.
   let defaultBundlerSpy, customBundlerSpy;
   let assertChangedAssets = (actual: number, expected: number) => {
     assert.equal(
@@ -54,7 +56,9 @@ describe.v2('incremental bundling', function () {
   });
 
   afterEach(() => {
+    // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
     defaultBundlerSpy.restore();
+    // @ts-expect-error - TS7005 - Variable 'customBundlerSpy' implicitly has an 'any' type.
     customBundlerSpy.restore();
   });
 
@@ -73,6 +77,7 @@ describe.v2('incremental bundling', function () {
           subscription = await b.watch();
 
           let event = await getNextBuildSuccess(b);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
           await overlayFS.writeFile(
@@ -85,6 +90,7 @@ console.log('adding a new console');`,
 
           event = await getNextBuildSuccess(b);
           assertChangedAssets(event.changedAssets.size, 1);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
           let result = await b.run();
@@ -115,6 +121,7 @@ console.log('adding a new console');`,
           subscription = await b.watch();
 
           let event = await getNextBuildSuccess(b);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
           await overlayFS.writeFile(
@@ -127,6 +134,7 @@ console.log('adding a new console');`,
 
           event = await getNextBuildSuccess(b);
           assertChangedAssets(event.changedAssets.size, 1);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 2);
 
           let result = await b.run();
@@ -157,6 +165,7 @@ console.log('adding a new console');`,
           subscription = await b.watch();
 
           let event = await getNextBuildSuccess(b);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
           await overlayFS.writeFile(
@@ -169,6 +178,7 @@ console.log('adding a new console');`,
 
           event = await getNextBuildSuccess(b);
           assertChangedAssets(event.changedAssets.size, 1);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
           let result = await b.run();
@@ -199,6 +209,7 @@ console.log('adding a new console');`,
           subscription = await b.watch();
 
           let event = await getNextBuildSuccess(b);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
           await overlayFS.writeFile(
@@ -211,6 +222,7 @@ console.log(a);
 
           event = await getNextBuildSuccess(b);
           assertChangedAssets(event.changedAssets.size, 1);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
           let result = await b.run();
@@ -243,6 +255,7 @@ console.log(a);
           subscription = await b.watch();
 
           let event = await getNextBuildSuccess(b);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
           await overlayFS.writeFile(
@@ -255,6 +268,7 @@ console.log(a);`,
 
           event = await getNextBuildSuccess(b);
           assertChangedAssets(event.changedAssets.size, 1);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
           let result = await b.run();
@@ -286,6 +300,7 @@ console.log(a);`,
           subscription = await b.watch();
 
           let event = await getNextBuildSuccess(b);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
           await overlayFS.writeFile(
@@ -302,6 +317,7 @@ module.exports = a;`,
 
           event = await getNextBuildSuccess(b);
           assertChangedAssets(event.changedAssets.size, 2);
+          // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
           assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
           let result = await b.run();
@@ -312,6 +328,7 @@ module.exports = a;`,
 
           assert(contents.includes(`console.log('adding a new console')`));
 
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let bundleOutput = await run(result.bundleGraph);
           assert.equal(bundleOutput, 'a updated');
         } finally {
@@ -337,6 +354,7 @@ module.exports = a;`,
         subscription = await b.watch();
 
         let event = await getNextBuildSuccess(b);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
         await overlayFS.writeFile(
@@ -349,6 +367,7 @@ module.exports = a;`,
 
         event = await getNextBuildSuccess(b);
         assertChangedAssets(event.changedAssets.size, 1);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
         let result = await b.run();
@@ -379,6 +398,7 @@ module.exports = a;`,
         subscription = await b.watch();
 
         let event = await getNextBuildSuccess(b);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
         await overlayFS.writeFile(
@@ -398,6 +418,7 @@ console.log(a, 'updated');`,
 
         event = await getNextBuildSuccess(b);
         assertChangedAssets(event.changedAssets.size, 2);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
         let result = await b.run();
@@ -435,6 +456,7 @@ console.log(a, 'updated');`,
         subscription = await b.watch();
 
         let event = await getNextBuildSuccess(b);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
         await overlayFS.writeFile(
@@ -447,6 +469,7 @@ console.log(a);`,
 
         event = await getNextBuildSuccess(b);
         assertChangedAssets(event.changedAssets.size, 1);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
         let result = await b.run();
@@ -486,6 +509,7 @@ console.log(a);`,
         subscription = await b.watch();
 
         await getNextBuildSuccess(b);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
         await overlayFS.writeFile(
@@ -499,6 +523,7 @@ console.log(a);
 
         let event = await getNextBuildSuccess(b);
         assertChangedAssets(event.changedAssets.size, 2);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 2);
 
         let contents = await overlayFS.readFile(
@@ -529,6 +554,7 @@ console.log(a);
         subscription = await b.watch();
 
         await getNextBuildSuccess(b);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
         await overlayFS.writeFile(
@@ -541,6 +567,7 @@ console.log(a);
 
         let event = await getNextBuildSuccess(b);
         assertChangedAssets(event.changedAssets.size, 2);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 2);
 
         // one CSS and one JS bundle
@@ -580,6 +607,7 @@ console.log(a);
         subscription = await b.watch();
 
         await getNextBuildSuccess(b);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
         await overlayFS.writeFile(
@@ -593,6 +621,7 @@ console.log(a, b);
         let event = await getNextBuildSuccess(b);
         let assets = Array.from(event.changedAssets.values());
         assertChangedAssets(getChangedAssetsBeforeRuntimes(assets).length, 2);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 2);
 
         // original bundle and new dynamic import bundle JS bundle
@@ -638,6 +667,7 @@ const b = 'b';`),
         subscription = await b.watch();
 
         let event = await getNextBuildSuccess(b);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
         await overlayFS.writeFile(
@@ -648,6 +678,7 @@ console.log('index.js');`,
 
         event = await getNextBuildSuccess(b);
         assertChangedAssets(event.changedAssets.size, 1);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 2);
 
         let output = await overlayFS.readFile(
@@ -679,7 +710,9 @@ console.log('index.js');`,
         subscription = await b.watch();
 
         let event = await getNextBuildSuccess(b);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
+        // @ts-expect-error - TS7005 - Variable 'customBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(customBundlerSpy.callCount, 0);
 
         await overlayFS.writeFile(
@@ -695,8 +728,10 @@ console.log('index.js');`,
         // should contain all the assets
         assertChangedAssets(getChangedAssetsBeforeRuntimes(assets).length, 3);
         // the default bundler was only called once
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
         // calls the new bundler to rebundle
+        // @ts-expect-error - TS7005 - Variable 'customBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(customBundlerSpy.callCount, 1);
 
         let output = await overlayFS.readFile(
@@ -715,6 +750,7 @@ console.log('index.js');`,
     it('changing bundler options', async () => {
       let subscription;
       try {
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         await fsFixture(overlayFS, __dirname)`
           index.js:
             export default 1;
@@ -738,6 +774,7 @@ console.log('index.js');`,
         subscription = await b.watch();
 
         let event = await getNextBuildSuccess(b);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
         let pkgFile = path.join(__dirname, 'package.json');
@@ -756,6 +793,7 @@ console.log('index.js');`,
 
         // should contain all the assets
         assertChangedAssets(event.changedAssets.size, 2);
+        // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
         assertTimesBundled(defaultBundlerSpy.callCount, 2);
       } finally {
         if (subscription) {
@@ -780,6 +818,7 @@ console.log('index.js');`,
       subscription = await b.watch();
 
       let event = await getNextBuildSuccess(b);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
       await overlayFS.writeFile(
@@ -794,6 +833,7 @@ console.log('index.js');`,
 
       // should contain all the assets
       assertChangedAssets(event.changedAssets.size, 3);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 2);
 
       let result = await b.run();
@@ -824,6 +864,7 @@ console.log('index.js');`,
       subscription = await b.watch();
 
       let event = await getNextBuildSuccess(b);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
       await overlayFS.writeFile(
@@ -839,6 +880,7 @@ console.log('index.js');`,
       // should contain all the assets
       let assets = Array.from(event.changedAssets.values());
       assertChangedAssets(getChangedAssetsBeforeRuntimes(assets).length, 3);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 2);
 
       let result = await b.run();
@@ -866,7 +908,9 @@ console.log('index.js');`,
       subscription = await b.watch();
 
       let event = await getNextBuildSuccess(b);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 1);
+      // @ts-expect-error - TS7005 - Variable 'customBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(customBundlerSpy.callCount, 0);
 
       let pkgFile = path.join(fixture, 'package.json');
@@ -885,6 +929,7 @@ console.log('index.js');`,
       event = await getNextBuildSuccess(b);
 
       assertChangedAssets(event.changedAssets.size, 3);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 2);
 
       let output = await overlayFS.readFile(
@@ -914,7 +959,9 @@ console.log('index.js');`,
       subscription = await b.watch();
 
       let event = await getNextBuildSuccess(b);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 1);
+      // @ts-expect-error - TS7005 - Variable 'customBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(customBundlerSpy.callCount, 0);
 
       await overlayFS.writeFile(
@@ -926,6 +973,7 @@ console.log('index.js');`,
 
       // should contain all the assets
       assertChangedAssets(event.changedAssets.size, 1);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 2);
     } finally {
       if (subscription) {
@@ -951,6 +999,7 @@ console.log('index.js');`,
       subscription = await b.watch();
 
       let event = await getNextBuildSuccess(b);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
       await overlayFS.writeFile(
@@ -965,6 +1014,7 @@ console.log('index.js');`,
 
       event = await getNextBuildSuccess(b);
       assertChangedAssets(event.changedAssets.size, 1);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 2);
 
       let result = await b.run();
@@ -1001,6 +1051,7 @@ console.log('index.js');`,
       subscription = await b.watch();
 
       let event = await getNextBuildSuccess(b);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 1);
 
       await overlayFS.writeFile(
@@ -1015,6 +1066,7 @@ module.exports = {a};
 
       event = await getNextBuildSuccess(b);
       assertChangedAssets(event.changedAssets.size, 1);
+      // @ts-expect-error - TS7005 - Variable 'defaultBundlerSpy' implicitly has an 'any' type.
       assertTimesBundled(defaultBundlerSpy.callCount, 2);
 
       let result = await b.run();

@@ -49,6 +49,7 @@ describe('EntryResolver', function () {
         diagnostics: [
           {
             origin: '@atlaspack/core',
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`${path.join(
               path.relative(fs.cwd(), INVALID_SOURCE_MISSING_FIXTURE_PATH),
               'missing.js',
@@ -88,6 +89,7 @@ describe('EntryResolver', function () {
         diagnostics: [
           {
             origin: '@atlaspack/core',
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`${path.join(
               path.relative(fs.cwd(), INVALID_SOURCE_NOT_FILE_FIXTURE_PATH),
               'src',
@@ -127,6 +129,7 @@ describe('EntryResolver', function () {
         diagnostics: [
           {
             origin: '@atlaspack/core',
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`${path.join(
               path.relative(
                 fs.cwd(),
@@ -170,6 +173,7 @@ describe('EntryResolver', function () {
         diagnostics: [
           {
             origin: '@atlaspack/core',
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`${path.join(
               path.relative(
                 fs.cwd(),

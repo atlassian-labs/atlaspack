@@ -1,4 +1,5 @@
 import type {FileSystem} from '@atlaspack/fs';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'node-forge'. '/home/ubuntu/parcel/node_modules/node-forge/lib/index.js' implicitly has an 'any' type.
 import forge from 'node-forge';
 import path from 'path';
 import logger from '@atlaspack/logger';

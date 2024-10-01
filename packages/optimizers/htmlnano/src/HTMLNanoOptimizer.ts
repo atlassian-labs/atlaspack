@@ -1,5 +1,7 @@
+// @ts-expect-error - TS2305 - Module '"posthtml"' has no exported member 'PostHTMLNode'.
 import type {PostHTMLNode} from 'posthtml';
 
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'htmlnano'. '/home/ubuntu/parcel/node_modules/htmlnano/index.js' implicitly has an 'any' type.
 import htmlnano from 'htmlnano';
 import {Optimizer} from '@atlaspack/plugin';
 import posthtml from 'posthtml';
@@ -42,9 +44,12 @@ export default new Optimizer({
 
     const presets = htmlnano.presets;
     const preset =
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       typeof clonedConfig.preset === 'string'
-        ? presets[clonedConfig.preset]
+        ? // @ts-expect-error - TS2571 - Object is of type 'unknown'.
+          presets[clonedConfig.preset]
         : {};
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     delete clonedConfig.preset;
 
     const htmlNanoConfig = {
@@ -80,6 +85,7 @@ export default new Optimizer({
         ],
       },
       ...(preset || {}),
+      // @ts-expect-error - TS2698 - Spread types may only be created from object types.
       ...clonedConfig,
       // TODO: Uncomment this line once we update htmlnano, new version isn't out yet
       // skipConfigLoading: true,
@@ -94,6 +100,7 @@ export default new Optimizer({
     return {
       contents: (
         await posthtml(plugins).process(contents, {
+          // @ts-expect-error - TS2345 - Argument of type '{ xmlMode: boolean; closingSingleTag: string | undefined; }' is not assignable to parameter of type 'Options'.
           xmlMode: bundle.type === 'xhtml',
           closingSingleTag: bundle.type === 'xhtml' ? 'slash' : undefined,
         })

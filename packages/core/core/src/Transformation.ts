@@ -7,6 +7,7 @@ import type {
   ResolveOptions,
   SemverRange,
 } from '@atlaspack/types';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'WorkerApi'. Did you mean to use 'import WorkerApi from "@atlaspack/workers"' instead?
 import type {WorkerApi} from '@atlaspack/workers';
 import type {
   Asset as AssetValue,
@@ -141,6 +142,7 @@ export default class Transformation {
         logger.verbose([
           {
             origin: '@atlaspack/core',
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`Could not load existing source map for ${fromProjectPathRelative(
               asset.value.filePath,
             )}`,
@@ -195,6 +197,7 @@ export default class Transformation {
     ]);
 
     return {
+      // @ts-expect-error - TS2322 - Type '{ $$raw: boolean; assets: AssetValue[] | undefined; configRequests: ConfigRequest[]; error: Diagnostic[] | undefined; invalidations: Invalidations; devDepRequests: DevDepRequest[]; }' is not assignable to type 'TransformationResult'.
       $$raw: true,
       assets,
       configRequests,
@@ -448,7 +451,9 @@ export default class Transformation {
         .map(async (asset) => {
           if (asset.isASTDirty && asset.generate) {
             let output = await asset.generate();
+            // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
             asset.content = output.content;
+            // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
             asset.mapBuffer = output.map?.toBuffer();
           }
 
@@ -620,7 +625,9 @@ export default class Transformation {
       asset.generate
     ) {
       let output = await asset.generate();
+      // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
       asset.content = output.content;
+      // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
       asset.mapBuffer = output.map?.toBuffer();
     }
 
@@ -682,6 +689,7 @@ export default class Transformation {
       pipeline.postProcess = async (
         assets: Array<UncommittedAsset>,
       ): Promise<Array<UncommittedAsset> | null> => {
+        // @ts-expect-error - TS2532 - Object is possibly 'undefined'. | TS2684 - The 'this' context of type '((arg1: { assets: MutableAsset[]; config: unknown; resolve: ResolveFn; options: PluginOptions; logger: PluginLogger; tracer: PluginTracer; }) => Async<...>) | undefined' is not assignable to method's 'this' of type '(this: Transformer<...>, args_0: { assets: MutableAsset[]; config: Config | null | undefined; options: PluginOptions; resolve: (from: string, to: string, options?: ResolveOptions | undefined) => Promise<...>; logger: PluginLogger; tracer: PluginTracer; }) => Async<...>'.
         let results = await postProcess.call(transformer, {
           assets: assets.map((asset) => new MutableAsset(asset)),
           config,

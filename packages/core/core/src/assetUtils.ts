@@ -204,6 +204,7 @@ export function getInvalidationId(invalidation: RequestInvalidation): string {
     case 'option':
       return 'option:' + invalidation.key;
     default:
+      // @ts-expect-error - TS2339 - Property 'type' does not exist on type 'never'.
       throw new Error('Unknown invalidation type: ' + invalidation.type);
   }
 }
@@ -244,9 +245,11 @@ export async function getInvalidationHash(
         break;
       case 'option':
         hashes +=
+          // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'AtlaspackOptions'.
           invalidation.key + ':' + hashFromOption(options[invalidation.key]);
         break;
       default:
+        // @ts-expect-error - TS2339 - Property 'type' does not exist on type 'never'.
         throw new Error('Unknown invalidation type: ' + invalidation.type);
     }
   }

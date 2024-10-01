@@ -7,6 +7,7 @@ import path from 'path';
 // user's package.json, and hmr-runtime.js is transpiled as a JSX asset.
 const FILENAME =
   // $FlowFixMe
+  // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
   process.env.ATLASPACK_BUILD_REPL && process.browser
     ? '/' + __filename
     : __filename;
@@ -49,6 +50,7 @@ export default new Runtime({
         `var HMR_ENV_HASH = "${bundle.env.id}";` +
         `var HMR_USE_SSE = ${JSON.stringify(
           // $FlowFixMe
+          // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
           !!(process.env.ATLASPACK_BUILD_REPL && process.browser),
         )};` +
         `module.bundle.HMR_BUNDLE_ID = ${JSON.stringify(bundle.id)};` +

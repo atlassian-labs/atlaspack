@@ -14,6 +14,7 @@ export class CompilerHost extends FSHost {
   // workaround for https://github.com/microsoft/TypeScript/issues/39547
   redirectTypes: Map<FilePath, FilePath> = new Map();
 
+  // @ts-expect-error - TS2709 - Cannot use namespace 'TypeScriptModule' as a type.
   constructor(fs: FileSystem, ts: TypeScriptModule, logger: PluginLogger) {
     super(fs, ts);
     this.logger = logger;
@@ -30,6 +31,7 @@ export class CompilerHost extends FSHost {
           path.posix.join(path.posix.dirname(filePath), json.types),
         )
       ) {
+        // @ts-expect-error - TS2345 - Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
         let source = path.posix.join(path.posix.dirname(filePath), json.source);
         let fakeTypes =
           source.slice(0, -path.posix.extname(source).length) + '.d.ts';

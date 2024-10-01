@@ -11,11 +11,13 @@ import {serialize, deserialize} from '@atlaspack/core';
 
 const WORKER_PATH = path.join(__dirname, 'ProcessChild.js');
 
+// @ts-expect-error - TS2420 - Class 'ProcessWorker' incorrectly implements interface 'WorkerImpl'.
 export default class ProcessWorker implements WorkerImpl {
   execArgv: any;
   onMessage: MessageHandler;
   onError: ErrorHandler;
   onExit: ExitHandler;
+  // @ts-expect-error - TS2564 - Property 'child' has no initializer and is not definitely assigned in the constructor.
   child: ChildProcess;
   processQueue: boolean = true;
   sendQueue: Array<any> = [];

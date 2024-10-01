@@ -100,6 +100,7 @@ function checkSourceMapping({
     }
   }
   if (closestIndex > -1) {
+    // @ts-expect-error - TS2339 - Property 'indexedMappingToStringMapping' does not exist on type 'SourceMap'.
     mapping = map.indexedMappingToStringMapping(mappings[closestIndex]);
   }
 
@@ -604,6 +605,7 @@ describe.v2('sourcemaps', function () {
 
     let mapData = sourceMap.getMap();
     assert.deepEqual(mapData.sources, ['src/index.ts']);
+    // @ts-expect-error - TS7006 - Parameter 's' implicitly has an 'any' type.
     assert(map.sourcesContent.every((s) => s));
 
     let input = await inputFS.readFile(
@@ -914,6 +916,7 @@ describe.v2('sourcemaps', function () {
 
   it('should create a valid sourcemap for a LESS asset', async function () {
     async function test(shouldOptimize: boolean) {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS, __dirname)`
         .parcelrc:
           {

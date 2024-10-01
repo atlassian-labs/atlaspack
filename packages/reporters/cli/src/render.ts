@@ -25,7 +25,9 @@ let errorLineCount = 0;
 let statusPersisted = false;
 
 export function _setStdio(stdoutLike: Writable, stderrLike: Writable) {
+  // @ts-expect-error - TS2322 - Type 'Writable' is not assignable to type 'WriteStream & { fd: 1; }'.
   stdout = stdoutLike;
+  // @ts-expect-error - TS2322 - Type 'Writable' is not assignable to type 'WriteStream & { fd: 2; }'.
   stderr = stderrLike;
 }
 

@@ -7,6 +7,7 @@ import ts from 'typescript';
 export async function loadTSConfig(
   config: Config,
   options: PluginOptions,
+  // @ts-expect-error - TS1064 - The return type of an async function or method must be the global Promise<T> type. Did you mean to write 'Promise<any>'?
 ): any {
   let configResult = await config.getConfig(['tsconfig.json']);
   if (!configResult) {

@@ -28,6 +28,7 @@ type WorkerOpts = {
 let WORKER_ID = 0;
 export default class Worker extends EventEmitter {
   readonly options: WorkerOpts;
+  // @ts-expect-error - TS2564 - Property 'worker' has no initializer and is not definitely assigned in the constructor.
   worker: WorkerImpl;
   id: number = WORKER_ID++;
   sentSharedReferences: Set<SharedReference> = new Set();
@@ -187,8 +188,10 @@ export default class Worker extends EventEmitter {
     };
 
     if (this.ready || call.skipReadyCheck === true) {
+      // @ts-expect-error - TS2345 - Argument of type '{ type: string; idx: number; child: number; handle: number | undefined; method: string | undefined; args: readonly any[]; }' is not assignable to parameter of type 'WorkerMessage'.
       this.send(msg);
     } else {
+      // @ts-expect-error - TS2345 - Argument of type '{ type: string; idx: number; child: number; handle: number | undefined; method: string | undefined; args: readonly any[]; }' is not assignable to parameter of type 'WorkerMessage'.
       this.once('ready', () => this.send(msg));
     }
   }

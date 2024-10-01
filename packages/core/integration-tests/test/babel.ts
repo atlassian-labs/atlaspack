@@ -24,6 +24,7 @@ const atlaspackCli = require.resolve('@atlaspack/cli/src/bin.js');
 const inputDir = path.join(__dirname, '/input');
 
 describe.v2('babel', function () {
+  // @ts-expect-error - TS7034 - Variable 'subscription' implicitly has type 'any' in some locations where its type cannot be determined.
   let subscription;
   beforeEach(async function () {
     // TODO maybe don't do this for all tests
@@ -34,7 +35,9 @@ describe.v2('babel', function () {
 
   afterEach(async () => {
     await removeDistDirectory();
+    // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type.
     if (subscription) {
+      // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type.
       await subscription.unsubscribe();
       subscription = null;
     }
@@ -48,6 +51,7 @@ describe.v2('babel', function () {
       __dirname + '/integration/babel-7-autoinstall/index.js',
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'object');
     assert.equal(typeof output.default, 'function');
@@ -71,6 +75,7 @@ describe.v2('babel', function () {
       __dirname + '/integration/babel-plugin-autoinstall/index.js',
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'object');
     assert.equal(typeof output.default, 'function');
@@ -170,6 +175,7 @@ describe.v2('babel', function () {
       path.join(__dirname, '/integration/babel-strip-flow-types/index.js'),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(output(), 'hello world');
@@ -576,6 +582,7 @@ describe.v2('babel', function () {
     let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
     assert(!file.includes('#priv'));
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(typeof output, 'object');
     assert.strictEqual(output.default, 123);
@@ -591,6 +598,7 @@ describe.v2('babel', function () {
     assert(!file.includes('REPLACE_ME'));
     assert(!file.includes('#private'));
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(typeof output, 'object');
     assert.strictEqual(output.default, 'hello');
@@ -617,6 +625,7 @@ describe.v2('babel', function () {
     assert(!file.includes('#private'));
     assert(!file.includes('interface'));
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(typeof output, 'object');
     assert.strictEqual(output.default, 'hello');
@@ -654,6 +663,7 @@ describe.v2('babel', function () {
         diagnostics: [
           {
             origin: '@atlaspack/transformer-babel',
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`Parcel includes transpilation by default. Babel config __${path.relative(
               process.cwd(),
               babelrcPath,
@@ -677,6 +687,7 @@ describe.v2('babel', function () {
               },
             ],
             hints: [
+              // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
               md`Delete __${path.relative(process.cwd(), babelrcPath)}__`,
             ],
             documentationURL:
@@ -739,6 +750,7 @@ describe.v2('babel', function () {
         diagnostics: [
           {
             origin: '@atlaspack/transformer-babel',
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`Parcel includes transpilation by default. Babel config __${path.relative(
               process.cwd(),
               babelrcPath,
@@ -762,6 +774,7 @@ describe.v2('babel', function () {
               },
             ],
             hints: [
+              // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
               md`Remove the above presets from __${path.relative(
                 process.cwd(),
                 babelrcPath,
@@ -799,6 +812,7 @@ describe.v2('babel', function () {
         diagnostics: [
           {
             origin: '@atlaspack/transformer-babel',
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`Parcel includes transpilation by default. Babel config __${path.relative(
               process.cwd(),
               babelrcPath,
@@ -822,6 +836,7 @@ describe.v2('babel', function () {
               },
             ],
             hints: [
+              // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
               md`Remove the above presets from __${path.relative(
                 process.cwd(),
                 babelrcPath,

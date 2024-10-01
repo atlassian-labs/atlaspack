@@ -2,6 +2,7 @@ import type {FilePath} from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
 import type {PackageInstaller, ModuleRequest} from '@atlaspack/package-manager';
 
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'isomorphic-fetch'. '/home/ubuntu/parcel/node_modules/isomorphic-fetch/fetch-npm-node.js' implicitly has an 'any' type.
 import fetch from 'isomorphic-fetch';
 import path from 'path';
 import semver from 'semver';
@@ -120,6 +121,7 @@ export default class SimplePackageInstaller implements PackageInstaller {
     if (!res.arrayBuffer) {
       // node
       var bufs: Array<Buffer> = [];
+      // @ts-expect-error - TS7006 - Parameter 'd' implicitly has an 'any' type.
       res.body.on('data', function (d) {
         bufs.push(d);
       });
@@ -243,6 +245,7 @@ export default class SimplePackageInstaller implements PackageInstaller {
         ? JSON.parse(await this.fs.readFile(pkgPath, 'utf8'))
         : {};
 
+      // @ts-expect-error - TS7034 - Variable 'dest' implicitly has type 'any' in some locations where its type cannot be determined.
       let dest;
       if (saveDev) {
         dest = pkg.devDependencies = pkg.devDependencies || {};
@@ -252,6 +255,7 @@ export default class SimplePackageInstaller implements PackageInstaller {
 
       let modulesResolved: Array<[string, string]> = await Promise.all(
         modules
+          // @ts-expect-error - TS7005 - Variable 'dest' implicitly has an 'any' type.
           .filter(({name}) => !dest[name])
           .map(
             async ({name, range}) =>

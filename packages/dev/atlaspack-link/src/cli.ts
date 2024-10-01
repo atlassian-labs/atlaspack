@@ -3,6 +3,7 @@
 import type {LinkCommandOptions} from './link';
 import type {UnlinkCommandOptions} from './unlink';
 
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import {version} from '../package.json';
 import {createLinkCommand} from './link';
 import {createUnlinkCommand} from './unlink';

@@ -7,6 +7,7 @@ import {
   registerSerializableClass,
 } from '@atlaspack/core';
 import {bufferStream} from '@atlaspack/utils';
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import packageJson from '../package.json';
 import {openDB} from 'idb';
 
@@ -60,8 +61,11 @@ export class IDBCache implements Cache {
 
   getStream(key: string): Readable {
     let dataPromise = this.store
+      // @ts-expect-error - TS7006 - Parameter 's' implicitly has an 'any' type.
       .then((s) => s.get(STORE_NAME, key))
+      // @ts-expect-error - TS7006 - Parameter 'd' implicitly has an 'any' type.
       .then((d) => Buffer.from(d))
+      // @ts-expect-error - TS7006 - Parameter 'e' implicitly has an 'any' type.
       .catch((e) => e);
     const stream = new Readable({
       // $FlowFixMe(incompatible-call)

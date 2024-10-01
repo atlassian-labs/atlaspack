@@ -14,6 +14,7 @@ import {
 } from '@atlaspack/utils';
 // import SimplePackageInstaller from './SimplePackageInstaller';
 // import {NodePackageManager} from '@atlaspack/package-manager';
+// @ts-expect-error - TS2307 - Cannot find module '@atlaspack/config-repl' or its corresponding type declarations.
 import configRepl from '@atlaspack/config-repl';
 
 import {ExtendedMemoryFS} from './ExtendedMemoryFS';
@@ -49,8 +50,10 @@ export type BundleOutput =
   | BundleOutputError;
 
 let workerFarm: WorkerFarm;
+// @ts-expect-error - TS2749 - 'MemoryFS' refers to a value, but is being used as a type here. Did you mean 'typeof MemoryFS'?
 let fs: MemoryFS;
 function startWorkerFarm(numWorkers?: number | null) {
+  // @ts-expect-error - TS2339 - Property 'maxConcurrentWorkers' does not exist on type 'WorkerFarm'.
   if (!workerFarm || workerFarm.maxConcurrentWorkers !== numWorkers) {
     workerFarm?.end();
     workerFarm = createWorkerFarm(
@@ -59,11 +62,14 @@ function startWorkerFarm(numWorkers?: number | null) {
     fs = new ExtendedMemoryFS(workerFarm);
     fs.chdir('/app');
 
+    // @ts-expect-error - TS2339 - Property 'fs' does not exist on type 'typeof globalThis'.
     globalThis.fs = fs;
+    // @ts-expect-error - TS7017 - Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
     globalThis.workerFarm = workerFarm;
   }
 }
 
+// @ts-expect-error - TS7034 - Variable 'swFSPromise' implicitly has type 'any' in some locations where its type cannot be determined. | TS7034 - Variable 'resolveSWFSPromise' implicitly has type 'any' in some locations where its type cannot be determined.
 let swFSPromise, resolveSWFSPromise;
 function resetSWPromise() {
   ({
@@ -73,12 +79,16 @@ function resetSWPromise() {
 }
 
 let sw: MessagePort;
+// @ts-expect-error - TS7017 - Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
 global.ATLASPACK_SERVICE_WORKER = async (type: any, data: any) => {
+  // @ts-expect-error - TS2554 - Expected 4 arguments, but got 3.
   await sendMsg(sw, type, data);
   if (type === 'setFS') {
+    // @ts-expect-error - TS7005 - Variable 'resolveSWFSPromise' implicitly has an 'any' type.
     resolveSWFSPromise();
   }
 };
+// @ts-expect-error - TS7017 - Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
 global.ATLASPACK_SERVICE_WORKER_REGISTER = (type: any, cb: any) => {
   let wrapper: EventHandler = async (evt: ExtendableMessageEvent) => {
     if (evt.data.type === type) {
@@ -98,16 +108,21 @@ global.ATLASPACK_SERVICE_WORKER_REGISTER = (type: any, cb: any) => {
 expose({
   bundle,
   watch,
+  // @ts-expect-error - TS7006 - Parameter 'numWorkers' implicitly has an 'any' type.
   ready: (numWorkers) =>
     new Promise((res: (result: Promise<boolean> | boolean) => void) => {
       startWorkerFarm(numWorkers);
+      // @ts-expect-error - TS2339 - Property 'readyWorkers' does not exist on type 'WorkerFarm'. | TS2339 - Property 'options' does not exist on type 'WorkerFarm'.
       if (workerFarm.readyWorkers === workerFarm.options.maxConcurrentWorkers) {
         res(true);
       } else {
+        // @ts-expect-error - TS2339 - Property 'once' does not exist on type 'WorkerFarm'.
         workerFarm.once('ready', () => res(true));
       }
     }),
+  // @ts-expect-error - TS7005 - Variable 'swFSPromise' implicitly has an 'any' type.
   waitForFS: () => proxy(swFSPromise),
+  // @ts-expect-error - TS7006 - Parameter 'v' implicitly has an 'any' type.
   setServiceWorker: (v) => {
     sw = v;
     sw.start();
@@ -134,6 +149,7 @@ function removeTrailingNewline(text: string): string {
   }
 }
 async function convertDiagnostics(
+  // @ts-expect-error - TS2749 - 'MemoryFS' refers to a value, but is being used as a type here. Did you mean 'typeof MemoryFS'?
   inputFS: MemoryFS,
   diagnostics: Array<Diagnostic>,
 ) {
@@ -191,6 +207,7 @@ async function convertDiagnostics(
 }
 
 async function renderDiagnostics(
+  // @ts-expect-error - TS2749 - 'MemoryFS' refers to a value, but is being used as a type here. Did you mean 'typeof MemoryFS'?
   inputFS: MemoryFS,
   diagnostics: Array<Diagnostic>,
 ): Promise<string> {
@@ -201,6 +218,7 @@ async function renderDiagnostics(
           await prettyDiagnostic(
             diagnostic,
             // $FlowFixMe
+            // @ts-expect-error - TS2345 - Argument of type '{ projectRoot: string; inputFS: MemoryFS; }' is not assignable to parameter of type 'PluginOptions'.
             {projectRoot: '/', inputFS},
             80,
             'html',
@@ -234,6 +252,7 @@ async function renderDiagnostics(
   ).join(`\n${'-'.repeat(80)}\n\n`);
 }
 
+// @ts-expect-error - TS7006 - Parameter 'options' implicitly has an 'any' type.
 async function setup(assets: FSList, options) {
   if (!(await fs.exists('/.parcelrc'))) {
     await fs.writeFile('/.parcelrc', JSON.stringify(configRepl, null, 2));
@@ -245,14 +264,18 @@ async function setup(assets: FSList, options) {
 
   let graphs = options.renderGraphs ? [] : null;
   if (graphs && options.renderGraphs) {
+    // @ts-expect-error - TS7017 - Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
     globalThis.ATLASPACK_DUMP_GRAPHVIZ = (name: any, content: any) =>
+      // @ts-expect-error - TS2531 - Object is possibly 'null'. | TS2322 - Type 'any' is not assignable to type 'never'. | TS2322 - Type 'any' is not assignable to type 'never'.
       graphs.push({name, content});
+    // @ts-expect-error - TS7017 - Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
     globalThis.ATLASPACK_DUMP_GRAPHVIZ.mode = options.renderGraphs;
   }
 
   // TODO only create new instance if options/entries changed
   let entries = assets
     .filter(([, data]: [any, any]) => data.isEntry)
+    // @ts-expect-error - TS2345 - Argument of type '([name]: [any]) => string' is not assignable to parameter of type '(value: [string, File], index: number, array: [string, File][]) => string'.
     .map(([name]: [any]) => PathUtils.fromAssetPath(name));
   const bundler = new Atlaspack({
     entries,
@@ -294,6 +317,7 @@ async function collectResult(
     content: string;
     name: string;
   }>,
+  // @ts-expect-error - TS2749 - 'MemoryFS' refers to a value, but is being used as a type here. Did you mean 'typeof MemoryFS'?
   fs: MemoryFS,
 ): Promise<BundleOutput> {
   let bundleContents: Array<{
@@ -341,6 +365,7 @@ async function syncAssetsToFS(assets: FSList, options: REPLOptions) {
     '/app/node_modules',
     '/app/yarn.lock',
     '/app/package.json',
+    // @ts-expect-error - TS2345 - Argument of type '([name]: [any]) => string' is not assignable to parameter of type '(value: [string, File], index: number, array: [string, File][]) => string'.
     ...assets.map(([name]: [any]) => PathUtils.fromAssetPath(name)),
   ]);
 
@@ -357,6 +382,7 @@ async function syncAssetsToFS(assets: FSList, options: REPLOptions) {
     ? await fs.readFile('/app/package.json', 'utf8')
     : null;
   let newPackageJson =
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assets.find(([name]: [any]) => name === '/package.json')?.[1].value ??
     generatePackageJson(options);
 
@@ -441,6 +467,7 @@ async function watch(
 
   progress('building');
 
+  // @ts-expect-error - TS2322 - Type '{ unsubscribe: () => Promise<unknown>; writeAssets: (assets: FSList) => void; } & ProxyMarked' is not assignable to type '{ unsubscribe: () => Promise<unknown>; writeAssets: (arg1: FSList) => Promise<unknown>; }'.
   return proxy({
     unsubscribe: (
       await bundler.watch(async (err, event) => {
@@ -476,6 +503,7 @@ function uuidv4() {
   return (String(1e7) + -1e3 + -4e3 + -8e3 + -1e11).replace(
     /[018]/g,
     // $FlowFixMe
+    // @ts-expect-error - TS2769 - No overload matches this call.
     (c: number) =>
       (
         c ^

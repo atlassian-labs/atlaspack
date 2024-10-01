@@ -77,7 +77,9 @@ const OPTIONS = {
 
 export default function collectDependencies(asset: MutableAsset, ast: AST) {
   let isDirty = false;
+  // @ts-expect-error - TS7034 - Variable 'errors' implicitly has type 'any[]' in some locations where its type cannot be determined.
   const errors = [];
+  // @ts-expect-error - TS2339 - Property 'walk' does not exist on type 'PostHTML<unknown, unknown>'. | TS7006 - Parameter 'node' implicitly has an 'any' type.
   PostHTML().walk.call(ast.program, (node) => {
     // Ideally we'd have location information for specific attributes...
     let getLoc = () =>
@@ -107,6 +109,7 @@ export default function collectDependencies(asset: MutableAsset, ast: AST) {
         continue;
       }
 
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly href: string[]; readonly 'xlink:href': readonly [...string[], "altGlyph", "cursor", "filter", "font-face-uri", "glyphRef", "tref", "color-profile"]; }'.
       const elements = ATTRS[attr];
       if (elements && elements.includes(node.tag)) {
         // Check for empty string
@@ -118,6 +121,7 @@ export default function collectDependencies(asset: MutableAsset, ast: AST) {
           });
         }
 
+        // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly a: { readonly href: { readonly needsStableName: true; }; readonly 'xlink:href': { readonly needsStableName: true; }; }; }'.
         let options = OPTIONS[tag]?.[attr];
         if (node.tag === 'script') {
           options = {
@@ -154,6 +158,7 @@ export default function collectDependencies(asset: MutableAsset, ast: AST) {
   });
 
   if (errors.length > 0) {
+    // @ts-expect-error - TS7005 - Variable 'errors' implicitly has an 'any[]' type.
     throw errors;
   }
 

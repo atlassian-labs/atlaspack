@@ -1,4 +1,5 @@
 import type {AST, MutableAsset, FilePath} from '@atlaspack/types';
+// @ts-expect-error - TS2305 - Module '"posthtml"' has no exported member 'PostHTMLNode'.
 import type {PostHTMLNode} from 'posthtml';
 import PostHTML from 'posthtml';
 import {parse, stringify} from 'srcset';
@@ -116,6 +117,7 @@ export default function collectDependencies(
     filePath: FilePath;
     loc: unknown;
   }> = [];
+  // @ts-expect-error - TS2339 - Property 'walk' does not exist on type 'PostHTML<unknown, unknown>'. | TS7006 - Parameter 'node' implicitly has an 'any' type.
   PostHTML().walk.call(ast.program, (node) => {
     let {tag, attrs} = node;
     if (!attrs || seen.has(node)) {
@@ -126,6 +128,7 @@ export default function collectDependencies(
 
     if (tag === 'meta') {
       const isMetaDependency = Object.keys(attrs).some((attr) => {
+        // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly property: readonly ["og:image", "og:image:url", "og:image:secure_url", "og:audio", "og:audio:secure_url", "og:video", "og:video:secure_url", "vk:image"]; readonly name: readonly ["twitter:image", ... 5 more ..., "msapplication-config"]; readonly itemprop: readonly [...]; }'.
         let values = META[attr];
         return (
           values &&
@@ -218,6 +221,7 @@ export default function collectDependencies(
               ? 'isolated'
               : undefined,
           env: {
+            // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'SourceType | undefined'.
             sourceType,
             outputFormat: 'global',
             loc,
@@ -239,7 +243,9 @@ export default function collectDependencies(
             ? 'isolated'
             : undefined,
         env: {
+          // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'SourceType | undefined'.
           sourceType,
+          // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'OutputFormat | undefined'.
           outputFormat,
           loc,
         },
@@ -261,6 +267,7 @@ export default function collectDependencies(
         continue;
       }
 
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly src: readonly ["script", "img", "audio", "video", "source", "track", "iframe", "embed", "amp-img"]; readonly href: readonly ["link", "a", "use", "script", "image"]; readonly srcset: readonly ["img", "source"]; ... 4 more ...; readonly data: readonly [...]; }'.
       let elements = ATTRS[attr];
       if (elements && elements.includes(node.tag)) {
         // Check for empty string
@@ -273,6 +280,7 @@ export default function collectDependencies(
         }
 
         let depHandler = getAttrDepHandler(attr);
+        // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly a: { readonly href: { readonly needsStableName: true; }; }; readonly iframe: { readonly src: { readonly needsStableName: true; }; }; readonly link: (attrs: any) => { priority: string; } | undefined; }'.
         let depOptionsHandler = OPTIONS[node.tag];
         let depOptions =
           typeof depOptionsHandler === 'function'

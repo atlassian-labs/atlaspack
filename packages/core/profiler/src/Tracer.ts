@@ -12,6 +12,7 @@ import {ValueEmitter} from '@atlaspack/events';
 
 import {performance} from 'perf_hooks';
 
+// @ts-expect-error - TS7034 - Variable 'tid' implicitly has type 'any' in some locations where its type cannot be determined.
 let tid;
 try {
   tid = require('worker_threads').threadId;
@@ -96,6 +97,7 @@ export default class Tracer {
       args = {name: argumentName};
     }
     if (typeof otherArgs === 'object') {
+      // @ts-expect-error - TS2454 - Variable 'args' is used before being assigned.
       if (typeof args == 'undefined') {
         args = {};
       }
@@ -106,9 +108,11 @@ export default class Tracer {
 
     const data: TraceMeasurementData = {
       categories: [category],
+      // @ts-expect-error - TS2454 - Variable 'args' is used before being assigned.
       args,
     };
 
+    // @ts-expect-error - TS7005 - Variable 'tid' implicitly has an 'any' type.
     return new TraceMeasurement(this, name, pid, tid, data);
   }
 

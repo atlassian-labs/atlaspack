@@ -24,7 +24,9 @@ module.exports =
         PackagedBundleClass: require('@atlaspack/core/src/public/Bundle.js')
           .PackagedBundle,
       } as {
+        // @ts-expect-error - TS2749 - 'loadGraphs' refers to a value, but is being used as a type here. Did you mean 'typeof loadGraphs'?
         loadGraphs: loadGraphs;
+        // @ts-expect-error - TS2749 - 'getBundleStats' refers to a value, but is being used as a type here. Did you mean 'typeof getBundleStats'?
         getBundleStats: getBundleStats;
         PackagedBundleClass: PackagedBundleClass;
       });

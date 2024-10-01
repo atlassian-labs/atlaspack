@@ -37,34 +37,42 @@ export default class Target implements ITarget {
   }
 
   get distEntry(): FilePath | null | undefined {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#target.distEntry;
   }
 
   get distDir(): FilePath {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'. | TS2532 - Object is possibly 'undefined'.
     return fromProjectPath(this.#options.projectRoot, this.#target.distDir);
   }
 
   get env(): IEnvironment {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'. | TS2345 - Argument of type 'AtlaspackOptions | undefined' is not assignable to parameter of type 'AtlaspackOptions'.
     return new Environment(this.#target.env, this.#options);
   }
 
   get name(): string {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#target.name;
   }
 
   get publicUrl(): string {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#target.publicUrl;
   }
 
   get loc(): SourceLocation | null | undefined {
     return fromInternalSourceLocation(
+      // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
       this.#options.projectRoot,
+      // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
       this.#target.loc,
     );
   }
 
   // $FlowFixMe[unsupported-syntax]
   [inspect](): string {
+    // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'unique symbol' can't be used to index type 'Environment'.
     return `Target(${this.name} - ${this.env[inspect]()})`;
   }
 }

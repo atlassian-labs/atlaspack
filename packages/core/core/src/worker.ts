@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2307 - Cannot find module 'flow-to-typescript-codemod' or its corresponding type declarations.
 import {Flow} from 'flow-to-typescript-codemod';
 
 import type {
@@ -6,6 +7,7 @@ import type {
   ProcessedAtlaspackConfig,
   RequestInvalidation,
 } from './types';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'SharedReference'. Did you mean to use 'import SharedReference from "@atlaspack/workers"' instead? | TS2614 - Module '"@atlaspack/workers"' has no exported member 'WorkerApi'. Did you mean to use 'import WorkerApi from "@atlaspack/workers"' instead?
 import type {SharedReference, WorkerApi} from '@atlaspack/workers';
 import {loadConfig as configCache} from '@atlaspack/utils';
 import type {DevDepSpecifier} from './requests/DevDepRequest';
@@ -24,6 +26,7 @@ import AtlaspackConfig from './AtlaspackConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {clearBuildCaches} from './buildCache';
 import {init as initSourcemaps} from '@parcel/source-map';
+// @ts-expect-error - TS2305 - Module '"@atlaspack/rust"' has no exported member 'init'.
 import {init as initRust} from '@atlaspack/rust';
 import WorkerFarm from '@atlaspack/workers';
 import {setFeatureFlags} from '@atlaspack/feature-flags';
@@ -32,6 +35,7 @@ import '@atlaspack/cache'; // register with serializer
 import '@atlaspack/package-manager';
 import '@atlaspack/fs';
 
+// @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
 if (process.env.ATLASPACK_BUILD_REPL && process.browser) {
   /* eslint-disable import/no-extraneous-dependencies, monorepo/no-internal-import */
   require('@atlaspack/repl/src/atlaspack/BrowserPackageManager.js');
@@ -159,6 +163,7 @@ export async function runPackage(
   let runner = new PackagerRunner({
     config: atlaspackConfig,
     options,
+    // @ts-expect-error - TS2322 - Type '(event: ReporterEvent) => void' is not assignable to type 'ReportFn'. | TS2339 - Property 'isWorker' does not exist on type 'typeof WorkerFarm'.
     report: WorkerFarm.isWorker() ? reportWorker.bind(null, workerApi) : report,
     previousDevDeps,
     previousInvalidations,

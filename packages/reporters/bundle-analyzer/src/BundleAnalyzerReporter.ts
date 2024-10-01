@@ -131,6 +131,7 @@ async function getBundleNode(bundle: PackagedBundle, options: PluginOptions) {
     let map = dirMap;
     for (let dir of dirs) {
       invariant(map instanceof DefaultMap);
+      // @ts-expect-error - TS2322 - Type 'DirMapValue' is not assignable to type 'DirMap'.
       map = map.get(dir);
     }
 

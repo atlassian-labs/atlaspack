@@ -24,6 +24,7 @@ import {
 } from 'vscode-jsonrpc/node';
 import * as invariant from 'assert';
 import * as url from 'url';
+// @ts-expect-error - TS2497 - This module can only be referenced with ECMAScript imports/exports by turning on the 'esModuleInterop' flag and referencing its default export.
 import * as commonPathPrefix from 'common-path-prefix';
 
 // import {TextDocument} from 'vscode-languageserver-textdocument';
@@ -111,6 +112,7 @@ connection.onInitialized(() => {
 
 // Proxy
 connection.onRequest(RequestImporters, async (params) => {
+  // @ts-expect-error - TS2345 - Argument of type 'CancellationToken' is not assignable to parameter of type 'string'.
   let client = findClient(params);
   if (client) {
     let result = await client.connection.sendRequest(RequestImporters, params);
@@ -153,6 +155,7 @@ connection.onRequest(
     return {
       kind: DocumentDiagnosticReportKind.Full,
       resultId: client?.lastBuild,
+      // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type 'Diagnostic[]'.
       items: result ?? [],
     };
   },
@@ -179,7 +182,9 @@ class ProgressReporter {
     if (this.progressReporterPromise == null) {
       this.begin();
     }
+    // @ts-expect-error - TS2349 - This expression is not callable.
     invariant(this.progressReporterPromise != null);
+    // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
     (await this.progressReporterPromise).done();
     this.progressReporterPromise = null;
   }
@@ -247,6 +252,7 @@ function createClient(metafilepath: string, metafile: Metafile) {
     lastBuild: '0',
   };
 
+  // @ts-expect-error - TS7006 - Parameter 'state' implicitly has an 'any' type. | TS7006 - Parameter 'message' implicitly has an 'any' type.
   client.onNotification(NotificationBuildStatus, (state, message) => {
     // console.log('got NotificationBuildStatus', state, message);
     if (state === 'start') {
@@ -264,6 +270,7 @@ function createClient(metafilepath: string, metafile: Metafile) {
     }
   });
 
+  // @ts-expect-error - TS7006 - Parameter 'diagnostics' implicitly has an 'any' type.
   client.onNotification(NotificationWorkspaceDiagnostics, (diagnostics) => {
     // console.log('got NotificationWorkspaceDiagnostics', diagnostics);
     for (let d of diagnostics) {

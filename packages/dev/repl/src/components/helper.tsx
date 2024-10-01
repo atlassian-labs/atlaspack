@@ -14,8 +14,11 @@ export function ParcelError(
   },
 ): any {
   return (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
     <div className="build-error">
+{ /* @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided. */}
       <span>A build error occured:</span>
+{ /* @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided. */}
       <div className="content" dangerouslySetInnerHTML={{__html: error}} />
     </div>
   );
@@ -23,10 +26,15 @@ export function ParcelError(
 
 export function Notes(): any {
   return (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
     <div className="help">
+{ /* @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided. */}
       <div>
+{ /* @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided. */}
         <p>{ctrlKey} + B to bundle</p>
+{ /* @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided. */}
         <p>{ctrlKey} + S to save</p>
+{ /* @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided. */}
         <p>Ctrl + W to close a tab</p>
         {/* Note:
         <ul>
@@ -49,6 +57,7 @@ export function Notes(): any {
 //   return `data:${mime};charset=utf-8;base64,${btoa(data)}`;
 // }
 
+// @ts-expect-error - TS2339 - Property 'graphs' does not exist on type '{ children?: ReactNode; }'.
 export const Graphs: any = memo(function Graphs({graphs}) {
   let [rendered, setRendered] = useState();
 
@@ -56,8 +65,10 @@ export const Graphs: any = memo(function Graphs({graphs}) {
     renderGraph().then(async (render) => {
       setRendered(
         await Promise.all(
+// @ts-expect-error - TS7031 - Binding element 'name' implicitly has an 'any' type. | TS7031 - Binding element 'content' implicitly has an 'any' type.
           graphs.map(async ({name, content}) => ({
             name,
+// @ts-expect-error - TS2695 - Left side of comma operator is unused and has no side effects.
             content: /*toDataURI*/ ('image/svg+xml', await render(content)),
           })),
         ),
@@ -66,15 +77,20 @@ export const Graphs: any = memo(function Graphs({graphs}) {
   }, [graphs]);
 
   return (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
     <div className="graphs">
       Graphs (will open in a new tab)
       {rendered && (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
         <div>
+{ /* @ts-expect-error - TS2339 - Property 'map' does not exist on type 'never'. | TS7031 - Binding element 'name' implicitly has an 'any' type. | TS7031 - Binding element 'content' implicitly has an 'any' type. | TS7006 - Parameter 'i' implicitly has an 'any' type. */}
           {rendered.map(({name, content}, i) => (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
             <button
               key={i}
               onClick={() => {
                 var win = window.open();
+// @ts-expect-error - TS2531 - Object is possibly 'null'.
                 win.document.write(content);
                 // win.document.write(
                 //   '<iframe src="' +
@@ -116,9 +132,13 @@ export function Tabs(
   }, [children, selected, setSelected]);
 
   return (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
     <div {...props} className={'tabs ' + (className || '')}>
+{ /* @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided. */}
       <div className="switcher">
+{ /* @ts-expect-error - TS7006 - Parameter 'n' implicitly has an 'any' type. | TS7006 - Parameter 'i' implicitly has an 'any' type. */}
         {names.map((n, i) => (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
           <div
             onClick={() => setSelected(i)}
             key={i}
@@ -131,8 +151,11 @@ export function Tabs(
         ))}
       </div>
       {mode === 'remove'
+// @ts-expect-error - TS7006 - Parameter '_' implicitly has an 'any' type. | TS7006 - Parameter 'i' implicitly has an 'any' type.
         ? children.find((_, i) => i === selected)
+// @ts-expect-error - TS7006 - Parameter 'c' implicitly has an 'any' type. | TS7006 - Parameter 'i' implicitly has an 'any' type.
         : children.map((c, i) => (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
             <div
               key={i}
               className="content"
@@ -176,6 +199,7 @@ export function EditableField(
   }, [editing, value]);
 
   return editing ? (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
     <form
       onSubmit={(e) => {
         e.preventDefault();
@@ -183,16 +207,19 @@ export function EditableField(
       }}
       style={{display: 'inline'}}
     >
+{ /* @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided. */}
       <input
         type="text"
         value={v}
         onInput={(e) => {
+// @ts-expect-error - TS2339 - Property 'value' does not exist on type 'EventTarget'.
           setV(e.target.value);
         }}
         onClick={(e) => e.stopPropagation()}
       />
     </form>
   ) : (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
     <span>{value}</span>
   );
 }
@@ -207,6 +234,7 @@ export function PresetSelector(
       if (preset === 'Three.js Benchmark') {
         try {
           let data = await (
+// @ts-expect-error - TS1343 - The 'import.meta' meta-property is only allowed when the '--module' option is 'es2020', 'es2022', 'esnext', 'system', 'node12', or 'nodenext'.
             await fetch(new URL('../assets/three.zip', import.meta.url))
           ).arrayBuffer();
           let files: FSMap = await extractZIP(data);
@@ -218,6 +246,7 @@ export function PresetSelector(
             [
               'index.js',
               {
+// @ts-expect-error - TS2769 - No overload matches this call.
                 isEntry: true,
                 value: `import * as copy1 from './copy1/Three.js'; export {copy1};
         import * as copy2 from './copy2/Three.js'; export {copy2};
@@ -238,16 +267,21 @@ export function PresetSelector(
   );
 
   return (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
     <label className="presets">
+{ /* @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided. */}
       <span>Preset:</span>
+{ /* @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided. */}
       <select
         onChange={(e) => {
           onChange(e.target.value);
         }}
         value={''}
       >
+{ /* @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided. */}
         <option value=""></option>
         {[...ASSET_PRESETS.keys()].map((n) => (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
           <option key={n} value={n}>
             {n}
           </option>
@@ -285,6 +319,7 @@ export function useSessionStorage(key: string, initialValue: unknown): [any, () 
   const setValue = (value: undefined) => {
     try {
       const valueToStore =
+// @ts-expect-error - TS2358 - The left-hand side of an 'instanceof' expression must be of type 'any', an object type or a type parameter. | TS2349 - This expression is not callable.
         value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
       window.sessionStorage.setItem(key, JSON.stringify(valueToStore));
@@ -293,6 +328,7 @@ export function useSessionStorage(key: string, initialValue: unknown): [any, () 
     }
   };
 
+// @ts-expect-error - TS2322 - Type '(value: undefined) => void' is not assignable to type '() => void'.
   return [storedValue, setValue];
 }
 
@@ -310,11 +346,14 @@ export function usePromise<T>(promise: Promise<T>): [T | null | undefined, any, 
 
   useEffect(() => {
     promise.then(
+// @ts-expect-error - TS2345 - Argument of type '{ resolved: T; }' is not assignable to parameter of type 'SetStateAction<null>'.
       (v) => mountedRef.current && setState({resolved: v}),
+// @ts-expect-error - TS2345 - Argument of type '{ rejected: any; }' is not assignable to parameter of type 'SetStateAction<null>'.
       (v) => mountedRef.current && setState({rejected: v}),
     );
   }, [promise]);
 
+// @ts-expect-error - TS2339 - Property 'resolved' does not exist on type 'never'. | TS2339 - Property 'rejected' does not exist on type 'never'.
   return [state?.resolved, state?.rejected, state != null];
 }
 

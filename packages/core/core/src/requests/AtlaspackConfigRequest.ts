@@ -39,6 +39,7 @@ import {createBuildCache} from '../buildCache';
 import {toProjectPath} from '../projectPath';
 import {requestTypes} from '../RequestTracker';
 
+// @ts-expect-error - TS2344 - Type 'K' does not satisfy the constraint 'string | number | symbol'.
 type ConfigMap<K, V> = Partial<Record<K, V>>;
 
 export type ConfigAndCachePath = {
@@ -119,12 +120,14 @@ export function getCachedAtlaspackConfig(
   let {config: processedConfig, cachePath} = result;
   let config = atlaspackConfigCache.get(cachePath);
   if (config) {
+    // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type 'AtlaspackConfig'.
     return config;
   }
 
   config = new AtlaspackConfig(processedConfig, options);
 
   atlaspackConfigCache.set(cachePath, config);
+  // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type 'AtlaspackConfig'.
   return config;
 }
 
@@ -181,6 +184,7 @@ export async function resolveAtlaspackConfig(
   } catch (e: any) {
     throw new ThrowableDiagnostic({
       diagnostic: {
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         message: md`Could not find parcel config at ${path.relative(
           options.projectRoot,
           configPath,
@@ -349,6 +353,7 @@ export async function processConfig(
       : {
           /*::...null*/
         }),
+    // @ts-expect-error - TS2322 - Type '("..." | { packageName: string; resolveFrom: string; keyPath: string; })[] | undefined' is not assignable to type 'PureAtlaspackConfigPipeline | undefined'.
     resolvers: processPipeline(
       options,
       configFile.resolvers,
@@ -372,12 +377,14 @@ export async function processConfig(
             keyPath: '/bundler',
           }
         : undefined,
+    // @ts-expect-error - TS2322 - Type '("..." | { packageName: string; resolveFrom: string; keyPath: string; })[] | undefined' is not assignable to type 'PureAtlaspackConfigPipeline | undefined'.
     namers: processPipeline(
       options,
       configFile.namers,
       '/namers',
       configFile.filePath,
     ),
+    // @ts-expect-error - TS2322 - Type '("..." | { packageName: string; resolveFrom: string; keyPath: string; })[] | undefined' is not assignable to type 'PureAtlaspackConfigPipeline | undefined'.
     runtimes: processPipeline(
       options,
       configFile.runtimes,
@@ -402,6 +409,7 @@ export async function processConfig(
       configFile.filePath,
       options,
     ),
+    // @ts-expect-error - TS2322 - Type '("..." | { packageName: string; resolveFrom: string; keyPath: string; })[] | undefined' is not assignable to type 'PureAtlaspackConfigPipeline | undefined'.
     reporters: processPipeline(
       options,
       configFile.reporters,
@@ -514,6 +522,7 @@ export async function resolveExtends(
                 {
                   key: extendsKey,
                   type: 'value',
+                  // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
                   message: md`Cannot find module "${ext}"${
                     alternatives[0]
                       ? `, did you mean "${alternatives[0]}"?`
@@ -563,6 +572,7 @@ async function processExtendedConfig(
               {
                 key: extendsKey,
                 type: 'value',
+                // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
                 message: md`"${extendsSpecifier}" does not exist${
                   alternatives[0] ? `, did you mean "${alternatives[0]}"?` : ''
                 }`,
@@ -697,6 +707,7 @@ export function mergeMaps<K extends string, V>(
   for (let k in ext) {
     let key: K = k as any;
     res[key] =
+      // @ts-expect-error - TS2345 - Argument of type 'V | undefined' is not assignable to parameter of type 'V'.
       merger && base[key] != null ? merger(base[key], ext[key]) : ext[key];
   }
 

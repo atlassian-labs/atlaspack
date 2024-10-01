@@ -6,15 +6,19 @@ import {RequireInliningVisitor} from './RequireInliningVisitor';
 import nullthrows from 'nullthrows';
 import SourceMap from '@parcel/source-map';
 
+// @ts-expect-error - TS7034 - Variable 'assetPublicIdsWithSideEffects' implicitly has type 'any' in some locations where its type cannot be determined.
 let assetPublicIdsWithSideEffects = null;
 
 type BundleConfig = {
   assetPublicIdsWithSideEffects: Set<string>;
 };
 
+// @ts-expect-error - TS2558 - Expected 0 type arguments, but got 2.
 module.exports = new Optimizer<never, BundleConfig>({
   loadBundleConfig({bundle, bundleGraph, tracer}): BundleConfig {
+    // @ts-expect-error - TS7005 - Variable 'assetPublicIdsWithSideEffects' implicitly has an 'any' type.
     if (assetPublicIdsWithSideEffects !== null) {
+      // @ts-expect-error - TS7005 - Variable 'assetPublicIdsWithSideEffects' implicitly has an 'any' type.
       return {assetPublicIdsWithSideEffects};
     }
 
@@ -33,6 +37,7 @@ module.exports = new Optimizer<never, BundleConfig>({
     bundleGraph.traverse((node) => {
       if (node.type === 'asset' && node.value.sideEffects) {
         const publicId = bundleGraph.getAssetPublicId(node.value);
+        // @ts-expect-error - TS7005 - Variable 'assetPublicIdsWithSideEffects' implicitly has an 'any' type.
         let sideEffectsMap = nullthrows(assetPublicIdsWithSideEffects);
         sideEffectsMap.add(publicId);
       }
@@ -63,6 +68,7 @@ module.exports = new Optimizer<never, BundleConfig>({
           code: contents.toString(),
           sourceMaps: !!bundle.env.sourceMap,
           ignoreModuleIds: Array.from(
+            // @ts-expect-error - TS2571 - Object is of type 'unknown'.
             bundleConfig.assetPublicIdsWithSideEffects,
           ),
         });
@@ -71,6 +77,7 @@ module.exports = new Optimizer<never, BundleConfig>({
           sourceMap = new SourceMap(options.projectRoot);
           sourceMap.addVLQMap(JSON.parse(sourceMapResult));
           if (originalMap) {
+            // @ts-expect-error - TS2345 - Argument of type 'SourceMap' is not assignable to parameter of type 'Buffer'.
             sourceMap.extends(originalMap);
           }
         }
@@ -89,6 +96,7 @@ module.exports = new Optimizer<never, BundleConfig>({
         bundle,
         logger,
         assetPublicIdsWithSideEffects:
+          // @ts-expect-error - TS2571 - Object is of type 'unknown'.
           bundleConfig.assetPublicIdsWithSideEffects,
       });
 
@@ -117,6 +125,7 @@ module.exports = new Optimizer<never, BundleConfig>({
           sourceMap = new SourceMap(options.projectRoot);
           sourceMap.addVLQMap(JSON.parse(resultMap));
           if (originalMap) {
+            // @ts-expect-error - TS2345 - Argument of type 'SourceMap' is not assignable to parameter of type 'Buffer'.
             sourceMap.extends(originalMap);
           }
         }

@@ -24,7 +24,9 @@ export class AtlaspackWorker {
     specifier: string;
     options: PluginOptions;
     asset: InnerAsset;
+    // @ts-expect-error - TS1064 - The return type of an async function or method must be the global Promise<T> type. Did you mean to write 'Promise<any>'?
   }): any {
+    // @ts-expect-error - TS2339 - Property 'createRequire' does not exist on type 'typeof Module'.
     const customRequire = module.createRequire(resolveFrom);
     const resolvedPath = customRequire.resolve(specifier);
     const transformerModule = await import(resolvedPath);
@@ -35,12 +37,15 @@ export class AtlaspackWorker {
 
     try {
       if (transformer.parse) {
+        // @ts-expect-error - TS2740 - Type 'AssetCompat' is missing the following properties from type 'Asset': stats, fs, query, env, and 13 more.
         const ast = await transformer.parse({asset: assetCompat}); // missing "config"
+        // @ts-expect-error - TS2345 - Argument of type 'AST | null | undefined' is not assignable to parameter of type 'AST'.
         assetCompat.setAST(ast);
       }
 
       const result = await transformer.transform({
         // $FlowFixMe
+        // @ts-expect-error - TS2740 - Type 'AssetCompat' is missing the following properties from type 'MutableAsset': isBundleSplittable, sideEffects, uniqueKey, symbols, and 22 more.
         asset: assetCompat,
         options,
         config: null,
@@ -49,10 +54,13 @@ export class AtlaspackWorker {
       if (transformer.generate) {
         let output = await transformer.generate({
           // $FlowFixMe
+          // @ts-expect-error - TS2322 - Type 'AssetCompat' is not assignable to type 'Asset'.
           asset: assetCompat,
           // $FlowFixMe
+          // @ts-expect-error - TS2322 - Type 'AST | null | undefined' is not assignable to type 'AST'.
           ast: assetCompat.getAST(),
         });
+        // @ts-expect-error - TS2345 - Argument of type 'Blob' is not assignable to parameter of type 'string'.
         assetCompat.setCode(output.content);
       }
 

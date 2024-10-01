@@ -47,6 +47,7 @@ afterEach(() => {
 });
 
 describe('resolver', function () {
+  // @ts-expect-error - TS7034 - Variable 'resolver' implicitly has type 'any' in some locations where its type cannot be determined. | TS7034 - Variable 'prodResolver' implicitly has type 'any' in some locations where its type cannot be determined.
   let resolver, prodResolver;
 
   beforeEach(async function () {
@@ -103,6 +104,7 @@ describe('resolver', function () {
     configCache.clear();
   });
 
+  // @ts-expect-error - TS7006 - Parameter 'res' implicitly has an 'any' type.
   function normalize(res) {
     return {
       filePath: res?.filePath,
@@ -157,6 +159,7 @@ describe('resolver', function () {
           filePath: undefined | FilePath;
           sideEffects: undefined | boolean;
         },
+    // @ts-expect-error - TS7006 - Parameter 'expected' implicitly has an 'any' type.
     expected,
   ) {
     assert.deepEqual(normalize(resolved), normalize(expected));
@@ -164,6 +167,7 @@ describe('resolver', function () {
 
   describe('file paths', function () {
     it('should resolve a relative path with an extension', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './bar.js',
@@ -174,6 +178,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a relative path without an extension', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './bar',
@@ -184,6 +189,7 @@ describe('resolver', function () {
     });
 
     it('should resolve an absolute path from the root module', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '/bar',
@@ -194,6 +200,7 @@ describe('resolver', function () {
     });
 
     it('should resolve an absolute path from a node_modules folder', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '/bar',
@@ -204,6 +211,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a tilde path from the root module', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '~/bar',
@@ -214,6 +222,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a tilde path from the root module without a slash', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '~bar',
@@ -224,6 +233,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a tilde path from a node_modules folder', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '~/bar',
@@ -237,6 +247,7 @@ describe('resolver', function () {
     });
 
     it('should resolve an index file in a directory', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './nested',
@@ -250,6 +261,7 @@ describe('resolver', function () {
     });
 
     it('should not resolve an index file in a directory for URL specifiers', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './nested',
@@ -269,6 +281,7 @@ describe('resolver', function () {
 
       await overlayFS.writeFile(path.join(rootDir, 'a?b.js'), '');
 
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './a?b.js',
@@ -286,6 +299,7 @@ describe('resolver', function () {
 
       await overlayFS.writeFile(path.join(rootDir, 'a?b.js'), '');
 
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './a?b.js',
@@ -305,6 +319,7 @@ describe('resolver', function () {
 
       await overlayFS.writeFile(path.join(rootDir, 'a?b.js'), '');
 
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './a%3Fb.js',
@@ -322,6 +337,7 @@ describe('resolver', function () {
 
       await overlayFS.writeFile(path.join(rootDir, 'a?b.js'), '');
 
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './a%3Fb.js',
@@ -337,6 +353,7 @@ describe('resolver', function () {
     });
 
     it('should support query params for ESM specifiers', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './nested?foo=bar',
@@ -351,6 +368,7 @@ describe('resolver', function () {
     });
 
     it('should not support query params for CommonJS specifiers', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './nested?foo=bar',
@@ -365,6 +383,7 @@ describe('resolver', function () {
 
   describe('builtins', function () {
     it('should resolve node builtin modules', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'zlib',
@@ -394,6 +413,7 @@ describe('resolver', function () {
     });
 
     it('Should be able to handle node: prefixes', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'node:zlib',
@@ -423,6 +443,7 @@ describe('resolver', function () {
     });
 
     it('should resolve unimplemented node builtin modules to an empty file', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'fs',
@@ -437,6 +458,7 @@ describe('resolver', function () {
     });
 
     it('should exclude node builtin modules with --target=node', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: NODE_ENV,
         filename: 'zlib',
@@ -447,6 +469,7 @@ describe('resolver', function () {
     });
 
     it('should exclude the electron module in electron environments', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: new Environment(
           createEnvironment({
@@ -468,6 +491,7 @@ describe('resolver', function () {
 
   describe('node_modules', function () {
     it('should resolve a node_modules index.js', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'foo',
@@ -493,6 +517,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a node_modules package.main', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-main',
@@ -518,6 +543,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a node_modules package.module', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-module',
@@ -548,6 +574,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a node_modules package.browser main field', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-browser',
@@ -578,6 +605,7 @@ describe('resolver', function () {
     });
 
     it('should not resolve a node_modules package.browser main field with --target=node', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: NODE_INCLUDE_ENV,
         filename: 'package-browser',
@@ -608,6 +636,7 @@ describe('resolver', function () {
     });
 
     it('should fall back to index.js when it cannot find package.main', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-fallback',
@@ -715,6 +744,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a node_module package.main pointing to a directory', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-main-directory',
@@ -833,6 +863,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a file inside a node_modules folder', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'foo/nested/baz',
@@ -862,6 +893,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a scoped module', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '@scope/pkg',
@@ -887,6 +919,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a file inside a scoped module', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '@scope/pkg/foo/bar',
@@ -923,6 +956,7 @@ describe('resolver', function () {
 
     describe('sideEffects: false', function () {
       it('should determine sideEffects correctly (file)', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'side-effects-false/src/index.js',
@@ -965,6 +999,7 @@ describe('resolver', function () {
       });
 
       it('should determine sideEffects correctly (extensionless file)', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'side-effects-false/src/index',
@@ -1007,6 +1042,7 @@ describe('resolver', function () {
       });
 
       it('should determine sideEffects correctly (sub folder)', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'side-effects-false/src/',
@@ -1058,6 +1094,7 @@ describe('resolver', function () {
       });
 
       it('should determine sideEffects correctly (main field)', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'side-effects-false/src/',
@@ -1109,6 +1146,7 @@ describe('resolver', function () {
       });
 
       it('should determine sideEffects correctly (main field exists in upward package)', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'side-effects-package-redirect-up/foo/bar',
@@ -1229,6 +1267,7 @@ describe('resolver', function () {
       });
 
       it('should determine sideEffects correctly (main field exists in downward package)', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'side-effects-package-redirect-down/foo/bar',
@@ -1353,6 +1392,7 @@ describe('resolver', function () {
 
     describe('sideEffects: globs', function () {
       it('should determine sideEffects correctly (matched)', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'side-effects-false-glob/a/index',
@@ -1371,6 +1411,7 @@ describe('resolver', function () {
         );
       });
       it('should determine sideEffects correctly (unmatched)', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'side-effects-false-glob/b/index.js',
@@ -1389,6 +1430,7 @@ describe('resolver', function () {
         );
       });
       it('should determine sideEffects correctly (matched dotslash)', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'side-effects-false-glob/sub/index.js',
@@ -1407,6 +1449,7 @@ describe('resolver', function () {
         );
       });
       it('should determine sideEffects correctly (unmatched, prefix in subdir)', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'side-effects-false-glob/sub/a/index.js',
@@ -1425,6 +1468,7 @@ describe('resolver', function () {
         );
       });
       it('should determine sideEffects correctly (only name)', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'side-effects-false-glob/sub/index.json',
@@ -1445,6 +1489,7 @@ describe('resolver', function () {
     });
 
     it('should not resolve a node module for URL dependencies', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '@scope/pkg',
@@ -1457,6 +1502,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a node module for URL dependencies with the npm: prefix', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'npm:@scope/pkg',
@@ -1470,6 +1516,7 @@ describe('resolver', function () {
     });
 
     it('should support query params for bare ESM specifiers', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '@scope/pkg?foo=2',
@@ -1484,6 +1531,7 @@ describe('resolver', function () {
     });
 
     it('should not support query params for bare CommonJS specifiers', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '@scope/pkg?foo=2',
@@ -1499,6 +1547,7 @@ describe('resolver', function () {
     });
 
     it('should support query params for npm: specifiers', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'npm:@scope/pkg?foo=2',
@@ -1515,6 +1564,7 @@ describe('resolver', function () {
 
   describe('aliases', function () {
     it('should alias the main file using the package.browser field', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-browser-alias',
@@ -1550,6 +1600,7 @@ describe('resolver', function () {
     });
 
     it('should alias a sub-file using the package.browser field', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-browser-alias/foo',
@@ -1585,6 +1636,7 @@ describe('resolver', function () {
     });
 
     it('should alias a relative file using the package.browser field', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './foo',
@@ -1619,6 +1671,7 @@ describe('resolver', function () {
     });
 
     it('should not alias using the package.browser field with --target=node', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: NODE_INCLUDE_ENV,
         filename: 'package-browser-alias/foo',
@@ -1654,6 +1707,7 @@ describe('resolver', function () {
     });
 
     it('should alias a deep nested relative file using the package.browser field', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './nested',
@@ -1699,6 +1753,7 @@ describe('resolver', function () {
     });
 
     it('should alias a sub-file using the package.alias field', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-alias/foo',
@@ -1724,6 +1779,7 @@ describe('resolver', function () {
     });
 
     it('should alias a relative file using the package.alias field', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './foo',
@@ -1748,6 +1804,7 @@ describe('resolver', function () {
     });
 
     it('should alias a glob using the package.alias field', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './lib/test',
@@ -1802,6 +1859,7 @@ describe('resolver', function () {
     });
 
     it('should apply a module alias using the package.alias field in the root package', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'aliased',
@@ -1826,6 +1884,7 @@ describe('resolver', function () {
     });
 
     it('should apply a global module alias using the package.alias field in the root package', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'aliased',
@@ -1850,6 +1909,7 @@ describe('resolver', function () {
     });
 
     it('should apply a global module alias to a sub-file in a package', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'aliased/bar',
@@ -1874,6 +1934,7 @@ describe('resolver', function () {
     });
 
     it('should apply a module alias pointing to a file using the package.alias field', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'aliased-file',
@@ -1890,6 +1951,7 @@ describe('resolver', function () {
     });
 
     it('should apply a global module alias pointing to a file using the package.alias field', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'aliased-file',
@@ -1906,6 +1968,7 @@ describe('resolver', function () {
     });
 
     it('should apply an alias for a virtual module folder (relative to project dir)', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'aliasedfolder/test.js',
@@ -1927,6 +1990,7 @@ describe('resolver', function () {
     });
 
     it('should apply an alias for a virtual module folder only (relative to project dir)', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'aliasedfolder',
@@ -1972,6 +2036,7 @@ describe('resolver', function () {
     });
 
     it('should apply an alias for a virtual module folder (relative to root dir)', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'aliasedabsolute/test.js',
@@ -1993,6 +2058,7 @@ describe('resolver', function () {
     });
 
     it('should apply an alias for a virtual module folder only (relative to root dir)', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'aliasedabsolute',
@@ -2038,6 +2104,7 @@ describe('resolver', function () {
     });
 
     it('should apply an alias for a virtual module folder sub-path', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'foo/bar',
@@ -2054,6 +2121,7 @@ describe('resolver', function () {
     });
 
     it('should apply an alias for a virtual module folder glob sub-path', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'glob/bar/test',
@@ -2075,6 +2143,7 @@ describe('resolver', function () {
     });
 
     it('should apply an alias for a virtual module', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'something',
@@ -2096,6 +2165,7 @@ describe('resolver', function () {
     });
 
     it('should apply a global alias for a virtual module', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'something',
@@ -2117,6 +2187,7 @@ describe('resolver', function () {
     });
 
     it('should resolve to an empty file when package.browser resolves to false', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-browser-exclude',
@@ -2147,6 +2218,7 @@ describe('resolver', function () {
     });
 
     it('should resolve to an empty file when package.alias resolves to false', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-alias-exclude',
@@ -2180,6 +2252,7 @@ describe('resolver', function () {
   describe('source field', function () {
     describe('package behind symlinks', function () {
       it('should use the source field, when its realpath is not under `node_modules`', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'source',
@@ -2206,6 +2279,7 @@ describe('resolver', function () {
       });
 
       it('should prioritize the source field over exports', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'source-exports',
@@ -2242,6 +2316,7 @@ describe('resolver', function () {
       });
 
       it('should not use the source field, when its realpath is under `node_modules`', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'source-pnpm',
@@ -2286,6 +2361,7 @@ describe('resolver', function () {
 
     describe('package not behind symlinks', function () {
       it('should not use the source field', async function () {
+        // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
         let resolved = await resolver.resolve({
           env: BROWSER_ENV,
           filename: 'source-not-symlinked',
@@ -2324,6 +2400,7 @@ describe('resolver', function () {
 
   describe('package exports', function () {
     it('should resolve a browser development import', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-conditions',
@@ -2340,6 +2417,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a browser development require', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-conditions',
@@ -2356,6 +2434,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a browser production import', async function () {
+      // @ts-expect-error - TS7005 - Variable 'prodResolver' implicitly has an 'any' type.
       let resolved = await prodResolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-conditions',
@@ -2372,6 +2451,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a browser development require', async function () {
+      // @ts-expect-error - TS7005 - Variable 'prodResolver' implicitly has an 'any' type.
       let resolved = await prodResolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-conditions',
@@ -2388,6 +2468,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a node import', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: NODE_INCLUDE_ENV,
         filename: 'package-conditions',
@@ -2401,6 +2482,7 @@ describe('resolver', function () {
     });
 
     it('should resolve a node require', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: NODE_INCLUDE_ENV,
         filename: 'package-conditions',
@@ -2416,6 +2498,7 @@ describe('resolver', function () {
 
   describe('symlinks', function () {
     it('should resolve symlinked files to their realpath', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './baz.js',
@@ -2426,6 +2509,7 @@ describe('resolver', function () {
     });
 
     it('should resolve symlinked directories to their realpath', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './symlinked-nested',
@@ -2441,6 +2525,7 @@ describe('resolver', function () {
 
   describe('error handling', function () {
     it('should return diagnostics when package.module does not exist', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-module-fallback',
@@ -2455,6 +2540,7 @@ describe('resolver', function () {
     });
 
     it('should throw when a relative path cannot be resolved', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './xyz.js',
@@ -2469,6 +2555,7 @@ describe('resolver', function () {
     });
 
     it('should throw when a node_module cannot be resolved', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'food',
@@ -2483,6 +2570,7 @@ describe('resolver', function () {
     });
 
     it('should throw when a subfile of a node_module cannot be resolved', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'foo/bark',
@@ -2497,6 +2585,7 @@ describe('resolver', function () {
     });
 
     it('should error when a library is missing an external dependency', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: new Environment(
           createEnvironment({
@@ -2519,6 +2608,7 @@ describe('resolver', function () {
     });
 
     it('should not error when external dependencies are declared', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: new Environment(
           createEnvironment({
@@ -2542,6 +2632,7 @@ describe('resolver', function () {
     });
 
     it('should not error when external dependencies are declared in peerDependencies', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: new Environment(
           createEnvironment({
@@ -2565,6 +2656,7 @@ describe('resolver', function () {
     });
 
     it('should not error on missing dependencies for environment builtins', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: new Environment(
           createEnvironment({
@@ -2588,6 +2680,7 @@ describe('resolver', function () {
     });
 
     it('should not error on builtin node modules', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: new Environment(
           createEnvironment({
@@ -2607,6 +2700,7 @@ describe('resolver', function () {
     });
 
     it('should error when a library has an incorrect external dependency version', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: new Environment(
           createEnvironment({
@@ -2630,6 +2724,7 @@ describe('resolver', function () {
     });
 
     it('should error when package.json is invalid', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'json-error',
@@ -2670,6 +2765,7 @@ describe('resolver', function () {
     });
 
     it('should error on an invalid empty specifier', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '',
@@ -2684,6 +2780,7 @@ describe('resolver', function () {
     });
 
     it('should error on unknown URL schemes', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'http://parceljs.org',
@@ -2709,6 +2806,7 @@ describe('resolver', function () {
     });
 
     it('should error on non-exported package paths', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-exports/internal',
@@ -2747,6 +2845,7 @@ describe('resolver', function () {
     });
 
     it('should error when export does not exist', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-exports/missing',
@@ -2762,6 +2861,7 @@ describe('resolver', function () {
     });
 
     it('should error on undefined package imports', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '#foo',
@@ -2797,6 +2897,7 @@ describe('resolver', function () {
     });
 
     it("should error when package.json doesn't define imports field", async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '#foo',
@@ -2820,6 +2921,7 @@ describe('resolver', function () {
     });
 
     it("should error when a package.json couldn't be found", async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '#foo',
@@ -2839,6 +2941,7 @@ describe('resolver', function () {
     });
 
     it("should error when a tsconfig.json extends couldn't be found", async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let result = await resolver.resolve({
         env: BROWSER_ENV,
         filename: './bar',
@@ -2886,6 +2989,7 @@ describe('resolver', function () {
 
   describe('urls', function () {
     it('should ignore protocol relative urls', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '//example.com/foo.png',
@@ -2896,6 +3000,7 @@ describe('resolver', function () {
     });
 
     it('should ignore hash urls', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: '#hash',
@@ -2906,6 +3011,7 @@ describe('resolver', function () {
     });
 
     it('should ignore http: urls', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'http://example.com/foo.png',
@@ -2921,6 +3027,7 @@ describe('resolver', function () {
         return;
       }
 
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'file:///bar.js',
@@ -2961,6 +3068,7 @@ describe('resolver', function () {
     });
 
     it('supports custom mainFields', async function () {
+      // @ts-expect-error - TS7005 - Variable 'resolver' implicitly has an 'any' type.
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
         filename: 'package-types',

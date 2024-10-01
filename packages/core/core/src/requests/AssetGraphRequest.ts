@@ -1,5 +1,6 @@
 import type {NodeId} from '@atlaspack/graph';
 import type {Async} from '@atlaspack/types';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'SharedReference'. Did you mean to use 'import SharedReference from "@atlaspack/workers"' instead?
 import type {SharedReference} from '@atlaspack/workers';
 import type {
   Asset,
@@ -171,6 +172,7 @@ export class AssetGraphBuilder {
     this.isSingleChangeRebuild =
       api
         .getInvalidSubRequests()
+        // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'number' and 'string' have no overlap.
         .filter((req) => req.requestType === 'asset_request').length === 1;
     this.queue = new PromiseQueue();
 
@@ -224,6 +226,7 @@ export class AssetGraphBuilder {
       for (let childNodeId of this.assetGraph.getNodeIdsConnectedFrom(nodeId)) {
         let child = nullthrows(this.assetGraph.getNode(childNodeId));
         if (
+          // @ts-expect-error - TS2339 - Property 'hasDeferred' does not exist on type 'AssetNode | DependencyNode | RootNode | AssetGroupNode | EntrySpecifierNode | EntryFileNode'.
           (!visited.has(childNodeId) || child.hasDeferred) &&
           this.shouldVisitChild(nodeId, childNodeId)
         ) {
@@ -424,9 +427,12 @@ export class AssetGraphBuilder {
   shouldSkipRequest(nodeId: NodeId): boolean {
     let node = nullthrows(this.assetGraph.getNode(nodeId));
     return (
+      // @ts-expect-error - TS2339 - Property 'complete' does not exist on type 'AssetNode | DependencyNode | RootNode | AssetGroupNode | EntrySpecifierNode | EntryFileNode'.
       node.complete === true ||
       !typesWithRequests.has(node.type) ||
+      // @ts-expect-error - TS2339 - Property 'correspondingRequest' does not exist on type 'AssetNode | DependencyNode | RootNode | AssetGroupNode | EntrySpecifierNode | EntryFileNode'.
       (node.correspondingRequest != null &&
+        // @ts-expect-error - TS2339 - Property 'correspondingRequest' does not exist on type 'AssetNode | DependencyNode | RootNode | AssetGroupNode | EntrySpecifierNode | EntryFileNode'.
         this.api.canSkipSubrequest(node.correspondingRequest))
     );
   }
@@ -435,6 +441,7 @@ export class AssetGraphBuilder {
     nodeId: NodeId,
     errors: Array<Error>,
   ): Promise<unknown> {
+    // @ts-expect-error - TS7034 - Variable 'promise' implicitly has type 'any' in some locations where its type cannot be determined.
     let promise;
     let node = nullthrows(this.assetGraph.getNode(nodeId));
     switch (node.type) {
@@ -456,6 +463,7 @@ export class AssetGraphBuilder {
         );
     }
     return this.queue.add(() =>
+      // @ts-expect-error - TS7005 - Variable 'promise' implicitly has an 'any' type. | TS7006 - Parameter 'error' implicitly has an 'any' type.
       promise.then(null, (error) => errors.push(error)),
     );
   }

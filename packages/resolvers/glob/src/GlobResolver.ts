@@ -35,6 +35,7 @@ function errorToThrowableDiagnostic(
 }
 
 export default new Resolver({
+  // @ts-expect-error - TS2322 - Type '({ dependency, options, specifier, pipeline, logger }: { dependency: Dependency; options: PluginOptions; logger: PluginLogger; tracer: PluginTracer; specifier: string; pipeline: string | ... 1 more ... | undefined; config: unknown; }) => Promise<...>' is not assignable to type '(arg1: { dependency: Dependency; options: PluginOptions; logger: PluginLogger; tracer: PluginTracer; specifier: string; pipeline: string | ... 1 more ... | undefined; config: unknown; }) => Async<...>'.
   async resolve({dependency, options, specifier, pipeline, logger}) {
     if (!isGlob(specifier)) {
       return;
@@ -219,6 +220,7 @@ export default new Resolver({
 }) as Resolver;
 
 function set(
+  // @ts-expect-error - TS7006 - Parameter 'obj' implicitly has an 'any' type.
   obj,
   path: Array<never> | Array<string>,
   value: FilePath | string,
@@ -236,6 +238,7 @@ function set(
   obj[path[path.length - 1]] = value;
 }
 
+// @ts-expect-error - TS7006 - Parameter 'matches' implicitly has an 'any' type.
 function generate(matches, isAsync: boolean, indent = '', count = 0) {
   if (typeof matches === 'string') {
     if (isAsync) {

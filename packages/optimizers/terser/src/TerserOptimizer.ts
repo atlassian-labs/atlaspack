@@ -32,6 +32,7 @@ export default new Optimizer({
 
     let originalMap = map ? await map.stringify({}) : null;
     let config = {
+      // @ts-expect-error - TS2698 - Spread types may only be created from object types.
       ...userConfig,
       sourceMap: bundle.env.sourceMap
         ? {
@@ -106,6 +107,7 @@ export default new Optimizer({
     let resultMap = result.map;
     if (resultMap && typeof resultMap !== 'string') {
       sourceMap = new SourceMap(options.projectRoot);
+      // @ts-expect-error - TS2345 - Argument of type 'EncodedSourceMap' is not assignable to parameter of type 'Readonly<{ sources: readonly string[]; sourcesContent?: readonly (string | null)[] | undefined; names: readonly string[]; mappings: string; version?: number | undefined; file?: string | undefined; sourceRoot?: string | undefined; }>'.
       sourceMap.addVLQMap(resultMap);
       let sourcemapReference = await getSourceMapReference(sourceMap);
       if (sourcemapReference) {

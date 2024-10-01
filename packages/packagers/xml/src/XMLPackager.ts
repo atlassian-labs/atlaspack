@@ -53,10 +53,13 @@ export default new Packager({
           );
           if (parsed.documentElement != null) {
             let parent = element.parentNode;
+            // @ts-expect-error - TS2531 - Object is possibly 'null'.
             parent.removeChild(element);
+            // @ts-expect-error - TS2531 - Object is possibly 'null'.
             parent.appendChild(parsed.documentElement);
           }
         } else {
+          // @ts-expect-error - TS2531 - Object is possibly 'null'.
           element.parentNode.textContent = contents;
         }
       }

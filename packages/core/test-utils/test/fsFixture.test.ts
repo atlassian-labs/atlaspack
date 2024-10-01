@@ -18,6 +18,7 @@ import path from 'path';
 describe('dedentRaw', () => {
   it('dedents a string with leading space', () => {
     assert.equal(
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       dedentRaw`     foo
         bar
           baz
@@ -28,6 +29,7 @@ describe('dedentRaw', () => {
 
   it('dedents a string with leading newline', () => {
     assert.equal(
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       dedentRaw`
         foo
           bar
@@ -39,6 +41,7 @@ describe('dedentRaw', () => {
 
   it('dedents correctly with multiple top level entries', () => {
     assert.equal(
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       dedentRaw`
       foo
         bar: "bar"
@@ -53,6 +56,7 @@ describe('dedentRaw', () => {
 
   it('stringifies object expressions', () => {
     assert.equal(
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       dedentRaw`
         foo
           ${{
@@ -67,6 +71,7 @@ describe('dedentRaw', () => {
 
   it('does not stringify literal expressions', () => {
     assert.equal(
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       dedentRaw`
         foo
           ${JSON.stringify({
@@ -176,6 +181,7 @@ describe('FixtureTokenizer', () => {
   });
 
   it('tokenizes multiline file contents', () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     let tokens = new FixtureTokenizer(dedentRaw`
       app
         foo.js:
@@ -206,6 +212,7 @@ describe('FixtureTokenizer', () => {
   });
 
   it('tokenizes windows paths', () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     let tokens = new FixtureTokenizer(dedentRaw`
       foo\\bar
         bat:
@@ -493,6 +500,7 @@ describe('fsFixture', () => {
   let workerFarm: any;
 
   beforeEach(() => {
+    // @ts-expect-error - TS2345 - Argument of type '{ workerPath: string; }' is not assignable to parameter of type 'FarmOptions'.
     workerFarm = new WorkerFarm({
       workerPath: require.resolve('@atlaspack/core/src/worker.js'),
     });
@@ -504,6 +512,7 @@ describe('fsFixture', () => {
   });
 
   it('applies a fixture with nesting and overwriting', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(fs)`
       foo
         bar: bar
@@ -519,6 +528,7 @@ describe('fsFixture', () => {
   });
 
   it('applies a fixture with expressions', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(fs)`
       app
         yarn.lock:
@@ -565,6 +575,7 @@ describe('fsFixture', () => {
   });
 
   it('applies a fixture with multiline file contents', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(fs)`
       app
         foo.js:
@@ -590,6 +601,7 @@ describe('fsFixture', () => {
   });
 
   it('applies a fixture with windows paths', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(fs)`
       foo\\bar
         bat:
@@ -605,6 +617,7 @@ describe('toFixture', () => {
   let workerFarm: any;
 
   beforeEach(() => {
+    // @ts-expect-error - TS2345 - Argument of type '{ workerPath: string; }' is not assignable to parameter of type 'FarmOptions'.
     workerFarm = new WorkerFarm({
       workerPath: require.resolve('@atlaspack/core/src/worker.js'),
     });

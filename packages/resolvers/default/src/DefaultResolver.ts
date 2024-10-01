@@ -18,6 +18,7 @@ export default new Resolver({
       shouldAutoInstall: options.shouldAutoInstall,
       mode: options.mode,
       logger,
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       packageExports: conf?.contents?.packageExports ?? false,
     });
   },
@@ -28,6 +29,7 @@ export default new Resolver({
       );
     }
 
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     return resolver.resolve({
       filename: specifier,
       specifierType: dependency.specifierType,

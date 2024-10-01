@@ -11,6 +11,7 @@ export function addImportersView(
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider(
       'importersView',
+      // @ts-expect-error - TS2345 - Argument of type 'ImportersTreeProvider' is not assignable to parameter of type 'TreeDataProvider<string>'.
       importersTreeProvider,
     ),
   );
@@ -60,6 +61,7 @@ export class ImportersTreeProvider implements vscode.TreeDataProvider<string> {
     return {
       resourceUri: uri,
       collapsibleState:
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'.
         children.length > 0
           ? vscode.TreeItemCollapsibleState.Collapsed
           : vscode.TreeItemCollapsibleState.None,
@@ -72,6 +74,7 @@ export class ImportersTreeProvider implements vscode.TreeDataProvider<string> {
     };
   }
 
+  // @ts-expect-error - TS2416 - Property 'getChildren' in type 'ImportersTreeProvider' is not assignable to the same property in base type 'TreeDataProvider<string>'.
   async getChildren(element?: string | undefined) {
     if (element) {
       return await this.getAsset(element);
@@ -87,6 +90,7 @@ export class ImportersTreeProvider implements vscode.TreeDataProvider<string> {
     }
 
     let result = await this.client.sendRequest(RequestImporters, uri);
+    // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'string[]'.
     this.cache.set(uri, result ?? []);
     return result ?? [];
   }

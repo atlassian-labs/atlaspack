@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2305 - Module '"posthtml-render"' has no exported member 'PostHTMLNode'.
 import {PostHTMLNode, render} from 'posthtml-render';
 import {parseHTML, transformerOpts} from '../src/HTMLTransformer';
 import assert from 'assert';
@@ -15,6 +16,7 @@ function normalizeHTML(code: string): string {
 
 function renderHTML(newAST: {program: PostHTMLNode}): string {
   return render(newAST.program, {
+    // @ts-expect-error - TS2322 - Type '"slash"' is not assignable to type 'closingSingleTagOptionEnum | undefined'.
     closingSingleTag: 'slash',
   });
 }
@@ -62,8 +64,10 @@ async function runTestTransform(
       hmrOptions: options.hmrOptions,
     },
   } as const;
+  // @ts-expect-error - TS2345 - Argument of type '{ readonly asset: { readonly getAST: () => AST; readonly setAST: (n: any) => void; readonly addURLDependency: (url: string, opts: DependencyOptions) => string; readonly env: { readonly shouldScopeHoist: boolean; readonly supports: (tag: string, defaultValue: boolean) => boolean; }; readonly addDependency: (specifier...' is not assignable to parameter of type '{ asset: MutableAsset; config: undefined; resolve: ResolveFn; options: PluginOptions; logger: PluginLogger; tracer: PluginTracer; }'.
   const transformResult = await transformerOpts.transform(transformInput);
 
+  // @ts-expect-error - TS2345 - Argument of type 'null' is not assignable to parameter of type '{ program: PostHTMLNode; }'.
   const outputCode = renderHTML(newAST);
 
   return {dependencies, newAST, outputCode, transformResult, inputAsset: asset};
@@ -141,6 +145,7 @@ describe('HTMLTransformer', () => {
 </html>
     `;
     const {transformResult, inputAsset} = await runTestTransform(code);
+    // @ts-expect-error - TS2345 - Argument of type '{ readonly getAST: () => AST; readonly setAST: (n: any) => void; readonly addURLDependency: (url: string, opts: DependencyOptions) => string; readonly env: { readonly shouldScopeHoist: boolean; readonly supports: (tag: string, defaultValue: boolean) => boolean; }; readonly addDependency: (specifier: DependencyOption...' is not assignable to parameter of type 'MutableAsset | TransformerResult'.
     assert(transformResult.includes(inputAsset));
     const assets = normalizeAssets(transformResult);
     assert.deepEqual(assets[1], {

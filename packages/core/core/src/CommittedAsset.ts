@@ -78,6 +78,7 @@ export default class CommittedAsset {
     }
 
     this.content = bufferStream(content);
+    // @ts-expect-error - TS2322 - Type 'string | Buffer' is not assignable to type 'Buffer'.
     return this.content;
   }
 
@@ -104,6 +105,7 @@ export default class CommittedAsset {
       })();
     }
 
+    // @ts-expect-error - TS2322 - Type 'Promise<void> | Promise<Buffer | null | undefined>' is not assignable to type 'Promise<Buffer | null | undefined>'.
     return this.mapBuffer ?? Promise.resolve();
   }
 
@@ -129,9 +131,11 @@ export default class CommittedAsset {
     if (this.ast == null) {
       this.ast = this.options.cache
         .getBlob(this.value.astKey)
+        // @ts-expect-error - TS7006 - Parameter 'serializedAst' implicitly has an 'any' type.
         .then((serializedAst) => deserializeRaw(serializedAst));
     }
 
+    // @ts-expect-error - TS2322 - Type 'Promise<AST> | null | undefined' is not assignable to type 'Promise<AST | null | undefined>'.
     return this.ast;
   }
 

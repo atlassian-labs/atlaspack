@@ -78,6 +78,7 @@ export function assetFromValue(
 
 class BaseAsset {
   #asset: CommittedAsset | UncommittedAsset;
+  // @ts-expect-error - TS7008 - Member '#query' implicitly has an 'any' type.
   #query /*: ?URLSearchParams */;
 
   constructor(asset: CommittedAsset | UncommittedAsset) {
@@ -142,6 +143,7 @@ class BaseAsset {
   }
 
   get symbols(): IAssetSymbols {
+    // @ts-expect-error - TS2322 - Type 'import("/home/ubuntu/parcel/packages/core/core/src/public/Symbols").AssetSymbols' is not assignable to type 'import("/home/ubuntu/parcel/packages/core/types-internal/src/index").AssetSymbols'.
     return new AssetSymbols(this.#asset.options, this.#asset.value);
   }
 
@@ -190,8 +192,10 @@ class BaseAsset {
 
 export class Asset extends BaseAsset implements IAsset {
   #asset /*: CommittedAsset | UncommittedAsset */;
+  // @ts-expect-error - TS7008 - Member '#env' implicitly has an 'any' type.
   #env /*: ?Environment */;
 
+  // @ts-expect-error - TS2376 - A 'super' call must be the first statement in the constructor when a class contains initialized properties, parameter properties, or private identifiers.
   constructor(asset: CommittedAsset | UncommittedAsset) {
     let assetValueToAsset = asset.value.committed
       ? committedAssetValueToAsset
@@ -208,11 +212,13 @@ export class Asset extends BaseAsset implements IAsset {
   }
 
   get env(): IEnvironment {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'. | TS2532 - Object is possibly 'undefined'.
     this.#env ??= new Environment(this.#asset.value.env, this.#asset.options);
     return this.#env;
   }
 
   get stats(): Stats {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#asset.value.stats;
   }
 }
@@ -220,6 +226,7 @@ export class Asset extends BaseAsset implements IAsset {
 export class MutableAsset extends BaseAsset implements IMutableAsset {
   #asset /*: UncommittedAsset */;
 
+  // @ts-expect-error - TS2376 - A 'super' call must be the first statement in the constructor when a class contains initialized properties, parameter properties, or private identifiers.
   constructor(asset: UncommittedAsset) {
     let existing = assetValueToMutableAsset.get(asset.value);
     if (existing != null) {
@@ -234,107 +241,141 @@ export class MutableAsset extends BaseAsset implements IMutableAsset {
   }
 
   setMap(map?: SourceMap | null): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.setMap(map);
   }
 
   get type(): string {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#asset.value.type;
   }
 
+  // @ts-expect-error - TS1095 - A 'set' accessor cannot have a return type annotation.
   set type(type: string): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     if (type !== this.#asset.value.type) {
+      // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
       this.#asset.value.type = type;
+      // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
       this.#asset.updateId();
     }
   }
 
+  // @ts-expect-error - TS2380 - The return type of a 'get' accessor must be assignable to its 'set' accessor type
   get bundleBehavior(): BundleBehavior | null | undefined {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     let bundleBehavior = this.#asset.value.bundleBehavior;
     return bundleBehavior == null ? null : BundleBehaviorNames[bundleBehavior];
   }
 
+  // @ts-expect-error - TS1095 - A 'set' accessor cannot have a return type annotation.
   set bundleBehavior(bundleBehavior?: BundleBehavior | null): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.value.bundleBehavior = bundleBehavior
       ? BundleBehaviorMap[bundleBehavior]
       : null;
   }
 
   get isBundleSplittable(): boolean {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#asset.value.isBundleSplittable;
   }
 
+  // @ts-expect-error - TS1095 - A 'set' accessor cannot have a return type annotation.
   set isBundleSplittable(isBundleSplittable: boolean): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.value.isBundleSplittable = isBundleSplittable;
   }
 
   get sideEffects(): boolean {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#asset.value.sideEffects;
   }
 
+  // @ts-expect-error - TS1095 - A 'set' accessor cannot have a return type annotation.
   set sideEffects(sideEffects: boolean): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.value.sideEffects = sideEffects;
   }
 
+  // @ts-expect-error - TS2380 - The return type of a 'get' accessor must be assignable to its 'set' accessor type
   get uniqueKey(): string | null | undefined {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#asset.value.uniqueKey;
   }
 
+  // @ts-expect-error - TS1095 - A 'set' accessor cannot have a return type annotation.
   set uniqueKey(uniqueKey?: string | null): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     if (this.#asset.value.uniqueKey != null) {
       throw new Error(
         "Cannot change an asset's uniqueKey after it has been set.",
       );
     }
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.value.uniqueKey = uniqueKey;
   }
 
   get symbols(): IMutableAssetSymbols {
+    // @ts-expect-error - TS2322 - Type 'import("/home/ubuntu/parcel/packages/core/core/src/public/Symbols").MutableAssetSymbols' is not assignable to type 'import("/home/ubuntu/parcel/packages/core/types-internal/src/index").MutableAssetSymbols'. | TS2532 - Object is possibly 'undefined'. | TS2532 - Object is possibly 'undefined'.
     return new MutableAssetSymbols(this.#asset.options, this.#asset.value);
   }
 
   addDependency(dep: DependencyOptions): string {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#asset.addDependency(dep);
   }
 
   invalidateOnFileChange(filePath: FilePath): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.invalidateOnFileChange(
+      // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
       toProjectPath(this.#asset.options.projectRoot, filePath),
     );
   }
 
   invalidateOnFileCreate(invalidation: FileCreateInvalidation): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.invalidateOnFileCreate(invalidation);
   }
 
   invalidateOnEnvChange(env: string): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.invalidateOnEnvChange(env);
   }
 
   invalidateOnStartup(): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.invalidateOnStartup();
   }
 
   invalidateOnBuild(): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.invalidateOnBuild();
   }
 
   isASTDirty(): boolean {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#asset.isASTDirty;
   }
 
   setBuffer(buffer: Buffer): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.setBuffer(buffer);
   }
 
   setCode(code: string): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.setCode(code);
   }
 
   setStream(stream: Readable): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.setStream(stream);
   }
 
   setAST(ast: AST): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     return this.#asset.setAST(ast);
   }
 
@@ -348,10 +389,13 @@ export class MutableAsset extends BaseAsset implements IMutableAsset {
   }
 
   setEnvironment(env: EnvironmentOptions): void {
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.value.env = createEnvironment({
       ...env,
+      // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
       loc: toInternalSourceLocation(this.#asset.options.projectRoot, env.loc),
     });
+    // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
     this.#asset.updateId();
   }
 }

@@ -2,6 +2,7 @@ export class DefaultMap<K, V> extends Map<K, V> {
   _getDefault: (arg1: K) => V;
 
   constructor(getDefault: (arg1: K) => V, entries?: Iterable<[K, V]>) {
+    // @ts-expect-error - TS2769 - No overload matches this call.
     super(entries);
     this._getDefault = getDefault;
   }
@@ -15,6 +16,7 @@ export class DefaultMap<K, V> extends Map<K, V> {
       this.set(key, ret);
     }
 
+    // @ts-expect-error - TS2322 - Type 'V | undefined' is not assignable to type 'V'.
     return ret;
   }
 }
@@ -27,6 +29,7 @@ export class DefaultWeakMap<K extends IKey, V> extends WeakMap<K, V> {
   _getDefault: (arg1: K) => V;
 
   constructor(getDefault: (arg1: K) => V, entries?: Iterable<[K, V]>) {
+    // @ts-expect-error - TS2769 - No overload matches this call.
     super(entries);
     this._getDefault = getDefault;
   }
@@ -40,6 +43,7 @@ export class DefaultWeakMap<K extends IKey, V> extends WeakMap<K, V> {
       this.set(key, ret);
     }
 
+    // @ts-expect-error - TS2322 - Type 'V | undefined' is not assignable to type 'V'.
     return ret;
   }
 }

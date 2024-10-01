@@ -1,7 +1,9 @@
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'less'. '/home/ubuntu/parcel/node_modules/less/index.js' implicitly has an 'any' type.
 import type Less from 'less';
 import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
 import SourceMap from '@parcel/source-map';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'less'. '/home/ubuntu/parcel/node_modules/less/index.js' implicitly has an 'any' type.
 import less from 'less';
 
 import {load} from './loadConfig';
@@ -27,6 +29,7 @@ export default new Transformer({
     let code = await asset.getCode();
     let result;
     try {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       let lessConfig: LessConfig = config ? {...config.config} : {};
 
       if (asset.env.sourceMap) {
@@ -56,6 +59,7 @@ export default new Transformer({
       let rawMap = JSON.parse(result.map);
       map.addVLQMap({
         ...rawMap,
+        // @ts-expect-error - TS7006 - Parameter 's' implicitly has an 'any' type.
         sources: rawMap.sources.map((s) =>
           path.relative(options.projectRoot, s),
         ),
@@ -69,6 +73,7 @@ export default new Transformer({
   },
 }) as Transformer;
 
+// @ts-expect-error - TS7031 - Binding element 'asset' implicitly has an 'any' type.
 function urlPlugin({asset}) {
   return {
     install(less: Less, pluginManager: any) {
@@ -79,6 +84,7 @@ function urlPlugin({asset}) {
 
       const visitor = new less.visitors.Visitor({
         visitUrl(node: URL) {
+          // @ts-expect-error - TS2339 - Property 'value' does not exist on type 'URL'.
           const valueNode = node.value as LessNodeWithValue;
           const stringValue = valueNode.value as string;
           if (
@@ -96,6 +102,7 @@ function urlPlugin({asset}) {
   };
 }
 
+// @ts-expect-error - TS7031 - Binding element 'asset' implicitly has an 'any' type. | TS7031 - Binding element 'resolve' implicitly has an 'any' type.
 function resolvePathPlugin({asset, resolve}) {
   return {
     install(less: any, pluginManager: any) {

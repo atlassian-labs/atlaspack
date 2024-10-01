@@ -12,6 +12,7 @@ import {
 
 describe('AtlaspackV3', function () {
   it('builds', async () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, __dirname)`
       index.js:
         console.log('hello world');
@@ -28,6 +29,7 @@ describe('AtlaspackV3', function () {
     `;
 
     let atlaspack = new AtlaspackV3({
+      // @ts-expect-error - TS2345 - Argument of type '{ corePath: string; entries: string[]; fs: FileSystem; nodeWorkers: number; packageManager: PackageManager; }' is not assignable to parameter of type '{ fs?: unknown; nodeWorkers?: number | undefined; packageManager?: unknown; threads?: number | undefined; }'.
       corePath: '',
       entries: [join(__dirname, 'index.js')],
       fs: toFileSystemV3(overlayFS),

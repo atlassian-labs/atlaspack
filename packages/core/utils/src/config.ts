@@ -2,6 +2,7 @@ import type {ConfigResult, File, FilePath} from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import path from 'path';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'clone'. '/home/ubuntu/parcel/node_modules/clone/clone.js' implicitly has an 'any' type.
 import clone from 'clone';
 import json5 from 'json5';
 import {parse as toml} from '@iarna/toml';

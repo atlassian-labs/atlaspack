@@ -23,16 +23,24 @@ export default new Transformer({
       packageKey: '@atlaspack/transformer-css',
     });
     let contents = conf?.contents;
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     if (typeof contents?.cssModules?.include === 'string') {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'. | TS2571 - Object is of type 'unknown'.
       contents.cssModules.include = [globToRegex(contents.cssModules.include)];
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     } else if (Array.isArray(contents?.cssModules?.include)) {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'. | TS2571 - Object is of type 'unknown'. | TS7006 - Parameter 'include' implicitly has an 'any' type.
       contents.cssModules.include = contents.cssModules.include.map((include) =>
         typeof include === 'string' ? globToRegex(include) : include,
       );
     }
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     if (typeof contents?.cssModules?.exclude === 'string') {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'. | TS2571 - Object is of type 'unknown'.
       contents.cssModules.exclude = [globToRegex(contents.cssModules.exclude)];
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     } else if (Array.isArray(contents?.cssModules?.exclude)) {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'. | TS2571 - Object is of type 'unknown'. | TS7006 - Parameter 'exclude' implicitly has an 'any' type.
       contents.cssModules.exclude = contents.cssModules.exclude.map((exclude) =>
         typeof exclude === 'string' ? globToRegex(exclude) : exclude,
       );
@@ -57,6 +65,7 @@ export default new Transformer({
       asset.getBuffer(),
       asset.getMap(),
       // $FlowFixMe native.default is the init function only when bundled for the browser build
+      // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'. | TS2339 - Property 'default' does not exist on type 'typeof import("/home/ubuntu/parcel/node_modules/lightningcss/node/index")'.
       process.browser && native.default(),
     ]);
 
@@ -67,6 +76,7 @@ export default new Transformer({
         res = transformStyleAttribute({
           code,
           analyzeDependencies: true,
+          // @ts-expect-error - TS2571 - Object is of type 'unknown'.
           errorRecovery: config?.errorRecovery || false,
           targets,
         });
@@ -76,6 +86,7 @@ export default new Transformer({
           asset.meta.type !== 'tag' &&
           asset.meta.cssModulesCompiled == null
         ) {
+          // @ts-expect-error - TS2571 - Object is of type 'unknown'.
           let cssModulesConfig = config?.cssModules;
           let isCSSModule = /\.module\./.test(asset.filePath);
           if (asset.isSource) {
@@ -86,6 +97,7 @@ export default new Transformer({
             if (typeof cssModulesConfig === 'boolean') {
               isCSSModule = true;
             } else if (cssModulesConfig?.include) {
+              // @ts-expect-error - TS7006 - Parameter 'include' implicitly has an 'any' type.
               isCSSModule = cssModulesConfig.include.some((include) =>
                 include.test(projectRootPath),
               );
@@ -124,8 +136,11 @@ export default new Transformer({
                 }
               : false,
           sourceMap: !!asset.env.sourceMap,
+          // @ts-expect-error - TS2571 - Object is of type 'unknown'.
           drafts: config?.drafts,
+          // @ts-expect-error - TS2571 - Object is of type 'unknown'.
           pseudoClasses: config?.pseudoClasses,
+          // @ts-expect-error - TS2571 - Object is of type 'unknown'.
           errorRecovery: config?.errorRecovery || false,
           targets,
         });
@@ -178,12 +193,15 @@ export default new Transformer({
       }
     }
 
+    // @ts-expect-error - TS2339 - Property 'map' does not exist on type 'TransformAttributeResult'.
     if (res.map != null) {
+      // @ts-expect-error - TS2339 - Property 'map' does not exist on type 'TransformAttributeResult'.
       let vlqMap = JSON.parse(Buffer.from(res.map).toString());
       let map = new SourceMap(options.projectRoot);
       map.addVLQMap(vlqMap);
 
       if (originalMap) {
+        // @ts-expect-error - TS2345 - Argument of type 'SourceMap' is not assignable to parameter of type 'Buffer'.
         map.extends(originalMap);
       }
 
@@ -197,6 +215,7 @@ export default new Transformer({
           loc = remapSourceLocation(loc, originalMap);
         }
 
+        // @ts-expect-error - TS2339 - Property 'exports' does not exist on type 'TransformAttributeResult'.
         if (dep.type === 'import' && !res.exports) {
           asset.addDependency({
             specifier: dep.url,
@@ -224,9 +243,12 @@ export default new Transformer({
     let assets = [asset];
     let buffer = Buffer.from(res.code);
 
+    // @ts-expect-error - TS2339 - Property 'exports' does not exist on type 'TransformAttributeResult'.
     if (res.exports != null) {
+      // @ts-expect-error - TS2339 - Property 'exports' does not exist on type 'TransformAttributeResult'.
       let exports = res.exports;
       asset.symbols.ensure();
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       asset.symbols.set('default', 'default');
 
       let dependencies = new Map();
@@ -309,6 +331,7 @@ export default new Transformer({
       // It's possible that the exports can be ordered differently between builds.
       // Sorting by key is safe as the order is irrelevant but needs to be deterministic.
       for (let key of Object.keys(exports).sort()) {
+        // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         asset.symbols.set(key, exports[key].name);
         add(key);
       }
@@ -320,12 +343,15 @@ export default new Transformer({
             let d = `dep_$${c++}`;
             depjs += `import * as ${d} from ${JSON.stringify(dep.url)};\n`;
             js += `for (let key in ${d}) { if (key in module.exports) module.exports[key] += ' ' + ${d}[key]; else module.exports[key] = ${d}[key]; }\n`;
+            // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
             asset.symbols.set('*', '*');
           }
         }
       }
 
+      // @ts-expect-error - TS2339 - Property 'references' does not exist on type 'TransformAttributeResult'.
       if (res.references != null) {
+        // @ts-expect-error - TS2339 - Property 'references' does not exist on type 'TransformAttributeResult'.
         let references = res.references;
         for (let symbol in references) {
           let reference = references[symbol];
@@ -345,6 +371,7 @@ export default new Transformer({
 
       assets.push({
         type: 'js',
+        // @ts-expect-error - TS2345 - Argument of type '{ type: string; content: string; dependencies: never[]; env: Environment; }' is not assignable to parameter of type 'MutableAsset'.
         content: depjs + js,
         dependencies: jsDeps,
         env,

@@ -54,6 +54,7 @@ export default async function bundleReport(
       for (let asset of largestAssets) {
         let columns: Array<string> = [
           asset == largestAssets[largestAssets.length - 1] ? '└── ' : '├── ',
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           chalk.dim(prettifySize(asset.size)),
           chalk.dim(chalk.green(prettifyTime(asset.time))),
         ];
@@ -86,6 +87,7 @@ export default async function bundleReport(
 
   // Render table
   writeOut('');
+  // @ts-expect-error - TS2345 - Argument of type '{ align: string; }[]' is not assignable to parameter of type 'ColumnType[]'.
   table(COLUMNS, rows);
 }
 

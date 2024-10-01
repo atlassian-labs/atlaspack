@@ -1,4 +1,5 @@
 import assert from 'assert';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
 import {PassThrough} from 'stream';
 import {_report} from '../src/CLIReporter';
@@ -95,8 +96,10 @@ describe('CLIReporter', () => {
           },
         ],
       },
+      // @ts-expect-error - TS2345 - Argument of type '{ logLevel: string; cacheDir: ".parcel-cache"; parcelVersion: ""; entries: readonly []; targets: readonly []; projectRoot: ""; distDir: "dist"; lockFile: undefined; shouldAutoInstall: false; shouldBuildLazily: false; ... 13 more ...; featureFlags: FeatureFlags; }' is not assignable to parameter of type 'PluginOptions'.
       options,
     );
+    // @ts-expect-error - TS2345 - Argument of type '{ logLevel: string; cacheDir: ".parcel-cache"; parcelVersion: ""; entries: readonly []; targets: readonly []; projectRoot: ""; distDir: "dist"; lockFile: undefined; shouldAutoInstall: false; shouldBuildLazily: false; ... 13 more ...; featureFlags: FeatureFlags; }' is not assignable to parameter of type 'PluginOptions'.
     await _report({type: 'log', level: 'success', message: 'success'}, options);
     await _report(
       {
@@ -109,6 +112,7 @@ describe('CLIReporter', () => {
           },
         ],
       },
+      // @ts-expect-error - TS2345 - Argument of type '{ logLevel: string; cacheDir: ".parcel-cache"; parcelVersion: ""; entries: readonly []; targets: readonly []; projectRoot: ""; distDir: "dist"; lockFile: undefined; shouldAutoInstall: false; shouldBuildLazily: false; ... 13 more ...; featureFlags: FeatureFlags; }' is not assignable to parameter of type 'PluginOptions'.
       options,
     );
 
@@ -204,6 +208,7 @@ describe('CLIReporter', () => {
     // emit a buildSuccess event to reset the timings and seen phases
     // from the previous test
     process.env['ATLASPACK_SHOW_PHASE_TIMES'] = undefined;
+    // @ts-expect-error - TS2345 - Argument of type '{ type: "buildSuccess"; }' is not assignable to parameter of type 'ReporterEvent'.
     await _report({type: 'buildSuccess'}, EMPTY_OPTIONS);
 
     process.env['ATLASPACK_SHOW_PHASE_TIMES'] = 'true';
@@ -216,13 +221,16 @@ describe('CLIReporter', () => {
       // $FlowFixMe
       {
         type: 'buildProgress',
+        // @ts-expect-error - TS2322 - Type '"packaging"' is not assignable to type '"optimizing"'.
         phase: 'packaging',
+        // @ts-expect-error - TS2740 - Type '{ displayName: string; }' is missing the following properties from type 'NamedBundle': publicId, name, id, type, and 12 more.
         bundle: {
           displayName: 'test',
         },
       },
       EMPTY_OPTIONS,
     );
+    // @ts-expect-error - TS2345 - Argument of type '{ type: "buildSuccess"; }' is not assignable to parameter of type 'ReporterEvent'.
     await _report({type: 'buildSuccess'}, EMPTY_OPTIONS);
     const expected =
       /Building...\nBundling...\nPackaging & Optimizing...\nTransforming finished in [0-9]ms\nBundling finished in [0-9]ms\nPackaging & Optimizing finished in [0-9]ms/;
@@ -240,13 +248,16 @@ describe('CLIReporter', () => {
       // $FlowFixMe
       {
         type: 'buildProgress',
+        // @ts-expect-error - TS2322 - Type '"packaging"' is not assignable to type '"optimizing"'.
         phase: 'packaging',
+        // @ts-expect-error - TS2740 - Type '{ displayName: string; }' is missing the following properties from type 'NamedBundle': publicId, name, id, type, and 12 more.
         bundle: {
           displayName: 'test',
         },
       },
       EMPTY_OPTIONS,
     );
+    // @ts-expect-error - TS2345 - Argument of type '{ type: "buildSuccess"; }' is not assignable to parameter of type 'ReporterEvent'.
     await _report({type: 'buildSuccess'}, EMPTY_OPTIONS);
 
     assert.equal(

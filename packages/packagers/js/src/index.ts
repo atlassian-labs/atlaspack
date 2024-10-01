@@ -66,13 +66,16 @@ export default new Packager({
       },
     );
 
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     let name = packageName?.contents?.name ?? '';
     return {
       parcelRequireName: 'parcelRequire' + hashString(name).slice(-4),
       unstable_asyncBundleRuntime: Boolean(
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'.
         conf?.contents?.unstable_asyncBundleRuntime,
       ),
       unstable_forceSkipWrapAssets:
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'.
         conf?.contents?.unstable_forceSkipWrapAssets ?? [],
     };
   },
@@ -105,8 +108,11 @@ export default new Packager({
             options,
             bundleGraph,
             bundle,
+            // @ts-expect-error - TS2571 - Object is of type 'unknown'.
             nullthrows(config).parcelRequireName,
+            // @ts-expect-error - TS2571 - Object is of type 'unknown'.
             nullthrows(config).unstable_asyncBundleRuntime,
+            // @ts-expect-error - TS2571 - Object is of type 'unknown'.
             nullthrows(config).unstable_forceSkipWrapAssets,
             logger,
           )
@@ -114,6 +120,7 @@ export default new Packager({
             options,
             bundleGraph,
             bundle,
+            // @ts-expect-error - TS2571 - Object is of type 'unknown'.
             nullthrows(config).parcelRequireName,
           );
 

@@ -1,5 +1,7 @@
+// @ts-expect-error - TS7016 - Could not find a declaration file for module '@babel/core'. '/home/ubuntu/parcel/node_modules/@babel/core/lib/index.js' implicitly has an 'any' type.
 import * as babel from '@babel/core';
 import assert from 'assert';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module '@atlaspack/babel-preset-env'. '/home/ubuntu/parcel/packages/utils/babel-preset-env/src/index.js' implicitly has an 'any' type.
 import preset from '@atlaspack/babel-preset-env';
 
 const input = `

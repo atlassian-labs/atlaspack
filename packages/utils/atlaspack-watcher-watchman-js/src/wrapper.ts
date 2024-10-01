@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'fb-watchman'. '/home/ubuntu/parcel/node_modules/fb-watchman/index.js' implicitly has an 'any' type.
 import * as watchman from 'fb-watchman';
 import {isGlob} from '@atlaspack/utils';
 import logger from '@atlaspack/logger';
@@ -99,8 +100,10 @@ export class AtlaspackWatcherWatchmanJS implements Watcher {
       return this.initPromise;
     }
 
+    // @ts-expect-error - TS2322 - Type 'Promise<void>' is not assignable to type 'Promise<undefined>'.
     this.initPromise = this._init(watchDir);
 
+    // @ts-expect-error - TS2322 - Type 'Promise<undefined> | undefined' is not assignable to type 'Promise<void>'.
     return this.initPromise;
   }
 
@@ -201,6 +204,7 @@ export class AtlaspackWatcherWatchmanJS implements Watcher {
       },
     ]);
 
+    // @ts-expect-error - TS7006 - Parameter 'resp' implicitly has an 'any' type.
     this.client.on('subscription', function (resp) {
       if (!resp.files || resp.subscription !== subscriptionName) {
         return;

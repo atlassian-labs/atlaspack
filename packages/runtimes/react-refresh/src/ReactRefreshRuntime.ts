@@ -1,5 +1,6 @@
 import {Runtime} from '@atlaspack/plugin';
 import {loadConfig} from '@atlaspack/utils';
+// @ts-expect-error - TS2732 - Cannot find module 'react-refresh/package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import {version} from 'react-refresh/package.json';
 
 const CODE = `

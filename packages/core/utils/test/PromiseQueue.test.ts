@@ -1,7 +1,9 @@
 import assert from 'assert';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'random-int'. '/home/ubuntu/parcel/node_modules/random-int/index.js' implicitly has an 'any' type.
 import randomInt from 'random-int';
 
 import PromiseQueue from '../src/PromiseQueue';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
 
 describe('PromiseQueue', () => {

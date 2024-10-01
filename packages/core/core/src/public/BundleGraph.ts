@@ -285,6 +285,7 @@ export default class BundleGraph<TBundle extends IBundle>
     } | null,
   ): TContext | null | undefined {
     return this.#graph.traverse(
+      // @ts-expect-error - TS2345 - Argument of type '(node: AssetNode | DependencyNode, actions: TraversalActions) => { type: string; value: Asset; } | { type: string; value: Dependency; } | null' is not assignable to parameter of type '(arg1: AssetNode | DependencyNode, arg2: TraversalActions) => BundleGraphTraversable | null | undefined'.
       mapVisitor((node, actions) => {
         // Skipping unused dependencies here is faster than doing an isDependencySkipped check inside the visitor
         // because the node needs to be re-looked up by id from the hashmap.

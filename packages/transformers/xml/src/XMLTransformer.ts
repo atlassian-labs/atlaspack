@@ -20,17 +20,20 @@ export default new Transformer({
 
     let parts: Array<any> = [];
     let nonNamespacedHandlers = !dom.documentElement.namespaceURI
-      ? NON_NAMESPACED_HANDLERS[dom.documentElement.nodeName] || {}
+      ? // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly rss: typeof import("/home/ubuntu/parcel/packages/transformers/xml/src/rss"); }'.
+        NON_NAMESPACED_HANDLERS[dom.documentElement.nodeName] || {}
       : {};
 
     walk(dom, (node) => {
       let handler =
         node.nodeType === node.ELEMENT_NODE
           ? node.namespaceURI
-            ? HANDLERS[node.namespaceURI]?.[node.localName]
+            ? // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly 'http://www.w3.org/2005/Atom': typeof import("/home/ubuntu/parcel/packages/transformers/xml/src/atom"); }'.
+              HANDLERS[node.namespaceURI]?.[node.localName]
             : nonNamespacedHandlers[node.nodeName]
           : node.nodeType === node.PROCESSING_INSTRUCTION_NODE
-          ? processingInstruction[node.target]
+          ? // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'typeof import("/home/ubuntu/parcel/packages/transformers/xml/src/processing-instruction")'.
+            processingInstruction[node.target]
           : undefined;
 
       if (handler) {

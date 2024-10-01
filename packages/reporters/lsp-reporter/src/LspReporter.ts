@@ -1,5 +1,6 @@
 import type {Diagnostic as ParcelDiagnostic} from '@atlaspack/diagnostic';
 import type {BundleGraph, FilePath, PackagedBundle} from '@atlaspack/types';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'ps-node'. '/home/ubuntu/parcel/node_modules/ps-node/index.js' implicitly has an 'any' type.
 import type {Program, Query} from 'ps-node';
 import type {Diagnostic, DocumentUri} from 'vscode-languageserver';
 import type {MessageConnection} from 'vscode-jsonrpc/node';
@@ -16,11 +17,13 @@ import os from 'os';
 import url from 'url';
 import fs from 'fs';
 import nullthrows from 'nullthrows';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'ps-node'. '/home/ubuntu/parcel/node_modules/ps-node/index.js' implicitly has an 'any' type.
 import * as ps from 'ps-node';
 import {promisify} from 'util';
 
 import {createServer} from './ipc';
 import {
+  // @ts-expect-error - TS2305 - Module '"@atlaspack/lsp-protocol"' has no exported member 'PublishDiagnostic'.
   PublishDiagnostic,
   NotificationBuildStatus,
   NotificationWorkspaceDiagnostics,
@@ -61,6 +64,7 @@ const getWorkspaceDiagnostics = (): Array<PublishDiagnostic> =>
     diagnostics,
   }));
 
+// @ts-expect-error - TS7034 - Variable 'server' implicitly has type 'any' in some locations where its type cannot be determined.
 let server;
 let connections: Array<MessageConnection> = [];
 
@@ -72,6 +76,7 @@ let bundleGraph: Promise<BundleGraph<PackagedBundle> | null | undefined> =
 
 let watchStarted = false;
 let lspStarted = false;
+// @ts-expect-error - TS7034 - Variable 'watchStartPromise' implicitly has type 'any' in some locations where its type cannot be determined.
 let watchStartPromise;
 
 const LSP_SENTINEL_FILENAME = 'lsp-server';
@@ -86,6 +91,7 @@ async function watchLspActive(): Promise<FSWatcher> {
     //
   }
 
+  // @ts-expect-error - TS2769 - No overload matches this call.
   return fs.watch(BASEDIR, (eventType: string, filename: string) => {
     switch (eventType) {
       case 'rename':
@@ -128,6 +134,7 @@ async function doWatchStart(options: PluginOptions) {
       let graph = await bundleGraph;
       if (!graph) return;
 
+      // @ts-expect-error - TS2345 - Argument of type 'CancellationToken' is not assignable to parameter of type 'string'.
       return getDiagnosticsUnusedExports(graph, uri);
     });
 
@@ -135,6 +142,7 @@ async function doWatchStart(options: PluginOptions) {
       let graph = await bundleGraph;
       if (!graph) return null;
 
+      // @ts-expect-error - TS2345 - Argument of type 'CancellationToken' is not assignable to parameter of type 'string'.
       return getImporters(graph, params);
     });
 
@@ -159,9 +167,11 @@ export default new Reporter({
     }
 
     if (watchStarted && lspStarted) {
+      // @ts-expect-error - TS7005 - Variable 'watchStartPromise' implicitly has an 'any' type.
       if (!watchStartPromise) {
         watchStartPromise = doWatchStart(options);
       }
+      // @ts-expect-error - TS7005 - Variable 'watchStartPromise' implicitly has an 'any' type.
       await watchStartPromise;
     }
 
@@ -191,6 +201,7 @@ export default new Reporter({
       }
       case 'log':
         if (
+          // @ts-expect-error - TS2339 - Property 'diagnostics' does not exist on type 'ProgressLogEvent | DiagnosticLogEvent | TextLogEvent'.
           event.diagnostics != null &&
           (event.level === 'error' ||
             event.level === 'warn' ||
@@ -213,6 +224,7 @@ export default new Reporter({
       }
       case 'watchEnd':
         connections.forEach((c) => c.end());
+        // @ts-expect-error - TS7005 - Variable 'server' implicitly has an 'any' type.
         await server.close();
         ignoreFail(() => fs.unlinkSync(META_FILE));
         break;
@@ -352,8 +364,10 @@ function getDiagnosticsUnusedExports(
       tags: [DiagnosticTag.Unnecessary],
     });
 
+    // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'Dependency | Asset'.
     let usedSymbols = bundleGraph.getUsedSymbols(asset);
     if (usedSymbols) {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       for (let [exported, symbol] of asset.symbols) {
         if (!usedSymbols.has(exported)) {
           if (symbol.loc) {
@@ -380,6 +394,7 @@ function getDiagnosticsUnusedExports(
       // }
     }
 
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     for (let dep of asset.getDependencies()) {
       let usedSymbols = bundleGraph.getUsedSymbols(dep);
       if (usedSymbols) {
@@ -448,6 +463,7 @@ function getImporters(
   });
 
   if (asset) {
+    // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'Asset'.
     let incoming = bundleGraph.getIncomingDependencies(asset);
     return incoming
       .filter((dep) => dep.sourcePath != null)

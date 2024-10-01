@@ -7,6 +7,7 @@ import {Transform} from 'stream';
 export default class TapStream extends Transform {
   _tap: (arg1: Buffer) => unknown;
   constructor(tap: (arg1: Buffer) => unknown, options: unknown) {
+    // @ts-expect-error - TS2698 - Spread types may only be created from object types.
     super({...options});
     this._tap = tap;
   }

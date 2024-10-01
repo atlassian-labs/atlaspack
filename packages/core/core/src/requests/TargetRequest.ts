@@ -118,6 +118,7 @@ export function skipTarget(
     : targetName !== exclusiveTarget;
 }
 
+// @ts-expect-error - TS7031 - Binding element 'input' implicitly has an 'any' type. | TS7031 - Binding element 'api' implicitly has an 'any' type. | TS7031 - Binding element 'options' implicitly has an 'any' type.
 async function run({input, api, options}) {
   let targetResolver = new TargetResolver(
     api,
@@ -131,6 +132,7 @@ async function run({input, api, options}) {
   assertTargetsAreNotEntries(targets, input, options);
 
   let configResult = nullthrows(
+    // @ts-expect-error - TS2347 - Untyped function calls may not accept type arguments.
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
@@ -227,12 +229,14 @@ export class TargetResolver {
 
         // If an array of strings is passed, it's a filter on the resolved package
         // targets. Load them, and find the matching targets.
+        // @ts-expect-error - TS2322 - Type '(Target | null | undefined)[]' is not assignable to type 'Target[]'.
         targets = optionTargets
           .map((target) => {
             // null means skipped.
             if (!packageTargets.has(target)) {
               throw new ThrowableDiagnostic({
                 diagnostic: {
+                  // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
                   message: md`Could not find target with name "${target}"`,
                   origin: '@atlaspack/core',
                 },
@@ -260,6 +264,7 @@ export class TargetResolver {
               );
               throw new ThrowableDiagnostic({
                 diagnostic: {
+                  // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
                   message: md`Missing distDir for target "${name}"`,
                   origin: '@atlaspack/core',
                   codeFrames: [
@@ -369,6 +374,7 @@ export class TargetResolver {
             env: createEnvironment({
               context: 'browser',
               engines: {
+                // @ts-expect-error - TS2322 - Type 'readonly ["last 1 Chrome version", "last 1 Safari version", "last 1 Firefox version", "last 1 Edge version"]' is not assignable to type 'string | string[] | undefined'.
                 browsers: DEFAULT_ENGINES.browsers,
               },
               shouldOptimize: this.options.defaultTargetOptions.shouldOptimize,
@@ -382,6 +388,7 @@ export class TargetResolver {
           },
         ];
       } else {
+        // @ts-expect-error - TS2322 - Type '(Target | null)[]' is not assignable to type 'Target[]'.
         targets = Array.from(packageTargets.values())
           .filter(Boolean)
           .filter((descriptor) => {
@@ -427,6 +434,7 @@ export class TargetResolver {
       if (pkgFile == null) {
         throw new ThrowableDiagnostic({
           diagnostic: {
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`Expected package.json file in ${rootDir}`,
             origin: '@atlaspack/core',
           },
@@ -506,6 +514,7 @@ export class TargetResolver {
             };
 
             browsersLoc = {
+              // @ts-expect-error - TS2322 - Type '{ message: string; }' is not assignable to type '{ path: string; }'.
               message: `(defined in ${path.relative(
                 process.cwd(),
                 browserslistConfig,
@@ -531,14 +540,17 @@ export class TargetResolver {
     if (context === 'browser' && pkgEngines.browsers == null) {
       pkgEngines = {
         ...pkgEngines,
+        // @ts-expect-error - TS2322 - Type 'string | string[] | readonly ["last 1 Chrome version", "last 1 Safari version", "last 1 Firefox version", "last 1 Edge version"]' is not assignable to type 'string | string[] | undefined'.
         browsers: defaultEngines?.browsers ?? DEFAULT_ENGINES.browsers,
       };
+      // @ts-expect-error - TS2322 - Type '{ message: string; }' is not assignable to type '{ path: string; }'.
       browsersLoc = {message: '(default)'};
     } else if (context === 'node' && pkgEngines.node == null) {
       pkgEngines = {
         ...pkgEngines,
         node: defaultEngines?.node ?? DEFAULT_ENGINES.node,
       };
+      // @ts-expect-error - TS2322 - Type '{ message: string; }' is not assignable to type '{ path: string; }'.
       nodeLoc = {message: '(default)'};
     }
 
@@ -633,9 +645,11 @@ export class TargetResolver {
         pkg.name
       ) {
         // The `browser` field can be a file path or an alias map.
+        // @ts-expect-error - TS2532 - Object is possibly 'undefined'. | TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'string | Partial<Record<string, string | boolean>>'.
         _targetDist = pkg[targetName][pkg.name];
         pointer = `/${targetName}/${encodeJSONKeyComponent(pkg.name)}`;
       } else {
+        // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'PackageJSON | {}'.
         _targetDist = pkg[targetName];
         pointer = `/${targetName}`;
       }
@@ -687,6 +701,7 @@ export class TargetResolver {
 
         if (
           distEntry != null &&
+          // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly main: { readonly match: RegExp; readonly extensions: string[]; }; readonly module: { readonly match: RegExp; readonly extensions: readonly [".js", ".mjs"]; }; readonly browser: { ...; }; readonly types: { ...; }; }'.
           !COMMON_TARGETS[targetName].match.test(distEntry)
         ) {
           let contents: string =
@@ -694,13 +709,16 @@ export class TargetResolver {
               ? pkgContents
               : // $FlowFixMe
                 JSON.stringify(pkgContents, null, '\t');
+          // @ts-expect-error - TS2339 - Property 'ListFormat' does not exist on type 'typeof Intl'.
           let listFormat = new Intl.ListFormat('en-US', {type: 'disjunction'});
           let extensions = listFormat.format(
+            // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly main: { readonly match: RegExp; readonly extensions: string[]; }; readonly module: { readonly match: RegExp; readonly extensions: readonly [".js", ".mjs"]; }; readonly browser: { ...; }; readonly types: { ...; }; }'.
             COMMON_TARGETS[targetName].extensions,
           );
           let ext = path.extname(distEntry);
           throw new ThrowableDiagnostic({
             diagnostic: {
+              // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
               message: md`Unexpected output file type ${ext} in target "${targetName}"`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -734,6 +752,7 @@ export class TargetResolver {
                 JSON.stringify(pkgContents, null, '\t');
           throw new ThrowableDiagnostic({
             diagnostic: {
+              // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
               message: md`The "global" output format is not supported in the "${targetName}" target.`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -763,6 +782,7 @@ export class TargetResolver {
             distEntry,
             descriptor,
             targetName,
+            // @ts-expect-error - TS2345 - Argument of type 'PackageJSON | {}' is not assignable to parameter of type 'PackageJSON'.
             pkg,
             pkgFilePath,
             pkgContents,
@@ -788,6 +808,7 @@ export class TargetResolver {
           throw new ThrowableDiagnostic({
             diagnostic: {
               // prettier-ignore
+              // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
               message: md`Output format "esmodule" cannot be used in the "main" target without a .mjs extension or "type": "module" field.`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -866,6 +887,7 @@ export class TargetResolver {
             descriptor.publicUrl ?? this.options.defaultTargetOptions.publicUrl,
           env: createEnvironment({
             engines: descriptor.engines ?? pkgEngines,
+            // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'EnvironmentContext | undefined'.
             context,
             includeNodeModules: descriptor.includeNodeModules ?? false,
             outputFormat,
@@ -919,11 +941,13 @@ export class TargetResolver {
     }
 
     let customTargets = (Object.keys(pkgTargets) as Array<string>).filter(
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly main: { readonly match: RegExp; readonly extensions: string[]; }; readonly module: { readonly match: RegExp; readonly extensions: readonly [".js", ".mjs"]; }; readonly browser: { ...; }; readonly types: { ...; }; }'.
       (targetName) => !COMMON_TARGETS[targetName],
     );
 
     // Custom targets
     for (let targetName of customTargets) {
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'PackageJSON | {}'.
       let distPath: unknown = pkg[targetName];
       let distDir;
       let distEntry;
@@ -956,6 +980,7 @@ export class TargetResolver {
                 JSON.stringify(pkgContents, null, '\t');
           throw new ThrowableDiagnostic({
             diagnostic: {
+              // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
               message: md`Invalid distPath for target "${targetName}"`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -1005,6 +1030,7 @@ export class TargetResolver {
             distEntry,
             descriptor,
             targetName,
+            // @ts-expect-error - TS2345 - Argument of type 'PackageJSON | {}' is not assignable to parameter of type 'PackageJSON'.
             pkg,
             pkgFilePath,
             pkgContents,
@@ -1137,6 +1163,7 @@ export class TargetResolver {
         publicUrl: this.options.defaultTargetOptions.publicUrl,
         env: createEnvironment({
           engines: pkgEngines,
+          // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'EnvironmentContext | undefined'.
           context,
           outputFormat: this.options.defaultTargetOptions.outputFormat,
           isLibrary: this.options.defaultTargetOptions.isLibrary,
@@ -1210,9 +1237,11 @@ export class TargetResolver {
           expectedExtensions = ['.js'];
           break;
       }
+      // @ts-expect-error - TS2339 - Property 'ListFormat' does not exist on type 'typeof Intl'.
       let listFormat = new Intl.ListFormat('en-US', {type: 'disjunction'});
       throw new ThrowableDiagnostic({
         diagnostic: {
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           message: md`Declared output format "${descriptor.outputFormat}" does not match expected output format "${inferredOutputFormat}".`,
           origin: '@atlaspack/core',
           codeFrames: [
@@ -1247,6 +1276,7 @@ export class TargetResolver {
       });
     }
 
+    // @ts-expect-error - TS2322 - Type 'string | undefined' is not assignable to type 'OutputFormat | null | undefined'.
     return [inferredOutputFormat, inferredOutputFormatField];
   }
 }
@@ -1267,6 +1297,7 @@ function parseEngines(
       '@atlaspack/core',
       message,
     );
+    // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type 'Engines | undefined'.
     return engines;
   }
 }
@@ -1289,6 +1320,7 @@ function parseDescriptor(
     `Invalid target descriptor for target "${targetName}"`,
   );
 
+  // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type 'TargetDescriptor'.
   return descriptor;
 }
 
@@ -1309,6 +1341,7 @@ function parsePackageDescriptor(
     '@atlaspack/core',
     `Invalid target descriptor for target "${targetName}"`,
   );
+  // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type 'PackageTargetDescriptor'.
   return descriptor;
 }
 
@@ -1330,6 +1363,7 @@ function parseCommonTargetDescriptor(
     `Invalid target descriptor for target "${targetName}"`,
   );
 
+  // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type 'PackageTargetDescriptor'.
   return descriptor;
 }
 
@@ -1364,6 +1398,7 @@ function assertNoDuplicateTargets(
   for (let [targetPath, targetNames] of targetsByPath) {
     if (targetNames.length > 1 && pkgContents != null && pkgFilePath != null) {
       diagnostics.push({
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         message: md`Multiple targets have the same destination path "${path.relative(
           path.dirname(pkgFilePath),
           targetPath,
@@ -1462,6 +1497,7 @@ function assertTargetsAreNotEntries(
           message: `Target "${target.name}" is configured to overwrite entry "${relativeEntry}".`,
           codeFrames,
           hints: [
+            // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly main: { readonly match: RegExp; readonly extensions: string[]; }; readonly module: { readonly match: RegExp; readonly extensions: readonly [".js", ".mjs"]; }; readonly browser: { ...; }; readonly types: { ...; }; }'.
             (COMMON_TARGETS[target.name]
               ? `The "${target.name}" field is an _output_ file path so that your build can be consumed by other tools. `
               : '') +
@@ -1526,6 +1562,7 @@ async function debugResolvedTargets(
     // Builds up map of code highlights for each defined/inferred path in the package.json.
     let jsonHighlights = new Map();
     for (let key in info) {
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'TargetInfo'.
       let keyInfo = info[key];
       let path = keyInfo.path || keyInfo.inferred;
       if (!path) {
@@ -1546,16 +1583,19 @@ async function debugResolvedTargets(
       }
 
       if (keyInfo.path) {
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         highlight.defined = md`${key} defined here`;
       }
 
       if (keyInfo.inferred) {
         highlight.inferred.push(
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'. | TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'Environment'.
           md`${key} to be ${JSON.stringify(target.env[key])}`,
         );
       }
     }
 
+    // @ts-expect-error - TS2339 - Property 'ListFormat' does not exist on type 'typeof Intl'.
     let listFormat = new Intl.ListFormat('en-US');
 
     // Generate human friendly messages for each field.
@@ -1599,14 +1639,17 @@ async function debugResolvedTargets(
         listFormat.format(
           Object.entries(target.env.includeNodeModules)
             .filter(([, v]: [any, any]) => v === false)
+            // @ts-expect-error - TS2345 - Argument of type '([k]: [any]) => string' is not assignable to parameter of type '(value: [string, boolean | undefined], index: number, array: [string, boolean | undefined][]) => string'.
             .map(([k]: [any]) => JSON.stringify(k)),
         );
     }
 
     let format = (v: TargetKeyInfo) =>
+      // @ts-expect-error - TS2339 - Property 'message' does not exist on type 'TargetKeyInfo'. | TS2339 - Property 'message' does not exist on type 'TargetKeyInfo'.
       v.message != null ? md.italic(v.message) : '';
     logger.verbose({
       origin: '@atlaspack/core',
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       message: md`**Target** "${target.name}"
 
                **Entry**: ${path.relative(

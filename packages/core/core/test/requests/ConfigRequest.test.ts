@@ -1,6 +1,7 @@
 import WorkerFarm from '@atlaspack/workers';
 import path from 'path';
 import assert from 'assert';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
 import {MemoryFS} from '@atlaspack/fs';
 import {hashString} from '@atlaspack/rust';
@@ -17,6 +18,7 @@ const mockCast = (f: any): any => f;
 
 describe('ConfigRequest tests', () => {
   const projectRoot = 'project_root';
+  // @ts-expect-error - TS2345 - Argument of type '{ workerPath: string; maxConcurrentWorkers: number; }' is not assignable to parameter of type 'FarmOptions'.
   const farm = new WorkerFarm({
     workerPath: require.resolve('../../src/worker.js'),
     maxConcurrentWorkers: 1,

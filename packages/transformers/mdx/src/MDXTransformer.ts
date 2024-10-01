@@ -1,4 +1,5 @@
 import {Transformer} from '@atlaspack/plugin';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module '@mdx-js/mdx'. '/home/ubuntu/parcel/node_modules/@mdx-js/mdx/index.js' implicitly has an 'any' type.
 import mdx from '@mdx-js/mdx';
 
 export default new Transformer({

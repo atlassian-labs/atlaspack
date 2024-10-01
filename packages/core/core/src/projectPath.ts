@@ -24,6 +24,7 @@ function toProjectPath_(projectRoot: FilePath, p: FilePath): ProjectPath {
   return relative;
 }
 
+// @ts-expect-error - TS2322 - Type '(projectRoot: string, p: string) => string' is not assignable to type '((projectRoot: string, p: string) => string) & ((projectRoot: string, p: string | undefined) => string | undefined) & ((projectRoot: string, p?: string | null | undefined) => string | ... 1 more ... | undefined)'.
 export const toProjectPath: ((
   projectRoot: FilePath,
   p: FilePath,
@@ -63,6 +64,7 @@ function fromProjectPath_(
   return projectRoot + projectPath;
 }
 
+// @ts-expect-error - TS2322 - Type '(projectRoot: string, p?: string | null | undefined) => string | null | undefined' is not assignable to type '((projectRoot: string, p: string) => string) & ((projectRoot: string, p?: string | null | undefined) => string | null | undefined)'.
 export const fromProjectPath: ((
   // $FlowFixMe Not sure how to type properly
   projectRoot: FilePath,

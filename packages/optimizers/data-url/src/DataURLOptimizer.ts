@@ -1,5 +1,6 @@
 import {Optimizer} from '@atlaspack/plugin';
 import {blobToBuffer} from '@atlaspack/utils';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'mime'. '/home/ubuntu/parcel/packages/optimizers/data-url/node_modules/mime/index.js' implicitly has an 'any' type.
 import mime from 'mime';
 import {isBinaryFile} from 'isbinaryfile';
 

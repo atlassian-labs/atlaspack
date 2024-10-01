@@ -51,13 +51,16 @@ const LOADERS = {
 
 function getLoaders(ctx: Environment):
   | {
+      // @ts-expect-error - TS2411 - Property 'IMPORT_POLYFILL' of type 'string | false | null' is not assignable to 'string' index type 'string'.
       IMPORT_POLYFILL: null | false | string;
       [key: string]: string;
     }
   | null
   | undefined {
+  // @ts-expect-error - TS2322 - Type '{ readonly js: "./helpers/worker/js-loader"; readonly wasm: "./helpers/worker/wasm-loader"; readonly IMPORT_POLYFILL: false; }' is not assignable to type '{ [key: string]: string; IMPORT_POLYFILL: string | false | null; }'.
   if (ctx.isWorker()) return LOADERS.worker;
   if (ctx.isBrowser()) return LOADERS.browser;
+  // @ts-expect-error - TS2322 - Type '{ readonly css: "./helpers/node/css-loader"; readonly html: "./helpers/node/html-loader"; readonly js: "./helpers/node/js-loader"; readonly wasm: "./helpers/node/wasm-loader"; readonly IMPORT_POLYFILL: null; }' is not assignable to type '{ [key: string]: string; IMPORT_POLYFILL: string | false | null; }'.
   if (ctx.isNode()) return LOADERS.node;
   return null;
 }
@@ -290,6 +293,7 @@ export default new Runtime({
         priority: getManifestBundlePriority(
           bundleGraph,
           bundle,
+          // @ts-expect-error - TS2571 - Object is of type 'unknown'.
           config.splitManifestThreshold,
         ),
       });
@@ -406,6 +410,7 @@ function getLoaderRuntime({
         continue;
       }
 
+      // @ts-expect-error - TS2322 - Type 'string | false' is not assignable to type 'string'.
       loader = nullthrows(
         loaders.IMPORT_POLYFILL,
         `No import() polyfill available for context '${bundle.env.context}'`,
@@ -536,14 +541,17 @@ function getHintedBundleGroups(
       typeof attributes === 'object' &&
       attributes != null &&
       // $FlowFixMe
+      // @ts-expect-error - TS2339 - Property 'preload' does not exist on type 'JSONValue[] | JSONObject'. | TS2339 - Property 'prefetch' does not exist on type 'JSONValue[] | JSONObject'.
       (attributes.preload || attributes.prefetch)
     ) {
       let resolved = bundleGraph.resolveAsyncDependency(dependency, bundle);
       if (resolved?.type === 'bundle_group') {
         // === true for flow
+        // @ts-expect-error - TS2339 - Property 'preload' does not exist on type 'JSONValue[] | JSONObject'.
         if (attributes.preload === true) {
           preload.push(resolved.value);
         }
+        // @ts-expect-error - TS2339 - Property 'prefetch' does not exist on type 'JSONValue[] | JSONObject'.
         if (attributes.prefetch === true) {
           prefetch.push(resolved.value);
         }
@@ -572,6 +580,7 @@ function getHintLoaders(
         bundleToPreload,
         options,
       );
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly css: "style"; readonly js: "script"; }'.
       let priority = TYPE_TO_RESOURCE_PRIORITY[bundleToPreload.type];
       hintLoaders.push(
         `require(${JSON.stringify(loader)})(${getAbsoluteUrlExpr(

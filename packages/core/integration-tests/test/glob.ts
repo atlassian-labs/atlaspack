@@ -22,6 +22,7 @@ describe.v2('glob', function () {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(await output(), 3);
@@ -39,6 +40,7 @@ describe.v2('glob', function () {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(await output(), 13);
@@ -60,6 +62,7 @@ describe.v2('glob', function () {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(output(), 2);
@@ -93,6 +96,7 @@ describe.v2('glob', function () {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.deepEqual(output, {
       a: `http://localhost/${path.basename(
@@ -130,6 +134,7 @@ describe.v2('glob', function () {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(await output(), 3);
   });
@@ -216,6 +221,7 @@ describe.v2('glob', function () {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(await output(), 10);
@@ -243,6 +249,7 @@ describe.v2('glob', function () {
       {type: 'js', assets: ['y.js']},
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(await output(), 10);
@@ -258,6 +265,7 @@ describe.v2('glob', function () {
         assets: ['index.js', '*.js', 'a.js', 'b.js'],
       },
     ]);
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(output, 3);
   });
@@ -275,6 +283,7 @@ describe.v2('glob', function () {
         assets: ['index.js', '*.js', 'a.js', 'b.js'],
       },
     ]);
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(output, 3);
   });

@@ -35,6 +35,7 @@ export default class ValueEmitter<TValue> implements IDisposable {
         }
 
         if (emitter._disposed) {
+          // @ts-expect-error - TS2322 - Type 'null' is not assignable to type 'this'.
           emitter = null;
           return;
         }
@@ -45,6 +46,7 @@ export default class ValueEmitter<TValue> implements IDisposable {
           listeners.splice(listenerIndex, 1);
         }
 
+        // @ts-expect-error - TS2322 - Type 'null' is not assignable to type 'this'.
         emitter = null;
       },
     };

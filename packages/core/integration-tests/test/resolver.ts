@@ -19,6 +19,7 @@ describe('resolver', function () {
       ),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(output.default, 1234);
   });
@@ -28,6 +29,7 @@ describe('resolver', function () {
       path.join(__dirname, '/integration/resolve-node-prefix/src/index.js'),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(
       output.default,
@@ -40,6 +42,7 @@ describe('resolver', function () {
       path.join(__dirname, '/integration/resolve-tilde-nodemodules/index.js'),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(output.default, 1234);
   });
@@ -52,6 +55,7 @@ describe('resolver', function () {
       ),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(output.default, 42);
   });
@@ -61,6 +65,7 @@ describe('resolver', function () {
       path.join(__dirname, '/integration/resolve-index-fallback/no-entry.js'),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(output.default, 42);
   });
@@ -313,6 +318,7 @@ describe('resolver', function () {
       path.join(__dirname, '/integration/alias/package-to-package.js'),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(output.default, 3);
   });
@@ -322,6 +328,7 @@ describe('resolver', function () {
       path.join(__dirname, '/integration/alias/package-to-local.js'),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(output.default, 'bar');
   });
@@ -331,6 +338,7 @@ describe('resolver', function () {
       path.join(__dirname, '/integration/alias/exclude-local.js'),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.deepEqual(output.default, {});
   });
@@ -340,6 +348,7 @@ describe('resolver', function () {
       path.join(__dirname, '/integration/alias/exclude-package.js'),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.deepEqual(output.default, {});
   });
@@ -382,6 +391,7 @@ describe('resolver', function () {
       },
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(output.default, 42);
   });
@@ -419,11 +429,13 @@ describe('resolver', function () {
       },
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(output.default, 2);
   });
 
   it.v2('should support very long dependency specifiers', async function () {
+    // @ts-expect-error - TS2683 - 'this' implicitly has type 'any' because it does not have a type annotation.
     this.timeout(8000);
 
     let inputDir = path.join(__dirname, 'input');
@@ -456,6 +468,7 @@ describe('resolver', function () {
       path.join(__dirname, '/integration/resolve-exports/index.js'),
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(output.default, 'hello bar');
   });
@@ -466,6 +479,7 @@ describe('resolver', function () {
       {mode: 'development'},
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.strictEqual(output.default, 'development');
 
@@ -474,6 +488,7 @@ describe('resolver', function () {
       {mode: 'production'},
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     output = await run(b);
     assert.strictEqual(output.default, 'production');
   });

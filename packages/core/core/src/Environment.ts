@@ -55,6 +55,7 @@ export function createEnvironment({
       case 'service-worker':
       case 'electron-renderer':
         engines = {
+          // @ts-expect-error - TS2322 - Type 'readonly ["> 0.25%"]' is not assignable to type 'string | string[] | undefined'.
           browsers: DEFAULT_ENGINES.browsers,
         };
         break;
@@ -95,6 +96,7 @@ export function createEnvironment({
   let res: Environment = {
     id: '',
     context,
+    // @ts-expect-error - TS2322 - Type 'Engines | undefined' is not assignable to type 'Engines'.
     engines,
     includeNodeModules,
     outputFormat,

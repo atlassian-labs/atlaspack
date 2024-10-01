@@ -1,4 +1,5 @@
 import type {ReporterEvent, Reporter} from '@atlaspack/types';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'WorkerApi'. Did you mean to use 'import WorkerApi from "@atlaspack/workers"' instead?
 import type {WorkerApi} from '@atlaspack/workers';
 import type {Bundle as InternalBundle, AtlaspackOptions} from './types';
 import type {LoadedPlugin} from './AtlaspackConfig';
@@ -9,6 +10,7 @@ import {
   bundleToInternalBundleGraph,
   NamedBundle,
 } from './public/Bundle';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'bus'. Did you mean to use 'import bus from "@atlaspack/workers"' instead?
 import WorkerFarm, {bus} from '@atlaspack/workers';
 import logger, {
   patchConsole,
@@ -62,10 +64,13 @@ export default class ReporterRunner {
       (event.phase === 'optimizing' || event.phase === 'packaging') &&
       !(event.bundle instanceof NamedBundle)
     ) {
+      // @ts-expect-error - TS2339 - Property 'bundleGraphRef' does not exist on type 'PackagingProgressEvent | OptimizingProgressEvent'.
       let bundleGraphRef = event.bundleGraphRef;
+      // @ts-expect-error - TS2739 - Type 'NamedBundle' is missing the following properties from type 'Bundle': entryAssetIds, mainEntryId, pipeline
       let bundle: InternalBundle = event.bundle;
       // Convert any internal bundles back to their public equivalents as reporting
       // is public api
+      // @ts-expect-error - TS2339 - Property 'workerApi' does not exist on type 'WorkerFarm'.
       let bundleGraph = this.workerFarm.workerApi.getSharedReference(
         // $FlowFixMe
         bundleGraphRef,
@@ -83,10 +88,12 @@ export default class ReporterRunner {
 
   async report(unsanitisedEvent: ReporterEvent) {
     let event: ReporterEvent = unsanitisedEvent;
+    // @ts-expect-error - TS2339 - Property 'diagnostics' does not exist on type 'ReporterEvent'.
     if (event.diagnostics) {
       // Sanitise input before passing to reporters
       event = {
         ...event,
+        // @ts-expect-error - TS2322 - Type '{ diagnostics: Diagnostic[]; type: "log"; level: "progress"; phase?: string | undefined; message: string; } | { diagnostics: Diagnostic[]; type: "log"; level: "error" | "warn" | "info" | "verbose"; } | ... 14 more ... | { ...; }' is not assignable to type 'ReporterEvent'. | TS2339 - Property 'diagnostics' does not exist on type 'ReporterEvent'.
         diagnostics: anyToDiagnostic(event.diagnostics),
       };
     }

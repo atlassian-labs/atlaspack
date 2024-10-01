@@ -31,6 +31,7 @@ describe('blob-url:', () => {
 
     class Worker {
       constructor(src: any) {
+        // @ts-expect-error - TS2345 - Argument of type 'any' is not assignable to parameter of type 'never'.
         created.push(src);
       }
       postMessage() {}
@@ -43,6 +44,7 @@ describe('blob-url:', () => {
     });
 
     assert.equal(created.length, 1);
+    // @ts-expect-error - TS2339 - Property 'startsWith' does not exist on type 'never'.
     assert(created[0].startsWith('data:application/javascript,'));
 
     let content = await outputFS.readFile(join(distDir, 'index.js'), 'utf8');
@@ -71,6 +73,7 @@ describe('blob-url:', () => {
 
     class Worker {
       constructor(src: any) {
+        // @ts-expect-error - TS2345 - Argument of type 'any' is not assignable to parameter of type 'never'.
         created.push(src);
       }
       postMessage() {}
@@ -83,6 +86,7 @@ describe('blob-url:', () => {
     });
 
     assert.equal(created.length, 1);
+    // @ts-expect-error - TS2339 - Property 'startsWith' does not exist on type 'never'.
     assert(created[0].startsWith('data:application/javascript,'));
 
     let content = await outputFS.readFile(join(distDir, 'index.js'), 'utf8');

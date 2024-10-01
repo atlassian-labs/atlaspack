@@ -1,5 +1,6 @@
 import type {ContentKey} from '@atlaspack/graph';
 import type {Async} from '@atlaspack/types';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'SharedReference'. Did you mean to use 'import SharedReference from "@atlaspack/workers"' instead?
 import type {SharedReference} from '@atlaspack/workers';
 
 import type {StaticRunOpts} from '../RequestTracker';
@@ -46,6 +47,7 @@ export function createPackageRequest(
   };
 }
 
+// @ts-expect-error - TS7031 - Binding element 'input' implicitly has an 'any' type. | TS7031 - Binding element 'api' implicitly has an 'any' type. | TS7031 - Binding element 'farm' implicitly has an 'any' type.
 async function run({input, api, farm}) {
   let {bundleGraphReference, optionsRef, bundle, useMainThread} = input;
   let runPackage = farm.createHandle('runPackage', useMainThread);
@@ -53,6 +55,7 @@ async function run({input, api, farm}) {
   let start = Date.now();
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);
   let {cachePath} = nullthrows(
+    // @ts-expect-error - TS2347 - Untyped function calls may not accept type arguments.
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
@@ -90,10 +93,12 @@ async function run({input, api, farm}) {
         api.invalidateOnOptionChange(invalidation.key);
         break;
       default:
+        // @ts-expect-error - TS2339 - Property 'type' does not exist on type 'never'.
         throw new Error(`Unknown invalidation type: ${invalidation.type}`);
     }
   }
 
+  // @ts-expect-error - TS2540 - Cannot assign to 'time' because it is a read-only property.
   bundleInfo.time = Date.now() - start;
 
   api.storeResult(bundleInfo);

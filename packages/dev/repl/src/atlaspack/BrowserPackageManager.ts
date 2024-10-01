@@ -10,6 +10,7 @@ import type {
   ResolveResult,
 } from '@atlaspack/package-manager';
 import {registerSerializableClass} from '@atlaspack/core';
+// @ts-expect-error - TS2732 - Cannot find module '../../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import packageJson from '../../package.json';
 
 import path from 'path';
@@ -28,6 +29,7 @@ import packagerRaw from '@atlaspack/packager-raw';
 import reporterJson from '@atlaspack/reporter-json';
 import reporterServer from '@atlaspack/reporter-dev-server-sw';
 import resolverDefault from '@atlaspack/resolver-default';
+// @ts-expect-error - TS2307 - Cannot find module '@atlaspack/resolver-repl-runtimes' or its corresponding type declarations.
 import resolverREPLRuntimes from '@atlaspack/resolver-repl-runtimes';
 import runtimeHMR from '@atlaspack/runtime-browser-hmr';
 import runtimeJs from '@atlaspack/runtime-js';
@@ -83,6 +85,7 @@ const ENTRIES =
     : 0);
 
 export class BrowserPackageManager implements PackageManager {
+  // @ts-expect-error - TS2749 - 'ResolverBase' refers to a value, but is being used as a type here. Did you mean 'typeof ResolverBase'?
   resolver: ResolverBase | null | undefined;
   fs: FileSystem;
   projectRoot: FilePath;
@@ -93,6 +96,7 @@ export class BrowserPackageManager implements PackageManager {
     this.projectRoot = projectRoot;
   }
 
+  // @ts-expect-error - TS2749 - 'ResolverBase' refers to a value, but is being used as a type here. Did you mean 'typeof ResolverBase'?
   async getResolver(): Promise<ResolverBase> {
     if (this.resolver != null) return this.resolver;
     await init?.();
@@ -138,6 +142,7 @@ export class BrowserPackageManager implements PackageManager {
     let {resolved} = await this.resolve(name, from, opts);
 
     if (resolved in BUILTINS) {
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly '@atlaspack/bundler-default': Bundler; readonly '@atlaspack/compressor-raw': Compressor; readonly '@atlaspack/namer-default': Namer; readonly '@atlaspack/optimizer-css': Optimizer; ... 21 more ...; readonly '@atlaspack/transformer-react-refresh-wrap': Transformer; }'.
       return BUILTINS[resolved];
     }
 
@@ -181,9 +186,11 @@ export class BrowserPackageManager implements PackageManager {
       });
       if (res.error) {
         let e = new Error(`Could not resolve module "${name}" from "${from}"`);
+        // @ts-expect-error - TS2339 - Property 'code' does not exist on type 'Error'.
         e.code = 'MODULE_NOT_FOUND';
         throw e;
       }
+      // @ts-expect-error - TS7034 - Variable 'getPkg' implicitly has type 'any' in some locations where its type cannot be determined.
       let getPkg;
       switch (res.resolution.type) {
         case 'Path':
@@ -205,6 +212,7 @@ export class BrowserPackageManager implements PackageManager {
             invalidateOnFileCreate: res.invalidateOnFileCreate,
             type: res.moduleType,
             get pkg() {
+              // @ts-expect-error - TS7005 - Variable 'getPkg' implicitly has an 'any' type.
               return getPkg();
             },
           };

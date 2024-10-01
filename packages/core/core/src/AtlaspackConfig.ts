@@ -139,6 +139,7 @@ export default class AtlaspackConfig {
 
   async loadPlugin<T>(node: AtlaspackPluginNode): Promise<LoadedPlugin<T>> {
     let plugin = await this._loadPlugin(node);
+    // @ts-expect-error - TS2322 - Type '{ name: string; keyPath: string | undefined; plugin: unknown; version: string; resolveFrom: string; range: string | null | undefined; }' is not assignable to type 'LoadedPlugin<T>'.
     return {
       ...plugin,
       name: node.packageName,
@@ -210,6 +211,7 @@ export default class AtlaspackConfig {
 
       throw await this.missingPluginError(
         this.transformers,
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         md`No transformers found for __${fromProjectPathRelative(filePath)}__` +
           (pipeline != null ? ` with pipeline: '${pipeline}'` : '') +
           '.',
@@ -262,6 +264,7 @@ export default class AtlaspackConfig {
     if (!packager) {
       throw await this.missingPluginError(
         this.packagers,
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         md`No packager found for __${filePath}__.`,
         '/packagers',
       );
@@ -325,6 +328,7 @@ export default class AtlaspackConfig {
     if (compressors.length === 0) {
       throw await this.missingPluginError(
         this.compressors,
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         md`No compressors found for __${filePath}__.`,
         '/compressors',
       );
@@ -348,6 +352,7 @@ export default class AtlaspackConfig {
     let [patternPipeline, patternGlob] = pattern.split(':');
     if (!patternGlob) {
       patternGlob = patternPipeline;
+      // @ts-expect-error - TS2322 - Type 'null' is not assignable to type 'string'.
       patternPipeline = null;
     }
 
@@ -400,6 +405,7 @@ export default class AtlaspackConfig {
 
     for (let pattern in globMap) {
       if (this.isGlobMatch(filePath, pattern)) {
+        // @ts-expect-error - TS2345 - Argument of type 'ExtendableAtlaspackConfigPipeline | undefined' is not assignable to parameter of type 'ExtendableAtlaspackConfigPipeline'.
         matches.push(globMap[pattern]);
       }
     }
@@ -425,6 +431,7 @@ export default class AtlaspackConfig {
     };
 
     let res = flatten();
+    // @ts-expect-error - TS2322 - Type 'ExtendableAtlaspackConfigPipeline' is not assignable to type 'PureAtlaspackConfigPipeline'.
     return res;
   }
 
@@ -442,9 +449,12 @@ export default class AtlaspackConfig {
     } else {
       configsWithPlugin = new Set(
         Object.keys(plugins).flatMap((k) =>
+          // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'PureAtlaspackConfigPipeline | Partial<Record<string, ExtendableAtlaspackConfigPipeline>> | Partial<...>'.
           Array.isArray(plugins[k])
-            ? getConfigPaths(this.options, plugins[k])
-            : [getConfigPath(this.options, plugins[k])],
+            ? // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'PureAtlaspackConfigPipeline | Partial<Record<string, ExtendableAtlaspackConfigPipeline>> | Partial<...>'.
+              getConfigPaths(this.options, plugins[k])
+            : // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'PureAtlaspackConfigPipeline | Partial<Record<string, ExtendableAtlaspackConfigPipeline>> | Partial<...>'.
+              [getConfigPath(this.options, plugins[k])],
         ),
       );
     }
@@ -459,6 +469,7 @@ export default class AtlaspackConfig {
     let codeFrames = await Promise.all(
       [...configsWithPlugin].map(async (filePath) => {
         let configContents = await this.options.inputFS.readFile(
+          // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'string'.
           filePath,
           'utf8',
         );
@@ -478,6 +489,7 @@ export default class AtlaspackConfig {
       diagnostic: {
         message,
         origin: '@atlaspack/core',
+        // @ts-expect-error - TS2322 - Type '{ filePath: unknown; code: Buffer & string; codeHighlights: DiagnosticCodeHighlight[]; }[]' is not assignable to type 'DiagnosticCodeFrame[]'.
         codeFrames,
         hints: !seenKey ? ['Try extending __@atlaspack/config-default__'] : [],
       },
@@ -492,14 +504,18 @@ function getConfigPaths(
     | PureAtlaspackConfigPipeline
     | ExtendableAtlaspackConfigPipeline,
 ) {
-  return nodes
-    .map((node) => (node !== '...' ? getConfigPath(options, node) : null))
-    .filter(Boolean);
+  return (
+    nodes
+      // @ts-expect-error - TS2339 - Property 'map' does not exist on type 'AtlaspackPluginNode | PureAtlaspackConfigPipeline | ExtendableAtlaspackConfigPipeline'. | TS7006 - Parameter 'node' implicitly has an 'any' type.
+      .map((node) => (node !== '...' ? getConfigPath(options, node) : null))
+      .filter(Boolean)
+  );
 }
 
 function getConfigPath(
   options: AtlaspackOptions,
   node: AtlaspackPluginNode | ExtendableAtlaspackConfigPipeline,
 ) {
+  // @ts-expect-error - TS2339 - Property 'resolveFrom' does not exist on type 'AtlaspackPluginNode | ExtendableAtlaspackConfigPipeline'.
   return fromProjectPath(options.projectRoot, node.resolveFrom);
 }

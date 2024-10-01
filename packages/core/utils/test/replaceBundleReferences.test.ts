@@ -9,6 +9,7 @@ describe('replace bundle references', () => {
       filePath: '/user/dist/reformat.html',
       name: 'reformat.html',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist',
         publicUrl: '/',
@@ -20,12 +21,14 @@ describe('replace bundle references', () => {
         '/user/dist/image.HASH_REF_87f9d66c16c2216ccc7e5664cf089305.webp',
       name: 'image.HASH_REF_87f9d66c16c2216ccc7e5664cf089305.webp',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist',
         publicUrl: '/',
       },
     };
 
+    // @ts-expect-error - TS2740 - Type '{ id: string; specifier: string; specifierType: "esm"; }' is missing the following properties from type 'Dependency': priority, bundleBehavior, needsStableName, isOptional, and 13 more.
     let dependency: Dependency = {
       id: '074b36596e3147e900a8ad17ceb5c90b',
       specifier: 'url:./image.jpg?as=webp',
@@ -51,6 +54,7 @@ describe('replace bundle references', () => {
       filePath: '/user/dist/reformat.html',
       name: 'reformat.html',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist',
         publicUrl: '/',
@@ -62,12 +66,14 @@ describe('replace bundle references', () => {
         '/user/dist/image.HASH_REF_87f9d66c16c2216ccc7e5664cf089305.webp',
       name: 'image.HASH_REF_87f9d66c16c2216ccc7e5664cf089305.webp',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist',
         publicUrl: '/',
       },
     };
 
+    // @ts-expect-error - TS2740 - Type '{ id: string; specifier: string; specifierType: "esm"; }' is missing the following properties from type 'Dependency': priority, bundleBehavior, needsStableName, isOptional, and 13 more.
     let dependency: Dependency = {
       id: '074b36596e3147e900a8ad17ceb5c90b',
       specifier: 'url:./image.jpg?as=webp',
@@ -93,6 +99,7 @@ describe('replace bundle references', () => {
       filePath: '/user/dist/reformat.html',
       name: 'reformat.html',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist',
         publicUrl: 'https://test.com/static',
@@ -104,12 +111,14 @@ describe('replace bundle references', () => {
         '/user/dist/image.HASH_REF_87f9d66c16c2216ccc7e5664cf089305.webp',
       name: 'image.HASH_REF_87f9d66c16c2216ccc7e5664cf089305.webp',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist',
         publicUrl: 'https://test.com/static',
       },
     };
 
+    // @ts-expect-error - TS2740 - Type '{ id: string; specifier: string; specifierType: "esm"; }' is missing the following properties from type 'Dependency': priority, bundleBehavior, needsStableName, isOptional, and 13 more.
     let dependency: Dependency = {
       id: '074b36596e314797845a8ad17ceb5c9b',
       specifier: './image.jpg',
@@ -135,6 +144,7 @@ describe('replace bundle references', () => {
       filePath: '/user/dist/reformat.html',
       name: 'reformat.html',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist',
         publicUrl: 'https://test.com/static',
@@ -146,12 +156,14 @@ describe('replace bundle references', () => {
         '/user/dist/assets/image.HASH_REF_87f9d66c16c2216ccc7e5664cf089305.webp',
       name: 'image.HASH_REF_87f9d66c16c2216ccc7e5664cf089305.webp',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist/assets',
         publicUrl: 'https://test.com/static',
       },
     };
 
+    // @ts-expect-error - TS2740 - Type '{ id: string; specifier: string; specifierType: "esm"; }' is missing the following properties from type 'Dependency': priority, bundleBehavior, needsStableName, isOptional, and 13 more.
     let dependency: Dependency = {
       id: '074b36596e3147e900a8ad17ceb5c90b',
       specifier: 'url:./image.jpg?as=webp',
@@ -177,6 +189,7 @@ describe('replace bundle references', () => {
       filePath: '/user/dist/reformat.html',
       name: 'reformat.html',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist',
         publicUrl: '/',
@@ -187,12 +200,14 @@ describe('replace bundle references', () => {
       filePath: '/user/dist/a:b:c.html',
       name: 'a:b:c.html',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist',
         publicUrl: '/',
       },
     };
 
+    // @ts-expect-error - TS2740 - Type '{ id: string; specifier: string; specifierType: "esm"; }' is missing the following properties from type 'Dependency': priority, bundleBehavior, needsStableName, isOptional, and 13 more.
     let dependency: Dependency = {
       id: '074b36596e3147e900a8ad17ceb5c90b',
       specifier: './a:b:c.html',
@@ -214,6 +229,7 @@ describe('replace bundle references', () => {
       filePath: '/user/dist/reformat.html',
       name: 'reformat.html',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist',
         publicUrl: '/',
@@ -224,12 +240,14 @@ describe('replace bundle references', () => {
       filePath: '/user/dist/a:b:c.html',
       name: 'a:b:c.html',
       // $FlowFixMe
+      // @ts-expect-error - TS2739 - Type '{ distDir: string; publicUrl: string; }' is missing the following properties from type 'Target': distEntry, env, name, loc
       target: {
         distDir: '/user/dist',
         publicUrl: '/',
       },
     };
 
+    // @ts-expect-error - TS2740 - Type '{ id: string; specifier: string; specifierType: "esm"; }' is missing the following properties from type 'Dependency': priority, bundleBehavior, needsStableName, isOptional, and 13 more.
     let dependency: Dependency = {
       id: '074b36596e3147e900a8ad17ceb5c90b',
       specifier: './a:b:c.html',

@@ -33,6 +33,7 @@ export default new Optimizer({
       let codeHighlights;
       let message;
       if (filename === 'package.json') {
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         message = md`
 Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cssnano" key was found in **package.json**. Either remove this configuration, or configure Parcel to use @atlaspack/optimizer-cssnano instead.
         `;
@@ -44,6 +45,7 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
           {key: '/cssnano', type: 'key'},
         ]);
       } else {
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         message = md`Parcel\'s default CSS minifer changed from cssnano to lightningcss, but a __${filename}__ config file was found. Either remove this config file, or configure Parcel to use @atlaspack/optimizer-cssnano instead.`;
         codeHighlights = [
           {
@@ -101,9 +103,11 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
         if (usedSymbols.has('default')) {
           let incoming = bundleGraph.getIncomingDependencies(asset);
           defaultImport = incoming.find((d) =>
+            // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
             d.symbols.hasExportSymbol('default'),
           );
           if (defaultImport) {
+            // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
             let loc = defaultImport.symbols.get('default')?.loc;
             logger.warn({
               message:
@@ -129,6 +133,7 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
 
         if (!defaultImport && !usedSymbols.has('*')) {
           for (let [symbol, {local}] of asset.symbols) {
+            // @ts-expect-error - TS2367 - This condition will always return 'true' since the types 'symbol' and 'string' have no overlap.
             if (local !== 'default' && !usedSymbols.has(symbol)) {
               unusedSymbols.push(local);
             }
@@ -153,7 +158,9 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
       }
     }
 
+    // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
     if (process.browser) {
+      // @ts-expect-error - TS2349 - This expression is not callable.
       await init();
     }
 
@@ -172,6 +179,7 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
       map = new SourceMap(options.projectRoot);
       map.addVLQMap(vlqMap);
       if (prevMap) {
+        // @ts-expect-error - TS2345 - Argument of type 'SourceMap' is not assignable to parameter of type 'Buffer'.
         map.extends(prevMap);
       }
     }
@@ -180,6 +188,7 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
     if (bundle.env.sourceMap) {
       let reference = await getSourceMapReference(map);
       if (reference != null) {
+        // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'Buffer'.
         contents =
           contents.toString() +
           '\n' +

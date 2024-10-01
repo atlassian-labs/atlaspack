@@ -2,6 +2,7 @@ import type {Environment, AtlaspackOptions, Target} from '../src/types';
 
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {FSCache} from '@atlaspack/cache';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'tempy'. '/home/ubuntu/parcel/node_modules/tempy/index.js' implicitly has an 'any' type.
 import tempy from 'tempy';
 import {inputFS, outputFS} from '@atlaspack/test-utils';
 import {relativePath} from '@atlaspack/utils';
@@ -10,6 +11,7 @@ import {createEnvironment} from '../src/Environment';
 import {toProjectPath} from '../src/projectPath';
 
 let cacheDir = tempy.directory();
+// @ts-expect-error - TS2749 - 'FSCache' refers to a value, but is being used as a type here. Did you mean 'typeof FSCache'? | TS2554 - Expected 1 arguments, but got 2.
 export let cache: FSCache = new FSCache(outputFS, cacheDir);
 cache.ensure();
 

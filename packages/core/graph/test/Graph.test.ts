@@ -1,4 +1,5 @@
 import assert from 'assert';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
 import type {TraversalActions} from '@atlaspack/types-internal';
 
@@ -9,6 +10,7 @@ describe('Graph', () => {
   it('constructor should initialize an empty graph', () => {
     let graph = new Graph();
     assert.deepEqual(graph.nodes, []);
+    // @ts-expect-error - TS2488 - Type 'Iterator<Edge<1>, any, undefined>' must have a '[Symbol.iterator]()' method that returns an iterator.
     assert.deepEqual([...graph.getAllEdges()], []);
   });
 
@@ -121,6 +123,7 @@ describe('Graph', () => {
     assert(!graph.hasNode(nodeB));
     assert(!graph.hasNode(nodeC));
     assert.deepEqual(
+      // @ts-expect-error - TS2488 - Type 'Iterator<Edge<1>, any, undefined>' must have a '[Symbol.iterator]()' method that returns an iterator.
       [...graph.getAllEdges()],
       [{from: nodeA, to: nodeD, type: 1}],
     );
@@ -164,6 +167,7 @@ describe('Graph', () => {
     graph.removeNode(nodeB);
 
     assert.deepEqual(graph.nodes.filter(Boolean), ['a', 'c', 'f']);
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.deepEqual(Array.from(graph.getAllEdges()), [
       {from: nodeA, to: nodeC, type: 1},
       {from: nodeC, to: nodeF, type: 1},
@@ -209,6 +213,7 @@ describe('Graph', () => {
     graph.removeNode(nodeB);
 
     assert.deepEqual(graph.nodes.filter(Boolean), ['a', 'c', 'f']);
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.deepEqual(Array.from(graph.getAllEdges()), [
       {from: nodeA, to: nodeC, type: 1},
       {from: nodeC, to: nodeF, type: 1},
@@ -244,6 +249,7 @@ describe('Graph', () => {
     graph.removeEdge(nodeC, nodeE);
 
     assert.deepEqual(nodesBefore, getNodeIds());
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.deepEqual(Array.from(graph.getAllEdges()), [
       {from: nodeA, to: nodeB, type: 1},
       {from: nodeB, to: nodeC, type: 1},
@@ -288,6 +294,7 @@ describe('Graph', () => {
     assert(graph.hasNode(nodeB));
     assert(!graph.hasNode(nodeC));
     assert(graph.hasNode(nodeD));
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.deepEqual(Array.from(graph.getAllEdges()), [
       {from: nodeA, to: nodeB, type: 1},
       {from: nodeA, to: nodeD, type: 1},
@@ -301,9 +308,11 @@ describe('Graph', () => {
     let nodeC = graph.addNode('c');
     let nodeD = graph.addNode('d');
 
+    // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(nodeA, nodeB, 2);
     graph.addEdge(nodeA, nodeD);
     graph.addEdge(nodeB, nodeC);
+    // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | undefined'.
     graph.addEdge(nodeB, nodeD, 2);
 
     graph.setRootNodeId(nodeA);
@@ -314,6 +323,7 @@ describe('Graph', () => {
         visited.push(nodeId);
       },
       null, // use root as startNode
+      // @ts-expect-error - TS2345 - Argument of type '2' is not assignable to parameter of type '1 | -1 | 1[] | undefined'.
       2,
     );
 
@@ -337,6 +347,7 @@ describe('Graph', () => {
     graph.removeNode(node1);
 
     assert.deepEqual(graph.nodes.filter(Boolean), ['root']);
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.deepStrictEqual(Array.from(graph.getAllEdges()), []);
   });
 

@@ -6,7 +6,9 @@ import {Tracer} from 'chrome-trace-event';
 
 // We need to maintain some state here to ensure we write to the same output, there should only be one
 // instance of this reporter (this gets asserted below)
+// @ts-expect-error - TS7034 - Variable 'tracer' implicitly has type 'any' in some locations where its type cannot be determined.
 let tracer;
+// @ts-expect-error - TS7034 - Variable 'writeStream' implicitly has type 'any' in some locations where its type cannot be determined.
 let writeStream = null;
 
 function millisecondsToMicroseconds(milliseconds: number) {
@@ -33,11 +35,13 @@ export default new Reporter({
     let filePath;
     switch (event.type) {
       case 'buildStart':
+        // @ts-expect-error - TS7005 - Variable 'tracer' implicitly has an 'any' type.
         invariant(tracer == null, 'Tracer multiple initialisation');
         tracer = new Tracer();
         filename = `parcel-trace-${getTimeId()}.json`;
         filePath = path.join(options.projectRoot, filename);
         invariant(
+          // @ts-expect-error - TS7005 - Variable 'writeStream' implicitly has an 'any' type.
           writeStream == null,
           'Trace write stream multiple initialisation',
         );
@@ -50,8 +54,10 @@ export default new Reporter({
       case 'trace':
         // Due to potential race conditions at the end of the build, we ignore any trace events that occur
         // after we've closed the write stream.
+        // @ts-expect-error - TS7005 - Variable 'tracer' implicitly has an 'any' type.
         if (tracer === null) return;
 
+        // @ts-expect-error - TS7005 - Variable 'tracer' implicitly has an 'any' type.
         tracer.completeEvent({
           name: event.name,
           cat: event.categories,
@@ -64,6 +70,7 @@ export default new Reporter({
         break;
       case 'buildSuccess':
       case 'buildFailure':
+        // @ts-expect-error - TS7005 - Variable 'tracer' implicitly has an 'any' type.
         nullthrows(tracer).flush();
         tracer = null;
         // We explicitly trigger `end` on the writeStream for the trace, then we need to wait for
@@ -75,14 +82,17 @@ export default new Reporter({
             resolve: (result: Promise<undefined> | undefined) => void,
             reject: (error?: any) => void,
           ) => {
+            // @ts-expect-error - TS7005 - Variable 'writeStream' implicitly has an 'any' type. | TS7006 - Parameter 'err' implicitly has an 'any' type.
             nullthrows(writeStream).once('close', (err) => {
               writeStream = null;
               if (err) {
                 reject(err);
               } else {
+                // @ts-expect-error - TS2794 - Expected 1 arguments, but got 0. Did you forget to include 'void' in your type argument to 'Promise'?
                 resolve();
               }
             });
+            // @ts-expect-error - TS7005 - Variable 'writeStream' implicitly has an 'any' type.
             nullthrows(writeStream).end();
           },
         );

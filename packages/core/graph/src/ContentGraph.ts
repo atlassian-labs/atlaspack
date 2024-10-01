@@ -49,6 +49,7 @@ export default class ContentGraph<
     return {
       ...super.serialize(),
       _contentKeyToNodeId: this._contentKeyToNodeId,
+      // @ts-expect-error - TS2322 - Type '{ _contentKeyToNodeId: Map<string, number>; _nodeIdToContentKey: Map<number, string>; nodes: (TNode | null)[]; adjacencyList: SerializedAdjacencyList<TEdgeType>; rootNodeId: number | ... 1 more ... | undefined; }' is not assignable to type 'SerializedContentGraph<TNode, TEdgeType>'.
       _nodeIdToContentKey: this._nodeIdToContentKey,
     };
   }

@@ -25,6 +25,7 @@ export default new Optimizer({
         ? path.relative(process.cwd(), filepath)
         : 'unknown';
       logger.warn({
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         message: md`Could not optimize image ${filename}: ${err.message}`,
         stack: err.stack,
       });

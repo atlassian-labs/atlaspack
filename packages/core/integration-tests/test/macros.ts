@@ -14,6 +14,7 @@ import {
 
 describe.v2('macros', function () {
   let count = 0;
+  // @ts-expect-error - TS7034 - Variable 'dir' implicitly has type 'any' in some locations where its type cannot be determined.
   let dir;
   beforeEach(async () => {
     dir = path.join(__dirname, 'macros', '' + ++count);
@@ -25,6 +26,7 @@ describe.v2('macros', function () {
   });
 
   it('should support named imports', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { hash } from "./macro" with { type: "macro" };
@@ -37,6 +39,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -47,12 +50,14 @@ describe.v2('macros', function () {
   });
 
   it('should support renamed imports', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { hashString as foo } from "@atlaspack/rust" with { type: "macro" };
         output = foo('hi');
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -63,6 +68,7 @@ describe.v2('macros', function () {
   });
 
   it('should support default imports', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import test from "./macro.js" with { type: "macro" };
@@ -75,6 +81,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -85,6 +92,7 @@ describe.v2('macros', function () {
   });
 
   it('should support default interop with CommonJS modules', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import test from "./macro.js" with { type: "macro" };
@@ -97,6 +105,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -107,12 +116,14 @@ describe.v2('macros', function () {
   });
 
   it('should support namespace imports', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import * as ns from "@atlaspack/rust" with { type: "macro" };
         output = ns.hashString('hi');
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -123,6 +134,7 @@ describe.v2('macros', function () {
   });
 
   it('should support various JS value types', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -135,11 +147,13 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
     });
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let res = await run(b);
     assert.equal(
       res,
@@ -159,6 +173,7 @@ describe.v2('macros', function () {
   });
 
   it('should support returning various JS value types', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -170,11 +185,13 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
     });
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let res = await run(b);
     assert.deepEqual(res, [
       undefined,
@@ -191,6 +208,7 @@ describe.v2('macros', function () {
   });
 
   it('should support evaluating expressions', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -202,11 +220,13 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
     });
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let res = await run(b);
     assert.deepEqual(res, [
       3,
@@ -225,6 +245,7 @@ describe.v2('macros', function () {
   });
 
   it('should dead code eliminate falsy branches', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -241,6 +262,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -252,6 +274,7 @@ describe.v2('macros', function () {
   });
 
   it('should support async macros', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -263,6 +286,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -273,6 +297,7 @@ describe.v2('macros', function () {
   });
 
   it('should ignore macros in node_modules', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import test from "foo";
@@ -288,6 +313,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
     });
@@ -297,6 +323,7 @@ describe.v2('macros', function () {
   });
 
   it('should throw a diagnostic when an argument cannot be converted', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -309,6 +336,7 @@ describe.v2('macros', function () {
     `;
 
     try {
+      // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
       await bundle(path.join(dir, '/index.js'), {
         inputFS: overlayFS,
         mode: 'production',
@@ -320,6 +348,7 @@ describe.v2('macros', function () {
           origin: '@atlaspack/transformer-js',
           codeFrames: [
             {
+              // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
               filePath: path.join(dir, 'index.js'),
               codeHighlights: [
                 {
@@ -343,6 +372,7 @@ describe.v2('macros', function () {
   });
 
   it('should throw a diagnostic when a macro errors', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -355,6 +385,7 @@ describe.v2('macros', function () {
     `;
 
     try {
+      // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
       await bundle(path.join(dir, '/index.js'), {
         inputFS: overlayFS,
         mode: 'production',
@@ -365,6 +396,7 @@ describe.v2('macros', function () {
       );
       assert.deepEqual(err.diagnostics[0].codeFrames, [
         {
+          // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
           filePath: path.join(dir, 'index.js'),
           codeHighlights: [
             {
@@ -385,6 +417,7 @@ describe.v2('macros', function () {
   });
 
   it('should throw a diagnostic when a macro cannot be resolved', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -392,6 +425,7 @@ describe.v2('macros', function () {
     `;
 
     try {
+      // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
       await bundle(path.join(dir, '/index.js'), {
         inputFS: overlayFS,
         mode: 'production',
@@ -399,6 +433,7 @@ describe.v2('macros', function () {
     } catch (err: any) {
       assert.deepEqual(
         // \ gets escaped by Node -> Rust -> Node in Windows, so we normalize it for the test
+        // @ts-expect-error - TS7006 - Parameter 'd' implicitly has an 'any' type.
         err.diagnostics.map((d) => ({
           ...d,
           message: d.message.replace(/\\\\/g, '\\'),
@@ -406,12 +441,14 @@ describe.v2('macros', function () {
         [
           {
             message: `Error loading macro: Could not resolve module "./macro.js" from "${path.join(
+              // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
               dir,
               'index.js',
             )}"`,
             origin: '@atlaspack/transformer-js',
             codeFrames: [
               {
+                // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
                 filePath: path.join(dir, 'index.js'),
                 codeHighlights: [
                   {
@@ -436,6 +473,7 @@ describe.v2('macros', function () {
   });
 
   it('should support returning functions', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -447,6 +485,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -457,6 +496,7 @@ describe.v2('macros', function () {
   });
 
   it('should support macros written in typescript', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.ts" with { type: "macro" };
@@ -468,6 +508,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -478,6 +519,7 @@ describe.v2('macros', function () {
   });
 
   it('should support macros written in typescript without extension', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro" with { type: "macro" };
@@ -489,6 +531,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -499,6 +542,7 @@ describe.v2('macros', function () {
   });
 
   it('should allow emitting additional assets', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { css } from "./macro.ts" with { type: "macro" };
@@ -514,6 +558,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -527,6 +572,7 @@ describe.v2('macros', function () {
   });
 
   it('should invalidate the cache when changing a macro', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -538,6 +584,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -547,6 +594,7 @@ describe.v2('macros', function () {
     let res = await overlayFS.readFile(b.getBundles()[0].filePath, 'utf8');
     assert(res.includes('output=2'));
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       macro.js:
         export function test() {
@@ -554,6 +602,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -565,6 +614,7 @@ describe.v2('macros', function () {
   });
 
   it('should invalidate the cache on build', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -577,6 +627,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -587,6 +638,7 @@ describe.v2('macros', function () {
     let match = res.match(/output=(\d+)/);
     assert(match);
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -600,6 +652,7 @@ describe.v2('macros', function () {
   });
 
   it('should only error once if a macro errors during loading', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.js" with { type: "macro" };
@@ -613,6 +666,7 @@ describe.v2('macros', function () {
     `;
 
     try {
+      // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
       await bundle(path.join(dir, '/index.js'), {
         inputFS: overlayFS,
         mode: 'production',
@@ -623,6 +677,7 @@ describe.v2('macros', function () {
   });
 
   it('should rebuild in watch mode after fixing an error', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { test } from "./macro.ts" with { type: "macro" };
@@ -634,6 +689,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundler(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -646,6 +702,7 @@ describe.v2('macros', function () {
       let buildEvent = await getNextBuild(b);
       assert.equal(buildEvent.type, 'buildFailure');
 
+      // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS, dir)`
         macro.ts:
           export function test() {
@@ -669,6 +726,7 @@ describe.v2('macros', function () {
   });
 
   it('should support evaluating constants', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { hashString } from "@atlaspack/rust" with { type: "macro" };
@@ -707,6 +765,7 @@ describe.v2('macros', function () {
         }
     `;
 
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
     let b = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       mode: 'production',
@@ -719,6 +778,7 @@ describe.v2('macros', function () {
   });
 
   it('should throw a diagnostic when a constant is mutated', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { hashString } from "@atlaspack/rust" with { type: "macro" };
@@ -732,6 +792,7 @@ describe.v2('macros', function () {
     `;
 
     try {
+      // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
       await bundle(path.join(dir, '/index.js'), {
         inputFS: overlayFS,
         mode: 'production',
@@ -743,6 +804,7 @@ describe.v2('macros', function () {
           origin: '@atlaspack/transformer-js',
           codeFrames: [
             {
+              // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
               filePath: path.join(dir, 'index.js'),
               codeHighlights: [
                 {
@@ -766,6 +828,7 @@ describe.v2('macros', function () {
           origin: '@atlaspack/transformer-js',
           codeFrames: [
             {
+              // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
               filePath: path.join(dir, 'index.js'),
               codeHighlights: [
                 {
@@ -789,6 +852,7 @@ describe.v2('macros', function () {
   });
 
   it('should throw a diagnostic when a constant object is passed to a function', async function () {
+    // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type. | TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS, dir)`
       index.js:
         import { hashString } from "@atlaspack/rust" with { type: "macro" };
@@ -813,6 +877,7 @@ describe.v2('macros', function () {
     `;
 
     try {
+      // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
       await bundle(path.join(dir, '/index.js'), {
         inputFS: overlayFS,
         mode: 'production',
@@ -824,6 +889,7 @@ describe.v2('macros', function () {
           origin: '@atlaspack/transformer-js',
           codeFrames: [
             {
+              // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
               filePath: path.join(dir, 'index.js'),
               codeHighlights: [
                 {
@@ -847,6 +913,7 @@ describe.v2('macros', function () {
           origin: '@atlaspack/transformer-js',
           codeFrames: [
             {
+              // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
               filePath: path.join(dir, 'index.js'),
               codeHighlights: [
                 {
@@ -870,6 +937,7 @@ describe.v2('macros', function () {
           origin: '@atlaspack/transformer-js',
           codeFrames: [
             {
+              // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
               filePath: path.join(dir, 'index.js'),
               codeHighlights: [
                 {
@@ -893,6 +961,7 @@ describe.v2('macros', function () {
           origin: '@atlaspack/transformer-js',
           codeFrames: [
             {
+              // @ts-expect-error - TS7005 - Variable 'dir' implicitly has an 'any' type.
               filePath: path.join(dir, 'index.js'),
               codeHighlights: [
                 {

@@ -1,4 +1,5 @@
 import type {FilePath} from '@atlaspack/types';
+// @ts-expect-error - TS2305 - Module '"@atlaspack/fs"' has no exported member 'FSError'. | TS2305 - Module '"@atlaspack/fs"' has no exported member 'makeShared'. | TS2305 - Module '"@atlaspack/fs"' has no exported member 'File'.
 import {MemoryFS, FSError, makeShared, File} from '@atlaspack/fs';
 import path from 'path';
 import {registerSerializableClass} from '@atlaspack/core';
@@ -30,7 +31,9 @@ const CONSTANTS = {
   O_NONBLOCK: 2048,
 } as const;
 
+// @ts-expect-error - TS7006 - Parameter 'f' implicitly has an 'any' type.
 function asyncToNode(args: any, num: number, f) {
+  // @ts-expect-error - TS7034 - Variable 'cb' implicitly has type 'any' in some locations where its type cannot be determined.
   let cb, params;
   if (args.length === num) {
     cb = args[args.length - 1];
@@ -49,8 +52,10 @@ function asyncToNode(args: any, num: number, f) {
   if (cb) {
     result.then(
       // $FlowFixMe
+      // @ts-expect-error - TS7005 - Variable 'cb' implicitly has an 'any' type.
       (res) => cb(null, res),
       // $FlowFixMe
+      // @ts-expect-error - TS7005 - Variable 'cb' implicitly has an 'any' type.
       (err) => cb(err),
     );
   } else {
@@ -86,30 +91,39 @@ function parseOpenFlags(flags: number) {
   if (typeof flags === 'number') {
     flagsBits = flags;
   } else {
+    // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'number'.
     flags = [...flags].filter((c) => c !== 's').join('');
+    // @ts-expect-error - TS2339 - Property 'includes' does not exist on type 'number'.
     if (flags.includes('a')) {
       flagsBits |= CONSTANTS.O_APPEND | CONSTANTS.O_CREAT;
+      // @ts-expect-error - TS2339 - Property 'includes' does not exist on type 'number'.
       if (flags.includes('+')) {
         flagsBits |= CONSTANTS.O_RDWR;
       } else {
         flagsBits |= CONSTANTS.O_RDONLY;
       }
+      // @ts-expect-error - TS2339 - Property 'includes' does not exist on type 'number'.
       if (flags.includes('x')) {
         flagsBits |= CONSTANTS.O_EXCL;
       }
+      // @ts-expect-error - TS2339 - Property 'includes' does not exist on type 'number'.
     } else if (flags.includes('r')) {
+      // @ts-expect-error - TS2339 - Property 'includes' does not exist on type 'number'.
       if (flags.includes('+')) {
         flagsBits |= CONSTANTS.O_RDWR;
       } else {
         flagsBits |= CONSTANTS.O_RDONLY;
       }
+      // @ts-expect-error - TS2339 - Property 'includes' does not exist on type 'number'.
     } else if (flags.includes('w')) {
       flagsBits |= CONSTANTS.O_CREAT;
+      // @ts-expect-error - TS2339 - Property 'includes' does not exist on type 'number'.
       if (flags.includes('+')) {
         flagsBits |= CONSTANTS.O_RDWR;
       } else {
         flagsBits |= CONSTANTS.O_WRONLY;
       }
+      // @ts-expect-error - TS2339 - Property 'includes' does not exist on type 'number'.
       if (flags.includes('x')) {
         flagsBits |= CONSTANTS.O_EXCL;
       } else {
@@ -145,9 +159,11 @@ export class ExtendedMemoryFS extends MemoryFS {
     let {recursive = false} = options;
 
     if (!recursive) {
+      // @ts-expect-error - TS2339 - Property 'dirs' does not exist on type 'ExtendedMemoryFS'.
       if (!this.dirs.has(path.dirname(dir))) {
         throw new FSError('ENOENT', path.dirname(dir), 'is not a directory');
       }
+      // @ts-expect-error - TS2339 - Property 'dirs' does not exist on type 'ExtendedMemoryFS'.
       if (this.dirs.has(dir)) {
         throw new FSError('EEXIST', dir, 'already exists');
       }
@@ -165,10 +181,12 @@ export class ExtendedMemoryFS extends MemoryFS {
     let {recursive = false} = options;
 
     if (!recursive) {
+      // @ts-expect-error - TS2339 - Property 'dirs' does not exist on type 'ExtendedMemoryFS'. | TS2339 - Property 'files' does not exist on type 'ExtendedMemoryFS'.
       if (!this.dirs.has(filePath) && !this.files.has(filePath)) {
         throw new FSError('ENOENT', filePath, 'is not a directory');
       }
       if (
+        // @ts-expect-error - TS2339 - Property 'dirs' does not exist on type 'ExtendedMemoryFS'.
         this.dirs.has(filePath) &&
         (await this.readdir(filePath)).length > 0
       ) {
@@ -182,36 +200,47 @@ export class ExtendedMemoryFS extends MemoryFS {
   // --------------------------------
 
   rmdir(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
     return asyncToNode(args, 3, (...p) => this._rmdir(...p));
   }
   mkdir(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
     return asyncToNode(args, 3, (...p) => this._mkdir(...p));
   }
   readdir(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
     return asyncToNode(args, 3, (...p) => super.readdir(...p));
   }
   unlink(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
     return asyncToNode(args, 2, (...p) => super.unlink(...p));
   }
   copyFile(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
     return asyncToNode(args, 3, (...p) => super.copyFile(...p));
   }
   realpath(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
     return asyncToNode(args, 3, (...p) => super.realpath(...p));
   }
   readFile(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
     return asyncToNode(args, 3, (...p) => super.readFile(...p));
   }
   symlink(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
     return asyncToNode(args, 4, (...p) => super.symlink(...p));
   }
   writeFile(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
     return asyncToNode(args, 4, (...p) => super.writeFile(...p));
   }
   stat(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
     return asyncToNode(args, 2, (...p) => super.stat(...p));
   }
   lstat(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
     return asyncToNode(args, 2, (...p) => super.stat(...p));
   }
   lstatSync(filePath: FilePath): any {
@@ -228,28 +257,40 @@ export class ExtendedMemoryFS extends MemoryFS {
   // --------------------------------
   chmodSync() {}
   renameSync(oldPath: FilePath, newPath: FilePath) {
+    // @ts-expect-error - TS2339 - Property 'files' does not exist on type 'ExtendedMemoryFS'.
     let file = this.files.get(oldPath);
     if (file) {
+      // @ts-expect-error - TS2339 - Property 'files' does not exist on type 'ExtendedMemoryFS'.
       this.files.delete(oldPath);
+      // @ts-expect-error - TS2339 - Property 'dirs' does not exist on type 'ExtendedMemoryFS'.
       if (this.dirs.has(newPath)) {
+        // @ts-expect-error - TS2339 - Property 'files' does not exist on type 'ExtendedMemoryFS'.
         this.files.set(newPath + '/' + path.basename(oldPath), file);
       } else {
+        // @ts-expect-error - TS2339 - Property 'files' does not exist on type 'ExtendedMemoryFS'.
         this.files.set(newPath, file);
+        // @ts-expect-error - TS2551 - Property 'symlinks' does not exist on type 'ExtendedMemoryFS'. Did you mean 'symlink'?
         this.symlinks.delete(newPath);
       }
       return;
     }
 
+    // @ts-expect-error - TS2551 - Property 'symlinks' does not exist on type 'ExtendedMemoryFS'. Did you mean 'symlink'?
     let target = this.symlinks.get(oldPath);
     if (target) {
+      // @ts-expect-error - TS2551 - Property 'symlinks' does not exist on type 'ExtendedMemoryFS'. Did you mean 'symlink'?
       this.symlinks.delete(oldPath);
+      // @ts-expect-error - TS2551 - Property 'symlinks' does not exist on type 'ExtendedMemoryFS'. Did you mean 'symlink'?
       this.symlinks.set(newPath, target);
       return;
     }
 
+    // @ts-expect-error - TS2339 - Property 'dirs' does not exist on type 'ExtendedMemoryFS'.
     let dir = this.dirs.get(oldPath);
     if (dir) {
+      // @ts-expect-error - TS2339 - Property 'dirs' does not exist on type 'ExtendedMemoryFS'.
       this.dirs.delete(oldPath);
+      // @ts-expect-error - TS2339 - Property 'dirs' does not exist on type 'ExtendedMemoryFS'.
       this.dirs.set(newPath, dir);
       return;
     }
@@ -279,12 +320,15 @@ export class ExtendedMemoryFS extends MemoryFS {
 
   openSync(filePath: FilePath, flags: number, mode: number): number {
     flags = parseOpenFlags(flags);
+    // @ts-expect-error - TS2551 - Property 'symlinks' does not exist on type 'ExtendedMemoryFS'. Did you mean 'symlink'?
     if (flags & CONSTANTS.O_NOFOLLOW && this.symlinks.has(filePath)) {
       throw new FSError('ELOOP', filePath, 'is a symlink');
     }
 
+    // @ts-expect-error - TS2339 - Property '_normalizePath' does not exist on type 'ExtendedMemoryFS'.
     filePath = this._normalizePath(filePath);
 
+    // @ts-expect-error - TS2339 - Property 'files' does not exist on type 'ExtendedMemoryFS'.
     let file = this.files.get(filePath);
     if (flags & CONSTANTS.O_CREAT) {
       if (file) {
@@ -293,6 +337,7 @@ export class ExtendedMemoryFS extends MemoryFS {
         }
       } else {
         file = new File(makeShared(''), mode);
+        // @ts-expect-error - TS2339 - Property 'files' does not exist on type 'ExtendedMemoryFS'.
         this.files.set(filePath, file);
       }
     }
@@ -394,39 +439,53 @@ export class ExtendedMemoryFS extends MemoryFS {
 
   /* eslint-disable require-await */
   open(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type.
     return asyncToNode(args, 2, async (...p) =>
+      // @ts-expect-error - TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
       Promise.resolve(this.openSync(...p)),
     );
   }
   read(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type.
     return asyncToNode(args, 6, async (...p) =>
+      // @ts-expect-error - TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
       Promise.resolve(this.readSync(...p)),
     );
   }
   write(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type.
     return asyncToNode(args, 6, async (...p) =>
+      // @ts-expect-error - TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
       Promise.resolve(this.writeSync(...p)),
     );
   }
   close(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type.
     return asyncToNode(args, 2, async (...p) =>
+      // @ts-expect-error - TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
       Promise.resolve(this.closeSync(...p)),
     );
   }
   fstat(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type.
     return asyncToNode(args, 2, async (...p) =>
+      // @ts-expect-error - TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
       Promise.resolve(this.fstatSync(...p)),
     );
   }
 
   rename(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type.
     return asyncToNode(args, 2, async (...p) =>
+      // @ts-expect-error - TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
       Promise.resolve(this.renameSync(...p)),
     );
   }
 
   chmod(...args: any): any {
+    // @ts-expect-error - TS7019 - Rest parameter 'p' implicitly has an 'any[]' type.
     return asyncToNode(args, 3, async (...p) =>
+      // @ts-expect-error - TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
       Promise.resolve(this.chmodSync(...p)),
     );
   }

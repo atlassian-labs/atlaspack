@@ -15,6 +15,7 @@ import type {
 
 import {registerSerializableClass} from '@atlaspack/core';
 import WorkerFarm from '@atlaspack/workers';
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import packageJSON from '../package.json';
 import {findAncestorFile, findNodeModule, findFirstFile} from './find';
 import {MemoryFS} from './MemoryFS';
@@ -279,8 +280,10 @@ export class OverlayFS implements FileSystem {
   readFileSync(filePath: FilePath, encoding?: Encoding): any {
     filePath = this.realpathSync(filePath);
     try {
+      // @ts-expect-error - TS2345 - Argument of type 'Encoding | undefined' is not assignable to parameter of type 'Encoding'.
       return this.writable.readFileSync(filePath, encoding);
     } catch (err: any) {
+      // @ts-expect-error - TS2345 - Argument of type 'Encoding | undefined' is not assignable to parameter of type 'Encoding'.
       return this.readable.readFileSync(filePath, encoding);
     }
   }
@@ -339,6 +342,7 @@ export class OverlayFS implements FileSystem {
     let entries = new Map();
 
     try {
+      // @ts-expect-error - TS2483 - The left-hand side of a 'for...of' statement cannot use a type annotation. | TS2769 - No overload matches this call.
       for (let entry: any of this.writable.readdirSync(dir, opts)) {
         let filePath = path.join(dir, entry.name ?? entry);
         if (this.deleted.has(filePath)) continue;
@@ -349,6 +353,7 @@ export class OverlayFS implements FileSystem {
     }
 
     try {
+      // @ts-expect-error - TS2483 - The left-hand side of a 'for...of' statement cannot use a type annotation. | TS2769 - No overload matches this call.
       for (let entry: any of this.readable.readdirSync(dir, opts)) {
         let filePath = path.join(dir, entry.name ?? entry);
         if (this.deleted.has(filePath)) continue;

@@ -1,6 +1,7 @@
 import {useCallback, useMemo, memo} from 'react';
 import path from 'path';
 
+// @ts-expect-error - TS7016 - Could not find a declaration file for module '../codemirror'. '/home/ubuntu/parcel/packages/dev/repl/src/codemirror.js' implicitly has an 'any' type.
 import {CodemirrorEditor} from '../codemirror';
 
 import {
@@ -56,10 +57,15 @@ const theme = EditorView.theme({
 
 const CONFIG_FILE = /^\.\w*rc$/;
 const Editor: any = memo(function Editor({
+// @ts-expect-error - TS2339 - Property 'filename' does not exist on type '{ children?: ReactNode; }'.
   filename,
+// @ts-expect-error - TS2339 - Property 'readOnly' does not exist on type '{ children?: ReactNode; }'.
   readOnly,
+// @ts-expect-error - TS2339 - Property 'content' does not exist on type '{ children?: ReactNode; }'.
   content,
+// @ts-expect-error - TS2339 - Property 'onChange' does not exist on type '{ children?: ReactNode; }'.
   onChange,
+// @ts-expect-error - TS2339 - Property 'diagnostics' does not exist on type '{ children?: ReactNode; }'.
   diagnostics,
 }) {
   const extension = path.extname(filename).slice(1);
@@ -120,6 +126,7 @@ const Editor: any = memo(function Editor({
   );
 
   return (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
     <CodemirrorEditor
       value={content}
       onChange={onChange}
@@ -145,6 +152,7 @@ function EditorWrapper(
   );
 
   return (
+// @ts-expect-error - TS17004 - Cannot use JSX unless the '--jsx' flag is provided.
     <Editor
       filename={name}
       content={value}

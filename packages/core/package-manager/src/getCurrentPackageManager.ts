@@ -1,4 +1,5 @@
 export default function getCurrentPackageManager(
+  // @ts-expect-error - TS2322 - Type 'string | undefined' is not assignable to type 'string | null'.
   userAgent: string | null = process.env.npm_config_user_agent,
 ):
   | {

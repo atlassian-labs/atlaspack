@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2307 - Cannot find module 'flow-to-typescript-codemod' or its corresponding type declarations.
 import {Flow} from 'flow-to-typescript-codemod';
 import {createBuildCache} from './buildCache';
 import {serializeRaw, deserializeRaw} from './serializerCore';
@@ -231,6 +232,7 @@ const serializeCache = createBuildCache();
 export function serialize(object: any): Buffer {
   let cached = serializeCache.get(object);
   if (cached) {
+    // @ts-expect-error - TS2322 - Type 'unknown' is not assignable to type 'Buffer'.
     return cached;
   }
 

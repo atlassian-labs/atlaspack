@@ -49,6 +49,7 @@ async function loadPlugin(
   options: unknown | null | undefined = {},
   packageManager: PackageManager,
   shouldAutoInstall: boolean,
+  // @ts-expect-error - TS1064 - The return type of an async function or method must be the global Promise<T> type. Did you mean to write 'Promise<unknown>'?
 ): unknown {
   if (typeof pluginArg !== 'string') {
     return pluginArg;

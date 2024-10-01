@@ -37,6 +37,7 @@ type PositionTickInfo = {
 };
 
 export default class SamplingProfiler {
+  // @ts-expect-error - TS2564 - Property 'session' has no initializer and is not definitely assigned in the constructor.
   session: Session;
 
   startProfiling(): Promise<unknown> {
@@ -85,6 +86,7 @@ export default class SamplingProfiler {
         ) => void,
         reject: (error?: any) => void,
       ) => {
+        // @ts-expect-error - TS2769 - No overload matches this call. | TS7006 - Parameter 'err' implicitly has an 'any' type. | TS7006 - Parameter 'p' implicitly has an 'any' type.
         this.session.post(method, params, (err, p) => {
           if (err == null) {
             resolve(

@@ -20,8 +20,11 @@ const {
 } = require('./deep-imports.js');
 
 export async function loadGraphs(cacheDir: string): Promise<{
+  // @ts-expect-error - TS2749 - 'AssetGraph' refers to a value, but is being used as a type here. Did you mean 'typeof AssetGraph'?
   assetGraph: AssetGraph | null | undefined;
+  // @ts-expect-error - TS2749 - 'BundleGraph' refers to a value, but is being used as a type here. Did you mean 'typeof BundleGraph'?
   bundleGraph: BundleGraph | null | undefined;
+  // @ts-expect-error - TS2749 - 'RequestTracker' refers to a value, but is being used as a type here. Did you mean 'typeof RequestTracker'?
   requestTracker: RequestTracker | null | undefined;
   bundleInfo: Map<ContentKey, PackagedBundleInfo> | null | undefined;
   cacheInfo: Map<string, Array<string | number>> | null | undefined;
@@ -76,6 +79,7 @@ export async function loadGraphs(cacheDir: string): Promise<{
   const cache = new LMDBCache(cacheDir);
 
   // Get requestTracker
+  // @ts-expect-error - TS7034 - Variable 'requestTracker' implicitly has type 'any' in some locations where its type cannot be determined.
   let requestTracker;
   if (requestGraphBlob) {
     try {
@@ -145,9 +149,13 @@ export async function loadGraphs(cacheDir: string): Promise<{
   }
 
   function getSubRequests(id: NodeId) {
-    return requestTracker.graph
-      .getNodeIdsConnectedFrom(id, requestGraphEdgeTypes.subrequest)
-      .map((n) => nullthrows(requestTracker.graph.getNode(n)));
+    // @ts-expect-error - TS7005 - Variable 'requestTracker' implicitly has an 'any' type.
+    return (
+      requestTracker.graph
+        .getNodeIdsConnectedFrom(id, requestGraphEdgeTypes.subrequest)
+        // @ts-expect-error - TS7006 - Parameter 'n' implicitly has an 'any' type. | TS7005 - Variable 'requestTracker' implicitly has an 'any' type.
+        .map((n) => nullthrows(requestTracker.graph.getNode(n)))
+    );
   }
 
   // Load graphs by finding the main subrequests and loading their results
@@ -166,6 +174,7 @@ export async function loadGraphs(cacheDir: string): Promise<{
     let buildRequestSubRequests = getSubRequests(buildRequestId);
 
     let writeBundlesRequest = buildRequestSubRequests.find(
+      // @ts-expect-error - TS7006 - Parameter 'n' implicitly has an 'any' type.
       (n) => n.type === 1 && n.requestType === 11,
     );
     if (writeBundlesRequest != null) {

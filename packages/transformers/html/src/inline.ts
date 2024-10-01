@@ -1,5 +1,6 @@
 import type {AST, MutableAsset, TransformerResult} from '@atlaspack/types';
 import {hashString} from '@atlaspack/rust';
+// @ts-expect-error - TS2305 - Module '"posthtml"' has no exported member 'PostHTMLNode'.
 import type {PostHTMLNode} from 'posthtml';
 
 import PostHTML from 'posthtml';
@@ -28,6 +29,7 @@ export default function extractInlineAssets(
   // Extract inline <script> and <style> tags for processing.
   let parts: Array<TransformerResult> = [];
   let hasModuleScripts = false;
+  // @ts-expect-error - TS2339 - Property 'walk' does not exist on type 'PostHTML<unknown, unknown>'.
   PostHTML().walk.call(program, (node: PostHTMLNode) => {
     let parcelKey = hashString(`${asset.id}:${key++}`);
     if (node.tag === 'script' || node.tag === 'style') {
@@ -43,11 +45,14 @@ export default function extractInlineAssets(
           }
         } else if (node.attrs && node.attrs.type != null) {
           // Skip JSON
+          // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly 'application/javascript': "js"; readonly 'text/javascript': "js"; readonly 'application/json': false; readonly 'application/ld+json': "jsonld"; readonly 'text/html': false; readonly module: "js"; }'.
           if (SCRIPT_TYPES[node.attrs.type] === false) {
             return node;
           }
 
+          // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly 'application/javascript': "js"; readonly 'text/javascript': "js"; readonly 'application/json': false; readonly 'application/ld+json': "jsonld"; readonly 'text/html': false; readonly module: "js"; }'.
           if (SCRIPT_TYPES[node.attrs.type]) {
+            // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly 'application/javascript': "js"; readonly 'text/javascript': "js"; readonly 'application/json': false; readonly 'application/ld+json': "jsonld"; readonly 'text/html': false; readonly module: "js"; }'.
             type = SCRIPT_TYPES[node.attrs.type];
           } else {
             type = node.attrs.type.split('/')[1];
@@ -129,6 +134,7 @@ export default function extractInlineAssets(
           content: value,
           uniqueKey: parcelKey,
           bundleBehavior: 'inline',
+          // @ts-expect-error - TS2322 - Type '{ sourceType: string; outputFormat: string; loc: { filePath: string; start: any; end: any; } | undefined; }' is not assignable to type 'Environment | EnvironmentOptions | undefined'.
           env,
           meta: {
             type: 'tag',

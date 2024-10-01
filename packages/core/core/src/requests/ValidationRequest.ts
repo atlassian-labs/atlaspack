@@ -1,4 +1,5 @@
 import type {Async} from '@atlaspack/types';
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'SharedReference'. Did you mean to use 'import SharedReference from "@atlaspack/workers"' instead?
 import type {SharedReference} from '@atlaspack/workers';
 import type {StaticRunOpts} from '../RequestTracker';
 import type {AssetGroup} from '../types';
@@ -48,6 +49,7 @@ export default function createValidationRequest(
       // Schedule validations on workers for all plugins that implement the one-asset-at-a-time "validate" method.
       let promises = trackedRequestsDesc.map(
         async (request) =>
+          // @ts-expect-error - TS2339 - Property 'createHandle' does not exist on type 'WorkerFarm'.
           (await farm.createHandle('runValidate'))({
             requests: [request],
             optionsRef: optionsRef,
@@ -62,10 +64,12 @@ export default function createValidationRequest(
 
       // Schedule validations on the main thread for all validation plugins that implement "validateAll".
       promises.push(
+        // @ts-expect-error - TS2345 - Argument of type 'Promise<void>' is not assignable to parameter of type 'Promise<undefined>'.
         new Validation({
           requests: trackedRequestsDesc,
           options,
           config,
+          // @ts-expect-error - TS2322 - Type '(event: ReporterEvent) => Promise<void>' is not assignable to type 'ReportFn'.
           report,
           dedicatedThread: true,
         }).run(),

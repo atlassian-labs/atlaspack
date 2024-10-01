@@ -15,6 +15,7 @@ import {
   overlayFS,
   run,
 } from '@atlaspack/test-utils';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'wasm-sourcemap'. '/home/ubuntu/parcel/node_modules/wasm-sourcemap/index.js' implicitly has an 'any' type.
 import * as wasmmap from 'wasm-sourcemap';
 import {relativePath} from '@atlaspack/utils';
 
@@ -243,6 +244,7 @@ atlaspack-transformer-b`,
       },
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     assert.equal(await run(b), 2);
   });
 

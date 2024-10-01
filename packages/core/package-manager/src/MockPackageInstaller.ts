@@ -7,8 +7,10 @@ import type {FileSystem} from '@atlaspack/fs';
 import type {FilePath} from '@atlaspack/types';
 
 import path from 'path';
+// @ts-expect-error - TS2305 - Module '"@atlaspack/fs"' has no exported member 'ncp'.
 import {ncp} from '@atlaspack/fs';
 import {registerSerializableClass} from '@atlaspack/core';
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import pkg from '../package.json';
 import {moduleRequestsFromDependencyMap} from './utils';
 

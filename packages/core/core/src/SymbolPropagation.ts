@@ -85,6 +85,7 @@ export function propagateSymbols({
         }
       }
       let hasNamespaceOutgoingDeps = outgoingDeps.some(
+        // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol | undefined' and 'string' have no overlap. | TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         (d) => d.value.symbols?.get('*')?.local === '*',
       );
 
@@ -102,7 +103,9 @@ export function propagateSymbols({
 
       if (incomingDeps.length === 0) {
         // Root in the runtimes Graph
+        // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         assetNode.usedSymbols.add('*');
+        // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         namespaceReexportedSymbols.add('*');
       } else {
         for (let incomingDep of incomingDeps) {
@@ -118,8 +121,11 @@ export function propagateSymbols({
           }
 
           for (let exportSymbol of incomingDep.usedSymbolsDown) {
+            // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
             if (exportSymbol === '*') {
+              // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
               assetNode.usedSymbols.add('*');
+              // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
               namespaceReexportedSymbols.add('*');
             }
             if (
@@ -134,6 +140,7 @@ export function propagateSymbols({
             // (but only if we actually have namespace-exporting outgoing dependencies,
             // This usually happens with a reexporting asset with many namespace exports which means that
             // we cannot match up the correct asset with the used symbol at this level.)
+            // @ts-expect-error - TS2367 - This condition will always return 'true' since the types 'symbol' and 'string' have no overlap.
             else if (hasNamespaceOutgoingDeps && exportSymbol !== 'default') {
               namespaceReexportedSymbols.add(exportSymbol);
             }
@@ -160,6 +167,7 @@ export function propagateSymbols({
       for (let dep of outgoingDeps) {
         let depUsedSymbolsDownOld = dep.usedSymbolsDown;
         let depUsedSymbolsDown = new Set();
+        // @ts-expect-error - TS2322 - Type 'Set<unknown>' is not assignable to type 'Set<symbol>'.
         dep.usedSymbolsDown = depUsedSymbolsDown;
         if (
           assetNode.value.sideEffects ||
@@ -178,6 +186,7 @@ export function propagateSymbols({
           let depSymbols = dep.value.symbols;
           if (!depSymbols) continue;
 
+          // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol | undefined' and 'string' have no overlap. | TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
           if (depSymbols.get('*')?.local === '*') {
             if (addAll) {
               depUsedSymbolsDown.add('*');
@@ -191,6 +200,7 @@ export function propagateSymbols({
 
           for (let [symbol, {local}] of depSymbols) {
             // Was already handled above
+            // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
             if (local === '*') continue;
 
             if (!assetSymbolsInverse || !depSymbols.get(symbol)?.isWeak) {
@@ -201,6 +211,7 @@ export function propagateSymbols({
               if (reexportedExportSymbols == null) {
                 // not reexported = used in asset itself
                 depUsedSymbolsDown.add(symbol);
+                // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
               } else if (assetNode.usedSymbols.has('*')) {
                 // we need everything
                 depUsedSymbolsDown.add(symbol);
@@ -249,6 +260,7 @@ export function propagateSymbols({
       logger.warn({
         message: `${fromProjectPathRelative(
           assetNode.value.filePath,
+          // @ts-expect-error - TS2731 - Implicit conversion of a 'symbol' to a 'string' will fail at runtime. Consider wrapping this expression in 'String(...)'.
         )} reexports "${symbol}", which could be resolved either to the dependency "${
           depNode1.value.specifier
         }" or "${
@@ -321,8 +333,10 @@ export function propagateSymbols({
           );
         }
 
+        // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol | undefined' and 'string' have no overlap. | TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         if (outgoingDepSymbols.get('*')?.local === '*') {
           outgoingDep.usedSymbolsUp.forEach((sResolved, s) => {
+            // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
             if (s === 'default') {
               return;
             }
@@ -330,6 +344,7 @@ export function propagateSymbols({
             // If the symbol could come from multiple assets at runtime, assetNode's
             // namespace will be needed at runtime to perform the lookup on.
             if (reexportedSymbols.has(s)) {
+              // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
               if (!assetNode.usedSymbols.has('*')) {
                 logFallbackNamespaceInsertion(
                   assetNode,
@@ -338,6 +353,7 @@ export function propagateSymbols({
                   outgoingDep,
                 );
               }
+              // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
               assetNode.usedSymbols.add('*');
               reexportedSymbols.set(s, {asset: assetNode.id, symbol: s});
             } else {
@@ -365,6 +381,7 @@ export function propagateSymbols({
             reexported.forEach((s) => {
               // see same code above
               if (reexportedSymbols.has(s)) {
+                // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
                 if (!assetNode.usedSymbols.has('*')) {
                   logFallbackNamespaceInsertion(
                     assetNode,
@@ -373,6 +390,7 @@ export function propagateSymbols({
                     outgoingDep,
                   );
                 }
+                // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
                 assetNode.usedSymbols.add('*');
                 reexportedSymbols.set(s, {asset: assetNode.id, symbol: s});
               } else {
@@ -439,12 +457,14 @@ export function propagateSymbols({
         let incomingDepSymbols = incomingDep.value.symbols;
         if (!incomingDepSymbols) continue;
 
+        // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol | undefined' and 'string' have no overlap. | TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         let hasNamespaceReexport = incomingDepSymbols.get('*')?.local === '*';
         for (let s of incomingDep.usedSymbolsDown) {
           if (
             assetSymbols == null || // Assume everything could be provided if symbols are cleared
             assetNode.value.bundleBehavior === BundleBehavior.isolated ||
             assetNode.value.bundleBehavior === BundleBehavior.inline ||
+            // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
             s === '*' ||
             assetNode.usedSymbols.has(s)
           ) {
@@ -486,8 +506,10 @@ export function propagateSymbols({
             );
 
             errors.push({
+              // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
               message: md`${fromProjectPathRelative(
                 resolution.value.filePath,
+                // @ts-expect-error - TS2731 - Implicit conversion of a 'symbol' to a 'string' will fail at runtime. Consider wrapping this expression in 'String(...)'.
               )} does not export '${s}'`,
               origin: '@atlaspack/core',
               codeFrames: loc
@@ -541,6 +563,7 @@ export function propagateSymbols({
   // See https://github.com/parcel-bundler/parcel/pull/8212
   for (let dep of changedDeps) {
     dep.usedSymbolsUp = new Map(
+      // @ts-expect-error - TS2345 - Argument of type '([a]: [any], [b]: [any]) => any' is not assignable to parameter of type '(a: [symbol, { asset: string; symbol: symbol | null | undefined; } | null | undefined], b: [symbol, { asset: string; symbol: symbol | null | undefined; } | null | undefined]) => number'.
       [...dep.usedSymbolsUp].sort(([a]: [any], [b]: [any]) =>
         a.localeCompare(b),
       ),
@@ -669,6 +692,7 @@ function propagateSymbolsUp(
 
   let errors: Map<NodeId, Array<Diagnostic>> = previousErrors
     ? // Some nodes might have been removed since the last build
+      // @ts-expect-error - TS2769 - No overload matches this call.
       new Map([...previousErrors].filter(([n]: [any]) => assetGraph.hasNode(n)))
     : new Map();
 
@@ -687,6 +711,7 @@ function propagateSymbolsUp(
     assetGraph.nodes.length * (1 / 6) * 0.5 <
     changedDepsUsedSymbolsUpDirtyDownAssets.size;
 
+  // @ts-expect-error - TS7034 - Variable 'dirtyDeps' implicitly has type 'any' in some locations where its type cannot be determined.
   let dirtyDeps;
   if (runFullPass) {
     dirtyDeps = new Set<NodeId>();
@@ -745,13 +770,16 @@ function propagateSymbolsUp(
       } else {
         if (node.type === 'dependency') {
           if (node.usedSymbolsUpDirtyUp) {
+            // @ts-expect-error - TS7005 - Variable 'dirtyDeps' implicitly has an 'any' type.
             dirtyDeps.add(nodeId);
           } else {
+            // @ts-expect-error - TS7005 - Variable 'dirtyDeps' implicitly has an 'any' type.
             dirtyDeps.delete(nodeId);
           }
         }
       }
     };
+    // @ts-expect-error - TS2345 - Argument of type '(nodeId: NodeId) => void' is not assignable to parameter of type 'GraphTraversalCallback<number, TraversalActions>'.
     assetGraph.postOrderDfsFast(nodeVisitor, rootNodeId);
   }
 
@@ -806,6 +834,7 @@ function propagateSymbolsUp(
     } else {
       let connectedNodes = assetGraph.getNodeIdsConnectedTo(queuedNodeId);
       if (connectedNodes.length > 0) {
+        // @ts-expect-error - TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
         queue.add(...connectedNodes);
       }
     }

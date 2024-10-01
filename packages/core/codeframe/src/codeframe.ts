@@ -1,8 +1,10 @@
 import type {DiagnosticCodeHighlight} from '@atlaspack/diagnostic';
 
 import chalk from 'chalk';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'emphasize'. '/home/ubuntu/parcel/node_modules/emphasize/index.js' implicitly has an 'any' type.
 import emphasize from 'emphasize';
 import stringWidth from 'string-width';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'slice-ansi'. '/home/ubuntu/parcel/node_modules/slice-ansi/index.js' implicitly has an 'any' type.
 import sliceAnsi from 'slice-ansi';
 
 type CodeFramePadding = {

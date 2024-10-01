@@ -1,7 +1,9 @@
 import path from 'path';
 import {promisify} from 'util';
 import {Transformer} from '@atlaspack/plugin';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'glslify-deps'. '/home/ubuntu/parcel/node_modules/glslify-deps/index.js' implicitly has an 'any' type.
 import glslifyDeps from 'glslify-deps';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'glslify-bundle'. '/home/ubuntu/parcel/node_modules/glslify-bundle/index.js' implicitly has an 'any' type.
 import glslifyBundle from 'glslify-bundle';
 
 export default new Transformer({
@@ -10,6 +12,7 @@ export default new Transformer({
     let cwd = path.dirname(asset.filePath);
     let depper = glslifyDeps({
       cwd,
+      // @ts-expect-error - TS7006 - Parameter 'target' implicitly has an 'any' type. | TS7006 - Parameter 'opts' implicitly has an 'any' type. | TS7006 - Parameter 'next' implicitly has an 'any' type.
       resolve: async (target, opts, next) => {
         try {
           let filePath = await resolve(

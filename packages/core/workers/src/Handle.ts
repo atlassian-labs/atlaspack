@@ -1,4 +1,5 @@
 import {registerSerializableClass} from '@atlaspack/core';
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import packageJson from '../package.json';
 
 let HANDLE_ID = 0;

@@ -30,6 +30,7 @@ describe.v2('eslint-validator', function () {
       assert.equal(codeframe.filePath, entry);
       assert.equal(codeframe.codeHighlights.length, 2);
       codeframe.codeHighlights.sort(
+        // @ts-expect-error - TS7031 - Binding element 'a' implicitly has an 'any' type. | TS7031 - Binding element 'b' implicitly has an 'any' type.
         ({start: {line: a}}, {start: {line: b}}) => a - b,
       );
       assert.equal(

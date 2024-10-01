@@ -34,7 +34,9 @@ import {NodePackageManager} from '@atlaspack/package-manager';
 import {createWorkerFarm} from '@atlaspack/core';
 import resolveOptions from '@atlaspack/core/src/resolveOptions';
 import logger from '@atlaspack/logger';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
+// @ts-expect-error - TS2732 - Cannot find module '@atlaspack/core/package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import {version} from '@atlaspack/core/package.json';
 import {deserialize} from '@atlaspack/core/src/serializer';
 import {hashString} from '@atlaspack/rust';
@@ -48,6 +50,7 @@ function getEntries(entries = 'src/index.js') {
   );
 }
 
+// @ts-expect-error - TS7006 - Parameter 'opts' implicitly has an 'any' type.
 function getOptions(opts) {
   return mergeParcelOptions(
     {
@@ -58,6 +61,7 @@ function getOptions(opts) {
   );
 }
 
+// @ts-expect-error - TS7006 - Parameter 'opts' implicitly has an 'any' type.
 function runBundle(entries = 'src/index.js', opts) {
   return bundler(getEntries(entries), getOptions(opts)).run();
 }
@@ -97,9 +101,11 @@ async function testCache(
   }
 
   let resolvedOptions = await resolveOptions(
+    // @ts-expect-error - TS2345 - Argument of type 'string[] | undefined' is not assignable to parameter of type 'string | undefined'.
     getParcelOptions(getEntries(entries), getOptions(options)),
   );
 
+  // @ts-expect-error - TS2345 - Argument of type 'string[] | undefined' is not assignable to parameter of type 'string | undefined'.
   let b = await runBundle(entries, options);
 
   await assertNoFilePathInCache(
@@ -113,9 +119,11 @@ async function testCache(
   options = mergeParcelOptions(options || {}, newOptions);
 
   // Run cached build
+  // @ts-expect-error - TS2345 - Argument of type 'string[] | undefined' is not assignable to parameter of type 'string | undefined'.
   b = await runBundle(entries, options);
 
   resolvedOptions = await resolveOptions(
+    // @ts-expect-error - TS2345 - Argument of type 'string[] | undefined' is not assignable to parameter of type 'string | undefined'.
     getParcelOptions(getEntries(entries), getOptions(options)),
   );
   await assertNoFilePathInCache(
@@ -141,7 +149,9 @@ describe.v2('cache', function () {
   });
 
   it('should support updating a JS file', async function () {
+    // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
     let b = await testCache(async (b) => {
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 4);
       await overlayFS.writeFile(
         path.join(inputDir, 'src/nested/test.js'),
@@ -149,11 +159,14 @@ describe.v2('cache', function () {
       );
     });
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     assert.equal(await run(b.bundleGraph), 6);
   });
 
   it('should support adding a dependency', async function () {
+    // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
     let b = await testCache(async (b) => {
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 4);
       await overlayFS.writeFile(
         path.join(inputDir, 'src/nested/foo.js'),
@@ -165,6 +178,7 @@ describe.v2('cache', function () {
       );
     });
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     assert.equal(await run(b.bundleGraph), 8);
   });
 
@@ -186,6 +200,7 @@ describe.v2('cache', function () {
       {
         entries: ['a.html', 'b.html'],
         mode: 'production',
+        // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
         update: async (b) => {
           let html = b.bundleGraph
             .getBundles()
@@ -213,6 +228,7 @@ describe.v2('cache', function () {
   it('should error when deleting a file', async function () {
     await assert.rejects(
       async () => {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         await testCache(async () => {
           await overlayFS.unlink(path.join(inputDir, 'src/nested/test.js'));
         });
@@ -223,6 +239,7 @@ describe.v2('cache', function () {
 
   it('should error when starting parcel from a broken state with no changes', async function () {
     await assert.rejects(async () => {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       await testCache(async () => {
         await overlayFS.unlink(path.join(inputDir, 'src/nested/test.js'));
       });
@@ -231,6 +248,7 @@ describe.v2('cache', function () {
     // Do a third build from a failed state with no changes
     await assert.rejects(
       async () => {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 0.
         await runBundle();
       },
       {message: "Failed to resolve './nested/test' from './src/index.js'"},
@@ -238,7 +256,9 @@ describe.v2('cache', function () {
   });
 
   describe('babel', function () {
+    // @ts-expect-error - TS7006 - Parameter 'config' implicitly has an 'any' type.
     let json = (config) => JSON.stringify(config);
+    // @ts-expect-error - TS7006 - Parameter 'config' implicitly has an 'any' type.
     let cjs = (config) => `module.exports = ${JSON.stringify(config)}`;
     // TODO: not sure how to invalidate the ESM cache in node...
     // let mjs = (config) => `export default ${JSON.stringify(config)}`;
@@ -258,7 +278,9 @@ describe.v2('cache', function () {
       // Invalidate @babel/core before any of these tests run so that it is required
       // through NodePackageManager and we are able to track module children.
       // Otherwise, it will already have been loaded by @babel/register.
+      // @ts-expect-error - TS2339 - Property 'callAllWorkers' does not exist on type 'WorkerFarm'.
       await workerFarm.callAllWorkers('invalidateRequireCache', [
+        // @ts-expect-error - TS2339 - Property 'resolveSync' does not exist on type 'PackageManager'.
         packageManager.resolveSync('@babel/core', __filename)?.resolved,
       ]);
     });
@@ -266,6 +288,7 @@ describe.v2('cache', function () {
     for (let {name, formatter, nesting} of configs) {
       describe(name, function () {
         it(`should support adding a ${name}`, async function () {
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           let b = await testCache({
             // Babel's config loader only works with the node filesystem
             inputFS,
@@ -278,6 +301,7 @@ describe.v2('cache', function () {
               );
             },
             async update(b: BuildSuccessEvent) {
+              // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
               assert.equal(await run(b.bundleGraph), 4);
 
               let contents = await overlayFS.readFile(
@@ -300,6 +324,7 @@ describe.v2('cache', function () {
             },
           });
 
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 4);
 
           let contents = await overlayFS.readFile(
@@ -313,6 +338,7 @@ describe.v2('cache', function () {
         });
 
         it(`should support updating a ${name}`, async function () {
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           let b = await testCache({
             // Babel's config loader only works with the node filesystem
             inputFS,
@@ -364,6 +390,7 @@ describe.v2('cache', function () {
         });
 
         it(`should support deleting a ${name}`, async function () {
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           let b = await testCache({
             // Babel's config loader only works with the node filesystem
             inputFS,
@@ -408,6 +435,7 @@ describe.v2('cache', function () {
 
         it(`should support updating an extended ${name}`, async function () {
           let extendedName = '.babelrc-extended' + path.extname(name);
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           let b = await testCache({
             // Babel's config loader only works with the node filesystem
             inputFS,
@@ -466,6 +494,7 @@ describe.v2('cache', function () {
 
         if (nesting) {
           it(`should support adding a nested ${name}`, async function () {
+            // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
             let b = await testCache({
               // Babel's config loader only works with the node filesystem
               inputFS,
@@ -478,6 +507,7 @@ describe.v2('cache', function () {
                 );
               },
               async update(b: BuildSuccessEvent) {
+                // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
                 assert.equal(await run(b.bundleGraph), 4);
 
                 let contents = await overlayFS.readFile(
@@ -504,6 +534,7 @@ describe.v2('cache', function () {
               },
             });
 
+            // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
             assert.equal(await run(b.bundleGraph), 4);
 
             let contents = await overlayFS.readFile(
@@ -521,6 +552,7 @@ describe.v2('cache', function () {
           });
 
           it(`should support updating a nested ${name}`, async function () {
+            // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
             let b = await testCache({
               // Babel's config loader only works with the node filesystem
               inputFS,
@@ -580,6 +612,7 @@ describe.v2('cache', function () {
           });
 
           it(`should support deleting a nested ${name}`, async function () {
+            // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
             let b = await testCache({
               // Babel's config loader only works with the node filesystem
               inputFS,
@@ -635,6 +668,7 @@ describe.v2('cache', function () {
 
     describe('.babelignore', function () {
       it('should support adding a .babelignore', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           // Babel's config loader only works with the node filesystem
           inputFS,
@@ -690,6 +724,7 @@ describe.v2('cache', function () {
       });
 
       it('should support updating a .babelignore', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           // Babel's config loader only works with the node filesystem
           inputFS,
@@ -745,6 +780,7 @@ describe.v2('cache', function () {
       });
 
       it('should support deleting a .babelignore', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           // Babel's config loader only works with the node filesystem
           inputFS,
@@ -799,6 +835,7 @@ describe.v2('cache', function () {
 
     describe('plugins', function () {
       it('should invalidate when plugins are updated', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           // Babel's config loader only works with the node filesystem
           inputFS,
@@ -872,6 +909,7 @@ describe.v2('cache', function () {
       });
 
       it('should invalidate when there are relative plugins', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           // Babel's config loader only works with the node filesystem
           inputFS,
@@ -931,10 +969,12 @@ describe.v2('cache', function () {
       it('should invalidate when there are symlinked plugins', async function () {
         // Symlinks don't work consistently on windows. Skip this test.
         if (process.platform === 'win32') {
+          // @ts-expect-error - TS2683 - 'this' implicitly has type 'any' because it does not have a type annotation.
           this.skip();
           return;
         }
 
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           // Babel's config loader only works with the node filesystem
           inputFS,
@@ -1013,7 +1053,9 @@ describe.v2('cache', function () {
 
   describe('parcel config', function () {
     it('should support adding a .parcelrc', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache(async (b) => {
+        // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
         assert.equal(await run(b.bundleGraph), 4);
 
         let contents = await overlayFS.readFile(
@@ -1041,6 +1083,7 @@ describe.v2('cache', function () {
     });
 
     it('should support updating a .parcelrc', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -1075,10 +1118,12 @@ describe.v2('cache', function () {
       );
       assert(!contents.includes('TRANSFORMED CODE'));
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 4);
     });
 
     it('should support updating an extended .parcelrc', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -1120,12 +1165,14 @@ describe.v2('cache', function () {
       );
       assert(!contents.includes('TRANSFORMED CODE'));
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 4);
     });
 
     it('should error when deleting an extended.parcelrc', async function () {
       await assert.rejects(
         async () => {
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           await testCache({
             async setup() {
               await overlayFS.writeFile(
@@ -1161,6 +1208,7 @@ describe.v2('cache', function () {
     });
 
     it('should support deleting a .parcelrc', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -1190,12 +1238,14 @@ describe.v2('cache', function () {
       );
       assert(!contents.includes('TRANSFORMED CODE'));
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 4);
     });
   });
 
   describe('transformations', function () {
     it('should invalidate when included files changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         // TODO: update when the fs transform supports the MemoryFS
         inputFS,
@@ -1214,6 +1264,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 'hi');
 
           await inputFS.writeFile(
@@ -1225,10 +1276,12 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 'updated');
     });
 
     it('should not invalidate when a set environment variable does not change', async () => {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(path.join(inputDir, '.env'), 'TEST=hi');
@@ -1239,17 +1292,20 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 'hi');
 
           await overlayFS.writeFile(path.join(inputDir, '.env'), 'TEST=hi');
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 'hi');
       assert.equal(b.changedAssets.size, 0);
     });
 
     it('should not invalidate when an environment variable remains unset', async () => {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -1258,15 +1314,18 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), undefined);
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), undefined);
       assert.equal(b.changedAssets.size, 0);
     });
 
     it('should invalidate when an environment variable becomes set', async () => {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -1275,15 +1334,18 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), undefined);
           await overlayFS.writeFile(path.join(inputDir, '.env'), 'TEST=hi');
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 'hi');
     });
 
     it('should invalidate when an environment variable becomes unset', async () => {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -1293,15 +1355,18 @@ describe.v2('cache', function () {
           await overlayFS.writeFile(path.join(inputDir, '.env'), 'TEST=hi');
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 'hi');
           await overlayFS.writeFile(path.join(inputDir, '.env'), '');
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), undefined);
     });
 
     it('should invalidate when environment variables change', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(path.join(inputDir, '.env'), 'TEST=hi');
@@ -1312,6 +1377,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 'hi');
 
           await overlayFS.writeFile(
@@ -1321,11 +1387,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 'updated');
     });
 
     describe('config keys', () => {
       it(`should not invalidate when package.json config keys don't change`, async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           featureFlags: {
             exampleFeature: false,
@@ -1381,11 +1449,13 @@ describe.v2('cache', function () {
           },
         });
 
+        // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
         assert.equal(await run(b.bundleGraph), 'default');
         assert.equal(b.changedAssets.size, 0);
       });
 
       it('should invalidate when package.json config keys change', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           featureFlags: {
             exampleFeature: false,
@@ -1441,11 +1511,13 @@ describe.v2('cache', function () {
           },
         });
 
+        // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
         assert.equal(await run(b.bundleGraph), 'hi');
         assert.equal(b.changedAssets.size, 1);
       });
 
       it('should invalidate when package.json config keys are removed', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           featureFlags: {
             exampleFeature: false,
@@ -1499,6 +1571,7 @@ describe.v2('cache', function () {
           },
         });
 
+        // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
         assert.equal(await run(b.bundleGraph), 'hi');
         assert.equal(b.changedAssets.size, 1);
       });
@@ -1507,6 +1580,7 @@ describe.v2('cache', function () {
 
   describe('entries', function () {
     it('should support adding an entry that matches a glob', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         entries: ['src/entries/*.js'],
         async update(b: BuildSuccessEvent) {
@@ -1545,6 +1619,7 @@ describe.v2('cache', function () {
     });
 
     it('should support deleting an entry that matches a glob', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         entries: ['src/entries/*.js'],
         async update(b: BuildSuccessEvent) {
@@ -1574,11 +1649,13 @@ describe.v2('cache', function () {
     it('should error when deleting a file entry', async function () {
       await assert.rejects(
         async () => {
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           await testCache(async () => {
             await overlayFS.unlink(path.join(inputDir, 'src/index.js'));
           });
         },
         {
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           message: md`Entry ${path.join(
             inputDir,
             'src/index.js',
@@ -1590,11 +1667,13 @@ describe.v2('cache', function () {
     it('should recover from errors when adding a missing entry', async function () {
       await assert.rejects(
         async () => {
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           await testCache(async () => {
             await overlayFS.unlink(path.join(inputDir, 'src/index.js'));
           });
         },
         {
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           message: md`Entry ${path.join(
             inputDir,
             'src/index.js',
@@ -1607,13 +1686,16 @@ describe.v2('cache', function () {
         'module.exports = "hi"',
       );
 
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 0.
       let b = await runBundle();
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 'hi');
     });
   });
 
   describe('target config', function () {
     it('should support adding a target config', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -1651,6 +1733,7 @@ describe.v2('cache', function () {
 
     it('should support adding a second target', async function () {
       let pkgFile = path.join(inputDir, 'package.json');
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -1715,6 +1798,7 @@ describe.v2('cache', function () {
 
     it('should support changing target output location', async function () {
       let pkgFile = path.join(inputDir, 'package.json');
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -1784,6 +1868,7 @@ describe.v2('cache', function () {
 
     it('should support updating target config options', async function () {
       let pkgFile = path.join(inputDir, 'package.json');
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -1837,6 +1922,7 @@ describe.v2('cache', function () {
 
     it('should support deleting a target', async function () {
       let pkgFile = path.join(inputDir, 'package.json');
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -1901,6 +1987,7 @@ describe.v2('cache', function () {
 
     it('should support deleting all targets', async function () {
       let pkgFile = path.join(inputDir, 'package.json');
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -1981,6 +2068,7 @@ describe.v2('cache', function () {
 
     it('should update when sourcemap options change', async function () {
       let pkgFile = path.join(inputDir, 'package.json');
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -2038,6 +2126,7 @@ describe.v2('cache', function () {
 
     it('should update when publicUrl changes', async function () {
       let pkgFile = path.join(inputDir, 'package.json');
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         entries: ['src/index.html'],
         defaultTargetOptions: {
@@ -2096,7 +2185,9 @@ describe.v2('cache', function () {
 
     it('should update when a package.json is created', async function () {
       let pkgFile = path.join(inputDir, 'package.json');
+      // @ts-expect-error - TS7034 - Variable 'pkg' implicitly has type 'any' in some locations where its type cannot be determined.
       let pkg;
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -2115,6 +2206,7 @@ describe.v2('cache', function () {
           await overlayFS.writeFile(
             pkgFile,
             JSON.stringify({
+              // @ts-expect-error - TS7005 - Variable 'pkg' implicitly has an 'any' type.
               ...pkg,
               targets: {
                 modern: {
@@ -2136,6 +2228,7 @@ describe.v2('cache', function () {
 
     it('should update when a package.json is deleted', async function () {
       let pkgFile = path.join(inputDir, 'package.json');
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -2174,6 +2267,7 @@ describe.v2('cache', function () {
 
     describe('browserslist', function () {
       it('should update when a browserslist file is added', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           defaultTargetOptions: {
             shouldScopeHoist: true,
@@ -2205,6 +2299,7 @@ describe.v2('cache', function () {
       });
 
       it('should update when a .browserslistrc file is added', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           defaultTargetOptions: {
             shouldScopeHoist: true,
@@ -2236,6 +2331,7 @@ describe.v2('cache', function () {
       });
 
       it('should update when a browserslist is updated', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           defaultTargetOptions: {
             shouldScopeHoist: true,
@@ -2273,6 +2369,7 @@ describe.v2('cache', function () {
       });
 
       it('should update when a browserslist is deleted', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           defaultTargetOptions: {
             shouldScopeHoist: true,
@@ -2307,6 +2404,7 @@ describe.v2('cache', function () {
       });
 
       it('should update when BROWSERSLIST_ENV changes', async function () {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           defaultTargetOptions: {
             shouldScopeHoist: true,
@@ -2354,6 +2452,7 @@ describe.v2('cache', function () {
 
       it('should update when NODE_ENV changes', async function () {
         let env = process.env.NODE_ENV;
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           defaultTargetOptions: {
             shouldScopeHoist: true,
@@ -2403,6 +2502,7 @@ describe.v2('cache', function () {
 
   describe('options', function () {
     it('should update when publicUrl changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         entries: ['src/index.html'],
         defaultTargetOptions: {
@@ -2440,6 +2540,7 @@ describe.v2('cache', function () {
     });
 
     it('should update when minify changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         entries: ['src/index.html'],
         defaultTargetOptions: {
@@ -2470,6 +2571,7 @@ describe.v2('cache', function () {
     });
 
     it('should update when scopeHoist changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: false,
@@ -2500,6 +2602,7 @@ describe.v2('cache', function () {
     });
 
     it('should update when sourceMaps changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           sourceMaps: false,
@@ -2533,6 +2636,7 @@ describe.v2('cache', function () {
     });
 
     it('should update when distDir changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -2560,6 +2664,7 @@ describe.v2('cache', function () {
     });
 
     it('should update when targets changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -2628,6 +2733,7 @@ describe.v2('cache', function () {
     });
 
     it('should update when defaultEngines changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -2667,6 +2773,7 @@ describe.v2('cache', function () {
     });
 
     it('should update when shouldContentHash changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         entries: ['src/index.html'],
         defaultTargetOptions: {
@@ -2688,6 +2795,7 @@ describe.v2('cache', function () {
     });
 
     it('should update when hmr options change', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         hmrOptions: {
           host: 'localhost',
@@ -2743,6 +2851,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate react refresh hot options change', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           let pkgFile = path.join(inputDir, 'package.json');
@@ -2796,6 +2905,7 @@ describe.v2('cache', function () {
     });
 
     it('should update when the config option changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async update(b: BuildSuccessEvent) {
           let contents = await overlayFS.readFile(
@@ -2828,6 +2938,7 @@ describe.v2('cache', function () {
     });
 
     it('should update when the defaultConfig option changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async update(b: BuildSuccessEvent) {
           let contents = await overlayFS.readFile(
@@ -2863,6 +2974,7 @@ describe.v2('cache', function () {
       let env = process.env.NODE_ENV;
       delete process.env.NODE_ENV;
       try {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           defaultTargetOptions: {
             shouldScopeHoist: false,
@@ -2911,7 +3023,9 @@ describe.v2('cache', function () {
 
   describe('resolver', function () {
     it('should support updating a package.json#main field', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache(async (b) => {
+        // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
         assert.equal(await run(b.bundleGraph), 4);
         await overlayFS.writeFile(
           path.join(inputDir, 'node_modules/foo/test.js'),
@@ -2924,11 +3038,14 @@ describe.v2('cache', function () {
         );
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 8);
     });
 
     it('should support adding an alias', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache(async (b) => {
+        // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
         assert.equal(await run(b.bundleGraph), 4);
         await overlayFS.writeFile(
           path.join(inputDir, 'node_modules/foo/test.js'),
@@ -2946,10 +3063,12 @@ describe.v2('cache', function () {
         );
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 8);
     });
 
     it('should support updating an alias', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -2968,6 +3087,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 8);
           await overlayFS.writeFile(
             path.join(inputDir, 'node_modules/foo/baz.js'),
@@ -2986,10 +3106,12 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 12);
     });
 
     it('should support deleting an alias', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -3008,6 +3130,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 8);
           await overlayFS.writeFile(
             path.join(inputDir, 'node_modules/foo/package.json'),
@@ -3016,11 +3139,14 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 4);
     });
 
     it('should support adding an alias in a closer package.json', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache(async (b) => {
+        // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
         assert.equal(await run(b.bundleGraph), 4);
         await overlayFS.writeFile(
           path.join(inputDir, 'src/nested/foo.js'),
@@ -3037,10 +3163,12 @@ describe.v2('cache', function () {
         );
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 6);
     });
 
     it('should support adding a file with a higher priority extension', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           // Start out pointing to a .ts file from a .js file
@@ -3058,6 +3186,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 6);
 
           // Adding a .js file should be higher priority
@@ -3068,10 +3197,12 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 4);
     });
 
     it('should support renaming a file to a different extension', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           // Start out pointing to a .js file
@@ -3089,6 +3220,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 6);
 
           // Rename to .ts
@@ -3101,10 +3233,12 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 4);
     });
 
     it('should resolve to a file over a directory with an index.js', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           let contents = await overlayFS.readFile(
@@ -3121,6 +3255,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 6);
 
           await overlayFS.writeFile(
@@ -3130,10 +3265,12 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 4);
     });
 
     it('should resolve to package.json#main over an index.js', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           let contents = await overlayFS.readFile(
@@ -3150,6 +3287,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 6);
 
           await overlayFS.writeFile(
@@ -3161,12 +3299,14 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 4);
     });
 
     it('should recover from errors when adding a missing dependency', async function () {
       await assert.rejects(
         async () => {
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           await testCache({
             async setup() {
               await overlayFS.unlink(path.join(inputDir, 'src/nested/test.js'));
@@ -3184,11 +3324,14 @@ describe.v2('cache', function () {
         'module.exports = 4;',
       );
 
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 0.
       let b = await runBundle();
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 6);
     });
 
     it('should recover from a missing package.json#main', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           let contents = await overlayFS.readFile(
@@ -3213,6 +3356,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 6);
 
           await overlayFS.writeFile(
@@ -3222,11 +3366,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 10);
     });
 
     it('should recover from an invalid package.json', async function () {
       await assert.rejects(async () => {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         await testCache({
           async setup() {
             let contents = await overlayFS.readFile(
@@ -3259,13 +3405,17 @@ describe.v2('cache', function () {
         }),
       );
 
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 0.
       let b = await runBundle();
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 4);
     });
 
     it('should support adding a deeper node_modules folder', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           assert.equal(await run(b.bundleGraph), 4);
 
           await overlayFS.mkdirp(
@@ -3279,10 +3429,12 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       assert.equal(await run(b.bundleGraph), 6);
     });
 
     it('should invalidate when switching to a different resolver plugin', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -3322,6 +3474,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when a resolver is updated', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -3379,6 +3532,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when adding resolver config', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -3428,6 +3582,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when updating resolver config', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -3482,6 +3637,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when removing resolver config', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         defaultTargetOptions: {
           shouldScopeHoist: true,
@@ -3543,6 +3699,7 @@ describe.v2('cache', function () {
             {
               entries: ['index.js'],
               inputFS,
+              // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
               async setup() {
                 await inputFS.mkdirp(inputDir);
                 await inputFS.ncp(
@@ -3550,6 +3707,7 @@ describe.v2('cache', function () {
                   inputDir,
                 );
 
+                // @ts-expect-error - TS2322 - Type '42' is not assignable to type 'string | undefined'.
                 process.versions.pnp = 42;
 
                 Module.findPnpApi = () =>
@@ -3571,7 +3729,9 @@ describe.v2('cache', function () {
                   'exports.a = 4;',
                 );
               },
+              // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
               async update(b: BuildSuccessEvent) {
+                // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
                 let output = await run(b.bundleGraph);
                 assert.equal(output(), 3);
 
@@ -3591,6 +3751,7 @@ describe.v2('cache', function () {
             'pnp-require',
           );
 
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let output = await run(b.bundleGraph);
           assert.equal(output(), 6);
         } finally {
@@ -3605,6 +3766,7 @@ describe.v2('cache', function () {
         let b = await testCache(
           {
             entries: ['index.js'],
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               await overlayFS.writeFile(
                 path.join(inputDir, '.lessrc'),
@@ -3613,6 +3775,7 @@ describe.v2('cache', function () {
                 }),
               );
             },
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               let css = await overlayFS.readFile(
                 nullthrows(
@@ -3660,6 +3823,7 @@ describe.v2('cache', function () {
             await testCache(
               {
                 entries: ['index.js'],
+                // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
                 async setup() {
                   await overlayFS.writeFile(
                     path.join(inputDir, '.lessrc'),
@@ -3677,6 +3841,7 @@ describe.v2('cache', function () {
                     path.join(inputDir, 'include-path/a.less'),
                   );
                 },
+                // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type 'UpdateFn'.
                 async update() {},
               },
               'less-include-paths',
@@ -3694,6 +3859,7 @@ describe.v2('cache', function () {
           }`,
         );
 
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await runBundle('index.js');
         let css = await overlayFS.readFile(
           nullthrows(
@@ -3711,6 +3877,7 @@ describe.v2('cache', function () {
         let b = await testCache(
           {
             entries: ['index.sass'],
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               await overlayFS.writeFile(
                 path.join(inputDir, '.sassrc'),
@@ -3719,6 +3886,7 @@ describe.v2('cache', function () {
                 }),
               );
             },
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               let css = await overlayFS.readFile(
                 nullthrows(
@@ -3757,6 +3925,7 @@ describe.v2('cache', function () {
             env: {
               SASS_PATH: 'include-path',
             },
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               await overlayFS.mkdirp(path.join(inputDir, 'include2'));
               await overlayFS.rimraf(path.join(inputDir, '.sassrc.js'));
@@ -3802,6 +3971,7 @@ describe.v2('cache', function () {
           await testCache(
             {
               entries: ['index.sass'],
+              // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
               async setup() {
                 await overlayFS.writeFile(
                   path.join(inputDir, '.sassrc'),
@@ -3816,6 +3986,7 @@ describe.v2('cache', function () {
                   path.join(inputDir, 'include-path/style.sass'),
                 );
               },
+              // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type 'UpdateFn'.
               async update() {},
             },
             'sass-include-paths-import',
@@ -3829,6 +4000,7 @@ describe.v2('cache', function () {
           `,
         );
 
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await runBundle('index.sass');
         let css = await overlayFS.readFile(
           nullthrows(
@@ -3843,6 +4015,7 @@ describe.v2('cache', function () {
 
   describe('dev deps', function () {
     it('should invalidate when updating a parcel transformer plugin', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -3882,6 +4055,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when updating a file required via options.packageManager.require', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -3935,6 +4109,7 @@ describe.v2('cache', function () {
     });
 
     it('should resolve to package.json#main over an index.js', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -3996,6 +4171,7 @@ describe.v2('cache', function () {
         'node_modules',
         'atlaspack-transformer-mock',
       );
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -4050,6 +4226,7 @@ describe.v2('cache', function () {
       });
 
       try {
+        // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
         let b = await testCache({
           inputFS,
           outputFS: inputFS,
@@ -4061,6 +4238,7 @@ describe.v2('cache', function () {
               inputDir,
             );
 
+            // @ts-expect-error - TS2322 - Type '42' is not assignable to type 'string | undefined'.
             process.versions.pnp = 42;
 
             fs.renameSync(
@@ -4225,6 +4403,7 @@ describe.v2('cache', function () {
 
         let b;
         try {
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           b = await testCache({
             inputFS,
             outputFS: inputFS,
@@ -4275,6 +4454,7 @@ describe.v2('cache', function () {
 
         let b;
         try {
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           b = await testCache({
             inputFS,
             outputFS: inputFS,
@@ -4321,6 +4501,7 @@ describe.v2('cache', function () {
 
         let b;
         try {
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           b = await testCache({
             inputFS,
             outputFS: inputFS,
@@ -4372,6 +4553,7 @@ describe.v2('cache', function () {
 
         let b;
         try {
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           b = await testCache({
             inputFS,
             outputFS: inputFS,
@@ -4396,6 +4578,7 @@ describe.v2('cache', function () {
               assert(
                 spy.calledWith([
                   {
+                    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
                     message: md`${path.normalize(
                       'node_modules/atlaspack-transformer-esm/index.js',
                     )} contains non-statically analyzable dependencies in its module graph. This causes Parcel to invalidate the cache on startup.`,
@@ -4435,6 +4618,7 @@ describe.v2('cache', function () {
         let b = await testCache(
           {
             entries: ['index.css'],
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               await overlayFS.mkdirp(path.join(inputDir, 'node_modules'));
               await ncp(
@@ -4449,6 +4633,7 @@ describe.v2('cache', function () {
                 path.join(inputDir, 'node_modules', 'postcss-test'),
               );
             },
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               let output = await overlayFS.readFile(
                 b.bundleGraph.getBundles()[0].filePath,
@@ -4485,6 +4670,7 @@ describe.v2('cache', function () {
             entries: ['style.css'],
             inputFS,
             outputFS: inputFS,
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
@@ -4492,6 +4678,7 @@ describe.v2('cache', function () {
                 inputDir,
               );
             },
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               let output = await inputFS.readFile(
                 b.bundleGraph.getBundles()[0].filePath,
@@ -4524,6 +4711,7 @@ describe.v2('cache', function () {
             entries: ['index.css'],
             inputFS,
             outputFS: inputFS,
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               await inputFS.mkdirp(path.join(inputDir, 'node_modules'));
               await inputFS.ncp(
@@ -4549,6 +4737,7 @@ describe.v2('cache', function () {
                 'module.exports = { plugins: [require("postcss-test")] };',
               );
             },
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               let output = await inputFS.readFile(
                 b.bundleGraph.getBundles()[0].filePath,
@@ -4595,6 +4784,7 @@ describe.v2('cache', function () {
               entries: ['style.css'],
               inputFS,
               outputFS: inputFS,
+              // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
               async setup() {
                 await inputFS.mkdirp(inputDir);
                 await inputFS.ncp(
@@ -4636,6 +4826,7 @@ describe.v2('cache', function () {
         let b = await testCache(
           {
             entries: ['nested/index.css'],
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               let output = await overlayFS.readFile(
                 b.bundleGraph.getBundles()[0].filePath,
@@ -4667,6 +4858,7 @@ describe.v2('cache', function () {
         let b = await testCache(
           {
             entries: ['nested/index.css'],
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               let output = await overlayFS.readFile(
                 b.bundleGraph.getBundles()[0].filePath,
@@ -4700,6 +4892,7 @@ describe.v2('cache', function () {
         let b = await testCache(
           {
             entries: ['index.html'],
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               await overlayFS.mkdirp(path.join(inputDir, 'node_modules'));
               await ncp(
@@ -4714,6 +4907,7 @@ describe.v2('cache', function () {
                 path.join(inputDir, 'node_modules', 'posthtml-test'),
               );
             },
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               let output = await overlayFS.readFile(
                 b.bundleGraph.getBundles()[0].filePath,
@@ -4750,6 +4944,7 @@ describe.v2('cache', function () {
             entries: ['index.html'],
             inputFS,
             outputFS: inputFS,
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
@@ -4763,6 +4958,7 @@ describe.v2('cache', function () {
                 '<h1>Another great page</h1>',
               );
             },
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               let output = await inputFS.readFile(
                 b.bundleGraph.getBundles()[0].filePath,
@@ -4793,6 +4989,7 @@ describe.v2('cache', function () {
 
   describe('bundling', function () {
     it('should invalidate when switching to a different bundler plugin', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async update(b: BuildSuccessEvent) {
           assert.equal(b.bundleGraph.getBundles().length, 1);
@@ -4811,6 +5008,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when a bundler plugin is updated', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -4845,6 +5043,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when adding a namer plugin', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async update(b: BuildSuccessEvent) {
           let bundles = b.bundleGraph.getBundles().map((b) => b.name);
@@ -4868,6 +5067,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when a namer plugin is updated', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -4908,6 +5108,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when adding a runtime plugin', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async update(b: BuildSuccessEvent) {
           let res = await run(b.bundleGraph, null, {require: false});
@@ -4928,6 +5129,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when a runtime is updated', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -4969,6 +5171,7 @@ describe.v2('cache', function () {
           {
             entries: ['index.js'],
             mode: 'production',
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               let pkgFile = path.join(inputDir, 'package.json');
               let pkg = JSON.parse(await overlayFS.readFile(pkgFile));
@@ -4980,6 +5183,7 @@ describe.v2('cache', function () {
                 }),
               );
             },
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               assertBundles(b.bundleGraph, [
                 {
@@ -5045,6 +5249,7 @@ describe.v2('cache', function () {
           {
             entries: ['index.js'],
             mode: 'production',
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               let pkgFile = path.join(inputDir, 'package.json');
               let pkg = JSON.parse(await overlayFS.readFile(pkgFile));
@@ -5056,6 +5261,7 @@ describe.v2('cache', function () {
                 }),
               );
             },
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               assert.deepEqual(b.bundleGraph.getBundles().length, 7);
               let pkgFile = path.join(inputDir, 'package.json');
@@ -5081,6 +5287,7 @@ describe.v2('cache', function () {
           {
             entries: ['index.js'],
             mode: 'production',
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               let pkgFile = path.join(inputDir, 'package.json');
               let pkg = JSON.parse(await overlayFS.readFile(pkgFile));
@@ -5094,6 +5301,7 @@ describe.v2('cache', function () {
                 }),
               );
             },
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               assertBundles(b.bundleGraph, [
                 {
@@ -5159,6 +5367,7 @@ describe.v2('cache', function () {
           {
             entries: ['index.js'],
             mode: 'production',
+            // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
             async setup() {
               let pkgFile = path.join(inputDir, 'package.json');
               let pkg = JSON.parse(await overlayFS.readFile(pkgFile));
@@ -5172,6 +5381,7 @@ describe.v2('cache', function () {
                 }),
               );
             },
+            // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
             async update(b: BuildSuccessEvent) {
               assertBundles(b.bundleGraph, [
                 {
@@ -5233,6 +5443,7 @@ describe.v2('cache', function () {
 
   describe('packaging', function () {
     it('should invalidate when switching to a different packager plugin', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async update(b: BuildSuccessEvent) {
           let res = await overlayFS.readFile(
@@ -5261,6 +5472,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when a packager is updated', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5303,6 +5515,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when adding packager config', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5337,6 +5550,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when updating packager config', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5376,6 +5590,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when removing packager config', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5412,6 +5627,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when adding an optimizer plugin', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async update(b: BuildSuccessEvent) {
           let res = await overlayFS.readFile(
@@ -5440,6 +5656,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when removing an optimizer plugin', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5479,6 +5696,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when an optimizer is updated', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5521,6 +5739,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when adding optimizer config', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5555,6 +5774,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when updating packager config', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5594,6 +5814,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when removing packager config', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5630,8 +5851,10 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when an asset content changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.equal(res, 4);
 
@@ -5642,11 +5865,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 6);
     });
 
     it('should invalidate when an inline bundle changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5655,6 +5880,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert(res.includes(`let a = 'a'`));
 
@@ -5665,11 +5891,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert(res.includes(`let a = 'b'`));
     });
 
     it('should invalidate when switching to a different packager for an inline bundle', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5683,6 +5911,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.notEqual(res, 'packaged');
 
@@ -5698,11 +5927,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 'packaged');
     });
 
     it('should invalidate when a packager for an inline bundle is updated', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5726,6 +5957,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.equal(res, 'packaged');
 
@@ -5744,11 +5976,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 'updated');
     });
 
     it('should invalidate when adding packager config for an inline bundle', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5772,6 +6006,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.equal(res, 'packaged');
 
@@ -5782,11 +6017,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 'test');
     });
 
     it('should invalidate when updating packager config for an inline bundle', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5815,6 +6052,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.equal(res, 'test');
 
@@ -5825,11 +6063,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 'updated');
     });
 
     it('should invalidate when removing packager config for an inline bundle', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5858,6 +6098,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.equal(res, 'test');
 
@@ -5865,11 +6106,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 'packaged');
     });
 
     it('should invalidate when adding an optimizer for an inline bundle', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5883,6 +6126,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.notEqual(res, 'packaged');
 
@@ -5898,11 +6142,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 'optimized');
     });
 
     it('should invalidate when an optimizer for an inline bundle is updated', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5926,6 +6172,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.equal(res, 'optimized');
 
@@ -5944,11 +6191,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 'updated');
     });
 
     it('should invalidate when adding optimizer config for an inline bundle', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -5972,6 +6221,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.equal(res, 'optimized');
 
@@ -5982,11 +6232,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 'test');
     });
 
     it('should invalidate when updating optimizer config for an inline bundle', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -6015,6 +6267,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.equal(res, 'test');
 
@@ -6025,11 +6278,13 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 'updated');
     });
 
     it('should invalidate when removing optimizer config for an inline bundle', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -6058,6 +6313,7 @@ describe.v2('cache', function () {
           );
         },
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.equal(res, 'test');
 
@@ -6065,15 +6321,18 @@ describe.v2('cache', function () {
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 'optimized');
     });
 
     it('should invalidate when deleting a dist file', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         outputFS: overlayFS,
         async update(b: BuildSuccessEvent) {
           assert(await overlayFS.exists(path.join(distDir, 'index.js')));
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.equal(res, 4);
 
@@ -6082,11 +6341,13 @@ describe.v2('cache', function () {
       });
 
       assert(await overlayFS.exists(path.join(distDir, 'index.js')));
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 4);
     });
 
     it('should invalidate when deleting a source map', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       await testCache({
         outputFS: overlayFS,
         async update() {
@@ -6100,6 +6361,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when the dist directory', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       await testCache({
         outputFS: overlayFS,
         async update() {
@@ -6115,13 +6377,16 @@ describe.v2('cache', function () {
     });
 
     it('should hit the cache when there are no changes', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         async update(b: BuildSuccessEvent) {
+          // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
           let res = await run(b.bundleGraph);
           assert.equal(res, 4);
         },
       });
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let res = await run(b.bundleGraph);
       assert.equal(res, 4);
     });
@@ -6143,6 +6408,7 @@ describe.v2('cache', function () {
         cacheDir: path.join(__dirname, '.parcel-cache'),
       };
 
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
       source
         foo.js:
@@ -6197,6 +6463,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when a terser config is modified', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         mode: 'production',
         async setup() {
@@ -6231,6 +6498,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when an htmlnano config is modified', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       let b = await testCache({
         mode: 'production',
         entries: ['src/index.html'],
@@ -6268,6 +6536,7 @@ describe.v2('cache', function () {
 
   describe('compression', function () {
     it('should invaldate when adding a compressor plugin', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       await testCache({
         async update() {
           let files = await outputFS.readdir(distDir);
@@ -6295,6 +6564,7 @@ describe.v2('cache', function () {
     });
 
     it('should invalidate when updating a compressor plugin', async function () {
+      // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
       await testCache({
         async setup() {
           await overlayFS.writeFile(
@@ -6354,6 +6624,7 @@ describe.v2('cache', function () {
             shouldScopeHoist: true,
           },
           entries: ['a.js'],
+          // @ts-expect-error - TS2322 - Type '() => Promise<void>' is not assignable to type '() => Promise<undefined> | undefined'.
           async setup() {
             let contents = await overlayFS.readFile(
               path.join(inputDir, 'a.js'),
@@ -6364,6 +6635,7 @@ describe.v2('cache', function () {
               contents.replace(/if \(b\) \{((?:.|\n)+)\}/, '$1'),
             );
           },
+          // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
           async update(b: BuildSuccessEvent) {
             let out: Array<any> = [];
             await run(b.bundleGraph, {
@@ -6402,6 +6674,7 @@ describe.v2('cache', function () {
 
   describe('runtime', () => {
     it('should support updating files added by runtimes', async function () {
+      // @ts-expect-error - TS2345 - Argument of type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to parameter of type 'UpdateFn | TestConfig'.
       let b = await testCache(async (b) => {
         let contents = await overlayFS.readFile(
           b.bundleGraph.getBundles()[0].filePath,
@@ -6427,6 +6700,7 @@ describe.v2('cache', function () {
       let b = await testCache(
         {
           entries: ['reformat.html'],
+          // @ts-expect-error - TS2322 - Type '(b: BuildSuccessEvent) => Promise<void>' is not assignable to type 'UpdateFn'.
           update: async (b) => {
             let bundles = b.bundleGraph.getBundles();
             let contents = await overlayFS.readFile(
@@ -6470,6 +6744,7 @@ describe.v2('cache', function () {
         shouldOptimize: false,
       },
     });
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let result1 = (await run(b.bundleGraph))();
 
     b = await runBundle(entries, {
@@ -6477,6 +6752,7 @@ describe.v2('cache', function () {
         shouldOptimize: true,
       },
     });
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let result2 = (await run(b.bundleGraph))();
 
     b = await runBundle(entries, {
@@ -6484,6 +6760,7 @@ describe.v2('cache', function () {
         shouldOptimize: false,
       },
     });
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let result3 = (await run(b.bundleGraph))();
 
     assert(typeof result1 === 'string' && result1.includes('foo'));
@@ -6506,7 +6783,9 @@ describe.v2('cache', function () {
 }`,
     );
 
+    // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
     let b = await runBundle(entries);
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let result1 = (await run(b.bundleGraph))();
 
     await overlayFS.writeFile(
@@ -6516,7 +6795,9 @@ describe.v2('cache', function () {
 }`,
     );
 
+    // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
     b = await runBundle(entries);
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let result2 = (await run(b.bundleGraph))();
 
     await overlayFS.writeFile(
@@ -6526,7 +6807,9 @@ describe.v2('cache', function () {
 }`,
     );
 
+    // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
     b = await runBundle(entries);
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let result3 = (await run(b.bundleGraph))();
 
     assert(typeof result1 === 'string' && result1.includes('foo'));
@@ -6540,7 +6823,9 @@ describe.v2('cache', function () {
     let entry = path.join(inputDir, 'index.js');
     let original = await overlayFS.readFile(entry, 'utf8');
 
+    // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
     let b = await runBundle(entry);
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let result1 = (await run(b.bundleGraph))();
 
     await overlayFS.writeFile(
@@ -6548,12 +6833,16 @@ describe.v2('cache', function () {
       'module.exports = function(){ return 10; }',
     );
 
+    // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
     b = await runBundle(entry);
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let result2 = (await run(b.bundleGraph))();
 
     await overlayFS.writeFile(entry, original);
 
+    // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
     b = await runBundle(entry);
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let result3 = (await run(b.bundleGraph))();
 
     assert.strictEqual(result1, 3);
@@ -6562,6 +6851,7 @@ describe.v2('cache', function () {
   });
 
   it('properly watches included files even after resaving them without changes', async function () {
+    // @ts-expect-error - TS2683 - 'this' implicitly has type 'any' because it does not have a type annotation.
     this.timeout(15000);
     let subscription;
     let fixture = path.join(__dirname, '/integration/included-file');
@@ -6619,6 +6909,7 @@ describe.v2('cache', function () {
   });
 
   it('properly handles included files even after when changing back to a cached state', async function () {
+    // @ts-expect-error - TS2683 - 'this' implicitly has type 'any' because it does not have a type annotation.
     this.timeout(15000);
     let subscription;
     let fixture = path.join(__dirname, '/integration/included-file');
@@ -6666,6 +6957,7 @@ describe.v2('cache', function () {
   });
 
   it('properly watches included files after a transformer error', async function () {
+    // @ts-expect-error - TS2683 - 'this' implicitly has type 'any' because it does not have a type annotation.
     this.timeout(15000);
     let subscription;
     let fixture = path.join(__dirname, '/integration/included-file');
@@ -6715,6 +7007,7 @@ describe.v2('cache', function () {
       return;
     }
 
+    // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
     let b = await testCache({
       inputFS,
       outputFS: inputFS,
@@ -6723,6 +7016,7 @@ describe.v2('cache', function () {
         await inputFS.ncp(path.join(__dirname, '/integration/cache'), inputDir);
       },
       update: async (b) => {
+        // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
         assert.equal(await run(b.bundleGraph), 4);
 
         await inputFS.writeFile(
@@ -6735,6 +7029,7 @@ describe.v2('cache', function () {
       },
     });
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     assert.equal(await run(b.bundleGraph), 6);
   });
 
@@ -6753,6 +7048,7 @@ describe.v2('cache', function () {
     assert.strictEqual((await a.getBuffer()).length, 0);
     assert.strictEqual((await b.getBuffer()).length, 0);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let res = await run(build.bundleGraph);
     assert.deepEqual(res, {default: 'foo'});
   });
@@ -6772,6 +7068,7 @@ describe.v2('cache', function () {
       cacheDir: path.join(__dirname, '.parcel-cache'),
     };
 
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     await fsFixture(overlayFS)`
     source
       lazy.js:

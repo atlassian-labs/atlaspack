@@ -5,8 +5,10 @@ import path from 'path';
 
 export class FSHost {
   fs: FileSystem;
+  // @ts-expect-error - TS2709 - Cannot use namespace 'TypeScriptModule' as a type.
   ts: TypeScriptModule;
 
+  // @ts-expect-error - TS2709 - Cannot use namespace 'TypeScriptModule' as a type.
   constructor(fs: FileSystem, ts: TypeScriptModule) {
     this.fs = fs;
     this.ts = ts;
@@ -98,8 +100,11 @@ export class FSHost {
       this.ts.sys.useCaseSensitiveFileNames,
       this.getCurrentDirectory(),
       depth,
+      // @ts-expect-error - TS7006 - Parameter 'dirPath' implicitly has an 'any' type.
       (dirPath) => this.getAccessibleFileSystemEntries(dirPath),
+      // @ts-expect-error - TS7006 - Parameter 'filePath' implicitly has an 'any' type.
       (filePath) => this.realpath(filePath),
+      // @ts-expect-error - TS7006 - Parameter 'dirPath' implicitly has an 'any' type.
       (dirPath) => this.directoryExists(dirPath),
     );
   }

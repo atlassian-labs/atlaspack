@@ -102,6 +102,7 @@ export function reducer(state: State, action: any): State {
             : {value: nullthrows(state.files.get(action.name)).value},
         ],
       ]);
+      // @ts-expect-error - TS2345 - Argument of type '([n]: [any]) => boolean' is not assignable to parameter of type '(value: [any, { component: any; value?: undefined; } | { value: string; component?: undefined; }], index: number, obj: [any, { component: any; value?: undefined; } | { value: string; component?: undefined; }][]) => unknown'.
       let viewIndex = [...views].findIndex(([n]: [any]) => n === action.name);
       return {
         ...state,
@@ -113,11 +114,13 @@ export function reducer(state: State, action: any): State {
       return {
         ...state,
         views: new Map(
+          // @ts-expect-error - TS2769 - No overload matches this call.
           [...state.views].filter(([n]: [any]) => n !== action.name),
         ),
       };
     case 'view.setValue': {
       let data = nullthrows(state.views.get(action.name));
+      // @ts-expect-error - TS2339 - Property 'component' does not exist on type '{ value: string; } | { component: any; }'.
       if (data.component) {
         return state;
       }
@@ -144,8 +147,10 @@ export function reducer(state: State, action: any): State {
     case 'view.saveCurrent': {
       if (state.useTabs) {
         let [name, view] = [...state.views][state.currentView];
+        // @ts-expect-error - TS2339 - Property 'value' does not exist on type '{ value: string; } | { component: any; }'.
         if (view.value == null) return state;
 
+        // @ts-expect-error - TS2339 - Property 'value' does not exist on type '{ value: string; } | { component: any; }'.
         let value = view.value;
         let file = nullthrows(state.files.get(name));
         if (file.value === value) return state;
@@ -209,6 +214,7 @@ export function reducer(state: State, action: any): State {
         files: state.files.delete(action.name),
         views: new Map(
           [...state.views].filter(
+            // @ts-expect-error - TS2769 - No overload matches this call.
             ([name]: [any]) => !name.startsWith(action.name),
           ),
         ),
@@ -339,6 +345,7 @@ export function loadState(): State | null | undefined {
       files,
       views: new Map(
         data.views
+          // @ts-expect-error - TS7006 - Parameter 'name' implicitly has an 'any' type.
           .map((name) => [name, files.get(name)])
           .filter(([, data]: [any, any]) => data),
       ),

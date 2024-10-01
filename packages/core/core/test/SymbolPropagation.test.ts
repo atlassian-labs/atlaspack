@@ -115,10 +115,13 @@ function createAssetGraph(
   if (isLibrary) {
     let entryDependencyNode = nullthrows(graph.getNode(entryDependencyId));
     invariant(entryDependencyNode.type === 'dependency');
+    // @ts-expect-error - TS2322 - Type 'Map<string, { local: string; isWeak: true; loc: null; }>' is not assignable to type 'Map<symbol, { local: symbol; loc: InternalSourceLocation | null | undefined; isWeak: boolean; meta?: JSONObject | null | undefined; }>'.
     entryDependencyNode.value.symbols = new Map([
       ['*', {local: '*', isWeak: true, loc: null}],
     ]);
+    // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
     entryDependencyNode.usedSymbolsDown.add('*');
+    // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
     entryDependencyNode.usedSymbolsUp.set('*', undefined);
   }
 
@@ -349,11 +352,13 @@ async function testPropagation(
   isLibrary?: boolean,
 ): Promise<AssetGraph> {
   let {graph, changedAssets} = createAssetGraph(
+    // @ts-expect-error - TS2345 - Argument of type '([f, symbols, sideEffects]: [any, any, any]) => [any, any, any]' is not assignable to parameter of type '(value: [string, [symbol, { local: symbol; loc?: SourceLocation | null | undefined; meta?: JSONObject | null | undefined; }][] | null | undefined, boolean, symbol[]], index: number, array: [...][]) => [...]'.
     assets.map(([f, symbols, sideEffects]: [any, any, any]) => [
       f,
       symbols,
       sideEffects,
     ]),
+    // @ts-expect-error - TS2345 - Argument of type '([from, to, symbols]: [any, any, any]) => [any, any, any]' is not assignable to parameter of type '(value: [string, string, [symbol, { local: symbol; loc?: SourceLocation | null | undefined; isWeak: boolean; meta?: JSONObject | null | undefined; }][] | null | undefined, ([...] | [...])[] | null], index: number, array: [...][]) => [...]'.
     dependencies.map(([from, to, symbols]: [any, any, any]) => [
       from,
       to,
@@ -463,8 +468,11 @@ describe('SymbolPropagation', () => {
     await testPropagation(
       [
         ['/index.js', [], true, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib.js', [['f', {local: 'lib1$foo'}], ['b', {local: 'lib2$bar'}]], false, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib1.js', [['foo', {local: 'v'}]], false, ['foo']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib2.js', [['bar', {local: 'v'}]], false, []],
       ],
       [
@@ -480,6 +488,7 @@ describe('SymbolPropagation', () => {
     let graph = await testPropagation(
       [
         ['/index.js', [], true, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib.js', [['f', {local: 'f'}], ['b', {local: 'b'}]], true, ['f']],
       ],
       [
@@ -507,6 +516,7 @@ describe('SymbolPropagation', () => {
     assertUsedSymbols(graph,
       [
         ['/index.js', []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib.js', ['f', 'b']],
       ],
       [
@@ -520,6 +530,7 @@ describe('SymbolPropagation', () => {
     let graph = await testPropagation(
       [
         ['/index.js', [], true, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib.js', [['f', {local: 'f'}]], true, ['f']],
       ],
       [
@@ -563,6 +574,7 @@ describe('SymbolPropagation', () => {
     let graph = await testPropagation(
       [
         ['/index.js', [], true, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib.js', [['f', {local: 'f'}]], true, ['f']],
       ],
       [
@@ -606,8 +618,11 @@ describe('SymbolPropagation', () => {
     let graph = await testPropagation(
       [
         ['/index.js', [], true, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib.js', [['f', {local: 'lib1$foo'}], ['b', {local: 'lib2$bar'}]], true, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib1.js', [['foo', {local: 'v'}]], true, ['foo']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib2.js', [['bar', {local: 'v'}]], true, []],
       ],
       [
@@ -638,7 +653,9 @@ describe('SymbolPropagation', () => {
       [
         ['/index.js', []],
         ['/lib.js', []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib1.js', ['foo']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib2.js', ['bar']],
       ],
       [
@@ -655,7 +672,9 @@ describe('SymbolPropagation', () => {
       [
         ['/index.js', [], true, []],
         ['/lib.js', [], false, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib1.js', [['foo', {local: 'v'}]], false, ['foo']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib2.js', [['bar', {local: 'v'}]], false, []],
       ],
       [
@@ -671,8 +690,11 @@ describe('SymbolPropagation', () => {
     await testPropagation(
       [
         ['/index.js', [], true, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib.js', [['a', {local: 'lib1$foo'}], ['b', {local: 'lib1$b'}]], true, ['*']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib1.js', [['b', {local: 'v'}]], true, ['b']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib2.js', [['c', {local: 'v'}]], true, ['*']],
       ],
       [
@@ -689,8 +711,11 @@ describe('SymbolPropagation', () => {
     await testPropagation(
       [
         ['/index.js', [], true, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib.js', [['a', {local: 'lib1$foo'}], ['b', {local: 'lib$b'}]], true, ['b']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib1.js', [['b', {local: 'v'}]], true, ['b']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib2.js', [['c', {local: 'v'}]], false, ['*']],
       ],
       [
@@ -706,9 +731,13 @@ describe('SymbolPropagation', () => {
     await testPropagation(
       [
         ['/index.js', [], true, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib.js', [['a', {local: 'lib$a'}], ['b', {local: 'lib1$b'}], ['c', {local: 'lib2$c'}]], false, ['a']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib1.js', [['b', {local: 'v'}]], false, ['b']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib2.js', [['c', {local: 'v'}]], false, ['c']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/lib3.js', [['d', {local: 'v'}]], false, ['*']],
       ],
       [
@@ -724,6 +753,7 @@ describe('SymbolPropagation', () => {
     // prettier-ignore
     await testPropagation(
       [
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/index.js', [["foo", {local: "foo"}], ['b', {local: 'b$b'}]], true, ['*']],
       ],
       [],
@@ -735,7 +765,9 @@ describe('SymbolPropagation', () => {
     // prettier-ignore
     await testPropagation(
       [
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/index.js', [["foo", {local: "foo"}], ['b', {local: 'b$b'}]], true, ['*']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/b.js', [['b', {local: 'b'}]], true, ['b']],
       ],
       [
@@ -750,8 +782,11 @@ describe('SymbolPropagation', () => {
     await testPropagation(
       [
         ['/index.js', [], true, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/a.js', [['a', {local: 'b$b'}], ['real', {local: 'real'}]], true, ['real']],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/b.js', [['b', {local: 'c$c'}]], true, []],
+// @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'. | TS2322 - Type 'string' is not assignable to type 'symbol'.
         ['/c.js', [['c', {local: 'a$real'}]], true, []],
       ],
       [

@@ -59,6 +59,7 @@ export async function toFixture(
     fixture = new FixtureRoot();
     if (fixtureOrIncludeDir) {
       fixture.children.push(
+        // @ts-expect-error - TS2345 - Argument of type 'FixtureRoot | FixtureDir' is not assignable to parameter of type 'FixtureChild'.
         await toFixture(fs, dir, new FixtureDir(path.basename(dir))),
       );
       return fixture;
@@ -94,6 +95,7 @@ export async function toFixture(
       fixture.children.push(new FixtureFile(name, content));
     } else if (dirent.isDirectory()) {
       fixture.children.push(
+        // @ts-expect-error - TS2345 - Argument of type 'FixtureRoot | FixtureDir' is not assignable to parameter of type 'FixtureChild'.
         await toFixture(fs, filepath, new FixtureDir(name)),
       );
     } else {
@@ -133,6 +135,7 @@ export async function applyFixture(
     }
     default: {
       /*:: ((node: empty) => void 0)(node); */
+      // @ts-expect-error - TS2339 - Property 'type' does not exist on type 'never'.
       throw new Error(`Unexpected node type "${node.type}"`);
     }
   }
@@ -184,6 +187,7 @@ function toPosixPath(str: FilePath | string) {
 
 export class FixtureTokenizer {
   #src: string;
+  // @ts-expect-error - TS2564 - Property '#tokens' has no initializer and is not definitely assigned in the constructor.
   #tokens: Array<FixtureToken>;
 
   #tokenizeNext = (src: string, types: Array<RegExp>) => {
@@ -240,8 +244,11 @@ export class FixtureTokenizer {
 
 export class FixtureParser {
   #tokens: Array<FixtureToken>;
+  // @ts-expect-error - TS2564 - Property '#root' has no initializer and is not definitely assigned in the constructor.
   #root: FixtureRoot;
+  // @ts-expect-error - TS2564 - Property '#cwd' has no initializer and is not definitely assigned in the constructor.
   #cwd: FixtureRoot | FixtureDir;
+  // @ts-expect-error - TS2564 - Property '#dirStack' has no initializer and is not definitely assigned in the constructor.
   #dirStack: Array<FixtureRoot | FixtureDir>;
 
   #peek = (type: string) =>

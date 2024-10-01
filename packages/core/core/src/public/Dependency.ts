@@ -82,10 +82,12 @@ export default class Dependency implements IDependency {
   }
 
   get specifierType(): SpecifierType {
+    // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'SpecifierType'.
     return SpecifierTypeNames[this.#dep.specifierType];
   }
 
   get priority(): DependencyPriority {
+    // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'DependencyPriority'.
     return PriorityNames[this.#dep.priority];
   }
 
@@ -122,6 +124,7 @@ export default class Dependency implements IDependency {
     if (this.#dep.packageConditions) {
       conditions = conditions ? [...conditions] : [];
       for (let key in ExportsCondition) {
+        // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly import: number; readonly require: number; readonly module: number; readonly style: number; readonly sass: number; readonly less: number; }'.
         if (this.#dep.packageConditions & ExportsCondition[key]) {
           conditions.push(key);
         }
@@ -136,6 +139,7 @@ export default class Dependency implements IDependency {
   }
 
   get symbols(): IMutableDependencySymbols {
+    // @ts-expect-error - TS2322 - Type 'import("/home/ubuntu/parcel/packages/core/core/src/public/Symbols").MutableDependencySymbols' is not assignable to type 'import("/home/ubuntu/parcel/packages/core/types-internal/src/index").MutableDependencySymbols'.
     return new MutableDependencySymbols(this.#options, this.#dep);
   }
 

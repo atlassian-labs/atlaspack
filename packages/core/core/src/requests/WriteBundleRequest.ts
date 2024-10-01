@@ -80,6 +80,7 @@ export default function createWriteBundleRequest(
   };
 }
 
+// @ts-expect-error - TS7031 - Binding element 'input' implicitly has an 'any' type. | TS7031 - Binding element 'options' implicitly has an 'any' type. | TS7031 - Binding element 'api' implicitly has an 'any' type.
 async function run({input, options, api}) {
   let {bundleGraph, bundle, info, hashRefToNameHash} = input;
   let {inputFS, outputFS} = options;
@@ -136,12 +137,14 @@ async function run({input, options, api}) {
   }
   let size = 0;
   contentStream = contentStream.pipe(
+    // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
     new TapStream((buf: Buffer) => {
       size += buf.length;
     }),
   );
 
   let configResult = nullthrows(
+    // @ts-expect-error - TS2347 - Untyped function calls may not accept type arguments.
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
@@ -221,6 +224,7 @@ async function writeFiles(
   let promises: Array<Promise<undefined>> = [];
   for (let compressor of compressors) {
     promises.push(
+      // @ts-expect-error - TS2345 - Argument of type 'Promise<void>' is not assignable to parameter of type 'Promise<undefined>'.
       runCompressor(
         compressor,
         cloneStream(stream),
@@ -268,13 +272,16 @@ async function runCompressor(
           reject: (error?: any) => void,
         ) =>
           pipeline(
+            // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'.
             res.stream,
             outputFS.createWriteStream(
+              // @ts-expect-error - TS2533 - Object is possibly 'null' or 'undefined'. | TS2533 - Object is possibly 'null' or 'undefined'.
               filePath + (res.type != null ? '.' + res.type : ''),
               writeOptions,
             ),
             (err) => {
               if (err) reject(err);
+              // @ts-expect-error - TS2794 - Expected 1 arguments, but got 0. Did you forget to include 'void' in your type argument to 'Promise'?
               else resolve();
             },
           ),
@@ -367,8 +374,10 @@ function replaceStream(hashRefToNameHash: Map<string, string>) {
 function cloneStream(readable: stream.Readable | stream.Transform) {
   let res = new Readable();
   res._read = () => {};
+  // @ts-expect-error - TS7006 - Parameter 'chunk' implicitly has an 'any' type.
   readable.on('data', (chunk) => res.push(chunk));
   readable.on('end', () => res.push(null));
+  // @ts-expect-error - TS7006 - Parameter 'err' implicitly has an 'any' type.
   readable.on('error', (err) => res.emit('error', err));
   return res;
 }

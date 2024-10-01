@@ -1,6 +1,8 @@
 import assert from 'assert';
 
+// @ts-expect-error - TS2307 - Cannot find module '../' or its corresponding type declarations.
 import config from '../';
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import packageJson from '../package.json';
 
 describe('@atlaspack/config-default', () => {

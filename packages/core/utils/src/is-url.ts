@@ -1,3 +1,4 @@
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'is-url'. '/home/ubuntu/parcel/node_modules/is-url/index.js' implicitly has an 'any' type.
 import _isURL from 'is-url';
 
 // Matches anchor (ie: #raptors)

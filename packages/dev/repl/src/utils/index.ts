@@ -79,10 +79,12 @@ export async function extractZIP(content: ArrayBuffer): Promise<FSMap> {
         c = new Map();
         v.set(e, c);
       }
+      // @ts-expect-error - TS2322 - Type 'File | FSMap' is not assignable to type 'FSMap'.
       v = c;
     }
     return v;
   }
+  // @ts-expect-error - TS2488 - Type 'any[] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
   for (let [p, data] of files) {
     let pSplit = p.split('/');
     let folder = pSplit.slice(0, -1);

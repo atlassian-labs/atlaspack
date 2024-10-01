@@ -110,6 +110,7 @@ async function installPeerDependencies(
       if (!semver.satisfies(pkg.version, range)) {
         throw new ThrowableDiagnostic({
           diagnostic: {
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`Could not install the peer dependency "${name}" for "${module.name}", installed version ${pkg.version} is incompatible with ${range}`,
             origin: '@atlaspack/package-manager',
             codeFrames: [
@@ -252,7 +253,9 @@ export function installPackage(
   projectRoot: FilePath,
   options?: InstallOptions,
 ): Promise<unknown> {
+  // @ts-expect-error - TS2339 - Property 'isWorker' does not exist on type 'typeof WorkerFarm'.
   if (WorkerFarm.isWorker()) {
+    // @ts-expect-error - TS2339 - Property 'getWorkerApi' does not exist on type 'typeof WorkerFarm'.
     let workerApi = WorkerFarm.getWorkerApi();
     // TODO this should really be `__filename` but without the rewriting.
     let bundlePath =

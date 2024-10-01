@@ -39,18 +39,23 @@ export function detectRealCores(): number {
   return amount;
 }
 
+// @ts-expect-error - TS7034 - Variable 'cores' implicitly has type 'any' in some locations where its type cannot be determined.
 let cores;
 export default function getCores(bypassCache: boolean = false): number {
   // Do not re-run commands if we already have the count...
+  // @ts-expect-error - TS7005 - Variable 'cores' implicitly has an 'any' type.
   if (cores && !bypassCache) {
+    // @ts-expect-error - TS7005 - Variable 'cores' implicitly has an 'any' type.
     return cores;
   }
 
+  // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
   if (process.browser) {
     // eslint-disable-next-line no-undef
     cores = navigator.hardwareConcurrency / 2;
   }
 
+  // @ts-expect-error - TS7005 - Variable 'cores' implicitly has an 'any' type.
   if (!cores) {
     try {
       cores = detectRealCores();
@@ -65,9 +70,11 @@ export default function getCores(bypassCache: boolean = false): number {
   }
 
   // Another fallback
+  // @ts-expect-error - TS7005 - Variable 'cores' implicitly has an 'any' type.
   if (!cores) {
     cores = 1;
   }
 
+  // @ts-expect-error - TS7005 - Variable 'cores' implicitly has an 'any' type.
   return cores;
 }

@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import {version} from '../package.json';
 
 export const ATLASPACK_VERSION = version;

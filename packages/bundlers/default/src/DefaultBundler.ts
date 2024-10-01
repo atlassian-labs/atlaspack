@@ -143,6 +143,7 @@ export default new Bundler({
     let graphs: Array<IdealGraph> = [];
     for (let entries of targetMap.values()) {
       // Create separate bundleGraphs per distDir
+      // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'ResolvedBundlerConfig'.
       graphs.push(createIdealGraph(bundleGraph, config, entries, logger));
     }
     for (let g of graphs) {
@@ -336,11 +337,13 @@ function decorateLegacyGraph(
     }
   }
 
+  // @ts-expect-error - TS2488 - Type 'Iterator<Edge<1>, any, undefined>' must have a '[Symbol.iterator]()' method that returns an iterator.
   for (let {from, to} of idealBundleGraph.getAllEdges()) {
     let sourceBundle = nullthrows(idealBundleGraph.getNode(from));
     if (sourceBundle === 'root') {
       continue;
     }
+    // @ts-expect-error - TS2367 - This condition will always return 'true' since the types 'Bundle' and 'string' have no overlap.
     invariant(sourceBundle !== 'root');
 
     let legacySourceBundle = nullthrows(
@@ -351,6 +354,7 @@ function decorateLegacyGraph(
     if (targetBundle === 'root') {
       continue;
     }
+    // @ts-expect-error - TS2367 - This condition will always return 'true' since the types 'Bundle' and 'string' have no overlap.
     invariant(targetBundle !== 'root');
     let legacyTargetBundle = nullthrows(
       idealBundleToLegacyBundle.get(targetBundle),
@@ -436,6 +440,7 @@ function createIdealGraph(
 
     for (let c of config.manualSharedBundles) {
       if (c.root != null) {
+        // @ts-expect-error - TS2345 - Argument of type '{ name: string; assets: string[]; types?: string[] | undefined; root?: string | undefined; split?: number | undefined; }' is not assignable to parameter of type 'never'.
         parentsToConfig.get(path.join(config.projectRoot, c.root)).push(c);
       }
     }
@@ -486,6 +491,7 @@ function createIdealGraph(
           // We track all matching MSB's for constant modules as they are never duplicated
           // and need to be assigned to all matching bundles
           if (node.value.meta.isConstantModule === true) {
+            // @ts-expect-error - TS2345 - Argument of type '{ name: string; assets: string[]; types?: string[] | undefined; root?: string | undefined; split?: number | undefined; }' is not assignable to parameter of type 'never'.
             constantModuleToMSB.get(node.value).push(c);
           }
           manualAssetToConfig.set(node.value, c);
@@ -661,6 +667,7 @@ function createIdealGraph(
                     type: 'bundle',
                   },
                 ),
+                // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly sync: 1; readonly parallel: 2; readonly lazy: 3; }'.
                 dependencyPriorityEdges[dependency.priority],
               );
             } else if (
@@ -746,6 +753,7 @@ function createIdealGraph(
 
               assetReference.get(childAsset).push([dependency, bundle]);
             } else {
+              // @ts-expect-error - TS2322 - Type 'null' is not assignable to type 'number | undefined'.
               bundleId = null;
             }
             if (manualSharedObject && bundleId != null) {
@@ -753,6 +761,7 @@ function createIdealGraph(
               // add the asset if it doesn't already have it and set key
 
               invariant(
+                // @ts-expect-error - TS2367 - This condition will always return 'true' since the types 'Bundle | undefined' and 'string' have no overlap.
                 bundle !== 'root' && bundle != null && bundleId != null,
               );
 
@@ -1068,8 +1077,11 @@ function createIdealGraph(
 
   function assignInlineConstants(parentAsset: Asset, bundle: Bundle) {
     for (let inlineConstant of inlineConstantDeps.get(parentAsset)) {
+      // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'Asset'.
       if (!bundle.assets.has(inlineConstant)) {
+        // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'Asset'.
         bundle.assets.add(inlineConstant);
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'.
         bundle.size += inlineConstant.stats.size;
       }
     }
@@ -1333,6 +1345,7 @@ function createIdealGraph(
           let numRep = getBigIntFromContentKey(a.id);
           let r = Number(numRep % BigInt(modNum));
 
+          // @ts-expect-error - TS2345 - Argument of type 'Asset' is not assignable to parameter of type 'never'.
           remainderMap.get(r).push(a);
         }
 
@@ -1355,8 +1368,10 @@ function createIdealGraph(
           }
           for (let sp of remainderMap.get(i)) {
             bundle.assets.add(sp);
+            // @ts-expect-error - TS2339 - Property 'stats' does not exist on type 'never'.
             bundle.size += sp.stats.size;
             manualBundle.assets.delete(sp);
+            // @ts-expect-error - TS2339 - Property 'stats' does not exist on type 'never'.
             manualBundle.size -= sp.stats.size;
           }
         }
@@ -1369,6 +1384,7 @@ function createIdealGraph(
   // match multiple MSB's
   for (let [asset, msbs] of constantModuleToMSB.entries()) {
     for (let manualSharedObject of msbs) {
+      // @ts-expect-error - TS2339 - Property 'name' does not exist on type 'never'.
       let bundleId = manualSharedMap.get(manualSharedObject.name + ',js');
       if (bundleId == null) continue;
       let bundle = nullthrows(bundleGraph.getNode(bundleId));
@@ -1377,8 +1393,11 @@ function createIdealGraph(
         'We tried to use the root incorrectly',
       );
 
+      // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'Asset'.
       if (!bundle.assets.has(asset)) {
+        // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'Asset'.
         bundle.assets.add(asset);
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'.
         bundle.size += asset.stats.size;
       }
     }
@@ -1414,6 +1433,7 @@ function createIdealGraph(
       let numBundlesContributingToPRL = bundleIdsInGroup.reduce((count, b) => {
         let bundle = nullthrows(bundleGraph.getNode(b));
         invariant(bundle !== 'root');
+        // @ts-expect-error - TS2365 - Operator '+' cannot be applied to types 'number' and 'boolean'.
         return count + (bundle.bundleBehavior !== 'inline');
       }, 0);
 
@@ -1449,7 +1469,9 @@ function createIdealGraph(
           numBundlesContributingToPRL > config.maxParallelRequests
         ) {
           let bundleTuple = sharedBundlesInGroup.pop();
+          // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
           let bundleToRemove = bundleTuple.bundle;
+          // @ts-expect-error - TS2532 - Object is possibly 'undefined'.
           let bundleIdToRemove = bundleTuple.id;
           //TODO add integration test where bundles in bunlde group > max parallel request limit & only remove a couple shared bundles
           // but total # bundles still exceeds limit due to non shared bundles
@@ -1515,7 +1537,9 @@ function createIdealGraph(
     let assetOrderMap = new Map(assets.map((a, index) => [a, index]));
 
     for (let bundle of modifiedSourceBundles) {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       bundle.assets = new Set(
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'.
         [...bundle.assets].sort((a, b) => {
           let aIndex = nullthrows(assetOrderMap.get(a));
           let bIndex = nullthrows(assetOrderMap.get(b));
@@ -1594,6 +1618,7 @@ function createIdealGraph(
     for (let asset of bundle.assets) {
       assetReference.set(
         asset,
+        // @ts-expect-error - TS2345 - Argument of type '"root" | Bundle' is not assignable to parameter of type 'Dependency | Bundle'.
         assetReference.get(asset).filter((t) => !t.includes(bundle)),
       );
       for (let sourceBundleId of bundle.sourceBundles) {
@@ -1722,6 +1747,7 @@ function resolveModeConfig(
   for (const key of Object.keys(config)) {
     if (key === 'development' || key === 'production') {
       if (key === mode) {
+        // @ts-expect-error - TS2322 - Type 'BaseBundlerConfig | undefined' is not assignable to type 'Record<string, any>'.
         modeConfig = config[key];
       }
     } else {
@@ -1749,6 +1775,7 @@ async function loadBundlerConfig(
       ...HTTP_OPTIONS['2'],
       projectRoot: options.projectRoot,
     } as const;
+    // @ts-expect-error - TS2322 - Type '{ readonly projectRoot: string; readonly minBundles: 1; readonly manualSharedBundles: readonly []; readonly minBundleSize: 20000; readonly maxParallelRequests: 25; readonly disableSharedBundles: false; }' is not assignable to type 'ResolvedBundlerConfig'.
     return modDefault;
   }
 
@@ -1811,6 +1838,7 @@ async function loadBundlerConfig(
   );
 
   let http = modeConfig.http ?? 2;
+  // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'number' can't be used to index type '{ readonly '1': { readonly minBundles: 1; readonly manualSharedBundles: readonly []; readonly minBundleSize: 30000; readonly maxParallelRequests: 6; readonly disableSharedBundles: false; }; readonly '2': { readonly minBundles: 1; readonly manualSharedBundles: readonly []; readonly minBundleSize: 20000; readonly maxP...'.
   let defaults = HTTP_OPTIONS[http];
 
   return {

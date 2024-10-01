@@ -149,6 +149,7 @@ describe('AssetGraph', () => {
         }).id,
       ),
     );
+    // @ts-expect-error - TS2769 - No overload matches this call.
     assert.deepEqual(Array.from(graph.getAllEdges()), [
       {
         from: graph.rootNodeId,

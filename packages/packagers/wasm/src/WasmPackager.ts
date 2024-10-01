@@ -1,5 +1,6 @@
 import assert from 'assert';
 import {Packager} from '@atlaspack/plugin';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module './wasm-sourcemap'. '/home/ubuntu/parcel/packages/packagers/wasm/src/wasm-sourcemap.js' implicitly has an 'any' type.
 import * as wasmmap from './wasm-sourcemap';
 
 export default new Packager({

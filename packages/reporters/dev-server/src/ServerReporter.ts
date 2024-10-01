@@ -45,6 +45,7 @@ export default new Reporter({
               port: serveOptions.port,
               host: hmrOptions.host,
               devServer,
+              // @ts-expect-error - TS7006 - Parameter 'handler' implicitly has an 'any' type.
               addMiddleware: (handler) => {
                 server?.middleware.push(handler);
               },

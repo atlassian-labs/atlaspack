@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2307 - Cannot find module 'flow-to-typescript-codemod' or its corresponding type declarations.
 import {Flow} from 'flow-to-typescript-codemod';
 
 import type {
@@ -12,6 +13,7 @@ import type {
 import type {Async, IDisposable} from '@atlaspack/types-internal';
 import type {SharedReference} from './WorkerFarm';
 
+// @ts-expect-error - TS7016 - Could not find a declaration file for module './core-worker'. '/home/ubuntu/parcel/packages/core/workers/src/core-worker.js' implicitly has an 'any' type.
 import * as coreWorker from './core-worker';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
@@ -41,6 +43,7 @@ export class Child {
   tracerDisposable: IDisposable;
   child: ChildImpl;
   profiler: SamplingProfiler | null | undefined;
+  // @ts-expect-error - TS2749 - 'Handle' refers to a value, but is being used as a type here. Did you mean 'typeof Handle'?
   handles: Map<number, Handle> = new Map();
   sharedReferences: Map<SharedReference, unknown> = new Map();
   sharedReferencesByValue: Map<unknown, SharedReference> = new Map();
@@ -69,17 +72,21 @@ export class Child {
       request: CallRequest,
       awaitResponse?: boolean | null | undefined,
     ) => Promise<unknown>;
+    // @ts-expect-error - TS2749 - 'Handle' refers to a value, but is being used as a type here. Did you mean 'typeof Handle'?
     createReverseHandle: (fn: (...args: Array<any>) => unknown) => Handle;
     getSharedReference: (ref: SharedReference) => unknown;
     resolveSharedReference: (value: unknown) => undefined | SharedReference;
+    // @ts-expect-error - TS2749 - 'Handle' refers to a value, but is being used as a type here. Did you mean 'typeof Handle'?
     runHandle: (handle: Handle, args: Array<any>) => Promise<unknown>;
   } = {
     callMaster: (
       request: CallRequest,
       awaitResponse: boolean | null = true,
     ): Promise<unknown> => this.addCall(request, awaitResponse),
+    // @ts-expect-error - TS2749 - 'Handle' refers to a value, but is being used as a type here. Did you mean 'typeof Handle'?
     createReverseHandle: (fn: (...args: Array<any>) => unknown): Handle =>
       this.createReverseHandle(fn),
+    // @ts-expect-error - TS2749 - 'Handle' refers to a value, but is being used as a type here. Did you mean 'typeof Handle'?
     runHandle: (handle: Handle, args: Array<any>): Promise<unknown> =>
       this.workerApi.callMaster({handle: handle.id, args}, true),
     getSharedReference: (ref: SharedReference) =>
@@ -101,6 +108,7 @@ export class Child {
   }
 
   async childInit(module: string, childId: number): Promise<void> {
+    // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
     if (process.browser) {
       if (module === '@atlaspack/core/src/worker.js') {
         this.module = coreWorker;
@@ -212,6 +220,7 @@ export class Child {
       try {
         result = responseFromContent(
           // $FlowFixMe
+          // @ts-expect-error - TS2538 - Type 'null' cannot be used as an index type. | TS2538 - Type 'undefined' cannot be used as an index type.
           await this.module[method](this.workerApi, ...args),
         );
       } catch (e: any) {
@@ -255,6 +264,7 @@ export class Child {
       type: 'request',
       child: this.childId,
       // $FlowFixMe Added in Flow 0.121.0 upgrade in #4381
+      // @ts-expect-error - TS2322 - Type 'boolean | null' is not assignable to type 'boolean | undefined'.
       awaitResponse,
       resolve: () => {},
       reject: () => {},
@@ -304,6 +314,7 @@ export class Child {
     }
 
     if (this.responseQueue.size < this.maxConcurrentCalls) {
+      // @ts-expect-error - TS2345 - Argument of type 'ChildCall | undefined' is not assignable to parameter of type 'ChildCall'.
       this.sendRequest(this.callQueue.shift());
     }
   }
@@ -313,6 +324,7 @@ export class Child {
     this.tracerDisposable.dispose();
   }
 
+  // @ts-expect-error - TS2749 - 'Handle' refers to a value, but is being used as a type here. Did you mean 'typeof Handle'?
   createReverseHandle(fn: (...args: Array<any>) => unknown): Handle {
     let handle = new Handle({
       fn,

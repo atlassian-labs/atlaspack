@@ -1,6 +1,7 @@
 import AtlaspackConfig from '../src/AtlaspackConfig';
 import assert from 'assert';
 import path from 'path';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
 import logger from '@atlaspack/logger';
 import {inputFS} from '@atlaspack/test-utils';
@@ -152,6 +153,7 @@ describe('AtlaspackConfig', () => {
         keyPath: '/transformers/*.js/0',
       });
       assert(plugin);
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       assert.equal(typeof plugin.transform, 'function');
       assert(warnStub.calledOnce);
       assert.deepEqual(warnStub.getCall(0).args[0], {

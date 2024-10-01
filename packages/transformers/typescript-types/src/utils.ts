@@ -5,10 +5,12 @@ export function getExportedName(node: any): string | null | undefined {
     return null;
   }
 
+  // @ts-expect-error - TS7006 - Parameter 'm' implicitly has an 'any' type.
   if (!node.modifiers.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) {
     return null;
   }
 
+  // @ts-expect-error - TS7006 - Parameter 'm' implicitly has an 'any' type.
   if (node.modifiers.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword)) {
     return 'default';
   }

@@ -44,15 +44,20 @@ module.exports = v as {
   AssetGraph: AssetGraph;
   BundleGraph: {
     default: BundleGraph;
+    // @ts-expect-error - TS2749 - 'bundleGraphEdgeTypes' refers to a value, but is being used as a type here. Did you mean 'typeof bundleGraphEdgeTypes'?
     bundleGraphEdgeTypes: bundleGraphEdgeTypes;
   };
   RequestTracker: {
     default: RequestTracker;
+    // @ts-expect-error - TS2749 - 'readAndDeserializeRequestGraph' refers to a value, but is being used as a type here. Did you mean 'typeof readAndDeserializeRequestGraph'?
     readAndDeserializeRequestGraph: readAndDeserializeRequestGraph;
     RequestGraph: RequestGraph;
+    // @ts-expect-error - TS2749 - 'requestGraphEdgeTypes' refers to a value, but is being used as a type here. Did you mean 'typeof requestGraphEdgeTypes'?
     requestGraphEdgeTypes: requestGraphEdgeTypes;
   };
   LMDBCache: LMDBCache;
+  // @ts-expect-error - TS2749 - 'Priority' refers to a value, but is being used as a type here. Did you mean 'typeof Priority'?
   Priority: Priority;
+  // @ts-expect-error - TS2749 - 'fromProjectPathRelative' refers to a value, but is being used as a type here. Did you mean 'typeof fromProjectPathRelative'?
   fromProjectPathRelative: fromProjectPathRelative;
 };

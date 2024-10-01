@@ -42,6 +42,7 @@ export default new Packager({
       },
     );
     return {
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       render: posthtmlConfig?.contents?.render,
     };
   },
@@ -64,9 +65,11 @@ export default new Packager({
         new Set(bundleGraph.getReferencedBundles(bundle, {recursive: false})),
       ),
     ];
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     let renderConfig = config?.render;
 
     let {html} = await posthtml([
+      // @ts-expect-error - TS2345 - Argument of type 'unknown[]' is not assignable to parameter of type 'NamedBundle[]'.
       (tree: any) => insertBundleReferences(referencedBundles, tree),
       (tree: any) =>
         replaceInlineAssetContent(bundleGraph, getInlineBundleContents, tree),
@@ -140,6 +143,7 @@ async function replaceInlineAssetContent(
   tree: any,
 ) {
   const inlineNodes: Array<any> = [];
+  // @ts-expect-error - TS7006 - Parameter 'node' implicitly has an 'any' type.
   tree.walk((node) => {
     if (node.attrs && node.attrs['data-parcel-key']) {
       inlineNodes.push(node);
@@ -222,8 +226,10 @@ function insertBundleReferences(siblingBundles: Array<NamedBundle>, tree: any) {
   addBundlesToTree(bundles, tree);
 }
 
+// @ts-expect-error - TS7006 - Parameter 'bundles' implicitly has an 'any' type.
 function addBundlesToTree(bundles, tree: any) {
   const main = find(tree, 'head') || find(tree, 'html');
+  // @ts-expect-error - TS2339 - Property 'content' does not exist on type 'never'. | TS2339 - Property 'content' does not exist on type 'never'.
   const content = main ? main.content || (main.content = []) : tree;
   const index = findBundleInsertIndex(content);
 
@@ -232,6 +238,7 @@ function addBundlesToTree(bundles, tree: any) {
 
 function find(tree: any, tag: string) {
   let res;
+  // @ts-expect-error - TS7006 - Parameter 'node' implicitly has an 'any' type.
   tree.match({tag}, (node) => {
     res = node;
     return node;

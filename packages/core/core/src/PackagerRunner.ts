@@ -103,7 +103,9 @@ export default class PackagerRunner {
   config: AtlaspackConfig;
   options: AtlaspackOptions;
   pluginOptions: PluginOptions;
+  // @ts-expect-error - TS2564 - Property 'distDir' has no initializer and is not definitely assigned in the constructor.
   distDir: FilePath;
+  // @ts-expect-error - TS2564 - Property 'distExists' has no initializer and is not definitely assigned in the constructor.
   distExists: Set<FilePath>;
   report: ReportFn;
   previousDevDeps: Map<string, string>;
@@ -227,6 +229,7 @@ export default class PackagerRunner {
       // Only load config for a plugin once per build.
       let existing = pluginConfigs.get(plugin.name);
       if (existing != null) {
+        // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'Config'.
         configs.set(plugin.name, existing);
       } else {
         if (plugin.plugin.loadConfig != null) {
@@ -731,6 +734,7 @@ export default class PackagerRunner {
   ): Promise<BundleInfo> {
     let size = 0;
     let hash;
+    // @ts-expect-error - TS2702 - 'RegExp' only refers to a type, but is being used as a namespace here.
     let hashReferences: RegExp.matchResult | Array<string> = [];
     let isLargeBlob = false;
 
@@ -742,6 +746,7 @@ export default class PackagerRunner {
       await this.options.cache.setStream(
         cacheKeys.content,
         blobToStream(contents).pipe(
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           new TapStream((buf: Buffer) => {
             let str = boundaryStr + buf.toString();
             hashReferences = hashReferences.concat(

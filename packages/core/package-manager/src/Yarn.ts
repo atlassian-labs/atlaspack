@@ -1,14 +1,18 @@
 import type {PackageInstaller, InstallerOptions} from '@atlaspack/types';
 
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'command-exists'. '/home/ubuntu/parcel/node_modules/command-exists/index.js' implicitly has an 'any' type.
 import commandExists from 'command-exists';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'cross-spawn'. '/home/ubuntu/parcel/packages/core/package-manager/node_modules/cross-spawn/index.js' implicitly has an 'any' type.
 import spawn from 'cross-spawn';
 import logger from '@atlaspack/logger';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'split2'. '/home/ubuntu/parcel/node_modules/split2/index.js' implicitly has an 'any' type.
 import split from 'split2';
 import JSONParseStream from './JSONParseStream';
 import promiseFromProcess from './promiseFromProcess';
 import {registerSerializableClass} from '@atlaspack/core';
 import {exec, npmSpecifierFromModuleRequest} from './utils';
 
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import pkg from '../package.json';
 
 const YARN_CMD = 'yarn';
@@ -64,6 +68,7 @@ export class Yarn implements PackageInstaller {
   }: InstallerOptions): Promise<void> {
     if (yarnVersion == null) {
       let version = await exec('yarn --version');
+      // @ts-expect-error - TS2345 - Argument of type 'string | Buffer' is not assignable to parameter of type 'string'.
       yarnVersion = parseInt(version.stdout, 10);
     }
 
@@ -97,7 +102,9 @@ export class Yarn implements PackageInstaller {
     installProcess.stdout
       // Invoking yarn with --json provides streaming, newline-delimited JSON output.
       .pipe(split())
+      // @ts-expect-error - TS2554 - Expected 1 arguments, but got 0.
       .pipe(new JSONParseStream())
+      // @ts-expect-error - TS7006 - Parameter 'e' implicitly has an 'any' type.
       .on('error', (e) => {
         logger.error(e, '@atlaspack/package-manager');
       })
@@ -124,7 +131,9 @@ export class Yarn implements PackageInstaller {
 
     installProcess.stderr
       .pipe(split())
+      // @ts-expect-error - TS2554 - Expected 1 arguments, but got 0.
       .pipe(new JSONParseStream())
+      // @ts-expect-error - TS7006 - Parameter 'e' implicitly has an 'any' type.
       .on('error', (e) => {
         logger.error(e, '@atlaspack/package-manager');
       })

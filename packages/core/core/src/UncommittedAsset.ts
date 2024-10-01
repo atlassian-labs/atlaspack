@@ -52,6 +52,7 @@ export default class UncommittedAsset {
   isASTDirty: boolean;
   code: string | null | undefined;
   invalidations: Invalidations;
+  // @ts-expect-error - TS2564 - Property 'generate' has no initializer and is not definitely assigned in the constructor.
   generate: () => Promise<GenerateOutput> | null | undefined;
 
   constructor({
@@ -133,6 +134,7 @@ export default class UncommittedAsset {
       await this.options.cache.setStream(
         contentKey,
         content.pipe(
+          // @ts-expect-error - TS2554 - Expected 2 arguments, but got 1.
           new TapStream((buf: Buffer) => {
             hash.writeBuffer(buf);
             size += buf.length;
@@ -419,6 +421,7 @@ export default class UncommittedAsset {
   }
 
   updateId() {
+    // @ts-expect-error - TS2345 - Argument of type 'Asset' is not assignable to parameter of type 'AssetOptions'.
     this.value.id = createAssetIdFromOptions(this.value);
   }
 }

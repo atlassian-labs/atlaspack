@@ -47,6 +47,7 @@ export function generatePackageJson(options: REPLOptions): string {
     dependencies: Object.fromEntries(
       options.dependencies
         .filter(([a, b]: [any, any]) => a && b)
+        // @ts-expect-error - TS2345 - Argument of type '([a]: [any], [b]: [any]) => any' is not assignable to parameter of type '(a: [string, string], b: [string, string]) => number'.
         .sort(([a]: [any], [b]: [any]) => a.localeCompare(b)),
     ),
   };

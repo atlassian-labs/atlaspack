@@ -114,6 +114,7 @@ export async function getDevDepRequests<TResult extends RequestResult>(
   api: RunAPI<TResult>,
 ): Promise<DevDepRequests> {
   let previousDevDepRequests: Map<string, DevDepRequestResult> = new Map(
+    // @ts-expect-error - TS2769 - No overload matches this call.
     await Promise.all(
       api
         .getSubRequests()
@@ -128,6 +129,7 @@ export async function getDevDepRequests<TResult extends RequestResult>(
   return {
     devDeps: new Map(
       [...previousDevDepRequests.entries()]
+        // @ts-expect-error - TS2769 - No overload matches this call.
         .filter(([id]: [any]) => api.canSkipSubrequest(id))
         .map(([, req]: [any, any]) => [
           `${req.specifier}:${fromProjectPathRelative(req.resolveFrom)}`,
@@ -136,6 +138,7 @@ export async function getDevDepRequests<TResult extends RequestResult>(
     ),
     invalidDevDeps: await Promise.all(
       [...previousDevDepRequests.entries()]
+        // @ts-expect-error - TS2769 - No overload matches this call.
         .filter(([id]: [any]) => !api.canSkipSubrequest(id))
         .flatMap(([, req]: [any, any]) => {
           return [
@@ -143,6 +146,7 @@ export async function getDevDepRequests<TResult extends RequestResult>(
               specifier: req.specifier,
               resolveFrom: req.resolveFrom,
             },
+            // @ts-expect-error - TS7006 - Parameter 'i' implicitly has an 'any' type.
             ...(req.additionalInvalidations ?? []).map((i) => ({
               specifier: i.specifier,
               resolveFrom: i.resolveFrom,
@@ -195,6 +199,7 @@ export async function runDevDepRequest<TResult extends RequestResult>(
   await api.runRequest<null, DevDepRequestResult | undefined>({
     id: 'dev_dep_request:' + devDepRequest.specifier + ':' + devDepRequest.hash,
     type: requestTypes.dev_dep_request,
+    // @ts-expect-error - TS2322 - Type '({ api }: { input: null; } & StaticRunOpts<DevDepRequestResult | undefined>) => void' is not assignable to type '(arg1: { input: null; } & StaticRunOpts<DevDepRequestResult | undefined>) => Async<DevDepRequestResult | undefined>'.
     run: ({api}) => {
       for (let filePath of nullthrows(
         devDepRequest.invalidateOnFileChange,

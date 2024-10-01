@@ -5,12 +5,14 @@ import {describe, fsFixture, it, overlayFS} from '@atlaspack/test-utils';
 
 import assert from 'assert';
 import path from 'path';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'sinon'. '/home/ubuntu/parcel/node_modules/sinon/lib/sinon.js' implicitly has an 'any' type.
 import sinon from 'sinon';
 
 function createProgram(opts: ProgramOptions) {
   let program = _createProgram(opts).exitOverride();
 
   function cli(command: string = ''): Promise<void> {
+    // @ts-expect-error - TS2322 - Type 'Promise<Command>' is not assignable to type 'Promise<void>'.
     return program.parseAsync(command.split(/\s+/), {from: 'user'});
   }
 
@@ -18,7 +20,9 @@ function createProgram(opts: ProgramOptions) {
 }
 
 describe.v2('@atlaspack/link', () => {
+  // @ts-expect-error - TS7034 - Variable '_cwd' implicitly has type 'any' in some locations where its type cannot be determined.
   let _cwd;
+  // @ts-expect-error - TS7034 - Variable '_stdout' implicitly has type 'any' in some locations where its type cannot be determined.
   let _stdout;
 
   beforeEach(async function () {
@@ -30,7 +34,9 @@ describe.v2('@atlaspack/link', () => {
   });
 
   afterEach(function () {
+    // @ts-expect-error - TS7005 - Variable '_cwd' implicitly has an 'any' type.
     _cwd?.restore();
+    // @ts-expect-error - TS7005 - Variable '_stdout' implicitly has an 'any' type.
     _stdout?.restore();
     _cwd = null;
     _stdout = null;
@@ -56,6 +62,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('errors for invalid package root', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`yarn.lock:`;
 
       assert(overlayFS.existsSync('/app/yarn.lock'));
@@ -66,6 +73,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('errors when a link exists', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`yarn.lock:`;
 
       let cli = createProgram({fs: overlayFS});
@@ -75,6 +83,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('links with the default options', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
@@ -103,6 +112,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('links from a custom package root', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS, '/')`
         app
           yarn.lock:
@@ -141,6 +151,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('links with a custom namespace', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
@@ -188,6 +199,7 @@ describe.v2('@atlaspack/link', () => {
 
     // FIXME: this test fails on windows
     it.skip('updates config for custom namespace', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS, '/')`
         ${path.resolve(
           path.join(__dirname, '../../../configs/namespace/package.json'),
@@ -240,6 +252,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('links with custom node modules glob', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         tools
@@ -275,6 +288,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('does not do anything with dry run', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
@@ -303,6 +317,7 @@ describe.v2('@atlaspack/link', () => {
 
   describe('unlink', () => {
     it('errors without a link config', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`yarn.lock:`;
 
       let cli = createProgram({fs: overlayFS});
@@ -311,6 +326,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('errors for invalid app root', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         .atlaspack-link: ${{
@@ -326,6 +342,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('errors for invalid package root', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         .atlaspack-link: ${{
@@ -341,6 +358,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('unlinks with the default options', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
@@ -369,6 +387,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('unlinks from a custom package root', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         .atlaspack-link: ${{
@@ -382,6 +401,7 @@ describe.v2('@atlaspack/link', () => {
         node_modules/@atlaspack/core -> package-root/core/core
       `;
 
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS, '/')`
         package-root/core/cli/package.json: ${{name: '@atlaspack/cli'}}
         package-root/core/cli/src/bin.js:
@@ -398,6 +418,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('unlinks with a custom namespace', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         .atlaspack-link: ${{
@@ -429,6 +450,7 @@ describe.v2('@atlaspack/link', () => {
 
     // FIXME: this test fails on windows
     it.skip('updates config for custom namespace', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         .parcelrc: ${{
@@ -451,6 +473,7 @@ describe.v2('@atlaspack/link', () => {
           namespace: '@namespace',
         }}`;
 
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS, '/')`
         ${path.resolve(
           path.join(__dirname, '../../../configs/namespace/package.json'),
@@ -486,6 +509,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('unlinks with custom node modules glob', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         .atlaspack-link: ${{
@@ -520,6 +544,7 @@ describe.v2('@atlaspack/link', () => {
     });
 
     it('does not do anything with dry run', async () => {
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules

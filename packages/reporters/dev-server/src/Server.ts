@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2307 - Cannot find module './types.js.flow' or its corresponding type declarations.
 import type {DevServerOptions, Request, Response} from './types.js.flow';
 import type {
   BuildSuccessEvent,
@@ -23,12 +24,17 @@ import {
 } from '@atlaspack/utils';
 import serverErrors from './serverErrors';
 import fs from 'fs';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'ejs'. '/home/ubuntu/parcel/node_modules/ejs/lib/ejs.js' implicitly has an 'any' type.
 import ejs from 'ejs';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'connect'. '/home/ubuntu/parcel/node_modules/connect/index.js' implicitly has an 'any' type.
 import connect from 'connect';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'serve-handler'. '/home/ubuntu/parcel/node_modules/serve-handler/src/index.js' implicitly has an 'any' type.
 import serveHandler from 'serve-handler';
 import {createProxyMiddleware} from 'http-proxy-middleware';
 import {URL, URLSearchParams} from 'url';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'launch-editor'. '/home/ubuntu/parcel/node_modules/launch-editor/index.js' implicitly has an 'any' type.
 import launchEditor from 'launch-editor';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'fresh'. '/home/ubuntu/parcel/node_modules/fresh/index.js' implicitly has an 'any' type.
 import fresh from 'fresh';
 
 export function setHeaders(res: Response) {
@@ -80,6 +86,7 @@ export default class Server {
     hints: Array<string>;
     documentation: string;
   }> | null;
+  // @ts-expect-error - TS2564 - Property 'stopServer' has no initializer and is not definitely assigned in the constructor.
   stopServer: () => Promise<void> | null | undefined;
 
   constructor(options: DevServerOptions) {
@@ -93,6 +100,7 @@ export default class Server {
     this.pendingRequests = [];
     this.middleware = [];
     this.bundleGraph = null;
+    // @ts-expect-error - TS2322 - Type 'null' is not assignable to type '(bundle: PackagedBundle) => Promise<BuildSuccessEvent> | null | undefined'.
     this.requestBundle = null;
     this.errors = null;
   }
@@ -374,9 +382,13 @@ export default class Server {
         cleanUrls: false,
       },
       {
+        // @ts-expect-error - TS7006 - Parameter 'path' implicitly has an 'any' type.
         lstat: (path) => fs.stat(path),
+        // @ts-expect-error - TS7006 - Parameter 'path' implicitly has an 'any' type.
         realpath: (path) => fs.realpath(path),
+        // @ts-expect-error - TS7006 - Parameter 'path' implicitly has an 'any' type. | TS7006 - Parameter 'options' implicitly has an 'any' type.
         createReadStream: (path, options) => fs.createReadStream(path, options),
+        // @ts-expect-error - TS7006 - Parameter 'path' implicitly has an 'any' type.
         readdir: (path) => fs.readdir(path),
       },
     );
@@ -456,6 +468,7 @@ export default class Server {
       }
       for (const [context, options] of Object.entries(cfg)) {
         // each key is interpreted as context, and value as middleware options
+        // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'Options | undefined'.
         app.use(createProxyMiddleware(context, options));
       }
     } else {
@@ -495,11 +508,13 @@ export default class Server {
     };
 
     const app = connect();
+    // @ts-expect-error - TS7006 - Parameter 'req' implicitly has an 'any' type. | TS7006 - Parameter 'res' implicitly has an 'any' type. | TS7006 - Parameter 'next' implicitly has an 'any' type.
     app.use((req, res, next) => {
       setHeaders(res);
       next();
     });
 
+    // @ts-expect-error - TS7006 - Parameter 'req' implicitly has an 'any' type. | TS7006 - Parameter 'res' implicitly has an 'any' type. | TS7006 - Parameter 'next' implicitly has an 'any' type.
     app.use((req, res, next) => {
       if (req.url === '/__parcel_healthcheck') {
         res.statusCode = 200;
@@ -524,6 +539,7 @@ export default class Server {
     this.stopServer = stop;
 
     server.listen(this.options.port, this.options.host);
+    // @ts-expect-error - TS2322 - Type 'Server' is not assignable to type 'HTTPServer'.
     return new Promise(
       (
         resolve: (result: Promise<Server> | Server) => void,
@@ -531,12 +547,14 @@ export default class Server {
       ) => {
         server.once('error', (err) => {
           this.options.logger.error({
+            // @ts-expect-error - TS2345 - Argument of type 'Error' is not assignable to parameter of type 'ServerError'.
             message: serverErrors(err, this.options.port),
           } as Diagnostic);
           reject(err);
         });
 
         server.once('listening', () => {
+          // @ts-expect-error - TS2345 - Argument of type 'HTTPServer' is not assignable to parameter of type 'Server | Promise<Server>'.
           resolve(server);
         });
       },
@@ -546,6 +564,7 @@ export default class Server {
   async stop(): Promise<void> {
     invariant(this.stopServer != null);
     await this.stopServer();
+    // @ts-expect-error - TS2322 - Type 'null' is not assignable to type '() => Promise<void> | null | undefined'.
     this.stopServer = null;
   }
 }

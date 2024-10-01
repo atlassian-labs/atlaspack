@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2614 - Module '"@atlaspack/workers"' has no exported member 'WorkerApi'. Did you mean to use 'import WorkerApi from "@atlaspack/workers"' instead?
 import type {WorkerApi} from '@atlaspack/workers';
 import type {AssetGroup, AtlaspackOptions, ReportFn} from './types';
 import type {Validator, ValidateResult} from '@atlaspack/types';
@@ -37,6 +38,7 @@ export default class Validation {
     [validatorName: string]: Validator;
   } = {};
   dedicatedThread: boolean;
+  // @ts-expect-error - TS2564 - Property 'impactfulOptions' has no initializer and is not definitely assigned in the constructor.
   impactfulOptions: Partial<AtlaspackOptions>;
   options: AtlaspackOptions;
   atlaspackConfig: AtlaspackConfig;
@@ -76,7 +78,9 @@ export default class Validation {
           let validatorResults: Array<ValidateResult | null | undefined> = [];
           try {
             // If the plugin supports the single-threading validateAll method, pass all assets to it.
+            // @ts-expect-error - TS2339 - Property 'validateAll' does not exist on type 'Validator'.
             if (plugin.validateAll && this.dedicatedThread) {
+              // @ts-expect-error - TS2339 - Property 'validateAll' does not exist on type 'Validator'.
               validatorResults = await plugin.validateAll({
                 assets: assets.map((asset) => new Asset(asset)),
                 options: pluginOptions,
@@ -96,12 +100,15 @@ export default class Validation {
             }
 
             // Otherwise, pass the assets one-at-a-time
+            // @ts-expect-error - TS2339 - Property 'validate' does not exist on type 'Validator'.
             else if (plugin.validate && !this.dedicatedThread) {
               await Promise.all(
                 assets.map(async (input) => {
                   let config = null;
                   let publicAsset = new Asset(input);
+                  // @ts-expect-error - TS2339 - Property 'getConfig' does not exist on type 'Validator'.
                   if (plugin.getConfig) {
+                    // @ts-expect-error - TS2339 - Property 'getConfig' does not exist on type 'Validator'.
                     config = await plugin.getConfig({
                       asset: publicAsset,
                       options: pluginOptions,
@@ -117,6 +124,7 @@ export default class Validation {
                     });
                   }
 
+                  // @ts-expect-error - TS2339 - Property 'validate' does not exist on type 'Validator'.
                   let validatorResult = await plugin.validate({
                     asset: publicAsset,
                     options: pluginOptions,

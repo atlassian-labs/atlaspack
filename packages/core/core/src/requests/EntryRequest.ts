@@ -52,6 +52,7 @@ export default function createEntryRequest(input: ProjectPath): EntryRequest {
   };
 }
 
+// @ts-expect-error - TS7031 - Binding element 'input' implicitly has an 'any' type. | TS7031 - Binding element 'api' implicitly has an 'any' type. | TS7031 - Binding element 'options' implicitly has an 'any' type.
 async function run({input, api, options}): Promise<EntryRequestResult> {
   let entryResolver = new EntryResolver(options);
   let filePath = fromProjectPath(options.projectRoot, input);
@@ -106,6 +107,7 @@ async function assertFile(
     throw new ThrowableDiagnostic({
       diagnostic: {
         origin: '@atlaspack/core',
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         message: md`${path.relative(process.cwd(), source)} does not exist.`,
         codeFrames: [
           {
@@ -119,6 +121,7 @@ async function assertFile(
           },
         ],
         hints: alternatives.map((r) => {
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           return md`Did you mean '__${r}__'?`;
         }),
       },
@@ -130,6 +133,7 @@ async function assertFile(
     throw new ThrowableDiagnostic({
       diagnostic: {
         origin: '@atlaspack/core',
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         message: md`${path.relative(process.cwd(), source)} is not a file.`,
         codeFrames: [
           {
@@ -162,6 +166,7 @@ export class EntryResolver {
       if (!isGlob(entry)) {
         throw new ThrowableDiagnostic({
           diagnostic: {
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`Entry ${entry} does not exist`,
           },
         });
@@ -314,6 +319,7 @@ export class EntryResolver {
 
       throw new ThrowableDiagnostic({
         diagnostic: {
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           message: md`Could not find entry: ${entry}`,
         },
       });
@@ -340,6 +346,7 @@ export class EntryResolver {
 
     throw new ThrowableDiagnostic({
       diagnostic: {
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         message: md`Unknown entry: ${entry}`,
       },
     });
@@ -372,6 +379,7 @@ export class EntryResolver {
       // TODO: code frame?
       throw new ThrowableDiagnostic({
         diagnostic: {
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           message: md`Error parsing ${path.relative(
             this.options.inputFS.cwd(),
             pkgFile,

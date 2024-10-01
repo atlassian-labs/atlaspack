@@ -15,6 +15,7 @@ export default function promiseFromProcess(
           return;
         }
 
+        // @ts-expect-error - TS2794 - Expected 1 arguments, but got 0. Did you forget to include 'void' in your type argument to 'Promise'?
         resolve();
       });
     },

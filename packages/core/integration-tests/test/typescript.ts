@@ -41,6 +41,7 @@ describe.v2('typescript', function () {
         },
       ]);
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(typeof output.count, 'function');
       assert.equal(output.count(), 3);
@@ -59,6 +60,7 @@ describe.v2('typescript', function () {
         },
       ]);
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(typeof output.count, 'function');
       assert.equal(output.count(), 3);
@@ -72,6 +74,7 @@ describe.v2('typescript', function () {
       // assert.equal(b.assets.size, 2);
       // assert.equal(b.childBundles.size, 1);
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(typeof output.count, 'function');
       assert.equal(output.count(), 3);
@@ -90,6 +93,7 @@ describe.v2('typescript', function () {
         },
       ]);
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(typeof output.env, 'function');
       assert.equal(output.env(), 'test');
@@ -112,6 +116,7 @@ describe.v2('typescript', function () {
         },
       ]);
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(typeof output.getRaw, 'function');
       assert(/http:\/\/localhost\/test\.[0-9a-f]+\.txt$/.test(output.getRaw()));
@@ -140,6 +145,7 @@ describe.v2('typescript', function () {
         },
       ]);
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(typeof output.count, 'function');
       assert.equal(output.count(), 3);
@@ -174,6 +180,7 @@ describe.v2('typescript', function () {
         },
       ]);
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
       assert.equal(typeof output.test, 'function');
       assert.equal(output.test(), 'test passed');
@@ -189,6 +196,7 @@ describe.v2('typescript', function () {
       );
 
       const text = 'export default <div>Hello</div>;';
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
 
       assert.deepEqual(output, {
@@ -216,6 +224,7 @@ describe.v2('typescript', function () {
         {config},
       );
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
 
       assert.deepEqual(output, {
@@ -250,6 +259,7 @@ describe.v2('typescript', function () {
         {config},
       );
 
+      // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
       let output = await run(b);
 
       assert.deepEqual(output, {

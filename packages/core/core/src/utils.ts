@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2307 - Cannot find module 'flow-to-typescript-codemod' or its corresponding type declarations.
 import {Flow} from 'flow-to-typescript-codemod';
 
 import type {
@@ -94,6 +95,7 @@ export function optionsProxy(
         invalidateOnOptionChange(prop);
       }
 
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'AtlaspackOptions'.
       return target[prop];
     },
   });
@@ -119,6 +121,7 @@ function proxyPackageManager(
         return require;
       }
 
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'PackageManager'.
       return target[prop];
     },
   });
@@ -126,6 +129,7 @@ function proxyPackageManager(
 
 export function hashFromOption(value: unknown): string {
   if (typeof value === 'object' && value != null) {
+    // @ts-expect-error - TS2345 - Argument of type 'object' is not assignable to parameter of type '{ readonly [key: string]: unknown; }'.
     return hashObject(value);
   }
 
@@ -136,18 +140,25 @@ export function invalidateOnFileCreateToInternal(
   projectRoot: FilePath,
   invalidation: FileCreateInvalidation,
 ): InternalFileCreateInvalidation {
+  // @ts-expect-error - TS2339 - Property 'glob' does not exist on type 'FileCreateInvalidation'.
   if (invalidation.glob != null) {
+    // @ts-expect-error - TS2339 - Property 'glob' does not exist on type 'FileCreateInvalidation'.
     return {glob: toProjectPath(projectRoot, invalidation.glob)};
+    // @ts-expect-error - TS2339 - Property 'filePath' does not exist on type 'FileCreateInvalidation'.
   } else if (invalidation.filePath != null) {
     return {
+      // @ts-expect-error - TS2339 - Property 'filePath' does not exist on type 'FileCreateInvalidation'.
       filePath: toProjectPath(projectRoot, invalidation.filePath),
     };
   } else {
     invariant(
+      // @ts-expect-error - TS2339 - Property 'aboveFilePath' does not exist on type 'FileCreateInvalidation'. | TS2339 - Property 'fileName' does not exist on type 'FileCreateInvalidation'.
       invalidation.aboveFilePath != null && invalidation.fileName != null,
     );
     return {
+      // @ts-expect-error - TS2339 - Property 'fileName' does not exist on type 'FileCreateInvalidation'.
       fileName: invalidation.fileName,
+      // @ts-expect-error - TS2339 - Property 'aboveFilePath' does not exist on type 'FileCreateInvalidation'.
       aboveFilePath: toProjectPath(projectRoot, invalidation.aboveFilePath),
     };
   }

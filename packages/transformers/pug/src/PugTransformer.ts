@@ -1,5 +1,6 @@
 import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'pug'. '/home/ubuntu/parcel/node_modules/pug/lib/index.js' implicitly has an 'any' type.
 import pug from 'pug';
 
 export default new Transformer({
@@ -24,7 +25,9 @@ export default new Transformer({
       compileDebug: false,
       basedir: path.dirname(asset.filePath),
       filename: asset.filePath,
+      // @ts-expect-error - TS2698 - Spread types may only be created from object types.
       ...pugConfig,
+      // @ts-expect-error - TS2571 - Object is of type 'unknown'.
       pretty: pugConfig.pretty || false,
     });
 
@@ -33,6 +36,7 @@ export default new Transformer({
     }
 
     asset.type = 'html';
+    // @ts-expect-error - TS2571 - Object is of type 'unknown'.
     asset.setCode(render(pugConfig.locals));
 
     return [asset];

@@ -23,6 +23,7 @@ export class AssetCompat {
 
   constructor(_inner: InnerAsset, options: PluginOptions) {
     this._inner = _inner;
+    // @ts-expect-error - TS2339 - Property 'env' does not exist on type 'AssetCompat'. | TS2345 - Argument of type 'PluginOptions' is not assignable to parameter of type 'AtlaspackOptions'.
     this.env = new Environment(_inner.env, options);
     this._dependencies = [];
   }
@@ -42,10 +43,12 @@ export class AssetCompat {
     this._inner.type = value;
   }
 
+  // @ts-expect-error - TS2380 - The return type of a 'get' accessor must be assignable to its 'set' accessor type
   get bundleBehavior(): BundleBehavior | null | undefined {
     let bundleBehavior = this._inner.bundleBehavior;
     return bundleBehavior == null ? null : BundleBehaviorNames[bundleBehavior];
   }
+  // @ts-expect-error - TS1095 - A 'set' accessor cannot have a return type annotation.
   set bundleBehavior(bundleBehavior?: BundleBehavior | null): void {
     this._inner.bundleBehavior = bundleBehavior
       ? BundleBehaviorMap[bundleBehavior]

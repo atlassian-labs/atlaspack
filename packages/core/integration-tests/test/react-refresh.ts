@@ -15,9 +15,11 @@ import {
 import getPort from 'get-port';
 import type {BuildEvent, Asset} from '@atlaspack/types';
 // flowlint-next-line untyped-import:off
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'jsdom'. '/home/ubuntu/parcel/node_modules/jsdom/lib/api.js' implicitly has an 'any' type.
 import JSDOM from 'jsdom';
 import nullthrows from 'nullthrows';
 
+// @ts-expect-error - TS7034 - Variable 'MessageChannel' implicitly has type 'any' in some locations where its type cannot be determined.
 let MessageChannel;
 try {
   ({MessageChannel} = require('worker_threads'));
@@ -36,9 +38,13 @@ if (MessageChannel) {
         '/integration/react-refresh-automatic',
       );
 
+      // @ts-expect-error - TS7034 - Variable 'b' implicitly has type 'any' in some locations where its type cannot be determined.
       let b,
+        // @ts-expect-error - TS7034 - Variable 'root' implicitly has type 'any' in some locations where its type cannot be determined.
         root,
+        // @ts-expect-error - TS7034 - Variable 'randoms' implicitly has type 'any' in some locations where its type cannot be determined.
         randoms,
+        // @ts-expect-error - TS7034 - Variable 'subscription' implicitly has type 'any' in some locations where its type cannot be determined.
         subscription,
         window: Record<string, any> = {};
 
@@ -54,21 +60,27 @@ if (MessageChannel) {
           path.join(testDir, 'Foo.1.js'),
           path.join(testDir, 'Foo.js'),
         );
+        // @ts-expect-error - TS7005 - Variable 'b' implicitly has an 'any' type.
         assert.equal((await getNextBuild(b)).type, 'buildSuccess');
 
         // Wait for the hmr-runtime to process the event
         await sleep(100);
 
+        // @ts-expect-error - TS7005 - Variable 'root' implicitly has an 'any' type.
         let [, indexNum, appNum, fooText, fooNum] = root.textContent.match(
           /^([\d.]+) ([\d.]+) ([\w]+):([\d.]+)$/,
         );
+        // @ts-expect-error - TS7005 - Variable 'randoms' implicitly has an 'any' type.
         assert.equal(randoms?.indexNum, indexNum);
+        // @ts-expect-error - TS7005 - Variable 'randoms' implicitly has an 'any' type.
         assert.equal(randoms?.appNum, appNum);
+        // @ts-expect-error - TS7005 - Variable 'randoms' implicitly has an 'any' type.
         assert.equal(randoms?.fooNum, fooNum);
         assert.equal(fooText, 'OtherFunctional');
       });
 
       afterEach(async () => {
+        // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type.
         await cleanup({subscription, window});
       });
     });
@@ -76,13 +88,18 @@ if (MessageChannel) {
     describe('synchronous', () => {
       const testDir = path.join(__dirname, '/integration/react-refresh');
 
+      // @ts-expect-error - TS7034 - Variable 'b' implicitly has type 'any' in some locations where its type cannot be determined.
       let b,
+        // @ts-expect-error - TS7034 - Variable 'root' implicitly has type 'any' in some locations where its type cannot be determined.
         root,
+        // @ts-expect-error - TS7034 - Variable 'window' implicitly has type 'any' in some locations where its type cannot be determined.
         window,
+        // @ts-expect-error - TS7034 - Variable 'subscription' implicitly has type 'any' in some locations where its type cannot be determined.
         subscription,
         randoms: Record<string, any> = {};
 
       beforeEach(async () => {
+        // @ts-expect-error - TS2322 - Type '{ indexNum: any; appNum: any; fooText: any; fooNum: any; } | undefined' is not assignable to type 'Record<string, any>'.
         ({b, root, window, subscription, randoms} = await setup(
           path.join(testDir, 'index.html'),
         ));
@@ -94,11 +111,13 @@ if (MessageChannel) {
           path.join(testDir, 'Foo.1.js'),
           path.join(testDir, 'Foo.js'),
         );
+        // @ts-expect-error - TS7005 - Variable 'b' implicitly has an 'any' type.
         assert.equal((await getNextBuild(b)).type, 'buildSuccess');
 
         // Wait for the hmr-runtime to process the event
         await sleep(100);
 
+        // @ts-expect-error - TS7005 - Variable 'root' implicitly has an 'any' type.
         let [, indexNum, appNum, fooText, fooNum] = root.textContent.match(
           /^([\d.]+) ([\d.]+) ([\w]+):([\d.]+)$/,
         );
@@ -114,12 +133,14 @@ if (MessageChannel) {
           path.join(testDir, 'Foo.2-hooks.js'),
           path.join(testDir, 'Foo.js'),
         );
+        // @ts-expect-error - TS7005 - Variable 'b' implicitly has an 'any' type.
         assert.equal((await getNextBuild(b)).type, 'buildSuccess');
 
         // Wait for the hmr-runtime to process the event
         await sleep(100);
 
         let [, indexNum, appNum, fooText, fooNum, fooNum2] =
+          // @ts-expect-error - TS7005 - Variable 'root' implicitly has an 'any' type.
           root.textContent.match(
             /^([\d.]+) ([\d.]+) ([\w]+):([\d.]+):([\d.]+)$/,
           );
@@ -136,11 +157,13 @@ if (MessageChannel) {
           path.join(testDir, 'Foo.3-class.js'),
           path.join(testDir, 'Foo.js'),
         );
+        // @ts-expect-error - TS7005 - Variable 'b' implicitly has an 'any' type.
         assert.equal((await getNextBuild(b)).type, 'buildSuccess');
 
         // Wait for the hmr-runtime to process the event
         await sleep(100);
 
+        // @ts-expect-error - TS7005 - Variable 'root' implicitly has an 'any' type.
         let [, indexNum, appNum, fooText, fooNum] = root.textContent.match(
           /^([\d.]+) ([\d.]+) ([\w]+):([\d.]+)$/,
         );
@@ -151,6 +174,7 @@ if (MessageChannel) {
       });
 
       afterEach(async () => {
+        // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type. | TS7005 - Variable 'window' implicitly has an 'any' type.
         await cleanup({subscription, window});
       });
     });
@@ -161,13 +185,18 @@ if (MessageChannel) {
         '/integration/react-refresh-lazy-child',
       );
 
+      // @ts-expect-error - TS7034 - Variable 'b' implicitly has type 'any' in some locations where its type cannot be determined.
       let b,
+        // @ts-expect-error - TS7034 - Variable 'root' implicitly has type 'any' in some locations where its type cannot be determined.
         root,
+        // @ts-expect-error - TS7034 - Variable 'window' implicitly has type 'any' in some locations where its type cannot be determined.
         window,
+        // @ts-expect-error - TS7034 - Variable 'subscription' implicitly has type 'any' in some locations where its type cannot be determined.
         subscription,
         randoms: Record<string, any> = {};
 
       beforeEach(async () => {
+        // @ts-expect-error - TS2322 - Type '{ indexNum: any; appNum: any; fooText: any; fooNum: any; } | undefined' is not assignable to type 'Record<string, any>'.
         ({b, root, window, subscription, randoms} = await setup(
           path.join(testDir, 'index.html'),
         ));
@@ -181,11 +210,13 @@ if (MessageChannel) {
           path.join(testDir, 'Async.1.js'),
           path.join(testDir, 'Async.js'),
         );
+        // @ts-expect-error - TS7005 - Variable 'b' implicitly has an 'any' type.
         assert.equal((await getNextBuild(b)).type, 'buildSuccess');
 
         // Wait for the hmr-runtime to process the event
         await sleep(100);
 
+        // @ts-expect-error - TS7005 - Variable 'root' implicitly has an 'any' type.
         let [, indexNum, appNum, fooText, fooNum] = root.textContent.match(
           /^([\d.]+) ([\d.]+) ([\w]+):([\d.]+)$/,
         );
@@ -196,6 +227,7 @@ if (MessageChannel) {
       });
 
       afterEach(async () => {
+        // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type. | TS7005 - Variable 'window' implicitly has an 'any' type.
         await cleanup({subscription, window});
       });
     });
@@ -206,8 +238,11 @@ if (MessageChannel) {
         '/integration/react-refresh-circular',
       );
 
+      // @ts-expect-error - TS7034 - Variable 'b' implicitly has type 'any' in some locations where its type cannot be determined.
       let b,
+        // @ts-expect-error - TS7034 - Variable 'root' implicitly has type 'any' in some locations where its type cannot be determined.
         root,
+        // @ts-expect-error - TS7034 - Variable 'subscription' implicitly has type 'any' in some locations where its type cannot be determined.
         subscription,
         window: Record<string, any> = {};
 
@@ -221,11 +256,13 @@ if (MessageChannel) {
         await fs.mkdirp(testDir);
         let f = path.join(testDir, 'Provider.js');
         await fs.writeFile(f, (await fs.readFile(f, 'utf8')).replace('2', '3'));
+        // @ts-expect-error - TS7005 - Variable 'b' implicitly has an 'any' type.
         assert.equal((await getNextBuild(b)).type, 'buildSuccess');
 
         // Wait for the hmr-runtime to process the event
         await sleep(100);
 
+        // @ts-expect-error - TS7005 - Variable 'root' implicitly has an 'any' type.
         assert.equal(root.textContent, '3');
       });
 
@@ -236,15 +273,18 @@ if (MessageChannel) {
           f,
           (await fs.readFile(f, 'utf8')).replace('tmp', 'foo'),
         );
+        // @ts-expect-error - TS7005 - Variable 'b' implicitly has an 'any' type.
         assert.equal((await getNextBuild(b)).type, 'buildSuccess');
 
         // Wait for the hmr-runtime to process the event
         await sleep(100);
 
+        // @ts-expect-error - TS7005 - Variable 'root' implicitly has an 'any' type.
         assert.equal(root.textContent, '2');
       });
 
       afterEach(async () => {
+        // @ts-expect-error - TS7005 - Variable 'subscription' implicitly has an 'any' type.
         await cleanup({subscription, window});
       });
     });
@@ -310,6 +350,7 @@ if (MessageChannel) {
 async function setup(entry: string) {
   let port = await getPort(),
     b,
+    // @ts-expect-error - TS7034 - Variable 'window' implicitly has type 'any' in some locations where its type cannot be determined.
     window,
     randoms,
     subscription,
@@ -346,11 +387,14 @@ async function setup(entry: string) {
   );
   window = dom.window;
   await new Promise((res: (result: Promise<undefined> | undefined) => void) =>
+    // @ts-expect-error - TS7005 - Variable 'window' implicitly has an 'any' type.
     window.document.addEventListener('load', () => {
+      // @ts-expect-error - TS2794 - Expected 1 arguments, but got 0. Did you forget to include 'void' in your type argument to 'Promise'?
       res();
     }),
   );
   window.console.clear = () => {};
+  // @ts-expect-error - TS7005 - Variable 'MessageChannel' implicitly has an 'any' type.
   window.MessageChannel = MessageChannel;
   root = window.document.getElementById('root');
 
@@ -362,6 +406,7 @@ async function setup(entry: string) {
   );
   // ReactDOM.render
   await window[parcelRequire](
+    // @ts-expect-error - TS2345 - Argument of type 'Asset | undefined' is not assignable to parameter of type 'Asset'.
     bundleGraph.getAssetPublicId(bundle.getEntryAssets().pop()),
   ).default();
   await sleep(100);
@@ -378,6 +423,7 @@ async function setup(entry: string) {
   return {port, b, window, randoms, subscription, root};
 }
 
+// @ts-expect-error - TS7031 - Binding element 'window' implicitly has an 'any' type. | TS7031 - Binding element 'subscription' implicitly has an 'any' type.
 async function cleanup({window, subscription}) {
   if (window) {
     window.close();

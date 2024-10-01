@@ -61,6 +61,7 @@ function getId(input: AssetRequestInput) {
   );
 }
 
+// @ts-expect-error - TS7031 - Binding element 'input' implicitly has an 'any' type. | TS7031 - Binding element 'api' implicitly has an 'any' type. | TS7031 - Binding element 'farm' implicitly has an 'any' type. | TS7031 - Binding element 'invalidateReason' implicitly has an 'any' type. | TS7031 - Binding element 'options' implicitly has an 'any' type.
 async function run({input, api, farm, invalidateReason, options}) {
   report({
     type: 'buildProgress',
@@ -72,6 +73,7 @@ async function run({input, api, farm, invalidateReason, options}) {
   let start = Date.now();
   let {optionsRef, ...rest} = input;
   let {cachePath} = nullthrows(
+    // @ts-expect-error - TS2347 - Untyped function calls may not accept type arguments.
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
@@ -81,9 +83,12 @@ async function run({input, api, farm, invalidateReason, options}) {
     await Promise.all(
       api
         .getSubRequests()
+        // @ts-expect-error - TS7006 - Parameter 'req' implicitly has an 'any' type.
         .filter((req) => req.requestType === requestTypes.dev_dep_request)
+        // @ts-expect-error - TS7006 - Parameter 'req' implicitly has an 'any' type.
         .map(async (req) => [
           req.id,
+          // @ts-expect-error - TS2347 - Untyped function calls may not accept type arguments.
           nullthrows(await api.getRequestResult<DevDepRequestResult>(req.id)),
         ]),
     ),
@@ -94,6 +99,7 @@ async function run({input, api, farm, invalidateReason, options}) {
     invalidateReason,
     devDeps: new Map(
       [...previousDevDepRequests.entries()]
+        // @ts-expect-error - TS2769 - No overload matches this call.
         .filter(([id]: [any]) => api.canSkipSubrequest(id))
         .map(([, req]: [any, any]) => [
           `${req.specifier}:${fromProjectPathRelative(req.resolveFrom)}`,
@@ -102,6 +108,7 @@ async function run({input, api, farm, invalidateReason, options}) {
     ),
     invalidDevDeps: await Promise.all(
       [...previousDevDepRequests.entries()]
+        // @ts-expect-error - TS2769 - No overload matches this call.
         .filter(([id]: [any]) => !api.canSkipSubrequest(id))
         .flatMap(([, req]: [any, any]) => {
           return [
@@ -109,6 +116,7 @@ async function run({input, api, farm, invalidateReason, options}) {
               specifier: req.specifier,
               resolveFrom: req.resolveFrom,
             },
+            // @ts-expect-error - TS7006 - Parameter 'i' implicitly has an 'any' type.
             ...(req.additionalInvalidations ?? []).map((i) => ({
               specifier: i.specifier,
               resolveFrom: i.resolveFrom,

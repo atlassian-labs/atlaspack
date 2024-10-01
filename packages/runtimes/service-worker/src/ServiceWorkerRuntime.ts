@@ -39,6 +39,7 @@ _register(manifest, version);
 
     return [
       {
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'.
         filePath: asset.filePath,
         code,
         isEntry: true,

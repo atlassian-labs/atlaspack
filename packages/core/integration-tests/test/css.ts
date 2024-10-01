@@ -31,6 +31,7 @@ describe.v2('css', () => {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(output(), 3);
@@ -136,6 +137,7 @@ describe.v2('css', () => {
       {name: 'index.css', assets: ['index.css']},
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(await output(), 3);
@@ -157,6 +159,7 @@ describe.v2('css', () => {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(output(), 2);
@@ -188,6 +191,7 @@ describe.v2('css', () => {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(output(), 2);
@@ -233,6 +237,7 @@ describe.v2('css', () => {
       },
     ]);
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(output(), 2);
@@ -386,6 +391,7 @@ describe.v2('css', () => {
       },
     );
 
+    // @ts-expect-error - TS2554 - Expected 2-4 arguments, but got 1.
     let output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(output(), 3);

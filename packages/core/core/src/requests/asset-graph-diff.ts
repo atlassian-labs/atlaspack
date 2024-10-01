@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'rfdc/default'. '/home/ubuntu/parcel/node_modules/rfdc/default.js' implicitly has an 'any' type.
 import deepClone from 'rfdc/default';
 import {diff} from 'jest-diff';
 import AssetGraph from '../AssetGraph';
@@ -31,6 +32,7 @@ function filterNode(node: AssetNode | DependencyNode) {
   return clone;
 }
 
+// @ts-expect-error - TS7023 - 'compactDeep' implicitly has return type 'any' because it does not have a return type annotation and is referenced directly or indirectly in one of its return expressions.
 function compactDeep(
   obj: unknown,
   ignoredPatterns: Array<string> = [],

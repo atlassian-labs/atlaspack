@@ -1,6 +1,7 @@
 import {Reporter} from '@atlaspack/plugin';
 import HMRServer, {getHotAssetContents} from './HMRServer';
 
+// @ts-expect-error - TS7034 - Variable 'hmrServer' implicitly has type 'any' in some locations where its type cannot be determined.
 let hmrServer;
 let hmrAssetSourceCleanup: (() => void) | undefined;
 
@@ -12,6 +13,7 @@ export default new Reporter({
         if (hmrOptions) {
           hmrServer = new HMRServer((data: HMRMessage) =>
             // $FlowFixMe
+            // @ts-expect-error - TS7017 - Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
             globalThis.ATLASPACK_SERVICE_WORKER('hmrUpdate', data),
           );
         }
@@ -32,11 +34,14 @@ export default new Reporter({
               'utf8',
             );
           }
+          // @ts-expect-error - TS7017 - Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
           await globalThis.ATLASPACK_SERVICE_WORKER('setFS', files);
 
           hmrAssetSourceCleanup?.();
+          // @ts-expect-error - TS7017 - Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
           hmrAssetSourceCleanup = globalThis.ATLASPACK_SERVICE_WORKER_REGISTER(
             'hmrAssetSource',
+            // @ts-expect-error - TS7006 - Parameter 'id' implicitly has an 'any' type.
             async (id) => {
               let bundleGraph = event.bundleGraph;
               let asset = bundleGraph.getAssetById(id);
@@ -47,7 +52,9 @@ export default new Reporter({
             },
           );
 
+          // @ts-expect-error - TS7005 - Variable 'hmrServer' implicitly has an 'any' type.
           if (hmrServer) {
+            // @ts-expect-error - TS7005 - Variable 'hmrServer' implicitly has an 'any' type.
             await hmrServer?.emitUpdate(event);
           }
         }

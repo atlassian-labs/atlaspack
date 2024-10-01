@@ -560,6 +560,7 @@ export async function run(input: string[]) {
       'Node is not a bundle, but a ' + node.type,
     );
 
+    // @ts-expect-error - TS7006 - Parameter 'asset' implicitly has an 'any' type.
     bundleGraph.traverseAssets(node.value, (asset) => {
       console.log(asset.id, asset.filePath);
     });
@@ -579,6 +580,7 @@ export async function run(input: string[]) {
       'Node is not a bundle, but a ' + node.type,
     );
 
+    // @ts-expect-error - TS7006 - Parameter 'node' implicitly has an 'any' type.
     bundleGraph.traverseBundle(node.value, (node) => {
       if (node.type === 'asset') {
         console.log(node.id, node.value.filePath);
@@ -678,6 +680,7 @@ export async function run(input: string[]) {
       assetNodeId,
     )) {
       if (
+        // @ts-expect-error - TS7006 - Parameter 'ref' implicitly has an 'any' type.
         referencingBundles.some((ref) =>
           bundleGraph._graph.hasEdge(
             bundleGraph._graph.getNodeIdByContentKey(ref.id),
@@ -693,6 +696,7 @@ export async function run(input: string[]) {
 
   function _getIncomingNodeOfType(
     bundleGraph: BundleGraph,
+    // @ts-expect-error - TS7006 - Parameter 'node' implicitly has an 'any' type.
     node,
     type: string,
   ) {
@@ -701,10 +705,14 @@ export async function run(input: string[]) {
     }
     invariant(bundleGraph != null);
     const bundleGraphNodeId = bundleGraph._graph.getNodeIdByContentKey(node.id);
-    return bundleGraph._graph
-      .getNodeIdsConnectedTo(bundleGraphNodeId, -1)
-      .map((id) => nullthrows(bundleGraph._graph.getNode(id)))
-      .find((node) => node.type == type);
+    return (
+      bundleGraph._graph
+        .getNodeIdsConnectedTo(bundleGraphNodeId, -1)
+        // @ts-expect-error - TS7006 - Parameter 'id' implicitly has an 'any' type.
+        .map((id) => nullthrows(bundleGraph._graph.getNode(id)))
+        // @ts-expect-error - TS7006 - Parameter 'node' implicitly has an 'any' type.
+        .find((node) => node.type == type)
+    );
   }
 
   // We find the priority of a Bundle or BundleGroup by looking at its incoming dependencies.
@@ -738,8 +746,10 @@ export async function run(input: string[]) {
     const bundleGraphNodeId = bundleGraph._graph.getNodeIdByContentKey(node.id);
     const entryBundleGroup = bundleGraph._graph
       .getNodeIdsConnectedTo(bundleGraphNodeId, -1)
+      // @ts-expect-error - TS7006 - Parameter 'id' implicitly has an 'any' type.
       .map((id) => nullthrows(bundleGraph._graph.getNode(id)))
       .find(
+        // @ts-expect-error - TS7006 - Parameter 'node' implicitly has an 'any' type.
         (node) =>
           node.type === 'bundle_group' &&
           bundleGraph.isEntryBundleGroup(node.value),
@@ -782,6 +792,7 @@ export async function run(input: string[]) {
       column.shift();
       invariant(column != null);
       return column.reduce(
+        // @ts-expect-error - TS2365 - Operator '+' cannot be applied to types 'string | number' and 'string | number'.
         (accumulator, currentValue) => accumulator + currentValue,
         initialValue,
       );
@@ -832,6 +843,7 @@ export async function run(input: string[]) {
       invariant(assetGraph != null);
       for (let n of assetGraph.nodes) {
         if (n && n.type in ag) {
+          // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ asset: number; dependency: number; asset_group: number; }'.
           ag[n.type]++;
         }
       }
@@ -916,6 +928,7 @@ export async function run(input: string[]) {
 
     let sum_b_type = 0;
     for (let k in b_type) {
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ entry: number; shared: number; async: number; parallel: number; sync: number; }'.
       sum_b_type += b_type[k];
     }
 
@@ -1072,6 +1085,7 @@ export async function run(input: string[]) {
         'findBundleReason',
         {
           help: 'args: <bundle> <asset>. Why is the asset in the bundle',
+          // @ts-expect-error - TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
           action: (v) => findBundleReason(...v.split(' ')),
         },
       ],

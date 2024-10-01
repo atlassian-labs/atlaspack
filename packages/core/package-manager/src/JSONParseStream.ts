@@ -7,6 +7,7 @@ import {Transform} from 'stream';
 // Pair with split2 to parse stream of newline-delimited text.
 export default class JSONParseStream extends Transform {
   constructor(options: unknown) {
+    // @ts-expect-error - TS2698 - Spread types may only be created from object types.
     super({...options, objectMode: true});
   }
 

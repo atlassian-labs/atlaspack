@@ -9,6 +9,7 @@ import type {
 } from './types';
 import type {HandleFunction} from './Handle';
 
+// @ts-expect-error - TS7016 - Could not find a declaration file for module './core-worker'. '/home/ubuntu/parcel/packages/core/workers/src/core-worker.js' implicitly has an 'any' type.
 import * as coreWorker from './core-worker';
 import * as bus from './bus';
 import invariant from 'assert';
@@ -106,6 +107,7 @@ export default class WorkerFarm extends EventEmitter {
       throw new Error('Please provide a worker path!');
     }
 
+    // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
     if (process.browser) {
       if (this.options.workerPath === '@atlaspack/core/src/worker.js') {
         this.localWorker = coreWorker;
@@ -118,6 +120,7 @@ export default class WorkerFarm extends EventEmitter {
       this.localWorker = require(this.options.workerPath);
     }
 
+    // @ts-expect-error - TS2322 - Type 'Promise<unknown> | null' is not assignable to type 'Promise<undefined> | null | undefined'.
     this.localWorkerInit =
       this.localWorker.childInit != null ? this.localWorker.childInit() : null;
 
@@ -161,6 +164,7 @@ export default class WorkerFarm extends EventEmitter {
     ): Promise<unknown> => {
       let result = await this.processRequest({
         ...request,
+        // @ts-expect-error - TS2322 - Type 'boolean | null' is not assignable to type 'boolean | undefined'.
         awaitResponse,
       });
       return deserialize(serialize(result));
@@ -263,6 +267,7 @@ export default class WorkerFarm extends EventEmitter {
   ): undefined | Promise<undefined> {
     // Handle ipc errors
     if (error.code === 'ERR_IPC_CHANNEL_CLOSED') {
+      // @ts-expect-error - TS2322 - Type 'Promise<void>' is not assignable to type 'Promise<undefined>'.
       return this.stopWorker(worker);
     } else {
       logger.error(error, '@atlaspack/workers');
@@ -340,6 +345,7 @@ export default class WorkerFarm extends EventEmitter {
       }
 
       if (worker.calls.size < this.options.maxConcurrentCallsPerWorker) {
+        // @ts-expect-error - TS2345 - Argument of type 'WorkerCall | undefined' is not assignable to parameter of type 'WorkerCall'.
         this.callWorker(worker, this.callQueue.shift());
       }
     }
@@ -369,6 +375,7 @@ export default class WorkerFarm extends EventEmitter {
     if (handleId != null) {
       mod = nullthrows(this.handles.get(handleId)?.fn);
     } else if (location) {
+      // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
       if (process.browser) {
         if (location === '@atlaspack/workers/src/bus.js') {
           mod = bus as any;
@@ -399,6 +406,7 @@ export default class WorkerFarm extends EventEmitter {
     let result;
     if (method == null) {
       try {
+        // @ts-expect-error - TS2488 - Type 'readonly any[] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
         result = responseFromContent(await mod(...args));
       } catch (e: any) {
         result = errorResponseFromError(e);
@@ -625,6 +633,7 @@ export default class WorkerFarm extends EventEmitter {
     let stream = trace.pipe(fs.createWriteStream(filename));
 
     for (let profile of profiles) {
+      // @ts-expect-error - TS2345 - Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
       trace.addCPUProfile(names.shift(), profile);
     }
 
@@ -635,6 +644,7 @@ export default class WorkerFarm extends EventEmitter {
 
     logger.info({
       origin: '@atlaspack/workers',
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       message: md`Wrote profile to ${filename}`,
     });
   }
@@ -691,6 +701,7 @@ export default class WorkerFarm extends EventEmitter {
 
       logger.info({
         origin: '@atlaspack/workers',
+        // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
         message: md`Wrote heap snapshots to the following paths:\n${snapshotPaths.join(
           '\n',
         )}`,
@@ -734,6 +745,7 @@ export default class WorkerFarm extends EventEmitter {
     defaultValue: number = DEFAULT_MAX_CONCURRENT_CALLS,
   ): number {
     return (
+      // @ts-expect-error - TS2345 - Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
       parseInt(process.env.ATLASPACK_MAX_CONCURRENT_CALLS, 10) || defaultValue
     );
   }

@@ -1,3 +1,4 @@
+// @ts-expect-error - TS7016 - Could not find a declaration file for module '@mischnic/pako'. '/home/ubuntu/parcel/node_modules/@mischnic/pako/lib/index.js' implicitly has an 'any' type.
 import {inflate} from '@mischnic/pako';
 
 function gunzip(arrayBuffer: ArrayBuffer) {

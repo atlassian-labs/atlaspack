@@ -72,10 +72,12 @@ describe('reporters', () => {
       try {
         let buildEvent = await bundler(loadReporterFailureEntry).run();
 
+        // @ts-expect-error - TS2345 - Argument of type 'BuildSuccessEvent' is not assignable to parameter of type 'string'.
         throw new Error(buildEvent);
       } catch (err: any) {
         assert.equal(err.name, 'Error');
         assert.deepEqual(
+          // @ts-expect-error - TS7006 - Parameter 'd' implicitly has an 'any' type.
           err.diagnostics.map((d) => d.message),
           ['Cannot find Atlaspack plugin "./test-reporter"'],
         );
@@ -86,10 +88,12 @@ describe('reporters', () => {
       try {
         let buildEvent = await bundler(failingReporterEntry).run();
 
+        // @ts-expect-error - TS2345 - Argument of type 'BuildSuccessEvent' is not assignable to parameter of type 'string'.
         throw new Error(buildEvent);
       } catch (err: any) {
         assert.equal(err.name, 'BuildError');
         assert.deepEqual(
+          // @ts-expect-error - TS7006 - Parameter 'd' implicitly has an 'any' type.
           err.diagnostics.map((d) => d.message),
           ['Failed to report buildSuccess'],
         );

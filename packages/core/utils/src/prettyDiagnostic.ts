@@ -60,6 +60,7 @@ export default async function prettyDiagnostic(
       ? _chalk
       : {
           gray: {
+            // @ts-expect-error - TS7006 - Parameter 'v' implicitly has an 'any' type.
             underline: (v) =>
               `<span style="color: grey; text-decoration: underline;">${v}</span>`,
           },
@@ -117,7 +118,9 @@ export default async function prettyDiagnostic(
       }
 
       result.frames.push({
+        // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'never'.
         location,
+        // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'never'.
         code: formattedCodeFrame,
       });
     }
@@ -128,6 +131,7 @@ export default async function prettyDiagnostic(
   }
 
   if (Array.isArray(hints) && hints.length) {
+    // @ts-expect-error - TS2322 - Type 'string[]' is not assignable to type 'never[]'.
     result.hints = hints.map((h) => {
       return md(h);
     });
@@ -135,6 +139,7 @@ export default async function prettyDiagnostic(
 
   if (documentationURL != null) {
     result.documentation = terminalLink('Learn more', documentationURL, {
+      // @ts-expect-error - TS7006 - Parameter 'text' implicitly has an 'any' type. | TS7006 - Parameter 'url' implicitly has an 'any' type.
       fallback: (text, url) => `${text}: ${url}`,
     });
   }

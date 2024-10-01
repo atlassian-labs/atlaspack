@@ -175,6 +175,7 @@ export class Bundle implements IBundle {
   ): TContext | null | undefined {
     return this.#bundleGraph.traverseBundle(
       this.#bundle,
+      // @ts-expect-error - TS2345 - Argument of type '(node: AssetNode | DependencyNode) => { type: string; value: Asset; } | { type: string; value: Dependency; } | undefined' is not assignable to parameter of type '(arg1: AssetNode | DependencyNode, arg2: TraversalActions) => BundleTraversable | null | undefined'.
       mapVisitor((node) => {
         if (node.type === 'asset') {
           return {

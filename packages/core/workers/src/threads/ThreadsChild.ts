@@ -13,6 +13,7 @@ import {
   restoreDeserializedObject,
 } from '@atlaspack/core';
 
+// @ts-expect-error - TS2420 - Class 'ThreadsChild' incorrectly implements interface 'ChildImpl'.
 export default class ThreadsChild implements ChildImpl {
   onMessage: MessageHandler;
   onExit: ExitHandler;

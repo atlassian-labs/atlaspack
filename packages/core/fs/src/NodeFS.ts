@@ -12,8 +12,10 @@ import type {
   AsyncSubscription,
 } from '@parcel/watcher';
 
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'graceful-fs'. '/home/ubuntu/parcel/node_modules/graceful-fs/graceful-fs.js' implicitly has an 'any' type.
 import fs from 'graceful-fs';
 import nativeFS from 'fs';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'ncp'. '/home/ubuntu/parcel/node_modules/ncp/lib/ncp.js' implicitly has an 'any' type.
 import ncp from 'ncp';
 import path from 'path';
 import {tmpdir} from 'os';
@@ -22,6 +24,7 @@ import {registerSerializableClass} from '@atlaspack/core';
 import {hashFile} from '@atlaspack/utils';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import watcher from '@parcel/watcher';
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import packageJSON from '../package.json';
 
 import * as searchNative from '@atlaspack/rust';
@@ -62,13 +65,16 @@ export class NodeFS implements FileSystem {
   existsSync: (path: string) => boolean = fs.existsSync;
   readdirSync: any = fs.readdirSync as any;
   findAncestorFile: any = isPnP
-    ? (...args) => searchJS.findAncestorFile(this, ...args)
+    ? // @ts-expect-error - TS7019 - Rest parameter 'args' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
+      (...args) => searchJS.findAncestorFile(this, ...args)
     : searchNative.findAncestorFile;
   findNodeModule: any = isPnP
-    ? (...args) => searchJS.findNodeModule(this, ...args)
+    ? // @ts-expect-error - TS7019 - Rest parameter 'args' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
+      (...args) => searchJS.findNodeModule(this, ...args)
     : searchNative.findNodeModule;
   findFirstFile: any = isPnP
-    ? (...args) => searchJS.findFirstFile(this, ...args)
+    ? // @ts-expect-error - TS7019 - Rest parameter 'args' implicitly has an 'any[]' type. | TS2556 - A spread argument must either have a tuple type or be passed to a rest parameter.
+      (...args) => searchJS.findFirstFile(this, ...args)
     : searchNative.findFirstFile;
 
   watcher(): typeof watcher {
@@ -115,7 +121,9 @@ export class NodeFS implements FileSystem {
       ...options,
       fs: {
         ...fs,
+        // @ts-expect-error - TS7006 - Parameter 'fd' implicitly has an 'any' type. | TS7006 - Parameter 'cb' implicitly has an 'any' type.
         close: (fd, cb) => {
+          // @ts-expect-error - TS7006 - Parameter 'err' implicitly has an 'any' type.
           fs.close(fd, (err) => {
             if (err) {
               cb(err);
@@ -233,6 +241,7 @@ registerSerializableClass(`${packageJSON.version}:NodeFS`, NodeFS);
 
 let writeStreamCalls = 0;
 
+// @ts-expect-error - TS7034 - Variable 'threadId' implicitly has type 'any' in some locations where its type cannot be determined.
 let threadId;
 try {
   ({threadId} = require('worker_threads'));
@@ -240,10 +249,13 @@ try {
   //
 }
 
+// @ts-expect-error - TS7034 - Variable 'useOsTmpDir' implicitly has type 'any' in some locations where its type cannot be determined.
 let useOsTmpDir;
 
 function shouldUseOsTmpDir(filePath: FilePath) {
+  // @ts-expect-error - TS7005 - Variable 'useOsTmpDir' implicitly has an 'any' type.
   if (useOsTmpDir != null) {
+    // @ts-expect-error - TS7005 - Variable 'useOsTmpDir' implicitly has an 'any' type.
     return useOsTmpDir;
   }
   try {
@@ -280,6 +292,7 @@ function getTempFilePath(filePath: FilePath) {
     tmpFilePath +
     '.' +
     process.pid +
+    // @ts-expect-error - TS7005 - Variable 'threadId' implicitly has an 'any' type. | TS7005 - Variable 'threadId' implicitly has an 'any' type.
     (threadId != null ? '.' + threadId : '') +
     '.' +
     (writeStreamCalls++).toString(36)

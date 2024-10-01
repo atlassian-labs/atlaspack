@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2307 - Cannot find module 'deasync' or its corresponding type declarations.
 import deasync from 'deasync';
 
 /**
@@ -25,5 +26,6 @@ export default function syncPromise<T>(promise: Promise<T>): T {
     throw err;
   }
 
+  // @ts-expect-error - TS2322 - Type 'undefined' is not assignable to type 'T'.
   return res;
 }

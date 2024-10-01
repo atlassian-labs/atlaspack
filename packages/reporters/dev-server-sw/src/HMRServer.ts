@@ -1,3 +1,4 @@
+// @ts-expect-error - TS2307 - Cannot find module 'flow-to-typescript-codemod' or its corresponding type declarations.
 import {Flow} from 'flow-to-typescript-codemod';
 
 import type {
@@ -115,6 +116,7 @@ export default class HMRServer {
 
         if (isOnlyReferencedByRuntimes) {
           for (let runtime of runtimes) {
+            // @ts-expect-error - TS2345 - Argument of type 'unknown' is not assignable to parameter of type 'Asset'.
             changedAssets.add(runtime);
           }
 
@@ -155,6 +157,7 @@ export default class HMRServer {
     let assets = await queue.run();
     this.broadcast({
       type: 'update',
+      // @ts-expect-error - TS2322 - Type 'unknown[]' is not assignable to type 'HMRAsset[]'.
       assets: assets,
     });
   }

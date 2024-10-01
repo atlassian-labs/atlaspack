@@ -1,4 +1,5 @@
 import type {DiagnosticLogEvent, FilePath} from '@atlaspack/types';
+// @ts-expect-error - TS2724 - '"vscode-languageserver"' has no exported member named 'ODiagnosticSeverity'. Did you mean 'DiagnosticSeverity'?
 import type {ODiagnosticSeverity} from 'vscode-languageserver';
 
 import path from 'path';

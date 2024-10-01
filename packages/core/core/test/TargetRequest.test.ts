@@ -1,5 +1,6 @@
 import assert from 'assert';
 import path from 'path';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module 'tempy'. '/home/ubuntu/parcel/node_modules/tempy/index.js' implicitly has an 'any' type.
 import tempy from 'tempy';
 import {inputFS as fs} from '@atlaspack/test-utils';
 import {md} from '@atlaspack/diagnostic';
@@ -98,6 +99,7 @@ describe('TargetResolver', () => {
   };
 
   it('resolves exactly specified targets', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, {
       ...DEFAULT_OPTIONS,
       targets: {
@@ -164,6 +166,7 @@ describe('TargetResolver', () => {
   });
 
   it('resolves common targets from package.json', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
 
     assert.deepEqual(
@@ -278,6 +281,7 @@ describe('TargetResolver', () => {
   });
 
   it('allows ignoring common targets from package.json', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
 
     assert.deepEqual(
@@ -324,6 +328,7 @@ describe('TargetResolver', () => {
   });
 
   it('resolves custom targets from package.json', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     assert.deepEqual(
       await targetResolver.resolve(CUSTOM_TARGETS_FIXTURE_PATH),
@@ -435,6 +440,7 @@ describe('TargetResolver', () => {
   });
 
   it('should not optimize libraries by default', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, {
       ...DEFAULT_OPTIONS,
       mode: 'production',
@@ -554,6 +560,7 @@ describe('TargetResolver', () => {
   });
 
   it('resolves explicit distDir for custom targets from package.json', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     assert.deepEqual(
       await targetResolver.resolve(CUSTOM_TARGETS_DISTDIR_FIXTURE_PATH),
@@ -597,6 +604,7 @@ describe('TargetResolver', () => {
   });
 
   it('skips targets with custom entry source for default entry', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, {
       ...DEFAULT_OPTIONS,
       targets: {
@@ -639,6 +647,7 @@ describe('TargetResolver', () => {
   });
 
   it('skips other targets with custom entry', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, {
       ...DEFAULT_OPTIONS,
       targets: {
@@ -682,6 +691,7 @@ describe('TargetResolver', () => {
   });
 
   it('resolves main target with context from package.json', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     assert.deepEqual(await targetResolver.resolve(CONTEXT_FIXTURE_PATH), [
       {
@@ -725,6 +735,7 @@ describe('TargetResolver', () => {
   });
 
   it('errors when the main target contains a non-js extension', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let fixture = path.join(__dirname, 'fixtures/application-targets');
     let code = await fs.readFile(path.join(fixture, 'package.json'), 'utf8');
@@ -765,6 +776,7 @@ describe('TargetResolver', () => {
   });
 
   it('errors when the main target uses the global output format', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let fixture = path.join(__dirname, 'fixtures/main-global');
     let code = await fs.readFile(path.join(fixture, 'package.json'), 'utf8');
@@ -806,6 +818,7 @@ describe('TargetResolver', () => {
   });
 
   it('errors when the main target uses the esmodule output format without a .mjs extension or "type": "module" field', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let fixture = path.join(__dirname, 'fixtures/main-mjs');
     let code = await fs.readFile(path.join(fixture, 'package.json'), 'utf8');
@@ -858,6 +871,7 @@ describe('TargetResolver', () => {
   });
 
   it('errors when the inferred output format does not match the declared one in common targets', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let fixture = path.join(__dirname, 'fixtures/main-format-mismatch');
     let code = await fs.readFile(path.join(fixture, 'package.json'), 'utf8');
@@ -910,6 +924,7 @@ describe('TargetResolver', () => {
   });
 
   it('errors when the inferred output format does not match the declared one in custom targets', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let fixture = path.join(__dirname, 'fixtures/custom-format-mismatch');
     let code = await fs.readFile(path.join(fixture, 'package.json'), 'utf8');
@@ -962,6 +977,7 @@ describe('TargetResolver', () => {
   });
 
   it('errors when a common library target turns scope hoisting off', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let fixture = path.join(__dirname, 'fixtures/library-scopehoist');
     let code = await fs.readFile(path.join(fixture, 'package.json'), 'utf8');
@@ -1002,6 +1018,7 @@ describe('TargetResolver', () => {
   });
 
   it('errors when a custom library target turns scope hoisting off', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let fixture = path.join(__dirname, 'fixtures/library-custom-scopehoist');
     let code = await fs.readFile(path.join(fixture, 'package.json'), 'utf8');
@@ -1051,6 +1068,7 @@ describe('TargetResolver', () => {
   });
 
   it('should infer output format for custom targets by extension', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let fixture = path.join(__dirname, 'fixtures/custom-format-infer-ext');
 
@@ -1096,6 +1114,7 @@ describe('TargetResolver', () => {
   });
 
   it('should infer output format for custom targets by "type": "module" field', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let fixture = path.join(__dirname, 'fixtures/custom-format-infer-type');
 
@@ -1141,6 +1160,7 @@ describe('TargetResolver', () => {
   });
 
   it('resolves a subset of package.json targets when given a list of names', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, {
       ...DEFAULT_OPTIONS,
       targets: ['main', 'browser'],
@@ -1224,6 +1244,7 @@ describe('TargetResolver', () => {
   it('generates a default target in serve mode', async () => {
     let serveDistDir = path.join(DEFAULT_OPTIONS.cacheDir, 'dist');
 
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, {
       ...DEFAULT_OPTIONS,
       serveOptions: {distDir: serveDistDir, port: 1234},
@@ -1262,6 +1283,7 @@ describe('TargetResolver', () => {
   });
 
   it('generates the correct distDir with no explicit targets', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
 
     assert.deepEqual(
@@ -1294,6 +1316,7 @@ describe('TargetResolver', () => {
   });
 
   it('generates the correct distDir with one explicit target', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
 
     assert.deepEqual(
@@ -1340,6 +1363,7 @@ describe('TargetResolver', () => {
   });
 
   it('generates the correct distDirs with two explicit targets', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
 
     assert.deepEqual(
@@ -1452,6 +1476,7 @@ describe('TargetResolver', () => {
       '\t\t}\n' +
       '\t}\n' +
       '}';
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, {
       ...DEFAULT_OPTIONS,
       ...JSON.parse(code),
@@ -1511,6 +1536,7 @@ describe('TargetResolver', () => {
   });
 
   it('rejects invalid or unknown fields in package.json', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let code = await fs.readFileSync(
       path.join(INVALID_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -1552,6 +1578,7 @@ describe('TargetResolver', () => {
   });
 
   it('rejects invalid engines in package.json', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let code = await fs.readFileSync(
       path.join(INVALID_ENGINES_FIXTURE_PATH, 'package.json'),
@@ -1605,6 +1632,7 @@ describe('TargetResolver', () => {
   });
 
   it('rejects target distpath in package.json', async () => {
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let code = await fs.readFileSync(
       path.join(INVALID_DISTPATH_FIXTURE_PATH, 'package.json'),
@@ -1648,6 +1676,7 @@ describe('TargetResolver', () => {
 
   it('rejects duplicate target paths', async () => {
     let fixture = path.join(__dirname, 'fixtures/duplicate-targets');
+    // @ts-expect-error - TS2345 - Argument of type '{ invalidateOnFileCreate(): void; invalidateOnFileUpdate(): void; invalidateOnConfigKeyChange(): void; invalidateOnFileDelete(): void; invalidateOnEnvChange(): void; invalidateOnOptionChange(): void; ... 9 more ...; getInvalidSubRequests(): never[]; }' is not assignable to parameter of type 'RunAPI<Target[]>'.
     let targetResolver = new TargetResolver(api, DEFAULT_OPTIONS);
     let code = await fs.readFileSync(
       path.join(fixture, 'package.json'),
@@ -1656,6 +1685,7 @@ describe('TargetResolver', () => {
     await assert.rejects(() => targetResolver.resolve(fixture), {
       diagnostics: [
         {
+          // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
           message: md`Multiple targets have the same destination path "${path.normalize(
             'dist/index.js',
           )}"`,

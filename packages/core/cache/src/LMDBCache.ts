@@ -12,6 +12,7 @@ import {
 } from '@atlaspack/core';
 import {NodeFS} from '@atlaspack/fs';
 // flowlint-next-line untyped-import:off
+// @ts-expect-error - TS2732 - Cannot find module '../package.json'. Consider using '--resolveJsonModule' to import module with '.json' extension.
 import packageJson from '../package.json';
 import lmdb from 'lmdb';
 
@@ -22,6 +23,7 @@ const pipeline: (arg1: Readable, arg2: Writable) => Promise<void> = promisify(
 );
 
 export class LMDBCache implements Cache {
+  // @ts-expect-error - TS2749 - 'NodeFS' refers to a value, but is being used as a type here. Did you mean 'typeof NodeFS'?
   fs: NodeFS;
   dir: FilePath;
   // $FlowFixMe

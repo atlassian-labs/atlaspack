@@ -70,6 +70,7 @@ export function fallbackStream(
 ): Readable {
   const res = new PassThrough();
   stream.on('error', (err) => {
+    // @ts-expect-error - TS2339 - Property 'code' does not exist on type 'Error'.
     if (err.code === 'ENOENT') {
       fallback().pipe(res);
     } else {

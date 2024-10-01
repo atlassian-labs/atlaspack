@@ -103,13 +103,16 @@ export function nodeFromEntryFile(entry: Entry): EntryFileNode {
   };
 }
 
+// @ts-expect-error - TS2417 - Class static side 'typeof AssetGraph' incorrectly extends base class static side 'typeof ContentGraph'.
 export default class AssetGraph extends ContentGraph<AssetGraphNode> {
+  // @ts-expect-error - TS2564 - Property 'onNodeRemoved' has no initializer and is not definitely assigned in the constructor.
   onNodeRemoved: (nodeId: NodeId) => unknown | null | undefined;
   hash: string | null | undefined;
   envCache: Map<string, Environment>;
   safeToIncrementallyBundle: boolean = true;
   undeferredDependencies: Set<Dependency>;
 
+  // @ts-expect-error - TS2376 - A 'super' call must be the first statement in the constructor when a class contains initialized properties, parameter properties, or private identifiers.
   constructor(opts?: AssetGraphOpts | null) {
     if (opts) {
       let {hash, ...rest} = opts;
@@ -227,6 +230,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
           env: target.env,
           isEntry: true,
           needsStableName: true,
+          // @ts-expect-error - TS2322 - Type 'Map<string, { local: string; isWeak: true; loc: null; }> | undefined' is not assignable to type 'Map<symbol, { local: symbol; loc: SourceLocation | null | undefined; isWeak: boolean; meta?: JSONObject | null | undefined; }> | null | undefined'.
           symbols: target.env.isLibrary
             ? new Map([['*', {local: '*', isWeak: true, loc: null}]])
             : undefined,
@@ -235,7 +239,9 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
 
       if (node.value.env.isLibrary) {
         // in library mode, all of the entry's symbols are "used"
+        // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         node.usedSymbolsDown.add('*');
+        // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         node.usedSymbolsUp.set('*', undefined);
       }
       return node;
@@ -336,9 +342,11 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
         let hasDeferred = this.getNodeIdsConnectedFrom(traversedNodeId).some(
           (childNodeId) => {
             let childNode = nullthrows(this.getNode(childNodeId));
+            // @ts-expect-error - TS2339 - Property 'hasDeferred' does not exist on type 'AssetNode | DependencyNode | RootNode | AssetGroupNode | EntrySpecifierNode | EntryFileNode'.
             return childNode.hasDeferred == null
               ? false
-              : childNode.hasDeferred;
+              : // @ts-expect-error - TS2339 - Property 'hasDeferred' does not exist on type 'AssetNode | DependencyNode | RootNode | AssetGroupNode | EntrySpecifierNode | EntryFileNode'.
+                childNode.hasDeferred;
           },
         );
         if (!hasDeferred) {
@@ -349,6 +357,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
         traversedNode.type === 'asset_group' &&
         nodeId !== traversedNodeId
       ) {
+        // @ts-expect-error - TS2571 - Object is of type 'unknown'.
         if (!ctx?.hasDeferred) {
           this.safeToIncrementallyBundle = false;
           delete traversedNode.hasDeferred;
@@ -384,6 +393,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
       [...dependencySymbols].every(([, {isWeak}]: [any, any]) => isWeak) &&
       sideEffects === false &&
       canDefer &&
+      // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       !dependencySymbols.has('*');
 
     if (!isDeferrable) {
@@ -421,6 +431,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
       let depIsDeferrable =
         d.symbols &&
         !(d.env.isLibrary && d.isEntry) &&
+        // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         !d.symbols.has('*') &&
         ![...d.symbols.keys()].some((symbol) => {
           let assetSymbol = resolvedAsset.symbols?.get(symbol)?.local;
@@ -442,6 +453,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
   ) {
     this.normalizeEnvironment(assetGroup);
     let assetGroupNode = nodeFromAssetGroup(assetGroup);
+    // @ts-expect-error - TS2322 - Type 'AssetGraphNode | null | undefined' is not assignable to type 'AssetGroupNode'.
     assetGroupNode = this.getNodeByContentKey(assetGroupNode.id);
     if (!assetGroupNode) {
       return;

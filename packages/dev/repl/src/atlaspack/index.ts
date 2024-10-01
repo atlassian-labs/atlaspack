@@ -5,6 +5,7 @@ import {proxy, wrap, transfer} from 'comlink';
 
 const worker = wrap(
   // $FlowFixMe
+  // @ts-expect-error - TS1343 - The 'import.meta' meta-property is only allowed when the '--module' option is 'es2020', 'es2022', 'esnext', 'system', 'node12', or 'nodenext'.
   new Worker(new URL('./ParcelWorker.js', import /*:: ("") */.meta.url), {
     name: 'Atlaspack Worker Main',
     type: 'module',
@@ -49,10 +50,12 @@ const worker = wrap(
 // };
 
 export function workerReady(numWorkers?: number | null): Promise<void> {
+  // @ts-expect-error - TS2339 - Property 'ready' does not exist on type 'Remote<unknown>'.
   return worker.ready(numWorkers);
 }
 
 export function waitForFS(): Promise<void> {
+  // @ts-expect-error - TS2339 - Property 'waitForFS' does not exist on type 'Remote<unknown>'.
   return worker.waitForFS();
 }
 
@@ -61,6 +64,7 @@ export function bundle(
   options: REPLOptions,
   progress: (arg1: string) => void,
 ): Promise<BundleOutput> {
+  // @ts-expect-error - TS2339 - Property 'bundle' does not exist on type 'Remote<unknown>'.
   return worker.bundle(files.toJSON(), options, proxy(progress));
 }
 
@@ -73,6 +77,7 @@ export async function watch(
   unsubscribe: () => Promise<unknown>;
   writeAssets: (arg1: FS) => Promise<unknown>;
 }> {
+  // @ts-expect-error - TS2339 - Property 'watch' does not exist on type 'Remote<unknown>'.
   let result = await worker.watch(
     files.toJSON(),
     options,
@@ -92,12 +97,15 @@ class MessageTarget {
     this.receive = receive;
     this.post = post;
   }
+  // @ts-expect-error - TS7019 - Rest parameter 'args' implicitly has an 'any[]' type.
   postMessage(...args) {
     this.post.postMessage(...args);
   }
+  // @ts-expect-error - TS7019 - Rest parameter 'args' implicitly has an 'any[]' type.
   addEventListener(...args) {
     this.receive.addEventListener(...args);
   }
+  // @ts-expect-error - TS7019 - Rest parameter 'args' implicitly has an 'any[]' type.
   removeEventListener(...args) {
     this.receive.removeEventListener(...args);
   }
@@ -120,6 +128,7 @@ function uuidv4() {
   return (String(1e7) + -1e3 + -4e3 + -8e3 + -1e11).replace(
     /[018]/g,
     // $FlowFixMe
+    // @ts-expect-error - TS2769 - No overload matches this call.
     (c: number) =>
       (
         c ^
@@ -150,8 +159,10 @@ if (navigator.serviceWorker) {
     });
 
     port2.start();
+    // @ts-expect-error - TS2339 - Property 'setServiceWorker' does not exist on type 'Remote<unknown>'.
     await worker.setServiceWorker(transfer(port1, [port1]));
 
+    // @ts-expect-error - TS2554 - Expected 3 arguments, but got 1.
     return sw.sendMsg('getID');
   })();
 }

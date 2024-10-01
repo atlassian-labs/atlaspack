@@ -1,5 +1,6 @@
 import type {Config, PluginOptions, PackageJSON} from '@atlaspack/types';
 import type {BabelConfig} from './types';
+// @ts-expect-error - TS7016 - Could not find a declaration file for module '@babel/core'. '/home/ubuntu/parcel/node_modules/@babel/core/lib/index.js' implicitly has an 'any' type.
 import * as BabelCore from '@babel/core';
 
 import {BABEL_CORE_RANGE} from './constants';

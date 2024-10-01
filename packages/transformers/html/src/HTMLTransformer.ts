@@ -2,6 +2,7 @@ import {Transformer} from '@atlaspack/plugin';
 import type {AST, Transformer as TransformerOpts} from '@atlaspack/types';
 import {parser as parse} from 'posthtml-parser';
 import nullthrows from 'nullthrows';
+// @ts-expect-error - TS2305 - Module '"posthtml"' has no exported member 'PostHTMLExpression'. | TS2305 - Module '"posthtml"' has no exported member 'PostHTMLNode'.
 import type {PostHTMLExpression, PostHTMLNode} from 'posthtml';
 import PostHTML from 'posthtml';
 import {render} from 'posthtml-render';
@@ -106,11 +107,13 @@ export const transformerOpts: TransformerOpts<undefined> = {
   generate({ast, asset}) {
     return {
       content: render(ast.program, {
+        // @ts-expect-error - TS2322 - Type '"slash" | undefined' is not assignable to type 'closingSingleTagOptionEnum | undefined'.
         closingSingleTag: asset.type === 'xhtml' ? 'slash' : undefined,
       }),
     };
   },
 };
+// @ts-expect-error - TS2345 - Argument of type 'Transformer<undefined>' is not assignable to parameter of type 'Transformer<unknown>'.
 export default new Transformer(transformerOpts) as Transformer;
 
 function findFirstMatch(
@@ -120,6 +123,7 @@ function findFirstMatch(
   let found;
 
   for (const expression of expressions) {
+    // @ts-expect-error - TS2339 - Property 'match' does not exist on type 'PostHTML<unknown, unknown>'. | TS7006 - Parameter 'node' implicitly has an 'any' type.
     PostHTML().match.call(ast.program, expression, (node) => {
       found = node;
       return node;

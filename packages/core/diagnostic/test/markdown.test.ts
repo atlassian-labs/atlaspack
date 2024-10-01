@@ -32,6 +32,7 @@ describe('md tagged template literal', () => {
   it('bold placeholder', () => {
     assert.strictEqual(
       '*Test*: **\\_abc\\_**',
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       md`*Test*: ${md.bold('_abc_')}`,
     );
   });
@@ -39,6 +40,7 @@ describe('md tagged template literal', () => {
   it('italic placeholder', () => {
     assert.strictEqual(
       '*Test*: _\\_abc\\__',
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       md`*Test*: ${md.italic('_abc_')}`,
     );
   });
@@ -46,6 +48,7 @@ describe('md tagged template literal', () => {
   it('underline placeholder', () => {
     assert.strictEqual(
       '*Test*: __\\_abc\\___',
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       md`*Test*: ${md.underline('_abc_')}`,
     );
   });
@@ -53,11 +56,13 @@ describe('md tagged template literal', () => {
   it('strikethrough placeholder', () => {
     assert.strictEqual(
       '*Test*: ~~\\_abc\\_~~',
+      // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
       md`*Test*: ${md.strikethrough('_abc_')}`,
     );
   });
 
   it('escapes only placeholders', () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     assert.strictEqual('*Test*: \\_abc\\_', md`*Test*: ${'_abc_'}`);
   });
 
@@ -71,10 +76,12 @@ describe('md tagged template literal', () => {
         return 'b';
       },
     };
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     assert.strictEqual('Test: b', md`Test: ${v}`);
   });
 
   it('supports null and undefined', () => {
+    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
     assert.strictEqual('Test: undefined null', md`Test: ${undefined} ${null}`);
   });
 });

@@ -48,6 +48,7 @@ export default new Namer({
       let loc = bundle.target.loc;
       let distEntry = bundle.target.distEntry;
       let distExtension = path.extname(bundle.target.distEntry).slice(1);
+      // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly js: readonly ["js", "mjs", "cjs"]; }'.
       let allowedExtensions = ALLOWED_EXTENSIONS[bundle.type] || [bundle.type];
       if (!allowedExtensions.includes(distExtension) && loc) {
         let fullName = path.relative(
@@ -56,6 +57,7 @@ export default new Namer({
         );
         let err = new ThrowableDiagnostic({
           diagnostic: {
+            // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
             message: md`Target "${bundle.target.name}" declares an output file path of "${fullName}" which does not match the compiled bundle type "${bundle.type}".`,
             codeFrames: [
               {
@@ -63,6 +65,7 @@ export default new Namer({
                 codeHighlights: [
                   convertSourceLocationToHighlight(
                     loc,
+                    // @ts-expect-error - TS2345 - Argument of type 'TemplateStringsArray' is not assignable to parameter of type 'string[]'.
                     md`Did you mean "${
                       fullName.slice(0, -path.extname(fullName).length) +
                       '.' +

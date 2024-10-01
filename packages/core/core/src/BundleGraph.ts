@@ -105,6 +105,7 @@ function makeReadOnlySet<T>(set: Set<T>): $ReadOnlySet<T> {
       if (property === 'delete' || property === 'add' || property === 'clear') {
         return undefined;
       } else {
+        // @ts-expect-error - TS7053 - Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'Set<T>'.
         let value = target[property];
         return typeof value === 'function' ? value.bind(target) : value;
       }
@@ -241,6 +242,7 @@ export default class BundleGraph {
           // It doesn't make sense to retarget dependencies where `*` is used, because the
           // retargeting won't enable any benefits in that case (apart from potentially even more
           // code being generated).
+          // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
           !node.usedSymbolsUp.has('*') &&
           // TODO We currently can't rename imports in async imports, e.g. from
           //      (parcelRequire("...")).then(({ a }) => a);
@@ -257,9 +259,11 @@ export default class BundleGraph {
             ([, t]: [any, any]) => new Set([...t.values()]).size === t.size,
           )
         ) {
+          // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol | undefined' and 'string' have no overlap. | TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
           let isReexportAll = nodeValueSymbols.get('*')?.local === '*';
           let reexportAllLoc = isReexportAll
-            ? nullthrows(nodeValueSymbols.get('*')).loc
+            ? // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
+              nullthrows(nodeValueSymbols.get('*')).loc
             : undefined;
 
           // TODO adjust sourceAssetIdNode.value.dependencies ?
@@ -272,12 +276,14 @@ export default class BundleGraph {
                 value: {
                   ...node.value,
                   symbols: new Map(
+                    // @ts-expect-error - TS2769 - No overload matches this call.
                     [...nodeValueSymbols].filter(([k]: [any]) =>
                       externalSymbols.has(k),
                     ),
                   ),
                 },
                 usedSymbolsUp: new Map(
+                  // @ts-expect-error - TS2769 - No overload matches this call.
                   [...node.usedSymbolsUp].filter(([k]: [any]) =>
                     externalSymbols.has(k),
                   ),
@@ -333,6 +339,7 @@ export default class BundleGraph {
                         invariant(!sourceAssetSymbols.has(as));
                         sourceAssetSymbols.set(as, {
                           loc: reexportAllLoc,
+                          // @ts-expect-error - TS2322 - Type 'string' is not assignable to type 'symbol'.
                           local: local,
                         });
                       }
@@ -341,6 +348,7 @@ export default class BundleGraph {
                 }
               }
               let usedSymbolsUp = new Map(
+                // @ts-expect-error - TS2339 - Property 'usedSymbolsUp' does not exist on type 'AssetNode | DependencyNode | RootNode | AssetGroupNode | EntrySpecifierNode | EntryFileNode'.
                 [...node.usedSymbolsUp]
                   .filter(([k]: [any]) => target.has(k) || k === '*')
                   .map(([k, v]: [any, any]) => [target.get(k) ?? k, v]),
@@ -355,6 +363,7 @@ export default class BundleGraph {
                     id: newNodeId,
                     symbols,
                   },
+                  // @ts-expect-error - TS2345 - Argument of type '{ id: string; value: any; usedSymbolsUp: Map<any, any>; usedSymbolsDown: Set<symbol>; type: "asset"; usedSymbols: Set<symbol>; hasDeferred?: boolean | undefined; usedSymbolsDownDirty: boolean; usedSymbolsUpDirty: boolean; requested?: boolean | undefined; } | ... 4 more ... | { ...; }' is not assignable to parameter of type 'BundleGraphNode'.
                   usedSymbolsUp,
                   // This is only a temporary helper needed during symbol propagation and is never
                   // read afterwards (and also not exposed through the public API).
@@ -383,6 +392,7 @@ export default class BundleGraph {
           node.type === 'asset'
             ? {
                 ...node,
+                // @ts-expect-error - TS2769 - No overload matches this call.
                 value: {...node.value, symbols: new Map(node.value.symbols)},
               }
             : node;
@@ -399,6 +409,7 @@ export default class BundleGraph {
     }
     walk(nullthrows(assetGraph.rootNodeId));
 
+    // @ts-expect-error - TS2488 - Type 'Iterator<Edge<1>, any, undefined>' must have a '[Symbol.iterator]()' method that returns an iterator.
     for (let edge of assetGraph.getAllEdges()) {
       if (assetGroupIds.has(edge.from)) {
         continue;
@@ -498,9 +509,11 @@ export default class BundleGraph {
           readonly shouldContentHash: boolean;
         },
   ): Bundle {
+    // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'.
     let {entryAsset, target} = opts;
     let bundleId = hashString(
       'bundle:' +
+        // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'. | TS2339 - Property 'entryAsset' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'. | TS2339 - Property 'uniqueKey' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'.
         (opts.entryAsset ? opts.entryAsset.id : opts.uniqueKey) +
         fromProjectPathRelative(target.distDir) +
         (opts.bundleBehavior ?? ''),
@@ -532,19 +545,24 @@ export default class BundleGraph {
         hashReference: opts.shouldContentHash
           ? HASH_REF_PREFIX + bundleId
           : bundleId.slice(-8),
+        // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'. | TS2339 - Property 'entryAsset' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'. | TS2339 - Property 'type' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'.
         type: opts.entryAsset ? opts.entryAsset.type : opts.type,
         env: opts.env,
         entryAssetIds: entryAsset ? [entryAsset.id] : [],
         mainEntryId: entryAsset?.id,
+        // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'. | TS2339 - Property 'entryAsset' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'. | TS2339 - Property 'pipeline' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'.
         pipeline: opts.entryAsset ? opts.entryAsset.pipeline : opts.pipeline,
         needsStableName: opts.needsStableName,
         bundleBehavior:
           opts.bundleBehavior != null
             ? BundleBehavior[opts.bundleBehavior]
             : null,
+        // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'.
         isSplittable: opts.entryAsset
-          ? opts.entryAsset.isBundleSplittable
-          : opts.isSplittable,
+          ? // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'.
+            opts.entryAsset.isBundleSplittable
+          : // @ts-expect-error - TS2339 - Property 'isSplittable' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'.
+            opts.isSplittable,
         isPlaceholder,
         target,
         name: null,
@@ -555,9 +573,11 @@ export default class BundleGraph {
 
     let bundleNodeId = this._graph.addNodeByContentKey(bundleId, bundleNode);
 
+    // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'.
     if (opts.entryAsset) {
       this._graph.addEdge(
         bundleNodeId,
+        // @ts-expect-error - TS2339 - Property 'entryAsset' does not exist on type '{ readonly entryAsset: Asset; readonly target: Target; readonly needsStableName?: boolean | null | undefined; readonly bundleBehavior?: BundleBehavior | null | undefined; readonly shouldContentHash: boolean; readonly env: Environment; } | { ...; }'.
         this._graph.getNodeIdByContentKey(opts.entryAsset.id),
       );
     }
@@ -590,10 +610,13 @@ export default class BundleGraph {
       for (let [bundleGroupNodeId, bundleGroupNode] of this._graph
         .getNodeIdsConnectedFrom(dependencyNodeId)
         .map((id) => [id, nullthrows(this._graph.getNode(id))])
+        // @ts-expect-error - TS2769 - No overload matches this call.
         .filter(([, node]: [any, any]) => node.type === 'bundle_group')) {
+        // @ts-expect-error - TS2339 - Property 'type' does not exist on type 'number | AssetNode | DependencyNode | RootNode | EntrySpecifierNode | EntryFileNode | BundleGroupNode | BundleNode'.
         invariant(bundleGroupNode.type === 'bundle_group');
         this._graph.addEdge(
           bundleNodeId,
+          // @ts-expect-error - TS2345 - Argument of type 'number | AssetNode | DependencyNode | RootNode | EntrySpecifierNode | EntryFileNode | BundleGroupNode | BundleNode' is not assignable to parameter of type 'number'.
           bundleGroupNodeId,
           bundleGraphEdgeTypes.bundle,
         );
@@ -655,10 +678,13 @@ export default class BundleGraph {
         for (let [bundleGroupNodeId, bundleGroupNode] of this._graph
           .getNodeIdsConnectedFrom(nodeId)
           .map((id) => [id, nullthrows(this._graph.getNode(id))])
+          // @ts-expect-error - TS2769 - No overload matches this call.
           .filter(([, node]: [any, any]) => node.type === 'bundle_group')) {
+          // @ts-expect-error - TS2339 - Property 'type' does not exist on type 'number | AssetNode | DependencyNode | RootNode | EntrySpecifierNode | EntryFileNode | BundleGroupNode | BundleNode'.
           invariant(bundleGroupNode.type === 'bundle_group');
           this._graph.addEdge(
             bundleNodeId,
+            // @ts-expect-error - TS2345 - Argument of type 'number | AssetNode | DependencyNode | RootNode | EntrySpecifierNode | EntryFileNode | BundleGroupNode | BundleNode' is not assignable to parameter of type 'number'.
             bundleGroupNodeId,
             bundleGraphEdgeTypes.bundle,
           );
@@ -871,6 +897,7 @@ export default class BundleGraph {
         includeInline: true,
       }).find((b) => {
         let mainEntryId = b.entryAssetIds[b.entryAssetIds.length - 1];
+        // @ts-expect-error - TS2532 - Object is possibly 'undefined'. | TS2531 - Object is possibly 'null'. | TS2339 - Property 'entryAssetId' does not exist on type 'string | Dependency | Asset | Entry | Bundle | BundleGroup'.
         return mainEntryId != null && node.value.entryAssetId === mainEntryId;
       });
     }
@@ -1189,6 +1216,7 @@ export default class BundleGraph {
       );
 
       if (bundle) {
+        // @ts-expect-error - TS2322 - Type 'Asset | undefined' is not assignable to type 'Asset'.
         resolved = potential.find((a) => a.type === bundle.type);
       }
       resolved ||= potential[0];
@@ -1462,7 +1490,8 @@ export default class BundleGraph {
 
         let sorted =
           entries && bundle.entryAssetIds.length > 0
-            ? children.sort(([, a]: [any, any], [, b]: [any, any]) => {
+            ? // @ts-expect-error - TS2345 - Argument of type '([, a]: [any, any], [, b]: [any, any]) => number' is not assignable to parameter of type '(a: (number | AssetNode | DependencyNode | RootNode | EntrySpecifierNode | EntryFileNode | BundleGroupNode | BundleNode)[], b: (number | ... 6 more ... | BundleNode)[]) => number'.
+              children.sort(([, a]: [any, any], [, b]: [any, any]) => {
                 let aIndex = bundle.entryAssetIds.indexOf(a.id);
                 let bIndex = bundle.entryAssetIds.indexOf(b.id);
 
@@ -1481,6 +1510,7 @@ export default class BundleGraph {
             : children;
 
         entries = false;
+        // @ts-expect-error - TS2345 - Argument of type '([id]: [any]) => any' is not assignable to parameter of type '(value: (number | AssetNode | DependencyNode | RootNode | EntrySpecifierNode | EntryFileNode | BundleGroupNode | BundleNode)[], index: number, array: (number | ... 6 more ... | BundleNode)[][]) => any'.
         return sorted.map(([id]: [any]) => id);
       },
     });
@@ -1682,6 +1712,7 @@ export default class BundleGraph {
         ),
     });
 
+    // @ts-expect-error - TS2322 - Type 'unknown[]' is not assignable to type 'Bundle[]'.
     return [...referencedBundles];
   }
 
@@ -1758,6 +1789,7 @@ export default class BundleGraph {
     let assetOutside = boundary && !this.bundleHasAsset(boundary, asset);
 
     let identifier = asset.symbols?.get(symbol)?.local;
+    // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol' and 'string' have no overlap.
     if (symbol === '*') {
       return {
         asset,
@@ -1789,6 +1821,7 @@ export default class BundleGraph {
           // External module or self-reference
           return {
             asset,
+            // @ts-expect-error - TS2322 - Type 'symbol' is not assignable to type 'string'.
             exportSymbol: symbol,
             symbol: identifier,
             loc: asset.symbols?.get(symbol)?.loc,
@@ -1831,7 +1864,9 @@ export default class BundleGraph {
       // Wildcard reexports are never listed in the reexporting asset's symbols.
       if (
         identifier == null &&
+        // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol | undefined' and 'string' have no overlap. | TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
         depSymbols.get('*')?.local === '*' &&
+        // @ts-expect-error - TS2367 - This condition will always return 'true' since the types 'symbol' and 'string' have no overlap.
         symbol !== 'default'
       ) {
         let resolved = this.getResolvedAsset(dep, boundary);
@@ -1898,17 +1933,21 @@ export default class BundleGraph {
       let result = identifier;
       if (skipped) {
         // ... and it was excluded (by symbol propagation) or deferred.
+        // @ts-expect-error - TS2322 - Type 'false' is not assignable to type 'symbol | undefined'.
         result = false;
       } else {
         // ... and there is no single reexport, but it might still be exported:
         if (found) {
           // Fallback to namespace access, because of a bundle boundary.
+          // @ts-expect-error - TS2322 - Type 'null' is not assignable to type 'symbol | undefined'.
           result = null;
         } else if (result === undefined) {
           // If not exported explicitly by the asset (= would have to be in * or a reexport-all) ...
+          // @ts-expect-error - TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
           if (nonStaticDependency || asset.symbols?.has('*')) {
             // ... and if there are non-statically analyzable dependencies or it's a CJS asset,
             // fallback to namespace access.
+            // @ts-expect-error - TS2322 - Type 'null' is not assignable to type 'symbol | undefined'.
             result = null;
           }
           // (It shouldn't be possible for the symbol to be in a reexport-all and to end up here).
@@ -1918,6 +1957,7 @@ export default class BundleGraph {
 
       return {
         asset,
+        // @ts-expect-error - TS2322 - Type 'symbol' is not assignable to type 'string'.
         exportSymbol: symbol,
         symbol: result,
         loc: asset.symbols?.get(symbol)?.loc,
@@ -1966,6 +2006,7 @@ export default class BundleGraph {
       let depSymbols = dep.symbols;
       if (!depSymbols) continue;
 
+      // @ts-expect-error - TS2367 - This condition will always return 'false' since the types 'symbol | undefined' and 'string' have no overlap. | TS2345 - Argument of type 'string' is not assignable to parameter of type 'symbol'.
       if (depSymbols.get('*')?.local === '*') {
         let resolved = this.getResolvedAsset(dep, boundary);
         if (!resolved) continue;
@@ -2157,6 +2198,7 @@ export default class BundleGraph {
       }
     }
 
+    // @ts-expect-error - TS2488 - Type 'Iterator<Edge<BundleGraphEdgeType>, any, undefined>' must have a '[Symbol.iterator]()' method that returns an iterator.
     for (let edge of other._graph.getAllEdges()) {
       this._graph.addEdge(
         nullthrows(otherGraphIdToThisNodeId.get(edge.from)),

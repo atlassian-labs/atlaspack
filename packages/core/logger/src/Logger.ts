@@ -17,6 +17,7 @@ class Logger {
   #logEmitter /*: ValueEmitter<LogEvent> */ = new ValueEmitter();
 
   onLog(cb: (event: LogEvent) => unknown): IDisposable {
+    // @ts-expect-error - TS2345 - Argument of type '(event: LogEvent) => unknown' is not assignable to parameter of type '(value: unknown) => unknown'.
     return this.#logEmitter.addListener(cb);
   }
 
@@ -56,6 +57,7 @@ class Logger {
             return {...d, origin: realOrigin};
           })
         : {
+            // @ts-expect-error - TS2698 - Spread types may only be created from object types.
             ...diagnostic,
             origin: realOrigin,
           };
@@ -215,6 +217,7 @@ function messagesToDiagnostic(
       });
     } else {
       return {
+        // @ts-expect-error - TS2698 - Spread types may only be created from object types.
         ...diagnostic,
         skipFormatting: true,
       };

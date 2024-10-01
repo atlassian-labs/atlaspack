@@ -78,17 +78,20 @@ export default class PromiseQueue<T> {
 
     let {deferred, promise} = makeDeferredWithPromise();
     this._deferred = deferred;
+    // @ts-expect-error - TS2322 - Type 'Promise<unknown>' is not assignable to type 'Promise<T[]>'.
     this._runPromise = promise;
 
     while (this._queue.length && this._numRunning < this._maxConcurrent) {
       this._next();
     }
 
+    // @ts-expect-error - TS2322 - Type 'Promise<unknown>' is not assignable to type 'Promise<T[]>'.
     return promise;
   }
 
   async _next(): Promise<void> {
     let fn = this._queue.shift();
+    // @ts-expect-error - TS2345 - Argument of type '(() => Promise<void>) | undefined' is not assignable to parameter of type '() => unknown'.
     await this._runFn(fn);
     if (this._queue.length) {
       this._next();
