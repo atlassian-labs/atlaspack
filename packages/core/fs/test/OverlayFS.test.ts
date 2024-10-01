@@ -14,7 +14,7 @@ describe('OverlayFS', () => {
   beforeEach(() => {
     // @ts-expect-error - TS2345 - Argument of type '{ workerPath: string; }' is not assignable to parameter of type 'FarmOptions'.
     workerFarm = new WorkerFarm({
-      workerPath: require.resolve('@atlaspack/core/src/worker.js'),
+      workerPath: require.resolve('@atlaspack/core/src/worker.ts'),
     });
     underlayFS = new MemoryFS(workerFarm);
     fs = new OverlayFS(workerFarm, underlayFS);

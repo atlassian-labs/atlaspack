@@ -9,7 +9,7 @@ import {makeDeferredWithPromise} from '@atlaspack/utils';
 
 const options = DEFAULT_OPTIONS;
 // @ts-expect-error - TS2345 - Argument of type '{ workerPath: string; }' is not assignable to parameter of type 'FarmOptions'.
-const farm = new WorkerFarm({workerPath: require.resolve('../src/worker.js')});
+const farm = new WorkerFarm({workerPath: require.resolve('../src/worker.ts')});
 
 describe('RequestTracker', () => {
   it('should not run requests that have not been invalidated', async () => {

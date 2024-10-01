@@ -110,7 +110,7 @@ export class Child {
   async childInit(module: string, childId: number): Promise<void> {
     // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
     if (process.browser) {
-      if (module === '@atlaspack/core/src/worker.js') {
+      if (module === '@atlaspack/core/src/worker.ts') {
         this.module = coreWorker;
       } else {
         throw new Error('No dynamic require possible: ' + module);

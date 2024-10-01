@@ -690,7 +690,7 @@ export function createWorkerFarm(
     // $FlowFixMe
     // @ts-expect-error - TS2339 - Property 'browser' does not exist on type 'Process'.
     workerPath: process.browser
-      ? '@atlaspack/core/src/worker.js'
+      ? '@atlaspack/core/src/worker.ts'
       : require.resolve('./worker'),
   });
 }

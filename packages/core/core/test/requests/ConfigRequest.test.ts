@@ -20,7 +20,7 @@ describe('ConfigRequest tests', () => {
   const projectRoot = 'project_root';
   // @ts-expect-error - TS2345 - Argument of type '{ workerPath: string; maxConcurrentWorkers: number; }' is not assignable to parameter of type 'FarmOptions'.
   const farm = new WorkerFarm({
-    workerPath: require.resolve('../../src/worker.js'),
+    workerPath: require.resolve('../../src/worker.ts'),
     maxConcurrentWorkers: 1,
   });
   let fs = new MemoryFS(farm);
