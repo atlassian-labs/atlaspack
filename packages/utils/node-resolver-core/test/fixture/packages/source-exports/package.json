@@ -1,5 +1,5 @@
 {
   "name": "source-exports",
   "exports": "./dist.js",
-  "source": "source.js"
+  "source": "source.ts"
 }

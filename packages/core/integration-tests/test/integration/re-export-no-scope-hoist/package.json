@@ -1,5 +1,5 @@
 {
-  "source": "test.js",
+  "source": "test.ts",
   "scope-hoist": "dist/scope-hoist.js",
   "no-scope-hoist": "dist/no-scope-hoist.js",
   "targets": {

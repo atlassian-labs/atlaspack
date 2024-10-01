@@ -1,4 +1,4 @@
 {
     "browser": "index.js",
-    "source": "index.js"
+    "source": "index.ts"
 }

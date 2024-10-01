@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/LspReporter.js",
-  "source": "src/LspReporter.js",
+  "source": "src/LspReporter.ts",
   "engines": {
     "node": ">= 16.0.0",
     "parcel": "^2.12.0"

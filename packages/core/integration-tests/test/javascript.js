@@ -4489,7 +4489,7 @@ describe('javascript', function () {
 
       packages/a/package.json:
         {
-          "source": "index.js",
+          "source": "index.ts",
           "module": "dist/module.js"
         }
 
@@ -4499,7 +4499,7 @@ describe('javascript', function () {
 
       packages/b/package.json:
         {
-          "source": "index.js",
+          "source": "index.ts",
           "module": "dist/module.js"
         }
 

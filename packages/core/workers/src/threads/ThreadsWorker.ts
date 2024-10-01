@@ -12,7 +12,7 @@ import {
   restoreDeserializedObject,
 } from '@atlaspack/core';
 
-const WORKER_PATH = path.join(__dirname, 'ThreadsChild.js');
+const WORKER_PATH = path.join(__dirname, 'ThreadsChild.ts');
 
 export default class ThreadsWorker implements WorkerImpl {
   execArgv: any;

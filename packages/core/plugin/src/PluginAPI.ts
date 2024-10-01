@@ -16,31 +16,31 @@ import type {
 const CONFIG = Symbol.for('parcel-plugin-config');
 
 export class Transformer {
-  constructor<T>(opts: TransformerOpts<T>) {
+  constructor(opts: TransformerOpts<unknown>) {
     this[CONFIG] = opts;
   }
 }
 
 export class Resolver {
-  constructor<T>(opts: ResolverOpts<T>) {
+  constructor(opts: ResolverOpts<unknown>) {
     this[CONFIG] = opts;
   }
 }
 
 export class Bundler {
-  constructor<T>(opts: BundlerOpts<T>) {
+  constructor(opts: BundlerOpts<unknown>) {
     this[CONFIG] = opts;
   }
 }
 
 export class Namer {
-  constructor<T>(opts: NamerOpts<T>) {
+  constructor(opts: NamerOpts<unknown>) {
     this[CONFIG] = opts;
   }
 }
 
 export class Runtime {
-  constructor<T>(opts: RuntimeOpts<T>) {
+  constructor(opts: RuntimeOpts<unknown>) {
     this[CONFIG] = opts;
   }
 }
@@ -52,13 +52,13 @@ export class Validator {
 }
 
 export class Packager {
-  constructor<T, U>(opts: PackagerOpts<T, U>) {
+  constructor(opts: PackagerOpts<unknown, unknown>) {
     this[CONFIG] = opts;
   }
 }
 
 export class Optimizer {
-  constructor<T, U>(opts: OptimizerOpts<T, U>) {
+  constructor(opts: OptimizerOpts<unknown, unknown>) {
     this[CONFIG] = opts;
   }
 }

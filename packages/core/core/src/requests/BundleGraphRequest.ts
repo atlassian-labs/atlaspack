@@ -1,6 +1,7 @@
 import type {Async, Bundle as IBundle, Namer} from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
-import type AtlaspackConfig, {LoadedPlugin} from '../AtlaspackConfig';
+import type AtlaspackConfig from '../AtlaspackConfig';
+import type {LoadedPlugin} from '../AtlaspackConfig';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
 import type {
   Asset,

@@ -1,5 +1,5 @@
 {
-  "source": "index.js",
+  "source": "index.ts",
   "main": "dist/main.js",
   "dependencies": {
     "@atlaspack/transformer-react-refresh-wrap": "*",

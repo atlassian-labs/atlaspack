@@ -1,5 +1,5 @@
 {
   "main": "dist/main/index.js",
   "module": "dist/module/index.js",
-  "source": "missing.js"
+  "source": "missing.ts"
 }

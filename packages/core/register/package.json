@@ -11,7 +11,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/register.js",
-  "source": "src/register.js",
+  "source": "src/register.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

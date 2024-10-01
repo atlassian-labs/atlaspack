@@ -2,14 +2,14 @@
   "name": "@atlaspack/target-source-package-b",
   "version": "2.0.0-beta.1",
   "private": true,
-  "source": "src/index.js",
+  "source": "src/index.ts",
   "devDependencies": {
     "@atlaspack/babel-register": "2.0.0-beta.1",
     "@atlaspack/core": "2.0.0-beta.1"
   },
   "targets": {
     "alternate": {
-      "source": "src/indexAlternate.js"
+      "source": "src/indexAlternate.ts"
     },
     "browser": {
       "engines": {

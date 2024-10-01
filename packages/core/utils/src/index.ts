@@ -47,7 +47,7 @@ export {
 } from './config';
 export {DefaultMap, DefaultWeakMap} from './DefaultMap';
 export {makeDeferredWithPromise} from './Deferred';
-export {getProgressMessage} from './progress-message.js';
+export {getProgressMessage} from './progress-message';
 export {
   isGlob,
   isGlobMatch,

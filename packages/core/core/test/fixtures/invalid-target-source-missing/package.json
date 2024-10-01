@@ -3,7 +3,7 @@
   "module": "dist/module/index.js",
   "targets": {
     "a": {
-      "source": "missing.js"
+      "source": "missing.ts"
     }
   }
 }

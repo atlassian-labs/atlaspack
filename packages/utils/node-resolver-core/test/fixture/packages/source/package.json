@@ -1,5 +1,5 @@
 {
   "name": "source",
   "main": "dist.js",
-  "source": "source.js"
+  "source": "source.ts"
 }

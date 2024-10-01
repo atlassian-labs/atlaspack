@@ -1,4 +1,4 @@
 {
     "name": "env-file-with-package-source",
-    "source": "index.js"
+    "source": "index.ts"
 }

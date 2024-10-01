@@ -11,7 +11,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/ServerReporter.js",
-  "source": "src/ServerReporter.js",
+  "source": "src/ServerReporter.ts",
   "engines": {
     "node": ">= 16.0.0",
     "parcel": "^2.12.0"

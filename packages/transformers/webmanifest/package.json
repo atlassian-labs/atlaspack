@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/WebManifestTransformer.js",
-  "source": "src/WebManifestTransformer.js",
+  "source": "src/WebManifestTransformer.ts",
   "engines": {
     "parcel": "^2.12.0"
   },

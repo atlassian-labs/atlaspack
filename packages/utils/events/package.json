@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/index.js",
-  "source": "src/index.js",
+  "source": "src/index.ts",
   "engines": {
     "node": ">= 16.0.0"
   }

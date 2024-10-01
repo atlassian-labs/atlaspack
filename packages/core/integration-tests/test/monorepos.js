@@ -976,7 +976,7 @@ describe.v2('monorepos', function () {
 
       package.json:
         {
-          "source": "foo/*.js",
+          "source": "foo/*.ts",
           "targets": {
             "default": {
               "outputFormat": "esmodule",
@@ -1023,12 +1023,12 @@ describe.v2('monorepos', function () {
         {
           "targets": {
             "foo-esm": {
-              "source": "foo/*.js",
+              "source": "foo/*.ts",
               "outputFormat": "esmodule",
               "isLibrary": true
             },
             "foo-cjs": {
-              "source": "foo/*.js",
+              "source": "foo/*.ts",
               "outputFormat": "commonjs",
               "isLibrary": true
             }
@@ -1078,7 +1078,7 @@ describe.v2('monorepos', function () {
 
       package.json:
         {
-          "source": "foo/*.js",
+          "source": "foo/*.ts",
           "targets": {
             "default": {
               "outputFormat": "esmodule",

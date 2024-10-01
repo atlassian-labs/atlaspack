@@ -435,13 +435,13 @@ describe.v2('library bundler', function () {
           "engines": { "node": "*" },
           "targets": {
             "a": {
-              "source": "src/a.js",
+              "source": "src/a.ts",
               "distDir": "a",
               "outputFormat": "esmodule",
               "isLibrary": true
             },
             "b": {
-              "source": "src/b.js",
+              "source": "src/b.ts",
               "distDir": "b",
               "outputFormat": "esmodule",
               "isLibrary": true
@@ -506,7 +506,7 @@ describe.v2('library bundler', function () {
       packages/a/package.json:
         {
           "engines": { "node": "*" },
-          "source": "src/a.js",
+          "source": "src/a.ts",
           "module": "dist/a.js",
           "targets": {
             "module": {
@@ -522,7 +522,7 @@ describe.v2('library bundler', function () {
       packages/b/package.json:
         {
           "engines": { "node": "*" },
-          "source": "src/b.js",
+          "source": "src/b.ts",
           "module": "dist/b.js",
           "targets": {
             "module": {

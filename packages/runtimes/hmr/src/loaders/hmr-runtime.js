@@ -1,4 +1,3 @@
-import {Flow} from 'flow-to-typescript-codemod';
 /* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope */
 
 /*::
@@ -53,7 +52,7 @@ var OVERLAY_ID = '__parcel__error__overlay__';
 
 var OldModule = module.bundle.Module;
 
-function Module(moduleName: any) {
+function Module(moduleName) {
   OldModule.call(this, moduleName);
   this.hot = {
     data: module.bundle.hotData[moduleName],
@@ -106,7 +105,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
       ws = new WebSocket(
         protocol + '://' + hostname + (port ? ':' + port : '') + '/',
       );
-    } catch (err: any) {
+    } catch (err) {
       if (err.message) {
         console.error(err.message);
       }
@@ -127,15 +126,12 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var supportsSourceURL = false;
   try {
     (0, eval)('throw new Error("test"); //# sourceURL=test.js');
-  } catch (err: any) {
+  } catch (err) {
     supportsSourceURL = err.stack.includes('test.js');
   }
 
-  ws.onmessage = async function (
-    event: {
-      data: string;
-    } /*: {data: string, ...} */,
-  ) {
+  // $FlowFixMe
+  ws.onmessage = async function (event /*: {data: string, ...} */) {
     checkedAssets = {} /*: {|[string]: boolean|} */;
     assetsToAccept = [];
     assetsToDispose = [];
@@ -177,8 +173,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
         await hmrApplyUpdates(assets);
 
         // Dispose all old assets.
-        let processedAssets: Record<string, any> =
-          {} /*: {|[string]: boolean|} */;
+        let processedAssets = {}; /*: {|[string]: boolean|} */
         for (let i = 0; i < assetsToDispose.length; i++) {
           let id = assetsToDispose[i][1];
 
@@ -222,17 +217,18 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
         // Render the fancy html overlay
         removeErrorOverlay();
         var overlay = createErrorOverlay(data.diagnostics.html);
+        // $FlowFixMe
         document.body.appendChild(overlay);
       }
     }
   };
   if (ws instanceof WebSocket) {
-    ws.onerror = function (e: any) {
+    ws.onerror = function (e) {
       if (e.message) {
         console.error(e.message);
       }
     };
-    ws.onclose = function (e: CloseEvent) {
+    ws.onclose = function (e) {
       if (process.env.ATLASPACK_BUILD_ENV !== 'test') {
         console.warn('[parcel] 🚨 Connection to the HMR server was lost');
       }
@@ -248,18 +244,7 @@ function removeErrorOverlay() {
   }
 }
 
-function createErrorOverlay(
-  diagnostics: Array<
-    Partial<
-      Flow.Diff<
-        AnsiDiagnosticResult,
-        {
-          codeframe: string;
-        }
-      >
-    >
-  >,
-) {
+function createErrorOverlay(diagnostics) {
   var overlay = document.createElement('div');
   overlay.id = OVERLAY_ID;
 
@@ -314,16 +299,13 @@ function fullReload() {
   }
 }
 
-function getParents(
-  bundle: ParcelRequire,
-  id: string,
-) /*: Array<[ParcelRequire, string]> */ {
+function getParents(bundle, id) /*: Array<[ParcelRequire, string]> */ {
   var modules = bundle.modules;
   if (!modules) {
     return [];
   }
 
-  var parents: Array<[ParcelRequire, string]> = [];
+  var parents = [];
   var k, d, dep;
 
   for (k in modules) {
@@ -343,7 +325,7 @@ function getParents(
   return parents;
 }
 
-function updateLink(link: HTMLElement) {
+function updateLink(link) {
   var href = link.getAttribute('href');
 
   if (!href) {
@@ -352,6 +334,7 @@ function updateLink(link: HTMLElement) {
   var newLink = link.cloneNode();
   newLink.onload = function () {
     if (link.parentNode !== null) {
+      // $FlowFixMe
       link.parentNode.removeChild(link);
     }
   };
@@ -360,6 +343,7 @@ function updateLink(link: HTMLElement) {
     // $FlowFixMe
     href.split('?')[0] + '?' + Date.now(),
   );
+  // $FlowFixMe
   link.parentNode.insertBefore(newLink, link.nextSibling);
 }
 
@@ -372,6 +356,7 @@ function reloadCSS() {
   cssTimeout = setTimeout(function () {
     var links = document.querySelectorAll('link[rel="stylesheet"]');
     for (var i = 0; i < links.length; i++) {
+      // $FlowFixMe[incompatible-type]
       var href /*: string */ = links[i].getAttribute('href');
       var hostname = getHostname();
       var servedFromHMRServer =
@@ -393,7 +378,7 @@ function reloadCSS() {
   }, 50);
 }
 
-function hmrDownload(asset: HMRAsset) {
+function hmrDownload(asset) {
   if (asset.type === 'js') {
     if (typeof document !== 'undefined') {
       let script = document.createElement('script');
@@ -401,42 +386,30 @@ function hmrDownload(asset: HMRAsset) {
       if (asset.outputFormat === 'esmodule') {
         script.type = 'module';
       }
-      return new Promise(
-        (
-          resolve: (
-            result: Promise<HTMLScriptElement> | HTMLScriptElement,
-          ) => void,
-          reject: (error?: any) => void,
-        ) => {
-          script.onload = () => resolve(script);
-          script.onerror = reject;
-          document.head?.appendChild(script);
-        },
-      );
+      return new Promise((resolve, reject) => {
+        script.onload = () => resolve(script);
+        script.onerror = reject;
+        document.head?.appendChild(script);
+      });
     } else if (typeof importScripts === 'function') {
       // Worker scripts
       if (asset.outputFormat === 'esmodule') {
         return __parcel__import__(asset.url + '?t=' + Date.now());
       } else {
-        return new Promise(
-          (
-            resolve: (result: Promise<undefined> | undefined) => void,
-            reject: (error?: any) => void,
-          ) => {
-            try {
-              __parcel__importScripts__(asset.url + '?t=' + Date.now());
-              resolve();
-            } catch (err: any) {
-              reject(err);
-            }
-          },
-        );
+        return new Promise((resolve, reject) => {
+          try {
+            __parcel__importScripts__(asset.url + '?t=' + Date.now());
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
       }
     }
   }
 }
 
-async function hmrApplyUpdates(assets: Array<HMRAsset>) {
+async function hmrApplyUpdates(assets) {
   global.parcelHotUpdate = Object.create(null);
 
   let scriptsToRemove;
@@ -449,7 +422,7 @@ async function hmrApplyUpdates(assets: Array<HMRAsset>) {
     // This path is also taken if a CSP disallows eval.
     if (!supportsSourceURL) {
       let promises = assets.map((asset) =>
-        hmrDownload(asset)?.catch((err: any) => {
+        hmrDownload(asset)?.catch((err) => {
           // Web extension fix
           if (
             extCtx &&
@@ -484,10 +457,7 @@ async function hmrApplyUpdates(assets: Array<HMRAsset>) {
   }
 }
 
-function hmrApply(
-  bundle: ParcelRequire /*: ParcelRequire */,
-  asset: HMRAsset /*:  HMRAsset */,
-) {
+function hmrApply(bundle /*: ParcelRequire */, asset /*:  HMRAsset */) {
   var modules = bundle.modules;
   if (!modules) {
     return;
@@ -519,6 +489,7 @@ function hmrApply(
         (0, eval)(asset.output);
       }
 
+      // $FlowFixMe
       let fn = global.parcelHotUpdate[asset.id];
       modules[asset.id] = [fn, deps];
     } else if (bundle.parent) {
@@ -527,7 +498,7 @@ function hmrApply(
   }
 }
 
-function hmrDelete(bundle: ParcelRequire, id: string) {
+function hmrDelete(bundle, id) {
   let modules = bundle.modules;
   if (!modules) {
     return;
@@ -536,7 +507,7 @@ function hmrDelete(bundle: ParcelRequire, id: string) {
   if (modules[id]) {
     // Collect dependencies that will become orphaned when this module is deleted.
     let deps = modules[id][1];
-    let orphans: Array<string> = [];
+    let orphans = [];
     for (let dep in deps) {
       let parents = getParents(module.bundle.root, deps[dep]);
       if (parents.length === 1) {
@@ -558,16 +529,9 @@ function hmrDelete(bundle: ParcelRequire, id: string) {
 }
 
 function hmrAcceptCheck(
-  bundle: ParcelRequire /*: ParcelRequire */,
-  id: string /*: string */,
-  depsByBundle:
-    | {
-        [key: string]: {
-          [key: string]: string;
-        };
-      }
-    | null
-    | undefined /*: ?{ [string]: { [string]: string } }*/,
+  bundle /*: ParcelRequire */,
+  id /*: string */,
+  depsByBundle /*: ?{ [string]: { [string]: string } }*/,
 ) {
   if (hmrAcceptCheckOne(bundle, id, depsByBundle)) {
     return true;
@@ -598,16 +562,9 @@ function hmrAcceptCheck(
 }
 
 function hmrAcceptCheckOne(
-  bundle: ParcelRequire /*: ParcelRequire */,
-  id: string /*: string */,
-  depsByBundle:
-    | {
-        [key: string]: {
-          [key: string]: string;
-        };
-      }
-    | null
-    | undefined /*: ?{ [string]: { [string]: string } }*/,
+  bundle /*: ParcelRequire */,
+  id /*: string */,
+  depsByBundle /*: ?{ [string]: { [string]: string } }*/,
 ) {
   var modules = bundle.modules;
   if (!modules) {
@@ -639,10 +596,7 @@ function hmrAcceptCheckOne(
   }
 }
 
-function hmrDispose(
-  bundle: ParcelRequire /*: ParcelRequire */,
-  id: string /*: string */,
-) {
+function hmrDispose(bundle /*: ParcelRequire */, id /*: string */) {
   var cached = bundle.cache[id];
   bundle.hotData[id] = {};
   if (cached && cached.hot) {
@@ -658,10 +612,7 @@ function hmrDispose(
   delete bundle.cache[id];
 }
 
-function hmrAccept(
-  bundle: ParcelRequire /*: ParcelRequire */,
-  id: string /*: string */,
-) {
+function hmrAccept(bundle /*: ParcelRequire */, id /*: string */) {
   // Execute the module.
   bundle(id);
 
@@ -677,6 +628,7 @@ function hmrAccept(
           hmrDispose(a[0], a[1]);
         });
 
+        // $FlowFixMe[method-unbinding]
         assetsToAccept.push.apply(assetsToAccept, assetsToAlsoAccept);
       }
     });

@@ -2,7 +2,7 @@
   "name": "@atlaspack/target-source",
   "version": "2.0.0-beta.1",
   "private": true,
-  "source": "src/index.js",
+  "source": "src/index.ts",
   "scripts": {
     "clean": "rm -rf ../.parcel-cache dist",
     "demo": "yarn clean && ATLASPACK_WORKERS=0 atlaspack build packages/package-a",
