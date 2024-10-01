@@ -105,24 +105,21 @@ impl JsCallable {
         let container: JsObject = value.try_into()?;
         let then_fn: JsFunction = container.get_named_property("then")?;
 
-        let then_callback = env.create_function_from_closure("callback", {
-          let tx = tx.clone();
-          move |ctx| {
-            // Return [bool, promise]
-            let container = ctx.get::<JsObject>(0)?;
+        let then_callback = env.create_function_from_closure("callback", move |ctx| {
+          // Return [bool, promise]
+          let container = ctx.get::<JsObject>(0)?;
 
-            let error = container.get_element::<JsUnknown>(0)?;
+          let error = container.get_element::<JsUnknown>(0)?;
 
-            if let ValueType::Null = error.get_type()? {
-              let value = container.get_element::<JsUnknown>(1)?;
-              tx.send(map_return(&env, value)).unwrap();
-            } else {
-              let error_value = env.from_js_value::<String, JsUnknown>(error)?;
-              tx.send(Err(anyhow::anyhow!(error_value))).unwrap();
-            }
-
-            ctx.env.get_undefined()
+          if let ValueType::Null = error.get_type()? {
+            let value = container.get_element::<JsUnknown>(1)?;
+            tx.send(map_return(&env, value)).unwrap();
+          } else {
+            let error_value = env.from_js_value::<String, JsUnknown>(error)?;
+            tx.send(Err(anyhow::anyhow!(error_value))).unwrap();
           }
+
+          ctx.env.get_undefined()
         })?;
 
         then_fn.call(Some(&container), &[then_callback])?;
