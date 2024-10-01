@@ -190,7 +190,7 @@ async function collectDependencies(
       for (let j = 0; j < files.length; ++j) {
         const globFiles = (
           await glob(path.join(assetDir, files[j]), fs, {})
-        ).map(fp =>
+        ).map((fp) =>
           asset.addURLDependency(path.relative(assetDir, fp), {
             bundleBehavior: 'isolated',
             needsStableName: true,
@@ -344,7 +344,7 @@ async function collectDependencies(
       program.permissions.push('scripting');
     }
     const hostPerms = [
-      ...new Set(program.content_scripts?.flatMap(sc => sc.matches)),
+      ...new Set(program.content_scripts?.flatMap((sc) => sc.matches)),
     ];
     if (isMV2) program.permissions = program.permissions.concat(hostPerms);
     else {

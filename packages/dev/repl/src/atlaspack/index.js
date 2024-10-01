@@ -60,7 +60,7 @@ export function waitForFS(): Promise<void> {
 export function bundle(
   files: FS,
   options: REPLOptions,
-  progress: string => void,
+  progress: (string) => void,
 ): Promise<BundleOutput> {
   return worker.bundle(files.toJSON(), options, proxy(progress));
 }
@@ -68,11 +68,11 @@ export function bundle(
 export async function watch(
   files: FS,
   options: REPLOptions,
-  onBuild: BundleOutput => void,
+  onBuild: (BundleOutput) => void,
   progress: (?string) => void,
 ): Promise<{|
   unsubscribe: () => Promise<mixed>,
-  writeAssets: FS => Promise<mixed>,
+  writeAssets: (FS) => Promise<mixed>,
 |}> {
   let result = await worker.watch(
     files.toJSON(),
@@ -82,7 +82,7 @@ export async function watch(
   );
   return {
     unsubscribe: result.unsubscribe,
-    writeAssets: f => result.writeAssets(f.toJSON()),
+    writeAssets: (f) => result.writeAssets(f.toJSON()),
   };
 }
 
@@ -106,8 +106,8 @@ class MessageTarget {
   }
   sendMsg(type, data, transfer) {
     let id = uuidv4();
-    return new Promise(res => {
-      let handler = evt => {
+    return new Promise((res) => {
+      let handler = (evt) => {
         if (evt.data.id === id) {
           this.removeEventListener('message', handler);
           res(evt.data.data);

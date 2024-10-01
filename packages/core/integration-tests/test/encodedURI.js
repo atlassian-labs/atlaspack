@@ -13,6 +13,6 @@ describe.v2('encodedURI', function () {
         assert(html.includes(file));
       }
     }
-    assert(!!files.find(f => f.startsWith('日本語')));
+    assert(!!files.find((f) => f.startsWith('日本語')));
   });
 });

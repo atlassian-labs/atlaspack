@@ -12,7 +12,7 @@ async function run(example) {
   let nativeOutput = {output: [], error: null};
   try {
     await runESM({
-      entries: example.entries.map(f => `${__dirname}/src/${f}`),
+      entries: example.entries.map((f) => `${__dirname}/src/${f}`),
       globals: {
         output(v) {
           nativeOutput.push(v);
@@ -46,7 +46,7 @@ async function run(example) {
   try {
     parcelBundles.output = await parcel({
       inputFS,
-      entries: example.entries.map(f => `${__dirname}/src/${f}`),
+      entries: example.entries.map((f) => `${__dirname}/src/${f}`),
     });
   } catch (e) {
     let match = e.diagnostics[0].message.match(/(.*) does not export '(.*)'/);
@@ -73,7 +73,7 @@ async function run(example) {
       let output = [];
       await runESM({
         entries: example.entries.map(
-          f => `${__dirname}/dist/${f.replace('.mjs', '.js')}`,
+          (f) => `${__dirname}/dist/${f.replace('.mjs', '.js')}`,
         ),
         globals: {
           output(v) {

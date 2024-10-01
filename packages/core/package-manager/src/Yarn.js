@@ -93,7 +93,7 @@ export class Yarn implements PackageInstaller {
       // Invoking yarn with --json provides streaming, newline-delimited JSON output.
       .pipe(split())
       .pipe(new JSONParseStream())
-      .on('error', e => {
+      .on('error', (e) => {
         logger.error(e, '@atlaspack/package-manager');
       })
       .on('data', (message: YarnStdOutMessage) => {
@@ -120,7 +120,7 @@ export class Yarn implements PackageInstaller {
     installProcess.stderr
       .pipe(split())
       .pipe(new JSONParseStream())
-      .on('error', e => {
+      .on('error', (e) => {
         logger.error(e, '@atlaspack/package-manager');
       })
       .on('data', (message: YarnStdErrMessage) => {

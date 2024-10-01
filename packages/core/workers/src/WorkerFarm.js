@@ -266,7 +266,7 @@ export default class WorkerFarm extends EventEmitter {
 
     worker.fork(nullthrows(this.options.workerPath));
 
-    worker.on('request', data => this.processRequest(data, worker));
+    worker.on('request', (data) => this.processRequest(data, worker));
 
     worker.on('ready', () => {
       this.readyWorkers++;
@@ -277,7 +277,7 @@ export default class WorkerFarm extends EventEmitter {
     });
     worker.on('response', () => this.processQueue());
 
-    worker.on('error', err => this.onError(err, worker));
+    worker.on('error', (err) => this.onError(err, worker));
     worker.once('exit', () => this.stopWorker(worker));
 
     this.workers.set(worker.id, worker);
@@ -438,7 +438,9 @@ export default class WorkerFarm extends EventEmitter {
     this.ending = true;
 
     await Promise.all(
-      Array.from(this.workers.values()).map(worker => this.stopWorker(worker)),
+      Array.from(this.workers.values()).map((worker) =>
+        this.stopWorker(worker),
+      ),
     );
 
     for (let handle of this.handles.values()) {
@@ -593,7 +595,7 @@ export default class WorkerFarm extends EventEmitter {
     }
 
     trace.flush();
-    await new Promise(resolve => {
+    await new Promise((resolve) => {
       stream.once('finish', resolve);
     });
 
@@ -629,7 +631,7 @@ export default class WorkerFarm extends EventEmitter {
     try {
       let snapshotPaths = await Promise.all(
         [...this.workers.values()].map(
-          worker =>
+          (worker) =>
             new Promise((resolve, reject) => {
               worker.call({
                 method: 'takeHeapSnapshot',

@@ -42,7 +42,7 @@ function generateInstanceId(entries: Array<FilePath>): string {
 
 // Compiles an array of globs to regex - used for lazy include/excludes
 function compileGlobs(globs: string[]): RegExp[] {
-  return globs.map(glob => globToRegex(glob));
+  return globs.map((glob) => globToRegex(glob));
 }
 
 export default async function resolveOptions(
@@ -58,7 +58,7 @@ export default async function resolveOptions(
   if (initialOptions.entries == null || initialOptions.entries === '') {
     entries = [];
   } else if (Array.isArray(initialOptions.entries)) {
-    entries = initialOptions.entries.map(entry =>
+    entries = initialOptions.entries.map((entry) =>
       path.resolve(inputCwd, entry),
     );
   } else {
@@ -202,7 +202,7 @@ export default async function resolveOptions(
     watchDir,
     watchBackend: initialOptions.watchBackend,
     watchIgnore: initialOptions.watchIgnore,
-    entries: entries.map(e => toProjectPath(projectRoot, e)),
+    entries: entries.map((e) => toProjectPath(projectRoot, e)),
     targets: initialOptions.targets,
     logLevel: initialOptions.logLevel ?? 'info',
     projectRoot,

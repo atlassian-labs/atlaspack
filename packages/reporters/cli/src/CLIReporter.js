@@ -188,7 +188,7 @@ export async function _report(
         case 'warn':
           if (
             event.diagnostics.some(
-              diagnostic => !seenWarnings.has(diagnostic.message),
+              (diagnostic) => !seenWarnings.has(diagnostic.message),
             )
           ) {
             await writeDiagnostic(options, event.diagnostics, 'yellow', true);

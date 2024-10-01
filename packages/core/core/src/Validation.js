@@ -62,7 +62,7 @@ export default class Validation {
     let pluginOptions = new PluginOptions(this.options);
     await this.buildAssetsAndValidators();
     await Promise.all(
-      Object.keys(this.allValidators).map(async validatorName => {
+      Object.keys(this.allValidators).map(async (validatorName) => {
         let assets = this.allAssets[validatorName];
         if (assets) {
           let plugin = this.allValidators[validatorName];
@@ -76,7 +76,7 @@ export default class Validation {
             // If the plugin supports the single-threading validateAll method, pass all assets to it.
             if (plugin.validateAll && this.dedicatedThread) {
               validatorResults = await plugin.validateAll({
-                assets: assets.map(asset => new Asset(asset)),
+                assets: assets.map((asset) => new Asset(asset)),
                 options: pluginOptions,
                 logger: validatorLogger,
                 tracer: validatorTracer,
@@ -96,7 +96,7 @@ export default class Validation {
             // Otherwise, pass the assets one-at-a-time
             else if (plugin.validate && !this.dedicatedThread) {
               await Promise.all(
-                assets.map(async input => {
+                assets.map(async (input) => {
                   let config = null;
                   let publicAsset = new Asset(input);
                   if (plugin.getConfig) {
@@ -142,7 +142,7 @@ export default class Validation {
   async buildAssetsAndValidators() {
     // Figure out what validators need to be run, and group the assets by the relevant validators.
     await Promise.all(
-      this.requests.map(async request => {
+      this.requests.map(async (request) => {
         this.report({
           type: 'validation',
           filePath: fromProjectPath(this.options.projectRoot, request.filePath),
@@ -169,7 +169,7 @@ export default class Validation {
   handleResults(validatorResults: Array<?ValidateResult>) {
     let warnings: Array<Diagnostic> = [];
     let errors: Array<Diagnostic> = [];
-    validatorResults.forEach(result => {
+    validatorResults.forEach((result) => {
       if (result) {
         warnings.push(...result.warnings);
         errors.push(...result.errors);

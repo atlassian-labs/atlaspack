@@ -28,7 +28,7 @@ const config = path.join(
 
 async function closeSocket(ws: WebSocket) {
   ws.close();
-  await new Promise(resolve => {
+  await new Promise((resolve) => {
     ws.once('close', resolve);
   });
 }
@@ -45,7 +45,9 @@ async function openSocket(uri: string, opts: any) {
 }
 
 async function nextWSMessage(ws: WebSocket) {
-  return json5.parse(await new Promise(resolve => ws.once('message', resolve)));
+  return json5.parse(
+    await new Promise((resolve) => ws.once('message', resolve)),
+  );
 }
 
 describe.v2('hmr', function () {
@@ -161,7 +163,7 @@ describe.v2('hmr', function () {
       assert.equal(message.type, 'update');
 
       // Figure out why output doesn't change...
-      let localAsset = message.assets.find(asset =>
+      let localAsset = message.assets.find((asset) =>
         asset.output.includes('exports.a = 5;\nexports.b = 5;\n'),
       );
       assert(!!localAsset);
@@ -371,7 +373,7 @@ describe.v2('hmr', function () {
     });
 
     it('should support self accepting', async function () {
-      let {outputs} = await testHMRClient('hmr-accept-self', outputs => {
+      let {outputs} = await testHMRClient('hmr-accept-self', (outputs) => {
         assert.deepStrictEqual(outputs, [
           ['other', 1],
           ['local', 1],
@@ -393,7 +395,7 @@ describe.v2('hmr', function () {
     });
 
     it('should bubble through parents', async function () {
-      let {outputs} = await testHMRClient('hmr-bubble', outputs => {
+      let {outputs} = await testHMRClient('hmr-bubble', (outputs) => {
         assert.deepStrictEqual(outputs, [
           ['other', 1],
           ['local', 1],
@@ -416,7 +418,7 @@ describe.v2('hmr', function () {
     });
 
     it('should call dispose callbacks', async function () {
-      let {outputs} = await testHMRClient('hmr-dispose', outputs => {
+      let {outputs} = await testHMRClient('hmr-dispose', (outputs) => {
         assert.deepStrictEqual(outputs, [
           ['eval:other', 1, null],
           ['eval:local', 1, null],
@@ -458,7 +460,7 @@ module.hot.dispose((data) => {
     });
 
     it('should work with circular dependencies', async function () {
-      let {outputs} = await testHMRClient('hmr-circular', outputs => {
+      let {outputs} = await testHMRClient('hmr-circular', (outputs) => {
         assert.deepEqual(outputs, [3]);
 
         return {
@@ -471,7 +473,7 @@ module.hot.dispose((data) => {
     });
 
     it('should reload if not accepted', async function () {
-      let {reloaded} = await testHMRClient('hmr-reload', outputs => {
+      let {reloaded} = await testHMRClient('hmr-reload', (outputs) => {
         assert.deepEqual(outputs, [3]);
         return {
           'local.js': 'exports.a = 5; exports.b = 5;',
@@ -482,7 +484,7 @@ module.hot.dispose((data) => {
     });
 
     it('should reload when modifying the entry', async function () {
-      let {reloaded} = await testHMRClient('hmr-reload', outputs => {
+      let {reloaded} = await testHMRClient('hmr-reload', (outputs) => {
         assert.deepEqual(outputs, [3]);
         return {
           'index.js': 'output(5)',
@@ -493,7 +495,7 @@ module.hot.dispose((data) => {
     });
 
     it('should work with multiple parents', async function () {
-      let {outputs} = await testHMRClient('hmr-multiple-parents', outputs => {
+      let {outputs} = await testHMRClient('hmr-multiple-parents', (outputs) => {
         assert.deepEqual(outputs, ['a: fn1 b: fn2']);
         return {
           'fn2.js': 'export function fn2() { return "UPDATED"; }',
@@ -506,7 +508,7 @@ module.hot.dispose((data) => {
     it('should reload if only one parent accepts', async function () {
       let {reloaded} = await testHMRClient(
         'hmr-multiple-parents-reload',
-        outputs => {
+        (outputs) => {
           assert.deepEqual(outputs, ['a: fn1', 'b: fn2']);
           return {
             'fn2.js': 'export function fn2() { return "UPDATED"; }',
@@ -518,7 +520,7 @@ module.hot.dispose((data) => {
     });
 
     it('should work across bundles', async function () {
-      let {reloaded} = await testHMRClient('hmr-dynamic', outputs => {
+      let {reloaded} = await testHMRClient('hmr-dynamic', (outputs) => {
         assert.deepEqual(outputs, [3]);
         return {
           'local.js': 'exports.a = 5; exports.b = 5;',
@@ -531,7 +533,7 @@ module.hot.dispose((data) => {
 
     it('should work with urls', async function () {
       let search;
-      let {outputs} = await testHMRClient('hmr-url', outputs => {
+      let {outputs} = await testHMRClient('hmr-url', (outputs) => {
         assert.equal(outputs.length, 1);
         let url = new URL(outputs[0]);
         assert(/test\.[0-9a-f]+\.txt/, url.pathname);
@@ -552,7 +554,7 @@ module.hot.dispose((data) => {
     it('should clean up orphaned assets when deleting a dependency', async function () {
       let search;
       let {outputs} = await testHMRClient('hmr-url', [
-        outputs => {
+        (outputs) => {
           assert.equal(outputs.length, 1);
           let url = new URL(outputs[0]);
           assert(/test\.[0-9a-f]+\.txt/, url.pathname);
@@ -562,7 +564,7 @@ module.hot.dispose((data) => {
             'index.js': 'output("yo"); module.hot.accept();',
           };
         },
-        outputs => {
+        (outputs) => {
           assert.equal(outputs.length, 2);
           assert.equal(outputs[1], 'yo');
           return {
@@ -893,7 +895,7 @@ module.hot.dispose((data) => {
         );
         let _window = (window = dom.window); // For Flow
         window.WebSocket = WebSocket;
-        await new Promise(res =>
+        await new Promise((res) =>
           dom.window.document.addEventListener('load', () => {
             res();
           }),
@@ -956,7 +958,7 @@ module.hot.dispose((data) => {
         );
         let _window = (window = dom.window); // For Flow
         window.WebSocket = WebSocket;
-        await new Promise(res =>
+        await new Promise((res) =>
           dom.window.document.addEventListener('load', () => {
             res();
           }),

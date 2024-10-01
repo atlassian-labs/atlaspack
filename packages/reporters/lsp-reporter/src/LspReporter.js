@@ -38,9 +38,9 @@ import {
 } from './utils';
 import type {FSWatcher} from 'fs';
 
-const lookupPid: Query => Program[] = promisify(ps.lookup);
+const lookupPid: (Query) => Program[] = promisify(ps.lookup);
 
-const ignoreFail = func => {
+const ignoreFail = (func) => {
   try {
     func();
   } catch (e) {
@@ -88,7 +88,7 @@ async function watchLspActive(): Promise<FSWatcher> {
     switch (eventType) {
       case 'rename':
         if (filename === LSP_SENTINEL_FILENAME) {
-          fs.access(LSP_SENTINEL_FILE, fs.constants.F_OK, err => {
+          fs.access(LSP_SENTINEL_FILE, fs.constants.F_OK, (err) => {
             if (err) {
               lspStarted = false;
             } else {
@@ -115,21 +115,21 @@ async function doWatchStart(options) {
     ignoreFail(() => fs.unlinkSync(path.join(BASEDIR, filename + '.json')));
   }
 
-  server = await createServer(SOCKET_FILE, connection => {
+  server = await createServer(SOCKET_FILE, (connection) => {
     // console.log('got connection');
     connections.push(connection);
     connection.onClose(() => {
-      connections = connections.filter(c => c !== connection);
+      connections = connections.filter((c) => c !== connection);
     });
 
-    connection.onRequest(RequestDocumentDiagnostics, async uri => {
+    connection.onRequest(RequestDocumentDiagnostics, async (uri) => {
       let graph = await bundleGraph;
       if (!graph) return;
 
       return getDiagnosticsUnusedExports(graph, uri);
     });
 
-    connection.onRequest(RequestImporters, async params => {
+    connection.onRequest(RequestImporters, async (params) => {
       let graph = await bundleGraph;
       if (!graph) return null;
 
@@ -210,7 +210,7 @@ export default (new Reporter({
         break;
       }
       case 'watchEnd':
-        connections.forEach(c => c.end());
+        connections.forEach((c) => c.end());
         await server.close();
         ignoreFail(() => fs.unlinkSync(META_FILE));
         break;
@@ -222,7 +222,7 @@ function updateBuildState(
   state: 'start' | 'progress' | 'end',
   message: string | void,
 ) {
-  connections.forEach(c =>
+  connections.forEach((c) =>
     c.sendNotification(NotificationBuildStatus, state, message),
   );
 }
@@ -232,7 +232,7 @@ function clearDiagnostics() {
 }
 function sendDiagnostics() {
   // console.log('send', getWorkspaceDiagnostics());
-  connections.forEach(c =>
+  connections.forEach((c) =>
     c.sendNotification(
       NotificationWorkspaceDiagnostics,
       getWorkspaceDiagnostics(),
@@ -448,8 +448,8 @@ function getImporters(
   if (asset) {
     let incoming = bundleGraph.getIncomingDependencies(asset);
     return incoming
-      .filter(dep => dep.sourcePath != null)
-      .map(dep => `file://${nullthrows(dep.sourcePath)}`);
+      .filter((dep) => dep.sourcePath != null)
+      .map((dep) => `file://${nullthrows(dep.sourcePath)}`);
   }
   return null;
 }

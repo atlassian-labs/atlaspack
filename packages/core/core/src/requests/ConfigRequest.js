@@ -90,7 +90,7 @@ export async function loadPluginConfig<T: PluginWithLoadConfig>(
     config.result = await loadConfig({
       config: new PublicConfig(config, options),
       options: new PluginOptions(
-        optionsProxy(options, option => {
+        optionsProxy(options, (option) => {
           config.invalidateOnOptionChange.add(option);
         }),
       ),
@@ -231,7 +231,7 @@ export async function getConfigHash(
     if (config.invalidateOnFileChange.size > 0) {
       hash.writeString(
         await getInvalidationHash(
-          [...config.invalidateOnFileChange].map(filePath => ({
+          [...config.invalidateOnFileChange].map((filePath) => ({
             type: 'file',
             filePath,
           })),
@@ -262,7 +262,7 @@ export function getConfigRequests(
   configs: Array<Config>,
 ): Array<ConfigRequest> {
   return configs
-    .filter(config => {
+    .filter((config) => {
       // No need to send to the graph if there are no invalidations.
       return (
         config.invalidateOnFileChange.size > 0 ||
@@ -274,7 +274,7 @@ export function getConfigRequests(
         config.invalidateOnBuild
       );
     })
-    .map(config => ({
+    .map((config) => ({
       id: config.id,
       invalidateOnFileChange: config.invalidateOnFileChange,
       invalidateOnConfigKeyChange: config.invalidateOnConfigKeyChange,

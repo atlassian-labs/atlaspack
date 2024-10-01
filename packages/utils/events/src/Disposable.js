@@ -42,7 +42,7 @@ export default class Disposable implements IDisposable {
 
     invariant(this.#disposables != null);
     await Promise.all(
-      [...this.#disposables].map(disposable =>
+      [...this.#disposables].map((disposable) =>
         typeof disposable === 'function' ? disposable() : disposable.dispose(),
       ),
     );

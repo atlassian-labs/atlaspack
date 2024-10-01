@@ -66,7 +66,7 @@ describe.v2('glob', function () {
     assert.equal(output(), 2);
 
     let css = await outputFS.readFile(
-      nullthrows(b.getBundles().find(b => b.type === 'css')).filePath,
+      nullthrows(b.getBundles().find((b) => b.type === 'css')).filePath,
       'utf8',
     );
     assert(css.includes('.local'));
@@ -97,10 +97,10 @@ describe.v2('glob', function () {
     let output = await run(b);
     assert.deepEqual(output, {
       a: `http://localhost/${path.basename(
-        nullthrows(b.getBundles().find(b => b.name.startsWith('a'))).filePath,
+        nullthrows(b.getBundles().find((b) => b.name.startsWith('a'))).filePath,
       )}`,
       b: `http://localhost/${path.basename(
-        nullthrows(b.getBundles().find(b => b.name.startsWith('b'))).filePath,
+        nullthrows(b.getBundles().find((b) => b.name.startsWith('b'))).filePath,
       )}`,
     });
   });

@@ -56,7 +56,7 @@ const Codemirror = memo(function ({
     // (first render)
     let v = (view.current = new EditorView({
       state,
-      dispatch: t => {
+      dispatch: (t) => {
         const {onChange} = dispatchRefs.current;
 
         v.update([t]);

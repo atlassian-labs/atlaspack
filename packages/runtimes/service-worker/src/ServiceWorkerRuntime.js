@@ -24,7 +24,7 @@ export default (new Runtime({
     }
 
     let manifest = [];
-    bundleGraph.traverseBundles(b => {
+    bundleGraph.traverseBundles((b) => {
       if (b.bundleBehavior === 'inline' || b.id === bundle.id) {
         return;
       }

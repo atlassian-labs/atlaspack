@@ -77,7 +77,7 @@ describe('javascript', function () {
       },
     ]);
 
-    let txtBundle = b.getBundles().find(b => b.type === 'txt').filePath;
+    let txtBundle = b.getBundles().find((b) => b.type === 'txt').filePath;
 
     let output = await run(b);
     assert.strictEqual(path.basename(output), path.basename(txtBundle));
@@ -410,7 +410,7 @@ describe('javascript', function () {
 
     let headChildren = outputReturn.children;
     assert.equal(headChildren.length, 7);
-    let cssBundles = headChildren.filter(child =>
+    let cssBundles = headChildren.filter((child) =>
       child.href?.match(/prefetched-loaded\..*\.css/),
     );
     assert.equal(cssBundles.length, 2);
@@ -770,7 +770,7 @@ describe('javascript', function () {
 
   it('should duplicate an asset if it is not present in every parent bundle', async function () {
     let b = await bundle(
-      ['a.js', 'b.js'].map(entry =>
+      ['a.js', 'b.js'].map((entry) =>
         path.join(__dirname, 'integration/dynamic-hoist-no-dedupe', entry),
       ),
     );
@@ -1687,7 +1687,7 @@ describe('javascript', function () {
     'should warn on process.env mutations in node_modules',
     async function () {
       let logs = [];
-      let disposable = Logger.onLog(d => {
+      let disposable = Logger.onLog((d) => {
         if (d.level !== 'verbose') {
           logs.push(d);
         }
@@ -2197,7 +2197,7 @@ describe('javascript', function () {
     assert.equal(typeof output.test, 'object');
 
     let failed = Object.keys(output.test).some(
-      key => output.test[key] !== 'test passed',
+      (key) => output.test[key] !== 'test passed',
     );
 
     assert.equal(failed, false);
@@ -2406,7 +2406,9 @@ describe('javascript', function () {
       },
     );
     const {rootDir} = b.entryAsset.options;
-    const writtenAssets = Array.from(b.offsets.keys()).map(asset => asset.name);
+    const writtenAssets = Array.from(b.offsets.keys()).map(
+      (asset) => asset.name,
+    );
     assert.equal(writtenAssets.length, 2);
     assert(writtenAssets.includes(path.join(rootDir, 'index.js')));
     assert(
@@ -2432,7 +2434,9 @@ describe('javascript', function () {
       },
     );
     const {rootDir} = b.entryAsset.options;
-    const writtenAssets = Array.from(b.offsets.keys()).map(asset => asset.name);
+    const writtenAssets = Array.from(b.offsets.keys()).map(
+      (asset) => asset.name,
+    );
     assert(
       writtenAssets.includes(path.join(rootDir, 'hello1.js')) &&
         writtenAssets.includes(path.join(rootDir, 'hello2.js')),
@@ -2603,7 +2607,7 @@ describe('javascript', function () {
 
   it('should not create shared bundles from contents of entries', async () => {
     let b = await bundle(
-      ['a.js', 'b.js'].map(entry =>
+      ['a.js', 'b.js'].map((entry) =>
         path.join(
           __dirname,
           '/integration/no-shared-bundles-from-entries/',
@@ -2823,7 +2827,7 @@ describe('javascript', function () {
         ),
       );
       let dist = await outputFS.readFile(
-        b.getBundles().find(b => b.type === 'js').filePath,
+        b.getBundles().find((b) => b.type === 'js').filePath,
         'utf8',
       );
       assert(dist.includes('$cKnEA$lodash = require("lodash");'));
@@ -2841,7 +2845,7 @@ describe('javascript', function () {
       ),
     );
     let dist = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'js').filePath,
+      b.getBundles().find((b) => b.type === 'js').filePath,
       'utf8',
     );
 
@@ -2879,8 +2883,8 @@ describe('javascript', function () {
     let getBundleNameWithPrefix = (b, prefix) =>
       b
         .getBundles()
-        .map(bundle => path.basename(bundle.filePath))
-        .find(name => name.startsWith(prefix));
+        .map((bundle) => path.basename(bundle.filePath))
+        .find((name) => name.startsWith(prefix));
 
     assert.equal(
       getBundleNameWithPrefix(first, 'a'),
@@ -2928,7 +2932,7 @@ describe('javascript', function () {
 
   it('async dependency can be resolved internally and externally from two different bundles', async () => {
     let b = await bundle(
-      ['entry1.js', 'entry2.js'].map(entry =>
+      ['entry1.js', 'entry2.js'].map((entry) =>
         path.join(
           __dirname,
           '/integration/async-dep-internal-external/',
@@ -2994,7 +2998,7 @@ describe('javascript', function () {
 
   it('can static import and dynamic import in the same bundle when another bundle requires async', async () => {
     let b = await bundle(
-      ['same-bundle.js', 'get-dep.js'].map(entry =>
+      ['same-bundle.js', 'get-dep.js'].map((entry) =>
         path.join(__dirname, '/integration/sync-async/', entry),
       ),
       {
@@ -3033,8 +3037,8 @@ describe('javascript', function () {
     ]);
 
     let bundles = b.getBundles();
-    let sameBundle = bundles.find(b => b.name === 'same-bundle.js');
-    let getDep = bundles.find(b => b.name === 'get-dep.js');
+    let sameBundle = bundles.find((b) => b.name === 'same-bundle.js');
+    let getDep = bundles.find((b) => b.name === 'get-dep.js');
 
     assert.deepEqual(
       await (
@@ -3093,7 +3097,7 @@ describe('javascript', function () {
 
   it('can run an entry bundle whose entry asset is present in another bundle', async () => {
     let b = await bundle(
-      ['index.js', 'value.js'].map(basename =>
+      ['index.js', 'value.js'].map((basename) =>
         path.join(__dirname, '/integration/sync-entry-shared', basename),
       ),
     );
@@ -3117,7 +3121,7 @@ describe('javascript', function () {
       await (
         await runBundle(
           b,
-          b.getBundles().find(bundle => bundle.name.includes('index.js')),
+          b.getBundles().find((bundle) => bundle.name.includes('index.js')),
         )
       ).default,
       43,
@@ -3190,7 +3194,7 @@ describe('javascript', function () {
 
   it('can run an async bundle that depends on a nonentry asset in a sibling', async () => {
     let b = await bundle(
-      ['index.js', 'other-entry.js'].map(basename =>
+      ['index.js', 'other-entry.js'].map((basename) =>
         path.join(
           __dirname,
           '/integration/async-entry-shared-sibling',
@@ -3238,7 +3242,7 @@ describe('javascript', function () {
 
       let bundles = b.getBundles();
       let asyncJsBundles = bundles.filter(
-        b => !b.needsStableName && b.type === 'js',
+        (b) => !b.needsStableName && b.type === 'js',
       );
       assert.equal(asyncJsBundles.length, 2);
 
@@ -3246,7 +3250,7 @@ describe('javascript', function () {
       for (let bundle of asyncJsBundles) {
         for (let bundleGroup of b.getBundleGroupsContainingBundle(bundle)) {
           let bundlesInGroup = b.getBundlesInBundleGroup(bundleGroup);
-          assert(bundlesInGroup.find(s => s.type === 'css'));
+          assert(bundlesInGroup.find((s) => s.type === 'css'));
         }
       }
     },
@@ -3307,10 +3311,10 @@ describe('javascript', function () {
       path.join(__dirname, '/integration/bundle-naming/.invisible/index.js'),
     );
     let bundleFiles = await outputFS.readdir(distDir);
-    let renamedSomeFiles = bundleFiles.some(currFile =>
+    let renamedSomeFiles = bundleFiles.some((currFile) =>
       currFile.startsWith('invisible.'),
     );
-    let namedWithDot = bundleFiles.some(currFile =>
+    let namedWithDot = bundleFiles.some((currFile) =>
       currFile.startsWith('.invisible.'),
     );
     assert.equal(renamedSomeFiles, true);
@@ -4261,7 +4265,7 @@ describe('javascript', function () {
 
   it('should support importing async bundles from bundles with different dist paths', async function () {
     let bundleGraph = await bundle(
-      ['bar/entry/entry-a.js', 'foo/entry-b.js'].map(f =>
+      ['bar/entry/entry-a.js', 'foo/entry-b.js'].map((f) =>
         path.join(__dirname, 'integration/differing-bundle-urls', f),
       ),
       {
@@ -4296,7 +4300,7 @@ describe('javascript', function () {
       {name: /common\.[a-f0-9]+\.js/, assets: ['index.js']},
     ]);
 
-    let [a, b] = bundleGraph.getBundles().filter(b => b.needsStableName);
+    let [a, b] = bundleGraph.getBundles().filter((b) => b.needsStableName);
     let calls = [];
 
     let bundles = [
@@ -4305,7 +4309,7 @@ describe('javascript', function () {
     ];
 
     await runBundles(bundleGraph, a, bundles, {
-      sideEffect: v => {
+      sideEffect: (v) => {
         calls.push(v);
       },
     });
@@ -4606,7 +4610,7 @@ describe('javascript', function () {
             b,
             {
               output: null,
-              sideEffect: caller => {
+              sideEffect: (caller) => {
                 calls.push(caller);
               },
             },
@@ -4616,7 +4620,7 @@ describe('javascript', function () {
           assert.deepEqual(res.output, 2);
 
           let css = await outputFS.readFile(
-            b.getBundles().find(bundle => bundle.type === 'css').filePath,
+            b.getBundles().find((bundle) => bundle.type === 'css').filePath,
             'utf8',
           );
           assert(!css.includes('.b2'));
@@ -4649,7 +4653,7 @@ describe('javascript', function () {
               b,
               {
                 output: null,
-                sideEffect: caller => {
+                sideEffect: (caller) => {
                   calls.push(caller);
                 },
               },
@@ -4688,7 +4692,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -4736,7 +4740,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -4776,7 +4780,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -4809,7 +4813,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -4837,7 +4841,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5162,7 +5166,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5279,7 +5283,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5310,7 +5314,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5338,7 +5342,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5374,7 +5378,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5408,7 +5412,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5469,7 +5473,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5504,7 +5508,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5539,7 +5543,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5567,7 +5571,7 @@ describe('javascript', function () {
           await run(
             b,
             {
-              sideEffect: caller => {
+              sideEffect: (caller) => {
                 calls.push(caller);
               },
             },
@@ -5605,7 +5609,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5650,7 +5654,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5684,7 +5688,7 @@ describe('javascript', function () {
         let res = await run(
           b,
           {
-            sideEffect: caller => {
+            sideEffect: (caller) => {
               calls.push(caller);
             },
           },
@@ -5743,7 +5747,7 @@ describe('javascript', function () {
 
       let result = await runBundle(
         b,
-        b.getBundles().find(b => b.name.includes('one.js')),
+        b.getBundles().find((b) => b.name.includes('one.js')),
         {},
         {require: false},
       );

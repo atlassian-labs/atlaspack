@@ -33,7 +33,7 @@ export function propagateSymbols({
   previousErrors?: ?Map<NodeId, Array<Diagnostic>>,
 |}): Map<NodeId, Array<Diagnostic>> {
   let changedAssets = new Set(
-    [...changedAssetsPropagation].map(id =>
+    [...changedAssetsPropagation].map((id) =>
       assetGraph.getNodeIdByContentKey(id),
     ),
   );
@@ -80,7 +80,7 @@ export function propagateSymbols({
         }
       }
       let hasNamespaceOutgoingDeps = outgoingDeps.some(
-        d => d.value.symbols?.get('*')?.local === '*',
+        (d) => d.value.symbols?.get('*')?.local === '*',
       );
 
       // 1) Determine what the incomingDeps requests from the asset
@@ -193,18 +193,18 @@ export function propagateSymbols({
                 // we need everything
                 depUsedSymbolsDown.add(symbol);
 
-                [...reexportedExportSymbols].forEach(s =>
+                [...reexportedExportSymbols].forEach((s) =>
                   assetNode.usedSymbols.delete(s),
                 );
               } else {
                 let usedReexportedExportSymbols = [
                   ...reexportedExportSymbols,
-                ].filter(s => assetNode.usedSymbols.has(s));
+                ].filter((s) => assetNode.usedSymbols.has(s));
                 if (usedReexportedExportSymbols.length > 0) {
                   // The symbol is indeed a reexport, so it's not used from the asset itself
                   depUsedSymbolsDown.add(symbol);
 
-                  usedReexportedExportSymbols.forEach(s =>
+                  usedReexportedExportSymbols.forEach((s) =>
                     assetNode.usedSymbols.delete(s),
                   );
                 }
@@ -338,7 +338,7 @@ export function propagateSymbols({
 
           let reexported = assetSymbolsInverse?.get(local);
           if (reexported != null) {
-            reexported.forEach(s => {
+            reexported.forEach((s) => {
               // see same code above
               if (reexportedSymbols.has(s)) {
                 if (!assetNode.usedSymbols.has('*')) {
@@ -555,12 +555,12 @@ function propagateSymbolsDown(
     } else if (node.type === 'asset' && node.usedSymbolsDownDirty) {
       visit(
         node,
-        assetGraph.getIncomingDependencies(node.value).map(d => {
+        assetGraph.getIncomingDependencies(node.value).map((d) => {
           let dep = assetGraph.getNodeByContentKey(d.id);
           invariant(dep && dep.type === 'dependency');
           return dep;
         }),
-        outgoing.map(dep => {
+        outgoing.map((dep) => {
           let depNode = nullthrows(assetGraph.getNode(dep));
           invariant(depNode.type === 'dependency');
           return depNode;
@@ -620,7 +620,7 @@ function propagateSymbolsUp(
   let changedDepsUsedSymbolsUpDirtyDownAssets = new Set([
     ...[...changedDepsUsedSymbolsUpDirtyDown]
       .reverse()
-      .flatMap(id => getDependencyResolution(assetGraph, id)),
+      .flatMap((id) => getDependencyResolution(assetGraph, id)),
     ...changedAssets,
   ]);
 
@@ -640,7 +640,7 @@ function propagateSymbolsUp(
       'A root node is required to traverse',
     );
 
-    const nodeVisitor = nodeId => {
+    const nodeVisitor = (nodeId) => {
       let node = nullthrows(assetGraph.getNode(nodeId));
       let outgoing = assetGraph.getNodeIdsConnectedFrom(nodeId);
 
@@ -656,11 +656,13 @@ function propagateSymbolsUp(
       }
 
       if (node.type === 'asset') {
-        let incoming = assetGraph.getIncomingDependencies(node.value).map(d => {
-          let n = assetGraph.getNodeByContentKey(d.id);
-          invariant(n && n.type === 'dependency');
-          return n;
-        });
+        let incoming = assetGraph
+          .getIncomingDependencies(node.value)
+          .map((d) => {
+            let n = assetGraph.getNodeByContentKey(d.id);
+            invariant(n && n.type === 'dependency');
+            return n;
+          });
         for (let dep of incoming) {
           if (dep.usedSymbolsUpDirtyDown) {
             dep.usedSymbolsUpDirtyDown = false;
@@ -671,7 +673,7 @@ function propagateSymbolsUp(
           let e = visit(
             node,
             incoming,
-            outgoing.map(depNodeId => {
+            outgoing.map((depNodeId) => {
               let depNode = nullthrows(assetGraph.getNode(depNodeId));
               invariant(depNode.type === 'dependency');
               return depNode;
@@ -703,11 +705,13 @@ function propagateSymbolsUp(
     let queuedNodeId = setPop(queue);
     let node = nullthrows(assetGraph.getNode(queuedNodeId));
     if (node.type === 'asset') {
-      let incoming = assetGraph.getIncomingDependencies(node.value).map(dep => {
-        let depNode = assetGraph.getNodeByContentKey(dep.id);
-        invariant(depNode && depNode.type === 'dependency');
-        return depNode;
-      });
+      let incoming = assetGraph
+        .getIncomingDependencies(node.value)
+        .map((dep) => {
+          let depNode = assetGraph.getNodeByContentKey(dep.id);
+          invariant(depNode && depNode.type === 'dependency');
+          return depNode;
+        });
       for (let dep of incoming) {
         if (dep.usedSymbolsUpDirtyDown) {
           dep.usedSymbolsUpDirtyDown = false;
@@ -716,7 +720,7 @@ function propagateSymbolsUp(
       }
       let outgoing = assetGraph
         .getNodeIdsConnectedFrom(queuedNodeId)
-        .map(depNodeId => {
+        .map((depNodeId) => {
           let depNode = nullthrows(assetGraph.getNode(depNodeId));
           invariant(depNode.type === 'dependency');
           return depNode;

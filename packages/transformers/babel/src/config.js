@@ -102,7 +102,7 @@ export async function load(
     [string]: any,
   |} = await babelCore.loadPartialConfigAsync(babelOptions);
 
-  let addIncludedFile = file => {
+  let addIncludedFile = (file) => {
     if (JS_EXTNAME_RE.test(path.extname(file))) {
       // We need to invalidate on startup in case the config is non-static,
       // e.g. uses unknown environment variables, reads from the filesystem, etc.
@@ -241,7 +241,7 @@ async function buildDefaultBabelConfig(
 
 function hasRequire(options) {
   let configItems = [...options.presets, ...options.plugins];
-  return configItems.some(item => !item.file);
+  return configItems.some((item) => !item.file);
 }
 
 function definePluginDependencies(config, babelConfig: ?BabelConfig, options) {
@@ -294,7 +294,7 @@ async function warnOnRedundantPlugins(fs, babelConfig, logger) {
   let plugins = babelConfig.options.plugins || [];
   let foundRedundantPresets = new Set();
 
-  let filteredPresets = presets.filter(preset => {
+  let filteredPresets = presets.filter((preset) => {
     if (redundantPresets.has(preset.file.request)) {
       foundRedundantPresets.add(preset.file.request);
       return false;
@@ -331,7 +331,7 @@ async function warnOnRedundantPlugins(fs, babelConfig, logger) {
     diagnostics.push({
       message: md`Parcel includes transpilation by default. Babel config __${filePath}__ includes the following redundant presets: ${[
         ...foundRedundantPresets,
-      ].map(p =>
+      ].map((p) =>
         md.underline(p),
       )}. Removing these may improve build performance.`,
       codeFrames: [

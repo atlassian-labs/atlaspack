@@ -52,7 +52,7 @@ export const Graphs: any = memo(function Graphs({graphs}) {
   let [rendered, setRendered] = useState();
 
   useEffect(() => {
-    renderGraph().then(async render => {
+    renderGraph().then(async (render) => {
       setRendered(
         await Promise.all(
           graphs.map(async ({name, content}) => ({
@@ -168,7 +168,7 @@ export function EditableField({value, editing, onChange}: any): any {
 
   return editing ? (
     <form
-      onSubmit={e => {
+      onSubmit={(e) => {
         e.preventDefault();
         onChange(v);
       }}
@@ -177,10 +177,10 @@ export function EditableField({value, editing, onChange}: any): any {
       <input
         type="text"
         value={v}
-        onInput={e => {
+        onInput={(e) => {
           setV(e.target.value);
         }}
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       />
     </form>
   ) : (
@@ -190,7 +190,7 @@ export function EditableField({value, editing, onChange}: any): any {
 
 export function PresetSelector({dispatch}: any): any {
   let onChange = useCallback(
-    async preset => {
+    async (preset) => {
       if (preset === 'Three.js Benchmark') {
         try {
           let data = await (
@@ -228,13 +228,13 @@ export function PresetSelector({dispatch}: any): any {
     <label className="presets">
       <span>Preset:</span>
       <select
-        onChange={e => {
+        onChange={(e) => {
           onChange(e.target.value);
         }}
         value={''}
       >
         <option value=""></option>
-        {[...ASSET_PRESETS.keys()].map(n => (
+        {[...ASSET_PRESETS.keys()].map((n) => (
           <option key={n} value={n}>
             {n}
           </option>
@@ -276,7 +276,7 @@ export function useSessionStorage(
     }
   });
 
-  const setValue = value => {
+  const setValue = (value) => {
     try {
       const valueToStore =
         value instanceof Function ? value(storedValue) : value;
@@ -304,8 +304,8 @@ export function usePromise<T>(promise: Promise<T>): [?T, any, boolean] {
 
   useEffect(() => {
     promise.then(
-      v => mountedRef.current && setState({resolved: v}),
-      v => mountedRef.current && setState({rejected: v}),
+      (v) => mountedRef.current && setState({resolved: v}),
+      (v) => mountedRef.current && setState({rejected: v}),
     );
   }, [promise]);
 
@@ -313,9 +313,10 @@ export function usePromise<T>(promise: Promise<T>): [?T, any, boolean] {
 }
 
 // $FlowFixMe
-const addBodyClass = className => document.body.classList.add(className);
+const addBodyClass = (className) => document.body.classList.add(className);
 // $FlowFixMe
-const removeBodyClass = className => document.body.classList.remove(className);
+const removeBodyClass = (className) =>
+  document.body.classList.remove(className);
 export function useBodyClass(className: string) {
   useEffect(() => {
     let classNames = Array.isArray(className) ? className : [className];
@@ -327,7 +328,7 @@ export function useBodyClass(className: string) {
   }, [className]);
 }
 
-export function useKeyboard(cb: KeyboardEvent => mixed, deps: Array<mixed>) {
+export function useKeyboard(cb: (KeyboardEvent) => mixed, deps: Array<mixed>) {
   const keydownCb = useCallback(
     (e: KeyboardEvent) => {
       cb(e);

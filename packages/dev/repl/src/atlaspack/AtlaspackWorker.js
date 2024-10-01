@@ -97,8 +97,8 @@ global.ATLASPACK_SERVICE_WORKER_REGISTER = (type, cb) => {
 expose({
   bundle,
   watch,
-  ready: numWorkers =>
-    new Promise(res => {
+  ready: (numWorkers) =>
+    new Promise((res) => {
       startWorkerFarm(numWorkers);
       if (workerFarm.readyWorkers === workerFarm.options.maxConcurrentWorkers) {
         res(true);
@@ -107,7 +107,7 @@ expose({
       }
     }),
   waitForFS: () => proxy(swFSPromise),
-  setServiceWorker: v => {
+  setServiceWorker: (v) => {
     sw = v;
     sw.start();
   },
@@ -192,7 +192,7 @@ async function renderDiagnostics(
 ): Promise<string> {
   return (
     await Promise.all(
-      diagnostics.map(async diagnostic => {
+      diagnostics.map(async (diagnostic) => {
         let {message, stack, codeframe, hints, documentation} =
           await prettyDiagnostic(
             diagnostic,
@@ -355,7 +355,7 @@ async function syncAssetsToFS(assets: FSList, options: REPLOptions) {
 
   for (let f of await fs.readdir('/app')) {
     f = '/app/' + f;
-    if (filesToKeep.has(f) || [...filesToKeep].some(k => k.startsWith(f))) {
+    if (filesToKeep.has(f) || [...filesToKeep].some((k) => k.startsWith(f))) {
       continue;
     }
     await fs.rimraf(f);
@@ -365,14 +365,14 @@ async function syncAssetsToFS(assets: FSList, options: REPLOptions) {
 async function bundle(
   assets: FSList,
   options: REPLOptions,
-  progress: string => void,
+  progress: (string) => void,
 ): Promise<BundleOutput> {
   const {bundler, graphs} = await setup(assets, {...options, hmr: false});
 
   resetSWPromise();
   await syncAssetsToFS(assets, options);
 
-  await yarnInstall(options, fs, PathUtils.APP_DIR, v => {
+  await yarnInstall(options, fs, PathUtils.APP_DIR, (v) => {
     if (v.data.includes('Resolution step')) {
       progress('Yarn: Resolving');
     } else if (v.data.includes('Fetch step')) {
@@ -407,18 +407,18 @@ async function bundle(
 async function watch(
   assets: FSList,
   options: REPLOptions,
-  onBuild: BundleOutput => void,
+  onBuild: (BundleOutput) => void,
   progress: (?string) => void,
 ): Promise<{|
   unsubscribe: () => Promise<mixed>,
-  writeAssets: FSList => Promise<mixed>,
+  writeAssets: (FSList) => Promise<mixed>,
 |}> {
   let {bundler, graphs} = await setup(assets, options);
 
   resetSWPromise();
   await syncAssetsToFS(assets, options);
 
-  await yarnInstall(options, fs, PathUtils.APP_DIR, v => {
+  await yarnInstall(options, fs, PathUtils.APP_DIR, (v) => {
     if (v.data.includes('Resolution step')) {
       progress('Yarn: Resolving');
     } else if (v.data.includes('Fetch step')) {
@@ -454,7 +454,7 @@ async function watch(
         }
       })
     ).unsubscribe,
-    writeAssets: assets => {
+    writeAssets: (assets) => {
       resetSWPromise();
       syncAssetsToFS(assets, options);
     },
@@ -476,7 +476,7 @@ function uuidv4() {
 
 function sendMsg(target, type, data, transfer) {
   let id = uuidv4();
-  return new Promise(res => {
+  return new Promise((res) => {
     let handler = (evt: MessageEvent) => {
       // $FlowFixMe
       if (evt.data.id === id) {

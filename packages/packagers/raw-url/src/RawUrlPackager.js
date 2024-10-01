@@ -7,7 +7,7 @@ import {replaceURLReferences} from '@atlaspack/utils';
 export default (new Packager({
   async package({bundle, bundleGraph}) {
     let assets = [];
-    bundle.traverseAssets(asset => {
+    bundle.traverseAssets((asset) => {
       assets.push(asset);
     });
 
@@ -17,7 +17,7 @@ export default (new Packager({
       bundleGraph,
       contents: await assets[0].getCode(),
       relative: false,
-      getReplacement: s => s,
+      getReplacement: (s) => s,
     });
     return {contents};
   },

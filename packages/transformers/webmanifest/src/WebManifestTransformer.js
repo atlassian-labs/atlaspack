@@ -15,7 +15,7 @@ const RESOURCES_SCHEMA = {
     properties: {
       src: {
         type: 'string',
-        __validate: s => {
+        __validate: (s) => {
           if (s.length === 0) {
             return 'Must not be empty';
           }

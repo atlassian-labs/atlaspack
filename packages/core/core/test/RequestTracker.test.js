@@ -82,7 +82,7 @@ describe('RequestTracker', () => {
     assert(
       tracker
         .getInvalidRequests()
-        .map(req => req.id)
+        .map((req) => req.id)
         .includes('abc'),
     );
   });
@@ -105,7 +105,7 @@ describe('RequestTracker', () => {
     assert(
       tracker
         .getInvalidRequests()
-        .map(req => req.id)
+        .map((req) => req.id)
         .includes('abc'),
     );
   });
@@ -184,7 +184,7 @@ describe('RequestTracker', () => {
     assert(
       tracker
         .getInvalidRequests()
-        .map(req => req.id)
+        .map((req) => req.id)
         .includes('abc'),
     );
   });
@@ -469,7 +469,8 @@ root --- node1 --- node2 ----------- orphan1 --- orphan2
 
      */
 
-    const getNonNullNodes = graph => graph.nodes.filter(node => node != null);
+    const getNonNullNodes = (graph) =>
+      graph.nodes.filter((node) => node != null);
 
     graph.addEdge(root, node1);
     graph.addEdge(node1, node2);

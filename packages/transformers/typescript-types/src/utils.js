@@ -6,11 +6,11 @@ export function getExportedName(node: any): ?string {
     return null;
   }
 
-  if (!node.modifiers.some(m => m.kind === ts.SyntaxKind.ExportKeyword)) {
+  if (!node.modifiers.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) {
     return null;
   }
 
-  if (node.modifiers.some(m => m.kind === ts.SyntaxKind.DefaultKeyword)) {
+  if (node.modifiers.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword)) {
     return 'default';
   }
 

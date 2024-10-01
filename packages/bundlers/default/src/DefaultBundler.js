@@ -185,7 +185,7 @@ function decorateLegacyGraph(
           dependencyBundleGraph.getNodeIdByContentKey(String(bundleNodeId)),
           ALL_EDGE_TYPES,
         )
-        .map(nodeId => {
+        .map((nodeId) => {
           let dependency = nullthrows(dependencyBundleGraph.getNode(nodeId));
           invariant(dependency.type === 'dependency');
           return dependency.value;
@@ -222,7 +222,7 @@ function decorateLegacyGraph(
       let uniqueKey =
         idealBundle.uniqueKey != null
           ? idealBundle.uniqueKey
-          : [...idealBundle.assets].map(asset => asset.id).join(',');
+          : [...idealBundle.assets].map((asset) => asset.id).join(',');
 
       bundle = nullthrows(
         bundleGraph.createBundle({
@@ -271,7 +271,7 @@ function decorateLegacyGraph(
     if (!idealBundle || idealBundle === 'root') continue;
     let bundle = nullthrows(idealBundleToLegacyBundle.get(idealBundle));
     if (idealBundle.internalizedAssets) {
-      idealBundle.internalizedAssets.forEach(internalized => {
+      idealBundle.internalizedAssets.forEach((internalized) => {
         let incomingDeps = bundleGraph.getIncomingDependencies(
           idealGraph.assets[internalized],
         );
@@ -469,7 +469,7 @@ function createIdealGraph(
       }
 
       let parentAsset = configToParentAsset.get(c);
-      let assetRegexes = c.assets.map(glob => globToRegex(glob));
+      let assetRegexes = c.assets.map((glob) => globToRegex(glob));
 
       assetGraph.traverse((node, _, actions) => {
         if (
@@ -480,7 +480,7 @@ function createIdealGraph(
             config.projectRoot,
             node.value.filePath,
           );
-          if (!assetRegexes.some(regex => regex.test(projectRelativePath))) {
+          if (!assetRegexes.some((regex) => regex.test(projectRelativePath))) {
             return;
           }
 
@@ -890,7 +890,7 @@ function createIdealGraph(
         if (asset.meta.isConstantModule === true) {
           let parents = assetGraph
             .getIncomingDependencies(asset)
-            .map(dep => nullthrows(assetGraph.getAssetWithDependency(dep)));
+            .map((dep) => nullthrows(assetGraph.getAssetWithDependency(dep)));
 
           for (let parent of parents) {
             inlineConstantDeps.get(parent).add(asset);
@@ -1084,7 +1084,7 @@ function createIdealGraph(
     // Neither can non-splittable, isolated, or needing of stable name bundles.
     // Reserve those filtered out bundles since we add the asset back into them.
     reachableNonEntries.clear();
-    reachableRoots[i].forEach(nodeId => {
+    reachableRoots[i].forEach((nodeId) => {
       let assetId = bundleRootGraph.getNode(nodeId);
       if (assetId == null) return; // deleted
       let a = assets[assetId];
@@ -1112,7 +1112,7 @@ function createIdealGraph(
       let bundleId;
       let manualSharedBundleKey = manualSharedObject.name + ',' + asset.type;
       let sourceBundles = [];
-      reachable.forEach(id => {
+      reachable.forEach((id) => {
         sourceBundles.push(nullthrows(bundleRoots.get(assets[id]))[0]);
       });
 
@@ -1175,7 +1175,7 @@ function createIdealGraph(
 
     // if a bundle b is a subgraph of another bundle f, reuse it, drawing an edge between the two
     if (config.disableSharedBundles === false) {
-      reachableNonEntries.forEach(candidateId => {
+      reachableNonEntries.forEach((candidateId) => {
         let candidateSourceBundleRoot = assets[candidateId];
         let candidateSourceBundleId = nullthrows(
           bundleRoots.get(candidateSourceBundleRoot),
@@ -1201,7 +1201,7 @@ function createIdealGraph(
             ],
           );
 
-          reachableIntersection.forEach(otherCandidateId => {
+          reachableIntersection.forEach((otherCandidateId) => {
             let otherReuseCandidate = assets[otherCandidateId];
             if (candidateSourceBundleRoot === otherReuseCandidate) return;
             let reusableBundleId = nullthrows(
@@ -1221,7 +1221,7 @@ function createIdealGraph(
     }
 
     let reachableArray = [];
-    reachable.forEach(id => {
+    reachable.forEach((id) => {
       reachableArray.push(assets[id]);
     });
 
@@ -1231,9 +1231,9 @@ function createIdealGraph(
       reachableArray.length > config.minBundles
     ) {
       let sourceBundles = reachableArray.map(
-        a => nullthrows(bundleRoots.get(a))[0],
+        (a) => nullthrows(bundleRoots.get(a))[0],
       );
-      let key = reachableArray.map(a => a.id).join(',') + '.' + asset.type;
+      let key = reachableArray.map((a) => a.id).join(',') + '.' + asset.type;
       let bundleId = bundles.get(key);
       let bundle;
       if (bundleId == null) {
@@ -1401,7 +1401,7 @@ function createIdealGraph(
       }, 0);
 
       if (numBundlesContributingToPRL > config.maxParallelRequests) {
-        let sharedBundleIdsInBundleGroup = bundleIdsInGroup.filter(b => {
+        let sharedBundleIdsInBundleGroup = bundleIdsInGroup.filter((b) => {
           let bundle = nullthrows(bundleGraph.getNode(b));
           // shared bundles must have source bundles, we could have a bundle
           // connected to another bundle that isnt a shared bundle, so check
@@ -1415,7 +1415,7 @@ function createIdealGraph(
 
         // Sort the bundles so the smallest ones are removed first.
         let sharedBundlesInGroup = sharedBundleIdsInBundleGroup
-          .map(id => ({
+          .map((id) => ({
             id,
             bundle: nullthrows(bundleGraph.getNode(id)),
           }))
@@ -1438,7 +1438,7 @@ function createIdealGraph(
           // but total # bundles still exceeds limit due to non shared bundles
 
           // Add all assets in the shared bundle into the source bundles that are within this bundle group.
-          let sourceBundles = [...bundleToRemove.sourceBundles].filter(b =>
+          let sourceBundles = [...bundleToRemove.sourceBundles].filter((b) =>
             bundleIdsInGroup.includes(b),
           );
 
@@ -1520,7 +1520,7 @@ function createIdealGraph(
   }
   function getBundlesForBundleGroup(bundleGroupId) {
     let bundlesInABundleGroup = [];
-    bundleGraph.traverse(nodeId => {
+    bundleGraph.traverse((nodeId) => {
       bundlesInABundleGroup.push(nodeId);
     }, bundleGroupId);
     return bundlesInABundleGroup;
@@ -1578,7 +1578,7 @@ function createIdealGraph(
     for (let asset of bundle.assets) {
       assetReference.set(
         asset,
-        assetReference.get(asset).filter(t => !t.includes(bundle)),
+        assetReference.get(asset).filter((t) => !t.includes(bundle)),
       );
       for (let sourceBundleId of bundle.sourceBundles) {
         let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
@@ -1605,7 +1605,7 @@ const CONFIG_SCHEMA: SchemaEntity = {
   properties: {
     http: {
       type: 'number',
-      enum: Object.keys(HTTP_OPTIONS).map(k => Number(k)),
+      enum: Object.keys(HTTP_OPTIONS).map((k) => Number(k)),
     },
     manualSharedBundles: {
       type: 'array',
@@ -1775,7 +1775,7 @@ async function loadBundlerConfig(
   }
 
   if (modeConfig.manualSharedBundles) {
-    let nameArray = modeConfig.manualSharedBundles.map(a => a.name);
+    let nameArray = modeConfig.manualSharedBundles.map((a) => a.name);
     let nameSet = new Set(nameArray);
     invariant(
       nameSet.size == nameArray.length,

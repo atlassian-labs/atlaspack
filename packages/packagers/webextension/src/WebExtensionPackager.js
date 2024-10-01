@@ -8,10 +8,10 @@ import {replaceURLReferences, relativeBundlePath} from '@atlaspack/utils';
 export default (new Packager({
   async package({bundle, bundleGraph}) {
     let assets = [];
-    bundle.traverseAssets(asset => {
+    bundle.traverseAssets((asset) => {
       assets.push(asset);
     });
-    const manifestAssets = assets.filter(a => a.meta.webextEntry === true);
+    const manifestAssets = assets.filter((a) => a.meta.webextEntry === true);
 
     assert(
       assets.length == 2 && manifestAssets.length == 1,
@@ -19,7 +19,7 @@ export default (new Packager({
     );
     const asset = manifestAssets[0];
 
-    const relPath = b =>
+    const relPath = (b) =>
       relativeBundlePath(bundle, b, {leadingDotSlash: false});
 
     const manifest = JSON.parse(await asset.getCode());
@@ -35,17 +35,17 @@ export default (new Packager({
     for (const contentScript of manifest.content_scripts || []) {
       const srcBundles = deps
         .filter(
-          d =>
+          (d) =>
             contentScript.js?.includes(d.id) ||
             contentScript.css?.includes(d.id),
         )
-        .map(d => nullthrows(bundleGraph.getReferencedBundle(d, bundle)));
+        .map((d) => nullthrows(bundleGraph.getReferencedBundle(d, bundle)));
 
       contentScript.css = [
         ...new Set(
           srcBundles
-            .flatMap(b => bundleGraph.getReferencedBundles(b))
-            .filter(b => b.type == 'css')
+            .flatMap((b) => bundleGraph.getReferencedBundles(b))
+            .filter((b) => b.type == 'css')
             .map(relPath)
             .concat(contentScript.css || []),
         ),
@@ -54,18 +54,18 @@ export default (new Packager({
       contentScript.js = [
         ...new Set(
           srcBundles
-            .flatMap(b => bundleGraph.getReferencedBundles(b))
-            .filter(b => b.type == 'js')
+            .flatMap((b) => bundleGraph.getReferencedBundles(b))
+            .filter((b) => b.type == 'js')
             .map(relPath)
             .concat(contentScript.js || []),
         ),
       ];
 
       const resources = srcBundles
-        .flatMap(b => {
+        .flatMap((b) => {
           const children = [];
           const siblings = bundleGraph.getReferencedBundles(b);
-          bundleGraph.traverseBundles(child => {
+          bundleGraph.traverseBundles((child) => {
             if (b !== child && !siblings.includes(child)) {
               children.push(child);
             }
@@ -76,7 +76,7 @@ export default (new Packager({
 
       if (resources.length > 0) {
         war.push({
-          matches: contentScript.matches.map(match => {
+          matches: contentScript.matches.map((match) => {
             if (/^(((http|ws)s?)|ftp|\*):\/\//.test(match)) {
               let pathIndex = match.indexOf('/', match.indexOf('://') + 3);
               // Avoids creating additional errors in invalid match URLs
@@ -92,7 +92,7 @@ export default (new Packager({
 
     const warResult = (manifest.web_accessible_resources || []).concat(
       manifest.manifest_version == 2
-        ? [...new Set(war.flatMap(entry => entry.resources))]
+        ? [...new Set(war.flatMap((entry) => entry.resources))]
         : war,
     );
 

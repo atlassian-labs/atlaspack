@@ -62,11 +62,11 @@ export default (new Transformer({
     let emitResult = program.emit(undefined, undefined, undefined, true, {
       afterDeclarations: [
         // 1. Build module graph
-        context => sourceFile => {
+        (context) => (sourceFile) => {
           return collect(moduleGraph, context, sourceFile);
         },
         // 2. Tree shake and rename types
-        context => sourceFile => {
+        (context) => (sourceFile) => {
           return shake(moduleGraph, context, sourceFile);
         },
       ],
@@ -93,7 +93,7 @@ export default (new Transformer({
       }
     }
 
-    let parcelDiagnostics = deduplicatedDiagnostics.map(diagnostic => {
+    let parcelDiagnostics = deduplicatedDiagnostics.map((diagnostic) => {
       let filename = asset.filePath;
       let {file} = diagnostic;
 
@@ -167,7 +167,7 @@ export default (new Transformer({
     code = code.substring(0, code.lastIndexOf('//# sourceMappingURL'));
 
     let map = JSON.parse(nullthrows(host.outputMap));
-    map.sources = map.sources.map(source =>
+    map.sources = map.sources.map((source) =>
       path.join(path.dirname(asset.filePath), source),
     );
 

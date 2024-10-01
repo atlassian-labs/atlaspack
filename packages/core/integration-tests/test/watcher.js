@@ -223,7 +223,7 @@ describe.v2('watcher', function () {
 
     await b.bundle();
     let mtimes = (await fs.readdir(path.join(__dirname, '/dist'))).map(
-      f =>
+      (f) =>
         (nodeFS.statSync(path.join(__dirname, '/dist/', f)).mtime.getTime() /
           1000) |
         0,
@@ -237,7 +237,7 @@ describe.v2('watcher', function () {
 
     await nextBundle(b);
     let newMtimes = (await fs.readdir(path.join(__dirname, '/dist'))).map(
-      f =>
+      (f) =>
         (nodeFS.statSync(path.join(__dirname, '/dist/', f)).mtime.getTime() /
           1000) |
         0,

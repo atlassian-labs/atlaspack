@@ -139,7 +139,7 @@ function EditorWrapper({
   diagnostics,
 }: any): any {
   let onChange = useCallback(
-    value => dispatch({type: 'view.setValue', name, value}),
+    (value) => dispatch({type: 'view.setValue', name, value}),
     [dispatch, name],
   );
 

@@ -49,7 +49,7 @@ module.exports = async function runESM({
 
       let m = new vm.SyntheticModule(
         Object.keys(ns),
-        function() {
+        function () {
           for (let [k, v] of Object.entries(ns)) {
             this.setExport(k, v);
           }
@@ -86,7 +86,7 @@ module.exports = async function runESM({
   return {
     context,
     exports: Array.isArray(entries)
-      ? modules.map(m => m.namespace)
+      ? modules.map((m) => m.namespace)
       : modules[0].namespace,
   };
 };

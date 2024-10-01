@@ -100,9 +100,9 @@ export class FSHost {
       this.ts.sys.useCaseSensitiveFileNames,
       this.getCurrentDirectory(),
       depth,
-      dirPath => this.getAccessibleFileSystemEntries(dirPath),
-      filePath => this.realpath(filePath),
-      dirPath => this.directoryExists(dirPath),
+      (dirPath) => this.getAccessibleFileSystemEntries(dirPath),
+      (filePath) => this.realpath(filePath),
+      (dirPath) => this.directoryExists(dirPath),
     );
   }
 }

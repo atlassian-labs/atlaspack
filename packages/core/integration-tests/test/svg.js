@@ -53,7 +53,7 @@ describe('svg', function () {
     ]);
 
     let file = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'svg').filePath,
+      b.getBundles().find((b) => b.type === 'svg').filePath,
       'utf-8',
     );
     assert(file.includes('<a href="/other1.html">'));
@@ -61,14 +61,14 @@ describe('svg', function () {
     assert(
       file.includes(
         `<use xlink:href="/${path.basename(
-          b.getBundles().find(b => b.name.startsWith('square')).filePath,
+          b.getBundles().find((b) => b.name.startsWith('square')).filePath,
         )}#square"`,
       ),
     );
     assert(
       file.includes(
         `fill="url('/${path.basename(
-          b.getBundles().find(b => b.name.startsWith('gradient')).filePath,
+          b.getBundles().find((b) => b.name.startsWith('gradient')).filePath,
         )}#myGradient')"`,
       ),
     );
@@ -77,7 +77,7 @@ describe('svg', function () {
         `<script xlink:href="/${path.basename(
           b
             .getBundles()
-            .find(b => b.type === 'js' && b.env.sourceType === 'script')
+            .find((b) => b.type === 'js' && b.env.sourceType === 'script')
             .filePath,
         )}"`,
       ),
@@ -87,7 +87,7 @@ describe('svg', function () {
         `<script href="/${path.basename(
           b
             .getBundles()
-            .find(b => b.type === 'js' && b.env.sourceType === 'module')
+            .find((b) => b.type === 'js' && b.env.sourceType === 'module')
             .filePath,
         )}"`,
       ),
@@ -95,7 +95,7 @@ describe('svg', function () {
     assert(
       file.includes(
         `<?xml-stylesheet href="/${path.basename(
-          b.getBundles().find(b => b.type === 'css').filePath,
+          b.getBundles().find((b) => b.type === 'css').filePath,
         )}"?>`,
       ),
     );
@@ -109,7 +109,7 @@ describe('svg', function () {
     });
 
     let file = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'svg').filePath,
+      b.getBundles().find((b) => b.type === 'svg').filePath,
       'utf-8',
     );
     assert(!file.includes('comment'));
@@ -126,7 +126,7 @@ describe('svg', function () {
     );
 
     let file = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'svg').filePath,
+      b.getBundles().find((b) => b.type === 'svg').filePath,
       'utf-8',
     );
     assert(!file.includes('inkscape'));
@@ -156,7 +156,7 @@ describe('svg', function () {
       ]);
 
       let file = await outputFS.readFile(
-        b.getBundles().find(b => b.type === 'svg').filePath,
+        b.getBundles().find((b) => b.type === 'svg').filePath,
         'utf-8',
       );
 
@@ -200,7 +200,7 @@ describe('svg', function () {
     assert(
       svg.includes(
         `"fill: url(&quot;${path.basename(
-          b.getBundles().find(b => b.name.startsWith('gradient')).filePath,
+          b.getBundles().find((b) => b.name.startsWith('gradient')).filePath,
         )}#myGradient&quot;)`,
       ),
     );

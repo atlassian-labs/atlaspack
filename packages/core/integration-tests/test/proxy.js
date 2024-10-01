@@ -37,10 +37,10 @@ function get(file, port, client = http) {
         path: file,
         rejectUnauthorized: false,
       },
-      res => {
+      (res) => {
         res.setEncoding('utf8');
         let data = '';
-        res.on('data', c => (data += c));
+        res.on('data', (c) => (data += c));
         res.on('end', () => {
           if (res.statusCode !== 200) {
             return reject({statusCode: res.statusCode, data});

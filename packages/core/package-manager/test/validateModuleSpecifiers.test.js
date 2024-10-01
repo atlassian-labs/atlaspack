@@ -15,7 +15,7 @@ describe('Validate Module Specifiers', () => {
     ];
 
     assert.deepEqual(
-      modules.map(module => validateModuleSpecifier(module)),
+      modules.map((module) => validateModuleSpecifier(module)),
       [
         '@atlaspack/transformer-posthtml',
         '@some-org/package@v1.0.0',
@@ -31,7 +31,7 @@ describe('Validate Module Specifiers', () => {
     let modules = ['./somewhere.js', './hello/world.js', '~/hello/world.js'];
 
     assert.deepEqual(
-      modules.map(module => validateModuleSpecifier(module)),
+      modules.map((module) => validateModuleSpecifier(module)),
       ['', '', ''],
     );
   });

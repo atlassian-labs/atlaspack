@@ -49,12 +49,12 @@ function compactDeep(
     });
     return copy;
   } else if (Array.isArray(obj)) {
-    return obj.map(v => compactDeep(v, ignoredPatterns, `${currentPath}[]`));
+    return obj.map((v) => compactDeep(v, ignoredPatterns, `${currentPath}[]`));
   } else if (typeof obj === 'object') {
     const copy = {};
     Object.entries(obj ?? {}).forEach(([key, value]) => {
       const path = `${currentPath}.${key}`;
-      if (ignoredPatterns.some(pattern => path.includes(pattern))) {
+      if (ignoredPatterns.some((pattern) => path.includes(pattern))) {
         return;
       }
       // Equivalent false == null
@@ -73,10 +73,10 @@ function compactDeep(
 }
 
 function assetGraphDiff(jsAssetGraph: AssetGraph, rustAssetGraph: AssetGraph) {
-  const getNodes = graph => {
+  const getNodes = (graph) => {
     let nodes = {};
 
-    graph.traverse(nodeId => {
+    graph.traverse((nodeId) => {
       let node: AssetGraphNode | null = graph.getNode(nodeId) ?? null;
       if (!node) return;
 

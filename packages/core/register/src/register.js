@@ -66,7 +66,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
 
       if (result.assets && result.assets.length >= 1) {
         let output = '';
-        let asset = result.assets.find(a => a.type === 'js');
+        let asset = result.assets.find((a) => a.type === 'js');
         if (asset) {
           output = await asset.getCode();
         }

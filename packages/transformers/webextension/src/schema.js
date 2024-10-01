@@ -6,7 +6,8 @@ const validateVersion = (ver: string): ?string => {
   if (parts.length == 5) return 'Extension versions to have at most three dots';
   if (
     parts.every(
-      part => part.length != 0 && Number(part[0]) >= 0 && Number(part) < 65536,
+      (part) =>
+        part.length != 0 && Number(part[0]) >= 0 && Number(part) < 65536,
     )
   )
     return;

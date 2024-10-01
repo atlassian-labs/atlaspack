@@ -568,11 +568,13 @@ export class MemoryFS implements FileSystem {
   async _sendWorkerEvent(event: WorkerEvent) {
     // Wait for worker instances to register their handles
     while (this._workerHandles.length < this._numWorkerInstances) {
-      await new Promise(resolve => this._workerRegisterResolves.push(resolve));
+      await new Promise((resolve) =>
+        this._workerRegisterResolves.push(resolve),
+      );
     }
 
     await Promise.all(
-      this._workerHandles.map(workerHandle =>
+      this._workerHandles.map((workerHandle) =>
         this.farm.workerApi.runHandle(workerHandle, [event]),
       ),
     );
@@ -618,7 +620,7 @@ export class MemoryFS implements FileSystem {
     let ignore = opts.ignore;
     if (ignore) {
       events = events.filter(
-        event => !ignore.some(i => event.path.startsWith(i + path.sep)),
+        (event) => !ignore.some((i) => event.path.startsWith(i + path.sep)),
       );
     }
 
@@ -662,7 +664,7 @@ class Watcher {
     let ignore = this.options.ignore;
     if (ignore) {
       events = events.filter(
-        event => !ignore.some(i => event.path.startsWith(i + path.sep)),
+        (event) => !ignore.some((i) => event.path.startsWith(i + path.sep)),
       );
     }
 
@@ -704,12 +706,12 @@ class ReadStream extends Readable {
 
     this.reading = true;
     this.fs.readFile(this.filePath).then(
-      res => {
+      (res) => {
         this.bytesRead += res.byteLength;
         this.push(res);
         this.push(null);
       },
-      err => {
+      (err) => {
         this.emit('error', err);
       },
     );
@@ -965,7 +967,7 @@ class WorkerFS extends MemoryFS {
       WorkerFarm.getWorkerApi().runHandle(handle, [methodName, args]);
 
     this.handleFn('_registerWorker', [
-      WorkerFarm.getWorkerApi().createReverseHandle(event => {
+      WorkerFarm.getWorkerApi().createReverseHandle((event) => {
         switch (event.type) {
           case 'writeFile':
             this.files.set(event.path, event.entry);
