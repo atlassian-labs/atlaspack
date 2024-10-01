@@ -8,7 +8,7 @@ import type {
   Dependency,
   FilePath,
 } from '@atlaspack/types';
-import {workerData} from 'worker_threads';
+import {workerData, threadId} from 'worker_threads';
 import * as module from 'module';
 
 import {AssetCompat} from './compat';
@@ -32,9 +32,23 @@ export class AtlaspackWorker {
       // $FlowFixMe
       let resolvedModule = await import(resolvedPath);
 
+      let instance = undefined;
+      if (CONFIG in resolvedModule.default) {
+        instance = resolvedModule.default[CONFIG];
+      } else if (
+        'default' in resolvedModule &&
+        CONFIG in resolvedModule.default.default
+      ) {
+        instance = resolvedModule.default.default[CONFIG];
+      } else {
+        throw new Error(
+          `Plugin could not be resolved\n\t${kind}\n\t${resolveFrom}\n\t${specifier}`,
+        );
+      }
+
       switch (kind) {
         case 'resolver':
-          this.#resolvers.set(specifier, resolvedModule.default[CONFIG]);
+          this.#resolvers.set(specifier, instance);
           break;
       }
     },
@@ -44,9 +58,10 @@ export class AtlaspackWorker {
     [RunResolverResolveOptions],
     Promise<RunResolverResolveResult>,
   > = jsCallable(async ({key, dependency, specifier}) => {
+    // console.log({threadId, key, specifier, resolvers: this.#resolvers })
     const resolver = this.#resolvers.get(key);
     if (!resolver) {
-      throw new Error('Resolver not found');
+      throw new Error(`Resolver not found: ${key}`);
     }
 
     const result = await resolver.resolve({
