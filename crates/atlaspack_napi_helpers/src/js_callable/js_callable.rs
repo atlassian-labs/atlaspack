@@ -10,6 +10,7 @@ use napi::Env;
 use napi::JsFunction;
 use napi::JsObject;
 use napi::JsUnknown;
+use napi::ValueType;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -18,7 +19,7 @@ use super::map_return_serde;
 use super::JsValue;
 
 pub type MapJsParams = Box<dyn FnOnce(&Env) -> napi::Result<Vec<JsUnknown>> + 'static>;
-pub type MapJsReturn<Return> = Box<dyn Fn(&Env, JsUnknown) -> napi::Result<Return> + 'static>;
+pub type MapJsReturn<Return> = Box<dyn Fn(&Env, JsUnknown) -> anyhow::Result<Return> + 'static>;
 
 /// JsCallable provides a Send + Sync wrapper around callable JavaScript functions
 ///
@@ -78,78 +79,53 @@ impl JsCallable {
     Ok(self)
   }
 
-  /// Call JavaScript function and discard return value
-  pub fn call(
-    &self,
-    map_params: impl FnOnce(&Env) -> napi::Result<Vec<JsUnknown>> + 'static,
-  ) -> napi::Result<()> {
-    #[cfg(debug_assertions)]
-    if self.initial_thread == std::thread::current().id() {
-      return Err(napi::Error::from_reason(format!(
-        "Cannot run threadsafe function {} on main thread",
-        self.name
-      )));
-    }
-
-    self
-      .threadsafe_function
-      .call(Box::new(map_params), ThreadsafeFunctionCallMode::Blocking);
-
-    Ok(())
-  }
-
-  pub fn call_serde<Params>(&self, params: Params) -> napi::Result<()>
-  where
-    Params: Serialize + Send + Sync + 'static,
-  {
-    self.call(map_params_serde(params))
-  }
-
   /// Call JavaScript function and handle the return value
-  pub fn call_with_return<Return>(
+  pub fn call<Return>(
     &self,
     map_params: impl FnOnce(&Env) -> napi::Result<Vec<JsUnknown>> + 'static,
-    map_return: impl Fn(&Env, JsUnknown) -> napi::Result<Return> + 'static,
-  ) -> napi::Result<Return>
+    map_return: impl Fn(&Env, JsUnknown) -> anyhow::Result<Return> + 'static,
+  ) -> anyhow::Result<Return>
   where
     Return: Send + 'static,
   {
     #[cfg(debug_assertions)]
     if self.initial_thread == std::thread::current().id() {
-      return Err(napi::Error::from_reason(format!(
+      anyhow::bail!(
         "Cannot run threadsafe function {} on main thread",
         self.name
-      )));
+      );
     }
 
-    let (tx, rx) = channel();
+    let (tx, rx) = channel::<anyhow::Result<Return>>();
 
     self.threadsafe_function.call_with_return_value(
       Box::new(map_params),
       ThreadsafeFunctionCallMode::NonBlocking,
       move |JsValue(value, env)| {
-        if value.is_promise()? {
-          let result: JsObject = value.try_into()?;
-          let then: JsFunction = result.get_named_property("then")?;
+        let container: JsObject = value.try_into()?;
+        let then_fn: JsFunction = container.get_named_property("then")?;
 
-          let tx2 = tx.clone();
-          let cb = env.create_function_from_closure("callback", move |ctx| {
-            tx.send(map_return(&env, ctx.get::<JsUnknown>(0)?)).unwrap();
+        let then_callback = env.create_function_from_closure("callback", {
+          let tx = tx.clone();
+          move |ctx| {
+            // Return [bool, promise]
+            let container = ctx.get::<JsObject>(0)?;
+
+            let error = container.get_element::<JsUnknown>(0)?;
+
+            if let ValueType::Null = error.get_type()? {
+              let value = container.get_element::<JsUnknown>(1)?;
+              tx.send(map_return(&env, value)).unwrap();
+            } else {
+              let error_value = env.from_js_value::<String, JsUnknown>(error)?;
+              tx.send(Err(anyhow::anyhow!(error_value))).unwrap();
+            }
+
             ctx.env.get_undefined()
-          })?;
+          }
+        })?;
 
-          let eb = env.create_function_from_closure("error_callback", move |ctx| {
-            let err = napi::Error::from(ctx.get::<JsUnknown>(0)?);
-            tx2.send(Err(err)).expect("send failure");
-            ctx.env.get_undefined()
-          })?;
-
-          then.call(Some(&result), &[cb, eb])?;
-        } else if value.is_error()? {
-          tx.send(Err(napi::Error::from(value))).unwrap();
-        } else {
-          tx.send(map_return(&env, value)).unwrap();
-        }
+        then_fn.call(Some(&container), &[then_callback])?;
         Ok(())
       },
     );
@@ -157,11 +133,11 @@ impl JsCallable {
     rx.recv().unwrap()
   }
 
-  pub fn call_with_return_serde<Params, Return>(&self, params: Params) -> napi::Result<Return>
+  pub fn call_serde<Params, Return>(&self, params: Params) -> anyhow::Result<Return>
   where
     Params: Serialize + Send + Sync + 'static,
     Return: Send + DeserializeOwned + 'static,
   {
-    self.call_with_return(map_params_serde(params), map_return_serde())
+    self.call(map_params_serde(params), map_return_serde())
   }
 }

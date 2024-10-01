@@ -24,12 +24,19 @@ export interface ConfigRequest {
 }
 export interface RequestOptions {}
 
+export type IsOk = boolean;
+
+export type JsCallable<Args: $ReadOnlyArray<mixed>, Return> = (
+  ...Args
+) => [IsOk, Return] | Promise<[IsOk, Return]>;
+
 export interface FileSystem {
-  canonicalize(path: FilePath): FilePath;
-  cwd(): FilePath;
-  isDir(path: FilePath): boolean;
-  isFile(path: FilePath): boolean;
-  readFile(path: FilePath, encoding?: Encoding): string;
+  canonicalize: JsCallable<[FilePath], FilePath>;
+  cwd: JsCallable<[], FilePath>;
+  isDir: JsCallable<[FilePath], boolean>;
+  isFile: JsCallable<[FilePath], boolean>;
+  readFile: JsCallable<[FilePath], Array<number>>;
+  readFile: JsCallable<[FilePath, Encoding], string>;
 }
 
 export type AtlaspackNapiOptions = {|

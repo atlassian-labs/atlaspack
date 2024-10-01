@@ -1,5 +1,4 @@
 use atlaspack_core::plugin::Resolved;
-use atlaspack_napi_helpers::anyhow_from_napi;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use napi::{JsObject, JsUnknown};
 
@@ -32,34 +31,22 @@ impl NodejsWorker {
 
 impl RpcWorker for NodejsWorker {
   fn ping(&self) -> anyhow::Result<()> {
-    self
-      .ping_fn
-      .call_with_return(
-        |_env| Ok(Vec::<JsUnknown>::new()),
-        |_env, _| Ok(Vec::<()>::new()),
-      )
-      .map_err(anyhow_from_napi)?;
+    self.ping_fn.call(
+      |_env| Ok(Vec::<JsUnknown>::new()),
+      |_env, _| Ok(Vec::<()>::new()),
+    )?;
     Ok(())
   }
 
   fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
-    self
-      .load_plugin_fn
-      .call_with_return_serde(opts)
-      .map_err(anyhow_from_napi)
+    self.load_plugin_fn.call_serde(opts)
   }
 
   fn run_resolver_resolve(&self, opts: RunResolverResolve) -> anyhow::Result<Resolved> {
-    self
-      .run_resolver_resolve_fn
-      .call_with_return_serde(opts)
-      .map_err(anyhow_from_napi)
+    self.run_resolver_resolve_fn.call_serde(opts)
   }
 
   fn run_transformer(&self, opts: RpcTransformerOpts) -> anyhow::Result<RpcTransformerResult> {
-    self
-      .transformer_register_fn
-      .call_with_return_serde(opts)
-      .map_err(anyhow_from_napi)
+    self.transformer_register_fn.call_serde(opts)
   }
 }

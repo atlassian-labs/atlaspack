@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use anyhow::anyhow;
 use napi::{Env, JsObject};
 
 use atlaspack_napi_helpers::js_callable::JsCallable;
@@ -23,7 +22,6 @@ impl PackageManager for PackageManagerNapi {
   fn resolve(&self, specifier: &str, from: &Path) -> anyhow::Result<Resolution> {
     self
       .resolve_fn
-      .call_with_return_serde((specifier.to_owned(), from.to_path_buf()))
-      .map_err(|e| anyhow!(e))
+      .call_serde((specifier.to_owned(), from.to_path_buf()))
   }
 }

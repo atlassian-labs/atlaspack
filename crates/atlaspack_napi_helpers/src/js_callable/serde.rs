@@ -35,5 +35,8 @@ pub fn map_return_serde<Return>() -> MapJsReturn<Return>
 where
   Return: Send + DeserializeOwned + 'static,
 {
-  Box::new(move |env, value| env.from_js_value(&value))
+  Box::new(move |env, value| match env.from_js_value(&value) {
+    Ok(result) => Ok(result),
+    Err(err) => Err(anyhow::anyhow!(err.to_string())),
+  })
 }
