@@ -1,6 +1,6 @@
-use std::cell::RefMut;
+use std::cell::RefCell;
 use std::io::BufReader;
-use std::ops::{Deref, DerefMut};
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -9,34 +9,53 @@ use html5ever::serialize::SerializeOpts;
 use html5ever::tendril::fmt::UTF8;
 use html5ever::tendril::TendrilSink;
 use html5ever::{serialize, ParseOpts};
-use markup5ever::interface::ElemName;
 use markup5ever::tendril::Tendril;
 use markup5ever::{
   expanded_name, local_name, namespace_url, ns, Attribute, ExpandedName, QualName,
 };
 use markup5ever_rcdom::{Node, NodeData, RcDom, SerializableHandle};
 
-use atlaspack_core::plugin::{TransformResult, TransformerPlugin};
+use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{
-  Asset, AssetId, BundleBehavior, Code, Dependency, Environment, OutputFormat, Priority,
+  Asset, AssetId, BundleBehavior, Code, Dependency, Environment, FileType, OutputFormat, Priority,
   SourceType, SpecifierType,
 };
 
 #[derive(Debug)]
-struct AtlaspackHtmlTransformerPlugin {}
+pub struct AtlaspackHtmlTransformerPlugin {}
+
+impl AtlaspackHtmlTransformerPlugin {
+  pub fn new(_ctx: &PluginContext) -> Self {
+    AtlaspackHtmlTransformerPlugin {}
+  }
+}
 
 impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
-  fn transform(&mut self, input: Asset) -> Result<TransformResult, Error> {
+  fn transform(
+    &mut self,
+    context: TransformContext,
+    input: Asset,
+  ) -> Result<TransformResult, Error> {
     let bytes: &[u8] = input.code.bytes();
     let mut dom = parse_html(bytes)?;
-    extract_dependencies(&mut dom);
+    let context = HTMLTransformationContext {
+      source_asset_id: Some(input.id.clone()),
+      source_path: Some(input.file_path.clone()),
+      env: context.env().clone(),
+      // TODO: Where is this?
+      enable_hmr: false,
+    };
+    let ExtractDependenciesOutput { dependencies, .. } =
+      run_html_transformations(context, &mut dom);
     let output_bytes = serialize_html(dom)?;
 
     let mut asset = input;
+    asset.bundle_behavior = Some(BundleBehavior::Isolated);
     asset.code = Arc::new(Code::new(output_bytes));
 
     Ok(TransformResult {
       asset,
+      dependencies,
       ..Default::default()
     })
   }
@@ -45,7 +64,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
 fn serialize_html(dom: RcDom) -> Result<Vec<u8>, Error> {
   let document: SerializableHandle = dom.document.clone().into();
   let mut output_bytes = vec![];
-  let mut options = SerializeOpts::default();
+  let options = SerializeOpts::default();
   serialize(&mut output_bytes, &document, options)?;
   Ok(output_bytes)
 }
@@ -60,14 +79,23 @@ fn parse_html(bytes: &[u8]) -> Result<RcDom, Error> {
   Ok(dom)
 }
 
+#[derive(PartialEq, Eq)]
+enum DomTraversalOperation {
+  Continue,
+  Stop,
+}
+
 trait DomVisitor {
-  fn visit_node(&mut self, node: &Node);
+  fn visit_node(&mut self, node: &Node) -> DomTraversalOperation;
 }
 
 fn walk(node: Rc<Node>, visitor: &mut impl DomVisitor) {
   let mut queue = vec![node.clone()];
   while let Some(node) = queue.pop() {
-    visitor.visit_node(&node);
+    let operation = visitor.visit_node(&node);
+    if operation == DomTraversalOperation::Stop {
+      break;
+    }
     let borrow = node.children.borrow();
     for child in borrow.iter() {
       queue.push(child.clone());
@@ -76,11 +104,11 @@ fn walk(node: Rc<Node>, visitor: &mut impl DomVisitor) {
 }
 
 struct AttrWrapper<'a> {
-  attributes: RefMut<'a, Vec<Attribute>>,
+  attributes: &'a mut Vec<Attribute>,
 }
 
 impl<'a> AttrWrapper<'a> {
-  pub fn new(attributes: RefMut<'a, Vec<Attribute>>) -> Self {
+  pub fn new(attributes: &'a mut Vec<Attribute>) -> Self {
     Self { attributes }
   }
 
@@ -93,8 +121,8 @@ impl<'a> AttrWrapper<'a> {
   }
 
   pub fn delete(&mut self, name: ExpandedName) {
-    let attributes = self.attributes.deref_mut();
-    *attributes = attributes
+    *self.attributes = self
+      .attributes
       .iter()
       .filter(|attr| attr.name.expanded() != name)
       .cloned()
@@ -109,8 +137,7 @@ impl<'a> AttrWrapper<'a> {
     {
       attribute.value = value.into();
     } else {
-      let attributes = self.attributes.deref_mut();
-      attributes.push(Attribute {
+      self.attributes.push(Attribute {
         name: QualName::new(None, name.ns.clone(), name.local.clone()),
         value: value.into(),
       });
@@ -118,16 +145,25 @@ impl<'a> AttrWrapper<'a> {
   }
 }
 
+/// Find all <script ...>, <link ...>, <a ...> etc. tags and create dependencies
+/// that correspond to them.
 #[derive(Default)]
 struct ExtractDependencies {
-  should_scope_hoist: bool,
+  context: Rc<HTMLTransformationContext>,
   dependencies: Vec<Dependency>,
-  source_asset_id: Option<AssetId>,
-  env: Arc<Environment>,
+}
+
+impl ExtractDependencies {
+  fn new(context: Rc<HTMLTransformationContext>) -> Self {
+    ExtractDependencies {
+      context,
+      ..Default::default()
+    }
+  }
 }
 
 impl DomVisitor for ExtractDependencies {
-  fn visit_node(&mut self, node: &Node) {
+  fn visit_node(&mut self, node: &Node) -> DomTraversalOperation {
     match &node.data {
       NodeData::Document => {}
       NodeData::Doctype { .. } => {}
@@ -139,8 +175,8 @@ impl DomVisitor for ExtractDependencies {
         // TODO: Handle link
         expanded_name!(html "link") => {}
         expanded_name!(html "script") => {
-          let attrs = attrs.borrow_mut();
-          let mut attrs = AttrWrapper::new(attrs);
+          let mut attrs = attrs.borrow_mut();
+          let mut attrs = AttrWrapper::new(&mut *attrs);
           if let Some(src_value) = attrs.get(expanded_name!("", "src")) {
             let src_string = src_value.to_string();
             let source_type = if attrs.get(expanded_name!("", "type")) == Some(&"module".into()) {
@@ -149,9 +185,9 @@ impl DomVisitor for ExtractDependencies {
               SourceType::Script
             };
 
-            let mut output_format = OutputFormat::Global;
-            if self.should_scope_hoist {
-              output_format = OutputFormat::EsModule;
+            let mut _output_format = OutputFormat::Global;
+            if self.context.env.should_scope_hoist {
+              _output_format = OutputFormat::EsModule;
             } else {
               if source_type == SourceType::Module {
                 attrs.set(expanded_name!("", "defer"), "");
@@ -165,16 +201,17 @@ impl DomVisitor for ExtractDependencies {
               specifier: src_string,
               specifier_type: SpecifierType::Url,
               priority: Priority::Parallel,
-              source_asset_id: self.source_asset_id.clone(),
-              env: self.env.clone(),
-              // TODO: Set this
-              source_path: None,
+              source_asset_type: Some(FileType::Html),
+              source_path: self.context.source_path.clone(),
+              source_asset_id: self.context.source_asset_id.clone(),
+              env: self.context.env.clone(),
+              is_esm: source_type == SourceType::Module,
               bundle_behavior: if source_type == SourceType::Script
                 && attrs.get(expanded_name!("", "async")).is_some()
               {
-                BundleBehavior::Isolated
+                Some(BundleBehavior::Isolated)
               } else {
-                BundleBehavior::None
+                None
               },
               ..Default::default()
             };
@@ -187,13 +224,96 @@ impl DomVisitor for ExtractDependencies {
       },
       NodeData::ProcessingInstruction { .. } => {}
     }
+
+    DomTraversalOperation::Continue
   }
 }
 
-fn extract_dependencies(dom: &mut RcDom) {
+struct ExtractDependenciesOutput {
+  dependencies: Vec<Dependency>,
+}
+
+#[derive(Default)]
+struct HTMLTransformationContext {
+  source_path: Option<PathBuf>,
+  source_asset_id: Option<AssetId>,
+  env: Arc<Environment>,
+  enable_hmr: bool,
+}
+
+/// Insert a tag for HMR and create its dependency/asset
+struct HMRVisitor {
+  context: Rc<HTMLTransformationContext>,
+}
+
+impl HMRVisitor {
+  fn new(context: Rc<HTMLTransformationContext>) -> Self {
+    Self { context }
+  }
+}
+
+impl DomVisitor for HMRVisitor {
+  fn visit_node(&mut self, node: &Node) -> DomTraversalOperation {
+    match &node.data {
+      NodeData::Element { name, .. } => {
+        if name.expanded() == expanded_name!(html "body") {
+          let mut children = node.children.borrow_mut();
+          let mut attrs = vec![];
+          {
+            let mut attrs = AttrWrapper::new(&mut attrs);
+            let dependency = Dependency {
+              specifier: "".to_owned(),
+              specifier_type: SpecifierType::Url,
+              priority: Priority::Parallel,
+              source_asset_id: self.context.source_asset_id.clone(),
+              env: self.context.env.clone(),
+              source_asset_type: Some(FileType::Html),
+              source_path: self.context.source_path.clone(),
+              ..Default::default()
+            };
+            let dependency_id = dependency.id();
+            attrs.set(expanded_name!("", "src"), &dependency_id);
+          }
+
+          let script_node = Node::new(NodeData::Element {
+            name: QualName::new(None, ns!(html), local_name!("script")),
+            attrs: RefCell::new(attrs),
+            template_contents: RefCell::new(None),
+            mathml_annotation_xml_integration_point: false,
+          });
+          children.push(script_node);
+          DomTraversalOperation::Stop
+        } else {
+          DomTraversalOperation::Continue
+        }
+      }
+      _ => DomTraversalOperation::Continue,
+    }
+  }
+}
+
+/// 'Purer' entry-point for all HTML transformations. Do split transformations
+/// into smaller functions/visitors rather than doing everything in one pass.
+fn run_html_transformations(
+  context: HTMLTransformationContext,
+  dom: &mut RcDom,
+) -> ExtractDependenciesOutput {
   let node = dom.document.clone();
-  let mut visitor = ExtractDependencies::default();
-  walk(node, &mut visitor);
+  let context = Rc::new(context);
+
+  // Note that HTML5EVER rc-dom uses interior mutability, so these Rc<...>
+  // values are actually mutable and changing at each step.
+  let mut visitor = ExtractDependencies::new(context.clone());
+  walk(node.clone(), &mut visitor);
+
+  if context.enable_hmr {
+    let mut hmr_visitor = HMRVisitor::new(context);
+    walk(node, &mut hmr_visitor);
+  }
+
+  ExtractDependenciesOutput {
+    dependencies: visitor.dependencies,
+  }
 }
 
 #[cfg(test)]
@@ -211,7 +331,11 @@ mod test {
     "#
     .trim();
     let mut dom = parse_html(bytes.as_bytes()).unwrap();
-    extract_dependencies(&mut dom);
+    let mut context = HTMLTransformationContext::default();
+    Arc::get_mut(&mut context.env).unwrap().should_optimize = false;
+    Arc::get_mut(&mut context.env).unwrap().should_scope_hoist = false;
+
+    run_html_transformations(context, &mut dom);
     let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
     assert_eq!(
       &normalize_html(&html),
@@ -219,7 +343,36 @@ mod test {
         r#"
 <html>
   <body>
-    <script src="4d82d7c15de63fc0"></script>
+    <script src="58210649f694bf7e"></script>
+  </body>
+</html>
+    "#
+      )
+    );
+  }
+
+  #[test]
+  fn test_insert_hmr_tag() {
+    let bytes = r#"
+<html>
+  <body>
+  </body>
+</html>
+    "#
+    .trim();
+    let mut dom = parse_html(bytes.as_bytes()).unwrap();
+    let mut context = HTMLTransformationContext::default();
+    context.enable_hmr = true;
+
+    run_html_transformations(context, &mut dom);
+    let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+    assert_eq!(
+      &normalize_html(&html),
+      &normalize_html(
+        r#"
+<html>
+  <body>
+    <script src="e4b9d27bade2678d"></script>
   </body>
 </html>
     "#

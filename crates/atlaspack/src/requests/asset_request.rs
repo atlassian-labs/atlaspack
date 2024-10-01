@@ -1,6 +1,7 @@
 use atlaspack_core::plugin::AssetBuildEvent;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
+use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::types::AssetStats;
 use atlaspack_core::types::Dependency;
@@ -24,6 +25,7 @@ use super::RequestResult;
 /// - Finally, returns the complete Asset and it's discovered Dependencies
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct AssetRequest {
+  pub project_root: PathBuf,
   pub code: Option<String>,
   pub env: Arc<Environment>,
   pub file_path: PathBuf,
@@ -56,6 +58,7 @@ impl Request for AssetRequest {
       .transformers(&self.file_path, self.pipeline.clone())?;
 
     let asset = Asset::new(
+      &self.project_root,
       self.env.clone(),
       self.file_path.clone(),
       self.code.clone(),
@@ -65,18 +68,22 @@ impl Request for AssetRequest {
       request_context.file_system().clone(),
     )?;
 
-    let result = run_pipeline(pipeline, asset, request_context.plugins().clone())?;
+    let transform_context = TransformContext::new(self.env.clone());
+    let mut result = run_pipeline(
+      transform_context,
+      pipeline,
+      asset,
+      request_context.plugins().clone(),
+    )?;
+
+    result.asset.stats = AssetStats {
+      size: result.asset.code.size(),
+      time: 0,
+    };
 
     Ok(ResultAndInvalidations {
       result: RequestResult::Asset(AssetRequestOutput {
-        asset: Asset {
-          stats: AssetStats {
-            // TODO: Does the size of the discovered assets belong to the original asset or the new asset
-            size: result.asset.code.size(),
-            time: 0,
-          },
-          ..result.asset
-        },
+        asset: result.asset,
         // TODO: Need to decide whether a discovered asset will belong to the asset graph as it's own node
         discovered_assets: result.discovered_assets,
         dependencies: result.dependencies,
@@ -91,6 +98,7 @@ impl Request for AssetRequest {
 }
 
 pub fn run_pipeline(
+  transform_context: TransformContext,
   mut pipeline: TransformerPipeline,
   input: Asset,
   plugins: PluginsRef,
@@ -108,7 +116,7 @@ pub fn run_pipeline(
     let mut current_asset = asset_to_modify.clone();
 
     for transformer in pipeline.transformers_mut() {
-      let transform_result = transformer.transform(current_asset)?;
+      let transform_result = transformer.transform(transform_context.clone(), current_asset)?;
       let is_different_asset_type = transform_result.asset.file_type != original_asset_type;
       current_asset = transform_result.asset;
 
@@ -160,7 +168,8 @@ mod tests {
 
     let asset = Asset::default();
     let plugins = Arc::new(MockPlugins::new());
-    let result = run_pipeline(pipeline, asset, plugins).unwrap();
+    let context = TransformContext::default();
+    let result = run_pipeline(context, pipeline, asset, plugins).unwrap();
 
     assert_eq!(
       String::from_utf8(result.asset.code.bytes().to_vec()).unwrap(),
@@ -181,7 +190,8 @@ mod tests {
     let expected_discovered_assets = vec![Asset::default()];
     let expected_dependencies = vec![Dependency::default()];
     let expected_invalidations = vec![PathBuf::from("./tmp")];
-    let result = run_pipeline(pipeline, asset, plugins).unwrap();
+    let context = TransformContext::default();
+    let result = run_pipeline(context, pipeline, asset, plugins).unwrap();
     assert_eq!(
       String::from_utf8(result.asset.code.bytes().to_vec()).unwrap(),
       "::transformer"
@@ -212,7 +222,7 @@ mod tests {
       .expect_transform()
       .return_once({
         let label = label.clone();
-        move |mut asset: Asset| {
+        move |_context, mut asset: Asset| {
           asset.code = Arc::new(Code::from(format!(
             "{}::{}",
             String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
@@ -243,7 +253,7 @@ mod tests {
           })
         }
       })
-      .returning(move |asset: Asset| get_simple_transformer(label.clone(), asset));
+      .returning(move |_context, asset: Asset| get_simple_transformer(label.clone(), asset));
     Box::new(mock)
   }
 

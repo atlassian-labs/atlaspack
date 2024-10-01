@@ -1,17 +1,10 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
-use atlaspack_core::types::{
-  engines::Engines, Asset, BundleBehavior, Code, EnvironmentContext, FileType, IncludeNodeModules,
-  JSONObject, OutputFormat, SourceLocation, SourceType, Symbol,
-};
-use serde::{Deserialize, Serialize};
+use atlaspack_core::types::engines::Engines;
+use atlaspack_core::types::*;
 
-pub type RpcHostRef = Arc<dyn RpcHost>;
-pub type RpcWorkerRef = Arc<dyn RpcWorker>;
-
-pub trait RpcHost: Send + Sync {
-  fn start(&self) -> anyhow::Result<RpcWorkerRef>;
-}
+use serde::Deserialize;
+use serde::Serialize;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,7 +22,7 @@ pub struct RpcPluginOptions {
 
 /// This Asset mostly replicates the core Asset type however it only features
 /// fields that can be modified by transformers
-#[derive(Default, PartialEq, Clone, Debug, Deserialize, Serialize)]
+#[derive(PartialEq, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RpcAssetResult {
   pub id: String,
@@ -78,9 +71,4 @@ pub struct RpcTransformerOpts {
 #[serde(rename_all = "camelCase")]
 pub struct RpcTransformerResult {
   pub asset: RpcAssetResult,
-}
-
-pub trait RpcWorker: Send + Sync {
-  fn ping(&self) -> anyhow::Result<()>;
-  fn run_transformer(&self, opts: RpcTransformerOpts) -> anyhow::Result<RpcTransformerResult>;
 }

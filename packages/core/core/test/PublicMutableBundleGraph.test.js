@@ -8,12 +8,15 @@ import InternalBundleGraph from '../src/BundleGraph';
 import MutableBundleGraph from '../src/public/MutableBundleGraph';
 import {DEFAULT_ENV, DEFAULT_TARGETS, DEFAULT_OPTIONS} from './test-utils';
 import AssetGraph, {nodeFromAssetGroup} from '../src/AssetGraph';
-import {createAsset as _createAsset} from '../src/assetUtils';
+import {
+  createAsset as _createAsset,
+  type AssetOptions,
+} from '../src/assetUtils';
 import {createDependency as _createDependency} from '../src/Dependency';
 import nullthrows from 'nullthrows';
 import {toProjectPath} from '../src/projectPath';
 
-function createAsset(opts) {
+function createAsset(opts: AssetOptions) {
   return _createAsset('/', opts);
 }
 
@@ -139,14 +142,14 @@ function createMockAssetGraph() {
 
   let dep1 = createDependency({
     specifier: 'path/to/index/src/main.js',
-    specifierType: 'esm',
+    specifierType: 'url',
     needsStableName: true,
     env: DEFAULT_ENV,
     target: DEFAULT_TARGETS[0],
   });
   let dep2 = createDependency({
     specifier: 'path/to/index/src/main2.js',
-    specifierType: 'esm',
+    specifierType: 'url',
     needsStableName: true,
     env: DEFAULT_ENV,
     target: DEFAULT_TARGETS[0],
@@ -160,6 +163,7 @@ function createMockAssetGraph() {
     [
       createAsset({
         id: id1,
+        code: null,
         filePath,
         type: 'js',
         isSource: true,
@@ -178,6 +182,7 @@ function createMockAssetGraph() {
     [
       createAsset({
         id: id2,
+        code: null,
         filePath,
         type: 'js',
         isSource: true,

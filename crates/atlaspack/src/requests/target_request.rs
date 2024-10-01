@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::hash::Hash;
 use std::path::Path;
 use std::path::PathBuf;
@@ -6,7 +6,9 @@ use std::sync::Arc;
 
 use atlaspack_core::config_loader::ConfigFile;
 use atlaspack_core::diagnostic_error;
+use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::Engines;
+use atlaspack_core::types::engines::EnginesBrowsers;
 use atlaspack_core::types::BuildMode;
 use atlaspack_core::types::CodeFrame;
 use atlaspack_core::types::DefaultTargetOptions;
@@ -43,20 +45,12 @@ mod package_json;
 ///
 /// Targets will be generated from the project package.json file and input Atlaspack options.
 ///
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct TargetRequest {
   pub default_target_options: DefaultTargetOptions,
   pub entry: Entry,
-  pub env: Option<HashMap<String, String>>,
+  pub env: Option<BTreeMap<String, String>>,
   pub mode: BuildMode,
-}
-
-impl Hash for TargetRequest {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    self.default_target_options.hash(state);
-    self.entry.hash(state);
-    self.mode.hash(state);
-  }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -164,11 +158,10 @@ impl TargetRequest {
     // If there is a separate `browser` target, or an `engines.node` field but no browser
     // targets, then the target refers to node, otherwise browser.
     if package_json.browser.is_some() || package_json.targets.browser.is_some() {
-      if package_json
-        .engines
-        .as_ref()
-        .is_some_and(|e| e.node.is_some() && e.browsers.is_empty())
-      {
+      if package_json.engines.as_ref().is_some_and(|e| {
+        let browsers = e.browsers.clone().unwrap_or_default();
+        e.node.is_some() && Browsers::from(browsers).is_empty()
+      }) {
         return EnvironmentContext::Node;
       } else {
         return EnvironmentContext::Browser;
@@ -249,12 +242,10 @@ impl TargetRequest {
       Ok(pkg) => pkg,
     };
 
-    if package_json
-      .contents
-      .engines
-      .as_ref()
-      .is_some_and(|e| !e.browsers.is_empty())
-    {
+    if package_json.contents.engines.as_ref().is_some_and(|e| {
+      let browsers = e.browsers.clone().unwrap_or_default();
+      !Browsers::from(browsers).is_empty()
+    }) {
       return Ok(package_json);
     }
 
@@ -279,7 +270,7 @@ impl TargetRequest {
         };
 
         package_json.contents.engines = Some(Engines {
-          browsers: Engines::from_browserslist(browserslist),
+          browsers: Some(EnginesBrowsers::new(browserslist)),
           ..match package_json.contents.engines {
             None => Engines::default(),
             Some(engines) => engines,
@@ -370,6 +361,12 @@ impl TargetRequest {
       let context = self.infer_environment_context(&package_json.contents);
 
       let is_library = self.default_target_options.is_library.unwrap_or(false);
+      let package_json_engines = package_json
+        .contents
+        .engines
+        .unwrap_or_else(|| self.get_default_engines_for_context(context));
+
+      tracing::debug!("Package JSON engines: {:?}", package_json_engines);
       targets.push(Some(Target {
         dist_dir: self
           .default_target_options
@@ -379,10 +376,7 @@ impl TargetRequest {
         dist_entry: None,
         env: Arc::new(Environment {
           context,
-          engines: package_json
-            .contents
-            .engines
-            .unwrap_or_else(|| self.default_target_options.engines.clone()),
+          engines: package_json_engines,
           include_node_modules: IncludeNodeModules::from(context),
           is_library,
           loc: None,
@@ -408,6 +402,23 @@ impl TargetRequest {
     }
 
     Ok(targets)
+  }
+
+  fn get_default_engines_for_context(&self, context: EnvironmentContext) -> Engines {
+    let defaults = self.default_target_options.engines.clone();
+    if context.is_browser() {
+      Engines {
+        browsers: defaults.browsers,
+        ..Engines::default()
+      }
+    } else if context.is_node() {
+      Engines {
+        node: defaults.node,
+        ..Engines::default()
+      }
+    } else {
+      defaults
+    }
   }
 
   fn skip_target(&self, target_name: &str, source: &Option<SourceField>) -> bool {
@@ -475,6 +486,8 @@ impl TargetRequest {
       .is_library
       .unwrap_or_else(|| self.default_target_options.is_library.unwrap_or(false));
 
+    let target_descriptor_engines = target_descriptor.engines.clone();
+    tracing::debug!("Target descriptor engines: {:?}", target_descriptor_engines);
     Ok(Some(Target {
       dist_dir: match dist.as_ref() {
         None => self
@@ -507,9 +520,7 @@ impl TargetRequest {
       dist_entry,
       env: Arc::new(Environment {
         context,
-        engines: target_descriptor
-          .engines
-          .clone()
+        engines: target_descriptor_engines
           .or_else(|| package_json.contents.engines.clone())
           .unwrap_or_else(|| self.default_target_options.engines.clone()),
         include_node_modules: target_descriptor
@@ -637,7 +648,7 @@ mod tests {
 
   use regex::Regex;
 
-  use atlaspack_core::types::{browsers::Browsers, version::Version};
+  use atlaspack_core::types::version::Version;
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
@@ -1153,10 +1164,7 @@ mod tests {
 
     let env = || Environment {
       engines: Engines {
-        browsers: Browsers {
-          chrome: Some(Version::new(NonZeroU16::new(20).unwrap(), 0)),
-          ..Browsers::default()
-        },
+        browsers: Some(EnginesBrowsers::new(vec![String::from("chrome 20")])),
         ..Engines::default()
       },
       ..builtin_default_env()
@@ -1307,11 +1315,10 @@ mod tests {
           env: Arc::new(Environment {
             context: EnvironmentContext::Browser,
             engines: Engines {
-              browsers: Browsers {
-                chrome: Some(Version::new(NonZeroU16::new(20).unwrap(), 0)),
-                firefox: Some(Version::new(NonZeroU16::new(2).unwrap(), 0)),
-                ..Browsers::default()
-              },
+              browsers: Some(EnginesBrowsers::new(vec![
+                String::from("chrome 20"),
+                String::from("firefox > 1"),
+              ])),
               ..Engines::default()
             },
             include_node_modules: IncludeNodeModules::Bool(true),
@@ -1379,11 +1386,8 @@ mod tests {
         "#,
       )),
       Engines {
-        browsers: Browsers {
-          chrome: Some(Version::new(NonZeroU16::new(20).unwrap(), 0)),
-          ..Browsers::default()
-        },
         node: Some(Version::new(NonZeroU16::new(1).unwrap(), 0)),
+        browsers: None,
         ..Engines::default()
       },
     );

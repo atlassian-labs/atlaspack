@@ -1,16 +1,97 @@
 // @flow
 import assert from 'assert';
 import * as napi from '@atlaspack/rust';
-import type {Transformer, PluginOptions} from '@atlaspack/types';
+import type {
+  Resolver,
+  Transformer,
+  PluginOptions,
+  Dependency,
+  FilePath,
+} from '@atlaspack/types';
 import {workerData} from 'worker_threads';
 import * as module from 'module';
 
 import {AssetCompat} from './compat';
 import type {InnerAsset} from './compat';
+import {jsCallable} from '../jsCallable';
+import type {JsCallable} from '../jsCallable';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 
 export class AtlaspackWorker {
+  #resolvers: Map<string, Resolver<*>>;
+
+  constructor() {
+    this.#resolvers = new Map();
+  }
+
+  loadPlugin: JsCallable<[LoadPluginOptions], Promise<void>> = jsCallable(
+    async ({kind, specifier, resolveFrom}) => {
+      let customRequire = module.createRequire(resolveFrom);
+      let resolvedPath = customRequire.resolve(specifier);
+      // $FlowFixMe
+      let resolvedModule = await import(resolvedPath);
+
+      switch (kind) {
+        case 'resolver':
+          this.#resolvers.set(specifier, resolvedModule.default[CONFIG]);
+          break;
+      }
+    },
+  );
+
+  runResolverResolve: JsCallable<
+    [RunResolverResolveOptions],
+    Promise<RunResolverResolveResult>,
+  > = jsCallable(async ({key, dependency, specifier}) => {
+    const resolver = this.#resolvers.get(key);
+    if (!resolver) {
+      throw new Error('Resolver not found');
+    }
+
+    const result = await resolver.resolve({
+      specifier,
+      dependency,
+      get options() {
+        throw new Error('TODO: Resolver.resolve.options');
+      },
+      get logger() {
+        throw new Error('TODO: Resolver.resolve.logger');
+      },
+      get tracer() {
+        throw new Error('TODO: Resolver.resolve.tracer');
+      },
+      get pipeline() {
+        throw new Error('TODO: Resolver.resolve.pipeline');
+      },
+      get config() {
+        throw new Error('TODO: Resolver.resolve.config');
+      },
+    });
+
+    if (!result) {
+      return {
+        invalidations: [],
+        resolution: {type: 'unresolved'},
+      };
+    }
+
+    return {
+      invalidations: [],
+      resolution: {
+        type: 'resolved',
+        filePath: result.filePath || '',
+        canDefer: result.canDefer || false,
+        sideEffects: result.sideEffects || false,
+        code: result.code || undefined,
+        meta: result.meta || undefined,
+        pipeline: result.pipeline || undefined,
+        priority: result.priority && PriorityMap[result.priority],
+        query: result.query && result.query.toString(),
+      },
+    };
+  });
+
   ping() {
     // console.log('Hi');
   }
@@ -26,24 +107,25 @@ export class AtlaspackWorker {
     options: PluginOptions,
     asset: InnerAsset,
   |}): any {
-    let customRequire = module.createRequire(resolveFrom);
-    let resolvedPath = customRequire.resolve(specifier);
+    const customRequire = module.createRequire(resolveFrom);
+    const resolvedPath = customRequire.resolve(specifier);
     // $FlowFixMe
-    let transformerModule = await import(resolvedPath);
-    let transformer: Transformer<*> = transformerModule.default.default[CONFIG];
+    const transformerModule = await import(resolvedPath);
+    const transformer: Transformer<*> =
+      transformerModule.default.default[CONFIG];
 
     let assetCompat = new AssetCompat(asset, options);
 
     try {
       if (transformer.parse) {
         // $FlowFixMe
-        let ast = await transformer.parse({asset: assetCompat});
+        const ast = await transformer.parse({asset: assetCompat}); // missing "config"
         // $FlowFixMe
         assetCompat.setAST(ast);
       }
 
       // $FlowFixMe
-      let result = await transformer.transform({
+      const result = await transformer.transform({
         // $FlowFixMe
         asset: assetCompat,
         options,
@@ -86,3 +168,39 @@ export class AtlaspackWorker {
 }
 
 napi.registerWorker(workerData.tx_worker, new AtlaspackWorker());
+
+type LoadPluginOptions = {|
+  kind: 'resolver',
+  specifier: string,
+  resolveFrom: string,
+|};
+
+type RunResolverResolveOptions = {|
+  key: string,
+  dependency: Dependency,
+  specifier: FilePath,
+|};
+
+type RunResolverResolveResult = {|
+  invalidations: Array<*>,
+  resolution:
+    | {|type: 'unresolved'|}
+    | {|type: 'excluded'|}
+    | {|
+        type: 'resolved',
+        canDefer: boolean,
+        filePath: string,
+        sideEffects: boolean,
+        code?: string,
+        meta?: mixed,
+        pipeline?: string,
+        priority?: number,
+        query?: string,
+      |},
+|};
+
+const PriorityMap = {
+  sync: 0,
+  parallel: 1,
+  lazy: 2,
+};

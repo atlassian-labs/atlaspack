@@ -4,8 +4,9 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
 
-use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
+use atlaspack_core::plugin::{TransformContext, TransformResult};
+use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
   Asset, BuildMode, Diagnostic, ErrorKind, FileType, LogLevel, OutputFormat, SourceType,
@@ -174,7 +175,11 @@ impl fmt::Debug for AtlaspackJsTransformerPlugin {
 impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does a lot of equivalent work to `JSTransformer::transform` in
   /// `packages/transformers/js`
-  fn transform(&mut self, asset: Asset) -> Result<TransformResult, Error> {
+  fn transform(
+    &mut self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let file_type = asset.file_type.clone();
     let is_node = env.context.is_node();
@@ -182,13 +187,13 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     let mut targets: HashMap<String, String> = HashMap::new();
     if env.context.is_browser() {
-      for (name, version) in env.engines.browsers.iter() {
-        if let Some(version) = version {
-          targets.insert(
-            String::from(name),
-            format!("{}.{}", version.major(), version.minor()),
-          );
-        }
+      let browsers = env.engines.browsers.clone().unwrap_or_default();
+      let browsers = Browsers::from(browsers);
+      for (name, version) in browsers.iter() {
+        targets.insert(
+          String::from(name),
+          format!("{}.{}", version.major(), version.minor()),
+        );
       }
     }
 
@@ -310,7 +315,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 #[cfg(test)]
 mod tests {
   use pretty_assertions::assert_eq;
-  use std::path::PathBuf;
+  use std::path::{Path, PathBuf};
 
   use atlaspack_core::{
     config_loader::ConfigLoader,
@@ -330,11 +335,12 @@ mod tests {
     }
   }
 
-  fn create_asset(file_path: &str, code: &str) -> Asset {
+  fn create_asset(project_root: &Path, file_path: &str, code: &str) -> Asset {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let env = Arc::new(Environment::default());
 
     Asset::new(
+      project_root,
       env.clone(),
       file_path.into(),
       Some(String::from(code)),
@@ -348,17 +354,19 @@ mod tests {
 
   #[test]
   fn test_asset_id_is_stable() {
-    let asset_1 = create_asset("mock_path", "function hello() {}");
-    let asset_2 = create_asset("mock_path", "function helloButDifferent() {}");
+    let project_root = Path::new("/root");
+    let asset_1 = create_asset(project_root, "mock_path", "function hello() {}");
+    let asset_2 = create_asset(project_root, "mock_path", "function helloButDifferent() {}");
 
     // This nº should not change across runs / compilation
-    assert_eq!(asset_1.id, "579a5e4d979a51a7");
+    assert_eq!(asset_1.id, "4711cac63cb78f2f");
     assert_eq!(asset_1.id, asset_2.id);
   }
 
   #[test]
   fn test_transformer_on_noop_asset() {
-    let target_asset = create_asset("mock_path.js", "function hello() {}");
+    let project_root = Path::new("/root");
+    let target_asset = create_asset(project_root, "mock_path.js", "function hello() {}");
     let result = run_test(target_asset.clone()).unwrap();
 
     assert_eq!(
@@ -370,7 +378,7 @@ mod tests {
           // SWC inserts a newline here
           code: Arc::new(Code::from(String::from("function hello() {}\n"))),
           symbols: Some(Vec::new()),
-          unique_key: Some(target_asset.id.clone()),
+          unique_key: None,
           ..target_asset
         },
         discovered_assets: vec![],
@@ -387,7 +395,8 @@ const x = require('other');
 exports.hello = function() {};
     "#;
 
-    let target_asset = create_asset("mock_path.js", source_code);
+    let project_root = Path::new("/root");
+    let target_asset = create_asset(project_root, "mock_path.js", source_code);
     let asset_id = target_asset.id.clone();
     let result = run_test(target_asset).unwrap();
 
@@ -406,12 +415,13 @@ exports.hello = function() {};
       placeholder: Some("e83f3db3d6f57ea6".to_string()),
       source_asset_id: Some(asset_id.clone()),
       source_path: Some(PathBuf::from("mock_path.js")),
+      source_asset_type: Some(FileType::Js),
       specifier: String::from("other"),
       specifier_type: SpecifierType::CommonJS,
       symbols: Some(vec![Symbol {
         exported: String::from("*"),
         loc: None,
-        local: String::from("$other$"),
+        local: String::from("1771c4e2ff9f2ce7$"),
         ..Symbol::default()
       }]),
       ..Default::default()
@@ -462,7 +472,7 @@ exports.hello = function() {};
               ..Default::default()
             }
           ]),
-          unique_key: Some(asset_id),
+          unique_key: None,
           ..empty_asset()
         },
         discovered_assets: vec![],
@@ -490,8 +500,9 @@ exports.hello = function() {};
     };
 
     let mut transformer = AtlaspackJsTransformerPlugin::new(&ctx).expect("Expected transformer");
+    let context = TransformContext::default();
 
-    let result = transformer.transform(asset)?;
+    let result = transformer.transform(context, asset)?;
     Ok(result)
   }
 }

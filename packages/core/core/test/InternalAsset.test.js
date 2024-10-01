@@ -2,12 +2,15 @@
 
 import assert from 'assert';
 import UncommittedAsset from '../src/UncommittedAsset';
-import {createAsset as _createAsset} from '../src/assetUtils';
+import {
+  createAsset as _createAsset,
+  type AssetOptions,
+} from '../src/assetUtils';
 import {createEnvironment} from '../src/Environment';
 import {DEFAULT_OPTIONS} from './test-utils';
 import {toProjectPath} from '../src/projectPath';
 
-function createAsset(opts) {
+function createAsset(opts: AssetOptions) {
   return _createAsset('/', opts);
 }
 
@@ -18,6 +21,7 @@ describe('InternalAsset', () => {
     let asset = new UncommittedAsset({
       value: createAsset({
         filePath: toProjectPath('/', '/foo/asset.js'),
+        code: null,
         env: createEnvironment(),
         stats,
         type: 'js',
@@ -37,6 +41,7 @@ describe('InternalAsset', () => {
     let asset = new UncommittedAsset({
       value: createAsset({
         filePath: toProjectPath('/', '/foo/asset.js'),
+        code: null,
         env: createEnvironment(),
         stats,
         type: 'js',
@@ -56,6 +61,7 @@ describe('InternalAsset', () => {
     let asset = new UncommittedAsset({
       value: createAsset({
         filePath: toProjectPath('/', '/foo/asset.js'),
+        code: null,
         env: createEnvironment(),
         stats,
         type: 'js',

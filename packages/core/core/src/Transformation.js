@@ -33,7 +33,6 @@ import ThrowableDiagnostic, {
   type Diagnostic,
 } from '@atlaspack/diagnostic';
 import {SOURCEMAP_EXTENSIONS} from '@atlaspack/utils';
-import {hashString} from '@atlaspack/rust';
 
 import {createDependency} from './Dependency';
 import AtlaspackConfig from './AtlaspackConfig';
@@ -231,16 +230,9 @@ export default class Transformation {
     // Prefer `isSource` originating from the AssetRequest.
     let isSource = isSourceOverride ?? summarizedIsSource;
 
-    // If the transformer request passed code, use a hash in addition
-    // to the filename as the base for the id to ensure it is unique.
-    let idBase = fromProjectPathRelative(filePath);
-    if (code != null) {
-      idBase += hashString(code);
-    }
     return new UncommittedAsset({
-      idBase,
       value: createAsset(this.options.projectRoot, {
-        idBase,
+        code,
         filePath,
         isSource,
         type: path.extname(fromProjectPathRelative(filePath)).slice(1),

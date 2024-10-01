@@ -228,3 +228,7 @@ declare export function getEventsSince(
   oldRev: string,
   newRev?: string | void | null,
 ): Array<string>;
+
+declare export function createAssetId(params: mixed): string;
+declare export function createDependencyId(params: mixed): string;
+declare export function createEnvironmentId(params: mixed): string;

@@ -1,13 +1,15 @@
-use parking_lot::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use atlaspack_core::plugin::Resolved;
 
 use super::NodejsWorker;
 
-use crate::{RpcTransformerOpts, RpcTransformerResult, RpcWorker};
+use crate::{LoadPluginOptions, RpcTransformerOpts, RpcTransformerResult, RpcWorker};
 
 /// Connection to multiple Nodejs Workers
 /// Implements round robin messaging
 pub struct NodejsWorkerFarm {
-  current_index: Mutex<usize>, // TODO use AtomicUsize
+  current_index: AtomicUsize,
   workers: Vec<NodejsWorker>,
 }
 
@@ -19,15 +21,17 @@ impl NodejsWorkerFarm {
     }
   }
 
-  #[allow(unused)]
   fn next_index(&self) -> usize {
-    let mut current_index = self.current_index.lock();
-    if *current_index >= self.workers.len() - 1 {
-      *current_index = 0;
-    } else {
-      *current_index = *current_index + 1;
-    }
-    current_index.clone()
+    self
+      .current_index
+      .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |value| {
+        Some((value + 1) % self.workers.len())
+      })
+      .expect("Could not get worker")
+  }
+
+  fn next_worker(&self) -> &NodejsWorker {
+    &self.workers[self.next_index()]
   }
 }
 
@@ -39,8 +43,18 @@ impl RpcWorker for NodejsWorkerFarm {
     Ok(())
   }
 
+  fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
+    for worker in &self.workers {
+      worker.load_plugin(opts.clone())?;
+    }
+    Ok(())
+  }
+
+  fn run_resolver_resolve(&self, opts: crate::RunResolverResolve) -> anyhow::Result<Resolved> {
+    self.next_worker().run_resolver_resolve(opts)
+  }
+
   fn run_transformer(&self, opts: RpcTransformerOpts) -> anyhow::Result<RpcTransformerResult> {
-    let worker = &self.workers[self.next_index()];
-    worker.run_transformer(opts)
+    self.next_worker().run_transformer(opts)
   }
 }

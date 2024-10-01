@@ -98,14 +98,11 @@ function getAssetGraph(serializedGraph, options) {
 
   function mapSymbols({exported, ...symbol}) {
     let jsSymbol = {
-      local: symbol.local,
-      loc: symbol.loc,
+      local: symbol.local ?? undefined,
+      loc: symbol.loc ?? undefined,
+      meta: undefined,
+      isWeak: symbol.isWeak,
     };
-
-    if (symbol.isWeak) {
-      // $FlowFixMe
-      jsSymbol.isWeak = symbol.isWeak;
-    }
 
     if (symbol.exported) {
       // $FlowFixMe
@@ -120,8 +117,8 @@ function getAssetGraph(serializedGraph, options) {
     }
     return [exported, jsSymbol];
   }
+
   // See crates/atlaspack_core/src/types/environment.rs
-  let sourceTypeLookup = {'0': 'module', '1': 'script'};
   let cachedAssets = new Map();
   let changedAssets = new Map();
   let entry = 0;
@@ -176,10 +173,23 @@ function getAssetGraph(serializedGraph, options) {
 
       asset = {
         ...asset,
+        uniqueKey: asset.uniqueKey ?? undefined,
+        pipeline: asset.pipeline ?? undefined,
+        range: asset.range ?? undefined,
+        resolveFrom: asset.resolveFrom ?? undefined,
+        target: asset.target ?? undefined,
+        plugin: asset.plugin ?? undefined,
+        query: asset.query ?? undefined,
+        configPath: asset.configPath ?? undefined,
+        configKeyPath: asset.configKeyPath ?? undefined,
+        isLargeBlob: asset.isLargeBlob ?? false,
+        isSource: asset.isSource ?? false,
+        sourcePath: asset.sourcePath ?? undefined,
         env: {
           ...asset.env,
+          loc: asset.env.loc ?? undefined,
           id: getEnvId(asset.env),
-          sourceType: sourceTypeLookup[asset.env.sourceType],
+          sourceType: asset.env.sourceType,
         },
         bundleBehavior:
           asset.bundleBehavior === 255 ? null : asset.bundleBehavior,
@@ -211,8 +221,13 @@ function getAssetGraph(serializedGraph, options) {
         env: {
           ...dependency.env,
           id: getEnvId(dependency.env),
-          sourceType: sourceTypeLookup[dependency.env.sourceType],
+          sourceType: dependency.env.sourceType,
+          loc: dependency.env.loc ?? undefined,
         },
+        pipeline: dependency.pipeline ?? undefined,
+        range: dependency.range ?? undefined,
+        resolveFrom: dependency.resolveFrom ?? undefined,
+        target: dependency.target ?? undefined,
         bundleBehavior:
           dependency.bundleBehavior === 255 ? null : dependency.bundleBehavior,
         contentKey: id,
@@ -227,7 +242,7 @@ function getAssetGraph(serializedGraph, options) {
           : undefined,
         sourcePath: dependency.sourcePath
           ? toProjectPath(options.projectRoot, dependency.sourcePath)
-          : null,
+          : undefined,
         symbols:
           // Dependency.symbols are always set to an empty map when scope hoisting
           // is enabled. Some tests will fail if this is not the case. We should

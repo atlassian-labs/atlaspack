@@ -1,5 +1,4 @@
-use std::num::NonZeroU16;
-
+use browserslist::Distrib;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -7,55 +6,74 @@ use super::browsers::Browsers;
 use super::version::Version;
 use super::OutputFormat;
 
+/// The browsers list as it appears on the engines field.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum EnginesBrowsers {
+  List(Vec<String>),
+  String(String),
+}
+
+impl Default for EnginesBrowsers {
+  fn default() -> Self {
+    Self::List(vec![String::from("> 0.25%")])
+  }
+}
+
+impl EnginesBrowsers {
+  pub fn new(browser_list: Vec<String>) -> Self {
+    Self::List(browser_list)
+  }
+
+  pub fn list(&self) -> Vec<String> {
+    match self {
+      Self::List(list) => list.clone(),
+      Self::String(string) => vec![string.clone()],
+    }
+  }
+
+  pub fn resolve(&self) -> Vec<Distrib> {
+    let list = self.list();
+    browserslist::resolve(list, &Default::default()).unwrap_or(Vec::new())
+  }
+}
+
+impl From<EnginesBrowsers> for Browsers {
+  fn from(engines_browsers: EnginesBrowsers) -> Self {
+    let list = match engines_browsers {
+      EnginesBrowsers::List(list) => list,
+      EnginesBrowsers::String(string) => vec![string],
+    };
+    let distribs = browserslist::resolve(list, &Default::default()).unwrap_or(Vec::new());
+    Browsers::from(distribs)
+  }
+}
+
 /// The engines field in package.json
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct Engines {
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub atlaspack: Option<Version>,
   #[serde(default)]
-  pub browsers: Browsers,
+  pub browsers: Option<EnginesBrowsers>,
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub electron: Option<Version>,
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub node: Option<Version>,
 }
 
 /// List of environment features that may be supported by an engine
+#[derive(Debug)]
 pub enum EnvironmentFeature {
-  ArrowFunctions,
   DynamicImport,
-  Esmodules,
-  GlobalThis,
-  ImportMetaUrl,
-  ServiceWorkerModule,
   WorkerModule,
 }
 
-impl EnvironmentFeature {
-  pub fn engines(&self) -> Engines {
-    match self {
-      EnvironmentFeature::WorkerModule => Engines {
-        browsers: Browsers {
-          edge: Some(Version::new(NonZeroU16::new(80).unwrap(), 0)),
-          chrome: Some(Version::new(NonZeroU16::new(80).unwrap(), 0)),
-          opera: Some(Version::new(NonZeroU16::new(67).unwrap(), 0)),
-          android: Some(Version::new(NonZeroU16::new(81).unwrap(), 0)),
-          ..Default::default()
-        },
-        ..Default::default()
-      },
-      EnvironmentFeature::DynamicImport => Engines {
-        browsers: Browsers {
-          edge: Some(Version::new(NonZeroU16::new(76).unwrap(), 0)),
-          firefox: Some(Version::new(NonZeroU16::new(67).unwrap(), 0)),
-          chrome: Some(Version::new(NonZeroU16::new(63).unwrap(), 0)),
-          safari: Some(Version::new(NonZeroU16::new(11).unwrap(), 1)),
-          opera: Some(Version::new(NonZeroU16::new(50).unwrap(), 0)),
-          ios_saf: Some(Version::new(NonZeroU16::new(11).unwrap(), 3)),
-          android: Some(Version::new(NonZeroU16::new(63).unwrap(), 0)),
-          samsung: Some(Version::new(NonZeroU16::new(8).unwrap(), 0)),
-          ..Default::default()
-        },
-        ..Default::default()
-      },
-      _ => todo!(),
+impl From<EnvironmentFeature> for caniuse_database::BrowserFeature {
+  fn from(feature: EnvironmentFeature) -> Self {
+    match feature {
+      EnvironmentFeature::DynamicImport => caniuse_database::BrowserFeature::Es6ModuleDynamicImport,
+      EnvironmentFeature::WorkerModule => caniuse_database::BrowserFeature::Webworkers,
     }
   }
 }
@@ -97,29 +115,16 @@ impl Engines {
     todo!()
   }
 
+  #[tracing::instrument(level = "debug", skip(self))]
   pub fn supports(&self, feature: EnvironmentFeature) -> bool {
-    let min = feature.engines();
-    macro_rules! check {
-      ($p: ident$(. $x: ident)*) => {{
-        if let Some(v) = self.$p$(.$x)* {
-          match min.$p$(.$x)* {
-            None => return false,
-            Some(v2) if v < v2 => return false,
-            _ => {}
-          }
-        }
-      }};
-    }
-
-    check!(browsers.android);
-    check!(browsers.chrome);
-    check!(browsers.edge);
-    check!(browsers.firefox);
-    check!(browsers.ie);
-    check!(browsers.ios_saf);
-    check!(browsers.opera);
-    check!(browsers.safari);
-    check!(browsers.samsung);
-    true
+    let distribs = self
+      .browsers
+      .as_ref()
+      .unwrap_or(&Default::default())
+      .resolve();
+    caniuse_database::check_browserslist_support(
+      &caniuse_database::BrowserFeature::from(feature),
+      &distribs,
+    )
   }
 }

@@ -42,10 +42,10 @@
     "postinstall": "patch-package"
   },
   "devDependencies": {
+    "@atlaspack/babel-register": "*",
     "@babel/core": "^7.22.11",
     "@khanacademy/flow-to-ts": "^0.5.2",
     "@napi-rs/cli": "^2.18.3",
-    "@atlaspack/babel-register": "*",
     "@types/node": ">= 18",
     "buffer": "mischnic/buffer#b8a4fa94",
     "cross-env": "^7.0.0",
@@ -60,6 +60,7 @@
     "mocha": "^8.3.0",
     "prettier": "2.4.1",
     "punycode": "^1.4.1",
+    "rfdc": "^1.4.1",
     "rimraf": "^5.0.5",
     "semver": "^7.5.2",
     "sinon": "^7.3.1"

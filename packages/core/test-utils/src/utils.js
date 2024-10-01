@@ -11,16 +11,19 @@ import type {
   PackagedBundle,
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
+import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '@atlaspack/fs';
 import type WorkerFarm from '@atlaspack/workers';
 import type {IncomingMessage} from 'http';
+import http from 'http';
+// $FlowFixMe
+import expect from 'expect';
 
 import invariant from 'assert';
+import assert from 'assert';
 import util from 'util';
 import Parcel, {createWorkerFarm} from '@atlaspack/core';
-import assert from 'assert';
 import vm from 'vm';
 import v8 from 'v8';
-import {NodeFS, MemoryFS, OverlayFS, ncp as _ncp} from '@atlaspack/fs';
 import path from 'path';
 import url from 'url';
 import WebSocket from 'ws';
@@ -28,7 +31,6 @@ import nullthrows from 'nullthrows';
 import {parser as postHtmlParse} from 'posthtml-parser';
 import postHtml from 'posthtml';
 import EventEmitter from 'events';
-import http from 'http';
 import https from 'https';
 
 import {makeDeferredWithPromise, normalizeSeparators} from '@atlaspack/utils';
@@ -496,6 +498,37 @@ export function run(
   return runBundle(bundleGraph, bundle, globals, opts, externalModules);
 }
 
+export function getBundleData(
+  bundleGraph: BundleGraph<PackagedBundle>,
+  inputDir: string,
+): {|name: string, type: string, assets: string[]|}[] {
+  const byAlphabet = (a, b) => (a.toLowerCase() < b.toLowerCase() ? -1 : 1);
+  const bundles = bundleGraph.getBundles();
+  const bundleData = bundles.map(bundle => {
+    const assets = [];
+    bundle.traverseAssets(asset => {
+      assets.push(path.relative(inputDir, asset.filePath));
+    });
+    assets.sort(byAlphabet);
+    return {name: bundle.name, type: bundle.type, assets};
+  });
+  bundleData.sort(({name: a}, {name: b}) => byAlphabet(a, b));
+  return bundleData;
+}
+
+export function expectBundles(
+  inputDir: string,
+  bundleGraph: BundleGraph<PackagedBundle>,
+  expectedBundles: Array<{|
+    name?: string | RegExp,
+    type?: string,
+    assets: Array<string>,
+  |}>,
+) {
+  const bundleData = getBundleData(bundleGraph, inputDir);
+  expect(bundleData).toEqual(expectedBundles);
+}
+
 export function assertBundles(
   bundleGraph: BundleGraph<PackagedBundle>,
   expectedBundles: Array<{|
@@ -712,7 +745,10 @@ function prepareBrowserContext(
       WebSocket,
       TextEncoder,
       TextDecoder,
-      console: {...console, clear: () => {}},
+      console: {
+        ...console,
+        clear: () => {},
+      },
       location: {
         hostname: 'localhost',
         origin: 'http://localhost',
@@ -863,6 +899,7 @@ function prepareWorkerContext(
 }
 
 const nodeCache = new Map();
+
 // no filepath = ESM
 function prepareNodeContext(
   filePath,
@@ -983,6 +1020,7 @@ function prepareNodeContext(
 }
 
 let instanceId = 0;
+
 export async function runESM(
   baseDir: FilePath,
   entries: Array<[string, string]>,
@@ -993,6 +1031,7 @@ export async function runESM(
 ): Promise<Array<{|[string]: mixed|}>> {
   let id = instanceId++;
   let cache = new Map();
+
   function load(inputSpecifier, referrer, code = null) {
     // ESM can request bundles with an absolute URL. Normalize this to the baseDir.
     let specifier = inputSpecifier.replace('http://localhost', baseDir);
@@ -1081,6 +1120,7 @@ export async function runESM(
   }
 
   let entryPromises = new Map();
+
   function entry(specifier, referrer, code) {
     let m = load(specifier, referrer, code);
     let promise = entryPromises.get(m);
@@ -1268,6 +1308,7 @@ export function request(
 // $FlowFixMe
 let origDescribe = globalThis.describe;
 let parcelVersion: string | void;
+
 export function describe(...args: mixed[]) {
   parcelVersion = undefined;
   origDescribe.apply(this, args);
@@ -1312,6 +1353,7 @@ describe.v3.only = function (...args: mixed[]) {
 };
 
 let origIt = globalThis.it;
+
 export function it(...args: mixed[]) {
   if (
     parcelVersion == null ||

@@ -49,6 +49,9 @@ pub struct NamedPipelinesMap {
   inner: IndexMap<String, Vec<PluginNode>>,
 }
 
+// This is okay because the iteration order is deterministic
+//
+// WARNING: Do not implement this for hashmap since it will not be deterministic
 impl Hash for NamedPipelinesMap {
   fn hash<H: Hasher>(&self, state: &mut H) {
     for item in self.inner.iter() {
