@@ -3,7 +3,7 @@
   "endOfLine": "lf",
   "singleQuote": true,
   "trailingComma": "all",
-  "arrowParens": "avoid",
+  "arrowParens": "always",
   "overrides": [
     {
       "files": [
