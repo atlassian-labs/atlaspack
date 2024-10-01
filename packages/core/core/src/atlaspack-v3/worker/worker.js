@@ -33,7 +33,7 @@ export class AtlaspackWorker {
       let resolvedModule = await import(resolvedPath);
 
       let instance = undefined;
-      if (resolvedModule.default[CONFIG]) {
+      if (resolvedModule.default && resolvedModule.default[CONFIG]) {
         instance = resolvedModule.default[CONFIG];
       } else if (
         resolvedModule.default &&
