@@ -1,5 +1,5 @@
 {
-  "source": "react.ts",
+  "source": "react.js",
   "main": "icons.js",
   "types": "types.d.ts",
   "dependencies": {

@@ -2,7 +2,7 @@
   "name": "@atlaspack/target-source-package-a",
   "version": "2.0.0-beta.1",
   "private": true,
-  "source": "src/index.ts",
+  "source": "src/index.js",
   "devDependencies": {
     "@atlaspack/babel-register": "2.0.0-beta.1",
     "@atlaspack/core": "2.0.0-beta.1"
