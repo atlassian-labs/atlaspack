@@ -58,7 +58,6 @@ export class AtlaspackWorker {
     [RunResolverResolveOptions],
     Promise<RunResolverResolveResult>,
   > = jsCallable(async ({key, dependency, specifier}) => {
-    // console.log({threadId, key, specifier, resolvers: this.#resolvers })
     const resolver = this.#resolvers.get(key);
     if (!resolver) {
       throw new Error(`Resolver not found: ${key}`);
