@@ -8,7 +8,7 @@ import type {
   Dependency,
   FilePath,
 } from '@atlaspack/types';
-import {workerData, threadId} from 'worker_threads';
+import {workerData} from 'worker_threads';
 import * as module from 'module';
 
 import {AssetCompat} from './compat';
