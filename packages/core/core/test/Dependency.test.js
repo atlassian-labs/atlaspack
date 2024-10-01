@@ -1,4 +1,4 @@
-import expect from 'expect';
+import assert from 'assert';
 import {createDependencyId} from '../src/Dependency';
 import {createEnvironment} from '../src/Environment';
 
@@ -15,7 +15,7 @@ describe('Dependency', () => {
         env: createEnvironment(),
         specifierType: 'esm',
       });
-      expect(id1).toEqual(id2);
+      assert.equal(id1, id2);
     });
   });
 });

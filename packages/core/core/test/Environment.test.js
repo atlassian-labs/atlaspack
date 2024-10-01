@@ -1,8 +1,6 @@
 // @flow strict-local
 
 import assert from 'assert';
-// $FlowFixMe
-import expect from 'expect';
 import {createEnvironment} from '../src/Environment';
 import {initializeMonitoring} from '../../rust';
 
@@ -105,6 +103,6 @@ describe('createEnvironment', function () {
   it('returns a stable hash', () => {
     initializeMonitoring();
     const environment = createEnvironment({});
-    expect(environment.id).toEqual('d821e85f6b50315e');
+    assert.equal(environment.id, 'd821e85f6b50315e');
   });
 });

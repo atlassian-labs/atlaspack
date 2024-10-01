@@ -103,16 +103,23 @@ impl JsCallable {
       ThreadsafeFunctionCallMode::NonBlocking,
       move |JsValue(value, env)| {
         let container: JsObject = value.try_into()?;
-        let then_fn: JsFunction = container.get_named_property("then")?;
+        let then_fn: JsFunction = match container.get_named_property("then") {
+          Ok(then_fn) => then_fn,
+          Err(error) => {
+            tx.send(Err(anyhow::anyhow!(error))).unwrap();
+            return Ok(());
+          }
+        };
 
         let then_callback = env.create_function_from_closure("callback", move |ctx| {
-          // Return [bool, promise]
-          let container = ctx.get::<JsObject>(0)?;
-
-          let error = container.get_element::<JsUnknown>(0)?;
+          // Return
+          //   [error, null]
+          //   [null, value]
+          let result = ctx.get::<JsObject>(0)?;
+          let error = result.get_element::<JsUnknown>(0)?;
 
           if let ValueType::Null = error.get_type()? {
-            let value = container.get_element::<JsUnknown>(1)?;
+            let value = result.get_element::<JsUnknown>(1)?;
             tx.send(map_return(&env, value)).unwrap();
           } else {
             let error_value = env.from_js_value::<String, JsUnknown>(error)?;
@@ -127,7 +134,11 @@ impl JsCallable {
       },
     );
 
-    rx.recv().unwrap()
+    let result = rx.recv().unwrap();
+    match result {
+      Ok(value) => Ok(value),
+      Err(error) => Err(anyhow::anyhow!("{} {}", self.name, error)),
+    }
   }
 
   pub fn call_serde<Params, Return>(&self, params: Params) -> anyhow::Result<Return>
