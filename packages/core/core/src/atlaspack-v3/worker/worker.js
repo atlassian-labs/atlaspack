@@ -32,9 +32,23 @@ export class AtlaspackWorker {
       // $FlowFixMe
       let resolvedModule = await import(resolvedPath);
 
+      let instance = undefined;
+      if (resolvedModule.default && resolvedModule.default[CONFIG]) {
+        instance = resolvedModule.default[CONFIG];
+      } else if (
+        resolvedModule.default &&
+        resolvedModule.default.default[CONFIG]
+      ) {
+        instance = resolvedModule.default.default[CONFIG];
+      } else {
+        throw new Error(
+          `Plugin could not be resolved\n\t${kind}\n\t${resolveFrom}\n\t${specifier}`,
+        );
+      }
+
       switch (kind) {
         case 'resolver':
-          this.#resolvers.set(specifier, resolvedModule.default[CONFIG]);
+          this.#resolvers.set(specifier, instance);
           break;
       }
     },
@@ -46,7 +60,7 @@ export class AtlaspackWorker {
   > = jsCallable(async ({key, dependency, specifier}) => {
     const resolver = this.#resolvers.get(key);
     if (!resolver) {
-      throw new Error('Resolver not found');
+      throw new Error(`Resolver not found: ${key}`);
     }
 
     const result = await resolver.resolve({
