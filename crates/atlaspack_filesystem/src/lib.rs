@@ -33,14 +33,14 @@ pub trait FileSystem: std::fmt::Debug {
   fn cwd(&self) -> std::io::Result<PathBuf> {
     Err(std::io::Error::new(
       std::io::ErrorKind::Other,
-      "Not implemented",
+      "Not implemented: FileSystem::cwd",
     ))
   }
 
   fn canonicalize_base(&self, _path: &Path) -> std::io::Result<PathBuf> {
     Err(std::io::Error::new(
       std::io::ErrorKind::Other,
-      "Not implemented",
+      "Not implemented: FileSystem::canonicalize_base",
     ))
   }
 
