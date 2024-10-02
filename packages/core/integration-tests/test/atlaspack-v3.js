@@ -2,7 +2,7 @@
 
 import {join} from 'path';
 
-import {AtlaspackV3, toFileSystemV3} from '@atlaspack/core';
+import {AtlaspackV3} from '@atlaspack/core';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {
   describe,
@@ -32,7 +32,7 @@ describe('AtlaspackV3', function () {
     let atlaspack = new AtlaspackV3({
       corePath: '',
       entries: [join(__dirname, 'index.js')],
-      fs: toFileSystemV3(overlayFS),
+      fs: overlayFS,
       nodeWorkers: 1,
       packageManager: new NodePackageManager(inputFS, __dirname),
     });

@@ -25,6 +25,7 @@ import type {Glob} from './Glob';
 import type {PackageName} from './PackageName';
 import type {
   PackageManager,
+  PackageManagerPackageOptions,
   PackageManagerResolveResult,
   Invalidations,
   PackageInstaller,
@@ -62,6 +63,7 @@ export type {
   FileInvalidation,
   FileAboveInvalidation,
   PackageManager,
+  PackageManagerPackageOptions,
   PackageManagerResolveResult,
   Invalidations,
   PackageInstaller,

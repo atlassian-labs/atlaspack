@@ -43,16 +43,22 @@ export interface PackageManager {
   require(
     id: DependencySpecifier,
     from: FilePath,
-    ?{|range?: ?SemverRange, shouldAutoInstall?: boolean, saveDev?: boolean|},
+    options: ?PackageManagerPackageOptions,
   ): Promise<any>;
   resolve(
     id: DependencySpecifier,
     from: FilePath,
-    ?{|range?: ?SemverRange, shouldAutoInstall?: boolean, saveDev?: boolean|},
+    options: ?PackageManagerPackageOptions,
   ): Promise<PackageManagerResolveResult>;
   getInvalidations(id: DependencySpecifier, from: FilePath): Invalidations;
   invalidate(id: DependencySpecifier, from: FilePath): void;
 }
+
+export type PackageManagerPackageOptions = {|
+  range?: ?SemverRange,
+  shouldAutoInstall?: boolean,
+  saveDev?: boolean,
+|};
 
 export type ModuleRequest = {|
   +name: string,

@@ -1,46 +1,53 @@
 // @flow strict-local
 
-// import type { JsCallable } from "./jsCallable";
 import type {FileSystem} from '@atlaspack/rust';
 import type {
   Encoding,
   FilePath,
   FileSystem as ClassicFileSystem,
 } from '@atlaspack/types';
-
+import type {JsCallable} from './jsCallable';
 import {jsCallable} from './jsCallable';
 
-// Move to @atlaspack/utils or a dedicated v3 / migration package later
-export function toFileSystemV3(fs: ClassicFileSystem): FileSystem {
-  return {
-    // $FlowFixMe migrate to TypeScript
-    canonicalize: jsCallable((path: FilePath) => fs.realpathSync(path)),
-    createDirectory: jsCallable((path: FilePath) => fs.mkdirp(path)),
-    // $FlowFixMe migrate to TypeScript
-    cwd: jsCallable(() => fs.cwd()),
-    // $FlowFixMe migrate to TypeScript
-    readFile: jsCallable((path: string, encoding?: Encoding) => {
+export class NativeFileSystem implements FileSystem {
+  #fs: ClassicFileSystem;
+
+  constructor(fs: ClassicFileSystem) {
+    this.#fs = fs;
+  }
+
+  canonicalize: JsCallable<[FilePath], FilePath> = jsCallable(path =>
+    this.#fs.realpathSync(path),
+  );
+
+  createDirectory: JsCallable<[FilePath], Promise<void>> = jsCallable(path =>
+    this.#fs.mkdirp(path),
+  );
+
+  cwd: JsCallable<[], FilePath> = jsCallable(() => this.#fs.cwd());
+
+  isDir: JsCallable<[FilePath], boolean> = jsCallable((path: string) => {
+    try {
+      return this.#fs.statSync(path).isDirectory();
+    } catch {
+      return false;
+    }
+  });
+
+  isFile: JsCallable<[FilePath], boolean> = jsCallable(path => {
+    try {
+      return this.#fs.statSync(path).isDirectory();
+    } catch {
+      return false;
+    }
+  });
+
+  readFile: JsCallable<[FilePath, Encoding | void], string | Array<number>> =
+    jsCallable((path, encoding) => {
       if (!encoding) {
         // $FlowFixMe
-        return [...fs.readFileSync(path)];
+        return [...this.#fs.readFileSync(path)];
       }
-      return fs.readFileSync(path, encoding);
-    }),
-    // $FlowFixMe migrate to TypeScript
-    isFile: jsCallable((path: string) => {
-      try {
-        return fs.statSync(path).isFile();
-      } catch {
-        return false;
-      }
-    }),
-    // $FlowFixMe migrate to TypeScript
-    isDir: jsCallable((path: string) => {
-      try {
-        return fs.statSync(path).isDirectory();
-      } catch {
-        return false;
-      }
-    }),
-  };
+      return this.#fs.readFileSync(path, encoding);
+    });
 }

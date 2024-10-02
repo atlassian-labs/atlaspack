@@ -4,7 +4,9 @@ import type {
   FileCreateInvalidation,
   FilePath,
   InitialAtlaspackOptions,
-  PackageManager,
+  PackageManagerResolveResult,
+  DependencySpecifier,
+  PackageManagerPackageOptions,
 } from '@atlaspack/types';
 
 declare export var init: void | (() => void);
@@ -28,15 +30,22 @@ export type IsOk = boolean;
 
 export type JsCallable<Args: $ReadOnlyArray<mixed>, Return> = (
   ...Args
-) => [IsOk, Return] | Promise<[IsOk, Return]>;
+) => Promise<[string | null, Return | null]>;
 
 export interface FileSystem {
   canonicalize: JsCallable<[FilePath], FilePath>;
+  createDirectory: JsCallable<[FilePath], Promise<void>>;
   cwd: JsCallable<[], FilePath>;
   isDir: JsCallable<[FilePath], boolean>;
   isFile: JsCallable<[FilePath], boolean>;
-  readFile: JsCallable<[FilePath], Array<number>>;
-  readFile: JsCallable<[FilePath, Encoding], string>;
+  readFile: JsCallable<[FilePath, Encoding | void], string | Array<number>>;
+}
+
+export interface PackageManager {
+  resolve: JsCallable<
+  [DependencySpecifier, FilePath, ?PackageManagerPackageOptions],
+  Promise<PackageManagerResolveResult>,
+>
 }
 
 export type AtlaspackNapiOptions = {|

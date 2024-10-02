@@ -3,13 +3,17 @@
 import path from 'path';
 import {Worker} from 'worker_threads';
 import {AtlaspackNapi, type AtlaspackNapiOptions} from '@atlaspack/rust';
+import {NativePackageManager} from './package-manager';
+import type {FileSystem as ClassicFileSystem} from '@atlaspack/fs';
+import {NativeFileSystem} from './fs';
+import type {PackageManager as ClassicPackageManager} from '@atlaspack/types';
 
 const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
 
 export type AtlaspackV3Options = {|
-  fs?: AtlaspackNapiOptions['fs'],
+  fs?: ClassicFileSystem,
   nodeWorkers?: number,
-  packageManager?: AtlaspackNapiOptions['packageManager'],
+  packageManager?: ClassicPackageManager,
   threads?: number,
   ...AtlaspackNapiOptions['options'],
 |};
@@ -33,9 +37,10 @@ export class AtlaspackV3 {
     };
 
     this._internal = new AtlaspackNapi({
-      fs,
+      fs: fs && new NativeFileSystem(fs),
       nodeWorkers,
-      packageManager,
+      packageManager:
+        packageManager && new NativePackageManager(packageManager),
       threads,
       options,
     });

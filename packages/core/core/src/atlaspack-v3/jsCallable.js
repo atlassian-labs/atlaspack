@@ -2,9 +2,7 @@
 
 export type JsCallable<Args: $ReadOnlyArray<mixed>, Return> = (
   ...Args
-) => JsCallableResult<Return>;
-
-export type JsCallableResult<Return> = Promise<[string | null, Return | null]>;
+) => Promise<[string | null, Return | null]>;
 
 export function jsCallable<Args: $ReadOnlyArray<mixed>, Return>(
   fn: (...Args) => Return | Promise<Return>,
