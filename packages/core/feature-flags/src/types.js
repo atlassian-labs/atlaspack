@@ -28,12 +28,6 @@ export type FeatureFlags = {|
    */
   fastOptimizeInlineRequires: boolean,
   /**
-   * Enable fast path for needsDefaultInterop.
-   *
-   * This improves bundling performance of large applications very significantly.
-   */
-  fastNeedsDefaultInterop: boolean,
-  /**
    * Enables an experimental "conditional bundling" API - this allows the use of `importCond` syntax
    * in order to have (consumer) feature flag driven bundling. This feature is very experimental,
    * and requires server-side support.
