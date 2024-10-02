@@ -13,7 +13,6 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   fixQuadraticCacheInvalidation: false,
   fastOptimizeInlineRequires: false,
   useLmdbJsLite: false,
-  fastNeedsDefaultInterop: false,
   conditionalBundlingApi: false,
 };
 
