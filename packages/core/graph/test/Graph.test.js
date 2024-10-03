@@ -556,4 +556,26 @@ describe('Graph', () => {
       });
     });
   });
+
+  describe('traverseAncestors', () => {
+    it('works', () => {
+      const graph = new Graph();
+
+      /**
+       * a -> b -> c
+       */
+      const node1 = graph.addNode('a');
+      const node2 = graph.addNode('b');
+      const node3 = graph.addNode('c');
+      graph.addEdge(node1, node2);
+      graph.addEdge(node2, node3);
+
+      const visited = [];
+      graph.traverseAncestors(node3, nodeId => {
+        visited.push(nodeId);
+      });
+
+      assert.deepEqual(visited, [node3, node2, node1]);
+    });
+  });
 });

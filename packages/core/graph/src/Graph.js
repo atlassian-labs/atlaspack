@@ -69,7 +69,10 @@ export type DFSParams<TContext> = {|
    *
    * Only due to the latter we aren't replacing this.
    */
-  getChildren: (nodeId: NodeId) => Array<NodeId>,
+  getChildren:
+    | 'TRAVERSE_DOWN'
+    | 'TRAVERSE_UP'
+    | ((nodeId: NodeId) => Array<NodeId>),
   startNodeId?: ?NodeId,
 |};
 
@@ -587,14 +590,33 @@ export default class Graph<TNode, TEdgeType: number = 1> {
         }
 
         // TODO turn into generator function
-        const children = getChildren(nodeId);
-        for (let i = children.length - 1; i > -1; i -= 1) {
-          const child = children[i];
-          if (visited.has(child)) {
-            continue;
-          }
+        if (getChildren === 'TRAVERSE_DOWN') {
+          this.adjacencyList.forEachNodeIdConnectedFromReverse(
+            nodeId,
+            child => {
+              if (!visited.has(child)) {
+                queue.push({nodeId: child, context});
+              }
+              return false;
+            },
+          );
+        } else if (getChildren === 'TRAVERSE_UP') {
+          this.adjacencyList.forEachNodeIdConnectedTo(nodeId, child => {
+            if (!visited.has(child)) {
+              queue.push({nodeId: child, context});
+            }
+            return false;
+          });
+        } else {
+          const children = getChildren(nodeId);
+          for (let i = children.length - 1; i > -1; i -= 1) {
+            const child = children[i];
+            if (visited.has(child)) {
+              continue;
+            }
 
-          queue.push({nodeId: child, context});
+            queue.push({nodeId: child, context});
+          }
         }
       }
     }

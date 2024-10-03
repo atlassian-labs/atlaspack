@@ -880,7 +880,8 @@ export class RequestGraph extends ContentGraph<
     let count = 0;
     let predictedTime = 0;
     let startTime = Date.now();
-    const removeOrphans = !getFeatureFlag('fixQuadraticCacheInvalidation');
+    const enableOptimization = getFeatureFlag('fixQuadraticCacheInvalidation');
+    const removeOrphans = !enableOptimization;
 
     for (let {path: _path, type} of events) {
       if (++count === 256) {
@@ -1061,6 +1062,87 @@ export class RequestGraph extends ContentGraph<
     });
 
     return didInvalidate && this.invalidNodeIds.size > 0;
+  }
+
+  async respondToFSEventsFast(
+    events: Array<Event>,
+    options: AtlaspackOptions,
+    threshold: number,
+  ): Promise<boolean> {
+    type InvalidationTypes = {|
+      invalidated_by_update: boolean,
+      invalidated_by_delete: boolean,
+      invalidated_by_create: boolean,
+      invalidated_by_create_above: boolean,
+    |};
+    // Map of NodeId to InvalidationTypes
+    const nodesToInvalidate: Map<NodeId, InvalidationTypes> = new Map();
+    const mergeInvalidation = (
+      nodeId: NodeId,
+      invalidation: $Shape<InvalidationTypes>,
+    ) => {
+      const existing = nodesToInvalidate.get(nodeId);
+      nodesToInvalidate.set(nodeId, {
+        invalidated_by_update:
+          invalidation.invalidated_by_update ??
+          existing?.invalidated_by_update ??
+          false,
+        invalidated_by_delete:
+          invalidation.invalidated_by_delete ??
+          existing?.invalidated_by_delete ??
+          false,
+        invalidated_by_create:
+          invalidation.invalidated_by_create ??
+          existing?.invalidated_by_create ??
+          false,
+        invalidated_by_create_above:
+          invalidation.invalidated_by_create_above ??
+          existing?.invalidated_by_create_above ??
+          false,
+      });
+    };
+
+    for (let event of events) {
+      let filePath = fromProjectPathRelative(
+        toProjectPath(options.projectRoot, event.path),
+      );
+
+      let hasFileRequest = this.hasContentKey(filePath);
+      if (
+        hasFileRequest &&
+        (event.type === 'create' || event.type === 'update')
+      ) {
+        const fileRequest = this.getNodeIdByContentKey(filePath);
+        mergeInvalidation(fileRequest, {
+          invalidated_by_update: true,
+          invalidated_by_create: event.type === 'create',
+        });
+      } else if (event.type === 'create') {
+        const basename = path.basename(filePath);
+        const fileNameNode = this.getNodeByContentKey('file_name:' + basename);
+        if (fileNameNode != null && fileNameNode.type === FILE_NAME) {
+          let fileNameNodeId = this.getNodeIdByContentKey(
+            'file_name:' + basename,
+          );
+          mergeInvalidation(fileNameNodeId, {
+            invalidated_by_create_above: true,
+          });
+        }
+
+        for (let globeNodeId of this.globNodeIds) {
+          let globNode = this.getNode(globeNodeId);
+          invariant(globNode && globNode.type === GLOB);
+
+          if (isGlobMatch(filePath, fromProjectPathRelative(globNode.value))) {
+            mergeInvalidation(globeNodeId, {
+              invalidated_by_create_above: true,
+            });
+          }
+        }
+      }
+    }
+
+    return false;
   }
 
   hasCachedRequestChunk(index: number): boolean {
@@ -1719,4 +1801,155 @@ export function cleanUpOrphans<N, E: number>(graph: Graph<N, E>): NodeId[] {
   });
 
   return removedNodeIds;
+}
+
+async function respondToFSEventsFast(
+  requestGraph: RequestGraph,
+  events: Array<Event>,
+  options: AtlaspackOptions,
+): Promise<boolean> {
+  type InvalidationTypes = {|
+    invalidated_by_update: boolean,
+    invalidated_by_delete: boolean,
+    invalidated_by_create: boolean,
+    invalidated_by_create_above: boolean,
+  |};
+  // Map of NodeId to InvalidationTypes
+  const nodesToInvalidate: Map<NodeId, InvalidationTypes> = new Map();
+  function mergeInvalidation(
+    nodeId: NodeId,
+    invalidation: $Shape<InvalidationTypes>,
+  ) {
+    const existing = nodesToInvalidate.get(nodeId);
+    nodesToInvalidate.set(nodeId, {
+      invalidated_by_update:
+        invalidation.invalidated_by_update ??
+        existing?.invalidated_by_update ??
+        false,
+      invalidated_by_delete:
+        invalidation.invalidated_by_delete ??
+        existing?.invalidated_by_delete ??
+        false,
+      invalidated_by_create:
+        invalidation.invalidated_by_create ??
+        existing?.invalidated_by_create ??
+        false,
+      invalidated_by_create_above:
+        invalidation.invalidated_by_create_above ??
+        existing?.invalidated_by_create_above ??
+        false,
+    });
+  }
+
+  for (let event of events) {
+    const projectFilePath = toProjectPath(options.projectRoot, event.path);
+    const filePath = fromProjectPathRelative(projectFilePath);
+    const hasFileRequest = requestGraph.hasContentKey(filePath);
+
+    if (
+      hasFileRequest &&
+      (event.type === 'create' || event.type === 'update')
+    ) {
+      const fileRequest = requestGraph.getNodeIdByContentKey(filePath);
+      mergeInvalidation(fileRequest, {
+        invalidated_by_update: true,
+        invalidated_by_create: event.type === 'create',
+      });
+    } else if (event.type === 'create') {
+      const basename = path.basename(filePath);
+      const fileNameNode = requestGraph.getNodeByContentKey(
+        'file_name:' + basename,
+      );
+      if (fileNameNode != null && fileNameNode.type === FILE_NAME) {
+        const fileNameNodeId = requestGraph.getNodeIdByContentKey(
+          'file_name:' + basename,
+        );
+        mergeInvalidation(fileNameNodeId, {
+          invalidated_by_create_above: true,
+        });
+      }
+
+      for (let globeNodeId of requestGraph.globNodeIds) {
+        const globNode = requestGraph.getNode(globeNodeId);
+        invariant(globNode && globNode.type === GLOB);
+
+        if (isGlobMatch(filePath, fromProjectPathRelative(globNode.value))) {
+          mergeInvalidation(globeNodeId, {
+            invalidated_by_create_above: true,
+          });
+        }
+      }
+    } else if (event.type === 'delete') {
+      const nodeId = requestGraph.getNodeIdByContentKey(filePath);
+      mergeInvalidation(nodeId, {
+        invalidated_by_delete: true,
+      });
+    }
+
+    let configKeyNodes = this.configKeyNodes.get(projectFilePath);
+    if (
+      configKeyNodes &&
+      (event.type === 'delete' || event.type === 'update')
+    ) {
+      for (let nodeId of configKeyNodes) {
+        let isInvalid = event.type === 'delete';
+
+        if (event.type === 'update') {
+          const node = this.getNode(nodeId);
+          invariant(node && node.type === CONFIG_KEY);
+          const contentHash = await getConfigKeyContentHash(
+            projectFilePath,
+            node.configKey,
+            options,
+          );
+
+          isInvalid = node.contentHash !== contentHash;
+        }
+
+        if (isInvalid) {
+          mergeInvalidation(nodeId, {invalidated_by_update: true});
+        }
+      }
+    }
+  }
+
+  const seenNodes = new Set();
+  for (let [nodeId, invalidation] of nodesToInvalidate) {
+    let reason = FILE_UPDATE;
+    const edgeTypes = [];
+
+    if (invalidation.invalidated_by_delete) {
+      edgeTypes.push(requestGraphEdgeTypes.invalidated_by_delete);
+      reason = FILE_DELETE;
+    }
+    if (invalidation.invalidated_by_create) {
+      edgeTypes.push(requestGraphEdgeTypes.invalidated_by_create);
+      reason = FILE_CREATE;
+    }
+    if (invalidation.invalidated_by_create_above) {
+      edgeTypes.push(requestGraphEdgeTypes.invalidated_by_create_above);
+      reason = FILE_CREATE;
+    }
+    if (invalidation.invalidated_by_update) {
+      edgeTypes.push(requestGraphEdgeTypes.invalidated_by_update);
+      reason = FILE_UPDATE;
+    }
+
+    // this needed to be reverse traversal
+    requestGraph.traverse(
+      (nodeToInvalidate, _context, actions) => {
+        if (seenNodes.has(nodeToInvalidate)) {
+          actions.skipChildren();
+          return;
+        }
+
+        seenNodes.add(nodeToInvalidate);
+        requestGraph.invalidateNode(nodeToInvalidate, reason);
+      },
+      nodeId,
+      edgeTypes,
+    );
+  }
+
+  return false;
 }
