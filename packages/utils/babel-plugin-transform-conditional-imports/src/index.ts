@@ -1,23 +1,20 @@
 import {PluginObj} from '@babel/core';
 import {declare} from '@babel/helper-plugin-utils';
-import {
-  ExpressionStatement,
-  Node,
-  Statement,
-  StringLiteral,
-  VariableDeclaration,
-} from '@babel/types';
+import type {StringLiteral} from '@babel/types';
+
+interface Opts {
+  server?: boolean;
+}
 
 interface State {
-  server?: boolean;
+  opts: Opts;
   importNodes?: any[]; // Statement types didn't work so using any
 }
 
-const isServer = (state: State) => {
-  return 'server' in state && state.server;
+const isServer = (opts: Opts) => {
+  return 'server' in opts && opts.server;
 };
 
-// @ts-expect-error Types don't seem to work, manually make them what we need
 export default declare((api): PluginObj<State> => {
   const {types: t} = api;
 
@@ -139,7 +136,7 @@ export default declare((api): PluginObj<State> => {
             ) {
               const [cond, ifTrue, ifFalse] = path.node.arguments;
 
-              if (isServer(state)) {
+              if (isServer(state.opts)) {
                 // Make module pass lazy in ssr
                 const identUid = path.scope.generateUid(
                   `${cond.value}$${ifTrue.value}$${ifFalse.value}`,
@@ -173,9 +170,7 @@ export default declare((api): PluginObj<State> => {
         exit(path, state) {
           if (state.importNodes) {
             // If there's an import
-            for (const node of state.importNodes) {
-              path.unshiftContainer('body', node);
-            }
+            path.unshiftContainer('body', state.importNodes);
           }
         },
       },
