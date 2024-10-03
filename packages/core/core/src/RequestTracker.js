@@ -942,7 +942,7 @@ export class RequestGraph extends ContentGraph<
     };
 
     for (let {path: _path, type} of events) {
-      if (++count === 256) {
+      if (!enableOptimization && ++count === 256) {
         let duration = Date.now() - startTime;
         predictedTime = duration * (events.length >> 8);
         if (predictedTime > threshold) {
