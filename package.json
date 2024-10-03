@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "yarn build-bundles && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production gulp",
-    "build-bundles": "rimraf --glob packages/*/*/lib && lerna run dev:prepare && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SELF_BUILD=true atlaspack build --no-cache packages/core/{fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js}",
+    "build-bundles": "rimraf --glob packages/*/*/lib && lerna run dev:prepare && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SELF_BUILD=true atlaspack build --no-cache packages/core/{fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-conditional-imports}",
     "build-ts": "lerna run build-ts && lerna run check-ts",
     "build-native": "node scripts/build-native.js",
     "build-native-release": "node scripts/build-native.js --release",
@@ -64,7 +64,9 @@
     "rfdc": "^1.4.1",
     "rimraf": "^5.0.5",
     "semver": "^7.5.2",
-    "sinon": "^7.3.1"
+    "sinon": "^7.3.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
   },
   "engines": {
     "node": ">= 16.0.0"
