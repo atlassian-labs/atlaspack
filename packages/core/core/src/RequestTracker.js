@@ -15,7 +15,7 @@ import type {
 } from '@atlaspack/graph';
 import logger from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
-import type {Async, EnvMap} from '@atlaspack/types';
+import type {Async, EnvMap, FilePath} from '@atlaspack/types';
 import {
   type Deferred,
   isGlobMatch,
@@ -962,8 +962,8 @@ export class RequestGraph extends ContentGraph<
         }
       }
 
-      let _filePath = toProjectPath(options.projectRoot, _path);
-      let filePath = fromProjectPathRelative(_filePath);
+      let projectPath = toProjectPath(options.projectRoot, _path);
+      let filePath = fromProjectPathRelative(projectPath);
       let hasFileRequest = this.hasContentKey(filePath);
 
       // If we see a 'create' event for the project root itself,
@@ -990,112 +990,34 @@ export class RequestGraph extends ContentGraph<
       // if it was a create event, but the file already exists in the graph,
       // then also invalidate nodes connected by invalidated_by_update edges.
       if (hasFileRequest && (type === 'create' || type === 'update')) {
-        let nodeId = this.getNodeIdByContentKey(filePath);
-        let nodes = this.getNodeIdsConnectedTo(
-          nodeId,
-          requestGraphEdgeTypes.invalidated_by_update,
-        );
-
-        for (let connectedNode of nodes) {
-          didInvalidate = true;
-          invalidateNode(connectedNode, FILE_UPDATE);
-        }
-
-        if (type === 'create') {
-          let nodes = this.getNodeIdsConnectedTo(
-            nodeId,
-            requestGraphEdgeTypes.invalidated_by_create,
-          );
-          for (let connectedNode of nodes) {
-            didInvalidate = true;
-            invalidateNode(connectedNode, FILE_CREATE);
-          }
-        }
+        didInvalidate =
+          this.respondToFSEventUpdate(filePath, invalidateNode, type) ||
+          didInvalidate;
       } else if (type === 'create') {
-        let basename = path.basename(filePath);
-        let fileNameNode = this.getNodeByContentKey('file_name:' + basename);
-        if (fileNameNode != null && fileNameNode.type === FILE_NAME) {
-          let fileNameNodeId = this.getNodeIdByContentKey(
-            'file_name:' + basename,
-          );
-
-          // Find potential file nodes to be invalidated if this file name pattern matches
-          let above: Array<FileNode> = getAbove(fileNameNodeId);
-          if (above.length > 0) {
-            didInvalidate = true;
-            this.invalidateFileNameNode(
-              fileNameNode,
-              _filePath,
-              above,
-              invalidateNode,
-            );
-          }
-        }
-
-        for (let globeNodeId of this.globNodeIds) {
-          let globNode = this.getNode(globeNodeId);
-          invariant(globNode && globNode.type === GLOB);
-
-          if (isGlobMatch(filePath, fromProjectPathRelative(globNode.value))) {
-            let connectedNodes = this.getNodeIdsConnectedTo(
-              globeNodeId,
-              requestGraphEdgeTypes.invalidated_by_create,
-            );
-            for (let connectedNode of connectedNodes) {
-              didInvalidate = true;
-              invalidateNode(connectedNode, FILE_CREATE);
-            }
-          }
-        }
+        didInvalidate =
+          this.responseToFSEventCreateNewFile(
+            filePath,
+            getAbove,
+            projectPath,
+            invalidateNode,
+          ) || didInvalidate;
       } else if (hasFileRequest && type === 'delete') {
-        let nodeId = this.getNodeIdByContentKey(filePath);
-        for (let connectedNode of this.getNodeIdsConnectedTo(
-          nodeId,
-          requestGraphEdgeTypes.invalidated_by_delete,
-        )) {
-          didInvalidate = true;
-          invalidateNode(connectedNode, FILE_DELETE);
-        }
-
-        // Delete the file node since it doesn't exist anymore.
-        // This ensures that files that don't exist aren't sent
-        // to requests as invalidations for future requests.
-        this.removeNode(nodeId, removeOrphans);
+        didInvalidate =
+          this.respondToFSEventDelete(
+            filePath,
+            invalidateNode,
+            removeOrphans,
+          ) || didInvalidate;
       }
 
-      let configKeyNodes = this.configKeyNodes.get(_filePath);
-      if (configKeyNodes && (type === 'delete' || type === 'update')) {
-        for (let nodeId of configKeyNodes) {
-          let isInvalid = type === 'delete';
-
-          if (type === 'update') {
-            let node = this.getNode(nodeId);
-            invariant(node && node.type === CONFIG_KEY);
-
-            let contentHash = await getConfigKeyContentHash(
-              _filePath,
-              node.configKey,
-              options,
-            );
-
-            isInvalid = node.contentHash !== contentHash;
-          }
-
-          if (isInvalid) {
-            for (let connectedNode of this.getNodeIdsConnectedTo(
-              nodeId,
-              requestGraphEdgeTypes.invalidated_by_update,
-            )) {
-              invalidateNode(
-                connectedNode,
-                type === 'delete' ? FILE_DELETE : FILE_UPDATE,
-              );
-            }
-            didInvalidate = true;
-            this.removeNode(nodeId, removeOrphans);
-          }
-        }
-      }
+      didInvalidate =
+        (await this.respondToFSEventConfigChanges(
+          projectPath,
+          type,
+          options,
+          invalidateNode,
+          removeOrphans,
+        )) || didInvalidate;
     }
 
     if (getFeatureFlag('fixQuadraticCacheInvalidation')) {
@@ -1114,6 +1036,147 @@ export class RequestGraph extends ContentGraph<
     });
 
     return didInvalidate && this.invalidNodeIds.size > 0;
+  }
+
+  async respondToFSEventConfigChanges(
+    projectPath: ProjectPath,
+    type: Event['type'],
+    options: AtlaspackOptions,
+    invalidateNode: (NodeId, InvalidateReason) => void,
+    removeOrphans: boolean,
+  ): Promise<boolean> {
+    let didInvalidate = false;
+    let configKeyNodes = this.configKeyNodes.get(projectPath);
+    if (configKeyNodes && (type === 'delete' || type === 'update')) {
+      for (let nodeId of configKeyNodes) {
+        let isInvalid = type === 'delete';
+
+        if (type === 'update') {
+          let node = this.getNode(nodeId);
+          invariant(node && node.type === CONFIG_KEY);
+
+          let contentHash = await getConfigKeyContentHash(
+            projectPath,
+            node.configKey,
+            options,
+          );
+
+          isInvalid = node.contentHash !== contentHash;
+        }
+
+        if (isInvalid) {
+          for (let connectedNode of this.getNodeIdsConnectedTo(
+            nodeId,
+            requestGraphEdgeTypes.invalidated_by_update,
+          )) {
+            invalidateNode(
+              connectedNode,
+              type === 'delete' ? FILE_DELETE : FILE_UPDATE,
+            );
+          }
+          didInvalidate = true;
+          this.removeNode(nodeId, removeOrphans);
+        }
+      }
+    }
+    return didInvalidate;
+  }
+
+  respondToFSEventDelete(
+    filePath: FilePath,
+    invalidateNode: (NodeId, InvalidateReason) => void,
+    removeOrphans: boolean,
+  ): boolean {
+    let didInvalidate = false;
+    let nodeId = this.getNodeIdByContentKey(filePath);
+    for (let connectedNode of this.getNodeIdsConnectedTo(
+      nodeId,
+      requestGraphEdgeTypes.invalidated_by_delete,
+    )) {
+      didInvalidate = true;
+      invalidateNode(connectedNode, FILE_DELETE);
+    }
+
+    // Delete the file node since it doesn't exist anymore.
+    // This ensures that files that don't exist aren't sent
+    // to requests as invalidations for future requests.
+    this.removeNode(nodeId, removeOrphans);
+    return didInvalidate;
+  }
+
+  responseToFSEventCreateNewFile(
+    filePath: FilePath,
+    getAbove: NodeId => FileNode[],
+    projectPath: ProjectPath,
+    invalidateNode: (NodeId, InvalidateReason) => void,
+  ) {
+    let didInvalidate = false;
+    let basename = path.basename(filePath);
+    let fileNameNode = this.getNodeByContentKey('file_name:' + basename);
+    if (fileNameNode != null && fileNameNode.type === FILE_NAME) {
+      let fileNameNodeId = this.getNodeIdByContentKey('file_name:' + basename);
+
+      // Find potential file nodes to be invalidated if this file name pattern matches
+      let above: Array<FileNode> = getAbove(fileNameNodeId);
+      if (above.length > 0) {
+        didInvalidate = true;
+        this.invalidateFileNameNode(
+          fileNameNode,
+          projectPath,
+          above,
+          invalidateNode,
+        );
+      }
+    }
+
+    for (let globeNodeId of this.globNodeIds) {
+      let globNode = this.getNode(globeNodeId);
+      invariant(globNode && globNode.type === GLOB);
+
+      if (isGlobMatch(filePath, fromProjectPathRelative(globNode.value))) {
+        let connectedNodes = this.getNodeIdsConnectedTo(
+          globeNodeId,
+          requestGraphEdgeTypes.invalidated_by_create,
+        );
+        for (let connectedNode of connectedNodes) {
+          didInvalidate = true;
+          invalidateNode(connectedNode, FILE_CREATE);
+        }
+      }
+    }
+
+    return didInvalidate;
+  }
+
+  respondToFSEventUpdate(
+    filePath: FilePath,
+    invalidateNode: (NodeId, InvalidateReason) => void,
+    type: Event['type'],
+  ): boolean {
+    let didInvalidate = false;
+    const nodeId = this.getNodeIdByContentKey(filePath);
+    const nodes = this.getNodeIdsConnectedTo(
+      nodeId,
+      requestGraphEdgeTypes.invalidated_by_update,
+    );
+
+    for (let connectedNode of nodes) {
+      didInvalidate = true;
+      invalidateNode(connectedNode, FILE_UPDATE);
+    }
+
+    if (type === 'create') {
+      let nodes = this.getNodeIdsConnectedTo(
+        nodeId,
+        requestGraphEdgeTypes.invalidated_by_create,
+      );
+      for (let connectedNode of nodes) {
+        didInvalidate = true;
+        invalidateNode(connectedNode, FILE_CREATE);
+      }
+    }
+
+    return didInvalidate;
   }
 
   hasCachedRequestChunk(index: number): boolean {
