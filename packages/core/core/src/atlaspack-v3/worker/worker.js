@@ -7,6 +7,7 @@ import type {
   PluginOptions,
   Dependency,
   FilePath,
+  FileSystem,
 } from '@atlaspack/types';
 import {workerData} from 'worker_threads';
 import * as module from 'module';
@@ -20,8 +21,10 @@ const CONFIG = Symbol.for('parcel-plugin-config');
 
 export class AtlaspackWorker {
   #resolvers: Map<string, Resolver<*>>;
+  #fs: FileSystem;
 
-  constructor() {
+  constructor(fs: FileSystem) {
+    this.#fs = fs;
     this.#resolvers = new Map();
   }
 
@@ -66,8 +69,8 @@ export class AtlaspackWorker {
     const result = await resolver.resolve({
       specifier,
       dependency,
-      get options() {
-        throw new Error('TODO: Resolver.resolve.options');
+      options: {
+        inputFS: this.#fs,
       },
       get logger() {
         throw new Error('TODO: Resolver.resolve.logger');
@@ -181,7 +184,10 @@ export class AtlaspackWorker {
   }
 }
 
-napi.registerWorker(workerData.tx_worker, new AtlaspackWorker());
+const fsBridge = napi.getFsBridge(workerData.fsBridge);
+const worker = new AtlaspackWorker(fsBridge);
+
+napi.registerWorker(workerData.tx_worker, worker);
 
 type LoadPluginOptions = {|
   kind: 'resolver',

@@ -5,6 +5,8 @@ use atlaspack_napi_helpers::JsTransferable;
 use napi::{Env, JsObject, JsUndefined};
 use napi_derive::napi;
 
+use super::fs_bridge::FsBridge;
+
 /// This function is run in the Nodejs worker context upon initialization
 /// to notify the main thread that a Nodejs worker thread has started
 ///
@@ -37,4 +39,10 @@ pub fn register_worker(
     return Err(napi::Error::from_reason("Unable to register worker"));
   }
   env.get_undefined()
+}
+
+#[napi]
+pub fn get_fs_bridge(fs_bridge: JsTransferable<FsBridge>) -> napi::Result<FsBridge> {
+  let fs_bridge = fs_bridge.take()?;
+  Ok(fs_bridge)
 }

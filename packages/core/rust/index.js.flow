@@ -5,6 +5,7 @@ import type {
   FilePath,
   InitialAtlaspackOptions,
   PackageManager,
+  FileSystem as FileSystemClassic,
 } from '@atlaspack/types';
 
 declare export var init: void | (() => void);
@@ -34,6 +35,7 @@ export interface FileSystem {
 
 export type AtlaspackNapiOptions = {|
   fs?: FileSystem,
+  fsBridge?: FileSystemClassic,
   nodeWorkers?: number,
   options: {|
     corePath?: string,

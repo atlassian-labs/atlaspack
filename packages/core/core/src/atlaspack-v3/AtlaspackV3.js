@@ -3,11 +3,13 @@
 import path from 'path';
 import {Worker} from 'worker_threads';
 import {AtlaspackNapi, type AtlaspackNapiOptions} from '@atlaspack/rust';
+import type {FileSystem as FileSystemClassic} from '@atlaspack/types';
+import {toFileSystemV3} from './fs';
 
 const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
 
 export type AtlaspackV3Options = {|
-  fs?: AtlaspackNapiOptions['fs'],
+  fs: FileSystemClassic,
   nodeWorkers?: number,
   packageManager?: AtlaspackNapiOptions['packageManager'],
   threads?: number,
@@ -33,7 +35,8 @@ export class AtlaspackV3 {
     };
 
     this._internal = new AtlaspackNapi({
-      fs,
+      fs: toFileSystemV3(fs),
+      fsBridge: fs,
       nodeWorkers,
       packageManager,
       threads,
@@ -57,10 +60,11 @@ export class AtlaspackV3 {
 
     return [
       workers,
-      tx_worker => {
+      (tx_worker, fsBridge) => {
         let worker = new Worker(WORKER_PATH, {
           workerData: {
             tx_worker,
+            fsBridge,
           },
         });
         workers.push(worker);

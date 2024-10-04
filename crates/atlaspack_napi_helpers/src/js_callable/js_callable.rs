@@ -24,6 +24,7 @@ pub type MapJsReturn<Return> = Box<dyn Fn(&Env, JsUnknown) -> napi::Result<Retur
 ///
 /// Functions can be called from threads or the main thread, while parameters and return types can
 /// be mapped by the caller.
+#[derive(Clone)]
 pub struct JsCallable {
   #[cfg(debug_assertions)]
   initial_thread: ThreadId,

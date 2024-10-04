@@ -19,6 +19,7 @@ use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
 
 use super::file_system_napi::FileSystemNapi;
+use super::fs_bridge::FsBridge;
 use super::package_manager_napi::PackageManagerNapi;
 
 #[napi(object)]
@@ -32,6 +33,7 @@ pub struct AtlaspackNapiBuildResult {}
 #[napi(object)]
 pub struct AtlaspackNapiOptions {
   pub fs: Option<JsObject>,
+  pub fs_bridge: JsObject,
   pub node_workers: Option<u32>,
   pub options: JsObject,
   pub package_manager: Option<JsObject>,
@@ -42,6 +44,7 @@ pub struct AtlaspackNapiOptions {
 pub struct AtlaspackNapi {
   pub node_worker_count: u32,
   fs: Option<FileSystemRef>,
+  fs_bridge: FsBridge,
   options: AtlaspackOptions,
   package_manager: Option<PackageManagerRef>,
   rpc: Option<RpcHostRef>,
@@ -87,6 +90,7 @@ impl AtlaspackNapi {
 
     Ok(Self {
       fs,
+      fs_bridge: FsBridge::new(napi_options.fs_bridge)?,
       node_worker_count: node_worker_count as u32,
       options: env.from_js_value(napi_options.options)?,
       package_manager,
@@ -103,7 +107,7 @@ impl AtlaspackNapi {
   ) -> napi::Result<JsObject> {
     let (deferred, promise) = env.create_deferred()?;
 
-    self.register_workers(&options)?;
+    self.register_workers(env.clone(), &options)?;
 
     // Both the atlaspack initialisation and build must be run a dedicated system thread so that
     // the napi threadsafe functions do not panic
@@ -130,13 +134,18 @@ impl AtlaspackNapi {
     Ok(promise)
   }
 
-  fn register_workers(&self, options: &AtlaspackNapiBuildOptions) -> napi::Result<()> {
+  fn register_workers(&self, env: Env, options: &AtlaspackNapiBuildOptions) -> napi::Result<()> {
     for _ in 0..self.node_worker_count {
       let transferable = JsTransferable::new(self.tx_worker.clone());
 
+      let fs_bridge = JsTransferable::new(self.fs_bridge.clone());
+
       options
         .register_worker
-        .call1::<JsTransferable<Sender<NodejsWorker>>, JsUnknown>(transferable)?;
+        .call2::<JsTransferable<Sender<NodejsWorker>>, JsTransferable<FsBridge>, JsUnknown>(
+          transferable,
+          fs_bridge,
+        )?;
     }
 
     Ok(())

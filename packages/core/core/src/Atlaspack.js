@@ -58,7 +58,8 @@ import {
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags} from '@atlaspack/feature-flags';
-import {AtlaspackV3, toFileSystemV3} from './atlaspack-v3';
+import {AtlaspackV3} from './atlaspack-v3';
+import {NodeFS} from '@atlaspack/fs';
 
 registerCoreWithSerializer();
 
@@ -124,6 +125,11 @@ export default class Atlaspack {
 
     let rustAtlaspack: AtlaspackV3;
     if (resolvedOptions.featureFlags.atlaspackV3) {
+      if (!this.#initialOptions.inputFS) {
+        // $FlowFixMe readonly
+        this.#initialOptions.inputFS = new NodeFS();
+      }
+
       // eslint-disable-next-line no-unused-vars
       let {entries, inputFS, outputFS, ...options} = this.#initialOptions;
 
@@ -137,7 +143,7 @@ export default class Atlaspack {
           ? undefined
           : [entries],
         env: resolvedOptions.env,
-        fs: inputFS && toFileSystemV3(inputFS),
+        fs: inputFS,
         defaultTargetOptions: {
           // $FlowFixMe projectPath is just a string
           distDir: resolvedOptions.defaultTargetOptions.distDir,
