@@ -1,3 +1,10 @@
+//! Parse yarn lock files and state files to generate events for dependency
+//! directories that change resolutions.
+//!
+//! This is intended to avoid relying on file-system events for untracked files
+//! that are relevant for a bundler implementation. Since we'll simply read the
+//! yarn state, we can generate events when the yarn.lock changes, but otherwise
+//! rely on VCS as the source of truth for whether files have changed.
 use std::{
   collections::HashMap,
   path::{Path, PathBuf},
