@@ -3,12 +3,12 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use indexmap::IndexMap;
+use indexmap::{Equivalent, IndexMap};
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 
 use atlaspack_core::asset_graph::{AssetGraph, DependencyNode, DependencyState};
-use atlaspack_core::types::Dependency;
+use atlaspack_core::types::{Dependency, DiscoveredAsset};
 
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
@@ -225,7 +225,7 @@ impl AssetGraphBuilder {
   fn handle_asset_result(&mut self, result: AssetRequestOutput, request_id: u64) {
     let AssetRequestOutput {
       asset,
-      discovered_assets: _,
+      discovered_assets,
       dependencies,
     } = result;
     let incoming_dep_node_index = *self
@@ -236,15 +236,37 @@ impl AssetGraphBuilder {
     // Connect the incoming DependencyNode to the new AssetNode
     let asset_node_index = self.graph.add_asset(incoming_dep_node_index, asset.clone());
 
-    // TODO: Stitch discovered assets to the AssetGraph
-    // for asset in discovered_assets {
-    //   self.graph.add_asset(asset_node_index, asset);
-    // }
-
     self
       .asset_request_to_asset
       .insert(request_id, asset_node_index);
 
+    let mut added_discovered_assets: HashMap<String, NodeIndex> = HashMap::new();
+    self.add_asset_dependencies(
+      dependencies,
+      &discovered_assets,
+      asset_node_index,
+      &mut added_discovered_assets,
+    );
+
+    self.propagate_requested_symbols(asset_node_index, incoming_dep_node_index);
+
+    // Connect any previously discovered Dependencies that were waiting
+    // for this AssetNode to be created
+    if let Some(waiting) = self.waiting_asset_requests.remove(&request_id) {
+      for dep in waiting {
+        self.graph.add_edge(&dep, &asset_node_index);
+        self.propagate_requested_symbols(asset_node_index, dep);
+      }
+    }
+  }
+
+  fn add_asset_dependencies(
+    &mut self,
+    dependencies: Vec<Dependency>,
+    discovered_assets: &Vec<DiscoveredAsset>,
+    asset_node_index: NodeIndex,
+    added_discovered_assets: &mut HashMap<String, NodeIndex>,
+  ) {
     // Connect dependencies of the Asset
     let mut unique_deps: IndexMap<String, Dependency> = IndexMap::new();
 
@@ -270,17 +292,44 @@ impl AssetGraphBuilder {
     }
 
     for (_id, dependency) in unique_deps.into_iter() {
-      let _ = self.graph.add_dependency(asset_node_index, dependency);
-    }
+      // Find if this dependency points to a discovered_asset
+      let discovered_asset = discovered_assets.iter().find(|discovered_asset| {
+        discovered_asset
+          .asset
+          .unique_key
+          .as_ref()
+          .is_some_and(|key| key == &dependency.specifier)
+      });
 
-    self.propagate_requested_symbols(asset_node_index, incoming_dep_node_index);
+      let dep_node = self.graph.add_dependency(asset_node_index, dependency);
 
-    // Connect any previously discovered Dependencies that were waiting
-    // for this AssetNode to be created
-    if let Some(waiting) = self.waiting_asset_requests.remove(&request_id) {
-      for dep in waiting {
-        self.graph.add_edge(&dep, &asset_node_index);
-        self.propagate_requested_symbols(asset_node_index, dep);
+      // If the dependency points to a dicovered asset then add the asset using the new
+      // dep as it's parent
+      if let Some(DiscoveredAsset {
+        asset,
+        dependencies,
+      }) = discovered_asset
+      {
+        let existing_discovered_asset = added_discovered_assets.get(&asset.id);
+
+        if let Some(asset_node_index) = existing_discovered_asset {
+          // This discovered_asset has already been added to the graph so we
+          // just need to connect the dependency node to the asset node
+          self.graph.add_edge(&dep_node, asset_node_index);
+        } else {
+          // This discovered_asset isn't yet in the graph so we'll need to add
+          // it and assign it's dependencies by calling added_discovered_assets
+          // recursively.
+          let asset_node_index = self.graph.add_asset(dep_node, asset.clone());
+          added_discovered_assets.insert(asset.id.clone(), asset_node_index);
+
+          self.add_asset_dependencies(
+            dependencies.clone(),
+            discovered_assets,
+            asset_node_index,
+            added_discovered_assets,
+          );
+        }
       }
     }
   }

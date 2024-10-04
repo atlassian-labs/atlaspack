@@ -15,6 +15,7 @@ use super::environment::Environment;
 use super::file_type::FileType;
 use super::json::JSONObject;
 use super::symbol::Symbol;
+use super::Dependency;
 
 pub type AssetId = String;
 
@@ -199,6 +200,12 @@ pub struct Asset {
 
   pub config_path: Option<String>,
   pub config_key_path: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AssetWithDependencies {
+  pub asset: Asset,
+  pub dependencies: Vec<Dependency>,
 }
 
 impl Asset {
