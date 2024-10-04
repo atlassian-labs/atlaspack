@@ -217,4 +217,5 @@ const PriorityMap = {
   sync: 0,
   parallel: 1,
   lazy: 2,
+  conditional: 3,
 };
