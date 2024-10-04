@@ -936,13 +936,13 @@ export async function run(input: string[]) {
     );
 
     // $FlowFixMe[prop-missing]
-    server.context.bundleGraph = bundleGraph;
+    global.bundleGraph = server.context.bundleGraph = bundleGraph;
     // $FlowFixMe[prop-missing]
-    server.context.assetGraph = assetGraph;
+    global.assetGraph = server.context.assetGraph = assetGraph;
     // $FlowFixMe[prop-missing]
-    server.context.requestTracker = requestTracker;
+    global.requestTracker = server.context.requestTracker = requestTracker;
     // $FlowFixMe[prop-missing]
-    server.context.cacheInfo = cacheInfo;
+    global.cacheInfo = server.context.cacheInfo = cacheInfo;
     for (let [name, cmd] of new Map([
       [
         'getAsset',

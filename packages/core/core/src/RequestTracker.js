@@ -1109,7 +1109,7 @@ export class RequestGraph extends ContentGraph<
     getAbove: NodeId => FileNode[],
     projectPath: ProjectPath,
     invalidateNode: (NodeId, InvalidateReason) => void,
-  ) {
+  ): boolean {
     let didInvalidate = false;
     let basename = path.basename(filePath);
     let fileNameNode = this.getNodeByContentKey('file_name:' + basename);
@@ -1821,6 +1821,9 @@ function logErrorOnBailout(
 }
 
 export function cleanUpOrphans<N, E: number>(graph: Graph<N, E>): NodeId[] {
+  if (graph.rootNodeId == null) {
+    return [];
+  }
   const reachableNodes = new Set();
   graph.traverse(nodeId => {
     reachableNodes.add(nodeId);
