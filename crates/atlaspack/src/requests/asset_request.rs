@@ -12,9 +12,9 @@ use std::collections::VecDeque;
 use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::plugins::PluginsRef;
-use crate::plugins::TransformerPipeline;
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
 use super::RequestResult;
@@ -53,10 +53,7 @@ impl Request for AssetRequest {
       },
     )));
 
-    let pipeline = request_context
-      .plugins()
-      .transformers(&self.file_path, self.pipeline.clone())?;
-
+    let start = Instant::now();
     let asset = Asset::new(
       &self.project_root,
       self.env.clone(),
@@ -69,16 +66,11 @@ impl Request for AssetRequest {
     )?;
 
     let transform_context = TransformContext::new(self.env.clone());
-    let mut result = run_pipeline(
-      transform_context,
-      pipeline,
-      asset,
-      request_context.plugins().clone(),
-    )?;
+    let mut result = run_pipelines(transform_context, asset, request_context.plugins().clone())?;
 
     result.asset.stats = AssetStats {
       size: result.asset.code.size(),
-      time: 0,
+      time: start.elapsed().as_millis().try_into().unwrap_or(u32::MAX),
     };
 
     Ok(ResultAndInvalidations {
@@ -97,7 +89,7 @@ impl Request for AssetRequest {
   }
 }
 
-pub fn run_pipeline(
+pub fn run_pipelines(
   transform_context: TransformContext,
   input: Asset,
   plugins: PluginsRef,
@@ -173,6 +165,7 @@ pub fn run_pipeline(
 mod tests {
   use super::*;
   use crate::plugins::MockPlugins;
+  use crate::plugins::TransformerPipeline;
   use anyhow::Error;
   use atlaspack_core::hash::IdentifierHasher;
   use atlaspack_core::plugin::MockTransformerPlugin;
@@ -181,15 +174,17 @@ mod tests {
 
   #[test]
   fn test_run_pipeline_works() {
-    let mock_transformer1 = make_transformer("transformer1", None, None, None);
-    let mock_transformer2 = make_transformer("transformer2", None, None, None);
-
-    let pipeline = TransformerPipeline::new(vec![mock_transformer1, mock_transformer2]);
+    let mut plugins = MockPlugins::new();
+    plugins.expect_transformers().returning(move |_, _| {
+      Ok(TransformerPipeline::new(vec![
+        make_transformer("transformer1", None, None, None),
+        make_transformer("transformer2", None, None, None),
+      ]))
+    });
 
     let asset = Asset::default();
-    let plugins = Arc::new(MockPlugins::new());
     let context = TransformContext::default();
-    let result = run_pipeline(context, pipeline, asset, plugins).unwrap();
+    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
 
     assert_eq!(
       String::from_utf8(result.asset.code.bytes().to_vec()).unwrap(),
@@ -199,15 +194,17 @@ mod tests {
 
   #[test]
   fn test_run_pipelines_for_discovered_assets() {
-    let mock_transformer1 = make_transformer("transformer1", None, None, None);
-    let mock_transformer2 = make_transformer("transformer2", None, None, None);
-
-    let pipeline = TransformerPipeline::new(vec![mock_transformer1, mock_transformer2]);
+    let mut plugins = MockPlugins::new();
+    plugins.expect_transformers().returning(move |_, _| {
+      Ok(TransformerPipeline::new(vec![
+        make_transformer("transformer1", None, None, None),
+        make_transformer("transformer2", None, None, None),
+      ]))
+    });
 
     let asset = Asset::default();
-    let plugins = Arc::new(MockPlugins::new());
     let context = TransformContext::default();
-    let result = run_pipeline(context, pipeline, asset, plugins).unwrap();
+    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
 
     assert_eq!(
       String::from_utf8(result.asset.code.bytes().to_vec()).unwrap(),
@@ -217,20 +214,28 @@ mod tests {
 
   #[test]
   fn test_run_pipeline_with_all_fields() {
-    let mock_transformer = make_transformer(
-      "transformer",
-      Some(vec![Asset::default()]),
-      Some(vec![Dependency::default()]),
-      Some(vec![PathBuf::from("./tmp")]),
-    );
-    let pipeline = TransformerPipeline::new(vec![mock_transformer]);
+    let mut plugins = MockPlugins::new();
+    plugins.expect_transformers().returning(move |_, _| {
+      Ok(TransformerPipeline::new(vec![make_transformer(
+        "transformer",
+        Some(vec![AssetWithDependencies {
+          asset: Asset::default(),
+          dependencies: Vec::new(),
+        }]),
+        Some(vec![Dependency::default()]),
+        Some(vec![PathBuf::from("./tmp")]),
+      )]))
+    });
+
     let asset = Asset::default();
-    let plugins = Arc::new(MockPlugins::new());
-    let expected_discovered_assets = vec![Asset::default()];
+    let expected_discovered_assets = vec![AssetWithDependencies {
+      asset: Asset::default(),
+      dependencies: Vec::new(),
+    }];
     let expected_dependencies = vec![Dependency::default()];
     let expected_invalidations = vec![PathBuf::from("./tmp")];
     let context = TransformContext::default();
-    let result = run_pipeline(context, pipeline, asset, plugins).unwrap();
+    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
     assert_eq!(
       String::from_utf8(result.asset.code.bytes().to_vec()).unwrap(),
       "::transformer"
@@ -242,7 +247,7 @@ mod tests {
 
   fn make_transformer(
     label: &str,
-    discovered_assets: Option<Vec<Asset>>,
+    discovered_assets: Option<Vec<AssetWithDependencies>>,
     dependencies: Option<Vec<Dependency>>,
     invalidate_on_file_change: Option<Vec<PathBuf>>,
   ) -> Box<MockTransformerPlugin> {
@@ -268,27 +273,11 @@ mod tests {
             label.clone()
           )));
 
-          let result_discovered_assets: Vec<Asset> = if discovered_assets.is_some() {
-            discovered_assets.unwrap()
-          } else {
-            vec![]
-          };
-          let result_dependencies = if dependencies.is_some() {
-            dependencies.unwrap()
-          } else {
-            vec![]
-          };
-          let result_invalidations = if invalidate_on_file_change.is_some() {
-            invalidate_on_file_change.unwrap()
-          } else {
-            vec![]
-          };
-
           Ok(TransformResult {
             asset,
-            discovered_assets: result_discovered_assets,
-            dependencies: result_dependencies,
-            invalidate_on_file_change: result_invalidations,
+            discovered_assets: discovered_assets.unwrap_or_default(),
+            dependencies: dependencies.unwrap_or_default(),
+            invalidate_on_file_change: invalidate_on_file_change.unwrap_or_default(),
           })
         }
       })
@@ -310,7 +299,6 @@ mod tests {
       discovered_assets,
       dependencies,
       invalidate_on_file_change: invalidations,
-      ..TransformResult::default()
     })
   }
 }

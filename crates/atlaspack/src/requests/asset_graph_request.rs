@@ -3,12 +3,12 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use indexmap::{Equivalent, IndexMap};
+use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 
 use atlaspack_core::asset_graph::{AssetGraph, DependencyNode, DependencyState};
-use atlaspack_core::types::{Dependency, DiscoveredAsset};
+use atlaspack_core::types::{AssetWithDependencies, Dependency};
 
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
@@ -263,7 +263,7 @@ impl AssetGraphBuilder {
   fn add_asset_dependencies(
     &mut self,
     dependencies: Vec<Dependency>,
-    discovered_assets: &Vec<DiscoveredAsset>,
+    discovered_assets: &Vec<AssetWithDependencies>,
     asset_node_index: NodeIndex,
     added_discovered_assets: &mut HashMap<String, NodeIndex>,
   ) {
@@ -305,7 +305,7 @@ impl AssetGraphBuilder {
 
       // If the dependency points to a dicovered asset then add the asset using the new
       // dep as it's parent
-      if let Some(DiscoveredAsset {
+      if let Some(AssetWithDependencies {
         asset,
         dependencies,
       }) = discovered_asset
