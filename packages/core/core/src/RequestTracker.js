@@ -942,7 +942,11 @@ export class RequestGraph extends ContentGraph<
     };
 
     for (let {path: _path, type} of events) {
-      if (!enableOptimization && ++count === 256) {
+      if (
+        !enableOptimization &&
+        process.env.ATLASPACK_DISABLE_CACHE_TIMEOUT !== 'true' &&
+        ++count === 256
+      ) {
         let duration = Date.now() - startTime;
         predictedTime = duration * (events.length >> 8);
         if (predictedTime > threshold) {
@@ -1110,6 +1114,8 @@ export class RequestGraph extends ContentGraph<
         trackableEvent: 'fsevent_response_time',
         duration,
         predictedTime,
+        numberOfEvents: events.length,
+        numberOfInvalidatedNodes: invalidatedNodes.size,
       },
     });
 
@@ -1668,6 +1674,15 @@ async function loadRequestGraph(options): Async<RequestGraph> {
   let timeout;
   const snapshotKey = `snapshot-${cacheKey}`;
   const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');
+
+  logger.verbose({
+    origin: '@atlaspack/core',
+    message: 'Loading request graph',
+    meta: {
+      cacheKey,
+      snapshotKey,
+    },
+  });
   if (await options.cache.hasLargeBlob(requestGraphKey)) {
     try {
       let {requestGraph} = await readAndDeserializeRequestGraph(
@@ -1723,6 +1738,15 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     }
   }
 
+  logger.verbose({
+    origin: '@atlaspack/core',
+    message:
+      'Cache entry for request tracker was not found, initializing a clean cache.',
+    meta: {
+      cacheKey,
+      snapshotKey,
+    },
+  });
   return new RequestGraph();
 }
 
@@ -1758,6 +1782,10 @@ function logErrorOnBailout(
 }
 
 export function cleanUpOrphans<N, E: number>(graph: Graph<N, E>): NodeId[] {
+  if (graph.rootNodeId == null) {
+    return [];
+  }
+
   const reachableNodes = new Set();
   graph.traverse(nodeId => {
     reachableNodes.add(nodeId);

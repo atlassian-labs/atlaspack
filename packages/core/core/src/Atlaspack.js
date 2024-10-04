@@ -544,6 +544,10 @@ export default class Atlaspack {
     return this.#farm.takeHeapSnapshot();
   }
 
+  async unstable_invalidate(): Promise<void> {
+    await this._init();
+  }
+
   async unstable_transform(
     options: AtlaspackTransformOptions,
   ): Promise<Array<Asset>> {
