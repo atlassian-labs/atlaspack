@@ -691,32 +691,6 @@ export default class PackagerRunner {
     return devDepHashes;
   }
 
-  async readFromCache(cacheKey: string): Promise<?{|
-    contents: Readable,
-    map: ?Readable,
-  |}> {
-    let contentKey = PackagerRunner.getContentKey(cacheKey);
-    let mapKey = PackagerRunner.getMapKey(cacheKey);
-
-    let isLargeBlob = await this.options.cache.hasLargeBlob(contentKey);
-    let contentExists =
-      isLargeBlob || (await this.options.cache.has(contentKey));
-    if (!contentExists) {
-      return null;
-    }
-
-    let mapExists = await this.options.cache.has(mapKey);
-
-    return {
-      contents: isLargeBlob
-        ? this.options.cache.getStream(contentKey)
-        : blobToStream(await this.options.cache.getBlob(contentKey)),
-      map: mapExists
-        ? blobToStream(await this.options.cache.getBlob(mapKey))
-        : null,
-    };
-  }
-
   async writeToCache(
     cacheKeys: CacheKeyMap,
     type: string,
