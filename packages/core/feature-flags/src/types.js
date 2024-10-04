@@ -3,6 +3,7 @@
 export type FeatureFlags = {|
   // This feature flag mostly exists to test the feature flag system, and doesn't have any build/runtime effect
   +exampleFeature: boolean,
+  +exampleConsistencyCheckFeature: ConsistencyCheckFeatureFlagValue,
   /**
    * Rust backed requests
    */
@@ -22,7 +23,7 @@ export type FeatureFlags = {|
   /**
    * Fixes quadratic cache invalidation issue
    */
-  fixQuadraticCacheInvalidation: boolean,
+  fixQuadraticCacheInvalidation: ConsistencyCheckFeatureFlagValue,
   /**
    * Enable rust based inline requires optimization
    */
@@ -34,3 +35,9 @@ export type FeatureFlags = {|
    */
   conditionalBundlingApi: boolean,
 |};
+
+export type ConsistencyCheckFeatureFlagValue =
+  | 'NEW'
+  | 'OLD'
+  | 'NEW_AND_CHECK'
+  | 'OLD_AND_CHECK';

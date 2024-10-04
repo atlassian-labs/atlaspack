@@ -230,6 +230,53 @@ let build = program
 
 applyOptions(build, commonOptions);
 
+function makeDebugCommand() {
+  const debug = new commander.Command('debug').description(
+    'Debug commands for atlaspack',
+  );
+
+  const invalidate = debug
+    .command('invalidate [input...]')
+    .description('Run cache invalidation, then exit')
+    .action(async (entries, opts, command: any) => {
+      try {
+        if (entries.length === 0) {
+          entries = ['.'];
+        }
+        entries = entries.map(entry => path.resolve(entry));
+
+        Object.assign(command, opts);
+
+        const Atlaspack = require('@atlaspack/core').default;
+        const fs = new NodeFS();
+        const options = await normalizeOptions(command, fs);
+
+        console.log(command.featureFlag);
+        const atlaspack = new Atlaspack({
+          entries,
+          defaultConfig: require.resolve('@atlaspack/config-default', {
+            paths: [fs.cwd(), __dirname],
+          }),
+          shouldPatchConsole: false,
+          ...options,
+          shouldBuildLazily: true,
+          watchBackend: 'watchman',
+        });
+        console.log('Created atlaspack instance');
+
+        await atlaspack.unstable_invalidate();
+        console.log('Done invalidating cache');
+      } catch (err) {
+        handleUncaughtException(err);
+      }
+    });
+  applyOptions(invalidate, commonOptions);
+
+  return debug;
+}
+
+program.addCommand(makeDebugCommand());
+
 program
   .command('help [command]')
   .description('display help information for a command')

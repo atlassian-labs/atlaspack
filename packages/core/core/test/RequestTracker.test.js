@@ -9,8 +9,10 @@ import RequestTracker, {
 import {Graph} from '@atlaspack/graph';
 import WorkerFarm from '@atlaspack/workers';
 import {DEFAULT_OPTIONS} from './test-utils';
-import {INITIAL_BUILD} from '../src/constants';
+import {FILE_CREATE, FILE_UPDATE, INITIAL_BUILD} from '../src/constants';
 import {makeDeferredWithPromise} from '@atlaspack/utils';
+import {toProjectPath} from '../src/projectPath';
+import {DEFAULT_FEATURE_FLAGS, setFeatureFlags} from '../../feature-flags/src';
 
 const options = DEFAULT_OPTIONS;
 const farm = new WorkerFarm({workerPath: require.resolve('../src/worker.js')});
@@ -448,6 +450,97 @@ describe('RequestTracker', () => {
     tracker = await RequestTracker.init({farm, options});
 
     assert.equal(tracker.graph.getNode(nodeId)?.invalidateReason, 1);
+  });
+
+  describe('respondToFSEvents', () => {
+    [true, false].forEach(value => {
+      beforeEach(() => {
+        setFeatureFlags({
+          ...DEFAULT_FEATURE_FLAGS,
+          fixQuadraticCacheInvalidation: value === true ? 'NEW' : 'OLD',
+        });
+      });
+
+      afterEach(() => {
+        setFeatureFlags({
+          ...DEFAULT_FEATURE_FLAGS,
+        });
+      });
+
+      describe(`optimizations feature-flag ${String(value)}`, () => {
+        it('should invalidate file requests on file changes', async () => {
+          let tracker = new RequestTracker({farm, options});
+          await tracker.runRequest({
+            id: 'abc',
+            type: 7,
+            // $FlowFixMe string isn't a valid result
+            run: async ({api}: {api: RunAPI<string | void>, ...}) => {
+              api.invalidateOnFileUpdate(toProjectPath('', 'my-file'));
+              let result = await Promise.resolve('hello');
+              api.storeResult(result);
+            },
+            input: null,
+          });
+          const requestId = tracker.graph.getNodeIdByContentKey('abc');
+          const invalidated = await tracker.respondToFSEvents(
+            [
+              {
+                type: 'update',
+                path: 'my-file',
+              },
+            ],
+            Number.MAX_VALUE,
+          );
+          assert.equal(invalidated, true);
+          assert.equal(
+            tracker.graph.getNode(requestId)?.invalidateReason,
+            FILE_UPDATE,
+          );
+          assert.deepEqual(Array.from(tracker.graph.invalidNodeIds), [
+            requestId,
+          ]);
+        });
+
+        it('should invalidate file name requests with invalidate above invalidations', async () => {
+          let tracker = new RequestTracker({farm, options});
+          await tracker.runRequest({
+            id: 'abc',
+            type: 7,
+            // $FlowFixMe string isn't a valid result
+            run: async ({api}: {api: RunAPI<string | void>, ...}) => {
+              api.invalidateOnFileCreate({
+                fileName: 'package.json',
+                aboveFilePath: toProjectPath(
+                  '',
+                  './node_modules/something/package.json',
+                ),
+              });
+              let result = await Promise.resolve('hello');
+              api.storeResult(result);
+            },
+            input: null,
+          });
+          const requestId = tracker.graph.getNodeIdByContentKey('abc');
+          const invalidated = await tracker.respondToFSEvents(
+            [
+              {
+                type: 'create',
+                path: './package.json',
+              },
+            ],
+            Number.MAX_VALUE,
+          );
+          assert.equal(invalidated, true);
+          assert.equal(
+            tracker.graph.getNode(requestId)?.invalidateReason,
+            FILE_CREATE,
+          );
+          assert.deepEqual(Array.from(tracker.graph.invalidNodeIds), [
+            requestId,
+          ]);
+        });
+      });
+    });
   });
 });
 
