@@ -25,7 +25,7 @@ describe('feature-flag test', () => {
     assert.equal(getFeatureFlag('exampleFeature'), true);
   });
 
-  describe.only('consistency checks', () => {
+  describe('consistency checks', () => {
     it('runs the old function if the flag is off', () => {
       setFeatureFlags({
         ...DEFAULT_FEATURE_FLAGS,
