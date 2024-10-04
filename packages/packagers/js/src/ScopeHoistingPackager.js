@@ -24,7 +24,6 @@ import ThrowableDiagnostic, {
 } from '@atlaspack/diagnostic';
 import globals from 'globals';
 import path from 'path';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 import {ESMOutputFormat} from './ESMOutputFormat';
 import {CJSOutputFormat} from './CJSOutputFormat';
@@ -39,6 +38,10 @@ import {
 
 // General regex used to replace imports with the resolved code, references with resolutions,
 // and count the number of newlines in the file for source maps.
+//
+// For conditional bundling the only difference in this regex is adding `importCond` where we have `importAsync` etc..
+const REPLACEMENT_RE_CONDITIONAL =
+  /\n|import\s+"([0-9a-f]{16,20}:.+?)";|(?:\$[0-9a-f]{16,20}\$exports)|(?:\$[0-9a-f]{16,20}\$(?:import|importAsync|require|importCond)\$[0-9a-f]+(?:\$[0-9a-f]+)?)/g;
 const REPLACEMENT_RE =
   /\n|import\s+"([0-9a-f]{16,20}:.+?)";|(?:\$[0-9a-f]{16,20}\$exports)|(?:\$[0-9a-f]{16,20}\$(?:import|importAsync|require)\$[0-9a-f]+(?:\$[0-9a-f]+)?)/g;
 
@@ -565,92 +568,100 @@ export class ScopeHoistingPackager {
       // in a single regex so that we only do one pass over the whole code.
       let offset = 0;
       let columnStartIndex = 0;
-      code = code.replace(REPLACEMENT_RE, (m, d, i) => {
-        if (m === '\n') {
-          columnStartIndex = i + offset + 1;
-          lineCount++;
-          return '\n';
-        }
-
-        // If we matched an import, replace with the source code for the dependency.
-        if (d != null) {
-          let deps = depMap.get(d);
-          if (!deps) {
-            return m;
+      code = code.replace(
+        getFeatureFlag('conditionalBundlingApi')
+          ? REPLACEMENT_RE_CONDITIONAL
+          : REPLACEMENT_RE,
+        (m, d, i) => {
+          if (m === '\n') {
+            columnStartIndex = i + offset + 1;
+            lineCount++;
+            return '\n';
           }
 
-          let replacement = '';
+          // If we matched an import, replace with the source code for the dependency.
+          if (d != null) {
+            let deps = depMap.get(d);
+            if (!deps) {
+              return m;
+            }
 
-          // A single `${id}:${specifier}:esm` might have been resolved to multiple assets due to
-          // reexports.
-          for (let dep of deps) {
-            let resolved = this.bundleGraph.getResolvedAsset(dep, this.bundle);
-            let skipped = this.bundleGraph.isDependencySkipped(dep);
-            if (resolved && !skipped) {
-              // Hoist variable declarations for the referenced parcelRequire dependencies
-              // after the dependency is declared. This handles the case where the resulting asset
-              // is wrapped, but the dependency in this asset is not marked as wrapped. This means
-              // that it was imported/required at the top-level, so its side effects should run immediately.
-              let [res, lines] = this.getHoistedParcelRequires(
-                asset,
+            let replacement = '';
+
+            // A single `${id}:${specifier}:esm` might have been resolved to multiple assets due to
+            // reexports.
+            for (let dep of deps) {
+              let resolved = this.bundleGraph.getResolvedAsset(
                 dep,
-                resolved,
+                this.bundle,
               );
-              let map;
-              if (
-                this.bundle.hasAsset(resolved) &&
-                !this.seenAssets.has(resolved.id)
-              ) {
-                // If this asset is wrapped, we need to hoist the code for the dependency
-                // outside our parcelRequire.register wrapper. This is safe because all
-                // assets referenced by this asset will also be wrapped. Otherwise, inline the
-                // asset content where the import statement was.
-                if (shouldWrap) {
-                  depContent.push(this.visitAsset(resolved));
-                } else {
-                  let [depCode, depMap, depLines] = this.visitAsset(resolved);
-                  res = depCode + '\n' + res;
-                  lines += 1 + depLines;
-                  map = depMap;
+              let skipped = this.bundleGraph.isDependencySkipped(dep);
+              if (resolved && !skipped) {
+                // Hoist variable declarations for the referenced parcelRequire dependencies
+                // after the dependency is declared. This handles the case where the resulting asset
+                // is wrapped, but the dependency in this asset is not marked as wrapped. This means
+                // that it was imported/required at the top-level, so its side effects should run immediately.
+                let [res, lines] = this.getHoistedParcelRequires(
+                  asset,
+                  dep,
+                  resolved,
+                );
+                let map;
+                if (
+                  this.bundle.hasAsset(resolved) &&
+                  !this.seenAssets.has(resolved.id)
+                ) {
+                  // If this asset is wrapped, we need to hoist the code for the dependency
+                  // outside our parcelRequire.register wrapper. This is safe because all
+                  // assets referenced by this asset will also be wrapped. Otherwise, inline the
+                  // asset content where the import statement was.
+                  if (shouldWrap) {
+                    depContent.push(this.visitAsset(resolved));
+                  } else {
+                    let [depCode, depMap, depLines] = this.visitAsset(resolved);
+                    res = depCode + '\n' + res;
+                    lines += 1 + depLines;
+                    map = depMap;
+                  }
                 }
+
+                // Push this asset's source mappings down by the number of lines in the dependency
+                // plus the number of hoisted parcelRequires. Then insert the source map for the dependency.
+                if (sourceMap) {
+                  if (lines > 0) {
+                    sourceMap.offsetLines(lineCount + 1, lines);
+                  }
+
+                  if (map) {
+                    sourceMap.addSourceMap(map, lineCount);
+                  }
+                }
+
+                replacement += res;
+                lineCount += lines;
               }
+            }
+            return replacement;
+          }
 
-              // Push this asset's source mappings down by the number of lines in the dependency
-              // plus the number of hoisted parcelRequires. Then insert the source map for the dependency.
-              if (sourceMap) {
-                if (lines > 0) {
-                  sourceMap.offsetLines(lineCount + 1, lines);
-                }
-
-                if (map) {
-                  sourceMap.addSourceMap(map, lineCount);
-                }
-              }
-
-              replacement += res;
-              lineCount += lines;
+          // If it wasn't a dependency, then it was an inline replacement (e.g. $id$import$foo -> $id$export$foo).
+          let replacement = replacements.get(m) ?? m;
+          if (sourceMap) {
+            // Offset the source map columns for this line if the replacement was a different length.
+            // This assumes that the match and replacement both do not contain any newlines.
+            let lengthDifference = replacement.length - m.length;
+            if (lengthDifference !== 0) {
+              sourceMap.offsetColumns(
+                lineCount + 1,
+                i + offset - columnStartIndex + m.length,
+                lengthDifference,
+              );
+              offset += lengthDifference;
             }
           }
           return replacement;
-        }
-
-        // If it wasn't a dependency, then it was an inline replacement (e.g. $id$import$foo -> $id$export$foo).
-        let replacement = replacements.get(m) ?? m;
-        if (sourceMap) {
-          // Offset the source map columns for this line if the replacement was a different length.
-          // This assumes that the match and replacement both do not contain any newlines.
-          let lengthDifference = replacement.length - m.length;
-          if (lengthDifference !== 0) {
-            sourceMap.offsetColumns(
-              lineCount + 1,
-              i + offset - columnStartIndex + m.length,
-              lengthDifference,
-            );
-            offset += lengthDifference;
-          }
-        }
-        return replacement;
-      });
+        },
+      );
     }
 
     // If the asset is wrapped, we need to insert the dependency code outside the parcelRequire.register
@@ -772,7 +783,10 @@ ${code}
       // Async dependencies need a namespace object even if all used symbols were statically analyzed.
       // This is recorded in the promiseSymbol meta property set by the transformer rather than in
       // symbols so that we don't mark all symbols as used.
-      if (dep.priority === 'lazy' && dep.meta.promiseSymbol) {
+      if (
+        (dep.priority === 'lazy' || dep.priority === 'conditional') &&
+        dep.meta.promiseSymbol
+      ) {
         let promiseSymbol = dep.meta.promiseSymbol;
         invariant(typeof promiseSymbol === 'string');
         let symbol = this.getSymbolResolution(asset, resolved, '*', dep);
@@ -1405,7 +1419,9 @@ ${code}
           .getBundleGroupsContainingBundle(this.bundle)
           .some(g => this.bundleGraph.isEntryBundleGroup(g)) ||
         this.bundle.env.isIsolated() ||
-        this.bundle.bundleBehavior === 'isolated';
+        this.bundle.bundleBehavior === 'isolated' ||
+        // Conditional deps may be loaded before entrypoints on the server
+        this.hasConditionalDependency();
 
       if (mightBeFirstJS) {
         let preludeCode = prelude(this.parcelRequireName);
@@ -1459,17 +1475,7 @@ ${code}
       asset.symbols.hasExportSymbol('*') &&
       !asset.symbols.hasExportSymbol('default')
     ) {
-      if (getFeatureFlag('fastNeedsDefaultInterop')) {
-        return true;
-      }
-
-      let deps = this.bundleGraph.getIncomingDependencies(asset);
-      return deps.some(
-        dep =>
-          this.bundle.hasDependency(dep) &&
-          // dep.meta.isES6Module &&
-          dep.symbols.hasExportSymbol('default'),
-      );
+      return true;
     }
 
     return false;
@@ -1499,5 +1505,19 @@ ${code}
     return this.bundle.env.supports('arrow-functions', true)
       ? `(${args.join(', ')}) => ${expr}`
       : `function (${args.join(', ')}) { return ${expr}; }`;
+  }
+
+  hasConditionalDependency(): boolean {
+    if (!getFeatureFlag('conditionalBundlingApi')) {
+      return false;
+    }
+
+    return this.bundle
+      .getEntryAssets()
+      .some(entry =>
+        this.bundleGraph
+          .getIncomingDependencies(entry)
+          .some(dep => dep.priority === 'conditional'),
+      );
   }
 }

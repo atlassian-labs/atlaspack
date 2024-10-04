@@ -332,4 +332,110 @@ export default class BundleGraph<TBundle: IBundle>
       targetToInternalTarget(target),
     );
   }
+
+  // Given a set of dependencies, return any conditions where those dependencies are either
+  // the true or false dependency for those conditions. This is currently used to work out which
+  // conditions belong to a bundle in packaging.
+  getConditionsForDependencies(deps: Array<IDependency>): Set<{|
+    publicId: string,
+    key: string,
+    ifTrueDependency: IDependency,
+    ifFalseDependency: IDependency,
+    ifTrueAssetId: string,
+    ifFalseAssetId: string,
+  |}> {
+    const conditions = new Set();
+    const depIds = deps.map(dep => dep.id);
+    for (const condition of this.#graph._conditions.values()) {
+      if (
+        depIds.includes(condition.ifTrueDependency.id) ||
+        depIds.includes(condition.ifFalseDependency.id)
+      ) {
+        const [trueAsset, falseAsset] = [
+          condition.ifTrueDependency,
+          condition.ifFalseDependency,
+        ].map(dep => {
+          const resolved = nullthrows(this.#graph.resolveAsyncDependency(dep));
+          if (resolved.type === 'asset') {
+            return resolved.value;
+          } else {
+            return this.#graph.getAssetById(resolved.value.entryAssetId);
+          }
+        });
+
+        conditions.add({
+          publicId: condition.publicId,
+          key: condition.key,
+          ifTrueDependency: nullthrows(
+            deps.find(dep => dep.id === condition.ifTrueDependency.id),
+            'ifTrueDependency was null',
+          ),
+          ifFalseDependency: nullthrows(
+            deps.find(dep => dep.id === condition.ifFalseDependency.id),
+            'ifFalseDependency was null',
+          ),
+          ifTrueAssetId: this.#graph.getAssetPublicId(trueAsset),
+          ifFalseAssetId: this.#graph.getAssetPublicId(falseAsset),
+        });
+      }
+    }
+
+    return conditions;
+  }
+
+  // This is used to generate information for building a manifest that can
+  // be used by a webserver to understand which conditions are used by which bundles,
+  // and which bundles those conditions require depending on what they evaluate to.
+  getConditionalBundleMapping(): Map<
+    TBundle,
+    Map<
+      string,
+      {|
+        ifTrueBundles: Array<TBundle>,
+        ifFalseBundles: Array<TBundle>,
+      |},
+    >,
+  > {
+    let bundleConditions = new Map();
+
+    // Convert the internal references in conditions to public API references
+    for (const cond of this.#graph._conditions.values()) {
+      let assets = Array.from(cond.assets).map(asset =>
+        nullthrows(this.getAssetById(asset.id)),
+      );
+      let bundles = new Set<TBundle>();
+      let ifTrueBundles = [];
+      let ifFalseBundles = [];
+      for (const asset of assets) {
+        const bundlesWithAsset = this.getBundlesWithAsset(asset);
+        for (const bundle of bundlesWithAsset) {
+          bundles.add(bundle);
+        }
+        const assetDeps = this.getDependencies(asset);
+        const depToBundles = dep => {
+          const publicDep = nullthrows(
+            assetDeps.find(assetDep => dep.id === assetDep.id),
+          );
+          const resolved = nullthrows(this.resolveAsyncDependency(publicDep));
+          invariant(resolved.type === 'bundle_group');
+          return this.getBundlesInBundleGroup(resolved.value);
+        };
+        ifTrueBundles.push(...depToBundles(cond.ifTrueDependency));
+        ifFalseBundles.push(...depToBundles(cond.ifFalseDependency));
+      }
+
+      for (let bundle of bundles) {
+        const conditions = bundleConditions.get(bundle) ?? new Map();
+
+        conditions.set(cond.key, {
+          ifTrueBundles,
+          ifFalseBundles,
+        });
+
+        bundleConditions.set(bundle, conditions);
+      }
+    }
+
+    return bundleConditions;
+  }
 }

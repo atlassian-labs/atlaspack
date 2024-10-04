@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -5,10 +6,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::u64;
 
+use atlaspack_filesystem::FileSystemRef;
+
 use serde::Deserialize;
 use serde::Serialize;
-
-use atlaspack_filesystem::FileSystemRef;
+use serde_json::json;
 
 use super::bundle::MaybeBundleBehavior;
 use super::environment::Environment;
@@ -197,6 +199,11 @@ pub struct Asset {
   /// ```
   pub is_constant_module: bool,
 
+  /// Contains all conditional imports for an asset
+  ///
+  /// This includes the condition key and the dependency placeholders
+  pub conditions: HashSet<Condition>,
+
   pub config_path: Option<String>,
   pub config_key_path: Option<String>,
 }
@@ -291,6 +298,11 @@ impl Asset {
         .insert("has_node_replacements".into(), true.into());
     }
   }
+
+  pub fn set_conditions(&mut self, conditions: HashSet<Condition>) {
+    self.conditions = conditions.clone();
+    self.meta.insert("conditions".into(), json!(conditions));
+  }
 }
 
 /// Statistics that pertain to an asset
@@ -298,4 +310,11 @@ impl Asset {
 pub struct AssetStats {
   pub size: u32,
   pub time: u32,
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+pub struct Condition {
+  pub key: String,
+  pub if_true_placeholder: Option<String>,
+  pub if_false_placeholder: Option<String>,
 }

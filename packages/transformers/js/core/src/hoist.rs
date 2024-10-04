@@ -27,6 +27,7 @@ use crate::utils::is_unresolved;
 use crate::utils::match_export_name;
 use crate::utils::match_export_name_ident;
 use crate::utils::match_import;
+use crate::utils::match_import_cond;
 use crate::utils::match_member_expr;
 use crate::utils::match_property_name;
 use crate::utils::match_require;
@@ -952,6 +953,41 @@ impl<'a> Fold for Hoist<'a> {
           }
           return Expr::Ident(Ident::new(name, call.span));
         }
+
+        if let Some((source_true, source_false)) =
+          match_import_cond(&node, self.collect.ignore_mark)
+        {
+          let name: JsWord =
+            format!("${}$importCond${}", self.module_id, hash!(source_true)).into();
+          self.add_require(&source_true, ImportKind::ConditionalImport);
+          self.add_require(&source_false, ImportKind::ConditionalImport);
+
+          // Mark both deps as dynamic import
+          self
+            .dynamic_imports
+            .insert(name.clone(), source_true.clone());
+          self
+            .dynamic_imports
+            .insert(name.clone(), source_false.clone());
+
+          // Mark both deps "imported symbols"
+          self.imported_symbols.push(ImportedSymbol {
+            source: source_true,
+            local: name.clone(),
+            imported: "*".into(),
+            loc: SourceLocation::from(&self.collect.source_map, call.span),
+            kind: ImportKind::ConditionalImport,
+          });
+          self.imported_symbols.push(ImportedSymbol {
+            source: source_false,
+            local: name.clone(),
+            imported: "*".into(),
+            loc: SourceLocation::from(&self.collect.source_map, call.span),
+            kind: ImportKind::ConditionalImport,
+          });
+
+          return Expr::Ident(Ident::new(name, call.span));
+        }
       }
       Expr::This(this) => {
         if !self.in_function_scope {
@@ -1236,7 +1272,9 @@ impl<'a> Hoist<'a> {
   fn add_require(&mut self, source: &JsWord, import_kind: ImportKind) {
     let src = match import_kind {
       ImportKind::Import => format!("{}:{}:{}", self.module_id, source, "esm"),
-      ImportKind::DynamicImport | ImportKind::Require => format!("{}:{}", self.module_id, source),
+      ImportKind::DynamicImport | ImportKind::Require | ImportKind::ConditionalImport => {
+        format!("{}:{}", self.module_id, source)
+      }
     };
     self
       .module_items
@@ -1416,6 +1454,7 @@ mod tests {
               global_mark,
               true,
               is_module,
+              false,
             );
             module.visit_with(&mut collect);
 

@@ -19,6 +19,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use atlaspack_core::types::Condition;
 use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
 use atlaspack_macros::Macros;
@@ -148,6 +149,7 @@ pub struct TransformResult {
   pub used_env: HashSet<swc_core::ecma::atoms::JsWord>,
   pub has_node_replacements: bool,
   pub is_constant_module: bool,
+  pub conditions: HashSet<Condition>,
 }
 
 fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Versions> {
@@ -393,7 +395,8 @@ pub fn transform(
                       global_mark,
                       &config.project_root,
                       &mut fs_deps,
-                      is_module
+                      is_module,
+                      config.conditional_bundling
                     ),
                     should_inline_fs
                   ),
@@ -476,6 +479,7 @@ pub fn transform(
                   unresolved_mark,
                   &config,
                   &mut diagnostics,
+                  &mut result.conditions,
                 ),
               );
 
@@ -496,6 +500,7 @@ pub fn transform(
                 global_mark,
                 config.trace_bailouts,
                 is_module,
+                config.conditional_bundling,
               );
               module.visit_with(&mut collect);
               if let Some(bailouts) = &collect.bailouts {

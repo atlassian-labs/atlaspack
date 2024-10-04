@@ -5,6 +5,7 @@ import type {
   SourceLocation,
   FilePath,
   FileCreateInvalidation,
+  ConditionMeta,
 } from '@atlaspack/types';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
@@ -20,6 +21,7 @@ import ThrowableDiagnostic, {
 } from '@atlaspack/diagnostic';
 import {validateSchema, remapSourceLocation, globMatch} from '@atlaspack/utils';
 import pkg from '../package.json';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const JSX_EXTENSIONS = {
   jsx: true,
@@ -419,6 +421,7 @@ export default (new Transformer({
       used_env,
       has_node_replacements,
       is_constant_module,
+      conditions,
     } = await (transformAsync || transform)({
       filename: asset.filePath,
       code,
@@ -576,6 +579,14 @@ export default (new Transformer({
           }
         : null,
     });
+
+    if (getFeatureFlag('conditionalBundlingApi')) {
+      asset.meta.conditions = conditions.map((c): ConditionMeta => ({
+        key: c.key,
+        ifTruePlaceholder: c.if_true_placeholder,
+        ifFalsePlaceholder: c.if_false_placeholder,
+      }));
+    }
 
     if (is_constant_module) {
       asset.meta.isConstantModule = true;
@@ -851,7 +862,12 @@ export default (new Transformer({
           specifier: dep.specifier,
           specifierType: dep.kind === 'Require' ? 'commonjs' : 'esm',
           loc: convertLoc(dep.loc),
-          priority: dep.kind === 'DynamicImport' ? 'lazy' : 'sync',
+          priority:
+            dep.kind === 'DynamicImport'
+              ? 'lazy'
+              : dep.kind === 'ConditionalImport'
+              ? 'conditional'
+              : 'sync',
           isOptional: dep.is_optional,
           meta,
           resolveFrom: isHelper ? __filename : undefined,

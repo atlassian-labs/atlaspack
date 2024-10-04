@@ -19,6 +19,10 @@ impl FileSystem for OsFileSystem {
     canonicalize(path, cache)
   }
 
+  fn canonicalize_base(&self, path: &Path) -> std::io::Result<PathBuf> {
+    canonicalize(path, &Default::default())
+  }
+
   fn create_directory(&self, path: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(path)
   }

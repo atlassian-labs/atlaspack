@@ -818,32 +818,59 @@ export class RequestGraph extends ContentGraph<
     node: FileNameNode,
     filePath: ProjectPath,
     matchNodes: Array<FileNode>,
+    invalidateNode: (NodeId, InvalidateReason) => void,
   ) {
     // If there is an edge between this file_name node and one of the original file nodes pointed to
     // by the original file_name node, and the matched node is inside the current directory, invalidate
     // all connected requests pointed to by the file node.
-    let dirname = path.dirname(fromProjectPathRelative(filePath));
 
     let nodeId = this.getNodeIdByContentKey(node.id);
-    for (let matchNode of matchNodes) {
-      let matchNodeId = this.getNodeIdByContentKey(matchNode.id);
-      if (
-        this.hasEdge(
-          nodeId,
-          matchNodeId,
-          requestGraphEdgeTypes.invalidated_by_create_above,
-        ) &&
-        isDirectoryInside(
-          fromProjectPathRelative(toProjectPathUnsafe(matchNode.id)),
-          dirname,
+    let dirname = path.dirname(fromProjectPathRelative(filePath));
+
+    if (getFeatureFlag('fixQuadraticCacheInvalidation')) {
+      while (dirname !== '/') {
+        if (!this.hasContentKey(dirname)) break;
+        const matchNodeId = this.getNodeIdByContentKey(dirname);
+        if (
+          !this.hasEdge(
+            nodeId,
+            matchNodeId,
+            requestGraphEdgeTypes.invalidated_by_create_above,
+          )
         )
-      ) {
-        let connectedNodes = this.getNodeIdsConnectedTo(
+          break;
+
+        const connectedNodes = this.getNodeIdsConnectedTo(
           matchNodeId,
           requestGraphEdgeTypes.invalidated_by_create,
         );
         for (let connectedNode of connectedNodes) {
-          this.invalidateNode(connectedNode, FILE_CREATE);
+          invalidateNode(connectedNode, FILE_CREATE);
+        }
+
+        dirname = path.dirname(dirname);
+      }
+    } else {
+      for (let matchNode of matchNodes) {
+        let matchNodeId = this.getNodeIdByContentKey(matchNode.id);
+        if (
+          this.hasEdge(
+            nodeId,
+            matchNodeId,
+            requestGraphEdgeTypes.invalidated_by_create_above,
+          ) &&
+          isDirectoryInside(
+            fromProjectPathRelative(toProjectPathUnsafe(matchNode.id)),
+            dirname,
+          )
+        ) {
+          let connectedNodes = this.getNodeIdsConnectedTo(
+            matchNodeId,
+            requestGraphEdgeTypes.invalidated_by_create,
+          );
+          for (let connectedNode of connectedNodes) {
+            this.invalidateNode(connectedNode, FILE_CREATE);
+          }
         }
       }
     }
@@ -866,6 +893,7 @@ export class RequestGraph extends ContentGraph<
           parent,
           toProjectPathUnsafe(dirname),
           matchNodes,
+          invalidateNode,
         );
       }
     }
@@ -880,10 +908,45 @@ export class RequestGraph extends ContentGraph<
     let count = 0;
     let predictedTime = 0;
     let startTime = Date.now();
-    const removeOrphans = !getFeatureFlag('fixQuadraticCacheInvalidation');
+    const enableOptimization = getFeatureFlag('fixQuadraticCacheInvalidation');
+    const removeOrphans = !enableOptimization;
+
+    const invalidatedNodes = new Set();
+    const invalidateNode = (nodeId, reason) => {
+      if (enableOptimization && invalidatedNodes.has(nodeId)) {
+        return;
+      }
+      invalidatedNodes.add(nodeId);
+      this.invalidateNode(nodeId, reason);
+    };
+    const aboveCache = new Map();
+    const getAbove = fileNameNodeId => {
+      const cachedResult = aboveCache.get(fileNameNodeId);
+      if (enableOptimization && cachedResult) {
+        return cachedResult;
+      }
+
+      let above = [];
+      const children = this.getNodeIdsConnectedTo(
+        fileNameNodeId,
+        requestGraphEdgeTypes.invalidated_by_create_above,
+      );
+      for (const nodeId of children) {
+        let node = nullthrows(this.getNode(nodeId));
+        if (node.type === FILE) {
+          above.push(node);
+        }
+      }
+      aboveCache.set(fileNameNodeId, above);
+      return above;
+    };
 
     for (let {path: _path, type} of events) {
-      if (++count === 256) {
+      if (
+        !enableOptimization &&
+        process.env.ATLASPACK_DISABLE_CACHE_TIMEOUT !== 'true' &&
+        ++count === 256
+      ) {
         let duration = Date.now() - startTime;
         predictedTime = duration * (events.length >> 8);
         if (predictedTime > threshold) {
@@ -939,7 +1002,7 @@ export class RequestGraph extends ContentGraph<
 
         for (let connectedNode of nodes) {
           didInvalidate = true;
-          this.invalidateNode(connectedNode, FILE_UPDATE);
+          invalidateNode(connectedNode, FILE_UPDATE);
         }
 
         if (type === 'create') {
@@ -949,7 +1012,7 @@ export class RequestGraph extends ContentGraph<
           );
           for (let connectedNode of nodes) {
             didInvalidate = true;
-            this.invalidateNode(connectedNode, FILE_CREATE);
+            invalidateNode(connectedNode, FILE_CREATE);
           }
         }
       } else if (type === 'create') {
@@ -961,21 +1024,15 @@ export class RequestGraph extends ContentGraph<
           );
 
           // Find potential file nodes to be invalidated if this file name pattern matches
-          let above: Array<FileNode> = [];
-          for (const nodeId of this.getNodeIdsConnectedTo(
-            fileNameNodeId,
-            requestGraphEdgeTypes.invalidated_by_create_above,
-          )) {
-            let node = nullthrows(this.getNode(nodeId));
-            // these might also be `glob` nodes which get handled below, we only care about files here.
-            if (node.type === FILE) {
-              above.push(node);
-            }
-          }
-
+          let above: Array<FileNode> = getAbove(fileNameNodeId);
           if (above.length > 0) {
             didInvalidate = true;
-            this.invalidateFileNameNode(fileNameNode, _filePath, above);
+            this.invalidateFileNameNode(
+              fileNameNode,
+              _filePath,
+              above,
+              invalidateNode,
+            );
           }
         }
 
@@ -990,7 +1047,7 @@ export class RequestGraph extends ContentGraph<
             );
             for (let connectedNode of connectedNodes) {
               didInvalidate = true;
-              this.invalidateNode(connectedNode, FILE_CREATE);
+              invalidateNode(connectedNode, FILE_CREATE);
             }
           }
         }
@@ -1001,7 +1058,7 @@ export class RequestGraph extends ContentGraph<
           requestGraphEdgeTypes.invalidated_by_delete,
         )) {
           didInvalidate = true;
-          this.invalidateNode(connectedNode, FILE_DELETE);
+          invalidateNode(connectedNode, FILE_DELETE);
         }
 
         // Delete the file node since it doesn't exist anymore.
@@ -1033,7 +1090,7 @@ export class RequestGraph extends ContentGraph<
               nodeId,
               requestGraphEdgeTypes.invalidated_by_update,
             )) {
-              this.invalidateNode(
+              invalidateNode(
                 connectedNode,
                 type === 'delete' ? FILE_DELETE : FILE_UPDATE,
               );
@@ -1057,6 +1114,8 @@ export class RequestGraph extends ContentGraph<
         trackableEvent: 'fsevent_response_time',
         duration,
         predictedTime,
+        numberOfEvents: events.length,
+        numberOfInvalidatedNodes: invalidatedNodes.size,
       },
     });
 
@@ -1615,6 +1674,15 @@ async function loadRequestGraph(options): Async<RequestGraph> {
   let timeout;
   const snapshotKey = `snapshot-${cacheKey}`;
   const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');
+
+  logger.verbose({
+    origin: '@atlaspack/core',
+    message: 'Loading request graph',
+    meta: {
+      cacheKey,
+      snapshotKey,
+    },
+  });
   if (await options.cache.hasLargeBlob(requestGraphKey)) {
     try {
       let {requestGraph} = await readAndDeserializeRequestGraph(
@@ -1670,6 +1738,15 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     }
   }
 
+  logger.verbose({
+    origin: '@atlaspack/core',
+    message:
+      'Cache entry for request tracker was not found, initializing a clean cache.',
+    meta: {
+      cacheKey,
+      snapshotKey,
+    },
+  });
   return new RequestGraph();
 }
 
@@ -1705,6 +1782,10 @@ function logErrorOnBailout(
 }
 
 export function cleanUpOrphans<N, E: number>(graph: Graph<N, E>): NodeId[] {
+  if (graph.rootNodeId == null) {
+    return [];
+  }
+
   const reachableNodes = new Set();
   graph.traverse(nodeId => {
     reachableNodes.add(nodeId);

@@ -322,6 +322,9 @@ pub(crate) fn convert_result(
 
   asset.set_has_node_replacements(result.has_node_replacements);
   asset.set_is_constant_module(result.is_constant_module);
+  if transformer_config.conditional_bundling {
+    asset.set_conditions(result.conditions);
+  }
 
   asset.file_type = FileType::Js;
 

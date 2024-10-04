@@ -239,6 +239,7 @@ version = "0.1.0"
 dependencies = [
  "Inflector",
  "atlaspack-macros",
+ "atlaspack_core",
  "data-encoding",
  "dunce",
  "indexmap 1.9.3",
