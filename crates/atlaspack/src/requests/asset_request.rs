@@ -83,7 +83,7 @@ impl Request for AssetRequest {
       invalidations: result
         .invalidate_on_file_change
         .into_iter()
-        .map(|path| Invalidation::FileChange(path))
+        .map(Invalidation::FileChange)
         .collect(),
     })
   }
