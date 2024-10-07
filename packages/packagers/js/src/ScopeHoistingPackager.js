@@ -24,6 +24,7 @@ import ThrowableDiagnostic, {
 } from '@atlaspack/diagnostic';
 import globals from 'globals';
 import path from 'path';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 import {ESMOutputFormat} from './ESMOutputFormat';
 import {CJSOutputFormat} from './CJSOutputFormat';
