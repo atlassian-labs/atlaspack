@@ -25,6 +25,7 @@ mod atlaspack;
 #[cfg(not(test))]
 pub mod lmdb;
 mod optimizers;
+mod replace_hash_references;
 mod resolver;
 mod transformer;
 

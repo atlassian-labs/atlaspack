@@ -85,7 +85,6 @@ export type BundleInfo = {|
   +hashReferences: Array<string>,
   +time?: number,
   +cacheKeys: CacheKeyMap,
-  +isLargeBlob: boolean,
 |};
 
 type CacheKeyMap = {|
@@ -340,7 +339,7 @@ export default class PackagerRunner {
     bundleConfigs: Map<string, Config>,
   ): Promise<{|
     type: string,
-    contents: Blob,
+    contents: Buffer | string,
     map: ?string,
   |}> {
     let packaged = await this.package(
@@ -467,7 +466,7 @@ export default class PackagerRunner {
     internalBundle: InternalBundle,
     internalBundleGraph: InternalBundleGraph,
     type: string,
-    contents: Blob,
+    contents: Buffer | string,
     map?: ?SourceMap,
     configs: Map<string, Config>,
     bundleConfigs: Map<string, Config>,
@@ -486,7 +485,7 @@ export default class PackagerRunner {
       bundle.name,
       internalBundle.pipeline,
     );
-    if (!optimizers.length) {
+    if (optimizers.length === 0) {
       return {type: bundle.type, contents, map};
     }
 
@@ -694,35 +693,15 @@ export default class PackagerRunner {
   async writeToCache(
     cacheKeys: CacheKeyMap,
     type: string,
-    contents: Blob,
+    contents: Buffer | string,
     map: ?string,
   ): Promise<BundleInfo> {
     let size = 0;
     let hash;
     let hashReferences = [];
-    let isLargeBlob = false;
 
     // TODO: don't replace hash references in binary files??
-    if (contents instanceof Readable) {
-      isLargeBlob = true;
-      let boundaryStr = '';
-      let h = new Hash();
-      await this.options.cache.setStream(
-        cacheKeys.content,
-        blobToStream(contents).pipe(
-          new TapStream(buf => {
-            let str = boundaryStr + buf.toString();
-            hashReferences = hashReferences.concat(
-              str.match(HASH_REF_REGEX) ?? [],
-            );
-            size += buf.length;
-            h.writeBuffer(buf);
-            boundaryStr = str.slice(str.length - BOUNDARY_LENGTH);
-          }),
-        ),
-      );
-      hash = h.finish();
-    } else if (typeof contents === 'string') {
+    if (typeof contents === 'string') {
       let buffer = Buffer.from(contents);
       size = buffer.byteLength;
       hash = hashBuffer(buffer);
@@ -744,7 +723,6 @@ export default class PackagerRunner {
       hash,
       hashReferences,
       cacheKeys,
-      isLargeBlob,
     };
     await this.options.cache.set(cacheKeys.info, info);
     return info;

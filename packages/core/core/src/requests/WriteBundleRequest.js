@@ -3,6 +3,7 @@
 import type {FileSystem, FileOptions} from '@atlaspack/fs';
 import type {ContentKey} from '@atlaspack/graph';
 import type {Async, FilePath, Compressor} from '@atlaspack/types';
+import {replaceHashReferences} from '@atlaspack/rust';
 
 import type {RunAPI, StaticRunOpts} from '../RequestTracker';
 import type {Bundle, PackagedBundleInfo, AtlaspackOptions} from '../types';
@@ -16,7 +17,7 @@ import {HASH_REF_HASH_LEN, HASH_REF_PREFIX} from '../constants';
 import nullthrows from 'nullthrows';
 import path from 'path';
 import {NamedBundle} from '../public/Bundle';
-import {blobToStream, TapStream} from '@atlaspack/utils';
+import {blobToStream} from '@atlaspack/utils';
 import {Readable, Transform, pipeline} from 'stream';
 import {
   fromProjectPath,
@@ -129,20 +130,8 @@ async function run({input, options, api}) {
       : {
           mode: (await inputFS.stat(mainEntry.filePath)).mode,
         };
-  let contentStream: Readable;
-  if (info.isLargeBlob) {
-    contentStream = options.cache.getStream(cacheKeys.content);
-  } else {
-    contentStream = blobToStream(
-      await options.cache.getBlob(cacheKeys.content),
-    );
-  }
-  let size = 0;
-  contentStream = contentStream.pipe(
-    new TapStream(buf => {
-      size += buf.length;
-    }),
-  );
+  const contents: Buffer = await options.cache.getBlob(cacheKeys.content);
+  const size = contents.byteLength;
 
   let configResult = nullthrows(
     await api.runRequest<null, ConfigAndCachePath>(
@@ -155,7 +144,7 @@ async function run({input, options, api}) {
   invalidateDevDeps(invalidDevDeps, options, config);
 
   await writeFiles(
-    contentStream,
+    contents,
     info,
     hashRefToNameHash,
     options,
@@ -174,7 +163,7 @@ async function run({input, options, api}) {
     (await options.cache.has(mapKey))
   ) {
     await writeFiles(
-      blobToStream(await options.cache.getBlob(mapKey)),
+      await options.cache.getBlob(mapKey),
       info,
       hashRefToNameHash,
       options,
@@ -201,7 +190,7 @@ async function run({input, options, api}) {
 }
 
 async function writeFiles(
-  inputStream: stream$Readable,
+  contents: Buffer,
   info: BundleInfo,
   hashRefToNameHash: Map<string, string>,
   options: AtlaspackOptions,
@@ -217,16 +206,19 @@ async function writeFiles(
   );
   let fullPath = fromProjectPath(options.projectRoot, filePath);
 
-  let stream = info.hashReferences.length
-    ? inputStream.pipe(replaceStream(hashRefToNameHash))
-    : inputStream;
+  const stream = info.hashReferences.length
+    ? replaceHashReferences(
+        contents,
+        Object.fromEntries(hashRefToNameHash.entries()),
+      )
+    : contents;
 
   let promises = [];
   for (let compressor of compressors) {
     promises.push(
       runCompressor(
         compressor,
-        cloneStream(stream),
+        blobToStream(stream),
         options,
         outputFS,
         fullPath,
