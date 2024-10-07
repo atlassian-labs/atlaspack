@@ -171,9 +171,25 @@ mod tests {
   use atlaspack_core::plugin::MockTransformerPlugin;
   use atlaspack_core::types::Code;
   use std::hash::Hasher;
+  use std::path::Path;
+
+  fn make_asset(file_path: &str) -> Asset {
+    let mut asset = Asset::default();
+
+    asset.file_path = PathBuf::from(file_path);
+
+    asset
+  }
+
+  fn assert_code(asset: &Asset, code: &str) {
+    assert_eq!(
+      String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
+      code
+    )
+  }
 
   #[test]
-  fn test_run_pipeline_works() {
+  fn test_run_pipelines_works() {
     let mut plugins = MockPlugins::new();
     plugins.expect_transformers().returning(move |_, _| {
       Ok(TransformerPipeline::new(vec![
@@ -186,10 +202,7 @@ mod tests {
     let context = TransformContext::default();
     let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
 
-    assert_eq!(
-      String::from_utf8(result.asset.code.bytes().to_vec()).unwrap(),
-      "::transformer1::transformer2"
-    )
+    assert_code(&result.asset, "::transformer1::transformer2");
   }
 
   #[test]
@@ -206,41 +219,51 @@ mod tests {
     let context = TransformContext::default();
     let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
 
-    assert_eq!(
-      String::from_utf8(result.asset.code.bytes().to_vec()).unwrap(),
-      "::transformer1::transformer2"
-    )
+    assert_code(&result.asset, "::transformer1::transformer2");
   }
 
   #[test]
-  fn test_run_pipeline_with_all_fields() {
+  fn test_run_pipelines_with_all_fields() {
     let mut plugins = MockPlugins::new();
-    plugins.expect_transformers().returning(move |_, _| {
-      Ok(TransformerPipeline::new(vec![make_transformer(
-        "transformer",
-        Some(vec![AssetWithDependencies {
-          asset: Asset::default(),
-          dependencies: Vec::new(),
-        }]),
-        Some(vec![Dependency::default()]),
-        Some(vec![PathBuf::from("./tmp")]),
-      )]))
-    });
+    plugins
+      .expect_transformers()
+      .withf(|path: &Path, _pipeline: &Option<String>| {
+        path.extension().is_some_and(|ext| ext == "js")
+      })
+      .returning(move |_, _| {
+        Ok(TransformerPipeline::new(vec![make_transformer(
+          "js-transformer",
+          Some(vec![AssetWithDependencies {
+            asset: make_asset("discovered.css"),
+            dependencies: Vec::new(),
+          }]),
+          Some(vec![Dependency::default()]),
+          Some(vec![PathBuf::from("./tmp")]),
+        )]))
+      });
+    plugins
+      .expect_transformers()
+      .withf(|path: &Path, _pipeline: &Option<String>| {
+        path.extension().is_some_and(|ext| ext == "css")
+      })
+      .returning(move |_, _| {
+        Ok(TransformerPipeline::new(vec![make_transformer(
+          "css-transformer",
+          None,
+          None,
+          None,
+        )]))
+      });
 
-    let asset = Asset::default();
-    let expected_discovered_assets = vec![AssetWithDependencies {
-      asset: Asset::default(),
-      dependencies: Vec::new(),
-    }];
+    let asset = make_asset("index.js");
     let expected_dependencies = vec![Dependency::default()];
     let expected_invalidations = vec![PathBuf::from("./tmp")];
     let context = TransformContext::default();
     let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
-    assert_eq!(
-      String::from_utf8(result.asset.code.bytes().to_vec()).unwrap(),
-      "::transformer"
-    );
-    assert_eq!(result.discovered_assets, expected_discovered_assets);
+
+    assert_code(&result.asset, "::js-transformer");
+    assert_eq!(result.discovered_assets.len(), 1);
+    assert_code(&result.discovered_assets[0].asset, "::css-transformer");
     assert_eq!(result.dependencies, expected_dependencies);
     assert_eq!(result.invalidate_on_file_change, expected_invalidations);
   }
@@ -262,43 +285,25 @@ mod tests {
       }
     });
 
-    mock
-      .expect_transform()
-      .return_once({
-        let label = label.clone();
-        move |_context, mut asset: Asset| {
-          asset.code = Arc::new(Code::from(format!(
-            "{}::{}",
-            String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
-            label.clone()
-          )));
+    mock.expect_transform().returning({
+      let label = label.clone();
+      move |_context, asset: Asset| {
+        let mut asset = asset.clone();
+        asset.code = Arc::new(Code::from(format!(
+          "{}::{}",
+          String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
+          label.clone()
+        )));
 
-          Ok(TransformResult {
-            asset,
-            discovered_assets: discovered_assets.unwrap_or_default(),
-            dependencies: dependencies.unwrap_or_default(),
-            invalidate_on_file_change: invalidate_on_file_change.unwrap_or_default(),
-          })
-        }
-      })
-      .returning(move |_context, asset: Asset| get_simple_transformer(label.clone(), asset));
+        Ok(TransformResult {
+          asset,
+          discovered_assets: discovered_assets.clone().unwrap_or_default(),
+          dependencies: dependencies.clone().unwrap_or_default(),
+          invalidate_on_file_change: invalidate_on_file_change.clone().unwrap_or_default(),
+        })
+      }
+    });
+    // .returning(move |_context, asset: Asset| get_simple_transformer(label.clone(), asset));
     Box::new(mock)
-  }
-
-  fn get_simple_transformer(label: String, mut asset: Asset) -> Result<TransformResult, Error> {
-    asset.code = Arc::new(Code::from(format!(
-      "{}::{label}",
-      String::from_utf8(asset.code.bytes().to_vec()).unwrap()
-    )));
-    // Set the fields to be checked in the test
-    let discovered_assets = vec![];
-    let dependencies = vec![Dependency::default()];
-    let invalidations = vec![PathBuf::from("./tmp")];
-    Ok(TransformResult {
-      asset,
-      discovered_assets,
-      dependencies,
-      invalidate_on_file_change: invalidations,
-    })
   }
 }
