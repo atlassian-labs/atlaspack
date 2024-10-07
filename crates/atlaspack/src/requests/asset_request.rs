@@ -166,7 +166,6 @@ mod tests {
   use super::*;
   use crate::plugins::MockPlugins;
   use crate::plugins::TransformerPipeline;
-  use anyhow::Error;
   use atlaspack_core::hash::IdentifierHasher;
   use atlaspack_core::plugin::MockTransformerPlugin;
   use atlaspack_core::types::Code;
@@ -206,24 +205,7 @@ mod tests {
   }
 
   #[test]
-  fn test_run_pipelines_for_discovered_assets() {
-    let mut plugins = MockPlugins::new();
-    plugins.expect_transformers().returning(move |_, _| {
-      Ok(TransformerPipeline::new(vec![
-        make_transformer("transformer1", None, None, None),
-        make_transformer("transformer2", None, None, None),
-      ]))
-    });
-
-    let asset = Asset::default();
-    let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
-
-    assert_code(&result.asset, "::transformer1::transformer2");
-  }
-
-  #[test]
-  fn test_run_pipelines_with_all_fields() {
+  fn test_run_pipelines_with_invalidations() {
     let mut plugins = MockPlugins::new();
     plugins
       .expect_transformers()
@@ -231,15 +213,66 @@ mod tests {
         path.extension().is_some_and(|ext| ext == "js")
       })
       .returning(move |_, _| {
-        Ok(TransformerPipeline::new(vec![make_transformer(
-          "js-transformer",
-          Some(vec![AssetWithDependencies {
-            asset: make_asset("discovered.css"),
-            dependencies: Vec::new(),
-          }]),
-          Some(vec![Dependency::default()]),
-          Some(vec![PathBuf::from("./tmp")]),
-        )]))
+        Ok(TransformerPipeline::new(vec![
+          make_transformer("js-1", None, None, None),
+          make_transformer("js-2", None, None, Some(vec![PathBuf::from("./tmp")])),
+        ]))
+      });
+
+    let asset = make_asset("index.js");
+    let expected_invalidations = vec![PathBuf::from("./tmp")];
+    let context = TransformContext::default();
+    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
+
+    assert_code(&result.asset, "::js-1::js-2");
+    assert_eq!(result.invalidate_on_file_change, expected_invalidations);
+  }
+
+  #[test]
+  fn test_run_pipelines_with_dependencies() {
+    let mut plugins = MockPlugins::new();
+    plugins
+      .expect_transformers()
+      .withf(|path: &Path, _pipeline: &Option<String>| {
+        path.extension().is_some_and(|ext| ext == "js")
+      })
+      .returning(move |_, _| {
+        Ok(TransformerPipeline::new(vec![
+          make_transformer("js-1", None, None, None),
+          make_transformer("js-2", None, Some(vec![Dependency::default()]), None),
+        ]))
+      });
+
+    let asset = make_asset("index.js");
+    let expected_dependencies = vec![Dependency::default()];
+    let context = TransformContext::default();
+    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
+
+    assert_code(&result.asset, "::js-1::js-2");
+    assert_eq!(result.dependencies, expected_dependencies);
+  }
+
+  #[test]
+  fn test_run_pipelines_with_discovered_assets() {
+    let mut plugins = MockPlugins::new();
+    plugins
+      .expect_transformers()
+      .withf(|path: &Path, _pipeline: &Option<String>| {
+        path.extension().is_some_and(|ext| ext == "js")
+      })
+      .returning(move |_, _| {
+        Ok(TransformerPipeline::new(vec![
+          make_transformer("js-1", None, None, None),
+          make_transformer(
+            "js-2",
+            Some(vec![AssetWithDependencies {
+              asset: make_asset("discovered.css"),
+              dependencies: vec![Dependency::default()],
+            }]),
+            None,
+            None,
+          ),
+        ]))
       });
     plugins
       .expect_transformers()
@@ -247,25 +280,20 @@ mod tests {
         path.extension().is_some_and(|ext| ext == "css")
       })
       .returning(move |_, _| {
-        Ok(TransformerPipeline::new(vec![make_transformer(
-          "css-transformer",
-          None,
-          None,
-          None,
-        )]))
+        Ok(TransformerPipeline::new(vec![
+          make_transformer("css-1", None, None, None),
+          make_transformer("css-2", None, Some(vec![Dependency::default()]), None),
+        ]))
       });
 
     let asset = make_asset("index.js");
-    let expected_dependencies = vec![Dependency::default()];
-    let expected_invalidations = vec![PathBuf::from("./tmp")];
     let context = TransformContext::default();
     let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
 
-    assert_code(&result.asset, "::js-transformer");
+    assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.discovered_assets.len(), 1);
-    assert_code(&result.discovered_assets[0].asset, "::css-transformer");
-    assert_eq!(result.dependencies, expected_dependencies);
-    assert_eq!(result.invalidate_on_file_change, expected_invalidations);
+    assert_code(&result.discovered_assets[0].asset, "::css-1::css-2");
+    assert_eq!(result.discovered_assets[0].dependencies.len(), 2);
   }
 
   fn make_transformer(
