@@ -153,7 +153,7 @@ pub fn run_pipelines(
   }
 
   Ok(TransformResult {
-    asset: initial_asset.expect("Initial asset missing after transformer pipeline"),
+    asset: initial_asset.ok_or_else(|| anyhow!("Initial asset missing after transformer pipeline"))?,
     dependencies: initial_asset_dependencies
       .expect("Initial asset missing after transformer pipeline"),
     discovered_assets: processed_assets,
