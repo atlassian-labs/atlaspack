@@ -1,0 +1,7 @@
+{
+  "extends": "@atlaspack/config-default",
+  "reporters": [
+    "@atlaspack/reporter-conditional-manifest",
+    "..."
+  ]
+}

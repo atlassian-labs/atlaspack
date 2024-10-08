@@ -231,6 +231,8 @@ export default async function resolveOptions(
       outputFormat: initialOptions?.defaultTargetOptions?.outputFormat,
       isLibrary: initialOptions?.defaultTargetOptions?.isLibrary,
     },
+    // unused, feature-flags are set above this to allow this function to use
+    // feature-flags
     featureFlags: {...DEFAULT_FEATURE_FLAGS, ...initialOptions?.featureFlags},
     parcelVersion: ATLASPACK_VERSION,
   };

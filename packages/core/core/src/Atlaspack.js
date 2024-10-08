@@ -57,7 +57,7 @@ import {
   fromProjectPathRelative,
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
-import {setFeatureFlags} from '@atlaspack/feature-flags';
+import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {AtlaspackV3, toFileSystemV3} from './atlaspack-v3';
 
 registerCoreWithSerializer();
@@ -105,6 +105,12 @@ export default class Atlaspack {
       return;
     }
 
+    const featureFlags = {
+      ...DEFAULT_FEATURE_FLAGS,
+      ...this.#initialOptions.featureFlags,
+    };
+    setFeatureFlags(featureFlags);
+
     await initSourcemaps;
     await initRust?.();
     try {
@@ -117,9 +123,10 @@ export default class Atlaspack {
       logger.warn(e);
     }
 
-    let resolvedOptions: AtlaspackOptions = await resolveOptions(
-      this.#initialOptions,
-    );
+    let resolvedOptions: AtlaspackOptions = await resolveOptions({
+      ...this.#initialOptions,
+      featureFlags,
+    });
     this.#resolvedOptions = resolvedOptions;
 
     let rustAtlaspack: AtlaspackV3;
@@ -151,8 +158,6 @@ export default class Atlaspack {
         },
       });
     }
-
-    setFeatureFlags(resolvedOptions.featureFlags);
 
     let {config} = await loadAtlaspackConfig(resolvedOptions);
     this.#config = new AtlaspackConfig(config, resolvedOptions);
@@ -542,6 +547,10 @@ export default class Atlaspack {
       message: 'Taking heap snapshot...',
     });
     return this.#farm.takeHeapSnapshot();
+  }
+
+  async unstable_invalidate(): Promise<void> {
+    await this._init();
   }
 
   async unstable_transform(

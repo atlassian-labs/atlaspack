@@ -13,6 +13,7 @@
     {
       "name": "Run Integration Tests (lldb)",
       "args": [
+        "--inspect-brk",
         "${workspaceFolder}/node_modules/.bin/_mocha",
         "${input:integration-tests-args}"
       ],

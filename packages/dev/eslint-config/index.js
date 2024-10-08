@@ -41,6 +41,7 @@ module.exports = {
   ],
   rules: {
     '@atlaspack/no-self-package-imports': 'error',
+    '@atlaspack/no-ff-module-level-eval': 'error',
     'import/first': 'error',
     'import/newline-after-import': 'error',
     'import/no-extraneous-dependencies': 'error',

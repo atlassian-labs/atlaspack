@@ -34,6 +34,10 @@ impl VisitMut for ConditionalImportsFallback {
       return;
     }
 
+    if callee_ident.span.ctxt.outer() != self.unresolved_mark {
+      // Don't process importCond more than once
+    }
+
     let (Some((cond, _cond_span)), Some((if_true, if_true_span)), Some((if_false, if_false_span))) = (
       match_str(&call.args[0].expr),
       match_str(&call.args[1].expr),

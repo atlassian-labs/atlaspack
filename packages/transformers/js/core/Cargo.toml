@@ -41,5 +41,6 @@ pathdiff = "0.2.0"
 path-slash = "0.1.4"
 indexmap = "1.9.2"
 atlaspack-macros = { path = "../../../../crates/macros" }
+atlaspack_core = { path = "../../../../crates/atlaspack_core" }
 parking_lot = "0.12"
 regex = "1.10.5"
