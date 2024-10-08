@@ -97,7 +97,7 @@ describe.only('replaceStream', () => {
 
   let currentInputSize = 1024 * 1024; // Start at 1MB and grow to 40MB
   const inputSizes = [];
-  while (currentInputSize < 40 * 1024 * 1024) {
+  while (currentInputSize < 80 * 1024 * 1024) {
     inputSizes.push(currentInputSize);
     currentInputSize *= 2;
   }

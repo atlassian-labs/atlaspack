@@ -12,8 +12,21 @@ fn replace_hash_references(
   hash_ref_to_name_hash: HashMap<String, String>,
 ) -> napi::Result<Buffer> {
   // We assume that the buffer is a UTF-8 string.
+  //
   // This performs no copying. If the buffer encoding is not UTF-8 we'll corrupt
   // the data, because we write UTF-8 strings into it without validating.
+  //
+  // This is faster than using Regex, although it is not optimal because we
+  // actually don't need to search for multiple strings, only for `HASH_REF_...`.
+  //
+  // Therefore this does a lot of unnecessary comparisons.
+  //
+  // It's possible to improve perf. by avoiding copying the buffer and replacing
+  // in place as well as using a faster search strategy.
+  //
+  // However, we have found that the performance improvement is small. Also,
+  // we have measured `daachorse` to be significantly slower than this
+  // implementation.
   let input_bytes = input.as_ref();
   let patterns: Vec<&String> = hash_ref_to_name_hash.keys().collect();
   let replacements: Vec<&String> = patterns
