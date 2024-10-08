@@ -7,6 +7,8 @@ import type {
   PackageManager,
 } from '@atlaspack/types';
 
+import {decl} from 'postcss';
+
 declare export var init: void | (() => void);
 
 export type Transferable = {||};
@@ -205,3 +207,8 @@ declare export function runInlineRequiresOptimizer(
 declare export function createAssetId(params: mixed): string;
 declare export function createDependencyId(params: mixed): string;
 declare export function createEnvironmentId(params: mixed): string;
+
+declare export function replaceHashReferences(
+  input: Buffer,
+  hashRefToNameHash: {[key: string]: string},
+): Buffer;

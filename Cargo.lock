@@ -230,6 +230,7 @@ dependencies = [
 name = "atlaspack-node-bindings"
 version = "0.1.0"
 dependencies = [
+ "aho-corasick",
  "anyhow",
  "atlaspack",
  "atlaspack-dev-dep-resolver",

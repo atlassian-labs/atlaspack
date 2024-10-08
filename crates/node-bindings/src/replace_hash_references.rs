@@ -12,33 +12,23 @@ fn replace_hash_references(
   hash_ref_to_name_hash: HashMap<String, String>,
 ) -> napi::Result<Buffer> {
   // We assume that the buffer is a UTF-8 string.
-  //
-  // This performs no copying but is still totally safe. It'll just throw if the
-  // buffer is not a valid UTF-8 string.
+  // This performs no copying. If the buffer encoding is not UTF-8 we'll corrupt
+  // the data, because we write UTF-8 strings into it without validating.
   let input_bytes = input.as_ref();
-  let input_string = std::str::from_utf8(input_bytes).map_err(|err| {
+  let patterns: Vec<&String> = hash_ref_to_name_hash.keys().collect();
+  let replacements: Vec<&String> = patterns
+    .iter()
+    .map(|pattern| hash_ref_to_name_hash.get(*pattern).unwrap())
+    .collect();
+  let ac = aho_corasick::AhoCorasick::new(patterns).map_err(|err| {
     napi::Error::new(
       Status::GenericFailure,
-      format!(
-        "[napi] Failed to parse input buffer as UTF-8 string: {}",
-        err
-      ),
-    )
-  })?;
-  let regex = regex::Regex::new(r"HASH_REF_\w{16}").map_err(|err| {
-    napi::Error::new(
-      Status::GenericFailure,
-      format!("[napi] Failed to compile regex: {}", err),
+      format!("[napi] Failed to build aho-corasick replacer: {}", err),
     )
   })?;
 
-  let output_string = regex.replace_all(input_string, |captures: &regex::Captures| {
-    let hash_ref = captures.get(0).unwrap().as_str();
-    let name_hash = hash_ref_to_name_hash.get(hash_ref).unwrap();
-    name_hash
-  });
+  let output_string = ac.replace_all_bytes(input_bytes, &replacements);
 
-  let buffer = Buffer::from(output_string.as_bytes());
-
+  let buffer = Buffer::from(output_string);
   Ok(buffer)
 }

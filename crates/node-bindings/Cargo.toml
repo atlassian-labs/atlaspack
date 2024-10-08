@@ -20,6 +20,7 @@ atlaspack_package_manager = { path = "../atlaspack_package_manager" }
 atlaspack_plugin_optimizer_inline_requires = { path = "../atlaspack_plugin_optimizer_inline_requires" }
 atlaspack_plugin_transformer_js = { path = "../atlaspack_plugin_transformer_js" }
 atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers" }
+aho-corasick = "1.1"
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 
 anyhow = "1.0.82"
@@ -47,7 +48,12 @@ crossbeam-channel = "0.5.6"
 indexmap = "1.9.2"
 libc = "0.2"
 mozjpeg-sys = "1.0.0"
-napi = { version = "2.16.4", features = ["async", "napi4", "napi5", "serde-json"] }
+napi = { version = "2.16.4", features = [
+  "async",
+  "napi4",
+  "napi5",
+  "serde-json",
+] }
 once_cell = { version = "1.19.0" }
 oxipng = "8.0.0"
 rayon = "1.7.0"
