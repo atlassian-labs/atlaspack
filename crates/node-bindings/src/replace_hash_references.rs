@@ -27,6 +27,9 @@ fn replace_hash_references(
   // However, we have found that the performance improvement is small. Also,
   // we have measured `daachorse` to be significantly slower than this
   // implementation.
+  //
+  // We have also measured using regex bytes and only searching for HASH_REF_...
+  // to be slower than this implementation.
   let input_bytes = input.as_ref();
   let patterns: Vec<&String> = hash_ref_to_name_hash.keys().collect();
   let replacements: Vec<&String> = patterns
