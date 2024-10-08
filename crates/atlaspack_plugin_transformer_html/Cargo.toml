@@ -15,3 +15,4 @@ markup5ever_rcdom = { git = "https://github.com/servo/html5ever", rev = "a831e82
 
 [dev-dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+pretty_assertions = "1.4.0"

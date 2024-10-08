@@ -432,6 +432,7 @@ dependencies = [
  "html5ever",
  "markup5ever",
  "markup5ever_rcdom",
+ "pretty_assertions",
 ]
 
 [[package]]
