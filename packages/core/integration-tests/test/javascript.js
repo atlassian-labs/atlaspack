@@ -32,6 +32,103 @@ describe('javascript', function () {
     await removeDistDirectory();
   });
 
+  it('throws when deferring an unused ES6 re-export (wildcard, empty, unused)', async function () {
+    await assert.rejects(
+      () =>
+        bundle(
+          path.join(
+            __dirname,
+            '/integration/scope-hoisting/es6/side-effects-re-exports-all-empty/a.js',
+          ),
+        ),
+      {
+        message:
+          "You are attempting to import 'integration/scope-hoisting/es6/side-effects-re-exports-all-empty/library/empty.js'. This is not supported and the build cannot succeed.\nPlease remove the empty file import or change to a dependency version that does not attempt to import an empty file.",
+      },
+    );
+  });
+
+  it('panics when re-exporting all from an empty module without side effects and panicOnEmptyFileImport is enabled', async function () {
+    await assert.rejects(
+      () =>
+        bundle(
+          path.join(
+            __dirname,
+            '/integration/scope-hoisting/es6/re-export-all-empty-no-side-effects/index.js',
+          ),
+          {
+            mode: 'production',
+          },
+        ),
+      {
+        message:
+          "You are attempting to import 'integration/scope-hoisting/es6/re-export-all-empty-no-side-effects/node\\_modules/lib/empty.js'. This is not supported and the build cannot succeed.\nPlease remove the empty file import or change to a dependency version that does not attempt to import an empty file.",
+      },
+    );
+  });
+
+  it('missing exports should throw when panicOnEmptyFileImport is enabled', async function () {
+    await fsFixture(overlayFS, __dirname)`
+            empty.js:
+              // intentionally empty
+            index.js:
+              import {a} from './empty.js';
+            package.json:
+              {
+                "sideEffects": false
+              }
+            yarn.lock: {}
+          `;
+
+    await assert.rejects(
+      () =>
+        bundle(
+          path.join(
+            __dirname,
+            '/integration/scope-hoisting/es6/empty-module/a.js',
+          ),
+          {
+            inputFS: overlayFS,
+          },
+        ),
+      {
+        message:
+          "You are attempting to import 'integration/scope-hoisting/es6/empty-module/b.js'. This is not supported and the build cannot succeed.\nPlease remove the empty file import or change to a dependency version that does not attempt to import an empty file.",
+      },
+    );
+  });
+
+  it.only('missing exports should throw when panicOnEmptyFileImport is enabled even if export is present', async function () {
+    await fsFixture(overlayFS, __dirname)`
+            empty.js:
+              export default 2;
+            index.js:
+              import a from './empty.js';
+            package.json:
+              {
+                "sideEffects": false
+              }
+            yarn.lock: {}
+          `;
+
+    await assert.rejects(
+      () =>
+        bundle(
+          path.join(
+            __dirname,
+            '/integration/scope-hoisting/es6/empty-module/a.js',
+          ),
+          {
+            inputFS: overlayFS,
+          },
+        ),
+      {
+        message:
+          "You are attempting to import 'integration/scope-hoisting/es6/empty-module/b.js'. This is not supported and the build cannot succeed.\nPlease remove the empty file import or change to a dependency version that does not attempt to import an empty file.",
+      },
+    );
+  });
+
   it('should produce a basic JS bundle with CommonJS requires', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/commonjs/index.js'),

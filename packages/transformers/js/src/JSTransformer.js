@@ -20,6 +20,7 @@ import ThrowableDiagnostic, {
 } from '@atlaspack/diagnostic';
 import {validateSchema, remapSourceLocation, globMatch} from '@atlaspack/utils';
 import pkg from '../package.json';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const JSX_EXTENSIONS = {
   jsx: true,
@@ -166,6 +167,12 @@ type MacroContext = {|
   invalidateOnBuild(): void,
 |};
 
+// function hasNoCode(code) {
+//   const strippedCode = code
+//     .replaceAll(/\/\*[\s\S]*?\*\/|\/\/.*/g, '')
+//     .trim();
+//   return strippedCode === '' || strippedCode === 'export {}';
+// }
 export default (new Transformer({
   async loadConfig({config, options}) {
     let pkg = await config.getPackage();
@@ -326,6 +333,13 @@ export default (new Transformer({
       asset.getMap(),
     ]);
 
+    // if (hasNoCode(codeAsString)) {
+    //   logger.error({
+    //     origin: '@atlaspack/transformer-js',
+    //     message: `Asset: ${asset.sourcePath} imports empty asset: ${asset.specifier}. Importing empty assets is not supported.`,
+    //   });
+    // }
+
     let targets;
     if (asset.env.isElectron() && asset.env.engines.electron) {
       targets = {
@@ -419,6 +433,7 @@ export default (new Transformer({
       used_env,
       has_node_replacements,
       is_constant_module,
+      is_empty_asset,
     } = await (transformAsync || transform)({
       filename: asset.filePath,
       code,
@@ -460,6 +475,10 @@ export default (new Transformer({
       standalone: asset.query.has('standalone'),
       inline_constants: config.inlineConstants,
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
+
+      should_error_on_empty_file_imports: getFeatureFlag(
+        'shouldPanicOnEmptyFileImports',
+      ),
       callMacro: asset.isSource
         ? async (err, src, exportName, args, loc) => {
             let mod;
@@ -576,6 +595,12 @@ export default (new Transformer({
           }
         : null,
     });
+
+    // Treat the asset as esm when it's empty after transformation
+    // This prevents an edge case in the scope hoisting packager
+    // where importing an empty cjs asset breaks the build
+    if (is_empty_asset) {
+    }
 
     if (is_constant_module) {
       asset.meta.isConstantModule = true;

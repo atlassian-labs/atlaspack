@@ -41,8 +41,11 @@ use indexmap::IndexMap;
 use modules::esm2cjs;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
+use pathdiff::diff_paths;
 use serde::Deserialize;
 use serde::Serialize;
+use std::fs::OpenOptions;
+use std::io::{self, Write};
 use swc_core::common::chain;
 use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::errors::Handler;
@@ -53,9 +56,9 @@ use swc_core::common::FileName;
 use swc_core::common::Globals;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
-use swc_core::ecma::ast::Module;
 use swc_core::ecma::ast::ModuleItem;
 use swc_core::ecma::ast::Program;
+use swc_core::ecma::ast::{Module, ModuleDecl, NamedExport, Script, Stmt};
 use swc_core::ecma::codegen::text_writer::JsWriter;
 use swc_core::ecma::parser::error::Error;
 use swc_core::ecma::parser::lexer::Lexer;
@@ -81,6 +84,7 @@ use swc_core::ecma::transforms::optimization::simplify::expr_simplifier;
 use swc_core::ecma::transforms::proposal::decorators;
 use swc_core::ecma::transforms::react;
 use swc_core::ecma::transforms::typescript;
+use swc_core::ecma::visit::Visit;
 use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
 use swc_core::ecma::visit::{as_folder, FoldWith};
@@ -131,6 +135,7 @@ pub struct Config {
   pub standalone: bool,
   pub inline_constants: bool,
   pub conditional_bundling: bool,
+  // pub should_error_on_empty_file_imports: bool
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -148,6 +153,99 @@ pub struct TransformResult {
   pub used_env: HashSet<swc_core::ecma::atoms::JsWord>,
   pub has_node_replacements: bool,
   pub is_constant_module: bool,
+  pub is_empty_asset: bool,
+}
+
+struct EmptyVisitor {
+  has_content: bool,
+  has_empty_export: bool,
+}
+impl EmptyVisitor {
+  fn new() -> Self {
+    EmptyVisitor {
+      has_content: false,
+      has_empty_export: false,
+    }
+  }
+  fn is_empty(&self) -> bool {
+    println!(
+      "has content: {:?}\nhas empty export: {:?}",
+      self.has_content, self.has_empty_export
+    );
+    if self.has_content {
+      return false;
+    }
+    !self.has_content || self.has_empty_export
+  }
+}
+
+impl Visit for EmptyVisitor {
+  fn visit_module(&mut self, module: &Module) {
+    if self.has_content {
+      return;
+    }
+    if module.body.is_empty() {
+      self.has_content = false;
+      return;
+    }
+    module.visit_children_with(self);
+  }
+
+  fn visit_module_item(&mut self, item: &ModuleItem) {
+    if self.has_content {
+      return;
+    }
+    match item {
+      ModuleItem::ModuleDecl(ModuleDecl::ExportNamed(NamedExport { specifiers, .. })) => {
+        if specifiers.is_empty() {
+          self.has_empty_export = true;
+        } else {
+          self.has_content = true;
+          return;
+        }
+      }
+      ModuleItem::Stmt(Stmt::Empty(..)) => {
+        // Empty statements do not contribute to content
+      }
+      _ => {
+        self.has_content = true;
+        return;
+      }
+    }
+    item.visit_children_with(self);
+  }
+  fn visit_script(&mut self, script: &Script) {
+    if self.has_content {
+      return;
+    }
+    if script.body.is_empty() {
+      return;
+    }
+    script.visit_children_with(self);
+  }
+  fn visit_stmt(&mut self, stmt: &Stmt) {
+    if self.has_content {
+      return;
+    }
+    match stmt {
+      Stmt::Empty(..) => {
+        // Empty statements do not contribute to content
+      }
+      _ => {
+        self.has_content = true;
+        return;
+      }
+    }
+    stmt.visit_children_with(self);
+  }
+}
+fn check_is_empty_ast(program: &mut Program, should_error_on_empty_file_imports: bool) -> bool {
+  if !should_error_on_empty_file_imports {
+    return false;
+  }
+  let mut check_is_empty_visitor = EmptyVisitor::new();
+  program.visit_with(&mut check_is_empty_visitor);
+  check_is_empty_visitor.is_empty()
 }
 
 fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Versions> {
@@ -179,11 +277,18 @@ fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Vers
 
   None
 }
-
+fn write_to_file(source_file: String) -> Result<(), anyhow::Error> {
+  let mut file = OpenOptions::new().append(true).create(true).open(
+    "/Users/ngrujic/atlassian/atlassian-frontend-monorepo/jira/.parcel-cache/empty_file_list.txt",
+  )?;
+  let _result = file.write_all(format!("{source_file}\n").as_bytes());
+  let _temp = file.flush().is_ok();
+  Ok(())
+}
 pub fn transform(
   config: Config,
   call_macro: Option<MacroCallback>,
-) -> Result<TransformResult, std::io::Error> {
+) -> Result<TransformResult, io::Error> {
   let mut result = TransformResult::default();
   let mut map_buf = vec![];
 
@@ -210,6 +315,24 @@ pub fn transform(
     }
     Ok((module, comments)) => {
       let mut module = module;
+
+      println!("{:?}", code);
+      // TODO: add feature flag
+      if check_is_empty_ast(&mut module, true) {
+        result.is_empty_asset = true;
+        let name = config.filename.clone();
+        let root = config.project_root.clone();
+        let source_file = diff_paths(name, root)
+          .unwrap()
+          .into_os_string()
+          .into_string()
+          .unwrap();
+        let _message = format!("You are attempting to import '{source_file}'. This is not supported and the build cannot succeed.\nPlease remove the empty file import or change to a dependency version that does not attempt to import an empty file.");
+        // return Err(std::io::Error::new(ErrorKind::InvalidInput, message));
+        // let source_file = config.filename.clone();
+        // write_to_file(source_file);
+      }
+
       result.shebang = match &mut module {
         Program::Module(module) => module.shebang.take().map(|s| s.to_string()),
         Program::Script(script) => script.shebang.take().map(|s| s.to_string()),

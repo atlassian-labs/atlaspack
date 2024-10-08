@@ -288,6 +288,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
             })
           })
           .unwrap_or_default(),
+        // should_error_on_empty_file_imports: false,
         ..atlaspack_js_swc_core::Config::default()
       },
       None,

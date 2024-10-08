@@ -14,6 +14,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   useLmdbJsLite: false,
   fastNeedsDefaultInterop: false,
   conditionalBundlingApi: false,
+  shouldPanicOnEmptyFileImports: true,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

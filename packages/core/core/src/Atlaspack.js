@@ -1,5 +1,4 @@
 // @flow strict-local
-
 import type {
   Asset,
   AsyncSubscription,
@@ -50,6 +49,7 @@ import {
   init as initRust,
   initializeMonitoring,
   closeMonitoring,
+  setFeatureFlag,
 } from '@atlaspack/rust';
 import {
   fromProjectPath,
@@ -104,6 +104,7 @@ export default class Atlaspack {
     if (this.#initialized) {
       return;
     }
+    this.#initialOptions.featureFlags;
 
     await initSourcemaps;
     await initRust?.();
