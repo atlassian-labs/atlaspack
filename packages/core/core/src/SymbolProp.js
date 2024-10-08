@@ -199,6 +199,7 @@ function distributeSymbolsToOutgoingDependencies(
     );
   }
 }
+
 function shouldPropagateSymbols(
   assetNode,
   isEverySymbolCleared,
@@ -213,6 +214,7 @@ function shouldPropagateSymbols(
     namespaceReexportedSymbols.size > 0
   );
 }
+
 function processOutgoingDependencySymbols(
   dep,
   depUsedSymbolsDown,
@@ -244,6 +246,7 @@ function processOutgoingDependencySymbols(
     }
   }
 }
+
 function handleNamespaceSymbols(
   depUsedSymbolsDown,
   depSymbols,
@@ -258,6 +261,7 @@ function handleNamespaceSymbols(
     }
   }
 }
+
 function handleReexportedSymbols(
   depUsedSymbolsDown,
   symbol,
@@ -281,6 +285,7 @@ function handleReexportedSymbols(
     }
   }
 }
+
 function updateDependencyState(
   dep,
   depUsedSymbolsDownOld,
@@ -344,15 +349,18 @@ function getIncomingDependencyRequestsFromAsset(
     namespaceReexportedSymbols,
   };
 }
+
 function checkForNamespaceOutgoingDeps(outgoingDeps, rootSymbol) {
   return outgoingDeps.some(
     dep => dep.value.symbols?.get(rootSymbol)?.local === rootSymbol,
   );
 }
+
 function handleRootAsset(assetNode, namespaceReexportedSymbols, rootSymbol) {
   assetNode.usedSymbols.add(rootSymbol);
   namespaceReexportedSymbols.add(rootSymbol);
 }
+
 function handleClearedSymbolsDependency(
   incomingDep,
   isEntryAsset,
@@ -365,6 +373,7 @@ function handleClearedSymbolsDependency(
   }
   return {isEntryAsset, shouldAddAllSymbols};
 }
+
 function processIncomingDependencySymbols(
   incomingDep,
   assetNode,
@@ -389,11 +398,13 @@ function processIncomingDependencySymbols(
     }
   }
 }
+
 function addAllSymbols(exportSymbolToIdentifierMap, assetNode) {
   exportSymbolToIdentifierMap?.forEach((_, exportSymbol) =>
     assetNode.usedSymbols.add(exportSymbol),
   );
 }
+
 function markAsRootAsset(asset, ROOT_SYMBOL) {
   asset.usedSymbols.add(ROOT_SYMBOL);
   asset.namespaceReexportedSymbols.add(ROOT_SYMBOL);
@@ -635,6 +646,7 @@ function initializeUnreachedNodes(
 ) {
   return new Set([...changedAssets, ...assetGroupsWithRemovedParents]);
 }
+
 function processCurrentNode(
   assetGraph,
   currentNode,
@@ -655,6 +667,7 @@ function processCurrentNode(
   }
   return wasNodeDirty;
 }
+
 function getIncomingDependencies(assetGraph, assetNode) {
   return assetGraph.getIncomingDependencies(assetNode.value).map(dependency => {
     let dependencyNode = assetGraph.getNodeByContentKey(dependency.id);
@@ -662,6 +675,7 @@ function getIncomingDependencies(assetGraph, assetNode) {
     return dependencyNode;
   });
 }
+
 function getOutgoingDependencyNodes(assetGraph, outgoingDependencies) {
   return outgoingDependencies.map(dependencyId => {
     let dependencyNode = nullthrows(assetGraph.getNode(dependencyId));
