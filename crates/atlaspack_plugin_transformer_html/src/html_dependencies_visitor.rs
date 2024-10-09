@@ -5,8 +5,8 @@ use markup5ever::{expanded_name, local_name, namespace_url, ns};
 use markup5ever_rcdom::{Handle, NodeData, SerializableHandle};
 
 use atlaspack_core::types::{
-  Asset, BundleBehavior, Code, Dependency, FileType, JSONObject, OutputFormat, Priority,
-  SourceType, SpecifierType,
+  Asset, AssetWithDependencies, BundleBehavior, Code, Dependency, FileType, JSONObject,
+  OutputFormat, Priority, SourceType, SpecifierType,
 };
 
 use crate::{
@@ -21,7 +21,7 @@ use crate::{
 pub struct HtmlDependenciesVisitor {
   context: Rc<HTMLTransformationContext>,
   pub dependencies: Vec<Dependency>,
-  pub discovered_assets: Vec<Asset>,
+  pub discovered_assets: Vec<AssetWithDependencies>,
 }
 
 impl HtmlDependenciesVisitor {
@@ -146,14 +146,17 @@ impl DomVisitor for HtmlDependenciesVisitor {
             .expect("Inline style serialization failed");
 
           // TODO: How to best handle id construction?
-          self.discovered_assets.push(Asset {
-            bundle_behavior: Some(BundleBehavior::Inline),
-            code: Arc::new(Code::new(styles)),
-            env: self.context.env.clone(),
-            file_type,
-            meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
-            unique_key: Some(specifier),
-            ..Asset::default()
+          self.discovered_assets.push(AssetWithDependencies {
+            asset: Asset {
+              bundle_behavior: Some(BundleBehavior::Inline),
+              code: Arc::new(Code::new(styles)),
+              env: self.context.env.clone(),
+              file_type,
+              meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
+              unique_key: Some(specifier),
+              ..Asset::default()
+            },
+            dependencies: Vec::new(),
           });
 
           return DomTraversalOperation::Stop;

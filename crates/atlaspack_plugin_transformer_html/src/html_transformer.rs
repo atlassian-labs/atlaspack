@@ -10,7 +10,9 @@ use html5ever::{serialize, ParseOpts};
 use markup5ever_rcdom::{RcDom, SerializableHandle};
 
 use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};
-use atlaspack_core::types::{Asset, AssetId, BundleBehavior, Code, Dependency, Environment};
+use atlaspack_core::types::{
+  Asset, AssetId, AssetWithDependencies, BundleBehavior, Code, Dependency, Environment,
+};
 
 use crate::dom_visitor::walk;
 use crate::hmr_visitor::HMRVisitor;
@@ -89,7 +91,7 @@ pub struct HTMLTransformationContext {
 #[derive(Debug, PartialEq)]
 struct HtmlTransformation {
   dependencies: Vec<Dependency>,
-  discovered_assets: Vec<Asset>,
+  discovered_assets: Vec<AssetWithDependencies>,
 }
 
 /// 'Purer' entry-point for all HTML transformations. Do split transformations
