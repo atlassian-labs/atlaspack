@@ -22,6 +22,7 @@ pub struct RpcResolverPlugin {
   specifier: String,
   started: bool,
   rpc_worker: RpcWorkerRef,
+  project_root: PathBuf,
 }
 
 impl Debug for RpcResolverPlugin {
@@ -32,7 +33,7 @@ impl Debug for RpcResolverPlugin {
 
 impl RpcResolverPlugin {
   pub fn new(
-    _ctx: &PluginContext,
+    ctx: &PluginContext,
     plugin: &PluginNode,
     rpc_worker: RpcWorkerRef,
   ) -> Result<Self, anyhow::Error> {
@@ -41,6 +42,7 @@ impl RpcResolverPlugin {
       specifier: plugin.package_name.clone(),
       rpc_worker,
       started: false,
+      project_root: (&*ctx.options.project_root).to_path_buf(),
     })
   }
 }
@@ -68,6 +70,8 @@ impl ResolverPlugin for RpcResolverPlugin {
       key: self.specifier.clone(),
       dependency: (&*ctx.dependency).clone(),
       specifier: (&*ctx.specifier).to_owned(),
+      pipeline: ctx.pipeline.clone(),
+      project_root: self.project_root.clone(),
     })
   }
 }
