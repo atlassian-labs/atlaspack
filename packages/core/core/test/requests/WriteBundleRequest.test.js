@@ -32,7 +32,7 @@ class BufferWritable extends Writable {
 function generateSampleInput(
   hashReferences: Map<string, string>,
   inputSize: number,
-): Buffe {
+): Buffer {
   let output = '';
 
   while (output.length < inputSize) {
