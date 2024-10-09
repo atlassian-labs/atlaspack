@@ -7,8 +7,6 @@ import type {
   PackageManager,
 } from '@atlaspack/types';
 
-import {decl} from 'postcss';
-
 declare export var init: void | (() => void);
 
 export type Transferable = {||};

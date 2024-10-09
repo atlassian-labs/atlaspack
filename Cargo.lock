@@ -262,7 +262,6 @@ dependencies = [
  "oxipng",
  "parking_lot",
  "rayon",
- "regex",
  "serde",
  "serde_json",
  "swc_core",
