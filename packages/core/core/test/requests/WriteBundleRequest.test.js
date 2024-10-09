@@ -66,7 +66,7 @@ async function javascriptReplaceHashReferences(
   return output;
 }
 
-describe.only('replaceStream', () => {
+describe('replaceStream', () => {
   const hashReferences = new Map([
     ['HASH_REF_1234567890123456', 'HASH_REF_replacedwithstri'],
   ]);
