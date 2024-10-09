@@ -11,7 +11,7 @@ import {
 } from '@atlaspack/test-utils';
 import type {BundleGraph, BundleGroup, PackagedBundle} from '@atlaspack/types';
 
-describe.v2('BundleGraph', () => {
+describe('BundleGraph', () => {
   it('can traverse assets across bundles and contexts', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/worker-shared/index.js'),
@@ -99,8 +99,6 @@ describe.v2('BundleGraph', () => {
 
         index.jsx:
           import logo from 'data-url:./logo.svg';
-
-        yarn.lock: {}
       `;
 
       bundleGraph = await bundle(path.join(dir, 'index.jsx'), {

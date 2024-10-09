@@ -3,7 +3,7 @@ import path from 'path';
 import zlib from 'zlib';
 import {bundle, describe, it, outputFS, distDir} from '@atlaspack/test-utils';
 
-describe.v2('compressors', function () {
+describe('compressors', function () {
   it('should not compress output with gzip and brotli in development', async function () {
     await bundle(path.join(__dirname, 'integration/compressors/index.js'));
 
