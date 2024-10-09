@@ -13,13 +13,13 @@ import {
   run,
 } from '@atlaspack/test-utils';
 
-describe.v2('yaml', function () {
+describe('yaml', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });
 
   it('files can be required in JavaScript', async function () {
-    await fsFixture(overlayFS)`
+    await fsFixture(overlayFS, __dirname)`
       index.js:
         const test = require('./test.yaml');
 
@@ -33,7 +33,7 @@ describe.v2('yaml', function () {
           c: 2
     `;
 
-    let b = await bundle('index.js', {inputFS: overlayFS});
+    let b = await bundle(join(__dirname, 'index.js'), {inputFS: overlayFS});
 
     assertBundles(b, [
       {
@@ -53,14 +53,14 @@ describe.v2('yaml', function () {
   });
 
   it('files are minified', async function () {
-    await fsFixture(overlayFS)`
+    await fsFixture(overlayFS, __dirname)`
       index.yaml:
         a: 1
         b:
           c: 2
     `;
 
-    await bundle('index.yaml', {
+    await bundle(join(__dirname, 'index.yaml'), {
       defaultTargetOptions: {
         shouldOptimize: true,
         shouldScopeHoist: false,

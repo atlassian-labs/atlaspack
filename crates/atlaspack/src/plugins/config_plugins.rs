@@ -33,6 +33,7 @@ use atlaspack_plugin_transformer_inline_string::AtlaspackInlineStringTransformer
 use atlaspack_plugin_transformer_js::AtlaspackJsTransformerPlugin;
 use atlaspack_plugin_transformer_json::AtlaspackJsonTransformerPlugin;
 use atlaspack_plugin_transformer_raw::AtlaspackRawTransformerPlugin;
+use atlaspack_plugin_transformer_yaml::AtlaspackYamlTransformerPlugin;
 
 use super::Plugins;
 use super::TransformerPipeline;
@@ -220,6 +221,7 @@ impl Plugins for ConfigPlugins {
         "@atlaspack/transformer-image" => Box::new(AtlaspackImageTransformerPlugin::new(&self.ctx)),
         "@atlaspack/transformer-raw" => Box::new(AtlaspackRawTransformerPlugin::new(&self.ctx)),
         "@atlaspack/transformer-json" => Box::new(AtlaspackJsonTransformerPlugin::new(&self.ctx)),
+        "@atlaspack/transformer-yaml" => Box::new(AtlaspackYamlTransformerPlugin::new(&self.ctx)),
         _ => {
           let Some(rpc_worker) = &self.rpc_worker else {
             anyhow::bail!("Unable to initialize JavaScript plugin")

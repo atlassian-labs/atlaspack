@@ -20,6 +20,7 @@ atlaspack_plugin_transformer_inline_string = { path = "../atlaspack_plugin_trans
 atlaspack_plugin_transformer_js = { path = "../atlaspack_plugin_transformer_js" }
 atlaspack_plugin_transformer_json = { path = "../atlaspack_plugin_transformer_json" }
 atlaspack_plugin_transformer_raw = { path = "../atlaspack_plugin_transformer_raw" }
+atlaspack_plugin_transformer_yaml = { path = "../atlaspack_plugin_transformer_yaml" }
 atlaspack_plugin_rpc = { path = "../atlaspack_plugin_rpc" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 
