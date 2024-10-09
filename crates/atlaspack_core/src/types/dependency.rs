@@ -23,7 +23,7 @@ use super::FileType;
 pub fn create_dependency_id(
   source_asset_id: Option<&AssetId>,
   specifier: &str,
-  env: &Environment,
+  environment_id: &str,
   target: Option<&Target>,
   pipeline: Option<&str>,
   specifier_type: &SpecifierType,
@@ -35,7 +35,7 @@ pub fn create_dependency_id(
 
   source_asset_id.hash(&mut hasher);
   specifier.hash(&mut hasher);
-  env.hash(&mut hasher);
+  environment_id.hash(&mut hasher);
   target.hash(&mut hasher);
   pipeline.hash(&mut hasher);
   specifier_type.hash(&mut hasher);
@@ -149,7 +149,7 @@ impl Dependency {
     create_dependency_id(
       self.source_asset_id.as_ref(),
       &self.specifier,
-      &self.env,
+      &self.env.id(),
       self.target.as_ref().map(|t| &**t),
       self.pipeline.as_ref().map(|s| s.as_str()),
       &self.specifier_type,
