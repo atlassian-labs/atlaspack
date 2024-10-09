@@ -17,6 +17,7 @@ use super::environment::Environment;
 use super::file_type::FileType;
 use super::json::JSONObject;
 use super::symbol::Symbol;
+use super::BundleBehavior;
 
 pub type AssetId = String;
 
@@ -247,20 +248,51 @@ impl Asset {
       unique_key: None,
       file_type: file_type.clone(),
     });
+
     Ok(Self {
       code: Arc::new(code),
-      id: asset_id.clone(),
-      unique_key: None,
       env,
       file_path,
       file_type,
+      id: asset_id,
       is_bundle_splittable: true,
       is_source,
       pipeline,
       query,
       side_effects,
+      unique_key: None,
       ..Asset::default()
     })
+  }
+
+  pub fn new_inline(
+    code: Code,
+    env: Arc<Environment>,
+    file_type: FileType,
+    meta: JSONObject,
+    unique_key: Option<String>,
+  ) -> Self {
+    let environment_id = env.id();
+    let mut hasher = crate::hash::IdentifierHasher::default();
+
+    environment_id.hash(&mut hasher);
+    code.bytes().hash(&mut hasher);
+    file_type.hash(&mut hasher);
+    unique_key.hash(&mut hasher);
+
+    // Ids must be 16 characters for scope hoisting to replace imports correctly in REPLACEMENT_RE
+    let asset_id = format!("{:016x}", hasher.finish());
+
+    Self {
+      bundle_behavior: Some(BundleBehavior::Inline),
+      code: Arc::new(code),
+      id: asset_id,
+      env,
+      file_type,
+      meta,
+      unique_key,
+      ..Asset::default()
+    }
   }
 
   pub fn set_interpreter(&mut self, shebang: impl Into<serde_json::Value>) {

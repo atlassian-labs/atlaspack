@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use markup5ever_rcdom::Handle;
 
 #[derive(PartialEq, Eq)]
@@ -11,8 +13,8 @@ pub trait DomVisitor {
 }
 
 pub fn walk(node: Handle, visitor: &mut impl DomVisitor) {
-  let mut queue = vec![node.clone()];
-  while let Some(node) = queue.pop() {
+  let mut queue = VecDeque::from([node.clone()]);
+  while let Some(node) = queue.pop_front() {
     let operation = visitor.visit_node(node.clone());
     if operation == DomTraversalOperation::Stop {
       break;
@@ -20,7 +22,7 @@ pub fn walk(node: Handle, visitor: &mut impl DomVisitor) {
 
     let children = node.children.borrow();
     for child in children.iter() {
-      queue.push(child.clone());
+      queue.push_back(child.clone());
     }
   }
 }

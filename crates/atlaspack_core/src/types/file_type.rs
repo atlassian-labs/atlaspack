@@ -78,6 +78,7 @@ impl FileType {
       "jpeg" => FileType::Jpeg,
       "png" => FileType::Png,
       "gif" => FileType::Gif,
+      "htm" => FileType::Html,
       "html" => FileType::Html,
       "avif" => FileType::Avif,
       "avifs" => FileType::Avif,

@@ -146,6 +146,7 @@ mod test {
     run_html_transformations(transformation_context(), &mut dom);
 
     let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
     assert_eq!(
       &normalize_html(&html),
       &normalize_html(
@@ -176,6 +177,7 @@ mod test {
     run_html_transformations(transformation_context(), &mut dom);
 
     let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
     assert_eq!(
       &normalize_html(&html),
       &normalize_html(
@@ -188,6 +190,66 @@ mod test {
           </html>
         "#
       )
+    );
+  }
+
+  #[test]
+  fn transforms_inline_script_tag() {
+    let bytes = r#"
+      <html>
+        <body>
+          <script type="text/javascript">
+            console.log('test');
+          </script>
+        </body>
+      </html>
+    "#
+    .trim();
+
+    let mut dom = parse_html(bytes.as_bytes()).unwrap();
+    let context = transformation_context();
+
+    let transformation = run_html_transformations(context.clone(), &mut dom);
+    let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
+    assert_eq!(
+      &normalize_html(&html),
+      &normalize_html(&normalize_html(
+        r#"
+          <html>
+            <head></head>
+            <body>
+              <script data-parcel-key="test:0">
+                console.log('test');
+              </script>
+            </body>
+          </html>
+        "#
+      ))
+    );
+
+    assert_eq!(
+      transformation,
+      HtmlTransformation {
+        dependencies: vec![Dependency {
+          bundle_behavior: Some(BundleBehavior::Inline),
+          source_asset_id: Some(String::from("test")),
+          source_asset_type: Some(FileType::Html),
+          specifier: String::from("test:0"),
+          ..Dependency::default()
+        }],
+        discovered_assets: vec![Asset {
+          bundle_behavior: Some(BundleBehavior::Inline),
+          code: Arc::new(Code::from(String::from(
+            "\n            console.log('test');\n          "
+          ))),
+          file_type: FileType::Js,
+          id: "2534244a93270a8a".into(),
+          meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
+          unique_key: Some(String::from("test:0")),
+          ..Asset::default()
+        }],
+      }
     );
   }
 
@@ -208,8 +270,8 @@ mod test {
     let context = transformation_context();
 
     let transformation = run_html_transformations(context.clone(), &mut dom);
-
     let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
     assert_eq!(&normalize_html(&html), &normalize_html(&bytes));
 
     assert_eq!(
@@ -255,6 +317,7 @@ mod test {
     run_html_transformations(context, &mut dom);
 
     let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
     assert_eq!(
       &normalize_html(&html),
       &normalize_html(

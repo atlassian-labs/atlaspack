@@ -27,6 +27,7 @@ use atlaspack_plugin_rpc::plugin::RpcResolverPlugin;
 use atlaspack_plugin_rpc::plugin::RpcRuntimePlugin;
 use atlaspack_plugin_rpc::plugin::RpcTransformerPlugin;
 use atlaspack_plugin_rpc::RpcWorkerRef;
+use atlaspack_plugin_transformer_html::AtlaspackHtmlTransformerPlugin;
 use atlaspack_plugin_transformer_image::AtlaspackImageTransformerPlugin;
 use atlaspack_plugin_transformer_inline::AtlaspackInlineTransformerPlugin;
 use atlaspack_plugin_transformer_inline_string::AtlaspackInlineStringTransformerPlugin;
@@ -210,6 +211,7 @@ impl Plugins for ConfigPlugins {
         // before releasing native asset graph
         "@atlaspack/transformer-babel" => continue,
         "@atlaspack/transformer-react-refresh-wrap" => continue,
+        "@atlaspack/transformer-posthtml" => continue,
         "@atlaspack/transformer-js" => Box::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?),
         "@atlaspack/transformer-inline-string" => {
           Box::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
@@ -219,6 +221,7 @@ impl Plugins for ConfigPlugins {
         }
         "@atlaspack/transformer-image" => Box::new(AtlaspackImageTransformerPlugin::new(&self.ctx)),
         "@atlaspack/transformer-raw" => Box::new(AtlaspackRawTransformerPlugin::new(&self.ctx)),
+        "@atlaspack/transformer-html" => Box::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx)),
         "@atlaspack/transformer-json" => Box::new(AtlaspackJsonTransformerPlugin::new(&self.ctx)),
         _ => {
           let Some(rpc_worker) = &self.rpc_worker else {
