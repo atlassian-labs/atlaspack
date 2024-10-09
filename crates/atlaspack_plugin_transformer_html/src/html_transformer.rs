@@ -154,7 +154,7 @@ mod test {
         r#"
           <html>
             <body>
-              <script src="5ad926ae3ae30d11"></script>
+              <script src="0fe42f4006faa861"></script>
             </body>
           </html>
         "#
@@ -184,7 +184,7 @@ mod test {
         r#"
           <html>
             <head>
-              <link href="b7e43ce21336e8fb" rel="manifest" />
+              <link href="492e1268e5326028" rel="manifest" />
             </head>
             <body></body>
           </html>
@@ -266,7 +266,7 @@ mod test {
         r#"
           <html>
             <body>
-              <script src="aaa87d49a66b51d6"></script>
+              <script src="8321472594eb517f"></script>
             </body>
           </html>
         "#

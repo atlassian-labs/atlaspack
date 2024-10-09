@@ -72,7 +72,7 @@ export function createDependencyId({
   const params = {
     sourceAssetId,
     specifier,
-    env,
+    environmentId: env.id,
     target,
     pipeline,
     specifierType: SpecifierType[specifierType],
