@@ -223,15 +223,18 @@ mod test {
           specifier: String::from("test:0"),
           ..Dependency::default()
         }],
-        discovered_assets: vec![Asset {
-          bundle_behavior: Some(BundleBehavior::Inline),
-          code: Arc::new(Code::from(String::from(
-            "\n            a { color: blue; }\n          "
-          ))),
-          file_type: FileType::Css,
-          meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
-          unique_key: Some(String::from("test:0")),
-          ..Asset::default()
+        discovered_assets: vec![AssetWithDependencies {
+          asset: Asset {
+            bundle_behavior: Some(BundleBehavior::Inline),
+            code: Arc::new(Code::from(String::from(
+              "\n            a { color: blue; }\n          "
+            ))),
+            file_type: FileType::Css,
+            meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
+            unique_key: Some(String::from("test:0")),
+            ..Asset::default()
+          },
+          dependencies: Vec::new()
         }],
       }
     );
