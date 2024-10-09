@@ -344,13 +344,3 @@ export function replaceStream(
     },
   });
 }
-
-function cloneStream(readable) {
-  let res = new Readable();
-  // $FlowFixMe
-  res._read = () => {};
-  readable.on('data', chunk => res.push(chunk));
-  readable.on('end', () => res.push(null));
-  readable.on('error', err => res.emit('error', err));
-  return res;
-}
