@@ -36,7 +36,7 @@ import BundleGraph, {
 } from './public/BundleGraph';
 import PluginOptions from './public/PluginOptions';
 import PublicConfig from './public/Config';
-import {ATLASPACK_VERSION, HASH_REF_PREFIX, HASH_REF_REGEX} from './constants';
+import {ATLASPACK_VERSION, HASH_REF_REGEX} from './constants';
 import {
   fromProjectPath,
   toProjectPathUnsafe,

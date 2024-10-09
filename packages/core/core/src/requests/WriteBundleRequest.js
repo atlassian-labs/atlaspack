@@ -18,7 +18,7 @@ import nullthrows from 'nullthrows';
 import path from 'path';
 import {NamedBundle} from '../public/Bundle';
 import {blobToStream} from '@atlaspack/utils';
-import {Readable, Transform, pipeline} from 'stream';
+import {Transform, pipeline} from 'stream';
 import {
   fromProjectPath,
   fromProjectPathRelative,
