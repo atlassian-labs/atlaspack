@@ -1,0 +1,17 @@
+[package]
+name = "atlaspack_plugin_transformer_yaml"
+version = "0.1.0"
+authors = ["Monica Olejniczak <monica.j.olejniczak@gmail.com>"]
+edition = "2021"
+description = "Yaml transformer plugin for the Atlaspack Bundler"
+
+[dependencies]
+atlaspack_core = { path = "../atlaspack_core" }
+
+anyhow = "1"
+serde_json = "1.0.116"
+serde_yml = "0.0.12"
+
+[dev-dependencies]
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+pretty_assertions = "1.4.0"
