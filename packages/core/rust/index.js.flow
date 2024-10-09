@@ -94,25 +94,13 @@ declare export function findNodeModule(
 declare export function hashString(s: string): string;
 declare export function hashBuffer(buf: Buffer): string;
 declare export function optimizeImage(kind: string, buf: Buffer): Buffer;
-export interface JsFileSystemOptions {
-  canonicalize: string => string;
-  read: string => Buffer;
-  isFile: string => boolean;
-  isDir: string => boolean;
-  includeNodeModules?: boolean | Array<string> | {|[string]: boolean|};
-}
+
 export interface ResolveOptions {
   filename: string;
   specifierType: string;
   parent: string;
   packageConditions?: Array<string>;
 }
-export type Resolution =
-  | {|type: 'Path', value: string|}
-  | {|type: 'Builtin', value: string|}
-  | {|type: 'External'|}
-  | {|type: 'Empty'|}
-  | {|type: 'Global', value: string|};
 
 export interface ResolveResult {
   resolution: Resolution;
@@ -135,21 +123,159 @@ declare export class Hash {
   writeBuffer(b: Buffer): void;
   finish(): string;
 }
-export interface ResolverOptions {
-  fs?: JsFileSystemOptions;
-  includeNodeModules?: boolean | Array<string> | {|[string]: boolean|};
-  conditions?: number;
-  moduleDirResolver?: (...args: any[]) => any;
-  mode: number;
-  entries?: number;
-  extensions?: Array<string>;
-}
+
+export type Engines = {|
+  atlaspack?: string,
+  browsers?: string | string[],
+  electron?: string,
+  node?: string,
+|}
+
+export type Environment = {|
+   context: string,
+   engines: Engines,
+   includeNodeModules: IncludeNodeModules,
+   isLibrary: boolean,
+   loc?: SourceLocation,
+   outputFormat: string,
+   shouldScopeHoist: boolean,
+   shouldOptimize: boolean,
+   sourceMap?: {|
+    inline?: boolean,
+    inlineSources?: boolean,
+    sourceRoot?: string,
+  |},
+   sourceType: string,
+|}
+
+export type SourceLocation = {|
+  filePath: string,
+  start: {|
+    line: number, 
+    column: number 
+  |},
+  end: {|
+    line: number, 
+    column: number 
+  |},
+|}
+
+export type Symbol = {|
+  local: string,
+  exported: string,
+  loc?: SourceLocation,
+  isWeak: boolean,
+  isEsmExport: boolean,
+  selfReferenced: boolean,
+|}
+
+export type Target = {|
+  distDir: string,
+  distEntry?: string,
+  env: Environment,
+  loc?: SourceLocation,
+  name: string,
+  publicUrl: string,
+|}
+
+export type Dependency = {|
+  bundleBehavior?: number,
+  env: Environment,
+  loc: SourceLocation,
+  meta?: any,
+  packageConditions: number,
+  pipeline?: string,
+  priority: number,
+  range?: string,
+  resolveFrom?: string,
+  sourceAssetId?: string,
+  sourcePath?: string,
+  specifier: string,
+  specifierType: number,
+  sourceAssetType?: string,
+  symbols?: Symbol[],
+  target?: Target,
+  isEntry: boolean,
+  isOptional: boolean,
+  needsStableName: boolean,
+  shouldWrap: boolean,
+  isEsm: boolean,
+  placeholder?: string,  
+|}
+
+export type RpcAssetResult = {|
+  id: String,
+  bundleBehavior: number,
+  filePath: string,
+  type: string,
+  code: Array<number>,
+  meta: any,
+  pipeline?: string,
+  query?: string,
+  symbols?: Symbol[],
+  uniqueKey?: string,
+  sideEffects: boolean,
+  isBundleSplittable: boolean,
+  isSource: boolean,
+|}
+
+export type RpcTransformerOpts = {|
+  resolveFrom: string,
+  specifier: string,
+  options: RpcPluginOptions,
+  asset: Asset,
+|}
+
+export type RpcHmrOptions = {|
+  port?: number,
+  host?: string,
+|}
+
+export type RpcPluginOptions = {|
+  hmrOptions?: RpcHmrOptions,
+  projectRoot: string,
+|}
+
+export type Asset = {|
+  id: string,
+  bundleBehavior: number,
+  env: Environment,
+  filePath: string,
+  type: string,
+  code: Array<number>,
+  meta: any,
+  pipeline?: string,
+  query?: string,
+  stats: {|
+    size: number,
+    time: number,
+  |},
+  symbols?: Symbol[],
+  uniqueKey?: string,
+  sideEffects: boolean,
+  isBundleSplittable: boolean,
+  isSource: boolean,
+  hasCjsExports: boolean,
+  staticExports: boolean,
+  shouldWrap: boolean,
+  hasNodeReplacements: boolean,
+  isConstantModule: boolean,
+  conditions: Array<{|
+    key: string,
+    ifTruePlaceholder?: string,
+    ifFalsePlaceholder?: string,
+  |}>,
+  configPath?: string,
+  configKeyPath?: string,
+|}
+
 declare export class Resolver {
   constructor(projectRoot: string, options: ResolverOptions): Resolver;
   resolve(options: ResolveOptions): ResolveResult;
   resolveAsync(options: ResolveOptions): Promise<ResolveResult>;
   getInvalidations(path: string): JsInvalidations;
 }
+
 export interface LmdbOptions {
   /** The database directory path */
   path: string;
@@ -212,3 +338,32 @@ declare export function replaceHashReferences(
   input: Buffer,
   hashRefToNameHash: {[key: string]: string},
 ): Buffer;
+
+export interface ResolverOptions {
+  fs?: JsFileSystemOptions;
+  includeNodeModules?: IncludeNodeModules;
+  conditions?: number;
+  moduleDirResolver?: (...args: any[]) => any;
+  mode: number;
+  entries?: number;
+  extensions?: Array<string>;
+}
+
+export interface JsFileSystemOptions {
+  canonicalize: string => string;
+  read: string => Buffer;
+  isFile: string => boolean;
+  isDir: string => boolean;
+  includeNodeModules?: IncludeNodeModules;
+}
+
+// Types below break IDE highlighting, place them at the bottom of the file
+
+export type IncludeNodeModules = boolean | Array<string> | {|[string]: boolean|}
+
+export type Resolution =
+  | {|type: 'Path', value: string|}
+  | {|type: 'Builtin', value: string|}
+  | {|type: 'External'|}
+  | {|type: 'Empty'|}
+  | {|type: 'Global', value: string|};

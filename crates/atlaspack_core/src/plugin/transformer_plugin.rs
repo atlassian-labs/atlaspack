@@ -1,5 +1,5 @@
 use crate::hash::IdentifierHasher;
-use crate::types::{Asset, Dependency, Environment, SpecifierType};
+use crate::types::{Asset, AssetWithDependencies, Dependency, Environment, SpecifierType};
 use mockall::automock;
 use serde::Serialize;
 use std::any::Any;
@@ -21,8 +21,8 @@ pub type Resolve = dyn Fn(PathBuf, String, ResolveOptions) -> Result<PathBuf, an
 #[derive(Debug, Serialize, PartialEq, Default)]
 pub struct TransformResult {
   pub asset: Asset,
-  pub discovered_assets: Vec<Asset>,
   pub dependencies: Vec<Dependency>,
+  pub discovered_assets: Vec<AssetWithDependencies>,
   /// The transformer signals through this field that its result should be invalidated
   /// if these paths change.
   pub invalidate_on_file_change: Vec<PathBuf>,
