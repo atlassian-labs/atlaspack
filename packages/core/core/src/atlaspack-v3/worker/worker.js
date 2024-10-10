@@ -7,7 +7,6 @@ import type {
   Resolver,
   Transformer,
   PluginOptions,
-  Dependency,
   FilePath,
   FileSystem,
   ConfigResultWithFilePath,
@@ -16,11 +15,10 @@ import type {
 import {workerData} from 'worker_threads';
 import * as module from 'module';
 
-import {AssetCompat} from './compat';
+import {AssetCompat, Environment, Dependency} from './compat';
 import type {InnerAsset} from './compat';
 import {jsCallable} from '../jsCallable';
 import type {JsCallable} from '../jsCallable';
-import Environment from '../../public/Environment';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 
@@ -67,7 +65,13 @@ export class AtlaspackWorker {
     [RunResolverResolveOptions],
     Promise<RunResolverResolveResult>,
   > = jsCallable(
-    async ({key, dependency, specifier, pipeline, projectRoot}) => {
+    async ({
+      key,
+      dependency: napiDependency,
+      specifier,
+      pipeline,
+      projectRoot,
+    }) => {
       const state = this.#resolvers.get(key);
       if (!state) {
         throw new Error(`Resolver not found: ${key}`);
@@ -78,6 +82,9 @@ export class AtlaspackWorker {
         packageManager = new NodePackageManager(this.#fs, projectRoot);
         state.packageManager = packageManager;
       }
+
+      const env = new Environment(napiDependency.env);
+      const dependency = new Dependency(napiDependency, env);
 
       const defaultOptions = {
         get logger() {
@@ -132,10 +139,7 @@ export class AtlaspackWorker {
             isSource: true,
             searchPath: '',
             // $FlowFixMe This isn't correct to flow but is enough to satisfy the runtime checks
-            env: new Environment(dependency.env, {
-              projectRoot,
-              hmrOptions: undefined,
-            }),
+            env,
             invalidateOnFileChange(): void {},
             invalidateOnFileCreate(): void {},
             invalidateOnEnvChange(): void {},
@@ -280,7 +284,7 @@ type LoadPluginOptions = {|
 
 type RunResolverResolveOptions = {|
   key: string,
-  dependency: Dependency,
+  dependency: napi.Dependency,
   specifier: FilePath,
   pipeline: ?string,
   projectRoot: string,

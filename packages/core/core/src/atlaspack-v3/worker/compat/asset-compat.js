@@ -1,11 +1,11 @@
 // @flow
 import type {PluginOptions, BundleBehavior, AST} from '@atlaspack/types';
 
-import Environment from '../../public/Environment';
+import Environment from '../../../public/Environment';
 import {
   BundleBehaviorNames,
   BundleBehavior as BundleBehaviorMap,
-} from '../../types';
+} from '../../../types';
 
 export type InnerAsset = {|
   id: string,
