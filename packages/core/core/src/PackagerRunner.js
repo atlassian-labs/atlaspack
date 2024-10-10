@@ -1,7 +1,6 @@
 // @flow strict-local
 
 import type {
-  Blob,
   FilePath,
   BundleResult,
   Bundle as BundleType,
@@ -24,14 +23,12 @@ import type {ConfigRequest} from './requests/ConfigRequest';
 import type {DevDepSpecifier} from './requests/DevDepRequest';
 
 import invariant from 'assert';
-import {blobToStream, TapStream} from '@atlaspack/utils';
 import {PluginLogger} from '@atlaspack/logger';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
-import {Readable} from 'stream';
 import nullthrows from 'nullthrows';
 import path from 'path';
 import url from 'url';
-import {hashString, hashBuffer, Hash} from '@atlaspack/rust';
+import {hashString, hashBuffer} from '@atlaspack/rust';
 
 import {NamedBundle, bundleToInternalBundle} from './public/Bundle';
 import BundleGraph, {
@@ -39,7 +36,7 @@ import BundleGraph, {
 } from './public/BundleGraph';
 import PluginOptions from './public/PluginOptions';
 import PublicConfig from './public/Config';
-import {ATLASPACK_VERSION, HASH_REF_PREFIX, HASH_REF_REGEX} from './constants';
+import {ATLASPACK_VERSION, HASH_REF_REGEX} from './constants';
 import {
   fromProjectPath,
   toProjectPathUnsafe,
@@ -85,7 +82,6 @@ export type BundleInfo = {|
   +hashReferences: Array<string>,
   +time?: number,
   +cacheKeys: CacheKeyMap,
-  +isLargeBlob: boolean,
 |};
 
 type CacheKeyMap = {|
@@ -93,8 +89,6 @@ type CacheKeyMap = {|
   map: string,
   info: string,
 |};
-
-const BOUNDARY_LENGTH = HASH_REF_PREFIX.length + 32 - 1;
 
 // Packager/optimizer configs are not bundle-specific, so we only need to
 // load them once per build.
@@ -340,7 +334,7 @@ export default class PackagerRunner {
     bundleConfigs: Map<string, Config>,
   ): Promise<{|
     type: string,
-    contents: Blob,
+    contents: Buffer | string,
     map: ?string,
   |}> {
     let packaged = await this.package(
@@ -467,7 +461,7 @@ export default class PackagerRunner {
     internalBundle: InternalBundle,
     internalBundleGraph: InternalBundleGraph,
     type: string,
-    contents: Blob,
+    contents: Buffer | string,
     map?: ?SourceMap,
     configs: Map<string, Config>,
     bundleConfigs: Map<string, Config>,
@@ -486,7 +480,7 @@ export default class PackagerRunner {
       bundle.name,
       internalBundle.pipeline,
     );
-    if (!optimizers.length) {
+    if (optimizers.length === 0) {
       return {type: bundle.type, contents, map};
     }
 
@@ -691,64 +685,18 @@ export default class PackagerRunner {
     return devDepHashes;
   }
 
-  async readFromCache(cacheKey: string): Promise<?{|
-    contents: Readable,
-    map: ?Readable,
-  |}> {
-    let contentKey = PackagerRunner.getContentKey(cacheKey);
-    let mapKey = PackagerRunner.getMapKey(cacheKey);
-
-    let isLargeBlob = await this.options.cache.hasLargeBlob(contentKey);
-    let contentExists =
-      isLargeBlob || (await this.options.cache.has(contentKey));
-    if (!contentExists) {
-      return null;
-    }
-
-    let mapExists = await this.options.cache.has(mapKey);
-
-    return {
-      contents: isLargeBlob
-        ? this.options.cache.getStream(contentKey)
-        : blobToStream(await this.options.cache.getBlob(contentKey)),
-      map: mapExists
-        ? blobToStream(await this.options.cache.getBlob(mapKey))
-        : null,
-    };
-  }
-
   async writeToCache(
     cacheKeys: CacheKeyMap,
     type: string,
-    contents: Blob,
+    contents: Buffer | string,
     map: ?string,
   ): Promise<BundleInfo> {
     let size = 0;
     let hash;
     let hashReferences = [];
-    let isLargeBlob = false;
 
     // TODO: don't replace hash references in binary files??
-    if (contents instanceof Readable) {
-      isLargeBlob = true;
-      let boundaryStr = '';
-      let h = new Hash();
-      await this.options.cache.setStream(
-        cacheKeys.content,
-        blobToStream(contents).pipe(
-          new TapStream(buf => {
-            let str = boundaryStr + buf.toString();
-            hashReferences = hashReferences.concat(
-              str.match(HASH_REF_REGEX) ?? [],
-            );
-            size += buf.length;
-            h.writeBuffer(buf);
-            boundaryStr = str.slice(str.length - BOUNDARY_LENGTH);
-          }),
-        ),
-      );
-      hash = h.finish();
-    } else if (typeof contents === 'string') {
+    if (typeof contents === 'string') {
       let buffer = Buffer.from(contents);
       size = buffer.byteLength;
       hash = hashBuffer(buffer);
@@ -770,7 +718,6 @@ export default class PackagerRunner {
       hash,
       hashReferences,
       cacheKeys,
-      isLargeBlob,
     };
     await this.options.cache.set(cacheKeys.info, info);
     return info;

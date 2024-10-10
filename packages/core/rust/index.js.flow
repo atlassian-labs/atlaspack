@@ -332,6 +332,11 @@ declare export function createAssetId(params: mixed): string;
 declare export function createDependencyId(params: mixed): string;
 declare export function createEnvironmentId(params: mixed): string;
 
+declare export function replaceHashReferences(
+  input: Buffer,
+  hashRefToNameHash: {[key: string]: string},
+): Buffer;
+
 export interface ResolverOptions {
   fs?: JsFileSystemOptions;
   includeNodeModules?: IncludeNodeModules;
