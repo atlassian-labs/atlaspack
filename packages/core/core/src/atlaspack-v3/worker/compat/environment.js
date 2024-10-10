@@ -103,11 +103,13 @@ export class Environment implements ClassicEnvironment {
   }
 
   // TODO
+  // eslint-disable-next-line no-unused-vars
   matchesEngines(minVersions: VersionMap, defaultValue?: boolean): boolean {
     return true;
   }
 
   // TODO
+  // eslint-disable-next-line no-unused-vars
   supports(feature: EnvironmentFeature, defaultValue?: boolean): boolean {
     return true;
   }

@@ -15,7 +15,6 @@ import type {
   SemverRange,
   MutableDependencySymbols as ClassicMutableDependencySymbols,
 } from '@atlaspack/types';
-import {Environment} from './environment';
 import {Target} from './target';
 import {MutableDependencySymbols} from './asset-symbols';
 import {

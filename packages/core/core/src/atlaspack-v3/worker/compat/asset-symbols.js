@@ -77,18 +77,22 @@ export class MutableDependencySymbols
   }
 }
 
+// TODO
 export class AssetSymbols
   extends Array<[Symbol, AssetSymbol]>
   implements ClassicAssetSymbols
 {
   isCleared: boolean;
 
+  // eslint-disable-next-line no-unused-vars
   get(exportSymbol: Symbol): ?AssetSymbol {}
 
+  // eslint-disable-next-line no-unused-vars
   hasExportSymbol(exportSymbol: Symbol): boolean {
     throw new Error('AssetSymbols.hasExportSymbol');
   }
 
+  // eslint-disable-next-line no-unused-vars
   hasLocalSymbol(local: Symbol): boolean {
     throw new Error('AssetSymbols.hasExportSymbol');
   }
@@ -98,17 +102,24 @@ export class AssetSymbols
   }
 }
 
+// TODO
 export class MutableAssetSymbols
   extends AssetSymbols
   implements ClassicMutableAssetSymbols
 {
   ensure(): void {}
   set(
+    // eslint-disable-next-line no-unused-vars
     exportSymbol: Symbol,
+    // eslint-disable-next-line no-unused-vars
     local: Symbol,
+    // eslint-disable-next-line no-unused-vars
     loc: ?SourceLocation,
+    // eslint-disable-next-line no-unused-vars
     meta?: ?Meta,
   ): void {}
+
+  // eslint-disable-next-line no-unused-vars
   delete(exportSymbol: Symbol): void {}
 }
 
