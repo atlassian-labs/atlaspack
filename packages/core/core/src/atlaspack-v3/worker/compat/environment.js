@@ -15,61 +15,37 @@ import type {
 } from '@atlaspack/types';
 
 export class Environment implements ClassicEnvironment {
-  #inner: NapiEnvironment;
-
-  // TODO
-  get id(): string {
-    return '';
-  }
-
-  get context(): EnvironmentContext {
-    // $FlowFixMe
-    return this.#inner.context;
-  }
-
-  get engines(): Engines {
-    return this.#inner.engines;
-  }
-
-  get includeNodeModules():
+  id: string;
+  includeNodeModules:
     | boolean
     | Array<PackageName>
-    | {[PackageName]: boolean, ...} {
-    return this.#inner.includeNodeModules;
-  }
-
-  get outputFormat(): OutputFormat {
-    // $FlowFixMe
-    return this.#inner.outputFormat;
-  }
-
-  get sourceType(): SourceType {
-    // $FlowFixMe
-    return this.#inner.sourceType;
-  }
-
-  get isLibrary(): boolean {
-    return this.#inner.isLibrary;
-  }
-
-  get shouldOptimize(): boolean {
-    return this.#inner.shouldOptimize;
-  }
-
-  get shouldScopeHoist(): boolean {
-    return this.#inner.shouldScopeHoist;
-  }
-
-  get sourceMap(): ?TargetSourceMapOptions {
-    return this.#inner.sourceMap;
-  }
-
-  get loc(): ?SourceLocation {
-    return this.#inner.loc;
-  }
+    | {[PackageName]: boolean, ...};
+  context: EnvironmentContext;
+  engines: Engines;
+  outputFormat: OutputFormat;
+  sourceType: SourceType;
+  isLibrary: boolean;
+  shouldOptimize: boolean;
+  shouldScopeHoist: boolean;
+  sourceMap: ?TargetSourceMapOptions;
+  loc: ?SourceLocation;
 
   constructor(inner: NapiEnvironment) {
-    this.#inner = inner;
+    // TODO
+    this.id = '';
+    this.includeNodeModules = inner.includeNodeModules;
+    // $FlowFixMe
+    this.context = inner.context;
+    this.engines = inner.engines;
+    // $FlowFixMe
+    this.outputFormat = inner.outputFormat;
+    // $FlowFixMe
+    this.sourceType = inner.sourceType;
+    this.isLibrary = inner.isLibrary;
+    this.shouldOptimize = inner.shouldOptimize;
+    this.shouldScopeHoist = inner.shouldScopeHoist;
+    this.sourceMap = inner.sourceMap;
+    this.loc = inner.loc;
   }
 
   // TODO

@@ -29,83 +29,55 @@ export class Dependency implements ClassicDependency {
   meta: Meta;
   target: ?ClassicTarget;
   symbols: ClassicMutableDependencySymbols;
-  #inner: NapiDependency;
+  specifier: DependencySpecifier;
+  specifierType: SpecifierType;
+  priority: DependencyPriority;
+  bundleBehavior: ?BundleBehavior;
+  needsStableName: boolean;
+  isOptional: boolean;
+  isEntry: boolean;
+  loc: ?SourceLocation;
+  packageConditions: ?Array<string>;
+  sourceAssetId: ?string;
+  sourcePath: ?FilePath;
+  sourceAssetType: ?string;
+  resolveFrom: ?FilePath;
+  range: ?SemverRange;
+  pipeline: ?string;
 
   get id(): string {
     throw new Error('Dependency.id');
   }
 
-  get specifier(): DependencySpecifier {
-    return this.#inner.specifier;
-  }
-
-  get specifierType(): SpecifierType {
-    return specifierTypeMap.from(this.#inner.specifierType);
-  }
-
-  get priority(): DependencyPriority {
-    return dependencyPriorityMap.from(this.#inner.priority);
-  }
-
-  get bundleBehavior(): ?BundleBehavior {
-    if (!this.#inner.bundleBehavior) {
-      return undefined;
-    }
-    return bundleBehaviorMap.from(this.#inner.bundleBehavior);
-  }
-
-  get needsStableName(): boolean {
-    return this.#inner.needsStableName;
-  }
-
-  get isOptional(): boolean {
-    return this.#inner.isOptional;
-  }
-
-  get isEntry(): boolean {
-    return this.#inner.isEntry;
-  }
-
-  get loc(): ?SourceLocation {
-    return this.#inner.loc;
-  }
-
-  get packageConditions(): ?Array<string> {
-    return packageConditionsMap.fromArray(this.#inner.packageConditions || []);
-  }
-
-  get sourceAssetId(): ?string {
-    return this.#inner.sourceAssetId;
-  }
-
-  get sourcePath(): ?FilePath {
-    return this.#inner.sourcePath;
-  }
-
-  get sourceAssetType(): ?string {
-    return this.#inner.sourceAssetType;
-  }
-
-  get resolveFrom(): ?FilePath {
-    return this.#inner.resolveFrom;
-  }
-
-  get range(): ?SemverRange {
-    return this.#inner.range;
-  }
-
-  get pipeline(): ?string {
-    return this.#inner.pipeline;
-  }
-
   constructor(inner: NapiDependency, env: ClassicEnvironment) {
-    this.#inner = inner;
     this.env = env;
     this.meta = inner.meta || {};
     this.target = undefined;
     if (inner.target) {
       this.target = new Target(inner.target, this.env);
     }
+    if (!inner.bundleBehavior) {
+      this.bundleBehavior = undefined;
+    } else {
+      this.bundleBehavior = bundleBehaviorMap.from(inner.bundleBehavior);
+    }
+    this.bundleBehavior = undefined;
     this.symbols = new MutableDependencySymbols(inner.symbols || []);
+    this.specifier = inner.specifier;
+    this.specifierType = specifierTypeMap.from(inner.specifierType);
+    this.priority = dependencyPriorityMap.from(inner.priority);
+    this.needsStableName = inner.needsStableName;
+    this.isOptional = inner.isOptional;
+    this.isEntry = inner.isEntry;
+    this.loc = inner.loc;
+    this.packageConditions = packageConditionsMap.fromArray(
+      inner.packageConditions || [],
+    );
+    this.sourceAssetId = inner.sourceAssetId;
+    this.sourcePath = inner.sourcePath;
+    this.sourceAssetType = inner.sourceAssetType;
+    this.resolveFrom = inner.resolveFrom;
+    this.range = inner.range;
+    this.pipeline = inner.pipeline;
   }
 }
