@@ -4,8 +4,9 @@ use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::u64;
+use std::{str, u64};
 
+use anyhow::anyhow;
 use atlaspack_filesystem::FileSystemRef;
 
 use serde::Deserialize;
@@ -39,6 +40,11 @@ impl Code {
 
   pub fn bytes(&self) -> &[u8] {
     &self.inner
+  }
+
+  pub fn as_str(&self) -> anyhow::Result<&str> {
+    str::from_utf8(&self.inner)
+      .map_err(|e| anyhow::Error::new(e).context("Failed to convert code to UTF8 str"))
   }
 
   pub fn size(&self) -> u32 {

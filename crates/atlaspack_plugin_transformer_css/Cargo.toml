@@ -1,0 +1,15 @@
+[package]
+name = "atlaspack_plugin_transformer_css"
+version = "0.1.0"
+authors = ["Matt Jones <mattjones701@gmail.com>"]
+edition = "2021"
+description = "CSS transformer plugin for the Atlaspack Bundler"
+
+[dependencies]
+atlaspack_core = { path = "../atlaspack_core" }
+
+anyhow = "1"
+lightningcss = "1.0.0-alpha.59"
+
+[dev-dependencies]
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
