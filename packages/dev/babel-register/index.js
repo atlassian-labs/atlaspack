@@ -8,11 +8,14 @@ require('@babel/register')({
     // Don't run babel over ignore integration tests fixtures.
     // These may include relative babel plugins, and running babel on those causes
     // the plugin to be loaded to compile the plugin.
-    path.resolve(__dirname, '../../core/integration-tests/test/integration'),
+    filepath =>
+      filepath.endsWith('.js') &&
+      filepath.includes('/core/integration-tests/test/integration'),
   ],
   only: [path.join(__dirname, '../../..')],
   presets: [parcelBabelPreset],
   plugins: [require('./babel-plugin-module-translate')],
+  extensions: ['.js', '.jsx', '.ts', '.tsx'],
 });
 
 // This adds the registration to the Node args, which are passed
