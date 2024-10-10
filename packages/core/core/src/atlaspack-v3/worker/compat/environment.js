@@ -19,7 +19,7 @@ export class Environment implements ClassicEnvironment {
 
   // TODO
   get id(): string {
-    throw new Error('Environment.id');
+    return '';
   }
 
   get context(): EnvironmentContext {
