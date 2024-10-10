@@ -398,6 +398,7 @@ impl TargetRequest {
         loc: None,
         name: String::from("default"),
         public_url: self.default_target_options.public_url.clone(),
+        ..Target::default()
       }));
     }
 
@@ -561,6 +562,7 @@ impl TargetRequest {
         .public_url
         .clone()
         .unwrap_or(self.default_target_options.public_url.clone()),
+      ..Target::default()
     }))
   }
 }

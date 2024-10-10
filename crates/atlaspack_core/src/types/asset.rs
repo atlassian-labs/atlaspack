@@ -61,7 +61,7 @@ impl From<String> for Code {
 
 #[derive(Debug)]
 pub struct CreateAssetIdParams<'a> {
-  pub env: &'a Environment,
+  pub environment_id: &'a str,
   /// This is str because we need to hashes are ran against project relative paths
   /// equal canonical paths, but with different representations will not be
   /// considered the same. All paths should be normalized to be project relative.
@@ -79,7 +79,7 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
   tracing::debug!(?params, "Creating asset id");
 
   let CreateAssetIdParams {
-    env,
+    environment_id,
     file_path,
     code,
     pipeline,
@@ -87,7 +87,6 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
     query,
     unique_key,
   } = params;
-  let environment_id = env.id();
   let mut hasher = crate::hash::IdentifierHasher::default();
   environment_id.hash(&mut hasher);
   file_path.hash(&mut hasher);
@@ -241,7 +240,7 @@ impl Asset {
       .any(|p| p.file_name() == Some(&OsStr::new("node_modules")));
 
     let asset_id = create_asset_id(CreateAssetIdParams {
-      env: &env,
+      environment_id: &env.id(),
       file_path: file_path
         .strip_prefix(project_root)
         .unwrap_or_else(|_| file_path.as_path())

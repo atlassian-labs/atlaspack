@@ -1,12 +1,12 @@
-use atlaspack_core::types::{Environment, FileType};
+use atlaspack_core::types::FileType;
 use napi::{Env, JsUnknown};
 use napi_derive::napi;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssetIdParams {
-  env: Environment,
+  environment_id: String,
   file_path: String,
   code: Option<String>,
   pipeline: Option<String>,
@@ -18,7 +18,7 @@ pub struct AssetIdParams {
 #[napi]
 pub fn create_asset_id(env: Env, params: JsUnknown) -> napi::Result<String> {
   let AssetIdParams {
-    env,
+    environment_id,
     file_path,
     code,
     pipeline,
@@ -30,7 +30,7 @@ pub fn create_asset_id(env: Env, params: JsUnknown) -> napi::Result<String> {
   let asset_id =
     atlaspack_core::types::create_asset_id(atlaspack_core::types::CreateAssetIdParams {
       file_type,
-      env: &env,
+      environment_id: &environment_id,
       file_path: &file_path,
       code: code.as_deref(),
       pipeline: pipeline.as_deref(),

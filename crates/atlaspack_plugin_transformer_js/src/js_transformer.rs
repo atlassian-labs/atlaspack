@@ -421,7 +421,7 @@ exports.hello = function() {};
       symbols: Some(vec![Symbol {
         exported: String::from("*"),
         loc: None,
-        local: String::from("1771c4e2ff9f2ce7$"),
+        local: String::from("a1ad9714284f3ad6$"),
         ..Symbol::default()
       }]),
       ..Default::default()

@@ -1,6 +1,4 @@
-use atlaspack_core::types::{
-  AssetId, BundleBehavior, Environment, Priority, SpecifierType, Target,
-};
+use atlaspack_core::types::{AssetId, BundleBehavior, Priority, SpecifierType, Target};
 use atlaspack_resolver::ExportsCondition;
 use napi::{Env, JsUnknown};
 use napi_derive::napi;
@@ -36,7 +34,7 @@ impl From<JSBundleBehavior> for BundleBehavior {
 struct DependencyIdParams {
   source_asset_id: Option<AssetId>,
   specifier: String,
-  env: Environment,
+  environment_id: String,
   target: Option<Target>,
   pipeline: Option<String>,
   specifier_type: Option<SpecifierType>,
@@ -52,7 +50,7 @@ fn create_dependency_id(env: Env, params: JsUnknown) -> napi::Result<String> {
   let DependencyIdParams {
     source_asset_id,
     specifier,
-    env,
+    environment_id,
     target,
     pipeline,
     specifier_type,
@@ -66,7 +64,7 @@ fn create_dependency_id(env: Env, params: JsUnknown) -> napi::Result<String> {
   Ok(atlaspack_core::types::create_dependency_id(
     source_asset_id.as_ref(),
     &specifier,
-    &env,
+    &environment_id,
     target.as_ref(),
     pipeline.as_ref().map(|s| s.as_str()),
     &specifier_type.unwrap_or_default(),
