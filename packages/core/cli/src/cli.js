@@ -203,6 +203,7 @@ let serve = program
     '--lazy-exclude <excludes>',
     'Can only be used in combination with --lazy. Comma separated list of source file globs, async bundles whose entry points match these globs will not be built lazily',
   )
+  .option('--production', 'Run with production mode defaults')
   .action(runCommand);
 
 applyOptions(serve, hmrOptions);
@@ -214,6 +215,7 @@ let watch = program
   .option('--public-url <url>', 'the path prefix for absolute urls')
   .option('--no-content-hash', 'disable content hashing')
   .option('--watch-for-stdin', 'exit when stdin closes')
+  .option('--production', 'Run with production mode defaults')
   .action(runCommand);
 
 applyOptions(watch, hmrOptions);
@@ -474,12 +476,16 @@ function parseOptionInt(value) {
   return parsedValue;
 }
 
+function shouldUseProductionDefaults(command) {
+  return command.name() === 'build' || command.production === true;
+}
+
 async function normalizeOptions(
   command,
   inputFS,
 ): Promise<InitialAtlaspackOptions> {
   let nodeEnv;
-  if (command.name() === 'build') {
+  if (shouldUseProductionDefaults(command)) {
     nodeEnv = process.env.NODE_ENV || 'production';
     // Autoinstall unless explicitly disabled or we detect a CI environment.
     command.autoinstall = !(command.autoinstall === false || process.env.CI);
@@ -505,7 +511,10 @@ async function normalizeOptions(
   // Ensure port is valid and available
   let port = parsePort(command.port || '1234');
   let originalPort = port;
-  if (command.name() === 'serve' || command.hmr) {
+  if (
+    !shouldUseProductionDefaults(command) &&
+    (command.name() === 'serve' || command.hmr)
+  ) {
     try {
       port = await getPort({port, host});
     } catch (err) {
@@ -542,7 +551,7 @@ async function normalizeOptions(
   }
 
   let hmrOptions = null;
-  if (command.name() !== 'build' && command.hmr !== false) {
+  if (!shouldUseProductionDefaults(command) && command.hmr !== false) {
     let hmrport = command.hmrPort ? parsePort(command.hmrPort) : port;
     let hmrhost = command.hmrHost ? command.hmrHost : host;
 
@@ -571,7 +580,9 @@ async function normalizeOptions(
     });
   }
 
-  let mode = command.name() === 'build' ? 'production' : 'development';
+  let mode = shouldUseProductionDefaults(command)
+    ? 'production'
+    : 'development';
 
   const normalizeIncludeExcludeList = (input?: string): string[] => {
     if (typeof input !== 'string') return [];
