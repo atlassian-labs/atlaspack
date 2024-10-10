@@ -595,7 +595,7 @@ describe.v2('macros', function () {
     });
 
     res = await overlayFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    let match2 = res.match(/output=(\d+)/);
+    let match2 = res.match(/output=(.*);/);
     assert(match2);
     assert.notEqual(match[1], match2[1]);
   });
