@@ -343,7 +343,6 @@ async function run(
     }),
     shouldPatchConsole: false,
     ...options,
-    shouldScopeHoist: true,
   });
 
   let disposable = new Disposable();
