@@ -8,6 +8,7 @@
   },
   "private": true,
   "workspaces": [
+    "crates/caniuse_database",
     "crates/lmdb-js-lite",
     "packages/*/*"
   ],

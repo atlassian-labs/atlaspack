@@ -1,3 +1,8 @@
+//! This file was automatically generated and should not be edited manually.
+//!
+//! Use `yarn workspace caniuse-database generate` to regenerate the contents of this file.
+//!
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
@@ -43,6 +48,7 @@ pub enum BrowserAgent {
   /// Any other browser
   Any(String),
 }
+
 impl BrowserAgent {
   pub fn key(&self) -> &str {
     match self {
@@ -68,6 +74,7 @@ impl BrowserAgent {
       BrowserAgent::Any(key) => key,
     }
   }
+
   pub fn from_key(key: &str) -> Self {
     match key {
       "ie" => BrowserAgent::Ie,
@@ -2843,6 +2850,7 @@ pub enum BrowserFeature {
   /// * [Firefox bug, highlights comment that confirms note #4](https://bugzilla.mozilla.org/show_bug.cgi?id=366324#c50)
   /// * [WebKit feature request bug](https://bugs.webkit.org/show_bug.cgi?id=136059)
   /// * [How to favicon in 2021](https://dev.to/masakudamatsu/favicon-nightmare-how-to-maintain-sanity-3al7)
+  /// * [WebKit position 2024: Support](https://github.com/WebKit/standards-positions/issues/367)
   LinkIconSvg,
   /// Resource Hints: dns-prefetch
   ///
@@ -3903,7 +3911,7 @@ pub enum BrowserFeature {
   ///
   /// * [Fixing JavaScript Date](https://maggiepint.com/2017/04/11/fixing-javascript-date-web-compatibility-and-reality/)
   /// * [Chromium implementation bug](https://bugs.chromium.org/p/v8/issues/detail?id=11544)
-  /// * [Firefox implementation bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1519167)
+  /// * [Firefox implementation bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1839673)
   /// * [WebKit implementation bug](https://bugs.webkit.org/show_bug.cgi?id=223166)
   /// * [Blog post: Temporal: getting started with JavaScript’s new date time API](https://2ality.com/2021/06/temporal-api.html)
   Temporal,
@@ -4568,6 +4576,7 @@ pub enum BrowserFeature {
   /// Any other browser feature
   Any(String),
 }
+
 impl BrowserFeature {
   pub fn key(&self) -> &str {
     match self {
@@ -5124,6 +5133,7 @@ impl BrowserFeature {
       BrowserFeature::Any(key) => key,
     }
   }
+
   pub fn from_key(key: &str) -> Self {
     match key {
       "aac" => BrowserFeature::Aac,

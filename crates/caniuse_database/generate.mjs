@@ -1,102 +1,114 @@
+import {writeFileSync} from 'node:fs';
+
+import {$} from 'zx';
+
+import data from './data.json' with { type: "json" };
+
 await $`rm -f data.json`;
 await $`wget https://raw.githubusercontent.com/Fyrd/caniuse/main/data.json`;
-const fs = require("fs");
-const data = require("./data.json");
 
-const browserAgents = [];
-Object.entries(data.agents).forEach(([key, agent]) => {
-  browserAgents.push({
-    name: capitalize(key),
-    comment: [...agent.long_name.split("\n")],
-    key,
+const write = console.log;
+
+write('//! This file was automatically generated and should not be edited manually.');
+write('//!');
+write('//! Use `yarn workspace caniuse-database generate` to regenerate the contents of this file.');
+write('//!');
+write('');
+
+const browserAgents = Object.entries(data.agents).map(([key, agent]) => ({
+  name: capitalize(key),
+  comment: [...agent.long_name.split('\n')],
+  key,
+}));
+
+write('use serde::{Deserialize, Serialize};');
+
+write('');
+
+write('#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]');
+write('pub enum BrowserAgent {');
+browserAgents.forEach(agent => {
+  agent.comment.forEach(comment => {
+    write(`  /// ${comment}`);
   });
+  write(`  ${agent.name},`);
 });
-console.log("use serde::{Serialize, Deserialize};\n");
-console.log(
-  "#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]"
-);
-console.log("pub enum BrowserAgent {");
-browserAgents.forEach((agent) => {
-  agent.comment.forEach((comment) => {
-    console.log(`    /// ${comment}`);
+write(`  /// Any other browser`);
+write(`  Any(String),`);
+write('}');
+
+write('');
+
+write('impl BrowserAgent {');
+write('  pub fn key(&self) -> &str {');
+write('    match self {');
+browserAgents.forEach(agent => {
+  write(`      BrowserAgent::${agent.name} => "${agent.key}",`);
+});
+write(`      BrowserAgent::Any(key) => key,`);
+write('    }');
+write('  }');
+write('');
+write('  pub fn from_key(key: &str) -> Self {');
+write('    match key {');
+browserAgents.forEach(agent => {
+  write(`      "${agent.key}" => BrowserAgent::${agent.name},`);
+});
+write('      key => BrowserAgent::Any(key.to_string()),');
+write('    }');
+write('  }');
+write('}');
+
+write('');
+
+const featuresEnum = Object.entries(data.data).map(([key, feature]) => ({
+  name: capitalize(key),
+  key,
+  comment: [
+    ...feature.title.split('\n'),
+    '',
+    ...feature.description.split('\n'),
+    '',
+    ...feature.links.map(link => `* [${link.title}](${link.url})`),
+  ],
+}));
+
+write('#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]');
+write('pub enum BrowserFeature {');
+featuresEnum.forEach(feature => {
+  feature.comment.forEach(comment => {
+    write(`  /// ${comment}`);
   });
-  console.log(`    ${agent.name},`);
+  write(`  ${feature.name},`);
 });
-console.log(`    /// Any other browser`);
-console.log(`    Any(String),`);
-console.log("}");
-console.log("impl BrowserAgent {");
-console.log("    pub fn key(&self) -> &str {");
-console.log("        match self {");
-browserAgents.forEach((agent) => {
-  console.log(`          BrowserAgent::${agent.name} => "${agent.key}",`);
-});
-console.log(`          BrowserAgent::Any(key) => key,`);
-console.log("        }");
-console.log("    }");
-console.log("    pub fn from_key(key: &str) -> Self {");
-console.log("        match key {");
-browserAgents.forEach((agent) => {
-  console.log(`          "${agent.key}" => BrowserAgent::${agent.name},`);
-});
-console.log("            key => BrowserAgent::Any(key.to_string()),");
-console.log("        }");
-console.log("    }");
-console.log("}");
+write(`  /// Any other browser feature`);
+write(`  Any(String),`);
+write('}');
 
-console.log("");
+write('');
 
-const featuresEnum = [];
-Object.entries(data.data).forEach(([key, feature]) => {
-  // console.log(feature.stats);
-  featuresEnum.push({
-    name: capitalize(key),
-    key,
-    comment: [
-      ...feature.title.split("\n"),
-      "",
-      ...feature.description.split("\n"),
-      "",
-      ...feature.links.map((link) => `* [${link.title}](${link.url})`),
-    ],
-  });
+write('impl BrowserFeature {');
+write('  pub fn key(&self) -> &str {');
+write('    match self {');
+featuresEnum.forEach(feature => {
+  write(`      BrowserFeature::${feature.name} => "${feature.key}",`);
 });
-
-console.log(
-  "#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]"
-);
-console.log("pub enum BrowserFeature {");
-featuresEnum.forEach((feature) => {
-  feature.comment.forEach((comment) => {
-    console.log(`    /// ${comment}`);
-  });
-  console.log(`    ${feature.name},`);
+write(`      BrowserFeature::Any(key) => key,`);
+write('    }');
+write('  }');
+write('');
+write('  pub fn from_key(key: &str) -> Self {');
+write('    match key {');
+featuresEnum.forEach(feature => {
+  write(`      "${feature.key}" => BrowserFeature::${feature.name},`);
 });
-console.log(`    /// Any other browser feature`);
-console.log(`    Any(String),`);
-console.log("}");
-
-console.log("impl BrowserFeature {");
-console.log("    pub fn key(&self) -> &str {");
-console.log("        match self {");
-featuresEnum.forEach((feature) => {
-  console.log(`          BrowserFeature::${feature.name} => "${feature.key}",`);
-});
-console.log(`          BrowserFeature::Any(key) => key,`);
-console.log("        }");
-console.log("    }");
-console.log("    pub fn from_key(key: &str) -> Self {");
-console.log("        match key {");
-featuresEnum.forEach((feature) => {
-  console.log(`          "${feature.key}" => BrowserFeature::${feature.name},`);
-});
-console.log("            key => BrowserFeature::Any(key.to_string()),");
-console.log("        }");
-console.log("    }");
-console.log("}");
+write('      key => BrowserFeature::Any(key.to_string()),');
+write('    }');
+write('  }');
+write('}');
 
 const minimalData = {};
-Object.entries(data.data).forEach(([key, feature]) => {
+for (const [key, feature] of Object.entries(data.data)) {
   const minimalStats = {};
   for (let [browser, versions] of Object.entries(feature.stats)) {
     const minimalVersions = {};
@@ -107,36 +119,26 @@ Object.entries(data.data).forEach(([key, feature]) => {
     minimalStats[browser] = minimalVersions;
   }
   minimalData[key] = minimalStats;
-});
+}
 
-fs.writeFileSync("src/data.json", JSON.stringify(minimalData, null, 2));
+writeFileSync('src/data.json', JSON.stringify(minimalData, null, 2));
 
 function capitalize(s) {
   const parts = s.split(/[\W_]/g);
   return parts
-    .map((part) => {
+    .map(part => {
       return part.charAt(0).toUpperCase() + part.slice(1);
     })
-    .join("");
-}
-
-function parseVersion(s) {
-  const parts = s.split(".");
-  return parts.map((part) => parseInt(part));
-}
-
-function parseVersionRange(s) {
-  const parts = s.split("-");
-  return parts.map((part) => parseVersion(part));
+    .join('');
 }
 
 function collapseRequirements(versions) {
-  const ranges = [];
   let currentMinimum = null;
   let currentMaximum = null;
+  const ranges = [];
 
   for (let [version, supports] of Object.entries(versions)) {
-    if (supports === "y") {
+    if (supports === 'y') {
       if (currentMinimum === null) {
         currentMinimum = version;
       }
@@ -147,18 +149,20 @@ function collapseRequirements(versions) {
         if (currentMaximum !== currentMinimum) {
           range.push(currentMaximum);
         }
-        ranges.push(range.join("-"));
+        ranges.push(range.join('-'));
       }
       currentMinimum = null;
       currentMaximum = null;
     }
   }
+
   if (currentMinimum !== null) {
     const range = [currentMinimum];
     if (currentMaximum !== currentMinimum) {
       range.push(currentMaximum);
     }
-    ranges.push(range.join("-"));
+    ranges.push(range.join('-'));
   }
+
   return ranges;
 }
