@@ -62,14 +62,12 @@ impl From<String> for Code {
 
 #[derive(Debug)]
 pub struct CreateAssetIdParams<'a> {
-  pub environment_id: &'a str,
-  /// This is str because we need to hashes are ran against project relative paths
-  /// equal canonical paths, but with different representations will not be
-  /// considered the same. All paths should be normalized to be project relative.
-  pub file_path: &'a str,
   pub code: Option<&'a str>,
+  pub environment_id: &'a str,
+  /// All paths should be normalized to a project relative string to generate a consistent hash.
+  pub file_path: &'a str,
+  pub file_type: &'a FileType,
   pub pipeline: Option<&'a str>,
-  pub file_type: FileType,
   pub query: Option<&'a str>,
   /// This should be set to None if it's equal to the asset-id and set by the
   /// constructor otherwise the values will differ. See [`Asset::new`] for more.
@@ -80,15 +78,17 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
   tracing::debug!(?params, "Creating asset id");
 
   let CreateAssetIdParams {
+    code,
     environment_id,
     file_path,
-    code,
-    pipeline,
     file_type,
+    pipeline,
     query,
     unique_key,
   } = params;
+
   let mut hasher = crate::hash::IdentifierHasher::default();
+
   environment_id.hash(&mut hasher);
   file_path.hash(&mut hasher);
   pipeline.hash(&mut hasher);
@@ -241,18 +241,16 @@ impl Asset {
       .any(|p| p.file_name() == Some(&OsStr::new("node_modules")));
 
     let asset_id = create_asset_id(CreateAssetIdParams {
+      code: None,
       environment_id: &env.id(),
-      file_path: file_path
+      file_path: &file_path
         .strip_prefix(project_root)
         .unwrap_or_else(|_| file_path.as_path())
-        .as_os_str()
-        .to_str()
-        .unwrap(),
-      code: None,
+        .to_string_lossy(),
+      file_type: &file_type,
       pipeline: pipeline.as_deref(),
       query: query.as_deref(),
       unique_key: None,
-      file_type: file_type.clone(),
     });
 
     Ok(Self {
@@ -280,16 +278,15 @@ impl Asset {
     side_effects: bool,
     unique_key: Option<String>,
   ) -> Self {
-    let environment_id = env.id();
-    let mut hasher = crate::hash::IdentifierHasher::default();
-
-    environment_id.hash(&mut hasher);
-    code.bytes().hash(&mut hasher);
-    file_type.hash(&mut hasher);
-    unique_key.hash(&mut hasher);
-
-    // Ids must be 16 characters for scope hoisting to replace imports correctly in REPLACEMENT_RE
-    let asset_id = format!("{:016x}", hasher.finish());
+    let asset_id = create_asset_id(CreateAssetIdParams {
+      code: None,
+      environment_id: &env.id(),
+      file_path: &file_path.to_string_lossy(),
+      file_type: &file_type,
+      pipeline: None,
+      query: None,
+      unique_key: unique_key.as_deref(),
+    });
 
     let is_source = !file_path
       .ancestors()

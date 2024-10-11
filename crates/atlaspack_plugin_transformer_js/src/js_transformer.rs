@@ -391,8 +391,8 @@ mod tests {
   #[test]
   fn test_transformer_on_asset_that_requires_other() {
     let source_code = r#"
-const x = require('other');
-exports.hello = function() {};
+      const x = require('other');
+      exports.hello = function() {};
     "#;
 
     let project_root = Path::new("/root");
@@ -405,11 +405,11 @@ exports.hello = function() {};
         file_path: PathBuf::from("mock_path.js"),
         start: Location {
           line: 2,
-          column: 19,
+          column: 25,
         },
         end: Location {
           line: 2,
-          column: 26,
+          column: 32,
         },
       }),
       placeholder: Some("e83f3db3d6f57ea6".to_string()),
@@ -426,6 +426,7 @@ exports.hello = function() {};
       }]),
       ..Default::default()
     }];
+
     expected_dependencies[0].set_placeholder("e83f3db3d6f57ea6");
     expected_dependencies[0].set_kind("Require");
 
@@ -446,10 +447,13 @@ exports.hello = function() {};
               exported: String::from("hello"),
               loc: Some(SourceLocation {
                 file_path: PathBuf::from("mock_path.js"),
-                start: Location { line: 3, column: 9 },
+                start: Location {
+                  line: 3,
+                  column: 15
+                },
                 end: Location {
                   line: 3,
-                  column: 14
+                  column: 20
                 }
               }),
               local: String::from("$hello"),
