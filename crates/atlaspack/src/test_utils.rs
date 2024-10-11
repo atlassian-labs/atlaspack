@@ -8,6 +8,8 @@ use atlaspack_core::{
   types::AtlaspackOptions,
 };
 use atlaspack_filesystem::{in_memory_file_system::InMemoryFileSystem, FileSystemRef};
+use atlaspack_plugin_rpc::testing::TestingRpcFactory;
+use atlaspack_plugin_rpc::RpcFactory;
 
 use crate::{
   plugins::{config_plugins::ConfigPlugins, PluginsRef},
@@ -33,8 +35,9 @@ pub(crate) fn make_test_plugin_context() -> PluginContext {
 
 pub(crate) fn config_plugins(ctx: PluginContext) -> PluginsRef {
   let fixture = default_config(Arc::new(PathBuf::default()));
-
-  Arc::new(ConfigPlugins::new(None, fixture.atlaspack_config, ctx))
+  let rpc_factory = TestingRpcFactory::default();
+  let rpc_worker = rpc_factory.start().unwrap();
+  Arc::new(ConfigPlugins::new(Some(rpc_worker), fixture.atlaspack_config, ctx).unwrap())
 }
 
 pub struct RequestTrackerTestOptions {

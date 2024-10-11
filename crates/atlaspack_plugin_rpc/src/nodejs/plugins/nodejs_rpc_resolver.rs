@@ -1,0 +1,97 @@
+use std::any::Any;
+use std::fmt;
+use std::fmt::Debug;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use atlaspack_config::PluginNode;
+use atlaspack_core::hash::IdentifierHasher;
+use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::ResolveContext;
+use atlaspack_core::plugin::Resolved;
+use atlaspack_core::plugin::ResolverPlugin;
+use atlaspack_core::types::Dependency;
+use atlaspack_napi_helpers::anyhow_from_napi;
+use serde::{Deserialize, Serialize};
+
+use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
+use super::super::rpc::LoadPluginKind;
+use super::super::rpc::LoadPluginOptions;
+
+pub struct RpcNodejsResolverPlugin {
+  rpc_workers: Arc<NodeJsWorkerCollection>,
+  resolve_from: PathBuf,
+  specifier: String,
+  started: bool,
+  project_root: PathBuf,
+}
+
+impl Debug for RpcNodejsResolverPlugin {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "RpcNodejsResolverPlugin")
+  }
+}
+
+impl RpcNodejsResolverPlugin {
+  pub fn new(
+    rpc_workers: Arc<NodeJsWorkerCollection>,
+    ctx: &PluginContext,
+    plugin: &PluginNode,
+  ) -> Result<Self, anyhow::Error> {
+    Ok(Self {
+      resolve_from: plugin.resolve_from.to_path_buf(),
+      specifier: plugin.package_name.clone(),
+      rpc_workers,
+      started: false,
+      project_root: (&*ctx.options.project_root).to_path_buf(),
+    })
+  }
+}
+
+impl ResolverPlugin for RpcNodejsResolverPlugin {
+  fn id(&self) -> u64 {
+    let mut hasher = IdentifierHasher::new();
+    self.type_id().hash(&mut hasher);
+    self.resolve_from.hash(&mut hasher);
+    self.specifier.hash(&mut hasher);
+    self.started.hash(&mut hasher);
+    hasher.finish()
+  }
+
+  fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+    if !self.started {
+      self.rpc_workers.exec_on_all(|worker| {
+        worker.load_plugin(LoadPluginOptions {
+          kind: LoadPluginKind::Resolver,
+          specifier: self.specifier.clone(),
+          resolve_from: self.resolve_from.clone(),
+        })
+      })?;
+    }
+
+    self.rpc_workers.exec_on_one(|worker| {
+      worker
+        .run_resolver_resolve_fn
+        .call_with_return_serde(RunResolverResolve {
+          key: self.specifier.clone(),
+          dependency: (&*ctx.dependency).clone(),
+          specifier: (&*ctx.specifier).to_owned(),
+          pipeline: ctx.pipeline.clone(),
+          project_root: self.project_root.clone(),
+        })
+        .map_err(anyhow_from_napi)
+    })
+  }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunResolverResolve {
+  pub key: String,
+  pub dependency: Dependency,
+  pub specifier: String,
+  pub pipeline: Option<String>,
+  pub project_root: PathBuf,
+}

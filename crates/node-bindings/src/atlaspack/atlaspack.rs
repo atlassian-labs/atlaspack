@@ -10,9 +10,9 @@ use napi::JsUnknown;
 use napi_derive::napi;
 
 use atlaspack::file_system::FileSystemRef;
+use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack::rpc::nodejs::NodejsWorker;
-use atlaspack::rpc::nodejs::RpcHostNodejs;
-use atlaspack::rpc::RpcHostRef;
+use atlaspack::rpc::RpcFactoryRef;
 use atlaspack::Atlaspack;
 use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_napi_helpers::JsTransferable;
@@ -44,7 +44,7 @@ pub struct AtlaspackNapi {
   fs: Option<FileSystemRef>,
   options: AtlaspackOptions,
   package_manager: Option<PackageManagerRef>,
-  rpc: Option<RpcHostRef>,
+  rpc: Option<RpcFactoryRef>,
   tx_worker: Sender<NodejsWorker>,
 }
 
@@ -82,8 +82,8 @@ impl AtlaspackNapi {
       .unwrap_or_else(|| threads);
 
     let (tx_worker, rx_worker) = channel::<NodejsWorker>();
-    let rpc_host_nodejs = RpcHostNodejs::new(node_worker_count, rx_worker)?;
-    let rpc = Some::<RpcHostRef>(Arc::new(rpc_host_nodejs));
+    let rpc_host_nodejs = NodejsRpcFactory::new(node_worker_count, rx_worker)?;
+    let rpc = Some::<RpcFactoryRef>(Arc::new(rpc_host_nodejs));
 
     Ok(Self {
       fs,

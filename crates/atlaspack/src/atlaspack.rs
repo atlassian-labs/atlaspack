@@ -13,7 +13,7 @@ use atlaspack_filesystem::os_file_system::OsFileSystem;
 use atlaspack_filesystem::FileSystemRef;
 use atlaspack_package_manager::NodePackageManager;
 use atlaspack_package_manager::PackageManagerRef;
-use atlaspack_plugin_rpc::RpcHostRef;
+use atlaspack_plugin_rpc::RpcFactoryRef;
 use atlaspack_plugin_rpc::RpcWorkerRef;
 
 use crate::plugins::config_plugins::ConfigPlugins;
@@ -34,7 +34,7 @@ pub struct Atlaspack {
   pub options: AtlaspackOptions,
   pub package_manager: PackageManagerRef,
   pub project_root: PathBuf,
-  pub rpc: Option<RpcHostRef>,
+  pub rpc: Option<RpcFactoryRef>,
   state: Option<AtlaspackState>,
 }
 
@@ -43,7 +43,7 @@ impl Atlaspack {
     fs: Option<FileSystemRef>,
     options: AtlaspackOptions,
     package_manager: Option<PackageManagerRef>,
-    rpc: Option<RpcHostRef>,
+    rpc: Option<RpcFactoryRef>,
   ) -> Result<Self, anyhow::Error> {
     let fs = fs.unwrap_or_else(|| Arc::new(OsFileSystem::default()));
     let project_root = infer_project_root(Arc::clone(&fs), options.entries.clone())?;
@@ -107,7 +107,7 @@ impl Atlaspack {
         // TODO Initialise actual logger
         logger: PluginLogger::default(),
       },
-    ));
+    )?);
 
     let state = AtlaspackState {
       config: config_loader,
