@@ -6,25 +6,25 @@ use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::plugin::ReporterPlugin;
 
-pub struct RpcReporterPlugin {
+pub struct NodejsRpcReporterPlugin {
   _name: String,
 }
 
-impl Debug for RpcReporterPlugin {
+impl Debug for NodejsRpcReporterPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "RpcReporterPlugin")
   }
 }
 
-impl RpcReporterPlugin {
-  pub fn new(_ctx: &PluginContext, plugin: &PluginNode) -> Self {
-    RpcReporterPlugin {
+impl NodejsRpcReporterPlugin {
+  pub fn new(_ctx: &PluginContext, plugin: &PluginNode) -> anyhow::Result<Self> {
+    Ok(NodejsRpcReporterPlugin {
       _name: plugin.package_name.clone(),
-    }
+    })
   }
 }
 
-impl ReporterPlugin for RpcReporterPlugin {
+impl ReporterPlugin for NodejsRpcReporterPlugin {
   fn report(&self, _event: &ReporterEvent) -> Result<(), anyhow::Error> {
     // TODO
     Ok(())
