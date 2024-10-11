@@ -127,36 +127,36 @@ export type Engines = {|
   browsers?: string | string[],
   electron?: string,
   node?: string,
-|}
+|};
 
 export type Environment = {|
-   context: string,
-   engines: Engines,
-   includeNodeModules: IncludeNodeModules,
-   isLibrary: boolean,
-   loc?: SourceLocation,
-   outputFormat: string,
-   shouldScopeHoist: boolean,
-   shouldOptimize: boolean,
-   sourceMap?: {|
+  context: string,
+  engines: Engines,
+  includeNodeModules: IncludeNodeModules,
+  isLibrary: boolean,
+  loc?: SourceLocation,
+  outputFormat: string,
+  shouldScopeHoist: boolean,
+  shouldOptimize: boolean,
+  sourceMap?: {|
     inline?: boolean,
     inlineSources?: boolean,
     sourceRoot?: string,
   |},
-   sourceType: string,
-|}
+  sourceType: string,
+|};
 
 export type SourceLocation = {|
   filePath: string,
   start: {|
-    line: number, 
-    column: number 
+    line: number,
+    column: number,
   |},
   end: {|
-    line: number, 
-    column: number 
+    line: number,
+    column: number,
   |},
-|}
+|};
 
 export type Symbol = {|
   local: string,
@@ -165,7 +165,7 @@ export type Symbol = {|
   isWeak: boolean,
   isEsmExport: boolean,
   selfReferenced: boolean,
-|}
+|};
 
 export type Target = {|
   distDir: string,
@@ -174,14 +174,14 @@ export type Target = {|
   loc?: SourceLocation,
   name: string,
   publicUrl: string,
-|}
+|};
 
 export type Dependency = {|
   bundleBehavior?: number,
   env: Environment,
   loc: SourceLocation,
   meta?: any,
-  packageConditions: number,
+  packageConditions: number[],
   pipeline?: string,
   priority: number,
   range?: string,
@@ -198,8 +198,8 @@ export type Dependency = {|
   needsStableName: boolean,
   shouldWrap: boolean,
   isEsm: boolean,
-  placeholder?: string,  
-|}
+  placeholder?: string,
+|};
 
 export type RpcAssetResult = {|
   id: String,
@@ -215,24 +215,24 @@ export type RpcAssetResult = {|
   sideEffects: boolean,
   isBundleSplittable: boolean,
   isSource: boolean,
-|}
+|};
 
 export type RpcTransformerOpts = {|
   resolveFrom: string,
   specifier: string,
   options: RpcPluginOptions,
   asset: Asset,
-|}
+|};
 
 export type RpcHmrOptions = {|
   port?: number,
   host?: string,
-|}
+|};
 
 export type RpcPluginOptions = {|
   hmrOptions?: RpcHmrOptions,
   projectRoot: string,
-|}
+|};
 
 export type Asset = {|
   id: string,
@@ -265,7 +265,7 @@ export type Asset = {|
   |}>,
   configPath?: string,
   configKeyPath?: string,
-|}
+|};
 
 declare export class Resolver {
   constructor(projectRoot: string, options: ResolverOptions): Resolver;
@@ -352,7 +352,10 @@ export interface JsFileSystemOptions {
 
 // Types below break IDE highlighting, place them at the bottom of the file
 
-export type IncludeNodeModules = boolean | Array<string> | {|[string]: boolean|}
+export type IncludeNodeModules =
+  | boolean
+  | Array<string>
+  | {|[string]: boolean|};
 
 export type Resolution =
   | {|type: 'Path', value: string|}
