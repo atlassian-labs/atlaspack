@@ -1,0 +1,12 @@
+[package]
+name = "atlaspack_swc_transform_utils"
+version = "0.1.0"
+edition = "2021"
+description = "Atlaspack Bundler"
+
+[dependencies]
+regex = "1.10.5"
+swc_core = { version = "0.96" }
+thiserror = "1.0.63"
+swc_ecma_parser = "*"
+sourcemap = "*"

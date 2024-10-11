@@ -23,4 +23,4 @@ swc_core = { version = "0.96", features = [
     "ecma_visit",
     "stacker"
 ] }
-atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
+atlaspack_swc_transform_utils = { path = "../atlaspack_swc_transform_utils" }

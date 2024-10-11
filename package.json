@@ -10,6 +10,7 @@
   "workspaces": [
     "crates/caniuse_database",
     "crates/lmdb-js-lite",
+    "crates/atlaspack_conditional_imports_swc_plugin",
     "packages/*/*"
   ],
   "scripts": {

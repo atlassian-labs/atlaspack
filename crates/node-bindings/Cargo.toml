@@ -20,6 +20,7 @@ atlaspack_package_manager = { path = "../atlaspack_package_manager" }
 atlaspack_plugin_optimizer_inline_requires = { path = "../atlaspack_plugin_optimizer_inline_requires" }
 atlaspack_plugin_transformer_js = { path = "../atlaspack_plugin_transformer_js" }
 atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers" }
+atlaspack_swc_transform_utils = { path = "../atlaspack_swc_transform_utils" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 
 anyhow = "1.0.82"
