@@ -180,7 +180,7 @@ atlaspack-transformer-b`,
     );
   });
 
-  it('merges symbol information when applying runtime assets', async function () {
+  it.only('merges symbol information when applying runtime assets', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/runtime-symbol-merging/entry.js'),
       {

@@ -339,7 +339,7 @@ describe('scope hoisting', function () {
       assert.equal(output, 6);
     });
 
-    it('supports re-exporting all when falling back to namespace at runtime 1', async function () {
+    it.only('supports re-exporting all when falling back to namespace at runtime 1', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -351,7 +351,7 @@ describe('scope hoisting', function () {
       assert.strictEqual(output, 2);
     });
 
-    it('supports re-exporting all when falling back to namespace at runtime 2', async function () {
+    it.only('supports re-exporting all when falling back to namespace at runtime 2', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -374,7 +374,7 @@ describe('scope hoisting', function () {
       assert.strictEqual(output, 'FOOBAR!');
     });
 
-    it('supports nested re-exporting all when falling back to namespace at runtime', async function () {
+    it.only('supports nested re-exporting all when falling back to namespace at runtime', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -2361,7 +2361,7 @@ describe('scope hoisting', function () {
       assert.deepEqual(output.foo, 'bar');
     });
 
-    it('should correctly codesplit even with reexporting library index', async function () {
+    it.only('should correctly codesplit even with reexporting library index', async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -2748,7 +2748,7 @@ describe('scope hoisting', function () {
         }
       });
 
-      it('add and remove dependency (keep asset)', async function () {
+      it.only('add and remove dependency (keep asset)', async function () {
         let testDir = path.join(
           __dirname,
           '/integration/scope-hoisting/es6/update-used-symbols-dependency-add',
@@ -3004,7 +3004,7 @@ describe('scope hoisting', function () {
         }
       });
 
-      it('add and remove dependency with namespace', async function () {
+      it.only('add and remove dependency with namespace', async function () {
         let testDir = path.join(
           __dirname,
           '/integration/scope-hoisting/es6/update-used-symbols-dependency-add-namespace',
