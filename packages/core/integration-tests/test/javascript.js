@@ -2822,10 +2822,12 @@ describe('javascript', function () {
           '/integration/commonjs-template-literal-plain/index.js',
         ),
       );
+
       let dist = await outputFS.readFile(
         b.getBundles().find(b => b.type === 'js').filePath,
         'utf8',
       );
+
       assert(dist.includes('$cKnEA$lodash = require("lodash");'));
 
       let add = await run(b);
@@ -2833,7 +2835,7 @@ describe('javascript', function () {
     },
   );
 
-  it('should detect requires in commonjs with plain template literals', async function () {
+  it('should detect requires in commonjs with interpolated template literals', async function () {
     let b = await bundle(
       path.join(
         __dirname,

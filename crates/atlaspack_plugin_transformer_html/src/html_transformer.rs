@@ -39,6 +39,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
       // TODO: Where is this?
       enable_hmr: false,
       env: context.env().clone(),
+      side_effects: input.side_effects,
       source_asset_id: input.id.clone(),
       source_path: Some(input.file_path.clone()),
     };
@@ -84,6 +85,7 @@ fn parse_html(bytes: &[u8]) -> Result<RcDom, Error> {
 pub struct HTMLTransformationContext {
   pub enable_hmr: bool,
   pub env: Arc<Environment>,
+  pub side_effects: bool,
   pub source_asset_id: AssetId,
   pub source_path: Option<PathBuf>,
 }
@@ -127,7 +129,7 @@ fn run_html_transformations(
 
 #[cfg(test)]
 mod test {
-  use atlaspack_core::types::{FileType, JSONObject};
+  use atlaspack_core::types::{FileType, JSONObject, SourceType};
   use pretty_assertions::assert_eq;
 
   use super::*;
@@ -140,21 +142,21 @@ mod test {
           <script src="input.js"></script>
         </body>
       </html>
-    "#
-    .trim();
+    "#;
 
     let mut dom = parse_html(bytes.as_bytes()).unwrap();
 
     run_html_transformations(transformation_context(), &mut dom);
 
     let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
     assert_eq!(
       &normalize_html(&html),
       &normalize_html(
         r#"
           <html>
             <body>
-              <script src="0fe42f4006faa861"></script>
+              <script src="966f7b31c3f6c3fc"></script>
             </body>
           </html>
         "#
@@ -170,14 +172,14 @@ mod test {
           <link href="manifest.json" rel="manifest" />
         </head>
       </html>
-    "#
-    .trim();
+    "#;
 
     let mut dom = parse_html(bytes.as_bytes()).unwrap();
 
     run_html_transformations(transformation_context(), &mut dom);
 
     let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
     assert_eq!(
       &normalize_html(&html),
       &normalize_html(
@@ -194,25 +196,101 @@ mod test {
   }
 
   #[test]
-  fn transforms_inline_style_tag() {
-    let bytes = r#"
-      <html>
-        <body>
-          <style>
-            a { color: blue; }
-          </style>
-        </body>
-      </html>
-    "#
-    .trim();
+  fn transforms_inline_script_tag() {
+    let script = String::from(
+      "
+        const main = () => {
+          console.log('test');
+        }
+      ",
+    )
+    .trim()
+    .to_string();
+
+    let bytes = html_body(&format!(
+      r#"
+        <script type="text/javascript">{script}</script>
+      "#,
+    ));
 
     let mut dom = parse_html(bytes.as_bytes()).unwrap();
     let context = transformation_context();
 
     let transformation = run_html_transformations(context.clone(), &mut dom);
-
     let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
-    assert_eq!(&normalize_html(&html), &normalize_html(&bytes));
+
+    assert_eq!(
+      &normalize_html(&html),
+      &normalize_html(&html_body(&format!(
+        r#"
+          <script data-parcel-key="16f87d7beed96467">{script}</script>
+        "#
+      )))
+    );
+
+    let env = Arc::new(Environment {
+      source_type: SourceType::Script,
+      ..Environment::default()
+    });
+
+    assert_eq!(
+      transformation,
+      HtmlTransformation {
+        dependencies: vec![Dependency {
+          bundle_behavior: Some(BundleBehavior::Inline),
+          env: env.clone(),
+          source_asset_id: Some(String::from("test")),
+          source_asset_type: Some(FileType::Html),
+          source_path: Some(PathBuf::from("main.html")),
+          specifier: String::from("16f87d7beed96467"),
+          ..Dependency::default()
+        }],
+        discovered_assets: vec![AssetWithDependencies {
+          asset: Asset {
+            bundle_behavior: Some(BundleBehavior::Inline),
+            code: Arc::new(Code::from(script)),
+            env: env.clone(),
+            file_path: PathBuf::from("main.html"),
+            file_type: FileType::Js,
+            id: String::from("60105a288adcc04d"),
+            is_bundle_splittable: true,
+            is_source: true,
+            meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
+            unique_key: Some(String::from("16f87d7beed96467")),
+            ..Asset::default()
+          },
+          dependencies: Vec::new()
+        }],
+      }
+    );
+  }
+
+  #[test]
+  fn transforms_inline_style_tag() {
+    let bytes = html_body(
+      "
+        <style>
+          a { color: blue; }
+        </style>
+      ",
+    );
+
+    let mut dom = parse_html(bytes.as_bytes()).unwrap();
+    let context = transformation_context();
+
+    let transformation = run_html_transformations(context.clone(), &mut dom);
+    let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
+    assert_eq!(
+      &normalize_html(&html),
+      &normalize_html(&html_body(
+        r#"
+          <style data-parcel-key="16f87d7beed96467">
+            a { color: blue; }
+          </style>
+        "#
+      ))
+    );
 
     assert_eq!(
       transformation,
@@ -220,18 +298,23 @@ mod test {
         dependencies: vec![Dependency {
           source_asset_id: Some(String::from("test")),
           source_asset_type: Some(FileType::Html),
-          specifier: String::from("test:0"),
+          source_path: Some(PathBuf::from("main.html")),
+          specifier: String::from("16f87d7beed96467"),
           ..Dependency::default()
         }],
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),
             code: Arc::new(Code::from(String::from(
-              "\n            a { color: blue; }\n          "
+              "\n          a { color: blue; }\n        "
             ))),
+            file_path: PathBuf::from("main.html"),
             file_type: FileType::Css,
+            id: String::from("ee29c9ae8eef15d4"),
+            is_bundle_splittable: true,
+            is_source: true,
             meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
-            unique_key: Some(String::from("test:0")),
+            unique_key: Some(String::from("16f87d7beed96467")),
             ..Asset::default()
           },
           dependencies: Vec::new()
@@ -242,14 +325,7 @@ mod test {
 
   #[test]
   fn inserts_hmr_tag() {
-    let bytes = r#"
-      <html>
-        <body>
-        </body>
-      </html>
-    "#
-    .trim();
-
+    let bytes = html_body("");
     let context = HTMLTransformationContext {
       enable_hmr: true,
       ..transformation_context()
@@ -260,17 +336,10 @@ mod test {
     run_html_transformations(context, &mut dom);
 
     let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
     assert_eq!(
       &normalize_html(&html),
-      &normalize_html(
-        r#"
-          <html>
-            <body>
-              <script src="8321472594eb517f"></script>
-            </body>
-          </html>
-        "#
-      )
+      &normalize_html(&html_body(r#"<script src="8321472594eb517f"></script>"#))
     );
   }
 
@@ -279,9 +348,23 @@ mod test {
 
     Arc::get_mut(&mut context.env).unwrap().should_optimize = false;
     Arc::get_mut(&mut context.env).unwrap().should_scope_hoist = false;
+    context.source_path = Some(PathBuf::from("main.html"));
     context.source_asset_id = String::from("test");
 
     context
+  }
+
+  fn html_body(body: &str) -> String {
+    format!(
+      r#"
+        <html>
+          <body>
+            {}
+          </body>
+        </html>
+      "#,
+      body.trim()
+    )
   }
 
   fn normalize_html(html: &str) -> String {
