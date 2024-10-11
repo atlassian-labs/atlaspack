@@ -8,21 +8,21 @@
 import type {ContentKey, NodeId} from '@atlaspack/graph';
 import type {Meta, Symbol} from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
+import {convertSourceLocationToHighlight, md} from '@atlaspack/diagnostic';
 import type {
   AssetNode,
+  AtlaspackOptions,
   DependencyNode,
   InternalSourceLocation,
-  AtlaspackOptions,
 } from './types';
-import {type default as AssetGraph} from './AssetGraph';
+import {BundleBehavior} from './types';
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
 import {setEqual} from '@atlaspack/utils';
 import logger from '@atlaspack/logger';
-import {md, convertSourceLocationToHighlight} from '@atlaspack/diagnostic';
-import {BundleBehavior} from './types';
-import {fromProjectPathRelative, fromProjectPath} from './projectPath';
+import {fromProjectPath, fromProjectPathRelative} from './projectPath';
+import AssetGraph from './AssetGraph';
 
 function logFallbackNamespaceInsertion(
   assetNode,
@@ -319,7 +319,7 @@ function getIncomingDependencyRequestsFromAsset(
   assetNode.usedSymbols = new Set();
   let namespaceReexportedSymbols = new Set<Symbol>();
   if (incomingDeps.length === 0) {
-    handleRootAsset(assetNode, namespaceReexportedSymbols, ROOT_SYMBOL);
+    markAsRootAsset(assetNode, namespaceReexportedSymbols, ROOT_SYMBOL);
   } else {
     for (let incomingDep of incomingDeps) {
       if (incomingDep.value.symbols == null) {
@@ -356,11 +356,6 @@ function checkForNamespaceOutgoingDeps(outgoingDeps, rootSymbol) {
   );
 }
 
-function handleRootAsset(assetNode, namespaceReexportedSymbols, rootSymbol) {
-  assetNode.usedSymbols.add(rootSymbol);
-  namespaceReexportedSymbols.add(rootSymbol);
-}
-
 function handleClearedSymbolsDependency(
   incomingDep,
   isEntryAsset,
@@ -384,7 +379,7 @@ function processIncomingDependencySymbols(
 ) {
   for (let exportSymbol of incomingDep.usedSymbolsDown) {
     if (exportSymbol === rootSymbol) {
-      markAsRootAsset(assetNode, rootSymbol);
+      markAsRootAsset(assetNode, namespaceReexportedSymbols, rootSymbol);
       continue;
     }
     const isOwnSymbolOrNonNamespaceReexport =
@@ -405,9 +400,9 @@ function addAllSymbols(exportSymbolToIdentifierMap, assetNode) {
   );
 }
 
-function markAsRootAsset(asset, ROOT_SYMBOL) {
+function markAsRootAsset(asset, namespaceReexportedSymbols, ROOT_SYMBOL) {
   asset.usedSymbols.add(ROOT_SYMBOL);
-  asset.namespaceReexportedSymbols.add(ROOT_SYMBOL);
+  namespaceReexportedSymbols.add(ROOT_SYMBOL);
 }
 
 function propagateSymbolsDown(
@@ -498,12 +493,12 @@ function findDirtyNodes(
   changedAssets,
   changedDepsUsedSymbolsUpDirtyDown,
 ) {
-  return new Set(
-    [...changedDepsUsedSymbolsUpDirtyDown]
+  return new Set([
+    ...[...changedDepsUsedSymbolsUpDirtyDown]
       .reverse()
       .flatMap(id => getDependencyResolution(assetGraph, id)),
     ...changedAssets,
-  );
+  ]);
 }
 
 function getDependencyResolution(
@@ -539,7 +534,7 @@ function shouldRunFullPass(assetGraph, dirtyNodes) {
 }
 
 function performFullTraversal(assetGraph, visit, errors) {
-  let dirtyDeps = new Set();
+  let dirtyDeps = new Set<NodeId>();
   let rootNodeId = nullthrows(
     assetGraph.rootNodeId,
     'A root node is required to traverse',
@@ -547,12 +542,17 @@ function performFullTraversal(assetGraph, visit, errors) {
 
   function visitNode(nodeId) {
     let node = nullthrows(assetGraph.getNode(nodeId));
-    let outgoingDeps = getOutgoingDependencies(assetGraph, nodeId);
 
-    propagateUsedSymbols(node, outgoingDeps, 'up');
     if (node.type === 'asset') {
+      let outgoingDeps = depNodesFromNodeIds(
+        assetGraph,
+        getOutgoingDependencies(assetGraph, nodeId),
+      );
+      propagateUsedSymbols(node, outgoingDeps, 'up');
+
       let incomingDeps = getIncomingDependencies(assetGraph, node);
       propagateUsedSymbols(node, incomingDeps, 'down');
+
       handleNodeVisit(node, incomingDeps, outgoingDeps, visit, errors, nodeId);
     } else if (node.type === 'dependency') {
       updateDirtyDependencies(node, nodeId, dirtyDeps);
@@ -563,6 +563,14 @@ function performFullTraversal(assetGraph, visit, errors) {
   return dirtyDeps;
 }
 
+function depNodesFromNodeIds(assetGraph, depNodeIds) {
+  return depNodeIds.map(depNodeId => {
+    let depNode = nullthrows(assetGraph.getNode(depNodeId));
+    invariant(depNode.type === 'dependency');
+    return depNode;
+  });
+}
+
 function processDirtyNodes(assetGraph, queue, visit, errors) {
   while (queue.size > 0) {
     let queuedNodeId = setPop(queue);
@@ -571,7 +579,10 @@ function processDirtyNodes(assetGraph, queue, visit, errors) {
     if (node.type === 'asset') {
       let incomingDeps = getIncomingDependencies(assetGraph, node);
       propagateUsedSymbols(node, incomingDeps, 'down');
-      let outgoingDeps = getOutgoingDependencies(assetGraph, queuedNodeId);
+      let outgoingDeps = depNodesFromNodeIds(
+        assetGraph,
+        getOutgoingDependencies(assetGraph, queuedNodeId),
+      );
       propagateUsedSymbols(node, outgoingDeps, 'up');
 
       handleNodeVisit(
@@ -593,19 +604,15 @@ function processDirtyNodes(assetGraph, queue, visit, errors) {
 }
 
 function getOutgoingDependencies(assetGraph, nodeId) {
-  return assetGraph.getNodeIdsConnectedFrom(nodeId).map(depNodeId => {
-    let depNode = nullthrows(assetGraph.getNode(depNodeId));
-    invariant(depNode.type === 'dependency');
-    return depNode;
-  });
+  return assetGraph.getNodeIdsConnectedFrom(nodeId);
 }
 
 function propagateUsedSymbols(node, dependencies, direction) {
   for (let dep of dependencies) {
-    if (
+    const isDepDirty =
       (direction === 'down' && dep.usedSymbolsUpDirtyDown) ||
-      (direction === 'up' && dep.usedSymbolsUpDirtyUp)
-    ) {
+      (direction === 'up' && dep.usedSymbolsUpDirtyUp);
+    if (isDepDirty) {
       node.usedSymbolsUpDirty = true;
       if (direction === 'down') {
         dep.usedSymbolsUpDirtyDown = false;
@@ -661,7 +668,7 @@ function processCurrentNode(
     visit(
       currentNode,
       getIncomingDependencies(assetGraph, currentNode),
-      getOutgoingDependencyNodes(assetGraph, outgoingDependencies),
+      depNodesFromNodeIds(assetGraph, outgoingDependencies),
     );
     currentNode.usedSymbolsDownDirty = false;
   }
@@ -672,14 +679,6 @@ function getIncomingDependencies(assetGraph, assetNode) {
   return assetGraph.getIncomingDependencies(assetNode.value).map(dependency => {
     let dependencyNode = assetGraph.getNodeByContentKey(dependency.id);
     invariant(dependencyNode && dependencyNode.type === 'dependency');
-    return dependencyNode;
-  });
-}
-
-function getOutgoingDependencyNodes(assetGraph, outgoingDependencies) {
-  return outgoingDependencies.map(dependencyId => {
-    let dependencyNode = nullthrows(assetGraph.getNode(dependencyId));
-    invariant(dependencyNode.type === 'dependency');
     return dependencyNode;
   });
 }
@@ -788,11 +787,10 @@ function processOutgoingDependencies(
     }
     if (outgoingDepSymbols.get('*')?.local === '*') {
       processWildcardSymbols(
-        outgoingDeps,
+        outgoingDep,
         assetNode,
         reexportedSymbols,
         reexportedSymbolsSource,
-        outgoingDep,
         options,
       );
     }
@@ -824,7 +822,6 @@ function processWildcardSymbols(
   assetNode,
   reexportedSymbols,
   reexportedSymbolsSource,
-  outgoingDepNode,
   options,
 ) {
   outgoingDep.usedSymbolsUp.forEach((sResolved, s) => {
@@ -834,7 +831,7 @@ function processWildcardSymbols(
       assetNode,
       s,
       sResolved,
-      outgoingDepNode,
+      outgoingDep,
       options,
       reexportedSymbolsSource,
     );

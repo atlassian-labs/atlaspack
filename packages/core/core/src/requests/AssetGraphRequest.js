@@ -32,7 +32,7 @@ import createAssetRequest from './AssetRequest';
 import createPathRequest from './PathRequest';
 import {type ProjectPath, fromProjectPathRelative} from '../projectPath';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
-import {propagateSymbols} from '../SymbolPropagation';
+import {propagateSymbols} from '../SymbolPropagationNew';
 import {requestTypes} from '../RequestTracker';
 
 export type AssetGraphRequestInput = {|

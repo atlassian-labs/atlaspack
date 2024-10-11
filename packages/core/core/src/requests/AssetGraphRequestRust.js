@@ -9,7 +9,7 @@ import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
 import {toProjectPath} from '../projectPath';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
-import {propagateSymbols} from '../SymbolPropagation';
+import {propagateSymbols} from '../SymbolPropagationNew';
 import type {Environment} from '../types';
 
 import type {

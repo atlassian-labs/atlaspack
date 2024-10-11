@@ -19,7 +19,7 @@ import {
   toProjectPath as _toProjectPath,
   type ProjectPath,
 } from '../src/projectPath';
-import {propagateSymbols} from '../src/SymbolPropagation';
+import {propagateSymbols} from '../src/SymbolPropagationNew';
 import dumpGraphToGraphViz from '../src/dumpGraphToGraphViz';
 import {DEFAULT_ENV, DEFAULT_OPTIONS, DEFAULT_TARGETS} from './test-utils';
 import type {
