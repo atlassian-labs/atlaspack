@@ -31,7 +31,7 @@ import {
             }
 
           other.js:
-            // this is here so that we don't scope hoist a.js
+            // this is here so that we don't scope hoist dependency/index.js
             import {exportedFunction} from './dependency';
             console.log(exportedFunction());
 
