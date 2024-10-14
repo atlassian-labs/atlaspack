@@ -314,6 +314,36 @@ impl Asset {
     }
   }
 
+  pub fn new_discovered(
+    source_asset: &Asset,
+    unique_key: String,
+    file_type: FileType,
+    code: String,
+    side_effects: bool,
+  ) -> anyhow::Result<Self> {
+    let asset_id = create_asset_id(CreateAssetIdParams {
+      environment_id: &source_asset.env.id(),
+      file_path: source_asset
+        .file_path
+        .to_str()
+        .ok_or_else(|| anyhow!("Could not get source asset file path"))?,
+      code: Some(code.as_str()),
+      pipeline: None,
+      query: None,
+      unique_key: Some(&unique_key),
+      file_type: &file_type,
+    });
+
+    Ok(Self {
+      code: Arc::new(Code::from(code)),
+      file_type,
+      id: asset_id,
+      side_effects,
+      unique_key: Some(unique_key),
+      ..source_asset.clone()
+    })
+  }
+
   pub fn set_interpreter(&mut self, shebang: impl Into<serde_json::Value>) {
     self.meta.insert("interpreter".into(), shebang.into());
   }
