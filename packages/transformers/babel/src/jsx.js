@@ -30,7 +30,7 @@ export default async function isJSX(
   } else {
     // Find a dependency that implies JSX syntax.
     return JSX_LIBRARIES.some(
-      libName =>
+      (libName) =>
         pkg &&
         ((pkg.dependencies && pkg.dependencies[libName]) ||
           (pkg.devDependencies && pkg.devDependencies[libName]) ||

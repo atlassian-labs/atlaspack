@@ -7,25 +7,25 @@ use atlaspack_core::plugin::CompressedFile;
 use atlaspack_core::plugin::CompressorPlugin;
 use atlaspack_core::plugin::PluginContext;
 
-pub struct RpcCompressorPlugin {
+pub struct NodejsRpcCompressorPlugin {
   _name: String,
 }
 
-impl Debug for RpcCompressorPlugin {
+impl Debug for NodejsRpcCompressorPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "RpcCompressorPlugin")
   }
 }
 
-impl RpcCompressorPlugin {
-  pub fn new(_ctx: &PluginContext, plugin: &PluginNode) -> Self {
-    RpcCompressorPlugin {
+impl NodejsRpcCompressorPlugin {
+  pub fn new(_ctx: &PluginContext, plugin: &PluginNode) -> anyhow::Result<Self> {
+    Ok(NodejsRpcCompressorPlugin {
       _name: plugin.package_name.clone(),
-    }
+    })
   }
 }
 
-impl CompressorPlugin for RpcCompressorPlugin {
+impl CompressorPlugin for NodejsRpcCompressorPlugin {
   fn compress(&self, _file: &File) -> Result<Option<CompressedFile>, String> {
     todo!()
   }

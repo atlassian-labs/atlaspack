@@ -67,15 +67,15 @@ describe.v2('globals', function () {
       let bundles = await Promise.all(
         bundleGraph
           .getBundles()
-          .map(b => overlayFS.readFile(b.filePath, 'utf8')),
+          .map((b) => overlayFS.readFile(b.filePath, 'utf8')),
       );
 
       let onGlobal = sinon.spy();
       await run(bundleGraph, {globalThis: 'global', onGlobal});
 
-      assert(bundles.some(b => b.includes('var global = arguments[3]')));
+      assert(bundles.some((b) => b.includes('var global = arguments[3]')));
       assert(
-        bundles.every(b => !b.includes('var $parcel$global = globalThis')),
+        bundles.every((b) => !b.includes('var $parcel$global = globalThis')),
       );
       assert.equal(onGlobal.callCount, 1);
       assert.deepEqual(onGlobal.firstCall.args, ['global']);
@@ -93,14 +93,16 @@ describe.v2('globals', function () {
       let bundles = await Promise.all(
         bundleGraph
           .getBundles()
-          .map(b => overlayFS.readFile(b.filePath, 'utf8')),
+          .map((b) => overlayFS.readFile(b.filePath, 'utf8')),
       );
 
       let onGlobal = sinon.spy();
       await run(bundleGraph, {globalThis: 'global', onGlobal});
 
-      assert(bundles.some(b => b.includes('var $parcel$global = globalThis')));
-      assert(bundles.every(b => !b.includes('var global = arguments[3]')));
+      assert(
+        bundles.some((b) => b.includes('var $parcel$global = globalThis')),
+      );
+      assert(bundles.every((b) => !b.includes('var global = arguments[3]')));
       assert.equal(onGlobal.callCount, 1);
       assert.deepEqual(onGlobal.firstCall.args, ['global']);
     });

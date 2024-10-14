@@ -961,7 +961,7 @@ describe.v2('monorepos', function () {
             reject(new Error('Changed assets missing.'));
           }
         }
-      }).then(sub => {
+      }).then((sub) => {
         subscription = sub;
       });
     });

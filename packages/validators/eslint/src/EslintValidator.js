@@ -40,7 +40,7 @@ export default (new Validator({
       let codeframe: DiagnosticCodeFrame = {
         filePath: asset.filePath,
         code: result.source,
-        codeHighlights: result.messages.map(message => {
+        codeHighlights: result.messages.map((message) => {
           let start = {
             line: message.line,
             column: message.column,

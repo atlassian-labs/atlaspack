@@ -4,7 +4,7 @@ const path = require('path');
 require('@babel/register')({
   cwd: path.join(__dirname, '../../..'),
   ignore: [
-    filepath => filepath.includes(path.sep + 'node_modules' + path.sep),
+    (filepath) => filepath.includes(path.sep + 'node_modules' + path.sep),
     // Don't run babel over ignore integration tests fixtures.
     // These may include relative babel plugins, and running babel on those causes
     // the plugin to be loaded to compile the plugin.

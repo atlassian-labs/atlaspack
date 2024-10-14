@@ -52,7 +52,7 @@ export default (new Reporter({
       let metrics = {
         phaseTimings: value.timings,
         buildTime: event.buildTime,
-        bundles: bundles.map(b => {
+        bundles: bundles.map((b) => {
           return {
             filePath: b.filePath,
             size: b.size,

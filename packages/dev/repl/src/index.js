@@ -143,7 +143,7 @@ function Output({state, dispatch}: {|state: State, dispatch: Function|}) {
       let {unsubscribe, writeAssets} = await watch(
         state.files,
         state.options,
-        output => {
+        (output) => {
           setBuildState(STATUS_IDLING);
           setBuildOutput(output);
           dispatch({
@@ -172,7 +172,7 @@ function Output({state, dispatch}: {|state: State, dispatch: Function|}) {
   }, [state.files]);
 
   useKeyboard(
-    e => {
+    (e) => {
       if (
         e.metaKey &&
         e.code === 'KeyB' &&
@@ -225,7 +225,7 @@ function Output({state, dispatch}: {|state: State, dispatch: Function|}) {
                           href="https://evanw.github.io/source-map-visualization/#"
                           target="_blank"
                           rel="noopener noreferrer"
-                          onClick={event => {
+                          onClick={(event) => {
                             event.target.href = linkSourceMapVisualization(
                               content,
                               nullthrows(buildOutput.sourcemaps?.get(name)),
@@ -296,7 +296,7 @@ function Editors({state, dispatch}) {
         className="editors views"
         mode="hide"
         selected={state.currentView}
-        setSelected={i => dispatch({type: 'view.select', index: i})}
+        setSelected={(i) => dispatch({type: 'view.select', index: i})}
         fallback={<Notes />}
       >
         {children}
@@ -329,7 +329,7 @@ function App() {
   useDebounce(() => saveState(state), 500, [state.files, state.options]);
 
   useKeyboard(
-    e => {
+    (e) => {
       if (e.metaKey && e.code === 'KeyS') {
         dispatch({type: 'view.saveCurrent'});
         e.preventDefault();
@@ -451,7 +451,7 @@ if (navigator.serviceWorker) {
     .register(new URL('./sw.js', import /*:: ("") */.meta.url), {
       type: 'module',
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('Service worker registration failed:', error);
     });
 }

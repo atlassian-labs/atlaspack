@@ -191,14 +191,14 @@ function assertUsedSymbols(
     _expectedDependency.map(([from, to, sym]) => [
       from + ':' + to,
       // $FlowFixMe[invalid-tuple-index]
-      sym ? sym.map(v => [v[0], v[1] ?? [to, v[0]]]) : sym,
+      sym ? sym.map((v) => [v[0], v[1] ?? [to, v[0]]]) : sym,
     ]),
   );
 
   if (isLibrary) {
     let entryDep = nullthrows(
       [...graph.nodes.values()].find(
-        n => n?.type === 'dependency' && n.value.sourceAssetId == null,
+        (n) => n?.type === 'dependency' && n.value.sourceAssetId == null,
       ),
     );
     invariant(entryDep.type === 'dependency');
@@ -374,13 +374,13 @@ function changeDependency(
 ): Iterable<[ContentKey, Asset]> {
   let sourceAssetNode = nullthrowsAssetNode(
     [...graph.nodes.values()].find(
-      n => n?.type === 'asset' && n.value.filePath === from,
+      (n) => n?.type === 'asset' && n.value.filePath === from,
     ),
   );
   sourceAssetNode.usedSymbolsDownDirty = true;
   let depNode = nullthrowsDependencyNode(
     [...graph.nodes.values()].find(
-      n =>
+      (n) =>
         n?.type === 'dependency' &&
         n.value.sourcePath === from &&
         n.value.specifier === to,
@@ -397,7 +397,7 @@ function changeAsset(
 ): Iterable<[ContentKey, Asset]> {
   let node = nullthrowsAssetNode(
     [...graph.nodes.values()].find(
-      n => n?.type === 'asset' && n.value.filePath === asset,
+      (n) => n?.type === 'asset' && n.value.filePath === asset,
     ),
   );
   node.usedSymbolsUpDirty = true;
@@ -440,7 +440,7 @@ describe('SymbolPropagation', () => {
     );
 
     let changedAssets = [
-      ...changeDependency(graph, 'index.js', '/lib.js', symbols => {
+      ...changeDependency(graph, 'index.js', '/lib.js', (symbols) => {
         symbols.set('b', {
           local: 'b',
           isWeak: false,
@@ -480,7 +480,7 @@ describe('SymbolPropagation', () => {
     );
 
     let changedAssets = [
-      ...changeDependency(graph, 'index.js', '/lib.js', symbols => {
+      ...changeDependency(graph, 'index.js', '/lib.js', (symbols) => {
         symbols.delete('f');
         symbols.set('f2', {
           local: 'f2',
@@ -523,7 +523,7 @@ describe('SymbolPropagation', () => {
     );
 
     let changedAssets = [
-      ...changeAsset(graph, 'lib.js', symbols => {
+      ...changeAsset(graph, 'lib.js', (symbols) => {
         symbols.delete('f');
         symbols.set('f2', {
           local: 'f2',
@@ -570,7 +570,7 @@ describe('SymbolPropagation', () => {
     );
 
     let changedAssets = [
-      ...changeDependency(graph, 'index.js', '/lib.js', symbols => {
+      ...changeDependency(graph, 'index.js', '/lib.js', (symbols) => {
         symbols.set('b', {
           local: 'b',
           isWeak: false,

@@ -1,3 +1,3 @@
-module.exports = function() {
+module.exports = function () {
   return Math.ceil(Math.random() * 100);
 };

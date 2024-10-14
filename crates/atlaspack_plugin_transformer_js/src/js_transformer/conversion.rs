@@ -640,8 +640,8 @@ fn convert_dependency(
         // output format so that assets can be shared between the bundles.
         let mut output_format = env.output_format;
         if env.source_type == SourceType::Script
-                    // && env.flags.contains(EnvironmentFlags::SHOULD_SCOPE_HOIST)
-                    && env.engines.supports(EnvironmentFeature::DynamicImport)
+          && asset.env.should_scope_hoist
+          && env.engines.supports(EnvironmentFeature::DynamicImport)
         {
           output_format = OutputFormat::EsModule;
         }

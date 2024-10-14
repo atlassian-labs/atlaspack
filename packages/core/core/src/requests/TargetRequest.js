@@ -225,14 +225,14 @@ export class TargetResolver {
         // Only build the intersection of the exclusive target and option targets.
         if (exclusiveTarget != null) {
           optionTargets = optionTargets.filter(
-            target => target === exclusiveTarget,
+            (target) => target === exclusiveTarget,
           );
         }
 
         // If an array of strings is passed, it's a filter on the resolved package
         // targets. Load them, and find the matching targets.
         targets = optionTargets
-          .map(target => {
+          .map((target) => {
             // null means skipped.
             if (!packageTargets.has(target)) {
               throw new ThrowableDiagnostic({
@@ -326,7 +326,8 @@ export class TargetResolver {
             return target;
           })
           .filter(
-            target => !skipTarget(target.name, exclusiveTarget, target.source),
+            (target) =>
+              !skipTarget(target.name, exclusiveTarget, target.source),
           );
       }
 
@@ -387,7 +388,7 @@ export class TargetResolver {
       } else {
         targets = Array.from(packageTargets.values())
           .filter(Boolean)
-          .filter(descriptor => {
+          .filter((descriptor) => {
             return (
               descriptor &&
               !skipTarget(descriptor.name, exclusiveTarget, descriptor.source)
@@ -920,7 +921,7 @@ export class TargetResolver {
     }
 
     let customTargets = (Object.keys(pkgTargets): Array<string>).filter(
-      targetName => !COMMON_TARGETS[targetName],
+      (targetName) => !COMMON_TARGETS[targetName],
     );
 
     // Custom targets
@@ -1377,7 +1378,7 @@ function assertNoDuplicateTargets(options, targets, pkgFilePath, pkgContents) {
             code: pkgContents,
             codeHighlights: generateJSONCodeHighlights(
               pkgContents,
-              targetNames.map(t => ({
+              targetNames.map((t) => ({
                 key: `/${t}`,
                 type: 'value',
               })),
@@ -1580,7 +1581,7 @@ async function debugResolvedTargets(input, targets, targetInfo, options) {
       includeNodeModules =
         'only ' +
         listFormat.format(
-          target.env.includeNodeModules.map(m => JSON.stringify(m)),
+          target.env.includeNodeModules.map((m) => JSON.stringify(m)),
         );
     } else if (
       target.env.includeNodeModules &&
@@ -1595,7 +1596,7 @@ async function debugResolvedTargets(input, targets, targetInfo, options) {
         );
     }
 
-    let format = v => (v.message != null ? md.italic(v.message) : '');
+    let format = (v) => (v.message != null ? md.italic(v.message) : '');
     logger.verbose({
       origin: '@atlaspack/core',
       message: md`**Target** "${target.name}"

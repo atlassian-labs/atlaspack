@@ -27,19 +27,21 @@ export async function findAlternativeNodeModules(
         let dirContent = (await fs.readdir(modulesDir)).sort();
 
         // Filter out the modules that interest us
-        let modules = dirContent.filter(i =>
+        let modules = dirContent.filter((i) =>
           isOrganisationModule ? i.startsWith('@') : !i.startsWith('@'),
         );
 
         // If it's an organisation module, loop through all the modules of that organisation
         if (isOrganisationModule) {
           await Promise.all(
-            modules.map(async item => {
+            modules.map(async (item) => {
               let orgDirPath = path.join(modulesDir, item);
               let orgDirContent = (await fs.readdir(orgDirPath)).sort();
 
               // Add all org packages
-              potentialModules.push(...orgDirContent.map(i => `${item}/${i}`));
+              potentialModules.push(
+                ...orgDirContent.map((i) => `${item}/${i}`),
+              );
             }),
           );
         } else {
@@ -78,7 +80,7 @@ async function findAllFilesUp({
 |}): Promise<mixed> {
   let dirContent = (await fs.readdir(dir)).sort();
   return Promise.all(
-    dirContent.map(async item => {
+    dirContent.map(async (item) => {
       let fullPath = path.join(dir, item);
       let relativeFilePath = relativePath(basedir, fullPath, leadingDotSlash);
       if (relativeFilePath.length < maxlength) {
@@ -135,7 +137,7 @@ export async function findAlternativeFiles(
   });
 
   if (path.extname(fileSpecifier) === '' && !includeExtension) {
-    potentialFiles = potentialFiles.map(p => {
+    potentialFiles = potentialFiles.map((p) => {
       let ext = path.extname(p);
       return ext.length > 0 ? p.slice(0, -ext.length) : p;
     });

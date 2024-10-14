@@ -293,7 +293,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
   replaceNodeIdsConnectedTo(
     fromNodeId: NodeId,
     toNodeIds: $ReadOnlyArray<NodeId>,
-    replaceFilter?: null | (NodeId => boolean),
+    replaceFilter?: null | ((NodeId) => boolean),
     type?: TEdgeType | NullEdgeType = 1,
   ): void {
     this._assertHasNodeId(fromNodeId);
@@ -301,7 +301,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
     let outboundEdges = this.getNodeIdsConnectedFrom(fromNodeId, type);
     let childrenToRemove = new Set(
       replaceFilter
-        ? outboundEdges.filter(toNodeId => replaceFilter(toNodeId))
+        ? outboundEdges.filter((toNodeId) => replaceFilter(toNodeId))
         : outboundEdges,
     );
     for (let toNodeId of toNodeIds) {
@@ -337,7 +337,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
       return this.dfs({
         visit,
         startNodeId,
-        getChildren: nodeId => this.getNodeIdsConnectedFrom(nodeId, type),
+        getChildren: (nodeId) => this.getNodeIdsConnectedFrom(nodeId, type),
       });
     }
   }
@@ -363,7 +363,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
     return this.dfs({
       visit,
       startNodeId,
-      getChildren: nodeId => this.getNodeIdsConnectedTo(nodeId, type),
+      getChildren: (nodeId) => this.getNodeIdsConnectedTo(nodeId, type),
     });
   }
 
@@ -421,7 +421,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
         return context;
       }
 
-      this.adjacencyList.forEachNodeIdConnectedFromReverse(nodeId, child => {
+      this.adjacencyList.forEachNodeIdConnectedFromReverse(nodeId, (child) => {
         if (!visited.has(child)) {
           queue.push({nodeId: child, context});
         }
@@ -473,12 +473,15 @@ export default class Graph<TNode, TEdgeType: number = 1> {
       if (!visited.has(nodeId)) {
         visited.add(nodeId);
 
-        this.adjacencyList.forEachNodeIdConnectedFromReverse(nodeId, child => {
-          if (!visited.has(child)) {
-            queue.push(child);
-          }
-          return false;
-        });
+        this.adjacencyList.forEachNodeIdConnectedFromReverse(
+          nodeId,
+          (child) => {
+            if (!visited.has(child)) {
+              queue.push(child);
+            }
+            return false;
+          },
+        );
       } else {
         queue.pop();
         visit(nodeId, null, actions);
@@ -633,7 +636,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
     let sorted: Array<NodeId> = [];
     this.traverse(
       {
-        exit: nodeId => {
+        exit: (nodeId) => {
           sorted.push(nodeId);
         },
       },

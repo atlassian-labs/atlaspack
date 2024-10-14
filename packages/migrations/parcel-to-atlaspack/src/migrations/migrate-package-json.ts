@@ -30,7 +30,7 @@ export async function migratePackageJson({
 
   const packageJsonPaths = await new fdir()
     .withFullPaths()
-    .exclude(dir => dir.startsWith('node_modules'))
+    .exclude((dir) => dir.startsWith('node_modules'))
     .filter((path: string) => basename(path) === 'package.json')
     .crawl(cwd)
     .withPromise();
@@ -38,7 +38,7 @@ export async function migratePackageJson({
   const modifiedFiles = [];
 
   await Promise.all(
-    packageJsonPaths.map(async packageJsonPath => {
+    packageJsonPaths.map(async (packageJsonPath) => {
       const rawPackageJson = await readFile(packageJsonPath, 'utf8');
       if (!rawPackageJson.includes('parcel')) {
         return;

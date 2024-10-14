@@ -7,25 +7,25 @@ use atlaspack_core::plugin::NamerPlugin;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::types::Bundle;
 
-pub struct RpcNamerPlugin {
+pub struct NodejsRpcNamerPlugin {
   _name: String,
 }
 
-impl Debug for RpcNamerPlugin {
+impl Debug for NodejsRpcNamerPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "RpcNamerPlugin")
   }
 }
 
-impl RpcNamerPlugin {
+impl NodejsRpcNamerPlugin {
   pub fn new(_ctx: &PluginContext, plugin: &PluginNode) -> Result<Self, anyhow::Error> {
-    Ok(RpcNamerPlugin {
+    Ok(NodejsRpcNamerPlugin {
       _name: plugin.package_name.clone(),
     })
   }
 }
 
-impl NamerPlugin for RpcNamerPlugin {
+impl NamerPlugin for NodejsRpcNamerPlugin {
   fn name(
     &self,
     _bundle: &Bundle,

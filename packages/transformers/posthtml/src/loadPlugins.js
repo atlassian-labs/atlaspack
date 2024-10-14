@@ -11,7 +11,7 @@ export default async function loadExternalPlugins(
   if (Array.isArray(plugins)) {
     return Promise.all(
       plugins
-        .map(p =>
+        .map((p) =>
           loadPlugin(
             p,
             relative,
@@ -25,7 +25,7 @@ export default async function loadExternalPlugins(
   } else if (typeof plugins === 'object') {
     let _plugins = plugins;
     let mapPlugins = await Promise.all(
-      Object.keys(plugins).map(p =>
+      Object.keys(plugins).map((p) =>
         loadPlugin(
           p,
           relative,

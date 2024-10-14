@@ -86,7 +86,7 @@ export default class PublicConfig implements IConfig {
     this.#config.devDeps.push({
       ...devDep,
       resolveFrom: toProjectPath(this.#options.projectRoot, devDep.resolveFrom),
-      additionalInvalidations: devDep.additionalInvalidations?.map(i => ({
+      additionalInvalidations: devDep.additionalInvalidations?.map((i) => ({
         ...i,
         resolveFrom: toProjectPath(this.#options.projectRoot, i.resolveFrom),
       })),

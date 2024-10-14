@@ -47,10 +47,10 @@ async function logUncaughtError(e: mixed) {
   }
 
   // A hack to definitely ensure we logged the uncaught exception
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 100));
 }
 
-const handleUncaughtException = async exception => {
+const handleUncaughtException = async (exception) => {
   try {
     await logUncaughtError(exception);
   } catch (err) {
@@ -100,7 +100,7 @@ const commonOptions = {
     'set the root watch directory. defaults to nearest lockfile or source control dir.',
   '--watch-ignore [path]': [
     `list of directories watcher should not be tracking for changes. defaults to ['.git', '.hg']`,
-    dirs => dirs.split(','),
+    (dirs) => dirs.split(','),
   ],
   '--watch-backend': new commander.Option(
     '--watch-backend <name>',
@@ -245,7 +245,7 @@ function makeDebugCommand() {
         if (entries.length === 0) {
           entries = ['.'];
         }
-        entries = entries.map(entry => path.resolve(entry));
+        entries = entries.map((entry) => path.resolve(entry));
 
         Object.assign(command, opts);
 
@@ -283,7 +283,7 @@ program
   .command('help [command]')
   .description('display help information for a command')
   .action(function (command) {
-    let cmd = program.commands.find(c => c.name() === command) || program;
+    let cmd = program.commands.find((c) => c.name() === command) || program;
     cmd.help();
   });
 
@@ -312,7 +312,7 @@ commander.Command.prototype.optionMissingArgument = function (option) {
 var args = process.argv;
 if (args[2] === '--help' || args[2] === '-h') args[2] = 'help';
 
-if (!args[2] || !program.commands.some(c => c.name() === args[2])) {
+if (!args[2] || !program.commands.some((c) => c.name() === args[2])) {
   args.splice(2, 0, 'serve');
 }
 
@@ -331,7 +331,7 @@ async function run(
     entries = ['.'];
   }
 
-  entries = entries.map(entry => path.resolve(entry));
+  entries = entries.map((entry) => path.resolve(entry));
 
   let Atlaspack = require('@atlaspack/core').default;
   let fs = new NodeFS();
@@ -413,7 +413,7 @@ async function run(
   }
 
   if (isWatching) {
-    ({unsubscribe} = await atlaspack.watch(err => {
+    ({unsubscribe} = await atlaspack.watch((err) => {
       if (err) {
         throw err;
       }
@@ -567,7 +567,7 @@ async function normalizeOptions(
 
   let additionalReporters = [
     {packageName: '@atlaspack/reporter-cli', resolveFrom: __filename},
-    ...(command.reporter: Array<string>).map(packageName => ({
+    ...(command.reporter: Array<string>).map((packageName) => ({
       packageName,
       resolveFrom: path.join(inputFS.cwd(), 'index'),
     })),
@@ -586,7 +586,7 @@ async function normalizeOptions(
 
   const normalizeIncludeExcludeList = (input?: string): string[] => {
     if (typeof input !== 'string') return [];
-    return input.split(',').map(value => value.trim());
+    return input.split(',').map((value) => value.trim());
   };
 
   return {

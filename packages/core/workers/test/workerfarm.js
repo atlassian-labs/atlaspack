@@ -44,7 +44,7 @@ describe('WorkerFarm', function () {
       assert.equal(await workerfarm.run(i), i);
     }
 
-    await new Promise(resolve => workerfarm.once('warmedup', resolve));
+    await new Promise((resolve) => workerfarm.once('warmedup', resolve));
 
     assert(workerfarm.workers.size > 0, 'Should have spawned workers.');
     assert(
@@ -134,7 +134,7 @@ describe('WorkerFarm', function () {
 
   it('Forwards stdio from the child process and levels event source if shouldPatchConsole is true', async () => {
     let events = [];
-    let logDisposable = Logger.onLog(event => events.push(event));
+    let logDisposable = Logger.onLog((event) => events.push(event));
 
     let workerfarm = new WorkerFarm({
       warmWorkers: true,
@@ -209,7 +209,7 @@ describe('WorkerFarm', function () {
 
   it('Forwards logger events to the main process', async () => {
     let events = [];
-    let logDisposable = Logger.onLog(event => events.push(event));
+    let logDisposable = Logger.onLog((event) => events.push(event));
 
     let workerfarm = new WorkerFarm({
       warmWorkers: true,

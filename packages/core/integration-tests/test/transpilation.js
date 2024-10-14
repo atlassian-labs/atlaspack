@@ -364,14 +364,14 @@ describe.v2('transpilation', function () {
     );
 
     let file = await outputFS.readFile(
-      nullthrows(b.getBundles().find(b => b.env.outputFormat === 'commonjs'))
+      nullthrows(b.getBundles().find((b) => b.env.outputFormat === 'commonjs'))
         .filePath,
       'utf8',
     );
     assert(file.includes('@swc/helpers/cjs/_class_call_check.cjs'));
 
     file = await outputFS.readFile(
-      nullthrows(b.getBundles().find(b => b.env.outputFormat === 'esmodule'))
+      nullthrows(b.getBundles().find((b) => b.env.outputFormat === 'esmodule'))
         .filePath,
       'utf8',
     );

@@ -8,25 +8,25 @@ use atlaspack_core::plugin::RuntimeAsset;
 use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::types::Bundle;
 
-pub struct RpcRuntimePlugin {
+pub struct NodejsRpcRuntimePlugin {
   _name: String,
 }
 
-impl Debug for RpcRuntimePlugin {
+impl Debug for NodejsRpcRuntimePlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "RpcRuntimePlugin")
   }
 }
 
-impl RpcRuntimePlugin {
+impl NodejsRpcRuntimePlugin {
   pub fn new(_ctx: &PluginContext, plugin: &PluginNode) -> Result<Self, anyhow::Error> {
-    Ok(RpcRuntimePlugin {
+    Ok(NodejsRpcRuntimePlugin {
       _name: plugin.package_name.clone(),
     })
   }
 }
 
-impl RuntimePlugin for RpcRuntimePlugin {
+impl RuntimePlugin for NodejsRpcRuntimePlugin {
   fn apply(
     &self,
     _bundle: Bundle,

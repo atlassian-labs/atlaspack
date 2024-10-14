@@ -167,7 +167,7 @@ describe('NodePackageManager', function () {
           path.join(FIXTURES_DIR, 'has-a-not-yet-installed/index.js'),
           {shouldAutoInstall: true},
         ),
-      err => {
+      (err) => {
         invariant(err instanceof ThrowableDiagnostic);
         assert(err.message.includes('Run your package manager'));
         return true;
@@ -258,7 +258,7 @@ describe('NodePackageManager', function () {
               range: '^2.0.0',
             },
           ),
-        err => {
+        (err) => {
           invariant(err instanceof ThrowableDiagnostic);
           assert.equal(
             err.message,
@@ -370,7 +370,7 @@ describe('NodePackageManager', function () {
               shouldAutoInstall: true,
             },
           ),
-        err => {
+        (err) => {
           assert(err instanceof ThrowableDiagnostic);
           assert.equal(
             err.message,

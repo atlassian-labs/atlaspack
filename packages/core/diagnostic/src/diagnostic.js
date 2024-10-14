@@ -114,7 +114,7 @@ export type Diagnostifiable =
 /** Normalize the given value into a diagnostic. */
 export function anyToDiagnostic(input: Diagnostifiable): Array<Diagnostic> {
   if (Array.isArray(input)) {
-    return input.flatMap(e => anyToDiagnostic(e));
+    return input.flatMap((e) => anyToDiagnostic(e));
   } else if (input instanceof ThrowableDiagnostic) {
     return input.diagnostics;
   } else if (input instanceof Error) {
@@ -148,7 +148,7 @@ export function errorToDiagnostic(
   }
 
   if (error instanceof ThrowableDiagnostic) {
-    return error.diagnostics.map(d => {
+    return error.diagnostics.map((d) => {
       return {
         ...d,
         origin: d.origin ?? defaultValues?.origin ?? 'unknown',

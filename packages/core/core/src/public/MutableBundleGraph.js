@@ -55,13 +55,13 @@ export default class MutableBundleGraph
   addAssetGraphToBundle(
     asset: IAsset,
     bundle: IBundle,
-    shouldSkipDependency?: IDependency => boolean,
+    shouldSkipDependency?: (IDependency) => boolean,
   ) {
     this.#graph.addAssetGraphToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
       shouldSkipDependency
-        ? d => shouldSkipDependency(new Dependency(d, this.#options))
+        ? (d) => shouldSkipDependency(new Dependency(d, this.#options))
         : undefined,
     );
   }
@@ -69,13 +69,13 @@ export default class MutableBundleGraph
   addEntryToBundle(
     asset: IAsset,
     bundle: IBundle,
-    shouldSkipDependency?: IDependency => boolean,
+    shouldSkipDependency?: (IDependency) => boolean,
   ) {
     this.#graph.addEntryToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
       shouldSkipDependency
-        ? d => shouldSkipDependency(new Dependency(d, this.#options))
+        ? (d) => shouldSkipDependency(new Dependency(d, this.#options))
         : undefined,
     );
   }
@@ -194,7 +194,7 @@ export default class MutableBundleGraph
       return Bundle.get(existing.value, this.#graph, this.#options);
     }
 
-    let publicId = getPublicId(bundleId, existing =>
+    let publicId = getPublicId(bundleId, (existing) =>
       this.#bundlePublicIds.has(existing),
     );
     this.#bundlePublicIds.add(publicId);
@@ -283,13 +283,13 @@ export default class MutableBundleGraph
   getDependencyAssets(dependency: IDependency): Array<IAsset> {
     return this.#graph
       .getDependencyAssets(dependencyToInternalDependency(dependency))
-      .map(asset => assetFromValue(asset, this.#options));
+      .map((asset) => assetFromValue(asset, this.#options));
   }
 
   getBundleGroupsContainingBundle(bundle: IBundle): Array<IBundleGroup> {
     return this.#graph
       .getBundleGroupsContainingBundle(bundleToInternalBundle(bundle))
-      .map(bundleGroup => new BundleGroup(bundleGroup, this.#options));
+      .map((bundleGroup) => new BundleGroup(bundleGroup, this.#options));
   }
 
   getParentBundlesOfBundleGroup(bundleGroup: IBundleGroup): Array<IBundle> {
@@ -297,7 +297,7 @@ export default class MutableBundleGraph
       .getParentBundlesOfBundleGroup(
         bundleGroupToInternalBundleGroup(bundleGroup),
       )
-      .map(bundle => Bundle.get(bundle, this.#graph, this.#options));
+      .map((bundle) => Bundle.get(bundle, this.#graph, this.#options));
   }
 
   getTotalSize(asset: IAsset): number {

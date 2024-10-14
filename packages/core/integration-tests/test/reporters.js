@@ -78,7 +78,7 @@ describe('reporters', () => {
       } catch (err) {
         assert.equal(err.name, 'Error');
         assert.deepEqual(
-          err.diagnostics.map(d => d.message),
+          err.diagnostics.map((d) => d.message),
           ['Cannot find Atlaspack plugin "./test-reporter"'],
         );
       }
@@ -92,7 +92,7 @@ describe('reporters', () => {
       } catch (err) {
         assert.equal(err.name, 'BuildError');
         assert.deepEqual(
-          err.diagnostics.map(d => d.message),
+          err.diagnostics.map((d) => d.message),
           ['Failed to report buildSuccess'],
         );
       }

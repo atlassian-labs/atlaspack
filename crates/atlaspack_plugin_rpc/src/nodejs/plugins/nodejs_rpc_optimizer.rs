@@ -7,25 +7,25 @@ use atlaspack_core::plugin::OptimizedBundle;
 use atlaspack_core::plugin::OptimizerPlugin;
 use atlaspack_core::plugin::PluginContext;
 
-pub struct RpcOptimizerPlugin {
+pub struct NodejsRpcOptimizerPlugin {
   _name: String,
 }
 
-impl Debug for RpcOptimizerPlugin {
+impl Debug for NodejsRpcOptimizerPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "RpcOptimizerPlugin")
   }
 }
 
-impl RpcOptimizerPlugin {
+impl NodejsRpcOptimizerPlugin {
   pub fn new(_ctx: &PluginContext, plugin: &PluginNode) -> Result<Self, anyhow::Error> {
-    Ok(RpcOptimizerPlugin {
+    Ok(NodejsRpcOptimizerPlugin {
       _name: plugin.package_name.clone(),
     })
   }
 }
 
-impl OptimizerPlugin for RpcOptimizerPlugin {
+impl OptimizerPlugin for NodejsRpcOptimizerPlugin {
   fn optimize(&self, _ctx: OptimizeContext) -> Result<OptimizedBundle, anyhow::Error> {
     todo!()
   }

@@ -154,7 +154,7 @@ export default class AtlaspackConfig {
   loadPlugins<T>(
     plugins: PureAtlaspackConfigPipeline,
   ): Promise<Array<LoadedPlugin<T>>> {
-    return Promise.all(plugins.map(p => this.loadPlugin<T>(p)));
+    return Promise.all(plugins.map((p) => this.loadPlugin<T>(p)));
   }
 
   async getResolvers(): Promise<Array<LoadedPlugin<Resolver<mixed>>>> {
@@ -181,7 +181,7 @@ export default class AtlaspackConfig {
   getValidatorNames(filePath: ProjectPath): Array<string> {
     let validators: PureAtlaspackConfigPipeline =
       this._getValidatorNodes(filePath);
-    return validators.map(v => v.packageName);
+    return validators.map((v) => v.packageName);
   }
 
   getValidators(
@@ -193,8 +193,8 @@ export default class AtlaspackConfig {
 
   getNamedPipelines(): $ReadOnlyArray<string> {
     return Object.keys(this.transformers)
-      .filter(glob => glob.includes(':'))
-      .map(glob => glob.split(':')[0]);
+      .filter((glob) => glob.includes(':'))
+      .map((glob) => glob.split(':')[0]);
   }
 
   async getTransformers(
@@ -278,7 +278,9 @@ export default class AtlaspackConfig {
     // Pipelines for bundles come from their entry assets, so the pipeline likely exists in transformers.
     if (pipeline) {
       let prefix = pipeline + ':';
-      if (!Object.keys(this.optimizers).some(glob => glob.startsWith(prefix))) {
+      if (
+        !Object.keys(this.optimizers).some((glob) => glob.startsWith(prefix))
+      ) {
         pipeline = null;
       }
     }
@@ -294,7 +296,7 @@ export default class AtlaspackConfig {
 
   getOptimizerNames(filePath: FilePath, pipeline: ?string): Array<string> {
     let optimizers = this._getOptimizerNodes(filePath, pipeline);
-    return optimizers.map(o => o.packageName);
+    return optimizers.map((o) => o.packageName);
   }
 
   getOptimizers(
@@ -435,7 +437,7 @@ export default class AtlaspackConfig {
       configsWithPlugin = new Set(getConfigPaths(this.options, plugins));
     } else {
       configsWithPlugin = new Set(
-        Object.keys(plugins).flatMap(k =>
+        Object.keys(plugins).flatMap((k) =>
           Array.isArray(plugins[k])
             ? getConfigPaths(this.options, plugins[k])
             : [getConfigPath(this.options, plugins[k])],
@@ -451,7 +453,7 @@ export default class AtlaspackConfig {
 
     let seenKey = false;
     let codeFrames = await Promise.all(
-      [...configsWithPlugin].map(async filePath => {
+      [...configsWithPlugin].map(async (filePath) => {
         let configContents = await this.options.inputFS.readFile(
           filePath,
           'utf8',
@@ -481,7 +483,7 @@ export default class AtlaspackConfig {
 
 function getConfigPaths(options, nodes) {
   return nodes
-    .map(node => (node !== '...' ? getConfigPath(options, node) : null))
+    .map((node) => (node !== '...' ? getConfigPath(options, node) : null))
     .filter(Boolean);
 }
 

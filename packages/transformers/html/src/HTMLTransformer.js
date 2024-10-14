@@ -49,7 +49,7 @@ export const transformerOpts: TransformerOpts<void> = {
     } catch (errors) {
       if (Array.isArray(errors)) {
         throw new ThrowableDiagnostic({
-          diagnostic: errors.map(error => ({
+          diagnostic: errors.map((error) => ({
             message: error.message,
             origin: '@atlaspack/transformer-html',
             codeFrames: [
@@ -122,7 +122,7 @@ function findFirstMatch(
   let found;
 
   for (const expression of expressions) {
-    PostHTML().match.call(ast.program, expression, node => {
+    PostHTML().match.call(ast.program, expression, (node) => {
       found = node;
       return node;
     });

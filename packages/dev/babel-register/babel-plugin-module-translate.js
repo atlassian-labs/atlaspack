@@ -64,7 +64,7 @@ module.exports = ({types: t}) => ({
         } catch (e) {
           let exprStmtParent = path
             .getAncestry()
-            .find(v => v.isExpressionStatement());
+            .find((v) => v.isExpressionStatement());
           if (exprStmtParent) {
             exprStmtParent.replaceWith(
               t.throwStatement(t.stringLiteral(e.message)),

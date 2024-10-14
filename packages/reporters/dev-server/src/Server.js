@@ -118,17 +118,17 @@ export default class Server {
   async buildError(options: PluginOptions, diagnostics: Array<Diagnostic>) {
     this.pending = false;
     this.errors = await Promise.all(
-      diagnostics.map(async d => {
+      diagnostics.map(async (d) => {
         let ansiDiagnostic = await prettyDiagnostic(d, options);
 
         return {
           message: ansiHtml(ansiDiagnostic.message),
           stack: ansiDiagnostic.stack ? ansiHtml(ansiDiagnostic.stack) : null,
-          frames: ansiDiagnostic.frames.map(f => ({
+          frames: ansiDiagnostic.frames.map((f) => ({
             location: f.location,
             code: ansiHtml(f.code),
           })),
-          hints: ansiDiagnostic.hints.map(hint => ansiHtml(hint)),
+          hints: ansiDiagnostic.hints.map((hint) => ansiHtml(hint)),
           documentation: d.documentationURL ?? '',
         };
       }),
@@ -136,7 +136,7 @@ export default class Server {
   }
 
   respond(req: Request, res: Response): mixed {
-    if (this.middleware.some(handler => handler(req, res))) return;
+    if (this.middleware.some((handler) => handler(req, res))) return;
     let {pathname, search} = url.parse(req.originalUrl || req.url);
     if (pathname == null) {
       pathname = '/';
@@ -186,8 +186,8 @@ export default class Server {
       // If the main asset is an HTML file, serve it
       let htmlBundleFilePaths = this.bundleGraph
         .getBundles()
-        .filter(bundle => path.posix.extname(bundle.name) === '.html')
-        .map(bundle => {
+        .filter((bundle) => path.posix.extname(bundle.name) === '.html')
+        .map((bundle) => {
           return `/${relativePath(
             this.options.distDir,
             bundle.filePath,
@@ -270,7 +270,7 @@ export default class Server {
       let bundle = bundleGraph
         .getBundles()
         .find(
-          b =>
+          (b) =>
             path.relative(this.options.distDir, b.filePath) === requestedPath,
         );
       if (!bundle) {
@@ -370,10 +370,10 @@ export default class Server {
         cleanUrls: false,
       },
       {
-        lstat: path => fs.stat(path),
-        realpath: path => fs.realpath(path),
+        lstat: (path) => fs.stat(path),
+        realpath: (path) => fs.realpath(path),
         createReadStream: (path, options) => fs.createReadStream(path, options),
-        readdir: path => fs.readdir(path),
+        readdir: (path) => fs.readdir(path),
       },
     );
   }
@@ -521,7 +521,7 @@ export default class Server {
 
     server.listen(this.options.port, this.options.host);
     return new Promise((resolve, reject) => {
-      server.once('error', err => {
+      server.once('error', (err) => {
         this.options.logger.error(
           ({
             message: serverErrors(err, this.options.port),

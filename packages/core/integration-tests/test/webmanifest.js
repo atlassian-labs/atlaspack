@@ -44,7 +44,7 @@ describe.v2('webmanifest', function () {
     ]);
 
     const manifest = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'webmanifest').filePath,
+      b.getBundles().find((b) => b.type === 'webmanifest').filePath,
       'utf8',
     );
     assert(/screenshot\.[0-9a-f]+\.png/.test(manifest));
@@ -86,7 +86,7 @@ describe.v2('webmanifest', function () {
     ]);
 
     const manifest = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'webmanifest').filePath,
+      b.getBundles().find((b) => b.type === 'webmanifest').filePath,
       'utf8',
     );
     assert(/screenshot\.[0-9a-f]+\.png/.test(manifest));

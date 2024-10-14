@@ -19,7 +19,7 @@ type NamedExportBindings = any;
 
 const [majorVersion, minorVersion] = ts.versionMajorMinor
   .split('.')
-  .map(num => parseInt(num, 10));
+  .map((num) => parseInt(num, 10));
 
 // Everything below was generated using https://github.com/mischnic/tsc-version-wrapper
 

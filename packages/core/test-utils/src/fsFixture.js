@@ -258,9 +258,9 @@ export class FixtureParser {
   #cwd: FixtureRoot | FixtureDir;
   #dirStack: Array<FixtureRoot | FixtureDir>;
 
-  #peek = type => this.#tokens[this.#tokens.length - 1]?.type === type;
+  #peek = (type) => this.#tokens[this.#tokens.length - 1]?.type === type;
 
-  #consume = type => {
+  #consume = (type) => {
     let token = this.#tokens.pop();
     if (token?.type !== type) {
       throw new Error(
@@ -352,7 +352,7 @@ export class FixtureRoot {
   type: 'root' = 'root';
   children: Array<FixtureChild> = [];
   toString(): string {
-    return this.children.map(child => child.toString()).join('\n');
+    return this.children.map((child) => child.toString()).join('\n');
   }
 }
 
@@ -366,11 +366,11 @@ export class FixtureDir {
   toString(): string {
     return [this.name]
       .concat(
-        this.children.flatMap(child =>
+        this.children.flatMap((child) =>
           child
             .toString()
             .split('\n')
-            .map(line => `  ${line}`),
+            .map((line) => `  ${line}`),
         ),
       )
       .join('\n');
@@ -387,7 +387,7 @@ export class FixtureFile {
   }
   toString(): string {
     return [`${this.name}:`]
-      .concat(this.content.split('\n').map(line => `  ${line}`))
+      .concat(this.content.split('\n').map((line) => `  ${line}`))
       .join('\n');
   }
 }

@@ -75,7 +75,7 @@ const MIME = new Map([
 // listen here instead of attaching temporary 'message' event listeners to self
 let messageProxy = new EventTarget();
 
-self.addEventListener('message', evt => {
+self.addEventListener('message', (evt) => {
   let parentId = evt.source.id;
   let {type, data, id} = evt.data;
   if (type === 'setFS') {
@@ -102,7 +102,7 @@ self.addEventListener('message', evt => {
 
 let encodeUTF8 = new TextEncoder();
 
-self.addEventListener('fetch', evt => {
+self.addEventListener('fetch', (evt) => {
   let url = new URL(evt.request.url);
   let {clientId} = evt;
   let parentId;
@@ -124,8 +124,8 @@ self.addEventListener('fetch', evt => {
       url.pathname === '/__parcel_hmr'
     ) {
       let stream = new ReadableStream({
-        start: controller => {
-          let cb = data => {
+        start: (controller) => {
+          let cb = (data) => {
             let chunk = `data: ${JSON.stringify(data)}\n\n`;
             controller.enqueue(encodeUTF8.encode(chunk));
           };
@@ -203,7 +203,9 @@ function removeNonExistingKeys(existing, map) {
   }
 }
 setInterval(async () => {
-  let existingClients = new Set((await self.clients.matchAll()).map(c => c.id));
+  let existingClients = new Set(
+    (await self.clients.matchAll()).map((c) => c.id),
+  );
 
   removeNonExistingKeys(existingClients, pages);
   removeNonExistingKeys(existingClients, sendToIFrame);
@@ -213,7 +215,7 @@ setInterval(async () => {
 
 function sendMsg(target, type, data, transfer) {
   let id = uuidv4();
-  return new Promise(res => {
+  return new Promise((res) => {
     let handler = (evt: MessageEvent) => {
       // $FlowFixMe
       if (evt.data.id === id) {

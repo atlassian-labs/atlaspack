@@ -48,7 +48,7 @@ describe('ConfigRequest tests', () => {
       invalidateOnFileUpdate: sinon.spy(),
       invalidateOnOptionChange: sinon.spy(),
       invalidateOnStartup: sinon.spy(),
-      runRequest: sinon.spy(request => {
+      runRequest: sinon.spy((request) => {
         return request.run({
           api: mockRunApi,
           options,

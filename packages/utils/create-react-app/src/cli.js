@@ -27,8 +27,8 @@ program
   .name('create-react-app')
   .version(version)
   .arguments('<path-to-new-app>')
-  .action(command => {
-    run(command).catch(reason => {
+  .action((command) => {
+    run(command).catch((reason) => {
       // eslint-disable-next-line no-console
       console.error(chalk`${emoji.error} {red ${reason.message}}`);
       process.exit(1);

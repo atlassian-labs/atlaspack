@@ -53,7 +53,7 @@ describe('PromiseQueue', () => {
     let error = new Error('Oh no!');
     let promise = queue.add(() => Promise.reject(error));
     await queue.run().catch(() => null);
-    await promise.then(null, e => assert.equal(e, error));
+    await promise.then(null, (e) => assert.equal(e, error));
   });
 
   it('constructor() should allow for configuration of max concurrent running functions', async () => {

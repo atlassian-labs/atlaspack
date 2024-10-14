@@ -32,7 +32,7 @@ module.exports = new Optimizer<empty, BundleConfig>({
       bundle.name,
     );
 
-    bundleGraph.traverse(node => {
+    bundleGraph.traverse((node) => {
       if (node.type === 'asset' && node.value.sideEffects) {
         const publicId = bundleGraph.getAssetPublicId(node.value);
         let sideEffectsMap = nullthrows(assetPublicIdsWithSideEffects);
