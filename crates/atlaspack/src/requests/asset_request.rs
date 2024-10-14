@@ -116,14 +116,16 @@ pub fn run_pipelines(
   )) = asset_queue.pop_front()
   {
     let original_asset_type = asset_to_modify.file_type.clone();
-    let (mut pipeline, pipeline_hash) = if let Some(pipeline_info) = pipeline {
+    let (mut pipeline, pipeline_id) = if let Some(pipeline_info) = pipeline {
       pipeline_info
     } else {
-      let pipeline =
-        plugins.transformers(&asset_to_modify.file_path, asset_to_modify.pipeline.clone())?;
-      let pipeline_hash = pipeline.id();
+      let mut file_path = asset_to_modify.file_path.clone();
+      file_path.set_extension(asset_to_modify.file_type.extension());
 
-      (pipeline, pipeline_hash)
+      let pipeline = plugins.transformers(&file_path, asset_to_modify.pipeline.clone())?;
+      let pipeline_id = pipeline.id();
+
+      (pipeline, pipeline_id)
     };
 
     let mut current_asset = asset_to_modify.clone();
@@ -147,15 +149,16 @@ pub fn run_pipelines(
       if is_different_asset_type {
         let next_pipeline =
           plugins.transformers(&current_asset.file_path, current_asset.pipeline.clone())?;
-        let next_pipeline_hash = next_pipeline.id();
 
-        if next_pipeline_hash != pipeline_hash {
+        let next_pipeline_id = next_pipeline.id();
+
+        if next_pipeline_id != pipeline_id {
           asset_queue.push_front((
             AssetWithDependencies {
               asset: current_asset.clone(),
               dependencies: current_dependencies.clone(),
             },
-            Some((next_pipeline, next_pipeline_hash)),
+            Some((next_pipeline, next_pipeline_id)),
           ));
           break;
         }
@@ -192,13 +195,15 @@ mod tests {
   use atlaspack_core::hash::IdentifierHasher;
   use atlaspack_core::plugin::MockTransformerPlugin;
   use atlaspack_core::types::Code;
+  use atlaspack_core::types::FileType;
   use std::hash::Hasher;
   use std::path::Path;
 
-  fn make_asset(file_path: &str) -> Asset {
+  fn make_asset(file_path: &str, file_type: FileType) -> Asset {
     let mut asset = Asset::default();
 
     asset.file_path = PathBuf::from(file_path);
+    asset.file_type = file_type;
 
     asset
   }
@@ -242,7 +247,7 @@ mod tests {
         ]))
       });
 
-    let asset = make_asset("index.js");
+    let asset = make_asset("index.js", FileType::Js);
     let expected_invalidations = vec![PathBuf::from("./tmp")];
     let context = TransformContext::default();
     let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
@@ -266,7 +271,7 @@ mod tests {
         ]))
       });
 
-    let asset = make_asset("index.js");
+    let asset = make_asset("index.js", FileType::Js);
     let expected_dependencies = vec![Dependency::default()];
     let context = TransformContext::default();
     let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
@@ -278,6 +283,7 @@ mod tests {
   #[test]
   fn test_run_pipelines_with_discovered_assets() {
     let mut plugins = MockPlugins::new();
+
     plugins
       .expect_transformers()
       .withf(|path: &Path, _pipeline: &Option<String>| {
@@ -289,7 +295,7 @@ mod tests {
           make_transformer(
             "js-2",
             Some(vec![AssetWithDependencies {
-              asset: make_asset("discovered.css"),
+              asset: make_asset("discovered.css", FileType::Css),
               dependencies: vec![Dependency::default()],
             }]),
             None,
@@ -297,6 +303,7 @@ mod tests {
           ),
         ]))
       });
+
     plugins
       .expect_transformers()
       .withf(|path: &Path, _pipeline: &Option<String>| {
@@ -309,7 +316,7 @@ mod tests {
         ]))
       });
 
-    let asset = make_asset("index.js");
+    let asset = make_asset("index.js", FileType::Js);
     let context = TransformContext::default();
     let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
 
