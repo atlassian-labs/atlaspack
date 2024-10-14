@@ -764,7 +764,7 @@ function setPop<T>(set: Set<T>): T {
 function outgoingDependencyNodesFromAsset(assetGraph, assetNode) {
   return dependencyNodesFromIds(
     assetGraph,
-    assetGraph.getNodeIdsConnectedTo(assetNode),
+    assetGraph.getNodeIdsConnectedFrom(assetNode),
   );
 }
 
