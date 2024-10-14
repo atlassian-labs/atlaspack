@@ -168,9 +168,11 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
         nodes.push(node);
       }
     } else if (assetGroups) {
-      nodes.push(
-        ...assetGroups.map(assetGroup => nodeFromAssetGroup(assetGroup)),
-      );
+      for (const assetGroup of assetGroups) {
+        // Adding nodes individually ensures we do not encounter a range stack size exceeded error
+        // when there are >100000 asset groups
+        nodes.push(nodeFromAssetGroup(assetGroup));
+      }
     }
     this.replaceNodeIdsConnectedTo(
       nullthrows(this.rootNodeId),
