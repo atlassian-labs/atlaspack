@@ -5,7 +5,7 @@
 import type {
   HMRAsset,
   HMRMessage,
-} from '@atlaspack/reporter-dev-server/src/HMRServer.js';
+} from '@atlaspack/reporter-dev-server/src/HMRServer';
 interface ParcelRequire {
   (string): mixed;
   cache: {|[string]: ParcelModule|};
