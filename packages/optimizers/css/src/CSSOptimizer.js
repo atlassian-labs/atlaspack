@@ -87,7 +87,7 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
     let unusedSymbols;
     if (bundle.env.shouldScopeHoist) {
       unusedSymbols = [];
-      bundle.traverseAssets(asset => {
+      bundle.traverseAssets((asset) => {
         if (
           asset.symbols.isCleared ||
           asset.meta.cssModulesCompiled === 'postcss'
@@ -103,7 +103,7 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
         let defaultImport = null;
         if (usedSymbols.has('default')) {
           let incoming = bundleGraph.getIncomingDependencies(asset);
-          defaultImport = incoming.find(d =>
+          defaultImport = incoming.find((d) =>
             d.symbols.hasExportSymbol('default'),
           );
           if (defaultImport) {

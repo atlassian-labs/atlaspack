@@ -47,7 +47,7 @@ export default (new Reporter({
               port: serveOptions.port,
               host: hmrOptions.host,
               devServer,
-              addMiddleware: handler => {
+              addMiddleware: (handler) => {
                 server?.middleware.push(handler);
               },
               logger,

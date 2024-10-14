@@ -401,8 +401,9 @@ describe('scope hoisting', function () {
       assert.strictEqual(output, 'foo bar');
 
       let contents = await outputFS.readFile(
-        b.getBundles().find(b => b.getMainEntry().filePath.endsWith('index.js'))
-          .filePath,
+        b
+          .getBundles()
+          .find((b) => b.getMainEntry().filePath.endsWith('index.js')).filePath,
         'utf8',
       );
       assert.match(contents, /output="foo bar"/);
@@ -828,7 +829,7 @@ describe('scope hoisting', function () {
 
     it.v2('supports live bindings across bundles', async function () {
       let b = await bundle(
-        ['a.html', 'b.html'].map(f =>
+        ['a.html', 'b.html'].map((f) =>
           path.join(
             __dirname,
             '/integration/scope-hoisting/es6/live-bindings-cross-bundle',
@@ -840,7 +841,7 @@ describe('scope hoisting', function () {
 
       let ctx = await runBundle(
         b,
-        b.getBundles().find(b => b.type === 'html'),
+        b.getBundles().find((b) => b.type === 'html'),
         {output: null},
         {require: false},
       );
@@ -1292,7 +1293,7 @@ describe('scope hoisting', function () {
             assets: ['a.js'],
           },
         ]);
-        for (let bundle of b.getBundles().filter(b => b.type === 'html')) {
+        for (let bundle of b.getBundles().filter((b) => b.type === 'html')) {
           let calls = [];
           await runBundle(b, bundle, {
             call(v) {
@@ -1347,7 +1348,7 @@ describe('scope hoisting', function () {
 
       let calls = [];
       let output = await run(b, {
-        sideEffect: v => {
+        sideEffect: (v) => {
           calls.push(v);
         },
       });
@@ -1372,7 +1373,7 @@ describe('scope hoisting', function () {
 
       let calls = [];
       let output = await run(b, {
-        sideEffect: v => {
+        sideEffect: (v) => {
           calls.push(v);
         },
       });
@@ -1492,7 +1493,7 @@ describe('scope hoisting', function () {
       assert(!contents.includes('method'));
     });
 
-    ['global', 'esmodule'].forEach(outputFormat => {
+    ['global', 'esmodule'].forEach((outputFormat) => {
       let targets = {
         default: {
           outputFormat,
@@ -1516,13 +1517,13 @@ describe('scope hoisting', function () {
           }
 
           let contents = await outputFS.readFile(
-            b.getBundles().find(b => b.name.startsWith('b1')).filePath,
+            b.getBundles().find((b) => b.name.startsWith('b1')).filePath,
             'utf8',
           );
           assert(!contents.includes('bar'));
 
           contents = await outputFS.readFile(
-            b.getBundles().find(b => b.name.startsWith('b2')).filePath,
+            b.getBundles().find((b) => b.name.startsWith('b2')).filePath,
             'utf8',
           );
           assert(!contents.includes('bar'));
@@ -1543,13 +1544,13 @@ describe('scope hoisting', function () {
           }
 
           let contents = await outputFS.readFile(
-            b.getBundles().find(b => b.name.startsWith('b1')).filePath,
+            b.getBundles().find((b) => b.name.startsWith('b1')).filePath,
             'utf8',
           );
           assert(!contents.includes('bar'));
 
           contents = await outputFS.readFile(
-            b.getBundles().find(b => b.name.startsWith('b2')).filePath,
+            b.getBundles().find((b) => b.name.startsWith('b2')).filePath,
             'utf8',
           );
           assert(!contents.includes('bar'));
@@ -1570,13 +1571,13 @@ describe('scope hoisting', function () {
           }
 
           let contents = await outputFS.readFile(
-            b.getBundles().find(b => b.name.startsWith('b1')).filePath,
+            b.getBundles().find((b) => b.name.startsWith('b1')).filePath,
             'utf8',
           );
           assert(!contents.includes('bar'));
 
           contents = await outputFS.readFile(
-            b.getBundles().find(b => b.name.startsWith('b2')).filePath,
+            b.getBundles().find((b) => b.name.startsWith('b2')).filePath,
             'utf8',
           );
           assert(!contents.includes('bar'));
@@ -1609,7 +1610,8 @@ describe('scope hoisting', function () {
         let contents = await outputFS.readFile(
           b
             .getBundles()
-            .find(b => b.getMainEntry().filePath.endsWith('async.js')).filePath,
+            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
+            .filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
@@ -1641,7 +1643,8 @@ describe('scope hoisting', function () {
         let contents = await outputFS.readFile(
           b
             .getBundles()
-            .find(b => b.getMainEntry().filePath.endsWith('async.js')).filePath,
+            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
+            .filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
@@ -1673,7 +1676,8 @@ describe('scope hoisting', function () {
         let contents = await outputFS.readFile(
           b
             .getBundles()
-            .find(b => b.getMainEntry().filePath.endsWith('async.js')).filePath,
+            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
+            .filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
@@ -1757,7 +1761,8 @@ describe('scope hoisting', function () {
         let contents = await outputFS.readFile(
           b
             .getBundles()
-            .find(b => b.getMainEntry().filePath.endsWith('async.js')).filePath,
+            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
+            .filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
@@ -1789,7 +1794,8 @@ describe('scope hoisting', function () {
         let contents = await outputFS.readFile(
           b
             .getBundles()
-            .find(b => b.getMainEntry().filePath.endsWith('async.js')).filePath,
+            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
+            .filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
@@ -1852,7 +1858,8 @@ describe('scope hoisting', function () {
         let contents = await outputFS.readFile(
           b
             .getBundles()
-            .find(b => b.getMainEntry().filePath.endsWith('async.js')).filePath,
+            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
+            .filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
@@ -3617,7 +3624,7 @@ describe('scope hoisting', function () {
 
         // Check constant export names are NOT present in the bundles
         assert(
-          constants.every(constant => !contents.includes(constant)),
+          constants.every((constant) => !contents.includes(constant)),
           `Bundle didn't inline constant values`,
         );
       }
@@ -3653,7 +3660,7 @@ describe('scope hoisting', function () {
 
         // Check constant export names are NOT present in the bundles
         assert(
-          constants.every(constant => !contents.includes(constant)),
+          constants.every((constant) => !contents.includes(constant)),
           `Bundle didn't inline constant values`,
         );
       }
@@ -5407,7 +5414,7 @@ describe('scope hoisting', function () {
 
     let value = [];
     await run(b, {
-      alert: v => value.push(v),
+      alert: (v) => value.push(v),
     });
     assert.deepEqual(value, ['other']);
   });
@@ -5489,7 +5496,7 @@ describe('scope hoisting', function () {
       path.join(__dirname, '/integration/worker-shared/index.js'),
     );
 
-    let mainBundle = b.getBundles().find(b => b.name === 'index.js');
+    let mainBundle = b.getBundles().find((b) => b.name === 'index.js');
     let contents = await outputFS.readFile(mainBundle.filePath, 'utf8');
     // We wrap for other reasons now, so this is broken
     assert(!contents.includes(`if (parcelRequire == null) {`));
@@ -5509,11 +5516,13 @@ describe('scope hoisting', function () {
     let sharedBundle = b
       .getBundles()
       .sort((a, b) => b.stats.size - a.stats.size)
-      .find(b => b.name !== 'index.js');
+      .find((b) => b.name !== 'index.js');
     let contents = await outputFS.readFile(sharedBundle.filePath, 'utf8');
     assert(contents.includes(`if (parcelRequire == null) {`));
 
-    let workerBundle = b.getBundles().find(b => b.name.startsWith('worker-b'));
+    let workerBundle = b
+      .getBundles()
+      .find((b) => b.name.startsWith('worker-b'));
     contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
     assert(
       contents.includes(
@@ -5665,7 +5674,7 @@ describe('scope hoisting', function () {
   it('can static import and dynamic import in the same bundle when another bundle requires async', async () => {
     let b = await bundle(
       ['same-bundle-scope-hoisting.js', 'get-dep-scope-hoisting.js'].map(
-        entry => path.join(__dirname, '/integration/sync-async/', entry),
+        (entry) => path.join(__dirname, '/integration/sync-async/', entry),
       ),
       {mode: 'production'},
     );
@@ -5697,9 +5706,9 @@ describe('scope hoisting', function () {
 
     let bundles = b.getBundles();
     let sameBundle = bundles.find(
-      b => b.name === 'same-bundle-scope-hoisting.js',
+      (b) => b.name === 'same-bundle-scope-hoisting.js',
     );
-    let getDep = bundles.find(b => b.name === 'get-dep-scope-hoisting.js');
+    let getDep = bundles.find((b) => b.name === 'get-dep-scope-hoisting.js');
 
     assert.deepEqual(await runBundle(b, sameBundle), [42, 42, 42]);
     assert.deepEqual(await runBundle(b, getDep), 42);
@@ -5757,7 +5766,7 @@ describe('scope hoisting', function () {
     'can run an entry bundle whose entry asset is present in another bundle',
     async () => {
       let b = await bundle(
-        ['index.js', 'value.js'].map(basename =>
+        ['index.js', 'value.js'].map((basename) =>
           path.join(__dirname, '/integration/sync-entry-shared', basename),
         ),
         {targets: {main: {context: 'node', distDir, isLibrary: true}}},
@@ -5800,7 +5809,7 @@ describe('scope hoisting', function () {
 
   it('can run an async bundle that depends on a nonentry asset in a sibling', async () => {
     let b = await bundle(
-      ['scope-hoisting.js', 'other-entry.js'].map(basename =>
+      ['scope-hoisting.js', 'other-entry.js'].map((basename) =>
         path.join(
           __dirname,
           '/integration/async-entry-shared-sibling',
@@ -5837,7 +5846,7 @@ describe('scope hoisting', function () {
         b,
         b
           .getBundles()
-          .find(bundle => bundle.name.includes('scope-hoisting.js')),
+          .find((bundle) => bundle.name.includes('scope-hoisting.js')),
       ),
       43,
     );
@@ -6026,7 +6035,7 @@ describe('scope hoisting', function () {
           if (waitMap.has(filePath)) {
             return Promise.resolve();
           }
-          return new Promise(resolve => {
+          return new Promise((resolve) => {
             waitMap.set(filePath, resolve);
           });
         }
@@ -6075,7 +6084,9 @@ describe('scope hoisting', function () {
 
         let bundleHashDelayFoo = b
           .getBundles()
-          .find(b => b.filePath.endsWith('.js') && b.filePath.includes('index'))
+          .find(
+            (b) => b.filePath.endsWith('.js') && b.filePath.includes('index'),
+          )
           .filePath.split('.')[1];
 
         let slowBarFS = new Proxy(overlayFS, waitHandler('bar.js', 'foo.js'));
@@ -6089,7 +6100,9 @@ describe('scope hoisting', function () {
 
         let bundleHashDelayBar = b2
           .getBundles()
-          .find(b => b.filePath.endsWith('.js') && b.filePath.includes('index'))
+          .find(
+            (b) => b.filePath.endsWith('.js') && b.filePath.includes('index'),
+          )
           .filePath.split('.')[1];
 
         assert.strictEqual(bundleHashDelayFoo, bundleHashDelayBar);
@@ -6164,14 +6177,14 @@ describe('scope hoisting', function () {
       );
 
       let contents = await outputFS.readFile(
-        b.getBundles().find(b => /index.*\.js/.test(b.filePath)).filePath,
+        b.getBundles().find((b) => /index.*\.js/.test(b.filePath)).filePath,
         'utf8',
       );
       assert(contents.includes('$parcel$global.rwr('));
 
       let result;
       await run(b, {
-        result: r => {
+        result: (r) => {
           result = r;
         },
       });
@@ -6224,7 +6237,7 @@ describe('scope hoisting', function () {
       function hasAsset(bundle, assetName) {
         let result = false;
 
-        bundle.traverseAssets(asset => {
+        bundle.traverseAssets((asset) => {
           if (asset.filePath.includes(assetName)) {
             result = true;
           }
@@ -6234,14 +6247,14 @@ describe('scope hoisting', function () {
       }
       let sharedBundleContents = await outputFS.readFile(
         nullthrows(
-          b.getBundles().find(b => hasAsset(b, 'shared.js')),
+          b.getBundles().find((b) => hasAsset(b, 'shared.js')),
           'No shared bundle',
         ).filePath,
         'utf8',
       );
       let entryContents = await outputFS.readFile(
         nullthrows(
-          b.getBundles().find(b => hasAsset(b, 'index.js')),
+          b.getBundles().find((b) => hasAsset(b, 'index.js')),
           'No entry bundle',
         ).filePath,
         'utf8',
@@ -6259,7 +6272,7 @@ describe('scope hoisting', function () {
 
       let result;
       await run(b, {
-        result: r => {
+        result: (r) => {
           result = r;
         },
       });
@@ -6295,7 +6308,7 @@ describe('scope hoisting', function () {
     );
 
     let contents = await outputFS.readFile(
-      nullthrows(b.getBundles().find(b => /empty.*\.js/.test(b.filePath)))
+      nullthrows(b.getBundles().find((b) => /empty.*\.js/.test(b.filePath)))
         .filePath,
       'utf8',
     );
@@ -6359,7 +6372,7 @@ describe('scope hoisting', function () {
     function hasAsset(bundle, assetName) {
       let result = false;
 
-      bundle.traverseAssets(asset => {
+      bundle.traverseAssets((asset) => {
         if (asset.filePath.includes(assetName)) {
           result = true;
         }
@@ -6369,7 +6382,7 @@ describe('scope hoisting', function () {
     }
     let asyncBundleContents = await outputFS.readFile(
       nullthrows(
-        b.getBundles().find(b => hasAsset(b, 'async-root.js')),
+        b.getBundles().find((b) => hasAsset(b, 'async-root.js')),
         'No async bundle',
       ).filePath,
       'utf8',
@@ -6382,11 +6395,11 @@ describe('scope hoisting', function () {
     );
 
     let resolve;
-    let p = new Promise(r => {
+    let p = new Promise((r) => {
       resolve = r;
     });
     await run(b, {
-      result: r => {
+      result: (r) => {
         resolve(r);
       },
     });

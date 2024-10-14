@@ -11,7 +11,7 @@ import {
   overlayFS,
 } from '@atlaspack/test-utils';
 
-[false, true].forEach(value => {
+[false, true].forEach((value) => {
   const implementation = value ? 'rust' : 'js';
   describe.v2(`inline requires - ${implementation}`, () => {
     let options = {
@@ -70,8 +70,8 @@ import {
         },
       );
       const bundles = bundleGraph.getBundles();
-      const mainBundle = bundles.find(b => b.name === 'index.js');
-      const otherBundle = bundles.find(b => b.name.includes('other'));
+      const mainBundle = bundles.find((b) => b.name === 'index.js');
+      const otherBundle = bundles.find((b) => b.name.includes('other'));
       if (mainBundle == null) throw new Error('There was no JS bundle');
       if (otherBundle == null) throw new Error('There was no JS bundle');
       const bundleContents = overlayFS.readFileSync(

@@ -183,12 +183,12 @@ export default (new Transformer({
       );
 
       if (code == null || COMPOSES_RE.test(code)) {
-        program.walkDecls(decl => {
+        program.walkDecls((decl) => {
           let [, importPath] = FROM_IMPORT_RE.exec(decl.value) || [];
           if (decl.prop === 'composes' && importPath != null) {
             let parsed = valueParser(decl.value);
 
-            parsed.walk(node => {
+            parsed.walk((node) => {
               if (node.type === 'string') {
                 asset.addDependency({
                   specifier: importPath,
@@ -238,12 +238,14 @@ export default (new Transformer({
       let cssModulesList = (Object.entries(cssModules): Array<
         [string, string],
       >);
-      let deps = asset.getDependencies().filter(dep => dep.priority === 'sync');
+      let deps = asset
+        .getDependencies()
+        .filter((dep) => dep.priority === 'sync');
       let code: string;
       if (deps.length > 0) {
         code = `
           module.exports = Object.assign({}, ${deps
-            .map(dep => `require(${JSON.stringify(dep.specifier)})`)
+            .map((dep) => `require(${JSON.stringify(dep.specifier)})`)
             .join(', ')}, ${JSON.stringify(cssModules, null, 2)});
         `;
       } else {
@@ -276,7 +278,7 @@ export default (new Transformer({
     const postcss: Postcss = await loadPostcss(options, asset.filePath);
 
     let code = '';
-    postcss.stringify(postcss.fromJSON(ast.program), c => {
+    postcss.stringify(postcss.fromJSON(ast.program), (c) => {
       code += c;
     });
 

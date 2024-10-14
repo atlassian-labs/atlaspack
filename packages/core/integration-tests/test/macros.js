@@ -400,7 +400,7 @@ describe.v2('macros', function () {
     } catch (err) {
       assert.deepEqual(
         // \ gets escaped by Node -> Rust -> Node in Windows, so we normalize it for the test
-        err.diagnostics.map(d => ({
+        err.diagnostics.map((d) => ({
           ...d,
           message: d.message.replace(/\\\\/g, '\\'),
         })),

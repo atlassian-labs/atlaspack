@@ -82,7 +82,7 @@ export type BundleGraphResult = {|
 type BundleGraphRequest = {|
   id: string,
   +type: typeof requestTypes.bundle_graph_request,
-  run: RunInput => Async<BundleGraphResult>,
+  run: (RunInput) => Async<BundleGraphResult>,
   input: BundleGraphRequestInput,
 |};
 
@@ -92,7 +92,7 @@ export default function createBundleGraphRequest(
   return {
     type: requestTypes.bundle_graph_request,
     id: 'BundleGraph',
-    run: async input => {
+    run: async (input) => {
       let {options, api, invalidateReason} = input;
       let {optionsRef, requestedAssetIds, signal} = input.input;
       let measurement = tracer.createMeasurement('building');
@@ -146,7 +146,7 @@ export default function createBundleGraphRequest(
         Boolean(invalidateReason & OPTION_CHANGE) ||
         input.api
           .getSubRequests()
-          .some(req => !input.api.canSkipSubrequest(req.id));
+          .some((req) => !input.api.canSkipSubrequest(req.id));
 
       if (subRequestsInvalid) {
         assetGraph.safeToIncrementallyBundle = false;
@@ -342,7 +342,7 @@ class BundlerRunner {
         if (tracer.enabled) {
           measurementFilename = graph
             .getEntryAssets()
-            .map(asset => fromProjectPathRelative(asset.filePath))
+            .map((asset) => fromProjectPathRelative(asset.filePath))
             .join(', ');
           measurement = tracer.createMeasurement(
             plugin.name,
@@ -440,7 +440,7 @@ class BundlerRunner {
       // can match them to the correct packager/optimizer plugins.
       let bundles = internalBundleGraph.getBundles({includeInline: true});
       await Promise.all(
-        bundles.map(bundle =>
+        bundles.map((bundle) =>
           this.nameBundle(namers, bundle, internalBundleGraph),
         ),
       );
@@ -502,7 +502,7 @@ class BundlerRunner {
   validateBundles(bundleGraph: InternalBundleGraph): void {
     let bundles = bundleGraph.getBundles();
 
-    let bundleNames = bundles.map(b =>
+    let bundleNames = bundles.map((b) =>
       joinProjectPath(b.target.distDir, nullthrows(b.name)),
     );
     assert.deepEqual(

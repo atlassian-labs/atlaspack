@@ -72,14 +72,14 @@ describe.v2('library bundler', function () {
 
     let esm: any = await runBundle(
       b,
-      nullthrows(b.getBundles().find(b => b.name === 'module.js')),
+      nullthrows(b.getBundles().find((b) => b.name === 'module.js')),
     );
     assert.equal(esm.foo(), 'foobaz');
     assert.equal(esm.bar(), 'barbaz');
 
     let cjs: any = await runBundle(
       b,
-      nullthrows(b.getBundles().find(b => b.name === 'main.js')),
+      nullthrows(b.getBundles().find((b) => b.name === 'main.js')),
     );
     assert.equal(cjs.foo(), 'foobaz');
     assert.equal(cjs.bar(), 'barbaz');
@@ -261,13 +261,13 @@ describe.v2('library bundler', function () {
 
     let esm: any = await runBundle(
       b,
-      nullthrows(b.getBundles().find(b => b.name === 'module.js')),
+      nullthrows(b.getBundles().find((b) => b.name === 'module.js')),
     );
     assert.equal(esm.test(), 'Qe6WCq_bar');
 
     let cjs: any = await runBundle(
       b,
-      nullthrows(b.getBundles().find(b => b.name === 'main.js')),
+      nullthrows(b.getBundles().find((b) => b.name === 'main.js')),
     );
     assert.equal(cjs.test(), 'Qe6WCq_bar');
   });
@@ -344,7 +344,7 @@ describe.v2('library bundler', function () {
 
     let esm: any = await runBundle(
       b,
-      nullthrows(b.getBundles().find(b => b.name === 'module.js')),
+      nullthrows(b.getBundles().find((b) => b.name === 'module.js')),
       null,
       undefined,
       {
@@ -358,7 +358,7 @@ describe.v2('library bundler', function () {
 
     let cjs: any = await runBundle(
       b,
-      nullthrows(b.getBundles().find(b => b.name === 'main.js')),
+      nullthrows(b.getBundles().find((b) => b.name === 'main.js')),
       null,
       undefined,
       {
@@ -481,14 +481,14 @@ describe.v2('library bundler', function () {
 
     let res: any = await runBundle(
       b,
-      nullthrows(b.getBundles().find(b => b.name === 'a.js')),
+      nullthrows(b.getBundles().find((b) => b.name === 'a.js')),
     );
 
     assert.equal(res.default, 'shared-a');
 
     let res2: any = await runBundle(
       b,
-      nullthrows(b.getBundles().find(b => b.name === 'b.js')),
+      nullthrows(b.getBundles().find((b) => b.name === 'b.js')),
     );
 
     assert.equal(res2.default, 'shared-b');
@@ -617,13 +617,13 @@ describe.v2('library bundler', function () {
 
     let esm: any = await runBundle(
       b,
-      nullthrows(b.getBundles().find(b => b.name === 'module.js')),
+      nullthrows(b.getBundles().find((b) => b.name === 'module.js')),
     );
     assert.equal(esm.test(), 'test:foo');
 
     let cjs: any = await runBundle(
       b,
-      nullthrows(b.getBundles().find(b => b.name === 'main.js')),
+      nullthrows(b.getBundles().find((b) => b.name === 'main.js')),
     );
     assert.equal(cjs.test(), 'test:foo');
   });

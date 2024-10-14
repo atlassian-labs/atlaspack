@@ -90,10 +90,10 @@ export default class NodeResolver {
           !init
             ? undefined
             : {
-                canonicalize: path => this.options.fs.realpathSync(path),
-                read: path => this.options.fs.readFileSync(path),
-                isFile: path => this.options.fs.statSync(path).isFile(),
-                isDir: path => this.options.fs.statSync(path).isDirectory(),
+                canonicalize: (path) => this.options.fs.realpathSync(path),
+                read: (path) => this.options.fs.readFileSync(path),
+                isFile: (path) => this.options.fs.statSync(path).isFile(),
+                isDir: (path) => this.options.fs.statSync(path).isDirectory(),
               },
         mode: 1,
         includeNodeModules: options.env.includeNodeModules,
@@ -402,7 +402,7 @@ export default class NodeResolver {
             this.options.projectRoot,
             dir,
           )}'.`,
-          hints: potentialFiles.map(r => {
+          hints: potentialFiles.map((r) => {
             return `Did you mean '__${r}__'?`;
           }),
         };
@@ -418,7 +418,7 @@ export default class NodeResolver {
 
         return {
           message: md`Cannot find module '${error.module}'`,
-          hints: alternativeModules.map(r => {
+          hints: alternativeModules.map((r) => {
             return `Did you mean '__${r}__'?`;
           }),
         };
@@ -483,7 +483,7 @@ export default class NodeResolver {
 
         return {
           message: md`Cannot load file '${relative}' from module '${error.module}'`,
-          hints: potentialFiles.map(r => {
+          hints: potentialFiles.map((r) => {
             return `Did you mean '__${error.module}/${r}__'?`;
           }),
         };

@@ -121,10 +121,10 @@ export default class Transformation {
     this.pluginOptions = new PluginOptions(
       optionsProxy(
         this.options,
-        option => {
+        (option) => {
           this.invalidations.invalidateOnOptionChange.add(option);
         },
-        devDep => {
+        (devDep) => {
           this.pluginDevDeps.push(devDep);
         },
       ),
@@ -181,8 +181,8 @@ export default class Transformation {
     let assets, error;
     try {
       let results = await this.runPipelines(pipeline, asset);
-      await Promise.all(results.map(asset => asset.commit()));
-      assets = results.map(a => a.value);
+      await Promise.all(results.map((asset) => asset.commit()));
+      assets = results.map((a) => a.value);
     } catch (e) {
       error = e;
     }
@@ -440,7 +440,7 @@ export default class Transformation {
     await Promise.all(
       resultingAssets
         .filter(
-          asset =>
+          (asset) =>
             asset.ast != null &&
             !(
               this.options.mode === 'production' &&
@@ -448,7 +448,7 @@ export default class Transformation {
               asset.value.symbols
             ),
         )
-        .map(async asset => {
+        .map(async (asset) => {
           if (asset.isASTDirty && asset.generate) {
             let output = await asset.generate();
             asset.content = output.content;
@@ -481,8 +481,8 @@ export default class Transformation {
     }
 
     return {
-      id: transformers.map(t => t.name).join(':'),
-      transformers: transformers.map(transformer => ({
+      id: transformers.map((t) => t.name).join(':'),
+      transformers: transformers.map((transformer) => ({
         name: transformer.name,
         resolveFrom: transformer.resolveFrom,
         config: this.configs.get(transformer.name)?.result,
@@ -584,7 +584,7 @@ export default class Transformation {
 
       if (result.invalidateOnFileCreate) {
         this.invalidations.invalidateOnFileCreate.push(
-          ...result.invalidateOnFileCreate.map(i =>
+          ...result.invalidateOnFileCreate.map((i) =>
             invalidateOnFileCreateToInternal(this.options.projectRoot, i),
           ),
         );
@@ -686,7 +686,7 @@ export default class Transformation {
         assets: Array<UncommittedAsset>,
       ): Promise<Array<UncommittedAsset> | null> => {
         let results = await postProcess.call(transformer, {
-          assets: assets.map(asset => new MutableAsset(asset)),
+          assets: assets.map((asset) => new MutableAsset(asset)),
           config,
           options: pipeline.pluginOptions,
           resolve,
@@ -695,7 +695,7 @@ export default class Transformation {
         });
 
         return Promise.all(
-          results.map(result =>
+          results.map((result) =>
             asset.createChildAsset(
               result,
               transformerName,
@@ -734,7 +734,7 @@ function normalizeAssets(
   options,
   results: Array<TransformerResult | MutableAsset>,
 ): Array<TransformerResult | UncommittedAsset> {
-  return results.map(result => {
+  return results.map((result) => {
     if (result instanceof MutableAsset) {
       return mutableAssetToUncommittedAsset(result);
     }

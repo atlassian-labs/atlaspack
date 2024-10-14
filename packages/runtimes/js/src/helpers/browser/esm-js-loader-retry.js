@@ -4,7 +4,7 @@ async function load(id) {
   }
 
   if (!globalThis.navigator.onLine) {
-    await new Promise(res =>
+    await new Promise((res) =>
       globalThis.addEventListener('online', res, {once: true}),
     );
   }

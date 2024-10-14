@@ -79,7 +79,7 @@ type ExternalModules = {|
 |};
 
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function normalizeFilePath(filePath: string): FilePath {
@@ -179,11 +179,11 @@ export function findDependency(
 
   let dependencies = bundleGraph
     .getDependencies(asset)
-    .filter(d => d.specifier === specifier);
+    .filter((d) => d.specifier === specifier);
 
   let dependency =
     dependencies.length > 1
-      ? dependencies.find(d => !bundleGraph.isDependencySkipped(d))
+      ? dependencies.find((d) => !bundleGraph.isDependencySkipped(d))
       : dependencies[0];
 
   invariant(
@@ -248,7 +248,7 @@ export function getNextBuild(b: Parcel): Promise<BuildEvent> {
         }
 
         subscriptionPromise
-          .then(subscription => {
+          .then((subscription) => {
             // If the watch callback was reached, subscription must have been successful
             invariant(subscription != null);
             return subscription.unsubscribe();
@@ -356,7 +356,7 @@ export async function runBundles(
 
   // A utility to prevent optimizers from removing side-effect-free code needed for testing
   // $FlowFixMe[prop-missing]
-  ctx.sideEffectNoop = v => v;
+  ctx.sideEffectNoop = (v) => v;
 
   vm.createContext(ctx);
   let esmOutput;
@@ -444,7 +444,7 @@ export async function runBundle(
 
     let bundles = bundleGraph.getBundles({includeInline: true});
     let scripts = [];
-    postHtml().walk.call(ast, node => {
+    postHtml().walk.call(ast, (node) => {
       if (node.attrs?.nomodule != null) {
         return node;
       }
@@ -452,13 +452,13 @@ export async function runBundle(
         let src = url.parse(nullthrows(node.attrs).src);
         if (src.hostname == null) {
           let p = path.join(distDir, nullthrows(src.pathname));
-          let b = nullthrows(bundles.find(b => b.filePath === p));
+          let b = nullthrows(bundles.find((b) => b.filePath === p));
           scripts.push([overlayFS.readFileSync(b.filePath, 'utf8'), b]);
         }
       } else if (node.tag === 'script' && node.content && !node.attrs?.src) {
         let content = node.content.join('');
         let inline = bundles.filter(
-          b => b.bundleBehavior === 'inline' && b.type === 'js',
+          (b) => b.bundleBehavior === 'inline' && b.type === 'js',
         );
         scripts.push([content, inline[0]]);
       }
@@ -493,7 +493,7 @@ export function run(
   // $FlowFixMe[unclear-type]
 ): Promise<any> {
   let bundle = nullthrows(
-    bundleGraph.getBundles().find(b => b.type === 'js' || b.type === 'html'),
+    bundleGraph.getBundles().find((b) => b.type === 'js' || b.type === 'html'),
   );
   return runBundle(bundleGraph, bundle, globals, opts, externalModules);
 }
@@ -504,9 +504,9 @@ export function getBundleData(
 ): {|name: string, type: string, assets: string[]|}[] {
   const byAlphabet = (a, b) => (a.toLowerCase() < b.toLowerCase() ? -1 : 1);
   const bundles = bundleGraph.getBundles();
-  const bundleData = bundles.map(bundle => {
+  const bundleData = bundles.map((bundle) => {
     const assets = [];
-    bundle.traverseAssets(asset => {
+    bundle.traverseAssets((asset) => {
       assets.push(path.relative(inputDir, asset.filePath));
     });
     assets.sort(byAlphabet);
@@ -540,10 +540,10 @@ export function assertBundles(
   let actualBundles = [];
   const byAlphabet = (a, b) => (a.toLowerCase() < b.toLowerCase() ? -1 : 1);
 
-  bundleGraph.traverseBundles(bundle => {
+  bundleGraph.traverseBundles((bundle) => {
     let assets = [];
 
-    bundle.traverseAssets(asset => {
+    bundle.traverseAssets((asset) => {
       if (/@swc[/\\]helpers/.test(asset.filePath)) {
         // Skip all helpers for now, as they add friction and churn to assertions.
         // A longer term solution might have an explicit opt-in to this behavior, or
@@ -589,7 +589,7 @@ export function assertBundles(
 
   for (let bundle of expectedBundles) {
     let name = bundle.name;
-    let found = actualBundles.some(b => {
+    let found = actualBundles.some((b) => {
       if (name != null && b.name != null) {
         if (typeof name === 'string') {
           if (name !== b.name) {
@@ -805,7 +805,7 @@ function createWorkerClass(filePath: FilePath) {
       let u = new URL(url);
       let filename = path.join(path.dirname(filePath), u.pathname);
       let {ctx, promises} = prepareWorkerContext(filename, {
-        postMessage: msg => {
+        postMessage: (msg) => {
           this.emit('message', msg);
         },
       });
@@ -911,7 +911,7 @@ function prepareNodeContext(
   let exports = {};
   let req =
     filePath &&
-    (specifier => {
+    ((specifier) => {
       if (externalModules && specifier in externalModules) {
         return externalModules[specifier](ctx);
       }
@@ -924,7 +924,7 @@ function prepareNodeContext(
         readFileSync: (...args) => {
           return overlayFS.readFileSync(...args);
         },
-        isFile: file => {
+        isFile: (file) => {
           try {
             var stat = overlayFS.statSync(file);
           } catch (err) {
@@ -932,7 +932,7 @@ function prepareNodeContext(
           }
           return stat.isFile();
         },
-        isDirectory: file => {
+        isDirectory: (file) => {
           try {
             var stat = overlayFS.statSync(file);
           } catch (err) {
@@ -1142,7 +1142,7 @@ export async function runESM(
     }
   }
 
-  return modules.map(m => m.namespace);
+  return modules.map((m) => m.namespace);
 }
 
 export async function assertESMExports(
@@ -1157,7 +1157,7 @@ export async function assertESMExports(
   let entry = nullthrows(
     b
       .getBundles()
-      .find(b => b.type === 'js')
+      .find((b) => b.type === 'js')
       ?.getMainEntry(),
   );
   nodeCache.clear();
@@ -1261,7 +1261,7 @@ export function requestRaw(
         (res: IncomingMessage) => {
           res.setEncoding('utf8');
           let data = '';
-          res.on('data', c => (data += c));
+          res.on('data', (c) => (data += c));
           res.on('end', () => {
             if (res.statusCode !== 200) {
               return reject({res, data});
@@ -1289,10 +1289,10 @@ export function request(
         path: file,
         rejectUnauthorized: false,
       },
-      res => {
+      (res) => {
         res.setEncoding('utf8');
         let data = '';
-        res.on('data', c => (data += c));
+        res.on('data', (c) => (data += c));
         res.on('end', () => {
           if (res.statusCode !== 200) {
             return reject({statusCode: res.statusCode, data});

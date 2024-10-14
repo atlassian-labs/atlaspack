@@ -301,7 +301,7 @@ export default class AdjacencyList<TEdgeType: number = 1> {
     // Copy the existing edges into the new array.
     nodes.nextId = this.#nodes.nextId;
     this.#edges.forEach(
-      edge =>
+      (edge) =>
         void link(
           this.#edges.from(edge),
           this.#edges.to(edge),
@@ -570,7 +570,7 @@ export default class AdjacencyList<TEdgeType: number = 1> {
       | NullEdgeType
       | Array<TEdgeType | NullEdgeType> = 1,
   ): NodeId[] {
-    let matches = node =>
+    let matches = (node) =>
       type === ALL_EDGE_TYPES ||
       (Array.isArray(type)
         ? type.includes(this.#nodes.typeOf(node))
@@ -628,7 +628,7 @@ export default class AdjacencyList<TEdgeType: number = 1> {
       | NullEdgeType
       | Array<TEdgeType | NullEdgeType> = 1,
   ): NodeId[] {
-    let matches = node =>
+    let matches = (node) =>
       type === ALL_EDGE_TYPES ||
       (Array.isArray(type)
         ? type.includes(this.#nodes.typeOf(node))

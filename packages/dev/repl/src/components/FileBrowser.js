@@ -22,7 +22,7 @@ function FileBrowserEntry({
   return (
     <li
       draggable="true"
-      onDragStart={e => {
+      onDragStart={(e) => {
         e.dataTransfer.setData('application/x-parcel-repl-file', p);
         e.stopPropagation();
       }}
@@ -49,7 +49,7 @@ function FileBrowserEntry({
           <EditableField
             value={name}
             editing={isEditing === p}
-            onChange={value =>
+            onChange={(value) =>
               dispatch({
                 type: 'browser.setEditing',
                 value,
@@ -63,7 +63,7 @@ function FileBrowserEntry({
               title="Entrypoint"
               type="checkbox"
               checked={isEntry}
-              onChange={e => {
+              onChange={(e) => {
                 dispatch({
                   type: 'file.isEntry',
                   name: p,
@@ -75,7 +75,7 @@ function FileBrowserEntry({
           )}
           <button
             className="rename"
-            onClick={e => {
+            onClick={(e) => {
               dispatch({
                 type: 'browser.setEditing',
                 name: p,
@@ -85,7 +85,7 @@ function FileBrowserEntry({
           />
           <button
             className="delete"
-            onClick={e => {
+            onClick={(e) => {
               dispatch({
                 type: 'file.delete',
                 name: p,
@@ -124,7 +124,7 @@ function FileBrowserFolder({
               dispatch={dispatch}
               isEditing={isEditing}
               collapsed={isCollapsed}
-              onDrop={e => {
+              onDrop={(e) => {
                 const data = e.dataTransfer.getData(
                   'application/x-parcel-repl-file',
                 );
@@ -138,7 +138,7 @@ function FileBrowserFolder({
                   e.stopPropagation();
                 }
               }}
-              onDragOver={e => e.preventDefault()}
+              onDragOver={(e) => e.preventDefault()}
             >
               {!isCollapsed && (
                 <FileBrowserFolder
@@ -199,7 +199,7 @@ export function FileBrowser({
           collapsed={collapsed}
           isEditing={isEditing}
           dispatch={dispatch}
-          onDrop={e => {
+          onDrop={(e) => {
             const data = e.dataTransfer.getData(
               'application/x-parcel-repl-file',
             );
@@ -207,7 +207,7 @@ export function FileBrowser({
             e.preventDefault();
             e.stopPropagation();
           }}
-          onDragOver={e => e.preventDefault()}
+          onDragOver={(e) => e.preventDefault()}
         />
         <div className="download">
           <button

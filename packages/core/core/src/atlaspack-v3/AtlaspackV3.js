@@ -57,7 +57,7 @@ export class AtlaspackV3 {
 
     return [
       workers,
-      tx_worker => {
+      (tx_worker) => {
         let worker = new Worker(WORKER_PATH, {
           workerData: {
             tx_worker,

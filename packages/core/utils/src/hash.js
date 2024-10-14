@@ -9,17 +9,17 @@ import {hashString, Hash} from '@atlaspack/rust';
 export function hashStream(stream: Readable): Promise<string> {
   let hash = new Hash();
   return new Promise((resolve, reject) => {
-    stream.on('error', err => {
+    stream.on('error', (err) => {
       reject(err);
     });
     stream
-      .on('data', chunk => {
+      .on('data', (chunk) => {
         hash.writeBuffer(chunk);
       })
       .on('end', function () {
         resolve(hash.finish());
       })
-      .on('error', err => {
+      .on('error', (err) => {
         reject(err);
       });
   });

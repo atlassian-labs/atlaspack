@@ -320,7 +320,7 @@ export default async function applyRuntimes<TResult: RequestResult>({
 
       let assets = runtimesBundleGraph._graph
         .getNodeIdsConnectedFrom(nodeId)
-        .map(assetNodeId => {
+        .map((assetNodeId) => {
           let assetNode = nullthrows(
             runtimesBundleGraph._graph.getNode(assetNodeId),
           );
@@ -393,7 +393,7 @@ function reconcileNewRuntimes<TResult: RequestResult>(
   connections: Array<RuntimeConnection>,
   optionsRef: SharedReference,
 ) {
-  let assetGroups = connections.map(t => t.assetGroup);
+  let assetGroups = connections.map((t) => t.assetGroup);
   let request = createAssetGraphRequest({
     name: 'Runtimes',
     assetGroups,

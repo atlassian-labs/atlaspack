@@ -7,8 +7,8 @@ import {Transform} from 'stream';
  * callback. Continues to pass data chunks down the stream.
  */
 export default class TapStream extends Transform {
-  _tap: Buffer => mixed;
-  constructor(tap: Buffer => mixed, options: mixed) {
+  _tap: (Buffer) => mixed;
+  constructor(tap: (Buffer) => mixed, options: mixed) {
     super({...options});
     this._tap = tap;
   }

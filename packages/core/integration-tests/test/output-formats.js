@@ -309,7 +309,7 @@ describe('output formats', function () {
         );
 
         let dist = await outputFS.readFile(
-          b.getBundles().find(b => b.type === 'js').filePath,
+          b.getBundles().find((b) => b.type === 'js').filePath,
           'utf8',
         );
         assert(dist.includes('require("./index.css")'));
@@ -322,7 +322,7 @@ describe('output formats', function () {
       );
 
       let index = await outputFS.readFile(
-        b.getBundles().find(b => b.name.startsWith('index')).filePath,
+        b.getBundles().find((b) => b.name.startsWith('index')).filePath,
         'utf8',
       );
       assert(/Promise\.resolve\(require\("\.\/async\..+?\.js"\)\)/.test(index));
@@ -342,7 +342,7 @@ describe('output formats', function () {
       );
 
       let index = await outputFS.readFile(
-        b.getBundles().find(b => b.name.startsWith('index')).filePath,
+        b.getBundles().find((b) => b.name.startsWith('index')).filePath,
         'utf8',
       );
       assert(
@@ -464,7 +464,7 @@ describe('output formats', function () {
       );
 
       let dist = await outputFS.readFile(
-        b.getBundles().find(b => b.type === 'js').filePath,
+        b.getBundles().find((b) => b.type === 'js').filePath,
         'utf8',
       );
       assert(dist.includes('Object.assign(module.exports'));
@@ -484,7 +484,7 @@ describe('output formats', function () {
         );
 
         let dist = await outputFS.readFile(
-          b.getBundles().find(b => b.type === 'js').filePath,
+          b.getBundles().find((b) => b.type === 'js').filePath,
           'utf8',
         );
         assert(dist.includes('= require("lodash")'));
@@ -529,10 +529,10 @@ describe('output formats', function () {
         );
         let workerBundle = b
           .getBundles()
-          .find(b => b.name.startsWith('dedicated-worker'));
+          .find((b) => b.name.startsWith('dedicated-worker'));
         let sharedWorkerBundle = b
           .getBundles()
-          .find(b => b.name.startsWith('shared-worker'));
+          .find((b) => b.name.startsWith('shared-worker'));
         assert(
           contents.includes(
             `new Worker(new URL("${path.basename(
@@ -814,7 +814,7 @@ describe('output formats', function () {
           {
             lodash: () => lodash,
           },
-          ns => ns.add(1, 2),
+          (ns) => ns.add(1, 2),
         );
       },
     );
@@ -835,7 +835,7 @@ describe('output formats', function () {
           {
             lodash: () => lodash,
           },
-          ns => ns.add(1, 2),
+          (ns) => ns.add(1, 2),
         );
       },
     );
@@ -856,7 +856,7 @@ describe('output formats', function () {
           {
             lodash: () => lodash,
           },
-          ns => ns.add(1, 2),
+          (ns) => ns.add(1, 2),
         );
       },
     );
@@ -869,7 +869,7 @@ describe('output formats', function () {
         );
 
         let dist = await outputFS.readFile(
-          b.getBundles().find(b => b.type === 'js').filePath,
+          b.getBundles().find((b) => b.type === 'js').filePath,
           'utf8',
         );
         assert(dist.includes('import "./index.css"'));
@@ -885,7 +885,7 @@ describe('output formats', function () {
       );
 
       let dist = await outputFS.readFile(
-        b.getBundles().find(b => b.type === 'js').filePath,
+        b.getBundles().find((b) => b.type === 'js').filePath,
         'utf8',
       );
       assert(!dist.includes('foo'));
@@ -911,7 +911,7 @@ describe('output formats', function () {
       ]);
 
       let dist = await outputFS.readFile(
-        b.getBundles().find(b => !b.needsStableName).filePath,
+        b.getBundles().find((b) => !b.needsStableName).filePath,
         'utf8',
       );
       assert(dist.includes('$parcel$interopDefault'));
@@ -936,12 +936,12 @@ describe('output formats', function () {
       );
 
       let index = await outputFS.readFile(
-        b.getBundles().find(b => b.name.startsWith('index')).filePath,
+        b.getBundles().find((b) => b.name.startsWith('index')).filePath,
         'utf8',
       );
       assert(/import\("\.\/async\..+?\.js"\)/.test(index));
 
-      await assertESMExports(b, 4, {}, ns => ns.default);
+      await assertESMExports(b, 4, {}, (ns) => ns.default);
     });
 
     // This is currently not possible, it would have to do something like this:
@@ -955,7 +955,7 @@ describe('output formats', function () {
       );
 
       let async = await outputFS.readFile(
-        b.getBundles().find(b => b.name.startsWith('c')).filePath,
+        b.getBundles().find((b) => b.name.startsWith('c')).filePath,
         'utf8',
       );
       assert(!/\$export\$default\s+=/.test(async));
@@ -974,7 +974,7 @@ describe('output formats', function () {
         'utf8',
       );
       assert(!async.includes('$import$'));
-      await assertESMExports(b, ['index', 'a', 1], {}, ns => ns.default);
+      await assertESMExports(b, ['index', 'a', 1], {}, (ns) => ns.default);
     });
 
     it.v2(
@@ -1039,7 +1039,7 @@ describe('output formats', function () {
       );
 
       let index = await outputFS.readFile(
-        b.getBundles().find(b => b.name.startsWith('index')).filePath,
+        b.getBundles().find((b) => b.name.startsWith('index')).filePath,
         'utf8',
       );
       assert(/import\("\.\/async1\..+?\.js"\)/.test(index));
@@ -1049,7 +1049,7 @@ describe('output formats', function () {
         b,
         true,
         {lodash: () => lodash, react: () => react},
-        ns => ns.default,
+        (ns) => ns.default,
       );
     });
 
@@ -1078,7 +1078,7 @@ describe('output formats', function () {
       );
 
       let workerBundle = nullthrows(
-        b.getBundles().find(b => b.env.context === 'web-worker'),
+        b.getBundles().find((b) => b.env.context === 'web-worker'),
       );
       let workerBundleContents = await outputFS.readFile(
         workerBundle.filePath,
@@ -1087,10 +1087,10 @@ describe('output formats', function () {
 
       let asyncBundle = b
         .getChildBundles(workerBundle)
-        .find(b => b.filePath.includes('async'));
+        .find((b) => b.filePath.includes('async'));
       let syncBundle = b
         .getReferencedBundles(workerBundle)
-        .find(b => !b.filePath.includes('async'));
+        .find((b) => !b.filePath.includes('async'));
       assert(
         workerBundleContents.includes(
           `import "./${path.basename(syncBundle.filePath)}"`,
@@ -1109,7 +1109,7 @@ describe('output formats', function () {
         );
 
         let html = await outputFS.readFile(
-          b.getBundles().find(b => b.type === 'html').filePath,
+          b.getBundles().find((b) => b.type === 'html').filePath,
           'utf8',
         );
 
@@ -1119,14 +1119,15 @@ describe('output formats', function () {
           b
             .getBundles()
             .find(
-              b => path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
+              (b) =>
+                path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
             ).filePath,
           'utf8',
         );
 
         let asyncBundle = b
           .getBundles()
-          .find(bundle => bundle.name.startsWith('async'));
+          .find((bundle) => bundle.name.startsWith('async'));
         assert(
           entry.includes(`import("./${path.basename(asyncBundle.filePath)}")`),
         );
@@ -1154,7 +1155,7 @@ describe('output formats', function () {
         );
 
         let html = await outputFS.readFile(
-          b.getBundles().find(b => b.type === 'html').filePath,
+          b.getBundles().find((b) => b.type === 'html').filePath,
           'utf8',
         );
 
@@ -1164,7 +1165,8 @@ describe('output formats', function () {
           b
             .getBundles()
             .find(
-              b => path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
+              (b) =>
+                path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
             ).filePath,
           'utf8',
         );
@@ -1172,7 +1174,7 @@ describe('output formats', function () {
 
         let asyncBundle = b
           .getBundles()
-          .find(bundle => bundle.name.startsWith('async'));
+          .find((bundle) => bundle.name.startsWith('async'));
         assert(
           new RegExp(
             `getBundleURL\\('[a-zA-Z0-9]+'\\) \\+ "` +
@@ -1194,7 +1196,7 @@ describe('output formats', function () {
         );
 
         let html = await outputFS.readFile(
-          b.getBundles().find(b => b.type === 'html').filePath,
+          b.getBundles().find((b) => b.type === 'html').filePath,
           'utf8',
         );
 
@@ -1205,17 +1207,18 @@ describe('output formats', function () {
           b
             .getBundles()
             .find(
-              b => path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
+              (b) =>
+                path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
             ).filePath,
           'utf8',
         );
 
         let bundles = b.getBundles();
         let asyncJsBundle = bundles.find(
-          bundle => bundle.type === 'js' && bundle.name.startsWith('async'),
+          (bundle) => bundle.type === 'js' && bundle.name.startsWith('async'),
         );
         let asyncCssBundle = bundles.find(
-          bundle => bundle.type === 'css' && bundle.name.startsWith('async'),
+          (bundle) => bundle.type === 'css' && bundle.name.startsWith('async'),
         );
         assert(
           new RegExp(
@@ -1230,7 +1233,8 @@ describe('output formats', function () {
         let async = await outputFS.readFile(
           b
             .getBundles()
-            .find(b => b.type === 'js' && b.name.startsWith('async')).filePath,
+            .find((b) => b.type === 'js' && b.name.startsWith('async'))
+            .filePath,
           'utf8',
         );
         assert(!async.includes('.css"'));
@@ -1254,7 +1258,7 @@ describe('output formats', function () {
         );
 
         let html = await outputFS.readFile(
-          b.getBundles().find(b => b.type === 'html').filePath,
+          b.getBundles().find((b) => b.type === 'html').filePath,
           'utf8',
         );
 
@@ -1263,16 +1267,16 @@ describe('output formats', function () {
         let bundles = b.getBundles();
         let entry = await outputFS.readFile(
           bundles.find(
-            b => path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
+            (b) => path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
           ).filePath,
           'utf8',
         );
 
-        let sharedBundle = bundles.find(b => b.getEntryAssets().length === 0);
+        let sharedBundle = bundles.find((b) => b.getEntryAssets().length === 0);
         let async1Bundle = bundles.find(
-          b => b.name.startsWith('async1') && b.id !== sharedBundle.id,
+          (b) => b.name.startsWith('async1') && b.id !== sharedBundle.id,
         );
-        let async2Bundle = bundles.find(b => b.name.startsWith('async2'));
+        let async2Bundle = bundles.find((b) => b.name.startsWith('async2'));
 
         let esmLoaderPublicId;
         b.traverse((node, _, actions) => {
@@ -1313,7 +1317,7 @@ describe('output formats', function () {
         b,
         ['!!!index!!!', 'DiagramVersion: !!!some name!!!'],
         {},
-        ns => ns.default,
+        (ns) => ns.default,
       );
     });
 
@@ -1501,10 +1505,10 @@ describe('output formats', function () {
         );
         let workerBundle = b
           .getBundles()
-          .find(b => b.name.startsWith('dedicated-worker'));
+          .find((b) => b.name.startsWith('dedicated-worker'));
         let sharedWorkerBundle = b
           .getBundles()
-          .find(b => b.name.startsWith('shared-worker'));
+          .find((b) => b.name.startsWith('shared-worker'));
         assert(
           contents.includes(
             `new Worker(new URL("${path.basename(
@@ -1596,7 +1600,7 @@ describe('output formats', function () {
 
     let cjs = b
       .getBundles()
-      .find(b => b.type === 'js' && b.env.outputFormat === 'commonjs');
+      .find((b) => b.type === 'js' && b.env.outputFormat === 'commonjs');
 
     let calls = [];
     assert.deepEqual(
@@ -1685,7 +1689,8 @@ describe('output formats', function () {
                 b
                   .getBundles()
                   .find(
-                    b => path.basename(b.filePath) === path.posix.basename(url),
+                    (b) =>
+                      path.basename(b.filePath) === path.posix.basename(url),
                   ),
               );
             }

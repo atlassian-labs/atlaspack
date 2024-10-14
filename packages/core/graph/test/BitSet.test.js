@@ -5,14 +5,14 @@ import {BitSet} from '../src/BitSet';
 
 function assertValues(set: BitSet, values: Array<number>) {
   let setValues = [];
-  set.forEach(bit => {
+  set.forEach((bit) => {
     setValues.push(bit);
   });
 
   for (let value of values) {
     assert(set.has(value), 'Set.has returned false');
     assert(
-      setValues.some(v => v === value),
+      setValues.some((v) => v === value),
       'Set values is missing value',
     );
   }

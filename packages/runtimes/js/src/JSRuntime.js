@@ -254,9 +254,9 @@ export default (new Runtime({
 
       let bundleGroup = resolved.value;
       let mainBundle = nullthrows(
-        bundleGraph.getBundlesInBundleGroup(bundleGroup).find(b => {
+        bundleGraph.getBundlesInBundleGroup(bundleGroup).find((b) => {
           let entries = b.getEntryAssets();
-          return entries.some(e => bundleGroup.entryAssetId === e.id);
+          return entries.some((e) => bundleGroup.entryAssetId === e.id);
         }),
       );
 
@@ -307,7 +307,7 @@ export default (new Runtime({
       shouldUseRuntimeManifest(bundle, options) &&
       bundleGraph
         .getChildBundles(bundle)
-        .some(b => b.bundleBehavior !== 'inline') &&
+        .some((b) => b.bundleBehavior !== 'inline') &&
       isNewContext(bundle, bundleGraph)
     ) {
       assets.push({
@@ -340,7 +340,7 @@ function getDependencies(bundle: NamedBundle): {|
     let asyncDependencies = [];
     let otherDependencies = [];
     let conditionalDependencies = [];
-    bundle.traverse(node => {
+    bundle.traverse((node) => {
       if (node.type !== 'dependency') {
         return;
       }
@@ -387,7 +387,7 @@ function getLoaderRuntime({
   let externalBundles = bundleGraph.getBundlesInBundleGroup(bundleGroup);
   let mainBundle = nullthrows(
     externalBundles.find(
-      bundle => bundle.getMainEntry()?.id === bundleGroup.entryAssetId,
+      (bundle) => bundle.getMainEntry()?.id === bundleGroup.entryAssetId,
     ),
   );
 
@@ -472,7 +472,7 @@ function getLoaderRuntime({
 
   if (getFeatureFlag('conditionalBundlingApi')) {
     let conditionalDependencies = externalBundles.flatMap(
-      to => getDependencies(to).conditionalDependencies,
+      (to) => getDependencies(to).conditionalDependencies,
     );
     for (const cond of bundleGraph.getConditionsForDependencies(
       conditionalDependencies,
@@ -511,8 +511,8 @@ function getLoaderRuntime({
     loaderModules.push(
       ...externalBundles
         // TODO: Allow css to preload resources as well
-        .filter(to => to.type === 'js')
-        .flatMap(from => {
+        .filter((to) => to.type === 'js')
+        .flatMap((from) => {
           let {preload, prefetch} = getHintedBundleGroups(bundleGraph, from);
 
           return [
@@ -660,12 +660,12 @@ function isNewContext(
   let parents = bundleGraph.getParentBundles(bundle);
   let isInEntryBundleGroup = bundleGraph
     .getBundleGroupsContainingBundle(bundle)
-    .some(g => bundleGraph.isEntryBundleGroup(g));
+    .some((g) => bundleGraph.isEntryBundleGroup(g));
   return (
     isInEntryBundleGroup ||
     parents.length === 0 ||
     parents.some(
-      parent =>
+      (parent) =>
         parent.env.context !== bundle.env.context || parent.type !== 'js',
     )
   );

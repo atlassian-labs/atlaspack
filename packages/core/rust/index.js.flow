@@ -343,10 +343,10 @@ export interface ResolverOptions {
 }
 
 export interface JsFileSystemOptions {
-  canonicalize: string => string;
-  read: string => Buffer;
-  isFile: string => boolean;
-  isDir: string => boolean;
+  canonicalize: (string) => string;
+  read: (string) => Buffer;
+  isFile: (string) => boolean;
+  isDir: (string) => boolean;
   includeNodeModules?: IncludeNodeModules;
 }
 

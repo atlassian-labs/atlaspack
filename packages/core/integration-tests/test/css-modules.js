@@ -67,11 +67,11 @@ describe.v2('css modules', () => {
     assert(/[_0-9a-zA-Z]+_b-2/.test(output));
 
     let css = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css').filePath,
       'utf8',
     );
     let includedRules = new Set();
-    postcss.parse(css).walkRules(rule => {
+    postcss.parse(css).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert(includedRules.has('.page'));
@@ -99,7 +99,7 @@ describe.v2('css modules', () => {
     ]);
 
     let js = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'js').filePath,
+      b.getBundles().find((b) => b.type === 'js').filePath,
       'utf8',
     );
     assert(!js.includes('unused'));
@@ -108,11 +108,11 @@ describe.v2('css modules', () => {
     assert(/[_0-9a-zA-Z]+_b-2/.test(output));
 
     let css = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css').filePath,
       'utf8',
     );
     let includedRules = new Set();
-    postcss.parse(css).walkRules(rule => {
+    postcss.parse(css).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert.deepStrictEqual(
@@ -150,11 +150,11 @@ describe.v2('css modules', () => {
     assert(/[_0-9a-zA-Z]+_b-2/.test(output));
 
     let css = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css').filePath,
       'utf8',
     );
     let includedRules = new Set();
-    postcss.parse(css).walkRules(rule => {
+    postcss.parse(css).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert(includedRules.has('body'));
@@ -183,7 +183,7 @@ describe.v2('css modules', () => {
     ]);
 
     let js = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'js').filePath,
+      b.getBundles().find((b) => b.type === 'js').filePath,
       'utf8',
     );
     assert(js.includes('unused'));
@@ -193,11 +193,11 @@ describe.v2('css modules', () => {
     assert(/[_0-9a-zA-Z]+_unused/.test(output['unused']));
 
     let css = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css').filePath,
       'utf8',
     );
     let includedRules = new Set();
-    postcss.parse(css).walkRules(rule => {
+    postcss.parse(css).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert.deepStrictEqual(
@@ -591,9 +591,9 @@ describe.v2('css modules', () => {
     let res = [];
     await runBundle(
       b,
-      b.getBundles().find(b => b.name === 'page1.html'),
+      b.getBundles().find((b) => b.name === 'page1.html'),
       {
-        sideEffect: s => res.push(s),
+        sideEffect: (s) => res.push(s),
       },
     );
 
@@ -602,9 +602,9 @@ describe.v2('css modules', () => {
     res = [];
     await runBundle(
       b,
-      b.getBundles().find(b => b.name === 'page2.html'),
+      b.getBundles().find((b) => b.name === 'page2.html'),
       {
-        sideEffect: s => res.push(s),
+        sideEffect: (s) => res.push(s),
       },
     );
 
@@ -658,7 +658,7 @@ describe.v2('css modules', () => {
     assert.deepEqual(res, 'C-gzXq_foo');
 
     let contents = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css').filePath,
       'utf8',
     );
     assert(contents.includes('.C-gzXq_foo'));
@@ -673,7 +673,7 @@ describe.v2('css modules', () => {
     let res = await run(b);
     assert.deepEqual(res, 'C-gzXq_foo');
     let contents = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css').filePath,
       'utf8',
     );
     assert(contents.includes('.C-gzXq_foo'));
@@ -686,7 +686,7 @@ describe.v2('css modules', () => {
       {mode: 'production'},
     );
     let contents = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css').filePath,
       'utf8',
     );
     assert.equal(
@@ -705,9 +705,9 @@ describe.v2('css modules', () => {
     let res = [];
     await runBundle(
       b,
-      b.getBundles().find(b => b.name === 'index.html'),
+      b.getBundles().find((b) => b.name === 'index.html'),
       {
-        sideEffect: s => res.push(s),
+        sideEffect: (s) => res.push(s),
       },
     );
     assert.deepEqual(res, [
@@ -727,9 +727,9 @@ describe.v2('css modules', () => {
     let res = [];
     await runBundle(
       b,
-      b.getBundles().find(b => b.name === 'index.html'),
+      b.getBundles().find((b) => b.name === 'index.html'),
       {
-        sideEffect: s => res.push(s),
+        sideEffect: (s) => res.push(s),
       },
     );
     // Result is  [ 'mainJs', 'SX8vmq_container YpGmra_-expand' ]
@@ -812,7 +812,7 @@ describe.v2('css modules', () => {
     });
 
     let contents = await outputFS.readFile(
-      b.getBundles().find(b => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css').filePath,
       'utf8',
     );
     assert(contents.includes('.foo'));

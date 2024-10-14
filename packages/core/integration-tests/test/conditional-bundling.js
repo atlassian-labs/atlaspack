@@ -127,10 +127,10 @@ describe('conditional bundling', function () {
 
       let ifTrueBundle = bundleGraph
         .getBundles()
-        .find(b => b.filePath === path.join(distDir, ifTrueBundlePath));
+        .find((b) => b.filePath === path.join(distDir, ifTrueBundlePath));
       let ifFalseBundle = bundleGraph
         .getBundles()
-        .find(b => b.filePath === path.join(distDir, ifFalseBundlePath));
+        .find((b) => b.filePath === path.join(distDir, ifFalseBundlePath));
       assert.ok(ifTrueBundle, 'ifTrue bundle not found');
       assert.ok(ifFalseBundle, 'ifFalse bundle not found');
     },
@@ -171,7 +171,7 @@ describe('conditional bundling', function () {
     });
 
     let entry = nullthrows(
-      bundleGraph.getBundles().find(b => b.name === 'index.js'),
+      bundleGraph.getBundles().find((b) => b.name === 'index.js'),
       'index.js bundle not found',
     );
 
@@ -191,7 +191,7 @@ describe('conditional bundling', function () {
       ),
     );
     let ifTrueBundle = nullthrows(
-      bundleGraph.getBundles().find(b => b.filePath === ifTrueBundlePath),
+      bundleGraph.getBundles().find((b) => b.filePath === ifTrueBundlePath),
     );
 
     // Run the bundles and act like the webserver included the ifTrue bundles already
@@ -247,7 +247,7 @@ describe('conditional bundling', function () {
       });
 
       let entry = nullthrows(
-        bundleGraph.getBundles().find(b => b.name === 'index.js'),
+        bundleGraph.getBundles().find((b) => b.name === 'index.js'),
         'index.js bundle not found',
       );
 
@@ -300,7 +300,7 @@ describe('conditional bundling', function () {
     });
 
     let entry = nullthrows(
-      bundleGraph.getBundles().find(b => b.name === 'index.js'),
+      bundleGraph.getBundles().find((b) => b.name === 'index.js'),
       'index.js bundle not found',
     );
 
@@ -370,7 +370,7 @@ describe('conditional bundling', function () {
       });
 
       let entry = nullthrows(
-        bundleGraph.getBundles().find(b => b.name === 'index.js'),
+        bundleGraph.getBundles().find((b) => b.name === 'index.js'),
         'index.js bundle not found',
       );
 
@@ -390,7 +390,7 @@ describe('conditional bundling', function () {
         ),
       );
       let ifTrueBundle = nullthrows(
-        bundleGraph.getBundles().find(b => b.filePath === ifTrueBundlePath),
+        bundleGraph.getBundles().find((b) => b.filePath === ifTrueBundlePath),
       );
 
       // Run the bundles and act like the webserver included the ifTrue bundles already

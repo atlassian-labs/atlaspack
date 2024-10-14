@@ -24,12 +24,12 @@ describe('images', function () {
     await bundle(join(__dirname, '/integration/image/resized.js'));
 
     let filenames = await outputFS.readdir(distDir);
-    let exts = filenames.map(f => extname(f)).filter(ext => ext !== '.map');
+    let exts = filenames.map((f) => extname(f)).filter((ext) => ext !== '.map');
 
     assert.deepStrictEqual(exts.sort(), ['.jpeg', '.js']);
 
     let filename = filenames.find(
-      f => f.endsWith('.jpeg') || f.endsWith('.jpg'),
+      (f) => f.endsWith('.jpeg') || f.endsWith('.jpg'),
     );
 
     let buffer = await outputFS.readFile(join(distDir, filename));
@@ -47,7 +47,9 @@ describe('images', function () {
         );
 
         let filenames = await outputFS.readdir(distDir);
-        let exts = filenames.map(f => extname(f)).filter(ext => ext !== '.map');
+        let exts = filenames
+          .map((f) => extname(f))
+          .filter((ext) => ext !== '.map');
 
         assert.deepStrictEqual(
           exts.sort(),
@@ -72,7 +74,9 @@ describe('images', function () {
         await bundle(join(__dirname, `/integration/image/reformat.${ext}`));
 
         let filenames = await outputFS.readdir(distDir);
-        let exts = filenames.map(f => extname(f)).filter(ext => ext !== '.map');
+        let exts = filenames
+          .map((f) => extname(f))
+          .filter((ext) => ext !== '.map');
 
         assert.deepStrictEqual(exts.sort(), [`.${ext}`, '.webp'].sort());
       };
@@ -104,7 +108,9 @@ describe('images', function () {
       },
     });
 
-    let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
+    let {filePath} = b
+      .getBundles()
+      .find((b) => ['jpg', 'jpeg'].includes(b.type));
 
     let input = await inputFS.readFile(img);
     let inputRaw = await sharp(input).toFormat('raw').toBuffer();
@@ -125,7 +131,9 @@ describe('images', function () {
       logLevel: 'verbose',
     });
 
-    let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
+    let {filePath} = b
+      .getBundles()
+      .find((b) => ['jpg', 'jpeg'].includes(b.type));
 
     // let input = await inputFS.readFile(img);
     // let inputRaw = await sharp(input)
@@ -148,7 +156,7 @@ describe('images', function () {
       },
     });
 
-    let {filePath} = b.getBundles().find(b => b.type === 'png');
+    let {filePath} = b.getBundles().find((b) => b.type === 'png');
 
     let input = await inputFS.readFile(img);
     let inputRaw = await sharp(input).toFormat('raw').toBuffer();
@@ -163,7 +171,9 @@ describe('images', function () {
   it.v2('retain EXIF data when resized with a query string', async () => {
     let b = await bundle(join(__dirname, '/integration/image-exif/resized.js'));
 
-    let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
+    let {filePath} = b
+      .getBundles()
+      .find((b) => ['jpg', 'jpeg'].includes(b.type));
 
     let buffer = await outputFS.readFile(filePath);
     let image = await sharp(buffer).metadata();
@@ -186,7 +196,9 @@ describe('images', function () {
       },
     );
 
-    let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
+    let {filePath} = b
+      .getBundles()
+      .find((b) => ['jpg', 'jpeg'].includes(b.type));
 
     let buffer = await outputFS.readFile(filePath);
     let image = await sharp(buffer).metadata();
@@ -197,7 +209,9 @@ describe('images', function () {
   it.v2('uses the EXIF orientation tag when resizing', async () => {
     let b = await bundle(join(__dirname, '/integration/image-exif/resized.js'));
 
-    let {filePath} = b.getBundles().find(b => ['jpg', 'jpeg'].includes(b.type));
+    let {filePath} = b
+      .getBundles()
+      .find((b) => ['jpg', 'jpeg'].includes(b.type));
 
     let buffer = await outputFS.readFile(filePath);
     let image = await sharp(buffer).metadata();
@@ -217,7 +231,7 @@ describe('images', function () {
       },
     );
 
-    let {filePath} = b.getBundles().find(b => b.type === 'jpeg');
+    let {filePath} = b.getBundles().find((b) => b.type === 'jpeg');
 
     let buffer = await outputFS.readFile(filePath);
     let image = await sharp(buffer).metadata();
@@ -238,7 +252,7 @@ describe('images', function () {
       },
     );
 
-    let {filePath} = b.getBundles().find(b => b.type === 'png');
+    let {filePath} = b.getBundles().find((b) => b.type === 'png');
 
     let buffer = await outputFS.readFile(filePath);
     let image = await sharp(buffer).metadata();

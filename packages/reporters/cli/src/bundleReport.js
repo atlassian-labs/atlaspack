@@ -31,7 +31,7 @@ export default async function bundleReport(
     assetCount > 0
       ? await generateBuildMetrics(bundleList, fs, projectRoot)
       : {
-          bundles: bundleList.map(b => {
+          bundles: bundleList.map((b) => {
             return {
               filePath: nullthrows(b.filePath),
               size: b.stats.size,

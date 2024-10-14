@@ -131,7 +131,7 @@ export default (new Packager({
         bundleGraph,
         contents,
         map,
-        getReplacement: s => JSON.stringify(s).slice(1, -1),
+        getReplacement: (s) => JSON.stringify(s).slice(1, -1),
       }));
     }
 

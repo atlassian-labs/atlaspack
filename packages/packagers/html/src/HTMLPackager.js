@@ -48,7 +48,7 @@ export default (new Packager({
   },
   async package({bundle, bundleGraph, getInlineBundleContents, config}) {
     let assets = [];
-    bundle.traverseAssets(asset => {
+    bundle.traverseAssets((asset) => {
       assets.push(asset);
     });
 
@@ -68,8 +68,8 @@ export default (new Packager({
     let renderConfig = config?.render;
 
     let {html} = await posthtml([
-      tree => insertBundleReferences(referencedBundles, tree),
-      tree =>
+      (tree) => insertBundleReferences(referencedBundles, tree),
+      (tree) =>
         replaceInlineAssetContent(bundleGraph, getInlineBundleContents, tree),
     ]).process(code, {
       ...renderConfig,
@@ -82,7 +82,7 @@ export default (new Packager({
       bundleGraph,
       contents: html,
       relative: false,
-      getReplacement: contents => contents.replace(/"/g, '&quot;'),
+      getReplacement: (contents) => contents.replace(/"/g, '&quot;'),
     });
 
     return replaceInlineReferences({
@@ -107,7 +107,7 @@ async function getAssetContent(
   let inlineBundle: ?Bundle;
   bundleGraph.traverseBundles((bundle, context, {stop}) => {
     let entryAssets = bundle.getEntryAssets();
-    if (entryAssets.some(a => a.uniqueKey === assetId)) {
+    if (entryAssets.some((a) => a.uniqueKey === assetId)) {
       inlineBundle = bundle;
       stop();
     }
@@ -131,7 +131,7 @@ async function replaceInlineAssetContent(
   tree,
 ) {
   const inlineNodes = [];
-  tree.walk(node => {
+  tree.walk((node) => {
     if (node.attrs && node.attrs['data-parcel-key']) {
       inlineNodes.push(node);
     }
@@ -223,7 +223,7 @@ function addBundlesToTree(bundles, tree) {
 
 function find(tree, tag) {
   let res;
-  tree.match({tag}, node => {
+  tree.match({tag}, (node) => {
     res = node;
     return node;
   });

@@ -401,7 +401,7 @@ export default class Atlaspack {
           options,
         ),
         buildTime: Date.now() - startTime,
-        requestBundle: async bundle => {
+        requestBundle: async (bundle) => {
           let bundleNode = bundleGraph._graph.getNodeByContentKey(bundle.id);
           invariant(bundleNode?.type === 'bundle', 'Bundle does not exist');
 
@@ -580,7 +580,7 @@ export default class Atlaspack {
     let res = await this.#requestTracker.runRequest(request, {
       force: true,
     });
-    return res.map(asset =>
+    return res.map((asset) =>
       assetFromValue(asset, nullthrows(this.#resolvedOptions)),
     );
   }

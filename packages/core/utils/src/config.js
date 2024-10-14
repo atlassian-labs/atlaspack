@@ -16,7 +16,7 @@ export type ConfigOutput = {|
 
 export type ConfigOptions = {|
   parse?: boolean,
-  parser?: string => any,
+  parser?: (string) => any,
 |};
 
 const configCache = new LRU<FilePath, ConfigOutput>({max: 500});

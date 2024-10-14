@@ -55,7 +55,7 @@ export default class ProcessWorker implements WorkerImpl {
     this.child.send('die');
 
     let forceKill = setTimeout(() => this.child.kill('SIGINT'), 500);
-    await new Promise(resolve => {
+    await new Promise((resolve) => {
       this.child.once('exit', resolve);
     });
 
@@ -68,20 +68,23 @@ export default class ProcessWorker implements WorkerImpl {
       return;
     }
 
-    let result = this.child.send(serialize(data).toString('base64'), error => {
-      if (error && error instanceof Error) {
-        // Ignore this, the workerfarm handles child errors
-        return;
-      }
+    let result = this.child.send(
+      serialize(data).toString('base64'),
+      (error) => {
+        if (error && error instanceof Error) {
+          // Ignore this, the workerfarm handles child errors
+          return;
+        }
 
-      this.processQueue = true;
+        this.processQueue = true;
 
-      if (this.sendQueue.length > 0) {
-        let queueCopy = this.sendQueue.slice(0);
-        this.sendQueue = [];
-        queueCopy.forEach(entry => this.send(entry));
-      }
-    });
+        if (this.sendQueue.length > 0) {
+          let queueCopy = this.sendQueue.slice(0);
+          this.sendQueue = [];
+          queueCopy.forEach((entry) => this.send(entry));
+        }
+      },
+    );
 
     if (!result || /^win/.test(process.platform)) {
       // Queue is handling too much messages throttle it

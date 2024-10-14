@@ -39,17 +39,17 @@ export async function loadGraphs(cacheDir: string): Promise<{|
     |}> = [
       {
         name: 'requestGraphBlob',
-        check: basename =>
+        check: (basename) =>
           basename.startsWith('requestGraph-') &&
           !basename.startsWith('requestGraph-nodes'),
       },
       {
         name: 'bundleGraphBlob',
-        check: basename => basename.endsWith('BundleGraph-0'),
+        check: (basename) => basename.endsWith('BundleGraph-0'),
       },
       {
         name: 'assetGraphBlob',
-        check: basename => basename.endsWith('AssetGraph-0'),
+        check: (basename) => basename.endsWith('AssetGraph-0'),
       },
     ];
 
@@ -148,7 +148,7 @@ export async function loadGraphs(cacheDir: string): Promise<{|
   function getSubRequests(id: NodeId) {
     return requestTracker.graph
       .getNodeIdsConnectedFrom(id, requestGraphEdgeTypes.subrequest)
-      .map(n => nullthrows(requestTracker.graph.getNode(n)));
+      .map((n) => nullthrows(requestTracker.graph.getNode(n)));
   }
 
   // Load graphs by finding the main subrequests and loading their results
@@ -167,7 +167,7 @@ export async function loadGraphs(cacheDir: string): Promise<{|
     let buildRequestSubRequests = getSubRequests(buildRequestId);
 
     let writeBundlesRequest = buildRequestSubRequests.find(
-      n => n.type === 1 && n.requestType === 11,
+      (n) => n.type === 1 && n.requestType === 11,
     );
     if (writeBundlesRequest != null) {
       invariant(writeBundlesRequest.type === 1);

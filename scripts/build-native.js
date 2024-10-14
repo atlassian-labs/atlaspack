@@ -46,7 +46,7 @@ async function build() {
         shell: true,
       });
 
-      yarn.on('close', code => (code === 0 ? resolve() : reject()));
+      yarn.on('close', (code) => (code === 0 ? resolve() : reject()));
     }).catch(() => process.exit(1));
   }
 }

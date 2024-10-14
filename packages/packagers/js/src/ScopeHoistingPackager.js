@@ -156,7 +156,7 @@ export class ScopeHoistingPackager {
     let res = '';
     let lineCount = 0;
     let sourceMap = null;
-    let processAsset = asset => {
+    let processAsset = (asset) => {
       let [content, map, lines] = this.visitAsset(asset);
       if (sourceMap && map) {
         sourceMap.addSourceMap(map, lineCount);
@@ -198,7 +198,7 @@ export class ScopeHoistingPackager {
     if (this.isAsyncBundle) {
       // In async bundles we don't want the main entry to execute until we require it
       // as there might be dependencies in a sibling bundle that hasn't loaded yet.
-      entries = entries.filter(a => a.id !== mainEntry?.id);
+      entries = entries.filter((a) => a.id !== mainEntry?.id);
       mainEntry = null;
     }
 
@@ -277,7 +277,7 @@ export class ScopeHoistingPackager {
 
   shouldBundleQueue(bundle: NamedBundle): boolean {
     let referencingBundles = this.bundleGraph.getReferencingBundles(bundle);
-    let hasHtmlReference = referencingBundles.some(b => b.type === 'html');
+    let hasHtmlReference = referencingBundles.some((b) => b.type === 'html');
 
     return (
       this.useAsyncBundleRuntime &&
@@ -293,8 +293,8 @@ export class ScopeHoistingPackager {
   runWhenReady(bundle: NamedBundle, codeToRun: string): string {
     let deps = this.bundleGraph
       .getReferencedBundles(bundle)
-      .filter(b => this.shouldBundleQueue(b))
-      .map(b => b.publicId);
+      .filter((b) => this.shouldBundleQueue(b))
+      .map((b) => b.publicId);
 
     if (deps.length === 0) {
       // If no deps we can safely execute immediately
@@ -313,7 +313,7 @@ export class ScopeHoistingPackager {
   async loadAssets(): Promise<Array<Asset>> {
     let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped = [];
-    this.bundle.traverseAssets(asset => {
+    this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
         let [code, map] = await Promise.all([
           asset.getCode(),
@@ -328,14 +328,14 @@ export class ScopeHoistingPackager {
         this.bundleGraph.isAssetReferenced(this.bundle, asset) ||
         this.bundleGraph
           .getIncomingDependencies(asset)
-          .some(dep => dep.meta.shouldWrap && dep.specifierType !== 'url')
+          .some((dep) => dep.meta.shouldWrap && dep.specifierType !== 'url')
       ) {
         // Don't wrap constant "entry" modules _except_ if they are referenced by any lazy dependency
         if (
           !asset.meta.isConstantModule ||
           this.bundleGraph
             .getIncomingDependencies(asset)
-            .some(dep => dep.priority === 'lazy')
+            .some((dep) => dep.priority === 'lazy')
         ) {
           this.wrappedAssets.add(asset.id);
           wrapped.push(asset);
@@ -361,7 +361,8 @@ export class ScopeHoistingPackager {
         if (
           this.forceSkipWrapAssets.length > 0 &&
           this.forceSkipWrapAssets.some(
-            p => p === path.relative(this.options.projectRoot, asset.filePath),
+            (p) =>
+              p === path.relative(this.options.projectRoot, asset.filePath),
           )
         ) {
           this.logger.verbose({
@@ -696,7 +697,7 @@ ${code}
     if (
       !shouldWrap &&
       this.shouldBundleQueue(this.bundle) &&
-      this.bundle.getEntryAssets().some(entry => entry.id === asset.id)
+      this.bundle.getEntryAssets().some((entry) => entry.id === asset.id)
     ) {
       code = this.runWhenReady(this.bundle, code);
     }
@@ -1187,7 +1188,7 @@ ${code}
           this.bundleGraph
             .getIncomingDependencies(asset)
             .some(
-              dep =>
+              (dep) =>
                 !dep.isEntry &&
                 this.bundle.hasDependency(dep) &&
                 nullthrows(this.bundleGraph.getUsedSymbols(dep)).has('*'),
@@ -1195,7 +1196,7 @@ ${code}
       // If a symbol is imported (used) from a CJS asset but isn't listed in the symbols,
       // we fallback on the namespace object.
       (asset.symbols.hasExportSymbol('*') &&
-        [...usedSymbols].some(s => !asset.symbols.hasExportSymbol(s))) ||
+        [...usedSymbols].some((s) => !asset.symbols.hasExportSymbol(s))) ||
       // If the exports has this asset's namespace (e.g. ESM output from CJS input),
       // include the namespace object for the default export.
       this.exportedSymbols.has(`$${assetId}$exports`) ||
@@ -1316,7 +1317,7 @@ ${code}
       // incoming dependencies rather than the asset's own used exports so that we include
       // re-exported symbols rather than only symbols declared in this asset.
       let incomingDeps = this.bundleGraph.getIncomingDependencies(asset);
-      let usedExports = [...asset.symbols.exportSymbols()].filter(symbol => {
+      let usedExports = [...asset.symbols.exportSymbols()].filter((symbol) => {
         if (symbol === '*') {
           return false;
         }
@@ -1327,7 +1328,7 @@ ${code}
           return true;
         }
 
-        let unused = incomingDeps.every(d => {
+        let unused = incomingDeps.every((d) => {
           let symbols = nullthrows(this.bundleGraph.getUsedSymbols(d));
           return !symbols.has(symbol) && !symbols.has('*');
         });
@@ -1340,7 +1341,7 @@ ${code}
         // required to simulate ESM live bindings. It's easier to do it this way rather than inserting
         // additional assignments after each mutation of the original binding.
         prepend += `\n${usedExports
-          .map(exp => {
+          .map((exp) => {
             let resolved = this.getSymbolResolution(
               asset,
               asset,
@@ -1415,10 +1416,10 @@ ${code}
       let parentBundles = this.bundleGraph.getParentBundles(this.bundle);
       let mightBeFirstJS =
         parentBundles.length === 0 ||
-        parentBundles.some(b => b.type !== 'js') ||
+        parentBundles.some((b) => b.type !== 'js') ||
         this.bundleGraph
           .getBundleGroupsContainingBundle(this.bundle)
-          .some(g => this.bundleGraph.isEntryBundleGroup(g)) ||
+          .some((g) => this.bundleGraph.isEntryBundleGroup(g)) ||
         this.bundle.env.isIsolated() ||
         this.bundle.bundleBehavior === 'isolated' ||
         // Conditional deps may be loaded before entrypoints on the server
@@ -1515,10 +1516,10 @@ ${code}
 
     return this.bundle
       .getEntryAssets()
-      .some(entry =>
+      .some((entry) =>
         this.bundleGraph
           .getIncomingDependencies(entry)
-          .some(dep => dep.priority === 'conditional'),
+          .some((dep) => dep.priority === 'conditional'),
       );
   }
 }
