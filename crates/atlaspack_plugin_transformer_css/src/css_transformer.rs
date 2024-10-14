@@ -1,3 +1,4 @@
+use std::fmt::format;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -6,8 +7,10 @@ use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::engines::Engines;
 use atlaspack_core::types::{
-  Asset, Code, Dependency, EnvironmentContext, ExportsCondition, FileType, Priority, SpecifierType,
+  Asset, AssetWithDependencies, Code, Dependency, EnvironmentContext, ExportsCondition, FileType,
+  Priority, SpecifierType, Symbol,
 };
+use atlaspack_filesystem::FileSystemRef;
 use lightningcss::dependencies::{self, Dependency, DependencyOptions};
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::{self, ParserFlags, ParserOptions, StyleSheet};
@@ -16,12 +19,14 @@ use lightningcss::targets::Targets;
 #[derive(Debug)]
 pub struct AtlaspackCssTransformerPlugin {
   project_root: PathBuf,
+  fs: FileSystemRef,
 }
 
 impl AtlaspackCssTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Self {
     AtlaspackCssTransformerPlugin {
       project_root: ctx.options.project_root.clone(),
+      fs: ctx.file_system,
     }
   }
 }
@@ -95,9 +100,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       pseudo_classes: None,
     })?;
 
-    asset.code = Arc::new(Code::from(css.code));
-
-    let dependencies = css
+    let mut dependencies = css
       .dependencies
       .map(|dependencies| {
         dependencies
@@ -153,6 +156,150 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
           .collect()
       })
       .unwrap_or_default();
+
+    let mut css_code = Vec::new();
+    let mut discovered_assets = None;
+    let mut asset_symbols = Vec::new();
+
+    if let Some(exports) = css.exports {
+      let unique_key = format!("{}:module", asset.id);
+      let mut export_code = String::new();
+
+      asset_symbols.push(Symbol {
+        exported: "default".into(),
+        local: "default".into(),
+        is_weak: false,
+        is_esm_export: true,
+        self_referenced: false,
+        loc: None,
+      });
+
+      for (key, export) in exports.iter() {
+        asset_symbols.push(Symbol {
+          exported: export.name.clone(),
+          local: key.clone(),
+          is_weak: false,
+          is_esm_export: true,
+          self_referenced: false,
+          loc: None,
+        });
+        export_code
+          .push_str(format!("module.exports[\"{}\"] = `{}`;\n", key, export.name).as_str());
+
+        // TODO: Add support for CSS modules "composes" feature, or drop it
+
+        if export.is_referenced {
+          export_code.push_str(format!("module.exports[\"{key}\"];\n").as_str());
+
+          let symbols = vec![Symbol {
+            exported: key.clone(),
+            local: export.name.clone(),
+            is_weak: false,
+            is_esm_export: true,
+            self_referenced: true,
+            loc: None,
+          }];
+
+          dependencies.push(Dependency {
+            specifier: unique_key.clone(),
+            specifier_type: SpecifierType::Esm,
+            symbols: Some(symbols),
+            env: asset.env.clone(),
+            source_asset_id: Some(asset.id.clone()),
+            source_path: Some(asset.file_path),
+            source_asset_type: Some(FileType::Css),
+            ..Dependency::default()
+          });
+        }
+      }
+
+      let mut import_code = String::new();
+
+      if let Some(dependencies) = css.dependencies {
+        for (index, dependency) in dependencies.iter().enumerate() {
+          if let lightningcss::dependencies::Dependency::Import(import) = dependency {
+            let local = format!("dep_${index}");
+
+            let import_statement = format!("import * as {} from \"{}\";\n", local, import.url);
+            import_code.push_str(&import_statement);
+
+            let export_statement = format!(
+              r"
+              for (let key in {local}) {{
+                if (key in module.exports)
+                  module.exports[key] += ' ' + {local}[key];
+                else
+                  module.exports[key] = {local}[key];
+              }}
+            "
+            );
+            export_code.push_str(&export_statement);
+
+            asset_symbols.push(Symbol {
+              exported: "*".into(),
+              local: "*".into(),
+              is_weak: false,
+              is_esm_export: true,
+              self_referenced: false,
+              loc: None,
+            })
+          }
+        }
+      }
+
+      if let Some(references) = css.references {
+        for (local, reference) in references.iter() {
+          if let lightningcss::css_modules::CssModuleReference::Dependency(reference) = reference {
+            let symbols = vec![Symbol {
+              local: local.clone(),
+              exported: reference.name,
+              is_weak: false,
+              loc: None,
+              self_referenced: false,
+              is_esm_export: true,
+            }];
+
+            dependencies.push(Dependency {
+              specifier: reference.specifier,
+              specifier_type: SpecifierType::Esm,
+              package_conditions: ExportsCondition::STYLE,
+              symbols: Some(symbols),
+              env: asset.env.clone(),
+              source_asset_id: Some(asset.id.clone()),
+              source_path: Some(asset.file_path),
+              source_asset_type: Some(FileType::Css),
+              ..Dependency::default()
+            });
+
+            asset.meta.insert("hasReferences".into(), true.into());
+            css_code.push(format!("@import '{}';", reference.specifier));
+          }
+        }
+      }
+
+      let discovered_asset = Asset::new_discovered(
+        &asset,
+        unique_key,
+        FileType::Js,
+        format!("{import_code}{export_code}"),
+        false,
+      )?;
+
+      discovered_assets = Some(vec![AssetWithDependencies {
+        asset: discovered_asset,
+        dependencies: Vec::new(),
+      }])
+    }
+
+    if let Some(symbols) = asset.symbols.as_mut() {
+      symbols.extend(asset_symbols);
+    } else {
+      asset.symbols = Some(asset_symbols);
+    }
+
+    // Add the generated css imports to the css output
+    css_code.push(css.code);
+    asset.code = Arc::new(Code::from(css_code.join("\n")));
 
     Ok(TransformResult {
       asset,
