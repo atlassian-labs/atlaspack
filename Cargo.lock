@@ -174,6 +174,7 @@ dependencies = [
  "atlaspack_package_manager",
  "atlaspack_plugin_resolver",
  "atlaspack_plugin_rpc",
+ "atlaspack_plugin_transformer_css",
  "atlaspack_plugin_transformer_html",
  "atlaspack_plugin_transformer_image",
  "atlaspack_plugin_transformer_inline",
@@ -475,6 +476,7 @@ dependencies = [
  "atlaspack_core",
  "atlaspack_filesystem",
  "lightningcss",
+ "pretty_assertions",
 ]
 
 [[package]]

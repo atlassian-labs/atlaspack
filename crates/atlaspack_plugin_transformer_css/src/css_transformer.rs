@@ -1,5 +1,5 @@
-use std::fmt::format;
 use std::ops::Deref;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
@@ -10,23 +10,20 @@ use atlaspack_core::types::{
   Asset, AssetWithDependencies, Code, Dependency, EnvironmentContext, ExportsCondition, FileType,
   Priority, SpecifierType, Symbol,
 };
-use atlaspack_filesystem::FileSystemRef;
-use lightningcss::dependencies::{self, Dependency, DependencyOptions};
+use lightningcss::dependencies::DependencyOptions;
 use lightningcss::printer::PrinterOptions;
-use lightningcss::stylesheet::{self, ParserFlags, ParserOptions, StyleSheet};
+use lightningcss::stylesheet::{ParserFlags, ParserOptions, StyleSheet};
 use lightningcss::targets::Targets;
 
 #[derive(Debug)]
 pub struct AtlaspackCssTransformerPlugin {
   project_root: PathBuf,
-  fs: FileSystemRef,
 }
 
 impl AtlaspackCssTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Self {
     AtlaspackCssTransformerPlugin {
       project_root: ctx.options.project_root.clone(),
-      fs: ctx.file_system,
     }
   }
 }
@@ -34,12 +31,12 @@ impl AtlaspackCssTransformerPlugin {
 impl TransformerPlugin for AtlaspackCssTransformerPlugin {
   fn transform(
     &mut self,
-    context: TransformContext,
+    _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, Error> {
     // TODO: Hardcoded AFM defaults for now, could support proper config here if
     // need be
-    let css_modules = if asset.is_source {
+    let css_modules = if asset.is_source && asset.file_path.ends_with(".module.css") {
       Some(Default::default())
     } else {
       None
@@ -54,7 +51,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
           .into_os_string()
           .into_string()
           .map_err(|_e| anyhow!("Couldn't convert file path to String"))?,
-        css_modules: Some(Default::default()),
+        css_modules,
         source_index: Default::default(),
         error_recovery: false,
         warnings: None,
@@ -100,8 +97,9 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       pseudo_classes: None,
     })?;
 
-    let mut dependencies = css
+    let mut dependencies: Vec<Dependency> = css
       .dependencies
+      .as_ref()
       .map(|dependencies| {
         dependencies
           .iter()
@@ -113,42 +111,42 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 return None;
               }
 
-              let dependency = Dependency {
+              let mut dependency = Dependency {
                 env: asset.env.clone(),
+                package_conditions: ExportsCondition::STYLE,
                 priority: Priority::Sync,
                 source_asset_id: Some(asset.id.clone()),
-                source_asset_type: Some(FileType::Css),
                 source_path: Some(asset.file_path.clone()),
-                specifier: import_dependency.url,
+                specifier: import_dependency.url.clone(),
                 specifier_type: SpecifierType::Url,
-                package_conditions: ExportsCondition::STYLE,
+                source_asset_type: Some(FileType::Css),
                 ..Dependency::default()
               };
 
-              if let Some(media) = import_dependency.media {
-                dependency.meta.insert("media".into(), media.into());
+              if let Some(media) = &import_dependency.media {
+                dependency.meta.insert("media".into(), media.clone().into());
               }
 
               // For the glob resolver to distinguish between `@import` and other URL dependencies.
               dependency.meta.insert("isCSSImport".into(), true.into());
 
-              dependency.set_placeholder(import_dependency.placeholder);
+              dependency.set_placeholder(import_dependency.placeholder.clone());
 
               Some(dependency)
             }
             lightningcss::dependencies::Dependency::Url(url_dependency) => {
-              let dependency = Dependency {
+              let mut dependency = Dependency {
                 env: asset.env.clone(),
                 priority: Priority::Sync,
                 source_asset_id: Some(asset.id.clone()),
                 source_asset_type: Some(FileType::Css),
                 source_path: Some(asset.file_path.clone()),
-                specifier: url_dependency.url,
+                specifier: url_dependency.url.clone(),
                 specifier_type: SpecifierType::Url,
                 ..Dependency::default()
               };
 
-              dependency.set_placeholder(url_dependency.placeholder);
+              dependency.set_placeholder(url_dependency.placeholder.clone());
 
               Some(dependency)
             }
@@ -158,7 +156,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       .unwrap_or_default();
 
     let mut css_code = Vec::new();
-    let mut discovered_assets = None;
+    let mut discovered_assets = Vec::new();
     let mut asset_symbols = Vec::new();
 
     if let Some(exports) = css.exports {
@@ -206,7 +204,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
             symbols: Some(symbols),
             env: asset.env.clone(),
             source_asset_id: Some(asset.id.clone()),
-            source_path: Some(asset.file_path),
+            source_path: Some(asset.file_path.clone()),
             source_asset_type: Some(FileType::Css),
             ..Dependency::default()
           });
@@ -215,7 +213,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
       let mut import_code = String::new();
 
-      if let Some(dependencies) = css.dependencies {
+      if let Some(dependencies) = &css.dependencies {
         for (index, dependency) in dependencies.iter().enumerate() {
           if let lightningcss::dependencies::Dependency::Import(import) = dependency {
             let local = format!("dep_${index}");
@@ -249,10 +247,12 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
       if let Some(references) = css.references {
         for (local, reference) in references.iter() {
-          if let lightningcss::css_modules::CssModuleReference::Dependency(reference) = reference {
+          if let lightningcss::css_modules::CssModuleReference::Dependency { name, specifier } =
+            reference
+          {
             let symbols = vec![Symbol {
               local: local.clone(),
-              exported: reference.name,
+              exported: name.clone(),
               is_weak: false,
               loc: None,
               self_referenced: false,
@@ -260,19 +260,19 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
             }];
 
             dependencies.push(Dependency {
-              specifier: reference.specifier,
+              specifier: specifier.clone(),
               specifier_type: SpecifierType::Esm,
               package_conditions: ExportsCondition::STYLE,
               symbols: Some(symbols),
               env: asset.env.clone(),
               source_asset_id: Some(asset.id.clone()),
-              source_path: Some(asset.file_path),
+              source_path: Some(asset.file_path.clone()),
               source_asset_type: Some(FileType::Css),
               ..Dependency::default()
             });
 
             asset.meta.insert("hasReferences".into(), true.into());
-            css_code.push(format!("@import '{}';", reference.specifier));
+            css_code.push(format!("@import '{}';", specifier));
           }
         }
       }
@@ -285,16 +285,18 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
         false,
       )?;
 
-      discovered_assets = Some(vec![AssetWithDependencies {
+      discovered_assets.push(AssetWithDependencies {
         asset: discovered_asset,
         dependencies: Vec::new(),
-      }])
+      });
     }
 
-    if let Some(symbols) = asset.symbols.as_mut() {
-      symbols.extend(asset_symbols);
-    } else {
-      asset.symbols = Some(asset_symbols);
+    if asset_symbols.len() > 0 {
+      if let Some(symbols) = asset.symbols.as_mut() {
+        symbols.extend(asset_symbols);
+      } else {
+        asset.symbols = Some(asset_symbols);
+      }
     }
 
     // Add the generated css imports to the css output
@@ -304,6 +306,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
     Ok(TransformResult {
       asset,
       dependencies,
+      discovered_assets,
       ..Default::default()
     })
   }
@@ -311,18 +314,20 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
 #[cfg(test)]
 mod tests {
+  use pretty_assertions::assert_eq;
   use std::{path::PathBuf, sync::Arc};
 
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::{PluginLogger, PluginOptions},
+    types::JSONObject,
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
   use super::*;
 
   #[test]
-  fn returns_raw_asset() {
+  fn find_css_imports() {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let mut plugin = AtlaspackCssTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
@@ -334,22 +339,34 @@ mod tests {
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
     });
-
-    let asset = Asset::default();
-
-    assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Isolated));
-    let mut asset = asset;
-    asset.bundle_behavior = Some(BundleBehavior::Isolated);
     let context = TransformContext::default();
 
+    let asset = Asset {
+      id: "my-asset".into(),
+      file_path: "styles.css".into(),
+      code: Arc::new(Code::from("@import './stuff.css';")),
+      ..Default::default()
+    };
+
+    let result = plugin
+      .transform(context, asset.clone())
+      .map_err(|e| e.to_string());
+
     assert_eq!(
-      plugin
-        .transform(context, asset.clone())
-        .map_err(|e| e.to_string()),
-      Ok(TransformResult {
-        asset,
-        ..Default::default()
-      })
+      result.unwrap().dependencies,
+      vec![Dependency {
+        specifier: "./stuff.css".into(),
+        source_asset_id: Some("my-asset".into()),
+        source_path: Some("styles.css".into()),
+        source_asset_type: Some(FileType::Css),
+        specifier_type: SpecifierType::Url,
+        package_conditions: ExportsCondition::STYLE,
+        meta: JSONObject::from_iter([
+          ("isCSSImport".into(), true.into()),
+          ("placeholder".into(), "OFe21q".into())
+        ]),
+        ..Dependency::default()
+      }]
     );
   }
 }

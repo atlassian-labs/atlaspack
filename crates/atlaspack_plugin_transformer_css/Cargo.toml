@@ -10,6 +10,7 @@ atlaspack_core = { path = "../atlaspack_core" }
 
 anyhow = "1"
 lightningcss = "1.0.0-alpha.59"
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 
 [dev-dependencies]
-atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+pretty_assertions = "1.4.0"

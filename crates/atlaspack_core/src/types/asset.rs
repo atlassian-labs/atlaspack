@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::ffi::OsStr;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -27,7 +27,7 @@ pub type AssetId = String;
 ///
 /// TODO: This should be called contents now that it's bytes
 /// TODO: This should be an enum and represent cases where the bytes are on disk
-#[derive(PartialEq, Default, Clone, Debug, Deserialize, Serialize)]
+#[derive(PartialEq, Default, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", transparent)]
 pub struct Code {
   inner: Vec<u8>,
@@ -58,10 +58,24 @@ impl Display for Code {
   }
 }
 
+impl Debug for Code {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{:?}", self.as_str().unwrap())
+  }
+}
+
 impl From<String> for Code {
   fn from(value: String) -> Self {
     Self {
       inner: value.into_bytes(),
+    }
+  }
+}
+
+impl From<&str> for Code {
+  fn from(value: &str) -> Self {
+    Self {
+      inner: value.to_owned().into_bytes(),
     }
   }
 }
