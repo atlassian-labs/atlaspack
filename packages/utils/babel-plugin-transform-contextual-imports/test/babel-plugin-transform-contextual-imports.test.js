@@ -5,8 +5,8 @@ import assert from 'assert';
 
 const plugin = require.resolve('../src/index.ts');
 
-describe('@atlaspack/babel-plugin-transform-dev-conditional-imports', () => {
-  it('should transform to inline requires', () => {
+describe('@atlaspack/babel-plugin-transform-contextual-imports', () => {
+  it('should transform importCond to inline requires', () => {
     const input = `
       importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
     `;
@@ -22,7 +22,7 @@ describe('@atlaspack/babel-plugin-transform-dev-conditional-imports', () => {
     );
   });
 
-  it('should transform to ssr safe code', () => {
+  it('should transform importCond to ssr safe code', () => {
     const input = `
       importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
     `;

@@ -122,7 +122,7 @@ export default declare((api): PluginObj<State> => {
   ];
 
   return {
-    name: '@atlaspack/babel-plugin-transform-conditional-imports',
+    name: '@atlaspack/babel-plugin-transform-contextual-imports',
     visitor: {
       CallExpression: {
         enter(path, state) {

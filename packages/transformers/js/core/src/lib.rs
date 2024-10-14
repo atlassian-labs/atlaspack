@@ -16,8 +16,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use atlaspack_conditional_imports::ConditionalImportsConfig;
-use atlaspack_conditional_imports::ConditionalImportsVisitor;
+use atlaspack_contextual_imports::ContextualImportsConfig;
+use atlaspack_contextual_imports::ContextualImportsInlineRequireVisitor;
 use atlaspack_core::types::Condition;
 use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
@@ -355,20 +355,14 @@ pub fn transform(
                 result.is_constant_module = constant_module.is_constant_module;
               }
 
-              // Replace conditional imports with requires when flag is off
               if !config.conditional_bundling {
-                module.visit_mut_with(
-                  // conditional_imports_swc_plugin::ConditionalImportsVisitor::new(
-                  //   metadata.unresolved_mark,
-                  //   conditional_imports::ConditionalImportsConfig {},
-                  // ),
-                  &mut ConditionalImportsVisitor::new(
-                    unresolved_mark,
-                    ConditionalImportsConfig {
-                      server: Some(false),
-                    },
-                  ),
-                );
+                // Treat conditional imports as two inline requires when flag is off
+                module.visit_mut_with(&mut ContextualImportsInlineRequireVisitor::new(
+                  unresolved_mark,
+                  ContextualImportsConfig {
+                    server: Some(false),
+                  },
+                ));
               }
 
               let module = {
