@@ -1,5 +1,5 @@
 {
-  "name": "@atlaspack/babel-plugin-transform-conditional-imports",
+  "name": "@atlaspack/babel-plugin-transform-contextual-imports",
   "version": "2.12.0",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
