@@ -46,13 +46,13 @@ pub fn remove_code_whitespace(code: &str) -> String {
   re.replace_all(code, "\n").trim().to_string()
 }
 
-pub(crate) fn run_swc_core_transform(source_code: &str) -> TransformResult {
+pub fn run_swc_core_transform(source_code: &str) -> TransformResult {
   let swc_output = crate::transform(make_test_swc_config(source_code), None).unwrap();
   swc_output
 }
 
 /// SWC configuration for testing
-pub(crate) fn make_test_swc_config(source_code: &str) -> Config {
+pub fn make_test_swc_config(source_code: &str) -> Config {
   Config {
     source_type: crate::SourceType::Module,
     is_browser: true,
