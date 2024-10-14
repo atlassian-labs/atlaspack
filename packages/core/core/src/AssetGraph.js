@@ -176,7 +176,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     }
     this.replaceNodeIdsConnectedTo(
       nullthrows(this.rootNodeId),
-      nodes.map(node => this.addNode(node)),
+      nodes.map((node) => this.addNode(node)),
     );
   }
 
@@ -215,7 +215,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
 
     this.replaceNodeIdsConnectedTo(
       entrySpecifierNodeId,
-      resolved.map(file => this.addNode(nodeFromEntryFile(file))),
+      resolved.map((file) => this.addNode(nodeFromEntryFile(file))),
     );
   }
 
@@ -224,7 +224,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     targets: Array<Target>,
     correspondingRequest: string,
   ) {
-    let depNodes = targets.map(target => {
+    let depNodes = targets.map((target) => {
       let node = nodeFromDep(
         // The passed project path is ignored in this case, because there is no `loc`
         createDependency('', {
@@ -256,7 +256,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
 
     this.replaceNodeIdsConnectedTo(
       entryNodeId,
-      depNodes.map(node => this.addNode(node)),
+      depNodes.map((node) => this.addNode(node)),
     );
   }
 
@@ -342,7 +342,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
       let traversedNode = nullthrows(this.getNode(traversedNodeId));
       if (traversedNode.type === 'asset') {
         let hasDeferred = this.getNodeIdsConnectedFrom(traversedNodeId).some(
-          childNodeId => {
+          (childNodeId) => {
             let childNode = nullthrows(this.getNode(childNodeId));
             return childNode.hasDeferred == null
               ? false
@@ -419,7 +419,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
 
     let deps = this.getIncomingDependencies(resolvedAsset);
 
-    return deps.every(d => {
+    return deps.every((d) => {
       // If this dependency has already been through this process, and we
       // know it's not deferrable, then there's no need to re-check
       if (this.undeferredDependencies.has(d)) {
@@ -430,7 +430,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
         d.symbols &&
         !(d.env.isLibrary && d.isEntry) &&
         !d.symbols.has('*') &&
-        ![...d.symbols.keys()].some(symbol => {
+        ![...d.symbols.keys()].some((symbol) => {
           let assetSymbol = resolvedAsset.symbols?.get(symbol)?.local;
           return assetSymbol != null && symbols.has(assetSymbol);
         });
@@ -534,7 +534,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
         };
       }
       let dependentAsset = dependentAssets.find(
-        a => a.uniqueKey === dep.specifier,
+        (a) => a.uniqueKey === dep.specifier,
       );
       if (dependentAsset) {
         depNode.complete = true;
@@ -595,7 +595,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     startNodeId: ?NodeId,
   ): ?TContext {
     return this.filteredTraverse(
-      nodeId => {
+      (nodeId) => {
         let node = nullthrows(this.getNode(nodeId));
         return node.type === 'asset' ? node.value : null;
       },
@@ -633,7 +633,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
 
     let hash = new Hash();
     // TODO: sort??
-    this.traverse(nodeId => {
+    this.traverse((nodeId) => {
       let node = nullthrows(this.getNode(nodeId));
       if (node.type === 'asset') {
         hash.writeString(nullthrows(node.value.outputHash));

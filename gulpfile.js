@@ -55,7 +55,7 @@ class TapStream extends Transform {
 exports.clean = function clean(cb) {
   rimraf('packages/*/*/lib/**').then(
     () => cb(),
-    err => cb(err),
+    (err) => cb(err),
   );
 };
 
@@ -65,19 +65,19 @@ function buildBabel() {
   return gulp
     .src(paths.packageSrc)
     .pipe(babel({...babelConfig, babelrcRoots: [__dirname + '/packages/*/*']}))
-    .pipe(renameStream(relative => relative.replace('src', 'lib')))
+    .pipe(renameStream((relative) => relative.replace('src', 'lib')))
     .pipe(gulp.dest(paths.packages));
 }
 
 function copyOthers() {
   return gulp
     .src(paths.packageOther)
-    .pipe(renameStream(relative => relative.replace('src', 'lib')))
+    .pipe(renameStream((relative) => relative.replace('src', 'lib')))
     .pipe(gulp.dest(paths.packages));
 }
 
 function renameStream(fn) {
-  return new TapStream(vinyl => {
+  return new TapStream((vinyl) => {
     let relative = path.relative(vinyl.base, vinyl.path);
     vinyl.path = path.join(vinyl.base, fn(relative));
   });

@@ -28,14 +28,14 @@ export default (new Transformer({
     if (typeof contents?.cssModules?.include === 'string') {
       contents.cssModules.include = [globToRegex(contents.cssModules.include)];
     } else if (Array.isArray(contents?.cssModules?.include)) {
-      contents.cssModules.include = contents.cssModules.include.map(include =>
+      contents.cssModules.include = contents.cssModules.include.map((include) =>
         typeof include === 'string' ? globToRegex(include) : include,
       );
     }
     if (typeof contents?.cssModules?.exclude === 'string') {
       contents.cssModules.exclude = [globToRegex(contents.cssModules.exclude)];
     } else if (Array.isArray(contents?.cssModules?.exclude)) {
-      contents.cssModules.exclude = contents.cssModules.exclude.map(exclude =>
+      contents.cssModules.exclude = contents.cssModules.exclude.map((exclude) =>
         typeof exclude === 'string' ? globToRegex(exclude) : exclude,
       );
     }
@@ -88,7 +88,7 @@ export default (new Transformer({
             if (typeof cssModulesConfig === 'boolean') {
               isCSSModule = true;
             } else if (cssModulesConfig?.include) {
-              isCSSModule = cssModulesConfig.include.some(include =>
+              isCSSModule = cssModulesConfig.include.some((include) =>
                 include.test(projectRootPath),
               );
             } else if (cssModulesConfig?.global) {
@@ -96,7 +96,7 @@ export default (new Transformer({
             }
 
             if (
-              cssModulesConfig?.exclude?.some(exclude =>
+              cssModulesConfig?.exclude?.some((exclude) =>
                 exclude.test(projectRootPath),
               )
             ) {
@@ -247,7 +247,7 @@ export default (new Transformer({
       asset.uniqueKey ??= asset.id;
 
       let seen = new Set();
-      let add = key => {
+      let add = (key) => {
         if (seen.has(key)) {
           return;
         }

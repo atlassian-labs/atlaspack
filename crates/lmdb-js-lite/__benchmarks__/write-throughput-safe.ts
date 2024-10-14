@@ -1,6 +1,6 @@
-import { randomBytes } from "node:crypto";
-import { Lmdb } from "../index";
-import { mkdirSync, rmSync } from "node:fs";
+import {randomBytes} from 'node:crypto';
+import {Lmdb} from '../index';
+import {mkdirSync, rmSync} from 'node:fs';
 
 const KEY_SIZE = 64;
 const ENTRY_SIZE = 64 * 1024; // 64KB
@@ -18,25 +18,25 @@ function generateEntry() {
 
 async function main() {
   {
-    rmSync("./databases", {
+    rmSync('./databases', {
       recursive: true,
       force: true,
     });
-    mkdirSync("./databases", {
+    mkdirSync('./databases', {
       recursive: true,
     });
     const safeDB = new Lmdb({
-      path: "./databases/safe/no-batching",
+      path: './databases/safe/no-batching',
       asyncWrites: ASYNC_WRITES,
       mapSize: MAP_SIZE,
     });
 
     {
-      console.log("Generating entries for testing");
+      console.log('Generating entries for testing');
       const entries = [...Array(NUM_ENTRIES)].map(() => {
         return generateEntry();
       });
-      console.log("(no-batching) Writing entries for", MAX_TIME, "ms");
+      console.log('(no-batching) Writing entries for', MAX_TIME, 'ms');
       const start = Date.now();
       let numEntriesInserted = 0;
       await safeDB.startWriteTransaction();
@@ -49,30 +49,30 @@ async function main() {
       await safeDB.commitWriteTransaction();
       const duration = Date.now() - start;
       const throughput = numEntriesInserted / duration;
-      console.log("Throughput:", throughput, "entries / second");
+      console.log('Throughput:', throughput, 'entries / second');
     }
     safeDB.close();
   }
 
   {
-    rmSync("./databases", {
+    rmSync('./databases', {
       recursive: true,
       force: true,
     });
-    mkdirSync("./databases", {
+    mkdirSync('./databases', {
       recursive: true,
     });
     const safeDB = new Lmdb({
-      path: "./databases/safe/manual",
+      path: './databases/safe/manual',
       asyncWrites: ASYNC_WRITES,
       mapSize: MAP_SIZE,
     });
     {
-      console.log("Generating entries for testing");
+      console.log('Generating entries for testing');
       const entries = [...Array(NUM_ENTRIES)].map(() => {
         return generateEntry();
       });
-      console.log("(manual batching) Writing entries for", MAX_TIME, "ms");
+      console.log('(manual batching) Writing entries for', MAX_TIME, 'ms');
       const start = Date.now();
       let numEntriesInserted = 0;
       let batch = [];
@@ -88,7 +88,7 @@ async function main() {
       }
       const duration = Date.now() - start;
       const throughput = numEntriesInserted / duration;
-      console.log("Safe Throughput:", throughput, "entries / second");
+      console.log('Safe Throughput:', throughput, 'entries / second');
     }
     safeDB.close();
   }

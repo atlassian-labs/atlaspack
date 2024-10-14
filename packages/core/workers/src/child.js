@@ -47,7 +47,7 @@ export class Child {
 
   constructor(ChildBackend: Class<ChildImpl>) {
     this.child = new ChildBackend(
-      m => {
+      (m) => {
         this.messageListener(m);
       },
       () => this.handleEnd(),
@@ -55,11 +55,11 @@ export class Child {
 
     // Monitior all logging events inside this child process and forward to
     // the main process via the bus.
-    this.loggerDisposable = Logger.onLog(event => {
+    this.loggerDisposable = Logger.onLog((event) => {
       bus.emit('logEvent', event);
     });
     // .. and do the same for trace events
-    this.tracerDisposable = tracer.onTrace(event => {
+    this.tracerDisposable = tracer.onTrace((event) => {
       bus.emit('traceEvent', event);
     });
   }

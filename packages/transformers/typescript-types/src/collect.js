@@ -115,7 +115,7 @@ export function collect(
 
     if (ts.isVariableStatement(node) && node.modifiers) {
       let isExported = node.modifiers.some(
-        m => m.kind === ts.SyntaxKind.ExportKeyword,
+        (m) => m.kind === ts.SyntaxKind.ExportKeyword,
       );
       for (let v of node.declarationList.declarations) {
         currentModule.addLocal(v.name.text, v);

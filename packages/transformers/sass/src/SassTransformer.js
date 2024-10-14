@@ -29,7 +29,7 @@ export default (new Transformer({
 
     // Resolve relative paths from config file
     if (configFile && configResult.includePaths) {
-      configResult.includePaths = configResult.includePaths.map(p =>
+      configResult.includePaths = configResult.includePaths.map((p) =>
         path.resolve(path.dirname(configFile.filePath), p),
       );
     }
@@ -133,7 +133,7 @@ function resolvePathImporter({asset, resolve, includePaths, options}) {
       paths.push(
         ...options.env.SASS_PATH.split(
           process.platform === 'win32' ? ';' : ':',
-        ).map(p => path.resolve(options.projectRoot, p)),
+        ).map((p) => path.resolve(options.projectRoot, p)),
       );
     }
 
@@ -182,7 +182,7 @@ function resolvePathImporter({asset, resolve, includePaths, options}) {
   return function (rawUrl, prev, done) {
     const url = rawUrl.replace(/^file:\/\//, '');
     resolvePath(url, prev)
-      .then(resolved => {
+      .then((resolved) => {
         if (resolved) {
           done({
             file: resolved.filePath,

@@ -15,7 +15,7 @@ function shouldExclude(asset, options) {
     !asset
       .getDependencies()
       .find(
-        v =>
+        (v) =>
           v.specifier === 'react' ||
           v.specifier === 'react/jsx-runtime' ||
           v.specifier === 'react/jsx-dev-runtime' ||

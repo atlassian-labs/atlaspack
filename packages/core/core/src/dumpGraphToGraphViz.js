@@ -82,7 +82,7 @@ export default async function dumpGraphToGraphViz(
       label = node;
     } else if (node.assets) {
       label = `(${nodeId(id)}), (assetIds: ${[...node.assets]
-        .map(a => {
+        .map((a) => {
           let arr = a.filePath.split('/');
           return arr[arr.length - 1];
         })

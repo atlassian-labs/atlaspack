@@ -24,7 +24,7 @@ export async function load({
 
     // Resolve relative paths from config file
     if (configContents.paths) {
-      configContents.paths = configContents.paths.map(p =>
+      configContents.paths = configContents.paths.map((p) =>
         path.resolve(path.dirname(configFile.filePath), p),
       );
     }

@@ -203,12 +203,12 @@ function validateSchema(schema: SchemaEntity, data: mixed): Array<SchemaError> {
             if (schemaNode.__forbiddenProperties) {
               // $FlowFixMe type was already checked
               let keys = Object.keys(dataNode);
-              invalidProps = schemaNode.__forbiddenProperties.filter(val =>
+              invalidProps = schemaNode.__forbiddenProperties.filter((val) =>
                 keys.includes(val),
               );
               results.push(
                 ...invalidProps.map(
-                  k =>
+                  (k) =>
                     ({
                       type: 'forbidden-prop',
                       dataPath: dataPath + '/' + encodeJSONKeyComponent(k),
@@ -225,11 +225,11 @@ function validateSchema(schema: SchemaEntity, data: mixed): Array<SchemaError> {
               // $FlowFixMe type was already checked
               let keys = Object.keys(dataNode);
               let missingKeys = schemaNode.required.filter(
-                val => !keys.includes(val),
+                (val) => !keys.includes(val),
               );
               results.push(
                 ...missingKeys.map(
-                  k =>
+                  (k) =>
                     ({
                       type: 'missing-prop',
                       dataPath,
@@ -268,7 +268,7 @@ function validateSchema(schema: SchemaEntity, data: mixed): Array<SchemaError> {
                           schemaNode.properties,
                         ).filter(
                           // $FlowFixMe type was already checked
-                          p => !(p in dataNode),
+                          (p) => !(p in dataNode),
                         ),
                         actualValue: k,
                         ancestors: schemaAncestors,
@@ -368,7 +368,7 @@ export function fuzzySearch(
   actualValue: string,
 ): Array<string> {
   let result = expectedValues
-    .map(exp => [exp, levenshtein.distance(exp, actualValue)])
+    .map((exp) => [exp, levenshtein.distance(exp, actualValue)])
     .filter(
       // Remove if more than half of the string would need to be changed
       ([, d]) => d * 2 < actualValue.length,
@@ -414,7 +414,7 @@ validateSchema.diagnostic = function (
       data.data ?? JSON.parse(data.source);
   let errors = validateSchema(schema, object);
   if (errors.length) {
-    let keys = errors.map(e => {
+    let keys = errors.map((e) => {
       let message;
       if (e.type === 'enum') {
         let {actualValue} = e;
@@ -426,11 +426,11 @@ validateSchema.diagnostic = function (
 
         if (likely.length > 0) {
           message = `Did you mean ${likely
-            .map(v => JSON.stringify(v))
+            .map((v) => JSON.stringify(v))
             .join(', ')}?`;
         } else if (expectedValues.length > 0) {
           message = `Possible values: ${expectedValues
-            .map(v => JSON.stringify(v))
+            .map((v) => JSON.stringify(v))
             .join(', ')}`;
         } else {
           message = 'Unexpected value';
@@ -438,11 +438,11 @@ validateSchema.diagnostic = function (
       } else if (e.type === 'forbidden-prop') {
         let {prop, expectedProps, actualProps} = e;
         let likely = fuzzySearch(expectedProps, prop).filter(
-          v => !actualProps.includes(v),
+          (v) => !actualProps.includes(v),
         );
         if (likely.length > 0) {
           message = `Did you mean ${likely
-            .map(v => JSON.stringify(v))
+            .map((v) => JSON.stringify(v))
             .join(', ')}?`;
         } else {
           message = 'Unexpected property';

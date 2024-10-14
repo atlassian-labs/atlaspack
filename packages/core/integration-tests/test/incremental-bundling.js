@@ -38,7 +38,7 @@ describe.v2('incremental bundling', function () {
   };
 
   let getChangedAssetsBeforeRuntimes = (changedAssets: Array<Asset>) => {
-    return changedAssets.filter(a => !a.filePath.includes('runtime'));
+    return changedAssets.filter((a) => !a.filePath.includes('runtime'));
   };
   beforeEach(async () => {
     let Bundler = (
@@ -800,8 +800,8 @@ console.log('index.js');`,
       let result = await b.run();
       let bundles = result.bundleGraph.getBundles();
       assert.deepEqual(
-        bundles.map(b => b.name),
-        bundles.map(b => `${b.id}.${b.type}`),
+        bundles.map((b) => b.name),
+        bundles.map((b) => `${b.id}.${b.type}`),
       );
     } finally {
       if (subscription) {
@@ -1025,7 +1025,7 @@ module.exports = {a};
       );
       assert(/console\.log\(\(0, [^)]+\)\);/.test(contents));
 
-      result.bundleGraph.getBundles()[0].traverseAssets(a => {
+      result.bundleGraph.getBundles()[0].traverseAssets((a) => {
         assert(!a.filePath.endsWith('b.js'));
       });
     } finally {

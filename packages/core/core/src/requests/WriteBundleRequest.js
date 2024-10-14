@@ -139,7 +139,7 @@ async function run({input, options, api}) {
   }
   let size = 0;
   contentStream = contentStream.pipe(
-    new TapStream(buf => {
+    new TapStream((buf) => {
       size += buf.length;
     }),
   );
@@ -272,7 +272,7 @@ async function runCompressor(
             filePath + (res.type != null ? '.' + res.type : ''),
             writeOptions,
           ),
-          err => {
+          (err) => {
             if (err) reject(err);
             else resolve();
           },
@@ -355,8 +355,8 @@ function cloneStream(readable) {
   let res = new Readable();
   // $FlowFixMe
   res._read = () => {};
-  readable.on('data', chunk => res.push(chunk));
+  readable.on('data', (chunk) => res.push(chunk));
   readable.on('end', () => res.push(null));
-  readable.on('error', err => res.emit('error', err));
+  readable.on('error', (err) => res.emit('error', err));
   return res;
 }

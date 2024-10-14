@@ -51,9 +51,9 @@ function asyncToNode(args, num, f) {
   if (cb) {
     result.then(
       // $FlowFixMe
-      res => cb(null, res),
+      (res) => cb(null, res),
       // $FlowFixMe
-      err => cb(err),
+      (err) => cb(err),
     );
   } else {
     return result;
@@ -88,7 +88,7 @@ function parseOpenFlags(flags) {
   if (typeof flags === 'number') {
     flagsBits = flags;
   } else {
-    flags = [...flags].filter(c => c !== 's').join('');
+    flags = [...flags].filter((c) => c !== 's').join('');
     if (flags.includes('a')) {
       flagsBits |= CONSTANTS.O_APPEND | CONSTANTS.O_CREAT;
       if (flags.includes('+')) {
@@ -209,10 +209,10 @@ export class ExtendedMemoryFS extends MemoryFS {
   lstatSync(filePath: FilePath): any {
     return this.statSync(filePath);
   }
-  exists(filePath: FilePath, cb?: boolean => void): any {
+  exists(filePath: FilePath, cb?: (boolean) => void): any {
     let result = super.exists(filePath);
     if (cb != null) {
-      result.then(res => cb(res));
+      result.then((res) => cb(res));
     } else {
       return result;
     }

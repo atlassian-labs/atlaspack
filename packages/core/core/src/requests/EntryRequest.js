@@ -121,7 +121,7 @@ async function assertFile(
             ]),
           },
         ],
-        hints: alternatives.map(r => {
+        hints: alternatives.map((r) => {
           return md`Did you mean '__${r}__'?`;
         }),
       },
@@ -174,7 +174,7 @@ export class EntryResolver {
         onlyFiles: false,
       });
       let results = await Promise.all(
-        files.map(f => this.resolveEntry(path.normalize(f))),
+        files.map((f) => this.resolveEntry(path.normalize(f))),
       );
       return results.reduce(
         (p, res) => ({

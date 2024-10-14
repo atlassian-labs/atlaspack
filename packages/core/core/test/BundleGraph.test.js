@@ -29,7 +29,7 @@ describe('BundleGraph', () => {
       false,
     );
     assert.deepEqual(
-      getAssets(bundleGraph).map(a => bundleGraph.getAssetPublicId(a)),
+      getAssets(bundleGraph).map((a) => bundleGraph.getAssetPublicId(a)),
       ['296TI', '4DGUq'],
     );
   });
@@ -40,7 +40,7 @@ describe('BundleGraph', () => {
       false,
     );
     assert.deepEqual(
-      getAssets(bundleGraph).map(a => bundleGraph.getAssetPublicId(a)),
+      getAssets(bundleGraph).map((a) => bundleGraph.getAssetPublicId(a)),
       ['296TI', '296TII'],
     );
   });
@@ -48,7 +48,7 @@ describe('BundleGraph', () => {
 
 function getAssets(bundleGraph) {
   let assets = [];
-  bundleGraph.traverse(node => {
+  bundleGraph.traverse((node) => {
     if (node.type === 'asset') {
       assets.push(node.value);
     }

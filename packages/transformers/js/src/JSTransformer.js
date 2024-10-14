@@ -187,7 +187,7 @@ export default (new Transformer({
       } else {
         // Find a dependency that we can map to a JSX pragma
         reactLib = Object.keys(JSX_PRAGMA).find(
-          libName =>
+          (libName) =>
             pkg?.dependencies?.[libName] ||
             pkg?.devDependencies?.[libName] ||
             pkg?.peerDependencies?.[libName],
@@ -615,16 +615,16 @@ export default (new Transformer({
 
     if (diagnostics) {
       let errors = diagnostics.filter(
-        d =>
+        (d) =>
           d.severity === 'Error' ||
           (d.severity === 'SourceError' && asset.isSource),
       );
       let warnings = diagnostics.filter(
-        d =>
+        (d) =>
           d.severity === 'Warning' ||
           (d.severity === 'SourceError' && !asset.isSource),
       );
-      let convertDiagnostic = diagnostic => {
+      let convertDiagnostic = (diagnostic) => {
         let message = diagnostic.message;
         if (message === 'SCRIPT_ERROR') {
           let err = SCRIPT_ERRORS[(asset.env.context: string)];
@@ -636,7 +636,7 @@ export default (new Transformer({
           codeFrames: [
             {
               filePath: asset.filePath,
-              codeHighlights: diagnostic.code_highlights?.map(highlight =>
+              codeHighlights: diagnostic.code_highlights?.map((highlight) =>
                 convertSourceLocationToHighlight(
                   convertLoc(highlight.loc),
                   highlight.message ?? undefined,
@@ -897,7 +897,7 @@ export default (new Transformer({
       let deps = new Map(
         asset
           .getDependencies()
-          .map(dep => [dep.meta.placeholder ?? dep.specifier, dep]),
+          .map((dep) => [dep.meta.placeholder ?? dep.specifier, dep]),
       );
       for (let dep of deps.values()) {
         dep.symbols.ensure();
@@ -994,7 +994,7 @@ export default (new Transformer({
         let deps = new Map(
           asset
             .getDependencies()
-            .map(dep => [dep.meta.placeholder ?? dep.specifier, dep]),
+            .map((dep) => [dep.meta.placeholder ?? dep.specifier, dep]),
         );
         asset.symbols.ensure();
 

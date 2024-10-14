@@ -1,3 +1,4 @@
+flow-libs
 flow-typed
 packages/*/*/src/builtins
 packages/*/*/test/integration

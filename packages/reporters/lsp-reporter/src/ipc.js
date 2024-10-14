@@ -28,7 +28,7 @@ function createClientPipeTransport(
       resolve({
         close() {
           return new Promise((res, rej) => {
-            server.close(e => {
+            server.close((e) => {
               if (e) rej(e);
               else res();
             });

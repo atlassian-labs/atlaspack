@@ -13,7 +13,7 @@ import {DOMParser, XMLSerializer} from '@xmldom/xmldom';
 export default (new Packager({
   async package({bundle, bundleGraph, getInlineBundleContents}) {
     const assets = [];
-    bundle.traverseAssets(asset => {
+    bundle.traverseAssets((asset) => {
       assets.push(asset);
     });
 
@@ -71,7 +71,7 @@ export default (new Packager({
       bundleGraph,
       contents: code,
       relative: false,
-      getReplacement: contents => contents.replace(/"/g, '&quot;'),
+      getReplacement: (contents) => contents.replace(/"/g, '&quot;'),
     });
 
     return replaceInlineReferences({
@@ -96,7 +96,7 @@ async function getAssetContent(
   let inlineBundle: ?Bundle;
   bundleGraph.traverseBundles((bundle, context, {stop}) => {
     const entryAssets = bundle.getEntryAssets();
-    if (entryAssets.some(a => a.uniqueKey === assetId)) {
+    if (entryAssets.some((a) => a.uniqueKey === assetId)) {
       inlineBundle = bundle;
       stop();
     }

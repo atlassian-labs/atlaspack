@@ -23,7 +23,7 @@ const {findProjects, exec} = require('./common');
 //  all projects { [dirname]: package }
 let projects = findProjects(rootDir);
 //  all project names
-let names = new Set(Object.values(projects).map(pack => pack.name));
+let names = new Set(Object.values(projects).map((pack) => pack.name));
 //  first link all projects
 let count = 0;
 for (let path in projects) {

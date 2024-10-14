@@ -45,8 +45,8 @@ export default class ReporterRunner {
     this.workerFarm = opts.workerFarm;
     this.pluginOptions = new PluginOptions(this.options);
 
-    logger.onLog(event => this.report(event));
-    tracer.onTrace(event => this.report(event));
+    logger.onLog((event) => this.report(event));
+    tracer.onTrace((event) => this.report(event));
 
     bus.on('reporterEvent', this.eventHandler);
     instances.add(this);
@@ -58,7 +58,7 @@ export default class ReporterRunner {
     }
   }
 
-  eventHandler: ReporterEvent => void = (event): void => {
+  eventHandler: (ReporterEvent) => void = (event): void => {
     if (
       event.type === 'buildProgress' &&
       (event.phase === 'optimizing' || event.phase === 'packaging') &&
@@ -154,5 +154,5 @@ export function reportWorker(workerApi: WorkerApi, event: ReporterEvent) {
 }
 
 export async function report(event: ReporterEvent): Promise<void> {
-  await Promise.all([...instances].map(instance => instance.report(event)));
+  await Promise.all([...instances].map((instance) => instance.report(event)));
 }

@@ -28,7 +28,7 @@ describe('getPublicId', () => {
 
   it('uses more characters if there is a collision', () => {
     assert.equal(
-      getPublicId(id, publicId =>
+      getPublicId(id, (publicId) =>
         [fullPublicId.slice(0, 5), fullPublicId.slice(0, 6)].includes(publicId),
       ),
       fullPublicId.slice(0, 7),

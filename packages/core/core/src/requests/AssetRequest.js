@@ -84,8 +84,8 @@ async function run({input, api, farm, invalidateReason, options}) {
     await Promise.all(
       api
         .getSubRequests()
-        .filter(req => req.requestType === requestTypes.dev_dep_request)
-        .map(async req => [
+        .filter((req) => req.requestType === requestTypes.dev_dep_request)
+        .map(async (req) => [
           req.id,
           nullthrows(await api.getRequestResult<DevDepRequestResult>(req.id)),
         ]),
@@ -112,7 +112,7 @@ async function run({input, api, farm, invalidateReason, options}) {
               specifier: req.specifier,
               resolveFrom: req.resolveFrom,
             },
-            ...(req.additionalInvalidations ?? []).map(i => ({
+            ...(req.additionalInvalidations ?? []).map((i) => ({
               specifier: i.specifier,
               resolveFrom: i.resolveFrom,
             })),

@@ -67,7 +67,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise(resolve => {
+    let res = await new Promise((resolve) => {
       run(b, {
         output: resolve,
       });
@@ -107,7 +107,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise(resolve => {
+    let res = await new Promise((resolve) => {
       run(b, {
         output: resolve,
       });
@@ -147,7 +147,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise(resolve => {
+    let res = await new Promise((resolve) => {
       run(b, {
         output: resolve,
       });
@@ -187,7 +187,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise(resolve => {
+    let res = await new Promise((resolve) => {
       run(b, {
         output: resolve,
       });
@@ -753,8 +753,8 @@ describe('atlaspack', function () {
     ]);
 
     let bundles = b.getBundles();
-    let main = bundles.find(b => !b.env.isWorker());
-    let worker = bundles.find(b => b.env.isWorker());
+    let main = bundles.find((b) => !b.env.isWorker());
+    let worker = bundles.find((b) => b.env.isWorker());
     let mainContents = await outputFS.readFile(main.filePath, 'utf8');
     let workerContents = await outputFS.readFile(worker.filePath, 'utf8');
     assert(/navigator.serviceWorker.register\([^,]+?\)/.test(mainContents));
@@ -782,7 +782,7 @@ describe('atlaspack', function () {
     ]);
 
     let bundles = b.getBundles();
-    let main = bundles.find(b => !b.env.isWorker());
+    let main = bundles.find((b) => !b.env.isWorker());
     let mainContents = await outputFS.readFile(main.filePath, 'utf8');
     assert(
       /navigator.serviceWorker.register\(.*?, {[\n\s]*scope: 'foo'[\n\s]*}\)/.test(
@@ -889,7 +889,7 @@ describe('atlaspack', function () {
     ]);
 
     let bundles = b.getBundles();
-    let worker = bundles.find(b => b.env.isWorker());
+    let worker = bundles.find((b) => b.env.isWorker());
     let manifest, version;
     await runBundle(b, worker, {
       output(m, v) {
@@ -1222,8 +1222,10 @@ describe('atlaspack', function () {
     let sharedBundle = b
       .getBundles()
       .sort((a, b) => b.stats.size - a.stats.size)
-      .find(b => b.name !== 'index.js');
-    let workerBundle = b.getBundles().find(b => b.name.startsWith('worker-b'));
+      .find((b) => b.name !== 'index.js');
+    let workerBundle = b
+      .getBundles()
+      .find((b) => b.name.startsWith('worker-b'));
     let contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
     assert(
       contents.includes(
@@ -1266,7 +1268,9 @@ describe('atlaspack', function () {
       //   .getBundles()
       //   .sort((a, b) => b.stats.size - a.stats.size)
       //   .find(b => b.name !== 'index.js');
-      let workerBundle = b.getBundles().find(b => b.name.startsWith('worker'));
+      let workerBundle = b
+        .getBundles()
+        .find((b) => b.name.startsWith('worker'));
       // let contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
       // assert(
       //   contents.includes(

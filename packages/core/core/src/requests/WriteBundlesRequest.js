@@ -63,7 +63,7 @@ async function run({input, api, farm, options}) {
   |} = {};
   let writeEarlyPromises = {};
   let hashRefToNameHash = new Map();
-  let bundles = bundleGraph.getBundles().filter(bundle => {
+  let bundles = bundleGraph.getBundles().filter((bundle) => {
     // Do not package and write placeholder bundles to disk. We just
     // need to update the name so other bundles can reference it.
     if (bundle.isPlaceholder) {
@@ -91,12 +91,12 @@ async function run({input, api, farm, options}) {
   // This avoids the cost of serializing the bundle graph for single file change builds.
   let useMainThread =
     bundles.length === 1 ||
-    bundles.filter(b => !api.canSkipSubrequest(bundleGraph.getHash(b)))
+    bundles.filter((b) => !api.canSkipSubrequest(bundleGraph.getHash(b)))
       .length === 1;
 
   try {
     await Promise.all(
-      bundles.map(async bundle => {
+      bundles.map(async (bundle) => {
         let request = createPackageRequest({
           bundle,
           bundleGraph,
@@ -142,7 +142,7 @@ async function run({input, api, farm, options}) {
     );
     assignComplexNameHashes(hashRefToNameHash, bundles, bundleInfoMap, options);
     await Promise.all(
-      bundles.map(bundle => {
+      bundles.map((bundle) => {
         let promise =
           writeEarlyPromises[bundle.id] ??
           api.runRequest(
@@ -154,7 +154,7 @@ async function run({input, api, farm, options}) {
             }),
           );
 
-        return promise.then(r => res.set(bundle.id, r));
+        return promise.then((r) => res.set(bundle.id, r));
       }),
     );
 
@@ -180,7 +180,7 @@ function assignComplexNameHashes(
       options.shouldContentHash
         ? hashString(
             [...getBundlesIncludedInHash(bundle.id, bundleInfoMap)]
-              .map(bundleId => bundleInfoMap[bundleId].hash)
+              .map((bundleId) => bundleInfoMap[bundleId].hash)
               .join(':'),
           ).slice(-8)
         : bundle.id.slice(-8),

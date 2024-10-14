@@ -9,8 +9,10 @@ export default (new Reporter({
       const bundles = event.bundleGraph.getConditionalBundleMapping();
 
       // Replace bundles with file paths
-      const mapBundles = bundles =>
-        bundles.map(bundle => relative(bundle.target.distDir, bundle.filePath));
+      const mapBundles = (bundles) =>
+        bundles.map((bundle) =>
+          relative(bundle.target.distDir, bundle.filePath),
+        );
 
       const manifest = {};
       for (const [bundle, conditions] of bundles.entries()) {
@@ -29,7 +31,7 @@ export default (new Reporter({
 
       // Error if there are multiple targets in the build
       const targets = new Set(
-        event.bundleGraph.getBundles().map(bundle => bundle.target),
+        event.bundleGraph.getBundles().map((bundle) => bundle.target),
       );
       if (targets.size > 1) {
         throw new Error(

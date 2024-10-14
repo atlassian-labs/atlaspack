@@ -147,10 +147,12 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
         removeErrorOverlay();
       }
 
-      let assets = data.assets.filter(asset => asset.envHash === HMR_ENV_HASH);
+      let assets = data.assets.filter(
+        (asset) => asset.envHash === HMR_ENV_HASH,
+      );
 
       // Handle HMR Update
-      let handled = assets.every(asset => {
+      let handled = assets.every((asset) => {
         return (
           asset.type === 'css' ||
           (asset.type === 'js' &&
@@ -270,7 +272,9 @@ ${frame.code}`;
         </div>
         <pre>${stack}</pre>
         <div>
-          ${diagnostic.hints.map(hint => '<div>💡 ' + hint + '</div>').join('')}
+          ${diagnostic.hints
+            .map((hint) => '<div>💡 ' + hint + '</div>')
+            .join('')}
         </div>
         ${
           diagnostic.documentation
@@ -418,8 +422,8 @@ async function hmrApplyUpdates(assets) {
     // https://bugs.webkit.org/show_bug.cgi?id=137297
     // This path is also taken if a CSP disallows eval.
     if (!supportsSourceURL) {
-      let promises = assets.map(asset =>
-        hmrDownload(asset)?.catch(err => {
+      let promises = assets.map((asset) =>
+        hmrDownload(asset)?.catch((err) => {
           // Web extension fix
           if (
             extCtx &&
@@ -445,7 +449,7 @@ async function hmrApplyUpdates(assets) {
     delete global.parcelHotUpdate;
 
     if (scriptsToRemove) {
-      scriptsToRemove.forEach(script => {
+      scriptsToRemove.forEach((script) => {
         if (script) {
           document.head?.removeChild(script);
         }
@@ -517,7 +521,7 @@ function hmrDelete(bundle, id) {
     delete bundle.cache[id];
 
     // Now delete the orphans.
-    orphans.forEach(id => {
+    orphans.forEach((id) => {
       hmrDelete(module.bundle.root, id);
     });
   } else if (bundle.parent) {

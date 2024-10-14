@@ -57,7 +57,7 @@ function execAsync(cmd) {
       shell: true,
     });
 
-    child.on('close', code => {
+    child.on('close', (code) => {
       if (code !== 0) {
         reject(new Error(`Exit code ${code}`));
       } else {
@@ -148,7 +148,7 @@ function findTestsWithFixturePaths(root, api, options) {
   let testMap = new Map();
   root
     .find(j.ExpressionStatement, {expression: {callee: {name: 'it'}}})
-    .forEach(p => {
+    .forEach((p) => {
       let test = j(p);
       let fixturePaths = findFixturePaths(test, api, options);
       if (
@@ -202,7 +202,7 @@ function shouldTransformTest(testName, grep) {
 function findFixturePaths(test, api, {verbose, keep}) {
   let j = api.jscodeshift;
   return {
-    literals: test.find(j.Literal).filter(p => {
+    literals: test.find(j.Literal).filter((p) => {
       let {value, loc} = p.value;
       if (value?.includes?.('integration/')) {
         if (shouldKeepFixture(value, keep)) {
@@ -231,7 +231,7 @@ function findFixturePaths(test, api, {verbose, keep}) {
       }
       return false;
     }),
-    templates: test.find(j.TemplateElement).filter(p => {
+    templates: test.find(j.TemplateElement).filter((p) => {
       let {value, loc} = p.value;
       if (value?.cooked?.includes?.('integration/')) {
         if (shouldKeepFixture(value.cooked, keep)) {
@@ -267,7 +267,7 @@ function findFixturePaths(test, api, {verbose, keep}) {
 function resolveFixturePath(value) {
   let filePath = value;
   let dirname = path.dirname(filePath);
-  while (POSSIBLE_ROOTS.every(root => path.basename(dirname) !== root)) {
+  while (POSSIBLE_ROOTS.every((root) => path.basename(dirname) !== root)) {
     if (filePath === dirname) {
       throw new Error(
         `Could not find one of ${POSSIBLE_ROOTS} in path: ${value}`,
@@ -289,11 +289,11 @@ function resolveFixturePath(value) {
 async function generateFsFixtures(fixturePaths, api, {verbose}) {
   let toGenerate = [];
 
-  fixturePaths.literals.forEach(match => {
+  fixturePaths.literals.forEach((match) => {
     toGenerate.push(resolveFixturePath(match.get('value').value));
   });
 
-  fixturePaths.templates.forEach(match => {
+  fixturePaths.templates.forEach((match) => {
     toGenerate.push(resolveFixturePath(match.get('value').value.cooked));
   });
 
@@ -359,7 +359,7 @@ async function printDiff(testName, testString, api, options) {
       diff
         .createTwoFilesPatch('before', 'after', testString, test.toSource())
         .split('\n')
-        .map(line => {
+        .map((line) => {
           if (/^\++ /.test(line)) {
             return chalk.green(line);
           } else if (/^-+ /.test(line)) {
@@ -381,13 +381,13 @@ async function printDiff(testName, testString, api, options) {
 function replaceFixturePaths(fixturePaths, api) {
   let j = api.jscodeshift;
 
-  for (let match of fixturePaths.literals.paths().map(p => j(p))) {
-    match.replaceWith(p => p.value.raw.replace(ROOT_PATTERN, '$1'));
+  for (let match of fixturePaths.literals.paths().map((p) => j(p))) {
+    match.replaceWith((p) => p.value.raw.replace(ROOT_PATTERN, '$1'));
   }
 
-  for (let match of fixturePaths.templates.paths().map(p => j(p))) {
+  for (let match of fixturePaths.templates.paths().map((p) => j(p))) {
     // TODO: Update the path. this probably isn't the right way?
-    match.replaceWith(p => p.value.value.cooked.replace(ROOT_PATTERN, '$1'));
+    match.replaceWith((p) => p.value.value.cooked.replace(ROOT_PATTERN, '$1'));
   }
 }
 
@@ -400,7 +400,7 @@ function replaceFixturePaths(fixturePaths, api) {
  * */
 function replaceInputFS(test, {jscodeshift: j}, {verbose}) {
   let shouldReplace = false;
-  test.find(j.CallExpression).forEach(node => {
+  test.find(j.CallExpression).forEach((node) => {
     let {loc, arguments: args, callee} = node.value;
     let name = callee?.name;
     switch (name) {
@@ -435,7 +435,7 @@ function replaceInputFS(test, {jscodeshift: j}, {verbose}) {
               );
             }
             let inputFS = options.properties.find(
-              prop => prop.key.name === 'inputFS',
+              (prop) => prop.key.name === 'inputFS',
             );
             if (!inputFS) {
               shouldReplace = true;
@@ -522,7 +522,7 @@ function replaceInputFS(test, {jscodeshift: j}, {verbose}) {
   });
 
   if (shouldReplace) {
-    test.find(j.Identifier, {name: 'inputFS'}).forEach(path => {
+    test.find(j.Identifier, {name: 'inputFS'}).forEach((path) => {
       if (path.parentPath.value.type === 'Property') return;
       if (verbose) {
         console.log(
@@ -552,12 +552,16 @@ function insertFsFixtureImport(root, api) {
       `);
   } else {
     let specifiers = testUtils.find(j.Specifier);
-    if (!specifiers.paths().some(p => p.value.imported.name === 'fsFixture')) {
+    if (
+      !specifiers.paths().some((p) => p.value.imported.name === 'fsFixture')
+    ) {
       specifiers
         .at(-1)
         .insertAfter(j.importSpecifier(j.identifier('fsFixture')));
     }
-    if (!specifiers.paths().some(p => p.value.imported.name === 'overlayFS')) {
+    if (
+      !specifiers.paths().some((p) => p.value.imported.name === 'overlayFS')
+    ) {
       specifiers
         .at(-1)
         .insertAfter(j.importSpecifier(j.identifier('overlayFS')));
@@ -568,12 +572,12 @@ function insertFsFixtureImport(root, api) {
 /** Prints the `fsFixture` template string. */
 function printFsFixture(fixtures) {
   return `await fsFixture(overlayFS, __dirname)\`\n${[...fixtures.values()]
-    .map(fixture =>
+    .map((fixture) =>
       fixture
         .toString()
         .trim()
         .split('\n')
-        .map(l => `  ${l}`)
+        .map((l) => `  ${l}`)
         .join('\n'),
     )
     .join('\n')}\`;`;
@@ -713,8 +717,8 @@ function runJsCodeshift(file, {dryRun, verbose, yes, keep, grep}) {
     if (dryRun) args.push('--dry');
     if (verbose) args.push('--verbose=2');
     if (yes) args.push('--yes');
-    if (keep?.length) args = args.concat(keep.map(k => `--keep "${k}"`));
-    if (grep?.length) args = args.concat(grep.map(g => `--grep "${g}"`));
+    if (keep?.length) args = args.concat(keep.map((k) => `--keep "${k}"`));
+    if (grep?.length) args = args.concat(grep.map((g) => `--grep "${g}"`));
     args.push(`--transform=${__filename}`);
     args = args.concat(file);
 
@@ -728,7 +732,7 @@ function runJsCodeshift(file, {dryRun, verbose, yes, keep, grep}) {
       shell: true,
     });
 
-    jscodeshift.on('message', event => {
+    jscodeshift.on('message', (event) => {
       switch (event.type) {
         case 'fixture': {
           results.fixturesToCleanup.add(event.fixturePath);
@@ -744,7 +748,7 @@ function runJsCodeshift(file, {dryRun, verbose, yes, keep, grep}) {
       }
     });
 
-    jscodeshift.on('close', code => {
+    jscodeshift.on('close', (code) => {
       if (code !== 0) {
         reject(new Error(`Exit code ${code}`));
       } else {
@@ -836,8 +840,10 @@ function bootstrap(files, {parent: options}) {
   if (options.dryRun) args.push('--dry-run');
   if (options.verbose) args.push('--verbose');
   if (options.yes) args.push('--yes');
-  if (options.keep) args = args.concat(options.keep.map(k => `--keep "${k}"`));
-  if (options.grep) args = args.concat(options.grep.map(g => `--grep "${g}"`));
+  if (options.keep)
+    args = args.concat(options.keep.map((k) => `--keep "${k}"`));
+  if (options.grep)
+    args = args.concat(options.grep.map((g) => `--grep "${g}"`));
   args.push('--');
   args = args.concat(files);
   args = args.join(' ');
@@ -904,7 +910,7 @@ if (require.main === module) {
 
   let args = process.argv;
   if (!args.includes('--help') && !args.includes('-h')) {
-    if (!args[2] || !program.commands.some(c => c.name() === args[2])) {
+    if (!args[2] || !program.commands.some((c) => c.name() === args[2])) {
       args.splice(2, 0, 'bootstrap');
     }
   }

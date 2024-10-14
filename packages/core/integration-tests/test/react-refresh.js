@@ -281,12 +281,12 @@ if (MessageChannel) {
       );
       let result = await getNextBuildSuccess(parcel);
       let bundle = nullthrows(
-        result.bundleGraph.getBundles().find(b => b.type === 'js'),
+        result.bundleGraph.getBundles().find((b) => b.type === 'js'),
       );
 
       // Make sure react-refresh transforms were not applied.
       let assets: Asset[] = [];
-      bundle.traverse(node => {
+      bundle.traverse((node) => {
         if (node.type === 'asset') {
           assets.push(node.value);
         } else if (node.type === 'dependency') {
@@ -346,7 +346,7 @@ async function setup(entry) {
     },
   );
   window = dom.window;
-  await new Promise(res =>
+  await new Promise((res) =>
     window.document.addEventListener('load', () => {
       res();
     }),
@@ -355,8 +355,10 @@ async function setup(entry) {
   window.MessageChannel = MessageChannel;
   root = window.document.getElementById('root');
 
-  let bundle = nullthrows(bundleGraph.getBundles().find(b => b.type === 'js'));
-  let parcelRequire = Object.keys(window).find(k =>
+  let bundle = nullthrows(
+    bundleGraph.getBundles().find((b) => b.type === 'js'),
+  );
+  let parcelRequire = Object.keys(window).find((k) =>
     k.startsWith('parcelRequire'),
   );
   // ReactDOM.render

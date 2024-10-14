@@ -79,7 +79,7 @@ export async function createHTTPServer(
         }
         sockets = new Set();
 
-        server.close(err => {
+        server.close((err) => {
           if (err != null) {
             reject(err);
             return;

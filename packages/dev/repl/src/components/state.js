@@ -180,7 +180,7 @@ export function reducer(state: State, action: any): State {
         ...state,
         files: state.files.move(oldName, newName),
         browserCollapsed: new Set(
-          [...state.browserCollapsed].map(f =>
+          [...state.browserCollapsed].map((f) =>
             f === action.name ? newName : f,
           ),
         ),
@@ -239,7 +239,9 @@ export function reducer(state: State, action: any): State {
       return {
         ...state,
         browserCollapsed: state.browserCollapsed.has(action.name)
-          ? new Set([...state.browserCollapsed].filter(n => n !== action.name))
+          ? new Set(
+              [...state.browserCollapsed].filter((n) => n !== action.name),
+            )
           : new Set([...state.browserCollapsed, action.name]),
       };
     }
@@ -251,7 +253,9 @@ export function reducer(state: State, action: any): State {
           ...state,
           files: state.files.move(oldName, newName),
           browserCollapsed: new Set(
-            [...state.browserCollapsed].map(f => (f === oldName ? newName : f)),
+            [...state.browserCollapsed].map((f) =>
+              f === oldName ? newName : f,
+            ),
           ),
           views: new Map(
             [...state.views].map(([name, data]) => [
@@ -322,7 +326,7 @@ export function loadState(): ?State {
       files,
       views: new Map(
         data.views
-          .map(name => [name, files.get(name)])
+          .map((name) => [name, files.get(name)])
           .filter(([, data]) => data),
       ),
       options: {...data.options, numWorkers: DEFAULT_OPTIONS.numWorkers},
