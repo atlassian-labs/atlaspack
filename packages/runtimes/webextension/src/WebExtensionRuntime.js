@@ -23,7 +23,7 @@ export default (new Runtime({
     if (bundle.getMainEntry()?.meta.webextEntry === true) {
       // Hack to bust packager cache when any descendants update
       const descendants = [];
-      bundleGraph.traverseBundles(b => {
+      bundleGraph.traverseBundles((b) => {
         descendants.push(b.id);
       }, bundle);
       return {
@@ -34,12 +34,14 @@ export default (new Runtime({
     } else if (options.hmrOptions && bundle.type == 'js') {
       const manifest = bundleGraph
         .getBundles()
-        .find(b => b.getMainEntry()?.meta.webextEntry === true);
+        .find((b) => b.getMainEntry()?.meta.webextEntry === true);
       const entry = manifest?.getMainEntry();
       const insertDep = entry?.meta.webextBGInsert;
       if (!manifest || !entry || insertDep == null) return;
       const insertBundle = bundleGraph.getReferencedBundle(
-        nullthrows(entry?.getDependencies().find(dep => dep.id === insertDep)),
+        nullthrows(
+          entry?.getDependencies().find((dep) => dep.id === insertDep),
+        ),
         nullthrows(manifest),
       );
       let firstInsertableBundle;

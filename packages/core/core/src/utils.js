@@ -40,7 +40,7 @@ export class BuildAbortError extends Error {
 
 export function getPublicId(
   id: string,
-  alreadyExists: string => boolean,
+  alreadyExists: (string) => boolean,
 ): string {
   let encoded = base62.encode(Buffer.from(id, 'hex'));
   for (let end = 5; end <= encoded.length; end++) {
@@ -74,7 +74,7 @@ const ignoreOptions = new Set([
 
 export function optionsProxy(
   options: AtlaspackOptions,
-  invalidateOnOptionChange: string => void,
+  invalidateOnOptionChange: (string) => void,
   addDevDependency?: (devDep: InternalDevDepOptions) => void,
 ): AtlaspackOptions {
   let packageManager = addDevDependency

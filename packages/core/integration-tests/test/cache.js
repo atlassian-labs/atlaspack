@@ -44,7 +44,7 @@ let inputDir: string;
 let packageManager = new NodePackageManager(inputFS, '/');
 
 function getEntries(entries = 'src/index.js') {
-  return (Array.isArray(entries) ? entries : [entries]).map(entry =>
+  return (Array.isArray(entries) ? entries : [entries]).map((entry) =>
     path.resolve(inputDir, entry),
   );
 }
@@ -63,7 +63,7 @@ function runBundle(entries = 'src/index.js', opts) {
   return bundler(getEntries(entries), getOptions(opts)).run();
 }
 
-type UpdateFn = BuildSuccessEvent =>
+type UpdateFn = (BuildSuccessEvent) =>
   | ?InitialAtlaspackOptions
   | Promise<?InitialAtlaspackOptions>;
 type TestConfig = {|
@@ -136,7 +136,7 @@ describe.v2('cache', function () {
   });
 
   it('should support updating a JS file', async function () {
-    let b = await testCache(async b => {
+    let b = await testCache(async (b) => {
       assert.equal(await run(b.bundleGraph), 4);
       await overlayFS.writeFile(
         path.join(inputDir, 'src/nested/test.js'),
@@ -148,7 +148,7 @@ describe.v2('cache', function () {
   });
 
   it('should support adding a dependency', async function () {
-    let b = await testCache(async b => {
+    let b = await testCache(async (b) => {
       assert.equal(await run(b.bundleGraph), 4);
       await overlayFS.writeFile(
         path.join(inputDir, 'src/nested/foo.js'),
@@ -178,8 +178,10 @@ describe.v2('cache', function () {
       {
         entries: ['a.html', 'b.html'],
         mode: 'production',
-        update: async b => {
-          let html = b.bundleGraph.getBundles().filter(b => b.type === 'html');
+        update: async (b) => {
+          let html = b.bundleGraph
+            .getBundles()
+            .filter((b) => b.type === 'html');
           assert.deepEqual(await exec(b.bundleGraph, html[0]), ['a']);
           assert.deepEqual(await exec(b.bundleGraph, html[1]), ['b']);
           await overlayFS.writeFile(
@@ -195,7 +197,7 @@ describe.v2('cache', function () {
       'cache-add-dep-referenced',
     );
 
-    let html = b.bundleGraph.getBundles().filter(b => b.type === 'html');
+    let html = b.bundleGraph.getBundles().filter((b) => b.type === 'html');
     assert.deepEqual(await exec(b.bundleGraph, html[0]), ['c', 'a']);
     assert.deepEqual(await exec(b.bundleGraph, html[1]), ['c', 'b']);
   });
@@ -231,8 +233,8 @@ describe.v2('cache', function () {
   });
 
   describe('babel', function () {
-    let json = config => JSON.stringify(config);
-    let cjs = config => `module.exports = ${JSON.stringify(config)}`;
+    let json = (config) => JSON.stringify(config);
+    let cjs = (config) => `module.exports = ${JSON.stringify(config)}`;
     // TODO: not sure how to invalidate the ESM cache in node...
     // let mjs = (config) => `export default ${JSON.stringify(config)}`;
     let configs = [
@@ -1006,7 +1008,7 @@ describe.v2('cache', function () {
 
   describe('parcel config', function () {
     it('should support adding a .parcelrc', async function () {
-      let b = await testCache(async b => {
+      let b = await testCache(async (b) => {
         assert.equal(await run(b.bundleGraph), 4);
 
         let contents = await overlayFS.readFile(
@@ -2907,7 +2909,7 @@ describe.v2('cache', function () {
 
   describe('resolver', function () {
     it('should support updating a package.json#main field', async function () {
-      let b = await testCache(async b => {
+      let b = await testCache(async (b) => {
         assert.equal(await run(b.bundleGraph), 4);
         await overlayFS.writeFile(
           path.join(inputDir, 'node_modules/foo/test.js'),
@@ -2924,7 +2926,7 @@ describe.v2('cache', function () {
     });
 
     it('should support adding an alias', async function () {
-      let b = await testCache(async b => {
+      let b = await testCache(async (b) => {
         assert.equal(await run(b.bundleGraph), 4);
         await overlayFS.writeFile(
           path.join(inputDir, 'node_modules/foo/test.js'),
@@ -3016,7 +3018,7 @@ describe.v2('cache', function () {
     });
 
     it('should support adding an alias in a closer package.json', async function () {
-      let b = await testCache(async b => {
+      let b = await testCache(async (b) => {
         assert.equal(await run(b.bundleGraph), 4);
         await overlayFS.writeFile(
           path.join(inputDir, 'src/nested/foo.js'),
@@ -3619,7 +3621,7 @@ describe.v2('cache', function () {
             async update(b) {
               let css = await overlayFS.readFile(
                 nullthrows(
-                  b.bundleGraph.getBundles().find(b => b.type === 'css')
+                  b.bundleGraph.getBundles().find((b) => b.type === 'css')
                     ?.filePath,
                 ),
                 'utf8',
@@ -3647,7 +3649,7 @@ describe.v2('cache', function () {
 
         let css = await overlayFS.readFile(
           nullthrows(
-            b.bundleGraph.getBundles().find(b => b.type === 'css')?.filePath,
+            b.bundleGraph.getBundles().find((b) => b.type === 'css')?.filePath,
           ),
           'utf8',
         );
@@ -3701,7 +3703,7 @@ describe.v2('cache', function () {
         let b = await runBundle('index.js');
         let css = await overlayFS.readFile(
           nullthrows(
-            b.bundleGraph.getBundles().find(b => b.type === 'css')?.filePath,
+            b.bundleGraph.getBundles().find((b) => b.type === 'css')?.filePath,
           ),
           'utf8',
         );
@@ -3726,7 +3728,7 @@ describe.v2('cache', function () {
             async update(b) {
               let css = await overlayFS.readFile(
                 nullthrows(
-                  b.bundleGraph.getBundles().find(b => b.type === 'css')
+                  b.bundleGraph.getBundles().find((b) => b.type === 'css')
                     ?.filePath,
                 ),
                 'utf8',
@@ -3746,7 +3748,7 @@ describe.v2('cache', function () {
 
         let css = await overlayFS.readFile(
           nullthrows(
-            b.bundleGraph.getBundles().find(b => b.type === 'css')?.filePath,
+            b.bundleGraph.getBundles().find((b) => b.type === 'css')?.filePath,
           ),
           'utf8',
         );
@@ -3774,7 +3776,7 @@ describe.v2('cache', function () {
             async update(b) {
               let css = await overlayFS.readFile(
                 nullthrows(
-                  b.bundleGraph.getBundles().find(b => b.type === 'css')
+                  b.bundleGraph.getBundles().find((b) => b.type === 'css')
                     ?.filePath,
                 ),
                 'utf8',
@@ -3793,7 +3795,7 @@ describe.v2('cache', function () {
 
         let css = await overlayFS.readFile(
           nullthrows(
-            b.bundleGraph.getBundles().find(b => b.type === 'css')?.filePath,
+            b.bundleGraph.getBundles().find((b) => b.type === 'css')?.filePath,
           ),
           'utf8',
         );
@@ -3837,7 +3839,7 @@ describe.v2('cache', function () {
         let b = await runBundle('index.sass');
         let css = await overlayFS.readFile(
           nullthrows(
-            b.bundleGraph.getBundles().find(b => b.type === 'css')?.filePath,
+            b.bundleGraph.getBundles().find((b) => b.type === 'css')?.filePath,
           ),
           'utf8',
         );
@@ -4257,7 +4259,7 @@ describe.v2('cache', function () {
                 path.join(transformerDir, 'constants.js'),
                 'export const message = "UPDATED"',
               );
-              await new Promise(resolve => setTimeout(resolve, 20));
+              await new Promise((resolve) => setTimeout(resolve, 20));
               return {
                 workerFarm,
               };
@@ -4300,7 +4302,7 @@ describe.v2('cache', function () {
                 path.join(dir, 'foo.js'),
                 'module.exports = 3',
               );
-              await new Promise(resolve => setTimeout(resolve, 20));
+              await new Promise((resolve) => setTimeout(resolve, 20));
               return {
                 workerFarm,
               };
@@ -4347,7 +4349,7 @@ describe.v2('cache', function () {
                 path.join(dir, 'data/a.js'),
                 'export const value = "updated";',
               );
-              await new Promise(resolve => setTimeout(resolve, 20));
+              await new Promise((resolve) => setTimeout(resolve, 20));
               return {
                 workerFarm,
               };
@@ -4409,7 +4411,7 @@ describe.v2('cache', function () {
                 path.join(inputDir, 'node_modules', 'foo', 'foo.js'),
                 'module.exports = 3',
               );
-              await new Promise(resolve => setTimeout(resolve, 20));
+              await new Promise((resolve) => setTimeout(resolve, 20));
               return {
                 workerFarm,
               };
@@ -4845,7 +4847,7 @@ describe.v2('cache', function () {
     it('should invalidate when adding a namer plugin', async function () {
       let b = await testCache({
         async update(b) {
-          let bundles = b.bundleGraph.getBundles().map(b => b.name);
+          let bundles = b.bundleGraph.getBundles().map((b) => b.name);
           assert.deepEqual(bundles, ['index.js']);
 
           await overlayFS.writeFile(
@@ -4860,8 +4862,8 @@ describe.v2('cache', function () {
 
       let bundles = b.bundleGraph.getBundles();
       assert.deepEqual(
-        bundles.map(b => b.name),
-        bundles.map(b => `${b.id}.${b.type}`),
+        bundles.map((b) => b.name),
+        bundles.map((b) => `${b.id}.${b.type}`),
       );
     });
 
@@ -4879,8 +4881,8 @@ describe.v2('cache', function () {
         async update(b) {
           let bundles = b.bundleGraph.getBundles();
           assert.deepEqual(
-            bundles.map(b => b.name),
-            bundles.map(b => `${b.id}.${b.type}`),
+            bundles.map((b) => b.name),
+            bundles.map((b) => `${b.id}.${b.type}`),
           );
 
           let namer = path.join(
@@ -4900,8 +4902,8 @@ describe.v2('cache', function () {
 
       let bundles = b.bundleGraph.getBundles();
       assert.deepEqual(
-        bundles.map(b => b.name),
-        bundles.map(b => `${b.id.slice(-8)}.${b.type}`),
+        bundles.map((b) => b.name),
+        bundles.map((b) => `${b.id.slice(-8)}.${b.type}`),
       );
     });
 
@@ -6401,7 +6403,7 @@ describe.v2('cache', function () {
 
   describe('runtime', () => {
     it('should support updating files added by runtimes', async function () {
-      let b = await testCache(async b => {
+      let b = await testCache(async (b) => {
         let contents = await overlayFS.readFile(
           b.bundleGraph.getBundles()[0].filePath,
           'utf8',
@@ -6426,7 +6428,7 @@ describe.v2('cache', function () {
       let b = await testCache(
         {
           entries: ['reformat.html'],
-          update: async b => {
+          update: async (b) => {
             let bundles = b.bundleGraph.getBundles();
             let contents = await overlayFS.readFile(
               bundles[0].filePath,
@@ -6721,7 +6723,7 @@ describe.v2('cache', function () {
         await inputFS.mkdirp(inputDir);
         await inputFS.ncp(path.join(__dirname, '/integration/cache'), inputDir);
       },
-      update: async b => {
+      update: async (b) => {
         assert.equal(await run(b.bundleGraph), 4);
 
         await inputFS.writeFile(

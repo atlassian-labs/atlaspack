@@ -22,7 +22,7 @@ describe.v2('json reporter', () => {
         logLevel: 'info',
       });
 
-      let parsedCalls = consoleStub.getCalls().map(call => {
+      let parsedCalls = consoleStub.getCalls().map((call) => {
         invariant(typeof call.lastArg === 'string');
         return JSON.parse(call.lastArg);
       });

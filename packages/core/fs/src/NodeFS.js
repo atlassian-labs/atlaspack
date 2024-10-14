@@ -56,9 +56,9 @@ export class NodeFS implements FileSystem {
   createReadStream: (path: string, options?: any) => ReadStream =
     fs.createReadStream;
   cwd: () => string = () => process.cwd();
-  chdir: (directory: string) => void = directory => process.chdir(directory);
+  chdir: (directory: string) => void = (directory) => process.chdir(directory);
 
-  statSync: (path: string) => Stats = path => fs.statSync(path);
+  statSync: (path: string) => Stats = (path) => fs.statSync(path);
   realpathSync: (path: string, cache?: any) => string =
     process.platform === 'win32' ? fs.realpathSync : fs.realpathSync.native;
   existsSync: (path: string) => boolean = fs.existsSync;
@@ -118,13 +118,13 @@ export class NodeFS implements FileSystem {
       fs: {
         ...fs,
         close: (fd, cb) => {
-          fs.close(fd, err => {
+          fs.close(fd, (err) => {
             if (err) {
               cb(err);
             } else {
               move().then(
                 () => cb(),
-                err => cb(err),
+                (err) => cb(err),
               );
             }
           });
@@ -168,7 +168,7 @@ export class NodeFS implements FileSystem {
   }
 
   exists(filePath: FilePath): Promise<boolean> {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       fs.exists(filePath, resolve);
     });
   }

@@ -410,8 +410,6 @@ mod tests {
   use std::path::{Path, PathBuf};
   use std::sync::Arc;
 
-  use tracing::Level;
-
   use atlaspack_core::types::{AtlaspackOptions, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
@@ -444,10 +442,6 @@ mod tests {
     let temporary_dir = PathBuf::from("c:/windows/atlaspack_tests");
 
     assert!(temporary_dir.is_absolute());
-
-    let _ = tracing_subscriber::FmtSubscriber::builder()
-      .with_max_level(Level::DEBUG)
-      .try_init();
 
     let fs = InMemoryFileSystem::default();
 

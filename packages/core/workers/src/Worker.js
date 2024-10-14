@@ -51,7 +51,7 @@ export default class Worker extends EventEmitter {
     let filteredArgs = [];
     if (process.execArgv) {
       filteredArgs = process.execArgv.filter(
-        v =>
+        (v) =>
           !/^--(debug|inspect|no-opt|max-old-space-size=|max-semi-space-size=|expose-gc)/.test(
             v,
           ),
@@ -94,13 +94,13 @@ export default class Worker extends EventEmitter {
       }
     }
 
-    let onMessage = data => this.receive(data);
-    let onExit = code => {
+    let onMessage = (data) => this.receive(data);
+    let onExit = (code) => {
       this.exitCode = code;
       this.emit('exit', code);
     };
 
-    let onError = err => {
+    let onError = (err) => {
       this.emit('error', err);
     };
 

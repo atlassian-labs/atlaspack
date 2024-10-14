@@ -8,7 +8,7 @@ let packages = JSON.parse(
   ),
 );
 let packageVersions = new Map(
-  packages.map(pkg => [
+  packages.map((pkg) => [
     pkg.name,
     {version: pkg.version, location: pkg.location},
   ]),

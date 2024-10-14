@@ -131,7 +131,7 @@ export default class CommittedAsset {
     if (this.ast == null) {
       this.ast = this.options.cache
         .getBlob(this.value.astKey)
-        .then(serializedAst => deserializeRaw(serializedAst));
+        .then((serializedAst) => deserializeRaw(serializedAst));
     }
 
     return this.ast;

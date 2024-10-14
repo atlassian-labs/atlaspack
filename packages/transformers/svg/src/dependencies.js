@@ -78,7 +78,7 @@ const OPTIONS = {
 export default function collectDependencies(asset: MutableAsset, ast: AST) {
   let isDirty = false;
   const errors = [];
-  PostHTML().walk.call(ast.program, node => {
+  PostHTML().walk.call(ast.program, (node) => {
     // Ideally we'd have location information for specific attributes...
     let getLoc = () =>
       node.location
@@ -89,7 +89,7 @@ export default function collectDependencies(asset: MutableAsset, ast: AST) {
           }
         : undefined;
     if (typeof node === 'string' && node.startsWith('<?xml-stylesheet')) {
-      return node.replace(/(?<=(?:^|\s)href\s*=\s*")(.+?)(?=")/i, href => {
+      return node.replace(/(?<=(?:^|\s)href\s*=\s*")(.+?)(?=")/i, (href) => {
         isDirty = true;
 
         return asset.addURLDependency(href, {priority: 'parallel'});

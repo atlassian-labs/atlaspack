@@ -1,5 +1,5 @@
-module.exports = api => {
-  let name = api.caller(caller => caller && caller.name);
+module.exports = (api) => {
+  let name = api.caller((caller) => caller && caller.name);
   if (name === 'parcel') {
     return {
       presets: [require('@babel/preset-flow')],

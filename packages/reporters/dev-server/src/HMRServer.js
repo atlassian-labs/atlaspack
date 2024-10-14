@@ -95,14 +95,14 @@ export default class HMRServer {
     }
     this.wss = new WebSocket.Server({server});
 
-    this.wss.on('connection', ws => {
+    this.wss.on('connection', (ws) => {
       if (this.unresolvedError) {
         ws.send(JSON.stringify(this.unresolvedError));
       }
     });
 
     // $FlowFixMe[incompatible-exact]
-    this.wss.on('error', err => this.handleSocketError(err));
+    this.wss.on('error', (err) => this.handleSocketError(err));
   }
 
   handle(req: Request, res: Response): boolean {
@@ -111,7 +111,7 @@ export default class HMRServer {
       let id = pathname.slice(HMR_ENDPOINT.length + 1);
       let bundleGraph = nullthrows(this.bundleGraph);
       let asset = bundleGraph.getAssetById(id);
-      this.getHotAssetContents(asset).then(output => {
+      this.getHotAssetContents(asset).then((output) => {
         res.setHeader('Content-Type', mime.contentType(asset.type));
         res.end(output);
       });
@@ -130,7 +130,7 @@ export default class HMRServer {
 
   async emitError(options: PluginOptions, diagnostics: Array<Diagnostic>) {
     let renderedDiagnostics = await Promise.all(
-      diagnostics.map(d => prettyDiagnostic(d, options)),
+      diagnostics.map((d) => prettyDiagnostic(d, options)),
     );
 
     // store the most recent error so we can notify new connections
@@ -143,11 +143,11 @@ export default class HMRServer {
           return {
             message: ansiHtml(d.message),
             stack: ansiHtml(d.stack),
-            frames: d.frames.map(f => ({
+            frames: d.frames.map((f) => ({
               location: f.location,
               code: ansiHtml(f.code),
             })),
-            hints: d.hints.map(hint => ansiHtml(hint)),
+            hints: d.hints.map((hint) => ansiHtml(hint)),
             documentation: diagnostics[i].documentationURL ?? '',
           };
         }),
@@ -176,7 +176,7 @@ export default class HMRServer {
         // have a cache busting query param added with HMR enabled which will trigger a reload.
         let runtimes = new Set();
         let incomingDeps = event.bundleGraph.getIncomingDependencies(asset);
-        let isOnlyReferencedByRuntimes = incomingDeps.every(dep => {
+        let isOnlyReferencedByRuntimes = incomingDeps.every((dep) => {
           let resolved = event.bundleGraph.getResolvedAsset(dep);
           let isRuntime = resolved?.type === 'js' && resolved !== asset;
           if (resolved && isRuntime) {

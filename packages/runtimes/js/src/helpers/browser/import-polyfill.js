@@ -4,7 +4,7 @@ module.exports = cacheLoader(function importModule(bundle) {
   return new Promise((resolve, reject) => {
     // Add a global function to handle when the script loads.
     let globalName = `i${('' + Math.random()).slice(2)}`;
-    global[globalName] = m => {
+    global[globalName] = (m) => {
       resolve(m);
       cleanup();
     };

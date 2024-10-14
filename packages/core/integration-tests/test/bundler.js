@@ -118,7 +118,7 @@ describe.v2('bundler', function () {
         yarn.lock:`;
 
     let messages = [];
-    let loggerDisposable = Logger.onLog(message => {
+    let loggerDisposable = Logger.onLog((message) => {
       if (message.level !== 'verbose') {
         messages.push(message);
       }
@@ -203,7 +203,7 @@ describe.v2('bundler', function () {
         yarn.lock:`;
 
     let messages = [];
-    let loggerDisposable = Logger.onLog(message => {
+    let loggerDisposable = Logger.onLog((message) => {
       if (message.level !== 'verbose') {
         messages.push(message);
       }
@@ -291,7 +291,7 @@ describe.v2('bundler', function () {
         yarn.lock:`;
 
     let messages = [];
-    let loggerDisposable = Logger.onLog(message => {
+    let loggerDisposable = Logger.onLog((message) => {
       if (message.level !== 'verbose') {
         messages.push(message);
       }
@@ -378,7 +378,7 @@ describe.v2('bundler', function () {
         yarn.lock:`;
 
     let messages = [];
-    let loggerDisposable = Logger.onLog(message => {
+    let loggerDisposable = Logger.onLog((message) => {
       if (message.level !== 'verbose') {
         messages.push(message);
       }
@@ -490,7 +490,7 @@ describe.v2('bundler', function () {
         yarn.lock:`;
 
     let messages = [];
-    let loggerDisposable = Logger.onLog(message => {
+    let loggerDisposable = Logger.onLog((message) => {
       if (message.level !== 'verbose') {
         messages.push(message);
       }
@@ -900,12 +900,12 @@ describe.v2('bundler', function () {
     let aManifestBundle = b
       .getBundles()
       .find(
-        bundle => !bundle.getMainEntry() && bundle.name.includes('runtime'),
+        (bundle) => !bundle.getMainEntry() && bundle.name.includes('runtime'),
       );
 
     let bBundles = b
       .getBundles()
-      .filter(bundle => /b\.HASH_REF/.test(bundle.name));
+      .filter((bundle) => /b\.HASH_REF/.test(bundle.name));
 
     let aBundleManifestAsset;
     aManifestBundle.traverseAssets((asset, _, {stop}) => {
@@ -1257,7 +1257,7 @@ describe.v2('bundler', function () {
     await run(b);
 
     // Asset should not be inlined
-    const index = b.getBundles().find(b => b.name.startsWith('index'));
+    const index = b.getBundles().find((b) => b.name.startsWith('index'));
     const contents = overlayFS.readFileSync(index.filePath, 'utf8');
     assert(
       !contents.includes('async value'),
@@ -1586,7 +1586,7 @@ describe.v2('bundler', function () {
       let targetDistDir = normalizePath(path.join(__dirname, '../dist'));
       let hashedIdWithMSB = hashString('bundle:' + 'vendor,js' + targetDistDir);
       assert(
-        b.getBundles().find(b => b.id == hashedIdWithMSB),
+        b.getBundles().find((b) => b.id == hashedIdWithMSB),
         'MSB id does not match expected',
       );
     });
@@ -1727,7 +1727,7 @@ describe.v2('bundler', function () {
       let targetDistDir = normalizePath(path.join(__dirname, '../dist'));
       let hashedIdWithMSB = hashString('bundle:' + 'vendorjs' + targetDistDir);
       assert(
-        b.getBundles().find(b => b.id == hashedIdWithMSB),
+        b.getBundles().find((b) => b.id == hashedIdWithMSB),
         'MSB id does not match expected',
       );
 

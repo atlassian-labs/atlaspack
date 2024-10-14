@@ -52,7 +52,6 @@ export class MutableAsset implements IMutableAsset {
     throw new Error('set MutableAsset.astGenerator');
   }
 
-  // eslint-disable-next-line no-unused-vars
   constructor(asset: InnerAsset, fs: FileSystem, env: Environment) {
     this.#inner = asset;
     this.stats = asset.stats;
@@ -73,6 +72,8 @@ export class MutableAsset implements IMutableAsset {
     this.uniqueKey = asset.uniqueKey;
     this.pipeline = asset.pipeline;
     this.#contents = Buffer.from(asset.code);
+    this.fs = fs;
+    this.env = env;
   }
 
   // eslint-disable-next-line require-await
@@ -113,7 +114,7 @@ export class MutableAsset implements IMutableAsset {
   setStream(stream: Readable): void {
     const data = [];
 
-    stream.on('data', chunk => {
+    stream.on('data', (chunk) => {
       data.push(chunk);
     });
 

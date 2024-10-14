@@ -75,7 +75,7 @@ export async function loadSourceMap(
     let sourcemapInstance = new SourceMap(options.projectRoot);
     sourcemapInstance.addVLQMap({
       ...foundMap.map,
-      sources: foundMap.map.sources.map(s => {
+      sources: foundMap.map.sources.map((s) => {
         return path.join(mapSourceRoot, s);
       }),
     });

@@ -146,7 +146,7 @@ export class AtlaspackWatcherWatchmanJS implements Watcher {
     ];
 
     if (ignore) {
-      const customIgnores = ignore?.map(filePathOrGlob => {
+      const customIgnores = ignore?.map((filePathOrGlob) => {
         const relative = path.relative(dir, filePathOrGlob);
 
         if (isGlob(filePathOrGlob)) {

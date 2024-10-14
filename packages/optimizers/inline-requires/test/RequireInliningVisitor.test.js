@@ -29,7 +29,7 @@ function getModule(body) {
 function normaliseCode(code) {
   return code
     .split('\n')
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .join('\n')
     .trim();
 }

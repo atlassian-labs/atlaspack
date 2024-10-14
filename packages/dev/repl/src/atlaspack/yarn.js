@@ -107,7 +107,7 @@ const YARN_LOCKFILE = '/app/yarn.lock';
 // const YARN_CACHE_STALE = /* 7 Days: */ 7 * 24 * 60 * 60 * 1000;
 const Cache = {
   async saveCache(fs: MemoryFS) {
-    const files = (await fs.readdir(YARN_CACHE_DIR)).map(name => [
+    const files = (await fs.readdir(YARN_CACHE_DIR)).map((name) => [
       name,
       fs.readFileSync(YARN_CACHE_DIR + '/' + name),
     ]);

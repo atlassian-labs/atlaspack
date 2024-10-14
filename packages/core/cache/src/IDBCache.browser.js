@@ -63,9 +63,9 @@ export class IDBCache implements Cache {
 
   getStream(key: string): Readable {
     let dataPromise = this.store
-      .then(s => s.get(STORE_NAME, key))
-      .then(d => Buffer.from(d))
-      .catch(e => e);
+      .then((s) => s.get(STORE_NAME, key))
+      .then((d) => Buffer.from(d))
+      .catch((e) => e);
     const stream = new Readable({
       // $FlowFixMe(incompatible-call)
       async read() {

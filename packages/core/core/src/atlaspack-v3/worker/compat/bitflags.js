@@ -15,7 +15,7 @@ export class BitFlags<K, V> {
     this.#kv = source;
     this.#vk = Object.fromEntries(
       // $FlowFixMe
-      Object.entries(source).map(a => a.reverse()),
+      Object.entries(source).map((a) => a.reverse()),
     );
   }
 
@@ -36,7 +36,7 @@ export class BitFlags<K, V> {
   }
 
   intoArray(keys: K[]): V[] {
-    return keys.map(key => this.into(key));
+    return keys.map((key) => this.into(key));
   }
 
   from(key: V): K {
@@ -56,7 +56,7 @@ export class BitFlags<K, V> {
   }
 
   fromArray(keys: V[]): K[] {
-    return keys.map(key => this.from(key));
+    return keys.map((key) => this.from(key));
   }
 }
 

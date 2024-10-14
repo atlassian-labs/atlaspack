@@ -155,7 +155,7 @@ export class Bundle implements IBundle {
   }
 
   getEntryAssets(): Array<IAsset> {
-    return this.#bundle.entryAssetIds.map(id => {
+    return this.#bundle.entryAssetIds.map((id) => {
       let assetNode = this.#bundleGraph._graph.getNodeByContentKey(id);
       invariant(assetNode != null && assetNode.type === 'asset');
       return assetFromValue(assetNode.value, this.#options);
@@ -177,7 +177,7 @@ export class Bundle implements IBundle {
   ): ?TContext {
     return this.#bundleGraph.traverseBundle(
       this.#bundle,
-      mapVisitor(node => {
+      mapVisitor((node) => {
         if (node.type === 'asset') {
           return {
             type: 'asset',
@@ -199,7 +199,7 @@ export class Bundle implements IBundle {
   ): ?TContext {
     return this.#bundleGraph.traverseAssets(
       this.#bundle,
-      mapVisitor(asset => assetFromValue(asset, this.#options), visit),
+      mapVisitor((asset) => assetFromValue(asset, this.#options), visit),
       startAsset ? assetToAssetValue(startAsset) : undefined,
     );
   }

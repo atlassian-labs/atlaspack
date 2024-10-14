@@ -110,8 +110,8 @@ describe.v2('content hashing', function () {
     assert.equal(aBundles.length, 2);
     assert.equal(bBundles.length, 2);
 
-    let aJS = aBundles.find(bundle => bundle.type === 'js');
-    let bJS = bBundles.find(bundle => bundle.type === 'js');
+    let aJS = aBundles.find((bundle) => bundle.type === 'js');
+    let bJS = bBundles.find((bundle) => bundle.type === 'js');
     assert(/index\.[a-f0-9]*\.js/.test(path.basename(aJS.filePath)));
     assert.equal(aJS.name, bJS.name);
   });

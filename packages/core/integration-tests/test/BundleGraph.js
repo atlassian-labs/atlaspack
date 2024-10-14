@@ -18,7 +18,7 @@ describe('BundleGraph', () => {
     );
 
     let assets = [];
-    b.traverse(node => {
+    b.traverse((node) => {
       if (node.type === 'asset') {
         assets.push({
           type: node.type,
@@ -118,7 +118,7 @@ describe('BundleGraph', () => {
       const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup);
 
       assert.deepEqual(
-        bundles.map(b => b.bundleBehavior),
+        bundles.map((b) => b.bundleBehavior),
         [null],
       );
     });
@@ -129,7 +129,7 @@ describe('BundleGraph', () => {
       });
 
       assert.deepEqual(
-        bundles.map(b => b.bundleBehavior),
+        bundles.map((b) => b.bundleBehavior),
         [null],
       );
     });
@@ -140,7 +140,7 @@ describe('BundleGraph', () => {
       });
 
       assert.deepEqual(
-        bundles.map(b => b.bundleBehavior),
+        bundles.map((b) => b.bundleBehavior),
         [null, 'inline'],
       );
     });

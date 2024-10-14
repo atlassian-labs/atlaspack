@@ -7,7 +7,7 @@ import * as wasmmap from './wasm-sourcemap';
 export default (new Packager({
   async package({bundle, getSourceMapReference}) {
     let assets = [];
-    bundle.traverseAssets(asset => {
+    bundle.traverseAssets((asset) => {
       assets.push(asset);
     });
 

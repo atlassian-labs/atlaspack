@@ -26,7 +26,7 @@ export default (new Namer({
 
     if (bundle.needsStableName) {
       let entryBundlesOfType = bundleGroupBundles.filter(
-        b => b.needsStableName && b.type === bundle.type,
+        (b) => b.needsStableName && b.type === bundle.type,
       );
       assert(
         entryBundlesOfType.length === 1,
@@ -36,8 +36,8 @@ export default (new Namer({
     }
 
     let mainBundle = nullthrows(
-      bundleGroupBundles.find(b =>
-        b.getEntryAssets().some(a => a.id === bundleGroup.entryAssetId),
+      bundleGroupBundles.find((b) =>
+        b.getEntryAssets().some((a) => a.id === bundleGroup.entryAssetId),
       ),
     );
 
@@ -111,7 +111,7 @@ function nameFromContent(
   entryRoot: FilePath,
 ): string {
   let entryFilePath = nullthrows(
-    bundle.getEntryAssets().find(a => a.id === entryAssetId),
+    bundle.getEntryAssets().find((a) => a.id === entryAssetId),
   ).filePath;
   let name = basenameWithoutExtension(entryFilePath);
 

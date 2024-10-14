@@ -115,7 +115,7 @@ atlaspack-transformer-b`,
           nullthrows(
             bundleEvent.bundleGraph
               .getBundles()
-              .find(b => b.getMainEntry()?.filePath.endsWith('a.txt')),
+              .find((b) => b.getMainEntry()?.filePath.endsWith('a.txt')),
           ).filePath,
           'utf8',
         ),
@@ -132,7 +132,7 @@ atlaspack-transformer-b`,
           nullthrows(
             bundleEvent.bundleGraph
               .getBundles()
-              .find(b => b.getMainEntry()?.filePath.endsWith('a.txt')),
+              .find((b) => b.getMainEntry()?.filePath.endsWith('a.txt')),
           ).filePath,
           'utf8',
         ),
@@ -143,7 +143,7 @@ atlaspack-transformer-b`,
           nullthrows(
             bundleEvent.bundleGraph
               .getBundles()
-              .find(b => b.getMainEntry()?.filePath.endsWith('b.txt')),
+              .find((b) => b.getMainEntry()?.filePath.endsWith('b.txt')),
           ).filePath,
           'utf8',
         ),
@@ -320,7 +320,7 @@ atlaspack-transformer-b`,
       path.join(__dirname, '/integration/wasm-sourcemap-transformer/index.js'),
     );
     let wasmPath = nullthrows(
-      b.getBundles().find(b => b.type === 'wasm'),
+      b.getBundles().find((b) => b.type === 'wasm'),
     ).filePath;
     let mapPath = wasmPath + '.map';
     assert(await fs.exists(mapPath));

@@ -12,7 +12,7 @@ export function remapAstLocations(
 ) {
   // remap ast to original mappings
   // This improves sourcemap accuracy and fixes sourcemaps when scope-hoisting
-  traverseAll(t, ast.program, node => {
+  traverseAll(t, ast.program, (node) => {
     if (node.loc) {
       if (node.loc?.start) {
         let mapping = map.findClosestMapping(

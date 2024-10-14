@@ -56,7 +56,7 @@ export default (new Optimizer({
         (
           stripAnsi(err.message)
             .split('\n')
-            .find(line => line.trim().length > 0) || ''
+            .find((line) => line.trim().length > 0) || ''
         )
           .trim()
           .replace(/^(×|x)\s+/, ''),

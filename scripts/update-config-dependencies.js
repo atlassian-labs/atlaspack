@@ -7,7 +7,7 @@ let packages = JSON.parse(
     `${path.join(__dirname, '..', 'node_modules', '.bin', 'lerna')} ls --json`,
   ),
 );
-let packageVersions = new Map(packages.map(pkg => [pkg.name, pkg.version]));
+let packageVersions = new Map(packages.map((pkg) => [pkg.name, pkg.version]));
 
 let configsDir = path.join(__dirname, '..', 'packages', 'configs');
 let configs = fs.readdirSync(configsDir);

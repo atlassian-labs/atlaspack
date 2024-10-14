@@ -145,8 +145,7 @@ export class AtlaspackWorker {
           code: result.code || undefined,
           meta: result.meta || undefined,
           pipeline: result.pipeline || undefined,
-          priority:
-            result.priority && dependencyPriorityMap.into(result.priority),
+          priority: dependencyPriorityMap.intoNullable(result.priority),
           query: result.query && result.query.toString(),
         },
       };
@@ -315,7 +314,7 @@ type RunResolverResolveResult = {|
         code?: string,
         meta?: mixed,
         pipeline?: string,
-        priority?: number,
+        priority?: ?number,
         query?: string,
       |},
 |};

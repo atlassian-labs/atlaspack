@@ -167,7 +167,7 @@ export default (new Resolver({
     });
 
     let dir = path.dirname(sourceFile);
-    let results = files.map(file => {
+    let results = files.map((file) => {
       let relative = relativePath(dir, file);
       if (pipeline) {
         relative = `${pipeline}:${relative}`;

@@ -103,14 +103,14 @@ connection.onInitialized(() => {
     );
   }
   if (hasWorkspaceFolderCapability) {
-    connection.workspace.onDidChangeWorkspaceFolders(_event => {
+    connection.workspace.onDidChangeWorkspaceFolders((_event) => {
       connection.console.log('Workspace folder change event received.');
     });
   }
 });
 
 // Proxy
-connection.onRequest(RequestImporters, async params => {
+connection.onRequest(RequestImporters, async (params) => {
   let client = findClient(params);
   if (client) {
     let result = await client.connection.sendRequest(RequestImporters, params);
@@ -169,7 +169,7 @@ class ProgressReporter {
       reporter.begin('Atlaspack');
       return reporter;
     })();
-    this.progressReporterPromise.then(reporter => {
+    this.progressReporterPromise.then((reporter) => {
       if (this.lastMessage != null) {
         reporter.report(this.lastMessage);
       }
@@ -264,7 +264,7 @@ function createClient(metafilepath: string, metafile: Metafile) {
     }
   });
 
-  client.onNotification(NotificationWorkspaceDiagnostics, diagnostics => {
+  client.onNotification(NotificationWorkspaceDiagnostics, (diagnostics) => {
     // console.log('got NotificationWorkspaceDiagnostics', diagnostics);
     for (let d of diagnostics) {
       uris.add(d.uri);
@@ -276,7 +276,9 @@ function createClient(metafilepath: string, metafile: Metafile) {
     clients.delete(JSON.stringify(metafile));
     sendDiagnosticsRefresh();
     return Promise.all(
-      [...uris].map(uri => connection.sendDiagnostics({uri, diagnostics: []})),
+      [...uris].map((uri) =>
+        connection.sendDiagnostics({uri, diagnostics: []}),
+      ),
     );
   });
 

@@ -166,7 +166,7 @@ export function prepareForSerialization(object: any): any {
 
   return mapObject(
     object,
-    value => {
+    (value) => {
       // Add a $$type property with the name of this class, if any is registered.
       if (
         value &&
@@ -201,7 +201,7 @@ export function prepareForSerialization(object: any): any {
 }
 
 export function restoreDeserializedObject(object: any): any {
-  return mapObject(object, value => {
+  return mapObject(object, (value) => {
     // If the value has a $$type property, use it to restore the object type
     if (value && value.$$type) {
       let ctor = nameToCtor.get(value.$$type);
