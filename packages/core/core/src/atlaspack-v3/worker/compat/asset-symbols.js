@@ -20,7 +20,7 @@ export class MutableDependencySymbols
     return this.#symbols.size === 0;
   }
 
-  constructor(inner: NapiSymbol[]) {
+  constructor(inner: NapiSymbol[] = []) {
     this.#symbols = new Map();
     this.#locals = new Set();
     for (const {exported, local, loc, isWeak} of inner) {
@@ -77,50 +77,143 @@ export class MutableDependencySymbols
   }
 }
 
-// TODO
-export class AssetSymbols
-  extends Array<[Symbol, AssetSymbol]>
-  implements ClassicAssetSymbols
-{
-  isCleared: boolean;
+export class AssetSymbols implements ClassicAssetSymbols {
+  #symbols: Map<Symbol, AssetSymbol>;
+  #locals: Set<Symbol>;
 
-  // eslint-disable-next-line no-unused-vars
-  get(exportSymbol: Symbol): ?AssetSymbol {}
-
-  // eslint-disable-next-line no-unused-vars
-  hasExportSymbol(exportSymbol: Symbol): boolean {
-    throw new Error('AssetSymbols.hasExportSymbol');
+  get isCleared(): boolean {
+    return this.#symbols.size === 0;
   }
 
-  // eslint-disable-next-line no-unused-vars
+  constructor(inner: NapiSymbol[] = []) {
+    this.#symbols = new Map();
+    this.#locals = new Set();
+    for (const {exported, local, loc} of inner) {
+      this.#set(exported, local, loc);
+    }
+  }
+
+  #set(exportSymbol: Symbol, local: Symbol, loc: ?SourceLocation): void {
+    this.#locals.add(local);
+    this.#symbols.set(exportSymbol, {
+      local,
+      loc,
+      meta: {},
+    });
+  }
+
+  get(exportSymbol: Symbol): ?AssetSymbol {
+    return this.#symbols.get(exportSymbol);
+  }
+
+  hasExportSymbol(exportSymbol: Symbol): boolean {
+    return this.#symbols.has(exportSymbol);
+  }
+
   hasLocalSymbol(local: Symbol): boolean {
-    throw new Error('AssetSymbols.hasExportSymbol');
+    return this.#locals.has(local);
   }
 
   exportSymbols(): Iterable<Symbol> {
+    return this.#symbols.keys();
+  }
+
+  intoNapi(): NapiSymbol[] {
     return [];
+  }
+
+  /*::  @@iterator(): Iterator<[Symbol, AssetSymbol]> { return ({}: any); } */
+  // $FlowFixMe Flow can't do computed properties
+  [Symbol.iterator]() {
+    return this.#symbols.values();
   }
 }
 
-// TODO
-export class MutableAssetSymbols
-  extends AssetSymbols
-  implements ClassicMutableAssetSymbols
-{
-  ensure(): void {}
-  set(
-    // eslint-disable-next-line no-unused-vars
-    exportSymbol: Symbol,
-    // eslint-disable-next-line no-unused-vars
-    local: Symbol,
-    // eslint-disable-next-line no-unused-vars
-    loc: ?SourceLocation,
-    // eslint-disable-next-line no-unused-vars
-    meta?: ?Meta,
-  ): void {}
+export class MutableAssetSymbols implements ClassicMutableAssetSymbols {
+  #symbols: Map<Symbol, AssetSymbol>;
+  #locals: Set<Symbol>;
 
-  // eslint-disable-next-line no-unused-vars
-  delete(exportSymbol: Symbol): void {}
+  get isCleared(): boolean {
+    return this.#symbols.size === 0;
+  }
+
+  constructor(inner: NapiSymbol[] = []) {
+    this.#symbols = new Map();
+    this.#locals = new Set();
+    for (const {exported, local, loc} of inner) {
+      this.set(exported, local, loc);
+    }
+  }
+
+  intoNapi(): NapiSymbol[] {
+    const results: NapiSymbol[] = [];
+    for (const [exportSymbol, {local, loc}] of this.#symbols.entries()) {
+      results.push({
+        exported: exportSymbol,
+        local,
+        loc: loc
+          ? {
+              filePath: loc.filePath,
+              start: {
+                line: loc.start.line,
+                column: loc.start.column,
+              },
+              end: {
+                line: loc.end.line,
+                column: loc.end.column,
+              },
+            }
+          : undefined,
+        // TODO
+        isWeak: false,
+        isEsmExport: false,
+        selfReferenced: false,
+      });
+    }
+    return results;
+  }
+
+  ensure(): void {
+    throw new Error('MutableAssetSymbols.ensure()');
+  }
+
+  set(exportSymbol: Symbol, local: Symbol, loc: ?SourceLocation): void {
+    this.#locals.add(local);
+    this.#symbols.set(exportSymbol, {
+      local,
+      loc,
+      meta: {},
+    });
+  }
+
+  get(exportSymbol: Symbol): ?AssetSymbol {
+    return this.#symbols.get(exportSymbol);
+  }
+
+  hasExportSymbol(exportSymbol: Symbol): boolean {
+    return this.#symbols.has(exportSymbol);
+  }
+
+  hasLocalSymbol(local: Symbol): boolean {
+    return this.#locals.has(local);
+  }
+
+  exportSymbols(): Iterable<Symbol> {
+    return this.#symbols.keys();
+  }
+
+  delete(exportSymbol: Symbol): void {
+    let existing = this.#symbols.get(exportSymbol);
+    if (!existing) return;
+    this.#locals.delete(existing.local);
+    this.#symbols.delete(exportSymbol);
+  }
+
+  /*::  @@iterator(): Iterator<[Symbol, AssetSymbol]> { return ({}: any); } */
+  // $FlowFixMe Flow can't do computed properties
+  [Symbol.iterator]() {
+    return this.#symbols.values();
+  }
 }
 
 export type AssetSymbol = {|local: Symbol, loc: ?SourceLocation, meta?: ?Meta|};

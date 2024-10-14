@@ -202,8 +202,8 @@ export type Dependency = {|
 |};
 
 export type RpcAssetResult = {|
-  id: String,
-  bundleBehavior: number,
+  id: string,
+  bundleBehavior: ?number,
   filePath: string,
   type: string,
   code: Array<number>,

@@ -28,6 +28,13 @@ export class BitFlags<K, V> {
     return found;
   }
 
+  intoNullable(key: ?K): ?V {
+    if (key === undefined || key === null) {
+      return undefined;
+    }
+    this.into(key);
+  }
+
   intoArray(keys: K[]): V[] {
     return keys.map(key => this.into(key));
   }
@@ -39,6 +46,13 @@ export class BitFlags<K, V> {
       throw new Error(`Invalid BundleBehavior(${key})`);
     }
     return found;
+  }
+
+  fromNullable(key: ?V): ?K {
+    if (key === undefined || key === null) {
+      return undefined;
+    }
+    return this.from(key);
   }
 
   fromArray(keys: V[]): K[] {
