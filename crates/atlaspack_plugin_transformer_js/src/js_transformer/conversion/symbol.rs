@@ -65,7 +65,7 @@ mod tests {
 
   use atlaspack_core::types::{Location, SourceLocation};
 
-  use crate::js_transformer::test_helpers::{make_test_swc_config, run_swc_core_transform};
+  use atlaspack_js_swc_core::test_utils::{make_test_swc_config, run_swc_core_transform};
 
   use super::*;
 

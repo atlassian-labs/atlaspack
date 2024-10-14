@@ -22,6 +22,7 @@ use atlaspack_core::types::Condition;
 use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
 use atlaspack_macros::Macros;
+
 use collect::Collect;
 pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
@@ -40,8 +41,10 @@ use indexmap::IndexMap;
 use modules::esm2cjs;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
+use pathdiff::diff_paths;
 use serde::Deserialize;
 use serde::Serialize;
+use std::io::{self};
 use swc_core::common::chain;
 use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::errors::Handler;
@@ -183,7 +186,7 @@ fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Vers
 pub fn transform(
   config: Config,
   call_macro: Option<MacroCallback>,
-) -> Result<TransformResult, std::io::Error> {
+) -> Result<TransformResult, io::Error> {
   let mut result = TransformResult::default();
   let mut map_buf = vec![];
 
@@ -210,6 +213,7 @@ pub fn transform(
     }
     Ok((module, comments)) => {
       let mut module = module;
+
       result.shebang = match &mut module {
         Program::Module(module) => module.shebang.take().map(|s| s.to_string()),
         Program::Script(script) => script.shebang.take().map(|s| s.to_string()),
@@ -506,6 +510,23 @@ pub fn transform(
                 config.conditional_bundling,
               );
               module.visit_with(&mut collect);
+
+              if collect.is_empty_or_empty_export {
+                // The above should be false almost always and we already have the value
+                // so it's better to skip fetching the flag when unnecessary
+                let should_look_for_empty_files = std::env::var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES");
+                if should_look_for_empty_files.is_ok() && should_look_for_empty_files.unwrap() == "true" {
+                  let name = config.filename.clone();
+                  let root = config.project_root.clone();
+                  let source_file = diff_paths(name, root)
+                      .unwrap()
+                      .into_os_string()
+                      .into_string()
+                      .unwrap();
+                  tracing::warn!("You are attempting to import '{source_file}' which is an empty file and may be causing a build error.");
+                }
+              }
+
               if let Some(bailouts) = &collect.bailouts {
                 diagnostics.extend(bailouts.iter().map(|bailout| bailout.to_diagnostic()));
               }
@@ -634,7 +655,7 @@ fn emit(
   comments: SingleThreadedComments,
   module: &Module,
   source_maps: bool,
-) -> Result<(Vec<u8>, SourceMapBuffer), std::io::Error> {
+) -> Result<(Vec<u8>, SourceMapBuffer), io::Error> {
   let mut src_map_buf = vec![];
   let mut buf = vec![];
   {
@@ -687,7 +708,7 @@ fn macro_error_to_diagnostic(error: MacroError, source_map: &SourceMap) -> Diagn
       }]),
       hints: None,
       show_environment: false,
-      severity: crate::utils::DiagnosticSeverity::Error,
+      severity: DiagnosticSeverity::Error,
       documentation_url: None,
     },
     MacroError::LoadError(err, span) => Diagnostic {
@@ -698,7 +719,7 @@ fn macro_error_to_diagnostic(error: MacroError, source_map: &SourceMap) -> Diagn
       }]),
       hints: None,
       show_environment: false,
-      severity: crate::utils::DiagnosticSeverity::Error,
+      severity: DiagnosticSeverity::Error,
       documentation_url: None,
     },
     MacroError::ExecutionError(err, span) => Diagnostic {
@@ -709,7 +730,7 @@ fn macro_error_to_diagnostic(error: MacroError, source_map: &SourceMap) -> Diagn
       }]),
       hints: None,
       show_environment: false,
-      severity: crate::utils::DiagnosticSeverity::Error,
+      severity: DiagnosticSeverity::Error,
       documentation_url: None,
     },
     MacroError::ParseError(err) => {
@@ -717,7 +738,38 @@ fn macro_error_to_diagnostic(error: MacroError, source_map: &SourceMap) -> Diagn
       let handler = Handler::with_emitter(true, false, Box::new(error_buffer.clone()));
       err.into_diagnostic(&handler).emit();
       let mut diagnostics = error_buffer_to_diagnostics(&error_buffer, source_map);
-      return diagnostics.pop().unwrap();
+      diagnostics.pop().unwrap()
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::env;
+  use test_utils::make_test_swc_config;
+  use tracing_test::traced_test;
+
+  #[test]
+  #[traced_test]
+  fn test_logs_when_flag_is_on_and_file_is_empty() {
+    let config: Config = make_test_swc_config(r#""#);
+    env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "true");
+    let _result = transform(config, None);
+    assert!(logs_contain("You are attempting to import"));
+
+    env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "false");
+    let config: Config = make_test_swc_config(r#""#);
+    let _result = transform(config, None);
+    logs_assert(|lines: &[&str]| {
+      let count = lines
+        .iter()
+        .filter(|line| line.contains("You are attempting to import"))
+        .count();
+      match count {
+        1 => Ok(()),
+        n => Err(format!("Expected one matching log, but found {}", n)),
+      }
+    });
   }
 }

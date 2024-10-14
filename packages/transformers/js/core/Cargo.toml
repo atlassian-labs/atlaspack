@@ -28,6 +28,7 @@ swc_core = { version = "0.96", features = [
   "ecma_quote",
   "stacker"
 ] }
+
 sourcemap = "*"
 swc_ecma_parser = "*"
 indoc = "1.0.3"
@@ -46,3 +47,5 @@ atlaspack_contextual_imports = { path = "../../../../crates/atlaspack_contextual
 atlaspack_swc_runner = { path = "../../../../crates/atlaspack_swc_runner" }
 parking_lot = "0.12"
 regex = "1.10.5"
+tracing = "0.1.40"
+tracing-test = "0.2.5"

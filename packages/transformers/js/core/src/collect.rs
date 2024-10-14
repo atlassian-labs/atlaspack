@@ -91,6 +91,7 @@ pub struct Collect {
   pub non_static_requires: HashSet<JsWord>,
   pub wrapped_requires: HashSet<String>,
   pub bailouts: Option<Vec<Bailout>>,
+  pub is_empty_or_empty_export: bool,
   in_module_this: bool,
   in_top_level: bool,
   in_export_decl: bool,
@@ -135,6 +136,7 @@ pub struct CollectResult {
   pub should_wrap: bool,
   pub has_cjs_exports: bool,
   pub is_esm: bool,
+  pub is_empty: bool,
 }
 
 impl Collect {
@@ -175,6 +177,7 @@ impl Collect {
       in_class: false,
       bailouts: if trace_bailouts { Some(vec![]) } else { None },
       conditional_bundling,
+      is_empty_or_empty_export: false,
     }
   }
 }
@@ -251,6 +254,7 @@ impl From<Collect> for CollectResult {
       should_wrap: collect.should_wrap,
       has_cjs_exports: collect.has_cjs_exports,
       is_esm: collect.is_esm,
+      is_empty: collect.is_empty_or_empty_export,
     }
   }
 }
@@ -260,6 +264,18 @@ impl Visit for Collect {
     self.in_module_this = true;
     self.in_top_level = true;
     self.in_function = false;
+
+    if node.body.is_empty() {
+      self.is_empty_or_empty_export = true;
+    }
+    if node.body.len() == 1 {
+      // Check if the single module item is an empty export
+      if let ModuleItem::ModuleDecl(ModuleDecl::ExportNamed(named_export)) = &node.body[0] {
+        self.is_empty_or_empty_export =
+          named_export.specifiers.is_empty() && named_export.src.is_none();
+      }
+    }
+
     // Visit all imports first so that all imports are known when collecting used_imports
     for n in &node.body {
       if n.is_module_decl() {
@@ -1185,4 +1201,50 @@ fn has_binding_identifier(node: &AssignTarget, sym: &JsWord, unresolved_mark: Ma
   };
   node.visit_with(&mut visitor);
   visitor.found
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::test_utils::{run_test_visit_const, RunTestContext, RunVisitResult};
+  #[test]
+  fn test_visit_module_sets_is_empty_on_empty_file() {
+    let RunVisitResult { visitor, .. } =
+      run_test_visit_const(r#""#, |context| make_default_swc_collector(context));
+    assert_eq!(visitor.is_empty_or_empty_export, true);
+  }
+
+  #[test]
+  fn test_visit_module_sets_is_empty_on_empty_export() {
+    let RunVisitResult { visitor, .. } = run_test_visit_const(r#"export {}"#, |context| {
+      make_default_swc_collector(context)
+    });
+    assert_eq!(visitor.is_empty_or_empty_export, true);
+  }
+
+  #[test]
+  fn test_visit_module_sees_file_has_single_line() {
+    let RunVisitResult { visitor, .. } =
+      run_test_visit_const(r#"console.log('hello');"#, |context| {
+        make_default_swc_collector(context)
+      });
+    assert_eq!(visitor.is_empty_or_empty_export, false);
+  }
+
+  #[test]
+  fn test_visit_module_sees_file_has_single_line_with_non_empty_export() {
+    let RunVisitResult { visitor, .. } = run_test_visit_const(r#"export default 2;"#, |context| {
+      make_default_swc_collector(context)
+    });
+    assert_eq!(visitor.is_empty_or_empty_export, false);
+  }
+
+  #[test]
+  fn test_visit_module_sees_file_has_multiple_lines() {
+    let RunVisitResult { visitor, .. } =
+      run_test_visit_const(r#"console.log('hello');console.log('world')"#, |context| {
+        make_default_swc_collector(context)
+      });
+    assert_eq!(visitor.is_empty_or_empty_export, false);
+  }
 }

@@ -1,5 +1,4 @@
 // @flow strict-local
-
 import type {
   Asset,
   AsyncSubscription,

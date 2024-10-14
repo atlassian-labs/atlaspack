@@ -1,8 +1,9 @@
 use regex::Regex;
-use swc_core::ecma::visit::{Fold, VisitMut};
+use swc_core::ecma::visit::{Fold, Visit, VisitMut};
 
-use crate::runner::{run_fold, run_visit};
+use crate::runner::{run_fold, run_visit, run_visit_const};
 pub use crate::runner::{RunContext, RunVisitResult};
+use crate::{Config, TransformResult};
 
 /// In the future this might be a different type to `RunContext`
 pub type RunTestContext = RunContext;
@@ -20,6 +21,13 @@ pub fn run_test_visit<V: VisitMut>(
   run_visit(code, make_visit).unwrap()
 }
 
+pub fn run_test_visit_const<V: Visit>(
+  code: &str,
+  make_visit: impl FnOnce(RunTestContext) -> V,
+) -> RunVisitResult<V> {
+  run_visit_const(code, make_visit).unwrap()
+}
+
 /// Same as `run_visit` but for `Fold` instances
 #[allow(unused)]
 pub fn run_test_fold<V: Fold>(
@@ -34,4 +42,22 @@ pub fn run_test_fold<V: Fold>(
 pub fn remove_code_whitespace(code: &str) -> String {
   let re = Regex::new(r"\s*\n\s*").unwrap();
   re.replace_all(code, "\n").trim().to_string()
+}
+
+pub(crate) fn run_swc_core_transform(source_code: &str) -> TransformResult {
+  let swc_output = crate::transform(make_test_swc_config(source_code), None).unwrap();
+  swc_output
+}
+
+/// SWC configuration for testing
+pub(crate) fn make_test_swc_config(source_code: &str) -> Config {
+  Config {
+    source_type: crate::SourceType::Module,
+    is_browser: true,
+    filename: "something/file.js".to_string(),
+    inline_fs: true,
+    code: source_code.as_bytes().to_vec(),
+    scope_hoist: true,
+    ..Default::default()
+  }
 }
