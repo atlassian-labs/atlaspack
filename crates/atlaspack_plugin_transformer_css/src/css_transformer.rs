@@ -36,7 +36,16 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
   ) -> Result<TransformResult, Error> {
     // TODO: Hardcoded AFM defaults for now, could support proper config here if
     // need be
-    let css_modules = if asset.is_source && asset.file_path.ends_with(".module.css") {
+    let is_css_module = asset.is_source && {
+      let file_path_string = asset
+        .file_path
+        .clone()
+        .into_os_string()
+        .into_string()
+        .map_err(|_err| anyhow!("Couldn't get string from asset file path"))?;
+      file_path_string.ends_with(".module.css")
+    };
+    let css_modules = if is_css_module {
       Some(Default::default())
     } else {
       None
@@ -58,7 +67,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
         flags: ParserFlags::empty(),
       },
     )
-    .map_err(|err| {
+    .map_err(|_err| {
       // TODO: Proper error handling
       anyhow!("Failed to parse CSS {}", asset.file_path.display())
     })?;
@@ -291,7 +300,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       });
     }
 
-    if asset_symbols.len() > 0 {
+    if !asset_symbols.is_empty() {
       if let Some(symbols) = asset.symbols.as_mut() {
         symbols.extend(asset_symbols);
       } else {
@@ -327,7 +336,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn find_css_imports() {
+  fn supports_css_imports() {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let mut plugin = AtlaspackCssTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
@@ -367,6 +376,48 @@ mod tests {
         ]),
         ..Dependency::default()
       }]
+    );
+  }
+
+  #[test]
+  fn supports_css_modules() {
+    let file_system = Arc::new(InMemoryFileSystem::default());
+    let mut plugin = AtlaspackCssTransformerPlugin::new(&PluginContext {
+      config: Arc::new(ConfigLoader {
+        fs: file_system.clone(),
+        project_root: PathBuf::default(),
+        search_path: PathBuf::default(),
+      }),
+      file_system,
+      logger: PluginLogger::default(),
+      options: Arc::new(PluginOptions::default()),
+    });
+    let context = TransformContext::default();
+
+    let asset = Asset {
+      id: "css-module".into(),
+      file_path: "styles.module.css".into(),
+      is_source: true,
+      code: Arc::new(Code::from(".root {display: 'block'}")),
+      ..Default::default()
+    };
+
+    let result = plugin.transform(context, asset.clone()).unwrap();
+
+    assert_eq!(result.discovered_assets.len(), 1);
+    assert_eq!(
+      result.discovered_assets[0],
+      AssetWithDependencies {
+        asset: Asset {
+          id: "41d174432961c58d".into(),
+          code: Arc::new(Code::from("module.exports[\"root\"] = `EcQGha_root`;\n")),
+          file_path: "styles.module.css".into(),
+          unique_key: Some("css-module:module".into()),
+          is_source: true,
+          ..Default::default()
+        },
+        dependencies: Vec::new()
+      }
     );
   }
 }
