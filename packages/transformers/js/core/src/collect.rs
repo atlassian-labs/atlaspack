@@ -1206,7 +1206,8 @@ fn has_binding_identifier(node: &AssignTarget, sym: &JsWord, unresolved_mark: Ma
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::test_utils::{run_test_visit_const, RunTestContext, RunVisitResult};
+  use crate::test_utils::{make_default_swc_collector, run_test_visit_const, RunVisitResult};
+
   #[test]
   fn test_visit_module_sets_is_empty_on_empty_file() {
     let RunVisitResult { visitor, .. } =

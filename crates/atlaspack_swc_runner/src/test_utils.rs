@@ -1,6 +1,8 @@
 use regex::Regex;
+use swc_core::common::Mark;
 use swc_core::ecma::visit::{Fold, Visit, VisitMut};
 
+use crate::collect::Collect;
 use crate::runner::{run_fold, run_visit, run_visit_const};
 pub use crate::runner::{RunContext, RunVisitResult};
 use crate::{Config, TransformResult};
@@ -60,4 +62,16 @@ pub(crate) fn make_test_swc_config(source_code: &str) -> Config {
     scope_hoist: true,
     ..Default::default()
   }
+}
+
+pub fn make_default_swc_collector(context: RunContext) -> Collect {
+  Collect::new(
+    context.source_map,
+    context.unresolved_mark,
+    Mark::fresh(Mark::root()),
+    context.global_mark,
+    false,
+    true,
+    false,
+  )
 }
