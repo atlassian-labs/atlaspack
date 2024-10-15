@@ -32,7 +32,7 @@ export class BitFlags<K, V> {
     if (key === undefined || key === null) {
       return undefined;
     }
-    this.into(key);
+    return this.into(key);
   }
 
   intoArray(keys: K[]): V[] {
