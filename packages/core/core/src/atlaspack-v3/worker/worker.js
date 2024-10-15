@@ -183,21 +183,19 @@ export class AtlaspackWorker {
         }),
       };
 
-      if (!('config' in state)) {
-        state.config = await transformer.loadConfig?.({
-          config: new PluginConfig({
-            env,
-            isSource: true,
-            searchPath: '',
-          }),
-          ...defaultOptions,
-        });
-      }
+      const config = await transformer.loadConfig?.({
+        config: new PluginConfig({
+          env,
+          isSource: true,
+          searchPath: '',
+        }),
+        ...defaultOptions,
+      });
 
       if (transformer.parse) {
         const ast = await transformer.parse({
           asset: mutableAsset,
-          config: state.config,
+          config,
           get resolve() {
             throw new Error('Transformer.parse.resolve()');
           },
@@ -210,7 +208,7 @@ export class AtlaspackWorker {
 
       const result = await state.transformer.transform({
         asset: mutableAsset,
-        config: state.config,
+        config,
         get resolve() {
           throw new Error('Transformer.transform.resolve()');
         },
@@ -284,7 +282,6 @@ type ResolverState<T> = {|
 type TransformerState<T> = {|
   packageManager?: NodePackageManager,
   transformer: Transformer<T>,
-  config?: T,
 |};
 
 type LoadPluginOptions = {|

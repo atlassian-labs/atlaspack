@@ -20,10 +20,10 @@ export class MutableDependencySymbols
     return this.#symbols.size === 0;
   }
 
-  constructor(inner: NapiSymbol[] = []) {
+  constructor(inner: ?(NapiSymbol[]) | null) {
     this.#symbols = new Map();
     this.#locals = new Set();
-    for (const {exported, local, loc, isWeak} of inner) {
+    for (const {exported, local, loc, isWeak} of inner || []) {
       this.set(exported, local, loc, isWeak);
     }
   }
@@ -85,10 +85,10 @@ export class AssetSymbols implements ClassicAssetSymbols {
     return this.#symbols.size === 0;
   }
 
-  constructor(inner: NapiSymbol[] = []) {
+  constructor(inner: ?(NapiSymbol[]) | null) {
     this.#symbols = new Map();
     this.#locals = new Set();
-    for (const {exported, local, loc} of inner) {
+    for (const {exported, local, loc} of inner || []) {
       this.#set(exported, local, loc);
     }
   }
@@ -137,10 +137,10 @@ export class MutableAssetSymbols implements ClassicMutableAssetSymbols {
     return this.#symbols.size === 0;
   }
 
-  constructor(inner: NapiSymbol[] = []) {
+  constructor(inner: ?(NapiSymbol[]) | null) {
     this.#symbols = new Map();
     this.#locals = new Set();
-    for (const {exported, local, loc} of inner) {
+    for (const {exported, local, loc} of inner || []) {
       this.set(exported, local, loc);
     }
   }
