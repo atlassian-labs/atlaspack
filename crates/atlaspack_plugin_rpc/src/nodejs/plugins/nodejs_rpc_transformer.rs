@@ -1,3 +1,4 @@
+use once_cell::sync::OnceCell;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -31,6 +32,7 @@ pub struct NodejsRpcTransformerPlugin {
   resolve_from: PathBuf,
   specifier: String,
   project_root: PathBuf,
+  started: OnceCell<Vec<()>>,
 }
 
 impl Debug for NodejsRpcTransformerPlugin {
@@ -56,6 +58,7 @@ impl NodejsRpcTransformerPlugin {
       specifier: plugin.package_name.clone(),
       resolve_from: (&*plugin.resolve_from).to_path_buf(),
       project_root: (&*ctx.options.project_root).to_path_buf(),
+      started: OnceCell::new(),
     })
   }
 }
@@ -72,11 +75,13 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, Error> {
-    self.rpc_workers.exec_on_all(|worker| {
-      worker.load_plugin(LoadPluginOptions {
-        kind: LoadPluginKind::Transformer,
-        specifier: self.specifier.clone(),
-        resolve_from: self.resolve_from.clone(),
+    self.started.get_or_try_init(|| {
+      self.rpc_workers.exec_on_all(|worker| {
+        worker.load_plugin(LoadPluginOptions {
+          kind: LoadPluginKind::Transformer,
+          specifier: self.specifier.clone(),
+          resolve_from: self.resolve_from.clone(),
+        })
       })
     })?;
 
