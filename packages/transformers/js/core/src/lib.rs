@@ -7,6 +7,7 @@ mod global_replacer;
 mod hoist;
 mod modules;
 mod node_replacer;
+pub mod test_utils;
 mod typeof_replacer;
 mod utils;
 
@@ -515,7 +516,7 @@ pub fn transform(
                 // The above should be false almost always and we already have the value
                 // so it's better to skip fetching the flag when unnecessary
                 let should_look_for_empty_files = std::env::var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES");
-                if should_look_for_empty_files.ok() == Some("true") {
+                if should_look_for_empty_files.ok() == Some("true".to_string()) {
                   let name = config.filename.clone();
                   let root = config.project_root.clone();
                   let source_file = diff_paths(name, root)
@@ -746,8 +747,8 @@ fn macro_error_to_diagnostic(error: MacroError, source_map: &SourceMap) -> Diagn
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::test_utils::make_test_swc_config;
   use std::env;
-  use test_utils::make_test_swc_config;
   use tracing_test::traced_test;
 
   #[test]

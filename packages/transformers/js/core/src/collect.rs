@@ -1205,7 +1205,22 @@ fn has_binding_identifier(node: &AssignTarget, sym: &JsWord, unresolved_mark: Ma
 
 #[cfg(test)]
 mod tests {
-  use crate::test_utils::{make_default_swc_collector, run_test_visit_const, RunVisitResult};
+  use crate::collect::Collect;
+  use atlaspack_swc_runner::runner::RunContext;
+  use atlaspack_swc_runner::test_utils::{run_test_visit_const, RunVisitResult};
+  use swc_core::common::Mark;
+
+  pub fn make_default_swc_collector(context: RunContext) -> Collect {
+    Collect::new(
+      context.source_map,
+      context.unresolved_mark,
+      Mark::fresh(Mark::root()),
+      context.global_mark,
+      false,
+      true,
+      false,
+    )
+  }
 
   #[test]
   fn test_visit_module_sets_is_empty_on_empty_file() {
