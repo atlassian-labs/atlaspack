@@ -9,14 +9,22 @@ import {relativePath, normalizeSeparators} from '@atlaspack/utils';
 export opaque type ProjectPath = string;
 
 function toProjectPath_(projectRoot: FilePath, p: FilePath): ProjectPath {
+  // If the file path is not provided, then treat it as though it is already from the project root
   if (p == null) {
     return p;
   }
 
-  // If the file is outside the project root, store an absolute path rather
-  // than a relative one. This way if the project root is moved, the file
-  // references still work. Accessing files outside the project root is not
-  // portable anyway.
+  // If the file path is already relative and it does not begin with . then treat the path as if it
+  // is already from the project root. This prevents relative paths from being processed twice,
+  // most often within `toInternalSourceLocation` when handling loc types from symbols and asset
+  // dependencies.
+  if (p[0] !== '.' && !path.isAbsolute(p)) {
+    return p;
+  }
+
+  // If the file is outside the project root, store an absolute path rather than a relative one.
+  // This way if the project root is moved, the file references still work. Accessing files outside
+  // the project root is not portable anyway.
   let relative = relativePath(projectRoot, p, false);
   if (relative.startsWith('..')) {
     return process.platform === 'win32' ? normalizeSeparators(p) : p;
