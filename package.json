@@ -45,6 +45,7 @@
   "devDependencies": {
     "@atlaspack/babel-register": "*",
     "@babel/core": "^7.22.11",
+    "@changesets/cli": "^2.27.9",
     "@khanacademy/flow-to-ts": "^0.5.2",
     "@napi-rs/cli": "^2.18.3",
     "@types/node": ">= 18",
