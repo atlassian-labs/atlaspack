@@ -16,6 +16,7 @@ use lightningcss::dependencies::DependencyOptions;
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::{ParserFlags, ParserOptions, StyleSheet};
 use lightningcss::targets::Targets;
+use serde_json::json;
 
 #[derive(Debug)]
 pub struct AtlaspackCssTransformerPlugin {
@@ -38,7 +39,11 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
   ) -> Result<TransformResult, Error> {
     // TODO: Hardcoded AFM defaults for now, could support proper config here if
     // need be
-    let is_css_module = asset.is_source && {
+    let is_style_tag = asset
+      .meta
+      .get("type")
+      .is_some_and(|meta_type| *meta_type == json!("tag"));
+    let is_css_module = asset.is_source && !is_style_tag && {
       let file_path_string = asset
         .file_path
         .clone()

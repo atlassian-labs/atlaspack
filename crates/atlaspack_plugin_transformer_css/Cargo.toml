@@ -11,6 +11,7 @@ atlaspack_core = { path = "../atlaspack_core" }
 anyhow = "1"
 lightningcss = "1.0.0-alpha.59"
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+serde_json = "1.0.116"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

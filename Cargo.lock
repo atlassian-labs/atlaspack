@@ -477,6 +477,7 @@ dependencies = [
  "atlaspack_filesystem",
  "lightningcss",
  "pretty_assertions",
+ "serde_json",
 ]
 
 [[package]]
