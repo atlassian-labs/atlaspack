@@ -558,16 +558,8 @@ function propagateSymbolsDown(
     } else if (node.type === 'asset' && node.usedSymbolsDownDirty) {
       visit(
         node,
-        assetGraph.getIncomingDependencies(node.value).map((d) => {
-          let dep = assetGraph.getNodeByContentKey(d.id);
-          invariant(dep && dep.type === 'dependency');
-          return dep;
-        }),
-        outgoing.map((dep) => {
-          let depNode = nullthrows(assetGraph.getNode(dep));
-          invariant(depNode.type === 'dependency');
-          return depNode;
-        }),
+        incomingDependencyNodesFromAsset(assetGraph, node.value),
+        dependencyNodesFromIds(assetGraph, outgoing),
       );
       node.usedSymbolsDownDirty = false;
     }
@@ -645,27 +637,16 @@ function propagateSymbolsUp(
 
     const nodeVisitor = (nodeId) => {
       let node = nullthrows(assetGraph.getNode(nodeId));
-      let outgoing = assetGraph.getNodeIdsConnectedFrom(nodeId);
 
-      for (let childId of outgoing) {
-        let child = nullthrows(assetGraph.getNode(childId));
-        if (node.type === 'asset') {
-          invariant(child.type === 'dependency');
+      if (node.type === 'asset') {
+        let outgoing = outgoingDependencyNodesFromAsset(assetGraph, nodeId);
+        for (let child of outgoing) {
           if (child.usedSymbolsUpDirtyUp) {
             node.usedSymbolsUpDirty = true;
             child.usedSymbolsUpDirtyUp = false;
           }
         }
-      }
-
-      if (node.type === 'asset') {
-        let incoming = assetGraph
-          .getIncomingDependencies(node.value)
-          .map((d) => {
-            let n = assetGraph.getNodeByContentKey(d.id);
-            invariant(n && n.type === 'dependency');
-            return n;
-          });
+        let incoming = incomingDependencyNodesFromAsset(assetGraph, node.value);
         for (let dep of incoming) {
           if (dep.usedSymbolsUpDirtyDown) {
             dep.usedSymbolsUpDirtyDown = false;
@@ -673,15 +654,7 @@ function propagateSymbolsUp(
           }
         }
         if (node.usedSymbolsUpDirty) {
-          let e = visit(
-            node,
-            incoming,
-            outgoing.map((depNodeId) => {
-              let depNode = nullthrows(assetGraph.getNode(depNodeId));
-              invariant(depNode.type === 'dependency');
-              return depNode;
-            }),
-          );
+          let e = visit(node, incoming, outgoing);
           if (e.length > 0) {
             node.usedSymbolsUpDirty = true;
             errors.set(nodeId, e);
@@ -708,26 +681,14 @@ function propagateSymbolsUp(
     let queuedNodeId = setPop(queue);
     let node = nullthrows(assetGraph.getNode(queuedNodeId));
     if (node.type === 'asset') {
-      let incoming = assetGraph
-        .getIncomingDependencies(node.value)
-        .map((dep) => {
-          let depNode = assetGraph.getNodeByContentKey(dep.id);
-          invariant(depNode && depNode.type === 'dependency');
-          return depNode;
-        });
+      let incoming = incomingDependencyNodesFromAsset(assetGraph, node.value);
       for (let dep of incoming) {
         if (dep.usedSymbolsUpDirtyDown) {
           dep.usedSymbolsUpDirtyDown = false;
           node.usedSymbolsUpDirty = true;
         }
       }
-      let outgoing = assetGraph
-        .getNodeIdsConnectedFrom(queuedNodeId)
-        .map((depNodeId) => {
-          let depNode = nullthrows(assetGraph.getNode(depNodeId));
-          invariant(depNode.type === 'dependency');
-          return depNode;
-        });
+      let outgoing = outgoingDependencyNodesFromAsset(assetGraph, queuedNodeId);
       for (let dep of outgoing) {
         if (dep.usedSymbolsUpDirtyUp) {
           node.usedSymbolsUpDirty = true;
@@ -798,4 +759,27 @@ function setPop<T>(set: Set<T>): T {
   let v = nullthrows(set.values().next().value);
   set.delete(v);
   return v;
+}
+
+function outgoingDependencyNodesFromAsset(assetGraph, assetNode) {
+  return dependencyNodesFromIds(
+    assetGraph,
+    assetGraph.getNodeIdsConnectedFrom(assetNode),
+  );
+}
+
+function dependencyNodesFromIds(assetGraph, dependencyIds) {
+  return dependencyIds.map((depNodeId) => {
+    let depNode = nullthrows(assetGraph.getNode(depNodeId));
+    invariant(depNode.type === 'dependency');
+    return depNode;
+  });
+}
+
+function incomingDependencyNodesFromAsset(assetGraph, assetNodeValue) {
+  return assetGraph.getIncomingDependencies(assetNodeValue).map((d) => {
+    let n = assetGraph.getNodeByContentKey(d.id);
+    invariant(n && n.type === 'dependency');
+    return n;
+  });
 }
