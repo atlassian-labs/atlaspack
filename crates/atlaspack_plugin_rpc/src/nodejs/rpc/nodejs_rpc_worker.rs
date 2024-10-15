@@ -19,7 +19,7 @@ impl NodejsWorker {
     Ok(Self {
       load_plugin_fn: bind("loadPlugin")?,
       run_resolver_resolve_fn: bind("runResolverResolve")?,
-      transformer_register_fn: bind("runTransformer")?,
+      transformer_register_fn: bind("runTransformerTransform")?,
     })
   }
 
@@ -35,6 +35,7 @@ impl NodejsWorker {
 #[serde(rename_all = "camelCase")]
 pub enum LoadPluginKind {
   Resolver,
+  Transformer,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
