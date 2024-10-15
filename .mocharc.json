@@ -1,5 +1,5 @@
 {
-  "spec": "packages/*/!(integration-tests)/test/{*.js,**/*.{test,spec}.js}",
+  "spec": "packages/*/!(integration-tests)/test/{*.{js,ts},**/*.{test,spec}.{js,ts}}",
   "require": [
     "@atlaspack/babel-register",
     "@atlaspack/test-utils/src/mochaSetup.js"

@@ -332,7 +332,7 @@ impl VisitMut for InlineRequiresOptimizer {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_js_swc_core::test_utils::{run_test_visit, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
 
   use super::*;
 
