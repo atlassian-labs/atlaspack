@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@babel/core": "^7.12.2",
-    "@babel/helper-plugin-utils": "^7.22.10"
+    "@babel/helper-plugin-utils": "^7.12.2"
   },
   "devDependencies": {
     "@types/babel__core": "^7.10.3",
