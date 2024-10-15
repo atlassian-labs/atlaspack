@@ -1,6 +1,7 @@
 #! /usr/bin/env node
 /* eslint-disable no-console */
 
+// eslint-disable-next-line import/no-extraneous-dependencies
 require('@atlaspack/babel-register');
 
 const fs = require('node:fs').promises;

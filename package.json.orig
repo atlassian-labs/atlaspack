@@ -52,10 +52,13 @@
     "postinstall": "patch-package"
   },
   "devDependencies": {
+    "@atlaspack/babel-register": "*",
     "@babel/core": "^7.22.11",
+<<<<<<< HEAD
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+=======
     "@changesets/cli": "^2.27.9",
-    "@changesets/changelog-github": "^0.5.0",
+>>>>>>> e77949736 (Add changesets to the repository)
     "@khanacademy/flow-to-ts": "^0.5.2",
     "@napi-rs/cli": "^2.18.3",
     "@types/node": ">= 18",
