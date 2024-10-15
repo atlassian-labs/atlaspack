@@ -20,8 +20,8 @@ import configRepl from '@atlaspack/config-repl';
 import {ExtendedMemoryFS} from './ExtendedMemoryFS';
 import {generatePackageJson, nthIndex} from '../utils/';
 import path from 'path';
-import {yarnInstall} from './yarn.js';
-import {BrowserPackageManager} from './BrowserPackageManager.js';
+import {yarnInstall} from './yarn';
+import {BrowserPackageManager} from './BrowserPackageManager';
 
 export type BundleOutputError = {|
   type: 'failure',

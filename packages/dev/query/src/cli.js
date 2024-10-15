@@ -14,13 +14,13 @@ import {serialize} from 'v8';
 // $FlowFixMe
 import {table} from 'table';
 
-import {loadGraphs} from './index.js';
+import {loadGraphs} from './index';
 
 const {
   BundleGraph: {bundleGraphEdgeTypes: bundleGraphEdgeTypes},
   Priority,
   fromProjectPathRelative,
-} = require('./deep-imports.js');
+} = require('./deep-imports');
 
 export async function run(input: string[]) {
   let args = input;
