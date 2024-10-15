@@ -351,7 +351,7 @@ impl<'a> EnvReplacer<'a> {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_swc_transform_utils::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
 
   use super::*;
 

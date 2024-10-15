@@ -212,7 +212,7 @@ mod tests {
 
   use crate::global_replacer::GlobalReplacer;
   use crate::{DependencyDescriptor, DependencyKind};
-  use atlaspack_swc_transform_utils::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
 
   fn make_global_replacer(
     run_test_context: RunTestContext,

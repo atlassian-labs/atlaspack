@@ -13,4 +13,4 @@ swc_ecma_transforms_testing = {version = "0.143.2"}
 getrandom = { version = "0.2.15", features = ["js"] }
 
 [dev-dependencies]
-atlaspack_swc_transform_utils = { path = "../atlaspack_swc_transform_utils" }
+atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }

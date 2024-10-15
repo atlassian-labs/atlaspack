@@ -219,7 +219,7 @@ dependencies = [
  "atlaspack-macros",
  "atlaspack_contextual_imports",
  "atlaspack_core",
- "atlaspack_swc_transform_utils",
+ "atlaspack_swc_runner",
  "data-encoding",
  "dunce",
  "indexmap 1.9.3",
@@ -265,7 +265,7 @@ dependencies = [
  "atlaspack_package_manager",
  "atlaspack_plugin_optimizer_inline_requires",
  "atlaspack_plugin_transformer_js",
- "atlaspack_swc_transform_utils",
+ "atlaspack_swc_runner",
  "crossbeam-channel",
  "getrandom",
  "glob",
@@ -343,7 +343,7 @@ dependencies = [
 name = "atlaspack_contextual_imports"
 version = "0.1.0"
 dependencies = [
- "atlaspack_swc_transform_utils",
+ "atlaspack_swc_runner",
  "getrandom",
  "serde",
  "serde_json",
@@ -438,7 +438,7 @@ dependencies = [
 name = "atlaspack_plugin_optimizer_inline_requires"
 version = "0.1.0"
 dependencies = [
- "atlaspack_swc_transform_utils",
+ "atlaspack_swc_runner",
  "swc_core",
 ]
 
@@ -559,7 +559,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "atlaspack_swc_transform_utils"
+name = "atlaspack_swc_runner"
 version = "0.1.0"
 dependencies = [
  "regex",

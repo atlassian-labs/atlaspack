@@ -1599,7 +1599,7 @@ fn match_worker_type(expr: Option<&ast::ExprOrSpread>) -> (SourceType, Option<as
 mod tests {
   use super::*;
   use crate::DependencyDescriptor;
-  use atlaspack_swc_transform_utils::test_utils::{run_test_fold, RunContext, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{run_test_fold, RunContext, RunVisitResult};
 
   fn make_dependency_collector<'a>(
     context: RunContext,

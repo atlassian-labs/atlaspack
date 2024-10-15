@@ -1,8 +1,8 @@
 [package]
-name = "atlaspack_swc_transform_utils"
+name = "atlaspack_swc_runner"
 version = "0.1.0"
 edition = "2021"
-description = "Atlaspack Bundler"
+description = "SWC runner functions for Atlaspack"
 
 [dependencies]
 regex = "1.10.5"

@@ -210,7 +210,7 @@ impl VisitMut for ContextualImportsInlineRequireVisitor {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_swc_transform_utils::{
+  use atlaspack_swc_runner::{
     runner::RunVisitResult,
     test_utils::{remove_code_whitespace, run_test_visit},
   };

@@ -8,9 +8,9 @@
   },
   "private": true,
   "workspaces": [
+    "crates/atlaspack_contextual_imports_swc_plugin",
     "crates/caniuse_database",
     "crates/lmdb-js-lite",
-    "crates/atlaspack_contextual_imports_swc_plugin",
     "packages/*/*"
   ],
   "scripts": {

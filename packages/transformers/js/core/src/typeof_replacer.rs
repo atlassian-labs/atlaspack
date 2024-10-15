@@ -82,7 +82,7 @@ impl VisitMut for TypeofReplacer {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_swc_transform_utils::test_utils::run_test_visit;
+  use atlaspack_swc_runner::test_utils::run_test_visit;
 
   use super::*;
 
