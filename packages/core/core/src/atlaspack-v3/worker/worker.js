@@ -256,11 +256,9 @@ export class AtlaspackWorker {
           type: mutableAsset.type,
           code: Array.from(await mutableAsset.getBuffer()),
           meta: mutableAsset.meta,
-          // $FlowFixMe TODO Rust does not accept an undefined pipeline
           pipeline: mutableAsset.pipeline,
           query: mutableAsset.query.toString(),
           symbols: mutableAsset.symbols.intoNapi(),
-          // $FlowFixMe TODO Rust does not accept an undefined pipeline
           uniqueKey: mutableAsset.uniqueKey,
           sideEffects: mutableAsset.sideEffects,
           isBundleSplittable: mutableAsset.isBundleSplittable,
