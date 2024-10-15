@@ -558,7 +558,7 @@ function propagateSymbolsDown(
     } else if (node.type === 'asset' && node.usedSymbolsDownDirty) {
       visit(
         node,
-        incomingDependencyNodesToAsset(assetGraph, node.value),
+        incomingDependencyNodesFromAsset(assetGraph, node.value),
         dependencyNodesFromIds(assetGraph, outgoing),
       );
       node.usedSymbolsDownDirty = false;
@@ -646,7 +646,7 @@ function propagateSymbolsUp(
             child.usedSymbolsUpDirtyUp = false;
           }
         }
-        let incoming = incomingDependencyNodesToAsset(assetGraph, node.value);
+        let incoming = incomingDependencyNodesFromAsset(assetGraph, node.value);
         for (let dep of incoming) {
           if (dep.usedSymbolsUpDirtyDown) {
             dep.usedSymbolsUpDirtyDown = false;
@@ -681,7 +681,7 @@ function propagateSymbolsUp(
     let queuedNodeId = setPop(queue);
     let node = nullthrows(assetGraph.getNode(queuedNodeId));
     if (node.type === 'asset') {
-      let incoming = incomingDependencyNodesToAsset(assetGraph, node.value);
+      let incoming = incomingDependencyNodesFromAsset(assetGraph, node.value);
       for (let dep of incoming) {
         if (dep.usedSymbolsUpDirtyDown) {
           dep.usedSymbolsUpDirtyDown = false;
@@ -776,7 +776,7 @@ function dependencyNodesFromIds(assetGraph, dependencyIds) {
   });
 }
 
-function incomingDependencyNodesToAsset(assetGraph, assetNodeValue) {
+function incomingDependencyNodesFromAsset(assetGraph, assetNodeValue) {
   return assetGraph.getIncomingDependencies(assetNodeValue).map((d) => {
     let n = assetGraph.getNodeByContentKey(d.id);
     invariant(n && n.type === 'dependency');
