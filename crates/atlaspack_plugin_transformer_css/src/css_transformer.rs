@@ -44,13 +44,10 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       .get("type")
       .is_some_and(|meta_type| *meta_type == json!("tag"));
     let is_css_module = asset.is_source && !is_style_tag && {
-      let file_path_string = asset
+      asset
         .file_path
-        .clone()
-        .into_os_string()
-        .into_string()
-        .map_err(|_err| anyhow!("Couldn't get string from asset file path"))?;
-      file_path_string.ends_with(".module.css")
+        .file_name()
+        .is_some_and(|name| name.to_string_lossy().ends_with(".module.css"))
     };
     let css_modules = if is_css_module {
       Some(Default::default())
