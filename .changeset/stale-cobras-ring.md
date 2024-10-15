@@ -1,6 +1,4 @@
 ---
-'caniuse-database': minor
-'lmdb-js-lite': minor
 '@atlaspack/bundler-default': minor
 '@atlaspack/bundler-library': minor
 '@atlaspack/compressor-brotli': minor
@@ -38,18 +36,8 @@
 '@atlaspack/eslint-config': minor
 '@atlaspack/eslint-config-browser': minor
 '@atlaspack/eslint-plugin': minor
-'fuzzer': minor
 '@atlaspack/query': minor
 '@atlaspack/repl': minor
-'@atlaspack/conditional-bundling-example': minor
-'@atlaspack/eslint-example': minor
-'@atlaspack/html-example': minor
-'@atlaspack/kitchen-sink-example': minor
-'@atlaspack/react-hmr-example': minor
-'@atlaspack/react-refresh-example': minor
-'@atlaspack/simple-example': minor
-'@atlaspack/typechecking-example': minor
-'@atlaspack/typescript-example': minor
 '@atlaspack/parcel-to-atlaspack': minor
 '@atlaspack/namer-default': minor
 '@atlaspack/optimizer-blob-url': minor
@@ -124,7 +112,6 @@
 '@atlaspack/lsp': minor
 '@atlaspack/lsp-protocol': minor
 '@atlaspack/watcher-watchman-js': minor
-'atlaspack-for-vscode': minor
 '@atlaspack/babel-plugin-transform-runtime': minor
 '@atlaspack/babel-preset-env': minor
 '@atlaspack/create-react-app': minor
@@ -137,6 +124,7 @@
 '@atlaspack/validator-typescript': minor
 ---
 
-Initial publish moving to changesets. `atlaspack` will move to a changeset
-release model, and continuously publish new versions to NPM using semantic
-versioning.
+Initial publish moving to changesets
+
+`atlaspack` will move to a changeset release model, and continuously publish new
+versions to NPM using semantic versioning.
