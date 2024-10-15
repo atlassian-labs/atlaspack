@@ -1,5 +1,4 @@
 mod collect;
-mod conditional_imports_fallback;
 mod constant_module;
 mod dependency_collector;
 mod env_replacer;
@@ -8,8 +7,6 @@ mod global_replacer;
 mod hoist;
 mod modules;
 mod node_replacer;
-pub mod runner;
-pub mod test_utils;
 mod typeof_replacer;
 mod utils;
 
@@ -19,6 +16,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use atlaspack_contextual_imports::ContextualImportsConfig;
+use atlaspack_contextual_imports::ContextualImportsInlineRequireVisitor;
 use atlaspack_core::types::Condition;
 use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
@@ -26,7 +25,6 @@ use atlaspack_macros::Macros;
 use collect::Collect;
 pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
-use conditional_imports_fallback::ConditionalImportsFallback;
 use constant_module::ConstantModule;
 pub use dependency_collector::dependency_collector;
 pub use dependency_collector::DependencyDescriptor;
@@ -357,9 +355,14 @@ pub fn transform(
                 result.is_constant_module = constant_module.is_constant_module;
               }
 
-              // Replace conditional imports with requires when flag is off
               if !config.conditional_bundling {
-                module.visit_mut_with(&mut ConditionalImportsFallback { unresolved_mark });
+                // Treat conditional imports as two inline requires when flag is off
+                module.visit_mut_with(&mut ContextualImportsInlineRequireVisitor::new(
+                  unresolved_mark,
+                  ContextualImportsConfig {
+                    server: Some(false),
+                  },
+                ));
               }
 
               let module = {
