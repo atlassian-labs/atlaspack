@@ -515,7 +515,7 @@ pub fn transform(
                 // The above should be false almost always and we already have the value
                 // so it's better to skip fetching the flag when unnecessary
                 let should_look_for_empty_files = std::env::var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES");
-                if should_look_for_empty_files.is_ok() && should_look_for_empty_files.unwrap() == "true" {
+                if should_look_for_empty_files.ok() == Some("true") {
                   let name = config.filename.clone();
                   let root = config.project_root.clone();
                   let source_file = diff_paths(name, root)
