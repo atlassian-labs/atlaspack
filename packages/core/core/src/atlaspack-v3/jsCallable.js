@@ -1,9 +1,5 @@
 // @flow strict-local
 
-export type JsCallable<Args: $ReadOnlyArray<mixed>, Return> = (
-  ...Args
-) => Return | Promise<Return>;
-
 export function jsCallable<Args: $ReadOnlyArray<mixed>, Return>(
   fn: (...Args) => Return | Promise<Return>,
 ): (...Args) => Promise<Return> {

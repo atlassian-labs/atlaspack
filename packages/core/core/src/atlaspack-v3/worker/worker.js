@@ -1,6 +1,7 @@
 // @flow
 import assert from 'assert';
 import * as napi from '@atlaspack/rust';
+import type {JsCallable} from '@atlaspack/rust';
 import {NodeFS} from '@atlaspack/fs';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import type {
@@ -24,7 +25,6 @@ import {
   dependencyPriorityMap,
 } from './compat';
 import {jsCallable} from '../jsCallable';
-import type {JsCallable} from '../jsCallable';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 
