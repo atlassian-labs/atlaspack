@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -10,6 +11,7 @@ use atlaspack_core::types::{
   Asset, AssetWithDependencies, Code, Dependency, EnvironmentContext, ExportsCondition, FileType,
   Priority, SpecifierType, Symbol,
 };
+use lightningcss::css_modules::CssModuleExport;
 use lightningcss::dependencies::DependencyOptions;
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::{ParserFlags, ParserOptions, StyleSheet};
@@ -181,7 +183,16 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
         loc: None,
       });
 
-      for (key, export) in exports.iter() {
+      // It's possible that the exports can be ordered differently between builds.
+      // Sorting by key is safe as the order is irrelevant but needs to be deterministic.
+      let sorted_exports: BTreeMap<String, CssModuleExport> = exports.into_iter().collect();
+      for (key, export) in sorted_exports.iter() {
+        if !export.composes.is_empty() {
+          return Err(anyhow!(
+            "CSS module 'composes' not currently supported in Atlaspack V3"
+          ));
+        }
+
         asset_symbols.push(Symbol {
           exported: export.name.clone(),
           local: key.clone(),
@@ -193,8 +204,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
         export_code
           .push_str(format!("module.exports[\"{}\"] = `{}`;\n", key, export.name).as_str());
 
-        // TODO: Add support for CSS modules "composes" feature, or drop it
-
+        // If the export is referenced internally (e.g. used @keyframes), add a self-reference
+        // to the JS so the symbol is retained during tree-shaking.
         if export.is_referenced {
           export_code.push_str(format!("module.exports[\"{key}\"];\n").as_str());
 
