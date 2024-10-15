@@ -14,6 +14,7 @@ use atlaspack_core::plugin::Resolved;
 use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::types::Dependency;
 use atlaspack_napi_helpers::anyhow_from_napi;
+use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 
 use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
@@ -24,7 +25,7 @@ pub struct RpcNodejsResolverPlugin {
   rpc_workers: Arc<NodeJsWorkerCollection>,
   resolve_from: PathBuf,
   specifier: String,
-  started: bool,
+  started: OnceCell<Vec<()>>,
   project_root: PathBuf,
 }
 
@@ -44,8 +45,8 @@ impl RpcNodejsResolverPlugin {
       resolve_from: plugin.resolve_from.to_path_buf(),
       specifier: plugin.package_name.clone(),
       rpc_workers,
-      started: false,
       project_root: (&*ctx.options.project_root).to_path_buf(),
+      started: OnceCell::new(),
     })
   }
 }
@@ -56,20 +57,19 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
     self.type_id().hash(&mut hasher);
     self.resolve_from.hash(&mut hasher);
     self.specifier.hash(&mut hasher);
-    self.started.hash(&mut hasher);
     hasher.finish()
   }
 
   fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
-    if !self.started {
+    self.started.get_or_try_init(|| {
       self.rpc_workers.exec_on_all(|worker| {
         worker.load_plugin(LoadPluginOptions {
           kind: LoadPluginKind::Resolver,
           specifier: self.specifier.clone(),
           resolve_from: self.resolve_from.clone(),
         })
-      })?;
-    }
+      })
+    })?;
 
     self.rpc_workers.exec_on_one(|worker| {
       worker
