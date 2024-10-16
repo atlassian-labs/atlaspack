@@ -225,7 +225,6 @@ export type RpcAssetResult = {|
 export type RpcTransformerOpts = {|
   resolveFrom: string,
   specifier: string,
-  options: RpcPluginOptions,
   asset: Asset,
 |};
 

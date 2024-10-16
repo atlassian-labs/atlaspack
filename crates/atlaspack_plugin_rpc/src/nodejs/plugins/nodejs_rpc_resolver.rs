@@ -63,11 +63,14 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
   fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
     self.started.get_or_try_init(|| {
       self.rpc_workers.exec_on_all(|worker| {
-        worker.load_plugin(LoadPluginOptions {
-          kind: LoadPluginKind::Resolver,
-          specifier: self.specifier.clone(),
-          resolve_from: self.resolve_from.clone(),
-        })
+        worker.load_plugin::<Option<()>>(
+          LoadPluginOptions {
+            kind: LoadPluginKind::Resolver,
+            specifier: self.specifier.clone(),
+            resolve_from: self.resolve_from.clone(),
+          },
+          None,
+        )
       })
     })?;
 

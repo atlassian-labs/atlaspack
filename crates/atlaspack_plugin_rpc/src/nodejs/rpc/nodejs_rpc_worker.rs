@@ -1,9 +1,11 @@
 use std::path::PathBuf;
 
 use atlaspack_napi_helpers::anyhow_from_napi;
+use atlaspack_napi_helpers::js_callable::map_return_serde;
 use atlaspack_napi_helpers::js_callable::JsCallable;
+use napi::bindgen_prelude::FromNapiValue;
 use napi::JsObject;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 /// NodejsWorker is the connection to a single JavaScript worker thread
 pub struct NodejsWorker {
@@ -23,10 +25,24 @@ impl NodejsWorker {
     })
   }
 
-  pub fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
+  pub fn load_plugin<T: Serialize + Send + Sync + 'static>(
+    &self,
+    opts: LoadPluginOptions,
+    data: Option<T>,
+  ) -> anyhow::Result<()> {
     self
       .load_plugin_fn
-      .call_with_return_serde(opts)
+      .call_with_return(
+        move |env| {
+          let obj = env.to_js_value(&opts)?;
+          let mut obj = JsObject::from_unknown(obj)?;
+          if let Some(data) = data {
+            obj.set_named_property("data", env.to_js_value(&data)?)?;
+          }
+          Ok(vec![obj.into_unknown()])
+        },
+        |_env, _value| Ok(()),
+      )
       .map_err(anyhow_from_napi)
   }
 }
@@ -38,7 +54,7 @@ pub enum LoadPluginKind {
   Transformer,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoadPluginOptions {
   pub kind: LoadPluginKind,
