@@ -18,6 +18,7 @@ use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::plugin::ValidatorPlugin;
 use atlaspack_plugin_resolver::AtlaspackResolver;
 use atlaspack_plugin_rpc::RpcWorkerRef;
+use atlaspack_plugin_transformer_css::AtlaspackCssTransformerPlugin;
 use atlaspack_plugin_transformer_html::AtlaspackHtmlTransformerPlugin;
 use atlaspack_plugin_transformer_image::AtlaspackImageTransformerPlugin;
 use atlaspack_plugin_transformer_inline::AtlaspackInlineTransformerPlugin;
@@ -250,7 +251,9 @@ impl Plugins for ConfigPlugins {
         "@atlaspack/transformer-babel" => continue,
         "@atlaspack/transformer-react-refresh-wrap" => continue,
         "@atlaspack/transformer-posthtml" => continue,
+        "@atlaspack/transformer-postcss" => continue,
         "@atlaspack/transformer-js" => Box::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?),
+        "@atlaspack/transformer-css" => Box::new(AtlaspackCssTransformerPlugin::new(&self.ctx)),
         "@atlaspack/transformer-inline-string" => {
           Box::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
         }
