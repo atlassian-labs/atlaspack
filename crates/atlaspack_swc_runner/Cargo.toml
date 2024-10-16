@@ -10,3 +10,5 @@ swc_core = { version = "0.96" }
 thiserror = "1.0.63"
 swc_ecma_parser = "*"
 sourcemap = "*"
+
+#atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
