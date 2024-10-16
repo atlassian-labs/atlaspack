@@ -56,7 +56,7 @@ export async function unlink(
     await cleanupBin(nodeModules, opts);
     await cleanupNodeModules(
       nodeModules,
-      packageName => parcelPackages.has(packageName),
+      (packageName) => parcelPackages.has(packageName),
       opts,
     );
   }
@@ -111,7 +111,7 @@ export async function unlink(
     for (let nodeModules of nodeModulesPaths) {
       await cleanupNodeModules(
         nodeModules,
-        packageName => namespacePackages.has(packageName),
+        (packageName) => namespacePackages.has(packageName),
         opts,
       );
     }
@@ -141,7 +141,7 @@ export function createUnlinkCommand(
     .description('Unlink a dev copy of Parcel from an app')
     .option('-d, --dry-run', 'Do not write any changes')
     .option('-f, --force-install', 'Force a reinstall after unlinking')
-    .action(async options => {
+    .action(async (options) => {
       if (options.dryRun) log('Dry run...');
       let appRoot = process.cwd();
 

@@ -1,9 +1,11 @@
+use anyhow::anyhow;
 use atlaspack_core::plugin::AssetBuildEvent;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::types::AssetStats;
+use atlaspack_core::types::AssetWithDependencies;
 use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Environment;
 use atlaspack_core::types::{Asset, Invalidation};
@@ -11,9 +13,9 @@ use std::collections::VecDeque;
 use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::plugins::PluginsRef;
-use crate::plugins::TransformerPipeline;
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
 use super::RequestResult;
@@ -37,7 +39,7 @@ pub struct AssetRequest {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssetRequestOutput {
   pub asset: Asset,
-  pub discovered_assets: Vec<Asset>, // TODO: model this better
+  pub discovered_assets: Vec<AssetWithDependencies>,
   pub dependencies: Vec<Dependency>,
 }
 
@@ -48,15 +50,11 @@ impl Request for AssetRequest {
   ) -> Result<ResultAndInvalidations, RunRequestError> {
     request_context.report(ReporterEvent::BuildProgress(BuildProgressEvent::Building(
       AssetBuildEvent {
-        // TODO: Should we try avoid a clone here?
         file_path: self.file_path.clone(),
       },
     )));
 
-    let pipeline = request_context
-      .plugins()
-      .transformers(&self.file_path, self.pipeline.clone())?;
-
+    let start = Instant::now();
     let asset = Asset::new(
       &self.project_root,
       self.env.clone(),
@@ -69,16 +67,11 @@ impl Request for AssetRequest {
     )?;
 
     let transform_context = TransformContext::new(self.env.clone());
-    let mut result = run_pipeline(
-      transform_context,
-      pipeline,
-      asset,
-      request_context.plugins().clone(),
-    )?;
+    let mut result = run_pipelines(transform_context, asset, request_context.plugins().clone())?;
 
     result.asset.stats = AssetStats {
       size: result.asset.code.size(),
-      time: 0,
+      time: start.elapsed().as_millis().try_into().unwrap_or(u32::MAX),
     };
 
     Ok(ResultAndInvalidations {
@@ -91,60 +84,105 @@ impl Request for AssetRequest {
       invalidations: result
         .invalidate_on_file_change
         .into_iter()
-        .map(|path| Invalidation::FileChange(path))
+        .map(Invalidation::FileChange)
         .collect(),
     })
   }
 }
 
-pub fn run_pipeline(
+pub fn run_pipelines(
   transform_context: TransformContext,
-  mut pipeline: TransformerPipeline,
   input: Asset,
   plugins: PluginsRef,
 ) -> anyhow::Result<TransformResult> {
-  let mut dependencies = vec![];
   let mut invalidations = vec![];
-  let mut asset_queue = VecDeque::from([input]);
+  let mut asset_queue = VecDeque::from([(
+    AssetWithDependencies {
+      asset: input,
+      dependencies: Vec::new(),
+    },
+    None,
+  )]);
   let mut initial_asset: Option<Asset> = None;
-  let mut processed_assets: Vec<Asset> = vec![];
+  let mut initial_asset_dependencies = None;
+  let mut processed_assets: Vec<AssetWithDependencies> = vec![];
 
-  while let Some(asset_to_modify) = asset_queue.pop_front() {
+  while let Some((
+    AssetWithDependencies {
+      asset: asset_to_modify,
+      dependencies,
+    },
+    pipeline,
+  )) = asset_queue.pop_front()
+  {
     let original_asset_type = asset_to_modify.file_type.clone();
-    let pipeline_hash = pipeline.id();
+    let (mut pipeline, pipeline_id) = if let Some(pipeline_info) = pipeline {
+      pipeline_info
+    } else {
+      let mut file_path = asset_to_modify.file_path.clone();
+      file_path.set_extension(asset_to_modify.file_type.extension());
+
+      let pipeline = plugins.transformers(&file_path, asset_to_modify.pipeline.clone())?;
+      let pipeline_id = pipeline.id();
+
+      (pipeline, pipeline_id)
+    };
 
     let mut current_asset = asset_to_modify.clone();
+    let mut current_dependencies = dependencies;
 
     for transformer in pipeline.transformers_mut() {
       let transform_result = transformer.transform(transform_context.clone(), current_asset)?;
       let is_different_asset_type = transform_result.asset.file_type != original_asset_type;
       current_asset = transform_result.asset;
 
-      dependencies.extend(transform_result.dependencies);
+      current_dependencies.extend(transform_result.dependencies);
       invalidations.extend(transform_result.invalidate_on_file_change);
-      asset_queue.extend(transform_result.discovered_assets);
+      asset_queue.extend(
+        transform_result
+          .discovered_assets
+          .into_iter()
+          .map(|discovered_asset| (discovered_asset, None)),
+      );
+
       // If the Asset has changed type then we may need to trigger a different pipeline
       if is_different_asset_type {
-        let next_pipeline = plugins.transformers(&current_asset.file_path, None)?;
-        if next_pipeline.id() != pipeline_hash {
-          let clone = current_asset.clone();
-          asset_queue.push_front(clone);
-          pipeline = next_pipeline;
+        let next_pipeline =
+          plugins.transformers(&current_asset.file_path, current_asset.pipeline.clone())?;
+
+        let next_pipeline_id = next_pipeline.id();
+
+        if next_pipeline_id != pipeline_id {
+          asset_queue.push_front((
+            AssetWithDependencies {
+              asset: current_asset.clone(),
+              dependencies: current_dependencies.clone(),
+            },
+            Some((next_pipeline, next_pipeline_id)),
+          ));
           break;
         }
       }
     }
 
+    // We assume the first asset to complete the pipeline is the initial asset
     if initial_asset.is_none() {
       initial_asset = Some(current_asset);
+      initial_asset_dependencies = Some(current_dependencies);
+    } else {
+      processed_assets.push(AssetWithDependencies {
+        asset: current_asset,
+        dependencies: current_dependencies,
+      });
     }
-    processed_assets.push(asset_to_modify);
   }
 
   Ok(TransformResult {
-    asset: initial_asset.unwrap(),
+    asset: initial_asset
+      .ok_or_else(|| anyhow!("Initial asset missing after transformer pipeline"))?,
+    dependencies: initial_asset_dependencies
+      .ok_or_else(|| anyhow!("Initial asset missing after transformer pipeline"))?,
     discovered_assets: processed_assets,
-    dependencies,
     invalidate_on_file_change: invalidations,
   })
 }
@@ -153,57 +191,144 @@ pub fn run_pipeline(
 mod tests {
   use super::*;
   use crate::plugins::MockPlugins;
-  use anyhow::Error;
+  use crate::plugins::TransformerPipeline;
   use atlaspack_core::hash::IdentifierHasher;
   use atlaspack_core::plugin::MockTransformerPlugin;
   use atlaspack_core::types::Code;
+  use atlaspack_core::types::FileType;
   use std::hash::Hasher;
+  use std::path::Path;
 
-  #[test]
-  fn test_run_pipeline_works() {
-    let mock_transformer1 = make_transformer("transformer1", None, None, None);
-    let mock_transformer2 = make_transformer("transformer2", None, None, None);
+  fn make_asset(file_path: &str, file_type: FileType) -> Asset {
+    let mut asset = Asset::default();
 
-    let pipeline = TransformerPipeline::new(vec![mock_transformer1, mock_transformer2]);
+    asset.file_path = PathBuf::from(file_path);
+    asset.file_type = file_type;
 
-    let asset = Asset::default();
-    let plugins = Arc::new(MockPlugins::new());
-    let context = TransformContext::default();
-    let result = run_pipeline(context, pipeline, asset, plugins).unwrap();
+    asset
+  }
 
+  fn assert_code(asset: &Asset, code: &str) {
     assert_eq!(
-      String::from_utf8(result.asset.code.bytes().to_vec()).unwrap(),
-      "::transformer1::transformer2"
+      String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
+      code
     )
   }
+
   #[test]
-  fn test_run_pipeline_with_all_fields() {
-    let mock_transformer = make_transformer(
-      "transformer",
-      Some(vec![Asset::default()]),
-      Some(vec![Dependency::default()]),
-      Some(vec![PathBuf::from("./tmp")]),
-    );
-    let pipeline = TransformerPipeline::new(vec![mock_transformer]);
+  fn test_run_pipelines_works() {
+    let mut plugins = MockPlugins::new();
+    plugins.expect_transformers().returning(move |_, _| {
+      Ok(TransformerPipeline::new(vec![
+        make_transformer("transformer1", None, None, None),
+        make_transformer("transformer2", None, None, None),
+      ]))
+    });
+
     let asset = Asset::default();
-    let plugins = Arc::new(MockPlugins::new());
-    let expected_discovered_assets = vec![Asset::default()];
-    let expected_dependencies = vec![Dependency::default()];
+    let context = TransformContext::default();
+    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
+
+    assert_code(&result.asset, "::transformer1::transformer2");
+  }
+
+  #[test]
+  fn test_run_pipelines_with_invalidations() {
+    let mut plugins = MockPlugins::new();
+    plugins
+      .expect_transformers()
+      .withf(|path: &Path, _pipeline: &Option<String>| {
+        path.extension().is_some_and(|ext| ext == "js")
+      })
+      .returning(move |_, _| {
+        Ok(TransformerPipeline::new(vec![
+          make_transformer("js-1", None, None, None),
+          make_transformer("js-2", None, None, Some(vec![PathBuf::from("./tmp")])),
+        ]))
+      });
+
+    let asset = make_asset("index.js", FileType::Js);
     let expected_invalidations = vec![PathBuf::from("./tmp")];
     let context = TransformContext::default();
-    let result = run_pipeline(context, pipeline, asset, plugins).unwrap();
-    assert_eq!(
-      String::from_utf8(result.asset.code.bytes().to_vec()).unwrap(),
-      "::transformer"
-    );
-    assert_eq!(result.discovered_assets, expected_discovered_assets);
-    assert_eq!(result.dependencies, expected_dependencies);
+    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
+
+    assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.invalidate_on_file_change, expected_invalidations);
+  }
+
+  #[test]
+  fn test_run_pipelines_with_dependencies() {
+    let mut plugins = MockPlugins::new();
+    plugins
+      .expect_transformers()
+      .withf(|path: &Path, _pipeline: &Option<String>| {
+        path.extension().is_some_and(|ext| ext == "js")
+      })
+      .returning(move |_, _| {
+        Ok(TransformerPipeline::new(vec![
+          make_transformer("js-1", None, None, None),
+          make_transformer("js-2", None, Some(vec![Dependency::default()]), None),
+        ]))
+      });
+
+    let asset = make_asset("index.js", FileType::Js);
+    let expected_dependencies = vec![Dependency::default()];
+    let context = TransformContext::default();
+    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
+
+    assert_code(&result.asset, "::js-1::js-2");
+    assert_eq!(result.dependencies, expected_dependencies);
+  }
+
+  #[test]
+  fn test_run_pipelines_with_discovered_assets() {
+    let mut plugins = MockPlugins::new();
+
+    plugins
+      .expect_transformers()
+      .withf(|path: &Path, _pipeline: &Option<String>| {
+        path.extension().is_some_and(|ext| ext == "js")
+      })
+      .returning(move |_, _| {
+        Ok(TransformerPipeline::new(vec![
+          make_transformer("js-1", None, None, None),
+          make_transformer(
+            "js-2",
+            Some(vec![AssetWithDependencies {
+              asset: make_asset("discovered.css", FileType::Css),
+              dependencies: vec![Dependency::default()],
+            }]),
+            None,
+            None,
+          ),
+        ]))
+      });
+
+    plugins
+      .expect_transformers()
+      .withf(|path: &Path, _pipeline: &Option<String>| {
+        path.extension().is_some_and(|ext| ext == "css")
+      })
+      .returning(move |_, _| {
+        Ok(TransformerPipeline::new(vec![
+          make_transformer("css-1", None, None, None),
+          make_transformer("css-2", None, Some(vec![Dependency::default()]), None),
+        ]))
+      });
+
+    let asset = make_asset("index.js", FileType::Js);
+    let context = TransformContext::default();
+    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
+
+    assert_code(&result.asset, "::js-1::js-2");
+    assert_eq!(result.discovered_assets.len(), 1);
+    assert_code(&result.discovered_assets[0].asset, "::css-1::css-2");
+    assert_eq!(result.discovered_assets[0].dependencies.len(), 2);
   }
 
   fn make_transformer(
     label: &str,
-    discovered_assets: Option<Vec<Asset>>,
+    discovered_assets: Option<Vec<AssetWithDependencies>>,
     dependencies: Option<Vec<Dependency>>,
     invalidate_on_file_change: Option<Vec<PathBuf>>,
   ) -> Box<MockTransformerPlugin> {
@@ -218,60 +343,25 @@ mod tests {
       }
     });
 
-    mock
-      .expect_transform()
-      .return_once({
-        let label = label.clone();
-        move |_context, mut asset: Asset| {
-          asset.code = Arc::new(Code::from(format!(
-            "{}::{}",
-            String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
-            label.clone()
-          )));
+    mock.expect_transform().returning({
+      let label = label.clone();
+      move |_context, asset: Asset| {
+        let mut asset = asset.clone();
+        asset.code = Arc::new(Code::from(format!(
+          "{}::{}",
+          String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
+          label.clone()
+        )));
 
-          let result_discovered_assets: Vec<Asset> = if discovered_assets.is_some() {
-            discovered_assets.unwrap()
-          } else {
-            vec![]
-          };
-          let result_dependencies = if dependencies.is_some() {
-            dependencies.unwrap()
-          } else {
-            vec![]
-          };
-          let result_invalidations = if invalidate_on_file_change.is_some() {
-            invalidate_on_file_change.unwrap()
-          } else {
-            vec![]
-          };
-
-          Ok(TransformResult {
-            asset,
-            discovered_assets: result_discovered_assets,
-            dependencies: result_dependencies,
-            invalidate_on_file_change: result_invalidations,
-          })
-        }
-      })
-      .returning(move |_context, asset: Asset| get_simple_transformer(label.clone(), asset));
+        Ok(TransformResult {
+          asset,
+          discovered_assets: discovered_assets.clone().unwrap_or_default(),
+          dependencies: dependencies.clone().unwrap_or_default(),
+          invalidate_on_file_change: invalidate_on_file_change.clone().unwrap_or_default(),
+        })
+      }
+    });
+    // .returning(move |_context, asset: Asset| get_simple_transformer(label.clone(), asset));
     Box::new(mock)
-  }
-
-  fn get_simple_transformer(label: String, mut asset: Asset) -> Result<TransformResult, Error> {
-    asset.code = Arc::new(Code::from(format!(
-      "{}::{label}",
-      String::from_utf8(asset.code.bytes().to_vec()).unwrap()
-    )));
-    // Set the fields to be checked in the test
-    let discovered_assets = vec![];
-    let dependencies = vec![Dependency::default()];
-    let invalidations = vec![PathBuf::from("./tmp")];
-    Ok(TransformResult {
-      asset,
-      discovered_assets,
-      dependencies,
-      invalidate_on_file_change: invalidations,
-      ..TransformResult::default()
-    })
   }
 }

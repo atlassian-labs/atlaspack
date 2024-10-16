@@ -607,7 +607,7 @@ describe.v2('server', function () {
     let local = build.bundleGraph
       .getBundles()
       .find(
-        b => b.type === 'js' && path.basename(b.filePath).startsWith('local'),
+        (b) => b.type === 'js' && path.basename(b.filePath).startsWith('local'),
       );
     invariant(local);
     data = await get(`/${path.basename(local.filePath)}`, port);
@@ -644,7 +644,8 @@ describe.v2('server', function () {
     let localCSS = build.bundleGraph
       .getBundles()
       .find(
-        b => b.type === 'css' && path.basename(b.filePath).startsWith('local'),
+        (b) =>
+          b.type === 'css' && path.basename(b.filePath).startsWith('local'),
       );
     invariant(localCSS);
 

@@ -1,5 +1,5 @@
-use atlaspack_js_swc_core::runner::run_visit;
 use atlaspack_plugin_optimizer_inline_requires::IgnorePattern;
+use atlaspack_swc_runner::runner::run_visit;
 use napi_derive::napi;
 use swc_core::atoms::Atom;
 

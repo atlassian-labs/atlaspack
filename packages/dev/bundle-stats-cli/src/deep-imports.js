@@ -1,6 +1,6 @@
 // @flow
 /* eslint-disable monorepo/no-internal-import */
-import typeof {loadGraphs} from '@atlaspack/query/src/index.js';
+import typeof {loadGraphs} from '@atlaspack/query/src/index';
 import typeof {getBundleStats} from '@atlaspack/reporter-bundle-stats/src/BundleStatsReporter';
 import typeof {PackagedBundle as PackagedBundleClass} from '@atlaspack/core/src/public/Bundle';
 

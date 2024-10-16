@@ -58,7 +58,9 @@ export default (new Transformer({
       let rawMap = JSON.parse(result.map);
       map.addVLQMap({
         ...rawMap,
-        sources: rawMap.sources.map(s => path.relative(options.projectRoot, s)),
+        sources: rawMap.sources.map((s) =>
+          path.relative(options.projectRoot, s),
+        ),
       });
       asset.setMap(map);
     }

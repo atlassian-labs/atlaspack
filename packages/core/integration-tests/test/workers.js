@@ -67,7 +67,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise(resolve => {
+    let res = await new Promise((resolve) => {
       run(b, {
         output: resolve,
       });
@@ -107,7 +107,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise(resolve => {
+    let res = await new Promise((resolve) => {
       run(b, {
         output: resolve,
       });
@@ -147,7 +147,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise(resolve => {
+    let res = await new Promise((resolve) => {
       run(b, {
         output: resolve,
       });
@@ -187,7 +187,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise(resolve => {
+    let res = await new Promise((resolve) => {
       run(b, {
         output: resolve,
       });
@@ -251,7 +251,7 @@ describe('atlaspack', function () {
     await run(b);
   });
 
-  it.v2('bundles workers of type module', async function () {
+  it('bundles workers of type module', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/workers-module/index.js'),
       {
@@ -308,77 +308,74 @@ describe('atlaspack', function () {
   });
 
   for (let shouldScopeHoist of [true, false]) {
-    it.v2(
-      `compiles workers to non modules if ${
-        shouldScopeHoist
-          ? 'browsers do not support it'
-          : 'shouldScopeHoist = false'
-      }`,
-      async function () {
-        let b = await bundle(
-          path.join(__dirname, '/integration/workers-module/index.js'),
-          {
-            mode: 'production',
-            defaultTargetOptions: {
-              shouldOptimize: false,
-              shouldScopeHoist,
-              engines: {
-                browsers: '>= 0.25%',
-              },
+    it(`compiles workers to non modules if ${
+      shouldScopeHoist
+        ? 'browsers do not support it'
+        : 'shouldScopeHoist = false'
+    }`, async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/workers-module/index.js'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+            shouldScopeHoist,
+            engines: {
+              browsers: '>= 0.25%',
             },
           },
-        );
+        },
+      );
 
-        assertBundles(b, [
-          {
-            assets: ['dedicated-worker.js'],
-          },
-          {
-            name: 'index.js',
-            assets: [
-              'index.js',
-              'bundle-url.js',
-              'get-worker-url.js',
-              'bundle-manifest.js',
-            ],
-          },
-          {
-            assets: [
-              !shouldScopeHoist && 'esmodule-helpers.js',
-              'index.js',
-            ].filter(Boolean),
-          },
-          {
-            assets: ['shared-worker.js'],
-          },
-        ]);
+      assertBundles(b, [
+        {
+          assets: ['dedicated-worker.js'],
+        },
+        {
+          name: 'index.js',
+          assets: [
+            'index.js',
+            'bundle-url.js',
+            'get-worker-url.js',
+            'bundle-manifest.js',
+          ],
+        },
+        {
+          assets: [
+            !shouldScopeHoist && 'esmodule-helpers.js',
+            'index.js',
+          ].filter(Boolean),
+        },
+        {
+          assets: ['shared-worker.js'],
+        },
+      ]);
 
-        let dedicated, shared;
-        b.traverseBundles((bundle, ctx, traversal) => {
-          let mainEntry = bundle.getMainEntry();
-          if (mainEntry && mainEntry.filePath.endsWith('shared-worker.js')) {
-            shared = bundle;
-          } else if (
-            mainEntry &&
-            mainEntry.filePath.endsWith('dedicated-worker.js')
-          ) {
-            dedicated = bundle;
-          }
-          if (dedicated && shared) traversal.stop();
-        });
+      let dedicated, shared;
+      b.traverseBundles((bundle, ctx, traversal) => {
+        let mainEntry = bundle.getMainEntry();
+        if (mainEntry && mainEntry.filePath.endsWith('shared-worker.js')) {
+          shared = bundle;
+        } else if (
+          mainEntry &&
+          mainEntry.filePath.endsWith('dedicated-worker.js')
+        ) {
+          dedicated = bundle;
+        }
+        if (dedicated && shared) traversal.stop();
+      });
 
-        assert(dedicated);
-        assert(shared);
+      assert(dedicated);
+      assert(shared);
 
-        let main = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-        dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
-        shared = await outputFS.readFile(shared.filePath, 'utf8');
-        assert(/new Worker([^,]*?)/.test(main));
-        assert(/new SharedWorker([^,]*?)/.test(main));
-        assert(!/export var foo/.test(dedicated));
-        assert(!/export var foo/.test(shared));
-      },
-    );
+      let main = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
+      shared = await outputFS.readFile(shared.filePath, 'utf8');
+      assert(/new Worker([^,]*?)/.test(main));
+      assert(/new SharedWorker([^,]*?)/.test(main));
+      assert(!/export var foo/.test(dedicated));
+      assert(!/export var foo/.test(shared));
+    });
   }
 
   for (let supported of [false, true]) {
@@ -447,7 +444,7 @@ describe('atlaspack', function () {
     );
   }
 
-  it.v2('preserves the worker name option', async function () {
+  it('preserves the worker name option', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/workers-module/named.js'),
       {
@@ -756,8 +753,8 @@ describe('atlaspack', function () {
     ]);
 
     let bundles = b.getBundles();
-    let main = bundles.find(b => !b.env.isWorker());
-    let worker = bundles.find(b => b.env.isWorker());
+    let main = bundles.find((b) => !b.env.isWorker());
+    let worker = bundles.find((b) => b.env.isWorker());
     let mainContents = await outputFS.readFile(main.filePath, 'utf8');
     let workerContents = await outputFS.readFile(worker.filePath, 'utf8');
     assert(/navigator.serviceWorker.register\([^,]+?\)/.test(mainContents));
@@ -785,7 +782,7 @@ describe('atlaspack', function () {
     ]);
 
     let bundles = b.getBundles();
-    let main = bundles.find(b => !b.env.isWorker());
+    let main = bundles.find((b) => !b.env.isWorker());
     let mainContents = await outputFS.readFile(main.filePath, 'utf8');
     assert(
       /navigator.serviceWorker.register\(.*?, {[\n\s]*scope: 'foo'[\n\s]*}\)/.test(
@@ -871,7 +868,7 @@ describe('atlaspack', function () {
     },
   );
 
-  it.v2('exposes a manifest to service workers', async function () {
+  it('exposes a manifest to service workers', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/service-worker/manifest.js'),
       {
@@ -892,7 +889,7 @@ describe('atlaspack', function () {
     ]);
 
     let bundles = b.getBundles();
-    let worker = bundles.find(b => b.env.isWorker());
+    let worker = bundles.find((b) => b.env.isWorker());
     let manifest, version;
     await runBundle(b, worker, {
       output(m, v) {
@@ -1225,8 +1222,10 @@ describe('atlaspack', function () {
     let sharedBundle = b
       .getBundles()
       .sort((a, b) => b.stats.size - a.stats.size)
-      .find(b => b.name !== 'index.js');
-    let workerBundle = b.getBundles().find(b => b.name.startsWith('worker-b'));
+      .find((b) => b.name !== 'index.js');
+    let workerBundle = b
+      .getBundles()
+      .find((b) => b.name.startsWith('worker-b'));
     let contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
     assert(
       contents.includes(
@@ -1269,7 +1268,9 @@ describe('atlaspack', function () {
       //   .getBundles()
       //   .sort((a, b) => b.stats.size - a.stats.size)
       //   .find(b => b.name !== 'index.js');
-      let workerBundle = b.getBundles().find(b => b.name.startsWith('worker'));
+      let workerBundle = b
+        .getBundles()
+        .find((b) => b.name.startsWith('worker'));
       // let contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
       // assert(
       //   contents.includes(

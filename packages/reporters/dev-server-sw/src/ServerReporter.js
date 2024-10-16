@@ -11,7 +11,7 @@ export default (new Reporter({
     switch (event.type) {
       case 'watchStart': {
         if (hmrOptions) {
-          hmrServer = new HMRServer(data =>
+          hmrServer = new HMRServer((data) =>
             // $FlowFixMe
             globalThis.ATLASPACK_SERVICE_WORKER('hmrUpdate', data),
           );
@@ -38,7 +38,7 @@ export default (new Reporter({
           // $FlowFixMe
           hmrAssetSourceCleanup = globalThis.ATLASPACK_SERVICE_WORKER_REGISTER(
             'hmrAssetSource',
-            async id => {
+            async (id) => {
               let bundleGraph = event.bundleGraph;
               let asset = bundleGraph.getAssetById(id);
               return [

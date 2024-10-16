@@ -452,7 +452,9 @@ function linearizeState(state /*: State */) /* : Fixture */ {
           ],
         ]),
     ),
-    entries: state.entries.map(n => numberToFilename(n, state.modules[n].type)),
+    entries: state.entries.map((n) =>
+      numberToFilename(n, state.modules[n].type),
+    ),
   };
 }
 

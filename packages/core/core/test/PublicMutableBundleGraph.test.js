@@ -38,7 +38,7 @@ describe('PublicMutableBundleGraph', () => {
       DEFAULT_OPTIONS,
     );
 
-    mutableBundleGraph.traverse(node => {
+    mutableBundleGraph.traverse((node) => {
       if (
         node.type === 'dependency' &&
         mutableBundleGraph.getResolvedAsset(node.value)
@@ -59,7 +59,7 @@ describe('PublicMutableBundleGraph', () => {
     });
 
     assert.deepEqual(
-      internalBundleGraph.getBundles().map(b => b.publicId),
+      internalBundleGraph.getBundles().map((b) => b.publicId),
       ['8LVYC', 'd7Pd5'],
     );
   });

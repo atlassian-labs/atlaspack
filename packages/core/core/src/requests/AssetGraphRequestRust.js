@@ -25,17 +25,17 @@ type RunInput = {|
 type AssetGraphRequest = {|
   id: string,
   +type: typeof requestTypes.asset_graph_request,
-  run: RunInput => Async<AssetGraphRequestResult>,
+  run: (RunInput) => Async<AssetGraphRequestResult>,
   input: AssetGraphRequestInput,
 |};
 
 export function createAssetGraphRequestRust(
   rustAtlaspack: AtlaspackV3,
 ): (input: AssetGraphRequestInput) => AssetGraphRequest {
-  return input => ({
+  return (input) => ({
     type: requestTypes.asset_graph_request,
     id: input.name,
-    run: async input => {
+    run: async (input) => {
       let options = input.options;
       let serializedAssetGraph;
       try {

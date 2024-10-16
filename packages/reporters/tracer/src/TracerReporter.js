@@ -72,7 +72,7 @@ export default (new Reporter({
         // that the file has been properly closed and moved from it's temp location before Parcel
         // shuts down.
         return new Promise((resolve, reject) => {
-          nullthrows(writeStream).once('close', err => {
+          nullthrows(writeStream).once('close', (err) => {
             writeStream = null;
             if (err) {
               reject(err);

@@ -1,11 +1,12 @@
 use std::collections::HashSet;
 use std::ffi::OsStr;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::u64;
+use std::{str, u64};
 
+use anyhow::anyhow;
 use atlaspack_filesystem::FileSystemRef;
 
 use serde::Deserialize;
@@ -17,6 +18,8 @@ use super::environment::Environment;
 use super::file_type::FileType;
 use super::json::JSONObject;
 use super::symbol::Symbol;
+use super::BundleBehavior;
+use super::Dependency;
 
 pub type AssetId = String;
 
@@ -24,7 +27,7 @@ pub type AssetId = String;
 ///
 /// TODO: This should be called contents now that it's bytes
 /// TODO: This should be an enum and represent cases where the bytes are on disk
-#[derive(PartialEq, Default, Clone, Debug, Deserialize, Serialize)]
+#[derive(PartialEq, Default, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", transparent)]
 pub struct Code {
   inner: Vec<u8>,
@@ -39,6 +42,11 @@ impl Code {
     &self.inner
   }
 
+  pub fn as_str(&self) -> anyhow::Result<&str> {
+    str::from_utf8(&self.inner)
+      .map_err(|e| anyhow::Error::new(e).context("Failed to convert code to UTF8 str"))
+  }
+
   pub fn size(&self) -> u32 {
     self.inner.len() as u32
   }
@@ -50,6 +58,12 @@ impl Display for Code {
   }
 }
 
+impl Debug for Code {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{:?}", self.as_str().unwrap())
+  }
+}
+
 impl From<String> for Code {
   fn from(value: String) -> Self {
     Self {
@@ -58,16 +72,22 @@ impl From<String> for Code {
   }
 }
 
+impl From<&str> for Code {
+  fn from(value: &str) -> Self {
+    Self {
+      inner: value.to_owned().into_bytes(),
+    }
+  }
+}
+
 #[derive(Debug)]
 pub struct CreateAssetIdParams<'a> {
-  pub env: &'a Environment,
-  /// This is str because we need to hashes are ran against project relative paths
-  /// equal canonical paths, but with different representations will not be
-  /// considered the same. All paths should be normalized to be project relative.
-  pub file_path: &'a str,
   pub code: Option<&'a str>,
+  pub environment_id: &'a str,
+  /// All paths should be normalized to a project relative string to generate a consistent hash.
+  pub file_path: &'a str,
+  pub file_type: &'a FileType,
   pub pipeline: Option<&'a str>,
-  pub file_type: FileType,
   pub query: Option<&'a str>,
   /// This should be set to None if it's equal to the asset-id and set by the
   /// constructor otherwise the values will differ. See [`Asset::new`] for more.
@@ -78,16 +98,17 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
   tracing::debug!(?params, "Creating asset id");
 
   let CreateAssetIdParams {
-    env,
-    file_path,
     code,
-    pipeline,
+    environment_id,
+    file_path,
     file_type,
+    pipeline,
     query,
     unique_key,
   } = params;
-  let environment_id = env.id();
+
   let mut hasher = crate::hash::IdentifierHasher::default();
+
   environment_id.hash(&mut hasher);
   file_path.hash(&mut hasher);
   pipeline.hash(&mut hasher);
@@ -208,6 +229,12 @@ pub struct Asset {
   pub config_key_path: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AssetWithDependencies {
+  pub asset: Asset,
+  pub dependencies: Vec<Dependency>,
+}
+
 impl Asset {
   pub fn new(
     project_root: &Path,
@@ -234,32 +261,100 @@ impl Asset {
       .any(|p| p.file_name() == Some(&OsStr::new("node_modules")));
 
     let asset_id = create_asset_id(CreateAssetIdParams {
-      env: &env,
-      file_path: file_path
+      code: None,
+      environment_id: &env.id(),
+      file_path: &file_path
         .strip_prefix(project_root)
         .unwrap_or_else(|_| file_path.as_path())
-        .as_os_str()
-        .to_str()
-        .unwrap(),
-      code: None,
+        .to_string_lossy(),
+      file_type: &file_type,
       pipeline: pipeline.as_deref(),
       query: query.as_deref(),
       unique_key: None,
-      file_type: file_type.clone(),
     });
+
     Ok(Self {
       code: Arc::new(code),
-      id: asset_id.clone(),
-      unique_key: None,
       env,
       file_path,
       file_type,
+      id: asset_id,
       is_bundle_splittable: true,
       is_source,
       pipeline,
       query,
       side_effects,
+      unique_key: None,
       ..Asset::default()
+    })
+  }
+
+  pub fn new_inline(
+    code: Code,
+    env: Arc<Environment>,
+    file_path: PathBuf,
+    file_type: FileType,
+    meta: JSONObject,
+    side_effects: bool,
+    unique_key: Option<String>,
+  ) -> Self {
+    let asset_id = create_asset_id(CreateAssetIdParams {
+      code: None,
+      environment_id: &env.id(),
+      file_path: &file_path.to_string_lossy(),
+      file_type: &file_type,
+      pipeline: None,
+      query: None,
+      unique_key: unique_key.as_deref(),
+    });
+
+    let is_source = !file_path
+      .ancestors()
+      .any(|p| p.file_name() == Some(&OsStr::new("node_modules")));
+
+    Self {
+      bundle_behavior: Some(BundleBehavior::Inline),
+      code: Arc::new(code),
+      id: asset_id,
+      is_bundle_splittable: true,
+      is_source,
+      env,
+      file_path,
+      file_type,
+      meta,
+      side_effects,
+      unique_key,
+      ..Asset::default()
+    }
+  }
+
+  pub fn new_discovered(
+    source_asset: &Asset,
+    unique_key: String,
+    file_type: FileType,
+    code: String,
+    side_effects: bool,
+  ) -> anyhow::Result<Self> {
+    let asset_id = create_asset_id(CreateAssetIdParams {
+      environment_id: &source_asset.env.id(),
+      file_path: source_asset
+        .file_path
+        .to_str()
+        .ok_or_else(|| anyhow!("Could not get source asset file path"))?,
+      code: Some(code.as_str()),
+      pipeline: None,
+      query: None,
+      unique_key: Some(&unique_key),
+      file_type: &file_type,
+    });
+
+    Ok(Self {
+      code: Arc::new(Code::from(code)),
+      file_type,
+      id: asset_id,
+      side_effects,
+      unique_key: Some(unique_key),
+      ..source_asset.clone()
     })
   }
 

@@ -126,7 +126,7 @@ export default class PackagerRunner {
     this.previousInvalidations = previousInvalidations;
     this.invalidations = new Map();
     this.pluginOptions = new PluginOptions(
-      optionsProxy(this.options, option => {
+      optionsProxy(this.options, (option) => {
         let invalidation: RequestInvalidation = {
           type: 'option',
           key: option,
@@ -409,7 +409,7 @@ export default class PackagerRunner {
           NamedBundle.get.bind(NamedBundle),
           this.options,
         ),
-        getSourceMapReference: map => {
+        getSourceMapReference: (map) => {
           return this.getSourceMapReference(bundle, map);
         },
         options: this.pluginOptions,
@@ -516,7 +516,7 @@ export default class PackagerRunner {
           bundleGraph,
           contents: optimized.contents,
           map: optimized.map,
-          getSourceMapReference: map => {
+          getSourceMapReference: (map) => {
             return this.getSourceMapReference(bundle, map);
           },
           options: this.pluginOptions,

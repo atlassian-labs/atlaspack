@@ -40,7 +40,7 @@ export function Options({
           type="checkbox"
           checked={values.sourceMaps}
           disabled={values.viewSourcemaps || disabled}
-          onChange={e => onChange('sourceMaps', e.target.checked)}
+          onChange={(e) => onChange('sourceMaps', e.target.checked)}
         />
       </label>
       <label title="Sets `--public-url <value>`">
@@ -49,14 +49,14 @@ export function Options({
           type="text"
           value={values.publicUrl}
           placeholder="/"
-          onInput={e => onChange('publicUrl', e.target.value)}
+          onInput={(e) => onChange('publicUrl', e.target.value)}
           disabled={disabled}
         />
       </label>
       <label>
         <span>Output Format</span>
         <select
-          onChange={e => onChange('outputFormat', e.target.value || null)}
+          onChange={(e) => onChange('outputFormat', e.target.value || null)}
           value={values.outputFormat ?? ''}
           disabled={disabled || disablePackageJSON}
         >
@@ -70,7 +70,7 @@ export function Options({
         <span>Target</span>
         <div>
           <select
-            onChange={e => {
+            onChange={(e) => {
               onChange('targetType', e.target.value);
               onChange('targetEnv', null);
             }}
@@ -84,7 +84,7 @@ export function Options({
           <input
             type="text"
             value={values.targetEnv ?? ''}
-            onInput={e => onChange('targetEnv', e.target.value || null)}
+            onInput={(e) => onChange('targetEnv', e.target.value || null)}
             placeholder={getDefaultTargetEnv(values.targetType)}
             disabled={disabled || disablePackageJSON}
           />
@@ -93,7 +93,7 @@ export function Options({
       <label>
         <span>Mode</span>
         <select
-          onChange={e => {
+          onChange={(e) => {
             onChange('mode', e.target.value || null);
             if (e.target.value === 'production') {
               onChange('hmr', false);
@@ -114,7 +114,7 @@ export function Options({
         <input
           type="checkbox"
           checked={values.hmr}
-          onChange={e => onChange('hmr', e.target.checked)}
+          onChange={(e) => onChange('hmr', e.target.checked)}
           disabled={disabled || values.mode === 'production'}
         />
       </label>
@@ -123,7 +123,7 @@ export function Options({
         <input
           type="checkbox"
           checked={values.minify}
-          onChange={e => onChange('minify', e.target.checked)}
+          onChange={(e) => onChange('minify', e.target.checked)}
           disabled={disabled || values.mode === 'development'}
         />
       </label>
@@ -132,7 +132,7 @@ export function Options({
         <input
           type="checkbox"
           checked={values.scopeHoist}
-          onChange={e => onChange('scopeHoist', e.target.checked)}
+          onChange={(e) => onChange('scopeHoist', e.target.checked)}
           disabled={disabled || values.mode === 'development'}
         />
       </label>
@@ -140,7 +140,7 @@ export function Options({
       <label title="env variable ATLASPACK_DUMP_GRAPHVIZ">
         <span>Render Graphs</span>
         <select
-          onChange={e => onChange('renderGraphs', e.target.value || null)}
+          onChange={(e) => onChange('renderGraphs', e.target.value || null)}
           value={values.renderGraphs}
           disabled={disabled}
         >
@@ -159,7 +159,7 @@ export function Options({
                 type="text"
                 value={name}
                 placeholder="pkg-name"
-                onInput={e =>
+                onInput={(e) =>
                   onChange(
                     'dependencies',
                     values.dependencies.map((v, j) =>
@@ -173,7 +173,7 @@ export function Options({
               <input
                 value={version}
                 placeholder="range"
-                onInput={e =>
+                onInput={(e) =>
                   onChange(
                     'dependencies',
                     values.dependencies.map((v, j) =>
@@ -214,7 +214,7 @@ export function Options({
       <label title="env variable ATLASPACK_WORKERS">
         <span>Workers</span>
         <select
-          onChange={e => onChange('numWorkers', JSON.parse(e.target.value))}
+          onChange={(e) => onChange('numWorkers', JSON.parse(e.target.value))}
           value={JSON.stringify(values.numWorkers)}
           disabled={disabled}
         >

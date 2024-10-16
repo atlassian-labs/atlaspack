@@ -400,7 +400,7 @@ describe.v2('macros', function () {
     } catch (err) {
       assert.deepEqual(
         // \ gets escaped by Node -> Rust -> Node in Windows, so we normalize it for the test
-        err.diagnostics.map(d => ({
+        err.diagnostics.map((d) => ({
           ...d,
           message: d.message.replace(/\\\\/g, '\\'),
         })),
@@ -595,7 +595,7 @@ describe.v2('macros', function () {
     });
 
     res = await overlayFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    let match2 = res.match(/output=(\d+)/);
+    let match2 = res.match(/output=(.*);/);
     assert(match2);
     assert.notEqual(match[1], match2[1]);
   });

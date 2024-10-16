@@ -38,6 +38,12 @@ pub struct Target {
 
   /// The URL bundles will be loaded with at runtime
   pub public_url: String,
+
+  // We need all fields in `type Target` to be captured so that we can hash
+  // target objects including for things rust is unaware of right now.
+  #[serde(flatten)]
+  #[allow(unused)]
+  pub extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 impl Default for Target {
@@ -49,6 +55,7 @@ impl Default for Target {
       loc: None,
       name: String::from("default"),
       public_url: String::from("/"),
+      extra: std::collections::BTreeMap::new(),
     }
   }
 }

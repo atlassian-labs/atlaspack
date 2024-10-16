@@ -302,7 +302,7 @@ Finally, after we've considered our asset for the above special cases, we're now
 Config can change this behavior, so beware. Since we process assets one by one, we need a key by which to look up if this particular set of `bundleRoots` already has a shared bundles.
 
 ```js
-let key = reachableArray.map(a => a.id).join(',');
+let key = reachableArray.map((a) => a.id).join(',');
 ```
 
 The key-to-bundle mapping is stored at `bundles`. That way if we have the following reachable, we can create a shared bundle the first time we need some sharing between bundleRoots `foo.js` and `bar.js` and the second time we hit that exact reachable, we can simple add in `b.js`.

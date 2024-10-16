@@ -1,9 +1,5 @@
 {
-  "exclude": [
-    "__test__",
-    "__benchmarks__",
-    "dist"
-  ],
+  "exclude": ["__test__", "__benchmarks__", "dist"],
   "compilerOptions": {
     "target": "es2016",
     "module": "commonjs",

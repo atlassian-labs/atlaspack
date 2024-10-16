@@ -41,11 +41,11 @@ export default class ThreadsWorker implements WorkerImpl {
       env: process.env,
     });
 
-    this.worker.on('message', data => this.handleMessage(data));
+    this.worker.on('message', (data) => this.handleMessage(data));
     this.worker.on('error', this.onError);
     this.worker.on('exit', this.onExit);
 
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve) => {
       this.worker.on('online', resolve);
     });
   }

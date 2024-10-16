@@ -65,7 +65,7 @@ type RunInput = {|
 type AssetGraphRequest = {|
   id: string,
   +type: typeof requestTypes.asset_graph_request,
-  run: RunInput => Async<AssetGraphRequestResult>,
+  run: (RunInput) => Async<AssetGraphRequestResult>,
   input: AssetGraphRequestInput,
 |};
 
@@ -75,7 +75,7 @@ export default function createAssetGraphRequest(
   return {
     type: requestTypes.asset_graph_request,
     id: requestInput.name,
-    run: async input => {
+    run: async (input) => {
       let prevResult =
         await input.api.getPreviousResult<AssetGraphRequestResult>();
 
@@ -171,10 +171,10 @@ export class AssetGraphBuilder {
     this.isSingleChangeRebuild =
       api
         .getInvalidSubRequests()
-        .filter(req => req.requestType === 'asset_request').length === 1;
+        .filter((req) => req.requestType === 'asset_request').length === 1;
     this.queue = new PromiseQueue();
 
-    assetGraph.onNodeRemoved = nodeId => {
+    assetGraph.onNodeRemoved = (nodeId) => {
       this.assetGroupsWithRemovedParents.delete(nodeId);
 
       // This needs to mark all connected nodes that doesn't become orphaned
@@ -365,13 +365,13 @@ export class AssetGraphBuilder {
         // also consider it not lazy (so it gets marked as requested).
         const relativePath = fromProjectPathRelative(node.value.filePath);
         if (this.lazyIncludes.length > 0) {
-          isNodeLazy = this.lazyIncludes.some(lazyIncludeRegex =>
+          isNodeLazy = this.lazyIncludes.some((lazyIncludeRegex) =>
             relativePath.match(lazyIncludeRegex),
           );
         }
         // Excludes override includes, so a node is _not_ lazy if it is included in the exclude list.
         if (this.lazyExcludes.length > 0 && isNodeLazy) {
-          isNodeLazy = !this.lazyExcludes.some(lazyExcludeRegex =>
+          isNodeLazy = !this.lazyExcludes.some((lazyExcludeRegex) =>
             relativePath.match(lazyExcludeRegex),
           );
         }
@@ -381,7 +381,7 @@ export class AssetGraphBuilder {
         } else if (!node.requested) {
           let isAsyncChild = this.assetGraph
             .getIncomingDependencies(node.value)
-            .every(dep => dep.isEntry || dep.priority !== Priority.sync);
+            .every((dep) => dep.isEntry || dep.priority !== Priority.sync);
           if (isAsyncChild) {
             node.requested = !isNodeLazy;
           } else {
@@ -456,7 +456,7 @@ export class AssetGraphBuilder {
         );
     }
     return this.queue.add(() =>
-      promise.then(null, error => errors.push(error)),
+      promise.then(null, (error) => errors.push(error)),
     );
   }
 
@@ -464,7 +464,7 @@ export class AssetGraphBuilder {
     let prevEntries = this.assetGraph.safeToIncrementallyBundle
       ? this.assetGraph
           .getEntryAssets()
-          .map(asset => asset.id)
+          .map((asset) => asset.id)
           .sort()
       : [];
 
@@ -480,7 +480,7 @@ export class AssetGraphBuilder {
     if (this.assetGraph.safeToIncrementallyBundle) {
       let currentEntries = this.assetGraph
         .getEntryAssets()
-        .map(asset => asset.id)
+        .map((asset) => asset.id)
         .sort();
       let didEntriesChange =
         prevEntries.length !== currentEntries.length ||

@@ -469,7 +469,9 @@ export async function processConfigChain(
 
     if (errors.length > 0) {
       throw new ThrowableDiagnostic({
-        diagnostic: errors.flatMap(e => e.diagnostics ?? errorToDiagnostic(e)),
+        diagnostic: errors.flatMap(
+          (e) => e.diagnostics ?? errorToDiagnostic(e),
+        ),
       });
     }
   }
@@ -641,7 +643,7 @@ export function getResolveFrom(
 function assertPurePipeline(
   pipeline: ExtendableAtlaspackConfigPipeline,
 ): PureAtlaspackConfigPipeline {
-  return pipeline.map(s => {
+  return pipeline.map((s) => {
     invariant(typeof s !== 'string');
     return s;
   });
@@ -655,7 +657,7 @@ export function mergePipelines(
     return base ?? [];
   }
 
-  if (ext.filter(v => v === '...').length > 1) {
+  if (ext.filter((v) => v === '...').length > 1) {
     throw new Error(
       'Only one spread element can be included in a config pipeline',
     );

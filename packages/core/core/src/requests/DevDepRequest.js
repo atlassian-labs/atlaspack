@@ -71,14 +71,14 @@ export async function createDevDependency(
 
   let invalidateOnFileChangeProject = [
     ...invalidations.invalidateOnFileChange,
-  ].map(f => toProjectPath(options.projectRoot, f));
+  ].map((f) => toProjectPath(options.projectRoot, f));
 
   // It is possible for a transformer to have multiple different hashes due to
   // different dependencies (e.g. conditional requires) so we must always
   // recompute the hash and compare rather than only sending a transformer
   // dev dependency once.
   hash = await getInvalidationHash(
-    invalidateOnFileChangeProject.map(f => ({
+    invalidateOnFileChangeProject.map((f) => ({
       type: 'file',
       filePath: f,
     })),
@@ -89,7 +89,7 @@ export async function createDevDependency(
     specifier,
     resolveFrom,
     hash,
-    invalidateOnFileCreate: invalidations.invalidateOnFileCreate.map(i =>
+    invalidateOnFileCreate: invalidations.invalidateOnFileCreate.map((i) =>
       invalidateOnFileCreateToInternal(options.projectRoot, i),
     ),
     invalidateOnFileChange: new Set(invalidateOnFileChangeProject),
@@ -118,8 +118,8 @@ export async function getDevDepRequests<TResult: RequestResult>(
     await Promise.all(
       api
         .getSubRequests()
-        .filter(req => req.requestType === requestTypes.dev_dep_request)
-        .map(async req => [
+        .filter((req) => req.requestType === requestTypes.dev_dep_request)
+        .map(async (req) => [
           req.id,
           nullthrows(await api.getRequestResult<DevDepRequestResult>(req.id)),
         ]),
@@ -144,7 +144,7 @@ export async function getDevDepRequests<TResult: RequestResult>(
               specifier: req.specifier,
               resolveFrom: req.resolveFrom,
             },
-            ...(req.additionalInvalidations ?? []).map(i => ({
+            ...(req.additionalInvalidations ?? []).map((i) => ({
               specifier: i.specifier,
               resolveFrom: i.resolveFrom,
             })),
@@ -232,7 +232,7 @@ const pluginCache = createBuildCache();
 export function getWorkerDevDepRequests(
   devDepRequests: Array<DevDepRequest>,
 ): Array<DevDepRequest> {
-  return devDepRequests.map(devDepRequest => {
+  return devDepRequests.map((devDepRequest) => {
     // If we've already sent a matching transformer + hash to the main thread during this build,
     // there's no need to repeat ourselves.
     let {specifier, resolveFrom, hash} = devDepRequest;

@@ -6,7 +6,7 @@ import {Packager} from '@atlaspack/plugin';
 export default (new Packager({
   async package({bundle}) {
     let assets = [];
-    bundle.traverseAssets(asset => {
+    bundle.traverseAssets((asset) => {
       assets.push(asset);
     });
 

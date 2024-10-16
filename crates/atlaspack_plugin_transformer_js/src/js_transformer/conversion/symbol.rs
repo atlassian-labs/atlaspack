@@ -63,11 +63,9 @@ pub(crate) fn transformer_exported_symbol_into_symbol(
 mod tests {
   use std::path::PathBuf;
 
-  use atlaspack_core::types::{Location, SourceLocation};
-
-  use crate::js_transformer::test_helpers::{make_test_swc_config, run_swc_core_transform};
-
   use super::*;
+  use atlaspack_core::types::{Location, SourceLocation};
+  use atlaspack_js_swc_core::test_utils::{make_test_swc_config, run_swc_core_transform};
 
   #[test]
   fn test_convert_collect_imported_symbol_to_symbol() {

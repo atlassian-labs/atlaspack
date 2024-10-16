@@ -39,7 +39,7 @@ export class DevPackager {
   async package(): Promise<{|contents: string, map: ?SourceMap|}> {
     // Load assets
     let queue = new PromiseQueue({maxConcurrent: 32});
-    this.bundle.traverseAssets(asset => {
+    this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
         let [code, mapBuffer] = await Promise.all([
           asset.getCode(),
@@ -60,7 +60,7 @@ export class DevPackager {
     let lineOffset = countLines(prefix);
     let script: ?{|code: string, mapBuffer: ?Buffer|} = null;
 
-    this.bundle.traverse(node => {
+    this.bundle.traverse((node) => {
       let wrapped = first ? '' : ',';
 
       if (node.type === 'dependency') {
@@ -166,7 +166,7 @@ export class DevPackager {
     ) {
       // In async bundles we don't want the main entry to execute until we require it
       // as there might be dependencies in a sibling bundle that hasn't loaded yet.
-      entries = entries.filter(a => a.id !== mainEntry?.id);
+      entries = entries.filter((a) => a.id !== mainEntry?.id);
       mainEntry = null;
     }
 
@@ -176,7 +176,7 @@ export class DevPackager {
       assets +
       '},' +
       JSON.stringify(
-        entries.map(asset => this.bundleGraph.getAssetPublicId(asset)),
+        entries.map((asset) => this.bundleGraph.getAssetPublicId(asset)),
       ) +
       ', ' +
       JSON.stringify(

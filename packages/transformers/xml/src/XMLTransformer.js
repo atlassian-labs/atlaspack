@@ -24,7 +24,7 @@ export default (new Transformer({
       ? NON_NAMESPACED_HANDLERS[dom.documentElement.nodeName] || {}
       : {};
 
-    walk(dom, node => {
+    walk(dom, (node) => {
       let handler =
         node.nodeType === node.ELEMENT_NODE
           ? node.namespaceURI

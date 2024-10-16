@@ -41,7 +41,7 @@ export default (new Transformer({
       collectDependencies(asset, ast);
     } catch (errors) {
       throw new ThrowableDiagnostic({
-        diagnostic: errors.map(error => ({
+        diagnostic: errors.map((error) => ({
           message: error.message,
           origin: '@atlaspack/transformer-svg',
           codeFrames: [

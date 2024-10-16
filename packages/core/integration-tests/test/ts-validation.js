@@ -45,7 +45,7 @@ describe.v2('ts-validator', function () {
       assert(e.diagnostics.length === 2);
 
       let entryDiagnostic = e.diagnostics.find(
-        diagnostic => diagnostic.codeFrames[0].filePath === entry,
+        (diagnostic) => diagnostic.codeFrames[0].filePath === entry,
       );
       assert(!!entryDiagnostic);
       assert(!!entryDiagnostic.codeFrames);
@@ -57,7 +57,7 @@ describe.v2('ts-validator', function () {
       assert.equal(entryDiagnostic.codeFrames[0].filePath, entry);
 
       let testFileDiagnostic = e.diagnostics.find(
-        diagnostic => diagnostic.codeFrames[0].filePath === testFile,
+        (diagnostic) => diagnostic.codeFrames[0].filePath === testFile,
       );
       assert(!!testFileDiagnostic);
       assert(!!testFileDiagnostic.codeFrames);

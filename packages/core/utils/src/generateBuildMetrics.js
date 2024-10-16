@@ -42,7 +42,7 @@ async function getSourcemapSizes(
   let parsedMapData = sourceMap.getMap();
 
   if (parsedMapData.mappings.length > 2) {
-    let sources = parsedMapData.sources.map(s =>
+    let sources = parsedMapData.sources.map((s) =>
       path.normalize(path.join(projectRoot, s)),
     );
     let currLine = 1;
@@ -105,7 +105,7 @@ async function createBundleStats(
   let sourcemapSizes = await getSourcemapSizes(filePath, fs, projectRoot);
 
   let assets: Map<string, AssetStats> = new Map();
-  bundle.traverseAssets(asset => {
+  bundle.traverseAssets((asset) => {
     let filePath = path.normalize(asset.filePath);
     assets.set(filePath, {
       filePath,
@@ -148,11 +148,15 @@ export default async function generateBuildMetrics(
   fs: FileSystem,
   projectRoot: FilePath,
 ): Promise<BuildMetrics> {
-  bundles.sort((a, b) => b.stats.size - a.stats.size).filter(b => !!b.filePath);
+  bundles
+    .sort((a, b) => b.stats.size - a.stats.size)
+    .filter((b) => !!b.filePath);
 
   return {
     bundles: (
-      await Promise.all(bundles.map(b => createBundleStats(b, fs, projectRoot)))
-    ).filter(e => !!e),
+      await Promise.all(
+        bundles.map((b) => createBundleStats(b, fs, projectRoot)),
+      )
+    ).filter((e) => !!e),
   };
 }

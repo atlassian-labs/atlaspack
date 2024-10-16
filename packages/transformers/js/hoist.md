@@ -421,7 +421,7 @@ wrapped dependencies:
 #### Packaged output
 
 ```js
-atlaspackRequire.register('b', module => {
+atlaspackRequire.register('b', (module) => {
   let $id$export$foo = 2;
   $parcel$export(module.exports, 'foo', () => $id$export$foo);
 });

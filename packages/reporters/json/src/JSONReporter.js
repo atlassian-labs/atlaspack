@@ -71,7 +71,7 @@ export default (new Reporter({
 }): Reporter);
 
 function makeWriter(
-  write: string => mixed,
+  write: (string) => mixed,
 ): (JSONReportEvent, $Keys<typeof LOG_LEVELS>) => void {
   return (
     event: JSONReportEvent,

@@ -24,7 +24,7 @@ import WorkerFarm from '@atlaspack/workers';
 
 import {Npm} from './Npm';
 import {Yarn} from './Yarn';
-import {Pnpm} from './Pnpm.js';
+import {Pnpm} from './Pnpm';
 import {getConflictingLocalDependencies} from './utils';
 import getCurrentPackageManager from './getCurrentPackageManager';
 import validateModuleSpecifier from './validateModuleSpecifier';
@@ -38,7 +38,7 @@ async function install(
   options: InstallOptions = {},
 ): Promise<void> {
   let {installPeers = true, saveDev = true, packageInstaller} = options;
-  let moduleNames = modules.map(m => m.name).join(', ');
+  let moduleNames = modules.map((m) => m.name).join(', ');
 
   logger.progress(`Installing ${moduleNames}...`);
 
@@ -68,7 +68,7 @@ async function install(
 
   if (installPeers) {
     await Promise.all(
-      modules.map(m =>
+      modules.map((m) =>
         installPeerDependencies(
           fs,
           packageManager,
@@ -121,7 +121,7 @@ async function installPeerDependencies(
                 code: conflicts.json,
                 codeHighlights: generateJSONCodeHighlights(
                   conflicts.json,
-                  conflicts.fields.map(field => ({
+                  conflicts.fields.map((field) => ({
                     key: `/${field}/${encodeJSONKeyComponent(name)}`,
                     type: 'key',
                     message: 'Found this conflicting local requirement.',
@@ -206,7 +206,7 @@ export function _addToInstallQueue(
   projectRoot: FilePath,
   options?: InstallOptions,
 ): Promise<mixed> {
-  modules = modules.map(request => ({
+  modules = modules.map((request) => ({
     name: validateModuleSpecifier(request.name),
     range: request.range,
   }));
@@ -215,7 +215,7 @@ export function _addToInstallQueue(
   // If a request comes in for a module that is currently installing, don't bother
   // enqueuing it.
   let modulesToInstall = modules.filter(
-    m => !modulesInstalling.has(getModuleRequestKey(m)),
+    (m) => !modulesInstalling.has(getModuleRequestKey(m)),
   );
   if (modulesToInstall.length) {
     for (let m of modulesToInstall) {

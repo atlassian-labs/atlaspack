@@ -22,7 +22,7 @@ export default class ProcessChild implements ChildImpl {
 
     this.onMessage = onMessage;
     this.onExit = onExit;
-    process.on('message', data => this.handleMessage(data));
+    process.on('message', (data) => this.handleMessage(data));
   }
 
   handleMessage(data: string): void {
@@ -35,7 +35,7 @@ export default class ProcessChild implements ChildImpl {
 
   send(data: WorkerMessage) {
     let processSend = nullthrows(process.send).bind(process);
-    processSend(serialize(data).toString('base64'), err => {
+    processSend(serialize(data).toString('base64'), (err) => {
       if (err && err instanceof Error) {
         // $FlowFixMe[prop-missing]
         if (err.code === 'ERR_IPC_CHANNEL_CLOSED') {

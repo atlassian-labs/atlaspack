@@ -99,7 +99,7 @@ async function getBundleData(
   options: PluginOptions,
 ): Promise<BundleData> {
   let groups = await Promise.all(
-    bundles.map(bundle => getBundleNode(bundle, options)),
+    bundles.map((bundle) => getBundleNode(bundle, options)),
   );
   return {
     groups,

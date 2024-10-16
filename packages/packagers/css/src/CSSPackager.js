@@ -64,7 +64,7 @@ export default (new Packager({
         }
         return true;
       },
-      exit: node => {
+      exit: (node) => {
         if (node.type === 'dependency') {
           let resolved = bundleGraph.getResolvedAsset(node.value, bundle);
 
@@ -129,7 +129,7 @@ export default (new Packager({
                       [...replacements.keys()].join('|'),
                       'g',
                     );
-                    css = css.replace(regex, m =>
+                    css = css.replace(regex, (m) =>
                       escapeDashedIdent(replacements.get(m) || m),
                     );
                   }
@@ -286,7 +286,9 @@ async function processCSSModule(
     let defaultImport = null;
     if (usedSymbols.has('default')) {
       let incoming = bundleGraph.getIncomingDependencies(asset);
-      defaultImport = incoming.find(d => d.symbols.hasExportSymbol('default'));
+      defaultImport = incoming.find((d) =>
+        d.symbols.hasExportSymbol('default'),
+      );
       if (defaultImport) {
         let loc = defaultImport.symbols.get('default')?.loc;
         logger.warn({
@@ -311,11 +313,11 @@ async function processCSSModule(
     if (!defaultImport && !usedSymbols.has('*')) {
       let usedLocalSymbols = new Set(
         [...usedSymbols].map(
-          exportSymbol =>
+          (exportSymbol) =>
             `.${nullthrows(asset.symbols.get(exportSymbol)).local}`,
         ),
       );
-      ast.walkRules(rule => {
+      ast.walkRules((rule) => {
         if (
           localSymbols.has(rule.selector) &&
           !usedLocalSymbols.has(rule.selector)

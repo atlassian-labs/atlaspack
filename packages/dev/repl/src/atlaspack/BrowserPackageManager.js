@@ -100,10 +100,10 @@ export class BrowserPackageManager implements PackageManager {
     await init?.();
     this.resolver = new ResolverBase(this.projectRoot, {
       fs: {
-        canonicalize: path => this.fs.realpathSync(path),
-        read: path => this.fs.readFileSync(path),
-        isFile: path => this.fs.statSync(path).isFile(),
-        isDir: path => this.fs.statSync(path).isDirectory(),
+        canonicalize: (path) => this.fs.realpathSync(path),
+        read: (path) => this.fs.readFileSync(path),
+        isFile: (path) => this.fs.statSync(path).isFile(),
+        isDir: (path) => this.fs.statSync(path).isDirectory(),
       },
       mode: 2,
       entries: ENTRIES,

@@ -33,7 +33,7 @@ export function replaceURLReferences({
   bundleGraph,
   contents,
   map,
-  getReplacement = s => s,
+  getReplacement = (s) => s,
   relative = true,
 }: {|
   bundle: NamedBundle,
@@ -41,11 +41,11 @@ export function replaceURLReferences({
   contents: string,
   relative?: boolean,
   map?: ?SourceMap,
-  getReplacement?: string => string,
+  getReplacement?: (string) => string,
 |}): {|+contents: string, +map: ?SourceMap|} {
   let replacements = new Map();
   let urlDependencies = [];
-  bundle.traverse(node => {
+  bundle.traverse((node) => {
     if (node.type === 'dependency' && node.value.specifierType === 'url') {
       urlDependencies.push(node.value);
     }
@@ -118,7 +118,7 @@ export async function replaceInlineReferences({
   let replacements = new Map();
 
   let dependencies = [];
-  bundle.traverse(node => {
+  bundle.traverse((node) => {
     if (node.type === 'dependency') {
       dependencies.push(node.value);
     }
@@ -165,7 +165,7 @@ export function getURLReplacement({
   fromBundle: NamedBundle,
   toBundle: NamedBundle,
   relative: boolean,
-  getReplacement?: string => string,
+  getReplacement?: (string) => string,
 |}): {|from: string, to: string|} {
   let to;
 
