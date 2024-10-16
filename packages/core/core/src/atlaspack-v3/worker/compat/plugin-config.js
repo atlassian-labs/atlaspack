@@ -16,15 +16,25 @@ export type PluginConfigOptions = {|
   env: Environment,
 |};
 
+interface ConfigLoader {
+  loadJsonConfig(filePath: string): any;
+  loadJsonConfigFrom(searchPath: string, filePath: string): any;
+}
+
 export class PluginConfig implements IPluginConfig {
   isSource: boolean;
   searchPath: FilePath;
   env: Environment;
+  #configLoader: ConfigLoader;
 
-  constructor({env, isSource, searchPath}: PluginConfigOptions) {
+  constructor(
+    configLoader: ConfigLoader,
+    {env, isSource, searchPath}: PluginConfigOptions,
+  ) {
     this.env = env;
     this.isSource = isSource;
     this.searchPath = searchPath;
+    this.#configLoader = configLoader;
   }
 
   // eslint-disable-next-line no-unused-vars
@@ -70,6 +80,15 @@ export class PluginConfig implements IPluginConfig {
       exclude?: boolean,
     |},
   ): Promise<?ConfigResultWithFilePath<T>> {
+    for (const filePath of filePaths) {
+      const found = this.#configLoader.loadJsonConfig(filePath);
+      if (found) {
+        return Promise.resolve({
+          contents: found.contents,
+          filePath: found.path,
+        });
+      }
+    }
     throw new Error('PluginOptions.getConfig');
   }
 
@@ -85,6 +104,16 @@ export class PluginConfig implements IPluginConfig {
       exclude?: boolean,
     |},
   ): Promise<?ConfigResultWithFilePath<T>> {
+    for (const filePath of filePaths) {
+      const found = this.#configLoader.loadJsonConfigFrom(searchPath, filePath);
+      if (found) {
+        return Promise.resolve({
+          contents: found.contents,
+          filePath: found.path,
+        });
+      }
+    }
+
     throw new Error('PluginOptions.getConfigFrom');
   }
 

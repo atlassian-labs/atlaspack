@@ -40,7 +40,7 @@ export class AtlaspackWorker {
   }
 
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<void>> = jsCallable(
-    async ({kind, specifier, resolveFrom, data}) => {
+    async ({kind, specifier, resolveFrom, data, configLoader}) => {
       let customRequire = module.createRequire(resolveFrom);
       let resolvedPath = customRequire.resolve(specifier);
       // $FlowFixMe
@@ -63,13 +63,14 @@ export class AtlaspackWorker {
 
       switch (kind) {
         case 'resolver':
-          this.#resolvers.set(specifier, {resolver: instance});
+          this.#resolvers.set(specifier, {resolver: instance, configLoader});
           break;
         case 'transformer':
           this.#transformers.set(specifier, {
             transformer: instance,
             // $FlowFixMe
             pluginOptions: data,
+            configLoader,
           });
           break;
       }
@@ -92,6 +93,7 @@ export class AtlaspackWorker {
         throw new Error(`Resolver not found: ${key}`);
       }
 
+      const {resolver, configLoader} = state;
       let packageManager = state.packageManager;
       if (!packageManager) {
         packageManager = new NodePackageManager(this.#fs, projectRoot);
@@ -114,8 +116,8 @@ export class AtlaspackWorker {
       };
 
       if (!('config' in state)) {
-        state.config = await state.resolver.loadConfig?.({
-          config: new PluginConfig({
+        state.config = await resolver.loadConfig?.({
+          config: new PluginConfig(configLoader, {
             env,
             isSource: true,
             searchPath: '',
@@ -124,7 +126,7 @@ export class AtlaspackWorker {
         });
       }
 
-      const result = await state.resolver.resolve({
+      const result = await resolver.resolve({
         specifier,
         dependency,
         pipeline,
@@ -165,7 +167,7 @@ export class AtlaspackWorker {
       throw new Error(`Transformer not found: ${key}`);
     }
 
-    const {transformer, pluginOptions} = state;
+    const {transformer, pluginOptions, configLoader} = state;
 
     let packageManager = state.packageManager;
     if (!packageManager) {
@@ -191,7 +193,7 @@ export class AtlaspackWorker {
     };
 
     const config = await transformer.loadConfig?.({
-      config: new PluginConfig({
+      config: new PluginConfig(configLoader, {
         env,
         isSource: true,
         searchPath: '',
@@ -281,25 +283,34 @@ type ResolverState<T> = {|
   resolver: Resolver<T>,
   config?: T,
   packageManager?: NodePackageManager,
+  configLoader: ConfigLoader,
 |};
 
 type TransformerState<T> = {|
   packageManager?: NodePackageManager,
   transformer: Transformer<T>,
   pluginOptions: napi.RpcPluginOptions,
+  configLoader: ConfigLoader,
 |};
+
+interface ConfigLoader {
+  loadJsonConfig(filePath: string): any;
+  loadJsonConfigFrom(searchPath: string, filePath: string): any;
+}
 
 type LoadPluginOptions =
   | {|
       kind: 'resolver',
       specifier: string,
       resolveFrom: string,
+      configLoader: ConfigLoader,
     |}
   | {|
       kind: 'transformer',
       specifier: string,
       resolveFrom: string,
       data: napi.RpcPluginOptions,
+      configLoader: ConfigLoader,
     |};
 
 type RunResolverResolveOptions = {|

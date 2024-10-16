@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 
+use atlaspack_core::config_loader::ConfigLoaderRef;
 use atlaspack_napi_helpers::anyhow_from_napi;
-use atlaspack_napi_helpers::js_callable::map_return_serde;
+use atlaspack_napi_helpers::anyhow_to_napi;
 use atlaspack_napi_helpers::js_callable::JsCallable;
-use napi::bindgen_prelude::FromNapiValue;
-use napi::JsObject;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use napi::{bindgen_prelude::FromNapiValue, JsString};
+use napi::{Env, JsObject};
+use serde::{Deserialize, Serialize};
 
 /// NodejsWorker is the connection to a single JavaScript worker thread
 pub struct NodejsWorker {
@@ -27,8 +28,8 @@ impl NodejsWorker {
 
   pub fn load_plugin<T: Serialize + Send + Sync + 'static>(
     &self,
-    opts: LoadPluginOptions,
-    data: Option<T>,
+    opts: LoadPluginOptions<T>,
+    config_loader: ConfigLoaderRef,
   ) -> anyhow::Result<()> {
     self
       .load_plugin_fn
@@ -36,9 +37,10 @@ impl NodejsWorker {
         move |env| {
           let obj = env.to_js_value(&opts)?;
           let mut obj = JsObject::from_unknown(obj)?;
-          if let Some(data) = data {
-            obj.set_named_property("data", env.to_js_value(&data)?)?;
-          }
+
+          let napi_config_loader = NapiConfigLoader::bind(config_loader, env)?;
+          obj.set_named_property("configLoader", napi_config_loader)?;
+
           Ok(vec![obj.into_unknown()])
         },
         |_env, _value| Ok(()),
@@ -56,8 +58,58 @@ pub enum LoadPluginKind {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LoadPluginOptions {
+pub struct LoadPluginOptions<T: Serialize + Send + Sync + 'static> {
   pub kind: LoadPluginKind,
   pub specifier: String,
   pub resolve_from: PathBuf,
+  pub data: T,
+}
+
+struct NapiConfigLoader;
+
+impl NapiConfigLoader {
+  fn bind(config_loader: ConfigLoaderRef, env: &Env) -> napi::Result<JsObject> {
+    let mut napi_config_loader = env.create_object()?;
+
+    napi_config_loader.set_named_property(
+      "loadJsonConfig",
+      env.create_function_from_closure("loadJsonConfig", {
+        let config_loader = config_loader.clone();
+        move |ctx| {
+          let file_path_js = ctx.get::<JsString>(0)?;
+          let file_path = file_path_js.into_utf8()?.into_owned()?;
+
+          let result = config_loader
+            .load_json_config::<serde_json::Value>(&file_path)
+            .map_err(anyhow_to_napi)?;
+
+          let result_js = ctx.env.to_js_value(&result)?;
+          Ok(result_js)
+        }
+      })?,
+    )?;
+
+    napi_config_loader.set_named_property(
+      "loadJsonConfigFrom",
+      env.create_function_from_closure("loadJsonConfigFrom", {
+        let config_loader = config_loader.clone();
+        move |ctx| {
+          let search_path_js = ctx.get::<JsString>(0)?;
+          let search_path = search_path_js.into_utf8()?.into_owned()?;
+
+          let file_path_js = ctx.get::<JsString>(1)?;
+          let file_path = file_path_js.into_utf8()?.into_owned()?;
+
+          let result = config_loader
+            .load_json_config_from::<serde_json::Value>(&PathBuf::from(search_path), &file_path)
+            .map_err(anyhow_to_napi)?;
+
+          let result_js = ctx.env.to_js_value(&result)?;
+          Ok(result_js)
+        }
+      })?,
+    )?;
+
+    Ok(napi_config_loader)
+  }
 }

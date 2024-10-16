@@ -464,6 +464,7 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "serde",
+ "serde_json",
  "tracing",
 ]
 

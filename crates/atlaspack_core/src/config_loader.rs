@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use atlaspack_filesystem::search::find_ancestor_file;
 use atlaspack_filesystem::FileSystemRef;
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
   diagnostic_error,
@@ -20,7 +20,7 @@ pub struct ConfigLoader {
   pub search_path: PathBuf,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct ConfigFile<T> {
   pub contents: T,
   pub path: PathBuf,
@@ -29,24 +29,20 @@ pub struct ConfigFile<T> {
 
 // TODO JavaScript configs, invalidations, dev deps, etc
 impl ConfigLoader {
-  pub fn load_json_config<Config: DeserializeOwned>(
+  pub fn load_json_config_from<Config: DeserializeOwned>(
     &self,
+    search_path: &Path,
     filename: &str,
   ) -> Result<ConfigFile<Config>, DiagnosticError> {
-    let path = find_ancestor_file(
-      &*self.fs,
-      &[filename],
-      &self.search_path,
-      &self.project_root,
-    )
-    .ok_or_else(|| {
-      diagnostic_error!(DiagnosticBuilder::default()
-        .kind(ErrorKind::NotFound)
-        .message(format!(
-          "Unable to locate {filename} config file from {}",
-          self.search_path.display()
-        )))
-    })?;
+    let path = find_ancestor_file(&*self.fs, &[filename], search_path, &self.project_root)
+      .ok_or_else(|| {
+        diagnostic_error!(DiagnosticBuilder::default()
+          .kind(ErrorKind::NotFound)
+          .message(format!(
+            "Unable to locate {filename} config file from {}",
+            self.search_path.display()
+          )))
+      })?;
 
     let code = self.fs.read_to_string(&path)?;
 
@@ -67,6 +63,13 @@ impl ConfigLoader {
       path,
       raw: code,
     })
+  }
+
+  pub fn load_json_config<Config: DeserializeOwned>(
+    &self,
+    filename: &str,
+  ) -> Result<ConfigFile<Config>, DiagnosticError> {
+    self.load_json_config_from(&self.search_path, filename)
   }
 
   pub fn load_package_json<Config: DeserializeOwned>(

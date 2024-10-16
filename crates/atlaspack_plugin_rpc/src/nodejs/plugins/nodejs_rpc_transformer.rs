@@ -76,11 +76,12 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
             kind: LoadPluginKind::Transformer,
             specifier: self.plugin_node.package_name.clone(),
             resolve_from: (&*self.plugin_node.resolve_from).clone(),
+            data: RpcPluginOptions {
+              hmr_options: None,
+              project_root: self.plugin_options.project_root.clone(),
+            },
           },
-          Some(RpcPluginOptions {
-            hmr_options: None,
-            project_root: self.plugin_options.project_root.clone(),
-          }),
+          self.config_loader.clone(),
         )
       })
     })?;
