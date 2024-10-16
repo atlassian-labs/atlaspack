@@ -373,7 +373,7 @@ function getDiagnosticsUnusedExports(
       //     },
       //     source: '@atlaspack/core',
       //     severity: DiagnosticSeverity.Warning,
-      //     message: `Asset has no used exports, but is not marked as sideEffect-free so it cannot be excluded automatically.`,
+      //     message: `PublicAsset has no used exports, but is not marked as sideEffect-free so it cannot be excluded automatically.`,
       //   });
       // }
     }

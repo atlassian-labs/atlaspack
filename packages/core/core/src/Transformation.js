@@ -39,10 +39,10 @@ import AtlaspackConfig from './AtlaspackConfig';
 // TODO: eventually call path request as sub requests
 import {ResolverRunner} from './requests/PathRequest';
 import {
-  Asset,
+  PublicAsset,
   MutableAsset,
   mutableAssetToUncommittedAsset,
-} from './public/Asset';
+} from './public/PublicAsset';
 import UncommittedAsset from './UncommittedAsset';
 import {createAsset} from './assetUtils';
 import summarizeRequest from './summarizeRequest';
@@ -634,7 +634,7 @@ export default class Transformation {
     let parse = transformer.parse?.bind(transformer);
     if (!asset.ast && parse) {
       let ast = await parse({
-        asset: new Asset(asset),
+        asset: new PublicAsset(asset),
         config,
         options: pipeline.pluginOptions,
         resolve,
@@ -662,7 +662,7 @@ export default class Transformation {
 
     // Create generate and postProcess function that can be called later
     asset.generate = (): Promise<GenerateOutput> => {
-      let publicAsset = new Asset(asset);
+      let publicAsset = new PublicAsset(asset);
       if (transformer.generate && asset.ast) {
         let generated = transformer.generate({
           asset: publicAsset,
@@ -676,7 +676,7 @@ export default class Transformation {
       }
 
       throw new Error(
-        'Asset has an AST but no generate method is available on the transform',
+        'PublicAsset has an AST but no generate method is available on the transform',
       );
     };
 

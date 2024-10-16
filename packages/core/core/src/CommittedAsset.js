@@ -44,7 +44,7 @@ export default class CommittedAsset {
           }),
         );
       } else {
-        throw new Error('Asset has no content');
+        throw new Error('PublicAsset has no content');
       }
     }
 

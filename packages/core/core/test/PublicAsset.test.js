@@ -1,7 +1,7 @@
 // @flow strict-local
 
 import assert from 'assert';
-import {Asset, MutableAsset} from '../src/public/Asset';
+import {PublicAsset, MutableAsset} from '../src/public/PublicAsset';
 import UncommittedAsset from '../src/UncommittedAsset';
 import {
   createAsset as _createAsset,
@@ -15,7 +15,7 @@ function createAsset(opts: AssetOptions) {
   return _createAsset('/', opts);
 }
 
-describe('Public Asset', () => {
+describe('Public PublicAsset', () => {
   let internalAsset;
   beforeEach(() => {
     internalAsset = new UncommittedAsset({
@@ -31,8 +31,11 @@ describe('Public Asset', () => {
     });
   });
 
-  it('returns the same public Asset given an internal asset', () => {
-    assert.equal(new Asset(internalAsset), new Asset(internalAsset));
+  it('returns the same public PublicAsset given an internal asset', () => {
+    assert.equal(
+      new PublicAsset(internalAsset),
+      new PublicAsset(internalAsset),
+    );
   });
 
   it('returns the same public MutableAsset given an internal asset', () => {

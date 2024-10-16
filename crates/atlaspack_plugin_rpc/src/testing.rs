@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::*;
-use atlaspack_core::types::Asset;
+use atlaspack_core::types::PublicAsset;
 
 use crate::RpcFactory;
 use crate::RpcWorker;
@@ -180,7 +180,7 @@ impl TransformerPlugin for TestingRpcPlugin {
   fn transform(
     &mut self,
     _context: TransformContext,
-    asset: Asset,
+    asset: PublicAsset,
   ) -> Result<TransformResult, anyhow::Error> {
     Ok(TransformResult {
       asset,

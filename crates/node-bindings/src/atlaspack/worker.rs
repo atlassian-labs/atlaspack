@@ -24,7 +24,7 @@ use napi_derive::napi;
 ///                 <- DependencyResult ---
 ///
 ///                 -- Transf.transform -->
-///                 <--- Array<Asset> -----
+///                 <--- Array<PublicAsset> -----
 #[napi]
 pub fn register_worker(
   env: Env,

@@ -5,7 +5,7 @@ use html5ever::namespace_url;
 use markup5ever::{expanded_name, local_name, ns, QualName};
 use markup5ever_rcdom::{Handle, Node, NodeData};
 
-use atlaspack_core::types::{Asset, Dependency, FileType, Priority, SpecifierType};
+use atlaspack_core::types::{Dependency, FileType, Priority, PublicAsset, SpecifierType};
 
 use crate::{
   attrs::Attrs,
@@ -16,7 +16,7 @@ use crate::{
 /// Insert a tag for HMR and create its dependency and asset
 #[derive(Default)]
 pub struct HMRVisitor {
-  pub hmr_asset: Option<Asset>,
+  pub hmr_asset: Option<PublicAsset>,
   context: Rc<HTMLTransformationContext>,
 }
 
@@ -51,10 +51,10 @@ impl DomVisitor for HMRVisitor {
 
             let src = dependency.id();
 
-            self.hmr_asset = Some(Asset {
+            self.hmr_asset = Some(PublicAsset {
               file_type: FileType::Js,
               unique_key: Some(src.clone()),
-              ..Asset::default()
+              ..PublicAsset::default()
             });
 
             attrs.set(expanded_name!("", "src"), &src);

@@ -17,7 +17,7 @@ await bundler.bundle({
 Targets are specified in the `package.json`. Read more about targets [here](https://parceljs.org/features/targets). For the bundler, this means that the final graph output must be completely disjoint between targets, because those bundles will be separately packaged. Shared bundles cannot exist between separate targets. To remedy this constraint, we create a target map, representing targets mapped to entry assets and what dependencies are part of that target.
 
 ```js
-targetMap: DefaultMap<string, Map<Asset, Dependency>>
+targetMap: DefaultMap<string, Map<PublicAsset, Dependency>>
 ```
 
 We create one IdealGraph per target, but mutations are applied to the same mutableBundleGraph. This ensures that we can return a singular bundleGraph, but generate bundles that **only** reference assets available to them within that target. See "targets" example in [Bundler Examples](./BundlerExamples.md)
@@ -30,12 +30,12 @@ The DefaultBundler can be divided into two main parts, `CreateIdealGraph` and `d
 
 ```
   type IdealGraph = {|
-    assets: Array<Asset>,
+    assets: Array<PublicAsset>,
     dependencyBundleGraph: DependencyBundleGraph,
     bundleGraph: Graph<Bundle | 'root'>,
     bundleGroupBundleIds: Set<NodeId>,
-    assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
-    manualAssetToBundle: Map<Asset, NodeId>,
+    assetReference: DefaultMap<PublicAsset, Array<[Dependency, Bundle]>>,
+    manualAssetToBundle: Map<PublicAsset, NodeId>,
   |};
 ```
 
@@ -103,7 +103,7 @@ More on code splitting: [Code Splitting](https://parceljs.org/features/code-spli
 
 After creating our entry points, we traverse the assetGraph, skipping any entries of different targets. On an asset, we begin to populate `assetIndex`, a mapping by which to look up any `bitSet` values. Then, we grab the `bundleIdTuple` from the `bundleRoots` structure.
 
-- `bundleRoots: Map<Asset,[NodeId, NodeId]` is a mapping of bundle-root assets. This means they are roots of a bundle. Think of these assets as assets which triggered the creation of a bundle, and are the **main entry** of a bundle. All explicit code-split points (all of which are handled in this step), are "bundleRoots"
+- `bundleRoots: Map<PublicAsset,[NodeId, NodeId]` is a mapping of bundle-root assets. This means they are roots of a bundle. Think of these assets as assets which triggered the creation of a bundle, and are the **main entry** of a bundle. All explicit code-split points (all of which are handled in this step), are "bundleRoots"
 
 We use the `stack` to track what bundleGroup we are currently in, so that we can accurately draw edges between bundles. `BundleIds` and `BundleGroupIds` are not the same, but can be. This is how we are able to reduce node bloat in the graph. In `createIdealGraph`, "bundleGroups" are simply represented by bundles that are attached to the root. Thus, when `bundleId === bundleGroupId`, or in this case, the tuple values are equivalent, we know we have entered a new bundleGroup.
 
@@ -339,7 +339,7 @@ BundleGraph decoration takes an idealGraph and mutates the passed-in assetGraph 
 
 ## Definitions
 
-- **Asset:** A file or representation of a file with some information about how it should be bundled
+- **PublicAsset:** A file or representation of a file with some information about how it should be bundled
 
 - **Bundle:** A grouping of assets which are loaded together and within the same location
 
@@ -359,7 +359,7 @@ BundleGraph decoration takes an idealGraph and mutates the passed-in assetGraph 
 
 - **dependencyBundleGraph:** Maps bundles to their dependencies
 
-- **bundleRoots:** An Asset which is an entry to a Bundle
+- **bundleRoots:** An PublicAsset which is an entry to a Bundle
 
 - **reachableBundles:** A graph maintaining Synchronous relationships between bundleRoots
 

@@ -39,13 +39,15 @@ import {toInternalSourceLocation} from '../utils';
 
 const inspect = Symbol.for('nodejs.util.inspect.custom');
 
-const uncommittedAssetValueToAsset: WeakMap<AssetValue, Asset> = new WeakMap();
-const committedAssetValueToAsset: WeakMap<AssetValue, Asset> = new WeakMap();
+const uncommittedAssetValueToAsset: WeakMap<AssetValue, PublicAsset> =
+  new WeakMap();
+const committedAssetValueToAsset: WeakMap<AssetValue, PublicAsset> =
+  new WeakMap();
 const assetValueToMutableAsset: WeakMap<AssetValue, MutableAsset> =
   new WeakMap();
 
 const _assetToAssetValue: WeakMap<
-  IAsset | IMutableAsset | BaseAsset,
+  IAsset | IMutableAsset | PublicBaseAsset,
   AssetValue,
 > = new WeakMap();
 
@@ -67,8 +69,8 @@ export function mutableAssetToUncommittedAsset(
 export function assetFromValue(
   value: AssetValue,
   options: AtlaspackOptions,
-): Asset {
-  return new Asset(
+): PublicAsset {
+  return new PublicAsset(
     value.committed
       ? new CommittedAsset(value, options)
       : new UncommittedAsset({
@@ -78,7 +80,7 @@ export function assetFromValue(
   );
 }
 
-class BaseAsset {
+class PublicBaseAsset {
   #asset: CommittedAsset | UncommittedAsset;
   #query /*: ?URLSearchParams */;
 
@@ -190,11 +192,11 @@ class BaseAsset {
   }
 }
 
-export class Asset extends BaseAsset implements IAsset {
+export class PublicAsset extends PublicBaseAsset implements IAsset {
   #asset /*: CommittedAsset | UncommittedAsset */;
   #env /*: ?Environment */;
 
-  constructor(asset: CommittedAsset | UncommittedAsset): Asset {
+  constructor(asset: CommittedAsset | UncommittedAsset): PublicAsset {
     let assetValueToAsset = asset.value.committed
       ? committedAssetValueToAsset
       : uncommittedAssetValueToAsset;
@@ -219,7 +221,7 @@ export class Asset extends BaseAsset implements IAsset {
   }
 }
 
-export class MutableAsset extends BaseAsset implements IMutableAsset {
+export class MutableAsset extends PublicBaseAsset implements IMutableAsset {
   #asset /*: UncommittedAsset */;
 
   constructor(asset: UncommittedAsset): MutableAsset {

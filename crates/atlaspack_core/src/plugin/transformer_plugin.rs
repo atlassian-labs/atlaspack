@@ -1,5 +1,5 @@
 use crate::hash::IdentifierHasher;
-use crate::types::{Asset, AssetWithDependencies, Dependency, Environment, SpecifierType};
+use crate::types::{AssetWithDependencies, Dependency, Environment, PublicAsset, SpecifierType};
 use mockall::automock;
 use serde::Serialize;
 use std::any::Any;
@@ -20,7 +20,7 @@ pub type Resolve = dyn Fn(PathBuf, String, ResolveOptions) -> Result<PathBuf, an
 
 #[derive(Debug, Serialize, PartialEq, Default)]
 pub struct TransformResult {
-  pub asset: Asset,
+  pub asset: PublicAsset,
   pub dependencies: Vec<Dependency>,
   pub discovered_assets: Vec<AssetWithDependencies>,
   /// The transformer signals through this field that its result should be invalidated
@@ -68,6 +68,6 @@ pub trait TransformerPlugin: Any + Debug + Send + Sync {
   fn transform(
     &mut self,
     context: TransformContext,
-    asset: Asset,
+    asset: PublicAsset,
   ) -> Result<TransformResult, anyhow::Error>;
 }

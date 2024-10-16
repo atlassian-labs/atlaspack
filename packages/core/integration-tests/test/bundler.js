@@ -1256,7 +1256,7 @@ describe.v2('bundler', function () {
     // This will fail when the async bundle does not export it's constant
     await run(b);
 
-    // Asset should not be inlined
+    // PublicAsset should not be inlined
     const index = b.getBundles().find((b) => b.name.startsWith('index'));
     const contents = overlayFS.readFileSync(index.filePath, 'utf8');
     assert(
@@ -1358,7 +1358,7 @@ describe.v2('bundler', function () {
       ]);
     });
 
-    it('should respect Asset.isBundleSplittable', async function () {
+    it('should respect PublicAsset.isBundleSplittable', async function () {
       await fsFixture(overlayFS, dir)`
       yarn.lock:
         // Required for config loading

@@ -8,7 +8,7 @@ use atlaspack_core::types::AssetStats;
 use atlaspack_core::types::AssetWithDependencies;
 use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Environment;
-use atlaspack_core::types::{Asset, Invalidation};
+use atlaspack_core::types::{Invalidation, PublicAsset};
 use std::collections::VecDeque;
 use std::hash::Hash;
 use std::path::PathBuf;
@@ -21,10 +21,10 @@ use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext,
 use super::RequestResult;
 
 /// The AssetRequest runs transformer plugins on discovered Assets.
-/// - Decides which transformer pipeline to run from the input Asset type
-/// - Runs the pipeline in series, switching pipeline if the Asset type changes
-/// - Stores the final Asset source code in the cache, for access in packaging
-/// - Finally, returns the complete Asset and it's discovered Dependencies
+/// - Decides which transformer pipeline to run from the input PublicAsset type
+/// - Runs the pipeline in series, switching pipeline if the PublicAsset type changes
+/// - Stores the final PublicAsset source code in the cache, for access in packaging
+/// - Finally, returns the complete PublicAsset and it's discovered Dependencies
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct AssetRequest {
   pub project_root: PathBuf,
@@ -38,7 +38,7 @@ pub struct AssetRequest {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssetRequestOutput {
-  pub asset: Asset,
+  pub asset: PublicAsset,
   pub discovered_assets: Vec<AssetWithDependencies>,
   pub dependencies: Vec<Dependency>,
 }
@@ -55,7 +55,7 @@ impl Request for AssetRequest {
     )));
 
     let start = Instant::now();
-    let asset = Asset::new(
+    let asset = PublicAsset::new(
       &self.project_root,
       self.env.clone(),
       self.file_path.clone(),
@@ -75,7 +75,7 @@ impl Request for AssetRequest {
     };
 
     Ok(ResultAndInvalidations {
-      result: RequestResult::Asset(AssetRequestOutput {
+      result: RequestResult::PublicAsset(AssetRequestOutput {
         asset: result.asset,
         // TODO: Need to decide whether a discovered asset will belong to the asset graph as it's own node
         discovered_assets: result.discovered_assets,
@@ -92,7 +92,7 @@ impl Request for AssetRequest {
 
 pub fn run_pipelines(
   transform_context: TransformContext,
-  input: Asset,
+  input: PublicAsset,
   plugins: PluginsRef,
 ) -> anyhow::Result<TransformResult> {
   let mut invalidations = vec![];
@@ -103,7 +103,7 @@ pub fn run_pipelines(
     },
     None,
   )]);
-  let mut initial_asset: Option<Asset> = None;
+  let mut initial_asset: Option<PublicAsset> = None;
   let mut initial_asset_dependencies = None;
   let mut processed_assets: Vec<AssetWithDependencies> = vec![];
 
@@ -145,7 +145,7 @@ pub fn run_pipelines(
           .map(|discovered_asset| (discovered_asset, None)),
       );
 
-      // If the Asset has changed type then we may need to trigger a different pipeline
+      // If the PublicAsset has changed type then we may need to trigger a different pipeline
       if is_different_asset_type {
         let next_pipeline =
           plugins.transformers(&current_asset.file_path, current_asset.pipeline.clone())?;
@@ -199,8 +199,8 @@ mod tests {
   use std::hash::Hasher;
   use std::path::Path;
 
-  fn make_asset(file_path: &str, file_type: FileType) -> Asset {
-    let mut asset = Asset::default();
+  fn make_asset(file_path: &str, file_type: FileType) -> PublicAsset {
+    let mut asset = PublicAsset::default();
 
     asset.file_path = PathBuf::from(file_path);
     asset.file_type = file_type;
@@ -208,7 +208,7 @@ mod tests {
     asset
   }
 
-  fn assert_code(asset: &Asset, code: &str) {
+  fn assert_code(asset: &PublicAsset, code: &str) {
     assert_eq!(
       String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
       code
@@ -225,7 +225,7 @@ mod tests {
       ]))
     });
 
-    let asset = Asset::default();
+    let asset = PublicAsset::default();
     let context = TransformContext::default();
     let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
 
@@ -345,7 +345,7 @@ mod tests {
 
     mock.expect_transform().returning({
       let label = label.clone();
-      move |_context, asset: Asset| {
+      move |_context, asset: PublicAsset| {
         let mut asset = asset.clone();
         asset.code = Arc::new(Code::from(format!(
           "{}::{}",
@@ -361,7 +361,7 @@ mod tests {
         })
       }
     });
-    // .returning(move |_context, asset: Asset| get_simple_transformer(label.clone(), asset));
+    // .returning(move |_context, asset: PublicAsset| get_simple_transformer(label.clone(), asset));
     Box::new(mock)
   }
 }

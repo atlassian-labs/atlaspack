@@ -393,7 +393,7 @@ export type AssetRequestInput = {|
 |};
 
 export type AssetRequestResult = Array<Asset>;
-// Asset group nodes are essentially used as placeholders for the results of an asset request
+// PublicAsset group nodes are essentially used as placeholders for the results of an asset request
 export type AssetGroup = $Rest<
   AssetRequestInput,
   {|optionsRef: SharedReference|},

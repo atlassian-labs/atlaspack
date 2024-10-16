@@ -21,7 +21,7 @@ import {hashString} from '@atlaspack/rust';
 import BundleGraph from './BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from '../BundleGraph';
 import {Bundle, bundleToInternalBundle} from './Bundle';
-import {assetFromValue, assetToAssetValue} from './Asset';
+import {assetFromValue, assetToAssetValue} from './PublicAsset';
 import {getBundleGroupId, getPublicId} from '../utils';
 import Dependency, {dependencyToInternalDependency} from './Dependency';
 import {environmentToInternalEnvironment} from './Environment';

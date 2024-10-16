@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use super::ConfigLoader;
-use crate::types::Asset;
+use crate::types::PublicAsset;
 
 pub struct Validation {
   pub errors: Vec<anyhow::Error>,
@@ -34,7 +34,7 @@ pub trait ValidatorPlugin: Debug {
   fn validate_asset(
     &mut self,
     config: &ConfigLoader,
-    asset: &Asset,
+    asset: &PublicAsset,
   ) -> Result<Validation, anyhow::Error>;
 
   /// Validates all assets
@@ -50,7 +50,7 @@ pub trait ValidatorPlugin: Debug {
   fn validate_assets(
     &mut self,
     config: &ConfigLoader,
-    assets: Vec<&Asset>,
+    assets: Vec<&PublicAsset>,
   ) -> Result<Validation, anyhow::Error>;
 }
 
@@ -69,7 +69,7 @@ mod tests {
     fn validate_asset(
       &mut self,
       _config: &ConfigLoader,
-      _asset: &Asset,
+      _asset: &PublicAsset,
     ) -> Result<Validation, anyhow::Error> {
       todo!()
     }
@@ -77,7 +77,7 @@ mod tests {
     fn validate_assets(
       &mut self,
       _config: &ConfigLoader,
-      _assets: Vec<&Asset>,
+      _assets: Vec<&PublicAsset>,
     ) -> Result<Validation, anyhow::Error> {
       todo!()
     }

@@ -242,7 +242,7 @@ export class AssetGraphBuilder {
 
     logger.verbose({
       origin: '@atlaspack/core',
-      message: 'Asset graph walked',
+      message: 'PublicAsset graph walked',
       meta: {
         visitedAssetGroupsCount: visitedAssetGroups.size,
       },
@@ -403,7 +403,7 @@ export class AssetGraphBuilder {
         if (!previouslyDeferred && childNode.deferred) {
           this.assetGraph.markParentsWithHasDeferred(childNodeId);
         } else if (previouslyDeferred && !childNode.deferred) {
-          // Mark Asset and Dependency as dirty for symbol propagation as it was
+          // Mark PublicAsset and Dependency as dirty for symbol propagation as it was
           // previously deferred and it's used symbols may have changed
           this.changedAssetsPropagation.add(node.id);
           node.usedSymbolsDownDirty = true;

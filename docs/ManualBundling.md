@@ -6,9 +6,9 @@ Atlaspack automatically code splits for certain import types, and automatically 
 
 This document aims to explain the current implementation of Manual Bundling, for information on using the feature visit the Atlaspack Docs.
 
-### Generate Asset Lookups
+### Generate PublicAsset Lookups
 
-First, we generate a look up, `manualAssetToConfig`, which contains an Asset Node as a key, mapped to which config object the asset is valid for. Consider the config below.
+First, we generate a look up, `manualAssetToConfig`, which contains an PublicAsset Node as a key, mapped to which config object the asset is valid for. Consider the config below.
 
 ```json
 {
@@ -126,7 +126,7 @@ To do this we collect all async assets in a manual bundle, and set the appropria
 
 ### Override Traditional Shared Bundles
 
-During asset placement (see Asset Placement in [DefaultBundler.md](DefaultBundler.md) for more info), we override shared bundles. Assets needed by entries are still placed in entries, but before we consider our asset, `a`, for reused or shared bundles, we check if it should be placed in a manualSharedBundle.
+During asset placement (see PublicAsset Placement in [DefaultBundler.md](DefaultBundler.md) for more info), we override shared bundles. Assets needed by entries are still placed in entries, but before we consider our asset, `a`, for reused or shared bundles, we check if it should be placed in a manualSharedBundle.
 
 ```
 

@@ -18,7 +18,7 @@ import type {Diagnostic} from '@atlaspack/diagnostic';
 
 import invariant from 'assert';
 import ThrowableDiagnostic, {anyToDiagnostic} from '@atlaspack/diagnostic';
-import {assetFromValue} from './public/Asset';
+import {assetFromValue} from './public/PublicAsset';
 import {PackagedBundle} from './public/Bundle';
 import BundleGraph from './public/BundleGraph';
 import WorkerFarm from '@atlaspack/workers';

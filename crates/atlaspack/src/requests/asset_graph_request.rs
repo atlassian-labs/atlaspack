@@ -104,7 +104,7 @@ impl AssetGraphBuilder {
           tracing::debug!("Handling TargetRequestOutput");
           self.handle_target_request_result(result);
         }
-        Ok((RequestResult::Asset(result), request_id)) => {
+        Ok((RequestResult::PublicAsset(result), request_id)) => {
           tracing::debug!(
             "Handling AssetRequestOutput: {}",
             result.asset.file_path.display()
@@ -188,7 +188,7 @@ impl AssetGraphBuilder {
         .queue_request(asset_request, self.sender.clone());
     } else if let Some(asset_node_index) = self.asset_request_to_asset.get(&id) {
       // We have already completed this AssetRequest so we can connect the
-      // Dependency to the Asset immediately
+      // Dependency to the PublicAsset immediately
       self.graph.add_edge(&node, asset_node_index);
       self.propagate_requested_symbols(*asset_node_index, node);
     } else {
@@ -267,7 +267,7 @@ impl AssetGraphBuilder {
     asset_node_index: NodeIndex,
     added_discovered_assets: &mut HashMap<String, NodeIndex>,
   ) {
-    // Connect dependencies of the Asset
+    // Connect dependencies of the PublicAsset
     let mut unique_deps: IndexMap<String, Dependency> = IndexMap::new();
 
     for mut dependency in dependencies {

@@ -9,7 +9,7 @@ use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
-  Asset, BuildMode, Diagnostic, ErrorKind, FileType, LogLevel, OutputFormat, SourceType,
+  BuildMode, Diagnostic, ErrorKind, FileType, LogLevel, OutputFormat, PublicAsset, SourceType,
 };
 use glob_match::glob_match;
 use serde::Deserialize;
@@ -83,7 +83,7 @@ impl AtlaspackJsTransformerPlugin {
     })
   }
 
-  fn env_variables(&mut self, asset: &Asset) -> HashMap<Atom, Atom> {
+  fn env_variables(&mut self, asset: &PublicAsset) -> HashMap<Atom, Atom> {
     if self.options.env.is_none()
       || self
         .options
@@ -176,7 +176,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   fn transform(
     &mut self,
     _context: TransformContext,
-    asset: Asset,
+    asset: PublicAsset,
   ) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let file_type = asset.file_type.clone();
@@ -324,8 +324,8 @@ mod tests {
 
   use super::*;
 
-  fn empty_asset() -> Asset {
-    Asset {
+  fn empty_asset() -> PublicAsset {
+    PublicAsset {
       file_type: FileType::Js,
       is_bundle_splittable: true,
       is_source: true,
@@ -333,11 +333,11 @@ mod tests {
     }
   }
 
-  fn create_asset(project_root: &Path, file_path: &str, code: &str) -> Asset {
+  fn create_asset(project_root: &Path, file_path: &str, code: &str) -> PublicAsset {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let env = Arc::new(Environment::default());
 
-    Asset::new(
+    PublicAsset::new(
       project_root,
       env.clone(),
       file_path.into(),
@@ -370,7 +370,7 @@ mod tests {
     assert_eq!(
       result,
       TransformResult {
-        asset: Asset {
+        asset: PublicAsset {
           file_path: "mock_path.js".into(),
           file_type: FileType::Js,
           // SWC inserts a newline here
@@ -432,7 +432,7 @@ mod tests {
     assert_eq!(
       result,
       TransformResult {
-        asset: Asset {
+        asset: PublicAsset {
           id: asset_id.clone(),
           file_path: "mock_path.js".into(),
           file_type: FileType::Js,
@@ -484,7 +484,7 @@ mod tests {
     );
   }
 
-  fn run_test(asset: Asset) -> anyhow::Result<TransformResult> {
+  fn run_test(asset: PublicAsset) -> anyhow::Result<TransformResult> {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let project_root = PathBuf::default();
 

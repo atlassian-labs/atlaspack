@@ -369,7 +369,7 @@ function createIdealGraph(
   entries: Map<Asset, Dependency>,
   logger: PluginLogger,
 ): IdealGraph {
-  // Asset to the bundle and group it's an entry of
+  // PublicAsset to the bundle and group it's an entry of
   let bundleRoots: Map<BundleRoot, [NodeId, NodeId]> = new Map();
   let bundles: Map<string, NodeId> = new Map();
   let dependencyBundleGraph: DependencyBundleGraph = new ContentGraph();
@@ -1198,7 +1198,7 @@ function createIdealGraph(
           invariant(reusableBundle !== 'root' && reusableBundle != null);
           reusableBundle.sourceBundles.add(candidateSourceBundleId);
         } else {
-          // Asset is not a bundleRoot, but if its ancestor bundle (in the asset's reachable) can be
+          // PublicAsset is not a bundleRoot, but if its ancestor bundle (in the asset's reachable) can be
           // reused as a subgraph of another bundleRoot in its reachable, reuse it
           reachableIntersection.bits.set(reachableNonEntries.bits);
           reachableIntersection.intersect(

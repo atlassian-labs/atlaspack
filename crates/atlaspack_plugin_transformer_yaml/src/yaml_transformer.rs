@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
-use atlaspack_core::types::{Asset, Code, FileType};
+use atlaspack_core::types::{Code, FileType, PublicAsset};
 
 #[derive(Debug)]
 pub struct AtlaspackYamlTransformerPlugin {}
@@ -18,7 +18,7 @@ impl TransformerPlugin for AtlaspackYamlTransformerPlugin {
   fn transform(
     &mut self,
     _context: TransformContext,
-    asset: Asset,
+    asset: PublicAsset,
   ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
@@ -67,7 +67,7 @@ mod tests {
   fn returns_js_asset_from_yaml() {
     let mut plugin = create_yaml_plugin();
 
-    let asset = Asset {
+    let asset = PublicAsset {
       code: Arc::new(Code::from(String::from(
         "
           a: 1
@@ -80,7 +80,7 @@ mod tests {
         ",
       ))),
       file_type: FileType::Json,
-      ..Asset::default()
+      ..PublicAsset::default()
     };
 
     let context = TransformContext::default();
@@ -89,12 +89,12 @@ mod tests {
     assert_eq!(
       transformation,
       Ok(TransformResult {
-        asset: Asset {
+        asset: PublicAsset {
           code: Arc::new(Code::from(String::from(
             "module.exports = {\"a\":1,\"b\":{\"c\":2,\"d\":true},\"e\":[\"f\",\"g\"]};"
           ))),
           file_type: FileType::Js,
-          ..Asset::default()
+          ..PublicAsset::default()
         },
         ..Default::default()
       })

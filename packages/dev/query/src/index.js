@@ -141,7 +141,7 @@ export async function loadGraphs(cacheDir: string): Promise<{|
       cacheInfo.set('AssetGraph', [Buffer.byteLength(file)]);
       cacheInfo.get('AssetGraph')?.push(timeToDeserialize);
     } catch (e) {
-      console.log('Error loading Asset Graph\n', e);
+      console.log('Error loading PublicAsset Graph\n', e);
     }
   }
 

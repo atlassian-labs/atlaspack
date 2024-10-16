@@ -18,7 +18,7 @@ use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::types::engines::Engines;
-use atlaspack_core::types::Asset;
+use atlaspack_core::types::PublicAsset;
 use atlaspack_core::types::*;
 
 use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
@@ -73,7 +73,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
   fn transform(
     &mut self,
     _context: TransformContext,
-    asset: Asset,
+    asset: PublicAsset,
   ) -> Result<TransformResult, Error> {
     self.started.get_or_try_init(|| {
       self.rpc_workers.exec_on_all(|worker| {
@@ -104,7 +104,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
         .map_err(anyhow_from_napi)
     })?;
 
-    let transformed_asset = Asset {
+    let transformed_asset = PublicAsset {
       id: result.asset.id,
       code: Arc::new(result.asset.code),
       bundle_behavior: result.asset.bundle_behavior,
@@ -147,7 +147,7 @@ pub struct RpcPluginOptions {
   pub project_root: PathBuf,
 }
 
-/// This Asset mostly replicates the core Asset type however it only features
+/// This PublicAsset mostly replicates the core PublicAsset type however it only features
 /// fields that can be modified by transformers
 #[derive(PartialEq, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -169,7 +169,7 @@ pub struct RpcAssetResult {
 }
 
 // This Environment mostly replicates the core Environment but makes everything
-// optional as it is merged into the Asset Environment later.
+// optional as it is merged into the PublicAsset Environment later.
 // Similar to packages/core/types-internal/src/index.js#EnvironmnetOptions
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -192,7 +192,7 @@ pub struct RpcTransformerOpts {
   pub options: RpcPluginOptions,
   pub env: Arc<Environment>,
   pub project_root: PathBuf,
-  pub asset: Asset,
+  pub asset: PublicAsset,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

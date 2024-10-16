@@ -22,10 +22,10 @@ This will then be interpreted from the `AssetGraph` into a map of targets, which
 ```
 [Target Map] {
   '/dist/main1' => Map(1) {
-    Asset(/main1/index.html) => Dependency(null -> src/main1/index.html)
+    PublicAsset(/main1/index.html) => Dependency(null -> src/main1/index.html)
   },
   'dist/main2' => Map(1) {
-    Asset(/main2/index.html) => Dependency(null -> src/main2/index.html)
+    PublicAsset(/main2/index.html) => Dependency(null -> src/main2/index.html)
   }
 ```
 
@@ -190,8 +190,8 @@ Then we handle placement for entries and manual shared assets, see [DefaultBundl
 
 We loop through them, searching for a `candidate`. Since we don't know which asset we will process first, we need to make sure we draw that connection between the bundles regardless of if we hit `a.js`, `b.js`, or `foo.js` first. There are two cases to consider.
 
-1. Asset is a bundleRoot, in this case `foo.js`.
-2. Asset is not a bundleRoot, in this case `a.js` or `b.js`
+1. PublicAsset is a bundleRoot, in this case `foo.js`.
+2. PublicAsset is not a bundleRoot, in this case `a.js` or `b.js`
 
 In the first case, we simply draw an edge and delete the `candidate` from this asset's reachable. We must delete it because this loop does not terminate asset placement, if reachable was still populated, we would go on to try to place our asset in the remaining reachable bundleroots.
 

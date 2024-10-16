@@ -70,7 +70,7 @@ pub struct CreateAssetIdParams<'a> {
   pub pipeline: Option<&'a str>,
   pub query: Option<&'a str>,
   /// This should be set to None if it's equal to the asset-id and set by the
-  /// constructor otherwise the values will differ. See [`Asset::new`] for more.
+  /// constructor otherwise the values will differ. See [`PublicAsset::new`] for more.
   pub unique_key: Option<&'a str>,
 }
 
@@ -107,7 +107,7 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
 ///
 #[derive(Default, PartialEq, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Asset {
+pub struct PublicAsset {
   /// The main identify hash for the asset. It is consistent for the entire
   /// build and between builds.
   pub id: AssetId,
@@ -211,11 +211,11 @@ pub struct Asset {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AssetWithDependencies {
-  pub asset: Asset,
+  pub asset: PublicAsset,
   pub dependencies: Vec<Dependency>,
 }
 
-impl Asset {
+impl PublicAsset {
   pub fn new(
     project_root: &Path,
     env: Arc<Environment>,
@@ -265,7 +265,7 @@ impl Asset {
       query,
       side_effects,
       unique_key: None,
-      ..Asset::default()
+      ..PublicAsset::default()
     })
   }
 
@@ -304,7 +304,7 @@ impl Asset {
       meta,
       side_effects,
       unique_key,
-      ..Asset::default()
+      ..PublicAsset::default()
     }
   }
 

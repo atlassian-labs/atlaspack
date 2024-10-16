@@ -1,7 +1,7 @@
 use anyhow::Error;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
-use atlaspack_core::types::{Asset, BundleBehavior};
+use atlaspack_core::types::{BundleBehavior, PublicAsset};
 
 #[derive(Debug)]
 pub struct AtlaspackRawTransformerPlugin {}
@@ -16,7 +16,7 @@ impl TransformerPlugin for AtlaspackRawTransformerPlugin {
   fn transform(
     &mut self,
     _context: TransformContext,
-    asset: Asset,
+    asset: PublicAsset,
   ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
@@ -55,7 +55,7 @@ mod tests {
       options: Arc::new(PluginOptions::default()),
     });
 
-    let asset = Asset::default();
+    let asset = PublicAsset::default();
 
     assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Isolated));
     let mut asset = asset;

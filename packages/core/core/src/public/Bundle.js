@@ -24,7 +24,7 @@ import invariant from 'assert';
 import nullthrows from 'nullthrows';
 import {DefaultWeakMap} from '@atlaspack/utils';
 
-import {assetToAssetValue, assetFromValue} from './Asset';
+import {assetToAssetValue, assetFromValue} from './PublicAsset';
 import {mapVisitor} from '@atlaspack/graph';
 import Environment from './Environment';
 import {

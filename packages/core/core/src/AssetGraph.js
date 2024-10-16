@@ -321,7 +321,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     return !defer;
   }
 
-  // Dependency: mark parent Asset <- AssetGroup with hasDeferred true
+  // Dependency: mark parent PublicAsset <- AssetGroup with hasDeferred true
   markParentsWithHasDeferred(nodeId: NodeId) {
     this.traverseAncestors(nodeId, (traversedNodeId, _, actions) => {
       let traversedNode = nullthrows(this.getNode(traversedNodeId));
@@ -336,7 +336,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     });
   }
 
-  // AssetGroup: update hasDeferred of all parent Dependency <- Asset <- AssetGroup
+  // AssetGroup: update hasDeferred of all parent Dependency <- PublicAsset <- AssetGroup
   unmarkParentsWithHasDeferred(nodeId: NodeId) {
     this.traverseAncestors(nodeId, (traversedNodeId, ctx, actions) => {
       let traversedNode = nullthrows(this.getNode(traversedNodeId));

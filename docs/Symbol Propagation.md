@@ -37,17 +37,17 @@ Instead, there are two passes:
 
 ```mermaid
 graph TD;
-  DepIn1[Incoming dep] --> Asset;
-  DepIn2[Incoming dep] --> Asset;
-  DepIn3[Incoming dep] --> Asset;
-  Asset;
-  Asset --> DepOut1[Outgoing dep];
-  Asset --> DepOut2[Outgoing dep];
-  Asset --> DepOut3[Outgoing dep];
+  DepIn1[Incoming dep] --> PublicAsset;
+  DepIn2[Incoming dep] --> PublicAsset;
+  DepIn3[Incoming dep] --> PublicAsset;
+  PublicAsset;
+  PublicAsset --> DepOut1[Outgoing dep];
+  PublicAsset --> DepOut2[Outgoing dep];
+  PublicAsset --> DepOut3[Outgoing dep];
 
   classDef asset fill:orange,stroke:orange;
   classDef dep fill:lime,stroke:lime;
-  class Asset asset;
+  class PublicAsset asset;
   class DepIn1,DepIn2,DepIn3,DepOut1,DepOut2,DepOut3 dep;
 ```
 
@@ -55,17 +55,17 @@ graph TD;
 
 ```mermaid
 graph BT;
-  Asset --> DepIn1[Incoming dep];
-  Asset --> DepIn2[Incoming dep];
-  Asset --> DepIn3[Incoming dep];
-  Asset;
-  DepOut1[Outgoing dep] --> Asset;
-  DepOut2[Outgoing dep] --> Asset;
-  DepOut3[Outgoing dep] --> Asset;
+  PublicAsset --> DepIn1[Incoming dep];
+  PublicAsset --> DepIn2[Incoming dep];
+  PublicAsset --> DepIn3[Incoming dep];
+  PublicAsset;
+  DepOut1[Outgoing dep] --> PublicAsset;
+  DepOut2[Outgoing dep] --> PublicAsset;
+  DepOut3[Outgoing dep] --> PublicAsset;
 
   classDef asset fill:orange,stroke:orange;
   classDef dep fill:lime,stroke:lime;
-  class Asset asset;
+  class PublicAsset asset;
   class DepIn1,DepIn2,DepIn3,DepOut1,DepOut2,DepOut3 dep;
 ```
 

@@ -6,7 +6,7 @@ use petgraph::{
   Direction,
 };
 
-use crate::types::{Asset, Dependency};
+use crate::types::{Dependency, PublicAsset};
 
 #[derive(Clone, Debug)]
 pub struct AssetGraph {
@@ -17,7 +17,7 @@ pub struct AssetGraph {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AssetNode {
-  pub asset: Asset,
+  pub asset: PublicAsset,
   pub requested_symbols: HashSet<String>,
 }
 
@@ -32,7 +32,7 @@ pub struct DependencyNode {
 pub enum AssetGraphNode {
   Root,
   Entry,
-  Asset(usize),
+  PublicAsset(usize),
   Dependency(usize),
 }
 
@@ -84,7 +84,7 @@ impl AssetGraph {
     }
   }
 
-  pub fn add_asset(&mut self, parent_idx: NodeIndex, asset: Asset) -> NodeIndex {
+  pub fn add_asset(&mut self, parent_idx: NodeIndex, asset: PublicAsset) -> NodeIndex {
     let idx = self.assets.len();
 
     self.assets.push(AssetNode {
@@ -92,7 +92,7 @@ impl AssetGraph {
       requested_symbols: HashSet::default(),
     });
 
-    let asset_idx = self.graph.add_node(AssetGraphNode::Asset(idx));
+    let asset_idx = self.graph.add_node(AssetGraphNode::PublicAsset(idx));
 
     self
       .graph
@@ -152,7 +152,7 @@ impl AssetGraph {
 
   pub fn asset_index(&self, node_index: NodeIndex) -> Option<usize> {
     match self.graph.node_weight(node_index).unwrap() {
-      AssetGraphNode::Asset(idx) => Some(*idx),
+      AssetGraphNode::PublicAsset(idx) => Some(*idx),
       _ => None,
     }
   }
@@ -290,10 +290,10 @@ impl serde::Serialize for AssetGraph {
       .map(|node| match node {
         AssetGraphNode::Root => SerializedAssetGraphNode::Root,
         AssetGraphNode::Entry => SerializedAssetGraphNode::Entry,
-        AssetGraphNode::Asset(idx) => {
+        AssetGraphNode::PublicAsset(idx) => {
           let asset = self.assets[*idx].asset.clone();
 
-          SerializedAssetGraphNode::Asset { value: asset }
+          SerializedAssetGraphNode::PublicAsset { value: asset }
         }
         AssetGraphNode::Dependency(idx) => {
           let dependency = self.dependencies[*idx].dependency.clone();
@@ -319,8 +319,8 @@ impl serde::Serialize for AssetGraph {
     enum SerializedAssetGraphNode {
       Root,
       Entry,
-      Asset {
-        value: Asset,
+      PublicAsset {
+        value: PublicAsset,
       },
       Dependency {
         value: SerializedDependency,
@@ -345,7 +345,7 @@ impl std::hash::Hash for AssetGraph {
     for node in self.graph.node_weights() {
       std::mem::discriminant(node).hash(state);
       match node {
-        AssetGraphNode::Asset(idx) => self.assets[*idx].asset.id.hash(state),
+        AssetGraphNode::PublicAsset(idx) => self.assets[*idx].asset.id.hash(state),
         AssetGraphNode::Dependency(idx) => self.dependencies[*idx].dependency.id().hash(state),
         _ => {}
       }
@@ -385,10 +385,10 @@ mod tests {
     symbols: Vec<TestSymbol>,
     file_path: &str,
   ) -> NodeIndex {
-    let index_asset = Asset {
+    let index_asset = PublicAsset {
       file_path: PathBuf::from(file_path),
       symbols: Some(symbols.iter().map(symbol).collect()),
-      ..Asset::default()
+      ..PublicAsset::default()
     };
     graph.add_asset(parent_node, index_asset)
   }

@@ -14,7 +14,7 @@ mod target_request;
 #[derive(Clone, Debug, PartialEq)]
 pub enum RequestResult {
   AssetGraph(AssetGraphRequestOutput),
-  Asset(AssetRequestOutput),
+  PublicAsset(AssetRequestOutput),
   Entry(EntryRequestOutput),
   Path(PathRequestOutput),
   Target(TargetRequestOutput),

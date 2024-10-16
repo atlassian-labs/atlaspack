@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
-use atlaspack_core::types::{Asset, Code, FileType};
+use atlaspack_core::types::{Code, FileType, PublicAsset};
 
 #[derive(Debug)]
 pub struct AtlaspackJsonTransformerPlugin {}
@@ -18,7 +18,7 @@ impl TransformerPlugin for AtlaspackJsonTransformerPlugin {
   fn transform(
     &mut self,
     _context: TransformContext,
-    asset: Asset,
+    asset: PublicAsset,
   ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
@@ -68,7 +68,7 @@ mod tests {
   fn returns_js_asset_from_json() {
     let mut plugin = create_json_plugin();
 
-    let asset = Asset {
+    let asset = PublicAsset {
       code: Arc::new(Code::from(
         r#"
           {
@@ -82,20 +82,20 @@ mod tests {
         .to_string(),
       )),
       file_type: FileType::Json,
-      ..Asset::default()
+      ..PublicAsset::default()
     };
     let context = TransformContext::default();
 
     assert_eq!(
       plugin.transform(context, asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
-        asset: Asset {
+        asset: PublicAsset {
           code: Arc::new(Code::from(
             r#"module.exports = JSON.parse("{\"a\":\"b\",\"c\":{\"d\":true,\"e\":1}}");"#
               .to_string()
           )),
           file_type: FileType::Js,
-          ..Asset::default()
+          ..PublicAsset::default()
         },
         ..Default::default()
       })
@@ -106,7 +106,7 @@ mod tests {
   fn returns_js_asset_from_json5() {
     let mut plugin = create_json_plugin();
 
-    let asset = Asset {
+    let asset = PublicAsset {
       code: Arc::new(Code::from(
         r#"
           /* start */
@@ -124,20 +124,20 @@ mod tests {
         .to_string(),
       )),
       file_type: FileType::Json,
-      ..Asset::default()
+      ..PublicAsset::default()
     };
     let context = TransformContext::default();
 
     assert_eq!(
       plugin.transform(context, asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
-        asset: Asset {
+        asset: PublicAsset {
           code: Arc::new(Code::from(
             r#"module.exports = JSON.parse("{\"a\":\"b\",\"c\":{\"d\":true,\"e\":1}}");"#
               .to_string()
           )),
           file_type: FileType::Js,
-          ..Asset::default()
+          ..PublicAsset::default()
         },
         ..Default::default()
       })

@@ -85,7 +85,7 @@ There are two ways in which assets can be skipped (not included in the output):
 
   Symbol propagation currently only runs when scope hoisting is enabled.
 
-**Single Asset**: if a side-effect free asset only has reexports and doesn't export a value itself (and is also not imported from other bundles), then it can be skipped since the reexports will be resolved to their original assets anyway. This is handled in the JS packager only, and not in core.
+**Single PublicAsset**: if a side-effect free asset only has reexports and doesn't export a value itself (and is also not imported from other bundles), then it can be skipped since the reexports will be resolved to their original assets anyway. This is handled in the JS packager only, and not in core.
 
 ```js
 import {a} from './lib.js';

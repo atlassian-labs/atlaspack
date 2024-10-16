@@ -26,7 +26,7 @@ import nullthrows from 'nullthrows';
 import CommittedAsset from './CommittedAsset';
 import UncommittedAsset from './UncommittedAsset';
 import loadPlugin from './loadAtlaspackPlugin';
-import {Asset as PublicAsset} from './public/Asset';
+import {PublicAsset as PublicAsset} from './public/PublicAsset';
 import PluginOptions from './public/PluginOptions';
 import {blobToStream, hashFile} from '@atlaspack/utils';
 import {hashFromOption, toInternalSourceLocation} from './utils';
@@ -141,7 +141,7 @@ export function generateFromAST(
 async function _generateFromAST(asset: CommittedAsset | UncommittedAsset) {
   let ast = await asset.getAST();
   if (ast == null) {
-    throw new Error('Asset has no AST');
+    throw new Error('PublicAsset has no AST');
   }
 
   let pluginName = nullthrows(asset.value.plugin);

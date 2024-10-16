@@ -18,7 +18,7 @@ import {bundleGraphEdgeTypes} from '../BundleGraph';
 import {report} from '../ReporterRunner';
 import IBundleGraph from '../public/BundleGraph';
 import {NamedBundle} from '../public/Bundle';
-import {assetFromValue} from '../public/Asset';
+import {assetFromValue} from '../public/PublicAsset';
 
 import {tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';

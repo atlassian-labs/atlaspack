@@ -8,8 +8,8 @@ use swc_core::atoms::{Atom, JsWord};
 use atlaspack_core::plugin::{PluginOptions, TransformResult};
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
-  Asset, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, Diagnostic, DiagnosticBuilder,
-  Environment, EnvironmentContext, File, FileType, IncludeNodeModules, OutputFormat,
+  BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, Diagnostic, DiagnosticBuilder,
+  Environment, EnvironmentContext, File, FileType, IncludeNodeModules, OutputFormat, PublicAsset,
   SourceLocation, SourceType, SpecifierType, Symbol,
 };
 
@@ -28,7 +28,7 @@ mod loc;
 mod symbol;
 
 pub(crate) fn convert_result(
-  mut asset: Asset,
+  mut asset: PublicAsset,
   transformer_config: &atlaspack_js_swc_core::Config,
   result: atlaspack_js_swc_core::TransformResult,
   options: &PluginOptions,
@@ -369,7 +369,7 @@ pub(crate) fn convert_dependencies(
   project_root: &Path,
   transformer_config: &atlaspack_js_swc_core::Config,
   dependencies: Vec<atlaspack_js_swc_core::DependencyDescriptor>,
-  asset: &Asset,
+  asset: &PublicAsset,
 ) -> Result<(IndexMap<Atom, Dependency>, Vec<PathBuf>), Vec<Diagnostic>> {
   let mut dependency_by_specifier = IndexMap::new();
   let mut invalidate_on_file_change = Vec::new();
@@ -458,7 +458,7 @@ enum DependencyConversionResult {
 fn convert_dependency(
   project_root: &Path,
   transformer_config: &atlaspack_js_swc_core::Config,
-  asset: &Asset,
+  asset: &PublicAsset,
   transformer_dependency: atlaspack_js_swc_core::DependencyDescriptor,
 ) -> Result<DependencyConversionResult, Vec<Diagnostic>> {
   use atlaspack_js_swc_core::DependencyKind;

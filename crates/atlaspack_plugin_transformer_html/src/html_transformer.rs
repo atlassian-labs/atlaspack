@@ -11,7 +11,7 @@ use markup5ever_rcdom::{RcDom, SerializableHandle};
 
 use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{
-  Asset, AssetId, AssetWithDependencies, BundleBehavior, Code, Dependency, Environment,
+  AssetId, AssetWithDependencies, BundleBehavior, Code, Dependency, Environment, PublicAsset,
 };
 
 use crate::dom_visitor::walk;
@@ -31,7 +31,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
   fn transform(
     &mut self,
     context: TransformContext,
-    input: Asset,
+    input: PublicAsset,
   ) -> Result<TransformResult, Error> {
     let bytes: &[u8] = input.code.bytes();
     let mut dom = parse_html(bytes)?;
@@ -246,7 +246,7 @@ mod test {
           ..Dependency::default()
         }],
         discovered_assets: vec![AssetWithDependencies {
-          asset: Asset {
+          asset: PublicAsset {
             bundle_behavior: Some(BundleBehavior::Inline),
             code: Arc::new(Code::from(script)),
             env: env.clone(),
@@ -257,7 +257,7 @@ mod test {
             is_source: true,
             meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
             unique_key: Some(String::from("16f87d7beed96467")),
-            ..Asset::default()
+            ..PublicAsset::default()
           },
           dependencies: Vec::new()
         }],
@@ -303,7 +303,7 @@ mod test {
           ..Dependency::default()
         }],
         discovered_assets: vec![AssetWithDependencies {
-          asset: Asset {
+          asset: PublicAsset {
             bundle_behavior: Some(BundleBehavior::Inline),
             code: Arc::new(Code::from(String::from(
               "\n          a { color: blue; }\n        "
@@ -315,7 +315,7 @@ mod test {
             is_source: true,
             meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
             unique_key: Some(String::from("16f87d7beed96467")),
-            ..Asset::default()
+            ..PublicAsset::default()
           },
           dependencies: Vec::new()
         }],

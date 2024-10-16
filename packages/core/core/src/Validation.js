@@ -12,7 +12,7 @@ import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import AtlaspackConfig from './AtlaspackConfig';
 import UncommittedAsset from './UncommittedAsset';
 import {createAsset} from './assetUtils';
-import {Asset} from './public/Asset';
+import {PublicAsset} from './public/PublicAsset';
 import PluginOptions from './public/PluginOptions';
 import summarizeRequest from './summarizeRequest';
 import {fromProjectPath, fromProjectPathRelative} from './projectPath';
@@ -76,7 +76,7 @@ export default class Validation {
             // If the plugin supports the single-threading validateAll method, pass all assets to it.
             if (plugin.validateAll && this.dedicatedThread) {
               validatorResults = await plugin.validateAll({
-                assets: assets.map((asset) => new Asset(asset)),
+                assets: assets.map((asset) => new PublicAsset(asset)),
                 options: pluginOptions,
                 logger: validatorLogger,
                 tracer: validatorTracer,
@@ -98,7 +98,7 @@ export default class Validation {
               await Promise.all(
                 assets.map(async (input) => {
                   let config = null;
-                  let publicAsset = new Asset(input);
+                  let publicAsset = new PublicAsset(input);
                   if (plugin.getConfig) {
                     config = await plugin.getConfig({
                       asset: publicAsset,

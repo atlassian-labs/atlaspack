@@ -16,8 +16,8 @@ In a project root containing a `.parcel-cache` folder:
 ```sh
 $ atlaspack-query
 > .findBundleReason 27494aebac508bd8 TJbGI
-# Asset is main entry of bundle: false
-# Asset is an entry of bundle: false
+# PublicAsset is main entry of bundle: false
+# PublicAsset is an entry of bundle: false
 # Incoming dependencies contained in the bundle:
 {
   id: '3fd182662e2a6fa9',

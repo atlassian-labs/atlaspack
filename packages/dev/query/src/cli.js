@@ -60,7 +60,7 @@ export async function run(input: string[]) {
 
   function hasAssetGraph() {
     if (assetGraph == null) {
-      console.error('Asset Graph could not be found');
+      console.error('PublicAsset Graph could not be found');
       return false;
     }
     return true;
@@ -332,7 +332,7 @@ export async function run(input: string[]) {
       | ContentGraph<AssetGraphNode>,
     v: string,
   ) {
-    let asset = nullthrows(parseAssetLocator(v), 'Asset not found');
+    let asset = nullthrows(parseAssetLocator(v), 'PublicAsset not found');
 
     let paths = new Paths<NodeId>(graph.getNodeIdByContentKey(asset), ' ');
     let cb = (id, ctx, revisiting) => {
@@ -398,7 +398,7 @@ export async function run(input: string[]) {
       return;
     }
     invariant(bundleGraph != null);
-    let asset = nullthrows(parseAssetLocator(v), 'Asset not found');
+    let asset = nullthrows(parseAssetLocator(v), 'PublicAsset not found');
     for (let b of bundleGraph.getBundlesWithAsset(
       bundleGraph.getAssetById(asset),
     )) {
@@ -481,7 +481,7 @@ export async function run(input: string[]) {
       return;
     }
     invariant(assetGraph != null);
-    let asset = nullthrows(parseAssetLocator(v), 'Asset not found');
+    let asset = nullthrows(parseAssetLocator(v), 'PublicAsset not found');
     let node = nullthrows(assetGraph.getNodeByContentKey(asset));
     invariant(node.type === 'asset');
 
@@ -492,7 +492,7 @@ export async function run(input: string[]) {
       return;
     }
     invariant(bundleGraph != null);
-    let asset = nullthrows(parseAssetLocator(v), 'Asset not found');
+    let asset = nullthrows(parseAssetLocator(v), 'PublicAsset not found');
     let value = nullthrows(bundleGraph.getAssetById(asset));
 
     console.log(bundleGraph.getIncomingDependencies(value));
@@ -615,11 +615,11 @@ export async function run(input: string[]) {
       'Bundle not found',
     );
     invariant(bundleNode.type === 'bundle', 'Not a bundle');
-    let assetId = nullthrows(parseAssetLocator(asset), 'Asset not found');
+    let assetId = nullthrows(parseAssetLocator(asset), 'PublicAsset not found');
     let assetNodeId = bundleGraph._graph.getNodeIdByContentKey(assetId);
     let assetNode = nullthrows(
       bundleGraph._graph.getNode(assetNodeId),
-      'Asset not found',
+      'PublicAsset not found',
     );
     invariant(assetNode.type === 'asset', 'Not an asset');
 
@@ -629,16 +629,16 @@ export async function run(input: string[]) {
         assetNodeId,
         bundleGraphEdgeTypes.contains,
       ),
-      'Asset is not part of the bundle',
+      'PublicAsset is not part of the bundle',
     );
 
     console.log(
-      '# Asset is main entry of bundle:',
+      '# PublicAsset is main entry of bundle:',
       bundleNode.value.mainEntryId === assetId,
     );
 
     console.log(
-      '# Asset is an entry of bundle:',
+      '# PublicAsset is an entry of bundle:',
       bundleNode.value.entryAssetIds.includes(assetId),
     );
 
@@ -816,7 +816,7 @@ export async function run(input: string[]) {
           ag[n.type]++;
         }
       }
-      _printStatsTable('# Asset Graph Node Counts', Object.entries(ag));
+      _printStatsTable('# PublicAsset Graph Node Counts', Object.entries(ag));
     }
 
     if (!hasBundleGraph()) {

@@ -11,8 +11,8 @@ use markup5ever_rcdom::{Handle, NodeData};
 use atlaspack_core::{
   hash::IdentifierHasher,
   types::{
-    Asset, AssetWithDependencies, BundleBehavior, Code, Dependency, FileType, JSONObject,
-    OutputFormat, Priority, SourceType, SpecifierType,
+    AssetWithDependencies, BundleBehavior, Code, Dependency, FileType, JSONObject, OutputFormat,
+    Priority, PublicAsset, SourceType, SpecifierType,
   },
 };
 
@@ -205,7 +205,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
                 .unwrap_or(FileType::Js);
 
               self.discovered_assets.push(AssetWithDependencies {
-                asset: Asset::new_inline(
+                asset: PublicAsset::new_inline(
                   Code::new(text_content(&node)),
                   env.clone(),
                   inline_asset_file_path(&self.context.source_path, &file_type),
@@ -248,7 +248,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
             });
 
             self.discovered_assets.push(AssetWithDependencies {
-              asset: Asset::new_inline(
+              asset: PublicAsset::new_inline(
                 Code::new(text_content(&node)),
                 self.context.env.clone(),
                 inline_asset_file_path(&self.context.source_path, &file_type),

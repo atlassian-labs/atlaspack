@@ -5,7 +5,7 @@ use anyhow::Error;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
-use atlaspack_core::types::{Asset, BundleBehavior, Code, FileType};
+use atlaspack_core::types::{BundleBehavior, Code, FileType, PublicAsset};
 use image::imageops::FilterType;
 use image::{ImageFormat, ImageReader};
 use url_search_params::parse_url_search_params;
@@ -23,7 +23,7 @@ impl TransformerPlugin for AtlaspackImageTransformerPlugin {
   fn transform(
     &mut self,
     _context: TransformContext,
-    asset: Asset,
+    asset: PublicAsset,
   ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
@@ -122,16 +122,16 @@ mod tests {
       options: Arc::new(PluginOptions::default()),
     });
 
-    let asset = Asset::default();
+    let asset = PublicAsset::default();
     let context = TransformContext::default();
 
     assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Isolated));
     assert_eq!(
       plugin.transform(context, asset).map_err(|e| e.to_string()),
       Ok(TransformResult {
-        asset: Asset {
+        asset: PublicAsset {
           bundle_behavior: Some(BundleBehavior::Isolated),
-          ..Asset::default()
+          ..PublicAsset::default()
         },
         ..Default::default()
       })

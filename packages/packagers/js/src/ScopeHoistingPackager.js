@@ -1108,7 +1108,7 @@ ${code}
         return this.getPropertyAccess(obj, exportSymbol);
       }
     } else if (!symbol) {
-      invariant(false, 'Asset was skipped or not found.');
+      invariant(false, 'PublicAsset was skipped or not found.');
     } else {
       return replacements?.get(symbol) || symbol;
     }

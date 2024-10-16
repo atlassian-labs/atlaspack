@@ -21,7 +21,7 @@ import invariant from 'assert';
 import nullthrows from 'nullthrows';
 
 import {mapVisitor} from '@atlaspack/graph';
-import {assetFromValue, assetToAssetValue, Asset} from './Asset';
+import {assetFromValue, assetToAssetValue, PublicAsset} from './PublicAsset';
 import {bundleToInternalBundle} from './Bundle';
 import Dependency, {
   dependencyToInternalDependency,
@@ -68,7 +68,7 @@ export default class BundleGraph<TBundle: IBundle>
     _bundleGraphToInternalBundleGraph.set(this, graph);
   }
 
-  getAssetById(id: string): Asset {
+  getAssetById(id: string): PublicAsset {
     return assetFromValue(this.#graph.getAssetById(id), this.#options);
   }
 
@@ -316,7 +316,7 @@ export default class BundleGraph<TBundle: IBundle>
   }
 
   getUsedSymbols(v: IAsset | IDependency): ?$ReadOnlySet<Symbol> {
-    if (v instanceof Asset) {
+    if (v instanceof PublicAsset) {
       return this.#graph.getUsedSymbolsAsset(assetToAssetValue(v));
     } else {
       invariant(v instanceof Dependency);
