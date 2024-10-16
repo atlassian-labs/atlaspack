@@ -34,6 +34,63 @@ describe('javascript', function () {
     await removeDistDirectory();
   });
 
+  it.v2(
+    'does not fail when there is a transitive import of an empty file with export *',
+    async () => {
+      await fsFixture(overlayFS, __dirname)`
+        empty.js:
+          // intentionally empty
+        a.js:
+          export * from './b.js';
+          export * from './c.js';
+          export * from './d.js';
+          export * from './e.js';
+          export * from './f.js';
+          export * from './empty.js';
+        b.js:
+          export * from './c.js';
+          export * from './d.js';
+          export * from './e.js';
+          export * from './f.js';
+          export * from './empty.js';
+        c.js:
+          export * from './d.js';
+          export * from './e.js';
+          export * from './f.js';
+          export * from './empty.js';
+        d.js:
+          export * from './e.js';
+          export * from './f.js';
+          export * from './empty.js';
+        e.js:
+          export * from './empty.js';
+          export * from './test.js';
+        f.js:
+          export * from './empty.js';
+        index.js:
+          import {test} from './a.js';
+          output(test);
+        package.json:
+          {
+            "sideEffects": false
+          }
+        test.js:
+          export const test = 'should not fail';
+        yarn.lock: {}
+      `;
+      let result = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+      });
+      let output;
+      await run(result, {
+        output(v) {
+          output = v;
+        },
+      });
+      assert.equal(output, 'should not fail');
+    },
+  );
+
   it('should produce a basic JS bundle with CommonJS requires', async function () {
     const inputDir = path.join(__dirname, 'integration/commonjs');
     let b = await bundle(path.join(inputDir, '/index.js'));

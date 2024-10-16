@@ -1,7 +1,7 @@
 use regex::Regex;
-use swc_core::ecma::visit::{Fold, VisitMut};
+use swc_core::ecma::visit::{Fold, Visit, VisitMut};
 
-use crate::runner::{run_fold, run_visit};
+use crate::runner::{run_fold, run_visit, run_visit_const};
 pub use crate::runner::{RunContext, RunVisitResult};
 
 /// In the future this might be a different type to `RunContext`
@@ -18,6 +18,13 @@ pub fn run_test_visit<V: VisitMut>(
   make_visit: impl FnOnce(RunTestContext) -> V,
 ) -> RunVisitResult<V> {
   run_visit(code, make_visit).unwrap()
+}
+
+pub fn run_test_visit_const<V: Visit>(
+  code: &str,
+  make_visit: impl FnOnce(RunTestContext) -> V,
+) -> RunVisitResult<V> {
+  run_visit_const(code, make_visit).unwrap()
 }
 
 /// Same as `run_visit` but for `Fold` instances
