@@ -152,6 +152,8 @@ pub fn generate_events(
 
   let mut changed_paths = vec![];
   for resolution in changed_resolutions {
+    tracing::debug!("Changed resolution: {:?}", resolution.resolution);
+
     if let Some(dependency_state) = state.get(&resolution.resolution) {
       for location in &dependency_state.locations {
         changed_paths.push(node_modules_parent_path.join(location));

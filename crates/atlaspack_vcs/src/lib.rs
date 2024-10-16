@@ -373,13 +373,28 @@ pub fn vcs_list_dirty_files(
 
   let mut results = Vec::new();
 
-  for path in lines {
-    let contents = std::fs::read(&dir.join(path))?;
+  for relative_path in lines {
+    tracing::debug!("Hashing file {}", relative_path);
+    let path = Path::new(relative_path);
+    let path = dir.join(path);
+
+    // We hash the contents of the file but if it's a symlink we hash the target
+    // path instead rather than following the link.
+    let metadata = std::fs::symlink_metadata(&path)?;
+    let contents = if metadata.is_symlink() {
+      std::fs::read_link(&path)?
+        .to_str()
+        .unwrap()
+        .as_bytes()
+        .to_vec()
+    } else {
+      std::fs::read(&path)?
+    };
     let mut state = std::collections::hash_map::DefaultHasher::new();
     contents.hash(&mut state);
     let hash = state.finish();
     results.push(VCSFile {
-      path: path.into(),
+      path: relative_path.into(),
       hash,
     });
   }
