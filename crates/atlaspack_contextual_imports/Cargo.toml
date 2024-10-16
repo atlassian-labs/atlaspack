@@ -1,0 +1,16 @@
+[package]
+name = "atlaspack_contextual_imports"
+version = "0.1.0"
+authors = ["Jake Lane <me@jakelane.me>"]
+edition = "2021"
+description = "Atlaspack contextual imports transformation"
+
+[dependencies]
+serde = { version = "1.0.200", features = ["derive"] }
+serde_json = "1.0.116"
+swc_core = { version = "0.96", features = ["ecma_plugin_transform"] }
+swc_ecma_transforms_testing = {version = "0.143.2"}
+getrandom = { version = "0.2.15", features = ["js"] }
+
+[dev-dependencies]
+atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }

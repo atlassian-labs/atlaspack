@@ -11,6 +11,10 @@ declare export var init: void | (() => void);
 
 export type Transferable = {||};
 
+export type JsCallable<Args: $ReadOnlyArray<mixed>, Return> = (
+  ...Args
+) => Return | Promise<Return>;
+
 export type ProjectPath = any;
 export interface ConfigRequest {
   id: string;
@@ -25,11 +29,12 @@ export interface ConfigRequest {
 export interface RequestOptions {}
 
 export interface FileSystem {
-  canonicalize(path: FilePath): FilePath;
-  cwd(): FilePath;
-  isDir(path: FilePath): boolean;
-  isFile(path: FilePath): boolean;
-  readFile(path: FilePath, encoding?: Encoding): string;
+  canonicalize: JsCallable<[FilePath], FilePath>;
+  createDirectory: JsCallable<[FilePath], Promise<void>>;
+  cwd: JsCallable<[], FilePath>;
+  isDir: JsCallable<[FilePath], boolean>;
+  isFile: JsCallable<[FilePath], boolean>;
+  readFile: JsCallable<[FilePath, Encoding], string>;
 }
 
 export type AtlaspackNapiOptions = {|
@@ -202,16 +207,16 @@ export type Dependency = {|
 |};
 
 export type RpcAssetResult = {|
-  id: String,
-  bundleBehavior: number,
+  id: string,
+  bundleBehavior: ?number,
   filePath: string,
   type: string,
   code: Array<number>,
   meta: any,
-  pipeline?: string,
+  pipeline?: ?string,
   query?: string,
   symbols?: Symbol[],
-  uniqueKey?: string,
+  uniqueKey?: ?string,
   sideEffects: boolean,
   isBundleSplittable: boolean,
   isSource: boolean,

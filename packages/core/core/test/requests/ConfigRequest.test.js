@@ -229,10 +229,7 @@ describe('ConfigRequest tests', () => {
       invalidateOnConfigKeyChange: [
         {
           configKey: 'key1',
-          filePath: toProjectPath(
-            projectRoot,
-            path.join('project_root', 'config.json'),
-          ),
+          filePath: toProjectPath(projectRoot, 'config.json'),
         },
       ],
     });

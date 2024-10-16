@@ -19,8 +19,6 @@ use crate::js_transformer_config::{InlineEnvironment, JsTransformerConfig};
 use crate::ts_config::{Jsx, Target, TsConfig};
 
 mod conversion;
-#[cfg(test)]
-mod test_helpers;
 
 /// This is a rust only `TransformerPlugin` implementation for JS assets that goes through the
 /// default SWC transformer.

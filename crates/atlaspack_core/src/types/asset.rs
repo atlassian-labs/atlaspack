@@ -1,11 +1,12 @@
 use std::collections::HashSet;
 use std::ffi::OsStr;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::u64;
+use std::{str, u64};
 
+use anyhow::anyhow;
 use atlaspack_filesystem::FileSystemRef;
 
 use serde::Deserialize;
@@ -26,7 +27,7 @@ pub type AssetId = String;
 ///
 /// TODO: This should be called contents now that it's bytes
 /// TODO: This should be an enum and represent cases where the bytes are on disk
-#[derive(PartialEq, Default, Clone, Debug, Deserialize, Serialize)]
+#[derive(PartialEq, Default, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", transparent)]
 pub struct Code {
   inner: Vec<u8>,
@@ -41,6 +42,11 @@ impl Code {
     &self.inner
   }
 
+  pub fn as_str(&self) -> anyhow::Result<&str> {
+    str::from_utf8(&self.inner)
+      .map_err(|e| anyhow::Error::new(e).context("Failed to convert code to UTF8 str"))
+  }
+
   pub fn size(&self) -> u32 {
     self.inner.len() as u32
   }
@@ -52,10 +58,24 @@ impl Display for Code {
   }
 }
 
+impl Debug for Code {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{:?}", self.as_str().unwrap())
+  }
+}
+
 impl From<String> for Code {
   fn from(value: String) -> Self {
     Self {
       inner: value.into_bytes(),
+    }
+  }
+}
+
+impl From<&str> for Code {
+  fn from(value: &str) -> Self {
+    Self {
+      inner: value.to_owned().into_bytes(),
     }
   }
 }
@@ -306,6 +326,36 @@ impl Asset {
       unique_key,
       ..Asset::default()
     }
+  }
+
+  pub fn new_discovered(
+    source_asset: &Asset,
+    unique_key: String,
+    file_type: FileType,
+    code: String,
+    side_effects: bool,
+  ) -> anyhow::Result<Self> {
+    let asset_id = create_asset_id(CreateAssetIdParams {
+      environment_id: &source_asset.env.id(),
+      file_path: source_asset
+        .file_path
+        .to_str()
+        .ok_or_else(|| anyhow!("Could not get source asset file path"))?,
+      code: Some(code.as_str()),
+      pipeline: None,
+      query: None,
+      unique_key: Some(&unique_key),
+      file_type: &file_type,
+    });
+
+    Ok(Self {
+      code: Arc::new(Code::from(code)),
+      file_type,
+      id: asset_id,
+      side_effects,
+      unique_key: Some(unique_key),
+      ..source_asset.clone()
+    })
   }
 
   pub fn set_interpreter(&mut self, shebang: impl Into<serde_json::Value>) {

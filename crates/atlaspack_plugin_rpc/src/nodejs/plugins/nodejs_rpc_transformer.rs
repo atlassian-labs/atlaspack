@@ -1,3 +1,4 @@
+use once_cell::sync::OnceCell;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -21,11 +22,17 @@ use atlaspack_core::types::Asset;
 use atlaspack_core::types::*;
 
 use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
+use super::super::rpc::LoadPluginKind;
+use super::super::rpc::LoadPluginOptions;
 
 pub struct NodejsRpcTransformerPlugin {
   rpc_workers: Arc<NodeJsWorkerCollection>,
   plugin: PluginNode,
   plugin_options: RpcPluginOptions,
+  resolve_from: PathBuf,
+  specifier: String,
+  project_root: PathBuf,
+  started: OnceCell<Vec<()>>,
 }
 
 impl Debug for NodejsRpcTransformerPlugin {
@@ -48,6 +55,10 @@ impl NodejsRpcTransformerPlugin {
       rpc_workers,
       plugin: plugin.clone(),
       plugin_options,
+      specifier: plugin.package_name.clone(),
+      resolve_from: (&*plugin.resolve_from).to_path_buf(),
+      project_root: (&*ctx.options.project_root).to_path_buf(),
+      started: OnceCell::new(),
     })
   }
 }
@@ -64,14 +75,25 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, Error> {
+    self.started.get_or_try_init(|| {
+      self.rpc_workers.exec_on_all(|worker| {
+        worker.load_plugin(LoadPluginOptions {
+          kind: LoadPluginKind::Transformer,
+          specifier: self.specifier.clone(),
+          resolve_from: self.resolve_from.clone(),
+        })
+      })
+    })?;
+
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
+
     let run_transformer_opts = RpcTransformerOpts {
-      // TODO: Make this not bad
-      resolve_from: self.plugin.resolve_from.to_str().unwrap().to_string(),
-      specifier: self.plugin.package_name.clone(),
+      key: self.specifier.clone(),
       // TODO: Pass this just once to each worker
       options: self.plugin_options.clone(),
+      env: asset_env.clone(),
+      project_root: self.project_root.clone(),
       asset,
     };
 
@@ -85,7 +107,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     let transformed_asset = Asset {
       id: result.asset.id,
       code: Arc::new(result.asset.code),
-      bundle_behavior: Some(result.asset.bundle_behavior),
+      bundle_behavior: result.asset.bundle_behavior,
       env: asset_env.clone(),
       file_path: result.asset.file_path,
       file_type: result.asset.file_type,
@@ -131,7 +153,7 @@ pub struct RpcPluginOptions {
 #[serde(rename_all = "camelCase")]
 pub struct RpcAssetResult {
   pub id: String,
-  pub bundle_behavior: BundleBehavior,
+  pub bundle_behavior: Option<BundleBehavior>,
   pub file_path: PathBuf,
   #[serde(rename = "type")]
   pub file_type: FileType,
@@ -166,9 +188,10 @@ pub struct RpcEnvironmentResult {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RpcTransformerOpts {
-  pub resolve_from: String,
-  pub specifier: String,
+  pub key: String,
   pub options: RpcPluginOptions,
+  pub env: Arc<Environment>,
+  pub project_root: PathBuf,
   pub asset: Asset,
 }
 
