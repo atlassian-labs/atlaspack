@@ -348,8 +348,7 @@ mod tests {
 
   use super::*;
 
-  #[test]
-  fn supports_css_imports() {
+  fn run_plugin(asset: &Asset) -> anyhow::Result<TransformResult> {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let mut plugin = AtlaspackCssTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
@@ -363,16 +362,18 @@ mod tests {
     });
     let context = TransformContext::default();
 
+    plugin.transform(context, asset.clone())
+  }
+
+  #[test]
+  fn supports_css_imports() {
     let asset = Asset {
       id: "my-asset".into(),
       file_path: "styles.css".into(),
       code: Arc::new(Code::from("@import './stuff.css';")),
       ..Default::default()
     };
-
-    let result = plugin
-      .transform(context, asset.clone())
-      .map_err(|e| e.to_string());
+    let result = run_plugin(&asset);
 
     assert_eq!(
       result.unwrap().dependencies,
@@ -394,19 +395,6 @@ mod tests {
 
   #[test]
   fn supports_css_modules() {
-    let file_system = Arc::new(InMemoryFileSystem::default());
-    let mut plugin = AtlaspackCssTransformerPlugin::new(&PluginContext {
-      config: Arc::new(ConfigLoader {
-        fs: file_system.clone(),
-        project_root: PathBuf::default(),
-        search_path: PathBuf::default(),
-      }),
-      file_system,
-      logger: PluginLogger::default(),
-      options: Arc::new(PluginOptions::default()),
-    });
-    let context = TransformContext::default();
-
     let asset = Asset {
       id: "css-module".into(),
       file_path: "styles.module.css".into(),
@@ -415,7 +403,7 @@ mod tests {
       ..Default::default()
     };
 
-    let result = plugin.transform(context, asset.clone()).unwrap();
+    let result = run_plugin(&asset).unwrap();
 
     assert_eq!(result.discovered_assets.len(), 1);
     assert_eq!(
