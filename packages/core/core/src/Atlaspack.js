@@ -58,7 +58,7 @@ import {
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
-import {AtlaspackV3, toFileSystemV3} from './atlaspack-v3';
+import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 
 registerCoreWithSerializer();
 
@@ -144,7 +144,7 @@ export default class Atlaspack {
           ? undefined
           : [entries],
         env: resolvedOptions.env,
-        fs: inputFS && toFileSystemV3(inputFS),
+        fs: inputFS && new FileSystemV3(inputFS),
         defaultTargetOptions: {
           // $FlowFixMe projectPath is just a string
           distDir: resolvedOptions.defaultTargetOptions.distDir,
