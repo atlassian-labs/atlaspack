@@ -1,28 +1,42 @@
 // @flow
 import assert from 'assert';
 import * as napi from '@atlaspack/rust';
+import type {JsCallable} from '@atlaspack/rust';
+import {NodeFS} from '@atlaspack/fs';
+import {NodePackageManager} from '@atlaspack/package-manager';
 import type {
   Resolver,
   Transformer,
-  PluginOptions,
-  Dependency,
   FilePath,
+  FileSystem,
 } from '@atlaspack/types';
 import {workerData} from 'worker_threads';
 import * as module from 'module';
 
-import {AssetCompat} from './compat';
-import type {InnerAsset} from './compat';
+import {
+  Environment,
+  Dependency,
+  PluginConfig,
+  PluginLogger,
+  PluginTracer,
+  PluginOptions,
+  MutableAsset,
+  bundleBehaviorMap,
+  dependencyPriorityMap,
+} from './compat';
 import {jsCallable} from '../jsCallable';
-import type {JsCallable} from '../jsCallable';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 
 export class AtlaspackWorker {
-  #resolvers: Map<string, Resolver<*>>;
+  #resolvers: Map<string, ResolverState<any>>;
+  #transformers: Map<string, TransformerState<any>>;
+  #fs: FileSystem;
 
   constructor() {
     this.#resolvers = new Map();
+    this.#transformers = new Map();
+    this.#fs = new NodeFS();
   }
 
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<void>> = jsCallable(
@@ -37,6 +51,7 @@ export class AtlaspackWorker {
         instance = resolvedModule.default[CONFIG];
       } else if (
         resolvedModule.default &&
+        resolvedModule.default.default &&
         resolvedModule.default.default[CONFIG]
       ) {
         instance = resolvedModule.default.default[CONFIG];
@@ -48,7 +63,10 @@ export class AtlaspackWorker {
 
       switch (kind) {
         case 'resolver':
-          this.#resolvers.set(specifier, instance);
+          this.#resolvers.set(specifier, {resolver: instance});
+          break;
+        case 'transformer':
+          this.#transformers.set(specifier, {transformer: instance});
           break;
       }
     },
@@ -57,142 +75,225 @@ export class AtlaspackWorker {
   runResolverResolve: JsCallable<
     [RunResolverResolveOptions],
     Promise<RunResolverResolveResult>,
-  > = jsCallable(async ({key, dependency, specifier}) => {
-    const resolver = this.#resolvers.get(key);
-    if (!resolver) {
-      throw new Error(`Resolver not found: ${key}`);
-    }
-
-    const result = await resolver.resolve({
+  > = jsCallable(
+    async ({
+      key,
+      dependency: napiDependency,
       specifier,
-      dependency,
-      get options() {
-        throw new Error('TODO: Resolver.resolve.options');
-      },
-      get logger() {
-        throw new Error('TODO: Resolver.resolve.logger');
-      },
-      get tracer() {
-        throw new Error('TODO: Resolver.resolve.tracer');
-      },
-      get pipeline() {
-        throw new Error('TODO: Resolver.resolve.pipeline');
-      },
-      get config() {
-        throw new Error('TODO: Resolver.resolve.config');
-      },
-    });
-
-    if (!result) {
-      return {
-        invalidations: [],
-        resolution: {type: 'unresolved'},
-      };
-    }
-
-    return {
-      invalidations: [],
-      resolution: {
-        type: 'resolved',
-        filePath: result.filePath || '',
-        canDefer: result.canDefer || false,
-        sideEffects: result.sideEffects || false,
-        code: result.code || undefined,
-        meta: result.meta || undefined,
-        pipeline: result.pipeline || undefined,
-        priority: result.priority && PriorityMap[result.priority],
-        query: result.query && result.query.toString(),
-      },
-    };
-  });
-
-  ping() {
-    // console.log('Hi');
-  }
-
-  async runTransformer({
-    resolveFrom,
-    specifier,
-    options,
-    asset,
-  }: {|
-    resolveFrom: string,
-    specifier: string,
-    options: PluginOptions,
-    asset: InnerAsset,
-  |}): any {
-    const customRequire = module.createRequire(resolveFrom);
-    const resolvedPath = customRequire.resolve(specifier);
-    // $FlowFixMe
-    const transformerModule = await import(resolvedPath);
-    const transformer: Transformer<*> =
-      transformerModule.default.default[CONFIG];
-
-    let assetCompat = new AssetCompat(asset, options);
-
-    try {
-      if (transformer.parse) {
-        // $FlowFixMe
-        const ast = await transformer.parse({asset: assetCompat}); // missing "config"
-        // $FlowFixMe
-        assetCompat.setAST(ast);
+      pipeline,
+      projectRoot,
+    }) => {
+      const state = this.#resolvers.get(key);
+      if (!state) {
+        throw new Error(`Resolver not found: ${key}`);
       }
 
-      // $FlowFixMe
-      const result = await transformer.transform({
-        // $FlowFixMe
-        asset: assetCompat,
-        options,
-        config: null,
+      let packageManager = state.packageManager;
+      if (!packageManager) {
+        packageManager = new NodePackageManager(this.#fs, projectRoot);
+        state.packageManager = packageManager;
+      }
+
+      const env = new Environment(napiDependency.env);
+      const dependency = new Dependency(napiDependency, env);
+
+      const defaultOptions = {
+        logger: new PluginLogger(),
+        tracer: new PluginTracer(),
+        options: new PluginOptions({
+          packageManager,
+          shouldAutoInstall: false,
+          projectRoot,
+          inputFS: this.#fs,
+          outputFS: this.#fs,
+        }),
+      };
+
+      if (!('config' in state)) {
+        state.config = await state.resolver.loadConfig?.({
+          config: new PluginConfig({
+            env,
+            isSource: true,
+            searchPath: '',
+          }),
+          ...defaultOptions,
+        });
+      }
+
+      const result = await state.resolver.resolve({
+        specifier,
+        dependency,
+        pipeline,
+        config: state.config,
+        ...defaultOptions,
+      });
+
+      if (!result) {
+        return {
+          invalidations: [],
+          resolution: {type: 'unresolved'},
+        };
+      }
+
+      return {
+        invalidations: [],
+        resolution: {
+          type: 'resolved',
+          filePath: result.filePath || '',
+          canDefer: result.canDefer || false,
+          sideEffects: result.sideEffects || false,
+          code: result.code || undefined,
+          meta: result.meta || undefined,
+          pipeline: result.pipeline || undefined,
+          priority: dependencyPriorityMap.intoNullable(result.priority),
+          query: result.query && result.query.toString(),
+        },
+      };
+    },
+  );
+
+  runTransformerTransform: JsCallable<
+    [RunTransformerTransformOptions],
+    Promise<RunTransformerTransformResult>,
+  > = jsCallable(
+    async ({key, env: napiEnv, projectRoot, asset: innerAsset}) => {
+      const state = this.#transformers.get(key);
+      if (!state) {
+        throw new Error(`Transformer not found: ${key}`);
+      }
+
+      let packageManager = state.packageManager;
+      if (!packageManager) {
+        packageManager = new NodePackageManager(this.#fs, projectRoot);
+        state.packageManager = packageManager;
+      }
+
+      const transformer: Transformer<any> = state.transformer;
+      const env = new Environment(napiEnv);
+      const mutableAsset = new MutableAsset(innerAsset, this.#fs, env);
+      const defaultOptions = {
+        logger: new PluginLogger(),
+        tracer: new PluginTracer(),
+        options: new PluginOptions({
+          packageManager,
+          shouldAutoInstall: false,
+          projectRoot,
+          inputFS: this.#fs,
+          outputFS: this.#fs,
+        }),
+      };
+
+      const config = await transformer.loadConfig?.({
+        config: new PluginConfig({
+          env,
+          isSource: true,
+          searchPath: '',
+        }),
+        ...defaultOptions,
+      });
+
+      if (transformer.parse) {
+        const ast = await transformer.parse({
+          asset: mutableAsset,
+          config,
+          get resolve() {
+            throw new Error('Transformer.parse.resolve()');
+          },
+          ...defaultOptions,
+        });
+        if (ast) {
+          mutableAsset.setAST(ast);
+        }
+      }
+
+      const result = await state.transformer.transform({
+        asset: mutableAsset,
+        config,
+        get resolve() {
+          throw new Error('Transformer.transform.resolve()');
+        },
+        ...defaultOptions,
       });
 
       if (transformer.generate) {
-        // $FlowFixMe
-        let output = await transformer.generate({
-          // $FlowFixMe
-          asset: assetCompat,
-          // $FlowFixMe
-          ast: assetCompat.getAST(),
+        const ast = await mutableAsset.getAST();
+        if (!ast) {
+          throw new Error('Transformer.generate.ast');
+        }
+        // $FlowFixMe "Cannot call `transformer.generate` because  undefined [1] is not a function." 🤷‍♀️
+        const output = await transformer.generate({
+          asset: mutableAsset,
+          ast,
+          ...defaultOptions,
         });
-        // $FlowFixMe
-        assetCompat.setCode(output.content);
+
+        if (typeof output.content === 'string') {
+          mutableAsset.setCode(output.content);
+        } else if (output.content instanceof Buffer) {
+          mutableAsset.setBuffer(output.content);
+        } else {
+          mutableAsset.setStream(output.content);
+        }
       }
 
       assert(
         result.length === 1,
         '[V3] Unimplemented: Multiple asset return from Node transformer',
       );
+
       assert(
-        result[0] === assetCompat,
+        result[0] === mutableAsset,
         '[V3] Unimplemented: New asset returned from Node transformer',
       );
 
       return {
-        asset,
-        dependencies: assetCompat._dependencies,
+        asset: {
+          id: mutableAsset.id,
+          bundleBehavior: bundleBehaviorMap.intoNullable(
+            mutableAsset.bundleBehavior,
+          ),
+          filePath: mutableAsset.filePath,
+          type: mutableAsset.type,
+          code: Array.from(await mutableAsset.getBuffer()),
+          meta: mutableAsset.meta,
+          pipeline: mutableAsset.pipeline,
+          query: mutableAsset.query.toString(),
+          symbols: mutableAsset.symbols.intoNapi(),
+          uniqueKey: mutableAsset.uniqueKey,
+          sideEffects: mutableAsset.sideEffects,
+          isBundleSplittable: mutableAsset.isBundleSplittable,
+          isSource: mutableAsset.isSource,
+        },
       };
-    } catch (e) {
-      // TODO: Improve error logging from JS plugins. Without this you currently
-      // only see the error message, no stack trace.
-      // eslint-disable-next-line no-console
-      console.error(e);
-      throw e;
-    }
-  }
+    },
+  );
 }
 
 napi.registerWorker(workerData.tx_worker, new AtlaspackWorker());
 
+type ResolverState<T> = {|
+  resolver: Resolver<T>,
+  config?: T,
+  packageManager?: NodePackageManager,
+|};
+
+type TransformerState<T> = {|
+  packageManager?: NodePackageManager,
+  transformer: Transformer<T>,
+|};
+
 type LoadPluginOptions = {|
-  kind: 'resolver',
+  kind: 'resolver' | 'transformer',
   specifier: string,
   resolveFrom: string,
 |};
 
 type RunResolverResolveOptions = {|
   key: string,
-  dependency: Dependency,
+  dependency: napi.Dependency,
   specifier: FilePath,
+  pipeline: ?string,
+  projectRoot: string,
 |};
 
 type RunResolverResolveResult = {|
@@ -208,14 +309,18 @@ type RunResolverResolveResult = {|
         code?: string,
         meta?: mixed,
         pipeline?: string,
-        priority?: number,
+        priority?: ?number,
         query?: string,
       |},
 |};
 
-const PriorityMap = {
-  sync: 0,
-  parallel: 1,
-  lazy: 2,
-  conditional: 3,
-};
+type RunTransformerTransformOptions = {|
+  key: string,
+  env: napi.Environment,
+  projectRoot: string,
+  asset: napi.Asset,
+|};
+
+type RunTransformerTransformResult = {|
+  asset: napi.RpcAssetResult,
+|};

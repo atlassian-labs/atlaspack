@@ -133,7 +133,7 @@ describe('AtlaspackConfigRequest', () => {
             '.parcelrc',
           );
         },
-        e => {
+        (e) => {
           assert.strictEqual(
             e.diagnostics[0].codeFrames[0].codeHighlights[0].message,
             `Possible values: "$schema", "bundler", "resolvers", "transformers", "validators", "namers", "packagers", "optimizers", "compressors", "reporters", "runtimes", "filePath", "resolveFrom"`,

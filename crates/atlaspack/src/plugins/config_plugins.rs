@@ -17,22 +17,16 @@ use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::plugin::ValidatorPlugin;
 use atlaspack_plugin_resolver::AtlaspackResolver;
-use atlaspack_plugin_rpc::plugin::RpcBundlerPlugin;
-use atlaspack_plugin_rpc::plugin::RpcCompressorPlugin;
-use atlaspack_plugin_rpc::plugin::RpcNamerPlugin;
-use atlaspack_plugin_rpc::plugin::RpcOptimizerPlugin;
-use atlaspack_plugin_rpc::plugin::RpcPackagerPlugin;
-use atlaspack_plugin_rpc::plugin::RpcReporterPlugin;
-use atlaspack_plugin_rpc::plugin::RpcResolverPlugin;
-use atlaspack_plugin_rpc::plugin::RpcRuntimePlugin;
-use atlaspack_plugin_rpc::plugin::RpcTransformerPlugin;
 use atlaspack_plugin_rpc::RpcWorkerRef;
+use atlaspack_plugin_transformer_css::AtlaspackCssTransformerPlugin;
+use atlaspack_plugin_transformer_html::AtlaspackHtmlTransformerPlugin;
 use atlaspack_plugin_transformer_image::AtlaspackImageTransformerPlugin;
 use atlaspack_plugin_transformer_inline::AtlaspackInlineTransformerPlugin;
 use atlaspack_plugin_transformer_inline_string::AtlaspackInlineStringTransformerPlugin;
 use atlaspack_plugin_transformer_js::AtlaspackJsTransformerPlugin;
 use atlaspack_plugin_transformer_json::AtlaspackJsonTransformerPlugin;
 use atlaspack_plugin_transformer_raw::AtlaspackRawTransformerPlugin;
+use atlaspack_plugin_transformer_yaml::AtlaspackYamlTransformerPlugin;
 
 use super::Plugins;
 use super::TransformerPipeline;
@@ -56,21 +50,28 @@ impl ConfigPlugins {
     rpc_worker: Option<RpcWorkerRef>,
     config: AtlaspackConfig,
     ctx: PluginContext,
-  ) -> Self {
+  ) -> anyhow::Result<Self> {
     let mut reporters: Vec<Box<dyn ReporterPlugin>> = Vec::new();
 
     for reporter in config.reporters.iter() {
-      reporters.push(Box::new(RpcReporterPlugin::new(&ctx, reporter)));
+      let Some(rpc_worker) = &rpc_worker else {
+        anyhow::bail!(
+          "Unable to initialize JavaScript Reporter plugin {}",
+          reporter.package_name
+        )
+      };
+
+      reporters.push(rpc_worker.create_reporter(&ctx, reporter)?);
     }
 
     let reporter = Arc::new(CompositeReporterPlugin::new(reporters));
 
-    ConfigPlugins {
+    Ok(ConfigPlugins {
       rpc_worker,
       config,
       ctx,
       reporter,
-    }
+    })
   }
 
   fn missing_plugin(&self, path: &Path, phase: &str) -> anyhow::Error {
@@ -88,10 +89,14 @@ impl ConfigPlugins {
 impl Plugins for ConfigPlugins {
   #[allow(unused)]
   fn bundler(&self) -> Result<Box<dyn BundlerPlugin>, anyhow::Error> {
-    Ok(Box::new(RpcBundlerPlugin::new(
-      &self.ctx,
-      &self.config.bundler,
-    )?))
+    let Some(rpc_worker) = &self.rpc_worker else {
+      anyhow::bail!(
+        "Unable to initialize JavaScript Bundler plugin {}",
+        self.config.bundler.package_name
+      )
+    };
+
+    Ok(rpc_worker.create_bundler(&self.ctx, &self.config.bundler)?)
   }
 
   #[allow(unused)]
@@ -99,7 +104,14 @@ impl Plugins for ConfigPlugins {
     let mut compressors: Vec<Box<dyn CompressorPlugin>> = Vec::new();
 
     for compressor in self.config.compressors.get(path).iter() {
-      compressors.push(Box::new(RpcCompressorPlugin::new(&self.ctx, compressor)));
+      let Some(rpc_worker) = &self.rpc_worker else {
+        anyhow::bail!(
+          "Unable to initialize JavaScript Compressor plugin {}",
+          compressor.package_name
+        )
+      };
+
+      compressors.push(rpc_worker.create_compressor(&self.ctx, compressor)?);
     }
 
     if compressors.is_empty() {
@@ -118,7 +130,14 @@ impl Plugins for ConfigPlugins {
     let mut namers: Vec<Box<dyn NamerPlugin>> = Vec::new();
 
     for namer in self.config.namers.iter() {
-      namers.push(Box::new(RpcNamerPlugin::new(&self.ctx, namer)?));
+      let Some(rpc_worker) = &self.rpc_worker else {
+        anyhow::bail!(
+          "Unable to initialize JavaScript Namer plugin {}",
+          namer.package_name
+        )
+      };
+
+      namers.push(rpc_worker.create_namer(&self.ctx, namer)?);
     }
 
     Ok(namers)
@@ -137,7 +156,14 @@ impl Plugins for ConfigPlugins {
     });
 
     for optimizer in self.config.optimizers.get(path, named_pattern).iter() {
-      optimizers.push(Box::new(RpcOptimizerPlugin::new(&self.ctx, optimizer)?));
+      let Some(rpc_worker) = &self.rpc_worker else {
+        anyhow::bail!(
+          "Unable to initialize JavaScript Optimizer plugin {}",
+          optimizer.package_name
+        )
+      };
+
+      optimizers.push(rpc_worker.create_optimizer(&self.ctx, optimizer)?);
     }
 
     Ok(optimizers)
@@ -147,10 +173,18 @@ impl Plugins for ConfigPlugins {
   fn packager(&self, path: &Path) -> Result<Box<dyn PackagerPlugin>, anyhow::Error> {
     let packager = self.config.packagers.get(path);
 
-    match packager {
-      None => Err(self.missing_plugin(path, "packager")),
-      Some(packager) => Ok(Box::new(RpcPackagerPlugin::new(&self.ctx, packager)?)),
-    }
+    let Some(packager) = packager else {
+      return Err(self.missing_plugin(path, "packager"));
+    };
+
+    let Some(rpc_worker) = &self.rpc_worker else {
+      anyhow::bail!(
+        "Unable to initialize JavaScript Packager plugin {}",
+        packager.package_name
+      )
+    };
+
+    rpc_worker.create_packager(&self.ctx, packager)
   }
 
   fn reporter(&self) -> Arc<dyn ReporterPlugin> {
@@ -167,14 +201,13 @@ impl Plugins for ConfigPlugins {
       }
 
       let Some(rpc_worker) = &self.rpc_worker else {
-        anyhow::bail!("Unable to initialize JavaScript plugin")
+        anyhow::bail!(
+          "Unable to initialize JavaScript Resolver plugin {}",
+          resolver.package_name
+        )
       };
 
-      resolvers.push(Box::new(RpcResolverPlugin::new(
-        &self.ctx,
-        resolver,
-        rpc_worker.clone(),
-      )?));
+      resolvers.push(rpc_worker.create_resolver(&self.ctx, resolver)?);
     }
 
     Ok(resolvers)
@@ -185,7 +218,14 @@ impl Plugins for ConfigPlugins {
     let mut runtimes: Vec<Box<dyn RuntimePlugin>> = Vec::new();
 
     for runtime in self.config.runtimes.iter() {
-      runtimes.push(Box::new(RpcRuntimePlugin::new(&self.ctx, runtime)?));
+      let Some(rpc_worker) = &self.rpc_worker else {
+        anyhow::bail!(
+          "Unable to initialize JavaScript Packager plugin {}",
+          runtime.package_name
+        )
+      };
+
+      runtimes.push(rpc_worker.create_runtime(&self.ctx, runtime)?);
     }
 
     Ok(runtimes)
@@ -210,7 +250,10 @@ impl Plugins for ConfigPlugins {
         // before releasing native asset graph
         "@atlaspack/transformer-babel" => continue,
         "@atlaspack/transformer-react-refresh-wrap" => continue,
+        "@atlaspack/transformer-posthtml" => continue,
+        "@atlaspack/transformer-postcss" => continue,
         "@atlaspack/transformer-js" => Box::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?),
+        "@atlaspack/transformer-css" => Box::new(AtlaspackCssTransformerPlugin::new(&self.ctx)),
         "@atlaspack/transformer-inline-string" => {
           Box::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
         }
@@ -219,17 +262,18 @@ impl Plugins for ConfigPlugins {
         }
         "@atlaspack/transformer-image" => Box::new(AtlaspackImageTransformerPlugin::new(&self.ctx)),
         "@atlaspack/transformer-raw" => Box::new(AtlaspackRawTransformerPlugin::new(&self.ctx)),
+        "@atlaspack/transformer-html" => Box::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx)),
         "@atlaspack/transformer-json" => Box::new(AtlaspackJsonTransformerPlugin::new(&self.ctx)),
+        "@atlaspack/transformer-yaml" => Box::new(AtlaspackYamlTransformerPlugin::new(&self.ctx)),
         _ => {
           let Some(rpc_worker) = &self.rpc_worker else {
-            anyhow::bail!("Unable to initialize JavaScript plugin")
+            anyhow::bail!(
+              "Unable to initialize JavaScript Transformer plugin {}",
+              transformer.package_name
+            )
           };
 
-          Box::new(RpcTransformerPlugin::new(
-            rpc_worker.clone(),
-            &self.ctx,
-            transformer,
-          )?)
+          rpc_worker.create_transformer(&self.ctx, transformer)?
         }
       };
 

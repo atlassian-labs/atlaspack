@@ -57,7 +57,7 @@ export default async function prettyDiagnostic(
       ? _chalk
       : {
           gray: {
-            underline: v =>
+            underline: (v) =>
               `<span style="color: grey; text-decoration: underline;">${v}</span>`,
           },
         };
@@ -125,7 +125,7 @@ export default async function prettyDiagnostic(
   }
 
   if (Array.isArray(hints) && hints.length) {
-    result.hints = hints.map(h => {
+    result.hints = hints.map((h) => {
       return md(h);
     });
   }

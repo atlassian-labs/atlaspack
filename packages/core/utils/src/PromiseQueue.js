@@ -32,11 +32,11 @@ export default class PromiseQueue<T> {
       let i = this._count++;
       let wrapped = () =>
         fn().then(
-          result => {
+          (result) => {
             this._results[i] = result;
             resolve(result);
           },
-          err => {
+          (err) => {
             reject(err);
             throw err;
           },

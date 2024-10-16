@@ -162,7 +162,7 @@ class BaseAsset {
   getDependencies(): $ReadOnlyArray<IDependency> {
     return this.#asset
       .getDependencies()
-      .map(dep => getPublicDependency(dep, this.#asset.options));
+      .map((dep) => getPublicDependency(dep, this.#asset.options));
   }
 
   getCode(): Promise<string> {

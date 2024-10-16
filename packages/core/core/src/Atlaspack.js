@@ -1,5 +1,4 @@
 // @flow strict-local
-
 import type {
   Asset,
   AsyncSubscription,
@@ -58,7 +57,7 @@ import {
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
-import {AtlaspackV3, toFileSystemV3} from './atlaspack-v3';
+import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 
 registerCoreWithSerializer();
 
@@ -144,7 +143,7 @@ export default class Atlaspack {
           ? undefined
           : [entries],
         env: resolvedOptions.env,
-        fs: inputFS && toFileSystemV3(inputFS),
+        fs: inputFS && new FileSystemV3(inputFS),
         defaultTargetOptions: {
           // $FlowFixMe projectPath is just a string
           distDir: resolvedOptions.defaultTargetOptions.distDir,
@@ -401,7 +400,7 @@ export default class Atlaspack {
           options,
         ),
         buildTime: Date.now() - startTime,
-        requestBundle: async bundle => {
+        requestBundle: async (bundle) => {
           let bundleNode = bundleGraph._graph.getNodeByContentKey(bundle.id);
           invariant(bundleNode?.type === 'bundle', 'Bundle does not exist');
 
@@ -580,7 +579,7 @@ export default class Atlaspack {
     let res = await this.#requestTracker.runRequest(request, {
       force: true,
     });
-    return res.map(asset =>
+    return res.map((asset) =>
       assetFromValue(asset, nullthrows(this.#resolvedOptions)),
     );
   }

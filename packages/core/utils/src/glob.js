@@ -48,10 +48,10 @@ export function globSync(
   options = {
     ...options,
     fs: {
-      statSync: p => {
+      statSync: (p) => {
         return fs.statSync(p);
       },
-      lstatSync: p => {
+      lstatSync: (p) => {
         // Our FileSystem interface doesn't have lstat support at the moment,
         // but this is fine for our purposes since we follow symlinks by default.
         return fs.statSync(p);

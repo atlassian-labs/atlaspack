@@ -7,7 +7,7 @@ export default function promiseFromProcess(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     childProcess.on('error', reject);
-    childProcess.on('close', code => {
+    childProcess.on('close', (code) => {
       if (code !== 0) {
         reject(new Error('Child process failed'));
         return;

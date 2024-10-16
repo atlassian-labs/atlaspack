@@ -312,7 +312,7 @@ describe('Graph', () => {
 
     let visited = [];
     graph.traverse(
-      nodeId => {
+      (nodeId) => {
         visited.push(nodeId);
       },
       null, // use root as startNode

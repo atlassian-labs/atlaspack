@@ -15,7 +15,7 @@ import {
 export default (new Packager({
   async package({bundle, bundleGraph, getInlineBundleContents}) {
     const assets = [];
-    bundle.traverseAssets(asset => {
+    bundle.traverseAssets((asset) => {
       assets.push(asset);
     });
 
@@ -48,8 +48,8 @@ export default (new Packager({
     };
 
     let {html: svg} = await posthtml([
-      tree => insertBundleReferences(referencedBundles, tree),
-      tree =>
+      (tree) => insertBundleReferences(referencedBundles, tree),
+      (tree) =>
         replaceInlineAssetContent(bundleGraph, getInlineBundleContents, tree),
     ]).process(code, options);
 
@@ -58,7 +58,7 @@ export default (new Packager({
       bundleGraph,
       contents: svg,
       relative: false,
-      getReplacement: contents => contents.replace(/"/g, '&quot;'),
+      getReplacement: (contents) => contents.replace(/"/g, '&quot;'),
     });
 
     return replaceInlineReferences({
@@ -81,7 +81,7 @@ async function replaceInlineAssetContent(
   tree,
 ) {
   const inlineNodes = [];
-  tree.walk(node => {
+  tree.walk((node) => {
     if (node.attrs && node.attrs['data-parcel-key']) {
       inlineNodes.push(node);
     }
@@ -124,7 +124,7 @@ async function getAssetContent(
   let inlineBundle: ?Bundle;
   bundleGraph.traverseBundles((bundle, context, {stop}) => {
     const entryAssets = bundle.getEntryAssets();
-    if (entryAssets.some(a => a.uniqueKey === assetId)) {
+    if (entryAssets.some((a) => a.uniqueKey === assetId)) {
       inlineBundle = bundle;
       stop();
     }
@@ -162,7 +162,7 @@ function insertBundleReferences(siblingBundles, tree) {
 
   tree.unshift(...stylesheets);
   if (scripts.length > 0) {
-    tree.match({tag: 'svg'}, node => {
+    tree.match({tag: 'svg'}, (node) => {
       node.content.unshift(...scripts);
     });
   }

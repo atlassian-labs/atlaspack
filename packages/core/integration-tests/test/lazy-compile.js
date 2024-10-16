@@ -15,13 +15,13 @@ import {
 } from '@atlaspack/test-utils';
 
 const findBundle = (bundleGraph, nameRegex) => {
-  const result = bundleGraph.getBundles().find(b => nameRegex.test(b.name));
+  const result = bundleGraph.getBundles().find((b) => nameRegex.test(b.name));
 
   if (!result) {
     throw new Error(
       `Couldn't find bundle matching '${nameRegex}'. Available bundles are ${bundleGraph
         ?.getBundles()
-        .map(b => b.name)
+        .map((b) => b.name)
         .join(', ')}`,
     );
   }
@@ -29,17 +29,17 @@ const findBundle = (bundleGraph, nameRegex) => {
   return result;
 };
 
-const distDirIncludes = async matches => {
+const distDirIncludes = async (matches) => {
   const files = await outputFS.readdir(distDir);
   for (const match of matches) {
     if (typeof match === 'string') {
-      if (!files.some(file => file === match)) {
+      if (!files.some((file) => file === match)) {
         throw new Error(
           `No file matching ${match} was found in ${files.join(', ')}`,
         );
       }
     } else {
-      if (!files.some(file => match.test(file))) {
+      if (!files.some((file) => match.test(file))) {
         throw new Error(
           `No file matching ${match} was found in ${files.join(', ')}`,
         );

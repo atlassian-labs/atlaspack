@@ -123,7 +123,7 @@ export class Pnpm implements PackageInstaller {
     installProcess.stdout
       .pipe(split())
       .pipe(new JSONParseStream())
-      .on('error', e => {
+      .on('error', (e) => {
         logger.warn({
           origin: '@atlaspack/package-manager',
           message: e.chunk,
@@ -150,10 +150,10 @@ export class Pnpm implements PackageInstaller {
 
     let stderr = [];
     installProcess.stderr
-      .on('data', str => {
+      .on('data', (str) => {
         stderr.push(str.toString());
       })
-      .on('error', e => {
+      .on('error', (e) => {
         logger.warn({
           origin: '@atlaspack/package-manager',
           message: e.message,

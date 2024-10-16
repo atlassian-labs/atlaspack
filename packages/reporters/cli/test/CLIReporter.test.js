@@ -57,9 +57,9 @@ describe('CLIReporter', () => {
     stderrOutput = '';
 
     let mockStdout = new PassThrough();
-    mockStdout.on('data', d => (stdoutOutput += stripAnsi(d.toString())));
+    mockStdout.on('data', (d) => (stdoutOutput += stripAnsi(d.toString())));
     let mockStderr = new PassThrough();
-    mockStderr.on('data', d => (stderrOutput += stripAnsi(d.toString())));
+    mockStderr.on('data', (d) => (stderrOutput += stripAnsi(d.toString())));
     _setStdio(mockStdout, mockStderr);
 
     await _report(

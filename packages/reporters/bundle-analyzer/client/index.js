@@ -64,7 +64,7 @@ let foamtree = new CarrotSearchFoamTree({
   },
 });
 
-visualization.addEventListener('mousemove', e => {
+visualization.addEventListener('mousemove', (e) => {
   if (tooltip == null) {
     return;
   }

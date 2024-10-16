@@ -74,7 +74,7 @@ async function configHydrator(
   }
 
   let redundantPlugins = pluginArray.filter(
-    p => p === 'autoprefixer' || p === 'postcss-preset-env',
+    (p) => p === 'autoprefixer' || p === 'postcss-preset-env',
   );
   if (redundantPlugins.length > 0) {
     let filename = path.basename(resolveFrom);
@@ -87,7 +87,7 @@ async function configHydrator(
     } else {
       message = md`Parcel includes CSS transpilation and vendor prefixing by default. PostCSS config __${filename}__ contains the following redundant plugins: ${[
         ...redundantPlugins,
-      ].map(p =>
+      ].map((p) =>
         md.underline(p),
       )}. Removing these may improve build performance.`;
       hints.push(md`Remove the above plugins from __${filename}__`);
@@ -104,7 +104,7 @@ async function configHydrator(
           code: contents,
           codeHighlights: generateJSONCodeHighlights(
             contents,
-            redundantPlugins.map(plugin => ({
+            redundantPlugins.map((plugin) => ({
               key: `${prefix}/plugins/${plugin}`,
               type: 'key',
             })),

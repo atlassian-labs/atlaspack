@@ -86,7 +86,7 @@ function checkSourceMapping({
 
   // Find closest mapping...
   let mappings = mapContent.mappings
-    .filter(m => m.generated.line === generatedPosition.line)
+    .filter((m) => m.generated.line === generatedPosition.line)
     .sort((a, b) => a.generated.column - b.generated.column);
   let closestIndex = -1;
   let lastDistance = Number.MAX_SAFE_INTEGER;
@@ -605,7 +605,7 @@ describe.v2('sourcemaps', function () {
 
     let mapData = sourceMap.getMap();
     assert.deepEqual(mapData.sources, ['src/index.ts']);
-    assert(map.sourcesContent.every(s => s));
+    assert(map.sourcesContent.every((s) => s));
 
     let input = await inputFS.readFile(
       path.join(path.dirname(filename), map.sourceRoot, map.sources[0]),

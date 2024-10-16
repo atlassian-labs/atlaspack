@@ -47,10 +47,10 @@ async function logUncaughtError(e: mixed) {
   }
 
   // A hack to definitely ensure we logged the uncaught exception
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 100));
 }
 
-const handleUncaughtException = async exception => {
+const handleUncaughtException = async (exception) => {
   try {
     await logUncaughtError(exception);
   } catch (err) {
@@ -100,7 +100,7 @@ const commonOptions = {
     'set the root watch directory. defaults to nearest lockfile or source control dir.',
   '--watch-ignore [path]': [
     `list of directories watcher should not be tracking for changes. defaults to ['.git', '.hg']`,
-    dirs => dirs.split(','),
+    (dirs) => dirs.split(','),
   ],
   '--watch-backend': new commander.Option(
     '--watch-backend <name>',
@@ -203,6 +203,7 @@ let serve = program
     '--lazy-exclude <excludes>',
     'Can only be used in combination with --lazy. Comma separated list of source file globs, async bundles whose entry points match these globs will not be built lazily',
   )
+  .option('--production', 'Run with production mode defaults')
   .action(runCommand);
 
 applyOptions(serve, hmrOptions);
@@ -214,6 +215,7 @@ let watch = program
   .option('--public-url <url>', 'the path prefix for absolute urls')
   .option('--no-content-hash', 'disable content hashing')
   .option('--watch-for-stdin', 'exit when stdin closes')
+  .option('--production', 'Run with production mode defaults')
   .action(runCommand);
 
 applyOptions(watch, hmrOptions);
@@ -243,7 +245,7 @@ function makeDebugCommand() {
         if (entries.length === 0) {
           entries = ['.'];
         }
-        entries = entries.map(entry => path.resolve(entry));
+        entries = entries.map((entry) => path.resolve(entry));
 
         Object.assign(command, opts);
 
@@ -281,7 +283,7 @@ program
   .command('help [command]')
   .description('display help information for a command')
   .action(function (command) {
-    let cmd = program.commands.find(c => c.name() === command) || program;
+    let cmd = program.commands.find((c) => c.name() === command) || program;
     cmd.help();
   });
 
@@ -310,7 +312,7 @@ commander.Command.prototype.optionMissingArgument = function (option) {
 var args = process.argv;
 if (args[2] === '--help' || args[2] === '-h') args[2] = 'help';
 
-if (!args[2] || !program.commands.some(c => c.name() === args[2])) {
+if (!args[2] || !program.commands.some((c) => c.name() === args[2])) {
   args.splice(2, 0, 'serve');
 }
 
@@ -329,7 +331,7 @@ async function run(
     entries = ['.'];
   }
 
-  entries = entries.map(entry => path.resolve(entry));
+  entries = entries.map((entry) => path.resolve(entry));
 
   let Atlaspack = require('@atlaspack/core').default;
   let fs = new NodeFS();
@@ -411,7 +413,7 @@ async function run(
   }
 
   if (isWatching) {
-    ({unsubscribe} = await atlaspack.watch(err => {
+    ({unsubscribe} = await atlaspack.watch((err) => {
       if (err) {
         throw err;
       }
@@ -474,12 +476,16 @@ function parseOptionInt(value) {
   return parsedValue;
 }
 
+function shouldUseProductionDefaults(command) {
+  return command.name() === 'build' || command.production === true;
+}
+
 async function normalizeOptions(
   command,
   inputFS,
 ): Promise<InitialAtlaspackOptions> {
   let nodeEnv;
-  if (command.name() === 'build') {
+  if (shouldUseProductionDefaults(command)) {
     nodeEnv = process.env.NODE_ENV || 'production';
     // Autoinstall unless explicitly disabled or we detect a CI environment.
     command.autoinstall = !(command.autoinstall === false || process.env.CI);
@@ -505,7 +511,10 @@ async function normalizeOptions(
   // Ensure port is valid and available
   let port = parsePort(command.port || '1234');
   let originalPort = port;
-  if (command.name() === 'serve' || command.hmr) {
+  if (
+    !shouldUseProductionDefaults(command) &&
+    (command.name() === 'serve' || command.hmr)
+  ) {
     try {
       port = await getPort({port, host});
     } catch (err) {
@@ -542,7 +551,7 @@ async function normalizeOptions(
   }
 
   let hmrOptions = null;
-  if (command.name() !== 'build' && command.hmr !== false) {
+  if (!shouldUseProductionDefaults(command) && command.hmr !== false) {
     let hmrport = command.hmrPort ? parsePort(command.hmrPort) : port;
     let hmrhost = command.hmrHost ? command.hmrHost : host;
 
@@ -558,7 +567,7 @@ async function normalizeOptions(
 
   let additionalReporters = [
     {packageName: '@atlaspack/reporter-cli', resolveFrom: __filename},
-    ...(command.reporter: Array<string>).map(packageName => ({
+    ...(command.reporter: Array<string>).map((packageName) => ({
       packageName,
       resolveFrom: path.join(inputFS.cwd(), 'index'),
     })),
@@ -571,11 +580,13 @@ async function normalizeOptions(
     });
   }
 
-  let mode = command.name() === 'build' ? 'production' : 'development';
+  let mode = shouldUseProductionDefaults(command)
+    ? 'production'
+    : 'development';
 
   const normalizeIncludeExcludeList = (input?: string): string[] => {
     if (typeof input !== 'string') return [];
-    return input.split(',').map(value => value.trim());
+    return input.split(',').map((value) => value.trim());
   };
 
   return {

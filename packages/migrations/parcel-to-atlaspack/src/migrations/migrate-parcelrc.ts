@@ -18,7 +18,7 @@ export async function migrateParcelRc({cwd, dryRun}: MigrateParcelRcOptions) {
 
   const parcelrcPaths = await new fdir()
     .withFullPaths()
-    .exclude(dir => dir.startsWith('node_modules'))
+    .exclude((dir) => dir.startsWith('node_modules'))
     .filter((path: string) => basename(path).startsWith('.parcelrc'))
     .crawl(cwd)
     .withPromise();
@@ -26,7 +26,7 @@ export async function migrateParcelRc({cwd, dryRun}: MigrateParcelRcOptions) {
   const modifiedFiles = [];
 
   await Promise.all(
-    parcelrcPaths.map(async parcelrcPath => {
+    parcelrcPaths.map(async (parcelrcPath) => {
       const parcelrc = await readFile(parcelrcPath, 'utf8');
       const atlaspckrc = parcelrc.replace(/@parcel\//g, '@atlaspack/');
       if (atlaspckrc !== parcelrc) {

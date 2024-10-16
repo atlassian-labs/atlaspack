@@ -1,0 +1,14 @@
+[package]
+name = "atlaspack_swc_runner"
+version = "0.1.0"
+edition = "2021"
+description = "SWC runner functions for Atlaspack"
+
+[dependencies]
+regex = "1.10.5"
+swc_core = { version = "0.96" }
+thiserror = "1.0.63"
+swc_ecma_parser = "*"
+sourcemap = "*"
+
+#atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }

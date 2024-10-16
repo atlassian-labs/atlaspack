@@ -61,7 +61,7 @@ export class AtlaspackLinkConfig {
 
   validateAppRoot() {
     assert(
-      [...LOCK_FILE_NAMES, ...SCM_FILE_NAMES].some(filename =>
+      [...LOCK_FILE_NAMES, ...SCM_FILE_NAMES].some((filename) =>
         this.fs.existsSync(path.join(this.appRoot, filename)),
       ),
       `Not a project root: '${this.appRoot}'`,

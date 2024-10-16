@@ -39,7 +39,7 @@ export default function untar(raw: ArrayBuffer): Map<string, Uint8Array> {
         TAR_HEADER_OFFSETS.filename[1],
       ),
     )
-      .map(c => String.fromCharCode(c))
+      .map((c) => String.fromCharCode(c))
       .join('');
 
     if (!filename) break;
@@ -52,7 +52,7 @@ export default function untar(raw: ArrayBuffer): Map<string, Uint8Array> {
           TAR_HEADER_OFFSETS.filesize[1],
         ),
       )
-        .map(c => String.fromCharCode(c))
+        .map((c) => String.fromCharCode(c))
         .join(''),
       8,
     );

@@ -14,13 +14,13 @@ import {serialize} from 'v8';
 // $FlowFixMe
 import {table} from 'table';
 
-import {loadGraphs} from './index.js';
+import {loadGraphs} from './index';
 
 const {
   BundleGraph: {bundleGraphEdgeTypes: bundleGraphEdgeTypes},
   Priority,
   fromProjectPathRelative,
-} = require('./deep-imports.js');
+} = require('./deep-imports');
 
 export async function run(input: string[]) {
   let args = input;
@@ -316,7 +316,7 @@ export async function run(input: string[]) {
       this.children.push(next);
       return next;
     }
-    print(format: T => string, prefix = '') {
+    print(format: (T) => string, prefix = '') {
       console.log(
         `${prefix}${this.label} ${format(this.value)} ${this.suffix}`,
       );
@@ -368,7 +368,7 @@ export async function run(input: string[]) {
     }
     walk(graph.getNodeIdByContentKey(asset), {paths, lazyOutgoing: false});
 
-    paths.print(id => {
+    paths.print((id) => {
       let node = nullthrows(graph.getNode(id));
       invariant(node.type === 'asset');
       return fromProjectPathRelative(node.value.filePath);
@@ -549,7 +549,7 @@ export async function run(input: string[]) {
       'Node is not a bundle, but a ' + node.type,
     );
 
-    bundleGraph.traverseAssets(node.value, asset => {
+    bundleGraph.traverseAssets(node.value, (asset) => {
       console.log(asset.id, asset.filePath);
     });
   }
@@ -568,7 +568,7 @@ export async function run(input: string[]) {
       'Node is not a bundle, but a ' + node.type,
     );
 
-    bundleGraph.traverseBundle(node.value, node => {
+    bundleGraph.traverseBundle(node.value, (node) => {
       if (node.type === 'asset') {
         console.log(node.id, node.value.filePath);
       } else {
@@ -667,7 +667,7 @@ export async function run(input: string[]) {
       assetNodeId,
     )) {
       if (
-        referencingBundles.some(ref =>
+        referencingBundles.some((ref) =>
           bundleGraph._graph.hasEdge(
             bundleGraph._graph.getNodeIdByContentKey(ref.id),
             incoming,
@@ -688,8 +688,8 @@ export async function run(input: string[]) {
     const bundleGraphNodeId = bundleGraph._graph.getNodeIdByContentKey(node.id);
     return bundleGraph._graph
       .getNodeIdsConnectedTo(bundleGraphNodeId, -1)
-      .map(id => nullthrows(bundleGraph._graph.getNode(id)))
-      .find(node => node.type == type);
+      .map((id) => nullthrows(bundleGraph._graph.getNode(id)))
+      .find((node) => node.type == type);
   }
 
   // We find the priority of a Bundle or BundleGroup by looking at its incoming dependencies.
@@ -723,9 +723,9 @@ export async function run(input: string[]) {
     const bundleGraphNodeId = bundleGraph._graph.getNodeIdByContentKey(node.id);
     const entryBundleGroup = bundleGraph._graph
       .getNodeIdsConnectedTo(bundleGraphNodeId, -1)
-      .map(id => nullthrows(bundleGraph._graph.getNode(id)))
+      .map((id) => nullthrows(bundleGraph._graph.getNode(id)))
       .find(
-        node =>
+        (node) =>
           node.type === 'bundle_group' &&
           bundleGraph.isEntryBundleGroup(node.value),
       );
@@ -763,7 +763,7 @@ export async function run(input: string[]) {
         return '';
       }
       const initialValue = 0;
-      let column = t.map(r => r[col]);
+      let column = t.map((r) => r[col]);
       column.shift();
       invariant(column != null);
       return column.reduce(
@@ -1060,7 +1060,7 @@ export async function run(input: string[]) {
         'findBundleReason',
         {
           help: 'args: <bundle> <asset>. Why is the asset in the bundle',
-          action: v => findBundleReason(...v.split(' ')),
+          action: (v) => findBundleReason(...v.split(' ')),
         },
       ],
       [
@@ -1112,7 +1112,7 @@ export async function run(input: string[]) {
       server.defineCommand(name, {
         // $FlowFixMe
         help: '📦 ' + cmd.help,
-        action: v => {
+        action: (v) => {
           // $FlowFixMe
           server.clearBufferedCommand();
           // $FlowFixMe

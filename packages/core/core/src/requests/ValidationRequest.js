@@ -43,13 +43,13 @@ export default function createValidationRequest(
       );
 
       let config = new AtlaspackConfig(processedConfig, options);
-      let trackedRequestsDesc = assetRequests.filter(request => {
+      let trackedRequestsDesc = assetRequests.filter((request) => {
         return config.getValidatorNames(request.filePath).length > 0;
       });
 
       // Schedule validations on workers for all plugins that implement the one-asset-at-a-time "validate" method.
       let promises = trackedRequestsDesc.map(
-        async request =>
+        async (request) =>
           ((await farm.createHandle('runValidate'))({
             requests: [request],
             optionsRef: optionsRef,

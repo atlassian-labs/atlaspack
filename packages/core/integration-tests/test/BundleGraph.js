@@ -11,14 +11,14 @@ import {
 } from '@atlaspack/test-utils';
 import type {BundleGraph, BundleGroup, PackagedBundle} from '@atlaspack/types';
 
-describe.v2('BundleGraph', () => {
+describe('BundleGraph', () => {
   it('can traverse assets across bundles and contexts', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/worker-shared/index.js'),
     );
 
     let assets = [];
-    b.traverse(node => {
+    b.traverse((node) => {
       if (node.type === 'asset') {
         assets.push({
           type: node.type,
@@ -99,8 +99,6 @@ describe.v2('BundleGraph', () => {
 
         index.jsx:
           import logo from 'data-url:./logo.svg';
-
-        yarn.lock: {}
       `;
 
       bundleGraph = await bundle(path.join(dir, 'index.jsx'), {
@@ -120,7 +118,7 @@ describe.v2('BundleGraph', () => {
       const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup);
 
       assert.deepEqual(
-        bundles.map(b => b.bundleBehavior),
+        bundles.map((b) => b.bundleBehavior),
         [null],
       );
     });
@@ -131,7 +129,7 @@ describe.v2('BundleGraph', () => {
       });
 
       assert.deepEqual(
-        bundles.map(b => b.bundleBehavior),
+        bundles.map((b) => b.bundleBehavior),
         [null],
       );
     });
@@ -142,7 +140,7 @@ describe.v2('BundleGraph', () => {
       });
 
       assert.deepEqual(
-        bundles.map(b => b.bundleBehavior),
+        bundles.map((b) => b.bundleBehavior),
         [null, 'inline'],
       );
     });

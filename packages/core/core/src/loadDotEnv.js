@@ -26,7 +26,7 @@ export default async function loadEnv(
   ].filter(Boolean);
 
   let envs = await Promise.all(
-    dotenvFiles.map(async dotenvFile => {
+    dotenvFiles.map(async (dotenvFile) => {
       const envPath = await resolveConfig(
         fs,
         filePath,

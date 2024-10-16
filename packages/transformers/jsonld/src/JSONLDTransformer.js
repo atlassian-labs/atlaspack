@@ -51,8 +51,8 @@ function extractUrlsFrom(data, asset) {
 
 function iterateThroughObject(jsonObject, asset) {
   Object.keys(jsonObject)
-    .filter(k => SCHEMA_ATTRS.includes(k))
-    .forEach(k => {
+    .filter((k) => SCHEMA_ATTRS.includes(k))
+    .forEach((k) => {
       let value = jsonObject[k];
       jsonObject[k] = extractUrlsFrom(value, asset);
     });
@@ -61,7 +61,7 @@ function iterateThroughObject(jsonObject, asset) {
 }
 
 function iterateThroughArray(jsonArray, asset) {
-  Object.keys(jsonArray).forEach(i => {
+  Object.keys(jsonArray).forEach((i) => {
     let value = jsonArray[i];
     jsonArray[i] = extractUrlsFrom(value, asset);
   });

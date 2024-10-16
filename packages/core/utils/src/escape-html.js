@@ -13,7 +13,7 @@ const htmlEscapes = {
 
 export function escapeHTML(s: string): string {
   if (reHasUnescapedHtml.test(s)) {
-    return s.replace(reUnescapedHtml, c => htmlEscapes[c]);
+    return s.replace(reUnescapedHtml, (c) => htmlEscapes[c]);
   }
 
   return s;

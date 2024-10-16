@@ -289,7 +289,7 @@ describe('AdjacencyList', () => {
       let originalSerialized = graph.serialize();
       let originalNodes = [...originalSerialized.nodes];
       let originalEdges = [...originalSerialized.edges];
-      let work = new Promise(resolve => worker.on('message', resolve));
+      let work = new Promise((resolve) => worker.on('message', resolve));
       worker.postMessage(originalSerialized);
       let received = AdjacencyList.deserialize(await work);
       // eslint-disable-next-line no-unused-vars

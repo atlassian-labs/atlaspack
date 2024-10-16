@@ -24,7 +24,7 @@ pub struct RequireInitializer {
 fn default_require_matchers() -> Vec<RequireMatcher> {
   vec![
     RequireMatcher::Global(atom!("require")),
-    RequireMatcher::Global(atom!("parcelRequire")),
+    RequireMatcher::Keyword(atom!("parcelRequire")),
   ]
 }
 
@@ -109,6 +109,7 @@ fn match_parcel_default_initializer(decl: &VarDeclarator) -> Option<Id> {
 pub enum RequireMatcher {
   Id(Id),
   Global(Atom),
+  Keyword(Atom),
 }
 
 impl RequireMatcher {
@@ -118,6 +119,7 @@ impl RequireMatcher {
       RequireMatcher::Global(atom) => {
         ident.span.ctxt.outer() == unresolved_mark && ident.sym == *atom
       }
+      RequireMatcher::Keyword(atom) => ident.sym == *atom,
     }
   }
 }
@@ -330,7 +332,7 @@ impl VisitMut for InlineRequiresOptimizer {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_js_swc_core::test_utils::{run_test_visit, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
 
   use super::*;
 

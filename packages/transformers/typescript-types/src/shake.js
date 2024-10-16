@@ -135,7 +135,7 @@ export function shake(
 
       // Remove original export modifiers
       node.modifiers = (node.modifiers || []).filter(
-        m =>
+        (m) =>
           m.kind !== ts.SyntaxKind.ExportKeyword &&
           m.kind !== ts.SyntaxKind.DefaultKeyword,
       );
@@ -177,14 +177,14 @@ export function shake(
 
       // Remove original export modifiers
       node.modifiers = (node.modifiers || []).filter(
-        m =>
+        (m) =>
           m.kind !== ts.SyntaxKind.ExportKeyword &&
           m.kind !== ts.SyntaxKind.DeclareKeyword,
       );
 
       // Add export modifier if all declarations are exported.
       let isExported = node.declarationList.declarations.every(
-        d => exportedNames.get(d.name.text) === currentModule,
+        (d) => exportedNames.get(d.name.text) === currentModule,
       );
       if (isExported) {
         node.modifiers.unshift(
@@ -237,7 +237,7 @@ export function shake(
     if (ts.isPropertyDeclaration(node)) {
       let isPrivate =
         node.modifiers &&
-        node.modifiers.some(m => m.kind === ts.SyntaxKind.PrivateKeyword);
+        node.modifiers.some((m) => m.kind === ts.SyntaxKind.PrivateKeyword);
       if (isPrivate) {
         return null;
       }

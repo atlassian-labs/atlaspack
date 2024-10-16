@@ -351,7 +351,7 @@ impl<'a> EnvReplacer<'a> {
 
 #[cfg(test)]
 mod tests {
-  use crate::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
 
   use super::*;
 
@@ -627,7 +627,7 @@ const version = process.env.hasOwnProperty('version');
   #[test]
   fn test_replace_env_has_the_variable() {
     let mut env: HashMap<JsWord, JsWord> = HashMap::new();
-    let mut used_env = HashSet::new();
+    let mut used_env: HashSet<JsWord> = HashSet::new();
     let mut diagnostics = Vec::new();
 
     env.insert("IS_TEST".into(), "true".into());
@@ -659,7 +659,7 @@ const package = "atlaspack", isTest2 = "true";
       ["package", "IS_TEST", "VERSION"]
         .iter()
         .map(|s| (*s).into())
-        .collect()
+        .collect::<HashSet<JsWord>>()
     );
     assert_eq!(diagnostics, vec![]);
   }
@@ -667,7 +667,7 @@ const package = "atlaspack", isTest2 = "true";
   #[test]
   fn test_replace_env_rest_spread() {
     let mut env: HashMap<JsWord, JsWord> = HashMap::new();
-    let mut used_env = HashSet::new();
+    let mut used_env: HashSet<JsWord> = HashSet::new();
     let mut diagnostics = Vec::new();
 
     env.insert("package".into(), "atlaspack".into());
@@ -688,7 +688,13 @@ const { package, ...other } = process.env;
 "#
     );
     // tracks that the variable was used
-    assert_eq!(used_env, ["package"].iter().map(|s| (*s).into()).collect());
+    assert_eq!(
+      used_env,
+      ["package"]
+        .iter()
+        .map(|s| (*s).into())
+        .collect::<HashSet<JsWord>>()
+    );
     assert_eq!(diagnostics, vec![]);
   }
 

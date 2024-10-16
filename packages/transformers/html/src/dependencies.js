@@ -113,7 +113,7 @@ export default function collectDependencies(
     filePath: FilePath,
     loc: PostHTMLNode['location'],
   |}> = [];
-  PostHTML().walk.call(ast.program, node => {
+  PostHTML().walk.call(ast.program, (node) => {
     let {tag, attrs} = node;
     if (!attrs || seen.has(node)) {
       return node;
@@ -122,7 +122,7 @@ export default function collectDependencies(
     seen.add(node);
 
     if (tag === 'meta') {
-      const isMetaDependency = Object.keys(attrs).some(attr => {
+      const isMetaDependency = Object.keys(attrs).some((attr) => {
         let values = META[attr];
         return (
           values &&

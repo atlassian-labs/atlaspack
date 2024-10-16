@@ -1,5 +1,5 @@
 // @ts-check
-import { Lmdb } from "../index";
+import {Lmdb} from '../index';
 
 interface DBOpenOptions {
   name: string;
@@ -21,7 +21,7 @@ export class LmdbWrapper {
   }
 
   async put(key: string, value: Buffer | string): Promise<void> {
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       value = Buffer.from(value);
     }
     await this.lmdb.put(key, value);
@@ -43,6 +43,6 @@ export function open(
   );
 }
 
-const defaultExport = { open };
+const defaultExport = {open};
 
 export default defaultExport;

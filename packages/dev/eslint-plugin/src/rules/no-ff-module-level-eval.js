@@ -1,6 +1,6 @@
 const featureLibraryFunctions = new Set(['getFeatureFlag']);
 
-const isInFunctionLevel = context => {
+const isInFunctionLevel = (context) => {
   let scope = context.getScope();
 
   while (scope?.type !== 'module' && scope?.type !== 'global') {
@@ -30,7 +30,7 @@ module.exports = {
   },
   create(context) {
     return {
-      'CallExpression[callee.type="Identifier"]': node => {
+      'CallExpression[callee.type="Identifier"]': (node) => {
         if (
           featureLibraryFunctions.has(node.callee.name) &&
           !isInFunctionLevel(context)

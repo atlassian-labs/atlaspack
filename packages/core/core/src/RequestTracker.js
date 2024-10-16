@@ -210,9 +210,9 @@ type RequestGraphNode =
   | ConfigKeyNode;
 
 export type RunAPI<TResult: RequestResult> = {|
-  invalidateOnFileCreate: InternalFileCreateInvalidation => void,
-  invalidateOnFileDelete: ProjectPath => void,
-  invalidateOnFileUpdate: ProjectPath => void,
+  invalidateOnFileCreate: (InternalFileCreateInvalidation) => void,
+  invalidateOnFileDelete: (ProjectPath) => void,
+  invalidateOnFileUpdate: (ProjectPath) => void,
   invalidateOnConfigKeyChange: (
     filePath: ProjectPath,
     configKey: string,
@@ -220,8 +220,8 @@ export type RunAPI<TResult: RequestResult> = {|
   ) => void,
   invalidateOnStartup: () => void,
   invalidateOnBuild: () => void,
-  invalidateOnEnvChange: string => void,
-  invalidateOnOptionChange: string => void,
+  invalidateOnEnvChange: (string) => void,
+  invalidateOnOptionChange: (string) => void,
   getInvalidations(): Array<RequestInvalidation>,
   storeResult(result: TResult, cacheKey?: string): void,
   getRequestResult<T: RequestResult>(contentKey: ContentKey): Async<?T>,
@@ -761,7 +761,7 @@ export class RequestGraph extends ContentGraph<
       requestGraphEdgeTypes.invalidated_by_update,
     );
     return invalidations
-      .map(nodeId => {
+      .map((nodeId) => {
         let node = nullthrows(this.getNode(nodeId));
         switch (node.type) {
           case FILE:
@@ -788,7 +788,7 @@ export class RequestGraph extends ContentGraph<
       requestGraphEdgeTypes.subrequest,
     );
 
-    return subRequests.map(nodeId => {
+    return subRequests.map((nodeId) => {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === REQUEST);
       return node;
@@ -806,8 +806,8 @@ export class RequestGraph extends ContentGraph<
     );
 
     return subRequests
-      .filter(id => this.invalidNodeIds.has(id))
-      .map(nodeId => {
+      .filter((id) => this.invalidNodeIds.has(id))
+      .map((nodeId) => {
         let node = nullthrows(this.getNode(nodeId));
         invariant(node.type === REQUEST);
         return node;
@@ -920,7 +920,7 @@ export class RequestGraph extends ContentGraph<
       this.invalidateNode(nodeId, reason);
     };
     const aboveCache = new Map();
-    const getAbove = fileNameNodeId => {
+    const getAbove = (fileNameNodeId) => {
       const cachedResult = aboveCache.get(fileNameNodeId);
       if (enableOptimization && cachedResult) {
         return cachedResult;
@@ -1390,7 +1390,7 @@ export default class RequestTracker {
   ): {|api: RunAPI<TResult>, subRequestContentKeys: Set<ContentKey>|} {
     let subRequestContentKeys = new Set<ContentKey>();
     let api: RunAPI<TResult> = {
-      invalidateOnFileCreate: input =>
+      invalidateOnFileCreate: (input) =>
         this.graph.invalidateOnFileCreate(requestId, input),
       invalidateOnConfigKeyChange: (filePath, configKey, contentHash) =>
         this.graph.invalidateOnConfigKeyChange(
@@ -1399,15 +1399,15 @@ export default class RequestTracker {
           configKey,
           contentHash,
         ),
-      invalidateOnFileDelete: filePath =>
+      invalidateOnFileDelete: (filePath) =>
         this.graph.invalidateOnFileDelete(requestId, filePath),
-      invalidateOnFileUpdate: filePath =>
+      invalidateOnFileUpdate: (filePath) =>
         this.graph.invalidateOnFileUpdate(requestId, filePath),
       invalidateOnStartup: () => this.graph.invalidateOnStartup(requestId),
       invalidateOnBuild: () => this.graph.invalidateOnBuild(requestId),
-      invalidateOnEnvChange: env =>
+      invalidateOnEnvChange: (env) =>
         this.graph.invalidateOnEnvChange(requestId, env, this.options.env[env]),
-      invalidateOnOptionChange: option =>
+      invalidateOnOptionChange: (option) =>
         this.graph.invalidateOnOptionChange(
           requestId,
           option,
@@ -1425,7 +1425,7 @@ export default class RequestTracker {
       },
       getRequestResult: <T: RequestResult>(id): Async<?T> =>
         this.getRequestResult<T>(id),
-      canSkipSubrequest: contentKey => {
+      canSkipSubrequest: (contentKey) => {
         if (
           this.graph.hasContentKey(contentKey) &&
           this.hasValidResult(this.graph.getNodeIdByContentKey(contentKey))
@@ -1611,7 +1611,7 @@ export function getWatcherOptions({
 }: AtlaspackOptions): WatcherOptions {
   const vcsDirs = ['.git', '.hg'];
   const uniqueDirs = [...new Set([...watchIgnore, ...vcsDirs, cacheDir])];
-  const ignore = uniqueDirs.map(dir => path.resolve(watchDir, dir));
+  const ignore = uniqueDirs.map((dir) => path.resolve(watchDir, dir));
 
   return {ignore, backend: watchBackend};
 }
@@ -1787,7 +1787,7 @@ export function cleanUpOrphans<N, E: number>(graph: Graph<N, E>): NodeId[] {
   }
 
   const reachableNodes = new Set();
-  graph.traverse(nodeId => {
+  graph.traverse((nodeId) => {
     reachableNodes.add(nodeId);
   });
 

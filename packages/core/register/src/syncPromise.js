@@ -11,11 +11,11 @@ export default function syncPromise<T>(promise: Promise<T>): T {
   let res, err;
 
   promise.then(
-    value => {
+    (value) => {
       res = value;
       isDone = true;
     },
-    error => {
+    (error) => {
       err = error;
       isDone = true;
     },

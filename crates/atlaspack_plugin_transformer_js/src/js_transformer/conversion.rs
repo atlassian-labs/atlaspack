@@ -640,8 +640,8 @@ fn convert_dependency(
         // output format so that assets can be shared between the bundles.
         let mut output_format = env.output_format;
         if env.source_type == SourceType::Script
-                    // && env.flags.contains(EnvironmentFlags::SHOULD_SCOPE_HOIST)
-                    && env.engines.supports(EnvironmentFeature::DynamicImport)
+          && asset.env.should_scope_hoist
+          && env.engines.supports(EnvironmentFeature::DynamicImport)
         {
           output_format = OutputFormat::EsModule;
         }
@@ -685,9 +685,8 @@ fn convert_source_type(source_type: &Option<atlaspack_js_swc_core::SourceType>) 
 
 #[cfg(test)]
 mod tests {
-  use crate::js_transformer::test_helpers::run_swc_core_transform;
-
   use super::*;
+  use atlaspack_js_swc_core::test_utils::run_swc_core_transform;
 
   #[test]
   fn test_is_re_export_all_symbol() {

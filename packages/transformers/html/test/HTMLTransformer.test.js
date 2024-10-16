@@ -11,8 +11,8 @@ function normalizeHTML(code: string): string {
   const result = renderHTML(ast);
   const lines = result
     .split('\n')
-    .map(line => line.trim())
-    .filter(line => line);
+    .map((line) => line.trim())
+    .filter((line) => line);
   return lines.join('');
 }
 
@@ -38,7 +38,7 @@ async function runTestTransform(
   let newAST = null;
   const asset = {
     getAST: () => parseHTML(code, true),
-    setAST: n => {
+    setAST: (n) => {
       newAST = n;
     },
     addURLDependency(url, opts) {
@@ -75,7 +75,7 @@ async function runTestTransform(
 }
 
 function normalizeDependencies(dependencies) {
-  return dependencies.map(dependency => ({
+  return dependencies.map((dependency) => ({
     ...dependency,
     opts: {
       ...dependency.opts,
@@ -89,7 +89,7 @@ function normalizeDependencies(dependencies) {
 }
 
 function normalizeAssets(assets) {
-  return assets.map(asset => {
+  return assets.map((asset) => {
     // $FlowFixMe
     return {
       ...asset,

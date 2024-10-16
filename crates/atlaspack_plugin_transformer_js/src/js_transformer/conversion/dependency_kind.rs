@@ -40,10 +40,9 @@ pub(crate) fn convert_specifier_type(
 
 #[cfg(test)]
 mod tests {
-  use crate::js_transformer::test_helpers::run_swc_core_transform;
-  use atlaspack_js_swc_core::DependencyKind;
-
   use super::*;
+  use atlaspack_js_swc_core::test_utils::run_swc_core_transform;
+  use atlaspack_js_swc_core::DependencyKind;
 
   #[test]
   fn test_import_dependency_kind() {

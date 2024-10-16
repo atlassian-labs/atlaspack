@@ -6,7 +6,7 @@ import type {Blob} from '@atlaspack/types';
 export function measureStreamLength(stream: Readable): Promise<number> {
   return new Promise((resolve, reject) => {
     let length = 0;
-    stream.on('data', chunk => {
+    stream.on('data', (chunk) => {
       length += chunk;
     });
     stream.on('end', () => resolve(length));
@@ -25,7 +25,7 @@ export function readableFromStringOrBuffer(str: string | Buffer): Readable {
 export function bufferStream(stream: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     let buf = Buffer.from([]);
-    stream.on('data', data => {
+    stream.on('data', (data) => {
       buf = Buffer.concat([buf, data]);
     });
     stream.on('end', () => {
@@ -45,7 +45,7 @@ export function blobToStream(blob: Blob): Readable {
 
 export function streamFromPromise(promise: Promise<Blob>): Readable {
   const stream = new PassThrough();
-  promise.then(blob => {
+  promise.then((blob) => {
     if (blob instanceof Readable) {
       blob.pipe(stream);
     } else {
@@ -61,7 +61,7 @@ export function fallbackStream(
   fallback: () => Readable,
 ): Readable {
   const res = new PassThrough();
-  stream.on('error', err => {
+  stream.on('error', (err) => {
     if (err.code === 'ENOENT') {
       fallback().pipe(res);
     } else {

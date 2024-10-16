@@ -5,15 +5,15 @@ const pluginTransformRuntime =
 const COMPATIBLE_ATLASPACK_BABEL_TRANSFORMER_SEMVER = '^2.0.0-alpha.1.1';
 
 module.exports = function parcelPluginTransformRuntime(api, opts, dirname) {
-  let name = api.caller(caller => caller && caller.name);
-  let version = api.caller(caller => caller && caller.version);
+  let name = api.caller((caller) => caller && caller.name);
+  let version = api.caller((caller) => caller && caller.version);
 
   if (
     name === 'parcel' &&
     typeof version === 'string' &&
     semver.satisfies(version, COMPATIBLE_ATLASPACK_BABEL_TRANSFORMER_SEMVER)
   ) {
-    let outputFormat = api.caller(caller => {
+    let outputFormat = api.caller((caller) => {
       return caller && caller.outputFormat;
     });
     if (typeof outputFormat !== 'string' && outputFormat !== undefined) {

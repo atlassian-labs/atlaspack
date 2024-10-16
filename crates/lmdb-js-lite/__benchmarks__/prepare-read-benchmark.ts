@@ -1,7 +1,7 @@
-import { randomBytes } from "node:crypto";
-import { mkdirSync, rmSync } from "node:fs";
-import * as v8 from "node:v8";
-import { Lmdb } from "../index";
+import {randomBytes} from 'node:crypto';
+import {mkdirSync, rmSync} from 'node:fs';
+import * as v8 from 'node:v8';
+import {Lmdb} from '../index';
 
 const ENTRY_SIZE = 64 * 1024; // 64KB
 const ASYNC_WRITES = true;
@@ -18,31 +18,31 @@ function generateEntry() {
 }
 
 async function main() {
-  rmSync("./databases/safe", {
+  rmSync('./databases/safe', {
     recursive: true,
     force: true,
   });
-  mkdirSync("./databases/safe", {
+  mkdirSync('./databases/safe', {
     recursive: true,
   });
 
   const safeDB = new Lmdb({
-    path: "./databases/safe/read",
+    path: './databases/safe/read',
     asyncWrites: ASYNC_WRITES,
     mapSize: MAP_SIZE,
   });
 
-  console.log("Generating entries for testing");
+  console.log('Generating entries for testing');
   const entries = [...Array(NUM_ENTRIES)].map(() => {
     return generateEntry();
   });
-  console.log("Writing entries");
+  console.log('Writing entries');
   await safeDB.startWriteTransaction();
   for (let entry of entries) {
     await safeDB.put(entry.key, entry.value);
   }
   await safeDB.put(
-    "benchmarkInfo",
+    'benchmarkInfo',
     v8.serialize({
       NUM_ENTRIES,
     }),

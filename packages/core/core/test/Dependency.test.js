@@ -17,5 +17,33 @@ describe('Dependency', () => {
       });
       expect(id1).toEqual(id2);
     });
+
+    it('dependencies with different targets should have different IDs', () => {
+      let id1 = createDependencyId({
+        specifier: 'foo',
+        env: createEnvironment(),
+        specifierType: 'esm',
+        target: {
+          name: 'test-1234',
+          distDir: 'dist-dir',
+          env: createEnvironment(),
+          publicUrl: 'public-url',
+          source: '1234',
+        },
+      });
+      let id2 = createDependencyId({
+        specifier: 'foo',
+        env: createEnvironment(),
+        specifierType: 'esm',
+        target: {
+          name: 'test-1234',
+          distDir: 'dist-dir',
+          env: createEnvironment(),
+          publicUrl: 'public-url',
+          source: '5678', // <- this is different
+        },
+      });
+      expect(id1).not.toEqual(id2);
+    });
   });
 });

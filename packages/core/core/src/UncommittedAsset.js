@@ -99,7 +99,7 @@ export default class UncommittedAsset {
     await Promise.all([
       contentKey != null &&
         this.commitContent(contentKey).then(
-          s => ((size = s.size), (outputHash = s.hash)),
+          (s) => ((size = s.size), (outputHash = s.hash)),
         ),
       this.mapBuffer != null &&
         mapKey != null &&
@@ -134,7 +134,7 @@ export default class UncommittedAsset {
       await this.options.cache.setStream(
         contentKey,
         content.pipe(
-          new TapStream(buf => {
+          new TapStream((buf) => {
             hash.writeBuffer(buf);
             size += buf.length;
           }),

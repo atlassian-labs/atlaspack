@@ -70,7 +70,7 @@ export type AssetOptions = {|
 
 export function createAssetIdFromOptions(options: AssetOptions): string {
   return createAssetIdRust({
-    env: options.env,
+    environmentId: options.env.id,
     filePath: options.filePath,
     code: options.code,
     pipeline: options.pipeline,

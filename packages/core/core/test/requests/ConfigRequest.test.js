@@ -48,7 +48,7 @@ describe('ConfigRequest tests', () => {
       invalidateOnFileUpdate: sinon.spy(),
       invalidateOnOptionChange: sinon.spy(),
       invalidateOnStartup: sinon.spy(),
-      runRequest: sinon.spy(request => {
+      runRequest: sinon.spy((request) => {
         return request.run({
           api: mockRunApi,
           options,
@@ -229,10 +229,7 @@ describe('ConfigRequest tests', () => {
       invalidateOnConfigKeyChange: [
         {
           configKey: 'key1',
-          filePath: toProjectPath(
-            projectRoot,
-            path.join('project_root', 'config.json'),
-          ),
+          filePath: toProjectPath(projectRoot, 'config.json'),
         },
       ],
     });

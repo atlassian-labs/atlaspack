@@ -6,7 +6,7 @@ import type {PackageInstaller, ModuleRequest} from '@atlaspack/package-manager';
 import fetch from 'isomorphic-fetch';
 import path from 'path';
 import semver from 'semver';
-import untar from './untar.js';
+import untar from './untar';
 
 async function findPackage(fs, dir) {
   while (dir !== '/' && path.basename(dir) !== 'node_modules') {
@@ -118,7 +118,7 @@ export default class SimplePackageInstaller implements PackageInstaller {
         bufs.push(d);
       });
 
-      const buffer = await new Promise(resolve =>
+      const buffer = await new Promise((resolve) =>
         res.body.on('end', () => {
           resolve(Buffer.concat(bufs));
         }),
@@ -208,7 +208,7 @@ export default class SimplePackageInstaller implements PackageInstaller {
       ]
         .filter(Boolean)
         // $FlowFixMe
-        .map(v => (Object.entries(v): Array<[string, string]>))
+        .map((v) => (Object.entries(v): Array<[string, string]>))
         .flat(1);
 
       // if (only) {

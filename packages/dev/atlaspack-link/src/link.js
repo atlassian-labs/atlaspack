@@ -55,7 +55,7 @@ export async function link(
     await cleanupBin(nodeModules, opts);
     await cleanupNodeModules(
       nodeModules,
-      packageName => parcelPackages.has(packageName),
+      (packageName) => parcelPackages.has(packageName),
       opts,
     );
   }
@@ -125,7 +125,7 @@ export async function link(
     for (let nodeModules of nodeModulesPaths) {
       await cleanupNodeModules(
         nodeModules,
-        packageName => namespacePackages.has(packageName),
+        (packageName) => namespacePackages.has(packageName),
         opts,
       );
     }

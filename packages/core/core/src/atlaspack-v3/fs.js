@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import type {FileSystem} from '@atlaspack/rust';
+import type {FileSystem, JsCallable} from '@atlaspack/rust';
 import type {
   Encoding,
   FilePath,
@@ -9,33 +9,47 @@ import type {
 
 import {jsCallable} from './jsCallable';
 
-// Move to @atlaspack/utils or a dedicated v3 / migration package later
-export function toFileSystemV3(fs: ClassicFileSystem): FileSystem {
-  return {
-    canonicalize: jsCallable((path: FilePath) => fs.realpathSync(path)),
-    createDirectory: jsCallable((path: FilePath) => fs.mkdirp(path)),
-    cwd: jsCallable(() => fs.cwd()),
-    readFile: jsCallable((path: string, encoding?: Encoding) => {
+export class FileSystemV3 implements FileSystem {
+  #fs: ClassicFileSystem;
+
+  constructor(fs: ClassicFileSystem) {
+    this.#fs = fs;
+  }
+
+  canonicalize: JsCallable<[FilePath], FilePath> = jsCallable(
+    (path: FilePath) => this.#fs.realpathSync(path),
+  );
+
+  createDirectory: JsCallable<[FilePath], Promise<void>> = jsCallable(
+    (path: FilePath) => this.#fs.mkdirp(path),
+  );
+
+  cwd: JsCallable<[], FilePath> = jsCallable(() => this.#fs.cwd());
+
+  isFile: JsCallable<[FilePath], boolean> = (path: string) => {
+    try {
+      return this.#fs.statSync(path).isFile();
+    } catch {
+      return false;
+    }
+  };
+
+  isDir: JsCallable<[FilePath], boolean> = (path: string) => {
+    try {
+      return this.#fs.statSync(path).isDirectory();
+    } catch {
+      return false;
+    }
+  };
+
+  readFile: JsCallable<[FilePath, Encoding], string> = jsCallable(
+    (path: string, encoding?: Encoding) => {
       if (!encoding) {
         // $FlowFixMe
-        return [...fs.readFileSync(path)];
+        return [...this.#fs.readFileSync(path)];
       } else {
-        return fs.readFileSync(path, encoding);
-      }
-    }),
-    isFile: (path: string) => {
-      try {
-        return fs.statSync(path).isFile();
-      } catch {
-        return false;
+        return this.#fs.readFileSync(path, encoding);
       }
     },
-    isDir: (path: string) => {
-      try {
-        return fs.statSync(path).isDirectory();
-      } catch {
-        return false;
-      }
-    },
-  };
+  );
 }

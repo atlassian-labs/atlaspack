@@ -77,7 +77,7 @@ export class NodePackageManager implements PackageManager {
     this.installer = installer;
 
     // $FlowFixMe - no type for _extensions
-    this.currentExtensions = Object.keys(Module._extensions).map(e =>
+    this.currentExtensions = Object.keys(Module._extensions).map((e) =>
       e.substring(1),
     );
   }
@@ -88,10 +88,10 @@ export class NodePackageManager implements PackageManager {
         this.fs instanceof NodeFS && process.versions.pnp == null
           ? undefined
           : {
-              canonicalize: path => this.fs.realpathSync(path),
-              read: path => this.fs.readFileSync(path),
-              isFile: path => this.fs.statSync(path).isFile(),
-              isDir: path => this.fs.statSync(path).isDirectory(),
+              canonicalize: (path) => this.fs.realpathSync(path),
+              read: (path) => this.fs.readFileSync(path),
+              isFile: (path) => this.fs.statSync(path).isFile(),
+              isDir: (path) => this.fs.statSync(path).isDirectory(),
             },
       mode: 2,
       entries: ENTRIES,
@@ -192,7 +192,7 @@ export class NodePackageManager implements PackageManager {
     // We assume that the extension list will change in size - as these tools usually add support for
     // additional extensions.
     if (extensions.length !== this.currentExtensions.length) {
-      this.currentExtensions = extensions.map(e => e.substring(1));
+      this.currentExtensions = extensions.map((e) => e.substring(1));
       this.resolver = this._createResolver();
     }
 
@@ -200,7 +200,7 @@ export class NodePackageManager implements PackageManager {
     Module._cache[filePath] = m;
 
     // Patch require within this module so it goes through our require
-    m.require = id => {
+    m.require = (id) => {
       return this.requireSync(id, filePath);
     };
 
@@ -212,7 +212,7 @@ export class NodePackageManager implements PackageManager {
     };
 
     // $FlowFixMe
-    nativeFS.statSync = filename => {
+    nativeFS.statSync = (filename) => {
       return this.fs.statSync(filename);
     };
 
@@ -320,7 +320,7 @@ export class NodePackageManager implements PackageManager {
         }
 
         throw new ThrowableDiagnostic({
-          diagnostic: conflicts.fields.map(field => ({
+          diagnostic: conflicts.fields.map((field) => ({
             message: md`Could not find module "${name}", but it was listed in package.json. Run your package manager first.`,
             origin: '@atlaspack/package-manager',
             codeFrames: [
@@ -371,7 +371,7 @@ export class NodePackageManager implements PackageManager {
                     code: conflicts.json,
                     codeHighlights: generateJSONCodeHighlights(
                       conflicts.json,
-                      conflicts.fields.map(field => ({
+                      conflicts.fields.map((field) => ({
                         key: `/${field}/${encodeJSONKeyComponent(name)}`,
                         type: 'key',
                         message: 'Found this conflicting local requirement.',
@@ -509,10 +509,10 @@ export class NodePackageManager implements PackageManager {
       // cannot be intercepted. Instead, ask the resolver to parse the file and recursively analyze the deps.
       if (resolved.type === 2) {
         let invalidations = this.resolver.getInvalidations(resolved.resolved);
-        invalidations.invalidateOnFileChange.forEach(i =>
+        invalidations.invalidateOnFileChange.forEach((i) =>
           res.invalidateOnFileChange.add(i),
         );
-        invalidations.invalidateOnFileCreate.forEach(i =>
+        invalidations.invalidateOnFileCreate.forEach((i) =>
           res.invalidateOnFileCreate.push(i),
         );
         res.invalidateOnStartup ||= invalidations.invalidateOnStartup;
