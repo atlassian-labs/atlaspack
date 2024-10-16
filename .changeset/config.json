@@ -10,5 +10,20 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": [
+    "caniuse-database",
+    "lmdb-js-lite",
+    "fuzzer",
+    "@atlaspack/repl",
+    "@atlaspack/conditional-bundling-example",
+    "@atlaspack/eslint-example",
+    "@atlaspack/html-example",
+    "@atlaspack/kitchen-sink-example",
+    "@atlaspack/react-hmr-example",
+    "@atlaspack/react-refresh-example",
+    "@atlaspack/simple-example",
+    "@atlaspack/typechecking-example",
+    "@atlaspack/typescript-example",
+    "atlaspack-for-vscode"
+  ]
 }

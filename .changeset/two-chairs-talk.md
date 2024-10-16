@@ -37,7 +37,6 @@
 '@atlaspack/eslint-config-browser': minor
 '@atlaspack/eslint-plugin': minor
 '@atlaspack/query': minor
-'@atlaspack/repl': minor
 '@atlaspack/parcel-to-atlaspack': minor
 '@atlaspack/namer-default': minor
 '@atlaspack/optimizer-blob-url': minor
@@ -112,8 +111,10 @@
 '@atlaspack/lsp': minor
 '@atlaspack/lsp-protocol': minor
 '@atlaspack/watcher-watchman-js': minor
+'@atlaspack/babel-plugin-transform-contextual-imports': minor
 '@atlaspack/babel-plugin-transform-runtime': minor
 '@atlaspack/babel-preset-env': minor
+'@atlaspack/swc-plugin-contextual-imports': minor
 '@atlaspack/create-react-app': minor
 '@atlaspack/events': minor
 '@atlaspack/macros': minor
@@ -124,7 +125,4 @@
 '@atlaspack/validator-typescript': minor
 ---
 
-Initial publish moving to changesets
-
-`atlaspack` will move to a changeset release model, and continuously publish new
-versions to NPM using semantic versioning.
+Initial changeset release - atlaspack will move towards changeset releases
