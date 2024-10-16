@@ -4,6 +4,7 @@ const path = require('path');
 function resolveSource(specifier, from) {
   return resolve.sync(specifier, {
     basedir: path.dirname(from),
+    extensions: ['.ts', '.js'],
     packageFilter(pkg) {
       if (
         pkg.name.startsWith('@atlaspack/') ||

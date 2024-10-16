@@ -24,7 +24,7 @@ const IGNORED_PACKAGES = [
 
 const paths = {
   packageSrc: [
-    'packages/*/*/src/**/*.js',
+    'packages/*/*/src/**/*.{js,ts}',
     '!**/dev-prelude.js',
     ...IGNORED_PACKAGES,
   ],
