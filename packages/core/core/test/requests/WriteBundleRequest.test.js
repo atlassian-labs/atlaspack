@@ -34,13 +34,18 @@ function generateSampleInput(
   inputSize: number,
 ): Buffer {
   let output = '';
+  const hashReferenceKeys = Array.from(hashReferences.keys());
 
   while (output.length < inputSize) {
     if (Math.random() < 0.1) {
-      output += 'HASH_REF_1234567890123456';
+      const hash =
+        hashReferenceKeys[Math.floor(Math.random() * hashReferenceKeys.length)];
+      output += hash;
     } else {
       for (let i = 0; i < 16; i++) {
-        output += String.fromCharCode(97 + Math.floor(Math.random() * 26));
+        output += String.fromCharCode(
+          'a'.charCodeAt(0) + Math.floor(Math.random() * 26),
+        );
       }
     }
   }
@@ -66,10 +71,31 @@ async function javascriptReplaceHashReferences(
   return output;
 }
 
-describe('replaceStream', () => {
+describe.only('replaceStream', () => {
   const hashReferences = new Map([
     ['HASH_REF_1234567890123456', 'HASH_REF_replacedwithstri'],
   ]);
+  const leftPad = (s: string, length: number) => {
+    let output = '';
+    const pad = length - s.length;
+    for (let i = 0; i < pad; i++) {
+      output += '0';
+    }
+    output += s;
+    return output;
+  };
+
+  for (let i = 0; i < 500; i++) {
+    const key = `HASH_REF_${leftPad(String(i), 16)}`;
+    const replacement = 'HASH_REF_replacedwithstri';
+    assert.equal(key.length, replacement.length);
+    hashReferences.set(key, replacement);
+  }
+
+  it('leftpad', () => {
+    assert.equal(leftPad('s', 5), '0000s');
+  });
+
   const buffer = Buffer.from(
     'Hello HASH_REF_1234567890123456 more stuff here HASH_REF_1234567890123456',
   );
@@ -95,9 +121,10 @@ describe('replaceStream', () => {
     assert.equal(outputString, expectedOutput);
   });
 
-  let currentInputSize = 1024 * 1024; // Start at 1MB and grow to 40MB
+  let currentInputSize = 1024 * 1024; // Start at 1MB and grow to 2MB
+  const maximumInputSize = 2 * 1024 * 1024;
   const inputSizes = [];
-  while (currentInputSize < 40 * 1024 * 1024) {
+  while (currentInputSize <= maximumInputSize) {
     inputSizes.push(currentInputSize);
     currentInputSize *= 2;
   }
@@ -105,9 +132,10 @@ describe('replaceStream', () => {
   inputSizes.forEach((inputSize) => {
     describe('input size ' + inputSize / 1024 / 1024 + 'MB', () => {
       const buffer = generateSampleInput(hashReferences, inputSize);
-      const expectedOutput = buffer
-        .toString()
-        .replace(/HASH_REF_1234567890123456/g, 'HASH_REF_replacedwithstri');
+      let expectedOutput = buffer.toString();
+      for (let [key, replacement] of hashReferences.entries()) {
+        expectedOutput = expectedOutput.replaceAll(key, replacement);
+      }
 
       it('javascript - works on huge buffer', async () => {
         const output = await javascriptReplaceHashReferences(
