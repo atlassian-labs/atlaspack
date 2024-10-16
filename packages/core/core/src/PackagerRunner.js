@@ -1,7 +1,6 @@
 // @flow strict-local
 
 import type {
-  Blob,
   FilePath,
   BundleResult,
   Bundle as BundleType,
@@ -24,14 +23,12 @@ import type {ConfigRequest} from './requests/ConfigRequest';
 import type {DevDepSpecifier} from './requests/DevDepRequest';
 
 import invariant from 'assert';
-import {blobToStream, TapStream} from '@atlaspack/utils';
 import {PluginLogger} from '@atlaspack/logger';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
-import {Readable} from 'stream';
 import nullthrows from 'nullthrows';
 import path from 'path';
 import url from 'url';
-import {hashString, hashBuffer, Hash} from '@atlaspack/rust';
+import {hashString, hashBuffer} from '@atlaspack/rust';
 
 import {NamedBundle, bundleToInternalBundle} from './public/Bundle';
 import BundleGraph, {
@@ -39,7 +36,7 @@ import BundleGraph, {
 } from './public/BundleGraph';
 import PluginOptions from './public/PluginOptions';
 import PublicConfig from './public/Config';
-import {ATLASPACK_VERSION, HASH_REF_PREFIX, HASH_REF_REGEX} from './constants';
+import {ATLASPACK_VERSION, HASH_REF_REGEX} from './constants';
 import {
   fromProjectPath,
   toProjectPathUnsafe,
@@ -92,8 +89,6 @@ type CacheKeyMap = {|
   map: string,
   info: string,
 |};
-
-const BOUNDARY_LENGTH = HASH_REF_PREFIX.length + 32 - 1;
 
 // Packager/optimizer configs are not bundle-specific, so we only need to
 // load them once per build.

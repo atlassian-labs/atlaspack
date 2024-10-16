@@ -32,7 +32,7 @@ class BufferWritable extends Writable {
 function generateSampleInput(
   hashReferences: Map<string, string>,
   inputSize: number,
-): Buffe {
+): Buffer {
   let output = '';
 
   while (output.length < inputSize) {
@@ -56,7 +56,7 @@ async function javascriptReplaceHashReferences(
   const transform = replaceStream(hashReferences);
 
   await new Promise((resolve, reject) => {
-    pipeline(blobToStream(buffer), transform, writable, err => {
+    pipeline(blobToStream(buffer), transform, writable, (err) => {
       if (err) reject(err);
       else resolve(null);
     });
@@ -66,7 +66,7 @@ async function javascriptReplaceHashReferences(
   return output;
 }
 
-describe.only('replaceStream', () => {
+describe('replaceStream', () => {
   const hashReferences = new Map([
     ['HASH_REF_1234567890123456', 'HASH_REF_replacedwithstri'],
   ]);
@@ -102,7 +102,7 @@ describe.only('replaceStream', () => {
     currentInputSize *= 2;
   }
 
-  inputSizes.forEach(inputSize => {
+  inputSizes.forEach((inputSize) => {
     describe('input size ' + inputSize / 1024 / 1024 + 'MB', () => {
       const buffer = generateSampleInput(hashReferences, inputSize);
       const expectedOutput = buffer

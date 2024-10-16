@@ -18,7 +18,7 @@ import nullthrows from 'nullthrows';
 import path from 'path';
 import {NamedBundle} from '../public/Bundle';
 import {blobToStream} from '@atlaspack/utils';
-import {Readable, Transform, pipeline} from 'stream';
+import {Transform, pipeline} from 'stream';
 import {
   fromProjectPath,
   fromProjectPathRelative,
@@ -343,14 +343,4 @@ export function replaceStream(
       cb(null, boundaryStr);
     },
   });
-}
-
-function cloneStream(readable) {
-  let res = new Readable();
-  // $FlowFixMe
-  res._read = () => {};
-  readable.on('data', (chunk) => res.push(chunk));
-  readable.on('end', () => res.push(null));
-  readable.on('error', (err) => res.emit('error', err));
-  return res;
 }
