@@ -8,7 +8,7 @@ use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 
 use atlaspack_core::asset_graph::{AssetGraph, DependencyNode, DependencyState};
-use atlaspack_core::types::{AssetWithDependencies, Dependency};
+use atlaspack_core::types::{Asset, AssetWithDependencies, Dependency};
 
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
@@ -240,12 +240,32 @@ impl AssetGraphBuilder {
       .asset_request_to_asset
       .insert(request_id, asset_node_index);
 
+    let root_asset = (&asset, asset_node_index);
     let mut added_discovered_assets: HashMap<String, NodeIndex> = HashMap::new();
+
+    // Attach the "direct" discovered assets to the graph
+    let direct_discovered_assets = get_direct_discovered_assets(&discovered_assets, &dependencies);
+    for discovered_asset in direct_discovered_assets {
+      let asset_node_index = self
+        .graph
+        .add_asset(incoming_dep_node_index, discovered_asset.asset.clone());
+
+      self.add_asset_dependencies(
+        &discovered_asset.dependencies,
+        &discovered_assets,
+        asset_node_index,
+        &mut added_discovered_assets,
+        root_asset,
+      );
+      self.propagate_requested_symbols(asset_node_index, incoming_dep_node_index);
+    }
+
     self.add_asset_dependencies(
-      dependencies,
+      &dependencies,
       &discovered_assets,
       asset_node_index,
       &mut added_discovered_assets,
+      root_asset,
     );
 
     self.propagate_requested_symbols(asset_node_index, incoming_dep_node_index);
@@ -262,15 +282,16 @@ impl AssetGraphBuilder {
 
   fn add_asset_dependencies(
     &mut self,
-    dependencies: Vec<Dependency>,
+    dependencies: &Vec<Dependency>,
     discovered_assets: &Vec<AssetWithDependencies>,
     asset_node_index: NodeIndex,
     added_discovered_assets: &mut HashMap<String, NodeIndex>,
+    root_asset: (&Asset, NodeIndex),
   ) {
     // Connect dependencies of the Asset
     let mut unique_deps: IndexMap<String, Dependency> = IndexMap::new();
 
-    for mut dependency in dependencies {
+    for dependency in dependencies {
       unique_deps
         .entry(dependency.id())
         .and_modify(|d| {
@@ -279,7 +300,7 @@ impl AssetGraphBuilder {
           // e.g. 'process'. I think ideally we wouldn't end up with two
           // dependencies post-transform but that needs further investigation to
           // resolve and understand...
-          d.meta.append(&mut dependency.meta);
+          d.meta.extend(dependency.meta.clone());
           if let Some(symbols) = d.symbols.as_mut() {
             if let Some(merge_symbols) = dependency.symbols.as_ref() {
               symbols.extend(merge_symbols.clone());
@@ -292,7 +313,7 @@ impl AssetGraphBuilder {
     }
 
     for (_id, dependency) in unique_deps.into_iter() {
-      // Find if this dependency points to a discovered_asset
+      // Check if this dependency points to a discovered_asset
       let discovered_asset = discovered_assets.iter().find(|discovered_asset| {
         discovered_asset
           .asset
@@ -301,7 +322,18 @@ impl AssetGraphBuilder {
           .is_some_and(|key| key == &dependency.specifier)
       });
 
+      // Check if this dependency points to the root asset
+      let dep_to_root_asset = root_asset
+        .0
+        .unique_key
+        .as_ref()
+        .is_some_and(|key| key == &dependency.specifier);
+
       let dep_node = self.graph.add_dependency(asset_node_index, dependency);
+
+      if dep_to_root_asset {
+        self.graph.add_edge(&dep_node, &root_asset.1);
+      }
 
       // If the dependency points to a dicovered asset then add the asset using the new
       // dep as it's parent
@@ -324,11 +356,13 @@ impl AssetGraphBuilder {
           added_discovered_assets.insert(asset.id.clone(), asset_node_index);
 
           self.add_asset_dependencies(
-            dependencies.clone(),
+            dependencies,
             discovered_assets,
             asset_node_index,
             added_discovered_assets,
+            root_asset,
           );
+          self.propagate_requested_symbols(asset_node_index, dep_node);
         }
       }
     }
@@ -403,6 +437,49 @@ impl AssetGraphBuilder {
     *work_count += 1;
     let _ = request_context.queue_request(request, sender.clone());
   }
+}
+
+/// Direct discovered assets are discovered assets that don't have any
+/// dependencies importing them. This means they need to be attached to the
+/// original asset directly otherwise they'll be left out of the graph entirely.
+///
+/// CSS module JS export files are a good example of this.
+fn get_direct_discovered_assets<'a>(
+  discovered_assets: &'a [AssetWithDependencies],
+  dependencies: &'a [Dependency],
+) -> Vec<&'a AssetWithDependencies> {
+  // Find all the discovered_asset unique keys
+  let discovered_asset_unique_keys: HashSet<String> = discovered_assets
+    .iter()
+    .filter_map(|discovered_asset| discovered_asset.asset.unique_key.clone())
+    .collect();
+
+  let all_dependencies = dependencies.iter().chain(
+    discovered_assets
+      .iter()
+      .flat_map(|discovered_asset| discovered_asset.dependencies.iter()),
+  );
+
+  // Find all the "indirect" discovered assets.
+  // Assets that are pointed to by one of the generated dependencies within the
+  // asset request
+  let mut indirect_discovered_assets = HashSet::new();
+  for dependency in all_dependencies {
+    if discovered_asset_unique_keys.contains(&dependency.specifier) {
+      indirect_discovered_assets.insert(dependency.specifier.clone());
+    }
+  }
+
+  discovered_assets
+    .iter()
+    .filter(|discovered_asset| {
+      !discovered_asset
+        .asset
+        .unique_key
+        .as_ref()
+        .is_some_and(|unique_key| indirect_discovered_assets.contains(unique_key))
+    })
+    .collect()
 }
 
 #[cfg(test)]

@@ -14,7 +14,7 @@ import {
 } from '@atlaspack/test-utils';
 import postcss from 'postcss';
 
-describe.v2('css modules', () => {
+describe('css modules', () => {
   it('should support transforming css modules (require)', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-modules-cjs/index.js'),
@@ -206,7 +206,7 @@ describe.v2('css modules', () => {
     );
   });
 
-  it('should support css modules composes imports', async () => {
+  it.v2('should support css modules composes imports', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index.js'),
     );
@@ -249,7 +249,7 @@ describe.v2('css modules', () => {
     assert(css.includes(`.${cssClass2}`));
   });
 
-  it('should not include css twice for composes imports', async () => {
+  it.v2('should not include css twice for composes imports', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index.js'),
     );
@@ -263,7 +263,7 @@ describe.v2('css modules', () => {
     );
   });
 
-  it('should support composes imports for sass', async () => {
+  it.v2('should support composes imports for sass', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index2.js'),
     );
@@ -291,7 +291,7 @@ describe.v2('css modules', () => {
     assert(css.includes('height: 200px;'));
   });
 
-  it('should support composes imports with custom path names', async () => {
+  it.v2('should support composes imports with custom path names', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index3.js'),
     );
@@ -319,7 +319,7 @@ describe.v2('css modules', () => {
     assert(css.includes('height: 100px;'));
   });
 
-  it('should support deep nested composes imports', async () => {
+  it.v2('should support deep nested composes imports', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index4.js'),
     );
@@ -360,7 +360,7 @@ describe.v2('css modules', () => {
     assert(css.indexOf('_intermediate') < css.indexOf('_composes5'));
   });
 
-  it('should support composes imports for multiple selectors', async () => {
+  it.v2('should support composes imports for multiple selectors', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index5.js'),
     );
@@ -386,95 +386,107 @@ describe.v2('css modules', () => {
     assert(composes6Classes[2].endsWith('_test-2'));
   });
 
-  it('should throw an error when importing a missing class', async function () {
-    await assert.rejects(
-      () =>
-        bundle(
-          path.join(
-            __dirname,
-            '/integration/no-export-error-with-correct-filetype/src/App.jsx',
-          ),
-          {
-            shouldDisableCache: true,
-            defaultTargetOptions: {
-              shouldScopeHoist: true,
-            },
-          },
-        ),
-      {
-        name: 'BuildError',
-        diagnostics: [
-          {
-            codeFrames: [
-              {
-                filePath: path.join(
-                  __dirname,
-                  '/integration/no-export-error-with-correct-filetype/src/App.jsx',
-                ),
-                language: 'js',
-                codeHighlights: [
-                  {
-                    message: undefined,
-                    end: {
-                      column: 45,
-                      line: 7,
-                    },
-                    start: {
-                      column: 28,
-                      line: 7,
-                    },
-                  },
-                ],
+  it.v2(
+    'should throw an error when importing a missing class',
+    async function () {
+      await assert.rejects(
+        () =>
+          bundle(
+            path.join(
+              __dirname,
+              '/integration/no-export-error-with-correct-filetype/src/App.jsx',
+            ),
+            {
+              shouldDisableCache: true,
+              defaultTargetOptions: {
+                shouldScopeHoist: true,
               },
-            ],
-            message:
-              "integration/no-export-error-with-correct-filetype/src/app.module.css does not export 'notExisting'",
-            origin: '@atlaspack/core',
-          },
-        ],
-      },
-    );
-  });
+            },
+          ),
+        {
+          name: 'BuildError',
+          diagnostics: [
+            {
+              codeFrames: [
+                {
+                  filePath: path.join(
+                    __dirname,
+                    '/integration/no-export-error-with-correct-filetype/src/App.jsx',
+                  ),
+                  language: 'js',
+                  codeHighlights: [
+                    {
+                      message: undefined,
+                      end: {
+                        column: 45,
+                        line: 7,
+                      },
+                      start: {
+                        column: 28,
+                        line: 7,
+                      },
+                    },
+                  ],
+                },
+              ],
+              message:
+                "integration/no-export-error-with-correct-filetype/src/app.module.css does not export 'notExisting'",
+              origin: '@atlaspack/core',
+            },
+          ],
+        },
+      );
+    },
+  );
 
-  it('should fall back to postcss for legacy css modules', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/css-modules-legacy/index.js'),
-    );
+  it.v2(
+    'should fall back to postcss for legacy css modules',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/css-modules-legacy/index.js'),
+      );
 
-    assertBundles(b, [
-      {
-        name: 'index.js',
-        assets: ['index.js', 'index.module.css'],
-      },
-      {
-        name: 'index.css',
-        assets: ['index.module.css'],
-      },
-    ]);
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          assets: ['index.js', 'index.module.css'],
+        },
+        {
+          name: 'index.css',
+          assets: ['index.module.css'],
+        },
+      ]);
 
-    let css = await outputFS.readFile(path.join(distDir, 'index.css'), 'utf8');
-    assert(css.includes('color: red'));
-  });
+      let css = await outputFS.readFile(
+        path.join(distDir, 'index.css'),
+        'utf8',
+      );
+      assert(css.includes('color: red'));
+    },
+  );
 
-  it('should fall back to postcss for legacy css modules with :export', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/css-modules-legacy/b.js'),
-    );
+  it.v2(
+    'should fall back to postcss for legacy css modules with :export',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/css-modules-legacy/b.js'),
+      );
 
-    assertBundles(b, [
-      {
-        name: 'b.js',
-        assets: ['b.js', 'b.module.css'],
-      },
-      {
-        name: 'b.css',
-        assets: ['b.module.css'],
-      },
-    ]);
+      assertBundles(b, [
+        {
+          name: 'b.js',
+          assets: ['b.js', 'b.module.css'],
+        },
+        {
+          name: 'b.css',
+          assets: ['b.module.css'],
+        },
+      ]);
 
-    let res = await run(b);
-    assert.deepEqual(res, {color: 'red'});
-  });
+      let res = await run(b);
+      assert.deepEqual(res, {color: 'red'});
+    },
+  );
 
   it('should optimize away unused @keyframes', async function () {
     let b = await bundle(
@@ -500,31 +512,41 @@ describe.v2('css modules', () => {
     assert(!css.includes('unused'));
   });
 
-  it('should not double optimize css modules processed with postcss', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/postcss-modules-optimize/index.js'),
-      {
-        mode: 'production',
-      },
-    );
+  // This test doesn't really make sense for v3 as postcss is completely
+  // disabled
+  it.v2(
+    'should not double optimize css modules processed with postcss',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/postcss-modules-optimize/index.js'),
+        {
+          mode: 'production',
+        },
+      );
 
-    assertBundles(b, [
-      {
-        name: 'index.js',
-        assets: ['index.js', 'index.css'],
-      },
-      {
-        name: 'index.css',
-        assets: ['index.css'],
-      },
-    ]);
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          assets: ['index.js', 'index.css'],
+        },
+        {
+          name: 'index.css',
+          assets: ['index.css'],
+        },
+      ]);
 
-    let css = await outputFS.readFile(path.join(distDir, 'index.css'), 'utf8');
-    assert(css.includes('@keyframes test'));
-    assert(css.includes('@keyframes unused'));
-  });
+      let css = await outputFS.readFile(
+        path.join(distDir, 'index.css'),
+        'utf8',
+      );
+      assert(css.includes('@keyframes test'));
+      assert(css.includes('@keyframes unused'));
+    },
+  );
 
-  it('should compile css modules for multiple targets', async function () {
+  // Not sure why this one fails for v3 as yet, the graphs seems pretty close to
+  // identical
+  it.v2('should compile css modules for multiple targets', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/css-modules-targets/index.html'),
       {
@@ -552,7 +574,8 @@ describe.v2('css modules', () => {
     ]);
   });
 
-  it('should not fail with many css modules', async function () {
+  // Uses "composes"
+  it.v2('should not fail with many css modules', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/css-modules-bug/src/index.html'),
     );
@@ -680,22 +703,28 @@ describe.v2('css modules', () => {
     assert(contents.includes('.x'));
   });
 
-  it('should optimize away unused variables when dashedIdents option is used', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/css-modules-vars/index.js'),
-      {mode: 'production'},
-    );
-    let contents = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
-      'utf8',
-    );
-    assert.equal(
-      contents.split('\n')[0],
-      ':root{--wGsoEa_color:red;--wGsoEa_font:Helvetica;--wGsoEa_theme-sizes-1\\/12:2;--wGsoEa_from-js:purple}body{font:var(--wGsoEa_font)}._4fY2uG_foo{color:var(--wGsoEa_color);width:var(--wGsoEa_theme-sizes-1\\/12);height:var(--height)}',
-    );
-    let res = await run(b);
-    assert.deepEqual(res, ['_4fY2uG_foo', '--wGsoEa_from-js']);
-  });
+  // In v3, this results in JS worker issues where workers are called when they've
+  // already been shutdown. Not sure if this is surfacing an existing worker bug
+  // or if it's related to v3?
+  it.v2(
+    'should optimize away unused variables when dashedIdents option is used',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/css-modules-vars/index.js'),
+        {mode: 'production'},
+      );
+      let contents = await outputFS.readFile(
+        b.getBundles().find((b) => b.type === 'css').filePath,
+        'utf8',
+      );
+      assert.equal(
+        contents.split('\n')[0],
+        ':root{--wGsoEa_color:red;--wGsoEa_font:Helvetica;--wGsoEa_theme-sizes-1\\/12:2;--wGsoEa_from-js:purple}body{font:var(--wGsoEa_font)}._4fY2uG_foo{color:var(--wGsoEa_color);width:var(--wGsoEa_theme-sizes-1\\/12);height:var(--height)}',
+      );
+      let res = await run(b);
+      assert.deepEqual(res, ['_4fY2uG_foo', '--wGsoEa_from-js']);
+    },
+  );
 
   it('should group together css and css modules into one bundle', async function () {
     let b = await bundle(
@@ -715,29 +744,34 @@ describe.v2('css modules', () => {
     ]);
   });
 
-  it('should bundle css modules siblings together and their JS assets', async function () {
-    // This issue was first documented here
-    // https://github.com/parcel-bundler/parcel/issues/8716
-    let b = await bundle(
-      path.join(
-        __dirname,
-        '/integration/css-modules-merging-siblings/index.html',
-      ),
-    );
-    let res = [];
-    await runBundle(
-      b,
-      b.getBundles().find((b) => b.name === 'index.html'),
-      {
-        sideEffect: (s) => res.push(s),
-      },
-    );
-    // Result is  [ 'mainJs', 'SX8vmq_container YpGmra_-expand' ]
-    assert.deepEqual(res[0][0], 'mainJs');
-    assert(res[0][1].includes('container') && res[0][1].includes('expand'));
-  });
+  // Uses "composes"
+  it.v2(
+    'should bundle css modules siblings together and their JS assets',
+    async function () {
+      // This issue was first documented here
+      // https://github.com/parcel-bundler/parcel/issues/8716
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/css-modules-merging-siblings/index.html',
+        ),
+      );
+      let res = [];
+      await runBundle(
+        b,
+        b.getBundles().find((b) => b.name === 'index.html'),
+        {
+          sideEffect: (s) => res.push(s),
+        },
+      );
+      // Result is  [ 'mainJs', 'SX8vmq_container YpGmra_-expand' ]
+      assert.deepEqual(res[0][0], 'mainJs');
+      assert(res[0][1].includes('container') && res[0][1].includes('expand'));
+    },
+  );
 
-  it('should duplicate css modules between targets', async function () {
+  // Breaks in v3 as it uses "composes"
+  it.v2('should duplicate css modules between targets', async function () {
     let b = await bundle([
       path.join(__dirname, '/integration/css-module-self-references/a'),
       path.join(__dirname, '/integration/css-module-self-references/b'),
@@ -779,8 +813,10 @@ describe.v2('css modules', () => {
     ]);
   });
 
-  it('should support the "include" and "exclude" options', async function () {
-    await fsFixture(overlayFS, __dirname)`
+  it.v2(
+    'should support the "include" and "exclude" options',
+    async function () {
+      await fsFixture(overlayFS, __dirname)`
       css-module-include
         a.css:
           .foo { color: red }
@@ -806,17 +842,21 @@ describe.v2('css modules', () => {
 
         yarn.lock:`;
 
-    let b = await bundle(path.join(__dirname, 'css-module-include/index.js'), {
-      mode: 'production',
-      inputFS: overlayFS,
-    });
+      let b = await bundle(
+        path.join(__dirname, 'css-module-include/index.js'),
+        {
+          mode: 'production',
+          inputFS: overlayFS,
+        },
+      );
 
-    let contents = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
-      'utf8',
-    );
-    assert(contents.includes('.foo'));
-    assert(contents.includes('.rp85ja_bar'));
-    assert(contents.includes('.baz'));
-  });
+      let contents = await outputFS.readFile(
+        b.getBundles().find((b) => b.type === 'css').filePath,
+        'utf8',
+      );
+      assert(contents.includes('.foo'));
+      assert(contents.includes('.rp85ja_bar'));
+      assert(contents.includes('.baz'));
+    },
+  );
 });

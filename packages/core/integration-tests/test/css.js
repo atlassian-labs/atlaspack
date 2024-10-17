@@ -13,7 +13,7 @@ import {
   outputFS,
 } from '@atlaspack/test-utils';
 
-describe.v2('css', () => {
+describe('css', () => {
   afterEach(async () => {
     await removeDistDirectory();
   });
@@ -171,88 +171,105 @@ describe.v2('css', () => {
     assert(css.includes('.index'));
   });
 
-  it('should support linking to assets with url() from CSS', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/css-url/index.js'));
+  it.v2(
+    'should support linking to assets with url() from CSS',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/css-url/index.js'),
+      );
 
-    assertBundles(b, [
-      {
-        name: 'index.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'index.css',
-        assets: ['index.css'],
-      },
-      {
-        type: 'woff2',
-        assets: ['test.woff2'],
-      },
-    ]);
-
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-    assert.equal(output(), 2);
-
-    let css = await outputFS.readFile(path.join(distDir, 'index.css'), 'utf8');
-    assert(/url\("test\.[0-9a-f]+\.woff2"\)/.test(css));
-    assert(css.includes('url("http://google.com")'));
-    assert(css.includes('.index'));
-    assert(css.includes('url("data:image/gif;base64,quotes")'));
-    assert(css.includes('.quotes'));
-    assert(css.includes('url("data:image/gif;base64,no-quote")'));
-    assert(css.includes('.no-quote'));
-
-    assert(
-      await outputFS.exists(
-        path.join(distDir, css.match(/url\("(test\.[0-9a-f]+\.woff2)"\)/)[1]),
-      ),
-    );
-  });
-
-  it('should support linking to assets with url() from CSS in production', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/css-url/index.js'),
-      {
-        defaultTargetOptions: {
-          shouldOptimize: true,
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          assets: ['index.js'],
         },
-      },
-    );
+        {
+          name: 'index.css',
+          assets: ['index.css'],
+        },
+        {
+          type: 'woff2',
+          assets: ['test.woff2'],
+        },
+      ]);
 
-    assertBundles(b, [
-      {
-        name: 'index.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'index.css',
-        assets: ['index.css'],
-      },
-      {
-        type: 'woff2',
-        assets: ['test.woff2'],
-      },
-    ]);
+      let output = await run(b);
+      assert.equal(typeof output, 'function');
+      assert.equal(output(), 2);
 
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-    assert.equal(output(), 2);
+      let css = await outputFS.readFile(
+        path.join(distDir, 'index.css'),
+        'utf8',
+      );
+      assert(/url\("test\.[0-9a-f]+\.woff2"\)/.test(css));
+      assert(css.includes('url("http://google.com")'));
+      assert(css.includes('.index'));
+      assert(css.includes('url("data:image/gif;base64,quotes")'));
+      assert(css.includes('.quotes'));
+      assert(css.includes('url("data:image/gif;base64,no-quote")'));
+      assert(css.includes('.no-quote'));
 
-    let css = await outputFS.readFile(path.join(distDir, 'index.css'), 'utf8');
-    assert(/url\(test\.[0-9a-f]+\.woff2\)/.test(css), 'woff ext found in css');
-    assert(css.includes('url(http://google.com)'), 'url() found');
-    assert(css.includes('.index'), '.index found');
-    assert(/url\("?data:image\/gif;base64,quotes"?\)/.test(css));
-    assert(css.includes('.quotes'));
-    assert(/url\("?data:image\/gif;base64,no-quote"?\)/.test(css));
-    assert(css.includes('.no-quote'));
+      assert(
+        await outputFS.exists(
+          path.join(distDir, css.match(/url\("(test\.[0-9a-f]+\.woff2)"\)/)[1]),
+        ),
+      );
+    },
+  );
 
-    assert(
-      await outputFS.exists(
-        path.join(distDir, css.match(/url\((test\.[0-9a-f]+\.woff2)\)/)[1]),
-      ),
-    );
-  });
+  it.v2(
+    'should support linking to assets with url() from CSS in production',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/css-url/index.js'),
+        {
+          defaultTargetOptions: {
+            shouldOptimize: true,
+          },
+        },
+      );
+
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          assets: ['index.js'],
+        },
+        {
+          name: 'index.css',
+          assets: ['index.css'],
+        },
+        {
+          type: 'woff2',
+          assets: ['test.woff2'],
+        },
+      ]);
+
+      let output = await run(b);
+      assert.equal(typeof output, 'function');
+      assert.equal(output(), 2);
+
+      let css = await outputFS.readFile(
+        path.join(distDir, 'index.css'),
+        'utf8',
+      );
+      assert(
+        /url\(test\.[0-9a-f]+\.woff2\)/.test(css),
+        'woff ext found in css',
+      );
+      assert(css.includes('url(http://google.com)'), 'url() found');
+      assert(css.includes('.index'), '.index found');
+      assert(/url\("?data:image\/gif;base64,quotes"?\)/.test(css));
+      assert(css.includes('.quotes'));
+      assert(/url\("?data:image\/gif;base64,no-quote"?\)/.test(css));
+      assert(css.includes('.no-quote'));
+
+      assert(
+        await outputFS.exists(
+          path.join(distDir, css.match(/url\((test\.[0-9a-f]+\.woff2)\)/)[1]),
+        ),
+      );
+    },
+  );
 
   it('should support linking to assets in parent folders with url() from CSS', async function () {
     let b = await bundle(
@@ -326,56 +343,59 @@ describe.v2('css', () => {
     assert(css.includes('url("#default#VML")'));
   });
 
-  it('should throw a diagnostic for relative url() dependencies in custom properties', async function () {
-    let fixture = path.join(
-      __dirname,
-      'integration/css-url-custom-property/index.css',
-    );
-    let code = await inputFS.readFileSync(fixture, 'utf8');
-    // $FlowFixMe
-    await assert.rejects(
-      () =>
-        bundle(fixture, {
-          defaultTargetOptions: {
-            shouldOptimize: true,
-          },
-        }),
-      {
-        name: 'BuildError',
-        diagnostics: [
-          {
-            message:
-              "Ambiguous url('foo.png') in custom property. Relative paths are resolved from the location the var() is used, not where the custom property is defined. Use an absolute URL instead",
-            origin: '@atlaspack/transformer-css',
-            name: 'SyntaxError',
-            stack: undefined,
-            codeFrames: [
-              {
-                filePath: fixture,
-                code,
-                codeHighlights: [
-                  {
-                    start: {
-                      line: 2,
-                      column: 11,
+  it.v2(
+    'should throw a diagnostic for relative url() dependencies in custom properties',
+    async function () {
+      let fixture = path.join(
+        __dirname,
+        'integration/css-url-custom-property/index.css',
+      );
+      let code = await inputFS.readFileSync(fixture, 'utf8');
+      // $FlowFixMe
+      await assert.rejects(
+        () =>
+          bundle(fixture, {
+            defaultTargetOptions: {
+              shouldOptimize: true,
+            },
+          }),
+        {
+          name: 'BuildError',
+          diagnostics: [
+            {
+              message:
+                "Ambiguous url('foo.png') in custom property. Relative paths are resolved from the location the var() is used, not where the custom property is defined. Use an absolute URL instead",
+              origin: '@atlaspack/transformer-css',
+              name: 'SyntaxError',
+              stack: undefined,
+              codeFrames: [
+                {
+                  filePath: fixture,
+                  code,
+                  codeHighlights: [
+                    {
+                      start: {
+                        line: 2,
+                        column: 11,
+                      },
+                      end: {
+                        line: 2,
+                        column: 11,
+                      },
                     },
-                    end: {
-                      line: 2,
-                      column: 11,
-                    },
-                  },
-                ],
-              },
-            ],
-            hints: [
-              'Replace with: url(/integration/css-url-custom-property/foo.png)',
-            ],
-            documentationURL: 'https://parceljs.org/languages/css/#url()',
-          },
-        ],
-      },
-    );
-  });
+                  ],
+                },
+              ],
+              hints: [
+                'Replace with: url(/integration/css-url-custom-property/foo.png)',
+              ],
+              documentationURL: 'https://parceljs.org/languages/css/#url()',
+            },
+          ],
+        },
+      );
+    },
+  );
 
   it('should minify CSS when minify is set', async function () {
     let b = await bundle(
@@ -399,30 +419,37 @@ describe.v2('css', () => {
     assert.equal(css.split('\n').length, 1);
   });
 
-  it('should produce a sourcemap when sourceMaps are used', async function () {
-    await bundle(path.join(__dirname, '/integration/cssnano/index.js'), {
-      defaultTargetOptions: {
-        shouldOptimize: true,
-      },
-    });
+  it.v2(
+    'should produce a sourcemap when sourceMaps are used',
+    async function () {
+      await bundle(path.join(__dirname, '/integration/cssnano/index.js'), {
+        defaultTargetOptions: {
+          shouldOptimize: true,
+        },
+      });
 
-    let css = await outputFS.readFile(path.join(distDir, 'index.css'), 'utf8');
-    assert(css.includes('.local'));
-    assert(css.includes('.index'));
+      let css = await outputFS.readFile(
+        path.join(distDir, 'index.css'),
+        'utf8',
+      );
+      assert(css.includes('.local'));
+      assert(css.includes('.index'));
 
-    let lines = css.trim().split('\n');
-    assert.equal(lines.length, 2);
-    assert.equal(lines[1], '/*# sourceMappingURL=index.css.map */');
+      let lines = css.trim().split('\n');
+      assert.equal(lines.length, 2);
+      assert.equal(lines[1], '/*# sourceMappingURL=index.css.map */');
 
-    let map = JSON.parse(
-      await outputFS.readFile(path.join(distDir, 'index.css.map'), 'utf8'),
-    );
-    assert.equal(map.file, 'index.css.map');
-    assert(map.sources.includes('integration/cssnano/local.css'));
-    assert(map.sources.includes('integration/cssnano/index.css'));
-  });
+      let map = JSON.parse(
+        await outputFS.readFile(path.join(distDir, 'index.css.map'), 'utf8'),
+      );
+      assert.equal(map.file, 'index.css.map');
+      assert(map.sources.includes('integration/cssnano/local.css'));
+      assert(map.sources.includes('integration/cssnano/index.css'));
+    },
+  );
 
-  it('should inline data-urls for text-encoded files', async () => {
+  // This breaks in v3 as it uses asset.addURLDependency inside the SVG transformer
+  it.v2('should inline data-urls for text-encoded files', async () => {
     await bundle(path.join(__dirname, '/integration/data-url/text.css'), {
       defaultTargetOptions: {
         sourceMaps: false,
@@ -446,55 +473,58 @@ describe.v2('css', () => {
     );
   });
 
-  it('should remap locations in diagnostics using the input source map', async () => {
-    let fixture = path.join(
-      __dirname,
-      'integration/diagnostic-sourcemap/index.scss',
-    );
-    let code = await inputFS.readFileSync(fixture, 'utf8');
-    // $FlowFixMe
-    await assert.rejects(
-      () =>
-        bundle(fixture, {
-          defaultTargetOptions: {
-            shouldOptimize: true,
-          },
-        }),
-      {
-        name: 'BuildError',
-        diagnostics: [
-          {
-            message: "Failed to resolve 'x.png' from './index.scss'",
-            origin: '@atlaspack/core',
-            codeFrames: [
-              {
-                filePath: fixture,
-                code,
-                codeHighlights: [
-                  {
-                    message: undefined,
-                    start: {
-                      line: 5,
-                      column: 3,
+  it.v2(
+    'should remap locations in diagnostics using the input source map',
+    async () => {
+      let fixture = path.join(
+        __dirname,
+        'integration/diagnostic-sourcemap/index.scss',
+      );
+      let code = await inputFS.readFileSync(fixture, 'utf8');
+      // $FlowFixMe
+      await assert.rejects(
+        () =>
+          bundle(fixture, {
+            defaultTargetOptions: {
+              shouldOptimize: true,
+            },
+          }),
+        {
+          name: 'BuildError',
+          diagnostics: [
+            {
+              message: "Failed to resolve 'x.png' from './index.scss'",
+              origin: '@atlaspack/core',
+              codeFrames: [
+                {
+                  filePath: fixture,
+                  code,
+                  codeHighlights: [
+                    {
+                      message: undefined,
+                      start: {
+                        line: 5,
+                        column: 3,
+                      },
+                      end: {
+                        line: 5,
+                        column: 3,
+                      },
                     },
-                    end: {
-                      line: 5,
-                      column: 3,
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            message: "Cannot load file './x.png' in './'.",
-            origin: '@atlaspack/resolver-default',
-            hints: [],
-          },
-        ],
-      },
-    );
-  });
+                  ],
+                },
+              ],
+            },
+            {
+              message: "Cannot load file './x.png' in './'.",
+              origin: '@atlaspack/resolver-default',
+              hints: [],
+            },
+          ],
+        },
+      );
+    },
+  );
 
   it('should support importing CSS from node_modules with the npm: scheme', async () => {
     let b = await bundle(
@@ -546,7 +576,9 @@ describe.v2('css', () => {
     );
   });
 
-  it('should support css nesting with lightningcss', async function () {
+  // This seems to broken due to the browser/target not being passed corrctly
+  // and the nesting doesn't get compiled out
+  it.v2('should support css nesting with lightningcss', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/css-nesting/a.css'),
       {

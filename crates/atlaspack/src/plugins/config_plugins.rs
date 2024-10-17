@@ -253,7 +253,7 @@ impl Plugins for ConfigPlugins {
         "@atlaspack/transformer-posthtml" => continue,
         "@atlaspack/transformer-postcss" => continue,
         "@atlaspack/transformer-js" => Box::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?),
-        "@atlaspack/transformer-css" => Box::new(AtlaspackCssTransformerPlugin::new(&self.ctx)),
+        "@atlaspack/transformer-css" => Box::new(AtlaspackCssTransformerPlugin::new(&self.ctx)?),
         "@atlaspack/transformer-inline-string" => {
           Box::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
         }

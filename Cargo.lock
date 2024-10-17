@@ -479,6 +479,7 @@ dependencies = [
  "atlaspack_filesystem",
  "lightningcss",
  "pretty_assertions",
+ "serde",
  "serde_json",
 ]
 
@@ -2398,6 +2399,7 @@ checksum = "53e225b3fa0a8bd5562c8833b1a32afa88761c4e661d3177b8cdc4e13cbf078e"
 dependencies = [
  "ahash 0.8.11",
  "bitflags 2.6.0",
+ "browserslist-rs",
  "const-str",
  "cssparser",
  "cssparser-color",
