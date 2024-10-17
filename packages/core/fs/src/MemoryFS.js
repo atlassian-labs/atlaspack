@@ -854,11 +854,15 @@ class Stat {
   }
 }
 
+interface DirEntry {
+  mode: number;
+}
+
 class Dirent {
   name: string;
   #mode: number;
 
-  constructor(name: string, entry: interface {mode: number}) {
+  constructor(name: string, entry: DirEntry) {
     this.name = name;
     this.#mode = entry.mode;
   }
