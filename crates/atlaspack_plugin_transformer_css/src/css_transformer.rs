@@ -469,15 +469,40 @@ mod tests {
 
     let result = run_plugin(&asset).unwrap();
 
+    assert_eq!(
+      result.asset,
+      Asset {
+        code: Arc::new(".EcQGha_root {\n  display: \"block\";\n}\n".into()),
+        unique_key: Some("css-module".into()),
+        symbols: Some(vec![
+          Symbol {
+            local: "default".into(),
+            exported: "default".into(),
+            loc: None,
+            is_weak: false,
+            is_esm_export: true,
+            self_referenced: false,
+          },
+          Symbol {
+            local: "EcQGha_root".into(),
+            exported: "root".into(),
+            loc: None,
+            is_weak: false,
+            is_esm_export: true,
+            self_referenced: false,
+          },
+        ]),
+        ..asset
+      }
+    );
     assert_eq!(result.discovered_assets.len(), 1);
     assert_eq!(
       result.discovered_assets[0],
       AssetWithDependencies {
         asset: Asset {
-          id: "41d174432961c58d".into(),
-          code: Arc::new(Code::from("module.exports[\"root\"] = `EcQGha_root`;\n")),
+          id: "88540641b9eed86d".into(),
+          code: Arc::new("module.exports[\"root\"] = `EcQGha_root`;\n".into()),
           file_path: "styles.module.css".into(),
-          unique_key: Some("css-module:module".into()),
           is_source: true,
           ..Default::default()
         },
