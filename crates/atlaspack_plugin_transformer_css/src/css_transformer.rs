@@ -6,28 +6,94 @@ use std::sync::Arc;
 use anyhow::{anyhow, Error};
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
-use atlaspack_core::types::engines::Engines;
+use atlaspack_core::types::engines::{Engines, EnginesBrowsers};
 use atlaspack_core::types::{
-  Asset, AssetWithDependencies, Code, Dependency, EnvironmentContext, ExportsCondition, FileType,
-  Priority, SpecifierType, Symbol,
+  Asset, AssetWithDependencies, Code, Dependency, Diagnostic, EnvironmentContext, ErrorKind,
+  ExportsCondition, FileType, Priority, SpecifierType, Symbol,
 };
 use lightningcss::css_modules::CssModuleExport;
 use lightningcss::dependencies::DependencyOptions;
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::{ParserFlags, ParserOptions, StyleSheet};
-use lightningcss::targets::Targets;
+use lightningcss::targets::{Browsers, Targets};
+use serde::Deserialize;
 use serde_json::json;
+
+use crate::css_transformer_config::{CssModulesConfig, CssModulesFullConfig, CssTransformerConfig};
 
 #[derive(Debug)]
 pub struct AtlaspackCssTransformerPlugin {
   project_root: PathBuf,
+  css_modules_config: CssModulesFullConfig,
+}
+
+#[derive(Deserialize)]
+struct PackageJson {
+  #[serde(rename = "@atlaspack/transformer-css")]
+  config: Option<CssTransformerConfig>,
 }
 
 impl AtlaspackCssTransformerPlugin {
-  pub fn new(ctx: &PluginContext) -> Self {
-    AtlaspackCssTransformerPlugin {
+  pub fn new(ctx: &PluginContext) -> Result<Self, Error> {
+    let config = ctx
+      .config
+      .load_package_json::<PackageJson>()
+      .map(|config| config.contents.config.unwrap_or_default())
+      .map_err(|err| {
+        let diagnostic = err.downcast_ref::<Diagnostic>();
+
+        if diagnostic.is_some_and(|d| d.kind != ErrorKind::NotFound) {
+          return Err(err);
+        }
+
+        Ok(CssTransformerConfig::default())
+      })
+      .ok()
+      .unwrap_or_default();
+
+    let css_modules_config = config
+      .css_modules
+      .map(|css_modules_config| match css_modules_config {
+        CssModulesConfig::GlobalOnly(global) => CssModulesFullConfig {
+          global: Some(global),
+          ..CssModulesFullConfig::default()
+        },
+        CssModulesConfig::Full(config) => config,
+      })
+      .unwrap_or_default();
+
+    Ok(AtlaspackCssTransformerPlugin {
       project_root: ctx.options.project_root.clone(),
+      css_modules_config,
+    })
+  }
+
+  fn is_css_module(&mut self, asset: &Asset) -> bool {
+    let is_style_tag = asset
+      .meta
+      .get("type")
+      .is_some_and(|meta_type| *meta_type == json!("tag"));
+
+    // If this is a style tag it's not a CSS module
+    if is_style_tag {
+      return false;
     }
+
+    let matches_css_module_file_pattern = asset
+      .file_path
+      .file_name()
+      .is_some_and(|name| name.to_string_lossy().ends_with(".module.css"));
+
+    // If it matches the *.module.css pattern, it is a CSS module
+    if matches_css_module_file_pattern {
+      return true;
+    }
+
+    // TODO: Implement include and exclude globs
+
+    // Otherwise if the asset is a source asset and global CSS modules are
+    // enabled
+    asset.is_source && self.css_modules_config.global.unwrap_or_default()
   }
 }
 
@@ -39,18 +105,11 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
   ) -> Result<TransformResult, Error> {
     // TODO: Hardcoded AFM defaults for now, could support proper config here if
     // need be
-    let is_style_tag = asset
-      .meta
-      .get("type")
-      .is_some_and(|meta_type| *meta_type == json!("tag"));
-    let is_css_module = asset.is_source && !is_style_tag && {
-      asset
-        .file_path
-        .file_name()
-        .is_some_and(|name| name.to_string_lossy().ends_with(".module.css"))
-    };
-    let css_modules = if is_css_module {
-      Some(Default::default())
+    let css_modules = if self.is_css_module(&asset) {
+      Some(lightningcss::css_modules::Config {
+        dashed_idents: asset.is_source && self.css_modules_config.dashed_idents.unwrap_or_default(),
+        ..Default::default()
+      })
     } else {
       None
     };
@@ -94,13 +153,22 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       .get("hasDependencies")
       .map_or_else(|| true, |value| value != false);
 
+    let browsers = asset
+      .env
+      .engines
+      .browsers
+      .clone()
+      .map(|browsers| match browsers {
+        EnginesBrowsers::String(s) => Browsers::from_browserslist(vec![s]).unwrap(),
+        EnginesBrowsers::List(l) => Browsers::from_browserslist(l).unwrap(),
+      })
+      .unwrap();
     let css = stylesheet.to_css(PrinterOptions {
       minify: false,
       source_map: None,
       project_root: self.project_root.to_str(),
       targets: Targets {
-        // TODO: provide this correctly
-        browsers: None,
+        browsers,
         include: Default::default(),
         exclude: Default::default(),
       },
@@ -173,8 +241,14 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
     let mut asset_symbols = Vec::new();
 
     if let Some(exports) = css.exports {
-      let unique_key = format!("{}:module", asset.id);
       let mut export_code = String::new();
+
+      // Set the unique key of the root asset so we can use it to assign some generated
+      // dependencies to it
+      let css_unique_key = asset.id.clone();
+      asset.unique_key = Some(css_unique_key.clone());
+
+      let js_unique_key = format!("{}:module", asset.id);
 
       asset_symbols.push(Symbol {
         exported: "default".into(),
@@ -196,8 +270,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
         }
 
         asset_symbols.push(Symbol {
-          exported: export.name.clone(),
-          local: key.clone(),
+          exported: key.clone(),
+          local: export.name.clone(),
           is_weak: false,
           is_esm_export: true,
           self_referenced: false,
@@ -215,13 +289,14 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
             exported: key.clone(),
             local: export.name.clone(),
             is_weak: false,
-            is_esm_export: true,
+            is_esm_export: false,
             self_referenced: true,
             loc: None,
           }];
 
           dependencies.push(Dependency {
-            specifier: unique_key.clone(),
+            // Point this at the root asset
+            specifier: css_unique_key.clone(),
             specifier_type: SpecifierType::Esm,
             symbols: Some(symbols),
             env: asset.env.clone(),
@@ -278,7 +353,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
               is_weak: false,
               loc: None,
               self_referenced: false,
-              is_esm_export: true,
+              is_esm_export: false,
             }];
 
             dependencies.push(Dependency {
@@ -301,10 +376,9 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
       let discovered_asset = Asset::new_discovered(
         &asset,
-        unique_key,
+        None,
         FileType::Js,
         format!("{import_code}{export_code}"),
-        false,
       )?;
 
       discovered_assets.push(AssetWithDependencies {
@@ -359,7 +433,7 @@ mod tests {
       file_system,
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
-    });
+    })?;
     let context = TransformContext::default();
 
     plugin.transform(context, asset.clone())
