@@ -141,5 +141,5 @@
     "@atlaspack/validator-eslint": "2.12.0",
     "@atlaspack/validator-typescript": "2.12.0"
   },
-  "changesets": []
+  "changesets": ["cyan-rats-shake"]
 }

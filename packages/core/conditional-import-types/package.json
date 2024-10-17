@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/conditional-import-types",
-  "version": "2.12.0",
+  "version": "2.13.0-dev.0",
   "license": "MIT",
   "types": "index.d.ts",
   "repository": {

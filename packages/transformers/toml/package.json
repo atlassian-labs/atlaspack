@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-toml",
-  "version": "2.12.0",
+  "version": "2.13.0-dev.0",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,6 +17,6 @@
   },
   "dependencies": {
     "@iarna/toml": "^2.2.3",
-    "@atlaspack/plugin": "2.12.0"
+    "@atlaspack/plugin": "2.13.0-dev.0"
   }
 }

@@ -23,10 +23,10 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@napi-rs/cli": "^2.18.4",
-    "@atlaspack/cache": "*",
-    "@atlaspack/core": "*",
-    "@atlaspack/fs": "*",
-    "@atlaspack/types": "*",
+    "@atlaspack/cache": "3.0.0-dev.0",
+    "@atlaspack/core": "2.13.0-dev.0",
+    "@atlaspack/fs": "3.0.0-dev.0",
+    "@atlaspack/types": "2.13.0-dev.0",
     "@types/node": "^22.3.0",
     "bench-node": "^0.0.1-beta.0",
     "lmdb": "^3.0.13",
@@ -47,10 +47,10 @@
     "version": "napi version"
   },
   "peerDependencies": {
-    "@atlaspack/cache": "*",
-    "@atlaspack/core": "*",
-    "@atlaspack/fs": "*",
-    "@atlaspack/types": "*"
+    "@atlaspack/cache": "3.0.0-dev.0",
+    "@atlaspack/core": "2.13.0-dev.0",
+    "@atlaspack/fs": "3.0.0-dev.0",
+    "@atlaspack/types": "2.13.0-dev.0"
   },
   "stableVersion": "0.0.0"
 }

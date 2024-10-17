@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/package-manager",
-  "version": "2.12.0",
+  "version": "3.0.0-dev.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -39,13 +39,13 @@
     }
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.12.0",
-    "@atlaspack/fs": "2.12.0",
-    "@atlaspack/logger": "2.12.0",
-    "@atlaspack/node-resolver-core": "3.3.0",
-    "@atlaspack/types": "2.12.0",
-    "@atlaspack/utils": "2.12.0",
-    "@atlaspack/workers": "2.12.0",
+    "@atlaspack/diagnostic": "2.13.0-dev.0",
+    "@atlaspack/fs": "3.0.0-dev.0",
+    "@atlaspack/logger": "2.13.0-dev.0",
+    "@atlaspack/node-resolver-core": "3.4.0-dev.0",
+    "@atlaspack/types": "2.13.0-dev.0",
+    "@atlaspack/utils": "2.13.0-dev.0",
+    "@atlaspack/workers": "3.0.0-dev.0",
     "@swc/core": "^1.7.26",
     "semver": "^7.5.2"
   },
@@ -56,7 +56,7 @@
     "split2": "^3.1.1"
   },
   "peerDependencies": {
-    "@atlaspack/core": "^2.12.0"
+    "@atlaspack/core": "^2.13.0-dev.0"
   },
   "browser": {
     "./src/NodePackageManager.js": false,

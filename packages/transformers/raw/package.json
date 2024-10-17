@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-raw",
-  "version": "2.12.0",
+  "version": "2.13.0-dev.0",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,6 +16,6 @@
     "parcel": "^2.12.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.12.0"
+    "@atlaspack/plugin": "2.13.0-dev.0"
   }
 }

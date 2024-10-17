@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/fs",
-  "version": "2.12.0",
+  "version": "3.0.0-dev.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -48,22 +48,22 @@
     "check-ts": "tsc --noEmit index.d.ts"
   },
   "dependencies": {
-    "@atlaspack/feature-flags": "2.12.0",
-    "@atlaspack/rust": "2.12.0",
-    "@atlaspack/types-internal": "2.12.0",
-    "@atlaspack/utils": "2.12.0",
+    "@atlaspack/feature-flags": "2.13.0-dev.0",
+    "@atlaspack/rust": "2.13.0-dev.0",
+    "@atlaspack/types-internal": "2.13.0-dev.0",
+    "@atlaspack/utils": "2.13.0-dev.0",
     "@parcel/watcher": "^2.0.7",
-    "@atlaspack/workers": "2.12.0"
+    "@atlaspack/workers": "3.0.0-dev.0"
   },
   "devDependencies": {
-    "@atlaspack/watcher-watchman-js": "2.12.0",
+    "@atlaspack/watcher-watchman-js": "2.13.0-dev.0",
     "graceful-fs": "^4.2.4",
     "ncp": "^2.0.0",
     "nullthrows": "^1.1.1",
     "utility-types": "^3.10.0"
   },
   "peerDependencies": {
-    "@atlaspack/core": "^2.12.0"
+    "@atlaspack/core": "^2.13.0-dev.0"
   },
   "browser": {
     "@atlaspack/fs": "./lib/browser.js",

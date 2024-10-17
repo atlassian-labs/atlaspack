@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-bundle-stats",
-  "version": "2.12.0",
+  "version": "2.13.0-dev.0",
   "publishConfig": {
     "access": "public"
   },
@@ -14,11 +14,11 @@
     "parcel": "^2.12.0"
   },
   "dependencies": {
-    "@atlaspack/core": "2.12.0",
-    "@atlaspack/plugin": "2.12.0",
-    "@atlaspack/utils": "2.12.0"
+    "@atlaspack/core": "2.13.0-dev.0",
+    "@atlaspack/plugin": "2.13.0-dev.0",
+    "@atlaspack/utils": "2.13.0-dev.0"
   },
   "devDependencies": {
-    "@atlaspack/types": "2.12.0"
+    "@atlaspack/types": "2.13.0-dev.0"
   }
 }

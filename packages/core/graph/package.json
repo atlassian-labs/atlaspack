@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/graph",
-  "version": "3.2.0",
+  "version": "3.3.0-dev.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -16,7 +16,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/feature-flags": "2.12.0",
+    "@atlaspack/feature-flags": "2.13.0-dev.0",
     "nullthrows": "^1.1.1"
   }
 }
