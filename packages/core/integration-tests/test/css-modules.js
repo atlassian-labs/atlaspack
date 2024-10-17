@@ -524,16 +524,16 @@ describe('css modules', () => {
         },
       );
 
-      // assertBundles(b, [
-      //   {
-      //     name: 'index.js',
-      //     assets: ['index.js', 'index.css'],
-      //   },
-      //   {
-      //     name: 'index.css',
-      //     assets: ['index.css'],
-      //   },
-      // ]);
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          assets: ['index.js', 'index.css'],
+        },
+        {
+          name: 'index.css',
+          assets: ['index.css'],
+        },
+      ]);
 
       let css = await outputFS.readFile(
         path.join(distDir, 'index.css'),
