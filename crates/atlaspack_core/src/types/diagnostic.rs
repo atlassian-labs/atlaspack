@@ -1,3 +1,4 @@
+use super::File;
 use crate::{
   config_loader::ConfigFile,
   types::{FileType, Location, SourceLocation},
@@ -8,8 +9,6 @@ use std::{
   fmt::{Display, Formatter},
   path::PathBuf,
 };
-
-use super::File;
 
 /// Represents the kind of diagnostic
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
@@ -22,7 +21,7 @@ pub enum ErrorKind {
 /// This is a user facing error for Atlaspack.
 ///
 /// Usually but not always this is linked to a source-code location.
-#[derive(Builder, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Builder, Debug, Deserialize, PartialEq, Serialize, Default)]
 #[builder(derive(Debug))]
 #[serde(rename_all = "camelCase")]
 pub struct Diagnostic {
@@ -62,7 +61,7 @@ impl Display for Diagnostic {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Language(FileType);
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CodeFrame {
   /// Source-code of the file at the time of error

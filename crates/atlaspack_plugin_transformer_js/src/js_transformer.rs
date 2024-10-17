@@ -1,22 +1,23 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
 
+use crate::js_transformer_config::{InlineEnvironment, JsTransformerConfig};
+use crate::ts_config::{Jsx, Target, TsConfig};
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
-  Asset, BuildMode, Diagnostic, ErrorKind, FileType, LogLevel, OutputFormat, SourceType,
+  Asset, BuildMode, CodeFrame, CodeHighlight, Diagnostic, DiagnosticBuilder, ErrorKind, File,
+  FileType, Location, LogLevel, OutputFormat, SourceType,
 };
 use glob_match::glob_match;
 use serde::Deserialize;
 use swc_core::atoms::Atom;
-
-use crate::js_transformer_config::{InlineEnvironment, JsTransformerConfig};
-use crate::ts_config::{Jsx, Target, TsConfig};
 
 mod conversion;
 
@@ -298,8 +299,56 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     // TODO handle errors properly
     if let Some(errors) = transformation_result.diagnostics {
-      return Err(anyhow!(format!("{:#?}", errors)));
+      let mut diagnostics = Vec::new();
+      let file_path: PathBuf = asset.file_path;
+      let contents = asset.code.to_string();
+      for error in errors {
+        let old_code_highlights = error.code_highlights.unwrap();
+        let mut code_highlights = Vec::new();
+        for old_highlight in old_code_highlights {
+          let highlight = CodeHighlight {
+            start: Location {
+              line: old_highlight.loc.start_line,
+              column: old_highlight.loc.start_col,
+            },
+            end: Location {
+              line: old_highlight.loc.end_line,
+              column: old_highlight.loc.end_col,
+            },
+            message: old_highlight.message,
+          };
+          code_highlights.push(highlight);
+        }
+        let diagnostic = DiagnosticBuilder::default()
+          .code_frames(vec![CodeFrame {
+            code_highlights,
+            path: Some(file_path.clone()),
+            ..CodeFrame::from(File {
+              contents: contents.clone(),
+              path: file_path.clone(),
+            })
+          }])
+          .origin(Some("nope".to_string()))
+          .kind(ErrorKind::NotFound)
+          .message(error.message)
+          .build()?;
+
+        println!("===============");
+        dbg!(&diagnostic);
+        println!("===============");
+
+        diagnostics.push(diagnostic);
+      }
+      return Err(anyhow!(format!("{:?}", diagnostics)));
     }
+
+    /*
+
+    if let Some(errors) {
+
+    }
+
+    */
 
     let config = atlaspack_js_swc_core::Config::default();
     let result = conversion::convert_result(asset, &config, transformation_result, &self.options)
