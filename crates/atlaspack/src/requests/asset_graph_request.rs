@@ -313,7 +313,7 @@ impl AssetGraphBuilder {
     }
 
     for (_id, dependency) in unique_deps.into_iter() {
-      // Find if this dependency points to a discovered_asset
+      // Check if this dependency points to a discovered_asset
       let discovered_asset = discovered_assets.iter().find(|discovered_asset| {
         discovered_asset
           .asset
@@ -322,7 +322,7 @@ impl AssetGraphBuilder {
           .is_some_and(|key| key == &dependency.specifier)
       });
 
-      // Check if the depden
+      // Check if this dependency points to the root asset
       let dep_to_root_asset = root_asset
         .0
         .unique_key
