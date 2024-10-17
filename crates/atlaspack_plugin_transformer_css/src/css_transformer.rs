@@ -103,8 +103,6 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
     _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, Error> {
-    // TODO: Hardcoded AFM defaults for now, could support proper config here if
-    // need be
     let css_modules = if self.is_css_module(&asset) {
       Some(lightningcss::css_modules::Config {
         dashed_idents: asset.is_source && self.css_modules_config.dashed_idents.unwrap_or_default(),
@@ -153,16 +151,13 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       .get("hasDependencies")
       .map_or_else(|| true, |value| value != false);
 
-    let browsers = asset
-      .env
-      .engines
-      .browsers
-      .clone()
-      .map(|browsers| match browsers {
-        EnginesBrowsers::String(s) => Browsers::from_browserslist(vec![s]).unwrap(),
-        EnginesBrowsers::List(l) => Browsers::from_browserslist(l).unwrap(),
-      })
-      .unwrap();
+    let browsers = asset.env.engines.browsers.clone().map_or_else(
+      || Ok(None),
+      |browsers| match browsers {
+        EnginesBrowsers::String(s) => Browsers::from_browserslist(vec![s]),
+        EnginesBrowsers::List(l) => Browsers::from_browserslist(l),
+      },
+    )?;
     let css = stylesheet.to_css(PrinterOptions {
       minify: false,
       source_map: None,
@@ -247,8 +242,6 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       // dependencies to it
       let css_unique_key = asset.id.clone();
       asset.unique_key = Some(css_unique_key.clone());
-
-      let js_unique_key = format!("{}:module", asset.id);
 
       asset_symbols.push(Symbol {
         exported: "default".into(),
