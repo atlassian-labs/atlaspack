@@ -14,7 +14,7 @@ import {
 } from '@atlaspack/test-utils';
 import postcss from 'postcss';
 
-describe.only('css modules', () => {
+describe('css modules', () => {
   it('should support transforming css modules (require)', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-modules-cjs/index.js'),
