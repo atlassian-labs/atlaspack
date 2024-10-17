@@ -63,7 +63,7 @@
     "utility-types": "^3.10.0"
   },
   "peerDependencies": {
-    "@atlaspack/core": "^2.13.0-dev.0"
+    "@atlaspack/core": "2.13.0-dev.0"
   },
   "browser": {
     "@atlaspack/fs": "./lib/browser.js",

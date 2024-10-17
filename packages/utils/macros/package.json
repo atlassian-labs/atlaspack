@@ -13,6 +13,6 @@
   "sideEffects": false,
   "engines": {
     "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
+    "parcel": "2.13.0-dev.0"
   }
 }

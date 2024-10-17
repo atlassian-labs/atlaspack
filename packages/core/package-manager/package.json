@@ -56,7 +56,7 @@
     "split2": "^3.1.1"
   },
   "peerDependencies": {
-    "@atlaspack/core": "^2.13.0-dev.0"
+    "@atlaspack/core": "2.13.0-dev.0"
   },
   "browser": {
     "./src/NodePackageManager.js": false,

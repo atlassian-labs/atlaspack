@@ -15,7 +15,7 @@
     "test": "mocha"
   },
   "engines": {
-    "parcel": "^2.12.0",
+    "parcel": "2.13.0-dev.0",
     "node": ">= 16.0.0"
   },
   "files": [
@@ -37,6 +37,6 @@
     "semver": "^7.5.2"
   },
   "peerDependencies": {
-    "@atlaspack/core": "^2.13.0-dev.0"
+    "@atlaspack/core": "2.13.0-dev.0"
   }
 }
