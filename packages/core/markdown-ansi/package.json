@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/markdown-ansi",
-  "version": "2.12.0",
+  "version": "2.13.0-dev.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "publishConfig": {
     "access": "public"

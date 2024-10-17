@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/cli",
-  "version": "2.12.0",
+  "version": "2.13.0-dev.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -23,25 +23,25 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/config-default": "2.12.0",
-    "@atlaspack/core": "2.12.0",
-    "@atlaspack/diagnostic": "2.12.0",
-    "@atlaspack/events": "2.12.0",
-    "@atlaspack/feature-flags": "2.12.0",
-    "@atlaspack/fs": "2.12.0",
-    "@atlaspack/logger": "2.12.0",
-    "@atlaspack/package-manager": "2.12.0",
-    "@atlaspack/reporter-cli": "2.12.0",
-    "@atlaspack/reporter-dev-server": "2.12.0",
-    "@atlaspack/reporter-tracer": "2.12.0",
-    "@atlaspack/utils": "2.12.0",
+    "@atlaspack/config-default": "3.0.0-dev.0",
+    "@atlaspack/core": "2.13.0-dev.0",
+    "@atlaspack/diagnostic": "2.13.0-dev.0",
+    "@atlaspack/events": "2.13.0-dev.0",
+    "@atlaspack/feature-flags": "2.13.0-dev.0",
+    "@atlaspack/fs": "3.0.0-dev.0",
+    "@atlaspack/logger": "2.13.0-dev.0",
+    "@atlaspack/package-manager": "3.0.0-dev.0",
+    "@atlaspack/reporter-cli": "2.13.0-dev.0",
+    "@atlaspack/reporter-dev-server": "2.13.0-dev.0",
+    "@atlaspack/reporter-tracer": "2.13.0-dev.0",
+    "@atlaspack/utils": "2.13.0-dev.0",
     "chalk": "^4.1.0",
     "commander": "^7.0.0",
     "get-port": "^4.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.22.11",
-    "@atlaspack/babel-register": "2.12.0",
+    "@atlaspack/babel-register": "2.13.0-dev.0",
     "rimraf": "^5.0.5"
   }
 }
