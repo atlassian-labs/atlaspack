@@ -8,13 +8,12 @@ import type {
   WorkerMessage,
 } from '../types';
 import {Worker} from 'worker_threads';
-import path from 'path';
 import {
   prepareForSerialization,
   restoreDeserializedObject,
 } from '@atlaspack/core';
 
-const WORKER_PATH = path.join(__dirname, 'ThreadsChild.js');
+const WORKER_PATH = require.resolve('./ThreadsChild');
 
 export default class ThreadsWorker implements WorkerImpl {
   execArgv: Object;

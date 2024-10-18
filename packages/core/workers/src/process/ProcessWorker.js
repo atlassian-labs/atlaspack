@@ -8,10 +8,9 @@ import type {
   WorkerMessage,
 } from '../types';
 import childProcess, {type ChildProcess} from 'child_process';
-import path from 'path';
 import {serialize, deserialize} from '@atlaspack/core';
 
-const WORKER_PATH = path.join(__dirname, 'ProcessChild.js');
+const WORKER_PATH = require.resolve('./ProcessChild');
 
 export default class ProcessWorker implements WorkerImpl {
   execArgv: Object;

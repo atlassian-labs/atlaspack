@@ -54,6 +54,13 @@
     "graphviz": "^0.0.9",
     "tempy": "^0.2.1"
   },
+  "exports": {
+    ".": "./lib/index.js",
+    "./worker": {
+      "development": "./src/worker.js",
+      "default": "./lib/worker.js"
+    }
+  },
   "browser": {
     "./src/serializerCore.js": "./src/serializerCore.browser.js"
   }

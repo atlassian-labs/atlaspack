@@ -16,11 +16,15 @@ const pkgPath = pkgInfo.path;
 const pkgName = pkgInfo.pkg.name;
 
 describe('utils', () => {
+  let opts = {
+    babelOptions: {filename: 'test.js'},
+  };
+
   describe('isRequire', () => {
     it('identifies requires', () => {
       assert.equal(
         isStaticRequire(
-          getFirstExpression(parse("require('@atlaspack/core')")),
+          getFirstExpression(parse("require('@atlaspack/core')"), opts),
         ),
         true,
       );
@@ -28,7 +32,7 @@ describe('utils', () => {
 
     it("doesn't handle dynamic requires", () => {
       assert.equal(
-        isStaticRequire(getFirstExpression(parse('require(dynamic)'))),
+        isStaticRequire(getFirstExpression(parse('require(dynamic)'), opts)),
         false,
       );
     });
@@ -38,7 +42,7 @@ describe('utils', () => {
     it('identifies built-in require.resolve', () => {
       assert.equal(
         isStaticResolve(
-          getFirstExpression(parse("require.resolve('@atlaspack/core')")),
+          getFirstExpression(parse("require.resolve('@atlaspack/core')"), opts),
         ),
         true,
       );

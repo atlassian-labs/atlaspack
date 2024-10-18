@@ -103,7 +103,7 @@ export class Child {
   async childInit(module: string, childId: number): Promise<void> {
     // $FlowFixMe
     if (process.browser) {
-      if (module === '@atlaspack/core/src/worker.js') {
+      if (module === '@atlaspack/core/worker') {
         this.module = coreWorker;
       } else {
         throw new Error('No dynamic require possible: ' + module);

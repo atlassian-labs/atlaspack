@@ -15,7 +15,7 @@ describe('OverlayFS', () => {
 
   beforeEach(() => {
     workerFarm = new WorkerFarm({
-      workerPath: require.resolve('@atlaspack/core/src/worker.js'),
+      workerPath: require.resolve('@atlaspack/core/worker'),
     });
     underlayFS = new MemoryFS(workerFarm);
     fs = new OverlayFS(workerFarm, underlayFS);
