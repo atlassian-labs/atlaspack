@@ -647,7 +647,7 @@ export function createWorkerFarm(
     ...options,
     // $FlowFixMe
     workerPath: process.browser
-      ? '@atlaspack/core/src/worker.js'
+      ? '@atlaspack/core/worker'
       : require.resolve('./worker'),
   });
 }

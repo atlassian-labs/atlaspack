@@ -105,7 +105,7 @@ export default class WorkerFarm extends EventEmitter {
 
     // $FlowFixMe
     if (process.browser) {
-      if (this.options.workerPath === '@atlaspack/core/src/worker.js') {
+      if (this.options.workerPath === '@atlaspack/core/worker') {
         this.localWorker = coreWorker;
       } else {
         throw new Error(
@@ -357,7 +357,7 @@ export default class WorkerFarm extends EventEmitter {
     } else if (location) {
       // $FlowFixMe
       if (process.browser) {
-        if (location === '@atlaspack/workers/src/bus.js') {
+        if (location === '@atlaspack/workers/bus') {
           mod = (bus: any);
         } else {
           throw new Error('No dynamic require possible: ' + location);
