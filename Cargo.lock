@@ -327,6 +327,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "atlaspack_bundler"
+version = "0.1.0"
+dependencies = [
+ "petgraph",
+]
+
+[[package]]
 name = "atlaspack_config"
 version = "0.1.0"
 dependencies = [
