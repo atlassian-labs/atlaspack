@@ -1,6 +1,8 @@
 //! This module contains a few abstract bundling algorithms to bundle assets
 //! together.
 
+use std::collections::HashMap;
+
 use petgraph::graph::DiGraph;
 use petgraph::{graph::NodeIndex, visit::EdgeRef, Direction};
 
@@ -42,22 +44,43 @@ impl BundlerResult {
   pub fn print_dot(&self, asset_graph: &BundlerAssetGraph) -> String {
     let mut output = "digraph {\n".to_string();
 
+    let mut bundles_by_asset_id: HashMap<BundlerAssetId, Vec<NodeIndex>> = HashMap::new();
+    for bundle_index in self.bundles.node_indices() {
+      let assets = &self.bundles[bundle_index].assets;
+      for asset in assets {
+        bundles_by_asset_id
+          .entry(*asset)
+          .or_default()
+          .push(bundle_index);
+      }
+    }
+
     for bundle_index in self.bundles.node_indices() {
       let bundle_id = bundle_index.index();
       output += &format!("    subgraph cluster_bundle_{} {{\n", bundle_id);
       output += &format!("        label = \"Bundle {bundle_id}\";\n");
       let assets = &self.bundles[bundle_index].assets;
       for asset in assets {
-        output += &format!("        bundle_{}_asset_{};\n", bundle_id, asset);
+        let asset_node_name = format!("bundle_{bundle_id}_asset_{asset}");
+        output += &format!("          {asset_node_name};\n");
+
         for edge in asset_graph.edges_directed(NodeIndex::new(*asset), Direction::Outgoing) {
           let target_asset = edge.target().index();
-          if !assets.contains(&target_asset) {
-            continue;
-          }
-          output += &format!(
-            "        bundle_{bundle_id}_asset_{} -> bundle_{bundle_id}_asset_{};\n",
-            asset, target_asset
-          );
+
+          if assets.contains(&target_asset) {
+            let target_asset_node_name = format!("bundle_{bundle_id}_asset_{target_asset}");
+            output += &format!("        {asset_node_name} -> {target_asset_node_name};\n");
+          } else {
+            // The asset is not on this bundle. There are two options for this to happen:
+            //
+            // * It's on a parent, this is an async bundle
+            // * It's on a shared bundle
+            for bundle_index in bundles_by_asset_id.get(&target_asset).unwrap() {
+              let bundle_id = bundle_index.index();
+              let target_asset_node_name = format!("bundle_{bundle_id}_asset_{target_asset}");
+              output += &format!("        {asset_node_name} -> {target_asset_node_name};\n");
+            }
+          };
         }
       }
       output += "    }\n"
@@ -513,6 +536,9 @@ pub mod deduplicating_subtree_bundler {
         for asset in &bundle.assets {
           let bundles_with_asset = bundle_node_index_by_asset_id.get(asset).unwrap();
           // println!("Bundles with asset: {bundles_with_asset:?} Incoming dependencies: {incoming_dependencies:?}");
+          //
+          // This is not correct because deduplication will not work if there are two bundles
+          // between the usage and declaration.
           let can_skip_asset = !incoming_dependencies.is_empty()
             && incoming_dependencies
               .iter()
