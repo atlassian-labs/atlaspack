@@ -15,7 +15,7 @@ import {toProjectPath} from '../src/projectPath';
 import {DEFAULT_FEATURE_FLAGS, setFeatureFlags} from '../../feature-flags/src';
 
 const options = DEFAULT_OPTIONS;
-const farm = new WorkerFarm({workerPath: require.resolve('../src/worker.js')});
+const farm = new WorkerFarm({workerPath: require.resolve('../src/worker')});
 
 describe('RequestTracker', () => {
   it('should not run requests that have not been invalidated', async () => {
