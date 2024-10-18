@@ -16,5 +16,7 @@ jobs:
     secrets: inherit
     with:
       profile: canary
-      release-command: yarn canary:release
+      release-command: |
+        yarn canary:release
+        yarn changeset publish
       type: canary
