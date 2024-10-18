@@ -330,10 +330,9 @@ impl Asset {
 
   pub fn new_discovered(
     source_asset: &Asset,
-    unique_key: String,
+    unique_key: Option<String>,
     file_type: FileType,
     code: String,
-    side_effects: bool,
   ) -> anyhow::Result<Self> {
     let asset_id = create_asset_id(CreateAssetIdParams {
       environment_id: &source_asset.env.id(),
@@ -344,7 +343,7 @@ impl Asset {
       code: Some(code.as_str()),
       pipeline: None,
       query: None,
-      unique_key: Some(&unique_key),
+      unique_key: unique_key.as_deref(),
       file_type: &file_type,
     });
 
@@ -352,8 +351,7 @@ impl Asset {
       code: Arc::new(Code::from(code)),
       file_type,
       id: asset_id,
-      side_effects,
-      unique_key: Some(unique_key),
+      unique_key,
       ..source_asset.clone()
     })
   }

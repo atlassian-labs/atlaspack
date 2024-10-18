@@ -263,7 +263,10 @@ impl AssetGraph {
           .edges_directed(dep_node, Direction::Outgoing)
           .next()
         {
-          self.propagate_requested_symbols(resolved.target(), dep_node, on_undeferred);
+          // Avoid infintite loops for self references
+          if resolved.target() != asset_node {
+            self.propagate_requested_symbols(resolved.target(), dep_node, on_undeferred);
+          }
         } else {
           on_undeferred(dep_node, Arc::clone(&dependency));
         }
