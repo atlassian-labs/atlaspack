@@ -17,7 +17,7 @@ export function fsFixture(
 ): (
   strings: Array<string>,
   ...exprs: Array<
-    null | string | number | boolean | interface {} | $ReadOnlyArray<mixed>,
+    null | string | number | boolean | {...} | $ReadOnlyArray<mixed>,
   >
 ) => Promise<void> {
   return async function apply(strings, ...exprs) {
@@ -415,7 +415,7 @@ export function escapeFixtureContent(content: string): string {
 export function dedentRaw(
   strings: Array<string>,
   ...exprs: Array<
-    null | string | number | boolean | interface {} | $ReadOnlyArray<mixed>,
+    null | string | number | boolean | {...} | $ReadOnlyArray<mixed>,
   >
 ): string {
   let src = '';
