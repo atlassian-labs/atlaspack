@@ -496,7 +496,7 @@ describe('fsFixture', () => {
 
   beforeEach(() => {
     workerFarm = new WorkerFarm({
-      workerPath: require.resolve('@atlaspack/core/src/worker.js'),
+      workerPath: require.resolve('@atlaspack/core/worker'),
     });
     fs = new MemoryFS(workerFarm);
   });
@@ -608,7 +608,7 @@ describe('toFixture', () => {
 
   beforeEach(() => {
     workerFarm = new WorkerFarm({
-      workerPath: require.resolve('@atlaspack/core/src/worker.js'),
+      workerPath: require.resolve('@atlaspack/core/worker'),
     });
     fs = new MemoryFS(workerFarm);
   });
