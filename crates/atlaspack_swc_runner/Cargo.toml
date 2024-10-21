@@ -6,7 +6,7 @@ description = "SWC runner functions for Atlaspack"
 
 [dependencies]
 regex = "1.10.5"
-swc_core = { version = "0.96" }
+swc_core = { version = "0.96", features = ["ecma_codegen", "ecma_parser"] }
 thiserror = "1.0.63"
 swc_ecma_parser = "*"
 sourcemap = "*"

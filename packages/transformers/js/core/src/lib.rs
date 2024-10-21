@@ -365,7 +365,9 @@ pub fn transform(
                 module.visit_mut_with(&mut ContextualImportsInlineRequireVisitor::new(
                   unresolved_mark,
                   ContextualImportsConfig {
-                    server: Some(false),
+                    server: false,
+                    // Fallback to false variant when flag is off
+                    default_if_undefined: true,
                   },
                 ));
               }
