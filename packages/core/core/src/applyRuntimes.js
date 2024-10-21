@@ -11,7 +11,7 @@ import type {
   DevDepRequest,
   AtlaspackOptions,
 } from './types';
-import type AtlaspackConfig from './AtlaspackConfig';
+import type {AtlaspackConfig} from './AtlaspackConfig';
 import type PluginOptions from './public/PluginOptions';
 import type {RequestResult, RunAPI} from './RequestTracker';
 

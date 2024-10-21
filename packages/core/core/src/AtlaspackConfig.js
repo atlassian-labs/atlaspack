@@ -55,7 +55,7 @@ export type LoadedPlugin<T> = {|
   range?: ?SemverRange,
 |};
 
-export default class AtlaspackConfig {
+export class AtlaspackConfig {
   options: AtlaspackOptions;
   filePath: ProjectPath;
   resolvers: PureAtlaspackConfigPipeline;

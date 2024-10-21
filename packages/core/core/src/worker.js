@@ -20,7 +20,7 @@ import Transformation, {
 import {reportWorker, report} from './ReporterRunner';
 import PackagerRunner, {type RunPackagerRunnerResult} from './PackagerRunner';
 import Validation, {type ValidationOpts} from './Validation';
-import AtlaspackConfig from './AtlaspackConfig';
+import {AtlaspackConfig} from './AtlaspackConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {clearBuildCaches} from './buildCache';
 import {init as initSourcemaps} from '@parcel/source-map';
