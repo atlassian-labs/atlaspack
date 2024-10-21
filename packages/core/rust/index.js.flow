@@ -395,3 +395,8 @@ export type Resolution =
   | {|type: 'External'|}
   | {|type: 'Empty'|}
   | {|type: 'Global', value: string|};
+
+declare export function replaceHashReferences(
+  input: Buffer,
+  hashRefToNameHash: {[key: string]: string},
+): Buffer;
