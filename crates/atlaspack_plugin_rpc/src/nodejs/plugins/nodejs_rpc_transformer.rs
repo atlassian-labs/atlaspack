@@ -50,6 +50,7 @@ impl NodejsRpcTransformerPlugin {
     let plugin_options = RpcPluginOptions {
       hmr_options: None,
       project_root: ctx.options.project_root.clone(),
+      mode: ctx.options.mode.clone(),
     };
     Ok(Self {
       rpc_workers,
@@ -93,7 +94,6 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       // TODO: Pass this just once to each worker
       options: self.plugin_options.clone(),
       env: asset_env.clone(),
-      project_root: self.project_root.clone(),
       asset,
     };
 
@@ -145,6 +145,7 @@ pub struct RpcHmrOptions {
 pub struct RpcPluginOptions {
   pub hmr_options: Option<RpcHmrOptions>,
   pub project_root: PathBuf,
+  pub mode: BuildMode,
 }
 
 /// This Asset mostly replicates the core Asset type however it only features

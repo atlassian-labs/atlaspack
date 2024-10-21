@@ -43,6 +43,7 @@ export class MutableAsset implements IMutableAsset {
   #inner: InnerAsset;
   #ast: ?AST;
   #contents: Buffer;
+  #astDirty: boolean;
 
   get astGenerator(): ?ASTGenerator {
     throw new Error('get MutableAsset.astGenerator');
@@ -74,6 +75,7 @@ export class MutableAsset implements IMutableAsset {
     this.#contents = Buffer.from(asset.code);
     this.fs = fs;
     this.env = env;
+    this.#astDirty = false;
   }
 
   // eslint-disable-next-line require-await
@@ -82,11 +84,12 @@ export class MutableAsset implements IMutableAsset {
   }
 
   setAST(ast: AST): void {
+    this.#astDirty = true;
     this.#ast = ast;
   }
 
   isASTDirty(): boolean {
-    throw new Error('MutableAsset.isASTDirty()');
+    return this.#astDirty;
   }
 
   // eslint-disable-next-line require-await
@@ -128,7 +131,8 @@ export class MutableAsset implements IMutableAsset {
   }
 
   getMap(): Promise<?SourceMap> {
-    throw new Error('MutableAsset.getMap');
+    // TODO: Provide source maps once they exist
+    return Promise.resolve(null);
   }
 
   // eslint-disable-next-line no-unused-vars
@@ -161,24 +165,24 @@ export class MutableAsset implements IMutableAsset {
 
   // eslint-disable-next-line no-unused-vars
   invalidateOnFileChange(invalidation: FilePath): void {
-    throw new Error('MutableAsset.invalidateOnFileChange()');
+    // TODO: Forward invalidations to Rust
   }
 
   // eslint-disable-next-line no-unused-vars
   invalidateOnFileCreate(invalidation: FileCreateInvalidation): void {
-    throw new Error('MutableAsset.invalidateOnFileCreate()');
+    // TODO: Forward invalidations to Rust
   }
 
   // eslint-disable-next-line no-unused-vars
   invalidateOnEnvChange(invalidation: string): void {
-    throw new Error('MutableAsset.invalidateOnEnvChange()');
+    // TODO: Forward invalidations to Rust
   }
 
   invalidateOnStartup(): void {
-    throw new Error('MutableAsset.invalidateOnStartup()');
+    // TODO: Forward invalidations to Rust
   }
 
   invalidateOnBuild(): void {
-    throw new Error('MutableAsset.invalidateOnBuild()');
+    // TODO: Forward invalidations to Rust
   }
 }
