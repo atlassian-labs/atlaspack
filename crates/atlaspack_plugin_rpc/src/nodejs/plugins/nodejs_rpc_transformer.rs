@@ -1,3 +1,5 @@
+use atlaspack_core::config_loader::ConfigLoaderRef;
+use atlaspack_core::plugin::PluginOptions;
 use once_cell::sync::OnceCell;
 use std::fmt;
 use std::fmt::Debug;
@@ -27,11 +29,10 @@ use super::super::rpc::LoadPluginOptions;
 use super::plugin_options::RpcPluginOptions;
 
 pub struct NodejsRpcTransformerPlugin {
-  rpc_workers: Arc<NodeJsWorkerCollection>,
-  plugin: PluginNode,
-  plugin_options: RpcPluginOptions,
-  resolve_from: PathBuf,
-  specifier: String,
+  nodejs_workers: Arc<NodeJsWorkerCollection>,
+  config_loader: ConfigLoaderRef,
+  plugin_options: Arc<PluginOptions>,
+  plugin_node: PluginNode,
   started: OnceCell<Vec<()>>,
 }
 
@@ -43,22 +44,37 @@ impl Debug for NodejsRpcTransformerPlugin {
 
 impl NodejsRpcTransformerPlugin {
   pub fn new(
-    rpc_workers: Arc<NodeJsWorkerCollection>,
+    nodejs_workers: Arc<NodeJsWorkerCollection>,
     ctx: &PluginContext,
-    plugin: &PluginNode,
+    plugin_node: &PluginNode,
   ) -> Result<Self, anyhow::Error> {
-    let plugin_options = RpcPluginOptions {
-      hmr_options: None,
-      project_root: ctx.options.project_root.clone(),
-      mode: ctx.options.mode.clone(),
-    };
     Ok(Self {
-      rpc_workers,
-      plugin: plugin.clone(),
-      plugin_options,
-      specifier: plugin.package_name.clone(),
-      resolve_from: (&*plugin.resolve_from).to_path_buf(),
+      nodejs_workers,
+      config_loader: ctx.config.clone(),
+      plugin_options: ctx.options.clone(),
+      plugin_node: plugin_node.clone(),
       started: OnceCell::new(),
+    })
+  }
+
+  fn bootstrap(&self) -> anyhow::Result<RpcPluginOptions> {
+    self.started.get_or_try_init(|| {
+      self.nodejs_workers.exec_on_all(|worker| {
+        worker.load_plugin(
+          LoadPluginOptions {
+            kind: LoadPluginKind::Transformer,
+            specifier: self.plugin_node.package_name.clone(),
+            resolve_from: (&*self.plugin_node.resolve_from).clone(),
+          },
+          self.config_loader.clone(),
+        )
+      })
+    })?;
+
+    Ok(RpcPluginOptions {
+      hmr_options: None,
+      project_root: self.plugin_options.project_root.clone(),
+      mode: self.plugin_options.mode.clone(),
     })
   }
 }
@@ -66,7 +82,7 @@ impl NodejsRpcTransformerPlugin {
 impl TransformerPlugin for NodejsRpcTransformerPlugin {
   fn id(&self) -> u64 {
     let mut hasher = IdentifierHasher::new();
-    self.plugin.hash(&mut hasher);
+    self.plugin_node.hash(&mut hasher);
     hasher.finish()
   }
 
@@ -75,28 +91,18 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, Error> {
-    self.started.get_or_try_init(|| {
-      self.rpc_workers.exec_on_all(|worker| {
-        worker.load_plugin(LoadPluginOptions {
-          kind: LoadPluginKind::Transformer,
-          specifier: self.specifier.clone(),
-          resolve_from: self.resolve_from.clone(),
-        })
-      })
-    })?;
-
+    let rpc_plugin_options = self.bootstrap()?;
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
 
     let run_transformer_opts = RpcTransformerOpts {
-      key: self.specifier.clone(),
-      // TODO: Pass this just once to each worker
-      options: self.plugin_options.clone(),
+      key: self.plugin_node.package_name.clone(),
+      options: rpc_plugin_options.clone(),
       env: asset_env.clone(),
       asset,
     };
 
-    let result: RpcTransformerResult = self.rpc_workers.exec_on_one(|worker| {
+    let result: RpcTransformerResult = self.nodejs_workers.exec_on_one(|worker| {
       worker
         .transformer_register_fn
         .call_with_return_serde(run_transformer_opts)

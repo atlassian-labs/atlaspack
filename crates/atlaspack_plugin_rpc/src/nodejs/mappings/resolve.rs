@@ -15,7 +15,7 @@ impl Resolve {
     Ok(obj)
   }
 
-  fn resolve(ctx: CallContext<'_>) -> napi::Result<()> {
+  fn resolve(_ctx: CallContext<'_>) -> napi::Result<()> {
     Ok(())
   }
 }

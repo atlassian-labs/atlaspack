@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use atlaspack_filesystem::search::find_ancestor_file;
@@ -29,6 +29,14 @@ pub struct ConfigFile<T> {
 
 // TODO JavaScript configs, invalidations, dev deps, etc
 impl ConfigLoader {
+  pub fn load_json_config_from<Config: DeserializeOwned, F: AsRef<str>>(
+    &self,
+    search_path: &Path,
+    file_names: &[F],
+  ) -> Result<ConfigFile<Config>, DiagnosticError> {
+    todo!()
+  }
+
   pub fn load_json_config<Config: DeserializeOwned>(
     &self,
     filename: &str,

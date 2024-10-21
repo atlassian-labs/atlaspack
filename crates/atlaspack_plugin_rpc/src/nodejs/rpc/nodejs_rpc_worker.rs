@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use atlaspack_core::config_loader::ConfigLoaderRef;
 use atlaspack_napi_helpers::anyhow_from_napi;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use napi::{bindgen_prelude::FromNapiValue, JsObject};
@@ -26,7 +27,11 @@ impl NodejsWorker {
     })
   }
 
-  pub fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
+  pub fn load_plugin(
+    &self,
+    opts: LoadPluginOptions,
+    config_loader: ConfigLoaderRef,
+  ) -> anyhow::Result<()> {
     self
       .load_plugin_fn
       .call_with_return(
@@ -34,7 +39,7 @@ impl NodejsWorker {
           let obj = env.to_js_value(&opts)?;
           let mut obj = JsObject::from_unknown(obj)?;
 
-          let public_config = PublicConfig::new(env)?;
+          let public_config = PublicConfig::new(env, config_loader)?;
           obj.set_named_property("publicConfig", public_config)?;
 
           let resolve = Resolve::new(env)?;
