@@ -27,6 +27,7 @@ pub mod lmdb;
 mod optimizers;
 mod resolver;
 mod transformer;
+pub mod vcs;
 
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]

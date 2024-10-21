@@ -8,7 +8,7 @@ require('@babel/register')({
     // Don't run babel over ignore integration tests fixtures.
     // These may include relative babel plugins, and running babel on those causes
     // the plugin to be loaded to compile the plugin.
-    filepath =>
+    (filepath) =>
       filepath.endsWith('.js') &&
       filepath.includes('/core/integration-tests/test/integration'),
   ],
