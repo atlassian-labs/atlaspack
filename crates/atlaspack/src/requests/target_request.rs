@@ -384,7 +384,10 @@ impl TargetRequest {
             .default_target_options
             .output_format
             .unwrap_or_else(|| fallback_output_format(context)),
-          should_optimize: self.default_target_options.should_optimize,
+          should_optimize: self
+            .default_target_options
+            .should_optimize
+            .unwrap_or_else(|| self.mode == BuildMode::Production && !is_library),
           should_scope_hoist: self
             .default_target_options
             .should_scope_hoist
@@ -530,14 +533,10 @@ impl TargetRequest {
         is_library,
         loc: None, // TODO
         output_format,
-        should_optimize: self.default_target_options.should_optimize
-          || if is_library {
-            // Libraries are not optimized by default, users must explicitly configure this.
-            target_descriptor.optimize.is_some_and(|o| o == true)
-          } else {
-            target_descriptor.optimize.is_none()
-              || target_descriptor.optimize.is_some_and(|o| o != false)
-          },
+        should_optimize: self.default_target_options.should_optimize.map_or_else(
+          || target_descriptor.optimize.unwrap_or(!is_library),
+          |o| o && target_descriptor.optimize.unwrap_or(!is_library),
+        ),
         should_scope_hoist: (is_library
           || self
             .default_target_options
@@ -654,6 +653,7 @@ mod tests {
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
+  use pretty_assertions::assert_eq;
 
   use super::*;
 
