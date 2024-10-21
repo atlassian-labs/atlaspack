@@ -1,5 +1,10 @@
 // @flow strict-local
 
+import {
+  deserialize,
+  registerSerializableClass,
+  serialize,
+} from '@atlaspack/build-cache';
 import {Lmdb} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types';
 import type {Cache} from './types';
@@ -8,12 +13,9 @@ import type {Readable, Writable} from 'stream';
 import stream from 'stream';
 import path from 'path';
 import {promisify} from 'util';
-import {
-  serialize,
-  deserialize,
-  registerSerializableClass,
-} from '@atlaspack/core';
+
 import {NodeFS} from '@atlaspack/fs';
+
 // $FlowFixMe
 import packageJson from '../package.json';
 

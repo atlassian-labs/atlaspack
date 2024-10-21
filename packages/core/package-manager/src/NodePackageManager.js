@@ -14,7 +14,7 @@ import type {
   PackageManagerResolveResult,
 } from '@atlaspack/types';
 
-import {registerSerializableClass} from '@atlaspack/core';
+import {registerSerializableClass} from '@atlaspack/build-cache';
 import ThrowableDiagnostic, {
   encodeJSONKeyComponent,
   escapeMarkdown,

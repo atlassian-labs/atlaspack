@@ -25,7 +25,7 @@
     "types": false,
     "main": {
       "includeNodeModules": {
-        "@atlaspack/core": false,
+        "@atlaspack/build-cache": false,
         "@atlaspack/diagnostic": false,
         "@atlaspack/fs": false,
         "@atlaspack/logger": false,
@@ -39,6 +39,7 @@
     }
   },
   "dependencies": {
+    "@atlaspack/build-cache": "2.12.0",
     "@atlaspack/diagnostic": "2.12.0",
     "@atlaspack/fs": "2.12.0",
     "@atlaspack/logger": "2.12.0",
@@ -54,9 +55,6 @@
     "cross-spawn": "^6.0.4",
     "nullthrows": "^1.1.1",
     "split2": "^3.1.1"
-  },
-  "peerDependencies": {
-    "@atlaspack/core": "^2.12.0"
   },
   "browser": {
     "./src/NodePackageManager.js": false,
