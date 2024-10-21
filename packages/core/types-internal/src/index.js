@@ -1653,7 +1653,7 @@ export interface BundleGraph<TBundle: Bundle> {
  * @section bundler
  */
 export type BundleResult = {|
-  +contents: Blob,
+  +contents: Buffer | string,
   +ast?: AST,
   +map?: ?SourceMap,
   +type?: string,
@@ -1830,7 +1830,7 @@ export type Optimizer<ConfigType, BundleConfigType> = {|
   optimize({|
     bundle: NamedBundle,
     bundleGraph: BundleGraph<NamedBundle>,
-    contents: Blob,
+    contents: Buffer | string,
     map: ?SourceMap,
     options: PluginOptions,
     logger: PluginLogger,
