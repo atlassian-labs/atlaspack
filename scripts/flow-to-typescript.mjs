@@ -8,7 +8,8 @@ import {join, relative} from 'path';
 // TODO packages/utils/atlaspack-watcher-watchman-js/src/index.js flow local
 // TODO require to import packages/utils/atlaspack-lsp/src/LspServer.ts
 // TODO remove atlaspack-lsp tsconfig
-let repositoryRoot = join(import.meta.dirname, '..');
+const repositoryRoot = join(import.meta.dirname, '..');
+const packagesRoot = join(repositoryRoot, 'packages');
 
 async function replaceFile(path, replacer) {
   const file = await readFile(path, 'utf8');
@@ -32,7 +33,7 @@ function getWorkspaces() {
 
 async function fixSyntax() {
   await replaceFile(
-    join(repositoryRoot, 'packages', 'core', 'plugin', 'src', 'PluginAPI.ts'),
+    join(packagesRoot, 'core', 'plugin', 'src', 'PluginAPI.ts'),
     (plugins) =>
       plugins
         .replace(/constructor<T>/g, 'constructor')
@@ -42,16 +43,41 @@ async function fixSyntax() {
   );
 
   await replaceFile(
-    join(
-      repositoryRoot,
-      'packages',
-      'transformers',
-      'less',
-      'src',
-      'LessTransformer.ts',
-    ),
+    join(packagesRoot, 'transformers', 'less', 'src', 'LessTransformer.ts'),
     (transformer) =>
       transformer.replace('import {typeof default', 'import type {default'),
+  );
+
+  const corePackageRoot = join(packagesRoot, 'core', 'core');
+
+  const filenames = [
+    join(
+      corePackageRoot,
+      'src',
+      'atlaspack-v3',
+      'worker',
+      'compat',
+      'plugin-options.ts',
+    ),
+    join(corePackageRoot, 'src', 'public', 'BundleGraph.ts'),
+    join(corePackageRoot, 'src', 'BundleGraph.ts'),
+    join(corePackageRoot, 'src', 'SymbolPropagation.ts'),
+    join(corePackageRoot, 'test', 'SymbolPropagation.test.ts'),
+    join(packagesRoot, 'core', 'utils', 'src', 'collection.ts'),
+    join(packagesRoot, 'core', 'workers', 'src', 'Worker.ts'),
+    join(packagesRoot, 'packagers', 'js', 'src', 'ScopeHoistingPackager.ts'),
+    join(packagesRoot, 'core', 'types-internal', 'src', 'index.ts'),
+  ];
+
+  await Promise.all(
+    filenames.map((filename) =>
+      replaceFile(filename, (file) =>
+        file
+          .replace(/\$Partial/g, 'Partial')
+          .replace(/\$ReadOnlyMap/g, 'ReadonlyMap')
+          .replace(/\$ReadOnlySet/g, 'ReadonlySet'),
+      ),
+    ),
   );
 }
 
@@ -63,13 +89,17 @@ async function updateJsReferences() {
   );
 }
 
-async function updateSourceFields(workspaces) {
-  await Promise.all(
-    Object.values(workspaces).map(async (workspace) => {
+async function updatePackageFields(workspaces) {
+  await Promise.all([
+    ...Object.values(workspaces).map(async (workspace) => {
       const path = join(repositoryRoot, workspace, 'package.json');
       const packageJson = JSON.parse(await readFile(path, 'utf8'));
 
-      if (packageJson.name === '@atlaspack/babel-preset-env') {
+      if (
+        ['@atlaspack/babel-preset-env', 'lmdb-js-lite'].includes(
+          packageJson.name,
+        )
+      ) {
         return;
       }
 
@@ -77,13 +107,28 @@ async function updateSourceFields(workspaces) {
         packageJson.main = packageJson.main.replace(/\.js$/, '.ts');
       }
 
+      if (packageJson.main && packageJson.main.endsWith('.js')) {
+        packageJson.types = packageJson.main.replace(/\.js$/, '.d.ts');
+      }
+
       if (packageJson.source && packageJson.source.endsWith('.js')) {
         packageJson.source = packageJson.source.replace(/\.js$/, '.ts');
       }
 
+      if (packageJson.scripts) {
+        delete packageJson.scripts['build-ts'];
+        delete packageJson.scripts['check-ts'];
+
+        if (Object.keys(packageJson.scripts).length === 0) {
+          delete packageJson.scripts;
+        }
+      }
+
       await writeFile(path, JSON.stringify(packageJson, null, 2) + '\n');
     }),
-  );
+    rm(join(packagesRoot, 'core', 'types-internal', 'scripts', 'build-ts.js')),
+    rm(join(packagesRoot, 'core', 'types-internal', 'scripts', 'build-ts.sh')),
+  ]);
 }
 
 async function removeFlowFiles() {
@@ -114,7 +159,7 @@ async function removeFlowReferences() {
         vscodeExtensions.replace(/\s+"flowtype.flow-for-vscode",/, ''),
     ),
     replaceFile(
-      join(repositoryRoot, 'packages', 'dev', 'babel-preset', 'index.js'),
+      join(packagesRoot, 'dev', 'babel-preset', 'index.js'),
       (preset) =>
         preset.replace(/@babel\/preset-flow/g, '@babel/preset-typescript'),
     ),
@@ -122,7 +167,9 @@ async function removeFlowReferences() {
 }
 
 async function updateDependencies() {
-  execSync('yarn remove -W flow-bin', {stdio: 'inherit'});
+  execSync('yarn remove -W flow-bin @khanacademy/flow-to-ts', {
+    stdio: 'inherit',
+  });
 
   execSync('yarn add -W --dev @types/sinon', {stdio: 'inherit'});
   execSync('yarn workspace @atlaspack/babel-preset remove @babel/preset-flow', {
@@ -131,8 +178,7 @@ async function updateDependencies() {
 
   // Manually update package.json due to https://github.com/yarnpkg/yarn/issues/7807
   const babelPackagePath = join(
-    repositoryRoot,
-    'packages',
+    packagesRoot,
     'dev',
     'babel-preset',
     'package.json',
@@ -229,10 +275,10 @@ async function addTsConfigs(workspaces) {
 
 const workspaces = getWorkspaces();
 
-await fixSyntax();
-await updateJsReferences();
-await updateSourceFields(workspaces);
-await removeFlowFiles();
-await removeFlowReferences();
-await updateDependencies();
-await addTsConfigs(workspaces);
+// await fixSyntax();
+// await updateJsReferences();
+await updatePackageFields(workspaces);
+// await removeFlowFiles();
+// await removeFlowReferences();
+// await updateDependencies();
+// await addTsConfigs(workspaces);
