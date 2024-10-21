@@ -1,0 +1,135 @@
+import {Optimizer} from '@atlaspack/plugin';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {runInlineRequiresOptimizer} from '@atlaspack/rust';
+import {parse, print} from '@swc/core';
+import {RequireInliningVisitor} from './RequireInliningVisitor';
+import nullthrows from 'nullthrows';
+import SourceMap from '@parcel/source-map';
+
+let assetPublicIdsWithSideEffects = null;
+
+type BundleConfig = {
+  assetPublicIdsWithSideEffects: Set<string>
+};
+
+module.exports = new Optimizer<never, BundleConfig>({
+  loadBundleConfig({bundle, bundleGraph, tracer}): BundleConfig {
+    if (assetPublicIdsWithSideEffects !== null) {
+      return {assetPublicIdsWithSideEffects};
+    }
+
+    assetPublicIdsWithSideEffects = new Set<string>();
+
+    if (!bundle.env.shouldOptimize) {
+      return {assetPublicIdsWithSideEffects};
+    }
+
+    const measurement = tracer.createMeasurement(
+      '@atlaspack/optimizer-inline-requires',
+      'generatePublicIdToAssetSideEffects',
+      bundle.name,
+    );
+
+    bundleGraph.traverse((node) => {
+      if (node.type === 'asset' && node.value.sideEffects) {
+        const publicId = bundleGraph.getAssetPublicId(node.value);
+        let sideEffectsMap = nullthrows(assetPublicIdsWithSideEffects);
+        sideEffectsMap.add(publicId);
+      }
+    });
+
+    measurement && measurement.end();
+
+    return {assetPublicIdsWithSideEffects};
+  },
+
+  async optimize({
+    bundle,
+    contents,
+    map: originalMap,
+    tracer,
+    logger,
+    bundleConfig,
+    options,
+  }) {
+    if (!bundle.env.shouldOptimize) {
+      return {contents, map: originalMap};
+    }
+
+    try {
+      if (getFeatureFlag('fastOptimizeInlineRequires')) {
+        let sourceMap = null;
+        const result = runInlineRequiresOptimizer({
+          code: contents.toString(),
+          sourceMaps: !!bundle.env.sourceMap,
+          ignoreModuleIds: Array.from(
+            bundleConfig.assetPublicIdsWithSideEffects,
+          ),
+        });
+        const sourceMapResult = result.sourceMap;
+        if (sourceMapResult != null) {
+          sourceMap = new SourceMap(options.projectRoot);
+          sourceMap.addVLQMap(JSON.parse(sourceMapResult));
+          if (originalMap) {
+            sourceMap.extends(originalMap);
+          }
+        }
+        return {contents: result.code, map: originalMap};
+      }
+
+      let measurement = tracer.createMeasurement(
+        '@atlaspack/optimizer-inline-requires',
+        'parse',
+        bundle.name,
+      );
+      const ast = await parse(contents.toString());
+      measurement && measurement.end();
+
+      const visitor = new RequireInliningVisitor({
+        bundle,
+        logger,
+        assetPublicIdsWithSideEffects:
+          bundleConfig.assetPublicIdsWithSideEffects,
+      });
+
+      measurement = tracer.createMeasurement(
+        '@atlaspack/optimizer-inline-requires',
+        'visit',
+        bundle.name,
+      );
+      visitor.visitProgram(ast);
+      measurement && measurement.end();
+
+      if (visitor.dirty) {
+        const measurement = tracer.createMeasurement(
+          '@atlaspack/optimizer-inline-requires',
+          'print',
+          bundle.name,
+        );
+        const result = await print(ast, {sourceMaps: !!bundle.env.sourceMap});
+        measurement && measurement.end();
+
+        let sourceMap = null;
+        let resultMap = result.map;
+        let contents: string = nullthrows(result.code);
+
+        if (resultMap != null) {
+          sourceMap = new SourceMap(options.projectRoot);
+          sourceMap.addVLQMap(JSON.parse(resultMap));
+          if (originalMap) {
+            sourceMap.extends(originalMap);
+          }
+        }
+
+        return {contents, map: sourceMap};
+      }
+    } catch (err: any) {
+      logger.warn({
+        origin: 'atlaspack-optimizer-experimental-inline-requires',
+        message: `Unable to optimise requires for ${bundle.name}: ${err.message}`,
+        stack: err.stack,
+      });
+    }
+    return {contents, map: originalMap};
+  },
+});
