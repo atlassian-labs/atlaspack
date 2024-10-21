@@ -1,0 +1,27 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../../configs/repl"
+    },
+    {
+      "path": "../../core/build-cache"
+    },
+    {
+      "path": "../../core/core"
+    },
+    {
+      "path": "../../core/fs"
+    },
+    {
+      "path": "../../core/package-manager"
+    }
+  ]
+}

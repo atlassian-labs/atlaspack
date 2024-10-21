@@ -1,23 +1,24 @@
 {
   "name": "@atlaspack/transformer-graphql",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "lib/GraphQLTransformer.js",
-  "source": "src/GraphQLTransformer.js",
-  "engines": {
-    "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
-  },
+  "source": "src/GraphQLTransformer.ts",
+  "types": "lib/GraphQLTransformer.d.ts",
   "dependencies": {
     "@atlaspack/plugin": "2.12.0",
     "graphql": "^15.0.0",
     "graphql-import-macro": "^1.0.0"
+  },
+  "engines": {
+    "node": ">= 16.0.0",
+    "parcel": "^2.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

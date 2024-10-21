@@ -1,0 +1,424 @@
+{
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "crates/caniuse_database"
+    },
+    {
+      "path": "crates/lmdb-js-lite"
+    },
+    {
+      "path": "packages/bundlers/default"
+    },
+    {
+      "path": "packages/bundlers/library"
+    },
+    {
+      "path": "packages/compressors/brotli"
+    },
+    {
+      "path": "packages/compressors/gzip"
+    },
+    {
+      "path": "packages/compressors/raw"
+    },
+    {
+      "path": "packages/configs/default"
+    },
+    {
+      "path": "packages/configs/repl"
+    },
+    {
+      "path": "packages/configs/webextension"
+    },
+    {
+      "path": "packages/core/build-cache"
+    },
+    {
+      "path": "packages/core/cache"
+    },
+    {
+      "path": "packages/core/cli"
+    },
+    {
+      "path": "packages/core/codeframe"
+    },
+    {
+      "path": "packages/core/conditional-import-types"
+    },
+    {
+      "path": "packages/core/core"
+    },
+    {
+      "path": "packages/core/diagnostic"
+    },
+    {
+      "path": "packages/core/feature-flags"
+    },
+    {
+      "path": "packages/core/fs"
+    },
+    {
+      "path": "packages/core/graph"
+    },
+    {
+      "path": "packages/core/integration-tests"
+    },
+    {
+      "path": "packages/core/logger"
+    },
+    {
+      "path": "packages/core/markdown-ansi"
+    },
+    {
+      "path": "packages/core/package-manager"
+    },
+    {
+      "path": "packages/core/plugin"
+    },
+    {
+      "path": "packages/core/profiler"
+    },
+    {
+      "path": "packages/core/register"
+    },
+    {
+      "path": "packages/core/rust"
+    },
+    {
+      "path": "packages/core/test-utils"
+    },
+    {
+      "path": "packages/core/types"
+    },
+    {
+      "path": "packages/core/types-internal"
+    },
+    {
+      "path": "packages/core/utils"
+    },
+    {
+      "path": "packages/core/workers"
+    },
+    {
+      "path": "packages/dev/atlaspack-link"
+    },
+    {
+      "path": "packages/dev/babel-preset"
+    },
+    {
+      "path": "packages/dev/babel-register"
+    },
+    {
+      "path": "packages/dev/bundle-stats-cli"
+    },
+    {
+      "path": "packages/dev/eslint-config"
+    },
+    {
+      "path": "packages/dev/eslint-config-browser"
+    },
+    {
+      "path": "packages/dev/eslint-plugin"
+    },
+    {
+      "path": "packages/dev/esm-fuzzer"
+    },
+    {
+      "path": "packages/dev/query"
+    },
+    {
+      "path": "packages/dev/repl"
+    },
+    {
+      "path": "packages/examples/conditional-bundling"
+    },
+    {
+      "path": "packages/examples/eslint"
+    },
+    {
+      "path": "packages/examples/html"
+    },
+    {
+      "path": "packages/examples/kitchen-sink"
+    },
+    {
+      "path": "packages/examples/react-hmr"
+    },
+    {
+      "path": "packages/examples/react-refresh"
+    },
+    {
+      "path": "packages/examples/simple"
+    },
+    {
+      "path": "packages/examples/typechecking"
+    },
+    {
+      "path": "packages/examples/typescript"
+    },
+    {
+      "path": "packages/migrations/parcel-to-atlaspack"
+    },
+    {
+      "path": "packages/namers/default"
+    },
+    {
+      "path": "packages/optimizers/blob-url"
+    },
+    {
+      "path": "packages/optimizers/css"
+    },
+    {
+      "path": "packages/optimizers/cssnano"
+    },
+    {
+      "path": "packages/optimizers/data-url"
+    },
+    {
+      "path": "packages/optimizers/htmlnano"
+    },
+    {
+      "path": "packages/optimizers/image"
+    },
+    {
+      "path": "packages/optimizers/inline-requires"
+    },
+    {
+      "path": "packages/optimizers/svgo"
+    },
+    {
+      "path": "packages/optimizers/swc"
+    },
+    {
+      "path": "packages/optimizers/terser"
+    },
+    {
+      "path": "packages/packagers/css"
+    },
+    {
+      "path": "packages/packagers/html"
+    },
+    {
+      "path": "packages/packagers/js"
+    },
+    {
+      "path": "packages/packagers/raw"
+    },
+    {
+      "path": "packages/packagers/raw-url"
+    },
+    {
+      "path": "packages/packagers/svg"
+    },
+    {
+      "path": "packages/packagers/ts"
+    },
+    {
+      "path": "packages/packagers/wasm"
+    },
+    {
+      "path": "packages/packagers/webextension"
+    },
+    {
+      "path": "packages/packagers/xml"
+    },
+    {
+      "path": "packages/reporters/build-metrics"
+    },
+    {
+      "path": "packages/reporters/bundle-analyzer"
+    },
+    {
+      "path": "packages/reporters/bundle-buddy"
+    },
+    {
+      "path": "packages/reporters/bundle-stats"
+    },
+    {
+      "path": "packages/reporters/cli"
+    },
+    {
+      "path": "packages/reporters/conditional-manifest"
+    },
+    {
+      "path": "packages/reporters/dev-server"
+    },
+    {
+      "path": "packages/reporters/dev-server-sw"
+    },
+    {
+      "path": "packages/reporters/json"
+    },
+    {
+      "path": "packages/reporters/lsp-reporter"
+    },
+    {
+      "path": "packages/reporters/sourcemap-visualiser"
+    },
+    {
+      "path": "packages/reporters/tracer"
+    },
+    {
+      "path": "packages/resolvers/default"
+    },
+    {
+      "path": "packages/resolvers/glob"
+    },
+    {
+      "path": "packages/resolvers/repl-runtimes"
+    },
+    {
+      "path": "packages/runtimes/hmr"
+    },
+    {
+      "path": "packages/runtimes/js"
+    },
+    {
+      "path": "packages/runtimes/react-refresh"
+    },
+    {
+      "path": "packages/runtimes/service-worker"
+    },
+    {
+      "path": "packages/runtimes/webextension"
+    },
+    {
+      "path": "packages/transformers/babel"
+    },
+    {
+      "path": "packages/transformers/css"
+    },
+    {
+      "path": "packages/transformers/glsl"
+    },
+    {
+      "path": "packages/transformers/graphql"
+    },
+    {
+      "path": "packages/transformers/html"
+    },
+    {
+      "path": "packages/transformers/image"
+    },
+    {
+      "path": "packages/transformers/inline"
+    },
+    {
+      "path": "packages/transformers/inline-string"
+    },
+    {
+      "path": "packages/transformers/js"
+    },
+    {
+      "path": "packages/transformers/json"
+    },
+    {
+      "path": "packages/transformers/jsonld"
+    },
+    {
+      "path": "packages/transformers/less"
+    },
+    {
+      "path": "packages/transformers/mdx"
+    },
+    {
+      "path": "packages/transformers/postcss"
+    },
+    {
+      "path": "packages/transformers/posthtml"
+    },
+    {
+      "path": "packages/transformers/pug"
+    },
+    {
+      "path": "packages/transformers/raw"
+    },
+    {
+      "path": "packages/transformers/react-refresh-wrap"
+    },
+    {
+      "path": "packages/transformers/sass"
+    },
+    {
+      "path": "packages/transformers/svg"
+    },
+    {
+      "path": "packages/transformers/svg-react"
+    },
+    {
+      "path": "packages/transformers/toml"
+    },
+    {
+      "path": "packages/transformers/typescript-tsc"
+    },
+    {
+      "path": "packages/transformers/typescript-types"
+    },
+    {
+      "path": "packages/transformers/webextension"
+    },
+    {
+      "path": "packages/transformers/webmanifest"
+    },
+    {
+      "path": "packages/transformers/worklet"
+    },
+    {
+      "path": "packages/transformers/xml"
+    },
+    {
+      "path": "packages/transformers/yaml"
+    },
+    {
+      "path": "packages/utils/atlaspack-lsp"
+    },
+    {
+      "path": "packages/utils/atlaspack-lsp-protocol"
+    },
+    {
+      "path": "packages/utils/atlaspack-watcher-watchman-js"
+    },
+    {
+      "path": "packages/utils/atlaspackforvscode"
+    },
+    {
+      "path": "packages/utils/babel-plugin-transform-contextual-imports"
+    },
+    {
+      "path": "packages/utils/babel-plugin-transform-runtime"
+    },
+    {
+      "path": "packages/utils/babel-preset-env"
+    },
+    {
+      "path": "packages/utils/contextual-imports-swc-plugin"
+    },
+    {
+      "path": "packages/utils/create-react-app"
+    },
+    {
+      "path": "packages/utils/events"
+    },
+    {
+      "path": "packages/utils/macros"
+    },
+    {
+      "path": "packages/utils/node-resolver-core"
+    },
+    {
+      "path": "packages/utils/service-worker"
+    },
+    {
+      "path": "packages/utils/ts-utils"
+    },
+    {
+      "path": "packages/validators/eslint"
+    },
+    {
+      "path": "packages/validators/typescript"
+    }
+  ]
+}

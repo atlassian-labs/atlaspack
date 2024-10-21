@@ -1,24 +1,25 @@
 {
   "name": "@atlaspack/reporter-dev-server-sw",
   "version": "2.12.0",
-  "description": "Blazing fast, zero configuration web application bundler",
-  "license": "(MIT OR Apache-2.0)",
   "private": true,
+  "description": "Blazing fast, zero configuration web application bundler",
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "lib/ServerReporter.js",
-  "source": "src/ServerReporter.js",
-  "engines": {
-    "node": ">= 16.0.0",
-    "parcel": "^2.11.0"
-  },
+  "source": "src/ServerReporter.ts",
+  "types": "lib/ServerReporter.d.ts",
   "dependencies": {
     "@atlaspack/plugin": "2.12.0",
     "@atlaspack/utils": "2.12.0"
   },
   "devDependencies": {
     "@atlaspack/types": "2.12.0"
+  },
+  "engines": {
+    "node": ">= 16.0.0",
+    "parcel": "^2.11.0"
   }
 }

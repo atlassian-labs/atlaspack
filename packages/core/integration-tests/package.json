@@ -2,11 +2,11 @@
   "name": "@atlaspack/integration-tests",
   "version": "2.12.0",
   "private": true,
-  "license": "(MIT OR Apache-2.0)",
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "scripts": {
     "test": "cross-env NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --conditions=development --experimental-vm-modules",
     "test-ci": "yarn test --config .mocharc.ci.json"

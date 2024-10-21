@@ -1,4 +1,3 @@
-import {Flow} from 'flow-to-typescript-codemod';
 
 import {registerSerializableClass} from '@atlaspack/build-cache';
 import {Graph} from '@atlaspack/graph';
@@ -29,7 +28,7 @@ export function registerCoreWithSerializer() {
     AtlaspackConfig,
     RequestGraph,
     // $FlowFixMe[unclear-type]
-  }) as Array<[string, Flow.Class<any>]>) {
+  }) as Array<[string, new (...args: any[]) => any]>) {
     registerSerializableClass(packageVersion + ':' + name, ctor);
   }
   coreRegistered = true;

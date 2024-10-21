@@ -26,8 +26,8 @@ jobs:
       - run: yarn --frozen-lockfile
       - run: yarn lint
 
-  flow:
-    name: Flow
+  typecheck:
+    name: Typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
         with:
           cache: yarn
       - run: yarn --frozen-lockfile
-      - run: yarn flow check
+      - run: yarn tsc --build tsconfig.json --emitDeclarationOnly
 
   ts-types:
     name: TypeScript types

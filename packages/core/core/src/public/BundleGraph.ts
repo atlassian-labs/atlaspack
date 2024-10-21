@@ -302,7 +302,7 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
       .map((bundle) => this.#createBundle(bundle, this.#graph, this.#options));
   }
 
-  getUsedSymbols(v: IAsset | IDependency): $ReadOnlySet<symbol> | null | undefined {
+  getUsedSymbols(v: IAsset | IDependency): ReadonlySet<symbol> | null | undefined {
     if (v instanceof Asset) {
       return this.#graph.getUsedSymbolsAsset(assetToAssetValue(v));
     } else {

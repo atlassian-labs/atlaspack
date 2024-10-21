@@ -1,0 +1,21 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../../configs/default"
+    },
+    {
+      "path": "../../core/cli"
+    },
+    {
+      "path": "../../validators/eslint"
+    }
+  ]
+}

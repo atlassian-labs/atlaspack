@@ -1,6 +1,5 @@
-import {Flow} from 'flow-to-typescript-codemod';
 
-export let SharedBuffer: Flow.Class<ArrayBuffer> | Flow.Class<SharedArrayBuffer>;
+export let SharedBuffer: new (...args: any[]) => ArrayBuffer | new (...args: any[]) => SharedArrayBuffer;
 
 if (process.browser) {
   SharedBuffer = ArrayBuffer;

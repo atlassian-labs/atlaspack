@@ -1,24 +1,21 @@
 {
   "name": "@atlaspack/plugin",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "lib/PluginAPI.js",
-  "source": "src/PluginAPI.js",
-  "types": "src/PluginAPI.d.ts",
+  "source": "src/PluginAPI.ts",
+  "types": "lib/PluginAPI.d.ts",
+  "dependencies": {
+    "@atlaspack/types": "2.12.0"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },
-  "scripts": {
-    "check-ts": "tsc --noEmit src/PluginAPI.d.ts"
-  },
-  "dependencies": {
-    "@atlaspack/types": "2.12.0"
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,16 +1,16 @@
 {
   "name": "@atlaspack/react-hmr-example",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
   "private": true,
+  "license": "(MIT OR Apache-2.0)",
   "scripts": {
     "start": "atlaspack src/index.html --https --open"
-  },
-  "devDependencies": {
-    "@atlaspack/cli": "^2.12.0"
   },
   "dependencies": {
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "@atlaspack/cli": "^2.12.0"
   }
 }

@@ -1,22 +1,19 @@
 {
   "name": "@atlaspack/query",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "prepack": "./ensure-no-dev-lib.sh",
-    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "main": "src/index.ts",
   "bin": {
     "atlaspack-query": "bin/atlaspack-query.js"
   },
-  "main": "src/index.js",
+  "scripts": {
+    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js",
+    "prepack": "./ensure-no-dev-lib.sh"
+  },
   "dependencies": {
     "@atlaspack/cache": "2.12.0",
     "@atlaspack/core": "2.12.0",
@@ -26,8 +23,11 @@
     "v8-compile-cache": "^2.0.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.11",
     "@atlaspack/babel-register": "2.12.0",
+    "@babel/core": "^7.22.11",
     "rimraf": "^5.0.5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

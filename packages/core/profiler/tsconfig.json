@@ -1,0 +1,21 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../../utils/events"
+    },
+    {
+      "path": "../diagnostic"
+    },
+    {
+      "path": "../types-internal"
+    }
+  ]
+}

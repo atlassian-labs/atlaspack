@@ -1,0 +1,30 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../../core/core"
+    },
+    {
+      "path": "../../core/types"
+    },
+    {
+      "path": "../../core/utils"
+    },
+    {
+      "path": "../../reporters/bundle-stats"
+    },
+    {
+      "path": "../babel-register"
+    },
+    {
+      "path": "../query"
+    }
+  ]
+}

@@ -103,7 +103,7 @@ type SerializedBundleGraph = {
   conditions: Map<string, Condition>
 };
 
-function makeReadOnlySet<T>(set: Set<T>): $ReadOnlySet<T> {
+function makeReadOnlySet<T>(set: Set<T>): ReadonlySet<T> {
   return new Proxy(set, {
     get(target: Set<T>, property: string) {
       if (property === 'delete' || property === 'add' || property === 'clear') {
@@ -2133,7 +2133,7 @@ export default class BundleGraph {
     }
   }
 
-  getUsedSymbolsAsset(asset: Asset): $ReadOnlySet<symbol> | null | undefined {
+  getUsedSymbolsAsset(asset: Asset): ReadonlySet<symbol> | null | undefined {
     let node = this._graph.getNodeByContentKey(asset.id);
     invariant(node && node.type === 'asset');
     return node.value.symbols
@@ -2141,7 +2141,7 @@ export default class BundleGraph {
       : null;
   }
 
-  getUsedSymbolsDependency(dep: Dependency): $ReadOnlySet<symbol> | null | undefined {
+  getUsedSymbolsDependency(dep: Dependency): ReadonlySet<symbol> | null | undefined {
     let node = this._graph.getNodeByContentKey(dep.id);
     invariant(node && node.type === 'dependency');
     return node.value.symbols

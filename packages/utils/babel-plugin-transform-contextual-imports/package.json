@@ -1,19 +1,14 @@
 {
   "name": "@atlaspack/babel-plugin-transform-contextual-imports",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "engines": {
-    "node": ">= 16.0.0"
-  },
+  "types": "./lib/index.d.ts",
   "dependencies": {
     "@babel/core": "^7.12.2",
     "@babel/helper-plugin-utils": "^7.12.2"
@@ -21,5 +16,11 @@
   "devDependencies": {
     "@types/babel__core": "^7.10.3",
     "@types/babel__helper-plugin-utils": "^7.10.3"
+  },
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

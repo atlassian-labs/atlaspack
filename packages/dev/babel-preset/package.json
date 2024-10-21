@@ -2,18 +2,18 @@
   "name": "@atlaspack/babel-preset",
   "version": "2.12.0",
   "private": true,
-  "license": "(MIT OR Apache-2.0)",
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git",
     "directory": "packages/dev/babel-preset"
   },
+  "license": "(MIT OR Apache-2.0)",
   "dependencies": {
     "@babel/core": "^7.22.11",
     "@babel/plugin-transform-modules-commonjs": "^7.22.11",
     "@babel/preset-env": "^7.22.14",
-    "@babel/preset-flow": "^7.22.5",
     "@babel/preset-react": "^7.22.5",
+    "@babel/preset-typescript": "^7.22.5",
     "babel-plugin-minify-dead-code-elimination": "^0.5.0",
     "babel-plugin-transform-inline-environment-variables": "^0.4.3",
     "read-pkg-up": "^4.0.0"

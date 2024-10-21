@@ -1,0 +1,27 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../build-cache"
+    },
+    {
+      "path": "../fs"
+    },
+    {
+      "path": "../logger"
+    },
+    {
+      "path": "../rust"
+    },
+    {
+      "path": "../utils"
+    }
+  ]
+}

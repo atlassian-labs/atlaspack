@@ -1,28 +1,25 @@
 {
   "name": "@atlaspack/create-react-app",
   "version": "2.12.0",
-  "bin": {
-    "atlaspack-create-react-app": "lib/bin.js"
-  },
-  "main": "src/bin.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git",
     "directory": "packages/utils/create-react-app"
   },
-  "source": "src/bin.js",
+  "license": "(MIT OR Apache-2.0)",
+  "main": "src/bin.ts",
+  "source": "src/bin.ts",
+  "bin": {
+    "atlaspack-create-react-app": "lib/bin.js"
+  },
   "files": [
     "templates",
     "lib",
     "bin"
   ],
   "scripts": {
-    "prepack": "./ensure-no-dev-lib.sh",
-    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
-  },
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
+    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js",
+    "prepack": "./ensure-no-dev-lib.sh"
   },
   "dependencies": {
     "@npmcli/promise-spawn": "^1.3.2",
@@ -36,8 +33,11 @@
     "v8-compile-cache": "^2.0.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.11",
     "@atlaspack/babel-register": "2.12.0",
+    "@babel/core": "^7.22.11",
     "rimraf": "^5.0.5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

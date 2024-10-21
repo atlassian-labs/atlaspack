@@ -1,18 +1,18 @@
 {
   "name": "@atlaspack/macros",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "types": "macros.d.ts",
+  "license": "(MIT OR Apache-2.0)",
   "sideEffects": false,
+  "types": "macros.d.ts",
   "engines": {
     "node": ">= 16.0.0",
     "parcel": "^2.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

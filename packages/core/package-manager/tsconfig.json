@@ -1,0 +1,36 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../../utils/node-resolver-core"
+    },
+    {
+      "path": "../build-cache"
+    },
+    {
+      "path": "../diagnostic"
+    },
+    {
+      "path": "../fs"
+    },
+    {
+      "path": "../logger"
+    },
+    {
+      "path": "../types"
+    },
+    {
+      "path": "../utils"
+    },
+    {
+      "path": "../workers"
+    }
+  ]
+}

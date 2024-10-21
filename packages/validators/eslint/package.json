@@ -1,20 +1,14 @@
 {
   "name": "@atlaspack/validator-eslint",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "lib/EslintValidator.js",
-  "source": "src/EslintValidator.js",
-  "engines": {
-    "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
-  },
+  "source": "src/EslintValidator.ts",
+  "types": "lib/EslintValidator.d.ts",
   "dependencies": {
     "@atlaspack/diagnostic": "2.12.0",
     "@atlaspack/plugin": "2.12.0",
@@ -26,5 +20,12 @@
   },
   "peerDependencies": {
     "eslint": "^6.0.0 || ^7.0.0 || ^8.0.0"
+  },
+  "engines": {
+    "node": ">= 16.0.0",
+    "parcel": "^2.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

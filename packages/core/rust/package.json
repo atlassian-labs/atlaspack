@@ -1,22 +1,14 @@
 {
   "name": "@atlaspack/rust",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "index.js",
   "browser": "browser.js",
-  "napi": {
-    "name": "atlaspack-node-bindings"
-  },
-  "engines": {
-    "node": ">= 16.0.0"
-  },
+  "types": "index.d.ts",
   "files": [
     "browser.js",
     "index.d.ts",
@@ -25,10 +17,6 @@
     "*.node",
     "*.wasm"
   ],
-  "devDependencies": {
-    "@napi-rs/cli": "^2.15.2",
-    "napi-wasm": "^1.0.1"
-  },
   "scripts": {
     "build": "napi build --platform --cargo-cwd ../../../crates/node-bindings",
     "build-canary": "napi build --platform --profile canary --features canary --cargo-cwd ../../../crates/node-bindings",
@@ -36,5 +24,18 @@
     "test": "mocha",
     "wasm:build": "cargo build -p atlaspack-node-bindings --target wasm32-unknown-unknown && cp ../../../target/wasm32-unknown-unknown/debug/atlaspack_node_bindings.wasm .",
     "wasm:build-release": "CARGO_PROFILE_RELEASE_LTO=true cargo build -p atlaspack-node-bindings --target wasm32-unknown-unknown --release && wasm-opt --strip-debug -O ../../../target/wasm32-unknown-unknown/release/atlaspack_node_bindings.wasm -o atlaspack_node_bindings.wasm"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.15.2",
+    "napi-wasm": "^1.0.1"
+  },
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "napi": {
+    "name": "atlaspack-node-bindings"
   }
 }

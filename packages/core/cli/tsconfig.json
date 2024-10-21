@@ -1,0 +1,51 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../../configs/default"
+    },
+    {
+      "path": "../../dev/babel-register"
+    },
+    {
+      "path": "../../reporters/cli"
+    },
+    {
+      "path": "../../reporters/dev-server"
+    },
+    {
+      "path": "../../reporters/tracer"
+    },
+    {
+      "path": "../../utils/events"
+    },
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../diagnostic"
+    },
+    {
+      "path": "../feature-flags"
+    },
+    {
+      "path": "../fs"
+    },
+    {
+      "path": "../logger"
+    },
+    {
+      "path": "../package-manager"
+    },
+    {
+      "path": "../utils"
+    }
+  ]
+}

@@ -22,7 +22,7 @@ type WorkerOpts = {
   backend: BackendType,
   shouldPatchConsole?: boolean,
   shouldTrace?: boolean,
-  sharedReferences: $ReadOnlyMap<SharedReference, unknown>
+  sharedReferences: ReadonlyMap<SharedReference, unknown>
 };
 
 let WORKER_ID = 0;

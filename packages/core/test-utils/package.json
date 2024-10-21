@@ -1,17 +1,14 @@
 {
   "name": "@atlaspack/test-utils",
   "version": "2.12.0",
-  "description": "Blazing fast, zero configuration web application bundler",
-  "license": "(MIT OR Apache-2.0)",
   "private": true,
+  "description": "Blazing fast, zero configuration web application bundler",
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "src/utils.js",
-  "engines": {
-    "node": ">= 16.0.0"
-  },
+  "license": "(MIT OR Apache-2.0)",
+  "main": "src/utils.ts",
   "dependencies": {
     "@atlaspack/config-default": "2.12.0",
     "@atlaspack/core": "2.12.0",
@@ -26,5 +23,8 @@
     "posthtml-parser": "^0.10.1",
     "resolve": "^1.12.0",
     "ws": "^7.0.0"
+  },
+  "engines": {
+    "node": ">= 16.0.0"
   }
 }

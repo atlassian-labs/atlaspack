@@ -1,12 +1,24 @@
 {
-  "exclude": ["__test__", "__benchmarks__", "dist"],
+  "extends": "../../tsconfig.node.json",
   "compilerOptions": {
-    "target": "es2016",
-    "module": "commonjs",
-    "rootDir": "./typescript",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "skipLibCheck": true
-  }
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../../packages/core/cache"
+    },
+    {
+      "path": "../../packages/core/core"
+    },
+    {
+      "path": "../../packages/core/fs"
+    },
+    {
+      "path": "../../packages/core/types"
+    }
+  ]
 }

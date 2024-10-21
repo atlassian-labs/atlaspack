@@ -1,13 +1,12 @@
-import {Flow} from 'flow-to-typescript-codemod';
 import {createBuildCache} from './buildCache';
 import {serializeRaw, deserializeRaw} from './serializerCore';
 
 export {serializeRaw, deserializeRaw} from './serializerCore';
 
-const nameToCtor: Map<string, Flow.Class<any>> = new Map();
-const ctorToName: Map<Flow.Class<any>, string> = new Map();
+const nameToCtor: Map<string, new (...args: any[]) => any> = new Map();
+const ctorToName: Map<new (...args: any[]) => any, string> = new Map();
 
-export function registerSerializableClass(name: string, ctor: Flow.Class<any>) {
+export function registerSerializableClass(name: string, ctor: new (...args: any[]) => any) {
   if (ctorToName.has(ctor)) {
     throw new Error('Class already registered with serializer');
   }
@@ -16,7 +15,7 @@ export function registerSerializableClass(name: string, ctor: Flow.Class<any>) {
   ctorToName.set(ctor, name);
 }
 
-export function unregisterSerializableClass(name: string, ctor: Flow.Class<any>) {
+export function unregisterSerializableClass(name: string, ctor: new (...args: any[]) => any) {
   if (nameToCtor.get(name) === ctor) {
     nameToCtor.delete(name);
   }

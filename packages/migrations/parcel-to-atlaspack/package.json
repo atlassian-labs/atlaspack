@@ -7,6 +7,7 @@
   },
   "license": "(MIT OR Apache-2.0)",
   "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
   "bin": {
     "parcel-to-atlaspack": "dist/bin.js"
   },

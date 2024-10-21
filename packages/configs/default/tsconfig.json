@@ -1,0 +1,108 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../../bundlers/default"
+    },
+    {
+      "path": "../../compressors/raw"
+    },
+    {
+      "path": "../../core/core"
+    },
+    {
+      "path": "../../namers/default"
+    },
+    {
+      "path": "../../optimizers/css"
+    },
+    {
+      "path": "../../optimizers/htmlnano"
+    },
+    {
+      "path": "../../optimizers/image"
+    },
+    {
+      "path": "../../optimizers/svgo"
+    },
+    {
+      "path": "../../optimizers/swc"
+    },
+    {
+      "path": "../../packagers/css"
+    },
+    {
+      "path": "../../packagers/html"
+    },
+    {
+      "path": "../../packagers/js"
+    },
+    {
+      "path": "../../packagers/raw"
+    },
+    {
+      "path": "../../packagers/svg"
+    },
+    {
+      "path": "../../packagers/wasm"
+    },
+    {
+      "path": "../../reporters/dev-server"
+    },
+    {
+      "path": "../../resolvers/default"
+    },
+    {
+      "path": "../../runtimes/hmr"
+    },
+    {
+      "path": "../../runtimes/js"
+    },
+    {
+      "path": "../../runtimes/react-refresh"
+    },
+    {
+      "path": "../../runtimes/service-worker"
+    },
+    {
+      "path": "../../transformers/babel"
+    },
+    {
+      "path": "../../transformers/css"
+    },
+    {
+      "path": "../../transformers/html"
+    },
+    {
+      "path": "../../transformers/image"
+    },
+    {
+      "path": "../../transformers/js"
+    },
+    {
+      "path": "../../transformers/json"
+    },
+    {
+      "path": "../../transformers/postcss"
+    },
+    {
+      "path": "../../transformers/posthtml"
+    },
+    {
+      "path": "../../transformers/raw"
+    },
+    {
+      "path": "../../transformers/react-refresh-wrap"
+    },
+    {
+      "path": "../../transformers/svg"
+    }
+  ]
+}

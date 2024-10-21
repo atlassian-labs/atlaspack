@@ -74,7 +74,7 @@ export class ScopeHoistingPackager {
   useAsyncBundleRuntime: boolean;
   outputFormat: OutputFormat;
   isAsyncBundle: boolean;
-  globalNames: $ReadOnlySet<string>;
+  globalNames: ReadonlySet<string>;
   assetOutputs: Map<string, {
     code: string,
     map: Buffer | null | undefined

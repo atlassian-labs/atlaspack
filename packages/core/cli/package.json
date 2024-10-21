@@ -2,25 +2,20 @@
   "name": "@atlaspack/cli",
   "version": "2.12.0",
   "description": "Blazing fast, zero configuration web application bundler",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "main": "lib/bin.js",
+  "source": "src/bin.ts",
+  "types": "lib/bin.d.ts",
   "bin": {
     "atlaspack": "bin/atlaspack.js"
   },
-  "main": "lib/bin.js",
-  "source": "src/bin.js",
   "scripts": {
-    "prepack": "./ensure-no-dev-lib.sh",
-    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
-  },
-  "engines": {
-    "node": ">= 16.0.0"
+    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js",
+    "prepack": "./ensure-no-dev-lib.sh"
   },
   "dependencies": {
     "@atlaspack/config-default": "2.12.0",
@@ -40,8 +35,14 @@
     "get-port": "^4.2.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.11",
     "@atlaspack/babel-register": "2.12.0",
+    "@babel/core": "^7.22.11",
     "rimraf": "^5.0.5"
+  },
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -248,7 +248,7 @@ function assertUsedSymbols(
   }
 }
 
-function assertSetEqual<T>(actual: $ReadOnlySet<T>, expected: $ReadOnlySet<T>, prefix: string = '') {
+function assertSetEqual<T>(actual: ReadonlySet<T>, expected: ReadonlySet<T>, prefix: string = '') {
   assert(
     setEqual(actual, expected),
     `${prefix} [${[...actual].join(',')}] wasn't [${[...expected].join(',')}]`,

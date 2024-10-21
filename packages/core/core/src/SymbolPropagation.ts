@@ -61,7 +61,7 @@ export function propagateSymbols(
     assetGroupsWithRemovedParents,
     (assetNode, incomingDeps, outgoingDeps) => {
       // exportSymbol -> identifier
-      let assetSymbols: $ReadOnlyMap<symbol, {
+      let assetSymbols: ReadonlyMap<symbol, {
         local: symbol,
         loc: InternalSourceLocation | null | undefined,
         meta?: Meta | null | undefined
@@ -263,7 +263,7 @@ export function propagateSymbols(
     changedDepsUsedSymbolsUpDirtyDown,
     previousErrors,
     (assetNode, incomingDeps, outgoingDeps) => {
-      let assetSymbols: $ReadOnlyMap<symbol, {
+      let assetSymbols: ReadonlyMap<symbol, {
         local: symbol,
         loc: InternalSourceLocation | null | undefined,
         meta?: Meta | null | undefined
@@ -758,11 +758,11 @@ function getDependencyResolution(graph: AssetGraph, depId: ContentKey): Array<No
 }
 
 function equalMap<K>(
-  a: $ReadOnlyMap<K, {
+  a: ReadonlyMap<K, {
     asset: ContentKey,
     symbol: symbol | null | undefined
   } | null | undefined>,
-  b: $ReadOnlyMap<K, {
+  b: ReadonlyMap<K, {
     asset: ContentKey,
     symbol: symbol | null | undefined
   } | null | undefined>,

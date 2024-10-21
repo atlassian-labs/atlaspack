@@ -1,15 +1,15 @@
 {
   "name": "@atlaspack/typescript-example",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
   "private": true,
+  "license": "(MIT OR Apache-2.0)",
+  "main": "dist/main.js",
+  "module": "dist/module.js",
+  "types": "dist/main.d.ts",
   "scripts": {
     "build": "atlaspack build src/index.ts"
   },
   "devDependencies": {
     "@atlaspack/cli": "^2.12.0"
-  },
-  "main": "dist/main.js",
-  "module": "dist/module.js",
-  "types": "dist/types.d.ts"
+  }
 }

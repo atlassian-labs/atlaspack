@@ -1,21 +1,22 @@
 {
   "name": "@atlaspack/packager-ts",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "lib/TSPackager.js",
-  "source": "src/TSPackager.js",
+  "source": "src/TSPackager.ts",
+  "types": "lib/TSPackager.d.ts",
+  "dependencies": {
+    "@atlaspack/plugin": "2.12.0"
+  },
   "engines": {
     "node": ">= 16.0.0",
     "parcel": "^2.12.0"
   },
-  "dependencies": {
-    "@atlaspack/plugin": "2.12.0"
+  "publishConfig": {
+    "access": "public"
   }
 }

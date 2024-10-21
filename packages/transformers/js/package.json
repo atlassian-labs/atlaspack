@@ -1,35 +1,29 @@
 {
   "name": "@atlaspack/transformer-js",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "lib/JSTransformer.js",
-  "source": "src/JSTransformer.js",
-  "scripts": {
-    "test": "mocha"
-  },
-  "engines": {
-    "parcel": "^2.12.0",
-    "node": ">= 16.0.0"
-  },
+  "source": "src/JSTransformer.ts",
+  "types": "lib/JSTransformer.d.ts",
   "files": [
     "lib",
     "src"
   ],
+  "scripts": {
+    "test": "mocha"
+  },
   "dependencies": {
     "@atlaspack/diagnostic": "2.12.0",
     "@atlaspack/feature-flags": "2.12.0",
     "@atlaspack/plugin": "2.12.0",
     "@atlaspack/rust": "2.12.0",
-    "@parcel/source-map": "^2.1.1",
     "@atlaspack/utils": "2.12.0",
     "@atlaspack/workers": "2.12.0",
+    "@parcel/source-map": "^2.1.1",
     "@swc/helpers": "^0.5.0",
     "browserslist": "^4.6.6",
     "nullthrows": "^1.1.1",
@@ -38,5 +32,12 @@
   },
   "peerDependencies": {
     "@atlaspack/core": "^2.12.0"
+  },
+  "engines": {
+    "node": ">= 16.0.0",
+    "parcel": "^2.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

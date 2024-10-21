@@ -1,25 +1,26 @@
 {
   "name": "@atlaspack/optimizer-htmlnano",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "lib/HTMLNanoOptimizer.js",
-  "source": "src/HTMLNanoOptimizer.js",
-  "engines": {
-    "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
-  },
+  "source": "src/HTMLNanoOptimizer.ts",
+  "types": "lib/HTMLNanoOptimizer.d.ts",
   "dependencies": {
     "@atlaspack/plugin": "2.12.0",
     "htmlnano": "^2.0.0",
     "nullthrows": "^1.1.1",
     "posthtml": "^0.16.5",
     "svgo": "^2.4.0"
+  },
+  "engines": {
+    "node": ">= 16.0.0",
+    "parcel": "^2.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

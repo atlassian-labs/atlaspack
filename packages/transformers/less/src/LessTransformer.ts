@@ -1,4 +1,4 @@
-import {typeof default as Less} from 'less';
+import type {default as Less} from 'less';
 import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
 import SourceMap from '@parcel/source-map';

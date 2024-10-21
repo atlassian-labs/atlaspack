@@ -1,8 +1,8 @@
 {
   "name": "@atlaspack/typechecking-example",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
   "private": true,
+  "license": "(MIT OR Apache-2.0)",
   "scripts": {
     "build": "atlaspack build src/index.ts"
   },

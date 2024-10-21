@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/eslint-config-browser",
-  "private": true,
   "version": "2.12.0",
+  "private": true,
   "dependencies": {
     "@atlaspack/eslint-config": "2.12.0"
   },

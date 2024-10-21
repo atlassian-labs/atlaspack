@@ -1,25 +1,21 @@
 {
   "name": "@atlaspack/cache",
-  "description": "Interface for defining caches and file-system, IDB and LMDB implementations.",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
+  "description": "Interface for defining caches and file-system, IDB and LMDB implementations.",
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "lib/index.js",
-  "source": "src/index.js",
-  "types": "index.d.ts",
-  "engines": {
-    "node": ">= 16.0.0"
+  "source": "src/index.ts",
+  "browser": {
+    "./src/IDBCache.js": "./src/IDBCache.browser.js",
+    "./src/LMDBCache.js": false
   },
+  "types": "lib/index.d.ts",
   "scripts": {
-    "test": "mocha",
-    "build-ts": "mkdir -p lib && flow-to-ts src/types.js > lib/types.d.ts",
-    "check-ts": "tsc --noEmit index.d.ts"
+    "test": "mocha"
   },
   "dependencies": {
     "@atlaspack/build-cache": "2.12.0",
@@ -32,8 +28,10 @@
   "devDependencies": {
     "idb": "^5.0.8"
   },
-  "browser": {
-    "./src/IDBCache.js": "./src/IDBCache.browser.js",
-    "./src/LMDBCache.js": false
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

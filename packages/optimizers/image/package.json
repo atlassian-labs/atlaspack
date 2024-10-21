@@ -1,20 +1,14 @@
 {
   "name": "@atlaspack/optimizer-image",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "main": "lib/ImageOptimizer.js",
-  "source": "src/ImageOptimizer.js",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "engines": {
-    "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
-  },
+  "license": "(MIT OR Apache-2.0)",
+  "main": "lib/ImageOptimizer.js",
+  "source": "src/ImageOptimizer.ts",
+  "types": "lib/ImageOptimizer.d.ts",
   "files": [
     "lib"
   ],
@@ -27,5 +21,12 @@
   },
   "peerDependencies": {
     "@atlaspack/core": "^2.12.0"
+  },
+  "engines": {
+    "node": ">= 16.0.0",
+    "parcel": "^2.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,0 +1,87 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../../bundlers/default"
+    },
+    {
+      "path": "../../compressors/raw"
+    },
+    {
+      "path": "../../namers/default"
+    },
+    {
+      "path": "../../optimizers/terser"
+    },
+    {
+      "path": "../../packagers/css"
+    },
+    {
+      "path": "../../packagers/html"
+    },
+    {
+      "path": "../../packagers/js"
+    },
+    {
+      "path": "../../packagers/raw"
+    },
+    {
+      "path": "../../reporters/dev-server-sw"
+    },
+    {
+      "path": "../../reporters/json"
+    },
+    {
+      "path": "../../resolvers/default"
+    },
+    {
+      "path": "../../resolvers/repl-runtimes"
+    },
+    {
+      "path": "../../runtimes/hmr"
+    },
+    {
+      "path": "../../runtimes/js"
+    },
+    {
+      "path": "../../runtimes/react-refresh"
+    },
+    {
+      "path": "../../transformers/babel"
+    },
+    {
+      "path": "../../transformers/css"
+    },
+    {
+      "path": "../../transformers/html"
+    },
+    {
+      "path": "../../transformers/inline-string"
+    },
+    {
+      "path": "../../transformers/js"
+    },
+    {
+      "path": "../../transformers/json"
+    },
+    {
+      "path": "../../transformers/postcss"
+    },
+    {
+      "path": "../../transformers/posthtml"
+    },
+    {
+      "path": "../../transformers/raw"
+    },
+    {
+      "path": "../../transformers/react-refresh-wrap"
+    }
+  ]
+}

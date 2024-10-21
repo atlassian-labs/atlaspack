@@ -1,0 +1,27 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../../configs/default"
+    },
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../fs"
+    },
+    {
+      "path": "../package-manager"
+    },
+    {
+      "path": "../utils"
+    }
+  ]
+}

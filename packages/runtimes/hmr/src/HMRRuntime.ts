@@ -12,7 +12,7 @@ const FILENAME =
     : __filename;
 
 const HMR_RUNTIME = fs.readFileSync(
-  path.join(__dirname, './loaders/hmr-runtime.js'),
+  path.join(__dirname, './loaders/hmr-runtime.ts'),
   'utf8',
 );
 

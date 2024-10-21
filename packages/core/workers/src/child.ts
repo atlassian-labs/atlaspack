@@ -1,4 +1,3 @@
-import {Flow} from 'flow-to-typescript-codemod';
 
 import type {
   CallRequest,
@@ -44,7 +43,7 @@ export class Child {
   sharedReferences: Map<SharedReference, unknown> = new Map();
   sharedReferencesByValue: Map<unknown, SharedReference> = new Map();
 
-  constructor(ChildBackend: Flow.Class<ChildImpl>) {
+  constructor(ChildBackend: new (...args: any[]) => ChildImpl) {
     this.child = new ChildBackend(
       (m: WorkerMessage) => {
         this.messageListener(m);

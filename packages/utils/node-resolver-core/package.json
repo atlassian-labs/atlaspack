@@ -1,32 +1,30 @@
 {
   "name": "@atlaspack/node-resolver-core",
   "version": "3.3.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "lib/index.js",
-  "source": "src/index.js",
-  "engines": {
-    "node": ">= 16.0.0"
+  "source": "src/index.ts",
+  "browser": {
+    "./src/builtins.js": "./src/builtins.browser.js"
   },
-  "scripts": {
-    "test": "mocha test"
-  },
+  "types": "lib/index.d.ts",
   "files": [
     "lib"
   ],
+  "scripts": {
+    "test": "mocha test"
+  },
   "dependencies": {
-    "@mischnic/json-sourcemap": "^0.1.0",
     "@atlaspack/diagnostic": "2.12.0",
     "@atlaspack/feature-flags": "2.12.0",
     "@atlaspack/fs": "2.12.0",
     "@atlaspack/rust": "2.12.0",
     "@atlaspack/utils": "2.12.0",
+    "@mischnic/json-sourcemap": "^0.1.0",
     "nullthrows": "^1.1.1",
     "semver": "^7.5.2"
   },
@@ -54,7 +52,10 @@
     "util": "^0.12.3",
     "vm-browserify": "^1.1.2"
   },
-  "browser": {
-    "./src/builtins.js": "./src/builtins.browser.js"
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

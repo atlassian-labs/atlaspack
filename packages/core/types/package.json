@@ -1,22 +1,18 @@
 {
   "name": "@atlaspack/types",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "main": "src/index.js",
-  "types": "lib/index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "build-ts": "mkdir -p lib ; flow-to-ts src/index.js > lib/index.d.ts",
-    "check-ts": "tsc --noEmit lib/index.d.ts"
-  },
+  "license": "(MIT OR Apache-2.0)",
+  "main": "src/index.ts",
+  "types": "lib/index.d.ts",
   "dependencies": {
     "@atlaspack/types-internal": "2.12.0",
     "@atlaspack/workers": "2.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

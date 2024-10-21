@@ -354,7 +354,7 @@ export type InitialAtlaspackOptionsInternal<WorkerFarm> = {
     packageName: DependencySpecifier,
     resolveFrom: FilePath
   }>,
-  readonly featureFlags?: $Partial<FeatureFlags>
+  readonly featureFlags?: Partial<FeatureFlags>
 
   // throwErrors
   // global?
@@ -572,7 +572,7 @@ export type DependencyOptions = {
   /** The semver version range expected for the dependency. */
   readonly range?: SemverRange,
   /** The symbols within the resolved module that the source file depends on. */
-  readonly symbols?: $ReadOnlyMap<symbol, {
+  readonly symbols?: ReadonlyMap<symbol, {
     local: symbol,
     loc: SourceLocation | null | undefined,
     isWeak: boolean,
@@ -997,7 +997,7 @@ export type TransformerResult = {
    */
   readonly sideEffects?: boolean,
   /** The symbols that the asset exports. */
-  readonly symbols?: $ReadOnlyMap<symbol, {
+  readonly symbols?: ReadonlyMap<symbol, {
     local: symbol,
     loc: SourceLocation | null | undefined
   }>,
@@ -1587,7 +1587,7 @@ export interface BundleGraph<TBundle extends Bundle> {
    *
    * Returns null if symbol propagation didn't run (so the result is unknown).
    */
-  getUsedSymbols(arg1: Asset | Dependency): $ReadOnlySet<symbol> | null | undefined;
+  getUsedSymbols(arg1: Asset | Dependency): ReadonlySet<symbol> | null | undefined;
   /** Returns the common root directory for the entry assets of a target. */
   getEntryRoot(target: Target): FilePath;
   getConditionalBundleMapping(): Map<TBundle, Map<string, {

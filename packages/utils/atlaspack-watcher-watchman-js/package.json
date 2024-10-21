@@ -3,10 +3,8 @@
   "version": "2.12.0",
   "license": "(MIT OR Apache-2.0)",
   "main": "lib/index.js",
-  "source": "src/index.js",
-  "publishConfig": {
-    "access": "public"
-  },
+  "source": "src/index.ts",
+  "types": "lib/index.d.ts",
   "dependencies": {
     "@atlaspack/logger": "2.12.0",
     "@atlaspack/utils": "2.12.0",
@@ -14,5 +12,8 @@
   },
   "devDependencies": {
     "@parcel/watcher": "^2.4.1"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

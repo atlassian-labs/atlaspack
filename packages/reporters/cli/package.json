@@ -1,31 +1,14 @@
 {
   "name": "@atlaspack/reporter-cli",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "lib/CLIReporter.js",
-  "source": "src/CLIReporter.js",
-  "engines": {
-    "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
-  },
-  "targets": {
-    "main": {
-      "includeNodeModules": {
-        "@atlaspack/plugin": false,
-        "@atlaspack/types": false,
-        "@atlaspack/utils": false,
-        "chalk": false,
-        "term-size": false
-      }
-    }
-  },
+  "source": "src/CLIReporter.ts",
+  "types": "lib/CLIReporter.d.ts",
   "dependencies": {
     "@atlaspack/plugin": "2.12.0",
     "@atlaspack/types": "2.12.0",
@@ -40,5 +23,23 @@
     "ora": "^5.2.0",
     "string-width": "^4.2.0",
     "wrap-ansi": "^7.0.0"
+  },
+  "engines": {
+    "node": ">= 16.0.0",
+    "parcel": "^2.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "targets": {
+    "main": {
+      "includeNodeModules": {
+        "@atlaspack/plugin": false,
+        "@atlaspack/types": false,
+        "@atlaspack/utils": false,
+        "chalk": false,
+        "term-size": false
+      }
+    }
   }
 }

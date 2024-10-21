@@ -1,22 +1,23 @@
 {
   "name": "@atlaspack/runtime-browser-hmr",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "lib/HMRRuntime.js",
-  "source": "src/HMRRuntime.js",
+  "source": "src/HMRRuntime.ts",
+  "types": "lib/HMRRuntime.d.ts",
+  "dependencies": {
+    "@atlaspack/plugin": "2.12.0",
+    "@atlaspack/utils": "2.12.0"
+  },
   "engines": {
     "node": ">= 16.0.0",
     "parcel": "^2.12.0"
   },
-  "dependencies": {
-    "@atlaspack/plugin": "2.12.0",
-    "@atlaspack/utils": "2.12.0"
+  "publishConfig": {
+    "access": "public"
   }
 }

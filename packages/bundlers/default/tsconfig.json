@@ -1,0 +1,30 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": [
+    "./src"
+  ],
+  "references": [
+    {
+      "path": "../../core/diagnostic"
+    },
+    {
+      "path": "../../core/feature-flags"
+    },
+    {
+      "path": "../../core/graph"
+    },
+    {
+      "path": "../../core/plugin"
+    },
+    {
+      "path": "../../core/rust"
+    },
+    {
+      "path": "../../core/utils"
+    }
+  ]
+}

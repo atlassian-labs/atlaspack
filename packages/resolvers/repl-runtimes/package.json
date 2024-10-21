@@ -1,21 +1,21 @@
 {
   "name": "@atlaspack/resolver-repl-runtimes",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
   "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "source": "src/REPLRuntimesResolver.js",
-  "engines": {
-    "parcel": "^2.11.0"
-  },
+  "license": "(MIT OR Apache-2.0)",
+  "source": "src/REPLRuntimesResolver.ts",
   "dependencies": {
     "@atlaspack/plugin": "2.12.0",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
     "@babel/core": "^7.12.2"
+  },
+  "engines": {
+    "parcel": "^2.11.0"
   }
 }

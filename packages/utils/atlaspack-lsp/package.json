@@ -1,24 +1,17 @@
 {
   "name": "@atlaspack/lsp",
   "version": "2.12.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
   "main": "./lib/LspServer.js",
   "source": "src/LspServer.ts",
-  "types": "src/LspServer.ts",
+  "types": "./lib/LspServer.d.ts",
   "scripts": {
-    "watch": "tsc -watch -p ./",
-    "lint": "eslint src --ext ts"
-  },
-  "engines": {
-    "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
+    "lint": "eslint src --ext ts",
+    "watch": "tsc -watch -p ./"
   },
   "dependencies": {
     "@atlaspack/lsp-protocol": "2.12.0",
@@ -36,6 +29,13 @@
     "@typescript-eslint/parser": "^5.59.7",
     "eslint": "^8.41.0",
     "typescript": ">=3.0.0"
+  },
+  "engines": {
+    "node": ">= 16.0.0",
+    "parcel": "^2.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "targets": {
     "types": false
