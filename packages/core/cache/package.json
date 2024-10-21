@@ -29,7 +29,7 @@
     "lmdb": "2.8.5"
   },
   "peerDependencies": {
-    "@atlaspack/core": "^2.12.0"
+    "@atlaspack/build-cache": "^2.12.0"
   },
   "devDependencies": {
     "idb": "^5.0.8"

@@ -21,7 +21,7 @@ import {
   prepareForSerialization,
   restoreDeserializedObject,
   serialize,
-} from '@atlaspack/core';
+} from '@atlaspack/build-cache';
 import ThrowableDiagnostic, {anyToDiagnostic, md} from '@atlaspack/diagnostic';
 import Worker, {type WorkerCall} from './Worker';
 import cpuCount from './cpuCount';

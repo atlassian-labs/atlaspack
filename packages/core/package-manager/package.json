@@ -25,7 +25,7 @@
     "types": false,
     "main": {
       "includeNodeModules": {
-        "@atlaspack/core": false,
+        "@atlaspack/build-cache": false,
         "@atlaspack/diagnostic": false,
         "@atlaspack/fs": false,
         "@atlaspack/logger": false,
@@ -56,7 +56,7 @@
     "split2": "^3.1.1"
   },
   "peerDependencies": {
-    "@atlaspack/core": "^2.12.0"
+    "@atlaspack/build-cache": "^2.12.0"
   },
   "browser": {
     "./src/NodePackageManager.js": false,

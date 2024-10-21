@@ -25,6 +25,7 @@
     "nullthrows": "^1.1.1"
   },
   "peerDependencies": {
+    "@atlaspack/build-cache": "^2.12.0",
     "@atlaspack/core": "^2.12.0"
   },
   "browser": {

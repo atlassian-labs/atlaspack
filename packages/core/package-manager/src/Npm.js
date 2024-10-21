@@ -5,8 +5,8 @@ import type {PackageInstaller, InstallerOptions} from '@atlaspack/types';
 import path from 'path';
 import spawn from 'cross-spawn';
 import logger from '@atlaspack/logger';
+import {registerSerializableClass} from '@atlaspack/build-cache';
 import promiseFromProcess from './promiseFromProcess';
-import {registerSerializableClass} from '@atlaspack/core';
 import {npmSpecifierFromModuleRequest} from './utils';
 
 // $FlowFixMe

@@ -18,7 +18,7 @@ import type {LoadedPlugin} from '../AtlaspackConfig';
 import type {RequestResult, RunAPI} from '../RequestTracker';
 import type {ProjectPath} from '../projectPath';
 
-import {serializeRaw} from '../serializer';
+import {createBuildCache, serializeRaw} from '@atlaspack/build-cache';
 import {PluginLogger} from '@atlaspack/logger';
 import PluginOptions from '../public/PluginOptions';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
@@ -29,7 +29,6 @@ import {hashString, Hash} from '@atlaspack/rust';
 import {PluginTracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 import {fromProjectPath, fromProjectPathRelative} from '../projectPath';
-import {createBuildCache} from '../buildCache';
 
 export type PluginWithLoadConfig = {
   loadConfig?: ({|

@@ -1,8 +1,11 @@
 // @flow
+
 import type {FilePath} from '@atlaspack/types';
-import {MemoryFS, FSError, makeShared, File} from '@atlaspack/fs';
+
 import path from 'path';
-import {registerSerializableClass} from '@atlaspack/core';
+
+import {registerSerializableClass} from '@atlaspack/build-cache';
+import {MemoryFS, FSError, makeShared, File} from '@atlaspack/fs';
 
 const {Buffer} = require('buffer');
 

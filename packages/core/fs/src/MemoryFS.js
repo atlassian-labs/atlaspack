@@ -15,7 +15,7 @@ import type {
 
 import path from 'path';
 import {Readable, Writable} from 'stream';
-import {registerSerializableClass} from '@atlaspack/core';
+import {registerSerializableClass} from '@atlaspack/build-cache';
 import {SharedBuffer} from '@atlaspack/utils';
 import packageJSON from '../package.json';
 import WorkerFarm, {Handle} from '@atlaspack/workers';
