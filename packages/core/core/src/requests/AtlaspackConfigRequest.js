@@ -33,12 +33,12 @@ import {parse} from 'json5';
 import path from 'path';
 import invariant from 'assert';
 
+import {AtlaspackConfig} from '../AtlaspackConfig';
 import AtlaspackConfigSchema from '../AtlaspackConfig.schema';
-import {optionsProxy} from '../utils';
-import AtlaspackConfig from '../AtlaspackConfig';
 import {createBuildCache} from '../buildCache';
 import {toProjectPath} from '../projectPath';
 import {requestTypes} from '../RequestTracker';
+import {optionsProxy} from '../utils';
 
 type ConfigMap<K, V> = {[K]: V, ...};
 

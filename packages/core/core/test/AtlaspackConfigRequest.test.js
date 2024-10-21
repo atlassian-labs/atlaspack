@@ -1,8 +1,11 @@
 // @flow
 import assert from 'assert';
-import nullthrows from 'nullthrows';
 import path from 'path';
-import AtlaspackConfig from '../src/AtlaspackConfig';
+
+import nullthrows from 'nullthrows';
+
+import {AtlaspackConfig} from '../src/AtlaspackConfig';
+import {toProjectPath} from '../src/projectPath';
 import {
   validateConfigFile,
   mergePipelines,
@@ -13,8 +16,8 @@ import {
   resolveAtlaspackConfig,
   processConfig,
 } from '../src/requests/AtlaspackConfigRequest';
+
 import {DEFAULT_OPTIONS, relative} from './test-utils';
-import {toProjectPath} from '../src/projectPath';
 
 describe('AtlaspackConfigRequest', () => {
   describe('validateConfigFile', () => {

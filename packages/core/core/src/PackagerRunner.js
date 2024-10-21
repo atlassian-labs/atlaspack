@@ -18,7 +18,7 @@ import type {
   ReportFn,
   RequestInvalidation,
 } from './types';
-import type AtlaspackConfig, {LoadedPlugin} from './AtlaspackConfig';
+import type {AtlaspackConfig, LoadedPlugin} from './AtlaspackConfig';
 import type InternalBundleGraph from './BundleGraph';
 import type {ConfigRequest} from './requests/ConfigRequest';
 import type {DevDepSpecifier} from './requests/DevDepRequest';

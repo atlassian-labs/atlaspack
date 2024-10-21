@@ -78,7 +78,7 @@ pub struct DefaultTargetOptions {
   pub is_library: Option<bool>,
   pub output_format: Option<OutputFormat>,
   pub public_url: String,
-  pub should_optimize: bool,
+  pub should_optimize: Option<bool>,
   pub should_scope_hoist: Option<bool>,
   pub source_maps: bool,
 }
@@ -91,7 +91,7 @@ impl Default for DefaultTargetOptions {
       is_library: None,
       output_format: None,
       public_url: String::from("/"),
-      should_optimize: false,
+      should_optimize: None,
       should_scope_hoist: None,
       source_maps: false,
     }

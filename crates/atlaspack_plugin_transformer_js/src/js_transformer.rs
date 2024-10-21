@@ -58,7 +58,18 @@ struct PackageJson {
 
 impl AtlaspackJsTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Result<Self, Error> {
-    let package_json = ctx.config.load_package_json::<PackageJson>()?;
+    let config = ctx.config.load_package_json::<PackageJson>().map_or_else(
+      |err| {
+        let diagnostic = err.downcast_ref::<Diagnostic>();
+
+        if diagnostic.is_some_and(|d| d.kind != ErrorKind::NotFound) {
+          return Err(err);
+        }
+
+        Ok(JsTransformerConfig::default())
+      },
+      |config| Ok(config.contents.config.unwrap_or_default()),
+    )?;
 
     let ts_config = ctx
       .config
@@ -77,7 +88,7 @@ impl AtlaspackJsTransformerPlugin {
 
     Ok(Self {
       cache: Cache::default(),
-      config: package_json.contents.config.unwrap_or_default(),
+      config,
       options: ctx.options.clone(),
       ts_config,
     })

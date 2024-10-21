@@ -76,13 +76,7 @@ export class AtlaspackWorker {
     [RunResolverResolveOptions],
     Promise<RunResolverResolveResult>,
   > = jsCallable(
-    async ({
-      key,
-      dependency: napiDependency,
-      specifier,
-      pipeline,
-      projectRoot,
-    }) => {
+    async ({key, dependency: napiDependency, specifier, pipeline, options}) => {
       const state = this.#resolvers.get(key);
       if (!state) {
         throw new Error(`Resolver not found: ${key}`);
@@ -90,7 +84,7 @@ export class AtlaspackWorker {
 
       let packageManager = state.packageManager;
       if (!packageManager) {
-        packageManager = new NodePackageManager(this.#fs, projectRoot);
+        packageManager = new NodePackageManager(this.#fs, options.projectRoot);
         state.packageManager = packageManager;
       }
 
@@ -101,9 +95,9 @@ export class AtlaspackWorker {
         logger: new PluginLogger(),
         tracer: new PluginTracer(),
         options: new PluginOptions({
+          ...options,
           packageManager,
           shouldAutoInstall: false,
-          projectRoot,
           inputFS: this.#fs,
           outputFS: this.#fs,
         }),
@@ -155,71 +149,68 @@ export class AtlaspackWorker {
   runTransformerTransform: JsCallable<
     [RunTransformerTransformOptions],
     Promise<RunTransformerTransformResult>,
-  > = jsCallable(
-    async ({key, env: napiEnv, projectRoot, asset: innerAsset}) => {
-      const state = this.#transformers.get(key);
-      if (!state) {
-        throw new Error(`Transformer not found: ${key}`);
-      }
+  > = jsCallable(async ({key, env: napiEnv, options, asset: innerAsset}) => {
+    const state = this.#transformers.get(key);
+    if (!state) {
+      throw new Error(`Transformer not found: ${key}`);
+    }
 
-      let packageManager = state.packageManager;
-      if (!packageManager) {
-        packageManager = new NodePackageManager(this.#fs, projectRoot);
-        state.packageManager = packageManager;
-      }
+    let packageManager = state.packageManager;
+    if (!packageManager) {
+      packageManager = new NodePackageManager(this.#fs, options.projectRoot);
+      state.packageManager = packageManager;
+    }
 
-      const transformer: Transformer<any> = state.transformer;
-      const env = new Environment(napiEnv);
-      const mutableAsset = new MutableAsset(innerAsset, this.#fs, env);
-      const defaultOptions = {
-        logger: new PluginLogger(),
-        tracer: new PluginTracer(),
-        options: new PluginOptions({
-          packageManager,
-          shouldAutoInstall: false,
-          projectRoot,
-          inputFS: this.#fs,
-          outputFS: this.#fs,
-        }),
-      };
+    const transformer: Transformer<any> = state.transformer;
+    const env = new Environment(napiEnv);
+    const mutableAsset = new MutableAsset(innerAsset, this.#fs, env);
+    const defaultOptions = {
+      logger: new PluginLogger(),
+      tracer: new PluginTracer(),
+      options: new PluginOptions({
+        ...options,
+        packageManager,
+        shouldAutoInstall: false,
+        inputFS: this.#fs,
+        outputFS: this.#fs,
+      }),
+    };
 
-      const config = await transformer.loadConfig?.({
-        config: new PluginConfig({
-          env,
-          isSource: true,
-          searchPath: '',
-        }),
-        ...defaultOptions,
-      });
+    const config = await transformer.loadConfig?.({
+      config: new PluginConfig({
+        env,
+        isSource: true,
+        searchPath: '',
+      }),
+      ...defaultOptions,
+    });
 
-      if (transformer.parse) {
-        const ast = await transformer.parse({
-          asset: mutableAsset,
-          config,
-          get resolve() {
-            throw new Error('Transformer.parse.resolve()');
-          },
-          ...defaultOptions,
-        });
-        if (ast) {
-          mutableAsset.setAST(ast);
-        }
-      }
-
-      const result = await state.transformer.transform({
+    if (transformer.parse) {
+      const ast = await transformer.parse({
         asset: mutableAsset,
         config,
         get resolve() {
-          throw new Error('Transformer.transform.resolve()');
+          throw new Error('Transformer.parse.resolve()');
         },
         ...defaultOptions,
       });
+      if (ast) {
+        mutableAsset.setAST(ast);
+      }
+    }
 
-      if (transformer.generate) {
-        const ast = await mutableAsset.getAST();
-        if (!ast) {
-          throw new Error('Transformer.generate.ast');
-        }
+    const result = await state.transformer.transform({
+      asset: mutableAsset,
+      config,
+      get resolve() {
+        throw new Error('Transformer.transform.resolve()');
+      },
+      ...defaultOptions,
+    });
+
+    if (transformer.generate) {
+      const ast = await mutableAsset.getAST();
+      if (ast) {
         // $FlowFixMe "Cannot call `transformer.generate` because  undefined [1] is not a function." 🤷‍♀️
         const output = await transformer.generate({
           asset: mutableAsset,
@@ -235,38 +226,38 @@ export class AtlaspackWorker {
           mutableAsset.setStream(output.content);
         }
       }
+    }
 
-      assert(
-        result.length === 1,
-        '[V3] Unimplemented: Multiple asset return from Node transformer',
-      );
+    assert(
+      result.length === 1,
+      '[V3] Unimplemented: Multiple asset return from Node transformer',
+    );
 
-      assert(
-        result[0] === mutableAsset,
-        '[V3] Unimplemented: New asset returned from Node transformer',
-      );
+    assert(
+      result[0] === mutableAsset,
+      '[V3] Unimplemented: New asset returned from Node transformer',
+    );
 
-      return {
-        asset: {
-          id: mutableAsset.id,
-          bundleBehavior: bundleBehaviorMap.intoNullable(
-            mutableAsset.bundleBehavior,
-          ),
-          filePath: mutableAsset.filePath,
-          type: mutableAsset.type,
-          code: Array.from(await mutableAsset.getBuffer()),
-          meta: mutableAsset.meta,
-          pipeline: mutableAsset.pipeline,
-          query: mutableAsset.query.toString(),
-          symbols: mutableAsset.symbols.intoNapi(),
-          uniqueKey: mutableAsset.uniqueKey,
-          sideEffects: mutableAsset.sideEffects,
-          isBundleSplittable: mutableAsset.isBundleSplittable,
-          isSource: mutableAsset.isSource,
-        },
-      };
-    },
-  );
+    return {
+      asset: {
+        id: mutableAsset.id,
+        bundleBehavior: bundleBehaviorMap.intoNullable(
+          mutableAsset.bundleBehavior,
+        ),
+        filePath: mutableAsset.filePath,
+        type: mutableAsset.type,
+        code: Array.from(await mutableAsset.getBuffer()),
+        meta: mutableAsset.meta,
+        pipeline: mutableAsset.pipeline,
+        query: mutableAsset.query.toString(),
+        symbols: mutableAsset.symbols.intoNapi(),
+        uniqueKey: mutableAsset.uniqueKey,
+        sideEffects: mutableAsset.sideEffects,
+        isBundleSplittable: mutableAsset.isBundleSplittable,
+        isSource: mutableAsset.isSource,
+      },
+    };
+  });
 }
 
 napi.registerWorker(workerData.tx_worker, new AtlaspackWorker());
@@ -288,12 +279,17 @@ type LoadPluginOptions = {|
   resolveFrom: string,
 |};
 
+type RpcPluginOptions = {|
+  projectRoot: string,
+  mode: string,
+|};
+
 type RunResolverResolveOptions = {|
   key: string,
   dependency: napi.Dependency,
   specifier: FilePath,
   pipeline: ?string,
-  projectRoot: string,
+  options: RpcPluginOptions,
 |};
 
 type RunResolverResolveResult = {|
@@ -317,7 +313,7 @@ type RunResolverResolveResult = {|
 type RunTransformerTransformOptions = {|
   key: string,
   env: napi.Environment,
-  projectRoot: string,
+  options: RpcPluginOptions,
   asset: napi.Asset,
 |};
 

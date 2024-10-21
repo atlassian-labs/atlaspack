@@ -374,7 +374,7 @@ impl ResolverPlugin for AtlaspackResolver {
         invalidations: Vec::new(),
         resolution: Resolution::Resolved(ResolvedResolution {
           code: Some(format!("module.exports={};", global)),
-          file_path: format!("{}.js", global).into(),
+          file_path: self.options.project_root.join(format!("{}.js", global)),
           query,
           side_effects,
           ..ResolvedResolution::default()

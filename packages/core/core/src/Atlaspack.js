@@ -31,7 +31,7 @@ import resolveOptions from './resolveOptions';
 import {ValueEmitter} from '@atlaspack/events';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {PromiseQueue} from '@atlaspack/utils';
-import AtlaspackConfig from './AtlaspackConfig';
+import {AtlaspackConfig} from './AtlaspackConfig';
 import logger from '@atlaspack/logger';
 import RequestTracker, {
   getWatcherOptions,
@@ -647,7 +647,7 @@ export function createWorkerFarm(
     ...options,
     // $FlowFixMe
     workerPath: process.browser
-      ? '@atlaspack/core/src/worker.js'
+      ? '@atlaspack/core/worker'
       : require.resolve('./worker'),
   });
 }

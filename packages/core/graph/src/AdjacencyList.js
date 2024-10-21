@@ -117,10 +117,10 @@ const MAX_LINK_TRIES: 3 = 3;
  *
  */
 export default class AdjacencyList<TEdgeType: number = 1> {
-  #nodes /*: NodeTypeMap<TEdgeType | NullEdgeType> */;
-  #edges /*: EdgeTypeMap<TEdgeType | NullEdgeType> */;
+  #nodes: NodeTypeMap<TEdgeType | NullEdgeType>;
+  #edges: EdgeTypeMap<TEdgeType | NullEdgeType>;
 
-  #params /*: AdjacencyListParams */;
+  #params: AdjacencyListParams;
 
   /**
    * Create a new `AdjacencyList` in one of two ways:
