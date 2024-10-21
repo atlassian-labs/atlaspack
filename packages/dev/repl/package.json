@@ -26,6 +26,7 @@
     "@mischnic/dot-svg": "^0.0.0",
     "@mischnic/pako": "^1.0.10",
     "@mischnic/yarn-browser": "^0.0.4",
+    "@atlaspack/build-cache": "2.12.0",
     "@atlaspack/config-repl": "2.12.0",
     "@atlaspack/core": "2.12.0",
     "@atlaspack/fs": "2.12.0",

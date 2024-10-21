@@ -20,7 +20,7 @@
     "types": false,
     "main": {
       "includeNodeModules": {
-        "@atlaspack/core": false,
+        "@atlaspack/build-cache": false,
         "@atlaspack/feature-flags": false,
         "@atlaspack/rust": false,
         "@atlaspack/types-internal": false,
@@ -32,7 +32,7 @@
     },
     "browser": {
       "includeNodeModules": {
-        "@atlaspack/core": false,
+        "@atlaspack/build-cache": false,
         "@atlaspack/feature-flags": false,
         "@atlaspack/rust": false,
         "@atlaspack/types-internal": false,
@@ -48,6 +48,7 @@
     "check-ts": "tsc --noEmit index.d.ts"
   },
   "dependencies": {
+    "@atlaspack/build-cache": "2.12.0",
     "@atlaspack/feature-flags": "2.12.0",
     "@atlaspack/rust": "2.12.0",
     "@atlaspack/types-internal": "2.12.0",
@@ -61,9 +62,6 @@
     "ncp": "^2.0.0",
     "nullthrows": "^1.1.1",
     "utility-types": "^3.10.0"
-  },
-  "peerDependencies": {
-    "@atlaspack/core": "^2.12.0"
   },
   "browser": {
     "@atlaspack/fs": "./lib/browser.js",

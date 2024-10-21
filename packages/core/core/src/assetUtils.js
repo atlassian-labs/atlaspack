@@ -21,6 +21,7 @@ import type {
 } from './types';
 
 import {Readable} from 'stream';
+import {createBuildCache} from '@atlaspack/build-cache';
 import {PluginLogger} from '@atlaspack/logger';
 import nullthrows from 'nullthrows';
 import CommittedAsset from './CommittedAsset';
@@ -30,7 +31,6 @@ import {Asset as PublicAsset} from './public/Asset';
 import PluginOptions from './public/PluginOptions';
 import {blobToStream, hashFile} from '@atlaspack/utils';
 import {hashFromOption, toInternalSourceLocation} from './utils';
-import {createBuildCache} from './buildCache';
 import {
   type ProjectPath,
   fromProjectPath,

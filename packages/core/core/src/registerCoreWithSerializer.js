@@ -1,12 +1,15 @@
 // @flow
+
+import {registerSerializableClass} from '@atlaspack/build-cache';
 import {Graph} from '@atlaspack/graph';
-import {registerSerializableClass} from './serializer';
+
+import packageJson from '../package.json';
+
+import {AtlaspackConfig} from './AtlaspackConfig';
 import AssetGraph from './AssetGraph';
 import BundleGraph from './BundleGraph';
-import {AtlaspackConfig} from './AtlaspackConfig';
-import {RequestGraph} from './RequestTracker';
 import Config from './public/Config';
-import packageJson from '../package.json';
+import {RequestGraph} from './RequestTracker';
 
 let coreRegistered;
 export function registerCoreWithSerializer() {

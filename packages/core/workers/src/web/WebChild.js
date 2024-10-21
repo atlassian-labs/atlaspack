@@ -7,12 +7,14 @@ import type {
   ExitHandler,
   WorkerMessage,
 } from '../types';
-import {setChild} from '../childState';
-import {Child} from '../child';
+
 import {
   prepareForSerialization,
   restoreDeserializedObject,
-} from '@atlaspack/core';
+} from '@atlaspack/build-cache';
+
+import {Child} from '../child';
+import {setChild} from '../childState';
 
 export default class WebChild implements ChildImpl {
   onMessage: MessageHandler;

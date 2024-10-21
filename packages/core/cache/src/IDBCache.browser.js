@@ -2,16 +2,18 @@
 import type {Cache} from './types';
 
 import {Readable} from 'stream';
+
 import {
-  serialize,
   deserialize,
   registerSerializableClass,
-} from '@atlaspack/core';
+  serialize,
+} from '@atlaspack/build-cache';
 import {bufferStream} from '@atlaspack/utils';
 // $FlowFixMe[untyped-import]
-import packageJson from '../package.json';
-// $FlowFixMe[untyped-import]
 import {openDB} from 'idb';
+
+// $FlowFixMe[untyped-import]
+import packageJson from '../package.json';
 
 const STORE_NAME = 'cache';
 

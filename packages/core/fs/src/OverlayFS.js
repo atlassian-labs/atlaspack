@@ -15,7 +15,7 @@ import type {
   AsyncSubscription,
 } from '@parcel/watcher';
 
-import {registerSerializableClass} from '@atlaspack/core';
+import {registerSerializableClass} from '@atlaspack/build-cache';
 import WorkerFarm from '@atlaspack/workers';
 import packageJSON from '../package.json';
 import {findAncestorFile, findNodeModule, findFirstFile} from './find';

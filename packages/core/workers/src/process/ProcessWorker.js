@@ -7,8 +7,10 @@ import type {
   ExitHandler,
   WorkerMessage,
 } from '../types';
+
 import childProcess, {type ChildProcess} from 'child_process';
-import {serialize, deserialize} from '@atlaspack/core';
+
+import {serialize, deserialize} from '@atlaspack/build-cache';
 
 const WORKER_PATH = require.resolve('./ProcessChild');
 
