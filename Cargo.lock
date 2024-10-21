@@ -189,6 +189,7 @@ dependencies = [
  "num_cpus",
  "pathdiff",
  "petgraph",
+ "pretty_assertions",
  "rand 0.8.5",
  "rayon",
  "regex",
