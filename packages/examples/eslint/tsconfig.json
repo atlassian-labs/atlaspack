@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../configs/default"
+    },
+    {
+      "path": "../../core/cli"
+    },
+    {
+      "path": "../../validators/eslint"
+    }
+  ]
+}

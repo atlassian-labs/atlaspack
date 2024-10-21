@@ -1,0 +1,26 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../build-cache"
+    },
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../diagnostic"
+    },
+    {
+      "path": "../logger"
+    },
+    {
+      "path": "../profiler"
+    },
+    {
+      "path": "../types-internal"
+    },
+    {
+      "path": "../utils"
+    }
+  ]
+}

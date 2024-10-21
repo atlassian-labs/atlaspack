@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../utils/events"
+    },
+    {
+      "path": "../diagnostic"
+    },
+    {
+      "path": "../types-internal"
+    }
+  ]
+}

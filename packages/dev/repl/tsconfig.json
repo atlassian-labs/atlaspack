@@ -1,0 +1,20 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../configs/repl"
+    },
+    {
+      "path": "../../core/build-cache"
+    },
+    {
+      "path": "../../core/core"
+    },
+    {
+      "path": "../../core/fs"
+    },
+    {
+      "path": "../../core/package-manager"
+    }
+  ]
+}

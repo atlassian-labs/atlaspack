@@ -1,0 +1,23 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../core/core"
+    },
+    {
+      "path": "../../packagers/webextension"
+    },
+    {
+      "path": "../../runtimes/webextension"
+    },
+    {
+      "path": "../../transformers/raw"
+    },
+    {
+      "path": "../../transformers/webextension"
+    },
+    {
+      "path": "../default"
+    }
+  ]
+}

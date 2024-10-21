@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "esModuleInterop": true,
+    "jsx": "react",
+    "module": "commonjs",
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2016"
+  }
+}

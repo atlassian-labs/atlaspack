@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../core/plugin"
+    },
+    {
+      "path": "../../core/types"
+    },
+    {
+      "path": "../../core/utils"
+    }
+  ]
+}

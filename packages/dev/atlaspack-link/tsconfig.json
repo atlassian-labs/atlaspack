@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../core/fs"
+    },
+    {
+      "path": "../../core/utils"
+    },
+    {
+      "path": "../babel-register"
+    }
+  ]
+}

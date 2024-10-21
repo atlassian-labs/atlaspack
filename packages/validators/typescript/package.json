@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/TypeScriptValidator.js",
-  "source": "src/TypeScriptValidator.js",
+  "source": "src/TypeScriptValidator.ts",
   "engines": {
     "node": ">= 16.0.0",
     "parcel": "^2.12.0"

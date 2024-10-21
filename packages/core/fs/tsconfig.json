@@ -1,0 +1,26 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../utils/atlaspack-watcher-watchman-js"
+    },
+    {
+      "path": "../build-cache"
+    },
+    {
+      "path": "../feature-flags"
+    },
+    {
+      "path": "../rust"
+    },
+    {
+      "path": "../types-internal"
+    },
+    {
+      "path": "../utils"
+    },
+    {
+      "path": "../workers"
+    }
+  ]
+}

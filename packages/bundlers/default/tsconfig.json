@@ -1,0 +1,23 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../core/diagnostic"
+    },
+    {
+      "path": "../../core/feature-flags"
+    },
+    {
+      "path": "../../core/graph"
+    },
+    {
+      "path": "../../core/plugin"
+    },
+    {
+      "path": "../../core/rust"
+    },
+    {
+      "path": "../../core/utils"
+    }
+  ]
+}

@@ -129,7 +129,7 @@ export class PluginOptions implements IPluginOptions {
     return this.#options.featureFlags;
   }
 
-  constructor(options: $Partial<IPluginOptions>) {
+  constructor(options: Partial<IPluginOptions>) {
     this.#options = options;
   }
 }

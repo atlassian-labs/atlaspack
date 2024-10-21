@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/InlineRequires.js",
-  "source": "src/InlineRequires.js",
+  "source": "src/InlineRequires.ts",
   "engines": {
     "node": ">= 14.0.0",
     "parcel": "^2.12.0"

@@ -3,7 +3,7 @@
   "version": "2.12.0",
   "license": "(MIT OR Apache-2.0)",
   "main": "lib/index.js",
-  "source": "src/index.js",
+  "source": "src/index.ts",
   "publishConfig": {
     "access": "public"
   },

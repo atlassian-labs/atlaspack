@@ -1,8 +1,11 @@
 {
-  "compilerOptions": {
-    "jsx": "react",
-    "typeRoots": ["./types.d.ts"],
-    "esModuleInterop": true,
-    "lib": ["ESNext", "DOM"]
-  }
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../core/cli"
+    },
+    {
+      "path": "../../reporters/conditional-manifest"
+    }
+  ]
 }

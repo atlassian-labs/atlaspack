@@ -1,0 +1,20 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../build-cache"
+    },
+    {
+      "path": "../fs"
+    },
+    {
+      "path": "../logger"
+    },
+    {
+      "path": "../rust"
+    },
+    {
+      "path": "../utils"
+    }
+  ]
+}

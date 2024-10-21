@@ -1,0 +1,17 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../configs/default"
+    },
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../fs"
+    },
+    {
+      "path": "../package-manager"
+    }
+  ]
+}

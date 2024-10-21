@@ -1,4 +1,4 @@
-import {typeof default as Less} from 'less';
+import type {default as Less} from 'less';
 import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
 import SourceMap from '@parcel/source-map';
@@ -10,9 +10,9 @@ import {load} from './loadConfig';
 const WEBPACK_ALIAS_RE = /^~[^/]/;
 
 type LessConfig = {
-  sourceMap: any,
-  filename: string,
-  plugins: Array<any>
+  sourceMap: any;
+  filename: string;
+  plugins: Array<any>;
 };
 
 export default new Transformer({
@@ -74,13 +74,13 @@ function urlPlugin({asset}) {
     install(less: Less, pluginManager: any) {
       // This is a hack; no such interface exists, even conceptually, in Less.
       type LessNodeWithValue = less.tree.Node & {
-        value: any
+        value: any;
       };
 
       const visitor = new less.visitors.Visitor({
         visitUrl(node: URL) {
-          const valueNode = (node.value as LessNodeWithValue);
-          const stringValue = (valueNode.value as string);
+          const valueNode = node.value as LessNodeWithValue;
+          const stringValue = valueNode.value as string;
           if (
             !stringValue.startsWith('#') // IE's `behavior: url(#default#VML)`)
           ) {

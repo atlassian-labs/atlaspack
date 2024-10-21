@@ -17,21 +17,19 @@ import {md, convertSourceLocationToHighlight} from '@atlaspack/diagnostic';
 import {BundleBehavior, Priority} from './types';
 import {fromProjectPathRelative, fromProjectPath} from './projectPath';
 
-export function propagateSymbols(
-  {
-    options,
-    assetGraph,
-    changedAssetsPropagation,
-    assetGroupsWithRemovedParents,
-    previousErrors,
-  }: {
-    options: AtlaspackOptions,
-    assetGraph: AssetGraph,
-    changedAssetsPropagation: Set<string>,
-    assetGroupsWithRemovedParents: Set<NodeId>,
-    previousErrors?: Map<NodeId, Array<Diagnostic>> | null | undefined
-  },
-): Map<NodeId, Array<Diagnostic>> {
+export function propagateSymbols({
+  options,
+  assetGraph,
+  changedAssetsPropagation,
+  assetGroupsWithRemovedParents,
+  previousErrors,
+}: {
+  options: AtlaspackOptions;
+  assetGraph: AssetGraph;
+  changedAssetsPropagation: Set<string>;
+  assetGroupsWithRemovedParents: Set<NodeId>;
+  previousErrors?: Map<NodeId, Array<Diagnostic>> | null | undefined;
+}): Map<NodeId, Array<Diagnostic>> {
   let changedAssets = new Set(
     [...changedAssetsPropagation].map((id) =>
       assetGraph.getNodeIdByContentKey(id),
@@ -61,11 +59,17 @@ export function propagateSymbols(
     assetGroupsWithRemovedParents,
     (assetNode, incomingDeps, outgoingDeps) => {
       // exportSymbol -> identifier
-      let assetSymbols: $ReadOnlyMap<symbol, {
-        local: symbol,
-        loc: InternalSourceLocation | null | undefined,
-        meta?: Meta | null | undefined
-      }> | null | undefined = assetNode.value.symbols;
+      let assetSymbols:
+        | ReadonlyMap<
+            symbol,
+            {
+              local: symbol;
+              loc: InternalSourceLocation | null | undefined;
+              meta?: Meta | null | undefined;
+            }
+          >
+        | null
+        | undefined = assetNode.value.symbols;
       // identifier -> exportSymbol
       let assetSymbolsInverse;
       if (assetSymbols) {
@@ -142,12 +146,15 @@ export function propagateSymbols(
 
       // Incomding dependency with cleared symbols, add everything
       if (addAll) {
-        assetSymbols?.forEach((_: {
-          loc: InternalSourceLocation | null | undefined,
-          local: symbol,
-          meta?: Meta | null | undefined
-        }, exportSymbol: symbol) =>
-          assetNode.usedSymbols.add(exportSymbol),
+        assetSymbols?.forEach(
+          (
+            _: {
+              loc: InternalSourceLocation | null | undefined;
+              local: symbol;
+              meta?: Meta | null | undefined;
+            },
+            exportSymbol: symbol,
+          ) => assetNode.usedSymbols.add(exportSymbol),
         );
       }
 
@@ -263,11 +270,17 @@ export function propagateSymbols(
     changedDepsUsedSymbolsUpDirtyDown,
     previousErrors,
     (assetNode, incomingDeps, outgoingDeps) => {
-      let assetSymbols: $ReadOnlyMap<symbol, {
-        local: symbol,
-        loc: InternalSourceLocation | null | undefined,
-        meta?: Meta | null | undefined
-      }> | null | undefined = assetNode.value.symbols;
+      let assetSymbols:
+        | ReadonlyMap<
+            symbol,
+            {
+              local: symbol;
+              loc: InternalSourceLocation | null | undefined;
+              meta?: Meta | null | undefined;
+            }
+          >
+        | null
+        | undefined = assetNode.value.symbols;
 
       let assetSymbolsInverse = null;
       if (assetSymbols) {
@@ -283,10 +296,15 @@ export function propagateSymbols(
       }
 
       // the symbols that are reexported (not used in `asset`) -> asset they resolved to
-      let reexportedSymbols = new Map<symbol, {
-        asset: ContentKey,
-        symbol: symbol | null | undefined
-      } | null | undefined>();
+      let reexportedSymbols = new Map<
+        symbol,
+        | {
+            asset: ContentKey;
+            symbol: symbol | null | undefined;
+          }
+        | null
+        | undefined
+      >();
       // the symbols that are reexported (not used in `asset`) -> the corresponding outgoingDep(s)
       // To generate the diagnostic when there are multiple dependencies with non-statically
       // analyzable exports
@@ -371,19 +389,36 @@ export function propagateSymbols(
 
       let errors: Array<Diagnostic> = [];
 
-      function usedSymbolsUpAmbiguous(old: Map<symbol, {
-        asset: ContentKey,
-        symbol: symbol | null | undefined
-      } | null | undefined>, current: Map<symbol, {
-        asset: ContentKey,
-        symbol: symbol | null | undefined
-      } | null | undefined>, s: symbol, value: {
-        asset: ContentKey,
-        symbol: symbol
-      } | {
-        asset: ContentKey,
-        symbol: symbol | null | undefined
-      }) {
+      function usedSymbolsUpAmbiguous(
+        old: Map<
+          symbol,
+          | {
+              asset: ContentKey;
+              symbol: symbol | null | undefined;
+            }
+          | null
+          | undefined
+        >,
+        current: Map<
+          symbol,
+          | {
+              asset: ContentKey;
+              symbol: symbol | null | undefined;
+            }
+          | null
+          | undefined
+        >,
+        s: symbol,
+        value:
+          | {
+              asset: ContentKey;
+              symbol: symbol;
+            }
+          | {
+              asset: ContentKey;
+              symbol: symbol | null | undefined;
+            },
+      ) {
         if (old.has(s)) {
           let valueOld = old.get(s);
           if (
@@ -509,7 +544,9 @@ export function propagateSymbols(
   // See https://github.com/parcel-bundler/parcel/pull/8212
   for (let dep of changedDeps) {
     dep.usedSymbolsUp = new Map(
-      [...dep.usedSymbolsUp].sort(([a]: [any], [b]: [any]) => a.localeCompare(b)),
+      [...dep.usedSymbolsUp].sort(([a]: [any], [b]: [any]) =>
+        a.localeCompare(b),
+      ),
     );
   }
 
@@ -741,7 +778,10 @@ function propagateSymbolsUp(
   return errors;
 }
 
-function getDependencyResolution(graph: AssetGraph, depId: ContentKey): Array<NodeId> {
+function getDependencyResolution(
+  graph: AssetGraph,
+  depId: ContentKey,
+): Array<NodeId> {
   let depNodeId = graph.getNodeIdByContentKey(depId);
   let connected = graph.getNodeIdsConnectedFrom(depNodeId);
   invariant(connected.length <= 1);
@@ -758,14 +798,24 @@ function getDependencyResolution(graph: AssetGraph, depId: ContentKey): Array<No
 }
 
 function equalMap<K>(
-  a: $ReadOnlyMap<K, {
-    asset: ContentKey,
-    symbol: symbol | null | undefined
-  } | null | undefined>,
-  b: $ReadOnlyMap<K, {
-    asset: ContentKey,
-    symbol: symbol | null | undefined
-  } | null | undefined>,
+  a: ReadonlyMap<
+    K,
+    | {
+        asset: ContentKey;
+        symbol: symbol | null | undefined;
+      }
+    | null
+    | undefined
+  >,
+  b: ReadonlyMap<
+    K,
+    | {
+        asset: ContentKey;
+        symbol: symbol | null | undefined;
+      }
+    | null
+    | undefined
+  >,
 ) {
   if (a.size !== b.size) return false;
   for (let [k, v] of a) {
@@ -782,14 +832,20 @@ function setPop<T>(set: Set<T>): T {
   return v;
 }
 
-function outgoingDependencyNodesFromAsset(assetGraph: AssetGraph, assetNode: NodeId) {
+function outgoingDependencyNodesFromAsset(
+  assetGraph: AssetGraph,
+  assetNode: NodeId,
+) {
   return dependencyNodesFromIds(
     assetGraph,
     assetGraph.getNodeIdsConnectedFrom(assetNode),
   );
 }
 
-function dependencyNodesFromIds(assetGraph: AssetGraph, dependencyIds: Array<NodeId>) {
+function dependencyNodesFromIds(
+  assetGraph: AssetGraph,
+  dependencyIds: Array<NodeId>,
+) {
   return dependencyIds.map((depNodeId) => {
     let depNode = nullthrows(assetGraph.getNode(depNodeId));
     invariant(depNode.type === 'dependency');
@@ -797,7 +853,10 @@ function dependencyNodesFromIds(assetGraph: AssetGraph, dependencyIds: Array<Nod
   });
 }
 
-function incomingDependencyNodesFromAsset(assetGraph: AssetGraph, assetNodeValue: Asset) {
+function incomingDependencyNodesFromAsset(
+  assetGraph: AssetGraph,
+  assetNodeValue: Asset,
+) {
   return assetGraph.getIncomingDependencies(assetNodeValue).map((d) => {
     let n = assetGraph.getNodeByContentKey(d.id);
     invariant(n && n.type === 'dependency');

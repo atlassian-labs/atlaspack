@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../core/plugin"
+    },
+    {
+      "path": "../../core/utils"
+    },
+    {
+      "path": "../../utils/atlaspack-lsp-protocol"
+    }
+  ]
+}

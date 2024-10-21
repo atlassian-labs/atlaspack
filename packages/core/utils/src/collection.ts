@@ -2,19 +2,17 @@ export function unique<T>(array: Array<T>): Array<T> {
   return [...new Set(array)];
 }
 
-export function objectSortedEntries(
-  obj: {
-    readonly [key: string]: unknown
-  },
-): Array<[string, unknown]> {
-  return Object.entries(obj).sort(([keyA]: [any], [keyB]: [any]) => keyA.localeCompare(keyB));
+export function objectSortedEntries(obj: {
+  readonly [key: string]: unknown;
+}): Array<[string, unknown]> {
+  return Object.entries(obj).sort(([keyA]: [any], [keyB]: [any]) =>
+    keyA.localeCompare(keyB),
+  );
 }
 
-export function objectSortedEntriesDeep(
-  object: {
-    readonly [key: string]: unknown
-  },
-): Array<[string, unknown]> {
+export function objectSortedEntriesDeep(object: {
+  readonly [key: string]: unknown;
+}): Array<[string, unknown]> {
   let sortedEntries = objectSortedEntries(object);
   for (let i = 0; i < sortedEntries.length; i++) {
     sortedEntries[i][1] = sortEntry(sortedEntries[i][1]);
@@ -34,7 +32,7 @@ function sortEntry(entry: unknown) {
   return entry;
 }
 
-export function setDifference<T>(a: $ReadOnlySet<T>, b: $ReadOnlySet<T>): Set<T> {
+export function setDifference<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): Set<T> {
   let difference = new Set();
   for (let e of a) {
     if (!b.has(e)) {
@@ -49,7 +47,7 @@ export function setDifference<T>(a: $ReadOnlySet<T>, b: $ReadOnlySet<T>): Set<T>
   return difference;
 }
 
-export function setIntersect<T>(a: Set<T>, b: $ReadOnlySet<T>): void {
+export function setIntersect<T>(a: Set<T>, b: ReadonlySet<T>): void {
   for (let entry of a) {
     if (!b.has(entry)) {
       a.delete(entry);
@@ -61,7 +59,7 @@ export function setUnion<T>(a: Iterable<T>, b: Iterable<T>): Set<T> {
   return new Set([...a, ...b]);
 }
 
-export function setEqual<T>(a: $ReadOnlySet<T>, b: $ReadOnlySet<T>): boolean {
+export function setEqual<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean {
   if (a.size != b.size) {
     return false;
   }

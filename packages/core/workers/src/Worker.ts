@@ -8,21 +8,21 @@ import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import {getWorkerBackend} from './backend';
 
 export type WorkerCall = {
-  method?: string,
-  handle?: number,
-  args: ReadonlyArray<any>,
-  retries: number,
-  skipReadyCheck?: boolean,
-  resolve: (result: Promise<any> | any) => void,
-  reject: (error?: any) => void
+  method?: string;
+  handle?: number;
+  args: ReadonlyArray<any>;
+  retries: number;
+  skipReadyCheck?: boolean;
+  resolve: (result: Promise<any> | any) => void;
+  reject: (error?: any) => void;
 };
 
 type WorkerOpts = {
-  forcedKillTime: number,
-  backend: BackendType,
-  shouldPatchConsole?: boolean,
-  shouldTrace?: boolean,
-  sharedReferences: $ReadOnlyMap<SharedReference, unknown>
+  forcedKillTime: number;
+  backend: BackendType;
+  shouldPatchConsole?: boolean;
+  shouldTrace?: boolean;
+  sharedReferences: ReadonlyMap<SharedReference, unknown>;
 };
 
 let WORKER_ID = 0;
@@ -106,22 +106,27 @@ export default class Worker extends EventEmitter {
     this.worker = new WorkerBackend(filteredArgs, onMessage, onError, onExit);
     await this.worker.start();
 
-    await new Promise((resolve: (result: Promise<any> | any) => void, reject: (error?: any) => void) => {
-      this.call({
-        method: 'childInit',
-        args: [
-          forkModule,
-          {
-            shouldPatchConsole: !!this.options.shouldPatchConsole,
-            shouldTrace: !!this.options.shouldTrace,
-          },
-        ],
-        retries: 0,
-        skipReadyCheck: true,
-        resolve,
-        reject,
-      });
-    });
+    await new Promise(
+      (
+        resolve: (result: Promise<any> | any) => void,
+        reject: (error?: any) => void,
+      ) => {
+        this.call({
+          method: 'childInit',
+          args: [
+            forkModule,
+            {
+              shouldPatchConsole: !!this.options.shouldPatchConsole,
+              shouldTrace: !!this.options.shouldTrace,
+            },
+          ],
+          retries: 0,
+          skipReadyCheck: true,
+          resolve,
+          reject,
+        });
+      },
+    );
 
     let sharedRefs = this.options.sharedReferences;
     let refsShared = new Set();
@@ -143,16 +148,21 @@ export default class Worker extends EventEmitter {
 
   sendSharedReference(ref: SharedReference, value: unknown): Promise<any> {
     this.sentSharedReferences.add(ref);
-    return new Promise((resolve: (result: Promise<any> | any) => void, reject: (error?: any) => void) => {
-      this.call({
-        method: 'createSharedReference',
-        args: [ref, value],
-        resolve,
-        reject,
-        retries: 0,
-        skipReadyCheck: true,
-      });
-    });
+    return new Promise(
+      (
+        resolve: (result: Promise<any> | any) => void,
+        reject: (error?: any) => void,
+      ) => {
+        this.call({
+          method: 'createSharedReference',
+          args: [ref, value],
+          resolve,
+          reject,
+          retries: 0,
+          skipReadyCheck: true,
+        });
+      },
+    );
   }
 
   send(data: WorkerMessage): void {

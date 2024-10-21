@@ -31,14 +31,25 @@ import BundleGroup, {bundleGroupToInternalBundleGroup} from './BundleGroup';
 
 // Friendly access for other modules within this package that need access
 // to the internal bundle.
-const _bundleGraphToInternalBundleGraph: WeakMap<IBundleGraph<IBundle>, InternalBundleGraph> = new WeakMap();
-export function bundleGraphToInternalBundleGraph(bundleGraph: IBundleGraph<IBundle>): InternalBundleGraph {
+const _bundleGraphToInternalBundleGraph: WeakMap<
+  IBundleGraph<IBundle>,
+  InternalBundleGraph
+> = new WeakMap();
+export function bundleGraphToInternalBundleGraph(
+  bundleGraph: IBundleGraph<IBundle>,
+): InternalBundleGraph {
   return nullthrows(_bundleGraphToInternalBundleGraph.get(bundleGraph));
 }
 
-type BundleFactory<TBundle extends IBundle> = (arg1: InternalBundle, arg2: InternalBundleGraph, arg3: AtlaspackOptions) => TBundle;
+type BundleFactory<TBundle extends IBundle> = (
+  arg1: InternalBundle,
+  arg2: InternalBundleGraph,
+  arg3: AtlaspackOptions,
+) => TBundle;
 
-export default class BundleGraph<TBundle extends IBundle> implements IBundleGraph<TBundle> {
+export default class BundleGraph<TBundle extends IBundle>
+  implements IBundleGraph<TBundle>
+{
   #graph: InternalBundleGraph;
   #options: AtlaspackOptions;
   #createBundle: BundleFactory<TBundle>;
@@ -66,7 +77,10 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
     return this.#graph.isDependencySkipped(dependencyToInternalDependency(dep));
   }
 
-  getResolvedAsset(dep: IDependency, bundle?: IBundle | null): IAsset | null | undefined {
+  getResolvedAsset(
+    dep: IDependency,
+    bundle?: IBundle | null,
+  ): IAsset | null | undefined {
     let resolution = this.#graph.getResolvedAsset(
       dependencyToInternalDependency(dep),
       bundle && bundleToInternalBundle(bundle),
@@ -100,8 +114,8 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
   getReferencedBundles(
     bundle: IBundle,
     opts?: {
-      recursive?: boolean,
-      includeInline?: boolean
+      recursive?: boolean;
+      includeInline?: boolean;
     },
   ): Array<TBundle> {
     return this.#graph
@@ -115,13 +129,20 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
       .map((bundle) => this.#createBundle(bundle, this.#graph, this.#options));
   }
 
-  resolveAsyncDependency(dependency: IDependency, bundle?: IBundle | null): {
-    type: 'bundle_group',
-    value: IBundleGroup
-  } | {
-    type: 'asset',
-    value: IAsset
-  } | null | undefined {
+  resolveAsyncDependency(
+    dependency: IDependency,
+    bundle?: IBundle | null,
+  ):
+    | {
+        type: 'bundle_group';
+        value: IBundleGroup;
+      }
+    | {
+        type: 'asset';
+        value: IAsset;
+      }
+    | null
+    | undefined {
     let resolved = this.#graph.resolveAsyncDependency(
       dependencyToInternalDependency(dependency),
       bundle && bundleToInternalBundle(bundle),
@@ -142,7 +163,10 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
     };
   }
 
-  getReferencedBundle(dependency: IDependency, bundle: IBundle): TBundle | null | undefined {
+  getReferencedBundle(
+    dependency: IDependency,
+    bundle: IBundle,
+  ): TBundle | null | undefined {
     let result = this.#graph.getReferencedBundle(
       dependencyToInternalDependency(dependency),
       bundleToInternalBundle(bundle),
@@ -183,7 +207,7 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
   getBundlesInBundleGroup(
     bundleGroup: IBundleGroup,
     opts?: {
-      includeInline: boolean
+      includeInline: boolean;
     },
   ): Array<TBundle> {
     return this.#graph
@@ -194,11 +218,7 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
       .map((bundle) => this.#createBundle(bundle, this.#graph, this.#options));
   }
 
-  getBundles(
-    opts?: {
-      includeInline: boolean
-    },
-  ): Array<TBundle> {
+  getBundles(opts?: {includeInline: boolean}): Array<TBundle> {
     return this.#graph
       .getBundles(opts)
       .map((bundle) => this.#createBundle(bundle, this.#graph, this.#options));
@@ -222,7 +242,11 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
       .map((bundle) => this.#createBundle(bundle, this.#graph, this.#options));
   }
 
-  getSymbolResolution(asset: IAsset, symbol: symbol, boundary?: IBundle | null): SymbolResolution {
+  getSymbolResolution(
+    asset: IAsset,
+    symbol: symbol,
+    boundary?: IBundle | null,
+  ): SymbolResolution {
     let res = this.#graph.getSymbolResolution(
       assetToAssetValue(asset),
       symbol,
@@ -236,7 +260,10 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
     };
   }
 
-  getExportedSymbols(asset: IAsset, boundary?: IBundle | null): Array<ExportSymbolResolution> {
+  getExportedSymbols(
+    asset: IAsset,
+    boundary?: IBundle | null,
+  ): Array<ExportSymbolResolution> {
     let res = this.#graph.getExportedSymbols(
       assetToAssetValue(asset),
       boundary ? bundleToInternalBundle(boundary) : null,
@@ -254,7 +281,7 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
     visit: GraphVisitor<BundleGraphTraversable, TContext>,
     start?: IAsset | null,
     opts?: {
-      skipUnusedDependencies?: boolean
+      skipUnusedDependencies?: boolean;
     } | null,
   ): TContext | null | undefined {
     return this.#graph.traverse(
@@ -280,7 +307,10 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
     );
   }
 
-  traverseBundles<TContext>(visit: GraphVisitor<TBundle, TContext>, startBundle?: IBundle | null): TContext | null | undefined {
+  traverseBundles<TContext>(
+    visit: GraphVisitor<TBundle, TContext>,
+    startBundle?: IBundle | null,
+  ): TContext | null | undefined {
     return this.#graph.traverseBundles(
       mapVisitor(
         (bundle) => this.#createBundle(bundle, this.#graph, this.#options),
@@ -302,7 +332,9 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
       .map((bundle) => this.#createBundle(bundle, this.#graph, this.#options));
   }
 
-  getUsedSymbols(v: IAsset | IDependency): $ReadOnlySet<symbol> | null | undefined {
+  getUsedSymbols(
+    v: IAsset | IDependency,
+  ): ReadonlySet<symbol> | null | undefined {
     if (v instanceof Asset) {
       return this.#graph.getUsedSymbolsAsset(assetToAssetValue(v));
     } else {
@@ -324,12 +356,12 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
   // the true or false dependency for those conditions. This is currently used to work out which
   // conditions belong to a bundle in packaging.
   getConditionsForDependencies(deps: Array<IDependency>): Set<{
-    publicId: string,
-    key: string,
-    ifTrueDependency: IDependency,
-    ifFalseDependency: IDependency,
-    ifTrueAssetId: string,
-    ifFalseAssetId: string
+    publicId: string;
+    key: string;
+    ifTrueDependency: IDependency;
+    ifFalseDependency: IDependency;
+    ifTrueAssetId: string;
+    ifFalseAssetId: string;
   }> {
     const conditions = new Set();
     const depIds = deps.map((dep) => dep.id);
@@ -373,10 +405,16 @@ export default class BundleGraph<TBundle extends IBundle> implements IBundleGrap
   // This is used to generate information for building a manifest that can
   // be used by a webserver to understand which conditions are used by which bundles,
   // and which bundles those conditions require depending on what they evaluate to.
-  getConditionalBundleMapping(): Map<TBundle, Map<string, {
-    ifTrueBundles: Array<TBundle>,
-    ifFalseBundles: Array<TBundle>
-  }>> {
+  getConditionalBundleMapping(): Map<
+    TBundle,
+    Map<
+      string,
+      {
+        ifTrueBundles: Array<TBundle>;
+        ifFalseBundles: Array<TBundle>;
+      }
+    >
+  > {
     let bundleConditions = new Map();
 
     // Convert the internal references in conditions to public API references

@@ -14,10 +14,7 @@ import AssetGraph, {
 } from '../src/AssetGraph';
 import {createDependency as _createDependency} from '../src/Dependency';
 import {createAsset as _createAsset} from '../src/assetUtils';
-import {
-  toProjectPath as _toProjectPath,
-  ProjectPath,
-} from '../src/projectPath';
+import {toProjectPath as _toProjectPath, ProjectPath} from '../src/projectPath';
 import {propagateSymbols} from '../src/SymbolPropagation';
 import dumpGraphToGraphViz from '../src/dumpGraphToGraphViz';
 import {DEFAULT_ENV, DEFAULT_OPTIONS, DEFAULT_TARGETS} from './test-utils';
@@ -57,17 +54,47 @@ function nullthrowsDependencyNode(v?: AssetGraphNode | null): DependencyNode {
 }
 
 function createAssetGraph(
-  assets: Array<[FilePath, /* symbols (or cleared) */ Array<[symbol, {
-    local: symbol,
-    loc?: SourceLocation | null | undefined,
-    meta?: Meta | null | undefined
-  }]> | null | undefined, /* sideEffects */ boolean]>,
-  dependencies: Array<[/* from */ FilePath, /* to */ FilePath, /* symbols (or cleared) */ Array<[symbol, {
-    local: symbol,
-    loc?: SourceLocation | null | undefined,
-    isWeak: boolean,
-    meta?: Meta | null | undefined
-  }]> | null | undefined]>,
+  assets: Array<
+    [
+      FilePath,
+      /* symbols (or cleared) */ (
+        | Array<
+            [
+              symbol,
+              {
+                local: symbol;
+                loc?: SourceLocation | null | undefined;
+                meta?: Meta | null | undefined;
+              },
+            ]
+          >
+        | null
+        | undefined
+      ),
+      /* sideEffects */ boolean,
+    ]
+  >,
+  dependencies: Array<
+    [
+      /* from */ FilePath,
+      /* to */ FilePath,
+      /* symbols (or cleared) */ (
+        | Array<
+            [
+              symbol,
+              {
+                local: symbol;
+                loc?: SourceLocation | null | undefined;
+                isWeak: boolean;
+                meta?: Meta | null | undefined;
+              },
+            ]
+          >
+        | null
+        | undefined
+      ),
+    ]
+  >,
   isLibrary?: boolean,
 ) {
   let graph = new AssetGraph();
@@ -158,7 +185,16 @@ function createAssetGraph(
 function assertUsedSymbols(
   graph: AssetGraph,
   _expectedAsset: Array<[FilePath, /* usedSymbols */ Array<symbol>]>,
-  _expectedDependency: Array<[FilePath, FilePath, /* usedSymbols */ Array<[symbol, [FilePath, symbol | null | undefined] | null | undefined] | [symbol]> | null]>,
+  _expectedDependency: Array<
+    [
+      FilePath,
+      FilePath,
+      /* usedSymbols */ Array<
+        | [symbol, [FilePath, symbol | null | undefined] | null | undefined]
+        | [symbol]
+      > | null,
+    ]
+  >,
   isLibrary?: boolean,
 ) {
   let expectedAsset = new Map(
@@ -186,7 +222,11 @@ function assertUsedSymbols(
     );
   }
 
-  function assertDependencyUsedSymbols(usedSymbolsUp: any, expectedMap: any, id: any) {
+  function assertDependencyUsedSymbols(
+    usedSymbolsUp: any,
+    expectedMap: any,
+    id: any,
+  ) {
     assertSetEqual(
       new Set(usedSymbolsUp.keys()),
       new Set(expectedMap.keys()),
@@ -248,7 +288,11 @@ function assertUsedSymbols(
   }
 }
 
-function assertSetEqual<T>(actual: $ReadOnlySet<T>, expected: $ReadOnlySet<T>, prefix: string = '') {
+function assertSetEqual<T>(
+  actual: ReadonlySet<T>,
+  expected: ReadonlySet<T>,
+  prefix: string = '',
+) {
   assert(
     setEqual(actual, expected),
     `${prefix} [${[...actual].join(',')}] wasn't [${[...expected].join(',')}]`,
@@ -256,22 +300,65 @@ function assertSetEqual<T>(actual: $ReadOnlySet<T>, expected: $ReadOnlySet<T>, p
 }
 
 async function testPropagation(
-  assets: Array<[FilePath, /* symbols (or cleared) */ Array<[symbol, {
-    local: symbol,
-    loc?: SourceLocation | null | undefined,
-    meta?: Meta | null | undefined
-  }]> | null | undefined, /* sideEffects */ boolean, /* usedSymbols */ Array<symbol>]>,
-  dependencies: Array<[/* from */ FilePath, /* to */ FilePath, /* symbols (or cleared) */ Array<[symbol, {
-    local: symbol,
-    loc?: SourceLocation | null | undefined,
-    isWeak: boolean,
-    meta?: Meta | null | undefined
-  }]> | null | undefined, /* usedSymbols */ Array<[symbol, [FilePath, symbol | null | undefined] | null | undefined] | [symbol]> | /* excluded */ null]>,
+  assets: Array<
+    [
+      FilePath,
+      /* symbols (or cleared) */ (
+        | Array<
+            [
+              symbol,
+              {
+                local: symbol;
+                loc?: SourceLocation | null | undefined;
+                meta?: Meta | null | undefined;
+              },
+            ]
+          >
+        | null
+        | undefined
+      ),
+      /* sideEffects */ boolean,
+      /* usedSymbols */ Array<symbol>,
+    ]
+  >,
+  dependencies: Array<
+    [
+      /* from */ FilePath,
+      /* to */ FilePath,
+      /* symbols (or cleared) */ (
+        | Array<
+            [
+              symbol,
+              {
+                local: symbol;
+                loc?: SourceLocation | null | undefined;
+                isWeak: boolean;
+                meta?: Meta | null | undefined;
+              },
+            ]
+          >
+        | null
+        | undefined
+      ),
+      /* usedSymbols */ Array<
+        | [symbol, [FilePath, symbol | null | undefined] | null | undefined]
+        | [symbol]
+      > | /* excluded */ null,
+    ]
+  >,
   isLibrary?: boolean,
 ): Promise<AssetGraph> {
   let {graph, changedAssets} = createAssetGraph(
-    assets.map(([f, symbols, sideEffects]: [any, any, any]) => [f, symbols, sideEffects]),
-    dependencies.map(([from, to, symbols]: [any, any, any]) => [from, to, symbols]),
+    assets.map(([f, symbols, sideEffects]: [any, any, any]) => [
+      f,
+      symbols,
+      sideEffects,
+    ]),
+    dependencies.map(([from, to, symbols]: [any, any, any]) => [
+      from,
+      to,
+      symbols,
+    ]),
     isLibrary,
   );
   await dumpGraphToGraphViz(graph, 'test_before');
@@ -290,8 +377,15 @@ async function testPropagation(
 
   assertUsedSymbols(
     graph,
-    assets.map(([f,,, usedSymbols]: [any, any, any, any]) => [f, usedSymbols]),
-    dependencies.map(([from, to,, usedSymbols]: [any, any, any, any]) => [from, to, usedSymbols]),
+    assets.map(([f, , , usedSymbols]: [any, any, any, any]) => [
+      f,
+      usedSymbols,
+    ]),
+    dependencies.map(([from, to, , usedSymbols]: [any, any, any, any]) => [
+      from,
+      to,
+      usedSymbols,
+    ]),
     isLibrary,
   );
 

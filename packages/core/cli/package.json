@@ -14,7 +14,7 @@
     "atlaspack": "bin/atlaspack.js"
   },
   "main": "lib/bin.js",
-  "source": "src/bin.js",
+  "source": "src/bin.ts",
   "scripts": {
     "prepack": "./ensure-no-dev-lib.sh",
     "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"

@@ -1,0 +1,20 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../codeframe"
+    },
+    {
+      "path": "../diagnostic"
+    },
+    {
+      "path": "../logger"
+    },
+    {
+      "path": "../markdown-ansi"
+    },
+    {
+      "path": "../rust"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../utils/node-resolver-core"
+    },
+    {
+      "path": "../build-cache"
+    },
+    {
+      "path": "../diagnostic"
+    },
+    {
+      "path": "../fs"
+    },
+    {
+      "path": "../logger"
+    },
+    {
+      "path": "../types"
+    },
+    {
+      "path": "../utils"
+    },
+    {
+      "path": "../workers"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../core/cache"
+    },
+    {
+      "path": "../../core/core"
+    },
+    {
+      "path": "../../core/graph"
+    },
+    {
+      "path": "../babel-register"
+    }
+  ]
+}

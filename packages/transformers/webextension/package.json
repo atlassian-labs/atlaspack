@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/WebExtensionTransformer.js",
-  "source": "src/WebExtensionTransformer.js",
+  "source": "src/WebExtensionTransformer.ts",
   "engines": {
     "parcel": "^2.12.0"
   },

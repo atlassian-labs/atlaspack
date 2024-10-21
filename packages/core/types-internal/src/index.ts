@@ -74,18 +74,24 @@ export type AST = _AST;
 export type ConfigResult = _ConfigResult;
 /** Plugin-specific config result, <code>any</code> */
 export type ConfigResultWithFilePath<T> = {
-  contents: T,
-  filePath: FilePath
+  contents: T;
+  filePath: FilePath;
 };
 /** <code>process.env</code> */
 export type EnvMap = typeof process.env;
 
-export type JSONValue = null | // ? Is this okay?
-undefined | boolean | number | string | Array<JSONValue> | JSONObject;
+export type JSONValue =
+  | null // ? Is this okay?
+  | undefined
+  | boolean
+  | number
+  | string
+  | Array<JSONValue>
+  | JSONObject;
 
 /** A JSON object (as in "map") */
 export type JSONObject = {
-  [key: string]: JSONValue
+  [key: string]: JSONValue;
 };
 
 export type Semver = string;
@@ -96,47 +102,47 @@ export type RawAtlaspackConfigPipeline = Array<PackageName>;
 export type RawParcelConfigPipeline = RawAtlaspackConfigPipeline;
 
 export type HMROptions = {
-  port?: number,
-  host?: string
+  port?: number;
+  host?: string;
 };
 
 /** The format of .parcelrc  */
 export type RawAtlaspackConfig = {
-  extends?: PackageName | FilePath | Array<PackageName | FilePath>,
-  resolvers?: RawAtlaspackConfigPipeline,
-  transformers?: Partial<Record<Glob, RawAtlaspackConfigPipeline>>,
-  bundler?: PackageName,
-  namers?: RawAtlaspackConfigPipeline,
-  runtimes?: RawAtlaspackConfigPipeline,
-  packagers?: Partial<Record<Glob, PackageName>>,
-  optimizers?: Partial<Record<Glob, RawAtlaspackConfigPipeline>>,
-  compressors?: Partial<Record<Glob, RawAtlaspackConfigPipeline>>,
-  reporters?: RawAtlaspackConfigPipeline,
-  validators?: Partial<Record<Glob, RawAtlaspackConfigPipeline>>
+  extends?: PackageName | FilePath | Array<PackageName | FilePath>;
+  resolvers?: RawAtlaspackConfigPipeline;
+  transformers?: Partial<Record<Glob, RawAtlaspackConfigPipeline>>;
+  bundler?: PackageName;
+  namers?: RawAtlaspackConfigPipeline;
+  runtimes?: RawAtlaspackConfigPipeline;
+  packagers?: Partial<Record<Glob, PackageName>>;
+  optimizers?: Partial<Record<Glob, RawAtlaspackConfigPipeline>>;
+  compressors?: Partial<Record<Glob, RawAtlaspackConfigPipeline>>;
+  reporters?: RawAtlaspackConfigPipeline;
+  validators?: Partial<Record<Glob, RawAtlaspackConfigPipeline>>;
 };
 export type RawParcelConfig = RawAtlaspackConfig;
 
 /** A .parcelrc where all package names are resolved */
-export type ResolvedAtlaspackConfigFile = (RawAtlaspackConfig) & {
-  readonly filePath: FilePath,
-  readonly resolveFrom?: FilePath
+export type ResolvedAtlaspackConfigFile = RawAtlaspackConfig & {
+  readonly filePath: FilePath;
+  readonly resolveFrom?: FilePath;
 };
 export type ResolvedParcelConfigFile = ResolvedAtlaspackConfigFile;
 
 /** Corresponds to <code>pkg#engines</code> */
 export type Engines = {
-  readonly atlaspack?: SemverRange,
-  readonly browsers?: string | Array<string>,
-  readonly electron?: SemverRange,
-  readonly node?: SemverRange,
-  readonly parcel?: SemverRange
+  readonly atlaspack?: SemverRange;
+  readonly browsers?: string | Array<string>;
+  readonly electron?: SemverRange;
+  readonly node?: SemverRange;
+  readonly parcel?: SemverRange;
 };
 
 /** Corresponds to <code>pkg#targets.*.sourceMap</code> */
 export type TargetSourceMapOptions = {
-  readonly sourceRoot?: string,
-  readonly inline?: boolean,
-  readonly inlineSources?: boolean
+  readonly sourceRoot?: string;
+  readonly inline?: boolean;
+  readonly inlineSources?: boolean;
 };
 
 /**
@@ -155,7 +161,14 @@ export interface Target {
 }
 
 /** In which environment the output should run (influces e.g. bundle loaders) */
-export type EnvironmentContext = 'browser' | 'web-worker' | 'service-worker' | 'worklet' | 'node' | 'electron-main' | 'electron-renderer';
+export type EnvironmentContext =
+  | 'browser'
+  | 'web-worker'
+  | 'service-worker'
+  | 'worklet'
+  | 'node'
+  | 'electron-main'
+  | 'electron-renderer';
 
 /** The JS module format for the bundle output */
 export type OutputFormat = 'esmodule' | 'commonjs' | 'global';
@@ -166,17 +179,20 @@ export type OutputFormat = 'esmodule' | 'commonjs' | 'global';
  * See Environment and Target.
  */
 export type PackageTargetDescriptor = {
-  readonly context?: EnvironmentContext,
-  readonly engines?: Engines,
-  readonly includeNodeModules?: boolean | Array<PackageName> | Partial<Record<PackageName, boolean>>,
-  readonly outputFormat?: OutputFormat,
-  readonly publicUrl?: string,
-  readonly distDir?: FilePath,
-  readonly sourceMap?: boolean | TargetSourceMapOptions,
-  readonly isLibrary?: boolean,
-  readonly optimize?: boolean,
-  readonly scopeHoist?: boolean,
-  readonly source?: FilePath | Array<FilePath>
+  readonly context?: EnvironmentContext;
+  readonly engines?: Engines;
+  readonly includeNodeModules?:
+    | boolean
+    | Array<PackageName>
+    | Partial<Record<PackageName, boolean>>;
+  readonly outputFormat?: OutputFormat;
+  readonly publicUrl?: string;
+  readonly distDir?: FilePath;
+  readonly sourceMap?: boolean | TargetSourceMapOptions;
+  readonly isLibrary?: boolean;
+  readonly optimize?: boolean;
+  readonly scopeHoist?: boolean;
+  readonly source?: FilePath | Array<FilePath>;
 };
 
 /**
@@ -184,9 +200,9 @@ export type PackageTargetDescriptor = {
  *
  * (Same as PackageTargetDescriptor, but <code>distDir</code> is required.)
  */
-export type TargetDescriptor = (PackageTargetDescriptor) & {
-  readonly distDir: FilePath,
-  readonly distEntry?: FilePath
+export type TargetDescriptor = PackageTargetDescriptor & {
+  readonly distDir: FilePath;
+  readonly distEntry?: FilePath;
 };
 
 export type SourceType = 'script' | 'module';
@@ -195,16 +211,19 @@ export type SourceType = 'script' | 'module';
  * This is used when creating an Environment (see that).
  */
 export type EnvironmentOptions = {
-  readonly context?: EnvironmentContext,
-  readonly engines?: Engines,
-  readonly includeNodeModules?: boolean | Array<PackageName> | Partial<Record<PackageName, boolean>>,
-  readonly outputFormat?: OutputFormat,
-  readonly sourceType?: SourceType,
-  readonly isLibrary?: boolean,
-  readonly shouldOptimize?: boolean,
-  readonly shouldScopeHoist?: boolean,
-  readonly sourceMap?: TargetSourceMapOptions | null | undefined,
-  readonly loc?: SourceLocation | null | undefined
+  readonly context?: EnvironmentContext;
+  readonly engines?: Engines;
+  readonly includeNodeModules?:
+    | boolean
+    | Array<PackageName>
+    | Partial<Record<PackageName, boolean>>;
+  readonly outputFormat?: OutputFormat;
+  readonly sourceType?: SourceType;
+  readonly isLibrary?: boolean;
+  readonly shouldOptimize?: boolean;
+  readonly shouldScopeHoist?: boolean;
+  readonly sourceMap?: TargetSourceMapOptions | null | undefined;
+  readonly loc?: SourceLocation | null | undefined;
 };
 
 /**
@@ -220,10 +239,17 @@ export type EnvironmentOptions = {
  * </code></pre>
  */
 export type VersionMap = {
-  [key: string]: string
+  [key: string]: string;
 };
 
-export type EnvironmentFeature = 'esmodules' | 'dynamic-import' | 'worker-module' | 'service-worker-module' | 'import-meta-url' | 'arrow-functions' | 'global-this';
+export type EnvironmentFeature =
+  | 'esmodules'
+  | 'dynamic-import'
+  | 'worker-module'
+  | 'service-worker-module'
+  | 'import-meta-url'
+  | 'arrow-functions'
+  | 'global-this';
 
 /**
  * Defines the environment in for the output bundle
@@ -236,7 +262,10 @@ export interface Environment {
    *  (<code>true / false</code>), an array of package names to include, or an object \
    *  (of a package is not specified, it's included).
    */
-  readonly includeNodeModules: boolean | Array<PackageName> | Partial<Record<PackageName, boolean>>;
+  readonly includeNodeModules:
+    | boolean
+    | Array<PackageName>
+    | Partial<Record<PackageName, boolean>>;
   readonly outputFormat: OutputFormat;
   readonly sourceType: SourceType;
   /** Whether this is a library build (e.g. less loaders) */
@@ -272,100 +301,116 @@ type PackageDependencies = Partial<Record<PackageName, Semver>>;
  * Format of <code>package.json</code>
  */
 export type PackageJSON = {
-  name: PackageName,
-  version: Semver,
-  type?: 'module',
-  main?: FilePath,
-  module?: FilePath,
-  types?: FilePath,
-  browser?: FilePath | Partial<Record<FilePath, FilePath | boolean>>,
-  source?: FilePath | Array<FilePath>,
-  alias?: Partial<Record<PackageName | FilePath | Glob, PackageName | FilePath | {
-    global: string
-  }>>,
-  browserslist?: Array<string> | {
-    [key: string]: Array<string>
-  },
-  engines?: Engines,
+  name: PackageName;
+  version: Semver;
+  type?: 'module';
+  main?: FilePath;
+  module?: FilePath;
+  types?: FilePath;
+  browser?: FilePath | Partial<Record<FilePath, FilePath | boolean>>;
+  source?: FilePath | Array<FilePath>;
+  alias?: Partial<
+    Record<
+      PackageName | FilePath | Glob,
+      | PackageName
+      | FilePath
+      | {
+          global: string;
+        }
+    >
+  >;
+  browserslist?:
+    | Array<string>
+    | {
+        [key: string]: Array<string>;
+      };
+  engines?: Engines;
   targets?: {
-    [key: string]: PackageTargetDescriptor
-  },
-  dependencies?: PackageDependencies,
-  devDependencies?: PackageDependencies,
-  peerDependencies?: PackageDependencies,
-  sideEffects?: boolean | FilePath | Array<FilePath>,
-  bin?: string | {
-    [key: string]: FilePath
-  }
+    [key: string]: PackageTargetDescriptor;
+  };
+  dependencies?: PackageDependencies;
+  devDependencies?: PackageDependencies;
+  peerDependencies?: PackageDependencies;
+  sideEffects?: boolean | FilePath | Array<FilePath>;
+  bin?:
+    | string
+    | {
+        [key: string]: FilePath;
+      };
 };
 
 export type LogLevel = 'none' | 'error' | 'warn' | 'info' | 'verbose';
 export type BuildMode = 'development' | 'production' | string;
 export type DetailedReportOptions = {
-  assetsPerBundle?: number
+  assetsPerBundle?: number;
 };
 
 declare type GlobPattern = string;
 
 export type InitialAtlaspackOptionsInternal<WorkerFarm> = {
-  readonly entries?: FilePath | Array<FilePath>,
-  readonly config?: DependencySpecifier,
-  readonly defaultConfig?: DependencySpecifier,
-  readonly env?: EnvMap,
-  readonly targets?: Array<string> | {
-    readonly [key: string]: TargetDescriptor
-  } | null | undefined,
-  readonly shouldDisableCache?: boolean,
-  readonly cacheDir?: FilePath,
-  readonly watchDir?: FilePath,
-  readonly watchBackend?: BackendType,
-  readonly watchIgnore?: Array<FilePath | GlobPattern>,
-  readonly mode?: BuildMode,
-  readonly hmrOptions?: HMROptions | null | undefined,
-  readonly shouldContentHash?: boolean,
-  readonly serveOptions?: InitialServerOptions | false,
-  readonly shouldAutoInstall?: boolean,
-  readonly logLevel?: LogLevel,
-  readonly shouldProfile?: boolean,
-  readonly shouldTrace?: boolean,
-  readonly shouldPatchConsole?: boolean,
-  readonly shouldBuildLazily?: boolean,
-  readonly lazyIncludes?: string[],
-  readonly lazyExcludes?: string[],
-  readonly shouldBundleIncrementally?: boolean,
-  readonly unstableFileInvalidations?: Array<Event>,
-  readonly inputFS?: FileSystem,
-  readonly outputFS?: FileSystem,
-  readonly cache?: Cache,
-  readonly workerFarm?: WorkerFarm,
-  readonly packageManager?: PackageManager,
-  readonly detailedReport?: DetailedReportOptions | null | undefined,
+  readonly entries?: FilePath | Array<FilePath>;
+  readonly config?: DependencySpecifier;
+  readonly defaultConfig?: DependencySpecifier;
+  readonly env?: EnvMap;
+  readonly targets?:
+    | Array<string>
+    | {
+        readonly [key: string]: TargetDescriptor;
+      }
+    | null
+    | undefined;
+  readonly shouldDisableCache?: boolean;
+  readonly cacheDir?: FilePath;
+  readonly watchDir?: FilePath;
+  readonly watchBackend?: BackendType;
+  readonly watchIgnore?: Array<FilePath | GlobPattern>;
+  readonly mode?: BuildMode;
+  readonly hmrOptions?: HMROptions | null | undefined;
+  readonly shouldContentHash?: boolean;
+  readonly serveOptions?: InitialServerOptions | false;
+  readonly shouldAutoInstall?: boolean;
+  readonly logLevel?: LogLevel;
+  readonly shouldProfile?: boolean;
+  readonly shouldTrace?: boolean;
+  readonly shouldPatchConsole?: boolean;
+  readonly shouldBuildLazily?: boolean;
+  readonly lazyIncludes?: string[];
+  readonly lazyExcludes?: string[];
+  readonly shouldBundleIncrementally?: boolean;
+  readonly unstableFileInvalidations?: Array<Event>;
+  readonly inputFS?: FileSystem;
+  readonly outputFS?: FileSystem;
+  readonly cache?: Cache;
+  readonly workerFarm?: WorkerFarm;
+  readonly packageManager?: PackageManager;
+  readonly detailedReport?: DetailedReportOptions | null | undefined;
   readonly defaultTargetOptions?: {
-    readonly shouldOptimize?: boolean,
-    readonly shouldScopeHoist?: boolean,
-    readonly sourceMaps?: boolean,
-    readonly publicUrl?: string,
-    readonly distDir?: FilePath,
-    readonly engines?: Engines,
-    readonly outputFormat?: OutputFormat,
-    readonly isLibrary?: boolean
-  },
+    readonly shouldOptimize?: boolean;
+    readonly shouldScopeHoist?: boolean;
+    readonly sourceMaps?: boolean;
+    readonly publicUrl?: string;
+    readonly distDir?: FilePath;
+    readonly engines?: Engines;
+    readonly outputFormat?: OutputFormat;
+    readonly isLibrary?: boolean;
+  };
   readonly additionalReporters?: Array<{
-    packageName: DependencySpecifier,
-    resolveFrom: FilePath
-  }>,
-  readonly featureFlags?: $Partial<FeatureFlags>
+    packageName: DependencySpecifier;
+    resolveFrom: FilePath;
+  }>;
+  readonly featureFlags?: Partial<FeatureFlags>;
 
   // throwErrors
   // global?
 };
-export type InitialParcelOptionsInternal<WorkerFarm> = InitialAtlaspackOptionsInternal<WorkerFarm>;
+export type InitialParcelOptionsInternal<WorkerFarm> =
+  InitialAtlaspackOptionsInternal<WorkerFarm>;
 
 export type InitialServerOptions = {
-  readonly publicUrl?: string,
-  readonly host?: string,
-  readonly port: number,
-  readonly https?: HTTPSOptions | boolean
+  readonly publicUrl?: string;
+  readonly host?: string;
+  readonly port: number;
+  readonly https?: HTTPSOptions | boolean;
 };
 
 export interface PluginOptions {
@@ -388,33 +433,33 @@ export interface PluginOptions {
 }
 
 export type ServerOptions = {
-  readonly distDir: FilePath,
-  readonly host?: string,
-  readonly port: number,
-  readonly https?: HTTPSOptions | boolean,
-  readonly publicUrl?: string
+  readonly distDir: FilePath;
+  readonly host?: string;
+  readonly port: number;
+  readonly https?: HTTPSOptions | boolean;
+  readonly publicUrl?: string;
 };
 
 export type HTTPSOptions = {
-  readonly cert: FilePath,
-  readonly key: FilePath
+  readonly cert: FilePath;
+  readonly key: FilePath;
 };
 
 /**
  * Source locations are 1-based, meaning lines and columns start at 1
  */
 export type SourceLocation = {
-  readonly filePath: string,
+  readonly filePath: string;
   /** inclusive */
   readonly start: {
-    readonly line: number,
-    readonly column: number
-  },
+    readonly line: number;
+    readonly column: number;
+  };
   /** exclusive */
   readonly end: {
-    readonly line: number,
-    readonly column: number
-  }
+    readonly line: number;
+    readonly column: number;
+  };
 };
 
 /**
@@ -430,22 +475,30 @@ export type Symbol = string;
 /**
  * A map of export names to the corresponding asset's local variable names.
  */
-export interface // eslint-disable-next-line no-undef
-AssetSymbols extends Iterable<[symbol, {
-  local: symbol,
-  loc: SourceLocation | null | undefined,
-  meta?: Meta | null | undefined
-}]> {
+export interface AssetSymbols
+  extends Iterable<
+    [
+      symbol,
+      {
+        local: symbol;
+        loc: SourceLocation | null | undefined;
+        meta?: Meta | null | undefined;
+      },
+    ]
+  > {
   /**
    * The exports of the asset are unknown, rather than just empty.
    * This is the default state.
    */
   readonly isCleared: boolean;
-  get(exportSymbol: symbol): {
-    local: symbol,
-    loc: SourceLocation | null | undefined,
-    meta?: Meta | null | undefined
-  } | null | undefined;
+  get(exportSymbol: symbol):
+    | {
+        local: symbol;
+        loc: SourceLocation | null | undefined;
+        meta?: Meta | null | undefined;
+      }
+    | null
+    | undefined;
   hasExportSymbol(exportSymbol: symbol): boolean;
   hasLocalSymbol(local: symbol): boolean;
   exportSymbols(): Iterable<symbol>;
@@ -468,13 +521,18 @@ export interface MutableAssetSymbols extends AssetSymbols {
 /**
  * isWeak means: the symbol is not used by the parent asset itself and is merely reexported
  */
-export interface // eslint-disable-next-line no-undef
-MutableDependencySymbols extends Iterable<[symbol, {
-  local: symbol,
-  loc: SourceLocation | null | undefined,
-  isWeak: boolean,
-  meta?: Meta | null | undefined
-}]> {
+export interface MutableDependencySymbols
+  extends Iterable<
+    [
+      symbol,
+      {
+        local: symbol;
+        loc: SourceLocation | null | undefined;
+        isWeak: boolean;
+        meta?: Meta | null | undefined;
+      },
+    ]
+  > {
   /**
    * Initializes the map, sets isCleared to false.
    */
@@ -484,12 +542,15 @@ MutableDependencySymbols extends Iterable<[symbol, {
    * This is the default state.
    */
   readonly isCleared: boolean;
-  get(exportSymbol: symbol): {
-    local: symbol,
-    loc: SourceLocation | null | undefined,
-    isWeak: boolean,
-    meta?: Meta | null | undefined
-  } | null | undefined;
+  get(exportSymbol: symbol):
+    | {
+        local: symbol;
+        loc: SourceLocation | null | undefined;
+        isWeak: boolean;
+        meta?: Meta | null | undefined;
+      }
+    | null
+    | undefined;
   hasExportSymbol(exportSymbol: symbol): boolean;
   hasLocalSymbol(local: symbol): boolean;
   exportSymbols(): Iterable<symbol>;
@@ -511,7 +572,7 @@ export type SpecifierType = 'commonjs' | 'esm' | 'url' | 'custom';
  */
 export type DependencyOptions = {
   /** The specifier used to resolve the dependency. */
-  readonly specifier: DependencySpecifier,
+  readonly specifier: DependencySpecifier;
   /**
    * How the specifier should be interpreted.
    *   - esm: An ES module specifier. It is parsed as a URL, but bare specifiers are treated as node_modules.
@@ -519,7 +580,7 @@ export type DependencyOptions = {
    *   - url: A URL that works as in a browser. Bare specifiers are treated as relative URLs.
    *   - custom: A custom specifier. Must be handled by a custom resolver plugin.
    */
-  readonly specifierType: SpecifierType,
+  readonly specifierType: SpecifierType;
   /**
    * When the dependency should be loaded.
    *   - sync: The dependency should be resolvable synchronously. The resolved asset will be placed
@@ -529,7 +590,7 @@ export type DependencyOptions = {
    *   - lazy: The dependency should be placed in a separate bundle that's loaded later.
    * @default 'sync'
    */
-  readonly priority?: DependencyPriority,
+  readonly priority?: DependencyPriority;
   /**
    * Controls the behavior of the bundle the resolved asset is placed into. Use in combination with `priority`
    * to determine when the bundle is loaded.
@@ -538,7 +599,7 @@ export type DependencyOptions = {
    *   - isolated: The resolved asset will be isolated from its parents in a separate bundle.
    *       Shared assets will be duplicated.
    */
-  readonly bundleBehavior?: BundleBehavior,
+  readonly bundleBehavior?: BundleBehavior;
   /**
    * When the dependency is a bundle entry (priority is "parallel" or "lazy"), this controls the naming
    * of that bundle. `needsStableName` indicates that the name should be stable over time, even when the
@@ -546,38 +607,41 @@ export type DependencyOptions = {
    * for, as well as for things like service workers or RSS feeds, where the URL must remain consistent
    * over time.
    */
-  readonly needsStableName?: boolean,
+  readonly needsStableName?: boolean;
   /** Whether the dependency is optional. If the dependency cannot be resolved, this will not fail the build. */
-  readonly isOptional?: boolean,
+  readonly isOptional?: boolean;
   /** The location within the source file where the dependency was found. */
-  readonly loc?: SourceLocation,
+  readonly loc?: SourceLocation;
   /** The environment of the dependency. */
-  readonly env?: EnvironmentOptions,
+  readonly env?: EnvironmentOptions;
   /**
    * A list of custom conditions to use when resolving package.json "exports" and "imports".
    * This is combined with the conditions from the environment. However, it overrides the
    * default "import" and "require" conditions inferred from the specifierType. To include those
    * in addition to custom conditions, explicitly add them to this list.
    */
-  readonly packageConditions?: Array<string>,
+  readonly packageConditions?: Array<string>;
   /** Plugin-specific metadata for the dependency. */
-  readonly meta?: Meta,
+  readonly meta?: Meta;
   /** The pipeline defined in .parcelrc that the dependency should be processed with. */
-  readonly pipeline?: string,
+  readonly pipeline?: string;
   /**
    * The file path where the dependency should be resolved from.
    * By default, this is the path of the source file where the dependency was specified.
    */
-  readonly resolveFrom?: FilePath,
+  readonly resolveFrom?: FilePath;
   /** The semver version range expected for the dependency. */
-  readonly range?: SemverRange,
+  readonly range?: SemverRange;
   /** The symbols within the resolved module that the source file depends on. */
-  readonly symbols?: $ReadOnlyMap<symbol, {
-    local: symbol,
-    loc: SourceLocation | null | undefined,
-    isWeak: boolean,
-    meta?: Meta
-  }>
+  readonly symbols?: ReadonlyMap<
+    symbol,
+    {
+      local: symbol;
+      loc: SourceLocation | null | undefined;
+      isWeak: boolean;
+      meta?: Meta;
+    }
+  >;
 };
 
 /**
@@ -666,41 +730,41 @@ export interface Dependency {
 }
 
 export type File = {
-  readonly filePath: FilePath,
-  readonly hash?: string
+  readonly filePath: FilePath;
+  readonly hash?: string;
 };
 
 /**
  * @section transformer
  */
 export type ASTGenerator = {
-  type: string,
-  version: Semver
+  type: string;
+  version: Semver;
 };
 
 export type BundleBehavior = 'inline' | 'isolated';
 
 export type AtlaspackTransformOptions = {
-  filePath: FilePath,
-  code?: string,
-  env?: EnvironmentOptions,
-  query?: string | null | undefined
+  filePath: FilePath;
+  code?: string;
+  env?: EnvironmentOptions;
+  query?: string | null | undefined;
 };
 export type ParcelTransformOptions = AtlaspackTransformOptions;
 
 export type AtlaspackResolveOptions = {
-  specifier: DependencySpecifier,
-  specifierType: SpecifierType,
-  env?: EnvironmentOptions,
-  resolveFrom?: FilePath
+  specifier: DependencySpecifier;
+  specifierType: SpecifierType;
+  env?: EnvironmentOptions;
+  resolveFrom?: FilePath;
 };
 export type ParcelResolveOptions = AtlaspackResolveOptions;
 
 export type AtlaspackResolveResult = {
-  filePath: FilePath,
-  code?: string,
-  query?: string | null | undefined,
-  sideEffects?: boolean
+  filePath: FilePath;
+  code?: string;
+  query?: string | null | undefined;
+  sideEffects?: boolean;
 };
 export type ParcelResolveResult = AtlaspackResolveResult;
 
@@ -858,19 +922,19 @@ export interface Asset extends BaseAsset {
 }
 
 export type DevDepOptions = {
-  specifier: DependencySpecifier,
-  resolveFrom: FilePath,
-  range?: SemverRange | null | undefined,
+  specifier: DependencySpecifier;
+  resolveFrom: FilePath;
+  range?: SemverRange | null | undefined;
   /**
    * When this dev dependency is invalidated, also invalidate these dependencies.
    * This is useful if the parcel plugin or another parent dependency
    * has its own cache for this dev dependency other than Node's require cache.
    */
   additionalInvalidations?: Array<{
-    specifier: DependencySpecifier,
-    resolveFrom: FilePath,
-    range?: SemverRange | null | undefined
-  }>
+    specifier: DependencySpecifier;
+    resolveFrom: FilePath;
+    range?: SemverRange | null | undefined;
+  }>;
 };
 
 /**
@@ -917,9 +981,9 @@ export interface Config {
   getConfig<T>(
     filePaths: Array<FilePath>,
     options?: {
-      packageKey?: string,
-      parse?: boolean,
-      exclude?: boolean
+      packageKey?: string;
+      parse?: boolean;
+      exclude?: boolean;
     },
   ): Promise<ConfigResultWithFilePath<T> | null | undefined>;
   /**
@@ -930,9 +994,9 @@ export interface Config {
     searchPath: FilePath,
     filePaths: Array<FilePath>,
     options?: {
-      packageKey?: string,
-      parse?: boolean,
-      exclude?: boolean
+      packageKey?: string;
+      parse?: boolean;
+      exclude?: boolean;
     },
   ): Promise<ConfigResultWithFilePath<T> | null | undefined>;
   /** Finds the nearest package.json from the config's searchPath. */
@@ -940,16 +1004,16 @@ export interface Config {
 }
 
 export type Stats = {
-  time: number,
-  size: number
+  time: number;
+  size: number;
 };
 
 /**
  * @section transformer
  */
 export type GenerateOutput = {
-  readonly content: Blob,
-  readonly map?: SourceMap | null | undefined
+  readonly content: Blob;
+  readonly map?: SourceMap | null | undefined;
 };
 
 export type Blob = string | Buffer | Readable;
@@ -963,17 +1027,17 @@ export type Blob = string | Buffer | Readable;
  */
 export type TransformerResult = {
   /** The asset's type. */
-  readonly type: string,
+  readonly type: string;
   /** The content of the asset. Either content or an AST is required. */
-  readonly content?: Blob | null | undefined,
+  readonly content?: Blob | null | undefined;
   /** The asset's AST. Either content or an AST is required. */
-  readonly ast?: AST | null | undefined,
+  readonly ast?: AST | null | undefined;
   /** The source map for the asset. */
-  readonly map?: SourceMap | null | undefined,
+  readonly map?: SourceMap | null | undefined;
   /** The dependencies of the asset. */
-  readonly dependencies?: ReadonlyArray<DependencyOptions>,
+  readonly dependencies?: ReadonlyArray<DependencyOptions>;
   /** The environment of the asset. The options are merged with the input asset's environment. */
-  readonly env?: EnvironmentOptions | Environment,
+  readonly env?: EnvironmentOptions | Environment;
   /**
    * Controls which bundle the asset is placed into.
    *   - inline: The asset will be placed into a new inline bundle. Inline bundles are not written
@@ -981,48 +1045,62 @@ export type TransformerResult = {
    *   - isolated: The asset will be isolated from its parents in a separate bundle. Shared assets
    *       will be duplicated.
    */
-  readonly bundleBehavior?: BundleBehavior | null | undefined,
+  readonly bundleBehavior?: BundleBehavior | null | undefined;
   /**
    * If the asset is used as a bundle entry, this controls whether that bundle can be split
    * into multiple, or whether all of the dependencies must be placed in a single bundle.
    */
-  readonly isBundleSplittable?: boolean,
+  readonly isBundleSplittable?: boolean;
   /** Plugin-specific metadata for the asset. */
-  readonly meta?: Meta,
+  readonly meta?: Meta;
   /** The pipeline defined in .parcelrc that the asset should be processed with. */
-  readonly pipeline?: string | null | undefined,
+  readonly pipeline?: string | null | undefined;
   /**
    * Whether this asset can be omitted if none of its exports are being used.
    * This is initially set by the resolver, but can be overridden by transformers.
    */
-  readonly sideEffects?: boolean,
+  readonly sideEffects?: boolean;
   /** The symbols that the asset exports. */
-  readonly symbols?: $ReadOnlyMap<symbol, {
-    local: symbol,
-    loc: SourceLocation | null | undefined
-  }>,
+  readonly symbols?: ReadonlyMap<
+    symbol,
+    {
+      local: symbol;
+      loc: SourceLocation | null | undefined;
+    }
+  >;
   /**
    * When a transformer returns multiple assets, it can give them unique keys to identify them.
    * This can be used to find assets during packaging, or to create dependencies between multiple
    * assets returned by a transformer by using the unique key as the dependency specifier.
    */
-  readonly uniqueKey?: string | null | undefined
+  readonly uniqueKey?: string | null | undefined;
 };
 
 export type Async<T> = T | Promise<T>;
 
 export interface PluginLogger {
   /** Logs a diagnostic at the verbose log level. */
-  verbose(diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>): void;
+  verbose(
+    diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
+  ): void;
   /** Logs a diagnostic at the info log level. */
-  info(diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>): void;
+  info(
+    diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
+  ): void;
   /** Synonym for logger.info. */
-  log(diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>): void;
+  log(
+    diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
+  ): void;
   /** Logs a diagnostic at the verbose warning log level. */
-  warn(diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>): void;
+  warn(
+    diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
+  ): void;
   /** Logs a diagnostic at the verbose error log level. */
   error(
-    input: Diagnostifiable | DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
+    input:
+      | Diagnostifiable
+      | DiagnosticWithoutOrigin
+      | Array<DiagnosticWithoutOrigin>,
   ): void;
 }
 
@@ -1037,35 +1115,44 @@ export type ResolveOptions = {
    *   - url: A URL that works as in a browser. Bare specifiers are treated as relative URLs.
    *   - custom: A custom specifier. Must be handled by a custom resolver plugin.
    */
-  readonly specifierType?: SpecifierType,
+  readonly specifierType?: SpecifierType;
   /** A list of custom conditions to use when resolving package.json "exports" and "imports". */
-  readonly packageConditions?: Array<string>
+  readonly packageConditions?: Array<string>;
 };
 
 /**
  * @section transformer
  */
-export type ResolveFn = (from: FilePath, to: string, options?: ResolveOptions) => Promise<FilePath>;
+export type ResolveFn = (
+  from: FilePath,
+  to: string,
+  options?: ResolveOptions,
+) => Promise<FilePath>;
 
 /**
  * @section validator
  * @experimental
  */
-type ResolveConfigFn = (configNames: Array<FilePath>) => Promise<FilePath | null | undefined>;
+type ResolveConfigFn = (
+  configNames: Array<FilePath>,
+) => Promise<FilePath | null | undefined>;
 
 /**
  * @section validator
  * @experimental
  */
-type ResolveConfigWithPathFn = (configNames: Array<FilePath>, assetFilePath: string) => Promise<FilePath | null | undefined>;
+type ResolveConfigWithPathFn = (
+  configNames: Array<FilePath>,
+  assetFilePath: string,
+) => Promise<FilePath | null | undefined>;
 
 /**
  * @section validator
  * @experimental
  */
 export type ValidateResult = {
-  warnings: Array<Diagnostic>,
-  errors: Array<Diagnostic>
+  warnings: Array<Diagnostic>;
+  errors: Array<Diagnostic>;
 };
 
 /**
@@ -1073,15 +1160,13 @@ export type ValidateResult = {
  * @experimental
  */
 export type DedicatedThreadValidator = {
-  validateAll: (
-    arg1: {
-      assets: Asset[],
-      resolveConfigWithPath: ResolveConfigWithPathFn,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Async<Array<ValidateResult | null | undefined>>
+  validateAll: (arg1: {
+    assets: Asset[];
+    resolveConfigWithPath: ResolveConfigWithPathFn;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Async<Array<ValidateResult | null | undefined>>;
 };
 
 /**
@@ -1089,24 +1174,20 @@ export type DedicatedThreadValidator = {
  * @experimental
  */
 export type MultiThreadValidator = {
-  validate: (
-    arg1: {
-      asset: Asset,
-      config: ConfigResult | undefined,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Async<ValidateResult | undefined>,
-  getConfig?: (
-    arg1: {
-      asset: Asset,
-      resolveConfig: ResolveConfigFn,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Async<ConfigResult | undefined>
+  validate: (arg1: {
+    asset: Asset;
+    config: ConfigResult | undefined;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Async<ValidateResult | undefined>;
+  getConfig?: (arg1: {
+    asset: Asset;
+    resolveConfig: ResolveConfigFn;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Async<ConfigResult | undefined>;
 };
 
 /**
@@ -1119,69 +1200,57 @@ export type Validator = DedicatedThreadValidator | MultiThreadValidator;
  * @section transformer
  */
 export type Transformer<ConfigType> = {
-  loadConfig?: (
-    arg1: {
-      config: Config,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Promise<ConfigType> | ConfigType,
+  loadConfig?: (arg1: {
+    config: Config;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Promise<ConfigType> | ConfigType;
   /** Whether an AST from a previous transformer can be reused (to prevent double-parsing) */
-  canReuseAST?: (
-    arg1: {
-      ast: AST,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => boolean,
+  canReuseAST?: (arg1: {
+    ast: AST;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => boolean;
   /** Parse the contents into an ast */
-  parse?: (
-    arg1: {
-      asset: Asset,
-      config: ConfigType,
-      resolve: ResolveFn,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Async<AST | null | undefined>,
+  parse?: (arg1: {
+    asset: Asset;
+    config: ConfigType;
+    resolve: ResolveFn;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Async<AST | null | undefined>;
   /** Transform the asset and/or add new assets */
-  transform(
-    arg1: {
-      asset: MutableAsset,
-      config: ConfigType,
-      resolve: ResolveFn,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ): Async<Array<TransformerResult | MutableAsset>>,
+  transform(arg1: {
+    asset: MutableAsset;
+    config: ConfigType;
+    resolve: ResolveFn;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }): Async<Array<TransformerResult | MutableAsset>>;
   /**
    * Do some processing after the transformation
    * @experimental
    */
-  postProcess?: (
-    arg1: {
-      assets: Array<MutableAsset>,
-      config: ConfigType,
-      resolve: ResolveFn,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Async<Array<TransformerResult>>,
+  postProcess?: (arg1: {
+    assets: Array<MutableAsset>;
+    config: ConfigType;
+    resolve: ResolveFn;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Async<Array<TransformerResult>>;
   /** Stringify the AST */
-  generate?: (
-    arg1: {
-      asset: Asset,
-      ast: AST,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Async<GenerateOutput>
+  generate?: (arg1: {
+    asset: Asset;
+    ast: AST;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Async<GenerateOutput>;
 };
 
 /**
@@ -1190,19 +1259,21 @@ export type Transformer<ConfigType> = {
  */
 export type TraversalActions = {
   /** Skip the current node's children and continue the traversal if there are other nodes in the queue. */
-  skipChildren(): void,
+  skipChildren(): void;
   /** Stop the traversal */
-  stop(): void
+  stop(): void;
 };
 
 /**
  * Essentially GraphTraversalCallback, but allows adding specific node enter and exit callbacks.
  * @section bundler
  */
-export type GraphVisitor<TNode, TContext> = GraphTraversalCallback<TNode, TContext> | {
-  enter?: GraphTraversalCallback<TNode, TContext>,
-  exit?: GraphTraversalCallback<TNode, TContext>
-};
+export type GraphVisitor<TNode, TContext> =
+  | GraphTraversalCallback<TNode, TContext>
+  | {
+      enter?: GraphTraversalCallback<TNode, TContext>;
+      exit?: GraphTraversalCallback<TNode, TContext>;
+    };
 
 /**
  * A generic callback for graph traversals
@@ -1219,24 +1290,28 @@ export type GraphTraversalCallback<TNode, TContext> = (
 /**
  * @section bundler
  */
-export type BundleTraversable = {
-  readonly type: 'asset',
-  value: Asset
-} | {
-  readonly type: 'dependency',
-  value: Dependency
-};
+export type BundleTraversable =
+  | {
+      readonly type: 'asset';
+      value: Asset;
+    }
+  | {
+      readonly type: 'dependency';
+      value: Dependency;
+    };
 
 /**
  * @section bundler
  */
-export type BundleGraphTraversable = {
-  readonly type: 'asset',
-  value: Asset
-} | {
-  readonly type: 'dependency',
-  value: Dependency
-};
+export type BundleGraphTraversable =
+  | {
+      readonly type: 'asset';
+      value: Asset;
+    }
+  | {
+      readonly type: 'dependency';
+      value: Dependency;
+    };
 
 /**
  * Options for MutableBundleGraph's <code>createBundle</code>.
@@ -1251,64 +1326,65 @@ export type BundleGraphTraversable = {
  * @section bundler
  */
 export type CreateBundleOpts = // If an entryAsset is provided, a bundle id, type, and environment will be
-// inferred from the entryAsset.
-// If an entryAsset is not provided, a bundle id, type, and environment must
-// be provided.
-{
-  /** The entry asset of the bundle. If provided, many bundle properties will be inferred from it. */
-  readonly entryAsset: Asset,
-  /** The target of the bundle. Should come from the dependency that created the bundle. */
-  readonly target: Target,
-  /**
-   * Indicates that the bundle's file name should be stable over time, even when the content of the bundle
-   * changes. This is useful for entries that a user would manually enter the URL for, as well as for things
-   * like service workers or RSS feeds, where the URL must remain consistent over time.
-   */
-  readonly needsStableName?: boolean | null | undefined,
-  /**
-   * Controls the behavior of the bundle.
-   * to determine when the bundle is loaded.
-   *   - inline: Inline bundles are not written to a separate file, but embedded into the parent bundle.
-   *   - isolated: The bundle will be isolated from its parents. Shared assets will be duplicated.
-   */
-  readonly bundleBehavior?: BundleBehavior | null | undefined,
-  /** Name of the manual shared bundle config that caused this bundle to be created */
-  readonly manualSharedBundle?: string | null | undefined,
-  readonly conditions?: Array<string>
-} | {
-  /** The type of the bundle. */
-  readonly type: string,
-  /** The environment of the bundle. */
-  readonly env: Environment,
-  /** A unique value for the bundle to be used in its id. */
-  readonly uniqueKey: string,
-  /** The target of the bundle. Should come from the dependency that created the bundle. */
-  readonly target: Target,
-  /**
-   * Indicates that the bundle's file name should be stable over time, even when the content of the bundle
-   * changes. This is useful for entries that a user would manually enter the URL for, as well as for things
-   * like service workers or RSS feeds, where the URL must remain consistent over time.
-   */
-  readonly needsStableName?: boolean | null | undefined,
-  /**
-   * Controls the behavior of the bundle.
-   * to determine when the bundle is loaded.
-   *   - inline: Inline bundles are not written to a separate file, but embedded into the parent bundle.
-   *   - isolated: The bundle will be isolated from its parents. Shared assets will be duplicated.
-   */
-  readonly bundleBehavior?: BundleBehavior | null | undefined,
-  /**
-   * Whether the bundle can be split. If false, then all dependencies of the bundle will be kept
-   * internal to the bundle, rather than referring to other bundles. This may result in assets
-   * being duplicated between multiple bundles, but can be useful for things like server side rendering.
-   */
-  readonly isSplittable?: boolean | null | undefined,
-  /** The bundle's pipeline, to be used for optimization. Usually based on the pipeline of the entry asset. */
-  readonly pipeline?: string | null | undefined,
-  /** Name of the manual shared bundle config that caused this bundle to be created */
-  readonly manualSharedBundle?: string | null | undefined,
-  readonly conditions?: Array<string>
-};
+  // inferred from the entryAsset.
+  // If an entryAsset is not provided, a bundle id, type, and environment must
+  // be provided.
+  | {
+      /** The entry asset of the bundle. If provided, many bundle properties will be inferred from it. */
+      readonly entryAsset: Asset;
+      /** The target of the bundle. Should come from the dependency that created the bundle. */
+      readonly target: Target;
+      /**
+       * Indicates that the bundle's file name should be stable over time, even when the content of the bundle
+       * changes. This is useful for entries that a user would manually enter the URL for, as well as for things
+       * like service workers or RSS feeds, where the URL must remain consistent over time.
+       */
+      readonly needsStableName?: boolean | null | undefined;
+      /**
+       * Controls the behavior of the bundle.
+       * to determine when the bundle is loaded.
+       *   - inline: Inline bundles are not written to a separate file, but embedded into the parent bundle.
+       *   - isolated: The bundle will be isolated from its parents. Shared assets will be duplicated.
+       */
+      readonly bundleBehavior?: BundleBehavior | null | undefined;
+      /** Name of the manual shared bundle config that caused this bundle to be created */
+      readonly manualSharedBundle?: string | null | undefined;
+      readonly conditions?: Array<string>;
+    }
+  | {
+      /** The type of the bundle. */
+      readonly type: string;
+      /** The environment of the bundle. */
+      readonly env: Environment;
+      /** A unique value for the bundle to be used in its id. */
+      readonly uniqueKey: string;
+      /** The target of the bundle. Should come from the dependency that created the bundle. */
+      readonly target: Target;
+      /**
+       * Indicates that the bundle's file name should be stable over time, even when the content of the bundle
+       * changes. This is useful for entries that a user would manually enter the URL for, as well as for things
+       * like service workers or RSS feeds, where the URL must remain consistent over time.
+       */
+      readonly needsStableName?: boolean | null | undefined;
+      /**
+       * Controls the behavior of the bundle.
+       * to determine when the bundle is loaded.
+       *   - inline: Inline bundles are not written to a separate file, but embedded into the parent bundle.
+       *   - isolated: The bundle will be isolated from its parents. Shared assets will be duplicated.
+       */
+      readonly bundleBehavior?: BundleBehavior | null | undefined;
+      /**
+       * Whether the bundle can be split. If false, then all dependencies of the bundle will be kept
+       * internal to the bundle, rather than referring to other bundles. This may result in assets
+       * being duplicated between multiple bundles, but can be useful for things like server side rendering.
+       */
+      readonly isSplittable?: boolean | null | undefined;
+      /** The bundle's pipeline, to be used for optimization. Usually based on the pipeline of the entry asset. */
+      readonly pipeline?: string | null | undefined;
+      /** Name of the manual shared bundle config that caused this bundle to be created */
+      readonly manualSharedBundle?: string | null | undefined;
+      readonly conditions?: Array<string>;
+    };
 
 /**
  * Specifies a symbol in an asset
@@ -1316,20 +1392,20 @@ export type CreateBundleOpts = // If an entryAsset is provided, a bundle id, typ
  */
 export type SymbolResolution = {
   /** The Asset which exports the symbol. */
-  readonly asset: Asset,
+  readonly asset: Asset;
   /** under which name the symbol is exported */
-  readonly exportSymbol: symbol | string,
+  readonly exportSymbol: symbol | string;
   /** The identifier under which the symbol can be referenced. */
-  readonly symbol: undefined | null | false | symbol,
+  readonly symbol: undefined | null | false | symbol;
   /** The location of the specifier that lead to this result. */
-  readonly loc: SourceLocation | null | undefined
+  readonly loc: SourceLocation | null | undefined;
 };
 
 /**
  * @section packager
  */
-export type ExportSymbolResolution = (SymbolResolution) & {
-  readonly exportAs: symbol | string
+export type ExportSymbolResolution = SymbolResolution & {
+  readonly exportAs: symbol | string;
 };
 
 /**
@@ -1386,9 +1462,14 @@ export interface Bundle {
   /** Returns whether the bundle includes the given dependency. */
   hasDependency(arg1: Dependency): boolean;
   /** Traverses the assets in the bundle. */
-  traverseAssets<TContext>(visit: GraphVisitor<Asset, TContext>, startAsset?: Asset): TContext | null | undefined;
+  traverseAssets<TContext>(
+    visit: GraphVisitor<Asset, TContext>,
+    startAsset?: Asset,
+  ): TContext | null | undefined;
   /** Traverses assets and dependencies in the bundle. */
-  traverse<TContext>(visit: GraphVisitor<BundleTraversable, TContext>): TContext | null | undefined;
+  traverse<TContext>(
+    visit: GraphVisitor<BundleTraversable, TContext>,
+  ): TContext | null | undefined;
 }
 
 /**
@@ -1484,17 +1565,13 @@ export interface BundleGraph<TBundle extends Bundle> {
   /** Returns the public (short) id for an asset. */
   getAssetPublicId(asset: Asset): string;
   /** Returns a list of bundles in the bundle graph. By default, inline bundles are excluded. */
-  getBundles(
-    opts?: {
-      includeInline: boolean
-    },
-  ): Array<TBundle>;
+  getBundles(opts?: {includeInline: boolean}): Array<TBundle>;
   /** Traverses the assets and dependencies in the bundle graph, in depth first order. */
   traverse<TContext>(
     visit: GraphVisitor<BundleGraphTraversable, TContext>,
     startAsset?: Asset | null | undefined,
     options?: {
-      skipUnusedDependencies?: boolean
+      skipUnusedDependencies?: boolean;
     },
   ): TContext | null | undefined;
   /** Traverses all bundles in the bundle graph, including inline bundles, in depth first order. */
@@ -1508,7 +1585,7 @@ export interface BundleGraph<TBundle extends Bundle> {
   getBundlesInBundleGroup(
     bundleGroup: BundleGroup,
     opts?: {
-      includeInline: boolean
+      includeInline: boolean;
     },
   ): Array<TBundle>;
   /** Returns a list of bundles that this bundle loads asynchronously. */
@@ -1521,8 +1598,8 @@ export interface BundleGraph<TBundle extends Bundle> {
   getReferencedBundles(
     bundle: Bundle,
     opts?: {
-      recursive?: boolean,
-      includeInline?: boolean
+      recursive?: boolean;
+      includeInline?: boolean;
     },
   ): Array<TBundle>;
   /** Returns a list of bundles that reference this bundle. */
@@ -1539,13 +1616,20 @@ export interface BundleGraph<TBundle extends Bundle> {
    * Returns undefined if the specified dependency was excluded or wasn't async \
    * and otherwise the BundleGroup or Asset that the dependency resolves to.
    */
-  resolveAsyncDependency(dependency: Dependency, bundle?: Bundle | null | undefined): {
-    type: 'bundle_group',
-    value: BundleGroup
-  } | {
-    type: 'asset',
-    value: Asset
-  } | null | undefined;
+  resolveAsyncDependency(
+    dependency: Dependency,
+    bundle?: Bundle | null | undefined,
+  ):
+    | {
+        type: 'bundle_group';
+        value: BundleGroup;
+      }
+    | {
+        type: 'asset';
+        value: Asset;
+      }
+    | null
+    | undefined;
   /** Returns whether a dependency was excluded because it had no used symbols. */
   isDependencySkipped(dependency: Dependency): boolean;
   /**
@@ -1553,9 +1637,15 @@ export interface BundleGraph<TBundle extends Bundle> {
    * If a bundle is given, assets in that bundle are preferred.
    * Returns null if the dependency was excluded.
    */
-  getResolvedAsset(dependency: Dependency, bundle?: Bundle | null | undefined): Asset | null | undefined;
+  getResolvedAsset(
+    dependency: Dependency,
+    bundle?: Bundle | null | undefined,
+  ): Asset | null | undefined;
   /** Returns the bundle that a dependency in a given bundle references, if any. */
-  getReferencedBundle(dependency: Dependency, bundle: Bundle): TBundle | null | undefined;
+  getReferencedBundle(
+    dependency: Dependency,
+    bundle: Bundle,
+  ): TBundle | null | undefined;
   /** Returns a list of bundles that contain the given asset. */
   getBundlesWithAsset(arg1: Asset): Array<TBundle>;
   /** Returns a list of bundles that contain the given dependency. */
@@ -1579,28 +1669,43 @@ export interface BundleGraph<TBundle extends Bundle> {
    * corresponding variable lives (resolves re-exports). Stop resolving transitively once \
    * <code>boundary</code> was left (<code>bundle.hasAsset(asset) === false</code>), then <code>result.symbol</code> is undefined.
    */
-  getSymbolResolution(asset: Asset, symbol: symbol, boundary?: Bundle | null | undefined): SymbolResolution;
+  getSymbolResolution(
+    asset: Asset,
+    symbol: symbol,
+    boundary?: Bundle | null | undefined,
+  ): SymbolResolution;
   /** Returns a list of symbols that are exported by the asset, including re-exports. */
-  getExportedSymbols(asset: Asset, boundary?: Bundle | null | undefined): Array<ExportSymbolResolution>;
+  getExportedSymbols(
+    asset: Asset,
+    boundary?: Bundle | null | undefined,
+  ): Array<ExportSymbolResolution>;
   /**
    * Returns a list of symbols from an asset or dependency that are referenced by a dependent asset.
    *
    * Returns null if symbol propagation didn't run (so the result is unknown).
    */
-  getUsedSymbols(arg1: Asset | Dependency): $ReadOnlySet<symbol> | null | undefined;
+  getUsedSymbols(
+    arg1: Asset | Dependency,
+  ): ReadonlySet<symbol> | null | undefined;
   /** Returns the common root directory for the entry assets of a target. */
   getEntryRoot(target: Target): FilePath;
-  getConditionalBundleMapping(): Map<TBundle, Map<string, {
-    ifTrueBundles: Array<TBundle>,
-    ifFalseBundles: Array<TBundle>
-  }>>;
+  getConditionalBundleMapping(): Map<
+    TBundle,
+    Map<
+      string,
+      {
+        ifTrueBundles: Array<TBundle>;
+        ifFalseBundles: Array<TBundle>;
+      }
+    >
+  >;
   getConditionsForDependencies(deps: Array<Dependency>): Set<{
-    publicId: string,
-    key: string,
-    ifTrueDependency: Dependency,
-    ifFalseDependency: Dependency,
-    ifTrueAssetId: string,
-    ifFalseAssetId: string
+    publicId: string;
+    key: string;
+    ifTrueDependency: Dependency;
+    ifFalseDependency: Dependency;
+    ifTrueAssetId: string;
+    ifFalseAssetId: string;
   }>;
 }
 
@@ -1608,10 +1713,10 @@ export interface BundleGraph<TBundle extends Bundle> {
  * @section bundler
  */
 export type BundleResult = {
-  readonly contents: Blob,
-  readonly ast?: AST,
-  readonly map?: SourceMap | null | undefined,
-  readonly type?: string
+  readonly contents: Blob;
+  readonly ast?: AST;
+  readonly map?: SourceMap | null | undefined;
+  readonly type?: string;
 };
 
 /**
@@ -1619,31 +1724,31 @@ export type BundleResult = {
  */
 export type ResolveResult = {
   /** An absolute path to the resolved file. */
-  readonly filePath?: FilePath,
+  readonly filePath?: FilePath;
   /** An optional named pipeline to use to compile the resolved file. */
-  readonly pipeline?: string | null | undefined,
+  readonly pipeline?: string | null | undefined;
   /** Query parameters to be used by transformers when compiling the resolved file. */
-  readonly query?: URLSearchParams,
+  readonly query?: URLSearchParams;
   /** Whether the resolved file should be excluded from the build. */
-  readonly isExcluded?: boolean,
+  readonly isExcluded?: boolean;
   /** Overrides the priority set on the dependency. */
-  readonly priority?: DependencyPriority,
+  readonly priority?: DependencyPriority;
   /** Corresponds to BaseAsset's <code>sideEffects</code>. */
-  readonly sideEffects?: boolean,
+  readonly sideEffects?: boolean;
   /** The code of the resolved asset. If provided, this is used rather than reading the file from disk. */
-  readonly code?: string,
+  readonly code?: string;
   /** Whether this dependency can be deferred by Atlaspack itself (true by default). */
-  readonly canDefer?: boolean,
+  readonly canDefer?: boolean;
   /** A resolver might return diagnostics to also run subsequent resolvers while still providing a reason why it failed. */
-  readonly diagnostics?: Diagnostic | Array<Diagnostic>,
+  readonly diagnostics?: Diagnostic | Array<Diagnostic>;
   /** Is spread (shallowly merged) onto the request's dependency.meta */
-  readonly meta?: JSONObject,
+  readonly meta?: JSONObject;
   /** A list of file paths or patterns that should invalidate the resolution if created. */
-  readonly invalidateOnFileCreate?: Array<FileCreateInvalidation>,
+  readonly invalidateOnFileCreate?: Array<FileCreateInvalidation>;
   /** A list of files that should invalidate the resolution if modified or deleted. */
-  readonly invalidateOnFileChange?: Array<FilePath>,
+  readonly invalidateOnFileChange?: Array<FilePath>;
   /** Invalidates the resolution when the given environment variable changes.*/
-  readonly invalidateOnEnvChange?: Array<string>
+  readonly invalidateOnEnvChange?: Array<string>;
 };
 
 /**
@@ -1653,56 +1758,46 @@ export type ResolveResult = {
  * @section bundler
  */
 export type Bundler<ConfigType> = {
-  loadConfig?: (
-    arg1: {
-      config: Config,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Promise<ConfigType> | ConfigType,
-  bundle(
-    arg1: {
-      bundleGraph: MutableBundleGraph,
-      config: ConfigType,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ): Async<void>,
-  optimize(
-    arg1: {
-      bundleGraph: MutableBundleGraph,
-      config: ConfigType,
-      options: PluginOptions,
-      logger: PluginLogger
-    },
-  ): Async<void>
+  loadConfig?: (arg1: {
+    config: Config;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Promise<ConfigType> | ConfigType;
+  bundle(arg1: {
+    bundleGraph: MutableBundleGraph;
+    config: ConfigType;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }): Async<void>;
+  optimize(arg1: {
+    bundleGraph: MutableBundleGraph;
+    config: ConfigType;
+    options: PluginOptions;
+    logger: PluginLogger;
+  }): Async<void>;
 };
 
 /**
  * @section namer
  */
 export type Namer<ConfigType> = {
-  loadConfig?: (
-    arg1: {
-      config: Config,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Promise<ConfigType> | ConfigType,
+  loadConfig?: (arg1: {
+    config: Config;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Promise<ConfigType> | ConfigType;
   /** Return a filename/-path for <code>bundle</code> or nullish to leave it to the next namer plugin. */
-  name(
-    arg1: {
-      bundle: Bundle,
-      bundleGraph: BundleGraph<Bundle>,
-      config: ConfigType,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ): Async<FilePath | null | undefined>
+  name(arg1: {
+    bundle: Bundle;
+    bundleGraph: BundleGraph<Bundle>;
+    config: ConfigType;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }): Async<FilePath | null | undefined>;
 };
 
 type RuntimeAssetPriority = 'sync' | 'parallel';
@@ -1712,165 +1807,154 @@ type RuntimeAssetPriority = 'sync' | 'parallel';
  * @section runtime
  */
 export type RuntimeAsset = {
-  readonly filePath: FilePath,
-  readonly code: string,
-  readonly dependency?: Dependency,
-  readonly isEntry?: boolean,
-  readonly env?: EnvironmentOptions,
-  readonly priority?: RuntimeAssetPriority
+  readonly filePath: FilePath;
+  readonly code: string;
+  readonly dependency?: Dependency;
+  readonly isEntry?: boolean;
+  readonly env?: EnvironmentOptions;
+  readonly priority?: RuntimeAssetPriority;
 };
 
 /**
  * @section runtime
  */
 export type Runtime<ConfigType> = {
-  loadConfig?: (
-    arg1: {
-      config: Config,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Promise<ConfigType> | ConfigType,
-  apply(
-    arg1: {
-      bundle: NamedBundle,
-      bundleGraph: BundleGraph<NamedBundle>,
-      config: ConfigType,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ): Async<undefined | RuntimeAsset | Array<RuntimeAsset>>
+  loadConfig?: (arg1: {
+    config: Config;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Promise<ConfigType> | ConfigType;
+  apply(arg1: {
+    bundle: NamedBundle;
+    bundleGraph: BundleGraph<NamedBundle>;
+    config: ConfigType;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }): Async<undefined | RuntimeAsset | Array<RuntimeAsset>>;
 };
 
 /**
  * @section packager
  */
 export type Packager<ConfigType, BundleConfigType> = {
-  loadConfig?: (
-    arg1: {
-      config: Config,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Async<ConfigType>,
-  loadBundleConfig?: (
-    arg1: {
-      bundle: NamedBundle,
-      bundleGraph: BundleGraph<NamedBundle>,
-      config: Config,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Async<BundleConfigType>,
-  package(
-    arg1: {
-      bundle: NamedBundle,
-      bundleGraph: BundleGraph<NamedBundle>,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer,
-      config: ConfigType,
-      bundleConfig: BundleConfigType,
-      getInlineBundleContents: (arg1: Bundle, arg2: BundleGraph<NamedBundle>) => Async<{
-        contents: Blob
-      }>,
-      getSourceMapReference: (map?: SourceMap | null | undefined) => Async<string | null | undefined>
-    },
-  ): Async<BundleResult>
+  loadConfig?: (arg1: {
+    config: Config;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Async<ConfigType>;
+  loadBundleConfig?: (arg1: {
+    bundle: NamedBundle;
+    bundleGraph: BundleGraph<NamedBundle>;
+    config: Config;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Async<BundleConfigType>;
+  package(arg1: {
+    bundle: NamedBundle;
+    bundleGraph: BundleGraph<NamedBundle>;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+    config: ConfigType;
+    bundleConfig: BundleConfigType;
+    getInlineBundleContents: (
+      arg1: Bundle,
+      arg2: BundleGraph<NamedBundle>,
+    ) => Async<{
+      contents: Blob;
+    }>;
+    getSourceMapReference: (
+      map?: SourceMap | null | undefined,
+    ) => Async<string | null | undefined>;
+  }): Async<BundleResult>;
 };
 
 /**
  * @section optimizer
  */
 export type Optimizer<ConfigType, BundleConfigType> = {
-  loadConfig?: (
-    arg1: {
-      config: Config,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Async<ConfigType>,
-  loadBundleConfig?: (
-    arg1: {
-      bundle: NamedBundle,
-      bundleGraph: BundleGraph<NamedBundle>,
-      config: Config,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Async<BundleConfigType>,
-  optimize(
-    arg1: {
-      bundle: NamedBundle,
-      bundleGraph: BundleGraph<NamedBundle>,
-      contents: Blob,
-      map: SourceMap | null | undefined,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer,
-      config: ConfigType,
-      bundleConfig: BundleConfigType,
-      getSourceMapReference: (map?: SourceMap | null | undefined) => Async<string | null | undefined>
-    },
-  ): Async<BundleResult>
+  loadConfig?: (arg1: {
+    config: Config;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Async<ConfigType>;
+  loadBundleConfig?: (arg1: {
+    bundle: NamedBundle;
+    bundleGraph: BundleGraph<NamedBundle>;
+    config: Config;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Async<BundleConfigType>;
+  optimize(arg1: {
+    bundle: NamedBundle;
+    bundleGraph: BundleGraph<NamedBundle>;
+    contents: Blob;
+    map: SourceMap | null | undefined;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+    config: ConfigType;
+    bundleConfig: BundleConfigType;
+    getSourceMapReference: (
+      map?: SourceMap | null | undefined,
+    ) => Async<string | null | undefined>;
+  }): Async<BundleResult>;
 };
 
 /**
  * @section compressor
  */
 export type Compressor = {
-  compress(
-    arg1: {
-      stream: Readable,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ): Async<{
-    stream: Readable,
-    type?: string
-  } | null | undefined>
+  compress(arg1: {
+    stream: Readable;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }): Async<
+    | {
+        stream: Readable;
+        type?: string;
+      }
+    | null
+    | undefined
+  >;
 };
 
 /**
  * @section resolver
  */
 export type Resolver<ConfigType> = {
-  loadConfig?: (
-    arg1: {
-      config: Config,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ) => Promise<ConfigType> | ConfigType,
-  resolve(
-    arg1: {
-      dependency: Dependency,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer,
-      specifier: FilePath,
-      pipeline: string | null | undefined,
-      config: ConfigType
-    },
-  ): Async<ResolveResult | null | undefined>
+  loadConfig?: (arg1: {
+    config: Config;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) => Promise<ConfigType> | ConfigType;
+  resolve(arg1: {
+    dependency: Dependency;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+    specifier: FilePath;
+    pipeline: string | null | undefined;
+    config: ConfigType;
+  }): Async<ResolveResult | null | undefined>;
 };
 
 /**
  * @section reporter
  */
 export type ProgressLogEvent = {
-  readonly type: 'log',
-  readonly level: 'progress',
-  readonly phase?: string,
-  readonly message: string
+  readonly type: 'log';
+  readonly level: 'progress';
+  readonly phase?: string;
+  readonly message: string;
 };
 
 /**
@@ -1878,18 +1962,18 @@ export type ProgressLogEvent = {
  * @section reporter
  */
 export type DiagnosticLogEvent = {
-  readonly type: 'log',
-  readonly level: 'error' | 'warn' | 'info' | 'verbose',
-  readonly diagnostics: Array<Diagnostic>
+  readonly type: 'log';
+  readonly level: 'error' | 'warn' | 'info' | 'verbose';
+  readonly diagnostics: Array<Diagnostic>;
 };
 
 /**
  * @section reporter
  */
 export type TextLogEvent = {
-  readonly type: 'log',
-  readonly level: 'success',
-  readonly message: string
+  readonly type: 'log';
+  readonly level: 'success';
+  readonly message: string;
 };
 
 /**
@@ -1902,7 +1986,7 @@ export type LogEvent = ProgressLogEvent | DiagnosticLogEvent | TextLogEvent;
  * @section reporter
  */
 export type BuildStartEvent = {
-  readonly type: 'buildStart'
+  readonly type: 'buildStart';
 };
 
 /**
@@ -1910,7 +1994,7 @@ export type BuildStartEvent = {
  * @section reporter
  */
 export type WatchStartEvent = {
-  readonly type: 'watchStart'
+  readonly type: 'watchStart';
 };
 
 /**
@@ -1918,7 +2002,7 @@ export type WatchStartEvent = {
  * @section reporter
  */
 export type WatchEndEvent = {
-  readonly type: 'watchEnd'
+  readonly type: 'watchEnd';
 };
 
 /**
@@ -1926,9 +2010,9 @@ export type WatchEndEvent = {
  * @section reporter
  */
 export type ResolvingProgressEvent = {
-  readonly type: 'buildProgress',
-  readonly phase: 'resolving',
-  readonly dependency: Dependency
+  readonly type: 'buildProgress';
+  readonly phase: 'resolving';
+  readonly dependency: Dependency;
 };
 
 /**
@@ -1936,9 +2020,9 @@ export type ResolvingProgressEvent = {
  * @section reporter
  */
 export type TransformingProgressEvent = {
-  readonly type: 'buildProgress',
-  readonly phase: 'transforming',
-  readonly filePath: FilePath
+  readonly type: 'buildProgress';
+  readonly phase: 'transforming';
+  readonly filePath: FilePath;
 };
 
 /**
@@ -1946,15 +2030,15 @@ export type TransformingProgressEvent = {
  * @section reporter
  */
 export type BundlingProgressEvent = {
-  readonly type: 'buildProgress',
-  readonly phase: 'bundling'
+  readonly type: 'buildProgress';
+  readonly phase: 'bundling';
 };
 
 export type BundledProgressEvent = {
-  readonly type: 'buildProgress',
-  readonly phase: 'bundled',
-  readonly bundleGraph: BundleGraph<NamedBundle>,
-  readonly changedAssets: Map<string, Asset>
+  readonly type: 'buildProgress';
+  readonly phase: 'bundled';
+  readonly bundleGraph: BundleGraph<NamedBundle>;
+  readonly changedAssets: Map<string, Asset>;
 };
 
 /**
@@ -1962,9 +2046,9 @@ export type BundledProgressEvent = {
  * @section reporter
  */
 export type PackagingProgressEvent = {
-  readonly type: 'buildProgress',
-  readonly phase: 'packaging',
-  readonly bundle: NamedBundle
+  readonly type: 'buildProgress';
+  readonly phase: 'packaging';
+  readonly bundle: NamedBundle;
 };
 
 /**
@@ -1972,29 +2056,35 @@ export type PackagingProgressEvent = {
  * @section reporter
  */
 export type OptimizingProgressEvent = {
-  readonly type: 'buildProgress',
-  readonly phase: 'optimizing',
-  readonly bundle: NamedBundle
+  readonly type: 'buildProgress';
+  readonly phase: 'optimizing';
+  readonly bundle: NamedBundle;
 };
 
 /**
  * @section reporter
  */
-export type BuildProgressEvent = ResolvingProgressEvent | TransformingProgressEvent | BundlingProgressEvent | BundledProgressEvent | PackagingProgressEvent | OptimizingProgressEvent;
+export type BuildProgressEvent =
+  | ResolvingProgressEvent
+  | TransformingProgressEvent
+  | BundlingProgressEvent
+  | BundledProgressEvent
+  | PackagingProgressEvent
+  | OptimizingProgressEvent;
 
 /**
  * The build was successful.
  * @section reporter
  */
 export type BuildSuccessEvent = {
-  readonly type: 'buildSuccess',
-  readonly bundleGraph: BundleGraph<PackagedBundle>,
-  readonly buildTime: number,
-  readonly changedAssets: Map<string, Asset>,
-  readonly requestBundle: (bundle: NamedBundle) => Promise<BuildSuccessEvent>,
+  readonly type: 'buildSuccess';
+  readonly bundleGraph: BundleGraph<PackagedBundle>;
+  readonly buildTime: number;
+  readonly changedAssets: Map<string, Asset>;
+  readonly requestBundle: (bundle: NamedBundle) => Promise<BuildSuccessEvent>;
   readonly unstable_requestStats: {
-    [requestType: string]: number
-  }
+    [requestType: string]: number;
+  };
 };
 
 /**
@@ -2002,11 +2092,11 @@ export type BuildSuccessEvent = {
  * @section reporter
  */
 export type BuildFailureEvent = {
-  readonly type: 'buildFailure',
-  readonly diagnostics: Array<Diagnostic>,
+  readonly type: 'buildFailure';
+  readonly diagnostics: Array<Diagnostic>;
   readonly unstable_requestStats: {
-    [requestType: string]: number
-  }
+    [requestType: string]: number;
+  };
 };
 
 /**
@@ -2019,8 +2109,8 @@ export type BuildEvent = BuildFailureEvent | BuildSuccessEvent;
  * @section reporter
  */
 export type ValidationEvent = {
-  readonly type: 'validation',
-  readonly filePath: FilePath
+  readonly type: 'validation';
+  readonly filePath: FilePath;
 };
 
 /**
@@ -2030,42 +2120,50 @@ export type ValidationEvent = {
  * @section reporter
  */
 export type TraceEvent = {
-  readonly type: 'trace',
-  readonly ts: number,
-  readonly duration: number,
-  readonly name: string,
-  readonly tid: number,
-  readonly pid: number,
-  readonly categories: string[],
+  readonly type: 'trace';
+  readonly ts: number;
+  readonly duration: number;
+  readonly name: string;
+  readonly tid: number;
+  readonly pid: number;
+  readonly categories: string[];
   readonly args?: {
-    [key: string]: unknown
-  }
+    [key: string]: unknown;
+  };
 };
 
 export type CacheEvent = {
-  type: 'cache',
-  phase: string,
-  total: number,
-  size: number
+  type: 'cache';
+  phase: string;
+  total: number;
+  size: number;
 };
 
 /**
  * @section reporter
  */
-export type ReporterEvent = LogEvent | BuildStartEvent | BuildProgressEvent | BuildSuccessEvent | BuildFailureEvent | WatchStartEvent | WatchEndEvent | ValidationEvent | TraceEvent | CacheEvent;
+export type ReporterEvent =
+  | LogEvent
+  | BuildStartEvent
+  | BuildProgressEvent
+  | BuildSuccessEvent
+  | BuildFailureEvent
+  | WatchStartEvent
+  | WatchEndEvent
+  | ValidationEvent
+  | TraceEvent
+  | CacheEvent;
 
 /**
  * @section reporter
  */
 export type Reporter = {
-  report(
-    arg1: {
-      event: ReporterEvent,
-      options: PluginOptions,
-      logger: PluginLogger,
-      tracer: PluginTracer
-    },
-  ): Async<void>
+  report(arg1: {
+    event: ReporterEvent;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }): Async<void>;
 };
 
 export interface ErrorWithCode extends Error {
@@ -2077,7 +2175,7 @@ export interface IDisposable {
 }
 
 export type AsyncSubscription = {
-  unsubscribe(): Promise<unknown>
+  unsubscribe(): Promise<unknown>;
 };
 
 export interface PluginTracer {
@@ -2105,13 +2203,13 @@ export interface PluginTracer {
     category?: string,
     argumentName?: string,
     otherArgs?: {
-      [key: string]: unknown
+      [key: string]: unknown;
     },
   ): TraceMeasurement | null;
 }
 
 export type ConditionMeta = {
-  key: string,
-  ifTruePlaceholder: string,
-  ifFalsePlaceholder: string
+  key: string;
+  ifTruePlaceholder: string;
+  ifFalsePlaceholder: string;
 };

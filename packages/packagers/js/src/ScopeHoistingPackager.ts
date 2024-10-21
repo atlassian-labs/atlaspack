@@ -1,4 +1,11 @@
-import type {Asset, BundleGraph, Dependency, PluginOptions, NamedBundle, PluginLogger} from '@atlaspack/types';
+import type {
+  Asset,
+  BundleGraph,
+  Dependency,
+  PluginOptions,
+  NamedBundle,
+  PluginLogger,
+} from '@atlaspack/types';
 
 import {
   DefaultMap,
@@ -74,17 +81,23 @@ export class ScopeHoistingPackager {
   useAsyncBundleRuntime: boolean;
   outputFormat: OutputFormat;
   isAsyncBundle: boolean;
-  globalNames: $ReadOnlySet<string>;
-  assetOutputs: Map<string, {
-    code: string,
-    map: Buffer | null | undefined
-  }>;
-  exportedSymbols: Map<string, {
-    asset: Asset,
-    exportSymbol: string,
-    local: string,
-    exportAs: Array<string>
-  }> = new Map();
+  globalNames: ReadonlySet<string>;
+  assetOutputs: Map<
+    string,
+    {
+      code: string;
+      map: Buffer | null | undefined;
+    }
+  >;
+  exportedSymbols: Map<
+    string,
+    {
+      asset: Asset;
+      exportSymbol: string;
+      local: string;
+      exportAs: Array<string>;
+    }
+  > = new Map();
   externals: Map<string, Map<string, string>> = new Map();
   topLevelNames: Map<string, number> = new Map();
   seenAssets: Set<string> = new Set();
@@ -125,8 +138,8 @@ export class ScopeHoistingPackager {
   }
 
   async package(): Promise<{
-    contents: string,
-    map: SourceMap | null | undefined
+    contents: string;
+    map: SourceMap | null | undefined;
   }> {
     let wrappedAssets = await this.loadAssets();
     this.buildExportedSymbols();
@@ -477,7 +490,11 @@ export class ScopeHoistingPackager {
     return this.buildAsset(asset, code, map);
   }
 
-  buildAsset(asset: Asset, code: string, map?: Buffer | null): [string, SourceMap | null | undefined, number] {
+  buildAsset(
+    asset: Asset,
+    code: string,
+    map?: Buffer | null,
+  ): [string, SourceMap | null | undefined, number] {
     let shouldWrap = this.wrappedAssets.has(asset.id);
     let deps = this.bundleGraph.getDependencies(asset);
 
@@ -548,7 +565,8 @@ export class ScopeHoistingPackager {
     code += append;
 
     let lineCount = 0;
-    let depContent: Array<[string, NodeSourceMap | null | undefined, number]> = [];
+    let depContent: Array<[string, NodeSourceMap | null | undefined, number]> =
+      [];
     if (depMap.size === 0 && replacements.size === 0) {
       // If there are no dependencies or replacements, use a simple function to count the number of lines.
       lineCount = countLines(code) - 1;
@@ -695,7 +713,10 @@ ${code}
     return [code, sourceMap, lineCount];
   }
 
-  buildReplacements(asset: Asset, deps: Array<Dependency>): [Map<string, Array<Dependency>>, Map<string, string>] {
+  buildReplacements(
+    asset: Asset,
+    deps: Array<Dependency>,
+  ): [Map<string, Array<Dependency>>, Map<string, string>] {
     let assetId = asset.meta.id;
     invariant(typeof assetId === 'string');
 
@@ -1101,7 +1122,11 @@ ${code}
     }
   }
 
-  getHoistedParcelRequires(parentAsset: Asset, dep: Dependency, resolved: Asset): [string, number] {
+  getHoistedParcelRequires(
+    parentAsset: Asset,
+    dep: Dependency,
+    resolved: Asset,
+  ): [string, number] {
     if (resolved.type !== 'js') {
       return ['', 0];
     }
@@ -1137,7 +1162,11 @@ ${code}
     return [res, lineCount];
   }
 
-  buildAssetPrelude(asset: Asset, deps: Array<Dependency>, replacements: Map<string, string>): [string, number, string] {
+  buildAssetPrelude(
+    asset: Asset,
+    deps: Array<Dependency>,
+    replacements: Map<string, string>,
+  ): [string, number, string] {
     let prepend = '';
     let prependLineCount = 0;
     let append = '';

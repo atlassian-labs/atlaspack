@@ -1,0 +1,20 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "references": [
+    {
+      "path": "../../core/diagnostic"
+    },
+    {
+      "path": "../../core/plugin"
+    },
+    {
+      "path": "../../core/types"
+    },
+    {
+      "path": "../../core/utils"
+    },
+    {
+      "path": "../../utils/ts-utils"
+    }
+  ]
+}
