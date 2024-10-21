@@ -6,14 +6,17 @@ import type {
   ExitHandler,
   WorkerMessage,
 } from '../types';
+
 import {isMainThread, parentPort} from 'worker_threads';
-import nullthrows from 'nullthrows';
-import {setChild} from '../childState';
-import {Child} from '../child';
+
 import {
   prepareForSerialization,
   restoreDeserializedObject,
-} from '@atlaspack/core';
+} from '@atlaspack/build-cache';
+import nullthrows from 'nullthrows';
+
+import {Child} from '../child';
+import {setChild} from '../childState';
 
 export default class ThreadsChild implements ChildImpl {
   onMessage: MessageHandler;

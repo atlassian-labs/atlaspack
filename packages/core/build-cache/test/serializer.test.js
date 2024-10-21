@@ -1,12 +1,14 @@
 // @flow
+
+import assert from 'assert';
+import sinon from 'sinon';
+
 import {
   serialize,
   deserialize,
   registerSerializableClass,
   unregisterSerializableClass,
 } from '../src/serializer';
-import assert from 'assert';
-import sinon from 'sinon';
 
 describe('serializer', () => {
   it('should serialize a basic object', () => {

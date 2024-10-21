@@ -17,6 +17,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
+    "@atlaspack/build-cache": "2.12.0",
     "@atlaspack/diagnostic": "2.12.0",
     "@atlaspack/logger": "2.12.0",
     "@atlaspack/profiler": "2.12.0",
@@ -24,12 +25,8 @@
     "@atlaspack/utils": "2.12.0",
     "nullthrows": "^1.1.1"
   },
-  "peerDependencies": {
-    "@atlaspack/core": "^2.12.0"
-  },
   "browser": {
     "./src/process/ProcessWorker.js": false,
-    "./src/threads/ThreadsWorker.js": false,
-    "./src/core-worker.js": "./src/core-worker.browser.js"
+    "./src/threads/ThreadsWorker.js": false
   }
 }

@@ -13,9 +13,9 @@ import type {
 import type {RequestResult, RunAPI} from '../RequestTracker';
 import type {ProjectPath} from '../projectPath';
 
+import {createBuildCache} from '@atlaspack/build-cache';
 import nullthrows from 'nullthrows';
 import {getInvalidationHash} from '../assetUtils';
-import {createBuildCache} from '../buildCache';
 import {invalidateOnFileCreateToInternal} from '../utils';
 import {
   fromProjectPath,

@@ -22,7 +22,7 @@ import PackagerRunner, {type RunPackagerRunnerResult} from './PackagerRunner';
 import Validation, {type ValidationOpts} from './Validation';
 import {AtlaspackConfig} from './AtlaspackConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
-import {clearBuildCaches} from './buildCache';
+import {clearBuildCaches} from '@atlaspack/build-cache';
 import {init as initSourcemaps} from '@parcel/source-map';
 import {init as initRust} from '@atlaspack/rust';
 import WorkerFarm from '@atlaspack/workers';

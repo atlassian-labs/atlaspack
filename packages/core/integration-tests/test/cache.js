@@ -37,7 +37,7 @@ import resolveOptions from '@atlaspack/core/src/resolveOptions';
 import logger from '@atlaspack/logger';
 import sinon from 'sinon';
 import {version} from '@atlaspack/core/package.json';
-import {deserialize} from '@atlaspack/core/src/serializer';
+import {deserialize} from '@atlaspack/build-cache';
 import {hashString} from '@atlaspack/rust';
 
 let inputDir: string;

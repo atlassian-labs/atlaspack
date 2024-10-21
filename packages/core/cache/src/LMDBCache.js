@@ -6,16 +6,18 @@ import type {Readable, Writable} from 'stream';
 import stream from 'stream';
 import path from 'path';
 import {promisify} from 'util';
+
 import {
-  serialize,
   deserialize,
   registerSerializableClass,
-} from '@atlaspack/core';
+  serialize,
+} from '@atlaspack/build-cache';
 import {NodeFS} from '@atlaspack/fs';
 // flowlint-next-line untyped-import:off
-import packageJson from '../package.json';
-// $FlowFixMe
 import lmdb from 'lmdb';
+
+// $FlowFixMe
+import packageJson from '../package.json';
 
 import {FSCache} from './FSCache';
 

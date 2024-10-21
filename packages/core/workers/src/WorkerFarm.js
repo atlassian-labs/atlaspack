@@ -11,7 +11,6 @@ import type {
 } from './types';
 import type {HandleFunction} from './Handle';
 
-import * as coreWorker from './core-worker';
 import * as bus from './bus';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
@@ -21,7 +20,7 @@ import {
   prepareForSerialization,
   restoreDeserializedObject,
   serialize,
-} from '@atlaspack/core';
+} from '@atlaspack/build-cache';
 import ThrowableDiagnostic, {anyToDiagnostic, md} from '@atlaspack/diagnostic';
 import Worker, {type WorkerCall} from './Worker';
 import cpuCount from './cpuCount';
@@ -104,18 +103,7 @@ export default class WorkerFarm extends EventEmitter {
     }
 
     // $FlowFixMe
-    if (process.browser) {
-      if (this.options.workerPath === '@atlaspack/core/worker') {
-        this.localWorker = coreWorker;
-      } else {
-        throw new Error(
-          'No dynamic require possible: ' + this.options.workerPath,
-        );
-      }
-    } else {
-      // $FlowFixMe this must be dynamic
-      this.localWorker = require(this.options.workerPath);
-    }
+    this.localWorker = require(this.options.workerPath);
 
     this.localWorkerInit =
       this.localWorker.childInit != null ? this.localWorker.childInit() : null;

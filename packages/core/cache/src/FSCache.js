@@ -8,14 +8,17 @@ import type {Cache} from './types';
 import stream from 'stream';
 import path from 'path';
 import {promisify} from 'util';
+
 import logger from '@atlaspack/logger';
 import {
-  serialize,
   deserialize,
   registerSerializableClass,
-} from '@atlaspack/core';
+  serialize,
+} from '@atlaspack/build-cache';
+
 // flowlint-next-line untyped-import:off
 import packageJson from '../package.json';
+
 import {WRITE_LIMIT_CHUNK} from './constants';
 
 const pipeline: (Readable, Writable) => Promise<void> = promisify(

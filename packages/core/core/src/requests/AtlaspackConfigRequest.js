@@ -15,6 +15,7 @@ import type {
   ProcessedAtlaspackConfig,
 } from '../types';
 
+import {createBuildCache} from '@atlaspack/build-cache';
 import {
   isDirectoryInside,
   hashObject,
@@ -35,7 +36,6 @@ import invariant from 'assert';
 
 import {AtlaspackConfig} from '../AtlaspackConfig';
 import AtlaspackConfigSchema from '../AtlaspackConfig.schema';
-import {createBuildCache} from '../buildCache';
 import {toProjectPath} from '../projectPath';
 import {requestTypes} from '../RequestTracker';
 import {optionsProxy} from '../utils';

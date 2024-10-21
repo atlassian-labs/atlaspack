@@ -6,10 +6,12 @@ import type {
   ExitHandler,
   WorkerMessage,
 } from '../types';
+
+import {serialize, deserialize} from '@atlaspack/build-cache';
 import nullthrows from 'nullthrows';
-import {setChild} from '../childState';
+
 import {Child} from '../child';
-import {serialize, deserialize} from '@atlaspack/core';
+import {setChild} from '../childState';
 
 export default class ProcessChild implements ChildImpl {
   onMessage: MessageHandler;

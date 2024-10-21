@@ -24,6 +24,7 @@ import type {ConfigRequest} from './requests/ConfigRequest';
 import type {DevDepSpecifier} from './requests/DevDepRequest';
 
 import invariant from 'assert';
+import {createBuildCache} from '@atlaspack/build-cache';
 import {blobToStream, TapStream} from '@atlaspack/utils';
 import {PluginLogger} from '@atlaspack/logger';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
@@ -57,7 +58,6 @@ import {
   createDevDependency,
   getWorkerDevDepRequests,
 } from './requests/DevDepRequest';
-import {createBuildCache} from './buildCache';
 import {getInvalidationId, getInvalidationHash} from './assetUtils';
 import {optionsProxy} from './utils';
 import {invalidateDevDeps} from './requests/DevDepRequest';

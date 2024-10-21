@@ -6,7 +6,7 @@ import {proxy, wrap, transfer} from 'comlink';
 
 const worker = wrap(
   // $FlowFixMe
-  new Worker(new URL('./ParcelWorker.js', import /*:: ("") */.meta.url), {
+  new Worker(new URL('./AtlaspackWorker.js', import /*:: ("") */.meta.url), {
     name: 'Atlaspack Worker Main',
     type: 'module',
   }),

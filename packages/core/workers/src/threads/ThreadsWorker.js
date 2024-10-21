@@ -7,11 +7,13 @@ import type {
   ExitHandler,
   WorkerMessage,
 } from '../types';
+
 import {Worker} from 'worker_threads';
+
 import {
   prepareForSerialization,
   restoreDeserializedObject,
-} from '@atlaspack/core';
+} from '@atlaspack/build-cache';
 
 const WORKER_PATH = require.resolve('./ThreadsChild');
 

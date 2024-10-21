@@ -12,12 +12,11 @@ import type {
 import type {Async, IDisposable} from '@atlaspack/types-internal';
 import type {SharedReference} from './WorkerFarm';
 
-import * as coreWorker from './core-worker';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
+import {deserialize} from '@atlaspack/build-cache';
 import Logger, {patchConsole, unpatchConsole} from '@atlaspack/logger';
 import ThrowableDiagnostic, {anyToDiagnostic} from '@atlaspack/diagnostic';
-import {deserialize} from '@atlaspack/core';
 import bus from './bus';
 import {SamplingProfiler, tracer} from '@atlaspack/profiler';
 import _Handle from './Handle';
@@ -102,16 +101,7 @@ export class Child {
 
   async childInit(module: string, childId: number): Promise<void> {
     // $FlowFixMe
-    if (process.browser) {
-      if (module === '@atlaspack/core/worker') {
-        this.module = coreWorker;
-      } else {
-        throw new Error('No dynamic require possible: ' + module);
-      }
-    } else {
-      // $FlowFixMe this must be dynamic
-      this.module = require(module);
-    }
+    this.module = require(module);
     this.childId = childId;
 
     if (this.module.childInit != null) {
