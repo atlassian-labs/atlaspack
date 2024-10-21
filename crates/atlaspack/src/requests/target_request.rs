@@ -530,14 +530,15 @@ impl TargetRequest {
         is_library,
         loc: None, // TODO
         output_format,
-        should_optimize: self.default_target_options.should_optimize
-          || if is_library {
-            // Libraries are not optimized by default, users must explicitly configure this.
-            target_descriptor.optimize.is_some_and(|o| o == true)
-          } else {
-            target_descriptor.optimize.is_none()
-              || target_descriptor.optimize.is_some_and(|o| o != false)
-          },
+        should_optimize: if is_library {
+          // Libraries are not optimized by default, users must explicitly configure this.
+          self.default_target_options.should_optimize
+            && target_descriptor.optimize.is_some_and(|o| o == true)
+        } else {
+          self.default_target_options.should_optimize
+            && (target_descriptor.optimize.is_none()
+              && target_descriptor.optimize.is_some_and(|o| o == true))
+        },
         should_scope_hoist: (is_library
           || self
             .default_target_options
