@@ -27,14 +27,69 @@ pub struct ConfigFile<T> {
   pub raw: String,
 }
 
+impl ConfigFile<serde_json::Value> {
+  pub fn parse<T: DeserializeOwned>(self) -> anyhow::Result<T> {
+    match serde_json::from_value(self.contents) {
+      Ok(value) => Ok(value),
+      Err(error) => Err(anyhow::anyhow!(error)),
+    }
+  }
+}
+
 // TODO JavaScript configs, invalidations, dev deps, etc
 impl ConfigLoader {
-  pub fn load_json_config_from<Config: DeserializeOwned, F: AsRef<str>>(
+  pub fn get_json_config_from(
     &self,
     search_path: &Path,
-    file_names: &[F],
-  ) -> Result<ConfigFile<Config>, DiagnosticError> {
-    todo!()
+    file_names: &[&str],
+  ) -> anyhow::Result<Option<ConfigFile<serde_json::Value>>> {
+    if file_names.len() == 0 {
+      return Ok(None);
+    }
+
+    let Some(resolved) = find_ancestor_file(&*self.fs, file_names, search_path, &self.project_root)
+    else {
+      return Ok(None);
+    };
+
+    let raw_contents = self.fs.read_to_string(&resolved)?;
+    let contents = serde_json::value::to_value(&raw_contents)?;
+
+    Ok(Some(ConfigFile {
+      contents,
+      path: resolved,
+      raw: "".into(),
+    }))
+  }
+
+  pub fn get_json_config(
+    &self,
+    file_names: &[&str],
+  ) -> anyhow::Result<Option<ConfigFile<serde_json::Value>>> {
+    self.get_json_config_from(&self.search_path, file_names)
+  }
+
+  pub fn get_package_json(&self) -> anyhow::Result<Option<ConfigFile<serde_json::Value>>> {
+    self.get_json_config(&["package.json"])
+  }
+
+  pub fn get_package_json_key<Config: DeserializeOwned>(
+    &self,
+    package_key: &str,
+  ) -> anyhow::Result<Option<ConfigFile<serde_json::Value>>> {
+    let Some(mut package_json) = self.get_package_json()? else {
+      return Ok(None);
+    };
+
+    if let Some(key_contents) = package_json.contents.get_mut(&package_key) {
+      return Ok(Some(ConfigFile {
+        contents: key_contents.take(),
+        path: package_json.path,
+        raw: Default::default(),
+      }));
+    }
+
+    return Ok(None);
   }
 
   pub fn load_json_config<Config: DeserializeOwned>(
