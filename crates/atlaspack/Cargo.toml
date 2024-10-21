@@ -43,3 +43,4 @@ xxhash-rust = { version = "0.8.2", features = ["xxh3"] }
 
 [dev-dependencies]
 mockall = "0.12.1"
+pretty_assertions = "1.4.0"
