@@ -489,7 +489,6 @@ impl TargetRequest {
     let is_library = target_descriptor
       .is_library
       .unwrap_or_else(|| self.default_target_options.is_library.unwrap_or(false));
-    println!("isLibrary {}", is_library);
 
     let target_descriptor_engines = target_descriptor.engines.clone();
     tracing::debug!("Target descriptor engines: {:?}", target_descriptor_engines);
