@@ -1,0 +1,29 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.3/schema.json",
+  "changelog": [
+    "@changesets/changelog-github",
+    {"repo": "atlassian-labs/atlaspack"}
+  ],
+  "commit": false,
+  "fixed": [],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [
+    "caniuse-database",
+    "lmdb-js-lite",
+    "fuzzer",
+    "@atlaspack/repl",
+    "@atlaspack/conditional-bundling-example",
+    "@atlaspack/eslint-example",
+    "@atlaspack/html-example",
+    "@atlaspack/kitchen-sink-example",
+    "@atlaspack/react-hmr-example",
+    "@atlaspack/react-refresh-example",
+    "@atlaspack/simple-example",
+    "@atlaspack/typechecking-example",
+    "@atlaspack/typescript-example",
+    "atlaspack-for-vscode"
+  ]
+}
