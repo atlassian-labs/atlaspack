@@ -19,13 +19,17 @@ use swc_core::{
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualImportsConfig {
-  pub server: Option<bool>,
+  #[serde(default)]
+  pub server: bool,
+  #[serde(default)]
+  pub default_if_undefined: bool,
 }
 
 impl Default for ContextualImportsConfig {
   fn default() -> ContextualImportsConfig {
     ContextualImportsConfig {
-      server: Some(false),
+      server: false,
+      default_if_undefined: false,
     }
   }
 }
@@ -76,9 +80,20 @@ impl ContextualImportsInlineRequireVisitor {
     if_false: Atom,
     if_false_span: Span,
   ) -> Expr {
+    let cond: Expr = Expr::Lit(Lit::Str(cond.into()));
+
+    let ternary_cond = if self.config.default_if_undefined {
+      quote!(
+        "globalThis.__MCOND && globalThis.__MCOND($cond)" as Expr,
+        cond: Expr = cond,
+      )
+    } else {
+      quote!("globalThis.__MCOND($cond)" as Expr, cond: Expr = cond)
+    };
+
     quote!(
-      "globalThis.__MCOND($cond) ? $if_true.default : $if_false.default" as Expr,
-      cond: Expr = Expr::Lit(Lit::Str(cond.into())),
+      "$ternary_cond ? $if_true.default : $if_false.default" as Expr,
+      ternary_cond: Expr = ternary_cond,
       if_true: Expr = self.create_import(if_true, if_true_span),
       if_false: Expr = self.create_import(if_false, if_false_span)
     )
@@ -115,7 +130,7 @@ impl ContextualImportsInlineRequireVisitor {
     self.new_stmts.push(quote!(
       r#"
       Object.defineProperty($obj_ident, "load", {
-        get: () => globalThis.__MCOND($cond) ? $obj_ident.ifTrue : $obj_ident.ifFalse
+        get: () => globalThis.__MCOND && globalThis.__MCOND($cond) ? $obj_ident.ifTrue : $obj_ident.ifFalse
       });
       "# as Stmt,
       cond: Expr = Expr::Lit(Lit::Str(cond.into())),
@@ -178,11 +193,11 @@ impl VisitMut for ContextualImportsInlineRequireVisitor {
     };
 
     match self.config.server {
-      Some(true) => {
+      true => {
         // Write special expression for server
         *node = self.create_lazy_server_object(cond, if_true, if_true_span, if_false, if_false_span)
       }
-      _ => {
+      false => {
         // Update inline expression
         *node = self.create_conditional_expr(cond, if_true, if_true_span, if_false, if_false_span);
       }
@@ -245,6 +260,36 @@ mod tests {
   }
 
   #[test]
+  fn test_import_cond_with_default() {
+    let input_code = r#"
+      const x = importCond('condition-1', 'a', 'b');
+      const y = importCond('condition-2', 'c', 'd');
+      const z = importCond('condition-2', 'c', 'd');
+    "#;
+
+    let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
+      ContextualImportsInlineRequireVisitor::new(
+        context.unresolved_mark,
+        ContextualImportsConfig {
+          default_if_undefined: true,
+          ..Default::default()
+        },
+      )
+    });
+
+    let expected_code = r#"
+      const x = globalThis.__MCOND && globalThis.__MCOND("condition-1") ? require("a").default : require("b").default;
+      const y = globalThis.__MCOND && globalThis.__MCOND("condition-2") ? require("c").default : require("d").default;
+      const z = globalThis.__MCOND && globalThis.__MCOND("condition-2") ? require("c").default : require("d").default;
+    "#;
+
+    assert_eq!(
+      remove_code_whitespace(output_code.as_str()),
+      remove_code_whitespace(expected_code)
+    );
+  }
+
+  #[test]
   fn test_import_cond_shadowed_variable() {
     let input_code = r#"
       importCond('condition', 'a', 'b');
@@ -286,7 +331,10 @@ mod tests {
     let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
       ContextualImportsInlineRequireVisitor::new(
         context.unresolved_mark,
-        ContextualImportsConfig { server: Some(true) },
+        ContextualImportsConfig {
+          server: true,
+          ..Default::default()
+        },
       )
     });
 
@@ -296,7 +344,7 @@ mod tests {
         ifFalse: require("b").default
       };
       Object.defineProperty(conditionab, "load", {
-        get: ()=>globalThis.__MCOND("condition") ? conditionab.ifTrue : conditionab.ifFalse
+        get: ()=>globalThis.__MCOND && globalThis.__MCOND("condition") ? conditionab.ifTrue : conditionab.ifFalse
       });
       conditionab.load;
 
@@ -322,7 +370,10 @@ mod tests {
     let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
       ContextualImportsInlineRequireVisitor::new(
         context.unresolved_mark,
-        ContextualImportsConfig { server: Some(true) },
+        ContextualImportsConfig {
+          server: true,
+          ..Default::default()
+        },
       )
     });
 
@@ -332,7 +383,7 @@ mod tests {
         ifFalse: require("b").default
       };
       Object.defineProperty(conditionab, "load", {
-        get: ()=>globalThis.__MCOND("condition") ? conditionab.ifTrue : conditionab.ifFalse
+        get: ()=>globalThis.__MCOND && globalThis.__MCOND("condition") ? conditionab.ifTrue : conditionab.ifFalse
       });
       conditionab.load;
 
