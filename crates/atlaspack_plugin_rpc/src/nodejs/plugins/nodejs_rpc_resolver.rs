@@ -20,13 +20,14 @@ use serde::{Deserialize, Serialize};
 use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 use super::super::rpc::LoadPluginKind;
 use super::super::rpc::LoadPluginOptions;
+use super::plugin_options::RpcPluginOptions;
 
 pub struct RpcNodejsResolverPlugin {
+  plugin_options: RpcPluginOptions,
   rpc_workers: Arc<NodeJsWorkerCollection>,
   resolve_from: PathBuf,
   specifier: String,
   started: OnceCell<Vec<()>>,
-  project_root: PathBuf,
 }
 
 impl Debug for RpcNodejsResolverPlugin {
@@ -41,11 +42,16 @@ impl RpcNodejsResolverPlugin {
     ctx: &PluginContext,
     plugin: &PluginNode,
   ) -> Result<Self, anyhow::Error> {
+    let plugin_options = RpcPluginOptions {
+      hmr_options: None,
+      project_root: ctx.options.project_root.clone(),
+      mode: ctx.options.mode.clone(),
+    };
     Ok(Self {
+      plugin_options,
       resolve_from: plugin.resolve_from.to_path_buf(),
       specifier: plugin.package_name.clone(),
       rpc_workers,
-      project_root: (&*ctx.options.project_root).to_path_buf(),
       started: OnceCell::new(),
     })
   }
@@ -79,7 +85,7 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
           dependency: (&*ctx.dependency).clone(),
           specifier: (&*ctx.specifier).to_owned(),
           pipeline: ctx.pipeline.clone(),
-          project_root: self.project_root.clone(),
+          options: self.plugin_options.clone(),
         })
         .map_err(anyhow_from_napi)
     })
@@ -93,5 +99,5 @@ pub struct RunResolverResolve {
   pub dependency: Dependency,
   pub specifier: String,
   pub pipeline: Option<String>,
-  pub project_root: PathBuf,
+  pub options: RpcPluginOptions,
 }
