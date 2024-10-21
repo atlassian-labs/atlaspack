@@ -132,7 +132,7 @@ export default declare((api): PluginObj<State> => {
           ) {
             if (
               path.node.arguments.length == 3 &&
-              path.node.arguments.every(arg => arg.type === 'StringLiteral')
+              path.node.arguments.every((arg) => arg.type === 'StringLiteral')
             ) {
               const [cond, ifTrue, ifFalse] = path.node.arguments;
 
