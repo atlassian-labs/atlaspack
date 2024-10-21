@@ -24,6 +24,7 @@ use atlaspack_core::types::*;
 use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 use super::super::rpc::LoadPluginKind;
 use super::super::rpc::LoadPluginOptions;
+use super::plugin_options::RpcPluginOptions;
 
 pub struct NodejsRpcTransformerPlugin {
   rpc_workers: Arc<NodeJsWorkerCollection>,
@@ -31,7 +32,6 @@ pub struct NodejsRpcTransformerPlugin {
   plugin_options: RpcPluginOptions,
   resolve_from: PathBuf,
   specifier: String,
-  project_root: PathBuf,
   started: OnceCell<Vec<()>>,
 }
 
@@ -58,7 +58,6 @@ impl NodejsRpcTransformerPlugin {
       plugin_options,
       specifier: plugin.package_name.clone(),
       resolve_from: (&*plugin.resolve_from).to_path_buf(),
-      project_root: (&*ctx.options.project_root).to_path_buf(),
       started: OnceCell::new(),
     })
   }
@@ -133,21 +132,6 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
   }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RpcHmrOptions {
-  pub port: Option<u16>,
-  pub host: Option<String>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RpcPluginOptions {
-  pub hmr_options: Option<RpcHmrOptions>,
-  pub project_root: PathBuf,
-  pub mode: BuildMode,
-}
-
 /// This Asset mostly replicates the core Asset type however it only features
 /// fields that can be modified by transformers
 #[derive(PartialEq, Clone, Debug, Deserialize, Serialize)]
@@ -192,7 +176,6 @@ pub struct RpcTransformerOpts {
   pub key: String,
   pub options: RpcPluginOptions,
   pub env: Arc<Environment>,
-  pub project_root: PathBuf,
   pub asset: Asset,
 }
 
