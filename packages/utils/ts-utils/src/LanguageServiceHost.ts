@@ -1,0 +1,68 @@
+import type {FileSystem} from '@atlaspack/fs';
+import type {FilePath} from '@atlaspack/types';
+import TypeScriptModule from 'typescript'; // eslint-disable-line import/no-extraneous-dependencies
+import type {
+  CompilerOptions,
+  LanguageServiceHost as ILanguageServiceHost,
+  IScriptSnapshot,
+  ParsedCommandLine,
+} from 'typescript';
+import {FSHost} from './FSHost';
+
+// the typings from flow-typed define the ILanguageServiceHost interface as
+// having its methods as properties with arrow functions. These should probably
+// be methods instead.
+export class LanguageServiceHost extends FSHost implements ILanguageServiceHost {
+  config: ParsedCommandLine;
+  files: Partial<Record<FilePath, {
+    version: number
+  }>>;
+
+  constructor(fs: FileSystem, ts: TypeScriptModule, config: ParsedCommandLine) {
+    super(fs, ts);
+    this.config = config;
+    this.files = {};
+  }
+
+  invalidate(fileName: FilePath) {
+    // When the typescript language server calls "getScriptVersion", it will normalize paths for cross-platform (e.g. C:\myFile.ts on Windows becomes C:/myFile.ts). We need to do the same thing.
+    const normalizedFileName = this.ts.getNormalizedAbsolutePath(fileName);
+    const entry = this.files[normalizedFileName];
+
+    if (entry) {
+      entry.version++;
+    } else {
+      this.files[normalizedFileName] = {
+        version: 0,
+      };
+    }
+  }
+
+  getScriptFileNames(): Array<string> {
+    return this.config.fileNames;
+  }
+
+  getScriptVersion(fileName: FilePath): string {
+    return this.files[fileName] && this.files[fileName].version.toString();
+  }
+
+  getScriptSnapshot(fileName: string): IScriptSnapshot | undefined {
+    if (!this.fileExists(fileName)) {
+      return;
+    }
+
+    const content = this.readFile(fileName);
+
+    if (content) {
+      return this.ts.ScriptSnapshot.fromString(content);
+    }
+  }
+
+  getCompilationSettings(): CompilerOptions {
+    return this.config.options;
+  }
+
+  getDefaultLibFileName(projectOptions: any): string {
+    return this.ts.getDefaultLibFilePath(projectOptions);
+  }
+}
