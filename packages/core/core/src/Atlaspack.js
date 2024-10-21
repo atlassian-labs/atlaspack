@@ -58,6 +58,7 @@ import {
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
+import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 
 registerCoreWithSerializer();
 
@@ -550,6 +551,28 @@ export default class Atlaspack {
 
   async unstable_invalidate(): Promise<void> {
     await this._init();
+  }
+
+  /**
+   * Build the asset graph
+   */
+  async unstable_buildAssetGraph(): Promise<void> {
+    await this._init();
+    await this.#requestTracker.runRequest(
+      createAssetGraphRequestJS({
+        optionsRef: this.#optionsRef,
+        name: 'Main',
+        entries: this.#config.options.entries,
+        shouldBuildLazily: false,
+        lazyIncludes: [],
+        lazyExcludes: [],
+        requestedAssetIds: this.#requestedAssetIds,
+      }),
+    );
+    console.log('Done building asset graph!');
+    console.log('Write request tracker to cache');
+    await this.writeRequestTrackerToCache();
+    console.log('Done writing request tracker to cache');
   }
 
   async unstable_transform(
