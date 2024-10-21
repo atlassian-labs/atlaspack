@@ -36,7 +36,7 @@ import {
   createDevDependency,
   runDevDepRequest,
 } from './DevDepRequest';
-import AtlaspackConfig from '../AtlaspackConfig';
+import {AtlaspackConfig} from '../AtlaspackConfig';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {PluginTracer, tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';

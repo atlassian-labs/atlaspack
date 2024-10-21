@@ -28,7 +28,7 @@ import {normalizePath} from '@atlaspack/utils';
 import {report} from '../ReporterRunner';
 import {getPublicDependency} from '../public/Dependency';
 import PluginOptions from '../public/PluginOptions';
-import AtlaspackConfig from '../AtlaspackConfig';
+import {AtlaspackConfig, type LoadedPlugin} from '../AtlaspackConfig';
 import createAtlaspackConfigRequest, {
   getCachedAtlaspackConfig,
 } from './AtlaspackConfigRequest';
@@ -41,7 +41,6 @@ import {
 } from '../projectPath';
 import {Priority} from '../types';
 import {createBuildCache} from '../buildCache';
-import type {LoadedPlugin} from '../AtlaspackConfig';
 import {createConfig} from '../InternalConfig';
 import {loadPluginConfig, runConfigRequest} from './ConfigRequest';
 import {

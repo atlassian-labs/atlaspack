@@ -4,7 +4,7 @@ import type {
   SemverRange,
   Invalidations,
 } from '@atlaspack/types';
-import type AtlaspackConfig from '../AtlaspackConfig';
+import type {AtlaspackConfig} from '../AtlaspackConfig';
 import type {
   DevDepRequest,
   AtlaspackOptions,

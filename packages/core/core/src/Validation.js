@@ -9,7 +9,7 @@ import path from 'path';
 import {resolveConfig} from '@atlaspack/utils';
 import logger, {PluginLogger} from '@atlaspack/logger';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
-import AtlaspackConfig from './AtlaspackConfig';
+import {AtlaspackConfig} from './AtlaspackConfig';
 import UncommittedAsset from './UncommittedAsset';
 import {createAsset} from './assetUtils';
 import {Asset} from './public/Asset';

@@ -6,7 +6,7 @@ import type {AssetGroup} from '../types';
 import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
 import nullthrows from 'nullthrows';
-import AtlaspackConfig from '../AtlaspackConfig';
+import {AtlaspackConfig} from '../AtlaspackConfig';
 import {report} from '../ReporterRunner';
 import Validation from '../Validation';
 import createAtlaspackConfigRequest from './AtlaspackConfigRequest';

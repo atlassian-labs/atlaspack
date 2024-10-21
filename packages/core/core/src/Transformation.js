@@ -35,7 +35,7 @@ import ThrowableDiagnostic, {
 import {SOURCEMAP_EXTENSIONS} from '@atlaspack/utils';
 
 import {createDependency} from './Dependency';
-import AtlaspackConfig from './AtlaspackConfig';
+import {AtlaspackConfig} from './AtlaspackConfig';
 // TODO: eventually call path request as sub requests
 import {ResolverRunner} from './requests/PathRequest';
 import {

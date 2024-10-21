@@ -35,7 +35,7 @@ import invariant from 'assert';
 
 import AtlaspackConfigSchema from '../AtlaspackConfig.schema';
 import {optionsProxy} from '../utils';
-import AtlaspackConfig from '../AtlaspackConfig';
+import {AtlaspackConfig} from '../AtlaspackConfig';
 import {createBuildCache} from '../buildCache';
 import {toProjectPath} from '../projectPath';
 import {requestTypes} from '../RequestTracker';
