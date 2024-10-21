@@ -4,11 +4,13 @@ pub mod js_callable;
 mod anyhow;
 mod call_method;
 mod console_log;
+mod define_method;
 mod get_function;
 mod transferable;
 
 pub use self::anyhow::*;
 pub use self::call_method::*;
 pub use self::console_log::*;
+pub use self::define_method::*;
 pub use self::get_function::*;
 pub use self::transferable::*;

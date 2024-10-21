@@ -2,8 +2,11 @@ use std::path::PathBuf;
 
 use atlaspack_napi_helpers::anyhow_from_napi;
 use atlaspack_napi_helpers::js_callable::JsCallable;
-use napi::JsObject;
+use napi::{bindgen_prelude::FromNapiValue, JsObject};
 use serde::{Deserialize, Serialize};
+
+use super::super::mappings::public_config::PublicConfig;
+use super::super::mappings::resolve::Resolve;
 
 /// NodejsWorker is the connection to a single JavaScript worker thread
 pub struct NodejsWorker {
@@ -26,7 +29,21 @@ impl NodejsWorker {
   pub fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
     self
       .load_plugin_fn
-      .call_with_return_serde(opts)
+      .call_with_return(
+        move |env| {
+          let obj = env.to_js_value(&opts)?;
+          let mut obj = JsObject::from_unknown(obj)?;
+
+          let public_config = PublicConfig::new(env)?;
+          obj.set_named_property("publicConfig", public_config)?;
+
+          let resolve = Resolve::new(env)?;
+          obj.set_named_property("resolve", resolve)?;
+
+          Ok(vec![obj.into_unknown()])
+        },
+        |_env, _value| Ok(()),
+      )
       .map_err(anyhow_from_napi)
   }
 }
