@@ -1,13 +1,7 @@
 const express = require('express');
 const fs = require('node:fs');
 const path = require('node:path');
-
-const FEATURES = {
-  'my.feature': true,
-  'feature.async.condition': true,
-  'feature.ui': true,
-  'my.feature.lazy': true,
-};
+const FEATURES = require('./features');
 
 const app = express();
 
@@ -21,7 +15,7 @@ app.get('/', (req, res, next) => {
     console.log('Manifest not loaded or found');
   }
   let index = fs.readFileSync('dist/index.html', 'utf-8');
-  const scripts = [];
+  const assets = new Set();
 
   for (const [script, condition] of Object.entries(manifest)) {
     if (script.startsWith('index.')) {
@@ -34,15 +28,18 @@ app.get('/', (req, res, next) => {
         for (const asset of featureManifest[
           state ? 'ifTrueBundles' : 'ifFalseBundles'
         ]) {
-          const script = `<script type="module" src="/${path.relative(
-            'dist/',
-            asset,
-          )}"></script>`;
-          scripts.push(script);
+          console.log('Sending asset', asset, 'for condition', feature);
+
+          assets.add(asset);
         }
       }
     }
   }
+
+  const scripts = Array.from(assets).map(
+    (asset) =>
+      `<script type="module" src="/${path.relative('dist/', asset)}"></script>`,
+  );
 
   const pos = index.indexOf('<script');
   index = `${index.slice(0, pos)}<script>const features = ${JSON.stringify(

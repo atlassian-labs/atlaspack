@@ -7,10 +7,13 @@ const Feature = importCond<
   typeof import('./feature-enabled'),
   typeof import('./feature-disabled')
 >('my.feature', './feature-enabled', './feature-disabled');
+console.log('Feature', Feature);
+
 const FeatureWithUI = importCond<
   typeof import('./feature-ui-enabled'),
   typeof import('./feature-ui-disabled')
 >('feature.ui', './feature-ui-enabled', './feature-ui-disabled');
+console.log('FeatureWithUI', FeatureWithUI);
 
 const LazyComponent = lazy(() => import('./lazy-component'));
 
@@ -25,8 +28,6 @@ function LazyComponentContainer() {
 const App = () => {
   const [showLazyComponent, setShowLazyComponent] = useState(false);
 
-  console.log('FeatureWithUI', FeatureWithUI);
-  console.log('Feature', Feature);
   return (
     <div>
       <p>Hello from React</p>

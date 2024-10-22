@@ -210,7 +210,10 @@ export default (new Runtime({
         assets.push({
           filePath: path.join(__dirname, `/conditions/${cond.publicId}.js`),
           code: assetCode,
-          dependency: cond.ifTrueDependency,
+          // This dependency is important, as it's the last symbol handled in scope hoisting.
+          // That means that scope hoisting will use the module id for this asset to replace the symbol
+          // (rather than the actual conditional deps)
+          dependency: cond.ifFalseDependency,
           env: {sourceType: 'module'},
         });
       }

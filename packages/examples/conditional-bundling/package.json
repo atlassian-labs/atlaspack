@@ -8,11 +8,10 @@
     "build:inspect:on": "PARCEL_WORKERS=0 node --inspect-brk $(yarn bin atlaspack) build --no-cache --feature-flag conditionalBundlingApi=true src/index.html",
     "build:off": "atlaspack build --no-cache --feature-flag conditionalBundlingApi=false src/index.html",
     "build:on": "atlaspack build --no-cache --feature-flag conditionalBundlingApi=true src/index.html",
-    "build:on": "atlaspack build --no-cache --feature-flag conditionalBundlingApi=true src/index.html",
     "dev:off": "npx nodemon -e 'ts, tsx, json, .parcelrc' --watch . --ignore 'dist/' --exec 'yarn build:off && node serve.js'",
     "dev:on": "npx nodemon -e 'ts, tsx, json, .parcelrc' --watch . --ignore 'dist/' --exec 'yarn build:on && node serve.js'",
-    "serve:on": "atlaspack serve --no-cache --feature-flag conditionalBundlingApi=true src/index.html",
-    "serve:off": "atlaspack serve --no-cache --feature-flag conditionalBundlingApi=false src/index.html"
+    "serve:off": "atlaspack serve --no-cache --feature-flag conditionalBundlingApi=false src/index.html",
+    "serve:on": "atlaspack serve --no-cache --feature-flag conditionalBundlingApi=true src/index.html"
   },
   "dependencies": {
     "@atlaskit/button": "*",
