@@ -1069,6 +1069,8 @@ export class TargetResolver {
             engines: descriptor.engines ?? pkgEngines,
             context: descriptor.context,
             includeNodeModules: descriptor.includeNodeModules,
+            unstableSingleFileOutput:
+              descriptor.__unstable_singleFileOutput ?? false,
             outputFormat:
               descriptor.outputFormat ??
               this.options.defaultTargetOptions.outputFormat ??

@@ -77,6 +77,7 @@ export type Environment = {|
   shouldScopeHoist: boolean,
   sourceMap: ?TargetSourceMapOptions,
   loc: ?InternalSourceLocation,
+  unstableSingleFileOutput: boolean,
 |};
 
 export type InternalSourceLocation = {|
