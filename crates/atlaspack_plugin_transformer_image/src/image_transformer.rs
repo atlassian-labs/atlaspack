@@ -20,11 +20,7 @@ impl AtlaspackImageTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackImageTransformerPlugin {
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     if asset.bundle_behavior.is_none() {

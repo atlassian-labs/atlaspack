@@ -230,6 +230,8 @@ dependencies = [
  "indexmap 2.5.0",
  "mockall",
  "num_cpus",
+ "once_cell",
+ "parking_lot",
  "pathdiff",
  "petgraph",
  "pretty_assertions",

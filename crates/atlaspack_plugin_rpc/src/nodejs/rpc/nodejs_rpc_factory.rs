@@ -34,7 +34,7 @@ impl RpcFactory for NodejsRpcFactory {
       let Ok(worker) = rx_worker.recv() else {
         return Err(anyhow!("Unable to receive NodejsWorker"));
       };
-      workers.push(worker)
+      workers.push(Arc::new(worker))
     }
 
     Ok(Arc::new(NodejsWorkerFarm::new(workers)))

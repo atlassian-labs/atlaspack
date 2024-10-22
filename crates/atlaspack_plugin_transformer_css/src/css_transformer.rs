@@ -65,7 +65,7 @@ impl AtlaspackCssTransformerPlugin {
     })
   }
 
-  fn is_css_module(&mut self, asset: &Asset) -> bool {
+  fn is_css_module(&self, asset: &Asset) -> bool {
     let is_style_tag = asset
       .meta
       .get("type")
@@ -95,11 +95,7 @@ impl AtlaspackCssTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackCssTransformerPlugin {
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let css_modules = if self.is_css_module(&asset) {
       Some(lightningcss::css_modules::Config {
         dashed_idents: asset.is_source && self.css_modules_config.dashed_idents.unwrap_or_default(),

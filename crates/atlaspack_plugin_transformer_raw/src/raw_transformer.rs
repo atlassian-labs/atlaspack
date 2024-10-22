@@ -13,11 +13,7 @@ impl AtlaspackRawTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackRawTransformerPlugin {
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     asset.bundle_behavior = Some(BundleBehavior::Isolated);

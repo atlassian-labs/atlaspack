@@ -15,11 +15,7 @@ impl AtlaspackJsonTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackJsonTransformerPlugin {
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     let code = std::str::from_utf8(asset.code.bytes())?;

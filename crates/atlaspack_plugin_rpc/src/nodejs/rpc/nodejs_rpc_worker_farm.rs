@@ -17,7 +17,7 @@ pub struct NodejsWorkerFarm {
 }
 
 impl NodejsWorkerFarm {
-  pub fn new(workers: Vec<NodejsWorker>) -> Self {
+  pub fn new(workers: Vec<Arc<NodejsWorker>>) -> Self {
     Self {
       workers: Arc::new(NodeJsWorkerCollection {
         current_index: Default::default(),
@@ -32,8 +32,8 @@ impl RpcWorker for NodejsWorkerFarm {
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
-  ) -> Result<Box<dyn ResolverPlugin>, anyhow::Error> {
-    Ok(Box::new(RpcNodejsResolverPlugin::new(
+  ) -> Result<Arc<dyn ResolverPlugin>, anyhow::Error> {
+    Ok(Arc::new(RpcNodejsResolverPlugin::new(
       self.workers.clone(),
       ctx,
       plugin,
@@ -44,8 +44,8 @@ impl RpcWorker for NodejsWorkerFarm {
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn TransformerPlugin>> {
-    Ok(Box::new(NodejsRpcTransformerPlugin::new(
+  ) -> anyhow::Result<Arc<dyn TransformerPlugin>> {
+    Ok(Arc::new(NodejsRpcTransformerPlugin::new(
       self.workers.clone(),
       ctx,
       plugin,
@@ -111,7 +111,7 @@ impl RpcWorker for NodejsWorkerFarm {
 
 pub struct NodeJsWorkerCollection {
   current_index: AtomicUsize,
-  workers: Vec<NodejsWorker>,
+  workers: Vec<Arc<NodejsWorker>>,
 }
 
 impl NodeJsWorkerCollection {
@@ -139,14 +139,23 @@ impl NodeJsWorkerCollection {
   /// Execute function on all Nodejs worker threads
   pub fn exec_on_all<F, R>(&self, eval: F) -> anyhow::Result<Vec<R>>
   where
-    F: Fn(&NodejsWorker) -> anyhow::Result<R>,
+    F: Send + Sync + 'static + Copy + Fn(&NodejsWorker) -> anyhow::Result<R>,
   {
-    let mut results = vec![];
+    // let mut results = vec![];
+    let mut handles = vec![];
 
     for worker in self.workers.iter() {
-      results.push(eval(worker)?)
+      let worker = worker.clone();
+      handles.push(std::thread::spawn(move || {
+        eval(&worker);
+      }));
+      // results.push(eval(worker)?)
     }
 
-    Ok(results)
+    for handle in handles.drain(0..) {
+      handle.join();
+    }
+
+    Ok(Vec::new())
   }
 }

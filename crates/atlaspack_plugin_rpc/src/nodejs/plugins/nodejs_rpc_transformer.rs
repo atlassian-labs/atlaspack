@@ -52,6 +52,16 @@ impl NodejsRpcTransformerPlugin {
       project_root: ctx.options.project_root.clone(),
       mode: ctx.options.mode.clone(),
     };
+    let resolve_from = (&*plugin.resolve_from).to_path_buf();
+    let specifier = plugin.package_name.clone();
+
+    rpc_workers.exec_on_all(move |worker| {
+      worker.load_plugin(LoadPluginOptions {
+        kind: LoadPluginKind::Transformer,
+        specifier: specifier.clone(),
+        resolve_from: resolve_from.clone(),
+      })
+    })?;
     Ok(Self {
       rpc_workers,
       plugin: plugin.clone(),
@@ -70,21 +80,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     hasher.finish()
   }
 
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
-    self.started.get_or_try_init(|| {
-      self.rpc_workers.exec_on_all(|worker| {
-        worker.load_plugin(LoadPluginOptions {
-          kind: LoadPluginKind::Transformer,
-          specifier: self.specifier.clone(),
-          resolve_from: self.resolve_from.clone(),
-        })
-      })
-    })?;
-
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
 

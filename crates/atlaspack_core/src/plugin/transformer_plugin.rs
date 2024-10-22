@@ -28,7 +28,7 @@ pub struct TransformResult {
   pub invalidate_on_file_change: Vec<PathBuf>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TransformContext {
   environment: Arc<Environment>,
 }
@@ -66,7 +66,7 @@ pub trait TransformerPlugin: Any + Debug + Send + Sync {
   }
   /// Transform the asset and/or add new assets
   fn transform(
-    &mut self,
+    &self,
     context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, anyhow::Error>;

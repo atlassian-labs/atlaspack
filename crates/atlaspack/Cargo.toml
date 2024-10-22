@@ -29,6 +29,8 @@ anyhow = "1.0.82"
 dyn-hash = "0.x"
 indexmap = "2.2.6"
 num_cpus = "1.16.0"
+once_cell = { version = "1.19.0" }
+parking_lot = "0.12"
 pathdiff = "0.2.1"
 petgraph = "0.x"
 rand = "0.8.5"

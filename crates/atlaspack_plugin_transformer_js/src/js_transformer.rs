@@ -94,7 +94,7 @@ impl AtlaspackJsTransformerPlugin {
     })
   }
 
-  fn env_variables(&mut self, asset: &Asset) -> HashMap<Atom, Atom> {
+  fn env_variables(&self, asset: &Asset) -> HashMap<Atom, Atom> {
     if self.options.env.is_none()
       || self
         .options
@@ -131,7 +131,7 @@ impl AtlaspackJsTransformerPlugin {
             }
           }
 
-          self.cache.env_variables.disabled = Some(vars.clone());
+          // self.cache.env_variables.disabled = Some(vars.clone());
 
           vars
         }
@@ -145,7 +145,7 @@ impl AtlaspackJsTransformerPlugin {
             .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
             .collect::<HashMap<Atom, Atom>>();
 
-          self.cache.env_variables.enabled = Some(vars.clone());
+          // self.cache.env_variables.enabled = Some(vars.clone());
 
           vars
         }
@@ -165,7 +165,7 @@ impl AtlaspackJsTransformerPlugin {
           }
         }
 
-        self.cache.env_variables.allowlist = Some(vars.clone());
+        // self.cache.env_variables.allowlist = Some(vars.clone());
 
         vars
       }
@@ -184,11 +184,7 @@ impl fmt::Debug for AtlaspackJsTransformerPlugin {
 impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does a lot of equivalent work to `JSTransformer::transform` in
   /// `packages/transformers/js`
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let file_type = asset.file_type.clone();
     let is_node = env.context.is_node();

@@ -72,8 +72,8 @@ impl RpcWorker for TestingRpcWorker {
     &self,
     _ctx: &PluginContext,
     _plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn ResolverPlugin>> {
-    Ok(Box::new(TestingRpcPlugin("RpcResolverPlugin".into())))
+  ) -> anyhow::Result<Arc<dyn ResolverPlugin>> {
+    Ok(Arc::new(TestingRpcPlugin("RpcResolverPlugin".into())))
   }
 
   fn create_runtime(
@@ -88,8 +88,8 @@ impl RpcWorker for TestingRpcWorker {
     &self,
     _ctx: &PluginContext,
     _plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn TransformerPlugin>> {
-    Ok(Box::new(TestingRpcPlugin("RpcTransformerPlugin".into())))
+  ) -> anyhow::Result<Arc<dyn TransformerPlugin>> {
+    Ok(Arc::new(TestingRpcPlugin("RpcTransformerPlugin".into())))
   }
 }
 
@@ -178,7 +178,7 @@ impl RuntimePlugin for TestingRpcPlugin {
 
 impl TransformerPlugin for TestingRpcPlugin {
   fn transform(
-    &mut self,
+    &self,
     _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, anyhow::Error> {
