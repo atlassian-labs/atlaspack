@@ -2,17 +2,15 @@
 
 import type {Symbol as NapiSymbol} from '@atlaspack/rust';
 import type {
-  AssetSymbols as ClassicAssetSymbols,
-  MutableAssetSymbols as ClassicMutableAssetSymbols,
-  MutableDependencySymbols as ClassicMutableDependencySymbols,
+  AssetSymbols as IAssetSymbols,
+  MutableAssetSymbols as IMutableAssetSymbols,
+  MutableDependencySymbols as IMutableDependencySymbols,
   Symbol,
   SourceLocation,
   Meta,
 } from '@atlaspack/types';
 
-export class MutableDependencySymbols
-  implements ClassicMutableDependencySymbols
-{
+export class MutableDependencySymbols implements IMutableDependencySymbols {
   #symbols: Map<Symbol, DependencyAssetSymbol>;
   #locals: Set<Symbol>;
 
@@ -77,7 +75,7 @@ export class MutableDependencySymbols
   }
 }
 
-export class AssetSymbols implements ClassicAssetSymbols {
+export class AssetSymbols implements IAssetSymbols {
   #symbols: Map<Symbol, AssetSymbol>;
   #locals: Set<Symbol>;
 
@@ -129,7 +127,7 @@ export class AssetSymbols implements ClassicAssetSymbols {
   }
 }
 
-export class MutableAssetSymbols implements ClassicMutableAssetSymbols {
+export class MutableAssetSymbols implements IMutableAssetSymbols {
   #symbols: Map<Symbol, AssetSymbol>;
   #locals: Set<Symbol>;
 

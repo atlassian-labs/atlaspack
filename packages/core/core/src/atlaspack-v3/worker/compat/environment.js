@@ -2,7 +2,7 @@
 
 import type {Environment as NapiEnvironment} from '@atlaspack/rust';
 import type {
-  Environment as ClassicEnvironment,
+  Environment as IEnvironment,
   EnvironmentContext,
   Engines,
   PackageName,
@@ -14,7 +14,7 @@ import type {
   EnvironmentFeature,
 } from '@atlaspack/types';
 
-export class Environment implements ClassicEnvironment {
+export class Environment implements IEnvironment {
   id: string;
   includeNodeModules:
     | boolean

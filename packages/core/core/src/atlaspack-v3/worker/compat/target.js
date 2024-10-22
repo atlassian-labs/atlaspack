@@ -2,13 +2,13 @@
 
 import type {Target as NapiTarget} from '@atlaspack/rust';
 import type {
-  Target as ClassicTarget,
+  Target as ITarget,
   FilePath,
   Environment,
   SourceLocation,
 } from '@atlaspack/types';
 
-export class Target implements ClassicTarget {
+export class Target implements ITarget {
   distEntry: ?FilePath;
   distDir: FilePath;
   env: Environment;

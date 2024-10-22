@@ -4,15 +4,15 @@ import type {FileSystem, JsCallable} from '@atlaspack/rust';
 import type {
   Encoding,
   FilePath,
-  FileSystem as ClassicFileSystem,
-} from '@atlaspack/types-internal';
+  FileSystem as IFileSystem,
+} from '@atlaspack/types';
 
 import {jsCallable} from './jsCallable';
 
 export class FileSystemV3 implements FileSystem {
-  #fs: ClassicFileSystem;
+  #fs: IFileSystem;
 
-  constructor(fs: ClassicFileSystem) {
+  constructor(fs: IFileSystem) {
     this.#fs = fs;
   }
 
