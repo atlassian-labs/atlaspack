@@ -9,12 +9,16 @@ pub enum Entry<'a> {
   File(&'a str),
 }
 
-pub fn find_ancestor<'a, P: AsRef<Path>>(
+pub fn find_ancestor<'a, F, R>(
   fs: &dyn FileSystem,
   entries: &[Entry<'a>],
-  from: P,
-  root: P,
-) -> Option<PathBuf> {
+  from: F,
+  root: R,
+) -> Option<PathBuf>
+where
+  F: AsRef<Path>,
+  R: AsRef<Path>,
+{
   for dir in from.as_ref().ancestors() {
     for entry in entries {
       match entry {
@@ -41,24 +45,37 @@ pub fn find_ancestor<'a, P: AsRef<Path>>(
   None
 }
 
-pub fn find_ancestor_directory<P: AsRef<Path>>(
+pub fn find_ancestor_directory<D, F, R>(
   fs: &dyn FileSystem,
-  dirnames: &[&str],
-  from: P,
-  root: P,
-) -> Option<PathBuf> {
-  let entries: Vec<Entry> = dirnames.iter().map(|d| Entry::Directory(d)).collect();
+  dirnames: &[D],
+  from: F,
+  root: R,
+) -> Option<PathBuf>
+where
+  D: AsRef<str>,
+  F: AsRef<Path>,
+  R: AsRef<Path>,
+{
+  let entries: Vec<Entry> = dirnames
+    .iter()
+    .map(|d| Entry::Directory(d.as_ref()))
+    .collect();
 
   find_ancestor(fs, &entries, from, root)
 }
 
-pub fn find_ancestor_file<P: AsRef<Path>>(
+pub fn find_ancestor_file<S, F, R>(
   fs: &dyn FileSystem,
-  filenames: &[&str],
-  from: P,
-  root: P,
-) -> Option<PathBuf> {
-  let entries: Vec<Entry> = filenames.iter().map(|d| Entry::File(d)).collect();
+  filenames: &[S],
+  from: F,
+  root: R,
+) -> Option<PathBuf>
+where
+  S: AsRef<str>,
+  F: AsRef<Path>,
+  R: AsRef<Path>,
+{
+  let entries: Vec<Entry> = filenames.iter().map(|d| Entry::File(d.as_ref())).collect();
 
   find_ancestor(fs, &entries, from, root)
 }
