@@ -9,8 +9,8 @@ import type {FileSystem} from '@atlaspack/fs';
 import type {FilePath} from '@atlaspack/types';
 
 import path from 'path';
+import {registerSerializableClass} from '@atlaspack/build-cache';
 import {ncp} from '@atlaspack/fs';
-import {registerSerializableClass} from '@atlaspack/core';
 import pkg from '../package.json';
 import {moduleRequestsFromDependencyMap} from './utils';
 

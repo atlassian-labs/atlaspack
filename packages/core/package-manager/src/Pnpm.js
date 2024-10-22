@@ -6,11 +6,11 @@ import path from 'path';
 import fs from 'fs';
 import commandExists from 'command-exists';
 import spawn from 'cross-spawn';
+import {registerSerializableClass} from '@atlaspack/build-cache';
 import logger from '@atlaspack/logger';
 import split from 'split2';
 import JSONParseStream from './JSONParseStream';
 import promiseFromProcess from './promiseFromProcess';
-import {registerSerializableClass} from '@atlaspack/core';
 import {exec, npmSpecifierFromModuleRequest} from './utils';
 
 // $FlowFixMe

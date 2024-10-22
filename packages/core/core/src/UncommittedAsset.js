@@ -14,6 +14,7 @@ import type {Asset, Dependency, AtlaspackOptions, Invalidations} from './types';
 import invariant from 'assert';
 import {Readable} from 'stream';
 import SourceMap from '@parcel/source-map';
+import {serializeRaw} from '@atlaspack/build-cache';
 import {
   blobToStream,
   bufferStream,
@@ -23,7 +24,6 @@ import {
   SOURCEMAP_RE,
 } from '@atlaspack/utils';
 import {hashString, hashBuffer, Hash} from '@atlaspack/rust';
-import {serializeRaw} from './serializer';
 import {createDependency, mergeDependencies} from './Dependency';
 import {mergeEnvironments} from './Environment';
 import {ATLASPACK_VERSION} from './constants';
