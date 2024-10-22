@@ -52,13 +52,13 @@ pub fn find_ancestor_directory<P: AsRef<Path>>(
   find_ancestor(fs, &entries, from, root)
 }
 
-pub fn find_ancestor_file<P: AsRef<Path>>(
+pub fn find_ancestor_file<F: AsRef<str>, P: AsRef<Path>>(
   fs: &dyn FileSystem,
-  filenames: &[&str],
+  filenames: &[F],
   from: P,
   root: P,
 ) -> Option<PathBuf> {
-  let entries: Vec<Entry> = filenames.iter().map(|d| Entry::File(d)).collect();
+  let entries: Vec<Entry> = filenames.iter().map(|d| Entry::File(d.as_ref())).collect();
 
   find_ancestor(fs, &entries, from, root)
 }

@@ -6,7 +6,7 @@ use atlaspack_napi_helpers::js_callable::JsCallable;
 use napi::{bindgen_prelude::FromNapiValue, JsObject};
 use serde::{Deserialize, Serialize};
 
-use super::super::mappings::public_config::PublicConfig;
+use super::super::mappings::public_config::NapiConfigLoader;
 use super::super::mappings::resolve::Resolve;
 
 /// NodejsWorker is the connection to a single JavaScript worker thread
@@ -39,7 +39,7 @@ impl NodejsWorker {
           let obj = env.to_js_value(&opts)?;
           let mut obj = JsObject::from_unknown(obj)?;
 
-          let public_config = PublicConfig::new(env, config_loader)?;
+          let public_config = NapiConfigLoader::new(env, config_loader)?;
           obj.set_named_property("publicConfig", public_config)?;
 
           let resolve = Resolve::new(env)?;
