@@ -87,11 +87,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     hasher.finish()
   }
 
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let state = self.get_or_init_state()?;
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();

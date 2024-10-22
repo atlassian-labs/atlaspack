@@ -12,11 +12,7 @@ impl AtlaspackInlineStringTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     asset.bundle_behavior = Some(BundleBehavior::Inline);
@@ -47,7 +43,7 @@ mod tests {
   #[test]
   fn returns_inline_string_asset() {
     let file_system = Arc::new(InMemoryFileSystem::default());
-    let mut plugin = AtlaspackInlineStringTransformerPlugin::new(&PluginContext {
+    let plugin = AtlaspackInlineStringTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
         fs: file_system.clone(),
         project_root: PathBuf::default(),
