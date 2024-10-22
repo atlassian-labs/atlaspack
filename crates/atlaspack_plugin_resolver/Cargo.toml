@@ -7,7 +7,7 @@ description = "Resolver Plugin for the Atlaspack Bundler"
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
-anyhow = "1"
+anyhow = { workspace = true }
 
 [dev-dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }

@@ -5,8 +5,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.82"
-mockall = "0.12.1"
+anyhow = { workspace = true }
+mockall = { workspace = true }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
-serde = { version = "1.0.200", features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }

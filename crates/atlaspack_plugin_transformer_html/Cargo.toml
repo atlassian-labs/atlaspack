@@ -7,12 +7,12 @@ description = "HTML transformer plugin for the Atlaspack Bundler"
 
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
-anyhow = "1"
+anyhow = { workspace = true }
 # Using git version because on crates.io the packages have quite stale and incompatible versions
-html5ever = { git = "https://github.com/servo/html5ever", rev = "a831e82fcee980d80f53699dc14bdfc39a17dc5f" }
-markup5ever = { git = "https://github.com/servo/html5ever", rev = "a831e82fcee980d80f53699dc14bdfc39a17dc5f" }
-markup5ever_rcdom = { git = "https://github.com/servo/html5ever", rev = "a831e82fcee980d80f53699dc14bdfc39a17dc5f" }
+html5ever = { workspace = true }
+markup5ever = { workspace = true }
+markup5ever_rcdom = { workspace = true }
 
 [dev-dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
-pretty_assertions = "1.4.0"
+pretty_assertions = { workspace = true }

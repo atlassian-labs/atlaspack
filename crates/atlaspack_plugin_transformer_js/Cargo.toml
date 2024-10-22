@@ -16,14 +16,14 @@ harness = false
 atlaspack_core = { path = "../atlaspack_core" }
 atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 
-anyhow = "1"
-glob-match = "0.2.1"
-indexmap = "2.2.6"
-serde = { version = "1.0.200", features = ["derive"] }
-swc_core = { version = "0.96", features = ["ecma_ast"] }
+anyhow = { workspace = true }
+glob-match = { workspace = true }
+indexmap = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+swc_core = { workspace = true, features = ["ecma_ast"] }
 
 [dev-dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 
-criterion = "0.5.1"
-pretty_assertions = "1.4.0"
+criterion = { workspace = true }
+pretty_assertions = { workspace = true }

@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-browserslist-rs = "0.16"
-lazy_static = "1.0"
-thiserror = "1.0"
-tinyvec = { version = "1.8", features = ["alloc", "serde"] }
-serde = "1.0"
-serde_json = "1.0"
+browserslist-rs = { workspace = true }
+lazy_static = { workspace = true }
+thiserror = { workspace = true }
+tinyvec = { workspace = true, features = ["alloc", "serde"] }
+serde = { workspace = true }
+serde_json = { workspace = true }

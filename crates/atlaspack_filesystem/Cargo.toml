@@ -5,12 +5,12 @@ edition = "2021"
 description = "FileSystem wrapper trait for use in Atlaspack codebase."
 
 [dependencies]
-mockall = "0.12.1"
-xxhash-rust = { version = "0.8.2", features = ["xxh3"] }
-anyhow = "1.0.86"
+mockall = { workspace = true }
+xxhash-rust = { workspace = true, features = ["xxh3"] }
+anyhow = { workspace = true }
 
 [dev-dependencies]
-assert_fs = "1.1.1"
+assert_fs = { workspace = true }
 
 [target.'cfg(windows)'.dev-dependencies]
-is_elevated = "0.1.2"
+is_elevated = { workspace = true }

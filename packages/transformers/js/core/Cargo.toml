@@ -8,8 +8,8 @@ edition = "2021"
 crate-type = ["rlib"]
 
 [dependencies]
-thiserror = "1.0.63"
-swc_core = { version = "0.96", features = [
+thiserror = { workspace = true }
+swc_core = { workspace = true, features = [
   "common",
   "common_ahash",
   "common_sourcemap",
@@ -29,23 +29,23 @@ swc_core = { version = "0.96", features = [
   "stacker"
 ] }
 
-sourcemap = "*"
-swc_ecma_parser = "*"
-indoc = "1.0.3"
-serde = "1.0.123"
-serde_bytes = "0.11.5"
-Inflector = "0.11.4"
-data-encoding = "2.3.2"
-sha-1 = "0.10.0"
-dunce = "1.0.1"
-pathdiff = "0.2.0"
-path-slash = "0.1.4"
-indexmap = "1.9.2"
+sourcemap = { workspace = true }
+swc_ecma_parser = { workspace = true }
+indoc = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
+Inflector = { workspace = true }
+data-encoding = { workspace = true }
+sha-1 = { workspace = true }
+dunce = { workspace = true }
+pathdiff = { workspace = true }
+path-slash = { workspace = true }
+indexmap = { workspace = true }
 atlaspack-macros = { path = "../../../../crates/macros" }
 atlaspack_core = { path = "../../../../crates/atlaspack_core" }
 atlaspack_contextual_imports = { path = "../../../../crates/atlaspack_contextual_imports" }
 atlaspack_swc_runner = { path = "../../../../crates/atlaspack_swc_runner" }
-parking_lot = "0.12"
-regex = "1.10.5"
-tracing = "0.1.40"
-tracing-test = "0.2.5"
+parking_lot = { workspace = true }
+regex = { workspace = true }
+tracing = { workspace = true }
+tracing-test = { workspace = true }

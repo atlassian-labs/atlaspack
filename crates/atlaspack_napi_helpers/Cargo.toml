@@ -7,16 +7,16 @@ edition = "2021"
 [lib]
 
 [dependencies]
-serde = "1"
-anyhow = "1"
-napi = { version = "2", features = ["serde-json", "napi4", "napi5", "async"] }
-once_cell = { version = "1" }
+serde = { workspace = true }
+anyhow = { workspace = true }
+napi = { workspace = true, features = ["serde-json", "napi4", "napi5", "async"] }
+once_cell = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-napi = { version = "2", features = ["serde-json"] }
+napi = { workspace = true, features = ["serde-json"] }
 
 [dev-dependencies]
-napi = { version = "2", features = ["serde-json", "napi4", "napi5", "async", "noop"]}
+napi = { workspace = true, features = ["serde-json", "napi4", "napi5", "async", "noop"]}
 
 [build-dependencies]
-napi-build = "2"
+napi-build = { workspace = true }
