@@ -5,7 +5,7 @@ import {NodeFS} from './NodeFS';
 import {getVcsStateSnapshot, getEventsSince} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types-internal';
 import type {Event, Options as WatcherOptions} from '@parcel/watcher';
-import {registerSerializableClass} from '@atlaspack/core';
+import {registerSerializableClass} from '@atlaspack/build-cache';
 
 // $FlowFixMe
 import packageJSON from '../package.json';
