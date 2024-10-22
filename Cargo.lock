@@ -227,13 +227,13 @@ dependencies = [
  "atlaspack_plugin_transformer_raw",
  "atlaspack_plugin_transformer_yaml",
  "dyn-hash",
- "indexmap 2.5.0",
+ "indexmap 1.9.3",
  "mockall",
  "num_cpus",
  "pathdiff",
  "petgraph",
  "pretty_assertions",
- "rand 0.8.5",
+ "rand",
  "rayon",
  "regex",
  "serde",
@@ -380,7 +380,7 @@ dependencies = [
  "atlaspack_package_manager",
  "derive_builder",
  "glob-match",
- "indexmap 2.5.0",
+ "indexmap 1.9.3",
  "mockall",
  "pathdiff",
  "serde",
@@ -580,7 +580,7 @@ dependencies = [
  "atlaspack_filesystem",
  "criterion",
  "glob-match",
- "indexmap 2.5.0",
+ "indexmap 1.9.3",
  "pretty_assertions",
  "serde",
  "swc_core",
@@ -1814,6 +1814,8 @@ dependencies = [
  "libc",
  "libgit2-sys",
  "log",
+ "openssl-probe",
+ "openssl-sys",
  "url",
 ]
 
@@ -2470,7 +2472,9 @@ checksum = "10472326a8a6477c3c20a64547b0059e4b0d086869eee31e6d7da728a8eb7224"
 dependencies = [
  "cc",
  "libc",
+ "libssh2-sys",
  "libz-sys",
+ "openssl-sys",
  "pkg-config",
 ]
 
@@ -2492,6 +2496,20 @@ checksum = "0e7bb23d733dfcc8af652a78b7bf232f0e967710d044732185e561e47c0336b6"
 dependencies = [
  "cc",
  "libc",
+]
+
+[[package]]
+name = "libssh2-sys"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2dc8a030b787e2119a731f1951d6a773e2280c660f8ec4b0f5e1505a386e71ee"
+dependencies = [
+ "cc",
+ "libc",
+ "libz-sys",
+ "openssl-sys",
+ "pkg-config",
+ "vcpkg",
 ]
 
 [[package]]
@@ -2574,7 +2592,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "rand 0.9.0-alpha.2",
+ "rand",
  "rayon",
  "thiserror",
  "tracing",
@@ -3408,7 +3426,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d5285893bb5eb82e6aaf5d59ee909a06a16737a8970984dd7746ba9283498d6"
 dependencies = [
  "phf_shared 0.10.0",
- "rand 0.8.5",
+ "rand",
 ]
 
 [[package]]
@@ -3418,7 +3436,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48e4cc64c2ad9ebe670cb8fd69dd50ae301650392e81c05f9bfcb2d5bdbc24b0"
 dependencies = [
  "phf_shared 0.11.2",
- "rand 0.8.5",
+ "rand",
 ]
 
 [[package]]
@@ -3729,19 +3747,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34af8d1a0e25924bc5b7c43c079c942339d8f0a8b57c39049bef581b46327404"
 dependencies = [
  "libc",
- "rand_chacha 0.3.1",
- "rand_core 0.6.4",
-]
-
-[[package]]
-name = "rand"
-version = "0.9.0-alpha.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3e256ff62cee3e03def855c4d4260106d2bb1696fdc01af03e9935b993720a5"
-dependencies = [
- "rand_chacha 0.9.0-alpha.2",
- "rand_core 0.9.0-alpha.2",
- "zerocopy",
+ "rand_chacha",
+ "rand_core",
 ]
 
 [[package]]
@@ -3751,17 +3758,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6c10a63a0fa32252be49d21e7709d4d4baf8d231c2dbce1eaa8141b9b127d88"
 dependencies = [
  "ppv-lite86",
- "rand_core 0.6.4",
-]
-
-[[package]]
-name = "rand_chacha"
-version = "0.9.0-alpha.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d299e9db34f6623b2a9e86c015d6e173d5f46d64d4b9b8cc46ae8a982a50b04c"
-dependencies = [
- "ppv-lite86",
- "rand_core 0.9.0-alpha.2",
+ "rand_core",
 ]
 
 [[package]]
@@ -3771,16 +3768,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom",
-]
-
-[[package]]
-name = "rand_core"
-version = "0.9.0-alpha.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4e93f5a5e3c528cda9acb0928c31b2ba868c551cc46e67b778075e34aab9906"
-dependencies = [
- "getrandom",
- "zerocopy",
 ]
 
 [[package]]
@@ -3818,8 +3805,8 @@ dependencies = [
  "once_cell",
  "paste",
  "profiling",
- "rand 0.8.5",
- "rand_chacha 0.3.1",
+ "rand",
+ "rand_chacha",
  "simd_helpers",
  "system-deps",
  "thiserror",
@@ -4339,7 +4326,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46a75011ea1c0d5c46e9e57df03ce81f5c7f0a9e199086334a1f9c0a541e0826"
 dependencies = [
  "once_cell",
- "rand 0.8.5",
+ "rand",
  "sentry-types",
  "serde",
  "serde_json",
@@ -4386,7 +4373,7 @@ checksum = "4519c900ce734f7a0eb7aba0869dfb225a7af8820634a7dd51449e3b093cfb7c"
 dependencies = [
  "debugid",
  "hex",
- "rand 0.8.5",
+ "rand",
  "serde",
  "serde_json",
  "thiserror",

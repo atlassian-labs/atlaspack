@@ -4,15 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = { version = "1.0" }
-git2 = { version = "0.19", default-features = false }
-hex = "0.4"
-nom = "7.1"
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9"
-tracing = "0.1"
-tracing-subscriber = "0.3"
+anyhow = { workspace = true }
+git2 = { workspace = true, default-features = false }
+hex = { workspace = true }
+nom = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_yaml = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [dev-dependencies]
-clap = { version = "4.5", features = ["derive"] }
-serde_json = "1.0"
+clap = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }

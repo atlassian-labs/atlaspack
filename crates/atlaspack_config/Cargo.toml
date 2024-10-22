@@ -12,13 +12,13 @@ atlaspack_core = { path = "../atlaspack_core" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 atlaspack_package_manager = { path = "../atlaspack_package_manager" }
 
-derive_builder = "0.20.0"
-glob-match = "0.2.1"
-indexmap = { version = "2.2.6", features = ["serde", "std"] }
-pathdiff = "0.2.1"
-serde = { version = "1.0.123", features = ["derive", "rc"] }
-serde_json5 = "0.1.0"
+derive_builder = { workspace = true }
+glob-match = { workspace = true }
+indexmap = { workspace = true, features = ["serde", "std"] }
+pathdiff = { workspace = true }
+serde = { workspace = true, features = ["derive", "rc"] }
+serde_json5 = { workspace = true }
 
 [dev-dependencies]
-anyhow = "1.0.82"
-mockall = "0.12.1"
+anyhow = { workspace = true }
+mockall = { workspace = true }

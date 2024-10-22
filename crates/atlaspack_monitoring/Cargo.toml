@@ -16,20 +16,20 @@ name = "sample_usage"
 required-features = ["canary"]
 
 [dependencies]
-anyhow = "1.0.86"
-thiserror = "1.0.63"
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-tracing-appender = "0.2.3"
-serde = { version = "1.0.204", features = ["derive"] }
-serde_json = "1.0.122"
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+tracing-appender = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 
-whoami = { version = "1.5.1", optional = true }
-sentry = { version = "0.32.2", optional = true, default-features = false, features = ["anyhow", "backtrace", "contexts", "debug-images", "panic", "reqwest"] }
+whoami = { workspace = true, optional = true }
+sentry = { workspace = true, optional = true, default-features = false, features = ["anyhow", "backtrace", "contexts", "debug-images", "panic", "reqwest"] }
 
 [target.'cfg(not(target_env = "musl"))'.dependencies]
-crash-handler = { version = "0.6.2", optional = true }
-minidumper = { version = "0.8.3", optional = true }
+crash-handler = { workspace = true, optional = true }
+minidumper = { workspace = true, optional = true }
 
 [dev-dependencies]
-cfg-if = "1.0.0"
+cfg-if = { workspace = true }
