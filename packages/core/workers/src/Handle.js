@@ -1,5 +1,5 @@
 // @flow strict-local
-import {registerSerializableClass} from '@atlaspack/core';
+import {registerSerializableClass} from '@atlaspack/build-cache';
 // $FlowFixMe
 import packageJson from '../package.json';
 

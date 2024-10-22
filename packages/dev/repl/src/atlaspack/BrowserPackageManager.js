@@ -10,7 +10,6 @@ import type {
   Invalidations,
   ResolveResult,
 } from '@atlaspack/package-manager';
-import {registerSerializableClass} from '@atlaspack/core';
 // $FlowFixMe[untyped-import]
 import packageJson from '../../package.json';
 
@@ -18,6 +17,7 @@ import path from 'path';
 import nullthrows from 'nullthrows';
 import {ResolverBase, init} from '@atlaspack/node-resolver-core';
 
+import {registerSerializableClass} from '@atlaspack/build-cache';
 import bundlerDefault from '@atlaspack/bundler-default';
 import compressorRaw from '@atlaspack/compressor-raw';
 import namerDefault from '@atlaspack/namer-default';

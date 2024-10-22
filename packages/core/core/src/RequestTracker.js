@@ -3,6 +3,7 @@
 import invariant, {AssertionError} from 'assert';
 import path from 'path';
 
+import {deserialize, serialize} from '@atlaspack/build-cache';
 import type {Cache} from '@atlaspack/cache';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {ContentGraph} from '@atlaspack/graph';
@@ -60,7 +61,6 @@ import type {AtlaspackConfigRequestResult} from './requests/AtlaspackConfigReque
 import type {AtlaspackBuildRequestResult} from './requests/AtlaspackBuildRequest';
 import type {EntryRequestResult} from './requests/EntryRequest';
 import type {BundleGraphResult} from './requests/BundleGraphRequest';
-import {deserialize, serialize} from './serializer';
 import type {
   AssetRequestResult,
   AtlaspackOptions,

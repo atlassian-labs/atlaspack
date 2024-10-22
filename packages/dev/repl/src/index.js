@@ -8,7 +8,7 @@ import {useMedia} from 'react-use';
 // $FlowFixMe
 import parcelLogo from 'url:./assets/logo.svg';
 // $FlowFixMe
-import parcelText from 'url:./assets/parcel.png';
+import parcelText from 'url:./assets/atlaspack.png';
 
 import {
   Editor,

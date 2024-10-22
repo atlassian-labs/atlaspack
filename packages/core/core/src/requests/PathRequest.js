@@ -16,6 +16,7 @@ import type {
 } from '../types';
 import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
+import {createBuildCache} from '@atlaspack/build-cache';
 import ThrowableDiagnostic, {
   convertSourceLocationToHighlight,
   errorToDiagnostic,
@@ -40,7 +41,6 @@ import {
   toProjectPathUnsafe,
 } from '../projectPath';
 import {Priority} from '../types';
-import {createBuildCache} from '../buildCache';
 import {createConfig} from '../InternalConfig';
 import {loadPluginConfig, runConfigRequest} from './ConfigRequest';
 import {

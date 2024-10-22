@@ -19,7 +19,7 @@ import ncp from 'ncp';
 import path from 'path';
 import {tmpdir} from 'os';
 import {promisify} from 'util';
-import {registerSerializableClass} from '@atlaspack/core';
+import {registerSerializableClass} from '@atlaspack/build-cache';
 import {hashFile} from '@atlaspack/utils';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import watcher from '@parcel/watcher';

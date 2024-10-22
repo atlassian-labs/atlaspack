@@ -4,10 +4,12 @@ import type {AST, Blob} from '@atlaspack/types';
 import type {Asset, Dependency, AtlaspackOptions} from './types';
 
 import {Readable} from 'stream';
+
+import {deserializeRaw} from '@atlaspack/build-cache';
 import SourceMap from '@parcel/source-map';
 import {bufferStream, blobToStream, streamFromPromise} from '@atlaspack/utils';
+
 import {generateFromAST} from './assetUtils';
-import {deserializeRaw} from './serializer';
 
 export default class CommittedAsset {
   key: ?string;
