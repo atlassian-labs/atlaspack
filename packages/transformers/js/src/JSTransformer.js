@@ -863,7 +863,7 @@ export default (new Transformer({
           specifierType: dep.kind === 'Require' ? 'commonjs' : 'esm',
           loc: convertLoc(dep.loc),
           priority:
-            dep.kind === 'DynamicImport'
+            dep.kind === 'DynamicImport' && !asset.env.unstableSingleFileOutput
               ? 'lazy'
               : dep.kind === 'ConditionalImport'
               ? 'conditional'
