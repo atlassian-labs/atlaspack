@@ -2,18 +2,18 @@
 
 import type {Dependency as NapiDependency} from '@atlaspack/rust';
 import type {
-  Dependency as ClassicDependency,
+  Dependency as IDependency,
   DependencySpecifier,
   SpecifierType,
   DependencyPriority,
   BundleBehavior,
   SourceLocation,
-  Environment as ClassicEnvironment,
+  Environment as IEnvironment,
   Meta,
-  Target as ClassicTarget,
+  Target as ITarget,
   FilePath,
   SemverRange,
-  MutableDependencySymbols as ClassicMutableDependencySymbols,
+  MutableDependencySymbols as IMutableDependencySymbols,
 } from '@atlaspack/types';
 import {Target} from './target';
 import {MutableDependencySymbols} from './asset-symbols';
@@ -24,11 +24,11 @@ import {
   packageConditionsMap,
 } from './bitflags';
 
-export class Dependency implements ClassicDependency {
-  env: ClassicEnvironment;
+export class Dependency implements IDependency {
+  env: IEnvironment;
   meta: Meta;
-  target: ?ClassicTarget;
-  symbols: ClassicMutableDependencySymbols;
+  target: ?ITarget;
+  symbols: IMutableDependencySymbols;
   specifier: DependencySpecifier;
   specifierType: SpecifierType;
   priority: DependencyPriority;
@@ -49,7 +49,7 @@ export class Dependency implements ClassicDependency {
     throw new Error('Dependency.id');
   }
 
-  constructor(inner: NapiDependency, env: ClassicEnvironment) {
+  constructor(inner: NapiDependency, env: IEnvironment) {
     this.env = env;
     this.meta = inner.meta || {};
     this.target = undefined;
