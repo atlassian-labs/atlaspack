@@ -312,6 +312,8 @@ export class TargetResolver {
                   this.options,
                   descriptor.sourceMap,
                 ),
+                unstableSingleFileOutput:
+                  descriptor.__unstable_singleFileOutput,
               }),
             };
 
