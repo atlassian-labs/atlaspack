@@ -1923,4 +1923,45 @@ describe.v2('bundler', function () {
       },
     ]);
   });
+
+  it('should not split any bundles when using singleFileOutput', async function () {
+    const targets = {
+      'single-file': {
+        distDir: 'dist-single',
+        __unstable_singleFileOutput: true,
+      },
+      'normally-split': {distDir: 'dist-normal'},
+    };
+
+    let [singleBundle, splitBundle] = await Promise.all(
+      ['single-file', 'normally-split'].map((target) =>
+        bundle([path.join(__dirname, 'integration/single-file-output/a.js')], {
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+          targets: {[target]: targets[target]},
+        }),
+      ),
+    );
+
+    // There should be a single bundle, including a, b, and c
+    assertBundles(singleBundle, [
+      {name: 'a.js', assets: ['a.js', 'b.js', 'c.js', 'esmodule-helpers.js']},
+    ]);
+
+    // Without the property, the bundle should be split properly
+    assertBundles(splitBundle, [
+      {
+        name: 'a.js',
+        assets: [
+          'a.js',
+          'b.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'esmodule-helpers.js',
+          'js-loader.js',
+        ],
+      },
+      {name: 'c.576ee741.js', assets: ['c.js']},
+    ]);
+  });
 });
