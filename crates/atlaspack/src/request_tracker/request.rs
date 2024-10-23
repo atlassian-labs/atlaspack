@@ -19,7 +19,8 @@ use atlaspack_filesystem::FileSystemRef;
 pub struct RunRequestMessage {
   pub request: Box<dyn Request>,
   pub parent_request_id: Option<u64>,
-  pub response_tx: Option<Sender<Result<(RequestResult, RequestId), anyhow::Error>>>,
+  pub response_tx:
+    Option<tokio::sync::mpsc::UnboundedSender<Result<(RequestResult, RequestId), anyhow::Error>>>,
 }
 
 type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send>;
@@ -72,7 +73,7 @@ impl RunRequestContext {
   pub fn queue_request(
     &mut self,
     request: impl Request,
-    tx: Sender<anyhow::Result<(RequestResult, RequestId)>>,
+    tx: tokio::sync::mpsc::UnboundedSender<anyhow::Result<(RequestResult, RequestId)>>,
   ) -> anyhow::Result<()> {
     let request: Box<dyn Request> = Box::new(request);
     let message = RunRequestMessage {

@@ -68,158 +68,114 @@ impl RequestTracker {
     }
   }
 
-  /// Run a request that has no parent. Return the result.
-  ///
-  /// ## Multi-threading
-  /// Sub-requests may be queued from this initial `request` using
-  /// [`RunRequestContext::queue_request`].
-  /// All sub-requests will run on separate tasks on a thread-pool.
-  ///
-  /// A request may use the channel passed into  [`RunRequestContext::queue_request`] to wait for
-  /// results from sub-requests.
-  ///
-  /// Because threads will be blocked by waiting on sub-requests, the system may stall if the thread
-  /// pool runs out of threads. For the same reason, the number of threads must always be greater
-  /// than 1. For this reason the minimum number of threads our thread-pool uses is 4.
-  ///
-  /// There are multiple ways we can fix this in our implementation:
-  /// * Use async, so we get cooperative multi-threading and don't need to worry about this
-  /// * Whenever we block a thread, block using recv_timeout and then use [`rayon::yield_now`] so
-  ///   other tasks get a chance to tick on our thread-pool. This is a very poor implementation of
-  ///   the cooperative threading behaviours async will grant us.
-  /// * Don't use rayon for multi-threading here and use a custom thread-pool implementation which
-  ///   ensures we always have more threads than concurrently running requests
-  /// * Run requests that need to spawn multithreaded sub-requests on the main-thread
-  ///   - That is, introduce a new `MainThreadRequest` trait, which is able to enqueue requests,
-  ///     these will run on the main-thread, therefore it'll be simpler to implement queueing
-  ///     without stalls and locks/channels
-  ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
   pub fn run_request(self, request: impl Request) -> anyhow::Result<RequestResult> {
-    let (tx, rx) = crossbeam::channel::unbounded::<RequestQueueMessage>();
+    tokio::runtime::Builder::new_multi_thread()
+      .enable_all()
+      .worker_threads(8)
+      .build()
+      .unwrap()
+      .block_on(async {
+        let request_id = request.id();
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let tx2 = tx.clone();
+        let _ = tx.send(RequestQueueMessage::RunRequest {
+          tx: tx2,
+          message: RunRequestMessage {
+            request: Box::new(request),
+            parent_request_id: None,
+            response_tx: None,
+          },
+        });
+        drop(tx);
 
-    let request_id = request.id();
-    let request = RequestQueueMessage::RunRequest {
-      tx: tx.clone(),
-      message: RunRequestMessage {
-        request: Box::new(request),
-        parent_request_id: None,
-        response_tx: None,
-      },
-    };
-    let _ = tx.send(request);
-    drop(tx);
+        let config_loader = self.config_loader.clone();
+        let file_system = self.file_system.clone();
+        let options = self.options.clone();
+        let plugins = self.plugins.clone();
+        let project_root = self.project_root.clone();
+        let rt = Arc::new(RwLock::new(self));
 
-    let config_loader = self.config_loader.clone();
-    let file_system = self.file_system.clone();
-    let options = self.options.clone();
-    let plugins = self.plugins.clone();
-    let project_root = self.project_root.clone();
-    let rt = Arc::new(RwLock::new(self));
-    let mut handles = vec![];
-
-    for i in 0..num_cpus::get() {
-      let rt = rt.clone();
-      let rx = rx.clone();
-
-      let config_loader = config_loader.clone();
-      let file_system = file_system.clone();
-      let options = options.clone();
-      let plugins = plugins.clone();
-      let project_root = project_root.clone();
-
-      handles.push(
-        std::thread::Builder::new()
-          .name(format!("RequestTracker Worker {}", i))
-          .spawn(move || -> anyhow::Result<()> {
-            while let Ok(request_queue_message) = rx.recv() {
-              match request_queue_message {
-                RequestQueueMessage::RunRequest {
-                  message:
-                    RunRequestMessage {
-                      request,
-                      parent_request_id,
-                      response_tx,
-                    },
-                  tx,
-                } => {
-                  let request_id = request.id();
-                  tracing::trace!(?request_id, ?parent_request_id, "Run request");
-
-                  let prepared = {
-                    let mut rt = rt.write();
-                    rt.prepare_request(request_id).unwrap()
-                  };
-
-                  // Cached request
-                  if !prepared {
-                    if let Some(response_tx) = response_tx {
-                      let result = {
-                        let mut rt = rt.write();
-                        rt.get_request(parent_request_id, request_id)
-                      };
-                      response_tx.send(result.map(|r| (r, request_id))).ok();
-                    }
-                    continue;
-                  }
-
-                  let context = RunRequestContext::new(
-                    config_loader.clone(),
-                    file_system.clone(),
-                    options.clone(),
-                    Some(request_id),
-                    plugins.clone(),
-                    project_root.clone(),
-                    // sub-request run
-                    Box::new({
-                      let tx = tx.clone();
-                      move |message| {
-                        tx.clone()
-                          .send(RequestQueueMessage::RunRequest {
-                            message,
-                            tx: tx.clone(),
-                          })
-                          .ok();
-                      }
-                    }),
-                  );
-
-                  let result = request.run(context);
-                  tx.send(RequestQueueMessage::RequestResult {
-                    request_id,
-                    parent_request_id,
-                    result,
-                    response_tx,
-                  })
-                  .ok();
-                }
-                RequestQueueMessage::RequestResult {
-                  request_id,
+        while let Some(request_queue_message) = rx.recv().await {
+          match request_queue_message {
+            RequestQueueMessage::RunRequest {
+              message:
+                RunRequestMessage {
+                  request,
                   parent_request_id,
-                  result,
                   response_tx,
-                } => {
-                  tracing::trace!(?request_id, ?parent_request_id, "Request result");
-                  let mut rt = rt.write();
-                  rt.store_request(request_id, &result)?;
-                  rt.link_request_to_parent(request_id, parent_request_id)?;
+                },
+              tx,
+            } => {
+              let request_id = request.id();
+              tracing::trace!(?request_id, ?parent_request_id, "Run request");
 
-                  if let Some(response_tx) = response_tx {
-                    let _ = response_tx.send(result.map(|result| (result.result, request_id)));
+              let prepared = {
+                let mut rt = rt.write();
+                rt.prepare_request(request_id).unwrap()
+              };
+
+              if prepared {
+                let context = RunRequestContext::new(
+                  config_loader.clone(),
+                  file_system.clone(),
+                  options.clone(),
+                  Some(request_id),
+                  plugins.clone(),
+                  project_root.clone(),
+                  // sub-request run
+                  Box::new({
+                    let tx = tx.clone();
+                    move |message| {
+                      let tx2 = tx.clone();
+                      tx.send(RequestQueueMessage::RunRequest { message, tx: tx2 })
+                        .unwrap();
+                    }
+                  }),
+                );
+
+                tokio::spawn({
+                  let tx = tx.clone();
+                  async move {
+                    let result = request.run(context);
+                    let _ = tx.send(RequestQueueMessage::RequestResult {
+                      request_id,
+                      parent_request_id,
+                      result,
+                      response_tx,
+                    });
                   }
+                });
+              } else {
+                // Cached request
+                if let Some(response_tx) = response_tx {
+                  let mut rt = rt.write();
+                  let result = rt.get_request(parent_request_id, request_id);
+                  let _ = response_tx.send(result.map(|r| (r, request_id)));
                 }
+              };
+            }
+            RequestQueueMessage::RequestResult {
+              request_id,
+              parent_request_id,
+              result,
+              response_tx,
+            } => {
+              tracing::trace!(?request_id, ?parent_request_id, "Request result");
+              let mut rt = rt.write();
+
+              rt.store_request(request_id, &result)?;
+              rt.link_request_to_parent(request_id, parent_request_id)?;
+
+              if let Some(response_tx) = response_tx {
+                let _ = response_tx.send(result.map(|result| (result.result, request_id)));
               }
             }
-            Ok(())
-          })?,
-      );
-    }
+          }
+        }
 
-    while let Some(handle) = handles.pop() {
-      handle.join().unwrap()?;
-    }
-
-    let mut rt = rt.write();
-    rt.get_request(None, request_id)
+        let mut rt = rt.write();
+        rt.get_request(None, request_id)
+      })
   }
 
   /// Before a request is run, a 'pending' [`RequestNode::Incomplete`] entry is added to the graph.
@@ -332,13 +288,14 @@ impl RequestTracker {
 #[derive(Debug)]
 enum RequestQueueMessage {
   RunRequest {
-    tx: crossbeam::channel::Sender<RequestQueueMessage>,
+    tx: tokio::sync::mpsc::UnboundedSender<RequestQueueMessage>,
     message: RunRequestMessage,
   },
   RequestResult {
     request_id: RequestId,
     parent_request_id: Option<RequestId>,
     result: Result<ResultAndInvalidations, RunRequestError>,
-    response_tx: Option<Sender<anyhow::Result<(RequestResult, RequestId)>>>,
+    response_tx:
+      Option<tokio::sync::mpsc::UnboundedSender<anyhow::Result<(RequestResult, RequestId)>>>,
   },
 }

@@ -43,6 +43,7 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 once_cell = { workspace = true }
 parking_lot = { workspace = true }
 crossbeam = "*"
+tokio = {version = "*", features = ["full"]}
 
 [dev-dependencies]
 mockall = { workspace = true }

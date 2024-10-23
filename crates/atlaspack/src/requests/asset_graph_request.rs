@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::mem::replace;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 
@@ -18,8 +19,9 @@ use super::path_request::{PathRequest, PathRequestOutput};
 use super::target_request::{TargetRequest, TargetRequestOutput};
 use super::RequestResult;
 
-type ResultSender = Sender<Result<(RequestResult, u64), anyhow::Error>>;
-type ResultReceiver = Receiver<Result<(RequestResult, u64), anyhow::Error>>;
+type ResultSender = tokio::sync::mpsc::UnboundedSender<Result<(RequestResult, u64), anyhow::Error>>;
+type ResultReceiver =
+  tokio::sync::mpsc::UnboundedReceiver<Result<(RequestResult, u64), anyhow::Error>>;
 
 /// The AssetGraphRequest is in charge of building the AssetGraphRequest
 /// In doing so, it kicks of the EntryRequest, TargetRequest, PathRequest and AssetRequests.
@@ -56,7 +58,7 @@ struct AssetGraphBuilder {
 
 impl AssetGraphBuilder {
   fn new(request_context: RunRequestContext) -> Self {
-    let (sender, receiver) = channel();
+    let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
 
     AssetGraphBuilder {
       request_id_to_dep_node_index: HashMap::new(),
@@ -89,9 +91,12 @@ impl AssetGraphBuilder {
         break;
       }
 
-      let Ok(result) = self.receiver.recv() else {
-        break;
-      };
+      // let mut rx = {
+      //   let (_tx, rx) = tokio::sync::mpsc::unbounded_channel();
+      //   std::mem::replace(&mut self.receiver, rx)
+      // };
+
+      let result = tokio::task::block_in_place(|| (&mut self.receiver).blocking_recv().unwrap());
 
       self.work_count -= 1;
 
