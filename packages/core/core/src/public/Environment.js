@@ -226,7 +226,7 @@ export default class Environment implements IEnvironment {
   }
 
   get unstableSingleFileOutput(): boolean {
-    return this.#environment.unstableSingleFileOutput ?? false;
+    return this.#environment.unstableSingleFileOutput;
   }
 
   // $FlowFixMe[unsupported-syntax]
