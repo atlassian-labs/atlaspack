@@ -367,6 +367,7 @@ dependencies = [
  "serde_json",
  "serde_json5",
  "thiserror",
+ "thread_local",
  "tracing",
  "tracing-subscriber",
  "url",
@@ -443,6 +444,7 @@ dependencies = [
  "assert_fs",
  "is_elevated",
  "mockall",
+ "thread_local",
  "xxhash-rust",
 ]
 
