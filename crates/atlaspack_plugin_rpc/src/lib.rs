@@ -60,7 +60,7 @@ pub trait RpcWorker: Send + Sync {
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn ResolverPlugin>>;
+  ) -> anyhow::Result<Arc<dyn ResolverPlugin>>;
   fn create_runtime(
     &self,
     ctx: &PluginContext,
@@ -70,5 +70,5 @@ pub trait RpcWorker: Send + Sync {
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn TransformerPlugin>>;
+  ) -> anyhow::Result<Arc<dyn TransformerPlugin>>;
 }

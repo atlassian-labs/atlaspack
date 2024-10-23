@@ -20,6 +20,7 @@ use mockall::automock;
 pub type PluginsRef = Arc<dyn Plugins + Send + Sync>;
 
 pub mod config_plugins;
+pub mod plugin_cache;
 
 #[cfg_attr(test, automock)]
 pub trait Plugins {
@@ -39,7 +40,7 @@ pub trait Plugins {
   #[allow(unused)]
   fn packager(&self, path: &Path) -> Result<Box<dyn PackagerPlugin>, anyhow::Error>;
   fn reporter(&self) -> Arc<dyn ReporterPlugin>;
-  fn resolvers(&self) -> Result<Vec<Box<dyn ResolverPlugin>>, anyhow::Error>;
+  fn resolvers(&self) -> Result<Vec<Arc<dyn ResolverPlugin>>, anyhow::Error>;
   #[allow(unused)]
   fn runtimes(&self) -> Result<Vec<Box<dyn RuntimePlugin>>, anyhow::Error>;
   fn transformers(
@@ -53,13 +54,13 @@ pub trait Plugins {
 
 #[derive(Default)]
 pub struct TransformerPipeline {
-  transformers: Vec<Box<dyn TransformerPlugin>>,
+  transformers: Vec<Arc<dyn TransformerPlugin>>,
   pipeline_id: u64,
 }
 
 #[cfg_attr(test, automock)]
 impl TransformerPipeline {
-  pub fn new(transformers: Vec<Box<dyn TransformerPlugin>>) -> Self {
+  pub fn new(transformers: Vec<Arc<dyn TransformerPlugin>>) -> Self {
     let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
 
     for transformer in &transformers {
@@ -75,7 +76,7 @@ impl TransformerPipeline {
     self.pipeline_id
   }
 
-  pub fn transformers_mut(&mut self) -> &mut [Box<dyn TransformerPlugin>] {
+  pub fn transformers_mut(&mut self) -> &mut [Arc<dyn TransformerPlugin>] {
     &mut self.transformers
   }
 }

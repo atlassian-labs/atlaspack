@@ -28,6 +28,7 @@ use atlaspack_plugin_transformer_json::AtlaspackJsonTransformerPlugin;
 use atlaspack_plugin_transformer_raw::AtlaspackRawTransformerPlugin;
 use atlaspack_plugin_transformer_yaml::AtlaspackYamlTransformerPlugin;
 
+use super::plugin_cache::PluginCache;
 use super::Plugins;
 use super::TransformerPipeline;
 
@@ -43,6 +44,9 @@ pub struct ConfigPlugins {
 
   /// A reporter that runs all reporter plugins
   reporter: Arc<dyn ReporterPlugin>,
+
+  /// Storage of initialized plugins
+  plugin_cache: PluginCache,
 }
 
 impl ConfigPlugins {
@@ -71,6 +75,7 @@ impl ConfigPlugins {
       config,
       ctx,
       reporter,
+      plugin_cache: Default::default(),
     })
   }
 
@@ -191,26 +196,28 @@ impl Plugins for ConfigPlugins {
     self.reporter.clone()
   }
 
-  fn resolvers(&self) -> Result<Vec<Box<dyn ResolverPlugin>>, anyhow::Error> {
-    let mut resolvers: Vec<Box<dyn ResolverPlugin>> = Vec::new();
+  fn resolvers(&self) -> anyhow::Result<Vec<Arc<dyn ResolverPlugin>>> {
+    self.plugin_cache.get_or_init_resolvers(move || {
+      let mut resolvers: Vec<Arc<dyn ResolverPlugin>> = Vec::new();
 
-    for resolver in self.config.resolvers.iter() {
-      if resolver.package_name == "@atlaspack/resolver-default" {
-        resolvers.push(Box::new(AtlaspackResolver::new(&self.ctx)));
-        continue;
+      for resolver in self.config.resolvers.iter() {
+        if resolver.package_name == "@atlaspack/resolver-default" {
+          resolvers.push(Arc::new(AtlaspackResolver::new(&self.ctx)));
+          continue;
+        }
+
+        let Some(rpc_worker) = &self.rpc_worker else {
+          anyhow::bail!(
+            "Unable to initialize JavaScript Resolver plugin {}",
+            resolver.package_name
+          )
+        };
+
+        resolvers.push(rpc_worker.create_resolver(&self.ctx, resolver)?);
       }
 
-      let Some(rpc_worker) = &self.rpc_worker else {
-        anyhow::bail!(
-          "Unable to initialize JavaScript Resolver plugin {}",
-          resolver.package_name
-        )
-      };
-
-      resolvers.push(rpc_worker.create_resolver(&self.ctx, resolver)?);
-    }
-
-    Ok(resolvers)
+      Ok(resolvers)
+    })
   }
 
   #[allow(unused)]
@@ -237,14 +244,16 @@ impl Plugins for ConfigPlugins {
     path: &Path,
     pipeline: Option<String>,
   ) -> Result<TransformerPipeline, anyhow::Error> {
-    let mut transformers: Vec<Box<dyn TransformerPlugin>> = Vec::new();
+    let mut transformers: Vec<Arc<dyn TransformerPlugin>> = Vec::new();
     let named_pattern = pipeline.as_ref().map(|pipeline| NamedPattern {
       pipeline,
       use_fallback: false,
     });
 
     for transformer in self.config.transformers.get(path, named_pattern).iter() {
-      let transformer: Box<dyn TransformerPlugin> = match transformer.package_name.as_str() {
+      let transformer_name = transformer.package_name.as_str();
+
+      match transformer_name {
         // Currently JS plugins don't work and it's easier to just skip these.
         // We also will probably remove babel from the defaults and support react refresh in Rust
         // before releasing native asset graph
@@ -252,30 +261,48 @@ impl Plugins for ConfigPlugins {
         "@atlaspack/transformer-react-refresh-wrap" => continue,
         "@atlaspack/transformer-posthtml" => continue,
         "@atlaspack/transformer-postcss" => continue,
-        "@atlaspack/transformer-js" => Box::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?),
-        "@atlaspack/transformer-css" => Box::new(AtlaspackCssTransformerPlugin::new(&self.ctx)?),
-        "@atlaspack/transformer-inline-string" => {
-          Box::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
-        }
-        "@atlaspack/transformer-inline" => {
-          Box::new(AtlaspackInlineTransformerPlugin::new(&self.ctx))
-        }
-        "@atlaspack/transformer-image" => Box::new(AtlaspackImageTransformerPlugin::new(&self.ctx)),
-        "@atlaspack/transformer-raw" => Box::new(AtlaspackRawTransformerPlugin::new(&self.ctx)),
-        "@atlaspack/transformer-html" => Box::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx)),
-        "@atlaspack/transformer-json" => Box::new(AtlaspackJsonTransformerPlugin::new(&self.ctx)),
-        "@atlaspack/transformer-yaml" => Box::new(AtlaspackYamlTransformerPlugin::new(&self.ctx)),
-        _ => {
-          let Some(rpc_worker) = &self.rpc_worker else {
-            anyhow::bail!(
-              "Unable to initialize JavaScript Transformer plugin {}",
-              transformer.package_name
-            )
-          };
+        _ => {}
+      }
 
-          rpc_worker.create_transformer(&self.ctx, transformer)?
-        }
-      };
+      let transformer = self
+        .plugin_cache
+        .get_or_init_transformer(transformer_name, || {
+          Ok(match transformer_name {
+            "@atlaspack/transformer-js" => Arc::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?),
+            "@atlaspack/transformer-css" => {
+              Arc::new(AtlaspackCssTransformerPlugin::new(&self.ctx)?)
+            }
+            "@atlaspack/transformer-inline-string" => {
+              Arc::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
+            }
+            "@atlaspack/transformer-inline" => {
+              Arc::new(AtlaspackInlineTransformerPlugin::new(&self.ctx))
+            }
+            "@atlaspack/transformer-image" => {
+              Arc::new(AtlaspackImageTransformerPlugin::new(&self.ctx))
+            }
+            "@atlaspack/transformer-raw" => Arc::new(AtlaspackRawTransformerPlugin::new(&self.ctx)),
+            "@atlaspack/transformer-html" => {
+              Arc::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx))
+            }
+            "@atlaspack/transformer-json" => {
+              Arc::new(AtlaspackJsonTransformerPlugin::new(&self.ctx))
+            }
+            "@atlaspack/transformer-yaml" => {
+              Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx))
+            }
+            _ => {
+              let Some(rpc_worker) = &self.rpc_worker else {
+                anyhow::bail!(
+                  "Unable to initialize JavaScript Transformer plugin {}",
+                  transformer.package_name
+                )
+              };
+
+              rpc_worker.create_transformer(&self.ctx, transformer)?
+            }
+          })
+        })?;
 
       transformers.push(transformer);
     }
@@ -385,7 +412,7 @@ mod tests {
       format!("{:?}", pipeline),
       format!(
         "{:?}",
-        TransformerPipeline::new(vec![Box::new(
+        TransformerPipeline::new(vec![Arc::new(
           AtlaspackJsTransformerPlugin::new(&make_test_plugin_context()).unwrap()
         )]),
       )
