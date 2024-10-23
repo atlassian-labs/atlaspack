@@ -289,7 +289,12 @@ export function shallowEqual(
   return true;
 }
 
-type RunOpts = {require?: boolean, strict?: boolean, ...};
+type RunOpts = {
+  require?: boolean,
+  strict?: boolean,
+  entryAsset?: Asset,
+  ...
+};
 
 export async function runBundles(
   bundleGraph: BundleGraph<PackagedBundle>,
@@ -299,11 +304,13 @@ export async function runBundles(
   opts: RunOpts = {},
   externalModules?: ExternalModules,
 ): Promise<mixed> {
-  let entryAsset = nullthrows(
-    bundles
-      .map(([, b]) => b.getMainEntry() || b.getEntryAssets()[0])
-      .filter(Boolean)[0],
-  );
+  let entryAsset = opts.entryAsset
+    ? opts.entryAsset
+    : nullthrows(
+        bundles
+          .map(([, b]) => b.getMainEntry() || b.getEntryAssets()[0])
+          .filter(Boolean)[0],
+      );
   let env = entryAsset.env;
   let target = env.context;
   let outputFormat = env.outputFormat;
