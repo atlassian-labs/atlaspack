@@ -12,6 +12,7 @@ use atlaspack_core::types::{
   Asset, BuildMode, Diagnostic, ErrorKind, FileType, LogLevel, OutputFormat, SourceType,
 };
 use glob_match::glob_match;
+use parking_lot::RwLock;
 use serde::Deserialize;
 use swc_core::atoms::Atom;
 
@@ -32,7 +33,7 @@ mod conversion;
 ///   mapping to a mangled name that the SWC transformer replaced in the source file + the source
 ///   module and the source name that has been imported)
 pub struct AtlaspackJsTransformerPlugin {
-  cache: Cache,
+  cache: RwLock<Cache>,
   config: JsTransformerConfig,
   options: Arc<PluginOptions>,
   ts_config: Option<TsConfig>,
@@ -87,14 +88,14 @@ impl AtlaspackJsTransformerPlugin {
       .ok();
 
     Ok(Self {
-      cache: Cache::default(),
+      cache: Default::default(),
       config,
       options: ctx.options.clone(),
       ts_config,
     })
   }
 
-  fn env_variables(&mut self, asset: &Asset) -> HashMap<Atom, Atom> {
+  fn env_variables(&self, asset: &Asset) -> HashMap<Atom, Atom> {
     if self.options.env.is_none()
       || self
         .options
@@ -115,7 +116,7 @@ impl AtlaspackJsTransformerPlugin {
     match inline_environment {
       InlineEnvironment::Enabled(enabled) => match enabled {
         false => {
-          if let Some(vars) = self.cache.env_variables.disabled.as_ref() {
+          if let Some(vars) = self.cache.read().env_variables.disabled.as_ref() {
             return vars.clone();
           }
 
@@ -131,12 +132,12 @@ impl AtlaspackJsTransformerPlugin {
             }
           }
 
-          self.cache.env_variables.disabled = Some(vars.clone());
+          self.cache.write().env_variables.disabled = Some(vars.clone());
 
           vars
         }
         true => {
-          if let Some(vars) = self.cache.env_variables.enabled.as_ref() {
+          if let Some(vars) = self.cache.read().env_variables.enabled.as_ref() {
             return vars.clone();
           }
 
@@ -145,13 +146,13 @@ impl AtlaspackJsTransformerPlugin {
             .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
             .collect::<HashMap<Atom, Atom>>();
 
-          self.cache.env_variables.enabled = Some(vars.clone());
+          self.cache.write().env_variables.enabled = Some(vars.clone());
 
           vars
         }
       },
       InlineEnvironment::Environments(environments) => {
-        if let Some(vars) = self.cache.env_variables.allowlist.as_ref() {
+        if let Some(vars) = self.cache.read().env_variables.allowlist.as_ref() {
           return vars.clone();
         }
 
@@ -165,7 +166,7 @@ impl AtlaspackJsTransformerPlugin {
           }
         }
 
-        self.cache.env_variables.allowlist = Some(vars.clone());
+        self.cache.write().env_variables.allowlist = Some(vars.clone());
 
         vars
       }
@@ -184,11 +185,7 @@ impl fmt::Debug for AtlaspackJsTransformerPlugin {
 impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does a lot of equivalent work to `JSTransformer::transform` in
   /// `packages/transformers/js`
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let file_type = asset.file_type.clone();
     let is_node = env.context.is_node();
@@ -512,7 +509,7 @@ mod tests {
       options: Arc::new(PluginOptions::default()),
     };
 
-    let mut transformer = AtlaspackJsTransformerPlugin::new(&ctx).expect("Expected transformer");
+    let transformer = AtlaspackJsTransformerPlugin::new(&ctx).expect("Expected transformer");
     let context = TransformContext::default();
 
     let result = transformer.transform(context, asset)?;

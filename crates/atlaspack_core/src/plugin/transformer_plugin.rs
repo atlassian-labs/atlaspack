@@ -66,7 +66,7 @@ pub trait TransformerPlugin: Any + Debug + Send + Sync {
   }
   /// Transform the asset and/or add new assets
   fn transform(
-    &mut self,
+    &self,
     context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, anyhow::Error>;

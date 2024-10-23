@@ -28,11 +28,7 @@ impl AtlaspackHtmlTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
-  fn transform(
-    &mut self,
-    context: TransformContext,
-    input: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, context: TransformContext, input: Asset) -> Result<TransformResult, Error> {
     let bytes: &[u8] = input.code.bytes();
     let mut dom = parse_html(bytes)?;
     let context = HTMLTransformationContext {

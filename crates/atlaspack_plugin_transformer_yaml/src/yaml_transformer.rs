@@ -15,11 +15,7 @@ impl AtlaspackYamlTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackYamlTransformerPlugin {
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     let code = serde_yml::from_slice::<serde_yml::Value>(asset.code.bytes())?;
@@ -65,7 +61,7 @@ mod tests {
 
   #[test]
   fn returns_js_asset_from_yaml() {
-    let mut plugin = create_yaml_plugin();
+    let plugin = create_yaml_plugin();
 
     let asset = Asset {
       code: Arc::new(Code::from(String::from(

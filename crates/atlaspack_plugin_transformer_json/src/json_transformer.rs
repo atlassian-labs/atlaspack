@@ -15,11 +15,7 @@ impl AtlaspackJsonTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackJsonTransformerPlugin {
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     let code = std::str::from_utf8(asset.code.bytes())?;
@@ -66,7 +62,7 @@ mod tests {
 
   #[test]
   fn returns_js_asset_from_json() {
-    let mut plugin = create_json_plugin();
+    let plugin = create_json_plugin();
 
     let asset = Asset {
       code: Arc::new(Code::from(
@@ -104,7 +100,7 @@ mod tests {
 
   #[test]
   fn returns_js_asset_from_json5() {
-    let mut plugin = create_json_plugin();
+    let plugin = create_json_plugin();
 
     let asset = Asset {
       code: Arc::new(Code::from(
