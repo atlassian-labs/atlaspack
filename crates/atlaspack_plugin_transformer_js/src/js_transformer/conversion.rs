@@ -10,7 +10,7 @@ use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
   Asset, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, Diagnostic, DiagnosticBuilder,
   Environment, EnvironmentContext, File, FileType, IncludeNodeModules, OutputFormat,
-  SourceLocation, SourceType, SpecifierType, Symbol,
+  SourceLocation, SourceMap, SourceType, SpecifierType, Symbol,
 };
 
 use crate::js_transformer::conversion::dependency_kind::{
@@ -326,20 +326,30 @@ pub(crate) fn convert_result(
     asset.set_conditions(result.conditions);
   }
 
-  asset.file_type = FileType::Js;
-
   // Overwrite the source-code with SWC output
   let result_source_code_string = String::from_utf8(result.code)
     // TODO: This is impossible; but we should extend 'diagnostic' type to be nicer / easier to build
     .map_err(|_| vec![])?;
+
+  asset.file_type = FileType::Js;
   asset.code = Arc::new(Code::from(result_source_code_string));
+
+  if let Some(map) = result.map {
+    // TODO: Fix diagnostic error handling
+    let mut source_map = SourceMap::from_json(&options.project_root, &map).map_err(|_| vec![])?;
+
+    if let Some(original_map) = asset.map {
+      source_map
+        .extends(&mut original_map.clone())
+        .map_err(|_| vec![])?;
+    }
+
+    asset.map = Some(source_map);
+  }
 
   Ok(TransformResult {
     asset,
     dependencies: dependency_by_specifier.into_values().collect(),
-    // map: result.map,
-    // shebang: result.shebang,
-    // dependencies: deps,
     // diagnostics: result.diagnostics,
     // used_env: result.used_env.into_iter().map(|v| v.to_string()).collect(),
     invalidate_on_file_change,

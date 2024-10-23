@@ -8,6 +8,7 @@ description = "Core logic and types for the atlaspack bundler"
 default = []
 
 [dependencies]
+atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 caniuse_database = { path = "../caniuse_database" }
 

@@ -26,4 +26,4 @@ pub struct SourceLocation {
   pub end: Location,
 }
 
-pub struct SourceMap {}
+pub use atlaspack_sourcemap::SourceMap;

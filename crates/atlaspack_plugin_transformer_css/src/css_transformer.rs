@@ -9,13 +9,14 @@ use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::engines::{Engines, EnginesBrowsers};
 use atlaspack_core::types::{
   Asset, AssetWithDependencies, Code, Dependency, Diagnostic, EnvironmentContext, ErrorKind,
-  ExportsCondition, FileType, Priority, SpecifierType, Symbol,
+  ExportsCondition, FileType, Priority, SourceMap, SpecifierType, Symbol,
 };
 use lightningcss::css_modules::CssModuleExport;
 use lightningcss::dependencies::DependencyOptions;
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::{ParserFlags, ParserOptions, StyleSheet};
 use lightningcss::targets::{Browsers, Targets};
+use parcel_sourcemap::SourceMap as ParcelSourceMap;
 use serde::Deserialize;
 use serde_json::json;
 
@@ -151,9 +152,19 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
         EnginesBrowsers::List(l) => Browsers::from_browserslist(l),
       },
     )?;
+
+    let mut lightning_source_map: Option<ParcelSourceMap> = if asset.env.source_map.is_some() {
+      let mut sm = ParcelSourceMap::new(&self.project_root.to_string_lossy());
+      sm.add_source(&asset.file_path.to_string_lossy());
+      sm.set_source_content(0, asset.code.as_str()?)?;
+      Some(sm)
+    } else {
+      None
+    };
+
     let css = stylesheet.to_css(PrinterOptions {
       minify: false,
-      source_map: None,
+      source_map: lightning_source_map.as_mut(),
       project_root: self.project_root.to_str(),
       targets: Targets {
         browsers,
@@ -226,7 +237,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
     let mut css_code = Vec::new();
     let mut discovered_assets = Vec::new();
-    let mut asset_symbols = Vec::new();
+    let mut asset_symbols: Vec<Symbol> = Vec::new();
 
     if let Some(exports) = css.exports {
       let mut export_code = String::new();
@@ -384,6 +395,16 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
     // Add the generated css imports to the css output
     css_code.push(css.code);
     asset.code = Arc::new(Code::from(css_code.join("\n")));
+
+    if let Some(source_map) = lightning_source_map.clone() {
+      let mut source_map = SourceMap::from(source_map);
+
+      if let Some(original_map) = asset.map {
+        source_map.extends(&mut original_map.clone())?;
+      }
+
+      asset.map = Some(source_map);
+    }
 
     Ok(TransformResult {
       asset,

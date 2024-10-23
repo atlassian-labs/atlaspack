@@ -108,6 +108,7 @@ pub enum SourceField {
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(untagged)]
 pub enum SourceMapField {
   Bool(bool),
   Options(TargetSourceMapOptions),

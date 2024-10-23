@@ -151,7 +151,7 @@ function checkSourceMapping({
   );
 }
 
-describe.v2('sourcemaps', function () {
+describe('sourcemaps', function () {
   it('Should create a basic browser sourcemap', async function () {
     let sourceFilename = path.join(
       __dirname,
@@ -206,51 +206,54 @@ describe.v2('sourcemaps', function () {
     });
   });
 
-  it('Should create a basic browser sourcemap when serving', async function () {
-    let fixture = path.join(__dirname, '/integration/sourcemap');
-    let sourceFilename = path.join(fixture, 'index.js');
-    await bundle(sourceFilename, {serveOptions: {port: 1234}});
+  it.v2(
+    'Should create a basic browser sourcemap when serving',
+    async function () {
+      let fixture = path.join(__dirname, '/integration/sourcemap');
+      let sourceFilename = path.join(fixture, 'index.js');
+      await bundle(sourceFilename, {serveOptions: {port: 1234}});
 
-    let filename = path.join(distDir, 'index.js');
-    let raw = await outputFS.readFile(filename, 'utf8');
-    let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
-    if (!mapUrlData) {
-      throw new Error('Could not load map');
-    }
-    let map = mapUrlData.map;
+      let filename = path.join(distDir, 'index.js');
+      let raw = await outputFS.readFile(filename, 'utf8');
+      let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
+      if (!mapUrlData) {
+        throw new Error('Could not load map');
+      }
+      let map = mapUrlData.map;
 
-    let sourceMap = new SourceMap('/');
-    sourceMap.addVLQMap(map);
-    assert.strictEqual(map.sourceRoot, '/__parcel_source_root/');
-    let input = await inputFS.readFile(
-      path.join(fixture, map.sources[0]),
-      'utf8',
-    );
+      let sourceMap = new SourceMap('/');
+      sourceMap.addVLQMap(map);
+      assert.strictEqual(map.sourceRoot, '/__parcel_source_root/');
+      let input = await inputFS.readFile(
+        path.join(fixture, map.sources[0]),
+        'utf8',
+      );
 
-    checkSourceMapping({
-      map: sourceMap,
-      source: input,
-      generated: raw,
-      str: 'function helloWorld',
-      sourcePath: map.sources[0],
-    });
+      checkSourceMapping({
+        map: sourceMap,
+        source: input,
+        generated: raw,
+        str: 'function helloWorld',
+        sourcePath: map.sources[0],
+      });
 
-    checkSourceMapping({
-      map: sourceMap,
-      source: input,
-      generated: raw,
-      str: 'module.exports = helloWorld;',
-      sourcePath: map.sources[0],
-    });
+      checkSourceMapping({
+        map: sourceMap,
+        source: input,
+        generated: raw,
+        str: 'module.exports = helloWorld;',
+        sourcePath: map.sources[0],
+      });
 
-    checkSourceMapping({
-      map: sourceMap,
-      source: input,
-      generated: raw,
-      str: '"hello world"',
-      sourcePath: map.sources[0],
-    });
-  });
+      checkSourceMapping({
+        map: sourceMap,
+        source: input,
+        generated: raw,
+        str: '"hello world"',
+        sourcePath: map.sources[0],
+      });
+    },
+  );
 
   it('Should create a basic node sourcemap', async function () {
     let sourceFilename = path.join(
@@ -581,44 +584,47 @@ describe.v2('sourcemaps', function () {
     });
   });
 
-  it('should create a valid sourcemap when using the Typescript tsc transformer', async function () {
-    let inputFilePath = path.join(
-      __dirname,
-      '/integration/sourcemap-typescript-tsc/src/index.ts',
-    );
+  it.v2(
+    'should create a valid sourcemap when using the Typescript tsc transformer',
+    async function () {
+      let inputFilePath = path.join(
+        __dirname,
+        '/integration/sourcemap-typescript-tsc/src/index.ts',
+      );
 
-    let b = await bundle(inputFilePath);
-    let filename = b.getBundles()[0].filePath;
-    let raw = await outputFS.readFile(filename, 'utf8');
-    let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
-    if (!mapUrlData) {
-      throw new Error('Could not load map');
-    }
-    let map = mapUrlData.map;
+      let b = await bundle(inputFilePath);
+      let filename = b.getBundles()[0].filePath;
+      let raw = await outputFS.readFile(filename, 'utf8');
+      let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
+      if (!mapUrlData) {
+        throw new Error('Could not load map');
+      }
+      let map = mapUrlData.map;
 
-    assert.equal(map.file, 'index.js.map');
-    assert(raw.includes('//# sourceMappingURL=index.js.map'));
-    // assert.equal(map.sourceRoot, '/__parcel_source_root/');
+      assert.equal(map.file, 'index.js.map');
+      assert(raw.includes('//# sourceMappingURL=index.js.map'));
+      // assert.equal(map.sourceRoot, '/__parcel_source_root/');
 
-    let sourceMap = new SourceMap('/');
-    sourceMap.addVLQMap(map);
+      let sourceMap = new SourceMap('/');
+      sourceMap.addVLQMap(map);
 
-    let mapData = sourceMap.getMap();
-    assert.deepEqual(mapData.sources, ['src/index.ts']);
-    assert(map.sourcesContent.every((s) => s));
+      let mapData = sourceMap.getMap();
+      assert.deepEqual(mapData.sources, ['src/index.ts']);
+      assert(map.sourcesContent.every((s) => s));
 
-    let input = await inputFS.readFile(
-      path.join(path.dirname(filename), map.sourceRoot, map.sources[0]),
-      'utf8',
-    );
-    checkSourceMapping({
-      map: sourceMap,
-      source: input,
-      generated: raw,
-      str: 'nonExistsFunc',
-      sourcePath: 'src/index.ts',
-    });
-  });
+      let input = await inputFS.readFile(
+        path.join(path.dirname(filename), map.sourceRoot, map.sources[0]),
+        'utf8',
+      );
+      checkSourceMapping({
+        map: sourceMap,
+        source: input,
+        generated: raw,
+        str: 'nonExistsFunc',
+        sourcePath: 'src/index.ts',
+      });
+    },
+  );
 
   it('should create a valid sourcemap for a CSS bundle', async function () {
     async function test(minify) {
@@ -756,7 +762,7 @@ describe.v2('sourcemaps', function () {
     await test(true);
   });
 
-  it('should create a valid sourcemap for a Sass asset', async function () {
+  it.v2('should create a valid sourcemap for a Sass asset', async function () {
     async function test(shouldOptimize) {
       let inputFilePath = path.join(
         __dirname,
@@ -807,61 +813,15 @@ describe.v2('sourcemaps', function () {
     await test(true);
   });
 
-  it('should create a valid sourcemap for a Sass asset w/ imports', async function () {
-    let inputFilePath = path.join(
-      __dirname,
-      '/integration/scss-sourcemap-imports/style.scss',
-    );
-
-    await bundle(inputFilePath);
-    let distDir = path.join(__dirname, '../dist/');
-    let filename = path.join(distDir, 'style.css');
-    let raw = await outputFS.readFile(filename, 'utf8');
-    let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
-    if (!mapUrlData) {
-      throw new Error('Could not load map');
-    }
-    let map = mapUrlData.map;
-
-    assert.equal(map.file, 'style.css.map');
-    assert(raw.includes('/*# sourceMappingURL=style.css.map */'));
-
-    let sourceMap = new SourceMap('/');
-    sourceMap.addVLQMap(map);
-
-    let mapData = sourceMap.getMap();
-    // This should actually just be `./integration/scss-sourcemap-imports/with_url.scss`
-    // but this is a small bug in the extend utility of the source-map library
-    assert.deepEqual(mapData.sources, [
-      'integration/scss-sourcemap-imports/with_url.scss',
-    ]);
-
-    let input = await inputFS.readFile(
-      path.join(path.dirname(filename), map.sourceRoot, map.sources[0]),
-      'utf-8',
-    );
-
-    checkSourceMapping({
-      map: sourceMap,
-      source: input,
-      generated: raw,
-      str: 'body',
-      sourcePath: 'integration/scss-sourcemap-imports/with_url.scss',
-    });
-  });
-
-  it('should create a valid sourcemap when for a CSS asset importing Sass', async function () {
-    async function test(shouldOptimize) {
+  it.v2(
+    'should create a valid sourcemap for a Sass asset w/ imports',
+    async function () {
       let inputFilePath = path.join(
         __dirname,
-        '/integration/sourcemap-sass-imported/style.css',
+        '/integration/scss-sourcemap-imports/style.scss',
       );
 
-      await bundle(inputFilePath, {
-        defaultTargetOptions: {
-          shouldOptimize,
-        },
-      });
+      await bundle(inputFilePath);
       let distDir = path.join(__dirname, '../dist/');
       let filename = path.join(distDir, 'style.css');
       let raw = await outputFS.readFile(filename, 'utf8');
@@ -878,42 +838,94 @@ describe.v2('sourcemaps', function () {
       sourceMap.addVLQMap(map);
 
       let mapData = sourceMap.getMap();
-      // TODO: htmlnano inserts `./<input css 1>`
-      assert(mapData.sources.includes('other.scss'));
-      assert(mapData.sources.includes('style.css'));
+      // This should actually just be `./integration/scss-sourcemap-imports/with_url.scss`
+      // but this is a small bug in the extend utility of the source-map library
+      assert.deepEqual(mapData.sources, [
+        'integration/scss-sourcemap-imports/with_url.scss',
+      ]);
 
-      let style = await inputFS.readFile(
-        path.join(path.dirname(filename), map.sourceRoot, 'style.css'),
-        'utf-8',
-      );
-      let other = await inputFS.readFile(
-        path.join(path.dirname(filename), map.sourceRoot, 'other.scss'),
+      let input = await inputFS.readFile(
+        path.join(path.dirname(filename), map.sourceRoot, map.sources[0]),
         'utf-8',
       );
 
       checkSourceMapping({
         map: sourceMap,
-        source: style,
+        source: input,
         generated: raw,
         str: 'body',
-        sourcePath: 'style.css',
-        msg: ' ' + (shouldOptimize ? 'with' : 'without') + ' minification',
+        sourcePath: 'integration/scss-sourcemap-imports/with_url.scss',
       });
+    },
+  );
 
-      checkSourceMapping({
-        map: sourceMap,
-        source: other,
-        generated: raw,
-        str: 'div',
-        sourcePath: 'other.scss',
-        msg: ' ' + (shouldOptimize ? 'with' : 'without') + ' minification',
-      });
-    }
-    await test(false);
-    await test(true);
-  });
+  it.v2(
+    'should create a valid sourcemap when for a CSS asset importing Sass',
+    async function () {
+      async function test(shouldOptimize) {
+        let inputFilePath = path.join(
+          __dirname,
+          '/integration/sourcemap-sass-imported/style.css',
+        );
 
-  it('should create a valid sourcemap for a LESS asset', async function () {
+        await bundle(inputFilePath, {
+          defaultTargetOptions: {
+            shouldOptimize,
+          },
+        });
+        let distDir = path.join(__dirname, '../dist/');
+        let filename = path.join(distDir, 'style.css');
+        let raw = await outputFS.readFile(filename, 'utf8');
+        let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
+        if (!mapUrlData) {
+          throw new Error('Could not load map');
+        }
+        let map = mapUrlData.map;
+
+        assert.equal(map.file, 'style.css.map');
+        assert(raw.includes('/*# sourceMappingURL=style.css.map */'));
+
+        let sourceMap = new SourceMap('/');
+        sourceMap.addVLQMap(map);
+
+        let mapData = sourceMap.getMap();
+        // TODO: htmlnano inserts `./<input css 1>`
+        assert(mapData.sources.includes('other.scss'));
+        assert(mapData.sources.includes('style.css'));
+
+        let style = await inputFS.readFile(
+          path.join(path.dirname(filename), map.sourceRoot, 'style.css'),
+          'utf-8',
+        );
+        let other = await inputFS.readFile(
+          path.join(path.dirname(filename), map.sourceRoot, 'other.scss'),
+          'utf-8',
+        );
+
+        checkSourceMapping({
+          map: sourceMap,
+          source: style,
+          generated: raw,
+          str: 'body',
+          sourcePath: 'style.css',
+          msg: ' ' + (shouldOptimize ? 'with' : 'without') + ' minification',
+        });
+
+        checkSourceMapping({
+          map: sourceMap,
+          source: other,
+          generated: raw,
+          str: 'div',
+          sourcePath: 'other.scss',
+          msg: ' ' + (shouldOptimize ? 'with' : 'without') + ' minification',
+        });
+      }
+      await test(false);
+      await test(true);
+    },
+  );
+
+  it.v2('should create a valid sourcemap for a LESS asset', async function () {
     async function test(shouldOptimize) {
       await fsFixture(overlayFS, __dirname)`
         .parcelrc:
@@ -1055,7 +1067,7 @@ describe.v2('sourcemaps', function () {
     );
   });
 
-  it('Should just skip invalid inlined sourcemaps', async function () {
+  it('Should skip invalid inlined sourcemaps', async function () {
     let sourceFilename = path.join(
       __dirname,
       '/integration/sourcemap-invalid-existing/index.js',
@@ -1089,12 +1101,8 @@ describe.v2('sourcemaps', function () {
     }
 
     let map = sourcemapData.map;
-    assert.equal(map.sourceRoot, '../test/');
-    assert.deepEqual(map.sources, [
-      'integration/sourcemap-existing/index.js',
-      'integration/sourcemap-existing/sum.js',
-      'integration/sourcemap-existing/sum.ts',
-    ]);
+    assert.equal(map.sourceRoot, '../test/integration/sourcemap-existing/');
+    assert.deepEqual(map.sources, ['index.js', 'sum.js', 'sum.ts']);
 
     for (let source of map.sources) {
       if (path.extname(source) !== '.ts') {
@@ -1125,12 +1133,8 @@ describe.v2('sourcemaps', function () {
     }
 
     let map = sourcemapData.map;
-    assert.equal(map.sourceRoot, '../test/');
-    assert.deepEqual(map.sources, [
-      'integration/sourcemap-inline/index.js',
-      'integration/sourcemap-inline/sum.js',
-      'integration/sourcemap-inline/sum.ts',
-    ]);
+    assert.equal(map.sourceRoot, '../test/integration/sourcemap-inline/');
+    assert.deepEqual(map.sources, ['index.js', 'sum.js', 'sum.ts']);
 
     for (let source of map.sources) {
       if (path.extname(source) !== '.ts') {
@@ -1160,8 +1164,13 @@ describe.v2('sourcemaps', function () {
     }
 
     let map = sourcemapData.map;
-    assert.equal(map.sourceRoot, '../test/');
+    assert.equal(
+      map.sourceRoot,
+      '../test/integration/sourcemap-external-contents/',
+    );
+
     assert.equal(map.sources.length, 3);
+
     for (let source of map.sources) {
       assert(
         await inputFS.exists(
@@ -1317,143 +1326,154 @@ describe.v2('sourcemaps', function () {
     });
   });
 
-  it('carries sourcesContent from the original sources through multiple transformations (babel and swc)', async () => {
-    let b = await bundle(
-      path.join(
+  it.v2(
+    'carries sourcesContent from the original sources through multiple transformations (babel and swc)',
+    async () => {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'integration/sourcemap-original-sourcecontents/index.js',
+        ),
+        {
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+          },
+        },
+      );
+
+      let filename = b.getBundles()[0].filePath;
+      let raw = await outputFS.readFile(filename, 'utf8');
+
+      let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
+      if (!mapUrlData) {
+        throw new Error('Could not load map');
+      }
+      let map = mapUrlData.map;
+
+      let sourceMap = new SourceMap('/');
+      sourceMap.addVLQMap(map);
+      let sourcePath = 'index.js';
+      let sourceContent = nullthrows(sourceMap.getSourceContent(sourcePath));
+
+      checkSourceMapping({
+        map: sourceMap,
+        source: sourceContent,
+        generated: raw,
+        str: 'bar="bar"' /* from jsx: <App bar="bar" /> */,
+        generatedStr: 'bar: "bar"',
+        sourcePath,
+      });
+
+      checkSourceMapping({
+        map: sourceMap,
+        source: sourceContent,
+        generated: raw,
+        str: 'document.getElementById(',
+        sourcePath,
+      });
+    },
+  );
+
+  it.v2(
+    'carries sourcesContent from the original sources (tsx) through multiple transformations (babel and swc)',
+    async () => {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          'integration/sourcemap-original-sourcecontents-ts/index.tsx',
+        ),
+        {
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+          },
+        },
+      );
+
+      let filename = b.getBundles()[0].filePath;
+      let raw = await outputFS.readFile(filename, 'utf8');
+
+      let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
+      if (!mapUrlData) {
+        throw new Error('Could not load map');
+      }
+      let map = mapUrlData.map;
+
+      let sourceMap = new SourceMap('/');
+      sourceMap.addVLQMap(map);
+      let sourcePath = 'index.tsx';
+      let sourceContent = nullthrows(sourceMap.getSourceContent(sourcePath));
+
+      checkSourceMapping({
+        map: sourceMap,
+        source: sourceContent,
+        generated: raw,
+        str: 'bar="bar"' /* from tsx: <App bar="bar" /> */,
+        generatedStr: 'bar: "bar"',
+        sourcePath,
+      });
+
+      checkSourceMapping({
+        map: sourceMap,
+        source: sourceContent,
+        generated: raw,
+        str: 'document.getElementById(',
+        sourcePath,
+      });
+    },
+  );
+
+  // TODO: The [node bindings](https://github.com/parcel-bundler/source-map/blob/master/src/node.js#L15-L20)
+  // perform additional sourcesContent handling that rust does not do in from_json
+  it.v2(
+    'retains sourcesContent from the original sources from a large text file',
+    async () => {
+      let testDir = path.join(
         __dirname,
-        'integration/sourcemap-original-sourcecontents/index.js',
-      ),
-      {
+        'integration/sourcemap-original-sourcecontents-large',
+      );
+
+      await overlayFS.mkdirp(testDir);
+      await Promise.all([
+        overlayFS.writeFile(
+          path.join(testDir, 'index.js'),
+          'const foo = ' +
+            `'${
+              // Generate ~6MB of text to exceed the stream threshold
+              'Lorem ipsum dolor sit amet '.repeat(245000)
+            }';`,
+        ),
+        overlayFS.writeFile(path.join(testDir, 'yarn.lock'), ''),
+      ]);
+
+      let b = await bundle(path.join(testDir, 'index.js'), {
+        inputFS: overlayFS,
         defaultTargetOptions: {
           shouldScopeHoist: true,
         },
-      },
-    );
+      });
 
-    let filename = b.getBundles()[0].filePath;
-    let raw = await outputFS.readFile(filename, 'utf8');
+      let filename = b.getBundles()[0].filePath;
+      let raw = await outputFS.readFile(filename, 'utf8');
 
-    let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
-    if (!mapUrlData) {
-      throw new Error('Could not load map');
-    }
-    let map = mapUrlData.map;
+      let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
+      if (!mapUrlData) {
+        throw new Error('Could not load map');
+      }
 
-    let sourceMap = new SourceMap('/');
-    sourceMap.addVLQMap(map);
-    let sourcePath = 'index.js';
-    let sourceContent = nullthrows(sourceMap.getSourceContent(sourcePath));
+      let map = mapUrlData.map;
+      let sourceMap = new SourceMap('/');
+      let sourceContent = map.sourcesContent[0];
 
-    checkSourceMapping({
-      map: sourceMap,
-      source: sourceContent,
-      generated: raw,
-      str: 'bar="bar"' /* from jsx: <App bar="bar" /> */,
-      generatedStr: 'bar: "bar"',
-      sourcePath,
-    });
+      sourceMap.addVLQMap(map);
 
-    checkSourceMapping({
-      map: sourceMap,
-      source: sourceContent,
-      generated: raw,
-      str: 'document.getElementById(',
-      sourcePath,
-    });
-  });
-
-  it('carries sourcesContent from the original sources (tsx) through multiple transformations (babel and swc)', async () => {
-    let b = await bundle(
-      path.join(
-        __dirname,
-        'integration/sourcemap-original-sourcecontents-ts/index.tsx',
-      ),
-      {
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
-        },
-      },
-    );
-
-    let filename = b.getBundles()[0].filePath;
-    let raw = await outputFS.readFile(filename, 'utf8');
-
-    let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
-    if (!mapUrlData) {
-      throw new Error('Could not load map');
-    }
-    let map = mapUrlData.map;
-
-    let sourceMap = new SourceMap('/');
-    sourceMap.addVLQMap(map);
-    let sourcePath = 'index.tsx';
-    let sourceContent = nullthrows(sourceMap.getSourceContent(sourcePath));
-
-    checkSourceMapping({
-      map: sourceMap,
-      source: sourceContent,
-      generated: raw,
-      str: 'bar="bar"' /* from tsx: <App bar="bar" /> */,
-      generatedStr: 'bar: "bar"',
-      sourcePath,
-    });
-
-    checkSourceMapping({
-      map: sourceMap,
-      source: sourceContent,
-      generated: raw,
-      str: 'document.getElementById(',
-      sourcePath,
-    });
-  });
-
-  it('retains sourcesContent from the original sources from a large text file', async () => {
-    let testDir = path.join(
-      __dirname,
-      'integration/sourcemap-original-sourcecontents-large',
-    );
-
-    await outputFS.mkdirp(testDir);
-    await Promise.all([
-      outputFS.writeFile(
-        path.join(testDir, 'index.js'),
-        'const foo = ' +
-          `'${
-            // Generate ~6MB of text to exceed the stream threshold
-            'Lorem ipsum dolor sit amet '.repeat(245000)
-          }';`,
-      ),
-      outputFS.writeFile(path.join(testDir, 'yarn.lock'), ''),
-    ]);
-
-    let b = await bundle(path.join(testDir, 'index.js'), {
-      inputFS: overlayFS,
-      defaultTargetOptions: {
-        shouldScopeHoist: true,
-      },
-    });
-
-    let filename = b.getBundles()[0].filePath;
-    let raw = await outputFS.readFile(filename, 'utf8');
-
-    let mapUrlData = await loadSourceMapUrl(outputFS, filename, raw);
-    if (!mapUrlData) {
-      throw new Error('Could not load map');
-    }
-    let map = mapUrlData.map;
-
-    let sourceMap = new SourceMap('/');
-    sourceMap.addVLQMap(map);
-    let sourceContent = map.sourcesContent[0];
-    let sourcePath = 'index.js';
-
-    checkSourceMapping({
-      map: sourceMap,
-      source: sourceContent,
-      generated: raw,
-      str: `foo = 'Lorem ipsum`,
-      generatedStr: `foo = 'Lorem ipsum`,
-      sourcePath,
-    });
-  });
+      checkSourceMapping({
+        map: sourceMap,
+        source: sourceContent,
+        generated: raw,
+        str: `foo = 'Lorem ipsum`,
+        generatedStr: `foo = 'Lorem ipsum`,
+        sourcePath: 'index.js',
+      });
+    },
+  );
 });

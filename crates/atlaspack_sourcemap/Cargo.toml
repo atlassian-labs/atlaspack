@@ -1,0 +1,13 @@
+[package]
+authors = ["Monica Olejniczak <monica.j.olejniczak@gmail.com>"]
+name = "atlaspack_sourcemap"
+version = "0.1.0"
+edition = "2021"
+description = "Sourcemaps for Atlaspack"
+
+[dependencies]
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+parcel_sourcemap = { workspace = true, features = ["json"] }
+regex = { workspace = true }
+rkyv = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
