@@ -266,44 +266,42 @@ impl Plugins for ConfigPlugins {
 
       let transformer = self
         .plugin_cache
-        .get_or_init_transformer(transformer_name, || match transformer_name {
-          "@atlaspack/transformer-js" => {
-            Ok(Arc::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?))
-          }
-          "@atlaspack/transformer-css" => {
-            Ok(Arc::new(AtlaspackCssTransformerPlugin::new(&self.ctx)?))
-          }
-          "@atlaspack/transformer-inline-string" => Ok(Arc::new(
-            AtlaspackInlineStringTransformerPlugin::new(&self.ctx),
-          )),
-          "@atlaspack/transformer-inline" => {
-            Ok(Arc::new(AtlaspackInlineTransformerPlugin::new(&self.ctx)))
-          }
-          "@atlaspack/transformer-image" => {
-            Ok(Arc::new(AtlaspackImageTransformerPlugin::new(&self.ctx)))
-          }
-          "@atlaspack/transformer-raw" => {
-            Ok(Arc::new(AtlaspackRawTransformerPlugin::new(&self.ctx)))
-          }
-          "@atlaspack/transformer-html" => {
-            Ok(Arc::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx)))
-          }
-          "@atlaspack/transformer-json" => {
-            Ok(Arc::new(AtlaspackJsonTransformerPlugin::new(&self.ctx)))
-          }
-          "@atlaspack/transformer-yaml" => {
-            Ok(Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx)))
-          }
-          _ => {
-            let Some(rpc_worker) = &self.rpc_worker else {
-              anyhow::bail!(
-                "Unable to initialize JavaScript Transformer plugin {}",
-                transformer.package_name
-              )
-            };
+        .get_or_init_transformer(transformer_name, || {
+          Ok(match transformer_name {
+            "@atlaspack/transformer-js" => Arc::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?),
+            "@atlaspack/transformer-css" => {
+              Arc::new(AtlaspackCssTransformerPlugin::new(&self.ctx)?)
+            }
+            "@atlaspack/transformer-inline-string" => {
+              Arc::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
+            }
+            "@atlaspack/transformer-inline" => {
+              Arc::new(AtlaspackInlineTransformerPlugin::new(&self.ctx))
+            }
+            "@atlaspack/transformer-image" => {
+              Arc::new(AtlaspackImageTransformerPlugin::new(&self.ctx))
+            }
+            "@atlaspack/transformer-raw" => Arc::new(AtlaspackRawTransformerPlugin::new(&self.ctx)),
+            "@atlaspack/transformer-html" => {
+              Arc::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx))
+            }
+            "@atlaspack/transformer-json" => {
+              Arc::new(AtlaspackJsonTransformerPlugin::new(&self.ctx))
+            }
+            "@atlaspack/transformer-yaml" => {
+              Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx))
+            }
+            _ => {
+              let Some(rpc_worker) = &self.rpc_worker else {
+                anyhow::bail!(
+                  "Unable to initialize JavaScript Transformer plugin {}",
+                  transformer.package_name
+                )
+              };
 
-            rpc_worker.create_transformer(&self.ctx, transformer)
-          }
+              rpc_worker.create_transformer(&self.ctx, transformer)?
+            }
+          })
         })?;
 
       transformers.push(transformer);
