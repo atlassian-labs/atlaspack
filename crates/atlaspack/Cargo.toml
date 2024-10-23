@@ -42,6 +42,8 @@ tracing-subscriber = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 once_cell = { workspace = true }
 parking_lot = { workspace = true }
+may = "*"
+crossbeam = "*"
 
 [dev-dependencies]
 mockall = { workspace = true }
