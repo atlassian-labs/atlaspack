@@ -189,8 +189,10 @@ export class AtlaspackWorker {
       const ast = await transformer.parse({
         asset: mutableAsset,
         config,
-        get resolve() {
-          throw new Error('Transformer.parse.resolve()');
+        async resolve(specifier: string, options: any) {
+          // TODO Temp, replace with resolver pipeline
+          // eslint-disable-next-line no-return-await
+          return await require.resolve(specifier, options);
         },
         ...defaultOptions,
       });
@@ -202,8 +204,10 @@ export class AtlaspackWorker {
     const result = await state.transformer.transform({
       asset: mutableAsset,
       config,
-      get resolve() {
-        throw new Error('Transformer.transform.resolve()');
+      async resolve(specifier: string, options: any) {
+        // TODO Temp, replace with resolver pipeline
+        // eslint-disable-next-line no-return-await
+        return await require.resolve(specifier, options);
       },
       ...defaultOptions,
     });
