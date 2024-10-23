@@ -20,11 +20,7 @@ impl AtlaspackImageTransformerPlugin {
 }
 
 impl TransformerPlugin for AtlaspackImageTransformerPlugin {
-  fn transform(
-    &mut self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     if asset.bundle_behavior.is_none() {
@@ -111,7 +107,7 @@ mod tests {
   #[test]
   fn returns_image_asset() {
     let file_system = Arc::new(InMemoryFileSystem::default());
-    let mut plugin = AtlaspackImageTransformerPlugin::new(&PluginContext {
+    let plugin = AtlaspackImageTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
         fs: file_system.clone(),
         project_root: PathBuf::default(),

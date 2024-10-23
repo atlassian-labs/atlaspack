@@ -178,7 +178,7 @@ impl RuntimePlugin for TestingRpcPlugin {
 
 impl TransformerPlugin for TestingRpcPlugin {
   fn transform(
-    &mut self,
+    &self,
     _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, anyhow::Error> {

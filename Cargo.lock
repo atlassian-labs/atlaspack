@@ -581,6 +581,7 @@ dependencies = [
  "criterion",
  "glob-match",
  "indexmap 1.9.3",
+ "parking_lot",
  "pretty_assertions",
  "serde",
  "swc_core",
