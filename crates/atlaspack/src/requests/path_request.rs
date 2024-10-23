@@ -231,7 +231,7 @@ mod tests {
     };
 
     let resolution = request_tracker(RequestTrackerTestOptions {
-      plugins: test_plugins!(vec![Box::new(ExcludedResolverPlugin {})]),
+      plugins: test_plugins!(vec![Arc::new(ExcludedResolverPlugin {})]),
       ..RequestTrackerTestOptions::default()
     })
     .run_request(request);
@@ -249,7 +249,7 @@ mod tests {
     };
 
     let resolution = request_tracker(RequestTrackerTestOptions {
-      plugins: test_plugins!(vec![Box::new(ResolvedResolverPlugin {
+      plugins: test_plugins!(vec![Arc::new(ResolvedResolverPlugin {
         resolution: ResolvedResolution {
           file_path: PathBuf::from("./"),
           ..ResolvedResolution::default()
@@ -283,14 +283,14 @@ mod tests {
 
     let resolution = request_tracker(RequestTrackerTestOptions {
       plugins: test_plugins!(vec![
-        Box::new(UnresolvedResolverPlugin {}),
-        Box::new(ResolvedResolverPlugin {
+        Arc::new(UnresolvedResolverPlugin {}),
+        Arc::new(ResolvedResolverPlugin {
           resolution: ResolvedResolution {
             file_path: root.join("a.js"),
             ..ResolvedResolution::default()
           },
         }),
-        Box::new(ResolvedResolverPlugin {
+        Arc::new(ResolvedResolverPlugin {
           resolution: ResolvedResolution {
             file_path: root.join("b.js"),
             ..ResolvedResolution::default()
@@ -328,7 +328,7 @@ mod tests {
       };
 
       let resolution = request_tracker(RequestTrackerTestOptions {
-        plugins: test_plugins!(vec![Box::new(UnresolvedResolverPlugin {})]),
+        plugins: test_plugins!(vec![Arc::new(UnresolvedResolverPlugin {})]),
         ..RequestTrackerTestOptions::default()
       })
       .run_request(request);
@@ -350,7 +350,7 @@ mod tests {
         };
 
         let resolution = request_tracker(RequestTrackerTestOptions {
-          plugins: test_plugins!(vec![Box::new(UnresolvedResolverPlugin {})]),
+          plugins: test_plugins!(vec![Arc::new(UnresolvedResolverPlugin {})]),
           ..RequestTrackerTestOptions::default()
         })
         .run_request(request);

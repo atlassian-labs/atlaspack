@@ -331,7 +331,7 @@ mod tests {
     discovered_assets: Option<Vec<AssetWithDependencies>>,
     dependencies: Option<Vec<Dependency>>,
     invalidate_on_file_change: Option<Vec<PathBuf>>,
-  ) -> Box<MockTransformerPlugin> {
+  ) -> Arc<MockTransformerPlugin> {
     let label = label.to_string();
     let mut mock = MockTransformerPlugin::new();
     mock.expect_id().returning({
@@ -362,6 +362,6 @@ mod tests {
       }
     });
     // .returning(move |_context, asset: Asset| get_simple_transformer(label.clone(), asset));
-    Box::new(mock)
+    Arc::new(mock)
   }
 }

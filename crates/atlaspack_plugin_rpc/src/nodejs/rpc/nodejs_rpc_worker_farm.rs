@@ -32,8 +32,8 @@ impl RpcWorker for NodejsWorkerFarm {
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
-  ) -> Result<Box<dyn ResolverPlugin>, anyhow::Error> {
-    Ok(Box::new(RpcNodejsResolverPlugin::new(
+  ) -> Result<Arc<dyn ResolverPlugin>, anyhow::Error> {
+    Ok(Arc::new(RpcNodejsResolverPlugin::new(
       self.workers.clone(),
       ctx,
       plugin,
@@ -44,8 +44,8 @@ impl RpcWorker for NodejsWorkerFarm {
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn TransformerPlugin>> {
-    Ok(Box::new(NodejsRpcTransformerPlugin::new(
+  ) -> anyhow::Result<Arc<dyn TransformerPlugin>> {
+    Ok(Arc::new(NodejsRpcTransformerPlugin::new(
       self.workers.clone(),
       ctx,
       plugin,
