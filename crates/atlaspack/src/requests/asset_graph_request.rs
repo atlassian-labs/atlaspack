@@ -497,7 +497,7 @@ mod tests {
   #[test]
   fn test_asset_graph_request_with_no_entries() {
     let options = RequestTrackerTestOptions::default();
-    let mut request_tracker = request_tracker(options);
+    let request_tracker = request_tracker(options);
 
     let asset_graph_request = AssetGraphRequest {};
     let RequestResult::AssetGraph(asset_graph_request_result) =
@@ -535,7 +535,7 @@ mod tests {
 
     fs.write_file(&temporary_dir.join("package.json"), String::from("{}"));
 
-    let mut request_tracker = request_tracker(RequestTrackerTestOptions {
+    let request_tracker = request_tracker(RequestTrackerTestOptions {
       atlaspack_options: AtlaspackOptions {
         entries: vec![temporary_dir.join("entry.js").to_str().unwrap().to_string()],
         ..AtlaspackOptions::default()
@@ -634,7 +634,7 @@ mod tests {
 
     setup_core_modules(&fs, &core_path);
 
-    let mut request_tracker = request_tracker(RequestTrackerTestOptions {
+    let request_tracker = request_tracker(RequestTrackerTestOptions {
       fs: Arc::new(fs),
       atlaspack_options: AtlaspackOptions {
         core_path,

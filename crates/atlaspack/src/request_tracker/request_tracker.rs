@@ -16,7 +16,6 @@ use atlaspack_filesystem::FileSystemRef;
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
 
-use super::request;
 use super::Request;
 use super::RequestEdgeType;
 use super::RequestGraph;
@@ -128,86 +127,95 @@ impl RequestTracker {
       let plugins = plugins.clone();
       let project_root = project_root.clone();
 
-      handles.push(std::thread::spawn(move || {
-        while let Ok(request_queue_message) = rx.recv() {
-          match request_queue_message {
-            RequestQueueMessage::RunRequest {
-              message:
-                RunRequestMessage {
-                  request,
-                  parent_request_id,
-                  response_tx,
-                },
-              tx,
-            } => {
-              let request_id = request.id();
-              tracing::trace!(?request_id, ?parent_request_id, "Run request");
+      handles.push(
+        std::thread::Builder::new()
+          .name(format!("RequestTracker Worker {}", i))
+          .spawn(move || -> anyhow::Result<()> {
+            while let Ok(request_queue_message) = rx.recv() {
+              match request_queue_message {
+                RequestQueueMessage::RunRequest {
+                  message:
+                    RunRequestMessage {
+                      request,
+                      parent_request_id,
+                      response_tx,
+                    },
+                  tx,
+                } => {
+                  let request_id = request.id();
+                  tracing::trace!(?request_id, ?parent_request_id, "Run request");
 
-              let prepared = {
-                let mut rt = rt.write();
-                rt.prepare_request(request_id).unwrap()
-              };
+                  let prepared = {
+                    let mut rt = rt.write();
+                    rt.prepare_request(request_id).unwrap()
+                  };
 
-              if prepared {
-                let context = RunRequestContext::new(
-                  config_loader.clone(),
-                  file_system.clone(),
-                  options.clone(),
-                  Some(request_id),
-                  plugins.clone(),
-                  project_root.clone(),
-                  // sub-request run
-                  Box::new({
-                    let tx = tx.clone();
-                    move |message| {
-                      let tx2 = tx.clone();
-                      tx.send(RequestQueueMessage::RunRequest { message, tx: tx2 })
-                        .unwrap();
+                  // Cached request
+                  if !prepared {
+                    if let Some(response_tx) = response_tx {
+                      let result = {
+                        let mut rt = rt.write();
+                        rt.get_request(parent_request_id, request_id)
+                      };
+                      response_tx.send(result.map(|r| (r, request_id))).ok();
                     }
-                  }),
-                );
+                    continue;
+                  }
 
-                let result = request.run(context);
-                let _ = tx.send(RequestQueueMessage::RequestResult {
+                  let context = RunRequestContext::new(
+                    config_loader.clone(),
+                    file_system.clone(),
+                    options.clone(),
+                    Some(request_id),
+                    plugins.clone(),
+                    project_root.clone(),
+                    // sub-request run
+                    Box::new({
+                      let tx = tx.clone();
+                      move |message| {
+                        tx.clone()
+                          .send(RequestQueueMessage::RunRequest {
+                            message,
+                            tx: tx.clone(),
+                          })
+                          .ok();
+                      }
+                    }),
+                  );
+
+                  let result = request.run(context);
+                  tx.send(RequestQueueMessage::RequestResult {
+                    request_id,
+                    parent_request_id,
+                    result,
+                    response_tx,
+                  })
+                  .ok();
+                }
+                RequestQueueMessage::RequestResult {
                   request_id,
                   parent_request_id,
                   result,
                   response_tx,
-                });
-              } else {
-                // Cached request
-                if let Some(response_tx) = response_tx {
-                  let result = {
-                    let mut rt = rt.write();
-                    rt.get_request(parent_request_id, request_id)
-                  };
-                  let _ = response_tx.send(result.map(|r| (r, request_id)));
-                }
-              };
-            }
-            RequestQueueMessage::RequestResult {
-              request_id,
-              parent_request_id,
-              result,
-              response_tx,
-            } => {
-              tracing::trace!(?request_id, ?parent_request_id, "Request result");
-              let mut rt = rt.write();
-              rt.store_request(request_id, &result).unwrap();
-              rt.link_request_to_parent(request_id, parent_request_id)
-                .unwrap();
+                } => {
+                  tracing::trace!(?request_id, ?parent_request_id, "Request result");
+                  let mut rt = rt.write();
+                  rt.store_request(request_id, &result)?;
+                  rt.link_request_to_parent(request_id, parent_request_id)?;
 
-              if let Some(response_tx) = response_tx {
-                let _ = response_tx.send(result.map(|result| (result.result, request_id)));
+                  if let Some(response_tx) = response_tx {
+                    let _ = response_tx.send(result.map(|result| (result.result, request_id)));
+                  }
+                }
               }
             }
-          }
-        }
-      }));
+            Ok(())
+          })?,
+      );
     }
 
     while let Some(handle) = handles.pop() {
-      handle.join().unwrap();
+      handle.join().unwrap()?;
     }
 
     let mut rt = rt.write();

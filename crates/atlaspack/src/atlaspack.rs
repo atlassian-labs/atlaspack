@@ -122,7 +122,7 @@ impl Atlaspack {
   pub fn build_asset_graph(&mut self) -> anyhow::Result<AssetGraph> {
     let AtlaspackState { config, plugins } = self.state()?;
 
-    let mut request_tracker = RequestTracker::new(
+    let request_tracker = RequestTracker::new(
       config.clone(),
       self.fs.clone(),
       Arc::new(self.options.clone()),

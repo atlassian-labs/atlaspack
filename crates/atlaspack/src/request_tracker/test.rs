@@ -84,21 +84,19 @@
 //   assert_eq!(request_b.run_count(), 1);
 // }
 
-// fn run_request(request_tracker: &mut RequestTracker, request: &TestRequest) -> Vec<String> {
-//   // let RequestResult::TestMain(result) = request_tracker.run_request(request.clone()).unwrap()
-//   // else {
-//   //   panic!("Unexpected result");
-//   // };
-//   // result
-//   "".into()
+// fn run_request(request_tracker: RequestTracker, request: &TestRequest) -> Vec<String> {
+//   let RequestResult::TestMain(result) = request_tracker.run_request(request.clone()).unwrap()
+//   else {
+//     panic!("Unexpected result");
+//   };
+//   result
 // }
 
 // fn run_sub_request(request_tracker: &mut RequestTracker, request: &TestRequest) -> String {
-//   // let RequestResult::TestSub(result) = request_tracker.run_request(request.clone()).unwrap() else {
-//   //   panic!("Unexpected result");
-//   // };
-//   // result
-//   "".into()
+//   let RequestResult::TestSub(result) = request_tracker.run_request(request.clone()).unwrap() else {
+//     panic!("Unexpected result");
+//   };
+//   result
 // }
 
 // /// This is a universal "Request" that can be instructed
