@@ -162,6 +162,8 @@ export class AtlaspackWorker {
     }
 
     const transformer: Transformer<any> = state.transformer;
+    const resolveFunc = (from: string, to: string): Promise<any> =>
+      Promise.resolve(require.resolve(to, {paths: [from]}));
     const env = new Environment(napiEnv);
     const mutableAsset = new MutableAsset(innerAsset, this.#fs, env);
     const defaultOptions = {
@@ -189,9 +191,7 @@ export class AtlaspackWorker {
       const ast = await transformer.parse({
         asset: mutableAsset,
         config,
-        get resolve() {
-          throw new Error('Transformer.parse.resolve()');
-        },
+        resolve: resolveFunc,
         ...defaultOptions,
       });
       if (ast) {
@@ -202,9 +202,7 @@ export class AtlaspackWorker {
     const result = await state.transformer.transform({
       asset: mutableAsset,
       config,
-      get resolve() {
-        throw new Error('Transformer.transform.resolve()');
-      },
+      resolve: resolveFunc,
       ...defaultOptions,
     });
 
