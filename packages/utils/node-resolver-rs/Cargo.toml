@@ -26,6 +26,7 @@ serde_json = "1.0.91"
 thiserror = "1.0.59"
 url = "2.3.1"
 xxhash-rust = { version = "0.8.2", features = ["xxh3"] }
+thread_local = "1.1.8"
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 

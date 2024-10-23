@@ -1,7 +1,13 @@
+use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
+
+use thread_local::ThreadLocal;
 
 /// In-memory file-system for testing
 pub mod in_memory_file_system;
@@ -16,8 +22,52 @@ pub mod os_file_system;
 /// This should be `OsFileSystem` for non-testing environments and `InMemoryFileSystem` for testing.
 pub type FileSystemRef = Arc<dyn FileSystem + Send + Sync>;
 
-pub type FileSystemRealPathCache =
-  RwLock<HashMap<PathBuf, Option<PathBuf>, xxhash_rust::xxh3::Xxh3Builder>>;
+type DefaultHasher = xxhash_rust::xxh3::Xxh3Builder;
+
+pub struct ThreadLocalHashMap<K: Send + Eq, V: Send + Clone> {
+  inner: ThreadLocal<RefCell<HashMap<K, V, DefaultHasher>>>,
+}
+
+impl<K: Send + Eq, V: Send + Clone> Default for ThreadLocalHashMap<K, V> {
+  fn default() -> Self {
+    Self {
+      inner: ThreadLocal::new(),
+    }
+  }
+}
+
+impl<K: std::hash::Hash + Send + Eq, V: Send + Clone> ThreadLocalHashMap<K, V> {
+  fn new() -> Self {
+    Self {
+      inner: ThreadLocal::new(),
+    }
+  }
+
+  fn get<KR>(&self, key: &KR) -> Option<V>
+  where
+    KR: ?Sized,
+    K: Borrow<KR>,
+    KR: Eq + std::hash::Hash,
+  {
+    let map_cell = self
+      .inner
+      .get_or(|| RefCell::new(HashMap::with_hasher(DefaultHasher::new())));
+
+    let map = map_cell.borrow();
+    map.deref().get(key).cloned()
+  }
+
+  fn insert(&self, key: K, value: V) {
+    let map_cell = self
+      .inner
+      .get_or(|| RefCell::new(HashMap::with_hasher(DefaultHasher::new())));
+
+    let mut map = map_cell.borrow_mut();
+    map.deref_mut().insert(key, value);
+  }
+}
+
+pub type FileSystemRealPathCache = ThreadLocalHashMap<PathBuf, Option<PathBuf>>;
 
 /// Trait abstracting file-system operations
 /// .
