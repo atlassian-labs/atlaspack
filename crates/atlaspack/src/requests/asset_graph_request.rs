@@ -222,7 +222,6 @@ impl AssetGraphBuilder {
         return;
       }
 
-      let asset_request_to_asset = asset_request_to_asset.clone();
       if let Some(asset_node_index) = asset_request_to_asset.get(&id) {
         // We have already completed this AssetRequest so we can connect the
         // Dependency to the Asset immediately
