@@ -18,8 +18,8 @@ use super::environment::Environment;
 use super::file_type::FileType;
 use super::json::JSONObject;
 use super::symbol::Symbol;
-use super::BundleBehavior;
 use super::Dependency;
+use super::{BundleBehavior, SourceMap};
 
 pub type AssetId = String;
 
@@ -149,6 +149,9 @@ pub struct Asset {
   /// transformed output
   pub code: Arc<Code>,
 
+  /// The source map for the asset
+  pub map: Option<SourceMap>,
+
   /// Plugin specific metadata for the asset
   pub meta: JSONObject,
 
@@ -258,7 +261,7 @@ impl Asset {
 
     let is_source = !file_path
       .ancestors()
-      .any(|p| p.file_name() == Some(&OsStr::new("node_modules")));
+      .any(|p| p.file_name() == Some(OsStr::new("node_modules")));
 
     let asset_id = create_asset_id(CreateAssetIdParams {
       code: None,
@@ -310,7 +313,7 @@ impl Asset {
 
     let is_source = !file_path
       .ancestors()
-      .any(|p| p.file_name() == Some(&OsStr::new("node_modules")));
+      .any(|p| p.file_name() == Some(OsStr::new("node_modules")));
 
     Self {
       bundle_behavior: Some(BundleBehavior::Inline),

@@ -378,7 +378,10 @@ mod tests {
   fn assert_requested_symbols(graph: &AssetGraph, node_index: NodeIndex, expected: Vec<&str>) {
     assert_eq!(
       graph.dependencies[graph.dependency_index(node_index).unwrap()].requested_symbols,
-      expected.into_iter().map(|s| s.into()).collect()
+      expected
+        .into_iter()
+        .map(|s| s.into())
+        .collect::<HashSet<String>>()
     );
   }
 

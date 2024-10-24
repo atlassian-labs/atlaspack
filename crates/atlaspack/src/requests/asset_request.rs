@@ -6,9 +6,13 @@ use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::types::AssetStats;
 use atlaspack_core::types::AssetWithDependencies;
+use atlaspack_core::types::Code;
 use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Environment;
+use atlaspack_core::types::FileType;
 use atlaspack_core::types::{Asset, Invalidation};
+use atlaspack_sourcemap::find_sourcemap_url;
+use atlaspack_sourcemap::load_sourcemap_url;
 use std::collections::VecDeque;
 use std::hash::Hash;
 use std::path::PathBuf;
@@ -55,7 +59,8 @@ impl Request for AssetRequest {
     )));
 
     let start = Instant::now();
-    let asset = Asset::new(
+
+    let mut asset = Asset::new(
       &self.project_root,
       self.env.clone(),
       self.file_path.clone(),
@@ -65,6 +70,27 @@ impl Request for AssetRequest {
       self.query.clone(),
       request_context.file_system().clone(),
     )?;
+
+    // Load an existing sourcemap if available for valid file types
+    if matches!(
+      asset.file_type,
+      FileType::Css | FileType::Js | FileType::Jsx | FileType::Ts | FileType::Tsx,
+    ) {
+      let code = asset.code.as_str()?;
+
+      if let Some(url_match) = find_sourcemap_url(code) {
+        // Sourcemaps are intentionally skipped if they are invalid
+        if let Ok(source_map) = load_sourcemap_url(
+          request_context.file_system(),
+          &self.project_root,
+          &asset.file_path,
+          &url_match.url,
+        ) {
+          asset.map = Some(source_map);
+          asset.code = Arc::new(Code::from(code.replace(&url_match.code, "")));
+        }
+      }
+    }
 
     let transform_context = TransformContext::new(self.env.clone());
     let mut result = run_pipelines(transform_context, asset, request_context.plugins().clone())?;

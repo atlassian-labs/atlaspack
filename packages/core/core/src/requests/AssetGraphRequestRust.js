@@ -3,10 +3,12 @@
 import invariant from 'assert';
 
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
+import {hashString} from '@atlaspack/rust';
 import type {Async} from '@atlaspack/types';
 
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
+import {ATLASPACK_VERSION} from '../constants';
 import {toProjectPath} from '../projectPath';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
@@ -199,6 +201,14 @@ function getAssetGraph(serializedGraph, options) {
         symbols:
           asset.symbols != null ? new Map(asset.symbols.map(mapSymbols)) : null,
       };
+
+      if (asset.map) {
+        let mapKey = hashString(`${ATLASPACK_VERSION}:map:${asset.id}`);
+
+        asset.mapKey = mapKey;
+        options.cache.setBlob(mapKey, asset.map);
+        delete asset.map;
+      }
 
       cachedAssets.set(id, asset.code);
       changedAssets.set(id, asset);

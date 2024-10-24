@@ -154,24 +154,35 @@ impl TargetRequest {
     }
   }
 
-  fn infer_environment_context(&self, package_json: &PackageJson) -> EnvironmentContext {
+  fn infer_environment_context(
+    &self,
+    package_json: &PackageJson,
+    engines_descriptor: Option<Engines>,
+  ) -> EnvironmentContext {
     // If there is a separate `browser` target, or an `engines.node` field but no browser
     // targets, then the target refers to node, otherwise browser.
     if package_json.browser.is_some() || package_json.targets.browser.is_some() {
-      if package_json.engines.as_ref().is_some_and(|e| {
-        let browsers = e.browsers.clone().unwrap_or_default();
-        e.node.is_some() && Browsers::from(browsers).is_empty()
-      }) {
+      let is_node = |engines: &Engines| {
+        let browsers = engines.browsers.clone().unwrap_or_default();
+        engines.node.is_some() && Browsers::from(browsers).is_empty()
+      };
+
+      if engines_descriptor.as_ref().is_some_and(is_node)
+        || package_json.engines.as_ref().is_some_and(is_node)
+      {
         return EnvironmentContext::Node;
       } else {
         return EnvironmentContext::Browser;
       }
     }
 
-    if package_json
-      .engines
+    if engines_descriptor
       .as_ref()
       .is_some_and(|e| e.node.is_some())
+      || package_json
+        .engines
+        .as_ref()
+        .is_some_and(|e| e.node.is_some())
     {
       return EnvironmentContext::Node;
     }
@@ -358,7 +369,7 @@ impl TargetRequest {
     }
 
     if targets.is_empty() {
-      let context = self.infer_environment_context(&package_json.contents);
+      let context = self.infer_environment_context(&package_json.contents, None);
 
       let is_library = self.default_target_options.is_library.unwrap_or(false);
       let package_json_engines = package_json
@@ -367,6 +378,7 @@ impl TargetRequest {
         .unwrap_or_else(|| self.get_default_engines_for_context(context));
 
       tracing::debug!("Package JSON engines: {:?}", package_json_engines);
+
       targets.push(Some(Target {
         dist_dir: self
           .default_target_options
@@ -446,10 +458,16 @@ impl TargetRequest {
       return Ok(None);
     }
 
+    let engines = target_descriptor
+      .engines
+      .clone()
+      .or_else(|| package_json.contents.engines.clone())
+      .unwrap_or_else(|| self.default_target_options.engines.clone());
+
     // TODO LOC
-    let context = target_descriptor
-      .context
-      .unwrap_or_else(|| self.infer_environment_context(&package_json.contents));
+    let context = target_descriptor.context.unwrap_or_else(|| {
+      self.infer_environment_context(&package_json.contents, Some(engines.clone()))
+    });
 
     let dist_entry = target_descriptor.dist_entry.clone().or_else(|| {
       dist
@@ -491,7 +509,9 @@ impl TargetRequest {
       .unwrap_or_else(|| self.default_target_options.is_library.unwrap_or(false));
 
     let target_descriptor_engines = target_descriptor.engines.clone();
+
     tracing::debug!("Target descriptor engines: {:?}", target_descriptor_engines);
+
     Ok(Some(Target {
       dist_dir: match dist.as_ref() {
         None => self
@@ -524,9 +544,7 @@ impl TargetRequest {
       dist_entry,
       env: Arc::new(Environment {
         context,
-        engines: target_descriptor_engines
-          .or_else(|| package_json.contents.engines.clone())
-          .unwrap_or_else(|| self.default_target_options.engines.clone()),
+        engines,
         include_node_modules: target_descriptor
           .include_node_modules
           .unwrap_or_else(|| IncludeNodeModules::from(context)),
@@ -546,12 +564,13 @@ impl TargetRequest {
             || target_descriptor.scope_hoist.is_some_and(|s| s != false)),
         source_map: match self.default_target_options.source_maps {
           false => None,
-          true => target_descriptor.source_map.as_ref().and_then(|s| match s {
-            SourceMapField::Bool(source_maps) => {
+          true => match target_descriptor.source_map.as_ref() {
+            None => Some(TargetSourceMapOptions::default()),
+            Some(SourceMapField::Bool(source_maps)) => {
               source_maps.then(|| TargetSourceMapOptions::default())
             }
-            SourceMapField::Options(source_maps) => Some(source_maps.clone()),
-          }),
+            Some(SourceMapField::Options(source_maps)) => Some(source_maps.clone()),
+          },
         },
         ..Environment::default()
       }),

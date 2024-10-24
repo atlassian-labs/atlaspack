@@ -23,6 +23,7 @@ atlaspack_plugin_transformer_raw = { path = "../atlaspack_plugin_transformer_raw
 atlaspack_plugin_transformer_css = { path = "../atlaspack_plugin_transformer_css" }
 atlaspack_plugin_transformer_yaml = { path = "../atlaspack_plugin_transformer_yaml" }
 atlaspack_plugin_rpc = { path = "../atlaspack_plugin_rpc" }
+atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 
 anyhow = { workspace = true }
