@@ -1,4 +1,3 @@
-mod mappings;
 mod plugins;
 mod rpc;
 

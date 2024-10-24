@@ -70,16 +70,13 @@ impl ConfigPlugins {
 
     let reporter = Arc::new(CompositeReporterPlugin::new(reporters));
 
-    let plugins = ConfigPlugins {
+    Ok(ConfigPlugins {
       rpc_worker,
       config,
       ctx,
       reporter,
       plugin_cache: Default::default(),
-    };
-
-    plugins.ctx.static_resolver.init(plugins.resolvers()?);
-    Ok(plugins)
+    })
   }
 
   fn missing_plugin(&self, path: &Path, phase: &str) -> anyhow::Error {
@@ -219,6 +216,7 @@ impl Plugins for ConfigPlugins {
         resolvers.push(rpc_worker.create_resolver(&self.ctx, resolver)?);
       }
 
+      self.ctx.static_resolver.init(resolvers.clone());
       Ok(resolvers)
     })
   }
