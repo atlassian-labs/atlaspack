@@ -8,7 +8,7 @@ use petgraph::{
 
 use crate::types::{Asset, Dependency};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AssetGraph {
   graph: DiGraph<AssetGraphNode, AssetGraphEdge>,
   pub assets: Vec<AssetNode>,

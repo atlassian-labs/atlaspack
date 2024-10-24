@@ -23,7 +23,7 @@ pub struct RunRequestMessage {
     Option<tokio::sync::mpsc::UnboundedSender<Result<(RequestResult, RequestId), anyhow::Error>>>,
 }
 
-type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send>;
+type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send + Sync>;
 
 /// This is the API for requests to call back onto the `RequestTracker`.
 ///
@@ -102,7 +102,8 @@ impl RunRequestContext {
 pub type RunRequestError = anyhow::Error;
 pub type RequestId = u64;
 
-pub trait Request: DynHash + Send + Debug + 'static {
+#[async_trait::async_trait]
+pub trait Request: DynHash + Send + Sync + Debug + 'static {
   fn id(&self) -> RequestId {
     let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
     std::any::type_name::<Self>().hash(&mut hasher);
@@ -113,7 +114,20 @@ pub trait Request: DynHash + Send + Debug + 'static {
   fn run(
     &self,
     request_context: RunRequestContext,
-  ) -> Result<ResultAndInvalidations, RunRequestError>;
+  ) -> Result<ResultAndInvalidations, RunRequestError> {
+    anyhow::bail!("Unimplemented")
+  }
+
+  fn is_async(&self) -> bool {
+    false
+  }
+
+  async fn run_async(
+    &self,
+    request_context: RunRequestContext,
+  ) -> Result<ResultAndInvalidations, RunRequestError> {
+    anyhow::bail!("Unimplemented")
+  }
 }
 
 dyn_hash::hash_trait_object!(Request);
