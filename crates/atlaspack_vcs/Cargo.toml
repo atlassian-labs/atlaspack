@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = { workspace = true }
-git2 = { workspace = true, default-features = false }
+git2 = { workspace = true }
 hex = { workspace = true }
 nom = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
