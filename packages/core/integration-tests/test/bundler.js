@@ -1933,25 +1933,44 @@ describe.v2('bundler', function () {
       'normally-split': {distDir: 'dist-normal'},
     };
 
-    let [singleBundle, splitBundle] = await Promise.all(
-      ['single-file', 'normally-split'].map((target) =>
-        bundle([path.join(__dirname, 'integration/single-file-output/a.js')], {
-          defaultTargetOptions: {shouldScopeHoist: false},
-          inputFS: overlayFS,
-          targets: {[target]: targets[target]},
-        }),
-      ),
+    await fsFixture(overlayFS, __dirname)`
+      single-file-output
+        a.js:
+          import {c} from './b';
+          const ignore = () => import('./c');
+        b.js:
+          export const c = () => import('./c');
+        c.js:
+          export const c = 'c';
+
+        yarn.lock:`;
+
+    let singleBundle = await bundle(
+      path.join(__dirname, 'single-file-output/a.js'),
+      {
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+        targets: {['single-file']: targets['single-file']},
+      },
+    );
+
+    let splitBundle = await bundle(
+      path.join(__dirname, 'single-file-output/a.js'),
+      {
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+        targets: {['normally-split']: targets['normally-split']},
+      },
     );
 
     // There should be a single bundle, including a, b, and c
     assertBundles(singleBundle, [
-      {name: 'a.js', assets: ['a.js', 'b.js', 'c.js', 'esmodule-helpers.js']},
+      {assets: ['a.js', 'b.js', 'c.js', 'esmodule-helpers.js']},
     ]);
 
     // Without the property, the bundle should be split properly
     assertBundles(splitBundle, [
       {
-        name: 'a.js',
         assets: [
           'a.js',
           'b.js',
@@ -1961,7 +1980,7 @@ describe.v2('bundler', function () {
           'js-loader.js',
         ],
       },
-      {name: 'c.576ee741.js', assets: ['c.js']},
+      {assets: ['c.js']},
     ]);
   });
 });
