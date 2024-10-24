@@ -58,7 +58,7 @@ struct AssetGraphBuilder {
   asset_request_to_asset: Arc<RwLock<HashMap<u64, NodeIndex>>>,
   waiting_asset_requests: Arc<RwLock<HashMap<u64, HashSet<NodeIndex>>>>,
   sender: ResultSender,
-  receiver: Arc<RwLock<ResultReceiver>>,
+  receiver: Arc<RwLock<Option<ResultReceiver>>>,
   work_count: Arc<AtomicUsize>,
 }
 
@@ -74,15 +74,16 @@ impl AssetGraphBuilder {
       asset_request_to_asset: Arc::new(RwLock::new(HashMap::new())),
       waiting_asset_requests: Arc::new(RwLock::new(HashMap::new())),
       sender,
-      receiver: Arc::new(RwLock::new(receiver)),
+      receiver: Arc::new(RwLock::new(Some(receiver))),
       work_count: Arc::new(AtomicUsize::new(0)),
     }
   }
 
   async fn build(mut self) -> Result<ResultAndInvalidations, RunRequestError> {
     let mut request_context = self.request_context.write().await;
+    let mut initial_job_count = 0;
     for entry in request_context.options.clone().entries.iter() {
-      self.work_count.fetch_add(1, Ordering::Relaxed);
+      initial_job_count += 1;
       let _ = request_context.queue_request(
         EntryRequest {
           entry: entry.clone(),
@@ -90,9 +91,20 @@ impl AssetGraphBuilder {
         self.sender.clone(),
       );
     }
+    self
+      .work_count
+      .fetch_add(initial_job_count, Ordering::Relaxed);
     drop(request_context);
 
+    let mut rx = { self.receiver.write().await.take().unwrap() };
+    // let mut handles: Vec<tokio::task::JoinHandle<Result<RequestResult, anyhow::Error>>> = vec![];
+
+    let mut c = 0;
     loop {
+      c += 1;
+      if c == 10 {
+        panic!()
+      }
       // TODO: Should the work count be tracked on the request_context as part of
       // the queue_request API?
 
@@ -100,33 +112,39 @@ impl AssetGraphBuilder {
         break;
       }
 
-      let Some(result) = self.receiver.write().await.recv().await else {
+      let Some(result) = rx.recv().await else {
         break;
       };
 
-      println!("{:?}", result);
+      println!("JOBS {}", self.work_count.load(Ordering::Relaxed));
+      if let Ok((result, _)) = &result {
+        println!("{}", result);
+      }
 
+      // handles.push(tokio::task::spawn(async move {
       self.work_count.fetch_sub(1, Ordering::Relaxed);
 
       match result {
         Ok((RequestResult::Entry(result), _request_id)) => {
           tracing::debug!("Handling EntryRequestOutput");
-          self.handle_entry_result(result);
+          self.handle_entry_result(result).await;
         }
         Ok((RequestResult::Target(result), _request_id)) => {
           tracing::debug!("Handling TargetRequestOutput");
-          self.handle_target_request_result(result, self.sender.clone(), self.work_count.clone());
+          self
+            .handle_target_request_result(result, self.sender.clone(), self.work_count.clone())
+            .await;
         }
         Ok((RequestResult::Asset(result), request_id)) => {
           tracing::debug!(
             "Handling AssetRequestOutput: {}",
             result.asset.file_path.display()
           );
-          self.handle_asset_result(result, request_id);
+          self.handle_asset_result(result, request_id).await;
         }
         Ok((RequestResult::Path(result), request_id)) => {
           tracing::debug!("Handling PathRequestOutput");
-          self.handle_path_result(result, request_id);
+          self.handle_path_result(result, request_id).await;
         }
         Err(err) => return Err(err),
         // This branch should never occur
@@ -138,7 +156,16 @@ impl AssetGraphBuilder {
           ))
         }
       }
+
+      println!("\n\n");
+
+      // panic!()
+      // }));
     }
+
+    // while let Some(handle) = handles.pop() {
+    //   handle.await.unwrap();
+    // }
 
     let mut graph = self.graph.write().await;
     Ok(ResultAndInvalidations {
@@ -149,7 +176,7 @@ impl AssetGraphBuilder {
     })
   }
 
-  fn handle_path_result(&mut self, result: PathRequestOutput, request_id: u64) {
+  async fn handle_path_result(&mut self, result: PathRequestOutput, request_id: u64) {
     let sender = self.sender.clone();
     let work_count = self.work_count.clone();
     let request_id_to_dep_node_index = self.request_id_to_dep_node_index.clone();
@@ -159,131 +186,116 @@ impl AssetGraphBuilder {
     let waiting_asset_requests = self.waiting_asset_requests.clone();
     let asset_request_to_asset = self.asset_request_to_asset.clone();
 
-    tokio::task::spawn(async move {
-      let mut request_id_to_dep_node_index = request_id_to_dep_node_index.write().await;
-      let mut graph = graph.write().await;
-      let mut request_context = request_context.write().await;
-      let mut visited = visited.write().await;
-      let mut waiting_asset_requests = waiting_asset_requests.write().await;
-      let mut asset_request_to_asset = asset_request_to_asset.write().await;
+    let mut request_id_to_dep_node_index = request_id_to_dep_node_index.write().await;
+    let mut graph = graph.write().await;
+    let mut request_context = request_context.write().await;
+    let mut visited = visited.write().await;
+    let mut waiting_asset_requests = waiting_asset_requests.write().await;
+    let mut asset_request_to_asset = asset_request_to_asset.write().await;
 
-      let node = *request_id_to_dep_node_index
-        .get(&request_id)
-        .expect("Missing node index for request id {request_id}");
+    let node = *request_id_to_dep_node_index
+      .get(&request_id)
+      .expect("Missing node index for request id {request_id}");
 
-      let dep_index = graph.dependency_index(node).unwrap();
+    let dep_index = graph.dependency_index(node).unwrap();
 
-      let DependencyNode {
-        dependency,
-        requested_symbols,
-        state,
-      } = &mut graph.dependencies[dep_index];
+    let DependencyNode {
+      dependency,
+      requested_symbols,
+      state,
+    } = &mut graph.dependencies[dep_index];
 
-      let asset_request = match result {
-        PathRequestOutput::Resolved {
-          path,
-          code,
-          pipeline,
-          side_effects,
-          query,
-          can_defer,
-        } => {
-          if !side_effects
-            && can_defer
-            && requested_symbols.is_empty()
-            && !dependency.symbols.is_none()
-          {
-            *state = DependencyState::Deferred;
-            return;
-          }
-
-          *state = DependencyState::Resolved;
-          AssetRequest {
-            code: code.clone(),
-            env: dependency.env.clone(),
-            file_path: path,
-            project_root: request_context.project_root.clone(),
-            pipeline: pipeline.clone(),
-            query,
-            side_effects,
-          }
-        }
-        PathRequestOutput::Excluded => {
-          *state = DependencyState::Excluded;
+    let asset_request = match result {
+      PathRequestOutput::Resolved {
+        path,
+        code,
+        pipeline,
+        side_effects,
+        query,
+        can_defer,
+      } => {
+        if !side_effects
+          && can_defer
+          && requested_symbols.is_empty()
+          && !dependency.symbols.is_none()
+        {
+          *state = DependencyState::Deferred;
           return;
         }
-      };
-      let id = asset_request.id();
 
-      if visited.insert(id) {
-        request_id_to_dep_node_index.insert(id, node);
-        work_count.fetch_add(1, Ordering::Relaxed);
-        let _ = request_context.queue_request(asset_request, sender);
+        *state = DependencyState::Resolved;
+        AssetRequest {
+          code: code.clone(),
+          env: dependency.env.clone(),
+          file_path: path,
+          project_root: request_context.project_root.clone(),
+          pipeline: pipeline.clone(),
+          query,
+          side_effects,
+        }
+      }
+      PathRequestOutput::Excluded => {
+        *state = DependencyState::Excluded;
         return;
       }
+    };
+    let id = asset_request.id();
 
-      if let Some(asset_node_index) = asset_request_to_asset.get(&id) {
-        // We have already completed this AssetRequest so we can connect the
-        // Dependency to the Asset immediately
-        graph.add_edge(&node, asset_node_index);
-        // Self::propagate_requested_symbols(&mut this, asset_node_index.clone(), node, sender,work_count.clone());
+    if visited.insert(id) {
+      request_id_to_dep_node_index.insert(id, node);
+      work_count.fetch_add(1, Ordering::Relaxed);
+      let _ = request_context.queue_request(asset_request, sender);
+      return;
+    }
 
-        graph.propagate_requested_symbols(
-          asset_node_index.clone(),
-          node.clone(),
-          &mut |dependency_node_index: NodeIndex, dependency: Arc<Dependency>| {
-            let request = PathRequest {
-              dependency: dependency.clone(),
-            };
+    if let Some(asset_node_index) = asset_request_to_asset.get(&id) {
+      // We have already completed this AssetRequest so we can connect the
+      // Dependency to the Asset immediately
+      graph.add_edge(&node, asset_node_index);
+      Self::propagate_requested_symbols(
+        &mut graph,
+        &mut request_context,
+        &mut request_id_to_dep_node_index,
+        asset_node_index.clone(),
+        node,
+        sender,
+        work_count.clone(),
+      );
+      return;
+    }
 
-            request_id_to_dep_node_index.insert(request.id(), dependency_node_index);
-            tracing::debug!(
-              "queueing a path request from on_undeferred, {}",
-              dependency.specifier
-            );
-
-            work_count.fetch_sub(1, Ordering::Relaxed);
-            let _ = request_context.queue_request(request, sender.clone());
-          },
-        );
-        return;
-      }
-
-      // The AssetRequest has already been kicked off but is yet to
-      // complete. Register this Dependency to be connected once it
-      // completes
-      waiting_asset_requests
-        .entry(id)
-        .and_modify(|nodes| {
-          nodes.insert(node);
-        })
-        .or_insert_with(|| HashSet::from([node]));
-    });
+    // The AssetRequest has already been kicked off but is yet to
+    // complete. Register this Dependency to be connected once it
+    // completes
+    waiting_asset_requests
+      .entry(id)
+      .and_modify(|nodes| {
+        nodes.insert(node);
+      })
+      .or_insert_with(|| HashSet::from([node]));
   }
 
-  fn handle_entry_result(&mut self, result: EntryRequestOutput) {
+  async fn handle_entry_result(&mut self, result: EntryRequestOutput) {
     let request_context = self.request_context.clone();
     let sender = self.sender.clone();
     let work_count = self.work_count.clone();
 
-    tokio::task::spawn(async move {
-      let mut request_context = request_context.write().await;
+    let mut request_context = request_context.write().await;
 
-      let EntryRequestOutput { entries } = result;
-      for entry in entries {
-        let target_request = TargetRequest {
-          default_target_options: request_context.options.default_target_options.clone(),
-          entry,
-          env: request_context.options.env.clone(),
-          mode: request_context.options.mode.clone(),
-        };
-        work_count.fetch_add(1, Ordering::Relaxed);
-        let _ = request_context.queue_request(target_request, sender.clone());
-      }
-    });
+    let EntryRequestOutput { entries } = result;
+    for entry in entries {
+      let target_request = TargetRequest {
+        default_target_options: request_context.options.default_target_options.clone(),
+        entry,
+        env: request_context.options.env.clone(),
+        mode: request_context.options.mode.clone(),
+      };
+      work_count.fetch_add(1, Ordering::Relaxed);
+      let _ = request_context.queue_request(target_request, sender.clone());
+    }
   }
 
-  fn handle_asset_result(&mut self, result: AssetRequestOutput, request_id: u64) {
+  async fn handle_asset_result(&mut self, result: AssetRequestOutput, request_id: u64) {
     let sender = self.sender.clone();
     let work_count = self.work_count.clone();
     let request_context = self.request_context.clone();
@@ -293,67 +305,42 @@ impl AssetGraphBuilder {
     let waiting_asset_requests = self.waiting_asset_requests.clone();
     let asset_request_to_asset = self.asset_request_to_asset.clone();
 
-    tokio::task::spawn(async move {
-      let mut request_context = request_context.write().await;
-      let mut request_id_to_dep_node_index = request_id_to_dep_node_index.write().await;
-      let mut graph = graph.write().await;
-      let mut visited = visited.write().await;
-      let mut waiting_asset_requests = waiting_asset_requests.write().await;
-      let mut asset_request_to_asset = asset_request_to_asset.write().await;
+    let mut request_context = request_context.write().await;
+    let mut request_id_to_dep_node_index = request_id_to_dep_node_index.write().await;
+    let mut graph = graph.write().await;
+    let mut visited = visited.write().await;
+    let mut waiting_asset_requests = waiting_asset_requests.write().await;
+    let mut asset_request_to_asset = asset_request_to_asset.write().await;
 
-      let AssetRequestOutput {
-        asset,
-        discovered_assets,
-        dependencies,
-      } = result;
-      let incoming_dep_node_index = *request_id_to_dep_node_index
-        .get(&request_id)
-        .expect("Missing node index for request id {request_id}");
+    let AssetRequestOutput {
+      asset,
+      discovered_assets,
+      dependencies,
+    } = result;
 
-      // Connect the incoming DependencyNode to the new AssetNode
-      let asset_node_index = graph.add_asset(incoming_dep_node_index, asset.clone());
+    let incoming_dep_node_index = *request_id_to_dep_node_index
+      .get(&request_id)
+      .expect("Missing node index for request id {request_id}");
 
-      asset_request_to_asset.insert(request_id, asset_node_index);
+    // Connect the incoming DependencyNode to the new AssetNode
+    let asset_node_index = graph.add_asset(incoming_dep_node_index, asset.clone());
 
-      let root_asset = (&asset, asset_node_index);
-      let mut added_discovered_assets: HashMap<String, NodeIndex> = HashMap::new();
+    asset_request_to_asset.insert(request_id, asset_node_index);
 
-      // Attach the "direct" discovered assets to the graph
-      let direct_discovered_assets =
-        get_direct_discovered_assets(&discovered_assets, &dependencies);
-      for discovered_asset in direct_discovered_assets {
-        let asset_node_index =
-          graph.add_asset(incoming_dep_node_index, discovered_asset.asset.clone());
+    let root_asset = (&asset, asset_node_index);
+    let mut added_discovered_assets: HashMap<String, NodeIndex> = HashMap::new();
 
-        Self::add_asset_dependencies(
-          &mut graph,
-          &mut request_context,
-          &mut request_id_to_dep_node_index,
-          &discovered_asset.dependencies,
-          &discovered_assets,
-          asset_node_index,
-          &mut added_discovered_assets,
-          root_asset,
-          sender.clone(),
-          work_count.clone(),
-        );
-
-        Self::propagate_requested_symbols(
-          &mut graph,
-          &mut request_context,
-          &mut request_id_to_dep_node_index,
-          asset_node_index,
-          incoming_dep_node_index,
-          sender.clone(),
-          work_count.clone(),
-        );
-      }
+    // Attach the "direct" discovered assets to the graph
+    let direct_discovered_assets = get_direct_discovered_assets(&discovered_assets, &dependencies);
+    for discovered_asset in direct_discovered_assets {
+      let asset_node_index =
+        graph.add_asset(incoming_dep_node_index, discovered_asset.asset.clone());
 
       Self::add_asset_dependencies(
         &mut graph,
         &mut request_context,
         &mut request_id_to_dep_node_index,
-        &dependencies,
+        &discovered_asset.dependencies,
         &discovered_assets,
         asset_node_index,
         &mut added_discovered_assets,
@@ -371,24 +358,47 @@ impl AssetGraphBuilder {
         sender.clone(),
         work_count.clone(),
       );
+    }
 
-      // Connect any previously discovered Dependencies that were waiting
-      // for this AssetNode to be created
-      if let Some(waiting) = waiting_asset_requests.remove(&request_id) {
-        for dep in waiting {
-          graph.add_edge(&dep, &asset_node_index);
-          Self::propagate_requested_symbols(
-            &mut graph,
-            &mut request_context,
-            &mut request_id_to_dep_node_index,
-            asset_node_index,
-            dep,
-            sender.clone(),
-            work_count.clone(),
-          );
-        }
+    Self::add_asset_dependencies(
+      &mut graph,
+      &mut request_context,
+      &mut request_id_to_dep_node_index,
+      &dependencies,
+      &discovered_assets,
+      asset_node_index,
+      &mut added_discovered_assets,
+      root_asset,
+      sender.clone(),
+      work_count.clone(),
+    );
+
+    Self::propagate_requested_symbols(
+      &mut graph,
+      &mut request_context,
+      &mut request_id_to_dep_node_index,
+      asset_node_index,
+      incoming_dep_node_index,
+      sender.clone(),
+      work_count.clone(),
+    );
+
+    // Connect any previously discovered Dependencies that were waiting
+    // for this AssetNode to be created
+    if let Some(waiting) = waiting_asset_requests.remove(&request_id) {
+      for dep in waiting {
+        graph.add_edge(&dep, &asset_node_index);
+        Self::propagate_requested_symbols(
+          &mut graph,
+          &mut request_context,
+          &mut request_id_to_dep_node_index,
+          asset_node_index,
+          dep,
+          sender.clone(),
+          work_count.clone(),
+        );
       }
-    });
+    }
   }
 
   async fn handle_target_request_result(
@@ -424,7 +434,9 @@ impl AssetGraphBuilder {
         work_count.fetch_add(1, Ordering::Relaxed);
         let _ = request_context.queue_request(request, sender.clone());
       }
-    });
+    })
+    .await
+    .unwrap();
   }
 
   // UTILS
@@ -444,6 +456,8 @@ impl AssetGraphBuilder {
     let mut unique_deps: IndexMap<String, Dependency> = IndexMap::new();
 
     for dependency in dependencies {
+      println!("JOBS AADL1 {}", work_count.load(Ordering::Relaxed));
+
       unique_deps
         .entry(dependency.id())
         .and_modify(|d| {
@@ -464,7 +478,11 @@ impl AssetGraphBuilder {
         .or_insert(dependency.clone());
     }
 
+    println!("JOBS AAD {}", work_count.load(Ordering::Relaxed));
+
     for (_id, dependency) in unique_deps.into_iter() {
+      println!("JOBS AADL2 {}", work_count.load(Ordering::Relaxed));
+
       // Check if this dependency points to a discovered_asset
       let discovered_asset = discovered_assets.iter().find(|discovered_asset| {
         discovered_asset
@@ -531,6 +549,8 @@ impl AssetGraphBuilder {
           );
         }
       }
+
+      println!("JOBS AADL2.1 {}", work_count.load(Ordering::Relaxed));
     }
   }
 

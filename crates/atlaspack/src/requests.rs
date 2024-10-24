@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 pub use asset_graph_request::*;
 use asset_request::AssetRequestOutput;
 use entry_request::EntryRequestOutput;
@@ -23,4 +25,20 @@ pub enum RequestResult {
   TestSub(String),
   #[cfg(test)]
   TestMain(Vec<String>),
+}
+
+impl Display for RequestResult {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      RequestResult::AssetGraph(asset_graph_request_output) => write!(f, "AssetGraph"),
+      RequestResult::Asset(asset_request_output) => write!(f, "Asset"),
+      RequestResult::Entry(entry_request_output) => write!(f, "Entry"),
+      RequestResult::Path(path_request_output) => write!(f, "Path"),
+      RequestResult::Target(target_request_output) => write!(f, "Target"),
+      #[cfg(test)]
+      RequestResult::TestSub(_) => write!(f, "TestSub"),
+      #[cfg(test)]
+      RequestResult::TestMain(vec) => write!(f, "TestMain"),
+    }
+  }
 }
