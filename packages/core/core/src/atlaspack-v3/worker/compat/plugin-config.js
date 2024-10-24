@@ -63,37 +63,23 @@ export class PluginConfig implements IPluginConfig {
   }
 
   // eslint-disable-next-line no-unused-vars
-  invalidateOnFileChange(filePath: FilePath): void {
-    // throw new Error('PluginOptions.invalidateOnFileChange');
-  }
+  invalidateOnFileChange(filePath: FilePath): void {}
 
   // eslint-disable-next-line no-unused-vars
-  invalidateOnFileCreate(invalidations: FileCreateInvalidation): void {
-    // throw new Error('PluginOptions.invalidateOnFileCreate');
-  }
+  invalidateOnFileCreate(invalidations: FileCreateInvalidation): void {}
 
   // eslint-disable-next-line no-unused-vars
-  invalidateOnEnvChange(invalidation: string): void {
-    // throw new Error('PluginOptions.invalidateOnEnvChange');
-  }
+  invalidateOnEnvChange(invalidation: string): void {}
 
-  invalidateOnStartup(): void {
-    throw new Error('PluginOptions.invalidateOnStartup');
-  }
+  invalidateOnStartup(): void {}
 
-  invalidateOnBuild(): void {
-    // throw new Error('PluginOptions.invalidateOnBuild');
-  }
+  invalidateOnBuild(): void {}
 
   // eslint-disable-next-line no-unused-vars
-  addDevDependency(options: DevDepOptions): void {
-    throw new Error('PluginOptions.addDevDependency');
-  }
+  addDevDependency(options: DevDepOptions): void {}
 
   // eslint-disable-next-line no-unused-vars
-  setCacheKey(key: string): void {
-    throw new Error('PluginOptions.setCacheKey');
-  }
+  setCacheKey(key: string): void {}
 
   getConfig<T>(
     // eslint-disable-next-line no-unused-vars
