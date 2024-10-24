@@ -30,6 +30,7 @@ export function createEnvironment({
   isLibrary = false,
   shouldScopeHoist = false,
   sourceMap,
+  unstableSingleFileOutput = false,
   loc,
 }: EnvironmentOpts = {
   /*::...null*/
@@ -105,6 +106,7 @@ export function createEnvironment({
     shouldOptimize,
     shouldScopeHoist,
     sourceMap,
+    unstableSingleFileOutput,
     loc,
   };
 

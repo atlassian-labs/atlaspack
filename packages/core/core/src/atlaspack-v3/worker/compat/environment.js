@@ -29,6 +29,7 @@ export class Environment implements IEnvironment {
   shouldScopeHoist: boolean;
   sourceMap: ?TargetSourceMapOptions;
   loc: ?SourceLocation;
+  unstableSingleFileOutput: boolean;
 
   constructor(inner: NapiEnvironment) {
     // TODO
@@ -46,6 +47,7 @@ export class Environment implements IEnvironment {
     this.shouldScopeHoist = inner.shouldScopeHoist;
     this.sourceMap = inner.sourceMap;
     this.loc = inner.loc;
+    this.unstableSingleFileOutput = false;
   }
 
   // TODO

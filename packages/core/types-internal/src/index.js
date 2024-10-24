@@ -196,6 +196,7 @@ export type PackageTargetDescriptor = {|
   +optimize?: boolean,
   +scopeHoist?: boolean,
   +source?: FilePath | Array<FilePath>,
+  +__unstable_singleFileOutput?: boolean,
 |};
 
 /**
@@ -228,6 +229,7 @@ export type EnvironmentOptions = {|
   +shouldScopeHoist?: boolean,
   +sourceMap?: ?TargetSourceMapOptions,
   +loc?: ?SourceLocation,
+  +unstableSingleFileOutput?: boolean,
 |};
 
 /**
@@ -281,6 +283,7 @@ export interface Environment {
   +shouldScopeHoist: boolean;
   +sourceMap: ?TargetSourceMapOptions;
   +loc: ?SourceLocation;
+  +unstableSingleFileOutput: boolean;
 
   /** Whether <code>context</code> specifies a browser context. */
   isBrowser(): boolean;

@@ -22,6 +22,7 @@ describe('Environment', () => {
       sourceMap: undefined,
       loc: undefined,
       sourceType: 'module',
+      unstableSingleFileOutput: false,
     });
   });
 
@@ -40,6 +41,7 @@ describe('Environment', () => {
       sourceMap: undefined,
       loc: undefined,
       sourceType: 'module',
+      unstableSingleFileOutput: false,
     });
   });
 
@@ -60,6 +62,7 @@ describe('Environment', () => {
         sourceMap: undefined,
         loc: undefined,
         sourceType: 'module',
+        unstableSingleFileOutput: false,
       },
     );
   });
@@ -79,6 +82,7 @@ describe('Environment', () => {
       sourceMap: undefined,
       loc: undefined,
       sourceType: 'module',
+      unstableSingleFileOutput: false,
     });
   });
 
@@ -97,6 +101,7 @@ describe('Environment', () => {
       sourceMap: undefined,
       loc: undefined,
       sourceType: 'module',
+      unstableSingleFileOutput: false,
     });
   });
 });

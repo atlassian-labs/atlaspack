@@ -112,6 +112,9 @@ export const PACKAGE_DESCRIPTOR_SCHEMA: SchemaObject = {
     scopeHoist: {
       type: 'boolean',
     },
+    __unstable_singleFileOutput: {
+      type: 'boolean',
+    },
   },
   additionalProperties: false,
 };
