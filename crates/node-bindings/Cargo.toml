@@ -57,7 +57,7 @@ swc_core = { workspace = true }
 # Crash reporting dependencies
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { workspace = true, features = ["custom"], default-features = false }
+getrandom = { workspace = true, features = ["custom"] }
 napi = { workspace = true, features = ["serde-json"] }
 
 [target.'cfg(all(target_os = "macos", not(feature = "canary")))'.dependencies]
@@ -66,7 +66,7 @@ napi = { workspace = true, features = ["serde-json"] }
 jemallocator = { workspace = true, features = ["disable_initial_exec_tls"] }
 
 [target.'cfg(windows)'.dependencies]
-mimalloc = { workspace = true, default-features = false }
+mimalloc = { workspace = true }
 
 [build-dependencies]
 napi-build = { workspace = true }
