@@ -76,7 +76,13 @@ export class AtlaspackWorker {
     [RunResolverResolveOptions],
     Promise<RunResolverResolveResult>,
   > = jsCallable(
-    async ({key, dependency: napiDependency, specifier, pipeline, options}) => {
+    async ({
+      key,
+      dependency: napiDependency,
+      specifier,
+      pipeline,
+      pluginOptions,
+    }) => {
       const state = this.#resolvers.get(key);
       if (!state) {
         throw new Error(`Resolver not found: ${key}`);
@@ -84,7 +90,10 @@ export class AtlaspackWorker {
 
       let packageManager = state.packageManager;
       if (!packageManager) {
-        packageManager = new NodePackageManager(this.#fs, options.projectRoot);
+        packageManager = new NodePackageManager(
+          this.#fs,
+          pluginOptions.projectRoot,
+        );
         state.packageManager = packageManager;
       }
 
@@ -95,7 +104,7 @@ export class AtlaspackWorker {
         logger: new PluginLogger(),
         tracer: new PluginTracer(),
         options: new PluginOptions({
-          ...options,
+          ...pluginOptions,
           packageManager,
           shouldAutoInstall: false,
           inputFS: this.#fs,
@@ -108,7 +117,10 @@ export class AtlaspackWorker {
           config: new PluginConfig({
             env,
             isSource: true,
-            searchPath: '',
+            searchPath: specifier,
+            projectRoot: pluginOptions.projectRoot,
+            fs: this.#fs,
+            packageManager,
           }),
           ...defaultOptions,
         });
@@ -182,7 +194,10 @@ export class AtlaspackWorker {
       config: new PluginConfig({
         env,
         isSource: true,
-        searchPath: '',
+        searchPath: innerAsset.filePath.replace(options.projectRoot + '/', ''),
+        projectRoot: options.projectRoot,
+        fs: this.#fs,
+        packageManager,
       }),
       ...defaultOptions,
     });
@@ -287,7 +302,7 @@ type RunResolverResolveOptions = {|
   dependency: napi.Dependency,
   specifier: FilePath,
   pipeline: ?string,
-  options: RpcPluginOptions,
+  pluginOptions: RpcPluginOptions,
 |};
 
 type RunResolverResolveResult = {|
