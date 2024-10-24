@@ -1,7 +1,7 @@
 pub use asset_graph_request::*;
 use asset_request::AssetRequestOutput;
 use entry_request::EntryRequestOutput;
-pub use path_request::*;
+use path_request::PathRequestOutput;
 use target_request::TargetRequestOutput;
 
 mod asset_graph_request;
