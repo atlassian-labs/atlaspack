@@ -145,16 +145,67 @@ export default (new Bundler({
   bundle({bundleGraph, config, logger}) {
     let targetMap = getEntryByTarget(bundleGraph); // Organize entries by target output folder/ distDir
     let graphs = [];
+
     for (let entries of targetMap.values()) {
+      let singleFileEntries = new Map();
+      let idealGraphEntries = new Map();
+
+      // Separate out the monolith bundles based on the option on target
+      for (let [entryAsset, entryDep] of entries.entries()) {
+        if (entryDep.target?.env.unstableSingleFileOutput === true) {
+          singleFileEntries.set(entryAsset, entryDep);
+        } else {
+          idealGraphEntries.set(entryAsset, entryDep);
+        }
+      }
+
       // Create separate bundleGraphs per distDir
-      graphs.push(createIdealGraph(bundleGraph, config, entries, logger));
+      graphs.push(
+        createIdealGraph(bundleGraph, config, idealGraphEntries, logger),
+      );
+
+      // Do this after the ideal graph so that the mutation of the bundleGraph doesn't
+      // interfere with the main bundling algorithm
+      for (let [entryAsset, entryDep] of singleFileEntries.entries()) {
+        createJSMonolithGraph(bundleGraph, entryAsset, entryDep);
+      }
     }
+
     for (let g of graphs) {
       decorateLegacyGraph(g, bundleGraph); //mutate original graph
     }
   },
   optimize() {},
 }): Bundler);
+
+function createJSMonolithGraph(
+  bundleGraph: MutableBundleGraph,
+  entryAsset: Asset,
+  entryDep: Dependency,
+): void {
+  let target = nullthrows(
+    entryDep.target,
+    'Expected dependency to have a valid target',
+  );
+
+  // Create a single bundle to hold all JS assets
+  let bundle = bundleGraph.createBundle({entryAsset, target});
+
+  bundleGraph.traverse((node) => {
+    // JS assets can be added to the bundle, but the rest are ignored
+    if (node.type === 'asset' && node.value.type === 'js') {
+      bundleGraph.addAssetToBundle(node.value, bundle);
+    } else if (node.type === 'dependency' && node.value.priority === 'lazy') {
+      // Any async dependencies need to be internalized into the bundle, and will
+      // be included by the asset check above
+      bundleGraph.internalizeAsyncDependency(bundle, node.value);
+    }
+  }, entryAsset);
+
+  let bundleGroup = bundleGraph.createBundleGroup(entryDep, target);
+
+  bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+}
 
 function decorateLegacyGraph(
   idealGraph: IdealGraph,
