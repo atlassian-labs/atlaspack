@@ -15,6 +15,7 @@ mod target_request;
 /// Union of all request outputs
 #[derive(Clone, Debug, PartialEq)]
 pub enum RequestResult {
+  Done,
   AssetGraph(AssetGraphRequestOutput),
   Asset(AssetRequestOutput),
   Entry(EntryRequestOutput),
@@ -30,15 +31,16 @@ pub enum RequestResult {
 impl Display for RequestResult {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      RequestResult::AssetGraph(asset_graph_request_output) => write!(f, "AssetGraph"),
-      RequestResult::Asset(asset_request_output) => write!(f, "Asset"),
-      RequestResult::Entry(entry_request_output) => write!(f, "Entry"),
-      RequestResult::Path(path_request_output) => write!(f, "Path"),
-      RequestResult::Target(target_request_output) => write!(f, "Target"),
+      RequestResult::Done => write!(f, "Done"),
+      RequestResult::AssetGraph(_) => write!(f, "AssetGraph"),
+      RequestResult::Asset(_) => write!(f, "Asset"),
+      RequestResult::Entry(_) => write!(f, "Entry"),
+      RequestResult::Path(_) => write!(f, "Path"),
+      RequestResult::Target(_) => write!(f, "Target"),
       #[cfg(test)]
       RequestResult::TestSub(_) => write!(f, "TestSub"),
       #[cfg(test)]
-      RequestResult::TestMain(vec) => write!(f, "TestMain"),
+      RequestResult::TestMain(_) => write!(f, "TestMain"),
     }
   }
 }

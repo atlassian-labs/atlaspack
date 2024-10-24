@@ -71,7 +71,8 @@ impl RequestTracker {
   pub fn run_request(self, request: impl Request) -> anyhow::Result<RequestResult> {
     tokio::runtime::Builder::new_multi_thread()
       .enable_all()
-      .worker_threads(8)
+      .worker_threads(num_cpus::get())
+      // .worker_threads(1)
       .build()
       .unwrap()
       .block_on(async {
