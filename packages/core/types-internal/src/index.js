@@ -2063,6 +2063,18 @@ export type CacheEvent = {|
   size: number,
 |};
 
+export type RequestTrackerEvent = {|
+  type: 'requestTrackerEvent',
+  requestType: string,
+  cacheHit: boolean,
+|};
+
+export type AssetGraphQueueEvent = {|
+  type: 'assetGraphQueueEvent',
+  total: number,
+  running: number,
+|};
+
 /**
  * @section reporter
  */
@@ -2076,7 +2088,9 @@ export type ReporterEvent =
   | WatchEndEvent
   | ValidationEvent
   | TraceEvent
-  | CacheEvent;
+  | CacheEvent
+  | RequestTrackerEvent
+  | AssetGraphQueueEvent;
 
 /**
  * @section reporter

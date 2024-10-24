@@ -49,22 +49,10 @@ impl<K: std::hash::Hash + Send + Eq, V: Send + Clone> ThreadLocalHashMap<K, V> {
     K: Borrow<KR>,
     KR: Eq + std::hash::Hash,
   {
-    let map_cell = self
-      .inner
-      .get_or(|| RefCell::new(HashMap::with_hasher(DefaultHasher::new())));
-
-    let map = map_cell.borrow();
-    map.deref().get(key).cloned()
+    None
   }
 
-  fn insert(&self, key: K, value: V) {
-    let map_cell = self
-      .inner
-      .get_or(|| RefCell::new(HashMap::with_hasher(DefaultHasher::new())));
-
-    let mut map = map_cell.borrow_mut();
-    map.deref_mut().insert(key, value);
-  }
+  fn insert(&self, key: K, value: V) {}
 }
 
 pub type FileSystemRealPathCache = ThreadLocalHashMap<PathBuf, Option<PathBuf>>;

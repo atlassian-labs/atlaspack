@@ -18,7 +18,6 @@ import bundleReport from './bundleReport';
 import phaseReport from './phaseReport';
 import {
   writeOut,
-  updateSpinner,
   persistSpinner,
   isTTY,
   resetWindow,
@@ -26,6 +25,10 @@ import {
 } from './render';
 import * as emoji from './emoji';
 import wrapAnsi from 'wrap-ansi';
+
+const updateSpinner = (msg: string) => {
+  console.log(new Date().toISOString(), msg);
+};
 
 const THROTTLE_DELAY = 100;
 const seenWarnings = new Set();
@@ -39,12 +42,190 @@ let statusThrottle = throttle((message: string) => {
   updateSpinner(message);
 }, THROTTLE_DELAY);
 
+class RateOfWorkTracker {
+  currentWindow = [];
+
+  addSample(sample: {|date: number, total: number, running: number|}) {
+    this.currentWindow.push(sample);
+    if (this.currentWindow.length > 10) {
+      this.currentWindow.shift();
+    }
+  }
+
+  getRateOfWork() {
+    // the slope of the "total" and "running" values over time is highly
+    // variable, so we want to use the rate of change of the rate of change
+    // to smooth out the data
+    let totalRate = 0;
+    let runningRate = 0;
+    for (let i = 1; i < this.currentWindow.length; i++) {
+      totalRate +=
+        this.currentWindow[i].total - this.currentWindow[i - 1].total;
+      runningRate +=
+        this.currentWindow[i].running - this.currentWindow[i - 1].running;
+    }
+
+    return {
+      totalRate,
+      runningRate,
+    };
+  }
+}
+
+class CLIReporterImpl {
+  pending = false;
+  phaseCounts = {};
+  lastQueueStatistics = {
+    total: 0,
+    running: 0,
+    date: Date.now(),
+  };
+  requestStats = {
+    requests: 0,
+    cacheHits: 0,
+  };
+  cacheWriteStart = 0;
+
+  constructor() {}
+
+  start() {
+    setInterval(() => {
+      if (this.pending) {
+        this.writeToConsole();
+      }
+    }, 1000);
+
+    let lastQueueStatistics = [
+      {
+        ...this.lastQueueStatistics,
+        discoveryRate: 0,
+        completedRate: 0,
+        discoveryRateSlope: 0,
+      },
+    ];
+    setInterval(() => {
+      const {total, running, date} = this.lastQueueStatistics;
+      const elapsed =
+        date - lastQueueStatistics[lastQueueStatistics.length - 1].date;
+
+      // total is the total number of jobs queued and completed, so calculate the
+      // rate in which jobs are added to the pendign queue (by looking at the running size)
+      // and the rate at which they are completed
+      const discoveryRate =
+        (total - lastQueueStatistics[lastQueueStatistics.length - 1].total) /
+        (elapsed / 1000);
+      const completedJobs = total - running;
+      const lastCompletedJobs =
+        lastQueueStatistics[lastQueueStatistics.length - 1].total -
+        lastQueueStatistics[lastQueueStatistics.length - 1].running;
+      const completedRate =
+        (completedJobs - lastCompletedJobs) / (elapsed / 1000);
+      const lastRunning = lastQueueStatistics[0].running;
+      const runningRate =
+        (running - lastRunning) / ((date - lastQueueStatistics[0].date) / 1000);
+
+      const discoveryRateSlope =
+        discoveryRate -
+        lastQueueStatistics[lastQueueStatistics.length - 1].discoveryRate;
+
+      const timeToCompleteBasedOnRunningShift = running / runningRate;
+      const timeToComplete = -timeToCompleteBasedOnRunningShift;
+
+      console.log(
+        new Date().toISOString(),
+        'Time to complete',
+        timeToComplete > 0 ? timeToComplete : 'N/A',
+        'Discovered jobs growing at',
+        discoveryRate,
+        'jobs/sec',
+        'completing at',
+        completedRate,
+        'jobs/sec',
+        'total jobs running',
+        running,
+        'total jobs completed',
+        completedJobs,
+        'total jobs',
+        total,
+      );
+
+      lastQueueStatistics.push({
+        total,
+        running,
+        date,
+        completedRate,
+        discoveryRate,
+        discoveryRateSlope,
+      });
+      if (lastQueueStatistics.length > 100) {
+        lastQueueStatistics.shift();
+      }
+    }, 1000);
+  }
+
+  onEvent(event: ReporterEvent) {
+    this.pending = true;
+
+    if (event.type === 'buildProgress') {
+      this.phaseCounts[event.phase] ??= 0;
+      this.phaseCounts[event.phase] += 1;
+      if (event.phase !== 'resolving' && event.phase !== 'transforming') {
+        console.log(new Date().toISOString(), event.phase, event);
+      }
+    } else if (event.type === 'log') {
+      event.diagnostics?.forEach((diagnostic) => {
+        console.log(
+          new Date().toISOString(),
+          event.level,
+          diagnostic.origin,
+          diagnostic.message,
+          diagnostic.meta,
+        );
+      });
+    } else if (event.type === 'assetGraphQueueEvent') {
+      this.lastQueueStatistics = {
+        total: event.total,
+        running: event.running,
+        date: Date.now(),
+      };
+    } else if (event.type === 'requestTrackerEvent') {
+      this.requestStats.requests += 1;
+      this.requestStats.cacheHits += event.cacheHit ? 1 : 0;
+    } else if (event.type === 'cache') {
+      if (event.phase === 'start') {
+        this.cacheWriteStart = Date.now();
+        console.log(new Date().toISOString(), 'Cache write start');
+      } else if (event.phase === 'end') {
+        console.log(
+          new Date().toISOString(),
+          'Cache write end',
+          Date.now() - this.cacheWriteStart,
+        );
+      }
+    } else {
+      console.log(event);
+    }
+  }
+
+  writeToConsole() {
+    console.log(new Date().toISOString(), 'Building...', {
+      ...this.phaseCounts,
+      ...this.requestStats,
+    });
+  }
+}
+
+const cliReporter = new CLIReporterImpl();
+// cliReporter.start();
+
 // Exported only for test
 export async function _report(
   event: ReporterEvent,
   options: PluginOptions,
 ): Promise<void> {
   let logLevelFilter = logLevels[options.logLevel || 'info'];
+
+  cliReporter.onEvent(event);
 
   switch (event.type) {
     case 'buildStart': {

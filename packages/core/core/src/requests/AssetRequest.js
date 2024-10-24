@@ -48,8 +48,6 @@ export default function createAssetRequest(
 const type = 'asset_request';
 
 function getId(input: AssetRequestInput) {
-  // eslint-disable-next-line no-unused-vars
-  let {optionsRef, ...hashInput} = input;
   return hashString(
     type +
       fromProjectPathRelative(input.filePath) +

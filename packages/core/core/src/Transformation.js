@@ -167,11 +167,11 @@ export default class Transformation {
       asset.sourceContent = await asset.getCode();
     }
 
-    invalidateDevDeps(
-      this.request.invalidDevDeps,
-      this.options,
-      this.atlaspackConfig,
-    );
+    // invalidateDevDeps(
+    //   this.request.invalidDevDeps,
+    //   this.options,
+    //   this.atlaspackConfig,
+    // );
 
     let pipeline = await this.loadPipeline(
       this.request.filePath,
@@ -191,10 +191,11 @@ export default class Transformation {
       ...this.configs.values(),
       ...this.resolverRunner.configs.values(),
     ]);
-    let devDepRequests = getWorkerDevDepRequests([
-      ...this.devDepRequests.values(),
-      ...this.resolverRunner.devDepRequests.values(),
-    ]);
+    let devDepRequests = [];
+    // getWorkerDevDepRequests([
+    //   ...this.devDepRequests.values(),
+    //   ...this.resolverRunner.devDepRequests.values(),
+    // ]);
 
     // $FlowFixMe because of $$raw
     return {

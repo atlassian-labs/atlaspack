@@ -256,6 +256,16 @@ export default class WorkerFarm extends EventEmitter {
   }
 
   startChild() {
+    logger.verbose({
+      origin: '@atlaspack/workers',
+      message: 'Starting worker',
+      meta: {
+        workerCount: this.workers.size,
+        backend: this.options.backend,
+        maxConcurrentWorkers: this.options.maxConcurrentWorkers,
+      },
+    });
+
     let worker = new Worker({
       forcedKillTime: this.options.forcedKillTime,
       backend: this.options.backend,

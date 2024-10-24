@@ -59,6 +59,7 @@ import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
+import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 
 registerCoreWithSerializer();
 
@@ -72,7 +73,6 @@ export default class Atlaspack {
   #initialized /*: boolean*/ = false;
   #disposable /*: Disposable */;
   #initialOptions /*: InitialAtlaspackOptions */;
-  #atlaspackV3: AtlaspackV3;
   #reporterRunner /*: ReporterRunner*/;
   #resolvedOptions /*: ?AtlaspackOptions*/ = null;
   #optionsRef /*: SharedReference */;
@@ -93,6 +93,8 @@ export default class Atlaspack {
   #watcherSubscription /*: ?AsyncSubscription*/;
   #watcherCount /*: number*/ = 0;
   #requestedAssetIds /*: Set<string>*/ = new Set();
+
+  rustAtlaspack: AtlaspackV3 | null | void;
 
   isProfiling /*: boolean */;
 
@@ -158,6 +160,7 @@ export default class Atlaspack {
         },
       });
     }
+    this.rustAtlaspack = rustAtlaspack;
 
     let {config} = await loadAtlaspackConfig(resolvedOptions);
     this.#config = new AtlaspackConfig(config, resolvedOptions);
@@ -558,16 +561,19 @@ export default class Atlaspack {
    */
   async unstable_buildAssetGraph(): Promise<void> {
     await this._init();
+    const input = {
+      optionsRef: this.#optionsRef,
+      name: 'Main',
+      entries: this.#config.options.entries,
+      shouldBuildLazily: false,
+      lazyIncludes: [],
+      lazyExcludes: [],
+      requestedAssetIds: this.#requestedAssetIds,
+    };
     await this.#requestTracker.runRequest(
-      createAssetGraphRequestJS({
-        optionsRef: this.#optionsRef,
-        name: 'Main',
-        entries: this.#config.options.entries,
-        shouldBuildLazily: false,
-        lazyIncludes: [],
-        lazyExcludes: [],
-        requestedAssetIds: this.#requestedAssetIds,
-      }),
+      this.rustAtlaspack != null
+        ? createAssetGraphRequestRust(this.rustAtlaspack)(input)
+        : createAssetGraphRequestJS(input),
     );
     console.log('Done building asset graph!');
     console.log('Write request tracker to cache');

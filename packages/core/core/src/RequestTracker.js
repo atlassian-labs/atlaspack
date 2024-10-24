@@ -197,6 +197,11 @@ export const requestTypes = {
   validation_request: 14,
 };
 
+const requestTypeEntries = {};
+for (let key of (Object.keys(requestTypes): RequestTypeName[])) {
+  requestTypeEntries[requestTypes[key]] = key;
+}
+
 type RequestType = $Values<typeof requestTypes>;
 type RequestTypeName = $Keys<typeof requestTypes>;
 
@@ -447,6 +452,14 @@ export class RequestGraph extends ContentGraph<
   }
 
   invalidateUnpredictableNodes() {
+    logger.verbose({
+      origin: '@atlaspack/core',
+      message: 'Invalidating unpredictable nodes',
+      meta: {
+        invalidatedNodes: this.unpredicatableNodeIds.size,
+      },
+    });
+
     for (let nodeId of this.unpredicatableNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type !== FILE && node.type !== GLOB);
@@ -455,6 +468,14 @@ export class RequestGraph extends ContentGraph<
   }
 
   invalidateOnBuildNodes() {
+    logger.verbose({
+      origin: '@atlaspack/core',
+      message: 'Invalidating on build nodes',
+      meta: {
+        invalidatedNodes: this.invalidateOnBuildNodeIds.size,
+      },
+    });
+
     for (let nodeId of this.invalidateOnBuildNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type !== FILE && node.type !== GLOB);
@@ -463,36 +484,74 @@ export class RequestGraph extends ContentGraph<
   }
 
   invalidateEnvNodes(env: EnvMap) {
+    let numInvalidations = 0;
+    const invalidations = {};
+
     for (let nodeId of this.envNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === ENV);
-      if (env[keyFromEnvContentKey(node.id)] !== node.value) {
+
+      const envVariable = keyFromEnvContentKey(node.id);
+      if (env[envVariable] !== node.value) {
+        invalidations[envVariable] ??= 0;
+
         let parentNodes = this.getNodeIdsConnectedTo(
           nodeId,
           requestGraphEdgeTypes.invalidated_by_update,
         );
+
         for (let parentNode of parentNodes) {
           this.invalidateNode(parentNode, ENV_CHANGE);
+          invalidations.envVariable += 1;
+          numInvalidations += 1;
         }
       }
+    }
+
+    if (Object.keys(invalidations).length > 0) {
+      logger.verbose({
+        origin: '@atlaspack/core',
+        message: `Invalidating node due to env change`,
+        meta: {
+          invalidations,
+          numInvalidations,
+        },
+      });
     }
   }
 
   invalidateOptionNodes(options: AtlaspackOptions) {
+    let numInvalidations = 0;
+    let optionsChanged = false;
+
     for (let nodeId of this.optionNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === OPTION);
       if (
         hashFromOption(options[keyFromOptionContentKey(node.id)]) !== node.hash
       ) {
+        optionsChanged = true;
+
         let parentNodes = this.getNodeIdsConnectedTo(
           nodeId,
           requestGraphEdgeTypes.invalidated_by_update,
         );
+
         for (let parentNode of parentNodes) {
           this.invalidateNode(parentNode, OPTION_CHANGE);
+          numInvalidations += 1;
         }
       }
+    }
+
+    if (optionsChanged) {
+      logger.verbose({
+        origin: '@atlaspack/core',
+        message: 'Invalidated nodes due to option change',
+        meta: {
+          numInvalidations,
+        },
+      });
     }
   }
 
@@ -1289,6 +1348,11 @@ export default class RequestTracker {
     let hasValidResult = requestId != null && this.hasValidResult(requestId);
 
     if (!opts?.force && hasValidResult) {
+      report({
+        type: 'requestTrackerEvent',
+        requestType: requestTypeEntries[request.type],
+        cacheHit: true,
+      });
       // $FlowFixMe[incompatible-type]
       return this.getRequestResult<TResult>(request.id);
     }
@@ -1338,6 +1402,12 @@ export default class RequestTracker {
 
       assertSignalNotAborted(this.signal);
       this.completeRequest(requestNodeId);
+
+      report({
+        type: 'requestTrackerEvent',
+        requestType: requestTypeEntries[request.type],
+        cacheHit: false,
+      });
 
       deferred.resolve(true);
       return result;

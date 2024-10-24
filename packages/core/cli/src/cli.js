@@ -298,6 +298,11 @@ function makeDebugCommand() {
           ...options,
           shouldBuildLazily: true,
           watchBackend: 'watchman',
+          featureFlags: {
+            ...options.featureFlags,
+            fixQuadraticCacheInvalidation: 'NEW',
+            useLmdbJsLite: true,
+          },
         });
         console.log('Created atlaspack instance');
 

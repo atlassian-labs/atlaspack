@@ -34,6 +34,7 @@ import {type ProjectPath, fromProjectPathRelative} from '../projectPath';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
 import {propagateSymbols} from '../SymbolPropagation';
 import {requestTypes} from '../RequestTracker';
+import {report} from '../ReporterRunner';
 
 export type AssetGraphRequestInput = {|
   entries?: Array<ProjectPath>,
@@ -196,6 +197,7 @@ export class AssetGraphBuilder {
   }
 
   async build(): Promise<AssetGraphRequestResult> {
+    const startTime = Date.now();
     let errors = [];
     let rootNodeId = nullthrows(
       this.assetGraph.rootNodeId,
@@ -245,7 +247,13 @@ export class AssetGraphBuilder {
       message: 'Asset graph walked',
       meta: {
         visitedAssetGroupsCount: visitedAssetGroups.size,
+        duration: Date.now() - startTime,
       },
+    });
+
+    logger.verbose({
+      origin: '@atlaspack/core',
+      message: 'Storing asset graph',
     });
 
     if (this.prevChangedAssetsPropagation) {
@@ -282,6 +290,11 @@ export class AssetGraphBuilder {
         'AssetGraph_' + this.name + '_before_prop',
       );
       try {
+        logger.verbose({
+          origin: '@atlaspack/core',
+          message: 'Running symbol propagation',
+        });
+
         let errors = propagateSymbols({
           options: this.options,
           assetGraph: this.assetGraph,
@@ -320,6 +333,10 @@ export class AssetGraphBuilder {
     }
     await dumpGraphToGraphViz(this.assetGraph, 'AssetGraph_' + this.name);
 
+    logger.verbose({
+      origin: '@atlaspack/core',
+      message: 'Storing asset graph after symbol propagation',
+    });
     this.api.storeResult(
       {
         assetGraph: this.assetGraph,
@@ -331,6 +348,11 @@ export class AssetGraphBuilder {
       },
       this.cacheKey,
     );
+
+    logger.verbose({
+      origin: '@atlaspack/core',
+      message: 'Finished running asset graph request',
+    });
 
     return {
       assetGraph: this.assetGraph,
@@ -455,6 +477,13 @@ export class AssetGraphBuilder {
           `Can not queue corresponding request of node with type ${node.type}`,
         );
     }
+
+    report({
+      type: 'assetGraphQueueEvent',
+      running: this.queue._numRunning,
+      total: this.queue._count,
+    });
+
     return this.queue.add(() =>
       promise.then(null, (error) => errors.push(error)),
     );

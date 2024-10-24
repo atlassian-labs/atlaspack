@@ -4,6 +4,7 @@ import randomInt from 'random-int';
 
 import PromiseQueue from '../src/PromiseQueue';
 import sinon from 'sinon';
+import resolve from 'resolve';
 
 describe('PromiseQueue', () => {
   it('run() should resolve when all async functions in queue have completed', async () => {
@@ -85,6 +86,31 @@ describe('PromiseQueue', () => {
     await promise;
 
     assert(subscribedFn.called);
+  });
+
+  it('runs functions concurrently', () => {
+    const queue = new PromiseQueue();
+
+    const fn1 = sinon
+      .stub()
+      .returns(new Promise((resolve) => setTimeout(resolve, 5000)));
+
+    queue.add(fn1); // queue does not work if nothing is running, this is broken behaviour
+    queue.run();
+
+    const fn2 = sinon
+      .stub()
+      .returns(new Promise((resolve) => setTimeout(resolve, 5000)));
+    const fn3 = sinon
+      .stub()
+      .returns(new Promise((resolve) => setTimeout(resolve, 5000)));
+
+    queue.add(fn2);
+    queue.add(fn3);
+
+    assert(fn1.calledOnce);
+    assert(fn2.calledOnce);
+    assert(fn3.calledOnce);
   });
 
   it('.subscribeToAdd() should allow unsubscribing', async () => {
