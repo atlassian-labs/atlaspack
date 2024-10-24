@@ -12,6 +12,7 @@ use atlaspack_core::plugin::PluginOptions;
 use atlaspack_core::plugin::ResolveContext;
 use atlaspack_core::plugin::Resolved;
 use atlaspack_core::plugin::ResolverPlugin;
+use atlaspack_core::static_resolver::StaticResolver;
 use atlaspack_core::types::Dependency;
 use atlaspack_napi_helpers::anyhow_from_napi;
 use once_cell::sync::OnceCell;
@@ -31,6 +32,7 @@ pub struct RpcNodejsResolverPlugin {
   nodejs_workers: Arc<NodeJsWorkerCollection>,
   plugin_options: Arc<PluginOptions>,
   plugin_node: PluginNode,
+  static_resolver: Arc<StaticResolver>,
   started: OnceCell<InitializedState>,
 }
 
@@ -50,18 +52,22 @@ impl RpcNodejsResolverPlugin {
       nodejs_workers,
       plugin_options: ctx.options.clone(),
       plugin_node: plugin_node.clone(),
+      static_resolver: ctx.static_resolver.clone(),
       started: OnceCell::new(),
     })
   }
 
   fn get_or_init_state(&self) -> anyhow::Result<&InitializedState> {
-    self.started.get_or_try_init(|| {
-      self.nodejs_workers.exec_on_all(|worker| {
-        worker.load_plugin(LoadPluginOptions {
-          kind: LoadPluginKind::Resolver,
-          specifier: self.plugin_node.package_name.clone(),
-          resolve_from: (&*self.plugin_node.resolve_from).clone(),
-        })
+    self.started.get_or_try_init(move || {
+      self.nodejs_workers.exec_on_all(move |worker| {
+        worker.load_plugin(
+          LoadPluginOptions {
+            kind: LoadPluginKind::Resolver,
+            specifier: self.plugin_node.package_name.clone(),
+            resolve_from: (&*self.plugin_node.resolve_from).clone(),
+          },
+          self.static_resolver.clone(),
+        )
       })?;
 
       Ok(InitializedState {

@@ -99,6 +99,7 @@ mod tests {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::{PluginLogger, PluginOptions},
+    static_resolver::StaticResolver,
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
@@ -116,6 +117,7 @@ mod tests {
       file_system,
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
+      static_resolver: Arc::new(StaticResolver::default()),
     });
 
     let asset = Asset::default();

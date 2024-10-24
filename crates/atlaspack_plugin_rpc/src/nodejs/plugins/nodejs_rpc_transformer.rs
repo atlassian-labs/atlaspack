@@ -1,4 +1,5 @@
 use atlaspack_core::plugin::PluginOptions;
+use atlaspack_core::static_resolver::StaticResolver;
 use once_cell::sync::OnceCell;
 use std::fmt;
 use std::fmt::Debug;
@@ -37,6 +38,7 @@ pub struct NodejsRpcTransformerPlugin {
   plugin_options: Arc<PluginOptions>,
   plugin_node: PluginNode,
   started: OnceCell<InitializedState>,
+  static_resolver: Arc<StaticResolver>,
 }
 
 impl Debug for NodejsRpcTransformerPlugin {
@@ -55,6 +57,7 @@ impl NodejsRpcTransformerPlugin {
       nodejs_workers,
       plugin_options: ctx.options.clone(),
       plugin_node: plugin_node.clone(),
+      static_resolver: ctx.static_resolver.clone(),
       started: OnceCell::new(),
     })
   }
@@ -62,11 +65,14 @@ impl NodejsRpcTransformerPlugin {
   fn get_or_init_state(&self) -> anyhow::Result<&InitializedState> {
     self.started.get_or_try_init(|| {
       self.nodejs_workers.exec_on_all(|worker| {
-        worker.load_plugin(LoadPluginOptions {
-          kind: LoadPluginKind::Transformer,
-          specifier: self.plugin_node.package_name.clone(),
-          resolve_from: (&*self.plugin_node.resolve_from).clone(),
-        })
+        worker.load_plugin(
+          LoadPluginOptions {
+            kind: LoadPluginKind::Transformer,
+            specifier: self.plugin_node.package_name.clone(),
+            resolve_from: (&*self.plugin_node.resolve_from).clone(),
+          },
+          self.static_resolver.clone(),
+        )
       })?;
 
       Ok(InitializedState {

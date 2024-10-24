@@ -1,8 +1,9 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
-use atlaspack_napi_helpers::anyhow_from_napi;
+use atlaspack_core::static_resolver::StaticResolver;
 use atlaspack_napi_helpers::js_callable::JsCallable;
-use napi::JsObject;
+use atlaspack_napi_helpers::{anyhow_from_napi, anyhow_to_napi};
+use napi::{bindgen_prelude::FromNapiValue, JsObject, JsString};
 use serde::{Deserialize, Serialize};
 
 /// NodejsWorker is the connection to a single JavaScript worker thread
@@ -23,10 +24,39 @@ impl NodejsWorker {
     })
   }
 
-  pub fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
+  pub fn load_plugin(
+    &self,
+    opts: LoadPluginOptions,
+    static_resolver: Arc<StaticResolver>,
+  ) -> anyhow::Result<()> {
     self
       .load_plugin_fn
-      .call_with_return_serde(opts)
+      .call_with_return(
+        move |env| {
+          let opts = env.to_js_value(&opts)?;
+          let mut opts = JsObject::from_unknown(opts)?;
+
+          let resolve_fn = env.create_function_from_closure("resolve", move |ctx| {
+            let from_js = ctx.get::<JsString>(0)?;
+            let from = from_js.into_utf8()?.into_owned()?;
+
+            let to_js = ctx.get::<JsString>(1)?;
+            let to = to_js.into_utf8()?.into_owned()?;
+            let to_path = PathBuf::from(to);
+
+            let result = static_resolver
+              .resolve(&from, &to_path)
+              .map_err(anyhow_to_napi)?;
+
+            ctx.env.to_js_value(&result)
+          })?;
+
+          opts.set_named_property("resolve", resolve_fn)?;
+
+          Ok(vec![opts.into_unknown()])
+        },
+        |_env, _ret| Ok(()),
+      )
       .map_err(anyhow_from_napi)
   }
 }

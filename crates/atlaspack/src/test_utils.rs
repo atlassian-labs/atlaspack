@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_config_fixtures::default_config;
+use atlaspack_core::static_resolver::StaticResolver;
 use atlaspack_core::{
   config_loader::ConfigLoader,
   plugin::{PluginContext, PluginLogger, PluginOptions},
@@ -30,6 +31,7 @@ pub(crate) fn make_test_plugin_context() -> PluginContext {
     file_system: fs.clone(),
     options: Arc::new(PluginOptions::default()),
     logger: PluginLogger::default(),
+    static_resolver: Arc::new(StaticResolver::default()),
   }
 }
 
@@ -87,6 +89,7 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
         project_root: project_root.clone(),
       }),
       logger: PluginLogger::default(),
+      static_resolver: Arc::new(StaticResolver::default()),
     })
   });
 

@@ -32,6 +32,7 @@ export class AtlaspackWorker {
   #resolvers: Map<string, ResolverState<any>>;
   #transformers: Map<string, TransformerState<any>>;
   #fs: FileSystem;
+  #resolveFunc: (from: string, to: string) => ?string;
 
   constructor() {
     this.#resolvers = new Map();
@@ -40,7 +41,11 @@ export class AtlaspackWorker {
   }
 
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<void>> = jsCallable(
-    async ({kind, specifier, resolveFrom}) => {
+    async ({kind, specifier, resolveFrom, resolve: staticResolver}) => {
+      if (!this.#resolveFunc) {
+        this.#resolveFunc = staticResolver;
+      }
+
       let customRequire = module.createRequire(resolveFrom);
       let resolvedPath = customRequire.resolve(specifier);
       // $FlowFixMe
@@ -174,8 +179,6 @@ export class AtlaspackWorker {
     }
 
     const transformer: Transformer<any> = state.transformer;
-    const resolveFunc = (from: string, to: string): Promise<any> =>
-      Promise.resolve(require.resolve(to, {paths: [from]}));
     const env = new Environment(napiEnv);
     const mutableAsset = new MutableAsset(innerAsset, this.#fs, env);
     const defaultOptions = {
@@ -206,7 +209,8 @@ export class AtlaspackWorker {
       const ast = await transformer.parse({
         asset: mutableAsset,
         config,
-        resolve: resolveFunc,
+        // $FlowFixMe
+        resolve: this.#resolveFunc,
         ...defaultOptions,
       });
       if (ast) {
@@ -217,7 +221,8 @@ export class AtlaspackWorker {
     const result = await state.transformer.transform({
       asset: mutableAsset,
       config,
-      resolve: resolveFunc,
+      // $FlowFixMe
+      resolve: this.#resolveFunc,
       ...defaultOptions,
     });
 
@@ -290,6 +295,7 @@ type LoadPluginOptions = {|
   kind: 'resolver' | 'transformer',
   specifier: string,
   resolveFrom: string,
+  resolve: (from: string, to: string) => ?string,
 |};
 
 type RpcPluginOptions = {|

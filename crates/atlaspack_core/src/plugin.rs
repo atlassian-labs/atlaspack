@@ -15,6 +15,7 @@ pub use transformer_plugin::*;
 pub use validator_plugin::*;
 
 use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
+use crate::static_resolver::StaticResolver;
 use crate::types::{BuildMode, LogLevel};
 
 mod bundler_plugin;
@@ -33,6 +34,7 @@ pub struct PluginContext {
   pub file_system: FileSystemRef,
   pub logger: PluginLogger,
   pub options: Arc<PluginOptions>,
+  pub static_resolver: Arc<StaticResolver>,
 }
 
 #[derive(Default)]
