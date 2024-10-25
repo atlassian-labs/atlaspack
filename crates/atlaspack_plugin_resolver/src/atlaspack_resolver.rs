@@ -410,6 +410,7 @@ mod tests {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::PluginLogger,
+    static_resolver::StaticResolver,
     types::{Dependency, Diagnostic, ErrorKind},
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
@@ -425,6 +426,7 @@ mod tests {
       file_system: Arc::new(InMemoryFileSystem::default()),
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
+      static_resolver: Arc::new(StaticResolver::default()),
     }
   }
 
@@ -517,6 +519,7 @@ mod tests {
       file_system: Arc::new(InMemoryFileSystem::default()),
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
+      static_resolver: Arc::new(StaticResolver::default()),
     };
 
     let resolver = AtlaspackResolver::new(&plugin_context);

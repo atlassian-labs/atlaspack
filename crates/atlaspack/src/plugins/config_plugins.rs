@@ -216,6 +216,7 @@ impl Plugins for ConfigPlugins {
         resolvers.push(rpc_worker.create_resolver(&self.ctx, resolver)?);
       }
 
+      self.ctx.static_resolver.init(resolvers.clone());
       Ok(resolvers)
     })
   }

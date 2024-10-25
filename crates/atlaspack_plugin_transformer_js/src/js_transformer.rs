@@ -326,6 +326,7 @@ mod tests {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::PluginLogger,
+    static_resolver::StaticResolver,
     types::{Code, Dependency, Environment, Location, SourceLocation, SpecifierType, Symbol},
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
@@ -507,6 +508,7 @@ mod tests {
       file_system,
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
+      static_resolver: Arc::new(StaticResolver::default()),
     };
 
     let transformer = AtlaspackJsTransformerPlugin::new(&ctx).expect("Expected transformer");
