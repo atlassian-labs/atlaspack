@@ -1937,11 +1937,16 @@ describe.v2('bundler', function () {
       single-file-output
         a.js:
           import {c} from './b';
+          import './should-be-ignored.css';
           const ignore = () => import('./c');
         b.js:
           export const c = () => import('./c');
         c.js:
           export const c = 'c';
+        should-be-ignored.css:
+          * {
+            color: papayawhip;
+          }
 
         yarn.lock:`;
 
@@ -1981,6 +1986,7 @@ describe.v2('bundler', function () {
         ],
       },
       {assets: ['c.js']},
+      {type: 'css', assets: ['should-be-ignored.css']},
     ]);
   });
 });
