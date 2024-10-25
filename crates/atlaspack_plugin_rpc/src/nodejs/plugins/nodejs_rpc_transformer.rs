@@ -102,7 +102,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     let result: RpcTransformerResult = self.nodejs_workers.exec_on_one(|worker| {
       worker
         .transformer_register_fn
-        .call_with_return_serde(run_transformer_opts)
+        .call_serde(run_transformer_opts)
         .map_err(anyhow_from_napi)
     })?;
 
