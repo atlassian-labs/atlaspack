@@ -24,6 +24,7 @@ import nullthrows from 'nullthrows';
 import path from 'path';
 import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {addJSMonolithBundle} from './MonolithicBundler';
 
 type Glob = string;
 
@@ -167,7 +168,7 @@ export default (new Bundler({
       // Do this after the ideal graph so that the mutation of the bundleGraph doesn't
       // interfere with the main bundling algorithm
       for (let [entryAsset, entryDep] of singleFileEntries.entries()) {
-        createJSMonolithGraph(bundleGraph, entryAsset, entryDep);
+        addJSMonolithBundle(bundleGraph, entryAsset, entryDep);
       }
     }
 
@@ -177,35 +178,6 @@ export default (new Bundler({
   },
   optimize() {},
 }): Bundler);
-
-function createJSMonolithGraph(
-  bundleGraph: MutableBundleGraph,
-  entryAsset: Asset,
-  entryDep: Dependency,
-): void {
-  let target = nullthrows(
-    entryDep.target,
-    'Expected dependency to have a valid target',
-  );
-
-  // Create a single bundle to hold all JS assets
-  let bundle = bundleGraph.createBundle({entryAsset, target});
-
-  bundleGraph.traverse((node) => {
-    // JS assets can be added to the bundle, but the rest are ignored
-    if (node.type === 'asset' && node.value.type === 'js') {
-      bundleGraph.addAssetToBundle(node.value, bundle);
-    } else if (node.type === 'dependency' && node.value.priority === 'lazy') {
-      // Any async dependencies need to be internalized into the bundle, and will
-      // be included by the asset check above
-      bundleGraph.internalizeAsyncDependency(bundle, node.value);
-    }
-  }, entryAsset);
-
-  let bundleGroup = bundleGraph.createBundleGroup(entryDep, target);
-
-  bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
-}
 
 function decorateLegacyGraph(
   idealGraph: IdealGraph,
