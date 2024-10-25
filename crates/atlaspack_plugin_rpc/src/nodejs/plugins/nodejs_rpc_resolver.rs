@@ -90,7 +90,7 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
     self.nodejs_workers.exec_on_one(|worker| {
       worker
         .run_resolver_resolve_fn
-        .call_with_return_serde(RunResolverResolve {
+        .call_serde(RunResolverResolve {
           key: self.plugin_node.package_name.clone(),
           dependency: (&*ctx.dependency).clone(),
           specifier: (&*ctx.specifier).to_owned(),

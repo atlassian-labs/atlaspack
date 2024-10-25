@@ -14,7 +14,7 @@ pub struct NodejsWorker {
 
 impl NodejsWorker {
   pub fn new(delegate: JsObject) -> napi::Result<Self> {
-    let bind = |method_name: &str| JsCallable::new_from_object_prop_bound(method_name, &delegate);
+    let bind = |method_name: &str| JsCallable::new_method_bound(method_name, &delegate);
 
     Ok(Self {
       load_plugin_fn: bind("loadPlugin")?,
@@ -26,7 +26,7 @@ impl NodejsWorker {
   pub fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
     self
       .load_plugin_fn
-      .call_with_return_serde(opts)
+      .call_serde(opts)
       .map_err(anyhow_from_napi)
   }
 }
