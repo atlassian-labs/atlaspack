@@ -19,7 +19,11 @@ export function addJSMonolithBundle(
     // JS assets can be added to the bundle, but the rest are ignored
     if (node.type === 'asset' && node.value.type === 'js') {
       bundleGraph.addAssetToBundle(node.value, bundle);
-    } else if (node.type === 'dependency' && node.value.priority === 'lazy') {
+    } else if (
+      node.type === 'dependency' &&
+      node.value.priority === 'lazy' &&
+      !bundleGraph.isDependencySkipped(node.value)
+    ) {
       // Any async dependencies need to be internalized into the bundle, and will
       // be included by the asset check above
       bundleGraph.internalizeAsyncDependency(bundle, node.value);
