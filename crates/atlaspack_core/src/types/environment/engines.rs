@@ -80,7 +80,7 @@ impl From<EnvironmentFeature> for caniuse_database::BrowserFeature {
 
 /// List of browsers to exclude when the esmodule target is specified based on
 /// https://caniuse.com/#feat=es6-module
-const _ESMODULE_BROWSERS: &'static [&'static str] = &[
+const _ESMODULE_BROWSERS: &[&str] = &[
   "not ie <= 11",
   "not edge < 16",
   "not firefox < 60",

@@ -26,7 +26,7 @@ impl From<Vec<Distrib>> for Browsers {
   fn from(distribs: Vec<Distrib>) -> Self {
     let mut browsers = Browsers::default();
     for distrib in distribs {
-      if let Ok(version) = Version::from_str(&*distrib.version()) {
+      if let Ok(version) = Version::from_str(distrib.version()) {
         browsers.data.insert(distrib.name().to_string(), version);
       }
     }

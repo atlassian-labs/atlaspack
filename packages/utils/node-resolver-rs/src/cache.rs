@@ -136,7 +136,7 @@ impl Cache {
         JsonError::new(
           File {
             path: PathBuf::from(path),
-            contents: contents.into(),
+            contents,
           },
           e,
         )
