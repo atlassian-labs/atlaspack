@@ -43,7 +43,7 @@ impl TryFrom<AtlaspackRcFile> for PartialAtlaspackConfig {
     let to_vec = |maybe_plugins: Option<&Vec<String>>| {
       maybe_plugins
         .map(|plugins| plugins.iter().map(to_entry).collect())
-        .unwrap_or(Vec::new())
+        .unwrap_or_default()
     };
 
     let to_pipelines = |map: Option<&IndexMap<String, Vec<String>>>| {
@@ -59,7 +59,7 @@ impl TryFrom<AtlaspackRcFile> for PartialAtlaspackConfig {
             })
             .collect()
         })
-        .unwrap_or(IndexMap::new())
+        .unwrap_or_default()
     };
 
     let to_pipeline = |map: Option<&IndexMap<String, String>>| {
@@ -70,7 +70,7 @@ impl TryFrom<AtlaspackRcFile> for PartialAtlaspackConfig {
             .map(|(pattern, package_name)| (String::from(pattern), to_entry(package_name)))
             .collect()
         })
-        .unwrap_or(IndexMap::new())
+        .unwrap_or_default()
     };
 
     Ok(PartialAtlaspackConfig {
@@ -126,7 +126,7 @@ impl PartialAtlaspackConfig {
     // Add remaining pipelines
     for (pattern, value) in map {
       if !used_patterns.contains(&pattern) {
-        merged_map.insert(String::from(pattern), value);
+        merged_map.insert(pattern, value);
       }
     }
 
