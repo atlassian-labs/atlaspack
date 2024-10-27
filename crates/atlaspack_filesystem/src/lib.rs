@@ -5,7 +5,7 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use thread_local::ThreadLocal;
 

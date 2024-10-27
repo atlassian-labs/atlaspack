@@ -1,6 +1,5 @@
 use std::borrow::Borrow;
 use std::borrow::Cow;
-use std::cell::Cell;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
