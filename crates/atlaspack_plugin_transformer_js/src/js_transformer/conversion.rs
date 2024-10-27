@@ -66,7 +66,7 @@ pub(crate) fn convert_result(
     // Collect all exported variable names
     for symbol in &hoist_result.exported_symbols {
       let symbol =
-        transformer_exported_symbol_into_symbol(&options.project_root, &asset_file_path, &symbol);
+        transformer_exported_symbol_into_symbol(&options.project_root, &asset_file_path, symbol);
       asset_symbols.push(symbol);
     }
 
@@ -117,7 +117,7 @@ pub(crate) fn convert_result(
           // TODO: Move this into the SWC transformer
           let re_export_fake_local_key = existing
             .map(|sym| sym.local.clone())
-            .unwrap_or_else(|| format!("${}$re_export${}", asset.id, symbol.local).into());
+            .unwrap_or_else(|| format!("${}$re_export${}", asset.id, symbol.local));
 
           let dependency_symbol = Symbol {
             exported: symbol.imported.as_ref().into(),
@@ -230,7 +230,7 @@ pub(crate) fn convert_result(
 
           (local, true)
         } else {
-          (format!("${}", sym.local).into(), false)
+          (format!("${}", sym.local), false)
         };
 
         asset_symbols.push(Symbol {
@@ -393,7 +393,7 @@ pub(crate) fn convert_dependencies(
     let result = convert_dependency(
       project_root,
       transformer_config,
-      &asset,
+      asset,
       transformer_dependency,
     )?;
 

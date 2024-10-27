@@ -2,6 +2,7 @@ use serde::{Deserialize, Deserializer};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[allow(clippy::enum_variant_names)]
 pub enum Jsx {
   Preserve,
   React,
