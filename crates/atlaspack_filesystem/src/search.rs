@@ -9,9 +9,9 @@ pub enum Entry<'a> {
   File(&'a str),
 }
 
-pub fn find_ancestor<'a, F, R>(
+pub fn find_ancestor<F, R>(
   fs: &dyn FileSystem,
-  entries: &[Entry<'a>],
+  entries: &[Entry<'_>],
   from: F,
   root: R,
 ) -> Option<PathBuf>

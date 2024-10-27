@@ -36,12 +36,12 @@ impl FileSystem for OsFileSystem {
   }
 
   fn is_file(&self, path: &Path) -> bool {
-    let path: &Path = path.as_ref();
+    let path: &Path = path;
     path.is_file()
   }
 
   fn is_dir(&self, path: &Path) -> bool {
-    let path: &Path = path.as_ref();
+    let path: &Path = path;
     path.is_dir()
   }
 }
