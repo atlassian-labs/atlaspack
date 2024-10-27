@@ -232,7 +232,7 @@ fn get_file_contents_at_commit(
   let tree = commit.tree()?;
   let entry = tree.get_path(path)?;
   let blob = entry
-    .to_object(&repo)?
+    .to_object(repo)?
     .into_blob()
     .map_err(|_| anyhow::anyhow!("Failed to read yarn.lock from git"))?;
   let contents = blob.content();
@@ -252,8 +252,8 @@ pub fn get_changed_files(
   failure_mode: FailureMode,
 ) -> anyhow::Result<Vec<PathBuf>> {
   let repo = Repository::open(repo_path)?;
-  let old_commit = repo.revparse_single(&old_rev)?.peel_to_commit()?;
-  let new_commit = repo.revparse_single(&new_rev)?.peel_to_commit()?;
+  let old_commit = repo.revparse_single(old_rev)?.peel_to_commit()?;
+  let new_commit = repo.revparse_single(new_rev)?.peel_to_commit()?;
 
   tracing::debug!("Calculating git diff");
   let mut diff_options = DiffOptions::new();
@@ -287,9 +287,9 @@ pub fn get_changed_files(
     let yarn_lock_path = yarn_lock_path.strip_prefix(repo_path)?;
     let node_modules_relative_path = yarn_lock_path.parent().unwrap().join("node_modules");
 
-    let old_yarn_lock_blob = get_file_contents_at_commit(&repo, &old_commit, &yarn_lock_path)?;
+    let old_yarn_lock_blob = get_file_contents_at_commit(&repo, &old_commit, yarn_lock_path)?;
     let old_yarn_lock: YarnLock = parse_yarn_lock(&old_yarn_lock_blob)?;
-    let new_yarn_lock_blob = get_file_contents_at_commit(&repo, &new_commit, &yarn_lock_path)?;
+    let new_yarn_lock_blob = get_file_contents_at_commit(&repo, &new_commit, yarn_lock_path)?;
     let new_yarn_lock: YarnLock = parse_yarn_lock(&new_yarn_lock_blob)?;
 
     let node_modules_path = repo_path.join(&node_modules_relative_path);
@@ -311,7 +311,7 @@ pub fn get_changed_files(
       node_modules_path.display()
     );
     let node_modules_changes = yarn_integration::generate_events(
-      &node_modules_path.parent().unwrap(),
+      node_modules_path.parent().unwrap(),
       &old_yarn_lock,
       &new_yarn_lock,
       &yarn_state,
