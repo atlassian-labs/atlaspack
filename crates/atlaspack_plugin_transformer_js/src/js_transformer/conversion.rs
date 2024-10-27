@@ -100,6 +100,7 @@ pub(crate) fn convert_result(
           }
           // TODO: Why isn't this added to the asset.symbols array?
         } else {
+          #[allow(clippy::op_ref)]
           let existing = if let Some(symbols) = dependency.symbols.as_ref() {
             symbols
               .as_slice()
@@ -375,6 +376,7 @@ pub(crate) fn is_re_export_all_symbol(symbol: &atlaspack_js_swc_core::ImportedSy
 /// dependency value.
 ///
 /// This will be used to find dependencies corresponding to imported symbols' `local` mangled names.
+#[allow(clippy::type_complexity)]
 pub(crate) fn convert_dependencies(
   project_root: &Path,
   transformer_config: &atlaspack_js_swc_core::Config,
@@ -423,7 +425,7 @@ fn make_export_star_symbol(asset_id: &str) -> Symbol {
 
 fn make_esm_helpers_dependency(
   options: &PluginOptions,
-  asset_file_path: &PathBuf,
+  #[allow(clippy::ptr_arg)] asset_file_path: &PathBuf,
   asset_environment: Environment,
   asset_id: &str,
 ) -> Dependency {
