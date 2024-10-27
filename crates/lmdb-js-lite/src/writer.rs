@@ -232,6 +232,7 @@ pub enum RwTransaction<'a, 'b> {
 }
 
 impl<'a, 'b> RwTransaction<'a, 'b> {
+  #[allow(clippy::should_implement_trait)]
   pub fn deref_mut(&mut self) -> &mut RwTxn<'b> {
     match self {
       RwTransaction::Borrowed(txn) => txn,
@@ -246,9 +247,11 @@ pub enum Transaction<'a, 'b> {
 }
 
 impl<'a, 'b> Transaction<'a, 'b> {
+  #[allow(clippy::should_implement_trait)]
   pub fn deref(&self) -> &RoTxn<'b> {
     match self {
       Transaction::Borrowed(txn) => txn,
+      #[allow(clippy::needless_borrow)]
       Transaction::Owned(txn) => &txn,
     }
   }
