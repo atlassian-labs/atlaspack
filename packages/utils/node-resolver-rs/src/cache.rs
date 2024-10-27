@@ -1,60 +1,19 @@
-use std::borrow::Borrow;
 use std::borrow::Cow;
-use std::cell::RefCell;
-use std::collections::HashMap;
 use std::fmt;
 use std::ops::Deref;
-use std::ops::DerefMut;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_core::types::File;
 use atlaspack_filesystem::{FileSystemRealPathCache, FileSystemRef};
-use thread_local::ThreadLocal;
+use atlaspack_shared_map::ThreadLocalHashMap;
 
 use crate::package_json::PackageJson;
 use crate::package_json::SourceField;
 use crate::tsconfig::TsConfig;
 use crate::tsconfig::TsConfigWrapper;
 use crate::ResolverError;
-
-type DefaultHasher = xxhash_rust::xxh3::Xxh3Builder;
-
-struct ThreadLocalHashMap<K: Send + Eq, V: Send + Clone> {
-  inner: ThreadLocal<RefCell<HashMap<K, V, DefaultHasher>>>,
-}
-
-impl<K: std::hash::Hash + Send + Eq, V: Send + Clone> ThreadLocalHashMap<K, V> {
-  fn new() -> Self {
-    Self {
-      inner: ThreadLocal::new(),
-    }
-  }
-
-  fn get<KR>(&self, key: &KR) -> Option<V>
-  where
-    KR: ?Sized,
-    K: Borrow<KR>,
-    KR: Eq + std::hash::Hash,
-  {
-    let map_cell = self
-      .inner
-      .get_or(|| RefCell::new(HashMap::with_hasher(DefaultHasher::new())));
-
-    let map = map_cell.borrow();
-    map.deref().get(key).cloned()
-  }
-
-  fn insert(&self, key: K, value: V) {
-    let map_cell = self
-      .inner
-      .get_or(|| RefCell::new(HashMap::with_hasher(DefaultHasher::new())));
-
-    let mut map = map_cell.borrow_mut();
-    map.deref_mut().insert(key, value);
-  }
-}
 
 pub struct Cache {
   pub fs: FileSystemRef,

@@ -1,0 +1,8 @@
+[package]
+name = "atlaspack_shared_map"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thread_local = { workspace = true }
+xxhash-rust = { workspace = true, features = ["xxh3"] }

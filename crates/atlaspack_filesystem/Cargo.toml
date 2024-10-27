@@ -9,6 +9,7 @@ mockall = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 anyhow = { workspace = true }
 thread_local = { workspace = true }
+atlaspack_shared_map = { path = "../atlaspack_shared_map" }
 
 [dev-dependencies]
 assert_fs = { workspace = true }
