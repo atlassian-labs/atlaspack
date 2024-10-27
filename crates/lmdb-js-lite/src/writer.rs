@@ -108,6 +108,7 @@ fn run_database_writer(rx: Receiver<DatabaseWriterMessage>, writer: Arc<Database
   }
 }
 
+#[allow(clippy::needless_lifetimes)]
 fn handle_message<'a, 'b>(
   writer: &'a DatabaseWriter,
   current_transaction: &'b mut Option<RwTxn<'a>>,
