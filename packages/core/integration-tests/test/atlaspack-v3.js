@@ -11,6 +11,7 @@ import {
   it,
   overlayFS,
 } from '@atlaspack/test-utils';
+import {LMDBLiteCache} from '@atlaspack/cache';
 
 describe('AtlaspackV3', function () {
   it('builds', async () => {
@@ -35,6 +36,7 @@ describe('AtlaspackV3', function () {
       fs: new FileSystemV3(overlayFS),
       nodeWorkers: 1,
       packageManager: new NodePackageManager(inputFS, __dirname),
+      lmdb: new LMDBLiteCache('.parcel-cache'),
     });
 
     await atlaspack.buildAssetGraph();
