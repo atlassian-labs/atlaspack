@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::Error;
 use async_trait::async_trait;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
@@ -27,7 +25,7 @@ impl TransformerPlugin for AtlaspackYamlTransformerPlugin {
     let code = serde_yml::from_slice::<serde_yml::Value>(asset.code.bytes())?;
     let code = serde_json::to_string(&code)?;
 
-    asset.code = Arc::new(Code::from(format!("module.exports = {code};")));
+    asset.code = Box::new(Code::from(format!("module.exports = {code};")));
     asset.file_type = FileType::Js;
 
     Ok(TransformResult {
@@ -70,7 +68,7 @@ mod tests {
     let plugin = create_yaml_plugin();
 
     let asset = Asset {
-      code: Arc::new(Code::from(String::from(
+      code: Box::new(Code::from(String::from(
         "
           a: 1
           b:
@@ -95,7 +93,7 @@ mod tests {
       transformation,
       Ok(TransformResult {
         asset: Asset {
-          code: Arc::new(Code::from(String::from(
+          code: Box::new(Code::from(String::from(
             "module.exports = {\"a\":1,\"b\":{\"c\":2,\"d\":true},\"e\":[\"f\",\"g\"]};"
           ))),
           file_type: FileType::Js,

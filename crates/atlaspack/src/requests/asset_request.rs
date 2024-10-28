@@ -89,7 +89,7 @@ impl Request for AssetRequest {
           &url_match.url,
         ) {
           asset.map = Some(source_map);
-          asset.code = Arc::new(Code::from(code.replace(&url_match.code, "")));
+          asset.code = Box::new(Code::from(code.replace(&url_match.code, "")));
         }
       }
     }
@@ -386,7 +386,7 @@ mod tests {
       let label = label.clone();
       move |_context, asset: Asset| {
         let mut asset = asset.clone();
-        asset.code = Arc::new(Code::from(format!(
+        asset.code = Box::new(Code::from(format!(
           "{}::{}",
           String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
           label.clone()

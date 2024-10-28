@@ -42,6 +42,10 @@ impl Code {
     &self.inner
   }
 
+  pub fn get_mut(&mut self) -> &mut Vec<u8> {
+    &mut self.inner
+  }
+
   pub fn as_str(&self) -> anyhow::Result<&str> {
     str::from_utf8(&self.inner)
       .map_err(|e| anyhow::Error::new(e).context("Failed to convert code to UTF8 str"))
@@ -147,7 +151,7 @@ pub struct Asset {
 
   /// The code of this asset, initially read from disk, then becoming the
   /// transformed output
-  pub code: Arc<Code>,
+  pub code: Box<Code>,
 
   /// The source map for the asset
   pub map: Option<SourceMap>,
@@ -278,7 +282,7 @@ impl Asset {
     });
 
     Ok(Self {
-      code: Arc::new(code),
+      code: Box::new(code),
       env,
       file_path,
       file_type,
@@ -318,7 +322,7 @@ impl Asset {
 
     Self {
       bundle_behavior: Some(BundleBehavior::Inline),
-      code: Arc::new(code),
+      code: Box::new(code),
       id: asset_id,
       is_bundle_splittable: true,
       is_source,
@@ -352,7 +356,7 @@ impl Asset {
     });
 
     Ok(Self {
-      code: Arc::new(Code::from(code)),
+      code: Box::new(Code::from(code)),
       file_type,
       id: asset_id,
       unique_key,

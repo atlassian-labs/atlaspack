@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::Error;
 use async_trait::async_trait;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
@@ -29,7 +27,7 @@ impl TransformerPlugin for AtlaspackJsonTransformerPlugin {
     let code = json5::to_string(&code)?;
     let code = json::stringify(code);
 
-    asset.code = Arc::new(Code::from(format!("module.exports = JSON.parse({code});")));
+    asset.code = Box::new(Code::from(format!("module.exports = JSON.parse({code});")));
     asset.file_type = FileType::Js;
 
     Ok(TransformResult {
@@ -71,7 +69,7 @@ mod tests {
     let plugin = create_json_plugin();
 
     let asset = Asset {
-      code: Arc::new(Code::from(
+      code: Box::new(Code::from(
         r#"
           {
             "a": "b",
@@ -95,7 +93,7 @@ mod tests {
         .map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
-          code: Arc::new(Code::from(
+          code: Box::new(Code::from(
             r#"module.exports = JSON.parse("{\"a\":\"b\",\"c\":{\"d\":true,\"e\":1}}");"#
               .to_string()
           )),
@@ -112,7 +110,7 @@ mod tests {
     let plugin = create_json_plugin();
 
     let asset = Asset {
-      code: Arc::new(Code::from(
+      code: Box::new(Code::from(
         r#"
           /* start */
           {
@@ -140,7 +138,7 @@ mod tests {
         .map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
-          code: Arc::new(Code::from(
+          code: Box::new(Code::from(
             r#"module.exports = JSON.parse("{\"a\":\"b\",\"c\":{\"d\":true,\"e\":1}}");"#
               .to_string()
           )),

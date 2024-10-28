@@ -580,7 +580,7 @@ mod tests {
         .unwrap()
         .asset
         .code,
-      Arc::new(Code::from(
+      Box::new(Code::from(
         String::from(
           r#"
             console.log('hello world');

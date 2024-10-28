@@ -7,6 +7,9 @@ members = [
   "packages/utils/dev-dep-resolver"
 ]
 
+[profile.release]
+debug = true
+
 [profile.canary]
 inherits = "release"
 debug = true

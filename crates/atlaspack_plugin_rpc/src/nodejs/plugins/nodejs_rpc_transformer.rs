@@ -1,5 +1,10 @@
 use async_trait::async_trait;
 use atlaspack_core::plugin::PluginOptions;
+use napi::bindgen_prelude::Buffer;
+use napi::bindgen_prelude::FromNapiValue;
+use napi::bindgen_prelude::ToNapiValue;
+use napi::JsObject;
+use napi::JsUnknown;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -96,7 +101,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
   async fn transform(
     &self,
     _context: TransformContext,
-    asset: Asset,
+    mut asset: Asset,
   ) -> Result<TransformResult, Error> {
     let state = self.get_or_init_state().await?;
 
@@ -107,19 +112,45 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       key: self.plugin_node.package_name.clone(),
       options: state.rpc_plugin_options.clone(),
       env: asset_env.clone(),
-      asset,
+      asset: Asset {
+        code: Default::default(),
+        ..asset
+      },
     };
 
-    let result: RpcTransformerResult = self
+    let (result, contents) = self
       .nodejs_workers
       .next_worker()
       .transformer_register_fn
-      .call_serde::<_, RpcTransformerResult>(run_transformer_opts)
+      .call(
+        move |env| {
+          let run_transformer_opts = env.to_js_value(&run_transformer_opts)?;
+
+          let bytes = std::mem::take(asset.code.get_mut());
+          let buf = napi::bindgen_prelude::Buffer::from(bytes);
+          let buf = unsafe { ToNapiValue::to_napi_value(env.raw(), buf)? };
+          let buf = unsafe { JsUnknown::from_napi_value(env.raw(), buf)? };
+
+          Ok(vec![run_transformer_opts, buf])
+        },
+        |env, return_value| {
+          let return_value = JsObject::from_unknown(return_value)?;
+          let props = return_value.get_element_unchecked::<JsUnknown>(0)?;
+          let props = env.from_js_value::<RpcTransformerResult, _>(props)?;
+
+          let contents = return_value.get_element_unchecked::<JsUnknown>(1)?;
+          let contents = Buffer::from_unknown(contents)?;
+          let contents = contents.to_vec();
+
+          //
+          Ok((props, contents))
+        },
+      )
       .await?;
 
     let transformed_asset = Asset {
       id: result.asset.id,
-      code: Arc::new(result.asset.code),
+      code: Box::new(Code::new(contents)),
       bundle_behavior: result.asset.bundle_behavior,
       env: asset_env.clone(),
       file_path: result.asset.file_path,
