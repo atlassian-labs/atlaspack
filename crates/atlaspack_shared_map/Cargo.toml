@@ -1,0 +1,10 @@
+[package]
+name = "atlaspack_shared_map"
+description = "A hashmap to be used in caches where consistency between threads is not a concern."
+authors = ["Pedro Tacla Yamada <tacla.yamada@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thread_local = { workspace = true }
+xxhash-rust = { workspace = true, features = ["xxh3"] }

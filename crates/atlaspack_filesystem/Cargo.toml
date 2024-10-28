@@ -5,9 +5,11 @@ edition = "2021"
 description = "FileSystem wrapper trait for use in Atlaspack codebase."
 
 [dependencies]
-mockall = { workspace = true }
-xxhash-rust = { workspace = true, features = ["xxh3"] }
 anyhow = { workspace = true }
+atlaspack_shared_map = { path = "../atlaspack_shared_map" }
+mockall = { workspace = true }
+thread_local = { workspace = true }
+xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
 assert_fs = { workspace = true }
