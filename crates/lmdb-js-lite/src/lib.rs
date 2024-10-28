@@ -353,25 +353,12 @@ impl LMDB {
   }
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum GetDatabaseError {
-  #[error("Trying to use closed DB")]
-  ClosedDatabase,
-}
-
 impl LMDB {
-  pub fn get_database(&self) -> Result<&Arc<DatabaseHandle>, GetDatabaseError> {
+  pub fn get_database_napi(&self) -> napi::Result<&Arc<DatabaseHandle>> {
     let inner = self
       .inner
       .as_ref()
-      .ok_or_else(|| GetDatabaseError::ClosedDatabase)?;
-    Ok(inner)
-  }
-
-  pub fn get_database_napi(&self) -> napi::Result<&Arc<DatabaseHandle>> {
-    let inner = self
-      .get_database()
-      .map_err(|err| napi::Error::from_reason(format!("[napi] {}", err)))?;
+      .ok_or_else(|| napi::Error::from_reason("[napi] Trying to get a closed database"))?;
     Ok(inner)
   }
 }
