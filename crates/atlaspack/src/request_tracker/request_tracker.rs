@@ -143,7 +143,7 @@ impl RequestTracker {
             tokio::spawn({
               let tx = tx.clone();
               async move {
-                let result = request.run(context);
+                let result = request.run(context).await;
                 let _ = tx.send(RequestQueueMessage::RequestResult {
                   request_id,
                   parent_request_id,

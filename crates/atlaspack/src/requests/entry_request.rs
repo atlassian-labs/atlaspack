@@ -2,6 +2,7 @@ use std::hash::Hash;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
+use async_trait::async_trait;
 
 use super::RequestResult;
 
@@ -25,8 +26,9 @@ pub struct EntryRequestOutput {
   pub entries: Vec<Entry>,
 }
 
+#[async_trait]
 impl Request for EntryRequest {
-  fn run(
+  async fn run(
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {

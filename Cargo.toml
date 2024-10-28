@@ -15,6 +15,7 @@ debug = true
 Inflector = "0.11.4"
 anyhow = "1"
 assert_fs = "1.1.1"
+async-trait = "0.1"
 bitflags = "2.5.0"
 browserslist-rs = "0.16"
 cfg-if = "1.0.0"

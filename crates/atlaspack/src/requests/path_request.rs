@@ -2,6 +2,7 @@ use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
@@ -38,8 +39,9 @@ pub enum PathRequestOutput {
 }
 
 // TODO tracing, dev deps
+#[async_trait]
 impl Request for PathRequest {
-  fn run(
+  async fn run(
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
@@ -66,11 +68,13 @@ impl Request for PathRequest {
     let mut invalidations = Vec::new();
 
     for resolver in request_context.plugins().resolvers()?.iter() {
-      let resolved = resolver.resolve(ResolveContext {
-        dependency: Arc::clone(&self.dependency),
-        pipeline: parsed_pipeline.clone(),
-        specifier: String::from(specifier),
-      })?;
+      let resolved = resolver
+        .resolve(ResolveContext {
+          dependency: Arc::clone(&self.dependency),
+          pipeline: parsed_pipeline.clone(),
+          specifier: String::from(specifier),
+        })
+        .await?;
 
       invalidations.extend(resolved.invalidations);
 
@@ -151,6 +155,7 @@ impl Request for PathRequest {
 mod tests {
   use std::fmt::Debug;
 
+  use async_trait::async_trait;
   use atlaspack_core::plugin::{
     composite_reporter_plugin::CompositeReporterPlugin, Resolved, ResolverPlugin,
   };
@@ -183,8 +188,9 @@ mod tests {
   #[derive(Debug, Hash)]
   struct ExcludedResolverPlugin {}
 
+  #[async_trait]
   impl ResolverPlugin for ExcludedResolverPlugin {
-    fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+    async fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
       Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Excluded,
@@ -203,8 +209,9 @@ mod tests {
     }
   }
 
+  #[async_trait]
   impl ResolverPlugin for ResolvedResolverPlugin {
-    fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+    async fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
       Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Resolved(self.resolution.clone()),
@@ -215,8 +222,9 @@ mod tests {
   #[derive(Debug, Hash)]
   struct UnresolvedResolverPlugin {}
 
+  #[async_trait]
   impl ResolverPlugin for UnresolvedResolverPlugin {
-    fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+    async fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
       Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Unresolved,

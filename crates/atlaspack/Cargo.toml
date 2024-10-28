@@ -27,6 +27,7 @@ atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 dyn-hash = { workspace = true }
 indexmap = { workspace = true }
 num_cpus = { workspace = true }

@@ -4,6 +4,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigFile;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::types::browsers::Browsers;
@@ -639,8 +640,9 @@ fn fallback_output_format(context: EnvironmentContext) -> OutputFormat {
   }
 }
 
+#[async_trait]
 impl Request for TargetRequest {
-  fn run(
+  async fn run(
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {

@@ -5,6 +5,7 @@ use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use serde::Deserialize;
 
 use crate::hash::IdentifierHasher;
@@ -75,6 +76,7 @@ pub struct Resolved {
 ///
 /// Resolvers run in a pipeline until one of them return a result.
 ///
+#[async_trait]
 pub trait ResolverPlugin: Any + Debug + Send + Sync {
   /// Unique ID for this resolver
   fn id(&self) -> u64 {
@@ -83,7 +85,7 @@ pub trait ResolverPlugin: Any + Debug + Send + Sync {
     hasher.finish()
   }
   /// Determines what the dependency specifier resolves to
-  fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error>;
+  async fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error>;
 }
 
 #[cfg(test)]
@@ -93,8 +95,9 @@ mod tests {
   #[derive(Debug, Hash)]
   struct TestResolverPlugin {}
 
+  #[async_trait]
   impl ResolverPlugin for TestResolverPlugin {
-    fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+    async fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
       todo!()
     }
   }

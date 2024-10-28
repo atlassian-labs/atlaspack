@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use async_trait::async_trait;
 use atlaspack_core::plugin::AssetBuildEvent;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
@@ -47,8 +48,9 @@ pub struct AssetRequestOutput {
   pub dependencies: Vec<Dependency>,
 }
 
+#[async_trait]
 impl Request for AssetRequest {
-  fn run(
+  async fn run(
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {

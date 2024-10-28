@@ -6,6 +6,8 @@ use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::time::Duration;
 
+use async_trait::async_trait;
+
 use crate::requests::RequestResult;
 use crate::test_utils::request_tracker;
 
@@ -129,8 +131,9 @@ impl std::hash::Hash for TestRequest {
   }
 }
 
+#[async_trait]
 impl Request for TestRequest {
-  fn run(
+  async fn run(
     &self,
     mut request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
@@ -175,8 +178,10 @@ impl Request for TestRequest {
 struct TestChildRequest {
   count: u32,
 }
+
+#[async_trait]
 impl Request for TestChildRequest {
-  fn run(
+  async fn run(
     &self,
     _request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
@@ -190,8 +195,10 @@ impl Request for TestChildRequest {
 struct TestRequest2 {
   sub_requests: u32,
 }
+
+#[async_trait]
 impl Request for TestRequest2 {
-  fn run(
+  async fn run(
     &self,
     mut request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {

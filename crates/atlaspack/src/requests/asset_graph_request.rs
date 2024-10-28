@@ -3,6 +3,7 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use async_trait::async_trait;
 use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
@@ -31,8 +32,9 @@ pub struct AssetGraphRequestOutput {
   pub graph: AssetGraph,
 }
 
+#[async_trait]
 impl Request for AssetGraphRequest {
-  fn run(
+  async fn run(
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {

@@ -5,6 +5,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::hash::IdentifierHasher;
 use atlaspack_core::plugin::PluginContext;
@@ -75,6 +76,7 @@ impl RpcNodejsResolverPlugin {
   }
 }
 
+#[async_trait]
 impl ResolverPlugin for RpcNodejsResolverPlugin {
   fn id(&self) -> u64 {
     let mut hasher = IdentifierHasher::new();
@@ -84,7 +86,7 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
     hasher.finish()
   }
 
-  fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+  async fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
     let state = self.get_or_init_state()?;
 
     self.nodejs_workers.exec_on_one(|worker| {

@@ -206,10 +206,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.83"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "721cae7de5c34fbb2acd27e21e6d2cf7b886dce0c27388d46c4e6c47ea4318dd"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.82",
+]
+
+[[package]]
 name = "atlaspack"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack-resolver",
  "atlaspack_config",
  "atlaspack_core",
@@ -419,6 +431,7 @@ name = "atlaspack_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack_filesystem",
  "atlaspack_sourcemap",
  "bitflags 2.6.0",
@@ -505,11 +518,13 @@ name = "atlaspack_plugin_resolver"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack-resolver",
  "atlaspack_core",
  "atlaspack_filesystem",
  "pretty_assertions",
  "serde",
+ "tokio",
 ]
 
 [[package]]
@@ -517,6 +532,7 @@ name = "atlaspack_plugin_rpc"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack_config",
  "atlaspack_core",
  "atlaspack_napi_helpers",
