@@ -28,7 +28,7 @@
     "link-all": "node scripts/link-all.js packages",
     "unlink-all": "node scripts/unlink-all.js packages",
     "check": "flow check",
-    "lint": "eslint . && prettier \"./packages/*/*/{src,bin,test}/**/*.{js,json,md}\" --list-different && cargo fmt --all -- --check",
+    "lint": "eslint . && prettier \"./packages/*/*/{src,bin,test}/**/*.{js,json,md}\" --list-different && cargo fmt --all -- --check && cargo clippy",
     "prepublishOnly": "yarn adjust-versions && yarn build && yarn build-ts",
     "test": "yarn test:unit && yarn test:integration",
     "test:integration": "yarn workspace @atlaspack/integration-tests test",
