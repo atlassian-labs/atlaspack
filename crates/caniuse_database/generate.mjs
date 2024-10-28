@@ -12,7 +12,11 @@ try {
 await $`wget https://raw.githubusercontent.com/Fyrd/caniuse/main/data.json`;
 
 // This import is dependent on the caniuse await above
-import data from './data.json' with { type: "json" };
+// import data from './data.json' with { type: "json" };
+
+const data = (await import('./data.json', {
+  assert: {type: 'json'},
+})).default;
 
 const write = console.log;
 
