@@ -42,7 +42,7 @@ impl VisitMut for IdentifierReplacementVisitor {
     // new getValue().default() // => this fails because `getValue` is not a constructor
     //
     // // and
-    // new (0, getValue)().default() // => this works and uses `default` as the constructor
+    // new (0, getValue()).default() // => this works and uses `default` as the constructor
     // ```
     *n = swc_core::quote!("(0, $expr)" as Expr, expr: Expr = replacement_expression.clone());
   }
