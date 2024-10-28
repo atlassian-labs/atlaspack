@@ -1,3 +1,5 @@
+rustflags = ["-C", "link-args=-Wl,--warn-unresolved-symbols"]
+
 [target.arm-unknown-linux-gnueabihf]
 linker = "arm-linux-gnueabihf-gcc"
 
@@ -11,4 +13,8 @@ linker = "aarch64-linux-gnu-gcc"
 linker = "aarch64-linux-musl-gcc"
 
 [target.wasm32-unknown-unknown]
-rustflags = ["-C", "link-arg=--export-table"]
+rustflags = [
+  "-C",
+  "link-arg=--export-table",
+  "link-args=-Wl,-undefined,dynamic_lookup",
+]
