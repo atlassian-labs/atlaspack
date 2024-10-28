@@ -15,6 +15,8 @@ import ThrowableDiagnostic, {
 import NodeResolver from '@atlaspack/node-resolver-core';
 import invariant from 'assert';
 
+const jsAssetTypes = new Set(['jsx', 'ts', 'tsx', 'mjs', 'mts', 'cts']);
+
 function errorToThrowableDiagnostic(error, dependency): ThrowableDiagnostic {
   return new ThrowableDiagnostic({
     diagnostic: {
@@ -39,6 +41,12 @@ export default (new Resolver({
     }
 
     let sourceAssetType = nullthrows(dependency.sourceAssetType);
+
+    if (jsAssetTypes.has(sourceAssetType)) {
+      // Treat all JS file extensions as 'js'
+      sourceAssetType = 'js';
+    }
+
     let sourceFile = nullthrows(
       dependency.resolveFrom ?? dependency.sourcePath,
     );
