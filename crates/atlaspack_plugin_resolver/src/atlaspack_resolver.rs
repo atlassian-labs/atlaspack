@@ -448,6 +448,7 @@ mod tests {
     types::{Dependency, Diagnostic, ErrorKind},
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use pretty_assertions::assert_eq;
   use std::path::PathBuf;
 
   fn plugin_context(fs: InMemoryFileSystem) -> PluginContext {
@@ -509,6 +510,11 @@ mod tests {
     fs.write_file(
       &package_path,
       String::from(r#"{ "name": "foo", "exports": {} }"#),
+    );
+
+    fs.write_file(
+      &PathBuf::default().join("package.json"),
+      String::from(r#"{ "@atlaspack/resolver-default": {"packageExports": true} }"#),
     );
 
     let plugin_context = plugin_context(fs);

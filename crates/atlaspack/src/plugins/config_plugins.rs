@@ -202,7 +202,7 @@ impl Plugins for ConfigPlugins {
 
       for resolver in self.config.resolvers.iter() {
         if resolver.package_name == "@atlaspack/resolver-default" {
-          resolvers.push(Arc::new(AtlaspackResolver::new(&self.ctx)));
+          resolvers.push(Arc::new(AtlaspackResolver::new(&self.ctx)?));
           continue;
         }
 

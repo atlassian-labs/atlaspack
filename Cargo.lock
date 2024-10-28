@@ -506,6 +506,7 @@ dependencies = [
  "atlaspack-resolver",
  "atlaspack_core",
  "atlaspack_filesystem",
+ "pretty_assertions",
  "serde",
 ]
 
