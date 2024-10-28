@@ -11,6 +11,7 @@ try {
 }
 await $`wget https://raw.githubusercontent.com/Fyrd/caniuse/main/data.json`;
 
+// This import is dependent on the caniuse await above
 import data from './data.json' with { type: "json" };
 
 const write = console.log;
