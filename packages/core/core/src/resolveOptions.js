@@ -110,7 +110,7 @@ export default async function resolveOptions(
       : projectRoot;
 
   const makeLMDBCache = () => {
-    if (getFeatureFlag('useLmdbJsLite')) {
+    if (getFeatureFlag('useLmdbJsLite') || getFeatureFlag('atlaspackV3')) {
       return new LMDBLiteCache(cacheDir);
     }
     return new LMDBCache(cacheDir);

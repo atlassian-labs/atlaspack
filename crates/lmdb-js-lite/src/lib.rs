@@ -64,9 +64,26 @@ fn napi_error(err: impl Debug) -> napi::Error {
   napi::Error::from_reason(format!("[napi] {err:?}"))
 }
 
-struct DatabaseHandle {
-  writer: Arc<DatabaseWriterHandle>,
+#[derive(Clone)]
+pub struct DatabaseHandle {
+  /// This is a handle into the writer thread
+  writer_thread_handle: Arc<DatabaseWriterHandle>,
+  /// This is a raw handle to the LMDB database
   database: Arc<DatabaseWriter>,
+}
+
+impl DatabaseHandle {
+  /// This should only be used if you need to share transaction state with
+  /// JavaScript writers, as in, use the same transaction for multiple threads.
+  pub fn writer_thread_handle(&self) -> &Arc<DatabaseWriterHandle> {
+    &self.writer_thread_handle
+  }
+
+  /// Get the raw database handle. Prefer using this for reads and writes on
+  /// native.
+  pub fn database(&self) -> &Arc<DatabaseWriter> {
+    &self.database
+  }
 }
 
 struct LMDBGlobalState {
@@ -95,7 +112,7 @@ impl LMDBGlobalState {
     }
     let (writer, database) = start_make_database_writer(&options)?;
     let handle = Arc::new(DatabaseHandle {
-      writer: Arc::new(writer),
+      writer_thread_handle: Arc::new(writer),
       database,
     });
     self.databases.insert(options.path, Arc::downgrade(&handle));
@@ -148,11 +165,11 @@ impl LMDB {
 
   #[napi(ts_return_type = "Promise<Buffer | null | undefined>")]
   pub fn get(&self, env: Env, key: String) -> napi::Result<napi::JsObject> {
-    let database_handle = self.get_database()?;
+    let database_handle = self.get_database_napi()?;
     let (deferred, promise) = env.create_deferred()?;
 
     database_handle
-      .writer
+      .writer_thread_handle()
       .send(DatabaseWriterMessage::Get {
         key,
         resolve: Box::new(|value| match value {
@@ -167,7 +184,7 @@ impl LMDB {
 
   #[napi(ts_return_type = "Buffer | null")]
   pub fn get_sync(&self, env: Env, key: String) -> napi::Result<JsUnknown> {
-    let database_handle = self.get_database()?;
+    let database_handle = self.get_database_napi()?;
     let database = &database_handle.database;
 
     let txn = if let Some(txn) = &self.read_transaction {
@@ -191,7 +208,7 @@ impl LMDB {
 
   #[napi]
   pub fn get_many_sync(&self, keys: Vec<String>) -> napi::Result<Vec<Option<Buffer>>> {
-    let database_handle = self.get_database()?;
+    let database_handle = self.get_database_napi()?;
     let database = &database_handle.database;
 
     let mut results = vec![];
@@ -212,7 +229,7 @@ impl LMDB {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn put_many(&self, env: Env, entries: Vec<Entry>) -> napi::Result<napi::JsObject> {
-    let database_handle = self.get_database()?;
+    let database_handle = self.get_database_napi()?;
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::PutMany {
@@ -228,7 +245,7 @@ impl LMDB {
       }),
     };
     database_handle
-      .writer
+      .writer_thread_handle()
       .send(message)
       .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
 
@@ -237,7 +254,7 @@ impl LMDB {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn put(&self, env: Env, key: String, data: Buffer) -> napi::Result<napi::JsObject> {
-    let database_handle = self.get_database()?;
+    let database_handle = self.get_database_napi()?;
     // This costs us 70% over the round-trip time after arg. conversion
     let (deferred, promise) = env.create_deferred()?;
 
@@ -250,7 +267,7 @@ impl LMDB {
       }),
     };
     database_handle
-      .writer
+      .writer_thread_handle()
       .send(message)
       .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
 
@@ -259,7 +276,7 @@ impl LMDB {
 
   #[napi]
   pub fn put_no_confirm(&self, key: String, data: Buffer) -> napi::Result<()> {
-    let database_handle = self.get_database()?;
+    let database_handle = self.get_database_napi()?;
 
     let message = DatabaseWriterMessage::Put {
       key,
@@ -267,7 +284,7 @@ impl LMDB {
       resolve: Box::new(|_| {}),
     };
     database_handle
-      .writer
+      .writer_thread_handle()
       .send(message)
       .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
 
@@ -279,7 +296,7 @@ impl LMDB {
     if self.read_transaction.is_some() {
       return Ok(());
     }
-    let database_handle = self.get_database()?;
+    let database_handle = self.get_database_napi()?;
     let txn = database_handle
       .database
       .static_read_txn()
@@ -300,14 +317,14 @@ impl LMDB {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn start_write_transaction(&self, env: Env) -> napi::Result<napi::JsObject> {
-    let database_handle = self.get_database()?;
+    let database_handle = self.get_database_napi()?;
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::StartTransaction {
       resolve: Box::new(|_| deferred.resolve(|_| Ok(()))),
     };
     database_handle
-      .writer
+      .writer_thread_handle()
       .send(message)
       .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
 
@@ -316,14 +333,14 @@ impl LMDB {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn commit_write_transaction(&self, env: Env) -> napi::Result<napi::JsObject> {
-    let database_handle = self.get_database()?;
+    let database_handle = self.get_database_napi()?;
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::CommitTransaction {
       resolve: Box::new(|_| deferred.resolve(|_| Ok(()))),
     };
     database_handle
-      .writer
+      .writer_thread_handle()
       .send(message)
       .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
 
@@ -336,12 +353,25 @@ impl LMDB {
   }
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum GetDatabaseError {
+  #[error("Trying to use closed DB")]
+  ClosedDatabase,
+}
+
 impl LMDB {
-  fn get_database(&self) -> napi::Result<&Arc<DatabaseHandle>> {
+  pub fn get_database(&self) -> Result<&Arc<DatabaseHandle>, GetDatabaseError> {
     let inner = self
       .inner
       .as_ref()
-      .ok_or_else(|| napi::Error::from_reason("Trying to use closed DB"))?;
+      .ok_or_else(|| GetDatabaseError::ClosedDatabase)?;
+    Ok(inner)
+  }
+
+  pub fn get_database_napi(&self) -> napi::Result<&Arc<DatabaseHandle>> {
+    let inner = self
+      .get_database()
+      .map_err(|err| napi::Error::from_reason(format!("[napi] {}", err)))?;
     Ok(inner)
   }
 }

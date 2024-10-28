@@ -11,6 +11,10 @@ export type AtlaspackV3Options = {|
   nodeWorkers?: number,
   packageManager?: AtlaspackNapiOptions['packageManager'],
   threads?: number,
+  /**
+   * A reference to LMDB lite's rust object
+   */
+  lmdb: mixed,
   ...AtlaspackNapiOptions['options'],
 |};
 
@@ -22,6 +26,7 @@ export class AtlaspackV3 {
     nodeWorkers,
     packageManager,
     threads,
+    lmdb,
     ...options
   }: AtlaspackV3Options) {
     options.logLevel = options.logLevel || 'error';
@@ -32,13 +37,16 @@ export class AtlaspackV3 {
       browsers: [],
     };
 
-    this._internal = new AtlaspackNapi({
-      fs,
-      nodeWorkers,
-      packageManager,
-      threads,
-      options,
-    });
+    this._internal = AtlaspackNapi.create(
+      {
+        fs,
+        nodeWorkers,
+        packageManager,
+        threads,
+        options,
+      },
+      lmdb,
+    );
   }
 
   async buildAssetGraph(): Promise<any> {

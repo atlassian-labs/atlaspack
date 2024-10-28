@@ -75,8 +75,7 @@ const pipeline: (Readable, Writable) => Promise<void> = promisify(
 export class LMDBLiteCache implements Cache {
   fs: NodeFS;
   dir: FilePath;
-  // $FlowFixMe
-  store: any;
+  store: LmdbWrapper;
   fsCache: FSCache;
 
   constructor(cacheDir: FilePath) {
@@ -89,6 +88,13 @@ export class LMDBLiteCache implements Cache {
       encoding: 'binary',
       compression: true,
     });
+  }
+
+  /**
+   * Use this to pass the native LMDB instance back to Rust.
+   */
+  getNativeRef(): Lmdb {
+    return this.store.lmdb;
   }
 
   ensure(): Promise<void> {
