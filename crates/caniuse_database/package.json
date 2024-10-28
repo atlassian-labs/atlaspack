@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "generate": "node ./generate.mjs > ./src/generated.rs"
+    "generate": "node --trace-warnings ./generate.mjs > ./src/generated.rs"
   },
   "dependencies": {
     "@msgpack/msgpack": "^3.0.0-beta2",
