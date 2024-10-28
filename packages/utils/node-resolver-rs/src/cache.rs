@@ -169,7 +169,7 @@ impl Cache {
 
     // Since we have exclusive access to packages,
     let entry = Arc::new(package.map(Arc::new));
-    let _ = self.packages.insert(path.clone(), entry.clone());
+    self.packages.insert(path.clone(), entry.clone());
 
     entry.clone()
   }
@@ -206,7 +206,7 @@ impl Cache {
     // after insert
     let tsconfig = read_tsconfig(&self.fs, path, process).map(Arc::new);
     let tsconfig = Arc::new(tsconfig);
-    let _ = self.tsconfigs.insert(PathBuf::from(path), tsconfig.clone());
+    self.tsconfigs.insert(PathBuf::from(path), tsconfig.clone());
 
     tsconfig
   }
