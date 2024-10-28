@@ -2,6 +2,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use atlaspack_shared_map::ThreadLocalHashMap;
+
 /// In-memory file-system for testing
 pub mod in_memory_file_system;
 
@@ -17,8 +19,7 @@ pub type FileSystemRef = Arc<dyn FileSystem + Send + Sync>;
 
 pub type DefaultHasher = xxhash_rust::xxh3::Xxh3Builder;
 
-pub type FileSystemRealPathCache =
-  atlaspack_shared_map::ThreadLocalHashMap<PathBuf, Option<PathBuf>, DefaultHasher>;
+pub type FileSystemRealPathCache = ThreadLocalHashMap<PathBuf, Option<PathBuf>, DefaultHasher>;
 
 /// Trait abstracting file-system operations
 /// .
