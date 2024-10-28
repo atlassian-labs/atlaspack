@@ -8,7 +8,7 @@ description = "Atlaspack contextual imports transformation"
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true}
-swc_core = { workspace = true, features = ["ecma_plugin_transform"] }
+swc_core = { workspace = true, features = ["ecma_plugin_transform", "__utils", "ecma_quote"] }
 swc_ecma_transforms_testing = { workspace = true }
 getrandom = { workspace = true, features = ["js"] }
 
