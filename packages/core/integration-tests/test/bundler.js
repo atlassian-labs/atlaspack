@@ -1923,4 +1923,70 @@ describe.v2('bundler', function () {
       },
     ]);
   });
+
+  it('should not split any bundles when using singleFileOutput', async function () {
+    const targets = {
+      'single-file': {
+        distDir: 'dist-single',
+        __unstable_singleFileOutput: true,
+      },
+      'normally-split': {distDir: 'dist-normal'},
+    };
+
+    await fsFixture(overlayFS, __dirname)`
+      single-file-output
+        a.js:
+          import {c} from './b';
+          import './should-be-ignored.css';
+          const ignore = () => import('./c');
+        b.js:
+          export const c = () => import('./c');
+        c.js:
+          export const c = 'c';
+        should-be-ignored.css:
+          * {
+            color: papayawhip;
+          }
+
+        yarn.lock:`;
+
+    let singleBundle = await bundle(
+      path.join(__dirname, 'single-file-output/a.js'),
+      {
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+        targets: {['single-file']: targets['single-file']},
+      },
+    );
+
+    let splitBundle = await bundle(
+      path.join(__dirname, 'single-file-output/a.js'),
+      {
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+        targets: {['normally-split']: targets['normally-split']},
+      },
+    );
+
+    // There should be a single bundle, including a, b, and c
+    assertBundles(singleBundle, [
+      {assets: ['a.js', 'b.js', 'c.js', 'esmodule-helpers.js']},
+    ]);
+
+    // Without the property, the bundle should be split properly
+    assertBundles(splitBundle, [
+      {
+        assets: [
+          'a.js',
+          'b.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'esmodule-helpers.js',
+          'js-loader.js',
+        ],
+      },
+      {assets: ['c.js']},
+      {type: 'css', assets: ['should-be-ignored.css']},
+    ]);
+  });
 });
