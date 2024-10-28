@@ -9,8 +9,9 @@ edition = "2021"
 [dependencies]
 serde = { workspace = true }
 anyhow = { workspace = true }
-napi = { workspace = true, features = ["serde-json", "napi4", "napi5", "async"] }
+napi = { workspace = true, features = ["serde-json", "napi4", "napi5", "async", "anyhow"] }
 once_cell = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 napi = { workspace = true, features = ["serde-json"] }
