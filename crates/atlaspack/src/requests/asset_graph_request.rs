@@ -494,14 +494,16 @@ mod tests {
   use crate::requests::{AssetGraphRequest, RequestResult};
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
 
-  #[test]
-  fn test_asset_graph_request_with_no_entries() {
+  #[tokio::test]
+  async fn test_asset_graph_request_with_no_entries() {
     let options = RequestTrackerTestOptions::default();
     let mut request_tracker = request_tracker(options);
 
     let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) =
-      request_tracker.run_request(asset_graph_request).unwrap()
+    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+      .run_request(asset_graph_request)
+      .await
+      .unwrap()
     else {
       assert!(false, "Got invalid result");
       return;
@@ -511,8 +513,8 @@ mod tests {
     assert_eq!(asset_graph_request_result.graph.dependencies.len(), 0);
   }
 
-  #[test]
-  fn test_asset_graph_request_with_a_single_entry_with_no_dependencies() {
+  #[tokio::test]
+  async fn test_asset_graph_request_with_a_single_entry_with_no_dependencies() {
     #[cfg(not(target_os = "windows"))]
     let temporary_dir = PathBuf::from("/atlaspack_tests");
     #[cfg(target_os = "windows")]
@@ -549,6 +551,7 @@ mod tests {
     let asset_graph_request = AssetGraphRequest {};
     let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
       .run_request(asset_graph_request)
+      .await
       .expect("Failed to run asset graph request")
     else {
       assert!(false, "Got invalid result");
@@ -588,8 +591,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn test_asset_graph_request_with_a_couple_of_entries() {
+  #[tokio::test]
+  async fn test_asset_graph_request_with_a_couple_of_entries() {
     #[cfg(not(target_os = "windows"))]
     let temporary_dir = PathBuf::from("/atlaspack_tests");
     #[cfg(target_os = "windows")]
@@ -649,6 +652,7 @@ mod tests {
     let asset_graph_request = AssetGraphRequest {};
     let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
       .run_request(asset_graph_request)
+      .await
       .expect("Failed to run asset graph request")
     else {
       assert!(false, "Got invalid result");

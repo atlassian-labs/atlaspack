@@ -43,6 +43,7 @@ tracing-subscriber = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 once_cell = { workspace = true }
 parking_lot = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
 
 [dev-dependencies]
 mockall = { workspace = true }

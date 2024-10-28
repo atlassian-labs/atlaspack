@@ -242,6 +242,7 @@ dependencies = [
  "serde",
  "serde-bool",
  "serde_json",
+ "tokio",
  "tracing",
  "tracing-subscriber",
  "xxhash-rust",

@@ -694,7 +694,7 @@ mod tests {
     PathBuf::from("packages").join("test")
   }
 
-  fn targets_from_package_json(package_json: String) -> Result<RequestResult, anyhow::Error> {
+  async fn targets_from_package_json(package_json: String) -> Result<RequestResult, anyhow::Error> {
     let fs = InMemoryFileSystem::default();
     let project_root = PathBuf::default();
     let package_dir = package_dir();
@@ -718,6 +718,7 @@ mod tests {
       ..Default::default()
     })
     .run_request(request)
+    .await
   }
 
   fn to_deterministic_error(error: anyhow::Error) -> String {
@@ -725,12 +726,13 @@ mod tests {
     re.replace_all(&format!("{:#}", error), "\\d").into_owned()
   }
 
-  #[test]
-  fn returns_error_when_builtin_target_is_true() {
+  #[tokio::test]
+  async fn returns_error_when_builtin_target_is_true() {
     for builtin_target in BUILT_IN_TARGETS {
       let targets = targets_from_package_json(format!(
         r#"{{ "targets": {{ "{builtin_target}": true }} }}"#,
-      ));
+      ))
+      .await;
 
       assert_eq!(
         targets.map_err(to_deterministic_error),
@@ -741,11 +743,11 @@ mod tests {
     }
   }
 
-  #[test]
-  fn returns_error_when_builtin_target_does_not_reference_expected_extension() {
+  #[tokio::test]
+  async fn returns_error_when_builtin_target_does_not_reference_expected_extension() {
     for builtin_target in BUILT_IN_TARGETS {
       let targets =
-        targets_from_package_json(format!(r#"{{ "{}": "dist/main.rs" }}"#, builtin_target));
+        targets_from_package_json(format!(r#"{{ "{}": "dist/main.rs" }}"#, builtin_target)).await;
 
       assert_eq!(
         targets.map_err(to_deterministic_error),
@@ -758,8 +760,8 @@ mod tests {
     }
   }
 
-  #[test]
-  fn returns_error_when_builtin_target_has_global_output_format() {
+  #[tokio::test]
+  async fn returns_error_when_builtin_target_has_global_output_format() {
     for builtin_target in BUILT_IN_TARGETS {
       let targets = targets_from_package_json(format!(
         r#"{{
@@ -767,7 +769,8 @@ mod tests {
             "{builtin_target}": {{ "outputFormat": "global" }}
           }}
         }}"#
-      ));
+      ))
+      .await;
 
       assert_eq!(
         targets.map_err(to_deterministic_error),
@@ -780,9 +783,9 @@ mod tests {
     }
   }
 
-  #[test]
-  fn returns_error_when_output_format_does_not_match_inferred_output_format() {
-    let assert_error = |ext, module_format: Option<&str>, output_format| {
+  #[tokio::test]
+  async fn returns_error_when_output_format_does_not_match_inferred_output_format() {
+    let assert_error = move |ext, module_format: Option<&'static str>, output_format| async move {
       let targets = targets_from_package_json(format!(
         r#"
           {{
@@ -799,7 +802,8 @@ mod tests {
           || String::default(),
           |module_format| format!(r#""type": "{module_format}","#)
         ),
-      ));
+      ))
+      .await;
 
       assert_eq!(
         targets.map_err(|err| err.to_string()),
@@ -814,20 +818,20 @@ mod tests {
       );
     };
 
-    assert_error("cjs", None, OutputFormat::EsModule);
-    assert_error("cjs", Some("module"), OutputFormat::EsModule);
+    assert_error("cjs", None, OutputFormat::EsModule).await;
+    assert_error("cjs", Some("module"), OutputFormat::EsModule).await;
 
-    assert_error("js", Some("commonjs"), OutputFormat::EsModule);
-    assert_error("js", Some("module"), OutputFormat::CommonJS);
+    assert_error("js", Some("commonjs"), OutputFormat::EsModule).await;
+    assert_error("js", Some("module"), OutputFormat::CommonJS).await;
 
-    assert_error("mjs", None, OutputFormat::CommonJS);
-    assert_error("mjs", Some("commonjs"), OutputFormat::CommonJS);
+    assert_error("mjs", None, OutputFormat::CommonJS).await;
+    assert_error("mjs", Some("commonjs"), OutputFormat::CommonJS).await;
   }
 
-  #[test]
-  fn returns_error_when_scope_hoisting_disabled_for_library_targets() {
-    let assert_error = |name, package_json| {
-      let targets = targets_from_package_json(package_json);
+  #[tokio::test]
+  async fn returns_error_when_scope_hoisting_disabled_for_library_targets() {
+    let assert_error = move |name, package_json| async move {
+      let targets = targets_from_package_json(package_json).await;
 
       assert_eq!(
         targets.map_err(to_deterministic_error),
@@ -856,7 +860,8 @@ mod tests {
           "#,
           ext = if target == "types" { "ts" } else { "js" },
         ),
-      );
+      )
+      .await;
     }
 
     assert_error(
@@ -873,11 +878,12 @@ mod tests {
           }
         "#,
       ),
-    );
+    )
+    .await;
   }
 
-  #[test]
-  fn returns_default_target_when_package_json_is_not_found() {
+  #[tokio::test]
+  async fn returns_default_target_when_package_json_is_not_found() {
     let request = TargetRequest {
       default_target_options: DefaultTargetOptions::default(),
       entry: Entry::default(),
@@ -885,7 +891,9 @@ mod tests {
       mode: BuildMode::Development,
     };
 
-    let targets = request_tracker(RequestTrackerTestOptions::default()).run_request(request);
+    let targets = request_tracker(RequestTrackerTestOptions::default())
+      .run_request(request)
+      .await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -899,12 +907,13 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_default_target_when_builtin_targets_are_disabled() {
+  #[tokio::test]
+  async fn returns_default_target_when_builtin_targets_are_disabled() {
     for builtin_target in BUILT_IN_TARGETS {
       let targets = targets_from_package_json(format!(
         r#"{{ "targets": {{ "{builtin_target}": false }} }}"#
-      ));
+      ))
+      .await;
 
       assert_eq!(
         targets.map_err(|e| e.to_string()),
@@ -916,9 +925,9 @@ mod tests {
     }
   }
 
-  #[test]
-  fn returns_default_target_when_no_targets_are_specified() {
-    let targets = targets_from_package_json(String::from("{}"));
+  #[tokio::test]
+  async fn returns_default_target_when_no_targets_are_specified() {
+    let targets = targets_from_package_json(String::from("{}")).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -939,9 +948,10 @@ mod tests {
     }
   }
 
-  #[test]
-  fn returns_default_builtin_browser_target() {
-    let targets = targets_from_package_json(String::from(r#"{ "browser": "build/browser.js" }"#));
+  #[tokio::test]
+  async fn returns_default_builtin_browser_target() {
+    let targets =
+      targets_from_package_json(String::from(r#"{ "browser": "build/browser.js" }"#)).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -962,8 +972,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_builtin_browser_target() {
+  #[tokio::test]
+  async fn returns_builtin_browser_target() {
     let targets = targets_from_package_json(String::from(
       r#"
         {
@@ -975,7 +985,8 @@ mod tests {
           }
         }
       "#,
-    ));
+    ))
+    .await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -996,9 +1007,9 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_default_builtin_main_target() {
-    let targets = targets_from_package_json(String::from(r#"{ "main": "./build/main.js" }"#));
+  #[tokio::test]
+  async fn returns_default_builtin_main_target() {
+    let targets = targets_from_package_json(String::from(r#"{ "main": "./build/main.js" }"#)).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1019,8 +1030,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_builtin_main_target() {
+  #[tokio::test]
+  async fn returns_builtin_main_target() {
     let targets = targets_from_package_json(String::from(
       r#"
         {
@@ -1032,7 +1043,8 @@ mod tests {
           }
         }
       "#,
-    ));
+    ))
+    .await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1054,9 +1066,9 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_default_builtin_module_target() {
-    let targets = targets_from_package_json(String::from(r#"{ "module": "module.js" }"#));
+  #[tokio::test]
+  async fn returns_default_builtin_module_target() {
+    let targets = targets_from_package_json(String::from(r#"{ "module": "module.js" }"#)).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1077,8 +1089,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_builtin_module_target() {
+  #[tokio::test]
+  async fn returns_builtin_module_target() {
     let targets = targets_from_package_json(String::from(
       r#"
         {
@@ -1090,7 +1102,8 @@ mod tests {
           }
         }
       "#,
-    ));
+    ))
+    .await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1112,8 +1125,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_builtin_types_target() {
+  #[tokio::test]
+  async fn returns_builtin_types_target() {
     let targets = targets_from_package_json(String::from(
       r#"
         {
@@ -1125,7 +1138,8 @@ mod tests {
           }
         }
       "#,
-    ));
+    ))
+    .await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1146,9 +1160,9 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_default_builtin_types_target() {
-    let targets = targets_from_package_json(String::from(r#"{ "types": "./types.d.ts" }"#));
+  #[tokio::test]
+  async fn returns_default_builtin_types_target() {
+    let targets = targets_from_package_json(String::from(r#"{ "types": "./types.d.ts" }"#)).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1169,8 +1183,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_builtin_targets() {
+  #[tokio::test]
+  async fn returns_builtin_targets() {
     let targets = targets_from_package_json(String::from(
       r#"
         {
@@ -1181,7 +1195,8 @@ mod tests {
           "browserslist": ["chrome 20"]
         }
       "#,
-    ));
+    ))
+    .await;
 
     let env = || Environment {
       engines: Engines {
@@ -1247,9 +1262,10 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_custom_targets_with_defaults() {
-    let targets = targets_from_package_json(String::from(r#"{ "targets": { "custom": {} } } "#));
+  #[tokio::test]
+  async fn returns_custom_targets_with_defaults() {
+    let targets =
+      targets_from_package_json(String::from(r#"{ "targets": { "custom": {} } } "#)).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1273,8 +1289,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_custom_targets() {
+  #[tokio::test]
+  async fn returns_custom_targets() {
     let targets = targets_from_package_json(String::from(
       r#"
         {
@@ -1288,7 +1304,8 @@ mod tests {
           }
         }
       "#,
-    ));
+    ))
+    .await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1312,8 +1329,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_inferred_custom_browser_target() {
+  #[tokio::test]
+  async fn returns_inferred_custom_browser_target() {
     let targets = targets_from_package_json(String::from(
       r#"
         {
@@ -1324,7 +1341,8 @@ mod tests {
           }
         }
       "#,
-    ));
+    ))
+    .await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1354,8 +1372,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_inferred_custom_node_target() {
+  #[tokio::test]
+  async fn returns_inferred_custom_node_target() {
     let assert_targets = |targets: Result<RequestResult, anyhow::Error>, engines| {
       assert_eq!(
         targets.map_err(|e| e.to_string()),
@@ -1388,7 +1406,8 @@ mod tests {
             "targets": { "custom": {} }
           }
         "#,
-      )),
+      ))
+      .await,
       Engines {
         node: Some(Version::new(NonZeroU16::new(1).unwrap(), 0)),
         ..Engines::default()
@@ -1405,7 +1424,8 @@ mod tests {
             "targets": { "custom": {} }
           }
         "#,
-      )),
+      ))
+      .await,
       Engines {
         node: Some(Version::new(NonZeroU16::new(1).unwrap(), 0)),
         browsers: None,
@@ -1414,9 +1434,9 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_custom_target_when_output_format_matches_inferred_output_format() {
-    let assert_targets = |ext, module_format: Option<ModuleFormat>, output_format| {
+  #[tokio::test]
+  async fn returns_custom_target_when_output_format_matches_inferred_output_format() {
+    let assert_targets = move |ext, module_format: Option<ModuleFormat>, output_format| async move {
       let targets = targets_from_package_json(format!(
         r#"
           {{
@@ -1433,7 +1453,8 @@ mod tests {
           || String::default(),
           |module_format| format!(r#""type": "{module_format}","#)
         ),
-      ));
+      ))
+      .await;
 
       assert_eq!(
         targets.map_err(|e| e.to_string()),
@@ -1454,18 +1475,18 @@ mod tests {
       );
     };
 
-    assert_targets("cjs", None, OutputFormat::CommonJS);
-    assert_targets("cjs", Some(ModuleFormat::CommonJS), OutputFormat::CommonJS);
-    assert_targets("cjs", Some(ModuleFormat::Module), OutputFormat::CommonJS);
+    assert_targets("cjs", None, OutputFormat::CommonJS).await;
+    assert_targets("cjs", Some(ModuleFormat::CommonJS), OutputFormat::CommonJS).await;
+    assert_targets("cjs", Some(ModuleFormat::Module), OutputFormat::CommonJS).await;
 
-    assert_targets("js", None, OutputFormat::CommonJS);
-    assert_targets("js", Some(ModuleFormat::CommonJS), OutputFormat::CommonJS);
+    assert_targets("js", None, OutputFormat::CommonJS).await;
+    assert_targets("js", Some(ModuleFormat::CommonJS), OutputFormat::CommonJS).await;
 
-    assert_targets("js", None, OutputFormat::EsModule);
-    assert_targets("js", Some(ModuleFormat::Module), OutputFormat::EsModule);
+    assert_targets("js", None, OutputFormat::EsModule).await;
+    assert_targets("js", Some(ModuleFormat::Module), OutputFormat::EsModule).await;
 
-    assert_targets("mjs", None, OutputFormat::EsModule);
-    assert_targets("mjs", Some(ModuleFormat::CommonJS), OutputFormat::EsModule);
-    assert_targets("mjs", Some(ModuleFormat::Module), OutputFormat::EsModule);
+    assert_targets("mjs", None, OutputFormat::EsModule).await;
+    assert_targets("mjs", Some(ModuleFormat::CommonJS), OutputFormat::EsModule).await;
+    assert_targets("mjs", Some(ModuleFormat::Module), OutputFormat::EsModule).await;
   }
 }

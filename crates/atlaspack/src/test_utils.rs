@@ -37,7 +37,7 @@ pub(crate) fn config_plugins(ctx: PluginContext) -> PluginsRef {
   let fixture = default_config(Arc::new(PathBuf::default()));
   let rpc_factory = TestingRpcFactory::default();
   let rpc_worker = rpc_factory.start().unwrap();
-  Arc::new(ConfigPlugins::new(Some(rpc_worker), fixture.atlaspack_config, ctx).unwrap())
+  Arc::new(ConfigPlugins::new(rpc_worker, fixture.atlaspack_config, ctx).unwrap())
 }
 
 pub struct RequestTrackerTestOptions {

@@ -224,8 +224,8 @@ mod tests {
     }
   }
 
-  #[test]
-  fn returns_excluded_resolution() {
+  #[tokio::test]
+  async fn returns_excluded_resolution() {
     let request = PathRequest {
       dependency: Arc::new(Dependency::default()),
     };
@@ -234,7 +234,8 @@ mod tests {
       plugins: test_plugins!(vec![Arc::new(ExcludedResolverPlugin {})]),
       ..RequestTrackerTestOptions::default()
     })
-    .run_request(request);
+    .run_request(request)
+    .await;
 
     assert_eq!(
       resolution.map_err(|e| e.to_string()),
@@ -242,8 +243,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_an_error_when_resolved_file_path_is_not_absolute() {
+  #[tokio::test]
+  async fn returns_an_error_when_resolved_file_path_is_not_absolute() {
     let request = PathRequest {
       dependency: Arc::new(Dependency::default()),
     };
@@ -257,7 +258,8 @@ mod tests {
       })]),
       ..RequestTrackerTestOptions::default()
     })
-    .run_request(request);
+    .run_request(request)
+    .await;
 
     assert_eq!(
       resolution.map_err(|e| e.to_string()),
@@ -267,8 +269,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_the_first_resolved_resolution() {
+  #[tokio::test]
+  async fn returns_the_first_resolved_resolution() {
     #[cfg(not(target_os = "windows"))]
     let root = PathBuf::from(std::path::MAIN_SEPARATOR_STR);
 
@@ -299,7 +301,8 @@ mod tests {
       ]),
       ..RequestTrackerTestOptions::default()
     })
-    .run_request(request);
+    .run_request(request)
+    .await;
 
     assert_eq!(
       resolution.map_err(|e| e.to_string()),
@@ -317,8 +320,8 @@ mod tests {
   mod when_all_resolvers_return_unresolved {
     use super::*;
 
-    #[test]
-    fn returns_an_excluded_resolution_when_the_dependency_is_optional() {
+    #[tokio::test]
+    async fn returns_an_excluded_resolution_when_the_dependency_is_optional() {
       let request = PathRequest {
         dependency: Arc::new(Dependency {
           is_optional: true,
@@ -331,7 +334,8 @@ mod tests {
         plugins: test_plugins!(vec![Arc::new(UnresolvedResolverPlugin {})]),
         ..RequestTrackerTestOptions::default()
       })
-      .run_request(request);
+      .run_request(request)
+      .await;
 
       assert_eq!(
         resolution.map_err(|e| e.to_string()),
@@ -339,9 +343,9 @@ mod tests {
       );
     }
 
-    #[test]
-    fn returns_an_error_when_the_dependency_is_required() {
-      let assert_error = |dependency: Dependency, error: &str| {
+    #[tokio::test]
+    async fn returns_an_error_when_the_dependency_is_required() {
+      let assert_error = move |dependency: Dependency, error: &'static str| async move {
         let request = PathRequest {
           dependency: Arc::new(Dependency {
             is_optional: false,
@@ -353,7 +357,8 @@ mod tests {
           plugins: test_plugins!(vec![Arc::new(UnresolvedResolverPlugin {})]),
           ..RequestTrackerTestOptions::default()
         })
-        .run_request(request);
+        .run_request(request)
+        .await;
 
         assert_eq!(
           resolution.map_err(|e| e.to_string()),
@@ -367,7 +372,8 @@ mod tests {
           ..Dependency::default()
         },
         "Failed to resolve a.js",
-      );
+      )
+      .await;
 
       assert_error(
         Dependency {
@@ -376,7 +382,8 @@ mod tests {
           ..Dependency::default()
         },
         "Failed to resolve a.js from rf.js",
-      );
+      )
+      .await;
 
       assert_error(
         Dependency {
@@ -385,7 +392,8 @@ mod tests {
           ..Dependency::default()
         },
         "Failed to resolve a.js from sp.js",
-      );
+      )
+      .await;
 
       assert_error(
         Dependency {
@@ -395,7 +403,8 @@ mod tests {
           ..Dependency::default()
         },
         "Failed to resolve a.js from rf.js",
-      );
+      )
+      .await;
     }
   }
 }
