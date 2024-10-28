@@ -89,29 +89,16 @@ import {
       const contents = cleanRequires(bundleContents);
       const otherContents = cleanRequires(otherContentsRaw);
 
-      if (implementation === 'js') {
-        expect(otherContents).toContain(
-          `console.log((0, (0, parcelRequire(...)).exportedFunction)())`,
-        );
-        expect(contents).toContain(
-          `
+      expect(otherContents).toContain(
+        `console.log((0, (0, parcelRequire(...)).exportedFunction)())`,
+      );
+      expect(contents).toContain(
+        `
     setTimeout(()=>{
         (0, (0, parcelRequire(...)).exportedFunction)();
     }, 5000);
       `.trim(),
-        );
-      } else {
-        expect(otherContents).toContain(
-          `console.log((0, parcelRequire(...).exportedFunction)())`,
-        );
-        expect(contents).toContain(
-          `
-    setTimeout(()=>{
-        (0, parcelRequire(...).exportedFunction)();
-    }, 5000);
-      `.trim(),
-        );
-      }
+      );
     });
   });
 });
