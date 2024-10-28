@@ -25,6 +25,7 @@ jobs:
           components: rustfmt
       - run: yarn --frozen-lockfile
       - run: yarn lint
+      - run: cargo clippy
 
   flow:
     name: Flow
