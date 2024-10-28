@@ -9,8 +9,10 @@ description = "Image transformer plugin for the Atlaspack Bundler"
 atlaspack_core = { path = "../atlaspack_core" }
 
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 image = { workspace = true }
 url-search-params = { workspace = true }
 
 [dev-dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+tokio = { workspace = true, features = ["full"] }

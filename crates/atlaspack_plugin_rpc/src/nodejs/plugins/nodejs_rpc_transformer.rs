@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use atlaspack_core::plugin::PluginOptions;
 use once_cell::sync::OnceCell;
 use std::fmt;
@@ -80,6 +81,7 @@ impl NodejsRpcTransformerPlugin {
   }
 }
 
+#[async_trait]
 impl TransformerPlugin for NodejsRpcTransformerPlugin {
   fn id(&self) -> u64 {
     let mut hasher = IdentifierHasher::new();
@@ -87,7 +89,11 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     hasher.finish()
   }
 
-  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
+  async fn transform(
+    &self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let state = self.get_or_init_state()?;
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();

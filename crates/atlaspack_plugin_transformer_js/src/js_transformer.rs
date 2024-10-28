@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
 
+use async_trait::async_trait;
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::browsers::Browsers;
@@ -182,10 +183,15 @@ impl fmt::Debug for AtlaspackJsTransformerPlugin {
   }
 }
 
+#[async_trait]
 impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does a lot of equivalent work to `JSTransformer::transform` in
   /// `packages/transformers/js`
-  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
+  async fn transform(
+    &self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let file_type = asset.file_type.clone();
     let is_node = env.context.is_node();
@@ -369,11 +375,11 @@ mod tests {
     assert_eq!(asset_1.id, asset_2.id);
   }
 
-  #[test]
-  fn test_transformer_on_noop_asset() {
+  #[tokio::test]
+  async fn test_transformer_on_noop_asset() {
     let project_root = Path::new("/root");
     let target_asset = create_asset(project_root, "mock_path.js", "function hello() {}");
-    let result = run_test(target_asset.clone()).unwrap();
+    let result = run_test(target_asset.clone()).await.unwrap();
 
     assert_eq!(
       result,
@@ -394,8 +400,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn test_transformer_on_asset_that_requires_other() {
+  #[tokio::test]
+  async fn test_transformer_on_asset_that_requires_other() {
     let source_code = r#"
       const x = require('other');
       exports.hello = function() {};
@@ -404,7 +410,7 @@ mod tests {
     let project_root = Path::new("/root");
     let target_asset = create_asset(project_root, "mock_path.js", source_code);
     let asset_id = target_asset.id.clone();
-    let result = run_test(target_asset).unwrap();
+    let result = run_test(target_asset).await.unwrap();
 
     let mut expected_dependencies = vec![Dependency {
       loc: Some(SourceLocation {
@@ -492,7 +498,7 @@ mod tests {
     );
   }
 
-  fn run_test(asset: Asset) -> anyhow::Result<TransformResult> {
+  async fn run_test(asset: Asset) -> anyhow::Result<TransformResult> {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let project_root = PathBuf::default();
 
@@ -512,7 +518,7 @@ mod tests {
     let transformer = AtlaspackJsTransformerPlugin::new(&ctx).expect("Expected transformer");
     let context = TransformContext::default();
 
-    let result = transformer.transform(context, asset)?;
+    let result = transformer.transform(context, asset).await?;
     Ok(result)
   }
 }

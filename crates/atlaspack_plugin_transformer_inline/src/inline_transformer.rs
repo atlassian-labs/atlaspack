@@ -1,4 +1,5 @@
 use anyhow::Error;
+use async_trait::async_trait;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
@@ -15,8 +16,13 @@ impl AtlaspackInlineTransformerPlugin {
   }
 }
 
+#[async_trait]
 impl TransformerPlugin for AtlaspackInlineTransformerPlugin {
-  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
+  async fn transform(
+    &self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     asset.bundle_behavior = Some(BundleBehavior::Inline);
@@ -40,8 +46,8 @@ mod tests {
 
   use super::*;
 
-  #[test]
-  fn returns_inline_string_asset() {
+  #[tokio::test]
+  async fn returns_inline_string_asset() {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let plugin = AtlaspackInlineTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
@@ -59,7 +65,10 @@ mod tests {
 
     assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Inline));
     assert_eq!(
-      plugin.transform(context, asset).map_err(|e| e.to_string()),
+      plugin
+        .transform(context, asset)
+        .await
+        .map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
           bundle_behavior: Some(BundleBehavior::Inline),

@@ -548,6 +548,7 @@ name = "atlaspack_plugin_transformer_css"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack_core",
  "atlaspack_filesystem",
  "lightningcss",
@@ -555,6 +556,7 @@ dependencies = [
  "pretty_assertions",
  "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -562,12 +564,14 @@ name = "atlaspack_plugin_transformer_html"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack_core",
  "atlaspack_filesystem",
  "html5ever",
  "markup5ever",
  "markup5ever_rcdom",
  "pretty_assertions",
+ "tokio",
 ]
 
 [[package]]
@@ -575,9 +579,11 @@ name = "atlaspack_plugin_transformer_image"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack_core",
  "atlaspack_filesystem",
  "image 0.25.2",
+ "tokio",
  "url-search-params",
 ]
 
@@ -586,8 +592,10 @@ name = "atlaspack_plugin_transformer_inline"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack_core",
  "atlaspack_filesystem",
+ "tokio",
 ]
 
 [[package]]
@@ -595,8 +603,10 @@ name = "atlaspack_plugin_transformer_inline_string"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack_core",
  "atlaspack_filesystem",
+ "tokio",
 ]
 
 [[package]]
@@ -604,6 +614,7 @@ name = "atlaspack_plugin_transformer_js"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack-js-swc-core",
  "atlaspack_core",
  "atlaspack_filesystem",
@@ -614,6 +625,7 @@ dependencies = [
  "pretty_assertions",
  "serde",
  "swc_core",
+ "tokio",
 ]
 
 [[package]]
@@ -621,11 +633,13 @@ name = "atlaspack_plugin_transformer_json"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack_core",
  "atlaspack_filesystem",
  "json",
  "json5",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -633,8 +647,10 @@ name = "atlaspack_plugin_transformer_raw"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack_core",
  "atlaspack_filesystem",
+ "tokio",
 ]
 
 [[package]]
@@ -642,11 +658,13 @@ name = "atlaspack_plugin_transformer_yaml"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "atlaspack_core",
  "atlaspack_filesystem",
  "pretty_assertions",
  "serde_json",
  "serde_yml",
+ "tokio",
 ]
 
 [[package]]

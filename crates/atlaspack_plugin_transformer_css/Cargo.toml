@@ -7,6 +7,7 @@ description = "CSS transformer plugin for the Atlaspack Bundler"
 
 [dependencies]
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 atlaspack_core = { path = "../atlaspack_core" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 lightningcss = { workspace = true, features = ["browserslist", "sourcemap"] }
@@ -16,3 +17,4 @@ serde_json = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["full"] }

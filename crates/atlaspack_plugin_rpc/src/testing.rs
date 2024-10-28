@@ -178,8 +178,9 @@ impl RuntimePlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl TransformerPlugin for TestingRpcPlugin {
-  fn transform(
+  async fn transform(
     &self,
     _context: TransformContext,
     asset: Asset,
