@@ -1,5 +1,9 @@
 use async_trait::async_trait;
 use atlaspack_core::plugin::PluginOptions;
+use atlaspack_napi_helpers::ZeroCopyBuffer;
+use napi::bindgen_prelude::FromNapiValue;
+use napi::JsObject;
+use napi::JsUnknown;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -96,7 +100,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
   async fn transform(
     &self,
     _context: TransformContext,
-    asset: Asset,
+    mut asset: Asset,
   ) -> Result<TransformResult, Error> {
     let state = self.get_or_init_state().await?;
 
@@ -107,19 +111,40 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       key: self.plugin_node.package_name.clone(),
       options: state.rpc_plugin_options.clone(),
       env: asset_env.clone(),
-      asset,
+      asset: Asset {
+        code: Default::default(),
+        ..asset
+      },
     };
 
-    let result: RpcTransformerResult = self
+    let (result, contents) = self
       .nodejs_workers
       .next_worker()
       .transformer_register_fn
-      .call_serde::<_, RpcTransformerResult>(run_transformer_opts)
+      .call(
+        move |env| {
+          let run_transformer_opts = env.to_js_value(&run_transformer_opts)?;
+          let bytes = std::mem::take(asset.code.get_mut());
+          let buf = ZeroCopyBuffer::new(&env, bytes)?;
+          Ok(vec![run_transformer_opts, buf.into_unknown()])
+        },
+        |env, return_value| {
+          let return_value = JsObject::from_unknown(return_value)?;
+
+          let transform_result = return_value.get_element_unchecked::<JsUnknown>(0)?;
+          let transform_result = env.from_js_value::<RpcTransformerResult, _>(transform_result)?;
+
+          let contents = return_value.get_element_unchecked::<ZeroCopyBuffer>(1)?;
+          let contents = contents.to_vec()?;
+
+          Ok((transform_result, contents))
+        },
+      )
       .await?;
 
     let transformed_asset = Asset {
       id: result.asset.id,
-      code: Arc::new(result.asset.code),
+      code: Code::new(contents),
       bundle_behavior: result.asset.bundle_behavior,
       env: asset_env.clone(),
       file_path: result.asset.file_path,

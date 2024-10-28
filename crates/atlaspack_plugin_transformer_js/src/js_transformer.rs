@@ -388,7 +388,7 @@ mod tests {
           file_path: "mock_path.js".into(),
           file_type: FileType::Js,
           // SWC inserts a newline here
-          code: Arc::new(Code::from(String::from("function hello() {}\n"))),
+          code: Code::from(String::from("function hello() {}\n")),
           symbols: Some(Vec::new()),
           unique_key: None,
           ..target_asset
@@ -451,9 +451,9 @@ mod tests {
           file_path: "mock_path.js".into(),
           file_type: FileType::Js,
           // SWC inserts a newline here
-          code: Arc::new(Code::from(String::from(
+          code: Code::from(String::from(
             "var x = require(\"e83f3db3d6f57ea6\");\nexports.hello = function() {};\n"
-          ))),
+          )),
           symbols: Some(vec![
             Symbol {
               exported: String::from("hello"),

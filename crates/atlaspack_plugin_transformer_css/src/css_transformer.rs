@@ -400,7 +400,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
     // Add the generated css imports to the css output
     css_code.push(css.code);
-    asset.code = Arc::new(Code::from(css_code.join("\n")));
+    asset.code = Code::from(css_code.join("\n"));
 
     if let Some(source_map) = lightning_source_map.clone() {
       let mut source_map = SourceMap::from(source_map);
@@ -457,7 +457,7 @@ mod tests {
     let asset = Asset {
       id: "my-asset".into(),
       file_path: "styles.css".into(),
-      code: Arc::new(Code::from("@import './stuff.css';")),
+      code: Code::from("@import './stuff.css';"),
       ..Default::default()
     };
     let result = run_plugin(&asset).await;
@@ -486,7 +486,7 @@ mod tests {
       id: "css-module".into(),
       file_path: "styles.module.css".into(),
       is_source: true,
-      code: Arc::new(Code::from(".root {display: 'block'}")),
+      code: Code::from(".root {display: 'block'}"),
       ..Default::default()
     };
 
@@ -495,7 +495,7 @@ mod tests {
     assert_eq!(
       result.asset,
       Asset {
-        code: Arc::new(".EcQGha_root {\n  display: \"block\";\n}\n".into()),
+        code: ".EcQGha_root {\n  display: \"block\";\n}\n".into(),
         unique_key: Some("css-module".into()),
         symbols: Some(vec![
           Symbol {
@@ -524,7 +524,7 @@ mod tests {
       AssetWithDependencies {
         asset: Asset {
           id: "88540641b9eed86d".into(),
-          code: Arc::new("module.exports[\"root\"] = `EcQGha_root`;\n".into()),
+          code: "module.exports[\"root\"] = `EcQGha_root`;\n".into(),
           file_path: "styles.module.css".into(),
           is_source: true,
           ..Default::default()
