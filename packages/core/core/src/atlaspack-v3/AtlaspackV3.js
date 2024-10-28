@@ -2,7 +2,11 @@
 
 import path from 'path';
 import {Worker} from 'worker_threads';
-import {AtlaspackNapi, type AtlaspackNapiOptions} from '@atlaspack/rust';
+import {
+  AtlaspackNapi,
+  type Lmdb,
+  type AtlaspackNapiOptions,
+} from '@atlaspack/rust';
 
 const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
 
@@ -14,7 +18,7 @@ export type AtlaspackV3Options = {|
   /**
    * A reference to LMDB lite's rust object
    */
-  lmdb: mixed,
+  lmdb: Lmdb,
   ...AtlaspackNapiOptions['options'],
 |};
 

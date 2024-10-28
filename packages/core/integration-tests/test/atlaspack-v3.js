@@ -36,7 +36,7 @@ describe('AtlaspackV3', function () {
       fs: new FileSystemV3(overlayFS),
       nodeWorkers: 1,
       packageManager: new NodePackageManager(inputFS, __dirname),
-      lmdb: new LMDBLiteCache('.parcel-cache'),
+      lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
     });
 
     await atlaspack.buildAssetGraph();
