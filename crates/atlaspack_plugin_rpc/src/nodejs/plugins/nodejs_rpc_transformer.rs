@@ -10,7 +10,6 @@ use tokio::sync::OnceCell;
 
 use anyhow::Error;
 use atlaspack_core::hash::IdentifierHasher;
-use atlaspack_napi_helpers::anyhow_from_napi;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -66,12 +65,10 @@ impl NodejsRpcTransformerPlugin {
       .get_or_try_init::<anyhow::Error, _, _>(|| async move {
         self
           .nodejs_workers
-          .exec_on_all(|worker| async move {
-            worker.load_plugin(LoadPluginOptions {
-              kind: LoadPluginKind::Resolver,
-              specifier: self.plugin_node.package_name.clone(),
-              resolve_from: (&*self.plugin_node.resolve_from).clone(),
-            })
+          .load_plugin(LoadPluginOptions {
+            kind: LoadPluginKind::Transformer,
+            specifier: self.plugin_node.package_name.clone(),
+            resolve_from: (&*self.plugin_node.resolve_from).clone(),
           })
           .await?;
 
@@ -101,6 +98,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     asset: Asset,
   ) -> Result<TransformResult, Error> {
     let state = self.get_or_init_state().await?;
+
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
 
@@ -113,12 +111,9 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
 
     let result: RpcTransformerResult = self
       .nodejs_workers
-      .exec_on_one(|worker| async move {
-        worker
-          .transformer_register_fn
-          .call_serde(run_transformer_opts)
-          .map_err(anyhow_from_napi)
-      })
+      .next_worker()
+      .transformer_register_fn
+      .call_serde::<_, RpcTransformerResult>(run_transformer_opts)
       .await?;
 
     let transformed_asset = Asset {

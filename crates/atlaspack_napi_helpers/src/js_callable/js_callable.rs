@@ -13,15 +13,15 @@ use napi::JsObject;
 use napi::JsUnknown;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use tokio::sync::mpsc::unbounded_channel;
 
 use super::map_params_serde;
 use super::map_return_serde;
-use super::oneshot::oneshot;
-use super::oneshot::SendError;
 use super::JsValue;
 
-pub type MapJsParams = Box<dyn FnOnce(&Env) -> napi::Result<Vec<JsUnknown>> + 'static>;
-pub type MapJsReturn<Return> = Box<dyn Fn(&Env, JsUnknown) -> napi::Result<Return> + 'static>;
+pub type MapJsParams = Box<dyn Send + FnOnce(&Env) -> anyhow::Result<Vec<JsUnknown>> + 'static>;
+pub type MapJsReturn<Return> =
+  Box<dyn Send + Fn(&Env, JsUnknown) -> anyhow::Result<Return> + 'static>;
 
 /// JsCallable provides a Send + Sync wrapper around callable JavaScript functions
 ///
@@ -47,7 +47,7 @@ impl JsCallable {
     // Store the threadsafe function on the struct
     let tsfn: ThreadsafeFunction<MapJsParams, ErrorStrategy::Fatal> = callback
       .create_threadsafe_function(0, |ctx: ThreadSafeCallContext<MapJsParams>| {
-        (ctx.value)(&ctx.env)
+        Ok((ctx.value)(&ctx.env)?)
       })?;
 
     Ok(Self {
@@ -81,10 +81,10 @@ impl JsCallable {
   }
 
   /// Call JavaScript function and handle the return value
-  pub async fn call_async<Return>(
+  pub async fn call<Return>(
     &self,
-    map_params: impl FnOnce(&Env) -> napi::Result<Vec<JsUnknown>> + 'static,
-    map_return: impl Fn(&Env, JsUnknown) -> napi::Result<Return> + 'static,
+    map_params: impl Send + FnOnce(&Env) -> anyhow::Result<Vec<JsUnknown>> + 'static,
+    map_return: impl Send + Fn(&Env, JsUnknown) -> anyhow::Result<Return> + 'static,
   ) -> napi::Result<Return>
   where
     Return: Send + 'static,
@@ -97,87 +97,92 @@ impl JsCallable {
       )));
     }
 
-    let (tx, rx) = oneshot::<napi::Result<Return>>();
+    let (tx, mut rx) = unbounded_channel::<napi::Result<Return>>();
     let send = {
       let name = self.fn_name.clone();
       move |error_message: &str, value: napi::Result<Return>| -> napi::Result<()> {
-        if let Err(SendError(err, _)) = tx.send(value) {
+        if let Err(_) = tx.send(value) {
           return Err(napi::Error::from_reason(format!(
-            "JsCallable({}) {:?}: {}",
-            &name, err, error_message
+            "JsCallable({}): {}",
+            &name, error_message
           )));
         }
         Ok(())
       }
     };
 
-    self.threadsafe_function.call_with_return_value(
-      Box::new(map_params),
-      ThreadsafeFunctionCallMode::NonBlocking,
-      {
-        move |JsValue(value, env)| {
-          if value.is_promise()? {
-            let result: JsObject = value.try_into()?;
-            let then_fn: JsFunction = result.get_named_property("then")?;
+    let threadsafe_function = self.threadsafe_function.clone();
 
-            let then_result_fn =
-              env.create_function_from_closure("JsCallable::then_result_fn", {
-                let send = send.clone();
-                move |ctx| {
-                  let return_value = ctx.get::<JsUnknown>(0)?;
-                  let mapped = map_return(&ctx.env, return_value);
-                  send("Result.then()", mapped)?;
-                  ctx.env.get_undefined()
-                }
-              })?;
+    tokio::spawn(async move {
+      threadsafe_function.call_with_return_value(
+        Box::new(map_params),
+        ThreadsafeFunctionCallMode::NonBlocking,
+        {
+          move |JsValue(value, env)| {
+            if value.is_promise()? {
+              let result: JsObject = value.try_into()?;
+              let then_fn: JsFunction = result.get_named_property("then")?;
 
-            let then_error_fn = env.create_function_from_closure("JsCallable::then_error_fn", {
-              let send = send.clone();
-              move |ctx| {
-                let return_value = ctx.get::<JsUnknown>(0)?;
-                let err = napi::Error::from(return_value);
-                send("Result.catch()", Err(err))?;
-                ctx.env.get_undefined()
-              }
-            })?;
+              let then_result_fn =
+                env.create_function_from_closure("JsCallable::then_result_fn", {
+                  let send = send.clone();
+                  move |ctx| {
+                    let return_value = ctx.get::<JsUnknown>(0)?;
+                    let mapped = Ok(map_return(&ctx.env, return_value)?);
+                    send("Result.then()", mapped)?;
+                    ctx.env.get_undefined()
+                  }
+                })?;
 
-            then_fn.call(Some(&result), &[then_result_fn, then_error_fn])?;
-            return Ok(());
+              let then_error_fn =
+                env.create_function_from_closure("JsCallable::then_error_fn", {
+                  let send = send.clone();
+                  move |ctx| {
+                    let return_value = ctx.get::<JsUnknown>(0)?;
+                    let err = napi::Error::from(return_value);
+                    send("Result.catch()", Err(err))?;
+                    ctx.env.get_undefined()
+                  }
+                })?;
+
+              then_fn.call(Some(&result), &[then_result_fn, then_error_fn])?;
+              return Ok(());
+            }
+
+            match map_return(&env, value) {
+              Ok(result) => send("Sync Result", Ok(result)),
+              Err(err) => send("Sync Throw", Err(err.into())),
+            }
           }
+        },
+      );
+    });
 
-          match map_return(&env, value) {
-            Ok(result) => send("Sync Result", Ok(result)),
-            Err(err) => send("Sync Throw", Err(err.into())),
-          }
-        }
-      },
-    );
-
-    match rx.await {
-      Ok(Ok(result)) => Ok(result),
-      Ok(Err(err)) => Err(err),
-      Err(err) => Err(napi::Error::from_reason(format!(
-        "JsCallable({}) RecvError: {:?}",
-        &self.fn_name, err
+    match rx.recv().await {
+      Some(Ok(result)) => Ok(result),
+      Some(Err(err)) => Err(err),
+      None => Err(napi::Error::from_reason(format!(
+        "JsCallable({}) RecvError",
+        &self.fn_name
       ))),
     }
   }
 
   /// Call JavaScript function and handle the return value
-  pub fn call<Return>(
+  pub fn call_blocking<Return>(
     &self,
-    map_params: impl FnOnce(&Env) -> napi::Result<Vec<JsUnknown>> + 'static,
-    map_return: impl Fn(&Env, JsUnknown) -> napi::Result<Return> + 'static,
-  ) -> napi::Result<Return>
+    map_params: impl Send + FnOnce(&Env) -> anyhow::Result<Vec<JsUnknown>> + 'static,
+    map_return: impl Send + Fn(&Env, JsUnknown) -> anyhow::Result<Return> + 'static,
+  ) -> anyhow::Result<Return>
   where
     Return: Send + 'static,
   {
     #[cfg(debug_assertions)]
     if self.initial_thread == std::thread::current().id() {
-      return Err(napi::Error::from_reason(format!(
+      return Err(anyhow::anyhow!(
         "Cannot run threadsafe function {} on main thread",
         self.fn_name
-      )));
+      ));
     }
 
     let (tx, rx) = std_channel();
@@ -214,7 +219,7 @@ impl JsCallable {
               let fn_name = fn_name.clone();
 
               move |ctx| {
-                let err = napi::Error::from(ctx.get::<JsUnknown>(0)?);
+                let err = anyhow::anyhow!("JavaScript Error");
                 if tx.send(Err(err)).is_err() {
                   return Err(napi::Error::from_reason(format!(
                     "JsCallable({}) SendError: Result.catch()",
@@ -230,12 +235,12 @@ impl JsCallable {
           }
 
           if value.is_error()? {
-            if tx.send(Err(napi::Error::from(value))).is_err() {
-              return Err(napi::Error::from_reason(format!(
-                "JsCallable({}) SendError: Sync Result Thrown",
-                &fn_name
-              )));
-            };
+            // if tx.send(Err(napi::Error::from(value))).is_err() {
+            //   return Err(napi::Error::from_reason(format!(
+            //     "JsCallable({}) SendError: Sync Result Thrown",
+            //     &fn_name
+            //   )));
+            // };
             return Ok(());
           }
 
@@ -252,28 +257,33 @@ impl JsCallable {
 
     match rx.recv() {
       Ok(Ok(result)) => Ok(result),
-      Ok(Err(err)) => Err(err),
-      Err(err) => Err(napi::Error::from_reason(format!(
+      Ok(Err(err)) => Err(err.into()),
+      Err(err) => Err(anyhow::anyhow!(
         "JsCallable({}) RecvError: {:?}",
-        &self.fn_name, err
-      ))),
+        &self.fn_name,
+        err
+      )),
     }
   }
 
-  pub fn call_serde<Params, Return>(&self, params: Params) -> napi::Result<Return>
+  pub fn call_serde_blocking<Params, Return>(&self, params: Params) -> anyhow::Result<Return>
   where
     Params: Serialize + Send + Sync + 'static,
     Return: Send + DeserializeOwned + 'static,
   {
-    self.call(map_params_serde(params), map_return_serde())
+    self.call_blocking(map_params_serde(params), map_return_serde())
   }
 
-  pub async fn call_serde_async<Params, Return>(&self, params: Params) -> napi::Result<Return>
+  pub async fn call_serde<Params, Return>(&self, params: Params) -> anyhow::Result<Return>
   where
     Params: Serialize + Send + Sync + 'static,
     Return: Send + DeserializeOwned + 'static,
   {
-    self.call(map_params_serde(params), map_return_serde())
+    Ok(
+      self
+        .call(map_params_serde(params), map_return_serde())
+        .await?,
+    )
   }
 }
 

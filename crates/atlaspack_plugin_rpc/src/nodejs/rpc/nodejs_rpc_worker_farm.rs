@@ -1,4 +1,3 @@
-use std::future::Future;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -10,6 +9,7 @@ use atlaspack_core::plugin::*;
 use super::super::super::RpcWorker;
 use super::super::plugins::*;
 use super::nodejs_rpc_worker::NodejsWorker;
+use super::LoadPluginOptions;
 
 /// NodejsWorkerFarm holds a collection of Nodejs worker threads
 /// and provides the ability to initialize plugins
@@ -125,31 +125,32 @@ impl NodeJsWorkerCollection {
       .expect("Could not get worker")
   }
 
-  fn next_worker(&self) -> Arc<NodejsWorker> {
+  pub fn next_worker(&self) -> Arc<NodejsWorker> {
     self.workers[self.next_index()].clone()
   }
 
-  /// Execute function on one Nodejs worker thread
-  pub async fn exec_on_one<R, F, Fut>(&self, eval: F) -> anyhow::Result<R>
-  where
-    F: FnOnce(Arc<NodejsWorker>) -> Fut,
-    Fut: Future<Output = anyhow::Result<R>>,
-  {
-    eval(self.next_worker()).await
-  }
-
-  /// Execute function on all Nodejs worker threads
-  pub async fn exec_on_all<R, F, Fut>(&self, eval: F) -> anyhow::Result<Vec<R>>
-  where
-    F: Fn(Arc<NodejsWorker>) -> Fut,
-    Fut: Future<Output = anyhow::Result<R>>,
-  {
-    let mut results = vec![];
+  pub fn all_workers(&self) -> Vec<Arc<NodejsWorker>> {
+    let mut workers = vec![];
 
     for worker in self.workers.iter() {
-      results.push(eval(worker.clone()).await?)
+      workers.push(worker.clone());
     }
 
-    Ok(results)
+    workers
+  }
+
+  pub async fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
+    let mut set = vec![];
+
+    for worker in self.all_workers() {
+      let opts = opts.clone();
+      set.push(tokio::spawn(async move { worker.load_plugin(opts).await }));
+    }
+
+    while let Some(res) = set.pop() {
+      res.await??;
+    }
+
+    Ok(())
   }
 }
