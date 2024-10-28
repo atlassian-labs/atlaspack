@@ -59,6 +59,7 @@ impl TsConfig {
   }
 
   fn validate(&mut self) {
+    #[allow(clippy::needless_borrows_for_generic_args)]
     if let Some(base_url) = &mut self.base_url {
       *base_url = resolve_path(&self.path, &base_url);
     }
