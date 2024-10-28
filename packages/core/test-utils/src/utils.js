@@ -21,7 +21,7 @@ import expect from 'expect';
 import invariant from 'assert';
 import assert from 'assert';
 import util from 'util';
-import Parcel, {createWorkerFarm} from '@atlaspack/core';
+import Atlaspack, {createWorkerFarm} from '@atlaspack/core';
 import vm from 'vm';
 import v8 from 'v8';
 import path from 'path';
@@ -32,6 +32,7 @@ import {parser as postHtmlParse} from 'posthtml-parser';
 import postHtml from 'posthtml';
 import EventEmitter from 'events';
 import https from 'https';
+import {LMDBLiteCache} from '@atlaspack/cache';
 
 import {makeDeferredWithPromise, normalizeSeparators} from '@atlaspack/utils';
 import _chalk from 'chalk';
@@ -134,6 +135,7 @@ export function getParcelOptions(
           node: '8',
         },
       },
+      cache: new LMDBLiteCache('.parcel-cache'),
       featureFlags: {
         atlaspackV3: isAtlaspackV3,
       },
@@ -145,8 +147,8 @@ export function getParcelOptions(
 export function bundler(
   entries: FilePath | Array<FilePath>,
   opts?: $Shape<InitialAtlaspackOptions>,
-): Parcel {
-  return new Parcel(getParcelOptions(entries, opts));
+): Atlaspack {
+  return new Atlaspack(getParcelOptions(entries, opts));
 }
 
 export function findAsset(
@@ -238,7 +240,7 @@ export async function bundle(
   return (await bundler(entries, opts).run()).bundleGraph;
 }
 
-export function getNextBuild(b: Parcel): Promise<BuildEvent> {
+export function getNextBuild(b: Atlaspack): Promise<BuildEvent> {
   return new Promise((resolve, reject) => {
     let subscriptionPromise = b
       .watch((err, buildEvent) => {
@@ -265,7 +267,7 @@ export function getNextBuild(b: Parcel): Promise<BuildEvent> {
 }
 
 export async function getNextBuildSuccess(
-  b: Parcel,
+  b: Atlaspack,
 ): Promise<BuildSuccessEvent> {
   let evt = await getNextBuild(b);
   invariant(evt.type === 'buildSuccess');
