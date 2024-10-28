@@ -15,8 +15,8 @@ use atlaspack_core::plugin::Resolved;
 use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::types::Dependency;
 use atlaspack_napi_helpers::anyhow_from_napi;
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
+use tokio::sync::OnceCell;
 
 use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 use super::super::rpc::LoadPluginKind;
@@ -55,24 +55,30 @@ impl RpcNodejsResolverPlugin {
     })
   }
 
-  fn get_or_init_state(&self) -> anyhow::Result<&InitializedState> {
-    self.started.get_or_try_init(|| {
-      self.nodejs_workers.exec_on_all(|worker| {
-        worker.load_plugin(LoadPluginOptions {
-          kind: LoadPluginKind::Resolver,
-          specifier: self.plugin_node.package_name.clone(),
-          resolve_from: (&*self.plugin_node.resolve_from).clone(),
-        })
-      })?;
+  async fn get_or_init_state(&self) -> anyhow::Result<&InitializedState> {
+    self
+      .started
+      .get_or_try_init::<anyhow::Error, _, _>(|| async move {
+        self
+          .nodejs_workers
+          .exec_on_all(|worker| async move {
+            worker.load_plugin(LoadPluginOptions {
+              kind: LoadPluginKind::Resolver,
+              specifier: self.plugin_node.package_name.clone(),
+              resolve_from: (&*self.plugin_node.resolve_from).clone(),
+            })
+          })
+          .await?;
 
-      Ok(InitializedState {
-        rpc_plugin_options: RpcPluginOptions {
-          hmr_options: None,
-          project_root: self.plugin_options.project_root.clone(),
-          mode: self.plugin_options.mode.clone(),
-        },
+        Ok(InitializedState {
+          rpc_plugin_options: RpcPluginOptions {
+            hmr_options: None,
+            project_root: self.plugin_options.project_root.clone(),
+            mode: self.plugin_options.mode.clone(),
+          },
+        })
       })
-    })
+      .await
   }
 }
 
@@ -87,20 +93,23 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
   }
 
   async fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
-    let state = self.get_or_init_state()?;
+    let state = self.get_or_init_state().await?;
 
-    self.nodejs_workers.exec_on_one(|worker| {
-      worker
-        .run_resolver_resolve_fn
-        .call_serde(RunResolverResolve {
-          key: self.plugin_node.package_name.clone(),
-          dependency: (&*ctx.dependency).clone(),
-          specifier: (&*ctx.specifier).to_owned(),
-          pipeline: ctx.pipeline.clone(),
-          plugin_options: state.rpc_plugin_options.clone(),
-        })
-        .map_err(anyhow_from_napi)
-    })
+    self
+      .nodejs_workers
+      .exec_on_one(|worker| async move {
+        worker
+          .run_resolver_resolve_fn
+          .call_serde(RunResolverResolve {
+            key: self.plugin_node.package_name.clone(),
+            dependency: (&*ctx.dependency).clone(),
+            specifier: (&*ctx.specifier).to_owned(),
+            pipeline: ctx.pipeline.clone(),
+            plugin_options: state.rpc_plugin_options.clone(),
+          })
+          .map_err(anyhow_from_napi)
+      })
+      .await
   }
 }
 

@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -17,7 +18,7 @@ pub struct NodejsWorkerFarm {
 }
 
 impl NodejsWorkerFarm {
-  pub fn new(workers: Vec<NodejsWorker>) -> Self {
+  pub fn new(workers: Vec<Arc<NodejsWorker>>) -> Self {
     Self {
       workers: Arc::new(NodeJsWorkerCollection {
         current_index: Default::default(),
@@ -111,7 +112,7 @@ impl RpcWorker for NodejsWorkerFarm {
 
 pub struct NodeJsWorkerCollection {
   current_index: AtomicUsize,
-  workers: Vec<NodejsWorker>,
+  workers: Vec<Arc<NodejsWorker>>,
 }
 
 impl NodeJsWorkerCollection {
@@ -124,27 +125,29 @@ impl NodeJsWorkerCollection {
       .expect("Could not get worker")
   }
 
-  fn next_worker(&self) -> &NodejsWorker {
-    &self.workers[self.next_index()]
+  fn next_worker(&self) -> Arc<NodejsWorker> {
+    self.workers[self.next_index()].clone()
   }
 
   /// Execute function on one Nodejs worker thread
-  pub fn exec_on_one<F, R>(&self, eval: F) -> R
+  pub async fn exec_on_one<R, F, Fut>(&self, eval: F) -> anyhow::Result<R>
   where
-    F: FnOnce(&NodejsWorker) -> R,
+    F: FnOnce(Arc<NodejsWorker>) -> Fut,
+    Fut: Future<Output = anyhow::Result<R>>,
   {
-    eval(self.next_worker())
+    eval(self.next_worker()).await
   }
 
   /// Execute function on all Nodejs worker threads
-  pub fn exec_on_all<F, R>(&self, eval: F) -> anyhow::Result<Vec<R>>
+  pub async fn exec_on_all<R, F, Fut>(&self, eval: F) -> anyhow::Result<Vec<R>>
   where
-    F: Fn(&NodejsWorker) -> anyhow::Result<R>,
+    F: Fn(Arc<NodejsWorker>) -> Fut,
+    Fut: Future<Output = anyhow::Result<R>>,
   {
     let mut results = vec![];
 
     for worker in self.workers.iter() {
-      results.push(eval(worker)?)
+      results.push(eval(worker.clone()).await?)
     }
 
     Ok(results)

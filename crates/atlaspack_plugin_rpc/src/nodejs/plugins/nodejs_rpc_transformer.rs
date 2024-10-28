@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use atlaspack_core::plugin::PluginOptions;
-use once_cell::sync::OnceCell;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
+use tokio::sync::OnceCell;
 
 use anyhow::Error;
 use atlaspack_core::hash::IdentifierHasher;
@@ -60,24 +60,30 @@ impl NodejsRpcTransformerPlugin {
     })
   }
 
-  fn get_or_init_state(&self) -> anyhow::Result<&InitializedState> {
-    self.started.get_or_try_init(|| {
-      self.nodejs_workers.exec_on_all(|worker| {
-        worker.load_plugin(LoadPluginOptions {
-          kind: LoadPluginKind::Transformer,
-          specifier: self.plugin_node.package_name.clone(),
-          resolve_from: (&*self.plugin_node.resolve_from).clone(),
-        })
-      })?;
+  async fn get_or_init_state(&self) -> anyhow::Result<&InitializedState> {
+    self
+      .started
+      .get_or_try_init::<anyhow::Error, _, _>(|| async move {
+        self
+          .nodejs_workers
+          .exec_on_all(|worker| async move {
+            worker.load_plugin(LoadPluginOptions {
+              kind: LoadPluginKind::Resolver,
+              specifier: self.plugin_node.package_name.clone(),
+              resolve_from: (&*self.plugin_node.resolve_from).clone(),
+            })
+          })
+          .await?;
 
-      Ok(InitializedState {
-        rpc_plugin_options: RpcPluginOptions {
-          hmr_options: None,
-          project_root: self.plugin_options.project_root.clone(),
-          mode: self.plugin_options.mode.clone(),
-        },
+        Ok(InitializedState {
+          rpc_plugin_options: RpcPluginOptions {
+            hmr_options: None,
+            project_root: self.plugin_options.project_root.clone(),
+            mode: self.plugin_options.mode.clone(),
+          },
+        })
       })
-    })
+      .await
   }
 }
 
@@ -94,7 +100,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, Error> {
-    let state = self.get_or_init_state()?;
+    let state = self.get_or_init_state().await?;
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
 
@@ -105,12 +111,15 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       asset,
     };
 
-    let result: RpcTransformerResult = self.nodejs_workers.exec_on_one(|worker| {
-      worker
-        .transformer_register_fn
-        .call_serde(run_transformer_opts)
-        .map_err(anyhow_from_napi)
-    })?;
+    let result: RpcTransformerResult = self
+      .nodejs_workers
+      .exec_on_one(|worker| async move {
+        worker
+          .transformer_register_fn
+          .call_serde(run_transformer_opts)
+          .map_err(anyhow_from_napi)
+      })
+      .await?;
 
     let transformed_asset = Asset {
       id: result.asset.id,
