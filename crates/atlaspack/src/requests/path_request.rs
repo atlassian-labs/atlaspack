@@ -68,11 +68,13 @@ impl Request for PathRequest {
     let mut invalidations = Vec::new();
 
     for resolver in request_context.plugins().resolvers()?.iter() {
-      let result = resolver.resolve(ResolveContext {
-        dependency: Arc::clone(&self.dependency),
-        pipeline: parsed_pipeline.clone(),
-        specifier: String::from(specifier),
-      });
+      let result = resolver
+        .resolve(ResolveContext {
+          dependency: Arc::clone(&self.dependency),
+          pipeline: parsed_pipeline.clone(),
+          specifier: String::from(specifier),
+        })
+        .await;
 
       let resolved = match result {
         Ok(result) => result,
