@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Error;
+use async_trait::async_trait;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, Code, FileType};
@@ -14,8 +15,13 @@ impl AtlaspackYamlTransformerPlugin {
   }
 }
 
+#[async_trait]
 impl TransformerPlugin for AtlaspackYamlTransformerPlugin {
-  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
+  async fn transform(
+    &self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     let code = serde_yml::from_slice::<serde_yml::Value>(asset.code.bytes())?;
@@ -59,8 +65,8 @@ mod tests {
     })
   }
 
-  #[test]
-  fn returns_js_asset_from_yaml() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_js_asset_from_yaml() {
     let plugin = create_yaml_plugin();
 
     let asset = Asset {
@@ -80,7 +86,10 @@ mod tests {
     };
 
     let context = TransformContext::default();
-    let transformation = plugin.transform(context, asset).map_err(|e| e.to_string());
+    let transformation = plugin
+      .transform(context, asset)
+      .await
+      .map_err(|e| e.to_string());
 
     assert_eq!(
       transformation,

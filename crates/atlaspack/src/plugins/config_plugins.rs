@@ -34,7 +34,7 @@ use super::TransformerPipeline;
 
 /// Loads plugins based on the Atlaspack config
 pub struct ConfigPlugins {
-  rpc_worker: Option<RpcWorkerRef>,
+  rpc_worker: RpcWorkerRef,
 
   /// The Atlaspack config that determines what plugins will be loaded
   config: AtlaspackConfig,
@@ -51,20 +51,13 @@ pub struct ConfigPlugins {
 
 impl ConfigPlugins {
   pub fn new(
-    rpc_worker: Option<RpcWorkerRef>,
+    rpc_worker: RpcWorkerRef,
     config: AtlaspackConfig,
     ctx: PluginContext,
   ) -> anyhow::Result<Self> {
     let mut reporters: Vec<Box<dyn ReporterPlugin>> = Vec::new();
 
     for reporter in config.reporters.iter() {
-      let Some(rpc_worker) = &rpc_worker else {
-        anyhow::bail!(
-          "Unable to initialize JavaScript Reporter plugin {}",
-          reporter.package_name
-        )
-      };
-
       reporters.push(rpc_worker.create_reporter(&ctx, reporter)?);
     }
 
@@ -94,14 +87,11 @@ impl ConfigPlugins {
 impl Plugins for ConfigPlugins {
   #[allow(unused)]
   fn bundler(&self) -> Result<Box<dyn BundlerPlugin>, anyhow::Error> {
-    let Some(rpc_worker) = &self.rpc_worker else {
-      anyhow::bail!(
-        "Unable to initialize JavaScript Bundler plugin {}",
-        self.config.bundler.package_name
-      )
-    };
-
-    Ok(rpc_worker.create_bundler(&self.ctx, &self.config.bundler)?)
+    Ok(
+      self
+        .rpc_worker
+        .create_bundler(&self.ctx, &self.config.bundler)?,
+    )
   }
 
   #[allow(unused)]
@@ -109,14 +99,7 @@ impl Plugins for ConfigPlugins {
     let mut compressors: Vec<Box<dyn CompressorPlugin>> = Vec::new();
 
     for compressor in self.config.compressors.get(path).iter() {
-      let Some(rpc_worker) = &self.rpc_worker else {
-        anyhow::bail!(
-          "Unable to initialize JavaScript Compressor plugin {}",
-          compressor.package_name
-        )
-      };
-
-      compressors.push(rpc_worker.create_compressor(&self.ctx, compressor)?);
+      compressors.push(self.rpc_worker.create_compressor(&self.ctx, compressor)?);
     }
 
     if compressors.is_empty() {
@@ -135,14 +118,7 @@ impl Plugins for ConfigPlugins {
     let mut namers: Vec<Box<dyn NamerPlugin>> = Vec::new();
 
     for namer in self.config.namers.iter() {
-      let Some(rpc_worker) = &self.rpc_worker else {
-        anyhow::bail!(
-          "Unable to initialize JavaScript Namer plugin {}",
-          namer.package_name
-        )
-      };
-
-      namers.push(rpc_worker.create_namer(&self.ctx, namer)?);
+      namers.push(self.rpc_worker.create_namer(&self.ctx, namer)?);
     }
 
     Ok(namers)
@@ -161,14 +137,7 @@ impl Plugins for ConfigPlugins {
     });
 
     for optimizer in self.config.optimizers.get(path, named_pattern).iter() {
-      let Some(rpc_worker) = &self.rpc_worker else {
-        anyhow::bail!(
-          "Unable to initialize JavaScript Optimizer plugin {}",
-          optimizer.package_name
-        )
-      };
-
-      optimizers.push(rpc_worker.create_optimizer(&self.ctx, optimizer)?);
+      optimizers.push(self.rpc_worker.create_optimizer(&self.ctx, optimizer)?);
     }
 
     Ok(optimizers)
@@ -182,14 +151,7 @@ impl Plugins for ConfigPlugins {
       return Err(self.missing_plugin(path, "packager"));
     };
 
-    let Some(rpc_worker) = &self.rpc_worker else {
-      anyhow::bail!(
-        "Unable to initialize JavaScript Packager plugin {}",
-        packager.package_name
-      )
-    };
-
-    rpc_worker.create_packager(&self.ctx, packager)
+    self.rpc_worker.create_packager(&self.ctx, packager)
   }
 
   fn reporter(&self) -> Arc<dyn ReporterPlugin> {
@@ -206,14 +168,7 @@ impl Plugins for ConfigPlugins {
           continue;
         }
 
-        let Some(rpc_worker) = &self.rpc_worker else {
-          anyhow::bail!(
-            "Unable to initialize JavaScript Resolver plugin {}",
-            resolver.package_name
-          )
-        };
-
-        resolvers.push(rpc_worker.create_resolver(&self.ctx, resolver)?);
+        resolvers.push(self.rpc_worker.create_resolver(&self.ctx, resolver)?);
       }
 
       Ok(resolvers)
@@ -225,14 +180,7 @@ impl Plugins for ConfigPlugins {
     let mut runtimes: Vec<Box<dyn RuntimePlugin>> = Vec::new();
 
     for runtime in self.config.runtimes.iter() {
-      let Some(rpc_worker) = &self.rpc_worker else {
-        anyhow::bail!(
-          "Unable to initialize JavaScript Packager plugin {}",
-          runtime.package_name
-        )
-      };
-
-      runtimes.push(rpc_worker.create_runtime(&self.ctx, runtime)?);
+      runtimes.push(self.rpc_worker.create_runtime(&self.ctx, runtime)?);
     }
 
     Ok(runtimes)
@@ -291,16 +239,7 @@ impl Plugins for ConfigPlugins {
             "@atlaspack/transformer-yaml" => {
               Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx))
             }
-            _ => {
-              let Some(rpc_worker) = &self.rpc_worker else {
-                anyhow::bail!(
-                  "Unable to initialize JavaScript Transformer plugin {}",
-                  transformer.package_name
-                )
-              };
-
-              rpc_worker.create_transformer(&self.ctx, transformer)?
-            }
+            _ => self.rpc_worker.create_transformer(&self.ctx, transformer)?,
           })
         })?;
 

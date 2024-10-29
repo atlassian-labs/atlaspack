@@ -44,7 +44,7 @@ pub struct AtlaspackNapi {
   fs: Option<FileSystemRef>,
   options: AtlaspackOptions,
   package_manager: Option<PackageManagerRef>,
-  rpc: Option<RpcFactoryRef>,
+  rpc: RpcFactoryRef,
   tx_worker: Sender<NodejsWorker>,
 }
 
@@ -83,7 +83,7 @@ impl AtlaspackNapi {
 
     let (tx_worker, rx_worker) = channel::<NodejsWorker>();
     let rpc_host_nodejs = NodejsRpcFactory::new(node_worker_count, rx_worker)?;
-    let rpc = Some::<RpcFactoryRef>(Arc::new(rpc_host_nodejs));
+    let rpc = Arc::new(rpc_host_nodejs);
 
     Ok(Self {
       fs,
@@ -119,7 +119,7 @@ impl AtlaspackNapi {
 
         match atlaspack {
           Err(error) => deferred.reject(to_napi_error(error)),
-          Ok(mut atlaspack) => match atlaspack.build_asset_graph() {
+          Ok(atlaspack) => match atlaspack.build_asset_graph() {
             Ok(asset_graph) => deferred.resolve(move |env| env.to_js_value(&asset_graph)),
             Err(error) => deferred.reject(to_napi_error(error)),
           },

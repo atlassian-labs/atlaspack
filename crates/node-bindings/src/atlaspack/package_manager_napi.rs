@@ -22,7 +22,7 @@ impl PackageManager for PackageManagerNapi {
   fn resolve(&self, specifier: &str, from: &Path) -> anyhow::Result<Resolution> {
     self
       .resolve_fn
-      .call_serde((specifier.to_owned(), from.to_path_buf()))
+      .call_serde_blocking((specifier.to_owned(), from.to_path_buf()))
       .map_err(|e| anyhow!(e))
   }
 }

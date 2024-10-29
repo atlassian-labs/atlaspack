@@ -17,6 +17,7 @@ atlaspack_core = { path = "../atlaspack_core" }
 atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 glob-match = { workspace = true }
 indexmap = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -28,3 +29,4 @@ atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 
 criterion = { workspace = true }
 pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["full"] }

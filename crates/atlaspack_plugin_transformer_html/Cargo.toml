@@ -8,6 +8,7 @@ description = "HTML transformer plugin for the Atlaspack Bundler"
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 # Using git version because on crates.io the packages have quite stale and incompatible versions
 html5ever = { workspace = true }
 markup5ever = { workspace = true }
@@ -16,3 +17,4 @@ markup5ever_rcdom = { workspace = true }
 [dev-dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["full"] }

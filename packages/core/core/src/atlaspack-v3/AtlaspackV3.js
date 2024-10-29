@@ -1,10 +1,7 @@
 // @flow
 
-import path from 'path';
-import {Worker} from 'worker_threads';
+import {workerPool} from './WorkerPool';
 import {AtlaspackNapi, type AtlaspackNapiOptions} from '@atlaspack/rust';
-
-const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
 
 export type AtlaspackV3Options = {|
   fs?: AtlaspackNapiOptions['fs'],
@@ -42,29 +39,17 @@ export class AtlaspackV3 {
   }
 
   async buildAssetGraph(): Promise<any> {
-    const [workers, registerWorker] = this.#createWorkers();
-
+    const workerIds = [];
     let result = await this._internal.buildAssetGraph({
-      registerWorker,
+      registerWorker: (tx_worker) => {
+        // $FlowFixMe
+        const workerId = workerPool.registerWorker(tx_worker);
+        workerIds.push(workerId);
+      },
     });
 
-    for (const worker of workers) worker.terminate();
+    workerPool.releaseWorkers(workerIds);
+
     return result;
-  }
-
-  #createWorkers() {
-    const workers = [];
-
-    return [
-      workers,
-      (tx_worker) => {
-        let worker = new Worker(WORKER_PATH, {
-          workerData: {
-            tx_worker,
-          },
-        });
-        workers.push(worker);
-      },
-    ];
   }
 }

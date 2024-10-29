@@ -10,7 +10,7 @@ import type {
   FilePath,
   FileSystem,
 } from '@atlaspack/types';
-import {workerData} from 'worker_threads';
+import {parentPort} from 'worker_threads';
 import * as module from 'module';
 
 import {
@@ -277,7 +277,28 @@ export class AtlaspackWorker {
   });
 }
 
-napi.registerWorker(workerData.tx_worker, new AtlaspackWorker());
+const worker = new AtlaspackWorker();
+parentPort?.on('message', (event) => {
+  if (event.type === 'registerWorker') {
+    try {
+      napi.registerWorker(event.tx_worker, worker);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(
+        'Registering worker failed... This might mean atlaspack is getting shut-down before the worker registered',
+        err,
+      );
+      parentPort?.postMessage({type: 'workerError', error: err});
+    }
+    parentPort?.postMessage({type: 'workerRegistered'});
+  } else if (event.type === 'probeStatus') {
+    parentPort.postMessage({
+      type: 'status',
+      status: 'ok',
+    });
+  }
+});
+parentPort?.postMessage({type: 'workerLoaded'});
 
 type ResolverState<T> = {|
   resolver: Resolver<T>,

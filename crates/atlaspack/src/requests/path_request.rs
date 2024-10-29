@@ -2,6 +2,7 @@ use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
@@ -38,8 +39,9 @@ pub enum PathRequestOutput {
 }
 
 // TODO tracing, dev deps
+#[async_trait]
 impl Request for PathRequest {
-  fn run(
+  async fn run(
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
@@ -161,6 +163,7 @@ impl Request for PathRequest {
 mod tests {
   use std::fmt::Debug;
 
+  use async_trait::async_trait;
   use atlaspack_core::plugin::{
     composite_reporter_plugin::CompositeReporterPlugin, Resolved, ResolverPlugin,
   };
@@ -193,8 +196,9 @@ mod tests {
   #[derive(Debug, Hash)]
   struct ExcludedResolverPlugin {}
 
+  #[async_trait]
   impl ResolverPlugin for ExcludedResolverPlugin {
-    fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+    async fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
       Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Excluded,
@@ -213,8 +217,9 @@ mod tests {
     }
   }
 
+  #[async_trait]
   impl ResolverPlugin for ResolvedResolverPlugin {
-    fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+    async fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
       Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Resolved(self.resolution.clone()),
@@ -225,8 +230,9 @@ mod tests {
   #[derive(Debug, Hash)]
   struct UnresolvedResolverPlugin {}
 
+  #[async_trait]
   impl ResolverPlugin for UnresolvedResolverPlugin {
-    fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+    async fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
       Ok(Resolved {
         invalidations: Vec::new(),
         resolution: Resolution::Unresolved,
@@ -234,8 +240,8 @@ mod tests {
     }
   }
 
-  #[test]
-  fn returns_excluded_resolution() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_excluded_resolution() {
     let request = PathRequest {
       dependency: Arc::new(Dependency::default()),
     };
@@ -244,7 +250,8 @@ mod tests {
       plugins: test_plugins!(vec![Arc::new(ExcludedResolverPlugin {})]),
       ..RequestTrackerTestOptions::default()
     })
-    .run_request(request);
+    .run_request(request)
+    .await;
 
     assert_eq!(
       resolution.map_err(|e| e.to_string()),
@@ -252,8 +259,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_an_error_when_resolved_file_path_is_not_absolute() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_an_error_when_resolved_file_path_is_not_absolute() {
     let request = PathRequest {
       dependency: Arc::new(Dependency::default()),
     };
@@ -267,7 +274,8 @@ mod tests {
       })]),
       ..RequestTrackerTestOptions::default()
     })
-    .run_request(request);
+    .run_request(request)
+    .await;
 
     assert_eq!(
       resolution.map_err(|e| e.to_string()),
@@ -277,8 +285,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_the_first_resolved_resolution() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_the_first_resolved_resolution() {
     #[cfg(not(target_os = "windows"))]
     let root = PathBuf::from(std::path::MAIN_SEPARATOR_STR);
 
@@ -309,7 +317,8 @@ mod tests {
       ]),
       ..RequestTrackerTestOptions::default()
     })
-    .run_request(request);
+    .run_request(request)
+    .await;
 
     assert_eq!(
       resolution.map_err(|e| e.to_string()),
@@ -327,8 +336,8 @@ mod tests {
   mod when_all_resolvers_return_unresolved {
     use super::*;
 
-    #[test]
-    fn returns_an_excluded_resolution_when_the_dependency_is_optional() {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn returns_an_excluded_resolution_when_the_dependency_is_optional() {
       let request = PathRequest {
         dependency: Arc::new(Dependency {
           is_optional: true,
@@ -341,7 +350,8 @@ mod tests {
         plugins: test_plugins!(vec![Arc::new(UnresolvedResolverPlugin {})]),
         ..RequestTrackerTestOptions::default()
       })
-      .run_request(request);
+      .run_request(request)
+      .await;
 
       assert_eq!(
         resolution.map_err(|e| e.to_string()),
@@ -349,9 +359,9 @@ mod tests {
       );
     }
 
-    #[test]
-    fn returns_an_error_when_the_dependency_is_required() {
-      let assert_error = |dependency: Dependency, error: &str| {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn returns_an_error_when_the_dependency_is_required() {
+      let assert_error = move |dependency: Dependency, error: &'static str| async move {
         let request = PathRequest {
           dependency: Arc::new(Dependency {
             is_optional: false,
@@ -363,7 +373,8 @@ mod tests {
           plugins: test_plugins!(vec![Arc::new(UnresolvedResolverPlugin {})]),
           ..RequestTrackerTestOptions::default()
         })
-        .run_request(request);
+        .run_request(request)
+        .await;
 
         assert_eq!(
           resolution.map_err(|e| e.to_string()),
@@ -377,7 +388,8 @@ mod tests {
           ..Dependency::default()
         },
         "Failed to resolve a.js",
-      );
+      )
+      .await;
 
       assert_error(
         Dependency {
@@ -386,7 +398,8 @@ mod tests {
           ..Dependency::default()
         },
         "Failed to resolve a.js from rf.js",
-      );
+      )
+      .await;
 
       assert_error(
         Dependency {
@@ -395,7 +408,8 @@ mod tests {
           ..Dependency::default()
         },
         "Failed to resolve a.js from sp.js",
-      );
+      )
+      .await;
 
       assert_error(
         Dependency {
@@ -405,7 +419,8 @@ mod tests {
           ..Dependency::default()
         },
         "Failed to resolve a.js from rf.js",
-      );
+      )
+      .await;
     }
   }
 }

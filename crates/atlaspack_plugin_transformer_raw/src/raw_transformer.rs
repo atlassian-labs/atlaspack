@@ -1,4 +1,5 @@
 use anyhow::Error;
+use async_trait::async_trait;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, BundleBehavior};
@@ -12,8 +13,13 @@ impl AtlaspackRawTransformerPlugin {
   }
 }
 
+#[async_trait]
 impl TransformerPlugin for AtlaspackRawTransformerPlugin {
-  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
+  async fn transform(
+    &self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     asset.bundle_behavior = Some(BundleBehavior::Isolated);
@@ -37,8 +43,8 @@ mod tests {
 
   use super::*;
 
-  #[test]
-  fn returns_raw_asset() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_raw_asset() {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let plugin = AtlaspackRawTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
@@ -61,6 +67,7 @@ mod tests {
     assert_eq!(
       plugin
         .transform(context, asset.clone())
+        .await
         .map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset,
