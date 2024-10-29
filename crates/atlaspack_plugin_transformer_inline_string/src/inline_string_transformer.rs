@@ -46,7 +46,7 @@ mod tests {
 
   use super::*;
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_inline_string_asset() {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let plugin = AtlaspackInlineStringTransformerPlugin::new(&PluginContext {

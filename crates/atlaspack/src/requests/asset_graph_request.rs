@@ -496,7 +496,7 @@ mod tests {
   use crate::requests::{AssetGraphRequest, RequestResult};
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_asset_graph_request_with_no_entries() {
     let options = RequestTrackerTestOptions::default();
     let mut request_tracker = request_tracker(options);
@@ -515,7 +515,7 @@ mod tests {
     assert_eq!(asset_graph_request_result.graph.dependencies.len(), 0);
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_asset_graph_request_with_a_single_entry_with_no_dependencies() {
     #[cfg(not(target_os = "windows"))]
     let temporary_dir = PathBuf::from("/atlaspack_tests");
@@ -593,7 +593,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_asset_graph_request_with_a_couple_of_entries() {
     #[cfg(not(target_os = "windows"))]
     let temporary_dir = PathBuf::from("/atlaspack_tests");

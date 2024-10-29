@@ -375,7 +375,7 @@ mod tests {
     assert_eq!(asset_1.id, asset_2.id);
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_transformer_on_noop_asset() {
     let project_root = Path::new("/root");
     let target_asset = create_asset(project_root, "mock_path.js", "function hello() {}");
@@ -400,7 +400,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_transformer_on_asset_that_requires_other() {
     let source_code = r#"
       const x = require('other');

@@ -246,7 +246,7 @@ mod tests {
     )
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_run_pipelines_works() {
     let mut plugins = MockPlugins::new();
     plugins.expect_transformers().returning(move |_, _| {
@@ -265,7 +265,7 @@ mod tests {
     assert_code(&result.asset, "::transformer1::transformer2");
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_run_pipelines_with_invalidations() {
     let mut plugins = MockPlugins::new();
     plugins
@@ -291,7 +291,7 @@ mod tests {
     assert_eq!(result.invalidate_on_file_change, expected_invalidations);
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_run_pipelines_with_dependencies() {
     let mut plugins = MockPlugins::new();
     plugins
@@ -317,7 +317,7 @@ mod tests {
     assert_eq!(result.dependencies, expected_dependencies);
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_run_pipelines_with_discovered_assets() {
     let mut plugins = MockPlugins::new();
 

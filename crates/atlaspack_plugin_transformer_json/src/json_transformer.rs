@@ -66,7 +66,7 @@ mod tests {
     })
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_js_asset_from_json() {
     let plugin = create_json_plugin();
 
@@ -107,7 +107,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_js_asset_from_json5() {
     let plugin = create_json_plugin();
 

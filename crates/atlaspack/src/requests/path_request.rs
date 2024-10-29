@@ -232,7 +232,7 @@ mod tests {
     }
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_excluded_resolution() {
     let request = PathRequest {
       dependency: Arc::new(Dependency::default()),
@@ -251,7 +251,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_an_error_when_resolved_file_path_is_not_absolute() {
     let request = PathRequest {
       dependency: Arc::new(Dependency::default()),
@@ -277,7 +277,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_the_first_resolved_resolution() {
     #[cfg(not(target_os = "windows"))]
     let root = PathBuf::from(std::path::MAIN_SEPARATOR_STR);
@@ -328,7 +328,7 @@ mod tests {
   mod when_all_resolvers_return_unresolved {
     use super::*;
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn returns_an_excluded_resolution_when_the_dependency_is_optional() {
       let request = PathRequest {
         dependency: Arc::new(Dependency {
@@ -351,7 +351,7 @@ mod tests {
       );
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn returns_an_error_when_the_dependency_is_required() {
       let assert_error = move |dependency: Dependency, error: &'static str| async move {
         let request = PathRequest {

@@ -13,7 +13,7 @@ use crate::test_utils::request_tracker;
 
 use super::*;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn should_run_request() {
   let mut rt = request_tracker(Default::default());
 
@@ -28,7 +28,7 @@ async fn should_run_request() {
   assert_eq!(result[2], "C");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn should_reuse_previously_run_request() {
   let mut rt = request_tracker(Default::default());
 
@@ -49,7 +49,7 @@ async fn should_reuse_previously_run_request() {
   assert_eq!(result[2], "C");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn should_run_request_once() {
   let mut rt = request_tracker(Default::default());
 
@@ -65,7 +65,7 @@ async fn should_run_request_once() {
   assert_eq!(request_a.run_count(), 1);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn should_run_request_once_2() {
   let mut rt = request_tracker(Default::default());
 
@@ -224,7 +224,7 @@ impl Request for TestRequest2 {
   }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_queued_subrequests() {
   let sub_requests = 20;
   let result = request_tracker(Default::default())

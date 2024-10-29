@@ -65,7 +65,7 @@ mod tests {
     })
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_js_asset_from_yaml() {
     let plugin = create_yaml_plugin();
 

@@ -483,7 +483,7 @@ mod tests {
     }
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_module_not_found_error_diagnostic() {
     let plugin_context = plugin_context(InMemoryFileSystem::default());
     let resolver = AtlaspackResolver::new(&plugin_context).unwrap();
@@ -511,7 +511,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_package_json_error_diagnostic() {
     let fs = InMemoryFileSystem::default();
     let package_path = Path::new("node_modules").join("foo").join("package.json");
@@ -552,7 +552,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_resolution() {
     let fs = Arc::new(InMemoryFileSystem::default());
 

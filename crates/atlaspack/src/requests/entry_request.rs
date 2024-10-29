@@ -65,7 +65,7 @@ mod tests {
 
   use super::*;
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_entry_is_not_found() {
     let request = EntryRequest {
       entry: String::from("src/a.js"),
@@ -81,7 +81,7 @@ mod tests {
     )
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_file_entry_from_project_root() {
     let fs = Arc::new(InMemoryFileSystem::default());
     let project_root = PathBuf::from("atlaspack");
@@ -112,7 +112,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_file_entry_from_root() {
     let fs = Arc::new(InMemoryFileSystem::default());
 

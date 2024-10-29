@@ -452,7 +452,7 @@ mod tests {
     plugin.transform(context, asset.clone()).await
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn supports_css_imports() {
     let asset = Asset {
       id: "my-asset".into(),
@@ -480,7 +480,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn supports_css_modules() {
     let asset = Asset {
       id: "css-module".into(),

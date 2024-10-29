@@ -728,7 +728,7 @@ mod tests {
     re.replace_all(&format!("{:#}", error), "\\d").into_owned()
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_builtin_target_is_true() {
     for builtin_target in BUILT_IN_TARGETS {
       let targets = targets_from_package_json(format!(
@@ -745,7 +745,7 @@ mod tests {
     }
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_builtin_target_does_not_reference_expected_extension() {
     for builtin_target in BUILT_IN_TARGETS {
       let targets =
@@ -762,7 +762,7 @@ mod tests {
     }
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_builtin_target_has_global_output_format() {
     for builtin_target in BUILT_IN_TARGETS {
       let targets = targets_from_package_json(format!(
@@ -785,7 +785,7 @@ mod tests {
     }
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_output_format_does_not_match_inferred_output_format() {
     let assert_error = move |ext, module_format: Option<&'static str>, output_format| async move {
       let targets = targets_from_package_json(format!(
@@ -830,7 +830,7 @@ mod tests {
     assert_error("mjs", Some("commonjs"), OutputFormat::CommonJS).await;
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_scope_hoisting_disabled_for_library_targets() {
     let assert_error = move |name, package_json| async move {
       let targets = targets_from_package_json(package_json).await;
@@ -884,7 +884,7 @@ mod tests {
     .await;
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_target_when_package_json_is_not_found() {
     let request = TargetRequest {
       default_target_options: DefaultTargetOptions::default(),
@@ -909,7 +909,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_target_when_builtin_targets_are_disabled() {
     for builtin_target in BUILT_IN_TARGETS {
       let targets = targets_from_package_json(format!(
@@ -927,7 +927,7 @@ mod tests {
     }
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_target_when_no_targets_are_specified() {
     let targets = targets_from_package_json(String::from("{}")).await;
 
@@ -950,7 +950,7 @@ mod tests {
     }
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_browser_target() {
     let targets =
       targets_from_package_json(String::from(r#"{ "browser": "build/browser.js" }"#)).await;
@@ -974,7 +974,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_builtin_browser_target() {
     let targets = targets_from_package_json(String::from(
       r#"
@@ -1009,7 +1009,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_main_target() {
     let targets = targets_from_package_json(String::from(r#"{ "main": "./build/main.js" }"#)).await;
 
@@ -1032,7 +1032,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_builtin_main_target() {
     let targets = targets_from_package_json(String::from(
       r#"
@@ -1068,7 +1068,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_module_target() {
     let targets = targets_from_package_json(String::from(r#"{ "module": "module.js" }"#)).await;
 
@@ -1091,7 +1091,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_builtin_module_target() {
     let targets = targets_from_package_json(String::from(
       r#"
@@ -1127,7 +1127,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_builtin_types_target() {
     let targets = targets_from_package_json(String::from(
       r#"
@@ -1162,7 +1162,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_types_target() {
     let targets = targets_from_package_json(String::from(r#"{ "types": "./types.d.ts" }"#)).await;
 
@@ -1185,7 +1185,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_builtin_targets() {
     let targets = targets_from_package_json(String::from(
       r#"
@@ -1264,7 +1264,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_custom_targets_with_defaults() {
     let targets =
       targets_from_package_json(String::from(r#"{ "targets": { "custom": {} } } "#)).await;
@@ -1291,7 +1291,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_custom_targets() {
     let targets = targets_from_package_json(String::from(
       r#"
@@ -1331,7 +1331,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_inferred_custom_browser_target() {
     let targets = targets_from_package_json(String::from(
       r#"
@@ -1374,7 +1374,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_inferred_custom_node_target() {
     let assert_targets = |targets: Result<RequestResult, anyhow::Error>, engines| {
       assert_eq!(
@@ -1436,7 +1436,7 @@ mod tests {
     );
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_custom_target_when_output_format_matches_inferred_output_format() {
     let assert_targets = move |ext, module_format: Option<ModuleFormat>, output_format| async move {
       let targets = targets_from_package_json(format!(
