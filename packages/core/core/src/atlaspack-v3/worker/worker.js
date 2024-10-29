@@ -278,7 +278,6 @@ napi.registerWorker(workerData.tx_worker, worker);
 
 parentPort?.on('message', (event) => {
   if (event.type === 'registerWorker') {
-    console.log('Worker event', event);
     napi.registerWorker(event.tx_worker, worker);
   }
 });
