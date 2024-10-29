@@ -10,7 +10,7 @@ import type {
   FilePath,
   FileSystem,
 } from '@atlaspack/types';
-import {workerData, parentPort} from 'worker_threads';
+import {parentPort} from 'worker_threads';
 import * as module from 'module';
 
 import {
