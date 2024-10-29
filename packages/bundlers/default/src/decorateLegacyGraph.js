@@ -34,7 +34,7 @@ export function decorateLegacyGraph(
     if (bundleGroupBundleIds.has(bundleNodeId)) {
       invariant(
         idealBundle.manualSharedBundle == null,
-        'Manual Shared Bundle feature is processing a manualSharedBundle as a BundleGroup',
+        'Processing a manualSharedBundle as a BundleGroup',
       );
       let dependencies = dependencyBundleGraph
         .getNodeIdsConnectedTo(
@@ -142,7 +142,7 @@ export function decorateLegacyGraph(
       });
     }
   }
-  // Unstable Manual Shared Bundles
+  // Manual Shared Bundles
   // NOTE: This only works under the assumption that manual shared bundles would have
   // always already been loaded before the bundle that requires internalization.
   for (let manualSharedAsset of manualAssetToBundle.keys()) {
