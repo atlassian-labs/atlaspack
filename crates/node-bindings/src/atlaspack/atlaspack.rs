@@ -49,14 +49,18 @@ pub struct AtlaspackNapi {
   options: AtlaspackOptions,
   package_manager: Option<PackageManagerRef>,
   rpc: Option<RpcFactoryRef>,
-  lmdb: Arc<DatabaseWriter>,
+  lmdb: Option<Arc<DatabaseWriter>>,
   tx_worker: Sender<NodejsWorker>,
 }
 
 #[napi]
 impl AtlaspackNapi {
   #[napi]
-  pub fn create(napi_options: AtlaspackNapiOptions, lmdb: &LMDB, env: Env) -> napi::Result<Self> {
+  pub fn create(
+    napi_options: AtlaspackNapiOptions,
+    lmdb: Option<&LMDB>,
+    env: Env,
+  ) -> napi::Result<Self> {
     let thread_id = std::thread::current().id();
     tracing::trace!(?thread_id, "atlaspack-napi initialize");
 
@@ -157,7 +161,8 @@ impl AtlaspackNapi {
   /// this handle. If we want to sequence writes with the JavaScript writes,
   /// we should be using the
   /// [`lmdb_js_lite::writer::DatabaseWriterHandle`] instead.
-  fn run_lmdb_healthcheck(lmdb: &LMDB) -> napi::Result<Arc<DatabaseWriter>> {
+  fn run_lmdb_healthcheck(lmdb: Option<&LMDB>) -> napi::Result<Option<Arc<DatabaseWriter>>> {
+    let Some(lmdb) = lmdb else { return Ok(None) };
     let lmdb = lmdb.get_database_napi()?.clone();
     let lmdb = lmdb.database();
 
@@ -175,6 +180,6 @@ impl AtlaspackNapi {
       tracing::warn!("LMDB healthcheck failed: {:?}", err);
     }
 
-    Ok(lmdb.clone())
+    Ok(Some(lmdb.clone()))
   }
 }

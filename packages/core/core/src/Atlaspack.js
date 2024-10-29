@@ -138,12 +138,10 @@ export default class Atlaspack {
         resolvedOptions.cache instanceof LMDBLiteCache
           ? resolvedOptions.cache.getNativeRef()
           : null;
-      if (lmdb == null) {
-        throw new Error('Atlaspack V3 requires the LMDBLiteCache');
-      }
+
       // $FlowFixMe
       const version = require('../package.json').version;
-      await lmdb.put('current_session_version', Buffer.from(version));
+      await lmdb?.put('current_session_version', Buffer.from(version));
 
       rustAtlaspack = new AtlaspackV3({
         ...options,
@@ -167,7 +165,7 @@ export default class Atlaspack {
           shouldScopeHoist:
             resolvedOptions.defaultTargetOptions.shouldScopeHoist,
         },
-        lmdb,
+        lmdb: lmdb ?? null,
       });
     }
 
