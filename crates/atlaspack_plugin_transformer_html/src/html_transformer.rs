@@ -54,7 +54,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
 
     let mut asset = input;
     asset.bundle_behavior = Some(BundleBehavior::Isolated);
-    asset.code = Box::new(Code::new(serialize_html(dom)?));
+    asset.code = Code::new(serialize_html(dom)?);
 
     Ok(TransformResult {
       asset,
@@ -250,7 +250,7 @@ mod test {
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),
-            code: Box::new(Code::from(script)),
+            code: Code::from(script),
             env: env.clone(),
             file_path: PathBuf::from("main.html"),
             file_type: FileType::Js,
@@ -307,9 +307,7 @@ mod test {
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),
-            code: Box::new(Code::from(String::from(
-              "\n          a { color: blue; }\n        "
-            ))),
+            code: Code::from(String::from("\n          a { color: blue; }\n        ")),
             file_path: PathBuf::from("main.html"),
             file_type: FileType::Css,
             id: String::from("9ee0b2d6680a3e8d"),

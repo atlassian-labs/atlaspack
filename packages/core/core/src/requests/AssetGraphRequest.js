@@ -80,7 +80,6 @@ export default function createAssetGraphRequest(
         await input.api.getPreviousResult<AssetGraphRequestResult>();
 
       let builder = new AssetGraphBuilder(input, prevResult);
-
       let assetGraphRequest = await await builder.build();
 
       // early break for incremental bundling if production or flag is off;
@@ -197,7 +196,6 @@ export class AssetGraphBuilder {
   }
 
   async build(): Promise<AssetGraphRequestResult> {
-    console.time('V2 AGR');
     let errors = [];
     let rootNodeId = nullthrows(
       this.assetGraph.rootNodeId,
@@ -241,7 +239,6 @@ export class AssetGraphBuilder {
 
     visit(rootNodeId);
     await this.queue.run();
-    console.timeEnd('V2 AGR');
 
     logger.verbose({
       origin: '@atlaspack/core',

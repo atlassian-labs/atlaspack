@@ -71,7 +71,7 @@ impl TransformerPlugin for AtlaspackImageTransformerPlugin {
       let mut bytes: Vec<u8> = Vec::new();
       img.write_to(&mut Cursor::new(&mut bytes), target_format)?;
 
-      asset.code = Box::new(Code::new(bytes));
+      asset.code = Code::new(bytes);
       asset.file_type = target_file_type.unwrap_or(asset.file_type);
     }
 

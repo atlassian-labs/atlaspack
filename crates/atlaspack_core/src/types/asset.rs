@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
+use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
@@ -53,6 +54,20 @@ impl Code {
 
   pub fn size(&self) -> u32 {
     self.inner.len() as u32
+  }
+}
+
+impl Deref for Code {
+  type Target = Vec<u8>;
+
+  fn deref(&self) -> &Self::Target {
+    &self.inner
+  }
+}
+
+impl DerefMut for Code {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.inner
   }
 }
 
@@ -151,7 +166,7 @@ pub struct Asset {
 
   /// The code of this asset, initially read from disk, then becoming the
   /// transformed output
-  pub code: Box<Code>,
+  pub code: Code,
 
   /// The source map for the asset
   pub map: Option<SourceMap>,
@@ -282,7 +297,7 @@ impl Asset {
     });
 
     Ok(Self {
-      code: Box::new(code),
+      code,
       env,
       file_path,
       file_type,
@@ -322,7 +337,7 @@ impl Asset {
 
     Self {
       bundle_behavior: Some(BundleBehavior::Inline),
-      code: Box::new(code),
+      code,
       id: asset_id,
       is_bundle_splittable: true,
       is_source,
@@ -356,7 +371,7 @@ impl Asset {
     });
 
     Ok(Self {
-      code: Box::new(Code::from(code)),
+      code: Code::from(code),
       file_type,
       id: asset_id,
       unique_key,

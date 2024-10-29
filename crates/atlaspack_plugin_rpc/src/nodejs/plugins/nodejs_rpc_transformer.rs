@@ -150,7 +150,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
 
     let transformed_asset = Asset {
       id: result.asset.id,
-      code: Box::new(Code::new(contents)),
+      code: Code::new(contents),
       bundle_behavior: result.asset.bundle_behavior,
       env: asset_env.clone(),
       file_path: result.asset.file_path,

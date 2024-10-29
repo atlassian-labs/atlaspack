@@ -580,7 +580,7 @@ mod tests {
         .unwrap()
         .asset
         .code,
-      Box::new(Code::from(
+      (Code::from(
         String::from(
           r#"
             console.log('hello world');

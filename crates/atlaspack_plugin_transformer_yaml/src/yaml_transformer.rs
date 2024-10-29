@@ -25,7 +25,7 @@ impl TransformerPlugin for AtlaspackYamlTransformerPlugin {
     let code = serde_yml::from_slice::<serde_yml::Value>(asset.code.bytes())?;
     let code = serde_json::to_string(&code)?;
 
-    asset.code = Box::new(Code::from(format!("module.exports = {code};")));
+    asset.code = Code::from(format!("module.exports = {code};"));
     asset.file_type = FileType::Js;
 
     Ok(TransformResult {
@@ -68,7 +68,7 @@ mod tests {
     let plugin = create_yaml_plugin();
 
     let asset = Asset {
-      code: Box::new(Code::from(String::from(
+      code: Code::from(String::from(
         "
           a: 1
           b:
@@ -78,7 +78,7 @@ mod tests {
             - f
             - g
         ",
-      ))),
+      )),
       file_type: FileType::Json,
       ..Asset::default()
     };
@@ -93,9 +93,9 @@ mod tests {
       transformation,
       Ok(TransformResult {
         asset: Asset {
-          code: Box::new(Code::from(String::from(
+          code: Code::from(String::from(
             "module.exports = {\"a\":1,\"b\":{\"c\":2,\"d\":true},\"e\":[\"f\",\"g\"]};"
-          ))),
+          )),
           file_type: FileType::Js,
           ..Asset::default()
         },
