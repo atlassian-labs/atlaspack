@@ -278,6 +278,11 @@ parentPort?.on('message', (event) => {
   if (event.type === 'registerWorker') {
     napi.registerWorker(event.tx_worker, worker);
     parentPort?.postMessage({type: 'workerRegistered'});
+  } else if (event.type === 'probeStatus') {
+    parentPort.postMessage({
+      type: 'status',
+      status: 'ok',
+    });
   }
 });
 parentPort?.postMessage({type: 'workerLoaded'});

@@ -1,10 +1,7 @@
 // @flow
 
-import path from 'path';
-import {Worker} from 'worker_threads';
+import {workerPool} from './WorkerPool';
 import {AtlaspackNapi, type AtlaspackNapiOptions} from '@atlaspack/rust';
-
-const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
 
 export type AtlaspackV3Options = {|
   fs?: AtlaspackNapiOptions['fs'],
@@ -13,60 +10,6 @@ export type AtlaspackV3Options = {|
   threads?: number,
   ...AtlaspackNapiOptions['options'],
 |};
-
-type WorkerMessage = {|type: 'workerRegistered'|} | {|type: 'pong'|};
-
-class WorkerPool {
-  workerPool: Worker[] = [];
-  currentUsedWorkers: number = 0;
-
-  waitMessage(worker: Worker, type: string): Promise<WorkerMessage> {
-    return new Promise((resolve) => {
-      const onMessage = (message: WorkerMessage) => {
-        if (message.type === type) {
-          resolve(message);
-          worker.off('message', onMessage);
-        }
-      };
-      worker.on('message', onMessage);
-    });
-  }
-
-  async bootWorker(worker: Worker, tx_worker: number): Promise<void> {
-    const timeout = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('Worker failed to register in time'));
-      }, 2000);
-    });
-    const workerReady = this.waitMessage(worker, 'workerRegistered');
-    worker.postMessage({type: 'registerWorker', tx_worker});
-    await Promise.race([workerReady, timeout]);
-  }
-
-  registerWorker(tx_worker: number) {
-    const workerIndex = this.currentUsedWorkers;
-    let availableWorker = this.workerPool[workerIndex];
-    if (availableWorker == null) {
-      availableWorker = new Worker(WORKER_PATH, {});
-      this.workerPool.push(availableWorker);
-    }
-
-    this.bootWorker(availableWorker, tx_worker).catch((err) => {
-      // eslint-disable-next-line no-console
-      console.error('Worker failed, retrying to create it...', err);
-      this.workerPool[workerIndex] = new Worker(WORKER_PATH, {});
-      this.bootWorker(this.workerPool[workerIndex], tx_worker);
-    });
-
-    this.currentUsedWorkers += 1;
-  }
-
-  reset() {
-    this.currentUsedWorkers = 0;
-  }
-}
-
-const workerPool = new WorkerPool();
 
 export class AtlaspackV3 {
   _internal: AtlaspackNapi;
@@ -96,14 +39,16 @@ export class AtlaspackV3 {
   }
 
   async buildAssetGraph(): Promise<any> {
+    const workerIds = [];
     let result = await this._internal.buildAssetGraph({
       registerWorker: (tx_worker) => {
         // $FlowFixMe
-        workerPool.registerWorker(tx_worker);
+        const workerId = workerPool.registerWorker(tx_worker);
+        workerIds.push(workerId);
       },
     });
 
-    workerPool.reset();
+    workerPool.releaseWorkers(workerIds);
 
     return result;
   }
