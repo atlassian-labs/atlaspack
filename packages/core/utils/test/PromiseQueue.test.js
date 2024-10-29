@@ -4,7 +4,6 @@ import randomInt from 'random-int';
 
 import PromiseQueue from '../src/PromiseQueue';
 import sinon from 'sinon';
-import resolve from 'resolve';
 
 describe('PromiseQueue', () => {
   it('run() should resolve when all async functions in queue have completed', async () => {

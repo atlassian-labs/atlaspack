@@ -575,9 +575,12 @@ export default class Atlaspack {
         ? createAssetGraphRequestRust(this.rustAtlaspack)(input)
         : createAssetGraphRequestJS(input),
     );
+    // eslint-disable-next-line no-console
     console.log('Done building asset graph!');
+    // eslint-disable-next-line no-console
     console.log('Write request tracker to cache');
     await this.writeRequestTrackerToCache();
+    // eslint-disable-next-line no-console
     console.log('Done writing request tracker to cache');
   }
 
