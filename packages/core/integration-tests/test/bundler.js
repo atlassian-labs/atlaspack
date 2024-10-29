@@ -1736,8 +1736,8 @@ describe.v2('bundler', function () {
 
     it('should support manual shared bundles with internalized assets', async function () {
       await fsFixture(overlayFS, dir)`
-        yarn.lock:
-          // Required for config loading
+        yarn.lock: {}
+
         package.json:
           {
             "@atlaspack/transformer-js" : {
@@ -1803,6 +1803,158 @@ describe.v2('bundler', function () {
       );
 
       await run(b);
+    });
+
+    describe('when dynamically imported', () => {
+      it('supports shared dependencies not specified in a manual bundle', async function () {
+        await fsFixture(overlayFS, dir)`
+          index.html:
+            <script type="module" src="index.js"></script>
+
+          index.js:
+            import('./foo');
+            import('./bar');
+
+          foo.js:
+            import { getRect } from './shared';
+
+            export const rect = getRect();
+
+          bar.js:
+            import { getBox } from './shared';
+
+            export const box = getBox();
+
+          shared.js:
+            export const getBox = () => 'box';
+            export const getRect = () => 'rect';
+
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [
+                  {
+                    "name": "vendor",
+                    "assets": ["**/foo.js"]
+                  }
+                ],
+                "minBundleSize": 999999
+              }
+            }
+
+          yarn.lock: {}
+        `;
+
+        let b = await bundle(path.join(dir, 'index.html'), {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+            shouldScopeHoist: false,
+            sourceMaps: false,
+          },
+          inputFS: overlayFS,
+        });
+
+        assertBundles(b, [
+          {
+            assets: ['index.html'],
+          },
+          {
+            assets: [
+              'bundle-manifest.js',
+              'bundle-url.js',
+              'cacheLoader.js',
+              'index.js',
+              'js-loader.js',
+            ],
+          },
+          {
+            assets: ['foo.js', 'esmodule-helpers.js', 'shared.js'],
+          },
+          {
+            assets: ['bar.js', 'esmodule-helpers.js', 'shared.js'],
+          },
+        ]);
+
+        await run(b);
+      });
+
+      it('supports shared dependencies not specified in multiple manual bundles', async function () {
+        await fsFixture(overlayFS, dir)`
+          index.html:
+            <script type="module" src="index.js"></script>
+
+          index.js:
+            import('./foo');
+            import('./bar');
+
+          foo.js:
+            import { getRect } from './shared';
+
+            export const rect = getRect();
+
+          bar.js:
+            import { getBox } from './shared';
+
+            export const box = getBox();
+
+          shared.js:
+            export const getBox = () => 'box';
+            export const getRect = () => 'rect';
+
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [
+                 {
+                    "name": "atl",
+                    "assets": ["**/foo.js"]
+                  },
+                  {
+                    "name": "vendor",
+                    "assets": ["**/bar.js"]
+                  }
+                ],
+                "minBundleSize": 999999
+              }
+            }
+
+          yarn.lock: {}
+        `;
+
+        let b = await bundle(path.join(dir, 'index.html'), {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+            shouldScopeHoist: false,
+            sourceMaps: false,
+          },
+          inputFS: overlayFS,
+        });
+
+        assertBundles(b, [
+          {
+            assets: ['index.html'],
+          },
+          {
+            assets: [
+              'bundle-manifest.js',
+              'bundle-url.js',
+              'cacheLoader.js',
+              'index.js',
+              'js-loader.js',
+            ],
+          },
+          {
+            assets: ['foo.js', 'esmodule-helpers.js', 'shared.js'],
+          },
+          {
+            assets: ['bar.js', 'esmodule-helpers.js', 'shared.js'],
+          },
+        ]);
+
+        await run(b);
+      });
     });
 
     it('should support consistently splitting manual shared bundles', async function () {
