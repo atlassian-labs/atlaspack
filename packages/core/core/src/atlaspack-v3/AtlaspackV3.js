@@ -14,6 +14,36 @@ export type AtlaspackV3Options = {|
   ...AtlaspackNapiOptions['options'],
 |};
 
+class WorkerPool {
+  workerPool: Worker[] = [];
+  currentUsedWorkers: number = 0;
+
+  registerWorker(tx_worker) {
+    let availableWorker = this.workerPool[this.currentUsedWorkers];
+    if (availableWorker == null) {
+      availableWorker = new Worker(WORKER_PATH, {
+        workerData: {
+          tx_worker,
+        },
+      });
+      this.workerPool.push(availableWorker);
+    } else {
+      availableWorker.postMessage({
+        type: 'registerWorker',
+        tx_worker,
+      });
+    }
+
+    this.currentUsedWorkers += 1;
+  }
+
+  reset() {
+    this.currentUsedWorkers = 0;
+  }
+}
+
+const workerPool = new WorkerPool();
+
 export class AtlaspackV3 {
   _internal: AtlaspackNapi;
 
@@ -42,29 +72,12 @@ export class AtlaspackV3 {
   }
 
   async buildAssetGraph(): Promise<any> {
-    const [workers, registerWorker] = this.#createWorkers();
-
     let result = await this._internal.buildAssetGraph({
-      registerWorker,
+      registerWorker: (tx_worker) => workerPool.registerWorker(tx_worker),
     });
 
-    for (const worker of workers) worker.terminate();
+    workerPool.reset();
+
     return result;
-  }
-
-  #createWorkers() {
-    const workers = [];
-
-    return [
-      workers,
-      (tx_worker) => {
-        let worker = new Worker(WORKER_PATH, {
-          workerData: {
-            tx_worker,
-          },
-        });
-        workers.push(worker);
-      },
-    ];
   }
 }
