@@ -1,8 +1,12 @@
+use core::str;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
 
+use anyhow::anyhow;
+use lmdb_js_lite::writer::DatabaseWriter;
+use lmdb_js_lite::LMDB;
 use napi::Env;
 use napi::JsFunction;
 use napi::JsObject;
@@ -45,13 +49,18 @@ pub struct AtlaspackNapi {
   options: AtlaspackOptions,
   package_manager: Option<PackageManagerRef>,
   rpc: RpcFactoryRef,
+  lmdb: Option<Arc<DatabaseWriter>>,
   tx_worker: Sender<NodejsWorker>,
 }
 
 #[napi]
 impl AtlaspackNapi {
-  #[napi(constructor)]
-  pub fn new(napi_options: AtlaspackNapiOptions, env: Env) -> napi::Result<Self> {
+  #[napi]
+  pub fn create(
+    napi_options: AtlaspackNapiOptions,
+    lmdb: Option<&LMDB>,
+    env: Env,
+  ) -> napi::Result<Self> {
     let thread_id = std::thread::current().id();
     tracing::trace!(?thread_id, "atlaspack-napi initialize");
 
@@ -68,6 +77,8 @@ impl AtlaspackNapi {
     } else {
       None
     };
+
+    let lmdb = Self::run_lmdb_healthcheck(lmdb)?;
 
     // Assign Rust thread count from JavaScript
     let threads = napi_options
@@ -91,6 +102,7 @@ impl AtlaspackNapi {
       options: env.from_js_value(napi_options.options)?,
       package_manager,
       rpc,
+      lmdb,
       tx_worker,
     })
   }
@@ -140,5 +152,34 @@ impl AtlaspackNapi {
     }
 
     Ok(())
+  }
+
+  /// Check that the LMDB database is healthy and return a reference to the
+  /// database handle directly.
+  ///
+  /// JavaScript does all its writes through a single thread, which is not
+  /// this handle. If we want to sequence writes with the JavaScript writes,
+  /// we should be using the
+  /// [`lmdb_js_lite::writer::DatabaseWriterHandle`] instead.
+  fn run_lmdb_healthcheck(lmdb: Option<&LMDB>) -> napi::Result<Option<Arc<DatabaseWriter>>> {
+    let Some(lmdb) = lmdb else { return Ok(None) };
+    let lmdb = lmdb.get_database_napi()?.clone();
+    let lmdb = lmdb.database();
+
+    let run_healthcheck = || -> anyhow::Result<()> {
+      let txn = lmdb.read_txn()?;
+      let value = lmdb
+        .get(&txn, "current_session_version")?
+        .ok_or(anyhow!("Missing 'current_session_version' key in LMDB"))?;
+      let value = str::from_utf8(&value)?;
+      tracing::info!("current_session_version: {:?}", value);
+      Ok(())
+    };
+
+    if let Err(err) = run_healthcheck() {
+      tracing::warn!("LMDB healthcheck failed: {:?}", err);
+    }
+
+    Ok(Some(lmdb.clone()))
   }
 }

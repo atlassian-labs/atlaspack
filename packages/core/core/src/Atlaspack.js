@@ -55,6 +55,7 @@ import {
   toProjectPath,
   fromProjectPathRelative,
 } from './projectPath';
+import {LMDBLiteCache} from '@atlaspack/cache';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
@@ -133,6 +134,15 @@ export default class Atlaspack {
       // eslint-disable-next-line no-unused-vars
       let {entries, inputFS, outputFS, ...options} = this.#initialOptions;
 
+      const lmdb =
+        resolvedOptions.cache instanceof LMDBLiteCache
+          ? resolvedOptions.cache.getNativeRef()
+          : null;
+
+      // $FlowFixMe
+      const version = require('../package.json').version;
+      await lmdb?.put('current_session_version', Buffer.from(version));
+
       rustAtlaspack = new AtlaspackV3({
         ...options,
         corePath: path.join(__dirname, '..'),
@@ -155,6 +165,7 @@ export default class Atlaspack {
           shouldScopeHoist:
             resolvedOptions.defaultTargetOptions.shouldScopeHoist,
         },
+        lmdb: lmdb ?? null,
       });
     }
 

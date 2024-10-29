@@ -13,6 +13,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
+    "@atlaspack/cache": "2.12.0",
     "@atlaspack/config-default": "2.12.0",
     "@atlaspack/core": "2.12.0",
     "@atlaspack/fs": "2.12.0",

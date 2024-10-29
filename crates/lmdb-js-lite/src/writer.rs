@@ -254,6 +254,19 @@ impl<'a, 'b> Transaction<'a, 'b> {
   }
 }
 
+/// Wraps a LMDB database environment.
+///
+/// This is thread-safe and can be shared across threads. LMDB itself will
+/// manage locks.
+///
+/// It's important that batch writes are done within a single write transaction.
+///
+/// Entries are individually compressed on read/write. In the future we may
+/// want to expose batch write methods that run compression in multiple threads.
+///
+/// The JavaScript writer thread [`DatabaseWriterHandle`] is doing this
+/// internally. The most basic usecases should be covered by this simplistic
+/// API.
 pub struct DatabaseWriter {
   environment: Env,
   database: heed::Database<Str, Bytes>,

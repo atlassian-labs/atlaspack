@@ -628,6 +628,7 @@ export class MemoryFS implements FileSystem {
   }
 
   async writeSnapshot(dir: FilePath, snapshot: FilePath): Promise<void> {
+    await this.mkdirp(path.dirname(snapshot));
     await this.writeFile(snapshot, '' + this.events.length);
   }
 

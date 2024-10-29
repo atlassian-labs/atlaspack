@@ -61,8 +61,8 @@ export type AtlaspackBuildOptions = {|
 |};
 
 declare export class AtlaspackNapi {
+  static create(options: AtlaspackNapiOptions, lmdb: mixed): AtlaspackNapi;
   nodeWorkerCount: number;
-  constructor(options: AtlaspackNapiOptions): AtlaspackNapi;
   build(options: AtlaspackBuildOptions): Promise<void>;
   buildAssetGraph(options: AtlaspackBuildOptions): Promise<any>;
   static defaultThreadCount(): number;

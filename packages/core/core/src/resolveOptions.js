@@ -109,18 +109,19 @@ export default async function resolveOptions(
       ? path.resolve(initialOptions.watchDir)
       : projectRoot;
 
+  const needsRustLmdbCache =
+    getFeatureFlag('useLmdbJsLite') || getFeatureFlag('atlaspackV3');
   const makeLMDBCache = () => {
-    if (getFeatureFlag('useLmdbJsLite')) {
+    if (needsRustLmdbCache) {
       return new LMDBLiteCache(cacheDir);
     }
     return new LMDBCache(cacheDir);
   };
 
   let cache =
-    initialOptions.cache ??
-    (outputFS instanceof NodeFS
+    outputFS instanceof NodeFS
       ? makeLMDBCache()
-      : new FSCache(outputFS, cacheDir));
+      : new FSCache(outputFS, cacheDir);
 
   let mode = initialOptions.mode ?? 'development';
   let shouldOptimize =

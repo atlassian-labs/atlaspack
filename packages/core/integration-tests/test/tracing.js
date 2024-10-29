@@ -5,6 +5,7 @@ import {bundle, describe, distDir, it, outputFS} from '@atlaspack/test-utils';
 
 describe('tracing', function () {
   it('should produce a trace', async function () {
+    await outputFS.mkdirp(path.join(__dirname, 'integration'));
     await bundle(
       path.join(__dirname, '/integration/typescript-jsx/index.tsx'),
       {

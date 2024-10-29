@@ -207,6 +207,7 @@ describe('fs', function () {
       );
       assert(contents.includes('readFileSync'));
 
+      outputFS.mkdirp(path.join(__dirname, '/integration/fs-node/'));
       await outputFS.writeFile(
         path.join(__dirname, '/integration/fs-node/', 'test.txt'),
         'hey',

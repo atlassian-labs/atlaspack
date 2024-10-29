@@ -1,3 +1,22 @@
+[target.x86_64-unknown-linux-gnu]
+# This turns the presence of undefined symbols in the output binary into a
+# warning instead of an error when linking.
+#
+# The reason we need this is because `napi` references symbols that are only
+# defined in the Node.js binary, which we don't link against when running tests
+# or building the NAPI bindings. `napi` will set an equivalent flag
+# automatically when building the dynamic library for use in node.js.
+#
+# When running a crate unit-tests, napi furthermore omits the function calls
+# into these undefined symbols. However, this does not work for
+# sub-dependencies, nor does it work for all the napi types.
+#
+# For example, if a crate A defines `napi` macro bindings, it'll compile for
+# unit-testing, however if this crate depends on a crate B that also defines
+# `napi` bindings, the linker will fail because B will have been compiled
+# without the testing mode noop removal.
+rustflags = ["-C", "link-args=-Wl,--warn-unresolved-symbols"]
+
 [target.arm-unknown-linux-gnueabihf]
 linker = "arm-linux-gnueabihf-gcc"
 
@@ -11,4 +30,8 @@ linker = "aarch64-linux-gnu-gcc"
 linker = "aarch64-linux-musl-gcc"
 
 [target.wasm32-unknown-unknown]
-rustflags = ["-C", "link-arg=--export-table"]
+rustflags = [
+  "-C",
+  "link-arg=--export-table",
+  "link-args=-Wl,-undefined,dynamic_lookup",
+]
