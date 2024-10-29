@@ -68,13 +68,23 @@ impl Request for PathRequest {
     let mut invalidations = Vec::new();
 
     for resolver in request_context.plugins().resolvers()?.iter() {
-      let resolved = resolver
+      let result = resolver
         .resolve(ResolveContext {
           dependency: Arc::clone(&self.dependency),
           pipeline: parsed_pipeline.clone(),
           specifier: String::from(specifier),
         })
-        .await?;
+        .await;
+
+      let resolved = match result {
+        Ok(result) => result,
+        Err(error) => {
+          // TODO: Forward the resolver diagnostic to the result
+          tracing::info!("Resolver {:?} failed.\n{}", resolver, error);
+          // Resolve failed so track the error and try the next resolver
+          continue;
+        }
+      };
 
       invalidations.extend(resolved.invalidations);
 
