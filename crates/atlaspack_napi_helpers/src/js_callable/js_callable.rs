@@ -122,7 +122,7 @@ impl JsCallable {
     In this case we are using `spawn_local` which creates a light weight tokio task on the
     current thread, having a negligible impact on performance.
     */
-    tokio::task::spawn_local({
+    tokio::task::spawn({
       let threadsafe_function = self.threadsafe_function.clone();
       async move {
         threadsafe_function.call_with_return_value(
