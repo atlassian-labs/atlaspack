@@ -113,6 +113,17 @@ impl JsCallable {
 
     let threadsafe_function = self.threadsafe_function.clone();
 
+    /*
+      The napi-rs thread safe function is already non blocking however moving the mapping
+      functions into the closure triggers a rust bug caused by the compiler being unable to infer
+      the lifetimes on auto impl traits.
+
+      https://github.com/rust-lang/rust/issues/64552
+
+      The simplest solution for now is to wrap the thread safe function call in a an async closure.
+      In this case we are using `spawn_local` which creates a light weight tokio task on the
+      current thread, having a negligible impact on performance.
+    */
     tokio::task::spawn_local(async move {
       threadsafe_function.call_with_return_value(
         Box::new(map_params),
