@@ -104,13 +104,6 @@ export class WorkerPool {
     return this.#workerPool[workerId];
   }
 
-  /**
-   * Check if a worker thread is available, used for testing.
-   */
-  isWorkerAvailable(workerId: number): boolean {
-    return !this.#usedWorkers.has(workerId);
-  }
-
   async #bootWorker(worker: Worker, tx_worker: number): Promise<void> {
     const timeout = new Promise((_, reject) => {
       setTimeout(() => {

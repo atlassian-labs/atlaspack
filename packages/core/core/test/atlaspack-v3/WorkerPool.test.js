@@ -81,4 +81,41 @@ describe('WorkerPool', () => {
       ],
     });
   });
+
+  describe('shutdown', () => {
+    it('terminates all workers', async () => {
+      const workerPool = new WorkerPool(path.join(__dirname, 'worker.js'));
+      const worker1Id = workerPool.registerWorker(0);
+      const worker2Id = workerPool.registerWorker(0);
+      const worker1 = workerPool.getWorker(worker1Id);
+      const worker2 = workerPool.getWorker(worker2Id);
+
+      const worker1Exit = new Promise((resolve) => {
+        worker1.on('exit', () => {
+          resolve(null);
+        });
+      });
+      const worker2Exit = new Promise((resolve) => {
+        worker2.on('exit', () => {
+          resolve(null);
+        });
+      });
+
+      workerPool.shutdown();
+      assert.throws(() => {
+        workerPool.getWorker(worker1Id);
+      });
+      assert.throws(() => {
+        workerPool.getWorker(worker2Id);
+      });
+
+      await worker1Exit;
+      await worker2Exit;
+
+      assert.deepEqual(workerPool.getStats(), {
+        totalWorkers: 0,
+        workersInUse: 0,
+      });
+    });
+  });
 });
