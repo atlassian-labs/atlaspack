@@ -2,6 +2,7 @@ use std::hash::Hash;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
+use async_trait::async_trait;
 
 use super::RequestResult;
 
@@ -25,8 +26,9 @@ pub struct EntryRequestOutput {
   pub entries: Vec<Entry>,
 }
 
+#[async_trait]
 impl Request for EntryRequest {
-  fn run(
+  async fn run(
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
@@ -63,13 +65,15 @@ mod tests {
 
   use super::*;
 
-  #[test]
-  fn returns_error_when_entry_is_not_found() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_error_when_entry_is_not_found() {
     let request = EntryRequest {
       entry: String::from("src/a.js"),
     };
 
-    let entry = request_tracker(RequestTrackerTestOptions::default()).run_request(request);
+    let entry = request_tracker(RequestTrackerTestOptions::default())
+      .run_request(request)
+      .await;
 
     assert_eq!(
       entry.map_err(|e| e.to_string()),
@@ -77,8 +81,8 @@ mod tests {
     )
   }
 
-  #[test]
-  fn returns_file_entry_from_project_root() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_file_entry_from_project_root() {
     let fs = Arc::new(InMemoryFileSystem::default());
     let project_root = PathBuf::from("atlaspack");
     let request = EntryRequest {
@@ -94,7 +98,8 @@ mod tests {
       project_root: project_root.clone(),
       ..RequestTrackerTestOptions::default()
     })
-    .run_request(request);
+    .run_request(request)
+    .await;
 
     assert_eq!(
       entry.map_err(|e| e.to_string()),
@@ -107,8 +112,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_file_entry_from_root() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_file_entry_from_root() {
     let fs = Arc::new(InMemoryFileSystem::default());
 
     #[cfg(not(target_os = "windows"))]
@@ -129,7 +134,8 @@ mod tests {
       project_root: PathBuf::from("atlaspack"),
       ..RequestTrackerTestOptions::default()
     })
-    .run_request(request);
+    .run_request(request)
+    .await;
 
     assert_eq!(
       entry.map_err(|e| e.to_string()),

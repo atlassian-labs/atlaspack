@@ -6,94 +6,97 @@ use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::time::Duration;
 
+use async_trait::async_trait;
+
 use crate::requests::RequestResult;
 use crate::test_utils::request_tracker;
 
 use super::*;
 
-#[test]
-fn should_run_request() {
+#[tokio::test(flavor = "multi_thread")]
+async fn should_run_request() {
   let mut rt = request_tracker(Default::default());
 
   let request_c = TestRequest::new("C", &[]);
   let request_b = TestRequest::new("B", &[request_c.clone()]);
   let request_a = TestRequest::new("A", &[request_b.clone()]);
 
-  let result = run_request(&mut rt, &request_a);
+  let result = run_request(&mut rt, &request_a).await;
 
   assert_eq!(result[0], "A");
   assert_eq!(result[1], "B");
   assert_eq!(result[2], "C");
 }
 
-#[test]
-fn should_reuse_previously_run_request() {
+#[tokio::test(flavor = "multi_thread")]
+async fn should_reuse_previously_run_request() {
   let mut rt = request_tracker(Default::default());
 
   let request_c = TestRequest::new("C", &[]);
   let request_b = TestRequest::new("B", &[request_c.clone()]);
   let request_a = TestRequest::new("A", &[request_b.clone()]);
 
-  let result = run_request(&mut rt, &request_a);
+  let result = run_request(&mut rt, &request_a).await;
 
   assert_eq!(result[0], "A");
   assert_eq!(result[1], "B");
   assert_eq!(result[2], "C");
 
-  let result = run_request(&mut rt, &request_a);
+  let result = run_request(&mut rt, &request_a).await;
 
   assert_eq!(result[0], "A");
   assert_eq!(result[1], "B");
   assert_eq!(result[2], "C");
 }
 
-#[test]
-fn should_run_request_once() {
+#[tokio::test(flavor = "multi_thread")]
+async fn should_run_request_once() {
   let mut rt = request_tracker(Default::default());
 
   let request_a = TestRequest::new("A", &[]);
 
-  let result = run_sub_request(&mut rt, &request_a);
+  let result = run_sub_request(&mut rt, &request_a).await;
 
   assert_eq!(result, "A");
   assert_eq!(request_a.run_count(), 1);
 
-  let result = run_sub_request(&mut rt, &request_a);
+  let result = run_sub_request(&mut rt, &request_a).await;
   assert_eq!(result, "A");
   assert_eq!(request_a.run_count(), 1);
 }
 
-#[test]
-fn should_run_request_once_2() {
+#[tokio::test(flavor = "multi_thread")]
+async fn should_run_request_once_2() {
   let mut rt = request_tracker(Default::default());
 
   let request_b = TestRequest::new("B", &[]);
   let request_a = TestRequest::new("A", &[request_b.clone()]);
 
-  let result = run_request(&mut rt, &request_a);
+  let result = run_request(&mut rt, &request_a).await;
 
   assert_eq!(result[0], "A");
   assert_eq!(result[1], "B");
   assert_eq!(request_a.run_count(), 1);
   assert_eq!(request_b.run_count(), 1);
 
-  let result = run_request(&mut rt, &request_a);
+  let result = run_request(&mut rt, &request_a).await;
   assert_eq!(result[0], "A");
   assert_eq!(result[1], "B");
   assert_eq!(request_a.run_count(), 1);
   assert_eq!(request_b.run_count(), 1);
 }
 
-fn run_request(request_tracker: &mut RequestTracker, request: &TestRequest) -> Vec<String> {
-  let RequestResult::TestMain(result) = request_tracker.run_request(request.clone()).unwrap()
+async fn run_request(request_tracker: &mut RequestTracker, request: &TestRequest) -> Vec<String> {
+  let RequestResult::TestMain(result) = request_tracker.run_request(request.clone()).await.unwrap()
   else {
     panic!("Unexpected result");
   };
   result
 }
 
-fn run_sub_request(request_tracker: &mut RequestTracker, request: &TestRequest) -> String {
-  let RequestResult::TestSub(result) = request_tracker.run_request(request.clone()).unwrap() else {
+async fn run_sub_request(request_tracker: &mut RequestTracker, request: &TestRequest) -> String {
+  let RequestResult::TestSub(result) = request_tracker.run_request(request.clone()).await.unwrap()
+  else {
     panic!("Unexpected result");
   };
   result
@@ -128,8 +131,9 @@ impl std::hash::Hash for TestRequest {
   }
 }
 
+#[async_trait]
 impl Request for TestRequest {
-  fn run(
+  async fn run(
     &self,
     mut request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
@@ -174,8 +178,10 @@ impl Request for TestRequest {
 struct TestChildRequest {
   count: u32,
 }
+
+#[async_trait]
 impl Request for TestChildRequest {
-  fn run(
+  async fn run(
     &self,
     _request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
@@ -189,8 +195,10 @@ impl Request for TestChildRequest {
 struct TestRequest2 {
   sub_requests: u32,
 }
+
+#[async_trait]
 impl Request for TestRequest2 {
-  fn run(
+  async fn run(
     &self,
     mut request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
@@ -216,10 +224,12 @@ impl Request for TestRequest2 {
   }
 }
 
-#[test]
-fn test_queued_subrequests() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_queued_subrequests() {
   let sub_requests = 20;
-  let result = request_tracker(Default::default()).run_request(TestRequest2 { sub_requests });
+  let result = request_tracker(Default::default())
+    .run_request(TestRequest2 { sub_requests })
+    .await;
 
   match result {
     Ok(RequestResult::TestMain(responses)) => {

@@ -9,6 +9,8 @@ description = "Raw transformer plugin for the Atlaspack Bundler"
 atlaspack_core = { path = "../atlaspack_core" }
 
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 
 [dev-dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+tokio = { workspace = true, features = ["full"] }

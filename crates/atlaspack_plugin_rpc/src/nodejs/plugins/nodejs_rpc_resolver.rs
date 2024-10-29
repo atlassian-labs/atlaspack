@@ -5,6 +5,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::hash::IdentifierHasher;
 use atlaspack_core::plugin::PluginContext;
@@ -13,9 +14,8 @@ use atlaspack_core::plugin::ResolveContext;
 use atlaspack_core::plugin::Resolved;
 use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::types::Dependency;
-use atlaspack_napi_helpers::anyhow_from_napi;
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
+use tokio::sync::OnceCell;
 
 use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 use super::super::rpc::LoadPluginKind;
@@ -30,7 +30,7 @@ struct InitializedState {
 pub struct RpcNodejsResolverPlugin {
   nodejs_workers: Arc<NodeJsWorkerCollection>,
   plugin_options: Arc<PluginOptions>,
-  plugin_node: PluginNode,
+  plugin_node: Arc<PluginNode>,
   started: OnceCell<InitializedState>,
 }
 
@@ -49,32 +49,37 @@ impl RpcNodejsResolverPlugin {
     Ok(Self {
       nodejs_workers,
       plugin_options: ctx.options.clone(),
-      plugin_node: plugin_node.clone(),
+      plugin_node: Arc::new(plugin_node.clone()),
       started: OnceCell::new(),
     })
   }
 
-  fn get_or_init_state(&self) -> anyhow::Result<&InitializedState> {
-    self.started.get_or_try_init(|| {
-      self.nodejs_workers.exec_on_all(|worker| {
-        worker.load_plugin(LoadPluginOptions {
-          kind: LoadPluginKind::Resolver,
-          specifier: self.plugin_node.package_name.clone(),
-          resolve_from: (&*self.plugin_node.resolve_from).clone(),
-        })
-      })?;
+  async fn get_or_init_state(&self) -> anyhow::Result<&InitializedState> {
+    self
+      .started
+      .get_or_try_init::<anyhow::Error, _, _>(|| async move {
+        self
+          .nodejs_workers
+          .load_plugin(LoadPluginOptions {
+            kind: LoadPluginKind::Resolver,
+            specifier: self.plugin_node.package_name.clone(),
+            resolve_from: (&*self.plugin_node.resolve_from).clone(),
+          })
+          .await?;
 
-      Ok(InitializedState {
-        rpc_plugin_options: RpcPluginOptions {
-          hmr_options: None,
-          project_root: self.plugin_options.project_root.clone(),
-          mode: self.plugin_options.mode.clone(),
-        },
+        Ok(InitializedState {
+          rpc_plugin_options: RpcPluginOptions {
+            hmr_options: None,
+            project_root: self.plugin_options.project_root.clone(),
+            mode: self.plugin_options.mode.clone(),
+          },
+        })
       })
-    })
+      .await
   }
 }
 
+#[async_trait]
 impl ResolverPlugin for RpcNodejsResolverPlugin {
   fn id(&self) -> u64 {
     let mut hasher = IdentifierHasher::new();
@@ -84,21 +89,21 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
     hasher.finish()
   }
 
-  fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
-    let state = self.get_or_init_state()?;
+  async fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+    let state = self.get_or_init_state().await?;
 
-    self.nodejs_workers.exec_on_one(|worker| {
-      worker
-        .run_resolver_resolve_fn
-        .call_serde(RunResolverResolve {
-          key: self.plugin_node.package_name.clone(),
-          dependency: (&*ctx.dependency).clone(),
-          specifier: (&*ctx.specifier).to_owned(),
-          pipeline: ctx.pipeline.clone(),
-          plugin_options: state.rpc_plugin_options.clone(),
-        })
-        .map_err(anyhow_from_napi)
-    })
+    self
+      .nodejs_workers
+      .next_worker()
+      .run_resolver_resolve_fn
+      .call_serde(RunResolverResolve {
+        key: self.plugin_node.package_name.clone(),
+        dependency: (&*ctx.dependency).clone(),
+        specifier: (&*ctx.specifier).to_owned(),
+        pipeline: ctx.pipeline.clone(),
+        plugin_options: state.rpc_plugin_options.clone(),
+      })
+      .await
   }
 }
 

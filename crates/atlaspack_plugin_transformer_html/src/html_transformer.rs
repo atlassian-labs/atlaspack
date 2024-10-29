@@ -4,6 +4,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::Error;
+use async_trait::async_trait;
 use html5ever::serialize::SerializeOpts;
 use html5ever::tendril::TendrilSink;
 use html5ever::{serialize, ParseOpts};
@@ -27,8 +28,13 @@ impl AtlaspackHtmlTransformerPlugin {
   }
 }
 
+#[async_trait]
 impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
-  fn transform(&self, context: TransformContext, input: Asset) -> Result<TransformResult, Error> {
+  async fn transform(
+    &self,
+    context: TransformContext,
+    input: Asset,
+  ) -> Result<TransformResult, Error> {
     let bytes: &[u8] = input.code.bytes();
     let mut dom = parse_html(bytes)?;
     let context = HTMLTransformationContext {

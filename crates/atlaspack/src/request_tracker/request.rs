@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigLoaderRef;
 use atlaspack_core::types::AtlaspackOptions;
 use dyn_hash::DynHash;
@@ -101,6 +102,7 @@ impl RunRequestContext {
 pub type RunRequestError = anyhow::Error;
 pub type RequestId = u64;
 
+#[async_trait]
 pub trait Request: DynHash + Send + Debug + 'static {
   fn id(&self) -> RequestId {
     let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
@@ -109,7 +111,7 @@ pub trait Request: DynHash + Send + Debug + 'static {
     hasher.finish()
   }
 
-  fn run(
+  async fn run(
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError>;

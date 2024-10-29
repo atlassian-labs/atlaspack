@@ -13,6 +13,7 @@ atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 caniuse_database = { path = "../caniuse_database" }
 
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 bitflags = { workspace = true }
 browserslist-rs = { workspace = true }
 derive_builder = { workspace = true }

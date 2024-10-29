@@ -19,7 +19,7 @@ where
 
       for index in 0..result.len() {
         let Some(item) = result.get::<JsUnknown>(index)? else {
-          return Err(napi::Error::from_reason("Error calculating params"));
+          return Err(anyhow::anyhow!("Error calculating params"));
         };
         args.push(item)
       }
@@ -35,5 +35,5 @@ pub fn map_return_serde<Return>() -> MapJsReturn<Return>
 where
   Return: Send + DeserializeOwned + 'static,
 {
-  Box::new(move |env, value| env.from_js_value(&value))
+  Box::new(move |env, value| Ok(env.from_js_value(&value)?))
 }

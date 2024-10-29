@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::*;
 use atlaspack_core::types::Asset;
@@ -157,8 +158,9 @@ impl ReporterPlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl ResolverPlugin for TestingRpcPlugin {
-  fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
+  async fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
     Ok(Resolved {
       invalidations: vec![],
       resolution: Resolution::Unresolved,
@@ -176,8 +178,9 @@ impl RuntimePlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl TransformerPlugin for TestingRpcPlugin {
-  fn transform(
+  async fn transform(
     &self,
     _context: TransformContext,
     asset: Asset,

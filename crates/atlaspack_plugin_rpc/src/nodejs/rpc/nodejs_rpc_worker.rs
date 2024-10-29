@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use atlaspack_napi_helpers::anyhow_from_napi;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use napi::JsObject;
 use serde::{Deserialize, Serialize};
@@ -23,11 +22,8 @@ impl NodejsWorker {
     })
   }
 
-  pub fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
-    self
-      .load_plugin_fn
-      .call_serde(opts)
-      .map_err(anyhow_from_napi)
+  pub async fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
+    self.load_plugin_fn.call_serde(opts).await
   }
 }
 

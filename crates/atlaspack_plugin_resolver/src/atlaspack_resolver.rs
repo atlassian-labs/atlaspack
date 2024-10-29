@@ -5,6 +5,7 @@ use std::hash::Hash;
 use std::path::Path;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::PluginOptions;
@@ -217,7 +218,11 @@ impl AtlaspackResolver {
     }
   }
 
-  fn resolve_builtin(&self, ctx: &ResolveContext, builtin: String) -> anyhow::Result<Resolved> {
+  async fn resolve_builtin(
+    &self,
+    ctx: &ResolveContext,
+    builtin: String,
+  ) -> anyhow::Result<Resolved> {
     let dep = &ctx.dependency;
     if dep.env.context.is_node() {
       return Ok(Resolved {
@@ -265,12 +270,14 @@ impl AtlaspackResolver {
       }
     };
 
-    self.resolve(ResolveContext {
-      // TODO: Can we get rid of the clones?
-      dependency: Arc::clone(&ctx.dependency),
-      pipeline: ctx.pipeline.clone(),
-      specifier: browser_module.to_owned(),
-    })
+    self
+      .resolve(ResolveContext {
+        // TODO: Can we get rid of the clones?
+        dependency: Arc::clone(&ctx.dependency),
+        pipeline: ctx.pipeline.clone(),
+        specifier: browser_module.to_owned(),
+      })
+      .await
   }
 }
 
@@ -282,8 +289,9 @@ impl Hash for AtlaspackResolver {
   }
 }
 
+#[async_trait]
 impl ResolverPlugin for AtlaspackResolver {
-  fn resolve(&self, ctx: ResolveContext) -> anyhow::Result<Resolved> {
+  async fn resolve(&self, ctx: ResolveContext) -> anyhow::Result<Resolved> {
     let mut resolver = Resolver::atlaspack(
       Cow::Borrowed(&self.options.project_root),
       CacheCow::Borrowed(&self.cache),
@@ -387,7 +395,7 @@ impl ResolverPlugin for AtlaspackResolver {
         }),
       }),
       (atlaspack_resolver::Resolution::Builtin(builtin), _query) => {
-        self.resolve_builtin(&ctx, builtin)
+        self.resolve_builtin(&ctx, builtin).await
       }
       (atlaspack_resolver::Resolution::Empty, _invalidations) => Ok(Resolved {
         invalidations: Vec::new(),
@@ -475,14 +483,15 @@ mod tests {
     }
   }
 
-  #[test]
-  fn returns_module_not_found_error_diagnostic() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_module_not_found_error_diagnostic() {
     let plugin_context = plugin_context(InMemoryFileSystem::default());
     let resolver = AtlaspackResolver::new(&plugin_context).unwrap();
     let ctx = resolve_context("foo.js");
 
     let err = resolver
       .resolve(ctx)
+      .await
       .expect_err("Expected resolution to fail")
       .downcast::<Diagnostic>()
       .expect("Expected error to be a diagnostic");
@@ -502,8 +511,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_package_json_error_diagnostic() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_package_json_error_diagnostic() {
     let fs = InMemoryFileSystem::default();
     let package_path = Path::new("node_modules").join("foo").join("package.json");
 
@@ -523,6 +532,7 @@ mod tests {
 
     let err = resolver
       .resolve(ctx)
+      .await
       .expect_err("Expected resolution to fail")
       .downcast::<Diagnostic>()
       .expect("Expected error to be a diagnostic");
@@ -542,8 +552,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_resolution() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_resolution() {
     let fs = Arc::new(InMemoryFileSystem::default());
 
     fs.write_file(Path::new("/foo/index.js"), String::default());
@@ -573,7 +583,7 @@ mod tests {
       specifier,
     };
 
-    let result = resolver.resolve(ctx).map_err(|err| err.to_string());
+    let result = resolver.resolve(ctx).await.map_err(|err| err.to_string());
 
     #[cfg(target_os = "windows")]
     let file_path = PathBuf::from("C:/foo/something.js");

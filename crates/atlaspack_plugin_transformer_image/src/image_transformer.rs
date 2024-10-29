@@ -2,6 +2,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use anyhow::Error;
+use async_trait::async_trait;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
@@ -19,8 +20,13 @@ impl AtlaspackImageTransformerPlugin {
   }
 }
 
+#[async_trait]
 impl TransformerPlugin for AtlaspackImageTransformerPlugin {
-  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
+  async fn transform(
+    &self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     if asset.bundle_behavior.is_none() {
@@ -104,8 +110,8 @@ mod tests {
 
   use super::*;
 
-  #[test]
-  fn returns_image_asset() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_image_asset() {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let plugin = AtlaspackImageTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
@@ -123,7 +129,10 @@ mod tests {
 
     assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Isolated));
     assert_eq!(
-      plugin.transform(context, asset).map_err(|e| e.to_string()),
+      plugin
+        .transform(context, asset)
+        .await
+        .map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
           bundle_behavior: Some(BundleBehavior::Isolated),
