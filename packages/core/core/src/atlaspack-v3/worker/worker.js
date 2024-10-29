@@ -10,7 +10,7 @@ import type {
   FilePath,
   FileSystem,
 } from '@atlaspack/types';
-import {workerData} from 'worker_threads';
+import {workerData, parentPort} from 'worker_threads';
 import * as module from 'module';
 
 import {
@@ -273,7 +273,15 @@ export class AtlaspackWorker {
   });
 }
 
-napi.registerWorker(workerData.tx_worker, new AtlaspackWorker());
+const worker = new AtlaspackWorker();
+napi.registerWorker(workerData.tx_worker, worker);
+
+parentPort?.on('message', (event) => {
+  if (event.type === 'registerWorker') {
+    console.log('Worker event', event);
+    napi.registerWorker(event.tx_worker, worker);
+  }
+});
 
 type ResolverState<T> = {|
   resolver: Resolver<T>,
