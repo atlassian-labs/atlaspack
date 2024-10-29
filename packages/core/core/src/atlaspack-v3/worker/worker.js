@@ -174,8 +174,12 @@ export class AtlaspackWorker {
     }
 
     const transformer: Transformer<any> = state.transformer;
-    const resolveFunc = (from: string, to: string): Promise<any> =>
-      Promise.resolve(require.resolve(to, {paths: [from]}));
+    const resolveFunc = (from: string, to: string): Promise<any> => {
+      let customRequire = module.createRequire(from);
+      let resolvedPath = customRequire.resolve(to);
+
+      return Promise.resolve(resolvedPath);
+    };
     const env = new Environment(napiEnv);
     const mutableAsset = new MutableAsset(innerAsset, this.#fs, env);
     const defaultOptions = {
