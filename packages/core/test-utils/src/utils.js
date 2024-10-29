@@ -32,7 +32,6 @@ import {parser as postHtmlParse} from 'posthtml-parser';
 import postHtml from 'posthtml';
 import EventEmitter from 'events';
 import https from 'https';
-import {LMDBLiteCache} from '@atlaspack/cache';
 
 import {makeDeferredWithPromise, normalizeSeparators} from '@atlaspack/utils';
 import _chalk from 'chalk';
@@ -135,7 +134,6 @@ export function getParcelOptions(
           node: '8',
         },
       },
-      cache: new LMDBLiteCache('.parcel-cache'),
       featureFlags: {
         atlaspackV3: isAtlaspackV3,
       },
