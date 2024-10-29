@@ -27,6 +27,7 @@ atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 dyn-hash = { workspace = true }
 indexmap = { workspace = true }
 num_cpus = { workspace = true }
@@ -43,6 +44,7 @@ tracing-subscriber = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 once_cell = { workspace = true }
 parking_lot = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
 
 [dev-dependencies]
 mockall = { workspace = true }

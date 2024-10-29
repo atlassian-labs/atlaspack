@@ -93,104 +93,91 @@ impl RequestTracker {
   ///     these will run on the main-thread, therefore it'll be simpler to implement queueing
   ///     without stalls and locks/channels
   ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
-  pub fn run_request(&mut self, request: impl Request) -> anyhow::Result<RequestResult> {
-    let thread_pool = rayon::ThreadPoolBuilder::new()
-      .thread_name(|count| format!("RequestTracker-{}", count))
-      .num_threads(num_cpus::get() + 4)
-      .panic_handler(|failure| {
-        tracing::error!(
-          ?failure,
-          "Lost thread from thread-pool. This is a bug in atlaspack. Builds may stall."
-        );
-        std::process::exit(1);
-      })
-      .build()?;
-    thread_pool.in_place_scope(|scope| {
-      let request_id = request.id();
-      let (tx, rx) = std::sync::mpsc::channel();
-      let tx2 = tx.clone();
-      let _ = tx.send(RequestQueueMessage::RunRequest {
-        tx: tx2,
-        message: RunRequestMessage {
-          request: Box::new(request),
-          parent_request_id: None,
-          response_tx: None,
-        },
-      });
-      drop(tx);
+  pub async fn run_request(&mut self, request: impl Request) -> anyhow::Result<RequestResult> {
+    let request_id = request.id();
+    let (tx, rx) = std::sync::mpsc::channel();
+    let tx2 = tx.clone();
+    let _ = tx.send(RequestQueueMessage::RunRequest {
+      tx: tx2,
+      message: RunRequestMessage {
+        request: Box::new(request),
+        parent_request_id: None,
+        response_tx: None,
+      },
+    });
+    drop(tx);
 
-      while let Ok(request_queue_message) = rx.recv() {
-        match request_queue_message {
-          RequestQueueMessage::RunRequest {
-            message:
-              RunRequestMessage {
-                request,
-                parent_request_id,
-                response_tx,
-              },
-            tx,
-          } => {
-            let request_id = request.id();
-            tracing::trace!(?request_id, ?parent_request_id, "Run request");
+    while let Ok(request_queue_message) = rx.recv() {
+      match request_queue_message {
+        RequestQueueMessage::RunRequest {
+          message:
+            RunRequestMessage {
+              request,
+              parent_request_id,
+              response_tx,
+            },
+          tx,
+        } => {
+          let request_id = request.id();
+          tracing::trace!(?request_id, ?parent_request_id, "Run request");
 
-            if self.prepare_request(request_id)? {
-              let context = RunRequestContext::new(
-                self.config_loader.clone(),
-                self.file_system.clone(),
-                self.options.clone(),
-                Some(request_id),
-                self.plugins.clone(),
-                self.project_root.clone(),
-                // sub-request run
-                Box::new({
-                  let tx = tx.clone();
-                  move |message| {
-                    let tx2 = tx.clone();
-                    tx.send(RequestQueueMessage::RunRequest { message, tx: tx2 })
-                      .unwrap();
-                  }
-                }),
-              );
-
-              scope.spawn({
+          if self.prepare_request(request_id)? {
+            let context = RunRequestContext::new(
+              self.config_loader.clone(),
+              self.file_system.clone(),
+              self.options.clone(),
+              Some(request_id),
+              self.plugins.clone(),
+              self.project_root.clone(),
+              // sub-request run
+              Box::new({
                 let tx = tx.clone();
-                move |_scope| {
-                  let result = request.run(context);
-                  let _ = tx.send(RequestQueueMessage::RequestResult {
-                    request_id,
-                    parent_request_id,
-                    result,
-                    response_tx,
-                  });
+                move |message| {
+                  let tx2 = tx.clone();
+                  tx.send(RequestQueueMessage::RunRequest { message, tx: tx2 })
+                    .unwrap();
                 }
-              })
-            } else {
-              // Cached request
-              if let Some(response_tx) = response_tx {
-                let result = self.get_request(parent_request_id, request_id);
-                let _ = response_tx.send(result.map(|r| (r, request_id)));
-              }
-            };
-          }
-          RequestQueueMessage::RequestResult {
-            request_id,
-            parent_request_id,
-            result,
-            response_tx,
-          } => {
-            tracing::trace!(?request_id, ?parent_request_id, "Request result");
-            self.store_request(request_id, &result)?;
-            self.link_request_to_parent(request_id, parent_request_id)?;
+              }),
+            );
 
+            tokio::spawn({
+              let tx = tx.clone();
+              async move {
+                let result = request.run(context).await;
+                let _ = tx.send(RequestQueueMessage::RequestResult {
+                  request_id,
+                  parent_request_id,
+                  result,
+                  response_tx,
+                });
+              }
+            });
+          } else {
+            // Cached request
             if let Some(response_tx) = response_tx {
-              let _ = response_tx.send(result.map(|result| (result.result, request_id)));
+              let result = self.get_request(parent_request_id, request_id);
+              let _ = response_tx.send(result.map(|r| (r, request_id)));
             }
+          };
+        }
+        RequestQueueMessage::RequestResult {
+          request_id,
+          parent_request_id,
+          result,
+          response_tx,
+        } => {
+          tracing::trace!(?request_id, ?parent_request_id, "Request result");
+          self.store_request(request_id, &result)?;
+          self.link_request_to_parent(request_id, parent_request_id)?;
+
+          if let Some(response_tx) = response_tx {
+            let _ = response_tx.send(result.map(|result| (result.result, request_id)));
           }
         }
       }
+    }
 
-      self.get_request(None, request_id)
-    })
+    self.get_request(None, request_id)
   }
 
   /// Before a request is run, a 'pending' [`RequestNode::Incomplete`] entry is added to the graph.

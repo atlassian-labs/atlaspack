@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use async_trait::async_trait;
 use atlaspack_core::plugin::AssetBuildEvent;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
@@ -47,8 +48,9 @@ pub struct AssetRequestOutput {
   pub dependencies: Vec<Dependency>,
 }
 
+#[async_trait]
 impl Request for AssetRequest {
-  fn run(
+  async fn run(
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
@@ -93,7 +95,8 @@ impl Request for AssetRequest {
     }
 
     let transform_context = TransformContext::new(self.env.clone());
-    let mut result = run_pipelines(transform_context, asset, request_context.plugins().clone())?;
+    let mut result =
+      run_pipelines(transform_context, asset, request_context.plugins().clone()).await?;
 
     result.asset.stats = AssetStats {
       size: result.asset.code.size(),
@@ -116,7 +119,7 @@ impl Request for AssetRequest {
   }
 }
 
-pub fn run_pipelines(
+pub async fn run_pipelines(
   transform_context: TransformContext,
   input: Asset,
   plugins: PluginsRef,
@@ -158,7 +161,9 @@ pub fn run_pipelines(
     let mut current_dependencies = dependencies;
 
     for transformer in pipeline.transformers_mut() {
-      let transform_result = transformer.transform(transform_context.clone(), current_asset)?;
+      let transform_result = transformer
+        .transform(transform_context.clone(), current_asset)
+        .await?;
       let is_different_asset_type = transform_result.asset.file_type != original_asset_type;
       current_asset = transform_result.asset;
 
@@ -241,8 +246,8 @@ mod tests {
     )
   }
 
-  #[test]
-  fn test_run_pipelines_works() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_run_pipelines_works() {
     let mut plugins = MockPlugins::new();
     plugins.expect_transformers().returning(move |_, _| {
       Ok(TransformerPipeline::new(vec![
@@ -253,13 +258,15 @@ mod tests {
 
     let asset = Asset::default();
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
+    let result = run_pipelines(context, asset, Arc::new(plugins))
+      .await
+      .unwrap();
 
     assert_code(&result.asset, "::transformer1::transformer2");
   }
 
-  #[test]
-  fn test_run_pipelines_with_invalidations() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_run_pipelines_with_invalidations() {
     let mut plugins = MockPlugins::new();
     plugins
       .expect_transformers()
@@ -276,14 +283,16 @@ mod tests {
     let asset = make_asset("index.js", FileType::Js);
     let expected_invalidations = vec![PathBuf::from("./tmp")];
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
+    let result = run_pipelines(context, asset, Arc::new(plugins))
+      .await
+      .unwrap();
 
     assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.invalidate_on_file_change, expected_invalidations);
   }
 
-  #[test]
-  fn test_run_pipelines_with_dependencies() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_run_pipelines_with_dependencies() {
     let mut plugins = MockPlugins::new();
     plugins
       .expect_transformers()
@@ -300,14 +309,16 @@ mod tests {
     let asset = make_asset("index.js", FileType::Js);
     let expected_dependencies = vec![Dependency::default()];
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
+    let result = run_pipelines(context, asset, Arc::new(plugins))
+      .await
+      .unwrap();
 
     assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.dependencies, expected_dependencies);
   }
 
-  #[test]
-  fn test_run_pipelines_with_discovered_assets() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_run_pipelines_with_discovered_assets() {
     let mut plugins = MockPlugins::new();
 
     plugins
@@ -344,7 +355,9 @@ mod tests {
 
     let asset = make_asset("index.js", FileType::Js);
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins)).unwrap();
+    let result = run_pipelines(context, asset, Arc::new(plugins))
+      .await
+      .unwrap();
 
     assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.discovered_assets.len(), 1);

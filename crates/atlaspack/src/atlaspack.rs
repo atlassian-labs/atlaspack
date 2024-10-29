@@ -14,7 +14,7 @@ use atlaspack_filesystem::FileSystemRef;
 use atlaspack_package_manager::NodePackageManager;
 use atlaspack_package_manager::PackageManagerRef;
 use atlaspack_plugin_rpc::RpcFactoryRef;
-use atlaspack_plugin_rpc::RpcWorkerRef;
+use tokio::runtime::Runtime;
 
 use crate::plugins::config_plugins::ConfigPlugins;
 use crate::plugins::PluginsRef;
@@ -34,8 +34,8 @@ pub struct Atlaspack {
   pub options: AtlaspackOptions,
   pub package_manager: PackageManagerRef,
   pub project_root: PathBuf,
-  pub rpc: Option<RpcFactoryRef>,
-  state: Option<AtlaspackState>,
+  pub rpc: RpcFactoryRef,
+  pub runtime: Runtime,
 }
 
 impl Atlaspack {
@@ -43,7 +43,7 @@ impl Atlaspack {
     fs: Option<FileSystemRef>,
     options: AtlaspackOptions,
     package_manager: Option<PackageManagerRef>,
-    rpc: Option<RpcFactoryRef>,
+    rpc: RpcFactoryRef,
   ) -> Result<Self, anyhow::Error> {
     let fs = fs.unwrap_or_else(|| Arc::new(OsFileSystem::default()));
     let project_root = infer_project_root(Arc::clone(&fs), options.entries.clone())?;
@@ -51,13 +51,18 @@ impl Atlaspack {
     let package_manager = package_manager
       .unwrap_or_else(|| Arc::new(NodePackageManager::new(project_root.clone(), fs.clone())));
 
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+      .enable_all()
+      .worker_threads(options.threads.unwrap_or_else(|| num_cpus::get()))
+      .build()?;
+
     Ok(Self {
       fs,
       options,
       package_manager,
       project_root,
       rpc,
-      state: None,
+      runtime,
     })
   }
 }
@@ -65,15 +70,8 @@ impl Atlaspack {
 pub struct BuildResult;
 
 impl Atlaspack {
-  fn state(&mut self) -> anyhow::Result<AtlaspackState> {
-    if let Some(state) = self.state.clone() {
-      return Ok(state);
-    }
-
-    let mut rpc_worker = None::<RpcWorkerRef>;
-    if let Some(rpc_host) = &self.rpc {
-      rpc_worker = Some(rpc_host.start()?);
-    }
+  fn state(&self) -> anyhow::Result<AtlaspackState> {
+    let rpc_worker = self.rpc.start()?;
 
     let (config, _files) =
       AtlaspackRcConfigLoader::new(Arc::clone(&self.fs), Arc::clone(&self.package_manager)).load(
@@ -92,7 +90,7 @@ impl Atlaspack {
     });
 
     let plugins = Arc::new(ConfigPlugins::new(
-      rpc_worker,
+      rpc_worker.clone(),
       config,
       PluginContext {
         config: Arc::clone(&config_loader),
@@ -114,29 +112,29 @@ impl Atlaspack {
       plugins,
     };
 
-    self.state = Some(state.clone());
-
     Ok(state)
   }
 
-  pub fn build_asset_graph(&mut self) -> anyhow::Result<AssetGraph> {
-    let AtlaspackState { config, plugins } = self.state()?;
+  pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
+    self.runtime.block_on(async move {
+      let AtlaspackState { config, plugins } = self.state().unwrap();
 
-    let mut request_tracker = RequestTracker::new(
-      config.clone(),
-      self.fs.clone(),
-      Arc::new(self.options.clone()),
-      plugins.clone(),
-      self.project_root.clone(),
-    );
+      let mut request_tracker = RequestTracker::new(
+        config.clone(),
+        self.fs.clone(),
+        Arc::new(self.options.clone()),
+        plugins.clone(),
+        self.project_root.clone(),
+      );
 
-    let request_result = request_tracker.run_request(AssetGraphRequest {})?;
+      let request_result = request_tracker.run_request(AssetGraphRequest {}).await?;
 
-    let asset_graph = match request_result {
-      RequestResult::AssetGraph(result) => result.graph,
-      _ => panic!("TODO"),
-    };
+      let asset_graph = match request_result {
+        RequestResult::AssetGraph(result) => result.graph,
+        _ => panic!("TODO"),
+      };
 
-    Ok(asset_graph)
+      Ok(asset_graph)
+    })
   }
 }

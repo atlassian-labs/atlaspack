@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Error;
+use async_trait::async_trait;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, Code, FileType};
@@ -14,8 +15,13 @@ impl AtlaspackJsonTransformerPlugin {
   }
 }
 
+#[async_trait]
 impl TransformerPlugin for AtlaspackJsonTransformerPlugin {
-  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
+  async fn transform(
+    &self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     let code = std::str::from_utf8(asset.code.bytes())?;
@@ -60,8 +66,8 @@ mod tests {
     })
   }
 
-  #[test]
-  fn returns_js_asset_from_json() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_js_asset_from_json() {
     let plugin = create_json_plugin();
 
     let asset = Asset {
@@ -83,7 +89,10 @@ mod tests {
     let context = TransformContext::default();
 
     assert_eq!(
-      plugin.transform(context, asset).map_err(|e| e.to_string()),
+      plugin
+        .transform(context, asset)
+        .await
+        .map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
           code: Arc::new(Code::from(
@@ -98,8 +107,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn returns_js_asset_from_json5() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_js_asset_from_json5() {
     let plugin = create_json_plugin();
 
     let asset = Asset {
@@ -125,7 +134,10 @@ mod tests {
     let context = TransformContext::default();
 
     assert_eq!(
-      plugin.transform(context, asset).map_err(|e| e.to_string()),
+      plugin
+        .transform(context, asset)
+        .await
+        .map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
           code: Arc::new(Code::from(

@@ -1,5 +1,6 @@
 use crate::hash::IdentifierHasher;
 use crate::types::{Asset, AssetWithDependencies, Dependency, Environment, SpecifierType};
+use async_trait::async_trait;
 use mockall::automock;
 use serde::Serialize;
 use std::any::Any;
@@ -57,6 +58,7 @@ impl TransformContext {
 /// designed to integrate with Atlaspack.
 ///
 #[automock]
+#[async_trait]
 pub trait TransformerPlugin: Any + Debug + Send + Sync {
   /// Unique ID for this transformer
   fn id(&self) -> u64 {
@@ -64,8 +66,9 @@ pub trait TransformerPlugin: Any + Debug + Send + Sync {
     self.type_id().hash(&mut hasher);
     hasher.finish()
   }
+
   /// Transform the asset and/or add new assets
-  fn transform(
+  async fn transform(
     &self,
     context: TransformContext,
     asset: Asset,

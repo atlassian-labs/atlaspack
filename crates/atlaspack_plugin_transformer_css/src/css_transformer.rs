@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
+use async_trait::async_trait;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::engines::{Engines, EnginesBrowsers};
@@ -95,8 +96,13 @@ impl AtlaspackCssTransformerPlugin {
   }
 }
 
+#[async_trait]
 impl TransformerPlugin for AtlaspackCssTransformerPlugin {
-  fn transform(&self, _context: TransformContext, asset: Asset) -> Result<TransformResult, Error> {
+  async fn transform(
+    &self,
+    _context: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
     let css_modules = if self.is_css_module(&asset) {
       Some(lightningcss::css_modules::Config {
         dashed_idents: asset.is_source && self.css_modules_config.dashed_idents.unwrap_or_default(),
@@ -429,7 +435,7 @@ mod tests {
 
   use super::*;
 
-  fn run_plugin(asset: &Asset) -> anyhow::Result<TransformResult> {
+  async fn run_plugin(asset: &Asset) -> anyhow::Result<TransformResult> {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let plugin = AtlaspackCssTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
@@ -443,18 +449,18 @@ mod tests {
     })?;
     let context = TransformContext::default();
 
-    plugin.transform(context, asset.clone())
+    plugin.transform(context, asset.clone()).await
   }
 
-  #[test]
-  fn supports_css_imports() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn supports_css_imports() {
     let asset = Asset {
       id: "my-asset".into(),
       file_path: "styles.css".into(),
       code: Arc::new(Code::from("@import './stuff.css';")),
       ..Default::default()
     };
-    let result = run_plugin(&asset);
+    let result = run_plugin(&asset).await;
 
     assert_eq!(
       result.unwrap().dependencies,
@@ -474,8 +480,8 @@ mod tests {
     );
   }
 
-  #[test]
-  fn supports_css_modules() {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn supports_css_modules() {
     let asset = Asset {
       id: "css-module".into(),
       file_path: "styles.module.css".into(),
@@ -484,7 +490,7 @@ mod tests {
       ..Default::default()
     };
 
-    let result = run_plugin(&asset).unwrap();
+    let result = run_plugin(&asset).await.unwrap();
 
     assert_eq!(
       result.asset,
