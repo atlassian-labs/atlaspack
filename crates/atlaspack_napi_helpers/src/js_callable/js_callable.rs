@@ -113,7 +113,7 @@ impl JsCallable {
 
     let threadsafe_function = self.threadsafe_function.clone();
 
-    tokio::spawn(async move {
+    tokio::task::spawn_local(async move {
       threadsafe_function.call_with_return_value(
         Box::new(map_params),
         ThreadsafeFunctionCallMode::NonBlocking,
