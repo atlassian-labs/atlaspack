@@ -220,6 +220,10 @@ impl InlineRequiresOptimizerBuilder {
 /// After replacement has been executed, `InlineRequiresOptimizer::require_initializers()` may be
 /// used to retrieve which statements have been matched against. This would be used for diagnostics
 /// purposes only.
+///
+/// The replacements are wrapped with `(0, $expr)`. This is to avoid issues when rewriting
+/// `new ...` expressions, where inserting a bare function like symbol will cause different
+/// treatment when instantiating classes. See [`IdentifierReplacementVisitor`].
 #[non_exhaustive]
 pub struct InlineRequiresOptimizer {
   unresolved_mark: Mark,
@@ -354,7 +358,7 @@ function doWork() {
     let expected_output = r#"
 const fs;
 function doWork() {
-    return require('fs').readFileSync('./something');
+    return (0, require('fs')).readFileSync('./something');
 }
     "#
     .trim();
@@ -384,7 +388,7 @@ parcelRequire.register('moduleId', function(require, module, exports) {
 parcelRequire.register('moduleId', function(require, module, exports) {
     const fs;
     function doWork() {
-        return require('fs').readFileSync('./something');
+        return (0, require('fs')).readFileSync('./something');
     }
 });
     "#
@@ -452,7 +456,7 @@ function run() {
 const app;
 const appDefault;
 function run() {
-    return parcelHelpers.interopDefault(require("./App")).test();
+    return (0, parcelHelpers.interopDefault((0, require("./App")))).test();
 }
     "#
     .trim();

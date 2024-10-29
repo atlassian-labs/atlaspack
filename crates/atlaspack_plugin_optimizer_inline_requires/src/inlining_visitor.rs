@@ -28,6 +28,22 @@ impl VisitMut for IdentifierReplacementVisitor {
     let Some(replacement_expression) = self.id_replacement.get(&ident.to_id()) else {
       return;
     };
-    *n = replacement_expression.clone();
+
+    // Expressions are wrapped in (0, require(...))
+    // The reason this is required is due to the following output being treated
+    // differently:
+    //
+    // ```
+    // const value = { default: class Something {} };
+    // new value.default() // => this is instance of Something
+    //
+    // // however
+    // const getValue = () => value;
+    // new getValue().default() // => this fails because `getValue` is not a constructor
+    //
+    // // and
+    // new (0, getValue()).default() // => this works and uses `default` as the constructor
+    // ```
+    *n = swc_core::quote!("(0, $expr)" as Expr, expr: Expr = replacement_expression.clone());
   }
 }

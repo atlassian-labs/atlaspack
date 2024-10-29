@@ -1,13 +1,13 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::fmt;
 use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use atlaspack_core::types::File;
 use atlaspack_filesystem::{FileSystemRealPathCache, FileSystemRef};
+use atlaspack_shared_map::ThreadLocalHashMap;
 
 use crate::package_json::PackageJson;
 use crate::package_json::SourceField;
@@ -15,21 +15,18 @@ use crate::tsconfig::TsConfig;
 use crate::tsconfig::TsConfigWrapper;
 use crate::ResolverError;
 
-type DefaultHasher = xxhash_rust::xxh3::Xxh3Builder;
-
 pub struct Cache {
   pub fs: FileSystemRef,
   /// These map paths to parsed config files. They aren't really 'static, but Rust doens't have a good
   /// way to associate a lifetime with owned data stored in the same struct. We only vend temporary references
   /// from our public methods so this is ok for now. FrozenMap is an append only map, which doesn't require &mut
   /// to insert into. Since each value is in a Box, it won't move and therefore references are stable.
-  packages: RwLock<HashMap<PathBuf, Arc<Result<Arc<PackageJson>, ResolverError>>, DefaultHasher>>,
-  tsconfigs:
-    RwLock<HashMap<PathBuf, Arc<Result<Arc<TsConfigWrapper>, ResolverError>>, DefaultHasher>>,
+  packages: ThreadLocalHashMap<PathBuf, Arc<Result<Arc<PackageJson>, ResolverError>>>,
+  tsconfigs: ThreadLocalHashMap<PathBuf, Arc<Result<Arc<TsConfigWrapper>, ResolverError>>>,
   // In particular just the is_dir_cache spends around 8% of the time on a large project resolution
   // hashing paths. Instead of using a hashmap we should try a trie here.
-  is_dir_cache: RwLock<HashMap<PathBuf, bool, DefaultHasher>>,
-  is_file_cache: RwLock<HashMap<PathBuf, bool, DefaultHasher>>,
+  is_dir_cache: ThreadLocalHashMap<PathBuf, bool>,
+  is_file_cache: ThreadLocalHashMap<PathBuf, bool>,
   realpath_cache: FileSystemRealPathCache,
 }
 
@@ -92,39 +89,31 @@ impl Cache {
   pub fn new(fs: FileSystemRef) -> Self {
     Self {
       fs,
-      packages: RwLock::new(HashMap::with_hasher(DefaultHasher::default())),
-      tsconfigs: RwLock::new(HashMap::with_hasher(DefaultHasher::default())),
-      is_file_cache: RwLock::new(HashMap::with_hasher(DefaultHasher::default())),
-      is_dir_cache: RwLock::new(HashMap::with_hasher(DefaultHasher::default())),
+      packages: ThreadLocalHashMap::new(),
+      tsconfigs: ThreadLocalHashMap::new(),
+      is_file_cache: ThreadLocalHashMap::new(),
+      is_dir_cache: ThreadLocalHashMap::new(),
       realpath_cache: FileSystemRealPathCache::default(),
     }
   }
 
   pub fn is_file(&self, path: &Path) -> bool {
-    if let Some(is_file) = self.is_file_cache.read().unwrap().get(path) {
-      return *is_file;
+    if let Some(is_file) = self.is_file_cache.get(path) {
+      return is_file;
     }
 
     let is_file = self.fs.is_file(path);
-    self
-      .is_file_cache
-      .write()
-      .unwrap()
-      .insert(path.to_path_buf(), is_file);
+    self.is_file_cache.insert(path.to_path_buf(), is_file);
     is_file
   }
 
   pub fn is_dir(&self, path: &Path) -> bool {
-    if let Some(is_file) = self.is_dir_cache.read().unwrap().get(path) {
-      return *is_file;
+    if let Some(is_file) = self.is_dir_cache.get(path) {
+      return is_file;
     }
 
     let is_file = self.fs.is_dir(path);
-    self
-      .is_dir_cache
-      .write()
-      .unwrap()
-      .insert(path.to_path_buf(), is_file);
+    self.is_dir_cache.insert(path.to_path_buf(), is_file);
     is_file
   }
 
@@ -133,11 +122,9 @@ impl Cache {
   }
 
   pub fn read_package(&self, path: Cow<Path>) -> Arc<Result<Arc<PackageJson>, ResolverError>> {
-    let read = self.packages.read().unwrap();
-    if let Some(pkg) = read.get(path.as_ref()) {
+    if let Some(pkg) = self.packages.get(path.as_ref()) {
       return pkg.clone();
     }
-    drop(read);
 
     fn read_package<'a>(
       fs: &'a FileSystemRef,
@@ -180,11 +167,7 @@ impl Cache {
 
     // Since we have exclusive access to packages,
     let entry = Arc::new(package.map(|pkg| Arc::new(pkg)));
-    let _ = self
-      .packages
-      .write()
-      .unwrap()
-      .insert(path.clone(), entry.clone());
+    let _ = self.packages.insert(path.clone(), entry.clone());
 
     entry.clone()
   }
@@ -194,11 +177,9 @@ impl Cache {
     path: &Path,
     process: F,
   ) -> Arc<Result<Arc<TsConfigWrapper>, ResolverError>> {
-    let read = self.tsconfigs.read().unwrap();
-    if let Some(tsconfig) = read.get(path) {
+    if let Some(tsconfig) = self.tsconfigs.get(path) {
       return tsconfig.clone();
     }
-    drop(read);
 
     fn read_tsconfig<'a, F: FnOnce(&mut TsConfigWrapper) -> Result<(), ResolverError>>(
       fs: &FileSystemRef,
@@ -223,11 +204,7 @@ impl Cache {
     // after insert
     let tsconfig = read_tsconfig(&self.fs, path, process).map(|t| Arc::new(t));
     let tsconfig = Arc::new(tsconfig);
-    let _ = self
-      .tsconfigs
-      .write()
-      .unwrap()
-      .insert(PathBuf::from(path), tsconfig.clone());
+    let _ = self.tsconfigs.insert(PathBuf::from(path), tsconfig.clone());
 
     tsconfig
   }

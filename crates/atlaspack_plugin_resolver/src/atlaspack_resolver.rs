@@ -16,6 +16,7 @@ use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::types::BuildMode;
 use atlaspack_core::types::CodeFrame;
 use atlaspack_core::types::CodeHighlight;
+use atlaspack_core::types::Diagnostic;
 use atlaspack_core::types::DiagnosticBuilder;
 use atlaspack_core::types::EnvironmentContext;
 use atlaspack_core::types::ErrorKind;
@@ -24,15 +25,18 @@ use atlaspack_resolver::Cache;
 use atlaspack_resolver::CacheCow;
 use atlaspack_resolver::ExportsCondition;
 use atlaspack_resolver::Fields;
+use atlaspack_resolver::Flags;
 use atlaspack_resolver::IncludeNodeModules;
 use atlaspack_resolver::PackageJsonError;
 use atlaspack_resolver::ResolveOptions;
 use atlaspack_resolver::Resolver;
 use atlaspack_resolver::ResolverError;
 use atlaspack_resolver::SpecifierError;
+use serde::Deserialize;
 
 pub struct AtlaspackResolver {
   cache: Cache,
+  config: ResolverConfig,
   options: Arc<PluginOptions>,
 }
 
@@ -42,12 +46,38 @@ impl Debug for AtlaspackResolver {
   }
 }
 
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ResolverConfig {
+  package_exports: Option<bool>,
+}
+
+#[derive(Deserialize)]
+struct PackageJson {
+  #[serde(rename = "@atlaspack/resolver-default")]
+  config: Option<ResolverConfig>,
+}
+
 impl AtlaspackResolver {
-  pub fn new(ctx: &PluginContext) -> Self {
-    Self {
+  pub fn new(ctx: &PluginContext) -> anyhow::Result<Self> {
+    let config = ctx.config.load_package_json::<PackageJson>().map_or_else(
+      |err| {
+        let diagnostic = err.downcast_ref::<Diagnostic>();
+
+        if diagnostic.is_some_and(|d| d.kind != ErrorKind::NotFound) {
+          return Err(err);
+        }
+
+        Ok(ResolverConfig::default())
+      },
+      |config| Ok(config.contents.config.unwrap_or_default()),
+    )?;
+
+    Ok(Self {
       cache: Cache::new(ctx.config.fs.clone()),
+      config,
       options: Arc::clone(&ctx.options),
-    }
+    })
   }
 
   fn to_diagnostic_error(&self, specifier: &str, error: ResolverError) -> anyhow::Error {
@@ -219,7 +249,7 @@ impl AtlaspackResolver {
       "punycode" => "punycode/",
       "querystring" => "querystring-es3",
       "stream" => "stream-browserify",
-      "string_decoder" => "string_decoder",
+      "string_decoder" => "string_decoder/",
       "sys" => "util/",
       "timers" => "timers-browserify",
       "tty" => "tty-browserify",
@@ -291,6 +321,11 @@ impl ResolverPlugin for AtlaspackResolver {
     if ctx.dependency.env.context.is_browser() {
       resolver.entries |= Fields::BROWSER;
     }
+
+    resolver.flags.set(
+      Flags::EXPORTS,
+      self.config.package_exports.unwrap_or_default(),
+    );
 
     resolver.include_node_modules = Cow::Borrowed(&ctx.dependency.env.include_node_modules);
 
@@ -413,6 +448,7 @@ mod tests {
     types::{Dependency, Diagnostic, ErrorKind},
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use pretty_assertions::assert_eq;
   use std::path::PathBuf;
 
   fn plugin_context(fs: InMemoryFileSystem) -> PluginContext {
@@ -442,7 +478,7 @@ mod tests {
   #[test]
   fn returns_module_not_found_error_diagnostic() {
     let plugin_context = plugin_context(InMemoryFileSystem::default());
-    let resolver = AtlaspackResolver::new(&plugin_context);
+    let resolver = AtlaspackResolver::new(&plugin_context).unwrap();
     let ctx = resolve_context("foo.js");
 
     let err = resolver
@@ -476,8 +512,13 @@ mod tests {
       String::from(r#"{ "name": "foo", "exports": {} }"#),
     );
 
+    fs.write_file(
+      &PathBuf::default().join("package.json"),
+      String::from(r#"{ "@atlaspack/resolver-default": {"packageExports": true} }"#),
+    );
+
     let plugin_context = plugin_context(fs);
-    let resolver = AtlaspackResolver::new(&plugin_context);
+    let resolver = AtlaspackResolver::new(&plugin_context).unwrap();
     let ctx = resolve_context("foo/bar");
 
     let err = resolver
@@ -519,7 +560,7 @@ mod tests {
       options: Arc::new(PluginOptions::default()),
     };
 
-    let resolver = AtlaspackResolver::new(&plugin_context);
+    let resolver = AtlaspackResolver::new(&plugin_context).unwrap();
     let specifier = String::from("./something.js");
 
     let ctx = ResolveContext {

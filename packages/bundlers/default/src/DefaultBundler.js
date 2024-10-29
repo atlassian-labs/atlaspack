@@ -24,6 +24,7 @@ import nullthrows from 'nullthrows';
 import path from 'path';
 import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {addJSMonolithBundle} from './MonolithicBundler';
 
 type Glob = string;
 
@@ -145,10 +146,32 @@ export default (new Bundler({
   bundle({bundleGraph, config, logger}) {
     let targetMap = getEntryByTarget(bundleGraph); // Organize entries by target output folder/ distDir
     let graphs = [];
+
     for (let entries of targetMap.values()) {
+      let singleFileEntries = new Map();
+      let idealGraphEntries = new Map();
+
+      // Separate out the monolith bundles based on the option on target
+      for (let [entryAsset, entryDep] of entries.entries()) {
+        if (entryDep.target?.env.unstableSingleFileOutput === true) {
+          singleFileEntries.set(entryAsset, entryDep);
+        } else {
+          idealGraphEntries.set(entryAsset, entryDep);
+        }
+      }
+
       // Create separate bundleGraphs per distDir
-      graphs.push(createIdealGraph(bundleGraph, config, entries, logger));
+      graphs.push(
+        createIdealGraph(bundleGraph, config, idealGraphEntries, logger),
+      );
+
+      // Do this after the ideal graph so that the mutation of the bundleGraph doesn't
+      // interfere with the main bundling algorithm
+      for (let [entryAsset, entryDep] of singleFileEntries.entries()) {
+        addJSMonolithBundle(bundleGraph, entryAsset, entryDep);
+      }
     }
+
     for (let g of graphs) {
       decorateLegacyGraph(g, bundleGraph); //mutate original graph
     }

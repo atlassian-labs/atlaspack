@@ -138,6 +138,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
         },
         {
@@ -159,6 +160,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
         },
       ],
@@ -190,6 +192,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -226,6 +229,7 @@ describe('TargetResolver', () => {
             },
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -260,6 +264,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -306,6 +311,7 @@ describe('TargetResolver', () => {
             sourceMap: undefined,
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -349,6 +355,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -383,6 +390,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -417,6 +425,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -468,6 +477,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -502,6 +512,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -536,6 +547,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -579,6 +591,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -634,6 +647,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
         },
       ],
@@ -676,6 +690,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           source: 'customA/index.js',
         },
@@ -710,6 +725,7 @@ describe('TargetResolver', () => {
           sourceMap: {},
           loc: undefined,
           sourceType: 'module',
+          unstableSingleFileOutput: false,
         },
         loc: {
           filePath: relative(path.join(CONTEXT_FIXTURE_PATH, 'package.json')),
@@ -1088,6 +1104,7 @@ describe('TargetResolver', () => {
           sourceMap: {},
           loc: undefined,
           sourceType: 'module',
+          unstableSingleFileOutput: false,
         },
         loc: {
           filePath: relative(path.join(fixture, 'package.json')),
@@ -1133,6 +1150,7 @@ describe('TargetResolver', () => {
           sourceMap: {},
           loc: undefined,
           sourceType: 'module',
+          unstableSingleFileOutput: false,
         },
         loc: {
           filePath: relative(path.join(fixture, 'package.json')),
@@ -1177,6 +1195,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -1211,6 +1230,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -1264,6 +1284,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
         },
       ],
@@ -1296,6 +1317,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
         },
       ],
@@ -1329,6 +1351,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -1379,6 +1402,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(
@@ -1419,6 +1443,7 @@ describe('TargetResolver', () => {
             sourceMap: {},
             loc: undefined,
             sourceType: 'module',
+            unstableSingleFileOutput: false,
           },
           loc: {
             filePath: relative(

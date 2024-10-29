@@ -21,7 +21,7 @@ function main() {
       `
 const fs;
 function main() {
-    return require('fs').readFile('./something');
+    return (0, require('fs')).readFile('./something');
 }
 `.trimStart(),
     );

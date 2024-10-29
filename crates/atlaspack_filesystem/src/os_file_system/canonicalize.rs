@@ -28,9 +28,7 @@ pub fn canonicalize(path: &Path, cache: &FileSystemRealPathCache) -> std::io::Re
           ret.push(c);
 
           // First, check the cache for the path up to this point.
-          let read = cache.read().unwrap();
-          let cached = read.get(&ret).cloned();
-          drop(read);
+          let cached = cache.get(&ret);
           let link = if let Some(cached) = cached {
             if let Some(link) = cached {
               link
@@ -40,15 +38,12 @@ pub fn canonicalize(path: &Path, cache: &FileSystemRealPathCache) -> std::io::Re
           } else {
             let stat = std::fs::symlink_metadata(&ret)?;
             if !stat.is_symlink() {
-              cache.write().unwrap().insert(ret.clone(), None);
+              cache.insert(ret.clone(), None);
               continue;
             }
 
             let link = std::fs::read_link(&ret)?;
-            cache
-              .write()
-              .unwrap()
-              .insert(ret.clone(), Some(link.clone()));
+            cache.insert(ret.clone(), Some(link.clone()));
             link
           };
 
