@@ -274,13 +274,13 @@ export class AtlaspackWorker {
 }
 
 const worker = new AtlaspackWorker();
-napi.registerWorker(workerData.tx_worker, worker);
-
 parentPort?.on('message', (event) => {
   if (event.type === 'registerWorker') {
     napi.registerWorker(event.tx_worker, worker);
+    parentPort?.postMessage({type: 'workerRegistered'});
   }
 });
+parentPort?.postMessage({type: 'workerLoaded'});
 
 type ResolverState<T> = {|
   resolver: Resolver<T>,
