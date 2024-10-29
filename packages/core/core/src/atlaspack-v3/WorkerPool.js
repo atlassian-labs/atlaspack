@@ -59,7 +59,10 @@ export class WorkerPool {
       // eslint-disable-next-line no-console
       console.error('Worker failed, retrying to create it...', err);
       this.#workerPool[workerId] = new Worker(WORKER_PATH, {});
-      this.#bootWorker(this.#workerPool[workerId], tx_worker);
+      this.#bootWorker(this.#workerPool[workerId], tx_worker).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('Worker failed to start. The build may hang', err);
+      });
     });
 
     this.#usedWorkers.add(workerId);
@@ -108,7 +111,7 @@ export class WorkerPool {
     const timeout = new Promise((_, reject) => {
       setTimeout(() => {
         reject(new Error('Worker failed to register in time'));
-      }, 2000);
+      }, 5000);
     });
     const workerReady = waitForMessage(worker, 'workerRegistered');
     worker.postMessage({type: 'registerWorker', tx_worker});

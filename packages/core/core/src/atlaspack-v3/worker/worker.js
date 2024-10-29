@@ -276,7 +276,16 @@ export class AtlaspackWorker {
 const worker = new AtlaspackWorker();
 parentPort?.on('message', (event) => {
   if (event.type === 'registerWorker') {
-    napi.registerWorker(event.tx_worker, worker);
+    try {
+      napi.registerWorker(event.tx_worker, worker);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(
+        'Registering worker failed... This might mean atlaspack is getting shut-down before the worker registered',
+        err,
+      );
+      parentPort?.postMessage({type: 'workerError', error: err});
+    }
     parentPort?.postMessage({type: 'workerRegistered'});
   } else if (event.type === 'probeStatus') {
     parentPort.postMessage({
