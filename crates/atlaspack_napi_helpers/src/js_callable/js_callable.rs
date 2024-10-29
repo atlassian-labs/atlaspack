@@ -113,50 +113,49 @@ impl JsCallable {
 
     let threadsafe_function = self.threadsafe_function.clone();
 
-    tokio::spawn(async move {
-      threadsafe_function.call_with_return_value(
-        Box::new(map_params),
-        ThreadsafeFunctionCallMode::NonBlocking,
-        {
-          move |JsValue(value, env)| {
-            if value.is_promise()? {
-              let result: JsObject = value.try_into()?;
-              let then_fn: JsFunction = result.get_named_property("then")?;
+    // tokio::spawn(async move {
+    threadsafe_function.call_with_return_value(
+      Box::new(map_params),
+      ThreadsafeFunctionCallMode::NonBlocking,
+      {
+        move |JsValue(value, env)| {
+          if value.is_promise()? {
+            let result: JsObject = value.try_into()?;
+            let then_fn: JsFunction = result.get_named_property("then")?;
 
-              let then_result_fn =
-                env.create_function_from_closure("JsCallable::then_result_fn", {
-                  let send = send.clone();
-                  move |ctx| {
-                    let return_value = ctx.get::<JsUnknown>(0)?;
-                    let mapped = Ok(map_return(&ctx.env, return_value)?);
-                    send("Result.then()", mapped)?;
-                    ctx.env.get_undefined()
-                  }
-                })?;
+            let then_result_fn =
+              env.create_function_from_closure("JsCallable::then_result_fn", {
+                let send = send.clone();
+                move |ctx| {
+                  let return_value = ctx.get::<JsUnknown>(0)?;
+                  let mapped = Ok(map_return(&ctx.env, return_value)?);
+                  send("Result.then()", mapped)?;
+                  ctx.env.get_undefined()
+                }
+              })?;
 
-              let then_error_fn =
-                env.create_function_from_closure("JsCallable::then_error_fn", {
-                  let send = send.clone();
-                  move |ctx| {
-                    let return_value = ctx.get::<JsUnknown>(0)?;
-                    let err = napi::Error::from(return_value);
-                    send("Result.catch()", Err(err))?;
-                    ctx.env.get_undefined()
-                  }
-                })?;
+            let then_error_fn = env.create_function_from_closure("JsCallable::then_error_fn", {
+              let send = send.clone();
+              move |ctx| {
+                let return_value = ctx.get::<JsUnknown>(0)?;
+                let err = napi::Error::from(return_value);
+                send("Result.catch()", Err(err))?;
+                ctx.env.get_undefined()
+              }
+            })?;
 
-              then_fn.call(Some(&result), &[then_result_fn, then_error_fn])?;
-              return Ok(());
-            }
-
-            match map_return(&env, value) {
-              Ok(result) => send("Sync Result", Ok(result)),
-              Err(err) => send("Sync Throw", Err(err.into())),
-            }
+            then_fn.call(Some(&result), &[then_result_fn, then_error_fn])?;
+            return Ok(());
           }
-        },
-      );
-    });
+
+          match map_return(&env, value) {
+            Ok(result) => send("Sync Result", Ok(result)),
+            Err(err) => send("Sync Throw", Err(err.into())),
+          }
+        }
+      },
+    );
+    // });
 
     match rx.recv().await {
       Some(Ok(result)) => Ok(result),
