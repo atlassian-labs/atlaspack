@@ -2,7 +2,6 @@
 
 # Requires:
 #
-# - Linux
 # - sudo apt install pkgconf libssl-dev
 # - cargo install cargo-tarpaulin
 
