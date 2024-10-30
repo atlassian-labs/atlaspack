@@ -60,7 +60,10 @@ pub enum ModuleFormat {
 }
 
 impl Display for ModuleFormat {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+  fn fmt(
+    &self,
+    f: &mut std::fmt::Formatter<'_>,
+  ) -> std::fmt::Result {
     match self {
       ModuleFormat::CommonJS => write!(f, "commonjs"),
       ModuleFormat::Module => write!(f, "module"),

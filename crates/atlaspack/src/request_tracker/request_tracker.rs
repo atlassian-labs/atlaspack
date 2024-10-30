@@ -94,7 +94,10 @@ impl RequestTracker {
   ///     these will run on the main-thread, therefore it'll be simpler to implement queueing
   ///     without stalls and locks/channels
   ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
-  pub async fn run_request(&mut self, request: impl Request) -> anyhow::Result<RequestResult> {
+  pub async fn run_request(
+    &mut self,
+    request: impl Request,
+  ) -> anyhow::Result<RequestResult> {
     let request_id = request.id();
     let (tx, rx) = std::sync::mpsc::channel();
     let tx2 = tx.clone();
@@ -182,7 +185,10 @@ impl RequestTracker {
   }
 
   /// Before a request is run, a 'pending' [`RequestNode::Incomplete`] entry is added to the graph.
-  fn prepare_request(&mut self, request_id: u64) -> anyhow::Result<bool> {
+  fn prepare_request(
+    &mut self,
+    request_id: u64,
+  ) -> anyhow::Result<bool> {
     let node_index = self
       .request_index
       .entry(request_id)

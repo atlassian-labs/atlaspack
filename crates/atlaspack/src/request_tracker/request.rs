@@ -61,7 +61,10 @@ impl RunRequestContext {
   }
 
   /// Report an event
-  pub async fn report(&self, event: ReporterEvent) {
+  pub async fn report(
+    &self,
+    event: ReporterEvent,
+  ) {
     self
       .plugins()
       .reporter()

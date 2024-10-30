@@ -12,7 +12,10 @@ pub struct PluginCache {
 }
 
 impl PluginCache {
-  pub fn get_or_init_resolvers<F>(&self, f: F) -> anyhow::Result<Vec<Arc<dyn ResolverPlugin>>>
+  pub fn get_or_init_resolvers<F>(
+    &self,
+    f: F,
+  ) -> anyhow::Result<Vec<Arc<dyn ResolverPlugin>>>
   where
     F: FnOnce() -> anyhow::Result<Vec<Arc<dyn ResolverPlugin>>>,
   {
