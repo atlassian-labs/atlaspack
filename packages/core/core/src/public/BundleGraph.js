@@ -355,7 +355,12 @@ export default class BundleGraph<TBundle: IBundle>
           condition.ifTrueDependency,
           condition.ifFalseDependency,
         ].map((dep) => {
-          const resolved = nullthrows(this.#graph.resolveAsyncDependency(dep));
+          const resolved = nullthrows(
+            this.#graph.resolveAsyncDependency(dep),
+            `Failed to resolve ${dep.id} with specifier '${
+              dep.specifier
+            }' from ${String(dep?.sourcePath)}`,
+          );
           if (resolved.type === 'asset') {
             return resolved.value;
           } else {
@@ -416,7 +421,11 @@ export default class BundleGraph<TBundle: IBundle>
           const publicDep = nullthrows(
             assetDeps.find((assetDep) => dep.id === assetDep.id),
           );
-          const resolved = nullthrows(this.resolveAsyncDependency(publicDep));
+          const resolved = this.resolveAsyncDependency(publicDep);
+          if (!resolved) {
+            // If there's no async dependency, don't list it as required
+            return [];
+          }
           invariant(resolved.type === 'bundle_group');
           return this.getBundlesInBundleGroup(resolved.value);
         };

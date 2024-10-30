@@ -481,13 +481,13 @@ function getLoaderRuntime({
       conditionalDependencies,
     )) {
       // This bundle has a conditional dependency, we need to load it as it may not be present
-      let ifTrueBundle = nullthrows(
-        bundleGraph.getReferencedBundle(cond.ifTrueDependency, bundle),
-        'ifTrueBundle was null',
+      let ifTrueBundle = bundleGraph.getReferencedBundle(
+        cond.ifTrueDependency,
+        bundle,
       );
-      let ifFalseBundle = nullthrows(
-        bundleGraph.getReferencedBundle(cond.ifFalseDependency, bundle),
-        'ifFalseBundle was null',
+      let ifFalseBundle = bundleGraph.getReferencedBundle(
+        cond.ifFalseDependency,
+        bundle,
       );
 
       // Load conditional bundles with helper (and a dev mode with additional hints)
@@ -495,9 +495,11 @@ function getLoaderRuntime({
         `require('./helpers/conditional-loader${
           options.mode === 'development' ? '-dev' : ''
         }')('${cond.key}', function (){return ${
-          getLoaderForBundle(bundle, ifTrueBundle) ?? `Promise.resolve()`
+          (ifTrueBundle && getLoaderForBundle(bundle, ifTrueBundle)) ??
+          `Promise.resolve()`
         }}, function (){return ${
-          getLoaderForBundle(bundle, ifFalseBundle) ?? `Promise.resolve()`
+          (ifFalseBundle && getLoaderForBundle(bundle, ifFalseBundle)) ??
+          `Promise.resolve()`
         }})`,
       );
     }
