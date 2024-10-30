@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::future::Future;
 use std::path::PathBuf;
 
@@ -23,18 +23,21 @@ use crate::atlaspack_build::BuildOptions;
 
 #[derive(Clone)]
 pub struct AtlaspackOptions {
-  pub config: Option<String>,
   /// Path to the atlaspack core node_module. This will be used to resolve built-ins or runtime files.
   ///
   /// In the future this may be replaced with embedding those files into the rust binary.
-  pub core_path: PathBuf,
-  pub default_target_options: DefaultTargetOptions,
-  pub entries: Vec<String>,
-  pub env: Option<HashMap<String, String>>,
+  pub core_path: Option<PathBuf>,
+  pub entries: Option<Vec<String>>,
+  pub config: Option<String>,
+  pub default_target_options: Option<DefaultTargetOptions>,
+  pub env: Option<BTreeMap<String, String>>,
   pub fallback_config: Option<String>,
-  pub log_level: LogLevel,
-  pub mode: BuildMode,
+  pub log_level: Option<LogLevel>,
+  pub mode: Option<BuildMode>,
   pub threads: Option<usize>,
+  pub fs: Option<FileSystemRef>,
+  pub package_manager: Option<PackageManagerRef>,
+  pub rpc: Option<RpcFactoryRef>,
 }
 
 pub struct Atlaspack {
@@ -75,6 +78,24 @@ impl Atlaspack {
       rpc,
       runtime,
     })
+  }
+
+  pub fn build(
+    &self,
+    options: BuildOptions,
+  ) -> anyhow::Result<AssetGraph> {
+    self.block_on(atlaspack_build::build(options, self.0.clone()))
+  }
+
+  fn block_on<R, F: Future<Output = anyhow::Result<R>>>(
+    &self,
+    future: F,
+  ) -> anyhow::Result<R> {
+    tokio::runtime::Builder::new_multi_thread()
+      .enable_all()
+      .worker_threads(self.0.threads.unwrap_or_else(|| num_cpus::get()))
+      .build()?
+      .block_on(future)
   }
 
   fn state(&self) -> anyhow::Result<AtlaspackState> {

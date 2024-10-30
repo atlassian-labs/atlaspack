@@ -10,7 +10,9 @@ use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack::rpc::RpcFactoryRef;
 use atlaspack::Atlaspack;
-use atlaspack_core::types::AtlaspackOptions;
+use atlaspack::AtlaspackOptions;
+use atlaspack::BuildOptions;
+use atlaspack_core::types::AtlaspackOptions as CoreAtlaspackOptions;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
 use lmdb_js_lite::writer::DatabaseWriter;
@@ -46,7 +48,7 @@ pub struct AtlaspackNapi {
   pub node_worker_count: u32,
   db: Arc<DatabaseWriter>,
   fs: Option<FileSystemRef>,
-  options: AtlaspackOptions,
+  options: CoreAtlaspackOptions,
   package_manager: Option<PackageManagerRef>,
   rpc: RpcFactoryRef,
   tx_worker: Sender<NodejsWorker>,
@@ -136,13 +138,10 @@ impl AtlaspackNapi {
         let atlaspack = Atlaspack::new(db, fs, options, package_manager, rpc);
         let to_napi_error = |error| napi::Error::from_reason(format!("{:?}", error));
 
-        // match atlaspack {
-        //   Err(error) => deferred.reject(to_napi_error(error)),
-        //   Ok(atlaspack) => match atlaspack.build_asset_graph() {
-        //     Ok(asset_graph) => deferred.resolve(move |env| env.to_js_value(&asset_graph)),
-        //     Err(error) => deferred.reject(to_napi_error(error)),
-        //   },
-        // }
+        match atlaspack.build(BuildOptions {}) {
+          Ok(asset_graph) => deferred.resolve(move |env| env.to_js_value(&asset_graph)),
+          Err(error) => deferred.reject(to_napi_error(error)),
+        }
       }
     });
 
