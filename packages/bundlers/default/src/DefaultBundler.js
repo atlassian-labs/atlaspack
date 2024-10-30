@@ -1,4 +1,5 @@
 // @flow strict-local
+
 import type {
   Asset,
   BundleBehavior,
@@ -316,6 +317,7 @@ function createIdealGraph(
             ) {
               bundleId = nullthrows(manualSharedMap.get(manualSharedBundleKey));
             }
+
             if (
               dependency.priority === 'lazy' ||
               (getFeatureFlag('conditionalBundlingApi') &&
@@ -466,6 +468,7 @@ function createIdealGraph(
             } else {
               bundleId = null;
             }
+
             if (manualSharedObject && bundleId != null) {
               // MSB Step 5:  At this point we've either created or found an existing MSB bundle
               // add the asset if it doesn't already have it and set key
@@ -518,15 +521,17 @@ function createIdealGraph(
     if (!bundle.internalizedAssets) {
       bundle.internalizedAssets = new BitSet(assets.length);
     }
+
     for (let asset of internalizedAssets) {
       bundle.internalizedAssets.add(nullthrows(assetToIndex.get(asset)));
     }
+
     bundle.mainEntryAsset = null;
     bundleGroupBundleIds.delete(nodeId); // manual bundles can now act as shared, non-bundle group, should they be non-bundleRoots as well?
   }
 
   /**
-   *  Step Determine Reachability: Determine reachability for every asset from each bundleRoot.
+   * Step Determine Reachability: Determine reachability for every asset from each bundleRoot.
    * This is later used to determine which bundles to place each asset in. We build up two
    * structures, one traversal each. ReachableRoots to store sync relationships,
    * and bundleRootGraph to store the minimal availability through `parallel` and `async` relationships.
@@ -864,8 +869,8 @@ function createIdealGraph(
           type: asset.type,
           env: firstSourceBundle.env,
           manualSharedBundle: manualSharedObject?.name,
+          sourceBundles: new Set(sourceBundles),
         });
-        bundle.sourceBundles = new Set(sourceBundles);
         bundle.assets.add(asset);
         bundleId = bundleGraph.addNode(bundle);
         manualSharedMap.set(manualSharedBundleKey, bundleId);
@@ -981,8 +986,9 @@ function createIdealGraph(
           target: firstSourceBundle.target,
           type: asset.type,
           env: firstSourceBundle.env,
+          sourceBundles: new Set(sourceBundles),
         });
-        bundle.sourceBundles = new Set(sourceBundles);
+
         let sharedInternalizedAssets = firstSourceBundle.internalizedAssets
           ? firstSourceBundle.internalizedAssets.clone()
           : new BitSet(assets.length);
@@ -1062,8 +1068,8 @@ function createIdealGraph(
             type: firstSourceBundle.type,
             env: firstSourceBundle.env,
             manualSharedBundle: manualSharedObject.name,
+            sourceBundles: manualBundle.sourceBundles,
           });
-          bundle.sourceBundles = manualBundle.sourceBundles;
           bundle.internalizedAssets = manualBundle.internalizedAssets;
           let bundleId = bundleGraph.addNode(bundle);
           manualSharedBundleIds.add(bundleId);
@@ -1114,7 +1120,12 @@ function createIdealGraph(
       bundle.size < config.minBundleSize &&
       !manualSharedBundleIds.has(bundleNodeId)
     ) {
-      removeBundle(bundleGraph, bundleNodeId, assetReference);
+      removeBundle(
+        bundleGraph,
+        bundleNodeId,
+        assetReference,
+        manualSharedBundleIds,
+      );
     }
   }
 
@@ -1207,11 +1218,16 @@ function createIdealGraph(
 
             if (
               incomingNodeCount <= 2 &&
-              //Never fully remove reused bundles
+              // Never fully remove reused bundles
               bundleToRemove.mainEntryAsset == null
             ) {
               // If one bundle group removes a shared bundle, but the other *can* keep it, still remove because that shared bundle is pointless (only one source bundle)
-              removeBundle(bundleGraph, bundleIdToRemove, assetReference);
+              removeBundle(
+                bundleGraph,
+                bundleIdToRemove,
+                assetReference,
+                manualSharedBundleIds,
+              );
               // Stop iterating through bundleToRemove's sourceBundles as the bundle has been removed.
               break;
             } else {
@@ -1245,6 +1261,7 @@ function createIdealGraph(
       );
     }
   }
+
   function deleteBundle(bundleRoot: BundleRoot) {
     bundleGraph.removeNode(nullthrows(bundles.get(bundleRoot.id)));
     bundleRoots.delete(bundleRoot);
@@ -1254,6 +1271,7 @@ function createIdealGraph(
       bundleRootGraph.removeNode(bundleRootId);
     }
   }
+
   function getBundlesForBundleGroup(bundleGroupId) {
     let bundlesInABundleGroup = [];
     bundleGraph.traverse((nodeId) => {
@@ -1308,6 +1326,7 @@ function createIdealGraph(
     bundleGraph: Graph<Bundle | 'root'>,
     bundleId: NodeId,
     assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
+    manualSharedBundleIds: Set<NodeId>,
   ) {
     let bundle = nullthrows(bundleGraph.getNode(bundleId));
     invariant(bundle !== 'root');
@@ -1316,10 +1335,17 @@ function createIdealGraph(
         asset,
         assetReference.get(asset).filter((t) => !t.includes(bundle)),
       );
+
       for (let sourceBundleId of bundle.sourceBundles) {
         let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
+
         invariant(sourceBundle !== 'root');
-        addAssetToBundleRoot(asset, nullthrows(sourceBundle.mainEntryAsset));
+        if (manualSharedBundleIds.has(sourceBundleId)) {
+          sourceBundle.assets.add(asset);
+          continue;
+        } else {
+          addAssetToBundleRoot(asset, nullthrows(sourceBundle.mainEntryAsset));
+        }
       }
     }
 
@@ -1345,6 +1371,7 @@ function createBundle(opts: {|
   needsStableName?: boolean,
   bundleBehavior?: ?BundleBehavior,
   manualSharedBundle?: ?string,
+  sourceBundles?: Set<NodeId>,
 |}): Bundle {
   if (opts.asset == null) {
     return {
@@ -1352,7 +1379,7 @@ function createBundle(opts: {|
       assets: new Set(),
       mainEntryAsset: null,
       size: 0,
-      sourceBundles: new Set(),
+      sourceBundles: opts.sourceBundles || new Set(),
       target: opts.target,
       type: nullthrows(opts.type),
       env: nullthrows(opts.env),
@@ -1368,7 +1395,7 @@ function createBundle(opts: {|
     assets: new Set([asset]),
     mainEntryAsset: asset,
     size: asset.stats.size,
-    sourceBundles: new Set(),
+    sourceBundles: opts.sourceBundles || new Set(),
     target: opts.target,
     type: opts.type ?? asset.type,
     env: opts.env ?? asset.env,

@@ -36,8 +36,10 @@ export default (new Namer({
     }
 
     let mainBundle = nullthrows(
-      bundleGroupBundles.find((b) =>
-        b.getEntryAssets().some((a) => a.id === bundleGroup.entryAssetId),
+      bundleGroupBundles.find(
+        (b) =>
+          b.manualSharedBundle ||
+          b.getEntryAssets().some((a) => a.id === bundleGroup.entryAssetId),
       ),
     );
 
@@ -90,12 +92,15 @@ export default (new Namer({
     // Base split bundle names on the first bundle in their group.
     // e.g. if `index.js` imports `foo.css`, the css bundle should be called
     //      `index.css`.
-    let name = nameFromContent(
-      mainBundle,
-      isEntry,
-      bundleGroup.entryAssetId,
-      bundleGraph.getEntryRoot(bundle.target),
-    );
+    let name = mainBundle.manualSharedBundle
+      ? mainBundle.manualSharedBundle
+      : nameFromContent(
+          mainBundle,
+          isEntry,
+          bundleGroup.entryAssetId,
+          bundleGraph.getEntryRoot(bundle.target),
+        );
+
     if (!bundle.needsStableName) {
       name += '.' + bundle.hashReference;
     }

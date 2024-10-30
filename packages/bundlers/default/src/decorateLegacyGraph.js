@@ -8,7 +8,6 @@ import {
 } from '@atlaspack/graph';
 import type {
   Bundle as LegacyBundle,
-  BundleGroup,
   MutableBundleGraph,
 } from '@atlaspack/types';
 import type {DefaultMap} from '@atlaspack/utils';
@@ -66,20 +65,20 @@ export function decorateLegacyGraph(
     bundleGroupBundleIds,
     manualAssetToBundle,
   } = idealGraph;
-  let entryBundleToBundleGroup: Map<NodeId, BundleGroup> = new Map();
+
   // Step Create Bundles: Create bundle groups, bundles, and shared bundles and add assets to them
   for (let [bundleNodeId, idealBundle] of idealBundleGraph.nodes.entries()) {
     if (!idealBundle || idealBundle === 'root') continue;
     let entryAsset = idealBundle.mainEntryAsset;
-    let bundleGroups = [];
     let bundleGroup;
     let bundle;
 
     if (bundleGroupBundleIds.has(bundleNodeId)) {
       invariant(
         idealBundle.manualSharedBundle == null,
-        'Unstable Manual Shared Bundle feature is processing a manualSharedBundle as a BundleGroup',
+        'Processing a manualSharedBundle as a BundleGroup',
       );
+
       let dependencies = dependencyBundleGraph
         .getNodeIdsConnectedTo(
           dependencyBundleGraph.getNodeIdByContentKey(String(bundleNodeId)),
@@ -90,19 +89,20 @@ export function decorateLegacyGraph(
           invariant(dependency.type === 'dependency');
           return dependency.value;
         });
+
       invariant(
         entryAsset != null,
         'Processing a bundleGroup with no entry asset',
       );
+
       for (let dependency of dependencies) {
         bundleGroup = bundleGraph.createBundleGroup(
           dependency,
           idealBundle.target,
         );
-        bundleGroups.push(bundleGroup);
       }
+
       invariant(bundleGroup);
-      entryBundleToBundleGroup.set(bundleNodeId, bundleGroup);
 
       bundle = nullthrows(
         bundleGraph.createBundle({
@@ -147,6 +147,31 @@ export function decorateLegacyGraph(
           manualSharedBundle: idealBundle.manualSharedBundle,
         }),
       );
+
+      // If a manual bundle is not referenced anywhere (per the idealBundle.sourceBundles.size > 0
+      // check above), then we must add it to the graph ourselves like a bundle group.
+      if (idealBundle.manualSharedBundle) {
+        let dependencies = dependencyBundleGraph
+          .getNodeIdsConnectedTo(
+            dependencyBundleGraph.getNodeIdByContentKey(String(bundleNodeId)),
+            ALL_EDGE_TYPES,
+          )
+          .map((nodeId) => {
+            let dependency = nullthrows(dependencyBundleGraph.getNode(nodeId));
+            invariant(dependency.type === 'dependency');
+            return dependency.value;
+          });
+
+        for (let dependency of dependencies) {
+          bundleGroup = bundleGraph.createBundleGroup(
+            dependency,
+            idealBundle.target,
+          );
+        }
+
+        invariant(bundleGroup);
+        bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+      }
     } else {
       invariant(entryAsset != null);
       bundle = nullthrows(
@@ -166,44 +191,6 @@ export function decorateLegacyGraph(
       bundleGraph.addAssetToBundle(asset, bundle);
     }
   }
-  // Step Internalization: Internalize dependencies for bundles
-  for (let idealBundle of idealBundleGraph.nodes) {
-    if (!idealBundle || idealBundle === 'root') continue;
-    let bundle = nullthrows(idealBundleToLegacyBundle.get(idealBundle));
-    if (idealBundle.internalizedAssets) {
-      idealBundle.internalizedAssets.forEach((internalized) => {
-        let incomingDeps = bundleGraph.getIncomingDependencies(
-          idealGraph.assets[internalized],
-        );
-        for (let incomingDep of incomingDeps) {
-          if (
-            incomingDep.priority === 'lazy' &&
-            incomingDep.specifierType !== 'url' &&
-            bundle.hasDependency(incomingDep)
-          ) {
-            bundleGraph.internalizeAsyncDependency(bundle, incomingDep);
-          }
-        }
-      });
-    }
-  }
-  // Unstable Manual Shared Bundles
-  // NOTE: This only works under the assumption that manual shared bundles would have
-  // always already been loaded before the bundle that requires internalization.
-  for (let manualSharedAsset of manualAssetToBundle.keys()) {
-    let incomingDeps = bundleGraph.getIncomingDependencies(manualSharedAsset);
-    for (let incomingDep of incomingDeps) {
-      if (
-        incomingDep.priority === 'lazy' &&
-        incomingDep.specifierType !== 'url'
-      ) {
-        let bundles = bundleGraph.getBundlesWithDependency(incomingDep);
-        for (let bundle of bundles) {
-          bundleGraph.internalizeAsyncDependency(bundle, incomingDep);
-        }
-      }
-    }
-  }
 
   // Step Add to BundleGroups: Add bundles to their bundle groups
   idealBundleGraph.traverse((nodeId, _, actions) => {
@@ -211,6 +198,7 @@ export function decorateLegacyGraph(
     if (node === 'root') {
       return;
     }
+
     actions.skipChildren();
 
     let outboundNodeIds = idealBundleGraph.getNodeIdsConnectedFrom(nodeId);
@@ -238,13 +226,35 @@ export function decorateLegacyGraph(
     }
   }
 
+  // Step Internalization: Internalize dependencies for bundles
+  for (let idealBundle of idealBundleGraph.nodes) {
+    if (!idealBundle || idealBundle === 'root') continue;
+    let bundle = nullthrows(idealBundleToLegacyBundle.get(idealBundle));
+    if (idealBundle.internalizedAssets) {
+      idealBundle.internalizedAssets.forEach((internalized) => {
+        let incomingDeps = bundleGraph.getIncomingDependencies(
+          idealGraph.assets[internalized],
+        );
+        for (let incomingDep of incomingDeps) {
+          if (
+            incomingDep.priority === 'lazy' &&
+            incomingDep.specifierType !== 'url' &&
+            bundle.hasDependency(incomingDep)
+          ) {
+            bundleGraph.internalizeAsyncDependency(bundle, incomingDep);
+          }
+        }
+      });
+    }
+  }
+
   for (let {from, to} of idealBundleGraph.getAllEdges()) {
     let sourceBundle = nullthrows(idealBundleGraph.getNode(from));
     if (sourceBundle === 'root') {
       continue;
     }
-    invariant(sourceBundle !== 'root');
 
+    invariant(sourceBundle !== 'root');
     let legacySourceBundle = nullthrows(
       idealBundleToLegacyBundle.get(sourceBundle),
     );
@@ -253,10 +263,11 @@ export function decorateLegacyGraph(
     if (targetBundle === 'root') {
       continue;
     }
-    invariant(targetBundle !== 'root');
+
     let legacyTargetBundle = nullthrows(
       idealBundleToLegacyBundle.get(targetBundle),
     );
+
     bundleGraph.createBundleReference(legacySourceBundle, legacyTargetBundle);
   }
 }
