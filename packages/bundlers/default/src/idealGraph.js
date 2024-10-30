@@ -310,14 +310,14 @@ export function createIdealGraph(
                 invariant(firstBundleGroup !== 'root');
                 bundle = createBundle({
                   asset: childAsset,
-                  target: firstBundleGroup.target,
+                  bundleBehavior:
+                    dependency.bundleBehavior ?? childAsset.bundleBehavior,
                   needsStableName:
                     dependency.bundleBehavior === 'inline' ||
                     childAsset.bundleBehavior === 'inline'
                       ? false
                       : dependency.isEntry || dependency.needsStableName,
-                  bundleBehavior:
-                    dependency.bundleBehavior ?? childAsset.bundleBehavior,
+                  target: firstBundleGroup.target,
                 });
                 bundleId = bundleGraph.addNode(bundle);
                 bundles.set(childAsset.id, bundleId);
@@ -840,13 +840,13 @@ export function createIdealGraph(
         invariant(firstSourceBundle !== 'root');
 
         bundle = createBundle({
-          uniqueKey: manualSharedBundleKey,
-          target: firstSourceBundle.target,
-          type: asset.type,
           env: firstSourceBundle.env,
           manualSharedBundle: manualSharedObject?.name,
+          sourceBundles: new Set(sourceBundles),
+          target: firstSourceBundle.target,
+          type: asset.type,
+          uniqueKey: manualSharedBundleKey,
         });
-        bundle.sourceBundles = new Set(sourceBundles);
         bundle.assets.add(asset);
         bundleId = bundleGraph.addNode(bundle);
         manualSharedMap.set(manualSharedBundleKey, bundleId);
@@ -959,11 +959,11 @@ export function createIdealGraph(
         );
         invariant(firstSourceBundle !== 'root');
         bundle = createBundle({
+          env: firstSourceBundle.env,
+          sourceBundles: new Set(sourceBundles),
           target: firstSourceBundle.target,
           type: asset.type,
-          env: firstSourceBundle.env,
         });
-        bundle.sourceBundles = new Set(sourceBundles);
         let sharedInternalizedAssets = firstSourceBundle.internalizedAssets
           ? firstSourceBundle.internalizedAssets.clone()
           : new BitSet(assets.length);
@@ -1038,13 +1038,13 @@ export function createIdealGraph(
 
         for (let i = 1; i < [...remainderMap.keys()].length; i++) {
           let bundle = createBundle({
-            uniqueKey: manualSharedObject.name + firstSourceBundle.type + i,
-            target: firstSourceBundle.target,
-            type: firstSourceBundle.type,
             env: firstSourceBundle.env,
             manualSharedBundle: manualSharedObject.name,
+            sourceBundles: manualBundle.sourceBundles,
+            target: firstSourceBundle.target,
+            type: firstSourceBundle.type,
+            uniqueKey: manualSharedObject.name + firstSourceBundle.type + i,
           });
-          bundle.sourceBundles = manualBundle.sourceBundles;
           bundle.internalizedAssets = manualBundle.internalizedAssets;
           let bundleId = bundleGraph.addNode(bundle);
           manualSharedBundleIds.add(bundleId);
@@ -1318,43 +1318,44 @@ export function createIdealGraph(
 }
 
 function createBundle(opts: {|
-  uniqueKey?: string,
-  target: Target,
   asset?: Asset,
-  env?: Environment,
-  type?: string,
-  needsStableName?: boolean,
   bundleBehavior?: ?BundleBehavior,
+  env?: Environment,
   manualSharedBundle?: ?string,
+  needsStableName?: boolean,
+  sourceBundles?: Set<NodeId>,
+  target: Target,
+  type?: string,
+  uniqueKey?: string,
 |}): Bundle {
   if (opts.asset == null) {
     return {
-      uniqueKey: opts.uniqueKey,
       assets: new Set(),
+      bundleBehavior: opts.bundleBehavior,
+      env: nullthrows(opts.env),
       mainEntryAsset: null,
+      manualSharedBundle: opts.manualSharedBundle,
+      needsStableName: Boolean(opts.needsStableName),
       size: 0,
-      sourceBundles: new Set(),
+      sourceBundles: opts.sourceBundles ?? new Set(),
       target: opts.target,
       type: nullthrows(opts.type),
-      env: nullthrows(opts.env),
-      needsStableName: Boolean(opts.needsStableName),
-      bundleBehavior: opts.bundleBehavior,
-      manualSharedBundle: opts.manualSharedBundle,
+      uniqueKey: opts.uniqueKey,
     };
   }
 
   let asset = nullthrows(opts.asset);
   return {
-    uniqueKey: opts.uniqueKey,
     assets: new Set([asset]),
+    bundleBehavior: opts.bundleBehavior ?? asset.bundleBehavior,
+    env: opts.env ?? asset.env,
     mainEntryAsset: asset,
+    manualSharedBundle: opts.manualSharedBundle,
+    needsStableName: Boolean(opts.needsStableName),
     size: asset.stats.size,
-    sourceBundles: new Set(),
+    sourceBundles: opts.sourceBundles ?? new Set(),
     target: opts.target,
     type: opts.type ?? asset.type,
-    env: opts.env ?? asset.env,
-    needsStableName: Boolean(opts.needsStableName),
-    bundleBehavior: opts.bundleBehavior ?? asset.bundleBehavior,
-    manualSharedBundle: opts.manualSharedBundle,
+    uniqueKey: opts.uniqueKey,
   };
 }
