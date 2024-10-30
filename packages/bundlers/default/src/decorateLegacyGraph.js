@@ -28,14 +28,13 @@ export function decorateLegacyGraph(
   for (let [bundleNodeId, idealBundle] of idealBundleGraph.nodes.entries()) {
     if (!idealBundle || idealBundle === 'root') continue;
     let entryAsset = idealBundle.mainEntryAsset;
-    let bundleGroups = [];
     let bundleGroup;
     let bundle;
 
     if (bundleGroupBundleIds.has(bundleNodeId)) {
       invariant(
         idealBundle.manualSharedBundle == null,
-        'Unstable Manual Shared Bundle feature is processing a manualSharedBundle as a BundleGroup',
+        'Manual Shared Bundle feature is processing a manualSharedBundle as a BundleGroup',
       );
       let dependencies = dependencyBundleGraph
         .getNodeIdsConnectedTo(
@@ -56,7 +55,6 @@ export function decorateLegacyGraph(
           dependency,
           idealBundle.target,
         );
-        bundleGroups.push(bundleGroup);
       }
       invariant(bundleGroup);
       entryBundleToBundleGroup.set(bundleNodeId, bundleGroup);
