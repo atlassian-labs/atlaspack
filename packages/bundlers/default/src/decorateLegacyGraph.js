@@ -1,64 +1,15 @@
 // @flow strict-local
 
-import {
-  ALL_EDGE_TYPES,
-  type BitSet,
-  type ContentGraph,
-  type Graph,
-  type NodeId,
-} from '@atlaspack/graph';
+import {ALL_EDGE_TYPES, type NodeId} from '@atlaspack/graph';
 import type {
-  Asset,
   Bundle as LegacyBundle,
-  BundleBehavior,
   BundleGroup,
-  Dependency,
-  Environment,
   MutableBundleGraph,
-  Target,
 } from '@atlaspack/types';
-import type {DefaultMap} from '@atlaspack/utils';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
 
-export type Bundle = {|
-  uniqueKey: ?string,
-  assets: Set<Asset>,
-  internalizedAssets?: BitSet,
-  bundleBehavior?: ?BundleBehavior,
-  needsStableName: boolean,
-  mainEntryAsset: ?Asset,
-  size: number,
-  sourceBundles: Set<NodeId>,
-  target: Target,
-  env: Environment,
-  type: string,
-  manualSharedBundle: ?string, // for naming purposes
-|};
-
-export type DependencyBundleGraph = ContentGraph<
-  | {|
-      value: Bundle,
-      type: 'bundle',
-    |}
-  | {|
-      value: Dependency,
-      type: 'dependency',
-    |},
-  number,
->;
-
-// IdealGraph is the structure we will pass to decorate,
-// which mutates the assetGraph into the bundleGraph we would
-// expect from default bundler
-export type IdealGraph = {|
-  assets: Array<Asset>,
-  dependencyBundleGraph: DependencyBundleGraph,
-  bundleGraph: Graph<Bundle | 'root'>,
-  bundleGroupBundleIds: Set<NodeId>,
-  assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
-  manualAssetToBundle: Map<Asset, NodeId>,
-|};
+import type {Bundle, IdealGraph} from './idealGraph';
 
 export function decorateLegacyGraph(
   idealGraph: IdealGraph,
