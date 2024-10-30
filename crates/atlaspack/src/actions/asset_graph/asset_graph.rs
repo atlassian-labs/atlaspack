@@ -3,17 +3,14 @@ use std::sync::Arc;
 use super::super::entry::EntryAction;
 use super::super::ActionQueue;
 use super::super::ActionType;
-use crate::compilation::Compilation;
+use super::super::Compilation;
+use crate::actions::Action;
 
-#[derive(Debug)]
+#[derive(Hash, Debug)]
 pub struct AssetGraphAction {}
 
-impl AssetGraphAction {
-  pub fn new() -> Self {
-    Self {}
-  }
-
-  pub async fn run(
+impl Action for AssetGraphAction {
+  async fn run(
     self,
     q: ActionQueue,
     Compilation { entries, .. }: &Compilation,

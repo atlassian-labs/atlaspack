@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_rc_config_loader::AtlaspackRcConfigLoader;
@@ -7,14 +10,23 @@ use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::PluginLogger;
 use atlaspack_core::plugin::PluginOptions;
+use atlaspack_core::types::BuildMode;
+use atlaspack_core::types::DefaultTargetOptions;
+use atlaspack_core::types::LogLevel;
+use atlaspack_filesystem::FileSystemRef;
+use atlaspack_package_manager::PackageManagerRef;
+use atlaspack_plugin_rpc::RpcFactoryRef;
+use petgraph::graph::NodeIndex;
 use tokio::sync::RwLock;
 
 use crate::actions::asset_graph::AssetGraphAction;
+use crate::actions::Action;
 use crate::actions::ActionQueue;
 use crate::actions::ActionType;
-use crate::compilation::Compilation;
-use crate::compilation::State;
+use crate::actions::Compilation;
 use crate::plugins::config_plugins::ConfigPlugins;
+use crate::state::EnvMap;
+use crate::state::State;
 use crate::AtlaspackOptions;
 
 pub struct BuildOptions {}
@@ -74,8 +86,6 @@ pub async fn build(
     },
   )?);
 
-  let asset_graph = Arc::new(RwLock::new(AssetGraph::new()));
-
   let c = Arc::new(Compilation {
     options: options.clone(),
     fs: fs.clone(),
@@ -89,17 +99,19 @@ pub async fn build(
     env: env.clone(),
     entries: entries.clone(),
     default_target_options,
-    asset_graph,
+    asset_graph: Arc::new(RwLock::new(AssetGraph::new())),
+    asset_request_to_asset: Default::default(),
   });
 
-  let mut jobs = tokio::task::JoinSet::<_>::new();
+  let completed = HashSet::<u64>::new();
+  let mut jobs = tokio::task::JoinSet::<anyhow::Result<u64>>::new();
   let (q, mut rx) = ActionQueue::new();
 
-  q.next(ActionType::AssetGraph(AssetGraphAction::new()))?;
+  q.next(ActionType::AssetGraph(AssetGraphAction {}))?;
 
   loop {
     // Try to get the next item from the queue
-    let Ok(action) = rx.try_recv() else {
+    let Ok((action, id)) = rx.try_recv() else {
       // If no jobs are running then exit
       if jobs.is_empty() {
         break;
@@ -116,17 +128,16 @@ pub async fn build(
     // dbg!(&action);
     // println!("");
 
+    if completed.contains(&id) {
+      continue;
+    }
+
     jobs.spawn({
       let q = q.clone();
       let c = c.clone();
       async move {
-        match action {
-          ActionType::Entry(a) => a.run(q, &c).await,
-          ActionType::AssetGraph(a) => a.run(q, &c).await,
-          ActionType::Target(a) => a.run(q, &c).await,
-          ActionType::Path(a) => a.run(q, &c).await,
-          ActionType::Asset(a) => a.run(q, &c).await,
-        }
+        action.run(q, &c).await?;
+        Ok(id)
       }
     });
   }

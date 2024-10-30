@@ -28,6 +28,7 @@ use pathdiff::diff_paths;
 
 use super::super::entry::Entry;
 use super::super::ActionQueue;
+use super::super::Compilation;
 use super::package_json::BrowserField;
 use super::package_json::BrowsersList;
 use super::package_json::BuiltInTargetDescriptor;
@@ -37,9 +38,9 @@ use super::package_json::SourceField;
 use super::package_json::SourceMapField;
 use super::package_json::TargetDescriptor;
 use crate::actions::path::PathAction;
+use crate::actions::Action;
 use crate::actions::ActionType;
-use crate::compilation::Compilation;
-use crate::compilation::EnvMap;
+use crate::state::EnvMap;
 
 /// Infers how and where source code is outputted
 ///
@@ -50,8 +51,8 @@ pub struct TargetAction {
   pub entry: Entry,
 }
 
-impl TargetAction {
-  pub async fn run(
+impl Action for TargetAction {
+  async fn run(
     self,
     q: ActionQueue,
 
@@ -80,17 +81,15 @@ impl TargetAction {
 
       let dependency = Dependency::entry(entry.to_str().unwrap().to_string(), target);
 
-      let _dep_node = asset_graph
+      let node_index = asset_graph
         .write()
         .await
         .add_entry_dependency(dependency.clone());
 
-      // self
-      //   .request_id_to_dep_node_index
-      //   .insert(request.id(), dep_node);
-
       q.next(ActionType::Path(PathAction {
         dependency: Arc::new(dependency),
+        node_index,
+        target_id: self.id(),
       }))?;
     }
 

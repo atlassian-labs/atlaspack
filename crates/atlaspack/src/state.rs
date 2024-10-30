@@ -20,22 +20,6 @@ use crate::AtlaspackOptions;
 
 pub type EnvMap = BTreeMap<String, String>;
 
-pub struct Compilation {
-  pub options: Arc<AtlaspackOptions>,
-  pub fs: FileSystemRef,
-  pub package_manager: PackageManagerRef,
-  pub project_root: PathBuf,
-  pub log_level: LogLevel,
-  pub mode: BuildMode,
-  pub rpc: RpcFactoryRef,
-  pub config_loader: Arc<ConfigLoader>,
-  pub plugins: Arc<ConfigPlugins>,
-  pub env: EnvMap,
-  pub entries: Vec<String>,
-  pub default_target_options: DefaultTargetOptions,
-  pub asset_graph: Arc<RwLock<AssetGraph>>,
-}
-
 pub struct State {
   pub fs: FileSystemRef,
   pub package_manager: PackageManagerRef,

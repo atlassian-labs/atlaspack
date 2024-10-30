@@ -4,6 +4,8 @@ use std::process::Termination;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use atlaspack_core::asset_graph::DependencyNode;
+use atlaspack_core::asset_graph::DependencyState;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
@@ -13,11 +15,17 @@ use atlaspack_core::plugin::ResolvedResolution;
 use atlaspack_core::plugin::ResolvingEvent;
 use atlaspack_core::types::Dependency;
 use atlaspack_resolver::parse_scheme;
+use petgraph::graph::DiGraph;
+use petgraph::graph::NodeIndex;
 
 use super::super::ActionQueue;
 use super::super::ActionType;
+use super::super::Compilation;
 use super::super::TargetAction;
-use crate::compilation::Compilation;
+use crate::actions::asset::AssetAction;
+use crate::actions::link::LinkAction;
+use crate::actions::Action;
+use crate::plugins::config_plugins::ConfigPlugins;
 use crate::plugins::Plugins;
 use crate::request_tracker::Request;
 use crate::request_tracker::ResultAndInvalidations;
@@ -27,28 +35,77 @@ use crate::request_tracker::RunRequestError;
 #[derive(Hash, Debug)]
 pub struct PathAction {
   pub dependency: Arc<Dependency>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum PathRequestOutput {
-  Excluded,
-  Resolved {
-    can_defer: bool,
-    path: PathBuf,
-    code: Option<String>,
-    pipeline: Option<String>,
-    query: Option<String>,
-    side_effects: bool,
-  },
+  pub node_index: NodeIndex,
+  pub target_id: u64,
 }
 
 // TODO tracing, dev deps
-impl PathAction {
-  pub async fn run(
+impl Action for PathAction {
+  async fn run(
     self,
-    _q: ActionQueue,
-    Compilation { plugins, .. }: &Compilation,
+    q: ActionQueue,
+    Compilation {
+      asset_graph,
+      plugins,
+      project_root,
+      ..
+    }: &Compilation,
   ) -> anyhow::Result<()> {
+    let result = self.exec(plugins).await?;
+
+    let mut asset_graph = asset_graph.write().await;
+
+    let index = asset_graph
+      .dependency_index(self.node_index.into())
+      .unwrap();
+
+    let DependencyNode {
+      dependency,
+      requested_symbols,
+      state,
+    } = &mut asset_graph.dependencies[index];
+
+    if let PathRequestOutput::Excluded = result {
+      *state = DependencyState::Excluded;
+      return Ok(());
+    };
+
+    let PathRequestOutput::Resolved {
+      path,
+      code,
+      pipeline,
+      side_effects,
+      query,
+      can_defer,
+    } = result
+    else {
+      anyhow::bail!("Probably should have used a match")
+    };
+
+    if !side_effects && can_defer && requested_symbols.is_empty() && !dependency.symbols.is_none() {
+      *state = DependencyState::Deferred;
+      return Ok(());
+    }
+
+    *state = DependencyState::Resolved;
+
+    q.next(ActionType::Link(LinkAction {
+      code: code.clone(),
+      env: dependency.env.clone(),
+      file_path: path,
+      project_root: project_root.clone(),
+      pipeline: pipeline.clone(),
+      query,
+      side_effects,
+    }))
+  }
+}
+
+impl PathAction {
+  async fn exec(
+    &self,
+    plugins: &ConfigPlugins,
+  ) -> anyhow::Result<PathRequestOutput> {
     plugins
       .reporter()
       .report(&ReporterEvent::BuildProgress(
@@ -96,13 +153,7 @@ impl PathAction {
 
       match resolved.resolution {
         Resolution::Unresolved => continue,
-        Resolution::Excluded => {
-          todo!()
-          // return Ok(ResultAndInvalidations {
-          //   invalidations: Vec::new(),
-          //   result: RequestResult::Path(PathRequestOutput::Excluded),
-          // })
-        }
+        Resolution::Excluded => return Ok(PathRequestOutput::Excluded),
         Resolution::Resolved(ResolvedResolution {
           can_defer,
           code,
@@ -124,7 +175,6 @@ impl PathAction {
           // TODO resolution.diagnostics
           // TODO Set dependency meta and priority
 
-          todo!()
           // return Ok(ResultAndInvalidations {
           //   invalidations,
           //   result: RequestResult::Path(PathRequestOutput::Resolved {
@@ -138,16 +188,27 @@ impl PathAction {
           //     side_effects,
           //   }),
           // });
+          return Ok(PathRequestOutput::Resolved {
+            can_defer,
+            code,
+            path: file_path,
+            pipeline: pipeline
+              .or(parsed_pipeline)
+              .or(self.dependency.pipeline.clone()),
+            query,
+            side_effects,
+          });
         }
       };
     }
 
     if self.dependency.is_optional {
-      todo!()
+      // todo!()
       // return Ok(ResultAndInvalidations {
       //   invalidations,
       //   result: RequestResult::Path(PathRequestOutput::Excluded),
       // });
+      return Ok(PathRequestOutput::Excluded);
     }
 
     let resolve_from = self
@@ -168,4 +229,17 @@ impl PathAction {
       )),
     }
   }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PathRequestOutput {
+  Excluded,
+  Resolved {
+    can_defer: bool,
+    path: PathBuf,
+    code: Option<String>,
+    pipeline: Option<String>,
+    query: Option<String>,
+    side_effects: bool,
+  },
 }

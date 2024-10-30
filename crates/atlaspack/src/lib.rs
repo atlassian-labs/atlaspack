@@ -8,10 +8,10 @@ pub(crate) mod request_tracker;
 
 mod actions;
 mod atlaspack_build;
-mod compilation;
 mod plugins;
 mod project_root;
 mod requests;
+mod state;
 
 #[cfg(test)]
 mod testing;

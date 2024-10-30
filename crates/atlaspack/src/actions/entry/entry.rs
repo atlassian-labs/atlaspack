@@ -3,8 +3,9 @@ use std::sync::Arc;
 
 use super::super::ActionQueue;
 use super::super::ActionType;
+use super::super::Compilation;
 use super::super::TargetAction;
-use crate::compilation::Compilation;
+use crate::actions::Action;
 
 #[derive(Clone, Debug, Default, Hash, PartialEq)]
 pub struct Entry {
@@ -12,13 +13,13 @@ pub struct Entry {
   pub target: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Hash, Debug)]
 pub struct EntryAction {
   pub entry: String,
 }
 
-impl EntryAction {
-  pub async fn run(
+impl Action for EntryAction {
+  async fn run(
     self,
     q: ActionQueue,
     Compilation {
