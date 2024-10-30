@@ -196,7 +196,7 @@ pub fn match_import_cond(node: &ast::Expr, ignore_mark: Mark) -> Option<(JsWord,
       Callee::Expr(expr) => match &**expr {
         Expr::Ident(ident) => {
           if ident.sym == js_word!("importCond")
-            && !is_marked(ident.span, ignore_mark)
+            && !is_marked(ident.ctxt, ignore_mark)
             && call.args.len() == 2
           {
             let if_true = match_str(&call.args[0].expr).map(|(name, _)| name);

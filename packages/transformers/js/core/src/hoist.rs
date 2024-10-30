@@ -991,7 +991,7 @@ impl<'a> Fold for Hoist<'a> {
             kind: ImportKind::ConditionalImport,
           });
 
-          return Expr::Ident(Ident::new(name, call.span));
+          return Expr::Ident(Ident::new_no_ctxt(name, call.span));
         }
       }
       Expr::This(this) => {

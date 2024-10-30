@@ -115,9 +115,7 @@ impl RequireMatcher {
   fn test(&self, unresolved_mark: Mark, ident: &Ident) -> bool {
     match self {
       RequireMatcher::Id(id) => ident.to_id() == *id,
-      RequireMatcher::Global(atom) => {
-        ident.span.ctxt.outer() == unresolved_mark && ident.sym == *atom
-      }
+      RequireMatcher::Global(atom) => ident.ctxt.outer() == unresolved_mark && ident.sym == *atom,
       RequireMatcher::Keyword(atom) => ident.sym == *atom,
     }
   }

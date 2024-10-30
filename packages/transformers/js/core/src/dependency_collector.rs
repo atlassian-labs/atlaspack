@@ -11,7 +11,6 @@ use path_slash::PathBufExt;
 use serde::Deserialize;
 use serde::Serialize;
 use swc_core::common::sync::Lrc;
-use swc_core::common::Mark;
 use swc_core::common::SourceMap;
 use swc_core::common::Span;
 use swc_core::common::Spanned;
@@ -1099,7 +1098,7 @@ impl<'a> Fold for DependencyCollector<'a> {
                     init: Some(Box::new(ast::Expr::Member(MemberExpr {
                       span: DUMMY_SP,
                       obj: call.into(),
-                      prop: MemberProp::Ident(ast::Ident::new("default".into(), DUMMY_SP)),
+                      prop: MemberProp::Ident(IdentName::new("default".into(), DUMMY_SP)),
                     }))),
                     definite: node.definite,
                   }
