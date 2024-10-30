@@ -1,5 +1,6 @@
 use std::fmt::Debug;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -26,7 +27,10 @@ pub trait Plugins {
   #[allow(unused)]
   fn bundler(&self) -> Result<Box<dyn BundlerPlugin>, anyhow::Error>;
   #[allow(unused)]
-  fn compressors(&self, path: &Path) -> Result<Vec<Box<dyn CompressorPlugin>>, anyhow::Error>;
+  fn compressors(
+    &self,
+    path: &Path,
+  ) -> Result<Vec<Box<dyn CompressorPlugin>>, anyhow::Error>;
   fn named_pipelines(&self) -> Vec<String>;
   #[allow(unused)]
   fn namers(&self) -> Result<Vec<Box<dyn NamerPlugin>>, anyhow::Error>;
@@ -37,7 +41,10 @@ pub trait Plugins {
     pipeline: Option<String>,
   ) -> Result<Vec<Box<dyn OptimizerPlugin>>, anyhow::Error>;
   #[allow(unused)]
-  fn packager(&self, path: &Path) -> Result<Box<dyn PackagerPlugin>, anyhow::Error>;
+  fn packager(
+    &self,
+    path: &Path,
+  ) -> Result<Box<dyn PackagerPlugin>, anyhow::Error>;
   fn reporter(&self) -> Arc<dyn ReporterPlugin>;
   fn resolvers(&self) -> Result<Vec<Arc<dyn ResolverPlugin>>, anyhow::Error>;
   #[allow(unused)]
@@ -48,7 +55,10 @@ pub trait Plugins {
     pipeline: Option<String>,
   ) -> Result<TransformerPipeline, anyhow::Error>;
   #[allow(unused)]
-  fn validators(&self, _path: &Path) -> Result<Vec<Box<dyn ValidatorPlugin>>, anyhow::Error>;
+  fn validators(
+    &self,
+    _path: &Path,
+  ) -> Result<Vec<Box<dyn ValidatorPlugin>>, anyhow::Error>;
 }
 
 #[derive(Default)]
@@ -81,7 +91,10 @@ impl TransformerPipeline {
 }
 
 impl Debug for TransformerPipeline {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+  fn fmt(
+    &self,
+    f: &mut std::fmt::Formatter<'_>,
+  ) -> std::fmt::Result {
     f.debug_struct("TransformerPipeline")
       .field("transformers", &self.transformers)
       .finish()

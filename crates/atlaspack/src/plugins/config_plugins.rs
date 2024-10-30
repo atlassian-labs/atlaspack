@@ -72,11 +72,20 @@ impl ConfigPlugins {
     })
   }
 
-  fn missing_plugin(&self, path: &Path, phase: &str) -> anyhow::Error {
+  fn missing_plugin(
+    &self,
+    path: &Path,
+    phase: &str,
+  ) -> anyhow::Error {
     diagnostic_error!("No {phase} found for path {}", path.display())
   }
 
-  fn missing_pipeline_plugin(&self, path: &Path, phase: &str, pipeline: &str) -> anyhow::Error {
+  fn missing_pipeline_plugin(
+    &self,
+    path: &Path,
+    phase: &str,
+    pipeline: &str,
+  ) -> anyhow::Error {
     diagnostic_error!(
       "No {phase} found for path {} with pipeline {pipeline}",
       path.display(),
@@ -93,7 +102,10 @@ impl Plugins for ConfigPlugins {
   }
 
   #[allow(unused)]
-  fn compressors(&self, path: &Path) -> Result<Vec<Box<dyn CompressorPlugin>>, anyhow::Error> {
+  fn compressors(
+    &self,
+    path: &Path,
+  ) -> Result<Vec<Box<dyn CompressorPlugin>>, anyhow::Error> {
     let mut compressors: Vec<Box<dyn CompressorPlugin>> = Vec::new();
 
     for compressor in self.config.compressors.get(path).iter() {
@@ -142,7 +154,10 @@ impl Plugins for ConfigPlugins {
   }
 
   #[allow(unused)]
-  fn packager(&self, path: &Path) -> Result<Box<dyn PackagerPlugin>, anyhow::Error> {
+  fn packager(
+    &self,
+    path: &Path,
+  ) -> Result<Box<dyn PackagerPlugin>, anyhow::Error> {
     let packager = self.config.packagers.get(path);
 
     let Some(packager) = packager else {
@@ -255,16 +270,19 @@ impl Plugins for ConfigPlugins {
   }
 
   #[allow(unused)]
-  fn validators(&self, _path: &Path) -> Result<Vec<Box<dyn ValidatorPlugin>>, anyhow::Error> {
+  fn validators(
+    &self,
+    _path: &Path,
+  ) -> Result<Vec<Box<dyn ValidatorPlugin>>, anyhow::Error> {
     todo!()
   }
 }
 
 #[cfg(test)]
 mod tests {
-  use crate::test_utils::{config_plugins, make_test_plugin_context};
-
   use super::*;
+  use crate::testing::config_plugins;
+  use crate::testing::make_test_plugin_context;
 
   #[test]
   fn returns_bundler() {

@@ -5,8 +5,10 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 
 use super::RequestResult;
-
-use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
+use crate::request_tracker::Request;
+use crate::request_tracker::ResultAndInvalidations;
+use crate::request_tracker::RunRequestContext;
+use crate::request_tracker::RunRequestError;
 
 /// A resolved entry file for the build
 #[derive(Clone, Debug, Default, Hash, PartialEq)]
@@ -62,9 +64,9 @@ mod tests {
 
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
-  use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
-
   use super::*;
+  use crate::testing::request_tracker;
+  use crate::testing::RequestTrackerTestOptions;
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_entry_is_not_found() {

@@ -1,2 +1,8 @@
 edition = "2021"
 tab_spaces = 2
+imports_granularity = "Item"
+indent_style = "Block"
+hard_tabs = false
+unstable_features = false
+fn_params_layout = "Vertical"
+group_imports = "StdExternalCrate"

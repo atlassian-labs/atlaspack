@@ -1,23 +1,35 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::mpsc::channel;
+use std::sync::mpsc::Receiver;
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
+use atlaspack_core::asset_graph::AssetGraph;
+use atlaspack_core::asset_graph::DependencyNode;
+use atlaspack_core::asset_graph::DependencyState;
+use atlaspack_core::types::Asset;
+use atlaspack_core::types::AssetWithDependencies;
+use atlaspack_core::types::Dependency;
 use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 
-use atlaspack_core::asset_graph::{AssetGraph, DependencyNode, DependencyState};
-use atlaspack_core::types::{Asset, AssetWithDependencies, Dependency};
-
-use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
-
-use super::asset_request::{AssetRequest, AssetRequestOutput};
-use super::entry_request::{EntryRequest, EntryRequestOutput};
-use super::path_request::{PathRequest, PathRequestOutput};
-use super::target_request::{TargetRequest, TargetRequestOutput};
+use super::asset_request::AssetRequest;
+use super::asset_request::AssetRequestOutput;
+use super::entry_request::EntryRequest;
+use super::entry_request::EntryRequestOutput;
+use super::path_request::PathRequest;
+use super::path_request::PathRequestOutput;
+use super::target_request::TargetRequest;
+use super::target_request::TargetRequestOutput;
 use super::RequestResult;
+use crate::request_tracker::Request;
+use crate::request_tracker::ResultAndInvalidations;
+use crate::request_tracker::RunRequestContext;
+use crate::request_tracker::RunRequestError;
 
 type ResultSender = Sender<Result<(RequestResult, u64), anyhow::Error>>;
 type ResultReceiver = Receiver<Result<(RequestResult, u64), anyhow::Error>>;
@@ -136,7 +148,11 @@ impl AssetGraphBuilder {
     })
   }
 
-  fn handle_path_result(&mut self, result: PathRequestOutput, request_id: u64) {
+  fn handle_path_result(
+    &mut self,
+    result: PathRequestOutput,
+    request_id: u64,
+  ) {
     let node = *self
       .request_id_to_dep_node_index
       .get(&request_id)
@@ -209,7 +225,10 @@ impl AssetGraphBuilder {
     }
   }
 
-  fn handle_entry_result(&mut self, result: EntryRequestOutput) {
+  fn handle_entry_result(
+    &mut self,
+    result: EntryRequestOutput,
+  ) {
     let EntryRequestOutput { entries } = result;
     for entry in entries {
       let target_request = TargetRequest {
@@ -226,7 +245,11 @@ impl AssetGraphBuilder {
     }
   }
 
-  fn handle_asset_result(&mut self, result: AssetRequestOutput, request_id: u64) {
+  fn handle_asset_result(
+    &mut self,
+    result: AssetRequestOutput,
+    request_id: u64,
+  ) {
     let AssetRequestOutput {
       asset,
       discovered_assets,
@@ -393,7 +416,10 @@ impl AssetGraphBuilder {
     );
   }
 
-  fn handle_target_request_result(&mut self, result: TargetRequestOutput) {
+  fn handle_target_request_result(
+    &mut self,
+    result: TargetRequestOutput,
+  ) {
     let TargetRequestOutput { entry, targets } = result;
     for target in targets {
       let entry =
@@ -488,15 +514,19 @@ fn get_direct_discovered_assets<'a>(
 
 #[cfg(test)]
 mod tests {
-  use std::path::{Path, PathBuf};
+  use std::path::Path;
+  use std::path::PathBuf;
   use std::sync::Arc;
 
-  use atlaspack_core::types::{AtlaspackOptions, Code};
+  use atlaspack_core::types::AtlaspackOptions;
+  use atlaspack_core::types::Code;
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
 
-  use crate::requests::{AssetGraphRequest, RequestResult};
-  use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
+  use crate::requests::AssetGraphRequest;
+  use crate::requests::RequestResult;
+  use crate::testing::request_tracker;
+  use crate::testing::RequestTrackerTestOptions;
 
   #[tokio::test(flavor = "multi_thread")]
   async fn test_asset_graph_request_with_no_entries() {
@@ -680,7 +710,10 @@ mod tests {
     );
   }
 
-  fn setup_core_modules(fs: &InMemoryFileSystem, core_path: &Path) {
+  fn setup_core_modules(
+    fs: &InMemoryFileSystem,
+    core_path: &Path,
+  ) {
     let transformer_path = core_path
       .join("node_modules")
       .join("@atlaspack/transformer-js");

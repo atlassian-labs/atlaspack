@@ -1,20 +1,21 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_config_fixtures::default_config;
-use atlaspack_core::{
-  config_loader::ConfigLoader,
-  plugin::{PluginContext, PluginLogger, PluginOptions},
-  types::AtlaspackOptions,
-};
-use atlaspack_filesystem::{in_memory_file_system::InMemoryFileSystem, FileSystemRef};
+use atlaspack_core::config_loader::ConfigLoader;
+use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::PluginLogger;
+use atlaspack_core::plugin::PluginOptions;
+use atlaspack_core::types::AtlaspackOptions;
+use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+use atlaspack_filesystem::FileSystemRef;
 use atlaspack_plugin_rpc::testing::TestingRpcFactory;
 use atlaspack_plugin_rpc::RpcFactory;
 
-use crate::{
-  plugins::{config_plugins::ConfigPlugins, PluginsRef},
-  request_tracker::RequestTracker,
-};
+use crate::plugins::config_plugins::ConfigPlugins;
+use crate::plugins::PluginsRef;
+use crate::request_tracker::RequestTracker;
 
 pub(crate) fn make_test_plugin_context() -> PluginContext {
   let fs = Arc::new(InMemoryFileSystem::default());

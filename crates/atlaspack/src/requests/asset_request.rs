@@ -1,3 +1,9 @@
+use std::collections::VecDeque;
+use std::hash::Hash;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Instant;
+
 use anyhow::anyhow;
 use async_trait::async_trait;
 use atlaspack_core::plugin::AssetBuildEvent;
@@ -5,25 +11,23 @@ use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
+use atlaspack_core::types::Asset;
 use atlaspack_core::types::AssetStats;
 use atlaspack_core::types::AssetWithDependencies;
 use atlaspack_core::types::Code;
 use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Environment;
 use atlaspack_core::types::FileType;
-use atlaspack_core::types::{Asset, Invalidation};
+use atlaspack_core::types::Invalidation;
 use atlaspack_sourcemap::find_sourcemap_url;
 use atlaspack_sourcemap::load_sourcemap_url;
-use std::collections::VecDeque;
-use std::hash::Hash;
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Instant;
-
-use crate::plugins::PluginsRef;
-use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
 use super::RequestResult;
+use crate::plugins::PluginsRef;
+use crate::request_tracker::Request;
+use crate::request_tracker::ResultAndInvalidations;
+use crate::request_tracker::RunRequestContext;
+use crate::request_tracker::RunRequestError;
 
 /// The AssetRequest runs transformer plugins on discovered Assets.
 /// - Decides which transformer pipeline to run from the input Asset type
@@ -231,17 +235,22 @@ async fn run_pipelines(
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::plugins::MockPlugins;
-  use crate::plugins::TransformerPipeline;
+  use std::hash::Hasher;
+  use std::path::Path;
+
   use atlaspack_core::hash::IdentifierHasher;
   use atlaspack_core::plugin::MockTransformerPlugin;
   use atlaspack_core::types::Code;
   use atlaspack_core::types::FileType;
-  use std::hash::Hasher;
-  use std::path::Path;
 
-  fn make_asset(file_path: &str, file_type: FileType) -> Asset {
+  use super::*;
+  use crate::plugins::MockPlugins;
+  use crate::plugins::TransformerPipeline;
+
+  fn make_asset(
+    file_path: &str,
+    file_type: FileType,
+  ) -> Asset {
     let mut asset = Asset::default();
 
     asset.file_path = PathBuf::from(file_path);
@@ -250,7 +259,10 @@ mod tests {
     asset
   }
 
-  fn assert_code(asset: &Asset, code: &str) {
+  fn assert_code(
+    asset: &Asset,
+    code: &str,
+  ) {
     assert_eq!(
       String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
       code

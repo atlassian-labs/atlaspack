@@ -1,8 +1,7 @@
+use std::collections::HashMap;
+use std::future::Future;
 use std::path::PathBuf;
-use std::sync::Arc;
 
-use atlaspack_config::atlaspack_rc_config_loader::AtlaspackRcConfigLoader;
-use atlaspack_config::atlaspack_rc_config_loader::LoadConfigOptions;
 use atlaspack_core::asset_graph::AssetGraph;
 use atlaspack_core::asset_graph::AssetNode;
 use atlaspack_core::config_loader::ConfigLoader;
@@ -19,17 +18,23 @@ use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::writer::DatabaseWriterError;
 use tokio::runtime::Runtime;
 
-use crate::plugins::config_plugins::ConfigPlugins;
-use crate::plugins::PluginsRef;
-use crate::project_root::infer_project_root;
-use crate::request_tracker::RequestTracker;
-use crate::requests::AssetGraphRequest;
-use crate::requests::RequestResult;
+use crate::atlaspack_build;
+use crate::atlaspack_build::BuildOptions;
 
 #[derive(Clone)]
-struct AtlaspackState {
-  config: Arc<ConfigLoader>,
-  plugins: PluginsRef,
+pub struct AtlaspackOptions {
+  pub config: Option<String>,
+  /// Path to the atlaspack core node_module. This will be used to resolve built-ins or runtime files.
+  ///
+  /// In the future this may be replaced with embedding those files into the rust binary.
+  pub core_path: PathBuf,
+  pub default_target_options: DefaultTargetOptions,
+  pub entries: Vec<String>,
+  pub env: Option<HashMap<String, String>>,
+  pub fallback_config: Option<String>,
+  pub log_level: LogLevel,
+  pub mode: BuildMode,
+  pub threads: Option<usize>,
 }
 
 pub struct Atlaspack {
@@ -71,11 +76,7 @@ impl Atlaspack {
       runtime,
     })
   }
-}
 
-pub struct BuildResult;
-
-impl Atlaspack {
   fn state(&self) -> anyhow::Result<AtlaspackState> {
     let rpc_worker = self.rpc.start()?;
 
@@ -148,7 +149,10 @@ impl Atlaspack {
     })
   }
 
-  fn commit_assets(&self, assets: &[AssetNode]) -> Result<(), DatabaseWriterError> {
+  fn commit_assets(
+    &self,
+    assets: &[AssetNode],
+  ) -> Result<(), DatabaseWriterError> {
     let mut txn = self.db.environment().write_txn()?;
 
     for AssetNode { asset, .. } in assets.iter() {

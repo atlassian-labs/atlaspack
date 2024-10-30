@@ -5,14 +5,6 @@ use std::sync::Arc;
 use std::thread;
 
 use anyhow::anyhow;
-use lmdb_js_lite::writer::DatabaseWriter;
-use lmdb_js_lite::LMDB;
-use napi::Env;
-use napi::JsFunction;
-use napi::JsObject;
-use napi::JsUnknown;
-use napi_derive::napi;
-
 use atlaspack::file_system::FileSystemRef;
 use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack::rpc::nodejs::NodejsWorker;
@@ -21,6 +13,13 @@ use atlaspack::Atlaspack;
 use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
+use lmdb_js_lite::writer::DatabaseWriter;
+use lmdb_js_lite::LMDB;
+use napi::Env;
+use napi::JsFunction;
+use napi::JsObject;
+use napi::JsUnknown;
+use napi_derive::napi;
 
 use super::file_system_napi::FileSystemNapi;
 use super::package_manager_napi::PackageManagerNapi;
@@ -57,7 +56,11 @@ pub struct AtlaspackNapi {
 impl AtlaspackNapi {
   #[tracing::instrument(level = "info", skip_all)]
   #[napi]
-  pub fn create(napi_options: AtlaspackNapiOptions, lmdb: &LMDB, env: Env) -> napi::Result<Self> {
+  pub fn create(
+    napi_options: AtlaspackNapiOptions,
+    lmdb: &LMDB,
+    env: Env,
+  ) -> napi::Result<Self> {
     let thread_id = std::thread::current().id();
     tracing::trace!(?thread_id, "atlaspack-napi initialize");
 
@@ -133,13 +136,13 @@ impl AtlaspackNapi {
         let atlaspack = Atlaspack::new(db, fs, options, package_manager, rpc);
         let to_napi_error = |error| napi::Error::from_reason(format!("{:?}", error));
 
-        match atlaspack {
-          Err(error) => deferred.reject(to_napi_error(error)),
-          Ok(atlaspack) => match atlaspack.build_asset_graph() {
-            Ok(asset_graph) => deferred.resolve(move |env| env.to_js_value(&asset_graph)),
-            Err(error) => deferred.reject(to_napi_error(error)),
-          },
-        }
+        // match atlaspack {
+        //   Err(error) => deferred.reject(to_napi_error(error)),
+        //   Ok(atlaspack) => match atlaspack.build_asset_graph() {
+        //     Ok(asset_graph) => deferred.resolve(move |env| env.to_js_value(&asset_graph)),
+        //     Err(error) => deferred.reject(to_napi_error(error)),
+        //   },
+        // }
       }
     });
 
@@ -147,7 +150,10 @@ impl AtlaspackNapi {
   }
 
   #[tracing::instrument(level = "info", skip_all)]
-  fn register_workers(&self, options: &AtlaspackNapiBuildOptions) -> napi::Result<()> {
+  fn register_workers(
+    &self,
+    options: &AtlaspackNapiBuildOptions,
+  ) -> napi::Result<()> {
     for _ in 0..self.node_worker_count {
       let transferable = JsTransferable::new(self.tx_worker.clone());
 

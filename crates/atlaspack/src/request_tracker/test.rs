@@ -8,10 +8,9 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 
-use crate::requests::RequestResult;
-use crate::test_utils::request_tracker;
-
 use super::*;
+use crate::requests::RequestResult;
+use crate::testing::request_tracker;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn should_run_request() {
@@ -86,7 +85,10 @@ async fn should_run_request_once_2() {
   assert_eq!(request_b.run_count(), 1);
 }
 
-async fn run_request(request_tracker: &mut RequestTracker, request: &TestRequest) -> Vec<String> {
+async fn run_request(
+  request_tracker: &mut RequestTracker,
+  request: &TestRequest,
+) -> Vec<String> {
   let RequestResult::TestMain(result) = request_tracker.run_request(request.clone()).await.unwrap()
   else {
     panic!("Unexpected result");
@@ -94,7 +96,10 @@ async fn run_request(request_tracker: &mut RequestTracker, request: &TestRequest
   result
 }
 
-async fn run_sub_request(request_tracker: &mut RequestTracker, request: &TestRequest) -> String {
+async fn run_sub_request(
+  request_tracker: &mut RequestTracker,
+  request: &TestRequest,
+) -> String {
   let RequestResult::TestSub(result) = request_tracker.run_request(request.clone()).await.unwrap()
   else {
     panic!("Unexpected result");
@@ -112,7 +117,10 @@ pub struct TestRequest {
 }
 
 impl TestRequest {
-  pub fn new<T: AsRef<str>>(name: T, subrequests: &[TestRequest]) -> Self {
+  pub fn new<T: AsRef<str>>(
+    name: T,
+    subrequests: &[TestRequest],
+  ) -> Self {
     Self {
       runs: Default::default(),
       name: name.as_ref().to_string(),
@@ -126,7 +134,10 @@ impl TestRequest {
 }
 
 impl std::hash::Hash for TestRequest {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+  fn hash<H: std::hash::Hasher>(
+    &self,
+    state: &mut H,
+  ) {
     self.name.hash(state);
   }
 }

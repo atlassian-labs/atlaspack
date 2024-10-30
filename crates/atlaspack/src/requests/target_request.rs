@@ -32,13 +32,12 @@ use package_json::SourceField;
 use package_json::SourceMapField;
 use package_json::TargetDescriptor;
 
+use super::entry_request::Entry;
+use super::RequestResult;
 use crate::request_tracker::Request;
 use crate::request_tracker::ResultAndInvalidations;
 use crate::request_tracker::RunRequestContext;
 use crate::request_tracker::RunRequestError;
-
-use super::entry_request::Entry;
-use super::RequestResult;
 
 mod package_json;
 
@@ -417,7 +416,10 @@ impl TargetRequest {
     Ok(targets)
   }
 
-  fn get_default_engines_for_context(&self, context: EnvironmentContext) -> Engines {
+  fn get_default_engines_for_context(
+    &self,
+    context: EnvironmentContext,
+  ) -> Engines {
     let defaults = self.default_target_options.engines.clone();
     if context.is_browser() {
       Engines {
@@ -434,7 +436,11 @@ impl TargetRequest {
     }
   }
 
-  fn skip_target(&self, target_name: &str, source: &Option<SourceField>) -> bool {
+  fn skip_target(
+    &self,
+    target_name: &str,
+    source: &Option<SourceField>,
+  ) -> bool {
     // We skip targets if they have a descriptor.source that does not match the current
     // exclusiveTarget. They will be handled by a separate resolvePackageTargets call from their
     // Entry point but with exclusiveTarget set.
@@ -669,17 +675,17 @@ impl Request for TargetRequest {
 // TODO Add more tests when revisiting targets config structure
 #[cfg(test)]
 mod tests {
-  use std::{num::NonZeroU16, sync::Arc};
-
-  use regex::Regex;
+  use std::num::NonZeroU16;
+  use std::sync::Arc;
 
   use atlaspack_core::types::version::Version;
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
-
-  use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
   use pretty_assertions::assert_eq;
+  use regex::Regex;
 
   use super::*;
+  use crate::testing::request_tracker;
+  use crate::testing::RequestTrackerTestOptions;
 
   const BUILT_IN_TARGETS: [&str; 4] = ["browser", "main", "module", "types"];
 
