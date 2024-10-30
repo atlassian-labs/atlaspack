@@ -15,10 +15,10 @@ impl AssetGraphAction {
 
   pub async fn run(
     self,
-    c: Arc<Compilation>,
     q: ActionQueue,
+    Compilation { entries, .. }: &Compilation,
   ) -> anyhow::Result<()> {
-    for entry in c.entries.iter() {
+    for entry in entries.iter() {
       q.next(ActionType::Entry(EntryAction {
         entry: entry.clone(),
       }))?;

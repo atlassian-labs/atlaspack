@@ -1,5 +1,3 @@
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_rc_config_loader::AtlaspackRcConfigLoader;
@@ -9,6 +7,7 @@ use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::PluginLogger;
 use atlaspack_core::plugin::PluginOptions;
+use tokio::sync::RwLock;
 
 use crate::actions::asset_graph::AssetGraphAction;
 use crate::actions::ActionQueue;
@@ -75,6 +74,8 @@ pub async fn build(
     },
   )?);
 
+  let asset_graph = Arc::new(RwLock::new(AssetGraph::new()));
+
   let c = Arc::new(Compilation {
     options: options.clone(),
     fs: fs.clone(),
@@ -88,6 +89,7 @@ pub async fn build(
     env: env.clone(),
     entries: entries.clone(),
     default_target_options,
+    asset_graph,
   });
 
   let mut jobs = tokio::task::JoinSet::<_>::new();
@@ -111,15 +113,19 @@ pub async fn build(
     };
 
     println!("{}", action);
+    // dbg!(&action);
+    // println!("");
 
     jobs.spawn({
       let q = q.clone();
       let c = c.clone();
       async move {
         match action {
-          ActionType::Entry(a) => a.run(c, q).await,
-          ActionType::AssetGraph(a) => a.run(c, q).await,
-          ActionType::Target(a) => a.run(c, q).await,
+          ActionType::Entry(a) => a.run(q, &c).await,
+          ActionType::AssetGraph(a) => a.run(q, &c).await,
+          ActionType::Target(a) => a.run(q, &c).await,
+          ActionType::Path(a) => a.run(q, &c).await,
+          ActionType::Asset(a) => a.run(q, &c).await,
         }
       }
     });

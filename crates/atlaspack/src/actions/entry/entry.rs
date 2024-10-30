@@ -20,16 +20,18 @@ pub struct EntryAction {
 impl EntryAction {
   pub async fn run(
     self,
-    c: Arc<Compilation>,
     q: ActionQueue,
+    Compilation {
+      fs, project_root, ..
+    }: &Compilation,
   ) -> anyhow::Result<()> {
     // TODO: Handle globs and directories
     let mut entry_path = PathBuf::from(self.entry.clone());
     if entry_path.is_relative() {
-      entry_path = c.project_root.join(entry_path);
+      entry_path = project_root.join(entry_path);
     };
 
-    if !c.fs.is_file(&entry_path) {
+    if !fs.is_file(&entry_path) {
       return Ok(());
     }
 

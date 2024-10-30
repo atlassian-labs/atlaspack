@@ -36,9 +36,10 @@ use super::package_json::PackageJson;
 use super::package_json::SourceField;
 use super::package_json::SourceMapField;
 use super::package_json::TargetDescriptor;
+use crate::actions::path::PathAction;
+use crate::actions::ActionType;
 use crate::compilation::Compilation;
 use crate::compilation::EnvMap;
-use crate::request_tracker::RunRequestContext;
 
 /// Infers how and where source code is outputted
 ///
@@ -52,36 +53,45 @@ pub struct TargetAction {
 impl TargetAction {
   pub async fn run(
     self,
-    c: Arc<Compilation>,
     q: ActionQueue,
+
+    Compilation {
+      env,
+      mode,
+      config_loader,
+      default_target_options,
+      asset_graph,
+      project_root,
+      ..
+    }: &Compilation,
   ) -> anyhow::Result<()> {
     // TODO options.targets, should this still be supported?
     // TODO serve options
-    let package_targets = self.resolve_package_targets(c.clone())?;
+    let package_targets =
+      self.resolve_package_targets(env, mode, config_loader, default_target_options)?;
     let targets = package_targets
       .into_iter()
       .filter_map(std::convert::identity)
       .collect::<Vec<Target>>();
 
-    // let TargetRequestOutput { entry, targets } = result;
     for target in targets {
-      let entry = diff_paths(&self.entry.file_path, &c.project_root)
+      let entry = diff_paths(&self.entry.file_path, &project_root)
         .unwrap_or_else(|| self.entry.file_path.clone());
 
       let dependency = Dependency::entry(entry.to_str().unwrap().to_string(), target);
 
-      // let dep_node = self.graph.add_entry_dependency(dependency.clone());
+      let _dep_node = asset_graph
+        .write()
+        .await
+        .add_entry_dependency(dependency.clone());
 
-      // let request = PathRequest {
-      //   dependency: Arc::new(dependency),
-      // };
       // self
       //   .request_id_to_dep_node_index
       //   .insert(request.id(), dep_node);
-      // self.work_count += 1;
-      // let _ = self
-      //   .request_context
-      //   .queue_request(request, self.sender.clone());
+
+      q.next(ActionType::Path(PathAction {
+        dependency: Arc::new(dependency),
+      }))?;
     }
 
     Ok(())
@@ -335,9 +345,12 @@ impl TargetAction {
 
   fn resolve_package_targets(
     &self,
-    c: Arc<Compilation>,
+    env: &EnvMap,
+    mode: &BuildMode,
+    config_loader: &ConfigLoader,
+    default_target_options: &DefaultTargetOptions,
   ) -> Result<Vec<Option<Target>>, anyhow::Error> {
-    let package_json = self.load_package_json(&c.env, &c.mode, &c.config_loader)?;
+    let package_json = self.load_package_json(env, &mode, config_loader)?;
     let mut targets: Vec<Option<Target>> = Vec::new();
 
     let builtin_targets = [
@@ -369,7 +382,7 @@ impl TargetAction {
         BuiltInTargetDescriptor::Disabled(_disabled) => continue,
         BuiltInTargetDescriptor::TargetDescriptor(builtin_target_descriptor) => {
           targets.push(self.target_from_descriptor(
-            c.default_target_options.clone(),
+            default_target_options.clone(),
             builtin_target.dist,
             &package_json,
             builtin_target_descriptor,
@@ -402,7 +415,7 @@ impl TargetAction {
       }
 
       targets.push(self.target_from_descriptor(
-        c.default_target_options.clone(),
+        default_target_options.clone(),
         dist,
         &package_json,
         custom_target.descriptor.clone(),
@@ -413,17 +426,16 @@ impl TargetAction {
     if targets.is_empty() {
       let context = self.infer_environment_context(&package_json.contents, None);
 
-      let is_library = c.default_target_options.is_library.unwrap_or(false);
+      let is_library = default_target_options.is_library.unwrap_or(false);
       let package_json_engines = package_json
         .contents
         .engines
-        .unwrap_or_else(|| self.get_default_engines_for_context(c.clone(), context));
+        .unwrap_or_else(|| self.get_default_engines_for_context(default_target_options, context));
 
       tracing::debug!("Package JSON engines: {:?}", package_json_engines);
 
       targets.push(Some(Target {
-        dist_dir: c
-          .default_target_options
+        dist_dir: default_target_options
           .dist_dir
           .clone()
           .unwrap_or_else(|| default_dist_dir(&package_json.path)),
@@ -434,27 +446,23 @@ impl TargetAction {
           include_node_modules: IncludeNodeModules::from(context),
           is_library,
           loc: None,
-          output_format: c
-            .default_target_options
+          output_format: default_target_options
             .output_format
             .unwrap_or_else(|| fallback_output_format(context)),
-          should_optimize: c
-            .default_target_options
+          should_optimize: default_target_options
             .should_optimize
-            .unwrap_or_else(|| c.mode == BuildMode::Production && !is_library),
-          should_scope_hoist: c
-            .default_target_options
+            .unwrap_or_else(|| *mode == BuildMode::Production && !is_library),
+          should_scope_hoist: default_target_options
             .should_scope_hoist
-            .unwrap_or_else(|| c.mode == BuildMode::Production && !is_library),
-          source_map: c
-            .default_target_options
+            .unwrap_or_else(|| *mode == BuildMode::Production && !is_library),
+          source_map: default_target_options
             .source_maps
             .then(|| TargetSourceMapOptions::default()),
           source_type: SourceType::Module,
         }),
         loc: None,
         name: String::from("default"),
-        public_url: c.default_target_options.public_url.clone(),
+        public_url: default_target_options.public_url.clone(),
         ..Target::default()
       }));
     }
@@ -464,10 +472,10 @@ impl TargetAction {
 
   fn get_default_engines_for_context(
     &self,
-    c: Arc<Compilation>,
+    default_target_options: &DefaultTargetOptions,
     context: EnvironmentContext,
   ) -> Engines {
-    let defaults = c.default_target_options.engines.clone();
+    let defaults = default_target_options.engines.clone();
     if context.is_browser() {
       Engines {
         browsers: defaults.browsers,
