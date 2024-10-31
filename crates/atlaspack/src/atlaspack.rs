@@ -53,7 +53,7 @@ impl Atlaspack {
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
       .enable_all()
-      .worker_threads(options.threads.unwrap_or_else(|| num_cpus::get()))
+      .worker_threads(options.threads.unwrap_or_else(num_cpus::get))
       .build()?;
 
     Ok(Self {
