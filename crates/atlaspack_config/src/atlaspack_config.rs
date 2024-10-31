@@ -57,7 +57,7 @@ impl TryFrom<PartialAtlaspackConfig> for AtlaspackConfig {
 
     let mut missing_phases = Vec::new();
 
-    if let None = config.bundler {
+    if config.bundler.is_none() {
       missing_phases.push(String::from("bundler"));
     }
 

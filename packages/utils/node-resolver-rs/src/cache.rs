@@ -21,7 +21,9 @@ pub struct Cache {
   /// way to associate a lifetime with owned data stored in the same struct. We only vend temporary references
   /// from our public methods so this is ok for now. FrozenMap is an append only map, which doesn't require &mut
   /// to insert into. Since each value is in a Box, it won't move and therefore references are stable.
+  #[allow(clippy::type_complexity)]
   packages: ThreadLocalHashMap<PathBuf, Arc<Result<Arc<PackageJson>, ResolverError>>>,
+  #[allow(clippy::type_complexity)]
   tsconfigs: ThreadLocalHashMap<PathBuf, Arc<Result<Arc<TsConfigWrapper>, ResolverError>>>,
   // In particular just the is_dir_cache spends around 8% of the time on a large project resolution
   // hashing paths. Instead of using a hashmap we should try a trie here.
@@ -30,7 +32,7 @@ pub struct Cache {
   realpath_cache: FileSystemRealPathCache,
 }
 
-impl<'a> fmt::Debug for Cache {
+impl fmt::Debug for Cache {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     f.debug_struct("Cache").finish()
   }
@@ -131,12 +133,12 @@ impl Cache {
       realpath_cache: &'a FileSystemRealPathCache,
       path: &Path,
     ) -> Result<PackageJson, ResolverError> {
-      let contents: String = fs.read_to_string(&path)?;
+      let contents: String = fs.read_to_string(path)?;
       let mut pkg = PackageJson::parse(PathBuf::from(path), &contents).map_err(|e| {
         JsonError::new(
           File {
             path: PathBuf::from(path),
-            contents: contents.into(),
+            contents,
           },
           e,
         )
@@ -166,8 +168,8 @@ impl Cache {
       read_package(&self.fs, &self.realpath_cache, &path);
 
     // Since we have exclusive access to packages,
-    let entry = Arc::new(package.map(|pkg| Arc::new(pkg)));
-    let _ = self.packages.insert(path.clone(), entry.clone());
+    let entry = Arc::new(package.map(Arc::new));
+    self.packages.insert(path.clone(), entry.clone());
 
     entry.clone()
   }
@@ -181,7 +183,7 @@ impl Cache {
       return tsconfig.clone();
     }
 
-    fn read_tsconfig<'a, F: FnOnce(&mut TsConfigWrapper) -> Result<(), ResolverError>>(
+    fn read_tsconfig<F: FnOnce(&mut TsConfigWrapper) -> Result<(), ResolverError>>(
       fs: &FileSystemRef,
       path: &Path,
       process: F,
@@ -202,9 +204,9 @@ impl Cache {
 
     // Since we have exclusive access to tsconfigs, it should be impossible for the get to fail
     // after insert
-    let tsconfig = read_tsconfig(&self.fs, path, process).map(|t| Arc::new(t));
+    let tsconfig = read_tsconfig(&self.fs, path, process).map(Arc::new);
     let tsconfig = Arc::new(tsconfig);
-    let _ = self.tsconfigs.insert(PathBuf::from(path), tsconfig.clone());
+    self.tsconfigs.insert(PathBuf::from(path), tsconfig.clone());
 
     tsconfig
   }

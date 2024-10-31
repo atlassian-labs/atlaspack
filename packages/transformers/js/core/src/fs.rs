@@ -20,6 +20,7 @@ use crate::dependency_collector::DependencyKind;
 use crate::id;
 use crate::utils::SourceLocation;
 
+#[allow(clippy::too_many_arguments)]
 pub fn inline_fs<'a>(
   filename: &str,
   source_map: swc_core::common::sync::Lrc<swc_core::common::SourceMap>,

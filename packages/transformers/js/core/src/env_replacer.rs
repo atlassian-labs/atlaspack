@@ -27,7 +27,7 @@ impl<'a> VisitMut for EnvReplacer<'a> {
   fn visit_mut_expr(&mut self, node: &mut Expr) {
     // Replace assignments to process.browser with `true`
     // TODO: this seems questionable but we did it in the JS version??
-    if let Some(value) = self.replace_browser_assignment(&node) {
+    if let Some(value) = self.replace_browser_assignment(node) {
       *node = value;
       return;
     }
@@ -293,7 +293,7 @@ impl<'a> EnvReplacer<'a> {
               // let {x = 2} = process.env;
               decls.push(VarDeclarator {
                 span: DUMMY_SP,
-                name: Pat::Ident(BindingIdent::from(assign.key.clone())),
+                name: Pat::Ident(assign.key.clone()),
                 init: if let Some(init) = self.replace(&assign.key.sym, false) {
                   Some(Box::new(init))
                 } else {

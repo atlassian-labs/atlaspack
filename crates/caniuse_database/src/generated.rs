@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! This file was automatically generated and should not be edited manually.
 //!
 //! Use `yarn workspace caniuse-database generate` to regenerate the contents of this file.
@@ -7,13 +8,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub enum BrowserAgent {
-  /// Microsoft Internet Explorer
+  /// IE
   Ie,
-  /// Microsoft Edge
+  /// Edge
   Edge,
-  /// Mozilla Firefox
+  /// Firefox
   Firefox,
-  /// Google Chrome
+  /// Chrome
   Chrome,
   /// Safari
   Safari,
@@ -23,25 +24,25 @@ pub enum BrowserAgent {
   IosSaf,
   /// Opera Mini
   OpMini,
-  /// Android Browser / Webview
+  /// Android Browser
   Android,
-  ///
+  /// Blackberry Browser
   Bb,
-  /// Opera for Android
+  /// Opera Mobile
   OpMob,
-  /// Google Chrome for Android
+  /// Chrome for Android
   AndChr,
-  /// Mozilla Firefox for Android
+  /// Firefox for Android
   AndFf,
-  ///
+  /// IE Mobile
   IeMob,
   /// UC Browser for Android
   AndUc,
-  /// Samsung Internet Browser
+  /// Samsung Internet
   Samsung,
-  /// QQ Browser for Android
+  /// QQ Browser
   AndQq,
-  /// Baidu Browser for Android
+  /// Baidu Browser
   Baidu,
   /// KaiOS Browser
   Kaios,
@@ -701,6 +702,7 @@ pub enum BrowserFeature {
   /// * [MDN Web Docs - CSS box-decoration-break](https://developer.mozilla.org/en-US/docs/Web/CSS/box-decoration-break)
   /// * [Demo of effect on box border](https://jsbin.com/xojoro/edit?css,output)
   /// * [Chromium bug to unprefix `-webkit-box-decoration-break`](https://bugs.chromium.org/p/chromium/issues/detail?id=682224)
+  /// * [WebKit position request to support box-decoration-break everywhere without prefix](https://github.com/WebKit/standards-positions/issues/366)
   CssBoxdecorationbreak,
   /// CSS3 Box-shadow
   ///
@@ -2346,6 +2348,7 @@ pub enum BrowserFeature {
   /// * [MDN Web Docs - navigator.hardwareConcurrency](https://developer.mozilla.org/en-US/docs/Web/API/NavigatorConcurrentHardware/hardwareConcurrency)
   /// * [Original Proposal](https://wiki.whatwg.org/wiki/Navigator_HW_Concurrency)
   /// * [WebKit implementation bug](https://bugs.webkit.org/show_bug.cgi?id=132588)
+  /// * [WebKit reinstatement bug](https://bugs.webkit.org/show_bug.cgi?id=233381)
   Hardwareconcurrency,
   /// Hashchange event
   ///
@@ -3065,7 +3068,7 @@ pub enum BrowserFeature {
   ///
   /// Deprecated mechanism for listening to changes made to the DOM, replaced by Mutation Observers.
   ///
-  /// * [MDN Web Docs - Mutation events](https://developer.mozilla.org/en-US/docs/Web/Guide/Events/Mutation_events)
+  /// * [MDN Web Docs - MutationEvent](https://developer.mozilla.org/en-US/docs/Web/API/MutationEvent)
   MutationEvents,
   /// Mutation Observer
   ///

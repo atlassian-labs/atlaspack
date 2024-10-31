@@ -492,7 +492,7 @@ impl PackageJson {
                   return Some(alias);
                 } else {
                   return Some(Cow::Owned(AliasValue::Specifier(Specifier::Relative(
-                    path.join(&subpath),
+                    path.join(subpath),
                   ))));
                 }
               }
@@ -617,11 +617,7 @@ impl PackageJson {
   }
 }
 
-fn replace_path_captures<'a>(
-  s: &'a Path,
-  path: &str,
-  captures: &Vec<Range<usize>>,
-) -> Option<PathBuf> {
+fn replace_path_captures(s: &Path, path: &str, captures: &Vec<Range<usize>>) -> Option<PathBuf> {
   Some(PathBuf::from(replace_captures(
     s.as_os_str().to_str()?,
     path,
@@ -631,7 +627,8 @@ fn replace_path_captures<'a>(
 
 /// Inserts captures matched in a glob against `path` using a pattern string.
 /// Replacements are inserted using JS-like $N syntax, e.g. $1 for the first capture.
-fn replace_captures<'a>(s: &'a str, path: &str, captures: &Vec<Range<usize>>) -> String {
+#[allow(clippy::ptr_arg)]
+fn replace_captures(s: &str, path: &str, captures: &Vec<Range<usize>>) -> String {
   let mut res = s.to_string();
   let bytes = s.as_bytes();
   for (idx, _) in s.match_indices('$').rev() {

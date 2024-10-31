@@ -45,8 +45,7 @@ fn match_require_initializer(
   let function_ident = call_expr
     .callee
     .as_expr()
-    .map(|expr| expr.as_ident())
-    .flatten()?;
+    .and_then(|expr| expr.as_ident())?;
 
   if !require_matchers
     .iter()
@@ -62,7 +61,7 @@ fn match_require_initializer(
 
   if ignore_patterns
     .iter()
-    .any(|pattern| pattern.test(&variable_identifier, &literal.value))
+    .any(|pattern| pattern.test(variable_identifier, &literal.value))
   {
     return None;
   }
@@ -301,7 +300,7 @@ impl VisitMut for InlineRequiresOptimizer {
         require_matchers.push(module_stack_info.require_matcher.clone());
       }
 
-      if let Some(default_initializer_id) = match_parcel_default_initializer(&decl) {
+      if let Some(default_initializer_id) = match_parcel_default_initializer(decl) {
         // first let the normal replacement run on this expression so we inline the require
         decl.visit_mut_children_with(self);
         // get the value we've replaced and carry it forward, we'll inline this value now

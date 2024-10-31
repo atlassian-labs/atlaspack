@@ -1,3 +1,4 @@
+#[allow(clippy::module_inception)]
 mod js_callable;
 mod js_value;
 mod serde;

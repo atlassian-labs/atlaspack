@@ -45,7 +45,7 @@ impl Atlaspack {
     package_manager: Option<PackageManagerRef>,
     rpc: RpcFactoryRef,
   ) -> Result<Self, anyhow::Error> {
-    let fs = fs.unwrap_or_else(|| Arc::new(OsFileSystem::default()));
+    let fs = fs.unwrap_or_else(|| Arc::new(OsFileSystem));
     let project_root = infer_project_root(Arc::clone(&fs), options.entries.clone())?;
 
     let package_manager = package_manager
@@ -53,7 +53,7 @@ impl Atlaspack {
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
       .enable_all()
-      .worker_threads(options.threads.unwrap_or_else(|| num_cpus::get()))
+      .worker_threads(options.threads.unwrap_or_else(num_cpus::get))
       .build()?;
 
     Ok(Self {

@@ -36,6 +36,7 @@ struct JsMacroError {
 
 // Allocate a single channel per thread to communicate with the JS thread.
 thread_local! {
+  #[allow(clippy::type_complexity)]
   static CHANNEL: (Sender<Result<JsValue, MacroError>>, Receiver<Result<JsValue, MacroError>>) = crossbeam_channel::unbounded();
 }
 

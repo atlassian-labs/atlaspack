@@ -14,8 +14,7 @@ use napi::NapiRaw;
 use once_cell::sync::Lazy;
 
 static COUNTER: AtomicI32 = AtomicI32::new(0);
-static VALUES: Lazy<Mutex<HashMap<i32, Box<dyn Any + Send + Sync>>>> =
-  Lazy::new(|| Default::default());
+static VALUES: Lazy<Mutex<HashMap<i32, Box<dyn Any + Send + Sync>>>> = Lazy::new(Default::default);
 
 /// Creates an external reference to a Rust value and
 /// makes it transferable across Nodejs workers
@@ -35,7 +34,7 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
   pub fn new(value: T) -> Self {
     let id = COUNTER.fetch_add(1, Ordering::Relaxed);
 
-    VALUES.lock().unwrap().insert(id.clone(), Box::new(value));
+    VALUES.lock().unwrap().insert(id, Box::new(value));
     Self {
       id,
       _value: Default::default(),
@@ -68,7 +67,7 @@ impl<T> ToNapiValue for JsTransferable<T> {
     val: Self,
   ) -> napi::Result<napi::sys::napi_value> {
     let env = Env::from_raw(env);
-    let pointer = env.create_int32(val.id.clone())?;
+    let pointer = env.create_int32(val.id)?;
     Ok(pointer.raw())
   }
 }

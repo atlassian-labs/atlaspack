@@ -32,6 +32,6 @@ pub fn call_method(
   args: &[&JsUnknown],
 ) -> napi::Result<JsUnknown> {
   let method_fn = get_function(env, js_object, field_name)?;
-  let result = method_fn.call(Some(&js_object), &args)?;
+  let result = method_fn.call(Some(js_object), args)?;
   Ok(result)
 }

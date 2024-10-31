@@ -210,9 +210,9 @@ impl TargetRequest {
         .contents
         .module_format
         .as_ref()
-        .and_then(|format| match format {
-          ModuleFormat::CommonJS => Some(OutputFormat::CommonJS),
-          ModuleFormat::Module => Some(OutputFormat::EsModule),
+        .map(|format| match format {
+          ModuleFormat::CommonJS => OutputFormat::CommonJS,
+          ModuleFormat::Module => OutputFormat::EsModule,
         }),
       _ => None,
     };
@@ -254,11 +254,11 @@ impl TargetRequest {
       Ok(pkg) => pkg,
     };
 
-    if package_json.contents.engines.as_ref().is_some_and(|e| {
+    if let Some(e) = package_json.contents.engines.as_ref() {
       let browsers = e.browsers.clone().unwrap_or_default();
-      !Browsers::from(browsers).is_empty()
-    }) {
-      return Ok(package_json);
+      if !Browsers::from(browsers).is_empty() {
+        return Ok(package_json);
+      }
     }
 
     let env = self
@@ -275,18 +275,14 @@ impl TargetRequest {
         let browserslist = match browserslist {
           BrowsersList::Browser(browser) => vec![browser],
           BrowsersList::Browsers(browsers) => browsers,
-          BrowsersList::BrowsersByEnv(browsers_by_env) => browsers_by_env
-            .get(&env)
-            .map(|b| b.clone())
-            .unwrap_or_default(),
+          BrowsersList::BrowsersByEnv(browsers_by_env) => {
+            browsers_by_env.get(&env).cloned().unwrap_or_default()
+          }
         };
 
         package_json.contents.engines = Some(Engines {
           browsers: Some(EnginesBrowsers::new(browserslist)),
-          ..match package_json.contents.engines {
-            None => Engines::default(),
-            Some(engines) => engines,
-          }
+          ..package_json.contents.engines.unwrap_or_default()
         });
       }
     };
@@ -365,7 +361,7 @@ impl TargetRequest {
         dist,
         &package_json,
         custom_target.descriptor.clone(),
-        &custom_target.name,
+        custom_target.name,
       )?);
     }
 
@@ -408,7 +404,7 @@ impl TargetRequest {
           source_map: self
             .default_target_options
             .source_maps
-            .then(|| TargetSourceMapOptions::default()),
+            .then(TargetSourceMapOptions::default),
           source_type: SourceType::Module,
         }),
         loc: None,
@@ -455,7 +451,7 @@ impl TargetRequest {
     target_descriptor: TargetDescriptor,
     target_name: &str,
   ) -> Result<Option<Target>, anyhow::Error> {
-    if self.skip_target(&target_name, &target_descriptor.source) {
+    if self.skip_target(target_name, &target_descriptor.source) {
       return Ok(None);
     }
 
@@ -470,20 +466,19 @@ impl TargetRequest {
       self.infer_environment_context(&package_json.contents, Some(engines.clone()))
     });
 
-    let dist_entry = target_descriptor.dist_entry.clone().or_else(|| {
-      dist
-        .as_ref()
-        .and_then(|d| d.file_name().map(|f| PathBuf::from(f)))
-    });
+    let dist_entry = target_descriptor
+      .dist_entry
+      .clone()
+      .or_else(|| dist.as_ref().and_then(|d| d.file_name().map(PathBuf::from)));
 
     let inferred_output_format =
-      self.infer_output_format(&dist_entry, &package_json, &target_descriptor)?;
+      self.infer_output_format(&dist_entry, package_json, &target_descriptor)?;
 
     let output_format = target_descriptor
       .output_format
       .or(self.default_target_options.output_format)
       .or(inferred_output_format)
-      .unwrap_or_else(|| match target_name {
+      .unwrap_or(match target_name {
         "browser" => OutputFormat::CommonJS,
         "main" => OutputFormat::CommonJS,
         "module" => OutputFormat::EsModule,
@@ -562,13 +557,13 @@ impl TargetRequest {
             .should_scope_hoist
             .unwrap_or(false))
           && (target_descriptor.scope_hoist.is_none()
-            || target_descriptor.scope_hoist.is_some_and(|s| s != false)),
+            || target_descriptor.scope_hoist.is_some_and(|s| s)),
         source_map: match self.default_target_options.source_maps {
           false => None,
           true => match target_descriptor.source_map.as_ref() {
             None => Some(TargetSourceMapOptions::default()),
             Some(SourceMapField::Bool(source_maps)) => {
-              source_maps.then(|| TargetSourceMapOptions::default())
+              source_maps.then(TargetSourceMapOptions::default)
             }
             Some(SourceMapField::Options(source_maps)) => Some(source_maps.clone()),
           },
@@ -625,10 +620,7 @@ fn builtin_target_descriptor(context: EnvironmentContext) -> TargetDescriptor {
 }
 
 fn default_dist_dir(package_path: &Path) -> PathBuf {
-  package_path
-    .parent()
-    .unwrap_or_else(|| &package_path)
-    .join("dist")
+  package_path.parent().unwrap_or(package_path).join("dist")
 }
 
 fn fallback_output_format(context: EnvironmentContext) -> OutputFormat {
@@ -654,10 +646,7 @@ impl Request for TargetRequest {
       invalidations: Vec::new(),
       result: RequestResult::Target(TargetRequestOutput {
         entry: self.entry.file_path.clone(),
-        targets: package_targets
-          .into_iter()
-          .filter_map(std::convert::identity)
-          .collect(),
+        targets: package_targets.into_iter().flatten().collect(),
       }),
     })
   }
