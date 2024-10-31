@@ -2,22 +2,20 @@ digraph dominators {
   labelloc="t";
   label="Dominators";
 
-  "page.js";
-  "react.js";
-  "left-pad.js";
-  "string-concat.js";
-  "string-chart-at.js";
   "esmodule_helpers.js";
   "jsx.js";
+  "left-pad.js";
   "lodash.js";
+  "page.js";
+  "react.js";
+  "string-chart-at.js";
+  "string-concat.js";
 
-  "page.js" -> "react.js";
-  "page.js" -> "left-pad.js";
-  "page.js" -> "string-concat.js";
-  "string-concat.js" -> "string-chart-at.js";
-  "page.js" -> "string-chart-at.js";
   "page.js" -> "esmodule_helpers.js";
   "react.js" -> "jsx.js";
-  "page.js" -> "jsx.js";
+  "page.js" -> "left-pad.js";
   "page.js" -> "lodash.js";
+  "page.js" -> "react.js";
+  "string-concat.js" -> "string-chart-at.js";
+  "page.js" -> "string-concat.js";
 }

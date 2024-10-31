@@ -1,12 +1,7 @@
 // @flow strict-local
 
-import type {
-  BundleGraph,
-  Bundle,
-  MutableBundleGraph,
-  Asset,
-  Dependency,
-} from '@atlaspack/types';
+import type {BundleGraph, Bundle, Asset, Dependency} from '@atlaspack/types';
+import MutableBundleGraph from '@atlaspack/core/src/public/MutableBundleGraph';
 import {Graph, ContentGraph} from '@atlaspack/graph';
 import nullthrows from 'nullthrows';
 
@@ -81,6 +76,44 @@ export function getImmediateDominatorTree(
   return immediateDominatorTree;
 }
 
+export function bundleGraphToRootedGraph(
+  bundleGraph: MutableBundleGraph,
+): ContentGraph<'root' | Asset> {
+  const graph = new ContentGraph();
+
+  const rootNodeId = graph.addNodeByContentKey('root', 'root');
+  graph.setRootNodeId(rootNodeId);
+
+  const postOrder = [];
+  bundleGraph.traverse({
+    exit: (node) => {
+      if (node.type === 'asset') {
+        postOrder.push(node.value.id);
+      }
+    },
+  });
+  const reversedPostOrder = postOrder.slice().reverse();
+
+  for (let assetId of reversedPostOrder) {
+    const childAsset = bundleGraph.getAssetById(assetId);
+    const assetNodeId = graph.addNodeByContentKey(assetId, childAsset);
+
+    for (let dependency of bundleGraph.getIncomingDependencies(childAsset)) {
+      if (dependency.isEntry) {
+        graph.addEdge(rootNodeId, assetNodeId);
+      } else {
+        const parentAsset = bundleGraph.getAssetWithDependency(dependency);
+        if (!parentAsset) {
+          throw new Error('Non entry dependency had no asset');
+        }
+        graph.addEdge(graph.getNodeIdByContentKey(parentAsset.id), assetNodeId);
+      }
+    }
+  }
+
+  return graph;
+}
+
 /**
  * For all assets, build the dominance relationship of the asset with other
  * assets.
@@ -90,90 +123,98 @@ export function getImmediateDominatorTree(
  * The return value contains the **immediate** dominator tree, which is
  * different to the dominator tree.
  */
-export function findAssetDominators<B: Bundle>(
-  bundleGraph: BundleGraph<B>,
-  roots: Asset[],
+export function findAssetDominators(
+  bundleGraph: MutableBundleGraph,
 ): Map<Asset, Set<Asset>> {
-  const dominators = new Map<Asset, Set<Asset>>();
-  bundleGraph.traverse((node) => {
-    if (node.type === 'asset') {
-      dominators.set(node.value, new Set());
-    }
-  });
-
-  // All nodes dominates themselves initially
-  for (let asset of dominators.keys()) {
-    dominators.get(asset)?.add(asset);
-  }
-
   // Build a simpler graph with a root at the top
-  const graph = new ContentGraph();
-  const rootNodeId = graph.addNode({type: 'root'});
-  bundleGraph.traverse((node) => {
-    if (node.type === 'asset') {
-      graph.addNodeByContentKey(node.value.id, node.value);
-    } else if (node.type === 'dependency' && node.value.isEntry) {
-      const asset = bundleGraph.getAssetById(
-        nullthrows(node.value.sourceAssetId),
-      );
-      const assetNodeId = graph.getNodeIdByContentKey(asset.id);
-      graph.addEdge(rootNodeId, assetNodeId);
-    }
-  });
-  bundleGraph.traverse((node) => {
-    if (node.type === 'asset') {
-      const dependencies = bundleGraph.getDependencies(node.value);
+  const graph = bundleGraphToRootedGraph(bundleGraph);
 
-      for (let dependency of dependencies) {
-        graph.addEdge(
-          graph.getNodeIdByContentKey(node.value.id),
-          graph.getNodeIdByContentKey(dependency.id),
+  const postOrder = [];
+  graph.traverse({
+    exit: (node) => {
+      postOrder.push(node);
+    },
+  });
+  const reversedPostOrder = postOrder.slice().reverse();
+
+  const dominators = Array(graph.nodes.length).fill(null);
+  // we know there's a root node
+  dominators[graph.rootNodeId ?? 0] = graph.rootNodeId;
+
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+
+    for (let node of reversedPostOrder) {
+      if (node === graph.rootNodeId) continue;
+
+      const predecessors = graph.getNodeIdsConnectedTo(node);
+
+      let newImmediateDominator = predecessors[0];
+      for (let i = 1; i < predecessors.length; i++) {
+        const predecessor = predecessors[i];
+        if (dominators[predecessor] == null) {
+          continue;
+        }
+
+        newImmediateDominator = intersect(
+          postOrder,
+          dominators,
+          predecessor,
+          newImmediateDominator,
         );
       }
+
+      if (dominators[node] !== newImmediateDominator) {
+        dominators[node] = newImmediateDominator;
+        changed = true;
+      }
+    }
+  }
+
+  const outputMap: Map<Asset, Set<Asset>> = new Map();
+  bundleGraph.traverse((node) => {
+    if (node.type === 'asset') {
+      outputMap.set(node.value, new Set());
     }
   });
 
-  // let changed = true;
-  // while (changed) {
-  //   changed = false;
+  for (let nodeId = 0; nodeId < dominators.length; nodeId++) {
+    const asset = graph.getNode(nodeId);
+    if (asset === 'root' || asset == null) {
+      continue;
+    }
+    const immediateDominator = dominators[nodeId];
+    if (immediateDominator == null) continue;
+    const immediateDominatorNode = graph.getNode(immediateDominator);
+    if (immediateDominatorNode == null || immediateDominatorNode === 'root')
+      continue;
 
-  //   graph.traverse((node) => {
-  //     if (node.type === 'asset') {
-  //       const asset = node.value;
-  //       if (asset === root) {
-  //         return;
-  //       }
-  //       const predecessors = graph
-  //         .getIncomingDependencies(asset)
-  //         .filter((dep) => !dep.isEntry)
-  //         .map((dep) => {
-  //           const asset = graph.getAssetWithDependency(dep);
-  //           if (asset == null) {
-  //             throw new Error('Asset not found');
-  //           }
-  //           return asset;
-  //         });
-  //       const newDominators = new Set([asset]);
-  //       if (predecessors.length > 0) {
-  //         const [firstAsset, ...otherAssets] = predecessors.map((asset) =>
-  //           nullthrows(dominators.get(asset)),
-  //         );
-  //         const intersection = new Set(
-  //           [...firstAsset].filter((x) => otherAssets.every((r) => r.has(x))),
-  //         );
-  //         for (let dominated of intersection) {
-  //           newDominators.add(dominated);
-  //         }
-  //       }
-  //       if (!isSetEqual(nullthrows(dominators.get(asset)), newDominators)) {
-  //         changed = true;
-  //         dominators.set(asset, newDominators);
-  //       }
-  //     }
-  //   });
-  // }
+    let dominatorSet = outputMap.get(asset);
+    dominatorSet?.add(immediateDominatorNode);
+  }
 
-  return dominators;
+  return outputMap;
+}
+
+function intersect(
+  postOrder: number[],
+  dominators: (number | null)[],
+  predecessor: number,
+  newImmediateDominator: number,
+) {
+  let n1: number = predecessor;
+  let n2: number = newImmediateDominator;
+  while (n1 !== n2) {
+    while (postOrder.indexOf(n1) < postOrder.indexOf(n2)) {
+      n1 = Number(dominators[n1]);
+    }
+    while (postOrder.indexOf(n2) < postOrder.indexOf(n1)) {
+      n2 = Number(dominators[n2]);
+    }
+  }
+  return n1;
 }
 
 export function isSetEqual(a: Set<Asset>, b: Set<Asset>) {

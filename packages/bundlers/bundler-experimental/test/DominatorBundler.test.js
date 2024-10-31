@@ -5,14 +5,15 @@ import type {Asset} from '@atlaspack/types';
 import {overlayFS} from '@atlaspack/test-utils';
 import {setupBundlerTest} from './test-utils';
 import {
+  bundleGraphToRootedGraph,
   findAssetDominators,
-  getImmediateDominatorTree,
 } from '../src/DominatorBundler';
 import assert from 'assert';
 import {asset, fixtureFromGraph} from './fixture-from-dot';
 import {execSync} from 'child_process';
 import fs from 'fs';
 import {mkdirSync} from 'fs';
+import nullthrows from 'nullthrows';
 
 function dominatorsToDot(
   entryPath: string,
@@ -26,16 +27,25 @@ function dominatorsToDot(
     return path.relative(path.dirname(entryPath), p);
   };
 
-  for (let [asset] of dominators) {
+  const iterableDominators = Array.from(dominators.entries());
+  iterableDominators.sort((a, b) =>
+    cleanPath(a[0].filePath).localeCompare(cleanPath(b[0].filePath)),
+  );
+
+  for (let [asset] of iterableDominators) {
     const assetPath = cleanPath(asset.filePath);
     contents.push(`"${assetPath}";`);
   }
 
   contents.push('');
 
-  for (let [asset, dominatorSet] of dominators) {
+  for (let [asset, dominatorSet] of iterableDominators) {
     const assetPath = cleanPath(asset.filePath);
-    for (let dominated of dominatorSet) {
+    const iterableDominatorSet = Array.from(dominatorSet).sort((a, b) =>
+      cleanPath(a.filePath).localeCompare(cleanPath(b.filePath)),
+    );
+
+    for (let dominated of iterableDominatorSet) {
       if (dominated === asset) {
         continue;
       }
@@ -74,7 +84,7 @@ function runDotForTest(name: string, label: string, dot: string) {
   );
 }
 
-describe.only('DominatorBundler', () => {
+describe('DominatorBundler', () => {
   function test(
     name: string,
     fn: () => Promise<{|label: string, dot: string|}[]>,
@@ -87,6 +97,56 @@ describe.only('DominatorBundler', () => {
       });
     });
   }
+
+  describe('bundleGraphToRootedGraph', () => {
+    it('returns a simple graph with a single root', async () => {
+      const entryPath = path.join(__dirname, 'test/test.js');
+      await fixtureFromGraph(path.dirname(entryPath), overlayFS, [
+        asset('test.js', ['dependency.js']),
+        asset('dependency.js'),
+      ]);
+
+      const {mutableBundleGraph} = await setupBundlerTest(entryPath);
+      const rootGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+
+      assert.equal(rootGraph.nodes.length, 4);
+
+      const rootNode = rootGraph.getNodeIdByContentKey('root');
+      const assetIdsByPath = new Map();
+      rootGraph.traverse((node) => {
+        if (node !== rootNode) {
+          const asset = rootGraph.getNode(node);
+          if (!asset || typeof asset === 'string') {
+            throw new Error('Asset not found');
+          }
+          assetIdsByPath.set(path.basename(asset.filePath), asset.id);
+        }
+      }, rootNode);
+
+      const getConnections = (contentKey: string) => {
+        const node = rootGraph.getNodeIdByContentKey(contentKey);
+        return rootGraph.getNodeIdsConnectedFrom(node).map((nodeId) => {
+          const node = rootGraph.getNode(nodeId);
+          if (!node || typeof node === 'string') throw new Error('root cycle');
+          return path.basename(node.filePath);
+        });
+      };
+
+      assert.deepEqual(getConnections('root'), ['test.js']);
+      assert.deepEqual(
+        getConnections(nullthrows(assetIdsByPath.get('test.js'))),
+        ['dependency.js', 'esmodule-helpers.js'],
+      );
+      assert.deepEqual(
+        getConnections(nullthrows(assetIdsByPath.get('dependency.js'))),
+        ['esmodule-helpers.js'],
+      );
+      assert.deepEqual(
+        getConnections(nullthrows(assetIdsByPath.get('esmodule-helpers.js'))),
+        [],
+      );
+    });
+  });
 
   describe('findAssetDominators', () => {
     test('can find dominators for a simple graph', async () => {
@@ -101,10 +161,8 @@ describe.only('DominatorBundler', () => {
         ],
       );
 
-      const {mutableBundleGraph, entry} = await setupBundlerTest(entryPath);
-      const dominators = findAssetDominators(mutableBundleGraph, [
-        entry.entryAsset,
-      ]);
+      const {mutableBundleGraph} = await setupBundlerTest(entryPath);
+      const dominators = findAssetDominators(mutableBundleGraph);
 
       const outputDot = dominatorsToDot(entryPath, dominators);
       assert.equal(
@@ -114,14 +172,14 @@ digraph dominators {
   labelloc="t";
   label="Dominators";
 
-  "test.js";
+  "async.js";
   "dependency.js";
   "esmodule_helpers.js";
-  "async.js";
+  "test.js";
 
+  "test.js" -> "async.js";
   "test.js" -> "dependency.js";
   "test.js" -> "esmodule_helpers.js";
-  "test.js" -> "async.js";
 }
       `.trim(),
       );
@@ -148,10 +206,8 @@ digraph dominators {
         ],
       );
 
-      const {mutableBundleGraph, entry} = await setupBundlerTest(entryPath);
-      const dominators = findAssetDominators(mutableBundleGraph, [
-        entry.entryAsset,
-      ]);
+      const {mutableBundleGraph} = await setupBundlerTest(entryPath);
+      const dominators = findAssetDominators(mutableBundleGraph);
 
       const outputDot = dominatorsToDot(entryPath, dominators);
       assert.equal(
@@ -161,24 +217,22 @@ digraph dominators {
   labelloc="t";
   label="Dominators";
 
-  "page.js";
-  "react.js";
-  "left-pad.js";
-  "string-concat.js";
-  "string-chart-at.js";
   "esmodule_helpers.js";
   "jsx.js";
+  "left-pad.js";
   "lodash.js";
+  "page.js";
+  "react.js";
+  "string-chart-at.js";
+  "string-concat.js";
 
-  "page.js" -> "react.js";
-  "page.js" -> "left-pad.js";
-  "page.js" -> "string-concat.js";
-  "string-concat.js" -> "string-chart-at.js";
-  "page.js" -> "string-chart-at.js";
   "page.js" -> "esmodule_helpers.js";
   "react.js" -> "jsx.js";
-  "page.js" -> "jsx.js";
+  "page.js" -> "left-pad.js";
   "page.js" -> "lodash.js";
+  "page.js" -> "react.js";
+  "string-concat.js" -> "string-chart-at.js";
+  "page.js" -> "string-concat.js";
 }
             `.trim(),
       );
