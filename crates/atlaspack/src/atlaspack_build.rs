@@ -1,6 +1,4 @@
-use std::collections::HashMap;
 use std::collections::HashSet;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_rc_config_loader::AtlaspackRcConfigLoader;
@@ -10,13 +8,6 @@ use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::PluginLogger;
 use atlaspack_core::plugin::PluginOptions;
-use atlaspack_core::types::BuildMode;
-use atlaspack_core::types::DefaultTargetOptions;
-use atlaspack_core::types::LogLevel;
-use atlaspack_filesystem::FileSystemRef;
-use atlaspack_package_manager::PackageManagerRef;
-use atlaspack_plugin_rpc::RpcFactoryRef;
-use petgraph::graph::NodeIndex;
 use tokio::sync::RwLock;
 
 use crate::actions::asset_graph::AssetGraphAction;
@@ -25,14 +16,13 @@ use crate::actions::ActionQueue;
 use crate::actions::ActionType;
 use crate::actions::Compilation;
 use crate::plugins::config_plugins::ConfigPlugins;
-use crate::state::EnvMap;
 use crate::state::State;
 use crate::AtlaspackOptions;
 
 pub struct BuildOptions {}
 
 pub async fn build(
-  build_options: BuildOptions,
+  _build_options: BuildOptions,
   options: AtlaspackOptions,
 ) -> anyhow::Result<AssetGraph> {
   let State {
@@ -101,6 +91,7 @@ pub async fn build(
     default_target_options,
     asset_graph: Arc::new(RwLock::new(AssetGraph::new())),
     asset_request_to_asset: Default::default(),
+    pending_dependency_links: Default::default(),
   });
 
   let completed = HashSet::<u64>::new();

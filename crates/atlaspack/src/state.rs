@@ -2,8 +2,6 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use atlaspack_core::asset_graph::AssetGraph;
-use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::types::BuildMode;
 use atlaspack_core::types::DefaultTargetOptions;
 use atlaspack_core::types::LogLevel;
@@ -12,9 +10,7 @@ use atlaspack_package_manager::NodePackageManager;
 use atlaspack_package_manager::PackageManagerRef;
 use atlaspack_plugin_rpc::RpcFactoryRef;
 use atlaspack_resolver::OsFileSystem;
-use tokio::sync::RwLock;
 
-use crate::plugins::config_plugins::ConfigPlugins;
 use crate::project_root::infer_project_root;
 use crate::AtlaspackOptions;
 

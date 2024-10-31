@@ -1,9 +1,8 @@
 use std::hash::Hash;
 use std::path::PathBuf;
-use std::process::Termination;
 use std::sync::Arc;
 
-use async_trait::async_trait;
+use atlaspack_core::asset_graph::AssetGraph;
 use atlaspack_core::asset_graph::DependencyNode;
 use atlaspack_core::asset_graph::DependencyState;
 use atlaspack_core::diagnostic_error;
@@ -15,28 +14,21 @@ use atlaspack_core::plugin::ResolvedResolution;
 use atlaspack_core::plugin::ResolvingEvent;
 use atlaspack_core::types::Dependency;
 use atlaspack_resolver::parse_scheme;
-use petgraph::graph::DiGraph;
 use petgraph::graph::NodeIndex;
 
 use super::super::ActionQueue;
 use super::super::ActionType;
 use super::super::Compilation;
-use super::super::TargetAction;
 use crate::actions::asset::AssetAction;
-use crate::actions::link::LinkAction;
 use crate::actions::Action;
 use crate::plugins::config_plugins::ConfigPlugins;
 use crate::plugins::Plugins;
-use crate::request_tracker::Request;
-use crate::request_tracker::ResultAndInvalidations;
-use crate::request_tracker::RunRequestContext;
-use crate::request_tracker::RunRequestError;
 
 #[derive(Hash, Debug)]
 pub struct PathAction {
   pub dependency: Arc<Dependency>,
   pub node_index: NodeIndex,
-  pub target_id: u64,
+  pub request_id: u64,
 }
 
 // TODO tracing, dev deps
@@ -48,12 +40,15 @@ impl Action for PathAction {
       asset_graph,
       plugins,
       project_root,
+      asset_request_to_asset,
+      pending_dependency_links,
       ..
     }: &Compilation,
   ) -> anyhow::Result<()> {
     let result = self.exec(plugins).await?;
 
     let mut asset_graph = asset_graph.write().await;
+    let asset_request_to_asset = asset_request_to_asset.write().await;
 
     let index = asset_graph
       .dependency_index(self.node_index.into())
@@ -89,15 +84,53 @@ impl Action for PathAction {
 
     *state = DependencyState::Resolved;
 
-    q.next(ActionType::Link(LinkAction {
-      code: code.clone(),
+    let asset_request = AssetAction {
+      code,
       env: dependency.env.clone(),
       file_path: path,
       project_root: project_root.clone(),
-      pipeline: pipeline.clone(),
-      query,
-      side_effects,
-    }))
+      pipeline: pipeline,
+      query: query,
+      side_effects: side_effects,
+    };
+    let id = asset_request.id();
+
+    if let Some(asset_node_index) = asset_request_to_asset.get(&id) {
+      println!("Asset exists");
+      // We have already completed this AssetRequest so we can connect the
+      // Dependency to the Asset immediately
+      asset_graph.add_edge(&self.node_index, asset_node_index);
+      propagate_requested_symbols(
+        &mut asset_graph,
+        asset_node_index,
+        &self.node_index,
+        self.request_id.clone(),
+        &q,
+      );
+      Ok(())
+    } else {
+      pending_dependency_links
+        .write()
+        .await
+        .entry(id)
+        .or_default()
+        .insert(self.node_index.into());
+
+      q.next(ActionType::Asset(asset_request))?;
+
+      Ok(())
+    }
+
+    // The AssetRequest has already been kicked off but is yet to
+    // complete. Register this Dependency to be connected once it
+    // completes
+    // self
+    //   .waiting_asset_requests
+    //   .entry(id)
+    //   .and_modify(|nodes| {
+    //     nodes.insert(node);
+    //   })
+    // .or_insert_with(|| HashSet::from([node]));
   }
 }
 
@@ -242,4 +275,29 @@ pub enum PathRequestOutput {
     query: Option<String>,
     side_effects: bool,
   },
+}
+
+fn propagate_requested_symbols(
+  asset_graph: &mut AssetGraph,
+  asset_node_index: &NodeIndex,
+  incoming_dep_node_index: &NodeIndex,
+  parent_request_id: u64,
+  q: &ActionQueue,
+) {
+  asset_graph.propagate_requested_symbols(
+    *asset_node_index,
+    *incoming_dep_node_index,
+    &mut |dependency_node_index: NodeIndex, dependency: Arc<Dependency>| {
+      tracing::debug!(
+        "queueing a path request from on_undeferred, {}",
+        dependency.specifier
+      );
+      q.next(ActionType::Path(PathAction {
+        dependency,
+        node_index: dependency_node_index,
+        request_id: parent_request_id,
+      }))
+      .unwrap();
+    },
+  );
 }

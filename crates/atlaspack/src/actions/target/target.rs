@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::hash::Hash;
 use std::path::Path;
 use std::path::PathBuf;
@@ -89,7 +88,7 @@ impl Action for TargetAction {
       q.next(ActionType::Path(PathAction {
         dependency: Arc::new(dependency),
         node_index,
-        target_id: self.id(),
+        request_id: self.id(),
       }))?;
     }
 

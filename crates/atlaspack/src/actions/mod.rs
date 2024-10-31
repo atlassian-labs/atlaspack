@@ -2,7 +2,6 @@ pub mod asset;
 pub mod asset_graph;
 mod compilation;
 pub mod entry;
-pub mod link;
 pub mod path;
 pub mod target;
 
@@ -12,7 +11,6 @@ use std::hash::Hasher;
 use asset::AssetAction;
 use asset_graph::AssetGraphAction;
 use entry::EntryAction;
-use link::LinkAction;
 use path::PathAction;
 use target::TargetAction;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -26,7 +24,6 @@ pub enum ActionType {
   Entry(EntryAction),
   Target(TargetAction),
   Path(PathAction),
-  Link(LinkAction),
   Asset(AssetAction),
 }
 
@@ -41,7 +38,6 @@ impl Action for ActionType {
       ActionType::AssetGraph(a) => a.run(q, &c).await,
       ActionType::Target(a) => a.run(q, &c).await,
       ActionType::Path(a) => a.run(q, &c).await,
-      ActionType::Link(a) => a.run(q, &c).await,
       ActionType::Asset(a) => a.run(q, &c).await,
     }
   }
@@ -57,7 +53,6 @@ impl std::fmt::Display for ActionType {
       Self::Entry(_) => write!(f, "Entry"),
       Self::Target(_) => write!(f, "Target"),
       Self::Path(_) => write!(f, "Path"),
-      Self::Link(_) => write!(f, "Link"),
       Self::Asset(_) => write!(f, "Asset"),
     }
   }

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -17,6 +18,7 @@ use crate::plugins::config_plugins::ConfigPlugins;
 use crate::state::EnvMap;
 use crate::AtlaspackOptions;
 
+#[allow(unused)]
 pub struct Compilation {
   pub options: Arc<AtlaspackOptions>,
   pub fs: FileSystemRef,
@@ -32,5 +34,6 @@ pub struct Compilation {
   pub default_target_options: DefaultTargetOptions,
   pub asset_graph: Arc<RwLock<AssetGraph>>,
   pub asset_request_to_asset: Arc<RwLock<HashMap<u64, NodeIndex>>>,
+  pub pending_dependency_links: Arc<RwLock<HashMap<u64, HashSet<NodeIndex>>>>,
   // waiting_asset_requests: HashMap<u64, HashSet<NodeIndex>>,
 }
