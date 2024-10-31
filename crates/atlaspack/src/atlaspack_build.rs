@@ -25,6 +25,52 @@ pub async fn build(
   _build_options: BuildOptions,
   options: AtlaspackOptions,
 ) -> anyhow::Result<AssetGraph> {
+  let c = bootstrap(options).await?;
+
+  let completed = HashSet::<u64>::new();
+
+  let mut jobs = tokio::task::JoinSet::<anyhow::Result<u64>>::new();
+  let (q, mut rx) = ActionQueue::new();
+
+  q.next(ActionType::AssetGraph(AssetGraphAction {}))?;
+
+  loop {
+    // Try to get the next item from the queue
+    let Ok((action, id)) = rx.try_recv() else {
+      // If no jobs are running then exit
+      if jobs.is_empty() {
+        break;
+      }
+      // Wait for the next job to complete
+      let Some(res) = jobs.join_next().await else {
+        anyhow::bail!("terminated early")
+      };
+      res??;
+      continue;
+    };
+
+    println!("{}", action);
+    // dbg!(&action);
+    // println!("");
+
+    if completed.contains(&id) {
+      continue;
+    }
+
+    jobs.spawn({
+      let q = q.clone();
+      let c = c.clone();
+      async move {
+        action.run(q, &c).await?;
+        Ok(id)
+      }
+    });
+  }
+
+  anyhow::bail!("build complete")
+}
+
+async fn bootstrap(options: AtlaspackOptions) -> anyhow::Result<Arc<Compilation>> {
   let State {
     fs,
     package_manager,
@@ -76,7 +122,7 @@ pub async fn build(
     },
   )?);
 
-  let c = Arc::new(Compilation {
+  Ok(Arc::new(Compilation {
     options: options.clone(),
     fs: fs.clone(),
     package_manager: package_manager.clone(),
@@ -92,46 +138,5 @@ pub async fn build(
     asset_graph: Arc::new(RwLock::new(AssetGraph::new())),
     asset_request_to_asset: Default::default(),
     pending_dependency_links: Default::default(),
-  });
-
-  let completed = HashSet::<u64>::new();
-  let mut jobs = tokio::task::JoinSet::<anyhow::Result<u64>>::new();
-  let (q, mut rx) = ActionQueue::new();
-
-  q.next(ActionType::AssetGraph(AssetGraphAction {}))?;
-
-  loop {
-    // Try to get the next item from the queue
-    let Ok((action, id)) = rx.try_recv() else {
-      // If no jobs are running then exit
-      if jobs.is_empty() {
-        break;
-      }
-      // Wait for the next job to complete
-      let Some(res) = jobs.join_next().await else {
-        anyhow::bail!("terminated early")
-      };
-      res??;
-      continue;
-    };
-
-    println!("{}", action);
-    // dbg!(&action);
-    // println!("");
-
-    if completed.contains(&id) {
-      continue;
-    }
-
-    jobs.spawn({
-      let q = q.clone();
-      let c = c.clone();
-      async move {
-        action.run(q, &c).await?;
-        Ok(id)
-      }
-    });
-  }
-
-  anyhow::bail!("build complete")
+  }))
 }
