@@ -27,6 +27,7 @@ import {
 import type {Options as WatcherOptions, Event} from '@parcel/watcher';
 import type WorkerFarm from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
+import makeDebug from 'debug';
 
 import {
   ATLASPACK_VERSION,
@@ -69,6 +70,8 @@ import type {
   InternalGlob,
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
+
+const debug = makeDebug('atlaspack:RequestTracker');
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
@@ -1282,6 +1285,8 @@ export default class RequestTracker {
     request: Request<TInput, TResult>,
     opts?: ?RunRequestOpts,
   ): Promise<TResult> {
+    debug('RequestTracker::runRequest', request.id);
+
     let hasKey = this.graph.hasContentKey(request.id);
     let requestId = hasKey
       ? this.graph.getNodeIdByContentKey(request.id)
@@ -1289,6 +1294,7 @@ export default class RequestTracker {
     let hasValidResult = requestId != null && this.hasValidResult(requestId);
 
     if (!opts?.force && hasValidResult) {
+      debug('RequestTracker::runRequest cached request', request.id);
       // $FlowFixMe[incompatible-type]
       return this.getRequestResult<TResult>(request.id);
     }
@@ -1335,6 +1341,7 @@ export default class RequestTracker {
         options: this.options,
         rustAtlaspack: this.rustAtlaspack,
       });
+      debug('RequestTracker::runRequest finished request', request.id);
 
       assertSignalNotAborted(this.signal);
       this.completeRequest(requestNodeId);

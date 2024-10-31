@@ -1,0 +1,13 @@
+digraph dominators {
+  labelloc="t";
+  label="Dominators";
+
+  "test.js";
+  "dependency.js";
+  "esmodule_helpers.js";
+  "async.js";
+
+  "test.js" -> "dependency.js";
+  "test.js" -> "esmodule_helpers.js";
+  "test.js" -> "async.js";
+}

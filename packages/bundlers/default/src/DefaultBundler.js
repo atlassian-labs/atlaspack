@@ -1401,6 +1401,14 @@ function createIdealGraph(
   // We should include "bundle reuse" as shared bundles that may be removed but the bundle itself would have to be retained
   for (let [bundleNodeId, bundle] of bundleGraph.nodes.entries()) {
     if (!bundle || bundle === 'root') continue;
+    console.log({
+      bundleSize: bundle.size,
+      bundleAssets: bundle.assets,
+      minBundleSize: config.minBundleSize,
+      sourceBundlesSize: bundle.sourceBundles.size,
+      mainEntryAsset: bundle.mainEntryAsset,
+      manualSharedBundleIdsHas: manualSharedBundleIds.has(bundleNodeId),
+    });
     if (
       bundle.sourceBundles.size > 0 &&
       bundle.mainEntryAsset == null &&
@@ -1612,7 +1620,18 @@ function createIdealGraph(
       for (let sourceBundleId of bundle.sourceBundles) {
         let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
         invariant(sourceBundle !== 'root');
-        addAssetToBundleRoot(asset, nullthrows(sourceBundle.mainEntryAsset));
+        if (sourceBundle.mainEntryAsset == null) {
+          // add here
+        } else {
+          console.log({
+            sourceBundle: sourceBundle.assets,
+            bundle: bundle.assets,
+            mainEntryAsset: sourceBundle.mainEntryAsset,
+          });
+          addAssetToBundleRoot(asset, nullthrows(sourceBundle.mainEntryAsset));
+        }
+
+        // }
       }
     }
 
@@ -1812,6 +1831,7 @@ async function loadBundlerConfig(
     );
   }
 
+  console.log('modeConfig', modeConfig);
   validateSchema.diagnostic(
     CONFIG_SCHEMA,
     {

@@ -3,6 +3,7 @@ import assert from 'assert';
 import Logger from '@atlaspack/logger';
 import {
   assertBundles,
+  expectBundles,
   bundle,
   describe,
   findAsset,
@@ -1264,6 +1265,7 @@ describe.v2('bundler', function () {
       'async value should not be inlined',
     );
   });
+
   describe('manual shared bundles', () => {
     const dir = path.join(__dirname, 'manual-bundle');
 
@@ -1875,6 +1877,304 @@ describe.v2('bundler', function () {
         {assets: ['index.html']},
         {assets: ['in-project.js', 'outside-project.js']},
         {assets: ['esmodule-helpers.js', 'index.js', 'vendor.js']},
+      ]);
+    });
+
+    it('this is a BUG ; the assets are duplicated', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        disable-shared-bundles-false
+          right-pad.js:
+            export default function () { return Math.random() * 1000; };
+          left-pad.js:
+            export default function () { return Math.random(); };
+          center-pad.js:
+            export default function () { return Math.random() * 999999999; };
+          lodash.js:
+            import a from './left-pad';
+            import b from './right-pad';
+            import c from './center-pad';
+
+            export default function () { return a() + b(); };
+          react.js:
+            import a from './left-pad';
+
+            export default function () { return a(); };
+          page1.js:
+            import react from './react';
+            import lodash from './lodash';
+            export default function () { return react() + lodash(); };
+          page2.js:
+            import react from './react';
+            import lodash from './lodash';
+            export default function () { return react() * lodash(); };
+          index.js:
+            const page1 = import('./page1');
+            const page2 = import('./page2');
+
+            export default () => page1() + page2();
+
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "minBundleSize": 1000,
+                "manualSharedBundles": [
+                  {
+                    "name": "react",
+                    "root": "react.js",
+                    "assets": [
+                      "react.js"
+                    ]
+                  },
+                  {
+                    "name": "lodash",
+                    "root": "lodash.js",
+                    "assets": [
+                      "lodash.js"
+                    ]
+                  }
+                ]
+              }
+            }
+
+          yarn.lock:`;
+      // 1000 is a magic number that will cause left-pad to be merged back
+
+      const inputDir = path.join(__dirname, 'disable-shared-bundles-false');
+      const entry = path.join(inputDir, 'index.js');
+      const messages = [];
+      const loggerDisposable = Logger.onLog((message) => {
+        if (message.level !== 'verbose') {
+          messages.push(message);
+        }
+      });
+      const bundleGraph = await bundle(entry, {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: false,
+        },
+        inputFS: overlayFS,
+      });
+      loggerDisposable.dispose();
+
+      assert.deepEqual(messages, []);
+      expectBundles(inputDir, bundleGraph, [
+        {
+          assets: ['index.js'],
+        },
+        {
+          assets: ['lodash.js'],
+        },
+        {
+          assets: ['react.js'],
+        },
+        {
+          assets: ['center-pad.js', 'left-pad.js', 'page1.js', 'right-pad.js'],
+          type: 'js',
+        },
+        {
+          assets: ['center-pad.js', 'left-pad.js', 'page2.js', 'right-pad.js'],
+          type: 'js',
+        },
+      ]);
+    });
+
+    it('this is a bug, assets are missing from the lodash bundle', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        disable-shared-bundles-false
+          right-pad.js:
+            export default function () { return Math.random() * 1000; };
+          left-pad.js:
+            export default function () { return Math.random(); };
+          lodash.js:
+            import a from './left-pad';
+            import b from './right-pad';
+
+            export default function () { return a() + b(); };
+          react.js:
+            import a from './left-pad';
+            import b from './right-pad';
+
+            export default function () { return a() * b(); };
+          page1.js:
+            import react from './react';
+            import lodash from './lodash';
+            export default function () { return react() + lodash(); };
+          page2.js:
+            import react from './react';
+            import lodash from './lodash';
+            export default function () { return react() * lodash(); };
+          index.js:
+            const page1 = import('./page1');
+            const page2 = import('./page2');
+
+            export default () => page1() + page2();
+
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "minBundleSize": 0,
+                "manualSharedBundles": [
+                  {
+                    "name": "react",
+                    "root": "react.js",
+                    "assets": [
+                      "*.js"
+                    ]
+                  },
+                  {
+                    "name": "lodash",
+                    "root": "lodash.js",
+                    "assets": [
+                      "*.js"
+                    ]
+                  }
+                ]
+              }
+            }
+
+          yarn.lock:`;
+
+      const inputDir = path.join(__dirname, 'disable-shared-bundles-false');
+      const entry = path.join(inputDir, 'index.js');
+      const messages = [];
+      const loggerDisposable = Logger.onLog((message) => {
+        if (message.level !== 'verbose') {
+          messages.push(message);
+        }
+      });
+      const bundleGraph = await bundle(entry, {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: false,
+        },
+        inputFS: overlayFS,
+      });
+      loggerDisposable.dispose();
+
+      assert.deepEqual(messages, []);
+      expectBundles(inputDir, bundleGraph, [
+        {
+          assets: ['index.js'],
+        },
+        {
+          assets: ['lodash.js'],
+        },
+        {
+          assets: ['left-pad.js', 'react.js', 'right-pad.js'],
+        },
+        {
+          assets: ['page1.js'],
+          type: 'js',
+        },
+        {
+          assets: ['page2.js'],
+          type: 'js',
+        },
+      ]);
+    });
+
+    it.only('this is a bug, the build fails', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        disable-shared-bundles-false
+          right-pad.js:
+            export default function () { return Math.random() * 1000; };
+          left-pad.js:
+            export default function () { return Math.random(); };
+          center-pad.js:
+            export default function () { return Math.random() * 999999999; };
+          left-right-pad.js:
+            import a from './left-pad';
+            import b from './right-pad';
+
+            export default function () { return a() + b(); };
+          lodash.js:
+            import b from './right-pad';
+            import c from './center-pad';
+
+            export default function () { return a() + b(); };
+          react.js:
+            import a from './left-right-pad';
+
+            export default function a() { return a(); };
+          page1.js:
+            import react from './react';
+            import lodash from './lodash';
+            export default function () { return react() + lodash(); };
+          page2.js:
+            import react from './react';
+            import leftPad from './left-pad';
+            export default function () { return react(); };
+          index.js:
+            const page1 = import('./page1');
+            const page2 = import('./page2');
+            import leftPad from './left-right-pad';
+
+            export default () => page1() + page2() + leftPad();
+
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "minBundleSize": 1000,
+                "manualSharedBundles": [
+                  {
+                    "name": "react",
+                    "root": "react.js",
+                    "assets": [
+                      "react.js",
+                      "*.js"
+                    ]
+                  },
+                  {
+                    "name": "lodash",
+                    "root": "lodash.js",
+                    "assets": [
+                      "lodash.js",
+                      "*.js"
+                    ]
+                  }
+                ]
+              }
+            }
+
+          yarn.lock:`;
+      // 1000 is a magic number that will cause left-pad to be merged back
+
+      const inputDir = path.join(__dirname, 'disable-shared-bundles-false');
+      const entry = path.join(inputDir, 'index.js');
+      const messages = [];
+      const loggerDisposable = Logger.onLog((message) => {
+        if (message.level !== 'verbose') {
+          messages.push(message);
+        }
+      });
+      const bundleGraph = await bundle(entry, {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: false,
+        },
+        inputFS: overlayFS,
+      });
+      loggerDisposable.dispose();
+
+      assert.deepEqual(messages, []);
+      expectBundles(inputDir, bundleGraph, [
+        {
+          assets: ['index.js'],
+        },
+        {
+          assets: ['lodash.js'],
+        },
+        {
+          assets: ['react.js'],
+        },
+        {
+          assets: ['center-pad.js', 'left-pad.js', 'page1.js', 'right-pad.js'],
+          type: 'js',
+        },
+        {
+          assets: ['left-pad.js', 'page2.js'],
+          type: 'js',
+        },
       ]);
     });
   });

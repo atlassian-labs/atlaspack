@@ -9,6 +9,7 @@ import type {
   FilePath,
   InitialAtlaspackOptions,
   PackagedBundle,
+  Bundle,
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
 import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '@atlaspack/fs';
@@ -505,8 +506,14 @@ export function run(
   return runBundle(bundleGraph, bundle, globals, opts, externalModules);
 }
 
-export function getBundleData(
-  bundleGraph: BundleGraph<PackagedBundle>,
+interface BundleWithName {
+  name?: string;
+}
+
+type BundleLike = Bundle & BundleWithName;
+
+export function getBundleData<B: BundleLike>(
+  bundleGraph: BundleGraph<B>,
   inputDir: string,
 ): {|name: string, type: string, assets: string[]|}[] {
   const byAlphabet = (a, b) => (a.toLowerCase() < b.toLowerCase() ? -1 : 1);
@@ -514,18 +521,31 @@ export function getBundleData(
   const bundleData = bundles.map((bundle) => {
     const assets = [];
     bundle.traverseAssets((asset) => {
+      if (
+        /@swc[/\\]helpers/.test(asset.filePath) ||
+        /runtime-[a-z0-9]{16}\.js/.test(asset.filePath) ||
+        /runtimes\/js\/src\/helpers/.test(asset.filePath) ||
+        /transformers\/js\/src\/esmodule-helpers\.js/.test(asset.filePath)
+      ) {
+        return;
+      }
+
       assets.push(path.relative(inputDir, asset.filePath));
     });
     assets.sort(byAlphabet);
-    return {name: bundle.name, type: bundle.type, assets};
+    return {
+      name: bundle.name ?? '',
+      type: bundle.type,
+      assets,
+    };
   });
   bundleData.sort(({name: a}, {name: b}) => byAlphabet(a, b));
   return bundleData;
 }
 
-export function expectBundles(
+export function expectBundles<B: BundleLike>(
   inputDir: string,
-  bundleGraph: BundleGraph<PackagedBundle>,
+  bundleGraph: BundleGraph<B>,
   expectedBundles: Array<{|
     name?: string | RegExp,
     type?: string,
@@ -533,7 +553,7 @@ export function expectBundles(
   |}>,
 ) {
   const bundleData = getBundleData(bundleGraph, inputDir);
-  expect(bundleData).toEqual(expectedBundles);
+  expect(bundleData).toMatchObject(expectedBundles);
 }
 
 export function assertBundles(
