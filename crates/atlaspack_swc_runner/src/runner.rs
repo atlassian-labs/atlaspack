@@ -118,7 +118,7 @@ fn run_with_transformation<R>(
   let mut parser = Parser::new_from(lexer);
   let module = parser
     .parse_module()
-    .map_err(|err| RunWithTransformationError::SwcParse(err))?;
+    .map_err(RunWithTransformationError::SwcParse)?;
 
   GLOBALS.set(
     &Globals::new(),

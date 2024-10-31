@@ -42,11 +42,11 @@ impl TransformerPlugin for AtlaspackImageTransformerPlugin {
 
     let width = query
       .get("width")
-      .map_or(Ok(None), |w| w.parse::<u32>().map(|w| Some(w)))?;
+      .map_or(Ok(None), |w| w.parse::<u32>().map(Some))?;
 
     let height = query
       .get("height")
-      .map_or(Ok(None), |h| h.parse::<u32>().map(|h| Some(h)))?;
+      .map_or(Ok(None), |h| h.parse::<u32>().map(Some))?;
 
     let target_file_type = query.get("as").map(|f| FileType::from_extension(f));
 
@@ -54,7 +54,7 @@ impl TransformerPlugin for AtlaspackImageTransformerPlugin {
       let format = image_format(&asset.file_type)?;
       let target_format = target_file_type
         .clone()
-        .map_or(Ok(None), |f| image_format(&f).map(|f| Some(f)))?
+        .map_or(Ok(None), |f| image_format(&f).map(Some))?
         .unwrap_or(format);
 
       let img = ImageReader::with_format(Cursor::new(asset.code.bytes()), format).decode()?;

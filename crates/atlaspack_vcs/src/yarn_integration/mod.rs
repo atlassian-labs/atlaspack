@@ -49,7 +49,7 @@ impl YarnLock {
 }
 
 pub fn parse_yarn_lock(contents: &str) -> anyhow::Result<YarnLock> {
-  let yarn_lock: YarnLock = serde_yaml::from_str(&contents)?;
+  let yarn_lock: YarnLock = serde_yaml::from_str(contents)?;
   yarn_lock.validate()?;
   Ok(yarn_lock)
 }

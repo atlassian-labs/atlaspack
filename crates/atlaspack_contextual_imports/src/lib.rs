@@ -16,22 +16,13 @@ use swc_core::{
   },
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualImportsConfig {
   #[serde(default)]
   pub server: bool,
   #[serde(default)]
   pub default_if_undefined: bool,
-}
-
-impl Default for ContextualImportsConfig {
-  fn default() -> ContextualImportsConfig {
-    ContextualImportsConfig {
-      server: false,
-      default_if_undefined: false,
-    }
-  }
 }
 
 pub struct ContextualImportsInlineRequireVisitor {
@@ -61,7 +52,7 @@ impl ContextualImportsInlineRequireVisitor {
         expr: Box::new(Expr::Lit(Lit::Str(Str {
           value: atom,
           // This span is important to avoid getting marked as a helper
-          span: span,
+          span,
           raw: None,
         }))),
         spread: None,

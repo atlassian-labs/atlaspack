@@ -28,7 +28,7 @@
     "link-all": "node scripts/link-all.js packages",
     "unlink-all": "node scripts/unlink-all.js packages",
     "check": "flow check",
-    "lint": "eslint . && prettier \"./packages/*/*/{src,bin,test}/**/*.{js,json,md}\" --list-different && cargo fmt --all -- --check",
+    "lint": "node ./scripts/lint-all.mjs",
     "prepublishOnly": "yarn adjust-versions && yarn build && yarn build-ts",
     "test": "yarn test:unit && yarn test:integration",
     "test:integration": "yarn workspace @atlaspack/integration-tests test",
@@ -71,7 +71,8 @@
     "rimraf": "^5.0.5",
     "semver": "^7.5.2",
     "sinon": "^7.3.1",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "zx": "^8.1.9"
   },
   "engines": {
     "node": ">= 16.0.0"

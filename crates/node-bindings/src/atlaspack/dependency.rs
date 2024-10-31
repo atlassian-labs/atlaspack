@@ -66,7 +66,7 @@ fn create_dependency_id(env: Env, params: JsUnknown) -> napi::Result<String> {
     &specifier,
     &environment_id,
     target.as_ref(),
-    pipeline.as_ref().map(|s| s.as_str()),
+    pipeline.as_deref(),
     &specifier_type.unwrap_or_default(),
     &bundle_behavior,
     &priority.unwrap_or_default(),

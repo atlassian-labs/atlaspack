@@ -77,7 +77,7 @@ impl VisitMut for GlobalReplacer<'_> {
     };
 
     // Only handle global variables
-    if !is_unresolved(&id, self.unresolved_mark) {
+    if !is_unresolved(id, self.unresolved_mark) {
       return;
     }
 

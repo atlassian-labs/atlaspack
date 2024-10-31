@@ -13,7 +13,7 @@ pub struct PackageManagerNapi {
 impl PackageManagerNapi {
   pub fn new(env: &Env, js_file_system: &JsObject) -> napi::Result<Self> {
     Ok(Self {
-      resolve_fn: JsCallable::new_method_bound("resolveSync", &js_file_system)?.into_unref(env)?,
+      resolve_fn: JsCallable::new_method_bound("resolveSync", js_file_system)?.into_unref(env)?,
     })
   }
 }

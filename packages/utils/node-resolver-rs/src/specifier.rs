@@ -159,7 +159,7 @@ impl Specifier {
     })
   }
 
-  pub fn to_string<'a>(&'a self) -> Cow<'a, str> {
+  pub fn to_string(&self) -> Cow<'_, str> {
     match self {
       Specifier::Relative(path) | Specifier::Absolute(path) | Specifier::Tilde(path) => {
         path.as_os_str().to_string_lossy()
@@ -180,6 +180,7 @@ impl Specifier {
 
 // https://url.spec.whatwg.org/#scheme-state
 // https://github.com/servo/rust-url/blob/1c1e406874b3d2aa6f36c5d2f3a5c2ea74af9efb/url/src/parser.rs#L387
+#[allow(clippy::result_unit_err)]
 pub fn parse_scheme(input: &str) -> Result<(Cow<'_, str>, &str), ()> {
   if input.is_empty() || !input.starts_with(ascii_alpha) {
     return Err(());

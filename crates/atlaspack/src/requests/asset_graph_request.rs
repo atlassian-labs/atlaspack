@@ -158,7 +158,7 @@ impl AssetGraphBuilder {
         if !side_effects
           && can_defer
           && requested_symbols.is_empty()
-          && !dependency.symbols.is_none()
+          && dependency.symbols.is_some()
         {
           *state = DependencyState::Deferred;
           return;

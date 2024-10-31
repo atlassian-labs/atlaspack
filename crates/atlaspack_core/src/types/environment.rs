@@ -71,6 +71,7 @@ pub struct Environment {
   pub source_type: SourceType,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn create_environment_id(
   context: &EnvironmentContext,
   engines: &Engines,
@@ -98,7 +99,7 @@ pub fn create_environment_id(
 
 impl Environment {
   pub fn id(&self) -> String {
-    let s = create_environment_id(
+    create_environment_id(
       &self.context,
       &self.engines,
       &self.include_node_modules,
@@ -108,8 +109,7 @@ impl Environment {
       &self.should_optimize,
       &self.should_scope_hoist,
       &self.source_map,
-    );
-    s
+    )
   }
 }
 

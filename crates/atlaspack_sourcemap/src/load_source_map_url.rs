@@ -31,5 +31,5 @@ pub fn load_sourcemap_url(
 
   let json = fs.read_to_string(&source_map_path)?;
 
-  Ok(SourceMap::from_json(project_root, &json)?)
+  SourceMap::from_json(project_root, &json)
 }

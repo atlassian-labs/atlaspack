@@ -21,17 +21,12 @@ pub fn run_inline_requires_optimizer(
   input: InlineRequiresOptimizerInput,
 ) -> napi::Result<InlineRequiresOptimizerResult> {
   let result = run_visit(&input.code, |ctx| {
-    let visitor = atlaspack_plugin_optimizer_inline_requires::InlineRequiresOptimizer::builder()
+    atlaspack_plugin_optimizer_inline_requires::InlineRequiresOptimizer::builder()
       .unresolved_mark(ctx.unresolved_mark)
       .add_ignore_pattern(IgnorePattern::ModuleIdHashSet(
-        input
-          .ignore_module_ids
-          .into_iter()
-          .map(|s| Atom::new(s))
-          .collect(),
+        input.ignore_module_ids.into_iter().map(Atom::new).collect(),
       ))
-      .build();
-    visitor
+      .build()
   })
   .map_err(|err| {
     napi::Error::from_reason(format!(

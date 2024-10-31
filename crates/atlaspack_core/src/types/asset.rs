@@ -3,8 +3,8 @@ use std::ffi::OsStr;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
+use std::str;
 use std::sync::Arc;
-use std::{str, u64};
 
 use anyhow::anyhow;
 use atlaspack_filesystem::FileSystemRef;
@@ -239,6 +239,7 @@ pub struct AssetWithDependencies {
 }
 
 impl Asset {
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     project_root: &Path,
     env: Arc<Environment>,
@@ -268,7 +269,7 @@ impl Asset {
       environment_id: &env.id(),
       file_path: &file_path
         .strip_prefix(project_root)
-        .unwrap_or_else(|_| file_path.as_path())
+        .unwrap_or(file_path.as_path())
         .to_string_lossy(),
       file_type: &file_type,
       pipeline: pipeline.as_deref(),

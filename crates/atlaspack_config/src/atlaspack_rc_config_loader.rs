@@ -191,7 +191,7 @@ impl AtlaspackRcConfigLoader {
     let mut config_path = match options.config {
       Some(config) => self
         .package_manager
-        .resolve(&config, &resolve_from)
+        .resolve(config, &resolve_from)
         .map(|r| r.resolved)
         .map_err(|source| {
           source.context(diagnostic_error!(
@@ -202,11 +202,11 @@ impl AtlaspackRcConfigLoader {
       None => self.find_config(project_root, &resolve_from),
     };
 
-    if !config_path.is_ok() {
+    if config_path.is_err() {
       if let Some(fallback_config) = options.fallback_config {
         config_path = self
           .package_manager
-          .resolve(&fallback_config, &resolve_from)
+          .resolve(fallback_config, &resolve_from)
           .map(|r| r.resolved)
           .map_err(|source| {
             source.context(diagnostic_error!(
@@ -220,7 +220,7 @@ impl AtlaspackRcConfigLoader {
     let config_path = config_path?;
     let (mut atlaspack_config, files) = self.load_config(config_path)?;
 
-    if options.additional_reporters.len() > 0 {
+    if !options.additional_reporters.is_empty() {
       atlaspack_config
         .reporters
         .extend(options.additional_reporters);
@@ -238,7 +238,7 @@ fn serde_to_diagnostic_error(error: serde_json5::Error, file: File) -> Diagnosti
 
   match error {
     serde_json5::Error::Message { msg, location } => {
-      let location = location.unwrap_or_else(|| Location { column: 1, line: 1 });
+      let location = location.unwrap_or(Location { column: 1, line: 1 });
 
       diagnostic_error.code_frames(vec![CodeFrame {
         code_highlights: vec![CodeHighlight {

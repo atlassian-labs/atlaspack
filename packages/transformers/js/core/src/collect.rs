@@ -716,9 +716,9 @@ impl Visit for Collect {
         }
       }
       Expr::Ident(ident) => {
-        if &*ident.sym == "exports" && is_unresolved(&ident, self.unresolved_mark) {
+        if &*ident.sym == "exports" && is_unresolved(ident, self.unresolved_mark) {
           handle_export!();
-        } else if ident.sym == js_word!("module") && is_unresolved(&ident, self.unresolved_mark) {
+        } else if ident.sym == js_word!("module") && is_unresolved(ident, self.unresolved_mark) {
           self.has_cjs_exports = true;
           self.static_cjs_exports = false;
           self.should_wrap = true;
@@ -756,7 +756,7 @@ impl Visit for Collect {
     if node.op == UnaryOp::TypeOf {
       match &*node.arg {
         Expr::Ident(ident)
-          if ident.sym == js_word!("module") && is_unresolved(&ident, self.unresolved_mark) =>
+          if ident.sym == js_word!("module") && is_unresolved(ident, self.unresolved_mark) =>
         {
           // Do nothing to avoid the ident visitor from marking the module as non-static.
         }
@@ -806,7 +806,7 @@ impl Visit for Collect {
         // Bail if `module` or `exports` are accessed non-statically.
         let is_module = ident.sym == js_word!("module");
         let is_exports = &*ident.sym == "exports";
-        if (is_module || is_exports) && is_unresolved(&ident, self.unresolved_mark) {
+        if (is_module || is_exports) && is_unresolved(ident, self.unresolved_mark) {
           self.has_cjs_exports = true;
           self.static_cjs_exports = false;
           if is_module {
@@ -963,7 +963,7 @@ impl Visit for Collect {
     if let Callee::Expr(expr) = &node.callee {
       match &**expr {
         Expr::Ident(ident) => {
-          if ident.sym == js_word!("eval") && is_unresolved(&ident, self.unresolved_mark) {
+          if ident.sym == js_word!("eval") && is_unresolved(ident, self.unresolved_mark) {
             self.should_wrap = true;
             self.add_bailout(node.span, BailoutReason::Eval);
           }
@@ -1188,7 +1188,7 @@ fn has_binding_identifier(node: &AssignTarget, sym: &JsWord, unresolved_mark: Ma
     noop_visit_type!();
 
     fn visit_binding_ident(&mut self, ident: &BindingIdent) {
-      if ident.id.sym == *self.sym && is_unresolved(&ident, self.unresolved_mark) {
+      if ident.id.sym == *self.sym && is_unresolved(ident, self.unresolved_mark) {
         self.found = true;
       }
     }

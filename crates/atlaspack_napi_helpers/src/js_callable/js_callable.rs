@@ -101,7 +101,7 @@ impl JsCallable {
     let send = {
       let name = self.fn_name.clone();
       move |error_message: &str, value: napi::Result<Return>| -> napi::Result<()> {
-        if let Err(_) = tx.send(value) {
+        if tx.send(value).is_err() {
           return Err(napi::Error::from_reason(format!(
             "JsCallable({}): {}",
             &name, error_message
@@ -139,7 +139,7 @@ impl JsCallable {
                     let send = send.clone();
                     move |ctx| {
                       let return_value = ctx.get::<JsUnknown>(0)?;
-                      let mapped = Ok(map_return(&ctx.env, return_value)?);
+                      let mapped = Ok(map_return(ctx.env, return_value)?);
                       send("Result.then()", mapped)?;
                       ctx.env.get_undefined()
                     }
@@ -271,7 +271,7 @@ impl JsCallable {
 
     match rx.recv() {
       Ok(Ok(result)) => Ok(result),
-      Ok(Err(err)) => Err(err.into()),
+      Ok(Err(err)) => Err(err),
       Err(err) => Err(anyhow::anyhow!(
         "JsCallable({}) RecvError: {:?}",
         &self.fn_name,

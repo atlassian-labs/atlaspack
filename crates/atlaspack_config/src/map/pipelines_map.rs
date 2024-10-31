@@ -66,7 +66,7 @@ impl PipelinesMap {
     let mut matches: Vec<PluginNode> = Vec::new();
 
     for (pattern, pipelines) in self.0.iter() {
-      if is_match(&pattern) {
+      if is_match(pattern) {
         matches.extend(pipelines.iter().cloned());
       }
     }

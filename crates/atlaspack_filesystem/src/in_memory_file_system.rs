@@ -103,7 +103,7 @@ impl FileSystem for InMemoryFileSystem {
   fn create_directory(&self, path: &Path) -> std::io::Result<()> {
     let mut files = self.files.write().unwrap();
     let path = self.canonicalize_impl(path);
-    files.insert(path.into(), InMemoryFileSystemEntry::Directory);
+    files.insert(path, InMemoryFileSystemEntry::Directory);
     Ok(())
   }
 

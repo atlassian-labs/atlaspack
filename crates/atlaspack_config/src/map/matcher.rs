@@ -2,7 +2,7 @@ use std::path::Path;
 
 use glob_match::glob_match;
 
-pub fn named_pattern_matcher<'a>(path: &'a Path) -> impl Fn(&str, &str) -> bool + 'a {
+pub fn named_pattern_matcher(path: &Path) -> impl Fn(&str, &str) -> bool + '_ {
   let basename = path.file_name().unwrap().to_str().unwrap();
   let path = path.as_os_str().to_str().unwrap();
 
@@ -12,7 +12,7 @@ pub fn named_pattern_matcher<'a>(path: &'a Path) -> impl Fn(&str, &str) -> bool 
   }
 }
 
-pub fn pattern_matcher<'a>(path: &'a Path) -> impl Fn(&str) -> bool + 'a {
+pub fn pattern_matcher(path: &Path) -> impl Fn(&str) -> bool + '_ {
   let is_match = named_pattern_matcher(path);
 
   move |pattern| is_match(pattern, "")
