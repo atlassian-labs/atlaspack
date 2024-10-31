@@ -24,12 +24,12 @@ describe('MonoBundler', () => {
           export default 5;
     `;
 
-    const {mutableBundleGraph, entry} = await setupBundlerTest(entryPath);
+    const {mutableBundleGraph, entries} = await setupBundlerTest(entryPath);
 
     const {bundleGraph: outputBundleGraph} = monoBundler({
       inputGraph: mutableBundleGraph,
       outputGraph: mutableBundleGraph,
-      entries: [entry],
+      entries,
     });
 
     expectBundles(path.dirname(entryPath), outputBundleGraph, [
@@ -50,12 +50,12 @@ describe('MonoBundler', () => {
           export function main() { return something('atlaspack'); };
     `;
 
-    const {mutableBundleGraph, entry} = await setupBundlerTest(entryPath);
+    const {mutableBundleGraph, entries} = await setupBundlerTest(entryPath);
 
     const {bundleGraph: outputBundleGraph} = monoBundler({
       inputGraph: mutableBundleGraph,
       outputGraph: mutableBundleGraph,
-      entries: [entry],
+      entries,
     });
 
     expectBundles(path.dirname(entryPath), outputBundleGraph, [
@@ -82,12 +82,12 @@ describe('MonoBundler', () => {
           };
     `;
 
-    const {mutableBundleGraph, entry} = await setupBundlerTest(entryPath);
+    const {mutableBundleGraph, entries} = await setupBundlerTest(entryPath);
 
     const {bundleGraph: outputBundleGraph} = monoBundler({
       inputGraph: mutableBundleGraph,
       outputGraph: mutableBundleGraph,
-      entries: [entry],
+      entries,
     });
 
     expectBundles(path.dirname(entryPath), outputBundleGraph, [

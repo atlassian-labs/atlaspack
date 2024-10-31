@@ -1,0 +1,17 @@
+digraph dominators {
+  labelloc="t";
+  label="Dominators";
+
+  "esmodule_helpers.js";
+  "jsx.js";
+  "left-pad.js";
+  "lodash.js";
+  "page1.js";
+  "page2.js";
+  "react.js";
+  "string-chart-at.js";
+  "string-concat.js";
+
+  "react.js" -> "jsx.js";
+  "string-concat.js" -> "string-chart-at.js";
+}

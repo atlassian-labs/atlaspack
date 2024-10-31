@@ -1,0 +1,43 @@
+digraph dominators {
+  labelloc="t";
+  label="Dominators";
+
+
+  subgraph cluster_empty {
+  label="";
+    
+  "page1.js";
+  "page2.js";
+  }
+  subgraph cluster_507fa9c4634750e8__6b334e67b36bf482__74c9622cb0d9c7f1__8914175ec607662a__a5fb992cd851a2a3__d42b80666886ae39__d880a50242dc7b27__d8939d2523f1d303 {
+  label="";
+    
+  "esmodule_helpers.js";
+  }
+  subgraph cluster_6b334e67b36bf482__a5fb992cd851a2a3 {
+  label="";
+    
+  "lodash.js";
+  "react.js";
+  }
+  subgraph cluster_74c9622cb0d9c7f1__8914175ec607662a {
+  label="";
+    
+  "left-pad.js";
+  }
+  subgraph cluster_8914175ec607662a {
+  label="";
+    
+  "jsx.js";
+  }
+  subgraph cluster_8914175ec607662a__d42b80666886ae39 {
+  label="";
+    
+  "string-concat.js";
+  }
+  subgraph cluster_d8939d2523f1d303 {
+  label="";
+    
+  "string-chart-at.js";
+  }
+}

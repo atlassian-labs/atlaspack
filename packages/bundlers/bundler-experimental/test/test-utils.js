@@ -18,14 +18,14 @@ export interface BundlerTestSetup {
   assetGraph: AssetGraph;
   mutableBundleGraph: MutableBundleGraph;
   bundleGraph: BundleGraph;
-  entry: {|
+  entries: {|
     entryAsset: Asset,
     entryDependency: Dependency,
-  |};
+  |}[];
 }
 
 export async function setupBundlerTest(
-  entryPath: string,
+  entryPath: string | string[],
 ): Promise<BundlerTestSetup> {
   const options = getParcelOptions(entryPath, {
     inputFS: overlayFS,
@@ -51,29 +51,34 @@ export async function setupBundlerTest(
   debug('Building bundle graph and finding entry values for bundling');
   const bundleGraph = BundleGraph.fromAssetGraph(assetGraph, false);
 
-  const entryAssetValue = assetGraph
-    .getEntryAssets()
-    .find(
-      (entryAssetValue) =>
-        entryAssetValue.filePath ===
-        path.relative(resolvedOptions.projectRoot, entryPath),
+  const entryPaths = Array.isArray(entryPath) ? entryPath : [entryPath];
+  const entries = entryPaths.map((entryPath) => {
+    const entryAssetValue = assetGraph
+      .getEntryAssets()
+      .find(
+        (entryAssetValue) =>
+          entryAssetValue.filePath ===
+          path.relative(resolvedOptions.projectRoot, entryPath),
+      );
+    if (!entryAssetValue) {
+      throw new Error('Entry asset not found');
+    }
+
+    const entryAsset: Asset = assetFromValue(entryAssetValue, resolvedOptions);
+    const entryDependencyValue = assetGraph
+      .getIncomingDependencies(entryAssetValue)
+      .find((dependency) => dependency.isEntry);
+    if (!entryDependencyValue) {
+      throw new Error('Entry dependency not found');
+    }
+    const entryDependency = getPublicDependency(
+      entryDependencyValue,
+      resolvedOptions,
     );
-  if (!entryAssetValue) {
-    throw new Error('Entry asset not found');
-  }
 
-  const entryAsset: Asset = assetFromValue(entryAssetValue, resolvedOptions);
-  const entryDependencyValue = assetGraph
-    .getIncomingDependencies(entryAssetValue)
-    .find((dependency) => dependency.isEntry);
-  if (!entryDependencyValue) {
-    throw new Error('Entry dependency not found');
-  }
+    return {entryAsset, entryDependency};
+  });
 
-  const entryDependency = getPublicDependency(
-    entryDependencyValue,
-    resolvedOptions,
-  );
   const mutableBundleGraph = new MutableBundleGraph(
     bundleGraph,
     resolvedOptions,
@@ -85,9 +90,6 @@ export async function setupBundlerTest(
     assetGraph,
     mutableBundleGraph,
     bundleGraph,
-    entry: {
-      entryAsset,
-      entryDependency,
-    },
+    entries,
   };
 }

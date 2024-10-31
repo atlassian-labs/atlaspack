@@ -23,59 +23,6 @@ export function dominatorBundler<B: Bundle>({
   throw new Error('');
 }
 
-export function getImmediateDominatorTree(
-  root: Asset,
-  dominators: Map<Asset, Set<Asset>>,
-): Map<Asset, Set<Asset>> {
-  const dominanceRelationGraph = new Graph<Asset>();
-  const assetNodeIds = new Map<Asset, number>();
-  const nodeIdsAssets = new Map<number, Asset>();
-
-  for (let [asset] of dominators) {
-    const nodeId = dominanceRelationGraph.addNode(asset);
-    assetNodeIds.set(asset, nodeId);
-    nodeIdsAssets.set(nodeId, asset);
-    if (asset.id === root.id) {
-      dominanceRelationGraph.setRootNodeId(nodeId);
-    }
-  }
-
-  for (let [asset, dominatedSet] of dominators) {
-    const nodeId = nullthrows(assetNodeIds.get(asset));
-    for (let dominated of dominatedSet) {
-      const dominatedNodeId = nullthrows(assetNodeIds.get(dominated));
-      dominanceRelationGraph.addEdge(dominatedNodeId, nodeId);
-    }
-  }
-
-  const dominatedByMap = new Map<Asset, Set<Asset>>();
-  for (let [asset, dominatedSet] of dominators) {
-    for (let dominated of dominatedSet) {
-      let dominatedBy = dominatedByMap.get(dominated);
-      if (dominatedBy == null) {
-        dominatedBy = new Set();
-        dominatedByMap.set(dominated, dominatedBy);
-      }
-      dominatedBy.add(asset);
-    }
-  }
-
-  const immediateDominatorTree = new Map();
-  const orderedNodes = dominanceRelationGraph.topoSort();
-  orderedNodes.reverse();
-
-  for (let node of orderedNodes) {
-    const asset = nullthrows(nodeIdsAssets.get(node));
-    const dominates = new Set();
-    const immdiateNodeId = immediateDominatorTree.set(asset, dominates);
-    if (asset === root) {
-      dominanceRelationGraph.setRootNodeId(immdiateNodeId);
-    }
-  }
-
-  return immediateDominatorTree;
-}
-
 export function bundleGraphToRootedGraph(
   bundleGraph: MutableBundleGraph,
 ): ContentGraph<'root' | Asset> {
@@ -217,7 +164,41 @@ function intersect(
   return n1;
 }
 
-export function isSetEqual(a: Set<Asset>, b: Set<Asset>) {
+export function createPackages(
+  bundleGraph: MutableBundleGraph,
+  dominators: Map<Asset, Set<Asset>>,
+) {
+  // turn the dominator map into a graph instance
+  const graph = new ContentGraph();
+  for (let [root, assets] of dominators) {
+    const chunk = {
+      id: `chunk:${root.id}`,
+      assets: new Set([root, ...assets]),
+    };
+    graph.addNodeByContentKey(chunk.id, chunk);
+  }
+  for (let [root] of dominators) {
+    const chunkId = `chunk:${root.id}`;
+    const dependencies = bundleGraph.getDependencies(root);
+    for (let dependency of dependencies) {
+      const parentAsset = bundleGraph.getAssetWithDependency(dependency);
+      if (!parentAsset) {
+        throw new Error('Non entry dependency had no asset');
+      }
+      const parentChunkId = `chunk:${parentAsset.id}`;
+      graph.addEdge(
+        graph.getNodeIdByContentKey(chunkId),
+        graph.getNodeIdByContentKey(parentChunkId),
+      );
+    }
+  }
+
+  // now we need to topo sort and create packages based on their parent IDs
+  // if we just iterated the map in any order, we'd not converge
+  // TODO
+}
+
+export function isSetEqual(a: Set<Asset>, b: Set<Asset>): boolean {
   if (a.size !== b.size) {
     return false;
   }
