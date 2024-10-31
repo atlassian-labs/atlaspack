@@ -28,7 +28,6 @@ pub async fn build(
   let c = bootstrap(options).await?;
 
   let completed = HashSet::<u64>::new();
-
   let mut jobs = tokio::task::JoinSet::<anyhow::Result<u64>>::new();
   let (q, mut rx) = ActionQueue::new();
 
