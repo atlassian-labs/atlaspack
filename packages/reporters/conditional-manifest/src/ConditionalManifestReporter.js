@@ -24,35 +24,40 @@ export default (new Reporter({
           };
         }
 
-        manifest[relative(bundle.target.distDir, bundle.filePath)] = bundleInfo;
+        manifest[bundle.target.name] ??= {};
+        manifest[bundle.target.name][
+          relative(bundle.target.distDir, bundle.filePath)
+        ] = bundleInfo;
       }
-
-      const conditionalManifest = JSON.stringify(manifest, null, 2);
 
       // Error if there are multiple targets in the build
       const targets = new Set(
         event.bundleGraph.getBundles().map((bundle) => bundle.target),
       );
-      if (targets.size > 1) {
-        throw new Error(
-          'Conditional bundling does not support multiple targets',
+
+      for (const target of targets) {
+        const conditionalManifestFilename = join(
+          nullthrows(target?.distDir, 'distDir not found in target'),
+          'conditional-manifest.json',
         );
+
+        const conditionalManifest = JSON.stringify(
+          manifest[target.name],
+          null,
+          2,
+        );
+
+        await options.outputFS.writeFile(
+          conditionalManifestFilename,
+          conditionalManifest,
+          {mode: 0o666},
+        );
+
+        logger.info({
+          message:
+            'Wrote conditional manifest to ' + conditionalManifestFilename,
+        });
       }
-
-      const target = targets.values().next().value;
-      const conditionalManifestFilename = join(
-        nullthrows(target?.distDir, 'distDir not found in target'),
-        'conditional-manifest.json',
-      );
-      await options.outputFS.writeFile(
-        conditionalManifestFilename,
-        conditionalManifest,
-        {mode: 0o666},
-      );
-
-      logger.info({
-        message: 'Wrote conditional manifest to ' + conditionalManifestFilename,
-      });
     }
   },
 }): Reporter);
