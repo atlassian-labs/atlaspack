@@ -1,3 +1,3 @@
 import c from './c';
 
-export default a;
+export default c;

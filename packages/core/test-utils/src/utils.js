@@ -459,7 +459,11 @@ export async function runBundle(
         let src = url.parse(nullthrows(node.attrs).src);
         if (src.hostname == null) {
           let p = path.join(distDir, nullthrows(src.pathname));
-          let b = nullthrows(bundles.find((b) => b.filePath === p));
+          let b = nullthrows(
+            bundles.find(
+              (b) => b.bundleBehavior !== 'inline' && b.filePath === p,
+            ),
+          );
           scripts.push([overlayFS.readFileSync(b.filePath, 'utf8'), b]);
         }
       } else if (node.tag === 'script' && node.content && !node.attrs?.src) {
