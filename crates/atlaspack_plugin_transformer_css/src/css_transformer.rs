@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -12,7 +12,7 @@ use atlaspack_core::types::{
   Asset, AssetWithDependencies, Code, Dependency, Diagnostic, EnvironmentContext, ErrorKind,
   ExportsCondition, FileType, Priority, SourceMap, SpecifierType, Symbol,
 };
-use lightningcss::css_modules::CssModuleExport;
+use lightningcss::css_modules::{CssModuleExport, CssModuleReference};
 use lightningcss::dependencies::DependencyOptions;
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::{ParserFlags, ParserOptions, StyleSheet};
@@ -266,12 +266,6 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       // Sorting by key is safe as the order is irrelevant but needs to be deterministic.
       let sorted_exports: BTreeMap<String, CssModuleExport> = exports.into_iter().collect();
       for (key, export) in sorted_exports.iter() {
-        if !export.composes.is_empty() {
-          return Err(anyhow!(
-            "CSS module 'composes' not currently supported in Atlaspack V3"
-          ));
-        }
-
         asset_symbols.push(Symbol {
           exported: key.clone(),
           local: export.name.clone(),
@@ -280,8 +274,55 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
           self_referenced: false,
           loc: None,
         });
-        export_code
-          .push_str(format!("module.exports[\"{}\"] = `{}`;\n", key, export.name).as_str());
+
+        export_code.push_str(format!("module.exports[\"{}\"] = `{}", key, export.name).as_str());
+
+        for reference in export.composes.iter() {
+          export_code.push(' ');
+
+          match reference {
+            CssModuleReference::Local { name } => {
+              if let Some((exported, _)) = sorted_exports
+                .iter()
+                .find(|(_, export)| name == &export.name)
+              {
+                export_code.push_str(format!("${{module.exports['{}']}}", *exported).as_str());
+                // TODO: Add the export first
+                let symbols = vec![Symbol {
+                  exported: exported.clone(),
+                  local: name.clone(),
+                  is_weak: false,
+                  is_esm_export: false,
+                  self_referenced: true,
+                  loc: None,
+                }];
+                dependencies.push(Dependency {
+                  // Point this at the root asset
+                  specifier: css_unique_key.clone(),
+                  specifier_type: SpecifierType::Esm,
+                  symbols: Some(symbols),
+                  env: asset.env.clone(),
+                  source_asset_id: Some(asset.id.clone()),
+                  source_path: Some(asset.file_path.clone()),
+                  source_asset_type: Some(FileType::Css),
+                  ..Dependency::default()
+                });
+              }
+            }
+            CssModuleReference::Global { name } => {
+              export_code.push_str(name);
+            }
+            CssModuleReference::Dependency {
+              name: _,
+              specifier: _,
+            } => {
+              return Err(anyhow!(
+                "Atlaspack V3 does not yet support CSS composes using dependencies"
+              ));
+            }
+          };
+        }
+        export_code.push_str("`;\n");
 
         // If the export is referenced internally (e.g. used @keyframes), add a self-reference
         // to the JS so the symbol is retained during tree-shaking.
