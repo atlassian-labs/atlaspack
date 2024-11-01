@@ -221,9 +221,6 @@ digraph dominators {
             `.trim(),
         );
 
-        dominators.traverse((node) => {
-          console.log(dominators.getNode(node));
-        });
         const iterations = [];
         const mergedDominators = createPackages(
           mutableBundleGraph,
@@ -235,16 +232,53 @@ digraph dominators {
             });
           },
         );
-        mergedDominators.traverse((node) => {
-          console.log(node, mergedDominators.getNode(node));
-        });
+        const mergedDominatorsDot = mergedDominatorsToDot(
+          entryDir,
+          mergedDominators,
+        );
+
+        assert.equal(
+          mergedDominatorsDot,
+          `
+digraph merged {
+  labelloc="t";
+  label="Merged";
+  layout="dot";
+
+  "root";
+  "page2.js";
+  "page1.js";
+  "package_1,9";
+  "lodash.js";
+  "react.js";
+  "jsx.js";
+  "left-pad.js";
+  "string-concat.js";
+  "string-chart-at.js";
+  "package_1,10,9";
+  "esmodule_helpers.js";
+
+  "root" -> "page2.js";
+  "root" -> "page1.js";
+  "root" -> "package_1,9";
+  "root" -> "package_1,10,9";
+  "package_1,9" -> "lodash.js";
+  "package_1,9" -> "react.js";
+  "package_1,9" -> "left-pad.js";
+  "package_1,9" -> "string-concat.js";
+  "react.js" -> "jsx.js";
+  "string-concat.js" -> "string-chart-at.js";
+  "package_1,10,9" -> "esmodule_helpers.js";
+}
+          `.trim(),
+        );
 
         return [
           {label: 'input', dot: inputDot},
           {label: 'output', dot: outputDot},
           {
             label: 'merged',
-            dot: mergedDominatorsToDot(entryDir, mergedDominators),
+            dot: mergedDominatorsDot,
           },
           ...iterations,
         ];

@@ -210,20 +210,16 @@ export function createPackages(
 
   let iterations = 0;
   while (changed) {
-    console.log('RUNNING ITERATION');
     changed = false;
 
     const chunks = packages.getNodeIdsConnectedFrom(
       packages.getNodeIdByContentKey('root'),
     );
-    console.log(chunks);
     const chunksByAsset = new Map();
     for (let chunk of chunks) {
-      console.log('traverse', packages.getNode(chunk));
       packages.traverse((node) => {
         if (node === packages.rootNodeId) return;
         chunksByAsset.set(node, chunk);
-        console.log(' ==> ', packages.getNode(node));
       }, chunk);
     }
 
@@ -261,12 +257,6 @@ export function createPackages(
             )
           : getParentChunks(chunkNode);
 
-      console.log('chunkNode', chunkNode);
-      console.log(
-        'parentChunks',
-        Array.from(parentChunks).map((c) => packages.getNode(c)),
-      );
-
       const key =
         parentChunks.size === 0
           ? 'root'
@@ -279,8 +269,6 @@ export function createPackages(
       }
       chunksByParent.get(key)?.chunksToMerge.push(chunk);
     }
-
-    console.log(chunksByParent);
 
     const merge = (parentChunk: number, chunksToMerge: number[]) => {
       for (const chunk of chunksToMerge) {
@@ -348,7 +336,6 @@ export function createPackages(
   for (let node of nodesToRemove) {
     packages.removeNode(node);
   }
-  onIteration?.(packages, 'clean-up');
 
   return packages;
 }
