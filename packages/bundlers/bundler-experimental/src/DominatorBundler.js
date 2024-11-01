@@ -1,8 +1,9 @@
 // @flow strict-local
 
 import type {BundleGraph, Bundle, Asset, Dependency} from '@atlaspack/types';
-import MutableBundleGraph from '@atlaspack/core/src/public/MutableBundleGraph';
-import {Graph, ContentGraph} from '@atlaspack/graph';
+import type {MutableBundleGraph} from '@atlaspack/types';
+import {ContentGraph} from '@atlaspack/graph';
+
 import nullthrows from 'nullthrows';
 
 export type DominatorBundlerInput<B: Bundle> = {|
@@ -72,7 +73,7 @@ export function bundleGraphToRootedGraph(
  */
 export function findAssetDominators(
   bundleGraph: MutableBundleGraph,
-): Map<Asset, Set<Asset>> {
+): ContentGraph<'root' | Asset> {
   // Build a simpler graph with a root at the top
   const graph = bundleGraphToRootedGraph(bundleGraph);
 
@@ -120,10 +121,13 @@ export function findAssetDominators(
     }
   }
 
-  const outputMap: Map<Asset, Set<Asset>> = new Map();
+  const dominatorTree = new ContentGraph();
+  const rootId = dominatorTree.addNodeByContentKey('root', 'root');
+  dominatorTree.setRootNodeId(rootId);
+
   bundleGraph.traverse((node) => {
     if (node.type === 'asset') {
-      outputMap.set(node.value, new Set());
+      dominatorTree.addNodeByContentKey(node.value.id, node.value);
     }
   });
 
@@ -132,17 +136,28 @@ export function findAssetDominators(
     if (asset === 'root' || asset == null) {
       continue;
     }
+
+    const assetDominatorTreeNodeId = dominatorTree.getNodeIdByContentKey(
+      asset.id,
+    );
+
     const immediateDominator = dominators[nodeId];
     if (immediateDominator == null) continue;
     const immediateDominatorNode = graph.getNode(immediateDominator);
-    if (immediateDominatorNode == null || immediateDominatorNode === 'root')
-      continue;
+    if (immediateDominatorNode == null) continue;
 
-    let dominatorSet = outputMap.get(asset);
-    dominatorSet?.add(immediateDominatorNode);
+    if (immediateDominatorNode === 'root') {
+      dominatorTree.addEdge(rootId, assetDominatorTreeNodeId);
+      continue;
+    }
+
+    const immediateDominatedId = dominatorTree.getNodeIdByContentKey(
+      immediateDominatorNode.id,
+    );
+    dominatorTree.addEdge(immediateDominatedId, assetDominatorTreeNodeId);
   }
 
-  return outputMap;
+  return dominatorTree;
 }
 
 function intersect(
@@ -164,38 +179,157 @@ function intersect(
   return n1;
 }
 
+export type PackagedDominatorGraph = ContentGraph<
+  'root' | Asset | {|type: 'package', id: string, parentChunks: Set<number>|},
+>;
+
 export function createPackages(
   bundleGraph: MutableBundleGraph,
-  dominators: Map<Asset, Set<Asset>>,
-) {
-  // turn the dominator map into a graph instance
-  const graph = new ContentGraph();
-  for (let [root, assets] of dominators) {
-    const chunk = {
-      id: `chunk:${root.id}`,
-      assets: new Set([root, ...assets]),
-    };
-    graph.addNodeByContentKey(chunk.id, chunk);
-  }
-  for (let [root] of dominators) {
-    const chunkId = `chunk:${root.id}`;
-    const dependencies = bundleGraph.getDependencies(root);
-    for (let dependency of dependencies) {
-      const parentAsset = bundleGraph.getAssetWithDependency(dependency);
-      if (!parentAsset) {
-        throw new Error('Non entry dependency had no asset');
-      }
-      const parentChunkId = `chunk:${parentAsset.id}`;
-      graph.addEdge(
-        graph.getNodeIdByContentKey(chunkId),
-        graph.getNodeIdByContentKey(parentChunkId),
+  dominators: ContentGraph<Asset | 'root'>,
+): PackagedDominatorGraph {
+  let changed = true;
+  // $FlowFixMe
+  const packages: PackagedDominatorGraph = dominators.clone();
+  const nodesToRemove = [];
+
+  while (changed) {
+    console.log('RUNNING ITERATION');
+    changed = false;
+
+    const chunks = packages.getNodeIdsConnectedFrom(
+      packages.getNodeIdByContentKey('root'),
+    );
+    console.log(chunks);
+    const chunksByAsset = new Map();
+    for (let chunk of chunks) {
+      console.log('traverse', packages.getNode(chunk));
+      packages.traverse((node) => {
+        if (node === packages.rootNodeId) return;
+        chunksByAsset.set(node, chunk);
+        console.log(' ==> ', packages.getNode(node));
+      }, chunk);
+    }
+
+    const chunksByParent = new Map();
+    for (let chunk of chunks) {
+      const chunkNode = packages.getNode(chunk);
+      if (chunkNode == null || chunkNode === 'root') continue; // can't happen
+
+      const getParentChunks = (chunkNode: Asset) => {
+        const parentDependencies =
+          bundleGraph.getIncomingDependencies(chunkNode);
+        const parentAssets = parentDependencies.map((dep) => {
+          return bundleGraph.getAssetWithDependency(dep);
+        });
+        const parentChunks = new Set();
+        parentAssets.forEach((asset) => {
+          if (!asset) return;
+          const assetNodeId = packages.getNodeIdByContentKey(asset.id);
+          const chunk = chunksByAsset.get(assetNodeId);
+          // chunk is null if parent is the root
+          if (chunk != null) {
+            parentChunks.add(chunk);
+          }
+        });
+        return parentChunks;
+      };
+
+      const parentChunks =
+        chunkNode.type === 'package'
+          ? new Set(
+              // $FlowFixMe the types are messed-up right now
+              Array.from(chunkNode.parentChunks).map(
+                (c) => chunksByAsset.get(c) ?? c,
+              ),
+            )
+          : getParentChunks(chunkNode);
+
+      console.log('chunkNode', chunkNode);
+      console.log(
+        'parentChunks',
+        Array.from(parentChunks).map((c) => packages.getNode(c)),
       );
+
+      const key =
+        parentChunks.size === 0
+          ? 'root'
+          : Array.from(parentChunks).sort().join(',');
+      if (!chunksByParent.has(key)) {
+        chunksByParent.set(key, {
+          chunksToMerge: [],
+          parentChunks,
+        });
+      }
+      chunksByParent.get(key)?.chunksToMerge.push(chunk);
+    }
+
+    console.log(chunksByParent);
+
+    const merge = (parentChunk: number, chunksToMerge: number[]) => {
+      for (const chunk of chunksToMerge) {
+        if (parentChunk === chunk) {
+          continue;
+        }
+
+        packages.removeEdge(
+          packages.getNodeIdByContentKey('root'),
+          chunk,
+          1,
+          false,
+        );
+
+        packages.addEdge(parentChunk, chunk);
+
+        const chunkNode = packages.getNode(chunk);
+        const isPackage =
+          chunkNode != null &&
+          chunkNode !== 'root' &&
+          chunkNode.type === 'package';
+
+        // Do work to flatten package tree
+        if (isPackage) {
+          const children = packages.getNodeIdsConnectedFrom(chunk);
+          for (let child of children) {
+            packages.addEdge(parentChunk, child);
+          }
+          nodesToRemove.push(chunk);
+        }
+
+        changed = true;
+      }
+    };
+
+    for (const [key, {chunksToMerge, parentChunks}] of chunksByParent) {
+      if (key === 'root') {
+        continue;
+      }
+
+      // // If we're merging into a single parent then reparent
+      if (parentChunks.size === 1) {
+        const parentChunk = nullthrows(parentChunks.values().next().value);
+        merge(parentChunk, chunksToMerge);
+        continue;
+      }
+
+      const chunkRoot = packages.addNodeByContentKeyIfNeeded(`virtual:${key}`, {
+        type: 'package',
+        id: key,
+        parentChunks,
+      });
+      packages.addEdge(packages.getNodeIdByContentKey('root'), chunkRoot);
+
+      merge(chunkRoot, chunksToMerge);
     }
   }
 
-  // now we need to topo sort and create packages based on their parent IDs
-  // if we just iterated the map in any order, we'd not converge
-  // TODO
+  // It is not ideal that we let the graph grow with virtual nodes while
+  // building and only clean-up at the end. There'll be maximum `N*iterations`
+  // nodes.
+  for (let node of nodesToRemove) {
+    packages.removeNode(node);
+  }
+
+  return packages;
 }
 
 export function isSetEqual(a: Set<Asset>, b: Set<Asset>): boolean {

@@ -2,6 +2,14 @@ digraph dominators {
   labelloc="t";
   label="Dominators";
 
+  "root";
+  "root" -> "esmodule_helpers.js";
+  "root" -> "left-pad.js";
+  "root" -> "lodash.js";
+  "root" -> "page1.js";
+  "root" -> "page2.js";
+  "root" -> "react.js";
+  "root" -> "string-concat.js";
   "esmodule_helpers.js";
   "jsx.js";
   "left-pad.js";

@@ -41,6 +41,34 @@ export default class ContentGraph<TNode, TEdgeType: number = 1> extends Graph<
     return new ContentGraph(opts);
   }
 
+  clone(): ContentGraph<TNode, TEdgeType> {
+    const newGraph = new ContentGraph();
+    let nodeId = 0;
+    for (let node of this.nodes) {
+      if (node == null) continue;
+      const contentKey = this._nodeIdToContentKey.get(nodeId);
+      if (contentKey == null) {
+        newGraph.addNode(node);
+      } else {
+        newGraph.addNodeByContentKey(contentKey, node);
+      }
+      nodeId += 1;
+    }
+    for (let edge of this.getAllEdges()) {
+      newGraph.addEdge(edge.from, edge.to, edge.type);
+    }
+
+    if (this.rootNodeId != null) {
+      const rootNodeContentKey = this._nodeIdToContentKey.get(this.rootNodeId);
+      const newGraphRootNodeId = newGraph.getNodeIdByContentKey(
+        nullthrows(rootNodeContentKey),
+      );
+      newGraph.setRootNodeId(newGraphRootNodeId);
+    }
+
+    return newGraph;
+  }
+
   // $FlowFixMe[prop-missing]
   serialize(): SerializedContentGraph<TNode, TEdgeType> {
     // $FlowFixMe[prop-missing]

@@ -8,21 +8,24 @@ import {
 } from '@atlaspack/test-utils';
 import {monoBundler} from '../src/MonoBundler';
 import * as path from 'path';
-import {setupBundlerTest} from './test-utils';
+import {dotTest, setupBundlerTest} from './test-utils';
+import {dotFromBundleGraph, fixtureFromGraph} from './fixture-from-dot';
+import {asset} from './fixture-from-dot';
 
-describe('MonoBundler', () => {
+describe.only('MonoBundler', () => {
   before(async () => {
     // Warm up worker farm so that the first test doesn't account for this time.
     await workerFarm.callAllWorkers('ping', []);
   });
 
-  it('can bundle a single file', async () => {
+  dotTest(__filename, 'can bundle a single file', async () => {
     const entryPath = path.join(__dirname, 'test/test.js');
-    await fsFixture(overlayFS, __dirname)`
-      test
-        test.js:
-          export default 5;
-    `;
+    const entryDir = path.dirname(entryPath);
+    const inputDot = await fixtureFromGraph(
+      path.dirname(entryPath),
+      overlayFS,
+      [asset('test.js', [])],
+    );
 
     const {mutableBundleGraph, entries} = await setupBundlerTest(entryPath);
 
@@ -32,11 +35,21 @@ describe('MonoBundler', () => {
       entries,
     });
 
-    expectBundles(path.dirname(entryPath), outputBundleGraph, [
+    expectBundles(entryDir, outputBundleGraph, [
       {
         assets: ['test.js'],
       },
     ]);
+
+    const outputBundleGraphDot = dotFromBundleGraph(
+      entryDir,
+      outputBundleGraph,
+    );
+
+    return [
+      {label: 'assets', dot: inputDot},
+      {label: 'output', dot: outputBundleGraphDot},
+    ];
   });
 
   it('can bundle multiple files with sync dependencies', async () => {

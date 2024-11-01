@@ -1,0 +1,7 @@
+digraph assets {
+  labelloc="t";
+  label="Assets";
+
+  "test.js";
+
+}

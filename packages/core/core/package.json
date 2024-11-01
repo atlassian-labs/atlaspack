@@ -58,6 +58,10 @@
   },
   "exports": {
     ".": "./lib/index.js",
+    "./public": {
+      "development": "./src/public",
+      "default": "./lib/public"
+    },
     "./worker": {
       "development": "./src/worker.js",
       "default": "./lib/worker.js"

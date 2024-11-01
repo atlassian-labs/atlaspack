@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import type {BundleGraph, Bundle} from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
 
 import path from 'path';
@@ -116,4 +117,40 @@ export async function fixtureFromGraph(
   }
 
   return dotFromGraph(entries);
+}
+
+export function dotFromBundleGraph<B: Bundle>(
+  entryDir: string,
+  bundleGraph: BundleGraph<B>,
+): string {
+  const cleanPath = (p) => {
+    if (p.includes('esmodule-helpers.js')) {
+      return 'esmodule_helpers.js';
+    }
+    return path.relative(entryDir, p);
+  };
+  const contents = [];
+
+  const bundles = bundleGraph.getBundles();
+
+  for (let bundle of bundles) {
+    const bundleId = bundle.id;
+    contents.push(`subgraph cluster_${bundleId} {`);
+    contents.push(`  label = "Bundle ${bundleId}";`);
+
+    bundle.traverseAssets((asset) => {
+      contents.push(`  "${cleanPath(asset.filePath)}";`);
+    });
+
+    contents.push('}');
+  }
+
+  return `
+digraph bundle_graph {
+  labelloc="t";
+  label="Bundle graph";
+
+${contents.map((line) => (line.length > 0 ? `  ${line}` : '')).join('\n')}
+}
+  `;
 }

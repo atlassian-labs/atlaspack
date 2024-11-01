@@ -11,8 +11,182 @@ import {getParcelOptions, overlayFS} from '@atlaspack/test-utils';
 import type {Asset, Dependency} from '@atlaspack/types';
 import * as path from 'path';
 import makeDebug from 'debug';
+import * as fs from 'fs';
+import {mkdirSync} from 'fs';
+import {execSync} from 'child_process';
+import {ContentGraph} from '@atlaspack/graph';
+import type {PackagedDominatorGraph} from '../src/DominatorBundler';
+import nullthrows from 'nullthrows';
 
 const debug = makeDebug('atlaspack:bundler:working-bundler:test-utils');
+
+export function dotTest(
+  __filename: string,
+  name: string,
+  fn: () => Promise<{|label: string, dot: string|}[]>,
+) {
+  it(name, async () => {
+    const graphs = await fn();
+
+    graphs.forEach(({label, dot}) => {
+      runDotForTest(path.dirname(__filename), __filename, name, label, dot);
+    });
+  });
+}
+
+export function dominatorsToDot(
+  entryDir: string,
+  dominators: ContentGraph<Asset | 'root'>,
+): string {
+  const contents = [];
+  const cleanPath = (p) => {
+    if (p.includes('esmodule-helpers.js')) {
+      return 'esmodule_helpers.js';
+    }
+    return path.relative(entryDir, p);
+  };
+
+  contents.push('"root";');
+  const rootNodeId = dominators.getNodeIdByContentKey('root');
+  const rootNodes = dominators
+    .getNodeIdsConnectedFrom(rootNodeId)
+    .map((id) => {
+      const node = dominators.getNode(id);
+      if (node && node !== 'root') {
+        return cleanPath(node.filePath);
+      }
+    })
+    .filter(Boolean)
+    .sort();
+  rootNodes.forEach((node) => {
+    contents.push(`"root" -> "${node}";`);
+  });
+
+  const iterableDominators: Asset[] = [];
+  dominators.nodes.forEach((node) => {
+    if (node && node !== 'root') {
+      iterableDominators.push(node);
+    }
+  });
+  iterableDominators.sort((a, b) =>
+    cleanPath(a.filePath).localeCompare(cleanPath(b.filePath)),
+  );
+
+  for (let asset of iterableDominators) {
+    const assetPath = cleanPath(asset.filePath);
+    contents.push(`"${assetPath}";`);
+  }
+
+  contents.push('');
+
+  for (let asset of iterableDominators) {
+    const assetPath = cleanPath(asset.filePath);
+    const dominatorSetIds = dominators.getNodeIdsConnectedFrom(
+      dominators.getNodeIdByContentKey(asset.id),
+    );
+    const dominatedAssets = [];
+    dominatorSetIds.forEach((id) => {
+      const node = dominators.getNode(id);
+      if (node && node !== 'root') {
+        dominatedAssets.push(node);
+      }
+    });
+
+    const iterableDominatorSet = dominatedAssets.sort((a, b) =>
+      cleanPath(a.filePath).localeCompare(cleanPath(b.filePath)),
+    );
+
+    for (let dominated of iterableDominatorSet) {
+      if (dominated === asset) {
+        continue;
+      }
+
+      const dominatedPath = cleanPath(dominated.filePath);
+      contents.push(`"${assetPath}" -> "${dominatedPath}";`);
+    }
+  }
+
+  return `
+digraph dominators {
+  labelloc="t";
+  label="Dominators";
+
+${contents.map((l) => (l.length > 0 ? `  ${l}` : '')).join('\n')}
+}`.trim();
+}
+
+export function mergedDominatorsToDot(
+  entryDir: string,
+  dominators: PackagedDominatorGraph,
+): string {
+  const contents = [];
+  const cleanPath = (p) => {
+    if (p.includes('esmodule-helpers.js')) {
+      return 'esmodule_helpers.js';
+    }
+    return path.relative(entryDir, p);
+  };
+
+  const getIdentifier = (nodeId) => {
+    const node = nullthrows(dominators.getNode(nodeId));
+    if (node === 'root') {
+      return '"root"';
+    } else if (node.type === 'package') {
+      return `"package_${node.id}"`;
+    } else {
+      return `"${cleanPath(node.filePath)}"`;
+    }
+  };
+
+  dominators.traverse((nodeId) => {
+    contents.push(`${getIdentifier(nodeId)};`);
+  });
+
+  contents.push('');
+
+  dominators.traverse((nodeId) => {
+    dominators.getNodeIdsConnectedFrom(nodeId).forEach((connectedNodeId) => {
+      contents.push(
+        `${getIdentifier(nodeId)} -> ${getIdentifier(connectedNodeId)};`,
+      );
+    });
+  });
+
+  return `
+digraph merged {
+  labelloc="t";
+  label="Merged";
+  layout="dot";
+
+${contents.map((l) => (l.length > 0 ? `  ${l}` : '')).join('\n')}
+}`.trim();
+}
+
+export function runDotForTest(
+  __dirname: string,
+  __filename: string,
+  name: string,
+  label: string,
+  dot: string,
+) {
+  const slugTestName = path.join(
+    __dirname,
+    '__graphs__',
+    path.basename(__filename) + ' - ' + name,
+  );
+  mkdirSync(slugTestName, {recursive: true});
+  mkdirSync(path.join(slugTestName, 'dot'), {recursive: true});
+  mkdirSync(path.join(slugTestName, 'png'), {recursive: true});
+  const filePath = `${label}.dot`;
+  fs.writeFileSync(path.join(slugTestName, 'dot', filePath), dot);
+  execSync(
+    `dot -Tpng -o "${path.join(
+      slugTestName,
+      'png',
+      filePath,
+    )}.png" "${path.join(slugTestName, 'dot', filePath)}"`,
+  );
+}
 
 export interface BundlerTestSetup {
   assetGraph: AssetGraph;

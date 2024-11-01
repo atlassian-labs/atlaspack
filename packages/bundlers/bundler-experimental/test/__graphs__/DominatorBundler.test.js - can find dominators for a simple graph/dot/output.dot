@@ -2,6 +2,8 @@ digraph dominators {
   labelloc="t";
   label="Dominators";
 
+  "root";
+  "root" -> "test.js";
   "async.js";
   "dependency.js";
   "esmodule_helpers.js";
