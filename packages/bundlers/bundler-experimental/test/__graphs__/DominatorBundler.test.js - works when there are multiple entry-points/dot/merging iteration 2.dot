@@ -10,15 +10,15 @@ digraph merged {
   "lodash.js";
   "react.js";
   "jsx.js";
-  "package_2,8";
+  "package_2,7";
   "left-pad.js";
   "package_10,11";
-  "package_2,3";
+  "package_3,7";
   "string-concat.js";
   "string-chart-at.js";
   "package_1,10,14,9";
   "package_1,10,11,12,9";
-  "package_1,2,3,4,8,9";
+  "package_1,2,3,4,7,9";
   "esmodule_helpers.js";
 
   "root" -> "page2.js";
@@ -27,21 +27,21 @@ digraph merged {
   "root" -> "package_1,10,14,9";
   "package_1,9" -> "lodash.js";
   "package_1,9" -> "react.js";
-  "package_1,9" -> "package_2,8";
+  "package_1,9" -> "package_2,7";
   "package_1,9" -> "left-pad.js";
   "package_1,9" -> "package_10,11";
-  "package_1,9" -> "package_2,3";
+  "package_1,9" -> "package_3,7";
   "package_1,9" -> "string-concat.js";
   "react.js" -> "jsx.js";
-  "package_2,8" -> "left-pad.js";
-  "package_10,11" -> "package_2,3";
+  "package_2,7" -> "left-pad.js";
+  "package_10,11" -> "package_3,7";
   "package_10,11" -> "string-concat.js";
-  "package_2,3" -> "string-concat.js";
+  "package_3,7" -> "string-concat.js";
   "string-concat.js" -> "string-chart-at.js";
   "package_1,10,14,9" -> "package_1,10,11,12,9";
-  "package_1,10,14,9" -> "package_1,2,3,4,8,9";
+  "package_1,10,14,9" -> "package_1,2,3,4,7,9";
   "package_1,10,14,9" -> "esmodule_helpers.js";
-  "package_1,10,11,12,9" -> "package_1,2,3,4,8,9";
+  "package_1,10,11,12,9" -> "package_1,2,3,4,7,9";
   "package_1,10,11,12,9" -> "esmodule_helpers.js";
-  "package_1,2,3,4,8,9" -> "esmodule_helpers.js";
+  "package_1,2,3,4,7,9" -> "esmodule_helpers.js";
 }

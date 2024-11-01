@@ -1,13 +1,21 @@
 // @flow strict-local
 
-import type {BundleGraph, Bundle} from '@atlaspack/types';
+/*!
+ * This module provides a way to write fixtures where we don't care about the
+ * code within the assets; only the shape of the asset graphs.
+ */
 import type {FileSystem} from '@atlaspack/fs';
-
 import path from 'path';
 
-type GraphEntry = AssetEntry;
+/**
+ * A node in the fixture graph
+ */
+export type GraphEntry = AssetEntry;
 
-type AssetEntry = {|
+/**
+ * An asset in the fixture graph. Just a path and dependencies
+ */
+export type AssetEntry = {|
   type: 'asset',
   value: {|
     filePath: string,
@@ -15,7 +23,10 @@ type AssetEntry = {|
   |},
 |};
 
-type DependencyEntry = {|
+/**
+ * Sync or async dependency between assets
+ */
+export type DependencyEntry = {|
   type: 'dependency',
   value: {|
     from: string,
@@ -24,11 +35,14 @@ type DependencyEntry = {|
   |},
 |};
 
-type DependencySpec = {|
+export type DependencySpec = {|
   to: string,
   type: 'sync' | 'async',
 |};
 
+/**
+ * Create an asset node in the fixture graph
+ */
 export function asset(
   path: string,
   dependencies?: (string | DependencySpec)[],
@@ -63,6 +77,37 @@ export function asset(
   };
 }
 
+/**
+ * Create the files for a fixture graph over the `fs` filesystem.
+ */
+export async function fixtureFromGraph(
+  dirname: string,
+  fs: FileSystem,
+  entries: GraphEntry[],
+): Promise<string> {
+  await fs.mkdirp(dirname);
+
+  for (let entry of entries) {
+    if (entry.type === 'asset') {
+      const dependencies = entry.value.dependencies ?? [];
+      const symbols = dependencies.map((_, i) => `d${i}`);
+      const contents = [
+        ...dependencies.map((dependency, i) => {
+          return `import ${symbols[i]} from './${dependency.value.to}';`;
+        }),
+        `export function run() { return [${symbols.join(', ')}] }`,
+      ].join('\n');
+
+      await fs.writeFile(path.join(dirname, entry.value.filePath), contents);
+    }
+  }
+
+  return dotFromGraph(entries);
+}
+
+/**
+ * Create a graphviz dot string from a fixture graph
+ */
 export function dotFromGraph(entries: GraphEntry[]): string {
   const contents = [];
 
@@ -92,65 +137,4 @@ digraph assets {
 ${contents.map((line) => (line.length > 0 ? `  ${line}` : '')).join('\n')}
 }
   `.trim();
-}
-
-export async function fixtureFromGraph(
-  dirname: string,
-  fs: FileSystem,
-  entries: GraphEntry[],
-): Promise<string> {
-  await fs.mkdirp(dirname);
-
-  for (let entry of entries) {
-    if (entry.type === 'asset') {
-      const dependencies = entry.value.dependencies ?? [];
-      const symbols = dependencies.map((_, i) => `d${i}`);
-      const contents = [
-        ...dependencies.map((dependency, i) => {
-          return `import ${symbols[i]} from './${dependency.value.to}';`;
-        }),
-        `export function run() { return [${symbols.join(', ')}] }`,
-      ].join('\n');
-
-      await fs.writeFile(path.join(dirname, entry.value.filePath), contents);
-    }
-  }
-
-  return dotFromGraph(entries);
-}
-
-export function dotFromBundleGraph<B: Bundle>(
-  entryDir: string,
-  bundleGraph: BundleGraph<B>,
-): string {
-  const cleanPath = (p) => {
-    if (p.includes('esmodule-helpers.js')) {
-      return 'esmodule_helpers.js';
-    }
-    return path.relative(entryDir, p);
-  };
-  const contents = [];
-
-  const bundles = bundleGraph.getBundles();
-
-  for (let bundle of bundles) {
-    const bundleId = bundle.id;
-    contents.push(`subgraph cluster_${bundleId} {`);
-    contents.push(`  label = "Bundle ${bundleId}";`);
-
-    bundle.traverseAssets((asset) => {
-      contents.push(`  "${cleanPath(asset.filePath)}";`);
-    });
-
-    contents.push('}');
-  }
-
-  return `
-digraph bundle_graph {
-  labelloc="t";
-  label="Bundle graph";
-
-${contents.map((line) => (line.length > 0 ? `  ${line}` : '')).join('\n')}
-}
-  `;
 }

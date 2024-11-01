@@ -35,6 +35,7 @@
     "test:integration-ci": "yarn workspace @atlaspack/integration-tests test-ci",
     "test:js": "yarn test:js:unit && yarn test:integration",
     "test:js:coverage": "yarn nyc yarn test:js:unit",
+    "test:js:coverage:check": "yarn nyc --check --include packages/bundlers/bundler-experimental yarn test:js:unit packages/bundlers/bundler-experimental/{**/*,*}.js",
     "test:js:coverage:report": "yarn nyc report --reporter=html-spa",
     "test:js:unit": "cross-env NODE_ENV=test mocha --conditions=development --timeout 5000",
     "test:unit": "yarn test:js:unit && cargo test",

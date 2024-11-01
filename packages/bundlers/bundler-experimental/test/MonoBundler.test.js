@@ -9,11 +9,12 @@ import {
 import {monoBundler} from '../src/MonoBundler';
 import * as path from 'path';
 import {dotTest, setupBundlerTest} from './test-utils';
-import {dotFromBundleGraph, fixtureFromGraph} from './fixture-from-dot';
-import {asset} from './fixture-from-dot';
+import {dotFromBundleGraph} from './graphviz/GraphvizUtils';
+import {fixtureFromGraph, asset} from './fixtureFromGraph';
 
-describe.only('MonoBundler', () => {
-  before(async () => {
+describe('MonoBundler', () => {
+  before(async function () {
+    this.timeout(10000);
     // Warm up worker farm so that the first test doesn't account for this time.
     await workerFarm.callAllWorkers('ping', []);
   });

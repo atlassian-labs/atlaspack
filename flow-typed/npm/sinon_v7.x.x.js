@@ -164,7 +164,7 @@ declare module 'sinon' {
     withArgs(...args: Array<any>): SinonStub;
   }
 
-  declare interface SinonStubStatic {
+  declare interface SinonStubStatic extends SinonStub {
     (): SinonStub;
     (obj: any): SinonStub;
     (obj: any, method: string): SinonStub;
