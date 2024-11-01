@@ -1,0 +1,9 @@
+{
+  "rust-analyzer.procMacro.ignored": {"napi-derive": ["napi"]},
+  "rust-analyzer.cargo.features": "all",
+  "javascript.validate.enable": false,
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true
+  }
+}
