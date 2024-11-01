@@ -183,15 +183,32 @@ export type PackagedDominatorGraph = ContentGraph<
   'root' | Asset | {|type: 'package', id: string, parentChunks: Set<number>|},
 >;
 
+/**
+ * Start with the dominator graph. This is the immediate dominator tree, with a
+ * root node at the top of every node.
+ *
+ * - Each node connected to a virtual root is a "chunk".
+ * - We want to reduce the number of chunks by merging them together if they
+ *   share the same parent chunks; this means those sub-trees are used together
+ * - To do this we iterate over these chunks and build a map of parent chunks
+ *   - This is done by looking at the parent assets of the chunk root asset
+ *     and mapping them to parent chunks
+ *   - We end-up with a relationship of "parent-ids": ["chunk", ...]
+ * - For each group of chunks with the same set of parent chunks, we merge them
+ *   under a new virtual node, called a package
+ * - We repeat this process iteratively until no more merges are possible
+ */
 export function createPackages(
   bundleGraph: MutableBundleGraph,
   dominators: ContentGraph<Asset | 'root'>,
+  onIteration?: (packages: PackagedDominatorGraph, label: string) => void,
 ): PackagedDominatorGraph {
   let changed = true;
   // $FlowFixMe
   const packages: PackagedDominatorGraph = dominators.clone();
   const nodesToRemove = [];
 
+  let iterations = 0;
   while (changed) {
     console.log('RUNNING ITERATION');
     changed = false;
@@ -320,6 +337,9 @@ export function createPackages(
 
       merge(chunkRoot, chunksToMerge);
     }
+
+    onIteration?.(packages, String(iterations));
+    iterations += 1;
   }
 
   // It is not ideal that we let the graph grow with virtual nodes while
@@ -328,6 +348,7 @@ export function createPackages(
   for (let node of nodesToRemove) {
     packages.removeNode(node);
   }
+  onIteration?.(packages, 'clean-up');
 
   return packages;
 }

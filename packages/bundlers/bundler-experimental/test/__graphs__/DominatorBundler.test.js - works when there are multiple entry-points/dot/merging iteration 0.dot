@@ -1,0 +1,34 @@
+digraph merged {
+  labelloc="t";
+  label="0";
+  layout="dot";
+
+  "root";
+  "page2.js";
+  "page1.js";
+  "package_1,9";
+  "lodash.js";
+  "react.js";
+  "jsx.js";
+  "package_2,8";
+  "left-pad.js";
+  "package_2,3";
+  "string-concat.js";
+  "string-chart-at.js";
+  "package_1,2,3,4,8,9";
+  "esmodule_helpers.js";
+
+  "root" -> "page2.js";
+  "root" -> "page1.js";
+  "root" -> "package_1,9";
+  "root" -> "package_2,8";
+  "root" -> "package_2,3";
+  "root" -> "package_1,2,3,4,8,9";
+  "package_1,9" -> "lodash.js";
+  "package_1,9" -> "react.js";
+  "react.js" -> "jsx.js";
+  "package_2,8" -> "left-pad.js";
+  "package_2,3" -> "string-concat.js";
+  "string-concat.js" -> "string-chart-at.js";
+  "package_1,2,3,4,8,9" -> "esmodule_helpers.js";
+}

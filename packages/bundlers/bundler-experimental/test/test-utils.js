@@ -118,6 +118,7 @@ ${contents.map((l) => (l.length > 0 ? `  ${l}` : '')).join('\n')}
 export function mergedDominatorsToDot(
   entryDir: string,
   dominators: PackagedDominatorGraph,
+  label?: string = 'Merged',
 ): string {
   const contents = [];
   const cleanPath = (p) => {
@@ -155,7 +156,7 @@ export function mergedDominatorsToDot(
   return `
 digraph merged {
   labelloc="t";
-  label="Merged";
+  label="${label}";
   layout="dot";
 
 ${contents.map((l) => (l.length > 0 ? `  ${l}` : '')).join('\n')}

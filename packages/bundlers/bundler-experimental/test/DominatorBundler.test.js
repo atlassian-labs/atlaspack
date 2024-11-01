@@ -224,7 +224,17 @@ digraph dominators {
         dominators.traverse((node) => {
           console.log(dominators.getNode(node));
         });
-        const mergedDominators = createPackages(mutableBundleGraph, dominators);
+        const iterations = [];
+        const mergedDominators = createPackages(
+          mutableBundleGraph,
+          dominators,
+          (graph, label) => {
+            iterations.push({
+              label: `merging iteration ${label}`,
+              dot: mergedDominatorsToDot(entryDir, graph, label),
+            });
+          },
+        );
         mergedDominators.traverse((node) => {
           console.log(node, mergedDominators.getNode(node));
         });
@@ -236,6 +246,7 @@ digraph dominators {
             label: 'merged',
             dot: mergedDominatorsToDot(entryDir, mergedDominators),
           },
+          ...iterations,
         ];
       },
     );
