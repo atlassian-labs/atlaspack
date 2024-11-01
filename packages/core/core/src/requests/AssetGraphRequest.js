@@ -382,7 +382,11 @@ export class AssetGraphBuilder {
           let isAsyncChild = this.assetGraph
             .getIncomingDependencies(node.value)
             .every((dep) => dep.isEntry || dep.priority !== Priority.sync);
-          if (isAsyncChild) {
+          if (
+            isAsyncChild &&
+            childNode.value.priority !== Priority.conditional
+          ) {
+            // Skip if we're on a conditional import
             node.requested = !isNodeLazy;
           } else {
             delete node.requested;
