@@ -43,11 +43,29 @@ export class AtlaspackWorker {
     async ({kind, specifier, resolveFrom}) => {
       let customRequire = module.createRequire(resolveFrom);
       let resolvedPath = customRequire.resolve(specifier);
-      // $FlowFixMe
-      let resolvedModule = await import(resolvedPath);
+
+      let resolvedModule;
+      try {
+        // $FlowFixMe
+        resolvedModule = require(resolvedPath);
+      } catch (error) {
+        if (error.code !== 'ERR_REQUIRE_ESM') {
+          throw error;
+        }
+        // If the file is an ESM file try to import it
+
+        // NOTE:
+        //   Cannot use TypeScript plugins in type: module until
+        //   @atlaspack/core is converted to esm or typescript
+
+        // $FlowFixMe
+        resolvedModule = await import(resolvedPath);
+      }
 
       let instance = undefined;
-      if (resolvedModule.default && resolvedModule.default[CONFIG]) {
+      if (resolvedModule && resolvedModule[CONFIG]) {
+        instance = resolvedModule[CONFIG];
+      } else if (resolvedModule.default && resolvedModule.default[CONFIG]) {
         instance = resolvedModule.default[CONFIG];
       } else if (
         resolvedModule.default &&
