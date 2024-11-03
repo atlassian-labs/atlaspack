@@ -3,28 +3,26 @@ digraph merged {
   label="Merged";
   layout="dot";
 
-  "root";
-  "page2.js";
-  "page1.js";
-  "package_1,9";
-  "lodash.js";
-  "react.js";
+  "esmodule_helpers.js";
   "jsx.js";
   "left-pad.js";
-  "string-concat.js";
+  "lodash.js";
+  "package_6b334e67b36bf482,a5fb992cd851a2a3";
+  "page1.js";
+  "page2.js";
+  "react.js";
+  "root";
   "string-chart-at.js";
-  "package_1,10,9";
-  "esmodule_helpers.js";
+  "string-concat.js";
 
-  "root" -> "page2.js";
-  "root" -> "page1.js";
-  "root" -> "package_1,9";
-  "root" -> "package_1,10,9";
-  "package_1,9" -> "lodash.js";
-  "package_1,9" -> "react.js";
-  "package_1,9" -> "left-pad.js";
-  "package_1,9" -> "string-concat.js";
+  "package_6b334e67b36bf482,a5fb992cd851a2a3" -> "esmodule_helpers.js";
+  "package_6b334e67b36bf482,a5fb992cd851a2a3" -> "left-pad.js";
+  "package_6b334e67b36bf482,a5fb992cd851a2a3" -> "lodash.js";
+  "package_6b334e67b36bf482,a5fb992cd851a2a3" -> "react.js";
+  "package_6b334e67b36bf482,a5fb992cd851a2a3" -> "string-concat.js";
   "react.js" -> "jsx.js";
+  "root" -> "package_6b334e67b36bf482,a5fb992cd851a2a3";
+  "root" -> "page1.js";
+  "root" -> "page2.js";
   "string-concat.js" -> "string-chart-at.js";
-  "package_1,10,9" -> "esmodule_helpers.js";
 }

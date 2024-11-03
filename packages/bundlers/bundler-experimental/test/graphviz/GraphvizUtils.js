@@ -102,7 +102,7 @@ export function rootedGraphToDot(
       }
     })
     .filter(Boolean)
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
   rootNodes.forEach((node) => {
     contents.push(`"root" -> "${node}";`);
   });
@@ -183,16 +183,21 @@ export function mergedDominatorsToDot(
   dominators.traverse((nodeId) => {
     contents.push(`${getIdentifier(nodeId)};`);
   });
+  contents.sort((a, b) => a.localeCompare(b));
 
   contents.push('');
 
+  const connections = [];
   dominators.traverse((nodeId) => {
     dominators.getNodeIdsConnectedFrom(nodeId).forEach((connectedNodeId) => {
-      contents.push(
+      connections.push(
         `${getIdentifier(nodeId)} -> ${getIdentifier(connectedNodeId)};`,
       );
     });
   });
+  connections.sort((a, b) => a.localeCompare(b));
+
+  contents.push(...connections);
 
   return `
 digraph merged {
