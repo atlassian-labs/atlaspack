@@ -41,14 +41,10 @@ export type PackagedDominatorGraph = ContentGraph<PackagedDominatorGraphNode>;
  *
  * - Each node connected to a virtual root is a "chunk".
  * - We want to reduce the number of chunks by merging them together if they
- *   share the same parent chunks; this means those sub-trees are used together
- * - To do this we iterate over these chunks and build a map of parent chunks
- *   - This is done by looking at the parent assets of the chunk root asset
- *     and mapping them to parent chunks
- *   - We end-up with a relationship of "parent-ids": ["chunk", ...]
+ *   share the same parent ENTRIES; this means those sub-trees are used together
+ * - To do this we iterate over these chunks and build a map of parent ENTRIES
  * - For each group of chunks with the same set of parent chunks, we merge them
  *   under a new virtual node, called a package
- * - We repeat this process iteratively until no more merges are possible
  */
 export function createPackages(
   bundleGraph: MutableBundleGraph,
@@ -62,7 +58,7 @@ export function createPackages(
   const root = packages.getNodeIdByContentKey('root');
   const chunks = getChunks(packages);
   const chunksByAsset = getChunkEntryPoints(rootedGraph, dominators);
-  const chunksByParent = getChunksByParent(
+  const chunksByParent = getChunksByParentEntryPoint(
     chunks,
     packages,
     bundleGraph,
@@ -133,7 +129,7 @@ export function createPackages(
  *
  * This will be used to merge the chunks that have the same parents.
  */
-function getChunksByParent(
+function getChunksByParentEntryPoint(
   chunks: NodeId[],
   packages: PackagedDominatorGraph,
   bundleGraph: MutableBundleGraph,
