@@ -1620,18 +1620,7 @@ function createIdealGraph(
       for (let sourceBundleId of bundle.sourceBundles) {
         let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
         invariant(sourceBundle !== 'root');
-        if (sourceBundle.mainEntryAsset == null) {
-          // add here
-        } else {
-          console.log({
-            sourceBundle: sourceBundle.assets,
-            bundle: bundle.assets,
-            mainEntryAsset: sourceBundle.mainEntryAsset,
-          });
-          addAssetToBundleRoot(asset, nullthrows(sourceBundle.mainEntryAsset));
-        }
-
-        // }
+        addAssetToBundleRoot(asset, nullthrows(sourceBundle.mainEntryAsset));
       }
     }
 
