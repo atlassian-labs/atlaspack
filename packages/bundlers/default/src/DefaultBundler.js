@@ -1820,7 +1820,6 @@ async function loadBundlerConfig(
     );
   }
 
-  console.log('modeConfig', modeConfig);
   validateSchema.diagnostic(
     CONFIG_SCHEMA,
     {
