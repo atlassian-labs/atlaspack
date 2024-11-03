@@ -1,7 +1,6 @@
 // @flow strict-local
 import {relative, join} from 'path';
 import {Reporter} from '@atlaspack/plugin';
-import nullthrows from 'nullthrows';
 
 export default (new Reporter({
   async report({event, options, logger}) {
@@ -37,7 +36,7 @@ export default (new Reporter({
 
       for (const target of targets) {
         const conditionalManifestFilename = join(
-          nullthrows(target?.distDir, 'distDir not found in target'),
+          target.distDir,
           'conditional-manifest.json',
         );
 
