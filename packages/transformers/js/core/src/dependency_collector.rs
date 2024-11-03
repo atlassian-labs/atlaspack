@@ -807,7 +807,7 @@ impl<'a> Fold for DependencyCollector<'a> {
 
       if match_str(&call.args[1].expr).unwrap().0 == match_str(&call.args[2].expr).unwrap().0 {
         self.diagnostics.push(Diagnostic {
-          message: format!("importCond requires unique dependencies"),
+          message: "importCond requires unique dependencies".to_string(),
           code_highlights: Some(vec![CodeHighlight {
             message: None,
             loc: SourceLocation::from(&self.source_map, call.span),
