@@ -12,7 +12,6 @@ import {DEFAULT_OPTIONS} from './test-utils';
 import {FILE_CREATE, FILE_UPDATE, INITIAL_BUILD} from '../src/constants';
 import {makeDeferredWithPromise} from '@atlaspack/utils';
 import {toProjectPath} from '../src/projectPath';
-import {DEFAULT_FEATURE_FLAGS, setFeatureFlags} from '../../feature-flags/src';
 
 const options = DEFAULT_OPTIONS;
 const farm = new WorkerFarm({workerPath: require.resolve('../src/worker')});
@@ -467,15 +466,12 @@ describe('RequestTracker', () => {
         input: null,
       });
       const requestId = tracker.graph.getNodeIdByContentKey('abc');
-      const invalidated = await tracker.respondToFSEvents(
-        [
-          {
-            type: 'update',
-            path: 'my-file',
-          },
-        ],
-        Number.MAX_VALUE,
-      );
+      const invalidated = await tracker.respondToFSEvents([
+        {
+          type: 'update',
+          path: 'my-file',
+        },
+      ]);
       assert.equal(invalidated, true);
       assert.equal(
         tracker.graph.getNode(requestId)?.invalidateReason,
@@ -504,15 +500,12 @@ describe('RequestTracker', () => {
         input: null,
       });
       const requestId = tracker.graph.getNodeIdByContentKey('abc');
-      const invalidated = await tracker.respondToFSEvents(
-        [
-          {
-            type: 'create',
-            path: './package.json',
-          },
-        ],
-        Number.MAX_VALUE,
-      );
+      const invalidated = await tracker.respondToFSEvents([
+        {
+          type: 'create',
+          path: './package.json',
+        },
+      ]);
       assert.equal(invalidated, true);
       assert.equal(
         tracker.graph.getNode(requestId)?.invalidateReason,

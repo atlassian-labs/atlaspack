@@ -509,10 +509,7 @@ export default class Atlaspack {
           message: `File watch event emitted with ${events.length} events. Sample event: [${events[0]?.type}] ${events[0]?.path}`,
         });
 
-        let isInvalid = await this.#requestTracker.respondToFSEvents(
-          events,
-          Number.POSITIVE_INFINITY,
-        );
+        let isInvalid = await this.#requestTracker.respondToFSEvents(events);
         if (isInvalid && this.#watchQueue.getNumWaiting() === 0) {
           if (this.#watchAbortController) {
             this.#watchAbortController.abort();

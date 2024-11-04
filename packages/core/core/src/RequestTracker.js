@@ -5,7 +5,6 @@ import path from 'path';
 
 import {deserialize, serialize} from '@atlaspack/build-cache';
 import type {Cache} from '@atlaspack/cache';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {ContentGraph} from '@atlaspack/graph';
 import type {
   ContentGraphOpts,
@@ -20,7 +19,6 @@ import type {Async, EnvMap} from '@atlaspack/types';
 import {
   type Deferred,
   isGlobMatch,
-  isDirectoryInside,
   makeDeferredWithPromise,
   PromiseQueue,
 } from '@atlaspack/utils';
@@ -1196,8 +1194,8 @@ export default class RequestTracker {
     }
   }
 
-  respondToFSEvents(events: Array<Event>, threshold: number): Async<boolean> {
-    return this.graph.respondToFSEvents(events, this.options, threshold);
+  respondToFSEvents(events: Array<Event>): Async<boolean> {
+    return this.graph.respondToFSEvents(events, this.options);
   }
 
   hasInvalidRequests(): boolean {
@@ -1668,7 +1666,6 @@ async function loadRequestGraph(options): Async<RequestGraph> {
       await requestGraph.respondToFSEvents(
         options.unstableFileInvalidations || events,
         options,
-        10000,
       );
       return requestGraph;
     } catch (e) {
