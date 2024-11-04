@@ -23,7 +23,7 @@ pub struct RunRequestMessage {
   pub response_tx: Option<Sender<Result<(RequestResult, RequestId), anyhow::Error>>>,
 }
 
-type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send>;
+type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send + Sync>;
 
 /// This is the API for requests to call back onto the `RequestTracker`.
 ///
@@ -104,7 +104,7 @@ pub type RunRequestError = anyhow::Error;
 pub type RequestId = u64;
 
 #[async_trait]
-pub trait Request: DynHash + Send + Debug + 'static {
+pub trait Request: DynHash + Send + Sync + Debug + 'static {
   fn id(&self) -> RequestId {
     let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
     std::any::type_name::<Self>().hash(&mut hasher);

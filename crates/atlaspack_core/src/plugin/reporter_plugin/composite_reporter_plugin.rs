@@ -60,8 +60,8 @@ mod tests {
 
   use super::*;
 
-  #[test]
-  fn test_reporters_get_called() {
+  #[tokio::test]
+  async fn test_reporters_get_called() {
     let mut reporter1 = MockReporterPlugin::new();
     let mut reporter2 = MockReporterPlugin::new();
 
@@ -72,11 +72,12 @@ mod tests {
 
     composite_reporter
       .report(&ReporterEvent::BuildStart)
+      .await
       .unwrap();
   }
 
-  #[test]
-  fn test_errors_are_forwarded_up() {
+  #[tokio::test]
+  async fn test_errors_are_forwarded_up() {
     let mut reporter1 = MockReporterPlugin::new();
     let mut reporter2 = MockReporterPlugin::new();
 
@@ -88,7 +89,7 @@ mod tests {
 
     let composite_reporter = CompositeReporterPlugin::new(vec![reporter1, reporter2]);
 
-    let result = composite_reporter.report(&ReporterEvent::BuildStart);
+    let result = composite_reporter.report(&ReporterEvent::BuildStart).await;
     assert!(result.is_err());
     assert!(result
       .err()
