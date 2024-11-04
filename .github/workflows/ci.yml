@@ -133,7 +133,7 @@ jobs:
           yarn build-native-release
           yarn build
       - run: |
-          export ATLASPACK_BENCH_COPIES=30
+          export ATLASPACK_BENCH_COPIES=15
           export ATLASPACK_BENCH_MODE=${{ matrix.version }}
           export ATLASPACK_BENCH_PLUGINS=${{ matrix.plugins }}
 
@@ -145,15 +145,6 @@ jobs:
 
           yarn start
           mv report.json reports/2.json
-
-          yarn start
-          mv report.json reports/3.json
-
-          yarn start
-          mv report.json reports/4.json
-
-          yarn start
-          mv report.json reports/5.json
 
           node scripts/ci-post.js
       - name: Average Build Time
