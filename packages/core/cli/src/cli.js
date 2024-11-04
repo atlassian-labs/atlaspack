@@ -300,7 +300,6 @@ function makeDebugCommand() {
           watchBackend: 'watchman',
           featureFlags: {
             ...options.featureFlags,
-            fixQuadraticCacheInvalidation: 'NEW',
             useLmdbJsLite: true,
           },
         });
