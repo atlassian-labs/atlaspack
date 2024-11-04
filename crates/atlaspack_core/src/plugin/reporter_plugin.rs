@@ -1,7 +1,7 @@
+use crate::types::Dependency;
+use async_trait::async_trait;
 use std::sync::Arc;
 use std::{fmt::Debug, path::PathBuf};
-
-use crate::types::Dependency;
 
 pub mod composite_reporter_plugin;
 
@@ -36,9 +36,10 @@ pub enum ReporterEvent {
 /// bundle analysis report at the end of a build.
 ///
 #[mockall::automock]
+#[async_trait]
 pub trait ReporterPlugin: Debug + Send + Sync {
   /// Processes the event from Atlaspack
-  fn report(&self, event: &ReporterEvent) -> Result<(), anyhow::Error>;
+  async fn report(&self, event: &ReporterEvent) -> Result<(), anyhow::Error>;
 }
 
 #[cfg(test)]
@@ -48,8 +49,9 @@ mod tests {
   #[derive(Debug)]
   struct TestReporterPlugin {}
 
+  #[async_trait]
   impl ReporterPlugin for TestReporterPlugin {
-    fn report(&self, _event: &ReporterEvent) -> Result<(), anyhow::Error> {
+    async fn report(&self, _event: &ReporterEvent) -> Result<(), anyhow::Error> {
       todo!()
     }
   }

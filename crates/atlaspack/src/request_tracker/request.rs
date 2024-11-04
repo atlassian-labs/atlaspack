@@ -61,11 +61,12 @@ impl RunRequestContext {
   }
 
   /// Report an event
-  pub fn report(&self, event: ReporterEvent) {
+  pub async fn report(&self, event: ReporterEvent) {
     self
       .plugins()
       .reporter()
       .report(&event)
+      .await
       .expect("TODO this should be handled?")
   }
 

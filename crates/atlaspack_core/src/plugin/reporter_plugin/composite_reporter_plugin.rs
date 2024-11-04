@@ -1,6 +1,6 @@
-use std::fmt::{Debug, Display, Formatter};
-
 use crate::plugin::{ReporterEvent, ReporterPlugin};
+use async_trait::async_trait;
+use std::fmt::{Debug, Display, Formatter};
 
 #[cfg(not(test))]
 type Reporter = Box<dyn ReporterPlugin>;
@@ -33,12 +33,13 @@ impl Display for CompositeReporterPluginError {
 
 impl std::error::Error for CompositeReporterPluginError {}
 
+#[async_trait]
 impl ReporterPlugin for CompositeReporterPlugin {
   /// Loop over reporters and call report on each one of them.
-  fn report(&self, event: &ReporterEvent) -> Result<(), anyhow::Error> {
+  async fn report(&self, event: &ReporterEvent) -> Result<(), anyhow::Error> {
     let mut errors = vec![];
     for reporter in &self.reporters {
-      let result = reporter.report(event);
+      let result = reporter.report(event).await;
       if let Err(error) = result {
         errors.push(error)
       }

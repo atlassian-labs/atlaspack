@@ -1,10 +1,10 @@
-use std::fmt;
-use std::fmt::Debug;
-
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::plugin::ReporterPlugin;
+use std::fmt;
+use std::fmt::Debug;
 
 pub struct NodejsRpcReporterPlugin {
   _name: String,
@@ -24,8 +24,9 @@ impl NodejsRpcReporterPlugin {
   }
 }
 
+#[async_trait]
 impl ReporterPlugin for NodejsRpcReporterPlugin {
-  fn report(&self, _event: &ReporterEvent) -> Result<(), anyhow::Error> {
+  async fn report(&self, _event: &ReporterEvent) -> Result<(), anyhow::Error> {
     // TODO
     Ok(())
   }

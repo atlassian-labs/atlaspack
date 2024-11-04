@@ -45,11 +45,13 @@ impl Request for PathRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
-    request_context.report(ReporterEvent::BuildProgress(BuildProgressEvent::Resolving(
-      ResolvingEvent {
-        dependency: Arc::clone(&self.dependency),
-      },
-    )));
+    request_context
+      .report(ReporterEvent::BuildProgress(BuildProgressEvent::Resolving(
+        ResolvingEvent {
+          dependency: Arc::clone(&self.dependency),
+        },
+      )))
+      .await;
 
     let (parsed_pipeline, specifier) = parse_scheme(&self.dependency.specifier)
       .and_then(|(pipeline, specifier)| {
