@@ -25,7 +25,7 @@ describe('fixtureFromGraph', () => {
     ]);
     assert.equal(
       await fs.readFile('dir/file1.js', 'utf8'),
-      'export function run() { return [] }',
+      'export default function run() { return [] }',
     );
   });
 
@@ -47,7 +47,7 @@ describe('fixtureFromGraph', () => {
       `
 import d0 from './file2.js';
 import d1 from './file3.js';
-export function run() { return [d0, d1] }
+export default function run() { return [d0, d1] }
       `.trim(),
     );
   });

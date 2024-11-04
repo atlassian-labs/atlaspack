@@ -95,7 +95,7 @@ export async function fixtureFromGraph(
         ...dependencies.map((dependency, i) => {
           return `import ${symbols[i]} from './${dependency.value.to}';`;
         }),
-        `export function run() { return [${symbols.join(', ')}] }`,
+        `export default function run() { return [${symbols.join(', ')}] }`,
       ].join('\n');
 
       await fs.writeFile(path.join(dirname, entry.value.filePath), contents);

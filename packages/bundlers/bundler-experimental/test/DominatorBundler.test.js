@@ -46,6 +46,7 @@ describe('DominatorBundler', () => {
         entryPath1,
         entryPath2,
       ]);
+      console.log('here');
       const dominators = findAssetDominators(mutableBundleGraph);
       const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
 
