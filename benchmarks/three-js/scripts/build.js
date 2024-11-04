@@ -6,6 +6,14 @@ const fs = require('node:fs');
 const os = require('node:os');
 const {execSync: $} = require('node:child_process');
 const {Atlaspack} = require('@atlaspack/core');
+const {
+  rm,
+  cp,
+  readJson,
+  writeJson,
+  append,
+  paths: basePaths,
+} = require('./utils');
 
 const MODE = process.env.ATLASPACK_BENCH_MODE;
 if (MODE === undefined) {
@@ -43,7 +51,7 @@ void (async function main() {
   }
 
   const paths = {
-    '~': (...segments) => path.join(__dirname, '..', ...segments),
+    ...basePaths,
     '/tmp': (...segments) => path.join(tmpDir, ...segments),
   };
 
@@ -145,22 +153,3 @@ void (async function main() {
     process.exit(0);
   }
 })();
-
-function rm(target) {
-  fs.rmSync(target, {force: true, recursive: true});
-}
-
-function cp(source, dest) {
-  fs.cpSync(source, dest, {recursive: true});
-}
-
-function readJson(target) {
-  return JSON.parse(fs.readFileSync(target, 'utf8'));
-}
-function writeJson(target, data) {
-  fs.writeFileSync(target, JSON.stringify(data, null, 2));
-}
-
-function append(target, data) {
-  fs.appendFileSync(target, data, 'utf8');
-}
