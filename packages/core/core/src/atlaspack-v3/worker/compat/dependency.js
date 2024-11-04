@@ -76,7 +76,7 @@ export class Dependency implements IDependency {
     this.sourceAssetId = inner.sourceAssetId;
     this.sourcePath = inner.sourcePath;
     this.sourceAssetType = inner.sourceAssetType;
-    this.resolveFrom = inner.resolveFrom;
+    this.resolveFrom = inner.resolveFrom ?? inner.sourcePath;
     this.range = inner.range;
     this.pipeline = inner.pipeline;
   }
