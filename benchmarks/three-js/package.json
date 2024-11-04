@@ -1,0 +1,16 @@
+{
+  "name": "@atlaspack/benchmark-three-js",
+  "scripts": {
+    "start:v2": "env ATLASPACK_BENCH_MODE=V2 ATLASPACK_BENCH_USE_PLUGINS=false node ./scripts/build.js",
+    "start:v2:plugins": "env ATLASPACK_BENCH_MODE=V2 ATLASPACK_BENCH_USE_PLUGINS=true node ./scripts/build.js",
+    "start:v3": "env ATLASPACK_BENCH_MODE=V3 ATLASPACK_BENCH_USE_PLUGINS=false node ./scripts/build.js",
+    "start:v3:plugins": "env ATLASPACK_BENCH_MODE=V3 ATLASPACK_BENCH_USE_PLUGINS=true node ./scripts/build.js"
+  },
+  "dependencies": {
+    "@atlaspack/config-default": "*",
+    "@atlaspack/core": "*",
+    "@atlaspack/plugin": "*",
+    "@atlaspack/cli": "*",
+    "@swc/helpers": "*"
+  }
+}
