@@ -21,7 +21,7 @@ pub struct Validation {
 /// trying to solve a problem.
 ///
 #[async_trait]
-pub trait ValidatorPlugin: Debug {
+pub trait ValidatorPlugin: Debug + Send + Sync {
   /// A hook designed to setup config needed to validate assets
   ///
   /// This function will run once, shortly after the plugin is initialised.
