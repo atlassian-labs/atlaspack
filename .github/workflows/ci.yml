@@ -107,6 +107,36 @@ jobs:
         env:
           ATLASPACK_V3: ${{ matrix.version == 'v3' && 'true' || 'false' }}
 
+  benchmarks:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: yarn
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.80.1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ubuntu-latest
+      - name: Bump max inotify watches (Linux only)
+        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+      - run: |
+          yarn --frozen-lockfile
+          yarn build-native-release
+          yarn build
+      - run: |
+          cd benchmarks/three-js
+
+          yarn start:v2
+          yarn start:v2
+          yarn start:v2
+          yarn start:v2
+          yarn start:v2
+
   repl:
     name: Deploy REPL
     if: false # ${{ github.event_name == 'pull_request' }}
