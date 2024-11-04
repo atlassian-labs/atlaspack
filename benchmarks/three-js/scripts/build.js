@@ -4,27 +4,31 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
-const child_process = require('node:child_process');
+const {execSync: $} = require('node:child_process');
 const {Atlaspack} = require('@atlaspack/core');
 
 const MODE = process.env.ATLASPACK_BENCH_MODE;
-if (!MODE) {
+if (MODE === undefined) {
   console.error('env:ATLASPACK_BENCH_MODE not specified');
   process.exit(1);
 }
-const USE_PLUGINS = process.env.ATLASPACK_BENCH_USE_PLUGINS;
-if (!USE_PLUGINS) {
+const PLUGINS = process.env.ATLASPACK_BENCH_PLUGINS
+  ? parseInt(process.env.ATLASPACK_BENCH_PLUGINS, 10)
+  : undefined;
+if (PLUGINS === undefined) {
   console.error('env:ATLASPACK_BENCH_USE_PLUGINS not specified');
   process.exit(1);
 }
-const COPIES = process.env.ATLASPACK_BENCH_COPIES
-  ? parseInt(process.env.ATLASPACK_BENCH_COPIES, 10)
-  : 30;
+
+const COPIES =
+  process.env.ATLASPACK_BENCH_COPIES !== undefined
+    ? parseInt(process.env.ATLASPACK_BENCH_COPIES, 10)
+    : 30;
 
 void (async function main() {
   console.log('Settings');
   console.log(`  Mode:        ${MODE}`);
-  console.log(`  Use Plugins: ${USE_PLUGINS}`);
+  console.log(`  Plugins:     ${PLUGINS}`);
   console.log(`  Copies:      ${COPIES}`);
 
   // Atlaspack fails to build in the current directory because it is getting
@@ -33,88 +37,84 @@ void (async function main() {
   let tmpDir;
   try {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'atlaspack-bench'));
-    // the rest of your app goes here
   } catch (error) {
     console.error('Failed to create temp directory for benchmark', error);
     process.exit(1);
   }
 
+  const paths = {
+    '~': (...segments) => path.join(__dirname, '..', ...segments),
+    '/tmp': (...segments) => path.join(tmpDir, ...segments),
+  };
+
   try {
     // Copy files to a temporary directory
-    fs.rmSync(path.join(__dirname, '..', 'dist'), {
-      recursive: true,
-      force: true,
-    });
-    fs.rmSync(path.join(__dirname, '..', '.parcel-cache'), {
-      recursive: true,
-      force: true,
-    });
+    rm(paths['~']('dist'));
+    rm(paths['~']('.parcel-cache'));
 
-    fs.cpSync(path.join(__dirname, '..'), tmpDir, {recursive: true});
-    fs.rmSync(path.join(tmpDir, 'node_modules'), {
-      recursive: true,
-      force: true,
-    });
+    cp(paths['~'](), paths['/tmp']());
+    rm(paths['/tmp']('node_modules'));
 
     // Patch the package.json to link the files to the workspace files
-    const packageJson = JSON.parse(
-      fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf8'),
-    );
-    const newPackageJson = structuredClone(packageJson);
+    const packageJson = readJson(paths['/tmp']('package.json'));
+
     for (const dependency of Object.keys(packageJson.dependencies)) {
       if (!dependency.startsWith('@atlaspack')) continue;
-      newPackageJson.dependencies[dependency] = `file:${path.dirname(
-        require.resolve(path.join(dependency, 'package.json')),
-      )}`;
+      const resolved = require.resolve(path.join(dependency, 'package.json'));
+      const dir = path.dirname(resolved);
+      packageJson.dependencies[dependency] = `file:${dir}`;
     }
-    fs.writeFileSync(
-      path.join(tmpDir, 'package.json'),
-      JSON.stringify(newPackageJson, null, 2),
-    );
 
-    // Link node_modules
-    child_process.execSync('npm install', {cwd: tmpDir, shell: true});
+    writeJson(paths['/tmp']('package.json'), packageJson);
+
+    // Patch .parcelrc to include plugins
+    const parcelRc = readJson(paths['/tmp']('.parcelrc'));
+    for (let i = 0; i < PLUGINS; i++) {
+      parcelRc['transformers']['*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}'].push(
+        './plugins/transformer.js',
+      );
+    }
+    writeJson(paths['/tmp']('.parcelrc'), parcelRc);
 
     // Set up benchmark fixture
-    child_process.execSync('tar -xzvf ./vendor/three-js.tar.gz -C ./vendor', {
-      cwd: tmpDir,
+    $('tar -xzvf ./vendor/three-js.tar.gz -C ./vendor', {
+      cwd: paths['/tmp'](),
       shell: true,
     });
 
     for (let i = 0; i < COPIES; i++) {
-      fs.cpSync(
-        path.join(tmpDir, 'vendor', 'three-js'),
-        path.join(tmpDir, 'src', `copy-${i}`),
-        {recursive: true},
+      cp(
+        paths['/tmp']('vendor', 'three-js'),
+        paths['/tmp']('src', `copy-${i}`),
       );
-      fs.appendFileSync(
-        path.join(tmpDir, 'src', 'index.js'),
+      append(
+        paths['/tmp']('src', 'index.js'),
         `import * as three_js_${i} from './copy-${i}/Three.js';`,
-        'utf8',
       );
-      fs.appendFileSync(
-        path.join(tmpDir, 'src', 'index.js'),
+      append(
+        paths['/tmp']('src', 'index.js'),
         `globalThis['three_js_${i}'] = three_js_${i};\n`,
-        'utf8',
       );
     }
+
+    // Link node_modules
+    $('npm install', {
+      cwd: paths['/tmp'](),
+      shell: true,
+    });
 
     // Start the benchmark
     console.log(`Running`);
     const startTime = Date.now();
 
     const atlaspack = new Atlaspack({
-      // inputFS: new NodeFS(),
       shouldDisableCache: true,
-      cacheDir: path.join(tmpDir, '.parcel-cache'),
-      config:
-        USE_PLUGINS === 'true'
-          ? path.join(tmpDir, '.parcelrc_plugins')
-          : path.join(tmpDir, '.parcelrc'),
-      entries: [path.join(tmpDir, 'src', 'index.js')],
+      cacheDir: paths['/tmp']('.parcel-cache'),
+      config: paths['/tmp']('.parcelrc'),
+      entries: [paths['/tmp']('src', 'index.js')],
       targets: {
         default: {
-          distDir: path.join(tmpDir, 'dist'),
+          distDir: paths['/tmp']('dist'),
         },
       },
       shouldAutoInstall: false,
@@ -128,19 +128,34 @@ void (async function main() {
 
     console.log(`  Build:       ${buildTime}ms`);
 
-    fs.writeFileSync(
-      path.join(__dirname, '..', 'report.json'),
-      JSON.stringify({
-        buildTime,
-      }),
-      'utf8',
-    );
+    writeJson(paths['~']('report.json'), {
+      buildTime,
+    });
   } catch (error) {
     console.error(error);
   } finally {
-    fs.rmSync(tmpDir, {recursive: true, force: true});
+    rm(paths['/tmp']());
 
     // TEMP: AtlaspackV3 hangs when exiting
     process.exit(0);
   }
 })();
+
+function rm(target) {
+  fs.rmSync(target, {force: true, recursive: true});
+}
+
+function cp(source, dest) {
+  fs.cpSync(source, dest, {recursive: true});
+}
+
+function readJson(target) {
+  return JSON.parse(fs.readFileSync(target, 'utf8'));
+}
+function writeJson(target, data) {
+  fs.writeFileSync(target, JSON.stringify(data, null, 2));
+}
+
+function append(target, data) {
+  fs.appendFileSync(target, data, 'utf8');
+}
