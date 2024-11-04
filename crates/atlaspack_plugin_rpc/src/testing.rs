@@ -134,8 +134,12 @@ impl NamerPlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl OptimizerPlugin for TestingRpcPlugin {
-  fn optimize(&self, _ctx: OptimizeContext) -> Result<OptimizedBundle, anyhow::Error> {
+  async fn optimize<'a>(
+    &self,
+    _ctx: OptimizeContext<'a>,
+  ) -> Result<OptimizedBundle, anyhow::Error> {
     anyhow::bail!("Mock Optimizer Plugin Incomplete")
     // Ok(OptimizedBundle {
     //   contents: fs::File::create(),
