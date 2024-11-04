@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use crate::bundle_graph::BundleGraph;
 use crate::types::Bundle;
 use crate::types::Dependency;
+use async_trait::async_trait;
 
 pub enum RuntimeAssetPriority {
   Sync,
@@ -21,9 +22,10 @@ pub struct RuntimeAsset {
 }
 
 /// Programmatically insert assets into bundles
+#[async_trait]
 pub trait RuntimePlugin: Debug {
   /// Generates runtime assets to insert into bundles
-  fn apply(
+  async fn apply(
     &self,
     bundle: Bundle,
     bundle_graph: BundleGraph,
@@ -37,8 +39,9 @@ mod tests {
   #[derive(Debug)]
   struct TestRuntimePlugin {}
 
+  #[async_trait]
   impl RuntimePlugin for TestRuntimePlugin {
-    fn apply(
+    async fn apply(
       &self,
       _bundle: Bundle,
       _bundle_graph: BundleGraph,
