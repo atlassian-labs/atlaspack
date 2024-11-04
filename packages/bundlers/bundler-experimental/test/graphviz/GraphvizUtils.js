@@ -7,6 +7,7 @@ import {ContentGraph} from '@atlaspack/graph';
 import type {PackagedDominatorGraph} from '../../src/DominatorBundler';
 import nullthrows from 'nullthrows';
 import type {Asset, BundleGraph, Bundle} from '@atlaspack/types';
+import type {StronglyConnectedComponentNode} from '../../src/DominatorBundler/oneCycleBreaker';
 
 /**
  * Write a dot string to a file and generate a PNG using the `dot` CLI command.
@@ -84,12 +85,27 @@ export function cleanPath(entryDir: string, p: string): string {
  */
 export function rootedGraphToDot(
   entryDir: string,
-  dominators: ContentGraph<Asset | 'root'>,
+  dominators:
+    | ContentGraph<
+        Asset | StronglyConnectedComponentNode<'root' | Asset> | 'root',
+      >
+    | ContentGraph<'root' | Asset>,
   label?: string = 'Dominators',
   name?: string = 'dominators',
 ): string {
   const contents = [];
-  const clean = (p) => cleanPath(entryDir, p);
+  const clean = (p: string) => cleanPath(entryDir, p);
+  const getLabel = (node) => {
+    if (node == null || node === 'root') {
+      return 'root';
+    }
+
+    if (node.type === 'StronglyConnectedComponent') {
+      return 'SCC';
+    }
+
+    return clean(node.filePath);
+  };
 
   contents.push('"root";');
   const rootNodeId = dominators.getNodeIdByContentKey('root');
@@ -97,35 +113,37 @@ export function rootedGraphToDot(
     .getNodeIdsConnectedFrom(rootNodeId)
     .map((id) => {
       const node = dominators.getNode(id);
-      if (node && node !== 'root') {
-        return clean(node.filePath);
-      }
+      return getLabel(node);
     })
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
+
   rootNodes.forEach((node) => {
     contents.push(`"root" -> "${node}";`);
   });
 
-  const iterableDominators: Asset[] = [];
+  const iterableDominators: (
+    | Asset
+    | StronglyConnectedComponentNode<Asset | 'root'>
+  )[] = [];
+  // $FlowFixMe
   dominators.nodes.forEach((node) => {
     if (node && node !== 'root') {
       iterableDominators.push(node);
     }
   });
-  iterableDominators.sort((a, b) =>
-    clean(a.filePath).localeCompare(clean(b.filePath)),
-  );
+
+  iterableDominators.sort((a, b) => getLabel(a).localeCompare(getLabel(b)));
 
   for (let asset of iterableDominators) {
-    const assetPath = clean(asset.filePath);
+    const assetPath = getLabel(asset);
     contents.push(`"${assetPath}";`);
   }
 
   contents.push('');
 
   for (let asset of iterableDominators) {
-    const assetPath = clean(asset.filePath);
+    const assetPath = getLabel(asset);
     const dominatorSetIds = dominators.getNodeIdsConnectedFrom(
       dominators.getNodeIdByContentKey(asset.id),
     );
@@ -138,7 +156,7 @@ export function rootedGraphToDot(
     });
 
     const iterableDominatorSet = dominatedAssets.sort((a, b) =>
-      clean(a.filePath).localeCompare(clean(b.filePath)),
+      getLabel(a).localeCompare(getLabel(b)),
     );
 
     for (let dominated of iterableDominatorSet) {
@@ -146,7 +164,7 @@ export function rootedGraphToDot(
         continue;
       }
 
-      const dominatedPath = clean(dominated.filePath);
+      const dominatedPath = getLabel(dominated);
       contents.push(`"${assetPath}" -> "${dominatedPath}";`);
     }
   }

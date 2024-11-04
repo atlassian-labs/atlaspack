@@ -4,6 +4,8 @@ import type {Asset} from '@atlaspack/types';
 import type {MutableBundleGraph} from '@atlaspack/types';
 import {ContentGraph, type NodeId, Graph} from '@atlaspack/graph';
 import {bundleGraphToRootedGraph} from './bundleGraphToRootedGraph';
+import {convertToAcyclicGraph} from './oneCycleBreaker';
+import type {StronglyConnectedComponentNode} from './oneCycleBreaker';
 
 /**
  * For all assets, build the dominance relationship of the asset with other
@@ -16,11 +18,14 @@ import {bundleGraphToRootedGraph} from './bundleGraphToRootedGraph';
  */
 export function findAssetDominators(
   bundleGraph: MutableBundleGraph,
-): ContentGraph<'root' | Asset> {
+): ContentGraph<
+  'root' | Asset | StronglyConnectedComponentNode<'root' | Asset>,
+> {
   // Build a simpler graph with a root at the top
   const graph = bundleGraphToRootedGraph(bundleGraph);
-  const dominators = simpleFastDominance(graph);
-  const dominatorTree = buildDominatorTree(graph, dominators);
+  const noCyclesGraph = convertToAcyclicGraph(graph);
+  const dominators = simpleFastDominance(noCyclesGraph);
+  const dominatorTree = buildDominatorTree(noCyclesGraph, dominators);
   return dominatorTree;
 }
 
@@ -30,30 +35,34 @@ export function findAssetDominators(
  *
  * This is a tree where each node is connected to its immediate dominator.
  */
-export function buildDominatorTree(
-  graph: ContentGraph<'root' | Asset>,
+export function buildDominatorTree<T>(
+  graph: ContentGraph<'root' | T>,
   dominators: NodeId[],
-): ContentGraph<'root' | Asset> {
+): ContentGraph<'root' | T> {
   const dominatorTree = new ContentGraph();
   const rootId = dominatorTree.addNodeByContentKey('root', 'root');
   dominatorTree.setRootNodeId(rootId);
 
   graph.traverse((nodeId) => {
     const node = graph.getNode(nodeId);
+    const contentKey = graph.getContentKeyByNodeId(nodeId);
     if (node != null && node !== 'root') {
-      dominatorTree.addNodeByContentKey(node.id, node);
+      dominatorTree.addNodeByContentKey(contentKey, node);
     }
   });
 
   for (let nodeId = 0; nodeId < dominators.length; nodeId++) {
-    const asset = graph.getNode(nodeId);
-    if (asset === 'root' || asset == null) {
+    const node = graph.getNode(nodeId);
+    const contentKey = graph.getContentKeyByNodeId(nodeId);
+    if (node === 'root' || node == null) {
       continue;
     }
 
-    const assetDominatorTreeNodeId = dominatorTree.getNodeIdByContentKey(
-      asset.id,
-    );
+    console.log(node);
+    console.log(contentKey);
+    console.log(dominatorTree);
+    const assetDominatorTreeNodeId =
+      dominatorTree.getNodeIdByContentKey(contentKey);
 
     const immediateDominator = dominators[nodeId];
     if (immediateDominator == null) continue;
@@ -66,7 +75,7 @@ export function buildDominatorTree(
     }
 
     const immediateDominatedId = dominatorTree.getNodeIdByContentKey(
-      immediateDominatorNode.id,
+      graph.getContentKeyByNodeId(immediateDominator),
     );
     dominatorTree.addEdge(immediateDominatedId, assetDominatorTreeNodeId);
   }

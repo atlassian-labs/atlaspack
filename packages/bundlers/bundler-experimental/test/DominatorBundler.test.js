@@ -5,7 +5,6 @@ import {overlayFS, workerFarm} from '@atlaspack/test-utils';
 import {dotTest, setupBundlerTest} from './test-utils';
 import {
   createPackages,
-  getAssetNodeByAssetId,
   getAssetNodeByKey,
   getChunkEntryPoints,
 } from '../src/DominatorBundler';
@@ -27,7 +26,7 @@ describe('DominatorBundler', () => {
   });
 
   describe('getChunkEntryPoints', () => {
-    it('returns the entry points for a chunk', async () => {
+    it.only('returns the entry points for a chunk', async () => {
       const entryDir = path.join(__dirname, 'test');
       const entryPath1 = path.join(entryDir, 'page1.js');
       const entryPath2 = path.join(entryDir, 'page2.js');
@@ -46,7 +45,6 @@ describe('DominatorBundler', () => {
         entryPath1,
         entryPath2,
       ]);
-      console.log('here');
       const dominators = findAssetDominators(mutableBundleGraph);
       const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
 

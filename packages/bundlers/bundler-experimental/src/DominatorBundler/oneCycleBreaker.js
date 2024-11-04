@@ -1,9 +1,62 @@
 // @flow strict-local
 
+import {hashString} from '@atlaspack/rust';
 import {ContentGraph, type NodeId} from '@atlaspack/graph';
-import type {Asset} from '@atlaspack/types';
+import nullthrows from 'nullthrows';
 
-type StronglyConnectedComponent = NodeId[];
+export type StronglyConnectedComponent = NodeId[];
+
+export type StronglyConnectedComponentNode<T> = {|
+  id: string,
+  type: 'StronglyConnectedComponent',
+  nodeIds: NodeId[],
+  values: T[],
+|};
+
+export function convertToAcyclicGraph<T>(
+  graph: ContentGraph<T>,
+): ContentGraph<T | StronglyConnectedComponentNode<T>> {
+  const result: ContentGraph<T | StronglyConnectedComponentNode<T>> =
+    new ContentGraph();
+
+  const components = findStronglyConnectedComponents(graph).filter(
+    (c) => c.length > 1,
+  );
+  const componentNodes = new Set(components.flatMap((component) => component));
+  const componentNodeIdsByNodeId = new Map();
+
+  graph.nodes.forEach((node, nodeId) => {
+    if (node != null && !componentNodes.has(nodeId)) {
+      result.addNodeByContentKey(graph.getContentKeyByNodeId(nodeId), node);
+    }
+  });
+
+  for (let component of components) {
+    const id = `StronglyConnectedComponent:${hashString(component.join(','))}`;
+    const componentNode = {
+      id,
+      type: 'StronglyConnectedComponent',
+      nodeIds: component,
+      values: component.map((nodeId) => nullthrows(graph.getNode(nodeId))),
+    };
+    const componentNodeId = result.addNodeByContentKey(id, componentNode);
+
+    for (let nodeId of component) {
+      componentNodeIdsByNodeId.set(nodeId, componentNodeId);
+    }
+  }
+
+  const redirectEdge = (n: NodeId): NodeId =>
+    componentNodeIdsByNodeId.get(n) ?? n;
+
+  for (let edge of graph.getAllEdges()) {
+    result.addEdge(redirectEdge(edge.from), redirectEdge(edge.to), edge.type);
+  }
+
+  result.setRootNodeId(graph.rootNodeId);
+
+  return result;
+}
 
 /**
  * Tarjan SCC algorithm

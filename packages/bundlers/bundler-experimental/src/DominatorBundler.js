@@ -4,6 +4,7 @@ import type {BundleGraph, Bundle, Asset, Dependency} from '@atlaspack/types';
 import type {MutableBundleGraph} from '@atlaspack/types';
 import {bundleGraphToRootedGraph} from './DominatorBundler/bundleGraphToRootedGraph';
 import {ContentGraph, type NodeId} from '@atlaspack/graph';
+import type {StronglyConnectedComponentNode} from './DominatorBundler/oneCycleBreaker';
 
 import nullthrows from 'nullthrows';
 
@@ -35,6 +36,10 @@ export type PackagedDominatorGraphNode = 'root' | Asset | PackageNode;
 
 export type PackagedDominatorGraph = ContentGraph<PackagedDominatorGraphNode>;
 
+export type PackagingInputGraph = ContentGraph<
+  Asset | StronglyConnectedComponentNode<Asset | 'root'> | 'root',
+>;
+
 /**
  * Start with the dominator graph. This is the immediate dominator tree, with a
  * root node at the top of every node.
@@ -48,7 +53,7 @@ export type PackagedDominatorGraph = ContentGraph<PackagedDominatorGraphNode>;
  */
 export function createPackages(
   bundleGraph: MutableBundleGraph,
-  dominators: ContentGraph<Asset | 'root'>,
+  dominators: PackagingInputGraph,
 ): PackagedDominatorGraph {
   // $FlowFixMe
   const packages: PackagedDominatorGraph = dominators.clone();
@@ -168,7 +173,7 @@ function getChunksByParentEntryPoint(
 
 export function getChunkEntryPoints(
   rootedGraph: ContentGraph<'root' | Asset>,
-  dominators: ContentGraph<'root' | Asset>,
+  dominators: PackagingInputGraph,
 ): Map<string, Set<string>> {
   const chunks = getChunks(dominators).map(
     (id) => getAssetNode(dominators, id).id,
@@ -213,31 +218,45 @@ export function getChunkEntryPoints(
 /**
  * Nodes connected to the root node are considered chunks.
  */
-function getChunks(
-  dominatorTree: ContentGraph<'root' | Asset> | PackagedDominatorGraph,
-): NodeId[] {
+function getChunks<T>(dominatorTree: ContentGraph<T>): NodeId[] {
   return dominatorTree.getNodeIdsConnectedFrom(
     dominatorTree.getNodeIdByContentKey('root'),
   );
 }
 
 export function getAssetNodeByKey(
-  graph: ContentGraph<'root' | Asset>,
+  graph:
+    | ContentGraph<'root' | Asset>
+    | ContentGraph<
+        'root' | StronglyConnectedComponentNode<'root' | Asset> | Asset,
+      >,
   id: string,
 ): Asset {
   const node = graph.getNodeByContentKey(id);
-  if (node == null || node === 'root') {
+  if (
+    node == null ||
+    node === 'root' ||
+    node.type === 'StronglyConnectedComponent'
+  ) {
     throw new Error('Invariant violation');
   }
   return node;
 }
 
 export function getAssetNode(
-  graph: ContentGraph<'root' | Asset>,
+  graph:
+    | ContentGraph<'root' | Asset>
+    | ContentGraph<
+        'root' | StronglyConnectedComponentNode<'root' | Asset> | Asset,
+      >,
   id: NodeId,
 ): Asset {
   const node = graph.getNode(id);
-  if (node == null || node === 'root') {
+  if (
+    node == null ||
+    node === 'root' ||
+    node.type === 'StronglyConnectedComponent'
+  ) {
     throw new Error('Invariant violation');
   }
   return node;
