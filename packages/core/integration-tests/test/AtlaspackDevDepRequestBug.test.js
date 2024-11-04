@@ -7,6 +7,7 @@ import {
   workerFarm,
 } from '@atlaspack/test-utils';
 import Atlaspack from '@atlaspack/core';
+import path from 'path';
 
 describe('dev dep request bug', () => {
   before(async function () {
@@ -19,13 +20,13 @@ describe('dev dep request bug', () => {
     this.timeout(100000);
 
     const i = 0;
-    const entryPath = 'test/test.js';
+    const entryPath = path.join(__dirname, 'test/test.js');
     const options = getParcelOptions(entryPath, {
       inputFS: overlayFS,
     });
 
     {
-      fsFixture(overlayFS)`
+      fsFixture(overlayFS, __dirname)`
       test/other${i}.js:
           export default function name() {
             return 'jira ${i}';
@@ -40,7 +41,7 @@ describe('dev dep request bug', () => {
     }
 
     {
-      fsFixture(overlayFS)`
+      fsFixture(overlayFS, __dirname)`
       test/other${i}.js:
           export default function name() {
             return 'atlaspack ${i}';
