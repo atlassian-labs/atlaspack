@@ -23,7 +23,7 @@ pub struct RuntimeAsset {
 
 /// Programmatically insert assets into bundles
 #[async_trait]
-pub trait RuntimePlugin: Debug {
+pub trait RuntimePlugin: Debug + Send + Sync {
   /// Generates runtime assets to insert into bundles
   async fn apply(
     &self,
