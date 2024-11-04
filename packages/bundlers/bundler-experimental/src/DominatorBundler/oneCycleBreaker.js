@@ -28,6 +28,10 @@ export function convertToAcyclicGraph<T>(
   graph.nodes.forEach((node, nodeId) => {
     if (node != null && !componentNodes.has(nodeId)) {
       result.addNodeByContentKey(graph.getContentKeyByNodeId(nodeId), node);
+    } else {
+      // Add null node to keep node ids stable
+      // $FlowFixMe
+      result.addNode(null);
     }
   });
 

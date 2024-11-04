@@ -22,9 +22,13 @@ export function findAssetDominators(
   'root' | Asset | StronglyConnectedComponentNode<'root' | Asset>,
 > {
   // Build a simpler graph with a root at the top
+  console.log('converting graph');
   const graph = bundleGraphToRootedGraph(bundleGraph);
+  console.log('finding cycles');
   const noCyclesGraph = convertToAcyclicGraph(graph);
+  console.log('dominating');
   const dominators = simpleFastDominance(noCyclesGraph);
+  console.log('dominator tree');
   const dominatorTree = buildDominatorTree(noCyclesGraph, dominators);
   return dominatorTree;
 }
