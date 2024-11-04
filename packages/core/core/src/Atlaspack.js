@@ -21,6 +21,7 @@ import ThrowableDiagnostic, {anyToDiagnostic} from '@atlaspack/diagnostic';
 import {assetFromValue} from './public/Asset';
 import {PackagedBundle} from './public/Bundle';
 import BundleGraph from './public/BundleGraph';
+import InternalBundleGraph from './BundleGraph';
 import WorkerFarm from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 import {BuildAbortError} from './utils';
@@ -59,10 +60,15 @@ import {clearBuildCaches} from '@atlaspack/build-cache';
 import {LMDBLiteCache} from '@atlaspack/cache';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
+import {
+  createPackages,
+  findAssetDominators,
+} from '@atlaspack/bundler-experimental';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
+import MutableBundleGraph from './public/MutableBundleGraph';
 
 registerCoreWithSerializer();
 
@@ -578,6 +584,32 @@ export default class Atlaspack {
     await this._init();
   }
 
+  async unstable_getBundlerStats() {
+    const assetGraphResult: AssetGraphRequestResult =
+      await this.unstable_buildAssetGraph(false);
+    const assetGraph = assetGraphResult.assetGraph;
+    console.log({message: 'Creating bundle graph'});
+    const bundleGraph = InternalBundleGraph.fromAssetGraph(assetGraph, false);
+    const mutableBundleGraph = new MutableBundleGraph(
+      bundleGraph,
+      nullthrows(this.#resolvedOptions),
+    );
+    console.log({message: 'Running bundler'});
+    const dominators = findAssetDominators(mutableBundleGraph);
+    console.log({message: 'Done running dominators'});
+    const packages = createPackages(mutableBundleGraph, dominators);
+    console.log({message: 'Done creating packages'});
+
+    const chunks = dominators.getNodeIdsConnectedFrom(
+      dominators.getNodeIdByContentKey('root'),
+    );
+    console.log({message: 'Number of dominator chunks: ' + chunks.length});
+    const packageNodes = packages.getNodeIdsConnectedFrom(
+      packages.getNodeIdByContentKey('root'),
+    );
+    console.log({message: 'Number of packages: ' + packageNodes.length});
+  }
+
   /**
    * Build the asset graph
    */
@@ -604,9 +636,9 @@ export default class Atlaspack {
     if (writeToCache) {
       logger.info({message: 'Write request tracker to cache'});
       await this.writeRequestTrackerToCache();
+      logger.info({message: 'Done writing request tracker to cache'});
     }
 
-    logger.info({message: 'Done writing request tracker to cache'});
     return result;
   }
 

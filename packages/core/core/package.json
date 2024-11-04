@@ -22,6 +22,7 @@
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",
     "@atlaspack/build-cache": "2.12.0",
+    "@atlaspack/bundler-experimental": "2.12.0",
     "@atlaspack/cache": "2.12.0",
     "@atlaspack/diagnostic": "2.12.0",
     "@atlaspack/events": "2.12.0",

@@ -33,6 +33,12 @@ export function bundleGraphToRootedGraph(
 
   const postOrder = [];
   bundleGraph.traverse({
+    enter: (node) => {
+      if (node.type === 'asset') {
+        const asset = bundleGraph.getAssetById(node.value.id);
+        graph.addNodeByContentKey(node.value.id, asset);
+      }
+    },
     exit: (node) => {
       if (node.type === 'asset') {
         postOrder.push(node.value.id);
@@ -43,7 +49,7 @@ export function bundleGraphToRootedGraph(
 
   for (let assetId of reversedPostOrder) {
     const childAsset = bundleGraph.getAssetById(assetId);
-    const assetNodeId = graph.addNodeByContentKey(assetId, childAsset);
+    const assetNodeId = graph.getNodeIdByContentKey(assetId);
 
     for (let dependency of bundleGraph.getIncomingDependencies(childAsset)) {
       if (dependency.isEntry) {
