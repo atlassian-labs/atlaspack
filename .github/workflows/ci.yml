@@ -108,7 +108,11 @@ jobs:
           ATLASPACK_V3: ${{ matrix.version == 'v3' && 'true' || 'false' }}
 
   benchmarks:
-    name: Benchmarks
+    strategy:
+      matrix:
+        version: [V2, V3]
+        plugins: [0, 10]
+    name: Benchmarks ${{ matrix.version }} / ${{ matrix.plugins }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -129,13 +133,32 @@ jobs:
           yarn build-native-release
           yarn build
       - run: |
-          cd benchmarks/three-js
+          export ATLASPACK_BENCH_COPIES=30
+          export ATLASPACK_BENCH_MODE=${{ matrix.version }}
+          export ATLASPACK_BENCH_PLUGINS=${{ matrix.plugins }}
 
-          yarn start:v2
-          yarn start:v2
-          yarn start:v2
-          yarn start:v2
-          yarn start:v2
+          cd benchmarks/three-js
+          mkdir reports
+
+          yarn start
+          mv report.json reports/1.json
+
+          yarn start
+          mv report.json reports/2.json
+
+          yarn start
+          mv report.json reports/3.json
+
+          yarn start
+          mv report.json reports/4.json
+
+          yarn start
+          mv report.json reports/5.json
+
+          node scripts/ci-post.js
+      - name: Average Build Time
+        run: node scripts/ci-post.js
+
 
   repl:
     name: Deploy REPL
