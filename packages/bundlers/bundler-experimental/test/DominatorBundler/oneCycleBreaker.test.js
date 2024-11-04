@@ -13,23 +13,23 @@ import {overlayFS} from '@atlaspack/test-utils';
 import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
 import {rootedGraphToDot} from '../graphviz/GraphvizUtils';
 
-describe.only('oneCycleBreaker', () => {
+describe('oneCycleBreaker', () => {
   describe('findStronglyConnectedComponents', () => {
     it('should find strongly connected components', () => {
       const graph = new ContentGraph();
-      graph.addNodeByContentKey('root', 'root');
+      const root = graph.addNodeByContentKey('root', 'root');
       graph.setRootNodeId(0);
-      graph.addNodeByContentKey('a', 'a');
-      graph.addNodeByContentKey('b', 'b');
-      graph.addNodeByContentKey('c', 'c');
+      const a = graph.addNodeByContentKey('a', 'a');
+      const b = graph.addNodeByContentKey('b', 'b');
+      const c = graph.addNodeByContentKey('c', 'c');
 
-      graph.addEdge(0, 1);
-      graph.addEdge(1, 2);
-      graph.addEdge(2, 1);
+      graph.addEdge(root, a);
+      graph.addEdge(a, b);
+      graph.addEdge(b, a);
 
       const result = findStronglyConnectedComponents(graph);
 
-      assert.deepStrictEqual(result, [[2, 1], [0]]);
+      assert.deepStrictEqual(result, [[b, a], [root], [c]]);
     });
   });
 
@@ -60,6 +60,48 @@ describe.only('oneCycleBreaker', () => {
           values: ['c', 'b'],
         },
         'a',
+        'root',
+      ]);
+    });
+
+    it('works on a graph with two starting roots', () => {
+      const graph = new ContentGraph();
+      graph.setRootNodeId(0);
+      const root = graph.addNodeByContentKey('root', 'root');
+      const a = graph.addNodeByContentKey('a', 'a');
+      const b = graph.addNodeByContentKey('b', 'b');
+      const c = graph.addNodeByContentKey('c', 'c');
+      const d = graph.addNodeByContentKey('d', 'd');
+      const e = graph.addNodeByContentKey('e', 'e');
+
+      graph.addEdge(root, a);
+      graph.addEdge(root, b);
+      graph.addEdge(a, c);
+      graph.addEdge(b, c);
+      graph.addEdge(c, d);
+      graph.addEdge(d, e);
+      graph.addEdge(e, c);
+      /*
+
+        root -> a -> c -> d -> e -----+
+            \-- b--/ |----------------+
+       */
+      // $FlowFixMe
+      const result = convertToAcyclicGraph(graph);
+
+      const nodes = [...result.nodes];
+      nodes.sort();
+
+      assert.deepStrictEqual(nodes, [
+        {
+          // $FlowFixMe
+          id: nodes[0].id,
+          type: 'StronglyConnectedComponent',
+          nodeIds: [e, d, c],
+          values: ['e', 'd', 'c'],
+        },
+        'a',
+        'b',
         'root',
       ]);
     });
@@ -105,7 +147,7 @@ describe.only('oneCycleBreaker', () => {
                 }
               }),
             ),
-          [['lodash.js', 'page2.js', 'root']],
+          [],
         );
 
         const result = convertToAcyclicGraph(rootedGraph);

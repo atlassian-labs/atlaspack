@@ -26,7 +26,7 @@ describe('DominatorBundler', () => {
   });
 
   describe('getChunkEntryPoints', () => {
-    it.only('returns the entry points for a chunk', async () => {
+    it('returns the entry points for a chunk', async () => {
       const entryDir = path.join(__dirname, 'test');
       const entryPath1 = path.join(entryDir, 'page1.js');
       const entryPath2 = path.join(entryDir, 'page2.js');

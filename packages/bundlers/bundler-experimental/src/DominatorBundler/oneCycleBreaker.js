@@ -82,8 +82,8 @@ export function findStronglyConnectedComponents<T>(
     onStack: false,
   }));
 
-  graph.traverse((nodeId) => {
-    if (state[nodeId].index == null) {
+  graph.nodes.forEach((node, nodeId) => {
+    if (node != null && state[nodeId].index == null) {
       strongConnect(nodeId);
     }
   });
@@ -91,7 +91,7 @@ export function findStronglyConnectedComponents<T>(
   function strongConnect(nodeId) {
     const nodeState = state[nodeId];
     nodeState.index = index;
-    nodeState.lowlink = nodeId;
+    nodeState.lowlink = index;
 
     index += 1;
 
@@ -115,7 +115,7 @@ export function findStronglyConnectedComponents<T>(
       }
     }
 
-    if (nodeState.lowlink === nodeId) {
+    if (nodeState.lowlink === nodeState.index) {
       const component = [];
       let member;
 

@@ -58,9 +58,6 @@ export function buildDominatorTree<T>(
       continue;
     }
 
-    console.log(node);
-    console.log(contentKey);
-    console.log(dominatorTree);
     const assetDominatorTreeNodeId =
       dominatorTree.getNodeIdByContentKey(contentKey);
 
