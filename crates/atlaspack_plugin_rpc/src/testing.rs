@@ -143,8 +143,9 @@ impl OptimizerPlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl PackagerPlugin for TestingRpcPlugin {
-  fn package(&self, _ctx: PackageContext) -> Result<PackagedBundle, anyhow::Error> {
+  async fn package<'a>(&self, _ctx: PackageContext<'a>) -> Result<PackagedBundle, anyhow::Error> {
     anyhow::bail!("Mock Packager Plugin Incomplete")
     // Ok(PackagedBundle {
     //   contents: fs::File::create(),
