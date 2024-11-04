@@ -48,7 +48,11 @@ void (async function main() {
   };
 
   try {
+    console.log('Setup:');
+
     // Copy files to a temporary directory
+    console.log('  Copying Base');
+
     rm(paths['~']('dist'));
     rm(paths['~']('.parcel-cache'));
 
@@ -57,14 +61,12 @@ void (async function main() {
 
     // Patch the package.json to link the files to the workspace files
     const packageJson = readJson(paths['/tmp']('package.json'));
-
     for (const dependency of Object.keys(packageJson.dependencies)) {
       if (!dependency.startsWith('@atlaspack')) continue;
       const resolved = require.resolve(path.join(dependency, 'package.json'));
       const dir = path.dirname(resolved);
       packageJson.dependencies[dependency] = `file:${dir}`;
     }
-
     writeJson(paths['/tmp']('package.json'), packageJson);
 
     // Patch .parcelrc to include plugins
@@ -76,17 +78,20 @@ void (async function main() {
     }
     writeJson(paths['/tmp']('.parcelrc'), parcelRc);
 
-    // Set up benchmark fixture
-    $('tar -xzvf ./vendor/three-js.tar.gz -C ./vendor', {
-      cwd: paths['/tmp'](),
-      shell: true,
-    });
+    // Get three-js
+    if (fs.readdirSync(paths['~']('three-js')).length === 0) {
+      console.log('  Pulling Three-js');
+      $('git submodule update --init ./three-js', {
+        cwd: paths['~'](),
+        shell: true,
+      });
+    }
+
+    // Copy three-js to bench directory
+    console.log('  Copying Sources');
 
     for (let i = 0; i < COPIES; i++) {
-      cp(
-        paths['/tmp']('vendor', 'three-js'),
-        paths['/tmp']('src', `copy-${i}`),
-      );
+      cp(paths['~']('three-js', 'src'), paths['/tmp']('src', `copy-${i}`));
       append(
         paths['/tmp']('src', 'index.js'),
         `import * as three_js_${i} from './copy-${i}/Three.js';`,
