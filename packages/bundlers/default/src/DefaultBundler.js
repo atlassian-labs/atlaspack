@@ -1401,14 +1401,6 @@ function createIdealGraph(
   // We should include "bundle reuse" as shared bundles that may be removed but the bundle itself would have to be retained
   for (let [bundleNodeId, bundle] of bundleGraph.nodes.entries()) {
     if (!bundle || bundle === 'root') continue;
-    console.log({
-      bundleSize: bundle.size,
-      bundleAssets: bundle.assets,
-      minBundleSize: config.minBundleSize,
-      sourceBundlesSize: bundle.sourceBundles.size,
-      mainEntryAsset: bundle.mainEntryAsset,
-      manualSharedBundleIdsHas: manualSharedBundleIds.has(bundleNodeId),
-    });
     if (
       bundle.sourceBundles.size > 0 &&
       bundle.mainEntryAsset == null &&
