@@ -451,7 +451,7 @@ impl<'a> Fold for DependencyCollector<'a> {
           }
           Ident(ident) => {
             // Bail if defined in scope
-            if !is_unresolved(&ident, self.unresolved_mark) {
+            if !is_unresolved(ident, self.unresolved_mark) {
               return node.fold_children_with(self);
             }
 
@@ -791,7 +791,7 @@ impl<'a> Fold for DependencyCollector<'a> {
 
       if call.args.len() != 3 {
         self.diagnostics.push(Diagnostic {
-          message: format!("importCond requires three arguments"),
+          message: "importCond requires three arguments".to_string(),
           code_highlights: Some(vec![CodeHighlight {
             message: None,
             loc: SourceLocation::from(&self.source_map, call.span),
@@ -872,7 +872,7 @@ impl<'a> Fold for DependencyCollector<'a> {
     } = &node
     {
       if let ast::Expr::Ident(ident) = &**arg {
-        if ident.sym == js_word!("require") && is_unresolved(&ident, self.unresolved_mark) {
+        if ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark) {
           return node;
         }
       }
@@ -888,7 +888,7 @@ impl<'a> Fold for DependencyCollector<'a> {
       Ident(id) => {
         if id.sym == "Worker" || id.sym == "SharedWorker" {
           // Bail if defined in scope
-          self.config.is_browser && is_unresolved(&id, self.unresolved_mark)
+          self.config.is_browser && is_unresolved(id, self.unresolved_mark)
         } else if id.sym == "Promise" {
           // Match requires inside promises (e.g. Rollup compiled dynamic imports)
           // new Promise(resolve => resolve(require('foo')))
@@ -1023,12 +1023,12 @@ impl<'a> Fold for DependencyCollector<'a> {
     let is_require = match &node {
       Expr::Ident(ident) => {
         // Free `require` -> undefined
-        ident.sym == js_word!("require") && is_unresolved(&ident, self.unresolved_mark)
+        ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark)
       }
       Expr::Member(MemberExpr { obj: expr, .. }) => {
         // e.g. `require.extensions` -> undefined
         if let Expr::Ident(ident) = &**expr {
-          ident.sym == js_word!("require") && is_unresolved(&ident, self.unresolved_mark)
+          ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark)
         } else {
           false
         }
@@ -1340,7 +1340,7 @@ impl<'a> DependencyCollector<'a> {
 
     if let Expr::New(new) = expr {
       let is_url = match &*new.callee {
-        Expr::Ident(id) => id.sym == js_word!("URL") && is_unresolved(&id, self.unresolved_mark),
+        Expr::Ident(id) => id.sym == js_word!("URL") && is_unresolved(id, self.unresolved_mark),
         _ => false,
       };
 

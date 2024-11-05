@@ -480,7 +480,7 @@ impl<'a> ResolveRequest<'a> {
           && self.resolver.flags.contains(Flags::EXPORTS)
         {
           // An internal package #import specifier.
-          let package = self.find_package(self.from.parent().unwrap_or_else(|| self.from))?;
+          let package = self.find_package(self.from.parent().unwrap_or(self.from))?;
           if let Some(package) = package {
             let res = package
               .resolve_package_imports(hash, self.conditions, self.custom_conditions)
@@ -599,7 +599,7 @@ impl<'a> ResolveRequest<'a> {
       }
 
       // Next, try the local package.json.
-      if let Some(package) = self.find_package(self.from.parent().unwrap_or_else(|| self.from))? {
+      if let Some(package) = self.find_package(self.from.parent().unwrap_or(self.from))? {
         let mut fields = Fields::ALIAS;
         if self.resolver.entries.contains(Fields::BROWSER) {
           fields |= Fields::BROWSER;
@@ -622,7 +622,7 @@ impl<'a> ResolveRequest<'a> {
     } else {
       self.invalidations.invalidate_on_file_create_above(
         format!("node_modules/{}", module),
-        self.from.parent().unwrap_or_else(|| self.from),
+        self.from.parent().unwrap_or(self.from),
       );
 
       for dir in self.from.ancestors() {
@@ -733,6 +733,7 @@ impl<'a> ResolveRequest<'a> {
         package_path: package.path.clone(),
       })
     } else {
+      #[allow(clippy::explicit_auto_deref)]
       let res = self.try_package_entries(&*package);
       if let Ok(Some(res)) = res {
         return Ok(res);

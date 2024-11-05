@@ -41,7 +41,7 @@ pub struct NodejsRpcTransformerPlugin {
 
 impl Debug for NodejsRpcTransformerPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "RpcTransformerPlugin")
+    write!(f, "RpcTransformerPlugin({})", self.plugin_node.package_name)
   }
 }
 
@@ -68,6 +68,7 @@ impl NodejsRpcTransformerPlugin {
           .load_plugin(LoadPluginOptions {
             kind: LoadPluginKind::Transformer,
             specifier: self.plugin_node.package_name.clone(),
+            #[allow(clippy::needless_borrow)]
             resolve_from: (&*self.plugin_node.resolve_from).clone(),
           })
           .await?;

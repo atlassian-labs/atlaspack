@@ -20,6 +20,7 @@ use super::symbol::Symbol;
 use super::target::Target;
 use super::FileType;
 
+#[allow(clippy::too_many_arguments)]
 pub fn create_dependency_id(
   source_asset_id: Option<&AssetId>,
   specifier: &str,
@@ -150,8 +151,8 @@ impl Dependency {
       self.source_asset_id.as_ref(),
       &self.specifier,
       &self.env.id(),
-      self.target.as_ref().map(|t| &**t),
-      self.pipeline.as_ref().map(|s| s.as_str()),
+      self.target.as_deref(),
+      self.pipeline.as_deref(),
       &self.specifier_type,
       &self.bundle_behavior,
       &self.priority,
@@ -241,8 +242,10 @@ pub struct ImportAttribute {
 #[derive(Clone, Copy, Debug, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
 #[serde(rename_all = "lowercase")]
 #[repr(u32)]
+#[derive(Default)]
 pub enum Priority {
   /// Resolves the dependency synchronously, placing the resolved asset in the same bundle as the parent or another bundle that is already on the page
+  #[default]
   Sync = 0,
   /// Places the dependency in a separate bundle loaded in parallel with the current bundle
   Parallel = 1,
@@ -252,20 +255,16 @@ pub enum Priority {
   Conditional = 3,
 }
 
-impl Default for Priority {
-  fn default() -> Self {
-    Priority::Sync
-  }
-}
-
 /// The type of the import specifier
 #[derive(Clone, Copy, Debug, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
 #[repr(u8)]
+#[derive(Default)]
 pub enum SpecifierType {
   /// An ES Module specifier
   ///
   /// This is parsed as an URL, but bare specifiers are treated as node_modules.
   ///
+  #[default]
   Esm = 0,
 
   /// A CommonJS specifier
@@ -282,10 +281,4 @@ pub enum SpecifierType {
 
   /// A custom specifier that must be handled by a custom resolver plugin
   Custom = 3,
-}
-
-impl Default for SpecifierType {
-  fn default() -> Self {
-    SpecifierType::Esm
-  }
 }

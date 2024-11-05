@@ -84,7 +84,7 @@ impl AtlaspackNapi {
     let threads = napi_options
       .threads
       .map(|t| t as usize)
-      .unwrap_or_else(|| num_cpus::get());
+      .unwrap_or_else(num_cpus::get);
 
     // Set up Nodejs plugin bindings
     let node_worker_count = napi_options

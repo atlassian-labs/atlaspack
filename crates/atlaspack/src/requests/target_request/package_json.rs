@@ -125,7 +125,7 @@ where
 
     match browser_field {
       BrowserField::EntryPoint(dist) => {
-        validate_extension::<D>("browser", &dist, &allowed_extensions)?;
+        validate_extension::<D>("browser", dist, &allowed_extensions)?;
       }
       BrowserField::ReplacementBySpecifier(replacements) => {
         for dist in replacements.values() {
@@ -235,19 +235,19 @@ where
 {
   let builtin_target = Option::<BuiltInTargetDescriptor>::deserialize(deserializer)?;
 
-  if let Some(target_descriptor) = builtin_target.as_ref() {
-    if let BuiltInTargetDescriptor::TargetDescriptor(target_descriptor) = target_descriptor {
-      validate_scope_hoisting::<D>(target_name, target_descriptor)?;
+  if let Some(BuiltInTargetDescriptor::TargetDescriptor(target_descriptor)) =
+    builtin_target.as_ref()
+  {
+    validate_scope_hoisting::<D>(target_name, target_descriptor)?;
 
-      if target_descriptor
-        .output_format
-        .is_some_and(|f| f == OutputFormat::Global)
-      {
-        return Err(serde::de::Error::custom(format!(
-          "The \"global\" output format is not supported in the {} target",
-          target_name
-        )));
-      }
+    if target_descriptor
+      .output_format
+      .is_some_and(|f| f == OutputFormat::Global)
+    {
+      return Err(serde::de::Error::custom(format!(
+        "The \"global\" output format is not supported in the {} target",
+        target_name
+      )));
     }
   }
 
@@ -271,7 +271,7 @@ where
 fn validate_extension<'de, D>(
   target: &str,
   dist: &Path,
-  allowed_extensions: &Vec<&str>,
+  #[allow(clippy::ptr_arg)] allowed_extensions: &Vec<&str>,
 ) -> Result<(), D::Error>
 where
   D: Deserializer<'de>,
@@ -300,8 +300,8 @@ fn validate_scope_hoisting<'de, D>(
 where
   D: Deserializer<'de>,
 {
-  if target_descriptor.is_library.is_some_and(|l| l == true)
-    && target_descriptor.scope_hoist.is_some_and(|s| s == false)
+  if target_descriptor.is_library.is_some_and(|l| l)
+    && target_descriptor.scope_hoist.is_some_and(|s| !s)
   {
     return Err(serde::de::Error::custom(format!(
       "Scope hoisting cannot be disabled for \"{}\" library target",

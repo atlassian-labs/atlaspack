@@ -41,7 +41,7 @@ impl TypeofReplacer {
       return None;
     };
 
-    if ident.sym == js_word!("require") && is_unresolved(&ident, self.unresolved_mark) {
+    if ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark) {
       return Some(Expr::Lit(Lit::Str(Str {
         span: unary.span,
         value: js_word!("function"),
@@ -49,7 +49,7 @@ impl TypeofReplacer {
       })));
     }
 
-    if &*ident.sym == "exports" && is_unresolved(&ident, self.unresolved_mark) {
+    if &*ident.sym == "exports" && is_unresolved(ident, self.unresolved_mark) {
       return Some(Expr::Lit(Lit::Str(Str {
         span: unary.span,
         value: js_word!("object"),
@@ -57,7 +57,7 @@ impl TypeofReplacer {
       })));
     }
 
-    if ident.sym == js_word!("module") && is_unresolved(&ident, self.unresolved_mark) {
+    if ident.sym == js_word!("module") && is_unresolved(ident, self.unresolved_mark) {
       return Some(Expr::Lit(Lit::Str(Str {
         span: unary.span,
         value: js_word!("object"),

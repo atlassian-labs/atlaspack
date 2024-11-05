@@ -871,7 +871,7 @@ impl<'a> Fold for Hoist<'a> {
 
             // exports.foo -> $id$export$foo
             if &*ident.sym == "exports"
-              && is_unresolved(&ident, self.unresolved_mark)
+              && is_unresolved(ident, self.unresolved_mark)
               && self.collect.static_cjs_exports
               && !self.collect.should_wrap
             {
@@ -1160,7 +1160,7 @@ impl<'a> Fold for Hoist<'a> {
         return AssignExpr {
           span: node.span,
           op: node.op,
-          left: AssignTarget::Simple(SimpleAssignTarget::Ident(ident.into())),
+          left: AssignTarget::Simple(SimpleAssignTarget::Ident(ident)),
           right: node.right.fold_with(self),
         };
       }
@@ -1170,7 +1170,7 @@ impl<'a> Fold for Hoist<'a> {
           match_member_expr(member, vec!["module", "exports"], self.unresolved_mark)
         }
         Expr::Ident(ident) => {
-          &*ident.sym == "exports" && is_unresolved(&ident, self.unresolved_mark)
+          &*ident.sym == "exports" && is_unresolved(ident, self.unresolved_mark)
         }
         Expr::This(_) if !self.in_function_scope => true,
         _ => false,
@@ -1212,7 +1212,7 @@ impl<'a> Fold for Hoist<'a> {
           span: node.span,
           op: node.op,
           left: if self.collect.static_cjs_exports {
-            AssignTarget::Simple(SimpleAssignTarget::Ident(ident.into()))
+            AssignTarget::Simple(SimpleAssignTarget::Ident(ident))
           } else {
             AssignTarget::Simple(SimpleAssignTarget::Member(MemberExpr {
               span: member.span,
@@ -1256,11 +1256,11 @@ impl<'a> Fold for Hoist<'a> {
         key: PropName::Ident(Ident::new(assign.key.sym.clone(), DUMMY_SP)),
         value: Box::new(match assign.value {
           Some(value) => Pat::Assign(AssignPat {
-            left: Box::new(Pat::Ident(BindingIdent::from(assign.key.fold_with(self)))),
+            left: Box::new(Pat::Ident(assign.key.fold_with(self))),
             right: value.fold_with(self),
             span: DUMMY_SP,
           }),
-          None => Pat::Ident(BindingIdent::from(assign.key.fold_with(self))),
+          None => Pat::Ident(assign.key.fold_with(self)),
         }),
       }),
       _ => node.fold_children_with(self),

@@ -2,13 +2,25 @@ import {writeFileSync} from 'node:fs';
 
 import {$} from 'zx';
 
-import data from './data.json' with { type: "json" };
-
 await $`rm -f data.json`;
+try {
+  await $`wget --version`
+} catch {
+  console.error('wget is not installed. Please install it to run the script.');
+  process.exit(1);
+}
 await $`wget https://raw.githubusercontent.com/Fyrd/caniuse/main/data.json`;
+
+// This import is dependent on the caniuse await above
+// import data from './data.json' with { type: "json" };
+
+const data = (await import('./data.json', {
+  assert: {type: 'json'},
+})).default;
 
 const write = console.log;
 
+write('#![allow(clippy::all)]');
 write('//! This file was automatically generated and should not be edited manually.');
 write('//!');
 write('//! Use `yarn workspace caniuse-database generate` to regenerate the contents of this file.');
@@ -17,7 +29,7 @@ write('');
 
 const browserAgents = Object.entries(data.agents).map(([key, agent]) => ({
   name: capitalize(key),
-  comment: [...agent.long_name.split('\n')],
+  comment: [...agent.browser.split('\n')],
   key,
 }));
 

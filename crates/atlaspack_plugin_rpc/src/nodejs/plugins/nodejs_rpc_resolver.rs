@@ -36,7 +36,11 @@ pub struct RpcNodejsResolverPlugin {
 
 impl Debug for RpcNodejsResolverPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "RpcNodejsResolverPlugin")
+    write!(
+      f,
+      "RpcNodejsResolverPlugin({})",
+      self.plugin_node.package_name
+    )
   }
 }
 
@@ -63,6 +67,7 @@ impl RpcNodejsResolverPlugin {
           .load_plugin(LoadPluginOptions {
             kind: LoadPluginKind::Resolver,
             specifier: self.plugin_node.package_name.clone(),
+            #[allow(clippy::needless_borrow)]
             resolve_from: (&*self.plugin_node.resolve_from).clone(),
           })
           .await?;
@@ -98,7 +103,9 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
       .run_resolver_resolve_fn
       .call_serde(RunResolverResolve {
         key: self.plugin_node.package_name.clone(),
+        #[allow(clippy::needless_borrow)]
         dependency: (&*ctx.dependency).clone(),
+        #[allow(clippy::needless_borrow)]
         specifier: (&*ctx.specifier).to_owned(),
         pipeline: ctx.pipeline.clone(),
         plugin_options: state.rpc_plugin_options.clone(),

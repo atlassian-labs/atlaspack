@@ -1,5 +1,3 @@
-use anyhow;
-
 /// Convert anyhow error to napi error
 pub fn anyhow_to_napi(error: anyhow::Error) -> napi::Error {
   napi::Error::from_reason(format!("[napi] {:?}", error))

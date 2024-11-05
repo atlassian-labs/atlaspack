@@ -45,7 +45,7 @@ impl<'a> VisitMut for NodeReplacer<'a> {
     match node {
       Ident(id) => {
         // Only handle global variables
-        if !is_unresolved(&id, self.unresolved_mark) {
+        if !is_unresolved(id, self.unresolved_mark) {
           return;
         }
 
@@ -179,11 +179,8 @@ impl<'a> VisitMut for NodeReplacer<'a> {
 
   // Do not traverse into the `prop` side of member expressions unless computed.
   fn visit_mut_member_prop(&mut self, node: &mut MemberProp) {
-    match node {
-      MemberProp::Computed(computed) => {
-        computed.visit_mut_children_with(self);
-      }
-      _ => {}
+    if let MemberProp::Computed(computed) = node {
+      computed.visit_mut_children_with(self);
     }
   }
 

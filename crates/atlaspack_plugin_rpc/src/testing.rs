@@ -168,8 +168,9 @@ impl ResolverPlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl RuntimePlugin for TestingRpcPlugin {
-  fn apply(
+  async fn apply(
     &self,
     _bundle: atlaspack_core::types::Bundle,
     _bundle_graph: atlaspack_core::bundle_graph::BundleGraph,

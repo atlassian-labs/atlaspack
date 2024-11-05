@@ -201,7 +201,7 @@ export default async function resolveOptions(
     shouldTrace: initialOptions.shouldTrace ?? false,
     cacheDir,
     watchDir,
-    watchBackend: initialOptions.watchBackend,
+    watchBackend: initialOptions.watchBackend ?? 'watchman',
     watchIgnore: initialOptions.watchIgnore,
     entries: entries.map((e) => toProjectPath(projectRoot, e)),
     targets: initialOptions.targets,

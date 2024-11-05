@@ -84,7 +84,7 @@ impl<'de> Deserialize<'de> for Version {
   {
     let v: String = Deserialize::deserialize(deserializer)?;
     if v == "*" {
-      return Ok(Version(NonZeroU16::new(1 as u16).unwrap()));
+      return Ok(Version(NonZeroU16::new(1_u16).unwrap()));
     }
 
     if let Some(version) = SemVerRange::parse(v.as_str())

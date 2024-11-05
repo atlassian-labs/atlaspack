@@ -6,7 +6,15 @@ description = "SWC runner functions for Atlaspack"
 
 [dependencies]
 regex = { workspace = true }
-swc_core = { workspace = true }
+swc_core = { workspace = true, features = [
+    "__ecma",
+    "ecma_codegen",
+    "__visit",
+    "__parser",
+    "ecma_ast",
+    "__common",
+    "__testing_transform"
+]}
 thiserror = { workspace = true }
 swc_ecma_parser = { workspace = true }
 sourcemap = { workspace = true }

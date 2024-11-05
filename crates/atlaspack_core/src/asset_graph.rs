@@ -71,6 +71,12 @@ impl PartialEq for AssetGraph {
   }
 }
 
+impl Default for AssetGraph {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl AssetGraph {
   pub fn new() -> Self {
     let mut graph = DiGraph::new();
@@ -268,7 +274,7 @@ impl AssetGraph {
             self.propagate_requested_symbols(resolved.target(), dep_node, on_undeferred);
           }
         } else {
-          on_undeferred(dep_node, Arc::clone(&dependency));
+          on_undeferred(dep_node, Arc::clone(dependency));
         }
       }
     }

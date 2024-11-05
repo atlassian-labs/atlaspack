@@ -49,7 +49,7 @@ pub fn match_member_expr(expr: &ast::MemberExpr, idents: Vec<&str>, unresolved_m
       Expr::Ident(id) => {
         return idents.len() == 1
           && id.sym == idents.pop().unwrap()
-          && is_unresolved(&id, unresolved_mark);
+          && is_unresolved(id, unresolved_mark);
       }
       _ => return false,
     }
@@ -141,7 +141,7 @@ pub fn match_require(node: &ast::Expr, unresolved_mark: Mark, ignore_mark: Mark)
       Callee::Expr(expr) => match &**expr {
         Expr::Ident(ident) => {
           if ident.sym == js_word!("require")
-            && is_unresolved(&ident, unresolved_mark)
+            && is_unresolved(ident, unresolved_mark)
             && !is_marked(ident.span, ignore_mark)
           {
             if let Some(arg) = call.args.first() {
@@ -313,16 +313,11 @@ pub enum DiagnosticSeverity {
   SourceError,
 }
 
-#[derive(Serialize, Debug, Deserialize, Eq, PartialEq, Clone, Copy)]
+#[derive(Serialize, Debug, Deserialize, Eq, PartialEq, Clone, Copy, Default)]
 pub enum SourceType {
   Script,
+  #[default]
   Module,
-}
-
-impl Default for SourceType {
-  fn default() -> Self {
-    SourceType::Module
-  }
 }
 
 #[derive(Debug)]

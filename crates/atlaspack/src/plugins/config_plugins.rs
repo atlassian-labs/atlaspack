@@ -87,11 +87,9 @@ impl ConfigPlugins {
 impl Plugins for ConfigPlugins {
   #[allow(unused)]
   fn bundler(&self) -> Result<Box<dyn BundlerPlugin>, anyhow::Error> {
-    Ok(
-      self
-        .rpc_worker
-        .create_bundler(&self.ctx, &self.config.bundler)?,
-    )
+    self
+      .rpc_worker
+      .create_bundler(&self.ctx, &self.config.bundler)
   }
 
   #[allow(unused)]

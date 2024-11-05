@@ -106,10 +106,10 @@ impl BrowsersFeaturesData {
     // write this with a for loop
     let mut features = HashMap::new();
     for (feature_key, support_map) in data.iter() {
-      let feature = BrowserFeature::from_key(&feature_key);
+      let feature = BrowserFeature::from_key(feature_key);
       let mut support = HashMap::new();
       for (browser_key, version_map) in support_map.iter() {
-        let agent = BrowserAgent::from_key(&browser_key);
+        let agent = BrowserAgent::from_key(browser_key);
         let mut versions = Vec::new();
         for (version, support) in version_map.iter() {
           // Safari Technology Preview and Opera mini ALL versions are not supported.
@@ -118,7 +118,7 @@ impl BrowsersFeaturesData {
           }
 
           if *support != 0 {
-            let range = VersionRange::parse(&version).map_err(|parse_error| {
+            let range = VersionRange::parse(version).map_err(|parse_error| {
               BrowserFeaturesError::InvalidVersion {
                 browser_key: browser_key.clone(),
                 feature_key: feature_key.clone(),
@@ -150,7 +150,7 @@ impl BrowsersFeaturesData {
       return false;
     };
 
-    versions.iter().any(|range| range.satisfies(&version))
+    versions.iter().any(|range| range.satisfies(version))
   }
 
   /// Load from a path to a caniuse JSON database.
@@ -258,10 +258,10 @@ impl From<CanIUseDatabase> for BrowsersFeaturesData {
     let mut features = HashMap::new();
     for (feature_key, feature_data) in value.data.iter() {
       let mut support = HashMap::new();
-      let feature = BrowserFeature::from_key(&feature_key);
+      let feature = BrowserFeature::from_key(feature_key);
       for (browser_key, version_map) in feature_data.stats.iter() {
         let mut versions = Vec::new();
-        let agent = BrowserAgent::from_key(&browser_key);
+        let agent = BrowserAgent::from_key(browser_key);
 
         for (version, support) in version_map.iter() {
           // Safari Technology Preview and Opera mini ALL versions are not supported.
@@ -270,7 +270,7 @@ impl From<CanIUseDatabase> for BrowsersFeaturesData {
           }
 
           if *support == "y" {
-            let range = VersionRange::parse(&version).unwrap();
+            let range = VersionRange::parse(version).unwrap();
             versions.push(range);
           }
         }

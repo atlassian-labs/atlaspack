@@ -2,7 +2,6 @@ use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::sync::Arc;
-use std::u64;
 
 use atlaspack_core::plugin::BundlerPlugin;
 use atlaspack_core::plugin::CompressorPlugin;
