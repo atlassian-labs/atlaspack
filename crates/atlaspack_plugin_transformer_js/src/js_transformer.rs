@@ -352,14 +352,14 @@ mod tests {
     let env = Arc::new(Environment::default());
 
     Asset::new(
-      project_root,
       env.clone(),
       file_path.into(),
-      Some(String::from(code)),
+      file_system.clone(),
       None,
+      project_root,
+      Some(String::from(code)),
       false,
       None,
-      file_system.clone(),
     )
     .unwrap()
   }
