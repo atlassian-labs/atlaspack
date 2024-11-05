@@ -36,7 +36,11 @@ pub struct RpcNodejsResolverPlugin {
 
 impl Debug for RpcNodejsResolverPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "RpcNodejsResolverPlugin")
+    write!(
+      f,
+      "RpcNodejsResolverPlugin({})",
+      self.plugin_node.package_name
+    )
   }
 }
 

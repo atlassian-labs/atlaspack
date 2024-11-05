@@ -63,14 +63,14 @@ impl Request for AssetRequest {
     let start = Instant::now();
 
     let mut asset = Asset::new(
-      &self.project_root,
       self.env.clone(),
       self.file_path.clone(),
-      self.code.clone(),
+      request_context.file_system().clone(),
       self.pipeline.clone(),
+      &self.project_root,
+      self.code.clone(),
       self.side_effects,
       self.query.clone(),
-      request_context.file_system().clone(),
     )?;
 
     // Load an existing sourcemap if available for valid file types

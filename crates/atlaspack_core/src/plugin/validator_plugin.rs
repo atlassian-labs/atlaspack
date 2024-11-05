@@ -1,7 +1,7 @@
-use std::fmt::Debug;
-
 use super::ConfigLoader;
 use crate::types::Asset;
+use async_trait::async_trait;
+use std::fmt::Debug;
 
 pub struct Validation {
   pub errors: Vec<anyhow::Error>,
@@ -20,18 +20,19 @@ pub struct Validation {
 /// remain productive, and do not have to worry about every small typing or linting issue while
 /// trying to solve a problem.
 ///
-pub trait ValidatorPlugin: Debug {
+#[async_trait]
+pub trait ValidatorPlugin: Debug + Send + Sync {
   /// A hook designed to setup config needed to validate assets
   ///
   /// This function will run once, shortly after the plugin is initialised.
   ///
-  fn load_config(&mut self, config: &ConfigLoader) -> Result<(), anyhow::Error>;
+  async fn load_config(&mut self, config: &ConfigLoader) -> Result<(), anyhow::Error>;
 
   /// Validates a single asset at a time
   ///
   /// This is usually designed for stateless validators
   ///
-  fn validate_asset(
+  async fn validate_asset(
     &mut self,
     config: &ConfigLoader,
     asset: &Asset,
@@ -47,7 +48,7 @@ pub trait ValidatorPlugin: Debug {
   /// single thread. Only use this if you have no other choice, as is typically the case for
   /// validators that need to have access to the entire project, like TypeScript.
   ///
-  fn validate_assets(
+  async fn validate_assets(
     &mut self,
     config: &ConfigLoader,
     assets: Vec<&Asset>,
@@ -61,12 +62,13 @@ mod tests {
   #[derive(Debug)]
   struct TestValidatorPlugin {}
 
+  #[async_trait]
   impl ValidatorPlugin for TestValidatorPlugin {
-    fn load_config(&mut self, _config: &ConfigLoader) -> Result<(), anyhow::Error> {
+    async fn load_config(&mut self, _config: &ConfigLoader) -> Result<(), anyhow::Error> {
       todo!()
     }
 
-    fn validate_asset(
+    async fn validate_asset(
       &mut self,
       _config: &ConfigLoader,
       _asset: &Asset,
@@ -74,7 +76,7 @@ mod tests {
       todo!()
     }
 
-    fn validate_assets(
+    async fn validate_assets(
       &mut self,
       _config: &ConfigLoader,
       _assets: Vec<&Asset>,
