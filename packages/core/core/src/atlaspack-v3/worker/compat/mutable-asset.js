@@ -53,7 +53,12 @@ export class MutableAsset implements IMutableAsset {
     throw new Error('set MutableAsset.astGenerator');
   }
 
-  constructor(asset: InnerAsset, fs: FileSystem, env: Environment) {
+  constructor(
+    asset: InnerAsset,
+    fs: FileSystem,
+    env: Environment,
+    contents: Buffer,
+  ) {
     this.#inner = asset;
     this.stats = asset.stats;
     this.id = asset.id;
@@ -72,7 +77,7 @@ export class MutableAsset implements IMutableAsset {
     this.sideEffects = asset.sideEffects;
     this.uniqueKey = asset.uniqueKey;
     this.pipeline = asset.pipeline;
-    this.#contents = Buffer.from(asset.code);
+    this.#contents = contents;
     this.fs = fs;
     this.env = env;
     this.#astDirty = false;

@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
+use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
@@ -41,6 +42,10 @@ impl Code {
     &self.inner
   }
 
+  pub fn get_mut(&mut self) -> &mut Vec<u8> {
+    &mut self.inner
+  }
+
   pub fn as_str(&self) -> anyhow::Result<&str> {
     str::from_utf8(&self.inner)
       .map_err(|e| anyhow::Error::new(e).context("Failed to convert code to UTF8 str"))
@@ -48,6 +53,20 @@ impl Code {
 
   pub fn size(&self) -> u32 {
     self.inner.len() as u32
+  }
+}
+
+impl Deref for Code {
+  type Target = Vec<u8>;
+
+  fn deref(&self) -> &Self::Target {
+    &self.inner
+  }
+}
+
+impl DerefMut for Code {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.inner
   }
 }
 
@@ -146,7 +165,7 @@ pub struct Asset {
 
   /// The code of this asset, initially read from disk, then becoming the
   /// transformed output
-  pub code: Arc<Code>,
+  pub code: Code,
 
   /// The source map for the asset
   pub map: Option<SourceMap>,
@@ -274,7 +293,7 @@ impl Asset {
     });
 
     Ok(Self {
-      code: Arc::new(code),
+      code,
       env,
       file_path,
       file_type,
@@ -316,7 +335,7 @@ impl Asset {
 
     Self {
       bundle_behavior: Some(BundleBehavior::Inline),
-      code: Arc::new(code),
+      code,
       env,
       file_path,
       file_type,
@@ -348,7 +367,7 @@ impl Asset {
     });
 
     Self {
-      code: Arc::new(Code::from(code)),
+      code: Code::from(code),
       file_type,
       id,
       unique_key,

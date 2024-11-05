@@ -1,5 +1,9 @@
 use async_trait::async_trait;
 use atlaspack_core::plugin::PluginOptions;
+use napi::bindgen_prelude::FromNapiValue;
+use napi::JsBuffer;
+use napi::JsObject;
+use napi::JsUnknown;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -107,32 +111,55 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       key: self.plugin_node.package_name.clone(),
       options: state.rpc_plugin_options.clone(),
       env: asset_env.clone(),
-      asset,
+      asset: Asset {
+        code: Default::default(),
+        ..asset
+      },
     };
 
-    let result: RpcTransformerResult = self
+    let (result, contents) = self
       .nodejs_workers
       .next_worker()
       .transformer_register_fn
-      .call_serde::<_, RpcTransformerResult>(run_transformer_opts)
+      .call(
+        move |env| {
+          let run_transformer_opts = env.to_js_value(&run_transformer_opts)?;
+
+          let mut result = env.create_buffer(asset.code.len())?;
+          result.copy_from_slice(&asset.code);
+
+          Ok(vec![run_transformer_opts, result.into_unknown()])
+        },
+        |env, return_value| {
+          let return_value = JsObject::from_unknown(return_value)?;
+
+          let transform_result = return_value.get_element::<JsUnknown>(0)?;
+          let transform_result = env.from_js_value::<RpcAssetResult, _>(transform_result)?;
+
+          let contents = return_value.get_element::<JsBuffer>(1)?;
+          let contents = contents.into_value()?.to_vec();
+
+          Ok((transform_result, contents))
+        },
+      )
       .await?;
 
     let transformed_asset = Asset {
-      id: result.asset.id,
-      code: Arc::new(result.asset.code),
-      bundle_behavior: result.asset.bundle_behavior,
+      id: result.id,
+      code: Code::new(contents),
+      bundle_behavior: result.bundle_behavior,
       env: asset_env.clone(),
-      file_path: result.asset.file_path,
-      file_type: result.asset.file_type,
-      meta: result.asset.meta,
-      pipeline: result.asset.pipeline,
-      query: result.asset.query,
+      file_path: result.file_path,
+      file_type: result.file_type,
+      meta: result.meta,
+      pipeline: result.pipeline,
+      query: result.query,
       stats,
-      symbols: result.asset.symbols,
-      unique_key: result.asset.unique_key,
-      side_effects: result.asset.side_effects,
-      is_bundle_splittable: result.asset.is_bundle_splittable,
-      is_source: result.asset.is_source,
+      symbols: result.symbols,
+      unique_key: result.unique_key,
+      side_effects: result.side_effects,
+      is_bundle_splittable: result.is_bundle_splittable,
+      is_source: result.is_source,
       // TODO: Fix or remove the duplicate meta fields.
       ..Default::default()
     };
@@ -191,10 +218,4 @@ pub struct RpcTransformerOpts {
   pub options: RpcPluginOptions,
   pub env: Arc<Environment>,
   pub asset: Asset,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RpcTransformerResult {
-  pub asset: RpcAssetResult,
 }
