@@ -72,6 +72,10 @@ const pipeline: (Readable, Writable) => Promise<void> = promisify(
   stream.pipeline,
 );
 
+export type SerLMDBLiteCache = {|
+  dir: FilePath,
+|};
+
 export class LMDBLiteCache implements Cache {
   fs: NodeFS;
   dir: FilePath;
@@ -101,14 +105,14 @@ export class LMDBLiteCache implements Cache {
     return Promise.resolve();
   }
 
-  serialize(): {|dir: FilePath|} {
+  serialize(): SerLMDBLiteCache {
     return {
       dir: this.dir,
     };
   }
 
-  static deserialize(opts: {|dir: FilePath|}): LMDBLiteCache {
-    return new LMDBLiteCache(opts.dir);
+  static deserialize(cache: SerLMDBLiteCache): LMDBLiteCache {
+    return new LMDBLiteCache(cache.dir);
   }
 
   has(key: string): Promise<boolean> {
@@ -139,12 +143,9 @@ export class LMDBLiteCache implements Cache {
     );
   }
 
-  getBlob(key: string): Promise<Buffer> {
-    try {
-      return Promise.resolve(this.getBlobSync(key));
-    } catch (err) {
-      return Promise.reject(err);
-    }
+  // eslint-disable-next-line require-await
+  async getBlob(key: string): Promise<Buffer> {
+    return this.getBlobSync(key);
   }
 
   getBlobSync(key: string): Buffer {

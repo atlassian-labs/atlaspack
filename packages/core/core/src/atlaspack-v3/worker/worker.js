@@ -13,6 +13,7 @@ import type {
 import {parentPort} from 'worker_threads';
 import * as module from 'module';
 
+import {jsCallable} from '../jsCallable';
 import {
   Environment,
   Dependency,
@@ -24,7 +25,6 @@ import {
   bundleBehaviorMap,
   dependencyPriorityMap,
 } from './compat';
-import {jsCallable} from '../jsCallable';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 
@@ -181,13 +181,15 @@ export class AtlaspackWorker {
 
         return Promise.resolve(resolvedPath);
       };
+
       const env = new Environment(napiEnv);
       const mutableAsset = new MutableAsset(
         innerAsset,
-        this.#fs,
-        env,
         contents,
+        env,
+        this.#fs,
       );
+
       const defaultOptions = {
         logger: new PluginLogger(),
         tracer: new PluginTracer(),

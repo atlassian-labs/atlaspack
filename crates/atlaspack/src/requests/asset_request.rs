@@ -119,7 +119,7 @@ impl Request for AssetRequest {
   }
 }
 
-pub async fn run_pipelines(
+async fn run_pipelines(
   transform_context: TransformContext,
   input: Asset,
   plugins: PluginsRef,
@@ -164,7 +164,7 @@ pub async fn run_pipelines(
       let transform_result = transformer
         .transform(transform_context.clone(), current_asset)
         .await?;
-      let is_different_asset_type = transform_result.asset.file_type != original_asset_type;
+
       current_asset = transform_result.asset;
 
       current_dependencies.extend(transform_result.dependencies);
@@ -177,7 +177,7 @@ pub async fn run_pipelines(
       );
 
       // If the Asset has changed type then we may need to trigger a different pipeline
-      if is_different_asset_type {
+      if current_asset.file_type != original_asset_type {
         let next_pipeline =
           plugins.transformers(&current_asset.file_path, current_asset.pipeline.clone())?;
 

@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::*;
+use mockall::automock;
 
 pub type RpcFactoryRef = Arc<dyn RpcFactory>;
 pub type RpcWorkerRef = Arc<dyn RpcWorker>;
@@ -16,6 +17,7 @@ pub type RpcWorkerRef = Arc<dyn RpcWorker>;
 /// The RpcFactory is used to spawn an RpcWorker which is used to
 /// execute the tasks like the offloading work to plugins in the
 /// external execution context.
+#[automock]
 pub trait RpcFactory: Send + Sync {
   fn start(&self) -> anyhow::Result<Arc<dyn RpcWorker>>;
 }
@@ -25,6 +27,7 @@ pub trait RpcFactory: Send + Sync {
 ///
 /// This is used to map calls to the bundler plugins APIs to
 /// their equivalent within the external context
+#[automock]
 pub trait RpcWorker: Send + Sync {
   fn create_bundler(
     &self,

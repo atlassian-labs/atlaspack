@@ -45,22 +45,18 @@ pub struct AtlaspackNapiOptions {
 #[napi]
 pub struct AtlaspackNapi {
   pub node_worker_count: u32,
+  db: Arc<DatabaseWriter>,
   fs: Option<FileSystemRef>,
   options: AtlaspackOptions,
   package_manager: Option<PackageManagerRef>,
   rpc: RpcFactoryRef,
-  lmdb: Option<Arc<DatabaseWriter>>,
   tx_worker: Sender<NodejsWorker>,
 }
 
 #[napi]
 impl AtlaspackNapi {
   #[napi]
-  pub fn create(
-    napi_options: AtlaspackNapiOptions,
-    lmdb: Option<&LMDB>,
-    env: Env,
-  ) -> napi::Result<Self> {
+  pub fn create(napi_options: AtlaspackNapiOptions, lmdb: &LMDB, env: Env) -> napi::Result<Self> {
     let thread_id = std::thread::current().id();
     tracing::trace!(?thread_id, "atlaspack-napi initialize");
 
@@ -78,7 +74,12 @@ impl AtlaspackNapi {
       None
     };
 
-    let lmdb = Self::run_lmdb_healthcheck(lmdb)?;
+    let db_handle = lmdb.get_database_napi()?.clone();
+    let db_writer = db_handle.database();
+
+    Self::run_db_healthcheck(db_writer)?;
+
+    let db = db_writer.clone();
 
     // Assign Rust thread count from JavaScript
     let threads = napi_options
@@ -97,12 +98,12 @@ impl AtlaspackNapi {
     let rpc = Arc::new(rpc_host_nodejs);
 
     Ok(Self {
+      db,
       fs,
       node_worker_count: node_worker_count as u32,
       options: env.from_js_value(napi_options.options)?,
       package_manager,
       rpc,
-      lmdb,
       tx_worker,
     })
   }
@@ -121,12 +122,13 @@ impl AtlaspackNapi {
     // the napi threadsafe functions do not panic
     thread::spawn({
       let fs = self.fs.clone();
+      let db = self.db.clone();
       let options = self.options.clone();
       let package_manager = self.package_manager.clone();
       let rpc = self.rpc.clone();
 
       move || {
-        let atlaspack = Atlaspack::new(fs, options, package_manager, rpc);
+        let atlaspack = Atlaspack::new(db, fs, options, package_manager, rpc);
         let to_napi_error = |error| napi::Error::from_reason(format!("{:?}", error));
 
         match atlaspack {
@@ -154,21 +156,15 @@ impl AtlaspackNapi {
     Ok(())
   }
 
-  /// Check that the LMDB database is healthy and return a reference to the
-  /// database handle directly.
+  /// Check that the LMDB database is healthy
   ///
-  /// JavaScript does all its writes through a single thread, which is not
-  /// this handle. If we want to sequence writes with the JavaScript writes,
-  /// we should be using the
+  /// JavaScript does all its writes through a single thread, which is not this handle. If we want
+  /// to sequence writes with the JavaScript writes, we should be using the
   /// [`lmdb_js_lite::writer::DatabaseWriterHandle`] instead.
-  fn run_lmdb_healthcheck(lmdb: Option<&LMDB>) -> napi::Result<Option<Arc<DatabaseWriter>>> {
-    let Some(lmdb) = lmdb else { return Ok(None) };
-    let lmdb = lmdb.get_database_napi()?.clone();
-    let lmdb = lmdb.database();
-
+  fn run_db_healthcheck(db: &Arc<DatabaseWriter>) -> napi::Result<()> {
     let run_healthcheck = || -> anyhow::Result<()> {
-      let txn = lmdb.read_txn()?;
-      let value = lmdb
+      let txn = db.read_txn()?;
+      let value = db
         .get(&txn, "current_session_version")?
         .ok_or(anyhow!("Missing 'current_session_version' key in LMDB"))?;
       let value = str::from_utf8(&value)?;
@@ -180,6 +176,6 @@ impl AtlaspackNapi {
       tracing::warn!("LMDB healthcheck failed: {:?}", err);
     }
 
-    Ok(Some(lmdb.clone()))
+    Ok(())
   }
 }

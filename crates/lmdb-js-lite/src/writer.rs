@@ -1,12 +1,13 @@
+use std::fs::{create_dir_all, remove_dir_all};
 use std::path::Path;
 use std::sync::Arc;
 use std::thread::JoinHandle;
 
 use crossbeam::channel::{Receiver, Sender};
 use heed::types::{Bytes, Str};
-use heed::EnvFlags;
 use heed::EnvOpenOptions;
 use heed::{Env, RoTxn, RwTxn};
+use heed::{EnvFlags, MdbError};
 use napi_derive::napi;
 use rayon::prelude::*;
 
@@ -286,26 +287,42 @@ impl DatabaseWriter {
   /// Create a new [`DatabaseWriter`] handle see [`LMDBOptions`] for
   /// documentation on the settings.
   pub fn new(options: &LMDBOptions) -> Result<Self> {
+    let mut env_open_options = EnvOpenOptions::new();
+    let mut flags = EnvFlags::empty();
     let path = Path::new(&options.path);
-    std::fs::create_dir_all(path)?;
+
+    create_dir_all(path)?;
+
+    flags.set(EnvFlags::MAP_ASYNC, options.async_writes);
+    flags.set(EnvFlags::NO_SYNC, options.async_writes);
+    flags.set(EnvFlags::WRITE_MAP, true);
+    flags.set(EnvFlags::NO_READ_AHEAD, false);
+    flags.set(EnvFlags::NO_META_SYNC, options.async_writes);
+
+    // http://www.lmdb.tech/doc/group__mdb.html#gaa2506ec8dab3d969b0e609cd82e619e5
+    // max DB size that will be memory mapped
+    if let Some(map_size) = options.map_size {
+      env_open_options.map_size(map_size as usize);
+    }
+
     let environment = unsafe {
-      let mut flags = EnvFlags::empty();
-      flags.set(EnvFlags::MAP_ASYNC, options.async_writes);
-      flags.set(EnvFlags::NO_SYNC, options.async_writes);
-      flags.set(EnvFlags::WRITE_MAP, true);
-      flags.set(EnvFlags::NO_READ_AHEAD, false);
-      flags.set(EnvFlags::NO_META_SYNC, options.async_writes);
-      let mut env_open_options = EnvOpenOptions::new();
       env_open_options.flags(flags);
-      // http://www.lmdb.tech/doc/group__mdb.html#gaa2506ec8dab3d969b0e609cd82e619e5
-      // max DB size that will be memory mapped
-      if let Some(map_size) = options.map_size {
-        env_open_options.map_size(map_size as usize);
+
+      let mut env = env_open_options.open(path);
+      if let Err(heed::Error::Mdb(MdbError::Invalid)) = env {
+        // Remove invalid v2 caches and retry opening the database
+        tracing::warn!("Clearing incompatible cache {}", path.display());
+        remove_dir_all(path)?;
+        create_dir_all(path)?;
+        env = env_open_options.open(path);
       }
-      env_open_options.open(path)
+
+      env
     }?;
+
     let mut write_txn = environment.write_txn()?;
     let database = environment.create_database(&mut write_txn, None)?;
+
     write_txn.commit()?;
 
     Ok(Self {
@@ -314,7 +331,7 @@ impl DatabaseWriter {
     })
   }
 
-  /// Compress an entry and store it
+  /// Read an entry and decompress it
   pub fn get(&self, txn: &RoTxn, key: &str) -> Result<Option<Vec<u8>>> {
     if let Some(result) = self.database.get(txn, key)? {
       let output_buffer = lz4_flex::block::decompress_size_prepended(result)?;
@@ -324,7 +341,7 @@ impl DatabaseWriter {
     }
   }
 
-  /// Read an entry and decompress it
+  /// Compress an entry and store it
   pub fn put(&self, txn: &mut RwTxn, key: &str, data: &[u8]) -> Result<()> {
     let compressed_data = lz4_flex::block::compress_prepend_size(data);
     self.database.put(txn, key, &compressed_data)?;

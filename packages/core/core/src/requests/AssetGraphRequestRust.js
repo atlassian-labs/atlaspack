@@ -48,16 +48,9 @@ export function createAssetGraphRequestRust(
         });
       }
 
-      let {assetGraph, cachedAssets, changedAssets} = getAssetGraph(
+      let {assetGraph, changedAssets} = getAssetGraph(
         serializedAssetGraph,
         options,
-      );
-
-      // TODO: Make it a bulk transaction
-      await Promise.all(
-        Array.from(cachedAssets.entries(), ([id, code]) =>
-          options.cache.setBlob(id, Buffer.from(code)),
-        ),
       );
 
       let changedAssetsPropagation = new Set(changedAssets.keys());
