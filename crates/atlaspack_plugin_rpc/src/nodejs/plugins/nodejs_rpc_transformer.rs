@@ -132,7 +132,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
           let return_value = JsObject::from_unknown(return_value)?;
 
           let transform_result = return_value.get_element_unchecked::<JsUnknown>(0)?;
-          let transform_result = env.from_js_value::<RpcTransformerResult, _>(transform_result)?;
+          let transform_result = env.from_js_value::<RpcAssetResult, _>(transform_result)?;
 
           let contents = return_value.get_element_unchecked::<ZeroCopyBuffer>(1)?;
           let contents = contents.to_vec()?;
@@ -143,21 +143,21 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       .await?;
 
     let transformed_asset = Asset {
-      id: result.asset.id,
+      id: result.id,
       code: Code::new(contents),
-      bundle_behavior: result.asset.bundle_behavior,
+      bundle_behavior: result.bundle_behavior,
       env: asset_env.clone(),
-      file_path: result.asset.file_path,
-      file_type: result.asset.file_type,
-      meta: result.asset.meta,
-      pipeline: result.asset.pipeline,
-      query: result.asset.query,
+      file_path: result.file_path,
+      file_type: result.file_type,
+      meta: result.meta,
+      pipeline: result.pipeline,
+      query: result.query,
       stats,
-      symbols: result.asset.symbols,
-      unique_key: result.asset.unique_key,
-      side_effects: result.asset.side_effects,
-      is_bundle_splittable: result.asset.is_bundle_splittable,
-      is_source: result.asset.is_source,
+      symbols: result.symbols,
+      unique_key: result.unique_key,
+      side_effects: result.side_effects,
+      is_bundle_splittable: result.is_bundle_splittable,
+      is_source: result.is_source,
       // TODO: Fix or remove the duplicate meta fields.
       ..Default::default()
     };
@@ -216,10 +216,4 @@ pub struct RpcTransformerOpts {
   pub options: RpcPluginOptions,
   pub env: Arc<Environment>,
   pub asset: Asset,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RpcTransformerResult {
-  pub asset: RpcAssetResult,
 }

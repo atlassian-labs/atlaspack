@@ -160,7 +160,7 @@ export class AtlaspackWorker {
 
   runTransformerTransform: JsCallable<
     [RunTransformerTransformOptions, Buffer],
-    Promise<[RunTransformerTransformResult, Buffer]>,
+    Promise<RunTransformerTransformResult>,
   > = jsCallable(
     async ({key, env: napiEnv, options, asset: innerAsset}, contents) => {
       const state = this.#transformers.get(key);
@@ -266,23 +266,21 @@ export class AtlaspackWorker {
 
       return [
         {
-          asset: {
-            id: mutableAsset.id,
-            bundleBehavior: bundleBehaviorMap.intoNullable(
-              mutableAsset.bundleBehavior,
-            ),
-            filePath: mutableAsset.filePath,
-            type: mutableAsset.type,
-            code: [],
-            meta: mutableAsset.meta,
-            pipeline: mutableAsset.pipeline,
-            query: mutableAsset.query.toString(),
-            symbols: mutableAsset.symbols.intoNapi(),
-            uniqueKey: mutableAsset.uniqueKey,
-            sideEffects: mutableAsset.sideEffects,
-            isBundleSplittable: mutableAsset.isBundleSplittable,
-            isSource: mutableAsset.isSource,
-          },
+          id: mutableAsset.id,
+          bundleBehavior: bundleBehaviorMap.intoNullable(
+            mutableAsset.bundleBehavior,
+          ),
+          filePath: mutableAsset.filePath,
+          type: mutableAsset.type,
+          code: [],
+          meta: mutableAsset.meta,
+          pipeline: mutableAsset.pipeline,
+          query: mutableAsset.query.toString(),
+          symbols: mutableAsset.symbols.intoNapi(),
+          uniqueKey: mutableAsset.uniqueKey,
+          sideEffects: mutableAsset.sideEffects,
+          isBundleSplittable: mutableAsset.isBundleSplittable,
+          isSource: mutableAsset.isSource,
         },
         await mutableAsset.getBuffer(),
       ];
@@ -368,6 +366,4 @@ type RunTransformerTransformOptions = {|
   asset: napi.Asset,
 |};
 
-type RunTransformerTransformResult = {|
-  asset: napi.RpcAssetResult,
-|};
+type RunTransformerTransformResult = [napi.RpcAssetResult, Buffer];
