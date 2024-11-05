@@ -45,7 +45,7 @@ declare module 'commander' {
     constructor(message: string): commander$InvalidOptionArgumentError;
   }
 
-  declare class commander$Option {
+  declare export class commander$Option {
     flags: string;
     description: string;
     required: boolean;
