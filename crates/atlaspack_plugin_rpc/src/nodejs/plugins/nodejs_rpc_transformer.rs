@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use atlaspack_core::plugin::PluginOptions;
-use atlaspack_napi_helpers::ZeroCopyBuffer;
 use napi::bindgen_prelude::FromNapiValue;
+use napi::JsBuffer;
 use napi::JsObject;
 use napi::JsUnknown;
 use std::fmt;
@@ -100,7 +100,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
   async fn transform(
     &self,
     _context: TransformContext,
-    mut asset: Asset,
+    asset: Asset,
   ) -> Result<TransformResult, Error> {
     let state = self.get_or_init_state().await?;
 
@@ -124,9 +124,11 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       .call(
         move |env| {
           let run_transformer_opts = env.to_js_value(&run_transformer_opts)?;
-          let bytes = std::mem::take(asset.code.get_mut());
-          let buf = ZeroCopyBuffer::new(env, bytes)?;
-          Ok(vec![run_transformer_opts, buf.into_unknown()])
+
+          let mut result = env.create_buffer(asset.code.len())?;
+          result.copy_from_slice(&asset.code);
+
+          Ok(vec![run_transformer_opts, result.into_unknown()])
         },
         |env, return_value| {
           let return_value = JsObject::from_unknown(return_value)?;
@@ -134,8 +136,8 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
           let transform_result = return_value.get_element_unchecked::<JsUnknown>(0)?;
           let transform_result = env.from_js_value::<RpcAssetResult, _>(transform_result)?;
 
-          let contents = return_value.get_element_unchecked::<ZeroCopyBuffer>(1)?;
-          let contents = contents.to_vec()?;
+          let contents = return_value.get_element_unchecked::<JsBuffer>(1)?;
+          let contents = contents.into_value()?.to_vec();
 
           Ok((transform_result, contents))
         },
