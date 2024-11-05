@@ -20,7 +20,7 @@ impl ZeroCopyBuffer {
   }
 
   pub fn into_unknown(self) -> JsUnknown {
-    return self.0.into_unknown();
+    self.0.into_unknown()
   }
 }
 

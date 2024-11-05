@@ -125,7 +125,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
         move |env| {
           let run_transformer_opts = env.to_js_value(&run_transformer_opts)?;
           let bytes = std::mem::take(asset.code.get_mut());
-          let buf = ZeroCopyBuffer::new(&env, bytes)?;
+          let buf = ZeroCopyBuffer::new(env, bytes)?;
           Ok(vec![run_transformer_opts, buf.into_unknown()])
         },
         |env, return_value| {
