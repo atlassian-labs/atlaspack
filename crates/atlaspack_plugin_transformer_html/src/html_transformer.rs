@@ -20,11 +20,15 @@ use crate::hmr_visitor::HMRVisitor;
 use crate::html_dependencies_visitor::HtmlDependenciesVisitor;
 
 #[derive(Debug)]
-pub struct AtlaspackHtmlTransformerPlugin {}
+pub struct AtlaspackHtmlTransformerPlugin {
+  project_root: PathBuf,
+}
 
 impl AtlaspackHtmlTransformerPlugin {
-  pub fn new(_ctx: &PluginContext) -> Self {
-    AtlaspackHtmlTransformerPlugin {}
+  pub fn new(ctx: &PluginContext) -> Self {
+    AtlaspackHtmlTransformerPlugin {
+      project_root: ctx.options.project_root.clone(),
+    }
   }
 }
 
@@ -41,6 +45,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
       // TODO: Where is this?
       enable_hmr: false,
       env: context.env().clone(),
+      project_root: self.project_root.clone(),
       side_effects: input.side_effects,
       source_asset_id: input.id.clone(),
       source_path: Some(input.file_path.clone()),
@@ -87,6 +92,7 @@ fn parse_html(bytes: &[u8]) -> Result<RcDom, Error> {
 pub struct HTMLTransformationContext {
   pub enable_hmr: bool,
   pub env: Arc<Environment>,
+  pub project_root: PathBuf,
   pub side_effects: bool,
   pub source_asset_id: AssetId,
   pub source_path: Option<PathBuf>,

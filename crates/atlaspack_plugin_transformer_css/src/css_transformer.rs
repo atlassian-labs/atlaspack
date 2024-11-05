@@ -378,11 +378,12 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       }
 
       let discovered_asset = Asset::new_discovered(
+        format!("{import_code}{export_code}"),
+        FileType::Js,
+        &self.project_root,
         &asset,
         None,
-        FileType::Js,
-        format!("{import_code}{export_code}"),
-      )?;
+      );
 
       discovered_assets.push(AssetWithDependencies {
         asset: discovered_asset,
