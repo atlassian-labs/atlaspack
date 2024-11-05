@@ -133,10 +133,10 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
         |env, return_value| {
           let return_value = JsObject::from_unknown(return_value)?;
 
-          let transform_result = return_value.get_element_unchecked::<JsUnknown>(0)?;
+          let transform_result = return_value.get_element::<JsUnknown>(0)?;
           let transform_result = env.from_js_value::<RpcAssetResult, _>(transform_result)?;
 
-          let contents = return_value.get_element_unchecked::<JsBuffer>(1)?;
+          let contents = return_value.get_element::<JsBuffer>(1)?;
           let contents = contents.into_value()?.to_vec();
 
           Ok((transform_result, contents))
