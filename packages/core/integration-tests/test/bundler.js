@@ -50,7 +50,8 @@ describe.v2('bundler', function () {
             }
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let b = await bundle(
       path.join(__dirname, 'disable-shared-bundle-single-source/index.js'),
@@ -82,6 +83,8 @@ describe.v2('bundler', function () {
         assets: ['a.js', 'b.js', 'foo.js', 'bar.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should not create shared bundles and should warn when disableSharedBundles is set to true with maxParallelRequests set', async function () {
@@ -115,7 +118,8 @@ describe.v2('bundler', function () {
             }
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let messages = [];
     let loggerDisposable = Logger.onLog((message) => {
@@ -148,6 +152,7 @@ describe.v2('bundler', function () {
         ],
       },
     ]);
+
     assertBundles(b, [
       {
         name: 'index.js',
@@ -167,6 +172,8 @@ describe.v2('bundler', function () {
         assets: ['bar.js', 'a.js', 'b.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should not create shared bundles and should warn when disableSharedBundles is set to true with minBundleSize set', async function () {
@@ -200,7 +207,8 @@ describe.v2('bundler', function () {
             }
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let messages = [];
     let loggerDisposable = Logger.onLog((message) => {
@@ -208,6 +216,7 @@ describe.v2('bundler', function () {
         messages.push(message);
       }
     });
+
     let b = await bundle(
       path.join(
         __dirname,
@@ -221,6 +230,7 @@ describe.v2('bundler', function () {
         inputFS: overlayFS,
       },
     );
+
     loggerDisposable.dispose();
 
     assert.deepEqual(messages, [
@@ -236,6 +246,7 @@ describe.v2('bundler', function () {
         ],
       },
     ]);
+
     assertBundles(b, [
       {
         name: 'index.js',
@@ -255,6 +266,8 @@ describe.v2('bundler', function () {
         assets: ['bar.js', 'a.js', 'b.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should not create shared bundles and should warn when disableSharedBundles is set to true with minBundles set', async function () {
@@ -288,7 +301,8 @@ describe.v2('bundler', function () {
             }
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let messages = [];
     let loggerDisposable = Logger.onLog((message) => {
@@ -296,6 +310,7 @@ describe.v2('bundler', function () {
         messages.push(message);
       }
     });
+
     let b = await bundle(
       path.join(__dirname, 'disable-shared-bundles-true-min-bundles/index.js'),
       {
@@ -306,6 +321,7 @@ describe.v2('bundler', function () {
         inputFS: overlayFS,
       },
     );
+
     loggerDisposable.dispose();
 
     assert.deepEqual(messages, [
@@ -321,6 +337,7 @@ describe.v2('bundler', function () {
         ],
       },
     ]);
+
     assertBundles(b, [
       {
         name: 'index.js',
@@ -340,6 +357,8 @@ describe.v2('bundler', function () {
         assets: ['bar.js', 'a.js', 'b.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should not create shared bundles and should warn when disableSharedBundles is set to true with minBundles, minBundleSize and maxParallelRequests set', async function () {
@@ -375,7 +394,8 @@ describe.v2('bundler', function () {
             }
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let messages = [];
     let loggerDisposable = Logger.onLog((message) => {
@@ -383,6 +403,7 @@ describe.v2('bundler', function () {
         messages.push(message);
       }
     });
+
     let b = await bundle(
       path.join(
         __dirname,
@@ -396,6 +417,7 @@ describe.v2('bundler', function () {
         inputFS: overlayFS,
       },
     );
+
     loggerDisposable.dispose();
 
     assert.deepEqual(messages, [
@@ -433,6 +455,7 @@ describe.v2('bundler', function () {
         ],
       },
     ]);
+
     assertBundles(b, [
       {
         name: 'index.js',
@@ -452,6 +475,8 @@ describe.v2('bundler', function () {
         assets: ['bar.js', 'a.js', 'b.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should create shared bundles and should not throw a warning when disableSharedBundles is set to false', async function () {
@@ -487,7 +512,8 @@ describe.v2('bundler', function () {
             }
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let messages = [];
     let loggerDisposable = Logger.onLog((message) => {
@@ -530,6 +556,8 @@ describe.v2('bundler', function () {
         assets: ['a.js', 'b.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should not count inline assests towards parallel request limit', async function () {
@@ -537,10 +565,12 @@ describe.v2('bundler', function () {
       inlined-assests
         buzz.js:
           export default 7;
+
         inline-module.js:
           import('./buzz');
 
           export default 10;
+
         local.html:
           <!doctype html>
           <html>
@@ -560,7 +590,8 @@ describe.v2('bundler', function () {
             }
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     // Shared bundle should not be removed in this case
     let b = await bundle(path.join(__dirname, 'inlined-assests/local.html'), {
@@ -591,6 +622,8 @@ describe.v2('bundler', function () {
         assets: ['esmodule-helpers.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should not create a shared bundle from an asset if that asset is shared by less than minBundles bundles', async function () {
@@ -638,6 +671,8 @@ describe.v2('bundler', function () {
         assets: ['local.html'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should remove reused bundle (over shared bundles based on size) if the bundlegroup hit the parallel request limit', async function () {
@@ -686,9 +721,11 @@ describe.v2('bundler', function () {
         assets: ['local.html'],
       },
     ]);
+
+    await run(b);
   });
 
-  //This test case is the same as previous except we remove the shared bundle since it is smaller
+  // This test case is the same as previous except we remove the shared bundle since it is smaller
   it('should remove shared bundle (over reused bundles based on size) if the bundlegroup hit the parallel request limit', async function () {
     let b = await bundle(
       path.join(
@@ -736,6 +773,8 @@ describe.v2('bundler', function () {
         assets: ['local.html'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should not remove shared bundle from graph if one bundlegroup hits the parallel request limit, and at least 2 other bundleGroups that need it do not', async function () {
@@ -787,6 +826,8 @@ describe.v2('bundler', function () {
         assets: ['local.html'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should not remove shared bundle from graph if its parent (a reused bundle) is removed by parallel request limit', async function () {
@@ -844,6 +885,8 @@ describe.v2('bundler', function () {
         .getReferencedBundles(b.getBundlesWithAsset(findAsset(b, 'bar.js'))[0])
         .includes(b.getBundlesWithAsset(findAsset(b, 'c.js'))[0]),
     );
+
+    await run(b);
   });
 
   it('should split manifest bundle', async function () {
@@ -923,6 +966,8 @@ describe.v2('bundler', function () {
         `Bundle should contain reference to: "${bundle.name}"`,
       );
     }
+
+    await run(b);
   });
 
   it('should not split manifest bundle for stable entries', async function () {
@@ -952,6 +997,8 @@ describe.v2('bundler', function () {
         assets: ['c.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should respect mode specific config', async function () {
@@ -991,7 +1038,8 @@ describe.v2('bundler', function () {
             }
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let b = await bundle(
       path.join(__dirname, 'mode-specific-bundler-config/index.js'),
@@ -1023,6 +1071,8 @@ describe.v2('bundler', function () {
         assets: ['a.js', 'b.js', 'foo.js', 'bar.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should support inline constants', async () => {
@@ -1065,7 +1115,8 @@ describe.v2('bundler', function () {
             }
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let b = await bundle(
       [
@@ -1097,6 +1148,8 @@ describe.v2('bundler', function () {
         assets: ['two.js', 'shared.js', 'constants.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should support inline constants with shared bundles', async () => {
@@ -1138,7 +1191,8 @@ describe.v2('bundler', function () {
             }
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let b = await bundle(
       [
@@ -1174,6 +1228,8 @@ describe.v2('bundler', function () {
         assets: ['shared.js', 'constants.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should support inline constants in non-splittable bundles', async () => {
@@ -1200,7 +1256,8 @@ describe.v2('bundler', function () {
             }
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let b = await bundle(
       path.join(__dirname, 'inline-constants-non-splittable/index.js'),
@@ -1220,25 +1277,28 @@ describe.v2('bundler', function () {
         assets: ['index.js', 'shared.js', 'constants.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should support inline constants in async bundles', async () => {
     await fsFixture(overlayFS, __dirname)`
-    inline-constants-async
-      index.js:
-        import('./async').then(m => console.log(m.value));
+      inline-constants-async
+        index.js:
+          import('./async').then(m => console.log(m.value));
 
-      async.js:
-        export const value = 'async value';
+        async.js:
+          export const value = 'async value';
 
-      package.json:
-        {
-          "@atlaspack/transformer-js": {
-            "unstable_inlineConstants": true
+        package.json:
+          {
+            "@atlaspack/transformer-js": {
+              "unstable_inlineConstants": true
+            }
           }
-        }
 
-      yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let b = await bundle(
       path.join(__dirname, 'inline-constants-async/index.js'),
@@ -1264,6 +1324,7 @@ describe.v2('bundler', function () {
       'async value should not be inlined',
     );
   });
+
   describe('manual shared bundles', () => {
     const dir = path.join(__dirname, 'manual-bundle');
 
@@ -1277,47 +1338,47 @@ describe.v2('bundler', function () {
 
     it('should support manual shared bundles via glob config option for different types', async function () {
       await fsFixture(overlayFS, dir)`
-      yarn.lock:
-        // Required for config loading
-      package.json:
-        {
-          "@atlaspack/bundler-default": {
-            "minBundleSize": 0,
-            "manualSharedBundles": [{
-              "name": "vendor",
-              "assets": ["vendor*.*"]
-            }]
+        yarn.lock: {}
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundleSize": 0,
+              "manualSharedBundles": [{
+                "name": "vendor",
+                "assets": ["vendor*.*"]
+              }]
+            }
           }
-        }
 
-      index.html:
-        <script type="module" src="./index.js"></script>
+        index.html:
+          <script type="module" src="./index.js"></script>
 
-      index.js:
-        import './vendor.css';
-        import './vendor.js';
-        import('./async');
+        index.js:
+          import './vendor.css';
+          import './vendor.js';
+          import('./async');
 
-      async.js:
-        import './vendor-async.css';
-        import './vendor-async.js';
+        async.js:
+          import './vendor-async.css';
+          import './vendor-async.js';
 
-      vendor.js:
-        export default 'vendor.js';
+        vendor.js:
+          export default 'vendor.js';
 
-      vendor-async.js:
-        export default 'vendor-async.js';
+        vendor-async.js:
+          export default 'vendor-async.js';
 
-      vendor.css:
-        body {
-          background: blue;
-        }
+        vendor.css:
+          body {
+            background: blue;
+          }
 
-      vendor-async.css:
-        body {
-          color: blue;
-        }
-        `;
+        vendor-async.css:
+          body {
+            color: blue;
+          }
+      `;
 
       let b = await bundle(path.join(dir, 'index.html'), {
         mode: 'production',
@@ -1356,56 +1417,58 @@ describe.v2('bundler', function () {
           assets: ['vendor.js', 'vendor-async.js'],
         },
       ]);
+
+      await run(b);
     });
 
     it('should respect Asset.isBundleSplittable', async function () {
       await fsFixture(overlayFS, dir)`
-      yarn.lock:
-        // Required for config loading
-      package.json:
-        {
-          "@atlaspack/bundler-default": {
-            "manualSharedBundles": [{
-              "name": "manual-inline",
-              "assets": ["shared.js"]
-            }]
-          }
-        }
+        yarn.lock: {}
 
-      .parcelrc:
-        {
-          "extends": "@atlaspack/config-default",
-          "transformers": {
-            "*.js": ["./transformer.js", "..."],
-          }
-        }
-
-      transformer.js:
-        import { Transformer } from '@atlaspack/plugin';
-
-        export default new Transformer({
-          transform({asset}) {
-            if (asset.filePath.endsWith('.html')) {
-              asset.isBundleSplittable = false;
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "manualSharedBundles": [{
+                "name": "manual-inline",
+                "assets": ["shared.js"]
+              }]
             }
-
-            return [asset];
           }
-        });
 
-      index.html:
-        <script type="module">
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "transformers": {
+              "*.js": ["./transformer.js", "..."],
+            }
+          }
+
+        transformer.js:
+          import { Transformer } from '@atlaspack/plugin';
+
+          export default new Transformer({
+            transform({asset}) {
+              if (asset.filePath.endsWith('.html')) {
+                asset.isBundleSplittable = false;
+              }
+
+              return [asset];
+            }
+          });
+
+        index.html:
+          <script type="module">
+            import shared from './shared.js';
+            sideEffectNoop(shared);
+          </script>
+          <script type="module" src="./index.js"></script>
+
+        index.js:
           import shared from './shared.js';
           sideEffectNoop(shared);
-        </script>
-        <script type="module" src="./index.js"></script>
 
-      index.js:
-        import shared from './shared.js';
-        sideEffectNoop(shared);
-
-      shared.js:
-        export default 'shared';
+        shared.js:
+          export default 'shared';
       `;
 
       let b = await bundle(path.join(dir, 'index.html'), {
@@ -1435,53 +1498,53 @@ describe.v2('bundler', function () {
         },
       ]);
 
-      run(b);
+      await run(b);
     });
 
     it('should support manual shared bundles via glob config option for configured types', async function () {
       await fsFixture(overlayFS, dir)`
-      yarn.lock:
-        // Required for config loading
-      package.json:
-        {
-          "@atlaspack/bundler-default": {
-            "minBundleSize": 0,
-            "manualSharedBundles": [{
-              "name": "vendor",
-              "assets": ["vendor*.*"],
-              "types": ["js"]
-            }]
+        yarn.lock: {}
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundleSize": 0,
+              "manualSharedBundles": [{
+                "name": "vendor",
+                "assets": ["vendor*.*"],
+                "types": ["js"]
+              }]
+            }
           }
-        }
 
-      index.html:
-        <script type="module" src="./index.js"></script>
+        index.html:
+          <script type="module" src="./index.js"></script>
 
-      index.js:
-        import './vendor.css';
-        import './vendor.js';
-        import('./async');
+        index.js:
+          import './vendor.css';
+          import './vendor.js';
+          import('./async');
 
-      async.js:
-        import './vendor-async.css';
-        import './vendor-async.js';
+        async.js:
+          import './vendor-async.css';
+          import './vendor-async.js';
 
-      vendor.js:
-        export default 'vendor.js';
+        vendor.js:
+          export default 'vendor.js';
 
-      vendor-async.js:
-        export default 'vendor-async.js';
+        vendor-async.js:
+          export default 'vendor-async.js';
 
-      vendor.css:
-        body {
-          background: blue;
-        }
+        vendor.css:
+          body {
+            background: blue;
+          }
 
-      vendor-async.css:
-        body {
-          color: blue;
-        }
-        `;
+        vendor-async.css:
+          body {
+            color: blue;
+          }
+      `;
 
       let b = await bundle(path.join(dir, 'index.html'), {
         mode: 'production',
@@ -1521,45 +1584,47 @@ describe.v2('bundler', function () {
           assets: ['vendor.js', 'vendor-async.js'],
         },
       ]);
+
+      await run(b);
     });
 
     it('should support manual shared bundles via parent config option', async function () {
       await fsFixture(overlayFS, dir)`
-      yarn.lock:
-        // Required for config loading
-      package.json:
-        {
-          "@atlaspack/bundler-default": {
-            "minBundleSize": 0,
-            "manualSharedBundles": [{
-              "name": "vendor",
-              "root": "math/math.js",
-              "assets": ["math/!(divide).js"]
-            }]
+        yarn.lock: {}
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundleSize": 0,
+              "manualSharedBundles": [{
+                "name": "vendor",
+                "root": "math/math.js",
+                "assets": ["math/!(divide).js"]
+              }]
+            }
           }
-        }
 
-      index.html:
-        <script type="module" src="./index.js"></script>
+        index.html:
+          <script type="module" src="./index.js"></script>
 
-      index.js:
-        import {add, subtract, divide} from './math/math';
-        sideEffectNoop(divide(subtract(add(1, 2), 3), 4));
+        index.js:
+          import {add, subtract, divide} from './math/math';
+          sideEffectNoop(divide(subtract(add(1, 2), 3), 4));
 
-      math
-        math.js:
-          export * from './add';
-          export * from './subtract';
-          export * from './divide';
+        math
+          math.js:
+            export * from './add';
+            export * from './subtract';
+            export * from './divide';
 
-        add.js:
-          export const add = (a, b) => a + b;
+          add.js:
+            export const add = (a, b) => a + b;
 
-        subtract.js:
-          export const subtract = (a, b) => a - b;
+          subtract.js:
+            export const subtract = (a, b) => a - b;
 
-        divide.js:
-          export const divide = (a, b) => a / b;
+          divide.js:
+            export const divide = (a, b) => a / b;
       `;
 
       let b = await bundle(path.join(dir, 'index.html'), {
@@ -1569,6 +1634,7 @@ describe.v2('bundler', function () {
         },
         inputFS: overlayFS,
       });
+
       //assert that a,b,c are in one bundle, causeing foo and bar to overfetch, due to MSB config
       assertBundles(b, [
         {
@@ -1585,50 +1651,53 @@ describe.v2('bundler', function () {
 
       let targetDistDir = normalizePath(path.join(__dirname, '../dist'));
       let hashedIdWithMSB = hashString('bundle:' + 'vendor,js' + targetDistDir);
+
       assert(
         b.getBundles().find((b) => b.id == hashedIdWithMSB),
         'MSB id does not match expected',
       );
+
+      await run(b);
     });
 
     it('should support manual shared bundles with constants module', async function () {
       await fsFixture(overlayFS, dir)`
-      yarn.lock:
-        // Required for config loading
-      package.json:
-        {
-          "@atlaspack/transformer-js" : {
-            "unstable_inlineConstants": true
-          },
-          "@atlaspack/bundler-default": {
-            "minBundleSize": 0,
-            "manualSharedBundles": [{
-              "name": "vendor",
-              "assets": ["vendor*.*"],
-              "types": ["js"]
-            }]
-          },
-          "sideEffects": ["index.js"]
-        }
+        yarn.lock: {}
 
-      vendor-constants.js:
-        export const a = 'hello';
+        package.json:
+          {
+            "@atlaspack/transformer-js" : {
+              "unstable_inlineConstants": true
+            },
+            "@atlaspack/bundler-default": {
+              "minBundleSize": 0,
+              "manualSharedBundles": [{
+                "name": "vendor",
+                "assets": ["vendor*.*"],
+                "types": ["js"]
+              }]
+            },
+            "sideEffects": ["index.js"]
+          }
 
-      index.html:
-        <script type="module" src="./index.js"></script>
+        vendor-constants.js:
+          export const a = 'hello';
 
-      index.js:
-        import {a} from './vendor-constants.js';
-        import('./async').then((res) => sideEffectNoop(res));
-        sideEffectNoop(a);
+        index.html:
+          <script type="module" src="./index.js"></script>
 
-      async.js:
-        import v from './vendor-async.js';
-        export default 'async' + v;
+        index.js:
+          import {a} from './vendor-constants.js';
+          import('./async').then((res) => sideEffectNoop(res));
+          sideEffectNoop(a);
 
-      vendor-async.js:
-        import {a} from './vendor-constants.js';
-        export default 'vendor-async.js' + a;
+        async.js:
+          import v from './vendor-async.js';
+          export default 'async' + v;
+
+        vendor-async.js:
+          import {a} from './vendor-constants.js';
+          export default 'vendor-async.js' + a;
         `;
 
       let b = await bundle(path.join(dir, 'index.html'), {
@@ -1661,44 +1730,46 @@ describe.v2('bundler', function () {
           assets: ['vendor-async.js', 'vendor-constants.js'],
         },
       ]);
+
+      await run(b);
     });
 
     it('should support manual shared bundles with internalized assets', async function () {
       await fsFixture(overlayFS, dir)`
-      yarn.lock:
-        // Required for config loading
-      package.json:
-        {
-          "@atlaspack/transformer-js" : {
-            "unstable_inlineConstants": true
-          },
-          "@atlaspack/bundler-default": {
-            "minBundleSize": 0,
-            "manualSharedBundles": [{
-              "name": "vendor",
-              "root": "manual.js",
-              "assets": ["**/*"],
-              "types": ["js"]
-            }]
+        yarn.lock: {}
+
+        package.json:
+          {
+            "@atlaspack/transformer-js" : {
+              "unstable_inlineConstants": true
+            },
+            "@atlaspack/bundler-default": {
+              "minBundleSize": 0,
+              "manualSharedBundles": [{
+                "name": "vendor",
+                "root": "manual.js",
+                "assets": ["**/*"],
+                "types": ["js"]
+              }]
+            }
           }
-        }
 
-      index.html:
-        <script type="module" src="./index.js"></script>
+        index.html:
+          <script type="module" src="./index.js"></script>
 
-      index.js:
-        import a from './manual.js';
+        index.js:
+          import a from './manual.js';
 
-      manual.js:
-        import v from './vendor-async.js';
-        import n from './vendor';
-        export default 'async' + v;
+        manual.js:
+          import v from './vendor-async.js';
+          import n from './vendor';
+          export default 'async' + v;
 
-      vendor.js:
-        export const n = () => import('./vendor-async');
+        vendor.js:
+          export const n = () => import('./vendor-async');
 
-      vendor-async.js:
-        export default 'vendor-async.js';
+        vendor-async.js:
+          export default 'vendor-async.js';
       `;
 
       let b = await bundle(path.join(dir, 'index.html'), {
@@ -1734,10 +1805,250 @@ describe.v2('bundler', function () {
       await run(b);
     });
 
+    // TODO: These are legitimate failures with manual shared bundles, should be fixed in some way
+    describe.skip('splits out small shared dependencies', () => {
+      it('for a single entry not specified in a manual bundle', async function () {
+        await fsFixture(overlayFS, dir)`
+          index.html:
+            <script type="module" src="index.js"></script>
+
+          index.js:
+            import('./foo');
+            import('./bar');
+
+          foo.js:
+            import { getRect } from './shared';
+
+            export const rect = getRect();
+
+          bar.js:
+            import { getBox } from './shared';
+
+            export const box = getBox();
+
+          shared.js:
+            export const getBox = () => 'box';
+            export const getRect = () => 'rect';
+
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [
+                  {
+                    "name": "vendor",
+                    "assets": ["**/foo.js"]
+                  }
+                ],
+                "minBundleSize": 999999
+              }
+            }
+
+          yarn.lock: {}
+        `;
+
+        let b = await bundle(path.join(dir, 'index.html'), {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+            shouldScopeHoist: false,
+            sourceMaps: false,
+          },
+          inputFS: overlayFS,
+        });
+
+        assertBundles(b, [
+          {
+            assets: ['index.html'],
+          },
+          {
+            assets: [
+              'bundle-manifest.js',
+              'bundle-url.js',
+              'cacheLoader.js',
+              'index.js',
+              'js-loader.js',
+            ],
+          },
+          {
+            assets: ['foo.js', 'esmodule-helpers.js', 'shared.js'],
+          },
+          {
+            assets: ['bar.js', 'esmodule-helpers.js', 'shared.js'],
+          },
+        ]);
+
+        await run(b);
+      });
+
+      it('for a single entry not specified in multiple manual bundles', async function () {
+        await fsFixture(overlayFS, dir)`
+          index.html:
+            <script type="module" src="index.js"></script>
+
+          index.js:
+            import('./foo');
+            import('./bar');
+
+          foo.js:
+            import { getRect } from './shared';
+
+            export const rect = getRect();
+
+          bar.js:
+            import { getBox } from './shared';
+
+            export const box = getBox();
+
+          shared.js:
+            export const getBox = () => 'box';
+            export const getRect = () => 'rect';
+
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [
+                  {
+                    "name": "atl",
+                    "assets": ["**/foo.js"]
+                  },
+                  {
+                    "name": "vendor",
+                    "assets": ["**/bar.js"]
+                  }
+                ],
+                "minBundleSize": 999999
+              }
+            }
+
+          yarn.lock: {}
+        `;
+
+        let b = await bundle(path.join(dir, 'index.html'), {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+            shouldScopeHoist: false,
+            sourceMaps: false,
+          },
+          inputFS: overlayFS,
+        });
+
+        assertBundles(b, [
+          {
+            assets: ['index.html'],
+          },
+          {
+            assets: [
+              'bundle-manifest.js',
+              'bundle-url.js',
+              'cacheLoader.js',
+              'index.js',
+              'js-loader.js',
+            ],
+          },
+          {
+            assets: ['foo.js', 'esmodule-helpers.js', 'shared.js'],
+          },
+          {
+            assets: ['bar.js', 'esmodule-helpers.js', 'shared.js'],
+          },
+        ]);
+
+        await run(b);
+      });
+
+      it('for multiple pages not specified in a manual bundle', async function () {
+        await fsFixture(overlayFS, dir)`
+          index.html:
+            <script type="module" src="index.js"></script>
+
+          index.js:
+            import('./page-1');
+            import('./page-2');
+
+          page-1.js:
+            import('./foo');
+            import('./bar');
+
+          page-2.js:
+            import('./foo');
+            import('./bar');
+
+          foo.js:
+            import { getRect } from './shared';
+
+            export const rect = getRect();
+
+          bar.js:
+            import { getBox } from './shared';
+
+            export const box = getBox();
+
+          shared.js:
+            export const getBox = () => 'box';
+            export const getRect = () => 'rect';
+
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [
+                  {
+                    "name": "vendor",
+                    "assets": ["**/foo.js"]
+                  }
+                ],
+                "minBundleSize": 999999
+              }
+            }
+
+          yarn.lock: {}
+        `;
+
+        let b = await bundle(path.join(dir, 'index.html'), {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+            shouldScopeHoist: false,
+            sourceMaps: false,
+          },
+          inputFS: overlayFS,
+        });
+
+        assertBundles(b, [
+          {
+            assets: ['index.html'],
+          },
+          {
+            assets: [
+              'bundle-manifest.js',
+              'bundle-url.js',
+              'cacheLoader.js',
+              'index.js',
+              'js-loader.js',
+            ],
+          },
+          {
+            assets: ['page-1.js'],
+          },
+          {
+            assets: ['page-2.js'],
+          },
+          {
+            assets: ['foo.js', 'esmodule-helpers.js', 'shared.js'],
+          },
+          {
+            assets: ['bar.js', 'esmodule-helpers.js', 'shared.js'],
+          },
+        ]);
+
+        await run(b);
+      });
+    });
+
     it('should support consistently splitting manual shared bundles', async function () {
       await fsFixture(overlayFS, dir)`
-        yarn.lock:
-          // Required for config loading
+        yarn.lock: {}
+
         package.json:
           {
             "@atlaspack/bundler-default": {
@@ -1818,49 +2129,52 @@ describe.v2('bundler', function () {
           assets: ['d.js', 'e.js', 'vendor.js'],
         },
       ]);
+
+      await run(b);
     });
 
     it('should support globs matching outside of the project root', async function () {
       const rootDir = path.join(dir, 'root');
       overlayFS.mkdirp(rootDir);
       await fsFixture(overlayFS, rootDir)`
-      yarn.lock:
-        // Required for config loading
+        yarn.lock: {}
 
-      package.json:
-        {
-          "@atlaspack/bundler-default": {
-            "minBundleSize": 0,
-            "manualSharedBundles": [{
-              "name": "vendor",
-              "root": "vendor.js",
-              "assets": [
-                "in-project.js",
-                "../outside-project.js"
-              ]
-            }]
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "minBundleSize": 0,
+              "manualSharedBundles": [{
+                "name": "vendor",
+                "root": "vendor.js",
+                "assets": [
+                  "in-project.js",
+                  "../outside-project.js"
+                ]
+              }]
+            }
           }
-        }
 
-      index.html:
-        <script type="module" src="./index.js"></script>
+        index.html:
+          <script type="module" src="./index.js"></script>
 
-      in-project.js:
-        export default 'in-project';
+        in-project.js:
+          export default 'in-project';
 
-      vendor.js:
-        export * from './in-project';
-        export * from '../outside-project';
+        vendor.js:
+          export * from './in-project';
+          export * from '../outside-project';
 
-      index.js:
-        import * as vendor from './vendor';
+        index.js:
+          import * as vendor from './vendor';
 
-        console.log(vendor.inProj);
-        console.log(vendor.outProj);`;
+          console.log(vendor.inProj);
+          console.log(vendor.outProj);
+      `;
 
       await fsFixture(overlayFS, dir)`
-      outside-project.js:
-        export default 'outside-project';`;
+        outside-project.js:
+          export default 'outside-project';
+      `;
 
       let b = await bundle(path.join(rootDir, 'index.html'), {
         defaultTargetOptions: {
@@ -1876,6 +2190,8 @@ describe.v2('bundler', function () {
         {assets: ['in-project.js', 'outside-project.js']},
         {assets: ['esmodule-helpers.js', 'index.js', 'vendor.js']},
       ]);
+
+      await run(b);
     });
   });
 
@@ -1922,6 +2238,8 @@ describe.v2('bundler', function () {
         assets: ['async.js'],
       },
     ]);
+
+    await run(b);
   });
 
   it('should not split any bundles when using singleFileOutput', async function () {
@@ -1948,7 +2266,8 @@ describe.v2('bundler', function () {
             color: papayawhip;
           }
 
-        yarn.lock:`;
+        yarn.lock: {}
+    `;
 
     let singleBundle = await bundle(
       path.join(__dirname, 'single-file-output/a.js'),
@@ -1973,6 +2292,8 @@ describe.v2('bundler', function () {
       {assets: ['a.js', 'b.js', 'c.js', 'esmodule-helpers.js']},
     ]);
 
+    await run(singleBundle);
+
     // Without the property, the bundle should be split properly
     assertBundles(splitBundle, [
       {
@@ -1988,5 +2309,7 @@ describe.v2('bundler', function () {
       {assets: ['c.js']},
       {type: 'css', assets: ['should-be-ignored.css']},
     ]);
+
+    await run(splitBundle);
   });
 });

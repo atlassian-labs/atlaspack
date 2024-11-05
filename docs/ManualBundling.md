@@ -13,7 +13,7 @@ First, we generate a look up, `manualAssetToConfig`, which contains an Asset Nod
 ```json
 {
   "@atlaspack/bundler-default": {
-    "unstable_manualSharedBundles": [
+    "manualSharedBundles": [
       {
         "name": "",
         "root": "manual.js",

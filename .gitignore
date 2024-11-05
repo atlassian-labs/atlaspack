@@ -5,6 +5,7 @@
 .parcel-cache/
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 coverage/
 dist/
 lib/
