@@ -1,4 +1,7 @@
 // @flow strict-local
+
+/* eslint-disable no-console */
+
 /*!
  * Atlaspack V3 delegates work to node.js worker threads.
  *
@@ -22,6 +25,7 @@ export function waitForMessage<T>(worker: Worker, type: string): Promise<T> {
         worker.off('message', onMessage);
       }
     };
+
     worker.on('message', onMessage);
   });
 }
@@ -58,10 +62,12 @@ export class WorkerPool {
     this.#bootWorker(worker, tx_worker).catch((err) => {
       // eslint-disable-next-line no-console
       console.error('Worker failed, retrying to create it...', err);
-      this.#workerPool[workerId] = new Worker(WORKER_PATH, {});
+      this.#workerPool[workerId] = new Worker(this.#workerPath, {
+        workerData: {attempt: 2},
+      });
+
       this.#bootWorker(this.#workerPool[workerId], tx_worker).catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error('Worker failed to start. The build may hang', err);
+        console.error('Worker failed to start, the build may hang:', err);
       });
     });
 
@@ -113,13 +119,22 @@ export class WorkerPool {
         reject(new Error('Worker failed to register in time'));
       }, 5000);
     });
+
+    const workerError = new Promise((_, reject) => {
+      worker.once('error', (err: Error) => {
+        reject(err);
+      });
+    });
+
     const workerReady = waitForMessage(worker, 'workerRegistered');
+
     worker.postMessage({type: 'registerWorker', tx_worker});
-    await Promise.race([workerReady, timeout]);
+
+    await Promise.race([timeout, workerError, workerReady]);
   }
 
   #createWorker(): [number, Worker] {
-    const worker = new Worker(this.#workerPath, {});
+    const worker = new Worker(this.#workerPath, {workerData: {attempt: 1}});
     const workerId = this.#workerPool.length;
     this.#workerPool.push(worker);
     return [workerId, worker];
