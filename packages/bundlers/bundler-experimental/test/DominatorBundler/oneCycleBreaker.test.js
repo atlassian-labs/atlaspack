@@ -49,7 +49,7 @@ describe('oneCycleBreaker', () => {
 
       const result = convertToAcyclicGraph(graph);
 
-      const nodes = [...result.nodes];
+      const nodes = [...result.nodes].filter((n) => n != null);
       nodes.sort();
 
       assert.deepStrictEqual(nodes, [
@@ -89,7 +89,7 @@ describe('oneCycleBreaker', () => {
       // $FlowFixMe
       const result = convertToAcyclicGraph(graph);
 
-      const nodes = [...result.nodes];
+      const nodes = [...result.nodes].filter((n) => n != null);
       nodes.sort();
 
       assert.deepStrictEqual(nodes, [
@@ -104,6 +104,27 @@ describe('oneCycleBreaker', () => {
         'b',
         'root',
       ]);
+    });
+
+    dotTest(__filename, 'cycles', async () => {
+      const entryDir = path.join(__dirname, 'test');
+      const entryPath1 = path.join(entryDir, 'a.js');
+      const inputDot = await fixtureFromGraph(entryDir, overlayFS, [
+        asset('a.js', ['b.js']),
+        asset('b.js', ['c.js']),
+        asset('c.js', ['d.js']),
+        asset('d.js', ['b.js', 'e.js']),
+        asset('e.js', []),
+      ]);
+
+      const {mutableBundleGraph} = await setupBundlerTest([entryPath1]);
+      const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+      const result = convertToAcyclicGraph(rootedGraph);
+
+      return [
+        {label: 'input', dot: inputDot},
+        {label: 'no-cycles', dot: rootedGraphToDot(entryDir, result)},
+      ];
     });
 
     dotTest(

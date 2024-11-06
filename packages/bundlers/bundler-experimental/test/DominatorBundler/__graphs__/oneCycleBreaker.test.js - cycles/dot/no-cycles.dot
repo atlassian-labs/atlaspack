@@ -1,0 +1,17 @@
+digraph dominators {
+  labelloc="t";
+  label="Dominators";
+
+  "root";
+  "root" -> "a.js";
+  "a.js";
+  "e.js";
+  "esmodule_helpers.js";
+  "SCC";
+
+  "a.js" -> "esmodule_helpers.js";
+  "a.js" -> "SCC";
+  "e.js" -> "esmodule_helpers.js";
+  "SCC" -> "e.js";
+  "SCC" -> "esmodule_helpers.js";
+}
