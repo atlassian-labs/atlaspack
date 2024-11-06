@@ -266,10 +266,8 @@ class BundlerRunner {
   async runDevDepRequest(devDepRequest: DevDepRequest | DevDepRequestRef) {
     let {specifier, resolveFrom} = devDepRequest;
     let key = `${specifier}:${fromProjectPathRelative(resolveFrom)}`;
-    if (devDepRequest.type !== 'ref') {
-      this.devDepRequests.set(key, devDepRequest);
-      await runDevDepRequest(this.api, devDepRequest);
-    }
+    this.devDepRequests.set(key, devDepRequest);
+    await runDevDepRequest(this.api, devDepRequest);
   }
 
   async bundle({

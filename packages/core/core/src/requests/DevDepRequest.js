@@ -190,6 +190,36 @@ export type DevDepRequestResult = {|
 |};
 
 const devDepRequests: Map<string, DevDepRequest> = createBuildCache();
+export function resolveDevDepRequestRef(
+  devDepRequestRef: DevDepRequest | DevDepRequestRef,
+): DevDepRequest {
+  const devDepRequest =
+    devDepRequestRef.type === 'ref'
+      ? devDepRequests.get(devDepRequestRef.hash)
+      : devDepRequestRef;
+  if (devDepRequest == null) {
+    throw new Error(
+      `Worker send back a reference to a missing dev dep request.
+
+This might happen due to internal in-memory build caches not being cleared
+between builds or due a race condition.
+${
+  process.env.NODE_ENV === 'test'
+    ? `If this is a unit test, call atlaspack.clearBuildCaches() between tests`
+    : ''
+}
+
+This is a bug in Atlaspack.`,
+    );
+  }
+
+  if (devDepRequestRef.type !== 'ref') {
+    devDepRequests.set(devDepRequest.hash, devDepRequest);
+  }
+
+  return devDepRequest;
+}
+
 export async function runDevDepRequest<TResult: RequestResult>(
   api: RunAPI<TResult>,
   devDepRequestRef: DevDepRequest | DevDepRequestRef,
@@ -202,29 +232,7 @@ export async function runDevDepRequest<TResult: RequestResult>(
       devDepRequestRef.hash,
     type: requestTypes.dev_dep_request,
     run: ({api}) => {
-      const devDepRequest =
-        devDepRequestRef.type === 'ref'
-          ? devDepRequests.get(devDepRequestRef.hash)
-          : devDepRequestRef;
-      if (devDepRequest == null) {
-        throw new Error(
-          `Worker send back a reference to a missing dev dep request.
-
-This might happen due to internal in-memory build caches not being cleared
-between builds or due a race condition.
-${
-  process.env.NODE_ENV === 'test'
-    ? `If this is a unit test, call atlaspack.clearBuildCaches() between tests`
-    : ''
-}
-
-This is a bug in Atlaspack.`,
-        );
-      }
-
-      if (devDepRequestRef.type !== 'ref') {
-        devDepRequests.set(devDepRequest.hash, devDepRequest);
-      }
+      const devDepRequest = resolveDevDepRequestRef(devDepRequestRef);
 
       for (let filePath of nullthrows(
         devDepRequest.invalidateOnFileChange,
