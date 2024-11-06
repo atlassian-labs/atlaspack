@@ -345,8 +345,8 @@ export default class BundleGraph<TBundle: IBundle>
     key: string,
     ifTrueDependency: IDependency,
     ifFalseDependency: IDependency,
-    ifTrueBundles: Array<NamedBundle>,
-    ifFalseBundles: Array<NamedBundle>,
+    ifTrueBundles: Array<TBundle>,
+    ifFalseBundles: Array<TBundle>,
     ifTrueAssetId: string,
     ifFalseAssetId: string,
   |}> {
@@ -374,18 +374,24 @@ export default class BundleGraph<TBundle: IBundle>
             return [
               resolvedAsync.value,
               [
-                nullthrows(
-                  this.#graph.getReferencedBundle(
-                    dep,
-                    bundleToInternalBundle(bundle),
+                this.#createBundle(
+                  nullthrows(
+                    this.#graph.getReferencedBundle(
+                      dep,
+                      bundleToInternalBundle(bundle),
+                    ),
                   ),
+                  this.#graph,
+                  this.#options,
                 ),
               ],
             ];
           } else {
             return [
               this.#graph.getAssetById(resolvedAsync.value.entryAssetId),
-              this.#graph.getBundlesInBundleGroup(resolvedAsync.value),
+              this.#graph
+                .getBundlesInBundleGroup(resolvedAsync.value)
+                .map((b) => this.#createBundle(b, this.#graph, this.#options)),
             ];
           }
         });

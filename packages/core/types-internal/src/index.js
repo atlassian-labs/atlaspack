@@ -1650,8 +1650,8 @@ export interface BundleGraph<TBundle: Bundle> {
     key: string,
     ifTrueDependency: Dependency,
     ifFalseDependency: Dependency,
-    ifTrueBundles: Array<NamedBundle>,
-    ifFalseBundles: Array<NamedBundle>,
+    ifTrueBundles: Array<TBundle>,
+    ifFalseBundles: Array<TBundle>,
     ifTrueAssetId: string,
     ifFalseAssetId: string,
   |}>;
