@@ -365,7 +365,10 @@ export default class BundleGraph<TBundle: IBundle>
             dep,
             bundleToInternalBundle(bundle),
           );
-          if (asset) {
+          if (
+            asset &&
+            this.#graph.bundleHasAsset(bundleToInternalBundle(bundle), asset)
+          ) {
             // Asset is in the same bundle
             return [asset, []];
           }
@@ -377,6 +380,7 @@ export default class BundleGraph<TBundle: IBundle>
             ),
           );
           if (resolvedAsync?.type === 'asset') {
+            // Single bundle to load dynamically
             return [
               resolvedAsync.value,
               [
@@ -393,6 +397,7 @@ export default class BundleGraph<TBundle: IBundle>
               ],
             ];
           } else {
+            // Bundle group means we have multiple bundles to load first
             return [
               this.#graph.getAssetById(resolvedAsync.value.entryAssetId),
               this.#graph
