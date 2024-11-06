@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashSet};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -262,10 +262,20 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
         loc: None,
       });
 
-      // It's possible that the exports can be ordered differently between builds.
-      // Sorting by key is safe as the order is irrelevant but needs to be deterministic.
-      let sorted_exports: BTreeMap<String, CssModuleExport> = exports.into_iter().collect();
-      for (key, export) in sorted_exports.iter() {
+      fn add_css_module_export(
+        key: &String,
+        export: &CssModuleExport,
+        asset: &Asset,
+        asset_symbols: &mut Vec<Symbol>,
+        export_code: &mut String,
+        dependencies: &mut Vec<Dependency>,
+        sorted_exports: &BTreeMap<String, CssModuleExport>,
+        seen: &mut HashSet<String>,
+      ) -> anyhow::Result<()> {
+        if !seen.insert(key.clone()) {
+          return Ok(());
+        }
+
         asset_symbols.push(Symbol {
           exported: key.clone(),
           local: export.name.clone(),
@@ -275,19 +285,28 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
           loc: None,
         });
 
-        export_code.push_str(format!("module.exports[\"{}\"] = `{}", key, export.name).as_str());
+        let mut code = format!("module.exports[\"{}\"] = `{}", key, export.name);
 
         for reference in export.composes.iter() {
-          export_code.push(' ');
+          code.push(' ');
 
           match reference {
             CssModuleReference::Local { name } => {
-              if let Some((exported, _)) = sorted_exports
+              if let Some((exported, referenced)) = sorted_exports
                 .iter()
                 .find(|(_, export)| name == &export.name)
               {
-                export_code.push_str(format!("${{module.exports['{}']}}", *exported).as_str());
-                // TODO: Add the export first
+                add_css_module_export(
+                  exported,
+                  referenced,
+                  asset,
+                  asset_symbols,
+                  export_code,
+                  dependencies,
+                  sorted_exports,
+                  seen,
+                )?;
+                code.push_str(format!("${{module.exports['{}']}}", *exported).as_str());
                 let symbols = vec![Symbol {
                   exported: exported.clone(),
                   local: name.clone(),
@@ -298,7 +317,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 }];
                 dependencies.push(Dependency {
                   // Point this at the root asset
-                  specifier: css_unique_key.clone(),
+                  specifier: asset.unique_key.as_ref().unwrap().clone(),
                   specifier_type: SpecifierType::Esm,
                   symbols: Some(symbols),
                   env: asset.env.clone(),
@@ -310,7 +329,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
               }
             }
             CssModuleReference::Global { name } => {
-              export_code.push_str(name);
+              code.push_str(name);
             }
             CssModuleReference::Dependency {
               name: _,
@@ -322,12 +341,12 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
             }
           };
         }
-        export_code.push_str("`;\n");
+        code.push_str("`;\n");
 
         // If the export is referenced internally (e.g. used @keyframes), add a self-reference
         // to the JS so the symbol is retained during tree-shaking.
         if export.is_referenced {
-          export_code.push_str(format!("module.exports[\"{key}\"];\n").as_str());
+          code.push_str(format!("module.exports[\"{key}\"];\n").as_str());
 
           let symbols = vec![Symbol {
             exported: key.clone(),
@@ -340,7 +359,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
           dependencies.push(Dependency {
             // Point this at the root asset
-            specifier: css_unique_key.clone(),
+            specifier: asset.unique_key.as_ref().unwrap().clone(),
             specifier_type: SpecifierType::Esm,
             symbols: Some(symbols),
             env: asset.env.clone(),
@@ -350,6 +369,27 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
             ..Dependency::default()
           });
         }
+
+        export_code.push_str(&code);
+
+        Ok(())
+      }
+
+      // It's possible that the exports can be ordered differently between builds.
+      // Sorting by key is safe as the order is irrelevant but needs to be deterministic.
+      let sorted_exports: BTreeMap<String, CssModuleExport> = exports.into_iter().collect();
+      let mut seen = HashSet::new();
+      for (key, export) in sorted_exports.iter() {
+        add_css_module_export(
+          key,
+          export,
+          &asset,
+          &mut asset_symbols,
+          &mut export_code,
+          &mut dependencies,
+          &sorted_exports,
+          &mut seen,
+        )?;
       }
 
       let mut import_code = String::new();
@@ -567,6 +607,72 @@ mod tests {
         asset: Asset {
           id: "88540641b9eed86d".into(),
           code: "module.exports[\"root\"] = `EcQGha_root`;\n".into(),
+          file_path: "styles.module.css".into(),
+          is_source: true,
+          ..Default::default()
+        },
+        dependencies: Vec::new()
+      }
+    );
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn supports_css_modules_composes() {
+    let asset = Asset {
+      id: "css-module".into(),
+      file_path: "styles.module.css".into(),
+      is_source: true,
+      code: Arc::new(Code::from(
+        ".root {display: 'block'} .other {composes: root; color: red}",
+      )),
+      ..Default::default()
+    };
+
+    let result = run_plugin(&asset).await.unwrap();
+
+    assert_eq!(
+      result.asset,
+      Asset {
+        code: Arc::new(
+          ".EcQGha_root {\n  display: \"block\";\n}\n\n.EcQGha_other {\n  color: red;\n}\n".into()
+        ),
+        unique_key: Some("css-module".into()),
+        symbols: Some(vec![
+          Symbol {
+            local: "default".into(),
+            exported: "default".into(),
+            loc: None,
+            is_weak: false,
+            is_esm_export: true,
+            self_referenced: false,
+          },
+          Symbol {
+            local: "EcQGha_other".into(),
+            exported: "other".into(),
+            loc: None,
+            is_weak: false,
+            is_esm_export: true,
+            self_referenced: false,
+          },
+          Symbol {
+            local: "EcQGha_root".into(),
+            exported: "root".into(),
+            loc: None,
+            is_weak: false,
+            is_esm_export: true,
+            self_referenced: false,
+          },
+        ]),
+        ..asset
+      }
+    );
+    assert_eq!(result.discovered_assets.len(), 1);
+    assert_eq!(
+      result.discovered_assets[0],
+      AssetWithDependencies {
+        asset: Asset {
+          id: "9ca5591ff8d30a6a".into(),
+          code: Arc::new("module.exports[\"root\"] = `EcQGha_root`;\nmodule.exports[\"other\"] = `EcQGha_other ${module.exports['root']}`;\n".into()),
           file_path: "styles.module.css".into(),
           is_source: true,
           ..Default::default()
