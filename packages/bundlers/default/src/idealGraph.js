@@ -362,6 +362,24 @@ export function createIdealGraph(
                 ),
                 dependencyPriorityEdges[dependency.priority],
               );
+
+              if (
+                (config.loadConditionalBundlesInParallel ??
+                  !bundle.env.shouldScopeHoist) &&
+                dependency.priority === 'conditional'
+              ) {
+                // When configured (or serving code in development), serve conditional bundles in parallel so we don't get module not found errors
+                let [referencingBundleRoot, bundleGroupNodeId] = nullthrows(
+                  stack[stack.length - 1],
+                );
+
+                let referencingBundleId = nullthrows(
+                  bundleRoots.get(referencingBundleRoot),
+                )[0];
+
+                bundleRoots.set(childAsset, [bundleId, bundleGroupNodeId]);
+                bundleGraph.addEdge(referencingBundleId, bundleId);
+              }
             } else if (
               dependency.priority === 'parallel' ||
               childAsset.bundleBehavior === 'inline'
@@ -582,7 +600,10 @@ export function createIdealGraph(
               bundleRootGraph.addEdge(
                 bundleRootId,
                 nullthrows(assetToBundleRootNodeId.get(bundleRoot)),
-                dependency.priority === 'parallel'
+                dependency.priority === 'parallel' ||
+                  ((config.loadConditionalBundlesInParallel ??
+                    !bundle.env.shouldScopeHoist) &&
+                    dependency.priority === 'conditional')
                   ? bundleRootEdgeTypes.parallel
                   : bundleRootEdgeTypes.lazy,
               );

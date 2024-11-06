@@ -27,6 +27,7 @@ type BaseBundlerConfig = {|
   maxParallelRequests?: number,
   disableSharedBundles?: boolean,
   manualSharedBundles?: ManualSharedBundles,
+  loadConditionalBundlesInParallel?: boolean,
 |};
 
 type BundlerConfig = {|
@@ -40,6 +41,7 @@ export type ResolvedBundlerConfig = {|
   projectRoot: string,
   disableSharedBundles: boolean,
   manualSharedBundles: ManualSharedBundles,
+  loadConditionalBundlesInParallel?: boolean,
 |};
 
 function resolveModeConfig(
@@ -226,5 +228,7 @@ export async function loadBundlerConfig(
       modeConfig.disableSharedBundles ?? defaults.disableSharedBundles,
     manualSharedBundles:
       modeConfig.manualSharedBundles ?? defaults.manualSharedBundles,
+    loadConditionalBundlesInParallel:
+      modeConfig.loadConditionalBundlesInParallel,
   };
 }

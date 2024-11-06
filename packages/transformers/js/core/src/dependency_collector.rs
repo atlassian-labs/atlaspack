@@ -805,12 +805,20 @@ impl<'a> Fold for DependencyCollector<'a> {
         return call;
       }
 
-      // If we're not scope hoisting, then change this `importCond` to a `require`
-      if !self.config.scope_hoist {
-        call.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
-          "require".into(),
-          DUMMY_SP,
-        ))));
+      if match_str(&call.args[1].expr).unwrap().0 == match_str(&call.args[2].expr).unwrap().0 {
+        self.diagnostics.push(Diagnostic {
+          message: "importCond requires unique dependencies".to_string(),
+          code_highlights: Some(vec![CodeHighlight {
+            message: None,
+            loc: SourceLocation::from(&self.source_map, call.span),
+          }]),
+          show_environment: false,
+          severity: DiagnosticSeverity::Error,
+          hints: None,
+          documentation_url: None,
+        });
+
+        return call;
       }
 
       let mut placeholders = Vec::new();
@@ -837,25 +845,55 @@ impl<'a> Fold for DependencyCollector<'a> {
       };
       self.conditions.insert(condition);
 
-      // write out code like importCond(depIfTrue, depIfFalse) - while we use the first dep as the link to the conditions
-      // we need both deps to ensure scope hoisting can make sure both arms are treated as "used"
-      call.args[0] = ast::ExprOrSpread {
-        spread: None,
-        expr: Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
-          value: format!("{}", placeholders[0]).into(),
-          span: DUMMY_SP,
-          raw: None,
-        }))),
-      };
-      call.args[1] = ast::ExprOrSpread {
-        spread: None,
-        expr: Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
-          value: format!("{}", placeholders[1]).into(),
-          span: DUMMY_SP,
-          raw: None,
-        }))),
-      };
-      call.args.truncate(2);
+      if self.config.scope_hoist {
+        // write out code like importCond(depIfTrue, depIfFalse) - while we use the first dep as the link to the conditions
+        // we need both deps to ensure scope hoisting can make sure both arms are treated as "used"
+        call.args[0] = ast::ExprOrSpread {
+          spread: None,
+          expr: Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
+            value: format!("{}", placeholders[0]).into(),
+            span: DUMMY_SP,
+            raw: None,
+          }))),
+        };
+        call.args[1] = ast::ExprOrSpread {
+          spread: None,
+          expr: Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
+            value: format!("{}", placeholders[1]).into(),
+            span: DUMMY_SP,
+            raw: None,
+          }))),
+        };
+        call.args.truncate(2);
+      } else {
+        // If we're not scope hoisting, then change this `importCond` to a require so the deps are resolved correctly
+        call.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
+          "require".into(),
+          DUMMY_SP,
+        ))));
+
+        // Flip these so require will have the ifFalse/default placeholder.
+        // That placeholder is used by the runtime to transform into a conditional expression
+        call.args[0] = ast::ExprOrSpread {
+          spread: None,
+          expr: Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
+            value: placeholders[1].clone(),
+            span: DUMMY_SP,
+            raw: None,
+          }))),
+        };
+
+        call.args[1] = ast::ExprOrSpread {
+          spread: None,
+          expr: Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
+            value: placeholders[0].clone(),
+            span: DUMMY_SP,
+            raw: None,
+          }))),
+        };
+
+        call.args.truncate(2);
+      }
 
       call
     } else {
@@ -1044,7 +1082,7 @@ impl<'a> Fold for DependencyCollector<'a> {
   }
 
   fn fold_var_declarator(&mut self, node: ast::VarDeclarator) -> ast::VarDeclarator {
-    if self.config.conditional_bundling && self.config.scope_hoist {
+    if self.config.conditional_bundling {
       if let Some(init) = node.init.clone() {
         if let ast::Expr::Call(call) = *init {
           if let ast::Callee::Expr(callee) = &call.callee {
@@ -2436,9 +2474,9 @@ document.body.appendChild(img);
     let hash_b = make_placeholder_hash("b", DependencyKind::ConditionalImport);
     let expected_code = format!(
       r#"
-      const x = require("{}", "{}");
+      const x = require("{}", "{}").default;
     "#,
-      hash_a, hash_b
+      hash_b, hash_a,
     );
     let expected_code = expected_code
       .trim_start()
@@ -2570,6 +2608,35 @@ document.body.appendChild(img);
     assert_eq!(
       diagnostics[0].message,
       "importCond requires three arguments"
+    );
+  }
+
+  #[test]
+  fn test_import_cond_same_deps() {
+    let mut items = vec![];
+    let mut diagnostics = vec![];
+    let mut config = make_config();
+    config.scope_hoist = true;
+    config.conditional_bundling = true;
+    let input_code = r#"
+      const x = importCond('condition', 'a', 'a');
+    "#;
+    let mut conditions = HashSet::new();
+
+    run_test_fold(input_code, |context| {
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
+    });
+
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(
+      diagnostics[0].message,
+      "importCond requires unique dependencies"
     );
   }
 }

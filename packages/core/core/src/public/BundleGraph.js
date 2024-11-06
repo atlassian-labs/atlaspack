@@ -11,6 +11,7 @@ import type {
   FilePath,
   GraphVisitor,
   Symbol,
+  NamedBundle,
   SymbolResolution,
   Target,
 } from '@atlaspack/types';
@@ -336,11 +337,16 @@ export default class BundleGraph<TBundle: IBundle>
   // Given a set of dependencies, return any conditions where those dependencies are either
   // the true or false dependency for those conditions. This is currently used to work out which
   // conditions belong to a bundle in packaging.
-  getConditionsForDependencies(deps: Array<IDependency>): Set<{|
+  getConditionsForDependencies(
+    deps: Array<IDependency>,
+    bundle: NamedBundle,
+  ): Set<{|
     publicId: string,
     key: string,
     ifTrueDependency: IDependency,
     ifFalseDependency: IDependency,
+    ifTrueBundles: Array<TBundle>,
+    ifFalseBundles: Array<TBundle>,
     ifTrueAssetId: string,
     ifFalseAssetId: string,
   |}> {
@@ -351,15 +357,53 @@ export default class BundleGraph<TBundle: IBundle>
         depIds.includes(condition.ifTrueDependency.id) ||
         depIds.includes(condition.ifFalseDependency.id)
       ) {
-        const [trueAsset, falseAsset] = [
+        const [[trueAsset, ifTrueBundles], [falseAsset, ifFalseBundles]] = [
           condition.ifTrueDependency,
           condition.ifFalseDependency,
         ].map((dep) => {
-          const resolved = nullthrows(this.#graph.resolveAsyncDependency(dep));
-          if (resolved.type === 'asset') {
-            return resolved.value;
+          const asset = this.#graph.getResolvedAsset(
+            dep,
+            bundleToInternalBundle(bundle),
+          );
+          if (
+            asset &&
+            this.#graph.bundleHasAsset(bundleToInternalBundle(bundle), asset)
+          ) {
+            // Asset is in the same bundle
+            return [asset, []];
+          }
+
+          const resolvedAsync = nullthrows(
+            this.#graph.resolveAsyncDependency(
+              dep,
+              bundleToInternalBundle(bundle),
+            ),
+          );
+          if (resolvedAsync?.type === 'asset') {
+            // Single bundle to load dynamically
+            return [
+              resolvedAsync.value,
+              [
+                this.#createBundle(
+                  nullthrows(
+                    this.#graph.getReferencedBundle(
+                      dep,
+                      bundleToInternalBundle(bundle),
+                    ),
+                  ),
+                  this.#graph,
+                  this.#options,
+                ),
+              ],
+            ];
           } else {
-            return this.#graph.getAssetById(resolved.value.entryAssetId);
+            // Bundle group means we have multiple bundles to load first
+            return [
+              this.#graph.getAssetById(resolvedAsync.value.entryAssetId),
+              this.#graph
+                .getBundlesInBundleGroup(resolvedAsync.value)
+                .map((b) => this.#createBundle(b, this.#graph, this.#options)),
+            ];
           }
         });
 
@@ -374,6 +418,8 @@ export default class BundleGraph<TBundle: IBundle>
             deps.find((dep) => dep.id === condition.ifFalseDependency.id),
             'ifFalseDependency was null',
           ),
+          ifTrueBundles,
+          ifFalseBundles,
           ifTrueAssetId: this.#graph.getAssetPublicId(trueAsset),
           ifFalseAssetId: this.#graph.getAssetPublicId(falseAsset),
         });
@@ -416,7 +462,11 @@ export default class BundleGraph<TBundle: IBundle>
           const publicDep = nullthrows(
             assetDeps.find((assetDep) => dep.id === assetDep.id),
           );
-          const resolved = nullthrows(this.resolveAsyncDependency(publicDep));
+          const resolved = this.resolveAsyncDependency(publicDep);
+          if (!resolved) {
+            // If there's no async dependency, don't list it as required
+            return [];
+          }
           invariant(resolved.type === 'bundle_group');
           return this.getBundlesInBundleGroup(resolved.value);
         };
