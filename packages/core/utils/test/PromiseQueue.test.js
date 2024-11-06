@@ -19,11 +19,24 @@ describe('PromiseQueue', () => {
     assert(someBooleanToBeChanged);
   });
 
-  it('run() should reject if the function throws a sync exception', async () => {
+  it('run() should reject if any of the async functions in the queue failed', async () => {
     let error = new Error('some failure');
     try {
       let queue = new PromiseQueue();
       queue.add(() => Promise.reject(error));
+      await queue.run();
+    } catch (e) {
+      assert.equal(e, error);
+    }
+  });
+
+  it('run() should reject if any of the async functions in the queue throwo', async () => {
+    let error = new Error('some failure');
+    try {
+      let queue = new PromiseQueue();
+      queue.add(() => {
+        throw error;
+      });
       await queue.run();
     } catch (e) {
       assert.equal(e, error);
@@ -36,7 +49,7 @@ describe('PromiseQueue', () => {
     // no need to assert, test will hang or throw an error if condition fails
   });
 
-  it(".add() should resolve with the same result when the passed in function's promise resolves", async () => {
+  it('.add() result should bubble into the run results', async () => {
     let queue = new PromiseQueue();
     queue.add(() => Promise.resolve(42));
     const result = await queue.run();
