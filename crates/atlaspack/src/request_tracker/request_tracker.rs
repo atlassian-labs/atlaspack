@@ -56,6 +56,7 @@ impl RequestTracker {
     let mut graph = StableDiGraph::<RequestNode, RequestEdgeType>::new();
 
     graph.add_node(RequestNode::Root);
+
     RequestTracker {
       config_loader,
       file_system,

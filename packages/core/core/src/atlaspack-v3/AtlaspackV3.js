@@ -15,7 +15,7 @@ export type AtlaspackV3Options = {|
   /**
    * A reference to LMDB lite's rust object
    */
-  lmdb: Lmdb | null,
+  lmdb: Lmdb,
   ...AtlaspackNapiOptions['options'],
 |};
 

@@ -25,6 +25,7 @@ atlaspack_plugin_transformer_yaml = { path = "../atlaspack_plugin_transformer_ya
 atlaspack_plugin_rpc = { path = "../atlaspack_plugin_rpc" }
 atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
+lmdb-js-lite = { path = "../lmdb-js-lite" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }

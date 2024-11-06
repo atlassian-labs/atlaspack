@@ -165,6 +165,7 @@ pub struct Asset {
 
   /// The code of this asset, initially read from disk, then becoming the
   /// transformed output
+  #[serde(skip_serializing)]
   pub code: Code,
 
   /// The source map for the asset

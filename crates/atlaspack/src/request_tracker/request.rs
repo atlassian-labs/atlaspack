@@ -7,14 +7,14 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigLoaderRef;
+use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::types::AtlaspackOptions;
+use atlaspack_core::types::Invalidation;
+use atlaspack_filesystem::FileSystemRef;
 use dyn_hash::DynHash;
 
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
-use atlaspack_core::plugin::ReporterEvent;
-use atlaspack_core::types::Invalidation;
-use atlaspack_filesystem::FileSystemRef;
 
 #[derive(Debug)]
 pub struct RunRequestMessage {

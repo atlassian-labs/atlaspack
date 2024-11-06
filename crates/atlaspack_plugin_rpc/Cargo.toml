@@ -5,7 +5,13 @@ edition = "2021"
 description = "Atlaspack Bundler"
 
 [features]
-nodejs = ["dep:napi", "dep:serde", "dep:parking_lot", "dep:once_cell", "dep:atlaspack_napi_helpers"]
+nodejs = [
+  "dep:napi",
+  "dep:serde",
+  "dep:parking_lot",
+  "dep:once_cell",
+  "dep:atlaspack_napi_helpers",
+]
 
 [dependencies]
 atlaspack_config = { path = "../atlaspack_config" }
@@ -14,9 +20,10 @@ atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers", optional = true }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+mockall = { workspace = true }
 napi = { workspace = true, features = ["serde"], optional = true }
-serde = { workspace = true, optional = true }
-parking_lot = { workspace = true, optional = true }
 once_cell = { workspace = true, optional = true }
+parking_lot = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
 tracing = { workspace = true }
 tokio = { workspace = true, features = ["full"] }

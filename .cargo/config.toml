@@ -17,6 +17,12 @@
 # without the testing mode noop removal.
 rustflags = ["-C", "link-args=-Wl,--warn-unresolved-symbols"]
 
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+
 [target.arm-unknown-linux-gnueabihf]
 linker = "arm-linux-gnueabihf-gcc"
 

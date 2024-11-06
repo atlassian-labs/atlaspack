@@ -200,7 +200,15 @@ impl LMDB {
     let Some(buffer) = buffer.map_err(|err| napi_error(anyhow!(err)))? else {
       return Ok(env.get_null()?.into_unknown());
     };
-    let mut result = env.create_buffer(buffer.len())?;
+
+    let size = buffer.len();
+    // Empty files that exist in the db have no size
+    if size == 0 {
+      // We must avoid calling create_buffer with a size of 0 as it will panic
+      return Ok(env.create_buffer_with_data(Vec::new())?.into_unknown());
+    }
+
+    let mut result = env.create_buffer(size)?;
     // This is faster than moving the vector in
     result.copy_from_slice(&buffer);
     Ok(result.into_unknown())

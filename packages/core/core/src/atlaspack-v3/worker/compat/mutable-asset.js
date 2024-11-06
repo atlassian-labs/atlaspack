@@ -55,9 +55,9 @@ export class MutableAsset implements IMutableAsset {
 
   constructor(
     asset: InnerAsset,
-    fs: FileSystem,
-    env: Environment,
     contents: Buffer,
+    env: Environment,
+    fs: FileSystem,
   ) {
     this.#inner = asset;
     this.stats = asset.stats;

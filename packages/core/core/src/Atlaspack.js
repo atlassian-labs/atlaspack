@@ -45,17 +45,18 @@ import {createEnvironment} from './Environment';
 import {createDependency} from './Dependency';
 import {Disposable} from '@atlaspack/events';
 import {init as initSourcemaps} from '@parcel/source-map';
+import {LMDBLiteCache} from '@atlaspack/cache';
 import {
   init as initRust,
   initializeMonitoring,
   closeMonitoring,
+  type Lmdb,
 } from '@atlaspack/rust';
 import {
   fromProjectPath,
   toProjectPath,
   fromProjectPathRelative,
 } from './projectPath';
-import {LMDBLiteCache} from '@atlaspack/cache';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
@@ -138,14 +139,15 @@ export default class Atlaspack {
       // eslint-disable-next-line no-unused-vars
       let {entries, inputFS, outputFS, ...options} = this.#initialOptions;
 
-      const lmdb =
-        resolvedOptions.cache instanceof LMDBLiteCache
-          ? resolvedOptions.cache.getNativeRef()
-          : null;
+      if (!(resolvedOptions.cache instanceof LMDBLiteCache)) {
+        throw new Error('Atlaspack v3 must be run with lmdb lite cache');
+      }
+
+      const lmdb: Lmdb = resolvedOptions.cache.getNativeRef();
 
       // $FlowFixMe
       const version = require('../package.json').version;
-      await lmdb?.put('current_session_version', Buffer.from(version));
+      await lmdb.put('current_session_version', Buffer.from(version));
 
       rustAtlaspack = new AtlaspackV3({
         ...options,
@@ -169,7 +171,7 @@ export default class Atlaspack {
           shouldScopeHoist:
             resolvedOptions.defaultTargetOptions.shouldScopeHoist,
         },
-        lmdb: lmdb ?? null,
+        lmdb,
       });
     }
     this.rustAtlaspack = rustAtlaspack;
@@ -596,7 +598,9 @@ export default class Atlaspack {
       this.rustAtlaspack != null
         ? createAssetGraphRequestRust(this.rustAtlaspack)(input)
         : createAssetGraphRequestJS(input),
+      {force: true},
     );
+
     logger.info({message: 'Done building asset graph!'});
 
     if (writeToCache) {
