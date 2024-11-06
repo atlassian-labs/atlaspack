@@ -1514,11 +1514,7 @@ export default class RequestTracker {
         resultCacheKey != null &&
         node?.result != null
       ) {
-        queue
-          .add(() => serialiseAndSet(resultCacheKey, node.result))
-          .catch(() => {
-            // Handle promise rejection
-          });
+        queue.add(() => serialiseAndSet(resultCacheKey, node.result));
 
         // eslint-disable-next-line no-unused-vars
         let {result: _, ...newNode} = node;
@@ -1547,19 +1543,15 @@ export default class RequestTracker {
         // We assume the request graph nodes are immutable and won't change
         let nodesToCache = cacheableNodes.slice(nodesStartIndex, nodesEndIndex);
 
-        queue
-          .add(() =>
-            serialiseAndSet(
-              getRequestGraphNodeKey(i, cacheKey),
-              nodesToCache,
-            ).then(() => {
-              // Succeeded in writing to disk, save that we have completed this chunk
-              this.graph.setCachedRequestChunk(i);
-            }),
-          )
-          .catch(() => {
-            // Handle promise rejection
-          });
+        queue.add(() =>
+          serialiseAndSet(
+            getRequestGraphNodeKey(i, cacheKey),
+            nodesToCache,
+          ).then(() => {
+            // Succeeded in writing to disk, save that we have completed this chunk
+            this.graph.setCachedRequestChunk(i);
+          }),
+        );
       }
     }
 

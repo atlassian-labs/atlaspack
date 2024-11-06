@@ -27,8 +27,8 @@ export default class PromiseQueue<T> {
     return this._queue.length;
   }
 
-  add(fn: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
+  add(fn: () => Promise<T>): void {
+    new Promise((resolve, reject) => {
       let i = this._count++;
       let wrapped = () =>
         fn().then(
@@ -51,7 +51,7 @@ export default class PromiseQueue<T> {
       if (this._numRunning > 0 && this._numRunning < this._maxConcurrent) {
         this._next();
       }
-    });
+    }).catch(() => {});
   }
 
   subscribeToAdd(fn: () => void): () => void {
