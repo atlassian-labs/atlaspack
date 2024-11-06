@@ -66,21 +66,6 @@ export default (new Packager({
       ),
     ];
 
-    const postOrder = [];
-    bundleGraph.traverseBundles({
-      exit: (bundle) => {
-        try {
-          postOrder.push(bundle);
-        } catch (err) {
-          // ignore
-        }
-      },
-    });
-    const reversePostOrder = postOrder.reverse();
-    referencedBundles.sort(
-      (a, b) => reversePostOrder.indexOf(a) - reversePostOrder.indexOf(b),
-    );
-
     let renderConfig = config?.render;
 
     let {html} = await posthtml([
