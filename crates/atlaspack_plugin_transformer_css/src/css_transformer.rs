@@ -262,6 +262,15 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
         loc: None,
       });
 
+      /// This function handles each CSS export as it is discovered. It runs recursively in cases
+      /// where we discover a CSS module export that is being composed but hasn't been
+      /// registered yet, and hence can't be written as a closure. There is a seen HashSet
+      /// to make sure we only process each export once.
+      ///
+      /// I could refactor this to use a struct but I wanted to keep the code closer to the
+      /// original JS implementation for now as it makes it easier to find any accidental
+      /// divergences
+      #[allow(clippy::too_many_arguments)]
       fn add_css_module_export(
         key: &String,
         export: &CssModuleExport,
