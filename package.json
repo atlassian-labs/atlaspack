@@ -32,6 +32,7 @@
     "prepublishOnly": "yarn adjust-versions && yarn build && yarn build-ts",
     "test": "yarn test:unit && yarn test:integration",
     "test:integration": "yarn workspace @atlaspack/integration-tests test",
+    "test:integration:v3": "ATLASPACK_V3=true yarn workspace @atlaspack/integration-tests test",
     "test:integration-ci": "yarn workspace @atlaspack/integration-tests test-ci",
     "test:js": "yarn test:js:unit && yarn test:integration",
     "test:js:coverage": "yarn nyc yarn test:js:unit",

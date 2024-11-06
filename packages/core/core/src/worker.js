@@ -85,7 +85,7 @@ async function loadConfig(cachePath, options) {
   return config;
 }
 
-export function clearConfigCache() {
+export function clearWorkerBuildCaches() {
   configCache.clear();
   clearBuildCaches();
 }
@@ -186,4 +186,11 @@ export function invalidateRequireCache(workerApi: WorkerApi, file: string) {
   }
 
   throw new Error('invalidateRequireCache is only for tests');
+}
+
+/**
+ * This is used to wait until workers are responding to messages.
+ */
+export function ping(): boolean {
+  return true;
 }

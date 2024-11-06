@@ -17,6 +17,7 @@ import type {
   AtlaspackOptions,
   ReportFn,
   RequestInvalidation,
+  DevDepRequestRef,
 } from './types';
 import type {AtlaspackConfig, LoadedPlugin} from './AtlaspackConfig';
 import type InternalBundleGraph from './BundleGraph';
@@ -74,7 +75,7 @@ type Opts = {|
 export type RunPackagerRunnerResult = {|
   bundleInfo: BundleInfo,
   configRequests: Array<ConfigRequest>,
-  devDepRequests: Array<DevDepRequest>,
+  devDepRequests: Array<DevDepRequest | DevDepRequestRef>,
   invalidations: Array<RequestInvalidation>,
 |};
 
@@ -108,7 +109,7 @@ export default class PackagerRunner {
   distExists: Set<FilePath>;
   report: ReportFn;
   previousDevDeps: Map<string, string>;
-  devDepRequests: Map<string, DevDepRequest>;
+  devDepRequests: Map<string, DevDepRequest | DevDepRequestRef>;
   invalidations: Map<string, RequestInvalidation>;
   previousInvalidations: Array<RequestInvalidation>;
 

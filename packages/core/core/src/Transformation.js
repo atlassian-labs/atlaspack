@@ -18,6 +18,7 @@ import type {
   AtlaspackOptions,
   InternalDevDepOptions,
   Invalidations,
+  DevDepRequestRef,
 } from './types';
 import type {LoadedPlugin} from './AtlaspackConfig';
 
@@ -88,13 +89,13 @@ export type TransformationResult = {|
   error?: Array<Diagnostic>,
   configRequests: Array<ConfigRequest>,
   invalidations: Invalidations,
-  devDepRequests: Array<DevDepRequest>,
+  devDepRequests: Array<DevDepRequest | DevDepRequestRef>,
 |};
 
 export default class Transformation {
   request: TransformationRequest;
   configs: Map<string, Config>;
-  devDepRequests: Map<string, DevDepRequest>;
+  devDepRequests: Map<string, DevDepRequest | DevDepRequestRef>;
   pluginDevDeps: Array<InternalDevDepOptions>;
   options: AtlaspackOptions;
   pluginOptions: PluginOptions;

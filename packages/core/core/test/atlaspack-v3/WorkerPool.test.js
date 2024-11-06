@@ -11,6 +11,8 @@ function probeStatus(worker: Worker) {
   return response;
 }
 
+const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
+
 describe('WorkerPool', () => {
   it('can create workers and will send them the tx_worker value', async () => {
     const workerPool = new WorkerPool(path.join(__dirname, 'worker.js'));
@@ -27,6 +29,26 @@ describe('WorkerPool', () => {
           tx_worker: 0,
         },
       ],
+    });
+  });
+
+  it('recreates a failing worker', async () => {
+    const workerPool = new WorkerPool(path.join(__dirname, 'worker-error.js'));
+    const workerId = workerPool.registerWorker(0);
+    const failingWorker = workerPool.getWorker(workerId);
+
+    await new Promise((resolve) => {
+      failingWorker.on('error', resolve);
+    });
+
+    await flushPromises();
+
+    const worker = workerPool.getWorker(workerId);
+    const status = await probeStatus(worker);
+
+    assert.deepEqual(status, {
+      type: 'status',
+      status: 'ok',
     });
   });
 
