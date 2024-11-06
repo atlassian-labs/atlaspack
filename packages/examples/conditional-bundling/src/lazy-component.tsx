@@ -1,4 +1,5 @@
 import React from 'react';
+
 const Button = importCond<
   typeof import('@atlaskit/button/new'),
   typeof import('@atlaskit/button')

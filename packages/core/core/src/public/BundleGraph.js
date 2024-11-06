@@ -361,16 +361,22 @@ export default class BundleGraph<TBundle: IBundle>
           condition.ifTrueDependency,
           condition.ifFalseDependency,
         ].map((dep) => {
+          const asset = this.#graph.getResolvedAsset(
+            dep,
+            bundleToInternalBundle(bundle),
+          );
+          if (asset) {
+            // Asset is in the same bundle
+            return [asset, []];
+          }
+
           const resolvedAsync = nullthrows(
             this.#graph.resolveAsyncDependency(
               dep,
               bundleToInternalBundle(bundle),
             ),
-            `Failed to resolve ${dep.id} with specifier '${
-              dep.specifier
-            }' from ${String(dep?.sourcePath)}`,
           );
-          if (resolvedAsync.type === 'asset') {
+          if (resolvedAsync?.type === 'asset') {
             return [
               resolvedAsync.value,
               [
