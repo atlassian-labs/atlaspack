@@ -61,6 +61,7 @@ import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
+import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
 
 registerCoreWithSerializer();
 
@@ -276,7 +277,7 @@ export default class Atlaspack {
 
   async _startNextBuild(): Promise<?BuildEvent> {
     this.#watchAbortController = new AbortController();
-    await this.#farm.callAllWorkers('clearConfigCache', []);
+    await this.clearBuildCaches();
 
     try {
       let buildEvent = await this._build({
@@ -484,7 +485,7 @@ export default class Atlaspack {
         await this.stopProfiling();
       }
 
-      await this.#farm.callAllWorkers('clearConfigCache', []);
+      await this.clearBuildCaches();
     }
   }
 
@@ -563,6 +564,14 @@ export default class Atlaspack {
     return this.#farm.takeHeapSnapshot();
   }
 
+  /**
+   * Must be called between builds otherwise there is global state that will
+   * break things unexpectedly.
+   */
+  async clearBuildCaches(): Promise<void> {
+    await this.#farm?.callAllWorkers('clearWorkerBuildCaches', []);
+  }
+
   async unstable_invalidate(): Promise<void> {
     await this._init();
   }
@@ -570,7 +579,9 @@ export default class Atlaspack {
   /**
    * Build the asset graph
    */
-  async unstable_buildAssetGraph(): Promise<void> {
+  async unstable_buildAssetGraph(
+    writeToCache: boolean = true,
+  ): Promise<AssetGraphRequestResult> {
     await this._init();
     const input = {
       optionsRef: this.#optionsRef,
@@ -581,18 +592,20 @@ export default class Atlaspack {
       lazyExcludes: [],
       requestedAssetIds: this.#requestedAssetIds,
     };
-    await this.#requestTracker.runRequest(
+    const result = await this.#requestTracker.runRequest(
       this.rustAtlaspack != null
         ? createAssetGraphRequestRust(this.rustAtlaspack)(input)
         : createAssetGraphRequestJS(input),
     );
-    // eslint-disable-next-line no-console
-    console.log('Done building asset graph!');
-    // eslint-disable-next-line no-console
-    console.log('Write request tracker to cache');
-    await this.writeRequestTrackerToCache();
-    // eslint-disable-next-line no-console
-    console.log('Done writing request tracker to cache');
+    logger.info({message: 'Done building asset graph!'});
+
+    if (writeToCache) {
+      logger.info({message: 'Write request tracker to cache'});
+      await this.writeRequestTrackerToCache();
+      logger.info({message: 'Done writing request tracker to cache'});
+    }
+
+    return result;
   }
 
   async unstable_transform(

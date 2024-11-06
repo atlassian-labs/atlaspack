@@ -13,6 +13,7 @@ import type {
   Dependency,
   DevDepRequest,
   AtlaspackOptions,
+  DevDepRequestRef,
 } from '../types';
 import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
@@ -238,10 +239,12 @@ export class ResolverRunner {
     }
   }
 
-  runDevDepRequest(devDepRequest: DevDepRequest) {
-    let {specifier, resolveFrom} = devDepRequest;
-    let key = `${specifier}:${fromProjectPathRelative(resolveFrom)}`;
-    this.devDepRequests.set(key, devDepRequest);
+  runDevDepRequest(devDepRequest: DevDepRequest | DevDepRequestRef) {
+    if (devDepRequest.type !== 'ref') {
+      let {specifier, resolveFrom} = devDepRequest;
+      let key = `${specifier}:${fromProjectPathRelative(resolveFrom)}`;
+      this.devDepRequests.set(key, devDepRequest);
+    }
   }
 
   async resolve(dependency: Dependency): Promise<ResolverResult> {

@@ -10,6 +10,7 @@ import type {
   Config,
   DevDepRequest,
   AtlaspackOptions,
+  DevDepRequestRef,
 } from './types';
 import type {AtlaspackConfig} from './AtlaspackConfig';
 import type PluginOptions from './public/PluginOptions';
@@ -87,7 +88,7 @@ export default async function applyRuntimes<TResult: RequestResult>({
   pluginOptions: PluginOptions,
   api: RunAPI<TResult>,
   previousDevDeps: Map<string, string>,
-  devDepRequests: Map<string, DevDepRequest>,
+  devDepRequests: Map<string, DevDepRequest | DevDepRequestRef>,
   configs: Map<string, Config>,
 |}): Promise<Map<string, Asset>> {
   let runtimes = await config.getRuntimes();
