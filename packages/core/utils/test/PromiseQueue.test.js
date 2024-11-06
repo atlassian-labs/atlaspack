@@ -19,15 +19,11 @@ describe('PromiseQueue', () => {
     assert(someBooleanToBeChanged);
   });
 
-  it('run() should reject if any of the async functions in the queue failed', async () => {
+  it('run() should reject if the function throws a sync exception', async () => {
     let error = new Error('some failure');
     try {
       let queue = new PromiseQueue();
-      queue
-        .add(() => Promise.reject(error))
-        .catch(
-          /* catch this to prevent an unhandled promise rejection*/ () => {},
-        );
+      queue.add(() => Promise.reject(error));
       await queue.run();
     } catch (e) {
       assert.equal(e, error);
@@ -42,18 +38,9 @@ describe('PromiseQueue', () => {
 
   it(".add() should resolve with the same result when the passed in function's promise resolves", async () => {
     let queue = new PromiseQueue();
-    let promise = queue.add(() => Promise.resolve(42));
-    await queue.run();
-    let result = await promise;
-    assert.equal(result, 42);
-  });
-
-  it(".add() should reject with the same error when the passed in function's promise rejects", async () => {
-    let queue = new PromiseQueue();
-    let error = new Error('Oh no!');
-    let promise = queue.add(() => Promise.reject(error));
-    await queue.run().catch(() => null);
-    await promise.then(null, (e) => assert.equal(e, error));
+    queue.add(() => Promise.resolve(42));
+    const result = await queue.run();
+    assert.deepEqual(result, [42]);
   });
 
   it('constructor() should allow for configuration of max concurrent running functions', async () => {
