@@ -296,6 +296,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 .iter()
                 .find(|(_, export)| name == &export.name)
               {
+                // This ensures that the local being referenced is added before
+                // the one composing it
                 add_css_module_export(
                   exported,
                   referenced,
