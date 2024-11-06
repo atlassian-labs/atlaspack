@@ -295,6 +295,9 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
         });
 
         let mut code = format!("module.exports[\"{}\"] = `{}", key, export.name);
+        let unique_key = asset.unique_key.as_ref().ok_or(anyhow!(
+          "CSS modules asset missing unique_key. This should never happen!"
+        ))?;
 
         for reference in export.composes.iter() {
           code.push(' ');
@@ -326,9 +329,10 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                   self_referenced: true,
                   loc: None,
                 }];
+
                 dependencies.push(Dependency {
                   // Point this at the root asset
-                  specifier: asset.unique_key.as_ref().unwrap().clone(),
+                  specifier: unique_key.clone(),
                   specifier_type: SpecifierType::Esm,
                   symbols: Some(symbols),
                   env: asset.env.clone(),
@@ -370,7 +374,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
           dependencies.push(Dependency {
             // Point this at the root asset
-            specifier: asset.unique_key.as_ref().unwrap().clone(),
+            specifier: unique_key.clone(),
             specifier_type: SpecifierType::Esm,
             symbols: Some(symbols),
             env: asset.env.clone(),
