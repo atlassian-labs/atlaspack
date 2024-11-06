@@ -195,6 +195,7 @@ export default (new Runtime({
       // replaced with a reference to this asset to implement the selection.
       const conditions = bundleGraph.getConditionsForDependencies(
         conditionalDependencies,
+        bundle,
       );
       for (const cond of conditions) {
         const requireName = bundle.env.shouldScopeHoist
@@ -479,28 +480,19 @@ function getLoaderRuntime({
     );
     for (const cond of bundleGraph.getConditionsForDependencies(
       conditionalDependencies,
+      bundle,
     )) {
-      // This bundle has a conditional dependency, we need to load it as it may not be present
-      let ifTrueBundle = bundleGraph.getReferencedBundle(
-        cond.ifTrueDependency,
-        bundle,
-      );
-      let ifFalseBundle = bundleGraph.getReferencedBundle(
-        cond.ifFalseDependency,
-        bundle,
-      );
+      // This bundle has a conditional dependency, we need to load the bundle group
 
       // Load conditional bundles with helper (and a dev mode with additional hints)
       loaderModules.push(
         `require('./helpers/conditional-loader${
           options.mode === 'development' ? '-dev' : ''
-        }')('${cond.key}', function (){return ${
-          (ifTrueBundle && getLoaderForBundle(bundle, ifTrueBundle)) ??
-          `Promise.resolve()`
-        }}, function (){return ${
-          (ifFalseBundle && getLoaderForBundle(bundle, ifFalseBundle)) ??
-          `Promise.resolve()`
-        }})`,
+        }')('${cond.key}', function (){return Promise.all([${cond.ifTrueBundles
+          .map((targetBundle) => getLoaderForBundle(bundle, targetBundle))
+          .join(',')}]);}, function (){return Promise.all([${cond.ifFalseBundles
+          .map((targetBundle) => getLoaderForBundle(bundle, targetBundle))
+          .join(',')}]);})`,
       );
     }
   }

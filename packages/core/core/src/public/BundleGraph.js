@@ -11,6 +11,7 @@ import type {
   FilePath,
   GraphVisitor,
   Symbol,
+  NamedBundle,
   SymbolResolution,
   Target,
 } from '@atlaspack/types';
@@ -336,11 +337,16 @@ export default class BundleGraph<TBundle: IBundle>
   // Given a set of dependencies, return any conditions where those dependencies are either
   // the true or false dependency for those conditions. This is currently used to work out which
   // conditions belong to a bundle in packaging.
-  getConditionsForDependencies(deps: Array<IDependency>): Set<{|
+  getConditionsForDependencies(
+    deps: Array<IDependency>,
+    bundle: NamedBundle,
+  ): Set<{|
     publicId: string,
     key: string,
     ifTrueDependency: IDependency,
     ifFalseDependency: IDependency,
+    ifTrueBundles: Array<NamedBundle>,
+    ifFalseBundles: Array<NamedBundle>,
     ifTrueAssetId: string,
     ifFalseAssetId: string,
   |}> {
@@ -351,20 +357,36 @@ export default class BundleGraph<TBundle: IBundle>
         depIds.includes(condition.ifTrueDependency.id) ||
         depIds.includes(condition.ifFalseDependency.id)
       ) {
-        const [trueAsset, falseAsset] = [
+        const [[trueAsset, ifTrueBundles], [falseAsset, ifFalseBundles]] = [
           condition.ifTrueDependency,
           condition.ifFalseDependency,
         ].map((dep) => {
-          const resolved = nullthrows(
-            this.#graph.resolveAsyncDependency(dep),
+          const resolvedAsync = nullthrows(
+            this.#graph.resolveAsyncDependency(
+              dep,
+              bundleToInternalBundle(bundle),
+            ),
             `Failed to resolve ${dep.id} with specifier '${
               dep.specifier
             }' from ${String(dep?.sourcePath)}`,
           );
-          if (resolved.type === 'asset') {
-            return resolved.value;
+          if (resolvedAsync.type === 'asset') {
+            return [
+              resolvedAsync.value,
+              [
+                nullthrows(
+                  this.#graph.getReferencedBundle(
+                    dep,
+                    bundleToInternalBundle(bundle),
+                  ),
+                ),
+              ],
+            ];
           } else {
-            return this.#graph.getAssetById(resolved.value.entryAssetId);
+            return [
+              this.#graph.getAssetById(resolvedAsync.value.entryAssetId),
+              this.#graph.getBundlesInBundleGroup(resolvedAsync.value),
+            ];
           }
         });
 
@@ -379,6 +401,8 @@ export default class BundleGraph<TBundle: IBundle>
             deps.find((dep) => dep.id === condition.ifFalseDependency.id),
             'ifFalseDependency was null',
           ),
+          ifTrueBundles,
+          ifFalseBundles,
           ifTrueAssetId: this.#graph.getAssetPublicId(trueAsset),
           ifFalseAssetId: this.#graph.getAssetPublicId(falseAsset),
         });

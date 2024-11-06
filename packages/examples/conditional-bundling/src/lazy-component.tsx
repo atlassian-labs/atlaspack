@@ -1,5 +1,8 @@
 import React from 'react';
-import Button from '@atlaskit/button/new';
+const Button = importCond<
+  typeof import('@atlaskit/button/new'),
+  typeof import('@atlaskit/button')
+>('my.feature.button', '@atlaskit/button', '@atlaskit/button/new');
 
 const Feature = importCond<
   typeof import('./feature-enabled'),
