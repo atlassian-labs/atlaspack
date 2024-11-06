@@ -619,14 +619,12 @@ mod tests {
   }
 
   #[tokio::test(flavor = "multi_thread")]
-  async fn supports_css_modules_composes() {
+  async fn supports_css_modules_composes_local() {
     let asset = Asset {
       id: "css-module".into(),
       file_path: "styles.module.css".into(),
       is_source: true,
-      code: Arc::new(Code::from(
-        ".root {display: 'block'} .other {composes: root; color: red}",
-      )),
+      code: ".root {display: 'block'} .other {composes: root; color: red}".into(),
       ..Default::default()
     };
 
@@ -635,9 +633,8 @@ mod tests {
     assert_eq!(
       result.asset,
       Asset {
-        code: Arc::new(
-          ".EcQGha_root {\n  display: \"block\";\n}\n\n.EcQGha_other {\n  color: red;\n}\n".into()
-        ),
+        code: ".EcQGha_root {\n  display: \"block\";\n}\n\n.EcQGha_other {\n  color: red;\n}\n"
+          .into(),
         unique_key: Some("css-module".into()),
         symbols: Some(vec![
           Symbol {
@@ -674,7 +671,63 @@ mod tests {
       AssetWithDependencies {
         asset: Asset {
           id: "9ca5591ff8d30a6a".into(),
-          code: Arc::new("module.exports[\"root\"] = `EcQGha_root`;\nmodule.exports[\"other\"] = `EcQGha_other ${module.exports['root']}`;\n".into()),
+          code: "module.exports[\"root\"] = `EcQGha_root`;\nmodule.exports[\"other\"] = `EcQGha_other ${module.exports['root']}`;\n".into(),
+          file_path: "styles.module.css".into(),
+          is_source: true,
+          ..Default::default()
+        },
+        dependencies: Vec::new()
+      }
+    );
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn supports_css_modules_composes_global() {
+    let asset = Asset {
+      id: "css-module".into(),
+      file_path: "styles.module.css".into(),
+      is_source: true,
+      code: ":global(.globalClass) {display: 'block'} .other {composes: globalClass from global; color: red}"
+        .into(),
+      ..Default::default()
+    };
+
+    let result = run_plugin(&asset).await.unwrap();
+
+    assert_eq!(
+      result.asset,
+      Asset {
+        code: ".globalClass {\n  display: \"block\";\n}\n\n.EcQGha_other {\n  color: red;\n}\n"
+          .into(),
+        unique_key: Some("css-module".into()),
+        symbols: Some(vec![
+          Symbol {
+            local: "default".into(),
+            exported: "default".into(),
+            loc: None,
+            is_weak: false,
+            is_esm_export: true,
+            self_referenced: false,
+          },
+          Symbol {
+            local: "EcQGha_other".into(),
+            exported: "other".into(),
+            loc: None,
+            is_weak: false,
+            is_esm_export: true,
+            self_referenced: false,
+          },
+        ]),
+        ..asset
+      }
+    );
+    assert_eq!(result.discovered_assets.len(), 1);
+    assert_eq!(
+      result.discovered_assets[0],
+      AssetWithDependencies {
+        asset: Asset {
+          id: "82961aca890a97d6".into(),
+          code: "module.exports[\"other\"] = `EcQGha_other globalClass`;\n".into(),
           file_path: "styles.module.css".into(),
           is_source: true,
           ..Default::default()
