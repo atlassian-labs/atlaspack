@@ -22,6 +22,9 @@ pub use package_json::Fields;
 pub use package_json::ModuleType;
 use package_json::PackageJson;
 pub use package_json::PackageJsonError;
+use parking_lot::RwLock;
+use parking_lot::RwLockReadGuard;
+use parking_lot::RwLockWriteGuard;
 pub use specifier::parse_package_specifier;
 pub use specifier::parse_scheme;
 pub use specifier::Specifier;
@@ -319,7 +322,7 @@ struct ResolveRequest<'a> {
   specifier_type: SpecifierType,
   from: &'a Path,
   flags: RequestFlags,
-  tsconfig: OnceCell<Option<TsConfig>>,
+  tsconfig: OnceCell<Option<Arc<RwLock<TsConfig>>>>,
   root_package: OnceCell<Option<Arc<PackageJson>>>,
   invalidations: &'a Invalidations,
   conditions: ExportsCondition,
@@ -944,13 +947,14 @@ impl<'a> ResolveRequest<'a> {
   ) -> Result<Option<Resolution>, ResolverError> {
     // TypeScript supports a moduleSuffixes option in tsconfig.json which allows suffixes
     // such as ".ios" to be appended just before the last extension.
-    let empty_string = String::from("");
-    let empty_string = [empty_string];
-    let tsconfig = self.tsconfig()?;
-    let module_suffixes = tsconfig
-      .as_ref()
-      .and_then(|tsconfig| tsconfig.module_suffixes.as_ref())
-      .map_or(empty_string.as_slice(), |v| v.as_slice());
+
+    let mut module_suffixes = vec![String::from("")];
+
+    if let Some(tsconfig) = self.tsconfig_read()? {
+      if let Some(module_suffixs) = tsconfig.module_suffixes.as_ref() {
+        module_suffixes = module_suffixs.clone()
+      };
+    }
 
     for suffix in module_suffixes {
       let mut p = if !suffix.is_empty() {
@@ -1083,7 +1087,7 @@ impl<'a> ResolveRequest<'a> {
   }
 
   fn resolve_tsconfig_paths(&self) -> Result<Option<Resolution>, ResolverError> {
-    if let Some(tsconfig) = self.tsconfig()? {
+    if let Some(tsconfig) = self.tsconfig_read()? {
       for path in tsconfig.paths(self.specifier) {
         // TODO: should aliases apply to tsconfig paths??
         if let Some(res) = self.load_path(&path, None)? {
@@ -1095,7 +1099,23 @@ impl<'a> ResolveRequest<'a> {
     Ok(None)
   }
 
-  fn tsconfig(&self) -> Result<&Option<TsConfig>, ResolverError> {
+  fn tsconfig_read(&self) -> Result<Option<RwLockReadGuard<'_, TsConfig>>, ResolverError> {
+    if let Some(tsconfig) = self.tsconfig()? {
+      Ok(Some(tsconfig.read()))
+    } else {
+      Ok(None)
+    }
+  }
+
+  fn tsconfig_write(&self) -> Result<Option<RwLockWriteGuard<'_, TsConfig>>, ResolverError> {
+    if let Some(tsconfig) = self.tsconfig()? {
+      Ok(Some(tsconfig.write()))
+    } else {
+      Ok(None)
+    }
+  }
+
+  fn tsconfig(&self) -> Result<&Option<Arc<RwLock<TsConfig>>>, ResolverError> {
     if self.resolver.flags.contains(Flags::TSCONFIG)
       && self
         .flags
@@ -1115,14 +1135,17 @@ impl<'a> ResolveRequest<'a> {
     }
   }
 
-  fn read_tsconfig(&self, path: PathBuf) -> Result<TsConfig, ResolverError> {
+  fn read_tsconfig(&self, path: PathBuf) -> Result<Arc<RwLock<TsConfig>>, ResolverError> {
     let tsconfig = self.invalidations.read(&path, || {
       let tsconfig = self.resolver.cache.read_tsconfig(&path, |tsconfig| {
-        for i in 0..tsconfig.extends.len() {
-          let path = match &tsconfig.extends[i] {
+        let extends = tsconfig.extends.read();
+        let mut compiler_options = tsconfig.compiler_options.write();
+
+        for i in 0..extends.len() {
+          let path = match &extends[i] {
             Specifier::Absolute(path) => path.to_owned(),
             Specifier::Relative(path) => {
-              let mut absolute_path = resolve_path(&tsconfig.compiler_options.path, path);
+              let mut absolute_path = resolve_path(&compiler_options.path, path);
 
               // TypeScript allows "." and ".." to implicitly refer to a tsconfig.json file.
               if path == Path::new(".") || path == Path::new("..") {
@@ -1148,10 +1171,10 @@ impl<'a> ResolveRequest<'a> {
 
               if !exists {
                 return Err(ResolverError::TsConfigExtendsNotFound {
-                  tsconfig: tsconfig.compiler_options.path.clone(),
+                  tsconfig: compiler_options.path.clone(),
                   error: Box::new(ResolverError::FileNotFound {
                     relative: path.to_path_buf(),
-                    from: tsconfig.compiler_options.path.clone(),
+                    from: compiler_options.path.clone(),
                   }),
                 });
               }
@@ -1175,14 +1198,14 @@ impl<'a> ResolveRequest<'a> {
                 &resolver,
                 specifier,
                 SpecifierType::Cjs,
-                &tsconfig.compiler_options.path,
+                &compiler_options.path,
                 self.invalidations,
               );
 
               let res = req
                 .resolve()
                 .map_err(|err| ResolverError::TsConfigExtendsNotFound {
-                  tsconfig: tsconfig.compiler_options.path.clone(),
+                  tsconfig: compiler_options.path.clone(),
                   error: Box::new(err),
                 })?;
 
@@ -1190,7 +1213,7 @@ impl<'a> ResolveRequest<'a> {
                 res
               } else {
                 return Err(ResolverError::TsConfigExtendsNotFound {
-                  tsconfig: tsconfig.compiler_options.path.clone(),
+                  tsconfig: compiler_options.path.clone(),
                   error: Box::new(ResolverError::UnknownError),
                 });
               }
@@ -1198,8 +1221,9 @@ impl<'a> ResolveRequest<'a> {
             _ => return Ok(()),
           };
 
-          let extended = self.read_tsconfig(path)?;
-          tsconfig.compiler_options.extend(&extended);
+          let tsconfig = self.read_tsconfig(path)?;
+          let extended = tsconfig.read();
+          compiler_options.extend(&extended);
         }
 
         Ok(())
