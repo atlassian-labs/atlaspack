@@ -24,7 +24,6 @@ use package_json::PackageJson;
 pub use package_json::PackageJsonError;
 use parking_lot::RwLock;
 use parking_lot::RwLockReadGuard;
-use parking_lot::RwLockWriteGuard;
 pub use specifier::parse_package_specifier;
 pub use specifier::parse_scheme;
 pub use specifier::Specifier;
@@ -947,7 +946,6 @@ impl<'a> ResolveRequest<'a> {
   ) -> Result<Option<Resolution>, ResolverError> {
     // TypeScript supports a moduleSuffixes option in tsconfig.json which allows suffixes
     // such as ".ios" to be appended just before the last extension.
-
     let mut module_suffixes = vec![String::from("")];
 
     if let Some(tsconfig) = self.tsconfig_read()? {
@@ -1102,14 +1100,6 @@ impl<'a> ResolveRequest<'a> {
   fn tsconfig_read(&self) -> Result<Option<RwLockReadGuard<'_, TsConfig>>, ResolverError> {
     if let Some(tsconfig) = self.tsconfig()? {
       Ok(Some(tsconfig.read()))
-    } else {
-      Ok(None)
-    }
-  }
-
-  fn tsconfig_write(&self) -> Result<Option<RwLockWriteGuard<'_, TsConfig>>, ResolverError> {
-    if let Some(tsconfig) = self.tsconfig()? {
-      Ok(Some(tsconfig.write()))
     } else {
       Ok(None)
     }
