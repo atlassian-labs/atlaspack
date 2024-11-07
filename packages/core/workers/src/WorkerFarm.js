@@ -244,7 +244,7 @@ export default class WorkerFarm extends EventEmitter {
   }
 
   startChild() {
-    logger.info({
+    logger.verbose({
       origin: '@atlaspack/workers',
       message: `Starting worker ${this.workers.size + 1}`,
     });
@@ -263,13 +263,13 @@ export default class WorkerFarm extends EventEmitter {
 
     worker.on('ready', () => {
       this.readyWorkers++;
-      logger.info({
+      logger.verbose({
         origin: '@atlaspack/workers',
         message: `Worker ready ${worker.id}`,
       });
 
       if (this.readyWorkers === this.options.maxConcurrentWorkers) {
-        logger.info({
+        logger.verbose({
           origin: '@atlaspack/workers',
           message: 'Finished starting worker threads',
         });

@@ -1,11 +1,19 @@
 // @flow strict-local
 
+import logger from '@atlaspack/logger';
 import type {Asset} from '@atlaspack/types';
 import type {MutableBundleGraph} from '@atlaspack/types';
 import {ContentGraph, type NodeId, Graph} from '@atlaspack/graph';
 import {bundleGraphToRootedGraph} from './bundleGraphToRootedGraph';
 import {convertToAcyclicGraph} from './oneCycleBreaker';
 import type {StronglyConnectedComponentNode} from './oneCycleBreaker';
+
+function debugLog(message: string) {
+  logger.info({
+    message,
+    origin: '@atlaspack/bundler-experimental',
+  });
+}
 
 /**
  * For all assets, build the dominance relationship of the asset with other
@@ -22,13 +30,13 @@ export function findAssetDominators(
   'root' | Asset | StronglyConnectedComponentNode<'root' | Asset>,
 > {
   // Build a simpler graph with a root at the top
-  console.log('converting graph');
+  debugLog('converting graph');
   const graph = bundleGraphToRootedGraph(bundleGraph);
-  console.log('finding cycles');
+  debugLog('finding cycles');
   const noCyclesGraph = convertToAcyclicGraph(graph);
-  console.log('dominating');
+  debugLog('dominating');
   const dominators = simpleFastDominance(noCyclesGraph);
-  console.log('dominator tree');
+  debugLog('dominator tree');
   const dominatorTree = buildDominatorTree(noCyclesGraph, dominators);
   return dominatorTree;
 }
@@ -57,11 +65,11 @@ export function buildDominatorTree<T>(
 
   for (let nodeId = 0; nodeId < dominators.length; nodeId++) {
     const node = graph.getNode(nodeId);
-    const contentKey = graph.getContentKeyByNodeId(nodeId);
     if (node === 'root' || node == null) {
       continue;
     }
 
+    const contentKey = graph.getContentKeyByNodeId(nodeId);
     const assetDominatorTreeNodeId =
       dominatorTree.getNodeIdByContentKey(contentKey);
 
@@ -109,13 +117,17 @@ export function simpleFastDominance<T, E: number>(
   const reversedPostOrder = postOrder.slice().reverse();
   const dominators = Array(graph.nodes.length).fill(null);
 
+  const postOrderIndexes = Array(graph.nodes.length).fill(null);
+  for (let i = 0; i < postOrder.length; i++) {
+    postOrderIndexes[postOrder[i]] = i;
+  }
+
   dominators[rootNodeId] = graph.rootNodeId;
 
   let changed = true;
 
   while (changed) {
     changed = false;
-    console.log('dominator iteration');
 
     for (let node of reversedPostOrder) {
       if (node === graph.rootNodeId) continue;
@@ -130,7 +142,7 @@ export function simpleFastDominance<T, E: number>(
           }
 
           newImmediateDominator = intersect(
-            postOrder,
+            postOrderIndexes,
             dominators,
             predecessor,
             newImmediateDominator,
@@ -200,7 +212,7 @@ export function getGraphPostOrder<T, E: number>(graph: Graph<T, E>): NodeId[] {
  * it is the closest to the node we're computing for.
  */
 export function intersect(
-  postOrder: NodeId[],
+  postOrderIndexes: number[],
   dominators: (NodeId | null)[],
   predecessor: NodeId,
   newImmediateDominator: NodeId,
@@ -208,10 +220,10 @@ export function intersect(
   let n1: number = predecessor;
   let n2: number = newImmediateDominator;
   while (n1 !== n2) {
-    while (postOrder.indexOf(n1) < postOrder.indexOf(n2)) {
+    while (postOrderIndexes[n1] < postOrderIndexes[n2]) {
       n1 = Number(dominators[n1]);
     }
-    while (postOrder.indexOf(n2) < postOrder.indexOf(n1)) {
+    while (postOrderIndexes[n2] < postOrderIndexes[n1]) {
       n2 = Number(dominators[n2]);
     }
   }

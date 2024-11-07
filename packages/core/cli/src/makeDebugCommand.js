@@ -1,6 +1,7 @@
 // @flow strict-local
 
 import {NodeFS} from '@atlaspack/fs';
+import logger from '@atlaspack/logger';
 import commander, {type commander$Command} from 'commander';
 import path from 'path';
 import {normalizeOptions, type Options} from './normalizeOptions';
@@ -37,7 +38,10 @@ export function makeDebugCommand(): commander$Command {
       shouldBuildLazily: true,
       watchBackend: 'watchman',
     });
-    console.log('Created atlaspack instance');
+    logger.info({
+      message: 'Created atlaspack instance',
+      origin: '@atlaspack/cli',
+    });
 
     return atlaspack;
   };
@@ -50,7 +54,10 @@ export function makeDebugCommand(): commander$Command {
         const atlaspack = await getInstance(args, opts, command);
 
         await atlaspack.unstable_invalidate();
-        console.log('Done invalidating cache');
+        logger.info({
+          message: 'Done invalidating cache',
+          origin: '@atlaspack/cli',
+        });
       } catch (err) {
         handleUncaughtException(err);
       }
@@ -65,7 +72,10 @@ export function makeDebugCommand(): commander$Command {
         const atlaspack = await getInstance(args, opts, command);
 
         await atlaspack.unstable_buildAssetGraph();
-        console.log('Done building asset graph');
+        logger.info({
+          message: 'Done building asset graph',
+          origin: '@atlaspack/cli',
+        });
         process.exit(0);
       } catch (err) {
         handleUncaughtException(err);
@@ -80,7 +90,10 @@ export function makeDebugCommand(): commander$Command {
       try {
         const atlaspack = await getInstance(entries, opts, command);
         await atlaspack.unstable_getBundlerStats();
-        console.log('Done getting statistics');
+        logger.info({
+          message: 'Done getting statistics',
+          origin: '@atlaspack/cli',
+        });
         process.exit(0);
       } catch (err) {
         handleUncaughtException(err);

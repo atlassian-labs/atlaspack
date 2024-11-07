@@ -175,9 +175,14 @@ export function getChunkEntryPoints(
   rootedGraph: ContentGraph<'root' | Asset>,
   dominators: PackagingInputGraph,
 ): Map<string, Set<string>> {
-  const chunks = getChunks(dominators).map(
-    (id) => getAssetNode(dominators, id).id,
-  );
+  const chunks = getChunks(dominators).map((id) => {
+    const node = dominators.getNode(id);
+    if (node == null || node === 'root') {
+      throw new Error('Invariant violation');
+    }
+
+    return node.id;
+  });
 
   const chunkSet = new Set(chunks);
   const result = new Map();

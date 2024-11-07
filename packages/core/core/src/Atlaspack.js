@@ -588,26 +588,35 @@ export default class Atlaspack {
     const assetGraphResult: AssetGraphRequestResult =
       await this.unstable_buildAssetGraph(true);
     const assetGraph = assetGraphResult.assetGraph;
-    console.log({message: 'Creating bundle graph'});
+    logger.info({message: 'Creating bundle graph', origin: '@atlaspack/core'});
     const bundleGraph = InternalBundleGraph.fromAssetGraph(assetGraph, false);
     const mutableBundleGraph = new MutableBundleGraph(
       bundleGraph,
       nullthrows(this.#resolvedOptions),
     );
-    console.log({message: 'Running bundler'});
+    logger.info({message: 'Running bundler', origin: '@atlaspack/core'});
     const dominators = findAssetDominators(mutableBundleGraph);
-    console.log({message: 'Done running dominators'});
+    logger.info({
+      message: 'Done running dominators',
+      origin: '@atlaspack/core',
+    });
     const packages = createPackages(mutableBundleGraph, dominators);
-    console.log({message: 'Done creating packages'});
+    logger.info({message: 'Done creating packages', origin: '@atlaspack/core'});
 
     const chunks = dominators.getNodeIdsConnectedFrom(
       dominators.getNodeIdByContentKey('root'),
     );
-    console.log({message: 'Number of dominator chunks: ' + chunks.length});
+    logger.info({
+      message: 'Number of dominator chunks: ' + chunks.length,
+      origin: '@atlaspack/core',
+    });
     const packageNodes = packages.getNodeIdsConnectedFrom(
       packages.getNodeIdByContentKey('root'),
     );
-    console.log({message: 'Number of packages: ' + packageNodes.length});
+    logger.info({
+      message: 'Number of packages: ' + packageNodes.length,
+      origin: '@atlaspack/core',
+    });
   }
 
   /**
