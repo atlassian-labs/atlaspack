@@ -859,4 +859,29 @@ describe('css modules', () => {
       assert(contents.includes('.baz'));
     },
   );
+
+  it('should handle css composes', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      css-composes
+        css-one.module.css:
+          .composed {
+            background: pink;
+          }
+          .foo {
+            composes: composed;
+            color: white;
+          }
+        index.js:
+          import {foo} from './css-one.module.css';
+          export {foo};
+    `;
+
+    let b = await bundle(path.join(__dirname, 'css-composes/index.js'), {
+      inputFS: overlayFS,
+    });
+
+    let result = await run(b);
+
+    assert.equal(result.foo, 'lRcZhq_foo lRcZhq_composed');
+  });
 });
