@@ -126,4 +126,53 @@ digraph simplified_graph {
       ];
     },
   );
+
+  dotTest(__filename, 'async dependencies are linked to the root', async () => {
+    const entryDir = 'test';
+    await fixtureFromGraph(entryDir, overlayFS, [
+      asset('page1.js', [{to: 'library1.js', type: 'async'}, 'library2.js']),
+      asset('library1.js'),
+      asset('library2.js'),
+    ]);
+    const {mutableBundleGraph} = await setupBundlerTest([
+      path.join(entryDir, 'page1.js'),
+    ]);
+
+    const simplfiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const dot = rootedGraphToDot(
+      entryDir,
+      simplfiedGraph,
+      'Simplified Graph',
+      'simplified_graph',
+    );
+    assert.equal(
+      dot,
+      `
+digraph simplified_graph {
+  labelloc="t";
+  label="Simplified Graph";
+
+  "root";
+  "root" -> "library1.js";
+  "root" -> "page1.js";
+  "esmodule_helpers.js";
+  "library1.js";
+  "library2.js";
+  "page1.js";
+
+  "library1.js" -> "esmodule_helpers.js";
+  "library2.js" -> "esmodule_helpers.js";
+  "page1.js" -> "esmodule_helpers.js";
+  "page1.js" -> "library2.js";
+}
+        `.trim(),
+    );
+
+    return [
+      {
+        label: 'simplifiedGraph',
+        dot,
+      },
+    ];
+  });
 });

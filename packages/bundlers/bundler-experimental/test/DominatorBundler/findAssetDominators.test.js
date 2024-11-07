@@ -37,15 +37,15 @@ digraph dominators {
   label="Dominators";
 
   "root";
+  "root" -> "async.js";
+  "root" -> "esmodule_helpers.js";
   "root" -> "test.js";
   "async.js";
   "dependency.js";
   "esmodule_helpers.js";
   "test.js";
 
-  "test.js" -> "async.js";
   "test.js" -> "dependency.js";
-  "test.js" -> "esmodule_helpers.js";
 }
       `.trim(),
       );

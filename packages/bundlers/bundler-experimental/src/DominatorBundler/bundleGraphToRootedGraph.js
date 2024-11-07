@@ -10,6 +10,9 @@ import {ContentGraph} from '@atlaspack/graph';
  *
  * Put a root node at the top of the graph, linked to the entry assets.
  *
+ * All the async boundaries become linked to the root node instead of the
+ * assets that depend on them.
+ *
  * Example:
  *
  * ```
@@ -52,7 +55,7 @@ export function bundleGraphToRootedGraph(
     const assetNodeId = graph.getNodeIdByContentKey(assetId);
 
     for (let dependency of bundleGraph.getIncomingDependencies(childAsset)) {
-      if (dependency.isEntry) {
+      if (dependency.isEntry || dependency.priority !== 'sync') {
         graph.addEdge(rootNodeId, assetNodeId);
       } else {
         const parentAsset = bundleGraph.getAssetWithDependency(dependency);

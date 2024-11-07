@@ -1,0 +1,17 @@
+digraph simplified_graph {
+  labelloc="t";
+  label="Simplified Graph";
+
+  "root";
+  "root" -> "library1.js";
+  "root" -> "page1.js";
+  "esmodule_helpers.js";
+  "library1.js";
+  "library2.js";
+  "page1.js";
+
+  "library1.js" -> "esmodule_helpers.js";
+  "library2.js" -> "esmodule_helpers.js";
+  "page1.js" -> "esmodule_helpers.js";
+  "page1.js" -> "library2.js";
+}

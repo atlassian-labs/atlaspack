@@ -52,6 +52,28 @@ export default function run() { return [d0, d1] }
     );
   });
 
+  it('will create files with async imports between themselves', async () => {
+    const fs = new MemoryFS();
+    await fixtureFromGraph('dir', fs, [
+      asset('file1.js', ['file2.js', {to: 'file3.js', type: 'async'}]),
+      asset('file2.js'),
+      asset('file3.js'),
+    ]);
+
+    assert.deepEqual(await fs.readdir('dir'), [
+      'file1.js',
+      'file2.js',
+      'file3.js',
+    ]);
+    assert.equal(
+      await fs.readFile('dir/file1.js', 'utf8'),
+      `
+import d0 from './file2.js';
+export default function run() { return [d0, import('./file3.js')] }
+      `.trim(),
+    );
+  });
+
   describe('dotFromGraph', () => {
     it('creates a dot string from a graph', () => {
       const graph = [

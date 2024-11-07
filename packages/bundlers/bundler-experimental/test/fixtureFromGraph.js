@@ -90,12 +90,24 @@ export async function fixtureFromGraph(
   for (let entry of entries) {
     if (entry.type === 'asset') {
       const dependencies = entry.value.dependencies ?? [];
-      const symbols = dependencies.map((_, i) => `d${i}`);
+      const symbols = dependencies
+        .filter((d) => d.value.type === 'sync')
+        .map((_, i) => `d${i}`);
+      const asyncDependencies = dependencies
+        .filter((d) => d.value.type === 'async')
+        .map((d) => `import('./${d.value.to}')`);
       const contents = [
-        ...dependencies.map((dependency, i) => {
-          return `import ${symbols[i]} from './${dependency.value.to}';`;
-        }),
-        `export default function run() { return [${symbols.join(', ')}] }`,
+        ...dependencies
+          .filter((d) => {
+            return d.value.type === 'sync';
+          })
+          .map((dependency, i) => {
+            return `import ${symbols[i]} from './${dependency.value.to}';`;
+          }),
+        `export default function run() { return [${[
+          ...symbols,
+          ...asyncDependencies,
+        ].join(', ')}] }`,
       ].join('\n');
 
       await fs.writeFile(path.join(dirname, entry.value.filePath), contents);
