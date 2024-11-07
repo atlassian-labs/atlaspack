@@ -161,7 +161,7 @@ async function run(
 
     if (process.stdin.isTTY && process.stdin.isRaw) {
       // $FlowFixMe
-      process.stdin.setRawMode(false);
+      // process.stdin.setRawMode(false);
     }
 
     disposable.dispose();
@@ -171,43 +171,42 @@ async function run(
   const isWatching = command.name() === 'watch' || command.name() === 'serve';
   if (process.stdin.isTTY) {
     // $FlowFixMe
-    process.stdin.setRawMode(true);
+    // process.stdin.setRawMode(true);
     require('readline').emitKeypressEvents(process.stdin);
 
-    let stream = process.stdin.on('keypress', async (char, key) => {
-      if (!key.ctrl) {
-        return;
-      }
-
-      switch (key.name) {
-        case 'c':
-          // Detect the ctrl+c key, and gracefully exit after writing the asset graph to the cache.
-          // This is mostly for tools that wrap Atlaspack as a child process like yarn and npm.
-          //
-          // Setting raw mode prevents SIGINT from being sent in response to ctrl-c:
-          // https://nodejs.org/api/tty.html#tty_readstream_setrawmode_mode
-          //
-          // We don't use the SIGINT event for this because when run inside yarn, the parent
-          // yarn process ends before Atlaspack and it appears that Atlaspack has ended while it may still
-          // be cleaning up. Handling events from stdin prevents this impression.
-          //
-          // When watching, a 0 success code is acceptable when Atlaspack is interrupted with ctrl-c.
-          // When building, fail with a code as if we received a SIGINT.
-          await exit(isWatching ? 0 : SIGINT_EXIT_CODE);
-          break;
-        case 'e':
-          await (atlaspack.isProfiling
-            ? atlaspack.stopProfiling()
-            : atlaspack.startProfiling());
-          break;
-        case 'y':
-          await atlaspack.takeHeapSnapshot();
-          break;
-      }
-    });
+    // let stream = process.stdin.on('keypress', async (char, key) => {
+    //   if (!key.ctrl) {
+    //     return;
+    //   }
+    //   switch (key.name) {
+    //     case 'c':
+    //       // Detect the ctrl+c key, and gracefully exit after writing the asset graph to the cache.
+    //       // This is mostly for tools that wrap Atlaspack as a child process like yarn and npm.
+    //       //
+    //       // Setting raw mode prevents SIGINT from being sent in response to ctrl-c:
+    //       // https://nodejs.org/api/tty.html#tty_readstream_setrawmode_mode
+    //       //
+    //       // We don't use the SIGINT event for this because when run inside yarn, the parent
+    //       // yarn process ends before Atlaspack and it appears that Atlaspack has ended while it may still
+    //       // be cleaning up. Handling events from stdin prevents this impression.
+    //       //
+    //       // When watching, a 0 success code is acceptable when Atlaspack is interrupted with ctrl-c.
+    //       // When building, fail with a code as if we received a SIGINT.
+    //       await exit(isWatching ? 0 : SIGINT_EXIT_CODE);
+    //       break;
+    //     case 'e':
+    //       await (atlaspack.isProfiling
+    //         ? atlaspack.stopProfiling()
+    //         : atlaspack.startProfiling());
+    //       break;
+    //     case 'y':
+    //       await atlaspack.takeHeapSnapshot();
+    //       break;
+    //   }
+    // });
 
     disposable.add(() => {
-      stream.destroy();
+      // stream.destroy();
     });
   }
 

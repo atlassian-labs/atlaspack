@@ -586,7 +586,7 @@ export default class Atlaspack {
 
   async unstable_getBundlerStats() {
     const assetGraphResult: AssetGraphRequestResult =
-      await this.unstable_buildAssetGraph(false);
+      await this.unstable_buildAssetGraph(true);
     const assetGraph = assetGraphResult.assetGraph;
     console.log({message: 'Creating bundle graph'});
     const bundleGraph = InternalBundleGraph.fromAssetGraph(assetGraph, false);

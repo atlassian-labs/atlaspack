@@ -244,6 +244,11 @@ export default class WorkerFarm extends EventEmitter {
   }
 
   startChild() {
+    logger.info({
+      origin: '@atlaspack/workers',
+      message: `Starting worker ${this.workers.size + 1}`,
+    });
+
     let worker = new Worker({
       forcedKillTime: this.options.forcedKillTime,
       backend: this.options.backend,
@@ -258,7 +263,16 @@ export default class WorkerFarm extends EventEmitter {
 
     worker.on('ready', () => {
       this.readyWorkers++;
+      logger.info({
+        origin: '@atlaspack/workers',
+        message: `Worker ready ${worker.id}`,
+      });
+
       if (this.readyWorkers === this.options.maxConcurrentWorkers) {
+        logger.info({
+          origin: '@atlaspack/workers',
+          message: 'Finished starting worker threads',
+        });
         this.emit('ready');
       }
       this.processQueue();

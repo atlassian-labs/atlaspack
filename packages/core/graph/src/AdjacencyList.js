@@ -613,6 +613,19 @@ export default class AdjacencyList<TEdgeType: number = 1> {
     }
   }
 
+  forEachNodeIdConnectedTo(to: NodeId, fn: (nodeId: NodeId) => void): NodeId[] {
+    let node = this.#nodes.head(to);
+    while (node !== null) {
+      let edge = this.#nodes.firstIn(node);
+      while (edge !== null) {
+        let from = this.#edges.from(edge);
+        fn(from);
+        edge = this.#edges.nextIn(edge);
+      }
+      node = this.#nodes.next(node);
+    }
+  }
+
   /**
    * Get the list of node ids connected to this node.
    *

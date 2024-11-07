@@ -115,26 +115,28 @@ export function simpleFastDominance<T, E: number>(
 
   while (changed) {
     changed = false;
+    console.log('dominator iteration');
 
     for (let node of reversedPostOrder) {
       if (node === graph.rootNodeId) continue;
 
-      const predecessors = graph.getNodeIdsConnectedTo(node);
+      let newImmediateDominator = null;
+      graph.forEachNodeIdConnectedTo(node, (predecessor) => {
+        if (newImmediateDominator == null) {
+          newImmediateDominator = predecessor;
+        } else {
+          if (dominators[predecessor] == null) {
+            return;
+          }
 
-      let newImmediateDominator = predecessors[0];
-      for (let i = 1; i < predecessors.length; i++) {
-        const predecessor = predecessors[i];
-        if (dominators[predecessor] == null) {
-          continue;
+          newImmediateDominator = intersect(
+            postOrder,
+            dominators,
+            predecessor,
+            newImmediateDominator,
+          );
         }
-
-        newImmediateDominator = intersect(
-          postOrder,
-          dominators,
-          predecessor,
-          newImmediateDominator,
-        );
-      }
+      });
 
       if (dominators[node] !== newImmediateDominator) {
         dominators[node] = newImmediateDominator;
