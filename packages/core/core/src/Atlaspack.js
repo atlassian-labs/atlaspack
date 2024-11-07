@@ -69,6 +69,8 @@ import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
 import MutableBundleGraph from './public/MutableBundleGraph';
+import {hashString} from '@atlaspack/rust';
+import fs from 'fs';
 
 registerCoreWithSerializer();
 
@@ -585,38 +587,77 @@ export default class Atlaspack {
   }
 
   async unstable_getBundlerStats() {
+    const log = (message) => {
+      logger.info({
+        message,
+        origin: '@atlaspack/core',
+      });
+    };
+
     const assetGraphResult: AssetGraphRequestResult =
       await this.unstable_buildAssetGraph(true);
     const assetGraph = assetGraphResult.assetGraph;
-    logger.info({message: 'Creating bundle graph', origin: '@atlaspack/core'});
+    log('Creating bundle graph');
     const bundleGraph = InternalBundleGraph.fromAssetGraph(assetGraph, false);
     const mutableBundleGraph = new MutableBundleGraph(
       bundleGraph,
       nullthrows(this.#resolvedOptions),
     );
-    logger.info({message: 'Running bundler', origin: '@atlaspack/core'});
+    log('Running bundler');
     const dominators = findAssetDominators(mutableBundleGraph);
-    logger.info({
-      message: 'Done running dominators',
-      origin: '@atlaspack/core',
-    });
+    log('Done running dominators');
     const packages = createPackages(mutableBundleGraph, dominators);
-    logger.info({message: 'Done creating packages', origin: '@atlaspack/core'});
+    log('Done creating packages');
 
     const chunks = dominators.getNodeIdsConnectedFrom(
       dominators.getNodeIdByContentKey('root'),
     );
-    logger.info({
-      message: 'Number of dominator chunks: ' + chunks.length,
-      origin: '@atlaspack/core',
-    });
+    log('==> number of dominator chunks: ' + chunks.length);
     const packageNodes = packages.getNodeIdsConnectedFrom(
       packages.getNodeIdByContentKey('root'),
     );
-    logger.info({
-      message: 'Number of packages: ' + packageNodes.length,
-      origin: '@atlaspack/core',
-    });
+    log('==> number of packages: ' + packageNodes.length);
+
+    const packageArray = [];
+    for (let packageNodeId of packageNodes) {
+      let packageNode = packages.getNode(packageNodeId);
+      if (packageNode == null || packageNode === 'root') {
+        continue;
+      }
+
+      if (packageNode.type === 'asset') {
+        log('Asset package: ' + packageNode.filePath);
+        const assets = [];
+        packages.traverse((nodeId) => {
+          const node = packages.getNode(nodeId);
+          if (node !== 'root' && node != null && node.type !== 'package') {
+            assets.push(node.filePath);
+          }
+        }, packageNodeId);
+        log('===> number of assets ' + assets.length);
+        packageArray.push({
+          package: packageNode.id,
+          rootAsset: packageNode.filePath,
+          assets,
+        });
+      } else {
+        log('Asset group package: ' + hashString(packageNode.id));
+        const assets = [];
+        packages.traverse((nodeId) => {
+          const node = packages.getNode(nodeId);
+          if (node !== 'root' && node != null && node.type !== 'package') {
+            assets.push(node.filePath);
+          }
+        }, packageNodeId);
+        log('===> number of assets ' + assets.length);
+        packageArray.push({
+          package: packageNode.id,
+          assets,
+        });
+      }
+    }
+
+    fs.writeFileSync('./packages.json', JSON.stringify(packageArray, null, 2));
   }
 
   /**
