@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, HashSet};
+use std::ops::Deref;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
 use async_trait::async_trait;
@@ -135,15 +137,14 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
     // Normalize the asset's environment so that properties that only affect JS don't cause CSS to be duplicated.
     // For example, with ESModule and CommonJS targets, only a single shared CSS bundle should be produced.
-    asset.env = atlaspack_core::types::Environment {
+    asset.env = Arc::new(atlaspack_core::types::Environment {
       context: EnvironmentContext::Browser,
       engines: Engines {
         browsers: asset.env.engines.browsers.clone(),
         ..Default::default()
       },
-      ..(**asset.env).clone()
-    }
-    .into();
+      ..asset.env.deref().clone()
+    });
 
     let preserve_imports = asset
       .meta
@@ -374,7 +375,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
           dependencies.push(Dependency {
             // Point this at the root asset
             specifier: unique_key.clone(),
-            specifier_type: SpecifierType::Esm,
+            specifier_type: SpecifierType::VirtualFile,
             symbols: Some(symbols),
             env: asset.env.clone(),
             source_asset_id: Some(asset.id.clone()),

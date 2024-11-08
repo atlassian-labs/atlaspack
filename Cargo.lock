@@ -447,7 +447,6 @@ dependencies = [
  "serde-value",
  "serde_json",
  "serde_repr",
- "thread_local",
  "tokio",
  "tracing",
  "tracing-subscriber",

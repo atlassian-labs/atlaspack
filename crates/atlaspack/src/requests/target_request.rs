@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::hash::Hash;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigFile;
@@ -382,7 +383,7 @@ impl TargetRequest {
           .clone()
           .unwrap_or_else(|| default_dist_dir(&package_json.path)),
         dist_entry: None,
-        env: Environment {
+        env: Arc::new(Environment {
           context,
           engines: package_json_engines,
           include_node_modules: IncludeNodeModules::from(context),
@@ -405,8 +406,7 @@ impl TargetRequest {
             .source_maps
             .then(TargetSourceMapOptions::default),
           source_type: SourceType::Module,
-        }
-        .into(),
+        }),
         loc: None,
         name: String::from("default"),
         public_url: self.default_target_options.public_url.clone(),
@@ -538,7 +538,7 @@ impl TargetRequest {
         }
       },
       dist_entry,
-      env: Environment {
+      env: Arc::new(Environment {
         context,
         engines,
         include_node_modules: target_descriptor
@@ -569,8 +569,7 @@ impl TargetRequest {
           },
         },
         ..Environment::default()
-      }
-      .into(),
+      }),
       loc: None, // TODO
       name: String::from(target_name),
       public_url: target_descriptor
@@ -673,11 +672,10 @@ mod tests {
   fn default_target() -> Target {
     Target {
       dist_dir: PathBuf::from("packages/test/dist"),
-      env: Environment {
+      env: Arc::new(Environment {
         output_format: OutputFormat::Global,
         ..Environment::default()
-      }
-      .into(),
+      }),
       name: String::from("default"),
       ..Target::default()
     }
@@ -957,8 +955,7 @@ mod tests {
             context: EnvironmentContext::Browser,
             output_format: OutputFormat::CommonJS,
             ..builtin_default_env()
-          })
-          .into(),
+          }),
           name: String::from("browser"),
           ..Target::default()
         }]
@@ -993,8 +990,7 @@ mod tests {
             context: EnvironmentContext::Browser,
             output_format: OutputFormat::EsModule,
             ..builtin_default_env()
-          })
-          .into(),
+          }),
           name: String::from("browser"),
           ..Target::default()
         }]
@@ -1017,8 +1013,7 @@ mod tests {
             context: EnvironmentContext::Node,
             output_format: OutputFormat::CommonJS,
             ..builtin_default_env()
-          })
-          .into(),
+          }),
           name: String::from("main"),
           ..Target::default()
         }]
@@ -1054,8 +1049,7 @@ mod tests {
             output_format: OutputFormat::CommonJS,
             should_optimize: true,
             ..builtin_default_env()
-          })
-          .into(),
+          }),
           name: String::from("main"),
           ..Target::default()
         }]
@@ -1078,8 +1072,7 @@ mod tests {
             context: EnvironmentContext::Node,
             output_format: OutputFormat::EsModule,
             ..builtin_default_env()
-          })
-          .into(),
+          }),
           name: String::from("module"),
           ..Target::default()
         }]
@@ -1115,8 +1108,7 @@ mod tests {
             output_format: OutputFormat::EsModule,
             should_optimize: true,
             ..builtin_default_env()
-          })
-          .into(),
+          }),
           name: String::from("module"),
           ..Target::default()
         }]
@@ -1151,8 +1143,7 @@ mod tests {
             context: EnvironmentContext::Node,
             output_format: OutputFormat::EsModule,
             ..builtin_default_env()
-          })
-          .into(),
+          }),
           name: String::from("types"),
           ..Target::default()
         }]
@@ -1175,8 +1166,7 @@ mod tests {
             context: EnvironmentContext::Node,
             output_format: OutputFormat::CommonJS,
             ..builtin_default_env()
-          })
-          .into(),
+          }),
           name: String::from("types"),
           ..Target::default()
         }]
@@ -1221,8 +1211,7 @@ mod tests {
               context: EnvironmentContext::Browser,
               output_format: OutputFormat::CommonJS,
               ..env()
-            })
-            .into(),
+            }),
             name: String::from("browser"),
             ..Target::default()
           },
@@ -1233,8 +1222,7 @@ mod tests {
               context: EnvironmentContext::Node,
               output_format: OutputFormat::CommonJS,
               ..env()
-            })
-            .into(),
+            }),
             name: String::from("main"),
             ..Target::default()
           },
@@ -1245,8 +1233,7 @@ mod tests {
               context: EnvironmentContext::Node,
               output_format: OutputFormat::EsModule,
               ..env()
-            })
-            .into(),
+            }),
             name: String::from("module"),
             ..Target::default()
           },
@@ -1257,8 +1244,7 @@ mod tests {
               context: EnvironmentContext::Node,
               output_format: OutputFormat::CommonJS,
               ..env()
-            })
-            .into(),
+            }),
             name: String::from("types"),
             ..Target::default()
           },
@@ -1286,8 +1272,7 @@ mod tests {
             should_optimize: true,
             should_scope_hoist: false,
             ..Environment::default()
-          })
-          .into(),
+          }),
           name: String::from("custom"),
           ..Target::default()
         }]
@@ -1327,8 +1312,7 @@ mod tests {
             output_format: OutputFormat::CommonJS,
             should_optimize: true,
             ..Environment::default()
-          })
-          .into(),
+          }),
           name: String::from("custom"),
           ..Target::default()
         }]
@@ -1371,8 +1355,7 @@ mod tests {
             output_format: OutputFormat::Global,
             should_optimize: true,
             ..Environment::default()
-          })
-          .into(),
+          }),
           name: String::from("custom"),
           ..Target::default()
         }]
@@ -1397,8 +1380,7 @@ mod tests {
               output_format: OutputFormat::CommonJS,
               should_optimize: true,
               ..Environment::default()
-            })
-            .into(),
+            }),
             name: String::from("custom"),
             ..Target::default()
           }]
@@ -1476,8 +1458,7 @@ mod tests {
               output_format,
               should_optimize: true,
               ..Environment::default()
-            })
-            .into(),
+            }),
             name: String::from("custom"),
             ..Target::default()
           }],

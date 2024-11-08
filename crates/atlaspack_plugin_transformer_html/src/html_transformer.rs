@@ -246,7 +246,7 @@ mod test {
       HtmlTransformation {
         dependencies: vec![Dependency {
           bundle_behavior: Some(BundleBehavior::Inline),
-          env: env.clone().into(),
+          env: env.clone(),
           source_asset_id: Some(String::from("test")),
           source_asset_type: Some(FileType::Html),
           source_path: Some(PathBuf::from("main.html")),
@@ -257,7 +257,7 @@ mod test {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),
             code: Code::from(script),
-            env: env.clone().into(),
+            env: env.clone(),
             file_path: PathBuf::from("main.html"),
             file_type: FileType::Js,
             id: String::from("b0deada2a458cc5f"),

@@ -110,7 +110,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     let run_transformer_opts = RpcTransformerOpts {
       key: self.plugin_node.package_name.clone(),
       options: state.rpc_plugin_options.clone(),
-      env: (*asset_env).clone(),
+      env: asset_env.clone(),
       asset: Asset {
         code: Default::default(),
         ..asset

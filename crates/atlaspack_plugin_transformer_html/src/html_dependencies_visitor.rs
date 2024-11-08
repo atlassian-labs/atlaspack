@@ -41,7 +41,7 @@ impl HtmlDependenciesVisitor {
 
   fn add_url_dependency(&mut self, specifier: String) -> String {
     let dependency = Dependency {
-      env: self.context.env.clone().into(),
+      env: self.context.env.clone(),
       priority: Priority::Lazy,
       source_asset_id: Some(self.context.source_asset_id.clone()),
       source_asset_type: Some(FileType::Html),
@@ -156,7 +156,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
             } else {
               None
             },
-            env: env.clone().into(),
+            env: env.clone(),
             is_esm: source_type == SourceType::Module,
             priority: match src_attr {
               None => Priority::Sync,
@@ -167,7 +167,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
             source_path: self.context.source_path.clone(),
             specifier: specifier.clone(),
             specifier_type: match src_attr {
-              None => SpecifierType::Esm,
+              None => SpecifierType::VirtualFile,
               Some(_) => SpecifierType::Url,
             },
             ..Default::default()
@@ -239,12 +239,12 @@ impl DomVisitor for HtmlDependenciesVisitor {
           );
 
           self.dependencies.push(Dependency {
-            env: self.context.env.clone().into(),
+            env: self.context.env.clone(),
             source_asset_id: Some(self.context.source_asset_id.clone()),
             source_asset_type: Some(FileType::Html),
             source_path: self.context.source_path.clone(),
             specifier: specifier.clone(),
-            specifier_type: SpecifierType::Esm,
+            specifier_type: SpecifierType::VirtualFile,
             ..Dependency::default()
           });
 

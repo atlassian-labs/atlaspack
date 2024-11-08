@@ -362,6 +362,7 @@ impl ResolverPlugin for AtlaspackResolver {
         SpecifierType::Url => atlaspack_resolver::SpecifierType::Url,
         // TODO: what should specifier custom map to?
         SpecifierType::Custom => atlaspack_resolver::SpecifierType::Esm,
+        _ => atlaspack_resolver::SpecifierType::Esm,
       },
       resolve_options,
     );

@@ -486,7 +486,7 @@ mod tests {
     assert_eq!(result, Some(vec![1, 2, 3, 3, 3, 3, 3, 3, 4]));
   }
 
-  // #[test]
+  #[test]
   fn database_writer_thread_read_within_transaction() {
     let db_path = temp_dir()
       .join("lmdb-js-lite")

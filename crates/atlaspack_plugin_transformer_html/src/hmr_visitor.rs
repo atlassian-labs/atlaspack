@@ -39,7 +39,7 @@ impl DomVisitor for HMRVisitor {
           {
             let mut attrs = Attrs::new(&mut attrs);
             let dependency = Dependency {
-              env: self.context.env.clone().into(),
+              env: self.context.env.clone(),
               priority: Priority::Parallel,
               specifier: "".to_owned(),
               specifier_type: SpecifierType::Url,

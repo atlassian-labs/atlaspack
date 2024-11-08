@@ -136,7 +136,7 @@ export function mergeEnvironments(
   });
 }
 
-export function getEnvironmentHash(env: Environment): string {
+function getEnvironmentHash(env: Environment): string {
   return createEnvironmentId({
     context: env.context,
     engines: env.engines,

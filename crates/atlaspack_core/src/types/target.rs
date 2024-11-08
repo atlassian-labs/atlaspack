@@ -6,14 +6,13 @@ use serde::Serialize;
 
 use super::environment::Environment;
 use super::source::SourceLocation;
-use super::EnvironmentRef;
 
 /// A target represents how and where source code is compiled
 ///
 /// For example, a "modern" target would output code that can run on the latest browsers while a
 /// "legacy" target generates code compatible with older browsers.
 ///
-#[derive(PartialEq, Clone, Debug, Hash, Deserialize, Serialize)]
+#[derive(PartialEq, Clone, Debug, Deserialize, Hash, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Target {
   /// The output folder for compiled bundles
@@ -26,7 +25,7 @@ pub struct Target {
   ///
   /// This influences how Atlaspack compiles your code, including what syntax to transpile.
   ///
-  pub env: EnvironmentRef,
+  pub env: Arc<Environment>,
 
   /// The location that created the target
   ///
@@ -52,7 +51,7 @@ impl Default for Target {
     Self {
       dist_dir: PathBuf::default(),
       dist_entry: None,
-      env: Arc::new(Environment::default()).into(),
+      env: Arc::new(Environment::default()),
       loc: None,
       name: String::from("default"),
       public_url: String::from("/"),

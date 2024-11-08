@@ -138,6 +138,7 @@ impl Atlaspack {
       let asset_graph = match request_result {
         RequestResult::AssetGraph(result) => {
           self.commit_assets(result.graph.assets.as_slice()).unwrap();
+
           result.graph
         }
         _ => panic!("TODO"),

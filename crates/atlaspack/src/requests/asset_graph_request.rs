@@ -114,7 +114,11 @@ impl AssetGraphBuilder {
           self.handle_asset_result(result, request_id);
         }
         Ok((RequestResult::Path(result), request_id)) => {
-          tracing::debug!("Handling PathRequestOutput");
+          let path = match &result {
+            PathRequestOutput::Excluded => "<excluded>",
+            PathRequestOutput::Resolved { path, .. } => path.as_os_str().to_str().unwrap(),
+          };
+          tracing::debug!(%path, %request_id, "Handling PathRequestOutput");
           self.handle_path_result(result, request_id);
         }
         Err(err) => return Err(err),
@@ -151,7 +155,7 @@ impl AssetGraphBuilder {
         query,
       } => AssetRequest {
         code: code.clone(),
-        env: dependency.env.clone().into(),
+        env: dependency.env.clone(),
         file_path: path,
         project_root: self.request_context.project_root.clone(),
         pipeline: pipeline.clone(),
@@ -292,6 +296,8 @@ impl AssetGraphBuilder {
     }
 
     for (_id, dependency) in unique_deps.into_iter() {
+      tracing::debug!("Adding dependency to asset {}", dependency.specifier);
+
       // Check if this dependency points to a discovered_asset
       let discovered_asset = discovered_assets.iter().find(|discovered_asset| {
         discovered_asset
@@ -393,11 +399,15 @@ impl AssetGraphBuilder {
       dependency: dependency.clone(),
     };
 
+    if request_id_to_dep_node_index.contains_key(&request.id()) {
+      return;
+    }
+
     request_id_to_dep_node_index.insert(request.id(), dependency_node_index);
-    tracing::debug!(
-      "queueing a path request from on_undeferred, {}",
-      dependency.specifier
-    );
+    // tracing::debug!(
+    //   "queueing a path request from on_undeferred, {:#?}",
+    //   dependency
+    // );
     *work_count += 1;
     let _ = request_context.queue_request(request, sender.clone());
   }

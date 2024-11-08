@@ -18,8 +18,8 @@ use super::environment::Environment;
 use super::file_type::FileType;
 use super::json::JSONObject;
 use super::symbol::Symbol;
+use super::Dependency;
 use super::{BundleBehavior, SourceMap};
-use super::{Dependency, EnvironmentRef};
 
 pub type AssetId = String;
 
@@ -154,7 +154,7 @@ pub struct Asset {
   pub bundle_behavior: MaybeBundleBehavior,
 
   /// The environment of the asset
-  pub env: EnvironmentRef,
+  pub env: Arc<Environment>,
 
   /// The file path to the asset
   pub file_path: PathBuf,
@@ -295,7 +295,7 @@ impl Asset {
 
     Ok(Self {
       code,
-      env: env.into(),
+      env,
       file_path,
       file_type,
       id,
@@ -337,7 +337,7 @@ impl Asset {
     Self {
       bundle_behavior: Some(BundleBehavior::Inline),
       code,
-      env: env.into(),
+      env,
       file_path,
       file_type,
       id,

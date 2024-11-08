@@ -1,12 +1,10 @@
 use core::str;
-use std::collections::HashMap;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
 
 use anyhow::anyhow;
-use atlaspack_core::types::take_serialized_refs;
 use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::LMDB;
 use napi::Env;
@@ -136,20 +134,7 @@ impl AtlaspackNapi {
         match atlaspack {
           Err(error) => deferred.reject(to_napi_error(error)),
           Ok(atlaspack) => match atlaspack.build_asset_graph() {
-            Ok(asset_graph) => deferred.resolve(move |env| {
-              let asset_graph_obj = env.to_js_value(&asset_graph)?;
-              let environment_ids = take_serialized_refs();
-              let environment_map = environment_ids
-                .iter()
-                .map(|env| (env.id(), env))
-                .collect::<HashMap<_, _>>();
-              let environment_map_obj = env.to_js_value(&environment_map)?;
-
-              let mut wrapper = env.create_object()?;
-              wrapper.set_named_property("assetGraph", asset_graph_obj)?;
-              wrapper.set_named_property("environments", environment_map_obj)?;
-              Ok(wrapper)
-            }),
+            Ok(asset_graph) => deferred.resolve(move |env| env.to_js_value(&asset_graph)),
             Err(error) => deferred.reject(to_napi_error(error)),
           },
         }

@@ -18,7 +18,6 @@ import type {
   AssetGraphRequestInput,
   AssetGraphRequestResult,
 } from './AssetGraphRequest';
-import {getEnvironmentHash} from '../Environment';
 
 type RunInput = {|
   input: AssetGraphRequestInput,
@@ -40,9 +39,9 @@ export function createAssetGraphRequestRust(
     id: input.name,
     run: async (input) => {
       let options = input.options;
-      let buildAssetGraphResult;
+      let serializedAssetGraph;
       try {
-        buildAssetGraphResult = await rustAtlaspack.buildAssetGraph();
+        serializedAssetGraph = await rustAtlaspack.buildAssetGraph();
       } catch (err) {
         throw new ThrowableDiagnostic({
           diagnostic: err,
@@ -50,7 +49,7 @@ export function createAssetGraphRequestRust(
       }
 
       let {assetGraph, changedAssets} = getAssetGraph(
-        buildAssetGraphResult,
+        serializedAssetGraph,
         options,
       );
 
@@ -84,8 +83,7 @@ export function createAssetGraphRequestRust(
   });
 }
 
-function getAssetGraph(buildAssetGraphResult, options) {
-  const {assetGraph: serializedGraph, environments} = buildAssetGraphResult;
+function getAssetGraph(serializedGraph, options) {
   let graph = new AssetGraph({
     _contentKeyToNodeId: new Map(),
     _nodeIdToContentKey: new Map(),
@@ -122,7 +120,20 @@ function getAssetGraph(buildAssetGraphResult, options) {
 
   let envs = new Map();
   let getEnvId = (env: Environment) => {
-    const envKey = getEnvironmentHash(env);
+    let envKey = [
+      env.context,
+      env.engines.atlaspack,
+      env.engines.browsers,
+      env.engines.electron,
+      env.engines.node,
+      env.includeNodeModules,
+      env.isLibrary,
+      env.outputFormat,
+      env.shouldScopeHoist,
+      env.shouldOptimize,
+      env.sourceType,
+    ].join(':');
+
     let envId = envs.get(envKey);
     if (envId == null) {
       envId = envs.size;
@@ -155,14 +166,13 @@ function getAssetGraph(buildAssetGraphResult, options) {
 
       asset.meta.id = id;
 
-      const env = environments[asset.env];
       asset = {
         ...asset,
         uniqueKey: asset.uniqueKey ?? undefined,
         pipeline: asset.pipeline ?? undefined,
         range: asset.range ?? undefined,
         resolveFrom: asset.resolveFrom ?? undefined,
-        target: patchTarget(environments, asset.target ?? undefined),
+        target: asset.target ?? undefined,
         plugin: asset.plugin ?? undefined,
         query: asset.query ?? undefined,
         configPath: asset.configPath ?? undefined,
@@ -171,10 +181,10 @@ function getAssetGraph(buildAssetGraphResult, options) {
         isSource: asset.isSource ?? false,
         sourcePath: asset.sourcePath ?? undefined,
         env: {
-          ...env,
-          loc: env.loc ?? undefined,
-          id: getEnvId(env),
-          sourceType: env.sourceType,
+          ...asset.env,
+          loc: asset.env.loc ?? undefined,
+          id: getEnvId(asset.env),
+          sourceType: asset.env.sourceType,
         },
         bundleBehavior:
           asset.bundleBehavior === 255 ? null : asset.bundleBehavior,
@@ -208,20 +218,19 @@ function getAssetGraph(buildAssetGraphResult, options) {
       let id = node.value.id;
       let dependency = node.value.dependency;
 
-      const env = environments[dependency.env];
       dependency = {
         ...dependency,
         id,
         env: {
-          ...env,
-          id: getEnvId(env),
-          sourceType: env.sourceType,
-          loc: env.loc ?? undefined,
+          ...dependency.env,
+          id: getEnvId(dependency.env),
+          sourceType: dependency.env.sourceType,
+          loc: dependency.env.loc ?? undefined,
         },
         pipeline: dependency.pipeline ?? undefined,
         range: dependency.range ?? undefined,
         resolveFrom: dependency.resolveFrom ?? undefined,
-        target: patchTarget(environments, dependency.target ?? undefined),
+        target: dependency.target ?? undefined,
         bundleBehavior:
           dependency.bundleBehavior === 255 ? null : dependency.bundleBehavior,
         contentKey: id,
@@ -241,7 +250,7 @@ function getAssetGraph(buildAssetGraphResult, options) {
           // Dependency.symbols are always set to an empty map when scope hoisting
           // is enabled. Some tests will fail if this is not the case. We should
           // make this consistant when we re-visit packaging.
-          dependency.symbols != null || env.shouldScopeHoist
+          dependency.symbols != null || dependency.env.shouldScopeHoist
             ? new Map(dependency.symbols?.map(mapSymbols))
             : undefined,
       };
@@ -300,20 +309,5 @@ function getAssetGraph(buildAssetGraphResult, options) {
     assetGraph: graph,
     cachedAssets,
     changedAssets,
-  };
-}
-
-function patchTarget(environments, target) {
-  if (target == null) {
-    return null;
-  }
-
-  const env = environments[target.env];
-  return {
-    ...target,
-    env: {
-      ...env,
-      id: getEnvironmentHash(env),
-    },
   };
 }

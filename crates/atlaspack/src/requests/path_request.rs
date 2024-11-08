@@ -11,6 +11,7 @@ use atlaspack_core::plugin::ResolveContext;
 use atlaspack_core::plugin::ResolvedResolution;
 use atlaspack_core::plugin::ResolvingEvent;
 use atlaspack_core::types::Dependency;
+use atlaspack_core::types::SpecifierType;
 use atlaspack_resolver::parse_scheme;
 
 use crate::request_tracker::Request;
@@ -44,6 +45,13 @@ impl Request for PathRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
+    if self.dependency.specifier_type == SpecifierType::VirtualFile {
+      return Ok(ResultAndInvalidations {
+        invalidations: Vec::new(),
+        result: RequestResult::Path(PathRequestOutput::Excluded),
+      });
+    }
+
     request_context
       .report(ReporterEvent::BuildProgress(BuildProgressEvent::Resolving(
         ResolvingEvent {
