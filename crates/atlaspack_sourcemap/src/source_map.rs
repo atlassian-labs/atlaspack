@@ -1,9 +1,8 @@
 use std::path::Path;
 
 use parcel_sourcemap::{SourceMap as ParcelSourceMap, SourceMapError};
-use rkyv::AlignedVec;
+use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
-
 #[derive(Clone, Debug)]
 pub struct SourceMap {
   inner: ParcelSourceMap,
@@ -52,16 +51,15 @@ impl PartialEq for SourceMap {
 impl Serialize for SourceMap {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
   where
-    S: serde::Serializer,
+    S: Serializer,
   {
-    let mut vec = AlignedVec::new();
-
-    self
+    let json = self
       .inner
-      .to_buffer(&mut vec)
+      .clone()
+      .to_json(None)
       .map_err(|err| serde::ser::Error::custom(err.to_string()))?;
 
-    serializer.serialize_bytes(&vec)
+    serializer.serialize_str(&json)
   }
 }
 
