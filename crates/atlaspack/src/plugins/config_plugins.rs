@@ -17,6 +17,7 @@ use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::plugin::ValidatorPlugin;
 use atlaspack_plugin_resolver::AtlaspackResolver;
+use atlaspack_plugin_resolver_oxc::AtlaspackResolverOxc;
 use atlaspack_plugin_rpc::RpcWorkerRef;
 use atlaspack_plugin_transformer_css::AtlaspackCssTransformerPlugin;
 use atlaspack_plugin_transformer_html::AtlaspackHtmlTransformerPlugin;
@@ -161,12 +162,13 @@ impl Plugins for ConfigPlugins {
       let mut resolvers: Vec<Arc<dyn ResolverPlugin>> = Vec::new();
 
       for resolver in self.config.resolvers.iter() {
-        if resolver.package_name == "@atlaspack/resolver-default" {
-          resolvers.push(Arc::new(AtlaspackResolver::new(&self.ctx)?));
-          continue;
-        }
+        let plugin: Arc<dyn ResolverPlugin> = match resolver.package_name.as_str() {
+          "@atlaspack/resolver-default" => Arc::new(AtlaspackResolver::new(&self.ctx)?),
+          "@atlaspack/resolver-oxc" => Arc::new(AtlaspackResolverOxc::new(&self.ctx)?),
+          _ => self.rpc_worker.create_resolver(&self.ctx, resolver)?,
+        };
 
-        resolvers.push(self.rpc_worker.create_resolver(&self.ctx, resolver)?);
+        resolvers.push(plugin);
       }
 
       Ok(resolvers)

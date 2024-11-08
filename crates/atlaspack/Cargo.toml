@@ -13,6 +13,7 @@ atlaspack_core = { path = "../atlaspack_core" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 atlaspack_package_manager = { path = "../atlaspack_package_manager" }
 atlaspack_plugin_resolver = { path = "../atlaspack_plugin_resolver" }
+atlaspack_plugin_resolver_oxc = { path = "../atlaspack_plugin_resolver_oxc" }
 atlaspack_plugin_transformer_html = { path = "../atlaspack_plugin_transformer_html" }
 atlaspack_plugin_transformer_image = { path = "../atlaspack_plugin_transformer_image" }
 atlaspack_plugin_transformer_inline = { path = "../atlaspack_plugin_transformer_inline" }
