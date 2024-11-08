@@ -120,7 +120,7 @@ impl<'a> EsmGraphBuilder<'a> {
     let contents = resolver.cache.fs.read_to_string(file)?;
     let module = lex(&contents)?;
     #[allow(clippy::map_collect_result_unit)]
-    module
+    let _: () = module
       .imports()
       // .par_bridge()
       .map(|import| -> Result<(), EsmGraphBuilderError> {
