@@ -1,11 +1,11 @@
-use std::fmt;
-use std::fmt::Debug;
-
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::OptimizeContext;
 use atlaspack_core::plugin::OptimizedBundle;
 use atlaspack_core::plugin::OptimizerPlugin;
 use atlaspack_core::plugin::PluginContext;
+use std::fmt;
+use std::fmt::Debug;
 
 pub struct NodejsRpcOptimizerPlugin {
   _name: String,
@@ -25,8 +25,12 @@ impl NodejsRpcOptimizerPlugin {
   }
 }
 
+#[async_trait]
 impl OptimizerPlugin for NodejsRpcOptimizerPlugin {
-  fn optimize(&self, _ctx: OptimizeContext) -> Result<OptimizedBundle, anyhow::Error> {
+  async fn optimize<'a>(
+    &self,
+    _ctx: OptimizeContext<'a>,
+  ) -> Result<OptimizedBundle, anyhow::Error> {
     todo!()
   }
 }
