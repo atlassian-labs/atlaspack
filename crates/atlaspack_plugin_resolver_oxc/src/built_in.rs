@@ -1,0 +1,80 @@
+use std::collections::HashSet;
+use std::rc::Rc;
+
+use once_cell::unsync::Lazy;
+
+thread_local! {
+  static BUILT_IN_MODULES: Lazy<HashSet<Rc<str>>> = Lazy::new(|| {
+    HashSet::from_iter(vec![
+      "_http_agent".into(),
+      "_http_client".into(),
+      "_http_common".into(),
+      "_http_incoming".into(),
+      "_http_outgoing".into(),
+      "_http_server".into(),
+      "_stream_duplex".into(),
+      "_stream_passthrough".into(),
+      "_stream_readable".into(),
+      "_stream_transform".into(),
+      "_stream_wrap".into(),
+      "_stream_writable".into(),
+      "_tls_common".into(),
+      "_tls_wrap".into(),
+      "assert".into(),
+      "assert/strict".into(),
+      "async_hooks".into(),
+      "buffer".into(),
+      "child_process".into(),
+      "cluster".into(),
+      "console".into(),
+      "constants".into(),
+      "crypto".into(),
+      "dgram".into(),
+      "diagnostics_channel".into(),
+      "dns".into(),
+      "dns/promises".into(),
+      "domain".into(),
+      "events".into(),
+      "fs".into(),
+      "fs/promises".into(),
+      "http".into(),
+      "http2".into(),
+      "https".into(),
+      "inspector".into(),
+      "module".into(),
+      "net".into(),
+      "os".into(),
+      "path".into(),
+      "path/posix".into(),
+      "path/win32".into(),
+      "perf_hooks".into(),
+      "process".into(),
+      "punycode".into(),
+      "querystring".into(),
+      "readline".into(),
+      "repl".into(),
+      "stream".into(),
+      "stream/consumers".into(),
+      "stream/promises".into(),
+      "stream/web".into(),
+      "string_decoder".into(),
+      "sys".into(),
+      "timers".into(),
+      "timers/promises".into(),
+      "tls".into(),
+      "trace_events".into(),
+      "tty".into(),
+      "url".into(),
+      "util".into(),
+      "util/types".into(),
+      "v8".into(),
+      "vm".into(),
+      "worker_threads".into(),
+      "zlib".into(),
+    ])
+  });
+}
+
+pub fn is_built_in<T: AsRef<str>>(specifier: T) -> bool {
+  BUILT_IN_MODULES.with(|modules| modules.contains(specifier.as_ref()))
+}

@@ -539,8 +539,10 @@ dependencies = [
  "atlaspack_core",
  "atlaspack_filesystem",
  "normalize-path",
+ "once_cell",
  "oxc_resolver",
  "serde",
+ "url",
 ]
 
 [[package]]

@@ -7,10 +7,12 @@ description = "Resolver Plugin for the Atlaspack Bundler"
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
 anyhow = { workspace = true }
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 async-trait = { workspace = true }
 oxc_resolver = { workspace = true }
 normalize-path = { workspace = true }
+once_cell = { workspace = true }
+url = { workspace = true }
 
 [dev-dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
