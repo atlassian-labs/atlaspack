@@ -119,8 +119,9 @@ impl BundlerPlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl CompressorPlugin for TestingRpcPlugin {
-  fn compress(&self, _file: &std::fs::File) -> Result<Option<CompressedFile>, String> {
+  async fn compress(&self, _file: &std::fs::File) -> Result<Option<CompressedFile>, String> {
     Ok(None)
   }
 }

@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use std::fmt::Debug;
 use std::fs::File;
 
@@ -13,13 +14,15 @@ pub struct CompressedFile {
 }
 
 /// Compresses the input file stream
-pub trait CompressorPlugin: Debug {
+
+#[async_trait]
+pub trait CompressorPlugin: Debug + Send + Sync {
   /// Compress the given file
   ///
   /// The file contains the final contents of bundles and sourcemaps as they are being written.
   /// A new stream can be returned, or None to forward compression onto the next plugin.
   ///
-  fn compress(&self, file: &File) -> Result<Option<CompressedFile>, String>;
+  async fn compress(&self, file: &File) -> Result<Option<CompressedFile>, String>;
 }
 
 #[cfg(test)]
@@ -29,8 +32,9 @@ mod tests {
   #[derive(Debug)]
   struct TestCompressorPlugin {}
 
+  #[async_trait]
   impl CompressorPlugin for TestCompressorPlugin {
-    fn compress(&self, _file: &File) -> Result<Option<CompressedFile>, String> {
+    async fn compress(&self, _file: &File) -> Result<Option<CompressedFile>, String> {
       todo!()
     }
   }
