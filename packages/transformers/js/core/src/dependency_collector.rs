@@ -11,11 +11,12 @@ use path_slash::PathBufExt;
 use serde::Deserialize;
 use serde::Serialize;
 use swc_core::common::sync::Lrc;
-use swc_core::common::SourceMap;
 use swc_core::common::Span;
 use swc_core::common::Spanned;
 use swc_core::common::DUMMY_SP;
+use swc_core::common::{Mark, SourceMap, SyntaxContext};
 use swc_core::ecma::ast::Callee;
+use swc_core::ecma::ast::Expr::Ident;
 use swc_core::ecma::ast::IdentName;
 use swc_core::ecma::ast::MemberExpr;
 use swc_core::ecma::ast::MemberProp;
@@ -283,7 +284,7 @@ impl<'a> DependencyCollector<'a> {
     // For scripts, we replace with __parcel__require__, which is later replaced
     // by a real atlaspackRequire of the resolved asset in the packager.
     if self.config.source_type == SourceType::Script {
-      res.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new_no_ctxt(
+      res.callee = Callee::Expr(Box::new(Ident(ast::Ident::new_no_ctxt(
         "__parcel__require__".into(),
         DUMMY_SP,
       ))));
@@ -517,7 +518,7 @@ impl<'a> Fold for DependencyCollector<'a> {
               }
               "__parcel__require__" => {
                 let mut call = node.fold_children_with(self);
-                call.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
+                call.callee = Callee::Expr(Box::new(Ident(ast::Ident::new(
                   "require".into(),
                   DUMMY_SP,
                   SyntaxContext::empty().apply_mark(self.ignore_mark),
@@ -526,7 +527,7 @@ impl<'a> Fold for DependencyCollector<'a> {
               }
               "__parcel__import__" => {
                 let mut call = node.fold_children_with(self);
-                call.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
+                call.callee = Callee::Expr(Box::new(Ident(ast::Ident::new(
                   "import".into(),
                   DUMMY_SP,
                   SyntaxContext::empty().apply_mark(self.ignore_mark),
@@ -535,7 +536,7 @@ impl<'a> Fold for DependencyCollector<'a> {
               }
               "__parcel__importScripts__" => {
                 let mut call = node.fold_children_with(self);
-                call.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
+                call.callee = Callee::Expr(Box::new(Ident(ast::Ident::new(
                   "importScripts".into(),
                   DUMMY_SP,
                   SyntaxContext::empty().apply_mark(self.ignore_mark),
@@ -771,7 +772,7 @@ impl<'a> Fold for DependencyCollector<'a> {
           SourceType::Module => "require",
           SourceType::Script => "__parcel__require__",
         };
-        call.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new_no_ctxt(
+        call.callee = Callee::Expr(Box::new(Ident(ast::Ident::new_no_ctxt(
           name.into(),
           DUMMY_SP,
         ))));
@@ -868,7 +869,7 @@ impl<'a> Fold for DependencyCollector<'a> {
         call.args.truncate(2);
       } else {
         // If we're not scope hoisting, then change this `importCond` to a require so the deps are resolved correctly
-        call.callee = ast::Callee::Expr(Box::new(ast::Expr::Ident(ast::Ident::new(
+        call.callee = Callee::Expr(Box::new(Ident(ast::Ident::new_no_ctxt(
           "require".into(),
           DUMMY_SP,
         ))));
@@ -910,7 +911,7 @@ impl<'a> Fold for DependencyCollector<'a> {
       ..
     } = &node
     {
-      if let ast::Expr::Ident(ident) = &**arg {
+      if let Ident(ident) = &**arg {
         if ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark) {
           return node;
         }
@@ -1077,7 +1078,7 @@ impl<'a> Fold for DependencyCollector<'a> {
     };
 
     if is_require {
-      return ast::Expr::Ident(get_undefined_ident(self.unresolved_mark));
+      return Expr::Ident(get_undefined_ident(self.unresolved_mark));
     }
 
     maybe_grow_default(|| node.fold_children_with(self))
@@ -1087,8 +1088,8 @@ impl<'a> Fold for DependencyCollector<'a> {
     if self.config.conditional_bundling {
       if let Some(init) = node.init.clone() {
         if let ast::Expr::Call(call) = *init {
-          if let ast::Callee::Expr(callee) = &call.callee {
-            if let ast::Expr::Ident(ident) = &**callee {
+          if let Callee::Expr(callee) = &call.callee {
+            if let Ident(ident) = &**callee {
               if ident.sym.as_str() == "importCond" {
                 // Drill down to default value in source, as the importCond API accesses this value directly
                 return maybe_grow_default(|| {
@@ -1152,9 +1153,9 @@ impl<'a> DependencyCollector<'a> {
           _ => return node.fold_children_with(self),
         };
 
-        if let Some(ast::Expr::Call(call)) = expr {
-          if let ast::Callee::Expr(callee) = &call.callee {
-            if let ast::Expr::Ident(id) = &**callee {
+        if let Some(Call(call)) = expr {
+          if let Callee::Expr(callee) = &call.callee {
+            if let Ident(id) = &**callee {
               if id.to_id() == resolve_id {
                 if let Some(arg) = call.args.first() {
                   if match_require(&arg.expr, self.unresolved_mark, Mark::fresh(Mark::root()))
@@ -1373,7 +1374,7 @@ impl Fold for PromiseTransformer {
     if let ast::Expr::Call(call) = &node {
       if let Some(require_node) = &self.require_node {
         if require_node == call {
-          return ast::Expr::Ident(ast::Ident::new_no_ctxt("res".into(), DUMMY_SP));
+          return Ident(ast::Ident::new_no_ctxt("res".into(), DUMMY_SP));
         }
       }
     }
