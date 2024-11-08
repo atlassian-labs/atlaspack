@@ -598,12 +598,24 @@ impl<'a> ResolveRequest<'a> {
         }
       }
 
+      let mut fields = Fields::ALIAS;
+      if self.resolver.entries.contains(Fields::BROWSER) {
+        fields |= Fields::BROWSER;
+      }
+
+      // Then try the CWD, in case it is different to the project root
+      if let Ok(cwd) = std::env::current_dir() {
+        if cwd.as_path() != self.resolver.project_root {
+          if let Ok(Some(package)) = self.find_package(cwd.as_path()) {
+            if let Some(res) = self.resolve_aliases(&package, specifier, fields)? {
+              return Ok(Some(res));
+            }
+          }
+        }
+      }
+
       // Next, try the local package.json.
       if let Some(package) = self.find_package(self.from.parent().unwrap_or(self.from))? {
-        let mut fields = Fields::ALIAS;
-        if self.resolver.entries.contains(Fields::BROWSER) {
-          fields |= Fields::BROWSER;
-        }
         if let Some(res) = self.resolve_aliases(&package, specifier, fields)? {
           return Ok(Some(res));
         }
