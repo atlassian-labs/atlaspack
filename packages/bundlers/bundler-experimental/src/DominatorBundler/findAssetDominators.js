@@ -15,6 +15,10 @@ function debugLog(message: string) {
   });
 }
 
+export type AssetDominatorTree = ContentGraph<
+  'root' | Asset | StronglyConnectedComponentNode<'root' | Asset>,
+>;
+
 /**
  * For all assets, build the dominance relationship of the asset with other
  * assets.
@@ -26,9 +30,7 @@ function debugLog(message: string) {
  */
 export function findAssetDominators(
   bundleGraph: MutableBundleGraph,
-): ContentGraph<
-  'root' | Asset | StronglyConnectedComponentNode<'root' | Asset>,
-> {
+): AssetDominatorTree {
   // Build a simpler graph with a root at the top
   debugLog('converting graph');
   const graph = bundleGraphToRootedGraph(bundleGraph);

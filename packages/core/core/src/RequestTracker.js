@@ -1281,6 +1281,18 @@ export default class RequestTracker {
     this.graph.replaceSubrequests(requestNodeId, subrequestContextKeys);
   }
 
+  hasCachedRequest<TInput, TResult: RequestResult>(
+    request: Request<TInput, TResult>,
+  ): boolean {
+    let hasKey = this.graph.hasContentKey(request.id);
+    let requestId = hasKey
+      ? this.graph.getNodeIdByContentKey(request.id)
+      : undefined;
+    let hasValidResult = requestId != null && this.hasValidResult(requestId);
+
+    return hasValidResult;
+  }
+
   async runRequest<TInput, TResult: RequestResult>(
     request: Request<TInput, TResult>,
     opts?: ?RunRequestOpts,

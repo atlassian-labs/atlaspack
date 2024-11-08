@@ -71,6 +71,7 @@ import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
 import MutableBundleGraph from './public/MutableBundleGraph';
 import {hashString} from '@atlaspack/rust';
 import fs from 'fs';
+import {runGetBundlerStats} from './BundlerStats';
 
 registerCoreWithSerializer();
 
@@ -609,55 +610,11 @@ export default class Atlaspack {
     const packages = createPackages(mutableBundleGraph, dominators);
     log('Done creating packages');
 
-    const chunks = dominators.getNodeIdsConnectedFrom(
-      dominators.getNodeIdByContentKey('root'),
-    );
-    log('==> number of dominator chunks: ' + chunks.length);
-    const packageNodes = packages.getNodeIdsConnectedFrom(
-      packages.getNodeIdByContentKey('root'),
-    );
-    log('==> number of packages: ' + packageNodes.length);
-
-    const packageArray = [];
-    for (let packageNodeId of packageNodes) {
-      let packageNode = packages.getNode(packageNodeId);
-      if (packageNode == null || packageNode === 'root') {
-        continue;
-      }
-
-      if (packageNode.type === 'asset') {
-        log('Asset package: ' + packageNode.filePath);
-        const assets = [];
-        packages.traverse((nodeId) => {
-          const node = packages.getNode(nodeId);
-          if (node !== 'root' && node != null && node.type !== 'package') {
-            assets.push(node.filePath);
-          }
-        }, packageNodeId);
-        log('===> number of assets ' + assets.length);
-        packageArray.push({
-          package: packageNode.id,
-          rootAsset: packageNode.filePath,
-          assets,
-        });
-      } else {
-        log('Asset group package: ' + hashString(packageNode.id));
-        const assets = [];
-        packages.traverse((nodeId) => {
-          const node = packages.getNode(nodeId);
-          if (node !== 'root' && node != null && node.type !== 'package') {
-            assets.push(node.filePath);
-          }
-        }, packageNodeId);
-        log('===> number of assets ' + assets.length);
-        packageArray.push({
-          package: packageNode.id,
-          assets,
-        });
-      }
-    }
-
-    fs.writeFileSync('./packages.json', JSON.stringify(packageArray, null, 2));
+    runGetBundlerStats({
+      dominators,
+      packages,
+      resolvedOptions: nullthrows(this.#resolvedOptions),
+    });
   }
 
   /**
@@ -666,6 +623,13 @@ export default class Atlaspack {
   async unstable_buildAssetGraph(
     writeToCache: boolean = true,
   ): Promise<AssetGraphRequestResult> {
+    const log = (message) => {
+      logger.info({
+        message,
+        origin: '@atlaspack/core',
+      });
+    };
+
     await this._init();
     const input = {
       optionsRef: this.#optionsRef,
@@ -676,17 +640,19 @@ export default class Atlaspack {
       lazyExcludes: [],
       requestedAssetIds: this.#requestedAssetIds,
     };
-    const result = await this.#requestTracker.runRequest(
+    const request =
       this.rustAtlaspack != null
         ? createAssetGraphRequestRust(this.rustAtlaspack)(input)
-        : createAssetGraphRequestJS(input),
-    );
-    logger.info({message: 'Done building asset graph!'});
+        : createAssetGraphRequestJS(input);
+    const hasCachedRequest = this.#requestTracker.hasCachedRequest(request);
+    const result = await this.#requestTracker.runRequest(request);
+    log('Done building asset graph!');
 
-    if (writeToCache) {
-      logger.info({message: 'Write request tracker to cache'});
+    // Don't write to cache if we already had a cached request
+    if (!hasCachedRequest && writeToCache) {
+      log('Write request tracker to cache');
       await this.writeRequestTrackerToCache();
-      logger.info({message: 'Done writing request tracker to cache'});
+      log('Done writing request tracker to cache');
     }
 
     return result;
