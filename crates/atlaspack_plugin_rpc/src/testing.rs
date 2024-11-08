@@ -102,15 +102,16 @@ impl std::fmt::Debug for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl BundlerPlugin for TestingRpcPlugin {
-  fn bundle(
+  async fn bundle(
     &self,
     _bundle_graph: &mut atlaspack_core::bundle_graph::BundleGraph,
   ) -> Result<(), anyhow::Error> {
     Ok(())
   }
 
-  fn optimize(
+  async fn optimize(
     &self,
     _bundle_graph: &mut atlaspack_core::bundle_graph::BundleGraph,
   ) -> Result<(), anyhow::Error> {
