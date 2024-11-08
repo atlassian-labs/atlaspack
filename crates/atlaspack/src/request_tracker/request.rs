@@ -1,8 +1,8 @@
 use std::fmt::Debug;
+use std::future::Future;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::PathBuf;
-use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -12,6 +12,7 @@ use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_core::types::Invalidation;
 use atlaspack_filesystem::FileSystemRef;
 use dyn_hash::DynHash;
+use tokio::sync::mpsc::Sender;
 
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
@@ -23,7 +24,9 @@ pub struct RunRequestMessage {
   pub response_tx: Option<Sender<Result<(RequestResult, RequestId), anyhow::Error>>>,
 }
 
-type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send + Sync>;
+type RunRequestFn = Box<
+  dyn Fn(RunRequestMessage) -> Box<dyn Future<Output = ()> + Unpin + Send + Sync> + Send + Sync,
+>;
 
 /// This is the API for requests to call back onto the `RequestTracker`.
 ///
@@ -71,7 +74,7 @@ impl RunRequestContext {
   }
 
   /// Run a child request to the current request
-  pub fn queue_request(
+  pub async fn queue_request(
     &mut self,
     request: impl Request,
     tx: Sender<anyhow::Result<(RequestResult, RequestId)>>,
@@ -82,7 +85,8 @@ impl RunRequestContext {
       response_tx: Some(tx),
       parent_request_id: self.parent_request_id,
     };
-    (*self.run_request_fn)(message);
+    let future = (*self.run_request_fn)(message);
+    future.await;
     Ok(())
   }
 

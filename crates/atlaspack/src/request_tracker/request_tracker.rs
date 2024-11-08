@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -96,19 +95,24 @@ impl RequestTracker {
   ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
   pub async fn run_request(&mut self, request: impl Request) -> anyhow::Result<RequestResult> {
     let request_id = request.id();
-    let (tx, rx) = std::sync::mpsc::channel();
+    let (tx, mut rx) = tokio::sync::mpsc::channel(10_000);
     let tx2 = tx.clone();
-    let _ = tx.send(RequestQueueMessage::RunRequest {
+    tx.send(RequestQueueMessage::RunRequest {
       tx: tx2,
       message: RunRequestMessage {
         request: Box::new(request),
         parent_request_id: None,
         response_tx: None,
       },
-    });
+    })
+    .await
+    .expect(
+      "The impossible happened and a top-level message was dropped. This should never happen",
+    );
+
     drop(tx);
 
-    while let Ok(request_queue_message) = rx.recv() {
+    while let Some(request_queue_message) = rx.recv().await {
       match request_queue_message {
         RequestQueueMessage::RunRequest {
           message:
@@ -134,9 +138,19 @@ impl RequestTracker {
               Box::new({
                 let tx = tx.clone();
                 move |message| {
-                  let tx2 = tx.clone();
-                  tx.send(RequestQueueMessage::RunRequest { message, tx: tx2 })
-                    .unwrap();
+                  Box::new({
+                    let tx = tx.clone();
+                    Box::pin(async move {
+                      let tx2 = tx.clone();
+                      let message = tx
+                        .send(RequestQueueMessage::RunRequest { message, tx: tx2 })
+                        .await;
+
+                      if let Err(err) = message {
+                        tracing::debug!(?err, "Message dropped");
+                      }
+                    })
+                  })
                 }
               }),
             );
@@ -145,19 +159,24 @@ impl RequestTracker {
               let tx = tx.clone();
               async move {
                 let result = request.run(context).await;
-                let _ = tx.send(RequestQueueMessage::RequestResult {
-                  request_id,
-                  parent_request_id,
-                  result,
-                  response_tx,
-                });
+                if let Err(err) = tx
+                  .send(RequestQueueMessage::RequestResult {
+                    request_id,
+                    parent_request_id,
+                    result,
+                    response_tx,
+                  })
+                  .await
+                {
+                  tracing::debug!(?err, "Message dropped");
+                }
               }
             });
           } else {
             // Cached request
             if let Some(response_tx) = response_tx {
               let result = self.get_request(parent_request_id, request_id);
-              let _ = response_tx.send(result.map(|r| (r, request_id)));
+              response_tx.send(result.map(|r| (r, request_id))).await?;
             }
           };
         }
@@ -172,7 +191,9 @@ impl RequestTracker {
           self.link_request_to_parent(request_id, parent_request_id)?;
 
           if let Some(response_tx) = response_tx {
-            let _ = response_tx.send(result.map(|result| (result.result, request_id)));
+            response_tx
+              .send(result.map(|result| (result.result, request_id)))
+              .await?;
           }
         }
       }
@@ -291,13 +312,13 @@ impl RequestTracker {
 #[derive(Debug)]
 enum RequestQueueMessage {
   RunRequest {
-    tx: Sender<RequestQueueMessage>,
+    tx: tokio::sync::mpsc::Sender<RequestQueueMessage>,
     message: RunRequestMessage,
   },
   RequestResult {
     request_id: RequestId,
     parent_request_id: Option<RequestId>,
     result: Result<ResultAndInvalidations, RunRequestError>,
-    response_tx: Option<Sender<anyhow::Result<(RequestResult, RequestId)>>>,
+    response_tx: Option<tokio::sync::mpsc::Sender<anyhow::Result<(RequestResult, RequestId)>>>,
   },
 }

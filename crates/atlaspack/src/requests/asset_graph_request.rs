@@ -1,5 +1,4 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -7,6 +6,7 @@ use async_trait::async_trait;
 use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 use atlaspack_core::asset_graph::{AssetGraph, DependencyNode};
 use atlaspack_core::types::{Asset, AssetWithDependencies, Dependency};
@@ -19,8 +19,9 @@ use super::path_request::{PathRequest, PathRequestOutput};
 use super::target_request::{TargetRequest, TargetRequestOutput};
 use super::RequestResult;
 
-type ResultSender = Sender<Result<(RequestResult, u64), anyhow::Error>>;
-type ResultReceiver = Receiver<Result<(RequestResult, u64), anyhow::Error>>;
+type AssetGraphChildResult = Result<(RequestResult, u64), anyhow::Error>;
+type ResultSender = Sender<AssetGraphChildResult>;
+type ResultReceiver = Receiver<AssetGraphChildResult>;
 
 /// The AssetGraphRequest is in charge of building the AssetGraphRequest
 /// In doing so, it kicks of the EntryRequest, TargetRequest, PathRequest and AssetRequests.
@@ -40,7 +41,7 @@ impl Request for AssetGraphRequest {
   ) -> Result<ResultAndInvalidations, RunRequestError> {
     let builder = AssetGraphBuilder::new(request_context);
 
-    builder.build()
+    builder.build().await
   }
 }
 
@@ -58,7 +59,7 @@ struct AssetGraphBuilder {
 
 impl AssetGraphBuilder {
   fn new(request_context: RunRequestContext) -> Self {
-    let (sender, receiver) = channel();
+    let (sender, receiver) = tokio::sync::mpsc::channel(10_000);
 
     AssetGraphBuilder {
       request_id_to_dep_node_index: HashMap::new(),
@@ -73,15 +74,18 @@ impl AssetGraphBuilder {
     }
   }
 
-  fn build(mut self) -> Result<ResultAndInvalidations, RunRequestError> {
+  async fn build(mut self) -> Result<ResultAndInvalidations, RunRequestError> {
     for entry in self.request_context.options.clone().entries.iter() {
       self.work_count += 1;
-      let _ = self.request_context.queue_request(
-        EntryRequest {
-          entry: entry.clone(),
-        },
-        self.sender.clone(),
-      );
+      self
+        .request_context
+        .queue_request(
+          EntryRequest {
+            entry: entry.clone(),
+          },
+          self.sender.clone(),
+        )
+        .await?;
     }
 
     loop {
@@ -91,7 +95,7 @@ impl AssetGraphBuilder {
         break;
       }
 
-      let Ok(result) = self.receiver.recv() else {
+      let Some(result) = self.receiver.recv().await else {
         break;
       };
 
@@ -100,18 +104,18 @@ impl AssetGraphBuilder {
       match result {
         Ok((RequestResult::Entry(result), _request_id)) => {
           tracing::debug!("Handling EntryRequestOutput");
-          self.handle_entry_result(result);
+          self.handle_entry_result(result).await?;
         }
         Ok((RequestResult::Target(result), _request_id)) => {
           tracing::debug!("Handling TargetRequestOutput");
-          self.handle_target_request_result(result);
+          self.handle_target_request_result(result).await?;
         }
         Ok((RequestResult::Asset(result), request_id)) => {
           tracing::debug!(
             "Handling AssetRequestOutput: {}",
             result.asset.file_path.display()
           );
-          self.handle_asset_result(result, request_id);
+          self.handle_asset_result(result, request_id).await?;
         }
         Ok((RequestResult::Path(result), request_id)) => {
           let path = match &result {
@@ -119,7 +123,7 @@ impl AssetGraphBuilder {
             PathRequestOutput::Resolved { path, .. } => path.as_os_str().to_str().unwrap(),
           };
           tracing::debug!(%path, %request_id, "Handling PathRequestOutput");
-          self.handle_path_result(result, request_id);
+          self.handle_path_result(result, request_id).await?;
         }
         Err(err) => return Err(err),
         // This branch should never occur
@@ -139,7 +143,11 @@ impl AssetGraphBuilder {
     })
   }
 
-  fn handle_path_result(&mut self, result: PathRequestOutput, request_id: u64) {
+  async fn handle_path_result(
+    &mut self,
+    result: PathRequestOutput,
+    request_id: u64,
+  ) -> anyhow::Result<()> {
     let node = *self
       .request_id_to_dep_node_index
       .get(&request_id)
@@ -163,7 +171,7 @@ impl AssetGraphBuilder {
         side_effects,
       },
       PathRequestOutput::Excluded => {
-        return;
+        return Ok(());
       }
     };
     let id = asset_request.id();
@@ -171,9 +179,10 @@ impl AssetGraphBuilder {
     if self.visited.insert(id) {
       self.request_id_to_dep_node_index.insert(id, node);
       self.work_count += 1;
-      let _ = self
+      self
         .request_context
-        .queue_request(asset_request, self.sender.clone());
+        .queue_request(asset_request, self.sender.clone())
+        .await?;
     } else if let Some(asset_node_index) = self.asset_request_to_asset.get(&id) {
       // We have already completed this AssetRequest so we can connect the
       // Dependency to the Asset immediately
@@ -190,9 +199,11 @@ impl AssetGraphBuilder {
         })
         .or_insert_with(|| HashSet::from([node]));
     }
+
+    Ok(())
   }
 
-  fn handle_entry_result(&mut self, result: EntryRequestOutput) {
+  async fn handle_entry_result(&mut self, result: EntryRequestOutput) -> anyhow::Result<()> {
     let EntryRequestOutput { entries } = result;
     for entry in entries {
       let target_request = TargetRequest {
@@ -203,13 +214,20 @@ impl AssetGraphBuilder {
       };
 
       self.work_count += 1;
-      let _ = self
+      self
         .request_context
-        .queue_request(target_request, self.sender.clone());
+        .queue_request(target_request, self.sender.clone())
+        .await?;
     }
+
+    Ok(())
   }
 
-  fn handle_asset_result(&mut self, result: AssetRequestOutput, request_id: u64) {
+  async fn handle_asset_result(
+    &mut self,
+    result: AssetRequestOutput,
+    request_id: u64,
+  ) -> anyhow::Result<()> {
     let AssetRequestOutput {
       asset,
       discovered_assets,
@@ -237,22 +255,26 @@ impl AssetGraphBuilder {
         .graph
         .add_asset(incoming_dep_node_index, discovered_asset.asset.clone());
 
-      self.add_asset_dependencies(
-        &discovered_asset.dependencies,
+      self
+        .add_asset_dependencies(
+          &discovered_asset.dependencies,
+          &discovered_assets,
+          asset_node_index,
+          &mut added_discovered_assets,
+          root_asset,
+        )
+        .await?;
+    }
+
+    self
+      .add_asset_dependencies(
+        &dependencies,
         &discovered_assets,
         asset_node_index,
         &mut added_discovered_assets,
         root_asset,
-      );
-    }
-
-    self.add_asset_dependencies(
-      &dependencies,
-      &discovered_assets,
-      asset_node_index,
-      &mut added_discovered_assets,
-      root_asset,
-    );
+      )
+      .await?;
 
     // Connect any previously discovered Dependencies that were waiting
     // for this AssetNode to be created
@@ -261,110 +283,132 @@ impl AssetGraphBuilder {
         self.graph.add_edge(&dep, &asset_node_index);
       }
     }
+
+    Ok(())
   }
 
-  fn add_asset_dependencies(
+  async fn add_asset_dependencies(
     &mut self,
     dependencies: &Vec<Dependency>,
     discovered_assets: &Vec<AssetWithDependencies>,
     asset_node_index: NodeIndex,
     added_discovered_assets: &mut HashMap<String, NodeIndex>,
     root_asset: (&Asset, NodeIndex),
-  ) {
-    // Connect dependencies of the Asset
-    let mut unique_deps: IndexMap<String, Dependency> = IndexMap::new();
-
-    for dependency in dependencies {
-      unique_deps
-        .entry(dependency.id())
-        .and_modify(|d| {
-          // This code is an incomplete version of mergeDependencies in packages/core/core/src/Dependency.js
-          // Duplicate dependencies can occur when node globals are polyfilled
-          // e.g. 'process'. I think ideally we wouldn't end up with two
-          // dependencies post-transform but that needs further investigation to
-          // resolve and understand...
-          d.meta.extend(dependency.meta.clone());
-          if let Some(symbols) = d.symbols.as_mut() {
-            if let Some(merge_symbols) = dependency.symbols.as_ref() {
-              symbols.extend(merge_symbols.clone());
-            }
-          } else {
-            d.symbols = dependency.symbols.clone();
-          }
-        })
-        .or_insert(dependency.clone());
+  ) -> anyhow::Result<()> {
+    struct Item<'a> {
+      asset_node_index: NodeIndex,
+      dependencies: &'a Vec<Dependency>,
     }
 
-    for (_id, dependency) in unique_deps.into_iter() {
-      tracing::debug!("Adding dependency to asset {}", dependency.specifier);
+    let mut queue: VecDeque<_> = VecDeque::new();
+    queue.push_back(Item {
+      asset_node_index,
+      dependencies,
+    });
 
-      // Check if this dependency points to a discovered_asset
-      let discovered_asset = discovered_assets.iter().find(|discovered_asset| {
-        discovered_asset
-          .asset
-          .unique_key
-          .as_ref()
-          .is_some_and(|key| key == &dependency.specifier)
-      });
+    while let Some(Item {
+      asset_node_index,
+      dependencies,
+    }) = queue.pop_front()
+    {
+      // Connect dependencies of the Asset
+      let mut unique_deps: IndexMap<String, Dependency> = IndexMap::new();
 
-      // Check if this dependency points to the root asset
-      let dep_to_root_asset = root_asset
-        .0
-        .unique_key
-        .as_ref()
-        .is_some_and(|key| key == &dependency.specifier);
-
-      let dependency = Arc::new(dependency);
-      let dep_node = self
-        .graph
-        .add_dependency(asset_node_index, dependency.clone());
-
-      Self::trigger_path_request(
-        &mut self.request_id_to_dep_node_index,
-        &mut self.work_count,
-        &mut self.request_context,
-        &self.sender,
-        dep_node,
-        dependency,
-      );
-
-      if dep_to_root_asset {
-        self.graph.add_edge(&dep_node, &root_asset.1);
+      for dependency in dependencies {
+        unique_deps
+          .entry(dependency.id())
+          .and_modify(|d| {
+            // This code is an incomplete version of mergeDependencies in packages/core/core/src/Dependency.js
+            // Duplicate dependencies can occur when node globals are polyfilled
+            // e.g. 'process'. I think ideally we wouldn't end up with two
+            // dependencies post-transform but that needs further investigation to
+            // resolve and understand...
+            d.meta.extend(dependency.meta.clone());
+            if let Some(symbols) = d.symbols.as_mut() {
+              if let Some(merge_symbols) = dependency.symbols.as_ref() {
+                symbols.extend(merge_symbols.clone());
+              }
+            } else {
+              d.symbols = dependency.symbols.clone();
+            }
+          })
+          .or_insert(dependency.clone());
       }
 
-      // If the dependency points to a dicovered asset then add the asset using the new
-      // dep as it's parent
-      if let Some(AssetWithDependencies {
-        asset,
-        dependencies,
-      }) = discovered_asset
-      {
-        let existing_discovered_asset = added_discovered_assets.get(&asset.id);
+      for (_id, dependency) in unique_deps.into_iter() {
+        tracing::debug!("Adding dependency to asset {}", dependency.specifier);
 
-        if let Some(asset_node_index) = existing_discovered_asset {
-          // This discovered_asset has already been added to the graph so we
-          // just need to connect the dependency node to the asset node
-          self.graph.add_edge(&dep_node, asset_node_index);
-        } else {
-          // This discovered_asset isn't yet in the graph so we'll need to add
-          // it and assign it's dependencies by calling added_discovered_assets
-          // recursively.
-          let asset_node_index = self.graph.add_asset(dep_node, asset.clone());
-          added_discovered_assets.insert(asset.id.clone(), asset_node_index);
+        // Check if this dependency points to a discovered_asset
+        let discovered_asset = discovered_assets.iter().find(|discovered_asset| {
+          discovered_asset
+            .asset
+            .unique_key
+            .as_ref()
+            .is_some_and(|key| key == &dependency.specifier)
+        });
 
-          self.add_asset_dependencies(
-            dependencies,
-            discovered_assets,
-            asset_node_index,
-            added_discovered_assets,
-            root_asset,
-          );
+        // Check if this dependency points to the root asset
+        let dep_to_root_asset = root_asset
+          .0
+          .unique_key
+          .as_ref()
+          .is_some_and(|key| key == &dependency.specifier);
+
+        let dependency = Arc::new(dependency);
+        let dep_node = self
+          .graph
+          .add_dependency(asset_node_index, dependency.clone());
+
+        Self::trigger_path_request(
+          &mut self.request_id_to_dep_node_index,
+          &mut self.work_count,
+          &mut self.request_context,
+          &self.sender,
+          dep_node,
+          dependency,
+        )
+        .await?;
+
+        if dep_to_root_asset {
+          self.graph.add_edge(&dep_node, &root_asset.1);
+        }
+
+        // If the dependency points to a dicovered asset then add the asset using the new
+        // dep as it's parent
+        if let Some(AssetWithDependencies {
+          asset,
+          dependencies,
+        }) = discovered_asset
+        {
+          let existing_discovered_asset = added_discovered_assets.get(&asset.id);
+
+          if let Some(asset_node_index) = existing_discovered_asset {
+            // This discovered_asset has already been added to the graph so we
+            // just need to connect the dependency node to the asset node
+            self.graph.add_edge(&dep_node, asset_node_index);
+          } else {
+            // This discovered_asset isn't yet in the graph so we'll need to add
+            // it and assign it's dependencies by calling added_discovered_assets
+            // recursively.
+            let asset_node_index = self.graph.add_asset(dep_node, asset.clone());
+            added_discovered_assets.insert(asset.id.clone(), asset_node_index);
+
+            queue.push_back(Item {
+              dependencies,
+              asset_node_index,
+            });
+          }
         }
       }
     }
+
+    Ok(())
   }
 
-  fn handle_target_request_result(&mut self, result: TargetRequestOutput) {
+  async fn handle_target_request_result(
+    &mut self,
+    result: TargetRequestOutput,
+  ) -> anyhow::Result<()> {
     let TargetRequestOutput { entry, targets } = result;
     for target in targets {
       let entry =
@@ -381,26 +425,29 @@ impl AssetGraphBuilder {
         .request_id_to_dep_node_index
         .insert(request.id(), dep_node);
       self.work_count += 1;
-      let _ = self
+      self
         .request_context
-        .queue_request(request, self.sender.clone());
+        .queue_request(request, self.sender.clone())
+        .await?;
     }
+
+    Ok(())
   }
 
-  fn trigger_path_request(
+  async fn trigger_path_request(
     request_id_to_dep_node_index: &mut HashMap<u64, NodeIndex>,
     work_count: &mut u32,
     request_context: &mut RunRequestContext,
     sender: &ResultSender,
     dependency_node_index: NodeIndex,
     dependency: Arc<Dependency>,
-  ) {
+  ) -> anyhow::Result<()> {
     let request = PathRequest {
       dependency: dependency.clone(),
     };
 
     if request_id_to_dep_node_index.contains_key(&request.id()) {
-      return;
+      return Ok(());
     }
 
     request_id_to_dep_node_index.insert(request.id(), dependency_node_index);
@@ -409,7 +456,11 @@ impl AssetGraphBuilder {
     //   dependency
     // );
     *work_count += 1;
-    let _ = request_context.queue_request(request, sender.clone());
+    request_context
+      .queue_request(request, sender.clone())
+      .await?;
+
+    Ok(())
   }
 }
 
