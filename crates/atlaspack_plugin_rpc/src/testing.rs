@@ -125,8 +125,9 @@ impl CompressorPlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl NamerPlugin for TestingRpcPlugin {
-  fn name(
+  async fn name(
     &self,
     _bundle: &atlaspack_core::types::Bundle,
     _bundle_graph: &atlaspack_core::bundle_graph::BundleGraph,

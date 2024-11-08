@@ -1,11 +1,11 @@
-use std::fmt;
-use std::fmt::Debug;
-
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::bundle_graph::BundleGraph;
 use atlaspack_core::plugin::NamerPlugin;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::types::Bundle;
+use std::fmt;
+use std::fmt::Debug;
 
 pub struct NodejsRpcNamerPlugin {
   _name: String,
@@ -25,8 +25,9 @@ impl NodejsRpcNamerPlugin {
   }
 }
 
+#[async_trait]
 impl NamerPlugin for NodejsRpcNamerPlugin {
-  fn name(
+  async fn name(
     &self,
     _bundle: &Bundle,
     _bundle_graph: &BundleGraph,
