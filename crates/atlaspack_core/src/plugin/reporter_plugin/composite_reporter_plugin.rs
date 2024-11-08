@@ -1,6 +1,6 @@
-use std::fmt::{Debug, Display, Formatter};
-
 use crate::plugin::{ReporterEvent, ReporterPlugin};
+use async_trait::async_trait;
+use std::fmt::{Debug, Display, Formatter};
 
 #[cfg(not(test))]
 type Reporter = Box<dyn ReporterPlugin>;
@@ -33,12 +33,13 @@ impl Display for CompositeReporterPluginError {
 
 impl std::error::Error for CompositeReporterPluginError {}
 
+#[async_trait]
 impl ReporterPlugin for CompositeReporterPlugin {
   /// Loop over reporters and call report on each one of them.
-  fn report(&self, event: &ReporterEvent) -> Result<(), anyhow::Error> {
+  async fn report(&self, event: &ReporterEvent) -> Result<(), anyhow::Error> {
     let mut errors = vec![];
     for reporter in &self.reporters {
-      let result = reporter.report(event);
+      let result = reporter.report(event).await;
       if let Err(error) = result {
         errors.push(error)
       }
@@ -59,8 +60,8 @@ mod tests {
 
   use super::*;
 
-  #[test]
-  fn test_reporters_get_called() {
+  #[tokio::test]
+  async fn test_reporters_get_called() {
     let mut reporter1 = MockReporterPlugin::new();
     let mut reporter2 = MockReporterPlugin::new();
 
@@ -71,11 +72,12 @@ mod tests {
 
     composite_reporter
       .report(&ReporterEvent::BuildStart)
+      .await
       .unwrap();
   }
 
-  #[test]
-  fn test_errors_are_forwarded_up() {
+  #[tokio::test]
+  async fn test_errors_are_forwarded_up() {
     let mut reporter1 = MockReporterPlugin::new();
     let mut reporter2 = MockReporterPlugin::new();
 
@@ -87,7 +89,7 @@ mod tests {
 
     let composite_reporter = CompositeReporterPlugin::new(vec![reporter1, reporter2]);
 
-    let result = composite_reporter.report(&ReporterEvent::BuildStart);
+    let result = composite_reporter.report(&ReporterEvent::BuildStart).await;
     assert!(result.is_err());
     assert!(result
       .err()

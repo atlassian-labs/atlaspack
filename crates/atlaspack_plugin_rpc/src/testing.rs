@@ -160,8 +160,9 @@ impl PackagerPlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl ReporterPlugin for TestingRpcPlugin {
-  fn report(&self, _event: &ReporterEvent) -> Result<(), anyhow::Error> {
+  async fn report(&self, _event: &ReporterEvent) -> Result<(), anyhow::Error> {
     Ok(())
   }
 }
