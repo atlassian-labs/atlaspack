@@ -25,9 +25,6 @@ pub struct ResolveContext {
 #[derive(Clone, Debug, Hash, Default, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolvedResolution {
-  /// Whether this dependency can be deferred by Atlaspack itself
-  pub can_defer: bool,
-
   /// The code of the resolved asset
   ///
   /// If provided, this is used rather than reading the file from disk.

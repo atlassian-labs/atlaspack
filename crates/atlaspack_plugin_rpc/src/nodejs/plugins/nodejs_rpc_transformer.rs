@@ -125,8 +125,17 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
         move |env| {
           let run_transformer_opts = env.to_js_value(&run_transformer_opts)?;
 
-          let mut result = env.create_buffer(asset.code.len())?;
-          result.copy_from_slice(&asset.code);
+          let result = {
+            let size = asset.code.len();
+            if size == 0 {
+              // We must avoid calling create_buffer with a size of 0 as it will panic
+              env.create_buffer_with_data(Vec::new())?
+            } else {
+              let mut result = env.create_buffer(size)?;
+              result.copy_from_slice(&asset.code);
+              result
+            }
+          };
 
           Ok(vec![run_transformer_opts, result.into_unknown()])
         },

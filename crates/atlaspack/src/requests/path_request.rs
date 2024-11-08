@@ -29,7 +29,6 @@ pub struct PathRequest {
 pub enum PathRequestOutput {
   Excluded,
   Resolved {
-    can_defer: bool,
     path: PathBuf,
     code: Option<String>,
     pipeline: Option<String>,
@@ -99,7 +98,6 @@ impl Request for PathRequest {
           })
         }
         Resolution::Resolved(ResolvedResolution {
-          can_defer,
           code,
           file_path,
           meta: _meta,
@@ -122,7 +120,6 @@ impl Request for PathRequest {
           return Ok(ResultAndInvalidations {
             invalidations,
             result: RequestResult::Path(PathRequestOutput::Resolved {
-              can_defer,
               code,
               path: file_path,
               pipeline: pipeline
@@ -149,6 +146,11 @@ impl Request for PathRequest {
       .as_ref()
       .or(self.dependency.source_path.as_ref());
 
+    tracing::error!(
+      "Failed to resolve {:?} from {:?}",
+      self.dependency.specifier,
+      resolve_from
+    );
     match resolve_from {
       None => Err(diagnostic_error!(
         "Failed to resolve {}",
@@ -327,7 +329,6 @@ mod tests {
     assert_eq!(
       resolution.map_err(|e| e.to_string()),
       Ok(RequestResult::Path(PathRequestOutput::Resolved {
-        can_defer: false,
         code: None,
         path,
         pipeline: None,

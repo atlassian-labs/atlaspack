@@ -1,10 +1,6 @@
 use std::{collections::HashSet, sync::Arc};
 
-use petgraph::{
-  graph::{DiGraph, NodeIndex},
-  visit::EdgeRef,
-  Direction,
-};
+use petgraph::graph::{DiGraph, NodeIndex};
 
 use crate::types::{Asset, Dependency};
 
@@ -25,7 +21,6 @@ pub struct AssetNode {
 pub struct DependencyNode {
   pub dependency: Arc<Dependency>,
   pub requested_symbols: HashSet<String>,
-  pub state: DependencyState,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -38,14 +33,6 @@ pub enum AssetGraphNode {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AssetGraphEdge {}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum DependencyState {
-  New,
-  Deferred,
-  Excluded,
-  Resolved,
-}
 
 impl PartialEq for AssetGraph {
   fn eq(&self, other: &Self) -> bool {
@@ -112,7 +99,7 @@ impl AssetGraph {
     let root_node_index = NodeIndex::new(0);
 
     let is_library = dependency.env.is_library;
-    let node_index = self.add_dependency(root_node_index, dependency);
+    let node_index = self.add_dependency(root_node_index, Arc::new(dependency));
 
     if is_library {
       if let Some(dependency_index) = &self.dependency_index(node_index) {
@@ -125,13 +112,16 @@ impl AssetGraph {
     node_index
   }
 
-  pub fn add_dependency(&mut self, parent_idx: NodeIndex, dependency: Dependency) -> NodeIndex {
+  pub fn add_dependency(
+    &mut self,
+    parent_idx: NodeIndex,
+    dependency: Arc<Dependency>,
+  ) -> NodeIndex {
     let idx = self.dependencies.len();
 
     self.dependencies.push(DependencyNode {
-      dependency: Arc::new(dependency),
+      dependency: dependency,
       requested_symbols: HashSet::default(),
-      state: DependencyState::New,
     });
 
     let dependency_idx = self.graph.add_node(AssetGraphNode::Dependency(idx));
@@ -160,123 +150,6 @@ impl AssetGraph {
     match self.graph.node_weight(node_index).unwrap() {
       AssetGraphNode::Asset(idx) => Some(*idx),
       _ => None,
-    }
-  }
-
-  /// Propagates the requested symbols from an incoming dependency to an asset,
-  /// and forwards those symbols to re-exported dependencies if needed.
-  /// This may result in assets becoming un-deferred and transformed if they
-  /// now have requested symbols.
-  pub fn propagate_requested_symbols<F: FnMut(NodeIndex, Arc<Dependency>)>(
-    &mut self,
-    asset_node: NodeIndex,
-    incoming_dep_node: NodeIndex,
-    on_undeferred: &mut F,
-  ) {
-    let DependencyNode {
-      requested_symbols, ..
-    } = &self.dependencies[self.dependency_index(incoming_dep_node).unwrap()];
-
-    let asset_index = self.asset_index(asset_node).unwrap();
-    let AssetNode {
-      asset,
-      requested_symbols: asset_requested_symbols,
-    } = &mut self.assets[asset_index];
-
-    let mut re_exports = HashSet::<String>::default();
-    let mut wildcards = HashSet::<String>::default();
-    let star = String::from("*");
-
-    if requested_symbols.contains(&star) {
-      // If the requested symbols includes the "*" namespace, we need to include all of the asset's
-      // exported symbols.
-      if let Some(symbols) = &asset.symbols {
-        for sym in symbols {
-          if asset_requested_symbols.insert(sym.exported.clone()) && sym.is_weak {
-            // Propagate re-exported symbol to dependency.
-            re_exports.insert(sym.local.clone());
-          }
-        }
-      }
-
-      // Propagate to all export * wildcard dependencies.
-      wildcards.insert(star);
-    } else {
-      // Otherwise, add each of the requested symbols to the asset.
-      for sym in requested_symbols.iter() {
-        if asset_requested_symbols.insert(sym.clone()) {
-          if let Some(asset_symbol) = asset
-            .symbols
-            .as_ref()
-            .and_then(|symbols| symbols.iter().find(|s| s.exported == *sym))
-          {
-            if asset_symbol.is_weak {
-              // Propagate re-exported symbol to dependency.
-              re_exports.insert(asset_symbol.local.clone());
-            }
-          } else {
-            // If symbol wasn't found in the asset or a named re-export.
-            // This means the symbol is in one of the export * wildcards, but we don't know
-            // which one yet, so we propagate it to _all_ wildcard dependencies.
-            wildcards.insert(sym.clone());
-          }
-        }
-      }
-    }
-
-    let deps: Vec<_> = self
-      .graph
-      .neighbors_directed(asset_node, Direction::Outgoing)
-      .collect();
-    for dep_node in deps {
-      let dep_index = self.dependency_index(dep_node).unwrap();
-      let DependencyNode {
-        dependency,
-        requested_symbols,
-        state,
-      } = &mut self.dependencies[dep_index];
-
-      let mut updated = false;
-      if let Some(symbols) = &dependency.symbols {
-        for sym in symbols {
-          if sym.is_weak {
-            // This is a re-export. If it is a wildcard, add all unmatched symbols
-            // to this dependency, otherwise attempt to match a named re-export.
-            if sym.local == "*" {
-              for wildcard in &wildcards {
-                if requested_symbols.insert(wildcard.clone()) {
-                  updated = true;
-                }
-              }
-            } else if re_exports.contains(&sym.local)
-              && requested_symbols.insert(sym.exported.clone())
-            {
-              updated = true;
-            }
-          } else if requested_symbols.insert(sym.exported.clone()) {
-            // This is a normal import. Add the requested symbol.
-            updated = true;
-          }
-        }
-      }
-
-      // If the dependency was updated, propagate to the target asset if there is one,
-      // or un-defer this dependency so we transform the requested asset.
-      // We must always resolve new dependencies to determine whether they have side effects.
-      if updated || *state == DependencyState::New {
-        if let Some(resolved) = self
-          .graph
-          .edges_directed(dep_node, Direction::Outgoing)
-          .next()
-        {
-          // Avoid infintite loops for self references
-          if resolved.target() != asset_node {
-            self.propagate_requested_symbols(resolved.target(), dep_node, on_undeferred);
-          }
-        } else {
-          on_undeferred(dep_node, Arc::clone(dependency));
-        }
-      }
     }
   }
 }
@@ -311,7 +184,7 @@ impl serde::Serialize for AssetGraph {
               id: dependency.id(),
               dependency: dependency.as_ref().clone(),
             },
-            has_deferred: self.dependencies[*idx].state == DependencyState::Deferred,
+            has_deferred: false,
           }
         }
       })
@@ -414,7 +287,7 @@ mod tests {
       symbols: Some(symbols.iter().map(symbol).collect()),
       ..Dependency::default()
     };
-    graph.add_dependency(parent_node, dep)
+    graph.add_dependency(parent_node, Arc::new(dep))
   }
 
   #[test]
@@ -427,13 +300,6 @@ mod tests {
 
     let index_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "index.js");
     let dep_a_node = add_dependency(&mut graph, index_asset_node, vec![("a", "a", false)]);
-    graph.propagate_requested_symbols(
-      index_asset_node,
-      entry_dep_node,
-      &mut |dependency_node_index, _dependency| {
-        requested.insert(dependency_node_index);
-      },
-    );
 
     assert_eq!(requested, HashSet::from_iter(vec![dep_a_node]));
     assert_requested_symbols(&graph, dep_a_node, vec!["a"]);

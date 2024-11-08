@@ -8,7 +8,7 @@ use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 
-use atlaspack_core::asset_graph::{AssetGraph, DependencyNode, DependencyState};
+use atlaspack_core::asset_graph::{AssetGraph, DependencyNode};
 use atlaspack_core::types::{Asset, AssetWithDependencies, Dependency};
 
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
@@ -141,11 +141,7 @@ impl AssetGraphBuilder {
       .get(&request_id)
       .expect("Missing node index for request id {request_id}");
     let dep_index = self.graph.dependency_index(node).unwrap();
-    let DependencyNode {
-      dependency,
-      requested_symbols,
-      state,
-    } = &mut self.graph.dependencies[dep_index];
+    let DependencyNode { dependency, .. } = &mut self.graph.dependencies[dep_index];
     let asset_request = match result {
       PathRequestOutput::Resolved {
         path,
@@ -153,30 +149,16 @@ impl AssetGraphBuilder {
         pipeline,
         side_effects,
         query,
-        can_defer,
-      } => {
-        if !side_effects
-          && can_defer
-          && requested_symbols.is_empty()
-          && dependency.symbols.is_some()
-        {
-          *state = DependencyState::Deferred;
-          return;
-        }
-
-        *state = DependencyState::Resolved;
-        AssetRequest {
-          code: code.clone(),
-          env: dependency.env.clone().into(),
-          file_path: path,
-          project_root: self.request_context.project_root.clone(),
-          pipeline: pipeline.clone(),
-          query,
-          side_effects,
-        }
-      }
+      } => AssetRequest {
+        code: code.clone(),
+        env: dependency.env.clone().into(),
+        file_path: path,
+        project_root: self.request_context.project_root.clone(),
+        pipeline: pipeline.clone(),
+        query,
+        side_effects,
+      },
       PathRequestOutput::Excluded => {
-        *state = DependencyState::Excluded;
         return;
       }
     };
@@ -192,7 +174,6 @@ impl AssetGraphBuilder {
       // We have already completed this AssetRequest so we can connect the
       // Dependency to the Asset immediately
       self.graph.add_edge(&node, asset_node_index);
-      self.propagate_requested_symbols(*asset_node_index, node);
     } else {
       // The AssetRequest has already been kicked off but is yet to
       // complete. Register this Dependency to be connected once it
@@ -259,7 +240,6 @@ impl AssetGraphBuilder {
         &mut added_discovered_assets,
         root_asset,
       );
-      self.propagate_requested_symbols(asset_node_index, incoming_dep_node_index);
     }
 
     self.add_asset_dependencies(
@@ -270,14 +250,11 @@ impl AssetGraphBuilder {
       root_asset,
     );
 
-    self.propagate_requested_symbols(asset_node_index, incoming_dep_node_index);
-
     // Connect any previously discovered Dependencies that were waiting
     // for this AssetNode to be created
     if let Some(waiting) = self.waiting_asset_requests.remove(&request_id) {
       for dep in waiting {
         self.graph.add_edge(&dep, &asset_node_index);
-        self.propagate_requested_symbols(asset_node_index, dep);
       }
     }
   }
@@ -331,7 +308,19 @@ impl AssetGraphBuilder {
         .as_ref()
         .is_some_and(|key| key == &dependency.specifier);
 
-      let dep_node = self.graph.add_dependency(asset_node_index, dependency);
+      let dependency = Arc::new(dependency);
+      let dep_node = self
+        .graph
+        .add_dependency(asset_node_index, dependency.clone());
+
+      Self::trigger_path_request(
+        &mut self.request_id_to_dep_node_index,
+        &mut self.work_count,
+        &mut self.request_context,
+        &self.sender,
+        dep_node,
+        dependency,
+      );
 
       if dep_to_root_asset {
         self.graph.add_edge(&dep_node, &root_asset.1);
@@ -364,31 +353,9 @@ impl AssetGraphBuilder {
             added_discovered_assets,
             root_asset,
           );
-          self.propagate_requested_symbols(asset_node_index, dep_node);
         }
       }
     }
-  }
-
-  fn propagate_requested_symbols(
-    &mut self,
-    asset_node_index: NodeIndex,
-    incoming_dep_node_index: NodeIndex,
-  ) {
-    self.graph.propagate_requested_symbols(
-      asset_node_index,
-      incoming_dep_node_index,
-      &mut |dependency_node_index: NodeIndex, dependency: Arc<Dependency>| {
-        Self::on_undeferred(
-          &mut self.request_id_to_dep_node_index,
-          &mut self.work_count,
-          &mut self.request_context,
-          &self.sender,
-          dependency_node_index,
-          dependency,
-        );
-      },
-    );
   }
 
   fn handle_target_request_result(&mut self, result: TargetRequestOutput) {
@@ -414,12 +381,7 @@ impl AssetGraphBuilder {
     }
   }
 
-  /// When we find dependencies, we will only trigger resolution and parsing for dependencies
-  /// that have used symbols.
-  ///
-  /// Once they do have symbols in use, this callback will re-trigger resolution/transformation
-  /// for those files.
-  fn on_undeferred(
+  fn trigger_path_request(
     request_id_to_dep_node_index: &mut HashMap<u64, NodeIndex>,
     work_count: &mut u32,
     request_context: &mut RunRequestContext,

@@ -131,9 +131,9 @@ impl AtlaspackResolver {
       }
       ResolverError::ModuleNotFound { module } => {
         // TODO: Add alternative modules
-        diagnostic_error!(diagnostic
-          .kind(ErrorKind::NotFound)
-          .message(format!("Cannot find module '{module}'")))
+        diagnostic_error!(diagnostic.kind(ErrorKind::NotFound).message(format!(
+          "Cannot find module '{module}', specifier={specifier}"
+        )))
       }
       ResolverError::ModuleSubpathNotFound {
         module,
