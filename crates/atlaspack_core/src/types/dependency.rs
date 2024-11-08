@@ -18,6 +18,7 @@ use super::json::JSONObject;
 use super::source::SourceLocation;
 use super::symbol::Symbol;
 use super::target::Target;
+use super::EnvironmentRef;
 use super::FileType;
 
 #[allow(clippy::too_many_arguments)]
@@ -49,7 +50,7 @@ pub fn create_dependency_id(
 }
 
 /// A dependency denotes a connection between two assets
-#[derive(Hash, PartialEq, Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Hash, PartialEq, Clone, Debug, Deserialize, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Dependency {
   /// Controls the behavior of the bundle the resolved asset is placed into
@@ -59,7 +60,7 @@ pub struct Dependency {
   pub bundle_behavior: MaybeBundleBehavior,
 
   /// The environment of the dependency
-  pub env: Arc<Environment>,
+  pub env: EnvironmentRef,
 
   /// The location within the source file where the dependency was found
   #[serde(default)]
@@ -190,7 +191,7 @@ impl Dependency {
 
   pub fn new(specifier: String, env: Arc<Environment>) -> Dependency {
     Dependency {
-      env,
+      env: env.into(),
       meta: JSONObject::new(),
       specifier,
       ..Dependency::default()

@@ -447,6 +447,7 @@ dependencies = [
  "serde-value",
  "serde_json",
  "serde_repr",
+ "thread_local",
  "tracing",
  "tracing-subscriber",
  "xxhash-rust",
