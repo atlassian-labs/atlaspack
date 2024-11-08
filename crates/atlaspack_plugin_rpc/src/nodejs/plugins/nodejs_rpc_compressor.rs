@@ -1,11 +1,11 @@
-use std::fmt;
-use std::fmt::Debug;
-use std::fs::File;
-
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::CompressedFile;
 use atlaspack_core::plugin::CompressorPlugin;
 use atlaspack_core::plugin::PluginContext;
+use std::fmt;
+use std::fmt::Debug;
+use std::fs::File;
 
 pub struct NodejsRpcCompressorPlugin {
   _name: String,
@@ -25,8 +25,9 @@ impl NodejsRpcCompressorPlugin {
   }
 }
 
+#[async_trait]
 impl CompressorPlugin for NodejsRpcCompressorPlugin {
-  fn compress(&self, _file: &File) -> Result<Option<CompressedFile>, String> {
+  async fn compress(&self, _file: &File) -> Result<Option<CompressedFile>, String> {
     todo!()
   }
 }

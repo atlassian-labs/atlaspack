@@ -54,11 +54,13 @@ impl Request for AssetRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
-    request_context.report(ReporterEvent::BuildProgress(BuildProgressEvent::Building(
-      AssetBuildEvent {
-        file_path: self.file_path.clone(),
-      },
-    )));
+    request_context
+      .report(ReporterEvent::BuildProgress(BuildProgressEvent::Building(
+        AssetBuildEvent {
+          file_path: self.file_path.clone(),
+        },
+      )))
+      .await;
 
     let start = Instant::now();
 

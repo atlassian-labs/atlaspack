@@ -1,9 +1,9 @@
-use std::fmt::Debug;
-use std::fs::File;
-
 use crate::bundle_graph::BundleGraph;
 use crate::types::Bundle;
 use crate::types::SourceMap;
+use async_trait::async_trait;
+use std::fmt::Debug;
+use std::fs::File;
 
 pub struct OptimizeContext<'a> {
   pub bundle: &'a Bundle,
@@ -28,9 +28,10 @@ pub struct OptimizedBundle {
 /// Multiple optimizer plugins may run in series, and the result of each optimizer is passed to
 /// the next.
 ///
+#[async_trait]
 pub trait OptimizerPlugin: Debug + Send + Sync {
   /// Transforms the contents of a bundle and its source map
-  fn optimize(&self, ctx: OptimizeContext) -> Result<OptimizedBundle, anyhow::Error>;
+  async fn optimize<'a>(&self, ctx: OptimizeContext<'a>) -> Result<OptimizedBundle, anyhow::Error>;
 }
 
 #[cfg(test)]
@@ -40,8 +41,12 @@ mod tests {
   #[derive(Debug)]
   struct TestOptimizerPlugin {}
 
+  #[async_trait]
   impl OptimizerPlugin for TestOptimizerPlugin {
-    fn optimize(&self, _ctx: OptimizeContext) -> Result<OptimizedBundle, anyhow::Error> {
+    async fn optimize<'a>(
+      &self,
+      _ctx: OptimizeContext<'a>,
+    ) -> Result<OptimizedBundle, anyhow::Error> {
       todo!()
     }
   }
