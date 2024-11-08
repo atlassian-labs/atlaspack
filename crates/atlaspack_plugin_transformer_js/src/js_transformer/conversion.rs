@@ -51,7 +51,7 @@ pub(crate) fn convert_result(
     let dependency = make_esm_helpers_dependency(
       options,
       &asset_file_path,
-      (*asset_environment).clone(),
+      (**asset_environment).clone(),
       &asset.id,
     );
     dependency_by_specifier.insert(dependency.specifier.as_str().into(), dependency);
@@ -542,8 +542,9 @@ fn convert_dependency(
           output_format,
           source_map: asset.env.source_map.clone(),
           source_type,
-          ..*asset.env.clone()
-        }),
+          ..**asset.env.clone()
+        })
+        .into(),
         ..base_dependency
       };
 
@@ -559,8 +560,9 @@ fn convert_dependency(
           output_format: OutputFormat::Global,
           source_map: asset.env.source_map.clone(),
           source_type,
-          ..*asset.env.clone()
-        }),
+          ..**asset.env.clone()
+        })
+        .into(),
         needs_stable_name: true,
         // placeholder: dep.placeholder.map(|s| s.into()),
         ..base_dependency
@@ -578,8 +580,9 @@ fn convert_dependency(
           output_format: OutputFormat::EsModule,
           source_map: asset.env.source_map.clone(),
           source_type: SourceType::Module,
-          ..*asset.env.clone()
-        }),
+          ..**asset.env.clone()
+        })
+        .into(),
         // placeholder: dep.placeholder.map(|s| s.into()),
         // promise_symbol: None,
         ..base_dependency
@@ -666,8 +669,9 @@ fn convert_dependency(
             output_format,
             source_map: env.source_map.clone(),
             source_type: SourceType::Module,
-            ..*env
-          });
+            ..**env
+          })
+          .into();
         }
       }
 

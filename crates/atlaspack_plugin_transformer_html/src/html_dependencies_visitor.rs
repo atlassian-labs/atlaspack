@@ -41,7 +41,7 @@ impl HtmlDependenciesVisitor {
 
   fn add_url_dependency(&mut self, specifier: String) -> String {
     let dependency = Dependency {
-      env: self.context.env.clone(),
+      env: self.context.env.clone().into(),
       priority: Priority::Lazy,
       source_asset_id: Some(self.context.source_asset_id.clone()),
       source_asset_type: Some(FileType::Html),
@@ -156,7 +156,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
             } else {
               None
             },
-            env: env.clone(),
+            env: env.clone().into(),
             is_esm: source_type == SourceType::Module,
             priority: match src_attr {
               None => Priority::Sync,
@@ -239,7 +239,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
           );
 
           self.dependencies.push(Dependency {
-            env: self.context.env.clone(),
+            env: self.context.env.clone().into(),
             source_asset_id: Some(self.context.source_asset_id.clone()),
             source_asset_type: Some(FileType::Html),
             source_path: self.context.source_path.clone(),

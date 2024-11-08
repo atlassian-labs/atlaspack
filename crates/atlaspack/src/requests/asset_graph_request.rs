@@ -167,7 +167,7 @@ impl AssetGraphBuilder {
         *state = DependencyState::Resolved;
         AssetRequest {
           code: code.clone(),
-          env: dependency.env.clone(),
+          env: dependency.env.clone().into(),
           file_path: path,
           project_root: self.request_context.project_root.clone(),
           pipeline: pipeline.clone(),

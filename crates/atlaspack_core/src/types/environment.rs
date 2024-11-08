@@ -1,7 +1,10 @@
+use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::hash::Hash;
 use std::hash::Hasher;
-use std::num::NonZeroU32;
+use std::ops::Deref;
+use std::sync::Arc;
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -19,14 +22,80 @@ pub mod engines;
 mod output_format;
 pub mod version;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct EnvironmentId(pub NonZeroU32);
+thread_local! {
+  static SERIALIZED_REFS: RefCell<HashSet<Arc<Environment>>> = RefCell::new(HashSet::new());
+}
+
+pub fn take_serialized_refs() -> HashSet<Arc<Environment>> {
+  SERIALIZED_REFS.with(|serialized_refs| serialized_refs.replace(HashSet::new()))
+}
+
+/// Wraps an environment, but serializes as the environment ID
+#[derive(Clone, Debug, PartialEq, Hash, Default)]
+pub struct EnvironmentRef(Arc<Environment>);
+
+impl From<EnvironmentRef> for Arc<Environment> {
+  fn from(environment_ref: EnvironmentRef) -> Self {
+    environment_ref.0.clone()
+  }
+}
+
+impl From<Environment> for EnvironmentRef {
+  fn from(environment: Environment) -> Self {
+    Self(Arc::new(environment))
+  }
+}
+
+impl From<Arc<Environment>> for EnvironmentRef {
+  fn from(environment: Arc<Environment>) -> Self {
+    Self(environment)
+  }
+}
+
+impl EnvironmentRef {
+  pub fn id(&self) -> String {
+    self.0.id()
+  }
+}
+
+impl Deref for EnvironmentRef {
+  type Target = Arc<Environment>;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+impl<'de> Deserialize<'de> for EnvironmentRef {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: serde::Deserializer<'de>,
+  {
+    Environment::deserialize(deserializer)
+      .map(Arc::new)
+      .map(Into::into)
+  }
+}
+
+impl Serialize for EnvironmentRef {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: serde::Serializer,
+  {
+    SERIALIZED_REFS.with(|serialized_refs| {
+      let mut serialized_refs = serialized_refs.borrow_mut();
+      serialized_refs.insert(self.0.clone());
+    });
+
+    self.id().serialize(serializer)
+  }
+}
 
 /// The environment the built code will run in
 ///
 /// This influences how Atlaspack compiles your code, including what syntax to transpile.
 ///
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Hash, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Environment {
   /// The environment the output should run in
