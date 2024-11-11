@@ -1,11 +1,11 @@
-use std::fmt;
-use std::fmt::Debug;
-
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::PackageContext;
 use atlaspack_core::plugin::PackagedBundle;
 use atlaspack_core::plugin::PackagerPlugin;
 use atlaspack_core::plugin::PluginContext;
+use std::fmt;
+use std::fmt::Debug;
 
 pub struct NodejsRpcPackagerPlugin {
   _name: String,
@@ -25,8 +25,9 @@ impl NodejsRpcPackagerPlugin {
   }
 }
 
+#[async_trait]
 impl PackagerPlugin for NodejsRpcPackagerPlugin {
-  fn package(&self, _ctx: PackageContext) -> Result<PackagedBundle, anyhow::Error> {
+  async fn package<'a>(&self, _ctx: PackageContext<'a>) -> Result<PackagedBundle, anyhow::Error> {
     todo!()
   }
 }

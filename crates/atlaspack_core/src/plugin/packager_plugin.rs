@@ -1,9 +1,9 @@
-use std::fmt::Debug;
-use std::fs::File;
-
 use crate::bundle_graph::BundleGraph;
 use crate::types::Bundle;
 use crate::types::SourceMap;
+use async_trait::async_trait;
+use std::fmt::Debug;
+use std::fs::File;
 
 pub struct PackageContext<'a> {
   pub bundle: &'a Bundle,
@@ -23,9 +23,10 @@ pub struct PackagedBundle {
 /// Packagers are also responsible for resolving URL references, bundle inlining, and generating
 /// source maps.
 ///
+#[async_trait]
 pub trait PackagerPlugin: Debug + Send + Sync {
   /// Combines assets in a bundle
-  fn package(&self, ctx: PackageContext) -> Result<PackagedBundle, anyhow::Error>;
+  async fn package<'a>(&self, ctx: PackageContext<'a>) -> Result<PackagedBundle, anyhow::Error>;
 }
 
 #[cfg(test)]
@@ -35,8 +36,9 @@ mod tests {
   #[derive(Debug)]
   struct TestPackagerPlugin {}
 
+  #[async_trait]
   impl PackagerPlugin for TestPackagerPlugin {
-    fn package(&self, _ctx: PackageContext) -> Result<PackagedBundle, anyhow::Error> {
+    async fn package<'a>(&self, _ctx: PackageContext<'a>) -> Result<PackagedBundle, anyhow::Error> {
       todo!()
     }
   }

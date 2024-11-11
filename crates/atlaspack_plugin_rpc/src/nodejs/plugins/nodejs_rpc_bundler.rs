@@ -1,10 +1,10 @@
-use std::fmt;
-use std::fmt::Debug;
-
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::bundle_graph::BundleGraph;
 use atlaspack_core::plugin::BundlerPlugin;
 use atlaspack_core::plugin::PluginContext;
+use std::fmt;
+use std::fmt::Debug;
 
 pub struct NodejsRpcBundlerPlugin {
   _name: String,
@@ -24,12 +24,13 @@ impl NodejsRpcBundlerPlugin {
   }
 }
 
+#[async_trait]
 impl BundlerPlugin for NodejsRpcBundlerPlugin {
-  fn bundle(&self, _bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error> {
+  async fn bundle(&self, _bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error> {
     todo!()
   }
 
-  fn optimize(&self, _bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error> {
+  async fn optimize(&self, _bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error> {
     todo!()
   }
 }
