@@ -9,8 +9,8 @@ use std::alloc::Layout;
 // #[global_allocator]
 // static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
-// #[global_allocator]
-// static GLOBAL: std::alloc::System = std::alloc::System;
+#[global_allocator]
+static GLOBAL: std::alloc::System = std::alloc::System;
 
 // #[cfg(all(windows, not(miri)))]
 // #[global_allocator]

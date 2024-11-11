@@ -59,7 +59,7 @@ impl Atlaspack {
 
     let threads = num_cpus::get();
     tracing::info!(%threads, "Creating tokio runtime...");
-    let runtime = tokio::runtime::Builder::new_current_thread()
+    let runtime = tokio::runtime::Builder::new_multi_thread()
       .enable_all()
       .thread_name("atlaspack-tokio-worker")
       .worker_threads(threads)
@@ -127,6 +127,8 @@ impl Atlaspack {
 
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
     self.runtime.block_on(async move {
+      tracing::info!("Building asset graph...");
+
       let AtlaspackState { config, plugins } = self.state().unwrap();
 
       let mut request_tracker = RequestTracker::new(

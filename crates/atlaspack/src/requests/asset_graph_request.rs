@@ -419,6 +419,7 @@ fn get_direct_discovered_assets<'a>(
     .collect()
 }
 
+#[tracing::instrument(skip(request_context, entry))]
 async fn run_entry_request(
   request_context: &Arc<RunRequestContext>,
   entry: &str,
