@@ -88,7 +88,7 @@ pub fn run_fold<V: Fold>(
 #[derive(Debug, thiserror::Error)]
 pub enum RunWithTransformationError {
   #[error("Failed to parse module")]
-  SwcParse(swc_ecma_parser::error::Error),
+  SwcParse(swc_core::ecma::parser::error::Error),
   #[error("IO Error: {0}")]
   IoError(#[from] std::io::Error),
   #[error("Invalid utf-8 output: {0}")]
@@ -106,7 +106,7 @@ fn run_with_transformation<R>(
   transform: impl FnOnce(RunContext, &mut Module) -> R,
 ) -> Result<RunWithTransformationOutput<R>, RunWithTransformationError> {
   let source_map = Lrc::new(SourceMap::default());
-  let source_file = source_map.new_source_file(FileName::Anon, code.into());
+  let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), code.into());
 
   let lexer = Lexer::new(
     Default::default(),

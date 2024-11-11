@@ -18,6 +18,7 @@ import type {
   AssetGraphRequestInput,
   AssetGraphRequestResult,
 } from './AssetGraphRequest';
+import SourceMap from '@parcel/source-map';
 
 type RunInput = {|
   input: AssetGraphRequestInput,
@@ -197,9 +198,11 @@ function getAssetGraph(serializedGraph, options) {
 
       if (asset.map) {
         let mapKey = hashString(`${ATLASPACK_VERSION}:map:${asset.id}`);
+        let sourceMap = new SourceMap(options.projectRoot);
+        sourceMap.addVLQMap(JSON.parse(asset.map));
 
         asset.mapKey = mapKey;
-        options.cache.setBlob(mapKey, asset.map);
+        options.cache.setBlob(mapKey, sourceMap.toBuffer());
         delete asset.map;
       }
 

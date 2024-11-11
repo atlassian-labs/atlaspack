@@ -5,6 +5,7 @@ use data_encoding::BASE64;
 use data_encoding::HEXLOWER;
 use swc_core::common::Mark;
 use swc_core::common::Span;
+use swc_core::common::SyntaxContext;
 use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
 use swc_core::ecma::atoms::JsWord;
@@ -199,9 +200,10 @@ impl<'a> InlineFS<'a> {
             callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
               obj: Box::new(Expr::Ident(Ident::new(
                 "Buffer".into(),
-                DUMMY_SP.apply_mark(self.collect.unresolved_mark),
+                DUMMY_SP,
+                SyntaxContext::empty().apply_mark(self.collect.unresolved_mark),
               ))),
-              prop: MemberProp::Ident(Ident::new("from".into(), DUMMY_SP)),
+              prop: MemberProp::Ident(IdentName::new("from".into(), DUMMY_SP)),
               span: DUMMY_SP,
             }))),
             args: vec![
@@ -215,6 +217,7 @@ impl<'a> InlineFS<'a> {
               },
             ],
             span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
             type_args: None,
           }))
         } else {
