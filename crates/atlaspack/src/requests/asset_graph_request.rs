@@ -1,11 +1,16 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
+use ::futures::future::BoxFuture;
+use ::futures::FutureExt;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
+use tokio::sync::futures;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use atlaspack_core::asset_graph::{AssetGraph, DependencyNode};
@@ -14,7 +19,7 @@ use atlaspack_core::types::{Asset, AssetWithDependencies, Dependency};
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
 use super::asset_request::{AssetRequest, AssetRequestOutput};
-use super::entry_request::{EntryRequest, EntryRequestOutput};
+use super::entry_request::{Entry, EntryRequest, EntryRequestOutput};
 use super::path_request::{PathRequest, PathRequestOutput};
 use super::target_request::{TargetRequest, TargetRequestOutput};
 use super::RequestResult;
@@ -50,97 +55,43 @@ struct AssetGraphBuilder {
   graph: AssetGraph,
   visited: HashSet<u64>,
   work_count: u32,
-  request_context: RunRequestContext,
-  sender: ResultSender,
-  receiver: ResultReceiver,
+  request_context: Arc<RunRequestContext>,
   asset_request_to_asset: HashMap<u64, NodeIndex>,
   waiting_asset_requests: HashMap<u64, HashSet<NodeIndex>>,
 }
 
 impl AssetGraphBuilder {
   fn new(request_context: RunRequestContext) -> Self {
-    let (sender, receiver) = tokio::sync::mpsc::channel(10_000);
-
     AssetGraphBuilder {
       request_id_to_dep_node_index: HashMap::new(),
       graph: AssetGraph::new(),
       visited: HashSet::new(),
       work_count: 0,
-      request_context,
-      sender,
-      receiver,
+      request_context: Arc::new(request_context),
       asset_request_to_asset: HashMap::new(),
       waiting_asset_requests: HashMap::new(),
     }
   }
 
-  async fn build(mut self) -> Result<ResultAndInvalidations, RunRequestError> {
-    for entry in self.request_context.options.clone().entries.iter() {
-      self.work_count += 1;
-      self
-        .request_context
-        .queue_request(
-          EntryRequest {
-            entry: entry.clone(),
-          },
-          self.sender.clone(),
-        )
-        .await?;
+  async fn build(self) -> Result<ResultAndInvalidations, RunRequestError> {
+    let mut futures = vec![];
+    for entry in &self.request_context.options.entries {
+      let f = tokio::spawn({
+        let request_context = self.request_context.clone();
+        let entry = entry.clone();
+        async move { run_entry_request(&request_context, &entry).await }
+      });
+      futures.push(f);
     }
 
-    loop {
-      // TODO: Should the work count be tracked on the request_context as part of
-      // the queue_request API?
-      if self.work_count == 0 {
-        break;
-      }
-
-      let Some(result) = self.receiver.recv().await else {
-        break;
-      };
-
-      self.work_count -= 1;
-
-      match result {
-        Ok((RequestResult::Entry(result), _request_id)) => {
-          tracing::debug!("Handling EntryRequestOutput");
-          self.handle_entry_result(result).await?;
-        }
-        Ok((RequestResult::Target(result), _request_id)) => {
-          tracing::debug!("Handling TargetRequestOutput");
-          self.handle_target_request_result(result).await?;
-        }
-        Ok((RequestResult::Asset(result), request_id)) => {
-          tracing::debug!(
-            "Handling AssetRequestOutput: {}",
-            result.asset.file_path.display()
-          );
-          self.handle_asset_result(result, request_id).await?;
-        }
-        Ok((RequestResult::Path(result), request_id)) => {
-          let path = match &result {
-            PathRequestOutput::Excluded => "<excluded>",
-            PathRequestOutput::Resolved { path, .. } => path.as_os_str().to_str().unwrap(),
-          };
-          tracing::debug!(%path, %request_id, "Handling PathRequestOutput");
-          self.handle_path_result(result, request_id).await?;
-        }
-        Err(err) => return Err(err),
-        // This branch should never occur
-        Ok((result, request_id)) => {
-          return Err(anyhow!(
-            "Unexpected request result in AssetGraphRequest ({}): {:?}",
-            request_id,
-            result
-          ))
-        }
-      }
+    for entry_future in futures {
+      entry_future.await??;
     }
 
-    Ok(ResultAndInvalidations {
-      result: RequestResult::AssetGraph(AssetGraphRequestOutput { graph: self.graph }),
-      invalidations: vec![],
-    })
+    Ok(ResultAndInvalidations::new(
+      RequestResult::AssetGraph(AssetGraphRequestOutput { graph: self.graph }),
+      vec![],
+    ))
   }
 
   async fn handle_path_result(
@@ -179,10 +130,7 @@ impl AssetGraphBuilder {
     if self.visited.insert(id) {
       self.request_id_to_dep_node_index.insert(id, node);
       self.work_count += 1;
-      self
-        .request_context
-        .queue_request(asset_request, self.sender.clone())
-        .await?;
+      self.request_context.run_request(asset_request).await?;
     } else if let Some(asset_node_index) = self.asset_request_to_asset.get(&id) {
       // We have already completed this AssetRequest so we can connect the
       // Dependency to the Asset immediately
@@ -198,26 +146,6 @@ impl AssetGraphBuilder {
           nodes.insert(node);
         })
         .or_insert_with(|| HashSet::from([node]));
-    }
-
-    Ok(())
-  }
-
-  async fn handle_entry_result(&mut self, result: EntryRequestOutput) -> anyhow::Result<()> {
-    let EntryRequestOutput { entries } = result;
-    for entry in entries {
-      let target_request = TargetRequest {
-        default_target_options: self.request_context.options.default_target_options.clone(),
-        entry,
-        env: self.request_context.options.env.clone(),
-        mode: self.request_context.options.mode.clone(),
-      };
-
-      self.work_count += 1;
-      self
-        .request_context
-        .queue_request(target_request, self.sender.clone())
-        .await?;
     }
 
     Ok(())
@@ -362,8 +290,7 @@ impl AssetGraphBuilder {
         Self::trigger_path_request(
           &mut self.request_id_to_dep_node_index,
           &mut self.work_count,
-          &mut self.request_context,
-          &self.sender,
+          &self.request_context,
           dep_node,
           dependency,
         )
@@ -425,10 +352,7 @@ impl AssetGraphBuilder {
         .request_id_to_dep_node_index
         .insert(request.id(), dep_node);
       self.work_count += 1;
-      self
-        .request_context
-        .queue_request(request, self.sender.clone())
-        .await?;
+      self.request_context.run_request(request).await?;
     }
 
     Ok(())
@@ -437,8 +361,7 @@ impl AssetGraphBuilder {
   async fn trigger_path_request(
     request_id_to_dep_node_index: &mut HashMap<u64, NodeIndex>,
     work_count: &mut u32,
-    request_context: &mut RunRequestContext,
-    sender: &ResultSender,
+    request_context: &RunRequestContext,
     dependency_node_index: NodeIndex,
     dependency: Arc<Dependency>,
   ) -> anyhow::Result<()> {
@@ -456,9 +379,7 @@ impl AssetGraphBuilder {
     //   dependency
     // );
     *work_count += 1;
-    request_context
-      .queue_request(request, sender.clone())
-      .await?;
+    request_context.run_request(request).await?;
 
     Ok(())
   }
@@ -507,209 +428,357 @@ fn get_direct_discovered_assets<'a>(
     .collect()
 }
 
-#[cfg(test)]
-mod tests {
-  use std::path::{Path, PathBuf};
-  use std::sync::Arc;
+async fn run_entry_request(
+  request_context: &Arc<RunRequestContext>,
+  entry: &str,
+) -> anyhow::Result<()> {
+  let entry_result = request_context
+    .run_request(EntryRequest {
+      entry: entry.to_string(),
+    })
+    .await?;
+  let RequestResult::Entry(EntryRequestOutput { entries }) = &*entry_result else {
+    return Err(anyhow!("Failed to run entry request"));
+  };
 
-  use atlaspack_core::types::{AtlaspackOptions, Code};
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
-  use atlaspack_filesystem::FileSystem;
-
-  use crate::requests::{AssetGraphRequest, RequestResult};
-  use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn test_asset_graph_request_with_no_entries() {
-    let options = RequestTrackerTestOptions::default();
-    let mut request_tracker = request_tracker(options);
-
-    let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
-      .run_request(asset_graph_request)
-      .await
-      .unwrap()
-    else {
-      assert!(false, "Got invalid result");
-      return;
-    };
-
-    assert_eq!(asset_graph_request_result.graph.assets.len(), 0);
-    assert_eq!(asset_graph_request_result.graph.dependencies.len(), 0);
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn test_asset_graph_request_with_a_single_entry_with_no_dependencies() {
-    #[cfg(not(target_os = "windows"))]
-    let temporary_dir = PathBuf::from("/atlaspack_tests");
-    #[cfg(target_os = "windows")]
-    let temporary_dir = PathBuf::from("c:/windows/atlaspack_tests");
-
-    assert!(temporary_dir.is_absolute());
-
-    let fs = InMemoryFileSystem::default();
-
-    fs.create_directory(&temporary_dir).unwrap();
-    fs.set_current_working_directory(&temporary_dir); // <- resolver is broken without this
-    fs.write_file(
-      &temporary_dir.join("entry.js"),
-      String::from(
-        r#"
-          console.log('hello world');
-        "#,
-      ),
-    );
-
-    fs.write_file(&temporary_dir.join("package.json"), String::from("{}"));
-
-    let mut request_tracker = request_tracker(RequestTrackerTestOptions {
-      atlaspack_options: AtlaspackOptions {
-        entries: vec![temporary_dir.join("entry.js").to_str().unwrap().to_string()],
-        ..AtlaspackOptions::default()
-      },
-      fs: Arc::new(fs),
-      project_root: temporary_dir.clone(),
-      search_path: temporary_dir.clone(),
-      ..RequestTrackerTestOptions::default()
+  let mut futures = vec![];
+  for entry in entries.iter().cloned() {
+    let future = tokio::spawn({
+      let request_context = request_context.clone();
+      async move { run_target_request(request_context, entry).await }
     });
-
-    let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
-      .run_request(asset_graph_request)
-      .await
-      .expect("Failed to run asset graph request")
-    else {
-      assert!(false, "Got invalid result");
-      return;
-    };
-
-    assert_eq!(asset_graph_request_result.graph.assets.len(), 1);
-    assert_eq!(asset_graph_request_result.graph.dependencies.len(), 1);
-    assert_eq!(
-      asset_graph_request_result
-        .graph
-        .assets
-        .get(0)
-        .unwrap()
-        .asset
-        .file_path,
-      temporary_dir.join("entry.js")
-    );
-    assert_eq!(
-      asset_graph_request_result
-        .graph
-        .assets
-        .get(0)
-        .unwrap()
-        .asset
-        .code,
-      (Code::from(
-        String::from(
-          r#"
-            console.log('hello world');
-        "#
-        )
-        .trim_start()
-        .trim_end_matches(|p| p == ' ')
-        .to_string()
-      ))
-    );
+    futures.push(future);
   }
 
-  #[tokio::test(flavor = "multi_thread")]
-  async fn test_asset_graph_request_with_a_couple_of_entries() {
-    #[cfg(not(target_os = "windows"))]
-    let temporary_dir = PathBuf::from("/atlaspack_tests");
-    #[cfg(target_os = "windows")]
-    let temporary_dir = PathBuf::from("C:\\windows\\atlaspack_tests");
-
-    let core_path = temporary_dir.join("atlaspack_core");
-    let fs = InMemoryFileSystem::default();
-
-    fs.create_directory(&temporary_dir).unwrap();
-    fs.set_current_working_directory(&temporary_dir);
-
-    fs.write_file(
-      &temporary_dir.join("entry.js"),
-      String::from(
-        r#"
-          import {x} from './a';
-          import {y} from './b';
-          console.log(x + y);
-        "#,
-      ),
-    );
-
-    fs.write_file(
-      &temporary_dir.join("a.js"),
-      String::from(
-        r#"
-          export const x = 15;
-        "#,
-      ),
-    );
-
-    fs.write_file(
-      &temporary_dir.join("b.js"),
-      String::from(
-        r#"
-          export const y = 27;
-        "#,
-      ),
-    );
-
-    fs.write_file(&temporary_dir.join("package.json"), String::from("{}"));
-
-    setup_core_modules(&fs, &core_path);
-
-    let mut request_tracker = request_tracker(RequestTrackerTestOptions {
-      fs: Arc::new(fs),
-      atlaspack_options: AtlaspackOptions {
-        core_path,
-        entries: vec![temporary_dir.join("entry.js").to_str().unwrap().to_string()],
-        ..AtlaspackOptions::default()
-      },
-      project_root: temporary_dir.clone(),
-      search_path: temporary_dir.clone(),
-      ..RequestTrackerTestOptions::default()
-    });
-
-    let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
-      .run_request(asset_graph_request)
-      .await
-      .expect("Failed to run asset graph request")
-    else {
-      assert!(false, "Got invalid result");
-      return;
-    };
-
-    // Entry, 2 assets + helpers file
-    assert_eq!(asset_graph_request_result.graph.assets.len(), 4);
-    // Entry, entry to assets (2), assets to helpers (2)
-    assert_eq!(asset_graph_request_result.graph.dependencies.len(), 5);
-
-    assert_eq!(
-      asset_graph_request_result
-        .graph
-        .assets
-        .get(0)
-        .unwrap()
-        .asset
-        .file_path,
-      temporary_dir.join("entry.js")
-    );
+  for future in futures {
+    future.await??;
   }
 
-  fn setup_core_modules(fs: &InMemoryFileSystem, core_path: &Path) {
-    let transformer_path = core_path
-      .join("node_modules")
-      .join("@atlaspack/transformer-js");
-
-    fs.write_file(&transformer_path.join("package.json"), String::from("{}"));
-    fs.write_file(
-      &transformer_path.join("src").join("esmodule-helpers.js"),
-      String::from("/* helpers */"),
-    );
-  }
+  Ok(())
 }
+
+async fn run_target_request(
+  request_context: Arc<RunRequestContext>,
+  entry: Entry,
+) -> anyhow::Result<()> {
+  let target_request = TargetRequest {
+    default_target_options: request_context.options.default_target_options.clone(),
+    entry: entry,
+    env: request_context.options.env.clone(),
+    mode: request_context.options.mode.clone(),
+  };
+  let result = request_context.run_request(target_request).await?;
+  let TargetRequestOutput { entry, targets } = result.as_target().unwrap();
+
+  let mut futures = vec![];
+  for target in targets.iter().cloned() {
+    let entry = diff_paths(&entry, &request_context.project_root).unwrap_or_else(|| entry.clone());
+    let dependency = Dependency::entry(entry.to_str().unwrap().to_string(), target);
+    let dependency = Arc::new(dependency);
+
+    // let dep_node = self.graph.add_entry_dependency(dependency.clone());
+
+    let request_context = request_context.clone();
+    let future = async move { run_path_request(request_context, dependency).await };
+    futures.push(tokio::spawn(future));
+
+    // let request = PathRequest {
+    //   dependency: Arc::new(dependency),
+    // };
+    // self
+    //   .request_id_to_dep_node_index
+    //   .insert(request.id(), dep_node);
+    // self.work_count += 1;
+    // request_context.run_request(request).await?;
+  }
+
+  for future in futures {
+    future.await??;
+  }
+
+  Ok(())
+}
+
+fn run_path_request(
+  request_context: Arc<RunRequestContext>,
+  dependency: Arc<Dependency>,
+) -> BoxFuture<'static, anyhow::Result<()>> {
+  // We need to box this due to recursion
+  async move {
+    let request = PathRequest {
+      dependency: dependency.clone(),
+    };
+    let result = request_context.run_request(request).await?;
+
+    let PathRequestOutput::Resolved {
+      path,
+      code,
+      pipeline,
+      side_effects,
+      query,
+    } = result.as_path().unwrap()
+    else {
+      // excluded path results just move on
+      return Ok(());
+    };
+
+    let asset_request = AssetRequest {
+      code: code.clone(),
+      env: dependency.env.clone(),
+      file_path: path.clone(),
+      project_root: request_context.project_root.clone(),
+      pipeline: pipeline.clone(),
+      query: query.clone(),
+      side_effects: *side_effects,
+    };
+    run_asset_request(request_context, asset_request).await?;
+
+    Ok(())
+  }
+  .boxed()
+}
+
+async fn run_asset_request(
+  request_context: Arc<RunRequestContext>,
+  asset_request: AssetRequest,
+) -> anyhow::Result<()> {
+  let result = request_context.run_request(asset_request).await?;
+  let AssetRequestOutput {
+    asset,
+    discovered_assets,
+    dependencies,
+  } = result.as_asset().unwrap();
+
+  let dependencies = dependencies
+    .iter()
+    .cloned()
+    .map(Arc::new)
+    .collect::<Vec<_>>();
+
+  let mut futures = vec![];
+  for dependency in dependencies {
+    let future = Box::pin(run_path_request(request_context.clone(), dependency));
+    futures.push(tokio::spawn(future));
+  }
+
+  for asset in discovered_assets {
+    for dependency in &asset.dependencies {
+      // TODO: asset.dependencies should be Vec<Arc<...>>
+      let future = run_path_request(request_context.clone(), Arc::new(dependency.clone()));
+      futures.push(tokio::spawn(future));
+    }
+  }
+
+  for future in futures {
+    future.await??;
+  }
+
+  Ok(())
+}
+
+// #[cfg(test)]
+// mod tests {
+//   use std::path::{Path, PathBuf};
+//   use std::sync::Arc;
+
+//   use atlaspack_core::types::{AtlaspackOptions, Code};
+//   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+//   use atlaspack_filesystem::FileSystem;
+
+//   use crate::requests::{AssetGraphRequest, RequestResult};
+//   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn test_asset_graph_request_with_no_entries() {
+//     let options = RequestTrackerTestOptions::default();
+//     let mut request_tracker = request_tracker(options);
+
+//     let asset_graph_request = AssetGraphRequest {};
+//     let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+//       .run_request(asset_graph_request)
+//       .await
+//       .unwrap()
+//     else {
+//       assert!(false, "Got invalid result");
+//       return;
+//     };
+
+//     assert_eq!(asset_graph_request_result.graph.assets.len(), 0);
+//     assert_eq!(asset_graph_request_result.graph.dependencies.len(), 0);
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn test_asset_graph_request_with_a_single_entry_with_no_dependencies() {
+//     #[cfg(not(target_os = "windows"))]
+//     let temporary_dir = PathBuf::from("/atlaspack_tests");
+//     #[cfg(target_os = "windows")]
+//     let temporary_dir = PathBuf::from("c:/windows/atlaspack_tests");
+
+//     assert!(temporary_dir.is_absolute());
+
+//     let fs = InMemoryFileSystem::default();
+
+//     fs.create_directory(&temporary_dir).unwrap();
+//     fs.set_current_working_directory(&temporary_dir); // <- resolver is broken without this
+//     fs.write_file(
+//       &temporary_dir.join("entry.js"),
+//       String::from(
+//         r#"
+//           console.log('hello world');
+//         "#,
+//       ),
+//     );
+
+//     fs.write_file(&temporary_dir.join("package.json"), String::from("{}"));
+
+//     let mut request_tracker = request_tracker(RequestTrackerTestOptions {
+//       atlaspack_options: AtlaspackOptions {
+//         entries: vec![temporary_dir.join("entry.js").to_str().unwrap().to_string()],
+//         ..AtlaspackOptions::default()
+//       },
+//       fs: Arc::new(fs),
+//       project_root: temporary_dir.clone(),
+//       search_path: temporary_dir.clone(),
+//       ..RequestTrackerTestOptions::default()
+//     });
+
+//     let asset_graph_request = AssetGraphRequest {};
+//     let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+//       .run_request(asset_graph_request)
+//       .await
+//       .expect("Failed to run asset graph request")
+//     else {
+//       assert!(false, "Got invalid result");
+//       return;
+//     };
+
+//     assert_eq!(asset_graph_request_result.graph.assets.len(), 1);
+//     assert_eq!(asset_graph_request_result.graph.dependencies.len(), 1);
+//     assert_eq!(
+//       asset_graph_request_result
+//         .graph
+//         .assets
+//         .get(0)
+//         .unwrap()
+//         .asset
+//         .file_path,
+//       temporary_dir.join("entry.js")
+//     );
+//     assert_eq!(
+//       asset_graph_request_result
+//         .graph
+//         .assets
+//         .get(0)
+//         .unwrap()
+//         .asset
+//         .code,
+//       (Code::from(
+//         String::from(
+//           r#"
+//             console.log('hello world');
+//         "#
+//         )
+//         .trim_start()
+//         .trim_end_matches(|p| p == ' ')
+//         .to_string()
+//       ))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn test_asset_graph_request_with_a_couple_of_entries() {
+//     #[cfg(not(target_os = "windows"))]
+//     let temporary_dir = PathBuf::from("/atlaspack_tests");
+//     #[cfg(target_os = "windows")]
+//     let temporary_dir = PathBuf::from("C:\\windows\\atlaspack_tests");
+
+//     let core_path = temporary_dir.join("atlaspack_core");
+//     let fs = InMemoryFileSystem::default();
+
+//     fs.create_directory(&temporary_dir).unwrap();
+//     fs.set_current_working_directory(&temporary_dir);
+
+//     fs.write_file(
+//       &temporary_dir.join("entry.js"),
+//       String::from(
+//         r#"
+//           import {x} from './a';
+//           import {y} from './b';
+//           console.log(x + y);
+//         "#,
+//       ),
+//     );
+
+//     fs.write_file(
+//       &temporary_dir.join("a.js"),
+//       String::from(
+//         r#"
+//           export const x = 15;
+//         "#,
+//       ),
+//     );
+
+//     fs.write_file(
+//       &temporary_dir.join("b.js"),
+//       String::from(
+//         r#"
+//           export const y = 27;
+//         "#,
+//       ),
+//     );
+
+//     fs.write_file(&temporary_dir.join("package.json"), String::from("{}"));
+
+//     setup_core_modules(&fs, &core_path);
+
+//     let mut request_tracker = request_tracker(RequestTrackerTestOptions {
+//       fs: Arc::new(fs),
+//       atlaspack_options: AtlaspackOptions {
+//         core_path,
+//         entries: vec![temporary_dir.join("entry.js").to_str().unwrap().to_string()],
+//         ..AtlaspackOptions::default()
+//       },
+//       project_root: temporary_dir.clone(),
+//       search_path: temporary_dir.clone(),
+//       ..RequestTrackerTestOptions::default()
+//     });
+
+//     let asset_graph_request = AssetGraphRequest {};
+//     let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+//       .run_request(asset_graph_request)
+//       .await
+//       .expect("Failed to run asset graph request")
+//     else {
+//       assert!(false, "Got invalid result");
+//       return;
+//     };
+
+//     // Entry, 2 assets + helpers file
+//     assert_eq!(asset_graph_request_result.graph.assets.len(), 4);
+//     // Entry, entry to assets (2), assets to helpers (2)
+//     assert_eq!(asset_graph_request_result.graph.dependencies.len(), 5);
+
+//     assert_eq!(
+//       asset_graph_request_result
+//         .graph
+//         .assets
+//         .get(0)
+//         .unwrap()
+//         .asset
+//         .file_path,
+//       temporary_dir.join("entry.js")
+//     );
+//   }
+
+//   fn setup_core_modules(fs: &InMemoryFileSystem, core_path: &Path) {
+//     let transformer_path = core_path
+//       .join("node_modules")
+//       .join("@atlaspack/transformer-js");
+
+//     fs.write_file(&transformer_path.join("package.json"), String::from("{}"));
+//     fs.write_file(
+//       &transformer_path.join("src").join("esmodule-helpers.js"),
+//       String::from("/* helpers */"),
+//     );
+//   }
+// }

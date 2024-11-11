@@ -34,6 +34,7 @@ use atlaspack_resolver::Resolver;
 use atlaspack_resolver::ResolverError;
 use atlaspack_resolver::SpecifierError;
 use serde::Deserialize;
+use tokio::task::block_in_place;
 
 pub struct AtlaspackResolver {
   cache: Cache,
@@ -353,19 +354,21 @@ impl ResolverPlugin for AtlaspackResolver {
       .map(|p| Cow::Borrowed(p.as_path()))
       .unwrap_or_else(|| Cow::Owned(self.options.project_root.join("index")));
 
-    let mut res = resolver.resolve_with_options(
-      &ctx.specifier,
-      &resolve_from,
-      match ctx.dependency.specifier_type {
-        SpecifierType::CommonJS => atlaspack_resolver::SpecifierType::Cjs,
-        SpecifierType::Esm => atlaspack_resolver::SpecifierType::Esm,
-        SpecifierType::Url => atlaspack_resolver::SpecifierType::Url,
-        // TODO: what should specifier custom map to?
-        SpecifierType::Custom => atlaspack_resolver::SpecifierType::Esm,
-        _ => atlaspack_resolver::SpecifierType::Esm,
-      },
-      resolve_options,
-    );
+    let mut res = block_in_place(|| {
+      resolver.resolve_with_options(
+        &ctx.specifier,
+        &resolve_from,
+        match ctx.dependency.specifier_type {
+          SpecifierType::CommonJS => atlaspack_resolver::SpecifierType::Cjs,
+          SpecifierType::Esm => atlaspack_resolver::SpecifierType::Esm,
+          SpecifierType::Url => atlaspack_resolver::SpecifierType::Url,
+          // TODO: what should specifier custom map to?
+          SpecifierType::Custom => atlaspack_resolver::SpecifierType::Esm,
+          _ => atlaspack_resolver::SpecifierType::Esm,
+        },
+        resolve_options,
+      )
+    });
 
     let side_effects = if let Ok((atlaspack_resolver::Resolution::Path(p), _)) = &res.result {
       match resolver.resolve_side_effects(p, &res.invalidations) {

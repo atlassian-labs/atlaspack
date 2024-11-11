@@ -135,11 +135,11 @@ impl Atlaspack {
 
       let request_result = request_tracker.run_request(AssetGraphRequest {}).await?;
 
-      let asset_graph = match request_result {
+      let asset_graph = match &*request_result {
         RequestResult::AssetGraph(result) => {
           self.commit_assets(result.graph.assets.as_slice()).unwrap();
-
-          result.graph
+          // this is wasteful
+          result.graph.clone()
         }
         _ => panic!("TODO"),
       };

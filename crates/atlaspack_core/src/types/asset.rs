@@ -113,7 +113,7 @@ pub struct CreateAssetIdParams<'a> {
 }
 
 pub fn create_asset_id(params: CreateAssetIdParams) -> String {
-  tracing::debug!(?params, "Creating asset id");
+  tracing::trace!(?params, "Creating asset id");
 
   let CreateAssetIdParams {
     code,

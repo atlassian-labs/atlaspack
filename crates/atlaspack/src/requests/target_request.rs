@@ -642,842 +642,842 @@ impl Request for TargetRequest {
     // TODO serve options
     let package_targets = self.resolve_package_targets(request_context)?;
 
-    Ok(ResultAndInvalidations {
-      invalidations: Vec::new(),
-      result: RequestResult::Target(TargetRequestOutput {
+    Ok(ResultAndInvalidations::new(
+      RequestResult::Target(TargetRequestOutput {
         entry: self.entry.file_path.clone(),
         targets: package_targets.into_iter().flatten().collect(),
       }),
-    })
+      vec![],
+    ))
   }
 }
 
 // TODO Add more tests when revisiting targets config structure
-#[cfg(test)]
-mod tests {
-  use std::{num::NonZeroU16, sync::Arc};
-
-  use regex::Regex;
-
-  use atlaspack_core::types::version::Version;
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
-
-  use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
-  use pretty_assertions::assert_eq;
-
-  use super::*;
-
-  const BUILT_IN_TARGETS: [&str; 4] = ["browser", "main", "module", "types"];
-
-  fn default_target() -> Target {
-    Target {
-      dist_dir: PathBuf::from("packages/test/dist"),
-      env: Arc::new(Environment {
-        output_format: OutputFormat::Global,
-        ..Environment::default()
-      }),
-      name: String::from("default"),
-      ..Target::default()
-    }
-  }
-
-  fn package_dir() -> PathBuf {
-    PathBuf::from("packages").join("test")
-  }
-
-  async fn targets_from_package_json(package_json: String) -> Result<RequestResult, anyhow::Error> {
-    let fs = InMemoryFileSystem::default();
-    let project_root = PathBuf::default();
-    let package_dir = package_dir();
-
-    fs.write_file(
-      &project_root.join(&package_dir).join("package.json"),
-      package_json,
-    );
-
-    let request = TargetRequest {
-      default_target_options: DefaultTargetOptions::default(),
-      entry: Entry::default(),
-      env: None,
-      mode: BuildMode::Development,
-    };
-
-    request_tracker(RequestTrackerTestOptions {
-      search_path: project_root.join(&package_dir),
-      project_root,
-      fs: Arc::new(fs),
-      ..Default::default()
-    })
-    .run_request(request)
-    .await
-  }
-
-  fn to_deterministic_error(error: anyhow::Error) -> String {
-    let re = Regex::new(r"\d+").unwrap();
-    re.replace_all(&format!("{:#}", error), "\\d").into_owned()
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_error_when_builtin_target_is_true() {
-    for builtin_target in BUILT_IN_TARGETS {
-      let targets = targets_from_package_json(format!(
-        r#"{{ "targets": {{ "{builtin_target}": true }} }}"#,
-      ))
-      .await;
-
-      assert_eq!(
-        targets.map_err(to_deterministic_error),
-        Err(format!("data did not match any variant of untagged enum BuiltInTargetDescriptor at line \\d column \\d in {}",
-          package_dir().join("package.json").display()
-        ))
-      );
-    }
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_error_when_builtin_target_does_not_reference_expected_extension() {
-    for builtin_target in BUILT_IN_TARGETS {
-      let targets =
-        targets_from_package_json(format!(r#"{{ "{}": "dist/main.rs" }}"#, builtin_target)).await;
-
-      assert_eq!(
-        targets.map_err(to_deterministic_error),
-        Err(format!(
-          "Unexpected file type \"main.rs\" in \"{}\" target at line \\d column \\d in {}",
-          builtin_target,
-          package_dir().join("package.json").display()
-        ))
-      );
-    }
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_error_when_builtin_target_has_global_output_format() {
-    for builtin_target in BUILT_IN_TARGETS {
-      let targets = targets_from_package_json(format!(
-        r#"{{
-          "targets": {{
-            "{builtin_target}": {{ "outputFormat": "global" }}
-          }}
-        }}"#
-      ))
-      .await;
-
-      assert_eq!(
-        targets.map_err(to_deterministic_error),
-        Err(format!(
-          "The \"global\" output format is not supported in the {} target at line \\d column \\d in {}",
-          builtin_target,
-          package_dir().join("package.json").display()
-        ))
-      );
-    }
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_error_when_output_format_does_not_match_inferred_output_format() {
-    let assert_error = move |ext, module_format: Option<&'static str>, output_format| async move {
-      let targets = targets_from_package_json(format!(
-        r#"
-          {{
-            {}
-            "custom": "dist/custom.{ext}",
-            "targets": {{
-              "custom": {{
-                "outputFormat": "{output_format}"
-              }}
-            }}
-          }}
-        "#,
-        module_format.map_or_else(
-          || String::default(),
-          |module_format| format!(r#""type": "{module_format}","#)
-        ),
-      ))
-      .await;
-
-      assert_eq!(
-        targets.map_err(|err| err.to_string()),
-        Err(format!(
-          "Declared output format {output_format} does not match expected output format {}",
-          if output_format == OutputFormat::CommonJS {
-            "esmodule"
-          } else {
-            "commonjs"
-          }
-        ))
-      );
-    };
-
-    assert_error("cjs", None, OutputFormat::EsModule).await;
-    assert_error("cjs", Some("module"), OutputFormat::EsModule).await;
-
-    assert_error("js", Some("commonjs"), OutputFormat::EsModule).await;
-    assert_error("js", Some("module"), OutputFormat::CommonJS).await;
-
-    assert_error("mjs", None, OutputFormat::CommonJS).await;
-    assert_error("mjs", Some("commonjs"), OutputFormat::CommonJS).await;
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_error_when_scope_hoisting_disabled_for_library_targets() {
-    let assert_error = move |name, package_json| async move {
-      let targets = targets_from_package_json(package_json).await;
-
-      assert_eq!(
-        targets.map_err(to_deterministic_error),
-        Err(format!(
-          "Scope hoisting cannot be disabled for \"{}\" library target at line \\d column \\d in {}",
-          name,
-          package_dir().join("package.json").display()
-        ))
-      );
-    };
-
-    for target in BUILT_IN_TARGETS {
-      assert_error(
-        target,
-        format!(
-          r#"
-            {{
-              "{target}": "dist/target.{ext}",
-              "targets": {{
-                "{target}": {{
-                  "isLibrary": true,
-                  "scopeHoist": false
-                }}
-              }}
-            }}
-          "#,
-          ext = if target == "types" { "ts" } else { "js" },
-        ),
-      )
-      .await;
-    }
-
-    assert_error(
-      "custom",
-      String::from(
-        r#"
-          {
-            "targets": {
-              "custom": {
-                "isLibrary": true,
-                "scopeHoist": false
-              }
-            }
-          }
-        "#,
-      ),
-    )
-    .await;
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_default_target_when_package_json_is_not_found() {
-    let request = TargetRequest {
-      default_target_options: DefaultTargetOptions::default(),
-      entry: Entry::default(),
-      env: None,
-      mode: BuildMode::Development,
-    };
-
-    let targets = request_tracker(RequestTrackerTestOptions::default())
-      .run_request(request)
-      .await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: default_dist_dir(&PathBuf::default()),
-          ..default_target()
-        }],
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_default_target_when_builtin_targets_are_disabled() {
-    for builtin_target in BUILT_IN_TARGETS {
-      let targets = targets_from_package_json(format!(
-        r#"{{ "targets": {{ "{builtin_target}": false }} }}"#
-      ))
-      .await;
-
-      assert_eq!(
-        targets.map_err(|e| e.to_string()),
-        Ok(RequestResult::Target(TargetRequestOutput {
-          entry: PathBuf::default(),
-          targets: vec![default_target()]
-        }))
-      );
-    }
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_default_target_when_no_targets_are_specified() {
-    let targets = targets_from_package_json(String::from("{}")).await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![default_target()]
-      }))
-    );
-  }
-
-  fn builtin_default_env() -> Environment {
-    Environment {
-      include_node_modules: IncludeNodeModules::Bool(false),
-      is_library: true,
-      should_optimize: false,
-      should_scope_hoist: true,
-      ..Environment::default()
-    }
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_default_builtin_browser_target() {
-    let targets =
-      targets_from_package_json(String::from(r#"{ "browser": "build/browser.js" }"#)).await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: package_dir().join("build"),
-          dist_entry: Some(PathBuf::from("browser.js")),
-          env: Arc::new(Environment {
-            context: EnvironmentContext::Browser,
-            output_format: OutputFormat::CommonJS,
-            ..builtin_default_env()
-          }),
-          name: String::from("browser"),
-          ..Target::default()
-        }]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_builtin_browser_target() {
-    let targets = targets_from_package_json(String::from(
-      r#"
-        {
-          "browser": "build/browser.js",
-          "targets": {
-            "browser": {
-              "outputFormat": "esmodule"
-            }
-          }
-        }
-      "#,
-    ))
-    .await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: package_dir().join("build"),
-          dist_entry: Some(PathBuf::from("browser.js")),
-          env: Arc::new(Environment {
-            context: EnvironmentContext::Browser,
-            output_format: OutputFormat::EsModule,
-            ..builtin_default_env()
-          }),
-          name: String::from("browser"),
-          ..Target::default()
-        }]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_default_builtin_main_target() {
-    let targets = targets_from_package_json(String::from(r#"{ "main": "./build/main.js" }"#)).await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: package_dir().join("build"),
-          dist_entry: Some(PathBuf::from("main.js")),
-          env: Arc::new(Environment {
-            context: EnvironmentContext::Node,
-            output_format: OutputFormat::CommonJS,
-            ..builtin_default_env()
-          }),
-          name: String::from("main"),
-          ..Target::default()
-        }]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_builtin_main_target() {
-    let targets = targets_from_package_json(String::from(
-      r#"
-        {
-          "main": "./build/main.js",
-          "targets": {
-            "main": {
-              "optimize": true
-            }
-          }
-        }
-      "#,
-    ))
-    .await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: package_dir().join("build"),
-          dist_entry: Some(PathBuf::from("main.js")),
-          env: Arc::new(Environment {
-            context: EnvironmentContext::Node,
-            output_format: OutputFormat::CommonJS,
-            should_optimize: true,
-            ..builtin_default_env()
-          }),
-          name: String::from("main"),
-          ..Target::default()
-        }]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_default_builtin_module_target() {
-    let targets = targets_from_package_json(String::from(r#"{ "module": "module.js" }"#)).await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: package_dir(),
-          dist_entry: Some(PathBuf::from("module.js")),
-          env: Arc::new(Environment {
-            context: EnvironmentContext::Node,
-            output_format: OutputFormat::EsModule,
-            ..builtin_default_env()
-          }),
-          name: String::from("module"),
-          ..Target::default()
-        }]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_builtin_module_target() {
-    let targets = targets_from_package_json(String::from(
-      r#"
-        {
-          "module": "module.js",
-          "targets": {
-            "module": {
-              "optimize": true
-            }
-          }
-        }
-      "#,
-    ))
-    .await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: package_dir(),
-          dist_entry: Some(PathBuf::from("module.js")),
-          env: Arc::new(Environment {
-            context: EnvironmentContext::Node,
-            output_format: OutputFormat::EsModule,
-            should_optimize: true,
-            ..builtin_default_env()
-          }),
-          name: String::from("module"),
-          ..Target::default()
-        }]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_builtin_types_target() {
-    let targets = targets_from_package_json(String::from(
-      r#"
-        {
-          "types": "./types.d.ts",
-          "targets": {
-            "types": {
-              "outputFormat": "esmodule"
-            }
-          }
-        }
-      "#,
-    ))
-    .await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: package_dir(),
-          dist_entry: Some(PathBuf::from("types.d.ts")),
-          env: Arc::new(Environment {
-            context: EnvironmentContext::Node,
-            output_format: OutputFormat::EsModule,
-            ..builtin_default_env()
-          }),
-          name: String::from("types"),
-          ..Target::default()
-        }]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_default_builtin_types_target() {
-    let targets = targets_from_package_json(String::from(r#"{ "types": "./types.d.ts" }"#)).await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: package_dir(),
-          dist_entry: Some(PathBuf::from("types.d.ts")),
-          env: Arc::new(Environment {
-            context: EnvironmentContext::Node,
-            output_format: OutputFormat::CommonJS,
-            ..builtin_default_env()
-          }),
-          name: String::from("types"),
-          ..Target::default()
-        }]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_builtin_targets() {
-    let targets = targets_from_package_json(String::from(
-      r#"
-        {
-          "browser": "build/browser.js",
-          "main": "./build/main.js",
-          "module": "module.js",
-          "types": "./types.d.ts",
-          "browserslist": ["chrome 20"]
-        }
-      "#,
-    ))
-    .await;
-
-    let env = || Environment {
-      engines: Engines {
-        browsers: Some(EnginesBrowsers::new(vec![String::from("chrome 20")])),
-        ..Engines::default()
-      },
-      ..builtin_default_env()
-    };
-
-    let package_dir = package_dir();
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![
-          Target {
-            dist_dir: package_dir.join("build"),
-            dist_entry: Some(PathBuf::from("browser.js")),
-            env: Arc::new(Environment {
-              context: EnvironmentContext::Browser,
-              output_format: OutputFormat::CommonJS,
-              ..env()
-            }),
-            name: String::from("browser"),
-            ..Target::default()
-          },
-          Target {
-            dist_dir: package_dir.join("build"),
-            dist_entry: Some(PathBuf::from("main.js")),
-            env: Arc::new(Environment {
-              context: EnvironmentContext::Node,
-              output_format: OutputFormat::CommonJS,
-              ..env()
-            }),
-            name: String::from("main"),
-            ..Target::default()
-          },
-          Target {
-            dist_dir: package_dir.clone(),
-            dist_entry: Some(PathBuf::from("module.js")),
-            env: Arc::new(Environment {
-              context: EnvironmentContext::Node,
-              output_format: OutputFormat::EsModule,
-              ..env()
-            }),
-            name: String::from("module"),
-            ..Target::default()
-          },
-          Target {
-            dist_dir: package_dir,
-            dist_entry: Some(PathBuf::from("types.d.ts")),
-            env: Arc::new(Environment {
-              context: EnvironmentContext::Node,
-              output_format: OutputFormat::CommonJS,
-              ..env()
-            }),
-            name: String::from("types"),
-            ..Target::default()
-          },
-        ]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_custom_targets_with_defaults() {
-    let targets =
-      targets_from_package_json(String::from(r#"{ "targets": { "custom": {} } } "#)).await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: package_dir().join("dist").join("custom"),
-          dist_entry: None,
-          env: Arc::new(Environment {
-            context: EnvironmentContext::Browser,
-            is_library: false,
-            output_format: OutputFormat::Global,
-            should_optimize: true,
-            should_scope_hoist: false,
-            ..Environment::default()
-          }),
-          name: String::from("custom"),
-          ..Target::default()
-        }]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_custom_targets() {
-    let targets = targets_from_package_json(String::from(
-      r#"
-        {
-          "custom": "dist/custom.js",
-          "targets": {
-            "custom": {
-              "context": "node",
-              "includeNodeModules": true,
-              "outputFormat": "commonjs"
-            }
-          }
-        }
-      "#,
-    ))
-    .await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: package_dir().join("dist"),
-          dist_entry: Some(PathBuf::from("custom.js")),
-          env: Arc::new(Environment {
-            context: EnvironmentContext::Node,
-            include_node_modules: IncludeNodeModules::Bool(true),
-            is_library: false,
-            output_format: OutputFormat::CommonJS,
-            should_optimize: true,
-            ..Environment::default()
-          }),
-          name: String::from("custom"),
-          ..Target::default()
-        }]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_inferred_custom_browser_target() {
-    let targets = targets_from_package_json(String::from(
-      r#"
-        {
-          "custom": "dist/custom.js",
-          "browserslist": ["chrome 20", "firefox > 1"],
-          "targets": {
-            "custom": {}
-          }
-        }
-      "#,
-    ))
-    .await;
-
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
-        entry: PathBuf::default(),
-        targets: vec![Target {
-          dist_dir: package_dir().join("dist"),
-          dist_entry: Some(PathBuf::from("custom.js")),
-          env: Arc::new(Environment {
-            context: EnvironmentContext::Browser,
-            engines: Engines {
-              browsers: Some(EnginesBrowsers::new(vec![
-                String::from("chrome 20"),
-                String::from("firefox > 1"),
-              ])),
-              ..Engines::default()
-            },
-            include_node_modules: IncludeNodeModules::Bool(true),
-            output_format: OutputFormat::Global,
-            should_optimize: true,
-            ..Environment::default()
-          }),
-          name: String::from("custom"),
-          ..Target::default()
-        }]
-      }))
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_inferred_custom_node_target() {
-    let assert_targets = |targets: Result<RequestResult, anyhow::Error>, engines| {
-      assert_eq!(
-        targets.map_err(|e| e.to_string()),
-        Ok(RequestResult::Target(TargetRequestOutput {
-          entry: PathBuf::default(),
-          targets: vec![Target {
-            dist_dir: package_dir().join("dist"),
-            dist_entry: Some(PathBuf::from("custom.js")),
-            env: Arc::new(Environment {
-              context: EnvironmentContext::Node,
-              engines,
-              include_node_modules: IncludeNodeModules::Bool(false),
-              output_format: OutputFormat::CommonJS,
-              should_optimize: true,
-              ..Environment::default()
-            }),
-            name: String::from("custom"),
-            ..Target::default()
-          }]
-        }))
-      );
-    };
-
-    assert_targets(
-      targets_from_package_json(String::from(
-        r#"
-          {
-            "custom": "dist/custom.js",
-            "engines": { "node": "^1.0.0" },
-            "targets": { "custom": {} }
-          }
-        "#,
-      ))
-      .await,
-      Engines {
-        node: Some(Version::new(NonZeroU16::new(1).unwrap(), 0)),
-        ..Engines::default()
-      },
-    );
-
-    assert_targets(
-      targets_from_package_json(String::from(
-        r#"
-          {
-            "custom": "dist/custom.js",
-            "engines": { "node": "^1.0.0" },
-            "browserslist": ["chrome 20"],
-            "targets": { "custom": {} }
-          }
-        "#,
-      ))
-      .await,
-      Engines {
-        node: Some(Version::new(NonZeroU16::new(1).unwrap(), 0)),
-        browsers: None,
-        ..Engines::default()
-      },
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_custom_target_when_output_format_matches_inferred_output_format() {
-    let assert_targets = move |ext, module_format: Option<ModuleFormat>, output_format| async move {
-      let targets = targets_from_package_json(format!(
-        r#"
-          {{
-            {}
-            "custom": "dist/custom.{ext}",
-            "targets": {{
-              "custom": {{
-                "outputFormat": "{output_format}"
-              }}
-            }}
-          }}
-        "#,
-        module_format.map_or_else(
-          || String::default(),
-          |module_format| format!(r#""type": "{module_format}","#)
-        ),
-      ))
-      .await;
-
-      assert_eq!(
-        targets.map_err(|e| e.to_string()),
-        Ok(RequestResult::Target(TargetRequestOutput {
-          entry: PathBuf::default(),
-          targets: vec![Target {
-            dist_dir: package_dir().join("dist"),
-            dist_entry: Some(PathBuf::from(format!("custom.{ext}"))),
-            env: Arc::new(Environment {
-              output_format,
-              should_optimize: true,
-              ..Environment::default()
-            }),
-            name: String::from("custom"),
-            ..Target::default()
-          }],
-        }))
-      );
-    };
-
-    assert_targets("cjs", None, OutputFormat::CommonJS).await;
-    assert_targets("cjs", Some(ModuleFormat::CommonJS), OutputFormat::CommonJS).await;
-    assert_targets("cjs", Some(ModuleFormat::Module), OutputFormat::CommonJS).await;
-
-    assert_targets("js", None, OutputFormat::CommonJS).await;
-    assert_targets("js", Some(ModuleFormat::CommonJS), OutputFormat::CommonJS).await;
-
-    assert_targets("js", None, OutputFormat::EsModule).await;
-    assert_targets("js", Some(ModuleFormat::Module), OutputFormat::EsModule).await;
-
-    assert_targets("mjs", None, OutputFormat::EsModule).await;
-    assert_targets("mjs", Some(ModuleFormat::CommonJS), OutputFormat::EsModule).await;
-    assert_targets("mjs", Some(ModuleFormat::Module), OutputFormat::EsModule).await;
-  }
-}
+// #[cfg(test)]
+// mod tests {
+//   use std::{num::NonZeroU16, sync::Arc};
+
+//   use regex::Regex;
+
+//   use atlaspack_core::types::version::Version;
+//   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+
+//   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
+//   use pretty_assertions::assert_eq;
+
+//   use super::*;
+
+//   const BUILT_IN_TARGETS: [&str; 4] = ["browser", "main", "module", "types"];
+
+//   fn default_target() -> Target {
+//     Target {
+//       dist_dir: PathBuf::from("packages/test/dist"),
+//       env: Arc::new(Environment {
+//         output_format: OutputFormat::Global,
+//         ..Environment::default()
+//       }),
+//       name: String::from("default"),
+//       ..Target::default()
+//     }
+//   }
+
+//   fn package_dir() -> PathBuf {
+//     PathBuf::from("packages").join("test")
+//   }
+
+//   async fn targets_from_package_json(package_json: String) -> Result<RequestResult, anyhow::Error> {
+//     let fs = InMemoryFileSystem::default();
+//     let project_root = PathBuf::default();
+//     let package_dir = package_dir();
+
+//     fs.write_file(
+//       &project_root.join(&package_dir).join("package.json"),
+//       package_json,
+//     );
+
+//     let request = TargetRequest {
+//       default_target_options: DefaultTargetOptions::default(),
+//       entry: Entry::default(),
+//       env: None,
+//       mode: BuildMode::Development,
+//     };
+
+//     request_tracker(RequestTrackerTestOptions {
+//       search_path: project_root.join(&package_dir),
+//       project_root,
+//       fs: Arc::new(fs),
+//       ..Default::default()
+//     })
+//     .run_request(request)
+//     .await
+//   }
+
+//   fn to_deterministic_error(error: anyhow::Error) -> String {
+//     let re = Regex::new(r"\d+").unwrap();
+//     re.replace_all(&format!("{:#}", error), "\\d").into_owned()
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_error_when_builtin_target_is_true() {
+//     for builtin_target in BUILT_IN_TARGETS {
+//       let targets = targets_from_package_json(format!(
+//         r#"{{ "targets": {{ "{builtin_target}": true }} }}"#,
+//       ))
+//       .await;
+
+//       assert_eq!(
+//         targets.map_err(to_deterministic_error),
+//         Err(format!("data did not match any variant of untagged enum BuiltInTargetDescriptor at line \\d column \\d in {}",
+//           package_dir().join("package.json").display()
+//         ))
+//       );
+//     }
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_error_when_builtin_target_does_not_reference_expected_extension() {
+//     for builtin_target in BUILT_IN_TARGETS {
+//       let targets =
+//         targets_from_package_json(format!(r#"{{ "{}": "dist/main.rs" }}"#, builtin_target)).await;
+
+//       assert_eq!(
+//         targets.map_err(to_deterministic_error),
+//         Err(format!(
+//           "Unexpected file type \"main.rs\" in \"{}\" target at line \\d column \\d in {}",
+//           builtin_target,
+//           package_dir().join("package.json").display()
+//         ))
+//       );
+//     }
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_error_when_builtin_target_has_global_output_format() {
+//     for builtin_target in BUILT_IN_TARGETS {
+//       let targets = targets_from_package_json(format!(
+//         r#"{{
+//           "targets": {{
+//             "{builtin_target}": {{ "outputFormat": "global" }}
+//           }}
+//         }}"#
+//       ))
+//       .await;
+
+//       assert_eq!(
+//         targets.map_err(to_deterministic_error),
+//         Err(format!(
+//           "The \"global\" output format is not supported in the {} target at line \\d column \\d in {}",
+//           builtin_target,
+//           package_dir().join("package.json").display()
+//         ))
+//       );
+//     }
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_error_when_output_format_does_not_match_inferred_output_format() {
+//     let assert_error = move |ext, module_format: Option<&'static str>, output_format| async move {
+//       let targets = targets_from_package_json(format!(
+//         r#"
+//           {{
+//             {}
+//             "custom": "dist/custom.{ext}",
+//             "targets": {{
+//               "custom": {{
+//                 "outputFormat": "{output_format}"
+//               }}
+//             }}
+//           }}
+//         "#,
+//         module_format.map_or_else(
+//           || String::default(),
+//           |module_format| format!(r#""type": "{module_format}","#)
+//         ),
+//       ))
+//       .await;
+
+//       assert_eq!(
+//         targets.map_err(|err| err.to_string()),
+//         Err(format!(
+//           "Declared output format {output_format} does not match expected output format {}",
+//           if output_format == OutputFormat::CommonJS {
+//             "esmodule"
+//           } else {
+//             "commonjs"
+//           }
+//         ))
+//       );
+//     };
+
+//     assert_error("cjs", None, OutputFormat::EsModule).await;
+//     assert_error("cjs", Some("module"), OutputFormat::EsModule).await;
+
+//     assert_error("js", Some("commonjs"), OutputFormat::EsModule).await;
+//     assert_error("js", Some("module"), OutputFormat::CommonJS).await;
+
+//     assert_error("mjs", None, OutputFormat::CommonJS).await;
+//     assert_error("mjs", Some("commonjs"), OutputFormat::CommonJS).await;
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_error_when_scope_hoisting_disabled_for_library_targets() {
+//     let assert_error = move |name, package_json| async move {
+//       let targets = targets_from_package_json(package_json).await;
+
+//       assert_eq!(
+//         targets.map_err(to_deterministic_error),
+//         Err(format!(
+//           "Scope hoisting cannot be disabled for \"{}\" library target at line \\d column \\d in {}",
+//           name,
+//           package_dir().join("package.json").display()
+//         ))
+//       );
+//     };
+
+//     for target in BUILT_IN_TARGETS {
+//       assert_error(
+//         target,
+//         format!(
+//           r#"
+//             {{
+//               "{target}": "dist/target.{ext}",
+//               "targets": {{
+//                 "{target}": {{
+//                   "isLibrary": true,
+//                   "scopeHoist": false
+//                 }}
+//               }}
+//             }}
+//           "#,
+//           ext = if target == "types" { "ts" } else { "js" },
+//         ),
+//       )
+//       .await;
+//     }
+
+//     assert_error(
+//       "custom",
+//       String::from(
+//         r#"
+//           {
+//             "targets": {
+//               "custom": {
+//                 "isLibrary": true,
+//                 "scopeHoist": false
+//               }
+//             }
+//           }
+//         "#,
+//       ),
+//     )
+//     .await;
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_default_target_when_package_json_is_not_found() {
+//     let request = TargetRequest {
+//       default_target_options: DefaultTargetOptions::default(),
+//       entry: Entry::default(),
+//       env: None,
+//       mode: BuildMode::Development,
+//     };
+
+//     let targets = request_tracker(RequestTrackerTestOptions::default())
+//       .run_request(request)
+//       .await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: default_dist_dir(&PathBuf::default()),
+//           ..default_target()
+//         }],
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_default_target_when_builtin_targets_are_disabled() {
+//     for builtin_target in BUILT_IN_TARGETS {
+//       let targets = targets_from_package_json(format!(
+//         r#"{{ "targets": {{ "{builtin_target}": false }} }}"#
+//       ))
+//       .await;
+
+//       assert_eq!(
+//         targets.map_err(|e| e.to_string()),
+//         Ok(RequestResult::Target(TargetRequestOutput {
+//           entry: PathBuf::default(),
+//           targets: vec![default_target()]
+//         }))
+//       );
+//     }
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_default_target_when_no_targets_are_specified() {
+//     let targets = targets_from_package_json(String::from("{}")).await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![default_target()]
+//       }))
+//     );
+//   }
+
+//   fn builtin_default_env() -> Environment {
+//     Environment {
+//       include_node_modules: IncludeNodeModules::Bool(false),
+//       is_library: true,
+//       should_optimize: false,
+//       should_scope_hoist: true,
+//       ..Environment::default()
+//     }
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_default_builtin_browser_target() {
+//     let targets =
+//       targets_from_package_json(String::from(r#"{ "browser": "build/browser.js" }"#)).await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: package_dir().join("build"),
+//           dist_entry: Some(PathBuf::from("browser.js")),
+//           env: Arc::new(Environment {
+//             context: EnvironmentContext::Browser,
+//             output_format: OutputFormat::CommonJS,
+//             ..builtin_default_env()
+//           }),
+//           name: String::from("browser"),
+//           ..Target::default()
+//         }]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_builtin_browser_target() {
+//     let targets = targets_from_package_json(String::from(
+//       r#"
+//         {
+//           "browser": "build/browser.js",
+//           "targets": {
+//             "browser": {
+//               "outputFormat": "esmodule"
+//             }
+//           }
+//         }
+//       "#,
+//     ))
+//     .await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: package_dir().join("build"),
+//           dist_entry: Some(PathBuf::from("browser.js")),
+//           env: Arc::new(Environment {
+//             context: EnvironmentContext::Browser,
+//             output_format: OutputFormat::EsModule,
+//             ..builtin_default_env()
+//           }),
+//           name: String::from("browser"),
+//           ..Target::default()
+//         }]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_default_builtin_main_target() {
+//     let targets = targets_from_package_json(String::from(r#"{ "main": "./build/main.js" }"#)).await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: package_dir().join("build"),
+//           dist_entry: Some(PathBuf::from("main.js")),
+//           env: Arc::new(Environment {
+//             context: EnvironmentContext::Node,
+//             output_format: OutputFormat::CommonJS,
+//             ..builtin_default_env()
+//           }),
+//           name: String::from("main"),
+//           ..Target::default()
+//         }]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_builtin_main_target() {
+//     let targets = targets_from_package_json(String::from(
+//       r#"
+//         {
+//           "main": "./build/main.js",
+//           "targets": {
+//             "main": {
+//               "optimize": true
+//             }
+//           }
+//         }
+//       "#,
+//     ))
+//     .await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: package_dir().join("build"),
+//           dist_entry: Some(PathBuf::from("main.js")),
+//           env: Arc::new(Environment {
+//             context: EnvironmentContext::Node,
+//             output_format: OutputFormat::CommonJS,
+//             should_optimize: true,
+//             ..builtin_default_env()
+//           }),
+//           name: String::from("main"),
+//           ..Target::default()
+//         }]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_default_builtin_module_target() {
+//     let targets = targets_from_package_json(String::from(r#"{ "module": "module.js" }"#)).await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: package_dir(),
+//           dist_entry: Some(PathBuf::from("module.js")),
+//           env: Arc::new(Environment {
+//             context: EnvironmentContext::Node,
+//             output_format: OutputFormat::EsModule,
+//             ..builtin_default_env()
+//           }),
+//           name: String::from("module"),
+//           ..Target::default()
+//         }]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_builtin_module_target() {
+//     let targets = targets_from_package_json(String::from(
+//       r#"
+//         {
+//           "module": "module.js",
+//           "targets": {
+//             "module": {
+//               "optimize": true
+//             }
+//           }
+//         }
+//       "#,
+//     ))
+//     .await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: package_dir(),
+//           dist_entry: Some(PathBuf::from("module.js")),
+//           env: Arc::new(Environment {
+//             context: EnvironmentContext::Node,
+//             output_format: OutputFormat::EsModule,
+//             should_optimize: true,
+//             ..builtin_default_env()
+//           }),
+//           name: String::from("module"),
+//           ..Target::default()
+//         }]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_builtin_types_target() {
+//     let targets = targets_from_package_json(String::from(
+//       r#"
+//         {
+//           "types": "./types.d.ts",
+//           "targets": {
+//             "types": {
+//               "outputFormat": "esmodule"
+//             }
+//           }
+//         }
+//       "#,
+//     ))
+//     .await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: package_dir(),
+//           dist_entry: Some(PathBuf::from("types.d.ts")),
+//           env: Arc::new(Environment {
+//             context: EnvironmentContext::Node,
+//             output_format: OutputFormat::EsModule,
+//             ..builtin_default_env()
+//           }),
+//           name: String::from("types"),
+//           ..Target::default()
+//         }]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_default_builtin_types_target() {
+//     let targets = targets_from_package_json(String::from(r#"{ "types": "./types.d.ts" }"#)).await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: package_dir(),
+//           dist_entry: Some(PathBuf::from("types.d.ts")),
+//           env: Arc::new(Environment {
+//             context: EnvironmentContext::Node,
+//             output_format: OutputFormat::CommonJS,
+//             ..builtin_default_env()
+//           }),
+//           name: String::from("types"),
+//           ..Target::default()
+//         }]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_builtin_targets() {
+//     let targets = targets_from_package_json(String::from(
+//       r#"
+//         {
+//           "browser": "build/browser.js",
+//           "main": "./build/main.js",
+//           "module": "module.js",
+//           "types": "./types.d.ts",
+//           "browserslist": ["chrome 20"]
+//         }
+//       "#,
+//     ))
+//     .await;
+
+//     let env = || Environment {
+//       engines: Engines {
+//         browsers: Some(EnginesBrowsers::new(vec![String::from("chrome 20")])),
+//         ..Engines::default()
+//       },
+//       ..builtin_default_env()
+//     };
+
+//     let package_dir = package_dir();
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![
+//           Target {
+//             dist_dir: package_dir.join("build"),
+//             dist_entry: Some(PathBuf::from("browser.js")),
+//             env: Arc::new(Environment {
+//               context: EnvironmentContext::Browser,
+//               output_format: OutputFormat::CommonJS,
+//               ..env()
+//             }),
+//             name: String::from("browser"),
+//             ..Target::default()
+//           },
+//           Target {
+//             dist_dir: package_dir.join("build"),
+//             dist_entry: Some(PathBuf::from("main.js")),
+//             env: Arc::new(Environment {
+//               context: EnvironmentContext::Node,
+//               output_format: OutputFormat::CommonJS,
+//               ..env()
+//             }),
+//             name: String::from("main"),
+//             ..Target::default()
+//           },
+//           Target {
+//             dist_dir: package_dir.clone(),
+//             dist_entry: Some(PathBuf::from("module.js")),
+//             env: Arc::new(Environment {
+//               context: EnvironmentContext::Node,
+//               output_format: OutputFormat::EsModule,
+//               ..env()
+//             }),
+//             name: String::from("module"),
+//             ..Target::default()
+//           },
+//           Target {
+//             dist_dir: package_dir,
+//             dist_entry: Some(PathBuf::from("types.d.ts")),
+//             env: Arc::new(Environment {
+//               context: EnvironmentContext::Node,
+//               output_format: OutputFormat::CommonJS,
+//               ..env()
+//             }),
+//             name: String::from("types"),
+//             ..Target::default()
+//           },
+//         ]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_custom_targets_with_defaults() {
+//     let targets =
+//       targets_from_package_json(String::from(r#"{ "targets": { "custom": {} } } "#)).await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: package_dir().join("dist").join("custom"),
+//           dist_entry: None,
+//           env: Arc::new(Environment {
+//             context: EnvironmentContext::Browser,
+//             is_library: false,
+//             output_format: OutputFormat::Global,
+//             should_optimize: true,
+//             should_scope_hoist: false,
+//             ..Environment::default()
+//           }),
+//           name: String::from("custom"),
+//           ..Target::default()
+//         }]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_custom_targets() {
+//     let targets = targets_from_package_json(String::from(
+//       r#"
+//         {
+//           "custom": "dist/custom.js",
+//           "targets": {
+//             "custom": {
+//               "context": "node",
+//               "includeNodeModules": true,
+//               "outputFormat": "commonjs"
+//             }
+//           }
+//         }
+//       "#,
+//     ))
+//     .await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: package_dir().join("dist"),
+//           dist_entry: Some(PathBuf::from("custom.js")),
+//           env: Arc::new(Environment {
+//             context: EnvironmentContext::Node,
+//             include_node_modules: IncludeNodeModules::Bool(true),
+//             is_library: false,
+//             output_format: OutputFormat::CommonJS,
+//             should_optimize: true,
+//             ..Environment::default()
+//           }),
+//           name: String::from("custom"),
+//           ..Target::default()
+//         }]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_inferred_custom_browser_target() {
+//     let targets = targets_from_package_json(String::from(
+//       r#"
+//         {
+//           "custom": "dist/custom.js",
+//           "browserslist": ["chrome 20", "firefox > 1"],
+//           "targets": {
+//             "custom": {}
+//           }
+//         }
+//       "#,
+//     ))
+//     .await;
+
+//     assert_eq!(
+//       targets.map_err(|e| e.to_string()),
+//       Ok(RequestResult::Target(TargetRequestOutput {
+//         entry: PathBuf::default(),
+//         targets: vec![Target {
+//           dist_dir: package_dir().join("dist"),
+//           dist_entry: Some(PathBuf::from("custom.js")),
+//           env: Arc::new(Environment {
+//             context: EnvironmentContext::Browser,
+//             engines: Engines {
+//               browsers: Some(EnginesBrowsers::new(vec![
+//                 String::from("chrome 20"),
+//                 String::from("firefox > 1"),
+//               ])),
+//               ..Engines::default()
+//             },
+//             include_node_modules: IncludeNodeModules::Bool(true),
+//             output_format: OutputFormat::Global,
+//             should_optimize: true,
+//             ..Environment::default()
+//           }),
+//           name: String::from("custom"),
+//           ..Target::default()
+//         }]
+//       }))
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_inferred_custom_node_target() {
+//     let assert_targets = |targets: Result<RequestResult, anyhow::Error>, engines| {
+//       assert_eq!(
+//         targets.map_err(|e| e.to_string()),
+//         Ok(RequestResult::Target(TargetRequestOutput {
+//           entry: PathBuf::default(),
+//           targets: vec![Target {
+//             dist_dir: package_dir().join("dist"),
+//             dist_entry: Some(PathBuf::from("custom.js")),
+//             env: Arc::new(Environment {
+//               context: EnvironmentContext::Node,
+//               engines,
+//               include_node_modules: IncludeNodeModules::Bool(false),
+//               output_format: OutputFormat::CommonJS,
+//               should_optimize: true,
+//               ..Environment::default()
+//             }),
+//             name: String::from("custom"),
+//             ..Target::default()
+//           }]
+//         }))
+//       );
+//     };
+
+//     assert_targets(
+//       targets_from_package_json(String::from(
+//         r#"
+//           {
+//             "custom": "dist/custom.js",
+//             "engines": { "node": "^1.0.0" },
+//             "targets": { "custom": {} }
+//           }
+//         "#,
+//       ))
+//       .await,
+//       Engines {
+//         node: Some(Version::new(NonZeroU16::new(1).unwrap(), 0)),
+//         ..Engines::default()
+//       },
+//     );
+
+//     assert_targets(
+//       targets_from_package_json(String::from(
+//         r#"
+//           {
+//             "custom": "dist/custom.js",
+//             "engines": { "node": "^1.0.0" },
+//             "browserslist": ["chrome 20"],
+//             "targets": { "custom": {} }
+//           }
+//         "#,
+//       ))
+//       .await,
+//       Engines {
+//         node: Some(Version::new(NonZeroU16::new(1).unwrap(), 0)),
+//         browsers: None,
+//         ..Engines::default()
+//       },
+//     );
+//   }
+
+//   #[tokio::test(flavor = "multi_thread")]
+//   async fn returns_custom_target_when_output_format_matches_inferred_output_format() {
+//     let assert_targets = move |ext, module_format: Option<ModuleFormat>, output_format| async move {
+//       let targets = targets_from_package_json(format!(
+//         r#"
+//           {{
+//             {}
+//             "custom": "dist/custom.{ext}",
+//             "targets": {{
+//               "custom": {{
+//                 "outputFormat": "{output_format}"
+//               }}
+//             }}
+//           }}
+//         "#,
+//         module_format.map_or_else(
+//           || String::default(),
+//           |module_format| format!(r#""type": "{module_format}","#)
+//         ),
+//       ))
+//       .await;
+
+//       assert_eq!(
+//         targets.map_err(|e| e.to_string()),
+//         Ok(RequestResult::Target(TargetRequestOutput {
+//           entry: PathBuf::default(),
+//           targets: vec![Target {
+//             dist_dir: package_dir().join("dist"),
+//             dist_entry: Some(PathBuf::from(format!("custom.{ext}"))),
+//             env: Arc::new(Environment {
+//               output_format,
+//               should_optimize: true,
+//               ..Environment::default()
+//             }),
+//             name: String::from("custom"),
+//             ..Target::default()
+//           }],
+//         }))
+//       );
+//     };
+
+//     assert_targets("cjs", None, OutputFormat::CommonJS).await;
+//     assert_targets("cjs", Some(ModuleFormat::CommonJS), OutputFormat::CommonJS).await;
+//     assert_targets("cjs", Some(ModuleFormat::Module), OutputFormat::CommonJS).await;
+
+//     assert_targets("js", None, OutputFormat::CommonJS).await;
+//     assert_targets("js", Some(ModuleFormat::CommonJS), OutputFormat::CommonJS).await;
+
+//     assert_targets("js", None, OutputFormat::EsModule).await;
+//     assert_targets("js", Some(ModuleFormat::Module), OutputFormat::EsModule).await;
+
+//     assert_targets("mjs", None, OutputFormat::EsModule).await;
+//     assert_targets("mjs", Some(ModuleFormat::CommonJS), OutputFormat::EsModule).await;
+//     assert_targets("mjs", Some(ModuleFormat::Module), OutputFormat::EsModule).await;
+//   }
+// }

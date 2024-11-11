@@ -104,20 +104,21 @@ impl Request for AssetRequest {
       size: result.asset.code.size(),
       time: start.elapsed().as_millis().try_into().unwrap_or(u32::MAX),
     };
+    result.asset.code = "".into();
 
-    Ok(ResultAndInvalidations {
-      result: RequestResult::Asset(AssetRequestOutput {
+    Ok(ResultAndInvalidations::new(
+      RequestResult::Asset(AssetRequestOutput {
         asset: result.asset,
         // TODO: Need to decide whether a discovered asset will belong to the asset graph as it's own node
         discovered_assets: result.discovered_assets,
         dependencies: result.dependencies,
       }),
-      invalidations: result
+      result
         .invalidate_on_file_change
         .into_iter()
         .map(Invalidation::FileChange)
         .collect(),
-    })
+    ))
   }
 }
 

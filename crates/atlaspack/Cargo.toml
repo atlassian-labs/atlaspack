@@ -28,6 +28,7 @@ atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 
 anyhow = { workspace = true }
+thiserror = { workspace = true }
 async-trait = { workspace = true }
 dyn-hash = { workspace = true }
 indexmap = { workspace = true }
@@ -46,6 +47,7 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 once_cell = { workspace = true }
 parking_lot = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
+futures = { workspace = true }
 
 [dev-dependencies]
 mockall = { workspace = true }
