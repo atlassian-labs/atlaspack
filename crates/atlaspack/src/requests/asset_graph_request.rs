@@ -146,6 +146,7 @@ impl AssetGraphBuilder {
       requested_symbols,
       state,
     } = &mut self.graph.dependencies[dep_index];
+
     let asset_request = match result {
       PathRequestOutput::Resolved {
         path,
