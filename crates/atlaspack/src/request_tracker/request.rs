@@ -83,8 +83,11 @@ impl RunRequestContext {
     &self,
     request: R,
   ) -> anyhow::Result<Arc<RequestResult>> {
+    let parent_request_id = self.request_id;
+    let request_id = request.id();
+
     let mut state = self.state.lock().await;
-    let result = state.get_pending_request(Some(self.request_id), request.id());
+    let result = state.get_pending_request(Some(parent_request_id), request_id);
 
     if let Some(pending_future) = result {
       // Release the lock before waiting for the request to finish
@@ -94,23 +97,19 @@ impl RunRequestContext {
       return Ok(result);
     } else {
       let context = RunRequestContext {
-        request_id: request.id(),
+        request_id,
         config_loader: self.config_loader.clone(),
         file_system: self.file_system.clone(),
         options: self.options.clone(),
-        parent_request_id: Some(self.request_id),
+        parent_request_id: Some(parent_request_id),
         plugins: self.plugins.clone(),
         project_root: self.project_root.clone(),
         state: self.state.clone(),
       };
 
-      tracing::info!(
-        "Running request {}::{:?}",
-        std::any::type_name::<R>(),
-        request
-      );
+      // tracing::info!("Running request {}", std::any::type_name::<R>());
 
-      let tx = state.register_pending_request(request.id());
+      let tx = state.register_pending_request(request_id);
 
       // Drop the lock before running the request
       drop(state);
@@ -127,7 +126,7 @@ impl RunRequestContext {
         .as_ref()
         .map(|result| result.result().clone())
         .map_err(|_| BroadcastRequestError::Any);
-      state.store_request(request.id(), request_result)?;
+      state.store_request(request_id, request_result)?;
 
       tracing::trace!(
         "Broadcasting request result {}::{:?}",
@@ -164,7 +163,7 @@ pub type RequestId = u64;
 pub trait Request: DynHash + Send + Sync + Debug + 'static {
   fn id(&self) -> RequestId {
     let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
-    std::any::type_name::<Self>().hash(&mut hasher);
+    self.type_id().hash(&mut hasher);
     self.dyn_hash(&mut hasher);
     hasher.finish()
   }

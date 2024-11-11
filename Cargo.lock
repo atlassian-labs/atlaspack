@@ -496,6 +496,7 @@ dependencies = [
  "once_cell",
  "serde",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -527,6 +528,7 @@ dependencies = [
  "atlaspack_core",
  "atlaspack_filesystem",
  "pretty_assertions",
+ "rayon",
  "serde",
  "tokio",
 ]
@@ -629,6 +631,7 @@ dependencies = [
  "indexmap 1.9.3",
  "parking_lot",
  "pretty_assertions",
+ "rayon",
  "serde",
  "swc_core",
  "tokio",

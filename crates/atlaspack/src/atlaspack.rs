@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use atlaspack_config::atlaspack_rc_config_loader::AtlaspackRcConfigLoader;
 use atlaspack_config::atlaspack_rc_config_loader::LoadConfigOptions;
@@ -56,9 +57,12 @@ impl Atlaspack {
     let package_manager = package_manager
       .unwrap_or_else(|| Arc::new(NodePackageManager::new(project_root.clone(), fs.clone())));
 
-    let runtime = tokio::runtime::Builder::new_multi_thread()
+    let threads = num_cpus::get();
+    tracing::info!(%threads, "Creating tokio runtime...");
+    let runtime = tokio::runtime::Builder::new_current_thread()
       .enable_all()
-      .worker_threads(options.threads.unwrap_or_else(num_cpus::get))
+      .thread_name("atlaspack-tokio-worker")
+      .worker_threads(threads)
       .build()?;
 
     Ok(Self {
@@ -133,6 +137,18 @@ impl Atlaspack {
         self.project_root.clone(),
       );
 
+      let state = request_tracker.state().clone();
+      let reporter_handle = tokio::spawn(async move {
+        loop {
+          {
+            let state = state.lock().await;
+            let stats = state.get_request_stats();
+            tracing::info!("Request stats: {:?}", stats);
+          }
+          tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+      });
+
       let request_result = request_tracker.run_request(AssetGraphRequest {}).await?;
 
       let asset_graph = match &*request_result {
@@ -143,6 +159,8 @@ impl Atlaspack {
         }
         _ => panic!("TODO"),
       };
+
+      reporter_handle.abort();
 
       Ok(asset_graph)
     })

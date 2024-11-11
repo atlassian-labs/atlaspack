@@ -254,7 +254,7 @@ pub struct Asset {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AssetWithDependencies {
   pub asset: Asset,
-  pub dependencies: Vec<Dependency>,
+  pub dependencies: Vec<Arc<Dependency>>,
 }
 
 impl Asset {

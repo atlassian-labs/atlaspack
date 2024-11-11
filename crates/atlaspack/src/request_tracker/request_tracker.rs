@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::future::Future;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -63,6 +64,7 @@ impl RequestTracker {
     let state = RequestTrackerState {
       graph,
       request_index: HashMap::new(),
+      request_stats: RequestStats::default(),
     };
     let state = Arc::new(tokio::sync::Mutex::new(state));
 
@@ -74,6 +76,10 @@ impl RequestTracker {
       state,
       options,
     }
+  }
+
+  pub fn state(&self) -> &Arc<tokio::sync::Mutex<RequestTrackerState>> {
+    &self.state
   }
 
   /// Run a request that has no parent. Return the result.
@@ -154,9 +160,23 @@ pub enum RequestQueueMessage {
 pub struct RequestTrackerState {
   graph: RequestGraph,
   request_index: HashMap<u64, NodeIndex>,
+  request_stats: RequestStats,
+}
+
+#[derive(Debug, Default)]
+pub struct RequestStats {
+  total_requests: usize,
+  pending_requests: usize,
+
+  asset_requests: usize,
+  path_requests: usize,
 }
 
 impl RequestTrackerState {
+  pub fn get_request_stats(&self) -> &RequestStats {
+    &self.request_stats
+  }
+
   pub fn get_pending_request(
     &mut self,
     parent_request_id: Option<u64>,
@@ -200,6 +220,9 @@ impl RequestTrackerState {
     &mut self,
     request_id: u64,
   ) -> tokio::sync::broadcast::Sender<Result<Arc<RequestResult>, BroadcastRequestError>> {
+    self.request_stats.total_requests += 1;
+    self.request_stats.pending_requests += 1;
+
     let (tx, rx) = tokio::sync::broadcast::channel(1);
     let node = self.graph.add_node(RequestNode::Incomplete(rx));
     self.request_index.insert(request_id, node);
@@ -230,6 +253,17 @@ impl RequestTrackerState {
     request_id: u64,
     result: Result<ResultAndInvalidations, RunRequestError>,
   ) -> anyhow::Result<()> {
+    self.request_stats.pending_requests -= 1;
+
+    match &result {
+      Ok(r) => match r.result().deref() {
+        RequestResult::Asset(_) => self.request_stats.asset_requests += 1,
+        RequestResult::Path(_) => self.request_stats.path_requests += 1,
+        _ => {}
+      },
+      _ => {}
+    }
+
     let node_index = self
       .request_index
       .get(&request_id)

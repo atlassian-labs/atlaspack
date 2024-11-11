@@ -234,81 +234,79 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       .as_ref()
       .and_then(|ts| ts.compiler_options.as_ref());
 
-    let transformation_result = atlaspack_js_swc_core::transform(
-      atlaspack_js_swc_core::Config {
-        // TODO: Infer from package.json
-        automatic_jsx_runtime: compiler_options
-          .map(|co| {
-            co.jsx
-              .as_ref()
-              .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
-              || co.jsx_import_source.is_some()
-          })
-          .unwrap_or_default(),
-        code: source_code.bytes().to_vec(),
-        decorators: compiler_options
-          .and_then(|co| co.experimental_decorators)
-          .unwrap_or_default(),
-        env: env_vars,
-        filename: asset
-          .file_path
-          .to_str()
-          .ok_or_else(|| anyhow!("Invalid non UTF-8 file-path"))?
-          .to_string(),
-        inline_constants: self.config.inline_constants.unwrap_or_default(),
-        inline_fs: !env.context.is_node() && self.config.inline_fs.unwrap_or(true),
-        insert_node_globals: !is_node && env.source_type != SourceType::Script,
-        is_browser: env.context.is_browser(),
-        is_development: self.options.mode == BuildMode::Development,
-        is_esm_output: env.output_format == OutputFormat::EsModule,
-        is_jsx: matches!(file_type, FileType::Jsx | FileType::Tsx),
-        is_library: env.is_library,
-        is_type_script: matches!(file_type, FileType::Ts | FileType::Tsx),
-        is_worker: env.context.is_worker(),
-        // TODO Infer from package.json
-        jsx_import_source: compiler_options.and_then(|co| co.jsx_import_source.clone()),
-        jsx_pragma: compiler_options.and_then(|co| co.jsx_factory.clone()),
-        jsx_pragma_frag: compiler_options.and_then(|co| co.jsx_fragment_factory.clone()),
-        module_id: asset.id.to_string(),
-        node_replacer: is_node,
-        project_root: self.options.project_root.to_string_lossy().into_owned(),
-        // TODO: Boolean(
-        //   pkg?.dependencies?.react ||
-        //     pkg?.devDependencies?.react ||
-        //     pkg?.peerDependencies?.react,
-        // );
-        react_refresh: self.options.mode == BuildMode::Development
+    let config = atlaspack_js_swc_core::Config {
+      // TODO: Infer from package.json
+      automatic_jsx_runtime: compiler_options
+        .map(|co| {
+          co.jsx
+            .as_ref()
+            .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
+            || co.jsx_import_source.is_some()
+        })
+        .unwrap_or_default(),
+      code: source_code.bytes().to_vec(),
+      decorators: compiler_options
+        .and_then(|co| co.experimental_decorators)
+        .unwrap_or_default(),
+      env: env_vars,
+      filename: asset
+        .file_path
+        .to_str()
+        .ok_or_else(|| anyhow!("Invalid non UTF-8 file-path"))?
+        .to_string(),
+      inline_constants: self.config.inline_constants.unwrap_or_default(),
+      inline_fs: !env.context.is_node() && self.config.inline_fs.unwrap_or(true),
+      insert_node_globals: !is_node && env.source_type != SourceType::Script,
+      is_browser: env.context.is_browser(),
+      is_development: self.options.mode == BuildMode::Development,
+      is_esm_output: env.output_format == OutputFormat::EsModule,
+      is_jsx: matches!(file_type, FileType::Jsx | FileType::Tsx),
+      is_library: env.is_library,
+      is_type_script: matches!(file_type, FileType::Ts | FileType::Tsx),
+      is_worker: env.context.is_worker(),
+      // TODO Infer from package.json
+      jsx_import_source: compiler_options.and_then(|co| co.jsx_import_source.clone()),
+      jsx_pragma: compiler_options.and_then(|co| co.jsx_factory.clone()),
+      jsx_pragma_frag: compiler_options.and_then(|co| co.jsx_fragment_factory.clone()),
+      module_id: asset.id.to_string(),
+      node_replacer: is_node,
+      project_root: self.options.project_root.to_string_lossy().into_owned(),
+      // TODO: Boolean(
+      //   pkg?.dependencies?.react ||
+      //     pkg?.devDependencies?.react ||
+      //     pkg?.peerDependencies?.react,
+      // );
+      react_refresh: self.options.mode == BuildMode::Development
           // && TODO: self.options.hmr_options
           && env.context.is_browser()
           && !env.is_library
           && !env.context.is_worker()
           && !env.context.is_worklet(),
-        replace_env: !is_node,
-        scope_hoist: env.should_scope_hoist && env.source_type != SourceType::Script,
-        source_maps: env.source_map.is_some(),
-        source_type: match env.source_type {
-          SourceType::Module => atlaspack_js_swc_core::SourceType::Module,
-          SourceType::Script => atlaspack_js_swc_core::SourceType::Script,
-        },
-        supports_module_workers: env.should_scope_hoist
-          && env.engines.supports(EnvironmentFeature::WorkerModule),
-        // TODO: Update transformer to use engines directly
-        targets: Some(targets),
-        trace_bailouts: self.options.log_level == LogLevel::Verbose,
-        use_define_for_class_fields: compiler_options
-          .map(|co| {
-            co.use_define_for_class_fields.unwrap_or_else(|| {
-              // Default useDefineForClassFields to true if target is ES2022 or higher (including ESNext)
-              co.target.as_ref().is_some_and(|target| {
-                matches!(target, Target::ES2022 | Target::ES2023 | Target::ESNext)
-              })
+      replace_env: !is_node,
+      scope_hoist: env.should_scope_hoist && env.source_type != SourceType::Script,
+      source_maps: env.source_map.is_some(),
+      source_type: match env.source_type {
+        SourceType::Module => atlaspack_js_swc_core::SourceType::Module,
+        SourceType::Script => atlaspack_js_swc_core::SourceType::Script,
+      },
+      supports_module_workers: env.should_scope_hoist
+        && env.engines.supports(EnvironmentFeature::WorkerModule),
+      // TODO: Update transformer to use engines directly
+      targets: Some(targets),
+      trace_bailouts: self.options.log_level == LogLevel::Verbose,
+      use_define_for_class_fields: compiler_options
+        .map(|co| {
+          co.use_define_for_class_fields.unwrap_or_else(|| {
+            // Default useDefineForClassFields to true if target is ES2022 or higher (including ESNext)
+            co.target.as_ref().is_some_and(|target| {
+              matches!(target, Target::ES2022 | Target::ES2023 | Target::ESNext)
             })
           })
-          .unwrap_or_default(),
-        ..atlaspack_js_swc_core::Config::default()
-      },
-      None,
-    )?;
+        })
+        .unwrap_or_default(),
+      ..atlaspack_js_swc_core::Config::default()
+    };
+    let transformation_result = transform_async(config).await?;
 
     // TODO handle errors properly
     if let Some(errors) = transformation_result.diagnostics {
@@ -324,6 +322,17 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   }
 }
 
+async fn transform_async(
+  config: atlaspack_js_swc_core::Config,
+) -> Result<atlaspack_js_swc_core::TransformResult, Error> {
+  let (tx, rx) = tokio::sync::oneshot::channel();
+  rayon::spawn(|| {
+    let result = atlaspack_js_swc_core::transform(config, None);
+    let _ = tx.send(result);
+  });
+  let result = rx.await??;
+  Ok(result)
+}
 #[cfg(test)]
 mod tests {
   use pretty_assertions::assert_eq;

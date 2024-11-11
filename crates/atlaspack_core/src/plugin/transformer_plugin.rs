@@ -22,7 +22,7 @@ pub type Resolve = dyn Fn(PathBuf, String, ResolveOptions) -> Result<PathBuf, an
 #[derive(Debug, Serialize, PartialEq, Default)]
 pub struct TransformResult {
   pub asset: Asset,
-  pub dependencies: Vec<Dependency>,
+  pub dependencies: Vec<Arc<Dependency>>,
   pub discovered_assets: Vec<AssetWithDependencies>,
   /// The transformer signals through this field that its result should be invalidated
   /// if these paths change.

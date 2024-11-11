@@ -34,8 +34,6 @@ pub struct AtlaspackOptions {
 
   #[serde(default)]
   pub mode: BuildMode,
-
-  pub threads: Option<usize>,
 }
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Serialize)]

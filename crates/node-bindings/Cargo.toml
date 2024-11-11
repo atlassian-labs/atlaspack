@@ -70,3 +70,6 @@ mimalloc = { workspace = true }
 
 [build-dependencies]
 napi-build = { workspace = true }
+
+[profile.release]
+debug = true

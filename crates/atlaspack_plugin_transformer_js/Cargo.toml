@@ -22,6 +22,8 @@ glob-match = { workspace = true }
 indexmap = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 swc_core = { workspace = true, features = ["ecma_ast"] }
+rayon = { workspace = true }
+tokio = { workspace = true }
 parking_lot = { workspace = true }
 
 [dev-dependencies]

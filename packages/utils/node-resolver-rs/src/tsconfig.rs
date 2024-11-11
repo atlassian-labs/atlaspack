@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::path::resolve_path;
 use crate::specifier::Specifier;
@@ -14,7 +15,7 @@ pub struct TsConfig {
   #[serde(skip)]
   pub path: PathBuf,
   base_url: Option<PathBuf>,
-  paths: Option<HashMap<Specifier, Vec<String>>>,
+  paths: Option<Arc<HashMap<Specifier, Vec<String>>>>,
   #[serde(skip)]
   paths_base: PathBuf,
   pub module_suffixes: Option<Vec<String>>,
@@ -190,7 +191,7 @@ mod tests {
   fn test_paths() {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
-      paths: Some(HashMap::from([
+      paths: Some(Arc::new(HashMap::from([
         (
           "jquery".into(),
           vec![String::from("node_modules/jquery/dist/jquery")],
@@ -203,7 +204,7 @@ mod tests {
         ),
         ("@/components/*".into(), vec![String::from("components/*")]),
         ("url".into(), vec![String::from("node_modules/my-url")]),
-      ])),
+      ]))),
       ..Default::default()
     };
     tsconfig.validate();
@@ -256,7 +257,7 @@ mod tests {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
       base_url: Some(Path::new("src").into()),
-      paths: Some(HashMap::from([
+      paths: Some(Arc::new(HashMap::from([
         ("*".into(), vec![String::from("generated/*")]),
         ("bar/*".into(), vec![String::from("test/*")]),
         (
@@ -264,7 +265,7 @@ mod tests {
           vec![String::from("baz/*"), String::from("yo/*")],
         ),
         ("@/components/*".into(), vec![String::from("components/*")]),
-      ])),
+      ]))),
       ..Default::default()
     };
     tsconfig.validate();

@@ -34,7 +34,9 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
   pub fn new(value: T) -> Self {
     let id = COUNTER.fetch_add(1, Ordering::Relaxed);
 
-    VALUES.lock().unwrap().insert(id, Box::new(value));
+    let mut values = VALUES.lock().unwrap();
+    tracing::info!(len = values.len(), "JsTransferable::len");
+    values.insert(id, Box::new(value));
     Self {
       id,
       _value: Default::default(),

@@ -183,7 +183,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       pseudo_classes: None,
     })?;
 
-    let mut dependencies: Vec<Dependency> = css
+    let mut dependencies: Vec<Arc<Dependency>> = css
       .dependencies
       .as_ref()
       .map(|dependencies| {
@@ -218,7 +218,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
               dependency.set_placeholder(import_dependency.placeholder.clone());
 
-              Some(dependency)
+              Some(Arc::new(dependency))
             }
             lightningcss::dependencies::Dependency::Url(url_dependency) => {
               let mut dependency = Dependency {
@@ -234,7 +234,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
               dependency.set_placeholder(url_dependency.placeholder.clone());
 
-              Some(dependency)
+              Some(Arc::new(dependency))
             }
           })
           .collect()
@@ -277,7 +277,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
         asset: &Asset,
         asset_symbols: &mut Vec<Symbol>,
         export_code: &mut String,
-        dependencies: &mut Vec<Dependency>,
+        dependencies: &mut Vec<Arc<Dependency>>,
         sorted_exports: &BTreeMap<String, CssModuleExport>,
         seen: &mut HashSet<String>,
       ) -> anyhow::Result<()> {
@@ -330,7 +330,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                   loc: None,
                 }];
 
-                dependencies.push(Dependency {
+                dependencies.push(Arc::new(Dependency {
                   // Point this at the root asset
                   specifier: unique_key.clone(),
                   specifier_type: SpecifierType::Esm,
@@ -340,7 +340,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                   source_path: Some(asset.file_path.clone()),
                   source_asset_type: Some(FileType::Css),
                   ..Dependency::default()
-                });
+                }));
               }
             }
             CssModuleReference::Global { name } => {
@@ -372,7 +372,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
             loc: None,
           }];
 
-          dependencies.push(Dependency {
+          dependencies.push(Arc::new(Dependency {
             // Point this at the root asset
             specifier: unique_key.clone(),
             specifier_type: SpecifierType::VirtualFile,
@@ -382,7 +382,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
             source_path: Some(asset.file_path.clone()),
             source_asset_type: Some(FileType::Css),
             ..Dependency::default()
-          });
+          }));
         }
 
         export_code.push_str(&code);
@@ -455,7 +455,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
               is_esm_export: false,
             }];
 
-            dependencies.push(Dependency {
+            dependencies.push(Arc::new(Dependency {
               specifier: specifier.clone(),
               specifier_type: SpecifierType::Esm,
               package_conditions: ExportsCondition::STYLE,
@@ -465,7 +465,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
               source_path: Some(asset.file_path.clone()),
               source_asset_type: Some(FileType::Css),
               ..Dependency::default()
-            });
+            }));
 
             asset.meta.insert("hasReferences".into(), true.into());
             css_code.push(format!("@import '{}';", specifier));

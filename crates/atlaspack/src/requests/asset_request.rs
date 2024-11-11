@@ -19,6 +19,7 @@ use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
+use tokio::task::spawn_blocking;
 
 use crate::plugins::PluginsRef;
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
@@ -45,7 +46,7 @@ pub struct AssetRequest {
 pub struct AssetRequestOutput {
   pub asset: Asset,
   pub discovered_assets: Vec<AssetWithDependencies>,
-  pub dependencies: Vec<Dependency>,
+  pub dependencies: Vec<Arc<Dependency>>,
 }
 
 #[async_trait]

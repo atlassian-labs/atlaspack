@@ -100,7 +100,7 @@ pub struct HTMLTransformationContext {
 
 #[derive(Debug, PartialEq)]
 struct HtmlTransformation {
-  dependencies: Vec<Dependency>,
+  dependencies: Vec<Arc<Dependency>>,
   discovered_assets: Vec<AssetWithDependencies>,
 }
 
@@ -130,7 +130,11 @@ fn run_html_transformations(
   }
 
   HtmlTransformation {
-    dependencies: dependencies_visitor.dependencies,
+    dependencies: dependencies_visitor
+      .dependencies
+      .into_iter()
+      .map(|d| Arc::new(d))
+      .collect(),
     discovered_assets,
   }
 }

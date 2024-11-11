@@ -117,7 +117,7 @@ export class WorkerPool {
     const timeout = new Promise((_, reject) => {
       setTimeout(() => {
         reject(new Error('Worker failed to register in time'));
-      }, 5000);
+      }, 30000);
     });
 
     const workerError = new Promise((_, reject) => {

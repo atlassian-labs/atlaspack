@@ -290,6 +290,7 @@ export class AtlaspackWorker {
   );
 }
 
+console.log('starting v3 worker');
 const worker = new AtlaspackWorker();
 parentPort?.on('message', (event) => {
   if (event.type === 'registerWorker') {

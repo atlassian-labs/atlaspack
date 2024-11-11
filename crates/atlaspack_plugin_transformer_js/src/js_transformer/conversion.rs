@@ -350,7 +350,10 @@ pub(crate) fn convert_result(
 
   Ok(TransformResult {
     asset,
-    dependencies: dependency_by_specifier.into_values().collect(),
+    dependencies: dependency_by_specifier
+      .into_values()
+      .map(Arc::new)
+      .collect(),
     // diagnostics: result.diagnostics,
     // used_env: result.used_env.into_iter().map(|v| v.to_string()).collect(),
     invalidate_on_file_change,

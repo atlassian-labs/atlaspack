@@ -244,6 +244,7 @@ export default class WorkerFarm extends EventEmitter {
   }
 
   startChild() {
+    console.log('starting worker');
     let worker = new Worker({
       forcedKillTime: this.options.forcedKillTime,
       backend: this.options.backend,

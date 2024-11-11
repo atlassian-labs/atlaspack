@@ -11,6 +11,7 @@ use napi::Env;
 use napi::JsFunction;
 use napi::JsObject;
 use napi::JsUnknown;
+use napi::Status;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use tokio::sync::mpsc::unbounded_channel;
@@ -125,7 +126,7 @@ impl JsCallable {
     tokio::task::spawn({
       let threadsafe_function = self.threadsafe_function.clone();
       async move {
-        threadsafe_function.call_with_return_value(
+        let status = threadsafe_function.call_with_return_value(
           Box::new(map_params),
           ThreadsafeFunctionCallMode::NonBlocking,
           {
@@ -167,6 +168,19 @@ impl JsCallable {
             }
           },
         );
+        match status {
+          Status::Ok => {}
+          Status::QueueFull => {
+            // https://github.com/nodejs/node-addon-api/blob/264bc1b94fea7c05fcbed3eac47b205c61b199ac/doc/threadsafe_function.md
+            tracing::warn!("thread-safe function queue full, builds may hang");
+          }
+          _ => {
+            tracing::warn!(
+              "unexpected status from thread-safe function call: {:?}",
+              status
+            );
+          }
+        }
       }
     });
 
