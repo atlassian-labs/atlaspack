@@ -105,7 +105,7 @@ impl Request for AssetRequest {
       size: result.asset.code.size(),
       time: start.elapsed().as_millis().try_into().unwrap_or(u32::MAX),
     };
-    result.asset.code = "".into();
+    // result.asset.code = "".into();
 
     Ok(ResultAndInvalidations::new(
       RequestResult::Asset(AssetRequestOutput {
