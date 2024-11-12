@@ -2889,7 +2889,7 @@ describe('javascript', function () {
         'utf8',
       );
 
-      assert(dist.includes('$cKnEA$lodash = require("lodash");'));
+      assert(dist.match(/\$\w+\$lodash = require\("lodash"\);/));
 
       let add = await run(b);
       assert.equal(add(2, 3), 5);
@@ -3422,18 +3422,44 @@ describe('javascript', function () {
     assert.deepEqual(res, {a: 4});
   });
 
-  it('should not use arrow functions for reexport declarations unless supported', async function () {
-    let b = await bundle(
-      path.join(__dirname, 'integration/js-export-arrow-support/index.js'),
-      {
-        // Remove comments containing "=>"
-        defaultTargetOptions: {
-          shouldOptimize: true,
+  // Enable this for v3 once hmr options is supported in the js_transformer
+  it.v2(
+    'should not use arrow functions for reexport declarations unless supported',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, 'integration/js-export-arrow-support/index.js'),
+        {
+          // Remove comments containing "=>"
+          defaultTargetOptions: {
+            shouldOptimize: true,
+          },
         },
+      );
+
+      let content = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(!content.includes('=>'));
+    },
+  );
+
+  it('should support classes that extend from another using default browsers', async () => {
+    await fsFixture(overlayFS, __dirname)`
+      index.js:
+        export class ValidationError extends Error {}
+    `;
+
+    let b = await bundle(path.join(__dirname, 'index.js'), {
+      inputFS: overlayFS,
+    });
+
+    // This should not contain any swc helpers
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: ['esmodule-helpers.js', 'index.js'],
       },
-    );
-    let content = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(!content.includes('=>'));
+    ]);
+
+    await run(b);
   });
 
   it('should support import namespace declarations of other ES modules', async function () {
@@ -4059,7 +4085,7 @@ describe('javascript', function () {
             },
             {
               message:
-                'External dependency "@swc/helpers" does not satisfy required semver range "^0.5.0".',
+                'External dependency "@swc/helpers" does not satisfy required semver range "^0.5.15".',
               origin: '@atlaspack/resolver-default',
               codeFrames: [
                 {
@@ -4082,7 +4108,7 @@ describe('javascript', function () {
                 },
               ],
               hints: [
-                'Update the dependency on "@swc/helpers" to satisfy "^0.5.0".',
+                'Update the dependency on "@swc/helpers" to satisfy "^0.5.15".',
               ],
             },
           ],

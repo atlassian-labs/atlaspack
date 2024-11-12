@@ -7,8 +7,6 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
 
-use atlaspack_filesystem::FileSystemRef;
-
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::json;
@@ -260,24 +258,16 @@ pub struct AssetWithDependencies {
 impl Asset {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
+    code: Code,
     env: Arc<Environment>,
     file_path: PathBuf,
-    fs: FileSystemRef,
     pipeline: Option<String>,
     project_root: &Path,
-    resolver_code: Option<String>,
-    side_effects: bool,
     query: Option<String>,
-  ) -> anyhow::Result<Self> {
+    side_effects: bool,
+  ) -> Self {
     let file_type =
       FileType::from_extension(file_path.extension().and_then(|s| s.to_str()).unwrap_or(""));
-
-    let code = if let Some(code) = resolver_code {
-      Code::from(code)
-    } else {
-      let code_from_disk = fs.read(&file_path)?;
-      Code::new(code_from_disk)
-    };
 
     let is_source = !file_path
       .ancestors()
@@ -293,7 +283,7 @@ impl Asset {
       unique_key: None,
     });
 
-    Ok(Self {
+    Self {
       code,
       env,
       file_path,
@@ -306,7 +296,7 @@ impl Asset {
       side_effects,
       unique_key: None,
       ..Asset::default()
-    })
+    }
   }
 
   #[allow(clippy::too_many_arguments)]
@@ -441,30 +431,52 @@ pub struct Condition {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
-
   use super::*;
 
   #[test]
-  fn new_creates_asset_ids_relative_to_project_root() {
+  fn new_produces_stable_ids() {
     let env = Arc::new(Environment::default());
-    let fs = Arc::new(InMemoryFileSystem::default());
-
     let project_root = PathBuf::from("project_root");
 
-    fs.write_file(&project_root.join("test.js"), String::default());
-
-    let asset = Asset::new(
+    let asset_1 = Asset::new(
+      Code::from("function hello() {}"),
       env.clone(),
       project_root.join("test.js"),
-      fs,
       None,
       &project_root,
       None,
       false,
+    );
+
+    let asset_2 = Asset::new(
+      Code::from("function helloButDifferent() {}"),
+      env.clone(),
+      project_root.join("test.js"),
       None,
-    )
-    .expect("Asset to be created");
+      &project_root,
+      None,
+      false,
+    );
+
+    // This nº should not change across runs / compilation
+    assert_eq!(asset_1.id, "91d0d64458c223d1");
+    assert_eq!(asset_1.id, asset_2.id);
+  }
+
+  #[test]
+  fn new_creates_asset_ids_relative_to_project_root() {
+    let env = Arc::new(Environment::default());
+    let project_root = PathBuf::from("project_root");
+
+    let asset = Asset::new(
+      Code::default(),
+      env.clone(),
+      project_root.join("test.js"),
+      None,
+      &project_root,
+      None,
+      false,
+    );
 
     assert_eq!(
       asset.id,

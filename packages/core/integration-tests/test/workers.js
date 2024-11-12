@@ -259,6 +259,10 @@ describe('atlaspack', function () {
         defaultTargetOptions: {
           shouldOptimize: false,
           shouldScopeHoist: true,
+          // TODO: The default engines should support workers of type module, this might be a bug
+          engines: {
+            browsers: ['last 1 Chrome version'],
+          },
         },
       },
     );

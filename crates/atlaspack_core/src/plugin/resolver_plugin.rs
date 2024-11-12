@@ -16,6 +16,7 @@ use crate::types::Priority;
 
 // TODO Diagnostics and invalidations
 
+#[derive(Debug)]
 pub struct ResolveContext {
   pub dependency: Arc<Dependency>,
   pub pipeline: Option<String>,
