@@ -211,11 +211,17 @@ async function main() {
       await atlaspack[FUNCTION]();
 
       const buildTime = Date.now() - startTime;
-      console.log(`Build ${i + 1} took ${buildTime}ms`);
+      console.log(`Build ${i + 1}: ${buildTime}ms`);
       buildTimes.push(buildTime);
     }
 
+    const average =
+      buildTimes.reduce((total, time) => total + time, 0) / buildTimes.length;
+
+    console.log(`Benchmarks completed with an average time of ${average}ms`);
+
     await writeJson(join(benchDir, 'report.json'), {
+      average,
       buildTimes,
     });
   } catch (err) {
