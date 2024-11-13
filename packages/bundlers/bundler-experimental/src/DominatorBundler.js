@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import type {BundleGraph, Bundle, Asset, Dependency} from '@atlaspack/types';
+import type {BundleGraph, Bundle, Asset} from '@atlaspack/types';
 import type {MutableBundleGraph} from '@atlaspack/types';
 import {bundleGraphToRootedGraph} from './DominatorBundler/bundleGraphToRootedGraph';
 import {ContentGraph, type NodeId} from '@atlaspack/graph';
