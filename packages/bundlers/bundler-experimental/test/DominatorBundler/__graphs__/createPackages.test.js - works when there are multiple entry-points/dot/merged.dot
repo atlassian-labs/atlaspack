@@ -1,0 +1,28 @@
+digraph merged {
+  labelloc="t";
+  label="Merged";
+  layout="dot";
+
+  "esmodule_helpers.js";
+  "jsx.js";
+  "left-pad.js";
+  "lodash.js";
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5";
+  "page1.js";
+  "page2.js";
+  "react.js";
+  "root";
+  "string-chart-at.js";
+  "string-concat.js";
+
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "esmodule_helpers.js";
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "left-pad.js";
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "lodash.js";
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "react.js";
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "string-concat.js";
+  "react.js" -> "jsx.js";
+  "root" -> "package_4d365acd7631caa5,85a47ee5bf2af6f5";
+  "root" -> "page1.js";
+  "root" -> "page2.js";
+  "string-concat.js" -> "string-chart-at.js";
+}

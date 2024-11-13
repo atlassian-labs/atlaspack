@@ -95,8 +95,8 @@ describe('DominatorBundler/createPackages', () => {
           entryPath1,
           entryPath2,
         ]);
-        const dominators = findAssetDominators(mutableBundleGraph);
 
+        const dominators = findAssetDominators(mutableBundleGraph);
         const outputDot = rootedGraphToDot(entryDir, dominators);
 
         const mergedDominators = createPackages(mutableBundleGraph, dominators);
@@ -117,7 +117,7 @@ digraph merged {
   "jsx.js";
   "left-pad.js";
   "lodash.js";
-  "package_6b334e67b36bf482,a5fb992cd851a2a3";
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5";
   "page1.js";
   "page2.js";
   "react.js";
@@ -125,13 +125,13 @@ digraph merged {
   "string-chart-at.js";
   "string-concat.js";
 
-  "package_6b334e67b36bf482,a5fb992cd851a2a3" -> "esmodule_helpers.js";
-  "package_6b334e67b36bf482,a5fb992cd851a2a3" -> "left-pad.js";
-  "package_6b334e67b36bf482,a5fb992cd851a2a3" -> "lodash.js";
-  "package_6b334e67b36bf482,a5fb992cd851a2a3" -> "react.js";
-  "package_6b334e67b36bf482,a5fb992cd851a2a3" -> "string-concat.js";
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "esmodule_helpers.js";
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "left-pad.js";
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "lodash.js";
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "react.js";
+  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "string-concat.js";
   "react.js" -> "jsx.js";
-  "root" -> "package_6b334e67b36bf482,a5fb992cd851a2a3";
+  "root" -> "package_4d365acd7631caa5,85a47ee5bf2af6f5";
   "root" -> "page1.js";
   "root" -> "page2.js";
   "string-concat.js" -> "string-chart-at.js";

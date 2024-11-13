@@ -23,6 +23,9 @@ export type PackagingInputGraph = ContentGraph<
   Asset | StronglyConnectedComponentNode<Asset | 'root'> | 'root',
 >;
 
+const defaultMakePackageKey = (parentChunks: Set<string>): string =>
+  parentChunks.size === 0 ? 'root' : Array.from(parentChunks).sort().join(',');
+
 /**
  * Start with the dominator graph. This is the immediate dominator tree, with a
  * root node at the top of every node.
@@ -37,6 +40,7 @@ export type PackagingInputGraph = ContentGraph<
 export function createPackages(
   bundleGraph: MutableBundleGraph,
   dominators: PackagingInputGraph,
+  makePackageKey: (parentChunks: Set<string>) => string = defaultMakePackageKey,
 ): PackagedDominatorGraph {
   // $FlowFixMe
   const packages: PackagedDominatorGraph = dominators.clone();
@@ -51,6 +55,7 @@ export function createPackages(
     packages,
     bundleGraph,
     chunksByAsset,
+    makePackageKey,
   );
 
   const merge = (parentChunkAssetId: string, chunksToMerge: number[]) => {
@@ -122,12 +127,9 @@ function getChunksByParentEntryPoint(
   packages: PackagedDominatorGraph,
   bundleGraph: MutableBundleGraph,
   entryPointsByChunk: Map<string, Set<string>>,
+  makePackageKey: (parentChunks: Set<string>) => string,
 ): Map<string, {|chunksToMerge: NodeId[], parentChunks: Set<string>|}> {
   const chunksByParent = new Map();
-  const makePackageKey = (parentChunks: Set<string>): string =>
-    parentChunks.size === 0
-      ? 'root'
-      : Array.from(parentChunks).sort().join(',');
   const addChunkToParent = (
     key: string,
     chunk: NodeId,
