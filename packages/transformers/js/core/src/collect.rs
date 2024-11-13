@@ -77,7 +77,7 @@ pub struct Collect {
   pub should_wrap: bool,
   /// local variable binding -> descriptor
   pub imports: HashMap<Id, Import>,
-  pub this_exprs: HashMap<Id, (Ident, Span)>,
+  pub this_exprs: HashMap<JsWord, Span>,
   /// exported name -> descriptor
   pub exports: HashMap<JsWord, Export>,
   /// local variable binding -> exported name
@@ -289,8 +289,8 @@ impl Visit for Collect {
     }
     self.in_module_this = false;
 
-    for (_key, (ident, span)) in std::mem::take(&mut self.this_exprs) {
-      if self.exports.contains_key(&ident.sym) {
+    for (key, span) in std::mem::take(&mut self.this_exprs) {
+      if self.exports.contains_key(&key) {
         self.should_wrap = true;
         self.add_bailout(span, BailoutReason::ThisInExport);
       }
@@ -630,7 +630,7 @@ impl Visit for Collect {
         .or_insert_with(|| node.id.sym.clone());
     }
 
-    if self.in_assign && node.id.span.has_mark(self.global_mark) {
+    if self.in_assign && node.id.ctxt.has_mark(self.global_mark) {
       self
         .non_const_bindings
         .entry(id!(node.id))
@@ -656,7 +656,7 @@ impl Visit for Collect {
         .or_insert_with(|| node.key.sym.clone());
     }
 
-    if self.in_assign && node.key.span.has_mark(self.global_mark) {
+    if self.in_assign && node.key.ctxt.has_mark(self.global_mark) {
       self
         .non_const_bindings
         .entry(id!(node.key))
@@ -741,7 +741,7 @@ impl Visit for Collect {
           }
         } else if !self.in_class {
           if let MemberProp::Ident(prop) = &node.prop {
-            self.this_exprs.insert(id!(prop), (prop.clone(), node.span));
+            self.this_exprs.insert(prop.sym.clone(), node.span);
           }
         }
         return;
@@ -779,7 +779,7 @@ impl Visit for Collect {
       self.add_bailout(span, BailoutReason::NonTopLevelRequire);
     }
 
-    if let Some(source) = match_import(node, self.ignore_mark) {
+    if let Some(source) = match_import(node) {
       self.non_static_requires.insert(source.clone());
       self.wrapped_requires.insert(source.to_string());
       let span = match node {
@@ -942,7 +942,7 @@ impl Visit for Collect {
         Expr::Await(await_exp) => {
           // let x = await import('foo');
           // let {x} = await import('foo');
-          if let Some(source) = match_import(&await_exp.arg, self.ignore_mark) {
+          if let Some(source) = match_import(&await_exp.arg) {
             self.add_pat_imports(&node.name, &source, ImportKind::DynamicImport);
             return;
           }
@@ -970,7 +970,7 @@ impl Visit for Collect {
         }
         Expr::Member(member) => {
           // import('foo').then(foo => ...);
-          if let Some(source) = match_import(&member.obj, self.ignore_mark) {
+          if let Some(source) = match_import(&member.obj) {
             if match_property_name(member).map_or(false, |f| &*f.0 == "then") {
               if let Some(ExprOrSpread { expr, .. }) = node.args.first() {
                 let param = match &**expr {

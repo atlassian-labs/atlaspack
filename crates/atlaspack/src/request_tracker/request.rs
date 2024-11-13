@@ -107,7 +107,11 @@ impl RunRequestContext {
         state: self.state.clone(),
       };
 
-      // tracing::info!("Running request {}", std::any::type_name::<R>());
+      // tracing::info!(
+      //   "Running request {}::{}",
+      //   std::any::type_name::<R>(),
+      //   request_id
+      // );
 
       let tx = state.register_pending_request(request_id);
 

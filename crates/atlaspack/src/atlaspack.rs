@@ -127,6 +127,8 @@ impl Atlaspack {
 
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
     self.runtime.block_on(async move {
+      tracing::info!("Building asset graph...");
+
       let AtlaspackState { config, plugins } = self.state().unwrap();
 
       let mut request_tracker = RequestTracker::new(
