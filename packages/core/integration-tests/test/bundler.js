@@ -2392,7 +2392,7 @@ describe.v2('bundler', function () {
       ]);
     });
 
-    it.only('this is a bug, the build fails', async function () {
+    it('this is a bug, the build fails', async function () {
       await fsFixture(overlayFS, __dirname)`
         disable-shared-bundles-false
           right-pad.js:
