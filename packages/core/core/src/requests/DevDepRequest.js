@@ -10,7 +10,6 @@ import type {
   AtlaspackOptions,
   InternalDevDepOptions,
   DevDepRequestRef,
-  DevDepRequestRef,
 } from '../types';
 import type {RequestResult, RunAPI} from '../RequestTracker';
 import type {ProjectPath} from '../projectPath';

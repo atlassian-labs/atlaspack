@@ -58,8 +58,6 @@ import {
   toProjectPath,
   fromProjectPathRelative,
 } from './projectPath';
-import {clearBuildCaches} from '@atlaspack/build-cache';
-import {LMDBLiteCache} from '@atlaspack/cache';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {
@@ -71,8 +69,6 @@ import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
 import MutableBundleGraph from './public/MutableBundleGraph';
-import {hashString} from '@atlaspack/rust';
-import fs from 'fs';
 import {runGetBundlerStats} from './BundlerStats';
 
 registerCoreWithSerializer();
