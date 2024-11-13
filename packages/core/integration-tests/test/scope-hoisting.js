@@ -4862,7 +4862,7 @@ describe('scope hoisting', function () {
       assert.deepStrictEqual(calls, [1, 2, 3, 4, 5, 6, 7]);
     });
 
-    it.v2('should support optional requires', async function () {
+    it('should support optional requires', async function () {
       let b = await bundle(
         path.join(
           __dirname,
