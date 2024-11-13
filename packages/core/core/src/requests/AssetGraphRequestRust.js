@@ -88,6 +88,7 @@ function getAssetGraph(serializedGraph, options) {
   let graph = new AssetGraph({
     _contentKeyToNodeId: new Map(),
     _nodeIdToContentKey: new Map(),
+    initialCapacity: serializedGraph.edges.length,
   });
 
   graph.safeToIncrementallyBundle = false;
