@@ -145,6 +145,14 @@ describe('WorkerFarm', function () {
 
     await workerfarm.run();
 
+    events = events.filter(
+      (event) =>
+        !event.diagnostics[0].message.startsWith('Starting worker') &&
+        !event.diagnostics[0].message.startsWith('Worker ready') &&
+        !event.diagnostics[0].message.startsWith(
+          'Finished starting worker threads',
+        ),
+    );
     assert.deepEqual(events, [
       {
         level: 'info',
@@ -219,7 +227,8 @@ describe('WorkerFarm', function () {
 
     await workerfarm.run();
 
-    // assert.equal(events.length, 2);
+    events = events.filter((event) => event.level !== 'verbose');
+    assert.equal(events.length, 2);
     assert.deepEqual(events, [
       {
         level: 'info',

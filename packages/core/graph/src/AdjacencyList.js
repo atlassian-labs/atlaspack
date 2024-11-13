@@ -613,7 +613,7 @@ export default class AdjacencyList<TEdgeType: number = 1> {
     }
   }
 
-  forEachNodeIdConnectedTo(to: NodeId, fn: (nodeId: NodeId) => void): NodeId[] {
+  forEachNodeIdConnectedTo(to: NodeId, fn: (nodeId: NodeId) => void) {
     let node = this.#nodes.head(to);
     while (node !== null) {
       let edge = this.#nodes.firstIn(node);

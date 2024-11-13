@@ -18,6 +18,7 @@ export function runDotForTest(
   name: string,
   label: string,
   dot: string,
+  updatePngs: boolean = process.env.ATLASPACK_UPDATE_DOT_PNGS === 'true',
 ) {
   const slugTestName = path.join(
     __dirname,
@@ -29,13 +30,15 @@ export function runDotForTest(
   fs.mkdirSync(path.join(slugTestName, 'png'), {recursive: true});
   const filePath = `${label}.dot`;
   fs.writeFileSync(path.join(slugTestName, 'dot', filePath), dot);
-  childProcess.execSync(
-    `dot -Tpng -o "${path.join(
-      slugTestName,
-      'png',
-      filePath,
-    )}.png" "${path.join(slugTestName, 'dot', filePath)}"`,
-  );
+  if (updatePngs) {
+    childProcess.execSync(
+      `dot -Tpng -o "${path.join(
+        slugTestName,
+        'png',
+        filePath,
+      )}.png" "${path.join(slugTestName, 'dot', filePath)}"`,
+    );
+  }
 }
 
 /**
