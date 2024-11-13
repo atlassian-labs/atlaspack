@@ -2158,30 +2158,27 @@ describe('javascript', function () {
     assert.equal(output.test(), 'pkg-main-module');
   });
 
-  it.v2(
-    'should support optional dependencies in try...catch blocks',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/optional-dep/index.js'),
-      );
+  it('should support optional dependencies in try...catch blocks', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/optional-dep/index.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: ['index.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: ['index.js'],
+      },
+    ]);
 
-      let output = await run(b);
+    let output = await run(b);
 
-      assert.equal(Object.getPrototypeOf(output).constructor.name, 'Error');
-      assert(
-        /Cannot find module ['"]optional-dep['"]/.test(output.message),
-        'Should set correct error message',
-      );
-      assert.equal(output.code, 'MODULE_NOT_FOUND');
-    },
-  );
+    assert.equal(Object.getPrototypeOf(output).constructor.name, 'Error');
+    assert(
+      /Cannot find module ['"]optional-dep['"]/.test(output.message),
+      'Should set correct error message',
+    );
+    assert.equal(output.code, 'MODULE_NOT_FOUND');
+  });
 
   it('should support excluding dependencies in falsy branches', async function () {
     let b = await bundle(
