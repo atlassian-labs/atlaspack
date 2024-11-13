@@ -14,7 +14,7 @@ use atlaspack_core::types::Invalidation;
 use atlaspack_filesystem::FileSystemRef;
 use dyn_hash::DynHash;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 use crate::plugins::PluginsRef;
 use crate::request_tracker::BroadcastRequestError;
@@ -42,7 +42,7 @@ pub struct RunRequestContext {
   parent_request_id: Option<u64>,
   plugins: PluginsRef,
   pub project_root: PathBuf,
-  state: Arc<Mutex<RequestTrackerState>>,
+  state: Arc<RwLock<RequestTrackerState>>,
 }
 
 impl RunRequestContext {
@@ -54,7 +54,7 @@ impl RunRequestContext {
     parent_request_id: Option<u64>,
     plugins: PluginsRef,
     project_root: PathBuf,
-    state: Arc<Mutex<RequestTrackerState>>,
+    state: Arc<RwLock<RequestTrackerState>>,
   ) -> Self {
     Self {
       request_id,
@@ -86,7 +86,7 @@ impl RunRequestContext {
     let parent_request_id = self.request_id;
     let request_id = request.id();
 
-    let mut state = self.state.lock().await;
+    let mut state = self.state.write().await;
     let result = state.get_pending_request(Some(parent_request_id), request_id);
 
     if let Some(pending_future) = result {
@@ -121,7 +121,7 @@ impl RunRequestContext {
         .map(|result| result.result().clone())
         .map_err(|_| anyhow!("TODO"));
       // Order matters; first we store the result, then we broadcast.
-      let mut state = self.state.lock().await;
+      let mut state = self.state.write().await;
       let broadcast_result = request_result
         .as_ref()
         .map(|result| result.result().clone())

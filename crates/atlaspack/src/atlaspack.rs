@@ -59,7 +59,7 @@ impl Atlaspack {
 
     let threads = num_cpus::get();
     tracing::info!(%threads, "Creating tokio runtime...");
-    let runtime = tokio::runtime::Builder::new_current_thread()
+    let runtime = tokio::runtime::Builder::new_multi_thread()
       .enable_all()
       .thread_name("atlaspack-tokio-worker")
       .worker_threads(threads)
@@ -141,10 +141,17 @@ impl Atlaspack {
       let reporter_handle = tokio::spawn(async move {
         loop {
           {
-            let state = state.lock().await;
+            let state = state.read().await;
             let stats = state.get_request_stats();
-            tracing::info!("Request stats: {:?}", stats);
+
+            tikv_jemalloc_ctl::epoch::advance().unwrap();
+
+            let allocated = tikv_jemalloc_ctl::stats::allocated::read().unwrap();
+            let resident = tikv_jemalloc_ctl::stats::resident::read().unwrap();
+
+            tracing::info!(?stats, %allocated, %resident, "Request stats");
           }
+
           tokio::time::sleep(Duration::from_secs(1)).await;
         }
       });

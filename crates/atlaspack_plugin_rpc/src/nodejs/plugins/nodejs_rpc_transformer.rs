@@ -102,7 +102,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, Error> {
-    tracing::info!("Running transformer {}", self.plugin_node.package_name);
+    // tracing::info!("Running transformer {}", self.plugin_node.package_name);
 
     let state = self.get_or_init_state().await?;
 

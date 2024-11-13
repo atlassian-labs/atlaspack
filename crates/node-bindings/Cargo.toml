@@ -48,7 +48,12 @@ crossbeam-channel = { workspace = true }
 indexmap = { workspace = true }
 libc = { workspace = true }
 mozjpeg-sys = { workspace = true }
-napi = { workspace = true, features = ["async", "napi4", "napi5", "serde-json"] }
+napi = { workspace = true, features = [
+  "async",
+  "napi4",
+  "napi5",
+  "serde-json",
+] }
 once_cell = { workspace = true }
 oxipng = { workspace = true }
 rayon = { workspace = true }
@@ -60,10 +65,10 @@ swc_core = { workspace = true }
 getrandom = { workspace = true, features = ["custom"] }
 napi = { workspace = true, features = ["serde-json"] }
 
-[target.'cfg(all(target_os = "macos", not(feature = "canary")))'.dependencies]
+[target.'cfg(all(target_os = "macos"))'.dependencies]
 # jemallocator is disabled on canary builds to experiment with its performance
 # and reliability
-jemallocator = { workspace = true, features = ["disable_initial_exec_tls"] }
+tikv-jemallocator = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 mimalloc = { workspace = true }

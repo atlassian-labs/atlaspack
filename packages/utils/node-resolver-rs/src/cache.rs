@@ -26,7 +26,7 @@ pub struct Cache {
   #[allow(clippy::type_complexity)]
   tsconfigs: ThreadLocalHashMap<PathBuf, Arc<Result<Arc<TsConfigWrapper>, ResolverError>>>,
   // In particular just the is_dir_cache spends around 8% of the time on a large project resolution
-  // hashing paths. Instead of using a hashmap we should try a trie here.
+  // hashing paths. Instead of using a hashmap we should    try a trie here.
   is_dir_cache: ThreadLocalHashMap<PathBuf, bool>,
   is_file_cache: ThreadLocalHashMap<PathBuf, bool>,
   realpath_cache: FileSystemRealPathCache,

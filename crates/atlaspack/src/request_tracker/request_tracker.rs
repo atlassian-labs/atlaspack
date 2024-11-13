@@ -46,7 +46,7 @@ pub struct RequestTracker {
   options: Arc<AtlaspackOptions>,
   plugins: PluginsRef,
   project_root: PathBuf,
-  state: Arc<tokio::sync::Mutex<RequestTrackerState>>,
+  state: Arc<tokio::sync::RwLock<RequestTrackerState>>,
 }
 
 impl RequestTracker {
@@ -66,7 +66,7 @@ impl RequestTracker {
       request_index: HashMap::new(),
       request_stats: RequestStats::default(),
     };
-    let state = Arc::new(tokio::sync::Mutex::new(state));
+    let state = Arc::new(tokio::sync::RwLock::new(state));
 
     RequestTracker {
       config_loader,
@@ -78,7 +78,7 @@ impl RequestTracker {
     }
   }
 
-  pub fn state(&self) -> &Arc<tokio::sync::Mutex<RequestTrackerState>> {
+  pub fn state(&self) -> &Arc<tokio::sync::RwLock<RequestTrackerState>> {
     &self.state
   }
 
@@ -110,7 +110,7 @@ impl RequestTracker {
   ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
   pub async fn run_request(&mut self, request: impl Request) -> anyhow::Result<Arc<RequestResult>> {
     let request_id = request.id();
-    let mut state = self.state.lock().await;
+    let mut state = self.state.write().await;
     let tx = state.register_pending_request(request_id);
     drop(state);
 
