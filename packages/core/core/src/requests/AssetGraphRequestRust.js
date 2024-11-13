@@ -18,6 +18,7 @@ import type {
   AssetGraphRequestInput,
   AssetGraphRequestResult,
 } from './AssetGraphRequest';
+import SourceMap from '@parcel/source-map';
 
 type RunInput = {|
   input: AssetGraphRequestInput,
@@ -48,16 +49,9 @@ export function createAssetGraphRequestRust(
         });
       }
 
-      let {assetGraph, cachedAssets, changedAssets} = getAssetGraph(
+      let {assetGraph, changedAssets} = getAssetGraph(
         serializedAssetGraph,
         options,
-      );
-
-      // TODO: Make it a bulk transaction
-      await Promise.all(
-        Array.from(cachedAssets.entries(), ([id, code]) =>
-          options.cache.setBlob(id, Buffer.from(code)),
-        ),
       );
 
       let changedAssetsPropagation = new Set(changedAssets.keys());
@@ -204,9 +198,11 @@ function getAssetGraph(serializedGraph, options) {
 
       if (asset.map) {
         let mapKey = hashString(`${ATLASPACK_VERSION}:map:${asset.id}`);
+        let sourceMap = new SourceMap(options.projectRoot);
+        sourceMap.addVLQMap(JSON.parse(asset.map));
 
         asset.mapKey = mapKey;
-        options.cache.setBlob(mapKey, asset.map);
+        options.cache.setBlob(mapKey, sourceMap.toBuffer());
         delete asset.map;
       }
 

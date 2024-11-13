@@ -222,25 +222,20 @@ export function _addToInstallQueue(
       modulesInstalling.add(getModuleRequestKey(m));
     }
 
-    queue
-      .add(() =>
-        install(
-          fs,
-          packageManager,
-          modulesToInstall,
-          filePath,
-          projectRoot,
-          options,
-        ).then(() => {
-          for (let m of modulesToInstall) {
-            modulesInstalling.delete(getModuleRequestKey(m));
-          }
-        }),
-      )
-      .then(
-        () => {},
-        () => {},
-      );
+    queue.add(() =>
+      install(
+        fs,
+        packageManager,
+        modulesToInstall,
+        filePath,
+        projectRoot,
+        options,
+      ).then(() => {
+        for (let m of modulesToInstall) {
+          modulesInstalling.delete(getModuleRequestKey(m));
+        }
+      }),
+    );
   }
 
   return queue.run();

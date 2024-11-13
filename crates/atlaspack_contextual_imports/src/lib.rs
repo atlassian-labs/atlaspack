@@ -1,8 +1,9 @@
 use serde::Deserialize;
 use swc_core::atoms::Atom;
-use swc_core::common::{Mark, Span, DUMMY_SP};
+use swc_core::common::{Mark, Span, SyntaxContext, DUMMY_SP};
 use swc_core::ecma::ast::{
-  self, CallExpr, ExprOrSpread, Ident, Lit, MemberExpr, MemberProp, ModuleItem, Stmt, Str,
+  self, CallExpr, ExprOrSpread, Ident, IdentName, Lit, MemberExpr, MemberProp, ModuleItem, Stmt,
+  Str,
 };
 use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::utils::private_ident;
@@ -46,7 +47,8 @@ impl ContextualImportsInlineRequireVisitor {
       callee: Callee::Expr(Box::new(Expr::Ident(Ident::new(
         "require".into(),
         // Required so that we resolve the new dependency
-        DUMMY_SP.apply_mark(self.unresolved_mark),
+        DUMMY_SP,
+        SyntaxContext::empty().apply_mark(self.unresolved_mark),
       )))),
       args: vec![ExprOrSpread {
         expr: Box::new(Expr::Lit(Lit::Str(Str {
@@ -59,6 +61,7 @@ impl ContextualImportsInlineRequireVisitor {
       }],
       span: DUMMY_SP,
       type_args: None,
+      ctxt: SyntaxContext::empty(),
     }
     .into()
   }
@@ -131,7 +134,7 @@ impl ContextualImportsInlineRequireVisitor {
     MemberExpr {
       span: DUMMY_SP,
       obj: obj_ident.into(),
-      prop: MemberProp::Ident(Ident::new("load".into(), DUMMY_SP)),
+      prop: MemberProp::Ident(IdentName::new("load".into(), DUMMY_SP)),
     }
     .into()
   }
@@ -170,7 +173,7 @@ impl VisitMut for ContextualImportsInlineRequireVisitor {
       return;
     }
 
-    if callee_ident.span.ctxt.outer() != self.unresolved_mark {
+    if callee_ident.ctxt.outer() != self.unresolved_mark {
       // Don't process if the `importCond` identifier is shadowed
       return;
     }

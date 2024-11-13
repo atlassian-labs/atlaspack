@@ -16,7 +16,12 @@ anyhow = { workspace = true }
 crossbeam = { workspace = true }
 heed = { workspace = true }
 lazy_static = { workspace = true }
-napi = { workspace = true, features = ["async", "napi4", "napi5", "serde-json"] }
+napi = { workspace = true, features = [
+  "async",
+  "napi4",
+  "napi5",
+  "serde-json",
+] }
 napi-derive = { workspace = true }
 rayon = { workspace = true }
 thiserror = { workspace = true }

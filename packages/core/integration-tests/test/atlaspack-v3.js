@@ -13,7 +13,7 @@ import {
 } from '@atlaspack/test-utils';
 import {LMDBLiteCache} from '@atlaspack/cache';
 
-describe('AtlaspackV3', function () {
+describe.v3('AtlaspackV3', function () {
   it('builds', async () => {
     await fsFixture(overlayFS, __dirname)`
       index.js:

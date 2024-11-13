@@ -15,7 +15,7 @@ export type AtlaspackV3Options = {|
   /**
    * A reference to LMDB lite's rust object
    */
-  lmdb: Lmdb | null,
+  lmdb: Lmdb,
   ...AtlaspackNapiOptions['options'],
 |};
 
@@ -33,10 +33,8 @@ export class AtlaspackV3 {
     options.logLevel = options.logLevel || 'error';
     options.defaultTargetOptions = options.defaultTargetOptions || {};
     // $FlowFixMe "engines" are readonly
-    options.defaultTargetOptions.engines = options.defaultTargetOptions
-      .engines || {
-      browsers: [],
-    };
+    options.defaultTargetOptions.engines =
+      options.defaultTargetOptions.engines || {};
 
     this._internal = AtlaspackNapi.create(
       {

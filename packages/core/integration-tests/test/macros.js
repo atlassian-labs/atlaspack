@@ -585,7 +585,7 @@ describe.v2('macros', function () {
     });
 
     let res = await overlayFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    let match = res.match(/output=(\d+)/);
+    let match = res.match(/output=(.*);/);
     assert(match);
 
     b = await bundle(path.join(dir, '/index.js'), {

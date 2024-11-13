@@ -333,7 +333,7 @@ pub(crate) fn convert_result(
     .map_err(|_| vec![])?;
 
   asset.file_type = FileType::Js;
-  asset.code = Arc::new(Code::from(result_source_code_string));
+  asset.code = Code::from(result_source_code_string);
 
   if let Some(map) = result.map {
     // TODO: Fix diagnostic error handling

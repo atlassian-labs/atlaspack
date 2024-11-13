@@ -2,12 +2,10 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
+use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
-
-use anyhow::anyhow;
-use atlaspack_filesystem::FileSystemRef;
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -42,6 +40,10 @@ impl Code {
     &self.inner
   }
 
+  pub fn get_mut(&mut self) -> &mut Vec<u8> {
+    &mut self.inner
+  }
+
   pub fn as_str(&self) -> anyhow::Result<&str> {
     str::from_utf8(&self.inner)
       .map_err(|e| anyhow::Error::new(e).context("Failed to convert code to UTF8 str"))
@@ -49,6 +51,20 @@ impl Code {
 
   pub fn size(&self) -> u32 {
     self.inner.len() as u32
+  }
+}
+
+impl Deref for Code {
+  type Target = Vec<u8>;
+
+  fn deref(&self) -> &Self::Target {
+    &self.inner
+  }
+}
+
+impl DerefMut for Code {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.inner
   }
 }
 
@@ -147,7 +163,8 @@ pub struct Asset {
 
   /// The code of this asset, initially read from disk, then becoming the
   /// transformed output
-  pub code: Arc<Code>,
+  #[serde(skip_serializing)]
+  pub code: Code,
 
   /// The source map for the asset
   pub map: Option<SourceMap>,
@@ -241,48 +258,37 @@ pub struct AssetWithDependencies {
 impl Asset {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
-    project_root: &Path,
+    code: Code,
     env: Arc<Environment>,
     file_path: PathBuf,
-    resolver_code: Option<String>,
     pipeline: Option<String>,
-    side_effects: bool,
+    project_root: &Path,
     query: Option<String>,
-    fs: FileSystemRef,
-  ) -> anyhow::Result<Self> {
+    side_effects: bool,
+  ) -> Self {
     let file_type =
       FileType::from_extension(file_path.extension().and_then(|s| s.to_str()).unwrap_or(""));
-
-    let code = if let Some(code) = resolver_code {
-      Code::from(code)
-    } else {
-      let code_from_disk = fs.read(&file_path)?;
-      Code::new(code_from_disk)
-    };
 
     let is_source = !file_path
       .ancestors()
       .any(|p| p.file_name() == Some(OsStr::new("node_modules")));
 
-    let asset_id = create_asset_id(CreateAssetIdParams {
+    let id = create_asset_id(CreateAssetIdParams {
       code: None,
       environment_id: &env.id(),
-      file_path: &file_path
-        .strip_prefix(project_root)
-        .unwrap_or(file_path.as_path())
-        .to_string_lossy(),
+      file_path: &project_path(project_root, &file_path).to_string_lossy(),
       file_type: &file_type,
       pipeline: pipeline.as_deref(),
       query: query.as_deref(),
       unique_key: None,
     });
 
-    Ok(Self {
-      code: Arc::new(code),
+    Self {
+      code,
       env,
       file_path,
       file_type,
-      id: asset_id,
+      id,
       is_bundle_splittable: true,
       is_source,
       pipeline,
@@ -290,22 +296,24 @@ impl Asset {
       side_effects,
       unique_key: None,
       ..Asset::default()
-    })
+    }
   }
 
+  #[allow(clippy::too_many_arguments)]
   pub fn new_inline(
     code: Code,
     env: Arc<Environment>,
     file_path: PathBuf,
     file_type: FileType,
     meta: JSONObject,
+    project_root: &Path,
     side_effects: bool,
     unique_key: Option<String>,
   ) -> Self {
-    let asset_id = create_asset_id(CreateAssetIdParams {
+    let id = create_asset_id(CreateAssetIdParams {
       code: None,
       environment_id: &env.id(),
-      file_path: &file_path.to_string_lossy(),
+      file_path: &project_path(project_root, &file_path).to_string_lossy(),
       file_type: &file_type,
       pipeline: None,
       query: None,
@@ -318,13 +326,13 @@ impl Asset {
 
     Self {
       bundle_behavior: Some(BundleBehavior::Inline),
-      code: Arc::new(code),
-      id: asset_id,
-      is_bundle_splittable: true,
-      is_source,
+      code,
       env,
       file_path,
       file_type,
+      id,
+      is_bundle_splittable: true,
+      is_source,
       meta,
       side_effects,
       unique_key,
@@ -333,31 +341,29 @@ impl Asset {
   }
 
   pub fn new_discovered(
+    code: String,
+    file_type: FileType,
+    project_root: &Path,
     source_asset: &Asset,
     unique_key: Option<String>,
-    file_type: FileType,
-    code: String,
-  ) -> anyhow::Result<Self> {
-    let asset_id = create_asset_id(CreateAssetIdParams {
-      environment_id: &source_asset.env.id(),
-      file_path: source_asset
-        .file_path
-        .to_str()
-        .ok_or_else(|| anyhow!("Could not get source asset file path"))?,
+  ) -> Self {
+    let id = create_asset_id(CreateAssetIdParams {
       code: Some(code.as_str()),
+      environment_id: &source_asset.env.id(),
+      file_path: &project_path(project_root, &source_asset.file_path).to_string_lossy(),
+      file_type: &file_type,
       pipeline: None,
       query: None,
       unique_key: unique_key.as_deref(),
-      file_type: &file_type,
     });
 
-    Ok(Self {
-      code: Arc::new(Code::from(code)),
+    Self {
+      code: Code::from(code),
       file_type,
-      id: asset_id,
+      id,
       unique_key,
       ..source_asset.clone()
-    })
+    }
   }
 
   pub fn set_interpreter(&mut self, shebang: impl Into<serde_json::Value>) {
@@ -402,6 +408,13 @@ impl Asset {
   }
 }
 
+fn project_path(project_root: &Path, file_path: &Path) -> PathBuf {
+  file_path
+    .strip_prefix(project_root)
+    .unwrap_or(file_path)
+    .to_path_buf()
+}
+
 /// Statistics that pertain to an asset
 #[derive(PartialEq, Clone, Debug, Default, Deserialize, Serialize)]
 pub struct AssetStats {
@@ -414,4 +427,129 @@ pub struct Condition {
   pub key: String,
   pub if_true_placeholder: Option<String>,
   pub if_false_placeholder: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn new_produces_stable_ids() {
+    let env = Arc::new(Environment::default());
+    let project_root = PathBuf::from("project_root");
+
+    let asset_1 = Asset::new(
+      Code::from("function hello() {}"),
+      env.clone(),
+      project_root.join("test.js"),
+      None,
+      &project_root,
+      None,
+      false,
+    );
+
+    let asset_2 = Asset::new(
+      Code::from("function helloButDifferent() {}"),
+      env.clone(),
+      project_root.join("test.js"),
+      None,
+      &project_root,
+      None,
+      false,
+    );
+
+    // This nº should not change across runs / compilation
+    assert_eq!(asset_1.id, "91d0d64458c223d1");
+    assert_eq!(asset_1.id, asset_2.id);
+  }
+
+  #[test]
+  fn new_creates_asset_ids_relative_to_project_root() {
+    let env = Arc::new(Environment::default());
+    let project_root = PathBuf::from("project_root");
+
+    let asset = Asset::new(
+      Code::default(),
+      env.clone(),
+      project_root.join("test.js"),
+      None,
+      &project_root,
+      None,
+      false,
+    );
+
+    assert_eq!(
+      asset.id,
+      create_asset_id(CreateAssetIdParams {
+        code: None,
+        environment_id: &env.id(),
+        file_path: "test.js",
+        file_type: &FileType::Js,
+        pipeline: None,
+        query: None,
+        unique_key: None,
+      })
+    );
+  }
+
+  #[test]
+  fn new_inline_creates_asset_ids_relative_to_project_root() {
+    let env = Arc::new(Environment::default());
+    let project_root = PathBuf::from("project_root");
+
+    let inline_asset = Asset::new_inline(
+      Code::default(),
+      env.clone(),
+      project_root.join("test.js"),
+      FileType::Js,
+      JSONObject::default(),
+      &project_root,
+      false,
+      None,
+    );
+
+    assert_eq!(
+      inline_asset.id,
+      create_asset_id(CreateAssetIdParams {
+        code: None,
+        environment_id: &env.id(),
+        file_path: "test.js",
+        file_type: &FileType::Js,
+        pipeline: None,
+        query: None,
+        unique_key: None,
+      })
+    );
+  }
+
+  #[test]
+  fn new_discovered_creates_asset_ids_relative_to_project_root() {
+    let project_root = PathBuf::from("project_root");
+    let source_asset = Asset {
+      file_path: project_root.join("test.js"),
+      file_type: FileType::Js,
+      ..Asset::default()
+    };
+
+    let discovered_asset = Asset::new_discovered(
+      String::default(),
+      FileType::Css,
+      &project_root,
+      &source_asset,
+      None,
+    );
+
+    assert_eq!(
+      discovered_asset.id,
+      create_asset_id(CreateAssetIdParams {
+        code: Some(""),
+        environment_id: &source_asset.env.id(),
+        file_path: "test.js",
+        file_type: &FileType::Css,
+        pipeline: None,
+        query: None,
+        unique_key: None,
+      })
+    );
+  }
 }

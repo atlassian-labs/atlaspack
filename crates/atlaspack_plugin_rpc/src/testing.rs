@@ -102,15 +102,16 @@ impl std::fmt::Debug for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl BundlerPlugin for TestingRpcPlugin {
-  fn bundle(
+  async fn bundle(
     &self,
     _bundle_graph: &mut atlaspack_core::bundle_graph::BundleGraph,
   ) -> Result<(), anyhow::Error> {
     Ok(())
   }
 
-  fn optimize(
+  async fn optimize(
     &self,
     _bundle_graph: &mut atlaspack_core::bundle_graph::BundleGraph,
   ) -> Result<(), anyhow::Error> {
@@ -118,14 +119,16 @@ impl BundlerPlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl CompressorPlugin for TestingRpcPlugin {
-  fn compress(&self, _file: &std::fs::File) -> Result<Option<CompressedFile>, String> {
+  async fn compress(&self, _file: &std::fs::File) -> Result<Option<CompressedFile>, String> {
     Ok(None)
   }
 }
 
+#[async_trait]
 impl NamerPlugin for TestingRpcPlugin {
-  fn name(
+  async fn name(
     &self,
     _bundle: &atlaspack_core::types::Bundle,
     _bundle_graph: &atlaspack_core::bundle_graph::BundleGraph,
@@ -134,8 +137,12 @@ impl NamerPlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl OptimizerPlugin for TestingRpcPlugin {
-  fn optimize(&self, _ctx: OptimizeContext) -> Result<OptimizedBundle, anyhow::Error> {
+  async fn optimize<'a>(
+    &self,
+    _ctx: OptimizeContext<'a>,
+  ) -> Result<OptimizedBundle, anyhow::Error> {
     anyhow::bail!("Mock Optimizer Plugin Incomplete")
     // Ok(OptimizedBundle {
     //   contents: fs::File::create(),
@@ -143,8 +150,9 @@ impl OptimizerPlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl PackagerPlugin for TestingRpcPlugin {
-  fn package(&self, _ctx: PackageContext) -> Result<PackagedBundle, anyhow::Error> {
+  async fn package<'a>(&self, _ctx: PackageContext<'a>) -> Result<PackagedBundle, anyhow::Error> {
     anyhow::bail!("Mock Packager Plugin Incomplete")
     // Ok(PackagedBundle {
     //   contents: fs::File::create(),
@@ -152,8 +160,9 @@ impl PackagerPlugin for TestingRpcPlugin {
   }
 }
 
+#[async_trait]
 impl ReporterPlugin for TestingRpcPlugin {
-  fn report(&self, _event: &ReporterEvent) -> Result<(), anyhow::Error> {
+  async fn report(&self, _event: &ReporterEvent) -> Result<(), anyhow::Error> {
     Ok(())
   }
 }

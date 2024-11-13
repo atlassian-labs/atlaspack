@@ -130,10 +130,6 @@ export function getParcelOptions(
       shouldContentHash: true,
       defaultTargetOptions: {
         distDir,
-        engines: {
-          browsers: ['last 1 Chrome version'],
-          node: '8',
-        },
       },
       featureFlags: {
         atlaspackV3: isAtlaspackV3,

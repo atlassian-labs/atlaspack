@@ -20,11 +20,15 @@ use crate::hmr_visitor::HMRVisitor;
 use crate::html_dependencies_visitor::HtmlDependenciesVisitor;
 
 #[derive(Debug)]
-pub struct AtlaspackHtmlTransformerPlugin {}
+pub struct AtlaspackHtmlTransformerPlugin {
+  project_root: PathBuf,
+}
 
 impl AtlaspackHtmlTransformerPlugin {
-  pub fn new(_ctx: &PluginContext) -> Self {
-    AtlaspackHtmlTransformerPlugin {}
+  pub fn new(ctx: &PluginContext) -> Self {
+    AtlaspackHtmlTransformerPlugin {
+      project_root: ctx.options.project_root.clone(),
+    }
   }
 }
 
@@ -41,6 +45,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
       // TODO: Where is this?
       enable_hmr: false,
       env: context.env().clone(),
+      project_root: self.project_root.clone(),
       side_effects: input.side_effects,
       source_asset_id: input.id.clone(),
       source_path: Some(input.file_path.clone()),
@@ -54,7 +59,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
 
     let mut asset = input;
     asset.bundle_behavior = Some(BundleBehavior::Isolated);
-    asset.code = Arc::new(Code::new(serialize_html(dom)?));
+    asset.code = Code::new(serialize_html(dom)?);
 
     Ok(TransformResult {
       asset,
@@ -87,6 +92,7 @@ fn parse_html(bytes: &[u8]) -> Result<RcDom, Error> {
 pub struct HTMLTransformationContext {
   pub enable_hmr: bool,
   pub env: Arc<Environment>,
+  pub project_root: PathBuf,
   pub side_effects: bool,
   pub source_asset_id: AssetId,
   pub source_path: Option<PathBuf>,
@@ -250,7 +256,7 @@ mod test {
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),
-            code: Arc::new(Code::from(script)),
+            code: Code::from(script),
             env: env.clone(),
             file_path: PathBuf::from("main.html"),
             file_type: FileType::Js,
@@ -307,9 +313,7 @@ mod test {
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),
-            code: Arc::new(Code::from(String::from(
-              "\n          a { color: blue; }\n        "
-            ))),
+            code: Code::from(String::from("\n          a { color: blue; }\n        ")),
             file_path: PathBuf::from("main.html"),
             file_type: FileType::Css,
             id: String::from("9ee0b2d6680a3e8d"),

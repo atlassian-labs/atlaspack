@@ -54,24 +54,32 @@ impl Request for AssetRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
-    request_context.report(ReporterEvent::BuildProgress(BuildProgressEvent::Building(
-      AssetBuildEvent {
-        file_path: self.file_path.clone(),
-      },
-    )));
+    request_context
+      .report(ReporterEvent::BuildProgress(BuildProgressEvent::Building(
+        AssetBuildEvent {
+          file_path: self.file_path.clone(),
+        },
+      )))
+      .await;
 
     let start = Instant::now();
 
+    let code = if let Some(code) = self.code.as_ref() {
+      Code::from(code.to_owned())
+    } else {
+      let code_from_disk = request_context.file_system().read(&self.file_path)?;
+      Code::new(code_from_disk)
+    };
+
     let mut asset = Asset::new(
-      &self.project_root,
+      code,
       self.env.clone(),
       self.file_path.clone(),
-      self.code.clone(),
       self.pipeline.clone(),
-      self.side_effects,
+      &self.project_root,
       self.query.clone(),
-      request_context.file_system().clone(),
-    )?;
+      self.side_effects,
+    );
 
     // Load an existing sourcemap if available for valid file types
     if matches!(
@@ -89,7 +97,7 @@ impl Request for AssetRequest {
           &url_match.url,
         ) {
           asset.map = Some(source_map);
-          asset.code = Arc::new(Code::from(code.replace(&url_match.code, "")));
+          asset.code = Code::from(code.replace(&url_match.code, ""));
         }
       }
     }
@@ -119,7 +127,7 @@ impl Request for AssetRequest {
   }
 }
 
-pub async fn run_pipelines(
+async fn run_pipelines(
   transform_context: TransformContext,
   input: Asset,
   plugins: PluginsRef,
@@ -164,7 +172,7 @@ pub async fn run_pipelines(
       let transform_result = transformer
         .transform(transform_context.clone(), current_asset)
         .await?;
-      let is_different_asset_type = transform_result.asset.file_type != original_asset_type;
+
       current_asset = transform_result.asset;
 
       current_dependencies.extend(transform_result.dependencies);
@@ -177,7 +185,7 @@ pub async fn run_pipelines(
       );
 
       // If the Asset has changed type then we may need to trigger a different pipeline
-      if is_different_asset_type {
+      if current_asset.file_type != original_asset_type {
         let next_pipeline =
           plugins.transformers(&current_asset.file_path, current_asset.pipeline.clone())?;
 
@@ -386,11 +394,11 @@ mod tests {
       let label = label.clone();
       move |_context, asset: Asset| {
         let mut asset = asset.clone();
-        asset.code = Arc::new(Code::from(format!(
+        asset.code = Code::from(format!(
           "{}::{}",
           String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
           label.clone()
-        )));
+        ));
 
         Ok(TransformResult {
           asset,

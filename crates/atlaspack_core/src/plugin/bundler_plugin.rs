@@ -1,6 +1,6 @@
-use std::fmt::Debug;
-
 use crate::bundle_graph::BundleGraph;
+use async_trait::async_trait;
+use std::fmt::Debug;
 
 /// Converts an asset graph into a BundleGraph
 ///
@@ -9,11 +9,12 @@ use crate::bundle_graph::BundleGraph;
 ///
 /// Bundle and optimize run in series and are functionally identitical.
 ///
-pub trait BundlerPlugin: Debug {
+#[async_trait]
+pub trait BundlerPlugin: Debug + Send + Sync {
   // TODO: Should BundleGraph be AssetGraph or something that contains AssetGraph in the name?
-  fn bundle(&self, bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error>;
+  async fn bundle(&self, bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error>;
 
-  fn optimize(&self, bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error>;
+  async fn optimize(&self, bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error>;
 }
 
 #[cfg(test)]
@@ -23,12 +24,13 @@ mod tests {
   #[derive(Debug)]
   struct TestBundlerPlugin {}
 
+  #[async_trait]
   impl BundlerPlugin for TestBundlerPlugin {
-    fn bundle(&self, _bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error> {
+    async fn bundle(&self, _bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error> {
       todo!()
     }
 
-    fn optimize(&self, _bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error> {
+    async fn optimize(&self, _bundle_graph: &mut BundleGraph) -> Result<(), anyhow::Error> {
       todo!()
     }
   }

@@ -1073,6 +1073,10 @@ describe('output formats', function () {
           mode: 'production',
           defaultTargetOptions: {
             shouldOptimize: false,
+            // TODO: The default engines should support workers of type module, this might be a bug
+            engines: {
+              browsers: ['last 1 Chrome version'],
+            },
           },
         },
       );

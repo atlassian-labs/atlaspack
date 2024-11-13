@@ -269,7 +269,7 @@ impl TargetRequest {
       .unwrap_or_else(|| self.mode.to_string());
 
     match package_json.contents.browserslist.clone() {
-      // TODO Process browserslist config file
+      // TODO: Process browserslist config file
       None => {}
       Some(browserslist) => {
         let browserslist = match browserslist {
@@ -421,7 +421,7 @@ impl TargetRequest {
     let defaults = self.default_target_options.engines.clone();
     if context.is_browser() {
       Engines {
-        browsers: defaults.browsers,
+        browsers: defaults.browsers.or(Some(EnginesBrowsers::default())),
         ..Engines::default()
       }
     } else if context.is_node() {
@@ -455,7 +455,7 @@ impl TargetRequest {
       return Ok(None);
     }
 
-    let engines = target_descriptor
+    let mut engines = target_descriptor
       .engines
       .clone()
       .or_else(|| package_json.contents.engines.clone())
@@ -465,6 +465,19 @@ impl TargetRequest {
     let context = target_descriptor.context.unwrap_or_else(|| {
       self.infer_environment_context(&package_json.contents, Some(engines.clone()))
     });
+
+    // Default browsers if it has not been set yet
+    if engines.browsers.is_none()
+      && matches!(
+        context,
+        EnvironmentContext::Browser
+          | EnvironmentContext::ServiceWorker
+          | EnvironmentContext::WebWorker
+          | EnvironmentContext::ElectronRenderer
+      )
+    {
+      engines.browsers = Some(EnginesBrowsers::default());
+    }
 
     let dist_entry = target_descriptor
       .dist_entry
@@ -673,6 +686,11 @@ mod tests {
     Target {
       dist_dir: PathBuf::from("packages/test/dist"),
       env: Arc::new(Environment {
+        context: EnvironmentContext::Browser,
+        engines: Engines {
+          browsers: Some(EnginesBrowsers::default()),
+          ..Engines::default()
+        },
         output_format: OutputFormat::Global,
         ..Environment::default()
       }),
@@ -953,6 +971,10 @@ mod tests {
           dist_entry: Some(PathBuf::from("browser.js")),
           env: Arc::new(Environment {
             context: EnvironmentContext::Browser,
+            engines: Engines {
+              browsers: Some(EnginesBrowsers::default()),
+              ..Engines::default()
+            },
             output_format: OutputFormat::CommonJS,
             ..builtin_default_env()
           }),
@@ -988,6 +1010,10 @@ mod tests {
           dist_entry: Some(PathBuf::from("browser.js")),
           env: Arc::new(Environment {
             context: EnvironmentContext::Browser,
+            engines: Engines {
+              browsers: Some(EnginesBrowsers::default()),
+              ..Engines::default()
+            },
             output_format: OutputFormat::EsModule,
             ..builtin_default_env()
           }),
@@ -1267,6 +1293,10 @@ mod tests {
           dist_entry: None,
           env: Arc::new(Environment {
             context: EnvironmentContext::Browser,
+            engines: Engines {
+              browsers: Some(EnginesBrowsers::default()),
+              ..Engines::default()
+            },
             is_library: false,
             output_format: OutputFormat::Global,
             should_optimize: true,
@@ -1455,6 +1485,11 @@ mod tests {
             dist_dir: package_dir().join("dist"),
             dist_entry: Some(PathBuf::from(format!("custom.{ext}"))),
             env: Arc::new(Environment {
+              context: EnvironmentContext::Browser,
+              engines: Engines {
+                browsers: Some(EnginesBrowsers::default()),
+                ..Engines::default()
+              },
               output_format,
               should_optimize: true,
               ..Environment::default()

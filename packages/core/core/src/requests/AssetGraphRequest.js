@@ -382,7 +382,11 @@ export class AssetGraphBuilder {
           let isAsyncChild = this.assetGraph
             .getIncomingDependencies(node.value)
             .every((dep) => dep.isEntry || dep.priority !== Priority.sync);
-          if (isAsyncChild) {
+          if (
+            isAsyncChild &&
+            childNode.value.priority !== Priority.conditional
+          ) {
+            // Skip if we're on a conditional import
             node.requested = !isNodeLazy;
           } else {
             delete node.requested;
@@ -434,7 +438,7 @@ export class AssetGraphBuilder {
   queueCorrespondingRequest(
     nodeId: NodeId,
     errors: Array<Error>,
-  ): Promise<mixed> {
+  ): Promise<null> {
     let promise;
     let node = nullthrows(this.assetGraph.getNode(nodeId));
     switch (node.type) {
@@ -455,9 +459,16 @@ export class AssetGraphBuilder {
           `Can not queue corresponding request of node with type ${node.type}`,
         );
     }
-    return this.queue.add(() =>
-      promise.then(null, (error) => errors.push(error)),
-    );
+    return new Promise((resolve) => {
+      this.queue.add(() =>
+        promise.then(
+          () => {
+            resolve(null);
+          },
+          (error) => errors.push(error),
+        ),
+      );
+    });
   }
 
   async runEntryRequest(input: ProjectPath) {

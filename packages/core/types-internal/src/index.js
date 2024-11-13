@@ -1642,11 +1642,16 @@ export interface BundleGraph<TBundle: Bundle> {
       |},
     >,
   >;
-  getConditionsForDependencies(deps: Array<Dependency>): Set<{|
+  getConditionsForDependencies(
+    deps: Array<Dependency>,
+    bundle: NamedBundle,
+  ): Set<{|
     publicId: string,
     key: string,
     ifTrueDependency: Dependency,
     ifFalseDependency: Dependency,
+    ifTrueBundles: Array<TBundle>,
+    ifFalseBundles: Array<TBundle>,
     ifTrueAssetId: string,
     ifFalseAssetId: string,
   |}>;

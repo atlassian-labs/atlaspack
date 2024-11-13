@@ -2109,6 +2109,10 @@ describe.v2('bundler', function () {
           shouldScopeHoist: false,
           shouldOptimize: false,
           sourceMaps: false,
+          // TODO: The default engines should split into 3 bundles, this might be a bug?
+          engines: {
+            browsers: ['last 1 Chrome version'],
+          },
         },
         inputFS: overlayFS,
       });

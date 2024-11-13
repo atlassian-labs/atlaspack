@@ -292,8 +292,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         },
         supports_module_workers: env.should_scope_hoist
           && env.engines.supports(EnvironmentFeature::WorkerModule),
-        // TODO: Update transformer to use engines directly
-        targets: Some(targets),
+        targets: (!targets.is_empty()).then_some(targets),
         trace_bailouts: self.options.log_level == LogLevel::Verbose,
         use_define_for_class_fields: compiler_options
           .map(|co| {
@@ -332,7 +331,10 @@ mod tests {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::PluginLogger,
-    types::{Code, Dependency, Environment, Location, SourceLocation, SpecifierType, Symbol},
+    types::{
+      Code, Dependency, Environment, EnvironmentContext, Location, SourceLocation, SpecifierType,
+      Symbol,
+    },
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
@@ -348,38 +350,24 @@ mod tests {
   }
 
   fn create_asset(project_root: &Path, file_path: &str, code: &str) -> Asset {
-    let file_system = Arc::new(InMemoryFileSystem::default());
     let env = Arc::new(Environment::default());
 
     Asset::new(
-      project_root,
+      Code::from(code),
       env.clone(),
       file_path.into(),
-      Some(String::from(code)),
+      None,
+      project_root,
       None,
       false,
-      None,
-      file_system.clone(),
     )
-    .unwrap()
-  }
-
-  #[test]
-  fn test_asset_id_is_stable() {
-    let project_root = Path::new("/root");
-    let asset_1 = create_asset(project_root, "mock_path", "function hello() {}");
-    let asset_2 = create_asset(project_root, "mock_path", "function helloButDifferent() {}");
-
-    // This nº should not change across runs / compilation
-    assert_eq!(asset_1.id, "4711cac63cb78f2f");
-    assert_eq!(asset_1.id, asset_2.id);
   }
 
   #[tokio::test(flavor = "multi_thread")]
-  async fn test_transformer_on_noop_asset() {
+  async fn test_transformer_on_noop_asset() -> anyhow::Result<()> {
     let project_root = Path::new("/root");
     let target_asset = create_asset(project_root, "mock_path.js", "function hello() {}");
-    let result = run_test(target_asset.clone()).await.unwrap();
+    let result = run_test(&project_root, target_asset.clone()).await?;
 
     assert_eq!(
       result,
@@ -388,9 +376,8 @@ mod tests {
           file_path: "mock_path.js".into(),
           file_type: FileType::Js,
           // SWC inserts a newline here
-          code: Arc::new(Code::from(String::from("function hello() {}\n"))),
+          code: Code::from(String::from("function hello() {}\n")),
           symbols: Some(Vec::new()),
-          unique_key: None,
           ..target_asset
         },
         discovered_assets: vec![],
@@ -398,6 +385,38 @@ mod tests {
         invalidate_on_file_change: vec![]
       }
     );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn uses_latest_node_when_no_node_target() -> anyhow::Result<()> {
+    let project_root = Path::new("/root");
+    let target_asset = Asset {
+      env: Arc::new(Environment {
+        context: EnvironmentContext::Node,
+        ..Environment::default()
+      }),
+      ..create_asset(project_root, "index.js", "const test = () => {};")
+    };
+
+    assert_eq!(
+      run_test(&project_root, target_asset.clone()).await?,
+      TransformResult {
+        asset: Asset {
+          // This asserts that the code has not been downlevelled into `var test = function() {}`
+          code: Code::from(String::from("const test = ()=>{};\n")),
+          file_path: "index.js".into(),
+          symbols: Some(Vec::new()),
+          ..target_asset
+        },
+        discovered_assets: vec![],
+        dependencies: vec![],
+        invalidate_on_file_change: vec![]
+      }
+    );
+
+    Ok(())
   }
 
   #[tokio::test(flavor = "multi_thread")]
@@ -410,7 +429,7 @@ mod tests {
     let project_root = Path::new("/root");
     let target_asset = create_asset(project_root, "mock_path.js", source_code);
     let asset_id = target_asset.id.clone();
-    let result = run_test(target_asset).await.unwrap();
+    let result = run_test(&project_root, target_asset).await.unwrap();
 
     let mut expected_dependencies = vec![Dependency {
       loc: Some(SourceLocation {
@@ -451,9 +470,9 @@ mod tests {
           file_path: "mock_path.js".into(),
           file_type: FileType::Js,
           // SWC inserts a newline here
-          code: Arc::new(Code::from(String::from(
-            "var x = require(\"e83f3db3d6f57ea6\");\nexports.hello = function() {};\n"
-          ))),
+          code: Code::from(String::from(
+            "const x = require(\"e83f3db3d6f57ea6\");\nexports.hello = function() {};\n"
+          )),
           symbols: Some(vec![
             Symbol {
               exported: String::from("hello"),
@@ -498,24 +517,23 @@ mod tests {
     );
   }
 
-  async fn run_test(asset: Asset) -> anyhow::Result<TransformResult> {
+  async fn run_test(project_root: &Path, asset: Asset) -> anyhow::Result<TransformResult> {
     let file_system = Arc::new(InMemoryFileSystem::default());
-    let project_root = PathBuf::default();
 
     file_system.write_file(&project_root.join("package.json"), String::from("{}"));
 
     let ctx = PluginContext {
       config: Arc::new(ConfigLoader {
         fs: file_system.clone(),
-        project_root: project_root.clone(),
-        search_path: project_root.clone(),
+        project_root: project_root.to_path_buf(),
+        search_path: project_root.to_path_buf(),
       }),
       file_system,
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
     };
 
-    let transformer = AtlaspackJsTransformerPlugin::new(&ctx).expect("Expected transformer");
+    let transformer = AtlaspackJsTransformerPlugin::new(&ctx)?;
     let context = TransformContext::default();
 
     let result = transformer.transform(context, asset).await?;

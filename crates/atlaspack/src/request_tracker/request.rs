@@ -7,14 +7,14 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigLoaderRef;
+use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::types::AtlaspackOptions;
+use atlaspack_core::types::Invalidation;
+use atlaspack_filesystem::FileSystemRef;
 use dyn_hash::DynHash;
 
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
-use atlaspack_core::plugin::ReporterEvent;
-use atlaspack_core::types::Invalidation;
-use atlaspack_filesystem::FileSystemRef;
 
 #[derive(Debug)]
 pub struct RunRequestMessage {
@@ -23,7 +23,7 @@ pub struct RunRequestMessage {
   pub response_tx: Option<Sender<Result<(RequestResult, RequestId), anyhow::Error>>>,
 }
 
-type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send>;
+type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send + Sync>;
 
 /// This is the API for requests to call back onto the `RequestTracker`.
 ///
@@ -61,11 +61,12 @@ impl RunRequestContext {
   }
 
   /// Report an event
-  pub fn report(&self, event: ReporterEvent) {
+  pub async fn report(&self, event: ReporterEvent) {
     self
       .plugins()
       .reporter()
       .report(&event)
+      .await
       .expect("TODO this should be handled?")
   }
 
@@ -103,7 +104,7 @@ pub type RunRequestError = anyhow::Error;
 pub type RequestId = u64;
 
 #[async_trait]
-pub trait Request: DynHash + Send + Debug + 'static {
+pub trait Request: DynHash + Send + Sync + Debug + 'static {
   fn id(&self) -> RequestId {
     let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
     std::any::type_name::<Self>().hash(&mut hasher);

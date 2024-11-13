@@ -13,6 +13,7 @@ import type {
 import {parentPort} from 'worker_threads';
 import * as module from 'module';
 
+import {jsCallable} from '../jsCallable';
 import {
   Environment,
   Dependency,
@@ -24,7 +25,6 @@ import {
   bundleBehaviorMap,
   dependencyPriorityMap,
 } from './compat';
-import {jsCallable} from '../jsCallable';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 
@@ -159,122 +159,135 @@ export class AtlaspackWorker {
   );
 
   runTransformerTransform: JsCallable<
-    [RunTransformerTransformOptions],
+    [RunTransformerTransformOptions, Buffer],
     Promise<RunTransformerTransformResult>,
-  > = jsCallable(async ({key, env: napiEnv, options, asset: innerAsset}) => {
-    const state = this.#transformers.get(key);
-    if (!state) {
-      throw new Error(`Transformer not found: ${key}`);
-    }
+  > = jsCallable(
+    async ({key, env: napiEnv, options, asset: innerAsset}, contents) => {
+      const state = this.#transformers.get(key);
+      if (!state) {
+        throw new Error(`Transformer not found: ${key}`);
+      }
 
-    let packageManager = state.packageManager;
-    if (!packageManager) {
-      packageManager = new NodePackageManager(this.#fs, options.projectRoot);
-      state.packageManager = packageManager;
-    }
+      let packageManager = state.packageManager;
+      if (!packageManager) {
+        packageManager = new NodePackageManager(this.#fs, options.projectRoot);
+        state.packageManager = packageManager;
+      }
 
-    const transformer: Transformer<any> = state.transformer;
-    const resolveFunc = (from: string, to: string): Promise<any> => {
-      let customRequire = module.createRequire(from);
-      let resolvedPath = customRequire.resolve(to);
+      const transformer: Transformer<any> = state.transformer;
+      const resolveFunc = (from: string, to: string): Promise<any> => {
+        let customRequire = module.createRequire(from);
+        let resolvedPath = customRequire.resolve(to);
 
-      return Promise.resolve(resolvedPath);
-    };
-    const env = new Environment(napiEnv);
-    const mutableAsset = new MutableAsset(innerAsset, this.#fs, env);
-    const defaultOptions = {
-      logger: new PluginLogger(),
-      tracer: new PluginTracer(),
-      options: new PluginOptions({
-        ...options,
-        packageManager,
-        shouldAutoInstall: false,
-        inputFS: this.#fs,
-        outputFS: this.#fs,
-      }),
-    };
+        return Promise.resolve(resolvedPath);
+      };
 
-    const config = await transformer.loadConfig?.({
-      config: new PluginConfig({
+      const env = new Environment(napiEnv);
+      const mutableAsset = new MutableAsset(
+        innerAsset,
+        contents,
         env,
-        isSource: true,
-        searchPath: innerAsset.filePath.replace(options.projectRoot + '/', ''),
-        projectRoot: options.projectRoot,
-        fs: this.#fs,
-        packageManager,
-      }),
-      ...defaultOptions,
-    });
+        this.#fs,
+      );
 
-    if (transformer.parse) {
-      const ast = await transformer.parse({
+      const defaultOptions = {
+        logger: new PluginLogger(),
+        tracer: new PluginTracer(),
+        options: new PluginOptions({
+          ...options,
+          packageManager,
+          shouldAutoInstall: false,
+          inputFS: this.#fs,
+          outputFS: this.#fs,
+        }),
+      };
+
+      const config = await transformer.loadConfig?.({
+        config: new PluginConfig({
+          env,
+          isSource: true,
+          searchPath: innerAsset.filePath.replace(
+            options.projectRoot + '/',
+            '',
+          ),
+          projectRoot: options.projectRoot,
+          fs: this.#fs,
+          packageManager,
+        }),
+        ...defaultOptions,
+      });
+
+      if (transformer.parse) {
+        const ast = await transformer.parse({
+          asset: mutableAsset,
+          config,
+          resolve: resolveFunc,
+          ...defaultOptions,
+        });
+        if (ast) {
+          mutableAsset.setAST(ast);
+        }
+      }
+
+      const result = await state.transformer.transform({
         asset: mutableAsset,
         config,
         resolve: resolveFunc,
         ...defaultOptions,
       });
-      if (ast) {
-        mutableAsset.setAST(ast);
-      }
-    }
 
-    const result = await state.transformer.transform({
-      asset: mutableAsset,
-      config,
-      resolve: resolveFunc,
-      ...defaultOptions,
-    });
+      if (transformer.generate) {
+        const ast = await mutableAsset.getAST();
+        if (ast) {
+          // $FlowFixMe "Cannot call `transformer.generate` because  undefined [1] is not a function." 🤷‍♀️
+          const output = await transformer.generate({
+            asset: mutableAsset,
+            ast,
+            ...defaultOptions,
+          });
 
-    if (transformer.generate) {
-      const ast = await mutableAsset.getAST();
-      if (ast) {
-        // $FlowFixMe "Cannot call `transformer.generate` because  undefined [1] is not a function." 🤷‍♀️
-        const output = await transformer.generate({
-          asset: mutableAsset,
-          ast,
-          ...defaultOptions,
-        });
-
-        if (typeof output.content === 'string') {
-          mutableAsset.setCode(output.content);
-        } else if (output.content instanceof Buffer) {
-          mutableAsset.setBuffer(output.content);
-        } else {
-          mutableAsset.setStream(output.content);
+          if (typeof output.content === 'string') {
+            mutableAsset.setCode(output.content);
+          } else if (output.content instanceof Buffer) {
+            mutableAsset.setBuffer(output.content);
+          } else {
+            mutableAsset.setStream(output.content);
+          }
         }
       }
-    }
 
-    assert(
-      result.length === 1,
-      '[V3] Unimplemented: Multiple asset return from Node transformer',
-    );
+      assert(
+        result.length === 1,
+        '[V3] Unimplemented: Multiple asset return from Node transformer',
+      );
 
-    assert(
-      result[0] === mutableAsset,
-      '[V3] Unimplemented: New asset returned from Node transformer',
-    );
+      assert(
+        result[0] === mutableAsset,
+        '[V3] Unimplemented: New asset returned from Node transformer',
+      );
 
-    return {
-      asset: {
-        id: mutableAsset.id,
-        bundleBehavior: bundleBehaviorMap.intoNullable(
-          mutableAsset.bundleBehavior,
-        ),
-        filePath: mutableAsset.filePath,
-        type: mutableAsset.type,
-        code: Array.from(await mutableAsset.getBuffer()),
-        meta: mutableAsset.meta,
-        pipeline: mutableAsset.pipeline,
-        query: mutableAsset.query.toString(),
-        symbols: mutableAsset.symbols.intoNapi(),
-        uniqueKey: mutableAsset.uniqueKey,
-        sideEffects: mutableAsset.sideEffects,
-        isBundleSplittable: mutableAsset.isBundleSplittable,
-        isSource: mutableAsset.isSource,
-      },
-    };
-  });
+      return [
+        {
+          id: mutableAsset.id,
+          bundleBehavior: bundleBehaviorMap.intoNullable(
+            mutableAsset.bundleBehavior,
+          ),
+          filePath: mutableAsset.filePath,
+          type: mutableAsset.type,
+          code: [],
+          meta: mutableAsset.meta,
+          pipeline: mutableAsset.pipeline,
+          query: mutableAsset.query.toString(),
+          symbols: mutableAsset.symbols.intoNapi(),
+          uniqueKey: mutableAsset.uniqueKey,
+          sideEffects: mutableAsset.sideEffects,
+          isBundleSplittable: mutableAsset.isBundleSplittable,
+          isSource: mutableAsset.isSource,
+        },
+        await mutableAsset.getBuffer(),
+      ];
+    },
+  );
 }
 
 const worker = new AtlaspackWorker();
@@ -355,6 +368,4 @@ type RunTransformerTransformOptions = {|
   asset: napi.Asset,
 |};
 
-type RunTransformerTransformResult = {|
-  asset: napi.RpcAssetResult,
-|};
+type RunTransformerTransformResult = [napi.RpcAssetResult, Buffer];
