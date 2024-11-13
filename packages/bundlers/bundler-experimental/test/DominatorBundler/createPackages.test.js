@@ -2,23 +2,23 @@
 
 import * as path from 'path';
 import {overlayFS, workerFarm} from '@atlaspack/test-utils';
-import {dotTest, setupBundlerTest} from './test-utils';
+import {dotTest, setupBundlerTest} from '../test-utils';
 import {
   createPackages,
   getAssetNodeByKey,
   getChunkEntryPoints,
-} from '../src/DominatorBundler';
+} from '../../src/DominatorBundler/createPackages';
 import assert from 'assert';
-import {asset, fixtureFromGraph} from './fixtureFromGraph';
+import {asset, fixtureFromGraph} from '../fixtureFromGraph';
 import {
   rootedGraphToDot,
   mergedDominatorsToDot,
   cleanPath,
-} from './graphviz/GraphvizUtils';
-import {findAssetDominators} from '../src/DominatorBundler/findAssetDominators';
-import {bundleGraphToRootedGraph} from '../src/DominatorBundler/bundleGraphToRootedGraph';
+} from '../graphviz/GraphvizUtils';
+import {findAssetDominators} from '../../src/DominatorBundler/findAssetDominators';
+import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
 
-describe('DominatorBundler', () => {
+describe('DominatorBundler/createPackages', () => {
   before(async function () {
     this.timeout(10000);
     // Warm up worker farm so that the first test doesn't account for this time.

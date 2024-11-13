@@ -109,8 +109,22 @@ export function runGetBundlerStats({
     );
   }
 
-  const bundlerStats = {
-    packages: packageArray,
+  const packageArraySorted = packageArray.sort(
+    (a, b) => a.totalSize - b.totalSize,
+  );
+  const percentileSize = (percentile) => {
+    const index = Math.floor((percentile / 100) * packageArraySorted.length);
+    return packageArraySorted[index].totalSize;
+  };
+
+  const p10 = percentileSize(10);
+  const p25 = percentileSize(25);
+  const p50 = percentileSize(50);
+  const p75 = percentileSize(75);
+  const p90 = percentileSize(90);
+  const p99 = percentileSize(99);
+
+  const stats = {
     numPackages: packageArray.length,
     numChunks: chunks.length,
     totalPackageSize: packageArray.reduce((acc, pkg) => acc + pkg.totalSize, 0),
@@ -125,6 +139,19 @@ export function runGetBundlerStats({
       (acc, pkg) => Math.min(acc, pkg.totalSize),
       Infinity,
     ),
+    packageSizeDistribution: {
+      p10,
+      p25,
+      p50,
+      p75,
+      p90,
+      p99,
+    },
+  };
+
+  const bundlerStats = {
+    packages: packageArray,
+    stats,
   };
 
   const outputPath = path.join(projectRoot, './packages.json');

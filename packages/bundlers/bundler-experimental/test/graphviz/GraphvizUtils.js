@@ -4,7 +4,7 @@ import childProcess from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import {ContentGraph} from '@atlaspack/graph';
-import type {PackagedDominatorGraph} from '../../src/DominatorBundler';
+import type {PackagedDominatorGraph} from '../../src/DominatorBundler/createPackages';
 import nullthrows from 'nullthrows';
 import type {Asset, BundleGraph, Bundle} from '@atlaspack/types';
 import type {StronglyConnectedComponentNode} from '../../src/DominatorBundler/oneCycleBreaker';
