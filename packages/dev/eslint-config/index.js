@@ -51,6 +51,8 @@ module.exports = {
     'no-return-await': 'error',
     'require-atomic-updates': 'off',
     'require-await': 'error',
+    'monorepo/no-relative-import': 'off',
+    '@atlaspack/no-relative-import': 'error',
   },
   settings: {
     flowtype: {
