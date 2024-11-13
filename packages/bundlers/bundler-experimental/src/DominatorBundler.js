@@ -5,25 +5,30 @@ import type {MutableBundleGraph} from '@atlaspack/types';
 import {bundleGraphToRootedGraph} from './DominatorBundler/bundleGraphToRootedGraph';
 import {ContentGraph, type NodeId} from '@atlaspack/graph';
 import type {StronglyConnectedComponentNode} from './DominatorBundler/oneCycleBreaker';
+import {findAssetDominators} from './DominatorBundler/findAssetDominators';
 
 import nullthrows from 'nullthrows';
 
-export type DominatorBundlerInput<B: Bundle> = {|
-  inputGraph: BundleGraph<B>,
+export type DominatorBundlerInput = {|
+  inputGraph: MutableBundleGraph,
   outputGraph: MutableBundleGraph,
-  entries: {|entryAsset: Asset, entryDependency: Dependency|}[],
 |};
 
 export type DominatorBundlerOutput = {|
   bundleGraph: BundleGraph<Bundle>,
 |};
 
-export function dominatorBundler<B: Bundle>({
+export function dominatorBundler({
   inputGraph,
   outputGraph,
-  entries,
-}: DominatorBundlerInput<B>): DominatorBundlerOutput {
-  throw new Error('Not implemented');
+}: DominatorBundlerInput): DominatorBundlerOutput {
+  const dominators = findAssetDominators(inputGraph);
+  // eslint-disable-next-line no-unused-vars
+  const packages = createPackages(inputGraph, dominators);
+
+  return {
+    bundleGraph: outputGraph,
+  };
 }
 
 export type PackageNode = {|
