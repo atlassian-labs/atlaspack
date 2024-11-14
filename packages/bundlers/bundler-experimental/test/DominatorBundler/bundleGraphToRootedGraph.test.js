@@ -32,11 +32,14 @@ describe('bundleGraphToRootedGraph', () => {
     const assetIdsByPath = new Map();
     rootGraph.traverse((node) => {
       if (node !== rootNode) {
-        const asset = rootGraph.getNode(node);
-        if (!asset || typeof asset === 'string') {
+        const assetNode = rootGraph.getNode(node);
+        if (!assetNode || typeof assetNode === 'string') {
           throw new Error('Asset not found');
         }
-        assetIdsByPath.set(path.basename(asset.filePath), asset.id);
+        assetIdsByPath.set(
+          path.basename(assetNode.asset.filePath),
+          assetNode.id,
+        );
       }
     }, rootNode);
 
@@ -45,7 +48,7 @@ describe('bundleGraphToRootedGraph', () => {
       return rootGraph.getNodeIdsConnectedFrom(node).map((nodeId) => {
         const node = rootGraph.getNode(nodeId);
         if (!node || typeof node === 'string') throw new Error('root cycle');
-        return path.basename(node.filePath);
+        return path.basename(node.asset.filePath);
       });
     };
 

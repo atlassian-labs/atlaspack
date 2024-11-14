@@ -1,28 +1,41 @@
 // @flow strict-local
 
-import type {BundleGraph, Bundle} from '@atlaspack/types';
+import {Bundler} from '@atlaspack/plugin';
 import type {MutableBundleGraph} from '@atlaspack/types';
-import {createPackages} from './DominatorBundler/createPackages';
+import {
+  createPackages,
+  getPackageNodes,
+} from './DominatorBundler/createPackages';
 import {findAssetDominators} from './DominatorBundler/findAssetDominators';
+import type {PackagedDominatorGraph} from './DominatorBundler/createPackages';
 
 export type DominatorBundlerInput = {|
-  inputGraph: MutableBundleGraph,
-  outputGraph: MutableBundleGraph,
+  bundleGraph: MutableBundleGraph,
 |};
 
-export type DominatorBundlerOutput = {|
-  bundleGraph: BundleGraph<Bundle>,
-|};
+const DominatorBundler: Bundler = new Bundler({
+  bundle({bundleGraph}) {
+    dominatorBundler({
+      bundleGraph,
+    });
+  },
+  optimize() {},
+});
 
-export function dominatorBundler({
-  inputGraph,
-  outputGraph,
-}: DominatorBundlerInput): DominatorBundlerOutput {
-  const dominators = findAssetDominators(inputGraph);
-  // eslint-disable-next-line no-unused-vars
-  const packages = createPackages(inputGraph, dominators);
+export default DominatorBundler;
 
-  return {
-    bundleGraph: outputGraph,
-  };
+export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
+  const dominators = findAssetDominators(bundleGraph);
+  const packages = createPackages(bundleGraph, dominators);
+}
+
+function intoBundleGraph(
+  packages: PackagedDominatorGraph,
+  bundleGraph: MutableBundleGraph,
+) {
+  const packageNodes = getPackageNodes(packages);
+
+  for (const packageNodeId of packageNodes) {
+    const node = packages.getNode(packageNodeId);
+  }
 }

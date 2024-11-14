@@ -4,6 +4,11 @@ import type {Asset} from '@atlaspack/types';
 import type {MutableBundleGraph} from '@atlaspack/types';
 import {ContentGraph} from '@atlaspack/graph';
 
+export type AssetNode = {|type: 'asset', id: string, asset: Asset|};
+export type SimpleAssetGraphNode = 'root' | AssetNode;
+
+export type SimpleAssetGraph = ContentGraph<SimpleAssetGraphNode>;
+
 /**
  * Simplify the BundleGraph structure into a graph that only contains assets
  * with edges representing the dependencies.
@@ -28,7 +33,7 @@ import {ContentGraph} from '@atlaspack/graph';
  */
 export function bundleGraphToRootedGraph(
   bundleGraph: MutableBundleGraph,
-): ContentGraph<'root' | Asset> {
+): SimpleAssetGraph {
   const graph = new ContentGraph();
 
   const rootNodeId = graph.addNodeByContentKey('root', 'root');
@@ -39,7 +44,11 @@ export function bundleGraphToRootedGraph(
     enter: (node) => {
       if (node.type === 'asset') {
         const asset = bundleGraph.getAssetById(node.value.id);
-        graph.addNodeByContentKey(node.value.id, asset);
+        graph.addNodeByContentKey(node.value.id, {
+          id: asset.id,
+          type: 'asset',
+          asset,
+        });
       }
     },
     exit: (node) => {

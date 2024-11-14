@@ -1,0 +1,16 @@
+digraph merged {
+  labelloc="t";
+  label="Merged";
+  layout="dot";
+
+  "package:4d365acd7631caa5,85a47ee5bf2af6f5";
+  "page1.js";
+  "page2.js";
+  "root";
+
+  "page1.js" -> "package:4d365acd7631caa5,85a47ee5bf2af6f5";
+  "page2.js" -> "package:4d365acd7631caa5,85a47ee5bf2af6f5";
+  "root" -> "package:4d365acd7631caa5,85a47ee5bf2af6f5";
+  "root" -> "page1.js";
+  "root" -> "page2.js";
+}

@@ -5,9 +5,13 @@ import type {MutableBundleGraph} from '@atlaspack/types';
 import {ContentGraph, type NodeId} from '@atlaspack/graph';
 
 import {bundleGraphToRootedGraph} from './bundleGraphToRootedGraph';
-import type {StronglyConnectedComponentNode} from './oneCycleBreaker';
+import type {
+  AcyclicGraph,
+  StronglyConnectedComponentNode,
+} from './oneCycleBreaker';
 
 import nullthrows from 'nullthrows';
+import type {AssetNode, SimpleAssetGraph} from './bundleGraphToRootedGraph';
 
 export type PackageNode = {|
   type: 'package',
@@ -15,13 +19,21 @@ export type PackageNode = {|
   parentChunks: Set<string>,
 |};
 
-export type PackagedDominatorGraphNode = 'root' | Asset | PackageNode;
+export type PackagedDominatorGraphNode =
+  | 'root'
+  | AssetNode
+  | PackageNode
+  | StronglyConnectedComponentNode<AssetNode>;
 
 export type PackagedDominatorGraph = ContentGraph<PackagedDominatorGraphNode>;
 
-export type PackagingInputGraph = ContentGraph<
-  Asset | StronglyConnectedComponentNode<Asset | 'root'> | 'root',
->;
+export type PackagingInputGraph = AcyclicGraph<'root' | AssetNode>;
+
+export function getPackageNodes(packages: PackagedDominatorGraph): NodeId[] {
+  return packages.getNodeIdsConnectedFrom(
+    packages.getNodeIdByContentKey('root'),
+  );
+}
 
 const defaultMakePackageKey = (parentChunks: Set<string>): string =>
   parentChunks.size === 0 ? 'root' : Array.from(parentChunks).sort().join(',');
@@ -97,14 +109,14 @@ export function createPackages(
       continue;
     }
 
-    const chunkRoot = packages.addNodeByContentKeyIfNeeded(`virtual:${key}`, {
+    const chunkRoot = packages.addNodeByContentKeyIfNeeded(`package:${key}`, {
       type: 'package',
-      id: key,
+      id: `package:${key}`,
       parentChunks,
     });
     packages.addEdge(root, chunkRoot);
 
-    merge(`virtual:${key}`, chunksToMerge);
+    merge(`package:${key}`, chunksToMerge);
   }
 
   // It is not ideal that we let the graph grow with virtual nodes while
@@ -157,7 +169,7 @@ function getChunksByParentEntryPoint(
 }
 
 export function getChunkEntryPoints(
-  rootedGraph: ContentGraph<'root' | Asset>,
+  rootedGraph: SimpleAssetGraph,
   dominators: PackagingInputGraph,
 ): Map<string, Set<string>> {
   const chunks = getChunks(dominators).map((id) => {
@@ -215,11 +227,7 @@ function getChunks<T>(dominatorTree: ContentGraph<T>): NodeId[] {
 }
 
 export function getAssetNodeByKey(
-  graph:
-    | ContentGraph<'root' | Asset>
-    | ContentGraph<
-        'root' | StronglyConnectedComponentNode<'root' | Asset> | Asset,
-      >,
+  graph: SimpleAssetGraph | AcyclicGraph<AssetNode | 'root'>,
   id: string,
 ): Asset {
   const node = graph.getNodeByContentKey(id);
@@ -230,15 +238,11 @@ export function getAssetNodeByKey(
   ) {
     throw new Error('Invariant violation');
   }
-  return node;
+  return node.asset;
 }
 
 export function getAssetNode(
-  graph:
-    | ContentGraph<'root' | Asset>
-    | ContentGraph<
-        'root' | StronglyConnectedComponentNode<'root' | Asset> | Asset,
-      >,
+  graph: SimpleAssetGraph | AcyclicGraph<AssetNode | 'root'>,
   id: NodeId,
 ): Asset {
   const node = graph.getNode(id);
@@ -249,5 +253,5 @@ export function getAssetNode(
   ) {
     throw new Error('Invariant violation');
   }
-  return node;
+  return node.asset;
 }

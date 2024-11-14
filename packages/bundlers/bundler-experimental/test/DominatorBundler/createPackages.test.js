@@ -96,6 +96,7 @@ describe('DominatorBundler/createPackages', () => {
           entryPath2,
         ]);
 
+        const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
         const dominators = findAssetDominators(mutableBundleGraph);
         const outputDot = rootedGraphToDot(entryDir, dominators);
 
@@ -117,7 +118,7 @@ digraph merged {
   "jsx.js";
   "left-pad.js";
   "lodash.js";
-  "package_4d365acd7631caa5,85a47ee5bf2af6f5";
+  "package:4d365acd7631caa5,85a47ee5bf2af6f5";
   "page1.js";
   "page2.js";
   "react.js";
@@ -125,13 +126,13 @@ digraph merged {
   "string-chart-at.js";
   "string-concat.js";
 
-  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "esmodule_helpers.js";
-  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "left-pad.js";
-  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "lodash.js";
-  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "react.js";
-  "package_4d365acd7631caa5,85a47ee5bf2af6f5" -> "string-concat.js";
+  "package:4d365acd7631caa5,85a47ee5bf2af6f5" -> "esmodule_helpers.js";
+  "package:4d365acd7631caa5,85a47ee5bf2af6f5" -> "left-pad.js";
+  "package:4d365acd7631caa5,85a47ee5bf2af6f5" -> "lodash.js";
+  "package:4d365acd7631caa5,85a47ee5bf2af6f5" -> "react.js";
+  "package:4d365acd7631caa5,85a47ee5bf2af6f5" -> "string-concat.js";
   "react.js" -> "jsx.js";
-  "root" -> "package_4d365acd7631caa5,85a47ee5bf2af6f5";
+  "root" -> "package:4d365acd7631caa5,85a47ee5bf2af6f5";
   "root" -> "page1.js";
   "root" -> "page2.js";
   "string-concat.js" -> "string-chart-at.js";
@@ -141,6 +142,7 @@ digraph merged {
 
         return [
           {label: 'input', dot: inputDot},
+          {label: 'root', dot: rootedGraphToDot(entryDir, rootedGraph)},
           {label: 'output', dot: outputDot},
           {
             label: 'merged',

@@ -63,6 +63,8 @@ import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {
   createPackages,
   findAssetDominators,
+  bundleGraphToRootedGraph,
+  runMergePackages,
 } from '@atlaspack/bundler-experimental';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
@@ -603,14 +605,18 @@ export default class Atlaspack {
       nullthrows(this.#resolvedOptions),
     );
     log('Running bundler');
+    const graph = bundleGraphToRootedGraph(mutableBundleGraph);
     const dominators = findAssetDominators(mutableBundleGraph);
     log('Done running dominators');
     const packages = createPackages(mutableBundleGraph, dominators);
     log('Done creating packages');
 
+    const mergedPackages = runMergePackages(graph, packages);
+
     runGetBundlerStats({
       dominators,
       packages,
+      mergedPackages,
       resolvedOptions: nullthrows(this.#resolvedOptions),
     });
   }

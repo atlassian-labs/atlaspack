@@ -1,12 +1,12 @@
 // @flow strict-local
 
 import logger from '@atlaspack/logger';
-import type {Asset} from '@atlaspack/types';
 import type {MutableBundleGraph} from '@atlaspack/types';
 import {ContentGraph, type NodeId, Graph} from '@atlaspack/graph';
 import {bundleGraphToRootedGraph} from './bundleGraphToRootedGraph';
 import {convertToAcyclicGraph} from './oneCycleBreaker';
-import type {StronglyConnectedComponentNode} from './oneCycleBreaker';
+import type {AcyclicGraph} from './oneCycleBreaker';
+import type {AssetNode} from './bundleGraphToRootedGraph';
 
 function debugLog(message: string) {
   logger.info({
@@ -15,9 +15,11 @@ function debugLog(message: string) {
   });
 }
 
-export type AssetDominatorTree = ContentGraph<
-  'root' | Asset | StronglyConnectedComponentNode<'root' | Asset>,
->;
+export type AssetDominatorTree = AcyclicGraph<'root' | AssetNode>;
+
+export type DominatorChunkDependencyGraph = ContentGraph<{|
+  assetDominatorTreeNodeId: NodeId,
+|}>;
 
 /**
  * For all assets, build the dominance relationship of the asset with other
@@ -85,10 +87,10 @@ export function buildDominatorTree<T>(
       continue;
     }
 
-    const immediateDominatedId = dominatorTree.getNodeIdByContentKey(
+    const immediateDominatorId = dominatorTree.getNodeIdByContentKey(
       graph.getContentKeyByNodeId(immediateDominator),
     );
-    dominatorTree.addEdge(immediateDominatedId, assetDominatorTreeNodeId);
+    dominatorTree.addEdge(immediateDominatorId, assetDominatorTreeNodeId);
   }
 
   return dominatorTree;

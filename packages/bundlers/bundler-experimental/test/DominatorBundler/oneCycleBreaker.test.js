@@ -164,7 +164,7 @@ describe('oneCycleBreaker', () => {
                 } else if (node === 'root') {
                   return 'root';
                 } else {
-                  return path.basename(node.filePath);
+                  return path.basename(node.asset.filePath);
                 }
               }),
             ),

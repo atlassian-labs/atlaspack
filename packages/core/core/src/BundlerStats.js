@@ -2,10 +2,13 @@
 
 import type {Asset} from '@atlaspack/types';
 import type {AtlaspackOptions} from './types';
-import type {
-  PackagedDominatorGraph,
-  AssetDominatorTree,
-  PackageNode,
+import {
+  type PackagedDominatorGraph,
+  type AssetDominatorTree,
+  type PackageNode,
+  type AssetNode,
+  type StronglyConnectedComponentNode,
+  getPackageNodes,
 } from '@atlaspack/bundler-experimental';
 import {hashString} from '@atlaspack/rust';
 import logger from '@atlaspack/logger';
@@ -23,6 +26,7 @@ const log = (message) => {
 export interface RunGetBundlerStatsParams {
   dominators: AssetDominatorTree;
   packages: PackagedDominatorGraph;
+  mergedPackages: PackagedDominatorGraph;
   resolvedOptions: AtlaspackOptions;
 }
 
@@ -46,24 +50,43 @@ function createPackageSummary(
   projectRoot: string,
   packages: PackagedDominatorGraph,
   packageNodeId: NodeId,
-  packageNode: Asset | PackageNode,
+  packageNode:
+    | AssetNode
+    | PackageNode
+    | StronglyConnectedComponentNode<AssetNode>,
 ): PackageSummary {
   let rootAsset = undefined;
   const assets = [];
   let totalSize = 0;
 
-  if (packageNode.type !== 'package') {
-    rootAsset = packageNode.filePath?.replace(projectRoot, '');
-    totalSize += getAssetSize(packageNode);
+  if (packageNode.type === 'asset') {
+    rootAsset = packageNode.asset.filePath?.replace(projectRoot, '');
+    totalSize += getAssetSize(packageNode.asset);
   }
 
   packages.traverse((nodeId) => {
     const node = packages.getNode(nodeId);
-    if (node !== 'root' && node != null && node.type !== 'package') {
-      const assetSize = getAssetSize(node);
+    if (node === 'root' || node == null) {
+      return;
+    }
+
+    if (node.type === 'StronglyConnectedComponent') {
+      for (const assetNode of node.values) {
+        const assetSize = getAssetSize(assetNode.asset);
+        totalSize += assetSize;
+        assets.push({
+          filePath: assetNode.asset.filePath?.replace(projectRoot, ''),
+          size: assetSize,
+        });
+      }
+      return;
+    }
+
+    if (node.type === 'asset') {
+      const assetSize = getAssetSize(node.asset);
       totalSize += assetSize;
       assets.push({
-        filePath: node.filePath?.replace(projectRoot, ''),
+        filePath: node.asset.filePath?.replace(projectRoot, ''),
         size: assetSize,
       });
     }
@@ -80,18 +103,37 @@ function createPackageSummary(
   };
 }
 
-export function runGetBundlerStats({
-  dominators,
+export interface GetPackageStatsParams {
+  chunks: NodeId[];
+  packages: PackagedDominatorGraph;
+  resolvedOptions: AtlaspackOptions;
+}
+
+export function getPackagesStats({
+  chunks,
   packages,
   resolvedOptions,
-}: RunGetBundlerStatsParams) {
-  const chunks = dominators.getNodeIdsConnectedFrom(
-    dominators.getNodeIdByContentKey('root'),
-  );
+}: GetPackageStatsParams): {|
+  packageArray: PackageSummary[],
+  stats: {|
+    numPackages: number,
+    numChunks: number,
+    totalPackageSize: number,
+    averagePackageSize: number,
+    maximumPackageSize: number,
+    minimumPackageSize: number,
+    packageSizeDistribution: {|
+      p10: number,
+      p25: number,
+      p50: number,
+      p75: number,
+      p90: number,
+      p99: number,
+    |},
+  |},
+|} {
   log('==> number of dominator chunks: ' + chunks.length);
-  const packageNodes = packages.getNodeIdsConnectedFrom(
-    packages.getNodeIdByContentKey('root'),
-  );
+  const packageNodes = getPackageNodes(packages);
   log('==> number of packages: ' + packageNodes.length);
 
   const projectRoot = resolvedOptions.projectRoot;
@@ -99,7 +141,7 @@ export function runGetBundlerStats({
   log('Aggregating package stats...');
   const packageArray = [];
   for (let packageNodeId of packageNodes) {
-    let packageNode = packages.getNode(packageNodeId);
+    const packageNode = packages.getNode(packageNodeId);
     if (packageNode == null || packageNode === 'root') {
       continue;
     }
@@ -149,12 +191,37 @@ export function runGetBundlerStats({
     },
   };
 
-  const bundlerStats = {
-    packages: packageArray,
+  return {
+    packageArray,
     stats,
   };
+}
 
+export function runGetBundlerStats({
+  dominators,
+  packages,
+  mergedPackages,
+  resolvedOptions,
+}: RunGetBundlerStatsParams) {
+  const chunks = dominators.getNodeIdsConnectedFrom(
+    dominators.getNodeIdByContentKey('root'),
+  );
+
+  const packageStats = getPackagesStats({packages, chunks, resolvedOptions});
+  const mergedPackageStats = getPackagesStats({
+    packages: mergedPackages,
+    chunks,
+    resolvedOptions,
+  });
+
+  const bundlerStats = {
+    packageStats,
+    mergedPackageStats,
+  };
+
+  const projectRoot = resolvedOptions.projectRoot;
   const outputPath = path.join(projectRoot, './packages.json');
   log('Writing package stats to ' + outputPath);
+
   fs.writeFileSync(outputPath, JSON.stringify(bundlerStats, null, 2));
 }

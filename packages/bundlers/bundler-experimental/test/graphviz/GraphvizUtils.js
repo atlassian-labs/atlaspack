@@ -7,7 +7,15 @@ import {ContentGraph} from '@atlaspack/graph';
 import type {PackagedDominatorGraph} from '../../src/DominatorBundler/createPackages';
 import nullthrows from 'nullthrows';
 import type {Asset, BundleGraph, Bundle} from '@atlaspack/types';
-import type {StronglyConnectedComponentNode} from '../../src/DominatorBundler/oneCycleBreaker';
+import type {
+  AcyclicGraph,
+  StronglyConnectedComponentNode,
+} from '../../src/DominatorBundler/oneCycleBreaker';
+import type {
+  AssetNode,
+  SimpleAssetGraph,
+  SimpleAssetGraphNode,
+} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
 
 /**
  * Write a dot string to a file and generate a PNG using the `dot` CLI command.
@@ -88,11 +96,7 @@ export function cleanPath(entryDir: string, p: string): string {
  */
 export function rootedGraphToDot(
   entryDir: string,
-  dominators:
-    | ContentGraph<
-        Asset | StronglyConnectedComponentNode<'root' | Asset> | 'root',
-      >
-    | ContentGraph<'root' | Asset>,
+  dominators: AcyclicGraph<SimpleAssetGraphNode> | SimpleAssetGraph,
   label?: string = 'Dominators',
   name?: string = 'dominators',
 ): string {
@@ -107,7 +111,7 @@ export function rootedGraphToDot(
       return 'SCC';
     }
 
-    return clean(node.filePath);
+    return clean(node.asset.filePath);
   };
 
   contents.push('"root";');
@@ -126,12 +130,13 @@ export function rootedGraphToDot(
   });
 
   const iterableDominators: (
-    | Asset
-    | StronglyConnectedComponentNode<Asset | 'root'>
+    | AssetNode
+    | StronglyConnectedComponentNode<AssetNode | 'root'>
   )[] = [];
+
   // $FlowFixMe
   dominators.nodes.forEach((node) => {
-    if (node && node !== 'root') {
+    if (node != null && node !== 'root') {
       iterableDominators.push(node);
     }
   });
@@ -195,9 +200,11 @@ export function mergedDominatorsToDot(
     if (node === 'root') {
       return '"root"';
     } else if (node.type === 'package') {
-      return `"package_${node.id}"`;
+      return `"${node.id}"`;
+    } else if (node.type === 'StronglyConnectedComponent') {
+      return `"scc_${node.id}"`;
     } else {
-      return `"${cleanPath(entryDir, node.filePath)}"`;
+      return `"${cleanPath(entryDir, node.asset.filePath)}"`;
     }
   };
 

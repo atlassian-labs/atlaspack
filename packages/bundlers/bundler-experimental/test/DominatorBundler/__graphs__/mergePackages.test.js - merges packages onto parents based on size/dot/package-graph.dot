@@ -1,0 +1,31 @@
+digraph merged {
+  labelloc="t";
+  label="Duplicated";
+  layout="dot";
+
+  "esmodule_helpers.js";
+  "jsx.js";
+  "left-pad.js";
+  "lodash.js";
+  "page1.js";
+  "page2.js";
+  "react.js";
+  "root";
+  "string-chart-at.js";
+  "string-concat.js";
+
+  "page1.js" -> "esmodule_helpers.js";
+  "page1.js" -> "left-pad.js";
+  "page1.js" -> "lodash.js";
+  "page1.js" -> "react.js";
+  "page1.js" -> "string-concat.js";
+  "page2.js" -> "esmodule_helpers.js";
+  "page2.js" -> "left-pad.js";
+  "page2.js" -> "lodash.js";
+  "page2.js" -> "react.js";
+  "page2.js" -> "string-concat.js";
+  "react.js" -> "jsx.js";
+  "root" -> "page1.js";
+  "root" -> "page2.js";
+  "string-concat.js" -> "string-chart-at.js";
+}

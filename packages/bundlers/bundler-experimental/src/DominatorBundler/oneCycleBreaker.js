@@ -13,9 +13,13 @@ export type StronglyConnectedComponentNode<T> = {|
   values: T[],
 |};
 
+export type AcyclicGraph<T> = ContentGraph<
+  T | StronglyConnectedComponentNode<T>,
+>;
+
 export function convertToAcyclicGraph<T>(
   graph: ContentGraph<T>,
-): ContentGraph<T | StronglyConnectedComponentNode<T>> {
+): AcyclicGraph<T> {
   const result: ContentGraph<T | StronglyConnectedComponentNode<T>> =
     new ContentGraph();
 
