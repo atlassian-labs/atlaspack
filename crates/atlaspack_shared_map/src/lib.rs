@@ -67,7 +67,7 @@ mod test {
   }
 
   #[test]
-  fn test_multiple_shared_hash_map() {
+  fn test_multiple_thread_shared_hash_map() {
     let map = Arc::new(SharedHashMap::<String, String>::new());
     let (close_tx, close_rx) = std::sync::mpsc::channel();
     let (tx, rx) = std::sync::mpsc::channel();
