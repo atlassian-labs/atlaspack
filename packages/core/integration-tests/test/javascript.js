@@ -88,7 +88,7 @@ describe('javascript', function () {
     assert.equal(output, 'should not fail');
   });
 
-  it.only('should produce a basic JS bundle with CommonJS requires', async function () {
+  it('should produce a basic JS bundle with CommonJS requires', async function () {
     const inputDir = path.join(__dirname, 'integration/commonjs');
     let b = await bundle(path.join(inputDir, '/index.js'));
 
