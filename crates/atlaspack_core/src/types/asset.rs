@@ -11,6 +11,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde_json::json;
 
+use crate::project_path::to_project_path;
+
 use super::bundle::MaybeBundleBehavior;
 use super::environment::Environment;
 use super::file_type::FileType;
@@ -276,7 +278,7 @@ impl Asset {
     let id = create_asset_id(CreateAssetIdParams {
       code: None,
       environment_id: &env.id(),
-      file_path: &project_path(project_root, &file_path).to_string_lossy(),
+      file_path: &to_project_path(project_root, &file_path).to_string_lossy(),
       file_type: &file_type,
       pipeline: pipeline.as_deref(),
       query: query.as_deref(),
@@ -313,7 +315,7 @@ impl Asset {
     let id = create_asset_id(CreateAssetIdParams {
       code: None,
       environment_id: &env.id(),
-      file_path: &project_path(project_root, &file_path).to_string_lossy(),
+      file_path: &to_project_path(project_root, &file_path).to_string_lossy(),
       file_type: &file_type,
       pipeline: None,
       query: None,
@@ -350,7 +352,7 @@ impl Asset {
     let id = create_asset_id(CreateAssetIdParams {
       code: Some(code.as_str()),
       environment_id: &source_asset.env.id(),
-      file_path: &project_path(project_root, &source_asset.file_path).to_string_lossy(),
+      file_path: &to_project_path(project_root, &source_asset.file_path).to_string_lossy(),
       file_type: &file_type,
       pipeline: None,
       query: None,
@@ -406,13 +408,6 @@ impl Asset {
     self.conditions = conditions.clone();
     self.meta.insert("conditions".into(), json!(conditions));
   }
-}
-
-fn project_path(project_root: &Path, file_path: &Path) -> PathBuf {
-  file_path
-    .strip_prefix(project_root)
-    .unwrap_or(file_path)
-    .to_path_buf()
 }
 
 /// Statistics that pertain to an asset
