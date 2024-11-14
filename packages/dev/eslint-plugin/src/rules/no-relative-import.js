@@ -29,13 +29,14 @@ const moduleVisitor = require('eslint-module-utils/moduleVisitor');
 const getPackages = require('get-monorepo-packages');
 const isInside = require('path-is-inside');
 const minimatch = require('minimatch');
-const _path = require('path');
+const {join, relative, parse} = require('path');
 const resolve = require('eslint-module-utils/resolve');
 
 const getPackageDir = (filePath, packages) => {
   const match = packages.find((pkg) =>
-    minimatch(filePath, _path.join(pkg.location, '**')),
+    minimatch(filePath, join(pkg.location, '**')),
   );
+
   if (match) {
     return match.location;
   }
@@ -58,9 +59,12 @@ module.exports = {
 
     return moduleVisitor.default((node) => {
       const resolvedPath = resolve.default(node.value, context);
+      if (!resolvedPath) {
+        return;
+      }
       const packageDir = getPackageDir(sourceFsPath, packages);
 
-      if (!packageDir || !resolvedPath || isInside(resolvedPath, packageDir)) {
+      if (!packageDir || isInside(resolvedPath, packageDir)) {
         return;
       }
 
@@ -69,22 +73,20 @@ module.exports = {
         return;
       }
 
-      const subPackagePath = _path.relative(pkg.location, resolvedPath);
+      const subPackagePath = relative(pkg.location, resolvedPath);
       context.report({
         node,
         message: `Import for monorepo package '${pkg.package.name}' should be absolute.`,
         fix: (fixer) => {
-          const basePath =
-            '' +
-            pkg.package.name +
-            (subPackagePath !== '.' ? '/' + subPackagePath : '');
-          const path = _path.parse(basePath).dir;
-          const name = _path.parse(basePath).name;
+          const {dir, name} = parse(
+            `${pkg.package.name}${
+              subPackagePath !== '.' ? `/${subPackagePath}` : ''
+            }`,
+          );
+
           return fixer.replaceText(
             node,
-            "'" +
-              (name !== '.' && name !== 'index' ? path + '/' + name : path) +
-              "'",
+            `'${name !== '.' && name !== 'index' ? `${dir}/${name}` : dir}'`,
           );
         },
       });
