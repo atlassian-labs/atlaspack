@@ -19,7 +19,7 @@ new RuleTester({
         },
       ],
       filename,
-      output: "import logger from '@atlaspack/logger/Logger';",
+      output: "import logger from '@atlaspack/logger/lib/Logger';",
     },
   ],
 });

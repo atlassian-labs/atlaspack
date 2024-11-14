@@ -2,7 +2,7 @@
 import type {PluginOptions, EnvMap} from '@atlaspack/types-internal';
 
 import {NodePackageManager} from '@atlaspack/package-manager';
-import {getConfig} from '../src/ConditionalManifestReporter';
+import {getConfig} from '../src/Config';
 import {overlayFS, fsFixture} from '@atlaspack/test-utils';
 import assert from 'assert';
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';

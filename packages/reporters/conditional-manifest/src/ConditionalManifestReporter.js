@@ -8,35 +8,7 @@ import type {
   PluginTracer,
   ReporterEvent,
 } from '@atlaspack/types-internal';
-
-type Config = {|
-  filename: string,
-|};
-
-// Exported for testing
-export async function getConfig({
-  env,
-  inputFS,
-  projectRoot,
-}: PluginOptions): Promise<Config> {
-  const packageJson = JSON.parse(
-    await inputFS.readFile(join(projectRoot, 'package.json'), 'utf8'),
-  );
-
-  const config = packageJson['@atlaspack/reporter-conditional-manifest'] ?? {};
-  for (const [key, value] of Object.entries(config)) {
-    // Replace values in the format of ${VARIABLE} with their corresponding env
-    if (typeof value === 'string') {
-      config[key] = value.replace(/\${([^}]+)}/g, (_, v) => env[v] ?? '');
-    }
-  }
-
-  const {filename} = config;
-
-  return {
-    filename: filename ?? 'conditional-manifest.json',
-  };
-}
+import {getConfig} from './Config';
 
 async function report({
   event,
@@ -48,8 +20,6 @@ async function report({
   logger: PluginLogger,
   tracer: PluginTracer,
 |}): Async<void> {
-  const {filename} = await getConfig(options);
-
   if (event.type === 'buildSuccess') {
     const bundles = event.bundleGraph.getConditionalBundleMapping();
 
@@ -62,6 +32,7 @@ async function report({
       const bundleInfo = {};
       for (const [key, cond] of conditions) {
         bundleInfo[key] = {
+          // Reverse bundles so we load children bundles first
           ifTrueBundles: mapBundles(cond.ifTrueBundles).reverse(),
           ifFalseBundles: mapBundles(cond.ifFalseBundles).reverse(),
         };
@@ -76,6 +47,8 @@ async function report({
     const targets = new Set(
       event.bundleGraph.getBundles().map((bundle) => bundle.target),
     );
+
+    const {filename} = await getConfig(options);
 
     for (const target of targets) {
       const conditionalManifestFilename = join(target.distDir, filename);
