@@ -1,4 +1,5 @@
 'use strict';
+// @flow
 
 const {RuleTester} = require('eslint');
 const rule = require('../../src/rules/no-relative-import');
@@ -12,14 +13,24 @@ new RuleTester({
   valid: [{code: "import logger from '@atlaspack/logger';", filename}],
   invalid: [
     {
-      code: "import logger from '../../../../core/logger';",
+      code: `import Logger from '../../../../core/logger';`,
       errors: [
         {
           message: `Import for monorepo package '@atlaspack/logger' should be absolute.`,
         },
       ],
       filename,
-      output: "import logger from '@atlaspack/logger/lib/Logger';",
+      output: "import Logger from '@atlaspack/logger/lib/Logger';",
+    },
+    {
+      code: `import type { PluginOptions } from '../../../../core/types-internal/src';`,
+      errors: [
+        {
+          message: `Import for monorepo package '@atlaspack/types-internal' should be absolute.`,
+        },
+      ],
+      filename,
+      output: "import type { PluginOptions } from '@atlaspack/types-internal';",
     },
   ],
 });

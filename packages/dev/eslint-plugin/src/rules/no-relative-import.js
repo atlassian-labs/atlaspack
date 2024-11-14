@@ -78,16 +78,19 @@ module.exports = {
         node,
         message: `Import for monorepo package '${pkg.package.name}' should be absolute.`,
         fix: (fixer) => {
-          const {dir, name} = parse(
+          let {dir, name} = parse(
             `${pkg.package.name}${
               subPackagePath !== '.' ? `/${subPackagePath}` : ''
             }`,
           );
 
-          return fixer.replaceText(
-            node,
-            `'${name !== '.' && name !== 'index' ? `${dir}/${name}` : dir}'`,
-          );
+          if (name !== '.' && name !== 'index') {
+            // Remove unneeded suffix
+            return fixer.replaceText(node, `'${dir}/${name}'`);
+          } else {
+            dir = dir.replace(/\/(src)|(lib)/, '');
+            return fixer.replaceText(node, `'${dir}'`);
+          }
         },
       });
     }, moduleUtilOptions);
