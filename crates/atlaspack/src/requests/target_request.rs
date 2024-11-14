@@ -647,6 +647,7 @@ fn fallback_output_format(context: EnvironmentContext) -> OutputFormat {
 
 #[async_trait]
 impl Request for TargetRequest {
+  #[tracing::instrument(level = "info", skip_all)]
   async fn run(
     &self,
     request_context: RunRequestContext,
