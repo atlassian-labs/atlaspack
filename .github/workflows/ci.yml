@@ -21,7 +21,7 @@ jobs:
           cache: yarn
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.80.1
+          toolchain: 1.82.0
           components: rustfmt
       - run: yarn --frozen-lockfile
       - run: yarn lint
@@ -63,7 +63,7 @@ jobs:
           node-version: ${{ matrix.node }}
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.80.1
+          toolchain: 1.82.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ matrix.os }}
@@ -93,7 +93,7 @@ jobs:
           node-version: ${{ matrix.node }}
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.80.1
+          toolchain: 1.82.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ matrix.os }}
