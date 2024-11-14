@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use atlaspack_core::types::File;
 use atlaspack_filesystem::{FileSystemRealPathCache, FileSystemRef};
-use atlaspack_shared_map::ThreadLocalHashMap;
+use atlaspack_shared_map::SharedHashMap;
 
 use crate::package_json::PackageJson;
 use crate::package_json::SourceField;
@@ -22,13 +22,13 @@ pub struct Cache {
   /// from our public methods so this is ok for now. FrozenMap is an append only map, which doesn't require &mut
   /// to insert into. Since each value is in a Box, it won't move and therefore references are stable.
   #[allow(clippy::type_complexity)]
-  packages: ThreadLocalHashMap<PathBuf, Arc<Result<Arc<PackageJson>, ResolverError>>>,
+  packages: SharedHashMap<PathBuf, Arc<Result<Arc<PackageJson>, ResolverError>>>,
   #[allow(clippy::type_complexity)]
-  tsconfigs: ThreadLocalHashMap<PathBuf, Arc<Result<Arc<TsConfigWrapper>, ResolverError>>>,
+  tsconfigs: SharedHashMap<PathBuf, Arc<Result<Arc<TsConfigWrapper>, ResolverError>>>,
   // In particular just the is_dir_cache spends around 8% of the time on a large project resolution
   // hashing paths. Instead of using a hashmap we should try a trie here.
-  is_dir_cache: ThreadLocalHashMap<PathBuf, bool>,
-  is_file_cache: ThreadLocalHashMap<PathBuf, bool>,
+  is_dir_cache: SharedHashMap<PathBuf, bool>,
+  is_file_cache: SharedHashMap<PathBuf, bool>,
   realpath_cache: FileSystemRealPathCache,
 }
 
@@ -91,10 +91,10 @@ impl Cache {
   pub fn new(fs: FileSystemRef) -> Self {
     Self {
       fs,
-      packages: ThreadLocalHashMap::new(),
-      tsconfigs: ThreadLocalHashMap::new(),
-      is_file_cache: ThreadLocalHashMap::new(),
-      is_dir_cache: ThreadLocalHashMap::new(),
+      packages: SharedHashMap::new(),
+      tsconfigs: SharedHashMap::new(),
+      is_file_cache: SharedHashMap::new(),
+      is_dir_cache: SharedHashMap::new(),
       realpath_cache: FileSystemRealPathCache::default(),
     }
   }
