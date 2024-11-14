@@ -55,6 +55,7 @@ pub struct AtlaspackNapi {
 
 #[napi]
 impl AtlaspackNapi {
+  #[tracing::instrument(level = "info", skip_all)]
   #[napi]
   pub fn create(napi_options: AtlaspackNapiOptions, lmdb: &LMDB, env: Env) -> napi::Result<Self> {
     let thread_id = std::thread::current().id();
@@ -108,6 +109,7 @@ impl AtlaspackNapi {
     })
   }
 
+  #[tracing::instrument(level = "info", skip_all)]
   #[napi]
   pub fn build_asset_graph(
     &self,
@@ -144,6 +146,7 @@ impl AtlaspackNapi {
     Ok(promise)
   }
 
+  #[tracing::instrument(level = "info", skip_all)]
   fn register_workers(&self, options: &AtlaspackNapiBuildOptions) -> napi::Result<()> {
     for _ in 0..self.node_worker_count {
       let transferable = JsTransferable::new(self.tx_worker.clone());
@@ -161,6 +164,7 @@ impl AtlaspackNapi {
   /// JavaScript does all its writes through a single thread, which is not this handle. If we want
   /// to sequence writes with the JavaScript writes, we should be using the
   /// [`lmdb_js_lite::writer::DatabaseWriterHandle`] instead.
+  #[tracing::instrument(level = "info", skip_all)]
   fn run_db_healthcheck(db: &Arc<DatabaseWriter>) -> napi::Result<()> {
     let run_healthcheck = || -> anyhow::Result<()> {
       let txn = db.read_txn()?;

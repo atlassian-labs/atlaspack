@@ -3,13 +3,13 @@
 //! Tracing is disabled by default.
 use std::sync::Arc;
 
+use crate::from_env::{optional_var, FromEnvError};
 use anyhow::anyhow;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::EnvFilter;
-
-use crate::from_env::{optional_var, FromEnvError};
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", tag = "mode")]
@@ -73,6 +73,7 @@ impl Tracer {
       TracerMode::Stdout => {
         tracing_subscriber::fmt()
           .with_env_filter(EnvFilter::from_default_env())
+          .with_span_events(FmtSpan::CLOSE)
           .try_init()
           .map_err(|err| {
             anyhow::anyhow!(err)
@@ -96,6 +97,7 @@ impl Tracer {
 
         tracing_subscriber::fmt()
           .with_writer(non_blocking)
+          .with_span_events(FmtSpan::CLOSE)
           .try_init()
           .map_err(|err| {
             anyhow::anyhow!(err).context("Failed to setup file tracing, is another tracer running?")
