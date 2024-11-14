@@ -18,16 +18,26 @@ export type SimpleAssetGraph = ContentGraph<SimpleAssetGraphNode>;
  * All the async boundaries become linked to the root node instead of the
  * assets that depend on them.
  *
- * Example:
+ * Example input:
+ * ```
+ * digraph root {
+ *   page1 -> library1;
+ *   page2 -> library2;
+ *   library1 -> library3;
+ *   library2 -> library3;
+ * }
+ * ```
+ *
+ * Example output:
  *
  * ```
  * digraph root {
- *   root -> page1
- *   root -> page2
- *   page1 -> library1
- *   page2 -> library2
- *   library1 -> library3
- *   library2 -> library3
+ *   root -> page1;
+ *   root -> page2;
+ *   page1 -> library1;
+ *   page2 -> library2;
+ *   library1 -> library3;
+ *   library2 -> library3;
  * }
  * ```
  */

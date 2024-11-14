@@ -7,3 +7,4 @@ export * from './DominatorBundler/findAssetDominators';
 export * from './DominatorBundler/mergePackages';
 export * from './DominatorBundler/oneCycleBreaker';
 export * from './MonoBundler';
+export {default} from './DominatorBundler';
