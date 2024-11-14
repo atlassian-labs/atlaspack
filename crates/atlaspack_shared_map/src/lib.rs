@@ -1,25 +1,16 @@
-use std::{
-  borrow::Borrow,
-  cell::RefCell,
-  collections::HashMap,
-  hash::BuildHasher,
-  ops::{Deref, DerefMut},
-};
+use std::{borrow::Borrow, collections::HashMap, hash::BuildHasher, sync::RwLock};
 
-use thread_local::ThreadLocal;
-
-/// A thread-local hash map.
-/// This is to be used within a shared structure but disabling the need for
-/// actually sharing data between threads.
-pub struct ThreadLocalHashMap<
+/// A HashMap that allows sharing of values between threads
+/// It is currently implemented using RwLock
+pub struct SharedHashMap<
   K: Send + Eq,
   V: Send + Clone,
   H: Send + Default + BuildHasher = xxhash_rust::xxh3::Xxh3Builder,
 > {
-  inner: ThreadLocal<RefCell<HashMap<K, V, H>>>,
+  inner: RwLock<HashMap<K, V, H>>,
 }
 
-impl<K, V, H> Default for ThreadLocalHashMap<K, V, H>
+impl<K, V, H> Default for SharedHashMap<K, V, H>
 where
   K: Send + Eq,
   V: Send + Clone,
@@ -27,12 +18,12 @@ where
 {
   fn default() -> Self {
     Self {
-      inner: ThreadLocal::new(),
+      inner: RwLock::new(HashMap::with_hasher(H::default())),
     }
   }
 }
 
-impl<K, V, H> ThreadLocalHashMap<K, V, H>
+impl<K, V, H> SharedHashMap<K, V, H>
 where
   K: std::hash::Hash + Send + Eq,
   V: Send + Clone,
@@ -40,7 +31,7 @@ where
 {
   pub fn new() -> Self {
     Self {
-      inner: ThreadLocal::new(),
+      inner: RwLock::new(HashMap::with_hasher(H::default())),
     }
   }
 
@@ -50,21 +41,15 @@ where
     K: Borrow<KR>,
     KR: Eq + std::hash::Hash,
   {
-    let map_cell = self
-      .inner
-      .get_or(|| RefCell::new(HashMap::with_hasher(H::default())));
-
-    let map = map_cell.borrow();
-    map.deref().get(key).cloned()
+    let map_cell = self.inner.read().unwrap();
+    let map = map_cell;
+    map.get(key).cloned()
   }
 
   pub fn insert(&self, key: K, value: V) {
-    let map_cell = self
-      .inner
-      .get_or(|| RefCell::new(HashMap::with_hasher(H::default())));
-
-    let mut map = map_cell.borrow_mut();
-    map.deref_mut().insert(key, value);
+    let map_cell = self.inner.write().unwrap();
+    let mut map = map_cell;
+    map.insert(key, value);
   }
 }
 
@@ -75,15 +60,15 @@ mod test {
   use super::*;
 
   #[test]
-  fn test_thread_local_hash_map() {
-    let map = ThreadLocalHashMap::<String, String>::new();
+  fn test_shared_hash_map() {
+    let map = SharedHashMap::<String, String>::new();
     map.insert("key".to_string(), "value".to_string());
     assert_eq!(map.get("key"), Some("value".to_string()));
   }
 
   #[test]
-  fn test_multiple_thread_local_hash_map() {
-    let map = Arc::new(ThreadLocalHashMap::<String, String>::new());
+  fn test_multiple_shared_hash_map() {
+    let map = Arc::new(SharedHashMap::<String, String>::new());
     let (close_tx, close_rx) = std::sync::mpsc::channel();
     let (tx, rx) = std::sync::mpsc::channel();
 
@@ -98,11 +83,11 @@ mod test {
     });
 
     rx.recv().unwrap(); // wait for value to be written
-                        // and check value is not visible on other threads
+                        // and check value is visible on other threads
     std::thread::spawn({
       let map = map.clone();
       move || {
-        assert_eq!(map.get("key"), None);
+        assert_eq!(map.get("key"), Some("value".to_string()));
       }
     })
     .join()
