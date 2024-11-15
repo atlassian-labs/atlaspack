@@ -13,14 +13,14 @@ new RuleTester({
   valid: [{code: "import logger from '@atlaspack/logger';", filename}],
   invalid: [
     {
-      code: `import Logger from '../../../../core/logger';`,
+      code: `import Logger from '../../../../core/logger/src/Logger';`,
       errors: [
         {
           message: `Import for monorepo package '@atlaspack/logger' should be absolute.`,
         },
       ],
       filename,
-      output: "import Logger from '@atlaspack/logger/lib/Logger';",
+      output: "import Logger from '@atlaspack/logger/src/Logger';",
     },
     {
       code: `import type { PluginOptions } from '../../../../core/types-internal/src';`,
