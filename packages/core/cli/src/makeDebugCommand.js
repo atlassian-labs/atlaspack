@@ -84,10 +84,10 @@ export function makeDebugCommand(): commander$Command {
             useLmdbJsLite: true,
           },
         });
+
         console.log('Created atlaspack instance');
 
         await atlaspack.unstable_buildAssetGraph();
-        console.log('Done building asset graph');
         process.exit(0);
       } catch (err) {
         handleUncaughtException(err);
