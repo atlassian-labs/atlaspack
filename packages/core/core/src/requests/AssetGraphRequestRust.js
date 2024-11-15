@@ -42,6 +42,9 @@ export function createAssetGraphRequestRust(
       let serializedAssetGraph;
       try {
         serializedAssetGraph = await rustAtlaspack.buildAssetGraph();
+        serializedAssetGraph.nodes = serializedAssetGraph.nodes.flatMap(
+          (node) => JSON.parse(node),
+        );
       } catch (err) {
         throw new ThrowableDiagnostic({
           diagnostic: err,

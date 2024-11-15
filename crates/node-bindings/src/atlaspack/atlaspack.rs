@@ -53,6 +53,9 @@ pub struct AtlaspackNapi {
   tx_worker: Sender<NodejsWorker>,
 }
 
+// Refer to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length
+const MAX_STRING_LENGTH: usize = 268435440;
+
 #[napi]
 impl AtlaspackNapi {
   #[tracing::instrument(level = "info", skip_all)]
@@ -136,7 +139,15 @@ impl AtlaspackNapi {
         match atlaspack {
           Err(error) => deferred.reject(to_napi_error(error)),
           Ok(atlaspack) => match atlaspack.build_asset_graph() {
-            Ok(asset_graph) => deferred.resolve(move |env| env.to_js_value(&asset_graph)),
+            Ok(asset_graph) => deferred.resolve(move |env| {
+              let mut js_object = env.create_object()?;
+
+              js_object.set_named_property("edges", env.to_js_value(&asset_graph.edges())?)?;
+              js_object
+                .set_named_property("nodes", asset_graph.serialize_nodes(MAX_STRING_LENGTH)?)?;
+
+              Ok(js_object)
+            }),
             Err(error) => deferred.reject(to_napi_error(error)),
           },
         }
