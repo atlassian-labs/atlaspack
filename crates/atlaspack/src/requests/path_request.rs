@@ -41,6 +41,7 @@ pub enum PathRequestOutput {
 // TODO tracing, dev deps
 #[async_trait]
 impl Request for PathRequest {
+  #[tracing::instrument(level = "trace", skip_all)]
   async fn run(
     &self,
     request_context: RunRequestContext,
