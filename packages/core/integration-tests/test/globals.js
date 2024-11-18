@@ -11,7 +11,7 @@ import {
 } from '@atlaspack/test-utils';
 import sinon from 'sinon';
 
-describe.v2('globals', function () {
+describe('globals', function () {
   it('should support global alias syntax', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/global-alias/index.js'),
@@ -81,7 +81,7 @@ describe.v2('globals', function () {
       assert.deepEqual(onGlobal.firstCall.args, ['global']);
     });
 
-    it('when scope hoisting is enabled', async function () {
+    it.v2('when scope hoisting is enabled', async function () {
       let bundleGraph = await bundle(path.join(dir, 'index.js'), {
         defaultTargetOptions: {
           context: 'browser',

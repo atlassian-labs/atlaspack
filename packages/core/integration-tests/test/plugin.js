@@ -20,7 +20,7 @@ import {
 import * as wasmmap from 'wasm-sourcemap';
 import {relativePath} from '@atlaspack/utils';
 
-describe.v2('plugin', function () {
+describe('plugin', function () {
   it("continue transformer pipeline on type change that doesn't change the pipeline", async function () {
     await bundle(
       path.join(__dirname, '/integration/pipeline-type-change/index.ini'),
@@ -29,9 +29,9 @@ describe.v2('plugin', function () {
     let output = await fs.readFile(path.join(distDir, 'index.txt'), 'utf8');
     assert.equal(
       output,
-      `INPUT
-atlaspack-transformer-a
-atlaspack-transformer-b`,
+      ['INPUT', 'atlaspack-transformer-a', 'atlaspack-transformer-b'].join(
+        '\n',
+      ),
     );
   });
 
@@ -57,102 +57,116 @@ atlaspack-transformer-b`,
     ]);
   });
 
-  it('should allow resolvers to return changes for dependency.meta', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/resolver-dependency-meta/a.js'),
-      {shouldDisableCache: false, shouldContentHash: false, inputFS: overlayFS},
-    );
-
-    let calls = [];
-    await run(b, {
-      sideEffect(v) {
-        calls.push(v);
-      },
-    });
-    assert.deepEqual(calls, [1234]);
-
-    await overlayFS.writeFile(
-      path.join(__dirname, '/integration/resolver-dependency-meta/a.js'),
-      (await overlayFS.readFile(
+  it.v2(
+    'should allow resolvers to return changes for dependency.meta',
+    async function () {
+      let b = await bundle(
         path.join(__dirname, '/integration/resolver-dependency-meta/a.js'),
-        'utf8',
-      )) + '\n// abc',
-    );
-
-    b = await bundle(
-      path.join(__dirname, '/integration/resolver-dependency-meta/a.js'),
-      {shouldDisableCache: false, shouldContentHash: false, inputFS: overlayFS},
-    );
-
-    calls = [];
-    await run(b, {
-      sideEffect(v) {
-        calls.push(v);
-      },
-    });
-    assert.deepEqual(calls, [1234]);
-  });
-
-  it('invalidate the cache based on loadBundleConfig in a packager', async function () {
-    let fixture = path.join(
-      __dirname,
-      '/integration/packager-loadBundleConfig',
-    );
-    let entry = path.join(fixture, 'index.html');
-
-    let b = await bundler(entry, {
-      inputFS: overlayFS,
-      shouldDisableCache: false,
-    });
-
-    let subscription = await b.watch();
-    try {
-      let bundleEvent = await getNextBuild(b);
-      invariant(bundleEvent.type === 'buildSuccess');
-
-      assert.strictEqual(
-        await overlayFS.readFile(
-          nullthrows(
-            bundleEvent.bundleGraph
-              .getBundles()
-              .find((b) => b.getMainEntry()?.filePath.endsWith('a.txt')),
-          ).filePath,
-          'utf8',
-        ),
-        `Bundles: a.txt. Contents: Hello from a\n`,
+        {
+          shouldDisableCache: false,
+          shouldContentHash: false,
+          inputFS: overlayFS,
+        },
       );
 
-      await overlayFS.copyFile(path.join(fixture, 'index.2.html'), entry);
+      let calls = [];
+      await run(b, {
+        sideEffect(v) {
+          calls.push(v);
+        },
+      });
+      assert.deepEqual(calls, [1234]);
 
-      bundleEvent = await getNextBuild(b);
-      invariant(bundleEvent.type === 'buildSuccess');
+      await overlayFS.writeFile(
+        path.join(__dirname, '/integration/resolver-dependency-meta/a.js'),
+        (await overlayFS.readFile(
+          path.join(__dirname, '/integration/resolver-dependency-meta/a.js'),
+          'utf8',
+        )) + '\n// abc',
+      );
 
-      assert.strictEqual(
-        await overlayFS.readFile(
-          nullthrows(
-            bundleEvent.bundleGraph
-              .getBundles()
-              .find((b) => b.getMainEntry()?.filePath.endsWith('a.txt')),
-          ).filePath,
-          'utf8',
-        ),
-        `Bundles: a.txt,b.txt. Contents: Hello from a\n`,
+      b = await bundle(
+        path.join(__dirname, '/integration/resolver-dependency-meta/a.js'),
+        {
+          shouldDisableCache: false,
+          shouldContentHash: false,
+          inputFS: overlayFS,
+        },
       );
-      assert.strictEqual(
-        await overlayFS.readFile(
-          nullthrows(
-            bundleEvent.bundleGraph
-              .getBundles()
-              .find((b) => b.getMainEntry()?.filePath.endsWith('b.txt')),
-          ).filePath,
-          'utf8',
-        ),
-        `Bundles: a.txt,b.txt. Contents: Hello from b\n`,
+
+      calls = [];
+      await run(b, {
+        sideEffect(v) {
+          calls.push(v);
+        },
+      });
+      assert.deepEqual(calls, [1234]);
+    },
+  );
+
+  it.v2(
+    'invalidate the cache based on loadBundleConfig in a packager',
+    async function () {
+      let fixture = path.join(
+        __dirname,
+        '/integration/packager-loadBundleConfig',
       );
-    } finally {
-      await subscription.unsubscribe();
-    }
-  });
+      let entry = path.join(fixture, 'index.html');
+
+      let b = await bundler(entry, {
+        inputFS: overlayFS,
+        shouldDisableCache: false,
+      });
+
+      let subscription = await b.watch();
+      try {
+        let bundleEvent = await getNextBuild(b);
+        invariant(bundleEvent.type === 'buildSuccess');
+
+        assert.strictEqual(
+          await overlayFS.readFile(
+            nullthrows(
+              bundleEvent.bundleGraph
+                .getBundles()
+                .find((b) => b.getMainEntry()?.filePath.endsWith('a.txt')),
+            ).filePath,
+            'utf8',
+          ),
+          `Bundles: a.txt. Contents: Hello from a\n`,
+        );
+
+        await overlayFS.copyFile(path.join(fixture, 'index.2.html'), entry);
+
+        bundleEvent = await getNextBuild(b);
+        invariant(bundleEvent.type === 'buildSuccess');
+
+        assert.strictEqual(
+          await overlayFS.readFile(
+            nullthrows(
+              bundleEvent.bundleGraph
+                .getBundles()
+                .find((b) => b.getMainEntry()?.filePath.endsWith('a.txt')),
+            ).filePath,
+            'utf8',
+          ),
+          `Bundles: a.txt,b.txt. Contents: Hello from a\n`,
+        );
+        assert.strictEqual(
+          await overlayFS.readFile(
+            nullthrows(
+              bundleEvent.bundleGraph
+                .getBundles()
+                .find((b) => b.getMainEntry()?.filePath.endsWith('b.txt')),
+            ).filePath,
+            'utf8',
+          ),
+          `Bundles: a.txt,b.txt. Contents: Hello from b\n`,
+        );
+      } finally {
+        await subscription.unsubscribe();
+      }
+    },
+  );
 
   it('invalidate the cache based on loadConfig in a packager', async function () {
     let fixture = path.join(__dirname, '/integration/packager-loadConfig');
@@ -180,62 +194,68 @@ atlaspack-transformer-b`,
     );
   });
 
-  it('merges symbol information when applying runtime assets', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/runtime-symbol-merging/entry.js'),
-      {
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
+  it.v2(
+    'merges symbol information when applying runtime assets',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/runtime-symbol-merging/entry.js'),
+        {
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+          },
+          mode: 'production',
         },
-        mode: 'production',
-      },
-    );
+      );
 
-    assert(!findAsset(b, 'index.js'));
-    assert.deepStrictEqual(
-      new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'a.js')))),
-      new Set(['a']),
-    );
-    assert.deepStrictEqual(
-      new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'b.js')))),
-      new Set(['b']),
-    );
+      assert(!findAsset(b, 'index.js'));
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'a.js')))),
+        new Set(['a']),
+      );
+      assert.deepStrictEqual(
+        new Set(b.getUsedSymbols(nullthrows(findAsset(b, 'b.js')))),
+        new Set(['b']),
+      );
 
-    let calls = [];
-    await run(b, {
-      call(v) {
-        calls.push(v);
-      },
-    });
-    assert.deepStrictEqual(calls, [789, 123]);
-  });
-
-  it('properly excludes assets that are excluded and deferred by both app code and runtimes', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/runtime-deferred-excluded/index.js'),
-      {
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
+      let calls = [];
+      await run(b, {
+        call(v) {
+          calls.push(v);
         },
-      },
-    );
+      });
+      assert.deepStrictEqual(calls, [789, 123]);
+    },
+  );
 
-    let calls = [];
-    let output = await run(b, {
-      f(v) {
-        calls.push(v);
-      },
-    });
+  it.v2(
+    'properly excludes assets that are excluded and deferred by both app code and runtimes',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/runtime-deferred-excluded/index.js'),
+        {
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+          },
+        },
+      );
 
-    assert.deepStrictEqual(
-      // `output` is from the vm and so is not deepStrictEqual
-      [...output],
-      ['index', 'used'],
-    );
-    assert.deepStrictEqual(calls, ['used']);
-  });
+      let calls = [];
+      let output = await run(b, {
+        f(v) {
+          calls.push(v);
+        },
+      });
 
-  it('handles multiple assets returned by a transformer', async function () {
+      assert.deepStrictEqual(
+        // `output` is from the vm and so is not deepStrictEqual
+        [...output],
+        ['index', 'used'],
+      );
+      assert.deepStrictEqual(calls, ['used']);
+    },
+  );
+
+  it.v2('handles multiple assets returned by a transformer', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/multi-asset-transformer/index.js'),
       {
@@ -248,54 +268,57 @@ atlaspack-transformer-b`,
     assert.equal(await run(b), 2);
   });
 
-  it('throws when multiple assets returned by a transformer import a missing symbol', async function () {
-    let source = path.join(
-      __dirname,
-      '/integration/multi-asset-transformer-export/index.js',
-    );
-    let message = `index.js does not export 'foo'`;
+  it.v2(
+    'throws when multiple assets returned by a transformer import a missing symbol',
+    async function () {
+      let source = path.join(
+        __dirname,
+        '/integration/multi-asset-transformer-export/index.js',
+      );
+      let message = `index.js does not export 'foo'`;
 
-    // $FlowFixMe[prop-missing]
-    await assert.rejects(
-      () =>
-        bundle(source, {
-          defaultTargetOptions: {
-            shouldScopeHoist: true,
-          },
-        }),
-      {
-        name: 'BuildError',
-        message,
-        diagnostics: [
-          {
-            message,
-            origin: '@atlaspack/core',
-            codeFrames: [
-              {
-                filePath: source,
-                language: 'js',
-                codeHighlights: [
-                  {
-                    message: undefined,
-                    start: {
-                      line: 1,
-                      column: 9,
+      // $FlowFixMe[prop-missing]
+      await assert.rejects(
+        () =>
+          bundle(source, {
+            defaultTargetOptions: {
+              shouldScopeHoist: true,
+            },
+          }),
+        {
+          name: 'BuildError',
+          message,
+          diagnostics: [
+            {
+              message,
+              origin: '@atlaspack/core',
+              codeFrames: [
+                {
+                  filePath: source,
+                  language: 'js',
+                  codeHighlights: [
+                    {
+                      message: undefined,
+                      start: {
+                        line: 1,
+                        column: 9,
+                      },
+                      end: {
+                        line: 1,
+                        column: 11,
+                      },
                     },
-                    end: {
-                      line: 1,
-                      column: 11,
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    );
-  });
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      );
+    },
+  );
 
-  it('should allow resolvers to invalidateOnEnvChange', async () => {
+  it.v2('should allow resolvers to invalidateOnEnvChange', async () => {
     async function assertAsset(replacedCode) {
       let b = await bundle(
         path.join(
@@ -315,7 +338,7 @@ atlaspack-transformer-b`,
     await assertAsset('const replaced = 2;');
   });
 
-  it('should output sourcemaps when packaging Wasm', async () => {
+  it.v2('should output sourcemaps when packaging wasm', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/wasm-sourcemap-transformer/index.js'),
     );

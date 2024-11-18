@@ -18,7 +18,7 @@ const tscConfig = path.join(
   '/integration/typescript-config/.parcelrc',
 );
 
-describe.v2('typescript', function () {
+describe('typescript', function () {
   // This tests both the SWC transformer implementation of typescript (which
   // powers typescript by default in Parcel) as well as through the Typescript
   // tsc transformer. Use a `undefined` config to indicate the default config, and the
@@ -29,232 +29,244 @@ describe.v2('typescript', function () {
     undefined /* default config -- testing SWC typescript */,
     tscConfig,
   ]) {
-    it('should produce a ts bundle using ES6 imports', async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/typescript/index.ts'),
-        {config},
-      );
+    describe(`using ${
+      config ? '@atlaspack/transformer-typescript-tsc' : 'default config'
+    }`, () => {
+      it.v2('should produce a ts bundle using ES6 imports', async function () {
+        let b = await bundle(
+          path.join(__dirname, '/integration/typescript/index.ts'),
+          {config},
+        );
 
-      assertBundles(b, [
-        {
-          type: 'js',
-          assets: ['index.ts', 'Local.ts', 'esmodule-helpers.js'],
-        },
-      ]);
-
-      let output = await run(b);
-      assert.equal(typeof output.count, 'function');
-      assert.equal(output.count(), 3);
-    });
-
-    it('should produce a ts bundle using commonJS require', async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/typescript-require/index.ts'),
-        {config},
-      );
-
-      assertBundles(b, [
-        {
-          type: 'js',
-          assets: ['index.ts', 'Local.ts', 'esmodule-helpers.js'],
-        },
-      ]);
-
-      let output = await run(b);
-      assert.equal(typeof output.count, 'function');
-      assert.equal(output.count(), 3);
-    });
-
-    it('should support json require', async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/typescript-json/index.ts'),
-      );
-
-      // assert.equal(b.assets.size, 2);
-      // assert.equal(b.childBundles.size, 1);
-
-      let output = await run(b);
-      assert.equal(typeof output.count, 'function');
-      assert.equal(output.count(), 3);
-    });
-
-    it('should support env variables', async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/typescript-env/index.ts'),
-        {config},
-      );
-
-      assertBundles(b, [
-        {
-          type: 'js',
-          assets: ['index.ts', 'esmodule-helpers.js'],
-        },
-      ]);
-
-      let output = await run(b);
-      assert.equal(typeof output.env, 'function');
-      assert.equal(output.env(), 'test');
-    });
-
-    it('should support importing a URL to a raw asset', async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/typescript-raw/index.ts'),
-        {config},
-      );
-
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: ['index.ts', 'bundle-url.js', 'esmodule-helpers.js'],
-        },
-        {
-          type: 'txt',
-          assets: ['test.txt'],
-        },
-      ]);
-
-      let output = await run(b);
-      assert.equal(typeof output.getRaw, 'function');
-      assert(/http:\/\/localhost\/test\.[0-9a-f]+\.txt$/.test(output.getRaw()));
-      assert(
-        await outputFS.exists(
-          path.join(distDir, nullthrows(url.parse(output.getRaw()).pathname)),
-        ),
-      );
-    });
-
-    it('should minify with minify enabled', async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/typescript-require/index.ts'),
-        {
-          config,
-          defaultTargetOptions: {
-            shouldOptimize: true,
+        assertBundles(b, [
+          {
+            type: 'js',
+            assets: ['index.ts', 'Local.ts', 'esmodule-helpers.js'],
           },
-        },
-      );
+        ]);
 
-      assertBundles(b, [
-        {
-          type: 'js',
-          assets: ['index.ts', 'Local.ts', 'esmodule-helpers.js'],
-        },
-      ]);
-
-      let output = await run(b);
-      assert.equal(typeof output.count, 'function');
-      assert.equal(output.count(), 3);
-
-      let js = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-      assert(!js.includes('local.a'));
-    });
-
-    it('should support compiling JSX', async function () {
-      await bundle(
-        path.join(__dirname, '/integration/typescript-jsx/index.tsx'),
-        {config},
-      );
-
-      let file = await outputFS.readFile(
-        path.join(distDir, 'index.js'),
-        'utf8',
-      );
-      assert(file.includes('React.createElement("div"'));
-    });
-
-    it('should use esModuleInterop by default', async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/typescript-interop/index.ts'),
-        {config},
-      );
-
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: ['esmodule-helpers.js', 'index.ts', 'commonjs-module.js'],
-        },
-      ]);
-
-      let output = await run(b);
-      assert.equal(typeof output.test, 'function');
-      assert.equal(output.test(), 'test passed');
-    });
-
-    it('fs.readFileSync should inline a file as a string', async function () {
-      if (config != null) {
-        return;
-      }
-      let b = await bundle(
-        path.join(__dirname, '/integration/typescript-fs/index.ts'),
-        {config},
-      );
-
-      const text = 'export default <div>Hello</div>;';
-      let output = await run(b);
-
-      assert.deepEqual(output, {
-        fromTs: text,
-        fromTsx: text,
+        let output = await run(b);
+        assert.equal(typeof output.count, 'function');
+        assert.equal(output.count(), 3);
       });
-    });
 
-    it('should handle legacy cast in .ts file', async function () {
-      if (config != null) {
-        return;
-      }
-      await bundle(
-        path.join(__dirname, '/integration/typescript-legacy-cast/index.ts'),
-        {config},
+      it.v2(
+        'should produce a ts bundle using commonJS require',
+        async function () {
+          let b = await bundle(
+            path.join(__dirname, '/integration/typescript-require/index.ts'),
+            {config},
+          );
+
+          assertBundles(b, [
+            {
+              type: 'js',
+              assets: ['index.ts', 'Local.ts', 'esmodule-helpers.js'],
+            },
+          ]);
+
+          let output = await run(b);
+          assert.equal(typeof output.count, 'function');
+          assert.equal(output.count(), 3);
+        },
       );
-    });
 
-    it('should handle compile enums correctly', async function () {
-      if (config != null) {
-        return;
-      }
-      let b = await bundle(
-        path.join(__dirname, '/integration/typescript-enum/index.ts'),
-        {config},
-      );
+      it('should support json require', async function () {
+        let b = await bundle(
+          path.join(__dirname, '/integration/typescript-json/index.ts'),
+        );
 
-      let output = await run(b);
+        // assert.equal(b.assets.size, 2);
+        // assert.equal(b.childBundles.size, 1);
 
-      assert.deepEqual(output, {
-        A: {
-          X: 'X',
-          Y: 'Y',
-        },
-        B: {
-          X: 'X',
-          Y: 'Y',
-        },
-        C: {
-          X: 'X',
-          Y: 'Y',
-        },
-        z: {
-          a: 'X',
-          c: 'Y',
-        },
+        let output = await run(b);
+        assert.equal(typeof output.count, 'function');
+        assert.equal(output.count(), 3);
       });
-    });
 
-    it('should handle simultaneous import type and reexport correctly', async function () {
-      if (config != null) {
-        return;
-      }
-      let b = await bundle(
-        path.join(
-          __dirname,
-          '/integration/typescript-import-type-reexport/index.ts',
-        ),
-        {config},
-      );
+      it.v2('should support env variables', async function () {
+        let b = await bundle(
+          path.join(__dirname, '/integration/typescript-env/index.ts'),
+          {config},
+        );
 
-      let output = await run(b);
+        assertBundles(b, [
+          {
+            type: 'js',
+            assets: ['index.ts', 'esmodule-helpers.js'],
+          },
+        ]);
 
-      assert.deepEqual(output, {
-        Bar: 123,
+        let output = await run(b);
+        assert.equal(typeof output.env, 'function');
+        assert.equal(output.env(), 'test');
+      });
+
+      it.v2('should support importing a URL to a raw asset', async function () {
+        let b = await bundle(
+          path.join(__dirname, '/integration/typescript-raw/index.ts'),
+          {config},
+        );
+
+        assertBundles(b, [
+          {
+            name: 'index.js',
+            assets: ['index.ts', 'bundle-url.js', 'esmodule-helpers.js'],
+          },
+          {
+            type: 'txt',
+            assets: ['test.txt'],
+          },
+        ]);
+
+        let output = await run(b);
+        assert.equal(typeof output.getRaw, 'function');
+        assert(
+          /http:\/\/localhost\/test\.[0-9a-f]+\.txt$/.test(output.getRaw()),
+        );
+        assert(
+          await outputFS.exists(
+            path.join(distDir, nullthrows(url.parse(output.getRaw()).pathname)),
+          ),
+        );
+      });
+
+      it.v2('should minify with minify enabled', async function () {
+        let b = await bundle(
+          path.join(__dirname, '/integration/typescript-require/index.ts'),
+          {
+            config,
+            defaultTargetOptions: {
+              shouldOptimize: true,
+            },
+          },
+        );
+
+        assertBundles(b, [
+          {
+            type: 'js',
+            assets: ['index.ts', 'Local.ts', 'esmodule-helpers.js'],
+          },
+        ]);
+
+        let output = await run(b);
+        assert.equal(typeof output.count, 'function');
+        assert.equal(output.count(), 3);
+
+        let js = await outputFS.readFile(
+          path.join(distDir, 'index.js'),
+          'utf8',
+        );
+        assert(!js.includes('local.a'));
+      });
+
+      it.v2('should support compiling JSX', async function () {
+        await bundle(
+          path.join(__dirname, '/integration/typescript-jsx/index.tsx'),
+          {config},
+        );
+
+        let file = await outputFS.readFile(
+          path.join(distDir, 'index.js'),
+          'utf8',
+        );
+        assert(file.includes('React.createElement("div"'));
+      });
+
+      it.v2('should use esModuleInterop by default', async function () {
+        let b = await bundle(
+          path.join(__dirname, '/integration/typescript-interop/index.ts'),
+          {config},
+        );
+
+        assertBundles(b, [
+          {
+            name: 'index.js',
+            assets: ['esmodule-helpers.js', 'index.ts', 'commonjs-module.js'],
+          },
+        ]);
+
+        let output = await run(b);
+        assert.equal(typeof output.test, 'function');
+        assert.equal(output.test(), 'test passed');
+      });
+
+      it('fs.readFileSync should inline a file as a string', async function () {
+        if (config != null) {
+          return;
+        }
+        let b = await bundle(
+          path.join(__dirname, '/integration/typescript-fs/index.ts'),
+          {config},
+        );
+
+        const text = 'export default <div>Hello</div>;';
+        let output = await run(b);
+
+        assert.deepEqual(output, {
+          fromTs: text,
+          fromTsx: text,
+        });
+      });
+
+      it('should handle legacy cast in .ts file', async function () {
+        if (config != null) {
+          return;
+        }
+        await bundle(
+          path.join(__dirname, '/integration/typescript-legacy-cast/index.ts'),
+          {config},
+        );
+      });
+
+      it('should handle compile enums correctly', async function () {
+        if (config != null) {
+          return;
+        }
+        let b = await bundle(
+          path.join(__dirname, '/integration/typescript-enum/index.ts'),
+          {config},
+        );
+
+        let output = await run(b);
+
+        assert.deepEqual(output, {
+          A: {
+            X: 'X',
+            Y: 'Y',
+          },
+          B: {
+            X: 'X',
+            Y: 'Y',
+          },
+          C: {
+            X: 'X',
+            Y: 'Y',
+          },
+          z: {
+            a: 'X',
+            c: 'Y',
+          },
+        });
+      });
+
+      it('should handle simultaneous import type and reexport correctly', async function () {
+        if (config != null) {
+          return;
+        }
+        let b = await bundle(
+          path.join(
+            __dirname,
+            '/integration/typescript-import-type-reexport/index.ts',
+          ),
+          {config},
+        );
+
+        let output = await run(b);
+
+        assert.deepEqual(output, {
+          Bar: 123,
+        });
       });
     });
   }
