@@ -419,34 +419,28 @@ describe('css', () => {
     assert.equal(css.split('\n').length, 1);
   });
 
-  it.v2(
-    'should produce a sourcemap when sourceMaps are used',
-    async function () {
-      await bundle(path.join(__dirname, '/integration/cssnano/index.js'), {
-        defaultTargetOptions: {
-          shouldOptimize: true,
-        },
-      });
+  it('should produce a sourcemap when sourceMaps are used', async function () {
+    await bundle(path.join(__dirname, '/integration/cssnano/index.js'), {
+      defaultTargetOptions: {
+        shouldOptimize: true,
+      },
+    });
 
-      let css = await outputFS.readFile(
-        path.join(distDir, 'index.css'),
-        'utf8',
-      );
-      assert(css.includes('.local'));
-      assert(css.includes('.index'));
+    let css = await outputFS.readFile(path.join(distDir, 'index.css'), 'utf8');
+    assert(css.includes('.local'));
+    assert(css.includes('.index'));
 
-      let lines = css.trim().split('\n');
-      assert.equal(lines.length, 2);
-      assert.equal(lines[1], '/*# sourceMappingURL=index.css.map */');
+    let lines = css.trim().split('\n');
+    assert.equal(lines.length, 2);
+    assert.equal(lines[1], '/*# sourceMappingURL=index.css.map */');
 
-      let map = JSON.parse(
-        await outputFS.readFile(path.join(distDir, 'index.css.map'), 'utf8'),
-      );
-      assert.equal(map.file, 'index.css.map');
-      assert(map.sources.includes('integration/cssnano/local.css'));
-      assert(map.sources.includes('integration/cssnano/index.css'));
-    },
-  );
+    let map = JSON.parse(
+      await outputFS.readFile(path.join(distDir, 'index.css.map'), 'utf8'),
+    );
+    assert.equal(map.file, 'index.css.map');
+    assert(map.sources.includes('integration/cssnano/local.css'));
+    assert(map.sources.includes('integration/cssnano/index.css'));
+  });
 
   // This breaks in v3 as it uses asset.addURLDependency inside the SVG transformer
   it.v2('should inline data-urls for text-encoded files', async () => {
@@ -576,9 +570,7 @@ describe('css', () => {
     );
   });
 
-  // This seems to broken due to the browser/target not being passed corrctly
-  // and the nesting doesn't get compiled out
-  it.v2('should support css nesting with lightningcss', async function () {
+  it('should support css nesting with lightningcss', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/css-nesting/a.css'),
       {

@@ -92,6 +92,7 @@ describe('conditional bundling', function () {
               "..."
             ]
           }
+
         index.js:
           const imported = importCond('cond', './a', './b');
 
