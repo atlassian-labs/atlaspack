@@ -1,5 +1,7 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fmt;
+use std::fs;
 use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
@@ -21,9 +23,8 @@ pub struct Cache {
   /// way to associate a lifetime with owned data stored in the same struct. We only vend temporary references
   /// from our public methods so this is ok for now. FrozenMap is an append only map, which doesn't require &mut
   /// to insert into. Since each value is in a Box, it won't move and therefore references are stable.
-  #[allow(clippy::type_complexity)]
   packages: SharedHashMap<PathBuf, Arc<Result<Arc<PackageJson>, ResolverError>>>,
-  #[allow(clippy::type_complexity)]
+  package_duplicates: SharedHashMap<PathBuf, Arc<PackageJson>>,
   tsconfigs: SharedHashMap<PathBuf, Arc<Result<Arc<TsConfigWrapper>, ResolverError>>>,
   // In particular just the is_dir_cache spends around 8% of the time on a large project resolution
   // hashing paths. Instead of using a hashmap we should try a trie here.
@@ -92,6 +93,7 @@ impl Cache {
     Self {
       fs,
       packages: SharedHashMap::new(),
+      package_duplicates: SharedHashMap::new(),
       tsconfigs: SharedHashMap::new(),
       is_file_cache: SharedHashMap::new(),
       is_dir_cache: SharedHashMap::new(),
@@ -123,49 +125,62 @@ impl Cache {
     Ok(self.fs.canonicalize(path, &self.realpath_cache)?)
   }
 
+  #[tracing::instrument(level = "info", skip_all)]
+  pub fn scan_package_duplicates(&self, root_dir: &Path) {
+    let mut package_json_files = find_package_json_files(&root_dir.join("node_modules"));
+    package_json_files.sort_by(|a, b| {
+      let a_len = a.to_string_lossy().len();
+      let b_len = b.to_string_lossy().len();
+
+      if a_len == b_len {
+        a.cmp(b)
+      } else {
+        a_len.cmp(&b_len)
+      }
+    });
+    tracing::info!("Results {:?}", package_json_files.len());
+
+    let mut packages_by_version: HashMap<String, Arc<PackageJson>> = HashMap::new();
+    let mut count = 0;
+    for path in package_json_files {
+      let package = read_and_parse_package(&self.fs, &self.realpath_cache, &path);
+      let entry = Arc::new(package.map(Arc::new));
+
+      // While we have the package.json we may as well hydrate the cache for
+      // later
+      self.packages.insert(path, entry.clone());
+
+      if let Ok(package_json) = entry.as_ref() {
+        if let Some(version) = package_json.version.clone() {
+          let dedupe_key = format!("{}@{}", package_json.name, version);
+
+          if let Some(existing) = packages_by_version.get(&dedupe_key) {
+            self
+              .package_duplicates
+              .insert(package_json.path.clone(), existing.clone());
+          } else {
+            count += 1;
+            packages_by_version.insert(dedupe_key.clone(), package_json.clone());
+          }
+        }
+      }
+    }
+    tracing::info!("{} packages marked as duplicate", count);
+  }
+
   pub fn read_package(&self, path: Cow<Path>) -> Arc<Result<Arc<PackageJson>, ResolverError>> {
+    if let Some(pkg) = self.package_duplicates.get(path.as_ref()) {
+      tracing::info!("Deduplicating package import: {:?} -> {:?}", path, pkg.path);
+      return Arc::new(Ok(pkg.clone()));
+    }
+
     if let Some(pkg) = self.packages.get(path.as_ref()) {
       return pkg.clone();
     }
 
-    fn read_package<'a>(
-      fs: &'a FileSystemRef,
-      realpath_cache: &'a FileSystemRealPathCache,
-      path: &Path,
-    ) -> Result<PackageJson, ResolverError> {
-      let contents: String = fs.read_to_string(path)?;
-      let mut pkg = PackageJson::parse(PathBuf::from(path), &contents).map_err(|e| {
-        JsonError::new(
-          File {
-            path: PathBuf::from(path),
-            contents,
-          },
-          e,
-        )
-      })?;
-
-      // If the package has a `source` field, make sure
-      // - the package is behind symlinks
-      // - and the realpath to the packages does not includes `node_modules`.
-      // Since such package is likely a pre-compiled module
-      // installed with package managers, rather than including a source code.
-      if !matches!(pkg.source, SourceField::None) {
-        let realpath = fs.canonicalize(&pkg.path, realpath_cache)?;
-        if realpath == pkg.path
-          || realpath
-            .components()
-            .any(|c| c.as_os_str() == "node_modules")
-        {
-          pkg.source = SourceField::None;
-        }
-      }
-
-      Ok(pkg)
-    }
-
     let path = path.into_owned();
     let package: Result<PackageJson, ResolverError> =
-      read_package(&self.fs, &self.realpath_cache, &path);
+      read_and_parse_package(&self.fs, &self.realpath_cache, &path);
 
     // Since we have exclusive access to packages,
     let entry = Arc::new(package.map(Arc::new));
@@ -210,4 +225,63 @@ impl Cache {
 
     tsconfig
   }
+}
+
+fn read_and_parse_package<'a>(
+  fs: &'a FileSystemRef,
+  realpath_cache: &'a FileSystemRealPathCache,
+  path: &Path,
+) -> Result<PackageJson, ResolverError> {
+  let contents: String = fs.read_to_string(path)?;
+  let mut pkg = PackageJson::parse(PathBuf::from(path), &contents).map_err(|e| {
+    JsonError::new(
+      File {
+        path: PathBuf::from(path),
+        contents,
+      },
+      e,
+    )
+  })?;
+
+  // If the package has a `source` field, make sure
+  // - the package is behind symlinks
+  // - and the realpath to the packages does not includes `node_modules`.
+  // Since such package is likely a pre-compiled module
+  // installed with package managers, rather than including a source code.
+  if !matches!(pkg.source, SourceField::None) {
+    let realpath = fs.canonicalize(&pkg.path, realpath_cache)?;
+    if realpath == pkg.path
+      || realpath
+        .components()
+        .any(|c| c.as_os_str() == "node_modules")
+    {
+      pkg.source = SourceField::None;
+    }
+  }
+
+  Ok(pkg)
+}
+
+fn find_package_json_files(base_path: &Path) -> Vec<PathBuf> {
+  let mut package_json_files = Vec::new();
+  let is_node_modules_dir = base_path.ends_with("node_modules");
+
+  if let Ok(entries) = fs::read_dir(base_path) {
+    for entry in entries.filter_map(Result::ok) {
+      let path = entry.path();
+      if path.is_dir() && (is_node_modules_dir || path.ends_with("node_modules")) {
+        // If the directory is node_modules, search inside it
+        package_json_files.extend(find_package_json_files(&path));
+        continue;
+      }
+
+      if let Some(file_name) = path.file_name() {
+        // If it's a package.json file, add it to the list
+        if file_name == "package.json" {
+          package_json_files.push(path);
+        }
+      }
+    }
+  }
+  package_json_files
 }

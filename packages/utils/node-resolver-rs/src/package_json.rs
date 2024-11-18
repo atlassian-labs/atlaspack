@@ -38,6 +38,7 @@ pub struct PackageJson {
   pub path: PathBuf,
   #[serde(default)]
   pub name: String,
+  pub version: Option<String>,
   #[serde(rename = "type", default)]
   pub module_type: ModuleType,
   main: Option<String>,

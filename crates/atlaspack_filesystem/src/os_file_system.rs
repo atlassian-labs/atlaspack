@@ -44,4 +44,8 @@ impl FileSystem for OsFileSystem {
     let path: &Path = path;
     path.is_dir()
   }
+
+  fn read_dir(&self, path: &Path) -> std::io::Result<std::fs::ReadDir> {
+    std::fs::read_dir(path)
+  }
 }

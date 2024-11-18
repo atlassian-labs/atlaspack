@@ -64,4 +64,5 @@ pub trait FileSystem: std::fmt::Debug {
   fn read_to_string(&self, path: &Path) -> std::io::Result<String>;
   fn is_file(&self, path: &Path) -> bool;
   fn is_dir(&self, path: &Path) -> bool;
+  fn read_dir(&self, path: &Path) -> std::io::Result<std::fs::ReadDir>;
 }
