@@ -28,6 +28,7 @@ import {makeDeferredWithPromise, normalizePath} from '@atlaspack/utils';
 import Logger from '@atlaspack/logger';
 import nullthrows from 'nullthrows';
 import {md} from '@atlaspack/diagnostic';
+import {trackDependenciesPerAsset} from '@atlaspack/core/src/requests/AssetGraphRequestRust';
 
 describe('javascript', function () {
   beforeEach(async () => {
@@ -3922,6 +3923,115 @@ describe('javascript', function () {
       );
     },
   );
+
+  describe('AssetGraphRequestRust', function () {
+    let seenAssetMap;
+    let initialDep;
+    let asset;
+    let dependency;
+    beforeEach(() => {
+      initialDep = {
+        id: 'dep1',
+        specifier: '',
+        specifierType: '',
+        priority: '',
+        needsStableName: false,
+        isEntry: false,
+        isOptional: false,
+        env: {},
+        meta: {},
+      };
+
+      dependency = {
+        id: 'dep2',
+        specifier: '',
+        specifierType: '',
+        priority: '',
+        needsStableName: false,
+        isEntry: false,
+        isOptional: false,
+        env: {},
+        meta: {},
+      };
+
+      asset = {
+        id: 'asset1',
+        committed: false,
+        filePath: '/path/to/asset',
+        type: 'js',
+        dependencies: new Map(),
+        isBundleSplittable: true,
+        isSource: true,
+        env: {},
+        meta: {},
+        stats: {},
+        sideEffects: true,
+      };
+
+      // Reset the seenAssetMap before each test
+      seenAssetMap = new Map();
+    });
+    it('should add a new asset if not present', () => {
+      trackDependenciesPerAsset(
+        'asset1',
+        {type: 'asset', value: asset},
+        seenAssetMap,
+      );
+      expect(seenAssetMap.get('asset1')).toEqual({type: 'asset', value: asset});
+    });
+    it('should update an existing asset with dependencies', () => {
+      const seenDeps = new Set([initialDep]);
+      seenAssetMap.set('asset1', {type: 'dependency', value: seenDeps});
+
+      trackDependenciesPerAsset(
+        'asset1',
+        {type: 'asset', value: asset},
+        seenAssetMap,
+      );
+      expect(asset.dependencies.size).toBe(1);
+      expect(asset.dependencies.get('dep1')).toEqual(initialDep);
+      expect(seenAssetMap.get('asset1')).toEqual({type: 'asset', value: asset});
+    });
+    it('should add a new dependency if not present', () => {
+      trackDependenciesPerAsset(
+        'asset1',
+        {type: 'dependency', value: dependency},
+        seenAssetMap,
+      );
+
+      expect(seenAssetMap.get('asset1').type).toBe('dependency');
+      expect(seenAssetMap.get('asset1').value.has(dependency)).toBe(true);
+    });
+
+    it('should update an existing dependency set', () => {
+      const seenDeps = new Set([initialDep]);
+      seenAssetMap.set('asset1', {type: 'dependency', value: seenDeps});
+
+      trackDependenciesPerAsset(
+        'asset1',
+        {type: 'dependency', value: dependency},
+        seenAssetMap,
+      );
+
+      expect(seenAssetMap.get('asset1').value.has(initialDep)).toBe(true);
+      expect(seenAssetMap.get('asset1').value.has(dependency)).toBe(true);
+    });
+
+    it('should add a dependency entry to an asset entry and update seenAssetMap accordingly', () => {
+      const seenDeps = new Set([initialDep]);
+      seenAssetMap.set('asset1', {type: 'dependency', value: seenDeps});
+
+      trackDependenciesPerAsset(
+        'asset1',
+        {type: 'asset', value: asset},
+        seenAssetMap,
+      );
+
+      expect(seenAssetMap.get('asset1').type).toBe('asset');
+      expect(asset.dependencies.size).toBe(1);
+      expect(asset.dependencies.get('dep1')).toEqual(initialDep);
+    });
+  });
 
   it.v2(
     'should error on undeclared helpers dependency for libraries',

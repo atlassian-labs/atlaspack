@@ -11,13 +11,14 @@ import type {AtlaspackV3} from '../atlaspack-v3';
 import {ATLASPACK_VERSION} from '../constants';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
-import type {Environment} from '../types';
+import type {Environment, Dependency, Asset} from '../types';
 
 import type {
   AssetGraphRequestInput,
   AssetGraphRequestResult,
 } from './AssetGraphRequest';
 import SourceMap from '@parcel/source-map';
+import type {ContentKey} from '@atlaspack/types';
 
 type RunInput = {|
   input: AssetGraphRequestInput,
@@ -86,6 +87,45 @@ export function createAssetGraphRequestRust(
   });
 }
 
+export function trackDependenciesPerAsset(
+  id: ContentKey,
+  entity:
+    | {type: 'asset', value: Asset}
+    | {type: 'dependency', value: Dependency},
+  seenAssetMap: Map<
+    ContentKey,
+    | {type: 'dependency', value: Set<Dependency>}
+    | {type: 'asset', value: Asset},
+  >,
+) {
+  const seenResult = seenAssetMap.get(id);
+
+  if (entity.type === 'asset') {
+    const asset = entity.value;
+    asset.dependencies = asset.dependencies ?? new Map();
+
+    if (seenResult) {
+      if (seenResult.type === 'dependency') {
+        for (const dep of seenResult.value) {
+          asset.dependencies.set(dep.id, dep);
+        }
+      }
+    }
+    seenAssetMap.set(id, {type: 'asset', value: asset});
+  } else {
+    const dependency = entity.value;
+
+    if (!seenResult || seenResult.type === 'dependency') {
+      const existingDeps =
+        seenResult?.type === 'dependency' ? seenResult.value : new Set();
+      existingDeps.add(dependency);
+      seenAssetMap.set(id, {type: 'dependency', value: existingDeps});
+    } else {
+      seenResult.value.dependencies.set(dependency.id, dependency);
+    }
+  }
+}
+
 function getAssetGraph(serializedGraph, options) {
   let graph = new AssetGraph({
     _contentKeyToNodeId: new Map(),
@@ -147,6 +187,12 @@ function getAssetGraph(serializedGraph, options) {
     return envId;
   };
 
+  let seenAssetMap: Map<
+    ContentKey,
+    | {type: 'dependency', value: Set<Dependency>}
+    | {type: 'asset', value: Asset},
+  > = new Map();
+
   for (let node of serializedGraph.nodes) {
     if (node.type === 'root') {
       let index = graph.addNodeByContentKey('@@root', {
@@ -167,6 +213,12 @@ function getAssetGraph(serializedGraph, options) {
     } else if (node.type === 'asset') {
       let asset = node.value;
       let id = asset.id;
+
+      trackDependenciesPerAsset(
+        id,
+        {type: 'asset', value: asset},
+        seenAssetMap,
+      );
 
       asset.committed = true;
       asset.contentKey = id;
@@ -198,8 +250,14 @@ function getAssetGraph(serializedGraph, options) {
         value: asset,
       });
     } else if (node.type === 'dependency') {
-      let id = node.value.id;
-      let dependency = node.value.dependency;
+      const id = node.value.id;
+      const dependency = node.value.dependency;
+
+      trackDependenciesPerAsset(
+        dependency.sourceAssetId,
+        {type: 'dependency', value: dependency},
+        seenAssetMap,
+      );
 
       dependency.id = id;
       dependency.env.id = getEnvId(dependency.env);
