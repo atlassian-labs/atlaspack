@@ -50,6 +50,7 @@ pub struct AssetRequestOutput {
 
 #[async_trait]
 impl Request for AssetRequest {
+  #[tracing::instrument(level = "trace", skip_all)]
   async fn run(
     &self,
     request_context: RunRequestContext,
@@ -130,6 +131,7 @@ impl Request for AssetRequest {
   }
 }
 
+#[tracing::instrument(level = "trace", skip_all)]
 async fn run_pipelines(
   transform_context: TransformContext,
   input: Asset,

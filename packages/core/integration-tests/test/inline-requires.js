@@ -13,7 +13,7 @@ import {
 
 [false, true].forEach((value) => {
   const implementation = value ? 'rust' : 'js';
-  describe.v2(`inline requires - ${implementation}`, () => {
+  describe(`inline requires - ${implementation}`, () => {
     let options = {
       defaultTargetOptions: {
         shouldScopeHoist: true,

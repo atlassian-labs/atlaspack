@@ -304,6 +304,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
             })
           })
           .unwrap_or_default(),
+        magic_comments: self.config.magic_comments.unwrap_or_default(),
         ..atlaspack_js_swc_core::Config::default()
       },
       None,

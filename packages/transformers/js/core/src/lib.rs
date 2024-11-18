@@ -136,6 +136,7 @@ pub struct Config {
   pub standalone: bool,
   pub inline_constants: bool,
   pub conditional_bundling: bool,
+  pub magic_comments: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -270,7 +271,7 @@ pub fn transform(
               let global_mark = Mark::fresh(Mark::root());
               let unresolved_mark = Mark::fresh(Mark::root());
 
-              if code.contains("webpackChunkName") {
+              if config.magic_comments && MagicCommentsVisitor::has_magic_comment(code) {
                 let mut magic_comment_visitor = MagicCommentsVisitor::new(code);
                 module.visit_with(&mut magic_comment_visitor);
                 result.magic_comments = magic_comment_visitor.magic_comments;

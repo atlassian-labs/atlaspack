@@ -204,26 +204,22 @@ describe('javascript', function () {
     assert.deepEqual(res.ys, {b: 'b'});
   });
 
-  it.v2(
-    'should bundle node_modules for a browser environment',
-    async function () {
-      // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
-      let b = await bundle(
-        path.join(__dirname, '/integration/node_require_browser/main.js'),
-      );
+  it('should bundle node_modules for a browser environment', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/node_require_browser/main.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'main.js',
-          assets: ['main.js', 'local.js', 'index.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'main.js',
+        assets: ['main.js', 'local.js', 'index.js'],
+      },
+    ]);
 
-      let output = await run(b);
-      assert.equal(typeof output, 'function');
-      assert.equal(output(), 3);
-    },
-  );
+    let output = await run(b);
+    assert.equal(typeof output, 'function');
+    assert.equal(output(), 3);
+  });
 
   it('should not bundle node_modules for a node environment', async function () {
     let b = await bundle(
@@ -314,26 +310,22 @@ describe('javascript', function () {
     await outputFS.rimraf(path.join(fixturePath, 'dist'));
   });
 
-  it.v2(
-    'should bundle node_modules for a node environment if includeNodeModules is specified',
-    async function () {
-      // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
-      let b = await bundle(
-        path.join(__dirname, '/integration/include_node_modules/main.js'),
-      );
+  it('should bundle node_modules for a node environment if includeNodeModules is specified', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/include_node_modules/main.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'main.js',
-          assets: ['main.js', 'local.js', 'index.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'main.js',
+        assets: ['main.js', 'local.js', 'index.js'],
+      },
+    ]);
 
-      let output = await run(b);
-      assert.equal(typeof output, 'function');
-      assert.equal(output(), 3);
-    },
-  );
+    let output = await run(b);
+    assert.equal(typeof output, 'function');
+    assert.equal(output(), 3);
+  });
 
   it('should bundle builtins for a browser environment', async function () {
     let b = await bundle(

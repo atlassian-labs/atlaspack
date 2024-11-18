@@ -585,6 +585,8 @@ export default class Atlaspack {
     writeToCache: boolean = true,
   ): Promise<AssetGraphRequestResult> {
     await this._init();
+
+    const origin = '@atlaspack/core';
     const input = {
       optionsRef: this.#optionsRef,
       name: 'Main',
@@ -594,6 +596,8 @@ export default class Atlaspack {
       lazyExcludes: [],
       requestedAssetIds: this.#requestedAssetIds,
     };
+
+    const start = Date.now();
     const result = await this.#requestTracker.runRequest(
       this.rustAtlaspack != null
         ? createAssetGraphRequestRust(this.rustAtlaspack)(input)
@@ -601,12 +605,17 @@ export default class Atlaspack {
       {force: true},
     );
 
-    logger.info({message: 'Done building asset graph!'});
+    const duration = Date.now() - start;
+
+    logger.info({
+      message: `Done building asset graph in ${duration / 1000}s!`,
+      origin,
+    });
 
     if (writeToCache) {
-      logger.info({message: 'Write request tracker to cache'});
+      logger.info({message: 'Write request tracker to cache', origin});
       await this.writeRequestTrackerToCache();
-      logger.info({message: 'Done writing request tracker to cache'});
+      logger.info({message: 'Done writing request tracker to cache', origin});
     }
 
     return result;
