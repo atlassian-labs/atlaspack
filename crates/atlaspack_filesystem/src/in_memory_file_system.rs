@@ -145,6 +145,10 @@ impl FileSystem for InMemoryFileSystem {
     let file = files.get(&path);
     matches!(file, Some(InMemoryFileSystemEntry::Directory { .. }))
   }
+
+  fn read_dir(&self, _path: &Path) -> std::io::Result<std::fs::ReadDir> {
+    todo!("InMemoryFileSystem::read_dir")
+  }
 }
 
 #[cfg(test)]

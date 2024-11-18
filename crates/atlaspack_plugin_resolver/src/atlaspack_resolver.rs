@@ -74,8 +74,12 @@ impl AtlaspackResolver {
       |config| Ok(config.contents.config.unwrap_or_default()),
     )?;
 
+    let cache = Cache::new(ctx.config.fs.clone());
+
+    cache.scan_package_duplicates(&ctx.config.project_root);
+
     Ok(Self {
-      cache: Cache::new(ctx.config.fs.clone()),
+      cache,
       config,
       options: Arc::clone(&ctx.options),
     })
