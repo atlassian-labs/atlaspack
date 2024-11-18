@@ -5,6 +5,7 @@ use petgraph::{
   visit::EdgeRef,
   Direction,
 };
+use serde::Serialize;
 
 use crate::types::{Asset, Dependency};
 
@@ -88,6 +89,24 @@ impl AssetGraph {
       assets: Vec::new(),
       dependencies: Vec::new(),
     }
+  }
+
+  pub fn edges(&self) -> Vec<u32> {
+    let raw_edges = self.graph.raw_edges();
+    let mut edges = Vec::with_capacity(raw_edges.len() * 2);
+
+    for edge in raw_edges {
+      edges.push(edge.source().index() as u32);
+      edges.push(edge.target().index() as u32);
+    }
+
+    edges
+  }
+
+  pub fn nodes(&self) -> impl Iterator<Item = &AssetGraphNode> {
+    let nodes = self.graph.node_weights();
+
+    nodes
   }
 
   pub fn add_asset(&mut self, parent_idx: NodeIndex, asset: Asset) -> NodeIndex {
@@ -279,24 +298,13 @@ impl AssetGraph {
       }
     }
   }
-}
 
-#[derive(serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SerializedDependency {
-  id: String,
-  dependency: Dependency,
-}
+  pub fn serialize_nodes(&self, max_str_len: usize) -> serde_json::Result<Vec<String>> {
+    let mut nodes: Vec<String> = Vec::new();
+    let mut curr_node = String::default();
 
-impl serde::Serialize for AssetGraph {
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-  where
-    S: serde::Serializer,
-  {
-    let nodes: Vec<_> = self
-      .graph
-      .node_weights()
-      .map(|node| match node {
+    for node in self.nodes() {
+      let serialized_node = match node {
         AssetGraphNode::Root => SerializedAssetGraphNode::Root,
         AssetGraphNode::Entry => SerializedAssetGraphNode::Entry,
         AssetGraphNode::Asset(idx) => {
@@ -314,39 +322,49 @@ impl serde::Serialize for AssetGraph {
             has_deferred: self.dependencies[*idx].state == DependencyState::Deferred,
           }
         }
-      })
-      .collect();
-    let raw_edges = self.graph.raw_edges();
-    let mut edges = Vec::with_capacity(raw_edges.len() * 2);
-    for edge in raw_edges {
-      edges.push(edge.source().index() as u32);
-      edges.push(edge.target().index() as u32);
+      };
+
+      let str = serde_json::to_string(&serialized_node)?;
+      if curr_node.len() + str.len() < (max_str_len - 3) {
+        if !curr_node.is_empty() {
+          curr_node.push(',');
+        }
+        curr_node.push_str(&str);
+      } else {
+        // Add the existing node now as it has reached the max JavaScript string size
+        nodes.push(format!("[{curr_node}]"));
+        curr_node = str;
+      }
     }
 
-    #[derive(serde::Serialize)]
-    #[serde(tag = "type", rename_all = "camelCase")]
-    enum SerializedAssetGraphNode {
-      Root,
-      Entry,
-      Asset {
-        value: Asset,
-      },
-      Dependency {
-        value: SerializedDependency,
-        has_deferred: bool,
-      },
+    // Add the current node if it did not overflow in size
+    if curr_node.len() < (max_str_len - 3) {
+      nodes.push(format!("[{curr_node}]"));
     }
 
-    #[derive(serde::Serialize)]
-    struct SerializedAssetGraph {
-      nodes: Vec<SerializedAssetGraphNode>,
-      // TODO: somehow make this a typed array?
-      edges: Vec<u32>,
-    }
-
-    let serialized = SerializedAssetGraph { nodes, edges };
-    serialized.serialize(serializer)
+    Ok(nodes)
   }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SerializedDependency {
+  id: String,
+  dependency: Dependency,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+enum SerializedAssetGraphNode {
+  Root,
+  Entry,
+  Asset {
+    value: Asset,
+  },
+  Dependency {
+    value: SerializedDependency,
+    has_deferred: bool,
+  },
 }
 
 impl std::hash::Hash for AssetGraph {
@@ -365,6 +383,8 @@ impl std::hash::Hash for AssetGraph {
 #[cfg(test)]
 mod tests {
   use std::path::PathBuf;
+
+  use serde_json::{json, Value};
 
   use crate::types::{Symbol, Target};
 
@@ -610,5 +630,101 @@ mod tests {
     assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
     // "*" should be marked as requested on the stuff dep
     assert_requested_symbols(&graph, stuff_dep, vec!["*"]);
+  }
+
+  #[test]
+  fn serialize_nodes_handles_max_size() -> anyhow::Result<()> {
+    let mut graph = AssetGraph::new();
+
+    let entry = graph.add_entry_dependency(Dependency {
+      specifier: String::from("entry"),
+      ..Dependency::default()
+    });
+
+    let entry_asset = graph.add_asset(
+      entry,
+      Asset {
+        file_path: PathBuf::from("entry"),
+        ..Asset::default()
+      },
+    );
+
+    for i in 1..100 {
+      graph.add_dependency(
+        entry_asset,
+        Dependency {
+          specifier: format!("dependency-{}", i),
+          ..Dependency::default()
+        },
+      );
+    }
+
+    let max_str_len = 10000;
+    let nodes = graph.serialize_nodes(max_str_len)?;
+
+    assert_eq!(nodes.len(), 7);
+
+    // Assert each string is less than the max size
+    for node in nodes.iter() {
+      assert!(node.len() < max_str_len);
+    }
+
+    // Assert all the nodes are included and in the correct order
+    let first_entry = serde_json::from_str::<Value>(&nodes[0])?;
+    let first_entry = first_entry.as_array().unwrap();
+
+    assert_eq!(get_type(&first_entry[0]), json!("root"));
+    assert_eq!(get_dependency(&first_entry[1]), Some(json!("entry")));
+    assert_eq!(get_asset(&first_entry[2]), Some(json!("entry")));
+
+    for i in 1..first_entry.len() - 2 {
+      assert_eq!(
+        get_dependency(&first_entry[i + 2]),
+        Some(json!(format!("dependency-{}", i)))
+      );
+    }
+
+    let mut specifier = first_entry.len() - 2;
+    for node in nodes[1..].iter() {
+      let entry = serde_json::from_str::<Value>(&node)?;
+      let entry = entry.as_array().unwrap();
+
+      for value in entry {
+        assert_eq!(
+          get_dependency(&value),
+          Some(json!(format!("dependency-{}", specifier)))
+        );
+
+        specifier += 1;
+      }
+    }
+
+    Ok(())
+  }
+
+  fn get_type(node: &Value) -> Value {
+    node.get("type").unwrap().to_owned()
+  }
+
+  fn get_dependency(value: &Value) -> Option<Value> {
+    assert_eq!(get_type(&value), json!("dependency"));
+
+    value
+      .get("value")
+      .unwrap()
+      .get("dependency")
+      .unwrap()
+      .get("specifier")
+      .map(|s| s.to_owned())
+  }
+
+  fn get_asset(value: &Value) -> Option<Value> {
+    assert_eq!(get_type(&value), json!("asset"));
+
+    value
+      .get("value")
+      .unwrap()
+      .get("filePath")
+      .map(|s| s.to_owned())
   }
 }
