@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use atlaspack_core::diagnostic;
 use indexmap::IndexMap;
+use std::collections::HashMap;
 use swc_core::atoms::{Atom, JsWord};
 
 use atlaspack_core::plugin::{PluginOptions, TransformResult};
@@ -44,6 +45,7 @@ pub(crate) fn convert_result(
     &options.project_root,
     transformer_config,
     result.dependencies,
+    result.magic_comments,
     &asset,
   )?;
 
@@ -381,6 +383,7 @@ pub(crate) fn convert_dependencies(
   project_root: &Path,
   transformer_config: &atlaspack_js_swc_core::Config,
   dependencies: Vec<atlaspack_js_swc_core::DependencyDescriptor>,
+  magic_comments: HashMap<String, String>,
   asset: &Asset,
 ) -> Result<(IndexMap<Atom, Dependency>, Vec<PathBuf>), Vec<Diagnostic>> {
   let mut dependency_by_specifier = IndexMap::new();
@@ -400,7 +403,13 @@ pub(crate) fn convert_dependencies(
     )?;
 
     match result {
-      DependencyConversionResult::Dependency(dependency) => {
+      DependencyConversionResult::Dependency(mut dependency) => {
+        if let Some(chunk_name) = magic_comments.get(&dependency.specifier) {
+          dependency.meta.insert(
+            "chunkNameMagicComment".to_string(),
+            chunk_name.clone().into(),
+          );
+        }
         dependency_by_specifier.insert(placeholder, dependency);
       }
       DependencyConversionResult::InvalidateOnFileChange(file_path) => {

@@ -5,6 +5,7 @@ mod env_replacer;
 mod fs;
 mod global_replacer;
 mod hoist;
+mod magic_comments;
 mod modules;
 mod node_replacer;
 pub mod test_utils;
@@ -39,6 +40,7 @@ pub use hoist::ExportedSymbol;
 use hoist::HoistResult;
 pub use hoist::ImportedSymbol;
 use indexmap::IndexMap;
+use magic_comments::MagicCommentsVisitor;
 use modules::esm2cjs;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
@@ -152,6 +154,7 @@ pub struct TransformResult {
   pub has_node_replacements: bool,
   pub is_constant_module: bool,
   pub conditions: HashSet<Condition>,
+  pub magic_comments: HashMap<String, String>,
 }
 
 fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Versions> {
@@ -266,6 +269,13 @@ pub fn transform(
 
               let global_mark = Mark::fresh(Mark::root());
               let unresolved_mark = Mark::fresh(Mark::root());
+
+              if code.contains("webpackChunkName") {
+                let mut magic_comment_visitor = MagicCommentsVisitor::new(code);
+                module.visit_with(&mut magic_comment_visitor);
+                result.magic_comments = magic_comment_visitor.magic_comments;
+              }
+
               let module = module.fold_with(&mut chain!(
                 resolver(unresolved_mark, global_mark, config.is_type_script),
                 // Decorators can use type information, so must run before the TypeScript pass.
