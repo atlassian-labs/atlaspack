@@ -14,7 +14,6 @@ use atlaspack_plugin_rpc::RpcFactoryRef;
 use petgraph::graph::NodeIndex;
 use tokio::sync::RwLock;
 
-use crate::plugins::config_plugins::ConfigPlugins;
 use crate::plugins::PluginsRef;
 
 #[allow(unused)]
@@ -33,5 +32,4 @@ pub struct Compilation {
   pub asset_graph: Arc<RwLock<AssetGraph>>,
   pub asset_request_to_asset: Arc<RwLock<HashMap<u64, NodeIndex>>>,
   pub pending_dependency_links: Arc<RwLock<HashMap<u64, HashSet<NodeIndex>>>>,
-  // waiting_asset_requests: HashMap<u64, HashSet<NodeIndex>>,
 }

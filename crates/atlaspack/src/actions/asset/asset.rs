@@ -8,7 +8,6 @@ use anyhow::anyhow;
 use atlaspack_core::plugin::*;
 use atlaspack_core::types::*;
 use atlaspack_filesystem::FileSystemRef;
-use atlaspack_resolver::FileSystem;
 use atlaspack_sourcemap::find_sourcemap_url;
 use atlaspack_sourcemap::load_sourcemap_url;
 
@@ -16,13 +15,7 @@ use super::super::ActionQueue;
 use super::super::Compilation;
 use crate::actions::path::PathAction;
 use crate::actions::Action;
-use crate::plugins::config_plugins::ConfigPlugins;
-use crate::plugins::Plugins;
 use crate::plugins::PluginsRef;
-use crate::request_tracker::Request;
-use crate::request_tracker::ResultAndInvalidations;
-use crate::request_tracker::RunRequestContext;
-use crate::request_tracker::RunRequestError;
 
 /// The AssetRequest runs transformer plugins on discovered Assets.
 /// - Decides which transformer pipeline to run from the input Asset type
@@ -48,7 +41,7 @@ impl Action for AssetAction {
       fs,
       plugins,
       asset_graph,
-      pending_dependency_links,
+      pending_dependency_links: _pending_dependency_links,
       ..
     }: &Compilation,
   ) -> anyhow::Result<()> {
@@ -62,9 +55,9 @@ impl Action for AssetAction {
       .await?;
 
     let TransformResult {
-      asset,
+      asset: _asset,
       dependencies,
-      discovered_assets,
+      discovered_assets: _discovered_assets,
       ..
     } = self.exec(fs.clone(), plugins.clone()).await?;
 

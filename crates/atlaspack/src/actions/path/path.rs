@@ -21,8 +21,6 @@ use super::super::ActionType;
 use super::super::Compilation;
 use crate::actions::asset::AssetAction;
 use crate::actions::Action;
-use crate::plugins::config_plugins::ConfigPlugins;
-use crate::plugins::Plugins;
 use crate::plugins::PluginsRef;
 
 #[derive(Hash, Debug)]

@@ -1,13 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use atlaspack_config::atlaspack_rc_config_loader::AtlaspackRcConfigLoader;
-use atlaspack_config::atlaspack_rc_config_loader::LoadConfigOptions;
 use atlaspack_core::asset_graph::AssetGraph;
-use atlaspack_core::config_loader::ConfigLoader;
-use atlaspack_core::plugin::PluginContext;
-use atlaspack_core::plugin::PluginLogger;
-use atlaspack_core::plugin::PluginOptions;
 use tokio::sync::RwLock;
 
 use crate::actions::asset_graph::AssetGraphAction;
@@ -16,7 +10,6 @@ use crate::actions::ActionQueue;
 use crate::actions::ActionType;
 use crate::actions::Compilation;
 use crate::atlaspack::AtlaspackState;
-use crate::plugins::config_plugins::ConfigPlugins;
 
 #[derive(Default)]
 pub struct BuildOptions {}
