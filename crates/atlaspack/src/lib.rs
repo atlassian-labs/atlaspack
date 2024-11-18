@@ -5,9 +5,12 @@ pub use atlaspack_plugin_rpc as rpc;
 pub mod atlaspack;
 pub(crate) mod request_tracker;
 
+mod actions;
+mod atlaspack_build;
 mod plugins;
 mod project_root;
 mod requests;
+mod state;
 
 #[cfg(test)]
 mod test_utils;

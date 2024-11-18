@@ -135,7 +135,7 @@ impl AtlaspackNapi {
 
         match atlaspack {
           Err(error) => deferred.reject(to_napi_error(error)),
-          Ok(atlaspack) => match atlaspack.build_asset_graph() {
+          Ok(atlaspack) => match atlaspack.build(Default::default()) {
             Ok(asset_graph) => deferred.resolve(move |env| env.to_js_value(&asset_graph)),
             Err(error) => deferred.reject(to_napi_error(error)),
           },

@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 // Re-export this from core, probably want to move this type here
 pub use atlaspack_filesystem::FileSystem;
 
@@ -31,3 +33,5 @@ mod source;
 mod symbol;
 mod target;
 mod utils;
+
+pub type EnvMap = BTreeMap<String, String>;

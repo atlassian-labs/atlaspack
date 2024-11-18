@@ -10,6 +10,7 @@ use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::PluginLogger;
 use atlaspack_core::plugin::PluginOptions;
 use atlaspack_core::types::AtlaspackOptions;
+use atlaspack_core::types::*;
 use atlaspack_filesystem::os_file_system::OsFileSystem;
 use atlaspack_filesystem::FileSystemRef;
 use atlaspack_package_manager::NodePackageManager;
@@ -19,6 +20,8 @@ use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::writer::DatabaseWriterError;
 use tokio::runtime::Runtime;
 
+use crate::atlaspack_build;
+use crate::atlaspack_build::BuildOptions;
 use crate::plugins::config_plugins::ConfigPlugins;
 use crate::plugins::PluginsRef;
 use crate::project_root::infer_project_root;
@@ -27,9 +30,21 @@ use crate::requests::AssetGraphRequest;
 use crate::requests::RequestResult;
 
 #[derive(Clone)]
-struct AtlaspackState {
-  config: Arc<ConfigLoader>,
-  plugins: PluginsRef,
+pub struct AtlaspackState {
+  pub config: Arc<ConfigLoader>,
+  pub plugins: PluginsRef,
+  pub db: Arc<DatabaseWriter>,
+  pub fs: FileSystemRef,
+  pub package_manager: PackageManagerRef,
+  pub project_root: PathBuf,
+  pub rpc: RpcFactoryRef,
+  pub default_target_options: DefaultTargetOptions,
+  pub entries: Vec<String>,
+  pub env: Option<EnvMap>,
+  pub log_level: LogLevel,
+  pub core_path: PathBuf,
+  pub mode: BuildMode,
+  pub threads: Option<usize>,
 }
 
 pub struct Atlaspack {
@@ -76,6 +91,12 @@ impl Atlaspack {
 pub struct BuildResult;
 
 impl Atlaspack {
+  pub fn build(&self, options: BuildOptions) -> anyhow::Result<AssetGraph> {
+    self
+      .runtime
+      .block_on(atlaspack_build::build(options, self.state()?))
+  }
+
   fn state(&self) -> anyhow::Result<AtlaspackState> {
     let rpc_worker = self.rpc.start()?;
 
@@ -116,6 +137,18 @@ impl Atlaspack {
     let state = AtlaspackState {
       config: config_loader,
       plugins,
+      db: self.db.clone(),
+      fs: self.fs.clone(),
+      package_manager: self.package_manager.clone(),
+      project_root: self.project_root.clone(),
+      rpc: self.rpc.clone(),
+      default_target_options: self.options.default_target_options.clone(),
+      entries: self.options.entries.clone(),
+      env: self.options.env.clone(),
+      log_level: self.options.log_level.clone(),
+      core_path: self.options.core_path.clone(),
+      mode: self.options.mode.clone(),
+      threads: self.options.threads.clone(),
     };
 
     Ok(state)
@@ -123,7 +156,9 @@ impl Atlaspack {
 
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
     self.runtime.block_on(async move {
-      let AtlaspackState { config, plugins } = self.state().unwrap();
+      let AtlaspackState {
+        config, plugins, ..
+      } = self.state().unwrap();
 
       let mut request_tracker = RequestTracker::new(
         config.clone(),
