@@ -34,7 +34,7 @@ module.exports = {
       rules: {
         'import/no-extraneous-dependencies': 'off',
         'monorepo/no-internal-import': 'off',
-        'monorepo/no-relative-import': 'off',
+        '@atlaspack/no-relative-import': 'off',
         'mocha/no-exclusive-tests': 'error',
       },
     },
@@ -51,6 +51,9 @@ module.exports = {
     'no-return-await': 'error',
     'require-atomic-updates': 'off',
     'require-await': 'error',
+    // Use internal rule
+    'monorepo/no-relative-import': 'off',
+    '@atlaspack/no-relative-import': 'error',
   },
   settings: {
     flowtype: {

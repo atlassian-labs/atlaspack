@@ -378,6 +378,9 @@ export default class BundleGraph<TBundle: IBundle>
               dep,
               bundleToInternalBundle(bundle),
             ),
+            `Failed to load depenendency for '${
+              dep.specifier
+            }' specifier from '${String(dep.sourcePath)}'`,
           );
           if (resolvedAsync?.type === 'asset') {
             // Single bundle to load dynamically
@@ -390,6 +393,9 @@ export default class BundleGraph<TBundle: IBundle>
                       dep,
                       bundleToInternalBundle(bundle),
                     ),
+                    `Failed to load referenced bundle for '${
+                      dep.specifier
+                    }' specifier from '${String(dep.sourcePath)}'`,
                   ),
                   this.#graph,
                   this.#options,
