@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
@@ -142,14 +143,19 @@ impl Cache {
 
     let mut packages_by_version: HashMap<String, Arc<PackageJson>> = HashMap::new();
     let mut count = 0;
-    for path in package_json_files {
-      let package = read_and_parse_package(&self.fs, &self.realpath_cache, &path);
-      let entry = Arc::new(package.map(Arc::new));
+    let packages: Vec<Arc<Result<Arc<PackageJson>, ResolverError>>> = package_json_files
+      .par_iter()
+      .map(|path| {
+        let package = read_and_parse_package(&self.fs, &self.realpath_cache, path);
+        let entry = Arc::new(package.map(Arc::new));
+        // While we have the package.json we may as well hydrate the cache for
+        // later
+        self.packages.insert(path.clone(), entry.clone());
+        entry
+      })
+      .collect();
 
-      // While we have the package.json we may as well hydrate the cache for
-      // later
-      self.packages.insert(path, entry.clone());
-
+    for entry in packages.iter() {
       if let Ok(package_json) = entry.as_ref() {
         if let Some(version) = package_json.version.clone() {
           let dedupe_key = format!("{}@{}", package_json.name, version);
@@ -158,14 +164,14 @@ impl Cache {
             self
               .package_duplicates
               .insert(package_json.path.clone(), existing.clone());
-          } else {
             count += 1;
+          } else {
             packages_by_version.insert(dedupe_key.clone(), package_json.clone());
           }
         }
       }
     }
-    tracing::info!("{} packages marked as duplicate", count);
+    tracing::info!("{} packages marked as duplicate", count,);
   }
 
   pub fn read_package(&self, path: Cow<Path>) -> Arc<Result<Arc<PackageJson>, ResolverError>> {
@@ -264,24 +270,35 @@ fn read_and_parse_package<'a>(
 
 fn find_package_json_files(base_path: &Path) -> Vec<PathBuf> {
   let mut package_json_files = Vec::new();
-  let is_node_modules_dir = base_path.ends_with("node_modules");
+  let should_traverse = base_path.file_name().is_some_and(|dir_name| {
+    dir_name == "node_modules" || dir_name.to_string_lossy().starts_with("@")
+  });
 
   if let Ok(entries) = fs::read_dir(base_path) {
-    for entry in entries.filter_map(Result::ok) {
-      let path = entry.path();
-      if path.is_dir() && (is_node_modules_dir || path.ends_with("node_modules")) {
-        // If the directory is node_modules, search inside it
-        package_json_files.extend(find_package_json_files(&path));
-        continue;
-      }
+    // Collect entries to avoid borrowing issues during parallel iteration
+    let entries: Vec<_> = entries.filter_map(Result::ok).collect();
 
-      if let Some(file_name) = path.file_name() {
-        // If it's a package.json file, add it to the list
-        if file_name == "package.json" {
-          package_json_files.push(path);
+    // Use parallel iterator for entries
+    let found_files: Vec<PathBuf> = entries
+      .par_iter()
+      .flat_map(|entry| {
+        let path = entry.path();
+        if path.is_dir() && (should_traverse || path.ends_with("node_modules")) {
+          // If it's a directory, recursively find package.json files in parallel
+          find_package_json_files(&path)
+        } else if path
+          .file_name()
+          .is_some_and(|file_name| file_name == "package.json")
+        {
+          // If it's a package.json file, add it to the list
+          vec![path]
+        } else {
+          vec![]
         }
-      }
-    }
+      })
+      .collect();
+
+    package_json_files.extend(found_files);
   }
   package_json_files
 }

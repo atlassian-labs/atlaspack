@@ -83,4 +83,8 @@ impl FileSystem for FileSystemNapi {
       .call_serde_blocking(path.to_path_buf())
       .expect("TODO handle error case")
   }
+
+  fn read_dir(&self, _path: &Path) -> std::io::Result<std::fs::ReadDir> {
+    todo!("InMemoryFileSystem::read_dir")
+  }
 }
