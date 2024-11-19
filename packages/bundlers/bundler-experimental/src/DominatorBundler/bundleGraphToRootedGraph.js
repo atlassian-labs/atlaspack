@@ -1,10 +1,17 @@
 // @flow strict-local
 
-import type {Asset} from '@atlaspack/types';
+import type {Asset, Dependency} from '@atlaspack/types';
 import type {MutableBundleGraph} from '@atlaspack/types';
 import {ContentGraph} from '@atlaspack/graph';
+import invariant from 'assert';
 
-export type AssetNode = {|type: 'asset', id: string, asset: Asset|};
+export type AssetNode = {|
+  type: 'asset',
+  id: string,
+  asset: Asset,
+  entryDependency: Dependency,
+|};
+
 export type SimpleAssetGraphNode = 'root' | AssetNode;
 
 export type SimpleAssetGraph = ContentGraph<SimpleAssetGraphNode>;
@@ -16,7 +23,9 @@ export type SimpleAssetGraph = ContentGraph<SimpleAssetGraphNode>;
  * Put a root node at the top of the graph, linked to the entry assets.
  *
  * All the async boundaries become linked to the root node instead of the
- * assets that depend on them.
+ * assets that depend on them. The same happens if the parent asset is of a
+ * different type than the child. For example an HTML file with a JS dependency
+ * will be split.
  *
  * Example input:
  * ```
@@ -51,14 +60,18 @@ export function bundleGraphToRootedGraph(
 
   const postOrder = [];
   bundleGraph.traverse({
-    enter: (node) => {
+    enter: (node, context) => {
       if (node.type === 'asset') {
         const asset = bundleGraph.getAssetById(node.value.id);
+        invariant(context != null);
         graph.addNodeByContentKey(node.value.id, {
           id: asset.id,
           type: 'asset',
           asset,
+          entryDependency: context,
         });
+      } else if (node.type === 'dependency' && node.value.isEntry) {
+        return node.value;
       }
     },
     exit: (node) => {
@@ -74,7 +87,11 @@ export function bundleGraphToRootedGraph(
     const assetNodeId = graph.getNodeIdByContentKey(assetId);
 
     for (let dependency of bundleGraph.getIncomingDependencies(childAsset)) {
-      if (dependency.isEntry || dependency.priority !== 'sync') {
+      if (
+        dependency.isEntry ||
+        dependency.priority !== 'sync' ||
+        dependency.sourceAssetType !== childAsset.type
+      ) {
         graph.addEdge(rootNodeId, assetNodeId);
       } else {
         const parentAsset = bundleGraph.getAssetWithDependency(dependency);
