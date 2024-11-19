@@ -2864,7 +2864,8 @@ mod tests {
     let cache = CacheCow::Owned(Cache::new(Arc::new(OsFileSystem)));
     cache.scan_package_duplicates(&root());
 
-    let resolver = Resolver::node(root().into(), cache);
+    let mut resolver = Resolver::node(root().into(), cache);
+    resolver.flags.set(Flags::EXPORTS, false);
 
     assert_eq!(
       resolver
@@ -2883,6 +2884,21 @@ mod tests {
       resolver
         .resolve(
           "duplicate/index.js",
+          &root().join("node_modules/duplicate-tester/index.js"),
+          SpecifierType::Esm,
+        )
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/duplicate/index.js"))
+    );
+
+    resolver.flags.set(Flags::EXPORTS, true);
+
+    assert_eq!(
+      resolver
+        .resolve(
+          "duplicate/main",
           &root().join("node_modules/duplicate-tester/index.js"),
           SpecifierType::Esm,
         )
