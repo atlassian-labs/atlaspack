@@ -225,6 +225,7 @@ export default class BundleGraph {
     });
 
     let walkVisited = new Set();
+
     function walk(nodeId) {
       if (walkVisited.has(nodeId)) return;
       walkVisited.add(nodeId);
@@ -473,6 +474,7 @@ export default class BundleGraph {
         walk(id);
       }
     }
+
     walk(nullthrows(assetGraph.rootNodeId));
 
     for (let edge of assetGraph.getAllEdges()) {
@@ -720,26 +722,26 @@ export default class BundleGraph {
       }
 
       if (node.type === 'dependency') {
-        for (let [bundleGroupNodeId, bundleGroupNode] of this._graph
-          .getNodeIdsConnectedFrom(nodeId)
-          .map((id) => [id, nullthrows(this._graph.getNode(id))])
-          .filter(([, node]) => node.type === 'bundle_group')) {
-          invariant(bundleGroupNode.type === 'bundle_group');
-          this._graph.addEdge(
-            bundleNodeId,
-            bundleGroupNodeId,
-            bundleGraphEdgeTypes.bundle,
-          );
-        }
+        this._graph.forEachNodeIdConnectedFrom(nodeId, (id) => {
+          const node = nullthrows(this._graph.getNode(id));
+          if (node.type !== 'bundle_group') return;
+          this._graph.addEdge(bundleNodeId, id, bundleGraphEdgeTypes.bundle);
+        });
 
         // If the dependency references a target bundle, add a reference edge from
         // the source bundle to the dependency for easy traversal.
-        if (
-          this._graph
-            .getNodeIdsConnectedFrom(nodeId, bundleGraphEdgeTypes.references)
-            .map((id) => nullthrows(this._graph.getNode(id)))
-            .some((node) => node.type === 'bundle')
-        ) {
+        let referencesBundle = false;
+        this._graph.forEachNodeIdConnectedFrom(
+          nodeId,
+          (id) => {
+            const node = nullthrows(this._graph.getNode(id));
+            if (node.type !== 'bundle') return;
+            referencesBundle = true;
+          },
+          bundleGraphEdgeTypes.references,
+        );
+
+        if (referencesBundle) {
           this._graph.addEdge(
             bundleNodeId,
             nodeId,
@@ -1977,6 +1979,7 @@ export default class BundleGraph {
       };
     }
   }
+
   getAssetById(contentKey: string): Asset {
     let node = this._graph.getNodeByContentKey(contentKey);
     if (node == null) {

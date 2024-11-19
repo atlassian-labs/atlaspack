@@ -1416,7 +1416,11 @@ export interface Bundle {
    * Returns the assets that are executed immediately when the bundle is loaded.
    * Some bundles may not have any entry assets, for example, shared bundles.
    */
-  getEntryAssets(): Array<Asset>;
+  getEntryAssets(): $ReadOnlyArray<Asset>;
+  /**
+   * Get an entry asset by ID
+   */
+  getEntryAssetById(id: string): ?Asset;
   /**
    * Returns the main entry of the bundle, which will provide the bundle's exports.
    * Some bundles do not have a main entry, for example, shared bundles.

@@ -361,9 +361,11 @@ async function setup(entry) {
   let parcelRequire = Object.keys(window).find((k) =>
     k.startsWith('parcelRequire'),
   );
+  const entryAssets = bundle.getEntryAssets();
+  const lastEntryAsset = entryAssets[entryAssets.length - 1];
   // ReactDOM.render
   await window[parcelRequire](
-    bundleGraph.getAssetPublicId(bundle.getEntryAssets().pop()),
+    bundleGraph.getAssetPublicId(lastEntryAsset),
   ).default();
   await sleep(100);
 
