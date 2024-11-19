@@ -2862,7 +2862,7 @@ mod tests {
   #[test]
   fn package_deduplication() {
     let cache = CacheCow::Owned(Cache::new(Arc::new(OsFileSystem)));
-    cache.scan_package_duplicates(&root());
+    cache.scan_package_duplicates(&root()).unwrap();
 
     let mut resolver = Resolver::node(root().into(), cache);
     resolver.flags.set(Flags::EXPORTS, false);
