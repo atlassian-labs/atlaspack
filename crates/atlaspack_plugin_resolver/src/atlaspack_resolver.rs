@@ -51,6 +51,7 @@ impl Debug for AtlaspackResolver {
 #[serde(rename_all = "camelCase")]
 struct ResolverConfig {
   package_exports: Option<bool>,
+  deduplicate_packages: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -76,7 +77,11 @@ impl AtlaspackResolver {
 
     let cache = Cache::new(ctx.config.fs.clone());
 
-    cache.scan_package_duplicates(&ctx.config.project_root);
+    // If package deduplication is enabled, then scan node_modules for duplicate package
+    // versions
+    if config.deduplicate_packages.is_some_and(|v| v) {
+      cache.scan_package_duplicates(&ctx.config.project_root);
+    }
 
     Ok(Self {
       cache,
