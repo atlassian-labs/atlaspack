@@ -598,16 +598,22 @@ export default class AdjacencyList<TEdgeType: number = 1> {
   forEachNodeIdConnectedFromReverse(
     from: NodeId,
     fn: (nodeId: NodeId) => boolean,
+    type: AllEdgeTypes | TEdgeType | NullEdgeType = ALL_EDGE_TYPES,
   ) {
+    const matches = (node) =>
+      type === ALL_EDGE_TYPES || type === this.#nodes.typeOf(node);
+
     let node = this.#nodes.head(from);
     while (node !== null) {
-      let edge = this.#nodes.lastOut(node);
-      while (edge !== null) {
-        let to = this.#edges.to(edge);
-        if (fn(to)) {
-          return;
+      if (matches(node)) {
+        let edge = this.#nodes.lastOut(node);
+        while (edge !== null) {
+          let to = this.#edges.to(edge);
+          if (fn(to)) {
+            return;
+          }
+          edge = this.#edges.prevOut(edge);
         }
-        edge = this.#edges.prevOut(edge);
       }
       node = this.#nodes.next(node);
     }
@@ -986,6 +992,7 @@ export class SharedTypeMap<TItemType, THash, TAddress: number>
   // Trick Flow into believing in `Symbol.iterator`.
   // See https://github.com/facebook/flow/issues/1163#issuecomment-353523840
   /*:: @@iterator(): Iterator<TAddress> { return ({}: any); } */
+
   // $FlowFixMe[unsupported-syntax]
   *[Symbol.iterator](): Iterator<TAddress> {
     let max = this.count;
@@ -1099,6 +1106,7 @@ export class NodeTypeMap<TEdgeType> extends SharedTypeMap<
   get nextId(): NodeId {
     return toNodeId(this.data[NodeTypeMap.#NEXT_ID]);
   }
+
   set nextId(nextId: NodeId) {
     this.data[NodeTypeMap.#NEXT_ID] = fromNodeId(nextId);
   }

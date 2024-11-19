@@ -165,6 +165,23 @@ export default class Graph<TNode, TEdgeType: number = 1> {
     this.adjacencyList.forEachNodeIdConnectedTo(to, fn);
   }
 
+  forEachNodeIdConnectedFrom(
+    from: NodeId,
+    fn: (nodeId: NodeId) => void,
+    type: AllEdgeTypes | TEdgeType | NullEdgeType = ALL_EDGE_TYPES,
+  ) {
+    this._assertHasNodeId(from);
+
+    this.adjacencyList.forEachNodeIdConnectedFromReverse(
+      from,
+      (id) => {
+        fn(id);
+        return false;
+      },
+      type,
+    );
+  }
+
   getNodeIdsConnectedTo(
     nodeId: NodeId,
     type:
