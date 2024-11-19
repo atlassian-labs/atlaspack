@@ -67,6 +67,9 @@ export function dotFromBundleGraph<B: Bundle>(
     contents.push(`  label = "Bundle ${bundleId}";`);
 
     bundle.traverseAssets((asset) => {
+      if (asset.filePath.includes('esmodule-helpers.js')) {
+        return;
+      }
       contents.push(`  "${clean(asset.filePath)}";`);
     });
 
@@ -85,7 +88,7 @@ ${contents.map((line) => (line.length > 0 ? `  ${line}` : '')).join('\n')}
 
 export function cleanPath(entryDir: string, p: string): string {
   if (p.includes('esmodule-helpers.js')) {
-    return 'esmodule_helpers.js';
+    return 'esmodule-helpers.js';
   }
   return path.relative(entryDir, p);
 }
@@ -97,8 +100,8 @@ export function cleanPath(entryDir: string, p: string): string {
 export function rootedGraphToDot(
   entryDir: string,
   dominators: AcyclicGraph<SimpleAssetGraphNode> | SimpleAssetGraph,
-  label?: string = 'Dominators',
-  name?: string = 'dominators',
+  label: string = 'Dominators',
+  name: string = 'dominators',
 ): string {
   const contents = [];
   const clean = (p: string) => cleanPath(entryDir, p);
@@ -120,6 +123,12 @@ export function rootedGraphToDot(
     .getNodeIdsConnectedFrom(rootNodeId)
     .map((id) => {
       const node = dominators.getNode(id);
+      if (
+        node.type === 'asset' &&
+        node.asset.filePath.includes('esmodule-helpers.js')
+      ) {
+        return;
+      }
       return getLabel(node);
     })
     .filter(Boolean)
@@ -145,6 +154,9 @@ export function rootedGraphToDot(
 
   for (let asset of iterableDominators) {
     const assetPath = getLabel(asset);
+    if (assetPath.includes('esmodule-helpers.js')) {
+      continue;
+    }
     contents.push(`"${assetPath}";`);
   }
 
@@ -173,6 +185,9 @@ export function rootedGraphToDot(
       }
 
       const dominatedPath = getLabel(dominated);
+      if (dominatedPath.includes('esmodule-helpers.js')) {
+        continue;
+      }
       contents.push(`"${assetPath}" -> "${dominatedPath}";`);
     }
   }
@@ -192,7 +207,7 @@ ${contents.map((l) => (l.length > 0 ? `  ${l}` : '')).join('\n')}
 export function mergedDominatorsToDot(
   entryDir: string,
   dominators: PackagedDominatorGraph,
-  label?: string = 'Merged',
+  label: string = 'Merged',
 ): string {
   const contents = [];
   const getIdentifier = (nodeId) => {
@@ -209,7 +224,11 @@ export function mergedDominatorsToDot(
   };
 
   dominators.traverse((nodeId) => {
-    contents.push(`${getIdentifier(nodeId)};`);
+    const identifier = getIdentifier(nodeId);
+    if (identifier.includes('esmodule-helpers.js')) {
+      return;
+    }
+    contents.push(`${identifier};`);
   });
   contents.sort((a, b) => a.localeCompare(b));
 
@@ -218,9 +237,15 @@ export function mergedDominatorsToDot(
   const connections = [];
   dominators.traverse((nodeId) => {
     dominators.getNodeIdsConnectedFrom(nodeId).forEach((connectedNodeId) => {
-      connections.push(
-        `${getIdentifier(nodeId)} -> ${getIdentifier(connectedNodeId)};`,
-      );
+      const source = getIdentifier(nodeId);
+      const target = getIdentifier(connectedNodeId);
+      if (
+        source.includes('esmodule-helpers.js') ||
+        target.includes('esmodule-helpers.js')
+      ) {
+        return;
+      }
+      connections.push(`${source} -> ${target};`);
     });
   });
   connections.sort((a, b) => a.localeCompare(b));

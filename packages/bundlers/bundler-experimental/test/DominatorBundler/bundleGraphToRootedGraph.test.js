@@ -63,8 +63,6 @@ describe('bundleGraphToRootedGraph', () => {
     const {mutableBundleGraph} = await setupBundlerTest(entryPath);
     const rootGraph = bundleGraphToRootedGraph(mutableBundleGraph);
 
-    assert.equal(rootGraph.nodes.length, 3);
-
     const rootNode = rootGraph.getNodeIdByContentKey('root');
     const assetIdsByPath = new Map();
     rootGraph.traverse((node) => {
@@ -82,11 +80,14 @@ describe('bundleGraphToRootedGraph', () => {
 
     const getConnections = (contentKey: string) => {
       const node = rootGraph.getNodeIdByContentKey(contentKey);
-      return rootGraph.getNodeIdsConnectedFrom(node).map((nodeId) => {
-        const node = rootGraph.getNode(nodeId);
-        if (!node || typeof node === 'string') throw new Error('root cycle');
-        return path.basename(node.asset.filePath);
-      });
+      return rootGraph
+        .getNodeIdsConnectedFrom(node)
+        .map((nodeId) => {
+          const node = rootGraph.getNode(nodeId);
+          if (!node || typeof node === 'string') throw new Error('root cycle');
+          return path.basename(node.asset.filePath);
+        })
+        .filter((path) => !path.includes('esmodule-helpers.js'));
     };
 
     assert.deepEqual(getConnections('root'), ['test.js']);

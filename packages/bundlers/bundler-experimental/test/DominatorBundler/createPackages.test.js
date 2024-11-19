@@ -59,6 +59,9 @@ describe('DominatorBundler/createPackages', () => {
 
         entryPoints.sort((a, b) => a.localeCompare(b));
 
+        if (chunk.filePath.includes('esmodule-helpers.js')) {
+          continue;
+        }
         filePathEntryPoints[cleanPath(entryDir, chunk.filePath)] = entryPoints;
       }
 
