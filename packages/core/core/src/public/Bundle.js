@@ -68,7 +68,6 @@ export class Bundle implements IBundle {
   #bundle /*: InternalBundle */;
   #bundleGraph /*: BundleGraph */;
   #options /*: AtlaspackOptions */;
-  #entryAssetsById: Map<string, IAsset>;
 
   constructor(
     sentinel: mixed,
@@ -83,13 +82,6 @@ export class Bundle implements IBundle {
     this.#bundle = bundle;
     this.#bundleGraph = bundleGraph;
     this.#options = options;
-
-    this.#entryAssetsById = new Map();
-    for (let id of bundle.entryAssetIds) {
-      let assetNode = bundleGraph._graph.getNodeByContentKey(id);
-      invariant(assetNode != null && assetNode.type === 'asset');
-      this.#entryAssetsById.set(id, assetFromValue(assetNode.value, options));
-    }
   }
 
   static get(
@@ -162,11 +154,7 @@ export class Bundle implements IBundle {
     );
   }
 
-  getEntryAssetById(id: string): ?IAsset {
-    return this.#entryAssetsById.get(id);
-  }
-
-  getEntryAssets(): $ReadOnlyArray<IAsset> {
+  getEntryAssets(): Array<IAsset> {
     return this.#bundle.entryAssetIds.map((id) => {
       let assetNode = this.#bundleGraph._graph.getNodeByContentKey(id);
       invariant(assetNode != null && assetNode.type === 'asset');

@@ -37,7 +37,7 @@ export default (new Namer({
 
     let mainBundle = nullthrows(
       bundleGroupBundles.find((b) =>
-        b.getEntryAssetById(bundleGroup.entryAssetId),
+        b.getEntryAssets().some((a) => a.id === bundleGroup.entryAssetId),
       ),
     );
 
@@ -111,7 +111,7 @@ function nameFromContent(
   entryRoot: FilePath,
 ): string {
   let entryFilePath = nullthrows(
-    bundle.getEntryAssetById(entryAssetId),
+    bundle.getEntryAssets().find((a) => a.id === entryAssetId),
   ).filePath;
   let name = basenameWithoutExtension(entryFilePath);
 
@@ -132,7 +132,7 @@ function nameFromContent(
       entryFilePath = path.dirname(entryFilePath);
       name = path.basename(entryFilePath);
       if (name.startsWith('.')) {
-        name = name.slice(1);
+        name = name.replace('.', '');
       }
     }
 
