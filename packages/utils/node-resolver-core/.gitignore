@@ -1,5 +1,6 @@
 !/test/fixture/node_modules
 !/test/fixture/node_modules/.pnpm/*/node_modules
+!/test/fixture/node_modules/duplicate-tester/node_modules
 *.node
 *.wasm
 native.d.ts
