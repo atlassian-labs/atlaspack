@@ -130,6 +130,10 @@ impl Cache {
   pub fn scan_package_duplicates(&self, root_dir: &Path) -> anyhow::Result<()> {
     let mut package_json_files =
       find_package_json_files(self.fs.clone(), &root_dir.join("node_modules"))?;
+
+    // Sort the files by shortest file path and the alphabetical.
+    // This ensures deterministic results and also favors duplicates that are
+    // less nested
     package_json_files.sort_by(|a, b| {
       let a_len = a.to_string_lossy().len();
       let b_len = b.to_string_lossy().len();
