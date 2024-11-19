@@ -126,6 +126,12 @@ impl Cache {
     Ok(self.fs.canonicalize(path, &self.realpath_cache)?)
   }
 
+  /// Calling this method before resolving will enable the package deduplication feature.
+  /// It does thos by hydrating the "package_duplicates" lookup. This can
+  /// the the be used when resolving packages that are duplicates, where a duplicate is a package
+  /// that has the same "name" and "version" field.
+  ///
+  /// This method also prefills the "packages" cache
   #[tracing::instrument(level = "info", skip_all)]
   pub fn scan_package_duplicates(&self, root_dir: &Path) -> anyhow::Result<()> {
     let mut package_json_files =
