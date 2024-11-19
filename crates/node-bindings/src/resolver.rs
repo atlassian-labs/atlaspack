@@ -154,7 +154,7 @@ impl FileSystem for JsFileSystem {
     todo!()
   }
   fn read_dir(&self, _path: &Path) -> std::io::Result<std::fs::ReadDir> {
-    todo!("InMemoryFileSystem::read_dir")
+    todo!("JsFileSystem::read_dir")
   }
 }
 
