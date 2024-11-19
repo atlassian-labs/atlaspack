@@ -12,7 +12,7 @@
   "main": "lib/WebExtensionTransformer.js",
   "source": "src/WebExtensionTransformer.js",
   "engines": {
-    "parcel": "^2.12.0"
+    "atlaspack": "^2.12.0"
   },
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",

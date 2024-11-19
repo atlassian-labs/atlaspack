@@ -12,8 +12,8 @@
   "main": "lib/LspReporter.js",
   "source": "src/LspReporter.js",
   "engines": {
-    "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
+    "atlaspack": "^2.12.0",
+    "node": ">= 16.0.0"
   },
   "dependencies": {
     "@atlaspack/lsp-protocol": "2.12.0",

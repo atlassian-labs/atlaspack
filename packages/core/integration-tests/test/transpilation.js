@@ -17,7 +17,7 @@ import nullthrows from 'nullthrows';
 
 const inputDir = path.join(__dirname, '/input');
 
-describe.v2('transpilation', function () {
+describe('transpilation', function () {
   it('should not transpile if no targets are defined', async function () {
     await bundle(path.join(__dirname, '/integration/babel-default/index.js'), {
       defaultTargetOptions: {
@@ -101,221 +101,253 @@ describe.v2('transpilation', function () {
     assert(file.includes('fileName: "integration/jsx/index.jsx"'));
   });
 
-  it('should support compiling JSX correctly with member expression type', async function () {
-    await bundle(path.join(__dirname, '/integration/jsx-member/index.jsx'));
+  describe.v2('supports compiling JSX', () => {
+    it('with member expression type', async function () {
+      await bundle(path.join(__dirname, '/integration/jsx-member/index.jsx'));
 
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(file.includes('React.createElement(S.Foo'));
-  });
-
-  it('should support compiling JSX in JS files with React dependency', async function () {
-    await bundle(path.join(__dirname, '/integration/jsx-react/index.js'));
-
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(file.includes('React.createElement("div"'));
-  });
-
-  it('should support compiling JSX with pure annotations', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/jsx-react/pure-comment.js'),
-    );
-
-    let file = await outputFS.readFile(
-      path.join(distDir, 'pure-comment.js'),
-      'utf8',
-    );
-    assert(
-      file.includes('/*#__PURE__*/ (0, _reactDefault.default).createElement'),
-    );
-
-    let res = await run(b);
-    assert(res.Foo());
-  });
-
-  it('should support compiling JSX in JS files with React aliased to Preact', async function () {
-    await bundle(path.join(__dirname, '/integration/jsx-react-alias/index.js'));
-
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(file.includes('React.createElement("div"'));
-  });
-
-  it('should support compiling JSX in JS files with Preact dependency', async function () {
-    await bundle(path.join(__dirname, '/integration/jsx-preact/index.js'));
-
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(file.includes('h("div"'));
-  });
-
-  it('should support compiling JSX in JS files with Preact url dependency', async function () {
-    await bundle(
-      path.join(__dirname, '/integration/jsx-preact-with-url/index.js'),
-    );
-
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(file.includes('h("div"'));
-  });
-
-  it('should support compiling JSX in TS files with Preact dependency', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/jsx-preact-ts/index.tsx'),
-    );
-
-    assert(typeof (await run(b)) === 'object');
-  });
-
-  it('should support compiling JSX in JS files with Nerv dependency', async function () {
-    await bundle(path.join(__dirname, '/integration/jsx-nervjs/index.js'));
-
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(file.includes('Nerv.createElement("div"'));
-  });
-
-  it('should support compiling JSX in JS files with Hyperapp dependency', async function () {
-    await bundle(path.join(__dirname, '/integration/jsx-hyperapp/index.js'));
-
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(file.includes('h("div"'));
-  });
-
-  it('should not transpile spread in JSX with modern targets', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/jsx-spread/index.jsx'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(file.includes('React.createElement("div"'));
-    assert(file.includes('...a'));
-    assert(!file.includes('@swc/helpers'));
-  });
-
-  it('should support the automatic JSX runtime with React >= 17', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/jsx-automatic/index.js'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(file.includes('react/jsx-dev-runtime'));
-    assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
-  });
-
-  it('should support the automatic JSX runtime with preact >= 10.5', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/jsx-automatic-preact/index.js'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(file.includes('preact/jsx-dev-runtime'));
-    assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
-  });
-
-  it('should support the automatic JSX runtime with React ^16.14.0', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/jsx-automatic-16/index.js'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(file.includes('react/jsx-dev-runtime'));
-    assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
-  });
-
-  it('should support the automatic JSX runtime with React 18 prereleases', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/jsx-automatic-18/index.js'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(file.includes('react/jsx-dev-runtime'));
-    assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
-  });
-
-  it('should support the automatic JSX runtime with experimental React versions', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/jsx-automatic-experimental/index.js'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(file.includes('react/jsx-dev-runtime'));
-    assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
-  });
-
-  it('should support the automatic JSX runtime with preact with alias', async function () {
-    let b = await bundle(
-      path.join(
-        __dirname,
-        '/integration/jsx-automatic-preact-with-alias/index.js',
-      ),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(/\Wreact\/jsx-dev-runtime\W/.test(file));
-    assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
-  });
-
-  it('should support the automatic JSX runtime with explicit tsconfig.json', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/jsx-automatic-tsconfig/index.js'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(file.includes('preact/jsx-dev-runtime'));
-    assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
-  });
-
-  it('should support explicit JSX pragma in tsconfig.json', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/jsx-pragma-tsconfig/index.js'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(file.includes('JSX(JSXFragment'));
-    assert(file.includes('JSX("div"'));
-  });
-
-  it('should support explicitly enabling JSX in tsconfig.json', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/jsx-tsconfig/index.js'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(file.includes('React.createElement("div"'));
-  });
-
-  it('should support enabling decorators in tsconfig.json', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/decorators/index.ts'),
-    );
-
-    let output = [];
-    await run(b, {
-      output(o) {
-        output.push(o);
-      },
+      let file = await outputFS.readFile(
+        path.join(distDir, 'index.js'),
+        'utf8',
+      );
+      assert(file.includes('React.createElement(S.Foo'));
     });
 
-    assert.deepEqual(output, [
-      'first(): factory evaluated',
-      'second(): factory evaluated',
-      'second(): called',
-      'first(): called',
-    ]);
-  });
+    it('with pure annotations', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/jsx-react/pure-comment.js'),
+      );
 
-  it('should support enabling decorators and setting useDefineForClassFields in tsconfig.json', async function () {
-    let b = await bundle(
-      path.join(
-        __dirname,
-        '/integration/decorators-useDefineForClassFields/index.ts',
-      ),
-    );
+      let file = await outputFS.readFile(
+        path.join(distDir, 'pure-comment.js'),
+        'utf8',
+      );
+      assert(
+        file.includes('/*#__PURE__*/ (0, _reactDefault.default).createElement'),
+      );
 
-    let output = [];
-    await run(b, {
-      output(...o) {
-        output.push(...o);
-      },
+      let res = await run(b);
+      assert(res.Foo());
     });
 
-    assert.deepEqual(output, ['foo 15', 'foo 16']);
+    it('spread with modern targets', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/jsx-spread/index.jsx'),
+      );
+
+      let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(file.includes('React.createElement("div"'));
+      assert(file.includes('...a'));
+      assert(!file.includes('@swc/helpers'));
+    });
+
+    it('in js files with a React dependency', async function () {
+      await bundle(path.join(__dirname, '/integration/jsx-react/index.js'));
+
+      let file = await outputFS.readFile(
+        path.join(distDir, 'index.js'),
+        'utf8',
+      );
+      assert(file.includes('React.createElement("div"'));
+    });
+
+    it('in js files with React aliased to Preact', async function () {
+      await bundle(
+        path.join(__dirname, '/integration/jsx-react-alias/index.js'),
+      );
+
+      let file = await outputFS.readFile(
+        path.join(distDir, 'index.js'),
+        'utf8',
+      );
+      assert(file.includes('React.createElement("div"'));
+    });
+
+    it('in js files with Preact dependency', async function () {
+      await bundle(path.join(__dirname, '/integration/jsx-preact/index.js'));
+
+      let file = await outputFS.readFile(
+        path.join(distDir, 'index.js'),
+        'utf8',
+      );
+      assert(file.includes('h("div"'));
+    });
+
+    it('in ts files with Preact dependency', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/jsx-preact-ts/index.tsx'),
+      );
+
+      assert(typeof (await run(b)) === 'object');
+    });
+
+    it('in js files with Preact url dependency', async function () {
+      await bundle(
+        path.join(__dirname, '/integration/jsx-preact-with-url/index.js'),
+      );
+
+      let file = await outputFS.readFile(
+        path.join(distDir, 'index.js'),
+        'utf8',
+      );
+      assert(file.includes('h("div"'));
+    });
+
+    it('in js files with Nerv dependency', async function () {
+      await bundle(path.join(__dirname, '/integration/jsx-nervjs/index.js'));
+
+      let file = await outputFS.readFile(
+        path.join(distDir, 'index.js'),
+        'utf8',
+      );
+      assert(file.includes('Nerv.createElement("div"'));
+    });
+
+    it('in js files with Hyperapp dependency', async function () {
+      await bundle(path.join(__dirname, '/integration/jsx-hyperapp/index.js'));
+
+      let file = await outputFS.readFile(
+        path.join(distDir, 'index.js'),
+        'utf8',
+      );
+      assert(file.includes('h("div"'));
+    });
+  });
+
+  describe.v2('supports the automatic jsx runtime', () => {
+    it('with React >= 17', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/jsx-automatic/index.js'),
+      );
+
+      let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(file.includes('react/jsx-dev-runtime'));
+      assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
+    });
+
+    it('with Preact >= 10.5', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/jsx-automatic-preact/index.js'),
+      );
+
+      let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(file.includes('preact/jsx-dev-runtime'));
+      assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
+    });
+
+    it('with React ^16.14.0', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/jsx-automatic-16/index.js'),
+      );
+
+      let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(file.includes('react/jsx-dev-runtime'));
+      assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
+    });
+
+    it('with React 18 prereleases', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/jsx-automatic-18/index.js'),
+      );
+
+      let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(file.includes('react/jsx-dev-runtime'));
+      assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
+    });
+
+    it('with experimental React versions', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/jsx-automatic-experimental/index.js',
+        ),
+      );
+
+      let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(file.includes('react/jsx-dev-runtime'));
+      assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
+    });
+
+    it('with Preact alias', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/jsx-automatic-preact-with-alias/index.js',
+        ),
+      );
+
+      let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(/\Wreact\/jsx-dev-runtime\W/.test(file));
+      assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
+    });
+
+    it('with explicit tsconfig.json', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/jsx-automatic-tsconfig/index.js'),
+      );
+
+      let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(file.includes('preact/jsx-dev-runtime'));
+      assert(file.includes('(0, _jsxDevRuntime.jsxDEV)("div"'));
+    });
+  });
+
+  describe('of tsconfig.json', () => {
+    it.v2('supports explicit JSX pragma', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/jsx-pragma-tsconfig/index.js'),
+      );
+
+      let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(file.includes('JSX(JSXFragment'));
+      assert(file.includes('JSX("div"'));
+    });
+
+    it.v2('supports explicitly enabling JSX', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/jsx-tsconfig/index.js'),
+      );
+
+      let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(file.includes('React.createElement("div"'));
+    });
+
+    it('supports decorators', async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/decorators/index.ts'),
+      );
+
+      let output = [];
+      await run(b, {
+        output(o) {
+          output.push(o);
+        },
+      });
+
+      assert.deepEqual(output, [
+        'first(): factory evaluated',
+        'second(): factory evaluated',
+        'second(): called',
+        'first(): called',
+      ]);
+    });
+
+    it('supports decorators and setting useDefineForClassFields', async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/decorators-useDefineForClassFields/index.ts',
+        ),
+      );
+
+      let output = [];
+      await run(b, {
+        output(...o) {
+          output.push(...o);
+        },
+      });
+
+      assert.deepEqual(output, ['foo 15', 'foo 16']);
+    });
   });
 
   it('should support transpiling optional chaining', async function () {
@@ -343,61 +375,72 @@ describe.v2('transpilation', function () {
     assert(!file.includes('es.array.concat'));
   });
 
-  it('should resolve @swc/helpers and regenerator-runtime relative to parcel', async function () {
-    let dir = path.join('/tmp/' + Math.random().toString(36).slice(2));
-    await outputFS.mkdirp(dir);
-    await ncp(path.join(__dirname, '/integration/swc-helpers'), dir);
-    await bundle(path.join(dir, 'index.js'), {
-      mode: 'production',
-      inputFS: overlayFS,
-      defaultTargetOptions: {
-        engines: {
-          browsers: '>= 0.25%',
-        },
-      },
-    });
-  });
-
-  it('should support commonjs and esm versions of @swc/helpers', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/swc-helpers-library/index.js'),
-    );
-
-    let file = await outputFS.readFile(
-      nullthrows(b.getBundles().find((b) => b.env.outputFormat === 'commonjs'))
-        .filePath,
-      'utf8',
-    );
-    assert(file.includes('@swc/helpers/cjs/_class_call_check.cjs'));
-
-    file = await outputFS.readFile(
-      nullthrows(b.getBundles().find((b) => b.env.outputFormat === 'esmodule'))
-        .filePath,
-      'utf8',
-    );
-    assert(file.includes('@swc/helpers/_/_class_call_check'));
-  });
-
-  it('should support commonjs versions of @swc/helpers without scope hoisting', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/swc-helpers-library/index.js'),
-      {
-        targets: {
-          test: {
-            distDir,
-            isLibrary: true,
-            scopeHoist: false,
+  it.v2(
+    'should resolve @swc/helpers and regenerator-runtime relative to parcel',
+    async function () {
+      let dir = path.join('/tmp/' + Math.random().toString(36).slice(2));
+      await outputFS.mkdirp(dir);
+      await ncp(path.join(__dirname, '/integration/swc-helpers'), dir);
+      await bundle(path.join(dir, 'index.js'), {
+        mode: 'production',
+        inputFS: overlayFS,
+        defaultTargetOptions: {
+          engines: {
+            browsers: '>= 0.25%',
           },
         },
-      },
-    );
+      });
+    },
+  );
 
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(file.includes('@swc/helpers/cjs/_class_call_check.cjs'));
-    await run(b);
-  });
+  it.v2(
+    'should support commonjs and esm versions of @swc/helpers',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/swc-helpers-library/index.js'),
+      );
 
-  it('should print errors from transpilation', async function () {
+      let file = await outputFS.readFile(
+        nullthrows(
+          b.getBundles().find((b) => b.env.outputFormat === 'commonjs'),
+        ).filePath,
+        'utf8',
+      );
+      assert(file.includes('@swc/helpers/cjs/_class_call_check.cjs'));
+
+      file = await outputFS.readFile(
+        nullthrows(
+          b.getBundles().find((b) => b.env.outputFormat === 'esmodule'),
+        ).filePath,
+        'utf8',
+      );
+      assert(file.includes('@swc/helpers/_/_class_call_check'));
+    },
+  );
+
+  it.v2(
+    'should support commonjs versions of @swc/helpers without scope hoisting',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/swc-helpers-library/index.js'),
+        {
+          targets: {
+            test: {
+              distDir,
+              isLibrary: true,
+              scopeHoist: false,
+            },
+          },
+        },
+      );
+
+      let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(file.includes('@swc/helpers/cjs/_class_call_check.cjs'));
+      await run(b);
+    },
+  );
+
+  it.v2('should print errors from transpilation', async function () {
     let source = path.join(
       __dirname,
       '/integration/transpilation-invalid/index.js',

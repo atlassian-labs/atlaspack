@@ -53,8 +53,12 @@ pub struct AtlaspackNapi {
   tx_worker: Sender<NodejsWorker>,
 }
 
+// Refer to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length
+const MAX_STRING_LENGTH: usize = 268435440;
+
 #[napi]
 impl AtlaspackNapi {
+  #[tracing::instrument(level = "info", skip_all)]
   #[napi]
   pub fn create(napi_options: AtlaspackNapiOptions, lmdb: &LMDB, env: Env) -> napi::Result<Self> {
     let thread_id = std::thread::current().id();
@@ -108,6 +112,7 @@ impl AtlaspackNapi {
     })
   }
 
+  #[tracing::instrument(level = "info", skip_all)]
   #[napi]
   pub fn build_asset_graph(
     &self,
@@ -134,7 +139,15 @@ impl AtlaspackNapi {
         match atlaspack {
           Err(error) => deferred.reject(to_napi_error(error)),
           Ok(atlaspack) => match atlaspack.build_asset_graph() {
-            Ok(asset_graph) => deferred.resolve(move |env| env.to_js_value(&asset_graph)),
+            Ok(asset_graph) => deferred.resolve(move |env| {
+              let mut js_object = env.create_object()?;
+
+              js_object.set_named_property("edges", env.to_js_value(&asset_graph.edges())?)?;
+              js_object
+                .set_named_property("nodes", asset_graph.serialize_nodes(MAX_STRING_LENGTH)?)?;
+
+              Ok(js_object)
+            }),
             Err(error) => deferred.reject(to_napi_error(error)),
           },
         }
@@ -144,6 +157,7 @@ impl AtlaspackNapi {
     Ok(promise)
   }
 
+  #[tracing::instrument(level = "info", skip_all)]
   fn register_workers(&self, options: &AtlaspackNapiBuildOptions) -> napi::Result<()> {
     for _ in 0..self.node_worker_count {
       let transferable = JsTransferable::new(self.tx_worker.clone());
@@ -161,6 +175,7 @@ impl AtlaspackNapi {
   /// JavaScript does all its writes through a single thread, which is not this handle. If we want
   /// to sequence writes with the JavaScript writes, we should be using the
   /// [`lmdb_js_lite::writer::DatabaseWriterHandle`] instead.
+  #[tracing::instrument(level = "info", skip_all)]
   fn run_db_healthcheck(db: &Arc<DatabaseWriter>) -> napi::Result<()> {
     let run_healthcheck = || -> anyhow::Result<()> {
       let txn = db.read_txn()?;

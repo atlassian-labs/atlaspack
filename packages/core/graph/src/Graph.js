@@ -17,6 +17,7 @@ export type GraphOpts<TNode, TEdgeType: number = 1> = {|
   nodes?: Array<TNode | null>,
   adjacencyList?: SerializedAdjacencyList<TEdgeType>,
   rootNodeId?: ?NodeId,
+  initialCapacity?: number,
 |};
 
 export type SerializedGraph<TNode, TEdgeType: number = 1> = {|
@@ -84,9 +85,12 @@ export default class Graph<TNode, TEdgeType: number = 1> {
     this.setRootNodeId(opts?.rootNodeId);
 
     let adjacencyList = opts?.adjacencyList;
+    let initialCapacity = opts?.initialCapacity;
     this.adjacencyList = adjacencyList
       ? AdjacencyList.deserialize(adjacencyList)
-      : new AdjacencyList<TEdgeType>();
+      : new AdjacencyList<TEdgeType>(
+          typeof initialCapacity === 'number' ? {initialCapacity} : undefined,
+        );
   }
 
   setRootNodeId(id: ?NodeId) {

@@ -1334,58 +1334,66 @@ export function request(
 
 // $FlowFixMe
 let origDescribe = globalThis.describe;
-let parcelVersion: string | void;
+let atlaspackVersion: string | void;
+
+function applyVersion(version: string | void, fn: () => void) {
+  let previousVersion = atlaspackVersion;
+  atlaspackVersion = version;
+  fn();
+  atlaspackVersion = previousVersion;
+}
 
 export function describe(...args: mixed[]) {
-  parcelVersion = undefined;
-  origDescribe.apply(this, args);
+  applyVersion(undefined, origDescribe.bind(this, ...args));
 }
 
 describe.only = function (...args: mixed[]) {
-  parcelVersion = undefined;
-  origDescribe.only.apply(this, args);
+  applyVersion(undefined, origDescribe.only.bind(this, ...args));
 };
 
 describe.skip = function (...args: mixed[]) {
-  parcelVersion = undefined;
-  origDescribe.skip.apply(this, args);
+  applyVersion(undefined, origDescribe.skip.bind(this, ...args));
 };
 
 describe.v2 = function (...args: mixed[]) {
-  parcelVersion = 'v2';
-  if (!isAtlaspackV3) {
-    origDescribe.apply(this, args);
-  }
+  applyVersion('v2', () => {
+    if (!isAtlaspackV3) {
+      origDescribe.apply(this, args);
+    }
+  });
 };
 
 describe.v2.only = function (...args: mixed[]) {
-  parcelVersion = 'v2';
-  if (!isAtlaspackV3) {
-    origDescribe.only.apply(this, args);
-  }
+  applyVersion('v2', () => {
+    if (!isAtlaspackV3) {
+      origDescribe.only.apply(this, args);
+    }
+  });
 };
 
 describe.v3 = function (...args: mixed[]) {
-  parcelVersion = 'v3';
-  if (isAtlaspackV3) {
-    origDescribe.apply(this, args);
-  }
+  applyVersion('v3', () => {
+    if (isAtlaspackV3) {
+      origDescribe.apply(this, args);
+    }
+  });
 };
 
 describe.v3.only = function (...args: mixed[]) {
-  parcelVersion = 'v3';
-  if (isAtlaspackV3) {
-    origDescribe.only.apply(this, args);
-  }
+  applyVersion('v3', () => {
+    if (isAtlaspackV3) {
+      origDescribe.only.apply(this, args);
+    }
+  });
 };
 
 let origIt = globalThis.it;
 
 export function it(...args: mixed[]) {
   if (
-    parcelVersion == null ||
-    (parcelVersion == 'v2' && !isAtlaspackV3) ||
-    (parcelVersion == 'v3' && isAtlaspackV3)
+    atlaspackVersion == null ||
+    (atlaspackVersion == 'v2' && !isAtlaspackV3) ||
+    (atlaspackVersion == 'v3' && isAtlaspackV3)
   ) {
     origIt.apply(this, args);
   }

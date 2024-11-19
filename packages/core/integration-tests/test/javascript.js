@@ -34,10 +34,8 @@ describe('javascript', function () {
     await removeDistDirectory();
   });
 
-  it.v2(
-    'does not fail when there is a transitive import of an empty file with export *',
-    async () => {
-      await fsFixture(overlayFS, __dirname)`
+  it('does not fail when there is a transitive import of an empty file with export *', async () => {
+    await fsFixture(overlayFS, __dirname)`
         empty.js:
           // intentionally empty
         a.js:
@@ -78,18 +76,17 @@ describe('javascript', function () {
           export const test = 'should not fail';
         yarn.lock: {}
       `;
-      let result = await bundle(path.join(__dirname, 'index.js'), {
-        inputFS: overlayFS,
-      });
-      let output;
-      await run(result, {
-        output(v) {
-          output = v;
-        },
-      });
-      assert.equal(output, 'should not fail');
-    },
-  );
+    let result = await bundle(path.join(__dirname, 'index.js'), {
+      inputFS: overlayFS,
+    });
+    let output;
+    await run(result, {
+      output(v) {
+        output = v;
+      },
+    });
+    assert.equal(output, 'should not fail');
+  });
 
   it('should produce a basic JS bundle with CommonJS requires', async function () {
     const inputDir = path.join(__dirname, 'integration/commonjs');
@@ -118,7 +115,7 @@ describe('javascript', function () {
     assert.equal(output(), 3);
   });
 
-  it.v2('should support url: imports with CommonJS output', async function () {
+  it('should support url: imports with CommonJS output', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/commonjs-import-url/index.js'),
     );
@@ -426,34 +423,31 @@ describe('javascript', function () {
     assert.equal(await output(), 3);
   });
 
-  it.v2(
-    'should prefetch bundles when declared as an import attribute statically',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/dynamic-static-prefetch/index.js'),
-      );
+  it('should prefetch bundles when declared as an import attribute statically', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/dynamic-static-prefetch/index.js'),
+    );
 
-      let output = await run(b);
-      let headChildren = await output.default;
+    let output = await run(b);
+    let headChildren = await output.default;
 
-      assert.strictEqual(headChildren.length, 4);
+    assert.strictEqual(headChildren.length, 4);
 
-      assert.strictEqual(headChildren[1].tag, 'script');
-      assert(headChildren[1].src.match(/async\..*\.js/));
+    assert.strictEqual(headChildren[1].tag, 'script');
+    assert(headChildren[1].src.match(/async\..*\.js/));
 
-      assert.strictEqual(headChildren[2].tag, 'link');
-      assert.strictEqual(headChildren[2].rel, 'prefetch');
-      assert.strictEqual(headChildren[2].as, 'script');
-      assert(headChildren[2].href.match(/prefetched\..*\.js/));
+    assert.strictEqual(headChildren[2].tag, 'link');
+    assert.strictEqual(headChildren[2].rel, 'prefetch');
+    assert.strictEqual(headChildren[2].as, 'script');
+    assert(headChildren[2].href.match(/prefetched\..*\.js/));
 
-      assert.strictEqual(headChildren[3].tag, 'link');
-      assert.strictEqual(headChildren[3].rel, 'prefetch');
-      assert.strictEqual(headChildren[3].as, 'style');
-      assert(headChildren[3].href.match(/prefetched\..*\.css/));
-    },
-  );
+    assert.strictEqual(headChildren[3].tag, 'link');
+    assert.strictEqual(headChildren[3].rel, 'prefetch');
+    assert.strictEqual(headChildren[3].as, 'style');
+    assert(headChildren[3].href.match(/prefetched\..*\.css/));
+  });
 
-  it.v2('should load additional links that were prefetched', async function () {
+  it('should load additional links that were prefetched', async function () {
     let b = await bundle(
       path.join(
         __dirname,
@@ -482,29 +476,26 @@ describe('javascript', function () {
     assert(cssBundles[1].href.match(/prefetched-loaded\..*\.css/));
   });
 
-  it.v2(
-    'should preload bundles when declared as an import attribute statically',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/dynamic-static-preload/index.js'),
-      );
+  it('should preload bundles when declared as an import attribute statically', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/dynamic-static-preload/index.js'),
+    );
 
-      let output = await run(b);
-      let headChildren = await output.default;
+    let output = await run(b);
+    let headChildren = await output.default;
 
-      assert(headChildren.length === 4);
+    assert(headChildren.length === 4);
 
-      assert(headChildren[2].tag === 'link');
-      assert(headChildren[2].rel === 'preload');
-      assert(headChildren[2].as === 'script');
-      assert(headChildren[2].href.match(/preloaded\..*\.js/));
+    assert(headChildren[2].tag === 'link');
+    assert(headChildren[2].rel === 'preload');
+    assert(headChildren[2].as === 'script');
+    assert(headChildren[2].href.match(/preloaded\..*\.js/));
 
-      assert(headChildren[3].tag === 'link');
-      assert(headChildren[3].rel === 'preload');
-      assert(headChildren[3].as === 'style');
-      assert(headChildren[3].href.match(/preloaded\..*\.css/));
-    },
-  );
+    assert(headChildren[3].tag === 'link');
+    assert(headChildren[3].rel === 'preload');
+    assert(headChildren[3].as === 'style');
+    assert(headChildren[3].href.match(/preloaded\..*\.css/));
+  });
 
   // TODO: Implement when we can evaluate bundles against esmodule targets
   it(
@@ -921,7 +912,7 @@ describe('javascript', function () {
     assert.ok(await promise);
   });
 
-  it.v2('should support importing a URL to a raw asset', async function () {
+  it('should support importing a URL to a raw asset', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/import-raw/index.js'),
     );
@@ -1078,49 +1069,46 @@ describe('javascript', function () {
     },
   );
 
-  it.v2(
-    'should support importing a URL to a large raw asset',
-    async function () {
-      // 6 megabytes, which exceeds the threshold in summarizeRequest for buffering
-      // entire contents into memory and should stream content instead
-      let assetSizeBytes = 6000000;
+  it('should support importing a URL to a large raw asset', async function () {
+    // 6 megabytes, which exceeds the threshold in summarizeRequest for buffering
+    // entire contents into memory and should stream content instead
+    let assetSizeBytes = 6000000;
 
-      let distDir = path.join(outputFS.cwd(), '/dist');
-      let fixtureDir = path.join(__dirname, '/integration/import-raw');
-      let inputDir = path.join(__dirname, 'input');
+    let distDir = path.join(outputFS.cwd(), '/dist');
+    let fixtureDir = path.join(__dirname, '/integration/import-raw');
+    let inputDir = path.join(__dirname, 'input');
 
-      await ncp(fixtureDir, inputDir);
-      await outputFS.writeFile(
-        path.join(inputDir, 'test.txt'),
-        Buffer.alloc(assetSizeBytes),
-      );
+    await ncp(fixtureDir, inputDir);
+    await outputFS.writeFile(
+      path.join(inputDir, 'test.txt'),
+      Buffer.alloc(assetSizeBytes),
+    );
 
-      let b = await bundle(path.join(inputDir, 'index.js'), {
-        inputFS: overlayFS,
-        defaultTargetOptions: {
-          distDir,
-        },
-      });
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: ['index.js', 'bundle-url.js'],
-        },
-        {
-          type: 'txt',
-          assets: ['test.txt'],
-        },
-      ]);
+    let b = await bundle(path.join(inputDir, 'index.js'), {
+      inputFS: overlayFS,
+      defaultTargetOptions: {
+        distDir,
+      },
+    });
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: ['index.js', 'bundle-url.js'],
+      },
+      {
+        type: 'txt',
+        assets: ['test.txt'],
+      },
+    ]);
 
-      let output = await run(b);
-      assert.equal(typeof output, 'function');
-      assert(/^http:\/\/localhost\/test\.[0-9a-f]+\.txt$/.test(output()));
-      let stats = await outputFS.stat(
-        path.join(distDir, url.parse(output()).pathname),
-      );
-      assert.equal(stats.size, assetSizeBytes);
-    },
-  );
+    let output = await run(b);
+    assert.equal(typeof output, 'function');
+    assert(/^http:\/\/localhost\/test\.[0-9a-f]+\.txt$/.test(output()));
+    let stats = await outputFS.stat(
+      path.join(distDir, url.parse(output()).pathname),
+    );
+    assert.equal(stats.size, assetSizeBytes);
+  });
 
   it('should minify JS in production mode', async function () {
     let b = await bundle(path.join(__dirname, '/integration/uglify/index.js'), {
@@ -1908,29 +1896,26 @@ describe('javascript', function () {
     },
   );
 
-  it.v2(
-    'should replace process.browser for target electron-renderer',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/process/index.js'),
-        {
-          targets: {
-            main: {
-              context: 'electron-renderer',
-              distDir: path.join(__dirname, '/integration/process/dist.js'),
-            },
+  it('should replace process.browser for target electron-renderer', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/process/index.js'),
+      {
+        targets: {
+          main: {
+            context: 'electron-renderer',
+            distDir: path.join(__dirname, '/integration/process/dist.js'),
           },
         },
-      );
+      },
+    );
 
-      let output = await run(b);
-      assert.ok(output.toString().indexOf('process.browser') === -1);
-      assert.equal(output(), true);
-      // Running the bundled code has the side effect of setting process.browser = true, which can mess
-      // up the instantiation of typescript.sys within validator-typescript, so we want to reset it.
-      process.browser = undefined;
-    },
-  );
+    let output = await run(b);
+    assert.ok(output.toString().indexOf('process.browser') === -1);
+    assert.equal(output(), true);
+    // Running the bundled code has the side effect of setting process.browser = true, which can mess
+    // up the instantiation of typescript.sys within validator-typescript, so we want to reset it.
+    process.browser = undefined;
+  });
 
   it.skip('should support adding implicit dependencies', async function () {
     let b = await bundle(path.join(__dirname, '/integration/json/index.js'), {
@@ -2158,30 +2143,27 @@ describe('javascript', function () {
     assert.equal(output.test(), 'pkg-main-module');
   });
 
-  it.v2(
-    'should support optional dependencies in try...catch blocks',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/optional-dep/index.js'),
-      );
+  it('should support optional dependencies in try...catch blocks', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/optional-dep/index.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: ['index.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: ['index.js'],
+      },
+    ]);
 
-      let output = await run(b);
+    let output = await run(b);
 
-      assert.equal(Object.getPrototypeOf(output).constructor.name, 'Error');
-      assert(
-        /Cannot find module ['"]optional-dep['"]/.test(output.message),
-        'Should set correct error message',
-      );
-      assert.equal(output.code, 'MODULE_NOT_FOUND');
-    },
-  );
+    assert.equal(Object.getPrototypeOf(output).constructor.name, 'Error');
+    assert(
+      /Cannot find module ['"]optional-dep['"]/.test(output.message),
+      'Should set correct error message',
+    );
+    assert.equal(output.code, 'MODULE_NOT_FOUND');
+  });
 
   it('should support excluding dependencies in falsy branches', async function () {
     let b = await bundle(
@@ -2693,7 +2675,7 @@ describe('javascript', function () {
     await run(b);
   });
 
-  it.v2('should support both pipeline and non-pipeline imports', async () => {
+  it('should support both pipeline and non-pipeline imports', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/multi-pipeline/index.js'),
     );
@@ -3289,31 +3271,28 @@ describe('javascript', function () {
     assert.deepEqual(await (await run(b)).default, 43);
   });
 
-  it.v2(
-    'can share sibling bundles reachable from a common dependency',
-    async () => {
-      let b = await bundle(
-        path.join(
-          __dirname,
-          '/integration/shared-sibling-common-dependency/index.js',
-        ),
-      );
+  it('can share sibling bundles reachable from a common dependency', async () => {
+    let b = await bundle(
+      path.join(
+        __dirname,
+        '/integration/shared-sibling-common-dependency/index.js',
+      ),
+    );
 
-      let bundles = b.getBundles();
-      let asyncJsBundles = bundles.filter(
-        (b) => !b.needsStableName && b.type === 'js',
-      );
-      assert.equal(asyncJsBundles.length, 2);
+    let bundles = b.getBundles();
+    let asyncJsBundles = bundles.filter(
+      (b) => !b.needsStableName && b.type === 'js',
+    );
+    assert.equal(asyncJsBundles.length, 2);
 
-      // Every bundlegroup with an async js bundle should have the corresponding css
-      for (let bundle of asyncJsBundles) {
-        for (let bundleGroup of b.getBundleGroupsContainingBundle(bundle)) {
-          let bundlesInGroup = b.getBundlesInBundleGroup(bundleGroup);
-          assert(bundlesInGroup.find((s) => s.type === 'css'));
-        }
+    // Every bundlegroup with an async js bundle should have the corresponding css
+    for (let bundle of asyncJsBundles) {
+      for (let bundleGroup of b.getBundleGroupsContainingBundle(bundle)) {
+        let bundlesInGroup = b.getBundlesInBundleGroup(bundleGroup);
+        assert(bundlesInGroup.find((s) => s.type === 'css'));
       }
-    },
-  );
+    }
+  });
 
   it.v2('should throw a diagnostic for unknown pipelines', async function () {
     let fixture = path.join(__dirname, 'integration/pipeline-unknown/a.js');
@@ -3423,9 +3402,11 @@ describe('javascript', function () {
   });
 
   // Enable this for v3 once hmr options is supported in the js_transformer
+
   it.v2(
     'should not use arrow functions for reexport declarations unless supported',
     async function () {
+      // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
       let b = await bundle(
         path.join(__dirname, 'integration/js-export-arrow-support/index.js'),
         {
@@ -3818,50 +3799,44 @@ describe('javascript', function () {
     },
   );
 
-  it.v2(
-    'should reuse a bundle when its main asset (aka bundleroot) is imported sychronously',
-    async function () {
-      let b = await bundle(
-        path.join(
-          __dirname,
-          'integration/shared-bundle-single-source/index.js',
-        ),
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            shouldScopeHoist: false,
-          },
+  it('should reuse a bundle when its main asset (aka bundleroot) is imported sychronously', async function () {
+    let b = await bundle(
+      path.join(__dirname, 'integration/shared-bundle-single-source/index.js'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: false,
         },
-      );
+      },
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'css-loader.js',
-            'esmodule-helpers.js',
-            'js-loader.js',
-            'bundle-manifest.js',
-          ],
-        },
-        {
-          assets: ['bar.js'],
-        },
-        {
-          assets: ['a.js', 'b.js', 'foo.js'],
-        },
-        {
-          assets: ['styles.css'],
-        },
-        {
-          assets: ['local.html'],
-        },
-      ]);
-    },
-  );
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: [
+          'index.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'css-loader.js',
+          'esmodule-helpers.js',
+          'js-loader.js',
+          'bundle-manifest.js',
+        ],
+      },
+      {
+        assets: ['bar.js'],
+      },
+      {
+        assets: ['a.js', 'b.js', 'foo.js'],
+      },
+      {
+        assets: ['styles.css'],
+      },
+      {
+        assets: ['local.html'],
+      },
+    ]);
+  });
 
   it.v2(
     'should error on undeclared external dependencies for libraries',
@@ -4348,57 +4323,61 @@ describe('javascript', function () {
     });
   });
 
-  it('should support importing async bundles from bundles with different dist paths', async function () {
-    let bundleGraph = await bundle(
-      ['bar/entry/entry-a.js', 'foo/entry-b.js'].map((f) =>
-        path.join(__dirname, 'integration/differing-bundle-urls', f),
-      ),
-      {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldOptimize: false,
+  it.v2(
+    'should support importing async bundles from bundles with different dist paths',
+    async function () {
+      // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
+      let bundleGraph = await bundle(
+        ['bar/entry/entry-a.js', 'foo/entry-b.js'].map((f) =>
+          path.join(__dirname, 'integration/differing-bundle-urls', f),
+        ),
+        {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+          },
         },
-      },
-    );
-    assertBundles(bundleGraph, [
-      {
-        name: 'entry-a.js',
-        assets: [
-          'bundle-manifest.js',
-          'bundle-url.js',
-          'cacheLoader.js',
-          'entry-a.js',
-          'js-loader.js',
-        ],
-      },
-      {
-        name: 'entry-b.js',
-        assets: [
-          'bundle-manifest.js',
-          'bundle-url.js',
-          'cacheLoader.js',
-          'entry-b.js',
-          'js-loader.js',
-        ],
-      },
-      {name: /deep\.[a-f0-9]+\.js/, assets: ['deep.js']},
-      {name: /common\.[a-f0-9]+\.js/, assets: ['index.js']},
-    ]);
+      );
+      assertBundles(bundleGraph, [
+        {
+          name: 'entry-a.js',
+          assets: [
+            'bundle-manifest.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'entry-a.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          name: 'entry-b.js',
+          assets: [
+            'bundle-manifest.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'entry-b.js',
+            'js-loader.js',
+          ],
+        },
+        {name: /deep\.[a-f0-9]+\.js/, assets: ['deep.js']},
+        {name: /common\.[a-f0-9]+\.js/, assets: ['index.js']},
+      ]);
 
-    let [a, b] = bundleGraph.getBundles().filter((b) => b.needsStableName);
-    let calls = [];
+      let [a, b] = bundleGraph.getBundles().filter((b) => b.needsStableName);
+      let calls = [];
 
-    let bundles = [
-      [await outputFS.readFile(a.filePath, 'utf8'), a],
-      [await outputFS.readFile(b.filePath, 'utf8'), b],
-    ];
+      let bundles = [
+        [await outputFS.readFile(a.filePath, 'utf8'), a],
+        [await outputFS.readFile(b.filePath, 'utf8'), b],
+      ];
 
-    await runBundles(bundleGraph, a, bundles, {
-      sideEffect: (v) => {
-        calls.push(v);
-      },
-    });
-  });
+      await runBundles(bundleGraph, a, bundles, {
+        sideEffect: (v) => {
+          calls.push(v);
+        },
+      });
+    },
+  );
 
   it('supports deferring unused ESM imports with sideEffects: false', async function () {
     let b = await bundle(
@@ -4720,7 +4699,7 @@ describe('javascript', function () {
       shouldScopeHoist ? '' : 'out'
     } scope-hoisting`, function () {
       if (usesSymbolPropagation) {
-        it.v2('supports excluding unused CSS imports', async function () {
+        it('supports excluding unused CSS imports', async function () {
           let b = await bundle(
             path.join(
               __dirname,
@@ -4765,43 +4744,40 @@ describe('javascript', function () {
           assert(!css.includes('.b2'));
         });
 
-        it.v2(
-          "doesn't create new bundles for dynamic imports in excluded assets",
-          async function () {
-            let b = await bundle(
-              path.join(
-                __dirname,
-                '/integration/scope-hoisting/es6/side-effects-no-new-bundle/index.html',
-              ),
-              options,
-            );
+        it("doesn't create new bundles for dynamic imports in excluded assets", async function () {
+          let b = await bundle(
+            path.join(
+              __dirname,
+              '/integration/scope-hoisting/es6/side-effects-no-new-bundle/index.html',
+            ),
+            options,
+          );
 
-            assertBundles(b, [
-              {
-                name: 'index.html',
-                assets: ['index.html'],
-              },
-              {
-                type: 'js',
-                assets: ['index.js', 'b1.js'],
-              },
-            ]);
+          assertBundles(b, [
+            {
+              name: 'index.html',
+              assets: ['index.html'],
+            },
+            {
+              type: 'js',
+              assets: ['index.js', 'b1.js'],
+            },
+          ]);
 
-            let calls = [];
-            let res = await run(
-              b,
-              {
-                output: null,
-                sideEffect: (caller) => {
-                  calls.push(caller);
-                },
+          let calls = [];
+          let res = await run(
+            b,
+            {
+              output: null,
+              sideEffect: (caller) => {
+                calls.push(caller);
               },
-              {require: false},
-            );
-            assert.deepEqual(calls, ['b1']);
-            assert.deepEqual(res.output, 2);
-          },
-        );
+            },
+            {require: false},
+          );
+          assert.deepEqual(calls, ['b1']);
+          assert.deepEqual(res.output, 2);
+        });
       }
 
       it('supports deferring unused ES6 re-exports (namespace used)', async function () {
@@ -5053,77 +5029,71 @@ describe('javascript', function () {
       );
 
       if (shouldScopeHoist) {
-        it.v2(
-          'correctly updates deferred assets that are reexported',
-          async function () {
-            let testDir = path.join(
-              __dirname,
-              '/integration/scope-hoisting/es6/side-effects-update-deferred-reexported',
-            );
+        it('correctly updates deferred assets that are reexported', async function () {
+          let testDir = path.join(
+            __dirname,
+            '/integration/scope-hoisting/es6/side-effects-update-deferred-reexported',
+          );
 
-            let b = bundler(path.join(testDir, 'index.js'), {
-              inputFS: overlayFS,
-              outputFS: overlayFS,
-              ...options,
-            });
+          let b = bundler(path.join(testDir, 'index.js'), {
+            inputFS: overlayFS,
+            outputFS: overlayFS,
+            ...options,
+          });
 
-            let subscription = await b.watch();
+          let subscription = await b.watch();
 
-            let bundleEvent = await getNextBuild(b);
-            assert(bundleEvent.type === 'buildSuccess');
-            let output = await run(bundleEvent.bundleGraph);
-            assert.deepEqual(output, '12345hello');
+          let bundleEvent = await getNextBuild(b);
+          assert(bundleEvent.type === 'buildSuccess');
+          let output = await run(bundleEvent.bundleGraph);
+          assert.deepEqual(output, '12345hello');
 
-            await overlayFS.mkdirp(path.join(testDir, 'node_modules', 'foo'));
-            await overlayFS.copyFile(
-              path.join(testDir, 'node_modules', 'foo', 'foo_updated.js'),
-              path.join(testDir, 'node_modules', 'foo', 'foo.js'),
-            );
+          await overlayFS.mkdirp(path.join(testDir, 'node_modules', 'foo'));
+          await overlayFS.copyFile(
+            path.join(testDir, 'node_modules', 'foo', 'foo_updated.js'),
+            path.join(testDir, 'node_modules', 'foo', 'foo.js'),
+          );
 
-            bundleEvent = await getNextBuild(b);
-            assert(bundleEvent.type === 'buildSuccess');
-            output = await run(bundleEvent.bundleGraph);
-            assert.deepEqual(output, '1234556789');
+          bundleEvent = await getNextBuild(b);
+          assert(bundleEvent.type === 'buildSuccess');
+          output = await run(bundleEvent.bundleGraph);
+          assert.deepEqual(output, '1234556789');
 
-            await subscription.unsubscribe();
-          },
-        );
+          await subscription.unsubscribe();
+        });
 
-        it.v2(
-          'correctly updates deferred assets that are reexported and imported directly',
-          async function () {
-            let testDir = path.join(
-              __dirname,
-              '/integration/scope-hoisting/es6/side-effects-update-deferred-direct',
-            );
+        it('correctly updates deferred assets that are reexported and imported directly', async function () {
+          let testDir = path.join(
+            __dirname,
+            '/integration/scope-hoisting/es6/side-effects-update-deferred-direct',
+          );
 
-            let b = bundler(path.join(testDir, 'index.js'), {
-              inputFS: overlayFS,
-              outputFS: overlayFS,
-              ...options,
-            });
+          let b = bundler(path.join(testDir, 'index.js'), {
+            inputFS: overlayFS,
+            outputFS: overlayFS,
+            ...options,
+          });
 
-            let subscription = await b.watch();
+          let subscription = await b.watch();
 
-            let bundleEvent = await getNextBuild(b);
-            assert(bundleEvent.type === 'buildSuccess');
-            let output = await run(bundleEvent.bundleGraph);
-            assert.deepEqual(output, '12345hello');
+          let bundleEvent = await getNextBuild(b);
+          assert(bundleEvent.type === 'buildSuccess');
+          let output = await run(bundleEvent.bundleGraph);
+          assert.deepEqual(output, '12345hello');
 
-            await overlayFS.mkdirp(path.join(testDir, 'node_modules', 'foo'));
-            await overlayFS.copyFile(
-              path.join(testDir, 'node_modules', 'foo', 'foo_updated.js'),
-              path.join(testDir, 'node_modules', 'foo', 'foo.js'),
-            );
+          await overlayFS.mkdirp(path.join(testDir, 'node_modules', 'foo'));
+          await overlayFS.copyFile(
+            path.join(testDir, 'node_modules', 'foo', 'foo_updated.js'),
+            path.join(testDir, 'node_modules', 'foo', 'foo.js'),
+          );
 
-            bundleEvent = await getNextBuild(b);
-            assert(bundleEvent.type === 'buildSuccess');
-            output = await run(bundleEvent.bundleGraph);
-            assert.deepEqual(output, '1234556789');
+          bundleEvent = await getNextBuild(b);
+          assert(bundleEvent.type === 'buildSuccess');
+          output = await run(bundleEvent.bundleGraph);
+          assert.deepEqual(output, '1234556789');
 
-            await subscription.unsubscribe();
-          },
-        );
+          await subscription.unsubscribe();
+        });
 
         it('removes deferred reexports when imported from multiple asssets', async function () {
           let b = await bundle(
@@ -5196,7 +5166,7 @@ describe('javascript', function () {
         assert.deepEqual(res.output, 4);
       });
 
-      it.v2('supports removing a deferred dependency', async function () {
+      it('supports removing a deferred dependency', async function () {
         let testDir = path.join(
           __dirname,
           '/integration/scope-hoisting/es6/side-effects-false',
@@ -5392,18 +5362,22 @@ describe('javascript', function () {
         assert.deepEqual(res.output, {Main: 'main', a: 'foo', b: 'bar'});
       });
 
-      it('can import from a different bundle via a re-export', async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/re-export-bundle-boundary-side-effects/index.js',
-          ),
-          options,
-        );
+      it.v2(
+        'can import from a different bundle via a re-export',
+        async function () {
+          // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
+          let b = await bundle(
+            path.join(
+              __dirname,
+              '/integration/scope-hoisting/es6/re-export-bundle-boundary-side-effects/index.js',
+            ),
+            options,
+          );
 
-        let res = await run(b, null, {require: false});
-        assert.deepEqual(await res.output, ['operational', 'ui']);
-      });
+          let res = await run(b, null, {require: false});
+          assert.deepEqual(await res.output, ['operational', 'ui']);
+        },
+      );
 
       it('supports excluding multiple chained namespace reexports', async function () {
         let b = await bundle(
@@ -5841,31 +5815,39 @@ describe('javascript', function () {
       });
     });
 
-    it(`ignores missing unused import specifiers in source assets ${
-      shouldScopeHoist ? 'with' : 'without'
-    } scope-hoisting`, async function () {
-      let b = await bundle(
-        path.join(__dirname, 'integration/js-unused-import-specifier/a.js'),
-        options,
-      );
-      let res = await run(b, null, {require: false});
-      assert.equal(res.output, 123);
-    });
+    it.v2(
+      `ignores missing unused import specifiers in source assets ${
+        shouldScopeHoist ? 'with' : 'without'
+      } scope-hoisting`,
+      async function () {
+        // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
+        let b = await bundle(
+          path.join(__dirname, 'integration/js-unused-import-specifier/a.js'),
+          options,
+        );
+        let res = await run(b, null, {require: false});
+        assert.equal(res.output, 123);
+      },
+    );
 
-    it(`ignores missing unused import specifiers in node-modules ${
-      shouldScopeHoist ? 'with' : 'without'
-    } scope-hoisting`, async function () {
-      let b = await bundle(
-        path.join(
-          __dirname,
-          '/integration/js-unused-import-specifier-node-modules/a.js',
-        ),
-        options,
-      );
+    it.v2(
+      `ignores missing unused import specifiers in node-modules ${
+        shouldScopeHoist ? 'with' : 'without'
+      } scope-hoisting`,
+      async function () {
+        // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
+        let b = await bundle(
+          path.join(
+            __dirname,
+            '/integration/js-unused-import-specifier-node-modules/a.js',
+          ),
+          options,
+        );
 
-      let res = await run(b, null, {require: false});
-      assert.equal(res.output, 123);
-    });
+        let res = await run(b, null, {require: false});
+        assert.equal(res.output, 123);
+      },
+    );
 
     it(`duplicate assets should share module scope ${
       shouldScopeHoist ? 'with' : 'without'

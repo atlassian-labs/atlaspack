@@ -10,8 +10,8 @@
     "atlaspack-bundle-stats": "bin.js"
   },
   "engines": {
-    "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
+    "atlaspack": "^2.12.0",
+    "node": ">= 16.0.0"
   },
   "dependencies": {
     "@atlaspack/core": "2.12.0",

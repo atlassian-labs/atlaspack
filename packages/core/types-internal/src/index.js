@@ -1413,6 +1413,10 @@ export interface Bundle {
    */
   +hashReference: string;
   /**
+   * Name of the manual shared bundle config, if that caused this bundle to be created
+   */
+  +manualSharedBundle: ?string;
+  /**
    * Returns the assets that are executed immediately when the bundle is loaded.
    * Some bundles may not have any entry assets, for example, shared bundles.
    */

@@ -16,7 +16,7 @@ describe('bundle-text:', function () {
     await removeDistDirectory();
   });
 
-  it.v2('inlines and compiles a css bundle', async () => {
+  it('inlines and compiles a css bundle', async () => {
     await fsFixture(overlayFS, __dirname)`
       index.js:
         import cssText from 'bundle-text:./styles.css';
@@ -121,7 +121,7 @@ describe('bundle-text:', function () {
     assert.deepEqual(logs, []);
   });
 
-  it.v2('inlines and compiles a bundle using a dynamic import', async () => {
+  it('inlines and compiles a bundle using a dynamic import', async () => {
     await fsFixture(overlayFS, __dirname)`
       index.js:
         export default import('bundle-text:./styles.css');

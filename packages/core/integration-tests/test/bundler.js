@@ -15,7 +15,7 @@ import {
 import {hashString} from '@atlaspack/rust';
 import {normalizePath} from '@atlaspack/utils';
 
-describe.v2('bundler', function () {
+describe('bundler', function () {
   it('should not create shared bundles when a bundle is being reused and disableSharedBundles is enabled', async function () {
     await fsFixture(overlayFS, __dirname)`
       disable-shared-bundle-single-source
@@ -561,8 +561,10 @@ describe.v2('bundler', function () {
     await run(b);
   });
 
-  it('should not count inline assests towards parallel request limit', async function () {
-    await fsFixture(overlayFS, __dirname)`
+  it.v2(
+    'should not count inline assests towards parallel request limit',
+    async function () {
+      await fsFixture(overlayFS, __dirname)`
       inlined-assests
         buzz.js:
           export default 7;
@@ -594,38 +596,39 @@ describe.v2('bundler', function () {
         yarn.lock: {}
     `;
 
-    // Shared bundle should not be removed in this case
-    let b = await bundle(path.join(__dirname, 'inlined-assests/local.html'), {
-      mode: 'production',
-      defaultTargetOptions: {
-        shouldScopeHoist: false,
-      },
-      inputFS: overlayFS,
-    });
+      // Shared bundle should not be removed in this case
+      let b = await bundle(path.join(__dirname, 'inlined-assests/local.html'), {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: false,
+        },
+        inputFS: overlayFS,
+      });
 
-    assertBundles(b, [
-      {
-        assets: ['local.html'],
-      },
-      {
-        assets: ['buzz.js'],
-      },
-      {
-        assets: [
-          'inline-module.js',
-          'local.html',
-          'bundle-url.js',
-          'cacheLoader.js',
-          'js-loader.js',
-        ],
-      },
-      {
-        assets: ['esmodule-helpers.js'],
-      },
-    ]);
+      assertBundles(b, [
+        {
+          assets: ['local.html'],
+        },
+        {
+          assets: ['buzz.js'],
+        },
+        {
+          assets: [
+            'inline-module.js',
+            'local.html',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          assets: ['esmodule-helpers.js'],
+        },
+      ]);
 
-    await run(b);
-  });
+      await run(b);
+    },
+  );
 
   it('should not create a shared bundle from an asset if that asset is shared by less than minBundles bundles', async function () {
     let b = await bundle(
@@ -1422,7 +1425,7 @@ describe.v2('bundler', function () {
       await run(b);
     });
 
-    it('should respect Asset.isBundleSplittable', async function () {
+    it.v2('should respect Asset.isBundleSplittable', async function () {
       await fsFixture(overlayFS, dir)`
         yarn.lock: {}
 
@@ -1661,8 +1664,10 @@ describe.v2('bundler', function () {
       await run(b);
     });
 
-    it('should support manual shared bundles with constants module', async function () {
-      await fsFixture(overlayFS, dir)`
+    it.v2(
+      'should support manual shared bundles with constants module',
+      async function () {
+        await fsFixture(overlayFS, dir)`
         yarn.lock: {}
 
         package.json:
@@ -1701,39 +1706,40 @@ describe.v2('bundler', function () {
           export default 'vendor-async.js' + a;
         `;
 
-      let b = await bundle(path.join(dir, 'index.html'), {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
-          sourceMaps: false,
-          shouldOptimize: false,
-        },
-        inputFS: overlayFS,
-      });
+        let b = await bundle(path.join(dir, 'index.html'), {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+            sourceMaps: false,
+            shouldOptimize: false,
+          },
+          inputFS: overlayFS,
+        });
 
-      assertBundles(b, [
-        {
-          assets: ['index.html'],
-        },
-        {
-          assets: [
-            'bundle-manifest.js',
-            'esm-js-loader.js',
-            'index.js',
-            'vendor-constants.js',
-          ],
-        },
-        {
-          assets: ['async.js'],
-        },
-        {
-          // Vendor MSB for JS
-          assets: ['vendor-async.js', 'vendor-constants.js'],
-        },
-      ]);
+        assertBundles(b, [
+          {
+            assets: ['index.html'],
+          },
+          {
+            assets: [
+              'bundle-manifest.js',
+              'esm-js-loader.js',
+              'index.js',
+              'vendor-constants.js',
+            ],
+          },
+          {
+            assets: ['async.js'],
+          },
+          {
+            // Vendor MSB for JS
+            assets: ['vendor-async.js', 'vendor-constants.js'],
+          },
+        ]);
 
-      await run(b);
-    });
+        await run(b);
+      },
+    );
 
     it('should support manual shared bundles with internalized assets', async function () {
       await fsFixture(overlayFS, dir)`
@@ -2498,8 +2504,10 @@ describe.v2('bundler', function () {
     });
   });
 
-  it('should reuse type change bundles from parent bundle groups', async function () {
-    await fsFixture(overlayFS, __dirname)`
+  it.v2(
+    'should reuse type change bundles from parent bundle groups',
+    async function () {
+      await fsFixture(overlayFS, __dirname)`
       reuse-type-change-bundles
         index.html:
           <link rel="stylesheet" type="text/css" href="./style.css">
@@ -2519,42 +2527,45 @@ describe.v2('bundler', function () {
           import './common.css';
     `;
 
-    let b = await bundle(
-      path.join(__dirname, 'reuse-type-change-bundles', 'index.html'),
-      {
-        mode: 'production',
-        inputFS: overlayFS,
-      },
-    );
+      let b = await bundle(
+        path.join(__dirname, 'reuse-type-change-bundles', 'index.html'),
+        {
+          mode: 'production',
+          inputFS: overlayFS,
+        },
+      );
 
-    assertBundles(b, [
-      {
-        assets: ['index.html'],
-      },
-      {
-        assets: ['style.css', 'common.css'],
-      },
-      {
-        assets: ['index.js', 'bundle-manifest.js', 'esm-js-loader.js'],
-      },
-      {
-        assets: ['async.js'],
-      },
-    ]);
+      assertBundles(b, [
+        {
+          assets: ['index.html'],
+        },
+        {
+          assets: ['style.css', 'common.css'],
+        },
+        {
+          assets: ['index.js', 'bundle-manifest.js', 'esm-js-loader.js'],
+        },
+        {
+          assets: ['async.js'],
+        },
+      ]);
 
-    await run(b);
-  });
+      await run(b);
+    },
+  );
 
-  it('should not split any bundles when using singleFileOutput', async function () {
-    const targets = {
-      'single-file': {
-        distDir: 'dist-single',
-        __unstable_singleFileOutput: true,
-      },
-      'normally-split': {distDir: 'dist-normal'},
-    };
+  it.v2(
+    'should not split any bundles when using singleFileOutput',
+    async function () {
+      const targets = {
+        'single-file': {
+          distDir: 'dist-single',
+          __unstable_singleFileOutput: true,
+        },
+        'normally-split': {distDir: 'dist-normal'},
+      };
 
-    await fsFixture(overlayFS, __dirname)`
+      await fsFixture(overlayFS, __dirname)`
       single-file-output
         a.js:
           import {c} from './b';
@@ -2572,47 +2583,48 @@ describe.v2('bundler', function () {
         yarn.lock: {}
     `;
 
-    let singleBundle = await bundle(
-      path.join(__dirname, 'single-file-output/a.js'),
-      {
-        defaultTargetOptions: {shouldScopeHoist: false},
-        inputFS: overlayFS,
-        targets: {['single-file']: targets['single-file']},
-      },
-    );
+      let singleBundle = await bundle(
+        path.join(__dirname, 'single-file-output/a.js'),
+        {
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+          targets: {['single-file']: targets['single-file']},
+        },
+      );
 
-    let splitBundle = await bundle(
-      path.join(__dirname, 'single-file-output/a.js'),
-      {
-        defaultTargetOptions: {shouldScopeHoist: false},
-        inputFS: overlayFS,
-        targets: {['normally-split']: targets['normally-split']},
-      },
-    );
+      let splitBundle = await bundle(
+        path.join(__dirname, 'single-file-output/a.js'),
+        {
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+          targets: {['normally-split']: targets['normally-split']},
+        },
+      );
 
-    // There should be a single bundle, including a, b, and c
-    assertBundles(singleBundle, [
-      {assets: ['a.js', 'b.js', 'c.js', 'esmodule-helpers.js']},
-    ]);
+      // There should be a single bundle, including a, b, and c
+      assertBundles(singleBundle, [
+        {assets: ['a.js', 'b.js', 'c.js', 'esmodule-helpers.js']},
+      ]);
 
-    await run(singleBundle);
+      await run(singleBundle);
 
-    // Without the property, the bundle should be split properly
-    assertBundles(splitBundle, [
-      {
-        assets: [
-          'a.js',
-          'b.js',
-          'bundle-url.js',
-          'cacheLoader.js',
-          'esmodule-helpers.js',
-          'js-loader.js',
-        ],
-      },
-      {assets: ['c.js']},
-      {type: 'css', assets: ['should-be-ignored.css']},
-    ]);
+      // Without the property, the bundle should be split properly
+      assertBundles(splitBundle, [
+        {
+          assets: [
+            'a.js',
+            'b.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'esmodule-helpers.js',
+            'js-loader.js',
+          ],
+        },
+        {assets: ['c.js']},
+        {type: 'css', assets: ['should-be-ignored.css']},
+      ]);
 
-    await run(splitBundle);
-  });
+      await run(splitBundle);
+    },
+  );
 });

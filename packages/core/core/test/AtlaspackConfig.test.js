@@ -127,12 +127,13 @@ describe('AtlaspackConfig', () => {
   });
 
   describe('loadPlugin', () => {
-    it('should warn if a plugin needs to specify an engines.parcel field in package.json', async () => {
+    it('should warn if a plugin needs to specify an engines.atlaspack field in package.json', async () => {
       let projectRoot = path.join(__dirname, 'fixtures', 'plugins');
       let configFilePath = toProjectPath(
         projectRoot,
-        path.join(__dirname, 'fixtures', 'plugins', '.parcelrc'),
+        path.join(projectRoot, '.parcelrc'),
       );
+
       let config = new AtlaspackConfig(
         {
           filePath: configFilePath,
@@ -140,7 +141,7 @@ describe('AtlaspackConfig', () => {
           transformers: {
             '*.js': [
               {
-                packageName: 'parcel-transformer-no-engines',
+                packageName: 'atlaspack-transformer-no-engines',
                 resolveFrom: configFilePath,
                 keyPath: '/transformers/*.js/0',
               },
@@ -152,51 +153,43 @@ describe('AtlaspackConfig', () => {
 
       let warnStub = sinon.stub(logger, 'warn');
       let {plugin} = await config.loadPlugin({
-        packageName: 'parcel-transformer-no-engines',
+        packageName: 'atlaspack-transformer-no-engines',
         resolveFrom: configFilePath,
         keyPath: '/transformers/*.js/0',
       });
-      assert(plugin);
-      assert.equal(typeof plugin.transform, 'function');
+
+      assert.equal(typeof plugin?.transform, 'function');
       assert(warnStub.calledOnce);
       assert.deepEqual(warnStub.getCall(0).args[0], {
         origin: '@atlaspack/core',
         message:
-          'The plugin "parcel-transformer-no-engines" needs to specify a `package.json#engines.parcel` field with the supported Atlaspack version range.',
+          'The plugin "atlaspack-transformer-no-engines" needs to specify a `package.json#engines.atlaspack` field with the supported Atlaspack version range.',
       });
       warnStub.restore();
     });
 
-    it('should error if a plugin specifies an invalid engines.parcel field in package.json', async () => {
+    it('should error if a plugin specifies an invalid engines.atlaspack field in package.json', async () => {
       let projectRoot = path.join(__dirname, 'fixtures', 'plugins');
       let configFilePath = toProjectPath(
         projectRoot,
-        path.join(__dirname, 'fixtures', 'plugins', '.parcelrc'),
+        path.join(projectRoot, '.parcelrc'),
       );
+
       let config = new AtlaspackConfig(
         {
           filePath: configFilePath,
           bundler: undefined,
-          transformers: {
-            '*.js': [
-              {
-                packageName: 'parcel-transformer-not-found',
-                resolveFrom: configFilePath,
-                keyPath: '/transformers/*.js/0',
-              },
-            ],
-          },
+          transformers: {},
         },
         {...DEFAULT_OPTIONS, projectRoot},
       );
+
       // $FlowFixMe[untyped-import]
-      let parcelVersion = require('../package.json').version;
+      let atlaspackVersion = require('../package.json').version;
       let pkgJSON = path.join(
-        __dirname,
-        'fixtures',
-        'plugins',
+        projectRoot,
         'node_modules',
-        'parcel-transformer-bad-engines',
+        'atlaspack-transformer-bad-engines',
         'package.json',
       );
       let code = inputFS.readFileSync(pkgJSON, 'utf8');
@@ -205,7 +198,7 @@ describe('AtlaspackConfig', () => {
       await assert.rejects(
         () =>
           config.loadPlugin({
-            packageName: 'parcel-transformer-bad-engines',
+            packageName: 'atlaspack-transformer-bad-engines',
             resolveFrom: configFilePath,
             keyPath: '/transformers/*.js/0',
           }),
@@ -213,7 +206,67 @@ describe('AtlaspackConfig', () => {
           name: 'Error',
           diagnostics: [
             {
-              message: `The plugin "parcel-transformer-bad-engines" is not compatible with the current version of Atlaspack. Requires "5.x" but the current version is "${parcelVersion}".`,
+              message: `The plugin "atlaspack-transformer-bad-engines" is not compatible with the current version of Atlaspack. Requires "1.x" but the current version is "${atlaspackVersion}".`,
+              origin: '@atlaspack/core',
+              codeFrames: [
+                {
+                  filePath: pkgJSON,
+                  language: 'json5',
+                  code,
+                  codeHighlights: [
+                    {
+                      start: {line: 5, column: 5},
+                      end: {line: 5, column: 22},
+                      message: undefined,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      );
+    });
+
+    it('should error if a plugin specifies an invalid engines.parcel field in package.json', async () => {
+      let projectRoot = path.join(__dirname, 'fixtures', 'plugins');
+      let configFilePath = toProjectPath(
+        projectRoot,
+        path.join(projectRoot, '.parcelrc'),
+      );
+
+      let config = new AtlaspackConfig(
+        {
+          filePath: configFilePath,
+          bundler: undefined,
+          transformers: {},
+        },
+        {...DEFAULT_OPTIONS, projectRoot},
+      );
+
+      // $FlowFixMe[untyped-import]
+      let atlaspackVersion = require('../package.json').version;
+      let pkgJSON = path.join(
+        projectRoot,
+        'node_modules',
+        'atlaspack-transformer-bad-parcel-engines',
+        'package.json',
+      );
+      let code = inputFS.readFileSync(pkgJSON, 'utf8');
+
+      // $FlowFixMe
+      await assert.rejects(
+        () =>
+          config.loadPlugin({
+            packageName: 'atlaspack-transformer-bad-parcel-engines',
+            resolveFrom: configFilePath,
+            keyPath: '/transformers/*.js/0',
+          }),
+        {
+          name: 'Error',
+          diagnostics: [
+            {
+              message: `The plugin "atlaspack-transformer-bad-parcel-engines" is not compatible with the current version of Atlaspack. Requires "1.x" but the current version is "${atlaspackVersion}".`,
               origin: '@atlaspack/core',
               codeFrames: [
                 {

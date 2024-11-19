@@ -19,7 +19,7 @@ function createProgram(opts: ProgramOptions) {
   return cli;
 }
 
-describe.v2('@atlaspack/link', () => {
+describe('@atlaspack/link', () => {
   let _cwd;
   let _stdout;
 

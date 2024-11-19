@@ -13,7 +13,7 @@
   "types": "service-worker.d.ts",
   "sideEffects": false,
   "engines": {
-    "node": ">= 16.0.0",
-    "parcel": "^2.12.0"
+    "atlaspack": "^2.12.0",
+    "node": ">= 16.0.0"
   }
 }

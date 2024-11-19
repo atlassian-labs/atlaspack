@@ -9,7 +9,6 @@ import type {Async} from '@atlaspack/types';
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
 import {ATLASPACK_VERSION} from '../constants';
-import {toProjectPath} from '../projectPath';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
 import type {Environment} from '../types';
@@ -43,6 +42,9 @@ export function createAssetGraphRequestRust(
       let serializedAssetGraph;
       try {
         serializedAssetGraph = await rustAtlaspack.buildAssetGraph();
+        serializedAssetGraph.nodes = serializedAssetGraph.nodes.flatMap(
+          (node) => JSON.parse(node),
+        );
       } catch (err) {
         throw new ThrowableDiagnostic({
           diagnostic: err,
@@ -88,6 +90,7 @@ function getAssetGraph(serializedGraph, options) {
   let graph = new AssetGraph({
     _contentKeyToNodeId: new Map(),
     _nodeIdToContentKey: new Map(),
+    initialCapacity: serializedGraph.edges.length,
   });
 
   graph.safeToIncrementallyBundle = false;
@@ -165,36 +168,13 @@ function getAssetGraph(serializedGraph, options) {
       let asset = node.value;
       let id = asset.id;
 
+      asset.committed = true;
+      asset.contentKey = id;
+      asset.env.id = getEnvId(asset.env);
       asset.meta.id = id;
-
-      asset = {
-        ...asset,
-        uniqueKey: asset.uniqueKey ?? undefined,
-        pipeline: asset.pipeline ?? undefined,
-        range: asset.range ?? undefined,
-        resolveFrom: asset.resolveFrom ?? undefined,
-        target: asset.target ?? undefined,
-        plugin: asset.plugin ?? undefined,
-        query: asset.query ?? undefined,
-        configPath: asset.configPath ?? undefined,
-        configKeyPath: asset.configKeyPath ?? undefined,
-        isLargeBlob: asset.isLargeBlob ?? false,
-        isSource: asset.isSource ?? false,
-        sourcePath: asset.sourcePath ?? undefined,
-        env: {
-          ...asset.env,
-          loc: asset.env.loc ?? undefined,
-          id: getEnvId(asset.env),
-          sourceType: asset.env.sourceType,
-        },
-        bundleBehavior:
-          asset.bundleBehavior === 255 ? null : asset.bundleBehavior,
-        committed: true,
-        contentKey: id,
-        filePath: toProjectPath(options.projectRoot, asset.filePath),
-        symbols:
-          asset.symbols != null ? new Map(asset.symbols.map(mapSymbols)) : null,
-      };
+      if (asset.symbols != null) {
+        asset.symbols = new Map(asset.symbols.map(mapSymbols));
+      }
 
       if (asset.map) {
         let mapKey = hashString(`${ATLASPACK_VERSION}:map:${asset.id}`);
@@ -221,42 +201,16 @@ function getAssetGraph(serializedGraph, options) {
       let id = node.value.id;
       let dependency = node.value.dependency;
 
-      dependency = {
-        ...dependency,
-        id,
-        env: {
-          ...dependency.env,
-          id: getEnvId(dependency.env),
-          sourceType: dependency.env.sourceType,
-          loc: dependency.env.loc ?? undefined,
-        },
-        pipeline: dependency.pipeline ?? undefined,
-        range: dependency.range ?? undefined,
-        resolveFrom: dependency.resolveFrom ?? undefined,
-        target: dependency.target ?? undefined,
-        bundleBehavior:
-          dependency.bundleBehavior === 255 ? null : dependency.bundleBehavior,
-        contentKey: id,
-        loc: dependency.loc
-          ? {
-              ...dependency.loc,
-              filePath: toProjectPath(
-                options.projectRoot,
-                dependency.loc.filePath,
-              ),
-            }
-          : undefined,
-        sourcePath: dependency.sourcePath
-          ? toProjectPath(options.projectRoot, dependency.sourcePath)
-          : undefined,
-        symbols:
-          // Dependency.symbols are always set to an empty map when scope hoisting
-          // is enabled. Some tests will fail if this is not the case. We should
-          // make this consistant when we re-visit packaging.
-          dependency.symbols != null || dependency.env.shouldScopeHoist
-            ? new Map(dependency.symbols?.map(mapSymbols))
-            : undefined,
-      };
+      dependency.id = id;
+      dependency.env.id = getEnvId(dependency.env);
+
+      // Dependency.symbols are always set to an empty map when scope hoisting
+      // is enabled. Some tests will fail if this is not the case. We should
+      // make this consistant when we re-visit packaging.
+      if (dependency.symbols != null || dependency.env.shouldScopeHoist) {
+        dependency.symbols = new Map(dependency.symbols?.map(mapSymbols));
+      }
+
       let usedSymbolsDown = new Set();
       let usedSymbolsUp = new Map();
       if (dependency.isEntry && dependency.isLibrary) {

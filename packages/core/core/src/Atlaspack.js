@@ -627,14 +627,9 @@ export default class Atlaspack {
   async unstable_buildAssetGraph(
     writeToCache: boolean = true,
   ): Promise<AssetGraphRequestResult> {
-    const log = (message) => {
-      logger.info({
-        message,
-        origin: '@atlaspack/core',
-      });
-    };
-
     await this._init();
+
+    const origin = '@atlaspack/core';
     const input = {
       optionsRef: this.#optionsRef,
       name: 'Main',
@@ -644,19 +639,26 @@ export default class Atlaspack {
       lazyExcludes: [],
       requestedAssetIds: this.#requestedAssetIds,
     };
+
+    const start = Date.now();
     const request =
       this.rustAtlaspack != null
         ? createAssetGraphRequestRust(this.rustAtlaspack)(input)
         : createAssetGraphRequestJS(input);
     const hasCachedRequest = this.#requestTracker.hasCachedRequest(request);
     const result = await this.#requestTracker.runRequest(request);
-    log('Done building asset graph!');
+
+    const duration = Date.now() - start;
+
+    logger.info({
+      message: `Done building asset graph in ${duration / 1000}s!`,
+      origin,
+    });
 
     // Don't write to cache if we already had a cached request
     if (!hasCachedRequest && writeToCache) {
-      log('Write request tracker to cache');
       await this.writeRequestTrackerToCache();
-      log('Done writing request tracker to cache');
+      logger.info({message: 'Done writing request tracker to cache', origin});
     }
 
     return result;
@@ -718,6 +720,8 @@ export default class Atlaspack {
                 ...request.env.loc,
                 filePath: toProjectPath(projectRoot, request.env.loc.filePath),
               }
+        // $FlowFixMe ProjectPath is a string
+        defaultTargetOptions: resolvedOptions.defaultTargetOptions,
             : undefined,
       }),
     });

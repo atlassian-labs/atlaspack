@@ -73,6 +73,7 @@ impl AssetGraphBuilder {
     }
   }
 
+  #[tracing::instrument(level = "info", skip_all)]
   fn build(mut self) -> Result<ResultAndInvalidations, RunRequestError> {
     for entry in self.request_context.options.clone().entries.iter() {
       self.work_count += 1;
@@ -146,6 +147,7 @@ impl AssetGraphBuilder {
       requested_symbols,
       state,
     } = &mut self.graph.dependencies[dep_index];
+
     let asset_request = match result {
       PathRequestOutput::Resolved {
         path,

@@ -50,6 +50,7 @@ pub struct AssetRequestOutput {
 
 #[async_trait]
 impl Request for AssetRequest {
+  #[tracing::instrument(level = "trace", skip_all)]
   async fn run(
     &self,
     request_context: RunRequestContext,
@@ -93,7 +94,7 @@ impl Request for AssetRequest {
         if let Ok(source_map) = load_sourcemap_url(
           request_context.file_system(),
           &self.project_root,
-          &asset.file_path,
+          &self.file_path,
           &url_match.url,
         ) {
           asset.map = Some(source_map);
@@ -105,6 +106,9 @@ impl Request for AssetRequest {
     let transform_context = TransformContext::new(self.env.clone());
     let mut result =
       run_pipelines(transform_context, asset, request_context.plugins().clone()).await?;
+
+    // TODO: Commit the asset with a project path now, as transformers rely on an absolute path
+    // result.asset.file_path = to_project_path(&self.project_root, &result.asset.file_path);
 
     result.asset.stats = AssetStats {
       size: result.asset.code.size(),
@@ -127,6 +131,7 @@ impl Request for AssetRequest {
   }
 }
 
+#[tracing::instrument(level = "trace", skip_all)]
 async fn run_pipelines(
   transform_context: TransformContext,
   input: Asset,

@@ -60,13 +60,8 @@ describe('images', function () {
 
     it('from javascript', testCase('js'));
     it.v2('from html', testCase('html'));
-    it.v2('from css', testCase('css'));
+    it('from css', testCase('css'));
   });
-
-  it.v2(
-    'can be resized and reformatted from html with a query string',
-    async () => {},
-  );
 
   describe('can change image format with a query string', () => {
     function testCase(ext) {
@@ -83,8 +78,8 @@ describe('images', function () {
     }
 
     it('from javascript', testCase('js'));
-    it.v2('from html', testCase('html'));
-    it.v2('from css', testCase('css'));
+    it('from html', testCase('html'));
+    it('from css', testCase('css'));
 
     it.v2('all formats', async () => {
       let b = await bundle(

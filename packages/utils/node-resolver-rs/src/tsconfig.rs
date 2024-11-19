@@ -2,11 +2,14 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::path::resolve_path;
 use crate::specifier::Specifier;
 use itertools::Either;
 use json_comments::StripComments;
+use parking_lot::RwLock;
+use serde::Deserialize;
 
 #[derive(serde::Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
@@ -40,21 +43,45 @@ where
   })
 }
 
-#[derive(serde::Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct TsConfigWrapper {
-  #[serde(default, deserialize_with = "deserialize_extends")]
-  pub extends: Vec<Specifier>,
-  #[serde(default)]
-  pub compiler_options: TsConfig,
+  pub extends: Arc<RwLock<Vec<Specifier>>>,
+  pub compiler_options: Arc<RwLock<TsConfig>>,
+}
+
+impl<'a> serde::Deserialize<'a> for TsConfigWrapper {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: serde::Deserializer<'a>,
+  {
+    #[derive(serde::Deserialize, Debug)]
+    #[serde(rename_all = "camelCase")]
+    struct TsConfigWrapperDe {
+      #[serde(default, deserialize_with = "deserialize_extends")]
+      pub extends: Vec<Specifier>,
+      #[serde(default)]
+      pub compiler_options: TsConfig,
+    }
+
+    let de: TsConfigWrapperDe = Deserialize::deserialize(deserializer)?;
+    Ok(TsConfigWrapper {
+      extends: Arc::new(RwLock::new(de.extends)),
+      compiler_options: Arc::new(RwLock::new(de.compiler_options)),
+    })
+  }
 }
 
 impl TsConfig {
   pub fn parse(path: PathBuf, data: &str) -> serde_json5::Result<TsConfigWrapper> {
     let mut stripped = StripComments::new(data.as_bytes());
-    let mut wrapper: TsConfigWrapper = serde_json5::from_reader(&mut stripped)?;
-    wrapper.compiler_options.path = path;
-    wrapper.compiler_options.validate();
+    let wrapper: TsConfigWrapper = serde_json5::from_reader(&mut stripped)?;
+
+    {
+      let mut compiler_options = wrapper.compiler_options.write();
+      compiler_options.path = path;
+      compiler_options.validate();
+    }
+
     Ok(wrapper)
   }
 
@@ -324,12 +351,14 @@ mod tests {
 }
     "#;
     let result: TsConfigWrapper = TsConfig::parse(PathBuf::from("stub.json"), config).unwrap();
-    assert_eq!(result.extends, vec![]);
-    assert!(result.compiler_options.paths.is_some());
+    let mut compiler_options = result.compiler_options.write();
+    let extends = result.extends.read();
+    assert_eq!(*extends, vec![]);
+    assert!(compiler_options.paths.is_some());
     assert_eq!(
-      result
-        .compiler_options
+      compiler_options
         .paths
+        .as_mut()
         .unwrap()
         .get(&Specifier::from("foo")),
       Some(&vec![String::from("bar.js")])
