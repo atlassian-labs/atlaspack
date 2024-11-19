@@ -651,7 +651,7 @@ impl<'a> ResolveRequest<'a> {
 
   fn resolve_package(
     &self,
-    mut package_dir: PathBuf,
+    package_dir: PathBuf,
     module: &str,
     subpath: &str,
   ) -> Result<Resolution, ResolverError> {
@@ -724,14 +724,16 @@ impl<'a> ResolveRequest<'a> {
         package_path: package.path.clone(),
       })
     } else if !subpath.is_empty() {
-      package_dir.push(subpath);
-      if let Some(res) = self.load_path(&package_dir, Some(&*package))? {
+      let mut package_sub_path = package.path.parent().unwrap().to_owned();
+      package_sub_path.push(subpath);
+
+      if let Some(res) = self.load_path(&package_sub_path, Some(&*package))? {
         return Ok(res);
       }
 
       Err(ResolverError::ModuleSubpathNotFound {
         module: module.to_owned(),
-        path: package_dir,
+        path: package.path.parent().unwrap().to_owned(),
         package_path: package.path.clone(),
       })
     } else {
@@ -743,6 +745,7 @@ impl<'a> ResolveRequest<'a> {
 
       // Node ESM doesn't allow directory imports.
       if self.resolver.flags.contains(Flags::DIR_INDEX) {
+        let package_dir = package.path.parent().unwrap().to_owned();
         if let Some(res) =
           self.load_file(&package_dir.join(self.resolver.index_file), Some(&*package))?
         {
@@ -2853,6 +2856,40 @@ mod tests {
         .unwrap()
         .0,
       Resolution::Path(root().join("node_modules/@scope/pkg/index.js"))
+    );
+  }
+
+  #[test]
+  fn package_deduplication() {
+    let cache = CacheCow::Owned(Cache::new(Arc::new(OsFileSystem)));
+    cache.scan_package_duplicates(&root());
+
+    let resolver = Resolver::node(root().into(), cache);
+
+    assert_eq!(
+      resolver
+        .resolve(
+          "duplicate",
+          &root().join("node_modules/duplicate-tester/index.js"),
+          SpecifierType::Esm,
+        )
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/duplicate/index.js"))
+    );
+
+    assert_eq!(
+      resolver
+        .resolve(
+          "duplicate/index.js",
+          &root().join("node_modules/duplicate-tester/index.js"),
+          SpecifierType::Esm,
+        )
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/duplicate/index.js"))
     );
   }
 

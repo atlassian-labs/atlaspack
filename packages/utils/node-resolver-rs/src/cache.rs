@@ -299,3 +299,34 @@ fn find_package_json_files(fs: FileSystemRef, base_path: &Path) -> Vec<PathBuf> 
   }
   package_json_files
 }
+
+#[cfg(test)]
+mod test {
+
+  use atlaspack_filesystem::os_file_system::OsFileSystem;
+
+  use super::*;
+
+  fn root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+      .parent()
+      .unwrap()
+      .join("node-resolver-core/test/fixture")
+  }
+
+  #[test]
+  fn scan_package_duplicates() {
+    let cache = CacheCow::Owned(Cache::new(Arc::new(OsFileSystem)));
+    cache.scan_package_duplicates(&root());
+
+    assert_eq!(cache.package_duplicates.len(), 1);
+    assert_eq!(
+      cache
+        .package_duplicates
+        .get(&root().join("node_modules/duplicate-tester/node_modules/duplicate/package.json"))
+        .unwrap()
+        .path,
+      root().join("node_modules/duplicate/package.json")
+    );
+  }
+}
