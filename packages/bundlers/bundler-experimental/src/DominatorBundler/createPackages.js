@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import invariant from 'assert';
 import type {Asset} from '@atlaspack/types';
 import type {MutableBundleGraph} from '@atlaspack/types';
 import {ContentGraph, type NodeId} from '@atlaspack/graph';
@@ -17,6 +18,7 @@ export type PackageNode = {|
   type: 'package',
   id: string,
   parentChunks: Set<string>,
+  entryPointAssets: Set<AssetNode>,
 |};
 
 export type PackagedDominatorGraphNode =
@@ -56,7 +58,6 @@ export function createPackages(
 ): PackagedDominatorGraph {
   // $FlowFixMe
   const packages: PackagedDominatorGraph = dominators.clone();
-  const nodesToRemove = [];
 
   const rootedGraph = bundleGraphToRootedGraph(bundleGraph);
   const root = packages.getNodeIdByContentKey('root');
@@ -92,12 +93,15 @@ export function createPackages(
         for (let child of children) {
           packages.addEdge(parentChunk, child);
         }
-        nodesToRemove.push(chunk);
+        // nodesToRemove.push(chunk);
       }
     }
   };
 
-  for (const [key, {chunksToMerge, parentChunks}] of chunksByParent) {
+  for (const [
+    key,
+    {chunksToMerge, parentChunks, entryPointAssets},
+  ] of chunksByParent) {
     if (key === 'root') {
       continue;
     }
@@ -113,17 +117,11 @@ export function createPackages(
       type: 'package',
       id: `package:${key}`,
       parentChunks,
+      entryPointAssets,
     });
     packages.addEdge(root, chunkRoot);
 
     merge(`package:${key}`, chunksToMerge);
-  }
-
-  // It is not ideal that we let the graph grow with virtual nodes while
-  // building and only clean-up at the end. There'll be maximum `N*iterations`
-  // nodes.
-  for (let node of nodesToRemove) {
-    packages.removeNode(node);
   }
 
   return packages;
@@ -138,19 +136,31 @@ function getChunksByParentEntryPoint(
   chunks: NodeId[],
   packages: PackagedDominatorGraph,
   bundleGraph: MutableBundleGraph,
-  entryPointsByChunk: Map<string, Set<string>>,
+  entryPointsByChunk: Map<
+    string,
+    {|entryPointChunkIds: Set<string>, entryPointAssets: Set<AssetNode>|},
+  >,
   makePackageKey: (parentChunks: Set<string>) => string,
-): Map<string, {|chunksToMerge: NodeId[], parentChunks: Set<string>|}> {
+): Map<
+  string,
+  {|
+    chunksToMerge: NodeId[],
+    parentChunks: Set<string>,
+    entryPointAssets: Set<AssetNode>,
+  |},
+> {
   const chunksByParent = new Map();
   const addChunkToParent = (
     key: string,
     chunk: NodeId,
     parentChunks: Set<string>,
+    entryPointAssets: Set<AssetNode>,
   ) => {
     if (!chunksByParent.has(key)) {
       chunksByParent.set(key, {
         chunksToMerge: [],
         parentChunks,
+        entryPointAssets,
       });
     }
     chunksByParent.get(key)?.chunksToMerge.push(chunk);
@@ -160,9 +170,18 @@ function getChunksByParentEntryPoint(
     const chunkNode = packages.getNode(chunk);
     if (chunkNode == null || chunkNode === 'root') continue; // can't happen
 
-    const parentChunks = entryPointsByChunk.get(chunkNode.id) ?? new Set();
-    const key = makePackageKey(parentChunks);
-    addChunkToParent(key, chunk, parentChunks);
+    const parentChunks = entryPointsByChunk.get(chunkNode.id) ?? {
+      entryPointChunkIds: new Set(),
+      entryPointAssets: new Set(),
+    };
+
+    const key = makePackageKey(parentChunks.entryPointChunkIds);
+    addChunkToParent(
+      key,
+      chunk,
+      parentChunks.entryPointChunkIds,
+      parentChunks.entryPointAssets,
+    );
   }
 
   return chunksByParent;
@@ -171,7 +190,10 @@ function getChunksByParentEntryPoint(
 export function getChunkEntryPoints(
   rootedGraph: SimpleAssetGraph,
   dominators: PackagingInputGraph,
-): Map<string, Set<string>> {
+): Map<
+  string,
+  {|entryPointChunkIds: Set<string>, entryPointAssets: Set<AssetNode>|},
+> {
   const chunks = getChunks(dominators).map((id) => {
     const node = dominators.getNode(id);
     if (node == null || node === 'root') {
@@ -183,11 +205,22 @@ export function getChunkEntryPoints(
 
   const chunkSet = new Set(chunks);
   const result = new Map();
-  const addChunk = (chunk: string, entryPoint: string) => {
+  const addChunk = (
+    chunk: string,
+    entryPoint: string,
+    entryPointAsset: AssetNode,
+  ) => {
     if (!result.has(chunk)) {
-      result.set(chunk, new Set());
+      result.set(chunk, {
+        entryPointChunkIds: new Set(),
+        entryPointAssets: new Set(),
+      });
     }
-    result.get(chunk)?.add(entryPoint);
+
+    const existing = result.get(chunk);
+    invariant(existing != null);
+    existing.entryPointChunkIds.add(entryPoint);
+    existing.entryPointAssets.add(entryPointAsset);
   };
 
   const root = rootedGraph.getNodeIdByContentKey('root');
@@ -195,7 +228,13 @@ export function getChunkEntryPoints(
   const entryPointsSet = new Set(entryPoints);
 
   for (let entryPointId of entryPoints) {
-    const entryPoint = getAssetNode(rootedGraph, entryPointId);
+    const entryPointNode = rootedGraph.getNode(entryPointId);
+    invariant(
+      entryPointNode != null &&
+        entryPointNode !== 'root' &&
+        entryPointNode.type === 'asset',
+    );
+    const entryPoint = entryPointNode.asset;
 
     rootedGraph.traverse((nodeId) => {
       if (
@@ -209,7 +248,7 @@ export function getChunkEntryPoints(
       const node = getAssetNode(rootedGraph, nodeId);
       const isChunk = chunkSet.has(node.id);
       if (isChunk) {
-        addChunk(node.id, entryPoint.id);
+        addChunk(node.id, entryPoint.id, entryPointNode);
       }
     }, entryPointId);
   }

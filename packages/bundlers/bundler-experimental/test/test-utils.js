@@ -12,6 +12,8 @@ import type {Asset, Dependency} from '@atlaspack/types';
 import * as path from 'path';
 import makeDebug from 'debug';
 import {runDotForTest} from './graphviz/GraphvizUtils';
+import type {PackagingInputGraph} from '../src';
+import {getAssetNodeByKey} from '../src';
 
 const debug = makeDebug('atlaspack:bundler:working-bundler:test-utils');
 
@@ -110,4 +112,21 @@ export async function setupBundlerTest(
     bundleGraph,
     entries,
   };
+}
+
+export function testMakePackageKey(
+  entryDir: string,
+  dominators: PackagingInputGraph,
+  parentChunks: Set<string>,
+): string {
+  if (parentChunks.size === 0) {
+    return 'root';
+  }
+
+  const chunks = Array.from(parentChunks);
+  const chunkPaths = chunks.map((chunk) =>
+    path.relative(entryDir, getAssetNodeByKey(dominators, chunk).filePath),
+  );
+  chunkPaths.sort((a, b) => a.localeCompare(b));
+  return chunkPaths.join(',');
 }

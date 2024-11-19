@@ -2,18 +2,18 @@
 
 import path from 'path';
 import {overlayFS, workerFarm} from '@atlaspack/test-utils';
+import assert from 'assert';
+import {mergedDominatorsToDot} from '../graphviz/GraphvizUtils';
+import {asset, fixtureFromGraph} from '../fixtureFromGraph';
+import {dotTest, setupBundlerTest, testMakePackageKey} from '../test-utils';
+import {findAssetDominators} from '../../src/DominatorBundler/findAssetDominators';
+import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
+import {createPackages} from '../../src/DominatorBundler/createPackages';
 import {
   buildPackageGraph,
   runMergePackages,
   getPackageInformation,
 } from '../../src/DominatorBundler/mergePackages';
-import {asset, fixtureFromGraph} from '../fixtureFromGraph';
-import {dotTest, setupBundlerTest} from '../test-utils';
-import {findAssetDominators} from '../../src/DominatorBundler/findAssetDominators';
-import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
-import {createPackages} from '../../src/DominatorBundler/createPackages';
-import {mergedDominatorsToDot} from '../graphviz/GraphvizUtils';
-import assert from 'assert';
 
 describe('mergePackages', () => {
   const fixture1 = async () => {
@@ -52,7 +52,12 @@ describe('mergePackages', () => {
         const {mutableBundleGraph, entryDir} = await fixture1();
         const dominators = findAssetDominators(mutableBundleGraph);
         const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
-        const packages = createPackages(mutableBundleGraph, dominators);
+        const packages = createPackages(
+          mutableBundleGraph,
+          dominators,
+          (parentChunks) =>
+            testMakePackageKey(entryDir, dominators, parentChunks),
+        );
 
         const packageNodes = packages.getNodeIdsConnectedFrom(
           packages.getNodeIdByContentKey('root'),
@@ -81,14 +86,14 @@ digraph merged {
   label="Merged";
   layout="dot";
 
-  "package:4d365acd7631caa5,85a47ee5bf2af6f5";
+  "package:page1.js,page2.js";
   "page1.js";
   "page2.js";
   "root";
 
-  "page1.js" -> "package:4d365acd7631caa5,85a47ee5bf2af6f5";
-  "page2.js" -> "package:4d365acd7631caa5,85a47ee5bf2af6f5";
-  "root" -> "package:4d365acd7631caa5,85a47ee5bf2af6f5";
+  "page1.js" -> "package:page1.js,page2.js";
+  "page2.js" -> "package:page1.js,page2.js";
+  "root" -> "package:page1.js,page2.js";
   "root" -> "page1.js";
   "root" -> "page2.js";
 }
@@ -125,7 +130,6 @@ digraph merged {
   label="Duplicated";
   layout="dot";
 
-  "esmodule_helpers.js";
   "jsx.js";
   "left-pad.js";
   "lodash.js";
@@ -136,12 +140,10 @@ digraph merged {
   "string-chart-at.js";
   "string-concat.js";
 
-  "page1.js" -> "esmodule_helpers.js";
   "page1.js" -> "left-pad.js";
   "page1.js" -> "lodash.js";
   "page1.js" -> "react.js";
   "page1.js" -> "string-concat.js";
-  "page2.js" -> "esmodule_helpers.js";
   "page2.js" -> "left-pad.js";
   "page2.js" -> "lodash.js";
   "page2.js" -> "react.js";

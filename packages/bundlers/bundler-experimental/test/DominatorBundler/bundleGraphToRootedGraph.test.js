@@ -1,13 +1,50 @@
 // @flow strict-local
 
-import {overlayFS, workerFarm} from '@atlaspack/test-utils';
-import {asset, fixtureFromGraph} from '../fixtureFromGraph';
-import {rootedGraphToDot} from '../graphviz/GraphvizUtils';
+import {getParcelOptions, overlayFS, workerFarm} from '@atlaspack/test-utils';
 import nullthrows from 'nullthrows';
-import {dotTest, setupBundlerTest} from '../test-utils';
 import * as path from 'path';
-import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
 import assert from 'assert';
+import MutableBundleGraph from '@atlaspack/core/src/public/MutableBundleGraph';
+import resolveOptions from '@atlaspack/core/src/resolveOptions';
+import AssetGraph from '@atlaspack/core/src/AssetGraph';
+import BundleGraph from '@atlaspack/core/src/BundleGraph';
+import type {AssetGraphNode} from '@atlaspack/core/src/types';
+import {asset, fixtureFromGraph} from '../fixtureFromGraph';
+import {dotTest, setupBundlerTest} from '../test-utils';
+import {rootedGraphToDot} from '../graphviz/GraphvizUtils';
+import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
+
+function encodeHex(str: string): string {
+  return Buffer.from(str).toString('hex');
+}
+
+function makeDependencyNode(dependency: any): AssetGraphNode {
+  return {
+    id: dependency.id,
+    type: 'dependency',
+    value: dependency,
+    usedSymbols: new Set(),
+    hasDeferred: false,
+    usedSymbolsDownDirty: false,
+    usedSymbolsUpDirty: false,
+    usedSymbolsUpDirtyUp: false,
+    usedSymbolsUpDirtyDown: false,
+    requested: true,
+  };
+}
+
+function makeAssetNode(asset: any): AssetGraphNode {
+  return {
+    id: asset.id,
+    type: 'asset',
+    value: asset,
+    usedSymbols: new Set(),
+    hasDeferred: false,
+    usedSymbolsDownDirty: false,
+    usedSymbolsUpDirty: false,
+    requested: true,
+  };
+}
 
 describe('bundleGraphToRootedGraph', () => {
   before(async function () {
@@ -26,7 +63,7 @@ describe('bundleGraphToRootedGraph', () => {
     const {mutableBundleGraph} = await setupBundlerTest(entryPath);
     const rootGraph = bundleGraphToRootedGraph(mutableBundleGraph);
 
-    assert.equal(rootGraph.nodes.length, 4);
+    assert.equal(rootGraph.nodes.length, 3);
 
     const rootNode = rootGraph.getNodeIdByContentKey('root');
     const assetIdsByPath = new Map();
@@ -55,14 +92,10 @@ describe('bundleGraphToRootedGraph', () => {
     assert.deepEqual(getConnections('root'), ['test.js']);
     assert.deepEqual(
       getConnections(nullthrows(assetIdsByPath.get('test.js'))),
-      ['dependency.js', 'esmodule-helpers.js'],
+      ['dependency.js'],
     );
     assert.deepEqual(
       getConnections(nullthrows(assetIdsByPath.get('dependency.js'))),
-      ['esmodule-helpers.js'],
-    );
-    assert.deepEqual(
-      getConnections(nullthrows(assetIdsByPath.get('esmodule-helpers.js'))),
       [],
     );
   });
@@ -84,10 +117,10 @@ describe('bundleGraphToRootedGraph', () => {
         path.join(entryDir, 'page2.js'),
       ]);
 
-      const simplfiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+      const simplifiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
       const dot = rootedGraphToDot(
         entryDir,
-        simplfiedGraph,
+        simplifiedGraph,
         'Simplified Graph',
         'simplified_graph',
       );
@@ -101,21 +134,15 @@ digraph simplified_graph {
   "root";
   "root" -> "page1.js";
   "root" -> "page2.js";
-  "esmodule_helpers.js";
   "library1.js";
   "library2.js";
   "library3.js";
   "page1.js";
   "page2.js";
 
-  "library1.js" -> "esmodule_helpers.js";
   "library1.js" -> "library3.js";
-  "library2.js" -> "esmodule_helpers.js";
   "library2.js" -> "library3.js";
-  "library3.js" -> "esmodule_helpers.js";
-  "page1.js" -> "esmodule_helpers.js";
   "page1.js" -> "library1.js";
-  "page2.js" -> "esmodule_helpers.js";
   "page2.js" -> "library2.js";
 }
         `.trim(),
@@ -141,10 +168,10 @@ digraph simplified_graph {
       path.join(entryDir, 'page1.js'),
     ]);
 
-    const simplfiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const simplifiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
     const dot = rootedGraphToDot(
       entryDir,
-      simplfiedGraph,
+      simplifiedGraph,
       'Simplified Graph',
       'simplified_graph',
     );
@@ -158,14 +185,10 @@ digraph simplified_graph {
   "root";
   "root" -> "library1.js";
   "root" -> "page1.js";
-  "esmodule_helpers.js";
   "library1.js";
   "library2.js";
   "page1.js";
 
-  "library1.js" -> "esmodule_helpers.js";
-  "library2.js" -> "esmodule_helpers.js";
-  "page1.js" -> "esmodule_helpers.js";
   "page1.js" -> "library2.js";
 }
         `.trim(),
@@ -177,5 +200,85 @@ digraph simplified_graph {
         dot,
       },
     ];
+  });
+
+  it('dependencies of different types are linked to the root', async () => {
+    const options = getParcelOptions('/test/index.js', {
+      inputFS: overlayFS,
+      defaultConfig: path.join(__dirname, 'atlaspack-config.json'),
+    });
+    const resolvedOptions = await resolveOptions(options);
+    resolvedOptions.projectRoot = '/test';
+
+    const assetGraph = new AssetGraph();
+    const entry = assetGraph.addNode(
+      makeDependencyNode({
+        isEntry: true,
+      }),
+    );
+    const entryAsset = assetGraph.addNode(
+      makeAssetNode({
+        id: encodeHex('asset-1'),
+        type: 'js',
+        filePath: '/test/index.js',
+      }),
+    );
+    const dependency = assetGraph.addNode(
+      makeDependencyNode({
+        id: 'child-dependency',
+        isEntry: false,
+        sourceAssetType: 'js',
+      }),
+    );
+    const childAsset = assetGraph.addNode({
+      id: encodeHex('asset-of-different-type'),
+      type: 'asset',
+      // $FlowFixMe
+      value: {
+        id: encodeHex('asset-of-different-type'),
+        type: 'png',
+        filePath: '/test/child.png',
+      },
+      usedSymbols: new Set(),
+      hasDeferred: false,
+      usedSymbolsDownDirty: false,
+      usedSymbolsUpDirty: false,
+      requested: true,
+    });
+    assetGraph.addEdge(assetGraph.rootNodeId, entry);
+    assetGraph.addEdge(entry, entryAsset);
+    assetGraph.addEdge(entryAsset, dependency);
+    assetGraph.addEdge(dependency, childAsset);
+
+    const bundleGraph = BundleGraph.fromAssetGraph(assetGraph, false);
+    const mutableBundleGraph = new MutableBundleGraph(
+      bundleGraph,
+      resolvedOptions,
+    );
+
+    const simplifiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+
+    const dot = rootedGraphToDot(
+      '/test',
+      simplifiedGraph,
+      'Simplified Graph',
+      'simplified_graph',
+    );
+    assert.equal(
+      dot,
+      `
+digraph simplified_graph {
+  labelloc="t";
+  label="Simplified Graph";
+
+  "root";
+  "root" -> "child.png";
+  "root" -> "index.js";
+  "child.png";
+  "index.js";
+
+}
+        `.trim(),
+    );
   });
 });

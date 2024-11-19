@@ -4,7 +4,6 @@ digraph dominators {
 
   "root";
   "root" -> "page.js";
-  "esmodule_helpers.js";
   "jsx.js";
   "left-pad.js";
   "lodash.js";
@@ -13,7 +12,6 @@ digraph dominators {
   "string-chart-at.js";
   "string-concat.js";
 
-  "page.js" -> "esmodule_helpers.js";
   "page.js" -> "left-pad.js";
   "page.js" -> "lodash.js";
   "page.js" -> "react.js";

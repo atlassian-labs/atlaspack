@@ -9,11 +9,17 @@ import assert from 'assert';
 import {dotTest, setupBundlerTest} from '../test-utils';
 import {asset, fixtureFromGraph} from '../fixtureFromGraph';
 import path from 'path';
-import {overlayFS} from '@atlaspack/test-utils';
+import {overlayFS, workerFarm} from '@atlaspack/test-utils';
 import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
 import {rootedGraphToDot} from '../graphviz/GraphvizUtils';
 
 describe('oneCycleBreaker', () => {
+  before(async function () {
+    this.timeout(10000);
+    // Warm up worker farm so that the first test doesn't account for this time.
+    await workerFarm.callAllWorkers('ping', []);
+  });
+
   describe('findStronglyConnectedComponents', () => {
     it('should find strongly connected components', () => {
       const graph = new ContentGraph();

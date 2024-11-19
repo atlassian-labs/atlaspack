@@ -90,7 +90,8 @@ export function bundleGraphToRootedGraph(
       if (
         dependency.isEntry ||
         dependency.priority !== 'sync' ||
-        dependency.sourceAssetType !== childAsset.type
+        (dependency.sourceAssetType != null &&
+          dependency.sourceAssetType !== childAsset.type)
       ) {
         graph.addEdge(rootNodeId, assetNodeId);
       } else {

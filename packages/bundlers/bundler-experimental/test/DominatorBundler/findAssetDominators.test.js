@@ -1,12 +1,12 @@
 // @flow strict-local
 
-import {findAssetDominators} from '../../src/DominatorBundler/findAssetDominators';
 import * as path from 'path';
 import {overlayFS, workerFarm} from '@atlaspack/test-utils';
-import {dotTest, setupBundlerTest} from '../test-utils';
 import assert from 'assert';
+import {dotTest, setupBundlerTest} from '../test-utils';
 import {asset, fixtureFromGraph} from '../fixtureFromGraph';
 import {rootedGraphToDot} from '../graphviz/GraphvizUtils';
+import {findAssetDominators} from '../../src/DominatorBundler/findAssetDominators';
 
 describe('findAssetDominators', () => {
   before(async function () {
@@ -38,11 +38,9 @@ digraph dominators {
 
   "root";
   "root" -> "async.js";
-  "root" -> "esmodule_helpers.js";
   "root" -> "test.js";
   "async.js";
   "dependency.js";
-  "esmodule_helpers.js";
   "test.js";
 
   "test.js" -> "dependency.js";
@@ -85,7 +83,6 @@ digraph dominators {
 
   "root";
   "root" -> "page.js";
-  "esmodule_helpers.js";
   "jsx.js";
   "left-pad.js";
   "lodash.js";
@@ -94,7 +91,6 @@ digraph dominators {
   "string-chart-at.js";
   "string-concat.js";
 
-  "page.js" -> "esmodule_helpers.js";
   "page.js" -> "left-pad.js";
   "page.js" -> "lodash.js";
   "page.js" -> "react.js";
@@ -145,14 +141,12 @@ digraph dominators {
   label="Dominators";
 
   "root";
-  "root" -> "esmodule_helpers.js";
   "root" -> "left-pad.js";
   "root" -> "lodash.js";
   "root" -> "page1.js";
   "root" -> "page2.js";
   "root" -> "react.js";
   "root" -> "string-concat.js";
-  "esmodule_helpers.js";
   "jsx.js";
   "left-pad.js";
   "lodash.js";

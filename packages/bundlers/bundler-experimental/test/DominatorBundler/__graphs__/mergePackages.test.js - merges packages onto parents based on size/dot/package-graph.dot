@@ -3,7 +3,6 @@ digraph merged {
   label="Duplicated";
   layout="dot";
 
-  "esmodule_helpers.js";
   "jsx.js";
   "left-pad.js";
   "lodash.js";
@@ -14,12 +13,10 @@ digraph merged {
   "string-chart-at.js";
   "string-concat.js";
 
-  "page1.js" -> "esmodule_helpers.js";
   "page1.js" -> "left-pad.js";
   "page1.js" -> "lodash.js";
   "page1.js" -> "react.js";
   "page1.js" -> "string-concat.js";
-  "page2.js" -> "esmodule_helpers.js";
   "page2.js" -> "left-pad.js";
   "page2.js" -> "lodash.js";
   "page2.js" -> "react.js";

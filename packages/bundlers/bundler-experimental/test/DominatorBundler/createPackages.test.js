@@ -2,7 +2,7 @@
 
 import * as path from 'path';
 import {overlayFS, workerFarm} from '@atlaspack/test-utils';
-import {dotTest, setupBundlerTest} from '../test-utils';
+import {dotTest, setupBundlerTest, testMakePackageKey} from '../test-utils';
 import {
   createPackages,
   getAssetNodeByKey,
@@ -51,9 +51,9 @@ describe('DominatorBundler/createPackages', () => {
       const chunkEntryPoints = getChunkEntryPoints(rootedGraph, dominators);
 
       const filePathEntryPoints = {};
-      for (const [chunkId, entryPointIds] of chunkEntryPoints) {
+      for (const [chunkId, {entryPointChunkIds}] of chunkEntryPoints) {
         const chunk = getAssetNodeByKey(dominators, chunkId);
-        const entryPoints = Array.from(entryPointIds).map((id) =>
+        const entryPoints = Array.from(entryPointChunkIds).map((id) =>
           cleanPath(entryDir, getAssetNodeByKey(dominators, id).filePath),
         );
 
@@ -63,7 +63,6 @@ describe('DominatorBundler/createPackages', () => {
       }
 
       assert.deepEqual(filePathEntryPoints, {
-        'esmodule_helpers.js': ['page1.js', 'page2.js'],
         'left-pad.js': ['page1.js', 'page2.js'],
         'lodash.js': ['page1.js', 'page2.js'],
         'react.js': ['page1.js', 'page2.js'],
@@ -100,7 +99,12 @@ describe('DominatorBundler/createPackages', () => {
         const dominators = findAssetDominators(mutableBundleGraph);
         const outputDot = rootedGraphToDot(entryDir, dominators);
 
-        const mergedDominators = createPackages(mutableBundleGraph, dominators);
+        const mergedDominators = createPackages(
+          mutableBundleGraph,
+          dominators,
+          (parentChunks) =>
+            testMakePackageKey(entryDir, dominators, parentChunks),
+        );
         const mergedDominatorsDot = mergedDominatorsToDot(
           entryDir,
           mergedDominators,
@@ -114,11 +118,10 @@ digraph merged {
   label="Merged";
   layout="dot";
 
-  "esmodule_helpers.js";
   "jsx.js";
   "left-pad.js";
   "lodash.js";
-  "package:4d365acd7631caa5,85a47ee5bf2af6f5";
+  "package:page1.js,page2.js";
   "page1.js";
   "page2.js";
   "react.js";
@@ -126,13 +129,12 @@ digraph merged {
   "string-chart-at.js";
   "string-concat.js";
 
-  "package:4d365acd7631caa5,85a47ee5bf2af6f5" -> "esmodule_helpers.js";
-  "package:4d365acd7631caa5,85a47ee5bf2af6f5" -> "left-pad.js";
-  "package:4d365acd7631caa5,85a47ee5bf2af6f5" -> "lodash.js";
-  "package:4d365acd7631caa5,85a47ee5bf2af6f5" -> "react.js";
-  "package:4d365acd7631caa5,85a47ee5bf2af6f5" -> "string-concat.js";
+  "package:page1.js,page2.js" -> "left-pad.js";
+  "package:page1.js,page2.js" -> "lodash.js";
+  "package:page1.js,page2.js" -> "react.js";
+  "package:page1.js,page2.js" -> "string-concat.js";
   "react.js" -> "jsx.js";
-  "root" -> "package:4d365acd7631caa5,85a47ee5bf2af6f5";
+  "root" -> "package:page1.js,page2.js";
   "root" -> "page1.js";
   "root" -> "page2.js";
   "string-concat.js" -> "string-chart-at.js";
