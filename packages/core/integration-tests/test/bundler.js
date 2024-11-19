@@ -3,7 +3,6 @@ import assert from 'assert';
 import Logger from '@atlaspack/logger';
 import {
   assertBundles,
-  expectBundles,
   bundle,
   describe,
   findAsset,
