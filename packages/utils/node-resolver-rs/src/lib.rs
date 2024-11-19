@@ -733,7 +733,7 @@ impl<'a> ResolveRequest<'a> {
 
       Err(ResolverError::ModuleSubpathNotFound {
         module: module.to_owned(),
-        path: package.path.parent().unwrap().to_owned(),
+        path: package_sub_path,
         package_path: package.path.clone(),
       })
     } else {
