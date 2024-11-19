@@ -720,9 +720,9 @@ export default class Atlaspack {
                 ...request.env.loc,
                 filePath: toProjectPath(projectRoot, request.env.loc.filePath),
               }
-        // $FlowFixMe ProjectPath is a string
-        defaultTargetOptions: resolvedOptions.defaultTargetOptions,
             : undefined,
+        // $FlowFixMe ProjectPath is a string
+        defaultTargetOptions: this.#resolvedOptions.defaultTargetOptions,
       }),
     });
 
