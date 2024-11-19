@@ -80,7 +80,7 @@ impl AtlaspackResolver {
     // If package deduplication is enabled, then scan node_modules for duplicate package
     // versions
     if config.deduplicate_packages.is_some_and(|v| v) {
-      cache.scan_package_duplicates(&ctx.config.project_root);
+      cache.scan_package_duplicates(&ctx.config.project_root)?;
     }
 
     Ok(Self {

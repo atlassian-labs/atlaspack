@@ -389,6 +389,7 @@ dependencies = [
 name = "atlaspack-resolver"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "assert_fs",
  "atlaspack_core",
  "atlaspack_filesystem",

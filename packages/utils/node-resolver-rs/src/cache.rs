@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use rayon::prelude::*;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -126,9 +127,9 @@ impl Cache {
   }
 
   #[tracing::instrument(level = "info", skip_all)]
-  pub fn scan_package_duplicates(&self, root_dir: &Path) {
+  pub fn scan_package_duplicates(&self, root_dir: &Path) -> anyhow::Result<()> {
     let mut package_json_files =
-      find_package_json_files(self.fs.clone(), &root_dir.join("node_modules"));
+      find_package_json_files(self.fs.clone(), &root_dir.join("node_modules"))?;
     package_json_files.sort_by(|a, b| {
       let a_len = a.to_string_lossy().len();
       let b_len = b.to_string_lossy().len();
@@ -173,6 +174,8 @@ impl Cache {
       "{} packages marked as duplicate",
       self.package_duplicates.len()
     );
+
+    Ok(())
   }
 
   pub fn read_package(&self, path: Cow<Path>) -> Arc<Result<Arc<PackageJson>, ResolverError>> {
@@ -269,35 +272,42 @@ fn read_and_parse_package<'a>(
   Ok(pkg)
 }
 
-fn find_package_json_files(fs: FileSystemRef, base_path: &Path) -> Vec<PathBuf> {
+fn find_package_json_files(fs: FileSystemRef, base_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
   let mut package_json_files = Vec::new();
   let should_traverse = base_path.file_name().is_some_and(|dir_name| {
     dir_name == "node_modules" || dir_name.to_string_lossy().starts_with("@")
   });
 
-  if let Ok(entries) = fs.read_dir(base_path) {
-    let entries: Vec<_> = entries.filter_map(Result::ok).collect();
+  let entries = fs.read_dir(base_path)?;
+  let entries: Vec<_> = entries.into_iter().collect();
 
-    let found_files: Vec<PathBuf> = entries
-      .par_iter()
-      .flat_map(|entry| {
-        let path = entry.path();
-        if path.is_dir() && (should_traverse || path.ends_with("node_modules")) {
-          find_package_json_files(fs.clone(), &path)
-        } else if path
-          .file_name()
-          .is_some_and(|file_name| file_name == "package.json")
-        {
-          vec![path]
-        } else {
-          Vec::new()
+  let packages: Vec<Vec<PathBuf>> = entries
+    .par_iter()
+    .map(|entry| {
+      match entry {
+        Ok(entry) => {
+          let path = entry.path();
+          if path.is_dir() && (should_traverse || path.ends_with("node_modules")) {
+            // Recursively attempt to find package.json files and propagate errors
+            find_package_json_files(fs.clone(), &path)
+          } else if path
+            .file_name()
+            .is_some_and(|file_name| file_name == "package.json")
+          {
+            Ok(vec![path])
+          } else {
+            Ok(Vec::new())
+          }
         }
-      })
-      .collect();
+        Err(error) => Err(anyhow!("Failure reading entry {}", error)),
+      }
+    })
+    .collect::<anyhow::Result<Vec<Vec<PathBuf>>>>()?;
 
-    package_json_files.extend(found_files);
-  }
-  package_json_files
+  let packages: Vec<PathBuf> = packages.into_iter().flatten().collect();
+  package_json_files.extend(packages);
+
+  Ok(package_json_files)
 }
 
 #[cfg(test)]
@@ -317,7 +327,7 @@ mod test {
   #[test]
   fn scan_package_duplicates() {
     let cache = CacheCow::Owned(Cache::new(Arc::new(OsFileSystem)));
-    cache.scan_package_duplicates(&root());
+    cache.scan_package_duplicates(&root()).unwrap();
 
     assert_eq!(cache.package_duplicates.len(), 1);
     assert_eq!(
