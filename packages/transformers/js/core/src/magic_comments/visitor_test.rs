@@ -63,11 +63,8 @@ fn it_should_set_chunk_name_if_code_contains_magic_comment() -> anyhow::Result<(
   parse(code)?.visit_with(&mut visitor);
 
   assert_eq!(
-    visitor
-      .magic_comments
-      .get("./foo")
-      .expect("Expected magic comment to be set"),
-    "foo-chunk",
+    visitor.magic_comments.get("./foo"),
+    Some(&"foo-chunk".to_string()),
     "Expected magic comment to be set"
   );
 
@@ -85,20 +82,14 @@ fn it_should_set_chunk_name_if_code_contains_multiple_magic_comment() -> anyhow:
   parse(code)?.visit_with(&mut visitor);
 
   assert_eq!(
-    visitor
-      .magic_comments
-      .get("./foo")
-      .expect("Expected magic comment to be set"),
-    "foo-chunk",
+    visitor.magic_comments.get("./foo"),
+    Some(&"foo-chunk".to_string()),
     "Expected magic comment to be set"
   );
 
   assert_eq!(
-    visitor
-      .magic_comments
-      .get("./bar")
-      .expect("Expected magic comment to be set"),
-    "bar-chunk",
+    visitor.magic_comments.get("./bar"),
+    Some(&"bar-chunk".to_string()),
     "Expected magic comment to be set"
   );
 
@@ -116,11 +107,8 @@ fn it_should_not_set_chunk_name_if_code_contains_multiple_imports() -> anyhow::R
   parse(code)?.visit_with(&mut visitor);
 
   assert_eq!(
-    visitor
-      .magic_comments
-      .get("./foo")
-      .expect("Expected magic comment to be set"),
-    "foo-chunk",
+    visitor.magic_comments.get("./foo"),
+    Some(&"foo-chunk".to_string()),
     "Expected magic comment to be set"
   );
 
@@ -141,11 +129,8 @@ fn it_should_work_with_current_dir_import() -> anyhow::Result<()> {
   parse(code)?.visit_with(&mut visitor);
 
   assert_eq!(
-    visitor
-      .magic_comments
-      .get(".")
-      .expect("Expected magic comment to be set"),
-    "foo-chunk",
+    visitor.magic_comments.get("."),
+    Some(&"foo-chunk".to_string()),
     "Expected magic comment to be set"
   );
 
@@ -160,11 +145,8 @@ fn it_should_work_with_current_dir_import_2() -> anyhow::Result<()> {
   parse(code)?.visit_with(&mut visitor);
 
   assert_eq!(
-    visitor
-      .magic_comments
-      .get("./")
-      .expect("Expected magic comment to be set"),
-    "foo-chunk",
+    visitor.magic_comments.get("./"),
+    Some(&"foo-chunk".to_string()),
     "Expected magic comment to be set"
   );
 
@@ -179,11 +161,8 @@ fn it_should_work_with_parent_dir_import() -> anyhow::Result<()> {
   parse(code)?.visit_with(&mut visitor);
 
   assert_eq!(
-    visitor
-      .magic_comments
-      .get("..")
-      .expect("Expected magic comment to be set"),
-    "foo-chunk",
+    visitor.magic_comments.get(".."),
+    Some(&"foo-chunk".to_string()),
     "Expected magic comment to be set"
   );
 
@@ -198,11 +177,8 @@ fn it_should_work_with_parent_dir_import_2() -> anyhow::Result<()> {
   parse(code)?.visit_with(&mut visitor);
 
   assert_eq!(
-    visitor
-      .magic_comments
-      .get("../")
-      .expect("Expected magic comment to be set"),
-    "foo-chunk",
+    visitor.magic_comments.get("../"),
+    Some(&"foo-chunk".to_string()),
     "Expected magic comment to be set"
   );
 
@@ -227,11 +203,8 @@ fn it_parses_lazy_imports() -> anyhow::Result<()> {
   parse(code)?.visit_with(&mut visitor);
 
   assert_eq!(
-    visitor
-      .magic_comments
-      .get("./view")
-      .expect("Expected magic comment to be set"),
-    "async-issue-view-permalink-button",
+    visitor.magic_comments.get("./view"),
+    Some(&"async-issue-view-permalink-button".to_string()),
     "Expected magic comment to be set"
   );
 
