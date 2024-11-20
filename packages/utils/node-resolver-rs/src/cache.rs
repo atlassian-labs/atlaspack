@@ -134,9 +134,9 @@ impl Cache {
   /// This method also prefills the "packages" cache
   #[tracing::instrument(level = "info", skip_all)]
   pub fn scan_package_duplicates(&self, root_dir: &Path) -> anyhow::Result<()> {
-    super::runtime::block_on(async move {
+    crate::runtime::block_on(async move {
       let mut package_json_files =
-        find_package_json_files(self.fs.clone(), &root_dir.join("node_modules"))?;
+        find_package_json_files(self.fs.clone(), &root_dir.join("node_modules")).await?;
 
       // Sort the files by shortest file path and the alphabetical.
       // This ensures deterministic results and also favors duplicates that are
@@ -290,22 +290,47 @@ fn read_and_parse_package<'a>(
   Ok(pkg)
 }
 
-fn find_package_json_files(fs: FileSystemRef, base_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
-  super::runtime::block_on(async move {
-    let (tx_result, mut rx_result) = unbounded_channel::<PathBuf>();
-    let (tx_queue, mut rx_queue) = unbounded_channel::<PathBuf>();
-    let mut jobs = JoinSet::<anyhow::Result<()>>::new();
+async fn find_package_json_files(
+  fs: FileSystemRef,
+  base_path: &Path,
+) -> anyhow::Result<Vec<PathBuf>> {
+  // Collect results in this channel
+  let (tx_result, mut rx_result) = unbounded_channel::<PathBuf>();
 
-    tx_queue.send(base_path.into()).unwrap();
+  // Queue of jobs to complete
+  let (tx_queue, mut rx_queue) = unbounded_channel::<Option<PathBuf>>();
+  tx_queue.send(Some(base_path.to_path_buf())).unwrap();
 
-    loop {
-      // Drain queue and spawn tasks
-      while let Ok(base_path) = rx_queue.try_recv() {
+  // List of in-flight jobs
+  let mut jobs = JoinSet::<anyhow::Result<()>>::new();
+
+  loop {
+    // Non blocking, clear the completed jobs from the JoinSet and propagate errors
+    while let Some(job) = jobs.try_join_next() {
+      job??;
+    }
+
+    // If the queue is empty and jobs are in flight then wait for the next job to complete
+    if rx_queue.is_empty() {
+      let Some(job) = jobs.join_next().await else {
+        // If there are no more jobs then exit
+        break;
+      };
+      job??;
+      continue;
+    }
+
+    // Wait for more work
+    match rx_queue.recv().await {
+      None => break,
+      // Job finished with no results
+      Some(None) => continue,
+      // Job finished with new item to queue
+      Some(Some(base_path)) => jobs.spawn({
         let fs = fs.clone();
-        let tx_queue = tx_queue.clone();
         let tx_result = tx_result.clone();
-
-        jobs.spawn(async move {
+        let tx_queue = tx_queue.clone();
+        async move {
           let should_traverse = base_path.file_name().is_some_and(|dir_name| {
             dir_name == "node_modules" || dir_name.to_string_lossy().starts_with("@")
           });
@@ -314,7 +339,7 @@ fn find_package_json_files(fs: FileSystemRef, base_path: &Path) -> anyhow::Resul
             let path = entry?.path();
 
             if path.is_dir() && (should_traverse || path.ends_with("node_modules")) {
-              tx_queue.send(path).unwrap();
+              tx_queue.send(Some(path))?;
               continue;
             }
 
@@ -322,32 +347,24 @@ fn find_package_json_files(fs: FileSystemRef, base_path: &Path) -> anyhow::Resul
               .file_name()
               .is_some_and(|file_name| file_name == "package.json")
             {
-              tx_result.send(path).unwrap();
+              tx_result.send(path)?;
               continue;
             }
           }
 
+          tx_queue.send(None)?;
           Ok(())
-        });
-      }
+        }
+      }),
+    };
+  }
 
-      match jobs.join_next().await {
-        Some(Ok(Ok(_))) => continue, // Check for new jobs if last completed successfully
-        None => break,               // Exit if no jobs left in queue
-        Some(Ok(Err(err))) => anyhow::bail!(err), // Last job errored
-        Some(Err(err)) => anyhow::bail!(err), // Tokio errored
-      }
-    }
-
-    // Collect results
-    let mut package_json_files = Vec::new();
-
-    while let Ok(path) = rx_result.try_recv() {
-      package_json_files.push(path);
-    }
-
-    Ok(package_json_files)
-  })
+  // Collect results
+  let mut package_json_files = Vec::new();
+  while let Ok(path) = rx_result.try_recv() {
+    package_json_files.push(path);
+  }
+  Ok(package_json_files)
 }
 
 #[cfg(test)]
