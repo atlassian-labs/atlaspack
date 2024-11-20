@@ -10,6 +10,13 @@ export type AssetNode = {|
   id: string,
   asset: Asset,
   entryDependency: Dependency,
+  /**
+   * We mark the assets that are connected to the root.
+   *
+   * Later on we will use this information to determine which assets were entry
+   * points, as opposed to lifted-up by other stages.
+   */
+  isEntryNode: boolean,
 |};
 
 export type SimpleAssetGraphNode = 'root' | AssetNode;
@@ -69,6 +76,7 @@ export function bundleGraphToRootedGraph(
           type: 'asset',
           asset,
           entryDependency: context,
+          isEntryNode: false,
         });
       } else if (node.type === 'dependency' && node.value.isEntry) {
         return node.value;
@@ -94,6 +102,9 @@ export function bundleGraphToRootedGraph(
           dependency.sourceAssetType !== childAsset.type)
       ) {
         graph.addEdge(rootNodeId, assetNodeId);
+        const node = graph.getNode(assetNodeId);
+        invariant(node != null && node !== 'root');
+        node.isEntryNode = true;
       } else {
         const parentAsset = bundleGraph.getAssetWithDependency(dependency);
         if (!parentAsset) {

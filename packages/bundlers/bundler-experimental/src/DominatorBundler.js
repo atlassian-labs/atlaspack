@@ -108,6 +108,7 @@ export function intoBundleGraph(
       // if (node.asset.type === 'js') {
       const bundle = bundleGraph.createBundle({
         entryAsset: node.asset,
+        needsStableName: node.isEntryNode,
         target,
       });
       addNodeToBundle(packages, bundleGraph, bundle, nodeId, node);
