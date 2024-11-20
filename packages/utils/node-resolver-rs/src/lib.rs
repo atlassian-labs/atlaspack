@@ -39,6 +39,7 @@ mod error;
 mod invalidations;
 mod package_json;
 mod path;
+mod runtime;
 mod specifier;
 mod tsconfig;
 mod url_to_path;

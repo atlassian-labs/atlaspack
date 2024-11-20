@@ -141,6 +141,10 @@ impl FileSystem for PreloadingFileSystem {
     let file = files.get(path);
     matches!(file, Some(FileEntry::Directory))
   }
+
+  fn read_dir(&self, _path: &Path) -> std::io::Result<std::fs::ReadDir> {
+    todo!()
+  }
 }
 
 fn root() -> PathBuf {

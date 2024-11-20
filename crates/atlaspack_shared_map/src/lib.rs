@@ -1,13 +1,19 @@
-use std::{borrow::Borrow, collections::HashMap, hash::BuildHasher, sync::RwLock};
+use std::{
+  borrow::Borrow,
+  collections::HashMap,
+  hash::BuildHasher,
+  sync::{Arc, RwLock},
+};
 
 /// A HashMap that allows sharing of values between threads
 /// It is currently implemented using RwLock
+#[derive(Clone)]
 pub struct SharedHashMap<
   K: Send + Eq,
   V: Send + Clone,
   H: Send + Default + BuildHasher = xxhash_rust::xxh3::Xxh3Builder,
 > {
-  inner: RwLock<HashMap<K, V, H>>,
+  inner: Arc<RwLock<HashMap<K, V, H>>>,
 }
 
 impl<K, V, H> Default for SharedHashMap<K, V, H>
@@ -18,7 +24,7 @@ where
 {
   fn default() -> Self {
     Self {
-      inner: RwLock::new(HashMap::with_hasher(H::default())),
+      inner: Arc::new(RwLock::new(HashMap::with_hasher(H::default()))),
     }
   }
 }
@@ -31,7 +37,7 @@ where
 {
   pub fn new() -> Self {
     Self {
-      inner: RwLock::new(HashMap::with_hasher(H::default())),
+      inner: Arc::new(RwLock::new(HashMap::with_hasher(H::default()))),
     }
   }
 

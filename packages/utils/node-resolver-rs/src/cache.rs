@@ -1,5 +1,3 @@
-use anyhow::anyhow;
-use rayon::prelude::*;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
@@ -7,6 +5,8 @@ use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use tokio::sync::mpsc::unbounded_channel;
+use tokio::task::JoinSet;
 
 use atlaspack_core::types::File;
 use atlaspack_filesystem::{FileSystemRealPathCache, FileSystemRef};
@@ -134,58 +134,66 @@ impl Cache {
   /// This method also prefills the "packages" cache
   #[tracing::instrument(level = "info", skip_all)]
   pub fn scan_package_duplicates(&self, root_dir: &Path) -> anyhow::Result<()> {
-    let mut package_json_files =
-      find_package_json_files(self.fs.clone(), &root_dir.join("node_modules"))?;
+    super::runtime::block_on(async move {
+      let mut package_json_files =
+        find_package_json_files(self.fs.clone(), &root_dir.join("node_modules"))?;
 
-    // Sort the files by shortest file path and the alphabetical.
-    // This ensures deterministic results and also favors duplicates that are
-    // less nested
-    package_json_files.sort_by(|a, b| {
-      let a_len = a.to_string_lossy().len();
-      let b_len = b.to_string_lossy().len();
+      // Sort the files by shortest file path and the alphabetical.
+      // This ensures deterministic results and also favors duplicates that are
+      // less nested
+      package_json_files.sort_by(|a, b| {
+        let a_len = a.to_string_lossy().len();
+        let b_len = b.to_string_lossy().len();
 
-      if a_len == b_len {
-        a.cmp(b)
-      } else {
-        a_len.cmp(&b_len)
+        if a_len == b_len {
+          a.cmp(b)
+        } else {
+          a_len.cmp(&b_len)
+        }
+      });
+
+      let mut jobs = JoinSet::new();
+
+      for package_json_file in package_json_files {
+        let fs = self.fs.clone();
+        let realpath_cache = self.realpath_cache.clone();
+        let packages = self.packages.clone();
+
+        jobs.spawn(async move {
+          let package = read_and_parse_package(&fs, &realpath_cache, &package_json_file);
+          let entry = Arc::new(package.map(Arc::new));
+          // While we have the package.json we may as well hydrate the cache for later
+          packages.insert(package_json_file.clone(), entry.clone());
+          entry
+        });
       }
-    });
 
-    let packages: Vec<Arc<Result<Arc<PackageJson>, ResolverError>>> = package_json_files
-      .par_iter()
-      .map(|path| {
-        let package = read_and_parse_package(&self.fs, &self.realpath_cache, path);
-        let entry = Arc::new(package.map(Arc::new));
-        // While we have the package.json we may as well hydrate the cache for
-        // later
-        self.packages.insert(path.clone(), entry.clone());
-        entry
-      })
-      .collect();
+      let packages = jobs.join_all().await;
 
-    let mut packages_by_version: HashMap<String, Arc<PackageJson>> = HashMap::new();
+      let mut packages_by_version: HashMap<String, Arc<PackageJson>> = HashMap::new();
 
-    for entry in packages {
-      if let Ok(package_json) = entry.as_ref() {
-        if let Some(version) = package_json.version.clone() {
-          let dedupe_key = format!("{}@{}", package_json.name, version);
+      for entry in packages {
+        if let Ok(package_json) = entry.as_ref() {
+          if let Some(version) = package_json.version.clone() {
+            let dedupe_key = format!("{}@{}", package_json.name, version);
 
-          if let Some(existing) = packages_by_version.get(&dedupe_key) {
-            self
-              .package_duplicates
-              .insert(package_json.path.clone(), existing.clone());
-          } else {
-            packages_by_version.insert(dedupe_key.clone(), package_json.clone());
+            if let Some(existing) = packages_by_version.get(&dedupe_key) {
+              self
+                .package_duplicates
+                .insert(package_json.path.clone(), existing.clone());
+            } else {
+              packages_by_version.insert(dedupe_key.clone(), package_json.clone());
+            }
           }
         }
       }
-    }
-    tracing::debug!(
-      "{} packages marked as duplicate",
-      self.package_duplicates.len()
-    );
+      tracing::debug!(
+        "{} packages marked as duplicate",
+        self.package_duplicates.len()
+      );
 
-    Ok(())
+      Ok(())
+    })
   }
 
   pub fn read_package(&self, path: Cow<Path>) -> Arc<Result<Arc<PackageJson>, ResolverError>> {
@@ -283,41 +291,63 @@ fn read_and_parse_package<'a>(
 }
 
 fn find_package_json_files(fs: FileSystemRef, base_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
-  let mut package_json_files = Vec::new();
-  let should_traverse = base_path.file_name().is_some_and(|dir_name| {
-    dir_name == "node_modules" || dir_name.to_string_lossy().starts_with("@")
-  });
+  super::runtime::block_on(async move {
+    let (tx_result, mut rx_result) = unbounded_channel::<PathBuf>();
+    let (tx_queue, mut rx_queue) = unbounded_channel::<PathBuf>();
+    let mut jobs = JoinSet::<anyhow::Result<()>>::new();
 
-  let entries = fs.read_dir(base_path)?;
-  let entries: Vec<_> = entries.into_iter().collect();
+    tx_queue.send(base_path.into()).unwrap();
 
-  let packages: Vec<Vec<PathBuf>> = entries
-    .par_iter()
-    .map(|entry| {
-      match entry {
-        Ok(entry) => {
-          let path = entry.path();
-          if path.is_dir() && (should_traverse || path.ends_with("node_modules")) {
-            // Recursively attempt to find package.json files and propagate errors
-            find_package_json_files(fs.clone(), &path)
-          } else if path
-            .file_name()
-            .is_some_and(|file_name| file_name == "package.json")
-          {
-            Ok(vec![path])
-          } else {
-            Ok(Vec::new())
+    loop {
+      // Drain queue and spawn tasks
+      while let Ok(base_path) = rx_queue.try_recv() {
+        let fs = fs.clone();
+        let tx_queue = tx_queue.clone();
+        let tx_result = tx_result.clone();
+
+        jobs.spawn(async move {
+          let should_traverse = base_path.file_name().is_some_and(|dir_name| {
+            dir_name == "node_modules" || dir_name.to_string_lossy().starts_with("@")
+          });
+
+          for entry in fs.read_dir(&base_path)? {
+            let path = entry?.path();
+
+            if path.is_dir() && (should_traverse || path.ends_with("node_modules")) {
+              tx_queue.send(path).unwrap();
+              continue;
+            }
+
+            if path
+              .file_name()
+              .is_some_and(|file_name| file_name == "package.json")
+            {
+              tx_result.send(path).unwrap();
+              continue;
+            }
           }
-        }
-        Err(error) => Err(anyhow!("Failure reading entry {}", error)),
+
+          Ok(())
+        });
       }
-    })
-    .collect::<anyhow::Result<Vec<Vec<PathBuf>>>>()?;
 
-  let packages: Vec<PathBuf> = packages.into_iter().flatten().collect();
-  package_json_files.extend(packages);
+      match jobs.join_next().await {
+        Some(Ok(Ok(_))) => continue, // Check for new jobs if last completed successfully
+        None => break,               // Exit if no jobs left in queue
+        Some(Ok(Err(err))) => anyhow::bail!(err), // Last job errored
+        Some(Err(err)) => anyhow::bail!(err), // Tokio errored
+      }
+    }
 
-  Ok(package_json_files)
+    // Collect results
+    let mut package_json_files = Vec::new();
+
+    while let Ok(path) = rx_result.try_recv() {
+      package_json_files.push(path);
+    }
+
+    Ok(package_json_files)
+  })
 }
 
 #[cfg(test)]
