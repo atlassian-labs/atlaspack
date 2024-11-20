@@ -108,6 +108,9 @@ const CONFIG_SCHEMA: SchemaEntity = {
         },
       ],
     },
+    magicComments: {
+      type: 'boolean',
+    },
     unstable_inlineConstants: {
       type: 'boolean',
     },
@@ -287,6 +290,8 @@ export default (new Transformer({
     let inlineEnvironment = config.isSource;
     let inlineFS = !ignoreFS;
     let inlineConstants = false;
+    let magicComments = false;
+
     if (conf && conf.contents) {
       validateSchema.diagnostic(
         CONFIG_SCHEMA,
@@ -302,6 +307,7 @@ export default (new Transformer({
         'Invalid config for @atlaspack/transformer-js',
       );
 
+      magicComments = conf.contents?.magicComments ?? magicComments;
       inlineEnvironment = conf.contents?.inlineEnvironment ?? inlineEnvironment;
       inlineFS = conf.contents?.inlineFS ?? inlineFS;
       inlineConstants =
@@ -320,6 +326,7 @@ export default (new Transformer({
       reactRefresh,
       decorators,
       useDefineForClassFields,
+      magicComments,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -463,6 +470,7 @@ export default (new Transformer({
       standalone: asset.query.has('standalone'),
       inline_constants: config.inlineConstants,
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
+      magic_comments: Boolean(config?.magicComments),
       callMacro: asset.isSource
         ? async (err, src, exportName, args, loc) => {
             let mod;

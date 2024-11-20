@@ -16,4 +16,6 @@ pub struct JsTransformerConfig {
 
   #[serde(rename = "inlineFS")]
   pub inline_fs: Option<bool>,
+
+  pub magic_comments: Option<bool>,
 }
