@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
+use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::AssetBuildEvent;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
@@ -103,7 +104,13 @@ impl Request for AssetRequest {
       }
     }
 
-    let transform_context = TransformContext::new(self.env.clone());
+    let config_loader = Arc::new(ConfigLoader {
+      fs: request_context.file_system().clone(),
+      project_root: request_context.project_root.clone(),
+      search_path: asset.file_path.clone(),
+    });
+
+    let transform_context = TransformContext::new(config_loader, self.env.clone());
     let mut result =
       run_pipelines(transform_context, asset, request_context.plugins().clone()).await?;
 

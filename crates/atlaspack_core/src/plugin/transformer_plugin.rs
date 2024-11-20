@@ -1,6 +1,8 @@
+use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
 use crate::hash::IdentifierHasher;
 use crate::types::{Asset, AssetWithDependencies, Dependency, Environment, SpecifierType};
 use async_trait::async_trait;
+use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 use mockall::automock;
 use serde::Serialize;
 use std::any::Any;
@@ -31,20 +33,34 @@ pub struct TransformResult {
 
 #[derive(Clone)]
 pub struct TransformContext {
+  config: ConfigLoaderRef,
   environment: Arc<Environment>,
 }
 
 impl Default for TransformContext {
   fn default() -> Self {
     Self {
+      config: Arc::new(ConfigLoader {
+        fs: Arc::new(InMemoryFileSystem::default()),
+        project_root: PathBuf::default(),
+        search_path: PathBuf::default(),
+      }),
       environment: Arc::new(Environment::default()),
     }
   }
 }
 
 impl TransformContext {
-  pub fn new(environment: Arc<Environment>) -> Self {
-    Self { environment }
+  pub fn new(config: ConfigLoaderRef, environment: Arc<Environment>) -> Self {
+    Self {
+      config,
+      environment,
+    }
+  }
+
+  /// Enables configuration to be loaded from the current asset
+  pub fn config(&self) -> ConfigLoaderRef {
+    self.config.clone()
   }
 
   pub fn env(&self) -> &Arc<Environment> {
