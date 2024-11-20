@@ -1,0 +1,13 @@
+digraph merged {
+  labelloc="t";
+  label="Merged";
+  layout="dot";
+
+  "async.js";
+  "index.js";
+  "root";
+
+  "index.js" -> "async.js";
+  "root" -> "async.js";
+  "root" -> "index.js";
+}

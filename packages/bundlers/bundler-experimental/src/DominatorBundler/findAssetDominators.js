@@ -6,7 +6,11 @@ import {ContentGraph, type NodeId, Graph} from '@atlaspack/graph';
 import {bundleGraphToRootedGraph} from './bundleGraphToRootedGraph';
 import {convertToAcyclicGraph} from './oneCycleBreaker';
 import type {AcyclicGraph} from './oneCycleBreaker';
-import type {AssetNode} from './bundleGraphToRootedGraph';
+import type {
+  AssetNode,
+  SimpleAssetGraph,
+  SimpleAssetGraphNode,
+} from './bundleGraphToRootedGraph';
 
 function debugLog(message: string) {
   logger.info({
@@ -30,9 +34,11 @@ export type DominatorChunkDependencyGraph = ContentGraph<{|
  * The return value contains the **immediate** dominator tree, which is
  * different to the dominator tree.
  */
-export function findAssetDominators(
-  bundleGraph: MutableBundleGraph,
-): AssetDominatorTree {
+export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
+  dominators: AssetDominatorTree,
+  graph: SimpleAssetGraph,
+  noCyclesGraph: AcyclicGraph<'root' | SimpleAssetGraphNode>,
+|} {
   // Build a simpler graph with a root at the top
   debugLog('converting graph');
   const graph = bundleGraphToRootedGraph(bundleGraph);
@@ -42,7 +48,8 @@ export function findAssetDominators(
   const dominators = simpleFastDominance(noCyclesGraph);
   debugLog('dominator tree');
   const dominatorTree = buildDominatorTree(noCyclesGraph, dominators);
-  return dominatorTree;
+
+  return {dominators: dominatorTree, graph, noCyclesGraph};
 }
 
 /**

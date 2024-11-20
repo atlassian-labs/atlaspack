@@ -46,6 +46,7 @@ export default class MutableBundleGraph
   }
 
   addAssetToBundle(asset: IAsset, bundle: IBundle) {
+    console.log('addAssetToBundle', asset, bundle);
     this.#graph.addAssetToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
@@ -57,6 +58,7 @@ export default class MutableBundleGraph
     bundle: IBundle,
     shouldSkipDependency?: (IDependency) => boolean,
   ) {
+    console.log('addAssetGraphToBundle', asset, bundle);
     this.#graph.addAssetGraphToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
@@ -71,6 +73,7 @@ export default class MutableBundleGraph
     bundle: IBundle,
     shouldSkipDependency?: (IDependency) => boolean,
   ) {
+    console.log('addEntryToBundle', asset, bundle);
     this.#graph.addEntryToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
@@ -81,6 +84,7 @@ export default class MutableBundleGraph
   }
 
   createBundleGroup(dependency: IDependency, target: Target): IBundleGroup {
+    console.log('createBundleGroup', dependency, target);
     let dependencyNode = this.#graph._graph.getNodeByContentKey(dependency.id);
     if (!dependencyNode) {
       throw new Error('Dependency not found');
@@ -169,6 +173,7 @@ export default class MutableBundleGraph
   }
 
   internalizeAsyncDependency(bundle: IBundle, dependency: IDependency): void {
+    console.log('internalizeAsyncDependency', bundle, dependency);
     this.#graph.internalizeAsyncDependency(
       bundleToInternalBundle(bundle),
       dependencyToInternalDependency(dependency),
@@ -176,6 +181,7 @@ export default class MutableBundleGraph
   }
 
   createBundle(opts: CreateBundleOpts): Bundle {
+    console.log('createBundle', opts);
     let entryAsset = opts.entryAsset
       ? assetToAssetValue(opts.entryAsset)
       : null;
@@ -255,6 +261,7 @@ export default class MutableBundleGraph
   }
 
   addBundleToBundleGroup(bundle: IBundle, bundleGroup: IBundleGroup) {
+    console.log('addBundleToBundleGroup', bundle, bundleGroup);
     this.#graph.addBundleToBundleGroup(
       bundleToInternalBundle(bundle),
       bundleGroupToInternalBundleGroup(bundleGroup),
@@ -266,6 +273,7 @@ export default class MutableBundleGraph
     asset: IAsset,
     bundle: IBundle,
   ): void {
+    console.log('createAssetReference', dependency, asset, bundle);
     return this.#graph.createAssetReference(
       dependencyToInternalDependency(dependency),
       assetToAssetValue(asset),
@@ -274,6 +282,7 @@ export default class MutableBundleGraph
   }
 
   createBundleReference(from: IBundle, to: IBundle): void {
+    console.log('createBundleReference', from, to);
     return this.#graph.createBundleReference(
       bundleToInternalBundle(from),
       bundleToInternalBundle(to),

@@ -108,7 +108,9 @@ export function buildPackageGraph(
       return;
     }
 
+    // console.log('buildPackageGraph ==> ', packageInfo);
     for (let asset of packageInfo.assets) {
+      // console.log(asset);
       assetGraph.forEachNodeIdConnectedTo(
         assetGraph.getNodeIdByContentKey(asset.id),
         (nodeId) => {
@@ -117,6 +119,7 @@ export function buildPackageGraph(
             return;
           }
 
+          // console.log(node);
           const packageId = packagesByAssetId.get(node.id);
           if (packageId == null) {
             return;
@@ -135,15 +138,10 @@ export function buildPackageGraph(
   return packageGraph;
 }
 
-/**
- * Merge packages whenever doing it will not increase the total size of all
- * bundles by more than a given threshold, do this iteratively starting at
- * the leaf packages.
- */
-export function runMergePackages(
-  assetGraph: SimpleAssetGraph,
-  packages: PackagedDominatorGraph,
-): PackagedDominatorGraph {
+export function buildPackageInfos(packages: PackagedDominatorGraph): {|
+  packageNodes: Array<NodeId>,
+  packageInfos: Array<null | PackageInfo>,
+|} {
   const packageNodes = packages.getNodeIdsConnectedFrom(
     packages.getNodeIdByContentKey('root'),
   );
@@ -156,6 +154,19 @@ export function runMergePackages(
       return getPackageInformation(packages, nodeId, packageNode);
     },
   );
+  return {packageNodes, packageInfos};
+}
+
+/**
+ * Merge packages whenever doing it will not increase the total size of all
+ * bundles by more than a given threshold, do this iteratively starting at
+ * the leaf packages.
+ */
+export function runMergePackages(
+  assetGraph: SimpleAssetGraph,
+  packages: PackagedDominatorGraph,
+): PackagedDominatorGraph {
+  const {packageNodes, packageInfos} = buildPackageInfos(packages);
   const packageInfosById: Map<string, PackageInfo> = new Map();
   packageNodes.forEach((nodeId, idx) => {
     const packageInfo = packageInfos[idx];
@@ -215,16 +226,16 @@ export function mergePackageNodes(
 
     const sizeIncreaseFromDuplication = totalSize; // * parents.length;
     if (parents.length && sizeIncreaseFromDuplication < 1024 * 10) {
-      console.log(
-        'merging package',
-        node.id,
-        'will increase size by',
-        `${sizeIncreaseFromDuplication / 1024}KB`,
-        'in',
-        parents.length,
-        'parent packages',
-        parents,
-      );
+      // console.log(
+      //   'merging package',
+      //   node.id,
+      //   'will increase size by',
+      //   `${sizeIncreaseFromDuplication / 1024}KB`,
+      //   'in',
+      //   parents.length,
+      //   'parent packages',
+      //   parents,
+      // );
 
       const directChildren = packages.getNodeIdsConnectedFrom(id);
       for (let parent of parents) {
@@ -250,7 +261,7 @@ export function mergePackageNodes(
     }
   }
 
-  console.log('total size increase from merging:', totalSizeIncrease / 1024);
+  // console.log('total size increase from merging:', totalSizeIncrease / 1024);
 
   return output;
 }

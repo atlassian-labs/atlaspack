@@ -1,6 +1,7 @@
 // @flow strict-local
 
-import * as path from 'path';
+import path from 'path';
+import expect from 'expect';
 import {overlayFS, workerFarm} from '@atlaspack/test-utils';
 import {dotTest, setupBundlerTest, testMakePackageKey} from '../test-utils';
 import {
@@ -18,11 +19,101 @@ import {
 import {findAssetDominators} from '../../src/DominatorBundler/findAssetDominators';
 import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
 
+async function testGetPackages(entryPath: string, entryDir: string) {
+  const {mutableBundleGraph} = await setupBundlerTest(entryPath);
+  const {dominators} = findAssetDominators(mutableBundleGraph);
+  const packages = createPackages(
+    mutableBundleGraph,
+    dominators,
+    (parentChunks) => testMakePackageKey(entryDir, dominators, parentChunks),
+  );
+  return {packages};
+}
+
 describe('DominatorBundler/createPackages', () => {
   before(async function () {
     this.timeout(10000);
     // Warm up worker farm so that the first test doesn't account for this time.
     await workerFarm.callAllWorkers('ping', []);
+  });
+
+  it('does nothing if there is just one node in the graph', async () => {
+    const entryDir = path.join(__dirname, 'test');
+    const entryPath = path.join(entryDir, 'a.js');
+    await fixtureFromGraph(entryDir, overlayFS, [asset('a.js', [])]);
+    const {packages} = await testGetPackages(entryPath, entryDir);
+    const dot = mergedDominatorsToDot(entryDir, packages);
+    expect(dot).toEqual(
+      `
+digraph merged {
+  labelloc="t";
+  label="Merged";
+  layout="dot";
+
+  "a.js";
+  "root";
+
+  "root" -> "a.js";
+}
+      `.trim(),
+    );
+  });
+
+  it('does nothing if there is just one dependency', async () => {
+    const entryDir = path.join(__dirname, 'test');
+    const entryPath = path.join(entryDir, 'a.js');
+    await fixtureFromGraph(entryDir, overlayFS, [
+      asset('a.js', ['b.js']),
+      asset('b.js', []),
+    ]);
+    const {packages} = await testGetPackages(entryPath, entryDir);
+    const dot = mergedDominatorsToDot(entryDir, packages);
+    expect(dot).toEqual(
+      `
+digraph merged {
+  labelloc="t";
+  label="Merged";
+  layout="dot";
+
+  "a.js";
+  "b.js";
+  "root";
+
+  "a.js" -> "b.js";
+  "root" -> "a.js";
+}
+      `.trim(),
+    );
+  });
+
+  it('does nothing if all nodes are reachable from the root', async () => {
+    const entryDir = path.join(__dirname, 'test');
+    const entryPath = path.join(entryDir, 'a.js');
+    await fixtureFromGraph(entryDir, overlayFS, [
+      asset('a.js', ['b.js', {to: 'async.js', type: 'async'}]),
+      asset('b.js', []),
+      asset('async.js', []),
+    ]);
+    const {packages} = await testGetPackages(entryPath, entryDir);
+    const dot = mergedDominatorsToDot(entryDir, packages);
+    expect(dot).toEqual(
+      `
+digraph merged {
+  labelloc="t";
+  label="Merged";
+  layout="dot";
+
+  "a.js";
+  "async.js";
+  "b.js";
+  "root";
+
+  "a.js" -> "b.js";
+  "root" -> "a.js";
+  "root" -> "async.js";
+}
+      `.trim(),
+    );
   });
 
   describe('getChunkEntryPoints', () => {
@@ -45,7 +136,7 @@ describe('DominatorBundler/createPackages', () => {
         entryPath1,
         entryPath2,
       ]);
-      const dominators = findAssetDominators(mutableBundleGraph);
+      const {dominators} = findAssetDominators(mutableBundleGraph);
       const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
 
       const chunkEntryPoints = getChunkEntryPoints(rootedGraph, dominators);
@@ -99,7 +190,7 @@ describe('DominatorBundler/createPackages', () => {
         ]);
 
         const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
-        const dominators = findAssetDominators(mutableBundleGraph);
+        const {dominators} = findAssetDominators(mutableBundleGraph);
         const outputDot = rootedGraphToDot(entryDir, dominators);
 
         const mergedDominators = createPackages(

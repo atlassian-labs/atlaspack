@@ -26,7 +26,7 @@ describe('findAssetDominators', () => {
       ]);
 
       const {mutableBundleGraph} = await setupBundlerTest(entryPath);
-      const dominators = findAssetDominators(mutableBundleGraph);
+      const {dominators} = findAssetDominators(mutableBundleGraph);
 
       const outputDot = rootedGraphToDot(entryDir, dominators);
       assert.equal(
@@ -71,7 +71,7 @@ digraph dominators {
         ]);
 
         const {mutableBundleGraph} = await setupBundlerTest(entryPath);
-        const dominators = findAssetDominators(mutableBundleGraph);
+        const {dominators} = findAssetDominators(mutableBundleGraph);
 
         const outputDot = rootedGraphToDot(entryDir, dominators);
         assert.equal(
@@ -130,7 +130,7 @@ digraph dominators {
           entryPath1,
           entryPath2,
         ]);
-        const dominators = findAssetDominators(mutableBundleGraph);
+        const {dominators} = findAssetDominators(mutableBundleGraph);
 
         const outputDot = rootedGraphToDot(entryDir, dominators);
         assert.equal(

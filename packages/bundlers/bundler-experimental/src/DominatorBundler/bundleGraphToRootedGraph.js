@@ -9,12 +9,16 @@ export type AssetNode = {|
   type: 'asset',
   id: string,
   asset: Asset,
-  entryDependency: Dependency,
   /**
-   * We mark the assets that are connected to the root.
+   * This should be a list
+   */
+  entryDependency: Dependency,
+  target: Target,
+  /**
+   * We mark the assets that are connected to entry dependencies.
    *
    * Later on we will use this information to determine which assets were entry
-   * points, as opposed to lifted-up by other stages.
+   * points, as opposed to lifted-up due to being async or chunked.
    */
   isEntryNode: boolean,
 |};
@@ -75,11 +79,15 @@ export function bundleGraphToRootedGraph(
           id: asset.id,
           type: 'asset',
           asset,
-          entryDependency: context,
+          entryDependency: context.dependency,
+          target: context.target,
           isEntryNode: false,
         });
-      } else if (node.type === 'dependency' && node.value.isEntry) {
-        return node.value;
+      } else if (node.type === 'dependency') {
+        return {
+          dependency: node.value,
+          target: node.value.target ?? context?.target,
+        };
       }
     },
     exit: (node) => {
@@ -95,16 +103,27 @@ export function bundleGraphToRootedGraph(
     const assetNodeId = graph.getNodeIdByContentKey(assetId);
 
     for (let dependency of bundleGraph.getIncomingDependencies(childAsset)) {
-      if (
-        dependency.isEntry ||
+      if (dependency.isEntry) {
+        graph.addEdge(rootNodeId, assetNodeId);
+        const node = graph.getNode(assetNodeId);
+        invariant(node != null && node !== 'root');
+        node.isEntryNode = true;
+      } else if (
         dependency.priority !== 'sync' ||
         (dependency.sourceAssetType != null &&
           dependency.sourceAssetType !== childAsset.type)
       ) {
         graph.addEdge(rootNodeId, assetNodeId);
-        const node = graph.getNode(assetNodeId);
-        invariant(node != null && node !== 'root');
-        node.isEntryNode = true;
+
+        const parentAsset = bundleGraph.getAssetWithDependency(dependency);
+        if (!parentAsset) {
+          throw new Error('Non entry dependency had no asset');
+        }
+        graph.addEdge(
+          graph.getNodeIdByContentKey(parentAsset.id),
+          assetNodeId,
+          2,
+        );
       } else {
         const parentAsset = bundleGraph.getAssetWithDependency(dependency);
         if (!parentAsset) {
