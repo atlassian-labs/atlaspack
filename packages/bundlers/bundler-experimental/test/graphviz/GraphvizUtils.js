@@ -3,10 +3,9 @@
 import childProcess from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import {ContentGraph} from '@atlaspack/graph';
 import type {PackagedDominatorGraph} from '../../src/DominatorBundler/createPackages';
 import nullthrows from 'nullthrows';
-import type {Asset, BundleGraph, Bundle} from '@atlaspack/types';
+import type {BundleGraph, Bundle} from '@atlaspack/types';
 import type {
   AcyclicGraph,
   StronglyConnectedComponentNode,
@@ -14,8 +13,10 @@ import type {
 import type {
   AssetNode,
   SimpleAssetGraph,
+  SimpleAssetGraphEdge,
   SimpleAssetGraphNode,
 } from '../../src/DominatorBundler/bundleGraphToRootedGraph';
+import invariant from 'assert';
 
 /**
  * Write a dot string to a file and generate a PNG using the `dot` CLI command.
@@ -99,13 +100,19 @@ export function cleanPath(entryDir: string, p: string): string {
  */
 export function rootedGraphToDot(
   entryDir: string,
-  dominators: AcyclicGraph<SimpleAssetGraphNode> | SimpleAssetGraph,
+  dominators:
+    | AcyclicGraph<SimpleAssetGraphNode, SimpleAssetGraphEdge>
+    | SimpleAssetGraph,
   label: string = 'Dominators',
   name: string = 'dominators',
 ): string {
   const contents = [];
   const clean = (p: string) => cleanPath(entryDir, p);
-  const getLabel = (node) => {
+  const getLabel = (
+    node:
+      | SimpleAssetGraphNode
+      | StronglyConnectedComponentNode<SimpleAssetGraphNode>,
+  ) => {
     if (node == null || node === 'root') {
       return 'root';
     }
@@ -123,6 +130,7 @@ export function rootedGraphToDot(
     .getNodeIdsConnectedFrom(rootNodeId)
     .map((id) => {
       const node = dominators.getNode(id);
+      invariant(node != null && node !== 'root');
       if (
         node.type === 'asset' &&
         node.asset.filePath.includes('esmodule-helpers.js')

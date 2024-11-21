@@ -13,14 +13,15 @@ export type StronglyConnectedComponentNode<T> = {|
   values: T[],
 |};
 
-export type AcyclicGraph<T> = ContentGraph<
+export type AcyclicGraph<T, E: number = 1> = ContentGraph<
   T | StronglyConnectedComponentNode<T>,
+  E,
 >;
 
-export function convertToAcyclicGraph<T>(
-  graph: ContentGraph<T>,
-): AcyclicGraph<T> {
-  const result: ContentGraph<T | StronglyConnectedComponentNode<T>> =
+export function convertToAcyclicGraph<T, E: number>(
+  graph: ContentGraph<T, E>,
+): AcyclicGraph<T, E> {
+  const result: ContentGraph<T | StronglyConnectedComponentNode<T>, E> =
     new ContentGraph();
 
   const components = findStronglyConnectedComponents(graph).filter(
@@ -71,8 +72,8 @@ export function convertToAcyclicGraph<T>(
  *
  * https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
  */
-export function findStronglyConnectedComponents<T>(
-  graph: ContentGraph<T>,
+export function findStronglyConnectedComponents<T, E: number>(
+  graph: ContentGraph<T, E>,
 ): StronglyConnectedComponent[] {
   type State = {|
     index: null | NodeId,

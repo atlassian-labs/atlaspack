@@ -1,7 +1,6 @@
 // @flow strict-local
 
 import path from 'path';
-import expect from 'expect';
 import {overlayFS, workerFarm} from '@atlaspack/test-utils';
 import {dotTest, setupBundlerTest, testMakePackageKey} from '../test-utils';
 import {
@@ -43,7 +42,8 @@ describe('DominatorBundler/createPackages', () => {
     await fixtureFromGraph(entryDir, overlayFS, [asset('a.js', [])]);
     const {packages} = await testGetPackages(entryPath, entryDir);
     const dot = mergedDominatorsToDot(entryDir, packages);
-    expect(dot).toEqual(
+    assert.equal(
+      dot,
       `
 digraph merged {
   labelloc="t";
@@ -68,7 +68,8 @@ digraph merged {
     ]);
     const {packages} = await testGetPackages(entryPath, entryDir);
     const dot = mergedDominatorsToDot(entryDir, packages);
-    expect(dot).toEqual(
+    assert.equal(
+      dot,
       `
 digraph merged {
   labelloc="t";
@@ -96,7 +97,8 @@ digraph merged {
     ]);
     const {packages} = await testGetPackages(entryPath, entryDir);
     const dot = mergedDominatorsToDot(entryDir, packages);
-    expect(dot).toEqual(
+    assert.equal(
+      dot,
       `
 digraph merged {
   labelloc="t";

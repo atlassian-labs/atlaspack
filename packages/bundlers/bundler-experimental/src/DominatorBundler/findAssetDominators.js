@@ -9,6 +9,7 @@ import type {AcyclicGraph} from './oneCycleBreaker';
 import type {
   AssetNode,
   SimpleAssetGraph,
+  SimpleAssetGraphEdge,
   SimpleAssetGraphNode,
 } from './bundleGraphToRootedGraph';
 
@@ -19,11 +20,10 @@ function debugLog(message: string) {
   });
 }
 
-export type AssetDominatorTree = AcyclicGraph<'root' | AssetNode>;
-
-export type DominatorChunkDependencyGraph = ContentGraph<{|
-  assetDominatorTreeNodeId: NodeId,
-|}>;
+export type AssetDominatorTree = AcyclicGraph<
+  'root' | AssetNode,
+  SimpleAssetGraphEdge,
+>;
 
 /**
  * For all assets, build the dominance relationship of the asset with other
@@ -37,7 +37,10 @@ export type DominatorChunkDependencyGraph = ContentGraph<{|
 export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
   dominators: AssetDominatorTree,
   graph: SimpleAssetGraph,
-  noCyclesGraph: AcyclicGraph<'root' | SimpleAssetGraphNode>,
+  noCyclesGraph: AcyclicGraph<
+    'root' | SimpleAssetGraphNode,
+    SimpleAssetGraphEdge,
+  >,
 |} {
   // Build a simpler graph with a root at the top
   debugLog('converting graph');
@@ -58,10 +61,10 @@ export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
  *
  * This is a tree where each node is connected to its immediate dominator.
  */
-export function buildDominatorTree<T>(
-  graph: ContentGraph<'root' | T>,
+export function buildDominatorTree<T, E: number>(
+  graph: ContentGraph<'root' | T, E>,
   dominators: NodeId[],
-): ContentGraph<'root' | T> {
+): ContentGraph<'root' | T, E> {
   const dominatorTree = new ContentGraph();
   const rootId = dominatorTree.addNodeByContentKey('root', 'root');
   dominatorTree.setRootNodeId(rootId);

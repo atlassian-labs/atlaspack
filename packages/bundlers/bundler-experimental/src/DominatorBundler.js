@@ -8,6 +8,7 @@ import type {
   Dependency,
   MutableBundleGraph,
   Bundle,
+  Target,
 } from '@atlaspack/types';
 import {
   createPackages,
@@ -21,7 +22,6 @@ import type {
 import type {NodeId} from '@atlaspack/graph';
 import type {AssetNode} from './DominatorBundler/bundleGraphToRootedGraph';
 import type {StronglyConnectedComponentNode} from './DominatorBundler/oneCycleBreaker';
-import {mergedDominatorsToDot} from '../test/graphviz/GraphvizUtils';
 import {
   buildPackageGraph,
   buildPackageInfos,
@@ -103,7 +103,7 @@ export function intoBundleGraph(
       | PackageNode
       | StronglyConnectedComponentNode<AssetNode>
       | 'root',
-  ) => {
+  ): Target | null | void => {
     if (node === 'root') {
       return null;
     } else if (node.type === 'asset') {
@@ -116,7 +116,7 @@ export function intoBundleGraph(
       for (const assetNode of node.values) {
         const result = getEntryDepForNode(assetNode);
         if (result) {
-          return result;
+          return result.target;
         }
       }
     }
@@ -147,7 +147,6 @@ export function intoBundleGraph(
       const bundle = bundleGraph.createBundle({
         entryAsset: node.asset,
         needsStableName: node.isEntryNode,
-        bundleBehavior: null,
         target,
       });
       bundlesByPackageContentKey.set(
@@ -183,7 +182,6 @@ export function intoBundleGraph(
       const bundle = bundleGraph.createBundle({
         env,
         type: sampleAsset.asset.type,
-        bundleBehavior: BundleBehavior.isolated,
         uniqueKey: node.id,
         target,
       });
@@ -213,7 +211,6 @@ export function intoBundleGraph(
 
       const bundle = bundleGraph.createBundle({
         env,
-        bundleBehavior: BundleBehavior.isolated,
         type: 'js',
         uniqueKey: node.id,
         target,

@@ -1,7 +1,11 @@
 // @flow strict-local
 
-import type {Asset, Dependency} from '@atlaspack/types';
-import type {MutableBundleGraph} from '@atlaspack/types';
+import type {
+  Asset,
+  Dependency,
+  MutableBundleGraph,
+  Target,
+} from '@atlaspack/types';
 import {ContentGraph} from '@atlaspack/graph';
 import invariant from 'assert';
 
@@ -13,7 +17,7 @@ export type AssetNode = {|
    * This should be a list
    */
   entryDependency: Dependency,
-  target: Target,
+  target: Target | null | void,
   /**
    * We mark the assets that are connected to entry dependencies.
    *
@@ -25,7 +29,17 @@ export type AssetNode = {|
 
 export type SimpleAssetGraphNode = 'root' | AssetNode;
 
-export type SimpleAssetGraph = ContentGraph<SimpleAssetGraphNode>;
+export const simpleAssetGraphEdges = {
+  dependency: 1,
+  asyncDependency: 2,
+};
+
+export type SimpleAssetGraphEdge = $Values<typeof simpleAssetGraphEdges>;
+
+export type SimpleAssetGraph = ContentGraph<
+  SimpleAssetGraphNode,
+  SimpleAssetGraphEdge,
+>;
 
 /**
  * Simplify the BundleGraph structure into a graph that only contains assets

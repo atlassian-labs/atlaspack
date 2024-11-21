@@ -13,36 +13,30 @@ import {asset, fixtureFromGraph} from '../fixtureFromGraph';
 import {dotTest, setupBundlerTest} from '../test-utils';
 import {rootedGraphToDot} from '../graphviz/GraphvizUtils';
 import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
+import {toProjectPath} from '@atlaspack/core/src/projectPath';
 
 function encodeHex(str: string): string {
   return Buffer.from(str).toString('hex');
 }
 
+// $FlowFixMe
 function makeDependencyNode(dependency: any): AssetGraphNode {
+  // $FlowFixMe
   return {
     id: dependency.id,
     type: 'dependency',
     value: dependency,
-    usedSymbols: new Set(),
     hasDeferred: false,
-    usedSymbolsDownDirty: false,
-    usedSymbolsUpDirty: false,
-    usedSymbolsUpDirtyUp: false,
-    usedSymbolsUpDirtyDown: false,
-    requested: true,
   };
 }
 
+// $FlowFixMe
 function makeAssetNode(asset: any): AssetGraphNode {
+  // $FlowFixMe
   return {
     id: asset.id,
     type: 'asset',
     value: asset,
-    usedSymbols: new Set(),
-    hasDeferred: false,
-    usedSymbolsDownDirty: false,
-    usedSymbolsUpDirty: false,
-    requested: true,
   };
 }
 
@@ -238,7 +232,7 @@ digraph simplified_graph {
       value: {
         id: encodeHex('asset-of-different-type'),
         type: 'png',
-        filePath: '/test/child.png',
+        filePath: toProjectPath('/test', 'child.png'),
       },
       usedSymbols: new Set(),
       hasDeferred: false,
@@ -246,7 +240,7 @@ digraph simplified_graph {
       usedSymbolsUpDirty: false,
       requested: true,
     });
-    assetGraph.addEdge(assetGraph.rootNodeId, entry);
+    assetGraph.addEdge(nullthrows(assetGraph.rootNodeId), entry);
     assetGraph.addEdge(entry, entryAsset);
     assetGraph.addEdge(entryAsset, dependency);
     assetGraph.addEdge(dependency, childAsset);

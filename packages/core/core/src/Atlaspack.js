@@ -606,7 +606,7 @@ export default class Atlaspack {
     );
     log('Running bundler');
     const graph = bundleGraphToRootedGraph(mutableBundleGraph);
-    const dominators = findAssetDominators(mutableBundleGraph);
+    const {dominators} = findAssetDominators(mutableBundleGraph);
     log('Done running dominators');
     const packages = createPackages(mutableBundleGraph, dominators);
     log('Done creating packages');
@@ -721,8 +721,6 @@ export default class Atlaspack {
                 filePath: toProjectPath(projectRoot, request.env.loc.filePath),
               }
             : undefined,
-        // $FlowFixMe ProjectPath is a string
-        defaultTargetOptions: this.#resolvedOptions.defaultTargetOptions,
       }),
     });
 
