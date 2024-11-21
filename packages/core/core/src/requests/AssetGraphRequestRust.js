@@ -56,6 +56,28 @@ export function createAssetGraphRequestRust(
         options,
       );
 
+      function findDependencyFor(assetId: string) {
+        const dependencies = new Map();
+
+        for (const node of assetGraph.nodes) {
+          if (
+            node &&
+            node.type === 'dependency' &&
+            node.value.sourceAssetId === assetId
+          ) {
+            dependencies.set(node.id, node.value);
+          }
+        }
+
+        return dependencies;
+      }
+
+      for (const node of assetGraph.nodes) {
+        if (node && node.type === 'asset') {
+          node.value.dependencies = findDependencyFor(node.id);
+        }
+      }
+
       let changedAssetsPropagation = new Set(changedAssets.keys());
       let errors = propagateSymbols({
         options,
