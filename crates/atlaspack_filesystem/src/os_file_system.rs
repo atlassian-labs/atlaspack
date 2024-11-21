@@ -31,6 +31,10 @@ impl FileSystem for OsFileSystem {
     std::fs::read(path)
   }
 
+  fn read_dir(&self, path: &Path) -> std::io::Result<std::fs::ReadDir> {
+    std::fs::read_dir(path)
+  }
+
   fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
     std::fs::read_to_string(path)
   }
@@ -43,9 +47,5 @@ impl FileSystem for OsFileSystem {
   fn is_dir(&self, path: &Path) -> bool {
     let path: &Path = path;
     path.is_dir()
-  }
-
-  fn read_dir(&self, path: &Path) -> std::io::Result<std::fs::ReadDir> {
-    std::fs::read_dir(path)
   }
 }

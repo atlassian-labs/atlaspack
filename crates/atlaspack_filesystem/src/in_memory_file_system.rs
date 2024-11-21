@@ -112,6 +112,10 @@ impl FileSystem for InMemoryFileSystem {
     Ok(str.as_bytes().to_vec())
   }
 
+  fn read_dir(&self, _path: &Path) -> std::io::Result<std::fs::ReadDir> {
+    todo!("InMemoryFileSystem::read_dir")
+  }
+
   fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
     let path = self.canonicalize_impl(path);
     let files = self.files.read().unwrap();
@@ -144,10 +148,6 @@ impl FileSystem for InMemoryFileSystem {
     let files = self.files.read().unwrap();
     let file = files.get(&path);
     matches!(file, Some(InMemoryFileSystemEntry::Directory { .. }))
-  }
-
-  fn read_dir(&self, _path: &Path) -> std::io::Result<std::fs::ReadDir> {
-    todo!("InMemoryFileSystem::read_dir")
   }
 }
 
