@@ -19,10 +19,10 @@ glob-match = { workspace = true }
 indexmap = { workspace = true, features = ["serde"] }
 itertools = { workspace = true }
 json_comments = { path = "../../../crates/json-comments-rs" }
-rayon = "1.10.0"
 once_cell = { workspace = true }
 parking_lot = { workspace = true }
 percent-encoding = { workspace = true }
+rayon = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 serde_json5 = { workspace = true }
