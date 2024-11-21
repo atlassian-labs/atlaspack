@@ -19,3 +19,9 @@ pub struct JsTransformerConfig {
 
   pub magic_comments: Option<bool>,
 }
+
+#[derive(Deserialize)]
+pub struct JsTransformerPackageJson {
+  #[serde(rename = "@atlaspack/transformer-js")]
+  pub config: Option<JsTransformerConfig>,
+}

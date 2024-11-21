@@ -650,9 +650,11 @@ dependencies = [
  "criterion",
  "glob-match",
  "indexmap 1.9.3",
+ "nodejs-semver",
  "parking_lot",
  "pretty_assertions",
  "serde",
+ "serde_json",
  "swc_core",
  "tokio",
 ]
