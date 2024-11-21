@@ -56,28 +56,6 @@ export function createAssetGraphRequestRust(
         options,
       );
 
-      function findDependencyFor(assetId: string) {
-        const dependencies = new Map();
-
-        for (const node of assetGraph.nodes) {
-          if (
-            node &&
-            node.type === 'dependency' &&
-            node.value.sourceAssetId === assetId
-          ) {
-            dependencies.set(node.id, node.value);
-          }
-        }
-
-        return dependencies;
-      }
-
-      for (const node of assetGraph.nodes) {
-        if (node && node.type === 'asset') {
-          node.value.dependencies = findDependencyFor(node.id);
-        }
-      }
-
       let changedAssetsPropagation = new Set(changedAssets.keys());
       let errors = propagateSymbols({
         options,
@@ -169,6 +147,8 @@ function getAssetGraph(serializedGraph, options) {
     return envId;
   };
 
+  const dependencyMap = new Map();
+
   for (let node of serializedGraph.nodes) {
     if (node.type === 'root') {
       let index = graph.addNodeByContentKey('@@root', {
@@ -189,6 +169,13 @@ function getAssetGraph(serializedGraph, options) {
     } else if (node.type === 'asset') {
       let asset = node.value;
       let id = asset.id;
+
+      let deps = dependencyMap.get(id);
+      if (!deps) {
+        deps = new Map();
+        dependencyMap.set(id, deps);
+      }
+      asset.dependencies = deps;
 
       asset.committed = true;
       asset.contentKey = id;
@@ -222,6 +209,13 @@ function getAssetGraph(serializedGraph, options) {
     } else if (node.type === 'dependency') {
       let id = node.value.id;
       let dependency = node.value.dependency;
+
+      let deps = dependencyMap.get(dependency.sourceAssetId);
+      if (!deps) {
+        deps = new Map();
+        dependencyMap.set(dependency.sourceAssetId, deps);
+      }
+      deps.set(id, dependency);
 
       dependency.id = id;
       dependency.env.id = getEnvId(dependency.env);
