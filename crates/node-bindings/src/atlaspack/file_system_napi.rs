@@ -63,6 +63,10 @@ impl FileSystem for FileSystemNapi {
       .map_err(io::Error::other)
   }
 
+  fn read_dir(&self, _path: &Path) -> std::io::Result<std::fs::ReadDir> {
+    todo!("FileSystemNapi::read_dir")
+  }
+
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
     self
       .read_file_fn

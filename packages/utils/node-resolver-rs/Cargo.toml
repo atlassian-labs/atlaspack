@@ -13,6 +13,7 @@ atlaspack_core = { path = "../../../crates/atlaspack_core" }
 atlaspack_filesystem = { path = "../../../crates/atlaspack_filesystem" }
 atlaspack_shared_map = { path = "../../../crates/atlaspack_shared_map" }
 
+anyhow = { workspace = true }
 bitflags = "1.3.2"                                            # TODO Update dependency
 glob-match = { workspace = true }
 indexmap = { workspace = true, features = ["serde"] }
@@ -21,6 +22,7 @@ json_comments = { path = "../../../crates/json-comments-rs" }
 once_cell = { workspace = true }
 parking_lot = { workspace = true }
 percent-encoding = { workspace = true }
+rayon = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 serde_json5 = { workspace = true }

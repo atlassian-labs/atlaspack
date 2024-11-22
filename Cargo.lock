@@ -389,6 +389,7 @@ dependencies = [
 name = "atlaspack-resolver"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "assert_fs",
  "atlaspack_core",
  "atlaspack_filesystem",
@@ -403,6 +404,7 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "percent-encoding",
+ "rayon",
  "serde",
  "serde_json",
  "serde_json5",
