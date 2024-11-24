@@ -11,8 +11,14 @@ import type {
   StronglyConnectedComponentNode,
 } from './oneCycleBreaker';
 
+import {EdgeContentGraph} from './EdgeContentGraph';
 import nullthrows from 'nullthrows';
-import type {AssetNode, SimpleAssetGraph} from './bundleGraphToRootedGraph';
+import type {
+  AssetNode,
+  SimpleAssetGraph,
+  SimpleAssetGraphEdge,
+  SimpleAssetGraphEdgeWeight,
+} from './bundleGraphToRootedGraph';
 
 export type PackageNode = {|
   type: 'package',
@@ -27,9 +33,16 @@ export type PackagedDominatorGraphNode =
   | PackageNode
   | StronglyConnectedComponentNode<AssetNode>;
 
-export type PackagedDominatorGraph = ContentGraph<PackagedDominatorGraphNode>;
+export type PackagedDominatorGraph = EdgeContentGraph<
+  PackagedDominatorGraphNode,
+  SimpleAssetGraphEdgeWeight,
+>;
 
-export type PackagingInputGraph = AcyclicGraph<'root' | AssetNode>;
+export type PackagingInputGraph = AcyclicGraph<
+  'root' | AssetNode,
+  SimpleAssetGraphEdgeWeight,
+  SimpleAssetGraphEdge,
+>;
 
 export function getPackageNodes(packages: PackagedDominatorGraph): NodeId[] {
   return packages.getNodeIdsConnectedFrom(
@@ -93,7 +106,6 @@ export function createPackages(
         for (let child of children) {
           packages.addEdge(parentChunk, child);
         }
-        // nodesToRemove.push(chunk);
       }
     }
   };
@@ -266,7 +278,9 @@ function getChunks<T>(dominatorTree: ContentGraph<T>): NodeId[] {
 }
 
 export function getAssetNodeByKey(
-  graph: SimpleAssetGraph | AcyclicGraph<AssetNode | 'root'>,
+  graph:
+    | SimpleAssetGraph
+    | AcyclicGraph<AssetNode | 'root', SimpleAssetGraphEdgeWeight>,
   id: string,
 ): Asset {
   const node = graph.getNodeByContentKey(id);
@@ -281,7 +295,9 @@ export function getAssetNodeByKey(
 }
 
 export function getAssetNode(
-  graph: SimpleAssetGraph | AcyclicGraph<AssetNode | 'root'>,
+  graph:
+    | SimpleAssetGraph
+    | AcyclicGraph<AssetNode | 'root', SimpleAssetGraphEdgeWeight>,
   id: NodeId,
 ): Asset {
   const node = graph.getNode(id);

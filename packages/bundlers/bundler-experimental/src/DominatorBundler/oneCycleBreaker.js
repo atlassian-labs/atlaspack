@@ -1,8 +1,11 @@
 // @flow strict-local
 
 import {hashString} from '@atlaspack/rust';
-import {ContentGraph, type NodeId} from '@atlaspack/graph';
+import type {ContentGraph, NodeId} from '@atlaspack/graph';
 import nullthrows from 'nullthrows';
+import {EdgeContentGraph} from './EdgeContentGraph';
+
+export type NullEdgeType = 1;
 
 export type StronglyConnectedComponent = NodeId[];
 
@@ -13,16 +16,20 @@ export type StronglyConnectedComponentNode<T> = {|
   values: T[],
 |};
 
-export type AcyclicGraph<T, E: number = 1> = ContentGraph<
+export type AcyclicGraph<T, EW, E: number = 1> = EdgeContentGraph<
   T | StronglyConnectedComponentNode<T>,
+  EW,
   E,
 >;
 
-export function convertToAcyclicGraph<T, E: number>(
-  graph: ContentGraph<T, E>,
-): AcyclicGraph<T, E> {
-  const result: ContentGraph<T | StronglyConnectedComponentNode<T>, E> =
-    new ContentGraph();
+export function convertToAcyclicGraph<T, EW, E: number>(
+  graph: EdgeContentGraph<T, EW, E>,
+): AcyclicGraph<T, EW, E | NullEdgeType> {
+  const result: EdgeContentGraph<
+    T | StronglyConnectedComponentNode<T>,
+    EW,
+    E | NullEdgeType,
+  > = new EdgeContentGraph();
 
   const components = findStronglyConnectedComponents(graph).filter(
     (c) => c.length > 1,
@@ -59,7 +66,13 @@ export function convertToAcyclicGraph<T, E: number>(
     componentNodeIdsByNodeId.get(n) ?? n;
 
   for (let edge of graph.getAllEdges()) {
-    result.addEdge(redirectEdge(edge.from), redirectEdge(edge.to), edge.type);
+    const weight = graph.getEdgeWeight(edge.from, edge.to);
+    result.addWeightedEdge(
+      redirectEdge(edge.from),
+      redirectEdge(edge.to),
+      edge.type,
+      weight,
+    );
   }
 
   result.setRootNodeId(graph.rootNodeId);

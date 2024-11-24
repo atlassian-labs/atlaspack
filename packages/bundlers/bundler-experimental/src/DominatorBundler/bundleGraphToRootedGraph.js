@@ -6,8 +6,8 @@ import type {
   MutableBundleGraph,
   Target,
 } from '@atlaspack/types';
-import {ContentGraph} from '@atlaspack/graph';
 import invariant from 'assert';
+import {EdgeContentGraph} from './EdgeContentGraph';
 
 export type AssetNode = {|
   type: 'asset',
@@ -34,10 +34,13 @@ export const simpleAssetGraphEdges = {
   asyncDependency: 2,
 };
 
+export type SimpleAssetGraphEdgeWeight = Dependency;
+
 export type SimpleAssetGraphEdge = $Values<typeof simpleAssetGraphEdges>;
 
-export type SimpleAssetGraph = ContentGraph<
+export type SimpleAssetGraph = EdgeContentGraph<
   SimpleAssetGraphNode,
+  SimpleAssetGraphEdgeWeight,
   SimpleAssetGraphEdge,
 >;
 
@@ -78,7 +81,7 @@ export type SimpleAssetGraph = ContentGraph<
 export function bundleGraphToRootedGraph(
   bundleGraph: MutableBundleGraph,
 ): SimpleAssetGraph {
-  const graph = new ContentGraph();
+  const graph = new EdgeContentGraph();
 
   const rootNodeId = graph.addNodeByContentKey('root', 'root');
   graph.setRootNodeId(rootNodeId);
@@ -118,7 +121,12 @@ export function bundleGraphToRootedGraph(
 
     for (let dependency of bundleGraph.getIncomingDependencies(childAsset)) {
       if (dependency.isEntry) {
-        graph.addEdge(rootNodeId, assetNodeId);
+        graph.addWeightedEdge(
+          rootNodeId,
+          assetNodeId,
+          simpleAssetGraphEdges.dependency,
+          dependency,
+        );
         const node = graph.getNode(assetNodeId);
         invariant(node != null && node !== 'root');
         node.isEntryNode = true;
@@ -127,23 +135,34 @@ export function bundleGraphToRootedGraph(
         (dependency.sourceAssetType != null &&
           dependency.sourceAssetType !== childAsset.type)
       ) {
-        graph.addEdge(rootNodeId, assetNodeId);
+        graph.addWeightedEdge(
+          rootNodeId,
+          assetNodeId,
+          simpleAssetGraphEdges.dependency,
+          dependency,
+        );
 
         const parentAsset = bundleGraph.getAssetWithDependency(dependency);
         if (!parentAsset) {
           throw new Error('Non entry dependency had no asset');
         }
-        graph.addEdge(
+        graph.addWeightedEdge(
           graph.getNodeIdByContentKey(parentAsset.id),
           assetNodeId,
-          2,
+          simpleAssetGraphEdges.asyncDependency,
+          dependency,
         );
       } else {
         const parentAsset = bundleGraph.getAssetWithDependency(dependency);
         if (!parentAsset) {
           throw new Error('Non entry dependency had no asset');
         }
-        graph.addEdge(graph.getNodeIdByContentKey(parentAsset.id), assetNodeId);
+        graph.addWeightedEdge(
+          graph.getNodeIdByContentKey(parentAsset.id),
+          assetNodeId,
+          simpleAssetGraphEdges.dependency,
+          dependency,
+        );
       }
     }
   }

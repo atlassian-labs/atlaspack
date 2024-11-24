@@ -10,8 +10,10 @@ import type {
   AssetNode,
   SimpleAssetGraph,
   SimpleAssetGraphEdge,
+  SimpleAssetGraphEdgeWeight,
   SimpleAssetGraphNode,
 } from './bundleGraphToRootedGraph';
+import type {EdgeContentGraph} from './EdgeContentGraph';
 
 function debugLog(message: string) {
   logger.info({
@@ -39,6 +41,7 @@ export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
   graph: SimpleAssetGraph,
   noCyclesGraph: AcyclicGraph<
     'root' | SimpleAssetGraphNode,
+    SimpleAssetGraphEdgeWeight,
     SimpleAssetGraphEdge,
   >,
 |} {
@@ -61,11 +64,11 @@ export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
  *
  * This is a tree where each node is connected to its immediate dominator.
  */
-export function buildDominatorTree<T, E: number>(
-  graph: ContentGraph<'root' | T, E>,
+export function buildDominatorTree<T, EW, E: number>(
+  graph: EdgeContentGraph<'root' | T, EW, E>,
   dominators: NodeId[],
-): ContentGraph<'root' | T, E> {
-  const dominatorTree = new ContentGraph();
+): EdgeContentGraph<'root' | T, EW, E> {
+  const dominatorTree = new EdgeContentGraph();
   const rootId = dominatorTree.addNodeByContentKey('root', 'root');
   dominatorTree.setRootNodeId(rootId);
 
@@ -93,14 +96,23 @@ export function buildDominatorTree<T, E: number>(
     if (immediateDominatorNode == null) continue;
 
     if (immediateDominatorNode === 'root') {
-      dominatorTree.addEdge(rootId, assetDominatorTreeNodeId);
+      const edgeWeight = graph.getEdgeWeight(immediateDominator, nodeId);
+      dominatorTree.addWeightedEdge(
+        rootId,
+        assetDominatorTreeNodeId,
+        1,
+        edgeWeight,
+      );
       continue;
     }
 
     const immediateDominatorId = dominatorTree.getNodeIdByContentKey(
       graph.getContentKeyByNodeId(immediateDominator),
     );
-    dominatorTree.addEdge(immediateDominatorId, assetDominatorTreeNodeId);
+    dominatorTree.addWeightedEdge(
+      immediateDominatorId,
+      assetDominatorTreeNodeId,
+    );
   }
 
   return dominatorTree;

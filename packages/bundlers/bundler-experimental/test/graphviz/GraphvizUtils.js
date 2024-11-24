@@ -14,6 +14,7 @@ import type {
   AssetNode,
   SimpleAssetGraph,
   SimpleAssetGraphEdge,
+  SimpleAssetGraphEdgeWeight,
   SimpleAssetGraphNode,
 } from '../../src/DominatorBundler/bundleGraphToRootedGraph';
 import invariant from 'assert';
@@ -101,7 +102,11 @@ export function cleanPath(entryDir: string, p: string): string {
 export function rootedGraphToDot(
   entryDir: string,
   dominators:
-    | AcyclicGraph<SimpleAssetGraphNode, SimpleAssetGraphEdge>
+    | AcyclicGraph<
+        SimpleAssetGraphNode,
+        SimpleAssetGraphEdgeWeight,
+        SimpleAssetGraphEdge,
+      >
     | SimpleAssetGraph,
   label: string = 'Dominators',
   name: string = 'dominators',

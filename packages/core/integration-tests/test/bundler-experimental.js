@@ -162,6 +162,63 @@ describe('bundler-experimental', () => {
 
           expect(await output).toEqual(1234);
         });
+
+        it('can bundle async splits without duplicating parent dependencies', async () => {
+          await fsFixture(overlayFS, __dirname)`
+      bundler-experimental
+        async.js:
+          const get = require('./dependency');
+          module.exports = () => 34 + get();
+
+        dependency.js:
+          module.exports = () => 1200;
+        index.js:
+          const get = require('./dependency');
+          output(import('./async').then((get2) => {
+            return get() + get2();
+          }));
+
+        package.json:
+          {}
+        yarn.lock:
+          {}
+
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "bundler": ${JSON.stringify(bundler)}
+          }
+    `;
+
+          const inputDir = path.join(__dirname, 'bundler-experimental');
+          const b = await bundle(path.join(inputDir, 'index.js'), {
+            inputFS: overlayFS,
+          });
+
+          // // $FlowFixMe
+          // expectBundles(inputDir, b, [
+          //   {
+          //     type: 'js',
+          //     assets: ['async.js'],
+          //   },
+          //   {
+          //     type: 'js',
+          //     name: 'index.js',
+          //     assets: ['dependency.js', 'index.js'],
+          //   },
+          // ]);
+
+          let output = null;
+          graphs.set(bundler, b);
+
+          await run(b, {
+            output: (value) => {
+              output = value;
+            },
+          });
+
+          expect(await output).toEqual(2434);
+        });
       });
     });
   });

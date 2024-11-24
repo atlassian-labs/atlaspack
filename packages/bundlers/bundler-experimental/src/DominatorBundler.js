@@ -26,7 +26,6 @@ import {
   buildPackageGraph,
   buildPackageInfos,
 } from './DominatorBundler/mergePackages';
-import {BundleBehavior} from '@atlaspack/core/src/types';
 
 export type DominatorBundlerInput = {|
   bundleGraph: MutableBundleGraph,
@@ -256,7 +255,7 @@ export function intoBundleGraph(
       }
 
       // console.log('connecting', node, 'to', child);
-      // bundleGraph.createBundleReference(bundle, childBundle);
+      bundleGraph.createBundleReference(bundle, childBundle);
     });
   });
 

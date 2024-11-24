@@ -2,7 +2,7 @@
 
 import sinon from 'sinon';
 import assert from 'assert';
-import {ContentGraph} from '@atlaspack/graph';
+import {EdgeContentGraph} from '../src/DominatorBundler/EdgeContentGraph';
 import type {Asset} from '@atlaspack/types';
 import type {AssetNode, PackagedDominatorGraph} from '../src';
 import {addNodeToBundle} from '../src';
@@ -20,7 +20,7 @@ describe('addNodeToBundle', () => {
     };
     const mockBundle = {};
     const mockAsset = {};
-    const packages: PackagedDominatorGraph = new ContentGraph();
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
     const root = packages.addNode('root');
     packages.setRootNodeId(root);
 
@@ -46,7 +46,7 @@ describe('addNodeToBundle', () => {
     const mockBundle = {};
     const mockAsset = {};
     const mockChildAsset = {};
-    const packages: PackagedDominatorGraph = new ContentGraph();
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
     const root = packages.addNode('root');
     packages.setRootNodeId(root);
 
@@ -82,7 +82,7 @@ describe('addNodeToBundle', () => {
     const mockChildAsset = {id: 'child'};
     const mockNestedChild = {id: 'nested'};
     const mockSecondTopLevelChild = {id: 'second-child'};
-    const packages: PackagedDominatorGraph = new ContentGraph();
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
     const root = packages.addNode('root');
     packages.setRootNodeId(root);
 
@@ -143,7 +143,7 @@ describe('addNodeToBundle', () => {
     const sccChild1 = makeAsset({id: 'scc-child1'});
     const sccChild2 = makeAsset({id: 'scc-child2'});
 
-    const packages: PackagedDominatorGraph = new ContentGraph();
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
     const root = packages.addNode('root');
     packages.setRootNodeId(root);
 

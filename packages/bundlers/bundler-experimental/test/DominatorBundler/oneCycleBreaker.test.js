@@ -1,6 +1,5 @@
 // @flow strict-local
 
-import {ContentGraph} from '@atlaspack/graph';
 import {
   convertToAcyclicGraph,
   findStronglyConnectedComponents,
@@ -12,6 +11,7 @@ import path from 'path';
 import {overlayFS, workerFarm} from '@atlaspack/test-utils';
 import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
 import {rootedGraphToDot} from '../graphviz/GraphvizUtils';
+import {EdgeContentGraph} from '../../src/DominatorBundler/EdgeContentGraph';
 
 describe('oneCycleBreaker', () => {
   before(async function () {
@@ -22,7 +22,7 @@ describe('oneCycleBreaker', () => {
 
   describe('findStronglyConnectedComponents', () => {
     it('should find strongly connected components', () => {
-      const graph = new ContentGraph();
+      const graph = new EdgeContentGraph();
       const root = graph.addNodeByContentKey('root', 'root');
       graph.setRootNodeId(0);
       const a = graph.addNodeByContentKey('a', 'a');
@@ -41,7 +41,7 @@ describe('oneCycleBreaker', () => {
 
   describe('convertToAcyclicGraph', () => {
     it('should replace strongly connected components with a single node', () => {
-      const graph = new ContentGraph();
+      const graph = new EdgeContentGraph();
       graph.addNodeByContentKey('root', 'root');
       graph.setRootNodeId(0);
       const a = graph.addNodeByContentKey('a', 'a');
@@ -71,7 +71,7 @@ describe('oneCycleBreaker', () => {
     });
 
     it('works on a graph with two starting roots', () => {
-      const graph = new ContentGraph();
+      const graph = new EdgeContentGraph();
       graph.setRootNodeId(0);
       const root = graph.addNodeByContentKey('root', 'root');
       const a = graph.addNodeByContentKey('a', 'a');

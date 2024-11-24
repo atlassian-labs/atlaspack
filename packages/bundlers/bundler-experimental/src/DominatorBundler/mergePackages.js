@@ -2,10 +2,11 @@
 
 import type {Asset} from '@atlaspack/types';
 import type {PackageNode, PackagedDominatorGraph} from './createPackages';
-import {type NodeId, ContentGraph} from '@atlaspack/graph';
+import {type NodeId} from '@atlaspack/graph';
 import {getGraphPostOrder} from './findAssetDominators';
 import type {StronglyConnectedComponentNode} from './oneCycleBreaker';
 import type {AssetNode, SimpleAssetGraph} from './bundleGraphToRootedGraph';
+import {EdgeContentGraph} from './EdgeContentGraph';
 
 function getAssetSize(asset: Asset): number {
   return asset.stats?.size ?? 0;
@@ -77,7 +78,7 @@ export function buildPackageGraph(
     }
   });
 
-  const packageGraph: PackagedDominatorGraph = new ContentGraph();
+  const packageGraph: PackagedDominatorGraph = new EdgeContentGraph();
   const rootId = packageGraph.addNodeByContentKey('root', 'root');
   packageGraph.setRootNodeId(rootId);
   const packageNodesSet = new Set(packageNodes);
