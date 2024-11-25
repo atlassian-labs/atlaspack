@@ -5,8 +5,6 @@ import type {ContentGraph, NodeId} from '@atlaspack/graph';
 import nullthrows from 'nullthrows';
 import {EdgeContentGraph} from './EdgeContentGraph';
 
-export type NullEdgeType = 1;
-
 export type StronglyConnectedComponent = NodeId[];
 
 export type StronglyConnectedComponentNode<T> = {|
@@ -16,20 +14,16 @@ export type StronglyConnectedComponentNode<T> = {|
   values: T[],
 |};
 
-export type AcyclicGraph<T, EW, E: number = 1> = EdgeContentGraph<
+export type AcyclicGraph<T, EW> = EdgeContentGraph<
   T | StronglyConnectedComponentNode<T>,
   EW,
-  E,
 >;
 
-export function convertToAcyclicGraph<T, EW, E: number>(
-  graph: EdgeContentGraph<T, EW, E>,
-): AcyclicGraph<T, EW, E | NullEdgeType> {
-  const result: EdgeContentGraph<
-    T | StronglyConnectedComponentNode<T>,
-    EW,
-    E | NullEdgeType,
-  > = new EdgeContentGraph();
+export function convertToAcyclicGraph<T, EW>(
+  graph: EdgeContentGraph<T, EW>,
+): AcyclicGraph<T, EW> {
+  const result: EdgeContentGraph<T | StronglyConnectedComponentNode<T>, EW> =
+    new EdgeContentGraph();
 
   const components = findStronglyConnectedComponents(graph).filter(
     (c) => c.length > 1,

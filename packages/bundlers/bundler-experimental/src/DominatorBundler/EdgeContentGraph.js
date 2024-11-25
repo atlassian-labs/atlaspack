@@ -3,10 +3,10 @@
 import {ContentGraph, type NodeId} from '@atlaspack/graph';
 import nullthrows from 'nullthrows';
 
-export class EdgeContentGraph<N, EW, E: number = 1> extends ContentGraph<N, E> {
-  #edgeWeights: Map<[NodeId, NodeId], EW> = new Map();
+export class EdgeContentGraph<N, EW> extends ContentGraph<N, number> {
+  #edgeWeights: Map<string, EW> = new Map();
 
-  clone(): EdgeContentGraph<TNode, TEdgeType> {
+  clone(): EdgeContentGraph<N, EW> {
     const newGraph = new EdgeContentGraph();
     let nodeId = 0;
     for (let node of this.nodes) {
@@ -35,12 +35,19 @@ export class EdgeContentGraph<N, EW, E: number = 1> extends ContentGraph<N, E> {
     return newGraph;
   }
 
-  addWeightedEdge(from: NodeId, to: NodeId, type: E, weight: EW): void {
+  addWeightedEdge(
+    from: NodeId,
+    to: NodeId,
+    type: number,
+    weight: EW | null,
+  ): void {
     this.addEdge(from, to, type);
-    this.#edgeWeights.set([String(from), String(to)].join(','), weight);
+    if (weight != null) {
+      this.#edgeWeights.set([String(from), String(to)].join(','), weight);
+    }
   }
 
-  getEdgeWeight(from: NodeId, to: NodeId): EW {
-    return this.#edgeWeights.get([String(from), String(to)].join(','));
+  getEdgeWeight(from: NodeId, to: NodeId): EW | null {
+    return this.#edgeWeights.get([String(from), String(to)].join(',')) ?? null;
   }
 }

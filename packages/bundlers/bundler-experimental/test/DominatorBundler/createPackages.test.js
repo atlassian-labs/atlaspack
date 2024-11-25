@@ -87,9 +87,10 @@ digraph merged {
     );
   });
 
-  it('does nothing if all nodes are reachable from the root', async () => {
+  it.only('does nothing if all nodes are reachable from the root', async () => {
     const entryDir = path.join(__dirname, 'test');
     const entryPath = path.join(entryDir, 'a.js');
+    console.log({entryDir, entryPath});
     await fixtureFromGraph(entryDir, overlayFS, [
       asset('a.js', ['b.js', {to: 'async.js', type: 'async'}]),
       asset('b.js', []),

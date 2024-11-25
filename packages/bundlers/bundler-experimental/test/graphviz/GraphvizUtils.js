@@ -102,11 +102,7 @@ export function cleanPath(entryDir: string, p: string): string {
 export function rootedGraphToDot(
   entryDir: string,
   dominators:
-    | AcyclicGraph<
-        SimpleAssetGraphNode,
-        SimpleAssetGraphEdgeWeight,
-        SimpleAssetGraphEdge,
-      >
+    | AcyclicGraph<SimpleAssetGraphNode, SimpleAssetGraphEdgeWeight>
     | SimpleAssetGraph,
   label: string = 'Dominators',
   name: string = 'dominators',

@@ -41,7 +41,6 @@ export type PackagedDominatorGraph = EdgeContentGraph<
 export type PackagingInputGraph = AcyclicGraph<
   'root' | AssetNode,
   SimpleAssetGraphEdgeWeight,
-  SimpleAssetGraphEdge,
 >;
 
 export function getPackageNodes(packages: PackagedDominatorGraph): NodeId[] {
@@ -84,6 +83,7 @@ export function createPackages(
     makePackageKey,
   );
 
+  const nodesToRemove = new Set();
   const merge = (parentChunkAssetId: string, chunksToMerge: number[]) => {
     for (const chunk of chunksToMerge) {
       const parentChunk = packages.getNodeIdByContentKey(parentChunkAssetId);
@@ -106,6 +106,7 @@ export function createPackages(
         for (let child of children) {
           packages.addEdge(parentChunk, child);
         }
+        nodesToRemove.add(chunk);
       }
     }
   };
@@ -118,13 +119,14 @@ export function createPackages(
       continue;
     }
 
-    // // If we're merging into a single parent then reparent
+    // If we're merging into a single parent then re-parent
     if (parentChunks.size === 1) {
       const parentChunk = nullthrows(parentChunks.values().next().value);
       merge(parentChunk, chunksToMerge);
       continue;
     }
 
+    console.log('creating package', 'for chunks', chunksToMerge);
     const chunkRoot = packages.addNodeByContentKeyIfNeeded(`package:${key}`, {
       type: 'package',
       id: `package:${key}`,
@@ -134,6 +136,10 @@ export function createPackages(
     packages.addEdge(root, chunkRoot);
 
     merge(`package:${key}`, chunksToMerge);
+  }
+
+  for (let node of nodesToRemove) {
+    packages.removeNode(node, false);
   }
 
   return packages;
@@ -271,7 +277,7 @@ export function getChunkEntryPoints(
 /**
  * Nodes connected to the root node are considered chunks.
  */
-function getChunks<T>(dominatorTree: ContentGraph<T>): NodeId[] {
+function getChunks<T>(dominatorTree: ContentGraph<T, number>): NodeId[] {
   return dominatorTree.getNodeIdsConnectedFrom(
     dominatorTree.getNodeIdByContentKey('root'),
   );

@@ -878,6 +878,7 @@ export default (new Transformer({
     }
 
     asset.meta.id = asset.id;
+    console.log(hoist_result);
     if (hoist_result) {
       asset.symbols.ensure();
       for (let {
@@ -1057,6 +1058,7 @@ export default (new Transformer({
         }
       }
 
+      console.log({code: code.toString(), needs_esm_helpers});
       if (needs_esm_helpers) {
         asset.addDependency({
           specifier: '@atlaspack/transformer-js/src/esmodule-helpers.js',

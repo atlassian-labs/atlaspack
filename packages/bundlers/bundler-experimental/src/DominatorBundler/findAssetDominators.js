@@ -2,7 +2,7 @@
 
 import logger from '@atlaspack/logger';
 import type {MutableBundleGraph} from '@atlaspack/types';
-import {ContentGraph, type NodeId, Graph} from '@atlaspack/graph';
+import {type NodeId, Graph} from '@atlaspack/graph';
 import {bundleGraphToRootedGraph} from './bundleGraphToRootedGraph';
 import {convertToAcyclicGraph} from './oneCycleBreaker';
 import type {AcyclicGraph} from './oneCycleBreaker';
@@ -13,7 +13,7 @@ import type {
   SimpleAssetGraphEdgeWeight,
   SimpleAssetGraphNode,
 } from './bundleGraphToRootedGraph';
-import type {EdgeContentGraph} from './EdgeContentGraph';
+import {EdgeContentGraph} from './EdgeContentGraph';
 
 function debugLog(message: string) {
   logger.info({
@@ -24,7 +24,7 @@ function debugLog(message: string) {
 
 export type AssetDominatorTree = AcyclicGraph<
   'root' | AssetNode,
-  SimpleAssetGraphEdge,
+  SimpleAssetGraphEdgeWeight,
 >;
 
 /**
@@ -42,7 +42,6 @@ export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
   noCyclesGraph: AcyclicGraph<
     'root' | SimpleAssetGraphNode,
     SimpleAssetGraphEdgeWeight,
-    SimpleAssetGraphEdge,
   >,
 |} {
   // Build a simpler graph with a root at the top
@@ -64,11 +63,11 @@ export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
  *
  * This is a tree where each node is connected to its immediate dominator.
  */
-export function buildDominatorTree<T, EW, E: number>(
-  graph: EdgeContentGraph<'root' | T, EW, E>,
+export function buildDominatorTree<T, EW>(
+  graph: EdgeContentGraph<'root' | T, EW>,
   dominators: NodeId[],
-): EdgeContentGraph<'root' | T, EW, E> {
-  const dominatorTree = new EdgeContentGraph();
+): EdgeContentGraph<'root' | T, EW> {
+  const dominatorTree = new EdgeContentGraph<'root' | T, EW>();
   const rootId = dominatorTree.addNodeByContentKey('root', 'root');
   dominatorTree.setRootNodeId(rootId);
 
@@ -109,10 +108,7 @@ export function buildDominatorTree<T, EW, E: number>(
     const immediateDominatorId = dominatorTree.getNodeIdByContentKey(
       graph.getContentKeyByNodeId(immediateDominator),
     );
-    dominatorTree.addWeightedEdge(
-      immediateDominatorId,
-      assetDominatorTreeNodeId,
-    );
+    dominatorTree.addEdge(immediateDominatorId, assetDominatorTreeNodeId);
   }
 
   return dominatorTree;

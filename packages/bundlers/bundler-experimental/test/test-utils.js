@@ -50,6 +50,7 @@ export async function setupBundlerTest(
   const options = getParcelOptions(entryPath, {
     inputFS: overlayFS,
     defaultConfig: path.join(__dirname, 'atlaspack-config.json'),
+    mode: 'production',
   });
   debug('Resolving options', entryPath);
   const resolvedOptions = await resolveOptions(options);

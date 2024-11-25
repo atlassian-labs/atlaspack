@@ -41,7 +41,6 @@ export type SimpleAssetGraphEdge = $Values<typeof simpleAssetGraphEdges>;
 export type SimpleAssetGraph = EdgeContentGraph<
   SimpleAssetGraphNode,
   SimpleAssetGraphEdgeWeight,
-  SimpleAssetGraphEdge,
 >;
 
 /**
