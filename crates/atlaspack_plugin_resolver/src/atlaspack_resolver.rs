@@ -52,6 +52,7 @@ impl Debug for AtlaspackResolver {
 struct ResolverConfig {
   package_exports: Option<bool>,
   deduplicate_packages: Option<bool>,
+  graphql_esm_upgrade: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -342,6 +343,11 @@ impl ResolverPlugin for AtlaspackResolver {
     resolver.flags.set(
       Flags::EXPORTS,
       self.config.package_exports.unwrap_or_default(),
+    );
+
+    resolver.flags.set(
+      Flags::GRAPHQL_ESM_UPGRADE,
+      self.config.graphql_esm_upgrade.unwrap_or_default(),
     );
 
     resolver.include_node_modules = Cow::Borrowed(&ctx.dependency.env.include_node_modules);

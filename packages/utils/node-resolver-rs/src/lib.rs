@@ -68,6 +68,8 @@ bitflags! {
     const PARENT_EXTENSION = 1 << 9;
     /// Whether to allow optional extensions in the "exports" field.
     const EXPORTS_OPTIONAL_EXTENSIONS = 1 << 10;
+    /// Enable the graphql ESM upgrade fix
+    const GRAPHQL_ESM_UPGRADE = 1 << 11;
 
     /// Default Node settings for CommonJS.
     const NODE_CJS = Self::EXPORTS.bits | Self::DIR_INDEX.bits | Self::OPTIONAL_EXTENSIONS.bits;
@@ -162,12 +164,15 @@ impl<'a> Resolver<'a> {
   }
 
   pub fn atlaspack(project_root: Cow<'a, Path>, cache: CacheCow<'a>) -> Self {
+    let mut flags = Flags::all();
+    flags.set(Flags::GRAPHQL_ESM_UPGRADE, false);
+
     Self {
       project_root,
       extensions: Extensions::Borrowed(&["mjs", "js", "jsx", "cjs", "json"]),
       index_file: "index",
       entries: Fields::MAIN | Fields::SOURCE | Fields::BROWSER | Fields::MODULE,
-      flags: Flags::all(),
+      flags,
       cache,
       include_node_modules: Cow::Owned(IncludeNodeModules::default()),
       conditions: ExportsCondition::empty(),
@@ -802,17 +807,64 @@ impl<'a> ResolveRequest<'a> {
         .unwrap_or(false);
 
     if !is_directory {
-      if let Some(res) = self.load_file(path, package)? {
+      if let Some(res) = self
+        .load_file(path, package)?
+        .map(|res| self.upgrade_graphql_path_to_esm(package, res))
+      {
         return Ok(Some(res));
       }
     }
 
     // Urls and Node ESM do not resolve directory index files.
     if can_load_directory {
-      return self.load_directory(path, package);
+      return Ok(
+        self
+          .load_directory(path, package)?
+          .map(|res| self.upgrade_graphql_path_to_esm(package, res)),
+      );
     }
 
     Ok(None)
+  }
+
+  // The 'graphql' package contains both '.js' and '.mjs' versions of all it's
+  // files. When importing 'graphql' and targetting ESM then you should resolve
+  // the '.mjs' version. However, as the package doesn't have an exports key,
+  // when importing subpaths like 'graphql/error' you will resolve the '.js'
+  // version. This can cause issues as you end up with mismatched constructors.
+  //
+  // This function attempts to upgrade any '.js' imports in the 'graphql'
+  // package to '.mjs' to avoid this issue.
+  fn upgrade_graphql_path_to_esm(
+    &self,
+    package: Option<&PackageJson>,
+    res: Resolution,
+  ) -> Resolution {
+    if self.resolver.flags.contains(Flags::GRAPHQL_ESM_UPGRADE)
+      && package.is_some_and(|package| package.name == "graphql")
+      && matches!(&res, Resolution::Path(path) if path.extension().is_some_and(|extension| extension == "js"))
+    {
+      if let Resolution::Path(path) = &res {
+        let esm_path = path.with_extension("mjs");
+
+        if let Ok(Some(res)) = self.load_file(&esm_path, package) {
+          tracing::info!(
+            "Upgraded graphql import to mjs. {:?} to {:?}",
+            path,
+            esm_path
+          );
+          return res;
+        } else {
+          tracing::info!(
+            "Failed to upgrade graphql import to mjs {:?}. Tried {:?}",
+            path,
+            esm_path
+          );
+        }
+      }
+    }
+
+    res
   }
 
   fn load_file(
@@ -2906,6 +2958,52 @@ mod tests {
         .unwrap()
         .0,
       Resolution::Path(root().join("node_modules/duplicate/index.js"))
+    );
+  }
+
+  #[test]
+  fn graphql_esm_upgrade() {
+    let mut resolver = test_resolver();
+    resolver.flags.set(Flags::GRAPHQL_ESM_UPGRADE, true);
+
+    assert_eq!(
+      resolver
+        .resolve("graphql", &root().join("foo.js"), SpecifierType::Cjs)
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/graphql/index.mjs"))
+    );
+
+    assert_eq!(
+      resolver
+        .resolve("graphql/index", &root().join("foo.js"), SpecifierType::Cjs)
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/graphql/index.mjs"))
+    );
+
+    assert_eq!(
+      resolver
+        .resolve("graphql/error", &root().join("foo.js"), SpecifierType::Cjs)
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/graphql/error/index.mjs"))
+    );
+
+    assert_eq!(
+      resolver
+        .resolve(
+          "graphql/error/some-error",
+          &root().join("foo.js"),
+          SpecifierType::Cjs
+        )
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/graphql/error/some-error.mjs"))
     );
   }
 
