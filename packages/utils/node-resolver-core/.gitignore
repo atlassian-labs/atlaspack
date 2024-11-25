@@ -1,4 +1,4 @@
-!/test/fixture/node_modules/**/*
+!/test/fixture/node_modules
 *.node
 *.wasm
 native.d.ts
