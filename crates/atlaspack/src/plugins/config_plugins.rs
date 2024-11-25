@@ -207,6 +207,7 @@ impl Plugins for ConfigPlugins {
         "@atlaspack/transformer-react-refresh-wrap" => continue,
         "@atlaspack/transformer-posthtml" => continue,
         "@atlaspack/transformer-postcss" => continue,
+        "@atlassian/parcel-transformer-magic-comment" => continue,
         _ => {}
       }
 
