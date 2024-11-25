@@ -1751,29 +1751,37 @@ mod tests {
 
   #[test]
   fn collect_has_cjs_exports() {
+    let (collect, _code, _hoist) = parse("module.exports = {};");
+    assert_eq!(collect.has_cjs_exports, true);
+
+    let (collect, _code, _hoist) = parse("this.someExport = 'true';");
+    assert_eq!(collect.has_cjs_exports, true);
+
+    // Some TSC polyfills use a pattern like below, we want to avoid marking these modules as cjs.
     let (collect, _code, _hoist) = parse(
       r#"
-      module.exports = {};
-    "#,
+        import 'something';
+        var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function () {}
+      "#,
     );
-    assert!(collect.has_cjs_exports);
+    assert_eq!(collect.has_cjs_exports, false);
+
+    // A free module is maybe considered a cjs export
+    let (collect, _code, _hoist) = parse(
+      "
+          const performance = req(module, 'perf_hooks');
+          export { performance };
+      ",
+    );
+    assert_eq!(collect.has_cjs_exports, true);
 
     let (collect, _code, _hoist) = parse(
-      r#"
-      this.someExport = 'true';
-    "#,
+      "
+        const performance = module.require('perf_hooks');
+        export { performance };
+      ",
     );
-    assert!(collect.has_cjs_exports);
-
-    // Some TSC polyfills use a pattern like below.
-    // We want to avoid marking these modules as CJS
-    let (collect, _code, _hoist) = parse(
-      r#"
-      import 'something';
-      var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function () {}
-    "#,
-    );
-    assert!(!collect.has_cjs_exports);
+    assert_eq!(collect.has_cjs_exports, false);
   }
 
   #[test]
