@@ -164,12 +164,15 @@ impl<'a> Resolver<'a> {
   }
 
   pub fn atlaspack(project_root: Cow<'a, Path>, cache: CacheCow<'a>) -> Self {
+    let mut flags = Flags::all();
+    flags.set(Flags::GRAPHQL_ESM_UPGRADE, false);
+
     Self {
       project_root,
       extensions: Extensions::Borrowed(&["mjs", "js", "jsx", "cjs", "json"]),
       index_file: "index",
       entries: Fields::MAIN | Fields::SOURCE | Fields::BROWSER | Fields::MODULE,
-      flags: Flags::all(),
+      flags,
       cache,
       include_node_modules: Cow::Owned(IncludeNodeModules::default()),
       conditions: ExportsCondition::empty(),
@@ -804,18 +807,21 @@ impl<'a> ResolveRequest<'a> {
         .unwrap_or(false);
 
     if !is_directory {
-      if let Some(res) = self.load_file(path, package)? {
-        if let Some(res) = self.upgrade_graphql_path_to_esm(package, &res) {
-          return Ok(Some(res));
-        }
-
+      if let Some(res) = self
+        .load_file(path, package)?
+        .map(|res| self.upgrade_graphql_path_to_esm(package, res))
+      {
         return Ok(Some(res));
       }
     }
 
     // Urls and Node ESM do not resolve directory index files.
     if can_load_directory {
-      return self.load_directory(path, package);
+      return Ok(
+        self
+          .load_directory(path, package)?
+          .map(|res| self.upgrade_graphql_path_to_esm(package, res)),
+      );
     }
 
     Ok(None)
@@ -832,13 +838,13 @@ impl<'a> ResolveRequest<'a> {
   fn upgrade_graphql_path_to_esm(
     &self,
     package: Option<&PackageJson>,
-    res: &Resolution,
-  ) -> Option<Resolution> {
+    res: Resolution,
+  ) -> Resolution {
     if self.resolver.flags.contains(Flags::GRAPHQL_ESM_UPGRADE)
       && package.is_some_and(|package| package.name == "graphql")
       && matches!(&res, Resolution::Path(path) if path.extension().is_some_and(|extension| extension == "js"))
     {
-      if let Resolution::Path(path) = res {
+      if let Resolution::Path(path) = &res {
         let esm_path = path.with_extension("mjs");
 
         if let Ok(Some(res)) = self.load_file(&esm_path, package) {
@@ -847,7 +853,7 @@ impl<'a> ResolveRequest<'a> {
             path,
             esm_path
           );
-          return Some(res);
+          return res;
         } else {
           tracing::info!(
             "Failed to upgrade graphql import to mjs {:?}. Tried {:?}",
@@ -858,7 +864,7 @@ impl<'a> ResolveRequest<'a> {
       }
     }
 
-    None
+    res
   }
 
   fn load_file(
@@ -2952,6 +2958,52 @@ mod tests {
         .unwrap()
         .0,
       Resolution::Path(root().join("node_modules/duplicate/index.js"))
+    );
+  }
+
+  #[test]
+  fn graphql_esm_upgrade() {
+    let mut resolver = test_resolver();
+    resolver.flags.set(Flags::GRAPHQL_ESM_UPGRADE, true);
+
+    assert_eq!(
+      resolver
+        .resolve("graphql", &root().join("foo.js"), SpecifierType::Cjs)
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/graphql/index.mjs"))
+    );
+
+    assert_eq!(
+      resolver
+        .resolve("graphql/index", &root().join("foo.js"), SpecifierType::Cjs)
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/graphql/index.mjs"))
+    );
+
+    assert_eq!(
+      resolver
+        .resolve("graphql/error", &root().join("foo.js"), SpecifierType::Cjs)
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/graphql/error/index.mjs"))
+    );
+
+    assert_eq!(
+      resolver
+        .resolve(
+          "graphql/error/some-error",
+          &root().join("foo.js"),
+          SpecifierType::Cjs
+        )
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/graphql/error/some-error.mjs"))
     );
   }
 
