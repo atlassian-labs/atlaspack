@@ -50,34 +50,35 @@ export class Environment implements IEnvironment {
     this.unstableSingleFileOutput = false;
   }
 
-  // TODO
   isBrowser(): boolean {
-    return true;
+    return (
+      this.context === 'browser' ||
+      this.isWorker() ||
+      this.isWorklet() ||
+      this.context === 'electron-renderer'
+    );
   }
 
-  // TODO
   isNode(): boolean {
-    return false;
+    return this.context === 'node' || this.isElectron();
   }
 
-  // TODO
   isElectron(): boolean {
-    return false;
+    return (
+      this.context === 'electron-main' || this.context === 'electron-renderer'
+    );
   }
 
-  // TODO
   isWorker(): boolean {
-    return false;
+    return this.context === 'web-worker' || this.context === 'service-worker';
   }
 
-  // TODO
   isWorklet(): boolean {
-    return false;
+    return this.context === 'worklet';
   }
 
-  // TODO
   isIsolated(): boolean {
-    return false;
+    return this.isWorker() || this.isWorklet();
   }
 
   // TODO
