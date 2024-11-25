@@ -114,6 +114,7 @@ function getAssetGraph(serializedGraph, options) {
         isEsm: true,
       };
     }
+
     return [exported, jsSymbol];
   }
 

@@ -138,14 +138,18 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
   constructor(inner: ?(NapiSymbol[]) | null) {
     this.#symbols = new Map();
     this.#locals = new Set();
-    for (const {exported, local, loc} of inner || []) {
-      this.set(exported, local, loc);
+    for (const {exported, loc, local, isEsmExport, selfReferenced} of inner ||
+      []) {
+      this.set(exported, local, loc, {
+        isEsm: isEsmExport,
+        selfReferenced,
+      });
     }
   }
 
   intoNapi(): NapiSymbol[] {
     const results: NapiSymbol[] = [];
-    for (const [exportSymbol, {local, loc}] of this.#symbols.entries()) {
+    for (const [exportSymbol, {local, loc, meta}] of this.#symbols.entries()) {
       results.push({
         exported: exportSymbol,
         local,
@@ -162,10 +166,9 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
               },
             }
           : undefined,
-        // TODO
+        isEsmExport: Boolean(meta?.isEsm),
         isWeak: false,
-        isEsmExport: false,
-        selfReferenced: false,
+        selfReferenced: Boolean(meta?.selfReferenced),
       });
     }
     return results;
@@ -175,12 +178,17 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
     throw new Error('MutableAssetSymbols.ensure()');
   }
 
-  set(exportSymbol: Symbol, local: Symbol, loc: ?SourceLocation): void {
+  set(
+    exportSymbol: Symbol,
+    local: Symbol,
+    loc: ?SourceLocation,
+    meta: ?Meta,
+  ): void {
     this.#locals.add(local);
     this.#symbols.set(exportSymbol, {
       local,
       loc,
-      meta: {},
+      meta,
     });
   }
 
@@ -214,7 +222,12 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
   }
 }
 
-export type AssetSymbol = {|local: Symbol, loc: ?SourceLocation, meta?: ?Meta|};
+export type AssetSymbol = {|
+  local: Symbol,
+  loc: ?SourceLocation,
+  meta?: ?Meta,
+|};
+
 export type DependencyAssetSymbol = {|
   local: Symbol,
   loc: ?SourceLocation,
