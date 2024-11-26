@@ -7,7 +7,6 @@ import type {
   Asset,
   Dependency,
   MutableBundleGraph,
-  Bundle,
   Target,
 } from '@atlaspack/types';
 import {
@@ -27,7 +26,7 @@ import {
   buildPackageInfos,
 } from './DominatorBundler/mergePackages';
 import {findNodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
-import nullthrows from 'nullthrows';
+import type {NodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
 
 export type DominatorBundlerInput = {|
   bundleGraph: MutableBundleGraph,
@@ -45,13 +44,9 @@ const DominatorBundler: Bundler = new Bundler({
 export default DominatorBundler;
 
 export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
-  // console.log('dominator bundling');
   const {dominators, graph} = findAssetDominators(bundleGraph);
-
-  // console.log('packages');
+  const entryDependencies = findNodeEntryDependencies(graph);
   const packages = createPackages(bundleGraph, dominators);
-  // console.log(mergedDominatorsToDot('', packages));
-  // console.log('conversion');
   const {packageNodes, packageInfos} = buildPackageInfos(packages);
   const packageGraph = buildPackageGraph(
     graph,
@@ -59,9 +54,8 @@ export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
     packageNodes,
     packageInfos,
   );
-  // console.log(mergedDominatorsToDot('', packageGraph));
 
-  intoBundleGraph(packages, bundleGraph, packageGraph);
+  intoBundleGraph(packages, bundleGraph, packageGraph, entryDependencies);
 }
 
 function getEntryDepForNode(
@@ -284,7 +278,15 @@ export function intoBundleGraph(
   packages: PackagedDominatorGraph,
   bundleGraph: MutableBundleGraph,
   packageGraph: PackagedDominatorGraph,
-) {}
+  entryDependencies: NodeEntryDependencies,
+) {
+  const plan = planBundleGraph(
+    packages,
+    entryDependencies.entryDependenciesByAsset,
+    entryDependencies.asyncDependenciesByAsset,
+  );
+  buildBundleGraph(plan, bundleGraph);
+}
 
 export function addNodeToBundle(
   packages: PackagedDominatorGraph,

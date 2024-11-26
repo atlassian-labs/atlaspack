@@ -1,6 +1,5 @@
 // @flow strict-local
 
-import sinon from 'sinon';
 import assert from 'assert';
 import {EdgeContentGraph} from '../src/DominatorBundler/EdgeContentGraph';
 import type {Asset, Dependency, Target} from '@atlaspack/types';
@@ -21,10 +20,9 @@ const makeAssetNode = (node: mixed): AssetNode => (node: any);
 
 describe('addNodeToBundle', () => {
   it('adds asset nodes into the bundle', () => {
-    const mockBundleGraph = {
-      addAssetToBundle: sinon.spy(),
+    const mockBundle = {
+      assets: [],
     };
-    const mockBundle = {};
     const mockAsset = {};
     const packages: PackagedDominatorGraph = new EdgeContentGraph();
     const root = packages.addNode('root');
@@ -39,17 +37,15 @@ describe('addNodeToBundle', () => {
     packages.addEdge(root, assetId);
 
     // $FlowFixMe
-    addNodeToBundle(packages, mockBundleGraph, mockBundle, assetId);
+    addNodeToBundle(packages, mockBundle, assetId);
 
-    assert(mockBundleGraph.addAssetToBundle.calledOnce);
-    assert(mockBundleGraph.addAssetToBundle.calledWith(mockAsset, mockBundle));
+    assert.deepStrictEqual(mockBundle.assets, [mockAsset]);
   });
 
   it('adds a tree of asset nodes into the bundle', () => {
-    const mockBundleGraph = {
-      addAssetToBundle: sinon.spy(),
+    const mockBundle = {
+      assets: [],
     };
-    const mockBundle = {};
     const mockAsset = {};
     const mockChildAsset = {};
     const packages: PackagedDominatorGraph = new EdgeContentGraph();
@@ -72,19 +68,15 @@ describe('addNodeToBundle', () => {
     packages.addEdge(parentAsset, childAsset);
 
     // $FlowFixMe
-    addNodeToBundle(packages, mockBundleGraph, mockBundle, parentAsset);
+    addNodeToBundle(packages, mockBundle, parentAsset);
 
-    assert(mockBundleGraph.addAssetToBundle.calledWith(mockAsset, mockBundle));
-    assert(
-      mockBundleGraph.addAssetToBundle.calledWith(mockChildAsset, mockBundle),
-    );
+    assert.deepStrictEqual(mockBundle.assets, [mockAsset, mockChildAsset]);
   });
 
   it('adds a package node to the bundle', () => {
-    const mockBundleGraph = {
-      addAssetToBundle: sinon.spy(),
+    const mockBundle = {
+      assets: [],
     };
-    const mockBundle = {};
     const mockChildAsset = {id: 'child'};
     const mockNestedChild = {id: 'nested'};
     const mockSecondTopLevelChild = {id: 'second-child'};
@@ -122,27 +114,19 @@ describe('addNodeToBundle', () => {
     packages.addEdge(parentPackage, secondChild);
 
     // $FlowFixMe
-    addNodeToBundle(packages, mockBundleGraph, mockBundle, parentPackage);
+    addNodeToBundle(packages, mockBundle, parentPackage);
 
-    assert(
-      mockBundleGraph.addAssetToBundle.calledWith(mockChildAsset, mockBundle),
-    );
-    assert(
-      mockBundleGraph.addAssetToBundle.calledWith(mockNestedChild, mockBundle),
-    );
-    assert(
-      mockBundleGraph.addAssetToBundle.calledWith(
-        mockSecondTopLevelChild,
-        mockBundle,
-      ),
-    );
+    assert.deepStrictEqual(mockBundle.assets, [
+      mockChildAsset,
+      mockNestedChild,
+      mockSecondTopLevelChild,
+    ]);
   });
 
   it('adds strongly connected components to a bundle', () => {
-    const mockBundleGraph = {
-      addAssetToBundle: sinon.spy(),
+    const mockBundle = {
+      assets: [],
     };
-    const mockBundle = {};
 
     const mockChildAsset = makeAsset({id: 'child'});
     const mockNestedChild = makeAsset({id: 'nested'});
@@ -187,16 +171,14 @@ describe('addNodeToBundle', () => {
     packages.addEdge(stronglyConnectedComponent, nested);
 
     // $FlowFixMe
-    addNodeToBundle(packages, mockBundleGraph, mockBundle, childAsset);
+    addNodeToBundle(packages, mockBundle, childAsset);
 
-    assert(
-      mockBundleGraph.addAssetToBundle.calledWith(mockChildAsset, mockBundle),
-    );
-    assert(mockBundleGraph.addAssetToBundle.calledWith(sccChild1, mockBundle));
-    assert(mockBundleGraph.addAssetToBundle.calledWith(sccChild2, mockBundle));
-    assert(
-      mockBundleGraph.addAssetToBundle.calledWith(mockNestedChild, mockBundle),
-    );
+    assert.deepStrictEqual(mockBundle.assets, [
+      mockChildAsset,
+      sccChild1,
+      sccChild2,
+      mockNestedChild,
+    ]);
   });
 });
 
@@ -257,6 +239,7 @@ describe('planBundleGraph', () => {
         entryAsset,
         needsStableName: true,
         target,
+        assets: [entryAsset],
       },
     ];
 
@@ -318,11 +301,13 @@ describe('planBundleGraph', () => {
         entryAsset,
         needsStableName: true,
         target,
+        assets: [entryAsset],
       },
       {
         entryAsset: asyncAssetValue,
         needsStableName: false,
         target,
+        assets: [asyncAssetValue],
       },
     ];
     assert.deepStrictEqual(result, {
