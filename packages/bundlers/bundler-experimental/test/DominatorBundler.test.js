@@ -199,6 +199,7 @@ describe('planBundleGraph', () => {
     assert.deepEqual(result, {
       bundles: [],
       bundleGroups: [],
+      bundlesByPackageContentKey: new Map(),
     });
   });
 
@@ -245,6 +246,7 @@ describe('planBundleGraph', () => {
 
     assert.deepStrictEqual(result, {
       bundles: expectedBundles,
+      bundlesByPackageContentKey: new Map([['asset', expectedBundles[0]]]),
       bundleGroups: [
         {
           entryDep,
@@ -265,6 +267,9 @@ describe('planBundleGraph', () => {
     const entryDep = makeDependency({
       target,
     });
+    const asyncDependency = makeDependency({
+      target,
+    });
     const assetNode = {
       type: 'asset',
       id: 'asset',
@@ -283,7 +288,7 @@ describe('planBundleGraph', () => {
       target: null,
       isEntryNode: false,
     });
-    packages.addEdge(root, asyncAsset);
+    packages.addWeightedEdge(root, asyncAsset, 1, asyncDependency);
 
     const entryDependenciesByAsset = new Map();
     entryDependenciesByAsset.set(asset, [assetNode]);
@@ -303,6 +308,8 @@ describe('planBundleGraph', () => {
         target,
         assets: [entryAsset],
       },
+    ];
+    const expectedAsyncBundles = [
       {
         entryAsset: asyncAssetValue,
         needsStableName: false,
@@ -310,15 +317,21 @@ describe('planBundleGraph', () => {
         assets: [asyncAssetValue],
       },
     ];
-    assert.deepStrictEqual(result, {
-      bundles: expectedBundles,
-      bundleGroups: [
-        {
-          entryDep,
-          target,
-          bundles: expectedBundles,
-        },
-      ],
-    });
+    assert.deepStrictEqual(result.bundles, [
+      ...expectedBundles,
+      ...expectedAsyncBundles,
+    ]);
+    assert.deepStrictEqual(result.bundleGroups, [
+      {
+        entryDep,
+        target,
+        bundles: expectedBundles,
+      },
+      {
+        entryDep: asyncDependency,
+        target,
+        bundles: expectedAsyncBundles,
+      },
+    ]);
   });
 });

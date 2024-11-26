@@ -68,6 +68,7 @@ interface SimpleBundleGroup {
 
 interface BundleGraphConversionResult {
   bundles: SimpleBundle[];
+  bundlesByPackageContentKey: Map<string, SimpleBundle>;
   bundleGroups: SimpleBundleGroup[];
 }
 
@@ -80,11 +81,12 @@ export function planBundleGraph(
 
   const result = {
     bundles: [],
+    bundlesByPackageContentKey: new Map(),
     bundleGroups: [],
   };
 
   const bundleGroups = new Map();
-  const bundlesByPackageContentKey = new Map();
+  const bundlesByPackageContentKey = result.bundlesByPackageContentKey;
 
   for (const nodeId of packageNodes) {
     let node = packages.getNode(nodeId);
@@ -96,14 +98,25 @@ export function planBundleGraph(
     invariant(entryDep != null);
     const target = entryDep.target;
     invariant(target != null);
+    const asyncDep = asyncDependenciesByAsset.get(nodeId)?.values().next();
 
     let bundleGroup = bundleGroups.get(entryDep);
-    if (bundleGroup == null) {
-      console.log('creating bundle group for', entryDep);
+    // if (bundleGroup == null) {
+
+    if (asyncDep != null) {
+      const dependency = packages.getEdgeWeight(
+        packages.getNodeIdByContentKey('root'),
+        packages.getNodeIdByContentKey(node.id),
+      );
+      invariant(dependency != null);
+      bundleGroup = {entryDep: dependency, target, bundles: []};
+    } else {
       bundleGroup = {entryDep, target, bundles: []};
-      result.bundleGroups.push(bundleGroup);
-      bundleGroups.set(entryDep, bundleGroup);
     }
+
+    result.bundleGroups.push(bundleGroup);
+    bundleGroups.set(entryDep, bundleGroup);
+    // }
 
     if (node.type === 'asset') {
       const bundle = {
@@ -196,8 +209,10 @@ export function planBundleGraph(
 
 export function buildBundleGraph(
   plan: BundleGraphConversionResult,
+  packageGraph: PackagedDominatorGraph,
   bundleGraph: MutableBundleGraph,
 ) {
+  console.log(JSON.stringify(plan, null, 2));
   const bundlesByPlanBundle = new Map();
 
   for (const planGroup of plan.bundleGroups) {
@@ -206,7 +221,7 @@ export function buildBundleGraph(
       planGroup.target,
     );
 
-    for (let planBundle of planGroup) {
+    for (let planBundle of planGroup.bundles) {
       const bundle =
         bundlesByPlanBundle.get(planBundle) ??
         bundleGraph.createBundle(planBundle);
@@ -219,6 +234,43 @@ export function buildBundleGraph(
       }
     }
   }
+
+  packageGraph.traverse((nodeId) => {
+    const node = packageGraph.getNode(nodeId);
+    if (node == null || node === 'root') {
+      return;
+    }
+
+    const contentKey = packageGraph.getContentKeyByNodeId(nodeId);
+    const planBundle = plan.bundlesByPackageContentKey.get(contentKey);
+    if (planBundle == null) {
+      return;
+    }
+    const bundle = bundlesByPlanBundle.get(planBundle);
+    if (bundle == null) {
+      return;
+    }
+
+    const nodes = packageGraph.getNodeIdsConnectedFrom(nodeId);
+    nodes.forEach((id) => {
+      const child = packageGraph.getNode(id);
+      if (child == null || child === 'root') {
+        return;
+      }
+      const childContentKey = packageGraph.getContentKeyByNodeId(id);
+      const childPlanBundle =
+        plan.bundlesByPackageContentKey.get(childContentKey);
+      if (childPlanBundle == null) {
+        return;
+      }
+      const childBundle = bundlesByPlanBundle.get(childPlanBundle);
+      if (childBundle == null) {
+        return;
+      }
+
+      bundleGraph.createBundleReference(bundle, childBundle);
+    });
+  });
 }
 
 export function intoBundleGraph(
@@ -232,7 +284,7 @@ export function intoBundleGraph(
     entryDependencies.entryDependenciesByAsset,
     entryDependencies.asyncDependenciesByAsset,
   );
-  buildBundleGraph(plan, bundleGraph);
+  buildBundleGraph(plan, packageGraph, bundleGraph);
 }
 
 export function addNodeToBundle(

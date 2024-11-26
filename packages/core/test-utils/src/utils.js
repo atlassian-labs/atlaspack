@@ -43,12 +43,10 @@ export {fsFixture} from './fsFixture';
 export const workerFarm = (createWorkerFarm(): WorkerFarm);
 export const inputFS: NodeFS = new NodeFS();
 export let outputFS: MemoryFS = new MemoryFS(workerFarm);
-// export let outputFS: NodeFS = inputFS;
 export let overlayFS: OverlayFS = new OverlayFS(outputFS, inputFS);
 
 beforeEach(() => {
   outputFS = new MemoryFS(workerFarm);
-  // overlayFS = new OverlayFS(outputFS, inputFS);
 });
 
 // Recursively copies a directory from the inputFS to the outputFS
@@ -484,7 +482,6 @@ export async function runBundle(
     );
   } else {
     const code = overlayFS.readFileSync(bundle.filePath, 'utf8');
-    console.log({code, filePath: bundle.filePath});
     return runBundles(
       bundleGraph,
       bundle,

@@ -14,7 +14,7 @@ import {
 describe('bundler-experimental', () => {
   describe('parity tests', () => {
     const bundlers = [
-      // '@atlaspack/bundler-default',
+      '@atlaspack/bundler-default',
       '@atlaspack/bundler-experimental',
     ];
 
@@ -42,6 +42,7 @@ describe('bundler-experimental', () => {
           const inputDir = path.join(__dirname, 'bundler-experimental');
           const b = await bundle(path.join(inputDir, 'index.js'), {
             inputFS: overlayFS,
+            outputFS: overlayFS,
           });
 
           // $FlowFixMe
@@ -87,6 +88,7 @@ describe('bundler-experimental', () => {
           const inputDir = path.join(__dirname, 'bundler-experimental');
           const b = await bundle(path.join(inputDir, 'index.js'), {
             inputFS: overlayFS,
+            outputFS: overlayFS,
           });
 
           // $FlowFixMe
@@ -136,6 +138,7 @@ describe('bundler-experimental', () => {
           const inputDir = path.join(__dirname, 'bundler-experimental');
           const b = await bundle(path.join(inputDir, 'index.js'), {
             inputFS: overlayFS,
+            outputFS: overlayFS,
           });
 
           // $FlowFixMe
@@ -163,7 +166,7 @@ describe('bundler-experimental', () => {
           expect(await output).toEqual(1234);
         });
 
-        it.only('can bundle async splits without duplicating parent dependencies', async () => {
+        it('can bundle async splits without duplicating parent dependencies', async () => {
           // TMP diff to test shared bundles
           await fsFixture(overlayFS, __dirname)`
       bundler-experimental
@@ -214,6 +217,7 @@ describe('bundler-experimental', () => {
           const inputDir = path.join(__dirname, 'bundler-experimental');
           const b = await bundle(path.join(inputDir, 'index.js'), {
             inputFS: overlayFS,
+            outputFS: overlayFS,
           });
 
           // // $FlowFixMe
