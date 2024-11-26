@@ -16,7 +16,6 @@ import nullthrows from 'nullthrows';
 import type {
   AssetNode,
   SimpleAssetGraph,
-  SimpleAssetGraphEdge,
   SimpleAssetGraphEdgeWeight,
 } from './bundleGraphToRootedGraph';
 

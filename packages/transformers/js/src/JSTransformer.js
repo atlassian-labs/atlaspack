@@ -1058,7 +1058,6 @@ export default (new Transformer({
         }
       }
 
-      console.log({code: code.toString(), needs_esm_helpers});
       if (needs_esm_helpers) {
         asset.addDependency({
           specifier: '@atlaspack/transformer-js/src/esmodule-helpers.js',

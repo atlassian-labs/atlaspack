@@ -3,9 +3,15 @@
 import sinon from 'sinon';
 import assert from 'assert';
 import {EdgeContentGraph} from '../src/DominatorBundler/EdgeContentGraph';
-import type {Asset} from '@atlaspack/types';
+import type {Asset, Dependency, Target} from '@atlaspack/types';
 import type {AssetNode, PackagedDominatorGraph} from '../src';
-import {addNodeToBundle} from '../src';
+import {addNodeToBundle, planBundleGraph} from '../src';
+
+// $FlowFixMe
+const makeDependency = (obj: mixed): Dependency => (obj: any);
+
+// $FlowFixMe
+const makeTarget = (obj: mixed): Target => (obj: any);
 
 // $FlowFixMe
 const makeAsset = (obj: mixed): Asset => (obj: any);
@@ -191,5 +197,147 @@ describe('addNodeToBundle', () => {
     assert(
       mockBundleGraph.addAssetToBundle.calledWith(mockNestedChild, mockBundle),
     );
+  });
+});
+
+describe('planBundleGraph', () => {
+  it('can plan an empty graph', () => {
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
+    const root = packages.addNodeByContentKey('root', 'root');
+    packages.setRootNodeId(root);
+
+    const entryDependenciesByAsset = new Map();
+    const asyncDependenciesByAsset = new Map();
+    const result = planBundleGraph(
+      packages,
+      entryDependenciesByAsset,
+      asyncDependenciesByAsset,
+    );
+
+    assert.deepEqual(result, {
+      bundles: [],
+      bundleGroups: [],
+    });
+  });
+
+  it('can plan a graph with a single asset node', () => {
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
+    const root = packages.addNodeByContentKey('root', 'root');
+    packages.setRootNodeId(root);
+    const entryAsset = makeAsset({});
+    const target = makeTarget({});
+    const entryDep = makeDependency({target});
+    const asset = packages.addNodeByContentKey('asset', {
+      type: 'asset',
+      id: 'asset',
+      asset: entryAsset,
+      entryDependency: entryDep,
+      target,
+      isEntryNode: true,
+    });
+    packages.addEdge(root, asset);
+
+    const entryDependenciesByAsset = new Map();
+    entryDependenciesByAsset.set(asset, [
+      {
+        assetNode: {type: 'asset', id: 'asset', asset: entryAsset},
+        entryDependency: entryDep,
+      },
+    ]);
+    const asyncDependenciesByAsset = new Map();
+
+    const result = planBundleGraph(
+      packages,
+      entryDependenciesByAsset,
+      asyncDependenciesByAsset,
+    );
+
+    const expectedBundles = [
+      {
+        entryAsset,
+        needsStableName: true,
+        target,
+      },
+    ];
+
+    assert.deepStrictEqual(result, {
+      bundles: expectedBundles,
+      bundleGroups: [
+        {
+          entryDep,
+          target,
+          bundles: expectedBundles,
+        },
+      ],
+    });
+  });
+
+  it('can plan a graph with two async dependant bundles', () => {
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
+    const root = packages.addNodeByContentKey('root', 'root');
+    packages.setRootNodeId(root);
+    const entryAsset = makeAsset({});
+    const asyncAssetValue = makeAsset({});
+    const target = makeTarget({});
+    const entryDep = makeDependency({
+      target,
+    });
+    const assetNode = {
+      type: 'asset',
+      id: 'asset',
+      asset: entryAsset,
+      entryDependency: entryDep,
+      target,
+      isEntryNode: true,
+    };
+    const asset = packages.addNodeByContentKey('asset', assetNode);
+    packages.addEdge(root, asset);
+    const asyncAsset = packages.addNodeByContentKey('async-asset', {
+      type: 'asset',
+      id: 'async-asset',
+      asset: asyncAssetValue,
+      entryDependency: null,
+      target: null,
+      isEntryNode: false,
+    });
+    packages.addEdge(root, asyncAsset);
+
+    const entryDependenciesByAsset = new Map();
+    entryDependenciesByAsset.set(asset, [
+      {assetNode, entryDependency: entryDep},
+    ]);
+    entryDependenciesByAsset.set(asyncAsset, [
+      {assetNode, entryDependency: entryDep},
+    ]);
+    const asyncDependenciesByAsset = new Map();
+
+    const result = planBundleGraph(
+      packages,
+      entryDependenciesByAsset,
+      asyncDependenciesByAsset,
+    );
+
+    const expectedBundles = [
+      {
+        entryAsset,
+        needsStableName: true,
+        target,
+      },
+      {
+        entryAsset: asyncAssetValue,
+        needsStableName: false,
+        target,
+      },
+    ];
+    assert.deepStrictEqual(result, {
+      bundles: expectedBundles,
+      bundleGroups: [
+        {
+          entryDep,
+          target,
+          bundles: expectedBundles,
+        },
+      ],
+    });
   });
 });

@@ -9,7 +9,6 @@ import type {AcyclicGraph} from './oneCycleBreaker';
 import type {
   AssetNode,
   SimpleAssetGraph,
-  SimpleAssetGraphEdge,
   SimpleAssetGraphEdgeWeight,
   SimpleAssetGraphNode,
 } from './bundleGraphToRootedGraph';

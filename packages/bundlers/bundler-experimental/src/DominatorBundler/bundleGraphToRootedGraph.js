@@ -13,11 +13,8 @@ export type AssetNode = {|
   type: 'asset',
   id: string,
   asset: Asset,
-  /**
-   * This should be a list
-   */
-  entryDependency: Dependency,
-  target: Target | null | void,
+  entryDependency: Dependency | null,
+  target: Target | null,
   /**
    * We mark the assets that are connected to entry dependencies.
    *
@@ -90,20 +87,24 @@ export function bundleGraphToRootedGraph(
     enter: (node, context) => {
       if (node.type === 'asset') {
         const asset = bundleGraph.getAssetById(node.value.id);
-        invariant(context != null);
         graph.addNodeByContentKey(node.value.id, {
           id: asset.id,
           type: 'asset',
           asset,
-          entryDependency: context.dependency,
-          target: context.target,
+          entryDependency: context?.dependency ?? null,
+          target: context?.target ?? null,
           isEntryNode: false,
         });
-      } else if (node.type === 'dependency') {
+        return context;
+      } else if (node.type === 'dependency' && node.value.isEntry) {
         return {
           dependency: node.value,
           target: node.value.target ?? context?.target,
         };
+      } else if (node.type === 'dependency') {
+        return null;
+      } else {
+        return context;
       }
     },
     exit: (node) => {

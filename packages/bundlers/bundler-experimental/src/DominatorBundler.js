@@ -26,6 +26,8 @@ import {
   buildPackageGraph,
   buildPackageInfos,
 } from './DominatorBundler/mergePackages';
+import {findNodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
+import nullthrows from 'nullthrows';
 
 export type DominatorBundlerInput = {|
   bundleGraph: MutableBundleGraph,
@@ -45,6 +47,7 @@ export default DominatorBundler;
 export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
   // console.log('dominator bundling');
   const {dominators, graph} = findAssetDominators(bundleGraph);
+
   // console.log('packages');
   const packages = createPackages(bundleGraph, dominators);
   // console.log(mergedDominatorsToDot('', packages));
@@ -61,6 +64,211 @@ export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
   intoBundleGraph(packages, bundleGraph, packageGraph);
 }
 
+function getEntryDepForNode(
+  node:
+    | AssetNode
+    | PackageNode
+    | StronglyConnectedComponentNode<AssetNode>
+    | 'root',
+): Dependency | null {
+  if (node === 'root') {
+    return null;
+  } else if (node.type === 'asset') {
+    return node.entryDependency;
+  } else if (node.type === 'package') {
+    for (const assetNode of node.entryPointAssets) {
+      return assetNode.entryDependency;
+    }
+  } else if (node.type === 'StronglyConnectedComponent') {
+    for (const assetNode of node.values) {
+      const result = getEntryDepForNode(assetNode);
+      if (result) {
+        return result;
+      }
+    }
+  }
+}
+
+function getTargetForNode(
+  node:
+    | AssetNode
+    | PackageNode
+    | StronglyConnectedComponentNode<AssetNode>
+    | 'root',
+): Target | null {
+  if (node === 'root') {
+    return null;
+  } else if (node.type === 'asset') {
+    return node.target;
+  } else if (node.type === 'package') {
+    return node.entryPointAssets[0]?.target;
+  } else if (node.type === 'StronglyConnectedComponent') {
+    for (const assetNode of node.values) {
+      const result = getEntryDepForNode(assetNode);
+      if (result) {
+        return result.target;
+      }
+    }
+  }
+}
+
+interface SimpleBundle {
+  entryAsset: Asset;
+  needsStableName: boolean;
+  target: Target;
+}
+
+interface SimpleBundleGroup {
+  entryDep: Dependency;
+  target: Target;
+  bundles: SimpleBundle[];
+}
+
+interface BundleGraphConversionResult {
+  bundles: SimpleBundle[];
+  bundleGroups: SimpleBundleGroup[];
+}
+
+export function planBundleGraph(
+  packages: PackagedDominatorGraph,
+  entryDependenciesByAsset: Map<
+    NodeId,
+    Set<{|assetNode: AssetNode, entryDependency: Dependency|}>,
+  >,
+  asyncDependenciesByAsset: Map<NodeId, Set<AssetNode>>,
+): BundleGraphConversionResult {
+  const packageNodes = getPackageNodes(packages);
+
+  // this is not right ; we needed to connect packages to their entries and
+  // treat the 'virtual' async import root packages we inserted differently
+
+  const result = {
+    bundles: [],
+    bundleGroups: [],
+  };
+
+  const bundleGroups = new Map();
+  const bundlesByPackageContentKey = new Map();
+
+  for (const nodeId of packageNodes) {
+    let node = packages.getNode(nodeId);
+    invariant(node !== 'root');
+    invariant(node != null);
+
+    const entryDep = entryDependenciesByAsset.get(nodeId)?.values().next()
+      ?.value?.entryDependency;
+    console.log({entryDep, nodeId});
+    invariant(entryDep != null);
+    const target = entryDep.target;
+    invariant(target != null);
+
+    let bundleGroup = bundleGroups.get(entryDep);
+    if (bundleGroup == null) {
+      console.log('creating bundle group for', entryDep);
+      bundleGroup = {entryDep, target, bundles: []};
+      result.bundleGroups.push(bundleGroup);
+      bundleGroups.set(entryDep, bundleGroup);
+    }
+    // console.log(node, entryDep, bundleGroup);
+
+    if (node.type === 'asset') {
+      // if (node.asset.type === 'js') {
+      const bundle = {
+        entryAsset: node.asset,
+        needsStableName: node.isEntryNode,
+        target,
+      };
+      bundlesByPackageContentKey.set(
+        packages.getContentKeyByNodeId(nodeId),
+        bundle,
+      );
+
+      // addNodeToBundle(packages, bundleGraph, bundle, nodeId);
+      // bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+      result.bundles.push(bundle);
+      bundleGroup.bundles.push(bundle);
+
+      // } else {
+      //   // TODO: handle other asset types
+      // }
+    } else if (node.type === 'package') {
+      const children = packages
+        .getNodeIdsConnectedFrom(nodeId)
+        .map((nodeId) => {
+          const node = packages.getNode(nodeId);
+          invariant(node != null && node !== 'root');
+          return node;
+        });
+
+      // this is not right
+      const sampleAsset = children.find((node) => node?.type === 'asset');
+      if (!sampleAsset) {
+        throw new Error('Could not find a sample asset to get environment for');
+      }
+
+      invariant(sampleAsset != null);
+      invariant(sampleAsset.type === 'asset');
+      const env = sampleAsset.asset.env;
+
+      // console.log('outputFormat', node, env.outputFormat);
+      const bundle = {
+        env,
+        type: sampleAsset.asset.type,
+        uniqueKey: node.id,
+        target,
+      };
+      bundlesByPackageContentKey.set(
+        packages.getContentKeyByNodeId(nodeId),
+        bundle,
+      );
+
+      result.bundles.push(bundle);
+      bundleGroup.bundles.push(bundle);
+
+      // addNodeToBundle(packages, bundleGraph, bundle, nodeId);
+      // bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+    } else if (node.type === 'StronglyConnectedComponent') {
+      const children = packages
+        .getNodeIdsConnectedFrom(nodeId)
+        .map((nodeId) => {
+          const node = packages.getNode(nodeId);
+          invariant(node != null && node !== 'root');
+          return node;
+        });
+      const sampleAsset = children.find((node) => node?.type === 'asset');
+      if (!sampleAsset) {
+        throw new Error('Could not find a sample asset to get environment for');
+      }
+
+      invariant(sampleAsset != null);
+      invariant(sampleAsset.type === 'asset');
+      const env = sampleAsset.asset.env;
+
+      const bundle = {
+        env,
+        type: 'js',
+        uniqueKey: node.id,
+        target,
+      };
+      bundlesByPackageContentKey.set(
+        packages.getContentKeyByNodeId(nodeId),
+        bundle,
+      );
+
+      result.bundles.push(bundle);
+      bundleGroup.bundles.push(bundle);
+
+      // addNodeToBundle(packages, bundleGraph, bundle, nodeId);
+      // bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+    } else {
+      node = (node: empty);
+    }
+    // console.log('done', nodeId);
+  }
+
+  return result;
+}
+
 export function intoBundleGraph(
   packages: PackagedDominatorGraph,
   bundleGraph: MutableBundleGraph,
@@ -70,56 +278,6 @@ export function intoBundleGraph(
 
   // this is not right ; we needed to connect packages to their entries and
   // treat the 'virtual' async import root packages we inserted differently
-
-  const getEntryDepForNode = (
-    node:
-      | AssetNode
-      | PackageNode
-      | StronglyConnectedComponentNode<AssetNode>
-      | 'root',
-  ) => {
-    if (node === 'root') {
-      return null;
-    } else if (node.type === 'asset') {
-      return node.entryDependency;
-    } else if (node.type === 'package') {
-      for (const assetNode of node.entryPointAssets) {
-        return assetNode.entryDependency;
-      }
-    } else if (node.type === 'StronglyConnectedComponent') {
-      for (const assetNode of node.values) {
-        const result = getEntryDepForNode(assetNode);
-        if (result) {
-          return result;
-        }
-      }
-    }
-  };
-
-  const getTargetForNode = (
-    node:
-      | AssetNode
-      | PackageNode
-      | StronglyConnectedComponentNode<AssetNode>
-      | 'root',
-  ): Target | null | void => {
-    if (node === 'root') {
-      return null;
-    } else if (node.type === 'asset') {
-      return node.target;
-    } else if (node.type === 'package') {
-      for (const assetNode of node.entryPointAssets) {
-        return assetNode.target;
-      }
-    } else if (node.type === 'StronglyConnectedComponent') {
-      for (const assetNode of node.values) {
-        const result = getEntryDepForNode(assetNode);
-        if (result) {
-          return result.target;
-        }
-      }
-    }
-  };
 
   const bundleGroups = new Map();
   const bundlesByPackageContentKey = new Map();
@@ -136,6 +294,7 @@ export function intoBundleGraph(
 
     let bundleGroup = bundleGroups.get(entryDep);
     if (bundleGroup == null) {
+      console.log('creating bundle group for', entryDep);
       bundleGroup = bundleGraph.createBundleGroup(entryDep, target);
       bundleGroups.set(entryDep, bundleGroup);
     }
@@ -190,7 +349,7 @@ export function intoBundleGraph(
       );
 
       addNodeToBundle(packages, bundleGraph, bundle, nodeId);
-      bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+      // bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
     } else if (node.type === 'StronglyConnectedComponent') {
       const children = packages
         .getNodeIdsConnectedFrom(nodeId)

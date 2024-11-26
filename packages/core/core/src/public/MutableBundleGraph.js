@@ -261,7 +261,10 @@ export default class MutableBundleGraph
   }
 
   addBundleToBundleGroup(bundle: IBundle, bundleGroup: IBundleGroup) {
-    console.log('addBundleToBundleGroup', bundle, bundleGroup);
+    console.log('addBundleToBundleGroup', bundle, {
+      bundleGroup,
+      dep: bundleGroup.entryAssetId,
+    });
     this.#graph.addBundleToBundleGroup(
       bundleToInternalBundle(bundle),
       bundleGroupToInternalBundleGroup(bundleGroup),
@@ -282,7 +285,18 @@ export default class MutableBundleGraph
   }
 
   createBundleReference(from: IBundle, to: IBundle): void {
-    console.log('createBundleReference', from, to);
+    const label = (bundle) => {
+      const assets = [];
+      bundle.traverseAssets((asset) => {
+        assets.push(asset.filePath);
+      });
+      return assets[0];
+    };
+    console.log(
+      'createBundleReference',
+      {from, fromDep: label(from)},
+      {to, toDep: label(to)},
+    );
     return this.#graph.createBundleReference(
       bundleToInternalBundle(from),
       bundleToInternalBundle(to),

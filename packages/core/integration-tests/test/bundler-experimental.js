@@ -14,7 +14,7 @@ import {
 describe('bundler-experimental', () => {
   describe('parity tests', () => {
     const bundlers = [
-      '@atlaspack/bundler-default',
+      // '@atlaspack/bundler-default',
       '@atlaspack/bundler-experimental',
     ];
 
@@ -163,7 +163,8 @@ describe('bundler-experimental', () => {
           expect(await output).toEqual(1234);
         });
 
-        it('can bundle async splits without duplicating parent dependencies', async () => {
+        it.only('can bundle async splits without duplicating parent dependencies', async () => {
+          // TMP diff to test shared bundles
           await fsFixture(overlayFS, __dirname)`
       bundler-experimental
         async.js:
@@ -172,14 +173,34 @@ describe('bundler-experimental', () => {
 
         dependency.js:
           module.exports = () => 1200;
-        index.js:
+
+        page1.js:
           const get = require('./dependency');
-          output(import('./async').then((get2) => {
+          module.exports = (output) => output(import('./async').then((get2) => {
             return get() + get2();
           }));
 
+        page2.js:
+          const get = require('./dependency');
+          module.exports = (output) => output(import('./async').then((get2) => {
+            return get() + get2();
+          }));
+
+        index.js:
+          import('./page1').then((page) => {
+            page(output);
+          });
+          import('./page2').then((page) => {
+            page(output);
+          });
+
         package.json:
-          {}
+          {
+             "@atlaspack/bundler-default": {
+                "minBundleSize": 0
+             }
+          }
+
         yarn.lock:
           {}
 
@@ -196,17 +217,29 @@ describe('bundler-experimental', () => {
           });
 
           // // $FlowFixMe
-          // expectBundles(inputDir, b, [
-          //   {
-          //     type: 'js',
-          //     assets: ['async.js'],
-          //   },
-          //   {
-          //     type: 'js',
-          //     name: 'index.js',
-          //     assets: ['dependency.js', 'index.js'],
-          //   },
-          // ]);
+          expectBundles(inputDir, b, [
+            {
+              type: 'js',
+              assets: ['async.js'],
+            },
+            {
+              type: 'js',
+              name: 'index.js',
+              assets: ['index.js'],
+            },
+            {
+              type: 'js',
+              assets: ['dependency.js'],
+            },
+            {
+              type: 'js',
+              assets: ['page1.js'],
+            },
+            {
+              type: 'js',
+              assets: ['page2.js'],
+            },
+          ]);
 
           let output = null;
           graphs.set(bundler, b);
