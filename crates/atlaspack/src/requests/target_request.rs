@@ -232,12 +232,12 @@ impl TargetRequest {
     Ok(inferred_output_format)
   }
 
-  fn load_package_json(
+  fn load_engine_and_browser_config(
     &self,
     request_context: RunRequestContext,
   ) -> Result<ConfigFile<PackageJson>, anyhow::Error> {
     // TODO Invalidations
-    let mut package_json = match request_context.config().load_package_json::<PackageJson>() {
+    let mut config = match request_context.config().load_package_json::<PackageJson>() {
       Err(err) => {
         let diagnostic = err.downcast_ref::<Diagnostic>();
 
@@ -254,10 +254,11 @@ impl TargetRequest {
       Ok(pkg) => pkg,
     };
 
-    if let Some(e) = package_json.contents.engines.as_ref() {
-      let browsers = e.browsers.clone().unwrap_or_default();
-      if !Browsers::from(browsers).is_empty() {
-        return Ok(package_json);
+    if let Some(e) = config.contents.engines.as_ref() {
+      if let Some(browsers) = &e.browsers {
+        if !Browsers::from(browsers.clone()).is_empty() {
+          return Ok(config);
+        }
       }
     }
 
@@ -268,52 +269,70 @@ impl TargetRequest {
       .map(|e| e.to_owned())
       .unwrap_or_else(|| self.mode.to_string());
 
-    match package_json.contents.browserslist.clone() {
-      // TODO: Process browserslist config file
-      None => {}
-      Some(browserslist) => {
-        let browserslist = match browserslist {
-          BrowsersList::Browser(browser) => vec![browser],
-          BrowsersList::Browsers(browsers) => browsers,
-          BrowsersList::BrowsersByEnv(browsers_by_env) => {
-            browsers_by_env.get(&env).cloned().unwrap_or_default()
-          }
-        };
+    let browsers = match config.contents.browserslist.clone() {
+      None => {
+        // Loading .browserslistrc
+        let browserslistrc = request_context
+          .file_system()
+          .read_to_string(
+            &request_context
+              .config()
+              .project_root
+              .join(".browserslistrc"),
+          )
+          .ok();
+        println!("Loaded {:?}", browserslistrc);
 
-        package_json.contents.engines = Some(Engines {
-          browsers: Some(EnginesBrowsers::new(browserslist)),
-          ..package_json.contents.engines.unwrap_or_default()
-        });
+        if let Some(browserslistrc) = browserslistrc {
+          Some(EnginesBrowsers::from_browserslistrc(browserslistrc)?)
+        } else {
+          None
+        }
       }
+      Some(browserslist) => Some(EnginesBrowsers::new(match browserslist {
+        BrowsersList::Browser(browser) => vec![browser],
+        BrowsersList::Browsers(browsers) => browsers,
+        BrowsersList::BrowsersByEnv(browsers_by_env) => {
+          browsers_by_env.get(&env).cloned().unwrap_or_default()
+        }
+      })),
     };
 
-    Ok(package_json)
+    if let Some(browserslist) = browsers {
+      config.contents.engines = Some(Engines {
+        browsers: Some(browserslist),
+        ..config.contents.engines.unwrap_or_default()
+      });
+    }
+
+    Ok(config)
   }
 
   fn resolve_package_targets(
     &self,
     request_context: RunRequestContext,
   ) -> Result<Vec<Option<Target>>, anyhow::Error> {
-    let package_json = self.load_package_json(request_context)?;
+    let config = self.load_engine_and_browser_config(request_context)?;
     let mut targets: Vec<Option<Target>> = Vec::new();
 
+    println!("Config browsers {:?}", config.contents.engines);
     let builtin_targets = [
       self.builtin_browser_target(
-        package_json.contents.targets.browser.clone(),
-        package_json.contents.browser.clone(),
-        package_json.contents.name.clone(),
+        config.contents.targets.browser.clone(),
+        config.contents.browser.clone(),
+        config.contents.name.clone(),
       ),
       self.builtin_main_target(
-        package_json.contents.targets.main.clone(),
-        package_json.contents.main.clone(),
+        config.contents.targets.main.clone(),
+        config.contents.main.clone(),
       ),
       self.builtin_module_target(
-        package_json.contents.targets.module.clone(),
-        package_json.contents.module.clone(),
+        config.contents.targets.module.clone(),
+        config.contents.module.clone(),
       ),
       self.builtin_types_target(
-        package_json.contents.targets.types.clone(),
-        package_json.contents.types.clone(),
+        config.contents.targets.types.clone(),
+        config.contents.types.clone(),
       ),
     ];
 
@@ -327,7 +346,7 @@ impl TargetRequest {
         BuiltInTargetDescriptor::TargetDescriptor(builtin_target_descriptor) => {
           targets.push(self.target_from_descriptor(
             builtin_target.dist,
-            &package_json,
+            &config,
             builtin_target_descriptor,
             builtin_target.name,
           )?);
@@ -335,7 +354,7 @@ impl TargetRequest {
       }
     }
 
-    let custom_targets = package_json
+    let custom_targets = config
       .contents
       .targets
       .custom_targets
@@ -344,14 +363,14 @@ impl TargetRequest {
 
     for custom_target in custom_targets {
       let mut dist = None;
-      if let Some(value) = package_json.contents.fields.get(custom_target.name) {
+      if let Some(value) = config.contents.fields.get(custom_target.name) {
         match value {
           serde_json::Value::String(str) => {
             dist = Some(PathBuf::from(str));
           }
           _ => {
             return Err(diagnostic_error!(DiagnosticBuilder::default()
-              .code_frames(vec![CodeFrame::from(&package_json)])
+              .code_frames(vec![CodeFrame::from(&config)])
               .message(format!("Invalid path for target {}", custom_target.name))));
           }
         }
@@ -359,33 +378,33 @@ impl TargetRequest {
 
       targets.push(self.target_from_descriptor(
         dist,
-        &package_json,
+        &config,
         custom_target.descriptor.clone(),
         custom_target.name,
       )?);
     }
 
     if targets.is_empty() {
-      let context = self.infer_environment_context(&package_json.contents, None);
+      let context = self.infer_environment_context(&config.contents, None);
 
       let is_library = self.default_target_options.is_library.unwrap_or(false);
-      let package_json_engines = package_json
+      let config_engines = config
         .contents
         .engines
         .unwrap_or_else(|| self.get_default_engines_for_context(context));
 
-      tracing::debug!("Package JSON engines: {:?}", package_json_engines);
+      tracing::debug!("Package JSON engines: {:?}", config_engines);
 
       targets.push(Some(Target {
         dist_dir: self
           .default_target_options
           .dist_dir
           .clone()
-          .unwrap_or_else(|| default_dist_dir(&package_json.path)),
+          .unwrap_or_else(|| default_dist_dir(&config.path)),
         dist_entry: None,
         env: Arc::new(Environment {
           context,
-          engines: package_json_engines,
+          engines: config_engines,
           include_node_modules: IncludeNodeModules::from(context),
           is_library,
           loc: None,
@@ -704,7 +723,10 @@ mod tests {
     PathBuf::from("packages").join("test")
   }
 
-  async fn targets_from_package_json(package_json: String) -> Result<RequestResult, anyhow::Error> {
+  async fn targets_from_config(
+    package_json: String,
+    browserslistrc: Option<String>,
+  ) -> Result<RequestResult, anyhow::Error> {
     let fs = InMemoryFileSystem::default();
     let project_root = PathBuf::default();
     let package_dir = package_dir();
@@ -713,6 +735,10 @@ mod tests {
       &project_root.join(&package_dir).join("package.json"),
       package_json,
     );
+
+    if let Some(browserslistrc) = browserslistrc {
+      fs.write_file(&project_root.join(".browserslistrc"), browserslistrc);
+    }
 
     let request = TargetRequest {
       default_target_options: DefaultTargetOptions::default(),
@@ -739,9 +765,10 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_builtin_target_is_true() {
     for builtin_target in BUILT_IN_TARGETS {
-      let targets = targets_from_package_json(format!(
-        r#"{{ "targets": {{ "{builtin_target}": true }} }}"#,
-      ))
+      let targets = targets_from_config(
+        format!(r#"{{ "targets": {{ "{builtin_target}": true }} }}"#,),
+        None,
+      )
       .await;
 
       assert_eq!(
@@ -756,8 +783,11 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_builtin_target_does_not_reference_expected_extension() {
     for builtin_target in BUILT_IN_TARGETS {
-      let targets =
-        targets_from_package_json(format!(r#"{{ "{}": "dist/main.rs" }}"#, builtin_target)).await;
+      let targets = targets_from_config(
+        format!(r#"{{ "{}": "dist/main.rs" }}"#, builtin_target),
+        None,
+      )
+      .await;
 
       assert_eq!(
         targets.map_err(to_deterministic_error),
@@ -773,13 +803,16 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_builtin_target_has_global_output_format() {
     for builtin_target in BUILT_IN_TARGETS {
-      let targets = targets_from_package_json(format!(
-        r#"{{
+      let targets = targets_from_config(
+        format!(
+          r#"{{
           "targets": {{
             "{builtin_target}": {{ "outputFormat": "global" }}
           }}
         }}"#
-      ))
+        ),
+        None,
+      )
       .await;
 
       assert_eq!(
@@ -796,8 +829,9 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_output_format_does_not_match_inferred_output_format() {
     let assert_error = move |ext, module_format: Option<&'static str>, output_format| async move {
-      let targets = targets_from_package_json(format!(
-        r#"
+      let targets = targets_from_config(
+        format!(
+          r#"
           {{
             {}
             "custom": "dist/custom.{ext}",
@@ -808,11 +842,13 @@ mod tests {
             }}
           }}
         "#,
-        module_format.map_or_else(
-          || String::default(),
-          |module_format| format!(r#""type": "{module_format}","#)
+          module_format.map_or_else(
+            || String::default(),
+            |module_format| format!(r#""type": "{module_format}","#)
+          ),
         ),
-      ))
+        None,
+      )
       .await;
 
       assert_eq!(
@@ -841,7 +877,7 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_scope_hoisting_disabled_for_library_targets() {
     let assert_error = move |name, package_json| async move {
-      let targets = targets_from_package_json(package_json).await;
+      let targets = targets_from_config(package_json, None).await;
 
       assert_eq!(
         targets.map_err(to_deterministic_error),
@@ -920,9 +956,10 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_target_when_builtin_targets_are_disabled() {
     for builtin_target in BUILT_IN_TARGETS {
-      let targets = targets_from_package_json(format!(
-        r#"{{ "targets": {{ "{builtin_target}": false }} }}"#
-      ))
+      let targets = targets_from_config(
+        format!(r#"{{ "targets": {{ "{builtin_target}": false }} }}"#),
+        None,
+      )
       .await;
 
       assert_eq!(
@@ -937,7 +974,7 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_target_when_no_targets_are_specified() {
-    let targets = targets_from_package_json(String::from("{}")).await;
+    let targets = targets_from_config(String::from("{}"), None).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -961,7 +998,7 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_browser_target() {
     let targets =
-      targets_from_package_json(String::from(r#"{ "browser": "build/browser.js" }"#)).await;
+      targets_from_config(String::from(r#"{ "browser": "build/browser.js" }"#), None).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -988,8 +1025,9 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_builtin_browser_target() {
-    let targets = targets_from_package_json(String::from(
-      r#"
+    let targets = targets_from_config(
+      String::from(
+        r#"
         {
           "browser": "build/browser.js",
           "targets": {
@@ -999,7 +1037,9 @@ mod tests {
           }
         }
       "#,
-    ))
+      ),
+      None,
+    )
     .await;
 
     assert_eq!(
@@ -1027,7 +1067,7 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_main_target() {
-    let targets = targets_from_package_json(String::from(r#"{ "main": "./build/main.js" }"#)).await;
+    let targets = targets_from_config(String::from(r#"{ "main": "./build/main.js" }"#), None).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1050,8 +1090,9 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_builtin_main_target() {
-    let targets = targets_from_package_json(String::from(
-      r#"
+    let targets = targets_from_config(
+      String::from(
+        r#"
         {
           "main": "./build/main.js",
           "targets": {
@@ -1061,7 +1102,9 @@ mod tests {
           }
         }
       "#,
-    ))
+      ),
+      None,
+    )
     .await;
 
     assert_eq!(
@@ -1086,7 +1129,7 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_module_target() {
-    let targets = targets_from_package_json(String::from(r#"{ "module": "module.js" }"#)).await;
+    let targets = targets_from_config(String::from(r#"{ "module": "module.js" }"#), None).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1109,8 +1152,9 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_builtin_module_target() {
-    let targets = targets_from_package_json(String::from(
-      r#"
+    let targets = targets_from_config(
+      String::from(
+        r#"
         {
           "module": "module.js",
           "targets": {
@@ -1120,7 +1164,9 @@ mod tests {
           }
         }
       "#,
-    ))
+      ),
+      None,
+    )
     .await;
 
     assert_eq!(
@@ -1145,8 +1191,9 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_builtin_types_target() {
-    let targets = targets_from_package_json(String::from(
-      r#"
+    let targets = targets_from_config(
+      String::from(
+        r#"
         {
           "types": "./types.d.ts",
           "targets": {
@@ -1156,7 +1203,9 @@ mod tests {
           }
         }
       "#,
-    ))
+      ),
+      None,
+    )
     .await;
 
     assert_eq!(
@@ -1180,7 +1229,7 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_types_target() {
-    let targets = targets_from_package_json(String::from(r#"{ "types": "./types.d.ts" }"#)).await;
+    let targets = targets_from_config(String::from(r#"{ "types": "./types.d.ts" }"#), None).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1203,8 +1252,9 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_builtin_targets() {
-    let targets = targets_from_package_json(String::from(
-      r#"
+    let targets = targets_from_config(
+      String::from(
+        r#"
         {
           "browser": "build/browser.js",
           "main": "./build/main.js",
@@ -1213,7 +1263,9 @@ mod tests {
           "browserslist": ["chrome 20"]
         }
       "#,
-    ))
+      ),
+      None,
+    )
     .await;
 
     let env = || Environment {
@@ -1283,7 +1335,7 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_custom_targets_with_defaults() {
     let targets =
-      targets_from_package_json(String::from(r#"{ "targets": { "custom": {} } } "#)).await;
+      targets_from_config(String::from(r#"{ "targets": { "custom": {} } } "#), None).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1313,8 +1365,9 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_custom_targets() {
-    let targets = targets_from_package_json(String::from(
-      r#"
+    let targets = targets_from_config(
+      String::from(
+        r#"
         {
           "custom": "dist/custom.js",
           "targets": {
@@ -1326,7 +1379,9 @@ mod tests {
           }
         }
       "#,
-    ))
+      ),
+      None,
+    )
     .await;
 
     assert_eq!(
@@ -1353,8 +1408,9 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_inferred_custom_browser_target() {
-    let targets = targets_from_package_json(String::from(
-      r#"
+    let targets = targets_from_config(
+      String::from(
+        r#"
         {
           "custom": "dist/custom.js",
           "browserslist": ["chrome 20", "firefox > 1"],
@@ -1363,7 +1419,59 @@ mod tests {
           }
         }
       "#,
-    ))
+      ),
+      None,
+    )
+    .await;
+
+    assert_eq!(
+      targets.map_err(|e| e.to_string()),
+      Ok(RequestResult::Target(TargetRequestOutput {
+        entry: PathBuf::default(),
+        targets: vec![Target {
+          dist_dir: package_dir().join("dist"),
+          dist_entry: Some(PathBuf::from("custom.js")),
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Browser,
+            engines: Engines {
+              browsers: Some(EnginesBrowsers::new(vec![
+                String::from("chrome 20"),
+                String::from("firefox > 1"),
+              ])),
+              ..Engines::default()
+            },
+            include_node_modules: IncludeNodeModules::Bool(true),
+            output_format: OutputFormat::Global,
+            should_optimize: true,
+            ..Environment::default()
+          }),
+          name: String::from("custom"),
+          ..Target::default()
+        }]
+      }))
+    );
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_inferred_custom_browser_target_with_browserslistrc() {
+    let targets = targets_from_config(
+      String::from(
+        r#"
+        {
+          "custom": "dist/custom.js",
+          "targets": {
+            "custom": {}
+          }
+        }
+      "#,
+      ),
+      Some(String::from(
+        r#"
+          chrome 20
+          firefox > 1
+      "#,
+      )),
+    )
     .await;
 
     assert_eq!(
@@ -1420,15 +1528,18 @@ mod tests {
     };
 
     assert_targets(
-      targets_from_package_json(String::from(
-        r#"
+      targets_from_config(
+        String::from(
+          r#"
           {
             "custom": "dist/custom.js",
             "engines": { "node": "^1.0.0" },
             "targets": { "custom": {} }
           }
         "#,
-      ))
+        ),
+        None,
+      )
       .await,
       Engines {
         node: Some(Version::new(NonZeroU16::new(1).unwrap(), 0)),
@@ -1437,8 +1548,9 @@ mod tests {
     );
 
     assert_targets(
-      targets_from_package_json(String::from(
-        r#"
+      targets_from_config(
+        String::from(
+          r#"
           {
             "custom": "dist/custom.js",
             "engines": { "node": "^1.0.0" },
@@ -1446,11 +1558,13 @@ mod tests {
             "targets": { "custom": {} }
           }
         "#,
-      ))
+        ),
+        None,
+      )
       .await,
       Engines {
         node: Some(Version::new(NonZeroU16::new(1).unwrap(), 0)),
-        browsers: None,
+        browsers: Some(EnginesBrowsers::new(vec![String::from("chrome 20")])),
         ..Engines::default()
       },
     );
@@ -1459,8 +1573,9 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_custom_target_when_output_format_matches_inferred_output_format() {
     let assert_targets = move |ext, module_format: Option<ModuleFormat>, output_format| async move {
-      let targets = targets_from_package_json(format!(
-        r#"
+      let targets = targets_from_config(
+        format!(
+          r#"
           {{
             {}
             "custom": "dist/custom.{ext}",
@@ -1471,11 +1586,13 @@ mod tests {
             }}
           }}
         "#,
-        module_format.map_or_else(
-          || String::default(),
-          |module_format| format!(r#""type": "{module_format}","#)
+          module_format.map_or_else(
+            || String::default(),
+            |module_format| format!(r#""type": "{module_format}","#)
+          ),
         ),
-      ))
+        None,
+      )
       .await;
 
       assert_eq!(

@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use browserslist::Distrib;
 use serde::Deserialize;
 use serde::Serialize;
@@ -34,6 +35,33 @@ impl EnginesBrowsers {
       Self::List(list) => list.clone(),
       Self::String(string) => vec![string.clone()],
     }
+  }
+
+  pub fn from_browserslistrc(content: String) -> anyhow::Result<Self> {
+    let mut query = Vec::new();
+
+    for line in content.lines() {
+      let line = line.trim();
+
+      if line.is_empty() || line.starts_with('#') {
+        continue;
+      }
+
+      if line.starts_with("extends ") {
+        return Err(anyhow!("Browserlist extends not supported in Atlaspack V3"));
+      }
+
+      query.push(
+        line
+          .chars()
+          .take_while(|&ch| ch != '#')
+          .collect::<String>()
+          .trim()
+          .to_string(),
+      );
+    }
+
+    Ok(Self::List(query))
   }
 
   pub fn resolve(&self) -> Vec<Distrib> {
