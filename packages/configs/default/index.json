@@ -9,7 +9,6 @@
       "..."
     ],
     "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": [
-      "@atlaspack/transformer-babel",
       "@atlaspack/transformer-js",
       "@atlaspack/transformer-react-refresh-wrap"
     ],

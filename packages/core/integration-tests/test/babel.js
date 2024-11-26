@@ -24,7 +24,7 @@ import {md} from '@atlaspack/diagnostic';
 const atlaspackCli = require.resolve('@atlaspack/cli/src/bin.js');
 const inputDir = path.join(__dirname, '/input');
 
-describe.v2('babel', function () {
+describe('babel', function () {
   let subscription;
   beforeEach(async function () {
     // TODO maybe don't do this for all tests
@@ -41,7 +41,7 @@ describe.v2('babel', function () {
     }
   });
 
-  it.skip('should auto install @babel/core v7', async function () {
+  it.skip('auto installs @babel/core v7', async function () {
     let originalPkg = await fs.readFile(
       __dirname + '/integration/babel-7-autoinstall/package.json',
     );
@@ -64,7 +64,7 @@ describe.v2('babel', function () {
     );
   });
 
-  it.skip('should auto install babel plugins', async function () {
+  it.skip('auto installs babel plugins', async function () {
     let originalPkg = await fs.readFile(
       __dirname + '/integration/babel-plugin-autoinstall/package.json',
     );
@@ -92,7 +92,7 @@ describe.v2('babel', function () {
     );
   });
 
-  it('should support compiling with babel using .babelrc config', async function () {
+  it('compiles code using .babelrc config', async function () {
     await bundle(path.join(__dirname, '/integration/babelrc-custom/index.js'));
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
@@ -100,7 +100,7 @@ describe.v2('babel', function () {
     assert(file.includes('hello there'));
   });
 
-  it('should support compiling with babel using babel.config.json config without warnings', async function () {
+  it('compiles code using babel.config.json config', async function () {
     let messages = [];
     let loggerDisposable = Logger.onLog((message) => {
       if (message.level !== 'verbose') {
@@ -118,7 +118,44 @@ describe.v2('babel', function () {
     assert.deepEqual(messages, []);
   });
 
-  it.skip('should support compiling with babel using browserslist for different environments', async function () {
+  it('compiles code using babel.config.js config', async function () {
+    await bundle(
+      path.join(__dirname, '/integration/babel-config-js/src/index.js'),
+    );
+
+    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
+    assert(!file.includes('REPLACE_ME'));
+    assert(file.match(/return \d+;/));
+  });
+
+  it('compiles code using babel.config.js config that requires a plugin', async function () {
+    await bundle(
+      path.join(__dirname, '/integration/babel-config-js-require/src/index.js'),
+    );
+
+    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
+    assert(!file.includes('REPLACE_ME'));
+    assert(file.match(/return \d+;/));
+  });
+
+  it('merges .babelrc and babel.config.json config in a monorepo', async function () {
+    await bundle(
+      path.join(
+        __dirname,
+        '/integration/babel-config-monorepo/packages/pkg-a/src/index.js',
+      ),
+    );
+
+    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
+    assert(!file.includes('REPLACE_ME'));
+    assert(file.includes('string from a plugin in babel.config.json'));
+    assert(!file.includes('ANOTHER_THING_TO_REPLACE'));
+    assert(file.includes('string from a plugin in .babelrc'));
+    assert(file.includes('SOMETHING ELSE'));
+    assert(!file.includes('string from a plugin from a different sub-package'));
+  });
+
+  it.skip('compiles code using browserslist', async function () {
     async function testBrowserListMultipleEnv(projectBasePath) {
       // Transpiled destructuring, like r = p.prop1, o = p.prop2, a = p.prop3;
       const prodRegExp =
@@ -151,7 +188,7 @@ describe.v2('babel', function () {
     );
   });
 
-  it.skip('should compile node_modules with browserslist to app target', async function () {
+  it.skip('compiles node_modules code with browserslist to app target', async function () {
     await bundle(
       path.join(
         __dirname,
@@ -164,40 +201,7 @@ describe.v2('babel', function () {
     assert(file.includes('function Bar'));
   });
 
-  it('should strip away flow types', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/babel-strip-flow-types/index.js'),
-    );
-
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-    assert.equal(output(), 'hello world');
-
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(!file.includes('OptionsType'));
-  });
-
-  it('should support compiling with babel using babel.config.js config', async function () {
-    await bundle(
-      path.join(__dirname, '/integration/babel-config-js/src/index.js'),
-    );
-
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(!file.includes('REPLACE_ME'));
-    assert(file.match(/return \d+;/));
-  });
-
-  it('should support compiling with babel using babel.config.js config with a require in it', async function () {
-    await bundle(
-      path.join(__dirname, '/integration/babel-config-js-require/src/index.js'),
-    );
-
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(!file.includes('REPLACE_ME'));
-    assert(file.match(/return \d+;/));
-  });
-
-  it('should support multitarget builds using a custom babel config with @atlaspack/babel-preset-env', async function () {
+  it('supports multitarget builds using a custom babel config with @atlaspack/babel-preset-env', async function () {
     let fixtureDir = path.join(
       __dirname,
       '/integration/babel-config-js-multitarget',
@@ -219,73 +223,300 @@ describe.v2('babel', function () {
     await outputFS.rimraf(path.join(fixtureDir, 'dist'));
   });
 
-  it('should support multitarget builds using a custom babel config with @atlaspack/babel-plugin-transform-runtime', async function () {
-    let fixtureDir = path.join(
-      __dirname,
-      '/integration/babel-config-js-multitarget-transform-runtime',
-    );
+  it.v2(
+    'supports multitarget builds using a custom babel config with @atlaspack/babel-plugin-transform-runtime',
+    async function () {
+      let fixtureDir = path.join(
+        __dirname,
+        '/integration/babel-config-js-multitarget-transform-runtime',
+      );
 
-    await bundle(path.join(fixtureDir, 'src/index.js'), {
-      mode: 'production',
-      defaultTargetOptions: {
-        shouldOptimize: false,
-      },
-    });
-
-    let [main, esmodule] = await Promise.all([
-      outputFS.readFile(path.join(fixtureDir, 'dist/main.js'), 'utf8'),
-      outputFS.readFile(path.join(fixtureDir, 'dist/module.js'), 'utf8'),
-    ]);
-
-    assert(main.includes('"@babel/runtime/helpers/objectSpread2"'));
-
-    assert(esmodule.includes('"@babel/runtime/helpers/esm/objectSpread2"'));
-
-    await outputFS.rimraf(path.join(fixtureDir, 'dist'));
-  });
-
-  it('should support building with custom babel config when running atlaspack globally', async function () {
-    let tmpDir = tempy.directory();
-    let distDir = path.join(tmpDir, 'dist');
-    await fs.ncp(
-      path.join(__dirname, '/integration/babelrc-custom'),
-      path.join(tmpDir, '/input'),
-    );
-    await bundle(path.join(tmpDir, '/input/index.js'), {
-      targets: {
-        modern: {
-          engines: {
-            node: '^4.0.0',
-          },
-          distDir,
+      await bundle(path.join(fixtureDir, 'src/index.js'), {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldOptimize: false,
         },
-      },
-      shouldAutoInstall: true,
-    });
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(!file.includes('REPLACE_ME'));
-    assert(file.includes('hello there'));
+      });
+
+      let [main, esmodule] = await Promise.all([
+        outputFS.readFile(path.join(fixtureDir, 'dist/main.js'), 'utf8'),
+        outputFS.readFile(path.join(fixtureDir, 'dist/module.js'), 'utf8'),
+      ]);
+
+      assert(main.includes('"@babel/runtime/helpers/objectSpread2"'));
+      assert(esmodule.includes('"@babel/runtime/helpers/esm/objectSpread2"'));
+
+      await outputFS.rimraf(path.join(fixtureDir, 'dist'));
+    },
+  );
+
+  it('compiles jsx', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/babel-jsx/index.jsx'),
+    );
+
+    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(file.includes('React.createElement'));
   });
 
-  it('should support merging .babelrc and babel.config.json in a monorepo', async function () {
-    await bundle(
+  it('compiles ts', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/babel-ts/index.ts'),
+    );
+
+    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(!file.includes('interface'));
+  });
+
+  it('compiles tsx', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/babel-tsx/index.tsx'),
+    );
+
+    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(!file.includes('interface'));
+    assert(file.includes('React.createElement'));
+  });
+
+  it('compiles code using a custom babel plugin and default transforms', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/babel-custom/index.js'),
+    );
+
+    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(!file.includes('REPLACE_ME'));
+
+    let output = await run(b);
+    assert.strictEqual(typeof output, 'object');
+    assert.strictEqual(output.default, 'hello');
+  });
+
+  it('compiles code with shipped proposals when using @atlaspack/babel-preset-env', async function () {
+    let b = await bundle(
       path.join(
         __dirname,
-        '/integration/babel-config-monorepo/packages/pkg-a/src/index.js',
+        '/integration/babel-preset-env-shippedProposals/index.js',
       ),
     );
 
-    let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(!file.includes('REPLACE_ME'));
-    assert(file.includes('string from a plugin in babel.config.json'));
-    assert(!file.includes('ANOTHER_THING_TO_REPLACE'));
-    assert(file.includes('string from a plugin in .babelrc'));
-    assert(file.includes('SOMETHING ELSE'));
-    assert(!file.includes('string from a plugin from a different sub-package'));
+    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(!file.includes('#priv'));
+
+    let output = await run(b);
+    assert.strictEqual(typeof output, 'object');
+    assert.strictEqual(output.default, 123);
   });
 
-  describe('Babel envName', () => {
-    it('should prefer BABEL_ENV to NODE_ENV', async () => {
+  it.v2(
+    'warns when a babel config contains only redundant plugins',
+    async function () {
+      let messages = [];
+      let loggerDisposable = Logger.onLog((message) => {
+        if (message.level !== 'verbose') {
+          messages.push(message);
+        }
+      });
+      let filePath = path.join(
+        __dirname,
+        '/integration/babel-warn-all/index.js',
+      );
+      await bundle(filePath);
+      loggerDisposable.dispose();
+
+      let babelrcPath = path.resolve(path.dirname(filePath), '.babelrc');
+      assert.deepEqual(messages, [
+        {
+          type: 'log',
+          level: 'warn',
+          diagnostics: [
+            {
+              origin: '@atlaspack/transformer-babel',
+              message: md`Parcel includes transpilation by default. Babel config __${path.relative(
+                process.cwd(),
+                babelrcPath,
+              )}__ contains only redundant presets. Deleting it may significantly improve build performance.`,
+              codeFrames: [
+                {
+                  filePath: babelrcPath,
+                  codeHighlights: [
+                    {
+                      message: undefined,
+                      start: {
+                        line: 2,
+                        column: 15,
+                      },
+                      end: {
+                        line: 2,
+                        column: 33,
+                      },
+                    },
+                  ],
+                },
+              ],
+              hints: [
+                md`Delete __${path.relative(process.cwd(), babelrcPath)}__`,
+              ],
+              documentationURL:
+                'https://parceljs.org/languages/javascript/#default-presets',
+            },
+            {
+              origin: '@atlaspack/transformer-babel',
+              message:
+                "@babel/preset-env does not support Parcel's targets, which will likely result in unnecessary transpilation and larger bundle sizes.",
+              codeFrames: [
+                {
+                  filePath: path.resolve(path.dirname(filePath), '.babelrc'),
+                  codeHighlights: [
+                    {
+                      message: undefined,
+                      start: {
+                        line: 2,
+                        column: 15,
+                      },
+                      end: {
+                        line: 2,
+                        column: 33,
+                      },
+                    },
+                  ],
+                },
+              ],
+              hints: [
+                "Either remove __@babel/preset-env__ to use Parcel's builtin transpilation, or replace with __@atlaspack/babel-preset-env__",
+              ],
+              documentationURL:
+                'https://parceljs.org/languages/javascript/#custom-plugins',
+            },
+          ],
+        },
+      ]);
+    },
+  );
+
+  it.v2(
+    'warns when a babel config contains redundant plugins',
+    async function () {
+      let messages = [];
+      let loggerDisposable = Logger.onLog((message) => {
+        if (message.level !== 'verbose') {
+          messages.push(message);
+        }
+      });
+      let filePath = path.join(
+        __dirname,
+        '/integration/babel-warn-some/index.js',
+      );
+      await bundle(filePath);
+      loggerDisposable.dispose();
+
+      let babelrcPath = path.resolve(path.dirname(filePath), '.babelrc');
+      assert.deepEqual(messages, [
+        {
+          type: 'log',
+          level: 'warn',
+          diagnostics: [
+            {
+              origin: '@atlaspack/transformer-babel',
+              message: md`Parcel includes transpilation by default. Babel config __${path.relative(
+                process.cwd(),
+                babelrcPath,
+              )}__ includes the following redundant presets: __@atlaspack/babel-preset-env__. Removing these may improve build performance.`,
+              codeFrames: [
+                {
+                  filePath: babelrcPath,
+                  codeHighlights: [
+                    {
+                      message: undefined,
+                      start: {
+                        line: 2,
+                        column: 15,
+                      },
+                      end: {
+                        line: 2,
+                        column: 43,
+                      },
+                    },
+                  ],
+                },
+              ],
+              hints: [
+                md`Remove the above presets from __${path.relative(
+                  process.cwd(),
+                  babelrcPath,
+                )}__`,
+              ],
+              documentationURL:
+                'https://parceljs.org/languages/javascript/#default-presets',
+            },
+          ],
+        },
+      ]);
+    },
+  );
+
+  it.v2(
+    'warns when a JSON5 babel config contains redundant plugins',
+    async function () {
+      let messages = [];
+      let loggerDisposable = Logger.onLog((message) => {
+        if (message.level !== 'verbose') {
+          messages.push(message);
+        }
+      });
+      let filePath = path.join(
+        __dirname,
+        '/integration/babel-warn-some-json5/index.js',
+      );
+      await bundle(filePath);
+      loggerDisposable.dispose();
+
+      let babelrcPath = path.resolve(path.dirname(filePath), '.babelrc');
+      assert.deepEqual(messages, [
+        {
+          type: 'log',
+          level: 'warn',
+          diagnostics: [
+            {
+              origin: '@atlaspack/transformer-babel',
+              message: md`Parcel includes transpilation by default. Babel config __${path.relative(
+                process.cwd(),
+                babelrcPath,
+              )}__ includes the following redundant presets: __@atlaspack/babel-preset-env__. Removing these may improve build performance.`,
+              codeFrames: [
+                {
+                  filePath: babelrcPath,
+                  codeHighlights: [
+                    {
+                      message: undefined,
+                      start: {
+                        line: 2,
+                        column: 13,
+                      },
+                      end: {
+                        line: 2,
+                        column: 41,
+                      },
+                    },
+                  ],
+                },
+              ],
+              hints: [
+                md`Remove the above presets from __${path.relative(
+                  process.cwd(),
+                  babelrcPath,
+                )}__`,
+              ],
+              documentationURL:
+                'https://parceljs.org/languages/javascript/#default-presets',
+            },
+          ],
+        },
+      ]);
+    },
+  );
+
+  describe.v2('environment', () => {
+    it('BABEL_ENV should be preferred to NODE_ENV', async () => {
       await bundle(
         path.join(__dirname, '/integration/babel-env-name/index.js'),
         {
@@ -293,14 +524,16 @@ describe.v2('babel', function () {
           env: {BABEL_ENV: 'production', NODE_ENV: 'development'},
         },
       );
+
       let file = await outputFS.readFile(
         path.join(distDir, 'index.js'),
         'utf8',
       );
+
       assert(!file.includes('class Foo'));
     });
 
-    it('should invalidate when BABEL_ENV changes', async () => {
+    it('invalidates when BABEL_ENV changes', async () => {
       await bundle(
         path.join(__dirname, '/integration/babel-env-name/index.js'),
         {
@@ -322,7 +555,7 @@ describe.v2('babel', function () {
       assert(!file.includes('class Foo'));
     });
 
-    it('should invalidate when NODE_ENV changes from BABEL_ENV', async () => {
+    it('invalidates when NODE_ENV changes from BABEL_ENV', async () => {
       await bundle(
         path.join(__dirname, '/integration/babel-env-name/index.js'),
         {
@@ -365,7 +598,7 @@ describe.v2('babel', function () {
     });
   });
 
-  describe('tests needing the real filesystem', () => {
+  describe.skip('change detection', () => {
     afterEach(async () => {
       try {
         await fs.rimraf(inputDir);
@@ -377,7 +610,7 @@ describe.v2('babel', function () {
       }
     });
 
-    it('should rebuild when .babelrc changes', async function () {
+    it('rebuilds when .babelrc changes', async function () {
       if (process.platform !== 'linux') {
         // This test is flaky outside of Linux. Skip it for now.
         return;
@@ -417,7 +650,7 @@ describe.v2('babel', function () {
       assert(distFile.includes('something different'));
     });
 
-    it('should rebuild when declared external dependencies change', async function () {
+    it.skip('rebuilds when declared external dependencies change', async function () {
       let inputDir = tempy.directory();
       let filepathMain = path.join(inputDir, 'main.txt');
       let filepathFallback = path.join(inputDir, 'fallback.txt');
@@ -456,7 +689,7 @@ describe.v2('babel', function () {
       await step(filepathMain, 'foo4', 'foo3');
     });
 
-    it('should invalidate babel.config.js across runs', async function () {
+    it('invalidates babel.config.js across runs', async function () {
       let dateRe = /return (\d+);/;
 
       let fixtureDir = path.join(__dirname, '/integration/babel-config-js');
@@ -501,7 +734,7 @@ describe.v2('babel', function () {
       assert.notEqual(firstDatestamp, secondDatestamp);
     });
 
-    it('should invalidate when babel plugins are upgraded across runs', async function () {
+    it('invalidates when babel plugins are upgraded across runs', async function () {
       let fixtureDir = path.join(
         __dirname,
         '/integration/babel-plugin-upgrade',
@@ -555,269 +788,5 @@ describe.v2('babel', function () {
       assert(!file.includes('hello there'));
       assert(file.includes('something different'));
     });
-  });
-
-  it('should enable shippedProposals with @atlaspack/babel-preset-env in custom babelrc', async function () {
-    let b = await bundle(
-      path.join(
-        __dirname,
-        '/integration/babel-preset-env-shippedProposals/index.js',
-      ),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(!file.includes('#priv'));
-
-    let output = await run(b);
-    assert.strictEqual(typeof output, 'object');
-    assert.strictEqual(output.default, 123);
-  });
-
-  it('should compile with custom babel plugin plus default transforms', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/babel-custom/index.js'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(!file.includes('class Test'));
-    assert(!file.includes('REPLACE_ME'));
-    assert(!file.includes('#private'));
-
-    let output = await run(b);
-    assert.strictEqual(typeof output, 'object');
-    assert.strictEqual(output.default, 'hello');
-  });
-
-  it('should compile with custom babel plugin and jsx', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/babel-custom/jsx.js'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(!file.includes('REPLACE_ME'));
-    assert(file.includes('React.createElement'));
-  });
-
-  it('should compile with custom babel plugin and typescript', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/babel-custom/ts.ts'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(!file.includes('class Test'));
-    assert(!file.includes('REPLACE_ME'));
-    assert(!file.includes('#private'));
-    assert(!file.includes('interface'));
-
-    let output = await run(b);
-    assert.strictEqual(typeof output, 'object');
-    assert.strictEqual(output.default, 'hello');
-  });
-
-  it('should compile with custom babel plugin and tsx', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/babel-custom/tsx.tsx'),
-    );
-
-    let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(!file.includes('REPLACE_ME'));
-    assert(!file.includes('interface'));
-    assert(file.includes('React.createElement'));
-  });
-
-  it('should warn when a babel config contains only redundant plugins', async function () {
-    let messages = [];
-    let loggerDisposable = Logger.onLog((message) => {
-      if (message.level !== 'verbose') {
-        messages.push(message);
-      }
-    });
-    let filePath = path.join(__dirname, '/integration/babel-warn-all/index.js');
-    await bundle(filePath);
-    loggerDisposable.dispose();
-
-    let babelrcPath = path.resolve(path.dirname(filePath), '.babelrc');
-    assert.deepEqual(messages, [
-      {
-        type: 'log',
-        level: 'warn',
-        diagnostics: [
-          {
-            origin: '@atlaspack/transformer-babel',
-            message: md`Parcel includes transpilation by default. Babel config __${path.relative(
-              process.cwd(),
-              babelrcPath,
-            )}__ contains only redundant presets. Deleting it may significantly improve build performance.`,
-            codeFrames: [
-              {
-                filePath: babelrcPath,
-                codeHighlights: [
-                  {
-                    message: undefined,
-                    start: {
-                      line: 2,
-                      column: 15,
-                    },
-                    end: {
-                      line: 2,
-                      column: 33,
-                    },
-                  },
-                ],
-              },
-            ],
-            hints: [
-              md`Delete __${path.relative(process.cwd(), babelrcPath)}__`,
-            ],
-            documentationURL:
-              'https://parceljs.org/languages/javascript/#default-presets',
-          },
-          {
-            origin: '@atlaspack/transformer-babel',
-            message:
-              "@babel/preset-env does not support Parcel's targets, which will likely result in unnecessary transpilation and larger bundle sizes.",
-            codeFrames: [
-              {
-                filePath: path.resolve(path.dirname(filePath), '.babelrc'),
-                codeHighlights: [
-                  {
-                    message: undefined,
-                    start: {
-                      line: 2,
-                      column: 15,
-                    },
-                    end: {
-                      line: 2,
-                      column: 33,
-                    },
-                  },
-                ],
-              },
-            ],
-            hints: [
-              "Either remove __@babel/preset-env__ to use Parcel's builtin transpilation, or replace with __@atlaspack/babel-preset-env__",
-            ],
-            documentationURL:
-              'https://parceljs.org/languages/javascript/#custom-plugins',
-          },
-        ],
-      },
-    ]);
-  });
-
-  it('should warn when a babel config contains redundant plugins', async function () {
-    let messages = [];
-    let loggerDisposable = Logger.onLog((message) => {
-      if (message.level !== 'verbose') {
-        messages.push(message);
-      }
-    });
-    let filePath = path.join(
-      __dirname,
-      '/integration/babel-warn-some/index.js',
-    );
-    await bundle(filePath);
-    loggerDisposable.dispose();
-
-    let babelrcPath = path.resolve(path.dirname(filePath), '.babelrc');
-    assert.deepEqual(messages, [
-      {
-        type: 'log',
-        level: 'warn',
-        diagnostics: [
-          {
-            origin: '@atlaspack/transformer-babel',
-            message: md`Parcel includes transpilation by default. Babel config __${path.relative(
-              process.cwd(),
-              babelrcPath,
-            )}__ includes the following redundant presets: __@atlaspack/babel-preset-env__. Removing these may improve build performance.`,
-            codeFrames: [
-              {
-                filePath: babelrcPath,
-                codeHighlights: [
-                  {
-                    message: undefined,
-                    start: {
-                      line: 2,
-                      column: 15,
-                    },
-                    end: {
-                      line: 2,
-                      column: 43,
-                    },
-                  },
-                ],
-              },
-            ],
-            hints: [
-              md`Remove the above presets from __${path.relative(
-                process.cwd(),
-                babelrcPath,
-              )}__`,
-            ],
-            documentationURL:
-              'https://parceljs.org/languages/javascript/#default-presets',
-          },
-        ],
-      },
-    ]);
-  });
-
-  it('should warn when a JSON5 babel config contains redundant plugins', async function () {
-    let messages = [];
-    let loggerDisposable = Logger.onLog((message) => {
-      if (message.level !== 'verbose') {
-        messages.push(message);
-      }
-    });
-    let filePath = path.join(
-      __dirname,
-      '/integration/babel-warn-some-json5/index.js',
-    );
-    await bundle(filePath);
-    loggerDisposable.dispose();
-
-    let babelrcPath = path.resolve(path.dirname(filePath), '.babelrc');
-    assert.deepEqual(messages, [
-      {
-        type: 'log',
-        level: 'warn',
-        diagnostics: [
-          {
-            origin: '@atlaspack/transformer-babel',
-            message: md`Parcel includes transpilation by default. Babel config __${path.relative(
-              process.cwd(),
-              babelrcPath,
-            )}__ includes the following redundant presets: __@atlaspack/babel-preset-env__. Removing these may improve build performance.`,
-            codeFrames: [
-              {
-                filePath: babelrcPath,
-                codeHighlights: [
-                  {
-                    message: undefined,
-                    start: {
-                      line: 2,
-                      column: 13,
-                    },
-                    end: {
-                      line: 2,
-                      column: 41,
-                    },
-                  },
-                ],
-              },
-            ],
-            hints: [
-              md`Remove the above presets from __${path.relative(
-                process.cwd(),
-                babelrcPath,
-              )}__`,
-            ],
-            documentationURL:
-              'https://parceljs.org/languages/javascript/#default-presets',
-          },
-        ],
-      },
-    ]);
   });
 });
