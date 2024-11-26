@@ -2,7 +2,6 @@
 
 import {Bundler} from '@atlaspack/plugin';
 import invariant from 'assert';
-import {DefaultMap} from '@atlaspack/utils';
 import type {
   Asset,
   Dependency,
@@ -14,13 +13,9 @@ import {
   getPackageNodes,
 } from './DominatorBundler/createPackages';
 import {findAssetDominators} from './DominatorBundler/findAssetDominators';
-import type {
-  PackageNode,
-  PackagedDominatorGraph,
-} from './DominatorBundler/createPackages';
+import type {PackagedDominatorGraph} from './DominatorBundler/createPackages';
 import type {NodeId} from '@atlaspack/graph';
 import type {AssetNode} from './DominatorBundler/bundleGraphToRootedGraph';
-import type {StronglyConnectedComponentNode} from './DominatorBundler/oneCycleBreaker';
 import {
   buildPackageGraph,
   buildPackageInfos,
@@ -56,54 +51,6 @@ export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
   );
 
   intoBundleGraph(packages, bundleGraph, packageGraph, entryDependencies);
-}
-
-function getEntryDepForNode(
-  node:
-    | AssetNode
-    | PackageNode
-    | StronglyConnectedComponentNode<AssetNode>
-    | 'root',
-): Dependency | null {
-  if (node === 'root') {
-    return null;
-  } else if (node.type === 'asset') {
-    return node.entryDependency;
-  } else if (node.type === 'package') {
-    for (const assetNode of node.entryPointAssets) {
-      return assetNode.entryDependency;
-    }
-  } else if (node.type === 'StronglyConnectedComponent') {
-    for (const assetNode of node.values) {
-      const result = getEntryDepForNode(assetNode);
-      if (result) {
-        return result;
-      }
-    }
-  }
-}
-
-function getTargetForNode(
-  node:
-    | AssetNode
-    | PackageNode
-    | StronglyConnectedComponentNode<AssetNode>
-    | 'root',
-): Target | null {
-  if (node === 'root') {
-    return null;
-  } else if (node.type === 'asset') {
-    return node.target;
-  } else if (node.type === 'package') {
-    return node.entryPointAssets[0]?.target;
-  } else if (node.type === 'StronglyConnectedComponent') {
-    for (const assetNode of node.values) {
-      const result = getEntryDepForNode(assetNode);
-      if (result) {
-        return result.target;
-      }
-    }
-  }
 }
 
 interface SimpleBundle {
