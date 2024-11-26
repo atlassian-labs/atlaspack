@@ -1501,6 +1501,7 @@ export interface MutableBundleGraph extends BundleGraph<Bundle> {
   addBundleToBundleGroup(Bundle, BundleGroup): void;
   createAssetReference(Dependency, Asset, Bundle): void;
   createBundleReference(Bundle, Bundle): void;
+  createBundleConditionalReference(Bundle, Bundle): void;
   createBundle(CreateBundleOpts): Bundle;
   /** Turns an edge (Dependency -> Asset-s) into (Dependency -> BundleGroup -> Asset-s) */
   createBundleGroup(Dependency, Target): BundleGroup;
@@ -1659,6 +1660,7 @@ export interface BundleGraph<TBundle: Bundle> {
     ifTrueAssetId: string,
     ifFalseAssetId: string,
   |}>;
+  getReferencedConditionalBundles(bundle: Bundle): Array<TBundle>;
 }
 
 /**

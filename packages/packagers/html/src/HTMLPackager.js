@@ -4,7 +4,7 @@ import type {Bundle, BundleGraph, NamedBundle} from '@atlaspack/types';
 import assert from 'assert';
 import {Readable} from 'stream';
 import {Packager} from '@atlaspack/plugin';
-import {setDifference} from '@atlaspack/utils';
+import {setSymmetricDifference, setDifference} from '@atlaspack/utils';
 import posthtml from 'posthtml';
 import {
   bufferStream,
@@ -13,6 +13,7 @@ import {
   urlJoin,
 } from '@atlaspack/utils';
 import nullthrows from 'nullthrows';
+import {join} from 'path';
 
 // https://www.w3.org/TR/html5/dom.html#metadata-content-2
 const metadataContent = new Set([
@@ -27,7 +28,7 @@ const metadataContent = new Set([
 ]);
 
 export default (new Packager({
-  async loadConfig({config}) {
+  async loadConfig({config, options}) {
     let posthtmlConfig = await config.getConfig(
       [
         '.posthtmlrc',
@@ -42,8 +43,16 @@ export default (new Packager({
         packageKey: 'posthtml',
       },
     );
+
+    let conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
+      packageKey: '@atlaspack/packager-html',
+    });
+
     return {
       render: posthtmlConfig?.contents?.render,
+      evaluateRootConditionalBundles: Boolean(
+        conf?.contents?.evaluateRootConditionalBundles,
+      ),
     };
   },
   async package({bundle, bundleGraph, getInlineBundleContents, config}) {
@@ -59,17 +68,34 @@ export default (new Packager({
 
     // Add bundles in the same bundle group that are not inline. For example, if two inline
     // bundles refer to the same library that is extracted into a shared bundle.
+    let referencedBundlesRecursive = bundleGraph.getReferencedBundles(bundle);
     let referencedBundles = [
-      ...setDifference(
-        new Set(bundleGraph.getReferencedBundles(bundle)),
+      ...setSymmetricDifference(
+        new Set(referencedBundlesRecursive),
         new Set(bundleGraph.getReferencedBundles(bundle, {recursive: false})),
       ),
     ];
 
+    let conditionalBundles = config.evaluateRootConditionalBundles
+      ? setDifference(
+          new Set([
+            ...referencedBundlesRecursive.flatMap((referencedBundle) =>
+              bundleGraph.getReferencedConditionalBundles(referencedBundle),
+            ),
+          ]),
+          new Set(referencedBundles),
+        )
+      : new Set();
+
     let renderConfig = config?.render;
 
     let {html} = await posthtml([
-      (tree) => insertBundleReferences(referencedBundles, tree),
+      (tree) =>
+        insertBundleReferences(
+          [...conditionalBundles, ...referencedBundles],
+          tree,
+          conditionalBundles,
+        ),
       (tree) =>
         replaceInlineAssetContent(bundleGraph, getInlineBundleContents, tree),
     ]).process(code, {
@@ -182,7 +208,7 @@ async function replaceInlineAssetContent(
   return tree;
 }
 
-function insertBundleReferences(siblingBundles, tree) {
+function insertBundleReferences(siblingBundles, tree, conditionalBundles) {
   const bundles = [];
 
   for (let bundle of siblingBundles) {
@@ -205,6 +231,7 @@ function insertBundleReferences(siblingBundles, tree) {
           type: bundle.env.outputFormat === 'esmodule' ? 'module' : undefined,
           nomodule: nomodule ? '' : undefined,
           defer: nomodule ? '' : undefined,
+          'data-conditional': conditionalBundles.has(bundle) ? true : undefined,
           src: urlJoin(bundle.target.publicUrl, bundle.name),
         },
       });

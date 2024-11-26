@@ -9,7 +9,7 @@ import {
   replaceInlineReferences,
   replaceURLReferences,
   urlJoin,
-  setDifference,
+  setSymmetricDifference,
 } from '@atlaspack/utils';
 
 export default (new Packager({
@@ -28,7 +28,7 @@ export default (new Packager({
     // Add bundles in the same bundle group that are not inline. For example, if two inline
     // bundles refer to the same library that is extracted into a shared bundle.
     let referencedBundles = [
-      ...setDifference(
+      ...setSymmetricDifference(
         new Set(bundleGraph.getReferencedBundles(bundle)),
         new Set(bundleGraph.getReferencedBundles(bundle, {recursive: false})),
       ),
