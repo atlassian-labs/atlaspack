@@ -13,7 +13,6 @@ import {
   urlJoin,
 } from '@atlaspack/utils';
 import nullthrows from 'nullthrows';
-import {join} from 'path';
 
 // https://www.w3.org/TR/html5/dom.html#metadata-content-2
 const metadataContent = new Set([
