@@ -281,7 +281,6 @@ impl TargetRequest {
               .join(".browserslistrc"),
           )
           .ok();
-        println!("Loaded {:?}", browserslistrc);
 
         if let Some(browserslistrc) = browserslistrc {
           Some(EnginesBrowsers::from_browserslistrc(browserslistrc)?)
@@ -315,7 +314,6 @@ impl TargetRequest {
     let config = self.load_engine_and_browser_config(request_context)?;
     let mut targets: Vec<Option<Target>> = Vec::new();
 
-    println!("Config browsers {:?}", config.contents.engines);
     let builtin_targets = [
       self.builtin_browser_target(
         config.contents.targets.browser.clone(),
