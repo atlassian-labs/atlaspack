@@ -2,6 +2,7 @@
 //!
 //! Tracing is disabled by default.
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use crate::from_env::{optional_var, FromEnvError};
 use anyhow::anyhow;
@@ -9,6 +10,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -16,6 +18,8 @@ use tracing_subscriber::EnvFilter;
 pub enum TracerMode {
   /// Output the Tracer logs to Stdout
   Stdout,
+  /// Output a Chrome profile
+  Chrome,
   /// Output the Tracer logs to a file
   #[serde(rename_all = "camelCase")]
   File {
@@ -37,6 +41,7 @@ impl TracerMode {
     match &*mode {
       "file" => Ok(Some(Self::file())),
       "stdout" => Ok(Some(Self::stdout())),
+      "chrome" => Ok(Some(Self::chrome())),
       value => Err(FromEnvError::InvalidKey(
         String::from("ATLASPACK_TRACING_MODE"),
         anyhow!("Invalid value: {}", value),
@@ -47,6 +52,10 @@ impl TracerMode {
   /// Default STDOUT configuration
   pub fn stdout() -> Self {
     Self::Stdout
+  }
+
+  pub fn chrome() -> Self {
+    Self::Chrome
   }
 
   /// Default file configuration
@@ -62,9 +71,16 @@ impl TracerMode {
   }
 }
 
+enum TracerGuard {
+  #[allow(unused)]
+  WorkerGuard(WorkerGuard),
+  #[allow(unused)]
+  ChromeGuard(tracing_chrome::FlushGuard),
+}
+
 pub struct Tracer {
   #[allow(unused)]
-  worker_guard: Arc<Option<WorkerGuard>>,
+  worker_guard: Arc<Mutex<Option<TracerGuard>>>,
 }
 
 impl Tracer {
@@ -80,6 +96,17 @@ impl Tracer {
               .context("Failed to setup stdout tracing, is another tracer running?")
           })?;
         None
+      }
+      TracerMode::Chrome => {
+        let (chrome_layer, guard) = tracing_chrome::ChromeLayerBuilder::new().build();
+        tracing_subscriber::registry()
+          .with(chrome_layer)
+          .try_init()
+          .map_err(|err| {
+            anyhow::anyhow!(err)
+              .context("Failed to setup chrome tracing, is another tracer running?")
+          })?;
+        Some(TracerGuard::ChromeGuard(guard))
       }
       TracerMode::File {
         directory,
@@ -103,12 +130,12 @@ impl Tracer {
             anyhow::anyhow!(err).context("Failed to setup file tracing, is another tracer running?")
           })?;
 
-        Some(worker_guard)
+        Some(TracerGuard::WorkerGuard(worker_guard))
       }
     };
 
     let tracer = Self {
-      worker_guard: Arc::new(worker_guard),
+      worker_guard: Arc::new(Mutex::new(worker_guard)),
     };
 
     Ok(tracer)
