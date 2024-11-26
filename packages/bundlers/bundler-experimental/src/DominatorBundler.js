@@ -114,6 +114,7 @@ function getTargetForNode(
 
 interface SimpleBundle {
   entryAsset: Asset;
+  assets: Asset[];
   needsStableName: boolean;
   target: Target;
 }
@@ -131,16 +132,10 @@ interface BundleGraphConversionResult {
 
 export function planBundleGraph(
   packages: PackagedDominatorGraph,
-  entryDependenciesByAsset: Map<
-    NodeId,
-    Set<{|assetNode: AssetNode, entryDependency: Dependency|}>,
-  >,
+  entryDependenciesByAsset: Map<NodeId, Set<AssetNode>>,
   asyncDependenciesByAsset: Map<NodeId, Set<AssetNode>>,
 ): BundleGraphConversionResult {
   const packageNodes = getPackageNodes(packages);
-
-  // this is not right ; we needed to connect packages to their entries and
-  // treat the 'virtual' async import root packages we inserted differently
 
   const result = {
     bundles: [],
@@ -157,7 +152,6 @@ export function planBundleGraph(
 
     const entryDep = entryDependenciesByAsset.get(nodeId)?.values().next()
       ?.value?.entryDependency;
-    console.log({entryDep, nodeId});
     invariant(entryDep != null);
     const target = entryDep.target;
     invariant(target != null);
@@ -169,28 +163,22 @@ export function planBundleGraph(
       result.bundleGroups.push(bundleGroup);
       bundleGroups.set(entryDep, bundleGroup);
     }
-    // console.log(node, entryDep, bundleGroup);
 
     if (node.type === 'asset') {
-      // if (node.asset.type === 'js') {
       const bundle = {
         entryAsset: node.asset,
         needsStableName: node.isEntryNode,
         target,
+        assets: [],
       };
       bundlesByPackageContentKey.set(
         packages.getContentKeyByNodeId(nodeId),
         bundle,
       );
+      addNodeToBundle(packages, bundle, nodeId);
 
-      // addNodeToBundle(packages, bundleGraph, bundle, nodeId);
-      // bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
       result.bundles.push(bundle);
       bundleGroup.bundles.push(bundle);
-
-      // } else {
-      //   // TODO: handle other asset types
-      // }
     } else if (node.type === 'package') {
       const children = packages
         .getNodeIdsConnectedFrom(nodeId)
@@ -210,7 +198,6 @@ export function planBundleGraph(
       invariant(sampleAsset.type === 'asset');
       const env = sampleAsset.asset.env;
 
-      // console.log('outputFormat', node, env.outputFormat);
       const bundle = {
         env,
         type: sampleAsset.asset.type,
@@ -224,8 +211,8 @@ export function planBundleGraph(
 
       result.bundles.push(bundle);
       bundleGroup.bundles.push(bundle);
+      addNodeToBundle(packages, bundle, nodeId);
 
-      // addNodeToBundle(packages, bundleGraph, bundle, nodeId);
       // bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
     } else if (node.type === 'StronglyConnectedComponent') {
       const children = packages
@@ -257,174 +244,51 @@ export function planBundleGraph(
 
       result.bundles.push(bundle);
       bundleGroup.bundles.push(bundle);
-
-      // addNodeToBundle(packages, bundleGraph, bundle, nodeId);
-      // bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+      addNodeToBundle(packages, bundle, nodeId);
     } else {
       node = (node: empty);
     }
-    // console.log('done', nodeId);
   }
 
   return result;
+}
+
+export function buildBundleGraph(
+  plan: BundleGraphConversionResult,
+  bundleGraph: MutableBundleGraph,
+) {
+  const bundlesByPlanBundle = new Map();
+
+  for (const planGroup of plan.bundleGroups) {
+    const bundleGroup = bundleGraph.createBundleGroup(
+      planGroup.entryDep,
+      planGroup.target,
+    );
+
+    for (let planBundle of planGroup) {
+      const bundle =
+        bundlesByPlanBundle.get(planBundle) ??
+        bundleGraph.createBundle(planBundle);
+
+      bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+      bundlesByPlanBundle.set(planBundle, bundle);
+
+      for (let asset of planBundle.assets) {
+        bundleGraph.addAssetToBundle(asset, bundle);
+      }
+    }
+  }
 }
 
 export function intoBundleGraph(
   packages: PackagedDominatorGraph,
   bundleGraph: MutableBundleGraph,
   packageGraph: PackagedDominatorGraph,
-) {
-  const packageNodes = getPackageNodes(packages);
-
-  // this is not right ; we needed to connect packages to their entries and
-  // treat the 'virtual' async import root packages we inserted differently
-
-  const bundleGroups = new Map();
-  const bundlesByPackageContentKey = new Map();
-
-  for (const nodeId of packageNodes) {
-    const node = packages.getNode(nodeId);
-    invariant(node !== 'root');
-    invariant(node != null);
-
-    const entryDep = getEntryDepForNode(node);
-    invariant(entryDep != null);
-    const target = getTargetForNode(node);
-    invariant(target != null);
-
-    let bundleGroup = bundleGroups.get(entryDep);
-    if (bundleGroup == null) {
-      console.log('creating bundle group for', entryDep);
-      bundleGroup = bundleGraph.createBundleGroup(entryDep, target);
-      bundleGroups.set(entryDep, bundleGroup);
-    }
-    // console.log(node, entryDep, bundleGroup);
-
-    if (node.type === 'asset') {
-      // if (node.asset.type === 'js') {
-      const bundle = bundleGraph.createBundle({
-        entryAsset: node.asset,
-        needsStableName: node.isEntryNode,
-        target,
-      });
-      bundlesByPackageContentKey.set(
-        packages.getContentKeyByNodeId(nodeId),
-        bundle,
-      );
-
-      addNodeToBundle(packages, bundleGraph, bundle, nodeId);
-      bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
-      // } else {
-      //   // TODO: handle other asset types
-      // }
-    } else if (node.type === 'package') {
-      const children = packages
-        .getNodeIdsConnectedFrom(nodeId)
-        .map((nodeId) => {
-          const node = packages.getNode(nodeId);
-          invariant(node != null && node !== 'root');
-          return node;
-        });
-
-      // this is not right
-      const sampleAsset = children.find((node) => node?.type === 'asset');
-      if (!sampleAsset) {
-        throw new Error('Could not find a sample asset to get environment for');
-      }
-
-      invariant(sampleAsset != null);
-      invariant(sampleAsset.type === 'asset');
-      const env = sampleAsset.asset.env;
-
-      // console.log('outputFormat', node, env.outputFormat);
-      const bundle = bundleGraph.createBundle({
-        env,
-        type: sampleAsset.asset.type,
-        uniqueKey: node.id,
-        target,
-      });
-      bundlesByPackageContentKey.set(
-        packages.getContentKeyByNodeId(nodeId),
-        bundle,
-      );
-
-      addNodeToBundle(packages, bundleGraph, bundle, nodeId);
-      // bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
-    } else if (node.type === 'StronglyConnectedComponent') {
-      const children = packages
-        .getNodeIdsConnectedFrom(nodeId)
-        .map((nodeId) => {
-          const node = packages.getNode(nodeId);
-          invariant(node != null && node !== 'root');
-          return node;
-        });
-      const sampleAsset = children.find((node) => node?.type === 'asset');
-      if (!sampleAsset) {
-        throw new Error('Could not find a sample asset to get environment for');
-      }
-
-      invariant(sampleAsset != null);
-      invariant(sampleAsset.type === 'asset');
-      const env = sampleAsset.asset.env;
-
-      const bundle = bundleGraph.createBundle({
-        env,
-        type: 'js',
-        uniqueKey: node.id,
-        target,
-      });
-      bundlesByPackageContentKey.set(
-        packages.getContentKeyByNodeId(nodeId),
-        bundle,
-      );
-
-      addNodeToBundle(packages, bundleGraph, bundle, nodeId);
-      bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
-    } else {
-      (node: empty);
-    }
-    // console.log('done', nodeId);
-  }
-
-  // stitch package relations into the graph
-  packageGraph.traverse((nodeId) => {
-    const node = packageGraph.getNode(nodeId);
-    if (node == null || node === 'root') {
-      return;
-    }
-
-    const contentKey = packageGraph.getContentKeyByNodeId(nodeId);
-    const bundle = bundlesByPackageContentKey.get(contentKey);
-    if (bundle == null) {
-      return;
-    }
-
-    const nodes = packageGraph.getNodeIdsConnectedFrom(nodeId);
-    // console.log('fixing connections for', node, nodes);
-    nodes.forEach((id) => {
-      const child = packageGraph.getNode(id);
-      if (child == null || child === 'root') {
-        return;
-      }
-
-      const childContentKey = packageGraph.getContentKeyByNodeId(id);
-      const childBundle = bundlesByPackageContentKey.get(childContentKey);
-      if (childBundle == null) {
-        return;
-      }
-
-      // console.log('connecting', node, 'to', child);
-      bundleGraph.createBundleReference(bundle, childBundle);
-    });
-  });
-
-  // console.log('done bundling');
-}
+) {}
 
 export function addNodeToBundle(
   packages: PackagedDominatorGraph,
-  bundleGraph: MutableBundleGraph,
-  bundle: Bundle,
+  bundle: SimpleBundle,
   nodeId: NodeId,
 ) {
   packages.traverse((id) => {
@@ -434,10 +298,10 @@ export function addNodeToBundle(
     }
 
     if (child.type === 'asset') {
-      bundleGraph.addAssetToBundle(child.asset, bundle);
+      bundle.assets.push(child.asset);
     } else if (child.type === 'StronglyConnectedComponent') {
       for (let assetNode of child.values) {
-        bundleGraph.addAssetToBundle(assetNode.asset, bundle);
+        bundle.assets.push(assetNode.asset);
       }
     }
   }, nodeId);

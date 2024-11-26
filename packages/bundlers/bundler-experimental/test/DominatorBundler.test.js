@@ -303,12 +303,8 @@ describe('planBundleGraph', () => {
     packages.addEdge(root, asyncAsset);
 
     const entryDependenciesByAsset = new Map();
-    entryDependenciesByAsset.set(asset, [
-      {assetNode, entryDependency: entryDep},
-    ]);
-    entryDependenciesByAsset.set(asyncAsset, [
-      {assetNode, entryDependency: entryDep},
-    ]);
+    entryDependenciesByAsset.set(asset, [assetNode]);
+    entryDependenciesByAsset.set(asyncAsset, [assetNode]);
     const asyncDependenciesByAsset = new Map();
 
     const result = planBundleGraph(

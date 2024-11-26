@@ -4,15 +4,19 @@ import type {AssetNode, SimpleAssetGraph} from './bundleGraphToRootedGraph';
 import {getGraphPostOrder} from './findAssetDominators';
 import {NodeId} from '@atlaspack/graph';
 
+export type NodeEntryDependencies = {|
+  entryDependenciesByAsset: Map<NodeId, Set<AssetNode>>,
+  asyncDependenciesByAsset: Map<NodeId, Set<AssetNode>>,
+|};
+
 /**
  * Traverses the graph in post-order, to find for any given asset, the
  * sets of entry dependencies and async boundaries through which it is
  * reachable.
  */
-export function findNodeEntryDependencies(graph: SimpleAssetGraph): {|
-  entryDependenciesByAsset: Map<NodeId, Set<AssetNode>>,
-  asyncDependenciesByAsset: Map<NodeId, Set<AssetNode>>,
-|} {
+export function findNodeEntryDependencies(
+  graph: SimpleAssetGraph,
+): NodeEntryDependencies {
   const postOrder = getGraphPostOrder(graph);
   const reversePostOrder = postOrder.slice(0).reverse();
 
@@ -45,34 +49,41 @@ export function findNodeEntryDependencies(graph: SimpleAssetGraph): {|
       continue;
     }
 
+    if (entryDependencyNodes.has(nodeId)) {
+      const dependencies = entryDependenciesByAsset.get(nodeId) ?? new Set();
+      dependencies.add(entryDependencyNodes.get(nodeId).node);
+      entryDependenciesByAsset.set(nodeId, dependencies);
+    }
+
+    if (asyncDependencyNodes.has(nodeId)) {
+      const dependencies = asyncDependenciesByAsset.get(nodeId) ?? new Set();
+      dependencies.add(asyncDependencyNodes.get(nodeId).node);
+      asyncDependenciesByAsset.set(nodeId, dependencies);
+    }
+
     graph.forEachNodeIdConnectedTo(nodeId, (parentId) => {
       const parent = graph.getNode(parentId);
       if (parent == null || parent === 'root') {
-        entryDependenciesByAsset.set(nodeId, new Set());
-        asyncDependenciesByAsset.set(nodeId, new Set());
         return;
       }
 
       const parentEntryDependency = parent.entryDependency;
       if (parentEntryDependency != null) {
-        const entryDependencies =
-          entryDependenciesByAsset.get(nodeId) ?? new Set();
-        entryDependencies.add(parent);
-        entryDependenciesByAsset.set(nodeId, entryDependencies);
+        const dependencies = entryDependenciesByAsset.get(nodeId) ?? new Set();
+        dependencies.add(parent);
+        entryDependenciesByAsset.set(nodeId, dependencies);
       }
 
       if (entryDependencyNodes.has(parentId)) {
-        const parentDependencies =
-          entryDependenciesByAsset.get(nodeId) ?? new Set();
-        parentDependencies.add(entryDependencyNodes.get(parentId).node);
-        entryDependenciesByAsset.set(nodeId, parentDependencies);
+        const dependencies = entryDependenciesByAsset.get(nodeId) ?? new Set();
+        dependencies.add(entryDependencyNodes.get(parentId).node);
+        entryDependenciesByAsset.set(nodeId, dependencies);
       }
 
       if (asyncDependencyNodes.has(parentId)) {
-        const asyncDependencies =
-          asyncDependenciesByAsset.get(nodeId) ?? new Set();
-        asyncDependencies.add(asyncDependencyNodes.get(parentId).node);
-        asyncDependenciesByAsset.set(nodeId, asyncDependencies);
+        const dependencies = asyncDependenciesByAsset.get(nodeId) ?? new Set();
+        dependencies.add(asyncDependencyNodes.get(parentId).node);
+        asyncDependenciesByAsset.set(nodeId, dependencies);
       }
     });
   }

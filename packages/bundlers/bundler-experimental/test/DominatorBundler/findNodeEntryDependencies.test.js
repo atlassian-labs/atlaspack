@@ -50,15 +50,12 @@ describe('findNodeEntryDependencies', () => {
       new Map([
         ['async.js', ['test.js']],
         ['dependency.js', ['test.js']],
-        ['test.js', []],
+        ['test.js', ['test.js']],
       ]),
     );
 
     expect(mapToPaths(rootedGraph, result.asyncDependenciesByAsset)).toEqual(
-      new Map([
-        ['async.js', []],
-        ['test.js', []],
-      ]),
+      new Map([['async.js', ['async.js']]]),
     );
   });
 
@@ -85,17 +82,13 @@ describe('findNodeEntryDependencies', () => {
       new Map([
         ['async.js', ['page1.js', 'page2.js']],
         ['dependency.js', ['page1.js', 'page2.js']],
-        ['page1.js', []],
-        ['page2.js', []],
+        ['page1.js', ['page1.js']],
+        ['page2.js', ['page2.js']],
       ]),
     );
 
     expect(mapToPaths(rootedGraph, result.asyncDependenciesByAsset)).toEqual(
-      new Map([
-        ['async.js', []],
-        ['page1.js', []],
-        ['page2.js', []],
-      ]),
+      new Map([['async.js', ['async.js']]]),
     );
   });
 
@@ -122,17 +115,15 @@ describe('findNodeEntryDependencies', () => {
       new Map([
         ['async.js', ['page1.js', 'page2.js']],
         ['dependency.js', ['page2.js']],
-        ['page1.js', []],
-        ['page2.js', []],
+        ['page1.js', ['page1.js']],
+        ['page2.js', ['page2.js']],
       ]),
     );
 
     expect(mapToPaths(rootedGraph, result.asyncDependenciesByAsset)).toEqual(
       new Map([
-        ['async.js', []],
+        ['async.js', ['async.js']],
         ['dependency.js', ['async.js']],
-        ['page1.js', []],
-        ['page2.js', []],
       ]),
     );
   });
