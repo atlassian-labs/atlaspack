@@ -254,8 +254,8 @@ impl TargetRequest {
       Ok(pkg) => pkg,
     };
 
-    if let Some(e) = config.contents.engines.as_ref() {
-      if let Some(browsers) = &e.browsers {
+    if let Some(engines) = config.contents.engines.as_ref() {
+      if let Some(browsers) = &engines.browsers {
         if !Browsers::from(browsers).is_empty() {
           return Ok(config);
         }
