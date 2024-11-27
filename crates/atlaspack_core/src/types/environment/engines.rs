@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use browserslist::Distrib;
 use serde::Deserialize;
 use serde::Serialize;
@@ -36,17 +37,44 @@ impl EnginesBrowsers {
     }
   }
 
+  pub fn from_browserslistrc(content: &str) -> Result<Self, anyhow::Error> {
+    let mut query = Vec::new();
+
+    for line in content.lines() {
+      let line = line.trim();
+
+      if line.is_empty() || line.starts_with('#') {
+        continue;
+      }
+
+      if line.starts_with("extends") {
+        return Err(anyhow!("Browserlist extends not supported in Atlaspack V3"));
+      }
+
+      query.push(
+        line
+          .chars()
+          .take_while(|&ch| ch != '#')
+          .collect::<String>()
+          .trim()
+          .to_string(),
+      );
+    }
+
+    Ok(Self::List(query))
+  }
+
   pub fn resolve(&self) -> Vec<Distrib> {
     let list = self.list();
     browserslist::resolve(list, &Default::default()).unwrap_or(Vec::new())
   }
 }
 
-impl From<EnginesBrowsers> for Browsers {
-  fn from(engines_browsers: EnginesBrowsers) -> Self {
+impl From<&EnginesBrowsers> for Browsers {
+  fn from(engines_browsers: &EnginesBrowsers) -> Self {
     let list = match engines_browsers {
-      EnginesBrowsers::List(list) => list,
-      EnginesBrowsers::String(string) => vec![string],
+      EnginesBrowsers::List(list) => &list.iter().collect(),
+      EnginesBrowsers::String(string) => &vec![string],
     };
     let distribs = browserslist::resolve(list, &Default::default()).unwrap_or(Vec::new());
     Browsers::from(distribs)
@@ -130,5 +158,40 @@ impl Engines {
       &caniuse_database::BrowserFeature::from(feature),
       &distribs,
     )
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use pretty_assertions::assert_eq;
+
+  #[test]
+  fn parses_browserslistrc() {
+    let browserslistrc = r#"
+      # Some comments
+      # Some more comments
+
+      last 2 chrome versions # Comment about this line
+    "#;
+
+    assert_eq!(
+      EnginesBrowsers::from_browserslistrc(browserslistrc).unwrap(),
+      EnginesBrowsers::new(vec!["last 2 chrome versions".into()])
+    );
+  }
+
+  #[test]
+  fn errors_on_browserslistrc_with_extends() {
+    let browserslistrc = r#"
+      extends some-shared-browserslist
+    "#;
+
+    assert_eq!(
+      EnginesBrowsers::from_browserslistrc(browserslistrc)
+        .map_err(|err| err.to_string())
+        .unwrap_err(),
+      "Browserlist extends not supported in Atlaspack V3"
+    );
   }
 }

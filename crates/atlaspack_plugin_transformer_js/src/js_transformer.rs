@@ -198,7 +198,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     let mut targets: HashMap<String, String> = HashMap::new();
     if env.context.is_browser() {
       let browsers = env.engines.browsers.clone().unwrap_or_default();
-      let browsers = Browsers::from(browsers);
+      let browsers = Browsers::from(&browsers);
       for (name, version) in browsers.iter() {
         targets.insert(
           String::from(name),
