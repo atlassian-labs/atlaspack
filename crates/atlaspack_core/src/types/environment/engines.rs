@@ -37,7 +37,7 @@ impl EnginesBrowsers {
     }
   }
 
-  pub fn from_browserslistrc(content: String) -> anyhow::Result<Self> {
+  pub fn from_browserslistrc(content: &str) -> Result<Self, anyhow::Error> {
     let mut query = Vec::new();
 
     for line in content.lines() {
@@ -47,7 +47,7 @@ impl EnginesBrowsers {
         continue;
       }
 
-      if line.starts_with("extends ") {
+      if line.starts_with("extends") {
         return Err(anyhow!("Browserlist extends not supported in Atlaspack V3"));
       }
 
@@ -158,5 +158,42 @@ impl Engines {
       &caniuse_database::BrowserFeature::from(feature),
       &distribs,
     )
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use anyhow::anyhow;
+
+  use super::*;
+  use pretty_assertions::assert_eq;
+
+  #[test]
+  fn parses_browserslistrc() {
+    let browserslistrc = r#"
+      # Some comments
+      # Some more comments
+
+      last 2 chrome versions # Comment about this line
+    "#;
+
+    assert_eq!(
+      EnginesBrowsers::from_browserslistrc(browserslistrc).unwrap(),
+      EnginesBrowsers::new(vec!["last 2 chrome versions".into()])
+    );
+  }
+
+  #[test]
+  fn errors_on_browserslistrc_with_extends() {
+    let browserslistrc = r#"
+      extends some-shared-browserslist
+    "#;
+
+    let result = EnginesBrowsers::from_browserslistrc(browserslistrc);
+
+    assert_eq!(
+      result,
+      Err(anyhow!("Browserlist extends not supported in Atlaspack V3"))
+    );
   }
 }

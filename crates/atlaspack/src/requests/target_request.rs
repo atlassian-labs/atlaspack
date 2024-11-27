@@ -286,7 +286,7 @@ impl TargetRequest {
           .ok();
 
         if let Some(browserslistrc) = browserslistrc {
-          Some(EnginesBrowsers::from_browserslistrc(browserslistrc)?)
+          Some(EnginesBrowsers::from_browserslistrc(&browserslistrc)?)
         } else {
           None
         }
