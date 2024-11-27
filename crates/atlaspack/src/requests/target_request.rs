@@ -274,18 +274,20 @@ impl TargetRequest {
 
     let browsers = match config.contents.browserslist.clone() {
       None => {
-        // Loading .browserslistrc
-        let browserslistrc = request_context
-          .file_system()
-          .read_to_string(
-            &request_context
-              .config()
-              .project_root
-              .join(".browserslistrc"),
-          )
-          .ok();
+        let browserslistrc_path = &request_context
+          .config()
+          .project_root
+          .join(".browserslistrc");
 
-        if let Some(browserslistrc) = browserslistrc {
+        // Loading .browserslistrc
+        if request_context
+          .file_system()
+          .is_file(browserslistrc_path.as_path())
+        {
+          let browserslistrc = request_context
+            .file_system()
+            .read_to_string(browserslistrc_path)?;
+
           Some(EnginesBrowsers::from_browserslistrc(&browserslistrc)?)
         } else {
           None
