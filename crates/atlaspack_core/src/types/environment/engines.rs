@@ -163,8 +163,6 @@ impl Engines {
 
 #[cfg(test)]
 mod tests {
-  use anyhow::anyhow;
-
   use super::*;
   use pretty_assertions::assert_eq;
 
@@ -189,11 +187,11 @@ mod tests {
       extends some-shared-browserslist
     "#;
 
-    let result = EnginesBrowsers::from_browserslistrc(browserslistrc);
-
     assert_eq!(
-      result,
-      Err(anyhow!("Browserlist extends not supported in Atlaspack V3"))
+      EnginesBrowsers::from_browserslistrc(browserslistrc)
+        .map_err(|err| err.to_string())
+        .unwrap_err(),
+      "Browserlist extends not supported in Atlaspack V3"
     );
   }
 }
