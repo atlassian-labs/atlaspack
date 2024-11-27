@@ -206,10 +206,7 @@ export class AtlaspackWorker {
         config: new PluginConfig({
           env,
           isSource: true,
-          searchPath: innerAsset.filePath.replace(
-            options.projectRoot + '/',
-            '',
-          ),
+          searchPath: innerAsset.filePath,
           projectRoot: options.projectRoot,
           fs: this.#fs,
           packageManager,

@@ -203,7 +203,6 @@ impl Plugins for ConfigPlugins {
         // Currently JS plugins don't work and it's easier to just skip these.
         // We also will probably remove babel from the defaults and support react refresh in Rust
         // before releasing native asset graph
-        "@atlaspack/transformer-babel" => continue,
         "@atlaspack/transformer-react-refresh-wrap" => continue,
         "@atlaspack/transformer-posthtml" => continue,
         "@atlaspack/transformer-postcss" => continue,

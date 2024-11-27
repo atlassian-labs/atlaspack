@@ -1,5 +1,5 @@
-interface Hi {
-  test: string
+interface TestInterface {
+  test: string;
 }
 
 class Test {
@@ -14,5 +14,3 @@ class Test {
     return this.#privateProperty;
   }
 }
-
-export default new Test('REPLACE_ME').get();

@@ -259,6 +259,24 @@ describe.v2('cache', function () {
     });
 
     for (let {name, formatter, nesting} of configs) {
+      beforeEach(async () => {
+        let atlaspackrc = {
+          extends: '@atlaspack/config-default',
+          transformers: {
+            ['*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}']: [
+              '@atlaspack/transformer-babel',
+              '...',
+            ],
+          },
+        };
+
+        await inputFS.mkdirp(inputDir);
+        await inputFS.writeFile(
+          path.join(inputDir, '.parcelrc'),
+          JSON.stringify(atlaspackrc),
+        );
+      });
+
       describe(name, function () {
         it(`should support adding a ${name}`, async function () {
           let b = await testCache({
@@ -266,7 +284,6 @@ describe.v2('cache', function () {
             inputFS,
             outputFS: inputFS,
             async setup() {
-              await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
                 path.join(__dirname, '/integration/cache'),
                 inputDir,
@@ -313,7 +330,6 @@ describe.v2('cache', function () {
             inputFS,
             outputFS: inputFS,
             async setup() {
-              await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
                 path.join(__dirname, '/integration/cache'),
                 inputDir,
@@ -364,7 +380,6 @@ describe.v2('cache', function () {
             inputFS,
             outputFS: inputFS,
             async setup() {
-              await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
                 path.join(__dirname, '/integration/cache'),
                 inputDir,
@@ -408,7 +423,6 @@ describe.v2('cache', function () {
             inputFS,
             outputFS: inputFS,
             async setup() {
-              await inputFS.mkdirp(inputDir);
               await inputFS.ncp(
                 path.join(__dirname, '/integration/cache'),
                 inputDir,
@@ -466,7 +480,6 @@ describe.v2('cache', function () {
               inputFS,
               outputFS: inputFS,
               async setup() {
-                await inputFS.mkdirp(inputDir);
                 await inputFS.ncp(
                   path.join(__dirname, '/integration/cache'),
                   inputDir,
@@ -521,7 +534,6 @@ describe.v2('cache', function () {
               inputFS,
               outputFS: inputFS,
               async setup() {
-                await inputFS.mkdirp(inputDir);
                 await inputFS.ncp(
                   path.join(__dirname, '/integration/cache'),
                   inputDir,
@@ -580,7 +592,6 @@ describe.v2('cache', function () {
               inputFS,
               outputFS: inputFS,
               async setup() {
-                await inputFS.mkdirp(inputDir);
                 await inputFS.ncp(
                   path.join(__dirname, '/integration/cache'),
                   inputDir,
@@ -635,7 +646,6 @@ describe.v2('cache', function () {
           inputFS,
           outputFS: inputFS,
           async setup() {
-            await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
               path.join(__dirname, '/integration/cache'),
               inputDir,
@@ -690,7 +700,6 @@ describe.v2('cache', function () {
           inputFS,
           outputFS: inputFS,
           async setup() {
-            await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
               path.join(__dirname, '/integration/cache'),
               inputDir,
@@ -745,7 +754,6 @@ describe.v2('cache', function () {
           inputFS,
           outputFS: inputFS,
           async setup() {
-            await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
               path.join(__dirname, '/integration/cache'),
               inputDir,
@@ -799,7 +807,6 @@ describe.v2('cache', function () {
           inputFS,
           outputFS: inputFS,
           async setup() {
-            await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
               path.join(__dirname, '/integration/cache'),
               inputDir,
@@ -872,7 +879,6 @@ describe.v2('cache', function () {
           inputFS,
           outputFS: inputFS,
           async setup() {
-            await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
               path.join(__dirname, '/integration/cache'),
               inputDir,
@@ -935,7 +941,6 @@ describe.v2('cache', function () {
           inputFS,
           outputFS: inputFS,
           async setup() {
-            await inputFS.mkdirp(inputDir);
             await inputFS.ncp(
               path.join(__dirname, '/integration/cache'),
               inputDir,
