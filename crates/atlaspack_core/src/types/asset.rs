@@ -368,14 +368,7 @@ impl Asset {
     }
   }
 
-  pub fn set_file_type(&mut self, file_type: FileType, project_root: &Path) {
-    if file_type != self.file_type {
-      self.file_type = file_type;
-      self.update_id(project_root);
-    }
-  }
-
-  fn update_id(&mut self, project_root: &Path) {
+  pub fn update_id(&mut self, project_root: &Path) {
     self.id = create_asset_id(CreateAssetIdParams {
       code: None,
       environment_id: &self.env.id(),

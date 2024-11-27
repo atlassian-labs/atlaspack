@@ -17,6 +17,7 @@ use atlaspack_sourcemap::find_sourcemap_url;
 use atlaspack_sourcemap::load_sourcemap_url;
 use std::collections::VecDeque;
 use std::hash::Hash;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
@@ -111,8 +112,13 @@ impl Request for AssetRequest {
     });
 
     let transform_context = TransformContext::new(config_loader, self.env.clone());
-    let mut result =
-      run_pipelines(transform_context, asset, request_context.plugins().clone()).await?;
+    let mut result = run_pipelines(
+      transform_context,
+      asset,
+      request_context.plugins().clone(),
+      &request_context.project_root,
+    )
+    .await?;
 
     // TODO: Commit the asset with a project path now, as transformers rely on an absolute path
     // result.asset.file_path = to_project_path(&self.project_root, &result.asset.file_path);
@@ -143,6 +149,7 @@ async fn run_pipelines(
   transform_context: TransformContext,
   input: Asset,
   plugins: PluginsRef,
+  project_root: &Path,
 ) -> anyhow::Result<TransformResult> {
   let mut invalidations = vec![];
   let mut asset_queue = VecDeque::from([(
@@ -198,6 +205,9 @@ async fn run_pipelines(
 
       // If the Asset has changed type then we may need to trigger a different pipeline
       if current_asset.file_type != original_asset_type {
+        // When the Asset changes file_type we need to regenerate it's id
+        current_asset.update_id(project_root);
+
         let next_pipeline =
           plugins.transformers(&current_asset.file_path, current_asset.pipeline.clone())?;
 
@@ -247,6 +257,7 @@ mod tests {
   use atlaspack_core::plugin::MockTransformerPlugin;
   use atlaspack_core::types::Code;
   use atlaspack_core::types::FileType;
+  use pretty_assertions::assert_eq;
   use std::hash::Hasher;
   use std::path::Path;
 
@@ -271,14 +282,20 @@ mod tests {
     let mut plugins = MockPlugins::new();
     plugins.expect_transformers().returning(move |_, _| {
       Ok(TransformerPipeline::new(vec![
-        make_transformer("transformer1", None, None, None),
-        make_transformer("transformer2", None, None, None),
+        make_transformer(MockTrasformerOptions {
+          label: "transformer1",
+          ..Default::default()
+        }),
+        make_transformer(MockTrasformerOptions {
+          label: "transformer2",
+          ..Default::default()
+        }),
       ]))
     });
 
     let asset = Asset::default();
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins))
+    let result = run_pipelines(context, asset, Arc::new(plugins), &PathBuf::default())
       .await
       .unwrap();
 
@@ -295,20 +312,61 @@ mod tests {
       })
       .returning(move |_, _| {
         Ok(TransformerPipeline::new(vec![
-          make_transformer("js-1", None, None, None),
-          make_transformer("js-2", None, None, Some(vec![PathBuf::from("./tmp")])),
+          make_transformer(MockTrasformerOptions {
+            label: "js-1",
+            ..Default::default()
+          }),
+          make_transformer(MockTrasformerOptions {
+            label: "js-2",
+            invalidate_on_file_change: Some(vec![PathBuf::from("./tmp")]),
+            ..Default::default()
+          }),
         ]))
       });
 
     let asset = make_asset("index.js", FileType::Js);
     let expected_invalidations = vec![PathBuf::from("./tmp")];
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins))
+    let result = run_pipelines(context, asset, Arc::new(plugins), &PathBuf::default())
       .await
       .unwrap();
 
     assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.invalidate_on_file_change, expected_invalidations);
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_run_pipelines_with_updated_file_type() {
+    let mut plugins = MockPlugins::new();
+    plugins
+      .expect_transformers()
+      .withf(|path: &Path, _pipeline: &Option<String>| {
+        path.extension().is_some_and(|ext| ext == "tsx")
+      })
+      .returning(move |_, _| {
+        Ok(TransformerPipeline::new(vec![make_transformer(
+          MockTrasformerOptions {
+            label: "js-1",
+            updated_file_type: Some(FileType::Js),
+            ..Default::default()
+          },
+        )]))
+      });
+
+    let asset = make_asset("index.tsx", FileType::Tsx);
+    let context = TransformContext::default();
+    let result = run_pipelines(context, asset, Arc::new(plugins), &PathBuf::default())
+      .await
+      .unwrap();
+
+    assert_eq!(
+      result.asset.clone(),
+      Asset {
+        id: "f862d94a6287d334".into(),
+        file_type: FileType::Js,
+        ..result.asset
+      }
+    );
   }
 
   #[tokio::test(flavor = "multi_thread")]
@@ -321,15 +379,22 @@ mod tests {
       })
       .returning(move |_, _| {
         Ok(TransformerPipeline::new(vec![
-          make_transformer("js-1", None, None, None),
-          make_transformer("js-2", None, Some(vec![Dependency::default()]), None),
+          make_transformer(MockTrasformerOptions {
+            label: "js-1",
+            ..Default::default()
+          }),
+          make_transformer(MockTrasformerOptions {
+            label: "js-2",
+            dependencies: Some(vec![Dependency::default()]),
+            ..Default::default()
+          }),
         ]))
       });
 
     let asset = make_asset("index.js", FileType::Js);
     let expected_dependencies = vec![Dependency::default()];
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins))
+    let result = run_pipelines(context, asset, Arc::new(plugins), &PathBuf::default())
       .await
       .unwrap();
 
@@ -348,16 +413,18 @@ mod tests {
       })
       .returning(move |_, _| {
         Ok(TransformerPipeline::new(vec![
-          make_transformer("js-1", None, None, None),
-          make_transformer(
-            "js-2",
-            Some(vec![AssetWithDependencies {
+          make_transformer(MockTrasformerOptions {
+            label: "js-1",
+            ..Default::default()
+          }),
+          make_transformer(MockTrasformerOptions {
+            label: "js-2",
+            discovered_assets: Some(vec![AssetWithDependencies {
               asset: make_asset("discovered.css", FileType::Css),
               dependencies: vec![Dependency::default()],
             }]),
-            None,
-            None,
-          ),
+            ..Default::default()
+          }),
         ]))
       });
 
@@ -368,14 +435,21 @@ mod tests {
       })
       .returning(move |_, _| {
         Ok(TransformerPipeline::new(vec![
-          make_transformer("css-1", None, None, None),
-          make_transformer("css-2", None, Some(vec![Dependency::default()]), None),
+          make_transformer(MockTrasformerOptions {
+            label: "css-1",
+            ..Default::default()
+          }),
+          make_transformer(MockTrasformerOptions {
+            label: "css-2",
+            dependencies: Some(vec![Dependency::default()]),
+            ..Default::default()
+          }),
         ]))
       });
 
     let asset = make_asset("index.js", FileType::Js);
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins))
+    let result = run_pipelines(context, asset, Arc::new(plugins), &PathBuf::default())
       .await
       .unwrap();
 
@@ -385,12 +459,22 @@ mod tests {
     assert_eq!(result.discovered_assets[0].dependencies.len(), 2);
   }
 
-  fn make_transformer(
-    label: &str,
+  #[derive(Default)]
+  struct MockTrasformerOptions<'a> {
+    label: &'a str,
     discovered_assets: Option<Vec<AssetWithDependencies>>,
     dependencies: Option<Vec<Dependency>>,
     invalidate_on_file_change: Option<Vec<PathBuf>>,
-  ) -> Arc<MockTransformerPlugin> {
+    updated_file_type: Option<FileType>,
+  }
+  fn make_transformer(options: MockTrasformerOptions) -> Arc<MockTransformerPlugin> {
+    let MockTrasformerOptions {
+      label,
+      discovered_assets,
+      dependencies,
+      invalidate_on_file_change,
+      updated_file_type,
+    } = options;
     let label = label.to_string();
     let mut mock = MockTransformerPlugin::new();
     mock.expect_id().returning({
@@ -411,6 +495,10 @@ mod tests {
           String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
           label.clone()
         ));
+
+        if let Some(file_type) = updated_file_type.clone() {
+          asset.file_type = file_type;
+        }
 
         Ok(TransformResult {
           asset,
