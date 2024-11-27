@@ -221,10 +221,7 @@ function getAssetGraph(serializedGraph, options) {
       dependency.id = id;
       dependency.env.id = getEnvId(dependency.env);
 
-      // Dependency.symbols are always set to an empty map when scope hoisting
-      // is enabled. Some tests will fail if this is not the case. We should
-      // make this consistant when we re-visit packaging.
-      if (dependency.symbols != null || dependency.env.shouldScopeHoist) {
+      if (dependency.symbols != null) {
         dependency.symbols = new Map(dependency.symbols?.map(mapSymbols));
       }
 

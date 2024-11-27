@@ -560,6 +560,8 @@ describe('bundler', function () {
     await run(b);
   });
 
+  // TODO: v3 does not run the transformation pipeline over the inline script, and omits the
+  // asset size as a result
   it.v2(
     'should not count inline assests towards parallel request limit',
     async function () {
@@ -1424,6 +1426,8 @@ describe('bundler', function () {
       await run(b);
     });
 
+    // TODO: V3 JavaScript plugins need the overlayFS and package manager require, otherwise use
+    // the real file system
     it.v2('should respect Asset.isBundleSplittable', async function () {
       await fsFixture(overlayFS, dir)`
         yarn.lock: {}
@@ -1663,10 +1667,8 @@ describe('bundler', function () {
       await run(b);
     });
 
-    it.v2(
-      'should support manual shared bundles with constants module',
-      async function () {
-        await fsFixture(overlayFS, dir)`
+    it('should support manual shared bundles with constants module', async function () {
+      await fsFixture(overlayFS, dir)`
         yarn.lock: {}
 
         package.json:
@@ -1703,42 +1705,41 @@ describe('bundler', function () {
         vendor-async.js:
           import {a} from './vendor-constants.js';
           export default 'vendor-async.js' + a;
-        `;
+      `;
 
-        let b = await bundle(path.join(dir, 'index.html'), {
-          mode: 'production',
-          defaultTargetOptions: {
-            shouldScopeHoist: true,
-            sourceMaps: false,
-            shouldOptimize: false,
-          },
-          inputFS: overlayFS,
-        });
+      let b = await bundle(path.join(dir, 'index.html'), {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+          sourceMaps: false,
+          shouldOptimize: false,
+        },
+        inputFS: overlayFS,
+      });
 
-        assertBundles(b, [
-          {
-            assets: ['index.html'],
-          },
-          {
-            assets: [
-              'bundle-manifest.js',
-              'esm-js-loader.js',
-              'index.js',
-              'vendor-constants.js',
-            ],
-          },
-          {
-            assets: ['async.js'],
-          },
-          {
-            // Vendor MSB for JS
-            assets: ['vendor-async.js', 'vendor-constants.js'],
-          },
-        ]);
+      assertBundles(b, [
+        {
+          assets: ['index.html'],
+        },
+        {
+          assets: [
+            'bundle-manifest.js',
+            'esm-js-loader.js',
+            'index.js',
+            'vendor-constants.js',
+          ],
+        },
+        {
+          assets: ['async.js'],
+        },
+        {
+          // Vendor MSB for JS
+          assets: ['vendor-async.js', 'vendor-constants.js'],
+        },
+      ]);
 
-        await run(b);
-      },
-    );
+      await run(b);
+    });
 
     it('should support manual shared bundles with internalized assets', async function () {
       await fsFixture(overlayFS, dir)`

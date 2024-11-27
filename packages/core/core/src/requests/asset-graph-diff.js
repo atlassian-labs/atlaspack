@@ -130,10 +130,11 @@ function assetGraphDiff(jsAssetGraph: AssetGraph, rustAssetGraph: AssetGraph) {
       // ignore correspondingRequest from all nodes
       '$.correspondingRequest',
     ];
+
     console.log(
       diff(
-        compactDeep(rustNode, ignoredPatterns),
         compactDeep(jsNode, ignoredPatterns),
+        compactDeep(rustNode, ignoredPatterns),
       ),
     );
   }
