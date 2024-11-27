@@ -316,9 +316,15 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     }
 
     let config = atlaspack_js_swc_core::Config::default();
-    let result = conversion::convert_result(asset, &config, transformation_result, &self.options)
-      // TODO handle errors properly
-      .map_err(|_err| anyhow!("Failed to transform"))?;
+    let mut result =
+      conversion::convert_result(asset, &config, transformation_result, &self.options)
+        // TODO handle errors properly
+        .map_err(|_err| anyhow!("Failed to transform"))?;
+
+    // Change transformed Asset to JS file type
+    result
+      .asset
+      .set_file_type(FileType::Js, &self.options.project_root);
 
     Ok(result)
   }

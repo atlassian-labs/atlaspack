@@ -368,6 +368,23 @@ impl Asset {
     }
   }
 
+  pub fn set_file_type(&mut self, file_type: FileType, project_root: &Path) {
+    self.file_type = file_type;
+    self.update_id(project_root);
+  }
+
+  fn update_id(&mut self, project_root: &Path) {
+    self.id = create_asset_id(CreateAssetIdParams {
+      code: None,
+      environment_id: &self.env.id(),
+      file_path: &to_project_path(project_root, &self.file_path).to_string_lossy(),
+      file_type: &self.file_type,
+      pipeline: self.pipeline.as_deref(),
+      query: self.query.as_deref(),
+      unique_key: self.unique_key.as_deref(),
+    });
+  }
+
   pub fn set_interpreter(&mut self, shebang: impl Into<serde_json::Value>) {
     self.meta.insert("interpreter".into(), shebang.into());
   }
