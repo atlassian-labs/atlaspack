@@ -6,7 +6,11 @@ import {WorkerPool, waitForMessage} from '../../src/atlaspack-v3/WorkerPool';
 import assert from 'assert';
 
 function probeStatus(worker: Worker) {
-  const response = waitForMessage(worker, 'status');
+  const response = waitForMessage(
+    worker,
+    'status',
+    new AbortController().signal,
+  );
   worker.postMessage({type: 'probeStatus'});
   return response;
 }

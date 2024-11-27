@@ -118,10 +118,21 @@ export default class Atlaspack {
 
     await initSourcemaps;
     await initRust?.();
+
+    this.#disposable = new Disposable();
+
     try {
       initializeMonitoring?.();
-      process.on('exit', () => {
+
+      const onExit = () => {
         closeMonitoring?.();
+      };
+
+      process.on('exit', onExit);
+
+      this.#disposable.add(() => {
+        process.off('exit', onExit);
+        onExit();
       });
     } catch (e) {
       // Fallthrough
@@ -188,7 +199,6 @@ export default class Atlaspack {
       await this.#farm.createSharedReference(resolvedOptions, false);
     this.#optionsRef = optionsRef;
 
-    this.#disposable = new Disposable();
     if (this.#initialOptions.workerFarm) {
       // If we don't own the farm, dispose of only these references when
       // Atlaspack ends.
