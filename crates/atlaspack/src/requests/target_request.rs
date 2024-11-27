@@ -256,7 +256,7 @@ impl TargetRequest {
 
     if let Some(e) = config.contents.engines.as_ref() {
       if let Some(browsers) = &e.browsers {
-        if !Browsers::from(browsers.clone()).is_empty() {
+        if !Browsers::from(browsers).is_empty() {
           return Ok(config);
         }
       }

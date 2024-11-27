@@ -70,11 +70,11 @@ impl EnginesBrowsers {
   }
 }
 
-impl From<EnginesBrowsers> for Browsers {
-  fn from(engines_browsers: EnginesBrowsers) -> Self {
+impl From<&EnginesBrowsers> for Browsers {
+  fn from(engines_browsers: &EnginesBrowsers) -> Self {
     let list = match engines_browsers {
-      EnginesBrowsers::List(list) => list,
-      EnginesBrowsers::String(string) => vec![string],
+      EnginesBrowsers::List(list) => &list.iter().collect(),
+      EnginesBrowsers::String(string) => &vec![string],
     };
     let distribs = browserslist::resolve(list, &Default::default()).unwrap_or(Vec::new());
     Browsers::from(distribs)
