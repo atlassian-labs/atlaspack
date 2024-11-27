@@ -164,8 +164,11 @@ impl TargetRequest {
     // targets, then the target refers to node, otherwise browser.
     if package_json.browser.is_some() || package_json.targets.browser.is_some() {
       let is_node = |engines: &Engines| {
-        let browsers = engines.browsers.clone().unwrap_or_default();
-        engines.node.is_some() && Browsers::from(browsers).is_empty()
+        engines.node.is_some()
+          && engines
+            .browsers
+            .as_ref()
+            .is_none_or(|browsers| Browsers::from(browsers).is_empty())
       };
 
       if engines_descriptor.as_ref().is_some_and(is_node)
