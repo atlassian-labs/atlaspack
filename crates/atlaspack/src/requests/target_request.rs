@@ -232,7 +232,7 @@ impl TargetRequest {
     Ok(inferred_output_format)
   }
 
-  fn load_engine_and_browser_config(
+  fn load_config(
     &self,
     request_context: RunRequestContext,
   ) -> Result<ConfigFile<PackageJson>, anyhow::Error> {
@@ -311,7 +311,7 @@ impl TargetRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<Vec<Option<Target>>, anyhow::Error> {
-    let config = self.load_engine_and_browser_config(request_context)?;
+    let config = self.load_config(request_context)?;
     let mut targets: Vec<Option<Target>> = Vec::new();
 
     let builtin_targets = [
