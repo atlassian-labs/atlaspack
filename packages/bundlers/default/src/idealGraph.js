@@ -373,7 +373,10 @@ export function createIdealGraph(
                 dependencyPriorityEdges[dependency.priority],
               );
 
-              if (dependency.priority === 'conditional') {
+              if (
+                getFeatureFlag('conditionalBundlingApi') &&
+                dependency.priority === 'conditional'
+              ) {
                 let [referencingBundleRoot, bundleGroupNodeId] = nullthrows(
                   stack[stack.length - 1],
                 );
@@ -383,23 +386,20 @@ export function createIdealGraph(
                 )[0];
 
                 if (
-                  getFeatureFlag('conditionalBundlingApi') &&
-                  (config.loadConditionalBundlesInParallel ??
-                    !bundle.env.shouldScopeHoist)
+                  config.loadConditionalBundlesInParallel ??
+                  !bundle.env.shouldScopeHoist
                 ) {
                   // When configured (or serving code in development), serve conditional bundles in parallel so we don't get module not found errors
                   bundleRoots.set(childAsset, [bundleId, bundleGroupNodeId]);
                   bundleGraph.addEdge(referencingBundleId, bundleId);
                 }
 
-                if (getFeatureFlag('conditionalBundlingApi')) {
-                  // Add conditional edge
-                  bundleGraph.addEdge(
-                    referencingBundleId,
-                    bundleId,
-                    idealBundleGraphEdges.conditional,
-                  );
-                }
+                // Add conditional edge to track which bundles request each other
+                bundleGraph.addEdge(
+                  referencingBundleId,
+                  bundleId,
+                  idealBundleGraphEdges.conditional,
+                );
               }
             } else if (
               dependency.priority === 'parallel' ||

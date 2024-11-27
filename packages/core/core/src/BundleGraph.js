@@ -2289,11 +2289,7 @@ export default class BundleGraph {
     this._graph.dfs({
       visit: (nodeId) => {
         let node = nullthrows(this._graph.getNode(nodeId));
-        if (node.type !== 'bundle') {
-          return;
-        }
-
-        if (node.value.id === bundle.id) {
+        if (node.type !== 'bundle' || node.value.id === bundle.id) {
           return;
         }
 

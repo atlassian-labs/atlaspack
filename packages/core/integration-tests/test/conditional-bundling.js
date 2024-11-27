@@ -23,7 +23,7 @@ describe('conditional bundling', function () {
 
   it(`when disabled, should treat importCond as a sync import`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
         index.js:
@@ -51,7 +51,7 @@ describe('conditional bundling', function () {
 
   it(`when disabled, should transform types in importCond`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond-types');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
         index.ts:
@@ -81,7 +81,7 @@ describe('conditional bundling', function () {
     `should have true and false deps as bundles in conditional manifest`,
     async function () {
       const dir = path.join(__dirname, 'import-cond-cond-manifest');
-      overlayFS.mkdirp(dir);
+      await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
         .parcelrc:
@@ -139,7 +139,7 @@ describe('conditional bundling', function () {
 
   it.v2(`should use true bundle when condition is true`, async function () {
     const dir = path.join(__dirname, 'import-cond-true');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
         .parcelrc:
@@ -218,7 +218,7 @@ describe('conditional bundling', function () {
 
   it.v2(`should use both conditional bundles correctly`, async function () {
     const dir = path.join(__dirname, 'import-cond-both');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
         .parcelrc:
@@ -329,7 +329,7 @@ describe('conditional bundling', function () {
     `should load false bundle when importing dynamic bundles`,
     async function () {
       const dir = path.join(__dirname, 'import-cond-false-dynamic');
-      overlayFS.mkdirp(dir);
+      await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
       .parcelrc:
@@ -399,7 +399,7 @@ describe('conditional bundling', function () {
   it.v2(`should load dev warning when bundle isn't loaded`, async function () {
     const dir = path.join(__dirname, 'import-cond-dev-warning');
 
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
         index.js:
@@ -457,7 +457,7 @@ describe('conditional bundling', function () {
     `should handle loading conditional bundles when imported in different bundles`,
     async function () {
       const dir = path.join(__dirname, 'import-cond-different-bundles');
-      overlayFS.mkdirp(dir);
+      await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
         .parcelrc:
@@ -547,7 +547,7 @@ describe('conditional bundling', function () {
     `should load bundles in parallel when config enabled`,
     async function () {
       const dir = path.join(__dirname, 'import-cond-parallel-enabled');
-      overlayFS.mkdirp(dir);
+      await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
       .parcelrc:
@@ -646,7 +646,7 @@ describe('conditional bundling', function () {
     `should load conditional bundles in entry html when enabled`,
     async function () {
       const dir = path.join(__dirname, 'import-cond-entry-html-enabled');
-      overlayFS.mkdirp(dir);
+      await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
       .parcelrc:
