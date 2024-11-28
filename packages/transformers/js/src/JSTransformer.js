@@ -878,7 +878,6 @@ export default (new Transformer({
     }
 
     asset.meta.id = asset.id;
-    console.log(hoist_result);
     if (hoist_result) {
       asset.symbols.ensure();
       for (let {

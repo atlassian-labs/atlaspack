@@ -161,7 +161,7 @@ describe('bundler-experimental', () => {
           expect(output).toEqual(1234);
         });
 
-        it.only('can bundle async splits', async () => {
+        it('can bundle async splits', async () => {
           await fsFixture(overlayFS, __dirname)`
       bundler-experimental
         async.js:

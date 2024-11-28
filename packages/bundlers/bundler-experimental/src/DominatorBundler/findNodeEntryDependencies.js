@@ -17,8 +17,8 @@ export type NodeEntryDependencies = {|
 export function findNodeEntryDependencies(
   graph: SimpleAssetGraph,
 ): NodeEntryDependencies {
-  const postOrder = getGraphPostOrder(graph);
-  const reversePostOrder = postOrder.slice(0).reverse();
+  const postOrder = getGraphPostOrder(graph, -1);
+  const reversePostOrder = [...postOrder].reverse();
 
   const entryDependenciesByAsset = new Map();
   const asyncDependenciesByAsset = new Map();
@@ -49,6 +49,7 @@ export function findNodeEntryDependencies(
       continue;
     }
 
+    console.log({node});
     const entryNode = entryDependencyNodes.get(nodeId)?.node;
     if (entryNode != null) {
       const dependencies = entryDependenciesByAsset.get(nodeId) ?? new Set();
@@ -76,17 +77,21 @@ export function findNodeEntryDependencies(
         entryDependenciesByAsset.set(nodeId, dependencies);
       }
 
-      const entryNode = entryDependencyNodes.get(parentId)?.node;
-      if (entryNode != null) {
+      const parentEntries = entryDependenciesByAsset.get(parentId);
+      if (parentEntries != null) {
         const dependencies = entryDependenciesByAsset.get(nodeId) ?? new Set();
-        dependencies.add(entryNode);
+        for (let parentEntry of parentEntries) {
+          dependencies.add(parentEntry);
+        }
         entryDependenciesByAsset.set(nodeId, dependencies);
       }
 
-      const asyncNode = asyncDependencyNodes.get(parentId)?.node;
-      if (asyncNode != null) {
+      const parentAsyncEntries = asyncDependenciesByAsset.get(parentId);
+      if (parentAsyncEntries != null) {
         const dependencies = asyncDependenciesByAsset.get(nodeId) ?? new Set();
-        dependencies.add(asyncNode);
+        for (let asyncNode of parentAsyncEntries) {
+          dependencies.add(asyncNode);
+        }
         asyncDependenciesByAsset.set(nodeId, dependencies);
       }
     });

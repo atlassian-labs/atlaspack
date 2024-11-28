@@ -184,13 +184,20 @@ export function simpleFastDominance<T, E: number>(
 /**
  * Return the post-order of the graph.
  */
-export function getGraphPostOrder<T, E: number>(graph: Graph<T, E>): NodeId[] {
+export function getGraphPostOrder<T, E: number>(
+  graph: Graph<T, E>,
+  type: number = 1,
+): NodeId[] {
   const postOrder = [];
-  graph.traverse({
-    exit: (node) => {
-      postOrder.push(node);
+  graph.traverse(
+    {
+      exit: (node) => {
+        postOrder.push(node);
+      },
     },
-  });
+    graph.rootNodeId,
+    type,
+  );
   return postOrder;
 }
 

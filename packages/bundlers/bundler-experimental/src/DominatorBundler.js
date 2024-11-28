@@ -117,6 +117,8 @@ export function getOrCreateBundleGroupsForNode(
       }
     } else {
       const entries = entryDependenciesByAsset.get(nodeId);
+      console.log({node, entryDependenciesByAsset, nodeId});
+      invariant(entries != null);
       for (let entry of entries) {
         const target = entry.entryDependency.target;
         const bundleGroupsMap = bundleGroupsByEntryDep.get(target);
@@ -348,9 +350,9 @@ export function buildBundleGraph(
           entryAsset: planBundle.entryAsset,
           needsStableName: planBundle.needsStableName,
           target: planBundle.target,
-          // env: planBundle.env,
-          // uniqueKey: planBundle.uniqueKey,
-          // type: planBundle.type,
+          env: planBundle.env,
+          uniqueKey: planBundle.uniqueKey,
+          type: planBundle.type,
         });
 
       bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);

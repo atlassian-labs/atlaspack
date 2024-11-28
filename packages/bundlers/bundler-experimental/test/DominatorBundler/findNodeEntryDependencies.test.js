@@ -119,7 +119,7 @@ describe('findNodeEntryDependencies', () => {
       mapToPaths(rootedGraph, result.entryDependenciesByAsset),
       new Map([
         ['async.js', ['page1.js', 'page2.js']],
-        ['dependency.js', ['page2.js']],
+        ['dependency.js', ['page1.js', 'page2.js']],
         ['page1.js', ['page1.js']],
         ['page2.js', ['page2.js']],
       ]),
@@ -130,6 +130,47 @@ describe('findNodeEntryDependencies', () => {
       new Map([
         ['async.js', ['async.js']],
         ['dependency.js', ['async.js']],
+      ]),
+    );
+  });
+
+  it('works with multiple async layers', async () => {
+    const entryPath = path.join(__dirname, 'test/index.js');
+    const entryDir = path.dirname(entryPath);
+    await fixtureFromGraph(entryDir, overlayFS, [
+      asset('index.js', [
+        {to: 'page1.js', type: 'async'},
+        {to: 'page2.js', type: 'async'},
+      ]),
+      asset('page1.js', [{to: 'async.js', type: 'async'}]),
+      asset('page2.js', ['dependency.js', {to: 'async.js', type: 'async'}]),
+      asset('async.js', ['dependency.js']),
+      asset('dependency.js', []),
+    ]);
+
+    const {mutableBundleGraph} = await setupBundlerTest(entryPath);
+    const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+
+    const result = findNodeEntryDependencies(rootedGraph);
+
+    assert.deepEqual(
+      mapToPaths(rootedGraph, result.entryDependenciesByAsset),
+      new Map([
+        ['async.js', ['index.js']],
+        ['dependency.js', ['index.js']],
+        ['index.js', ['index.js']],
+        ['page1.js', ['index.js']],
+        ['page2.js', ['index.js']],
+      ]),
+    );
+
+    assert.deepEqual(
+      mapToPaths(rootedGraph, result.asyncDependenciesByAsset),
+      new Map([
+        ['page1.js', ['page1.js']],
+        ['page2.js', ['page2.js']],
+        ['async.js', ['async.js', 'page1.js', 'page2.js']],
+        ['dependency.js', ['async.js', 'page1.js', 'page2.js']],
       ]),
     );
   });
