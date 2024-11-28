@@ -329,13 +329,8 @@ pub(crate) fn convert_result(
     asset.set_conditions(result.conditions);
   }
 
-  // Overwrite the source-code with SWC output
-  let result_source_code_string = String::from_utf8(result.code)
-    // TODO: This is impossible; but we should extend 'diagnostic' type to be nicer / easier to build
-    .map_err(|_| vec![])?;
-
   asset.file_type = FileType::Js;
-  asset.code = Code::from(result_source_code_string);
+  asset.code = Code::new(result.code);
 
   if let Some(map) = result.map {
     // TODO: Fix diagnostic error handling
