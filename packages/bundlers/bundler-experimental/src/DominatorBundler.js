@@ -122,7 +122,6 @@ export function getOrCreateBundleGroupsForNode(
         const bundleGroupsMap = bundleGroupsByEntryDep.get(target);
 
         const dependency = packages.getEdgeWeight(rootId, nodeId);
-        console.log(node);
         invariant(dependency != null);
 
         if (bundleGroupsMap.has(dependency)) {
@@ -173,7 +172,6 @@ export function getOrCreateBundleGroupsForNode(
     const asyncEntries = asyncDependenciesByAsset.get(nodeId) ?? new Set();
     const allEntries = Array.from(entries).concat(Array.from(asyncEntries));
     for (let entry of allEntries) {
-      console.log(entry);
       const nodeId = packages.getNodeIdByContentKey(entry.id);
       const childResult = getOrCreateBundleGroupsForNode(
         bundleGroupsByEntryDep,
@@ -205,6 +203,7 @@ export function planBundleGraph(
     bundleGroups: [],
   };
 
+  const allBundleGroups = new Set();
   const bundleGroupsByEntryDep = new DefaultMap(() => new Map());
   const bundlesByPackageContentKey = result.bundlesByPackageContentKey;
 
@@ -223,6 +222,9 @@ export function planBundleGraph(
         node,
       ),
     );
+    for (let bundleGroup of bundleGroups) {
+      allBundleGroups.add(bundleGroup);
+    }
     invariant(bundleGroups.length > 0);
     const targets = new Set(bundleGroups.values().map((group) => group.target));
 
@@ -321,6 +323,8 @@ export function planBundleGraph(
     }
   }
 
+  result.bundleGroups = Array.from(allBundleGroups);
+
   return result;
 }
 
@@ -329,7 +333,6 @@ export function buildBundleGraph(
   packageGraph: PackagedDominatorGraph,
   bundleGraph: MutableBundleGraph,
 ) {
-  console.log(JSON.stringify(plan, null, 2));
   const bundlesByPlanBundle = new Map();
 
   for (const planGroup of plan.bundleGroups) {
@@ -403,7 +406,6 @@ export function intoBundleGraph(
   packageGraph: PackagedDominatorGraph,
   entryDependencies: NodeEntryDependencies,
 ) {
-  console.log(entryDependencies);
   const plan = planBundleGraph(
     packages,
     entryDependencies.entryDependenciesByAsset,

@@ -4,7 +4,12 @@ import assert from 'assert';
 import {EdgeContentGraph} from '../src/DominatorBundler/EdgeContentGraph';
 import type {Asset, Dependency, Target} from '@atlaspack/types';
 import type {AssetNode, PackagedDominatorGraph} from '../src';
-import {addNodeToBundle, planBundleGraph} from '../src';
+import {
+  addNodeToBundle,
+  getOrCreateBundleGroupsForNode,
+  planBundleGraph,
+} from '../src';
+import {DefaultMap} from '@atlaspack/utils';
 
 // $FlowFixMe
 const makeDependency = (obj: mixed): Dependency => (obj: any);
@@ -178,6 +183,108 @@ describe('addNodeToBundle', () => {
       sccChild1,
       sccChild2,
       mockNestedChild,
+    ]);
+  });
+});
+
+describe('getOrCreateBundleGroupsForNode', () => {
+  it('will return a bundle group for an entry-point node', () => {
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
+    const root = packages.addNodeByContentKey('root', 'root');
+    packages.setRootNodeId(root);
+    const entryAsset = makeAsset({});
+    const target = makeTarget({});
+    const entryDep = makeDependency({target});
+    const assetNode = {
+      type: 'asset',
+      id: 'asset',
+      asset: entryAsset,
+      entryDependency: entryDep,
+      target,
+      isEntryNode: true,
+      isRoot: true,
+    };
+    const asset = packages.addNodeByContentKey('asset', assetNode);
+    packages.addEdge(root, asset);
+
+    const entryDependenciesByAsset = new Map();
+    entryDependenciesByAsset.set(asset, new Set([assetNode]));
+    const asyncDependenciesByAsset = new Map();
+
+    const bundleGroupsByEntryDep = new DefaultMap(() => new Map());
+    const result = getOrCreateBundleGroupsForNode(
+      bundleGroupsByEntryDep,
+      packages,
+      entryDependenciesByAsset,
+      asyncDependenciesByAsset,
+      asset,
+      assetNode,
+    );
+
+    assert.deepEqual(Array.from(result), [
+      {
+        entryDep: assetNode.entryDependency,
+        target: assetNode.target,
+        bundles: [],
+      },
+    ]);
+  });
+
+  it('will return a bundle group for an async node', () => {
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
+    const root = packages.addNodeByContentKey('root', 'root');
+    packages.setRootNodeId(root);
+    const entryAsset = makeAsset({});
+    const asyncAsset = makeAsset({});
+    const target = makeTarget({});
+    const entryDep = makeDependency({target});
+    const asyncDependency = makeDependency({});
+    const assetNode = {
+      type: 'asset',
+      id: 'asset',
+      asset: entryAsset,
+      entryDependency: entryDep,
+      target,
+      isEntryNode: true,
+      isRoot: true,
+    };
+    const asset = packages.addNodeByContentKey('asset', assetNode);
+    packages.addEdge(root, asset);
+
+    const asyncNode = {
+      type: 'asset',
+      id: 'async',
+      asset: asyncAsset,
+      entryDependency: null,
+      target: null,
+      isEntryNode: false,
+      isRoot: true,
+    };
+    const asyncId = packages.addNodeByContentKey('async', asyncNode);
+    packages.addWeightedEdge(root, asyncId, 1, asyncDependency);
+
+    const entryDependenciesByAsset = new Map();
+    entryDependenciesByAsset.set(asset, new Set([assetNode]));
+    entryDependenciesByAsset.set(asyncId, new Set([assetNode]));
+    const asyncDependenciesByAsset = new Map();
+    asyncDependenciesByAsset.set(asyncId, new Set([asyncNode]));
+
+    const bundleGroupsByEntryDep = new DefaultMap(() => new Map());
+    const result = getOrCreateBundleGroupsForNode(
+      bundleGroupsByEntryDep,
+      packages,
+      entryDependenciesByAsset,
+      asyncDependenciesByAsset,
+      asyncId,
+      asyncNode,
+    );
+
+    assert.deepEqual(Array.from(result), [
+      {
+        entryDep: asyncDependency,
+        target: assetNode.target,
+        bundles: [],
+      },
     ]);
   });
 });
