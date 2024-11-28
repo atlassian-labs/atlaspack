@@ -470,6 +470,7 @@ dependencies = [
  "mockall",
  "nodejs-semver",
  "petgraph",
+ "pretty_assertions",
  "serde",
  "serde-value",
  "serde_json",
