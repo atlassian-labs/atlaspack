@@ -18,9 +18,10 @@ pub enum EnginesBrowsers {
 impl Default for EnginesBrowsers {
   fn default() -> Self {
     Self::List(vec![
-      String::from("last 2 versions"),
-      String::from("> 0.25%"),
-      String::from("not dead"),
+      String::from("last 1 Chrome version"),
+      String::from("last 1 Safari version"),
+      String::from("last 1 Firefox version"),
+      String::from("last 1 Edge version"),
     ])
   }
 }

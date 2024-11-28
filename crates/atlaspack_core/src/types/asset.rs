@@ -384,6 +384,10 @@ impl Asset {
     self.meta.insert("interpreter".into(), shebang.into());
   }
 
+  pub fn set_meta_id(&mut self, id: impl Into<serde_json::Value>) {
+    self.meta.insert("id".into(), id.into());
+  }
+
   pub fn set_has_cjs_exports(&mut self, value: bool) {
     self.meta.insert("hasCJSExports".into(), value.into());
     self.has_cjs_exports = value;
