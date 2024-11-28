@@ -36,6 +36,7 @@ export {
   objectSortedEntries,
   objectSortedEntriesDeep,
   setDifference,
+  setSymmetricDifference,
   setEqual,
   setIntersect,
   setUnion,

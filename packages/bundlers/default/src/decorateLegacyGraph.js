@@ -6,10 +6,12 @@ import type {
   BundleGroup,
   MutableBundleGraph,
 } from '@atlaspack/types';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
 
 import type {Bundle, IdealGraph} from './idealGraph';
+import {idealBundleGraphEdges} from './idealGraph';
 
 export function decorateLegacyGraph(
   idealGraph: IdealGraph,
@@ -193,7 +195,7 @@ export function decorateLegacyGraph(
     }
   }
 
-  for (let {from, to} of idealBundleGraph.getAllEdges()) {
+  for (let {type, from, to} of idealBundleGraph.getAllEdges()) {
     let sourceBundle = nullthrows(idealBundleGraph.getNode(from));
     if (sourceBundle === 'root') {
       continue;
@@ -212,6 +214,16 @@ export function decorateLegacyGraph(
     let legacyTargetBundle = nullthrows(
       idealBundleToLegacyBundle.get(targetBundle),
     );
-    bundleGraph.createBundleReference(legacySourceBundle, legacyTargetBundle);
+    if (
+      getFeatureFlag('conditionalBundlingApi') &&
+      type === idealBundleGraphEdges.conditional
+    ) {
+      bundleGraph.createBundleConditionalReference(
+        legacySourceBundle,
+        legacyTargetBundle,
+      );
+    } else {
+      bundleGraph.createBundleReference(legacySourceBundle, legacyTargetBundle);
+    }
   }
 }

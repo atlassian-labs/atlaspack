@@ -73,6 +73,9 @@ export const bundleGraphEdgeTypes = {
   // Signals that the dependency is internally resolvable via the bundle's ancestry,
   // and that the bundle connected to the dependency is not necessary for the source bundle.
   internal_async: 5,
+  // This type is used to mark an edge between a bundle and a conditional bundle.
+  // This allows efficient discovery of conditional bundles in packaging
+  conditional: 5,
 };
 
 export type BundleGraphEdgeType = $Values<typeof bundleGraphEdgeTypes>;
@@ -1176,6 +1179,14 @@ export default class BundleGraph {
     );
   }
 
+  createBundleConditionalReference(from: Bundle, to: Bundle): void {
+    this._graph.addEdge(
+      this._graph.getNodeIdByContentKey(from.id),
+      this._graph.getNodeIdByContentKey(to.id),
+      bundleGraphEdgeTypes.conditional,
+    );
+  }
+
   getBundlesWithAsset(asset: Asset): Array<Bundle> {
     return this._graph
       .getNodeIdsConnectedTo(
@@ -2271,5 +2282,27 @@ export default class BundleGraph {
     let root = getRootDir(entries);
     this._targetEntryRoots.set(target.distDir, root);
     return root;
+  }
+
+  getReferencedConditionalBundles(bundle: Bundle): Array<Bundle> {
+    let referencedBundles = new Set();
+    this._graph.dfs({
+      visit: (nodeId) => {
+        let node = nullthrows(this._graph.getNode(nodeId));
+        if (node.type !== 'bundle' || node.value.id === bundle.id) {
+          return;
+        }
+
+        referencedBundles.add(node.value);
+      },
+      startNodeId: this._graph.getNodeIdByContentKey(bundle.id),
+      getChildren: (nodeId) =>
+        this._graph.getNodeIdsConnectedFrom(
+          nodeId,
+          bundleGraphEdgeTypes.conditional,
+        ),
+    });
+
+    return [...referencedBundles];
   }
 }

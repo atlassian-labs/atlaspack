@@ -5,6 +5,7 @@ import {
   objectSortedEntries,
   objectSortedEntriesDeep,
   setDifference,
+  setSymmetricDifference,
 } from '../src/collection';
 
 describe('objectSortedEntries', () => {
@@ -42,10 +43,20 @@ describe('objectSortedEntriesDeep', () => {
     );
   });
 });
+
 describe('setDifference', () => {
   it('returns a setDifference of two sets of T type', () => {
     assert.deepEqual(
       setDifference(new Set([1, 2, 3]), new Set([3, 4, 5])),
+      new Set([1, 2]),
+    );
+  });
+});
+
+describe('setSymmetricDifference', () => {
+  it('returns a setSymmetricDifference of two sets of T type', () => {
+    assert.deepEqual(
+      setSymmetricDifference(new Set([1, 2, 3]), new Set([3, 4, 5])),
       new Set([1, 2, 4, 5]),
     );
   });

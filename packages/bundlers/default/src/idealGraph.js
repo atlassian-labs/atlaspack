@@ -55,24 +55,34 @@ export type DependencyBundleGraph = ContentGraph<
   number,
 >;
 
-// IdealGraph is the structure we will pass to decorate,
-// which mutates the assetGraph into the bundleGraph we would
-// expect from default bundler
-export type IdealGraph = {|
-  assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
-  assets: Array<Asset>,
-  bundleGraph: Graph<Bundle | 'root'>,
-  bundleGroupBundleIds: Set<NodeId>,
-  dependencyBundleGraph: DependencyBundleGraph,
-  manualAssetToBundle: Map<Asset, NodeId>,
-|};
-
 const dependencyPriorityEdges = {
   sync: 1,
   parallel: 2,
   lazy: 3,
   conditional: 4,
 };
+
+export const idealBundleGraphEdges = Object.freeze({
+  default: 1,
+  conditional: 2,
+});
+
+type IdealBundleGraph = Graph<
+  Bundle | 'root',
+  $Values<typeof idealBundleGraphEdges>,
+>;
+
+// IdealGraph is the structure we will pass to decorate,
+// which mutates the assetGraph into the bundleGraph we would
+// expect from default bundler
+export type IdealGraph = {|
+  assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
+  assets: Array<Asset>,
+  bundleGraph: IdealBundleGraph,
+  bundleGroupBundleIds: Set<NodeId>,
+  dependencyBundleGraph: DependencyBundleGraph,
+  manualAssetToBundle: Map<Asset, NodeId>,
+|};
 
 export function createIdealGraph(
   assetGraph: MutableBundleGraph,
@@ -91,7 +101,7 @@ export function createIdealGraph(
 
   // A Graph of Bundles and a root node (dummy string), which models only Bundles, and connections to their
   // referencing Bundle. There are no actual BundleGroup nodes, just bundles that take on that role.
-  let bundleGraph: Graph<Bundle | 'root'> = new Graph();
+  let bundleGraph: IdealBundleGraph = new Graph();
   let stack: Array<[BundleRoot, NodeId]> = [];
 
   let bundleRootEdgeTypes = {
@@ -364,11 +374,9 @@ export function createIdealGraph(
               );
 
               if (
-                (config.loadConditionalBundlesInParallel ??
-                  !bundle.env.shouldScopeHoist) &&
+                getFeatureFlag('conditionalBundlingApi') &&
                 dependency.priority === 'conditional'
               ) {
-                // When configured (or serving code in development), serve conditional bundles in parallel so we don't get module not found errors
                 let [referencingBundleRoot, bundleGroupNodeId] = nullthrows(
                   stack[stack.length - 1],
                 );
@@ -377,8 +385,21 @@ export function createIdealGraph(
                   bundleRoots.get(referencingBundleRoot),
                 )[0];
 
-                bundleRoots.set(childAsset, [bundleId, bundleGroupNodeId]);
-                bundleGraph.addEdge(referencingBundleId, bundleId);
+                if (
+                  config.loadConditionalBundlesInParallel ??
+                  !bundle.env.shouldScopeHoist
+                ) {
+                  // When configured (or serving code in development), serve conditional bundles in parallel so we don't get module not found errors
+                  bundleRoots.set(childAsset, [bundleId, bundleGroupNodeId]);
+                  bundleGraph.addEdge(referencingBundleId, bundleId);
+                }
+
+                // Add conditional edge to track which bundles request each other
+                bundleGraph.addEdge(
+                  referencingBundleId,
+                  bundleId,
+                  idealBundleGraphEdges.conditional,
+                );
               }
             } else if (
               dependency.priority === 'parallel' ||
@@ -1307,7 +1328,7 @@ export function createIdealGraph(
   }
 
   function removeBundle(
-    bundleGraph: Graph<Bundle | 'root'>,
+    bundleGraph: IdealBundleGraph,
     bundleId: NodeId,
     assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
   ) {
