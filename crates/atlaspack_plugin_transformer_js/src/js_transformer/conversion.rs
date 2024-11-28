@@ -343,8 +343,6 @@ pub(crate) fn convert_result(
   // it get's updated on the meta object.
   asset.set_meta_id(asset.id.clone());
 
-  asset.code = Code::from(result_source_code_string);
-
   if let Some(map) = result.map {
     // TODO: Fix diagnostic error handling
     let mut source_map = SourceMap::from_json(&options.project_root, &map).map_err(|_| vec![])?;
