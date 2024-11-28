@@ -186,7 +186,7 @@ async fn run_pipelines(
 
     let mut current_asset = asset_to_modify.clone();
     let mut current_dependencies = dependencies;
-    let mut pipeline_incomplete = false;
+    let mut pipeline_complete = true;
 
     for transformer in pipeline.transformers_mut() {
       let transform_result = transformer
@@ -226,13 +226,13 @@ async fn run_pipelines(
             },
             Some((next_pipeline, next_pipeline_id)),
           ));
-          pipeline_incomplete = true;
+          pipeline_complete = false;
           break;
         }
       }
     }
 
-    if !pipeline_incomplete {
+    if pipeline_complete {
       // We assume the first asset to complete the pipeline is the initial asset
       if initial_asset.is_none() {
         initial_asset = Some(current_asset);
