@@ -206,7 +206,7 @@ async fn run_pipelines(
 
       // If the Asset has changed type then we may need to trigger a different pipeline
       if current_asset.file_type != original_asset_type {
-        // When the Asset changes file_type we need to regenerate it's id
+        // When the Asset changes file_type we need to regenerate its id
         current_asset.update_id(project_root);
 
         let next_pipeline = plugins.transformers(
