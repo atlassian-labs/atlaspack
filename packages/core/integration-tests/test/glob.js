@@ -12,7 +12,7 @@ import {
 } from '@atlaspack/test-utils';
 import nullthrows from 'nullthrows';
 
-describe.v2('glob', function () {
+describe('glob', function () {
   it('should require a glob of files', async function () {
     let b = await bundle(path.join(__dirname, '/integration/glob/index.js'));
 
@@ -45,7 +45,7 @@ describe.v2('glob', function () {
     assert.equal(await output(), 13);
   });
 
-  it('should support importing a glob of CSS files', async function () {
+  it.v2('should support importing a glob of CSS files', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/glob-css/index.js'),
     );
@@ -74,7 +74,7 @@ describe.v2('glob', function () {
     assert(css.includes('.index'));
   });
 
-  it('should require a glob using a pipeline', async function () {
+  it.v2('should require a glob using a pipeline', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/glob-pipeline/index.js'),
     );
@@ -105,7 +105,7 @@ describe.v2('glob', function () {
     });
   });
 
-  it('should import a glob with dynamic import', async function () {
+  it.v2('should import a glob with dynamic import', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/glob-async/index.js'),
     );
@@ -135,26 +135,29 @@ describe.v2('glob', function () {
     assert.equal(await output(), 3);
   });
 
-  it('should error when an unsupported asset type imports a glob', async function () {
-    let filePath = path.join(__dirname, '/integration/glob-error/index.html');
-    // $FlowFixMe[prop-missing]
-    await assert.rejects(() => bundle(filePath), {
-      name: 'BuildError',
-      diagnostics: [
-        {
-          message: "Failed to resolve 'foo/\\*.js' from './index.html'",
-          origin: '@atlaspack/core',
-        },
-        {
-          message: 'Glob imports are not supported in html files.',
-          origin: '@atlaspack/resolver-glob',
-          codeFrames: undefined,
-        },
-      ],
-    });
-  });
+  it.v2(
+    'should error when an unsupported asset type imports a glob',
+    async function () {
+      let filePath = path.join(__dirname, '/integration/glob-error/index.html');
+      // $FlowFixMe[prop-missing]
+      await assert.rejects(() => bundle(filePath), {
+        name: 'BuildError',
+        diagnostics: [
+          {
+            message: "Failed to resolve 'foo/\\*.js' from './index.html'",
+            origin: '@atlaspack/core',
+          },
+          {
+            message: 'Glob imports are not supported in html files.',
+            origin: '@atlaspack/resolver-glob',
+            codeFrames: undefined,
+          },
+        ],
+      });
+    },
+  );
 
-  it('should error when a URL dependency imports a glob', async function () {
+  it.v2('should error when a URL dependency imports a glob', async function () {
     let filePath = path.join(__dirname, '/integration/glob-error/index.css');
     // $FlowFixMe[prop-missing]
     await assert.rejects(() => bundle(filePath), {
@@ -208,7 +211,7 @@ describe.v2('glob', function () {
     });
   });
 
-  it('should require a glob of files from a package', async function () {
+  it.v2('should require a glob of files from a package', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/glob-package/index.js'),
     );
@@ -224,32 +227,35 @@ describe.v2('glob', function () {
     assert.equal(await output(), 10);
   });
 
-  it('should require a glob of files from a package async', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/glob-package-async/index.js'),
-    );
-    assertBundles(b, [
-      {
-        name: 'index.js',
-        assets: [
-          '*.js',
-          '*.js',
-          'bundle-url.js',
-          'cacheLoader.js',
-          'index.js',
-          'js-loader.js',
-        ],
-      },
-      {type: 'js', assets: ['a.js']},
-      {type: 'js', assets: ['b.js']},
-      {type: 'js', assets: ['x.js']},
-      {type: 'js', assets: ['y.js']},
-    ]);
+  it.v2(
+    'should require a glob of files from a package async',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/glob-package-async/index.js'),
+      );
+      assertBundles(b, [
+        {
+          name: 'index.js',
+          assets: [
+            '*.js',
+            '*.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'index.js',
+            'js-loader.js',
+          ],
+        },
+        {type: 'js', assets: ['a.js']},
+        {type: 'js', assets: ['b.js']},
+        {type: 'js', assets: ['x.js']},
+        {type: 'js', assets: ['y.js']},
+      ]);
 
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-    assert.equal(await output(), 10);
-  });
+      let output = await run(b);
+      assert.equal(typeof output, 'function');
+      assert.equal(await output(), 10);
+    },
+  );
 
   it('should resolve a glob with ~', async function () {
     let b = await bundle(

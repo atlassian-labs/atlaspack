@@ -65,6 +65,12 @@ pub(crate) fn convert_result(
     // Pre-allocate expected symbols
     asset_symbols.reserve(hoist_result.exported_symbols.len() + hoist_result.re_exports.len() + 1);
 
+    // Dependency symbols are always present during scope hoisting, this is necessary for the
+    // packaging phase and should be revisited later.
+    for dependency in dependency_by_specifier.values_mut() {
+      dependency.symbols = Some(Vec::new());
+    }
+
     // Collect all exported variable names
     for symbol in &hoist_result.exported_symbols {
       let symbol =
