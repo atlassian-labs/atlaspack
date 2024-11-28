@@ -159,10 +159,10 @@ export class AtlaspackWorker {
   );
 
   runTransformerTransform: JsCallable<
-    [RunTransformerTransformOptions, Buffer],
+    [RunTransformerTransformOptions, Buffer, ?string],
     Promise<RunTransformerTransformResult>,
   > = jsCallable(
-    async ({key, env: napiEnv, options, asset: innerAsset}, contents) => {
+    async ({key, env: napiEnv, options, asset: innerAsset}, contents, map) => {
       const state = this.#transformers.get(key);
       if (!state) {
         throw new Error(`Transformer not found: ${key}`);
@@ -188,6 +188,8 @@ export class AtlaspackWorker {
         contents,
         env,
         this.#fs,
+        map,
+        options.projectRoot,
       );
 
       const defaultOptions = {
@@ -250,6 +252,10 @@ export class AtlaspackWorker {
           } else {
             mutableAsset.setStream(output.content);
           }
+
+          if (output.map) {
+            mutableAsset.setMap(output.map);
+          }
         }
       }
 
@@ -269,20 +275,25 @@ export class AtlaspackWorker {
           bundleBehavior: bundleBehaviorMap.intoNullable(
             mutableAsset.bundleBehavior,
           ),
-          filePath: mutableAsset.filePath,
-          type: mutableAsset.type,
           code: [],
+          filePath: mutableAsset.filePath,
+          isBundleSplittable: mutableAsset.isBundleSplittable,
+          isSource: mutableAsset.isSource,
           meta: mutableAsset.meta,
           pipeline: mutableAsset.pipeline,
           // Query should be undefined if it's empty
           query: mutableAsset.query.toString() || undefined,
-          symbols: mutableAsset.symbols.intoNapi(),
-          uniqueKey: mutableAsset.uniqueKey,
           sideEffects: mutableAsset.sideEffects,
-          isBundleSplittable: mutableAsset.isBundleSplittable,
-          isSource: mutableAsset.isSource,
+          symbols: mutableAsset.symbols.intoNapi(),
+          type: mutableAsset.type,
+          uniqueKey: mutableAsset.uniqueKey,
         },
         await mutableAsset.getBuffer(),
+        // Only send back the map if it has changed
+        mutableAsset.isMapDirty
+          ? // $FlowFixMe A dirty map means this will be valid
+            JSON.stringify((await mutableAsset.getMap()).toVLQ())
+          : '',
       ];
     },
   );
@@ -366,4 +377,4 @@ type RunTransformerTransformOptions = {|
   asset: napi.Asset,
 |};
 
-type RunTransformerTransformResult = [napi.RpcAssetResult, Buffer];
+type RunTransformerTransformResult = [napi.RpcAssetResult, Buffer, string];

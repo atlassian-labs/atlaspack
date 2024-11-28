@@ -3,12 +3,10 @@
 import invariant from 'assert';
 
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
-import {hashString} from '@atlaspack/rust';
 import type {Async} from '@atlaspack/types';
 
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
-import {ATLASPACK_VERSION} from '../constants';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
 import type {Environment} from '../types';
@@ -17,7 +15,6 @@ import type {
   AssetGraphRequestInput,
   AssetGraphRequestResult,
 } from './AssetGraphRequest';
-import SourceMap from '@parcel/source-map';
 
 type RunInput = {|
   input: AssetGraphRequestInput,
@@ -51,10 +48,7 @@ export function createAssetGraphRequestRust(
         });
       }
 
-      let {assetGraph, changedAssets} = getAssetGraph(
-        serializedAssetGraph,
-        options,
-      );
+      let {assetGraph, changedAssets} = getAssetGraph(serializedAssetGraph);
 
       let changedAssetsPropagation = new Set(changedAssets.keys());
       let errors = propagateSymbols({
@@ -86,7 +80,7 @@ export function createAssetGraphRequestRust(
   });
 }
 
-function getAssetGraph(serializedGraph, options) {
+function getAssetGraph(serializedGraph) {
   let graph = new AssetGraph({
     _contentKeyToNodeId: new Map(),
     _nodeIdToContentKey: new Map(),
@@ -176,23 +170,19 @@ function getAssetGraph(serializedGraph, options) {
         deps = new Map();
         dependencyMap.set(id, deps);
       }
-      asset.dependencies = deps;
 
       asset.committed = true;
       asset.contentKey = id;
+      asset.dependencies = deps;
       asset.env.id = getEnvId(asset.env);
+      asset.mapKey = `map:${asset.id}`;
+
+      // We need to add this property for source map handling, as some assets like runtimes
+      // are processed after the Rust transformation and take the v2 code path
+      asset.meta.isV3 = true;
+
       if (asset.symbols != null) {
         asset.symbols = new Map(asset.symbols.map(mapSymbols));
-      }
-
-      if (asset.map) {
-        let mapKey = hashString(`${ATLASPACK_VERSION}:map:${asset.id}`);
-        let sourceMap = new SourceMap(options.projectRoot);
-        sourceMap.addVLQMap(JSON.parse(asset.map));
-
-        asset.mapKey = mapKey;
-        options.cache.setBlob(mapKey, sourceMap.toBuffer());
-        delete asset.map;
       }
 
       cachedAssets.set(id, asset.code);
