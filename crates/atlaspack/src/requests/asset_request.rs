@@ -186,6 +186,7 @@ async fn run_pipelines(
 
     let mut current_asset = asset_to_modify.clone();
     let mut current_dependencies = dependencies;
+    let mut pipeline_incomplete = false;
 
     for transformer in pipeline.transformers_mut() {
       let transform_result = transformer
@@ -208,8 +209,12 @@ async fn run_pipelines(
         // When the Asset changes file_type we need to regenerate it's id
         current_asset.update_id(project_root);
 
-        let next_pipeline =
-          plugins.transformers(&current_asset.file_path, current_asset.pipeline.clone())?;
+        let next_pipeline = plugins.transformers(
+          &current_asset
+            .file_path
+            .with_extension(current_asset.file_type.extension()),
+          current_asset.pipeline.clone(),
+        )?;
 
         let next_pipeline_id = next_pipeline.id();
 
@@ -221,20 +226,23 @@ async fn run_pipelines(
             },
             Some((next_pipeline, next_pipeline_id)),
           ));
+          pipeline_incomplete = true;
           break;
         }
       }
     }
 
-    // We assume the first asset to complete the pipeline is the initial asset
-    if initial_asset.is_none() {
-      initial_asset = Some(current_asset);
-      initial_asset_dependencies = Some(current_dependencies);
-    } else {
-      processed_assets.push(AssetWithDependencies {
-        asset: current_asset,
-        dependencies: current_dependencies,
-      });
+    if !pipeline_incomplete {
+      // We assume the first asset to complete the pipeline is the initial asset
+      if initial_asset.is_none() {
+        initial_asset = Some(current_asset);
+        initial_asset_dependencies = Some(current_dependencies);
+      } else {
+        processed_assets.push(AssetWithDependencies {
+          asset: current_asset,
+          dependencies: current_dependencies,
+        });
+      }
     }
   }
 
@@ -341,19 +349,34 @@ mod tests {
     plugins
       .expect_transformers()
       .withf(|path: &Path, _pipeline: &Option<String>| {
-        path.extension().is_some_and(|ext| ext == "tsx")
+        path.extension().is_some_and(|ext| ext == "json")
       })
       .returning(move |_, _| {
         Ok(TransformerPipeline::new(vec![make_transformer(
           MockTrasformerOptions {
-            label: "js-1",
+            label: "json",
             updated_file_type: Some(FileType::Js),
+            ..Default::default()
+          },
+        )]))
+      })
+      .times(1);
+
+    plugins
+      .expect_transformers()
+      .withf(|path: &Path, _pipeline: &Option<String>| {
+        path.extension().is_some_and(|ext| ext == "js")
+      })
+      .returning(move |_, _| {
+        Ok(TransformerPipeline::new(vec![make_transformer(
+          MockTrasformerOptions {
+            label: "js",
             ..Default::default()
           },
         )]))
       });
 
-    let asset = make_asset("index.tsx", FileType::Tsx);
+    let asset = make_asset("index.json", FileType::Json);
     let context = TransformContext::default();
     let result = run_pipelines(context, asset, Arc::new(plugins), &PathBuf::default())
       .await
@@ -362,11 +385,12 @@ mod tests {
     assert_eq!(
       result.asset.clone(),
       Asset {
-        id: "f862d94a6287d334".into(),
+        id: "531e3635c3398c55".into(),
         file_type: FileType::Js,
         ..result.asset
       }
     );
+    assert_eq!(result.discovered_assets.len(), 0);
   }
 
   #[tokio::test(flavor = "multi_thread")]
