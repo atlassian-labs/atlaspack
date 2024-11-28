@@ -361,6 +361,7 @@ mod tests {
           file_path: "mock_path.js".into(),
           file_type: FileType::Js,
           symbols: Some(Vec::new()),
+          meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
           ..target_asset
         },
         discovered_assets: vec![],
@@ -415,6 +416,7 @@ mod tests {
         file_path: PathBuf::from("index.jsx"),
         file_type: FileType::Js,
         symbols: Some(Vec::new()),
+        meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
         ..target_asset
       },
     );
@@ -465,6 +467,7 @@ mod tests {
         file_path: PathBuf::from("index.tsx"),
         file_type: FileType::Js,
         symbols: Some(Vec::new()),
+        meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
         ..target_asset
       },
     );
@@ -517,6 +520,7 @@ mod tests {
             is_esm_export: false,
             self_referenced: false,
           },]),
+          meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
           ..target_asset
         },
       );
@@ -582,6 +586,7 @@ mod tests {
         file_path: PathBuf::from("src").join("index.jsx"),
         file_type: FileType::Js,
         symbols: Some(Vec::new()),
+        meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
         ..target_asset
       },
     );
@@ -642,6 +647,7 @@ mod tests {
         file_path: PathBuf::from("index.jsx"),
         file_type: FileType::Js,
         symbols: Some(Vec::new()),
+        meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
         ..target_asset
       },
     );
@@ -671,6 +677,7 @@ mod tests {
           code: Code::from(String::from("const test = ()=>{};")),
           file_path: "index.js".into(),
           symbols: Some(Vec::new()),
+          meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
           ..target_asset
         },
         discovered_assets: vec![],
@@ -774,6 +781,7 @@ mod tests {
             }
           ]),
           unique_key: None,
+          meta: serde_json::Map::from_iter([(String::from("id"), asset_id.clone().into())]),
           ..empty_asset()
         },
         discovered_assets: vec![],
