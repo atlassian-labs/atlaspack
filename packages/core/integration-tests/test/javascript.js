@@ -4323,61 +4323,57 @@ describe('javascript', function () {
     });
   });
 
-  it.v2(
-    'should support importing async bundles from bundles with different dist paths',
-    async function () {
-      // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
-      let bundleGraph = await bundle(
-        ['bar/entry/entry-a.js', 'foo/entry-b.js'].map((f) =>
-          path.join(__dirname, 'integration/differing-bundle-urls', f),
-        ),
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            shouldOptimize: false,
-          },
+  it('should support importing async bundles from bundles with different dist paths', async function () {
+    let bundleGraph = await bundle(
+      ['bar/entry/entry-a.js', 'foo/entry-b.js'].map((f) =>
+        path.join(__dirname, 'integration/differing-bundle-urls', f),
+      ),
+      {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldOptimize: false,
         },
-      );
-      assertBundles(bundleGraph, [
-        {
-          name: 'entry-a.js',
-          assets: [
-            'bundle-manifest.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'entry-a.js',
-            'js-loader.js',
-          ],
-        },
-        {
-          name: 'entry-b.js',
-          assets: [
-            'bundle-manifest.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'entry-b.js',
-            'js-loader.js',
-          ],
-        },
-        {name: /deep\.[a-f0-9]+\.js/, assets: ['deep.js']},
-        {name: /common\.[a-f0-9]+\.js/, assets: ['index.js']},
-      ]);
+      },
+    );
+    assertBundles(bundleGraph, [
+      {
+        name: 'entry-a.js',
+        assets: [
+          'bundle-manifest.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'entry-a.js',
+          'js-loader.js',
+        ],
+      },
+      {
+        name: 'entry-b.js',
+        assets: [
+          'bundle-manifest.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'entry-b.js',
+          'js-loader.js',
+        ],
+      },
+      {name: /deep\.[a-f0-9]+\.js/, assets: ['deep.js']},
+      {name: /common\.[a-f0-9]+\.js/, assets: ['index.js']},
+    ]);
 
-      let [a, b] = bundleGraph.getBundles().filter((b) => b.needsStableName);
-      let calls = [];
+    let [a, b] = bundleGraph.getBundles().filter((b) => b.needsStableName);
+    let calls = [];
 
-      let bundles = [
-        [await outputFS.readFile(a.filePath, 'utf8'), a],
-        [await outputFS.readFile(b.filePath, 'utf8'), b],
-      ];
+    let bundles = [
+      [await outputFS.readFile(a.filePath, 'utf8'), a],
+      [await outputFS.readFile(b.filePath, 'utf8'), b],
+    ];
 
-      await runBundles(bundleGraph, a, bundles, {
-        sideEffect: (v) => {
-          calls.push(v);
-        },
-      });
-    },
-  );
+    await runBundles(bundleGraph, a, bundles, {
+      sideEffect: (v) => {
+        calls.push(v);
+      },
+    });
+  });
 
   it('supports deferring unused ESM imports with sideEffects: false', async function () {
     let b = await bundle(
@@ -5362,22 +5358,18 @@ describe('javascript', function () {
         assert.deepEqual(res.output, {Main: 'main', a: 'foo', b: 'bar'});
       });
 
-      it.v2(
-        'can import from a different bundle via a re-export',
-        async function () {
-          // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
-          let b = await bundle(
-            path.join(
-              __dirname,
-              '/integration/scope-hoisting/es6/re-export-bundle-boundary-side-effects/index.js',
-            ),
-            options,
-          );
+      it('can import from a different bundle via a re-export', async function () {
+        let b = await bundle(
+          path.join(
+            __dirname,
+            '/integration/scope-hoisting/es6/re-export-bundle-boundary-side-effects/index.js',
+          ),
+          options,
+        );
 
-          let res = await run(b, null, {require: false});
-          assert.deepEqual(await res.output, ['operational', 'ui']);
-        },
-      );
+        let res = await run(b, null, {require: false});
+        assert.deepEqual(await res.output, ['operational', 'ui']);
+      });
 
       it('supports excluding multiple chained namespace reexports', async function () {
         let b = await bundle(
@@ -5815,39 +5807,31 @@ describe('javascript', function () {
       });
     });
 
-    it.v2(
-      `ignores missing unused import specifiers in source assets ${
-        shouldScopeHoist ? 'with' : 'without'
-      } scope-hoisting`,
-      async function () {
-        // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
-        let b = await bundle(
-          path.join(__dirname, 'integration/js-unused-import-specifier/a.js'),
-          options,
-        );
-        let res = await run(b, null, {require: false});
-        assert.equal(res.output, 123);
-      },
-    );
+    it(`ignores missing unused import specifiers in source assets ${
+      shouldScopeHoist ? 'with' : 'without'
+    } scope-hoisting`, async function () {
+      let b = await bundle(
+        path.join(__dirname, 'integration/js-unused-import-specifier/a.js'),
+        options,
+      );
+      let res = await run(b, null, {require: false});
+      assert.equal(res.output, 123);
+    });
 
-    it.v2(
-      `ignores missing unused import specifiers in node-modules ${
-        shouldScopeHoist ? 'with' : 'without'
-      } scope-hoisting`,
-      async function () {
-        // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/js-unused-import-specifier-node-modules/a.js',
-          ),
-          options,
-        );
+    it(`ignores missing unused import specifiers in node-modules ${
+      shouldScopeHoist ? 'with' : 'without'
+    } scope-hoisting`, async function () {
+      let b = await bundle(
+        path.join(
+          __dirname,
+          '/integration/js-unused-import-specifier-node-modules/a.js',
+        ),
+        options,
+      );
 
-        let res = await run(b, null, {require: false});
-        assert.equal(res.output, 123);
-      },
-    );
+      let res = await run(b, null, {require: false});
+      assert.equal(res.output, 123);
+    });
 
     it(`duplicate assets should share module scope ${
       shouldScopeHoist ? 'with' : 'without'

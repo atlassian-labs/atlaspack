@@ -1253,58 +1253,57 @@ describe('scope hoisting', function () {
       assert.deepEqual(output, [123, 123]);
     });
 
-    it.v2(
-      'supports reexporting an asset from a shared bundle inside a shared bundle',
-      async function () {
-        let b = await bundle(
+    it('supports reexporting an asset from a shared bundle inside a shared bundle', async function () {
+      let b = await bundle(
+        ['1', '2', '3'].map((n) =>
           path.join(
             __dirname,
-            '/integration/scope-hoisting/es6/shared-bundle-reexport/*.html',
+            `/integration/scope-hoisting/es6/shared-bundle-reexport/index${n}.html`,
           ),
-          {mode: 'production'},
-        );
-        assertBundles(b, [
-          {
-            type: 'html',
-            assets: ['index1.html'],
+        ),
+        {mode: 'production'},
+      );
+      assertBundles(b, [
+        {
+          type: 'html',
+          assets: ['index1.html'],
+        },
+        {
+          type: 'js',
+          assets: ['index1.js'],
+        },
+        {
+          type: 'html',
+          assets: ['index2.html'],
+        },
+        {
+          type: 'js',
+          assets: ['index2.js', 'b.js'],
+        },
+        {
+          type: 'html',
+          assets: ['index3.html'],
+        },
+        {
+          type: 'js',
+          assets: ['index3.js', 'b.js'],
+        },
+        {
+          type: 'js',
+          assets: ['a.js'],
+        },
+      ]);
+      for (let bundle of b.getBundles().filter((b) => b.type === 'html')) {
+        let calls = [];
+        await runBundle(b, bundle, {
+          call(v) {
+            calls.push(v);
           },
-          {
-            type: 'js',
-            assets: ['index1.js'],
-          },
-          {
-            type: 'html',
-            assets: ['index2.html'],
-          },
-          {
-            type: 'js',
-            assets: ['index2.js', 'b.js'],
-          },
-          {
-            type: 'html',
-            assets: ['index3.html'],
-          },
-          {
-            type: 'js',
-            assets: ['index3.js', 'b.js'],
-          },
-          {
-            type: 'js',
-            assets: ['a.js'],
-          },
-        ]);
-        for (let bundle of b.getBundles().filter((b) => b.type === 'html')) {
-          let calls = [];
-          await runBundle(b, bundle, {
-            call(v) {
-              calls.push(v);
-            },
-          });
-          assert.equal(calls.length, 1);
-          assert(calls[0].startsWith('abcabc'));
-        }
-      },
-    );
+        });
+        assert.equal(calls.length, 1);
+        assert(calls[0].startsWith('abcabc'));
+      }
+    });
 
     it('supports simultaneous import and re-export of a symbol', async function () {
       let b = await bundle(
@@ -5438,49 +5437,46 @@ describe('scope hoisting', function () {
     assert.equal(await res.output(), 'Imported: foobar');
   });
 
-  it.v2(
-    'should include the prelude in shared entry bundles',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/html-shared/index.html'),
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            shouldOptimize: false,
-          },
+  it('should include the prelude in shared entry bundles', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/html-shared/index.html'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldOptimize: false,
         },
-      );
+      },
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.html',
-          assets: ['index.html'],
-        },
-        {
-          type: 'js',
-          assets: ['index.js'],
-        },
-        {
-          name: 'iframe.html',
-          assets: ['iframe.html'],
-        },
-        {
-          type: 'js',
-          assets: ['iframe.js'],
-        },
-        {
-          type: 'js',
-          assets: ['lodash.js'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.html',
+        assets: ['index.html'],
+      },
+      {
+        type: 'js',
+        assets: ['index.js'],
+      },
+      {
+        type: 'html',
+        assets: ['iframe.html'],
+      },
+      {
+        type: 'js',
+        assets: ['iframe.js'],
+      },
+      {
+        type: 'js',
+        assets: ['lodash.js'],
+      },
+    ]);
 
-      let sharedBundle = b
-        .getBundles()
-        .sort((a, b) => b.stats.size - a.stats.size)[0];
-      let contents = await outputFS.readFile(sharedBundle.filePath, 'utf8');
-      assert(contents.includes(`if (parcelRequire == null) {`));
-    },
-  );
+    let sharedBundle = b
+      .getBundles()
+      .sort((a, b) => b.stats.size - a.stats.size)[0];
+    let contents = await outputFS.readFile(sharedBundle.filePath, 'utf8');
+    assert(contents.includes(`if (parcelRequire == null) {`));
+  });
 
   it.skip('does not include prelude if child bundles are isolated', async function () {
     let b = await bundle(
