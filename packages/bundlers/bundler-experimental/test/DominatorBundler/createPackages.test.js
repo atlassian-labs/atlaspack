@@ -17,14 +17,13 @@ import {
 } from '../graphviz/GraphvizUtils';
 import {findAssetDominators} from '../../src/DominatorBundler/findAssetDominators';
 import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
+import {EdgeContentGraph} from '../../src/DominatorBundler/EdgeContentGraph';
 
 async function testGetPackages(entryPath: string, entryDir: string) {
   const {mutableBundleGraph} = await setupBundlerTest(entryPath);
-  const {dominators} = findAssetDominators(mutableBundleGraph);
-  const packages = createPackages(
-    mutableBundleGraph,
-    dominators,
-    (parentChunks) => testMakePackageKey(entryDir, dominators, parentChunks),
+  const {dominators, graph} = findAssetDominators(mutableBundleGraph);
+  const packages = createPackages(graph, dominators, (parentChunks) =>
+    testMakePackageKey(entryDir, dominators, parentChunks),
   );
   return {packages};
 }
@@ -34,6 +33,25 @@ describe('DominatorBundler/createPackages', () => {
     this.timeout(10000);
     // Warm up worker farm so that the first test doesn't account for this time.
     await workerFarm.callAllWorkers('ping', []);
+  });
+
+  it('preserves edge weights on the dominated graph', () => {
+    const inputGraph = new EdgeContentGraph();
+    const root = inputGraph.addNodeByContentKey('root', 'root');
+    inputGraph.setRootNodeId(root);
+    const a = inputGraph.addNodeByContentKey('a', {
+      id: 'a',
+      type: 'asset',
+    });
+    inputGraph.addWeightedEdge(root, a, 1, 'weight');
+
+    // $FlowFixMe
+    const packages = createPackages(inputGraph, inputGraph);
+    const weight = packages.getEdgeWeight(
+      packages.getNodeIdByContentKey('root'),
+      packages.getNodeIdByContentKey('a'),
+    );
+    assert.equal(weight, 'weight');
   });
 
   it('does nothing if there is just one node in the graph', async () => {
@@ -87,10 +105,9 @@ digraph merged {
     );
   });
 
-  it.only('does nothing if all nodes are reachable from the root', async () => {
+  it('does nothing if all nodes are reachable from the root', async () => {
     const entryDir = path.join(__dirname, 'test');
     const entryPath = path.join(entryDir, 'a.js');
-    console.log({entryDir, entryPath});
     await fixtureFromGraph(entryDir, overlayFS, [
       asset('a.js', ['b.js', {to: 'async.js', type: 'async'}]),
       asset('b.js', []),
@@ -197,7 +214,7 @@ digraph merged {
         const outputDot = rootedGraphToDot(entryDir, dominators);
 
         const mergedDominators = createPackages(
-          mutableBundleGraph,
+          rootedGraph,
           dominators,
           (parentChunks) =>
             testMakePackageKey(entryDir, dominators, parentChunks),

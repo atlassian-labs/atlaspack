@@ -53,7 +53,7 @@ describe('mergePackages', () => {
         const {dominators} = findAssetDominators(mutableBundleGraph);
         const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
         const packages = createPackages(
-          mutableBundleGraph,
+          rootedGraph,
           dominators,
           (parentChunks) =>
             testMakePackageKey(entryDir, dominators, parentChunks),
@@ -132,7 +132,7 @@ digraph merged {
         const {dominators} = findAssetDominators(mutableBundleGraph);
         const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
         const packages = createPackages(
-          mutableBundleGraph,
+          rootedGraph,
           dominators,
           (parentChunks) =>
             testMakePackageKey(entryDir, dominators, parentChunks),
@@ -213,7 +213,7 @@ digraph merged {
         const {dominators} = findAssetDominators(mutableBundleGraph);
         const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
         const packages = createPackages(
-          mutableBundleGraph,
+          rootedGraph,
           dominators,
           (parentChunks) =>
             testMakePackageKey(entryDir, dominators, parentChunks),
@@ -279,7 +279,7 @@ digraph merged {
         const {mutableBundleGraph, entryDir} = await fixture1();
         const {dominators} = findAssetDominators(mutableBundleGraph);
         const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
-        const packages = createPackages(mutableBundleGraph, dominators);
+        const packages = createPackages(rootedGraph, dominators);
         const result = runMergePackages(rootedGraph, packages);
         const dot = mergedDominatorsToDot(entryDir, result, 'Duplicated');
 

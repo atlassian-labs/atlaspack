@@ -80,8 +80,8 @@ describe('oneCycleBreaker', () => {
       const d = graph.addNodeByContentKey('d', 'd');
       const e = graph.addNodeByContentKey('e', 'e');
 
-      graph.addEdge(root, a);
-      graph.addEdge(root, b);
+      graph.addWeightedEdge(root, a, 1, 'a-weight');
+      graph.addWeightedEdge(root, b, 1, 'b-weight');
       graph.addEdge(a, c);
       graph.addEdge(b, c);
       graph.addEdge(c, d);
@@ -97,6 +97,9 @@ describe('oneCycleBreaker', () => {
 
       const nodes = [...result.nodes].filter((n) => n != null);
       nodes.sort();
+
+      assert.equal(result.getEdgeWeight(root, a), 'a-weight');
+      assert.equal(result.getEdgeWeight(root, b), 'b-weight');
 
       assert.deepStrictEqual(nodes, [
         {

@@ -1,7 +1,7 @@
 // @flow strict-local
 
 import path from 'path';
-import expect from 'expect';
+import assert from 'assert';
 import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
 import {findNodeEntryDependencies} from '../../src/DominatorBundler/findNodeEntryDependencies';
 import {overlayFS, workerFarm} from '@atlaspack/test-utils';
@@ -46,7 +46,8 @@ describe('findNodeEntryDependencies', () => {
 
     const result = findNodeEntryDependencies(rootedGraph);
 
-    expect(mapToPaths(rootedGraph, result.entryDependenciesByAsset)).toEqual(
+    assert.deepEqual(
+      mapToPaths(rootedGraph, result.entryDependenciesByAsset),
       new Map([
         ['async.js', ['test.js']],
         ['dependency.js', ['test.js']],
@@ -54,7 +55,8 @@ describe('findNodeEntryDependencies', () => {
       ]),
     );
 
-    expect(mapToPaths(rootedGraph, result.asyncDependenciesByAsset)).toEqual(
+    assert.deepEqual(
+      mapToPaths(rootedGraph, result.asyncDependenciesByAsset),
       new Map([['async.js', ['async.js']]]),
     );
   });
@@ -78,7 +80,8 @@ describe('findNodeEntryDependencies', () => {
 
     const result = findNodeEntryDependencies(rootedGraph);
 
-    expect(mapToPaths(rootedGraph, result.entryDependenciesByAsset)).toEqual(
+    assert.deepEqual(
+      mapToPaths(rootedGraph, result.entryDependenciesByAsset),
       new Map([
         ['async.js', ['page1.js', 'page2.js']],
         ['dependency.js', ['page1.js', 'page2.js']],
@@ -87,7 +90,8 @@ describe('findNodeEntryDependencies', () => {
       ]),
     );
 
-    expect(mapToPaths(rootedGraph, result.asyncDependenciesByAsset)).toEqual(
+    assert.deepEqual(
+      mapToPaths(rootedGraph, result.asyncDependenciesByAsset),
       new Map([['async.js', ['async.js']]]),
     );
   });
@@ -111,7 +115,8 @@ describe('findNodeEntryDependencies', () => {
 
     const result = findNodeEntryDependencies(rootedGraph);
 
-    expect(mapToPaths(rootedGraph, result.entryDependenciesByAsset)).toEqual(
+    assert.deepEqual(
+      mapToPaths(rootedGraph, result.entryDependenciesByAsset),
       new Map([
         ['async.js', ['page1.js', 'page2.js']],
         ['dependency.js', ['page2.js']],
@@ -120,7 +125,8 @@ describe('findNodeEntryDependencies', () => {
       ]),
     );
 
-    expect(mapToPaths(rootedGraph, result.asyncDependenciesByAsset)).toEqual(
+    assert.deepEqual(
+      mapToPaths(rootedGraph, result.asyncDependenciesByAsset),
       new Map([
         ['async.js', ['async.js']],
         ['dependency.js', ['async.js']],

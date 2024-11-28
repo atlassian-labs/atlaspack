@@ -63,21 +63,19 @@ const defaultMakePackageKey = (parentChunks: Set<string>): string =>
  *   under a new virtual node, called a package
  */
 export function createPackages(
-  bundleGraph: MutableBundleGraph,
+  rootedGraph: SimpleAssetGraph,
   dominators: PackagingInputGraph,
   makePackageKey: (parentChunks: Set<string>) => string = defaultMakePackageKey,
 ): PackagedDominatorGraph {
   // $FlowFixMe
   const packages: PackagedDominatorGraph = dominators.clone();
 
-  const rootedGraph = bundleGraphToRootedGraph(bundleGraph);
   const root = packages.getNodeIdByContentKey('root');
   const chunks = getChunks(packages);
   const chunksByAsset = getChunkEntryPoints(rootedGraph, dominators);
   const chunksByParent = getChunksByParentEntryPoint(
     chunks,
     packages,
-    bundleGraph,
     chunksByAsset,
     makePackageKey,
   );
@@ -152,7 +150,6 @@ export function createPackages(
 function getChunksByParentEntryPoint(
   chunks: NodeId[],
   packages: PackagedDominatorGraph,
-  bundleGraph: MutableBundleGraph,
   entryPointsByChunk: Map<
     string,
     {|entryPointChunkIds: Set<string>, entryPointAssets: Set<AssetNode>|},

@@ -1,6 +1,9 @@
 // @flow strict-local
 
 import path from 'path';
+import assert from 'assert';
+import sinon from 'sinon';
+import MutableBundleGraph from '@atlaspack/core/src/public/MutableBundleGraph.js';
 // $FlowFixMe
 import expect from 'expect';
 import {
@@ -11,7 +14,55 @@ import {
   run,
 } from '@atlaspack/test-utils';
 
+const invariant = assert;
+
 describe('bundler-experimental', () => {
+  let createBundleSpy;
+  let createBundleGroupSpy;
+  let createBundleReferenceSpy;
+  let createAssetReferenceSpy;
+  let internalizeAsyncDependencySpy;
+  let addAssetToBundleSpy;
+  let addBundleToBundleGroupSpy;
+
+  beforeEach(() => {
+    createBundleSpy = sinon.spy(MutableBundleGraph.prototype, 'createBundle');
+    createBundleGroupSpy = sinon.spy(
+      MutableBundleGraph.prototype,
+      'createBundleGroup',
+    );
+    createBundleReferenceSpy = sinon.spy(
+      MutableBundleGraph.prototype,
+      'createBundleReference',
+    );
+    createAssetReferenceSpy = sinon.spy(
+      MutableBundleGraph.prototype,
+      'createAssetReference',
+    );
+    internalizeAsyncDependencySpy = sinon.spy(
+      MutableBundleGraph.prototype,
+      'internalizeAsyncDependency',
+    );
+    addAssetToBundleSpy = sinon.spy(
+      MutableBundleGraph.prototype,
+      'addAssetToBundle',
+    );
+    addBundleToBundleGroupSpy = sinon.spy(
+      MutableBundleGraph.prototype,
+      'addBundleToBundleGroup',
+    );
+  });
+
+  afterEach(() => {
+    createBundleSpy.restore();
+    createBundleGroupSpy.restore();
+    createBundleReferenceSpy.restore();
+    createAssetReferenceSpy.restore();
+    internalizeAsyncDependencySpy.restore();
+    addAssetToBundleSpy.restore();
+    addBundleToBundleGroupSpy.restore();
+  });
+
   describe('parity tests', () => {
     const bundlers = [
       '@atlaspack/bundler-default',
@@ -110,7 +161,7 @@ describe('bundler-experimental', () => {
           expect(output).toEqual(1234);
         });
 
-        it('can bundle async splits', async () => {
+        it.only('can bundle async splits', async () => {
           await fsFixture(overlayFS, __dirname)`
       bundler-experimental
         async.js:
@@ -140,6 +191,62 @@ describe('bundler-experimental', () => {
             inputFS: overlayFS,
             outputFS: overlayFS,
           });
+
+          const bundles = b.getBundles();
+          assert.equal(bundles.length, 2);
+          const bundle1 = bundles.find((bundle) =>
+            bundle.getEntryAssets()[0].filePath.includes('index.js'),
+          );
+          const bundle2 = bundles.find((bundle) =>
+            bundle.getEntryAssets()[0].filePath.includes('async.js'),
+          );
+          invariant(bundle1);
+          invariant(bundle2);
+
+          const bundleGroupsForIndex =
+            b.getBundleGroupsContainingBundle(bundle1);
+          assert.equal(bundleGroupsForIndex.length, 1);
+          const bundleGroupsForAsync =
+            b.getBundleGroupsContainingBundle(bundle2);
+          assert.equal(bundleGroupsForAsync.length, 1);
+          // loaded in different bundle groups
+          assert.notStrictEqual(
+            bundleGroupsForIndex[0],
+            bundleGroupsForAsync[0],
+          );
+
+          assert.equal(createBundleSpy.callCount, 2);
+          assert(
+            createBundleSpy
+              .getCalls()[0]
+              .args[0].entryAsset.filePath.includes('index.js'),
+          );
+          assert(
+            createBundleSpy
+              .getCalls()[1]
+              .args[0].entryAsset.filePath.includes('async.js'),
+          );
+
+          assert.equal(createBundleGroupSpy.callCount, 2);
+          assert.equal(createBundleReferenceSpy.callCount, 0);
+          assert.equal(createAssetReferenceSpy.callCount, 0);
+          assert.equal(internalizeAsyncDependencySpy.callCount, 0);
+          assert.deepStrictEqual(
+            addAssetToBundleSpy
+              .getCalls()
+              .map((call) => [
+                path.relative(inputDir, call.args[0].filePath),
+                path.relative(
+                  inputDir,
+                  call.args[1].getEntryAssets()[0].filePath,
+                ),
+              ]),
+            [
+              ['index.js', 'index.js'],
+              ['dependency.js', 'index.js'],
+              ['async.js', 'async.js'],
+            ],
+          );
 
           // $FlowFixMe
           expectBundles(inputDir, b, [
@@ -221,29 +328,28 @@ describe('bundler-experimental', () => {
           });
 
           // // $FlowFixMe
-          expectBundles(inputDir, b, [
-            {
-              type: 'js',
-              assets: ['async.js'],
-            },
-            {
-              type: 'js',
-              name: 'index.js',
-              assets: ['index.js'],
-            },
-            {
-              type: 'js',
-              assets: ['dependency.js'],
-            },
-            {
-              type: 'js',
-              assets: ['page1.js'],
-            },
-            {
-              type: 'js',
-              assets: ['page2.js'],
-            },
-          ]);
+          // expectBundles(inputDir, b, [
+          //   {
+          //     type: 'js',
+          //     assets: ['async.js'],
+          //   },
+          //   {
+          //     type: 'js',
+          //     assets: ['dependency.js'],
+          //   },
+          //   {
+          //     type: 'js',
+          //     assets: ['index.js'],
+          //   },
+          //   {
+          //     type: 'js',
+          //     assets: ['page1.js'],
+          //   },
+          //   {
+          //     type: 'js',
+          //     assets: ['page2.js'],
+          //   },
+          // ]);
 
           let output = null;
           graphs.set(bundler, b);

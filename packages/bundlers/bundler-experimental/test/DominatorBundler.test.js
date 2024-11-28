@@ -210,23 +210,20 @@ describe('planBundleGraph', () => {
     const entryAsset = makeAsset({});
     const target = makeTarget({});
     const entryDep = makeDependency({target});
-    const asset = packages.addNodeByContentKey('asset', {
+    const assetNode = {
       type: 'asset',
       id: 'asset',
       asset: entryAsset,
       entryDependency: entryDep,
       target,
       isEntryNode: true,
-    });
+      isRoot: true,
+    };
+    const asset = packages.addNodeByContentKey('asset', assetNode);
     packages.addEdge(root, asset);
 
     const entryDependenciesByAsset = new Map();
-    entryDependenciesByAsset.set(asset, [
-      {
-        assetNode: {type: 'asset', id: 'asset', asset: entryAsset},
-        entryDependency: entryDep,
-      },
-    ]);
+    entryDependenciesByAsset.set(asset, new Set([assetNode]));
     const asyncDependenciesByAsset = new Map();
 
     const result = planBundleGraph(
@@ -244,17 +241,18 @@ describe('planBundleGraph', () => {
       },
     ];
 
-    assert.deepStrictEqual(result, {
-      bundles: expectedBundles,
-      bundlesByPackageContentKey: new Map([['asset', expectedBundles[0]]]),
-      bundleGroups: [
-        {
-          entryDep,
-          target,
-          bundles: expectedBundles,
-        },
-      ],
-    });
+    assert.deepStrictEqual(result.bundles, expectedBundles);
+    assert.deepStrictEqual(
+      result.bundlesByPackageContentKey,
+      new Map([['asset', expectedBundles[0]]]),
+    );
+    assert.deepStrictEqual(result.bundleGroups, [
+      {
+        entryDep,
+        target,
+        bundles: expectedBundles,
+      },
+    ]);
   });
 
   it('can plan a graph with two async dependant bundles', () => {
@@ -277,23 +275,30 @@ describe('planBundleGraph', () => {
       entryDependency: entryDep,
       target,
       isEntryNode: true,
+      isRoot: true,
     };
     const asset = packages.addNodeByContentKey('asset', assetNode);
     packages.addEdge(root, asset);
-    const asyncAsset = packages.addNodeByContentKey('async-asset', {
+    const asyncAssetNode = {
       type: 'asset',
       id: 'async-asset',
       asset: asyncAssetValue,
       entryDependency: null,
       target: null,
       isEntryNode: false,
-    });
+      isRoot: true,
+    };
+    const asyncAsset = packages.addNodeByContentKey(
+      'async-asset',
+      asyncAssetNode,
+    );
     packages.addWeightedEdge(root, asyncAsset, 1, asyncDependency);
 
     const entryDependenciesByAsset = new Map();
-    entryDependenciesByAsset.set(asset, [assetNode]);
-    entryDependenciesByAsset.set(asyncAsset, [assetNode]);
+    entryDependenciesByAsset.set(asset, new Set([assetNode]));
+    entryDependenciesByAsset.set(asyncAsset, new Set([assetNode]));
     const asyncDependenciesByAsset = new Map();
+    asyncDependenciesByAsset.set(asyncAsset, new Set([asyncAssetNode]));
 
     const result = planBundleGraph(
       packages,

@@ -2,7 +2,7 @@
 
 import type {AssetNode, SimpleAssetGraph} from './bundleGraphToRootedGraph';
 import {getGraphPostOrder} from './findAssetDominators';
-import {NodeId} from '@atlaspack/graph';
+import type {NodeId} from '@atlaspack/graph';
 
 export type NodeEntryDependencies = {|
   entryDependenciesByAsset: Map<NodeId, Set<AssetNode>>,
@@ -49,15 +49,17 @@ export function findNodeEntryDependencies(
       continue;
     }
 
-    if (entryDependencyNodes.has(nodeId)) {
+    const entryNode = entryDependencyNodes.get(nodeId)?.node;
+    if (entryNode != null) {
       const dependencies = entryDependenciesByAsset.get(nodeId) ?? new Set();
-      dependencies.add(entryDependencyNodes.get(nodeId).node);
+      dependencies.add(entryNode);
       entryDependenciesByAsset.set(nodeId, dependencies);
     }
 
-    if (asyncDependencyNodes.has(nodeId)) {
+    const asyncNode = asyncDependencyNodes.get(nodeId)?.node;
+    if (asyncNode != null) {
       const dependencies = asyncDependenciesByAsset.get(nodeId) ?? new Set();
-      dependencies.add(asyncDependencyNodes.get(nodeId).node);
+      dependencies.add(asyncNode);
       asyncDependenciesByAsset.set(nodeId, dependencies);
     }
 
@@ -74,15 +76,17 @@ export function findNodeEntryDependencies(
         entryDependenciesByAsset.set(nodeId, dependencies);
       }
 
-      if (entryDependencyNodes.has(parentId)) {
+      const entryNode = entryDependencyNodes.get(parentId)?.node;
+      if (entryNode != null) {
         const dependencies = entryDependenciesByAsset.get(nodeId) ?? new Set();
-        dependencies.add(entryDependencyNodes.get(parentId).node);
+        dependencies.add(entryNode);
         entryDependenciesByAsset.set(nodeId, dependencies);
       }
 
-      if (asyncDependencyNodes.has(parentId)) {
+      const asyncNode = asyncDependencyNodes.get(parentId)?.node;
+      if (asyncNode != null) {
         const dependencies = asyncDependenciesByAsset.get(nodeId) ?? new Set();
-        dependencies.add(asyncDependencyNodes.get(parentId).node);
+        dependencies.add(asyncNode);
         asyncDependenciesByAsset.set(nodeId, dependencies);
       }
     });

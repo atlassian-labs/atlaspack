@@ -608,7 +608,7 @@ export default class Atlaspack {
     const graph = bundleGraphToRootedGraph(mutableBundleGraph);
     const {dominators} = findAssetDominators(mutableBundleGraph);
     log('Done running dominators');
-    const packages = createPackages(mutableBundleGraph, dominators);
+    const packages = createPackages(graph, dominators);
     log('Done creating packages');
 
     const mergedPackages = runMergePackages(graph, packages);

@@ -6,7 +6,12 @@ import assert from 'assert';
 import {dotTest, setupBundlerTest} from '../test-utils';
 import {asset, fixtureFromGraph} from '../fixtureFromGraph';
 import {rootedGraphToDot} from '../graphviz/GraphvizUtils';
-import {findAssetDominators} from '../../src/DominatorBundler/findAssetDominators';
+import {
+  buildDominatorTree,
+  findAssetDominators,
+  simpleFastDominance,
+} from '../../src/DominatorBundler/findAssetDominators';
+import {EdgeContentGraph} from '../../src/DominatorBundler/EdgeContentGraph';
 
 describe('findAssetDominators', () => {
   before(async function () {
@@ -16,6 +21,46 @@ describe('findAssetDominators', () => {
   });
 
   describe('findAssetDominators', () => {
+    it('works on an empty graph', () => {
+      const inputGraph = new EdgeContentGraph();
+      const root = inputGraph.addNodeByContentKey('root', 'root');
+      inputGraph.setRootNodeId(root);
+      const dominators = simpleFastDominance(inputGraph);
+      const result = buildDominatorTree(inputGraph, dominators);
+      assert.deepEqual(result.nodes, [result.getNodeByContentKey('root')]);
+    });
+
+    it('works on a single node graph', () => {
+      const inputGraph = new EdgeContentGraph();
+      const root = inputGraph.addNodeByContentKey('root', 'root');
+      inputGraph.setRootNodeId(root);
+      const a = inputGraph.addNodeByContentKey('a', 'a');
+
+      inputGraph.addWeightedEdge(root, a, 1, 'weight');
+
+      const dominators = simpleFastDominance(inputGraph);
+
+      const result = buildDominatorTree(inputGraph, dominators);
+      assert.deepEqual(result.nodes, [
+        result.getNodeByContentKey('root'),
+        result.getNodeByContentKey('a'),
+      ]);
+      assert.deepEqual(Array.from(result.getAllEdges()), [
+        {
+          from: root,
+          to: a,
+          type: 1,
+        },
+      ]);
+      assert.deepEqual(
+        result.getEdgeWeight(
+          result.getNodeIdByContentKey('root'),
+          result.getNodeIdByContentKey('a'),
+        ),
+        'weight',
+      );
+    });
+
     dotTest(__filename, 'can find dominators for a simple graph', async () => {
       const entryPath = path.join(__dirname, 'test/test.js');
       const entryDir = path.dirname(entryPath);

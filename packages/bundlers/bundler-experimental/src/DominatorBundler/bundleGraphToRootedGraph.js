@@ -22,6 +22,13 @@ export type AssetNode = {|
    * points, as opposed to lifted-up due to being async or chunked.
    */
   isEntryNode: boolean,
+  /**
+   * This indicates that this was a root node in the original graph.
+   *
+   * We will use this later because this graph will be transformed into shared
+   * bundles / dominator trees.
+   */
+  isRoot: boolean,
 |};
 
 export type SimpleAssetGraphNode = 'root' | AssetNode;
@@ -94,6 +101,7 @@ export function bundleGraphToRootedGraph(
           entryDependency: context?.dependency ?? null,
           target: context?.target ?? null,
           isEntryNode: false,
+          isRoot: false,
         });
         return context;
       } else if (node.type === 'dependency' && node.value.isEntry) {
@@ -118,6 +126,8 @@ export function bundleGraphToRootedGraph(
   for (let assetId of reversedPostOrder) {
     const childAsset = bundleGraph.getAssetById(assetId);
     const assetNodeId = graph.getNodeIdByContentKey(assetId);
+    const node = graph.getNode(assetNodeId);
+    invariant(node != null && node !== 'root');
 
     for (let dependency of bundleGraph.getIncomingDependencies(childAsset)) {
       if (dependency.isEntry) {
@@ -127,9 +137,8 @@ export function bundleGraphToRootedGraph(
           simpleAssetGraphEdges.dependency,
           dependency,
         );
-        const node = graph.getNode(assetNodeId);
-        invariant(node != null && node !== 'root');
         node.isEntryNode = true;
+        node.isRoot = true;
       } else if (
         dependency.priority !== 'sync' ||
         (dependency.sourceAssetType != null &&
@@ -141,6 +150,7 @@ export function bundleGraphToRootedGraph(
           simpleAssetGraphEdges.dependency,
           dependency,
         );
+        node.isRoot = true;
 
         const parentAsset = bundleGraph.getAssetWithDependency(dependency);
         if (!parentAsset) {
