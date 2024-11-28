@@ -168,7 +168,7 @@ describe('plugin', function () {
     },
   );
 
-  it('invalidate the cache based on loadConfig in a packager', async function () {
+  it('invalidate the cache based on loadconfig in a packager', async function () {
     let fixture = path.join(__dirname, '/integration/packager-loadConfig');
     let entry = path.join(fixture, 'index.txt');
     let config = path.join(fixture, 'foo.config.json');
@@ -192,6 +192,22 @@ describe('plugin', function () {
       await overlayFS.readFile(b.getBundles()[0].filePath, 'utf8'),
       'xyz',
     );
+  });
+
+  it('scope the parcelRequire name based on package name', async function () {
+    let fixture = path.join(__dirname, '/integration/packager-loadConfig-js');
+    let entry = path.join(fixture, 'index.js');
+    let b = await bundle(entry, {
+      inputFS: overlayFS,
+      shouldDisableCache: false,
+    });
+
+    let fileContents = await overlayFS.readFile(
+      b.getBundles()[0].filePath,
+      'utf8',
+    );
+
+    assert(fileContents.includes('"parcelRequire21cd'));
   });
 
   it.v2(
