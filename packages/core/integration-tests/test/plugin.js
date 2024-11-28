@@ -15,6 +15,7 @@ import {
   it,
   outputFS as fs,
   overlayFS,
+  fsFixture,
   run,
 } from '@atlaspack/test-utils';
 import * as wasmmap from 'wasm-sourcemap';
@@ -195,8 +196,16 @@ describe('plugin', function () {
   });
 
   it('scope the parcelRequire name based on package name', async function () {
-    let fixture = path.join(__dirname, '/integration/packager-loadConfig-js');
-    let entry = path.join(fixture, 'index.js');
+    await fsFixture(overlayFS, __dirname)`
+      scopeParcelRequire
+        index.js:
+          module.exports = 2;
+        package.json:
+          { "name": "packager-integration-test" }
+        yarn.lock:
+      `;
+
+    let entry = path.join(__dirname, 'scopeParcelRequire/index.js');
     let b = await bundle(entry, {
       inputFS: overlayFS,
       shouldDisableCache: false,
