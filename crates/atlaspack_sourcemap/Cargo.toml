@@ -11,3 +11,7 @@ parcel_sourcemap = { workspace = true, features = ["json"] }
 regex = { workspace = true }
 rkyv = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+pretty_assertions = { workspace = true }

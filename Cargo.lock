@@ -714,8 +714,10 @@ dependencies = [
 name = "atlaspack_sourcemap"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "atlaspack_filesystem",
  "parcel_sourcemap",
+ "pretty_assertions",
  "regex",
  "rkyv",
  "serde",
