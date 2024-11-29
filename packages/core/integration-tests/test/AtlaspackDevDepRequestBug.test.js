@@ -26,30 +26,32 @@ describe('dev dep request bug', () => {
     });
 
     {
-      fsFixture(overlayFS, __dirname)`
-      test/other${i}.js:
-          export default function name() {
-            return 'jira ${i}';
-          }
-      test/test.js:
-          import name from './other${i}';
-          console.log('Hello, you ' + name());
+      await fsFixture(overlayFS, __dirname)`
+        test/other${i}.js:
+            export default function name() {
+              return 'jira ${i}';
+            }
+        test/test.js:
+            import name from './other${i}';
+            console.log('Hello, you ' + name());
       `;
+
       const atlaspack = new Atlaspack(options);
       await atlaspack.clearBuildCaches();
       await atlaspack.unstable_buildAssetGraph(false);
     }
 
     {
-      fsFixture(overlayFS, __dirname)`
-      test/other${i}.js:
-          export default function name() {
-            return 'atlaspack ${i}';
-          }
-      test/test.js:
-          import name from './other${i}';
-          console.log('Hello, you ' + name());
+      await fsFixture(overlayFS, __dirname)`
+        test/other${i}.js:
+            export default function name() {
+              return 'atlaspack ${i}';
+            }
+        test/test.js:
+            import name from './other${i}';
+            console.log('Hello, you ' + name());
       `;
+
       const atlaspack = new Atlaspack(options);
       await atlaspack.clearBuildCaches();
       await atlaspack.unstable_buildAssetGraph(false);
