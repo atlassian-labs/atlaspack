@@ -15,13 +15,19 @@ import {
   bundle,
 } from '@atlaspack/test-utils';
 import {LMDBLiteCache} from '@atlaspack/cache';
+import type {InitialAtlaspackOptions} from '@atlaspack/types';
 
-async function assertOutputIsIdentical(entry: string) {
+async function assertOutputIsIdentical(
+  entry: string,
+  options?: InitialAtlaspackOptions,
+) {
   let bundlesV3 = await bundle(entry, {
+    ...options,
     inputFS: overlayFS,
   }).then((b) => b.getBundles());
 
   let bundlesV2 = await bundle(entry, {
+    ...options,
     inputFS: overlayFS,
     featureFlags: {
       atlaspackV3: false,
@@ -68,6 +74,42 @@ describe.v3('AtlaspackV3', function () {
   });
 
   describe.only('should mirror V2 output', () => {
+    it('with scope hoisting enabled', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        scope-hoist
+          library.js:
+            export function doStuff() {
+              return 'stuff';
+            }
+          index.js:
+            import {doStuff} from './library';
+            sideEffectNoop(doStuff);
+          index.html:
+            <script type="module" src="./index.js" />
+      `;
+
+      await assertOutputIsIdentical(join(__dirname, 'scope-hoist/index.html'), {
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+        },
+      });
+    });
+
+    it.only('with Assets that change type', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        type-change
+          name.json:
+            {"name": "fred"}
+          index.js:
+            import * as json from './name.json';
+            sideEffectNoop(json.name);
+          index.html:
+            <script type="module" src="./index.js" />
+      `;
+
+      await assertOutputIsIdentical(join(__dirname, 'type-change/index.html'));
+    });
+
     it('with dynamic resolver code', async () => {
       await fsFixture(overlayFS, __dirname)`
         resolver-code
