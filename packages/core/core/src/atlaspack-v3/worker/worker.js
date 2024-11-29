@@ -274,7 +274,8 @@ export class AtlaspackWorker {
           code: [],
           meta: mutableAsset.meta,
           pipeline: mutableAsset.pipeline,
-          query: mutableAsset.query.toString(),
+          // Query should be undefined if it's empty
+          query: mutableAsset.query.toString() || undefined,
           symbols: mutableAsset.symbols.intoNapi(),
           uniqueKey: mutableAsset.uniqueKey,
           sideEffects: mutableAsset.sideEffects,

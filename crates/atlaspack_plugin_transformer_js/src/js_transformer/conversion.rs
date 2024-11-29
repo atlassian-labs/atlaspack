@@ -337,6 +337,11 @@ pub(crate) fn convert_result(
 
   asset.file_type = FileType::Js;
   asset.code = Code::new(result.code);
+  // Updating the file_type to JS will cause the asset id to be updated.
+  // However, the packager needs to be aware of the original id when creating
+  // symbols replacements in scope hoisting. That's why we store the id before
+  // it get's updated on the meta object.
+  asset.set_meta_id(asset.id.clone());
 
   if let Some(map) = result.map {
     // TODO: Fix diagnostic error handling

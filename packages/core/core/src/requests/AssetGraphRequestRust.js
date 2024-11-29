@@ -181,7 +181,6 @@ function getAssetGraph(serializedGraph, options) {
       asset.committed = true;
       asset.contentKey = id;
       asset.env.id = getEnvId(asset.env);
-      asset.meta.id = id;
       if (asset.symbols != null) {
         asset.symbols = new Map(asset.symbols.map(mapSymbols));
       }
