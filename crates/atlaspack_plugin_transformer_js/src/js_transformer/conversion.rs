@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use atlaspack_core::diagnostic;
 use indexmap::IndexMap;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use swc_core::atoms::{Atom, JsWord};
 
 use atlaspack_core::plugin::{PluginOptions, TransformResult};
@@ -450,7 +450,10 @@ fn make_esm_helpers_dependency(
     specifier_type: SpecifierType::Esm,
     source_path: Some(asset_file_path.clone()),
     env: Environment {
-      include_node_modules: IncludeNodeModules::Bool(true),
+      include_node_modules: IncludeNodeModules::Map(BTreeMap::from([(
+        "@atlaspack/transformer-js".into(),
+        true,
+      )])),
       ..asset_environment.clone()
     }
     .into(),
