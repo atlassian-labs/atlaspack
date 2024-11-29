@@ -320,7 +320,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                   sorted_exports,
                   seen,
                 )?;
-                code.push_str(format!("${{module.exports['{}']}}", *exported).as_str());
+                code.push_str(format!("${{module.exports[\"{}\"]}}", *exported).as_str());
                 let symbols = vec![Symbol {
                   exported: exported.clone(),
                   local: name.clone(),
