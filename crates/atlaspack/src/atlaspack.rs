@@ -1,30 +1,21 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use atlaspack_config::atlaspack_rc_config_loader::AtlaspackRcConfigLoader;
-use atlaspack_config::atlaspack_rc_config_loader::LoadConfigOptions;
-use atlaspack_core::asset_graph::AssetGraph;
-use atlaspack_core::asset_graph::AssetNode;
+use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
+use atlaspack_core::asset_graph::{AssetGraph, AssetNode};
 use atlaspack_core::config_loader::ConfigLoader;
-use atlaspack_core::plugin::PluginContext;
-use atlaspack_core::plugin::PluginLogger;
-use atlaspack_core::plugin::PluginOptions;
+use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::AtlaspackOptions;
-use atlaspack_filesystem::os_file_system::OsFileSystem;
-use atlaspack_filesystem::FileSystemRef;
-use atlaspack_package_manager::NodePackageManager;
-use atlaspack_package_manager::PackageManagerRef;
+use atlaspack_filesystem::{os_file_system::OsFileSystem, FileSystemRef};
+use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_plugin_rpc::RpcFactoryRef;
 use lmdb_js_lite::writer::DatabaseWriter;
-use lmdb_js_lite::writer::DatabaseWriterError;
 use tokio::runtime::Runtime;
 
-use crate::plugins::config_plugins::ConfigPlugins;
-use crate::plugins::PluginsRef;
+use crate::plugins::{config_plugins::ConfigPlugins, PluginsRef};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::RequestTracker;
-use crate::requests::AssetGraphRequest;
-use crate::requests::RequestResult;
+use crate::requests::{AssetGraphRequest, RequestResult};
 
 #[derive(Clone)]
 struct AtlaspackState {
@@ -137,7 +128,7 @@ impl Atlaspack {
 
       let asset_graph = match request_result {
         RequestResult::AssetGraph(result) => {
-          self.commit_assets(result.graph.assets.as_slice()).unwrap();
+          self.commit_assets(result.graph.assets.as_slice())?;
 
           result.graph
         }
@@ -148,11 +139,19 @@ impl Atlaspack {
     })
   }
 
-  fn commit_assets(&self, assets: &[AssetNode]) -> Result<(), DatabaseWriterError> {
+  fn commit_assets(&self, assets: &[AssetNode]) -> anyhow::Result<()> {
     let mut txn = self.db.environment().write_txn()?;
 
     for AssetNode { asset, .. } in assets.iter() {
       self.db.put(&mut txn, &asset.id, asset.code.bytes())?;
+      if let Some(map) = &asset.map {
+        // TODO: For some reason to_buffer strips data when rkyv was upgraded, so now we use json
+        self.db.put(
+          &mut txn,
+          &format!("map:{}", asset.id),
+          map.to_json()?.as_bytes(),
+        )?;
+      }
     }
 
     txn.commit()?;
@@ -168,7 +167,7 @@ mod tests {
   use atlaspack_core::types::{Asset, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_plugin_rpc::{MockRpcFactory, MockRpcWorker};
-  use lmdb_js_lite::LMDBOptions;
+  use lmdb_js_lite::{writer::DatabaseWriterError, LMDBOptions};
 
   use super::*;
 

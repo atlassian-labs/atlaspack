@@ -1479,8 +1479,7 @@ describe('sourcemaps', function () {
     },
   );
 
-  // TODO: Enable this for v3 once all the code has been integrated
-  it.v2('creates valid source maps for js transformers', async () => {
+  it('creates valid source maps for js transformers', async () => {
     let entry = path.join(
       __dirname,
       '/integration/sourcemaps-js-plugin/index.ts',
@@ -1510,8 +1509,7 @@ describe('sourcemaps', function () {
     ]);
   });
 
-  // TODO: Enable this for v3 once all the code has been integrated
-  it.v2('creates valid source maps for js and rust transformers', async () => {
+  it('creates valid source maps for js and rust transformers', async () => {
     let entry = path.join(
       __dirname,
       '/integration/sourcemaps-js-rust-plugins/index.ts',

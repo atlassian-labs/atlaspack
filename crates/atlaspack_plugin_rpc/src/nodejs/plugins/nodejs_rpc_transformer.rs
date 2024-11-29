@@ -3,6 +3,7 @@ use atlaspack_core::plugin::PluginOptions;
 use napi::bindgen_prelude::FromNapiValue;
 use napi::JsBuffer;
 use napi::JsObject;
+use napi::JsString;
 use napi::JsUnknown;
 use std::fmt;
 use std::fmt::Debug;
@@ -107,6 +108,13 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
 
+    let original_source_map = asset.map.clone();
+    let source_map = if let Some(map) = asset.map.as_ref() {
+      Some(map.to_json()?)
+    } else {
+      None
+    };
+
     let run_transformer_opts = RpcTransformerOpts {
       key: self.plugin_node.package_name.clone(),
       options: state.rpc_plugin_options.clone(),
@@ -117,7 +125,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       },
     };
 
-    let (result, contents) = self
+    let (result, contents, map) = self
       .nodejs_workers
       .next_worker()
       .transformer_register_fn
@@ -125,10 +133,16 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
         move |env| {
           let run_transformer_opts = env.to_js_value(&run_transformer_opts)?;
 
-          let mut result = env.create_buffer(asset.code.len())?;
-          result.copy_from_slice(&asset.code);
+          let mut contents = env.create_buffer(asset.code.len())?;
+          contents.copy_from_slice(&asset.code);
 
-          Ok(vec![run_transformer_opts, result.into_unknown()])
+          let map = if let Some(map) = source_map {
+            env.create_string(&map)?.into_unknown()
+          } else {
+            env.get_undefined()?.into_unknown()
+          };
+
+          Ok(vec![run_transformer_opts, contents.into_unknown(), map])
         },
         |env, return_value| {
           let return_value = JsObject::from_unknown(return_value)?;
@@ -139,7 +153,14 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
           let contents = return_value.get_element::<JsBuffer>(1)?;
           let contents = contents.into_value()?.to_vec();
 
-          Ok((transform_result, contents))
+          let map = return_value.get_element::<JsString>(2)?.into_utf8()?;
+          let map = if map.is_empty() {
+            None
+          } else {
+            Some(map.into_owned()?)
+          };
+
+          Ok((transform_result, contents, map))
         },
       )
       .await?;
@@ -151,6 +172,14 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       env: asset_env.clone(),
       file_path: result.file_path,
       file_type: result.file_type,
+      map: if let Some(json) = map {
+        Some(SourceMap::from_json(
+          &self.plugin_options.project_root,
+          &json,
+        )?)
+      } else {
+        original_source_map
+      },
       meta: result.meta,
       pipeline: result.pipeline,
       query: result.query,

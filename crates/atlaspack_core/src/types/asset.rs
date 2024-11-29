@@ -169,6 +169,7 @@ pub struct Asset {
   pub code: Code,
 
   /// The source map for the asset
+  #[serde(skip_serializing)]
   pub map: Option<SourceMap>,
 
   /// Plugin specific metadata for the asset

@@ -1,6 +1,6 @@
 // @flow
 
-import type SourceMap from '@parcel/source-map';
+import SourceMap from '@parcel/source-map';
 import * as napi from '@atlaspack/rust';
 import {Readable} from 'stream';
 import type {
@@ -24,26 +24,30 @@ import {MutableAssetSymbols} from './asset-symbols';
 export type InnerAsset = napi.Asset;
 
 export class MutableAsset implements IMutableAsset {
-  fs: FileSystem;
+  bundleBehavior: ?BundleBehavior;
   env: Environment;
-  symbols: MutableAssetSymbols;
-  stats: Stats;
-  id: string;
   filePath: FilePath;
-  type: string;
-  query: URLSearchParams;
+  fs: FileSystem;
+  id: string;
+  isBundleSplittable: boolean;
+  isMapDirty: boolean;
   isSource: boolean;
   meta: Meta;
-  bundleBehavior: ?BundleBehavior;
-  isBundleSplittable: boolean;
-  sideEffects: boolean;
-  uniqueKey: ?string;
   pipeline: ?string;
+  query: URLSearchParams;
+  sideEffects: boolean;
+  stats: Stats;
+  symbols: MutableAssetSymbols;
+  type: string;
+  uniqueKey: ?string;
 
-  #inner: InnerAsset;
+  #astDirty: boolean;
   #ast: ?AST;
   #contents: Buffer;
-  #astDirty: boolean;
+  #inner: InnerAsset;
+  #map: ?string;
+  #projectRoot: string;
+  #sourceMap: ?SourceMap;
 
   get astGenerator(): ?ASTGenerator {
     throw new Error('get MutableAsset.astGenerator');
@@ -58,29 +62,30 @@ export class MutableAsset implements IMutableAsset {
     contents: Buffer,
     env: Environment,
     fs: FileSystem,
+    map: ?string,
+    projectRoot: string,
   ) {
-    this.#inner = asset;
-    this.stats = asset.stats;
-    this.id = asset.id;
+    this.bundleBehavior = bundleBehaviorMap.fromNullable(asset.bundleBehavior);
+    this.env = env;
     this.filePath = asset.filePath;
-    this.type;
-    this.symbols = new MutableAssetSymbols(asset.symbols);
-    this.stats = asset.stats;
+    this.fs = fs;
     this.id = asset.id;
-    this.filePath = asset.filePath;
-    this.type = asset.type;
-    this.query = new URLSearchParams(asset.query);
+    this.isBundleSplittable = asset.isBundleSplittable;
     this.isSource = asset.isSource;
     this.meta = asset.meta;
-    this.bundleBehavior = bundleBehaviorMap.fromNullable(asset.bundleBehavior);
-    this.isBundleSplittable = asset.isBundleSplittable;
-    this.sideEffects = asset.sideEffects;
-    this.uniqueKey = asset.uniqueKey;
     this.pipeline = asset.pipeline;
-    this.#contents = contents;
-    this.fs = fs;
-    this.env = env;
+    this.query = new URLSearchParams(asset.query);
+    this.sideEffects = asset.sideEffects;
+    this.stats = asset.stats;
+    this.symbols = new MutableAssetSymbols(asset.symbols);
+    this.type = asset.type;
+    this.uniqueKey = asset.uniqueKey;
+
     this.#astDirty = false;
+    this.#contents = contents;
+    this.#inner = asset;
+    this.#map = map;
+    this.#projectRoot = projectRoot;
   }
 
   // eslint-disable-next-line require-await
@@ -136,17 +141,27 @@ export class MutableAsset implements IMutableAsset {
   }
 
   getMap(): Promise<?SourceMap> {
-    // TODO: Provide source maps once they exist
-    return Promise.resolve(null);
+    // Only create the source map if it is requested
+    if (!this.#sourceMap && this.#map && typeof this.#map === 'string') {
+      let sourceMap = new SourceMap(this.#projectRoot);
+      // $FlowFixMe Flow is dumb
+      sourceMap.addVLQMap(JSON.parse(this.#map));
+      this.#sourceMap = sourceMap;
+    }
+
+    return Promise.resolve(this.#sourceMap);
   }
 
   // eslint-disable-next-line no-unused-vars
   setMap(sourceMap: ?SourceMap): void {
-    throw new Error('MutableAsset.setMap()');
+    this.isMapDirty = true;
+    this.#sourceMap = sourceMap;
   }
 
   getMapBuffer(): Promise<?Buffer> {
-    throw new Error('MutableAsset.getMapBuffer');
+    throw new Error(
+      'getMapBuffer() is considered an internal implementation detail, please use getMap() instead',
+    );
   }
 
   getDependencies(): $ReadOnlyArray<Dependency> {
