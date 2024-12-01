@@ -109,9 +109,7 @@ export function buildPackageGraph(
       return;
     }
 
-    // console.log('buildPackageGraph ==> ', packageInfo);
     for (let asset of packageInfo.assets) {
-      // console.log(asset);
       assetGraph.forEachNodeIdConnectedTo(
         assetGraph.getNodeIdByContentKey(asset.id),
         (nodeId) => {
@@ -120,7 +118,6 @@ export function buildPackageGraph(
             return;
           }
 
-          // console.log(node);
           const packageId = packagesByAssetId.get(node.id);
           if (packageId == null) {
             return;
@@ -227,17 +224,6 @@ export function mergePackageNodes(
 
     const sizeIncreaseFromDuplication = totalSize; // * parents.length;
     if (parents.length && sizeIncreaseFromDuplication < 1024 * 10) {
-      // console.log(
-      //   'merging package',
-      //   node.id,
-      //   'will increase size by',
-      //   `${sizeIncreaseFromDuplication / 1024}KB`,
-      //   'in',
-      //   parents.length,
-      //   'parent packages',
-      //   parents,
-      // );
-
       const directChildren = packages.getNodeIdsConnectedFrom(id);
       for (let parent of parents) {
         const parentInfo = packageInfosById.get(parent);
@@ -261,8 +247,6 @@ export function mergePackageNodes(
       totalSizeIncrease += sizeIncreaseFromDuplication * parents.length;
     }
   }
-
-  // console.log('total size increase from merging:', totalSizeIncrease / 1024);
 
   return output;
 }

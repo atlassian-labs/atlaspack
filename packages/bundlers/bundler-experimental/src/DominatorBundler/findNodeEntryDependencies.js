@@ -49,7 +49,6 @@ export function findNodeEntryDependencies(
       continue;
     }
 
-    console.log({node});
     const entryNode = entryDependencyNodes.get(nodeId)?.node;
     if (entryNode != null) {
       const dependencies = entryDependenciesByAsset.get(nodeId) ?? new Set();

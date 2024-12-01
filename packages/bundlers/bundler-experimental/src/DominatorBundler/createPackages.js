@@ -123,7 +123,6 @@ export function createPackages(
       continue;
     }
 
-    console.log('creating package', 'for chunks', chunksToMerge);
     const chunkRoot = packages.addNodeByContentKeyIfNeeded(`package:${key}`, {
       type: 'package',
       id: `package:${key}`,

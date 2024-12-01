@@ -131,7 +131,6 @@ export function getOrCreateBundleGroupsForNode(
       }
     } else {
       const entries = entryDependenciesByAsset.get(nodeId);
-      console.log({node, entries, nodeId});
       invariant(entries != null);
       for (let entry of entries) {
         invariant(entry.entryDependency != null);
@@ -140,7 +139,6 @@ export function getOrCreateBundleGroupsForNode(
         const bundleGroupsMap = bundleGroupsByEntryDep.get(target);
 
         const dependencies = packages.getEdgeWeight(rootId, nodeId);
-        console.log({dependencies});
         invariant(dependencies != null);
         invariant(dependencies.length > 0);
 
@@ -358,8 +356,6 @@ export function planBundleGraph(
   }
 
   result.bundleGroups = Array.from(allBundleGroups);
-
-  console.log(result);
 
   return result;
 }
