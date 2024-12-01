@@ -25,6 +25,8 @@ export function bundleGroupToInternalBundleGroup(
   return nullthrows(_bundleGroupToInternalBundleGroup.get(target));
 }
 
+const inspect = Symbol.for('nodejs.util.inspect.custom');
+
 export default class BundleGroup implements IBundleGroup {
   #bundleGroup /*: InternalBundleGroup */;
   #options /*: AtlaspackOptions */;
@@ -51,5 +53,9 @@ export default class BundleGroup implements IBundleGroup {
 
   get entryAssetId(): string {
     return this.#bundleGroup.entryAssetId;
+  }
+
+  [inspect]() {
+    return `BundleGroup(${this.entryAssetId})`;
   }
 }

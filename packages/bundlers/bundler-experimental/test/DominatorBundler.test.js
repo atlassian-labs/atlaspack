@@ -192,7 +192,7 @@ describe('getOrCreateBundleGroupsForNode', () => {
     const packages: PackagedDominatorGraph = new EdgeContentGraph();
     const root = packages.addNodeByContentKey('root', 'root');
     packages.setRootNodeId(root);
-    const entryAsset = makeAsset({});
+    const entryAsset = makeAsset({filePath: 'entry'});
     const target = makeTarget({});
     const entryDep = makeDependency({target});
     const assetNode = {
@@ -234,8 +234,8 @@ describe('getOrCreateBundleGroupsForNode', () => {
     const packages: PackagedDominatorGraph = new EdgeContentGraph();
     const root = packages.addNodeByContentKey('root', 'root');
     packages.setRootNodeId(root);
-    const entryAsset = makeAsset({});
-    const asyncAsset = makeAsset({});
+    const entryAsset = makeAsset({filePath: 'entry'});
+    const asyncAsset = makeAsset({filePath: 'async'});
     const target = makeTarget({});
     const entryDep = makeDependency({target});
     const asyncDependency = makeDependency({});
@@ -314,7 +314,7 @@ describe('planBundleGraph', () => {
     const packages: PackagedDominatorGraph = new EdgeContentGraph();
     const root = packages.addNodeByContentKey('root', 'root');
     packages.setRootNodeId(root);
-    const entryAsset = makeAsset({});
+    const entryAsset = makeAsset({filePath: 'entry'});
     const target = makeTarget({});
     const entryDep = makeDependency({target});
     const assetNode = {
@@ -366,8 +366,8 @@ describe('planBundleGraph', () => {
     const packages: PackagedDominatorGraph = new EdgeContentGraph();
     const root = packages.addNodeByContentKey('root', 'root');
     packages.setRootNodeId(root);
-    const entryAsset = makeAsset({});
-    const asyncAssetValue = makeAsset({});
+    const entryAsset = makeAsset({filePath: 'entry'});
+    const asyncAssetValue = makeAsset({filePath: 'async'});
     const target = makeTarget({});
     const entryDep = makeDependency({
       target,
@@ -443,6 +443,201 @@ describe('planBundleGraph', () => {
         entryDep: asyncDependency,
         target,
         bundles: expectedAsyncBundles,
+      },
+    ]);
+  });
+
+  it.skip('can plan a graph with a shared bundle', () => {
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
+    const root = packages.addNodeByContentKey('root', 'root');
+    packages.setRootNodeId(root);
+    const entryAsset = makeAsset({filePath: 'entry'});
+    const sharedAssetValue = makeAsset({filePath: 'shared'});
+    const target = makeTarget({});
+    const entryDep = makeDependency({
+      target,
+    });
+    const assetNode = {
+      type: 'asset',
+      id: 'asset',
+      asset: entryAsset,
+      entryDependency: entryDep,
+      target,
+      isEntryNode: true,
+      isRoot: true,
+    };
+    const asset = packages.addNodeByContentKey('asset', assetNode);
+    packages.addEdge(root, asset);
+    const sharedAssetNode = {
+      type: 'asset',
+      id: 'shared-asset',
+      asset: sharedAssetValue,
+      entryDependency: null,
+      target: null,
+      isEntryNode: false,
+      isRoot: false,
+    };
+    const sharedAsset = packages.addNodeByContentKey(
+      'shared-asset',
+      sharedAssetNode,
+    );
+    packages.addEdge(root, sharedAsset);
+
+    const entryDependenciesByAsset = new Map();
+    entryDependenciesByAsset.set(asset, new Set([assetNode]));
+    entryDependenciesByAsset.set(sharedAsset, new Set([assetNode]));
+    const asyncDependenciesByAsset = new Map();
+
+    const result = planBundleGraph(
+      packages,
+      entryDependenciesByAsset,
+      asyncDependenciesByAsset,
+    );
+
+    const expectedBundles = [
+      {
+        entryAsset,
+        needsStableName: true,
+        target,
+        assets: [entryAsset],
+      },
+      {
+        entryAsset: sharedAssetValue,
+        needsStableName: false,
+        target,
+        assets: [sharedAssetValue],
+      },
+    ];
+    assert.deepStrictEqual(result.bundles, [...expectedBundles]);
+    assert.deepStrictEqual(result.bundleGroups, [
+      {
+        entryDep,
+        target,
+        bundles: expectedBundles,
+      },
+    ]);
+  });
+
+  it('can plan a graph with a shared bundle used on async roots', () => {
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
+    const root = packages.addNodeByContentKey('root', 'root');
+    packages.setRootNodeId(root);
+    const entryAsset = makeAsset({filePath: 'entry'});
+    const page1Asset = makeAsset({filePath: 'page1'});
+    const page2Asset = makeAsset({filePath: 'page2'});
+    const sharedAssetValue = makeAsset({filePath: 'shared'});
+    const target = makeTarget({});
+    const entryDep = makeDependency({
+      target,
+    });
+    const assetNode = {
+      type: 'asset',
+      id: 'asset',
+      asset: entryAsset,
+      entryDependency: entryDep,
+      target,
+      isEntryNode: true,
+      isRoot: true,
+    };
+    const asset = packages.addNodeByContentKey('asset', assetNode);
+    packages.addEdge(root, asset);
+    const page1Node = {
+      type: 'asset',
+      id: 'page1',
+      asset: page1Asset,
+      entryDependency: null,
+      target: null,
+      isEntryNode: false,
+      isRoot: true,
+    };
+    const page1 = packages.addNodeByContentKey('page1', page1Node);
+    const page1Dependency = makeDependency({id: 'index-to-page1'});
+    packages.addWeightedEdge(root, page1, 1, page1Dependency);
+    const page2Node = {
+      type: 'asset',
+      id: 'page2',
+      asset: page2Asset,
+      entryDependency: null,
+      target: null,
+      isEntryNode: false,
+      isRoot: true,
+    };
+    const page2 = packages.addNodeByContentKey('page2', page2Node);
+    const page2Dependency = makeDependency({id: 'index-to-page2'});
+    packages.addWeightedEdge(root, page2, 1, page2Dependency);
+    const sharedAssetNode = {
+      type: 'asset',
+      id: 'shared-asset',
+      asset: sharedAssetValue,
+      entryDependency: null,
+      target: null,
+      isEntryNode: false,
+      isRoot: false,
+    };
+    const sharedAsset = packages.addNodeByContentKey(
+      'shared-asset',
+      sharedAssetNode,
+    );
+    packages.addEdge(root, sharedAsset);
+
+    const entryDependenciesByAsset = new Map();
+    entryDependenciesByAsset.set(asset, new Set([assetNode]));
+    entryDependenciesByAsset.set(sharedAsset, new Set([assetNode]));
+    entryDependenciesByAsset.set(page1, new Set([assetNode]));
+    entryDependenciesByAsset.set(page2, new Set([assetNode]));
+    const asyncDependenciesByAsset = new Map();
+    asyncDependenciesByAsset.set(sharedAsset, new Set([page1Node, page2Node]));
+    asyncDependenciesByAsset.set(page1, new Set([page1Node]));
+    asyncDependenciesByAsset.set(page2, new Set([page2Node]));
+
+    const result = planBundleGraph(
+      packages,
+      entryDependenciesByAsset,
+      asyncDependenciesByAsset,
+    );
+
+    const expectedBundles = [
+      {
+        entryAsset,
+        needsStableName: true,
+        target,
+        assets: [entryAsset],
+      },
+      {
+        entryAsset: page1Asset,
+        needsStableName: false,
+        target,
+        assets: [page1Asset],
+      },
+      {
+        entryAsset: page2Asset,
+        needsStableName: false,
+        target,
+        assets: [page2Asset],
+      },
+      {
+        entryAsset: sharedAssetValue,
+        needsStableName: false,
+        target,
+        assets: [sharedAssetValue],
+      },
+    ];
+    assert.deepStrictEqual(result.bundles, [...expectedBundles]);
+    assert.deepStrictEqual(result.bundleGroups, [
+      {
+        entryDep,
+        target,
+        bundles: [expectedBundles[0]],
+      },
+      {
+        entryDep: page1Dependency,
+        target,
+        bundles: [expectedBundles[1], expectedBundles[3]],
+      },
+      {
+        entryDep: page2Dependency,
+        target,
+        bundles: [expectedBundles[2], expectedBundles[3]],
       },
     ]);
   });

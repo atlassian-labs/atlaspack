@@ -125,6 +125,10 @@ export default (new Runtime({
     // (e.g. WASM, HTML). These should be preloaded prior to the bundle being executed. Replace the entry asset(s)
     // with the preload module.
 
+    if (bundle.id === 'ebc7b4c1dac11865') {
+      debugger;
+    }
+
     if (bundle.type !== 'js') {
       return;
     }
@@ -134,6 +138,9 @@ export default (new Runtime({
 
     let assets = [];
     for (let dependency of asyncDependencies) {
+      if (bundle.id === 'ebc7b4c1dac11865') {
+        debugger;
+      }
       let resolved = bundleGraph.resolveAsyncDependency(dependency, bundle);
       if (resolved == null) {
         continue;

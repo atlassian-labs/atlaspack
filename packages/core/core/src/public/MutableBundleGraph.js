@@ -257,7 +257,10 @@ export default class MutableBundleGraph
         this.#graph._graph.getNodeIdByContentKey(opts.entryAsset.id),
       );
     }
-    return Bundle.get(bundleNode.value, this.#graph, this.#options);
+
+    const result = Bundle.get(bundleNode.value, this.#graph, this.#options);
+    console.log('==> createBundle', opts, result);
+    return result;
   }
 
   addBundleToBundleGroup(bundle: IBundle, bundleGroup: IBundleGroup) {

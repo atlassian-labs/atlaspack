@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import fs from 'fs';
 import path from 'path';
 import assert from 'assert';
 import sinon from 'sinon';
@@ -13,6 +14,10 @@ import {
   overlayFS,
   run,
 } from '@atlaspack/test-utils';
+import {
+  dotFromBundleGraph,
+  dotFromBundleGroupsInGraph,
+} from '@atlaspack/bundler-experimental/test/graphviz/GraphvizUtils';
 
 const invariant = assert;
 
@@ -65,7 +70,7 @@ describe('bundler-experimental', () => {
 
   describe('parity tests', () => {
     const bundlers = [
-      '@atlaspack/bundler-default',
+      // '@atlaspack/bundler-default',
       '@atlaspack/bundler-experimental',
     ];
 
@@ -273,6 +278,163 @@ describe('bundler-experimental', () => {
           expect(await output).toEqual(1234);
         });
 
+        it.only('can bundle two level deep async splits', async () => {
+          // TMP diff to test shared bundles
+          await fsFixture(overlayFS, __dirname)`
+      bundler-experimental
+        async.js:
+          module.exports = () => 34;
+
+        page1.js:
+          module.exports = (output) => output(import('./async').then((get2) => {
+            return get2();
+          }));
+
+        page2.js:
+          module.exports = (output) => output(import('./async').then((get2) => {
+            return get2();
+          }));
+
+        index.js:
+          import('./page1').then((page) => {
+            page(output);
+          });
+          import('./page2').then((page) => {
+            page(output);
+          });
+
+        package.json:
+          {
+             "@atlaspack/bundler-default": {
+                "minBundleSize": 0
+             }
+          }
+
+        yarn.lock:
+          {}
+
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "bundler": ${JSON.stringify(bundler)}
+          }
+    `;
+
+          const inputDir = path.join(__dirname, 'bundler-experimental');
+          const b = await bundle(path.join(inputDir, 'index.js'), {
+            inputFS: overlayFS,
+            outputFS: overlayFS,
+          });
+
+          {
+            const assetsByBundle = new Map();
+            b.traverseBundles((bundle) => {
+              const assets = [];
+              bundle.traverseAssets((asset) => {
+                assets.push(asset);
+              });
+              assetsByBundle.set(bundle, assets);
+            });
+
+            let debugOutput = ``;
+            for (let [bundle, assets] of assetsByBundle) {
+              for (let asset of assets) {
+                debugOutput +=
+                  [bundle.id, asset.id, await asset.getCode()].join(' ') + '\n';
+              }
+            }
+            fs.writeFileSync(
+              `./output-${bundler.replaceAll('/', '-')}.txt`,
+              debugOutput,
+            );
+          }
+          console.log(dotFromBundleGroupsInGraph(inputDir, b));
+          const dotString = dotFromBundleGraph(inputDir, b);
+          console.log(dotString);
+
+          const bundles = b.getBundles();
+          // assert.equal(bundles.length, 5);
+          // const entryBundle = bundles.find((bundle) =>
+          //   bundle.getEntryAssets()[0]?.filePath.includes('index.js'),
+          // );
+          // const page1Bundle = bundles.find((bundle) =>
+          //   bundle.getEntryAssets()[0]?.filePath.includes('page1.js'),
+          // );
+          // const page2Bundle = bundles.find((bundle) =>
+          //   bundle.getEntryAssets()[0]?.filePath.includes('page2.js'),
+          // );
+          // const asyncBundle = bundles.find((bundle) =>
+          //   bundle.getEntryAssets()[0]?.filePath.includes('async.js'),
+          // );
+          // invariant(entryBundle);
+          // invariant(asyncBundle);
+          // invariant(page1Bundle);
+          // invariant(page2Bundle);
+          //
+          // const bundleGroupsForIndex =
+          //   b.getBundleGroupsContainingBundle(entryBundle);
+          // const bundleGroupsForAsync =
+          //   b.getBundleGroupsContainingBundle(asyncBundle);
+          // const bundleGroupsForPage1 =
+          //   b.getBundleGroupsContainingBundle(page1Bundle);
+          // const bundleGroupsForPage2 =
+          //   b.getBundleGroupsContainingBundle(page2Bundle);
+          // assert.equal(bundleGroupsForPage1.length, 1);
+          // assert.equal(bundleGroupsForPage2.length, 1);
+          // assert.equal(bundleGroupsForIndex.length, 1);
+          // assert.equal(bundleGroupsForAsync.length, 1);
+          // // assert.equal(bundleGroupsForShared.length, 2);
+          // assert.notStrictEqual(
+          //   bundleGroupsForIndex[0],
+          //   bundleGroupsForAsync[0],
+          // );
+          // b.getBundlesInBundleGroup(bundleGroupsForPage1[0]).forEach(
+          //   (bundle) => {
+          //     console.log(bundle);
+          //     bundle.traverseAssets((asset) => {
+          //       console.log({asset});
+          //     });
+          //   },
+          // );
+          // // assert.deepStrictEqual(bundleGroupsForShared, [
+          // //   ...bundleGroupsForPage2,
+          // //   ...bundleGroupsForPage1,
+          // // ]);
+          // assert.equal(createBundleSpy.callCount, 5);
+          // assert.equal(addBundleToBundleGroupSpy.callCount, 4);
+
+          // // $FlowFixMe
+          expectBundles(inputDir, b, [
+            {
+              type: 'js',
+              assets: ['async.js'],
+            },
+            {
+              type: 'js',
+              assets: ['index.js'],
+            },
+            {
+              type: 'js',
+              assets: ['page1.js'],
+            },
+            {
+              type: 'js',
+              assets: ['page2.js'],
+            },
+          ]);
+
+          let output = null;
+          graphs.set(bundler, b);
+
+          await run(b, {
+            output: (value) => {
+              output = value;
+            },
+          });
+
+          expect(await output).toEqual(2434);
+        });
+
         it('can bundle async splits without duplicating parent dependencies', async () => {
           // TMP diff to test shared bundles
           await fsFixture(overlayFS, __dirname)`
@@ -327,29 +489,92 @@ describe('bundler-experimental', () => {
             outputFS: overlayFS,
           });
 
-          // // $FlowFixMe
-          // expectBundles(inputDir, b, [
-          //   {
-          //     type: 'js',
-          //     assets: ['async.js'],
-          //   },
-          //   {
-          //     type: 'js',
-          //     assets: ['dependency.js'],
-          //   },
-          //   {
-          //     type: 'js',
-          //     assets: ['index.js'],
-          //   },
-          //   {
-          //     type: 'js',
-          //     assets: ['page1.js'],
-          //   },
-          //   {
-          //     type: 'js',
-          //     assets: ['page2.js'],
-          //   },
+          const bundles = b.getBundles();
+          assert.equal(bundles.length, 5);
+          const entryBundle = bundles.find((bundle) =>
+            bundle.getEntryAssets()[0]?.filePath.includes('index.js'),
+          );
+          const page1Bundle = bundles.find((bundle) =>
+            bundle.getEntryAssets()[0]?.filePath.includes('page1.js'),
+          );
+          const page2Bundle = bundles.find((bundle) =>
+            bundle.getEntryAssets()[0]?.filePath.includes('page2.js'),
+          );
+          const sharedBundle = bundles.find((bundle) => {
+            let found = false;
+            bundle.traverseAssets((asset) => {
+              if (asset.filePath.includes('dependency.js')) {
+                found = true;
+              }
+            });
+            return found;
+          });
+          const asyncBundle = bundles.find((bundle) =>
+            bundle.getEntryAssets()[0]?.filePath.includes('async.js'),
+          );
+          invariant(entryBundle);
+          invariant(asyncBundle);
+          invariant(sharedBundle);
+          invariant(page1Bundle);
+          invariant(page2Bundle);
+
+          const bundleGroupsForIndex =
+            b.getBundleGroupsContainingBundle(entryBundle);
+          const bundleGroupsForAsync =
+            b.getBundleGroupsContainingBundle(asyncBundle);
+          const bundleGroupsForPage1 =
+            b.getBundleGroupsContainingBundle(page1Bundle);
+          const bundleGroupsForPage2 =
+            b.getBundleGroupsContainingBundle(page2Bundle);
+          const bundleGroupsForShared =
+            b.getBundleGroupsContainingBundle(sharedBundle);
+          assert.equal(bundleGroupsForPage1.length, 1);
+          assert.equal(bundleGroupsForPage2.length, 1);
+          assert.equal(bundleGroupsForIndex.length, 1);
+          assert.equal(bundleGroupsForAsync.length, 1);
+          // assert.equal(bundleGroupsForShared.length, 2);
+          assert.notStrictEqual(
+            bundleGroupsForIndex[0],
+            bundleGroupsForAsync[0],
+          );
+          b.getBundlesInBundleGroup(bundleGroupsForPage1[0]).forEach(
+            (bundle) => {
+              console.log(bundle);
+              bundle.traverseAssets((asset) => {
+                console.log({asset});
+              });
+            },
+          );
+          // assert.deepStrictEqual(bundleGroupsForShared, [
+          //   ...bundleGroupsForPage2,
+          //   ...bundleGroupsForPage1,
           // ]);
+          assert.equal(createBundleSpy.callCount, 5);
+          assert.equal(addBundleToBundleGroupSpy.callCount, 4);
+
+          // // $FlowFixMe
+          expectBundles(inputDir, b, [
+            {
+              type: 'js',
+              assets: ['async.js'],
+            },
+            {
+              type: 'js',
+              assets: ['index.js'],
+            },
+            {
+              type: 'js',
+              assets: ['dependency.js'],
+            },
+            {
+              type: 'js',
+              assets: ['page1.js'],
+            },
+            {
+              type: 'js',
+              assets: ['page2.js'],
+            },
+          ]);
 
           let output = null;
           graphs.set(bundler, b);

@@ -38,7 +38,7 @@ export const simpleAssetGraphEdges = {
   asyncDependency: 2,
 };
 
-export type SimpleAssetGraphEdgeWeight = Dependency;
+export type SimpleAssetGraphEdgeWeight = Dependency[];
 
 export type SimpleAssetGraphEdge = $Values<typeof simpleAssetGraphEdges>;
 
@@ -129,14 +129,10 @@ export function bundleGraphToRootedGraph(
     const node = graph.getNode(assetNodeId);
     invariant(node != null && node !== 'root');
 
+    let rootEdges = [];
     for (let dependency of bundleGraph.getIncomingDependencies(childAsset)) {
       if (dependency.isEntry) {
-        graph.addWeightedEdge(
-          rootNodeId,
-          assetNodeId,
-          simpleAssetGraphEdges.dependency,
-          dependency,
-        );
+        rootEdges.push(dependency);
         node.isEntryNode = true;
         node.isRoot = true;
       } else if (
@@ -144,12 +140,7 @@ export function bundleGraphToRootedGraph(
         (dependency.sourceAssetType != null &&
           dependency.sourceAssetType !== childAsset.type)
       ) {
-        graph.addWeightedEdge(
-          rootNodeId,
-          assetNodeId,
-          simpleAssetGraphEdges.dependency,
-          dependency,
-        );
+        rootEdges.push(dependency);
         node.isRoot = true;
 
         const parentAsset = bundleGraph.getAssetWithDependency(dependency);
@@ -174,6 +165,15 @@ export function bundleGraphToRootedGraph(
           dependency,
         );
       }
+    }
+
+    if (rootEdges.length) {
+      graph.addWeightedEdge(
+        rootNodeId,
+        assetNodeId,
+        simpleAssetGraphEdges.dependency,
+        rootEdges,
+      );
     }
   }
 

@@ -51,6 +51,41 @@ export function runDotForTest(
   }
 }
 
+export function dotFromBundleGroupsInGraph<B: Bundle>(
+  entryDir: string,
+  bundleGraph: BundleGraph<B>,
+): string {
+  const contents = [];
+
+  const bundleGroups = new Set(
+    bundleGraph.getBundles().flatMap((bundle) => {
+      return bundleGraph.getBundleGroupsContainingBundle(bundle);
+    }),
+  );
+
+  for (let bundleGroup of bundleGroups) {
+    const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup);
+    const id = bundleGroup.entryAssetId;
+    contents.push(`subgraph cluster_${id} {`);
+    contents.push(`  label = "Bundle Group ${id}";`);
+
+    for (let bundle of bundles) {
+      contents.push(`  "${bundle.id}";`);
+    }
+
+    contents.push('}');
+  }
+
+  return `
+digraph bundle_graph {
+  labelloc="t";
+  label="Bundle graph";
+
+${contents.map((line) => (line.length > 0 ? `  ${line}` : '')).join('\n')}
+}
+  `.trim();
+}
+
 /**
  * Create a dot string from a bundle graph.
  */

@@ -117,25 +117,29 @@ export function getOrCreateBundleGroupsForNode(
       }
     } else {
       const entries = entryDependenciesByAsset.get(nodeId);
-      console.log({node, entryDependenciesByAsset, nodeId});
+      console.log({node, entries, nodeId});
       invariant(entries != null);
       for (let entry of entries) {
         const target = entry.entryDependency.target;
         const bundleGroupsMap = bundleGroupsByEntryDep.get(target);
 
-        const dependency = packages.getEdgeWeight(rootId, nodeId);
-        invariant(dependency != null);
+        const dependencies = packages.getEdgeWeight(rootId, nodeId);
+        console.log({dependencies});
+        invariant(dependencies != null);
+        invariant(dependencies.length > 0);
 
-        if (bundleGroupsMap.has(dependency)) {
-          result.add(bundleGroupsMap.get(dependency));
-        } else {
-          const bundleGroup = {
-            entryDep: dependency,
-            target,
-            bundles: [],
-          };
-          result.add(bundleGroup);
-          bundleGroupsMap.set(dependency, bundleGroup);
+        for (let dependency of dependencies) {
+          if (bundleGroupsMap.has(dependency)) {
+            result.add(bundleGroupsMap.get(dependency));
+          } else {
+            const bundleGroup = {
+              entryDep: dependency,
+              target,
+              bundles: [],
+            };
+            result.add(bundleGroup);
+            bundleGroupsMap.set(dependency, bundleGroup);
+          }
         }
       }
     }
@@ -170,9 +174,9 @@ export function getOrCreateBundleGroupsForNode(
       }
     }
   } else {
-    const entries = entryDependenciesByAsset.get(nodeId) ?? new Set();
+    // const entries = entryDependenciesByAsset.get(nodeId) ?? new Set();
     const asyncEntries = asyncDependenciesByAsset.get(nodeId) ?? new Set();
-    const allEntries = Array.from(entries).concat(Array.from(asyncEntries));
+    const allEntries = Array.from(asyncEntries);
     for (let entry of allEntries) {
       const nodeId = packages.getNodeIdByContentKey(entry.id);
       const childResult = getOrCreateBundleGroupsForNode(
@@ -327,6 +331,8 @@ export function planBundleGraph(
 
   result.bundleGroups = Array.from(allBundleGroups);
 
+  console.log(result);
+
   return result;
 }
 
@@ -397,7 +403,9 @@ export function buildBundleGraph(
         return;
       }
 
-      // bundleGraph.createBundleReference(bundle, childBundle);
+      if (!child.isRoot) {
+        bundleGraph.createBundleReference(bundle, childBundle);
+      }
     });
   });
 }

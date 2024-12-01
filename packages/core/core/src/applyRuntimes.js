@@ -113,6 +113,7 @@ export default async function applyRuntimes<TResult: RequestResult>({
     },
   });
 
+  console.log('applyRuntimes', {bundles: bundles.map((b) => b.id)});
   let connectionMap = new DefaultMap(() => []);
 
   for (let bundle of bundles) {
@@ -141,6 +142,7 @@ export default async function applyRuntimes<TResult: RequestResult>({
           }),
         });
 
+        console.log({bundle: bundle.id, applied});
         if (applied) {
           let runtimeAssets = Array.isArray(applied) ? applied : [applied];
           for (let {
@@ -151,6 +153,11 @@ export default async function applyRuntimes<TResult: RequestResult>({
             env,
             priority,
           } of runtimeAssets) {
+            console.log('applyRuntimes::runtimeAssets', {
+              filePath,
+              priority,
+              bundle: bundle.id,
+            });
             let sourceName = path.join(
               path.dirname(filePath),
               `runtime-${hashString(code)}.${bundle.type}`,
