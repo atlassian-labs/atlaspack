@@ -147,22 +147,22 @@ export function bundleGraphToRootedGraph(
         if (!parentAsset) {
           throw new Error('Non entry dependency had no asset');
         }
-        graph.addWeightedEdge(
+        graph.addEdge(
           graph.getNodeIdByContentKey(parentAsset.id),
           assetNodeId,
           simpleAssetGraphEdges.asyncDependency,
-          dependency,
+          // dependency,
         );
       } else {
         const parentAsset = bundleGraph.getAssetWithDependency(dependency);
         if (!parentAsset) {
           throw new Error('Non entry dependency had no asset');
         }
-        graph.addWeightedEdge(
+        graph.addEdge(
           graph.getNodeIdByContentKey(parentAsset.id),
           assetNodeId,
           simpleAssetGraphEdges.dependency,
-          dependency,
+          // dependency,
         );
       }
     }

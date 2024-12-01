@@ -403,7 +403,7 @@ describe('bundler-experimental', () => {
           // assert.equal(createBundleSpy.callCount, 5);
           // assert.equal(addBundleToBundleGroupSpy.callCount, 4);
 
-          // // $FlowFixMe
+          // $FlowFixMe
           expectBundles(inputDir, b, [
             {
               type: 'js',
@@ -552,7 +552,7 @@ describe('bundler-experimental', () => {
           assert.equal(createBundleSpy.callCount, 5);
           assert.equal(addBundleToBundleGroupSpy.callCount, 4);
 
-          // // $FlowFixMe
+          // $FlowFixMe
           expectBundles(inputDir, b, [
             {
               type: 'js',

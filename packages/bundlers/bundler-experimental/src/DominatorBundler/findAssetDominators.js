@@ -126,9 +126,7 @@ export function buildDominatorTree<T, EW>(
  *
  * - https://www.cs.tufts.edu/comp/150FP/archive/keith-cooper/dom14.pdf
  */
-export function simpleFastDominance<T, E: number>(
-  graph: Graph<T, E>,
-): NodeId[] {
+export function simpleFastDominance<T>(graph: Graph<T, number>): NodeId[] {
   const rootNodeId = graph.rootNodeId;
   if (rootNodeId == null) {
     throw new Error('Graph must have a root node');
@@ -184,8 +182,8 @@ export function simpleFastDominance<T, E: number>(
 /**
  * Return the post-order of the graph.
  */
-export function getGraphPostOrder<T, E: number>(
-  graph: Graph<T, E>,
+export function getGraphPostOrder<T>(
+  graph: Graph<T, number>,
   type: number = 1,
 ): NodeId[] {
   const postOrder = [];

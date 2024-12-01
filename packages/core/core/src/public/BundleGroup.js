@@ -55,6 +55,7 @@ export default class BundleGroup implements IBundleGroup {
     return this.#bundleGroup.entryAssetId;
   }
 
+  // $FlowFixMe
   [inspect]() {
     return `BundleGroup(${this.entryAssetId})`;
   }

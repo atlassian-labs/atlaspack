@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import * as path from 'path';
+import path from 'path';
 import {overlayFS, workerFarm} from '@atlaspack/test-utils';
 import assert from 'assert';
 import {dotTest, setupBundlerTest} from '../test-utils';

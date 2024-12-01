@@ -59,15 +59,27 @@ export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
   intoBundleGraph(packages, bundleGraph, packageGraph, entryDependencies);
 }
 
-interface SimpleBundle {
-  env: Environment | null;
-  uniqueKey?: string;
-  type?: string;
-  entryAsset: Asset;
-  assets: Asset[];
-  needsStableName: boolean;
-  target: Target;
-}
+type SimpleBundle =
+  | {|
+      type: 'entry',
+      assets: Asset[],
+      options: {|
+        entryAsset: Asset,
+        target: Target,
+        needsStableName?: boolean,
+      |},
+    |}
+  | {|
+      type: 'shared',
+      assets: Asset[],
+      options: {|
+        env: Environment,
+        type: string,
+        uniqueKey: string,
+        target: Target,
+        needsStableName?: boolean,
+      |},
+    |};
 
 interface SimpleBundleGroup {
   entryDep: Dependency;
@@ -98,29 +110,33 @@ export function getOrCreateBundleGroupsForNode(
   // This node is either an entry-point or an async import
   if (node.type === 'asset' && node.isRoot) {
     if (node.isEntryNode) {
-      invariant(node.entryDependency != null);
-      invariant(node.target != null);
+      const entryDependency = node.entryDependency;
+      const target = node.target;
+      invariant(entryDependency != null);
+      invariant(target != null);
 
-      const bundleGroupsMap = bundleGroupsByEntryDep.get(node.target);
-      const existingBundleGroup = bundleGroupsMap.get(node.entryDependency);
+      const bundleGroupsMap = bundleGroupsByEntryDep.get(target);
+      const existingBundleGroup = bundleGroupsMap.get(entryDependency);
 
       if (existingBundleGroup != null) {
         result.add(existingBundleGroup);
       } else {
         const bundleGroup = {
-          entryDep: node.entryDependency,
-          target: node.target,
+          entryDep: entryDependency,
+          target: target,
           bundles: [],
         };
         result.add(bundleGroup);
-        bundleGroupsMap.set(node.entryDependency, bundleGroup);
+        bundleGroupsMap.set(entryDependency, bundleGroup);
       }
     } else {
       const entries = entryDependenciesByAsset.get(nodeId);
       console.log({node, entries, nodeId});
       invariant(entries != null);
       for (let entry of entries) {
+        invariant(entry.entryDependency != null);
         const target = entry.entryDependency.target;
+        invariant(target != null);
         const bundleGroupsMap = bundleGroupsByEntryDep.get(target);
 
         const dependencies = packages.getEdgeWeight(rootId, nodeId);
@@ -129,8 +145,9 @@ export function getOrCreateBundleGroupsForNode(
         invariant(dependencies.length > 0);
 
         for (let dependency of dependencies) {
-          if (bundleGroupsMap.has(dependency)) {
-            result.add(bundleGroupsMap.get(dependency));
+          const existingBundleGroup = bundleGroupsMap.get(dependency);
+          if (existingBundleGroup != null) {
+            result.add(existingBundleGroup);
           } else {
             const bundleGroup = {
               entryDep: dependency,
@@ -232,15 +249,20 @@ export function planBundleGraph(
       allBundleGroups.add(bundleGroup);
     }
     invariant(bundleGroups.length > 0);
-    const targets = new Set(bundleGroups.values().map((group) => group.target));
+    const targets = new Set(
+      Array.from(bundleGroups.values()).map((group) => group.target),
+    );
 
     for (let target of targets) {
       if (node.type === 'asset') {
         const bundle = {
-          entryAsset: node.asset,
-          needsStableName: node.isEntryNode,
-          target,
+          type: 'entry',
           assets: [],
+          options: {
+            entryAsset: node.asset,
+            needsStableName: node.isEntryNode,
+            target,
+          },
         };
         bundlesByPackageContentKey.set(
           packages.getContentKeyByNodeId(nodeId),
@@ -271,12 +293,15 @@ export function planBundleGraph(
         const env = sampleAsset.asset.env;
 
         const bundle = {
-          env,
-          type: sampleAsset.asset.type,
-          uniqueKey: node.id,
-          target,
-          needsStableName: false,
+          type: 'shared',
           assets: [],
+          options: {
+            env,
+            type: sampleAsset.asset.type,
+            uniqueKey: node.id,
+            target,
+            needsStableName: false,
+          },
         };
         bundlesByPackageContentKey.set(
           packages.getContentKeyByNodeId(nodeId),
@@ -308,11 +333,14 @@ export function planBundleGraph(
         const env = sampleAsset.asset.env;
 
         const bundle = {
-          env,
-          type: 'js',
-          uniqueKey: node.id,
-          target,
-          needsStableName: false,
+          type: 'shared',
+          options: {
+            env,
+            type: 'js',
+            uniqueKey: node.id,
+            target,
+            needsStableName: false,
+          },
           assets: [],
         };
         bundlesByPackageContentKey.set(
@@ -352,14 +380,7 @@ export function buildBundleGraph(
     for (let planBundle of planGroup.bundles) {
       const bundle =
         bundlesByPlanBundle.get(planBundle) ??
-        bundleGraph.createBundle({
-          entryAsset: planBundle.entryAsset,
-          needsStableName: planBundle.needsStableName,
-          target: planBundle.target,
-          env: planBundle.env,
-          uniqueKey: planBundle.uniqueKey,
-          type: planBundle.type,
-        });
+        bundleGraph.createBundle(planBundle.options);
 
       bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
       bundlesByPlanBundle.set(planBundle, bundle);

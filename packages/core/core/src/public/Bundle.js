@@ -71,6 +71,7 @@ export class Bundle implements IBundle {
   #bundleGraph /*: BundleGraph */;
   #options /*: AtlaspackOptions */;
 
+  // $FlowFixMe
   [inspect]() {
     return `Bundle(${this.#bundle.id})`;
   }
