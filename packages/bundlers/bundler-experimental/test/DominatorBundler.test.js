@@ -261,7 +261,7 @@ describe('getOrCreateBundleGroupsForNode', () => {
       isRoot: true,
     };
     const asyncId = packages.addNodeByContentKey('async', asyncNode);
-    packages.addWeightedEdge(root, asyncId, 1, asyncDependency);
+    packages.addWeightedEdge(root, asyncId, 1, [asyncDependency]);
 
     const entryDependenciesByAsset = new Map();
     entryDependenciesByAsset.set(asset, new Set([assetNode]));
@@ -399,7 +399,7 @@ describe('planBundleGraph', () => {
       'async-asset',
       asyncAssetNode,
     );
-    packages.addWeightedEdge(root, asyncAsset, 1, asyncDependency);
+    packages.addWeightedEdge(root, asyncAsset, 1, [asyncDependency]);
 
     const entryDependenciesByAsset = new Map();
     entryDependenciesByAsset.set(asset, new Set([assetNode]));
@@ -552,7 +552,7 @@ describe('planBundleGraph', () => {
     };
     const page1 = packages.addNodeByContentKey('page1', page1Node);
     const page1Dependency = makeDependency({id: 'index-to-page1'});
-    packages.addWeightedEdge(root, page1, 1, page1Dependency);
+    packages.addWeightedEdge(root, page1, 1, [page1Dependency]);
     const page2Node = {
       type: 'asset',
       id: 'page2',
@@ -564,7 +564,7 @@ describe('planBundleGraph', () => {
     };
     const page2 = packages.addNodeByContentKey('page2', page2Node);
     const page2Dependency = makeDependency({id: 'index-to-page2'});
-    packages.addWeightedEdge(root, page2, 1, page2Dependency);
+    packages.addWeightedEdge(root, page2, 1, [page2Dependency]);
     const sharedAssetNode = {
       type: 'asset',
       id: 'shared-asset',
