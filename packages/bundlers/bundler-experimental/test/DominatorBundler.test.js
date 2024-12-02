@@ -3,7 +3,12 @@
 import assert from 'assert';
 import {EdgeContentGraph} from '../src/DominatorBundler/EdgeContentGraph';
 import type {Asset, Dependency, Target} from '@atlaspack/types';
-import type {AssetNode, PackagedDominatorGraph} from '../src';
+import type {
+  AssetNode,
+  PackagedDominatorGraph,
+  SimpleBundle,
+  SimpleBundleGroup,
+} from '../src';
 import {
   addNodeToBundle,
   getOrCreateBundleGroupsForNode,
@@ -339,12 +344,15 @@ describe('planBundleGraph', () => {
       asyncDependenciesByAsset,
     );
 
-    const expectedBundles = [
+    const expectedBundles: SimpleBundle[] = [
       {
-        entryAsset,
-        needsStableName: true,
-        target,
+        type: 'entry',
         assets: [entryAsset],
+        options: {
+          entryAsset,
+          needsStableName: true,
+          target,
+        },
       },
     ];
 
@@ -413,20 +421,26 @@ describe('planBundleGraph', () => {
       asyncDependenciesByAsset,
     );
 
-    const expectedBundles = [
+    const expectedBundles: SimpleBundle[] = [
       {
-        entryAsset,
-        needsStableName: true,
-        target,
+        type: 'entry',
         assets: [entryAsset],
+        options: {
+          entryAsset,
+          needsStableName: true,
+          target,
+        },
       },
     ];
-    const expectedAsyncBundles = [
+    const expectedAsyncBundles: SimpleBundle[] = [
       {
-        entryAsset: asyncAssetValue,
-        needsStableName: false,
-        target,
+        type: 'entry',
         assets: [asyncAssetValue],
+        options: {
+          entryAsset: asyncAssetValue,
+          needsStableName: false,
+          target,
+        },
       },
     ];
     assert.deepStrictEqual(result.bundles, [
@@ -596,34 +610,46 @@ describe('planBundleGraph', () => {
       asyncDependenciesByAsset,
     );
 
-    const expectedBundles = [
+    const expectedBundles: SimpleBundle[] = [
       {
-        entryAsset,
-        needsStableName: true,
-        target,
+        type: 'entry',
         assets: [entryAsset],
+        options: {
+          entryAsset,
+          needsStableName: true,
+          target,
+        },
       },
       {
-        entryAsset: page1Asset,
-        needsStableName: false,
-        target,
+        type: 'entry',
         assets: [page1Asset],
+        options: {
+          entryAsset: page1Asset,
+          needsStableName: false,
+          target,
+        },
       },
       {
-        entryAsset: page2Asset,
-        needsStableName: false,
-        target,
+        type: 'entry',
         assets: [page2Asset],
+        options: {
+          entryAsset: page2Asset,
+          needsStableName: false,
+          target,
+        },
       },
       {
-        entryAsset: sharedAssetValue,
-        needsStableName: false,
-        target,
+        type: 'entry',
         assets: [sharedAssetValue],
+        options: {
+          entryAsset: sharedAssetValue,
+          needsStableName: false,
+          target,
+        },
       },
     ];
     assert.deepStrictEqual(result.bundles, [...expectedBundles]);
-    assert.deepStrictEqual(result.bundleGroups, [
+    const expectedBundleGroups: SimpleBundleGroup[] = [
       {
         entryDep,
         target,
@@ -639,6 +665,7 @@ describe('planBundleGraph', () => {
         target,
         bundles: [expectedBundles[2], expectedBundles[3]],
       },
-    ]);
+    ];
+    assert.deepStrictEqual(result.bundleGroups, expectedBundleGroups);
   });
 });

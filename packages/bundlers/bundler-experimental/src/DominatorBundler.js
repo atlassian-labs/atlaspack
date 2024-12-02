@@ -59,7 +59,7 @@ export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
   intoBundleGraph(packages, bundleGraph, packageGraph, entryDependencies);
 }
 
-type SimpleBundle =
+export type SimpleBundle =
   | {|
       type: 'entry',
       assets: Asset[],
@@ -81,13 +81,13 @@ type SimpleBundle =
       |},
     |};
 
-interface SimpleBundleGroup {
+export interface SimpleBundleGroup {
   entryDep: Dependency;
   target: Target;
   bundles: SimpleBundle[];
 }
 
-interface BundleGraphConversionResult {
+export interface BundleGraphConversionResult {
   bundles: SimpleBundle[];
   bundlesByPackageContentKey: Map<string, SimpleBundle>;
   bundleGroups: SimpleBundleGroup[];
