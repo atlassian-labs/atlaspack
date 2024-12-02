@@ -221,7 +221,7 @@ pub struct Asset {
   /// True if the Asset's code was returned from a resolver rather than being
   /// read from disk.
   #[serde(skip_serializing)]
-  pub is_virtual_code: bool,
+  pub is_virtual: bool,
 
   /// True if the asset has CommonJS exports
   pub has_cjs_exports: bool,
@@ -267,7 +267,7 @@ impl Asset {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
     code: Code,
-    is_virtual_code: bool,
+    is_virtual: bool,
     env: Arc<Environment>,
     file_path: PathBuf,
     pipeline: Option<String>,
@@ -282,7 +282,7 @@ impl Asset {
       .ancestors()
       .any(|p| p.file_name() == Some(OsStr::new("node_modules")));
 
-    let virtual_code = if is_virtual_code {
+    let virtual_code = if is_virtual {
       Some(code.as_str()?)
     } else {
       None
@@ -309,7 +309,7 @@ impl Asset {
       query,
       side_effects,
       unique_key: None,
-      is_virtual_code,
+      is_virtual,
       ..Asset::default()
     })
   }
