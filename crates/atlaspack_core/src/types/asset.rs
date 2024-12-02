@@ -218,6 +218,11 @@ pub struct Asset {
   ///
   pub is_source: bool,
 
+  /// True if the Asset's code was returned from a resolver rather than being
+  /// read from disk.
+  #[serde(skip_serializing)]
+  pub is_virtual: bool,
+
   /// True if the asset has CommonJS exports
   pub has_cjs_exports: bool,
 
@@ -262,13 +267,14 @@ impl Asset {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
     code: Code,
+    is_virtual: bool,
     env: Arc<Environment>,
     file_path: PathBuf,
     pipeline: Option<String>,
     project_root: &Path,
     query: Option<String>,
     side_effects: bool,
-  ) -> Self {
+  ) -> anyhow::Result<Self> {
     let file_type =
       FileType::from_extension(file_path.extension().and_then(|s| s.to_str()).unwrap_or(""));
 
@@ -276,8 +282,13 @@ impl Asset {
       .ancestors()
       .any(|p| p.file_name() == Some(OsStr::new("node_modules")));
 
+    let virtual_code = if is_virtual {
+      Some(code.as_str()?)
+    } else {
+      None
+    };
     let id = create_asset_id(CreateAssetIdParams {
-      code: None,
+      code: virtual_code,
       environment_id: &env.id(),
       file_path: &to_project_path(project_root, &file_path).to_string_lossy(),
       file_type: &file_type,
@@ -286,7 +297,7 @@ impl Asset {
       unique_key: None,
     });
 
-    Self {
+    Ok(Self {
       code,
       env,
       file_path,
@@ -298,8 +309,9 @@ impl Asset {
       query,
       side_effects,
       unique_key: None,
+      is_virtual,
       ..Asset::default()
-    }
+    })
   }
 
   #[allow(clippy::too_many_arguments)]
@@ -351,7 +363,7 @@ impl Asset {
     unique_key: Option<String>,
   ) -> Self {
     let id = create_asset_id(CreateAssetIdParams {
-      code: Some(code.as_str()),
+      code: None,
       environment_id: &source_asset.env.id(),
       file_path: &to_project_path(project_root, &source_asset.file_path).to_string_lossy(),
       file_type: &file_type,
@@ -452,23 +464,27 @@ mod tests {
 
     let asset_1 = Asset::new(
       Code::from("function hello() {}"),
+      false,
       env.clone(),
       project_root.join("test.js"),
       None,
       &project_root,
       None,
       false,
-    );
+    )
+    .unwrap();
 
     let asset_2 = Asset::new(
       Code::from("function helloButDifferent() {}"),
+      false,
       env.clone(),
       project_root.join("test.js"),
       None,
       &project_root,
       None,
       false,
-    );
+    )
+    .unwrap();
 
     // This nº should not change across runs / compilation
     assert_eq!(asset_1.id, "91d0d64458c223d1");
@@ -482,13 +498,15 @@ mod tests {
 
     let asset = Asset::new(
       Code::default(),
+      false,
       env.clone(),
       project_root.join("test.js"),
       None,
       &project_root,
       None,
       false,
-    );
+    )
+    .unwrap();
 
     assert_eq!(
       asset.id,
@@ -554,7 +572,7 @@ mod tests {
     assert_eq!(
       discovered_asset.id,
       create_asset_id(CreateAssetIdParams {
-        code: Some(""),
+        code: None,
         environment_id: &source_asset.env.id(),
         file_path: "test.js",
         file_type: &FileType::Css,

@@ -76,13 +76,14 @@ impl Request for AssetRequest {
 
     let mut asset = Asset::new(
       code,
+      self.code.is_some(),
       self.env.clone(),
       self.file_path.clone(),
       self.pipeline.clone(),
       &self.project_root,
       self.query.clone(),
       self.side_effects,
-    );
+    )?;
 
     // Load an existing sourcemap if available for valid file types
     if matches!(
