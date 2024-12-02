@@ -289,6 +289,13 @@ export default class MutableBundleGraph
     );
   }
 
+  createBundleConditionalReference(from: IBundle, to: IBundle): void {
+    return this.#graph.createBundleConditionalReference(
+      bundleToInternalBundle(from),
+      bundleToInternalBundle(to),
+    );
+  }
+
   getDependencyAssets(dependency: IDependency): Array<IAsset> {
     return this.#graph
       .getDependencyAssets(dependencyToInternalDependency(dependency))

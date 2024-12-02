@@ -34,7 +34,41 @@ function sortEntry(entry: mixed) {
   return entry;
 }
 
+/**
+ * Get the difference of A and B sets
+ *
+ * This is the set of elements which are in A but not in B
+ * For example, the difference of the sets {1,2,3} and {3,4} is {1,2}
+ *
+ * @param {*} a Set A
+ * @param {*} b Set B
+ * @returns A \ B
+ */
 export function setDifference<T>(
+  a: $ReadOnlySet<T>,
+  b: $ReadOnlySet<T>,
+): Set<T> {
+  let difference = new Set();
+  for (let e of a) {
+    if (!b.has(e)) {
+      difference.add(e);
+    }
+  }
+
+  return difference;
+}
+
+/**
+ * Get the symmetric difference of A and B sets
+ *
+ * This is the set of elements which are in either of the sets, but not in their intersection.
+ * For example, the symmetric difference of the sets {1,2,3} and {3,4} is {1,2,4}
+ *
+ * @param {*} a Set A
+ * @param {*} b Set B
+ * @returns A Δ B
+ */
+export function setSymmetricDifference<T>(
   a: $ReadOnlySet<T>,
   b: $ReadOnlySet<T>,
 ): Set<T> {

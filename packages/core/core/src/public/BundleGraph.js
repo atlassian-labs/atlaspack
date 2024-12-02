@@ -494,4 +494,10 @@ export default class BundleGraph<TBundle: IBundle>
 
     return bundleConditions;
   }
+
+  getReferencedConditionalBundles(bundle: IBundle): Array<TBundle> {
+    return this.#graph
+      .getReferencedConditionalBundles(bundleToInternalBundle(bundle))
+      .map((result) => this.#createBundle(result, this.#graph, this.#options));
+  }
 }

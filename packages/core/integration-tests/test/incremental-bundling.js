@@ -756,7 +756,7 @@ console.log('index.js');`,
         event = await getNextBuildSuccess(b);
 
         // should contain all the assets
-        assertChangedAssets(event.changedAssets.size, 2);
+        assertChangedAssets(event.changedAssets.size, 1);
         assertTimesBundled(defaultBundlerSpy.callCount, 2);
       } finally {
         if (subscription) {

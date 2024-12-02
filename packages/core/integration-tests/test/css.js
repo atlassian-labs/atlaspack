@@ -570,12 +570,15 @@ describe('css', () => {
     );
   });
 
-  it('should support css nesting with lightningcss', async function () {
+  it('should support transpiling css nesting with lightningcss', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/css-nesting/a.css'),
       {
         defaultTargetOptions: {
-          engines: {},
+          engines: {
+            // Force the CSS nesting to be transpiled
+            browsers: ['ie 11'],
+          },
         },
       },
     );

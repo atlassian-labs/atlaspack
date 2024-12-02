@@ -51,6 +51,8 @@ impl Debug for AtlaspackResolver {
 #[serde(rename_all = "camelCase")]
 struct ResolverConfig {
   package_exports: Option<bool>,
+  deduplicate_packages: Option<bool>,
+  graphql_esm_upgrade: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -74,8 +76,16 @@ impl AtlaspackResolver {
       |config| Ok(config.contents.config.unwrap_or_default()),
     )?;
 
+    let cache = Cache::new(ctx.config.fs.clone());
+
+    // If package deduplication is enabled, then scan node_modules for duplicate package
+    // versions
+    if config.deduplicate_packages.is_some_and(|v| v) {
+      cache.scan_package_duplicates(&ctx.config.project_root)?;
+    }
+
     Ok(Self {
-      cache: Cache::new(ctx.config.fs.clone()),
+      cache,
       config,
       options: Arc::clone(&ctx.options),
     })
@@ -333,6 +343,11 @@ impl ResolverPlugin for AtlaspackResolver {
     resolver.flags.set(
       Flags::EXPORTS,
       self.config.package_exports.unwrap_or_default(),
+    );
+
+    resolver.flags.set(
+      Flags::GRAPHQL_ESM_UPGRADE,
+      self.config.graphql_esm_upgrade.unwrap_or_default(),
     );
 
     resolver.include_node_modules = Cow::Borrowed(&ctx.dependency.env.include_node_modules);

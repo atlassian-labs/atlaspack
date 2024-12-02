@@ -51,6 +51,18 @@ where
     let mut map = map_cell;
     map.insert(key, value);
   }
+
+  pub fn len(&self) -> usize {
+    let map_cell = self.inner.read().unwrap();
+    let map = map_cell;
+    map.len()
+  }
+
+  pub fn is_empty(&self) -> bool {
+    let map_cell = self.inner.read().unwrap();
+    let map = map_cell;
+    map.is_empty()
+  }
 }
 
 #[cfg(test)]

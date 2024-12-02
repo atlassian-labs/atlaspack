@@ -4,7 +4,7 @@ members = [
   "crates/*",
   "packages/transformers/js/core",
   "packages/utils/node-resolver-rs",
-  "packages/utils/dev-dep-resolver"
+  "packages/utils/dev-dep-resolver",
 ]
 
 [profile.canary]
@@ -97,6 +97,7 @@ tokio = "1"
 toml = "0.8.12"
 tracing = "0.1"
 tracing-appender = "0.2.3"
+tracing-chrome = "0.7.2"
 tracing-subscriber = "0.3"
 tracing-test = "0.2.5"
 url = "2.3.1"

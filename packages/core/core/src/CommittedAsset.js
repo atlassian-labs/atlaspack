@@ -1,15 +1,14 @@
 // @flow strict-local
 
-import type {AST, Blob} from '@atlaspack/types';
-import type {Asset, Dependency, AtlaspackOptions} from './types';
-
 import {Readable} from 'stream';
 
 import {deserializeRaw} from '@atlaspack/build-cache';
-import SourceMap from '@parcel/source-map';
+import type {AST, Blob} from '@atlaspack/types';
 import {bufferStream, blobToStream, streamFromPromise} from '@atlaspack/utils';
+import SourceMap from '@parcel/source-map';
 
 import {generateFromAST} from './assetUtils';
+import type {Asset, Dependency, AtlaspackOptions} from './types';
 
 export default class CommittedAsset {
   key: ?string;
@@ -20,7 +19,6 @@ export default class CommittedAsset {
   map: ?Promise<?SourceMap>;
   ast: ?Promise<AST>;
   code: ?string;
-  generatingPromise: ?Promise<void>;
 
   constructor(value: Asset, options: AtlaspackOptions) {
     this.value = value;
@@ -97,6 +95,26 @@ export default class CommittedAsset {
     if (mapKey != null && this.mapBuffer == null) {
       this.mapBuffer = (async () => {
         try {
+          // Handle v3 assets that were processed by the native asset graph code (i.e. not runtime
+          // or helper assets)
+          if (
+            this.options.featureFlags.atlaspackV3 &&
+            this.value.meta.isV3 === true
+          ) {
+            let buffer = await this.options.cache.getBuffer(mapKey);
+            if (!buffer) {
+              return buffer;
+            }
+
+            // We make the conversion from json to buffer here, since both js packagers lazily
+            // instantiate a sourcemap from the map buffer. This ensures we do not have to modify
+            // the packagers in any significant way. Additionally, storing the SourceMap objects
+            // upfront in these packagers appears to make larger builds more prone to failing.
+            let sourceMap = new SourceMap(this.options.projectRoot);
+            sourceMap.addVLQMap(JSON.parse(buffer.toString()));
+            return sourceMap.toBuffer();
+          }
+
           return await this.options.cache.getBlob(mapKey);
         } catch (err) {
           if (err.code === 'ENOENT' && this.value.astKey != null) {

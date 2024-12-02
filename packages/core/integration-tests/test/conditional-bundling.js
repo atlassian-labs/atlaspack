@@ -23,7 +23,7 @@ describe('conditional bundling', function () {
 
   it(`when disabled, should treat importCond as a sync import`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
         index.js:
@@ -51,7 +51,7 @@ describe('conditional bundling', function () {
 
   it(`when disabled, should transform types in importCond`, async function () {
     const dir = path.join(__dirname, 'disabled-import-cond-types');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
         index.ts:
@@ -81,7 +81,7 @@ describe('conditional bundling', function () {
     `should have true and false deps as bundles in conditional manifest`,
     async function () {
       const dir = path.join(__dirname, 'import-cond-cond-manifest');
-      overlayFS.mkdirp(dir);
+      await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
         .parcelrc:
@@ -139,7 +139,7 @@ describe('conditional bundling', function () {
 
   it.v2(`should use true bundle when condition is true`, async function () {
     const dir = path.join(__dirname, 'import-cond-true');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
         .parcelrc:
@@ -218,7 +218,7 @@ describe('conditional bundling', function () {
 
   it.v2(`should use both conditional bundles correctly`, async function () {
     const dir = path.join(__dirname, 'import-cond-both');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
         .parcelrc:
@@ -329,7 +329,7 @@ describe('conditional bundling', function () {
     `should load false bundle when importing dynamic bundles`,
     async function () {
       const dir = path.join(__dirname, 'import-cond-false-dynamic');
-      overlayFS.mkdirp(dir);
+      await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
       .parcelrc:
@@ -399,7 +399,7 @@ describe('conditional bundling', function () {
   it.v2(`should load dev warning when bundle isn't loaded`, async function () {
     const dir = path.join(__dirname, 'import-cond-dev-warning');
 
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
         index.js:
@@ -457,7 +457,7 @@ describe('conditional bundling', function () {
     `should handle loading conditional bundles when imported in different bundles`,
     async function () {
       const dir = path.join(__dirname, 'import-cond-different-bundles');
-      overlayFS.mkdirp(dir);
+      await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
         .parcelrc:
@@ -547,7 +547,7 @@ describe('conditional bundling', function () {
     `should load bundles in parallel when config enabled`,
     async function () {
       const dir = path.join(__dirname, 'import-cond-parallel-enabled');
-      overlayFS.mkdirp(dir);
+      await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
       .parcelrc:
@@ -595,6 +595,111 @@ describe('conditional bundling', function () {
         inputFS: overlayFS,
         featureFlags: {conditionalBundlingApi: true},
         defaultConfig: path.join(dir, '.parcelrc'),
+      });
+
+      let entry = nullthrows(
+        bundleGraph.getBundles().find((b) => b.name === 'index.html'),
+        'index.html bundle not found',
+      );
+
+      let entryJs = nullthrows(
+        bundleGraph
+          .getBundles()
+          .find((b) => b.displayName === 'index.[hash].js'),
+        'index.js bundle not found',
+      );
+
+      // Load the generated manifest
+      let conditionalManifest = JSON.parse(
+        overlayFS
+          .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+          .toString(),
+      );
+
+      let entryContents = overlayFS.readFileSync(entry.filePath).toString();
+
+      // Get the true bundle path
+      let ifTrueBundleName = nullthrows(
+        conditionalManifest[path.basename(entryJs.filePath)]?.cond1
+          ?.ifTrueBundles?.[0],
+        'ifTrue bundle not found in manifest',
+      );
+      assert.ok(
+        entryContents.includes(ifTrueBundleName),
+        'ifTrue script not found in HTML',
+      );
+
+      // Get the false bundle path
+      let ifFalseBundleName = nullthrows(
+        conditionalManifest[path.basename(entryJs.filePath)]?.cond1
+          ?.ifFalseBundles?.[0],
+        'ifFalse bundle not found in manifest',
+      );
+      assert.ok(
+        entryContents.includes(ifFalseBundleName),
+        'ifFalse script not found in HTML',
+      );
+    },
+  );
+
+  it.v2(
+    `should load conditional bundles in entry html when enabled`,
+    async function () {
+      const dir = path.join(__dirname, 'import-cond-entry-html-enabled');
+      await overlayFS.mkdirp(dir);
+
+      await fsFixture(overlayFS, dir)`
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "reporters": [
+            "@atlaspack/reporter-conditional-manifest",
+            "..."
+          ]
+        }
+      package.json:
+        {
+          "@atlaspack/packager-html": {
+            "evaluateRootConditionalBundles": true
+          }
+        }
+
+      yarn.lock: {}
+
+      index.html:
+        <!doctype html>
+        <html>
+        <head>
+          <title>Test</title>
+        </head>
+        <body>
+          <script type="module" src="./index.js"></script>
+        </body>
+        </html>
+
+      index.js:
+        const conditions = { 'cond1': true, 'cond2': true };
+        globalThis.__MCOND = function(key) { return conditions[key]; }
+
+        const imported1 = importCond('cond1', './a', './b');
+
+        export default imported1;
+
+      a.js:
+        export default 'module-a';
+
+      b.js:
+        export default 'module-b';
+    `;
+
+      let bundleGraph = await bundle(path.join(dir, '/index.html'), {
+        inputFS: overlayFS,
+        featureFlags: {conditionalBundlingApi: true},
+        defaultConfig: path.join(dir, '.parcelrc'),
+        defaultTargetOptions: {
+          outputFormat: 'esmodule',
+          shouldScopeHoist: true,
+        },
       });
 
       let entry = nullthrows(

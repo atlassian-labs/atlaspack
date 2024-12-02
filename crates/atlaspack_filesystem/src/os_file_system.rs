@@ -31,6 +31,10 @@ impl FileSystem for OsFileSystem {
     std::fs::read(path)
   }
 
+  fn read_dir(&self, path: &Path) -> std::io::Result<std::fs::ReadDir> {
+    std::fs::read_dir(path)
+  }
+
   fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
     std::fs::read_to_string(path)
   }

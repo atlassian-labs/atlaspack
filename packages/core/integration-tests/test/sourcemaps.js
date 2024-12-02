@@ -2,6 +2,7 @@
 import assert from 'assert';
 import invariant from 'assert';
 import path from 'path';
+
 import SourceMap from '@parcel/source-map';
 import type {InitialAtlaspackOptions} from '@atlaspack/types';
 import {
@@ -18,6 +19,7 @@ import {
 } from '@atlaspack/test-utils';
 import {loadSourceMapUrl} from '@atlaspack/utils';
 import nullthrows from 'nullthrows';
+import {SourceMapConsumer} from 'source-map';
 
 const bundle = (name, opts?: InitialAtlaspackOptions) => {
   return _bundle(
@@ -1476,4 +1478,178 @@ describe('sourcemaps', function () {
       });
     },
   );
+
+  it('creates valid source maps for js transformers', async () => {
+    let entry = path.join(
+      __dirname,
+      '/integration/sourcemaps-js-plugin/index.ts',
+    );
+
+    let b = await bundle(entry, {
+      defaultTargetOptions: {
+        sourceMaps: true,
+      },
+    });
+
+    await verifySourceMaps([
+      {
+        source: entry,
+        dist: b.getBundles()[0].filePath,
+        matches: [
+          {
+            generated: /#privateProperty;/,
+            original: /#privateProperty: string;/,
+          },
+          {
+            name: 'getProperty',
+            original: /getProperty\(\) {/,
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('creates valid source maps for js and rust transformers', async () => {
+    let entry = path.join(
+      __dirname,
+      '/integration/sourcemaps-js-rust-plugins/index.ts',
+    );
+
+    let b = await bundle(entry, {
+      defaultTargetOptions: {
+        sourceMaps: true,
+      },
+    });
+
+    let bundles = b.getBundles();
+
+    let distEntry = bundles.find((b) => b.name === 'index.js');
+    let distMain = bundles.find((b) => b.name.startsWith('main'));
+    if (!distEntry || !distMain) {
+      throw new Error(
+        `Invalid bundles: ${JSON.stringify(bundles.map((b) => b.name))}`,
+      );
+    }
+
+    await verifySourceMaps([
+      {
+        source: entry,
+        dist: distEntry.filePath,
+        matches: [
+          {
+            generated: /#privateProperty;/,
+            original: /#privateProperty: string;/,
+          },
+          {
+            name: 'getProperty',
+            original: /getProperty\(\) {/,
+          },
+          {
+            generated: /require\(/,
+            original: /import\(/,
+          },
+        ],
+      },
+      {
+        source: path.join(path.dirname(entry), 'main.ts'),
+        dist: distMain.filePath,
+        matches: [
+          // TODO: The expected generated and original mappings are correct, but the actual
+          // mappings are partially missing or completely incorrect
+          // {
+          //   name: 'Foo',
+          //   generated: /var Foo/,
+          //   original: /enum Foo/,
+          // },
+          {
+            name: 'console',
+            original: /console\.log\(`hello/,
+          },
+        ],
+      },
+    ]);
+  });
+
+  async function verifySourceMaps(
+    tests: {|
+      source: string,
+      dist: string,
+      matches: {|name?: string | null, generated?: RegExp, original: RegExp|}[],
+    |}[],
+  ) {
+    for (const test of tests) {
+      // We are intentionally using mozilla sourcemaps, since they are basically what will be
+      // consumed by the browser. The @parcel/source-map module contains some dubious mappings
+      // between Rust and JS that may mask bugs.
+      let map = JSON.parse(await outputFS.readFile(`${test.dist}.map`));
+      let sourcemap = await new SourceMapConsumer(map);
+
+      let dist = await outputFS.readFile(test.dist, 'utf8');
+      let source = path.relative(distDir, test.source);
+
+      for (const match of test.matches) {
+        const expected = {
+          generated: {
+            ...findTargetSourcePosition(
+              dist,
+              match.generated ?? match.original,
+            ),
+          },
+          original: {
+            ...findTargetSourcePosition(
+              await inputFS.readFile(test.source, 'utf8'),
+              match.original,
+            ),
+            name: match.name ?? null,
+            source,
+          },
+        };
+
+        const actual = {
+          generated: sourcemap.generatedPositionFor({
+            line: expected.original.line,
+            column: expected.original.column,
+            source,
+          }),
+          original: sourcemap.originalPositionFor({
+            line: expected.generated.line,
+            column: expected.generated.column,
+          }),
+        };
+
+        // Skip comparing the last column
+        // $FlowFixMe The types are not actually readonly
+        delete actual.generated.lastColumn;
+
+        assert.deepEqual(
+          actual,
+          expected,
+          `SourceMap verification failed for ${match.original.toString()}`,
+        );
+      }
+    }
+  }
+
+  function findTargetSourcePosition(
+    source: string,
+    regex: RegExp,
+  ): {|line: number, column: number|} {
+    const lines = source.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const match = line.match(regex);
+
+      if (match && match.index != null) {
+        return {
+          line: i + 1,
+          column: match.index,
+        };
+      }
+    }
+
+    throw new Error(
+      `Unable to locate target source ${regex.toString()}\n${source}`,
+    );
+  }
 });

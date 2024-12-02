@@ -13,11 +13,17 @@
  * builds.
  */
 import path from 'path';
+// $FlowFixMe Missing types
+import {setTimeout} from 'timers/promises';
 import {Worker} from 'worker_threads';
 
 const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
 
-export function waitForMessage<T>(worker: Worker, type: string): Promise<T> {
+export function waitForMessage<T>(
+  worker: Worker,
+  type: string,
+  signal: AbortSignal,
+): Promise<T> {
   return new Promise((resolve) => {
     const onMessage = (message: T & {|type: string|}) => {
       if (message.type === type) {
@@ -27,6 +33,13 @@ export function waitForMessage<T>(worker: Worker, type: string): Promise<T> {
     };
 
     worker.on('message', onMessage);
+
+    const onAbort = () => {
+      signal.removeEventListener('abort', onAbort);
+      worker.off('message', onMessage);
+    };
+
+    signal.addEventListener('abort', onAbort);
   });
 }
 
@@ -114,23 +127,37 @@ export class WorkerPool {
   }
 
   async #bootWorker(worker: Worker, tx_worker: number): Promise<void> {
-    const timeout = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('Worker failed to register in time'));
-      }, 5000);
-    });
+    const controller = new AbortController();
+    const signal = controller.signal;
 
     const workerError = new Promise((_, reject) => {
-      worker.once('error', (err: Error) => {
+      const onError = (err: Error) => {
         reject(err);
-      });
+      };
+
+      worker.once('error', onError);
+
+      const onAbort = () => {
+        signal.removeEventListener('abort', onAbort);
+        worker.off('error', onError);
+      };
+
+      signal.addEventListener('abort', onAbort);
     });
 
-    const workerReady = waitForMessage(worker, 'workerRegistered');
+    const workerReady = waitForMessage(worker, 'workerRegistered', signal);
 
     worker.postMessage({type: 'registerWorker', tx_worker});
 
-    await Promise.race([timeout, workerError, workerReady]);
+    try {
+      await Promise.race([
+        setTimeout(5000, {signal}),
+        workerError,
+        workerReady,
+      ]);
+    } finally {
+      controller.abort();
+    }
   }
 
   #createWorker(): [number, Worker] {

@@ -47,5 +47,6 @@ atlaspack_contextual_imports = { path = "../../../../crates/atlaspack_contextual
 atlaspack_swc_runner = { path = "../../../../crates/atlaspack_swc_runner" }
 parking_lot = { workspace = true }
 regex = { workspace = true }
+anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-test = { workspace = true }

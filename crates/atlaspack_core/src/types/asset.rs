@@ -169,6 +169,7 @@ pub struct Asset {
   pub code: Code,
 
   /// The source map for the asset
+  #[serde(skip_serializing)]
   pub map: Option<SourceMap>,
 
   /// Plugin specific metadata for the asset
@@ -368,8 +369,24 @@ impl Asset {
     }
   }
 
+  pub fn update_id(&mut self, project_root: &Path) {
+    self.id = create_asset_id(CreateAssetIdParams {
+      code: None,
+      environment_id: &self.env.id(),
+      file_path: &to_project_path(project_root, &self.file_path).to_string_lossy(),
+      file_type: &self.file_type,
+      pipeline: self.pipeline.as_deref(),
+      query: self.query.as_deref(),
+      unique_key: self.unique_key.as_deref(),
+    });
+  }
+
   pub fn set_interpreter(&mut self, shebang: impl Into<serde_json::Value>) {
     self.meta.insert("interpreter".into(), shebang.into());
+  }
+
+  pub fn set_meta_id(&mut self, id: impl Into<serde_json::Value>) {
+    self.meta.insert("id".into(), id.into());
   }
 
   pub fn set_has_cjs_exports(&mut self, value: bool) {

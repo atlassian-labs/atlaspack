@@ -11,6 +11,9 @@ import {
   run,
   runBundle,
 } from '@atlaspack/test-utils';
+import sinon from 'sinon';
+
+const nextTick = () => new Promise(process.nextTick);
 
 describe('atlaspack', function () {
   beforeEach(async () => {
@@ -67,12 +70,16 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise((resolve) => {
-      run(b, {
-        output: resolve,
-      });
+    let onMessage = sinon.spy();
+
+    await run(b, {
+      output: onMessage,
     });
-    assert.deepEqual(res, {default: 42});
+
+    await nextTick();
+
+    assert(onMessage.calledOnce);
+    assert(onMessage.calledWith({default: 42}));
   });
 
   it('bundles a dynamic import in a worker using legacy browser targets', async function () {
@@ -107,12 +114,14 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise((resolve) => {
-      run(b, {
-        output: resolve,
-      });
+    let onMessage = sinon.spy();
+
+    await run(b, {
+      output: onMessage,
     });
-    assert.deepEqual(res, {default: 42});
+
+    assert(onMessage.calledOnce);
+    assert(onMessage.calledWith({default: 42}));
   });
 
   it('bundles a dynamic import in a nested worker', async function () {
@@ -147,12 +156,16 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise((resolve) => {
-      run(b, {
-        output: resolve,
-      });
+    let onMessage = sinon.spy();
+
+    await run(b, {
+      output: onMessage,
     });
-    assert.deepEqual(res, {default: 42});
+
+    await nextTick();
+
+    assert(onMessage.calledOnce);
+    assert(onMessage.calledWith({default: 42}));
   });
 
   it('bundles dynamic imports in both the page and worker', async function () {
@@ -187,12 +200,14 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let res = await new Promise((resolve) => {
-      run(b, {
-        output: resolve,
-      });
+    let onMessage = sinon.spy();
+
+    await run(b, {
+      output: onMessage,
     });
-    assert.deepEqual(res, {default: 42});
+
+    assert(onMessage.calledOnce);
+    assert(onMessage.calledWith({default: 42}));
   });
 
   it('should support workers pointing to themselves', async function () {

@@ -119,6 +119,10 @@ impl FileSystem for PreloadingFileSystem {
     todo!()
   }
 
+  fn read_dir(&self, _path: &Path) -> std::io::Result<std::fs::ReadDir> {
+    todo!("PreloadingFileSystem::read_dir")
+  }
+
   fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
     let files = self.files.read();
     let file = files.get(path);

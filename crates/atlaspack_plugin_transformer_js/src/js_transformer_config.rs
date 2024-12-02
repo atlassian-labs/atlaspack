@@ -16,4 +16,12 @@ pub struct JsTransformerConfig {
 
   #[serde(rename = "inlineFS")]
   pub inline_fs: Option<bool>,
+
+  pub magic_comments: Option<bool>,
+}
+
+#[derive(Deserialize)]
+pub struct JsTransformerPackageJson {
+  #[serde(rename = "@atlaspack/transformer-js")]
+  pub config: Option<JsTransformerConfig>,
 }

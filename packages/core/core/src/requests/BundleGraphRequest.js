@@ -27,7 +27,7 @@ import MutableBundleGraph from '../public/MutableBundleGraph';
 import {Bundle, NamedBundle} from '../public/Bundle';
 import {report} from '../ReporterRunner';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
-import {unique, setDifference} from '@atlaspack/utils';
+import {unique, setSymmetricDifference} from '@atlaspack/utils';
 import {hashString} from '@atlaspack/rust';
 import PluginOptions from '../public/PluginOptions';
 import applyRuntimes from '../applyRuntimes';
@@ -513,7 +513,10 @@ class BundlerRunner {
       unique(bundleNames),
       'Bundles must have unique name. Conflicting names: ' +
         [
-          ...setDifference(new Set(bundleNames), new Set(unique(bundleNames))),
+          ...setSymmetricDifference(
+            new Set(bundleNames),
+            new Set(unique(bundleNames)),
+          ),
         ].join(),
     );
   }

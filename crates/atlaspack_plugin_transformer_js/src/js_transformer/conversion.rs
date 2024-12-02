@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use atlaspack_core::diagnostic;
 use indexmap::IndexMap;
+use std::collections::HashMap;
 use swc_core::atoms::{Atom, JsWord};
 
 use atlaspack_core::plugin::{PluginOptions, TransformResult};
@@ -44,6 +45,7 @@ pub(crate) fn convert_result(
     &options.project_root,
     transformer_config,
     result.dependencies,
+    result.magic_comments,
     &asset,
   )?;
 
@@ -62,6 +64,12 @@ pub(crate) fn convert_result(
   if let Some(hoist_result) = result.hoist_result {
     // Pre-allocate expected symbols
     asset_symbols.reserve(hoist_result.exported_symbols.len() + hoist_result.re_exports.len() + 1);
+
+    // Dependency symbols are always present during scope hoisting, this is necessary for the
+    // packaging phase and should be revisited later.
+    for dependency in dependency_by_specifier.values_mut() {
+      dependency.symbols = Some(Vec::new());
+    }
 
     // Collect all exported variable names
     for symbol in &hoist_result.exported_symbols {
@@ -327,13 +335,13 @@ pub(crate) fn convert_result(
     asset.set_conditions(result.conditions);
   }
 
-  // Overwrite the source-code with SWC output
-  let result_source_code_string = String::from_utf8(result.code)
-    // TODO: This is impossible; but we should extend 'diagnostic' type to be nicer / easier to build
-    .map_err(|_| vec![])?;
-
   asset.file_type = FileType::Js;
-  asset.code = Code::from(result_source_code_string);
+  asset.code = Code::new(result.code);
+  // Updating the file_type to JS will cause the asset id to be updated.
+  // However, the packager needs to be aware of the original id when creating
+  // symbols replacements in scope hoisting. That's why we store the id before
+  // it get's updated on the meta object.
+  asset.set_meta_id(asset.id.clone());
 
   if let Some(map) = result.map {
     // TODO: Fix diagnostic error handling
@@ -381,6 +389,7 @@ pub(crate) fn convert_dependencies(
   project_root: &Path,
   transformer_config: &atlaspack_js_swc_core::Config,
   dependencies: Vec<atlaspack_js_swc_core::DependencyDescriptor>,
+  magic_comments: HashMap<String, String>,
   asset: &Asset,
 ) -> Result<(IndexMap<Atom, Dependency>, Vec<PathBuf>), Vec<Diagnostic>> {
   let mut dependency_by_specifier = IndexMap::new();
@@ -400,7 +409,13 @@ pub(crate) fn convert_dependencies(
     )?;
 
     match result {
-      DependencyConversionResult::Dependency(dependency) => {
+      DependencyConversionResult::Dependency(mut dependency) => {
+        if let Some(chunk_name) = magic_comments.get(&dependency.specifier) {
+          dependency.meta.insert(
+            "chunkNameMagicComment".to_string(),
+            chunk_name.clone().into(),
+          );
+        }
         dependency_by_specifier.insert(placeholder, dependency);
       }
       DependencyConversionResult::InvalidateOnFileChange(file_path) => {

@@ -34,7 +34,6 @@
     "@atlaspack/runtime-js": "2.12.0",
     "@atlaspack/runtime-react-refresh": "2.12.0",
     "@atlaspack/runtime-service-worker": "2.12.0",
-    "@atlaspack/transformer-babel": "2.12.0",
     "@atlaspack/transformer-css": "2.12.0",
     "@atlaspack/transformer-html": "2.12.0",
     "@atlaspack/transformer-image": "2.12.0",

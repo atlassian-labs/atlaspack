@@ -136,6 +136,9 @@ const CONFIG_SCHEMA: SchemaEntity = {
     disableSharedBundles: {
       type: 'boolean',
     },
+    loadConditionalBundlesInParallel: {
+      type: 'boolean',
+    },
   },
   additionalProperties: false,
 };

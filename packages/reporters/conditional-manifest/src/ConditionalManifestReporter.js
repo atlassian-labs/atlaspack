@@ -52,9 +52,9 @@ async function report({
 
     for (const target of targets) {
       const conditionalManifestFilename = join(target.distDir, filename);
-
       const conditionalManifest = JSON.stringify(
-        manifest[target.name],
+        // If there's no content, send an empty manifest so we can still map from it safely
+        manifest[target.name] ?? {},
         null,
         2,
       );

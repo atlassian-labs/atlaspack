@@ -153,6 +153,9 @@ impl FileSystem for JsFileSystem {
   fn read(&self, _path: &Path) -> std::io::Result<Vec<u8>> {
     todo!()
   }
+  fn read_dir(&self, _path: &Path) -> std::io::Result<std::fs::ReadDir> {
+    todo!("JsFileSystem::read_dir")
+  }
 }
 
 #[napi(object)]

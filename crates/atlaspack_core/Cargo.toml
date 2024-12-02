@@ -21,6 +21,7 @@ dyn-hash = { workspace = true }
 nodejs-semver = { workspace = true }
 mockall = { workspace = true }
 petgraph = { workspace = true, features = ["serde-1"] }
+pretty_assertions = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true, features = ["preserve_order"] }
 serde_repr = { workspace = true }

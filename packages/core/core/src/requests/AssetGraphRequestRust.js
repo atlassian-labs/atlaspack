@@ -3,12 +3,10 @@
 import invariant from 'assert';
 
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
-import {hashString} from '@atlaspack/rust';
 import type {Async} from '@atlaspack/types';
 
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
-import {ATLASPACK_VERSION} from '../constants';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
 import type {Environment} from '../types';
@@ -17,7 +15,6 @@ import type {
   AssetGraphRequestInput,
   AssetGraphRequestResult,
 } from './AssetGraphRequest';
-import SourceMap from '@parcel/source-map';
 
 type RunInput = {|
   input: AssetGraphRequestInput,
@@ -51,10 +48,7 @@ export function createAssetGraphRequestRust(
         });
       }
 
-      let {assetGraph, changedAssets} = getAssetGraph(
-        serializedAssetGraph,
-        options,
-      );
+      let {assetGraph, changedAssets} = getAssetGraph(serializedAssetGraph);
 
       let changedAssetsPropagation = new Set(changedAssets.keys());
       let errors = propagateSymbols({
@@ -86,7 +80,7 @@ export function createAssetGraphRequestRust(
   });
 }
 
-function getAssetGraph(serializedGraph, options) {
+function getAssetGraph(serializedGraph) {
   let graph = new AssetGraph({
     _contentKeyToNodeId: new Map(),
     _nodeIdToContentKey: new Map(),
@@ -114,6 +108,7 @@ function getAssetGraph(serializedGraph, options) {
         isEsm: true,
       };
     }
+
     return [exported, jsSymbol];
   }
 
@@ -147,6 +142,8 @@ function getAssetGraph(serializedGraph, options) {
     return envId;
   };
 
+  const dependencyMap = new Map();
+
   for (let node of serializedGraph.nodes) {
     if (node.type === 'root') {
       let index = graph.addNodeByContentKey('@@root', {
@@ -168,22 +165,24 @@ function getAssetGraph(serializedGraph, options) {
       let asset = node.value;
       let id = asset.id;
 
-      asset.committed = true;
-      asset.contentKey = id;
-      asset.env.id = getEnvId(asset.env);
-      asset.meta.id = id;
-      if (asset.symbols != null) {
-        asset.symbols = new Map(asset.symbols.map(mapSymbols));
+      let deps = dependencyMap.get(id);
+      if (!deps) {
+        deps = new Map();
+        dependencyMap.set(id, deps);
       }
 
-      if (asset.map) {
-        let mapKey = hashString(`${ATLASPACK_VERSION}:map:${asset.id}`);
-        let sourceMap = new SourceMap(options.projectRoot);
-        sourceMap.addVLQMap(JSON.parse(asset.map));
+      asset.committed = true;
+      asset.contentKey = id;
+      asset.dependencies = deps;
+      asset.env.id = getEnvId(asset.env);
+      asset.mapKey = `map:${asset.id}`;
 
-        asset.mapKey = mapKey;
-        options.cache.setBlob(mapKey, sourceMap.toBuffer());
-        delete asset.map;
+      // We need to add this property for source map handling, as some assets like runtimes
+      // are processed after the Rust transformation and take the v2 code path
+      asset.meta.isV3 = true;
+
+      if (asset.symbols != null) {
+        asset.symbols = new Map(asset.symbols.map(mapSymbols));
       }
 
       cachedAssets.set(id, asset.code);
@@ -201,13 +200,17 @@ function getAssetGraph(serializedGraph, options) {
       let id = node.value.id;
       let dependency = node.value.dependency;
 
+      let deps = dependencyMap.get(dependency.sourceAssetId);
+      if (!deps) {
+        deps = new Map();
+        dependencyMap.set(dependency.sourceAssetId, deps);
+      }
+      deps.set(id, dependency);
+
       dependency.id = id;
       dependency.env.id = getEnvId(dependency.env);
 
-      // Dependency.symbols are always set to an empty map when scope hoisting
-      // is enabled. Some tests will fail if this is not the case. We should
-      // make this consistant when we re-visit packaging.
-      if (dependency.symbols != null || dependency.env.shouldScopeHoist) {
+      if (dependency.symbols != null) {
         dependency.symbols = new Map(dependency.symbols?.map(mapSymbols));
       }
 
