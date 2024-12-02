@@ -457,14 +457,7 @@ describe('bundler-experimental', () => {
             bundleGroupsForIndex[0],
             bundleGroupsForAsync[0],
           );
-          b.getBundlesInBundleGroup(bundleGroupsForPage1[0]).forEach(
-            (bundle) => {
-              console.log(bundle);
-              bundle.traverseAssets((asset) => {
-                console.log({asset});
-              });
-            },
-          );
+
           // assert.deepStrictEqual(bundleGroupsForShared, [
           //   ...bundleGroupsForPage2,
           //   ...bundleGroupsForPage1,
