@@ -73,17 +73,22 @@ describe.v3('AtlaspackV3', function () {
     await atlaspack.buildAssetGraph();
   });
 
-  describe.only('should mirror V2 output', () => {
+  describe('should mirror V2 output', () => {
     it('with scope hoisting enabled', async () => {
       await fsFixture(overlayFS, __dirname)`
         scope-hoist
-          library.js:
-            export function doStuff() {
-              return 'stuff';
+          node_modules/library/named.js:
+            export default function namedFunction(arg) {
+              return arg;
             }
+          node_modules/library/index.js:
+            import namedFunction from './named.js';
+            export {namedFunction};
+          node_modules/library/package.json:
+            {"sideEffects": false}
           index.js:
-            import {doStuff} from './library';
-            sideEffectNoop(doStuff);
+            import {namedFunction} from 'library';
+            sideEffectNoop(namedFunction(''));
           index.html:
             <script type="module" src="./index.js" />
       `;
@@ -95,7 +100,7 @@ describe.v3('AtlaspackV3', function () {
       });
     });
 
-    it.only('with Assets that change type', async () => {
+    it('with Assets that change type', async () => {
       await fsFixture(overlayFS, __dirname)`
         type-change
           name.json:
