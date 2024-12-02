@@ -328,83 +328,6 @@ describe('bundler-experimental', () => {
             outputFS: overlayFS,
           });
 
-          {
-            const assetsByBundle = new Map();
-            b.traverseBundles((bundle) => {
-              const assets = [];
-              bundle.traverseAssets((asset) => {
-                assets.push(asset);
-              });
-              assetsByBundle.set(bundle, assets);
-            });
-
-            let debugOutput = ``;
-            for (let [bundle, assets] of assetsByBundle) {
-              for (let asset of assets) {
-                debugOutput +=
-                  [bundle.id, asset.id, await asset.getCode()].join(' ') + '\n';
-              }
-            }
-            fs.writeFileSync(
-              `./output-${bundler.replaceAll('/', '-')}.txt`,
-              debugOutput,
-            );
-          }
-          console.log(dotFromBundleGroupsInGraph(inputDir, b));
-          const dotString = dotFromBundleGraph(inputDir, b);
-          console.log(dotString);
-
-          const bundles = b.getBundles();
-          // assert.equal(bundles.length, 5);
-          // const entryBundle = bundles.find((bundle) =>
-          //   bundle.getEntryAssets()[0]?.filePath.includes('index.js'),
-          // );
-          // const page1Bundle = bundles.find((bundle) =>
-          //   bundle.getEntryAssets()[0]?.filePath.includes('page1.js'),
-          // );
-          // const page2Bundle = bundles.find((bundle) =>
-          //   bundle.getEntryAssets()[0]?.filePath.includes('page2.js'),
-          // );
-          // const asyncBundle = bundles.find((bundle) =>
-          //   bundle.getEntryAssets()[0]?.filePath.includes('async.js'),
-          // );
-          // invariant(entryBundle);
-          // invariant(asyncBundle);
-          // invariant(page1Bundle);
-          // invariant(page2Bundle);
-          //
-          // const bundleGroupsForIndex =
-          //   b.getBundleGroupsContainingBundle(entryBundle);
-          // const bundleGroupsForAsync =
-          //   b.getBundleGroupsContainingBundle(asyncBundle);
-          // const bundleGroupsForPage1 =
-          //   b.getBundleGroupsContainingBundle(page1Bundle);
-          // const bundleGroupsForPage2 =
-          //   b.getBundleGroupsContainingBundle(page2Bundle);
-          // assert.equal(bundleGroupsForPage1.length, 1);
-          // assert.equal(bundleGroupsForPage2.length, 1);
-          // assert.equal(bundleGroupsForIndex.length, 1);
-          // assert.equal(bundleGroupsForAsync.length, 1);
-          // // assert.equal(bundleGroupsForShared.length, 2);
-          // assert.notStrictEqual(
-          //   bundleGroupsForIndex[0],
-          //   bundleGroupsForAsync[0],
-          // );
-          // b.getBundlesInBundleGroup(bundleGroupsForPage1[0]).forEach(
-          //   (bundle) => {
-          //     console.log(bundle);
-          //     bundle.traverseAssets((asset) => {
-          //       console.log({asset});
-          //     });
-          //   },
-          // );
-          // // assert.deepStrictEqual(bundleGroupsForShared, [
-          // //   ...bundleGroupsForPage2,
-          // //   ...bundleGroupsForPage1,
-          // // ]);
-          // assert.equal(createBundleSpy.callCount, 5);
-          // assert.equal(addBundleToBundleGroupSpy.callCount, 4);
-
           // $FlowFixMe
           expectBundles(inputDir, b, [
             {
@@ -530,8 +453,6 @@ describe('bundler-experimental', () => {
             b.getBundleGroupsContainingBundle(page1Bundle);
           const bundleGroupsForPage2 =
             b.getBundleGroupsContainingBundle(page2Bundle);
-          const bundleGroupsForShared =
-            b.getBundleGroupsContainingBundle(sharedBundle);
           assert.equal(bundleGroupsForPage1.length, 1);
           assert.equal(bundleGroupsForPage2.length, 1);
           assert.equal(bundleGroupsForIndex.length, 1);
