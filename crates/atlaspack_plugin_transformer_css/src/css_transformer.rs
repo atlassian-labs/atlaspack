@@ -620,7 +620,7 @@ mod tests {
       result.discovered_assets[0],
       AssetWithDependencies {
         asset: Asset {
-          id: "88540641b9eed86d".into(),
+          id: "83301a06c27a61eb".into(),
           code: "module.exports[\"root\"] = `EcQGha_root`;\n".into(),
           file_path: "styles.module.css".into(),
           is_source: true,
@@ -683,8 +683,8 @@ mod tests {
       result.discovered_assets[0],
       AssetWithDependencies {
         asset: Asset {
-          id: "9ca5591ff8d30a6a".into(),
-          code: "module.exports[\"root\"] = `EcQGha_root`;\nmodule.exports[\"other\"] = `EcQGha_other ${module.exports['root']}`;\n".into(),
+          id: "83301a06c27a61eb".into(),
+          code: "module.exports[\"root\"] = `EcQGha_root`;\nmodule.exports[\"other\"] = `EcQGha_other ${module.exports[\"root\"]}`;\n".into(),
           file_path: "styles.module.css".into(),
           is_source: true,
           ..Default::default()
@@ -739,7 +739,7 @@ mod tests {
       result.discovered_assets[0],
       AssetWithDependencies {
         asset: Asset {
-          id: "82961aca890a97d6".into(),
+          id: "83301a06c27a61eb".into(),
           code: "module.exports[\"other\"] = `EcQGha_other globalClass`;\n".into(),
           file_path: "styles.module.css".into(),
           is_source: true,
