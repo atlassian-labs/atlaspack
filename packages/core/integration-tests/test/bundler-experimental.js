@@ -1,6 +1,5 @@
 // @flow strict-local
 
-import fs from 'fs';
 import path from 'path';
 import assert from 'assert';
 import sinon from 'sinon';
@@ -14,10 +13,6 @@ import {
   overlayFS,
   run,
 } from '@atlaspack/test-utils';
-import {
-  dotFromBundleGraph,
-  dotFromBundleGroupsInGraph,
-} from '@atlaspack/bundler-experimental/test/graphviz/GraphvizUtils';
 
 const invariant = assert;
 
