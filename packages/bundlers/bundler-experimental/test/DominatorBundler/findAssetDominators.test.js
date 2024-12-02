@@ -126,6 +126,31 @@ describe('findAssetDominators', () => {
       assert.equal(dominators[e], b);
     });
 
+    it('it works on simple graph with multiple paths', () => {
+      // digraph g {
+      //   root -> a;
+      //   a -> b;
+      //   b -> c;
+      //   a -> c;
+      // }
+      const {inputGraph, root} = baseGraph();
+
+      const a = inputGraph.addNodeByContentKey('a', 'a');
+      const b = inputGraph.addNodeByContentKey('b', 'b');
+      const c = inputGraph.addNodeByContentKey('c', 'c');
+
+      inputGraph.addEdge(root, a);
+      inputGraph.addEdge(a, b);
+      inputGraph.addEdge(b, c);
+      inputGraph.addEdge(a, c);
+
+      const dominators = simpleFastDominance(inputGraph);
+      assert.equal(dominators[root], root);
+      assert.equal(dominators[a], root);
+      assert.equal(dominators[b], a);
+      assert.equal(dominators[c], a);
+    });
+
     it('it works on a graph with multiple paths to nodes', () => {
       // digraph g {
       //   root -> a;
