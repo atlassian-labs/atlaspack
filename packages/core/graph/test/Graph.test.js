@@ -556,4 +556,52 @@ describe('Graph', () => {
       });
     });
   });
+
+  describe('forEachNodeConnectedTo', () => {
+    it('calls the callback for each node connected to the given node', () => {
+      const graph = new Graph();
+      const a = graph.addNode('0');
+      const b = graph.addNode('1');
+      const c = graph.addNode('2');
+      const d = graph.addNode('3');
+      graph.addNode('disconnected-1');
+      graph.addNode('disconnected-2');
+      graph.addEdge(a, b);
+      graph.addEdge(b, c);
+      graph.addEdge(b, d);
+      graph.addEdge(a, c);
+      graph.addEdge(c, d);
+
+      const order = [];
+      graph.forEachNodeIdConnectedTo(d, (node) => {
+        order.push(node);
+      });
+
+      assert.deepEqual(order, [b, c]);
+    });
+  });
+
+  describe('forEachNodeConnectedFrom', () => {
+    it('calls the callback for each node connected from the given node', () => {
+      const graph = new Graph();
+      const a = graph.addNode('0');
+      const b = graph.addNode('1');
+      const c = graph.addNode('2');
+      const d = graph.addNode('3');
+      graph.addNode('disconnected-1');
+      graph.addNode('disconnected-2');
+      graph.addEdge(a, b);
+      graph.addEdge(b, c);
+      graph.addEdge(b, d);
+      graph.addEdge(a, c);
+      graph.addEdge(c, d);
+
+      const order = [];
+      graph.forEachNodeIdConnectedFrom(a, (node) => {
+        order.push(node);
+      });
+
+      assert.deepEqual(order, [c, b]);
+    });
+  });
 });
