@@ -806,6 +806,7 @@ mod tests {
 
     Asset::new(
       Code::from(code),
+      false,
       env.clone(),
       file_path.into(),
       None,
@@ -813,6 +814,7 @@ mod tests {
       None,
       false,
     )
+    .unwrap()
   }
 
   fn create_asset_at_project_root(project_root: &Path, file_path: &str, code: &str) -> Asset {
@@ -820,6 +822,7 @@ mod tests {
 
     Asset::new(
       Code::from(code),
+      false,
       env.clone(),
       file_path.into(),
       None,
@@ -827,6 +830,7 @@ mod tests {
       None,
       false,
     )
+    .unwrap()
   }
 
   fn empty_asset() -> Asset {
