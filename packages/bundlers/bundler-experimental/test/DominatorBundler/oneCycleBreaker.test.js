@@ -66,6 +66,8 @@ describe('oneCycleBreaker', () => {
           values: ['c', 'b'],
         },
         'a',
+        'b',
+        'c',
         'root',
       ]);
     });
@@ -111,6 +113,9 @@ describe('oneCycleBreaker', () => {
         },
         'a',
         'b',
+        'c',
+        'd',
+        'e',
         'root',
       ]);
     });

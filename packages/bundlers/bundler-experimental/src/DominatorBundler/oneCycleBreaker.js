@@ -54,6 +54,15 @@ export function convertToAcyclicGraph<T, EW>(
     for (let nodeId of component) {
       componentNodeIdsByNodeId.set(nodeId, componentNodeId);
     }
+
+    for (let i = 0; i < component.length; i++) {
+      const nodeId = component[i];
+      const childNode = componentNode.values[i];
+
+      const contentKey = graph.getContentKeyByNodeId(nodeId);
+      const id = result.addNodeByContentKey(contentKey, childNode);
+      result.addEdge(componentNodeId, id);
+    }
   }
 
   const redirectEdge = (n: NodeId): NodeId =>
