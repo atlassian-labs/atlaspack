@@ -1,9 +1,0 @@
-{
-  "spec": "packages/*/!(integration-tests)/test/{*.{js,ts},**/*.{test,spec}.{js,ts}}",
-  "require": [
-    "@atlaspack/babel-register",
-    "@atlaspack/test-utils/src/mochaSetup.js"
-  ],
-  // TODO: Remove this when https://github.com/nodejs/node/pull/28788 is resolved
-  "exit": true
-}
