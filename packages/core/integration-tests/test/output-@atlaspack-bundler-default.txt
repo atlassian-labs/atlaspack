@@ -1,9 +1,9 @@
-e0187e76da0a44c0 4b12bf8476d0c19c require("6e9566f13a0987c7").then((page)=>{
-    page(output);
-});
-require("8a86030a1b18e023").then((page)=>{
-    page(output);
-});
+e0187e76da0a44c0 4b12bf8476d0c19c async function run() {
+    const page1 = await require("6e9566f13a0987c7");
+    const page2 = await require("8a86030a1b18e023");
+    return await page1() + await page2();
+}
+output(run());
 
 e0187e76da0a44c0 2ce086abe4f4d9e7 module.exports = require("18f8fb8e726aa291")(require("82de3e329cc5bbf1").getBundleURL('jeR4D') + "page1.HASH_REF_ebc7b4c1dac11865.js").catch((err)=>{
     delete module.bundle.cache[module.id];
@@ -107,20 +107,22 @@ e0187e76da0a44c0 6c740fd5293c1417 module.exports = require("675ba6b3192fa1c3")(r
     throw err;
 }).then(()=>module.bundle.root('dTn1t'));
 
-ebc7b4c1dac11865 a4a576f3c61a98b3 module.exports = (output)=>output(require("2d764abb487a2076").then((get2)=>{
-        return get() + get2();
-    }));
+ebc7b4c1dac11865 a4a576f3c61a98b3 module.exports = async ()=>{
+    const get = await require("2d764abb487a2076");
+    return get();
+};
 
 ebc7b4c1dac11865 21d5d40dacffa01f module.exports = require("750e29877b8e156a")(require("17345b4f304025f3").getBundleURL('kf3dH') + "async.HASH_REF_79b1bfbe8e1c56c9.js").catch((err)=>{
     delete module.bundle.cache[module.id];
     throw err;
 }).then(()=>module.bundle.root('2VW8Q'));
 
-79b1bfbe8e1c56c9 222e0160d42b4ebb module.exports = ()=>34 + get();
+79b1bfbe8e1c56c9 222e0160d42b4ebb module.exports = ()=>10;
 
-797d8b150732c46c a1d2453e709bda0c module.exports = (output)=>output(require("aead624db472eda0").then((get2)=>{
-        return get() + get2();
-    }));
+797d8b150732c46c a1d2453e709bda0c module.exports = async ()=>{
+    const get = await require("aead624db472eda0");
+    return get();
+};
 
 797d8b150732c46c f10733df2ec6e298 module.exports = require("baf2cf9870fb2e57")(require("12c8f7e38464addc").getBundleURL('aqGOx') + "async.HASH_REF_79b1bfbe8e1c56c9.js").catch((err)=>{
     delete module.bundle.cache[module.id];

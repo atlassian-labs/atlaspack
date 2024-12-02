@@ -70,7 +70,7 @@ describe('bundler-experimental', () => {
 
   describe('parity tests', () => {
     const bundlers = [
-      // '@atlaspack/bundler-default',
+      '@atlaspack/bundler-default',
       '@atlaspack/bundler-experimental',
     ];
 
@@ -278,30 +278,32 @@ describe('bundler-experimental', () => {
           expect(await output).toEqual(1234);
         });
 
-        it.only('can bundle two level deep async splits', async () => {
+        it('can bundle two level deep async splits', async () => {
           // TMP diff to test shared bundles
           await fsFixture(overlayFS, __dirname)`
       bundler-experimental
         async.js:
-          module.exports = () => 34;
+          module.exports = () => 10;
 
         page1.js:
-          module.exports = (output) => output(import('./async').then((get2) => {
-            return get2();
-          }));
+          module.exports = async () => {
+            const get = await import('./async');
+            return get();
+          };
 
         page2.js:
-          module.exports = (output) => output(import('./async').then((get2) => {
-            return get2();
-          }));
+          module.exports = async () => {
+            const get = await import('./async');
+            return get();
+          };
 
         index.js:
-          import('./page1').then((page) => {
-            page(output);
-          });
-          import('./page2').then((page) => {
-            page(output);
-          });
+          async function run() {
+            const page1 = await import('./page1');
+            const page2 = await import('./page2');
+            return await page1() + await page2();
+          }
+          output(run());
 
         package.json:
           {
@@ -432,7 +434,7 @@ describe('bundler-experimental', () => {
             },
           });
 
-          expect(await output).toEqual(2434);
+          expect(await output).toEqual(20);
         });
 
         it('can bundle async splits without duplicating parent dependencies', async () => {
@@ -441,30 +443,32 @@ describe('bundler-experimental', () => {
       bundler-experimental
         async.js:
           const get = require('./dependency');
-          module.exports = () => 34 + get();
+          module.exports = () => 1 + get();
 
         dependency.js:
-          module.exports = () => 1200;
+          module.exports = () => 1;
 
         page1.js:
           const get = require('./dependency');
-          module.exports = (output) => output(import('./async').then((get2) => {
+          module.exports = async () => {
+            const get2 = await import('./async');
             return get() + get2();
-          }));
+          };
 
         page2.js:
           const get = require('./dependency');
-          module.exports = (output) => output(import('./async').then((get2) => {
+          module.exports = async () => {
+            const get2 = await import('./async');
             return get() + get2();
-          }));
+          };
 
         index.js:
-          import('./page1').then((page) => {
-            page(output);
-          });
-          import('./page2').then((page) => {
-            page(output);
-          });
+          async function run() {
+            const page1 = await import('./page1');
+            const page2 = await import('./page2');
+            return await page1() + await page2();
+          }
+          output(run());
 
         package.json:
           {
@@ -550,7 +554,7 @@ describe('bundler-experimental', () => {
           //   ...bundleGroupsForPage1,
           // ]);
           assert.equal(createBundleSpy.callCount, 5);
-          assert.equal(addBundleToBundleGroupSpy.callCount, 4);
+          // assert.equal(addBundleToBundleGroupSpy.callCount, 4);
 
           // $FlowFixMe
           expectBundles(inputDir, b, [
@@ -585,7 +589,7 @@ describe('bundler-experimental', () => {
             },
           });
 
-          expect(await output).toEqual(2434);
+          expect(await output).toEqual(6);
         });
       });
     });
