@@ -14,7 +14,7 @@ import type {
 } from './bundleGraphToRootedGraph';
 import {EdgeContentGraph} from './EdgeContentGraph';
 
-function debugLog(message: string) {
+export function debugLog(message: string) {
   logger.info({
     message,
     origin: '@atlaspack/bundler-experimental',

@@ -14,7 +14,10 @@ import {
   createPackages,
   getPackageNodes,
 } from './DominatorBundler/createPackages';
-import {findAssetDominators} from './DominatorBundler/findAssetDominators';
+import {
+  debugLog,
+  findAssetDominators,
+} from './DominatorBundler/findAssetDominators';
 import type {
   PackagedDominatorGraph,
   PackageNode,
@@ -24,6 +27,7 @@ import type {AssetNode} from './DominatorBundler/bundleGraphToRootedGraph';
 import {
   buildPackageGraph,
   buildPackageInfos,
+  runMergePackages,
 } from './DominatorBundler/mergePackages';
 import {findNodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
 import type {NodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
@@ -45,9 +49,13 @@ const DominatorBundler: Bundler = new Bundler({
 export default DominatorBundler;
 
 export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
+  debugLog('building dominators');
   const {dominators, graph} = findAssetDominators(bundleGraph);
+  debugLog('finding entries');
   const entryDependencies = findNodeEntryDependencies(graph);
+  debugLog('merging things into packagse');
   const packages = createPackages(graph, dominators);
+  debugLog('building package dependency graph');
   const {packageNodes, packageInfos} = buildPackageInfos(packages);
   const packageGraph = buildPackageGraph(
     graph,
@@ -55,8 +63,12 @@ export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
     packageNodes,
     packageInfos,
   );
+  debugLog('merging packages together using heuristics');
+  // const mergedPackageGraph = runMergePackages(graph, packages);
 
+  debugLog('converting into parcel API');
   intoBundleGraph(packages, bundleGraph, packageGraph, entryDependencies);
+  debugLog('done bundling');
 }
 
 export type SimpleBundle =
@@ -131,6 +143,9 @@ export function getOrCreateBundleGroupsForNode(
       }
     } else {
       const entries = entryDependenciesByAsset.get(nodeId);
+      if (entries == null) {
+        return result;
+      }
       invariant(entries != null);
       for (let entry of entries) {
         invariant(entry.entryDependency != null);
@@ -139,6 +154,7 @@ export function getOrCreateBundleGroupsForNode(
         const bundleGroupsMap = bundleGroupsByEntryDep.get(target);
 
         const dependencies = packages.getEdgeWeight(rootId, nodeId);
+        if (dependencies == null || dependencies.length === 0) continue;
         invariant(dependencies != null);
         invariant(dependencies.length > 0);
 
@@ -192,18 +208,26 @@ export function getOrCreateBundleGroupsForNode(
     // const entries = entryDependenciesByAsset.get(nodeId) ?? new Set();
     const asyncEntries = asyncDependenciesByAsset.get(nodeId) ?? new Set();
     const allEntries = Array.from(asyncEntries);
+    // const allEntries = [...Array.from(entries), ...Array.from(asyncEntries)];
+
     for (let entry of allEntries) {
-      const nodeId = packages.getNodeIdByContentKey(entry.id);
-      const childResult = getOrCreateBundleGroupsForNode(
-        bundleGroupsByEntryDep,
-        packages,
-        entryDependenciesByAsset,
-        asyncDependenciesByAsset,
-        nodeId,
-        entry,
-      );
-      for (let entry of childResult) {
-        result.add(entry);
+      try {
+        const nodeId = packages.getNodeIdByContentKey(entry.id);
+        const childResult = getOrCreateBundleGroupsForNode(
+          bundleGroupsByEntryDep,
+          packages,
+          entryDependenciesByAsset,
+          asyncDependenciesByAsset,
+          nodeId,
+          entry,
+        );
+        for (let entry of childResult) {
+          result.add(entry);
+        }
+      } catch (err) {
+        console.log(entry);
+        console.log('\n\n\n\n\n\n');
+        throw err;
       }
     }
   }
@@ -246,6 +270,7 @@ export function planBundleGraph(
     for (let bundleGroup of bundleGroups) {
       allBundleGroups.add(bundleGroup);
     }
+    if (bundleGroups.length === 0) continue;
     invariant(bundleGroups.length > 0);
     const targets = new Set(
       Array.from(bundleGroups.values()).map((group) => group.target),
