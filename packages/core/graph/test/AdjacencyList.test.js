@@ -1,6 +1,7 @@
 // @flow strict-local
 
 import assert from 'assert';
+import sinon from 'sinon';
 import path from 'path';
 import {Worker} from 'worker_threads';
 
@@ -270,6 +271,160 @@ describe('AdjacencyList', () => {
     assert.ok(graph.hasEdge(a, b, [1, 2]));
     assert.ok(!graph.hasEdge(b, c, [1, 3]));
     assert.ok(graph.hasEdge(b, c, [2, 3]));
+  });
+
+  describe('forEachNodeIdConnectedTo', () => {
+    it('iterates no edges if there are none', () => {
+      const graph = new AdjacencyList();
+      const a = graph.addNode();
+      const b = graph.addNode();
+      const c = graph.addNode();
+
+      graph.addEdge(a, b);
+      graph.addEdge(c, b);
+
+      const callback = sinon.spy(() => {});
+      graph.forEachNodeIdConnectedTo(c, callback);
+
+      assert.equal(callback.callCount, 0);
+    });
+
+    it('iterates incoming edges to a node', () => {
+      const graph = new AdjacencyList();
+      const a = graph.addNode();
+      const b = graph.addNode();
+      const c = graph.addNode();
+
+      graph.addEdge(a, b);
+      graph.addEdge(c, b);
+
+      const nodeIds = [];
+      graph.forEachNodeIdConnectedTo(b, (id) => {
+        nodeIds.push(id);
+      });
+
+      assert.deepEqual(nodeIds, [a, c]);
+    });
+
+    it('terminates if the graph is cyclic', () => {
+      const graph = new AdjacencyList();
+      const a = graph.addNode();
+      const b = graph.addNode();
+      const c = graph.addNode();
+
+      graph.addEdge(a, b);
+      graph.addEdge(c, b);
+      graph.addEdge(b, b);
+
+      const nodeIds = [];
+      graph.forEachNodeIdConnectedTo(b, (id) => {
+        nodeIds.push(id);
+      });
+
+      assert.deepEqual(nodeIds, [a, c, b]);
+    });
+  });
+
+  describe('forEachNodeIdConnectedFromReverse', () => {
+    it('iterates no edges if there are none', () => {
+      const graph = new AdjacencyList();
+      const a = graph.addNode();
+      const b = graph.addNode();
+      const c = graph.addNode();
+
+      graph.addEdge(a, b);
+      graph.addEdge(b, c);
+
+      const callback = sinon.spy(() => false);
+      graph.forEachNodeIdConnectedFromReverse(c, callback);
+
+      assert.equal(callback.callCount, 0);
+    });
+
+    it('iterates outgoing edges from a node', () => {
+      const graph = new AdjacencyList();
+      const a = graph.addNode();
+      const b = graph.addNode();
+      const c = graph.addNode();
+      const d = graph.addNode();
+      const e = graph.addNode();
+
+      graph.addEdge(a, b, 1);
+      graph.addEdge(a, c, 2);
+      graph.addEdge(b, d, 3);
+      graph.addEdge(c, e, 4);
+
+      const nodeIds = [];
+      graph.forEachNodeIdConnectedFromReverse(a, (nodeId) => {
+        nodeIds.push(nodeId);
+        return false;
+      });
+
+      assert.deepEqual(nodeIds, [b, c]);
+    });
+
+    it('terminates if the graph is cyclic', () => {
+      const graph = new AdjacencyList();
+      const a = graph.addNode();
+      const b = graph.addNode();
+      const c = graph.addNode();
+
+      graph.addEdge(a, b);
+      graph.addEdge(a, c);
+      graph.addEdge(a, a);
+
+      const nodeIds = [];
+      graph.forEachNodeIdConnectedFromReverse(a, (nodeId) => {
+        nodeIds.push(nodeId);
+        return false;
+      });
+
+      assert.deepEqual(nodeIds, [a, c, b]);
+    });
+
+    it('stops traversal if the return value is true', () => {
+      const graph = new AdjacencyList();
+      const a = graph.addNode();
+      const b = graph.addNode();
+      const c = graph.addNode();
+      const d = graph.addNode();
+
+      graph.addEdge(a, b);
+      graph.addEdge(a, c);
+      graph.addEdge(a, d);
+
+      const nodeIds = [];
+      graph.forEachNodeIdConnectedFromReverse(a, (nodeId) => {
+        nodeIds.push(nodeId);
+        return true;
+      });
+
+      assert.deepEqual(nodeIds, [d]);
+    });
+
+    it('filters edges by type', () => {
+      const graph = new AdjacencyList();
+      const a = graph.addNode();
+      const b = graph.addNode();
+      const c = graph.addNode();
+      const d = graph.addNode();
+
+      graph.addEdge(a, b, 2);
+      graph.addEdge(a, c, 2);
+      graph.addEdge(a, d);
+
+      const nodeIds = [];
+      graph.forEachNodeIdConnectedFromReverse(
+        a,
+        (nodeId) => {
+          nodeIds.push(nodeId);
+          return false;
+        },
+        2,
+      );
+
+      assert.deepEqual(nodeIds, [c, b]);
+    });
   });
 
   describe('deserialize', function () {
