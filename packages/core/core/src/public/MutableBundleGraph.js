@@ -276,13 +276,6 @@ export default class MutableBundleGraph
   }
 
   createBundleReference(from: IBundle, to: IBundle): void {
-    const label = (bundle) => {
-      const assets = [];
-      bundle.traverseAssets((asset) => {
-        assets.push(asset.filePath);
-      });
-      return assets[0];
-    };
     return this.#graph.createBundleReference(
       bundleToInternalBundle(from),
       bundleToInternalBundle(to),
