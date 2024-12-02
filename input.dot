@@ -1,8 +1,0 @@
-digraph assets {
-  "test.js";
-  "async.js";
-  "dependency.js";
-
-  "test.js" -> "dependency.js";
-  "test.js" -> "async.js";
-}
