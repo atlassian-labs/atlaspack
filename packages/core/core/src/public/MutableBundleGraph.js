@@ -46,7 +46,6 @@ export default class MutableBundleGraph
   }
 
   addAssetToBundle(asset: IAsset, bundle: IBundle) {
-    console.log('addAssetToBundle', asset, bundle);
     this.#graph.addAssetToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
@@ -58,7 +57,6 @@ export default class MutableBundleGraph
     bundle: IBundle,
     shouldSkipDependency?: (IDependency) => boolean,
   ) {
-    console.log('addAssetGraphToBundle', asset, bundle);
     this.#graph.addAssetGraphToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
@@ -73,7 +71,6 @@ export default class MutableBundleGraph
     bundle: IBundle,
     shouldSkipDependency?: (IDependency) => boolean,
   ) {
-    console.log('addEntryToBundle', asset, bundle);
     this.#graph.addEntryToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
@@ -84,7 +81,6 @@ export default class MutableBundleGraph
   }
 
   createBundleGroup(dependency: IDependency, target: Target): IBundleGroup {
-    console.log('createBundleGroup', dependency, target);
     let dependencyNode = this.#graph._graph.getNodeByContentKey(dependency.id);
     if (!dependencyNode) {
       throw new Error('Dependency not found');
@@ -173,7 +169,6 @@ export default class MutableBundleGraph
   }
 
   internalizeAsyncDependency(bundle: IBundle, dependency: IDependency): void {
-    console.log('internalizeAsyncDependency', bundle, dependency);
     this.#graph.internalizeAsyncDependency(
       bundleToInternalBundle(bundle),
       dependencyToInternalDependency(dependency),
@@ -181,7 +176,6 @@ export default class MutableBundleGraph
   }
 
   createBundle(opts: CreateBundleOpts): Bundle {
-    console.log('createBundle', opts);
     let entryAsset = opts.entryAsset
       ? assetToAssetValue(opts.entryAsset)
       : null;
@@ -259,15 +253,10 @@ export default class MutableBundleGraph
     }
 
     const result = Bundle.get(bundleNode.value, this.#graph, this.#options);
-    console.log('==> createBundle', opts, result);
     return result;
   }
 
   addBundleToBundleGroup(bundle: IBundle, bundleGroup: IBundleGroup) {
-    console.log('addBundleToBundleGroup', bundle, {
-      bundleGroup,
-      dep: bundleGroup.entryAssetId,
-    });
     this.#graph.addBundleToBundleGroup(
       bundleToInternalBundle(bundle),
       bundleGroupToInternalBundleGroup(bundleGroup),
@@ -279,7 +268,6 @@ export default class MutableBundleGraph
     asset: IAsset,
     bundle: IBundle,
   ): void {
-    console.log('createAssetReference', dependency, asset, bundle);
     return this.#graph.createAssetReference(
       dependencyToInternalDependency(dependency),
       assetToAssetValue(asset),
@@ -295,11 +283,6 @@ export default class MutableBundleGraph
       });
       return assets[0];
     };
-    console.log(
-      'createBundleReference',
-      {from, fromDep: label(from)},
-      {to, toDep: label(to)},
-    );
     return this.#graph.createBundleReference(
       bundleToInternalBundle(from),
       bundleToInternalBundle(to),
