@@ -120,78 +120,80 @@ describe('oneCycleBreaker', () => {
       ]);
     });
 
-    dotTest(__filename, 'cycles', async () => {
-      const entryDir = path.join(__dirname, 'test');
-      const entryPath1 = path.join(entryDir, 'a.js');
-      const inputDot = await fixtureFromGraph(entryDir, overlayFS, [
-        asset('a.js', ['b.js']),
-        asset('b.js', ['c.js']),
-        asset('c.js', ['d.js']),
-        asset('d.js', ['b.js', 'e.js']),
-        asset('e.js', []),
-      ]);
-
-      const {mutableBundleGraph} = await setupBundlerTest([entryPath1]);
-      const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
-      const result = convertToAcyclicGraph(rootedGraph);
-
-      return [
-        {label: 'input', dot: inputDot},
-        {label: 'no-cycles', dot: rootedGraphToDot(entryDir, result)},
-      ];
-    });
-
-    dotTest(
-      __filename,
-      'can replace strongly connected components with a single node on an example graph',
-      async () => {
+    describe('fixture tests', () => {
+      dotTest(__filename, 'cycles', async () => {
         const entryDir = path.join(__dirname, 'test');
-        const entryPath1 = path.join(entryDir, 'page1.js');
-        const entryPath2 = path.join(entryDir, 'page2.js');
+        const entryPath1 = path.join(entryDir, 'a.js');
         const inputDot = await fixtureFromGraph(entryDir, overlayFS, [
-          asset('page1.js', ['react.js', 'lodash.js']),
-          asset('page2.js', ['lodash.js', 'react.js']),
-          asset('react.js', ['left-pad.js', 'string-concat.js', 'jsx.js']),
-          asset('lodash.js', ['left-pad.js']),
-          asset('left-pad.js', ['string-concat.js']),
-          asset('jsx.js', []),
-          asset('string-concat.js', ['string-chart-at.js']),
-          asset('string-chart-at.js', []),
+          asset('a.js', ['b.js']),
+          asset('b.js', ['c.js']),
+          asset('c.js', ['d.js']),
+          asset('d.js', ['b.js', 'e.js']),
+          asset('e.js', []),
         ]);
 
-        const {mutableBundleGraph} = await setupBundlerTest([
-          entryPath1,
-          entryPath2,
-        ]);
+        const {mutableBundleGraph} = await setupBundlerTest([entryPath1]);
         const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
-        const stronglyConnectedComponents =
-          findStronglyConnectedComponents(rootedGraph);
-
-        assert.deepStrictEqual(
-          stronglyConnectedComponents
-            .filter((cs) => cs.length > 1)
-            .map((cs) =>
-              cs.map((c) => {
-                const node = rootedGraph.getNode(c);
-                if (node == null) {
-                  return null;
-                } else if (node === 'root') {
-                  return 'root';
-                } else {
-                  return path.basename(node.asset.filePath);
-                }
-              }),
-            ),
-          [],
-        );
-
         const result = convertToAcyclicGraph(rootedGraph);
 
         return [
           {label: 'input', dot: inputDot},
           {label: 'no-cycles', dot: rootedGraphToDot(entryDir, result)},
         ];
-      },
-    );
+      });
+
+      dotTest(
+        __filename,
+        'can replace strongly connected components with a single node on an example graph',
+        async () => {
+          const entryDir = path.join(__dirname, 'test');
+          const entryPath1 = path.join(entryDir, 'page1.js');
+          const entryPath2 = path.join(entryDir, 'page2.js');
+          const inputDot = await fixtureFromGraph(entryDir, overlayFS, [
+            asset('page1.js', ['react.js', 'lodash.js']),
+            asset('page2.js', ['lodash.js', 'react.js']),
+            asset('react.js', ['left-pad.js', 'string-concat.js', 'jsx.js']),
+            asset('lodash.js', ['left-pad.js']),
+            asset('left-pad.js', ['string-concat.js']),
+            asset('jsx.js', []),
+            asset('string-concat.js', ['string-chart-at.js']),
+            asset('string-chart-at.js', []),
+          ]);
+
+          const {mutableBundleGraph} = await setupBundlerTest([
+            entryPath1,
+            entryPath2,
+          ]);
+          const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+          const stronglyConnectedComponents =
+            findStronglyConnectedComponents(rootedGraph);
+
+          assert.deepStrictEqual(
+            stronglyConnectedComponents
+              .filter((cs) => cs.length > 1)
+              .map((cs) =>
+                cs.map((c) => {
+                  const node = rootedGraph.getNode(c);
+                  if (node == null) {
+                    return null;
+                  } else if (node === 'root') {
+                    return 'root';
+                  } else {
+                    return path.basename(node.asset.filePath);
+                  }
+                }),
+              ),
+            [],
+          );
+
+          const result = convertToAcyclicGraph(rootedGraph);
+
+          return [
+            {label: 'input', dot: inputDot},
+            {label: 'no-cycles', dot: rootedGraphToDot(entryDir, result)},
+          ];
+        },
+      );
+    });
   });
 });
