@@ -649,17 +649,25 @@ export default class Transformation {
     }
 
     // Transform.
-    let transfomerResult: Array<TransformerResult | MutableAsset> =
+    const mutableAsset = new MutableAsset(asset);
+    const transfomerResult: Array<TransformerResult | MutableAsset> =
       // $FlowFixMe the returned IMutableAsset really is a MutableAsset
       await transformer.transform({
-        asset: new MutableAsset(asset),
+        asset: mutableAsset,
         config,
         options: pipeline.pluginOptions,
         resolve,
         logger,
         tracer,
       });
-    let results = await normalizeAssets(this.options, transfomerResult);
+    const results = await normalizeAssets(this.options, transfomerResult);
+
+    if (mutableAsset.hasUpdatedSource && !mutableAsset.hasUpdatedSourceMap) {
+      logger.warn({
+        origin: '@atlaspack/core',
+        message: md`The transformer ${transformerName} updated the source but did not update the source map. This may cause incorrect source maps.`,
+      });
+    }
 
     // Create generate and postProcess function that can be called later
     asset.generate = (): Promise<GenerateOutput> => {
