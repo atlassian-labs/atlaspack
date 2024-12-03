@@ -340,10 +340,10 @@ mod test {
     assert_eq!(
       cache
         .package_duplicates
-        .get(&root().join("node_modules/duplicate-tester/node_modules/duplicate/package.json"))
+        .get(&root().join("node_modules/duplicate-tester-2/node_modules/duplicate/package.json"))
         .unwrap()
         .path,
-      root().join("node_modules/duplicate/package.json")
+      root().join("node_modules/duplicate-tester/node_modules/duplicate/package.json")
     );
   }
 }
