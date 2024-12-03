@@ -185,19 +185,23 @@ export function runMergePackages(
     packageInfos,
   );
 
-  return mergePackageNodes(packages, packageGraph, packageInfosById);
+  return mergePackageNodes(packages, packageGraph, packageInfosById).output;
 }
 
 export function mergePackageNodes(
   packages: PackagedDominatorGraph,
   packageGraph: PackagedDominatorGraph,
   packageInfosById: Map<string, PackageInfo>,
-): PackagedDominatorGraph {
+): {|
+  output: PackagedDominatorGraph,
+  totalSizeIncrease: number,
+|} {
   const output: PackagedDominatorGraph = packages.clone();
 
   const postOrder = getGraphPostOrder(packageGraph);
 
   const removedNodes = new Set();
+
   let totalSizeIncrease = 0;
   for (let id of postOrder) {
     const node = packages.getNode(id);
@@ -248,5 +252,5 @@ export function mergePackageNodes(
     }
   }
 
-  return output;
+  return {output, totalSizeIncrease};
 }

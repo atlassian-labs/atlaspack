@@ -27,7 +27,7 @@ import type {AssetNode} from './DominatorBundler/bundleGraphToRootedGraph';
 import {
   buildPackageGraph,
   buildPackageInfos,
-  runMergePackages,
+  // runMergePackages,
 } from './DominatorBundler/mergePackages';
 import {findNodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
 import type {NodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
@@ -225,7 +225,9 @@ export function getOrCreateBundleGroupsForNode(
           result.add(entry);
         }
       } catch (err) {
+        // eslint-disable-next-line no-console
         console.log(entry);
+        // eslint-disable-next-line no-console
         console.log('\n\n\n\n\n\n');
         throw err;
       }

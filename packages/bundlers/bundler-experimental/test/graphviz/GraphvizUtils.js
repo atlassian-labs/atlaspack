@@ -13,7 +13,6 @@ import type {
 import type {
   AssetNode,
   SimpleAssetGraph,
-  SimpleAssetGraphEdge,
   SimpleAssetGraphEdgeWeight,
   SimpleAssetGraphNode,
 } from '../../src/DominatorBundler/bundleGraphToRootedGraph';

@@ -2,10 +2,8 @@
 
 import invariant from 'assert';
 import type {Asset} from '@atlaspack/types';
-import type {MutableBundleGraph} from '@atlaspack/types';
 import {ContentGraph, type NodeId} from '@atlaspack/graph';
 
-import {bundleGraphToRootedGraph} from './bundleGraphToRootedGraph';
 import type {
   AcyclicGraph,
   StronglyConnectedComponentNode,
