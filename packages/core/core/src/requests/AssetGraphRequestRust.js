@@ -15,6 +15,7 @@ import type {
   AssetGraphRequestInput,
   AssetGraphRequestResult,
 } from './AssetGraphRequest';
+import {instrument} from '../tracer';
 
 type RunInput = {|
   input: AssetGraphRequestInput,
@@ -48,7 +49,10 @@ export function createAssetGraphRequestRust(
         });
       }
 
-      let {assetGraph, changedAssets} = getAssetGraph(serializedAssetGraph);
+      let {assetGraph, changedAssets} = instrument(
+        'atlaspack_v3_getAssetGraph',
+        () => getAssetGraph(serializedAssetGraph),
+      );
 
       let changedAssetsPropagation = new Set(changedAssets.keys());
       let errors = propagateSymbols({

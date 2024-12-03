@@ -98,7 +98,9 @@ impl Tracer {
         None
       }
       TracerMode::Chrome => {
-        let (chrome_layer, guard) = tracing_chrome::ChromeLayerBuilder::new().build();
+        let (chrome_layer, guard) = tracing_chrome::ChromeLayerBuilder::new()
+          .include_args(true)
+          .build();
         tracing_subscriber::registry()
           .with(chrome_layer)
           .try_init()

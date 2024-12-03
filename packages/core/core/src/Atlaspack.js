@@ -136,7 +136,8 @@ export default class Atlaspack {
       });
     } catch (e) {
       // Fallthrough
-      logger.warn(e);
+      // eslint-disable-next-line no-console
+      console.warn(e);
     }
 
     let resolvedOptions: AtlaspackOptions = await resolveOptions({
