@@ -306,6 +306,26 @@ describe('AdjacencyList', () => {
       assert.deepEqual(nodeIds, [a, c]);
     });
 
+    it('stops traversal if the return value is true', () => {
+      const graph = new AdjacencyList();
+      const a = graph.addNode();
+      const b = graph.addNode();
+      const c = graph.addNode();
+      const d = graph.addNode();
+
+      graph.addEdge(a, d);
+      graph.addEdge(b, d);
+      graph.addEdge(c, d);
+
+      const nodeIds = [];
+      graph.forEachNodeIdConnectedTo(d, (nodeId) => {
+        nodeIds.push(nodeId);
+        return true;
+      });
+
+      assert.deepEqual(nodeIds, [a]);
+    });
+
     it('terminates if the graph is cyclic', () => {
       const graph = new AdjacencyList();
       const a = graph.addNode();

@@ -1773,14 +1773,23 @@ export default class BundleGraph {
       return null;
     }
 
-    let res = this._graph.getNodeIdsConnectedTo(
+    let res = null;
+    let count = 0;
+    this._graph.forEachNodeIdConnectedTo(
       this._graph.getNodeIdByContentKey(dep.id),
+      (node) => {
+        res = node;
+        count += 1;
+        if (count > 1) {
+          throw new Error(
+            'Expected a single asset to be connected to a dependency',
+          );
+        }
+      },
     );
-    invariant(
-      res.length <= 1,
-      'Expected a single asset to be connected to a dependency',
-    );
-    let resNode = this._graph.getNode(res[0]);
+
+    invariant(res != null, 'Expected an asset to be connected to a dependency');
+    let resNode = this._graph.getNode(res);
     if (resNode?.type === 'asset') {
       return resNode.value;
     }
