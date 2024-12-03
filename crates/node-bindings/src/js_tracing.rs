@@ -29,7 +29,7 @@ impl AtlaspackTracer {
     if self.current_id == u32::MAX {
       self.current_id = 0;
     } else {
-      self.current_id = self.current_id + 1;
+      self.current_id += 1;
     }
 
     self.current_spans.insert(id, span.entered());
