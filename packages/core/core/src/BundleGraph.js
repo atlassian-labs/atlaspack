@@ -1786,6 +1786,7 @@ export default class BundleGraph {
           );
         }
       },
+      1,
     );
 
     let resNode = res != null ? this._graph.getNode(res) : null;

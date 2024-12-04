@@ -166,7 +166,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
   forEachNodeIdConnectedTo(
     to: NodeId,
     fn: (nodeId: NodeId) => boolean | void,
-    type: AllEdgeTypes | TEdgeType | NullEdgeType = ALL_EDGE_TYPES,
+    type: AllEdgeTypes | TEdgeType | NullEdgeType = 1,
   ) {
     this._assertHasNodeId(to);
 
@@ -176,7 +176,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
   forEachNodeIdConnectedFrom(
     from: NodeId,
     fn: (nodeId: NodeId) => void,
-    type: AllEdgeTypes | TEdgeType | NullEdgeType = ALL_EDGE_TYPES,
+    type: AllEdgeTypes | TEdgeType | NullEdgeType = 1,
   ) {
     this._assertHasNodeId(from);
 
