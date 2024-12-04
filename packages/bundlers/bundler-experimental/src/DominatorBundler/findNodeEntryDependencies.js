@@ -3,6 +3,7 @@
 import type {AssetNode, SimpleAssetGraph} from './bundleGraphToRootedGraph';
 import {getGraphPostOrder} from './findAssetDominators';
 import type {NodeId} from '@atlaspack/graph';
+import {ALL_EDGE_TYPES} from '@atlaspack/graph/src';
 
 export type NodeEntryDependencies = {|
   entryDependenciesByAsset: Map<NodeId, Set<AssetNode>>,
@@ -63,37 +64,44 @@ export function findNodeEntryDependencies(
       asyncDependenciesByAsset.set(nodeId, dependencies);
     }
 
-    graph.forEachNodeIdConnectedTo(nodeId, (parentId) => {
-      const parent = graph.getNode(parentId);
-      if (parent == null || parent === 'root') {
-        return;
-      }
-
-      const parentEntryDependency = parent.entryDependency;
-      if (parentEntryDependency != null) {
-        const dependencies = entryDependenciesByAsset.get(nodeId) ?? new Set();
-        dependencies.add(parent);
-        entryDependenciesByAsset.set(nodeId, dependencies);
-      }
-
-      const parentEntries = entryDependenciesByAsset.get(parentId);
-      if (parentEntries != null) {
-        const dependencies = entryDependenciesByAsset.get(nodeId) ?? new Set();
-        for (let parentEntry of parentEntries) {
-          dependencies.add(parentEntry);
+    graph.forEachNodeIdConnectedTo(
+      nodeId,
+      (parentId) => {
+        const parent = graph.getNode(parentId);
+        if (parent == null || parent === 'root') {
+          return;
         }
-        entryDependenciesByAsset.set(nodeId, dependencies);
-      }
 
-      const parentAsyncEntries = asyncDependenciesByAsset.get(parentId);
-      if (parentAsyncEntries != null) {
-        const dependencies = asyncDependenciesByAsset.get(nodeId) ?? new Set();
-        for (let asyncNode of parentAsyncEntries) {
-          dependencies.add(asyncNode);
+        const parentEntryDependency = parent.entryDependency;
+        if (parentEntryDependency != null) {
+          const dependencies =
+            entryDependenciesByAsset.get(nodeId) ?? new Set();
+          dependencies.add(parent);
+          entryDependenciesByAsset.set(nodeId, dependencies);
         }
-        asyncDependenciesByAsset.set(nodeId, dependencies);
-      }
-    });
+
+        const parentEntries = entryDependenciesByAsset.get(parentId);
+        if (parentEntries != null) {
+          const dependencies =
+            entryDependenciesByAsset.get(nodeId) ?? new Set();
+          for (let parentEntry of parentEntries) {
+            dependencies.add(parentEntry);
+          }
+          entryDependenciesByAsset.set(nodeId, dependencies);
+        }
+
+        const parentAsyncEntries = asyncDependenciesByAsset.get(parentId);
+        if (parentAsyncEntries != null) {
+          const dependencies =
+            asyncDependenciesByAsset.get(nodeId) ?? new Set();
+          for (let asyncNode of parentAsyncEntries) {
+            dependencies.add(asyncNode);
+          }
+          asyncDependenciesByAsset.set(nodeId, dependencies);
+        }
+      },
+      ALL_EDGE_TYPES,
+    );
   }
 
   return {

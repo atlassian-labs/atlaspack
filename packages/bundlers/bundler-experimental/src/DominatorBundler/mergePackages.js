@@ -7,6 +7,7 @@ import {getGraphPostOrder} from './findAssetDominators';
 import type {StronglyConnectedComponentNode} from './oneCycleBreaker';
 import type {AssetNode, SimpleAssetGraph} from './bundleGraphToRootedGraph';
 import {EdgeContentGraph} from './EdgeContentGraph';
+import {ALL_EDGE_TYPES} from '@atlaspack/graph/src';
 
 function getAssetSize(asset: Asset): number {
   return asset.stats?.size ?? 0;
@@ -129,6 +130,7 @@ export function buildPackageGraph(
 
           packageGraph.addEdge(packageId, packageNodeId);
         },
+        ALL_EDGE_TYPES,
       );
     }
   });
@@ -218,13 +220,17 @@ export function mergePackageNodes(
 
     const totalSize = packageInfo.totalSize;
     const parents = [];
-    packageGraph.forEachNodeIdConnectedTo(id, (parent) => {
-      const contentKey = packageGraph.getContentKeyByNodeId(parent);
-      if (contentKey === 'root') {
-        return;
-      }
-      parents.push(contentKey);
-    });
+    packageGraph.forEachNodeIdConnectedTo(
+      id,
+      (parent) => {
+        const contentKey = packageGraph.getContentKeyByNodeId(parent);
+        if (contentKey === 'root') {
+          return;
+        }
+        parents.push(contentKey);
+      },
+      ALL_EDGE_TYPES,
+    );
 
     const sizeIncreaseFromDuplication = totalSize; // * parents.length;
     if (parents.length && sizeIncreaseFromDuplication < 1024 * 10) {

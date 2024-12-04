@@ -13,6 +13,7 @@ import type {
   SimpleAssetGraphNode,
 } from './bundleGraphToRootedGraph';
 import {EdgeContentGraph} from './EdgeContentGraph';
+import {ALL_EDGE_TYPES} from '@atlaspack/graph/src';
 
 export function debugLog(message: string) {
   logger.info({
@@ -152,22 +153,26 @@ export function simpleFastDominance<T>(graph: Graph<T, number>): NodeId[] {
       if (node === graph.rootNodeId) continue;
 
       let newImmediateDominator = null;
-      graph.forEachNodeIdConnectedTo(node, (predecessor) => {
-        if (newImmediateDominator == null) {
-          newImmediateDominator = predecessor;
-        } else {
-          if (dominators[predecessor] == null) {
-            return;
-          }
+      graph.forEachNodeIdConnectedTo(
+        node,
+        (predecessor) => {
+          if (newImmediateDominator == null) {
+            newImmediateDominator = predecessor;
+          } else {
+            if (dominators[predecessor] == null) {
+              return;
+            }
 
-          newImmediateDominator = intersect(
-            postOrderIndexes,
-            dominators,
-            predecessor,
-            newImmediateDominator,
-          );
-        }
-      });
+            newImmediateDominator = intersect(
+              postOrderIndexes,
+              dominators,
+              predecessor,
+              newImmediateDominator,
+            );
+          }
+        },
+        ALL_EDGE_TYPES,
+      );
 
       if (dominators[node] !== newImmediateDominator) {
         dominators[node] = newImmediateDominator;
