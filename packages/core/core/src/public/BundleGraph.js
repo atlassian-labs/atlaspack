@@ -369,18 +369,13 @@ export default class BundleGraph<TBundle: IBundle>
             asset &&
             this.#graph.bundleHasAsset(bundleToInternalBundle(bundle), asset)
           ) {
-            // Asset is in the same bundle
+            // Asset is in the same bundle, we know it doesn't need to be loaded externally
             return [asset, []];
           }
 
-          const resolvedAsync = nullthrows(
-            this.#graph.resolveAsyncDependency(
-              dep,
-              bundleToInternalBundle(bundle),
-            ),
-            `Failed to load depenendency for '${
-              dep.specifier
-            }' specifier from '${String(dep.sourcePath)}'`,
+          const resolvedAsync = this.#graph.resolveAsyncDependency(
+            dep,
+            bundleToInternalBundle(bundle),
           );
           if (resolvedAsync?.type === 'asset') {
             // Single bundle to load dynamically
@@ -402,13 +397,23 @@ export default class BundleGraph<TBundle: IBundle>
                 ),
               ],
             ];
-          } else {
+          } else if (resolvedAsync) {
             // Bundle group means we have multiple bundles to load first
             return [
               this.#graph.getAssetById(resolvedAsync.value.entryAssetId),
               this.#graph
                 .getBundlesInBundleGroup(resolvedAsync.value)
                 .map((b) => this.#createBundle(b, this.#graph, this.#options)),
+            ];
+          } else {
+            return [
+              nullthrows(
+                asset,
+                `Failed to load depenendency for '${
+                  dep.specifier
+                }' specifier from '${String(dep.sourcePath)}'`,
+              ),
+              [],
             ];
           }
         });
