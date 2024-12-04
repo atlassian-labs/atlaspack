@@ -137,19 +137,7 @@ impl Cache {
     let mut package_json_files =
       find_package_json_files(self.fs.clone(), &root_dir.join("node_modules"))?;
 
-    // Sort the files by shortest file path and the alphabetical.
-    // This ensures deterministic results and also favors duplicates that are
-    // less nested
-    package_json_files.sort_by(|a, b| {
-      let a_len = a.to_string_lossy().len();
-      let b_len = b.to_string_lossy().len();
-
-      if a_len == b_len {
-        a.cmp(b)
-      } else {
-        a_len.cmp(&b_len)
-      }
-    });
+    package_json_files.sort();
 
     let packages: Vec<Arc<Result<Arc<PackageJson>, ResolverError>>> = package_json_files
       .par_iter()
@@ -299,15 +287,24 @@ fn find_package_json_files(fs: FileSystemRef, base_path: &Path) -> anyhow::Resul
           let path = entry.path();
           if path.is_dir() && (should_traverse || path.ends_with("node_modules")) {
             // Recursively attempt to find package.json files and propagate errors
-            find_package_json_files(fs.clone(), &path)
-          } else if path
+            return find_package_json_files(fs.clone(), &path);
+          }
+
+          if path
             .file_name()
             .is_some_and(|file_name| file_name == "package.json")
+            &&
+          // Only match on paths that contain multiple node_modules directories
+          path
+              .components()
+              .filter(|component| component.as_os_str().to_string_lossy() == "node_modules")
+              .count()
+              > 1
           {
-            Ok(vec![path])
-          } else {
-            Ok(Vec::new())
+            return Ok(vec![path]);
           }
+
+          Ok(Vec::new())
         }
         Err(error) => Err(anyhow!("Failure reading entry {}", error)),
       }
@@ -343,10 +340,10 @@ mod test {
     assert_eq!(
       cache
         .package_duplicates
-        .get(&root().join("node_modules/duplicate-tester/node_modules/duplicate/package.json"))
+        .get(&root().join("node_modules/duplicate-tester-2/node_modules/duplicate/package.json"))
         .unwrap()
         .path,
-      root().join("node_modules/duplicate/package.json")
+      root().join("node_modules/duplicate-tester/node_modules/duplicate/package.json")
     );
   }
 }
