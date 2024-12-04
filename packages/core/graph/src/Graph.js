@@ -13,14 +13,15 @@ import {BitSet} from './BitSet';
 import nullthrows from 'nullthrows';
 
 export type NullEdgeType = 1;
-export type GraphOpts<TNode, TEdgeType: number = 1> = {|
+export const NULL_EDGE_TYPE: NullEdgeType = 1;
+export type GraphOpts<TNode, TEdgeType: number = NullEdgeType> = {|
   nodes?: Array<TNode | null>,
   adjacencyList?: SerializedAdjacencyList<TEdgeType>,
   rootNodeId?: ?NodeId,
   initialCapacity?: number,
 |};
 
-export type SerializedGraph<TNode, TEdgeType: number = 1> = {|
+export type SerializedGraph<TNode, TEdgeType: number = NullEdgeType> = {|
   nodes: Array<TNode | null>,
   adjacencyList: SerializedAdjacencyList<TEdgeType>,
   rootNodeId: ?NodeId,
@@ -74,7 +75,7 @@ export type DFSParams<TContext> = {|
   startNodeId?: ?NodeId,
 |};
 
-export default class Graph<TNode, TEdgeType: number = 1> {
+export default class Graph<TNode, TEdgeType: number = NullEdgeType> {
   nodes: Array<TNode | null>;
   adjacencyList: AdjacencyList<TEdgeType>;
   rootNodeId: ?NodeId;
@@ -138,7 +139,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
   addEdge(
     from: NodeId,
     to: NodeId,
-    type: TEdgeType | NullEdgeType = 1,
+    type: TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
   ): boolean {
     if (Number(type) === 0) {
       throw new Error(`Edge type "${type}" not allowed`);
@@ -158,7 +159,10 @@ export default class Graph<TNode, TEdgeType: number = 1> {
   hasEdge(
     from: NodeId,
     to: NodeId,
-    type?: TEdgeType | NullEdgeType | Array<TEdgeType | NullEdgeType> = 1,
+    type?:
+      | TEdgeType
+      | NullEdgeType
+      | Array<TEdgeType | NullEdgeType> = NULL_EDGE_TYPE,
   ): boolean {
     return this.adjacencyList.hasEdge(from, to, type);
   }
@@ -166,7 +170,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
   forEachNodeIdConnectedTo(
     to: NodeId,
     fn: (nodeId: NodeId) => boolean | void,
-    type: AllEdgeTypes | TEdgeType | NullEdgeType = 1,
+    type: AllEdgeTypes | TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
   ) {
     this._assertHasNodeId(to);
 
@@ -176,7 +180,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
   forEachNodeIdConnectedFrom(
     from: NodeId,
     fn: (nodeId: NodeId) => void,
-    type: AllEdgeTypes | TEdgeType | NullEdgeType = 1,
+    type: AllEdgeTypes | TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
   ) {
     this._assertHasNodeId(from);
 
@@ -196,7 +200,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
       | TEdgeType
       | NullEdgeType
       | Array<TEdgeType | NullEdgeType>
-      | AllEdgeTypes = 1,
+      | AllEdgeTypes = NULL_EDGE_TYPE,
   ): Array<NodeId> {
     this._assertHasNodeId(nodeId);
 
@@ -209,7 +213,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
       | TEdgeType
       | NullEdgeType
       | Array<TEdgeType | NullEdgeType>
-      | AllEdgeTypes = 1,
+      | AllEdgeTypes = NULL_EDGE_TYPE,
   ): Array<NodeId> {
     this._assertHasNodeId(nodeId);
 
@@ -240,7 +244,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
     this.nodes[nodeId] = null;
   }
 
-  removeEdges(nodeId: NodeId, type: TEdgeType | NullEdgeType = 1) {
+  removeEdges(nodeId: NodeId, type: TEdgeType | NullEdgeType = NULL_EDGE_TYPE) {
     if (!this.hasNode(nodeId)) {
       return;
     }
@@ -253,7 +257,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
   removeEdge(
     from: NodeId,
     to: NodeId,
-    type: TEdgeType | NullEdgeType = 1,
+    type: TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
     removeOrphans: boolean = true,
   ) {
     if (!this.adjacencyList.hasEdge(from, to, type)) {
@@ -269,7 +273,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
   _removeEdge(
     from: NodeId,
     to: NodeId,
-    type: TEdgeType | NullEdgeType = 1,
+    type: TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
     removeOrphans: boolean = true,
   ) {
     if (!this.adjacencyList.hasEdge(from, to, type)) {
@@ -325,7 +329,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
     fromNodeId: NodeId,
     toNodeIds: $ReadOnlyArray<NodeId>,
     replaceFilter?: null | ((NodeId) => boolean),
-    type?: TEdgeType | NullEdgeType = 1,
+    type?: TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
   ): void {
     this._assertHasNodeId(fromNodeId);
 
@@ -355,7 +359,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
       | TEdgeType
       | NullEdgeType
       | Array<TEdgeType | NullEdgeType>
-      | AllEdgeTypes = 1,
+      | AllEdgeTypes = NULL_EDGE_TYPE,
   ): ?TContext {
     let enter = typeof visit === 'function' ? visit : visit.enter;
     if (
@@ -389,7 +393,7 @@ export default class Graph<TNode, TEdgeType: number = 1> {
       | TEdgeType
       | NullEdgeType
       | Array<TEdgeType | NullEdgeType>
-      | AllEdgeTypes = 1,
+      | AllEdgeTypes = NULL_EDGE_TYPE,
   ): ?TContext {
     return this.dfs({
       visit,

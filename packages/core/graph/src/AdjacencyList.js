@@ -3,7 +3,12 @@ import assert from 'assert';
 import nullthrows from 'nullthrows';
 import {SharedBuffer} from './shared-buffer';
 import {fromNodeId, toNodeId} from './types';
-import {ALL_EDGE_TYPES, type NullEdgeType, type AllEdgeTypes} from './Graph';
+import {
+  ALL_EDGE_TYPES,
+  NULL_EDGE_TYPE,
+  type NullEdgeType,
+  type AllEdgeTypes,
+} from './Graph';
 import type {NodeId} from './types';
 
 /** The address of the node in the nodes map. */
@@ -116,7 +121,7 @@ const MAX_LINK_TRIES: 3 = 3;
  * `getInboundEdgesByType` methods.
  *
  */
-export default class AdjacencyList<TEdgeType: number = 1> {
+export default class AdjacencyList<TEdgeType: number = NullEdgeType> {
   #nodes: NodeTypeMap<TEdgeType | NullEdgeType>;
   #edges: EdgeTypeMap<TEdgeType | NullEdgeType>;
 
@@ -363,7 +368,7 @@ export default class AdjacencyList<TEdgeType: number = 1> {
   addEdge(
     from: NodeId,
     to: NodeId,
-    type: TEdgeType | NullEdgeType = 1,
+    type: TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
   ): boolean {
     assert(from < this.#nodes.nextId, `Node ${from} does not exist.`);
     assert(to < this.#nodes.nextId, `Node ${to} does not exist.`);
@@ -433,7 +438,10 @@ export default class AdjacencyList<TEdgeType: number = 1> {
   hasEdge(
     from: NodeId,
     to: NodeId,
-    type: TEdgeType | NullEdgeType | Array<TEdgeType | NullEdgeType> = 1,
+    type:
+      | TEdgeType
+      | NullEdgeType
+      | Array<TEdgeType | NullEdgeType> = NULL_EDGE_TYPE,
   ): boolean {
     let hasEdge = (type: TEdgeType | NullEdgeType) => {
       let hash = this.#edges.hash(from, to, type);
@@ -458,7 +466,7 @@ export default class AdjacencyList<TEdgeType: number = 1> {
   removeEdge(
     from: NodeId,
     to: NodeId,
-    type: TEdgeType | NullEdgeType = 1,
+    type: TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
   ): void {
     let hash = this.#edges.hash(from, to, type);
     let edge = this.#edges.addressOf(hash, from, to, type);
@@ -568,7 +576,7 @@ export default class AdjacencyList<TEdgeType: number = 1> {
       | AllEdgeTypes
       | TEdgeType
       | NullEdgeType
-      | Array<TEdgeType | NullEdgeType> = 1,
+      | Array<TEdgeType | NullEdgeType> = NULL_EDGE_TYPE,
   ): NodeId[] {
     let matches = (node) =>
       type === ALL_EDGE_TYPES ||
@@ -622,7 +630,7 @@ export default class AdjacencyList<TEdgeType: number = 1> {
   forEachNodeIdConnectedTo(
     to: NodeId,
     fn: (nodeId: NodeId) => boolean | void,
-    type: AllEdgeTypes | TEdgeType | NullEdgeType = 1,
+    type: AllEdgeTypes | TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
   ) {
     const matches = (node) =>
       type === ALL_EDGE_TYPES || type === this.#nodes.typeOf(node);
@@ -656,7 +664,7 @@ export default class AdjacencyList<TEdgeType: number = 1> {
       | AllEdgeTypes
       | TEdgeType
       | NullEdgeType
-      | Array<TEdgeType | NullEdgeType> = 1,
+      | Array<TEdgeType | NullEdgeType> = NULL_EDGE_TYPE,
   ): NodeId[] {
     let matches = (node) =>
       type === ALL_EDGE_TYPES ||
