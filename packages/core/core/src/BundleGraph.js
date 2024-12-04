@@ -1788,8 +1788,7 @@ export default class BundleGraph {
       },
     );
 
-    invariant(res != null, 'Expected an asset to be connected to a dependency');
-    let resNode = this._graph.getNode(res);
+    let resNode = res != null ? this._graph.getNode(res) : null;
     if (resNode?.type === 'asset') {
       return resNode.value;
     }
