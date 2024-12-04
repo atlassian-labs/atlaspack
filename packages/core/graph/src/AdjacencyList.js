@@ -619,16 +619,25 @@ export default class AdjacencyList<TEdgeType: number = 1> {
     }
   }
 
-  forEachNodeIdConnectedTo(to: NodeId, fn: (nodeId: NodeId) => boolean | void) {
+  forEachNodeIdConnectedTo(
+    to: NodeId,
+    fn: (nodeId: NodeId) => boolean | void,
+    type: AllEdgeTypes | TEdgeType | NullEdgeType = 1,
+  ) {
+    const matches = (node) =>
+      type === ALL_EDGE_TYPES || type === this.#nodes.typeOf(node);
+
     let node = this.#nodes.head(to);
     while (node !== null) {
-      let edge = this.#nodes.firstIn(node);
-      while (edge !== null) {
-        let from = this.#edges.from(edge);
-        if (fn(from)) {
-          return;
+      if (matches(node)) {
+        let edge = this.#nodes.firstIn(node);
+        while (edge !== null) {
+          let from = this.#edges.from(edge);
+          if (fn(from)) {
+            return;
+          }
+          edge = this.#edges.nextIn(edge);
         }
-        edge = this.#edges.nextIn(edge);
       }
       node = this.#nodes.next(node);
     }
