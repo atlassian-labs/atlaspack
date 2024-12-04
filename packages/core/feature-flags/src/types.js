@@ -25,10 +25,6 @@ export type FeatureFlags = {|
    */
   fixQuadraticCacheInvalidation: ConsistencyCheckFeatureFlagValue,
   /**
-   * Enable rust based inline requires optimization
-   */
-  fastOptimizeInlineRequires: boolean,
-  /**
    * Enables an experimental "conditional bundling" API - this allows the use of `importCond` syntax
    * in order to have (consumer) feature flag driven bundling. This feature is very experimental,
    * and requires server-side support.
