@@ -22,7 +22,7 @@ pub enum ErrorKind {
 /// This is a user facing error for Atlaspack.
 ///
 /// Usually but not always this is linked to a source-code location.
-#[derive(Builder, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Builder, Debug, Deserialize, PartialEq, Serialize, Clone)]
 #[builder(derive(Debug))]
 #[serde(rename_all = "camelCase")]
 pub struct Diagnostic {
@@ -59,6 +59,13 @@ impl Display for Diagnostic {
   }
 }
 
+impl TryFrom<anyhow::Error> for Diagnostic {
+  type Error = anyhow::Error;
+
+  fn try_from(value: anyhow::Error) -> Result<Self, Self::Error> {
+    value.downcast()
+  }
+}
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Language(FileType);
 
@@ -119,7 +126,6 @@ impl From<PathBuf> for CodeFrame {
     }
   }
 }
-
 /// Represents a snippet of code to highlight
 #[derive(Serialize, Default, Deserialize, Debug, PartialEq, Clone)]
 pub struct CodeHighlight {

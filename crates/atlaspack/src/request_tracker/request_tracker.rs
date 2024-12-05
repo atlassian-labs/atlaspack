@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
 
@@ -14,6 +13,7 @@ use atlaspack_filesystem::FileSystemRef;
 
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
+use crate::AtlaspackError;
 
 use super::Request;
 use super::RequestEdgeType;
@@ -224,7 +224,7 @@ impl RequestTracker {
 
     *request_node = match result {
       Ok(result) => RequestNode::Valid(result.clone()),
-      Err(error) => RequestNode::Error(anyhow!(error.to_string())),
+      Err(error) => RequestNode::Error(AtlaspackError::from(error).into()),
     };
 
     Ok(())
@@ -249,7 +249,7 @@ impl RequestTracker {
     match request_node {
       RequestNode::Root => Err(diagnostic_error!("Impossible")),
       RequestNode::Incomplete => Err(diagnostic_error!("Impossible")),
-      RequestNode::Error(error) => Err(anyhow!(error.to_string())),
+      RequestNode::Error(error) => Err(AtlaspackError::from(error).into()),
       RequestNode::Valid(value) => Ok(value.result.clone()),
     }
   }
