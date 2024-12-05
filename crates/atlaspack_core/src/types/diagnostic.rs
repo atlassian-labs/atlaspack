@@ -59,13 +59,6 @@ impl Display for Diagnostic {
   }
 }
 
-impl TryFrom<anyhow::Error> for Diagnostic {
-  type Error = anyhow::Error;
-
-  fn try_from(value: anyhow::Error) -> Result<Self, Self::Error> {
-    value.downcast()
-  }
-}
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Language(FileType);
 
