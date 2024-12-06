@@ -483,17 +483,27 @@ function getLoaderRuntime({
       bundle,
     )) {
       // This bundle has a conditional dependency, we need to load the bundle group
-
-      // Load conditional bundles with helper (and a dev mode with additional hints)
-      loaderModules.push(
-        `require('./helpers/conditional-loader${
-          options.mode === 'development' ? '-dev' : ''
-        }')('${cond.key}', function (){return Promise.all([${cond.ifTrueBundles
-          .map((targetBundle) => getLoaderForBundle(bundle, targetBundle))
-          .join(',')}]);}, function (){return Promise.all([${cond.ifFalseBundles
-          .map((targetBundle) => getLoaderForBundle(bundle, targetBundle))
-          .join(',')}]);})`,
+      const ifTrueLoaders = cond.ifTrueBundles.map((targetBundle) =>
+        getLoaderForBundle(bundle, targetBundle),
       );
+      const ifFalseLoaders = cond.ifFalseBundles.map((targetBundle) =>
+        getLoaderForBundle(bundle, targetBundle),
+      );
+
+      if (ifTrueLoaders.length > 0 || ifFalseLoaders.length > 0) {
+        // Load conditional bundles with helper (and a dev mode with additional hints)
+        loaderModules.push(
+          `require('./helpers/conditional-loader${
+            options.mode === 'development' ? '-dev' : ''
+          }')('${
+            cond.key
+          }', function (){return Promise.all([${ifTrueLoaders.join(
+            ',',
+          )}]);}, function (){return Promise.all([${ifFalseLoaders.join(
+            ',',
+          )}]);})`,
+        );
+      }
     }
   }
 

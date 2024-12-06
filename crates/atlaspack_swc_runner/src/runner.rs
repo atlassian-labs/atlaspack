@@ -116,7 +116,7 @@ fn run_with_transformation<R>(
   );
 
   let mut parser = Parser::new_from(lexer);
-  let module = parser
+  let mut module = parser
     .parse_module()
     .map_err(RunWithTransformationError::SwcParse)?;
 
@@ -125,7 +125,7 @@ fn run_with_transformation<R>(
     || -> Result<RunWithTransformationOutput<R>, RunWithTransformationError> {
       let global_mark = Mark::new();
       let unresolved_mark = Mark::new();
-      let mut module = module.fold_with(&mut resolver(unresolved_mark, global_mark, false));
+      module.visit_mut_with(&mut resolver(unresolved_mark, global_mark, false));
 
       let context = RunContext {
         source_map: source_map.clone(),

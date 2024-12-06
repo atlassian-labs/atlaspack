@@ -47,7 +47,7 @@
     "@atlaspack/types": "2.12.0",
     "@atlaspack/utils": "2.12.0",
     "@atlaspack/workers": "2.12.0",
-    "@swc/core": "^1.7.26",
+    "@swc/core": "^1.10.0",
     "semver": "^7.5.2"
   },
   "devDependencies": {
