@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use atlaspack_core::types::Code;
 use atlaspack_core::types::FileType;
-use atlaspack_js_swc_core::utils::Diagnostic as LegacyDiagnostic;
+use atlaspack_js_swc_core::utils::Diagnostic as ClassicDiagnostic;
 
 use atlaspack_core::types::CodeFrame;
 use atlaspack_core::types::CodeHighlight;
@@ -22,7 +22,7 @@ pub struct MapDiagnosticOptions {
 }
 
 pub fn map_diagnostics(
-  diagnostics: Vec<LegacyDiagnostic>,
+  diagnostics: Vec<ClassicDiagnostic>,
   options: MapDiagnosticOptions,
 ) -> Diagnostics {
   let mut mapped = Diagnostics::default();
@@ -35,7 +35,7 @@ pub fn map_diagnostics(
 }
 
 pub fn map_diagnostic(
-  input: LegacyDiagnostic,
+  input: ClassicDiagnostic,
   MapDiagnosticOptions {
     source_code,
     file_type,
