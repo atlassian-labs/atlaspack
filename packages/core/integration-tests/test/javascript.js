@@ -1342,17 +1342,20 @@ describe('javascript', function () {
     assert.deepEqual(output(), false);
   });
 
-  it('should insert environment variables inserted by a prior transform', async () => {
-    let b = await bundle(
-      path.join(__dirname, '/integration/env-prior-transform/index.js'),
-    );
+  it.v2(
+    'should insert environment variables inserted by a prior transform',
+    async () => {
+      let b = await bundle(
+        path.join(__dirname, '/integration/env-prior-transform/index.js'),
+      );
 
-    let jsBundle = b.getBundles()[0];
-    let contents = await outputFS.readFile(jsBundle.filePath, 'utf8');
+      let jsBundle = b.getBundles()[0];
+      let contents = await outputFS.readFile(jsBundle.filePath, 'utf8');
 
-    assert(!contents.includes('process.env'));
-    assert.equal(await run(b), 'test');
-  });
+      assert(!contents.includes('process.env'));
+      assert.equal(await run(b), 'test');
+    },
+  );
 
   it('should not insert environment variables in node environment', async function () {
     let b = await bundle(
@@ -3230,46 +3233,43 @@ describe('javascript', function () {
     );
   });
 
-  it.v2(
-    'can run an async bundle that depends on a nonentry asset in a sibling',
-    async () => {
-      let b = await bundle(
-        ['index.js', 'other-entry.js'].map((basename) =>
-          path.join(
-            __dirname,
-            '/integration/async-entry-shared-sibling',
-            basename,
-          ),
+  it('can run an async bundle that depends on a nonentry asset in a sibling', async () => {
+    let b = await bundle(
+      ['index.js', 'other-entry.js'].map((basename) =>
+        path.join(
+          __dirname,
+          '/integration/async-entry-shared-sibling',
+          basename,
         ),
-      );
+      ),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'js-loader.js',
-            'esmodule-helpers.js',
-          ],
-        },
-        {
-          name: 'other-entry.js',
-          assets: [
-            'other-entry.js',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'js-loader.js',
-          ],
-        },
-        {assets: ['a.js', 'value.js', 'esmodule-helpers.js']},
-        {assets: ['b.js']},
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: [
+          'index.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'esmodule-helpers.js',
+        ],
+      },
+      {
+        name: 'other-entry.js',
+        assets: [
+          'other-entry.js',
+          'bundle-url.js',
+          'cacheLoader.js',
+          'js-loader.js',
+        ],
+      },
+      {assets: ['a.js', 'value.js', 'esmodule-helpers.js']},
+      {assets: ['b.js']},
+    ]);
 
-      assert.deepEqual(await (await run(b)).default, 43);
-    },
-  );
+    assert.deepEqual(await (await run(b)).default, 43);
+  });
 
   it('can share sibling bundles reachable from a common dependency', async () => {
     let b = await bundle(
@@ -3403,21 +3403,24 @@ describe('javascript', function () {
 
   // Enable this for v3 once hmr options is supported in the js_transformer
 
-  it('should not use arrow functions for reexport declarations unless supported', async function () {
-    // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
-    let b = await bundle(
-      path.join(__dirname, 'integration/js-export-arrow-support/index.js'),
-      {
-        // Remove comments containing "=>"
-        defaultTargetOptions: {
-          shouldOptimize: true,
+  it.v2(
+    'should not use arrow functions for reexport declarations unless supported',
+    async function () {
+      // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
+      let b = await bundle(
+        path.join(__dirname, 'integration/js-export-arrow-support/index.js'),
+        {
+          // Remove comments containing "=>"
+          defaultTargetOptions: {
+            shouldOptimize: true,
+          },
         },
-      },
-    );
+      );
 
-    let content = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-    assert(!content.includes('=>'));
-  });
+      let content = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(!content.includes('=>'));
+    },
+  );
 
   it('should support classes that extend from another using default browsers', async () => {
     await fsFixture(overlayFS, __dirname)`
