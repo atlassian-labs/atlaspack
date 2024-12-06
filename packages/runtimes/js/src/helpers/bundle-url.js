@@ -35,15 +35,8 @@ function getBaseURL(url) {
   );
 }
 
-// TODO: Replace uses with `new URL(url).origin` when ie11 is no longer supported.
 function getOrigin(url) {
-  let matches = ('' + url).match(
-    /(https?|file|ftp|(chrome|moz|safari-web)-extension):\/\/[^/]+/,
-  );
-  if (!matches) {
-    throw new Error('Origin not found');
-  }
-  return matches[0];
+  return new URL(url).origin;
 }
 
 exports.getBundleURL = getBundleURLCached;
