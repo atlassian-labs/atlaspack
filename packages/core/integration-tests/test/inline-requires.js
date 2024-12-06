@@ -94,7 +94,7 @@ describe('inline requires', () => {
     );
   });
 
-  it('keeps source-maps working', async () => {
+  it.v2('keeps source-maps working', async () => {
     await fsFixture(overlayFS, __dirname)`
         inline-requires
           dependency/index.js:
