@@ -74,6 +74,10 @@ let bundleDependencies = new WeakMap<
 
 type JSRuntimeConfig = {|
   splitManifestThreshold: number,
+  domainSharding?: {|
+    maxShards: number,
+    cookieName: string,
+  |},
 |};
 
 let defaultConfig: JSRuntimeConfig = {
@@ -85,6 +89,19 @@ const CONFIG_SCHEMA: SchemaEntity = {
   properties: {
     splitManifestThreshold: {
       type: 'number',
+    },
+    domainSharding: {
+      type: 'object',
+      properties: {
+        maxShards: {
+          type: 'number',
+        },
+        cookieName: {
+          type: 'string',
+        },
+      },
+      additionalProperties: false,
+      required: ['maxShards', 'cookieName'],
     },
   },
   additionalProperties: false,
