@@ -1,8 +1,8 @@
 use atlaspack_contextual_imports::{
   ContextualImportsConfig, ContextualImportsInlineRequireVisitor,
 };
+use swc_core::ecma::ast::Program;
 use swc_core::ecma::visit::VisitMutWith;
-use swc_core::ecma::{ast::Program, visit::as_folder};
 use swc_core::plugin::{plugin_transform, proxies::TransformPluginProgramMetadata};
 
 #[plugin_transform]
@@ -16,10 +16,10 @@ pub fn process_transform(
     None => ContextualImportsConfig::default(),
   };
 
-  program.visit_mut_with(&mut as_folder(ContextualImportsInlineRequireVisitor::new(
+  program.visit_mut_with(&mut ContextualImportsInlineRequireVisitor::new(
     metadata.unresolved_mark,
     config,
-  )));
+  ));
 
   program
 }
