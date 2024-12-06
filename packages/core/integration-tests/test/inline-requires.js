@@ -10,6 +10,7 @@ import {
   it,
   overlayFS,
 } from '@atlaspack/test-utils';
+import {SourceMapConsumer} from 'source-map';
 
 describe('inline requires', () => {
   let options = {
@@ -91,5 +92,84 @@ describe('inline requires', () => {
     }, 5000);
       `.trim(),
     );
+  });
+
+  it('keeps source-maps working', async () => {
+    await fsFixture(overlayFS, __dirname)`
+        inline-requires
+          dependency/index.js:
+            export function exportedFunction() {
+              throw new Error("Shouldn't be called");
+            }
+
+          other.js:
+            // this is here so that we don't scope hoist dependency/index.js
+            import {exportedFunction} from './dependency';
+            console.log(exportedFunction());
+
+          index.js:
+            import {exportedFunction} from './dependency';
+
+            import('./other');
+
+            setTimeout(() => {
+              exportedFunction();
+              console.log('line 7');
+            }, 5000);
+
+          dependency/package.json:
+            {
+              "sideEffects": false
+            }
+
+          .parcelrc:
+            {
+              "extends": "@atlaspack/config-default",
+              "transformers": {
+                "*.js": ["@atlaspack/transformer-js"]
+              },
+              "optimizers": {
+                "*.js": ["@atlaspack/optimizer-inline-requires"]
+              }
+            }
+    `;
+
+    const bundleGraph = await bundle(
+      path.join(__dirname, 'inline-requires/index.js'),
+      {
+        ...options,
+        // mode: 'development',
+        inputFS: overlayFS,
+        config: path.join(__dirname, 'inline-requires/.parcelrc'),
+        defaultTargetOptions: {
+          sourceMaps: true,
+        },
+      },
+    );
+    const bundles = bundleGraph.getBundles();
+    const mainBundle = bundles.find((b) => b.name === 'index.js');
+    const otherBundle = bundles.find((b) => b.name.includes('other'));
+    if (mainBundle == null) throw new Error('There was no JS bundle');
+    if (otherBundle == null) throw new Error('There was no JS bundle');
+    const bundleContents = overlayFS.readFileSync(mainBundle.filePath, 'utf8');
+    const sourceMapContents = overlayFS.readFileSync(
+      mainBundle.filePath + '.map',
+      'utf8',
+    );
+
+    const sourceMapConsumer = await new SourceMapConsumer(
+      JSON.parse(sourceMapContents),
+    );
+
+    const line =
+      bundleContents.split('\n').findIndex((line) => line.includes('line 7')) +
+      1;
+    expect(line).not.toEqual(-1);
+    const originalPosition = sourceMapConsumer.originalPositionFor({
+      line,
+      column: 10,
+    });
+    expect(originalPosition.line).toBe(7);
+    expect(originalPosition.source).toBe('inline-requires/index.js');
   });
 });

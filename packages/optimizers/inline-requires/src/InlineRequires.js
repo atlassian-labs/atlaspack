@@ -69,7 +69,7 @@ module.exports = new Optimizer<empty, BundleConfig>({
           sourceMap.extends(originalMap);
         }
       }
-      return {contents: result.code, map: originalMap};
+      return {contents: result.code, map: sourceMap};
     } catch (err) {
       logger.warn({
         origin: 'atlaspack-optimizer-experimental-inline-requires',
