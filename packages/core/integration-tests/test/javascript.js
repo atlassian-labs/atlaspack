@@ -1025,49 +1025,46 @@ describe('javascript', function () {
     assert(contents.includes('"file:///local-url.js"'));
   });
 
-  it.v2(
-    'should throw a codeframe for a missing raw asset with static URL and import.meta.url',
-    async function () {
-      let fixture = path.join(
-        __dirname,
-        'integration/import-raw-import-meta-url/missing.js',
-      );
-      let code = await inputFS.readFileSync(fixture, 'utf8');
-      await assert.rejects(() => bundle(fixture), {
-        name: 'BuildError',
-        diagnostics: [
-          {
-            codeFrames: [
-              {
-                filePath: fixture,
-                code,
-                codeHighlights: [
-                  {
-                    message: undefined,
-                    end: {
-                      column: 36,
-                      line: 1,
-                    },
-                    start: {
-                      column: 24,
-                      line: 1,
-                    },
+  it('should throw a codeframe for a missing raw asset with static URL and import.meta.url', async function () {
+    let fixture = path.join(
+      __dirname,
+      'integration/import-raw-import-meta-url/missing.js',
+    );
+    let code = await inputFS.readFileSync(fixture, 'utf8');
+    await assert.rejects(() => bundle(fixture), {
+      name: 'BuildError',
+      diagnostics: [
+        {
+          codeFrames: [
+            {
+              filePath: fixture,
+              code,
+              codeHighlights: [
+                {
+                  message: undefined,
+                  end: {
+                    column: 36,
+                    line: 1,
                   },
-                ],
-              },
-            ],
-            message: "Failed to resolve 'invalid.txt' from './missing.js'",
-            origin: '@atlaspack/core',
-          },
-          {
-            hints: [],
-            message: "Cannot load file './invalid.txt' in './'.",
-            origin: '@atlaspack/resolver-default',
-          },
-        ],
-      });
-    },
-  );
+                  start: {
+                    column: 24,
+                    line: 1,
+                  },
+                },
+              ],
+            },
+          ],
+          message: "Failed to resolve 'invalid.txt' from './missing.js'",
+          origin: '@atlaspack/core',
+        },
+        {
+          hints: [],
+          message: "Cannot load file './invalid.txt' in './'.",
+          origin: '@atlaspack/resolver-default',
+        },
+      ],
+    });
+  });
 
   it('should support importing a URL to a large raw asset', async function () {
     // 6 megabytes, which exceeds the threshold in summarizeRequest for buffering
@@ -1628,7 +1625,7 @@ describe('javascript', function () {
     },
   );
 
-  it.v2('should error on process.env mutations', async function () {
+  it('should error on process.env mutations', async function () {
     let filePath = path.join(__dirname, '/integration/env-mutate/index.js');
     await assert.rejects(bundle(filePath), {
       diagnostics: [
@@ -1728,116 +1725,113 @@ describe('javascript', function () {
     });
   });
 
-  it.v2(
-    'should warn on process.env mutations in node_modules',
-    async function () {
-      let logs = [];
-      let disposable = Logger.onLog((d) => {
-        if (d.level !== 'verbose') {
-          logs.push(d);
-        }
-      });
-      let b = await bundle(
-        path.join(__dirname, '/integration/env-mutate/warn.js'),
-      );
-      disposable.dispose();
+  it('should warn on process.env mutations in node_modules', async function () {
+    let logs = [];
+    let disposable = Logger.onLog((d) => {
+      if (d.level !== 'verbose') {
+        logs.push(d);
+      }
+    });
+    let b = await bundle(
+      path.join(__dirname, '/integration/env-mutate/warn.js'),
+    );
+    disposable.dispose();
 
-      assert.deepEqual(logs, [
-        {
-          type: 'log',
-          level: 'warn',
-          diagnostics: [
-            {
-              origin: '@atlaspack/transformer-js',
-              message: 'Mutating process.env is not supported',
-              hints: null,
-              codeFrames: [
-                {
-                  filePath: path.join(
-                    __dirname,
-                    '/integration/env-mutate/node_modules/foo/index.js',
-                  ),
-                  codeHighlights: [
-                    {
-                      message: undefined,
-                      start: {
-                        line: 1,
-                        column: 8,
-                      },
-                      end: {
-                        line: 1,
-                        column: 36,
-                      },
+    assert.deepEqual(logs, [
+      {
+        type: 'log',
+        level: 'warn',
+        diagnostics: [
+          {
+            origin: '@atlaspack/transformer-js',
+            message: 'Mutating process.env is not supported',
+            hints: null,
+            codeFrames: [
+              {
+                filePath: path.join(
+                  __dirname,
+                  '/integration/env-mutate/node_modules/foo/index.js',
+                ),
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 1,
+                      column: 8,
                     },
-                  ],
-                },
-              ],
-            },
-            {
-              origin: '@atlaspack/transformer-js',
-              message: 'Mutating process.env is not supported',
-              hints: null,
-              codeFrames: [
-                {
-                  filePath: path.join(
-                    __dirname,
-                    '/integration/env-mutate/node_modules/foo/index.js',
-                  ),
-                  codeHighlights: [
-                    {
-                      message: undefined,
-                      start: {
-                        line: 2,
-                        column: 8,
-                      },
-                      end: {
-                        line: 2,
-                        column: 35,
-                      },
+                    end: {
+                      line: 1,
+                      column: 36,
                     },
-                  ],
-                },
-              ],
-            },
-            {
-              origin: '@atlaspack/transformer-js',
-              message: 'Mutating process.env is not supported',
-              hints: null,
-              codeFrames: [
-                {
-                  filePath: path.join(
-                    __dirname,
-                    '/integration/env-mutate/node_modules/foo/index.js',
-                  ),
-                  codeHighlights: [
-                    {
-                      message: undefined,
-                      start: {
-                        line: 3,
-                        column: 8,
-                      },
-                      end: {
-                        line: 3,
-                        column: 30,
-                      },
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            origin: '@atlaspack/transformer-js',
+            message: 'Mutating process.env is not supported',
+            hints: null,
+            codeFrames: [
+              {
+                filePath: path.join(
+                  __dirname,
+                  '/integration/env-mutate/node_modules/foo/index.js',
+                ),
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 2,
+                      column: 8,
                     },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ]);
+                    end: {
+                      line: 2,
+                      column: 35,
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            origin: '@atlaspack/transformer-js',
+            message: 'Mutating process.env is not supported',
+            hints: null,
+            codeFrames: [
+              {
+                filePath: path.join(
+                  __dirname,
+                  '/integration/env-mutate/node_modules/foo/index.js',
+                ),
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 3,
+                      column: 8,
+                    },
+                    end: {
+                      line: 3,
+                      column: 30,
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
 
-      let output = [];
-      await run(b, {
-        output(o) {
-          output.push(o);
-        },
-      });
-      assert.deepEqual(output, ['foo', true, undefined]);
-    },
-  );
+    let output = [];
+    await run(b, {
+      output(o) {
+        output.push(o);
+      },
+    });
+    assert.deepEqual(output, ['foo', true, undefined]);
+  });
 
   it('should replace process.browser for target browser', async function () {
     let b = await bundle(
@@ -3192,7 +3186,7 @@ describe('javascript', function () {
     assert.deepEqual(await (await run(b)).default, [42, 43]);
   });
 
-  it.v2('should display a codeframe on a Terser parse error', async () => {
+  it('should display a codeframe on a Terser parse error', async () => {
     let fixture = path.join(__dirname, 'integration/terser-codeframe/index.js');
     let code = await inputFS.readFileSync(fixture, 'utf8');
     await assert.rejects(
@@ -3294,7 +3288,7 @@ describe('javascript', function () {
     }
   });
 
-  it.v2('should throw a diagnostic for unknown pipelines', async function () {
+  it('should throw a diagnostic for unknown pipelines', async function () {
     let fixture = path.join(__dirname, 'integration/pipeline-unknown/a.js');
     let code = await inputFS.readFileSync(fixture, 'utf8');
     await assert.rejects(() => bundle(fixture), {
@@ -3747,57 +3741,54 @@ describe('javascript', function () {
     assert.equal(await res, true);
   });
 
-  it.v2(
-    'should remap locations in diagnostics using the input source map',
-    async () => {
-      let fixture = path.join(
-        __dirname,
-        'integration/diagnostic-sourcemap/index.js',
-      );
-      let code = await inputFS.readFileSync(fixture, 'utf8');
-      await assert.rejects(
-        () =>
-          bundle(fixture, {
-            defaultTargetOptions: {
-              shouldOptimize: true,
-            },
-          }),
-        {
-          name: 'BuildError',
-          diagnostics: [
-            {
-              message: "Failed to resolve 'foo' from './index.js'",
-              origin: '@atlaspack/core',
-              codeFrames: [
-                {
-                  filePath: fixture,
-                  code,
-                  codeHighlights: [
-                    {
-                      message: undefined,
-                      start: {
-                        line: 11,
-                        column: 17,
-                      },
-                      end: {
-                        line: 11,
-                        column: 21,
-                      },
+  it('should remap locations in diagnostics using the input source map', async () => {
+    let fixture = path.join(
+      __dirname,
+      'integration/diagnostic-sourcemap/index.js',
+    );
+    let code = await inputFS.readFileSync(fixture, 'utf8');
+    await assert.rejects(
+      () =>
+        bundle(fixture, {
+          defaultTargetOptions: {
+            shouldOptimize: true,
+          },
+        }),
+      {
+        name: 'BuildError',
+        diagnostics: [
+          {
+            message: "Failed to resolve 'foo' from './index.js'",
+            origin: '@atlaspack/core',
+            codeFrames: [
+              {
+                filePath: fixture,
+                code,
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 11,
+                      column: 17,
                     },
-                  ],
-                },
-              ],
-            },
-            {
-              message: "Cannot find module 'foo'",
-              origin: '@atlaspack/resolver-default',
-              hints: [],
-            },
-          ],
-        },
-      );
-    },
-  );
+                    end: {
+                      line: 11,
+                      column: 21,
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            message: "Cannot find module 'foo'",
+            origin: '@atlaspack/resolver-default',
+            hints: [],
+          },
+        ],
+      },
+    );
+  });
 
   it('should reuse a bundle when its main asset (aka bundleroot) is imported sychronously', async function () {
     let b = await bundle(
@@ -3838,259 +3829,246 @@ describe('javascript', function () {
     ]);
   });
 
-  it.v2(
-    'should error on undeclared external dependencies for libraries',
-    async function () {
-      let fixture = path.join(
-        __dirname,
-        'integration/undeclared-external/index.js',
-      );
-      let pkg = path.join(
-        __dirname,
-        'integration/undeclared-external/package.json',
-      );
-      await assert.rejects(
-        () =>
-          bundle(fixture, {
-            mode: 'production',
-            defaultTargetOptions: {
-              shouldOptimize: false,
-            },
-          }),
-        {
-          name: 'BuildError',
-          diagnostics: [
-            {
-              message: "Failed to resolve 'lodash' from './index.js'",
-              origin: '@atlaspack/core',
-              codeFrames: [
-                {
-                  code: await inputFS.readFile(fixture, 'utf8'),
-                  filePath: fixture,
-                  codeHighlights: [
-                    {
-                      message: undefined,
-                      start: {
-                        line: 1,
-                        column: 19,
-                      },
-                      end: {
-                        line: 1,
-                        column: 26,
-                      },
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              message:
-                'External dependency "lodash" is not declared in package.json.',
-              origin: '@atlaspack/resolver-default',
-              codeFrames: [
-                {
-                  code: await inputFS.readFile(pkg, 'utf8'),
-                  filePath: pkg,
-                  language: 'json',
-                  codeHighlights: [
-                    {
-                      message: undefined,
-                      start: {
-                        line: 5,
-                        column: 3,
-                      },
-                      end: {
-                        line: 5,
-                        column: 16,
-                      },
-                    },
-                  ],
-                },
-              ],
-              hints: ['Add "lodash" as a dependency.'],
-            },
-          ],
-        },
-      );
-    },
-  );
-
-  it.v2(
-    'should error on undeclared helpers dependency for libraries',
-    async function () {
-      let fixture = path.join(
-        __dirname,
-        'integration/undeclared-external/helpers.js',
-      );
-      let pkg = path.join(
-        __dirname,
-        'integration/undeclared-external/package.json',
-      );
-      await assert.rejects(
-        () =>
-          bundle(fixture, {
-            mode: 'production',
-            defaultTargetOptions: {
-              shouldOptimize: false,
-            },
-          }),
-        {
-          name: 'BuildError',
-          diagnostics: [
-            {
-              message: md`Failed to resolve '${'@swc/helpers/cjs/_class_call_check.cjs'}' from '${normalizePath(
-                require.resolve(
-                  '@atlaspack/transformer-js/src/JSTransformer.js',
-                ),
-              )}'`,
-              origin: '@atlaspack/core',
-              codeFrames: [
-                {
-                  code: await inputFS.readFile(fixture, 'utf8'),
-                  filePath: fixture,
-                  codeHighlights: [
-                    {
-                      message: undefined,
-                      start: {
-                        line: 1,
-                        column: 1,
-                      },
-                      end: {
-                        line: 1,
-                        column: 1,
-                      },
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              message:
-                'External dependency "@swc/helpers" is not declared in package.json.',
-              origin: '@atlaspack/resolver-default',
-              codeFrames: [
-                {
-                  code: await inputFS.readFile(pkg, 'utf8'),
-                  filePath: pkg,
-                  language: 'json',
-                  codeHighlights: [
-                    {
-                      message: undefined,
-                      start: {
-                        line: 5,
-                        column: 3,
-                      },
-                      end: {
-                        line: 5,
-                        column: 16,
-                      },
-                    },
-                  ],
-                },
-              ],
-              hints: ['Add "@swc/helpers" as a dependency.'],
-            },
-          ],
-        },
-      );
-    },
-  );
-
-  it.v2(
-    'should error on mismatched helpers version for libraries',
-    async function () {
-      let fixture = path.join(
-        __dirname,
-        'integration/undeclared-external/helpers.js',
-      );
-      let pkg = path.join(
-        __dirname,
-        'integration/undeclared-external/package.json',
-      );
-      let pkgContents = JSON.stringify(
-        {
-          ...JSON.parse(await overlayFS.readFile(pkg, 'utf8')),
-          dependencies: {
-            '@swc/helpers': '^0.3.0',
+  it('should error on undeclared external dependencies for libraries', async function () {
+    let fixture = path.join(
+      __dirname,
+      'integration/undeclared-external/index.js',
+    );
+    let pkg = path.join(
+      __dirname,
+      'integration/undeclared-external/package.json',
+    );
+    await assert.rejects(
+      () =>
+        bundle(fixture, {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
           },
-        },
-        false,
-        2,
-      );
-      await overlayFS.mkdirp(path.dirname(pkg));
-      await overlayFS.writeFile(pkg, pkgContents);
-      await assert.rejects(
-        () =>
-          bundle(fixture, {
-            mode: 'production',
-            inputFS: overlayFS,
-            defaultTargetOptions: {
-              shouldOptimize: false,
-            },
-          }),
-        {
-          name: 'BuildError',
-          diagnostics: [
-            {
-              message: md`Failed to resolve '${'@swc/helpers/cjs/_class_call_check.cjs'}' from '${normalizePath(
-                require.resolve(
-                  '@atlaspack/transformer-js/src/JSTransformer.js',
-                ),
-              )}'`,
-              origin: '@atlaspack/core',
-              codeFrames: [
-                {
-                  code: await inputFS.readFile(fixture, 'utf8'),
-                  filePath: fixture,
-                  codeHighlights: [
-                    {
-                      message: undefined,
-                      start: {
-                        line: 1,
-                        column: 1,
-                      },
-                      end: {
-                        line: 1,
-                        column: 1,
-                      },
+        }),
+      {
+        name: 'BuildError',
+        diagnostics: [
+          {
+            message: "Failed to resolve 'lodash' from './index.js'",
+            origin: '@atlaspack/core',
+            codeFrames: [
+              {
+                code: await inputFS.readFile(fixture, 'utf8'),
+                filePath: fixture,
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 1,
+                      column: 19,
                     },
-                  ],
-                },
-              ],
-            },
-            {
-              message:
-                'External dependency "@swc/helpers" does not satisfy required semver range "^0.5.15".',
-              origin: '@atlaspack/resolver-default',
-              codeFrames: [
-                {
-                  code: pkgContents,
-                  filePath: pkg,
-                  language: 'json',
-                  codeHighlights: [
-                    {
-                      message: 'Found this conflicting requirement.',
-                      start: {
-                        line: 6,
-                        column: 21,
-                      },
-                      end: {
-                        line: 6,
-                        column: 28,
-                      },
+                    end: {
+                      line: 1,
+                      column: 26,
                     },
-                  ],
-                },
-              ],
-              hints: [
-                'Update the dependency on "@swc/helpers" to satisfy "^0.5.15".',
-              ],
-            },
-          ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            message:
+              'External dependency "lodash" is not declared in package.json.',
+            origin: '@atlaspack/resolver-default',
+            codeFrames: [
+              {
+                code: await inputFS.readFile(pkg, 'utf8'),
+                filePath: pkg,
+                language: 'json',
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 5,
+                      column: 3,
+                    },
+                    end: {
+                      line: 5,
+                      column: 16,
+                    },
+                  },
+                ],
+              },
+            ],
+            hints: ['Add "lodash" as a dependency.'],
+          },
+        ],
+      },
+    );
+  });
+
+  it('should error on undeclared helpers dependency for libraries', async function () {
+    let fixture = path.join(
+      __dirname,
+      'integration/undeclared-external/helpers.js',
+    );
+    let pkg = path.join(
+      __dirname,
+      'integration/undeclared-external/package.json',
+    );
+    await assert.rejects(
+      () =>
+        bundle(fixture, {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldOptimize: false,
+          },
+        }),
+      {
+        name: 'BuildError',
+        diagnostics: [
+          {
+            message: md`Failed to resolve '${'@swc/helpers/cjs/_class_call_check.cjs'}' from '${normalizePath(
+              require.resolve('@atlaspack/transformer-js/src/JSTransformer.js'),
+            )}'`,
+            origin: '@atlaspack/core',
+            codeFrames: [
+              {
+                code: await inputFS.readFile(fixture, 'utf8'),
+                filePath: fixture,
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 1,
+                      column: 1,
+                    },
+                    end: {
+                      line: 1,
+                      column: 1,
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            message:
+              'External dependency "@swc/helpers" is not declared in package.json.',
+            origin: '@atlaspack/resolver-default',
+            codeFrames: [
+              {
+                code: await inputFS.readFile(pkg, 'utf8'),
+                filePath: pkg,
+                language: 'json',
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 5,
+                      column: 3,
+                    },
+                    end: {
+                      line: 5,
+                      column: 16,
+                    },
+                  },
+                ],
+              },
+            ],
+            hints: ['Add "@swc/helpers" as a dependency.'],
+          },
+        ],
+      },
+    );
+  });
+
+  it('should error on mismatched helpers version for libraries', async function () {
+    let fixture = path.join(
+      __dirname,
+      'integration/undeclared-external/helpers.js',
+    );
+    let pkg = path.join(
+      __dirname,
+      'integration/undeclared-external/package.json',
+    );
+    let pkgContents = JSON.stringify(
+      {
+        ...JSON.parse(await overlayFS.readFile(pkg, 'utf8')),
+        dependencies: {
+          '@swc/helpers': '^0.3.0',
         },
-      );
-    },
-  );
+      },
+      false,
+      2,
+    );
+    await overlayFS.mkdirp(path.dirname(pkg));
+    await overlayFS.writeFile(pkg, pkgContents);
+    await assert.rejects(
+      () =>
+        bundle(fixture, {
+          mode: 'production',
+          inputFS: overlayFS,
+          defaultTargetOptions: {
+            shouldOptimize: false,
+          },
+        }),
+      {
+        name: 'BuildError',
+        diagnostics: [
+          {
+            message: md`Failed to resolve '${'@swc/helpers/cjs/_class_call_check.cjs'}' from '${normalizePath(
+              require.resolve('@atlaspack/transformer-js/src/JSTransformer.js'),
+            )}'`,
+            origin: '@atlaspack/core',
+            codeFrames: [
+              {
+                code: await inputFS.readFile(fixture, 'utf8'),
+                filePath: fixture,
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    start: {
+                      line: 1,
+                      column: 1,
+                    },
+                    end: {
+                      line: 1,
+                      column: 1,
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            message:
+              'External dependency "@swc/helpers" does not satisfy required semver range "^0.5.15".',
+            origin: '@atlaspack/resolver-default',
+            codeFrames: [
+              {
+                code: pkgContents,
+                filePath: pkg,
+                language: 'json',
+                codeHighlights: [
+                  {
+                    message: 'Found this conflicting requirement.',
+                    start: {
+                      line: 6,
+                      column: 21,
+                    },
+                    end: {
+                      line: 6,
+                      column: 28,
+                    },
+                  },
+                ],
+              },
+            ],
+            hints: [
+              'Update the dependency on "@swc/helpers" to satisfy "^0.5.15".',
+            ],
+          },
+        ],
+      },
+    );
+  });
 
   describe('multiple import types', function () {
     it('supports both static and dynamic imports to the same specifier in the same file', async function () {
@@ -4636,7 +4614,7 @@ describe('javascript', function () {
     },
   );
 
-  it.v2(`should also fail on recoverable parse errors`, async () => {
+  it(`should also fail on recoverable parse errors`, async () => {
     await fsFixture(overlayFS, __dirname)`
       js-recoverable-parse-errors
         index.js:
