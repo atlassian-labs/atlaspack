@@ -93,7 +93,7 @@ use swc_core::ecma::visit::VisitWith;
 use typeof_replacer::*;
 use utils::error_buffer_to_diagnostics;
 use utils::CodeHighlight;
-use utils::Diagnostic;
+pub use utils::Diagnostic;
 use utils::DiagnosticSeverity;
 use utils::ErrorBuffer;
 pub use utils::SourceLocation;
