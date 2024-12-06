@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use atlaspack_core::types::Code;
 use atlaspack_core::types::FileType;
-use atlaspack_js_swc_core::utils::Diagnostic as ClassicDiagnostic;
+use atlaspack_js_swc_core::Diagnostic as ClassicDiagnostic;
 
 use atlaspack_core::types::CodeFrame;
 use atlaspack_core::types::CodeHighlight;
