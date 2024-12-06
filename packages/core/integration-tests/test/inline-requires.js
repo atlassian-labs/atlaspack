@@ -167,7 +167,7 @@ describe('inline requires', () => {
     expect(line).not.toEqual(-1);
     const originalPosition = sourceMapConsumer.originalPositionFor({
       line,
-      column: 10,
+      column: 'console.log'.length + 3,
     });
     expect(originalPosition.line).toBe(7);
     expect(originalPosition.source).toBe('inline-requires/index.js');
