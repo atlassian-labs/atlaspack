@@ -6,6 +6,7 @@ use std::thread;
 
 use anyhow::anyhow;
 use atlaspack::AtlaspackError;
+use atlaspack_napi_helpers::JsResolvable;
 use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::LMDB;
 use napi::Env;
@@ -20,11 +21,12 @@ use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack::rpc::RpcFactoryRef;
 use atlaspack::Atlaspack;
 use atlaspack_core::types::AtlaspackOptions;
+use atlaspack_napi_helpers::ext::*;
+use atlaspack_napi_helpers::JsResult;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
 
 use super::file_system_napi::FileSystemNapi;
-use super::napi_result::NapiAtlaspackResult;
 use super::package_manager_napi::PackageManagerNapi;
 
 #[napi(object)]
@@ -120,8 +122,8 @@ impl AtlaspackNapi {
     &self,
     env: Env,
     options: AtlaspackNapiBuildOptions,
-  ) -> napi::Result<JsObject> {
-    let (deferred, promise) = env.create_deferred()?;
+  ) -> napi::Result<JsResolvable> {
+    let promise = env.create_resolvable()?;
 
     self.register_workers(&options)?;
 
@@ -133,10 +135,18 @@ impl AtlaspackNapi {
       let options = self.options.clone();
       let package_manager = self.package_manager.clone();
       let rpc = self.rpc.clone();
+      let promise = promise.clone();
 
       move || {
         let atlaspack = match Atlaspack::new(db, fs, options, package_manager, rpc) {
-          Err(error) => return deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
+          Err(error) => {
+            return promise.resolve(move |env| {
+              JsResult::error(
+                &env,
+                env.create_error(napi::Error::from_reason(format!("{:?}", error))),
+              )
+            })
+          }
           Ok(atlaspack) => atlaspack,
         };
 
@@ -145,21 +155,21 @@ impl AtlaspackNapi {
         // "deferred.resolve" closure executes on the JavaScript thread.
         // Errors are returned as a resolved value because they need to be serialized and are
         // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
-        deferred.resolve(move |env| match result {
-          Ok(asset_graph) => {
+        match result {
+          Ok(asset_graph) => promise.resolve(move |env| {
             let mut js_object = env.create_object()?;
 
             js_object.set_named_property("edges", env.to_js_value(&asset_graph.edges())?)?;
             js_object
               .set_named_property("nodes", asset_graph.serialize_nodes(MAX_STRING_LENGTH)?)?;
 
-            NapiAtlaspackResult::ok(&env, js_object)
-          }
-          Err(error) => {
+            JsResult::ok(&env, js_object)
+          }),
+          Err(error) => promise.resolve(move |env| {
             let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
-            NapiAtlaspackResult::error(&env, js_object)
-          }
-        })
+            JsResult::error(&env, js_object)
+          }),
+        }
       }
     });
 

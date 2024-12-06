@@ -1,12 +1,16 @@
-use napi::{bindgen_prelude::ToNapiValue, Env, JsObject};
+use napi::bindgen_prelude::ToNapiValue;
+use napi::Env;
+use napi::JsObject;
 
 /// This creates the following JavaScript tuple
 /// ```
-/// [result: any | null, error: any | null]
+/// type Ok<T> = [T, null]
+/// type Err<E> = [null, E]
+/// type Result<T, E> = Ok<T> | Err<E>
 /// ```
-pub struct NapiAtlaspackResult;
+pub struct JsResult;
 
-impl NapiAtlaspackResult {
+impl JsResult {
   /// This creates the following JavaScript tuple
   /// ```
   /// [JsAny, null]

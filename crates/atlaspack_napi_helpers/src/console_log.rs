@@ -8,7 +8,7 @@ use napi::NapiRaw;
 ///
 /// This function can be used to debug what data the pointers actually refer to
 ///
-pub fn console_log<T>(env: Env, args: &[T]) -> napi::Result<JsUndefined>
+pub fn console_log<T>(env: &Env, args: &[T]) -> napi::Result<JsUndefined>
 where
   T: NapiRaw,
 {
