@@ -1401,7 +1401,6 @@ impl<'a> Hoist<'a> {
 
 #[cfg(test)]
 mod tests {
-  use swc_core::common::chain;
   use swc_core::common::comments::SingleThreadedComments;
   use swc_core::common::sync::Lrc;
   use swc_core::common::FileName;
@@ -1451,7 +1450,11 @@ mod tests {
 
             let unresolved_mark = Mark::fresh(Mark::root());
             let global_mark = Mark::fresh(Mark::root());
-            let module = module.fold_with(&mut resolver(unresolved_mark, global_mark, false));
+            let program = Program::Module(module);
+            let module = program
+              .apply(&mut resolver(unresolved_mark, global_mark, false))
+              .module()
+              .expect("Module should be returned");
 
             let mut collect = Collect::new(
               source_map.clone(),
@@ -1470,7 +1473,11 @@ mod tests {
               (module, hoist.get_result())
             };
 
-            let module = module.fold_with(&mut chain!(hygiene(), fixer(Some(&comments))));
+            let program = Program::Module(module);
+            let module = program
+              .apply(&mut (hygiene(), fixer(Some(&comments))))
+              .module()
+              .expect("Module should be returned");
 
             let code = emit(source_map, comments, &module);
             (collect, code, res)
