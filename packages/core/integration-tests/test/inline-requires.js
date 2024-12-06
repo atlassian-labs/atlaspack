@@ -138,7 +138,6 @@ describe('inline requires', () => {
       path.join(__dirname, 'inline-requires/index.js'),
       {
         ...options,
-        // mode: 'development',
         inputFS: overlayFS,
         config: path.join(__dirname, 'inline-requires/.parcelrc'),
         defaultTargetOptions: {
