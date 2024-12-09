@@ -25,7 +25,7 @@ Error
 `.trim();
 };
 
-describe.only('bundle-url-shards helper', () => {
+describe('bundle-url-shards helper', () => {
   describe('getShardedBundleURL', () => {
     it('should shard a URL if the cookie is present', () => {
       const testBundle = 'test-bundle.123abc.js';
