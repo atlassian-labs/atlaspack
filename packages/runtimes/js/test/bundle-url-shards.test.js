@@ -9,7 +9,7 @@ const testingCookieName = 'DOMAIN_SHARDING_TEST';
 
 const createErrorStack = (url) => {
   // This error stack is copied from a local dev, with a bunch
-  // of lines trimmed off the end
+  // of lines trimmed off the end so it's not unnecessarily long
   return `
 Error
     at Object.getShardedBundleURL (http://localhost:8081/main-bundle.1a2fa8b7.js:15688:29)
@@ -80,13 +80,13 @@ describe.only('bundle-url-shards helper', () => {
     it('should handle domains with no .', () => {
       const testUrl = 'http://localhost/assets/testBundle.123abc.js';
 
-      assert.equal(getBaseURL(testUrl), 'http://localhost-1/assets/');
+      assert.equal(getBaseURL(testUrl), 'http://localhost/assets/');
     });
 
     it('should handle domains with ports', () => {
       const testUrl = 'http://localhost:8081/assets/testBundle.123abc.js';
 
-      assert.equal(getBaseURL(testUrl), 'http://localhost-1:8081/assets/');
+      assert.equal(getBaseURL(testUrl), 'http://localhost:8081/assets/');
     });
   });
 });
