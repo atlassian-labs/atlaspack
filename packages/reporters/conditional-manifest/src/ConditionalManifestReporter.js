@@ -1,5 +1,5 @@
 // @flow strict-local
-import {relative, join} from 'path';
+import {relative, join, dirname} from 'path';
 import {Reporter} from '@atlaspack/plugin';
 import type {
   Async,
@@ -58,6 +58,8 @@ async function report({
         null,
         2,
       );
+
+      await options.outputFS.mkdirp(dirname(conditionalManifestFilename));
 
       await options.outputFS.writeFile(
         conditionalManifestFilename,
