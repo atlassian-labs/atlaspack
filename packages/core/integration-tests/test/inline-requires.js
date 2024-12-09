@@ -94,7 +94,7 @@ describe('inline requires', () => {
     );
   });
 
-  it.v2('keeps source-maps working', async () => {
+  it('keeps source-maps working', async () => {
     await fsFixture(overlayFS, __dirname)`
         inline-requires
           dependency/index.js:
@@ -125,9 +125,6 @@ describe('inline requires', () => {
           .parcelrc:
             {
               "extends": "@atlaspack/config-default",
-              "transformers": {
-                "*.js": ["@atlaspack/transformer-js"]
-              },
               "optimizers": {
                 "*.js": ["@atlaspack/optimizer-inline-requires"]
               }
