@@ -198,6 +198,7 @@ export default (new Runtime({
           bundleGraph,
           bundleGroup: resolved.value,
           options,
+          shardingConfig: config.domainSharding,
         });
 
         if (loaderRuntime != null) {
@@ -288,7 +289,15 @@ export default (new Runtime({
       }
 
       // URL dependency or not, fall back to including a runtime that exports the url
-      assets.push(getURLRuntime(dependency, bundle, mainBundle, options));
+      assets.push(
+        getURLRuntime(
+          dependency,
+          bundle,
+          mainBundle,
+          options,
+          config.domainSharding,
+        ),
+      );
     }
 
     // In development, bundles can be created lazily. This means that the parent bundle may not
@@ -314,7 +323,11 @@ export default (new Runtime({
         );
         let loaderCode = `require(${JSON.stringify(
           loader,
-        )})( ${getAbsoluteUrlExpr(relativePathExpr, bundle)})`;
+        )})(${getAbsoluteUrlExpr(
+          relativePathExpr,
+          bundle,
+          config.domainSharding,
+        )})`;
         assets.push({
           filePath: __filename,
           code: loaderCode,
@@ -393,12 +406,14 @@ function getLoaderRuntime({
   bundleGroup,
   bundleGraph,
   options,
+  shardingConfig,
 }: {|
   bundle: NamedBundle,
   dependency: Dependency,
   bundleGroup: BundleGroup,
   bundleGraph: BundleGraph<NamedBundle>,
   options: PluginOptions,
+  shardingConfig: JSRuntimeConfig['domainSharding'],
 |}): ?RuntimeAsset {
   let loaders = getLoaders(bundle.env);
   if (loaders == null) {
@@ -440,6 +455,7 @@ function getLoaderRuntime({
   function getLoaderForBundle(
     bundle: NamedBundle,
     to: NamedBundle,
+    shardingConfig: JSRuntimeConfig['domainSharding'],
   ): string | void {
     let loader = loaders[to.type];
     if (!loader) {
@@ -476,7 +492,7 @@ function getLoaderRuntime({
       ? `require('./helpers/bundle-manifest').resolve(${JSON.stringify(
           to.publicId,
         )})`
-      : getAbsoluteUrlExpr(relativePathExpr, bundle);
+      : getAbsoluteUrlExpr(relativePathExpr, bundle, shardingConfig);
     let code = `require(${JSON.stringify(loader)})(${absoluteUrlExpr})`;
 
     // In development, clear the require cache when an error occurs so the
@@ -525,7 +541,7 @@ function getLoaderRuntime({
   }
 
   for (let to of externalBundles) {
-    let loaderModule = getLoaderForBundle(bundle, to);
+    let loaderModule = getLoaderForBundle(bundle, to, shardingConfig);
     if (loaderModule !== undefined) loaderModules.push(loaderModule);
   }
 
@@ -700,6 +716,7 @@ function getURLRuntime(
   from: NamedBundle,
   to: NamedBundle,
   options: PluginOptions,
+  shardingConfig: JSRuntimeConfig['domainSharding'],
 ): RuntimeAsset {
   let relativePathExpr = getRelativePathExpr(from, to, options);
   let code;
@@ -722,7 +739,11 @@ function getURLRuntime(
       )});`;
     }
   } else {
-    code = `module.exports = ${getAbsoluteUrlExpr(relativePathExpr, from)};`;
+    code = `module.exports = ${getAbsoluteUrlExpr(
+      relativePathExpr,
+      from,
+      shardingConfig,
+    )};`;
   }
 
   return {
@@ -792,7 +813,11 @@ function getRelativePathExpr(
   return res;
 }
 
-function getAbsoluteUrlExpr(relativePathExpr: string, bundle: NamedBundle) {
+function getAbsoluteUrlExpr(
+  relativePathExpr: string,
+  bundle: NamedBundle,
+  shardingConfig: JSRuntimeConfig['domainSharding'],
+) {
   if (
     (bundle.env.outputFormat === 'esmodule' &&
       bundle.env.supports('import-meta-url')) ||
@@ -800,9 +825,20 @@ function getAbsoluteUrlExpr(relativePathExpr: string, bundle: NamedBundle) {
   ) {
     // This will be compiled to new URL(url, import.meta.url) or new URL(url, 'file:' + __filename).
     return `new __parcel__URL__(${relativePathExpr}).toString()`;
-  } else {
-    return `require('./helpers/bundle-url').getBundleURL('${bundle.publicId}') + ${relativePathExpr}`;
   }
+
+  if (shardingConfig) {
+    const bundleUrlArgs = [
+      `'${bundle.publicId}'`,
+      `'${shardingConfig.cookieName}'`,
+      'document.cookie',
+      shardingConfig.maxShards,
+    ].join(', ');
+
+    return `require('./helpers/bundle-url-shards').getShardedBundleURL(${bundleUrlArgs}) + ${relativePathExpr}`;
+  }
+
+  return `require('./helpers/bundle-url').getBundleURL('${bundle.publicId}') + ${relativePathExpr}`;
 }
 
 function shouldUseRuntimeManifest(
