@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigFile;
+use atlaspack_core::diagnostic::error_kind;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::Engines;
@@ -22,6 +23,7 @@ use atlaspack_core::types::OutputFormat;
 use atlaspack_core::types::SourceType;
 use atlaspack_core::types::Target;
 use atlaspack_core::types::TargetSourceMapOptions;
+use atlaspack_core::AtlaspackError;
 use atlaspack_resolver::IncludeNodeModules;
 use package_json::BrowserField;
 use package_json::BrowsersList;
@@ -241,19 +243,14 @@ impl TargetRequest {
   ) -> Result<ConfigFile<PackageJson>, anyhow::Error> {
     // TODO Invalidations
     let mut config = match request_context.config().load_package_json::<PackageJson>() {
-      Err(err) => {
-        let diagnostic = err.downcast_ref::<Diagnostic>();
-
-        if diagnostic.is_some_and(|d| d.kind != ErrorKind::NotFound) {
-          return Err(err);
-        }
-
-        ConfigFile {
+      Err(err) => match err.diagnostic_name_matches(error_kind::NOT_FOUND) {
+        true => ConfigFile {
           contents: PackageJson::default(),
           path: PathBuf::default(),
           raw: String::default(),
-        }
-      }
+        },
+        false => return Err(err.into()),
+      },
       Ok(pkg) => pkg,
     };
 

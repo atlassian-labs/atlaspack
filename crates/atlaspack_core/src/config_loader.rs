@@ -6,8 +6,9 @@ use atlaspack_filesystem::FileSystemRef;
 use serde::de::DeserializeOwned;
 
 use crate::{
-  diagnostic_error,
-  types::{CodeFrame, CodeHighlight, DiagnosticBuilder, DiagnosticError, ErrorKind, File},
+  diagnostic::{error_kind, CodeFrame, CodeHighlight, Diagnostic},
+  types::File,
+  AtlaspackResult,
 };
 
 pub type ConfigLoaderRef = Arc<ConfigLoader>;
@@ -32,34 +33,34 @@ impl ConfigLoader {
   pub fn load_json_config<Config: DeserializeOwned>(
     &self,
     filename: &str,
-  ) -> Result<ConfigFile<Config>, DiagnosticError> {
+  ) -> AtlaspackResult<ConfigFile<Config>> {
     let path = find_ancestor_file(
       &*self.fs,
       &[filename],
       &self.search_path,
       &self.project_root,
     )
-    .ok_or_else(|| {
-      diagnostic_error!(DiagnosticBuilder::default()
-        .kind(ErrorKind::NotFound)
-        .message(format!(
-          "Unable to locate {filename} config file from {}",
-          self.search_path.display()
-        )))
+    .ok_or_else(|| Diagnostic {
+      message: format!(
+        "Unable to locate {filename} config file from {}",
+        self.search_path.display()
+      ),
+      name: Some(error_kind::NOT_FOUND.into()),
+      ..Default::default()
     })?;
 
     let code = self.fs.read_to_string(&path)?;
 
-    let contents = serde_json::from_str::<Config>(&code).map_err(|error| {
-      diagnostic_error!(DiagnosticBuilder::default()
-        .code_frames(vec![CodeFrame {
-          code_highlights: vec![CodeHighlight::from([error.line(), error.column()])],
-          ..CodeFrame::from(File {
-            contents: code.clone(),
-            path: path.clone()
-          })
-        }])
-        .message(format!("{error} in {}", path.display())))
+    let contents = serde_json::from_str::<Config>(&code).map_err(|error| Diagnostic {
+      message: format!("{error} in {}", path.display()),
+      code_frames: Some(vec![CodeFrame {
+        code_highlights: vec![CodeHighlight::from([error.line(), error.column()])],
+        ..CodeFrame::from(File {
+          contents: code.clone(),
+          path: path.clone(),
+        })
+      }]),
+      ..Default::default()
     })?;
 
     Ok(ConfigFile {
@@ -69,9 +70,7 @@ impl ConfigLoader {
     })
   }
 
-  pub fn load_package_json<Config: DeserializeOwned>(
-    &self,
-  ) -> Result<ConfigFile<Config>, anyhow::Error> {
+  pub fn load_package_json<Config: DeserializeOwned>(&self) -> AtlaspackResult<ConfigFile<Config>> {
     self.load_json_config::<Config>("package.json")
   }
 }

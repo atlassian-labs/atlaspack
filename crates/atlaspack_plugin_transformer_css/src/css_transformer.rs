@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
 use async_trait::async_trait;
+use atlaspack_core::diagnostic::error_kind;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::engines::{Engines, EnginesBrowsers};
@@ -12,6 +13,7 @@ use atlaspack_core::types::{
   Asset, AssetWithDependencies, Code, Dependency, Diagnostic, EnvironmentContext, ErrorKind,
   ExportsCondition, FileType, Priority, SourceMap, SpecifierType, Symbol,
 };
+use atlaspack_core::AtlaspackError;
 use lightningcss::css_modules::{CssModuleExport, CssModuleReference};
 use lightningcss::dependencies::DependencyOptions;
 use lightningcss::printer::PrinterOptions;
@@ -38,14 +40,9 @@ struct PackageJson {
 impl AtlaspackCssTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Result<Self, Error> {
     let config = ctx.config.load_package_json::<PackageJson>().map_or_else(
-      |err| {
-        let diagnostic = err.downcast_ref::<Diagnostic>();
-
-        if diagnostic.is_some_and(|d| d.kind != ErrorKind::NotFound) {
-          return Err(err);
-        }
-
-        Ok(CssTransformerConfig::default())
+      |err| match err.diagnostic_name_matches(error_kind::NOT_FOUND) {
+        true => Ok(Default::default()),
+        false => Err(err),
       },
       |config| Ok(config.contents.config.unwrap_or_default()),
     )?;

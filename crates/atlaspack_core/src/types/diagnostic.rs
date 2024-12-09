@@ -8,6 +8,7 @@ use std::{
   fmt::{Display, Formatter},
   path::PathBuf,
 };
+use thiserror::Error;
 
 use super::File;
 
@@ -44,7 +45,7 @@ pub enum ErrorKind {
 /// This is a user facing error for Atlaspack.
 ///
 /// Usually but not always this is linked to a source-code location.
-#[derive(Builder, Debug, Deserialize, PartialEq, Serialize, Clone)]
+#[derive(Error, Builder, Debug, Deserialize, PartialEq, Serialize, Clone)]
 #[builder(derive(Debug))]
 #[serde(rename_all = "camelCase")]
 pub struct Diagnostic {

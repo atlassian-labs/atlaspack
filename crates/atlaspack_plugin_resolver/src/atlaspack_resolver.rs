@@ -6,6 +6,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use atlaspack_core::diagnostic::error_kind;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::PluginOptions;
@@ -17,11 +18,11 @@ use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::types::BuildMode;
 use atlaspack_core::types::CodeFrame;
 use atlaspack_core::types::CodeHighlight;
-use atlaspack_core::types::Diagnostic;
 use atlaspack_core::types::DiagnosticBuilder;
 use atlaspack_core::types::EnvironmentContext;
 use atlaspack_core::types::ErrorKind;
 use atlaspack_core::types::SpecifierType;
+use atlaspack_core::AtlaspackError;
 use atlaspack_resolver::Cache;
 use atlaspack_resolver::CacheCow;
 use atlaspack_resolver::ExportsCondition;
@@ -64,14 +65,9 @@ struct PackageJson {
 impl AtlaspackResolver {
   pub fn new(ctx: &PluginContext) -> anyhow::Result<Self> {
     let config = ctx.config.load_package_json::<PackageJson>().map_or_else(
-      |err| {
-        let diagnostic = err.downcast_ref::<Diagnostic>();
-
-        if diagnostic.is_some_and(|d| d.kind != ErrorKind::NotFound) {
-          return Err(err);
-        }
-
-        Ok(ResolverConfig::default())
+      |err| match err.diagnostic_name_matches(error_kind::NOT_FOUND) {
+        true => Ok(Default::default()),
+        false => Err(err),
       },
       |config| Ok(config.contents.config.unwrap_or_default()),
     )?;

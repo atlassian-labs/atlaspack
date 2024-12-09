@@ -5,6 +5,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Error};
 
 use async_trait::async_trait;
+use atlaspack_core::diagnostic::error_kind;
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::browsers::Browsers;
@@ -13,6 +14,7 @@ use atlaspack_core::types::{
   Asset, BuildMode, Diagnostic, Diagnostics, ErrorKind, FileType, LogLevel, OutputFormat,
   SourceType,
 };
+use atlaspack_core::AtlaspackError;
 use glob_match::glob_match;
 use parking_lot::RwLock;
 use swc_core::atoms::Atom;
@@ -62,14 +64,9 @@ impl AtlaspackJsTransformerPlugin {
       .config
       .load_package_json::<JsTransformerPackageJson>()
       .map_or_else(
-        |err| {
-          let diagnostic = err.downcast_ref::<Diagnostic>();
-
-          if diagnostic.is_some_and(|d| d.kind != ErrorKind::NotFound) {
-            return Err(err);
-          }
-
-          Ok(JsTransformerConfig::default())
+        |err| match err.diagnostic_name_matches(error_kind::NOT_FOUND) {
+          true => Ok(Default::default()),
+          false => Err(err),
         },
         |config| Ok(config.contents.config.unwrap_or_default()),
       )?;
@@ -78,15 +75,12 @@ impl AtlaspackJsTransformerPlugin {
       .config
       .load_json_config::<TsConfig>("tsconfig.json")
       .map(|config| config.contents)
-      .map_err(|err| {
-        let diagnostic = err.downcast_ref::<Diagnostic>();
-
-        if diagnostic.is_some_and(|d| d.kind != ErrorKind::NotFound) {
-          return Err(err);
-        }
-
-        Ok(None::<TsConfig>)
-      })
+      .map_err(
+        |err| match err.diagnostic_name_matches(error_kind::NOT_FOUND) {
+          true => Ok(None::<TsConfig>),
+          false => Err(err),
+        },
+      )
       .ok();
 
     Ok(Self {

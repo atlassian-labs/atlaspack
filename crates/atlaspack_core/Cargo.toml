@@ -12,6 +12,7 @@ atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 caniuse_database = { path = "../caniuse_database" }
 
+thiserror = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 bitflags = { workspace = true }

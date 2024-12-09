@@ -475,6 +475,7 @@ dependencies = [
  "serde-value",
  "serde_json",
  "serde_repr",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-subscriber",
