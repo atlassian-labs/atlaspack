@@ -1,3 +1,5 @@
+import {getBaseURL} from './bundle-url-common';
+
 const bundleURL: Record<string, string> = {};
 
 export function getShardedBundleURL(
@@ -90,13 +92,4 @@ function removeTrailingShard(subdomain: string) {
 
   const shardIdx = subdomain.lastIndexOf('-');
   return subdomain.slice(0, shardIdx);
-}
-
-// Get the URL without the filename (last / segment)
-export function getBaseURL(url: string) {
-  return url.slice(0, url.lastIndexOf('/')) + '/';
-}
-
-export function getOrigin(url: string) {
-  return new URL(url).origin;
 }

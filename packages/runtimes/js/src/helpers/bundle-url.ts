@@ -1,6 +1,10 @@
-var bundleURL = {};
-function getBundleURLCached(id) {
-  var value = bundleURL[id];
+import {getBaseURL, getOrigin} from './bundle-url-common';
+
+const bundleURL = {};
+
+function getBundleURLCached(id: string) {
+  let value = bundleURL[id];
+
   if (!value) {
     value = getBundleURL();
     bundleURL[id] = value;
@@ -26,19 +30,8 @@ function getBundleURL() {
   return '/';
 }
 
-function getBaseURL(url) {
-  return (
-    ('' + url).replace(
-      /^((?:https?|file|ftp|(chrome|moz|safari-web)-extension):\/\/.+)\/[^/]+$/,
-      '$1',
-    ) + '/'
-  );
-}
-
-function getOrigin(url) {
+export function getOrigin(url: string) {
   return new URL(url).origin;
 }
 
-exports.getBundleURL = getBundleURLCached;
-exports.getBaseURL = getBaseURL;
-exports.getOrigin = getOrigin;
+export {getBundleURLCached as getBundleURL};
