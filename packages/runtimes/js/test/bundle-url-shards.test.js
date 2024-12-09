@@ -8,21 +8,20 @@ import {
 const testingCookieName = 'DOMAIN_SHARDING_TEST';
 
 const createErrorStack = (url) => {
-  // This error stack is copied from a local dev
+  // This error stack is copied from a local dev, with a bunch
+  // of lines trimmed off the end
   return `
 Error
-    at getShardedBundleURL (http://localhost:8081/main-entry-bundle.1a2fa8b7.js:13663:29)
-    at Object.getShardedBundleURLCached [as getShardedBundleURL] (http://localhost:8081/main-entry-bundle.1a2fa8b7.js:13639:17)
-    at jrxWb.d7fe7af8a40b5d68 (${url}?1733635254967:695:74)
-    at newRequire (http://localhost-4:8081/Heartbeat.bc74c821.js?1733635254967:71:24)
-    at localRequire (http://localhost-4:8081/Heartbeat.bc74c821.js?1733635254967:84:35)
-    at loader (http://localhost-4:8081/Heartbeat.bc74c821.js?1733635254967:691:29)
-    at runLoader (http://localhost:8081/dashboard-spa-container-jquery3.40388a2a.js:56535:20)
-    at Object.run (http://localhost:8081/dashboard-spa-container-jquery3.40388a2a.js:56211:28)
-    at TaskManager.<anonymous> (http://localhost:8081/dashboard-spa-container-jquery3.40388a2a.js:56132:33)
-    at invokeFunc (http://localhost:8081/dashboard-spa-container-jquery3.40388a2a.js:53665:23)
-    at trailingEdge (http://localhost:8081/dashboard-spa-container-jquery3.40388a2a.js:53697:42)
-    at timerExpired (http://localhost:8081/dashboard-spa-container-jquery3.40388a2a.js:53689:40)
+    at Object.getShardedBundleURL (http://localhost:8081/main-bundle.1a2fa8b7.js:15688:29)
+    at a7u9v.6d3ceb6ac67fea50 (${url}.1a2fa8b7.js:361466:46)
+    at newRequire (http://localhost:8081/main-bundle.1a2fa8b7.js:71:24)
+    at localRequire (http://localhost:8081/main-bundle.1a2fa8b7.js:84:35)
+    at 7H8wc.react-intl-next (http://localhost:8081/main-bundle.1a2fa8b7.js:279746:28)
+    at newRequire (http://localhost:8081/main-bundle.1a2fa8b7.js:71:24)
+    at localRequire (http://localhost:8081/main-bundle.1a2fa8b7.js:84:35)
+    at 1nL5S../manifest (http://localhost:8081/main-bundle.1a2fa8b7.js:279714:17)
+    at newRequire (http://localhost:8081/main-bundle.1a2fa8b7.js:71:24)
+    at localRequire (http://localhost:8081/main-bundle.1a2fa8b7.js:84:35)
 `.trim();
 };
 
