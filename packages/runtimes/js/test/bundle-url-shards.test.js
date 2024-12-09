@@ -64,6 +64,28 @@ describe.only('bundle-url-shards helper', () => {
 
       assert.equal(result, 'https://bundle-shard-4.assets.example.com/assets/');
     });
+
+    it('should not add a shard if the cookie is not present', () => {
+      const testBundle = 'UnshardedBundle.9z8x7y.js';
+
+      const err = new Error();
+      err.stack = createErrorStack(
+        'https://bundle-unsharded.assets.example.com/assets/ParentBundle.cba321.js',
+      );
+
+      const result = getShardedBundleURL(
+        testBundle,
+        testingCookieName,
+        `some.other.cookie=1`,
+        5,
+        err,
+      );
+
+      assert.equal(
+        result,
+        'https://bundle-unsharded.assets.example.com/assets/',
+      );
+    });
   });
 
   describe('getBaseUrl', () => {
