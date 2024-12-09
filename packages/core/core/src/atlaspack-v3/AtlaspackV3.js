@@ -6,6 +6,7 @@ import {
   type AtlaspackNapiOptions,
 } from '@atlaspack/rust';
 import {workerPool} from './WorkerPool';
+import ThrowableDiagnostic from '@atlaspack/diagnostic';
 
 export type AtlaspackV3Options = {|
   fs?: AtlaspackNapiOptions['fs'],
@@ -50,7 +51,8 @@ export class AtlaspackV3 {
 
   async buildAssetGraph(): Promise<any> {
     const workerIds = [];
-    let result = await this._internal.buildAssetGraph({
+
+    let [graph, error] = await this._internal.buildAssetGraph({
       registerWorker: (tx_worker) => {
         // $FlowFixMe
         const workerId = workerPool.registerWorker(tx_worker);
@@ -60,6 +62,12 @@ export class AtlaspackV3 {
 
     workerPool.releaseWorkers(workerIds);
 
-    return result;
+    if (error !== null) {
+      throw new ThrowableDiagnostic({
+        diagnostic: error,
+      });
+    }
+
+    return graph;
   }
 }

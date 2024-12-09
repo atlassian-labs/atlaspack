@@ -48,7 +48,6 @@ use pathdiff::diff_paths;
 use serde::Deserialize;
 use serde::Serialize;
 use std::io::{self};
-use swc_core::common::chain;
 use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::errors::Handler;
 use swc_core::common::pass::Optional;
@@ -74,25 +73,27 @@ use swc_core::ecma::preset_env::Mode::Entry;
 use swc_core::ecma::preset_env::Targets;
 use swc_core::ecma::preset_env::Version;
 use swc_core::ecma::preset_env::Versions;
+use swc_core::ecma::transforms::base::assumptions::Assumptions;
 use swc_core::ecma::transforms::base::fixer::fixer;
 use swc_core::ecma::transforms::base::fixer::paren_remover;
 use swc_core::ecma::transforms::base::helpers;
 use swc_core::ecma::transforms::base::hygiene::hygiene;
 use swc_core::ecma::transforms::base::resolver;
-use swc_core::ecma::transforms::base::Assumptions;
 use swc_core::ecma::transforms::compat::reserved_words::reserved_words;
 use swc_core::ecma::transforms::optimization::simplify::dead_branch_remover;
 use swc_core::ecma::transforms::optimization::simplify::expr_simplifier;
 use swc_core::ecma::transforms::proposal::decorators;
 use swc_core::ecma::transforms::react;
 use swc_core::ecma::transforms::typescript;
+use swc_core::ecma::visit::fold_pass;
+use swc_core::ecma::visit::visit_mut_pass;
+use swc_core::ecma::visit::FoldWith;
 use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
-use swc_core::ecma::visit::{as_folder, FoldWith};
 use typeof_replacer::*;
 use utils::error_buffer_to_diagnostics;
 use utils::CodeHighlight;
-use utils::Diagnostic;
+pub use utils::Diagnostic;
 use utils::DiagnosticSeverity;
 use utils::ErrorBuffer;
 pub use utils::SourceLocation;
@@ -277,7 +278,7 @@ pub fn transform(
                 result.magic_comments = magic_comment_visitor.magic_comments;
               }
 
-              let module = module.fold_with(&mut chain!(
+              let module = module.apply(&mut (
                 resolver(unresolved_mark, global_mark, config.is_type_script),
                 // Decorators can use type information, so must run before the TypeScript pass.
                 Optional::new(
@@ -313,25 +314,25 @@ pub fn transform(
               let is_module = module.is_module();
               // If it's a script, convert into module. This needs to happen after
               // the resolver (which behaves differently for non-/strict mode).
-              let module = match module {
-                Program::Module(module) => module,
-                Program::Script(script) => Module {
+              let mut module = match module {
+                Program::Module(module) => Program::Module(module),
+                Program::Script(script) => Program::Module(Module {
                   span: script.span,
                   shebang: None,
                   body: script.body.into_iter().map(ModuleItem::Stmt).collect(),
-                },
+                }),
               };
 
-              let mut module = module.fold_with(&mut Optional::new(
-                react::react(
-                  source_map.clone(),
-                  Some(&comments),
-                  react_options,
-                  global_mark,
-                  unresolved_mark,
-                ),
-                config.is_jsx,
-              ));
+              if config.is_jsx {
+                module = module.apply(&mut react::react(
+                    source_map.clone(),
+                    Some(&comments),
+                    react_options,
+                    global_mark,
+                    unresolved_mark,
+                  ),
+                );
+              }
 
               let mut preset_env_config = swc_core::ecma::preset_env::Config {
                 dynamic_import: true,
@@ -384,15 +385,15 @@ pub fn transform(
                 ));
               }
 
-              let module = {
-                let mut passes = chain!(
+              let mut module = {
+                let mut passes = (
                   Optional::new(
-                    as_folder(TypeofReplacer::new(unresolved_mark)),
+                    visit_mut_pass(TypeofReplacer::new(unresolved_mark)),
                     config.source_type != SourceType::Script,
                   ),
                   // Inline process.env and process.browser,
                   Optional::new(
-                    as_folder(EnvReplacer {
+                    visit_mut_pass(EnvReplacer {
                       replace_env: config.replace_env,
                       env: &config.env,
                       is_browser: config.is_browser,
@@ -410,7 +411,7 @@ pub fn transform(
                   dead_branch_remover(unresolved_mark),
                   // Inline Node fs.readFileSync calls
                   Optional::new(
-                    inline_fs(
+                    fold_pass(inline_fs(
                       config.filename.as_str(),
                       source_map.clone(),
                       unresolved_mark,
@@ -419,18 +420,18 @@ pub fn transform(
                       &mut fs_deps,
                       is_module,
                       config.conditional_bundling
-                    ),
+                    )),
                     should_inline_fs
                   ),
                 );
 
-                module.fold_with(&mut passes)
+                module.apply(&mut passes)
               };
 
-              let module = module.fold_with(
+              module.visit_mut_with(
                 // Replace __dirname and __filename with placeholders in Node env
                 &mut Optional::new(
-                  as_folder(NodeReplacer {
+                  NodeReplacer {
                     source_map: source_map.clone(),
                     items: &mut global_deps,
                     global_mark,
@@ -438,16 +439,16 @@ pub fn transform(
                     filename: Path::new(&config.filename),
                     unresolved_mark,
                     has_node_replacements: &mut result.has_node_replacements,
-                  }),
+                  },
                   config.node_replacer,
                 ),
               );
 
               let module = {
-                let mut passes = chain!(
+                let mut passes = (
                   // Insert dependencies for node globals
                   Optional::new(
-                    as_folder(GlobalReplacer {
+                    visit_mut_pass(GlobalReplacer {
                       source_map: source_map.clone(),
                       items: &mut global_deps,
                       global_mark,
@@ -474,7 +475,7 @@ pub fn transform(
                   helpers::inject_helpers(global_mark),
                 );
 
-                module.fold_with(&mut passes)
+                module.apply(&mut passes)
               };
 
               // Flush Id=(JsWord, SyntaxContexts) into unique names and reresolve to
@@ -483,7 +484,7 @@ pub fn transform(
               // This only needs to be done if preset_env ran because all other transforms
               // insert declarations with global_mark (even though they are generated).
               let module = if config.scope_hoist && should_run_preset_env {
-                module.fold_with(&mut chain!(
+                module.apply(&mut (
                   hygiene(),
                   resolver(unresolved_mark, global_mark, false)
                 ))
@@ -546,6 +547,7 @@ pub fn transform(
                 diagnostics.extend(bailouts.iter().map(|bailout| bailout.to_diagnostic()));
               }
 
+              let module = module.module().expect("Module should be a module at this point");
               let module = if config.scope_hoist {
                 let res = hoist(module, config.module_id.as_str(), unresolved_mark, &collect);
                 match res {
@@ -570,11 +572,13 @@ pub fn transform(
                 module
               };
 
-              let module = module.fold_with(&mut chain!(
+              let module = Program::Module(module);
+              let module = module.apply(&mut (
                 reserved_words(),
                 hygiene(),
                 fixer(Some(&comments)),
               ));
+              let module = module.module().expect("Module should be a module at this point");
 
               result.dependencies.extend(global_deps);
               result.dependencies.extend(fs_deps);

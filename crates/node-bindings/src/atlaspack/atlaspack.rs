@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::thread;
 
 use anyhow::anyhow;
+use atlaspack::AtlaspackError;
 use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::LMDB;
 use napi::Env;
@@ -23,6 +24,7 @@ use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
 
 use super::file_system_napi::FileSystemNapi;
+use super::napi_result::NapiAtlaspackResult;
 use super::package_manager_napi::PackageManagerNapi;
 
 #[napi(object)]
@@ -123,7 +125,7 @@ impl AtlaspackNapi {
 
     self.register_workers(&options)?;
 
-    // Both the atlaspack initialisation and build must be run a dedicated system thread so that
+    // Both the atlaspack initialization and build must be run a dedicated system thread so that
     // the napi threadsafe functions do not panic
     thread::spawn({
       let fs = self.fs.clone();
@@ -133,24 +135,31 @@ impl AtlaspackNapi {
       let rpc = self.rpc.clone();
 
       move || {
-        let atlaspack = Atlaspack::new(db, fs, options, package_manager, rpc);
-        let to_napi_error = |error| napi::Error::from_reason(format!("{:?}", error));
+        let atlaspack = match Atlaspack::new(db, fs, options, package_manager, rpc) {
+          Err(error) => return deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
+          Ok(atlaspack) => atlaspack,
+        };
 
-        match atlaspack {
-          Err(error) => deferred.reject(to_napi_error(error)),
-          Ok(atlaspack) => match atlaspack.build_asset_graph() {
-            Ok(asset_graph) => deferred.resolve(move |env| {
-              let mut js_object = env.create_object()?;
+        let result = atlaspack.build_asset_graph();
 
-              js_object.set_named_property("edges", env.to_js_value(&asset_graph.edges())?)?;
-              js_object
-                .set_named_property("nodes", asset_graph.serialize_nodes(MAX_STRING_LENGTH)?)?;
+        // "deferred.resolve" closure executes on the JavaScript thread.
+        // Errors are returned as a resolved value because they need to be serialized and are
+        // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
+        deferred.resolve(move |env| match result {
+          Ok(asset_graph) => {
+            let mut js_object = env.create_object()?;
 
-              Ok(js_object)
-            }),
-            Err(error) => deferred.reject(to_napi_error(error)),
-          },
-        }
+            js_object.set_named_property("edges", env.to_js_value(&asset_graph.edges())?)?;
+            js_object
+              .set_named_property("nodes", asset_graph.serialize_nodes(MAX_STRING_LENGTH)?)?;
+
+            NapiAtlaspackResult::ok(&env, js_object)
+          }
+          Err(error) => {
+            let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+            NapiAtlaspackResult::error(&env, js_object)
+          }
+        })
       }
     });
 

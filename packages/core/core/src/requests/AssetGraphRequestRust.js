@@ -37,17 +37,11 @@ export function createAssetGraphRequestRust(
     id: input.name,
     run: async (input) => {
       let options = input.options;
-      let serializedAssetGraph;
-      try {
-        serializedAssetGraph = await rustAtlaspack.buildAssetGraph();
-        serializedAssetGraph.nodes = serializedAssetGraph.nodes.flatMap(
-          (node) => JSON.parse(node),
-        );
-      } catch (err) {
-        throw new ThrowableDiagnostic({
-          diagnostic: err,
-        });
-      }
+      let serializedAssetGraph = await rustAtlaspack.buildAssetGraph();
+
+      serializedAssetGraph.nodes = serializedAssetGraph.nodes.flatMap((node) =>
+        JSON.parse(node),
+      );
 
       let {assetGraph, changedAssets} = instrument(
         'atlaspack_v3_getAssetGraph',

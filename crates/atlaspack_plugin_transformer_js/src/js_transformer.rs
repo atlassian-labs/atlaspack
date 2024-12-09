@@ -10,7 +10,8 @@ use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
-  Asset, BuildMode, Diagnostic, ErrorKind, FileType, LogLevel, OutputFormat, SourceType,
+  Asset, BuildMode, Diagnostic, Diagnostics, ErrorKind, FileType, LogLevel, OutputFormat,
+  SourceType,
 };
 use glob_match::glob_match;
 use parking_lot::RwLock;
@@ -19,6 +20,7 @@ use swc_core::atoms::Atom;
 use crate::js_transformer_config::{
   InlineEnvironment, JsTransformerConfig, JsTransformerPackageJson,
 };
+use crate::map_diagnostics::{map_diagnostics, MapDiagnosticOptions};
 use crate::package_json::{depends_on_react, supports_automatic_jsx_runtime, PackageJson};
 use crate::ts_config::{Jsx, Target, TsConfig};
 
@@ -310,15 +312,20 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     let transformation_result = atlaspack_js_swc_core::transform(transform_config, None)?;
 
-    // TODO handle errors properly
     if let Some(errors) = transformation_result.diagnostics {
-      return Err(anyhow!(format!("{:#?}", errors)));
+      return Err(anyhow!(map_diagnostics(
+        errors,
+        MapDiagnosticOptions {
+          source_code: Some(source_code.clone()),
+          file_type: Some(file_type.clone()),
+          file_path: Some(asset.file_path),
+        },
+      )));
     }
 
     let config = atlaspack_js_swc_core::Config::default();
     let result = conversion::convert_result(asset, &config, transformation_result, &self.options)
-      // TODO handle errors properly
-      .map_err(|_err| anyhow!("Failed to transform"))?;
+      .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
 
     Ok(result)
   }
