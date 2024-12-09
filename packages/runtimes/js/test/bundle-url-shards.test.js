@@ -1,5 +1,7 @@
 import assert from 'assert';
 
+import {fsFixture, overlayFS, bundle} from '@atlaspack/test-utils';
+
 import {
   getShardedBundleURL,
   getBaseURL,
@@ -109,6 +111,49 @@ describe('bundle-url-shards helper', () => {
       const testUrl = 'http://localhost:8081/assets/testBundle.123abc.js';
 
       assert.equal(getBaseURL(testUrl), 'http://localhost:8081/assets/');
+    });
+  });
+
+  describe('compiled into JS Runtime', () => {
+    it('should insert all arguments into compiled output', async () => {
+      const maxShards = 8;
+      await fsFixture(overlayFS)`
+        package.json:
+          {
+            "name": "bundle-sharding-test",
+            "@atlaspack/runtime-js": {
+              "domainSharding": {
+                "maxShards": ${maxShards},
+                "cookieName": "${testingCookieName}"
+              }
+            }
+          }
+
+        src/index.js:
+          async function fn() {
+            const a = await import('./a.js');
+            console.log('a', a);
+          }
+          fn();
+
+        src/a.js:
+          export const a = 'A';
+
+        yarn.lock:
+      `;
+
+      const bundleGraph = await bundle('src/index.js', {inputFS: overlayFS});
+
+      const mainBundle = bundleGraph
+        .getBundles()
+        .find((b) => b.name === 'index.js');
+
+      const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
+      assert.ok(
+        code.includes(
+          `require("64e4a85cd0b8d551").getShardedBundleURL('1Acoq', '${testingCookieName}', document.cookie, ${maxShards}) + "a.771579fd.js"`,
+        ),
+      );
     });
   });
 });
