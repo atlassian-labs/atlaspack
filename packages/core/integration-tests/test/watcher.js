@@ -4,6 +4,8 @@ import nodeFS from 'fs';
 import path from 'path';
 import {
   assertBundles,
+  assertBundleTree,
+  nextBundle,
   bundler,
   describe,
   getNextBuild,
@@ -17,16 +19,6 @@ import {
   overlayFS,
 } from '@atlaspack/test-utils';
 import {symlinkSync} from 'fs';
-
-// eslint-disable-next-line no-unused-vars
-function nextBundle(...args: any[]): any {
-  throw new Error('stub');
-}
-
-// eslint-disable-next-line no-unused-vars
-function assertBundleTree(...args: any[]): any {
-  throw new Error('stub');
-}
 
 const inputDir = path.join(__dirname, '/watcher');
 const distDir = path.join(inputDir, 'dist');

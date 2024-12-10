@@ -6,7 +6,7 @@ import {
   assertBundles,
   bundle,
   describe,
-  findAssetOrThrow,
+  findAsset,
   it,
   overlayFS,
   fsFixture,
@@ -890,9 +890,11 @@ describe('bundler', function () {
     assert(
       b
         .getReferencedBundles(
-          b.getBundlesWithAsset(findAssetOrThrow(b, 'bar.js'))[0],
+          // $FlowFixMe nullcheck
+          b.getBundlesWithAsset(findAsset(b, 'bar.js'))[0],
         )
-        .includes(b.getBundlesWithAsset(findAssetOrThrow(b, 'c.js'))[0]),
+        // $FlowFixMe nullcheck
+        .includes(b.getBundlesWithAsset(findAsset(b, 'c.js'))[0]),
     );
 
     await run(b);
@@ -954,8 +956,7 @@ describe('bundler', function () {
       .find(
         (bundle) => !bundle.getMainEntry() && bundle.name.includes('runtime'),
       );
-    if (aManifestBundle === undefined)
-      return assert(aManifestBundle !== undefined);
+    if (aManifestBundle === undefined) return assert(false);
 
     let bBundles = b
       .getBundles()
@@ -969,10 +970,7 @@ describe('bundler', function () {
       }
     });
 
-    if (aBundleManifestAsset === undefined) {
-      assert(aBundleManifestAsset !== undefined);
-      return;
-    }
+    if (aBundleManifestAsset === undefined) return assert(false);
 
     let aBundleManifestAssetCode = await aBundleManifestAsset.getCode();
 
@@ -1335,7 +1333,7 @@ describe('bundler', function () {
 
     // Asset should not be inlined
     const index = b.getBundles().find((b) => b.name.startsWith('index'));
-    if (index === undefined) return assert(index !== undefined);
+    if (index === undefined) return assert(false);
 
     const contents = overlayFS.readFileSync(index.filePath, 'utf8');
     assert(

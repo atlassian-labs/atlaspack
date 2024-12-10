@@ -11,7 +11,7 @@ import {
   removeDistDirectory,
   run,
 } from '@atlaspack/test-utils';
-import type {InitialAtlaspackOptions} from '../../types/src';
+import type {InitialAtlaspackOptions} from '@atlaspack/types';
 
 describe('bundle-text:', function () {
   beforeEach(async () => {
@@ -203,7 +203,7 @@ describe('bundle-text:', function () {
             assets: [
               'index.js',
               'main.js',
-              !scopeHoist ? 'esmodule-helpers.js' : undefined,
+              ...(!scopeHoist ? ['esmodule-helpers.js'] : []),
             ].filter(Boolean),
           },
           {

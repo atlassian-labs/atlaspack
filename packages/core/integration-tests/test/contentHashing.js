@@ -118,8 +118,8 @@ describe('content hashing', function () {
       let aJS = aBundles.find((bundle) => bundle.type === 'js');
       let bJS = bBundles.find((bundle) => bundle.type === 'js');
 
-      if (aJS === undefined) return assert(aJS !== undefined);
-      if (bJS === undefined) return assert(bJS !== undefined);
+      if (aJS === undefined) return assert(false);
+      if (bJS === undefined) return assert(false);
 
       assert(/index\.[a-f0-9]*\.js/.test(path.basename(aJS.filePath)));
       assert.equal(aJS.name, bJS.name);

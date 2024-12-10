@@ -12,7 +12,6 @@ import {
   describe,
   distDir,
   findAsset,
-  findAssetOrThrow,
   findDependency,
   getNextBuild,
   it,
@@ -2711,7 +2710,8 @@ describe('scope hoisting', function () {
           assert.deepStrictEqual(
             new Set(
               bundleEvent.bundleGraph.getUsedSymbols(
-                findAssetOrThrow(bundleEvent.bundleGraph, 'b.js'),
+                // $FlowFixMe nullcheck
+                findAsset(bundleEvent.bundleGraph, 'b.js'),
               ),
             ),
             new Set(['foo']),
@@ -2763,7 +2763,8 @@ describe('scope hoisting', function () {
           assert.deepStrictEqual(
             new Set(
               bundleEvent.bundleGraph.getUsedSymbols(
-                findAssetOrThrow(bundleEvent.bundleGraph, 'c.js'),
+                // $FlowFixMe nullcheck
+                findAsset(bundleEvent.bundleGraph, 'c.js'),
               ),
             ),
             new Set(['c']),
@@ -3096,7 +3097,8 @@ describe('scope hoisting', function () {
           assert.deepStrictEqual(
             new Set(
               bundleEvent.bundleGraph.getUsedSymbols(
-                findAssetOrThrow(bundleEvent.bundleGraph, 'themeConstants.js'),
+                // $FlowFixMe nullcheck
+                findAsset(bundleEvent.bundleGraph, 'themeConstants.js'),
               ),
             ),
             new Set(['gridSize']),
@@ -3125,7 +3127,8 @@ describe('scope hoisting', function () {
           assert.deepStrictEqual(
             new Set(
               bundleEvent.bundleGraph.getUsedSymbols(
-                findAssetOrThrow(bundleEvent.bundleGraph, 'themeConstants.js'),
+                // $FlowFixMe nullcheck
+                findAsset(bundleEvent.bundleGraph, 'themeConstants.js'),
               ),
             ),
             new Set(['borderRadius', 'gridSize']),
@@ -3152,12 +3155,14 @@ describe('scope hoisting', function () {
           assert.deepStrictEqual(
             new Set(
               bundleEvent.bundleGraph.getUsedSymbols(
-                findAssetOrThrow(bundleEvent.bundleGraph, 'themeConstants.js'),
+                // $FlowFixMe nullcheck
+                findAsset(bundleEvent.bundleGraph, 'themeConstants.js'),
               ),
             ),
             new Set(['gridSize']),
           );
-          assert(!findAssetOrThrow(bundleEvent.bundleGraph, 'themeColors.js'));
+          // $FlowFixMe nullcheck
+          assert(!findAsset(bundleEvent.bundleGraph, 'themeColors.js'));
         } finally {
           await subscription.unsubscribe();
         }

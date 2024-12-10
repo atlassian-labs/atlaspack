@@ -38,6 +38,7 @@ import _chalk from 'chalk';
 import resolve from 'resolve';
 
 export {fsFixture} from './fsFixture';
+export * from './stubs';
 
 export const workerFarm = (createWorkerFarm(): WorkerFarm);
 export const inputFS: NodeFS = new NodeFS();
@@ -161,17 +162,6 @@ export function findAsset(
       return asset;
     }
   });
-}
-
-export function findAssetOrThrow(
-  bundleGraph: BundleGraph<PackagedBundle>,
-  assetFileName: string,
-): Asset {
-  let asset = findAsset(bundleGraph, assetFileName);
-  if (!asset) {
-    throw new Error('No Asset Found');
-  }
-  return asset;
 }
 
 export function findDependency(

@@ -97,7 +97,8 @@ describe('html', function () {
     let iconsBundle = b.getBundles().find((b) => b.name.startsWith('icons'));
     assert(
       html.includes(
-        '/' + path.basename(iconsBundle?.filePath || '') + '#icon-code',
+        // $FlowFixMe nullcheck
+        '/' + path.basename(iconsBundle.filePath) + '#icon-code',
       ),
     );
 
@@ -1222,7 +1223,8 @@ describe('html', function () {
     let bundles = b.getBundles();
 
     let html = await outputFS.readFile(
-      bundles.find((bundle) => bundle.type === 'html')?.filePath || '',
+      // $FlowFixMe nullchech
+      bundles.find((bundle) => bundle.type === 'html').filePath,
       'utf8',
     );
 
@@ -1710,23 +1712,30 @@ describe('html', function () {
 
       let bundles = b.getBundles();
       let html = await outputFS.readFile(
-        bundles.find((b) => b.type === 'html')?.filePath || '',
+        // $FlowFixMe nullcheck
+        bundles.find((b) => b.type === 'html').filePath,
         'utf8',
       );
       assert(html.includes('<script type="module" src='));
       assert(/<script src=".*?" nomodule/.test(html));
 
+      let found = bundles.find(
+        (b) => b.type === 'js' && b.env.outputFormat === 'esmodule',
+      );
+
       let js = await outputFS.readFile(
-        bundles.find(
-          (b) => b.type === 'js' && b.env.outputFormat === 'esmodule',
-        )?.filePath || '',
+        // $FlowFixMe nullcheck
+        found.filePath,
         'utf8',
       );
       assert(/class \$[a-f0-9]+\$var\$Useless \{/.test(js));
 
+      found = bundles.find(
+        (b) => b.type === 'js' && b.env.outputFormat === 'global',
+      );
       js = await outputFS.readFile(
-        bundles.find((b) => b.type === 'js' && b.env.outputFormat === 'global')
-          ?.filePath || '',
+        // $FlowFixMe nullcheck
+        found.filePath,
         'utf8',
       );
       assert(!/class \$[a-f0-9]+\$var\$Useless \{/.test(js));
@@ -2801,12 +2810,16 @@ describe('html', function () {
     );
 
     let bundles = b.getBundles();
+    let found = bundles.find((bundle) => bundle.filePath.endsWith('.css'));
     let cssBundle = path.basename(
-      bundles.find((bundle) => bundle.filePath.endsWith('.css'))?.filePath ||
-        '',
+      // $FlowFixMe nullcheck
+      found.filePath,
+      '',
     );
+    found = bundles.find((bundle) => bundle.filePath.endsWith('.js'));
     let jsBundle = path.basename(
-      bundles.find((bundle) => bundle.filePath.endsWith('.js'))?.filePath || '',
+      // $FlowFixMe nullcheck
+      found.filePath,
     );
 
     assert(
@@ -2920,7 +2933,8 @@ describe('html', function () {
     );
 
     let contents = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'html')?.filePath || '',
+      // $FlowFixMe nullcheck
+      b.getBundles().find((b) => b.type === 'html').filePath,
       'utf8',
     );
     assert.equal(
