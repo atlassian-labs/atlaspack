@@ -1,3 +1,4 @@
+// @flow
 import {parseFuncIRI} from '../src/dependencies';
 import assert from 'assert';
 

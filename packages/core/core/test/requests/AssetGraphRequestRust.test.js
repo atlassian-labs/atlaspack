@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import {getAssetGraph} from '../../src/requests/AssetGraphRequestRust';
 
@@ -11,9 +12,12 @@ describe('AssetGraphRequestRust -> getAssetGraph', function () {
     assert(indexAsset?.type === 'asset');
     assert(libraryDep?.type === 'dependency');
 
+    // $FlowFixMe
     assert.equal(indexAsset.value.filePath, '/index.ts');
+    // $FlowFixMe
     assert.equal(libraryDep.value.specifier, './library');
     assert.deepEqual(
+      // $FlowFixMe
       indexAsset.value.dependencies.get('cfe74f65a41af1a7')?.specifier,
       './library',
     );

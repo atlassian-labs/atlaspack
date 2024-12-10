@@ -1,3 +1,4 @@
+// @flow
 import {tracer, PluginTracer} from '../src/Tracer';
 import sinon from 'sinon';
 import assert from 'assert';
@@ -22,6 +23,7 @@ describe('Tracer', () => {
   });
   it('emits a basic trace event', () => {
     const measurement = tracer.createMeasurement('test');
+    // $FlowFixMe missing end()
     measurement.end();
     sinon.assert.calledWith(
       onTrace,
@@ -37,6 +39,7 @@ describe('Tracer', () => {
     const measurement = tracer.createMeasurement('test', 'myPlugin', 'aaargh', {
       extra: 'data',
     });
+    // $FlowFixMe missing end()
     measurement.end();
     sinon.assert.calledWith(
       onTrace,
@@ -51,7 +54,9 @@ describe('Tracer', () => {
   });
   it('calling end twice on measurment should be a no-op', () => {
     const measurement = tracer.createMeasurement('test');
+    // $FlowFixMe missing end()
     measurement.end();
+    // $FlowFixMe missing end()
     measurement.end();
     sinon.assert.calledOnce(onTrace);
   });
@@ -63,6 +68,7 @@ describe('Tracer', () => {
         category: 'cat',
       });
       const measurement = pluginTracer.createMeasurement('test', 'customCat');
+      // $FlowFixMe missing end()
       measurement.end();
       sinon.assert.calledWith(
         onTrace,

@@ -1,3 +1,4 @@
+// @flow
 import Logger from '@atlaspack/logger';
 import assert from 'assert';
 import WorkerFarm from '../src';
