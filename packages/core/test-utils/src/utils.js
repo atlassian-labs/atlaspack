@@ -163,6 +163,17 @@ export function findAsset(
   });
 }
 
+export function findAssetOrThrow(
+  bundleGraph: BundleGraph<PackagedBundle>,
+  assetFileName: string,
+): Asset {
+  let asset = findAsset(bundleGraph, assetFileName);
+  if (!asset) {
+    throw new Error('No Asset Found');
+  }
+  return asset;
+}
+
 export function findDependency(
   bundleGraph: BundleGraph<PackagedBundle>,
   assetFileName: string,
