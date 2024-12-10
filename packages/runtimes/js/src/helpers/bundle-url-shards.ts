@@ -1,4 +1,8 @@
-import {getBaseURL} from './bundle-url-common';
+import {
+  getBaseURL,
+  stackTraceUrlRegexp,
+  stackTraceUrlRegexp,
+} from './bundle-url-common';
 
 const bundleURL: Record<string, string> = {};
 
@@ -18,9 +22,7 @@ export function getShardedBundleURL(
   try {
     throw inputError ?? new Error();
   } catch (err) {
-    var matches = ('' + err.stack).match(
-      /(https?|file|ftp|(chrome|moz|safari-web)-extension):\/\/[^)\n]+/g,
-    );
+    var matches = ('' + err.stack).match(stackTraceUrlRegexp);
 
     if (!matches) {
       return '/';
