@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 
@@ -56,6 +57,7 @@ describe('globals', function () {
     });
 
     it('when scope hoisting is disabled', async function () {
+      // $FlowFixMe "context" missing in InitialOptions
       let bundleGraph = await bundle(path.join(dir, 'index.js'), {
         defaultTargetOptions: {
           context: 'browser',
@@ -82,6 +84,7 @@ describe('globals', function () {
     });
 
     it.v2('when scope hoisting is enabled', async function () {
+      // $FlowFixMe "context" missing in InitialOptions
       let bundleGraph = await bundle(path.join(dir, 'index.js'), {
         defaultTargetOptions: {
           context: 'browser',
