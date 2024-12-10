@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import expect from 'expect';
 import path from 'path';
@@ -131,7 +132,8 @@ describe('javascript', function () {
       },
     ]);
 
-    let txtBundle = b.getBundles().find((b) => b.type === 'txt').filePath;
+    let txtBundle =
+      b.getBundles().find((b) => b.type === 'txt')?.filePath || '';
 
     let output = await run(b);
     assert.strictEqual(path.basename(output), path.basename(txtBundle));
@@ -247,15 +249,18 @@ describe('javascript', function () {
   it.skip('should not bundle node_modules on --target=electron', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/node_require/main.js'),
+      // $FlowFixMe target missing in options
       {
         target: 'electron',
       },
     );
 
-    assertBundles(b, {
-      name: 'main.js',
-      assets: ['main.js', 'local.js'],
-    });
+    assertBundles(b, [
+      {
+        name: 'main.js',
+        assets: ['main.js', 'local.js'],
+      },
+    ]);
 
     await outputFS.mkdirp(path.join(distDir, 'node_modules/testmodule'));
     await outputFS.writeFile(
@@ -375,16 +380,19 @@ describe('javascript', function () {
   it.skip('should bundle node_modules on --target=electron and --bundle-node-modules', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/node_require/main.js'),
+      // $FlowFixMe target missing in options
       {
         target: 'electron',
         bundleNodeModules: true,
       },
     );
 
-    assertBundles(b, {
-      name: 'main.js',
-      assets: ['main.js', 'local.js', 'index.js'],
-    });
+    assertBundles(b, [
+      {
+        name: 'main.js',
+        assets: ['main.js', 'local.js', 'index.js'],
+      },
+    ]);
 
     let output = await run(b);
     assert.equal(typeof output, 'function');
@@ -581,15 +589,19 @@ describe('javascript', function () {
         __dirname,
         '/integration/dynamic-subdirectory/subdirectory/index.js',
       ),
+      // $FlowFixMe target missing in options
       {
         target: 'browser',
       },
     );
+
     // Set the rootDir to make sure subdirectory is preserved
+    // $FlowFixMe options missing in Atlaspack
     bu.options.rootDir = path.join(
       __dirname,
       '/integration/dynamic-subdirectory',
     );
+    // $FlowFixMe bundle() missing in Atlaspack
     let b = await bu.bundle();
     let output = await run(b);
     assert.equal(typeof output, 'function');
@@ -932,7 +944,7 @@ describe('javascript', function () {
     assert.equal(typeof output, 'function');
     assert(/^http:\/\/localhost\/test\.[0-9a-f]+\.txt$/.test(output()));
     let stats = await outputFS.stat(
-      path.join(distDir, url.parse(output()).pathname),
+      path.join(distDir, url.parse(output()).pathname || ''),
     );
     assert.equal(stats.size, 9);
   });
@@ -1033,6 +1045,7 @@ describe('javascript', function () {
         'integration/import-raw-import-meta-url/missing.js',
       );
       let code = await inputFS.readFileSync(fixture, 'utf8');
+      // $FlowFixMe rejects does not exist on assert
       await assert.rejects(() => bundle(fixture), {
         name: 'BuildError',
         diagnostics: [
@@ -1105,7 +1118,7 @@ describe('javascript', function () {
     assert.equal(typeof output, 'function');
     assert(/^http:\/\/localhost\/test\.[0-9a-f]+\.txt$/.test(output()));
     let stats = await outputFS.stat(
-      path.join(distDir, url.parse(output()).pathname),
+      path.join(distDir, url.parse(output()).pathname || ''),
     );
     assert.equal(stats.size, assetSizeBytes);
   });
@@ -1630,6 +1643,7 @@ describe('javascript', function () {
 
   it.v2('should error on process.env mutations', async function () {
     let filePath = path.join(__dirname, '/integration/env-mutate/index.js');
+    // $FlowFixMe
     await assert.rejects(bundle(filePath), {
       diagnostics: [
         {
@@ -1914,10 +1928,12 @@ describe('javascript', function () {
     assert.equal(output(), true);
     // Running the bundled code has the side effect of setting process.browser = true, which can mess
     // up the instantiation of typescript.sys within validator-typescript, so we want to reset it.
+    // $FlowFixMe browser does not exist on process
     process.browser = undefined;
   });
 
   it.skip('should support adding implicit dependencies', async function () {
+    // $FlowFixMe
     let b = await bundle(path.join(__dirname, '/integration/json/index.js'), {
       delegate: {
         getImplicitDependencies(asset) {
@@ -1928,19 +1944,21 @@ describe('javascript', function () {
       },
     });
 
-    assertBundles(b, {
-      name: 'index.js',
-      assets: ['index.js', 'local.json', 'index.css'],
-      childBundles: [
-        {
-          type: 'css',
-          assets: ['index.css'],
-        },
-        {
-          type: 'map',
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: ['index.js', 'local.json', 'index.css'],
+        childBundles: [
+          {
+            type: 'css',
+            assets: ['index.css'],
+          },
+          {
+            type: 'map',
+          },
+        ],
+      },
+    ]);
 
     let output = await run(b);
     assert.equal(typeof output, 'function');
@@ -2005,20 +2023,23 @@ describe('javascript', function () {
   it.skip('should not resolve the browser field for --target=node', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/resolve-entries/browser.js'),
+      // $FlowFixMe
       {
         target: 'node',
       },
     );
 
-    assertBundles(b, {
-      name: 'browser.js',
-      assets: ['browser.js', 'node-module.js'],
-      childBundles: [
-        {
-          type: 'map',
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'browser.js',
+        assets: ['browser.js', 'node-module.js'],
+        childBundles: [
+          {
+            type: 'map',
+          },
+        ],
+      },
+    ]);
 
     let output = await run(b);
 
@@ -2031,19 +2052,21 @@ describe('javascript', function () {
       path.join(__dirname, '/integration/resolve-entries/browser-multiple.js'),
     );
 
-    assertBundles(b, {
-      name: 'browser-multiple.js',
-      assets: [
-        'browser-multiple.js',
-        'projected-browser.js',
-        'browser-entry.js',
-      ],
-      childBundles: [
-        {
-          type: 'map',
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'browser-multiple.js',
+        assets: [
+          'browser-multiple.js',
+          'projected-browser.js',
+          'browser-entry.js',
+        ],
+        childBundles: [
+          {
+            type: 'map',
+          },
+        ],
+      },
+    ]);
 
     let {test: output} = await run(b);
 
@@ -2056,20 +2079,23 @@ describe('javascript', function () {
   it.skip('should not resolve advanced browser resolution with --target=node', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/resolve-entries/browser-multiple.js'),
+      // $FlowFixMe
       {
         target: 'node',
       },
     );
 
-    assertBundles(b, {
-      name: 'browser-multiple.js',
-      assets: ['browser-multiple.js', 'node-entry.js', 'projected.js'],
-      childBundles: [
-        {
-          type: 'map',
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'browser-multiple.js',
+        assets: ['browser-multiple.js', 'node-entry.js', 'projected.js'],
+        childBundles: [
+          {
+            type: 'map',
+          },
+        ],
+      },
+    ]);
 
     let {test: output} = await run(b);
 
@@ -2194,10 +2220,10 @@ describe('javascript', function () {
       error = err;
     }
     assert.equal(
-      error.message,
+      error?.message,
       `Cannot resolve dependency 'vue/thisDoesNotExist'`,
     );
-    assert.equal(error.code, 'MODULE_NOT_FOUND');
+    assert.equal(error?.code, 'MODULE_NOT_FOUND');
   });
 
   it.skip('should not autoinstall if resolve failed on aliased module', async function () {
@@ -2213,10 +2239,10 @@ describe('javascript', function () {
       error = err;
     }
     assert.equal(
-      error.message,
+      error?.message,
       `Cannot resolve dependency 'aliasVue/thisDoesNotExist'`,
     );
-    assert.equal(error.code, 'MODULE_NOT_FOUND');
+    assert.equal(error?.code, 'MODULE_NOT_FOUND');
   });
 
   it('should ignore require if it is defined in the scope', async function () {
@@ -2261,6 +2287,7 @@ describe('javascript', function () {
       test = f();
     };
     mockDefine.amd = true;
+    if (!test) return assert(false);
 
     await run(b, {define: mockDefine, module: undefined});
     assert.equal(test(), 'Test!');
@@ -2269,6 +2296,7 @@ describe('javascript', function () {
   it.skip('should expose variable with --browser-global', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/entry-point/index.js'),
+      // $FlowFixMe
       {
         global: 'testing',
       },
@@ -2410,6 +2438,7 @@ describe('javascript', function () {
   it.skip('should not dedupe imports with different contents', async function () {
     let b = await bundle(
       path.join(__dirname, `/integration/js-different-contents/index.js`),
+      // $FlowFixMe
       {
         hmr: false, // enable asset dedupe in JSPackager
       },
@@ -2425,6 +2454,7 @@ describe('javascript', function () {
         __dirname,
         `/integration/js-same-contents-different-dependencies/index.js`,
       ),
+      // $FlowFixMe
       {
         hmr: false, // enable asset dedupe in JSPackager
       },
@@ -2440,11 +2470,15 @@ describe('javascript', function () {
         __dirname,
         `/integration/js-same-contents-same-dependencies/index.js`,
       ),
+      // $FlowFixMe
       {
         hmr: false, // enable asset dedupe in JSPackager
       },
     );
+
+    // $FlowFixMe entryAsset missing
     const {rootDir} = b.entryAsset.options;
+    // $FlowFixMe offsets missing
     const writtenAssets = Array.from(b.offsets.keys()).map(
       (asset) => asset.name,
     );
@@ -2468,11 +2502,14 @@ describe('javascript', function () {
   it.skip('should not dedupe assets that exist in more than one bundle', async function () {
     let b = await bundle(
       path.join(__dirname, `/integration/js-dedup-hoist/index.js`),
+      // $FlowFixMe
       {
         hmr: false, // enable asset dedupe in JSPackager
       },
     );
+    // $FlowFixMe
     const {rootDir} = b.entryAsset.options;
+    // $FlowFixMe
     const writtenAssets = Array.from(b.offsets.keys()).map(
       (asset) => asset.name,
     );
@@ -2495,27 +2532,29 @@ describe('javascript', function () {
       },
     );
 
-    assertBundles(b, {
-      name: 'index.js',
-      assets: ['index.js', 'cacheLoader.js', 'html-loader.js'],
-      childBundles: [
-        {
-          type: 'html',
-          assets: ['other.html'],
-          childBundles: [
-            {
-              type: 'png',
-              assets: ['100x100.png'],
-              childBundles: [],
-            },
-            {
-              type: 'css',
-              assets: ['index.css'],
-            },
-          ],
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: ['index.js', 'cacheLoader.js', 'html-loader.js'],
+        childBundles: [
+          {
+            type: 'html',
+            assets: ['other.html'],
+            childBundles: [
+              {
+                type: 'png',
+                assets: ['100x100.png'],
+                childBundles: [],
+              },
+              {
+                type: 'css',
+                assets: ['index.css'],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
 
     let output = await run(b);
     assert.equal(typeof output, 'string');
@@ -2526,6 +2565,7 @@ describe('javascript', function () {
   it.skip('should support importing HTML from JS async with --target=node', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/import-html-async/index.js'),
+      // $FlowFixMe
       {
         target: 'node',
         defaultTargetOptions: {
@@ -2534,27 +2574,29 @@ describe('javascript', function () {
       },
     );
 
-    assertBundles(b, {
-      name: 'index.js',
-      assets: ['index.js', 'cacheLoader.js', 'html-loader.js'],
-      childBundles: [
-        {
-          type: 'html',
-          assets: ['other.html'],
-          childBundles: [
-            {
-              type: 'png',
-              assets: ['100x100.png'],
-              childBundles: [],
-            },
-            {
-              type: 'css',
-              assets: ['index.css'],
-            },
-          ],
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: ['index.js', 'cacheLoader.js', 'html-loader.js'],
+        childBundles: [
+          {
+            type: 'html',
+            assets: ['other.html'],
+            childBundles: [
+              {
+                type: 'png',
+                assets: ['100x100.png'],
+                childBundles: [],
+              },
+              {
+                type: 'css',
+                assets: ['index.css'],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
 
     let output = await run(b);
     assert.equal(typeof output, 'string');
@@ -2572,27 +2614,29 @@ describe('javascript', function () {
       },
     );
 
-    assertBundles(b, {
-      name: 'index.js',
-      assets: ['index.js', 'cacheLoader.js', 'html-loader.js'],
-      childBundles: [
-        {
-          type: 'html',
-          assets: ['other.html'],
-          childBundles: [
-            {
-              type: 'png',
-              assets: ['100x100.png'],
-              childBundles: [],
-            },
-            {
-              type: 'css',
-              assets: ['index.css'],
-            },
-          ],
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: ['index.js', 'cacheLoader.js', 'html-loader.js'],
+        childBundles: [
+          {
+            type: 'html',
+            assets: ['other.html'],
+            childBundles: [
+              {
+                type: 'png',
+                assets: ['100x100.png'],
+                childBundles: [],
+              },
+              {
+                type: 'css',
+                assets: ['index.css'],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
 
     let {deferred, promise} = makeDeferredWithPromise();
     await run(b, {output: deferred.resolve}, {require: false});
@@ -2605,6 +2649,7 @@ describe('javascript', function () {
   it.skip('should stub require.cache', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/node_require_cache/main.js'),
+      // $FlowFixMe
       {
         target: 'node',
       },
@@ -2867,7 +2912,7 @@ describe('javascript', function () {
       );
 
       let dist = await outputFS.readFile(
-        b.getBundles().find((b) => b.type === 'js').filePath,
+        b.getBundles().find((b) => b.type === 'js')?.filePath || '',
         'utf8',
       );
 
@@ -2886,7 +2931,7 @@ describe('javascript', function () {
       ),
     );
     let dist = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'js').filePath,
+      b.getBundles().find((b) => b.type === 'js')?.filePath || '',
       'utf8',
     );
 
@@ -3082,11 +3127,13 @@ describe('javascript', function () {
     let getDep = bundles.find((b) => b.name === 'get-dep.js');
 
     assert.deepEqual(
-      await (
+      await // $FlowFixMe
+      (
         await runBundle(b, sameBundle)
       ).default,
       [42, 42, 42],
     );
+    // $FlowFixMe
     assert.deepEqual(await (await runBundle(b, getDep)).default, 42);
   });
 
@@ -3159,7 +3206,8 @@ describe('javascript', function () {
     ]);
 
     assert.equal(
-      await (
+      await // $FlowFixMe
+      (
         await runBundle(
           b,
           b.getBundles().find((bundle) => bundle.name.includes('index.js')),
@@ -3195,6 +3243,7 @@ describe('javascript', function () {
   it.v2('should display a codeframe on a Terser parse error', async () => {
     let fixture = path.join(__dirname, 'integration/terser-codeframe/index.js');
     let code = await inputFS.readFileSync(fixture, 'utf8');
+    // $FlowFixMe
     await assert.rejects(
       () =>
         bundle(fixture, {
@@ -3297,6 +3346,7 @@ describe('javascript', function () {
   it.v2('should throw a diagnostic for unknown pipelines', async function () {
     let fixture = path.join(__dirname, 'integration/pipeline-unknown/a.js');
     let code = await inputFS.readFileSync(fixture, 'utf8');
+    // $FlowFixMe
     await assert.rejects(() => bundle(fixture), {
       name: 'BuildError',
       diagnostics: [
@@ -3755,6 +3805,7 @@ describe('javascript', function () {
         'integration/diagnostic-sourcemap/index.js',
       );
       let code = await inputFS.readFileSync(fixture, 'utf8');
+      // $FlowFixMe
       await assert.rejects(
         () =>
           bundle(fixture, {
@@ -3849,6 +3900,7 @@ describe('javascript', function () {
         __dirname,
         'integration/undeclared-external/package.json',
       );
+      // $FlowFixMe
       await assert.rejects(
         () =>
           bundle(fixture, {
@@ -3926,6 +3978,7 @@ describe('javascript', function () {
         __dirname,
         'integration/undeclared-external/package.json',
       );
+      // $FlowFixMe
       await assert.rejects(
         () =>
           bundle(fixture, {
@@ -4014,11 +4067,12 @@ describe('javascript', function () {
             '@swc/helpers': '^0.3.0',
           },
         },
-        false,
+        null,
         2,
       );
       await overlayFS.mkdirp(path.dirname(pkg));
       await overlayFS.writeFile(pkg, pkgContents);
+      // $FlowFixMe
       await assert.rejects(
         () =>
           bundle(fixture, {
@@ -4412,6 +4466,7 @@ describe('javascript', function () {
       path.join(__dirname, '/integration/js-import-initialization/a.mjs'),
     );
 
+    // $FlowFixMe
     await assert.rejects(
       run(b),
       new ReferenceError("Cannot access 'foo' before initialization"),
@@ -4428,6 +4483,7 @@ describe('javascript', function () {
       },
     );
 
+    // $FlowFixMe
     await assert.rejects(
       run(b),
       /^ReferenceError: Cannot access '(.+)' before initialization$/,
@@ -4647,6 +4703,7 @@ describe('javascript', function () {
       '/js-recoverable-parse-errors/index.js',
     );
 
+    // $FlowFixMe
     await assert.rejects(
       () =>
         bundle(fixture, {
@@ -4734,7 +4791,8 @@ describe('javascript', function () {
           assert.deepEqual(res.output, 2);
 
           let css = await outputFS.readFile(
-            b.getBundles().find((bundle) => bundle.type === 'css').filePath,
+            b.getBundles().find((bundle) => bundle.type === 'css')?.filePath ||
+              '',
             'utf8',
           );
           assert(!css.includes('.b2'));
@@ -5041,6 +5099,8 @@ describe('javascript', function () {
 
           let bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, '12345hello');
 
@@ -5052,6 +5112,7 @@ describe('javascript', function () {
 
           bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, '1234556789');
 
@@ -5074,6 +5135,7 @@ describe('javascript', function () {
 
           let bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, '12345hello');
 
@@ -5085,6 +5147,7 @@ describe('javascript', function () {
 
           bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, '1234556789');
 
@@ -5179,6 +5242,8 @@ describe('javascript', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           let called = false;
           let res = await run(
             bundleEvent.bundleGraph,
@@ -5203,6 +5268,8 @@ describe('javascript', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           called = false;
           res = await run(
             bundleEvent.bundleGraph,
@@ -5857,6 +5924,7 @@ describe('javascript', function () {
         {require: false},
       );
 
+      // $FlowFixMe result is "mixed"
       assert.equal(await result.output, 2);
     });
 

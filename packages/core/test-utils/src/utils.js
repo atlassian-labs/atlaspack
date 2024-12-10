@@ -556,14 +556,16 @@ export type ChildBundle = {|
   childBundles?: Array<ChildBundle>,
 |};
 
+export type BundleAssert = {|
+  name?: string | RegExp,
+  type?: string,
+  assets: Array<string>,
+  childBundles?: Array<ChildBundle>,
+|};
+
 export function assertBundles(
   bundleGraph: BundleGraph<PackagedBundle>,
-  expectedBundles: Array<{|
-    name?: string | RegExp,
-    type?: string,
-    assets: Array<string>,
-    childBundles?: Array<ChildBundle>,
-  |}>,
+  expectedBundles: Array<BundleAssert>,
 ) {
   let actualBundles = [];
   const byAlphabet = (a, b) => (a.toLowerCase() < b.toLowerCase() ? -1 : 1);
