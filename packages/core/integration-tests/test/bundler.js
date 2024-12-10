@@ -954,15 +954,12 @@ describe('bundler', function () {
       .find(
         (bundle) => !bundle.getMainEntry() && bundle.name.includes('runtime'),
       );
+    if (aManifestBundle === undefined)
+      return assert(aManifestBundle !== undefined);
 
     let bBundles = b
       .getBundles()
       .filter((bundle) => /b\.HASH_REF/.test(bundle.name));
-
-    if (aManifestBundle === undefined) {
-      assert(aManifestBundle !== undefined);
-      return;
-    }
 
     let aBundleManifestAsset: Asset | void;
     aManifestBundle.traverseAssets((asset, _, {stop}) => {
@@ -1338,11 +1335,7 @@ describe('bundler', function () {
 
     // Asset should not be inlined
     const index = b.getBundles().find((b) => b.name.startsWith('index'));
-
-    if (index === undefined) {
-      assert(index !== undefined);
-      return;
-    }
+    if (index === undefined) return assert(index !== undefined);
 
     const contents = overlayFS.readFileSync(index.filePath, 'utf8');
     assert(
