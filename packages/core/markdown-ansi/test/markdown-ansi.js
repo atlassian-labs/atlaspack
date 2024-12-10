@@ -1,9 +1,10 @@
+// @flow
 import assert from 'assert';
 import chalk from 'chalk';
 
 import mdAnsi from '../src/markdown-ansi';
 
-process.env.FORCE_COLOR = 3;
+process.env.FORCE_COLOR = '3';
 
 describe('markdown-ansi', () => {
   if (!chalk.supportsColor) return;

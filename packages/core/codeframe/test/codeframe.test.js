@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import {readFileSync} from 'fs';
 import {join as joinPath} from 'path';

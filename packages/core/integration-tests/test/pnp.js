@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import Module from 'module';
 import path from 'path';
@@ -18,16 +19,21 @@ describe.v2('pnp', function () {
     let dir = path.join(__dirname, 'integration/pnp-require');
 
     let origPnpVersion = process.versions.pnp;
-    process.versions.pnp = 42;
+    process.versions.pnp = `${42}`;
 
+    // $FlowFixMe
     let origModuleResolveFilename = Module._resolveFilename;
+    // $FlowFixMe
     Module.findPnpApi = () => require(path.join(dir, '.pnp.js'));
+    // $FlowFixMe
     Module._resolveFilename = (name, ...args) =>
       name === 'pnpapi'
         ? path.join(dir, '.pnp.js')
         : origModuleResolveFilename(name, ...args);
 
+    // $FlowFixMe
     let origReadFileSync = inputFS.readFileSync;
+    // $FlowFixMe
     inputFS.readFileSync = (p, ...args) => {
       return origReadFileSync.call(inputFS, p.replace(ZIPFS, ''), ...args);
     };
@@ -56,7 +62,9 @@ describe.v2('pnp', function () {
       assert.equal(output(), 3);
     } finally {
       process.versions.pnp = origPnpVersion;
+      // $FlowFixMe
       Module._resolveFilename = origModuleResolveFilename;
+      // $FlowFixMe
       inputFS.readFileSync = origReadFileSync;
       inputFS.statSync = origStatSync;
       inputFS.realpathSync = origRealpathSync;
@@ -67,10 +75,13 @@ describe.v2('pnp', function () {
     let dir = path.join(__dirname, 'integration/pnp-builtin');
 
     let origPnpVersion = process.versions.pnp;
-    process.versions.pnp = 42;
+    process.versions.pnp = `${42}`;
 
+    // $FlowFixMe
     let origModuleResolveFilename = Module._resolveFilename;
+    // $FlowFixMe
     Module.findPnpApi = () => require(path.join(dir, '.pnp.js'));
+    // $FlowFixMe
     Module._resolveFilename = (name, ...args) =>
       name === 'pnpapi'
         ? path.join(dir, '.pnp.js')
@@ -90,6 +101,7 @@ describe.v2('pnp', function () {
       assert.equal(output(), 3);
     } finally {
       process.versions.pnp = origPnpVersion;
+      // $FlowFixMe
       Module._resolveFilename = origModuleResolveFilename;
     }
   });

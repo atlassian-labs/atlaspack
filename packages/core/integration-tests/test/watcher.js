@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import nodeFS from 'fs';
 import path from 'path';
@@ -8,8 +9,6 @@ import {
   getNextBuild,
   it,
   run,
-  assertBundleTree,
-  nextBundle,
   ncp,
   inputFS as fs,
   sleep,
@@ -18,6 +17,16 @@ import {
   overlayFS,
 } from '@atlaspack/test-utils';
 import {symlinkSync} from 'fs';
+
+// eslint-disable-next-line no-unused-vars
+function nextBundle(...args: any[]): any {
+  throw new Error('stub');
+}
+
+// eslint-disable-next-line no-unused-vars
+function assertBundleTree(...args: any[]): any {
+  throw new Error('stub');
+}
 
 const inputDir = path.join(__dirname, '/watcher');
 const distDir = path.join(inputDir, 'dist');
@@ -36,20 +45,26 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'module.exports = "hello"',
+      // $FlowFixMe invalid arg
       'utf8',
     );
     let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
     subscription = await b.watch();
     let buildEvent = await getNextBuild(b);
+    if (!buildEvent.bundleGraph) return assert(false);
+
     let output = await run(buildEvent.bundleGraph);
     assert.equal(output, 'hello');
 
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'module.exports = "something else"',
+      // $FlowFixMe invalid arg
       'utf8',
     );
     buildEvent = await getNextBuild(b);
+    if (!buildEvent.bundleGraph) return assert(false);
+
     output = await run(buildEvent.bundleGraph);
     assert.equal(output, 'something else');
   });
@@ -59,6 +74,7 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'syntax\\error',
+      // $FlowFixMe invalid arg
       'utf8',
     );
     let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
@@ -68,9 +84,11 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'module.exports = "hello"',
+      // $FlowFixMe invalid arg
       'utf8',
     );
     buildEvent = await getNextBuild(b);
+    if (!buildEvent.bundleGraph) return assert(false);
     let output = await run(buildEvent.bundleGraph);
 
     assert.equal(output, 'hello');
@@ -142,7 +160,9 @@ describe.v2('watcher', function () {
   it.skip('should re-generate bundle tree when files change', async function () {
     await ncp(path.join(__dirname, '/integration/dynamic-hoist'), inputDir);
 
+    // $FlowFixMe invalid arg
     let b = bundler(path.join(inputDir, '/index.js'), {watch: true});
+    // $FlowFixMe missing bundle
     let bundle = await b.bundle();
 
     await assertBundleTree(bundle, {
@@ -219,8 +239,10 @@ describe.v2('watcher', function () {
 
   it.skip('should only re-package bundles that changed', async function () {
     await ncp(path.join(__dirname, '/integration/dynamic-hoist'), inputDir);
+    // $FlowFixMe invalid arg
     let b = bundler(path.join(inputDir, '/index.js'), {watch: true});
 
+    // $FlowFixMe missing bundle
     await b.bundle();
     let mtimes = (await fs.readdir(path.join(__dirname, '/dist'))).map(
       (f) =>
@@ -248,8 +270,10 @@ describe.v2('watcher', function () {
 
   it.skip('should unload assets that are orphaned', async function () {
     await ncp(path.join(__dirname, '/integration/dynamic-hoist'), inputDir);
+    // $FlowFixMe invalid arg
     let b = bundler(path.join(inputDir, '/index.js'), {watch: true});
 
+    // $FlowFixMe missing bundle
     let bundle = await b.bundle();
     await assertBundleTree(bundle, {
       name: 'index.js',
@@ -287,6 +311,7 @@ describe.v2('watcher', function () {
     let output = await run(bundle);
     assert.equal(await output(), 7);
 
+    // $FlowFixMe missing loadedAssets
     assert(b.loadedAssets.has(path.join(inputDir, '/common-dep.js')));
 
     // Get rid of common-dep.js
@@ -329,13 +354,16 @@ describe.v2('watcher', function () {
     output = await run(bundle);
     assert.equal(await output(), 13);
 
+    // $FlowFixMe missing loadedAssets
     assert(!b.loadedAssets.has(path.join(inputDir, 'common-dep.js')));
   });
 
   it.skip('should recompile all assets when a config file changes', async function () {
     await ncp(path.join(__dirname, '/integration/babel'), inputDir);
+    // $FlowFixMe invalid arg
     let b = bundler(path.join(inputDir, 'index.js'), {watch: true});
 
+    // $FlowFixMe missing bundle
     await b.bundle();
     let file = await fs.readFile(
       path.join(__dirname, '/dist/index.js'),
@@ -372,10 +400,12 @@ describe.v2('watcher', function () {
         path.join(inputDir, 'src/symlinked_local.js'),
       );
 
+      // $FlowFixMe invalid arg
       let b = bundler(path.join(inputDir, '/src/index.js'), {
         watch: true,
       });
 
+      // $FlowFixMe missing bundle
       let bundle = await b.bundle();
       let output = await run(bundle);
 
@@ -407,10 +437,13 @@ describe.v2('watcher', function () {
 
     let b = bundler(indexPath, {inputFS: overlayFS});
     let bundleGraph;
-    subscription = await b.watch((err, event) => {
+    subscription = await b.watch((err, event: any) => {
       assert(event.type === 'buildSuccess');
+      if (!event.bundleGraph) return assert(false);
       bundleGraph = event.bundleGraph;
     });
+    if (!bundleGraph) return assert(false);
+
     await getNextBuild(b);
     assertBundles(bundleGraph, [
       {
@@ -453,6 +486,7 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'import {other} from "./other";\nexport default other;',
+      // $FlowFixMe invalid arg
       'utf8',
     );
 
@@ -464,11 +498,13 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/other.js'),
       'export const other = 2;',
+      // $FlowFixMe invalid arg
       'utf8',
     );
 
     buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildSuccess');
+    if (!buildEvent.bundleGraph) return assert(false);
 
     let res = await run(buildEvent.bundleGraph);
     assert.equal(res.default, 2);

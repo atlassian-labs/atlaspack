@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import {
   matchSourceMappingURL,
@@ -46,6 +47,8 @@ describe('loadSourceMap', () => {
     let contents = fs.readFileSync(filename, 'utf-8');
 
     let foundMap = await loadSourceMapUrl(fs, filename, contents);
+    if (!foundMap) return assert(false);
+
     assert.equal(foundMap.url, 'file://referenced-min.js.map');
     assert.equal(
       foundMap.filename,
@@ -65,6 +68,8 @@ describe('loadSourceMap', () => {
     let contents = fs.readFileSync(filename, 'utf-8');
 
     let foundMap = await loadSourceMapUrl(fs, filename, contents);
+    if (!foundMap) return assert(false);
+
     assert.equal(
       foundMap.url,
       'data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiIiwic291cmNlcyI6WyJmb28uanMiLCJiYXIuanMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7Ozs7Ozs7O1VBQ0c7Ozs7Ozs7Ozs7Ozs7O3NCQ0RIO3NCQUNBIn0=',
@@ -89,6 +94,7 @@ describe('loadSourceMap', () => {
     });
 
     assert(!!map);
+    if (!map) return assert(false);
 
     let parsedMap = map.getMap();
     assert.deepEqual(parsedMap.sources, ['input/sourcemap/referenced.js']);
@@ -185,6 +191,7 @@ describe('loadSourceMap', () => {
     });
 
     assert(!!map);
+    if (!map) return assert(false);
 
     let parsedMap = map.getMap();
     assert.deepEqual(parsedMap.sources, ['input/sourcemap/referenced.js']);
@@ -200,6 +207,7 @@ describe('loadSourceMap', () => {
     });
 
     assert(!!map);
+    if (!map) return assert(false);
 
     let parsedMap = map.getMap();
     assert.deepEqual(parsedMap.sources, ['input/source.js']);

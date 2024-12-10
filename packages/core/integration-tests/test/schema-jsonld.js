@@ -1,3 +1,4 @@
+// @flow
 import {
   assertBundles,
   bundle,
@@ -13,6 +14,7 @@ describe.v2('jsonld', function () {
   it('Should parse a LD+JSON schema and collect dependencies', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/schema-jsonld/index.html'),
+      // $FlowFixMe publicURL missing
       {
         publicURL: 'https://place.holder/',
       },
@@ -45,11 +47,15 @@ describe.v2('jsonld', function () {
       path.join(distDir, 'index.html'),
       'utf-8',
     );
-    let contentBetweenScriptTag = new RegExp(
-      /<\s*script \s*type="application\/ld\+json"\s*>(.*)<\/\s*script\s*>/gm,
-    ).exec(file)[1];
+    let contentBetweenScriptTag =
+      new RegExp(
+        /<\s*script \s*type="application\/ld\+json"\s*>(.*)<\/\s*script\s*>/gm,
+      ).exec(file)?.[1] || '';
 
-    let jsonldData = assertValidJsonObject(contentBetweenScriptTag);
+    let jsonldData = assertValidJsonObject<{|
+      logo: {|url: string|},
+      image: string[],
+    |}>(contentBetweenScriptTag);
     match(jsonldData.logo.url, /logo\.[a-f0-9]+\.png/);
     match(jsonldData.image[0], /image\.[a-f0-9]+\.jpeg/);
     match(jsonldData.image[1], /image\.[a-f0-9]+\.jpeg/);
@@ -59,20 +65,24 @@ describe.v2('jsonld', function () {
 function match(test, pattern) {
   let success = new RegExp(pattern).test(test);
   if (success) {
+    // $FlowFixMe template literal
     assert.ok(`'${test}' matched the given pattern of '${pattern}'`);
     return;
   }
+  // $FlowFixMe template literal
   assert.fail(`'${test}' did not match the given pattern of '${pattern}'`);
 }
 
-function assertValidJsonObject(dataAsString) {
+function assertValidJsonObject<T>(dataAsString): T {
   try {
-    let data = JSON.parse(dataAsString);
+    let data: T = JSON.parse(dataAsString);
     assert.ok('input string is a valid json object');
     return data;
   } catch (e) {
+    // $FlowFixMe assert.fail missing
     assert.fail(
       `the given string (see below) is not a valid json object\n\terror :: ${e}\n\tinput :: ${dataAsString}`,
     );
+    throw e;
   }
 }

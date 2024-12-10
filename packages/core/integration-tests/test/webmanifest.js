@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -44,7 +45,7 @@ describe.v2('webmanifest', function () {
     ]);
 
     const manifest = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'webmanifest').filePath,
+      b.getBundles().find((b) => b.type === 'webmanifest')?.filePath || '',
       'utf8',
     );
     assert(/screenshot\.[0-9a-f]+\.png/.test(manifest));
@@ -86,7 +87,7 @@ describe.v2('webmanifest', function () {
     ]);
 
     const manifest = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'webmanifest').filePath,
+      b.getBundles().find((b) => b.type === 'webmanifest')?.filePath || '',
       'utf8',
     );
     assert(/screenshot\.[0-9a-f]+\.png/.test(manifest));
@@ -102,6 +103,7 @@ describe.v2('webmanifest', function () {
     );
     let manifest = await inputFS.readFileSync(manifestPath, 'utf8');
 
+    // $FlowFixMe
     await assert.rejects(
       () =>
         bundle(
@@ -214,6 +216,7 @@ describe.v2('webmanifest', function () {
 
     let message = md`Failed to resolve 'icon.png' from '${manifestPathRelative}'`;
 
+    // $FlowFixMe
     await assert.rejects(
       () =>
         bundle(

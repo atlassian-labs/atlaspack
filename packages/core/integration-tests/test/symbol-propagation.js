@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -24,6 +25,7 @@ describe.v2('symbol propagation', () => {
       shouldDisableCache: false,
     });
 
+    // $FlowFixMe
     await assert.rejects(() => b.run(), {
       message: `Failed to resolve './missing.js' from './broken.js'`,
     });

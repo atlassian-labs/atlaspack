@@ -1,8 +1,9 @@
-import * as path from 'node:path';
+// @flow
+import * as path from 'path';
 import {tmpdir} from 'os';
 import {LMDBLiteCache} from '../src/index';
-import {deserialize, serialize} from 'node:v8';
-import assert from 'node:assert';
+import {deserialize, serialize} from 'v8';
+import assert from 'assert';
 
 const cacheDir = path.join(tmpdir(), 'lmdb-lite-cache-tests');
 

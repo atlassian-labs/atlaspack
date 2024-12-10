@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -13,13 +14,17 @@ import {
   fsFixture,
   overlayFS,
 } from '@atlaspack/test-utils';
+import type {NamedBundle} from '@atlaspack/types';
 
-const findBundle = (bundleGraph, nameRegex) => {
+const findBundle = (bundleGraph, nameRegex): NamedBundle => {
+  if (!bundleGraph) throw new Error('Missing bundleGraph');
+  if (!nameRegex) throw new Error('Missing nameRegex');
+
   const result = bundleGraph.getBundles().find((b) => nameRegex.test(b.name));
 
   if (!result) {
     throw new Error(
-      `Couldn't find bundle matching '${nameRegex}'. Available bundles are ${bundleGraph
+      `Couldn't find bundle matching '${nameRegex.toString()}'. Available bundles are ${bundleGraph
         ?.getBundles()
         .map((b) => b.name)
         .join(', ')}`,
@@ -41,7 +46,9 @@ const distDirIncludes = async (matches) => {
     } else {
       if (!files.some((file) => match.test(file))) {
         throw new Error(
-          `No file matching ${match} was found in ${files.join(', ')}`,
+          `No file matching ${match.toString()} was found in ${files.join(
+            ', ',
+          )}`,
         );
       }
     }
@@ -64,6 +71,7 @@ describe.v2('lazy compile', function () {
 
     const subscription = await b.watch();
     let result = await getNextBuild(b);
+    if (!result.requestBundle) return assert(false);
 
     // This simulates what happens if index.js is loaded as well as lazy-1 which loads lazy-2.
     // While parallel-lazy-1 is also async imported by index.js, we pretend it wasn't requested (i.e. like
@@ -115,6 +123,8 @@ describe.v2('lazy compile', function () {
 
     const subscription = await b.watch();
     let result = await getNextBuild(b);
+    if (!result.requestBundle) return assert(false);
+
     result = await result.requestBundle(
       findBundle(result.bundleGraph, /^index-sync-async\./),
     );
@@ -151,6 +161,7 @@ describe.v2('lazy compile', function () {
 
     const subscription = await b.watch();
     let result = await getNextBuild(b);
+    if (!result.bundleGraph) return assert(false);
 
     // Expect the bundle graph to only contain `parallel-lazy-1` but not `lazy-1`s children as we're only including lazy-1 in lazy compilation
     // `parallel-lazy-1` which wasn't requested.
@@ -213,6 +224,7 @@ describe.v2('lazy compile', function () {
 
     const subscription = await b.watch();
     let result = await getNextBuild(b);
+    if (!result.requestBundle) return assert(false);
 
     result = await result.requestBundle(
       findBundle(result.bundleGraph, /index.js/),
@@ -256,6 +268,8 @@ describe.v2('lazy compile', function () {
 
     const subscription = await b.watch();
     let result = await getNextBuild(b);
+    if (!result.requestBundle) return assert(false);
+
     result = await result.requestBundle(
       findBundle(result.bundleGraph, /^index-sync-async\./),
     );
@@ -326,6 +340,8 @@ describe.v2('lazy compile', function () {
 
     const subscription = await b.watch();
     let result = await getNextBuild(b);
+    if (!result.requestBundle) return assert(false);
+
     result = await result.requestBundle(
       findBundle(result.bundleGraph, /^index\.js/),
     );

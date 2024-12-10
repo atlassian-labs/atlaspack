@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import {join} from 'path';
 import {
@@ -10,6 +11,7 @@ import {
   removeDistDirectory,
   run,
 } from '@atlaspack/test-utils';
+import type {InitialAtlaspackOptions} from '../../types/src';
 
 describe('bundle-text:', function () {
   beforeEach(async () => {
@@ -164,7 +166,7 @@ describe('bundle-text:', function () {
     describe(`when scope hoisting is ${
       scopeHoist ? 'enabled' : 'disabled'
     }`, () => {
-      let options = scopeHoist
+      let options: InitialAtlaspackOptions = scopeHoist
         ? {
             defaultTargetOptions: {
               isLibrary: true,
@@ -172,7 +174,7 @@ describe('bundle-text:', function () {
               shouldScopeHoist: true,
             },
           }
-        : {};
+        : Object.freeze({});
 
       it('can be used with an import that points to the same asset', async function () {
         await fsFixture(overlayFS, __dirname)`
@@ -201,7 +203,7 @@ describe('bundle-text:', function () {
             assets: [
               'index.js',
               'main.js',
-              !scopeHoist && 'esmodule-helpers.js',
+              !scopeHoist ? 'esmodule-helpers.js' : undefined,
             ].filter(Boolean),
           },
           {

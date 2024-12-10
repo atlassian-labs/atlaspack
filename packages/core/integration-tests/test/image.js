@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import {extname, join} from 'path';
 
@@ -103,6 +104,7 @@ describe('images', function () {
       },
     });
 
+    // $FlowFixMe "filePath" does not exist in Bundle
     let {filePath} = b
       .getBundles()
       .find((b) => ['jpg', 'jpeg'].includes(b.type));
@@ -126,6 +128,7 @@ describe('images', function () {
       logLevel: 'verbose',
     });
 
+    // $FlowFixMe "filePath" does not exist in Bundle
     let {filePath} = b
       .getBundles()
       .find((b) => ['jpg', 'jpeg'].includes(b.type));
@@ -151,6 +154,7 @@ describe('images', function () {
       },
     });
 
+    // $FlowFixMe "filePath" does not exist in Bundle
     let {filePath} = b.getBundles().find((b) => b.type === 'png');
 
     let input = await inputFS.readFile(img);
@@ -166,6 +170,7 @@ describe('images', function () {
   it.v2('retain EXIF data when resized with a query string', async () => {
     let b = await bundle(join(__dirname, '/integration/image-exif/resized.js'));
 
+    // $FlowFixMe "filePath" does not exist in Bundle
     let {filePath} = b
       .getBundles()
       .find((b) => ['jpg', 'jpeg'].includes(b.type));
@@ -191,6 +196,7 @@ describe('images', function () {
       },
     );
 
+    // $FlowFixMe "filePath" does not exist in Bundle
     let {filePath} = b
       .getBundles()
       .find((b) => ['jpg', 'jpeg'].includes(b.type));
@@ -204,6 +210,7 @@ describe('images', function () {
   it.v2('uses the EXIF orientation tag when resizing', async () => {
     let b = await bundle(join(__dirname, '/integration/image-exif/resized.js'));
 
+    // $FlowFixMe "filePath" does not exist in Bundle
     let {filePath} = b
       .getBundles()
       .find((b) => ['jpg', 'jpeg'].includes(b.type));
@@ -226,6 +233,7 @@ describe('images', function () {
       },
     );
 
+    // $FlowFixMe "filePath" does not exist in Bundle
     let {filePath} = b.getBundles().find((b) => b.type === 'jpeg');
 
     let buffer = await outputFS.readFile(filePath);
@@ -247,6 +255,7 @@ describe('images', function () {
       },
     );
 
+    // $FlowFixMe "filePath" does not exist in Bundle
     let {filePath} = b.getBundles().find((b) => b.type === 'png');
 
     let buffer = await outputFS.readFile(filePath);

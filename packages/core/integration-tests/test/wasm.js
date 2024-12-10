@@ -1,13 +1,11 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
-import {
-  assertBundleTree,
-  bundle,
-  deferred,
-  describe,
-  it,
-  run,
-} from '@atlaspack/test-utils';
+import {assertBundles, bundle, describe, it, run} from '@atlaspack/test-utils';
+
+function deferred() {
+  throw new Error('stub');
+}
 
 describe.skip('wasm', function () {
   if (typeof WebAssembly === 'undefined') {
@@ -19,30 +17,33 @@ describe.skip('wasm', function () {
       it('should preload a wasm file for a sync require', async function () {
         let b = await bundle(
           path.join(__dirname, '/integration/wasm-sync/index.js'),
+          // $FlowFixMe
           {
             target,
           },
         );
 
-        await assertBundleTree(b, {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bundle-loader.js',
-            'bundle-url.js',
-            'wasm-loader.js',
-          ],
-          childBundles: [
-            {
-              type: 'wasm',
-              assets: ['add.wasm'],
-              childBundles: [],
-            },
-            {
-              type: 'map',
-            },
-          ],
-        });
+        await assertBundles(b, [
+          {
+            name: 'index.js',
+            assets: [
+              'index.js',
+              'bundle-loader.js',
+              'bundle-url.js',
+              'wasm-loader.js',
+            ],
+            childBundles: [
+              {
+                type: 'wasm',
+                assets: ['add.wasm'],
+                childBundles: [],
+              },
+              {
+                type: 'map',
+              },
+            ],
+          },
+        ]);
 
         let promise = deferred();
         await run(b, {output: promise.resolve}, {require: false});
@@ -52,30 +53,33 @@ describe.skip('wasm', function () {
       it('should load a wasm file asynchronously with dynamic import', async function () {
         let b = await bundle(
           path.join(__dirname, '/integration/wasm-async/index.js'),
+          // $FlowFixMe
           {
             target,
           },
         );
 
-        await assertBundleTree(b, {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bundle-loader.js',
-            'bundle-url.js',
-            'wasm-loader.js',
-          ],
-          childBundles: [
-            {
-              type: 'wasm',
-              assets: ['add.wasm'],
-              childBundles: [],
-            },
-            {
-              type: 'map',
-            },
-          ],
-        });
+        await assertBundles(b, [
+          {
+            name: 'index.js',
+            assets: [
+              'index.js',
+              'bundle-loader.js',
+              'bundle-url.js',
+              'wasm-loader.js',
+            ],
+            childBundles: [
+              {
+                type: 'wasm',
+                assets: ['add.wasm'],
+                childBundles: [],
+              },
+              {
+                type: 'map',
+              },
+            ],
+          },
+        ]);
 
         var res = await run(b);
         assert.equal(await res, 5);
@@ -84,40 +88,43 @@ describe.skip('wasm', function () {
       it('should load a wasm file in parallel with a dynamic JS import', async function () {
         let b = await bundle(
           path.join(__dirname, '/integration/wasm-dynamic/index.js'),
+          // $FlowFixMe
           {
             target,
           },
         );
 
-        await assertBundleTree(b, {
-          name: 'index.js',
-          assets: [
-            'index.js',
-            'bundle-loader.js',
-            'bundle-url.js',
-            'js-loader.js',
-            'wasm-loader.js',
-          ],
-          childBundles: [
-            {
-              type: 'js',
-              assets: ['dynamic.js'],
-              childBundles: [
-                {
-                  type: 'wasm',
-                  assets: ['add.wasm'],
-                  childBundles: [],
-                },
-                {
-                  type: 'map',
-                },
-              ],
-            },
-            {
-              type: 'map',
-            },
-          ],
-        });
+        await assertBundles(b, [
+          {
+            name: 'index.js',
+            assets: [
+              'index.js',
+              'bundle-loader.js',
+              'bundle-url.js',
+              'js-loader.js',
+              'wasm-loader.js',
+            ],
+            childBundles: [
+              {
+                type: 'js',
+                assets: ['dynamic.js'],
+                childBundles: [
+                  {
+                    type: 'wasm',
+                    assets: ['add.wasm'],
+                    childBundles: [],
+                  },
+                  {
+                    type: 'map',
+                  },
+                ],
+              },
+              {
+                type: 'map',
+              },
+            ],
+          },
+        ]);
 
         var res = await run(b);
         assert.equal(await res, 5);

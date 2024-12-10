@@ -1,7 +1,8 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
-  assertBundleTree,
+  assertBundles,
   bundle,
   describe,
   inputFS as fs,
@@ -17,41 +18,43 @@ describe.skip('parser', function () {
       ),
     );
 
-    await assertBundleTree(b, {
-      name: 'index.html',
-      assets: ['index.html'],
-      childBundles: [
-        {
-          type: 'svg',
-          assets: ['icons.SVG'],
-          childBundles: [],
-        },
-        {
-          type: 'css',
-          assets: ['index.cSs'],
-          childBundles: [
-            {
-              type: 'map',
-            },
-          ],
-        },
-        {
-          type: 'html',
-          assets: ['other.HTM'],
-          childBundles: [
-            {
-              type: 'js',
-              assets: ['index.js'],
-              childBundles: [
-                {
-                  type: 'map',
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
+    await assertBundles(b, [
+      {
+        name: 'index.html',
+        assets: ['index.html'],
+        childBundles: [
+          {
+            type: 'svg',
+            assets: ['icons.SVG'],
+            childBundles: [],
+          },
+          {
+            type: 'css',
+            assets: ['index.cSs'],
+            childBundles: [
+              {
+                type: 'map',
+              },
+            ],
+          },
+          {
+            type: 'html',
+            assets: ['other.HTM'],
+            childBundles: [
+              {
+                type: 'js',
+                assets: ['index.js'],
+                childBundles: [
+                  {
+                    type: 'map',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
 
     let files = await fs.readdir(path.join(__dirname, '/dist'));
     let html = await fs.readFile(path.join(__dirname, '/dist/index.html'));

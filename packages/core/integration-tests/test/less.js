@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import {join} from 'path';
 import {
@@ -385,6 +386,7 @@ describe.v2('less', function () {
         @import '~library/style.less';
     `;
 
+    // $FlowFixMe
     await assert.rejects(() => bundle('index.less', {inputFS: overlayFS}), {
       message: md`The @import path "${'~library/style.less'}" is using webpack specific syntax, which isn't supported by Parcel.\n\nTo @import files from ${'node_modules'}, use "${'library/style.less'}"`,
     });

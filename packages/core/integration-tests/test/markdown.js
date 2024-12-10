@@ -1,7 +1,8 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
-  assertBundleTree,
+  assertBundles,
   bundle,
   describe,
   it,
@@ -14,17 +15,19 @@ describe.skip('markdown', function () {
       path.join(__dirname, '/integration/markdown/index.md'),
     );
 
-    await assertBundleTree(b, {
-      name: 'index.html',
-      assets: ['index.md'],
-      childBundles: [
-        {
-          type: 'png',
-          assets: ['100x100.png'],
-          childBundles: [],
-        },
-      ],
-    });
+    await assertBundles(b, [
+      {
+        name: 'index.html',
+        assets: ['index.md'],
+        childBundles: [
+          {
+            type: 'png',
+            assets: ['100x100.png'],
+            childBundles: [],
+          },
+        ],
+      },
+    ]);
 
     let files = await outputFS.readdir(path.join(__dirname, '/dist'));
     let html = await outputFS.readFile(

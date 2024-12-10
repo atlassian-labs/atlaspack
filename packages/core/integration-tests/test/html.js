@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import {
   assertBundles,
@@ -95,7 +96,9 @@ describe('html', function () {
 
     let iconsBundle = b.getBundles().find((b) => b.name.startsWith('icons'));
     assert(
-      html.includes('/' + path.basename(iconsBundle.filePath) + '#icon-code'),
+      html.includes(
+        '/' + path.basename(iconsBundle?.filePath || '') + '#icon-code',
+      ),
     );
 
     let value = null;
@@ -121,7 +124,9 @@ describe('html', function () {
       },
     ]);
 
+    // $FlowFixMe
     assert(await outputFS.exists(path.join(distDir, 'a.html'), 'utf8'));
+    // $FlowFixMe
     assert(await outputFS.exists(path.join(distDir, 'b.html'), 'utf8'));
   });
 
@@ -461,6 +466,7 @@ describe('html', function () {
   it.skip('should insert sibling JS bundles for CSS files in the HEAD', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/html-css-js/index.html'),
+      // $FlowFixMe hmr missing from options
       {
         hmr: true,
       },
@@ -956,23 +962,25 @@ describe('html', function () {
       path.join(__dirname, '/integration/webmanifest/index.html'),
     );
 
-    assertBundles(b, {
-      name: 'index.html',
-      assets: ['index.html'],
-      childBundles: [
-        {
-          type: 'webmanifest',
-          assets: ['manifest.webmanifest'],
-          childBundles: [
-            {
-              type: 'txt',
-              assets: ['some.txt'],
-              childBundles: [],
-            },
-          ],
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'index.html',
+        assets: ['index.html'],
+        childBundles: [
+          {
+            type: 'webmanifest',
+            assets: ['manifest.webmanifest'],
+            childBundles: [
+              {
+                type: 'txt',
+                assets: ['some.txt'],
+                childBundles: [],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
   });
 
   it.skip("should treat webmanifest as an entry module so it doesn't get content hashed", async function () {
@@ -980,16 +988,18 @@ describe('html', function () {
       path.join(__dirname, '/integration/html-manifest/index.html'),
     );
 
-    assertBundles(b, {
-      name: 'index.html',
-      assets: ['index.html'],
-      childBundles: [
-        {
-          type: 'webmanifest',
-          assets: ['manifest.webmanifest'],
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'index.html',
+        assets: ['index.html'],
+        childBundles: [
+          {
+            type: 'webmanifest',
+            assets: ['manifest.webmanifest'],
+          },
+        ],
+      },
+    ]);
 
     const html = await outputFS.readFile(
       path.join(__dirname, '/dist/index.html'),
@@ -1212,7 +1222,7 @@ describe('html', function () {
     let bundles = b.getBundles();
 
     let html = await outputFS.readFile(
-      bundles.find((bundle) => bundle.type === 'html').filePath,
+      bundles.find((bundle) => bundle.type === 'html')?.filePath || '',
       'utf8',
     );
 
@@ -1412,7 +1422,7 @@ describe('html', function () {
   for (let scopeHoist of [false, true]) {
     it.v2(
       'should expose top level declarations globally in inline <script> tags with dependencies with scopeHoist = ' +
-        scopeHoist,
+        scopeHoist.toString(),
       async function () {
         let b = await bundle(
           path.join(
@@ -1633,6 +1643,7 @@ describe('html', function () {
     async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/html-inline-js-module/index.html'),
+        // $FlowFixMe mode does not exist in InitialOptions
         {
           defaultTargetOptions: {
             mode: 'production',
@@ -1670,6 +1681,7 @@ describe('html', function () {
     async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/html-js/index.html'),
+        // $FlowFixMe mode does not exist in InitialOptions
         {
           defaultTargetOptions: {
             mode: 'production',
@@ -1698,7 +1710,7 @@ describe('html', function () {
 
       let bundles = b.getBundles();
       let html = await outputFS.readFile(
-        bundles.find((b) => b.type === 'html').filePath,
+        bundles.find((b) => b.type === 'html')?.filePath || '',
         'utf8',
       );
       assert(html.includes('<script type="module" src='));
@@ -1707,14 +1719,14 @@ describe('html', function () {
       let js = await outputFS.readFile(
         bundles.find(
           (b) => b.type === 'js' && b.env.outputFormat === 'esmodule',
-        ).filePath,
+        )?.filePath || '',
         'utf8',
       );
       assert(/class \$[a-f0-9]+\$var\$Useless \{/.test(js));
 
       js = await outputFS.readFile(
         bundles.find((b) => b.type === 'js' && b.env.outputFormat === 'global')
-          .filePath,
+          ?.filePath || '',
         'utf8',
       );
       assert(!/class \$[a-f0-9]+\$var\$Useless \{/.test(js));
@@ -1748,6 +1760,7 @@ describe('html', function () {
   it('should not add a nomodule version when all browsers support esmodules', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/html-js/index.html'),
+      // $FlowFixMe mode does not exist in InitialOptions
       {
         defaultTargetOptions: {
           mode: 'production',
@@ -1999,6 +2012,7 @@ describe('html', function () {
     let regex = /<script (?:type="[^"]+" )?src="([^"]*)"><\/script>/g;
     let match;
     while ((match = regex.exec(html)) !== null) {
+      if (match === null) continue;
       insertedBundles.push(path.basename(match[1]));
     }
 
@@ -2061,6 +2075,7 @@ describe('html', function () {
     let regex = /<script (?:type="[^"]+" )?src="([^"]*)"><\/script>/g;
     let match;
     while ((match = regex.exec(html)) !== null) {
+      if (match === null) continue;
       insertedBundles.push(path.basename(match[1]));
     }
 
@@ -2136,11 +2151,14 @@ describe('html', function () {
         let regex = /<script ([^>]*)><\/script>/g;
         let match;
         while ((match = regex.exec(html)) !== null) {
+          if (match === null) continue;
           let attributes = new Map(
+            // $FlowFixMe
             match[1].split(' ').map((a) => a.split('=')),
           );
-          let url = attributes.get('src').replace(/"/g, '');
-          assert(url);
+          let url = attributes.get('src')?.replace(/"/g, '');
+          if (!url) return assert(url, 'Could not get src');
+
           if (attributes.get('type') === '"module"') {
             assert.strictEqual(attributes.size, 2);
             moduleScripts.push(path.basename(url));
@@ -2158,13 +2176,13 @@ describe('html', function () {
             b
               .getBundles()
               .find((b) => b.filePath.endsWith(scripts[0]))
-              .getMainEntry() == null,
+              ?.getMainEntry() == null,
           );
           assert(
             b
               .getBundles()
               .find((b) => b.filePath.endsWith(scripts[1]))
-              .getMainEntry(),
+              ?.getMainEntry(),
           );
         }
       }
@@ -2258,6 +2276,7 @@ describe('html', function () {
     });
 
     // could run in either order.
+    // $FlowFixMe
     assert(output.sort(), ['a', 'b', 'c']);
   });
 
@@ -2317,6 +2336,7 @@ describe('html', function () {
       });
 
       // could run in either order.
+      // $FlowFixMe
       assert(output.sort(), ['a', 'b', 'c']);
     },
   );
@@ -2436,7 +2456,9 @@ describe('html', function () {
     let regex = /<script (?:type="[^"]+" )?src="([^"]*)"><\/script>/g;
     let match;
     while ((match = regex.exec(html)) !== null) {
+      if (!match) continue;
       let bundle = bundles.find(
+        // $FlowFixMe still thinks "match" can be undefined
         (b) => path.basename(b.filePath) === path.basename(match[1]),
       );
 
@@ -2572,12 +2594,19 @@ describe('html', function () {
     ]);
 
     let htmlBundle = b.getBundles().find((b) => b.type === 'html');
+    if (!htmlBundle) return assert(false, 'No HTML Bundle');
+
     let htmlSiblings = b.getReferencedBundles(htmlBundle);
+    if (!htmlSiblings) return assert(false, 'No HTML siblings');
+
     assert.equal(htmlSiblings.length, 2);
     assert(htmlSiblings.some((b) => b.type === 'js'));
     assert(htmlSiblings.some((b) => b.type === 'css'));
 
-    let worker = b.getChildBundles(htmlSiblings.find((b) => b.type === 'js'));
+    let htmlSibling = htmlSiblings.find((b) => b.type === 'js');
+    if (!htmlSibling) return assert(false, 'No HTML siblings');
+
+    let worker = b.getChildBundles(htmlSibling);
     assert.equal(worker.length, 1);
     let workerSiblings = b.getReferencedBundles(worker[0]);
     assert.equal(workerSiblings.length, 0);
@@ -2647,6 +2676,7 @@ describe('html', function () {
 
       for (let htmlBundle of b.getBundles().filter((b) => b.type === 'html')) {
         let htmlSiblings = b
+          // $FlowFixMe bool is not compatible with object
           .getReferencedBundles(htmlBundle, true)
           .map((b) => b.type)
           .sort();
@@ -2772,10 +2802,11 @@ describe('html', function () {
 
     let bundles = b.getBundles();
     let cssBundle = path.basename(
-      bundles.find((bundle) => bundle.filePath.endsWith('.css')).filePath,
+      bundles.find((bundle) => bundle.filePath.endsWith('.css'))?.filePath ||
+        '',
     );
     let jsBundle = path.basename(
-      bundles.find((bundle) => bundle.filePath.endsWith('.js')).filePath,
+      bundles.find((bundle) => bundle.filePath.endsWith('.js'))?.filePath || '',
     );
 
     assert(
@@ -2889,7 +2920,7 @@ describe('html', function () {
     );
 
     let contents = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'html').filePath,
+      b.getBundles().find((b) => b.type === 'html')?.filePath || '',
       'utf8',
     );
     assert.equal(
@@ -2902,6 +2933,7 @@ describe('html', function () {
     let dir = path.join(__dirname, 'integration/invalid-bundler-config');
     let pkg = path.join(dir, 'package.json');
     let code = await inputFS.readFileSync(pkg, 'utf8');
+    // $FlowFixMe
     await assert.rejects(() => bundle(path.join(dir, 'index.html')), {
       name: 'BuildError',
       diagnostics: [
@@ -2976,6 +3008,7 @@ describe('html', function () {
 
     let youngerSibling; // bundle containing younger sibling, b.js
     let olderSibling; // bundle containing old sibling, a.js
+
     b.traverseBundles((bundle) => {
       bundle.traverseAssets((asset) => {
         if (asset.filePath.includes('b.js')) {
@@ -2985,6 +3018,8 @@ describe('html', function () {
         }
       });
     });
+
+    if (!youngerSibling) return assert(false, 'No younger sibling found');
 
     assert(
       b.getReferencedBundles(youngerSibling).filter((b) => b == olderSibling)
@@ -3081,6 +3116,7 @@ describe('html', function () {
   it.v2(
     'should throw error with empty string reference to other resource',
     async function () {
+      // $FlowFixMe
       await assert.rejects(
         () =>
           bundle(

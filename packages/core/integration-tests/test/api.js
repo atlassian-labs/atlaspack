@@ -85,6 +85,7 @@ describe('JS API', function () {
       yarn.lock:
 
       reporter-plugin.js:
+        // @flow
         import {Reporter} from '@atlaspack/plugin';
         import path from 'node:path';
 

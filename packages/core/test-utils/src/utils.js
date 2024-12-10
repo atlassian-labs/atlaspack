@@ -163,6 +163,17 @@ export function findAsset(
   });
 }
 
+export function findAssetOrThrow(
+  bundleGraph: BundleGraph<PackagedBundle>,
+  assetFileName: string,
+): Asset {
+  let asset = findAsset(bundleGraph, assetFileName);
+  if (!asset) {
+    throw new Error('No Asset Found');
+  }
+  return asset;
+}
+
 export function findDependency(
   bundleGraph: BundleGraph<PackagedBundle>,
   assetFileName: string,
@@ -434,11 +445,14 @@ export async function runBundles(
 
 export async function runBundle(
   bundleGraph: BundleGraph<PackagedBundle>,
-  bundle: PackagedBundle,
+  bundle: ?PackagedBundle,
   globals: mixed,
   opts: RunOpts = {},
   externalModules?: ExternalModules,
 ): Promise<mixed> {
+  if (!bundle) {
+    throw new Error('No bundle supplied');
+  }
   if (bundle.type === 'html') {
     let code = await overlayFS.readFile(nullthrows(bundle.filePath), 'utf8');
     let ast = postHtmlParse(code, {
@@ -536,13 +550,22 @@ export function expectBundles(
   expect(bundleData).toEqual(expectedBundles);
 }
 
+export type ChildBundle = {|
+  type?: string,
+  assets?: Array<string>,
+  childBundles?: Array<ChildBundle>,
+|};
+
+export type BundleAssert = {|
+  name?: string | RegExp,
+  type?: string,
+  assets: Array<string>,
+  childBundles?: Array<ChildBundle>,
+|};
+
 export function assertBundles(
   bundleGraph: BundleGraph<PackagedBundle>,
-  expectedBundles: Array<{|
-    name?: string | RegExp,
-    type?: string,
-    assets: Array<string>,
-  |}>,
+  expectedBundles: Array<BundleAssert>,
 ) {
   let actualBundles = [];
   const byAlphabet = (a, b) => (a.toLowerCase() < b.toLowerCase() ? -1 : 1);
