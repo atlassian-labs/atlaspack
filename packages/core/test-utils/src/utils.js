@@ -445,11 +445,14 @@ export async function runBundles(
 
 export async function runBundle(
   bundleGraph: BundleGraph<PackagedBundle>,
-  bundle: PackagedBundle,
+  bundle: ?PackagedBundle,
   globals: mixed,
   opts: RunOpts = {},
   externalModules?: ExternalModules,
 ): Promise<mixed> {
+  if (!bundle) {
+    throw new Error('No bundle supplied');
+  }
   if (bundle.type === 'html') {
     let code = await overlayFS.readFile(nullthrows(bundle.filePath), 'utf8');
     let ast = postHtmlParse(code, {

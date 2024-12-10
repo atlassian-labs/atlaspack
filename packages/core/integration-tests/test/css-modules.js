@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -67,11 +68,11 @@ describe('css modules', () => {
     assert(/[_0-9a-zA-Z]+_b-2/.test(output));
 
     let css = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css')?.filePath || '',
       'utf8',
     );
     let includedRules = new Set();
-    postcss.parse(css).walkRules((rule) => {
+    postcss.parse(css, {}).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert(includedRules.has('.page'));
@@ -99,7 +100,7 @@ describe('css modules', () => {
     ]);
 
     let js = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'js').filePath,
+      b.getBundles().find((b) => b.type === 'js')?.filePath || '',
       'utf8',
     );
     assert(!js.includes('unused'));
@@ -108,11 +109,11 @@ describe('css modules', () => {
     assert(/[_0-9a-zA-Z]+_b-2/.test(output));
 
     let css = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css')?.filePath || '',
       'utf8',
     );
     let includedRules = new Set();
-    postcss.parse(css).walkRules((rule) => {
+    postcss.parse(css, {}).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert.deepStrictEqual(
@@ -150,11 +151,11 @@ describe('css modules', () => {
     assert(/[_0-9a-zA-Z]+_b-2/.test(output));
 
     let css = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css')?.filePath || '',
       'utf8',
     );
     let includedRules = new Set();
-    postcss.parse(css).walkRules((rule) => {
+    postcss.parse(css, {}).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert(includedRules.has('body'));
@@ -183,7 +184,7 @@ describe('css modules', () => {
     ]);
 
     let js = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'js').filePath,
+      b.getBundles().find((b) => b.type === 'js')?.filePath || '',
       'utf8',
     );
     assert(js.includes('unused'));
@@ -193,11 +194,11 @@ describe('css modules', () => {
     assert(/[_0-9a-zA-Z]+_unused/.test(output['unused']));
 
     let css = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css')?.filePath || '',
       'utf8',
     );
     let includedRules = new Set();
-    postcss.parse(css).walkRules((rule) => {
+    postcss.parse(css, {}).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert.deepStrictEqual(
@@ -389,6 +390,7 @@ describe('css modules', () => {
   it.v2(
     'should throw an error when importing a missing class',
     async function () {
+      // $FlowFixMe
       await assert.rejects(
         () =>
           bundle(
@@ -681,7 +683,7 @@ describe('css modules', () => {
     assert.deepEqual(res, 'C-gzXq_foo');
 
     let contents = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css')?.filePath || '',
       'utf8',
     );
     assert(contents.includes('.C-gzXq_foo'));
@@ -696,7 +698,7 @@ describe('css modules', () => {
     let res = await run(b);
     assert.deepEqual(res, 'C-gzXq_foo');
     let contents = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
+      b.getBundles().find((b) => b.type === 'css')?.filePath || '',
       'utf8',
     );
     assert(contents.includes('.C-gzXq_foo'));
@@ -714,7 +716,7 @@ describe('css modules', () => {
         {mode: 'production'},
       );
       let contents = await outputFS.readFile(
-        b.getBundles().find((b) => b.type === 'css').filePath,
+        b.getBundles().find((b) => b.type === 'css')?.filePath || '',
         'utf8',
       );
       assert.equal(
@@ -851,7 +853,7 @@ describe('css modules', () => {
       );
 
       let contents = await outputFS.readFile(
-        b.getBundles().find((b) => b.type === 'css').filePath,
+        b.getBundles().find((b) => b.type === 'css')?.filePath || '',
         'utf8',
       );
       assert(contents.includes('.foo'));
