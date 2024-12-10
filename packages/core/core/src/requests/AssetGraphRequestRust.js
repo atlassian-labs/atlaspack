@@ -9,7 +9,7 @@ import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
-import type {Environment} from '../types';
+import type {Environment, Asset} from '../types';
 
 import type {
   AssetGraphRequestInput,
@@ -78,7 +78,11 @@ export function createAssetGraphRequestRust(
   });
 }
 
-function getAssetGraph(serializedGraph) {
+// $FlowFixMe
+export function getAssetGraph(serializedGraph: any): {
+  assetGraph: AssetGraph,
+  changedAssets: Map<string, Asset>,
+} {
   let graph = new AssetGraph({
     _contentKeyToNodeId: new Map(),
     _nodeIdToContentKey: new Map(),
@@ -111,7 +115,6 @@ function getAssetGraph(serializedGraph) {
   }
 
   // See crates/atlaspack_core/src/types/environment.rs
-  let cachedAssets = new Map();
   let changedAssets = new Map();
   let entry = 0;
 
@@ -177,7 +180,6 @@ function getAssetGraph(serializedGraph) {
         asset.symbols = new Map(asset.symbols.map(mapSymbols));
       }
 
-      cachedAssets.set(id, asset.code);
       changedAssets.set(id, asset);
 
       graph.addNodeByContentKey(id, {
@@ -256,7 +258,6 @@ function getAssetGraph(serializedGraph) {
 
   return {
     assetGraph: graph,
-    cachedAssets,
     changedAssets,
   };
 }
