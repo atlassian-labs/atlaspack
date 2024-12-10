@@ -3,7 +3,6 @@ const worker = require('worker_threads')
 
 function run() {
   if (WorkerFarm.isWorker()) {
-    process.stdout.write(`${console.log}\n`)
     // Only test this behavior in workers. Logging in the main process will
     // always work.
     console.log('one');
