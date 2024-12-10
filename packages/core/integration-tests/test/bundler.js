@@ -1,3 +1,4 @@
+// @flow
 import path from 'path';
 import assert from 'assert';
 import Logger from '@atlaspack/logger';
@@ -5,7 +6,7 @@ import {
   assertBundles,
   bundle,
   describe,
-  findAsset,
+  findAssetOrThrow,
   it,
   overlayFS,
   fsFixture,
@@ -13,6 +14,7 @@ import {
 } from '@atlaspack/test-utils';
 import {hashString} from '@atlaspack/rust';
 import {normalizePath} from '@atlaspack/utils';
+import type {Asset} from '@atlaspack/types';
 
 describe('bundler', function () {
   it('should not create shared bundles when a bundle is being reused and disableSharedBundles is enabled', async function () {
@@ -887,8 +889,10 @@ describe('bundler', function () {
 
     assert(
       b
-        .getReferencedBundles(b.getBundlesWithAsset(findAsset(b, 'bar.js'))[0])
-        .includes(b.getBundlesWithAsset(findAsset(b, 'c.js'))[0]),
+        .getReferencedBundles(
+          b.getBundlesWithAsset(findAssetOrThrow(b, 'bar.js'))[0],
+        )
+        .includes(b.getBundlesWithAsset(findAssetOrThrow(b, 'c.js'))[0]),
     );
 
     await run(b);
@@ -955,13 +959,24 @@ describe('bundler', function () {
       .getBundles()
       .filter((bundle) => /b\.HASH_REF/.test(bundle.name));
 
-    let aBundleManifestAsset;
+    if (aManifestBundle === undefined) {
+      assert(aManifestBundle !== undefined);
+      return;
+    }
+
+    let aBundleManifestAsset: Asset | void;
     aManifestBundle.traverseAssets((asset, _, {stop}) => {
       if (/runtime-[a-z0-9]{16}\.js/.test(asset.filePath)) {
         aBundleManifestAsset = asset;
         stop();
       }
     });
+
+    if (aBundleManifestAsset === undefined) {
+      assert(aBundleManifestAsset !== undefined);
+      return;
+    }
+
     let aBundleManifestAssetCode = await aBundleManifestAsset.getCode();
 
     // Assert the a.js manifest bundle is aware of all the b.js bundles
@@ -1323,6 +1338,12 @@ describe('bundler', function () {
 
     // Asset should not be inlined
     const index = b.getBundles().find((b) => b.name.startsWith('index'));
+
+    if (index === undefined) {
+      assert(index !== undefined);
+      return;
+    }
+
     const contents = overlayFS.readFileSync(index.filePath, 'utf8');
     assert(
       !contents.includes('async value'),
