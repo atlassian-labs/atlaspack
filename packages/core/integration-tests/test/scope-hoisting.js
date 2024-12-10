@@ -1617,15 +1617,13 @@ describe('scope hoisting', function () {
           new Set(['foo', 'thing']),
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
-
+        let found = b
+          .getBundles()
+          // $FlowFixMe nullcheck filepath
+          .find((b) => b.getMainEntry().filePath.endsWith('async.js'));
         let contents = await outputFS.readFile(
           // $FlowFixMe nullcheck filepath
-          // $FlowFixMe nullcheck filepath
-          b
-            .getBundles()
-            // $FlowFixMe nullcheck filepath
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
+          found.filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
@@ -1653,15 +1651,13 @@ describe('scope hoisting', function () {
           new Set(['foo', 'thing']),
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
-
+        let found = b
+          .getBundles()
+          // $FlowFixMe nullcheck filepath
+          .find((b) => b.getMainEntry().filePath.endsWith('async.js'));
         let contents = await outputFS.readFile(
           // $FlowFixMe nullcheck filepath
-          // $FlowFixMe nullcheck filepath
-          b
-            .getBundles()
-            // $FlowFixMe nullcheck filepath
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
+          found.filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
@@ -1689,15 +1685,13 @@ describe('scope hoisting', function () {
           new Set(['foo', 'thing']),
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
-
+        let found = b
+          .getBundles()
+          // $FlowFixMe nullcheck filepath
+          .find((b) => b.getMainEntry().filePath.endsWith('async.js'));
         let contents = await outputFS.readFile(
           // $FlowFixMe nullcheck filepath
-          // $FlowFixMe nullcheck filepath
-          b
-            .getBundles()
-            // $FlowFixMe nullcheck filepath
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
+          found.filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
@@ -1777,15 +1771,13 @@ describe('scope hoisting', function () {
           new Set(['foo', 'thing']),
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
-
+        let found = b
+          .getBundles()
+          // $FlowFixMe nullcheck filepath
+          .find((b) => b.getMainEntry().filePath.endsWith('async.js'));
         let contents = await outputFS.readFile(
           // $FlowFixMe nullcheck filepath
-          // $FlowFixMe nullcheck filepath
-          b
-            .getBundles()
-            // $FlowFixMe nullcheck filepath
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
+          found.filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
@@ -1813,15 +1805,14 @@ describe('scope hoisting', function () {
           new Set(['foo', 'thing']),
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
+        let found = b
+          .getBundles()
+          // $FlowFixMe nullcheck filepath
+          .find((b) => b.getMainEntry().filePath.endsWith('async.js'));
 
         let contents = await outputFS.readFile(
           // $FlowFixMe nullcheck filepath
-          // $FlowFixMe nullcheck filepath
-          b
-            .getBundles()
-            // $FlowFixMe nullcheck filepath
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
+          found.filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
@@ -1880,15 +1871,13 @@ describe('scope hoisting', function () {
           new Set(['foo', 'thing']),
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
-
+        let found = b
+          .getBundles()
+          // $FlowFixMe nullcheck filepath
+          .find((b) => b.getMainEntry().filePath.endsWith('async.js'));
         let contents = await outputFS.readFile(
           // $FlowFixMe nullcheck filepath
-          // $FlowFixMe nullcheck filepath
-          b
-            .getBundles()
-            // $FlowFixMe nullcheck filepath
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
+          found.filePath,
           'utf8',
         );
         assert(!contents.includes('bar'));
