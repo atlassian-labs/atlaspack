@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -53,7 +54,7 @@ describe.v2('webextension', function () {
     );
     const manifest = JSON.parse(
       await outputFS.readFile(
-        b.getBundles().find((b) => b.name == 'manifest.json').filePath,
+        b.getBundles().find((b) => b.name == 'manifest.json')?.filePath || '',
         'utf8',
       ),
     );
@@ -101,7 +102,7 @@ describe.v2('webextension', function () {
     ]);
     const manifest = JSON.parse(
       await outputFS.readFile(
-        b.getBundles().find((b) => b.name == 'manifest.json').filePath,
+        b.getBundles().find((b) => b.name == 'manifest.json')?.filePath || '',
         'utf8',
       ),
     );

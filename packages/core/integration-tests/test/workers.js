@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -320,7 +321,9 @@ describe('atlaspack', function () {
     assert(shared);
 
     let main = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    // $FlowFixMe nullcheck filePath
     dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
+    // $FlowFixMe nullcheck filePath
     shared = await outputFS.readFile(shared.filePath, 'utf8');
     assert(/new Worker(.*?, {[\n\s]+type: 'module'[\n\s]+})/.test(main));
     assert(/new SharedWorker(.*?, {[\n\s]+type: 'module'[\n\s]+})/.test(main));
@@ -361,7 +364,7 @@ describe('atlaspack', function () {
         },
         {
           assets: [
-            !shouldScopeHoist && 'esmodule-helpers.js',
+            ...(!shouldScopeHoist ? ['esmodule-helpers.js'] : []),
             'index.js',
           ].filter(Boolean),
         },
@@ -388,11 +391,15 @@ describe('atlaspack', function () {
       assert(shared);
 
       let main = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      // $FlowFixMe nullcheck filePath
       dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
+      // $FlowFixMe nullcheck filePath
       shared = await outputFS.readFile(shared.filePath, 'utf8');
       assert(/new Worker([^,]*?)/.test(main));
       assert(/new SharedWorker([^,]*?)/.test(main));
+      // $FlowFixMe typecheck
       assert(!/export var foo/.test(dedicated));
+      // $FlowFixMe typecheck
       assert(!/export var foo/.test(shared));
     });
   }
@@ -454,10 +461,14 @@ describe('atlaspack', function () {
         assert(/new Worker([^,]*?)/.test(main));
         assert(/new SharedWorker([^,]*?)/.test(main));
 
+        // $FlowFixMe nullcheck filePath
         dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
+        // $FlowFixMe nullcheck filePath
         shared = await outputFS.readFile(shared.filePath, 'utf8');
         let importRegex = supported ? /importScripts\s*\(/ : /import\s*("|')/;
+        // $FlowFixMe typecheck
         assert(!importRegex.test(dedicated));
+        // $FlowFixMe typecheck
         assert(!importRegex.test(shared));
       },
     );
@@ -774,7 +785,9 @@ describe('atlaspack', function () {
     let bundles = b.getBundles();
     let main = bundles.find((b) => !b.env.isWorker());
     let worker = bundles.find((b) => b.env.isWorker());
+    // $FlowFixMe nullcheck filePath
     let mainContents = await outputFS.readFile(main.filePath, 'utf8');
+    // $FlowFixMe nullcheck filePath
     let workerContents = await outputFS.readFile(worker.filePath, 'utf8');
     assert(/navigator.serviceWorker.register\([^,]+?\)/.test(mainContents));
     assert(!/export /.test(workerContents));
@@ -802,6 +815,7 @@ describe('atlaspack', function () {
 
     let bundles = b.getBundles();
     let main = bundles.find((b) => !b.env.isWorker());
+    // $FlowFixMe nullcheck filePath
     let mainContents = await outputFS.readFile(main.filePath, 'utf8');
     assert(
       /navigator.serviceWorker.register\(.*?, {[\n\s]*scope: 'foo'[\n\s]*}\)/.test(
@@ -950,6 +964,7 @@ describe('atlaspack', function () {
         'integration/service-worker-import-meta-url/missing.js',
       );
       let code = await inputFS.readFileSync(fixture, 'utf8');
+      // $FlowFixMe missing assert.rejects
       await assert.rejects(() => bundle(fixture), {
         name: 'BuildError',
         diagnostics: [
@@ -1125,6 +1140,7 @@ describe('atlaspack', function () {
         'integration/worker-import-meta-url/missing.js',
       );
       let code = await inputFS.readFileSync(fixture, 'utf8');
+      // $FlowFixMe missing assert.rejects
       await assert.rejects(() => bundle(fixture), {
         name: 'BuildError',
         diagnostics: [
@@ -1169,34 +1185,36 @@ describe('atlaspack', function () {
       path.join(__dirname, '/integration/workers-with-other-loaders/index.js'),
     );
 
-    assertBundles(b, {
-      name: 'index.js',
-      assets: [
-        'index.js',
-        'worker-client.js',
-        'cacheLoader.js',
-        'js-loader.js',
-        'wasm-loader.js',
-      ],
-      childBundles: [
-        {
-          type: 'wasm',
-          assets: ['add.wasm'],
-          childBundles: [],
-        },
-        {
-          type: 'map',
-        },
-        {
-          assets: ['worker.js', 'cacheLoader.js', 'wasm-loader.js'],
-          childBundles: [
-            {
-              type: 'map',
-            },
-          ],
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: [
+          'index.js',
+          'worker-client.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'wasm-loader.js',
+        ],
+        childBundles: [
+          {
+            type: 'wasm',
+            assets: ['add.wasm'],
+            childBundles: [],
+          },
+          {
+            type: 'map',
+          },
+          {
+            assets: ['worker.js', 'cacheLoader.js', 'wasm-loader.js'],
+            childBundles: [
+              {
+                type: 'map',
+              },
+            ],
+          },
+        ],
+      },
+    ]);
   });
 
   it('creates a shared bundle to deduplicate assets in workers', async () => {
@@ -1245,9 +1263,11 @@ describe('atlaspack', function () {
     let workerBundle = b
       .getBundles()
       .find((b) => b.name.startsWith('worker-b'));
+    // $FlowFixMe nullcheck filePath
     let contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
     assert(
       contents.includes(
+        // $FlowFixMe nullcheck filePath
         `importScripts("./${path.basename(sharedBundle.filePath)}")`,
       ),
     );
@@ -1312,6 +1332,7 @@ describe('atlaspack', function () {
 
       assert.deepStrictEqual(outputArgs, [['main', 3]]);
       assert.deepStrictEqual(workerArgs, [
+        // $FlowFixMe nullcheck filePath
         `http://localhost/${path.basename(workerBundle.filePath)}`,
       ]);
     },

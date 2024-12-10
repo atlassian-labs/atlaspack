@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -43,14 +44,14 @@ describe.v2('xml', function () {
     assert(
       contents.includes(
         `<?xml-stylesheet type="text/xsl" href="http://example.org/${path.basename(
-          b.getBundles().find((b) => b.type === 'xsl').filePath,
+          b.getBundles().find((b) => b.type === 'xsl')?.filePath || '',
         )}"?>`,
       ),
     );
     assert(
       contents.includes(
         `<img src="http://example.org/${path.basename(
-          b.getBundles().find((b) => b.type === 'png').filePath,
+          b.getBundles().find((b) => b.type === 'png')?.filePath || '',
         )}"/>`,
       ),
     );
@@ -94,14 +95,14 @@ describe.v2('xml', function () {
     assert(
       contents.includes(
         `<?xml-stylesheet type="text/xsl" href="http://example.org/${path.basename(
-          b.getBundles().find((b) => b.type === 'xsl').filePath,
+          b.getBundles().find((b) => b.type === 'xsl')?.filePath || '',
         )}"?>`,
       ),
     );
     assert(
       contents.includes(
         `<img src="http://example.org/${path.basename(
-          b.getBundles().find((b) => b.type === 'png').filePath,
+          b.getBundles().find((b) => b.type === 'png')?.filePath || '',
         )}"/>`,
       ),
     );
@@ -144,7 +145,7 @@ describe.v2('xml', function () {
     assert(
       contents.includes(
         `&lt;img src="http://example.org/${path.basename(
-          b.getBundles().find((b) => b.type === 'png').filePath,
+          b.getBundles().find((b) => b.type === 'png')?.filePath || '',
         )}">`,
       ),
     );

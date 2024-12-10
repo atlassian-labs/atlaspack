@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -333,6 +334,7 @@ describe.v2('typescript types', function () {
     let message = md`Return type of exported function has or is using name 'Snapshot' from external module "${normalizeSeparators(
       path.join(__dirname, '/integration/ts-types/error/file2'),
     )}" but cannot be named.`;
+    // $FlowFixMe
     await assert.rejects(
       () =>
         bundle(path.join(__dirname, '/integration/ts-types/error/index.ts')),

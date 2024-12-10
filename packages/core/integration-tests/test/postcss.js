@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -234,6 +235,7 @@ describe.v2('postcss', () => {
     let subscription = await b.watch();
     let buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildSuccess');
+    if (!buildEvent.bundleGraph) return assert(false);
 
     let contents = await outputFS.readFile(
       buildEvent.bundleGraph.getBundles()[0].filePath,
@@ -253,6 +255,7 @@ describe.v2('postcss', () => {
 
     buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildSuccess');
+    if (!buildEvent.bundleGraph) return assert(false);
 
     contents = await outputFS.readFile(
       buildEvent.bundleGraph.getBundles()[0].filePath,
@@ -272,6 +275,7 @@ describe.v2('postcss', () => {
 
     buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildSuccess');
+    if (!buildEvent.bundleGraph) return assert(false);
 
     contents = await outputFS.readFile(
       buildEvent.bundleGraph.getBundles()[0].filePath,
@@ -288,6 +292,7 @@ describe.v2('postcss', () => {
 
     buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildSuccess');
+    if (!buildEvent.bundleGraph) return assert(false);
 
     contents = await outputFS.readFile(
       buildEvent.bundleGraph.getBundles()[0].filePath,
@@ -308,6 +313,7 @@ describe.v2('postcss', () => {
       '/integration/postcss-modules-config-invalid/.postcssrc',
     );
     let code = await inputFS.readFile(configFilePath, 'utf8');
+    // $FlowFixMe
     await assert.rejects(
       () =>
         bundle(

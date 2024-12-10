@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -69,7 +70,7 @@ describe('atlaspack', function () {
         },
       },
     });
-    assert(/^http:\/\/localhost\/worklet\.[0-9a-f]+\.js$/.test(url));
+    assert(/^http:\/\/localhost\/worklet\.[0-9a-f]+\.js$/.test(url || ''));
 
     let name;
     await runBundle(
@@ -115,7 +116,7 @@ describe('atlaspack', function () {
         },
       },
     });
-    assert(/^http:\/\/localhost\/worklet\.[0-9a-f]+\.js$/.test(url));
+    assert(/^http:\/\/localhost\/worklet\.[0-9a-f]+\.js$/.test(url || ''));
 
     let name;
     await runBundle(

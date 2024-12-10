@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import nullthrows from 'nullthrows';
@@ -11,6 +12,7 @@ import {
   describe,
   distDir,
   findAsset,
+  findAssetOrThrow,
   findDependency,
   getNextBuild,
   it,
@@ -403,9 +405,11 @@ describe('scope hoisting', function () {
       let contents = await outputFS.readFile(
         b
           .getBundles()
+          // $FlowFixMe filePath could be undefined
           .find((b) => b.getMainEntry().filePath.endsWith('index.js')).filePath,
         'utf8',
       );
+      // $FlowFixMe match missing
       assert.match(contents, /output="foo bar"/);
     });
 
@@ -845,6 +849,8 @@ describe('scope hoisting', function () {
         {output: null},
         {require: false},
       );
+
+      // $FlowFixMe notype ctx
       assert.deepEqual(ctx.output, 'aaa');
     });
 
@@ -1516,12 +1522,14 @@ describe('scope hoisting', function () {
           }
 
           let contents = await outputFS.readFile(
+            // $FlowFixMe nullcheck filepath
             b.getBundles().find((b) => b.name.startsWith('b1')).filePath,
             'utf8',
           );
           assert(!contents.includes('bar'));
 
           contents = await outputFS.readFile(
+            // $FlowFixMe nullcheck filepath
             b.getBundles().find((b) => b.name.startsWith('b2')).filePath,
             'utf8',
           );
@@ -1543,12 +1551,14 @@ describe('scope hoisting', function () {
           }
 
           let contents = await outputFS.readFile(
+            // $FlowFixMe nullcheck filepath
             b.getBundles().find((b) => b.name.startsWith('b1')).filePath,
             'utf8',
           );
           assert(!contents.includes('bar'));
 
           contents = await outputFS.readFile(
+            // $FlowFixMe nullcheck filepath
             b.getBundles().find((b) => b.name.startsWith('b2')).filePath,
             'utf8',
           );
@@ -1570,12 +1580,14 @@ describe('scope hoisting', function () {
           }
 
           let contents = await outputFS.readFile(
+            // $FlowFixMe nullcheck filepath
             b.getBundles().find((b) => b.name.startsWith('b1')).filePath,
             'utf8',
           );
           assert(!contents.includes('bar'));
 
           contents = await outputFS.readFile(
+            // $FlowFixMe nullcheck filepath
             b.getBundles().find((b) => b.name.startsWith('b2')).filePath,
             'utf8',
           );
@@ -1607,8 +1619,10 @@ describe('scope hoisting', function () {
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
         let contents = await outputFS.readFile(
+          // $FlowFixMe nullcheck filepath
           b
             .getBundles()
+            // $FlowFixMe nullcheck filepath
             .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
             .filePath,
           'utf8',
@@ -1640,8 +1654,10 @@ describe('scope hoisting', function () {
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
         let contents = await outputFS.readFile(
+          // $FlowFixMe nullcheck filepath
           b
             .getBundles()
+            // $FlowFixMe nullcheck filepath
             .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
             .filePath,
           'utf8',
@@ -1673,8 +1689,10 @@ describe('scope hoisting', function () {
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
         let contents = await outputFS.readFile(
+          // $FlowFixMe nullcheck filepath
           b
             .getBundles()
+            // $FlowFixMe nullcheck filepath
             .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
             .filePath,
           'utf8',
@@ -1758,8 +1776,10 @@ describe('scope hoisting', function () {
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
         let contents = await outputFS.readFile(
+          // $FlowFixMe nullcheck filepath
           b
             .getBundles()
+            // $FlowFixMe nullcheck filepath
             .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
             .filePath,
           'utf8',
@@ -1791,8 +1811,10 @@ describe('scope hoisting', function () {
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
         let contents = await outputFS.readFile(
+          // $FlowFixMe nullcheck filepath
           b
             .getBundles()
+            // $FlowFixMe nullcheck filepath
             .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
             .filePath,
           'utf8',
@@ -1855,8 +1877,10 @@ describe('scope hoisting', function () {
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
         let contents = await outputFS.readFile(
+          // $FlowFixMe nullcheck filepath
           b
             .getBundles()
+            // $FlowFixMe nullcheck filepath
             .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
             .filePath,
           'utf8',
@@ -1868,6 +1892,7 @@ describe('scope hoisting', function () {
       it.skip('throws an error for missing exports for dynamic import: destructured await assignment', async function () {
         let source = 'await-assignment-error.js';
         let message = `async.js does not export 'missing'`;
+        // $FlowFixMe missing rejects
         await assert.rejects(
           () =>
             bundle(
@@ -1917,6 +1942,7 @@ describe('scope hoisting', function () {
             'await-declaration-error.js',
           );
           let message = `async.js does not export 'missing'`;
+          // $FlowFixMe missing rejects
           await assert.rejects(
             () =>
               bundle(
@@ -1968,6 +1994,7 @@ describe('scope hoisting', function () {
             'await-declaration-namespace-error.js',
           );
           let message = `async.js does not export 'missing'`;
+          // $FlowFixMe missing rejects
           await assert.rejects(
             () =>
               bundle(
@@ -2019,6 +2046,7 @@ describe('scope hoisting', function () {
             'then-error.js',
           );
           let message = `async.js does not export 'missing'`;
+          // $FlowFixMe missing rejects
           await assert.rejects(
             () =>
               bundle(
@@ -2070,6 +2098,7 @@ describe('scope hoisting', function () {
             'then-namespace-error.js',
           );
           let message = `async.js does not export 'missing'`;
+          // $FlowFixMe missing rejects
           await assert.rejects(
             () =>
               bundle(
@@ -2585,6 +2614,7 @@ describe('scope hoisting', function () {
 
         let bar = findAsset(b, 'real-bar.js');
         assert(bar);
+        // $FlowFixMe nullcheck sideEffects
         assert.strictEqual(bar.sideEffects, false);
       });
 
@@ -2601,6 +2631,7 @@ describe('scope hoisting', function () {
 
         let bar = findAsset(b, 'real-bar.js');
         assert(bar);
+        // $FlowFixMe nullcheck sideEffects
         assert.strictEqual(bar.sideEffects, false);
       });
     });
@@ -2628,6 +2659,8 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, 123);
 
@@ -2675,13 +2708,15 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, 123);
 
           assert.deepStrictEqual(
             new Set(
               bundleEvent.bundleGraph.getUsedSymbols(
-                findAsset(bundleEvent.bundleGraph, 'b.js'),
+                findAssetOrThrow(bundleEvent.bundleGraph, 'b.js'),
               ),
             ),
             new Set(['foo']),
@@ -2713,6 +2748,8 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [123]);
 
@@ -2723,13 +2760,15 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [123, 789]);
 
           assert.deepStrictEqual(
             new Set(
               bundleEvent.bundleGraph.getUsedSymbols(
-                findAsset(bundleEvent.bundleGraph, 'c.js'),
+                findAssetOrThrow(bundleEvent.bundleGraph, 'c.js'),
               ),
             ),
             new Set(['c']),
@@ -2742,6 +2781,8 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [123]);
 
@@ -2773,6 +2814,8 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [123]);
 
@@ -2790,6 +2833,8 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [
             123,
@@ -2818,6 +2863,8 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [123]);
 
@@ -2854,6 +2901,8 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [
             789,
@@ -2881,6 +2930,8 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [
             123,
@@ -2909,6 +2960,8 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [
             789,
@@ -2955,6 +3008,8 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, 123);
 
@@ -2973,6 +3028,8 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, 1);
 
@@ -2991,6 +3048,8 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, 123);
 
@@ -3030,6 +3089,8 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           let res = await run(
             bundleEvent.bundleGraph,
             {output: null},
@@ -3040,7 +3101,7 @@ describe('scope hoisting', function () {
           assert.deepStrictEqual(
             new Set(
               bundleEvent.bundleGraph.getUsedSymbols(
-                findAsset(bundleEvent.bundleGraph, 'themeConstants.js'),
+                findAssetOrThrow(bundleEvent.bundleGraph, 'themeConstants.js'),
               ),
             ),
             new Set(['gridSize']),
@@ -3054,6 +3115,8 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           res = await run(
             bundleEvent.bundleGraph,
             {output: null},
@@ -3067,7 +3130,7 @@ describe('scope hoisting', function () {
           assert.deepStrictEqual(
             new Set(
               bundleEvent.bundleGraph.getUsedSymbols(
-                findAsset(bundleEvent.bundleGraph, 'themeConstants.js'),
+                findAssetOrThrow(bundleEvent.bundleGraph, 'themeConstants.js'),
               ),
             ),
             new Set(['borderRadius', 'gridSize']),
@@ -3082,6 +3145,8 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert(false);
+
           res = await run(
             bundleEvent.bundleGraph,
             {output: null},
@@ -3092,12 +3157,12 @@ describe('scope hoisting', function () {
           assert.deepStrictEqual(
             new Set(
               bundleEvent.bundleGraph.getUsedSymbols(
-                findAsset(bundleEvent.bundleGraph, 'themeConstants.js'),
+                findAssetOrThrow(bundleEvent.bundleGraph, 'themeConstants.js'),
               ),
             ),
             new Set(['gridSize']),
           );
-          assert(!findAsset(bundleEvent.bundleGraph, 'themeColors.js'));
+          assert(!findAssetOrThrow(bundleEvent.bundleGraph, 'themeColors.js'));
         } finally {
           await subscription.unsubscribe();
         }
@@ -3217,6 +3282,7 @@ describe('scope hoisting', function () {
         'integration/scope-hoisting/es6/import-local-assign/named.js',
       );
 
+      // $FlowFixMe missing assert.rejects
       await assert.rejects(() => bundle(source), {
         name: 'BuildError',
         message: 'Assignment to an import specifier is not allowed',
@@ -3265,6 +3331,7 @@ describe('scope hoisting', function () {
         'integration/scope-hoisting/es6/import-local-assign/default.js',
       );
 
+      // $FlowFixMe missing assert.rejects
       await assert.rejects(() => bundle(source), {
         name: 'BuildError',
         message: 'Assignment to an import specifier is not allowed',
@@ -3315,6 +3382,7 @@ describe('scope hoisting', function () {
           'integration/scope-hoisting/es6/import-local-assign/namespace.js',
         );
 
+        // $FlowFixMe missing assert.rejects
         await assert.rejects(() => bundle(source), {
           name: 'BuildError',
           message: 'Assignment to an import specifier is not allowed',
@@ -3366,6 +3434,7 @@ describe('scope hoisting', function () {
           'integration/scope-hoisting/es6/import-local-assign/destructure-assign.js',
         );
 
+        // $FlowFixMe missing assert.rejects
         await assert.rejects(() => bundle(source), {
           name: 'BuildError',
           message: 'Assignment to an import specifier is not allowed',
@@ -3417,6 +3486,7 @@ describe('scope hoisting', function () {
           'integration/scope-hoisting/es6/import-local-assign/multiple.js',
         );
 
+        // $FlowFixMe missing assert.rejects
         await assert.rejects(() => bundle(source), {
           name: 'BuildError',
           message: 'Assignment to an import specifier is not allowed',
@@ -4171,14 +4241,14 @@ describe('scope hoisting', function () {
         'utf8',
       );
 
-      assert(contents.split('f1_var').length - 1, 1);
-      assert(contents.split('f2_var').length - 1, 1);
-      assert(contents.split('f3_var').length - 1, 1);
-      assert(contents.split('f4_var').length - 1, 1);
-      assert(contents.split('c1_var').length - 1, 1);
-      assert(contents.split('c2_var').length - 1, 1);
-      assert(contents.split('BigIntSupported').length - 1, 4);
-      assert(contents.split('inner_let').length - 1, 2);
+      assert(contents.split('f1_var').length - 1, `${1}`);
+      assert(contents.split('f2_var').length - 1, `${1}`);
+      assert(contents.split('f3_var').length - 1, `${1}`);
+      assert(contents.split('f4_var').length - 1, `${1}`);
+      assert(contents.split('c1_var').length - 1, `${1}`);
+      assert(contents.split('c2_var').length - 1, `${1}`);
+      assert(contents.split('BigIntSupported').length - 1, `${4}`);
+      assert(contents.split('inner_let').length - 1, `${2}`);
 
       let output = await run(b);
       assert.equal(output, true);
@@ -4368,6 +4438,7 @@ describe('scope hoisting', function () {
       );
 
       let entryAsset = b.getBundles()[0].getMainEntry();
+      if (!entryAsset) return assert(false);
 
       // TODO: this test doesn't currently work in older browsers since babel
       // replaces the typeof calls before we can get to them.
@@ -4388,6 +4459,8 @@ describe('scope hoisting', function () {
         __dirname,
         '/integration/scope-hoisting/commonjs/require-resolve/a.js',
       );
+
+      // $FlowFixMe missing assert.rejects
       await assert.rejects(() => bundle(source), {
         name: 'BuildError',
         message,
@@ -4914,6 +4987,7 @@ describe('scope hoisting', function () {
       let obj = {
         test: 2,
       };
+      // $FlowFixMe missing default
       obj.default = obj;
       assert.deepEqual(output.default, obj);
     });
@@ -5484,6 +5558,7 @@ describe('scope hoisting', function () {
     );
 
     let mainBundle = b.getBundles().find((b) => b.name === 'index.js');
+    // $FlowFixMe nullcheck filePath
     let contents = await outputFS.readFile(mainBundle.filePath, 'utf8');
     // We wrap for other reasons now, so this is broken
     assert(!contents.includes(`if (parcelRequire == null) {`));
@@ -5504,15 +5579,19 @@ describe('scope hoisting', function () {
       .getBundles()
       .sort((a, b) => b.stats.size - a.stats.size)
       .find((b) => b.name !== 'index.js');
+    // $FlowFixMe nullcheck filePath
     let contents = await outputFS.readFile(sharedBundle.filePath, 'utf8');
     assert(contents.includes(`if (parcelRequire == null) {`));
 
     let workerBundle = b
       .getBundles()
       .find((b) => b.name.startsWith('worker-b'));
+
+    // $FlowFixMe nullcheck filePath
     contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
     assert(
       contents.includes(
+        // $FlowFixMe nullcheck filePath
         `importScripts("./${path.basename(sharedBundle.filePath)}")`,
       ),
     );
@@ -5854,6 +5933,8 @@ describe('scope hoisting', function () {
 
     let bundleEvent = await getNextBuild(b);
     assert(bundleEvent.type === 'buildSuccess');
+    if (!bundleEvent.bundleGraph) return assert(false);
+
     let output = await run(bundleEvent.bundleGraph);
     assert.deepEqual(output, 'foo');
 
@@ -5865,6 +5946,8 @@ describe('scope hoisting', function () {
 
     bundleEvent = await getNextBuild(b);
     assert(bundleEvent.type === 'buildSuccess');
+    if (!bundleEvent.bundleGraph) return assert(false);
+
     output = await run(bundleEvent.bundleGraph);
     assert.deepEqual(output, 'foobar');
 
@@ -6064,6 +6147,7 @@ describe('scope hoisting', function () {
       let bundleHashDelayFoo = b
         .getBundles()
         .find((b) => b.filePath.endsWith('.js') && b.filePath.includes('index'))
+        // $FlowFixMe nullcheck filePath
         .filePath.split('.')[1];
 
       let slowBarFS = new Proxy(overlayFS, waitHandler('bar.js', 'foo.js'));
@@ -6078,6 +6162,7 @@ describe('scope hoisting', function () {
       let bundleHashDelayBar = b2
         .getBundles()
         .find((b) => b.filePath.endsWith('.js') && b.filePath.includes('index'))
+        // $FlowFixMe nullcheck filePath
         .filePath.split('.')[1];
 
       assert.strictEqual(bundleHashDelayFoo, bundleHashDelayBar);
@@ -6149,6 +6234,7 @@ describe('scope hoisting', function () {
     );
 
     let contents = await outputFS.readFile(
+      // $FlowFixMe nullcheck filePath
       b.getBundles().find((b) => /index.*\.js/.test(b.filePath)).filePath,
       'utf8',
     );
@@ -6289,6 +6375,7 @@ describe('scope hoisting', function () {
     try {
       await run(b);
     } catch (e) {
+      // $FlowFixMe missing assert.fail
       assert.fail('Expected the empty bundle to still run');
     }
   });
