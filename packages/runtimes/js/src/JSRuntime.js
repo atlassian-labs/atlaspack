@@ -326,6 +326,7 @@ export default (new Runtime({
         )})(${getAbsoluteUrlExpr(
           relativePathExpr,
           bundle,
+          referencedBundle,
           config.domainSharding,
         )})`;
         assets.push({
@@ -492,7 +493,7 @@ function getLoaderRuntime({
       ? `require('./helpers/bundle-manifest').resolve(${JSON.stringify(
           to.publicId,
         )})`
-      : getAbsoluteUrlExpr(relativePathExpr, bundle, shardingConfig);
+      : getAbsoluteUrlExpr(relativePathExpr, bundle, to, shardingConfig);
     let code = `require(${JSON.stringify(loader)})(${absoluteUrlExpr})`;
 
     // In development, clear the require cache when an error occurs so the
@@ -683,6 +684,7 @@ function getHintLoaders(
         `require(${JSON.stringify(loader)})(${getAbsoluteUrlExpr(
           relativePathExpr,
           from,
+          bundleToPreload,
         )}, ${priority ? JSON.stringify(priority) : 'null'}, ${JSON.stringify(
           bundleToPreload.target.env.outputFormat === 'esmodule',
         )})`,
@@ -742,6 +744,7 @@ function getURLRuntime(
     code = `module.exports = ${getAbsoluteUrlExpr(
       relativePathExpr,
       from,
+      to,
       shardingConfig,
     )};`;
   }
@@ -815,13 +818,14 @@ function getRelativePathExpr(
 
 function getAbsoluteUrlExpr(
   relativePathExpr: string,
-  bundle: NamedBundle,
+  fromBundle: NamedBundle,
+  toBundle: NamedBundle,
   shardingConfig: JSRuntimeConfig['domainSharding'],
 ) {
   if (
-    (bundle.env.outputFormat === 'esmodule' &&
-      bundle.env.supports('import-meta-url')) ||
-    bundle.env.outputFormat === 'commonjs'
+    (fromBundle.env.outputFormat === 'esmodule' &&
+      fromBundle.env.supports('import-meta-url')) ||
+    fromBundle.env.outputFormat === 'commonjs'
   ) {
     // This will be compiled to new URL(url, import.meta.url) or new URL(url, 'file:' + __filename).
     return `new __parcel__URL__(${relativePathExpr}).toString()`;
@@ -829,7 +833,7 @@ function getAbsoluteUrlExpr(
 
   if (shardingConfig) {
     const bundleUrlArgs = [
-      `'${bundle.publicId}'`,
+      `'${toBundle.name}'`,
       `'${shardingConfig.cookieName}'`,
       'document.cookie',
       shardingConfig.maxShards,
@@ -838,7 +842,7 @@ function getAbsoluteUrlExpr(
     return `require('./helpers/bundle-url-shards').getShardedBundleURL(${bundleUrlArgs}) + ${relativePathExpr}`;
   }
 
-  return `require('./helpers/bundle-url').getBundleURL('${bundle.publicId}') + ${relativePathExpr}`;
+  return `require('./helpers/bundle-url').getBundleURL('${fromBundle.publicId}') + ${relativePathExpr}`;
 }
 
 function shouldUseRuntimeManifest(

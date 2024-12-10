@@ -3,13 +3,13 @@ import {getBaseURL} from './bundle-url-common';
 const bundleURL: Record<string, string> = {};
 
 export function getShardedBundleURL(
-  bundleId: string,
+  bundleName: string,
   cookieName: string,
   cookieString: string,
   maxShards: number,
   inputError?: string,
 ): string {
-  let value = bundleURL[bundleId];
+  let value = bundleURL[bundleName];
 
   if (value) {
     return value;
@@ -36,7 +36,7 @@ export function getShardedBundleURL(
       return baseUrl;
     }
 
-    const shardNumber = getDomainShardIndex(bundleId, maxShards);
+    const shardNumber = getDomainShardIndex(bundleName, maxShards);
     const url = new URL(baseUrl);
 
     const shardedDomain = getShardedDomain(url.hostname, shardNumber);
@@ -44,7 +44,7 @@ export function getShardedBundleURL(
 
     value = url.toString();
 
-    bundleURL[bundleId] = value;
+    bundleURL[bundleName] = value;
     return value;
   }
 }

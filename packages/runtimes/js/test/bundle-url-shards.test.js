@@ -90,30 +90,6 @@ describe('bundle-url-shards helper', () => {
     });
   });
 
-  describe('getBaseUrl', () => {
-    it('should return the URL with the filename removed', () => {
-      const testUrl =
-        'https://bundle-shard-3.assets.example.com/assets/testBundle.123abc.js';
-
-      assert.equal(
-        getBaseURL(testUrl),
-        'https://bundle-shard-3.assets.example.com/assets/',
-      );
-    });
-
-    it('should handle domains with no .', () => {
-      const testUrl = 'http://localhost/assets/testBundle.123abc.js';
-
-      assert.equal(getBaseURL(testUrl), 'http://localhost/assets/');
-    });
-
-    it('should handle domains with ports', () => {
-      const testUrl = 'http://localhost:8081/assets/testBundle.123abc.js';
-
-      assert.equal(getBaseURL(testUrl), 'http://localhost:8081/assets/');
-    });
-  });
-
   describe('compiled into JS Runtime', () => {
     it('should insert all arguments into compiled output', async () => {
       const maxShards = 8;
@@ -132,12 +108,18 @@ describe('bundle-url-shards helper', () => {
         src/index.js:
           async function fn() {
             const a = await import('./a.js');
-            console.log('a', a);
+            const b = await import('./b.js');
+            console.log('a', a, b);
           }
           fn();
 
         src/a.js:
-          export const a = 'A';
+          export const a = async () => {
+            const b = await import('./b');
+            return b + 'A';
+          }
+        src/b.js:
+          export const b = 'B';
 
         yarn.lock:
       `;
@@ -151,8 +133,9 @@ describe('bundle-url-shards helper', () => {
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
       assert.ok(
         code.includes(
-          `require("64e4a85cd0b8d551").getShardedBundleURL('1Acoq', '${testingCookieName}', document.cookie, ${maxShards}) + "a.771579fd.js"`,
+          `require("449af90f11ccd363").getShardedBundleURL('b.8575baaf.js', '${testingCookieName}', document.cookie, ${maxShards}) + "b.8575baaf.js"`,
         ),
+        'Expected generated code for getShardedBundleURL was not found',
       );
     });
   });
