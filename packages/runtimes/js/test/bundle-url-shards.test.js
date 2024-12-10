@@ -2,10 +2,7 @@ import assert from 'assert';
 
 import {fsFixture, overlayFS, bundle} from '@atlaspack/test-utils';
 
-import {
-  getShardedBundleURL,
-  getBaseURL,
-} from '../src/helpers/bundle-url-shards';
+import {getShardedBundleURL} from '../src/helpers/bundle-url-shards';
 
 const testingCookieName = 'DOMAIN_SHARDING_TEST';
 
