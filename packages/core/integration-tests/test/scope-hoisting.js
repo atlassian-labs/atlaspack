@@ -1620,6 +1620,7 @@ describe('scope hoisting', function () {
 
         let contents = await outputFS.readFile(
           // $FlowFixMe nullcheck filepath
+          // $FlowFixMe nullcheck filepath
           b
             .getBundles()
             // $FlowFixMe nullcheck filepath
@@ -1655,6 +1656,7 @@ describe('scope hoisting', function () {
 
         let contents = await outputFS.readFile(
           // $FlowFixMe nullcheck filepath
+          // $FlowFixMe nullcheck filepath
           b
             .getBundles()
             // $FlowFixMe nullcheck filepath
@@ -1689,6 +1691,7 @@ describe('scope hoisting', function () {
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
         let contents = await outputFS.readFile(
+          // $FlowFixMe nullcheck filepath
           // $FlowFixMe nullcheck filepath
           b
             .getBundles()
@@ -1777,6 +1780,7 @@ describe('scope hoisting', function () {
 
         let contents = await outputFS.readFile(
           // $FlowFixMe nullcheck filepath
+          // $FlowFixMe nullcheck filepath
           b
             .getBundles()
             // $FlowFixMe nullcheck filepath
@@ -1811,6 +1815,7 @@ describe('scope hoisting', function () {
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
         let contents = await outputFS.readFile(
+          // $FlowFixMe nullcheck filepath
           // $FlowFixMe nullcheck filepath
           b
             .getBundles()
@@ -1877,6 +1882,7 @@ describe('scope hoisting', function () {
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
         let contents = await outputFS.readFile(
+          // $FlowFixMe nullcheck filepath
           // $FlowFixMe nullcheck filepath
           b
             .getBundles()
