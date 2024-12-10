@@ -1,4 +1,4 @@
-import {getBaseURL, getOrigin, stackTraceUrlRegexp} from './bundle-url-common';
+import {getBaseURL, stackTraceUrlRegexp} from './bundle-url-common';
 
 const bundleURL = {};
 
