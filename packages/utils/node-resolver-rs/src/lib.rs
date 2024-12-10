@@ -2923,26 +2923,30 @@ mod tests {
       resolver
         .resolve(
           "duplicate",
-          &root().join("node_modules/duplicate-tester/index.js"),
+          &root().join("node_modules/duplicate-tester-2/index.js"),
           SpecifierType::Esm,
         )
         .result
         .unwrap()
         .0,
-      Resolution::Path(root().join("node_modules/duplicate/index.js"))
+      Resolution::Path(
+        root().join("node_modules/duplicate-tester/node_modules/duplicate/index.js")
+      )
     );
 
     assert_eq!(
       resolver
         .resolve(
           "duplicate/index.js",
-          &root().join("node_modules/duplicate-tester/index.js"),
+          &root().join("node_modules/duplicate-tester-2/index.js"),
           SpecifierType::Esm,
         )
         .result
         .unwrap()
         .0,
-      Resolution::Path(root().join("node_modules/duplicate/index.js"))
+      Resolution::Path(
+        root().join("node_modules/duplicate-tester/node_modules/duplicate/index.js")
+      )
     );
 
     resolver.flags.set(Flags::EXPORTS, true);
@@ -2951,13 +2955,15 @@ mod tests {
       resolver
         .resolve(
           "duplicate/main",
-          &root().join("node_modules/duplicate-tester/index.js"),
+          &root().join("node_modules/duplicate-tester-2/index.js"),
           SpecifierType::Esm,
         )
         .result
         .unwrap()
         .0,
-      Resolution::Path(root().join("node_modules/duplicate/index.js"))
+      Resolution::Path(
+        root().join("node_modules/duplicate-tester/node_modules/duplicate/index.js")
+      )
     );
   }
 

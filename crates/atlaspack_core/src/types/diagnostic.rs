@@ -11,6 +11,28 @@ use std::{
 
 use super::File;
 
+#[derive(Default, Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Diagnostics {
+  pub diagnostics: Vec<Diagnostic>,
+}
+
+impl Display for Diagnostics {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    let mut output = String::new();
+    for diagnostic in &self.diagnostics {
+      output += &format!("{}\n", diagnostic);
+    }
+    write!(f, "{}", output)
+  }
+}
+
+impl From<Vec<Diagnostic>> for Diagnostics {
+  fn from(diagnostics: Vec<Diagnostic>) -> Self {
+    Diagnostics { diagnostics }
+  }
+}
+
 /// Represents the kind of diagnostic
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub enum ErrorKind {
@@ -22,7 +44,7 @@ pub enum ErrorKind {
 /// This is a user facing error for Atlaspack.
 ///
 /// Usually but not always this is linked to a source-code location.
-#[derive(Builder, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Builder, Debug, Deserialize, PartialEq, Serialize, Clone)]
 #[builder(derive(Debug))]
 #[serde(rename_all = "camelCase")]
 pub struct Diagnostic {
@@ -62,6 +84,12 @@ impl Display for Diagnostic {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Language(FileType);
 
+impl From<FileType> for Language {
+  fn from(value: FileType) -> Self {
+    Self(value)
+  }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CodeFrame {
@@ -77,7 +105,7 @@ pub struct CodeFrame {
 
   /// Path to the source file if applicable.
   // TODO: In the future we might need to discern between errors on a source file in disk or in-memory.
-  pub path: Option<PathBuf>,
+  pub file_path: Option<PathBuf>,
 }
 
 impl From<File> for CodeFrame {
@@ -91,7 +119,7 @@ impl From<File> for CodeFrame {
       code: Some(file.contents),
       code_highlights: Vec::new(),
       language,
-      path: Some(file.path),
+      file_path: Some(file.path),
     }
   }
 }
@@ -115,11 +143,10 @@ impl From<PathBuf> for CodeFrame {
       code: None,
       code_highlights: Vec::new(),
       language,
-      path: Some(path),
+      file_path: Some(path),
     }
   }
 }
-
 /// Represents a snippet of code to highlight
 #[derive(Serialize, Default, Deserialize, Debug, PartialEq, Clone)]
 pub struct CodeHighlight {
