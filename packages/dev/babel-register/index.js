@@ -1,6 +1,6 @@
 const parcelBabelPreset = require('@atlaspack/babel-preset');
 const path = require('path');
-const fs = require('fs');
+// const fs = require('fs');
 
 require('@babel/register')({
   cwd: path.join(__dirname, '../../..'),
@@ -13,9 +13,9 @@ require('@babel/register')({
     (filepath) =>
       filepath.endsWith('.js') &&
       filepath.includes('/core/integration-tests/test/integration'),
-    // Include integration tests
-    (filepath) =>
-      !fs.readFileSync(filepath, 'utf8').trim().startsWith('// @flow'),
+    // Include tests
+    // (filepath) =>
+    //   filepath.endsWith('.js') && !fs.readFileSync(filepath, 'utf8').trim().startsWith('// @flow'),
   ],
   only: [path.join(__dirname, '../../..')],
   presets: [parcelBabelPreset],
