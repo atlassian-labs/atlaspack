@@ -3126,11 +3126,10 @@ describe('javascript', function () {
     let sameBundle = bundles.find((b) => b.name === 'same-bundle.js');
     let getDep = bundles.find((b) => b.name === 'get-dep.js');
 
+    let result = await await runBundle(b, sameBundle);
     assert.deepEqual(
-      await // $FlowFixMe
-      (
-        await runBundle(b, sameBundle)
-      ).default,
+      // $FlowFixMe
+      result.default,
       [42, 42, 42],
     );
     // $FlowFixMe
@@ -3205,14 +3204,13 @@ describe('javascript', function () {
       {assets: ['async.js']},
     ]);
 
+    let result = await await runBundle(
+      b,
+      b.getBundles().find((bundle) => bundle.name.includes('index.js')),
+    );
     assert.equal(
-      await // $FlowFixMe
-      (
-        await runBundle(
-          b,
-          b.getBundles().find((bundle) => bundle.name.includes('index.js')),
-        )
-      ).default,
+      // $FlowFixMe
+      result.default,
       43,
     );
   });
