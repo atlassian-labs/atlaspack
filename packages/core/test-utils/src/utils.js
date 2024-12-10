@@ -550,12 +550,19 @@ export function expectBundles(
   expect(bundleData).toEqual(expectedBundles);
 }
 
+export type ChildBundle = {|
+  type?: string,
+  assets?: Array<string>,
+  childBundles?: Array<ChildBundle>,
+|};
+
 export function assertBundles(
   bundleGraph: BundleGraph<PackagedBundle>,
   expectedBundles: Array<{|
     name?: string | RegExp,
     type?: string,
     assets: Array<string>,
+    childBundles?: Array<ChildBundle>,
   |}>,
 ) {
   let actualBundles = [];
