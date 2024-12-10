@@ -9,7 +9,7 @@ import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
-import type {Environment} from '../types';
+import type {Environment, Asset} from '../types';
 
 import type {
   AssetGraphRequestInput,
@@ -78,7 +78,11 @@ export function createAssetGraphRequestRust(
   });
 }
 
-function getAssetGraph(serializedGraph) {
+// $FlowFixMe
+export function getAssetGraph(serializedGraph: any): {
+  assetGraph: AssetGraph,
+  changedAssets: Map<string, Asset>,
+} {
   let graph = new AssetGraph({
     _contentKeyToNodeId: new Map(),
     _nodeIdToContentKey: new Map(),
@@ -111,7 +115,6 @@ function getAssetGraph(serializedGraph) {
   }
 
   // See crates/atlaspack_core/src/types/environment.rs
-  let cachedAssets = new Map();
   let changedAssets = new Map();
   let entry = 0;
 
@@ -140,8 +143,6 @@ function getAssetGraph(serializedGraph) {
     return envId;
   };
 
-  const dependencyMap = new Map();
-
   for (let node of serializedGraph.nodes) {
     if (node.type === 'root') {
       let index = graph.addNodeByContentKey('@@root', {
@@ -163,17 +164,13 @@ function getAssetGraph(serializedGraph) {
       let asset = node.value;
       let id = asset.id;
 
-      let deps = dependencyMap.get(id);
-      if (!deps) {
-        deps = new Map();
-        dependencyMap.set(id, deps);
-      }
-
       asset.committed = true;
       asset.contentKey = id;
-      asset.dependencies = deps;
       asset.env.id = getEnvId(asset.env);
       asset.mapKey = `map:${asset.id}`;
+
+      // This is populated later when we map the edges between assets and dependencies
+      asset.dependencies = new Map();
 
       // We need to add this property for source map handling, as some assets like runtimes
       // are processed after the Rust transformation and take the v2 code path
@@ -183,7 +180,6 @@ function getAssetGraph(serializedGraph) {
         asset.symbols = new Map(asset.symbols.map(mapSymbols));
       }
 
-      cachedAssets.set(id, asset.code);
       changedAssets.set(id, asset);
 
       graph.addNodeByContentKey(id, {
@@ -197,13 +193,6 @@ function getAssetGraph(serializedGraph) {
     } else if (node.type === 'dependency') {
       let id = node.value.id;
       let dependency = node.value.dependency;
-
-      let deps = dependencyMap.get(dependency.sourceAssetId);
-      if (!deps) {
-        deps = new Map();
-        dependencyMap.set(dependency.sourceAssetId, deps);
-      }
-      deps.set(id, dependency);
 
       dependency.id = id;
       dependency.env.id = getEnvId(dependency.env);
@@ -239,8 +228,9 @@ function getAssetGraph(serializedGraph) {
     let from = serializedGraph.edges[i];
     let to = serializedGraph.edges[i + 1];
     let fromNode = graph.getNode(from);
+    let toNode = graph.getNode(to);
+
     if (fromNode?.type === 'dependency') {
-      let toNode = graph.getNode(to);
       invariant(toNode?.type === 'asset');
 
       // For backwards compatibility, create asset group node if needed.
@@ -258,6 +248,9 @@ function getAssetGraph(serializedGraph) {
 
       graph.addEdge(from, index);
       graph.addEdge(index, to);
+    } else if (fromNode?.type === 'asset' && toNode?.type === 'dependency') {
+      fromNode.value.dependencies.set(toNode.value.id, toNode.value);
+      graph.addEdge(from, to);
     } else {
       graph.addEdge(from, to);
     }
@@ -265,7 +258,6 @@ function getAssetGraph(serializedGraph) {
 
   return {
     assetGraph: graph,
-    cachedAssets,
     changedAssets,
   };
 }

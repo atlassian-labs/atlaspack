@@ -73,6 +73,40 @@ describe.v3('AtlaspackV3', function () {
     await atlaspack.buildAssetGraph();
   });
 
+  it('should map dependencies to assets', async () => {
+    await fsFixture(overlayFS, __dirname)`
+        dependencies
+          library.ts:
+            export default 'library';
+          index.ts:
+            import library from './library';
+            sideEffectNoop(library);
+          index.html:
+            <script type="module" src="./index.ts" />
+      `;
+
+    let bundleGraph = await bundle(join(__dirname, 'dependencies/index.html'), {
+      inputFS: overlayFS,
+      defaultTargetOptions: {
+        shouldScopeHoist: true,
+      },
+    });
+
+    let jsBundle = bundleGraph.getBundles().find((b) => b.type === 'js');
+
+    let indexAsset;
+    jsBundle?.traverseAssets((asset) => {
+      if (asset.filePath.includes('index.ts')) {
+        indexAsset = asset;
+      }
+    });
+
+    assert.deepEqual(
+      indexAsset?.getDependencies().map((dep) => dep.specifier),
+      ['./library'],
+    );
+  });
+
   describe('should mirror V2 output', () => {
     it('with scope hoisting enabled', async () => {
       await fsFixture(overlayFS, __dirname)`
