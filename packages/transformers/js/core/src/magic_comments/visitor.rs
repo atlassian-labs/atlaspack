@@ -15,7 +15,6 @@ const MAGIC_COMMENT_DEFAULT_KEYWORD: &str = "webpackChunkName";
 #[derive(Debug)]
 pub struct MagicCommentsVisitor<'a> {
   pub magic_comments: HashMap<String, String>,
-  pub offset: u32,
   pub code: &'a str,
 }
 
@@ -23,7 +22,6 @@ impl<'a> MagicCommentsVisitor<'a> {
   pub fn new(code: &'a str) -> Self {
     Self {
       magic_comments: Default::default(),
-      offset: 0,
       code,
     }
   }
@@ -34,11 +32,6 @@ impl<'a> MagicCommentsVisitor<'a> {
 }
 
 impl<'a> Visit for MagicCommentsVisitor<'a> {
-  fn visit_module(&mut self, node: &Module) {
-    self.offset = node.span.lo().0;
-    node.visit_children_with(self);
-  }
-
   fn visit_call_expr(&mut self, node: &CallExpr) {
     if !node.callee.is_import() {
       node.visit_children_with(self);
@@ -56,13 +49,10 @@ impl<'a> Visit for MagicCommentsVisitor<'a> {
     // Comments are not available in the AST so we have to get the start/end
     // positions of the code for the call expression and match it with a regular
     // expression that matches the magic comment keyword within the code slice
-    let code_start = (node.span.lo().0 - self.offset) as usize;
-    let code_end = (node.span.hi().0 - self.offset) as usize;
 
     // swc index starts at 1
-    let code_start_index = code_start - 1;
-    let code_end_index = code_end - 1;
-
+    let code_start_index = (node.span.lo().0 - 1) as usize;
+    let code_end_index = (node.span.hi().0 - 1) as usize;
     let slice = &self.code[code_start_index..code_end_index];
 
     let Some(found) = match_re(slice) else {

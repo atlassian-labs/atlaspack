@@ -210,3 +210,39 @@ fn it_parses_lazy_imports() -> anyhow::Result<()> {
 
   Ok(())
 }
+
+#[test]
+fn it_handles_comments_and_imports_above() -> anyhow::Result<()> {
+  let code = r#"
+    /* Some comments */
+    import { something } from './some-import.tsx';
+
+    const Lazy = lazyForPaint(() => import( /* webpackChunkName: "the-chunk" */'@scope/package'), {
+      ...params
+    });
+
+    // Some more comments
+    // Some more comments
+    // Some more comments
+    const Lazy2 = lazyForPaint(() => import( /* webpackChunkName: "the-chunk-2" */'my-package'), {
+      ...params
+    });
+  "#;
+
+  let mut visitor = MagicCommentsVisitor::new(code);
+  parse(code)?.visit_with(&mut visitor);
+
+  assert_eq!(visitor.magic_comments.len(), 2);
+  assert_eq!(
+    visitor.magic_comments.get("@scope/package"),
+    Some(&"the-chunk".to_string()),
+    "Expected magic comment to be set"
+  );
+  assert_eq!(
+    visitor.magic_comments.get("my-package"),
+    Some(&"the-chunk-2".to_string()),
+    "Expected magic comment to be set"
+  );
+
+  Ok(())
+}
