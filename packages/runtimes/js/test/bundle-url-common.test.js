@@ -2,7 +2,7 @@ import assert from 'assert';
 
 import {getBaseURL} from '../src/helpers/bundle-url-common';
 
-describe.only('getBaseUrl', () => {
+describe('getBaseUrl', () => {
   it('should return the URL with the filename removed', () => {
     const testUrl =
       'https://bundle-shard-3.assets.example.com/assets/testBundle.123abc.js';
