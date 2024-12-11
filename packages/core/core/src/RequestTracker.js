@@ -1457,12 +1457,19 @@ export default class RequestTracker {
       return;
     }
 
+    let total = 0;
+    report({
+      type: 'cache',
+      phase: 'start',
+      total,
+      size: this.graph.nodes.length,
+    });
+
     let serialisedGraph = this.graph.serialize();
 
     // Delete an existing request graph cache, to prevent invalid states
     await this.options.cache.deleteLargeBlob(requestGraphKey);
 
-    let total = 0;
     const serialiseAndSet = async (
       key: string,
       // $FlowFixMe serialise input is any type
@@ -1494,13 +1501,6 @@ export default class RequestTracker {
 
     let queue = new PromiseQueue({
       maxConcurrent: 32,
-    });
-
-    report({
-      type: 'cache',
-      phase: 'start',
-      total,
-      size: this.graph.nodes.length,
     });
 
     // Preallocating a sparse array is faster than pushing when N is high enough
