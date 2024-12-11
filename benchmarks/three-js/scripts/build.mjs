@@ -228,9 +228,6 @@ async function main() {
     console.error(err);
   } finally {
     await rmrf(tmpDir);
-
-    // TEMP: AtlaspackV3 hangs when exiting
-    process.exit(0);
   }
 }
 

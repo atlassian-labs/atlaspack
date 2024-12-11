@@ -60,7 +60,13 @@ export class AtlaspackV3 {
       },
     });
 
-    workerPool.releaseWorkers(workerIds);
+    // In the integration tests we keep the workers alive so they don't need to
+    // be re-initialized for the next test
+    if (process.env.ATLASPACK_BUILD_ENV === 'test') {
+      workerPool.releaseWorkers(workerIds);
+    } else {
+      workerPool.shutdown();
+    }
 
     if (error !== null) {
       throw new ThrowableDiagnostic({
