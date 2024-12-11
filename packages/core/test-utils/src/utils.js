@@ -536,6 +536,7 @@ export function expectBundles(
   expect(bundleData).toEqual(expectedBundles);
 }
 
+const esmoduleHelpersName = 'esmodule-helpers.js';
 export function assertBundles(
   bundleGraph: BundleGraph<PackagedBundle>,
   expectedBundles: Array<{|
@@ -619,10 +620,21 @@ export function assertBundles(
         return false;
       }
 
+      // If we aren't explicitly expecting esmodule-helpers, then ignore it
+      let assetsToCompare = actualBundle.assets;
+      if (
+        expectedBundle.assets.indexOf(esmoduleHelpersName) === -1 &&
+        actualBundle.assets.indexOf(esmoduleHelpersName) !== -1
+      ) {
+        assetsToCompare = actualBundle.assets.filter(
+          (a) => a !== 'esmodule-helpers.js',
+        );
+      }
+
       return (
         expectedBundle.assets &&
-        expectedBundle.assets.length === actualBundle.assets.length &&
-        expectedBundle.assets.every((a, i) => a === actualBundle.assets[i])
+        expectedBundle.assets.length === assetsToCompare.length &&
+        expectedBundle.assets.every((a, i) => a === assetsToCompare[i])
       );
     });
 
