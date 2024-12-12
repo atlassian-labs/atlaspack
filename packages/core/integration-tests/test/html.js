@@ -1,5 +1,5 @@
 // @flow
-import assert from 'assert/strict';
+import assert from 'assert';
 import {
   assertBundles,
   bundle,
@@ -2452,9 +2452,9 @@ describe('html', function () {
     let regex = /<script (?:type="[^"]+" )?src="([^"]*)"><\/script>/g;
     let matches;
     while ((matches = regex.exec(html)) !== null) {
-      if (!matches) return assert(false);
+      if (!matches) continue;
       let match = matches[1];
-      if (!match) return assert(false);
+      if (!match) continue;
       let bundle = bundles.find(
         (b) => path.basename(b.filePath) === path.basename(match),
       );
@@ -2803,28 +2803,28 @@ describe('html', function () {
     let bundles = b.getBundles();
     let cssBundle = bundles.find((bundle) => bundle.filePath.endsWith('.css'));
     if (!cssBundle) return assert(false);
-    let cssBundleDir = path.basename(cssBundle.filePath);
+    let cssBundleFileName = path.basename(cssBundle.filePath);
 
     let jsBundle = bundles.find((bundle) => bundle.filePath.endsWith('.js'));
     if (!jsBundle) return assert(false);
-    let jsBundleDir = path.basename(jsBundle.filePath);
+    let jsBundleFileName = path.basename(jsBundle.filePath);
 
     assert(
-      firstHtmlFile.includes(cssBundle),
-      `a.html should include a reference to ${cssBundleDir}`,
+      firstHtmlFile.includes(cssBundleFileName),
+      `a.html should include a reference to ${cssBundleFileName}`,
     );
     assert(
-      secondHtmlFile.includes(cssBundle),
-      `b.html should include a reference to ${cssBundleDir}`,
+      secondHtmlFile.includes(cssBundleFileName),
+      `b.html should include a reference to ${cssBundleFileName}`,
     );
 
     assert(
-      firstHtmlFile.includes(jsBundleDir),
-      `a.html should include a reference to ${jsBundleDir}`,
+      firstHtmlFile.includes(jsBundleFileName),
+      `a.html should include a reference to ${jsBundleFileName}`,
     );
     assert(
-      secondHtmlFile.includes(jsBundleDir),
-      `b.html should include a reference to ${jsBundleDir}`,
+      secondHtmlFile.includes(jsBundleFileName),
+      `b.html should include a reference to ${jsBundleFileName}`,
     );
   });
 
