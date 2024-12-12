@@ -586,7 +586,8 @@ describe.v2('server', function () {
       {
         name: 'index.js',
         assets: [
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'css-loader.js',
           'index.js',
@@ -626,7 +627,8 @@ describe.v2('server', function () {
       {
         name: 'index.js',
         assets: [
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'css-loader.js',
           'index.js',

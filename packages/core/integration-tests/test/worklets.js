@@ -52,7 +52,7 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'url-worklet.js',
-        assets: ['bundle-url.js', 'url-worklet.js'],
+        assets: ['bundle-url.ts', 'bundle-url-common.ts', 'url-worklet.js'],
       },
       {
         type: 'js',
@@ -60,7 +60,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let url;
+    let url = '';
     await run(b, {
       CSS: {
         paintWorklet: {
@@ -70,7 +70,6 @@ describe('atlaspack', function () {
         },
       },
     });
-    if (!url) return assert.fail();
     assert(/^http:\/\/localhost\/worklet\.[0-9a-f]+\.js$/.test(url));
 
     let name;
@@ -99,7 +98,12 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'pipeline.js',
-        assets: ['bundle-url.js', 'pipeline.js', 'bundle-manifest.js'],
+        assets: [
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'pipeline.js',
+          'bundle-manifest.js',
+        ],
       },
       {
         type: 'js',
@@ -107,7 +111,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let url;
+    let url = '';
     await run(b, {
       CSS: {
         paintWorklet: {
@@ -117,7 +121,6 @@ describe('atlaspack', function () {
         },
       },
     });
-    if (!url) return assert.fail();
     assert(/^http:\/\/localhost\/worklet\.[0-9a-f]+\.js$/.test(url));
 
     let name;
@@ -141,7 +144,12 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'url.js',
-        assets: ['bundle-url.js', 'esmodule-helpers.js', 'url.js'],
+        assets: [
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'esmodule-helpers.js',
+          'url.js',
+        ],
       },
       {
         type: 'js',
@@ -239,7 +247,12 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'worklet-pipeline.js',
-        assets: ['bundle-url.js', 'bundle-manifest.js', 'worklet-pipeline.js'],
+        assets: [
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'bundle-manifest.js',
+          'worklet-pipeline.js',
+        ],
       },
       {
         type: 'js',

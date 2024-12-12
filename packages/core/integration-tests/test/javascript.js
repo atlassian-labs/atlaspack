@@ -411,7 +411,13 @@ describe('javascript', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
+        assets: [
+          'index.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'cacheLoader.js',
+          'js-loader.js',
+        ],
       },
       {
         assets: ['local.js'],
@@ -649,7 +655,8 @@ describe('javascript', function () {
         assets: [
           'index.js',
           'bar.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'esmodule-helpers.js',
           'foo.js',
@@ -687,7 +694,13 @@ describe('javascript', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
+        assets: [
+          'index.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'cacheLoader.js',
+          'js-loader.js',
+        ],
       },
       {
         assets: ['local.js', 'esmodule-helpers.js'],
@@ -712,7 +725,8 @@ describe('javascript', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'esmodule-helpers.js',
           'js-loader.js',
@@ -742,7 +756,13 @@ describe('javascript', function () {
       },
       {
         name: 'index.js',
-        assets: ['index.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
+        assets: [
+          'index.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'cacheLoader.js',
+          'js-loader.js',
+        ],
       },
     ]);
 
@@ -774,7 +794,8 @@ describe('javascript', function () {
         assets: [
           'index.js',
           'c.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
           'bundle-manifest.js',
@@ -801,7 +822,8 @@ describe('javascript', function () {
         assets: [
           'index.js',
           'common.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -828,13 +850,20 @@ describe('javascript', function () {
       },
       {
         name: 'b.js',
-        assets: ['b.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
+        assets: [
+          'b.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'cacheLoader.js',
+          'js-loader.js',
+        ],
       },
       {
         name: 'a.js',
         assets: [
           'a.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'common.js',
           'cacheLoader.js',
           'esmodule-helpers.js',
@@ -857,7 +886,8 @@ describe('javascript', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
           'esmodule-helpers.js',
@@ -891,7 +921,8 @@ describe('javascript', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'esmodule-helpers.js',
           'js-loader.js',
@@ -920,7 +951,7 @@ describe('javascript', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', 'bundle-url.js'],
+        assets: ['index.js', 'bundle-url.ts', 'bundle-url-common.ts'],
       },
       {
         type: 'txt',
@@ -950,7 +981,12 @@ describe('javascript', function () {
       assertBundles(b, [
         {
           name: 'index.js',
-          assets: ['index.js', 'bundle-url.js', 'esmodule-helpers.js'],
+          assets: [
+            'index.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
+            'esmodule-helpers.js',
+          ],
         },
         {
           type: 'txt',
@@ -983,7 +1019,12 @@ describe('javascript', function () {
       assertBundles(b, [
         {
           name: 'cjs.js',
-          assets: ['cjs.js', 'bundle-url.js', 'esmodule-helpers.js'],
+          assets: [
+            'cjs.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
+            'esmodule-helpers.js',
+          ],
         },
         {
           type: 'txt',
@@ -1093,7 +1134,7 @@ describe('javascript', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', 'bundle-url.js'],
+        assets: ['index.js', 'bundle-url.ts', 'bundle-url-common.ts'],
       },
       {
         type: 'txt',
@@ -2623,7 +2664,8 @@ describe('javascript', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'esmodule-helpers.js',
           'js-loader.js',
@@ -2706,7 +2748,13 @@ describe('javascript', function () {
     assertBundles(b, [
       {
         name: 'ts.js',
-        assets: ['ts.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
+        assets: [
+          'ts.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'cacheLoader.js',
+          'js-loader.js',
+        ],
       },
       {
         assets: ['async.js'],
@@ -2726,7 +2774,8 @@ describe('javascript', function () {
         name: 'ts-interop.js',
         assets: [
           'ts-interop.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -2755,7 +2804,8 @@ describe('javascript', function () {
         name: 'ts-interop-arrow.js',
         assets: [
           'ts-interop-arrow.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -2782,7 +2832,8 @@ describe('javascript', function () {
         name: 'rollup.js',
         assets: [
           'rollup.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -2820,7 +2871,8 @@ describe('javascript', function () {
         name: 'resolve-chain.js',
         assets: [
           'resolve-chain.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -2843,7 +2895,8 @@ describe('javascript', function () {
         name: 'atlaspack.js',
         assets: [
           'atlaspack.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -3000,7 +3053,8 @@ describe('javascript', function () {
         name: 'entry2.js',
         assets: [
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'child.js',
           'entry2.js',
@@ -3021,7 +3075,8 @@ describe('javascript', function () {
         name: 'same-ancestry.js',
         assets: [
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'dep.js',
           'js-loader.js',
@@ -3068,7 +3123,8 @@ describe('javascript', function () {
         name: 'get-dep.js',
         assets: [
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'get-dep.js',
           'js-loader.js',
@@ -3124,7 +3180,8 @@ describe('javascript', function () {
         name: 'index.js',
         assets: [
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'index.js',
           'js-loader.js',
@@ -3148,7 +3205,8 @@ describe('javascript', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
           'esmodule-helpers.js',
@@ -3179,7 +3237,8 @@ describe('javascript', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
           'esmodule-helpers.js',
@@ -3249,7 +3308,8 @@ describe('javascript', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
           'esmodule-helpers.js',
@@ -3259,7 +3319,8 @@ describe('javascript', function () {
         name: 'other-entry.js',
         assets: [
           'other-entry.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -3702,7 +3763,13 @@ describe('javascript', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
+        assets: [
+          'index.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'cacheLoader.js',
+          'js-loader.js',
+        ],
       },
       {
         assets: ['async1.js', 'shared.js', 'esmodule-helpers.js'],
@@ -3729,7 +3796,8 @@ describe('javascript', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
           'bundle-manifest.js',
@@ -3815,7 +3883,8 @@ describe('javascript', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'css-loader.js',
           'esmodule-helpers.js',
@@ -4157,7 +4226,8 @@ describe('javascript', function () {
             'static-dynamic-url.js',
             'other.js',
             'esmodule-helpers.js',
-            'bundle-url.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
             'cacheLoader.js',
             'js-loader.js',
           ],
@@ -4228,7 +4298,8 @@ describe('javascript', function () {
           assets: [
             'dynamic-url.js',
             'esmodule-helpers.js',
-            'bundle-url.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
             'cacheLoader.js',
             'js-loader.js',
           ],
@@ -4340,7 +4411,8 @@ describe('javascript', function () {
         name: 'entry-a.js',
         assets: [
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'entry-a.js',
           'js-loader.js',
@@ -4350,7 +4422,8 @@ describe('javascript', function () {
         name: 'entry-b.js',
         assets: [
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'entry-b.js',
           'js-loader.js',

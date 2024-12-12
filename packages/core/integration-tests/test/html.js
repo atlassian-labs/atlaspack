@@ -484,7 +484,8 @@ describe('html', function () {
         type: 'js',
         assets: [
           'index.css',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'css-loader.js',
           'hmr-runtime.js',
         ],
@@ -1874,7 +1875,8 @@ describe('html', function () {
           type: 'js',
           assets: [
             'bundle-manifest.js',
-            'bundle-url.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
             'cacheLoader.js',
             'index.js',
             'index.js',
@@ -2207,7 +2209,8 @@ describe('html', function () {
         type: 'js',
         assets: [
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'index.js',
           'js-loader.js',
@@ -2230,7 +2233,8 @@ describe('html', function () {
         type: 'js',
         assets: [
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'index.js',
           'js-loader.js',
@@ -2301,7 +2305,8 @@ describe('html', function () {
           assets: [
             'a.js',
             'bundle-manifest.js',
-            'bundle-url.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
             'cacheLoader.js',
             'js-loader.js',
           ],
@@ -2310,7 +2315,8 @@ describe('html', function () {
           assets: [
             'b.js',
             'bundle-manifest.js',
-            'bundle-url.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
             'cacheLoader.js',
             'js-loader.js',
           ],
@@ -2580,7 +2586,8 @@ describe('html', function () {
         type: 'js',
         assets: [
           'a.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'esmodule-helpers.js',
           'get-worker-url.js',
           'index.js',
