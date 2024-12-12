@@ -2239,7 +2239,7 @@ describe('html', function () {
     ]);
   });
 
-  it('should isolate async scripts', async function () {
+  it.v2('should isolate async scripts', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/html-async-script/index.html'),
       {
