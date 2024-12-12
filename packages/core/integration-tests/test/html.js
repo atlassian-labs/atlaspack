@@ -1642,7 +1642,6 @@ describe('html', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/html-inline-js-module/index.html'),
         {
-          mode: 'production',
           defaultTargetOptions: {
             shouldScopeHoist: true,
             engines: {
@@ -1679,7 +1678,6 @@ describe('html', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/html-js/index.html'),
         {
-          mode: 'production',
           defaultTargetOptions: {
             shouldScopeHoist: true,
             engines: {
