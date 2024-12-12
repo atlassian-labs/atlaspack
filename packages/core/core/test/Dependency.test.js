@@ -11,23 +11,11 @@ describe('Dependency', () => {
         specifier: 'foo',
         env: createEnvironment(),
         specifierType: 'esm',
-        bundleBehavior: undefined,
-        packageConditions: undefined,
-        pipeline: undefined,
-        priority: undefined,
-        sourceAssetId: undefined,
-        target: undefined,
       });
       let id2 = createDependencyId({
         specifier: 'foo',
         env: createEnvironment(),
         specifierType: 'esm',
-        bundleBehavior: undefined,
-        packageConditions: undefined,
-        pipeline: undefined,
-        priority: undefined,
-        sourceAssetId: undefined,
-        target: undefined,
       });
       expect(id1).toEqual(id2);
     });
@@ -44,11 +32,6 @@ describe('Dependency', () => {
           publicUrl: 'public-url',
           source: '1234',
         },
-        bundleBehavior: undefined,
-        packageConditions: undefined,
-        pipeline: undefined,
-        priority: undefined,
-        sourceAssetId: undefined,
       });
       let id2 = createDependencyId({
         specifier: 'foo',
@@ -61,11 +44,6 @@ describe('Dependency', () => {
           publicUrl: 'public-url',
           source: '5678', // <- this is different
         },
-        bundleBehavior: undefined,
-        packageConditions: undefined,
-        pipeline: undefined,
-        priority: undefined,
-        sourceAssetId: undefined,
       });
       expect(id1).not.toEqual(id2);
     });
