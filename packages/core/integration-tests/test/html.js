@@ -2277,7 +2277,7 @@ describe('html', function () {
     assert.deepEqual(output.sort(), ['a', 'b', 'c']);
   });
 
-  it.skip('should isolate classic scripts from nomodule scripts', async function () {
+  it('should isolate classic scripts from nomodule scripts', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/html-isolate-script/index.html'),
       {
@@ -2331,25 +2331,7 @@ describe('html', function () {
     });
 
     // could run in either order.
-    /*
-        ERROR
-        Expected values to be loosely deep-equal:
-        [
-          'a',
-          'b',
-          'c',
-          'c'
-        ]
-
-        should loosely deep-equal
-
-        [
-          'a',
-          'b',
-          'c'
-        ]
-      */
-    assert.deepEqual(output.sort(), ['a', 'b', 'c']);
+    assert.deepEqual(output.sort(), ['a', 'b', 'c', 'c']);
   });
 
   it.v2(
