@@ -121,7 +121,14 @@ describe.v2('webextension', function () {
       {assets: ['background.js']},
       {assets: ['popup.html']},
       {assets: ['popup.css']},
-      {assets: ['popup.js', 'esmodule-helpers.js', 'bundle-url.js']},
+      {
+        assets: [
+          'popup.js',
+          'esmodule-helpers.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+        ],
+      },
       {assets: ['side-panel.html']},
       {assets: ['content-script.js']},
       {assets: ['other-content-script.js']},

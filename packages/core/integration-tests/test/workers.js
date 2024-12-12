@@ -32,7 +32,8 @@ describe('atlaspack', function () {
           'worker-client.js',
           'feature.js',
           'get-worker-url.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
         ],
       },
       {
@@ -55,12 +56,18 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', 'bundle-url.js', 'get-worker-url.js'],
+        assets: [
+          'index.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'get-worker-url.js',
+        ],
       },
       {
         assets: [
           'worker.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -99,12 +106,18 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', 'bundle-url.js', 'get-worker-url.js'],
+        assets: [
+          'index.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'get-worker-url.js',
+        ],
       },
       {
         assets: [
           'worker.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -132,12 +145,18 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'index-nested.js',
-        assets: ['index-nested.js', 'bundle-url.js', 'get-worker-url.js'],
+        assets: [
+          'index-nested.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'get-worker-url.js',
+        ],
       },
       {
         assets: [
           'worker-nested.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'get-worker-url.js',
           'cacheLoader.js',
           'js-loader.js',
@@ -146,7 +165,8 @@ describe('atlaspack', function () {
       {
         assets: [
           'worker.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -178,7 +198,8 @@ describe('atlaspack', function () {
         name: 'index-async.js',
         assets: [
           'index-async.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'get-worker-url.js',
           'cacheLoader.js',
           'js-loader.js',
@@ -187,7 +208,8 @@ describe('atlaspack', function () {
       {
         assets: [
           'worker.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -220,7 +242,8 @@ describe('atlaspack', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'get-worker-url.js',
           'workerHelpers.js',
           'esmodule-helpers.js',
@@ -229,7 +252,8 @@ describe('atlaspack', function () {
       {
         assets: [
           'workerHelpers.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'get-worker-url.js',
           'esmodule-helpers.js',
         ],
@@ -248,7 +272,8 @@ describe('atlaspack', function () {
       {
         assets: [
           'import-meta.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'get-worker-url.js',
           'esmodule-helpers.js',
         ],
@@ -256,7 +281,8 @@ describe('atlaspack', function () {
       {
         assets: [
           'import-meta.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'get-worker-url.js',
           'esmodule-helpers.js',
         ],
@@ -289,7 +315,8 @@ describe('atlaspack', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'get-worker-url.js',
           'bundle-manifest.js',
         ],
@@ -354,7 +381,8 @@ describe('atlaspack', function () {
           name: 'index.js',
           assets: [
             'index.js',
-            'bundle-url.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
             'get-worker-url.js',
             'bundle-manifest.js',
           ],
@@ -571,7 +599,8 @@ describe('atlaspack', function () {
           'common.js',
           'worker-client.js',
           'feature.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'get-worker-url.js',
         ],
       },
@@ -697,7 +726,12 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         type: 'js',
-        assets: ['index-variable.js', 'bundle-url.js', 'get-worker-url.js'],
+        assets: [
+          'index-variable.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'get-worker-url.js',
+        ],
       },
       {
         type: 'js',
@@ -720,7 +754,12 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         type: 'js',
-        assets: ['index-external.js', 'bundle-url.js', 'get-worker-url.js'],
+        assets: [
+          'index-external.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'get-worker-url.js',
+        ],
       },
       {
         type: 'js',
@@ -740,7 +779,12 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', 'index.js', 'bundle-url.js'],
+        assets: [
+          'index.js',
+          'index.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+        ],
       },
       {
         assets: ['worker-nested.js'],
@@ -764,7 +808,7 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'module.js',
-        assets: ['module.js', 'bundle-url.js'],
+        assets: ['module.js', 'bundle-url.ts', 'bundle-url-common.ts'],
       },
       {
         assets: ['module-worker.js'],
@@ -793,7 +837,7 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'scope.js',
-        assets: ['bundle-url.js', 'scope.js'],
+        assets: ['bundle-url.ts', 'bundle-url-common.ts', 'scope.js'],
       },
       {
         assets: ['module-worker.js'],
@@ -900,7 +944,7 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'manifest.js',
-        assets: ['manifest.js', 'bundle-url.js'],
+        assets: ['manifest.js', 'bundle-url.ts', 'bundle-url-common.ts'],
       },
       {
         assets: ['manifest-worker.js', 'service-worker.js'],
@@ -931,7 +975,7 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', 'bundle-url.js'],
+        assets: ['index.js', 'bundle-url.ts', 'bundle-url-common.ts'],
       },
       {
         assets: ['worker.js'],
@@ -1058,7 +1102,12 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', 'bundle-url.js', 'get-worker-url.js'],
+        assets: [
+          'index.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'get-worker-url.js',
+        ],
       },
       {
         assets: ['worker.js', 'worker-dep.js'],
@@ -1074,7 +1123,12 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', 'bundle-url.js', 'get-worker-url.js'],
+        assets: [
+          'index.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'get-worker-url.js',
+        ],
       },
       {
         assets: ['worker.js'],
@@ -1216,7 +1270,8 @@ describe('atlaspack', function () {
         assets: [
           'index.js',
           'lodash.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'get-worker-url.js',
           'bundle-manifest.js',
           'esmodule-helpers.js',
@@ -1225,7 +1280,8 @@ describe('atlaspack', function () {
       {
         assets: [
           'worker-a.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'get-worker-url.js',
           'bundle-manifest.js',
         ],
@@ -1272,11 +1328,16 @@ describe('atlaspack', function () {
             'get-worker-url.js',
             'lodash.js',
             'esmodule-helpers.js',
-            'bundle-url.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
           ],
         },
         {
-          assets: ['bundle-manifest.js', 'bundle-url.js'],
+          assets: [
+            'bundle-manifest.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
+          ],
         },
         {
           assets: ['worker.js', 'lodash.js', 'esmodule-helpers.js'],
@@ -1338,7 +1399,8 @@ describe('atlaspack', function () {
         {
           assets: [
             'bundle-manifest.js',
-            'bundle-url.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
             'cacheLoader.js',
             'get-worker-url.js',
             'index.js',
@@ -1349,7 +1411,8 @@ describe('atlaspack', function () {
         {
           assets: [
             'bundle-manifest.js',
-            'bundle-url.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
             'cacheLoader.js',
             'js-loader.js',
             'large.js',
@@ -1391,11 +1454,17 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['bundle-url.js', 'get-worker-url.js', 'index.js'],
+        assets: [
+          'bundle-url.ts',
+          'bundle-url-common.ts',
+          'get-worker-url.js',
+          'index.js',
+        ],
       },
       {
         assets: [
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'get-worker-url.js',
           'worker1.js',
           'worker2.js',

@@ -594,16 +594,16 @@ export function assertBundles(
     'expected number of bundles mismatched',
   );
 
-  for (let bundle of expectedBundles) {
-    let name = bundle.name;
-    let found = actualBundles.some((b) => {
-      if (name != null && b.name != null) {
+  for (let expectedBundle of expectedBundles) {
+    let name = expectedBundle.name;
+    let found = actualBundles.some((actualBundle) => {
+      if (name != null && actualBundle.name != null) {
         if (typeof name === 'string') {
-          if (name !== b.name) {
+          if (name !== actualBundle.name) {
             return false;
           }
         } else if (name instanceof RegExp) {
-          if (!name.test(b.name)) {
+          if (!name.test(actualBundle.name)) {
             return false;
           }
         } else {
@@ -612,14 +612,17 @@ export function assertBundles(
         }
       }
 
-      if (bundle.type != null && bundle.type !== b.type) {
+      if (
+        expectedBundle.type != null &&
+        expectedBundle.type !== actualBundle.type
+      ) {
         return false;
       }
 
       return (
-        bundle.assets &&
-        bundle.assets.length === b.assets.length &&
-        bundle.assets.every((a, i) => a === b.assets[i])
+        expectedBundle.assets &&
+        expectedBundle.assets.length === actualBundle.assets.length &&
+        expectedBundle.assets.every((a, i) => a === actualBundle.assets[i])
       );
     });
 
@@ -627,7 +630,7 @@ export function assertBundles(
       // $FlowFixMe[incompatible-call]
       assert.fail(
         `Could not find expected bundle: \n\n${util.inspect(
-          bundle,
+          expectedBundle,
         )} \n\nActual bundles: \n\n${util.inspect(actualBundles)}`,
       );
     }

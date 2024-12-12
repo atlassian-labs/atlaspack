@@ -244,7 +244,8 @@ describe('bundle-text:', function () {
               : [
                   'index.js',
                   'esmodule-helpers.js',
-                  'bundle-url.js',
+                  'bundle-url.ts',
+                  'bundle-url-common.ts',
                   'cacheLoader.js',
                   'js-loader.js',
                 ],

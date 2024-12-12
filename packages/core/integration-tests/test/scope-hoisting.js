@@ -2381,7 +2381,8 @@ describe('scope hoisting', function () {
             'foo.js',
             'bar.js',
             'bundle-manifest.js',
-            'bundle-url.js',
+            'bundle-url.ts',
+            'bundle-url-common.ts',
             'cacheLoader.js',
             'js-loader.js',
           ],
@@ -4347,7 +4348,7 @@ describe('scope hoisting', function () {
       assertBundles(b, [
         {
           type: 'js',
-          assets: ['a.js', 'b.js', 'bundle-url.js'],
+          assets: ['a.js', 'b.js', 'bundle-url.ts', 'bundle-url-common.ts'],
         },
         {
           type: 'txt',
@@ -5616,7 +5617,8 @@ describe('scope hoisting', function () {
         name: 'same-ancestry-scope-hoisting.js',
         assets: [
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'dep.js',
           'js-loader.js',
@@ -5643,7 +5645,8 @@ describe('scope hoisting', function () {
         assets: [
           'index.js',
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -5683,7 +5686,8 @@ describe('scope hoisting', function () {
         name: 'get-dep-scope-hoisting.js',
         assets: [
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'get-dep-scope-hoisting.js',
           'js-loader.js',
@@ -5730,7 +5734,8 @@ describe('scope hoisting', function () {
         name: 'scope-hoisting.js',
         assets: [
           'bundle-manifest.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'scope-hoisting.js',
           'js-loader.js',
@@ -5782,7 +5787,8 @@ describe('scope hoisting', function () {
         name: 'scope-hoisting.js',
         assets: [
           'scope-hoisting.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -5810,7 +5816,8 @@ describe('scope hoisting', function () {
         name: 'scope-hoisting.js',
         assets: [
           'scope-hoisting.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -5819,7 +5826,8 @@ describe('scope hoisting', function () {
         name: 'other-entry.js',
         assets: [
           'other-entry.js',
-          'bundle-url.js',
+          'bundle-url.ts',
+          'bundle-url-common.ts',
           'cacheLoader.js',
           'js-loader.js',
         ],

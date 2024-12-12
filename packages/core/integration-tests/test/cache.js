@@ -4998,7 +4998,8 @@ describe.v2('cache', function () {
                   assets: [
                     'index.js',
                     'c.js',
-                    'bundle-url.js',
+                    'bundle-url.ts',
+                    'bundle-url-common.ts',
                     'cacheLoader.js',
                     'js-loader.js',
                     'bundle-manifest.js',
@@ -5036,7 +5037,8 @@ describe.v2('cache', function () {
             assets: [
               'index.js',
               'c.js',
-              'bundle-url.js',
+              'bundle-url.ts',
+              'bundle-url-common.ts',
               'cacheLoader.js',
               'js-loader.js',
               'bundle-manifest.js',
@@ -5112,7 +5114,8 @@ describe.v2('cache', function () {
                   assets: [
                     'index.js',
                     'c.js',
-                    'bundle-url.js',
+                    'bundle-url.ts',
+                    'bundle-url-common.ts',
                     'cacheLoader.js',
                     'js-loader.js',
                     'bundle-manifest.js',
@@ -5150,7 +5153,8 @@ describe.v2('cache', function () {
             assets: [
               'index.js',
               'c.js',
-              'bundle-url.js',
+              'bundle-url.ts',
+              'bundle-url-common.ts',
               'cacheLoader.js',
               'js-loader.js',
               'bundle-manifest.js',
@@ -5190,7 +5194,8 @@ describe.v2('cache', function () {
                   assets: [
                     'index.js',
                     'c.js',
-                    'bundle-url.js',
+                    'bundle-url.ts',
+                    'bundle-url-common.ts',
                     'cacheLoader.js',
                     'js-loader.js',
                     'bundle-manifest.js',
@@ -5222,7 +5227,8 @@ describe.v2('cache', function () {
             assets: [
               'index.js',
               'c.js',
-              'bundle-url.js',
+              'bundle-url.ts',
+              'bundle-url-common.ts',
               'cacheLoader.js',
               'js-loader.js',
               'bundle-manifest.js',
