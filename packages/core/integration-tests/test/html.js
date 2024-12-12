@@ -3016,6 +3016,7 @@ describe('html', function () {
         }
       });
     });
+    if (!youngerSibling) return assert(false);
 
     assert(
       b.getReferencedBundles(youngerSibling).filter((b) => b == olderSibling)
