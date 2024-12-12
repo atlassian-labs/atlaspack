@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -99,11 +100,19 @@ describe('content hashing', function () {
     async () => {
       let a = await _bundle(
         path.join(__dirname, 'integration/hash-distDir/a/index.html'),
-        {sourceMaps: true},
+        {
+          defaultTargetOptions: {
+            sourceMaps: true,
+          },
+        },
       );
       let b = await _bundle(
         path.join(__dirname, 'integration/hash-distDir/b/index.html'),
-        {sourceMaps: true},
+        {
+          defaultTargetOptions: {
+            sourceMaps: true,
+          },
+        },
       );
 
       let aBundles = a.getBundles();
@@ -113,7 +122,11 @@ describe('content hashing', function () {
       assert.equal(bBundles.length, 2);
 
       let aJS = aBundles.find((bundle) => bundle.type === 'js');
+      if (!aJS) return assert(false);
+
       let bJS = bBundles.find((bundle) => bundle.type === 'js');
+      if (!bJS) return assert(false);
+
       assert(/index\.[a-f0-9]*\.js/.test(path.basename(aJS.filePath)));
       assert.equal(aJS.name, bJS.name);
     },
