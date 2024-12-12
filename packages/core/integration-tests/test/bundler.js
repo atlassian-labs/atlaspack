@@ -1,3 +1,4 @@
+// @flow
 import path from 'path';
 import assert from 'assert';
 import Logger from '@atlaspack/logger';
@@ -885,10 +886,16 @@ describe('bundler', function () {
       },
     ]);
 
+    let assetBar = findAsset(b, 'bar.js');
+    if (!assetBar) return assert(false);
+
+    let assetC = findAsset(b, 'c.js');
+    if (!assetC) return assert(false);
+
     assert(
       b
-        .getReferencedBundles(b.getBundlesWithAsset(findAsset(b, 'bar.js'))[0])
-        .includes(b.getBundlesWithAsset(findAsset(b, 'c.js'))[0]),
+        .getReferencedBundles(b.getBundlesWithAsset(assetBar)[0])
+        .includes(b.getBundlesWithAsset(assetC)[0]),
     );
 
     await run(b);
@@ -950,6 +957,7 @@ describe('bundler', function () {
       .find(
         (bundle) => !bundle.getMainEntry() && bundle.name.includes('runtime'),
       );
+    if (!aManifestBundle) return assert(false);
 
     let bBundles = b
       .getBundles()
@@ -962,6 +970,8 @@ describe('bundler', function () {
         stop();
       }
     });
+    if (!aBundleManifestAsset) return assert(false);
+
     let aBundleManifestAssetCode = await aBundleManifestAsset.getCode();
 
     // Assert the a.js manifest bundle is aware of all the b.js bundles
@@ -1323,6 +1333,8 @@ describe('bundler', function () {
 
     // Asset should not be inlined
     const index = b.getBundles().find((b) => b.name.startsWith('index'));
+    if (!index) return assert(false);
+
     const contents = overlayFS.readFileSync(index.filePath, 'utf8');
     assert(
       !contents.includes('async value'),
