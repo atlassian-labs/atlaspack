@@ -1,4 +1,4 @@
-import {getBaseURL, stackTraceUrlRegexp} from './bundle-url-common';
+const {getBaseURL, stackTraceUrlRegexp} = require('./bundle-url-common');
 
 const bundleURL = {};
 
@@ -28,8 +28,9 @@ function getBundleURL() {
   return '/';
 }
 
-export function getOrigin(url: string) {
+function getOrigin(url: string) {
   return new URL(url).origin;
 }
 
-export {getBundleURLCached as getBundleURL};
+exports.getOrigin = getOrigin;
+exports.getBundleURL = getBundleURLCached;

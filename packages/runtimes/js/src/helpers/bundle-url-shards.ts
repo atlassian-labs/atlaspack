@@ -1,8 +1,8 @@
-import {getBaseURL, stackTraceUrlRegexp} from './bundle-url-common';
+const {getBaseURL, stackTraceUrlRegexp} = require('./bundle-url-common');
 
 const bundleURL: Record<string, string> = {};
 
-export function getShardedBundleURL(
+function getShardedBundleURL(
   bundleName: string,
   cookieName: string,
   cookieString: string,
@@ -91,3 +91,5 @@ function removeTrailingShard(subdomain: string) {
   const shardIdx = subdomain.lastIndexOf('-');
   return subdomain.slice(0, shardIdx);
 }
+
+exports.getShardedBundleURL = getShardedBundleURL;
