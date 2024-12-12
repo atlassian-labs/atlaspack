@@ -7,6 +7,12 @@ on:
     branches:
       - main
 
+concurrency:
+  # This causes the workflow to be cancelled if a newer commit is pushed to the
+  # pull request while it's still being built. Builds on main are not cancelled.
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -76,6 +82,7 @@ jobs:
 
   integration_tests:
     name: Integration tests (${{ matrix.version == 'v3' && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
+    timeout-minutes: 35
     strategy:
       matrix:
         node: [18, 20]
