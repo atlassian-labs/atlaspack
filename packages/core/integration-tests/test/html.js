@@ -1,4 +1,5 @@
-import assert from 'assert';
+// @flow
+import assert from 'assert/strict';
 import {
   assertBundles,
   bundle,
@@ -94,6 +95,8 @@ describe('html', function () {
     assert(html.includes('https://unpkg.com/parcel-bundler'));
 
     let iconsBundle = b.getBundles().find((b) => b.name.startsWith('icons'));
+    if (!iconsBundle) return assert(false);
+
     assert(
       html.includes('/' + path.basename(iconsBundle.filePath) + '#icon-code'),
     );
@@ -121,8 +124,8 @@ describe('html', function () {
       },
     ]);
 
-    assert(await outputFS.exists(path.join(distDir, 'a.html'), 'utf8'));
-    assert(await outputFS.exists(path.join(distDir, 'b.html'), 'utf8'));
+    assert(await outputFS.exists(path.join(distDir, 'a.html')));
+    assert(await outputFS.exists(path.join(distDir, 'b.html')));
   });
 
   it('should find href attr when not first', async function () {
@@ -462,7 +465,9 @@ describe('html', function () {
     let b = await bundle(
       path.join(__dirname, '/integration/html-css-js/index.html'),
       {
-        hmr: true,
+        // Test is skipped, hmr does not exist on InitialOptions
+        // Leaving it here to fix when the test is enabled in future
+        // hmr: true,
       },
     );
 
@@ -956,23 +961,25 @@ describe('html', function () {
       path.join(__dirname, '/integration/webmanifest/index.html'),
     );
 
-    assertBundles(b, {
-      name: 'index.html',
-      assets: ['index.html'],
-      childBundles: [
-        {
-          type: 'webmanifest',
-          assets: ['manifest.webmanifest'],
-          childBundles: [
-            {
-              type: 'txt',
-              assets: ['some.txt'],
-              childBundles: [],
-            },
-          ],
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'index.html',
+        assets: ['index.html'],
+        childBundles: [
+          {
+            type: 'webmanifest',
+            assets: ['manifest.webmanifest'],
+            childBundles: [
+              {
+                type: 'txt',
+                assets: ['some.txt'],
+                childBundles: [],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
   });
 
   it.skip("should treat webmanifest as an entry module so it doesn't get content hashed", async function () {
@@ -980,16 +987,18 @@ describe('html', function () {
       path.join(__dirname, '/integration/html-manifest/index.html'),
     );
 
-    assertBundles(b, {
-      name: 'index.html',
-      assets: ['index.html'],
-      childBundles: [
-        {
-          type: 'webmanifest',
-          assets: ['manifest.webmanifest'],
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'index.html',
+        assets: ['index.html'],
+        childBundles: [
+          {
+            type: 'webmanifest',
+            assets: ['manifest.webmanifest'],
+          },
+        ],
+      },
+    ]);
 
     const html = await outputFS.readFile(
       path.join(__dirname, '/dist/index.html'),
@@ -1210,11 +1219,10 @@ describe('html', function () {
     ]);
 
     let bundles = b.getBundles();
+    let foundBundle = bundles.find((bundle) => bundle.type === 'html');
+    if (!foundBundle) return assert(false);
 
-    let html = await outputFS.readFile(
-      bundles.find((bundle) => bundle.type === 'html').filePath,
-      'utf8',
-    );
+    let html = await outputFS.readFile(foundBundle.filePath, 'utf8');
 
     let urls = [...html.matchAll(/url\(([^)]*)\)/g)].map((m) => m[1]);
     assert.strictEqual(urls.length, 2);
@@ -1412,7 +1420,7 @@ describe('html', function () {
   for (let scopeHoist of [false, true]) {
     it.v2(
       'should expose top level declarations globally in inline <script> tags with dependencies with scopeHoist = ' +
-        scopeHoist,
+        scopeHoist.toString(),
       async function () {
         let b = await bundle(
           path.join(
@@ -1634,8 +1642,8 @@ describe('html', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/html-inline-js-module/index.html'),
         {
+          mode: 'production',
           defaultTargetOptions: {
-            mode: 'production',
             shouldScopeHoist: true,
             engines: {
               browsers: '>= 0.25%',
@@ -1671,8 +1679,8 @@ describe('html', function () {
       let b = await bundle(
         path.join(__dirname, '/integration/html-js/index.html'),
         {
+          mode: 'production',
           defaultTargetOptions: {
-            mode: 'production',
             shouldScopeHoist: true,
             engines: {
               browsers: '>= 0.25%',
@@ -1697,26 +1705,27 @@ describe('html', function () {
       ]);
 
       let bundles = b.getBundles();
-      let html = await outputFS.readFile(
-        bundles.find((b) => b.type === 'html').filePath,
-        'utf8',
-      );
+      let foundBundleHtml = bundles.find((b) => b.type === 'html');
+      if (!foundBundleHtml) return assert(false);
+
+      let html = await outputFS.readFile(foundBundleHtml.filePath, 'utf8');
       assert(html.includes('<script type="module" src='));
       assert(/<script src=".*?" nomodule/.test(html));
 
-      let js = await outputFS.readFile(
-        bundles.find(
-          (b) => b.type === 'js' && b.env.outputFormat === 'esmodule',
-        ).filePath,
-        'utf8',
+      let foundBundleJsEsm = bundles.find(
+        (b) => b.type === 'js' && b.env.outputFormat === 'esmodule',
       );
+      if (!foundBundleJsEsm) return assert(false);
+
+      let js = await outputFS.readFile(foundBundleJsEsm.filePath, 'utf8');
       assert(/class \$[a-f0-9]+\$var\$Useless \{/.test(js));
 
-      js = await outputFS.readFile(
-        bundles.find((b) => b.type === 'js' && b.env.outputFormat === 'global')
-          .filePath,
-        'utf8',
+      let foundBundleJsGlobal = bundles.find(
+        (b) => b.type === 'js' && b.env.outputFormat === 'global',
       );
+      if (!foundBundleJsGlobal) return assert(false);
+
+      js = await outputFS.readFile(foundBundleJsGlobal.filePath, 'utf8');
       assert(!/class \$[a-f0-9]+\$var\$Useless \{/.test(js));
     },
   );
@@ -1749,8 +1758,8 @@ describe('html', function () {
     let b = await bundle(
       path.join(__dirname, '/integration/html-js/index.html'),
       {
+        mode: 'production',
         defaultTargetOptions: {
-          mode: 'production',
           shouldScopeHoist: true,
           engines: {
             browsers: 'last 1 Chrome version',
@@ -1999,6 +2008,7 @@ describe('html', function () {
     let regex = /<script (?:type="[^"]+" )?src="([^"]*)"><\/script>/g;
     let match;
     while ((match = regex.exec(html)) !== null) {
+      if (!match) return assert(false);
       insertedBundles.push(path.basename(match[1]));
     }
 
@@ -2061,6 +2071,7 @@ describe('html', function () {
     let regex = /<script (?:type="[^"]+" )?src="([^"]*)"><\/script>/g;
     let match;
     while ((match = regex.exec(html)) !== null) {
+      if (!match) return assert(false);
       insertedBundles.push(path.basename(match[1]));
     }
 
@@ -2136,11 +2147,16 @@ describe('html', function () {
         let regex = /<script ([^>]*)><\/script>/g;
         let match;
         while ((match = regex.exec(html)) !== null) {
+          if (!match) return assert(false);
           let attributes = new Map(
-            match[1].split(' ').map((a) => a.split('=')),
+            match[1]
+              .split(' ')
+              .map((a) => a.split('='))
+              .map(([a, ...b]) => [a, b.join('')]),
           );
-          let url = attributes.get('src').replace(/"/g, '');
-          assert(url);
+          let url = attributes.get('src')?.replace(/"/g, '');
+          if (!url) return assert(false);
+
           if (attributes.get('type') === '"module"') {
             assert.strictEqual(attributes.size, 2);
             moduleScripts.push(path.basename(url));
@@ -2154,18 +2170,18 @@ describe('html', function () {
 
         for (let scripts of [moduleScripts, noModuleScripts]) {
           assert.strictEqual(scripts.length, 2);
-          assert(
-            b
-              .getBundles()
-              .find((b) => b.filePath.endsWith(scripts[0]))
-              .getMainEntry() == null,
-          );
-          assert(
-            b
-              .getBundles()
-              .find((b) => b.filePath.endsWith(scripts[1]))
-              .getMainEntry(),
-          );
+
+          let bundleA = b
+            .getBundles()
+            .find((b) => b.filePath.endsWith(scripts[0]));
+          if (!bundleA) return assert(false);
+          assert(bundleA.getMainEntry() == null);
+
+          let bundleB = b
+            .getBundles()
+            .find((b) => b.filePath.endsWith(scripts[1]));
+          if (!bundleB) return assert(false);
+          assert(bundleB.getMainEntry());
         }
       }
     },
@@ -2258,7 +2274,7 @@ describe('html', function () {
     });
 
     // could run in either order.
-    assert(output.sort(), ['a', 'b', 'c']);
+    assert.equal(output.sort(), ['a', 'b', 'c']);
   });
 
   it.v2(
@@ -2317,7 +2333,7 @@ describe('html', function () {
       });
 
       // could run in either order.
-      assert(output.sort(), ['a', 'b', 'c']);
+      assert.equal(output.sort(), ['a', 'b', 'c']);
     },
   );
 
@@ -2434,10 +2450,13 @@ describe('html', function () {
 
     let insertedBundles = [];
     let regex = /<script (?:type="[^"]+" )?src="([^"]*)"><\/script>/g;
-    let match;
-    while ((match = regex.exec(html)) !== null) {
+    let matches;
+    while ((matches = regex.exec(html)) !== null) {
+      if (!matches) return assert(false);
+      let match = matches[1];
+      if (!match) return assert(false);
       let bundle = bundles.find(
-        (b) => path.basename(b.filePath) === path.basename(match[1]),
+        (b) => path.basename(b.filePath) === path.basename(match),
       );
 
       insertedBundles.push(bundle);
@@ -2572,12 +2591,20 @@ describe('html', function () {
     ]);
 
     let htmlBundle = b.getBundles().find((b) => b.type === 'html');
-    let htmlSiblings = b.getReferencedBundles(htmlBundle);
-    assert.equal(htmlSiblings.length, 2);
-    assert(htmlSiblings.some((b) => b.type === 'js'));
-    assert(htmlSiblings.some((b) => b.type === 'css'));
+    if (!htmlBundle) return assert(false);
 
-    let worker = b.getChildBundles(htmlSiblings.find((b) => b.type === 'js'));
+    let htmlSiblings = b.getReferencedBundles(htmlBundle);
+    if (!htmlSiblings) return assert(false);
+
+    assert.equal(htmlSiblings.length, 2);
+
+    let jsSibling = htmlSiblings.find((b) => b.type === 'js');
+    if (!jsSibling) return assert(false);
+
+    let cssSibling = htmlSiblings.find((b) => b.type === 'css');
+    if (!cssSibling) return assert(false);
+
+    let worker = b.getChildBundles(jsSibling);
     assert.equal(worker.length, 1);
     let workerSiblings = b.getReferencedBundles(worker[0]);
     assert.equal(workerSiblings.length, 0);
@@ -2647,7 +2674,10 @@ describe('html', function () {
 
       for (let htmlBundle of b.getBundles().filter((b) => b.type === 'html')) {
         let htmlSiblings = b
-          .getReferencedBundles(htmlBundle, true)
+          .getReferencedBundles(htmlBundle, {
+            recursive: true,
+            includeInline: true,
+          })
           .map((b) => b.type)
           .sort();
         assert.deepEqual(htmlSiblings, ['css', 'js']);
@@ -2771,29 +2801,30 @@ describe('html', function () {
     );
 
     let bundles = b.getBundles();
-    let cssBundle = path.basename(
-      bundles.find((bundle) => bundle.filePath.endsWith('.css')).filePath,
-    );
-    let jsBundle = path.basename(
-      bundles.find((bundle) => bundle.filePath.endsWith('.js')).filePath,
-    );
+    let cssBundle = bundles.find((bundle) => bundle.filePath.endsWith('.css'));
+    if (!cssBundle) return assert(false);
+    let cssBundleDir = path.basename(cssBundle.filePath);
+
+    let jsBundle = bundles.find((bundle) => bundle.filePath.endsWith('.js'));
+    if (!jsBundle) return assert(false);
+    let jsBundleDir = path.basename(jsBundle.filePath);
 
     assert(
       firstHtmlFile.includes(cssBundle),
-      `a.html should include a reference to ${cssBundle}`,
+      `a.html should include a reference to ${cssBundleDir}`,
     );
     assert(
       secondHtmlFile.includes(cssBundle),
-      `b.html should include a reference to ${cssBundle}`,
+      `b.html should include a reference to ${cssBundleDir}`,
     );
 
     assert(
-      firstHtmlFile.includes(jsBundle),
-      `a.html should include a reference to ${jsBundle}`,
+      firstHtmlFile.includes(jsBundleDir),
+      `a.html should include a reference to ${jsBundleDir}`,
     );
     assert(
-      secondHtmlFile.includes(jsBundle),
-      `b.html should include a reference to ${jsBundle}`,
+      secondHtmlFile.includes(jsBundleDir),
+      `b.html should include a reference to ${jsBundleDir}`,
     );
   });
 
@@ -2888,10 +2919,10 @@ describe('html', function () {
       },
     );
 
-    let contents = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'html').filePath,
-      'utf8',
-    );
+    let htmlBundle = b.getBundles().find((b) => b.type === 'html');
+    if (!htmlBundle) return assert(false);
+    let contents = await outputFS.readFile(htmlBundle.filePath, 'utf8');
+
     assert.equal(
       contents.trim(),
       `<img src="data:image/svg+xml,%3Csvg%20width%3D%22120%22%20height%3D%22120%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%20%20%3Cfilter%20id%3D%22blur-_.%21~%2a%22%3E%0A%20%20%20%20%3CfeGaussianBlur%20stdDeviation%3D%225%22%3E%3C%2FfeGaussianBlur%3E%0A%20%20%3C%2Ffilter%3E%0A%20%20%3Ccircle%20cx%3D%2260%22%20cy%3D%2260%22%20r%3D%2250%22%20fill%3D%22green%22%20filter%3D%22url%28%27%23blur-_.%21~%2a%27%29%22%3E%3C%2Fcircle%3E%0A%3C%2Fsvg%3E%0A">`,
