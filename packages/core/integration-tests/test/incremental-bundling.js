@@ -593,7 +593,7 @@ console.log(a, b);
 
         let event = await getNextBuildSuccess(b);
         let assets = Array.from(event.changedAssets.values());
-        assertChangedAssets(getChangedAssetsBeforeRuntimes(assets).length, 3);
+        assertChangedAssets(getChangedAssetsBeforeRuntimes(assets).length, 2);
         assertTimesBundled(defaultBundlerSpy.callCount, 2);
 
         // original bundle and new dynamic import bundle JS bundle
