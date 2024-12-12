@@ -204,7 +204,7 @@ describe('bundle-text:', function () {
               'index.js',
               'main.js',
               ...(!scopeHoist ? ['esmodule-helpers.js'] : []),
-            ].filter(Boolean),
+            ],
           },
           {
             type: 'js',
