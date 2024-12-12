@@ -6,7 +6,7 @@ declare module "assert" {
     ok(value: any, message?: string): void;
     fail(message?: string | Error): void;
     // deprecated since v10.15
-    fail(actual: any, expected: any, message: string, operator: string): void;
+    // fail(actual: any, expected: any, message: string, operator: string): void;
     equal(actual: any, expected: any, message?: string): void;
     notEqual(actual: any, expected: any, message?: string): void;
     deepEqual(actual: any, expected: any, message?: string): void;
@@ -27,7 +27,7 @@ declare module "assert" {
     ok(value: any, message?: string): void,
     fail(message?: string | Error): void,
     // deprecated since v10.15
-    fail(actual: any, expected: any, message: string, operator: string): void,
+    // fail(actual: any, expected: any, message: string, operator: string): void,
     equal(actual: any, expected: any, message?: string): void,
     notEqual(actual: any, expected: any, message?: string): void,
     deepEqual(actual: any, expected: any, message?: string): void,
