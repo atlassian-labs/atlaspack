@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 
@@ -58,7 +59,6 @@ describe('globals', function () {
     it('when scope hoisting is disabled', async function () {
       let bundleGraph = await bundle(path.join(dir, 'index.js'), {
         defaultTargetOptions: {
-          context: 'browser',
           shouldScopeHoist: false,
         },
         inputFS: overlayFS,
@@ -84,7 +84,6 @@ describe('globals', function () {
     it.v2('when scope hoisting is enabled', async function () {
       let bundleGraph = await bundle(path.join(dir, 'index.js'), {
         defaultTargetOptions: {
-          context: 'browser',
           shouldScopeHoist: true,
         },
         inputFS: overlayFS,

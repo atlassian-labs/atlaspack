@@ -887,10 +887,10 @@ describe('bundler', function () {
     ]);
 
     let assetBar = findAsset(b, 'bar.js');
-    if (!assetBar) return assert(false);
+    if (!assetBar) return assert.fail();
 
     let assetC = findAsset(b, 'c.js');
-    if (!assetC) return assert(false);
+    if (!assetC) return assert.fail();
 
     assert(
       b
@@ -957,7 +957,7 @@ describe('bundler', function () {
       .find(
         (bundle) => !bundle.getMainEntry() && bundle.name.includes('runtime'),
       );
-    if (!aManifestBundle) return assert(false);
+    if (!aManifestBundle) return assert.fail();
 
     let bBundles = b
       .getBundles()
@@ -970,7 +970,7 @@ describe('bundler', function () {
         stop();
       }
     });
-    if (!aBundleManifestAsset) return assert(false);
+    if (!aBundleManifestAsset) return assert.fail();
 
     let aBundleManifestAssetCode = await aBundleManifestAsset.getCode();
 
@@ -1333,7 +1333,7 @@ describe('bundler', function () {
 
     // Asset should not be inlined
     const index = b.getBundles().find((b) => b.name.startsWith('index'));
-    if (!index) return assert(false);
+    if (!index) return assert.fail();
 
     const contents = overlayFS.readFileSync(index.filePath, 'utf8');
     assert(
