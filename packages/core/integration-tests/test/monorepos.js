@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -606,6 +607,7 @@ describe.v2('monorepos', function () {
 
     subscription = await b.watch();
     let evt = await getNextBuild(b);
+    if (!evt.bundleGraph) return assert.fail();
 
     assertBundles(evt.bundleGraph, [
       {
@@ -624,6 +626,8 @@ describe.v2('monorepos', function () {
     );
 
     evt = await getNextBuild(b);
+    if (!evt.bundleGraph) return assert.fail();
+
     assertBundles(evt.bundleGraph, [
       {
         name: 'pkg-a.cjs.js',
@@ -668,6 +672,7 @@ describe.v2('monorepos', function () {
 
     subscription = await b.watch();
     let evt = await getNextBuild(b);
+    if (!evt.bundleGraph) return assert.fail();
 
     assertBundles(evt.bundleGraph, [
       {
@@ -689,6 +694,8 @@ describe.v2('monorepos', function () {
 
     evt = await getNextBuild(b);
     assert(evt.type === 'buildSuccess');
+    if (!evt.bundleGraph) return assert.fail();
+
     assertBundles(evt.bundleGraph, [
       {
         name: 'pkg-a.cjs.js',
@@ -729,6 +736,7 @@ describe.v2('monorepos', function () {
 
     subscription = await b.watch();
     let evt = await getNextBuild(b);
+    if (!evt.bundleGraph) return assert.fail();
 
     assertBundles(evt.bundleGraph, [
       {
@@ -753,6 +761,8 @@ describe.v2('monorepos', function () {
     );
 
     evt = await getNextBuild(b);
+    if (!evt.bundleGraph) return assert.fail();
+
     assertBundles(evt.bundleGraph, [
       {
         name: 'alt.js',
@@ -1008,6 +1018,7 @@ describe.v2('monorepos', function () {
 
     for (let bundle of b.getBundles()) {
       let res = await runBundle(b, bundle);
+      // $FlowFixMe res is an unknown type
       assert.equal(res.default, bundle.name[0]);
     }
   });
@@ -1064,6 +1075,7 @@ describe.v2('monorepos', function () {
 
     for (let bundle of b.getBundles()) {
       let res = await runBundle(b, bundle);
+      // $FlowFixMe res is an unknown type
       assert.equal(res.default, bundle.name[0]);
     }
   });
@@ -1097,6 +1109,7 @@ describe.v2('monorepos', function () {
 
     subscription = await b.watch();
     let evt = await getNextBuild(b);
+    if (!evt.bundleGraph) return assert.fail();
 
     assertBundles(evt.bundleGraph, [
       {
@@ -1110,6 +1123,8 @@ describe.v2('monorepos', function () {
     `;
 
     evt = await getNextBuild(b);
+    if (!evt.bundleGraph) return assert.fail();
+
     assertBundles(evt.bundleGraph, [
       {
         assets: ['a.js'],
