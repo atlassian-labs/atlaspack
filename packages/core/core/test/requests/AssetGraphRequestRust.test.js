@@ -9,14 +9,8 @@ describe('AssetGraphRequestRust -> getAssetGraph', function () {
     const indexAsset = assetGraph.getNodeByContentKey('79c128d4f549c408');
     const libraryDep = assetGraph.getNodeByContentKey('cfe74f65a41af1a7');
 
-    if (!indexAsset) return assert(false);
-    if (!libraryDep) return assert(false);
-
-    assert(indexAsset.type === 'asset');
-    assert(libraryDep.type === 'dependency');
-
-    if (indexAsset.type !== 'asset') return assert(false);
-    if (libraryDep.type !== 'dependency') return assert(false);
+    if (indexAsset?.type !== 'asset') return assert(false);
+    if (libraryDep?.type !== 'dependency') return assert(false);
 
     assert.equal(indexAsset.value.filePath, '/index.ts');
     assert.equal(libraryDep.value.specifier, './library');
