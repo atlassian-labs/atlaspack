@@ -2277,62 +2277,65 @@ describe('html', function () {
     assert.deepEqual(output.sort(), ['a', 'b', 'c']);
   });
 
-  it('should isolate classic scripts from nomodule scripts', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/html-isolate-script/index.html'),
-      {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
-          shouldOptimize: false,
+  it.v2(
+    'should isolate classic scripts from nomodule scripts',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/html-isolate-script/index.html'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+            shouldOptimize: false,
+          },
         },
-      },
-    );
+      );
 
-    assertBundles(b, [
-      {
-        name: 'index.html',
-        assets: ['index.html'],
-      },
-      {
-        assets: ['a.js', 'bundle-manifest.js', 'esm-js-loader.js'],
-      },
-      {
-        assets: [
-          'a.js',
-          'bundle-manifest.js',
-          'bundle-url.js',
-          'cacheLoader.js',
-          'js-loader.js',
-        ],
-      },
-      {
-        assets: [
-          'b.js',
-          'bundle-manifest.js',
-          'bundle-url.js',
-          'cacheLoader.js',
-          'js-loader.js',
-        ],
-      },
-      {
-        assets: ['c.js'],
-      },
-      {
-        assets: ['c.js'],
-      },
-    ]);
+      assertBundles(b, [
+        {
+          name: 'index.html',
+          assets: ['index.html'],
+        },
+        {
+          assets: ['a.js', 'bundle-manifest.js', 'esm-js-loader.js'],
+        },
+        {
+          assets: [
+            'a.js',
+            'bundle-manifest.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          assets: [
+            'b.js',
+            'bundle-manifest.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          assets: ['c.js'],
+        },
+        {
+          assets: ['c.js'],
+        },
+      ]);
 
-    let output = [];
-    await run(b, {
-      output(o) {
-        output.push(o);
-      },
-    });
+      let output = [];
+      await run(b, {
+        output(o) {
+          output.push(o);
+        },
+      });
 
-    // could run in either order.
-    assert.deepEqual(output.sort(), ['a', 'b', 'c', 'c']);
-  });
+      // could run in either order.
+      assert.deepEqual(output.sort(), ['a', 'b', 'c', 'c']);
+    },
+  );
 
   it.v2(
     'should support multiple entries with shared sibling bundles',
