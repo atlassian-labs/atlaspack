@@ -57,15 +57,15 @@ export function createDependencyId({
   priority,
   packageConditions,
 }: {|
-  sourceAssetId: string | void,
+  sourceAssetId?: string | void,
   specifier: DependencySpecifier,
   env: Environment,
-  target: Target | void,
-  pipeline: ?string,
+  target?: Target | void,
+  pipeline?: ?string,
   specifierType: $Keys<typeof SpecifierType>,
-  bundleBehavior: ?IBundleBehavior,
-  priority: $Keys<typeof Priority> | void,
-  packageConditions: Array<string> | void,
+  bundleBehavior?: ?IBundleBehavior,
+  priority?: $Keys<typeof Priority> | void,
+  packageConditions?: Array<string> | void,
 |}): string {
   assert(typeof specifierType === 'string');
   assert(typeof priority === 'string' || priority == null);

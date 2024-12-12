@@ -1,6 +1,8 @@
+// @flow
 import expect from 'expect';
 import {createDependencyId} from '../src/Dependency';
 import {createEnvironment} from '../src/Environment';
+import type {ProjectPath} from '../src/projectPath';
 
 describe('Dependency', () => {
   describe('createDependencyId', () => {
@@ -25,7 +27,7 @@ describe('Dependency', () => {
         specifierType: 'esm',
         target: {
           name: 'test-1234',
-          distDir: 'dist-dir',
+          distDir: (('dist-dir': any): ProjectPath),
           env: createEnvironment(),
           publicUrl: 'public-url',
           source: '1234',
@@ -37,7 +39,7 @@ describe('Dependency', () => {
         specifierType: 'esm',
         target: {
           name: 'test-1234',
-          distDir: 'dist-dir',
+          distDir: (('dist-dir': any): ProjectPath),
           env: createEnvironment(),
           publicUrl: 'public-url',
           source: '5678', // <- this is different
