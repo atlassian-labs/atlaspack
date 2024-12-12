@@ -28,7 +28,11 @@ const paths = {
     '!**/dev-prelude.js',
     ...IGNORED_PACKAGES,
   ],
-  packageOther: ['packages/*/*/src/**/dev-prelude.js'],
+  packageOther: [
+    'packages/*/*/src/**/dev-prelude.js',
+    // This has to have some glob syntax so that vinyl.base will be right
+    'packages/{runtimes,}/js/src/helpers/*.ts',
+  ],
   packages: 'packages/',
 };
 
