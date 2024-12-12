@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import {extname, join} from 'path';
 
@@ -103,14 +104,15 @@ describe('images', function () {
       },
     });
 
-    let {filePath} = b
+    let jpgBundle = b
       .getBundles()
       .find((b) => ['jpg', 'jpeg'].includes(b.type));
+    if (!jpgBundle) return assert.fail();
 
     let input = await inputFS.readFile(img);
     let inputRaw = await sharp(input).toFormat('raw').toBuffer();
 
-    let output = await outputFS.readFile(filePath);
+    let output = await outputFS.readFile(jpgBundle.filePath);
     let outputRaw = await sharp(output).toFormat('raw').toBuffer();
 
     assert(outputRaw.equals(inputRaw));
@@ -126,9 +128,10 @@ describe('images', function () {
       logLevel: 'verbose',
     });
 
-    let {filePath} = b
+    let jpgBundle = b
       .getBundles()
       .find((b) => ['jpg', 'jpeg'].includes(b.type));
+    if (!jpgBundle) return assert.fail();
 
     // let input = await inputFS.readFile(img);
     // let inputRaw = await sharp(input)
@@ -136,7 +139,7 @@ describe('images', function () {
     //   .toBuffer();
 
     // Check validity of image
-    let output = await outputFS.readFile(filePath);
+    let output = await outputFS.readFile(jpgBundle.filePath);
     await sharp(output).toFormat('raw').toBuffer();
 
     // assert(outputRaw.equals(inputRaw));
@@ -151,12 +154,13 @@ describe('images', function () {
       },
     });
 
-    let {filePath} = b.getBundles().find((b) => b.type === 'png');
+    let pngBundle = b.getBundles().find((b) => b.type === 'png');
+    if (!pngBundle) return assert.fail();
 
     let input = await inputFS.readFile(img);
     let inputRaw = await sharp(input).toFormat('raw').toBuffer();
 
-    let output = await outputFS.readFile(filePath);
+    let output = await outputFS.readFile(pngBundle.filePath);
     let outputRaw = await sharp(output).toFormat('raw').toBuffer();
 
     assert(outputRaw.equals(inputRaw));
@@ -166,11 +170,12 @@ describe('images', function () {
   it.v2('retain EXIF data when resized with a query string', async () => {
     let b = await bundle(join(__dirname, '/integration/image-exif/resized.js'));
 
-    let {filePath} = b
+    let jpgBundle = b
       .getBundles()
       .find((b) => ['jpg', 'jpeg'].includes(b.type));
+    if (!jpgBundle) return assert.fail();
 
-    let buffer = await outputFS.readFile(filePath);
+    let buffer = await outputFS.readFile(jpgBundle.filePath);
     let image = await sharp(buffer).metadata();
 
     let {exif} = exifReader(image.exif);
@@ -191,11 +196,12 @@ describe('images', function () {
       },
     );
 
-    let {filePath} = b
+    let jpgBundle = b
       .getBundles()
       .find((b) => ['jpg', 'jpeg'].includes(b.type));
+    if (!jpgBundle) return assert.fail();
 
-    let buffer = await outputFS.readFile(filePath);
+    let buffer = await outputFS.readFile(jpgBundle.filePath);
     let image = await sharp(buffer).metadata();
 
     assert.strictEqual(image.exif, undefined);
@@ -204,11 +210,12 @@ describe('images', function () {
   it.v2('uses the EXIF orientation tag when resizing', async () => {
     let b = await bundle(join(__dirname, '/integration/image-exif/resized.js'));
 
-    let {filePath} = b
+    let jpgBundle = b
       .getBundles()
       .find((b) => ['jpg', 'jpeg'].includes(b.type));
+    if (!jpgBundle) return assert.fail();
 
-    let buffer = await outputFS.readFile(filePath);
+    let buffer = await outputFS.readFile(jpgBundle.filePath);
     let image = await sharp(buffer).metadata();
 
     assert.strictEqual(image.orientation, 1);
@@ -226,9 +233,10 @@ describe('images', function () {
       },
     );
 
-    let {filePath} = b.getBundles().find((b) => b.type === 'jpeg');
+    let jpgBundle = b.getBundles().find((b) => b.type === 'jpeg');
+    if (!jpgBundle) return assert.fail();
 
-    let buffer = await outputFS.readFile(filePath);
+    let buffer = await outputFS.readFile(jpgBundle.filePath);
     let image = await sharp(buffer).metadata();
     let originalSize = 549196;
 
@@ -247,9 +255,10 @@ describe('images', function () {
       },
     );
 
-    let {filePath} = b.getBundles().find((b) => b.type === 'png');
+    let pngBundle = b.getBundles().find((b) => b.type === 'png');
+    if (!pngBundle) return assert.fail();
 
-    let buffer = await outputFS.readFile(filePath);
+    let buffer = await outputFS.readFile(pngBundle.filePath);
     let image = await sharp(buffer).metadata();
     let originalSize = 84435;
 
