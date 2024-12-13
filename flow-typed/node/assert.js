@@ -48,6 +48,7 @@ declare module "assert" {
       message?: string
     ): void;
     ifError(value: any): void,
+    match(actual: any, expected: any, message?: string): void,
     AssertionError: typeof AssertionError,
     strict: AssertStrict;
     ...
