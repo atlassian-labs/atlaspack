@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import {
   assertBundles,
@@ -52,50 +53,71 @@ describe('svg', function () {
       },
     ]);
 
+    let svgBundle = b.getBundles().find((b) => b.type === 'svg')
+    if (!svgBundle) return assert.fail()
+
     let file = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'svg').filePath,
+      svgBundle.filePath,
       'utf-8',
     );
     assert(file.includes('<a href="/other1.html">'));
     assert(file.includes('<use href="#circle"'));
+
+    let squareBundle = b.getBundles().find((b) => b.name.startsWith('square'))
+    if (!squareBundle) return assert.fail()
+
     assert(
       file.includes(
         `<use xlink:href="/${path.basename(
-          b.getBundles().find((b) => b.name.startsWith('square')).filePath,
+          squareBundle.filePath,
         )}#square"`,
       ),
     );
+
+    let gradientBundle = b.getBundles().find((b) => b.name.startsWith('gradient'))
+    if (!gradientBundle) return assert.fail()
+
     assert(
       file.includes(
         `fill="url('/${path.basename(
-          b.getBundles().find((b) => b.name.startsWith('gradient')).filePath,
+          gradientBundle.filePath,
         )}#myGradient')"`,
       ),
     );
+
+    let scriptBundle = b
+    .getBundles()
+    .find((b) => b.type === 'js' && b.env.sourceType === 'script')
+    if (!scriptBundle) return assert.fail()
+
     assert(
       file.includes(
         `<script xlink:href="/${path.basename(
-          b
-            .getBundles()
-            .find((b) => b.type === 'js' && b.env.sourceType === 'script')
-            .filePath,
+          scriptBundle.filePath,
         )}"`,
       ),
     );
+
+    let moduleBundle = b
+    .getBundles()
+    .find((b) => b.type === 'js' && b.env.sourceType === 'module')
+    if (!moduleBundle) return assert.fail()
+
     assert(
       file.includes(
         `<script href="/${path.basename(
-          b
-            .getBundles()
-            .find((b) => b.type === 'js' && b.env.sourceType === 'module')
-            .filePath,
+          moduleBundle.filePath,
         )}"`,
       ),
     );
+
+    let cssBundle = b.getBundles().find((b) => b.type === 'css')
+    if (!cssBundle) return assert.fail()
+
     assert(
       file.includes(
         `<?xml-stylesheet href="/${path.basename(
-          b.getBundles().find((b) => b.type === 'css').filePath,
+          cssBundle.filePath,
         )}"?>`,
       ),
     );
@@ -108,8 +130,11 @@ describe('svg', function () {
       },
     });
 
+    let svgBundle = b.getBundles().find((b) => b.type === 'svg')
+    if (!svgBundle) return assert.fail()
+
     let file = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'svg').filePath,
+      svgBundle.filePath,
       'utf-8',
     );
     assert(!file.includes('comment'));
@@ -125,8 +150,11 @@ describe('svg', function () {
       },
     );
 
+    let svgBundle = b.getBundles().find((b) => b.type === 'svg')
+    if (!svgBundle) return assert.fail()
+
     let file = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'svg').filePath,
+      svgBundle.filePath,
       'utf-8',
     );
     assert(!file.includes('inkscape'));
@@ -155,8 +183,11 @@ describe('svg', function () {
         },
       ]);
 
+      let svgBundle = b.getBundles().find((b) => b.type === 'svg')
+      if (!svgBundle) return assert.fail()
+
       let file = await outputFS.readFile(
-        b.getBundles().find((b) => b.type === 'svg').filePath,
+        svgBundle.filePath,
         'utf-8',
       );
 
@@ -197,10 +228,14 @@ describe('svg', function () {
 
     assert(!svg.includes('@import'));
     assert(svg.includes(':root {\n  fill: red;\n}'));
+
+    let gradientBundle = b.getBundles().find((b) => b.name.startsWith('gradient'))
+    if (!gradientBundle) return assert.fail()
+
     assert(
       svg.includes(
         `"fill: url(&quot;${path.basename(
-          b.getBundles().find((b) => b.name.startsWith('gradient')).filePath,
+          gradientBundle.filePath,
         )}#myGradient&quot;)`,
       ),
     );

@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -48,12 +49,14 @@ describe.skip('rust', function () {
 
     // not minified
     assert(
+      // $FlowFixMe old api, test is skipped
       (await outputFS.stat(Array.from(b.childBundles)[0].name)).size > 500,
     );
   });
 
   it('should generate a wasm file from a rust file with rustc with --target=node', async function () {
     this.timeout(500000);
+    // $FlowFixMe old api, test is skipped
     let b = await bundle(path.join(__dirname, '/integration/rust/index.js'), {
       target: 'node',
     });
@@ -84,6 +87,7 @@ describe.skip('rust', function () {
 
     // not minified
     assert(
+      // $FlowFixMe old api, test is skipped
       (await outputFS.stat(Array.from(b.childBundles)[0].name)).size > 500,
     );
   });
@@ -91,6 +95,7 @@ describe.skip('rust', function () {
   it('should support rust files with dependencies via rustc', async function () {
     this.timeout(500000);
     let b = bundler(path.join(__dirname, '/integration/rust-deps/index.js'));
+    // $FlowFixMe old api, test is skipped
     let bundle = await b.bundle();
 
     await assertBundleTree(bundle, {
