@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -94,6 +95,7 @@ describe.v2('ts-validator', function () {
     subscription = await b.watch();
     let buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildFailure');
+    if (!buildEvent.diagnostics) return assert.fail();
     assert.equal(buildEvent.diagnostics.length, 1);
     assert.equal(
       buildEvent.diagnostics[0].message,
@@ -106,6 +108,7 @@ describe.v2('ts-validator', function () {
     );
     buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildSuccess');
+    if (!buildEvent.bundleGraph) return assert.fail();
     let output = await run(buildEvent.bundleGraph);
     assert.equal(output.message, 'The type error is fixed!');
 
@@ -115,6 +118,7 @@ describe.v2('ts-validator', function () {
     );
     buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildFailure');
+    if (!buildEvent.diagnostics) return assert.fail();
     assert.equal(buildEvent.diagnostics.length, 1);
     assert.equal(
       buildEvent.diagnostics[0].message,
@@ -146,6 +150,7 @@ describe.v2('ts-validator', function () {
 
     let buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildSuccess');
+    if (!buildEvent.bundleGraph) return assert.fail();
     let output = await run(buildEvent.bundleGraph);
     assert.equal(output.output, 'My Message!');
 
@@ -162,6 +167,7 @@ describe.v2('ts-validator', function () {
 
     buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildSuccess');
+    if (!buildEvent.bundleGraph) return assert.fail();
     output = await run(buildEvent.bundleGraph);
     assert.equal(output.output, 123456);
   });
@@ -190,6 +196,7 @@ describe.v2('ts-validator', function () {
 
     let buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildFailure');
+    if (!buildEvent.diagnostics) return assert.fail();
     assert.equal(buildEvent.diagnostics.length, 2);
     assert.equal(
       buildEvent.diagnostics[1].message,
@@ -209,6 +216,7 @@ describe.v2('ts-validator', function () {
 
     buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildFailure');
+    if (!buildEvent.diagnostics) return assert.fail();
     assert.equal(buildEvent.diagnostics.length, 1);
     assert.equal(
       buildEvent.diagnostics[0].message,
@@ -240,6 +248,7 @@ describe.v2('ts-validator', function () {
 
     let buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildSuccess');
+    if (!buildEvent.bundleGraph) return assert.fail();
     let output = await run(buildEvent.bundleGraph);
     assert.equal(output.output, 'My Message!');
 
@@ -250,6 +259,7 @@ describe.v2('ts-validator', function () {
 
     buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildFailure');
+    if (!buildEvent.diagnostics) return assert.fail();
     assert.equal(buildEvent.diagnostics.length, 1);
     assert.equal(
       buildEvent.diagnostics[0].message,
