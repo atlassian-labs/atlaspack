@@ -44,8 +44,10 @@ describe.v2('webmanifest', function () {
       },
     ]);
 
-    const webmanifestBundle = b.getBundles().find((b) => b.type === 'webmanifest')
-    if (!webmanifestBundle) return assert.fail()
+    const webmanifestBundle = b
+      .getBundles()
+      .find((b) => b.type === 'webmanifest');
+    if (!webmanifestBundle) return assert.fail();
 
     const manifest = await outputFS.readFile(
       webmanifestBundle.filePath,
@@ -89,8 +91,10 @@ describe.v2('webmanifest', function () {
       },
     ]);
 
-    const webmanifestBundle = b.getBundles().find((b) => b.type === 'webmanifest')
-    if (!webmanifestBundle) return assert.fail()
+    const webmanifestBundle = b
+      .getBundles()
+      .find((b) => b.type === 'webmanifest');
+    if (!webmanifestBundle) return assert.fail();
 
     const manifest = await outputFS.readFile(
       webmanifestBundle.filePath,

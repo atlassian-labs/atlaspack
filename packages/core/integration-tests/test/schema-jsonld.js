@@ -17,7 +17,7 @@ describe.v2('jsonld', function () {
       {
         defaultTargetOptions: {
           publicUrl: 'https://place.holder/',
-        }
+        },
       },
     );
 
@@ -60,17 +60,19 @@ describe.v2('jsonld', function () {
 });
 
 function match(test?: string, pattern: RegExp | string) {
-  if (!test) return assert.fail()
+  if (!test) return assert.fail();
   let success = new RegExp(pattern).test(test);
   if (success) {
     assert.ok(`'${test}' matched the given pattern of '${pattern.toString()}'`);
     return;
   }
-  assert.fail(`'${test}' did not match the given pattern of '${pattern.toString()}'`);
+  assert.fail(
+    `'${test}' did not match the given pattern of '${pattern.toString()}'`,
+  );
 }
 
 function assertValidJsonObject(dataAsString?: string) {
-  if (!dataAsString) return assert.fail()
+  if (!dataAsString) return assert.fail();
   try {
     let data = JSON.parse(dataAsString);
     assert.ok('input string is a valid json object');

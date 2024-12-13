@@ -47,7 +47,7 @@ describe('loadSourceMap', () => {
     let contents = fs.readFileSync(filename, 'utf-8');
 
     let foundMap = await loadSourceMapUrl(fs, filename, contents);
-    if (!foundMap) return assert.fail()
+    if (!foundMap) return assert.fail();
 
     assert.equal(foundMap.url, 'file://referenced-min.js.map');
     assert.equal(
@@ -68,7 +68,7 @@ describe('loadSourceMap', () => {
     let contents = fs.readFileSync(filename, 'utf-8');
 
     let foundMap = await loadSourceMapUrl(fs, filename, contents);
-    if (!foundMap) return assert.fail()
+    if (!foundMap) return assert.fail();
 
     assert.equal(
       foundMap.url,
@@ -93,7 +93,7 @@ describe('loadSourceMap', () => {
       projectRoot: __dirname,
     });
 
-    if (!map) return assert.fail()
+    if (!map) return assert.fail();
 
     let parsedMap = map.getMap();
     assert.deepEqual(parsedMap.sources, ['input/sourcemap/referenced.js']);
@@ -189,7 +189,7 @@ describe('loadSourceMap', () => {
       projectRoot: __dirname,
     });
 
-    if (!map) return assert.fail()
+    if (!map) return assert.fail();
 
     let parsedMap = map.getMap();
     assert.deepEqual(parsedMap.sources, ['input/sourcemap/referenced.js']);
@@ -204,7 +204,7 @@ describe('loadSourceMap', () => {
       projectRoot: __dirname,
     });
 
-    if (!map) return assert.fail()
+    if (!map) return assert.fail();
 
     let parsedMap = map.getMap();
     assert.deepEqual(parsedMap.sources, ['input/source.js']);

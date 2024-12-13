@@ -37,12 +37,12 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'module.exports = "hello"',
-      { encoding: 'utf8' },
+      {encoding: 'utf8'},
     );
     let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
     subscription = await b.watch();
     let buildEvent = await getNextBuild(b);
-    if (!buildEvent.bundleGraph) return assert.fail()
+    if (!buildEvent.bundleGraph) return assert.fail();
 
     let output = await run(buildEvent.bundleGraph);
     assert.equal(output, 'hello');
@@ -50,10 +50,10 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'module.exports = "something else"',
-      { encoding: 'utf8' },
+      {encoding: 'utf8'},
     );
     buildEvent = await getNextBuild(b);
-    if (!buildEvent.bundleGraph) return assert.fail()
+    if (!buildEvent.bundleGraph) return assert.fail();
 
     output = await run(buildEvent.bundleGraph);
     assert.equal(output, 'something else');
@@ -64,7 +64,7 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'syntax\\error',
-      { encoding: 'utf8' },
+      {encoding: 'utf8'},
     );
     let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
     subscription = await b.watch();
@@ -73,10 +73,10 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'module.exports = "hello"',
-      { encoding: 'utf8' },
+      {encoding: 'utf8'},
     );
     buildEvent = await getNextBuild(b);
-    if (!buildEvent.bundleGraph) return assert.fail()
+    if (!buildEvent.bundleGraph) return assert.fail();
     let output = await run(buildEvent.bundleGraph);
 
     assert.equal(output, 'hello');
@@ -435,13 +435,13 @@ describe.v2('watcher', function () {
     let b = bundler(indexPath, {inputFS: overlayFS});
     let bundleGraph;
     subscription = await b.watch((err, event) => {
-      if (!event) return assert.fail()
+      if (!event) return assert.fail();
       assert(event.type === 'buildSuccess');
       bundleGraph = event.bundleGraph;
     });
     await getNextBuild(b);
 
-    if (!bundleGraph) return assert.fail()
+    if (!bundleGraph) return assert.fail();
     assertBundles(bundleGraph, [
       {
         name: 'index.js',
@@ -464,7 +464,7 @@ describe.v2('watcher', function () {
     );
 
     await getNextBuild(b);
-    if (!bundleGraph) return assert.fail()
+    if (!bundleGraph) return assert.fail();
 
     assertBundles(bundleGraph, [
       {
@@ -484,7 +484,7 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(indexPath, '');
 
     await getNextBuild(b);
-    if (!bundleGraph) return assert.fail()
+    if (!bundleGraph) return assert.fail();
 
     assertBundles(bundleGraph, [
       {
@@ -499,7 +499,7 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'import {other} from "./other";\nexport default other;',
-      { encoding: 'utf8' },
+      {encoding: 'utf8'},
     );
 
     let b = bundler(path.join(inputDir, 'index.js'), {inputFS: overlayFS});
@@ -510,12 +510,12 @@ describe.v2('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/other.js'),
       'export const other = 2;',
-      { encoding: 'utf8' },
+      {encoding: 'utf8'},
     );
 
     buildEvent = await getNextBuild(b);
     assert.equal(buildEvent.type, 'buildSuccess');
-    if (!buildEvent.bundleGraph) return assert.fail()
+    if (!buildEvent.bundleGraph) return assert.fail();
 
     let res = await run(buildEvent.bundleGraph);
     assert.equal(res.default, 2);
