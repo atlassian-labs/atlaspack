@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -9,6 +10,7 @@ import {
   run,
 } from '@atlaspack/test-utils';
 
+// Type errors commented out because test is skipped
 describe.skip('wasm', function () {
   if (typeof WebAssembly === 'undefined') {
     return;
@@ -19,6 +21,7 @@ describe.skip('wasm', function () {
       it('should preload a wasm file for a sync require', async function () {
         let b = await bundle(
           path.join(__dirname, '/integration/wasm-sync/index.js'),
+          // $FlowFixMe target is missing from InitialOptions
           {
             target,
           },
@@ -53,6 +56,7 @@ describe.skip('wasm', function () {
       it('should load a wasm file asynchronously with dynamic import', async function () {
         let b = await bundle(
           path.join(__dirname, '/integration/wasm-async/index.js'),
+          // $FlowFixMe target is missing from InitialOptions
           {
             target,
           },
@@ -86,6 +90,7 @@ describe.skip('wasm', function () {
       it('should load a wasm file in parallel with a dynamic JS import', async function () {
         let b = await bundle(
           path.join(__dirname, '/integration/wasm-dynamic/index.js'),
+          // $FlowFixMe target is missing from InitialOptions
           {
             target,
           },
