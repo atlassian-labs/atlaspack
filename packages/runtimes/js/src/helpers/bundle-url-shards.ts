@@ -4,8 +4,7 @@ const bundleURL: Record<string, string> = {};
 
 function getShardedBundleURL(
   bundleName: string,
-  cookieName: string,
-  cookieString: string,
+  enableSharding: boolean,
   maxShards: number,
   inputError?: string,
 ): string {
@@ -29,8 +28,9 @@ function getShardedBundleURL(
     const stackUrl = matches[1];
     const baseUrl = getBaseURL(stackUrl);
 
-    // If the cookie doesn't exist then we don't need to shard
-    if (cookieString.indexOf(cookieName) === -1) {
+    // Only shard the domain if the window key has been set
+    if (!enableSharding) {
+      bundleURL[bundleName] = baseUrl;
       return baseUrl;
     }
 

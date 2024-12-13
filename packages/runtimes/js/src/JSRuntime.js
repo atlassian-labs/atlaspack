@@ -76,7 +76,6 @@ type JSRuntimeConfig = {|
   splitManifestThreshold: number,
   domainSharding?: {|
     maxShards: number,
-    cookieName: string,
   |},
 |};
 
@@ -96,12 +95,9 @@ const CONFIG_SCHEMA: SchemaEntity = {
         maxShards: {
           type: 'number',
         },
-        cookieName: {
-          type: 'string',
-        },
       },
       additionalProperties: false,
-      required: ['maxShards', 'cookieName'],
+      required: ['maxShards'],
     },
   },
   additionalProperties: false,
@@ -834,8 +830,7 @@ function getAbsoluteUrlExpr(
   if (shardingConfig) {
     const bundleUrlArgs = [
       `'${toBundle.name}'`,
-      `'${shardingConfig.cookieName}'`,
-      'document.cookie',
+      'Boolean(window.__ATLASPACK_ENABLE_DOMAIN_SHARDS)',
       shardingConfig.maxShards,
     ].join(', ');
 

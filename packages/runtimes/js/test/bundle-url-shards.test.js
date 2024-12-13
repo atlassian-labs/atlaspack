@@ -4,8 +4,6 @@ import {fsFixture, overlayFS, bundle} from '@atlaspack/test-utils';
 
 import {getShardedBundleURL} from '../src/helpers/bundle-url-shards';
 
-const testingCookieName = 'DOMAIN_SHARDING_TEST';
-
 const createErrorStack = (url) => {
   // This error stack is copied from a local dev, with a bunch
   // of lines trimmed off the end so it's not unnecessarily long
@@ -34,13 +32,7 @@ describe('bundle-url-shards helper', () => {
         'https://bundle-shard.assets.example.com/assets/ParentBundle.cba321.js',
       );
 
-      const result = getShardedBundleURL(
-        testBundle,
-        testingCookieName,
-        `${testingCookieName}=1`,
-        5,
-        err,
-      );
+      const result = getShardedBundleURL(testBundle, true, 5, err);
 
       assert.equal(result, 'https://bundle-shard-0.assets.example.com/assets/');
     });
@@ -53,13 +45,7 @@ describe('bundle-url-shards helper', () => {
         'https://bundle-shard-1.assets.example.com/assets/ParentBundle.cba321.js',
       );
 
-      const result = getShardedBundleURL(
-        testBundle,
-        testingCookieName,
-        `${testingCookieName}=1`,
-        5,
-        err,
-      );
+      const result = getShardedBundleURL(testBundle, true, 5, err);
 
       assert.equal(result, 'https://bundle-shard-4.assets.example.com/assets/');
     });
@@ -72,13 +58,7 @@ describe('bundle-url-shards helper', () => {
         'https://bundle-unsharded.assets.example.com/assets/ParentBundle.cba321.js',
       );
 
-      const result = getShardedBundleURL(
-        testBundle,
-        testingCookieName,
-        `some.other.cookie=1`,
-        5,
-        err,
-      );
+      const result = getShardedBundleURL(testBundle, false, 5, err);
 
       assert.equal(
         result,
@@ -96,8 +76,7 @@ describe('bundle-url-shards helper', () => {
             "name": "bundle-sharding-test",
             "@atlaspack/runtime-js": {
               "domainSharding": {
-                "maxShards": ${maxShards},
-                "cookieName": "${testingCookieName}"
+                "maxShards": ${maxShards}
               }
             }
           }
@@ -130,7 +109,7 @@ describe('bundle-url-shards helper', () => {
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
       assert.ok(
         code.includes(
-          `require("449af90f11ccd363").getShardedBundleURL('b.8575baaf.js', '${testingCookieName}', document.cookie, ${maxShards}) + "b.8575baaf.js"`,
+          `require("e73f1ec3075dec82").getShardedBundleURL('b.8575baaf.js', Boolean(window.__ATLASPACK_ENABLE_DOMAIN_SHARDS), ${maxShards}) + "b.8575baaf.js"`,
         ),
         'Expected generated code for getShardedBundleURL was not found',
       );
