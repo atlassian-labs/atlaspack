@@ -38,6 +38,7 @@ import _chalk from 'chalk';
 import resolve from 'resolve';
 
 export {fsFixture} from './fsFixture';
+export * from './stubs';
 
 export const workerFarm = (createWorkerFarm(): WorkerFarm);
 export const inputFS: NodeFS = new NodeFS();
@@ -539,7 +540,7 @@ export function expectBundles(
 export type AssertBundle = {|
   name?: string | RegExp,
   type?: string,
-  assets: Array<string>,
+  assets?: Array<string>,
   childBundles?: Array<AssertBundle>,
 |};
 

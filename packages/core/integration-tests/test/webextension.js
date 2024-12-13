@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -51,11 +52,10 @@ describe.v2('webextension', function () {
         path.join(distDir, '_locales', 'en_US', 'messages.json'),
       ),
     );
+    let manifestBundle = b.getBundles().find((b) => b.name == 'manifest.json');
+    if (!manifestBundle) return assert.fail();
     const manifest = JSON.parse(
-      await outputFS.readFile(
-        b.getBundles().find((b) => b.name == 'manifest.json').filePath,
-        'utf8',
-      ),
+      await outputFS.readFile(manifestBundle.filePath, 'utf8'),
     );
     const scripts = manifest.background.scripts;
     assert.equal(scripts.length, 1);
@@ -99,11 +99,12 @@ describe.v2('webextension', function () {
       },
       {assets: ['single.js', 'esmodule-helpers.js']},
     ]);
+
+    let manifestBundle = b.getBundles().find((b) => b.name == 'manifest.json');
+    if (!manifestBundle) return assert.fail();
+
     const manifest = JSON.parse(
-      await outputFS.readFile(
-        b.getBundles().find((b) => b.name == 'manifest.json').filePath,
-        'utf8',
-      ),
+      await outputFS.readFile(manifestBundle.filePath, 'utf8'),
     );
     const war = manifest.web_accessible_resources;
     assert.equal(war.length, 4);
