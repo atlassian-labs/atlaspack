@@ -1,3 +1,4 @@
+// @flow
 import {
   assertBundles,
   bundle,
@@ -14,7 +15,9 @@ describe.v2('jsonld', function () {
     let b = await bundle(
       path.join(__dirname, '/integration/schema-jsonld/index.html'),
       {
-        publicURL: 'https://place.holder/',
+        defaultTargetOptions: {
+          publicUrl: 'https://place.holder/',
+        },
       },
     );
 
@@ -47,25 +50,29 @@ describe.v2('jsonld', function () {
     );
     let contentBetweenScriptTag = new RegExp(
       /<\s*script \s*type="application\/ld\+json"\s*>(.*)<\/\s*script\s*>/gm,
-    ).exec(file)[1];
+    ).exec(file)?.[1];
 
     let jsonldData = assertValidJsonObject(contentBetweenScriptTag);
-    match(jsonldData.logo.url, /logo\.[a-f0-9]+\.png/);
-    match(jsonldData.image[0], /image\.[a-f0-9]+\.jpeg/);
-    match(jsonldData.image[1], /image\.[a-f0-9]+\.jpeg/);
+    match(jsonldData?.logo.url, /logo\.[a-f0-9]+\.png/);
+    match(jsonldData?.image[0], /image\.[a-f0-9]+\.jpeg/);
+    match(jsonldData?.image[1], /image\.[a-f0-9]+\.jpeg/);
   });
 });
 
-function match(test, pattern) {
+function match(test?: string, pattern: RegExp | string) {
+  if (!test) return assert.fail();
   let success = new RegExp(pattern).test(test);
   if (success) {
-    assert.ok(`'${test}' matched the given pattern of '${pattern}'`);
+    assert.ok(`'${test}' matched the given pattern of '${pattern.toString()}'`);
     return;
   }
-  assert.fail(`'${test}' did not match the given pattern of '${pattern}'`);
+  assert.fail(
+    `'${test}' did not match the given pattern of '${pattern.toString()}'`,
+  );
 }
 
-function assertValidJsonObject(dataAsString) {
+function assertValidJsonObject(dataAsString?: string) {
+  if (!dataAsString) return assert.fail();
   try {
     let data = JSON.parse(dataAsString);
     assert.ok('input string is a valid json object');

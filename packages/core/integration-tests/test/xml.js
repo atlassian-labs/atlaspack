@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -40,18 +41,24 @@ describe.v2('xml', function () {
     ]);
 
     let contents = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+
+    let xslBundle = b.getBundles().find((b) => b.type === 'xsl');
+    if (!xslBundle) return assert.fail();
+
     assert(
       contents.includes(
         `<?xml-stylesheet type="text/xsl" href="http://example.org/${path.basename(
-          b.getBundles().find((b) => b.type === 'xsl').filePath,
+          xslBundle.filePath,
         )}"?>`,
       ),
     );
+
+    let pngBundle = b.getBundles().find((b) => b.type === 'png');
+    if (!pngBundle) return assert.fail();
+
     assert(
       contents.includes(
-        `<img src="http://example.org/${path.basename(
-          b.getBundles().find((b) => b.type === 'png').filePath,
-        )}"/>`,
+        `<img src="http://example.org/${path.basename(pngBundle.filePath)}"/>`,
       ),
     );
     assert(contents.includes(`<link href="http://example.org/post.html"/>`));
@@ -91,18 +98,24 @@ describe.v2('xml', function () {
     ]);
 
     let contents = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+
+    let xslBundle = b.getBundles().find((b) => b.type === 'xsl');
+    if (!xslBundle) return assert.fail();
+
     assert(
       contents.includes(
         `<?xml-stylesheet type="text/xsl" href="http://example.org/${path.basename(
-          b.getBundles().find((b) => b.type === 'xsl').filePath,
+          xslBundle.filePath,
         )}"?>`,
       ),
     );
+
+    let pngBundle = b.getBundles().find((b) => b.type === 'png');
+    if (!pngBundle) return assert.fail();
+
     assert(
       contents.includes(
-        `<img src="http://example.org/${path.basename(
-          b.getBundles().find((b) => b.type === 'png').filePath,
-        )}"/>`,
+        `<img src="http://example.org/${path.basename(pngBundle.filePath)}"/>`,
       ),
     );
     assert(
@@ -141,10 +154,14 @@ describe.v2('xml', function () {
     ]);
 
     let contents = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+
+    let pngBundle = b.getBundles().find((b) => b.type === 'png');
+    if (!pngBundle) return assert.fail();
+
     assert(
       contents.includes(
         `&lt;img src="http://example.org/${path.basename(
-          b.getBundles().find((b) => b.type === 'png').filePath,
+          pngBundle.filePath,
         )}">`,
       ),
     );

@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -43,8 +44,13 @@ describe.v2('webmanifest', function () {
       },
     ]);
 
+    const webmanifestBundle = b
+      .getBundles()
+      .find((b) => b.type === 'webmanifest');
+    if (!webmanifestBundle) return assert.fail();
+
     const manifest = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'webmanifest').filePath,
+      webmanifestBundle.filePath,
       'utf8',
     );
     assert(/screenshot\.[0-9a-f]+\.png/.test(manifest));
@@ -85,8 +91,13 @@ describe.v2('webmanifest', function () {
       },
     ]);
 
+    const webmanifestBundle = b
+      .getBundles()
+      .find((b) => b.type === 'webmanifest');
+    if (!webmanifestBundle) return assert.fail();
+
     const manifest = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'webmanifest').filePath,
+      webmanifestBundle.filePath,
       'utf8',
     );
     assert(/screenshot\.[0-9a-f]+\.png/.test(manifest));
