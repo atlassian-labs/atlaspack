@@ -24,15 +24,21 @@ Error
 
 describe('bundle-url-shards helper', () => {
   describe('getShardedBundleURL', () => {
-    it('should shard a URL if the cookie is present', () => {
+    beforeEach(() => {
+      delete globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS;
+    });
+
+    it('should shard a URL if the global variable is set', () => {
       const testBundle = 'test-bundle.123abc.js';
+
+      globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS = true;
 
       const err = new Error();
       err.stack = createErrorStack(
         'https://bundle-shard.assets.example.com/assets/ParentBundle.cba321.js',
       );
 
-      const result = getShardedBundleURL(testBundle, true, 5, err);
+      const result = getShardedBundleURL(testBundle, 5, err);
 
       assert.equal(result, 'https://bundle-shard-0.assets.example.com/assets/');
     });
@@ -40,12 +46,14 @@ describe('bundle-url-shards helper', () => {
     it('should re-shard a domain that has already been sharded', () => {
       const testBundle = 'TestBundle.1a2b3c.js';
 
+      globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS = true;
+
       const err = new Error();
       err.stack = createErrorStack(
         'https://bundle-shard-1.assets.example.com/assets/ParentBundle.cba321.js',
       );
 
-      const result = getShardedBundleURL(testBundle, true, 5, err);
+      const result = getShardedBundleURL(testBundle, 5, err);
 
       assert.equal(result, 'https://bundle-shard-4.assets.example.com/assets/');
     });
@@ -58,7 +66,7 @@ describe('bundle-url-shards helper', () => {
         'https://bundle-unsharded.assets.example.com/assets/ParentBundle.cba321.js',
       );
 
-      const result = getShardedBundleURL(testBundle, false, 5, err);
+      const result = getShardedBundleURL(testBundle, 5, err);
 
       assert.equal(
         result,
@@ -109,7 +117,7 @@ describe('bundle-url-shards helper', () => {
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
       assert.ok(
         code.includes(
-          `require("e73f1ec3075dec82").getShardedBundleURL('b.8575baaf.js', Boolean(window.__ATLASPACK_ENABLE_DOMAIN_SHARDS), ${maxShards}) + "b.8575baaf.js"`,
+          `require("e3ed71d88565db").getShardedBundleURL('b.8575baaf.js', ${maxShards}) + "b.8575baaf.js"`,
         ),
         'Expected generated code for getShardedBundleURL was not found',
       );

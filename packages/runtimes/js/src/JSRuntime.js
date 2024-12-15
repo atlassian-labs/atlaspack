@@ -828,13 +828,7 @@ function getAbsoluteUrlExpr(
   }
 
   if (shardingConfig) {
-    const bundleUrlArgs = [
-      `'${toBundle.name}'`,
-      'Boolean(window.__ATLASPACK_ENABLE_DOMAIN_SHARDS)',
-      shardingConfig.maxShards,
-    ].join(', ');
-
-    return `require('./helpers/bundle-url-shards').getShardedBundleURL(${bundleUrlArgs}) + ${relativePathExpr}`;
+    return `require('./helpers/bundle-url-shards').getShardedBundleURL('${toBundle.name}', ${shardingConfig.maxShards}) + ${relativePathExpr}`;
   }
 
   return `require('./helpers/bundle-url').getBundleURL('${fromBundle.publicId}') + ${relativePathExpr}`;

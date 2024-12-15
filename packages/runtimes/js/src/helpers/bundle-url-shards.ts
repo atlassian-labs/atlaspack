@@ -4,7 +4,6 @@ const bundleURL: Record<string, string> = {};
 
 function getShardedBundleURL(
   bundleName: string,
-  enableSharding: boolean,
   maxShards: number,
   inputError?: string,
 ): string {
@@ -28,8 +27,8 @@ function getShardedBundleURL(
     const stackUrl = matches[1];
     const baseUrl = getBaseURL(stackUrl);
 
-    // Only shard the domain if the window key has been set
-    if (!enableSharding) {
+    // Global variable is set by SSR servers when HTTP1.1 traffic is detected
+    if (!Boolean(globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS)) {
       bundleURL[bundleName] = baseUrl;
       return baseUrl;
     }
