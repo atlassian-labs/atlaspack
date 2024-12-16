@@ -1,7 +1,9 @@
+// @flow
 import assert from 'assert';
 
 import {fsFixture, overlayFS, bundle} from '@atlaspack/test-utils';
 
+// $FlowFixMe importing TypeScript
 import {getShardedBundleURL} from '../src/helpers/bundle-url-shards';
 
 const createErrorStack = (url) => {
@@ -25,12 +27,14 @@ Error
 describe('bundle-url-shards helper', () => {
   describe('getShardedBundleURL', () => {
     beforeEach(() => {
+      // $FlowFixMe
       delete globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS;
     });
 
     it('should shard a URL if the global variable is set', () => {
       const testBundle = 'test-bundle.123abc.js';
 
+      // $FlowFixMe
       globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS = true;
 
       const err = new Error();
@@ -46,6 +50,7 @@ describe('bundle-url-shards helper', () => {
     it('should re-shard a domain that has already been sharded', () => {
       const testBundle = 'TestBundle.1a2b3c.js';
 
+      // $FlowFixMe
       globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS = true;
 
       const err = new Error();
@@ -113,6 +118,7 @@ describe('bundle-url-shards helper', () => {
       const mainBundle = bundleGraph
         .getBundles()
         .find((b) => b.name === 'index.js');
+      if (!mainBundle) return assert(mainBundle);
 
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
       assert.ok(

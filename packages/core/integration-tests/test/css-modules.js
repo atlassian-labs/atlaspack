@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -65,13 +66,12 @@ describe('css modules', () => {
 
     let output = await run(b);
     assert(/[_0-9a-zA-Z]+_b-2/.test(output));
+    let cssBundle = b.getBundles().find((b) => b.type === 'css');
+    if (!cssBundle) return assert(cssBundle);
 
-    let css = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
-      'utf8',
-    );
+    let css = await outputFS.readFile(cssBundle.filePath, 'utf8');
     let includedRules = new Set();
-    postcss.parse(css).walkRules((rule) => {
+    postcss.parse(css, {}).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert(includedRules.has('.page'));
@@ -98,21 +98,21 @@ describe('css modules', () => {
       },
     ]);
 
-    let js = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'js').filePath,
-      'utf8',
-    );
+    let jsBundle = b.getBundles().find((b) => b.type === 'js');
+    if (!jsBundle) return assert(jsBundle);
+
+    let js = await outputFS.readFile(jsBundle.filePath, 'utf8');
     assert(!js.includes('unused'));
 
     let output = await run(b);
     assert(/[_0-9a-zA-Z]+_b-2/.test(output));
 
-    let css = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
-      'utf8',
-    );
+    let cssBundle = b.getBundles().find((b) => b.type === 'css');
+    if (!cssBundle) return assert(cssBundle);
+
+    let css = await outputFS.readFile(cssBundle.filePath, 'utf8');
     let includedRules = new Set();
-    postcss.parse(css).walkRules((rule) => {
+    postcss.parse(css, {}).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert.deepStrictEqual(
@@ -149,12 +149,12 @@ describe('css modules', () => {
     let {output} = await run(b, null, {require: false});
     assert(/[_0-9a-zA-Z]+_b-2/.test(output));
 
-    let css = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
-      'utf8',
-    );
+    let cssBundle = b.getBundles().find((b) => b.type === 'css');
+    if (!cssBundle) return assert(cssBundle);
+
+    let css = await outputFS.readFile(cssBundle.filePath, 'utf8');
     let includedRules = new Set();
-    postcss.parse(css).walkRules((rule) => {
+    postcss.parse(css, {}).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert(includedRules.has('body'));
@@ -182,22 +182,22 @@ describe('css modules', () => {
       },
     ]);
 
-    let js = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'js').filePath,
-      'utf8',
-    );
+    let jsBundle = b.getBundles().find((b) => b.type === 'js');
+    if (!jsBundle) return assert(jsBundle);
+
+    let js = await outputFS.readFile(jsBundle.filePath, 'utf8');
     assert(js.includes('unused'));
 
     let output = await run(b);
     assert(/[_0-9a-zA-Z]+_b-2/.test(output['b-2']));
     assert(/[_0-9a-zA-Z]+_unused/.test(output['unused']));
 
-    let css = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
-      'utf8',
-    );
+    let cssBundle = b.getBundles().find((b) => b.type === 'css');
+    if (!cssBundle) return assert(cssBundle);
+
+    let css = await outputFS.readFile(cssBundle.filePath, 'utf8');
     let includedRules = new Set();
-    postcss.parse(css).walkRules((rule) => {
+    postcss.parse(css, {}).walkRules((rule) => {
       includedRules.add(rule.selector);
     });
     assert.deepStrictEqual(
@@ -612,24 +612,24 @@ describe('css modules', () => {
     );
 
     let res = [];
-    await runBundle(
-      b,
-      b.getBundles().find((b) => b.name === 'page1.html'),
-      {
-        sideEffect: (s) => res.push(s),
-      },
-    );
+
+    let page1Bundle = b.getBundles().find((b) => b.name === 'page1.html');
+    if (!page1Bundle) return assert(page1Bundle);
+
+    await runBundle(b, page1Bundle, {
+      sideEffect: (s) => res.push(s),
+    });
 
     assert.deepEqual(res, [['page1', '_1ZEqVW_a']]);
 
     res = [];
-    await runBundle(
-      b,
-      b.getBundles().find((b) => b.name === 'page2.html'),
-      {
-        sideEffect: (s) => res.push(s),
-      },
-    );
+
+    let page2Bundle = b.getBundles().find((b) => b.name === 'page2.html');
+    if (!page2Bundle) return assert(page2Bundle);
+
+    await runBundle(b, page2Bundle, {
+      sideEffect: (s) => res.push(s),
+    });
 
     assert.deepEqual(res, [['page2', '_4fY2uG_foo _1ZEqVW_foo j1UkRG_foo']]);
 
@@ -680,10 +680,10 @@ describe('css modules', () => {
     let res = await run(b);
     assert.deepEqual(res, 'C-gzXq_foo');
 
-    let contents = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
-      'utf8',
-    );
+    let cssBundle = b.getBundles().find((b) => b.type === 'css');
+    if (!cssBundle) return assert(cssBundle);
+
+    let contents = await outputFS.readFile(cssBundle.filePath, 'utf8');
     assert(contents.includes('.C-gzXq_foo'));
     assert(contents.includes('.x'));
   });
@@ -695,10 +695,11 @@ describe('css modules', () => {
     );
     let res = await run(b);
     assert.deepEqual(res, 'C-gzXq_foo');
-    let contents = await outputFS.readFile(
-      b.getBundles().find((b) => b.type === 'css').filePath,
-      'utf8',
-    );
+
+    let cssBundle = b.getBundles().find((b) => b.type === 'css');
+    if (!cssBundle) return assert(cssBundle);
+
+    let contents = await outputFS.readFile(cssBundle.filePath, 'utf8');
     assert(contents.includes('.C-gzXq_foo'));
     assert(contents.includes('.x'));
   });
@@ -713,10 +714,11 @@ describe('css modules', () => {
         path.join(__dirname, '/integration/css-modules-vars/index.js'),
         {mode: 'production'},
       );
-      let contents = await outputFS.readFile(
-        b.getBundles().find((b) => b.type === 'css').filePath,
-        'utf8',
-      );
+
+      let cssBundle = b.getBundles().find((b) => b.type === 'css');
+      if (!cssBundle) return assert(cssBundle);
+
+      let contents = await outputFS.readFile(cssBundle.filePath, 'utf8');
       assert.equal(
         contents.split('\n')[0],
         ':root{--wGsoEa_color:red;--wGsoEa_font:Helvetica;--wGsoEa_theme-sizes-1\\/12:2;--wGsoEa_from-js:purple}body{font:var(--wGsoEa_font)}._4fY2uG_foo{color:var(--wGsoEa_color);width:var(--wGsoEa_theme-sizes-1\\/12);height:var(--height)}',
@@ -732,13 +734,13 @@ describe('css modules', () => {
     );
 
     let res = [];
-    await runBundle(
-      b,
-      b.getBundles().find((b) => b.name === 'index.html'),
-      {
-        sideEffect: (s) => res.push(s),
-      },
-    );
+
+    let htmlBundle = b.getBundles().find((b) => b.name === 'index.html');
+    if (!htmlBundle) return assert(htmlBundle);
+
+    await runBundle(b, htmlBundle, {
+      sideEffect: (s) => res.push(s),
+    });
     assert.deepEqual(res, [
       ['mainJs', '_1ZEqVW_myClass', 'j1UkRG_myOtherClass'],
     ]);
@@ -757,13 +759,13 @@ describe('css modules', () => {
         ),
       );
       let res = [];
-      await runBundle(
-        b,
-        b.getBundles().find((b) => b.name === 'index.html'),
-        {
-          sideEffect: (s) => res.push(s),
-        },
-      );
+
+      let htmlBundle = b.getBundles().find((b) => b.name === 'index.html');
+      if (!htmlBundle) return assert(htmlBundle);
+
+      await runBundle(b, htmlBundle, {
+        sideEffect: (s) => res.push(s),
+      });
       // Result is  [ 'mainJs', 'SX8vmq_container YpGmra_-expand' ]
       assert.deepEqual(res[0][0], 'mainJs');
       assert(res[0][1].includes('container') && res[0][1].includes('expand'));
@@ -850,10 +852,10 @@ describe('css modules', () => {
         },
       );
 
-      let contents = await outputFS.readFile(
-        b.getBundles().find((b) => b.type === 'css').filePath,
-        'utf8',
-      );
+      let cssBundle = b.getBundles().find((b) => b.type === 'css');
+      if (!cssBundle) return assert(cssBundle);
+
+      let contents = await outputFS.readFile(cssBundle.filePath, 'utf8');
       assert(contents.includes('.foo'));
       assert(contents.includes('.rp85ja_bar'));
       assert(contents.includes('.baz'));

@@ -1,5 +1,7 @@
+// @flow
 import assert from 'assert';
 
+// $FlowFixMe importing TypeScript
 import {getBaseURL} from '../src/helpers/bundle-url-common';
 
 describe('getBaseUrl', () => {
