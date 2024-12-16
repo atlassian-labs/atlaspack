@@ -2,6 +2,13 @@ const {getBaseURL, stackTraceUrlRegexp} = require('./bundle-url-common');
 
 const bundleURL = {};
 
+/**
+ * Retrieves the cached bundle URL for a given identifier.
+ * If the URL is not cached, it computes and stores it in the cache.
+ *
+ * @param {string} id - The identifier for the bundle.
+ * @returns {string} The URL of the bundle, without file name.
+ */
 function getBundleURLCached(id) {
   let value = bundleURL[id];
 
@@ -28,6 +35,10 @@ function getBundleURL() {
   return '/';
 }
 
+/**
+ * @param {string} url
+ * @returns {string}
+ */
 function getOrigin(url) {
   return new URL(url).origin;
 }

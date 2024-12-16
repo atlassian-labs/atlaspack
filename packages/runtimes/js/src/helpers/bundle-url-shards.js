@@ -2,6 +2,15 @@ const {getBaseURL, stackTraceUrlRegexp} = require('./bundle-url-common');
 
 const bundleURL = {};
 
+/**
+ * Retrieves the sharded bundle URL based on the bundle name and the maximum number of shards.
+ *
+ * @param {string} bundleName - The file name of the requested bundle.
+ * @param {number} maxShards - The maximum number of domain shards available.
+ * @param {Error} inputError - An error object to extract the stack trace from
+ * (for testing purposes).
+ * @returns {string} The URL of the sharded bundle, without file name.
+ */
 function getShardedBundleURL(bundleName, maxShards, inputError) {
   let value = bundleURL[bundleName];
 
