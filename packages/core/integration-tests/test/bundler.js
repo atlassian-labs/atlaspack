@@ -1458,14 +1458,14 @@ describe('bundler', function () {
           {
             "extends": "@atlaspack/config-default",
             "transformers": {
-              "*.js": ["./transformer.js", "..."],
+              "*.js": ["./transformer.cjs", "..."],
             }
           }
 
-        transformer.js:
-          import { Transformer } from '@atlaspack/plugin';
+        transformer.cjs:
+          const { Transformer } = require('@atlaspack/plugin');
 
-          export default new Transformer({
+          module.exports = new Transformer({
             transform({asset}) {
               if (asset.filePath.endsWith('.html')) {
                 asset.isBundleSplittable = false;

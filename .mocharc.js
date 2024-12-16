@@ -3,14 +3,14 @@ const args = process.argv.slice(2);
 
 function isFileArg(file) {
   return (
-    /\.(j|t)s$/.test(file) ||
+    /\.(j|t|cj|mj|ct|mt)s$/.test(file) ||
     (fs.existsSync(file) && fs.statSync(file).isDirectory())
   );
 }
 
 const spec = args.some(isFileArg)
   ? args.filter(isFileArg)
-  : 'packages/*/!(integration-tests)/test/{*.{js,ts},**/*.{test,spec}.{js,ts}}';
+  : 'packages/*/!(integration-tests)/test/{*.{js,ts,cts,mts,cjs,mjs},**/*.{test,spec}.{js,ts,mts,cts,cjs,mjs}}';
 
 module.exports = {
   spec,

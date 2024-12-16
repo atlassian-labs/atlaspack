@@ -1,4 +1,4 @@
-const WorkerFarm = require('../../../src/WorkerFarm').default;
+const WorkerFarm = require('#atlaspack/workers').default;
 const Logger = require('@atlaspack/logger').default;
 
 function run() {
