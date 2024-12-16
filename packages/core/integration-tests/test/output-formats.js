@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {pathToFileURL} from 'url';
@@ -308,10 +309,10 @@ describe('output formats', function () {
           path.join(__dirname, '/integration/formats/commonjs-siblings/a.js'),
         );
 
-        let dist = await outputFS.readFile(
-          b.getBundles().find((b) => b.type === 'js').filePath,
-          'utf8',
-        );
+        let jsBundle = b.getBundles().find((b) => b.type === 'js');
+        if (!jsBundle) return assert.fail();
+
+        let dist = await outputFS.readFile(jsBundle.filePath, 'utf8');
         assert(dist.includes('require("./index.css")'));
       },
     );
@@ -321,10 +322,10 @@ describe('output formats', function () {
         path.join(__dirname, '/integration/formats/commonjs-async/index.js'),
       );
 
-      let index = await outputFS.readFile(
-        b.getBundles().find((b) => b.name.startsWith('index')).filePath,
-        'utf8',
-      );
+      let indexBundle = b.getBundles().find((b) => b.name.startsWith('index'));
+      if (!indexBundle) return assert.fail();
+
+      let index = await outputFS.readFile(indexBundle.filePath, 'utf8');
       assert(/Promise\.resolve\(require\("\.\/async\..+?\.js"\)\)/.test(index));
 
       assert.equal(await run(b), 4);
@@ -341,10 +342,10 @@ describe('output formats', function () {
         },
       );
 
-      let index = await outputFS.readFile(
-        b.getBundles().find((b) => b.name.startsWith('index')).filePath,
-        'utf8',
-      );
+      let indexBundle = b.getBundles().find((b) => b.name.startsWith('index'));
+      if (!indexBundle) return assert.fail();
+
+      let index = await outputFS.readFile(indexBundle.filePath, 'utf8');
       assert(
         /Promise\.resolve\(require\("\.\/async1\..+?\.js"\)\)/.test(index),
       );
@@ -463,10 +464,10 @@ describe('output formats', function () {
         path.join(__dirname, '/integration/formats/commonjs-dynamic/index.js'),
       );
 
-      let dist = await outputFS.readFile(
-        b.getBundles().find((b) => b.type === 'js').filePath,
-        'utf8',
-      );
+      let jsBundle = b.getBundles().find((b) => b.type === 'js');
+      if (!jsBundle) return assert.fail();
+
+      let dist = await outputFS.readFile(jsBundle.filePath, 'utf8');
       assert(dist.includes('Object.assign(module.exports'));
 
       let ns = await run(b);
@@ -483,10 +484,10 @@ describe('output formats', function () {
           ),
         );
 
-        let dist = await outputFS.readFile(
-          b.getBundles().find((b) => b.type === 'js').filePath,
-          'utf8',
-        );
+        let jsBundle = b.getBundles().find((b) => b.type === 'js');
+        if (!jsBundle) return assert.fail();
+
+        let dist = await outputFS.readFile(jsBundle.filePath, 'utf8');
         assert(dist.includes('= require("lodash")'));
 
         let add = await run(b);
@@ -530,9 +531,13 @@ describe('output formats', function () {
         let workerBundle = b
           .getBundles()
           .find((b) => b.name.startsWith('dedicated-worker'));
+        if (!workerBundle) return assert.fail();
+
         let sharedWorkerBundle = b
           .getBundles()
           .find((b) => b.name.startsWith('shared-worker'));
+        if (!sharedWorkerBundle) return assert.fail();
+
         assert(
           contents.includes(
             `new Worker(new URL("${path.basename(
@@ -612,12 +617,12 @@ describe('output formats', function () {
         ),
       );
 
-      let external = {
-        foo: 1,
+      let external = new (class {
+        foo = 1;
         setFoo(f) {
           this.foo = f;
-        },
-      };
+        }
+      })();
 
       let out = [];
       await run(b, {
@@ -868,10 +873,10 @@ describe('output formats', function () {
           path.join(__dirname, '/integration/formats/esm-siblings/a.js'),
         );
 
-        let dist = await outputFS.readFile(
-          b.getBundles().find((b) => b.type === 'js').filePath,
-          'utf8',
-        );
+        let jsBundle = b.getBundles().find((b) => b.type === 'js');
+        if (!jsBundle) return assert.fail();
+
+        let dist = await outputFS.readFile(jsBundle.filePath, 'utf8');
         assert(dist.includes('import "./index.css"'));
       },
     );
@@ -884,10 +889,10 @@ describe('output formats', function () {
         ),
       );
 
-      let dist = await outputFS.readFile(
-        b.getBundles().find((b) => b.type === 'js').filePath,
-        'utf8',
-      );
+      let jsBundle = b.getBundles().find((b) => b.type === 'js');
+      if (!jsBundle) return assert.fail();
+
+      let dist = await outputFS.readFile(jsBundle.filePath, 'utf8');
       assert(!dist.includes('foo'));
     });
 
@@ -910,10 +915,10 @@ describe('output formats', function () {
         },
       ]);
 
-      let dist = await outputFS.readFile(
-        b.getBundles().find((b) => !b.needsStableName).filePath,
-        'utf8',
-      );
+      let found = b.getBundles().find((b) => !b.needsStableName);
+      if (!found) return assert.fail();
+
+      let dist = await outputFS.readFile(found.filePath, 'utf8');
       assert(dist.includes('$parcel$interopDefault'));
       let ns = await run(b);
       assert.deepEqual(await ns.default, [123, 123]);
@@ -935,10 +940,10 @@ describe('output formats', function () {
         path.join(__dirname, '/integration/formats/esm-async/index.js'),
       );
 
-      let index = await outputFS.readFile(
-        b.getBundles().find((b) => b.name.startsWith('index')).filePath,
-        'utf8',
-      );
+      let indexBundle = b.getBundles().find((b) => b.name.startsWith('index'));
+      if (!indexBundle) return assert.fail();
+
+      let index = await outputFS.readFile(indexBundle.filePath, 'utf8');
       assert(/import\("\.\/async\..+?\.js"\)/.test(index));
 
       await assertESMExports(b, 4, {}, (ns) => ns.default);
@@ -954,10 +959,10 @@ describe('output formats', function () {
         ),
       );
 
-      let async = await outputFS.readFile(
-        b.getBundles().find((b) => b.name.startsWith('c')).filePath,
-        'utf8',
-      );
+      let cBundle = b.getBundles().find((b) => b.name.startsWith('c'));
+      if (!cBundle) return assert.fail();
+
+      let async = await outputFS.readFile(cBundle.filePath, 'utf8');
       assert(!/\$export\$default\s+=/.test(async));
     });
 
@@ -1038,10 +1043,10 @@ describe('output formats', function () {
         },
       );
 
-      let index = await outputFS.readFile(
-        b.getBundles().find((b) => b.name.startsWith('index')).filePath,
-        'utf8',
-      );
+      let indexBundle = b.getBundles().find((b) => b.name.startsWith('index'));
+      if (!indexBundle) return assert.fail();
+
+      let index = await outputFS.readFile(indexBundle.filePath, 'utf8');
       assert(/import\("\.\/async1\..+?\.js"\)/.test(index));
       assert(/import\("\.\/async2\..+?\.js"\)/.test(index));
 
@@ -1092,9 +1097,12 @@ describe('output formats', function () {
       let asyncBundle = b
         .getChildBundles(workerBundle)
         .find((b) => b.filePath.includes('async'));
+      if (!asyncBundle) return assert.fail();
       let syncBundle = b
         .getReferencedBundles(workerBundle)
         .find((b) => !b.filePath.includes('async'));
+      if (!syncBundle) return assert.fail();
+
       assert(
         workerBundleContents.includes(
           `import "./${path.basename(syncBundle.filePath)}"`,
@@ -1112,26 +1120,27 @@ describe('output formats', function () {
           path.join(__dirname, '/integration/formats/esm-browser/index.html'),
         );
 
-        let html = await outputFS.readFile(
-          b.getBundles().find((b) => b.type === 'html').filePath,
-          'utf8',
-        );
+        let htmlBundle = b.getBundles().find((b) => b.type === 'html');
+        if (!htmlBundle) return assert.fail();
+
+        let html = await outputFS.readFile(htmlBundle.filePath, 'utf8');
 
         assert(html.includes('<script type="module" src="/index'));
 
-        let entry = await outputFS.readFile(
-          b
-            .getBundles()
-            .find(
-              (b) =>
-                path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
-            ).filePath,
-          'utf8',
-        );
+        let indexBundle = b
+          .getBundles()
+          .find(
+            (b) => path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
+          );
+        if (!indexBundle) return assert.fail();
+
+        let entry = await outputFS.readFile(indexBundle.filePath, 'utf8');
 
         let asyncBundle = b
           .getBundles()
           .find((bundle) => bundle.name.startsWith('async'));
+        if (!asyncBundle) return assert.fail();
+
         assert(
           entry.includes(`import("./${path.basename(asyncBundle.filePath)}")`),
         );
@@ -1158,27 +1167,27 @@ describe('output formats', function () {
           },
         );
 
-        let html = await outputFS.readFile(
-          b.getBundles().find((b) => b.type === 'html').filePath,
-          'utf8',
-        );
+        let htmlBundle = b.getBundles().find((b) => b.type === 'html');
+        if (!htmlBundle) return assert.fail();
+        let html = await outputFS.readFile(htmlBundle.filePath, 'utf8');
 
         assert(html.includes('<script type="module" src="/index'));
 
-        let entry = await outputFS.readFile(
-          b
-            .getBundles()
-            .find(
-              (b) =>
-                path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
-            ).filePath,
-          'utf8',
-        );
+        let entryBundle = b
+          .getBundles()
+          .find(
+            (b) => path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
+          );
+        if (!entryBundle) return assert.fail();
+
+        let entry = await outputFS.readFile(entryBundle.filePath, 'utf8');
         assert(entry.includes('function importModule'));
 
         let asyncBundle = b
           .getBundles()
           .find((bundle) => bundle.name.startsWith('async'));
+        if (!asyncBundle) return assert.fail();
+
         assert(
           new RegExp(
             `getBundleURL\\('[a-zA-Z0-9]+'\\) \\+ "` +
@@ -1199,31 +1208,35 @@ describe('output formats', function () {
           ),
         );
 
-        let html = await outputFS.readFile(
-          b.getBundles().find((b) => b.type === 'html').filePath,
-          'utf8',
-        );
+        let htmlBundle = b.getBundles().find((b) => b.type === 'html');
+        if (!htmlBundle) return assert.fail();
+
+        let html = await outputFS.readFile(htmlBundle.filePath, 'utf8');
 
         assert(html.includes('<script type="module" src="/index'));
         assert(html.includes('<link rel="stylesheet" href="/index'));
 
-        let entry = await outputFS.readFile(
-          b
-            .getBundles()
-            .find(
-              (b) =>
-                path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
-            ).filePath,
-          'utf8',
-        );
+        let found = b
+          .getBundles()
+          .find(
+            (b) => path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
+          );
+        if (!found) return assert.fail();
+
+        let entry = await outputFS.readFile(found.filePath, 'utf8');
 
         let bundles = b.getBundles();
+
         let asyncJsBundle = bundles.find(
           (bundle) => bundle.type === 'js' && bundle.name.startsWith('async'),
         );
+        if (!asyncJsBundle) return assert.fail();
+
         let asyncCssBundle = bundles.find(
           (bundle) => bundle.type === 'css' && bundle.name.startsWith('async'),
         );
+        if (!asyncCssBundle) return assert.fail();
+
         assert(
           new RegExp(
             'Promise.all\\(\\[\\n.+?new URL\\("' +
@@ -1234,13 +1247,12 @@ describe('output formats', function () {
           ).test(entry),
         );
 
-        let async = await outputFS.readFile(
-          b
-            .getBundles()
-            .find((b) => b.type === 'js' && b.name.startsWith('async'))
-            .filePath,
-          'utf8',
-        );
+        let asyncBundle = b
+          .getBundles()
+          .find((b) => b.type === 'js' && b.name.startsWith('async'));
+        if (!asyncBundle) return assert.fail();
+
+        let async = await outputFS.readFile(asyncBundle.filePath, 'utf8');
         assert(!async.includes('.css"'));
       },
     );
@@ -1261,26 +1273,30 @@ describe('output formats', function () {
           },
         );
 
-        let html = await outputFS.readFile(
-          b.getBundles().find((b) => b.type === 'html').filePath,
-          'utf8',
-        );
+        let htmlBundle = b.getBundles().find((b) => b.type === 'html');
+        if (!htmlBundle) return assert.fail();
+
+        let html = await outputFS.readFile(htmlBundle.filePath, 'utf8');
 
         assert(html.includes('<script type="module" src="/index'));
 
         let bundles = b.getBundles();
-        let entry = await outputFS.readFile(
-          bundles.find(
-            (b) => path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
-          ).filePath,
-          'utf8',
+        let found = bundles.find(
+          (b) => path.basename(b.filePath) === html.match(/src="\/(.*?)"/)[1],
         );
+        if (!found) return assert.fail();
+        let entry = await outputFS.readFile(found.filePath, 'utf8');
 
         let sharedBundle = bundles.find((b) => b.getEntryAssets().length === 0);
+        if (!sharedBundle) return assert.fail();
+
         let async1Bundle = bundles.find(
           (b) => b.name.startsWith('async1') && b.id !== sharedBundle.id,
         );
+        if (!async1Bundle) return assert.fail();
+
         let async2Bundle = bundles.find((b) => b.name.startsWith('async2'));
+        if (!async2Bundle) return assert.fail();
 
         let esmLoaderPublicId;
         b.traverse((node, _, actions) => {
@@ -1292,6 +1308,7 @@ describe('output formats', function () {
             actions.stop();
           }
         });
+        if (!esmLoaderPublicId) return assert.fail();
 
         assert(
           esmLoaderPublicId != null,
@@ -1416,6 +1433,7 @@ describe('output formats', function () {
           path.join(__dirname, '/integration/formats/esm-import-shadow/a.mjs'),
         );
 
+        // $FlowFixMe "import" must be a string literal
         let _b = await import(
           pathToFileURL(
             path.join(
@@ -1510,9 +1528,13 @@ describe('output formats', function () {
         let workerBundle = b
           .getBundles()
           .find((b) => b.name.startsWith('dedicated-worker'));
+        if (!workerBundle) return assert.fail();
+
         let sharedWorkerBundle = b
           .getBundles()
           .find((b) => b.name.startsWith('shared-worker'));
+        if (!sharedWorkerBundle) return assert.fail();
+
         assert(
           contents.includes(
             `new Worker(new URL("${path.basename(
@@ -1605,6 +1627,7 @@ describe('output formats', function () {
     let cjs = b
       .getBundles()
       .find((b) => b.type === 'js' && b.env.outputFormat === 'commonjs');
+    if (!cjs) return assert.fail();
 
     let calls = [];
     assert.deepEqual(
@@ -1703,7 +1726,11 @@ describe('output formats', function () {
         {require: false},
       );
       assert.strictEqual(res.output, 3);
+      if (!workerBundle) return assert.fail();
+      if (!res.output) return assert.fail();
+
       res = await runBundle(b, workerBundle, {output: null}, {require: false});
+      // $FlowFixMe mixed type "res.output"
       assert.strictEqual(res.output, 30);
     });
 

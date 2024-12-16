@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import nullthrows from 'nullthrows';
@@ -400,12 +401,12 @@ describe('scope hoisting', function () {
       let output = await run(b);
       assert.strictEqual(output, 'foo bar');
 
-      let contents = await outputFS.readFile(
-        b
-          .getBundles()
-          .find((b) => b.getMainEntry().filePath.endsWith('index.js')).filePath,
-        'utf8',
-      );
+      let mainEntryBundle = b
+        .getBundles()
+        .find((b) => b.getMainEntry()?.filePath.endsWith('index.js'));
+      if (!mainEntryBundle) return assert.fail();
+
+      let contents = await outputFS.readFile(mainEntryBundle.filePath, 'utf8');
       assert.match(contents, /output="foo bar"/);
     });
 
@@ -839,12 +840,17 @@ describe('scope hoisting', function () {
         {mode: 'production'},
       );
 
+      let htmlBundle = b.getBundles().find((b) => b.type === 'html');
+      if (!htmlBundle) return assert.fail();
+
       let ctx = await runBundle(
         b,
-        b.getBundles().find((b) => b.type === 'html'),
+        htmlBundle,
         {output: null},
         {require: false},
       );
+
+      // $FlowFixMe runBundle mixed type
       assert.deepEqual(ctx.output, 'aaa');
     });
 
@@ -1515,16 +1521,16 @@ describe('scope hoisting', function () {
             assert.deepEqual(await run(b), ['b1:foo', 'b2:foo']);
           }
 
-          let contents = await outputFS.readFile(
-            b.getBundles().find((b) => b.name.startsWith('b1')).filePath,
-            'utf8',
-          );
+          let b1 = b.getBundles().find((b) => b.name.startsWith('b1'));
+          if (!b1) return assert.fail();
+
+          let contents = await outputFS.readFile(b1.filePath, 'utf8');
           assert(!contents.includes('bar'));
 
-          contents = await outputFS.readFile(
-            b.getBundles().find((b) => b.name.startsWith('b2')).filePath,
-            'utf8',
-          );
+          let b2 = b.getBundles().find((b) => b.name.startsWith('b2'));
+          if (!b2) return assert.fail();
+
+          contents = await outputFS.readFile(b2.filePath, 'utf8');
           assert(!contents.includes('bar'));
         });
 
@@ -1541,17 +1547,16 @@ describe('scope hoisting', function () {
             // TODO execute ESM at some point
             assert.deepEqual(await run(b), ['b1:foo', 'b2:foo']);
           }
+          let b1 = b.getBundles().find((b) => b.name.startsWith('b1'));
+          if (!b1) return assert.fail();
 
-          let contents = await outputFS.readFile(
-            b.getBundles().find((b) => b.name.startsWith('b1')).filePath,
-            'utf8',
-          );
+          let contents = await outputFS.readFile(b1.filePath, 'utf8');
           assert(!contents.includes('bar'));
 
-          contents = await outputFS.readFile(
-            b.getBundles().find((b) => b.name.startsWith('b2')).filePath,
-            'utf8',
-          );
+          let b2 = b.getBundles().find((b) => b.name.startsWith('b2'));
+          if (!b2) return assert.fail();
+
+          contents = await outputFS.readFile(b2.filePath, 'utf8');
           assert(!contents.includes('bar'));
         });
 
@@ -1569,16 +1574,16 @@ describe('scope hoisting', function () {
             assert.deepEqual(await run(b), ['b1:foo', 'b2:foo']);
           }
 
-          let contents = await outputFS.readFile(
-            b.getBundles().find((b) => b.name.startsWith('b1')).filePath,
-            'utf8',
-          );
+          let b1 = b.getBundles().find((b) => b.name.startsWith('b1'));
+          if (!b1) return assert.fail();
+
+          let contents = await outputFS.readFile(b1.filePath, 'utf8');
           assert(!contents.includes('bar'));
 
-          contents = await outputFS.readFile(
-            b.getBundles().find((b) => b.name.startsWith('b2')).filePath,
-            'utf8',
-          );
+          let b2 = b.getBundles().find((b) => b.name.startsWith('b2'));
+          if (!b2) return assert.fail();
+
+          contents = await outputFS.readFile(b2.filePath, 'utf8');
           assert(!contents.includes('bar'));
         });
       });
@@ -1606,13 +1611,12 @@ describe('scope hoisting', function () {
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
-        let contents = await outputFS.readFile(
-          b
-            .getBundles()
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
-          'utf8',
-        );
+        let mainEntry = b
+          .getBundles()
+          .find((b) => b.getMainEntry()?.filePath.endsWith('async.js'));
+        if (!mainEntry) return assert.fail();
+
+        let contents = await outputFS.readFile(mainEntry.filePath, 'utf8');
         assert(!contents.includes('bar'));
         assert(!contents.includes('stuff'));
       });
@@ -1639,13 +1643,12 @@ describe('scope hoisting', function () {
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
-        let contents = await outputFS.readFile(
-          b
-            .getBundles()
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
-          'utf8',
-        );
+        let mainEntry = b
+          .getBundles()
+          .find((b) => b.getMainEntry()?.filePath.endsWith('async.js'));
+        if (!mainEntry) return assert.fail();
+
+        let contents = await outputFS.readFile(mainEntry.filePath, 'utf8');
         assert(!contents.includes('bar'));
         assert(!contents.includes('stuff'));
       });
@@ -1672,13 +1675,12 @@ describe('scope hoisting', function () {
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
-        let contents = await outputFS.readFile(
-          b
-            .getBundles()
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
-          'utf8',
-        );
+        let mainEntry = b
+          .getBundles()
+          .find((b) => b.getMainEntry()?.filePath.endsWith('async.js'));
+        if (!mainEntry) return assert.fail();
+
+        let contents = await outputFS.readFile(mainEntry.filePath, 'utf8');
         assert(!contents.includes('bar'));
         assert(!contents.includes('stuff'));
       });
@@ -1757,13 +1759,12 @@ describe('scope hoisting', function () {
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
 
-        let contents = await outputFS.readFile(
-          b
-            .getBundles()
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
-          'utf8',
-        );
+        let mainEntry = b
+          .getBundles()
+          .find((b) => b.getMainEntry()?.filePath.endsWith('async.js'));
+        if (!mainEntry) return assert.fail();
+
+        let contents = await outputFS.readFile(mainEntry.filePath, 'utf8');
         assert(!contents.includes('bar'));
         assert(!contents.includes('stuff'));
       });
@@ -1789,14 +1790,12 @@ describe('scope hoisting', function () {
           new Set(['foo', 'thing']),
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
+        let mainEntry = b
+          .getBundles()
+          .find((b) => b.getMainEntry()?.filePath.endsWith('async.js'));
+        if (!mainEntry) return assert.fail();
 
-        let contents = await outputFS.readFile(
-          b
-            .getBundles()
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
-          'utf8',
-        );
+        let contents = await outputFS.readFile(mainEntry.filePath, 'utf8');
         assert(!contents.includes('bar'));
         assert(!contents.includes('stuff'));
       });
@@ -1853,14 +1852,12 @@ describe('scope hoisting', function () {
           new Set(['foo', 'thing']),
         );
         assert(b.isDependencySkipped(findDependency(b, 'async.js', './a1.js')));
+        let mainEntry = b
+          .getBundles()
+          .find((b) => b.getMainEntry()?.filePath.endsWith('async.js'));
+        if (!mainEntry) return assert.fail();
 
-        let contents = await outputFS.readFile(
-          b
-            .getBundles()
-            .find((b) => b.getMainEntry().filePath.endsWith('async.js'))
-            .filePath,
-          'utf8',
-        );
+        let contents = await outputFS.readFile(mainEntry.filePath, 'utf8');
         assert(!contents.includes('bar'));
         assert(!contents.includes('stuff'));
       });
@@ -2585,7 +2582,8 @@ describe('scope hoisting', function () {
         assert.strictEqual(result, 1);
 
         let bar = findAsset(b, 'real-bar.js');
-        assert(bar);
+        if (!bar) return assert(bar);
+
         assert.strictEqual(bar.sideEffects, false);
       });
 
@@ -2601,7 +2599,8 @@ describe('scope hoisting', function () {
         assert.strictEqual(result, 1);
 
         let bar = findAsset(b, 'real-bar.js');
-        assert(bar);
+        if (!bar) return assert(bar);
+
         assert.strictEqual(bar.sideEffects, false);
       });
     });
@@ -2629,6 +2628,8 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
+
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, 123);
 
@@ -2676,15 +2677,15 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, 123);
 
+          let asset = findAsset(bundleEvent.bundleGraph, 'b.js');
+          if (!asset) return assert.fail();
+
           assert.deepStrictEqual(
-            new Set(
-              bundleEvent.bundleGraph.getUsedSymbols(
-                findAsset(bundleEvent.bundleGraph, 'b.js'),
-              ),
-            ),
+            new Set(bundleEvent.bundleGraph.getUsedSymbols(asset)),
             new Set(['foo']),
           );
         } finally {
@@ -2714,6 +2715,7 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [123]);
 
@@ -2724,15 +2726,15 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [123, 789]);
 
+          let asset = findAsset(bundleEvent.bundleGraph, 'c.js');
+          if (!asset) return assert.fail();
+
           assert.deepStrictEqual(
-            new Set(
-              bundleEvent.bundleGraph.getUsedSymbols(
-                findAsset(bundleEvent.bundleGraph, 'c.js'),
-              ),
-            ),
+            new Set(bundleEvent.bundleGraph.getUsedSymbols(asset)),
             new Set(['c']),
           );
 
@@ -2743,6 +2745,7 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [123]);
 
@@ -2774,6 +2777,7 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [123]);
 
@@ -2791,6 +2795,7 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [
             123,
@@ -2819,6 +2824,7 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [123]);
 
@@ -2855,6 +2861,7 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [
             789,
@@ -2882,6 +2889,7 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [
             123,
@@ -2910,6 +2918,7 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, [
             789,
@@ -2956,6 +2965,7 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, 123);
 
@@ -2974,6 +2984,7 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, 1);
 
@@ -2992,6 +3003,7 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, 123);
 
@@ -3031,6 +3043,7 @@ describe('scope hoisting', function () {
         try {
           let bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           let res = await run(
             bundleEvent.bundleGraph,
             {output: null},
@@ -3038,12 +3051,11 @@ describe('scope hoisting', function () {
           );
           assert.deepEqual(await res.output, {akGridSize: 8});
 
+          let asset1 = findAsset(bundleEvent.bundleGraph, 'themeConstants.js');
+          if (!asset1) return assert.fail();
+
           assert.deepStrictEqual(
-            new Set(
-              bundleEvent.bundleGraph.getUsedSymbols(
-                findAsset(bundleEvent.bundleGraph, 'themeConstants.js'),
-              ),
-            ),
+            new Set(bundleEvent.bundleGraph.getUsedSymbols(asset1)),
             new Set(['gridSize']),
           );
           assert(!findAsset(bundleEvent.bundleGraph, 'themeColors.js'));
@@ -3055,6 +3067,7 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           res = await run(
             bundleEvent.bundleGraph,
             {output: null},
@@ -3065,12 +3078,11 @@ describe('scope hoisting', function () {
             {akEmojiSelectedBackgroundColor: '#EBECF0'},
           ]);
 
+          let asset2 = findAsset(bundleEvent.bundleGraph, 'themeConstants.js');
+          if (!asset2) return assert.fail();
+
           assert.deepStrictEqual(
-            new Set(
-              bundleEvent.bundleGraph.getUsedSymbols(
-                findAsset(bundleEvent.bundleGraph, 'themeConstants.js'),
-              ),
-            ),
+            new Set(bundleEvent.bundleGraph.getUsedSymbols(asset2)),
             new Set(['borderRadius', 'gridSize']),
           );
           assert(!findAsset(bundleEvent.bundleGraph, 'theme.js'));
@@ -3083,6 +3095,7 @@ describe('scope hoisting', function () {
 
           bundleEvent = await getNextBuild(b);
           assert.strictEqual(bundleEvent.type, 'buildSuccess');
+          if (!bundleEvent.bundleGraph) return assert.fail();
           res = await run(
             bundleEvent.bundleGraph,
             {output: null},
@@ -3090,12 +3103,11 @@ describe('scope hoisting', function () {
           );
           assert.deepEqual(await res.output, {akGridSize: 8});
 
+          let asset3 = findAsset(bundleEvent.bundleGraph, 'themeConstants.js');
+          if (!asset3) return assert.fail();
+
           assert.deepStrictEqual(
-            new Set(
-              bundleEvent.bundleGraph.getUsedSymbols(
-                findAsset(bundleEvent.bundleGraph, 'themeConstants.js'),
-              ),
-            ),
+            new Set(bundleEvent.bundleGraph.getUsedSymbols(asset3)),
             new Set(['gridSize']),
           );
           assert(!findAsset(bundleEvent.bundleGraph, 'themeColors.js'));
@@ -4172,14 +4184,14 @@ describe('scope hoisting', function () {
         'utf8',
       );
 
-      assert(contents.split('f1_var').length - 1, 1);
-      assert(contents.split('f2_var').length - 1, 1);
-      assert(contents.split('f3_var').length - 1, 1);
-      assert(contents.split('f4_var').length - 1, 1);
-      assert(contents.split('c1_var').length - 1, 1);
-      assert(contents.split('c2_var').length - 1, 1);
-      assert(contents.split('BigIntSupported').length - 1, 4);
-      assert(contents.split('inner_let').length - 1, 2);
+      assert(contents.split('f1_var').length - 1, '1');
+      assert(contents.split('f2_var').length - 1, '1');
+      assert(contents.split('f3_var').length - 1, '1');
+      assert(contents.split('f4_var').length - 1, '1');
+      assert(contents.split('c1_var').length - 1, '1');
+      assert(contents.split('c2_var').length - 1, '1');
+      assert(contents.split('BigIntSupported').length - 1, '4');
+      assert(contents.split('inner_let').length - 1, '2');
 
       let output = await run(b);
       assert.equal(output, true);
@@ -4369,6 +4381,7 @@ describe('scope hoisting', function () {
       );
 
       let entryAsset = b.getBundles()[0].getMainEntry();
+      if (!entryAsset) return assert.fail();
 
       // TODO: this test doesn't currently work in older browsers since babel
       // replaces the typeof calls before we can get to them.
@@ -4914,6 +4927,7 @@ describe('scope hoisting', function () {
       let output = await run(b);
       let obj = {
         test: 2,
+        default: undefined,
       };
       obj.default = obj;
       assert.deepEqual(output.default, obj);
@@ -5485,6 +5499,8 @@ describe('scope hoisting', function () {
     );
 
     let mainBundle = b.getBundles().find((b) => b.name === 'index.js');
+    if (!mainBundle) return assert.fail();
+
     let contents = await outputFS.readFile(mainBundle.filePath, 'utf8');
     // We wrap for other reasons now, so this is broken
     assert(!contents.includes(`if (parcelRequire == null) {`));
@@ -5505,12 +5521,16 @@ describe('scope hoisting', function () {
       .getBundles()
       .sort((a, b) => b.stats.size - a.stats.size)
       .find((b) => b.name !== 'index.js');
+    if (!sharedBundle) return assert.fail();
+
     let contents = await outputFS.readFile(sharedBundle.filePath, 'utf8');
     assert(contents.includes(`if (parcelRequire == null) {`));
 
     let workerBundle = b
       .getBundles()
       .find((b) => b.name.startsWith('worker-b'));
+    if (!workerBundle) return assert.fail();
+
     contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
     assert(
       contents.includes(
@@ -5699,7 +5719,10 @@ describe('scope hoisting', function () {
     let sameBundle = bundles.find(
       (b) => b.name === 'same-bundle-scope-hoisting.js',
     );
+    if (!sameBundle) return assert.fail();
+
     let getDep = bundles.find((b) => b.name === 'get-dep-scope-hoisting.js');
+    if (!getDep) return assert.fail();
 
     assert.deepEqual(await runBundle(b, sameBundle), [42, 42, 42]);
     assert.deepEqual(await runBundle(b, getDep), 42);
@@ -5836,15 +5859,11 @@ describe('scope hoisting', function () {
       {assets: ['b.js']},
     ]);
 
-    assert.deepEqual(
-      await runBundle(
-        b,
-        b
-          .getBundles()
-          .find((bundle) => bundle.name.includes('scope-hoisting.js')),
-      ),
-      43,
-    );
+    let targetBundle = b
+      .getBundles()
+      .find((bundle) => bundle.name.includes('scope-hoisting.js'));
+    if (!targetBundle) return assert.fail();
+    assert.deepEqual(await runBundle(b, targetBundle), 43);
   });
 
   it('correctly updates dependencies when a specifier is added', async function () {
@@ -5862,6 +5881,7 @@ describe('scope hoisting', function () {
 
     let bundleEvent = await getNextBuild(b);
     assert(bundleEvent.type === 'buildSuccess');
+    if (!bundleEvent.bundleGraph) return assert.fail();
     let output = await run(bundleEvent.bundleGraph);
     assert.deepEqual(output, 'foo');
 
@@ -5873,6 +5893,7 @@ describe('scope hoisting', function () {
 
     bundleEvent = await getNextBuild(b);
     assert(bundleEvent.type === 'buildSuccess');
+    if (!bundleEvent.bundleGraph) return assert.fail();
     output = await run(bundleEvent.bundleGraph);
     assert.deepEqual(output, 'foobar');
 
@@ -6072,7 +6093,7 @@ describe('scope hoisting', function () {
       let bundleHashDelayFoo = b
         .getBundles()
         .find((b) => b.filePath.endsWith('.js') && b.filePath.includes('index'))
-        .filePath.split('.')[1];
+        ?.filePath.split('.')[1];
 
       let slowBarFS = new Proxy(overlayFS, waitHandler('bar.js', 'foo.js'));
 
@@ -6086,7 +6107,7 @@ describe('scope hoisting', function () {
       let bundleHashDelayBar = b2
         .getBundles()
         .find((b) => b.filePath.endsWith('.js') && b.filePath.includes('index'))
-        .filePath.split('.')[1];
+        ?.filePath.split('.')[1];
 
       assert.strictEqual(bundleHashDelayFoo, bundleHashDelayBar);
     } finally {
@@ -6156,10 +6177,12 @@ describe('scope hoisting', function () {
       },
     );
 
-    let contents = await outputFS.readFile(
-      b.getBundles().find((b) => /index.*\.js/.test(b.filePath)).filePath,
-      'utf8',
-    );
+    let indexBundle = b
+      .getBundles()
+      .find((b) => /index.*\.js/.test(b.filePath));
+    if (!indexBundle) return assert.fail();
+
+    let contents = await outputFS.readFile(indexBundle.filePath, 'utf8');
     assert(contents.includes('$parcel$global.rwr('));
 
     let result;
