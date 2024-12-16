@@ -126,8 +126,8 @@ describe.v2('webextension', function () {
         assets: [
           'popup.js',
           'esmodule-helpers.js',
-          'bundle-url.ts',
-          'bundle-url-common.ts',
+          'bundle-url.js',
+          'bundle-url-common.js',
         ],
       },
       {assets: ['side-panel.html']},

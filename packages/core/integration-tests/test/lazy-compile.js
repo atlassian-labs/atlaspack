@@ -92,8 +92,8 @@ describe.v2('lazy compile', function () {
       {
         assets: [
           'index.js',
-          'bundle-url.ts',
-          'bundle-url-common.ts',
+          'bundle-url.js',
+          'bundle-url-common.js',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -176,8 +176,8 @@ describe.v2('lazy compile', function () {
         name: /^index.*/,
         assets: [
           'index.js',
-          'bundle-url.ts',
-          'bundle-url-common.ts',
+          'bundle-url.js',
+          'bundle-url-common.js',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -247,8 +247,8 @@ describe.v2('lazy compile', function () {
         name: /^index.*/,
         assets: [
           'index.js',
-          'bundle-url.ts',
-          'bundle-url-common.ts',
+          'bundle-url.js',
+          'bundle-url-common.js',
           'cacheLoader.js',
           'js-loader.js',
         ],

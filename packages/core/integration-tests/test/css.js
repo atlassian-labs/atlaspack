@@ -80,8 +80,8 @@ describe('css', () => {
         name: 'entry.js',
         type: 'js',
         assets: [
-          'bundle-url.ts',
-          'bundle-url-common.ts',
+          'bundle-url.js',
+          'bundle-url-common.js',
           'cacheLoader.js',
           'entry.js',
           'js-loader.js',
@@ -107,8 +107,8 @@ describe('css', () => {
         name: 'entry.js',
         type: 'js',
         assets: [
-          'bundle-url.ts',
-          'bundle-url-common.ts',
+          'bundle-url.js',
+          'bundle-url-common.js',
           'cacheLoader.js',
           'css-loader.js',
           'entry.js',
@@ -132,8 +132,8 @@ describe('css', () => {
       {
         name: 'index.js',
         assets: [
-          'bundle-url.ts',
-          'bundle-url-common.ts',
+          'bundle-url.js',
+          'bundle-url-common.js',
           'cacheLoader.js',
           'css-loader.js',
           'index.js',
