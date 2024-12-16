@@ -16,6 +16,7 @@ pub(crate) fn convert_priority(
     DependencyKind::Require => Priority::Sync,
     DependencyKind::File => Priority::Sync,
     DependencyKind::ConditionalImport => Priority::Conditional,
+    DependencyKind::Id => Priority::Sync,
   }
 }
 
@@ -35,6 +36,7 @@ pub(crate) fn convert_specifier_type(
     DependencyKind::Url => SpecifierType::Url,
     DependencyKind::File => SpecifierType::Custom,
     DependencyKind::ConditionalImport => SpecifierType::Esm,
+    DependencyKind::Id => SpecifierType::Custom,
   }
 }
 

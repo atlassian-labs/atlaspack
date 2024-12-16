@@ -72,6 +72,7 @@ module.bundle.Module = Module;
 module.bundle.hotData = {};
 
 var checkedAssets /*: {|[string]: boolean|} */,
+  disposedAssets /*: {|[string]: boolean|} */,
   assetsToDispose /*: Array<[ParcelRequire, string]> */,
   assetsToAccept /*: Array<[ParcelRequire, string]> */;
 
@@ -134,6 +135,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   // $FlowFixMe
   ws.onmessage = async function (event /*: {data: string, ...} */) {
     checkedAssets = ({} /*: {|[string]: boolean|} */);
+    disposedAssets = ({} /*: {|[string]: boolean|} */);
     assetsToAccept = [];
     assetsToDispose = [];
 
@@ -173,19 +175,10 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
 
         await hmrApplyUpdates(assets);
 
-        // Dispose all old assets.
-        let processedAssets = ({} /*: {|[string]: boolean|} */);
-        for (let i = 0; i < assetsToDispose.length; i++) {
-          let id = assetsToDispose[i][1];
-
-          if (!processedAssets[id]) {
-            hmrDispose(assetsToDispose[i][0], id);
-            processedAssets[id] = true;
-          }
-        }
+        hmrDisposeQueue();
 
         // Run accept callbacks. This will also re-execute other disposed assets in topological order.
-        processedAssets = {};
+        let processedAssets = {};
         for (let i = 0; i < assetsToAccept.length; i++) {
           let id = assetsToAccept[i][1];
 
@@ -493,7 +486,11 @@ function hmrApply(bundle /*: ParcelRequire */, asset /*:  HMRAsset */) {
       // $FlowFixMe
       let fn = global.parcelHotUpdate[asset.id];
       modules[asset.id] = [fn, deps];
-    } else if (bundle.parent) {
+    }
+
+    // Always traverse to the parent bundle, even if we already replaced the asset in this bundle.
+    // This is required in case modules are duplicated. We need to ensure all instances have the updated code.
+    if (bundle.parent) {
       hmrApply(bundle.parent, asset);
     }
   }
@@ -597,6 +594,20 @@ function hmrAcceptCheckOne(
   }
 }
 
+function hmrDisposeQueue() {
+  // Dispose all old assets.
+  for (let i = 0; i < assetsToDispose.length; i++) {
+    let id = assetsToDispose[i][1];
+
+    if (!disposedAssets[id]) {
+      hmrDispose(assetsToDispose[i][0], id);
+      disposedAssets[id] = true;
+    }
+  }
+
+  assetsToDispose = [];
+}
+
 function hmrDispose(bundle /*: ParcelRequire */, id /*: string */) {
   var cached = bundle.cache[id];
   bundle.hotData[id] = {};
@@ -620,18 +631,26 @@ function hmrAccept(bundle /*: ParcelRequire */, id /*: string */) {
   // Run the accept callbacks in the new version of the module.
   var cached = bundle.cache[id];
   if (cached && cached.hot && cached.hot._acceptCallbacks.length) {
+    let assetsToAlsoAccept = [];
     cached.hot._acceptCallbacks.forEach(function (cb) {
-      var assetsToAlsoAccept = cb(function () {
+      let additionalAssets = cb(function () {
         return getParents(module.bundle.root, id);
       });
-      if (assetsToAlsoAccept && assetsToAccept.length) {
-        assetsToAlsoAccept.forEach(function (a) {
-          hmrDispose(a[0], a[1]);
-        });
-
-        // $FlowFixMe[method-unbinding]
-        assetsToAccept.push.apply(assetsToAccept, assetsToAlsoAccept);
+      if (Array.isArray(additionalAssets) && additionalAssets.length) {
+        assetsToAlsoAccept.push(...additionalAssets);
       }
     });
+
+    if (assetsToAlsoAccept.length > 0) {
+      let handled = assetsToAlsoAccept.every(function (a) {
+        return hmrAcceptCheck(a[0], a[1]);
+      });
+
+      if (!handled) {
+        return fullReload();
+      }
+
+      hmrDisposeQueue();
+    }
   }
 }
