@@ -76,7 +76,6 @@ type JSRuntimeConfig = {|
   splitManifestThreshold: number,
   domainSharding?: {|
     maxShards: number,
-    cookieName: string,
   |},
 |};
 
@@ -96,12 +95,9 @@ const CONFIG_SCHEMA: SchemaEntity = {
         maxShards: {
           type: 'number',
         },
-        cookieName: {
-          type: 'string',
-        },
       },
       additionalProperties: false,
-      required: ['maxShards', 'cookieName'],
+      required: ['maxShards'],
     },
   },
   additionalProperties: false,
@@ -832,14 +828,7 @@ function getAbsoluteUrlExpr(
   }
 
   if (shardingConfig) {
-    const bundleUrlArgs = [
-      `'${toBundle.name}'`,
-      `'${shardingConfig.cookieName}'`,
-      'document.cookie',
-      shardingConfig.maxShards,
-    ].join(', ');
-
-    return `require('./helpers/bundle-url-shards').getShardedBundleURL(${bundleUrlArgs}) + ${relativePathExpr}`;
+    return `require('./helpers/bundle-url-shards').getShardedBundleURL('${toBundle.name}', ${shardingConfig.maxShards}) + ${relativePathExpr}`;
   }
 
   return `require('./helpers/bundle-url').getBundleURL('${fromBundle.publicId}') + ${relativePathExpr}`;

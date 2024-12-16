@@ -4,8 +4,6 @@ const bundleURL: Record<string, string> = {};
 
 function getShardedBundleURL(
   bundleName: string,
-  cookieName: string,
-  cookieString: string,
   maxShards: number,
   inputError?: string,
 ): string {
@@ -29,8 +27,9 @@ function getShardedBundleURL(
     const stackUrl = matches[1];
     const baseUrl = getBaseURL(stackUrl);
 
-    // If the cookie doesn't exist then we don't need to shard
-    if (cookieString.indexOf(cookieName) === -1) {
+    // Global variable is set by SSR servers when HTTP1.1 traffic is detected
+    if (!Boolean(globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS)) {
+      bundleURL[bundleName] = baseUrl;
       return baseUrl;
     }
 
