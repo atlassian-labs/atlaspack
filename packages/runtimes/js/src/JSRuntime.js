@@ -732,6 +732,9 @@ function getURLRuntime(
     } else {
       code += `let bundleURL = require('./helpers/bundle-url');\n`;
       code += `let url = bundleURL.getBundleURL('${from.publicId}') + ${relativePathExpr};`;
+      if (shardingConfig) {
+        code += `url = require('@atlaspack/domain-sharding').shardUrl(url, ${shardingConfig.maxShards});`;
+      }
       code += `module.exports = workerURL(url, bundleURL.getOrigin(url), ${String(
         from.env.outputFormat === 'esmodule',
       )});`;
@@ -833,9 +836,7 @@ function getAbsoluteUrlExpr(
     return regularBundleUrl;
   }
 
-  const shardUrlArgs = [regularBundleUrl, shardingConfig.maxShards].join(', ');
-
-  return `require('@atlaspack/domain-sharding').shardUrl(${shardUrlArgs})`;
+  return `require('@atlaspack/domain-sharding').shardUrl(${regularBundleUrl}, ${shardingConfig.maxShards})`;
 }
 
 function shouldUseRuntimeManifest(
