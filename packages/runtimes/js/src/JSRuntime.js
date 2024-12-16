@@ -485,11 +485,23 @@ function getLoaderRuntime({
       return `Promise.resolve(__parcel__require__("./" + ${relativePathExpr}))`;
     }
 
-    let absoluteUrlExpr = shouldUseRuntimeManifest(bundle, options)
-      ? `require('./helpers/bundle-manifest').resolve(${JSON.stringify(
-          to.publicId,
-        )})`
-      : getAbsoluteUrlExpr(relativePathExpr, bundle, to, shardingConfig);
+    let absoluteUrlExpr;
+    if (shouldUseRuntimeManifest(bundle, options)) {
+      let publicId = JSON.stringify(to.publicId);
+      absoluteUrlExpr = `require('./helpers/bundle-manifest').resolve(${publicId})`;
+
+      if (shardingConfig) {
+        absoluteUrlExpr = `require('@atlaspack/domain-sharding').shardUrl(${absoluteUrlExpr}, ${shardingConfig.maxShards});`;
+      }
+    } else {
+      absoluteUrlExpr = getAbsoluteUrlExpr(
+        relativePathExpr,
+        bundle,
+        to,
+        shardingConfig,
+      );
+    }
+
     let code = `require(${JSON.stringify(loader)})(${absoluteUrlExpr})`;
 
     // In development, clear the require cache when an error occurs so the
