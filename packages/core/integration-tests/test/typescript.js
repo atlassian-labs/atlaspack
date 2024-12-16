@@ -113,8 +113,8 @@ describe('typescript', function () {
             name: 'index.js',
             assets: [
               'index.ts',
-              'bundle-url.ts',
-              'bundle-url-common.ts',
+              'bundle-url.js',
+              'bundle-url-common.js',
               'esmodule-helpers.js',
             ],
           },

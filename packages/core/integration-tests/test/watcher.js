@@ -160,8 +160,8 @@ describe.v2('watcher', function () {
         'common.js',
         'common-dep.js',
         'bundle-loader.js',
-        'bundle-url.ts',
-        'bundle-url-common.ts',
+        'bundle-url.js',
+        'bundle-url-common.js',
         'js-loader.js',
       ],
       childBundles: [
@@ -201,8 +201,8 @@ describe.v2('watcher', function () {
       assets: [
         'index.js',
         'bundle-loader.js',
-        'bundle-url.ts',
-        'bundle-url-common.ts',
+        'bundle-url.js',
+        'bundle-url-common.js',
         'js-loader.js',
       ],
       childBundles: [
@@ -277,8 +277,8 @@ describe.v2('watcher', function () {
         'common.js',
         'common-dep.js',
         'bundle-loader.js',
-        'bundle-url.ts',
-        'bundle-url-common.ts',
+        'bundle-url.js',
+        'bundle-url-common.js',
         'js-loader.js',
       ],
       childBundles: [
@@ -321,8 +321,8 @@ describe.v2('watcher', function () {
         'index.js',
         'common.js',
         'bundle-loader.js',
-        'bundle-url.ts',
-        'bundle-url-common.ts',
+        'bundle-url.js',
+        'bundle-url-common.js',
         'js-loader.js',
       ],
       childBundles: [
@@ -447,8 +447,8 @@ describe.v2('watcher', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.ts',
-          'bundle-url-common.ts',
+          'bundle-url.js',
+          'bundle-url-common.js',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -471,8 +471,8 @@ describe.v2('watcher', function () {
         name: 'index.js',
         assets: [
           'index.js',
-          'bundle-url.ts',
-          'bundle-url-common.ts',
+          'bundle-url.js',
+          'bundle-url-common.js',
           'cacheLoader.js',
           'js-loader.js',
         ],

@@ -32,8 +32,8 @@ describe.skip('wasm', function () {
           assets: [
             'index.js',
             'bundle-loader.js',
-            'bundle-url.ts',
-            'bundle-url-common.ts',
+            'bundle-url.js',
+            'bundle-url-common.js',
             'wasm-loader.js',
           ],
           childBundles: [
@@ -67,8 +67,8 @@ describe.skip('wasm', function () {
           assets: [
             'index.js',
             'bundle-loader.js',
-            'bundle-url.ts',
-            'bundle-url-common.ts',
+            'bundle-url.js',
+            'bundle-url-common.js',
             'wasm-loader.js',
           ],
           childBundles: [
@@ -101,8 +101,8 @@ describe.skip('wasm', function () {
           assets: [
             'index.js',
             'bundle-loader.js',
-            'bundle-url.ts',
-            'bundle-url-common.ts',
+            'bundle-url.js',
+            'bundle-url-common.js',
             'js-loader.js',
             'wasm-loader.js',
           ],

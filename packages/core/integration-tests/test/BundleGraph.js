@@ -64,11 +64,11 @@ describe('BundleGraph', () => {
       },
       {
         type: 'asset',
-        value: 'bundle-url.ts',
+        value: 'bundle-url.js',
       },
       {
         type: 'asset',
-        value: 'bundle-url-common.ts',
+        value: 'bundle-url-common.js',
       },
       {
         type: 'asset',
@@ -80,11 +80,11 @@ describe('BundleGraph', () => {
       },
       {
         type: 'asset',
-        value: 'bundle-url.ts',
+        value: 'bundle-url.js',
       },
       {
         type: 'asset',
-        value: 'bundle-url-common.ts',
+        value: 'bundle-url-common.js',
       },
       {
         type: 'asset',

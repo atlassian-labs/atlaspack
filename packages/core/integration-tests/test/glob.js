@@ -82,7 +82,7 @@ describe('glob', function () {
     assertBundles(b, [
       {
         name: 'index.js',
-        assets: ['index.js', '*.js', 'bundle-url.ts', 'bundle-url-common.ts'],
+        assets: ['index.js', '*.js', 'bundle-url.js', 'bundle-url-common.js'],
       },
       {
         type: 'txt',
@@ -116,8 +116,8 @@ describe('glob', function () {
         assets: [
           'index.js',
           '*.js',
-          'bundle-url.ts',
-          'bundle-url-common.ts',
+          'bundle-url.js',
+          'bundle-url-common.js',
           'cacheLoader.js',
           'js-loader.js',
         ],
@@ -240,8 +240,8 @@ describe('glob', function () {
           assets: [
             '*.js',
             '*.js',
-            'bundle-url.ts',
-            'bundle-url-common.ts',
+            'bundle-url.js',
+            'bundle-url-common.js',
             'cacheLoader.js',
             'index.js',
             'js-loader.js',
