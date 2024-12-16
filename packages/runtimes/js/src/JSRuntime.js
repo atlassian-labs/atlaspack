@@ -827,11 +827,15 @@ function getAbsoluteUrlExpr(
     return `new __parcel__URL__(${relativePathExpr}).toString()`;
   }
 
-  if (shardingConfig) {
-    return `require('./helpers/bundle-url-shards').getShardedBundleURL('${toBundle.name}', ${shardingConfig.maxShards}) + ${relativePathExpr}`;
+  const regularBundleUrl = `require('./helpers/bundle-url').getBundleURL('${fromBundle.publicId}') + ${relativePathExpr}`;
+
+  if (!shardingConfig) {
+    return regularBundleUrl;
   }
 
-  return `require('./helpers/bundle-url').getBundleURL('${fromBundle.publicId}') + ${relativePathExpr}`;
+  const shardUrlArgs = [regularBundleUrl, shardingConfig.maxShards].join(', ');
+
+  return `require('@atlaspack/domain-sharding').shardUrl(${shardUrlArgs})`;
 }
 
 function shouldUseRuntimeManifest(
