@@ -14,21 +14,21 @@ function getBundleURLCached(id) {
   let value = bundleURL[id];
 
   if (!value) {
-    value = getBundleURL();
+    value = getBundleURL(inputError);
     bundleURL[id] = value;
   }
 
   return value;
 }
 
-function getBundleURL() {
-  // Get the URL without the filename (last / segment)
-  function getBaseURL(url: string) {
-    return url.slice(0, url.lastIndexOf('/')) + '/';
-  }
+// Get the URL without the filename (last / segment)
+function getBaseURL(url: string) {
+  return url.slice(0, url.lastIndexOf('/')) + '/';
+}
 
+function getBundleURL(inputError?: Error) {
   try {
-    throw new Error();
+    throw inputError ?? new Error();
   } catch (err) {
     var matches = ('' + err.stack).match(stackTraceUrlRegexp);
     if (matches) {
