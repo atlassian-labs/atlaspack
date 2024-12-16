@@ -1,4 +1,5 @@
-const {getBaseURL, stackTraceUrlRegexp} = require('./bundle-url-common');
+const stackTraceUrlRegexp =
+  /(https?|file|ftp|(chrome|moz|safari-web)-extension):\/\/[^)\n]+/g;
 
 const bundleURL = {};
 
@@ -21,6 +22,11 @@ function getBundleURLCached(id) {
 }
 
 function getBundleURL() {
+  // Get the URL without the filename (last / segment)
+  function getBaseURL(url: string) {
+    return url.slice(0, url.lastIndexOf('/')) + '/';
+  }
+
   try {
     throw new Error();
   } catch (err) {
