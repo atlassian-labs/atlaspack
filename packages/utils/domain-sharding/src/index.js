@@ -1,4 +1,11 @@
-function getFilenameFromUrlPath(pathname: string) {
+/**
+ * Extracts the file name from a static asset path.
+ * Will throw if the path doesn't have segments or ends in a trailing slash.
+ *
+ * @param {string} pathname
+ * @returns {string}
+ */
+function getFilenameFromUrlPath(pathname) {
   const lastSlashIdx = pathname.lastIndexOf('/');
 
   if (lastSlashIdx === -1 || lastSlashIdx === pathname.length - 1) {
@@ -11,7 +18,14 @@ function getFilenameFromUrlPath(pathname: string) {
   return pathname.slice(lastSlashIdx + 1);
 }
 
-function getDomainShardIndex(str: string, maxShards: number) {
+/**
+ * Generates a bounded numeric hash in [0, maxShards)
+ *
+ * @param {string} str
+ * @param {number} maxShards
+ * @returns {number}
+ */
+function getDomainShardIndex(str, maxShards) {
   let shard = str.split('').reduce((a, b) => {
     const n = (a << maxShards) - a + b.charCodeAt(0);
 
@@ -32,7 +46,10 @@ function getDomainShardIndex(str: string, maxShards: number) {
 
 const trailingShardRegex = /-\d+$/;
 
-function removeTrailingShard(subdomain: string) {
+/**
+ * @param {string} subdomain
+ */
+function removeTrailingShard(subdomain) {
   if (!trailingShardRegex.test(subdomain)) {
     return subdomain;
   }
@@ -41,7 +58,11 @@ function removeTrailingShard(subdomain: string) {
   return subdomain.slice(0, shardIdx);
 }
 
-function applyShardToDomain(domain: string, shard: number) {
+/**
+ * @param {string} domain
+ * @param {number} shard
+ */
+function applyShardToDomain(domain, shard) {
   let i = domain.indexOf('.');
 
   // Domains like localhost have no . separators
@@ -56,16 +77,20 @@ function applyShardToDomain(domain: string, shard: number) {
   return `${firstSubdomain}-${shard}${domain.slice(i)}`;
 }
 
-/*
+/**
  * Takes an absolute URL and applies a shard to the top level subdomain.
  * The shard number is based on a hash of the file name, which is
  * the content after the last / in the URL.
  *
  * Unlike `shardUrl`, this function will always apply sharding, without any
  * conditional logic.
+ *
+ * @param {string} url
+ * @param {number} maxShards
+ * @returns {string}
  */
 
-function shardUrlUnchecked(url: string, maxShards: number) {
+function shardUrlUnchecked(url, maxShards) {
   const parsedUrl = new URL(url);
 
   const fileName = getFilenameFromUrlPath(parsedUrl.pathname);
@@ -76,15 +101,19 @@ function shardUrlUnchecked(url: string, maxShards: number) {
   return parsedUrl.toString();
 }
 
-/*
+/**
  * Takes an absolute URL and applies a shard to the top level subdomain.
  * The shard number is based on a hash of the file name, which is
  * the content after the last / in the URL.
  *
  * This function only applies the sharding if the
  * __ATLASPACK_ENABLE_DOMAIN_SHARDS global variable has been set to true
+ *
+ * @param {string} url
+ * @param {number} maxShards
+ * @returns {string}
  */
-function shardUrl(url: string, maxShards: number) {
+function shardUrl(url, maxShards) {
   // Global variable is set by SSR servers when HTTP1.1 traffic is detected
   if (!Boolean(globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS)) {
     return url;
