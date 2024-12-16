@@ -33,7 +33,7 @@ function getShardedBundleURL(bundleName, maxShards, inputError) {
     const baseUrl = getBaseURL(stackUrl);
 
     // Global variable is set by SSR servers when HTTP1.1 traffic is detected
-    if (!Boolean(globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS)) {
+    if (!globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS) {
       bundleURL[bundleName] = baseUrl;
       return baseUrl;
     }
