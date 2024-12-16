@@ -1,5 +1,5 @@
 // Get the URL without the filename (last / segment)
-function getBaseURL(url: string) {
+function getBaseURL(url) {
   return url.slice(0, url.lastIndexOf('/')) + '/';
 }
 

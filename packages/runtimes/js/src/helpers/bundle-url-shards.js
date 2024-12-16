@@ -1,12 +1,8 @@
 const {getBaseURL, stackTraceUrlRegexp} = require('./bundle-url-common');
 
-const bundleURL: Record<string, string> = {};
+const bundleURL = {};
 
-function getShardedBundleURL(
-  bundleName: string,
-  maxShards: number,
-  inputError?: string,
-): string {
+function getShardedBundleURL(bundleName, maxShards, inputError) {
   let value = bundleURL[bundleName];
 
   if (value) {
@@ -46,7 +42,7 @@ function getShardedBundleURL(
   }
 }
 
-function getDomainShardIndex(str: string, maxShards: number) {
+function getDomainShardIndex(str, maxShards) {
   let shard = str.split('').reduce((a, b) => {
     const n = (a << maxShards) - a + b.charCodeAt(0);
 
@@ -65,7 +61,7 @@ function getDomainShardIndex(str: string, maxShards: number) {
   return shard;
 }
 
-function getShardedDomain(domain: string, shard: number) {
+function getShardedDomain(domain, shard) {
   let i = domain.indexOf('.');
 
   // Domains like localhost have no . separators
@@ -82,7 +78,7 @@ function getShardedDomain(domain: string, shard: number) {
 
 const trailingShardRegex = /-\d+$/;
 
-function removeTrailingShard(subdomain: string) {
+function removeTrailingShard(subdomain) {
   if (!trailingShardRegex.test(subdomain)) {
     return subdomain;
   }

@@ -2,7 +2,7 @@ const {getBaseURL, stackTraceUrlRegexp} = require('./bundle-url-common');
 
 const bundleURL = {};
 
-function getBundleURLCached(id: string) {
+function getBundleURLCached(id) {
   let value = bundleURL[id];
 
   if (!value) {
@@ -28,7 +28,7 @@ function getBundleURL() {
   return '/';
 }
 
-function getOrigin(url: string) {
+function getOrigin(url) {
   return new URL(url).origin;
 }
 
