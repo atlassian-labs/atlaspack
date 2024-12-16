@@ -43,5 +43,6 @@ function getOrigin(url) {
   return new URL(url).origin;
 }
 
+// TODO: convert this file to ESM once HMR issues are resolved
 exports.getOrigin = getOrigin;
 exports.getBundleURL = getBundleURLCached;
