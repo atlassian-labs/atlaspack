@@ -32,7 +32,7 @@ describe('domain sharding helpers', () => {
 
       const result = shardUrlUnchecked(testBundle, 5);
 
-      assert.equal(result, 'http://localhost-3/assets/');
+      assert.equal(result, 'http://localhost-3/assets/testBundle.123abc.js');
     });
 
     it('should handle domains with ports', () => {
@@ -40,7 +40,10 @@ describe('domain sharding helpers', () => {
 
       const result = shardUrlUnchecked(testBundle, 5);
 
-      assert.equal(result, 'http://localhost-3:8081/assets/');
+      assert.equal(
+        result,
+        'http://localhost-3:8081/assets/testBundle.123abc.js',
+      );
     });
   });
 
