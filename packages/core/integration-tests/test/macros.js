@@ -13,7 +13,7 @@ import {
   getNextBuild,
 } from '@atlaspack/test-utils';
 
-describe('macros', function () {
+describe.v2('macros', function () {
   let count = 0;
   let dir;
   beforeEach(async () => {
