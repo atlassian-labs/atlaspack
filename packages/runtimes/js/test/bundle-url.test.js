@@ -1,6 +1,5 @@
 // @flow
 import assert from 'assert';
-import {fsFixture, overlayFS, bundle} from '@atlaspack/test-utils';
 
 import {getBaseURL, getBundleURL} from '../src/helpers/bundle-url';
 
