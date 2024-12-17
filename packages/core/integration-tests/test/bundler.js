@@ -71,7 +71,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'esmodule-helpers.js',
           'js-loader.js',
@@ -161,7 +160,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'esmodule-helpers.js',
           'js-loader.js',
@@ -256,7 +254,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'esmodule-helpers.js',
           'js-loader.js',
@@ -348,7 +345,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'esmodule-helpers.js',
           'js-loader.js',
@@ -467,7 +463,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'esmodule-helpers.js',
           'js-loader.js',
@@ -546,7 +541,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'esmodule-helpers.js',
           'js-loader.js',
@@ -625,7 +619,6 @@ describe('bundler', function () {
             'inline-module.js',
             'local.html',
             'bundle-url.js',
-            'bundle-url-common.js',
             'cacheLoader.js',
             'js-loader.js',
           ],
@@ -656,7 +649,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'css-loader.js',
           'esmodule-helpers.js',
@@ -709,7 +701,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'css-loader.js',
           'esmodule-helpers.js',
@@ -761,7 +752,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'css-loader.js',
           'esmodule-helpers.js',
@@ -816,7 +806,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'css-loader.js',
           'esmodule-helpers.js',
@@ -870,7 +859,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'css-loader.js',
           'esmodule-helpers.js',
@@ -945,7 +933,7 @@ describe('bundler', function () {
         ],
       },
       {
-        assets: ['bundle-manifest.js', 'bundle-url.js', 'bundle-url-common.js'], // manifest bundle
+        assets: ['bundle-manifest.js', 'bundle-url.js'], // manifest bundle
       },
       {
         assets: [
@@ -957,7 +945,7 @@ describe('bundler', function () {
         ],
       },
       {
-        assets: ['bundle-manifest.js', 'bundle-url.js', 'bundle-url-common.js'], // manifest bundle
+        assets: ['bundle-manifest.js', 'bundle-url.js'], // manifest bundle
       },
       {
         assets: ['c.js'],
@@ -1014,7 +1002,6 @@ describe('bundler', function () {
           'a.js',
           'b.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'js-loader.js',
           'esmodule-helpers.js',
@@ -1086,7 +1073,6 @@ describe('bundler', function () {
         assets: [
           'index.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'esmodule-helpers.js',
           'js-loader.js',
@@ -1429,7 +1415,6 @@ describe('bundler', function () {
           assets: [
             'bundle-manifest.js',
             'bundle-url.js',
-            'bundle-url-common.js',
             'cacheLoader.js',
             'css-loader.js',
             'esmodule-helpers.js',
@@ -1597,7 +1582,6 @@ describe('bundler', function () {
           assets: [
             'bundle-manifest.js',
             'bundle-url.js',
-            'bundle-url-common.js',
             'cacheLoader.js',
             'css-loader.js',
             'esmodule-helpers.js',
@@ -1899,7 +1883,6 @@ describe('bundler', function () {
             assets: [
               'bundle-manifest.js',
               'bundle-url.js',
-              'bundle-url-common.js',
               'cacheLoader.js',
               'index.js',
               'js-loader.js',
@@ -1977,7 +1960,6 @@ describe('bundler', function () {
             assets: [
               'bundle-manifest.js',
               'bundle-url.js',
-              'bundle-url-common.js',
               'cacheLoader.js',
               'index.js',
               'js-loader.js',
@@ -2059,7 +2041,6 @@ describe('bundler', function () {
             assets: [
               'bundle-manifest.js',
               'bundle-url.js',
-              'bundle-url-common.js',
               'cacheLoader.js',
               'index.js',
               'js-loader.js',
@@ -2348,7 +2329,6 @@ describe('bundler', function () {
             'a.js',
             'b.js',
             'bundle-url.js',
-            'bundle-url-common.js',
             'cacheLoader.js',
             'esmodule-helpers.js',
             'js-loader.js',

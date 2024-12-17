@@ -52,7 +52,7 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'url-worklet.js',
-        assets: ['bundle-url.js', 'bundle-url-common.js', 'url-worklet.js'],
+        assets: ['bundle-url.js', 'url-worklet.js'],
       },
       {
         type: 'js',
@@ -98,12 +98,7 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'pipeline.js',
-        assets: [
-          'bundle-url.js',
-          'bundle-url-common.js',
-          'pipeline.js',
-          'bundle-manifest.js',
-        ],
+        assets: ['bundle-url.js', 'pipeline.js', 'bundle-manifest.js'],
       },
       {
         type: 'js',
@@ -144,12 +139,7 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'url.js',
-        assets: [
-          'bundle-url.js',
-          'bundle-url-common.js',
-          'esmodule-helpers.js',
-          'url.js',
-        ],
+        assets: ['bundle-url.js', 'esmodule-helpers.js', 'url.js'],
       },
       {
         type: 'js',
@@ -247,12 +237,7 @@ describe('atlaspack', function () {
     assertBundles(b, [
       {
         name: 'worklet-pipeline.js',
-        assets: [
-          'bundle-url.js',
-          'bundle-url-common.js',
-          'bundle-manifest.js',
-          'worklet-pipeline.js',
-        ],
+        assets: ['bundle-url.js', 'bundle-manifest.js', 'worklet-pipeline.js'],
       },
       {
         type: 'js',
