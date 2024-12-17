@@ -1,5 +1,6 @@
 // @flow
 import assert from 'assert';
+import path from 'path';
 
 import {fsFixture, overlayFS, bundle} from '@atlaspack/test-utils';
 
@@ -101,13 +102,20 @@ describe('domain-sharding', () => {
       const mainBundle = bundleGraph
         .getBundles()
         .find((b) => b.name === 'index.js');
+      const commonBundle = bundleGraph
+        .getBundles()
+        .find((b) => b.displayName === 'b.[hash].js');
+
+      assert(commonBundle, 'Unable to locate the shared bundle');
+
+      const commonFileName = path.basename(commonBundle?.filePath ?? '');
+
       if (!mainBundle) return assert(mainBundle);
 
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
-      console.log(code);
       assert.ok(
         code.includes(
-          `require("e480067c5bab431e")(require("5091f5df3a0c51b6").shardUrl(require("5e2c91749d676db2").getBundleURL('d8wEr') + "b.437614b2.js", ${maxShards})`,
+          `require("e480067c5bab431e")(require("5091f5df3a0c51b6").shardUrl(require("5e2c91749d676db2").getBundleURL('d8wEr') + "${commonFileName}", ${maxShards})`,
         ),
         'Expected generated code for shardUrl was not found',
       );
