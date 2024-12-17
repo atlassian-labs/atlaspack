@@ -28,7 +28,6 @@ describe.skip('rust', function () {
       assets: [
         'bundle-loader.js',
         'bundle-url.js',
-        'bundle-url-common.js',
         'index.js',
         'wasm-loader.js',
       ],
@@ -66,7 +65,6 @@ describe.skip('rust', function () {
       assets: [
         'bundle-loader.js',
         'bundle-url.js',
-        'bundle-url-common.js',
         'index.js',
         'wasm-loader.js',
       ],
@@ -103,7 +101,6 @@ describe.skip('rust', function () {
       assets: [
         'bundle-loader.js',
         'bundle-url.js',
-        'bundle-url-common.js',
         'index.js',
         'wasm-loader.js',
       ],
@@ -134,7 +131,6 @@ describe.skip('rust', function () {
       assets: [
         'bundle-loader.js',
         'bundle-url.js',
-        'bundle-url-common.js',
         'index.js',
         'wasm-loader.js',
       ],
@@ -168,7 +164,6 @@ describe.skip('rust', function () {
       assets: [
         'bundle-loader.js',
         'bundle-url.js',
-        'bundle-url-common.js',
         'index.js',
         'wasm-loader.js',
       ],

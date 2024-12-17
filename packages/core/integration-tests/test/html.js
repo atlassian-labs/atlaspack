@@ -485,7 +485,6 @@ describe('html', function () {
         assets: [
           'index.css',
           'bundle-url.js',
-          'bundle-url-common.js',
           'css-loader.js',
           'hmr-runtime.js',
         ],
@@ -1876,7 +1875,6 @@ describe('html', function () {
           assets: [
             'bundle-manifest.js',
             'bundle-url.js',
-            'bundle-url-common.js',
             'cacheLoader.js',
             'index.js',
             'index.js',
@@ -2210,7 +2208,6 @@ describe('html', function () {
         assets: [
           'bundle-manifest.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'index.js',
           'js-loader.js',
@@ -2234,7 +2231,6 @@ describe('html', function () {
         assets: [
           'bundle-manifest.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'cacheLoader.js',
           'index.js',
           'js-loader.js',
@@ -2306,7 +2302,6 @@ describe('html', function () {
             'a.js',
             'bundle-manifest.js',
             'bundle-url.js',
-            'bundle-url-common.js',
             'cacheLoader.js',
             'js-loader.js',
           ],
@@ -2316,7 +2311,6 @@ describe('html', function () {
             'b.js',
             'bundle-manifest.js',
             'bundle-url.js',
-            'bundle-url-common.js',
             'cacheLoader.js',
             'js-loader.js',
           ],
@@ -2587,7 +2581,6 @@ describe('html', function () {
         assets: [
           'a.js',
           'bundle-url.js',
-          'bundle-url-common.js',
           'esmodule-helpers.js',
           'get-worker-url.js',
           'index.js',

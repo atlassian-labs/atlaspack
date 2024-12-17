@@ -111,12 +111,7 @@ describe('typescript', function () {
         assertBundles(b, [
           {
             name: 'index.js',
-            assets: [
-              'index.ts',
-              'bundle-url.js',
-              'bundle-url-common.js',
-              'esmodule-helpers.js',
-            ],
+            assets: ['index.ts', 'bundle-url.js', 'esmodule-helpers.js'],
           },
           {
             type: 'txt',

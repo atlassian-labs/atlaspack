@@ -485,11 +485,23 @@ function getLoaderRuntime({
       return `Promise.resolve(__parcel__require__("./" + ${relativePathExpr}))`;
     }
 
-    let absoluteUrlExpr = shouldUseRuntimeManifest(bundle, options)
-      ? `require('./helpers/bundle-manifest').resolve(${JSON.stringify(
-          to.publicId,
-        )})`
-      : getAbsoluteUrlExpr(relativePathExpr, bundle, to, shardingConfig);
+    let absoluteUrlExpr;
+    if (shouldUseRuntimeManifest(bundle, options)) {
+      let publicId = JSON.stringify(to.publicId);
+      absoluteUrlExpr = `require('./helpers/bundle-manifest').resolve(${publicId})`;
+
+      if (shardingConfig) {
+        absoluteUrlExpr = `require('@atlaspack/domain-sharding').shardUrl(${absoluteUrlExpr}, ${shardingConfig.maxShards})`;
+      }
+    } else {
+      absoluteUrlExpr = getAbsoluteUrlExpr(
+        relativePathExpr,
+        bundle,
+        to,
+        shardingConfig,
+      );
+    }
+
     let code = `require(${JSON.stringify(loader)})(${absoluteUrlExpr})`;
 
     // In development, clear the require cache when an error occurs so the
@@ -732,6 +744,9 @@ function getURLRuntime(
     } else {
       code += `let bundleURL = require('./helpers/bundle-url');\n`;
       code += `let url = bundleURL.getBundleURL('${from.publicId}') + ${relativePathExpr};`;
+      if (shardingConfig) {
+        code += `url = require('@atlaspack/domain-sharding').shardUrl(url, ${shardingConfig.maxShards});`;
+      }
       code += `module.exports = workerURL(url, bundleURL.getOrigin(url), ${String(
         from.env.outputFormat === 'esmodule',
       )});`;
@@ -827,11 +842,13 @@ function getAbsoluteUrlExpr(
     return `new __parcel__URL__(${relativePathExpr}).toString()`;
   }
 
-  if (shardingConfig) {
-    return `require('./helpers/bundle-url-shards').getShardedBundleURL('${toBundle.name}', ${shardingConfig.maxShards}) + ${relativePathExpr}`;
+  const regularBundleUrl = `require('./helpers/bundle-url').getBundleURL('${fromBundle.publicId}') + ${relativePathExpr}`;
+
+  if (!shardingConfig) {
+    return regularBundleUrl;
   }
 
-  return `require('./helpers/bundle-url').getBundleURL('${fromBundle.publicId}') + ${relativePathExpr}`;
+  return `require('@atlaspack/domain-sharding').shardUrl(${regularBundleUrl}, ${shardingConfig.maxShards})`;
 }
 
 function shouldUseRuntimeManifest(

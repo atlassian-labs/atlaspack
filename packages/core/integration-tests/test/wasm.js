@@ -33,7 +33,6 @@ describe.skip('wasm', function () {
             'index.js',
             'bundle-loader.js',
             'bundle-url.js',
-            'bundle-url-common.js',
             'wasm-loader.js',
           ],
           childBundles: [
@@ -68,7 +67,6 @@ describe.skip('wasm', function () {
             'index.js',
             'bundle-loader.js',
             'bundle-url.js',
-            'bundle-url-common.js',
             'wasm-loader.js',
           ],
           childBundles: [
@@ -102,7 +100,6 @@ describe.skip('wasm', function () {
             'index.js',
             'bundle-loader.js',
             'bundle-url.js',
-            'bundle-url-common.js',
             'js-loader.js',
             'wasm-loader.js',
           ],

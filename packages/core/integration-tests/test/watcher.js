@@ -161,7 +161,6 @@ describe.v2('watcher', function () {
         'common-dep.js',
         'bundle-loader.js',
         'bundle-url.js',
-        'bundle-url-common.js',
         'js-loader.js',
       ],
       childBundles: [
@@ -198,13 +197,7 @@ describe.v2('watcher', function () {
     bundle = await nextBundle(b);
     await assertBundleTree(bundle, {
       name: 'index.js',
-      assets: [
-        'index.js',
-        'bundle-loader.js',
-        'bundle-url.js',
-        'bundle-url-common.js',
-        'js-loader.js',
-      ],
+      assets: ['index.js', 'bundle-loader.js', 'bundle-url.js', 'js-loader.js'],
       childBundles: [
         {
           assets: ['a.js', 'common.js', 'common-dep.js'],
@@ -278,7 +271,6 @@ describe.v2('watcher', function () {
         'common-dep.js',
         'bundle-loader.js',
         'bundle-url.js',
-        'bundle-url-common.js',
         'js-loader.js',
       ],
       childBundles: [
@@ -322,7 +314,6 @@ describe.v2('watcher', function () {
         'common.js',
         'bundle-loader.js',
         'bundle-url.js',
-        'bundle-url-common.js',
         'js-loader.js',
       ],
       childBundles: [
@@ -445,13 +436,7 @@ describe.v2('watcher', function () {
     assertBundles(bundleGraph, [
       {
         name: 'index.js',
-        assets: [
-          'index.js',
-          'bundle-url.js',
-          'bundle-url-common.js',
-          'cacheLoader.js',
-          'js-loader.js',
-        ],
+        assets: ['index.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
       },
       {assets: ['local.js']},
     ]);
@@ -469,13 +454,7 @@ describe.v2('watcher', function () {
     assertBundles(bundleGraph, [
       {
         name: 'index.js',
-        assets: [
-          'index.js',
-          'bundle-url.js',
-          'bundle-url-common.js',
-          'cacheLoader.js',
-          'js-loader.js',
-        ],
+        assets: ['index.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
       },
       {assets: ['local.js']},
       {assets: ['other.js']},
