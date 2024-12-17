@@ -61,6 +61,9 @@ function removeTrailingShard(subdomain) {
 }
 
 /**
+ * Given a shard number, inserts that shard in the expected pattern within the
+ * domain
+ *
  * @param {string} domain
  * @param {number} shard
  */
@@ -127,4 +130,6 @@ function shardUrl(url, maxShards) {
 // TODO: convert this file to ESM once HMR issues are resolved
 exports.shardUrl = shardUrl;
 exports.shardUrlUnchecked = shardUrlUnchecked;
+exports.getDomainShardIndex = getDomainShardIndex;
+exports.applyShardToDomain = applyShardToDomain;
 exports.domainShardingKey = globalKeyName;
