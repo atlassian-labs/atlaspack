@@ -15,7 +15,10 @@ describe('domain sharding helpers', () => {
 
       const result = shardUrlUnchecked(testBundle, 5);
 
-      assert.equal(result, 'https://bundle-shard-0.assets.example.com/assets/');
+      assert.equal(
+        result,
+        'https://bundle-shard-0.assets.example.com/assets/test-bundle.123abc.js',
+      );
     });
 
     it('should re-shard a domain that has already been sharded', () => {
@@ -24,7 +27,10 @@ describe('domain sharding helpers', () => {
 
       const result = shardUrlUnchecked(testBundle, 5);
 
-      assert.equal(result, 'https://bundle-shard-4.assets.example.com/assets/');
+      assert.equal(
+        result,
+        'https://bundle-shard-4.assets.example.com/assets/TestBundle.1a2b3c.js',
+      );
     });
 
     it('should handle domains with no .', () => {
