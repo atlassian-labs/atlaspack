@@ -1,3 +1,5 @@
+let globalKeyName = '__ATLASPACK_ENABLE_DOMAIN_SHARDS';
+
 /**
  * Extracts the file name from a static asset path.
  * Will throw if the path doesn't have segments or ends in a trailing slash.
@@ -6,7 +8,7 @@
  * @returns {string}
  */
 function getFilenameFromUrlPath(pathname) {
-  const lastSlashIdx = pathname.lastIndexOf('/');
+  let lastSlashIdx = pathname.lastIndexOf('/');
 
   if (lastSlashIdx === -1 || lastSlashIdx === pathname.length - 1) {
     throw new Error(
@@ -27,7 +29,7 @@ function getFilenameFromUrlPath(pathname) {
  */
 function getDomainShardIndex(str, maxShards) {
   let shard = str.split('').reduce((a, b) => {
-    const n = (a << maxShards) - a + b.charCodeAt(0);
+    let n = (a << maxShards) - a + b.charCodeAt(0);
 
     // The value returned by << is 64 bit, the & operator coerces to 32,
     // prevents overflow as we iterate.
@@ -44,7 +46,7 @@ function getDomainShardIndex(str, maxShards) {
   return shard;
 }
 
-const trailingShardRegex = /-\d+$/;
+let trailingShardRegex = /-\d+$/;
 
 /**
  * @param {string} subdomain
@@ -54,7 +56,7 @@ function removeTrailingShard(subdomain) {
     return subdomain;
   }
 
-  const shardIdx = subdomain.lastIndexOf('-');
+  let shardIdx = subdomain.lastIndexOf('-');
   return subdomain.slice(0, shardIdx);
 }
 
@@ -72,7 +74,7 @@ function applyShardToDomain(domain, shard) {
 
   // If this domain already has a shard number in it, strip it
   // out before adding the new one
-  const firstSubdomain = removeTrailingShard(domain.slice(0, i));
+  let firstSubdomain = removeTrailingShard(domain.slice(0, i));
 
   return `${firstSubdomain}-${shard}${domain.slice(i)}`;
 }
@@ -91,10 +93,10 @@ function applyShardToDomain(domain, shard) {
  */
 
 function shardUrlUnchecked(url, maxShards) {
-  const parsedUrl = new URL(url);
+  let parsedUrl = new URL(url);
 
-  const fileName = getFilenameFromUrlPath(parsedUrl.pathname);
-  const shardNumber = getDomainShardIndex(fileName, maxShards);
+  let fileName = getFilenameFromUrlPath(parsedUrl.pathname);
+  let shardNumber = getDomainShardIndex(fileName, maxShards);
 
   parsedUrl.hostname = applyShardToDomain(parsedUrl.hostname, shardNumber);
 
@@ -115,7 +117,7 @@ function shardUrlUnchecked(url, maxShards) {
  */
 function shardUrl(url, maxShards) {
   // Global variable is set by SSR servers when HTTP1.1 traffic is detected
-  if (!Boolean(globalThis.__ATLASPACK_ENABLE_DOMAIN_SHARDS)) {
+  if (!globalThis[globalKeyName]) {
     return url;
   }
 
@@ -125,3 +127,4 @@ function shardUrl(url, maxShards) {
 // TODO: convert this file to ESM once HMR issues are resolved
 exports.shardUrl = shardUrl;
 exports.shardUrlUnchecked = shardUrlUnchecked;
+exports.domainShardingKey = globalKeyName;
