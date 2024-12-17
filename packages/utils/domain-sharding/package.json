@@ -1,6 +1,18 @@
 {
   "name": "@atlaspack/domain-sharding",
   "version": "2.12.0",
+  "license": "(MIT OR Apache-2.0)",
   "source": "src/index.js",
-  "main": "lib/index.js"
+  "main": "lib/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
+  "engines": {
+    "atlaspack": "^2.12.0",
+    "node": ">= 16.0.0"
+  }
 }
