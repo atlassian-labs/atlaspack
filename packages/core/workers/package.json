@@ -23,13 +23,6 @@
       "default": "./lib/index.js"
     }
   },
-  "imports": {
-    "#atlaspack/workers": {
-      "types": "./index.d.ts",
-      "@atlaspack::sources": "./src/index.js",
-      "default": "./lib/index.js"
-    }
-  },
   "dependencies": {
     "@atlaspack/build-cache": "2.12.0",
     "@atlaspack/diagnostic": "2.12.0",

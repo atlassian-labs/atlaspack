@@ -2,7 +2,8 @@
 // If there are issues, check all imports are using the same module instance/path
 const Logger = require('@atlaspack/logger').default;
 const assert = require('assert');
-const WorkerFarm = require('#atlaspack/workers').default;
+// eslint-disable-next-line @atlaspack/no-self-package-imports
+const WorkerFarm = require('@atlaspack/workers').default;
 
 describe('WorkerFarm', function () {
   this.timeout(30000);
