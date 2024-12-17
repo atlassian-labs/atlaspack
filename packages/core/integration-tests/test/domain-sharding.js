@@ -14,7 +14,8 @@ describe('domain-sharding', () => {
               "name": "bundle-sharding-test",
               "targets": {
                 "default": {
-                  "scopeHoist": true
+                  "context": "browser",
+                  "optimize": false
                 }
               },
               "@atlaspack/runtime-js": {
@@ -43,7 +44,10 @@ describe('domain-sharding', () => {
           yarn.lock:
         `;
 
-      const bundleGraph = await bundle('src/index.js', {inputFS: overlayFS});
+      const bundleGraph = await bundle('src/index.js', {
+        inputFS: overlayFS,
+        mode: 'production',
+      });
 
       const mainBundle = bundleGraph
         .getBundles()
@@ -51,10 +55,11 @@ describe('domain-sharding', () => {
       if (!mainBundle) return assert(mainBundle);
 
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
+
       assert.ok(
         code.includes(
-          `module.exports = require("e480067c5bab431e")(require("5091f5df3a0c51b6").shardUrl(require("5e2c91749d676db2").getBundleURL('d8wEr') + "b.437614b2.js", ${maxShards}))`,
-          'Expected generated code for getShardedBundleURL was not found',
+          `require("85e3bc75ab94a411")(require("f41955f5cc01151").shardUrl(require("40cc202a4c7abf8d").resolve("aVRxe"), ${maxShards}))`,
+          'Expected generated code for shardUrl was not found',
         ),
       );
     });
@@ -101,9 +106,9 @@ describe('domain-sharding', () => {
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
       assert.ok(
         code.includes(
-          `require("e3ed71d88565db").getShardedBundleURL('b.8575baaf.js', ${maxShards}) + "b.8575baaf.js"`,
+          `require("e480067c5bab431e")(require("5091f5df3a0c51b6").shardUrl(require("5e2c91749d676db2").getBundleURL('d8wEr') + "b.437614b2.js", ${maxShards})`,
         ),
-        'Expected generated code for getShardedBundleURL was not found',
+        'Expected generated code for shardUrl was not found',
       );
     });
   });

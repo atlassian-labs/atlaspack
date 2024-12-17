@@ -491,7 +491,7 @@ function getLoaderRuntime({
       absoluteUrlExpr = `require('./helpers/bundle-manifest').resolve(${publicId})`;
 
       if (shardingConfig) {
-        absoluteUrlExpr = `require('@atlaspack/domain-sharding').shardUrl(${absoluteUrlExpr}, ${shardingConfig.maxShards});`;
+        absoluteUrlExpr = `require('@atlaspack/domain-sharding').shardUrl(${absoluteUrlExpr}, ${shardingConfig.maxShards})`;
       }
     } else {
       absoluteUrlExpr = getAbsoluteUrlExpr(
