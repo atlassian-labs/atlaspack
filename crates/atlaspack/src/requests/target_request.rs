@@ -237,7 +237,7 @@ impl TargetRequest {
 
   fn load_config(
     &self,
-    request_context: RunRequestContext,
+    request_context: &RunRequestContext,
   ) -> Result<ConfigFile<PackageJson>, anyhow::Error> {
     // TODO Invalidations
     let mut config = match request_context.config().load_package_json::<PackageJson>() {
@@ -316,7 +316,7 @@ impl TargetRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<Vec<Option<Target>>, anyhow::Error> {
-    let config = self.load_config(request_context)?;
+    let config = self.load_config(&request_context)?;
     let mut targets: Vec<Option<Target>> = Vec::new();
 
     let builtin_targets = [
@@ -365,6 +365,19 @@ impl TargetRequest {
       .map(|(name, descriptor)| CustomTarget { descriptor, name });
 
     for custom_target in custom_targets {
+      if request_context
+        .options
+        .targets
+        .as_ref()
+        .is_some_and(|targets| !targets.contains(&String::from(custom_target.name)))
+      {
+        tracing::debug!(
+          "Skipping custom target {} as it doesn't match passed in target options",
+          custom_target.name
+        );
+        continue;
+      }
+
       let mut dist = None;
       if let Some(value) = config.contents.fields.get(custom_target.name) {
         match value {
@@ -695,7 +708,7 @@ mod tests {
 
   use regex::Regex;
 
-  use atlaspack_core::types::version::Version;
+  use atlaspack_core::types::{version::Version, AtlaspackOptions};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
@@ -729,6 +742,7 @@ mod tests {
   async fn targets_from_config(
     package_json: String,
     browserslistrc: Option<String>,
+    atlaspack_options: Option<AtlaspackOptions>,
   ) -> Result<RequestResult, anyhow::Error> {
     let fs = InMemoryFileSystem::default();
     let project_root = PathBuf::default();
@@ -754,6 +768,7 @@ mod tests {
       search_path: project_root.join(&package_dir),
       project_root,
       fs: Arc::new(fs),
+      atlaspack_options: atlaspack_options.unwrap_or_default(),
       ..Default::default()
     })
     .run_request(request)
@@ -770,6 +785,7 @@ mod tests {
     for builtin_target in BUILT_IN_TARGETS {
       let targets = targets_from_config(
         format!(r#"{{ "targets": {{ "{builtin_target}": true }} }}"#,),
+        None,
         None,
       )
       .await;
@@ -788,6 +804,7 @@ mod tests {
     for builtin_target in BUILT_IN_TARGETS {
       let targets = targets_from_config(
         format!(r#"{{ "{}": "dist/main.rs" }}"#, builtin_target),
+        None,
         None,
       )
       .await;
@@ -814,6 +831,7 @@ mod tests {
           }}
         }}"#
         ),
+        None,
         None,
       )
       .await;
@@ -851,6 +869,7 @@ mod tests {
           ),
         ),
         None,
+        None,
       )
       .await;
 
@@ -880,7 +899,7 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_scope_hoisting_disabled_for_library_targets() {
     let assert_error = move |name, package_json| async move {
-      let targets = targets_from_config(package_json, None).await;
+      let targets = targets_from_config(package_json, None, None).await;
 
       assert_eq!(
         targets.map_err(to_deterministic_error),
@@ -962,6 +981,7 @@ mod tests {
       let targets = targets_from_config(
         format!(r#"{{ "targets": {{ "{builtin_target}": false }} }}"#),
         None,
+        None,
       )
       .await;
 
@@ -977,7 +997,7 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_target_when_no_targets_are_specified() {
-    let targets = targets_from_config(String::from("{}"), None).await;
+    let targets = targets_from_config(String::from("{}"), None, None).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1000,8 +1020,12 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_browser_target() {
-    let targets =
-      targets_from_config(String::from(r#"{ "browser": "build/browser.js" }"#), None).await;
+    let targets = targets_from_config(
+      String::from(r#"{ "browser": "build/browser.js" }"#),
+      None,
+      None,
+    )
+    .await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1042,6 +1066,7 @@ mod tests {
       "#,
       ),
       None,
+      None,
     )
     .await;
 
@@ -1070,7 +1095,8 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_main_target() {
-    let targets = targets_from_config(String::from(r#"{ "main": "./build/main.js" }"#), None).await;
+    let targets =
+      targets_from_config(String::from(r#"{ "main": "./build/main.js" }"#), None, None).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1107,6 +1133,7 @@ mod tests {
       "#,
       ),
       None,
+      None,
     )
     .await;
 
@@ -1132,7 +1159,8 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_module_target() {
-    let targets = targets_from_config(String::from(r#"{ "module": "module.js" }"#), None).await;
+    let targets =
+      targets_from_config(String::from(r#"{ "module": "module.js" }"#), None, None).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1168,6 +1196,7 @@ mod tests {
         }
       "#,
       ),
+      None,
       None,
     )
     .await;
@@ -1208,6 +1237,7 @@ mod tests {
       "#,
       ),
       None,
+      None,
     )
     .await;
 
@@ -1232,7 +1262,8 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_builtin_types_target() {
-    let targets = targets_from_config(String::from(r#"{ "types": "./types.d.ts" }"#), None).await;
+    let targets =
+      targets_from_config(String::from(r#"{ "types": "./types.d.ts" }"#), None, None).await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1267,6 +1298,7 @@ mod tests {
         }
       "#,
       ),
+      None,
       None,
     )
     .await;
@@ -1337,8 +1369,12 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_custom_targets_with_defaults() {
-    let targets =
-      targets_from_config(String::from(r#"{ "targets": { "custom": {} } } "#), None).await;
+    let targets = targets_from_config(
+      String::from(r#"{ "targets": { "custom": {} } } "#),
+      None,
+      None,
+    )
+    .await;
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
@@ -1367,6 +1403,58 @@ mod tests {
   }
 
   #[tokio::test(flavor = "multi_thread")]
+  async fn returns_only_requested_custom_targets() {
+    let targets = targets_from_config(
+      String::from(
+        r#"
+        {
+          "targets": {
+            "custom-one": {
+              "context": "node",
+              "includeNodeModules": true,
+              "outputFormat": "commonjs"
+            },
+            "custom-two": {
+              "context": "browser",
+              "outputFormat": "esmodule"
+            }
+          }
+        }
+      "#,
+      ),
+      None,
+      Some(AtlaspackOptions {
+        targets: Some(vec!["custom-two".into()]),
+        ..Default::default()
+      }),
+    )
+    .await;
+
+    assert_eq!(
+      targets.map_err(|e| e.to_string()),
+      Ok(RequestResult::Target(TargetRequestOutput {
+        entry: PathBuf::default(),
+        targets: vec![Target {
+          dist_dir: package_dir().join("dist/custom-two"),
+          dist_entry: None,
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Browser,
+            output_format: OutputFormat::EsModule,
+            should_optimize: true,
+            engines: Engines {
+              browsers: Some(EnginesBrowsers::default()),
+              ..Engines::default()
+            },
+            ..Environment::default()
+          }),
+          name: String::from("custom-two"),
+          ..Target::default()
+        }]
+      }))
+    );
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_custom_targets() {
     let targets = targets_from_config(
       String::from(
@@ -1383,6 +1471,7 @@ mod tests {
         }
       "#,
       ),
+      None,
       None,
     )
     .await;
@@ -1423,6 +1512,7 @@ mod tests {
         }
       "#,
       ),
+      None,
       None,
     )
     .await;
@@ -1474,6 +1564,7 @@ mod tests {
           firefox > 1
       "#,
       )),
+      None,
     )
     .await;
 
@@ -1542,6 +1633,7 @@ mod tests {
         "#,
         ),
         None,
+        None,
       )
       .await,
       Engines {
@@ -1562,6 +1654,7 @@ mod tests {
           }
         "#,
         ),
+        None,
         None,
       )
       .await,
@@ -1594,6 +1687,7 @@ mod tests {
             |module_format| format!(r#""type": "{module_format}","#)
           ),
         ),
+        None,
         None,
       )
       .await;

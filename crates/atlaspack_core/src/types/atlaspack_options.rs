@@ -36,6 +36,8 @@ pub struct AtlaspackOptions {
   pub mode: BuildMode,
 
   pub threads: Option<usize>,
+
+  pub targets: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Serialize)]
