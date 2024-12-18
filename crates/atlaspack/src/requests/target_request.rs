@@ -369,7 +369,11 @@ impl TargetRequest {
         .options
         .targets
         .as_ref()
-        .is_some_and(|targets| !targets.contains(&String::from(custom_target.name)))
+        .is_some_and(|targets| {
+          !targets
+            .iter()
+            .any(|target_name| target_name == custom_target.name)
+        })
       {
         tracing::debug!(
           "Skipping custom target {} as it doesn't match passed in target options",
