@@ -141,7 +141,7 @@ describe.v2('library bundler', function () {
         export {foo, bar} from './foo';
 
       foo.js:
-        import {css} from './macro' with {type: 'macro'};
+        import {css} from './macro.cjs' with {type: 'macro'};
         export function foo() {
           return css('.a { color: red }');
         }
@@ -150,8 +150,8 @@ describe.v2('library bundler', function () {
           return css('.b { color: pink }');
         }
 
-      macro.js:
-        export function css(content) {
+      macro.cjs:
+        module.exports.css = function css(content) {
           this.addAsset({type: 'css', content});
           return 'hi';
         }

@@ -12,6 +12,12 @@
   },
   "main": "lib/Logger.js",
   "source": "src/Logger.js",
+  "exports": {
+    ".": {
+      "@atlaspack::sources": "./src/Logger.js",
+      "default": "./lib/Logger.js"
+    }
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

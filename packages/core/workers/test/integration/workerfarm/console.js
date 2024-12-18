@@ -1,4 +1,5 @@
-const WorkerFarm = require('../../../src/WorkerFarm').default;
+// eslint-disable-next-line @atlaspack/no-self-package-imports
+const WorkerFarm = require('@atlaspack/workers').default;
 
 function run() {
   if (WorkerFarm.isWorker()) {

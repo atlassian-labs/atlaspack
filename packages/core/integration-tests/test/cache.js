@@ -6160,15 +6160,15 @@ describe.v2('cache', function () {
         .parcelrc:
           {
             "extends": "@atlaspack/config-default",
-            "bundler": "./test-bundler.js"
+            "bundler": "./test-bundler.cjs"
           }
-        test-bundler.js:
-          import {Bundler} from '@atlaspack/plugin'
-          import DefaultBundler from '@atlaspack/bundler-default'
+        test-bundler.cjs:
+          const {Bundler} = require('@atlaspack/plugin')
+          const DefaultBundler = require('@atlaspack/bundler-default').default
 
           const CONFIG = Symbol.for('parcel-plugin-config');
 
-          export default new Bundler({
+          module.exports = new Bundler({
             loadConfig({config, options}) {
               return DefaultBundler[CONFIG].loadConfig({config, options});
             },

@@ -53,7 +53,7 @@ module.exports = {
     'require-await': 'error',
     // Use internal rule
     'monorepo/no-relative-import': 'off',
-    '@atlaspack/no-relative-import': 'error',
+    '@atlaspack/no-relative-import': 'error'
   },
   settings: {
     flowtype: {

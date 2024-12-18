@@ -28,12 +28,12 @@ describe.v2('macros', function () {
   it('should support named imports', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { hash } from "./macro" with { type: "macro" };
+        import { hash } from "./macro.cjs" with { type: "macro" };
         output = hash('hi');
 
-      macro.js:
-        import {hashString} from '@atlaspack/rust';
-        export function hash(s) {
+      macro.cjs:
+        const {hashString} = require('@atlaspack/rust');
+        module.exports.hash = function hash(s) {
           return hashString(s);
         }
     `;
@@ -66,12 +66,13 @@ describe.v2('macros', function () {
   it('should support default imports', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import test from "./macro.js" with { type: "macro" };
+        import test from "./macro.cjs" with { type: "macro" };
         output = test('hi');
 
-      macro.js:
-        import {hashString} from '@atlaspack/rust';
-        export default function test(s) {
+      macro.cjs:
+        const {hashString} = require('@atlaspack/rust');
+
+        module.exports = function test(s) {
           return hashString(s);
         }
     `;
@@ -88,11 +89,11 @@ describe.v2('macros', function () {
   it('should support default interop with CommonJS modules', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import test from "./macro.js" with { type: "macro" };
+        import test from "./macro.cjs" with { type: "macro" };
         output = test('hi');
 
-      macro.js:
-        import {hashString} from '@atlaspack/rust';
+      macro.cjs:
+        const {hashString} = require('@atlaspack/rust');
         module.exports = function(s) {
           return hashString(s);
         }
@@ -126,12 +127,12 @@ describe.v2('macros', function () {
   it('should support various JS value types', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
         output = test(undefined, null, true, false, 1, 0, -2, 'hi', /yo/i, [1, {test: 8}]);
 
-      macro.js:
-        import {inspect} from 'util';
-        export function test(...args) {
+      macro.cjs:
+        const {inspect} = require('util');
+        module.exports.test = function test(...args) {
           return inspect(args);
         }
     `;
@@ -162,11 +163,11 @@ describe.v2('macros', function () {
   it('should support returning various JS value types', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
         output = test();
 
-      macro.js:
-        export function test() {
+      macro.cjs:
+        module.exports.test = function test() {
           return [undefined, null, true, false, 1, 0, -2, 'hi', /yo/i, [1, {test: 8}]];
         }
     `;
@@ -194,11 +195,11 @@ describe.v2('macros', function () {
   it('should support evaluating expressions', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
         output = test(1 + 2, 'foo ' + 'bar', 3 + 'em', 'test'.length, 'test'['length'], 'test'[1], !true, [1, ...[2, 3]], {x: 2, ...{y: 3}}, true ? 1 : 0, typeof false, null ?? 2);
 
-      macro.js:
-        export function test(...args) {
+      macro.cjs:
+        module.exports.test = function test(...args) {
           return args;
         }
     `;
@@ -228,7 +229,7 @@ describe.v2('macros', function () {
   it('should dead code eliminate falsy branches', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
 
         if (test()) {
           console.log('bad');
@@ -236,8 +237,8 @@ describe.v2('macros', function () {
           console.log('good');
         }
 
-      macro.js:
-        export function test() {
+      macro.cjs:
+        module.exports.test = function test() {
           return false;
         }
     `;
@@ -255,11 +256,11 @@ describe.v2('macros', function () {
   it('should support async macros', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
         output = test();
 
-      macro.js:
-        export function test() {
+      macro.cjs:
+        module.exports.test = function test() {
           return Promise.resolve(2);
         }
     `;
@@ -280,11 +281,11 @@ describe.v2('macros', function () {
         output = test;
 
       node_modules/foo/index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
         export default test();
 
-      node_modules/foo/macro.js:
-        export function test() {
+      node_modules/foo/macro.cjs:
+        module.exports.test = function test() {
           return 2;
         }
     `;
@@ -300,11 +301,11 @@ describe.v2('macros', function () {
   it('should throw a diagnostic when an argument cannot be converted', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
         output = test(1, foo);
 
-      macro.js:
-        export function test() {
+      macro.cjs:
+        module.exports.test = function test() {
           return 2;
         }
     `;
@@ -346,11 +347,11 @@ describe.v2('macros', function () {
   it('should throw a diagnostic when a macro errors', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
         output = test(1);
 
-      macro.js:
-        exports.test = function test() {
+      macro.cjs:
+        module.exports.test = function test() {
           throw new Error('test');
         }
     `;
@@ -439,11 +440,11 @@ describe.v2('macros', function () {
   it('should support returning functions', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
         output = test(1, 2)(3);
 
-      macro.js:
-        export function test(a, b) {
+      macro.cjs:
+        module.exports.test = function test(a, b) {
           return new Function('c', \`return \${a} + \${b} + c\`);
         }
     `;
@@ -530,11 +531,11 @@ describe.v2('macros', function () {
   it('should invalidate the cache when changing a macro', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
         output = test();
 
-      macro.js:
-        export function test() {
+      macro.cjs:
+        module.exports.test = function test() {
           return 2;
         }
     `;
@@ -549,8 +550,8 @@ describe.v2('macros', function () {
     assert(res.includes('output=2'));
 
     await fsFixture(overlayFS, dir)`
-      macro.js:
-        export function test() {
+      macro.cjs:
+        module.exports.test = function test() {
           return 3;
         }
     `;
@@ -568,11 +569,11 @@ describe.v2('macros', function () {
   it('should invalidate the cache on build', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
         output = test('test.txt');
 
-      macro.js:
-        export function test() {
+      macro.cjs:
+        module.exports.test = function test() {
           this.invalidateOnBuild();
           return Date.now();
         }
@@ -603,12 +604,12 @@ describe.v2('macros', function () {
   it('should only error once if a macro errors during loading', async function () {
     await fsFixture(overlayFS, dir)`
       index.js:
-        import { test } from "./macro.js" with { type: "macro" };
+        import { test } from "./macro.cjs" with { type: "macro" };
         output = test(1, 2);
         output2 = test(1, 3);
 
-      macro.js:
-        export function test() {
+      macro.cjs:
+        module.exports.test = function test() {
           return Date.now(
         }
     `;
@@ -673,7 +674,7 @@ describe.v2('macros', function () {
     await fsFixture(overlayFS, dir)`
       index.js:
         import { hashString } from "@atlaspack/rust" with { type: "macro" };
-        import { test, test2 } from './macro' with { type: "macro" };
+        import { test, test2 } from './macro.cjs' with { type: "macro" };
         const hi = "hi";
         const ref = hi;
         const arr = [hi];
@@ -697,13 +698,13 @@ describe.v2('macros', function () {
         output13 = hashString(res);
         output14 = test2(obj)();
 
-      macro.js:
-        import { hashString } from "@atlaspack/rust";
-        export function test() {
+      macro.cjs:
+        const { hashString } = require("@atlaspack/rust");
+        module.exports.test = function test() {
           return "hi";
         }
 
-        export function test2(obj) {
+        module.exports.test2 = function test2(obj) {
           return new Function('return "' + hashString(obj.a.b) + '"');
         }
     `;
