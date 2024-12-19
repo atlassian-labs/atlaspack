@@ -4,6 +4,7 @@ import path from 'path';
 
 import {fsFixture, overlayFS, bundle, run} from '@atlaspack/test-utils';
 import {domainShardingKey} from '@atlaspack/domain-sharding';
+import nullthrows from 'nullthrows';
 
 const maxShards = 8;
 
@@ -31,7 +32,7 @@ describe('domain-sharding', () => {
             async function fn() {
               const a = await import('./a.js');
               const b = await import('./b.js');
-              console.log('a', a, b);
+              sideEffectNoop('a', a, b);
             }
             fn();
 
@@ -78,12 +79,11 @@ describe('domain-sharding', () => {
               }
             }
           }
-
         src/index.js:
           async function fn() {
             const a = await import('./a.js');
             const b = await import('./b.js');
-            console.log('a', a, b);
+            sideEffectNoop('a', a, b);
           }
           fn();
 
@@ -139,7 +139,7 @@ describe('domain-sharding', () => {
           async function fn() {
             const a = await import('./a.js');
             const b = await import('./b.js');
-            console.log('a', a, b);
+            sideEffectNoop('a', a, b);
           }
           fn();
 
@@ -178,11 +178,26 @@ describe('domain-sharding', () => {
       );
 
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
+      const esmLoadAsset = nullthrows(
+        bundleGraph.traverse((node, _, actions) => {
+          if (
+            node.type === 'asset' &&
+            node.value.filePath.includes('helpers/browser/esm-js-loader-shards')
+          ) {
+            actions.stop();
+            return node.value;
+          }
+        }),
+        'Could not find esm-js-loader-shard asset',
+      );
 
-      const expectedCode = `var$load = (parcelRequire("cfSxn"))(${maxShards});`
-        .replaceAll('$', '\\$')
-        .replaceAll('(', '\\(')
-        .replaceAll(')', '\\)');
+      const expectedCode =
+        `var$load = (parcelRequire("${bundleGraph.getAssetPublicId(
+          esmLoadAsset,
+        )}"))(${maxShards});`
+          .replaceAll('$', '\\$')
+          .replaceAll('(', '\\(')
+          .replaceAll(')', '\\)');
 
       assert.match(code, new RegExp(expectedCode));
     });
