@@ -1048,7 +1048,11 @@ export async function runESM(
 
   function load(inputSpecifier, referrer, code = null) {
     // ESM can request bundles with an absolute URL. Normalize this to the baseDir.
-    let specifier = inputSpecifier.replace('http://localhost', baseDir);
+    // Any digits after the - can be ignored, for domain sharding tests
+    let specifier = inputSpecifier.replace(
+      /http:\/\/localhost(-\d+)?/,
+      baseDir,
+    );
 
     if (path.isAbsolute(specifier) || specifier.startsWith('.')) {
       let extname = path.extname(specifier);

@@ -2,7 +2,9 @@
 import assert from 'assert';
 import path from 'path';
 
-import {fsFixture, overlayFS, bundle} from '@atlaspack/test-utils';
+import {fsFixture, overlayFS, bundle, run} from '@atlaspack/test-utils';
+import {domainShardingKey} from '@atlaspack/domain-sharding';
+import nullthrows from 'nullthrows';
 
 const maxShards = 8;
 
@@ -30,7 +32,7 @@ describe('domain-sharding', () => {
             async function fn() {
               const a = await import('./a.js');
               const b = await import('./b.js');
-              console.log('a', a, b);
+              sideEffectNoop('a', a, b);
             }
             fn();
 
@@ -77,12 +79,11 @@ describe('domain-sharding', () => {
               }
             }
           }
-
         src/index.js:
           async function fn() {
             const a = await import('./a.js');
             const b = await import('./b.js');
-            console.log('a', a, b);
+            sideEffectNoop('a', a, b);
           }
           fn();
 
@@ -119,6 +120,86 @@ describe('domain-sharding', () => {
         ),
         'Expected generated code for shardUrl was not found',
       );
+    });
+
+    it('for ESM loaded bundle manifest', async () => {
+      const maxShards = 8;
+      await fsFixture(overlayFS)`
+        package.json:
+          {
+            "name": "bundle-sharding-test",
+            "@atlaspack/runtime-js": {
+              "domainSharding": {
+                "maxShards": ${maxShards}
+              }
+            }
+          }
+
+        src/index.js:
+          async function fn() {
+            const a = await import('./a.js');
+            const b = await import('./b.js');
+            sideEffectNoop('a', a, b);
+          }
+          fn();
+
+        src/a.js:
+          export const a = async () => {
+            const b = await import('./b');
+            return b + 'A';
+          }
+        src/b.js:
+          export const b = 'B';
+
+        yarn.lock:
+      `;
+
+      const bundleGraph = await bundle('src/index.js', {
+        inputFS: overlayFS,
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldOptimize: false,
+          outputFormat: 'esmodule',
+        },
+      });
+
+      const mainBundle = bundleGraph
+        .getBundles()
+        .find((b) => b.name === 'index.js');
+
+      if (!mainBundle) {
+        return assert(mainBundle);
+      }
+
+      // $FlowFixMe - Flow doesn't seem to know about doesNotReject
+      await assert.doesNotReject(
+        run(bundleGraph, {[domainShardingKey]: true}),
+        'Expected bundle to be able to execute',
+      );
+
+      const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
+      const esmLoadAsset = nullthrows(
+        bundleGraph.traverse((node, _, actions) => {
+          if (
+            node.type === 'asset' &&
+            node.value.filePath.includes('helpers/browser/esm-js-loader-shards')
+          ) {
+            actions.stop();
+            return node.value;
+          }
+        }),
+        'Could not find esm-js-loader-shard asset',
+      );
+
+      const expectedCode =
+        `var$load = (parcelRequire("${bundleGraph.getAssetPublicId(
+          esmLoadAsset,
+        )}"))(${maxShards});`
+          .replaceAll('$', '\\$')
+          .replaceAll('(', '\\(')
+          .replaceAll(')', '\\)');
+
+      assert.match(code, new RegExp(expectedCode));
     });
   });
 });
