@@ -19,18 +19,19 @@ use atlaspack_core::types::Environment;
 use atlaspack_core::types::EnvironmentContext;
 use atlaspack_core::types::ErrorKind;
 use atlaspack_core::types::OutputFormat;
+use atlaspack_core::types::SourceField;
+use atlaspack_core::types::SourceMapField;
 use atlaspack_core::types::SourceType;
 use atlaspack_core::types::Target;
+use atlaspack_core::types::TargetDescriptor;
 use atlaspack_core::types::TargetSourceMapOptions;
+use atlaspack_core::types::Targets;
 use atlaspack_resolver::IncludeNodeModules;
 use package_json::BrowserField;
 use package_json::BrowsersList;
 use package_json::BuiltInTargetDescriptor;
 use package_json::ModuleFormat;
 use package_json::PackageJson;
-use package_json::SourceField;
-use package_json::SourceMapField;
-use package_json::TargetDescriptor;
 
 use crate::request_tracker::Request;
 use crate::request_tracker::ResultAndInvalidations;
@@ -339,6 +340,24 @@ impl TargetRequest {
       ),
     ];
 
+    let mut target_filter = None;
+
+    if let Some(target_options) = &request_context.options.targets {
+      match target_options {
+        Targets::Filter(target_list) => {
+          target_filter = Some(target_list);
+        }
+        Targets::CustomTarget(custom_targets) => {
+          for (name, descriptor) in custom_targets.iter() {
+            targets.push(self.target_from_descriptor(None, &config, descriptor.clone(), name)?);
+          }
+
+          // Custom targets have been passed in so let's just use those
+          return Ok(targets);
+        }
+      }
+    }
+
     for builtin_target in builtin_targets {
       if builtin_target.dist.is_none() {
         continue;
@@ -362,26 +381,14 @@ impl TargetRequest {
       .targets
       .custom_targets
       .iter()
-      .map(|(name, descriptor)| CustomTarget { descriptor, name });
+      .map(|(name, descriptor)| CustomTarget { descriptor, name })
+      .filter(|CustomTarget { name, .. }| {
+        target_filter
+          .as_ref()
+          .is_none_or(|targets| targets.iter().any(|target_name| target_name == name))
+      });
 
     for custom_target in custom_targets {
-      if request_context
-        .options
-        .targets
-        .as_ref()
-        .is_some_and(|targets| {
-          !targets
-            .iter()
-            .any(|target_name| target_name == custom_target.name)
-        })
-      {
-        tracing::debug!(
-          "Skipping custom target {} as it doesn't match passed in target options",
-          custom_target.name
-        );
-        continue;
-      }
-
       let mut dist = None;
       if let Some(value) = config.contents.fields.get(custom_target.name) {
         match value {
@@ -1407,6 +1414,47 @@ mod tests {
   }
 
   #[tokio::test(flavor = "multi_thread")]
+  async fn returns_custom_targets_from_options_with_defaults() {
+    let targets = targets_from_config(
+      String::from(r#"{}"#),
+      None,
+      Some(AtlaspackOptions {
+        targets: Some(Targets::CustomTarget(BTreeMap::from([(
+          "custom".into(),
+          TargetDescriptor::default(),
+        )]))),
+        ..Default::default()
+      }),
+    )
+    .await;
+
+    assert_eq!(
+      targets.map_err(|e| e.to_string()),
+      Ok(RequestResult::Target(TargetRequestOutput {
+        entry: PathBuf::default(),
+        targets: vec![Target {
+          dist_dir: package_dir().join("dist").join("custom"),
+          dist_entry: None,
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Browser,
+            engines: Engines {
+              browsers: Some(EnginesBrowsers::default()),
+              ..Engines::default()
+            },
+            is_library: false,
+            output_format: OutputFormat::Global,
+            should_optimize: true,
+            should_scope_hoist: false,
+            ..Environment::default()
+          }),
+          name: String::from("custom"),
+          ..Target::default()
+        }]
+      }))
+    );
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
   async fn returns_only_requested_custom_targets() {
     let targets = targets_from_config(
       String::from(
@@ -1428,7 +1476,7 @@ mod tests {
       ),
       None,
       Some(AtlaspackOptions {
-        targets: Some(vec!["custom-two".into()]),
+        targets: Some(Targets::Filter(vec!["custom-two".into()])),
         ..Default::default()
       }),
     )

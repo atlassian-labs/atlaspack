@@ -1871,7 +1871,7 @@ describe('javascript', function () {
     assert.equal(output(), true);
   });
 
-  it.v2('should not touch process.browser for target node', async function () {
+  it('should not touch process.browser for target node', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/process/index.js'),
       {
@@ -1889,26 +1889,23 @@ describe('javascript', function () {
     assert.equal(output(), false);
   });
 
-  it.v2(
-    'should not touch process.browser for target electron-main',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/process/index.js'),
-        {
-          targets: {
-            main: {
-              context: 'electron-main',
-              distDir: path.join(__dirname, '/integration/process/dist.js'),
-            },
+  it('should not touch process.browser for target electron-main', async function () {
+    let b = await bundle(
+      path.join(__dirname, '/integration/process/index.js'),
+      {
+        targets: {
+          main: {
+            context: 'electron-main',
+            distDir: path.join(__dirname, '/integration/process/dist.js'),
           },
         },
-      );
+      },
+    );
 
-      let output = await run(b);
-      assert.ok(output.toString().indexOf('process.browser') !== -1);
-      assert.equal(output(), false);
-    },
-  );
+    let output = await run(b);
+    assert.ok(output.toString().indexOf('process.browser') !== -1);
+    assert.equal(output(), false);
+  });
 
   it('should replace process.browser for target electron-renderer', async function () {
     let b = await bundle(
@@ -2000,25 +1997,19 @@ describe('javascript', function () {
     },
   );
 
-  it.v2(
-    'should not exclude resolving specifiers that map to false in the browser field in node builds',
-    async () => {
-      let b = await bundle(
-        path.join(
-          __dirname,
-          '/integration/resolve-entries/pkg-ignore-browser/index.js',
-        ),
-        {
-          targets: ['node'],
-        },
-      );
+  it('should not exclude resolving specifiers that map to false in the browser field in node builds', async () => {
+    let b = await bundle(
+      path.join(
+        __dirname,
+        '/integration/resolve-entries/pkg-ignore-browser/index.js',
+      ),
+      {
+        targets: ['node'],
+      },
+    );
 
-      assert.equal(
-        await run(b),
-        'this should only exist in non-browser builds',
-      );
-    },
-  );
+    assert.equal(await run(b), 'this should only exist in non-browser builds');
+  });
 
   it.skip('should not resolve the browser field for --target=node', async function () {
     let b = await bundle(
@@ -3458,26 +3449,20 @@ describe('javascript', function () {
     assert.deepEqual(res, {a: 4});
   });
 
-  // Enable this for v3 once hmr options is supported in the js_transformer
-
-  it.v2(
-    'should not use arrow functions for reexport declarations unless supported',
-    async function () {
-      // TODO: Fails in v3 due to "ENOENT: no such file or directory" for the
-      let b = await bundle(
-        path.join(__dirname, 'integration/js-export-arrow-support/index.js'),
-        {
-          // Remove comments containing "=>"
-          defaultTargetOptions: {
-            shouldOptimize: true,
-          },
+  it('should not use arrow functions for reexport declarations unless supported', async function () {
+    let b = await bundle(
+      path.join(__dirname, 'integration/js-export-arrow-support/index.js'),
+      {
+        // Remove comments containing "=>"
+        defaultTargetOptions: {
+          shouldOptimize: true,
         },
-      );
+      },
+    );
 
-      let content = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
-      assert(!content.includes('=>'));
-    },
-  );
+    let content = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    assert(!content.includes('=>'));
+  });
 
   it('should support classes that extend from another using default browsers', async () => {
     await fsFixture(overlayFS, __dirname)`

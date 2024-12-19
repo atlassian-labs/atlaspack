@@ -4,10 +4,8 @@ use std::fmt::Display;
 use std::path::{Path, PathBuf};
 
 use atlaspack_core::types::engines::Engines;
-use atlaspack_core::types::EnvironmentContext;
 use atlaspack_core::types::OutputFormat;
-use atlaspack_core::types::TargetSourceMapOptions;
-use atlaspack_resolver::IncludeNodeModules;
+use atlaspack_core::types::TargetDescriptor;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde_json::Value;
@@ -33,23 +31,6 @@ pub enum BrowsersList {
 pub enum BuiltInTargetDescriptor {
   Disabled(serde_bool::False),
   TargetDescriptor(TargetDescriptor),
-}
-
-#[derive(Debug, Clone, Default, Deserialize, PartialEq)]
-#[serde(default, rename_all = "camelCase")]
-pub struct TargetDescriptor {
-  pub context: Option<EnvironmentContext>,
-  pub dist_dir: Option<PathBuf>,
-  pub dist_entry: Option<PathBuf>,
-  pub engines: Option<Engines>,
-  pub include_node_modules: Option<IncludeNodeModules>,
-  pub is_library: Option<bool>,
-  pub optimize: Option<bool>,
-  pub output_format: Option<OutputFormat>,
-  pub public_url: Option<String>,
-  pub scope_hoist: Option<bool>,
-  pub source: Option<SourceField>,
-  pub source_map: Option<SourceMapField>,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -97,21 +78,6 @@ pub struct PackageJson {
 
   #[serde(flatten)]
   pub fields: HashMap<String, serde_json::Value>,
-}
-
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-pub enum SourceField {
-  #[allow(unused)]
-  Source(String),
-  #[allow(unused)]
-  Sources(Vec<String>),
-}
-
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-#[serde(untagged)]
-pub enum SourceMapField {
-  Bool(bool),
-  Options(TargetSourceMapOptions),
 }
 
 fn browser_field<'de, D>(deserializer: D) -> Result<Option<BrowserField>, D::Error>

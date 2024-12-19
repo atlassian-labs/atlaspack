@@ -7,7 +7,10 @@ use serde::Deserializer;
 use serde::Serialize;
 
 use super::engines::Engines;
+use super::EnvironmentContext;
+use super::IncludeNodeModules;
 use super::OutputFormat;
+use super::TargetSourceMapOptions;
 
 /// The options passed into Atlaspack either through the CLI or the programmatic API
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -37,7 +40,46 @@ pub struct AtlaspackOptions {
 
   pub threads: Option<usize>,
 
-  pub targets: Option<Vec<String>>,
+  pub targets: Option<Targets>,
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum Targets {
+  Filter(Vec<String>),
+  CustomTarget(BTreeMap<String, TargetDescriptor>),
+}
+
+#[derive(Debug, Clone, Deserialize, Hash, PartialEq, Serialize)]
+pub enum SourceField {
+  #[allow(unused)]
+  Source(String),
+  #[allow(unused)]
+  Sources(Vec<String>),
+}
+
+#[derive(Debug, Clone, Deserialize, Hash, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum SourceMapField {
+  Bool(bool),
+  Options(TargetSourceMapOptions),
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Hash, PartialEq, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct TargetDescriptor {
+  pub context: Option<EnvironmentContext>,
+  pub dist_dir: Option<PathBuf>,
+  pub dist_entry: Option<PathBuf>,
+  pub engines: Option<Engines>,
+  pub include_node_modules: Option<IncludeNodeModules>,
+  pub is_library: Option<bool>,
+  pub optimize: Option<bool>,
+  pub output_format: Option<OutputFormat>,
+  pub public_url: Option<String>,
+  pub scope_hoist: Option<bool>,
+  pub source: Option<SourceField>,
+  pub source_map: Option<SourceMapField>,
 }
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Serialize)]
