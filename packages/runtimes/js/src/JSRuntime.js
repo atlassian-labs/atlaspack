@@ -625,7 +625,11 @@ function getLoaderRuntime({
   let code = [];
 
   if (needsEsmLoadPrelude) {
-    code.push(`let load = require('./helpers/browser/esm-js-loader');`);
+    let preludeLoad = shardingConfig
+      ? `let load = require('./helpers/browser/esm-js-loader-shards')(${shardingConfig.maxShards});`
+      : `let load = require('./helpers/browser/esm-js-loader');`;
+
+    code.push(preludeLoad);
   }
 
   code.push(`module.exports = ${loaderCode};`);
