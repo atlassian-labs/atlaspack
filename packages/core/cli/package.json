@@ -11,10 +11,16 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "bin": {
-    "atlaspack": "bin/atlaspack.js"
+    "atlaspack": "./bin/atlaspack.cjs"
   },
-  "main": "lib/bin.js",
-  "source": "src/bin.js",
+  "main": "./bin/atlaspack-lib.cjs",
+  "source": "./bin/atlaspack-src.cjs",
+  "imports": {
+    "#bin": {
+      "@atlaspack::sources": "./bin/atlaspack-src.cjs",
+      "default": "./bin/atlaspack-lib.cjs"
+    }
+  },
   "scripts": {
     "prepack": "./ensure-no-dev-lib.sh",
     "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
