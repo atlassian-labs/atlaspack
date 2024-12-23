@@ -322,7 +322,6 @@ export default (new Runtime({
         )})(${getAbsoluteUrlExpr(
           relativePathExpr,
           bundle,
-          referencedBundle,
           config.domainSharding,
         )})`;
         assets.push({
@@ -497,7 +496,6 @@ function getLoaderRuntime({
       absoluteUrlExpr = getAbsoluteUrlExpr(
         relativePathExpr,
         bundle,
-        to,
         shardingConfig,
       );
     }
@@ -696,7 +694,6 @@ function getHintLoaders(
         `require(${JSON.stringify(loader)})(${getAbsoluteUrlExpr(
           relativePathExpr,
           from,
-          bundleToPreload,
         )}, ${priority ? JSON.stringify(priority) : 'null'}, ${JSON.stringify(
           bundleToPreload.target.env.outputFormat === 'esmodule',
         )})`,
@@ -759,7 +756,6 @@ function getURLRuntime(
     code = `module.exports = ${getAbsoluteUrlExpr(
       relativePathExpr,
       from,
-      to,
       shardingConfig,
     )};`;
   }
@@ -834,7 +830,6 @@ function getRelativePathExpr(
 function getAbsoluteUrlExpr(
   relativePathExpr: string,
   fromBundle: NamedBundle,
-  toBundle: NamedBundle,
   shardingConfig: JSRuntimeConfig['domainSharding'],
 ) {
   if (
