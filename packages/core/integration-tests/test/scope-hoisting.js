@@ -6400,4 +6400,56 @@ describe('scope hoisting', function () {
       two: {name: 'two', value: 2},
     });
   });
+
+  it('should handle exports where incoming dep is HTML', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      exports-incoming-dep-html
+        one.js:
+          export default 'one';
+        two.js:
+          export default 'two';
+        three.js:
+          export default 'three';
+        index.js:
+          export const _3 = import("./three.js");
+          export * from "./one.js"
+          export * from "./two.js"
+        index.html:
+          <script type="module" src="./index.js"></script>
+        yarn.lock:`;
+
+    let b = await bundle(
+      [path.join(__dirname, 'exports-incoming-dep-html/index.html')],
+      {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+          shouldOptimize: true,
+          outputFormat: 'esmodule',
+        },
+        inputFS: overlayFS,
+      },
+    );
+
+    assertBundles(b, [
+      {
+        type: 'html',
+        assets: ['index.html'],
+      },
+      {
+        type: 'js',
+        assets: [
+          'bundle-manifest.js',
+          'esm-js-loader.js',
+          'index.js',
+          'one.js',
+          'two.js',
+        ],
+      },
+      {
+        type: 'js',
+        assets: ['three.js'],
+      },
+    ]);
+  });
 });
