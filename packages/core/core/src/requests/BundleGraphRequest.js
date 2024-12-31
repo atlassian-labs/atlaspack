@@ -15,6 +15,7 @@ import type {
 } from '../types';
 import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
+import fs from 'fs';
 import invariant from 'assert';
 import assert from 'assert';
 import nullthrows from 'nullthrows';
@@ -57,6 +58,11 @@ import createAssetGraphRequestJS from './AssetGraphRequest';
 import {createAssetGraphRequestRust} from './AssetGraphRequestRust';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
+import {
+  assetGraphToDot,
+  getDebugAssetGraphDotPath,
+  getDebugAssetGraphDotOptions,
+} from './asset-graph-dot';
 
 type BundleGraphRequestInput = {|
   requestedAssetIds: Set<string>,
@@ -118,6 +124,15 @@ export default function createBundleGraphRequest(
           force: options.shouldBuildLazily && requestedAssetIds.size > 0,
         },
       );
+
+      let debugAssetGraphDotPath = getDebugAssetGraphDotPath();
+      if (debugAssetGraphDotPath !== null) {
+        await fs.promises.writeFile(
+          debugAssetGraphDotPath,
+          assetGraphToDot(assetGraph, getDebugAssetGraphDotOptions()),
+          'utf8',
+        );
+      }
 
       // if (input.rustAtlaspack && process.env.NATIVE_COMPARE === 'true') {
       //   let {assetGraph: jsAssetGraph} = await api.runRequest(
