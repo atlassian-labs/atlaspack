@@ -15,6 +15,7 @@ import type {
 } from '../types';
 import type {ConfigAndCachePath} from './AtlaspackConfigRequest';
 
+import fs from 'fs';
 import invariant from 'assert';
 import assert from 'assert';
 import nullthrows from 'nullthrows';
@@ -57,7 +58,11 @@ import createAssetGraphRequestJS from './AssetGraphRequest';
 import {createAssetGraphRequestRust} from './AssetGraphRequestRust';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
-import {assetGraphToDot, getDebugAssetGraphDotPath} from './asset-graph-dot';
+import {
+  assetGraphToDot,
+  getDebugAssetGraphDotPath,
+  getDebugAssetGraphDotOptions,
+} from './asset-graph-dot';
 
 type BundleGraphRequestInput = {|
   requestedAssetIds: Set<string>,
@@ -113,18 +118,18 @@ export default function createBundleGraphRequest(
         requestedAssetIds,
       });
 
-      let result = await api.runRequest(request, {
-        force: options.shouldBuildLazily && requestedAssetIds.size > 0,
-      });
-
-      let {changedAssets, assetRequests} = result;
-      let assetGraph: AssetGraph = result.assetGraph;
+      let {assetGraph, changedAssets, assetRequests} = await api.runRequest(
+        request,
+        {
+          force: options.shouldBuildLazily && requestedAssetIds.size > 0,
+        },
+      );
 
       let debugAssetGraphDotPath = getDebugAssetGraphDotPath();
       if (debugAssetGraphDotPath !== null) {
-        require('fs').writeFileSync(
+        await fs.promises.writeFile(
           debugAssetGraphDotPath,
-          assetGraphToDot(assetGraph),
+          assetGraphToDot(assetGraph, getDebugAssetGraphDotOptions()),
           'utf8',
         );
       }

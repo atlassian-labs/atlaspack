@@ -72,12 +72,12 @@ export function getDebugAssetGraphDotPath(): string | null {
   return debugAssetGraphDot;
 }
 
-export function getDebugAssetGraphDotPathOptions(): AssetGraphToDotOptions {
+export function getDebugAssetGraphDotOptions(): AssetGraphToDotOptions {
   const options: AssetGraphToDotOptions = {};
 
   let style = process.env.DEBUG_ASSET_GRAPH_DOT_STYLE;
   if (style !== undefined) {
-    options.sort = style === 'true';
+    options.style = style === 'true';
   }
 
   let sort = process.env.DEBUG_ASSET_GRAPH_DOT_SORT;
