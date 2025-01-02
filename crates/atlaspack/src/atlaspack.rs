@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
-use atlaspack_core::asset_graph::{AssetGraph, AssetNode};
+use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::AtlaspackOptions;
@@ -128,7 +128,7 @@ impl Atlaspack {
 
       let asset_graph = match request_result {
         RequestResult::AssetGraph(result) => {
-          self.commit_assets(result.graph.assets.as_slice())?;
+          self.commit_assets(result.graph.nodes().collect())?;
 
           result.graph
         }
@@ -139,10 +139,13 @@ impl Atlaspack {
     })
   }
 
-  fn commit_assets(&self, assets: &[AssetNode]) -> anyhow::Result<()> {
+  fn commit_assets(&self, assets: Vec<&AssetGraphNode>) -> anyhow::Result<()> {
     let mut txn = self.db.environment().write_txn()?;
 
-    for AssetNode { asset, .. } in assets.iter() {
+    for asset_node in assets.iter() {
+      let AssetGraphNode::Asset(AssetNode { asset, .. }) = asset_node else {
+        continue;
+      };
       self.db.put(&mut txn, &asset.id, asset.code.bytes())?;
       if let Some(map) = &asset.map {
         // TODO: For some reason to_buffer strips data when rkyv was upgraded, so now we use json
@@ -186,12 +189,11 @@ mod tests {
     )?;
 
     let assets = vec!["foo", "bar", "baz"];
-
-    atlaspack.commit_assets(
-      &assets
-        .iter()
-        .enumerate()
-        .map(|(idx, asset)| AssetNode {
+    let nodes = assets
+      .iter()
+      .enumerate()
+      .map(|(idx, asset)| {
+        AssetGraphNode::Asset(AssetNode {
           asset: Asset {
             id: idx.to_string(),
             code: Code::from(asset.to_string()),
@@ -199,8 +201,10 @@ mod tests {
           },
           requested_symbols: HashSet::new(),
         })
-        .collect::<Vec<AssetNode>>(),
-    )?;
+      })
+      .collect::<Vec<AssetGraphNode>>();
+
+    atlaspack.commit_assets(nodes.iter().collect())?;
 
     let txn = db.environment().read_txn()?;
     for (idx, asset) in assets.iter().enumerate() {
