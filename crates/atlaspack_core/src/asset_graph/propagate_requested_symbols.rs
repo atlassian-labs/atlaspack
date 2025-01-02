@@ -26,13 +26,13 @@ pub fn propagate_requested_symbols(
   let mut next = vec![(asset_index, dependency_index)];
   let mut on_undeferred = vec![];
 
-  while let Some((asset_index, dependency_index)) = next.pop() {
+  while let Some((asset_nx, dependency_nx)) = next.pop() {
     let mut dependency_re_exports = HashSet::<String>::default();
     let mut dependency_wildcards = HashSet::<String>::default();
     let mut asset_requested_symbols_buf = HashSet::<String>::default();
 
-    let dependency_node = asset_graph.get_dependency_node(dependency_index).unwrap();
-    let asset_node = asset_graph.get_asset_node(asset_index).unwrap();
+    let dependency_node = asset_graph.get_dependency_node(&dependency_nx).unwrap();
+    let asset_node = asset_graph.get_asset_node(&asset_nx).unwrap();
 
     if dependency_node.requested_symbols.contains(CHAR_STAR) {
       // If the requested symbols includes the "*" namespace, we
@@ -81,17 +81,17 @@ pub fn propagate_requested_symbols(
 
     // Add dependencies to asset
     asset_graph
-      .get_asset_node_mut(asset_index)
+      .get_asset_node_mut(&asset_nx)
       .unwrap()
       .requested_symbols
       .extend(asset_requested_symbols_buf);
 
     let deps: Vec<_> = asset_graph
       .graph
-      .neighbors_directed(asset_index, Direction::Outgoing)
+      .neighbors_directed(asset_nx, Direction::Outgoing)
       .collect();
 
-    for dep_node in deps {
+    for dependency_nx in deps {
       let mut updated = false;
 
       {
@@ -99,7 +99,7 @@ pub fn propagate_requested_symbols(
           dependency,
           requested_symbols,
           state: _,
-        } = asset_graph.get_dependency_node_mut(dep_node).unwrap();
+        } = asset_graph.get_dependency_node_mut(&dependency_nx).unwrap();
 
         if let Some(symbols) = &dependency.symbols {
           for sym in symbols {
@@ -129,7 +129,7 @@ pub fn propagate_requested_symbols(
         dependency,
         requested_symbols: _,
         state,
-      } = asset_graph.get_dependency_node(dep_node).unwrap();
+      } = asset_graph.get_dependency_node(&dependency_nx).unwrap();
 
       // If the dependency was updated, propagate to the target asset if there is one,
       // or un-defer this dependency so we transform the requested asset.
@@ -137,16 +137,16 @@ pub fn propagate_requested_symbols(
       if updated || *state == DependencyState::New {
         let Some(resolved) = asset_graph
           .graph
-          .edges_directed(dep_node, Direction::Outgoing)
+          .edges_directed(dependency_nx, Direction::Outgoing)
           .next()
         else {
-          on_undeferred.push((dep_node, Arc::clone(dependency)));
+          on_undeferred.push((dependency_nx, Arc::clone(dependency)));
           continue;
         };
-        if resolved.target() == asset_index {
+        if resolved.target() == asset_nx {
           continue;
         }
-        next.push((resolved.target(), dep_node))
+        next.push((resolved.target(), dependency_nx))
       }
     }
   }

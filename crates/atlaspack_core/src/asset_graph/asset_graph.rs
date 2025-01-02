@@ -99,16 +99,16 @@ impl AssetGraph {
     }))
   }
 
-  pub fn get_asset_node(&self, id: NodeIndex) -> Option<&AssetNode> {
-    let value = self.graph.node_weight(id)?;
+  pub fn get_asset_node(&self, nx: &NodeIndex) -> Option<&AssetNode> {
+    let value = self.graph.node_weight(*nx)?;
     let AssetGraphNode::Asset(asset_node) = value else {
       return None;
     };
     Some(asset_node)
   }
 
-  pub fn get_asset_node_mut(&mut self, id: NodeIndex) -> Option<&mut AssetNode> {
-    let value = self.graph.node_weight_mut(id)?;
+  pub fn get_asset_node_mut(&mut self, nx: &NodeIndex) -> Option<&mut AssetNode> {
+    let value = self.graph.node_weight_mut(*nx)?;
     let AssetGraphNode::Asset(asset_node) = value else {
       return None;
     };
@@ -136,8 +136,8 @@ impl AssetGraph {
       }))
   }
 
-  pub fn get_dependency_node(&self, id: NodeIndex) -> Option<&DependencyNode> {
-    let value = self.graph.node_weight(id)?;
+  pub fn get_dependency_node(&self, nx: &NodeIndex) -> Option<&DependencyNode> {
+    let value = self.graph.node_weight(*nx)?;
     let AssetGraphNode::Dependency(node) = value else {
       return None;
     };
@@ -155,8 +155,8 @@ impl AssetGraph {
     results
   }
 
-  pub fn get_dependency_node_mut(&mut self, id: NodeIndex) -> Option<&mut DependencyNode> {
-    let value = self.graph.node_weight_mut(id)?;
+  pub fn get_dependency_node_mut(&mut self, nx: &NodeIndex) -> Option<&mut DependencyNode> {
+    let value = self.graph.node_weight_mut(*nx)?;
     let AssetGraphNode::Dependency(node) = value else {
       return None;
     };
@@ -165,20 +165,20 @@ impl AssetGraph {
 
   pub fn add_entry_dependency(&mut self, dependency: Dependency) -> NodeIndex {
     let is_library = dependency.env.is_library;
-    let node_index = self.add_dependency(dependency);
-    self.add_edge(&self.root_node_index.clone(), &node_index);
+    let dependency_nx = self.add_dependency(dependency);
+    self.add_edge(&self.root_node_index.clone(), &dependency_nx);
 
     if is_library {
-      if let Some(dependency_node) = self.get_dependency_node_mut(node_index) {
+      if let Some(dependency_node) = self.get_dependency_node_mut(&dependency_nx) {
         dependency_node.requested_symbols.insert("*".into());
       }
     }
 
-    node_index
+    dependency_nx
   }
 
-  pub fn add_edge(&mut self, parent_idx: &NodeIndex, child_idx: &NodeIndex) {
-    self.graph.add_edge(*parent_idx, *child_idx, ());
+  pub fn add_edge(&mut self, from_nx: &NodeIndex, to_nx: &NodeIndex) {
+    self.graph.add_edge(*from_nx, *to_nx, ());
   }
 }
 
@@ -228,12 +228,9 @@ mod tests {
     }
   }
 
-  fn assert_requested_symbols(graph: &AssetGraph, node_index: NodeIndex, expected: Vec<&str>) {
+  fn assert_requested_symbols(graph: &AssetGraph, nx: NodeIndex, expected: Vec<&str>) {
     assert_eq!(
-      graph
-        .get_dependency_node(node_index)
-        .unwrap()
-        .requested_symbols,
+      graph.get_dependency_node(&nx).unwrap().requested_symbols,
       expected
         .into_iter()
         .map(|s| s.into())
