@@ -6,6 +6,7 @@ use std::thread;
 
 use anyhow::anyhow;
 use atlaspack::AtlaspackError;
+use atlaspack_core::asset_graph::serialize_asset_graph;
 use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::LMDB;
 use napi::Env;
@@ -150,8 +151,11 @@ impl AtlaspackNapi {
             let mut js_object = env.create_object()?;
 
             js_object.set_named_property("edges", env.to_js_value(&asset_graph.edges())?)?;
-            js_object
-              .set_named_property("nodes", asset_graph.serialize_nodes(MAX_STRING_LENGTH)?)?;
+
+            js_object.set_named_property(
+              "nodes",
+              serialize_asset_graph(&asset_graph, MAX_STRING_LENGTH)?,
+            )?;
 
             NapiAtlaspackResult::ok(&env, js_object)
           }

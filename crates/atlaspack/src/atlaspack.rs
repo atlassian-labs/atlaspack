@@ -128,7 +128,7 @@ impl Atlaspack {
 
       let asset_graph = match request_result {
         RequestResult::AssetGraph(result) => {
-          self.commit_assets(result.graph.assets.as_slice())?;
+          self.commit_assets(result.graph.get_asset_nodes())?;
 
           result.graph
         }
@@ -139,16 +139,20 @@ impl Atlaspack {
     })
   }
 
-  fn commit_assets(&self, assets: &[AssetNode]) -> anyhow::Result<()> {
+  fn commit_assets(&self, assets: Vec<&AssetNode>) -> anyhow::Result<()> {
     let mut txn = self.db.environment().write_txn()?;
 
-    for AssetNode { asset, .. } in assets.iter() {
-      self.db.put(&mut txn, &asset.id, asset.code.bytes())?;
-      if let Some(map) = &asset.map {
+    for asset_node in assets {
+      self.db.put(
+        &mut txn,
+        &asset_node.asset.id,
+        asset_node.asset.code.bytes(),
+      )?;
+      if let Some(map) = &asset_node.asset.map {
         // TODO: For some reason to_buffer strips data when rkyv was upgraded, so now we use json
         self.db.put(
           &mut txn,
-          &format!("map:{}", asset.id),
+          &format!("map:{}", asset_node.asset.id),
           map.to_json()?.as_bytes(),
         )?;
       }
@@ -186,21 +190,20 @@ mod tests {
     )?;
 
     let assets = vec!["foo", "bar", "baz"];
+    let nodes = assets
+      .iter()
+      .enumerate()
+      .map(|(idx, asset)| AssetNode {
+        asset: Asset {
+          id: idx.to_string(),
+          code: Code::from(asset.to_string()),
+          ..Asset::default()
+        },
+        requested_symbols: HashSet::new(),
+      })
+      .collect::<Vec<AssetNode>>();
 
-    atlaspack.commit_assets(
-      &assets
-        .iter()
-        .enumerate()
-        .map(|(idx, asset)| AssetNode {
-          asset: Asset {
-            id: idx.to_string(),
-            code: Code::from(asset.to_string()),
-            ..Asset::default()
-          },
-          requested_symbols: HashSet::new(),
-        })
-        .collect::<Vec<AssetNode>>(),
-    )?;
+    atlaspack.commit_assets(nodes.iter().collect())?;
 
     let txn = db.environment().read_txn()?;
     for (idx, asset) in assets.iter().enumerate() {
