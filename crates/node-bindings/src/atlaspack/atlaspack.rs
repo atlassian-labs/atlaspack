@@ -7,6 +7,7 @@ use std::thread;
 use anyhow::anyhow;
 use atlaspack::AtlaspackError;
 use atlaspack_core::asset_graph::serialize_asset_graph;
+use atlaspack_core::asset_graph::serialize_asset_graph_sorted;
 use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::LMDB;
 use napi::Env;
@@ -148,16 +149,10 @@ impl AtlaspackNapi {
         // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
         deferred.resolve(move |env| match result {
           Ok(asset_graph) => {
-            let mut js_object = env.create_object()?;
+            let result = serialize_asset_graph_sorted(&asset_graph)?;
+            let js_result = env.to_js_value(&result)?;
 
-            js_object.set_named_property("edges", env.to_js_value(&asset_graph.edges())?)?;
-
-            js_object.set_named_property(
-              "nodes",
-              serialize_asset_graph(&asset_graph, MAX_STRING_LENGTH)?,
-            )?;
-
-            NapiAtlaspackResult::ok(&env, js_object)
+            NapiAtlaspackResult::ok(&env, js_result)
           }
           Err(error) => {
             let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
