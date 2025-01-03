@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use petgraph::graph::NodeIndex;
+use petgraph::visit::IntoNodeReferences;
 use serde::Serialize;
 
 use crate::types::{Asset, Dependency};
@@ -7,13 +11,13 @@ use super::{AssetGraph, AssetGraphNode, DependencyState};
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SerializedDependency {
-  id: String,
-  dependency: Dependency,
+  pub id: String,
+  pub dependency: Dependency,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
-enum SerializedAssetGraphNode {
+pub enum SerializedAssetGraphNode {
   Root,
   Entry,
   Asset {
@@ -23,6 +27,67 @@ enum SerializedAssetGraphNode {
     value: SerializedDependency,
     has_deferred: bool,
   },
+}
+
+#[derive(Debug, Serialize)]
+pub struct SerializedAssetGraphResult {
+  pub edges: Vec<u32>,
+  pub nodes: Vec<SerializedAssetGraphNode>,
+}
+
+pub fn serialize_asset_graph_sorted(
+  asset_graph: &AssetGraph,
+) -> anyhow::Result<SerializedAssetGraphResult> {
+  let mut edges = Vec::<(u32, u32)>::new();
+  let mut nodes = Vec::<SerializedAssetGraphNode>::new();
+
+  // Track index reassignment after sorting
+  let mut nx_to_index = HashMap::<NodeIndex, u32>::new();
+
+  let mut current_nodes = asset_graph
+    .graph
+    .node_references()
+    .collect::<Vec<(NodeIndex, &AssetGraphNode)>>();
+  current_nodes.sort_by(|a, b| a.1.id().cmp(&b.1.id()));
+
+  for (current_node_nx, current_node) in current_nodes {
+    nx_to_index.insert(current_node_nx, nodes.len() as u32);
+    nodes.push(match current_node {
+      AssetGraphNode::Root => SerializedAssetGraphNode::Root,
+      AssetGraphNode::Entry => SerializedAssetGraphNode::Entry,
+      AssetGraphNode::Asset(asset_node) => SerializedAssetGraphNode::Asset {
+        value: asset_node.asset.clone(),
+      },
+      AssetGraphNode::Dependency(dependency_node) => SerializedAssetGraphNode::Dependency {
+        value: SerializedDependency {
+          id: dependency_node.dependency.id(),
+          dependency: dependency_node.dependency.as_ref().clone(),
+        },
+        has_deferred: dependency_node.state == DependencyState::Deferred,
+      },
+    })
+  }
+
+  for (from, to) in asset_graph.edges() {
+    let Some(new_addr_from) = nx_to_index.get(&(from as u32).into()) else {
+      panic!();
+    };
+
+    let Some(new_addr_to) = nx_to_index.get(&(to as u32).into()) else {
+      panic!();
+    };
+
+    edges.push((new_addr_from.clone(), new_addr_to.clone()));
+  }
+
+  edges.sort_by(|a, b| format!("{}{}", a.0, a.1).cmp(&format!("{}{}", b.0, b.1)));
+
+  let edges = edges
+    .into_iter()
+    .flat_map(|v| vec![v.0, v.1])
+    .collect::<Vec<u32>>();
+
+  Ok(SerializedAssetGraphResult { edges, nodes })
 }
 
 pub fn serialize_asset_graph(

@@ -38,6 +38,17 @@ pub enum AssetGraphNode {
   Dependency(DependencyNode),
 }
 
+impl AssetGraphNode {
+  pub fn id(&self) -> String {
+    match self {
+      AssetGraphNode::Root => "@@root".into(),
+      AssetGraphNode::Entry => "@@entry".into(),
+      AssetGraphNode::Asset(asset_node) => asset_node.asset.id.clone(),
+      AssetGraphNode::Dependency(dependency_node) => dependency_node.dependency.id(),
+    }
+  }
+}
+
 #[derive(Clone, Debug)]
 pub struct AssetGraph {
   pub graph: StableDiGraph<AssetGraphNode, ()>,
@@ -60,13 +71,12 @@ impl AssetGraph {
     }
   }
 
-  pub fn edges(&self) -> Vec<u32> {
+  pub fn edges(&self) -> Vec<(usize, usize)> {
     let raw_edges = self.graph.edge_references();
-    let mut edges = Vec::new();
+    let mut edges = Vec::<(usize, usize)>::new();
 
     for edge in raw_edges {
-      edges.push(edge.source().index() as u32);
-      edges.push(edge.target().index() as u32);
+      edges.push((edge.source().index(), edge.target().index()));
     }
 
     edges

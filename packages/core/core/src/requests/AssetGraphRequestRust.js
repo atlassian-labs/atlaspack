@@ -39,10 +39,6 @@ export function createAssetGraphRequestRust(
       let options = input.options;
       let serializedAssetGraph = await rustAtlaspack.buildAssetGraph();
 
-      serializedAssetGraph.nodes = serializedAssetGraph.nodes.flatMap((node) =>
-        JSON.parse(node),
-      );
-
       let {assetGraph, changedAssets} = instrument(
         'atlaspack_v3_getAssetGraph',
         () => getAssetGraph(serializedAssetGraph),
