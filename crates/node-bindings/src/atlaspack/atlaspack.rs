@@ -122,7 +122,6 @@ impl AtlaspackNapi {
     options: AtlaspackNapiBuildOptions,
   ) -> napi::Result<JsObject> {
     let (deferred, promise) = env.create_deferred()?;
-
     self.register_workers(&options)?;
 
     // Both the atlaspack initialization and build must be run a dedicated system thread so that
@@ -147,11 +146,23 @@ impl AtlaspackNapi {
         // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
         deferred.resolve(move |env| match result {
           Ok(asset_graph) => {
+            let serialized_asset_graph = asset_graph.serialize()?;
+
             let mut js_object = env.create_object()?;
 
-            js_object.set_named_property("edges", env.to_js_value(&asset_graph.edges())?)?;
-            js_object
-              .set_named_property("nodes", asset_graph.serialize_nodes(MAX_STRING_LENGTH)?)?;
+            js_object.set_named_property(
+              "edges",
+              env
+                .create_buffer_with_data(serialized_asset_graph.edges)?
+                .into_unknown(),
+            )?;
+
+            js_object.set_named_property(
+              "nodes",
+              env
+                .create_buffer_with_data(serialized_asset_graph.nodes)?
+                .into_unknown(),
+            )?;
 
             NapiAtlaspackResult::ok(&env, js_object)
           }

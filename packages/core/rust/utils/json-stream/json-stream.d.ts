@@ -1,0 +1,3 @@
+export class JsonStream {
+  static parseLE<T>(data: Buffer): Iterator<T>;
+}

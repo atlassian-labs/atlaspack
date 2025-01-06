@@ -299,12 +299,12 @@ impl AssetGraph {
     }
   }
 
-  pub fn serialize_nodes(&self, max_str_len: usize) -> serde_json::Result<Vec<String>> {
-    let mut nodes: Vec<String> = Vec::new();
-    let mut curr_node = String::default();
+  pub fn serialize(&self) -> serde_json::Result<SerializedAssetGraph> {
+    let edges: Vec<u8> = serde_json::to_vec(&self.edges())?;
+    let mut nodes: Vec<u8> = Vec::new();
 
     for node in self.nodes() {
-      let serialized_node = match node {
+      let node = match node {
         AssetGraphNode::Root => SerializedAssetGraphNode::Root,
         AssetGraphNode::Entry => SerializedAssetGraphNode::Entry,
         AssetGraphNode::Asset(idx) => {
@@ -324,26 +324,23 @@ impl AssetGraph {
         }
       };
 
-      let str = serde_json::to_string(&serialized_node)?;
-      if curr_node.len() + str.len() < (max_str_len - 3) {
-        if !curr_node.is_empty() {
-          curr_node.push(',');
-        }
-        curr_node.push_str(&str);
-      } else {
-        // Add the existing node now as it has reached the max JavaScript string size
-        nodes.push(format!("[{curr_node}]"));
-        curr_node = str;
-      }
+      let bytes = serde_json::to_vec(&node)?;
+      let len = bytes.len();
+      let header = len.to_le_bytes();
+
+      nodes.extend(header);
+      nodes.extend(bytes);
     }
 
-    // Add the current node if it did not overflow in size
-    if curr_node.len() < (max_str_len - 3) {
-      nodes.push(format!("[{curr_node}]"));
-    }
-
-    Ok(nodes)
+    Ok(SerializedAssetGraph { edges, nodes })
   }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SerializedAssetGraph {
+  pub edges: Vec<u8>,
+  pub nodes: Vec<u8>,
 }
 
 #[derive(Debug, Serialize)]
@@ -383,8 +380,6 @@ impl std::hash::Hash for AssetGraph {
 #[cfg(test)]
 mod tests {
   use std::path::PathBuf;
-
-  use serde_json::{json, Value};
 
   use crate::types::{Symbol, Target};
 
@@ -630,101 +625,5 @@ mod tests {
     assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
     // "*" should be marked as requested on the stuff dep
     assert_requested_symbols(&graph, stuff_dep, vec!["*"]);
-  }
-
-  #[test]
-  fn serialize_nodes_handles_max_size() -> anyhow::Result<()> {
-    let mut graph = AssetGraph::new();
-
-    let entry = graph.add_entry_dependency(Dependency {
-      specifier: String::from("entry"),
-      ..Dependency::default()
-    });
-
-    let entry_asset = graph.add_asset(
-      entry,
-      Asset {
-        file_path: PathBuf::from("entry"),
-        ..Asset::default()
-      },
-    );
-
-    for i in 1..100 {
-      graph.add_dependency(
-        entry_asset,
-        Dependency {
-          specifier: format!("dependency-{}", i),
-          ..Dependency::default()
-        },
-      );
-    }
-
-    let max_str_len = 10000;
-    let nodes = graph.serialize_nodes(max_str_len)?;
-
-    assert_eq!(nodes.len(), 7);
-
-    // Assert each string is less than the max size
-    for node in nodes.iter() {
-      assert!(node.len() < max_str_len);
-    }
-
-    // Assert all the nodes are included and in the correct order
-    let first_entry = serde_json::from_str::<Value>(&nodes[0])?;
-    let first_entry = first_entry.as_array().unwrap();
-
-    assert_eq!(get_type(&first_entry[0]), json!("root"));
-    assert_eq!(get_dependency(&first_entry[1]), Some(json!("entry")));
-    assert_eq!(get_asset(&first_entry[2]), Some(json!("entry")));
-
-    for i in 1..first_entry.len() - 2 {
-      assert_eq!(
-        get_dependency(&first_entry[i + 2]),
-        Some(json!(format!("dependency-{}", i)))
-      );
-    }
-
-    let mut specifier = first_entry.len() - 2;
-    for node in nodes[1..].iter() {
-      let entry = serde_json::from_str::<Value>(&node)?;
-      let entry = entry.as_array().unwrap();
-
-      for value in entry {
-        assert_eq!(
-          get_dependency(&value),
-          Some(json!(format!("dependency-{}", specifier)))
-        );
-
-        specifier += 1;
-      }
-    }
-
-    Ok(())
-  }
-
-  fn get_type(node: &Value) -> Value {
-    node.get("type").unwrap().to_owned()
-  }
-
-  fn get_dependency(value: &Value) -> Option<Value> {
-    assert_eq!(get_type(&value), json!("dependency"));
-
-    value
-      .get("value")
-      .unwrap()
-      .get("dependency")
-      .unwrap()
-      .get("specifier")
-      .map(|s| s.to_owned())
-  }
-
-  fn get_asset(value: &Value) -> Option<Value> {
-    assert_eq!(get_type(&value), json!("asset"));
-
-    value
-      .get("value")
-      .unwrap()
-      .get("filePath")
-      .map(|s| s.to_owned())
   }
 }

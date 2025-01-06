@@ -4,6 +4,7 @@ import invariant from 'assert';
 
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Async} from '@atlaspack/types';
+import {JsonStream} from '@atlaspack/rust/utils';
 
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
@@ -37,11 +38,14 @@ export function createAssetGraphRequestRust(
     id: input.name,
     run: async (input) => {
       let options = input.options;
-      let serializedAssetGraph = await rustAtlaspack.buildAssetGraph();
 
-      serializedAssetGraph.nodes = serializedAssetGraph.nodes.flatMap((node) =>
-        JSON.parse(node),
-      );
+      let {nodes: serializedNodes, edges: seralizedEdges} =
+        await rustAtlaspack.buildAssetGraph();
+
+      const serializedAssetGraph = {
+        nodes: Array.from(JsonStream.parseLE(serializedNodes)),
+        edges: JSON.parse(seralizedEdges),
+      };
 
       let {assetGraph, changedAssets} = instrument(
         'atlaspack_v3_getAssetGraph',
