@@ -38,12 +38,17 @@ pub struct PackageJson {
   pub path: PathBuf,
   #[serde(default, deserialize_with = "ok_or_default")]
   pub name: String,
+  #[serde(default, deserialize_with = "ok_or_default")]
   pub version: Option<String>,
   #[serde(rename = "type", default, deserialize_with = "ok_or_default")]
   pub module_type: ModuleType,
+  #[serde(default, deserialize_with = "ok_or_default")]
   main: Option<String>,
+  #[serde(default, deserialize_with = "ok_or_default")]
   module: Option<String>,
+  #[serde(default, deserialize_with = "ok_or_default")]
   tsconfig: Option<String>,
+  #[serde(default, deserialize_with = "ok_or_default")]
   types: Option<String>,
   #[serde(default, deserialize_with = "ok_or_default")]
   pub source: SourceField,
