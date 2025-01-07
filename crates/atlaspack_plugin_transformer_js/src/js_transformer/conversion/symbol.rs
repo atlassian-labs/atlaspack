@@ -89,7 +89,7 @@ mod tests {
     let project_root = Path::new("");
 
     let result =
-      transformer_collect_imported_symbol_to_symbol(project_root, &Path::new("test.js"), &import);
+      transformer_collect_imported_symbol_to_symbol(project_root, Path::new("test.js"), &import);
     assert_eq!(
       result,
       Symbol {

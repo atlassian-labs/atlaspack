@@ -178,29 +178,23 @@ fn criterion_benchmark(c: &mut Criterion) {
   );
 
   c.bench_function("Run safe resolver simple OsFileSystem", |b| {
-    b.iter_with_setup(
-      || make_resolver(),
-      |resolver| {
-        let result = resolver
-          .resolve("./bar.js", &root().join("foo.js"), SpecifierType::Esm)
-          .result
-          .unwrap();
-        black_box(result)
-      },
-    );
+    b.iter_with_setup(&make_resolver, |resolver| {
+      let result = resolver
+        .resolve("./bar.js", &root().join("foo.js"), SpecifierType::Esm)
+        .result
+        .unwrap();
+      black_box(result)
+    });
   });
 
   c.bench_function("Run safe resolver modules OsFileSystem", |b| {
-    b.iter_with_setup(
-      || make_resolver(),
-      |resolver| {
-        let result = resolver
-          .resolve("@scope/pkg", &root().join("foo.js"), SpecifierType::Cjs)
-          .result
-          .unwrap();
-        black_box(result)
-      },
-    );
+    b.iter_with_setup(&make_resolver, |resolver| {
+      let result = resolver
+        .resolve("@scope/pkg", &root().join("foo.js"), SpecifierType::Cjs)
+        .result
+        .unwrap();
+      black_box(result)
+    });
   });
 
   let make_resolver = || {
@@ -211,29 +205,23 @@ fn criterion_benchmark(c: &mut Criterion) {
   };
 
   c.bench_function("Run unsafe resolver simple OsFileSystem", |b| {
-    b.iter_with_setup(
-      || make_resolver(),
-      |resolver| {
-        let result = resolver
-          .resolve("./bar.js", &root().join("foo.js"), SpecifierType::Esm)
-          .result
-          .unwrap();
-        black_box(result)
-      },
-    );
+    b.iter_with_setup(&make_resolver, |resolver| {
+      let result = resolver
+        .resolve("./bar.js", &root().join("foo.js"), SpecifierType::Esm)
+        .result
+        .unwrap();
+      black_box(result)
+    });
   });
 
   c.bench_function("Run unsafe resolver modules OsFileSystem", |b| {
-    b.iter_with_setup(
-      || make_resolver(),
-      |resolver| {
-        let result = resolver
-          .resolve("@scope/pkg", &root().join("foo.js"), SpecifierType::Cjs)
-          .result
-          .unwrap();
-        black_box(result)
-      },
-    );
+    b.iter_with_setup(&make_resolver, |resolver| {
+      let result = resolver
+        .resolve("@scope/pkg", &root().join("foo.js"), SpecifierType::Cjs)
+        .result
+        .unwrap();
+      black_box(result)
+    });
   });
 
   let preloading_fs = PreloadingFileSystem::load(&root());
@@ -247,32 +235,26 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function(
     "Run safe resolver simple - PreloadingFileSystem - No IO",
     |b| {
-      b.iter_with_setup(
-        || make_resolver(),
-        |resolver| {
-          let result = resolver
-            .resolve("./bar.js", &root().join("foo.js"), SpecifierType::Esm)
-            .result
-            .unwrap();
-          black_box(result)
-        },
-      );
+      b.iter_with_setup(&make_resolver, |resolver| {
+        let result = resolver
+          .resolve("./bar.js", &root().join("foo.js"), SpecifierType::Esm)
+          .result
+          .unwrap();
+        black_box(result)
+      });
     },
   );
 
   c.bench_function(
     "Run safe resolver modules - PreloadingFileSystem - No IO",
     |b| {
-      b.iter_with_setup(
-        || make_resolver(),
-        |resolver| {
-          let result = resolver
-            .resolve("@scope/pkg", &root().join("foo.js"), SpecifierType::Cjs)
-            .result
-            .unwrap();
-          black_box(result)
-        },
-      );
+      b.iter_with_setup(&make_resolver, |resolver| {
+        let result = resolver
+          .resolve("@scope/pkg", &root().join("foo.js"), SpecifierType::Cjs)
+          .result
+          .unwrap();
+        black_box(result)
+      });
     },
   );
 
@@ -286,32 +268,26 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function(
     "Run unsafe resolver simple - PreloadingFileSystem - No IO",
     |b| {
-      b.iter_with_setup(
-        || make_resolver(),
-        |resolver| {
-          let result = resolver
-            .resolve("./bar.js", &root().join("foo.js"), SpecifierType::Esm)
-            .result
-            .unwrap();
-          black_box(result)
-        },
-      );
+      b.iter_with_setup(&make_resolver, |resolver| {
+        let result = resolver
+          .resolve("./bar.js", &root().join("foo.js"), SpecifierType::Esm)
+          .result
+          .unwrap();
+        black_box(result)
+      });
     },
   );
 
   c.bench_function(
     "Run unsafe resolver modules - PreloadingFileSystem - No IO",
     |b| {
-      b.iter_with_setup(
-        || make_resolver(),
-        |resolver| {
-          let result = resolver
-            .resolve("@scope/pkg", &root().join("foo.js"), SpecifierType::Cjs)
-            .result
-            .unwrap();
-          black_box(result)
-        },
-      );
+      b.iter_with_setup(&make_resolver, |resolver| {
+        let result = resolver
+          .resolve("@scope/pkg", &root().join("foo.js"), SpecifierType::Cjs)
+          .result
+          .unwrap();
+        black_box(result)
+      });
     },
   );
 }

@@ -42,10 +42,10 @@ mod tests {
       for path in paths("a.ts") {
         let is_match = named_pattern_matcher(&path);
 
-        assert_eq!(is_match("*.t", ""), false);
-        assert_eq!(is_match("*.tsx", ""), false);
-        assert_eq!(is_match("types:*.{ts,tsx}", ""), false);
-        assert_eq!(is_match("url:*", ""), false);
+        assert!(!is_match("*.t", ""));
+        assert!(!is_match("*.tsx", ""));
+        assert!(!is_match("types:*.{ts,tsx}", ""));
+        assert!(!is_match("url:*", ""));
       }
     }
 
@@ -54,8 +54,8 @@ mod tests {
       for path in paths("a.ts") {
         let is_match = named_pattern_matcher(&path);
 
-        assert_eq!(is_match("types:*.{ts,tsx}", "type"), false);
-        assert_eq!(is_match("types:*.{ts,tsx}", "typesa"), false);
+        assert!(!is_match("types:*.{ts,tsx}", "type"));
+        assert!(!is_match("types:*.{ts,tsx}", "typesa"));
       }
     }
 
@@ -64,9 +64,9 @@ mod tests {
       for path in paths("a.ts") {
         let is_match = named_pattern_matcher(&path);
 
-        assert_eq!(is_match("*.{ts,tsx}", ""), true);
-        assert_eq!(is_match("*.ts", ""), true);
-        assert_eq!(is_match("*", ""), true);
+        assert!(is_match("*.{ts,tsx}", ""));
+        assert!(is_match("*.ts", ""));
+        assert!(is_match("*", ""));
       }
     }
 
@@ -75,9 +75,9 @@ mod tests {
       for path in paths("a.ts") {
         let is_match = named_pattern_matcher(&path);
 
-        assert_eq!(is_match("types:*.{ts,tsx}", "types"), true);
-        assert_eq!(is_match("types:*.ts", "types"), true);
-        assert_eq!(is_match("types:*", "types"), true);
+        assert!(is_match("types:*.{ts,tsx}", "types"));
+        assert!(is_match("types:*.ts", "types"));
+        assert!(is_match("types:*", "types"));
       }
     }
   }
@@ -90,10 +90,10 @@ mod tests {
       for path in paths("a.ts") {
         let is_match = pattern_matcher(&path);
 
-        assert_eq!(is_match("*.t"), false);
-        assert_eq!(is_match("*.tsx"), false);
-        assert_eq!(is_match("types:*.{ts,tsx}"), false);
-        assert_eq!(is_match("url:*"), false);
+        assert!(!is_match("*.t"));
+        assert!(!is_match("*.tsx"));
+        assert!(!is_match("types:*.{ts,tsx}"));
+        assert!(!is_match("url:*"));
       }
     }
 
@@ -102,9 +102,9 @@ mod tests {
       for path in paths("a.ts") {
         let is_match = pattern_matcher(&path);
 
-        assert_eq!(is_match("*.{ts,tsx}"), true);
-        assert_eq!(is_match("*.ts"), true);
-        assert_eq!(is_match("*"), true);
+        assert!(is_match("*.{ts,tsx}"));
+        assert!(is_match("*.ts"));
+        assert!(is_match("*"));
       }
     }
   }

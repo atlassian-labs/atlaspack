@@ -38,7 +38,7 @@ pub struct NodeReplacer<'a> {
   pub items: &'a mut Vec<DependencyDescriptor>,
 }
 
-impl<'a> VisitMut for NodeReplacer<'a> {
+impl VisitMut for NodeReplacer<'_> {
   fn visit_mut_expr(&mut self, node: &mut ast::Expr) {
     use ast::Expr::*;
 
@@ -255,7 +255,7 @@ console.log($parcel$__filename);
 "#
     .trim_start();
     assert_eq!(output_code, expected_code);
-    assert_eq!(has_node_replacements, true);
+    assert!(has_node_replacements);
     assert_eq!(items[0].specifier, JsWord::from("path"));
     assert_eq!(items[0].kind, DependencyKind::Require);
     assert_eq!(items[0].source_type, Some(SourceType::Module));
@@ -289,7 +289,7 @@ console.log($parcel$__dirname);
 "#
     .trim_start();
     assert_eq!(output_code, expected_code);
-    assert_eq!(has_node_replacements, true);
+    assert!(has_node_replacements);
     assert_eq!(items[0].specifier, JsWord::from("path"));
     assert_eq!(items[0].kind, DependencyKind::Require);
     assert_eq!(items[0].source_type, Some(SourceType::Module));
@@ -328,7 +328,7 @@ function something(__filename, __dirname) {
 "#
     .trim_start();
     assert_eq!(output_code, expected_code);
-    assert_eq!(has_node_replacements, false);
+    assert!(!has_node_replacements);
     assert_eq!(items.len(), 0);
   }
 
@@ -356,7 +356,7 @@ const filename = obj.__filename;
 "#
     .trim_start();
     assert_eq!(output_code, expected_code);
-    assert_eq!(has_node_replacements, false);
+    assert!(!has_node_replacements);
     assert_eq!(items.len(), 0);
   }
 
@@ -385,7 +385,7 @@ const filename = obj[$parcel$__filename];
 "#
     .trim_start();
     assert_eq!(output_code, expected_code);
-    assert_eq!(has_node_replacements, true);
+    assert!(has_node_replacements);
     assert_eq!(items.len(), 1);
   }
 }

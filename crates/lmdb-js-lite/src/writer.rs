@@ -233,7 +233,7 @@ pub enum RwTransaction<'a, 'b> {
   Borrowed(&'a mut RwTxn<'b>),
 }
 
-impl<'a, 'b> RwTransaction<'a, 'b> {
+impl<'b> RwTransaction<'_, 'b> {
   #[allow(clippy::should_implement_trait)]
   pub fn deref_mut(&mut self) -> &mut RwTxn<'b> {
     match self {
@@ -248,7 +248,7 @@ pub enum Transaction<'a, 'b> {
   Borrowed(&'a RoTxn<'b>),
 }
 
-impl<'a, 'b> Transaction<'a, 'b> {
+impl<'b> Transaction<'_, 'b> {
   #[allow(clippy::should_implement_trait)]
   pub fn deref(&self) -> &RoTxn<'b> {
     match self {
@@ -389,7 +389,7 @@ mod tests {
     let writer = DatabaseWriter::new(&options).unwrap();
     let mut write_txn = writer.environment().write_txn().unwrap();
     writer
-      .put(&mut write_txn, "key", &vec![1, 2, 3, 3, 3, 3, 3, 3, 4])
+      .put(&mut write_txn, "key", &[1, 2, 3, 3, 3, 3, 3, 3, 4])
       .unwrap();
     write_txn.commit().unwrap();
 
@@ -543,7 +543,7 @@ mod tests {
         }),
       })
       .unwrap();
-    let _result = rx.recv().unwrap().unwrap();
+    rx.recv().unwrap().unwrap();
   }
 
   fn get_sync(writer: &DatabaseWriterHandle, key: impl Into<String>) -> Option<Vec<u8>> {

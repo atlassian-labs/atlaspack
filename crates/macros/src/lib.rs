@@ -177,7 +177,7 @@ impl<'a> Macros<'a> {
   }
 }
 
-impl<'a> Fold for Macros<'a> {
+impl Fold for Macros<'_> {
   fn fold_module(&mut self, mut node: Module) -> Module {
     // Pre-pass to find all macro imports.
     node.body.retain(|item| {
@@ -377,7 +377,7 @@ pub enum JsValue {
   Function(String),
 }
 
-impl<'a> Macros<'a> {
+impl Macros<'_> {
   /// Statically evaluate a JS expression to a value, if possible.
   fn eval(&self, expr: &Expr) -> Result<JsValue, Span> {
     match expr.unwrap_parens() {

@@ -245,7 +245,7 @@ impl LMDB {
         .into_iter()
         .map(|entry| NativeEntry {
           key: entry.key,
-          value: entry.value.into(),
+          value: entry.value.to_vec(),
         })
         .collect(),
       resolve: Box::new(|value| {
@@ -469,7 +469,7 @@ mod tests {
       })();
       if let Err(DatabaseWriterError::HeedError(heed::Error::Mdb(heed::MdbError::MapFull))) = error
       {
-        current_size = current_size * 2;
+        current_size *= 2;
         tracing::info!("Resizing database {current_size}");
         unsafe { read.environment().resize(current_size).unwrap() }
       }

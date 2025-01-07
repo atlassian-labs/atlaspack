@@ -689,7 +689,7 @@ pub struct EntryIter<'a> {
   fields: Fields,
 }
 
-impl<'a> Iterator for EntryIter<'a> {
+impl Iterator for EntryIter<'_> {
   type Item = (PathBuf, &'static str);
 
   fn next(&mut self) -> Option<Self::Item> {

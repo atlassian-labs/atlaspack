@@ -181,74 +181,59 @@ mod tests {
 
     #[test]
     fn returns_false_when_react_is_not_present() {
-      assert_eq!(
-        depends_on_react(&PackageJson {
-          dependencies: None,
-          dev_dependencies: None,
-          peer_dependencies: None,
-        }),
-        false
-      );
+      assert!(!depends_on_react(&PackageJson {
+        dependencies: None,
+        dev_dependencies: None,
+        peer_dependencies: None,
+      }));
     }
 
     #[test]
     fn returns_true_when_react_is_present_in_dependencies() {
-      assert_eq!(
-        depends_on_react(&PackageJson {
-          dependencies: Some(DependencyList {
-            react: Some(String::default())
-          }),
-          dev_dependencies: None,
-          peer_dependencies: None
+      assert!(depends_on_react(&PackageJson {
+        dependencies: Some(DependencyList {
+          react: Some(String::default())
         }),
-        true
-      );
+        dev_dependencies: None,
+        peer_dependencies: None
+      }));
     }
 
     #[test]
     fn returns_true_when_react_is_present_in_dev_dependencies() {
-      assert_eq!(
-        depends_on_react(&PackageJson {
-          dependencies: None,
-          dev_dependencies: Some(DependencyList {
-            react: Some(String::default())
-          }),
-          peer_dependencies: None
+      assert!(depends_on_react(&PackageJson {
+        dependencies: None,
+        dev_dependencies: Some(DependencyList {
+          react: Some(String::default())
         }),
-        true
-      );
+        peer_dependencies: None
+      }));
     }
 
     #[test]
     fn returns_true_when_react_is_present_in_peer_dependencies() {
-      assert_eq!(
-        depends_on_react(&PackageJson {
-          dependencies: None,
-          dev_dependencies: None,
-          peer_dependencies: Some(DependencyList {
-            react: Some(String::default())
-          }),
+      assert!(depends_on_react(&PackageJson {
+        dependencies: None,
+        dev_dependencies: None,
+        peer_dependencies: Some(DependencyList {
+          react: Some(String::default())
         }),
-        true
-      );
+      }));
     }
 
     #[test]
     fn returns_true_when_react_is_present_in_all_dependencies() {
-      assert_eq!(
-        depends_on_react(&PackageJson {
-          dependencies: Some(DependencyList {
-            react: Some(String::default())
-          }),
-          dev_dependencies: Some(DependencyList {
-            react: Some(String::default())
-          }),
-          peer_dependencies: Some(DependencyList {
-            react: Some(String::default())
-          }),
+      assert!(depends_on_react(&PackageJson {
+        dependencies: Some(DependencyList {
+          react: Some(String::default())
         }),
-        true
-      );
+        dev_dependencies: Some(DependencyList {
+          react: Some(String::default())
+        }),
+        peer_dependencies: Some(DependencyList {
+          react: Some(String::default())
+        }),
+      }));
     }
   }
 
@@ -257,149 +242,122 @@ mod tests {
 
     #[test]
     fn returns_false_when_react_is_not_present() {
-      assert_eq!(
-        supports_automatic_jsx_runtime(&PackageJson {
-          dependencies: None,
-          dev_dependencies: None,
-          peer_dependencies: None,
-        }),
-        false
-      );
+      assert!(!supports_automatic_jsx_runtime(&PackageJson {
+        dependencies: None,
+        dev_dependencies: None,
+        peer_dependencies: None,
+      }));
     }
 
     #[test]
     fn returns_false_when_react_dependency_is_below_range() {
       for version in unsupported_versions() {
-        assert_eq!(
-          supports_automatic_jsx_runtime(&PackageJson {
-            dependencies: Some(DependencyList {
-              react: Some(version)
-            }),
-            dev_dependencies: None,
-            peer_dependencies: None,
+        assert!(!supports_automatic_jsx_runtime(&PackageJson {
+          dependencies: Some(DependencyList {
+            react: Some(version)
           }),
-          false
-        );
+          dev_dependencies: None,
+          peer_dependencies: None,
+        }));
       }
     }
 
     #[test]
     fn returns_false_when_react_dev_dependency_is_below_range() {
       for version in unsupported_versions() {
-        assert_eq!(
-          supports_automatic_jsx_runtime(&PackageJson {
-            dependencies: None,
-            dev_dependencies: Some(DependencyList {
-              react: Some(version)
-            }),
-            peer_dependencies: None,
+        assert!(!supports_automatic_jsx_runtime(&PackageJson {
+          dependencies: None,
+          dev_dependencies: Some(DependencyList {
+            react: Some(version)
           }),
-          false
-        );
+          peer_dependencies: None,
+        }));
       }
     }
 
     #[test]
     fn returns_false_when_react_peer_dependency_is_below_range() {
       for version in unsupported_versions() {
-        assert_eq!(
-          supports_automatic_jsx_runtime(&PackageJson {
-            dependencies: None,
-            dev_dependencies: None,
-            peer_dependencies: Some(DependencyList {
-              react: Some(version)
-            }),
+        assert!(!supports_automatic_jsx_runtime(&PackageJson {
+          dependencies: None,
+          dev_dependencies: None,
+          peer_dependencies: Some(DependencyList {
+            react: Some(version)
           }),
-          false
-        );
+        }));
       }
     }
 
     #[test]
     fn returns_false_when_react_dependencies_are_below_range() {
       for version in unsupported_versions() {
-        assert_eq!(
-          supports_automatic_jsx_runtime(&PackageJson {
-            dependencies: Some(DependencyList {
-              react: Some(version.clone())
-            }),
-            dev_dependencies: Some(DependencyList {
-              react: Some(version.clone())
-            }),
-            peer_dependencies: Some(DependencyList {
-              react: Some(version)
-            }),
+        assert!(!supports_automatic_jsx_runtime(&PackageJson {
+          dependencies: Some(DependencyList {
+            react: Some(version.clone())
           }),
-          false
-        );
+          dev_dependencies: Some(DependencyList {
+            react: Some(version.clone())
+          }),
+          peer_dependencies: Some(DependencyList {
+            react: Some(version)
+          }),
+        }));
       }
     }
 
     #[test]
     fn returns_true_when_react_dependency_is_in_range() {
       for version in supported_versions() {
-        assert_eq!(
-          supports_automatic_jsx_runtime(&PackageJson {
-            dependencies: Some(DependencyList {
-              react: Some(version.clone())
-            }),
-            dev_dependencies: None,
-            peer_dependencies: None,
+        assert!(supports_automatic_jsx_runtime(&PackageJson {
+          dependencies: Some(DependencyList {
+            react: Some(version.clone())
           }),
-          true
-        );
+          dev_dependencies: None,
+          peer_dependencies: None,
+        }));
       }
     }
 
     #[test]
     fn returns_true_when_react_dev_dependency_is_in_range() {
       for version in supported_versions() {
-        assert_eq!(
-          supports_automatic_jsx_runtime(&PackageJson {
-            dependencies: None,
-            dev_dependencies: Some(DependencyList {
-              react: Some(version.clone())
-            }),
-            peer_dependencies: None,
+        assert!(supports_automatic_jsx_runtime(&PackageJson {
+          dependencies: None,
+          dev_dependencies: Some(DependencyList {
+            react: Some(version.clone())
           }),
-          true
-        );
+          peer_dependencies: None,
+        }));
       }
     }
 
     #[test]
     fn returns_true_when_react_peer_dependency_is_in_range() {
       for version in supported_versions() {
-        assert_eq!(
-          supports_automatic_jsx_runtime(&PackageJson {
-            dependencies: None,
-            dev_dependencies: None,
-            peer_dependencies: Some(DependencyList {
-              react: Some(version.clone())
-            }),
+        assert!(supports_automatic_jsx_runtime(&PackageJson {
+          dependencies: None,
+          dev_dependencies: None,
+          peer_dependencies: Some(DependencyList {
+            react: Some(version.clone())
           }),
-          true
-        );
+        }));
       }
     }
 
     #[test]
     fn returns_true_when_react_dependencies_are_in_range() {
       for version in supported_versions() {
-        assert_eq!(
-          supports_automatic_jsx_runtime(&PackageJson {
-            dependencies: Some(DependencyList {
-              react: Some(version.clone())
-            }),
-            dev_dependencies: Some(DependencyList {
-              react: Some(version.clone())
-            }),
-            peer_dependencies: Some(DependencyList {
-              react: Some(version)
-            }),
+        assert!(supports_automatic_jsx_runtime(&PackageJson {
+          dependencies: Some(DependencyList {
+            react: Some(version.clone())
           }),
-          true
-        );
+          dev_dependencies: Some(DependencyList {
+            react: Some(version.clone())
+          }),
+          peer_dependencies: Some(DependencyList {
+            react: Some(version)
+          }),
+        }));
       }
     }
 

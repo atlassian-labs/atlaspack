@@ -224,11 +224,11 @@ mod tests {
     GlobalReplacer {
       source_map: run_test_context.source_map.clone(),
       items,
-      global_mark: run_test_context.global_mark.clone(),
+      global_mark: run_test_context.global_mark,
       globals: Default::default(),
       project_root: Path::new("project-root"),
       filename: Path::new("filename"),
-      unresolved_mark: run_test_context.unresolved_mark.clone(),
+      unresolved_mark: run_test_context.unresolved_mark,
       scope_hoist: false,
     }
   }

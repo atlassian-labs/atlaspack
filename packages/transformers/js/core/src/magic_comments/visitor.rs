@@ -31,7 +31,7 @@ impl<'a> MagicCommentsVisitor<'a> {
   }
 }
 
-impl<'a> Visit for MagicCommentsVisitor<'a> {
+impl Visit for MagicCommentsVisitor<'_> {
   fn visit_call_expr(&mut self, node: &CallExpr) {
     if !node.callee.is_import() {
       node.visit_children_with(self);

@@ -32,6 +32,7 @@ lz4_flex = { workspace = true }
 [dev-dependencies]
 criterion = { workspace = true }
 rand = { workspace = true }
+napi = { workspace = true, features = ["noop"] }
 
 [build-dependencies]
 napi-build = { workspace = true }

@@ -496,7 +496,7 @@ mod tests {
 
       let err = AtlaspackRcConfigLoader::new(fs, package_manager)
         .load(
-          &&project_root,
+          &project_root,
           LoadConfigOptions {
             additional_reporters: Vec::new(),
             config: Some("@scope/config"),

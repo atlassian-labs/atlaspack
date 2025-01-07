@@ -31,7 +31,7 @@ mod tests {
       let project_path = Path::new("test").join("a.js");
 
       assert_eq!(
-        to_project_path(&project_root, &project_root.join(project_path.clone())),
+        to_project_path(project_root, &project_root.join(project_path.clone())),
         project_path
       );
     }

@@ -568,7 +568,7 @@ mod tests {
       asset_graph_request_result
         .graph
         .assets
-        .get(0)
+        .first()
         .unwrap()
         .asset
         .file_path,
@@ -578,7 +578,7 @@ mod tests {
       asset_graph_request_result
         .graph
         .assets
-        .get(0)
+        .first()
         .unwrap()
         .asset
         .code,
@@ -589,7 +589,7 @@ mod tests {
         "#
         )
         .trim_start()
-        .trim_end_matches(|p| p == ' ')
+        .trim_end_matches(' ')
         .to_string()
       ))
     );
@@ -672,7 +672,7 @@ mod tests {
       asset_graph_request_result
         .graph
         .assets
-        .get(0)
+        .first()
         .unwrap()
         .asset
         .file_path,

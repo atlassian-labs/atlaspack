@@ -686,12 +686,12 @@ mod tests {
 
     let mut specifier = first_entry.len() - 2;
     for node in nodes[1..].iter() {
-      let entry = serde_json::from_str::<Value>(&node)?;
+      let entry = serde_json::from_str::<Value>(node)?;
       let entry = entry.as_array().unwrap();
 
       for value in entry {
         assert_eq!(
-          get_dependency(&value),
+          get_dependency(value),
           Some(json!(format!("dependency-{}", specifier)))
         );
 
@@ -707,7 +707,7 @@ mod tests {
   }
 
   fn get_dependency(value: &Value) -> Option<Value> {
-    assert_eq!(get_type(&value), json!("dependency"));
+    assert_eq!(get_type(value), json!("dependency"));
 
     value
       .get("value")
@@ -719,7 +719,7 @@ mod tests {
   }
 
   fn get_asset(value: &Value) -> Option<Value> {
-    assert_eq!(get_type(&value), json!("asset"));
+    assert_eq!(get_type(value), json!("asset"));
 
     value
       .get("value")

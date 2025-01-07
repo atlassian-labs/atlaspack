@@ -342,15 +342,15 @@ mod tests {
         String::from("data-url:*") => pipelines("1")
       });
 
-      assert_eq!(map.contains_named_pipeline("data-url"), true);
+      assert!(map.contains_named_pipeline("data-url"));
     }
 
     #[test]
     fn returns_false_for_empty_map() {
       let empty_map = NamedPipelinesMap::default();
 
-      assert_eq!(empty_map.contains_named_pipeline("data-url"), false);
-      assert_eq!(empty_map.contains_named_pipeline("types"), false);
+      assert!(!empty_map.contains_named_pipeline("data-url"));
+      assert!(!empty_map.contains_named_pipeline("types"));
     }
 
     #[test]
@@ -361,10 +361,10 @@ mod tests {
         String::from("url:*") => pipelines("3")
       });
 
-      assert_eq!(map.contains_named_pipeline("*"), false);
-      assert_eq!(map.contains_named_pipeline("data-url"), false);
-      assert_eq!(map.contains_named_pipeline("types"), false);
-      assert_eq!(map.contains_named_pipeline("urls"), false);
+      assert!(!map.contains_named_pipeline("*"));
+      assert!(!map.contains_named_pipeline("data-url"));
+      assert!(!map.contains_named_pipeline("types"));
+      assert!(!map.contains_named_pipeline("urls"));
     }
   }
 
