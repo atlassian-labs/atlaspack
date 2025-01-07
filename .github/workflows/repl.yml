@@ -34,9 +34,10 @@ jobs:
         with:
           cache: yarn
           node-version: 20
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          target: wasm32-unknown-unknown
+          toolchain: 1.83.0
+          targets: wasm32-unknown-unknown
       - name: Install wasm-opt
         run: |
           curl -L -O https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz
