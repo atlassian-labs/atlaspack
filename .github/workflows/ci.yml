@@ -25,10 +25,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           cache: yarn
-      - uses: dtolnay/rust-toolchain@master
+      - uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: 1.83.0
-          components: rustfmt
+          components: clippy, rustfmt
       - run: yarn --frozen-lockfile
       - run: yarn lint
 
@@ -67,9 +66,7 @@ jobs:
         with:
           cache: yarn
           node-version: ${{ matrix.node }}
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.83.0
+      - uses: ./.github/actions/rust-toolchain
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ matrix.os }}
@@ -98,9 +95,7 @@ jobs:
         with:
           cache: yarn
           node-version: ${{ matrix.node }}
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.83.0
+      - uses: ./.github/actions/rust-toolchain
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ matrix.os }}

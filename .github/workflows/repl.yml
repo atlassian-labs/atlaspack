@@ -34,9 +34,8 @@ jobs:
         with:
           cache: yarn
           node-version: 20
-      - uses: dtolnay/rust-toolchain@master
+      - uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: 1.83.0
           targets: wasm32-unknown-unknown
       - name: Install wasm-opt
         run: |

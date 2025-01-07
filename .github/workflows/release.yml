@@ -41,10 +41,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: 1.83.0
-          target: ${{ matrix.target }}
+          targets: ${{ matrix.target }}
       - uses: bahmutov/npm-install@v1.8.35
       - uses: Swatinem/rust-cache@v2
         if: ${{ inputs.type != 'latest' }}
@@ -87,11 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.83.0
-          profile: minimal
-          override: true
+        uses: ./.github/actions/rust-toolchain
       - uses: bahmutov/npm-install@v1.8.35
       - name: Build native packages
         run: yarn build-native-${{ inputs.profile }}
@@ -139,10 +134,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: 1.83.0
-          target: ${{ matrix.target }}
+          targets: ${{ matrix.target }}
       - name: Install cross compile toolchains
         run: |
           sudo apt-get update
