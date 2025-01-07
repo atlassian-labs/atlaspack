@@ -1,0 +1,23 @@
+name: Install Rust
+description: Install the Rust toolchain
+
+inputs:
+  components:
+    description: Comma-separated list of components to be additionally installed
+    required: false
+  targets:
+    description: Comma-separated list of target triples to install for this toolchain
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Set toolchain
+      run: echo "RUST_TOOLCHAIN=$(cat rust-toolchain)" >> $GITHUB_ENV
+      shell: bash
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        components: ${{ inputs.components }}
+        targets: ${{ inputs.targets }}
+        toolchain: ${{ env.RUST_TOOLCHAIN }}
