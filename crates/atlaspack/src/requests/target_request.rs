@@ -874,10 +874,9 @@ mod tests {
             }}
           }}
         "#,
-          module_format.map_or_else(
-            || String::default(),
-            |module_format| format!(r#""type": "{module_format}","#)
-          ),
+          module_format.map_or_else(String::default, |module_format| format!(
+            r#""type": "{module_format}","#
+          )),
         ),
         None,
         None,
@@ -1734,10 +1733,9 @@ mod tests {
             }}
           }}
         "#,
-          module_format.map_or_else(
-            || String::default(),
-            |module_format| format!(r#""type": "{module_format}","#)
-          ),
+          module_format.map_or_else(String::default, |module_format| format!(
+            r#""type": "{module_format}","#
+          )),
         ),
         None,
         None,

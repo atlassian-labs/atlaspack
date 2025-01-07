@@ -383,7 +383,7 @@ macro_rules! hoist_visit_fn {
   };
 }
 
-impl<'a> Fold for Hoist<'a> {
+impl Fold for Hoist<'_> {
   fn fold_module(&mut self, node: Module) -> Module {
     let mut node = node;
     for item in node.body {
@@ -1275,7 +1275,7 @@ impl<'a> Fold for Hoist<'a> {
   }
 }
 
-impl<'a> Hoist<'a> {
+impl Hoist<'_> {
   fn add_require(&mut self, source: &JsWord, import_kind: ImportKind) {
     let src = match import_kind {
       ImportKind::Import => format!("{}:{}:{}", self.module_id, source, "esm"),
@@ -1759,10 +1759,10 @@ mod tests {
   #[test]
   fn collect_has_cjs_exports() {
     let (collect, _code, _hoist) = parse("module.exports = {};");
-    assert_eq!(collect.has_cjs_exports, true);
+    assert!(collect.has_cjs_exports);
 
     let (collect, _code, _hoist) = parse("this.someExport = 'true';");
-    assert_eq!(collect.has_cjs_exports, true);
+    assert!(collect.has_cjs_exports);
 
     // Some TSC polyfills use a pattern like below, we want to avoid marking these modules as cjs.
     let (collect, _code, _hoist) = parse(
@@ -1771,7 +1771,7 @@ mod tests {
         var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function () {}
       "#,
     );
-    assert_eq!(collect.has_cjs_exports, false);
+    assert!(!collect.has_cjs_exports);
 
     // A free module is maybe considered a cjs export
     let (collect, _code, _hoist) = parse(
@@ -1780,7 +1780,7 @@ mod tests {
           export { performance };
       ",
     );
-    assert_eq!(collect.has_cjs_exports, true);
+    assert!(collect.has_cjs_exports);
 
     let (collect, _code, _hoist) = parse(
       "
@@ -1788,7 +1788,7 @@ mod tests {
         export { performance };
       ",
     );
-    assert_eq!(collect.has_cjs_exports, false);
+    assert!(!collect.has_cjs_exports);
   }
 
   #[test]

@@ -1224,9 +1224,8 @@ mod tests {
 
   #[test]
   fn test_visit_module_sets_is_empty_on_empty_file() {
-    let RunVisitResult { visitor, .. } =
-      run_test_visit_const(r#""#, |context| make_default_swc_collector(context));
-    assert_eq!(visitor.is_empty_or_empty_export, true);
+    let RunVisitResult { visitor, .. } = run_test_visit_const(r#""#, make_default_swc_collector);
+    assert!(visitor.is_empty_or_empty_export);
   }
 
   #[test]
@@ -1234,7 +1233,7 @@ mod tests {
     let RunVisitResult { visitor, .. } = run_test_visit_const(r#"export {}"#, |context| {
       make_default_swc_collector(context)
     });
-    assert_eq!(visitor.is_empty_or_empty_export, true);
+    assert!(visitor.is_empty_or_empty_export);
   }
 
   #[test]
@@ -1243,7 +1242,7 @@ mod tests {
       run_test_visit_const(r#"console.log('hello');"#, |context| {
         make_default_swc_collector(context)
       });
-    assert_eq!(visitor.is_empty_or_empty_export, false);
+    assert!(!visitor.is_empty_or_empty_export);
   }
 
   #[test]
@@ -1251,7 +1250,7 @@ mod tests {
     let RunVisitResult { visitor, .. } = run_test_visit_const(r#"export default 2;"#, |context| {
       make_default_swc_collector(context)
     });
-    assert_eq!(visitor.is_empty_or_empty_export, false);
+    assert!(!visitor.is_empty_or_empty_export);
   }
 
   #[test]
@@ -1260,6 +1259,6 @@ mod tests {
       run_test_visit_const(r#"console.log('hello');console.log('world')"#, |context| {
         make_default_swc_collector(context)
       });
-    assert_eq!(visitor.is_empty_or_empty_export, false);
+    assert!(!visitor.is_empty_or_empty_export);
   }
 }

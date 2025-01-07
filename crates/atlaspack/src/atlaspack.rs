@@ -185,7 +185,7 @@ mod tests {
       rpc(),
     )?;
 
-    let assets = vec!["foo", "bar", "baz"];
+    let assets = ["foo", "bar", "baz"];
 
     atlaspack.commit_assets(
       &assets

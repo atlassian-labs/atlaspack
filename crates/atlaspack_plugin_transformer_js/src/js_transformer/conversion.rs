@@ -725,6 +725,6 @@ export * from 'other';
     "#;
     let swc_output = run_swc_core_transform(source);
     let export = &swc_output.hoist_result.unwrap().re_exports[0];
-    assert_eq!(is_re_export_all_symbol(export), true);
+    assert!(is_re_export_all_symbol(export));
   }
 }

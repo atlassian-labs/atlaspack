@@ -118,54 +118,48 @@ mod tests {
     #[test]
     fn returns_none_when_there_is_no_common_path() {
       assert_eq!(
-        common_path(&vec![PathBuf::from("dist"), PathBuf::from("src")]),
+        common_path(&[PathBuf::from("dist"), PathBuf::from("src")]),
         None,
       );
 
       assert_eq!(
-        common_path(&vec![
-          PathBuf::from("dist"),
-          PathBuf::from("packages").join("foo"),
-        ]),
+        common_path(&[PathBuf::from("dist"), PathBuf::from("packages").join("foo")]),
         None,
       );
     }
 
     #[test]
     fn returns_the_common_prefix() {
-      assert_eq!(
-        common_path(&vec![PathBuf::from("/")]),
-        Some(PathBuf::from("/"))
-      );
+      assert_eq!(common_path(&[PathBuf::from("/")]), Some(PathBuf::from("/")));
 
       assert_eq!(
-        common_path(&vec![PathBuf::from("src")]),
+        common_path(&[PathBuf::from("src")]),
         Some(PathBuf::from("src"))
       );
 
       assert_eq!(
-        common_path(&vec![
+        common_path(&[
           PathBuf::from("packages/foo"),
           PathBuf::from("packages/bar"),
-          PathBuf::from("packages/baz"),
+          PathBuf::from("packages/baz")
         ]),
         Some(PathBuf::from("packages"))
       );
 
       assert_eq!(
-        common_path(&vec![
+        common_path(&[
           PathBuf::from("packages/foo"),
           PathBuf::from("packages/foo/a.js"),
-          PathBuf::from("packages/foo/bar/b.js"),
+          PathBuf::from("packages/foo/bar/b.js")
         ]),
         Some(PathBuf::from("packages").join("foo"))
       );
 
       assert_eq!(
-        common_path(&vec![
+        common_path(&[
           PathBuf::from("packages/foo/a.js"),
           PathBuf::from("packages/bar/b.js"),
-          PathBuf::from("packages/baz/c.js"),
+          PathBuf::from("packages/baz/c.js")
         ]),
         Some(PathBuf::from("packages"))
       );
@@ -312,7 +306,7 @@ mod tests {
 
       fs.set_current_working_directory(&cwd());
       fs.create_directory(&vcs)
-        .expect(format!("Expected {} directory to be created", vcs.display()).as_str());
+        .unwrap_or_else(|_| panic!("Expected {} directory to be created", vcs.display()));
 
       assert_eq!(
         infer_project_root(fs, entries).map_err(|e| e.to_string()),

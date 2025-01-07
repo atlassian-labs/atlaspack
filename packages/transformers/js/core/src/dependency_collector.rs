@@ -171,7 +171,7 @@ struct DependencyCollector<'a> {
   conditions: &'a mut HashSet<Condition>,
 }
 
-impl<'a> DependencyCollector<'a> {
+impl DependencyCollector<'_> {
   fn add_dependency(
     &mut self,
     mut specifier: JsWord,
@@ -326,7 +326,7 @@ fn rewrite_require_specifier(node: ast::CallExpr, unresolved_mark: Mark) -> ast:
   node
 }
 
-impl<'a> Fold for DependencyCollector<'a> {
+impl Fold for DependencyCollector<'_> {
   fn fold_module(&mut self, node: ast::Module) -> ast::Module {
     let mut res = node.fold_children_with(self);
     if let Some(decl) = self.import_meta.take() {
@@ -1116,7 +1116,7 @@ impl<'a> Fold for DependencyCollector<'a> {
   }
 }
 
-impl<'a> DependencyCollector<'a> {
+impl DependencyCollector<'_> {
   fn fold_new_promise(&mut self, node: ast::NewExpr) -> ast::NewExpr {
     use ast::Expr::*;
 
@@ -1383,7 +1383,7 @@ impl Fold for PromiseTransformer {
   }
 }
 
-impl<'a> DependencyCollector<'a> {
+impl DependencyCollector<'_> {
   fn match_new_url(&mut self, expr: &ast::Expr) -> Option<(JsWord, swc_core::common::Span)> {
     use ast::*;
 
@@ -1721,9 +1721,7 @@ mod tests {
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -1766,7 +1764,7 @@ mod tests {
       import { x } from 'other';
     "#
     .trim_start()
-    .trim_end_matches(|p: char| p == ' ');
+    .trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -1809,7 +1807,7 @@ mod tests {
       export { x } from 'other';
     "#
     .trim_start()
-    .trim_end_matches(|p: char| p == ' ');
+    .trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -1852,7 +1850,7 @@ mod tests {
       export * from 'other';
     "#
     .trim_start()
-    .trim_end_matches(|p: char| p == ' ');
+    .trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -1898,9 +1896,7 @@ mod tests {
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -1950,9 +1946,7 @@ try {{
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -1999,9 +1993,7 @@ Promise.resolve().then(()=>require("{}"));
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -2050,9 +2042,7 @@ Promise.resolve().then(function() {{
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -2103,9 +2093,7 @@ Promise.resolve().then(function() {{
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -2152,9 +2140,7 @@ new Promise((resolve)=>resolve(require("{}")));
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -2203,9 +2189,7 @@ new Promise(function(resolve) {{
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -2252,9 +2236,7 @@ Promise.resolve(require("{}"));
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -2300,9 +2282,7 @@ Promise.resolve(require("{}"));
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -2348,9 +2328,7 @@ Promise.resolve(require("{}"));
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -2396,9 +2374,7 @@ Promise.resolve(require("{}"));
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -2448,9 +2424,7 @@ document.body.appendChild(img);
     "#,
       hash
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -2498,9 +2472,7 @@ document.body.appendChild(img);
     "#,
       hash_b, hash_a,
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
@@ -2569,9 +2541,7 @@ document.body.appendChild(img);
     "#,
       hash_a, hash_b
     );
-    let expected_code = expected_code
-      .trim_start()
-      .trim_end_matches(|p: char| p == ' ');
+    let expected_code = expected_code.trim_start().trim_end_matches(' ');
 
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
