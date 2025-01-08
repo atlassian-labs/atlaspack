@@ -10,8 +10,8 @@ use napi::JsBuffer;
 use napi::Result;
 use napi_derive::napi;
 use oxipng::optimize_from_memory;
-use oxipng::Headers;
 use oxipng::Options;
+use oxipng::StripChunks;
 
 #[napi]
 pub fn optimize_image(kind: String, buf: Buffer, env: Env) -> Result<JsBuffer> {
@@ -20,7 +20,7 @@ pub fn optimize_image(kind: String, buf: Buffer, env: Env) -> Result<JsBuffer> {
   match kind.as_ref() {
     "png" => {
       let options = Options {
-        strip: Headers::Safe,
+        strip: StripChunks::Safe,
         ..Default::default()
       };
       match optimize_from_memory(slice, &options) {
