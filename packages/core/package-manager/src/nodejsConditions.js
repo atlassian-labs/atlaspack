@@ -2,10 +2,11 @@
 import process from 'process';
 
 // https://nodejs.org/api/packages.html#conditional-exports
+// TODO We don't support { "type": "module" }
 export const defaultNodejsConditions: Array<string> = Object.freeze([
   'node-addons',
   'node',
-  'import',
+  // 'import',
   'require',
   'module-sync',
   'default',
