@@ -33,6 +33,7 @@ import {getModuleParts} from '@atlaspack/utils';
 import {getConflictingLocalDependencies} from './utils';
 import {installPackage} from './installPackage';
 import pkg from '../package.json';
+import {getConditionsFromEnv} from './nodejsConditions';
 import {ResolverBase} from '@atlaspack/node-resolver-core';
 import {pathToFileURL} from 'url';
 import {transformSync} from '@swc/core';
@@ -587,6 +588,7 @@ export class NodePackageManager implements PackageManager {
       filename: name,
       specifierType: 'commonjs',
       parent: from,
+      packageConditions: getConditionsFromEnv(),
     });
 
     // Invalidate whenever the .pnp.js file changes.
