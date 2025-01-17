@@ -31,6 +31,7 @@ describe('esm-js-loader-retry', () => {
     globalThis.parcelRequire = mock.fn();
     // @ts-expect-error
     globalThis.navigator = {onLine: true};
+    globalThis.CustomEvent = globalThis.CustomEvent || class {};
     globalThis.dispatchEvent = mock.fn();
   });
 
