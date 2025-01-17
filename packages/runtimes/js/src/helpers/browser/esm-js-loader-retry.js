@@ -47,7 +47,7 @@ async function load(id) {
           if (i === maxRetries) throw error;
           // Dispatch event for reporting
           const event = {detail: {target: url, attempt: i}};
-          window.dispatchEvent(
+          globalThis.dispatchEvent(
             new CustomEvent('atlaspack:import_retry', event),
           );
         }
