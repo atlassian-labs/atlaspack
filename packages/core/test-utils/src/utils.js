@@ -48,6 +48,7 @@ export let overlayFS: OverlayFS = new OverlayFS(outputFS, inputFS);
 
 beforeEach(() => {
   outputFS = new MemoryFS(workerFarm);
+  overlayFS = new OverlayFS(outputFS, inputFS);
 });
 
 // Recursively copies a directory from the inputFS to the outputFS
