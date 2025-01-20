@@ -473,11 +473,11 @@ describe('bundler-experimental', () => {
             },
             {
               type: 'js',
-              assets: ['index.js'],
+              assets: ['dependency.js'],
             },
             {
               type: 'js',
-              assets: ['dependency.js'],
+              assets: ['index.js'],
             },
             {
               type: 'js',

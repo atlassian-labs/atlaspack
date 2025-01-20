@@ -541,7 +541,9 @@ export function getBundleData<B: BundleLike>(
       assets,
     };
   });
-  bundleData.sort(({name: a}, {name: b}) => byAlphabet(a, b));
+  bundleData.sort(({assets: assetsA}, {assets: assetsB}) =>
+    byAlphabet(assetsA[0], assetsB[0]),
+  );
   return bundleData;
 }
 
