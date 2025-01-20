@@ -19,7 +19,7 @@ import type {
 import invariant from 'assert';
 
 /**
- * Write a dot string to a file and generate a PNG using the `dot` CLI command.
+ * Write a dot string to a file and generate a SVG using the `dot` CLI command.
  */
 export function runDotForTest(
   __dirname: string,
@@ -27,7 +27,6 @@ export function runDotForTest(
   name: string,
   label: string,
   dot: string,
-  updatePngs: boolean = process.env.ATLASPACK_UPDATE_DOT_PNGS === 'true',
 ) {
   const slugTestName = path.join(
     __dirname,
@@ -36,18 +35,16 @@ export function runDotForTest(
   );
   fs.mkdirSync(slugTestName, {recursive: true});
   fs.mkdirSync(path.join(slugTestName, 'dot'), {recursive: true});
-  fs.mkdirSync(path.join(slugTestName, 'png'), {recursive: true});
+  fs.mkdirSync(path.join(slugTestName, 'svg'), {recursive: true});
   const filePath = `${label}.dot`;
   fs.writeFileSync(path.join(slugTestName, 'dot', filePath), dot);
-  if (updatePngs) {
-    childProcess.execSync(
-      `dot -Tpng -o "${path.join(
-        slugTestName,
-        'png',
-        filePath,
-      )}.png" "${path.join(slugTestName, 'dot', filePath)}"`,
-    );
-  }
+  childProcess.execSync(
+    `dot -Tsvg -o "${path.join(
+      slugTestName,
+      'svg',
+      filePath,
+    )}.svg" "${path.join(slugTestName, 'dot', filePath)}"`,
+  );
 }
 
 export function dotFromBundleGroupsInGraph<B: Bundle>(

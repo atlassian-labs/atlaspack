@@ -43,7 +43,7 @@ describe('runDotForTest', () => {
 
     assert.equal(
       execSync.withArgs(
-        'dot -Tpng -o "/path/to/dir/__graphs__/GraphvizUtils.tests.js - test 1234/png/label.dot.png" "/path/to/dir/__graphs__/GraphvizUtils.tests.js - test 1234/dot/label.dot"',
+        'dot -Tsvg -o "/path/to/dir/__graphs__/GraphvizUtils.tests.js - test 1234/svg/label.dot.svg" "/path/to/dir/__graphs__/GraphvizUtils.tests.js - test 1234/dot/label.dot"',
       ).callCount,
       1,
     );
