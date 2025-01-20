@@ -23,7 +23,7 @@ pub struct EnvReplacer<'a> {
   pub unresolved_mark: Mark,
 }
 
-impl<'a> VisitMut for EnvReplacer<'a> {
+impl VisitMut for EnvReplacer<'_> {
   fn visit_mut_expr(&mut self, node: &mut Expr) {
     // Replace assignments to process.browser with `true`
     // TODO: this seems questionable but we did it in the JS version??
@@ -206,7 +206,7 @@ impl<'a> VisitMut for EnvReplacer<'a> {
   }
 }
 
-impl<'a> EnvReplacer<'a> {
+impl EnvReplacer<'_> {
   /// If an expression matches `process.browser = ...` then the RHS is replaced with
   /// `true` when `is_browser` is set to true.
   ///

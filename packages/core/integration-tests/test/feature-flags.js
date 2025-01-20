@@ -1,5 +1,6 @@
+// @flow
 import assert from 'assert';
-import path from 'node:path';
+import path from 'path';
 import {rimraf} from 'rimraf';
 import {
   bundle,

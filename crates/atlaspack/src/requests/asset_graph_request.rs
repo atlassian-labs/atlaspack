@@ -8,10 +8,11 @@ use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 
-use atlaspack_core::asset_graph::{AssetGraph, DependencyNode, DependencyState};
-use atlaspack_core::types::{Asset, AssetWithDependencies, Dependency};
-
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
+use atlaspack_core::asset_graph::{
+  propagate_requested_symbols, AssetGraph, DependencyNode, DependencyState,
+};
+use atlaspack_core::types::{Asset, AssetWithDependencies, Dependency};
 
 use super::asset_request::{AssetRequest, AssetRequestOutput};
 use super::entry_request::{EntryRequest, EntryRequestOutput};
@@ -45,14 +46,14 @@ impl Request for AssetGraphRequest {
 }
 
 struct AssetGraphBuilder {
-  request_id_to_dep_node_index: HashMap<u64, NodeIndex>,
+  request_id_to_dependency_idx: HashMap<u64, NodeIndex>,
   graph: AssetGraph,
   visited: HashSet<u64>,
   work_count: u32,
   request_context: RunRequestContext,
   sender: ResultSender,
   receiver: ResultReceiver,
-  asset_request_to_asset: HashMap<u64, NodeIndex>,
+  asset_request_to_asset_idx: HashMap<u64, NodeIndex>,
   waiting_asset_requests: HashMap<u64, HashSet<NodeIndex>>,
 }
 
@@ -61,14 +62,14 @@ impl AssetGraphBuilder {
     let (sender, receiver) = channel();
 
     AssetGraphBuilder {
-      request_id_to_dep_node_index: HashMap::new(),
+      request_id_to_dependency_idx: HashMap::new(),
       graph: AssetGraph::new(),
       visited: HashSet::new(),
       work_count: 0,
       request_context,
       sender,
       receiver,
-      asset_request_to_asset: HashMap::new(),
+      asset_request_to_asset_idx: HashMap::new(),
       waiting_asset_requests: HashMap::new(),
     }
   }
@@ -137,16 +138,16 @@ impl AssetGraphBuilder {
   }
 
   fn handle_path_result(&mut self, result: PathRequestOutput, request_id: u64) {
-    let node = *self
-      .request_id_to_dep_node_index
+    let dependency_idx = *self
+      .request_id_to_dependency_idx
       .get(&request_id)
       .expect("Missing node index for request id {request_id}");
-    let dep_index = self.graph.dependency_index(node).unwrap();
+
     let DependencyNode {
       dependency,
       requested_symbols,
       state,
-    } = &mut self.graph.dependencies[dep_index];
+    } = self.graph.get_dependency_node_mut(&dependency_idx).unwrap();
 
     let asset_request = match result {
       PathRequestOutput::Resolved {
@@ -185,16 +186,16 @@ impl AssetGraphBuilder {
     let id = asset_request.id();
 
     if self.visited.insert(id) {
-      self.request_id_to_dep_node_index.insert(id, node);
+      self.request_id_to_dependency_idx.insert(id, dependency_idx);
       self.work_count += 1;
       let _ = self
         .request_context
         .queue_request(asset_request, self.sender.clone());
-    } else if let Some(asset_node_index) = self.asset_request_to_asset.get(&id) {
+    } else if let Some(asset_node_index) = self.asset_request_to_asset_idx.get(&id) {
       // We have already completed this AssetRequest so we can connect the
       // Dependency to the Asset immediately
-      self.graph.add_edge(&node, asset_node_index);
-      self.propagate_requested_symbols(*asset_node_index, node);
+      self.graph.add_edge(&dependency_idx, asset_node_index);
+      self.propagate_requested_symbols(*asset_node_index, dependency_idx);
     } else {
       // The AssetRequest has already been kicked off but is yet to
       // complete. Register this Dependency to be connected once it
@@ -203,9 +204,9 @@ impl AssetGraphBuilder {
         .waiting_asset_requests
         .entry(id)
         .and_modify(|nodes| {
-          nodes.insert(node);
+          nodes.insert(dependency_idx);
         })
-        .or_insert_with(|| HashSet::from([node]));
+        .or_insert_with(|| HashSet::from([dependency_idx]));
     }
   }
 
@@ -232,54 +233,57 @@ impl AssetGraphBuilder {
       discovered_assets,
       dependencies,
     } = result;
-    let incoming_dep_node_index = *self
-      .request_id_to_dep_node_index
+
+    let incoming_dependency_idx = *self
+      .request_id_to_dependency_idx
       .get(&request_id)
       .expect("Missing node index for request id {request_id}");
 
     // Connect the incoming DependencyNode to the new AssetNode
-    let asset_node_index = self.graph.add_asset(incoming_dep_node_index, asset.clone());
+    let asset_idx = self.graph.add_asset(asset.clone());
+
+    self.graph.add_edge(&incoming_dependency_idx, &asset_idx);
 
     self
-      .asset_request_to_asset
-      .insert(request_id, asset_node_index);
+      .asset_request_to_asset_idx
+      .insert(request_id, asset_idx);
 
-    let root_asset = (&asset, asset_node_index);
+    let root_asset = (&asset, asset_idx);
     let mut added_discovered_assets: HashMap<String, NodeIndex> = HashMap::new();
 
     // Attach the "direct" discovered assets to the graph
     let direct_discovered_assets = get_direct_discovered_assets(&discovered_assets, &dependencies);
     for discovered_asset in direct_discovered_assets {
-      let asset_node_index = self
-        .graph
-        .add_asset(incoming_dep_node_index, discovered_asset.asset.clone());
+      let asset_idx = self.graph.add_asset(discovered_asset.asset.clone());
+
+      self.graph.add_edge(&incoming_dependency_idx, &asset_idx);
 
       self.add_asset_dependencies(
         &discovered_asset.dependencies,
         &discovered_assets,
-        asset_node_index,
+        asset_idx,
         &mut added_discovered_assets,
         root_asset,
       );
-      self.propagate_requested_symbols(asset_node_index, incoming_dep_node_index);
+      self.propagate_requested_symbols(asset_idx, incoming_dependency_idx);
     }
 
     self.add_asset_dependencies(
       &dependencies,
       &discovered_assets,
-      asset_node_index,
+      asset_idx,
       &mut added_discovered_assets,
       root_asset,
     );
 
-    self.propagate_requested_symbols(asset_node_index, incoming_dep_node_index);
+    self.propagate_requested_symbols(asset_idx, incoming_dependency_idx);
 
     // Connect any previously discovered Dependencies that were waiting
     // for this AssetNode to be created
     if let Some(waiting) = self.waiting_asset_requests.remove(&request_id) {
       for dep in waiting {
-        self.graph.add_edge(&dep, &asset_node_index);
-        self.propagate_requested_symbols(asset_node_index, dep);
+        self.graph.add_edge(&dep, &asset_idx);
+        self.propagate_requested_symbols(asset_idx, dep);
       }
     }
   }
@@ -288,7 +292,7 @@ impl AssetGraphBuilder {
     &mut self,
     dependencies: &Vec<Dependency>,
     discovered_assets: &Vec<AssetWithDependencies>,
-    asset_node_index: NodeIndex,
+    asset_idx: NodeIndex,
     added_discovered_assets: &mut HashMap<String, NodeIndex>,
     root_asset: (&Asset, NodeIndex),
   ) {
@@ -333,10 +337,11 @@ impl AssetGraphBuilder {
         .as_ref()
         .is_some_and(|key| key == &dependency.specifier);
 
-      let dep_node = self.graph.add_dependency(asset_node_index, dependency);
+      let dependency_idx = self.graph.add_dependency(dependency);
+      self.graph.add_edge(&asset_idx, &dependency_idx);
 
       if dep_to_root_asset {
-        self.graph.add_edge(&dep_node, &root_asset.1);
+        self.graph.add_edge(&dependency_idx, &root_asset.1);
       }
 
       // If the dependency points to a dicovered asset then add the asset using the new
@@ -351,22 +356,23 @@ impl AssetGraphBuilder {
         if let Some(asset_node_index) = existing_discovered_asset {
           // This discovered_asset has already been added to the graph so we
           // just need to connect the dependency node to the asset node
-          self.graph.add_edge(&dep_node, asset_node_index);
+          self.graph.add_edge(&dependency_idx, asset_node_index);
         } else {
           // This discovered_asset isn't yet in the graph so we'll need to add
           // it and assign it's dependencies by calling added_discovered_assets
           // recursively.
-          let asset_node_index = self.graph.add_asset(dep_node, asset.clone());
-          added_discovered_assets.insert(asset.id.clone(), asset_node_index);
+          let asset_idx = self.graph.add_asset(asset.clone());
+          self.graph.add_edge(&dependency_idx, &asset_idx);
+          added_discovered_assets.insert(asset.id.clone(), asset_idx);
 
           self.add_asset_dependencies(
             dependencies,
             discovered_assets,
-            asset_node_index,
+            asset_idx,
             added_discovered_assets,
             root_asset,
           );
-          self.propagate_requested_symbols(asset_node_index, dep_node);
+          self.propagate_requested_symbols(asset_idx, dependency_idx);
         }
       }
     }
@@ -374,19 +380,20 @@ impl AssetGraphBuilder {
 
   fn propagate_requested_symbols(
     &mut self,
-    asset_node_index: NodeIndex,
-    incoming_dep_node_index: NodeIndex,
+    asset_idx: NodeIndex,
+    incoming_dependency_idx: NodeIndex,
   ) {
-    self.graph.propagate_requested_symbols(
-      asset_node_index,
-      incoming_dep_node_index,
-      &mut |dependency_node_index: NodeIndex, dependency: Arc<Dependency>| {
+    propagate_requested_symbols(
+      &mut self.graph,
+      asset_idx,
+      incoming_dependency_idx,
+      &mut |dependency_idx: NodeIndex, dependency: Arc<Dependency>| {
         Self::on_undeferred(
-          &mut self.request_id_to_dep_node_index,
+          &mut self.request_id_to_dependency_idx,
           &mut self.work_count,
           &mut self.request_context,
           &self.sender,
-          dependency_node_index,
+          dependency_idx,
           dependency,
         );
       },
@@ -407,7 +414,7 @@ impl AssetGraphBuilder {
         dependency: Arc::new(dependency),
       };
       self
-        .request_id_to_dep_node_index
+        .request_id_to_dependency_idx
         .insert(request.id(), dep_node);
       self.work_count += 1;
       let _ = self
@@ -491,9 +498,11 @@ mod tests {
   use std::path::{Path, PathBuf};
   use std::sync::Arc;
 
+  use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
   use atlaspack_core::types::{AtlaspackOptions, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
+  use petgraph::visit::Bfs;
 
   use crate::requests::{AssetGraphRequest, RequestResult};
   use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
@@ -513,8 +522,14 @@ mod tests {
       return;
     };
 
-    assert_eq!(asset_graph_request_result.graph.assets.len(), 0);
-    assert_eq!(asset_graph_request_result.graph.dependencies.len(), 0);
+    assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 0);
+    assert_eq!(
+      asset_graph_request_result
+        .graph
+        .get_dependency_nodes()
+        .len(),
+      0
+    );
   }
 
   #[tokio::test(flavor = "multi_thread")]
@@ -562,26 +577,22 @@ mod tests {
       return;
     };
 
-    assert_eq!(asset_graph_request_result.graph.assets.len(), 1);
-    assert_eq!(asset_graph_request_result.graph.dependencies.len(), 1);
+    assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 1);
     assert_eq!(
       asset_graph_request_result
         .graph
-        .assets
-        .get(0)
-        .unwrap()
-        .asset
-        .file_path,
-      temporary_dir.join("entry.js")
+        .get_dependency_nodes()
+        .len(),
+      1
     );
+
+    let AssetNode {
+      asset: first_asset, ..
+    } = get_first_asset(&asset_graph_request_result.graph).expect("No assets in graph");
+
+    assert_eq!(first_asset.file_path, temporary_dir.join("entry.js"));
     assert_eq!(
-      asset_graph_request_result
-        .graph
-        .assets
-        .get(0)
-        .unwrap()
-        .asset
-        .code,
+      first_asset.code,
       (Code::from(
         String::from(
           r#"
@@ -589,7 +600,7 @@ mod tests {
         "#
         )
         .trim_start()
-        .trim_end_matches(|p| p == ' ')
+        .trim_end_matches(' ')
         .to_string()
       ))
     );
@@ -664,20 +675,21 @@ mod tests {
     };
 
     // Entry, 2 assets + helpers file
-    assert_eq!(asset_graph_request_result.graph.assets.len(), 4);
+    assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 4);
     // Entry, entry to assets (2), assets to helpers (2)
-    assert_eq!(asset_graph_request_result.graph.dependencies.len(), 5);
-
     assert_eq!(
       asset_graph_request_result
         .graph
-        .assets
-        .get(0)
-        .unwrap()
-        .asset
-        .file_path,
-      temporary_dir.join("entry.js")
+        .get_dependency_nodes()
+        .len(),
+      5
     );
+
+    let AssetNode {
+      asset: first_asset, ..
+    } = get_first_asset(&asset_graph_request_result.graph).expect("No assets in graph");
+
+    assert_eq!(first_asset.file_path, temporary_dir.join("entry.js"));
   }
 
   fn setup_core_modules(fs: &InMemoryFileSystem, core_path: &Path) {
@@ -690,5 +702,25 @@ mod tests {
       &transformer_path.join("src").join("esmodule-helpers.js"),
       String::from("/* helpers */"),
     );
+  }
+
+  /// Do a BFS traversal of the the graph until the first AssetNode
+  /// is discovered. This should be the entry Asset.
+  fn get_first_asset(asset_graph: &AssetGraph) -> Option<&AssetNode> {
+    let mut first_asset = None::<&AssetNode>;
+
+    let mut bfs = Bfs::new(&asset_graph.graph, asset_graph.root_node());
+
+    while let Some(idx) = bfs.next(&asset_graph.graph) {
+      match asset_graph.get_node(&idx) {
+        Some(AssetGraphNode::Asset(asset_node)) => {
+          first_asset.replace(asset_node);
+          break;
+        }
+        _ => continue,
+      }
+    }
+
+    first_asset
   }
 }

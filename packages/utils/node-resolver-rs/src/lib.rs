@@ -99,7 +99,7 @@ pub enum Extensions<'a> {
   Owned(Vec<String>),
 }
 
-impl<'a> Extensions<'a> {
+impl Extensions<'_> {
   fn iter(&self) -> impl Iterator<Item = &str> {
     match self {
       Extensions::Borrowed(v) => itertools::Either::Left(v.iter().copied()),

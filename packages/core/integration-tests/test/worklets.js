@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -59,7 +60,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let url;
+    let url = '';
     await run(b, {
       CSS: {
         paintWorklet: {
@@ -105,7 +106,7 @@ describe('atlaspack', function () {
       },
     ]);
 
-    let url;
+    let url = '';
     await run(b, {
       CSS: {
         paintWorklet: {

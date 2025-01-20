@@ -1,6 +1,9 @@
 var mapping = new Map();
 
-function register(baseUrl, manifest) {
+function register(
+  /** @type {string} */ baseUrl,
+  /** @type {Array<string>} */ manifest, // ['id', 'path', 'id2', 'path2']
+) {
   for (var i = 0; i < manifest.length - 1; i += 2) {
     mapping.set(manifest[i], {
       baseUrl: baseUrl,

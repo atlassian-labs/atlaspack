@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import {
   bundle,
@@ -83,6 +84,7 @@ describe.v2('posthtml', function () {
     const b = await bundle(
       path.join(__dirname, '/integration/posthtml-assets/index.html'),
     );
+    // $FlowFixMe assets missing
     const asset = b.assets.values().next().value;
     const other = path.join(
       __dirname,
@@ -96,6 +98,7 @@ describe.v2('posthtml', function () {
     const b = await bundle(
       path.join(__dirname, '/integration/posthtml-plugin-deps/index.html'),
     );
+    // $FlowFixMe assets missing
     const asset = b.assets.values().next().value;
     const other = path.join(
       __dirname,

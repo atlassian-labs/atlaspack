@@ -19,7 +19,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function("inserting entries", |b| {
     b.iter(|| {
       input
-        .put(&mut txn, black_box("key"), black_box(&vec![1, 2, 3, 4, 5]))
+        .put(&mut txn, black_box("key"), black_box(&[1, 2, 3, 4, 5]))
         .unwrap();
     })
   });

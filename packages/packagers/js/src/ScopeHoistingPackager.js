@@ -1329,7 +1329,11 @@ ${code}
         }
 
         let unused = incomingDeps.every((d) => {
-          let symbols = nullthrows(this.bundleGraph.getUsedSymbols(d));
+          let symbols = this.bundleGraph.getUsedSymbols(d);
+
+          // No used symbols available for the asset, make sure we keep all of them
+          if (!symbols) return false;
+
           return !symbols.has(symbol) && !symbols.has('*');
         });
         return !unused;

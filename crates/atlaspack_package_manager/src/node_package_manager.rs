@@ -10,7 +10,7 @@ pub struct NodePackageManager<'a> {
   resolver: atlaspack_resolver::Resolver<'a>,
 }
 
-impl<'a> NodePackageManager<'a> {
+impl NodePackageManager<'_> {
   pub fn new(project_root: PathBuf, fs: FileSystemRef) -> Self {
     Self {
       resolver: atlaspack_resolver::Resolver::node(
@@ -21,7 +21,7 @@ impl<'a> NodePackageManager<'a> {
   }
 }
 
-impl<'a> PackageManager for NodePackageManager<'a> {
+impl PackageManager for NodePackageManager<'_> {
   fn resolve(&self, specifier: &str, from: &std::path::Path) -> anyhow::Result<crate::Resolution> {
     let res = self.resolver.resolve(specifier, from, SpecifierType::Cjs);
 

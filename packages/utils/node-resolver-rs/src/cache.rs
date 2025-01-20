@@ -47,7 +47,7 @@ pub enum CacheCow<'a> {
   Owned(Cache),
 }
 
-impl<'a> Deref for CacheCow<'a> {
+impl Deref for CacheCow<'_> {
   type Target = Cache;
 
   fn deref(&self) -> &Self::Target {

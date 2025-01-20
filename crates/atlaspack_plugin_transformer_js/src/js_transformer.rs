@@ -557,12 +557,12 @@ mod tests {
     // This test will fail if the react version is read from the project root
     file_system.write_file(
       Path::new("src/package.json"),
-      format!(r#"{{ "dependencies": {{ "react": "^16.0.0" }} }}"#),
+      r#"{ "dependencies": { "react": "^16.0.0" } }"#.to_string(),
     );
 
     file_system.write_file(
       Path::new("package.json"),
-      format!(r#"{{ "dependencies": {{ "react": "^18.0.0" }} }}"#),
+      r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
     );
 
     let result = run_test(TestOptions {
@@ -620,7 +620,7 @@ mod tests {
 
     file_system.write_file(
       Path::new("package.json"),
-      format!(r#"{{ "dependencies": {{ "react": "^18.0.0" }} }}"#),
+      r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
     );
 
     let result = run_test(TestOptions {
@@ -886,7 +886,7 @@ mod tests {
 
     let mut result = transformer.transform(context, asset).await?;
 
-    result.asset.code = Code::from(normalize_code(&result.asset.code.as_str()?));
+    result.asset.code = Code::from(normalize_code(result.asset.code.as_str()?));
 
     Ok(result)
   }

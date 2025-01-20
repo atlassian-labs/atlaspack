@@ -1,3 +1,4 @@
+// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -316,8 +317,8 @@ describe('atlaspack', function () {
       if (dedicated && shared) traversal.stop();
     });
 
-    assert(dedicated);
-    assert(shared);
+    if (!dedicated) return assert(dedicated);
+    if (!shared) return assert(shared);
 
     let main = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
     dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
@@ -361,9 +362,9 @@ describe('atlaspack', function () {
         },
         {
           assets: [
-            !shouldScopeHoist && 'esmodule-helpers.js',
+            ...(!shouldScopeHoist ? ['esmodule-helpers.js'] : []),
             'index.js',
-          ].filter(Boolean),
+          ],
         },
         {
           assets: ['shared-worker.js'],
@@ -384,16 +385,16 @@ describe('atlaspack', function () {
         if (dedicated && shared) traversal.stop();
       });
 
-      assert(dedicated);
-      assert(shared);
+      if (!dedicated) return assert(dedicated);
+      if (!shared) return assert(shared);
 
       let main = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
       dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
       shared = await outputFS.readFile(shared.filePath, 'utf8');
       assert(/new Worker([^,]*?)/.test(main));
       assert(/new SharedWorker([^,]*?)/.test(main));
-      assert(!/export var foo/.test(dedicated));
-      assert(!/export var foo/.test(shared));
+      assert(!/export var foo/.test(dedicated.toString()));
+      assert(!/export var foo/.test(shared.toString()));
     });
   }
 
@@ -447,8 +448,8 @@ describe('atlaspack', function () {
           if (dedicated && shared) traversal.stop();
         });
 
-        assert(dedicated);
-        assert(shared);
+        if (!dedicated) return assert(dedicated);
+        if (!shared) return assert(shared);
 
         let main = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
         assert(/new Worker([^,]*?)/.test(main));
@@ -457,8 +458,8 @@ describe('atlaspack', function () {
         dedicated = await outputFS.readFile(dedicated.filePath, 'utf8');
         shared = await outputFS.readFile(shared.filePath, 'utf8');
         let importRegex = supported ? /importScripts\s*\(/ : /import\s*("|')/;
-        assert(!importRegex.test(dedicated));
-        assert(!importRegex.test(shared));
+        assert(!importRegex.test(dedicated.toString()));
+        assert(!importRegex.test(shared.toString()));
       },
     );
   }
@@ -774,6 +775,10 @@ describe('atlaspack', function () {
     let bundles = b.getBundles();
     let main = bundles.find((b) => !b.env.isWorker());
     let worker = bundles.find((b) => b.env.isWorker());
+
+    if (!main) return assert(main);
+    if (!worker) return assert(worker);
+
     let mainContents = await outputFS.readFile(main.filePath, 'utf8');
     let workerContents = await outputFS.readFile(worker.filePath, 'utf8');
     assert(/navigator.serviceWorker.register\([^,]+?\)/.test(mainContents));
@@ -802,6 +807,8 @@ describe('atlaspack', function () {
 
     let bundles = b.getBundles();
     let main = bundles.find((b) => !b.env.isWorker());
+    if (!main) return assert(main);
+
     let mainContents = await outputFS.readFile(main.filePath, 'utf8');
     assert(
       /navigator.serviceWorker.register\(.*?, {[\n\s]*scope: 'foo'[\n\s]*}\)/.test(
@@ -909,6 +916,8 @@ describe('atlaspack', function () {
 
     let bundles = b.getBundles();
     let worker = bundles.find((b) => b.env.isWorker());
+    if (!worker) return assert(worker);
+
     let manifest, version;
     await runBundle(b, worker, {
       output(m, v) {
@@ -1169,34 +1178,36 @@ describe('atlaspack', function () {
       path.join(__dirname, '/integration/workers-with-other-loaders/index.js'),
     );
 
-    assertBundles(b, {
-      name: 'index.js',
-      assets: [
-        'index.js',
-        'worker-client.js',
-        'cacheLoader.js',
-        'js-loader.js',
-        'wasm-loader.js',
-      ],
-      childBundles: [
-        {
-          type: 'wasm',
-          assets: ['add.wasm'],
-          childBundles: [],
-        },
-        {
-          type: 'map',
-        },
-        {
-          assets: ['worker.js', 'cacheLoader.js', 'wasm-loader.js'],
-          childBundles: [
-            {
-              type: 'map',
-            },
-          ],
-        },
-      ],
-    });
+    assertBundles(b, [
+      {
+        name: 'index.js',
+        assets: [
+          'index.js',
+          'worker-client.js',
+          'cacheLoader.js',
+          'js-loader.js',
+          'wasm-loader.js',
+        ],
+        childBundles: [
+          {
+            type: 'wasm',
+            assets: ['add.wasm'],
+            childBundles: [],
+          },
+          {
+            type: 'map',
+          },
+          {
+            assets: ['worker.js', 'cacheLoader.js', 'wasm-loader.js'],
+            childBundles: [
+              {
+                type: 'map',
+              },
+            ],
+          },
+        ],
+      },
+    ]);
   });
 
   it('creates a shared bundle to deduplicate assets in workers', async () => {
@@ -1245,6 +1256,10 @@ describe('atlaspack', function () {
     let workerBundle = b
       .getBundles()
       .find((b) => b.name.startsWith('worker-b'));
+
+    if (!sharedBundle) return assert(sharedBundle);
+    if (!workerBundle) return assert(workerBundle);
+
     let contents = await outputFS.readFile(workerBundle.filePath, 'utf8');
     assert(
       contents.includes(
@@ -1296,6 +1311,7 @@ describe('atlaspack', function () {
       //     `importScripts("./${path.basename(sharedBundle.filePath)}")`,
       //   ),
       // );
+      if (!workerBundle) return assert(workerBundle);
 
       let outputArgs = [];
       let workerArgs = [];

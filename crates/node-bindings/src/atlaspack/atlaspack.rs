@@ -19,6 +19,7 @@ use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack::rpc::RpcFactoryRef;
 use atlaspack::Atlaspack;
+use atlaspack_core::asset_graph::serialize_asset_graph;
 use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
@@ -150,8 +151,10 @@ impl AtlaspackNapi {
             let mut js_object = env.create_object()?;
 
             js_object.set_named_property("edges", env.to_js_value(&asset_graph.edges())?)?;
-            js_object
-              .set_named_property("nodes", asset_graph.serialize_nodes(MAX_STRING_LENGTH)?)?;
+            js_object.set_named_property(
+              "nodes",
+              serialize_asset_graph(&asset_graph, MAX_STRING_LENGTH)?,
+            )?;
 
             NapiAtlaspackResult::ok(&env, js_object)
           }

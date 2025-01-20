@@ -1,3 +1,4 @@
+// @flow
 import path from 'path';
 import assert from 'assert';
 import Logger from '@atlaspack/logger';
@@ -885,10 +886,16 @@ describe('bundler', function () {
       },
     ]);
 
+    let assetBar = findAsset(b, 'bar.js');
+    if (!assetBar) return assert.fail();
+
+    let assetC = findAsset(b, 'c.js');
+    if (!assetC) return assert.fail();
+
     assert(
       b
-        .getReferencedBundles(b.getBundlesWithAsset(findAsset(b, 'bar.js'))[0])
-        .includes(b.getBundlesWithAsset(findAsset(b, 'c.js'))[0]),
+        .getReferencedBundles(b.getBundlesWithAsset(assetBar)[0])
+        .includes(b.getBundlesWithAsset(assetC)[0]),
     );
 
     await run(b);
@@ -950,6 +957,7 @@ describe('bundler', function () {
       .find(
         (bundle) => !bundle.getMainEntry() && bundle.name.includes('runtime'),
       );
+    if (!aManifestBundle) return assert.fail();
 
     let bBundles = b
       .getBundles()
@@ -962,6 +970,8 @@ describe('bundler', function () {
         stop();
       }
     });
+    if (!aBundleManifestAsset) return assert.fail();
+
     let aBundleManifestAssetCode = await aBundleManifestAsset.getCode();
 
     // Assert the a.js manifest bundle is aware of all the b.js bundles
@@ -1323,6 +1333,8 @@ describe('bundler', function () {
 
     // Asset should not be inlined
     const index = b.getBundles().find((b) => b.name.startsWith('index'));
+    if (!index) return assert.fail();
+
     const contents = overlayFS.readFileSync(index.filePath, 'utf8');
     assert(
       !contents.includes('async value'),
@@ -1446,14 +1458,14 @@ describe('bundler', function () {
           {
             "extends": "@atlaspack/config-default",
             "transformers": {
-              "*.js": ["./transformer.js", "..."],
+              "*.js": ["./transformer.cjs", "..."],
             }
           }
 
-        transformer.js:
-          import { Transformer } from '@atlaspack/plugin';
+        transformer.cjs:
+          const { Transformer } = require('@atlaspack/plugin');
 
-          export default new Transformer({
+          module.exports = new Transformer({
             transform({asset}) {
               if (asset.filePath.endsWith('.html')) {
                 asset.isBundleSplittable = false;

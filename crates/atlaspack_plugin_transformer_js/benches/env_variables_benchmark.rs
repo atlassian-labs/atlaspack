@@ -26,7 +26,7 @@ fn default_env_vars(
       for env_glob in environments {
         for (env_var, value) in env_vars
           .iter()
-          .filter(|(key, _value)| glob_match(&env_glob, key))
+          .filter(|(key, _value)| glob_match(env_glob, key))
         {
           vars.insert(env_var.as_str().into(), value.as_str().into());
         }
@@ -96,7 +96,7 @@ impl<'a> CachedEnvVariables<'a> {
           for (env_var, value) in self
             .env_vars
             .iter()
-            .filter(|(key, _value)| glob_match(&env_glob, key))
+            .filter(|(key, _value)| glob_match(env_glob, key))
           {
             vars.insert(env_var.as_str().into(), value.as_str().into());
           }

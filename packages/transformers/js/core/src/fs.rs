@@ -55,7 +55,7 @@ struct InlineFS<'a> {
   deps: &'a mut Vec<DependencyDescriptor>,
 }
 
-impl<'a> Fold for InlineFS<'a> {
+impl Fold for InlineFS<'_> {
   fn fold_module(&mut self, node: Module) -> Module {
     node.visit_with(&mut self.collect);
     node.fold_children_with(self)
@@ -80,7 +80,7 @@ impl<'a> Fold for InlineFS<'a> {
   }
 }
 
-impl<'a> InlineFS<'a> {
+impl InlineFS<'_> {
   fn match_module_reference(&self, node: &Expr) -> Option<(JsWord, JsWord)> {
     match node {
       Expr::Ident(ident) => {
@@ -233,7 +233,7 @@ struct Evaluator<'a> {
   inline: &'a InlineFS<'a>,
 }
 
-impl<'a> Fold for Evaluator<'a> {
+impl Fold for Evaluator<'_> {
   fn fold_expr(&mut self, node: Expr) -> Expr {
     let node = maybe_grow_default(|| node.fold_children_with(self));
 

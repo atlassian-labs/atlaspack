@@ -65,7 +65,7 @@
       "default": "./lib/public"
     },
     "./worker": {
-      "development": "./src/worker.js",
+      "@atlaspack::sources": "./src/worker.js",
       "default": "./lib/worker.js"
     }
   },
