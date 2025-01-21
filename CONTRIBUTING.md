@@ -4,13 +4,15 @@ Thank you for considering a contribution to Atlaspack! Unfortunately pull reques
 
 ---
 
+## Contribution standards
+
 For pull requests, please:
 
 - Add tests for new features and bug fixes
 - Follow the existing style
 - Separate unrelated changes into multiple pull requests
 
-See the existing issues for things to start contributing.
+<!-- See the existing issues for things to start contributing.
 
 For bigger changes, please make sure you start a discussion first by creating an issue and explaining the intended change. -->
 
@@ -20,3 +22,26 @@ Prior to accepting your contributions we ask that you please follow the appropri
 
 - [CLA for corporate contributors](https://opensource.atlassian.com/corporate)
 - [CLA for individuals](https://opensource.atlassian.com/individual)
+
+## Getting started with development
+
+Optional:
+
+```sh
+nvm use
+```
+
+These are required:
+
+```sh
+yarn
+yarn build-native-release
+yarn build
+```
+
+Then you can try out some of the examples:
+
+```sh
+cd packages/examples/kitchen-sink/
+yarn start
+```
