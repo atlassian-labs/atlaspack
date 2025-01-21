@@ -26,6 +26,11 @@ pub struct ContextualImportsConfig {
   pub default_if_undefined: bool,
 }
 
+/// Transform contextual imports usages into inline requires
+///
+/// This visitor is used to transform `importCond` into compliant ES syntax that is safe to use without bundler features `require('x')`
+/// We will need this for cases where the bundler is not available (like jest or node environments) or when we want to rollout `importCond`
+/// behaviour safely, by replicating naive source code
 pub struct ContextualImportsInlineRequireVisitor {
   unresolved_mark: Mark,
   config: ContextualImportsConfig,
