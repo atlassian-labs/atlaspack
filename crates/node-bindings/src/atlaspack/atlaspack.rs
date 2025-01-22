@@ -19,7 +19,6 @@ use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack::rpc::RpcFactoryRef;
 use atlaspack::Atlaspack;
-use atlaspack_core::asset_graph::serialize_asset_graph;
 use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
@@ -27,6 +26,7 @@ use atlaspack_package_manager::PackageManagerRef;
 use super::file_system_napi::FileSystemNapi;
 use super::napi_result::NapiAtlaspackResult;
 use super::package_manager_napi::PackageManagerNapi;
+use super::serialize_asset_graph::serialize_asset_graph;
 
 #[napi(object)]
 pub struct AtlaspackNapiBuildOptions {
@@ -148,15 +148,7 @@ impl AtlaspackNapi {
         // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
         deferred.resolve(move |env| match result {
           Ok(asset_graph) => {
-            let mut js_object = env.create_object()?;
-
-            js_object.set_named_property("edges", env.to_js_value(&asset_graph.edges())?)?;
-            js_object.set_named_property(
-              "nodes",
-              serialize_asset_graph(&asset_graph, MAX_STRING_LENGTH)?,
-            )?;
-
-            NapiAtlaspackResult::ok(&env, js_object)
+            NapiAtlaspackResult::ok(&env, serialize_asset_graph(&env, &asset_graph)?)
           }
           Err(error) => {
             let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
