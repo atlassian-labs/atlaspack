@@ -509,7 +509,7 @@ export function run(
 }
 
 interface BundleWithName {
-  name?: string;
+  +name?: string;
 }
 
 type BundleLike = Bundle & BundleWithName;

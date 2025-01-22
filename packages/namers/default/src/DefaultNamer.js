@@ -35,11 +35,24 @@ export default (new Namer({
       );
     }
 
-    let mainBundle = nullthrows(
-      bundleGroupBundles.find((b) =>
-        b.getEntryAssets().some((a) => a.id === bundleGroup.entryAssetId),
-      ),
+    console.log(bundle, bundleGroupBundles, bundleGroup.entryAssetId);
+    console.log(
+      bundle.getEntryAssets(),
+      bundle.getEntryAssets().map((a) => a.id),
     );
+    let mainBundle =
+      bundleGroupBundles.length === 1
+        ? bundleGroupBundles[0]
+        : bundleGroupBundles.find((b) =>
+            b.getEntryAssets().some((a) => a.id === bundleGroup.entryAssetId),
+          );
+    if (mainBundle == null) {
+      throw new Error(
+        `Could not find bundle with asset ${
+          bundleGroup.entryAssetId
+        } in bundles ${bundleGroupBundles.map((b) => b.id).join(', ')}`,
+      );
+    }
 
     if (
       bundle.id === mainBundle.id &&

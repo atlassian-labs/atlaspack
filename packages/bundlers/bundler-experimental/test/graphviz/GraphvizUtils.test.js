@@ -23,7 +23,7 @@ describe('runDotForTest', () => {
     const label = 'label';
     const dot = 'digraph { a -> b; }';
 
-    runDotForTest(__dirname, __filename, name, label, dot, true);
+    runDotForTest(__dirname, __filename, name, label, dot);
 
     assert.equal(
       mkdirSync.withArgs(

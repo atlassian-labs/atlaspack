@@ -72,6 +72,7 @@ import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
 import MutableBundleGraph from './public/MutableBundleGraph';
 import {runGetBundlerStats} from './BundlerStats';
+import {identifierRegistry} from './IdentifierRegistry';
 
 registerCoreWithSerializer();
 

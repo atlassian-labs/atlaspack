@@ -30,6 +30,24 @@ import {HASH_REF_PREFIX} from '../constants';
 import {fromProjectPathRelative} from '../projectPath';
 import {BundleBehavior} from '../types';
 import BundleGroup, {bundleGroupToInternalBundleGroup} from './BundleGroup';
+import type {ProjectPath} from '../projectPath';
+import {identifierRegistry} from '../IdentifierRegistry';
+
+function createBundleId(data: {|
+  entryAssetId: string | null,
+  uniqueKey: string | null,
+  distDir: ProjectPath,
+  bundleBehavior: string | null,
+|}): string {
+  const {entryAssetId, uniqueKey, distDir, bundleBehavior} = data;
+  const id = hashString(
+    `bundle:${String(
+      entryAssetId != null ? entryAssetId : uniqueKey,
+    )}${fromProjectPathRelative(distDir)}${bundleBehavior ?? ''}`,
+  );
+  identifierRegistry.addIdentifier('bundle', id, data);
+  return id;
+}
 
 export default class MutableBundleGraph
   extends BundleGraph<IBundle>
@@ -181,12 +199,12 @@ export default class MutableBundleGraph
       : null;
 
     let target = targetToInternalTarget(opts.target);
-    let bundleId = hashString(
-      'bundle:' +
-        (opts.entryAsset ? opts.entryAsset.id : opts.uniqueKey) +
-        fromProjectPathRelative(target.distDir) +
-        (opts.bundleBehavior ?? ''),
-    );
+    let bundleId = createBundleId({
+      entryAssetId: entryAsset?.id ?? null,
+      uniqueKey: opts.uniqueKey ?? null,
+      distDir: target.distDir,
+      bundleBehavior: opts.bundleBehavior ?? null,
+    });
 
     let existing = this.#graph._graph.getNodeByContentKey(bundleId);
     if (existing != null) {
