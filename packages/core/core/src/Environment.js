@@ -9,6 +9,7 @@ import {createEnvironmentId} from '@atlaspack/rust';
 import {toInternalSourceLocation} from './utils';
 import PublicEnvironment from './public/Environment';
 import {environmentToInternalEnvironment} from './public/Environment';
+import {identifierRegistry} from './IdentifierRegistry';
 
 const DEFAULT_ENGINES = {
   browsers: ['> 0.25%'],
@@ -137,7 +138,7 @@ export function mergeEnvironments(
 }
 
 function getEnvironmentHash(env: Environment): string {
-  return createEnvironmentId({
+  const data = {
     context: env.context,
     engines: env.engines,
     includeNodeModules: env.includeNodeModules,
@@ -147,5 +148,8 @@ function getEnvironmentHash(env: Environment): string {
     shouldOptimize: env.shouldOptimize,
     shouldScopeHoist: env.shouldScopeHoist,
     sourceMap: env.sourceMap,
-  });
+  };
+  const id = createEnvironmentId(data);
+  identifierRegistry.addIdentifier('environment', id, data);
+  return id;
 }
