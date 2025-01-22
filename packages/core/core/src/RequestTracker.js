@@ -1299,6 +1299,7 @@ export default class RequestTracker {
   ): Promise<TResult> {
     debug('RequestTracker::runRequest', request.id);
 
+    const startTime = performance.now();
     let hasKey = this.graph.hasContentKey(request.id);
     let requestId = hasKey
       ? this.graph.getNodeIdByContentKey(request.id)
@@ -1353,12 +1354,23 @@ export default class RequestTracker {
         options: this.options,
         rustAtlaspack: this.rustAtlaspack,
       });
-      debug('RequestTracker::runRequest finished request', request.id);
+
+      const requestDuration = performance.now() - startTime;
+      debug(
+        'RequestTracker::runRequest finished request',
+        request.id,
+        `duration=${requestDuration}ms`,
+      );
 
       assertSignalNotAborted(this.signal);
       this.completeRequest(requestNodeId);
 
       deferred.resolve(true);
+
+      if (requestDuration > 10000) {
+        await this.writeToCache();
+      }
+
       return result;
     } catch (err) {
       if (

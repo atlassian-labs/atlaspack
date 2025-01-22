@@ -6,10 +6,11 @@ export class IdentifierRegistry {
   constructor() {}
 
   addIdentifier(type: string, identifier: string, data: mixed) {
-    fs.appendFileSync(
+    fs.appendFile(
       './atlaspack-identifiers.txt',
       // $FlowFixMe
       `${type} ${identifier} ${JSON.stringify(data)}\n`,
+      () => {},
     );
   }
 }
