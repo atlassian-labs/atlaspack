@@ -28,19 +28,22 @@ function getFilenameFromUrlPath(pathname) {
  * @returns {number}
  */
 function getDomainShardIndex(str, maxShards) {
+  // As we include the base domain as a shard option then we add 1 to maxShards
+  // to account for that.
+  let totalShards = maxShards + 1;
   let shard = str.split('').reduce((a, b) => {
-    let n = (a << maxShards) - a + b.charCodeAt(0);
+    let n = (a << totalShards) - a + b.charCodeAt(0);
 
     // The value returned by << is 64 bit, the & operator coerces to 32,
     // prevents overflow as we iterate.
     return n & n;
   }, 0);
 
-  shard = shard % maxShards;
+  shard = shard % totalShards;
 
   // Make number positive
   if (shard < 0) {
-    shard += maxShards;
+    shard += totalShards;
   }
 
   return shard;
@@ -69,17 +72,20 @@ function removeTrailingShard(subdomain) {
  */
 function applyShardToDomain(domain, shard) {
   let i = domain.indexOf('.');
+  // If the shard is 0, then just use the base domain.
+  // If the shard is > 0, then remove 1 as the shards domains index from 0
+  let shardSuffix = shard === 0 ? '' : `-${shard - 1}`;
 
   // Domains like localhost have no . separators
   if (i === -1) {
-    return `${removeTrailingShard(domain)}-${shard}`;
+    return `${removeTrailingShard(domain)}${shardSuffix}`;
   }
 
   // If this domain already has a shard number in it, strip it
   // out before adding the new one
   let firstSubdomain = removeTrailingShard(domain.slice(0, i));
 
-  return `${firstSubdomain}-${shard}${domain.slice(i)}`;
+  return `${firstSubdomain}${shardSuffix}${domain.slice(i)}`;
 }
 
 /**
