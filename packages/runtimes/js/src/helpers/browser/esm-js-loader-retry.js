@@ -59,12 +59,11 @@ async function load(id) {
   return retryState[url];
 }
 
-function sendAnalyticsEvent(action, targetUrl, attempt) {
+function sendAnalyticsEvent(status, targetUrl, attempt) {
   require('./analytics/analytics.js').sendAnalyticsEvent({
-    kind: 'operational',
     action: 'importRetry',
     attributes: {
-      action,
+      status,
       targetUrl,
       attempt,
     },
