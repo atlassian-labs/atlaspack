@@ -42,20 +42,33 @@ async function load(id) {
           // Append the current time to the request URL
           // to ensure it has not been cached by the browser
           // eslint-disable-next-line no-undef
-          return await __parcel__import__(`${url}?t=${Date.now()}`);
+          const result = await __parcel__import__(`${url}?t=${Date.now()}`);
+          sendAnalyticsEvent('recovered', url, i);
+          return result;
         } catch (error) {
-          if (i === maxRetries) throw error;
-          // Dispatch event for reporting
-          const event = {detail: {target: url, attempt: i}};
-          globalThis.dispatchEvent(
-            new CustomEvent('atlaspack:import_retry', event),
-          );
+          if (i === maxRetries) {
+            sendAnalyticsEvent('failure', url, i);
+            throw error;
+          }
+          sendAnalyticsEvent('progress', url, i);
         }
       }
     })();
   }
 
   return retryState[url];
+}
+
+function sendAnalyticsEvent(kind, target, attempt) {
+  require('@atlaspack/analytics').sendAnalyticsEvent({
+    kind: 'operational',
+    action: 'importRetry',
+    attributes: {
+      kind,
+      target,
+      attempt,
+    },
+  });
 }
 
 module.exports = load;
