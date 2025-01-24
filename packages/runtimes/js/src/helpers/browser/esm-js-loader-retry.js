@@ -59,13 +59,13 @@ async function load(id) {
   return retryState[url];
 }
 
-function sendAnalyticsEvent(kind, target, attempt) {
-  require('@atlaspack/analytics').sendAnalyticsEvent({
+function sendAnalyticsEvent(action, targetUrl, attempt) {
+  require('./analytics/analytics.js').sendAnalyticsEvent({
     kind: 'operational',
     action: 'importRetry',
     attributes: {
-      kind,
-      target,
+      action,
+      targetUrl,
       attempt,
     },
   });

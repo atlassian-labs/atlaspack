@@ -1,4 +1,4 @@
-import {sendAnalyticsEvent} from '../cmd/index.js';
+import {sendAnalyticsEvent} from '../src/helpers/browser/analytics/analytics.js';
 import {mock} from 'node:test';
 import type {Mock} from 'node:test';
 import assert from 'node:assert';

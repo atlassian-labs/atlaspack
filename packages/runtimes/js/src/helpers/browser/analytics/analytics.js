@@ -1,7 +1,5 @@
-const EVENT_NAME = 'atlaspack:analytics';
-
 function sendAnalyticsEvent(detail) {
-  const ev = new globalThis.CustomEvent(EVENT_NAME, {detail});
+  const ev = new globalThis.CustomEvent('atlaspack:analytics', {detail});
   globalThis.dispatchEvent(ev);
 }
 
