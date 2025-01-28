@@ -5,6 +5,7 @@ import invariant from 'assert';
 import {DefaultMap} from '@atlaspack/utils';
 import type {
   Asset,
+  BundleBehavior,
   Dependency,
   MutableBundleGraph,
   Target,
@@ -55,16 +56,20 @@ export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
   const entryDependencies = findNodeEntryDependencies(graph);
   debugLog('merging things into packagse');
   const packages = createPackages(graph, dominators);
+
+  debugLog('merging packages together using heuristics');
+  // const mergedPackages = runMergePackages(graph, packages);
+  const mergedPackages = packages;
+
   debugLog('building package dependency graph');
-  const {packageNodes, packageInfos} = buildPackageInfos(packages);
+  const {packageNodes, packageInfos} = buildPackageInfos(mergedPackages);
+
   const packageGraph = buildPackageGraph(
     graph,
-    packages,
+    mergedPackages,
     packageNodes,
     packageInfos,
   );
-  debugLog('merging packages together using heuristics');
-  // const mergedPackageGraph = runMergePackages(graph, packages);
 
   debugLog('converting into parcel API');
   intoBundleGraph(packages, bundleGraph, packageGraph, entryDependencies);
@@ -77,6 +82,7 @@ export type SimpleBundle =
       assets: Asset[],
       options: {|
         entryAsset: Asset,
+        bundleBehavior: BundleBehavior,
         target: Target,
         needsStableName?: boolean,
       |},
@@ -285,6 +291,7 @@ export function planBundleGraph(
           assets: [],
           options: {
             entryAsset: node.asset,
+            bundleBehavior: node.asset.bundleBehavior,
             needsStableName: node.isEntryNode,
             target,
           },

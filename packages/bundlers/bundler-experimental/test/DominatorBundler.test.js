@@ -350,6 +350,7 @@ describe('planBundleGraph', () => {
         assets: [entryAsset],
         options: {
           entryAsset,
+          bundleBehavior: undefined,
           needsStableName: true,
           target,
         },
@@ -427,6 +428,7 @@ describe('planBundleGraph', () => {
         assets: [entryAsset],
         options: {
           entryAsset,
+          bundleBehavior: undefined,
           needsStableName: true,
           target,
         },
@@ -438,6 +440,7 @@ describe('planBundleGraph', () => {
         assets: [asyncAssetValue],
         options: {
           entryAsset: asyncAssetValue,
+          bundleBehavior: undefined,
           needsStableName: false,
           target,
         },
@@ -615,6 +618,7 @@ describe('planBundleGraph', () => {
         type: 'entry',
         assets: [entryAsset],
         options: {
+          bundleBehavior: undefined,
           entryAsset,
           needsStableName: true,
           target,
@@ -625,6 +629,7 @@ describe('planBundleGraph', () => {
         assets: [page1Asset],
         options: {
           entryAsset: page1Asset,
+          bundleBehavior: undefined,
           needsStableName: false,
           target,
         },
@@ -633,6 +638,7 @@ describe('planBundleGraph', () => {
         type: 'entry',
         assets: [page2Asset],
         options: {
+          bundleBehavior: undefined,
           entryAsset: page2Asset,
           needsStableName: false,
           target,
@@ -642,6 +648,7 @@ describe('planBundleGraph', () => {
         type: 'entry',
         assets: [sharedAssetValue],
         options: {
+          bundleBehavior: undefined,
           entryAsset: sharedAssetValue,
           needsStableName: false,
           target,
