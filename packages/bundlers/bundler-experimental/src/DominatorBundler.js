@@ -164,8 +164,16 @@ export function getOrCreateBundleGroupsForNode(
         invariant(dependencies != null);
         invariant(dependencies.length > 0);
 
-        for (let dependency of dependencies) {
+        for (let linkDependency of dependencies) {
+          // Our graph will split async and different type dependencies into
+          // new bundles. When the split is due to type, we don't want a new
+          // bundle group.
+          const dependency =
+            linkDependency.priority !== 'sync'
+              ? linkDependency
+              : entry.entryDependency;
           const existingBundleGroup = bundleGroupsMap.get(dependency);
+
           if (existingBundleGroup != null) {
             result.add(existingBundleGroup);
           } else {
@@ -217,25 +225,17 @@ export function getOrCreateBundleGroupsForNode(
     // const allEntries = [...Array.from(entries), ...Array.from(asyncEntries)];
 
     for (let entry of allEntries) {
-      try {
-        const nodeId = packages.getNodeIdByContentKey(entry.id);
-        const childResult = getOrCreateBundleGroupsForNode(
-          bundleGroupsByEntryDep,
-          packages,
-          entryDependenciesByAsset,
-          asyncDependenciesByAsset,
-          nodeId,
-          entry,
-        );
-        for (let entry of childResult) {
-          result.add(entry);
-        }
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.log(entry);
-        // eslint-disable-next-line no-console
-        console.log('\n\n\n\n\n\n');
-        throw err;
+      const nodeId = packages.getNodeIdByContentKey(entry.id);
+      const childResult = getOrCreateBundleGroupsForNode(
+        bundleGroupsByEntryDep,
+        packages,
+        entryDependenciesByAsset,
+        asyncDependenciesByAsset,
+        nodeId,
+        entry,
+      );
+      for (let entry of childResult) {
+        result.add(entry);
       }
     }
   }

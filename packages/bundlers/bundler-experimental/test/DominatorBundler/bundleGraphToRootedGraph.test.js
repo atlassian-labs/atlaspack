@@ -1,6 +1,11 @@
 // @flow strict-local
 
-import {getParcelOptions, overlayFS, workerFarm} from '@atlaspack/test-utils';
+import {
+  fsFixture,
+  getParcelOptions,
+  overlayFS,
+  workerFarm,
+} from '@atlaspack/test-utils';
 import nullthrows from 'nullthrows';
 import * as path from 'path';
 import assert from 'assert';
@@ -195,6 +200,91 @@ digraph simplified_graph {
         dot,
       },
     ];
+  });
+
+  it('HTML dependencies get split properly', async () => {
+    const entryDir = path.join(__dirname, 'html-dependencies');
+
+    await fsFixture(overlayFS, __dirname)`
+    html-dependencies
+      index.html:
+        <script type="module" src="./page1.js"></script>
+
+      page1.js:
+        console.log(1);
+    `;
+    const {mutableBundleGraph} = await setupBundlerTest([
+      path.join(entryDir, 'index.html'),
+    ]);
+
+    const simplifiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const dot = rootedGraphToDot(
+      entryDir,
+      simplifiedGraph,
+      'Simplified Graph',
+      'simplified_graph',
+    );
+    // page1.js is duplicated because of type=module
+    assert.equal(
+      dot,
+      `
+digraph simplified_graph {
+  labelloc="t";
+  label="Simplified Graph";
+
+  "root";
+  "root" -> "index.html";
+  "root" -> "page1.js";
+  "root" -> "page1.js";
+  "index.html";
+  "page1.js";
+  "page1.js";
+
+}
+        `.trim(),
+    );
+  });
+
+  it('image dependencies are linked to the root', async () => {
+    const entryDir = path.join(__dirname, 'html-dependencies');
+
+    await fsFixture(overlayFS, __dirname)`
+    html-dependencies
+      page1.js:
+        const image = require('./image.png');;
+        console.log(image);
+
+      image.png:
+        console.log(1);
+    `;
+    const {mutableBundleGraph} = await setupBundlerTest([
+      path.join(entryDir, 'page1.js'),
+    ]);
+
+    const simplifiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const dot = rootedGraphToDot(
+      entryDir,
+      simplifiedGraph,
+      'Simplified Graph',
+      'simplified_graph',
+    );
+    assert.equal(
+      dot,
+      `
+digraph simplified_graph {
+  labelloc="t";
+  label="Simplified Graph";
+
+  "root";
+  "root" -> "image.png";
+  "root" -> "page1.js";
+  "image.png";
+  "page1.js";
+
+  "page1.js" -> "image.png";
+}
+        `.trim(),
+    );
   });
 
   it('dependencies of different types are linked to the root', async () => {

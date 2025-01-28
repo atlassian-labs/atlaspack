@@ -150,7 +150,9 @@ export function bundleGraphToRootedGraph(
         graph.addEdge(
           graph.getNodeIdByContentKey(parentAsset.id),
           assetNodeId,
-          simpleAssetGraphEdges.asyncDependency,
+          dependency.priority !== 'sync'
+            ? simpleAssetGraphEdges.asyncDependency
+            : simpleAssetGraphEdges.dependency,
           // dependency,
         );
       } else {
