@@ -1,5 +1,5 @@
 {
-  "bundler": "@atlaspack/bundler-experimental",
+  "bundler": "@atlaspack/bundler-default",
   "transformers": {
     "types:*.{ts,tsx}": ["@atlaspack/transformer-typescript-types"],
     "bundle-text:*": ["...", "@atlaspack/transformer-inline-string"],
