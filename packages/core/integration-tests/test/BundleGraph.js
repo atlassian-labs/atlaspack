@@ -127,7 +127,6 @@ describe('BundleGraph', () => {
       const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup, {
         includeInline: false,
       });
-
       assert.deepEqual(
         bundles.map((b) => b.bundleBehavior),
         [null],
@@ -143,6 +142,175 @@ describe('BundleGraph', () => {
         bundles.map((b) => b.bundleBehavior),
         [null, 'inline'],
       );
+    });
+  });
+
+  describe('bundle groups', () => {
+    const bundlers = [
+      '@atlaspack/bundler-default',
+      '@atlaspack/bundler-experimental',
+    ];
+
+    bundlers.forEach((bundler) => {
+      it(`${bundler} - creates a bundle group per async boundary?`, async () => {
+        await fsFixture(overlayFS, __dirname)`
+        get-bundles-in-bundle-group
+          logo.svg:
+            <svg></svg>
+
+          async.jsx:
+            export default function() { return 10; }
+
+          index.jsx:
+            import logo from 'data-url:./logo.svg';
+            import('./async.jsx').then(console.log);
+
+          package.json:
+            {}
+          yarn.lock:
+            {}
+
+          .atlaspackrc:
+            {
+              "extends": "@atlaspack/config-default",
+              "bundler": ${JSON.stringify(bundler)}
+            }
+      `;
+
+        const bundleGraph = await bundle(
+          path.join(__dirname, 'get-bundles-in-bundle-group/index.jsx'),
+          {
+            inputFS: overlayFS,
+            config: '.atlaspackrc',
+          },
+        );
+
+        const bundles = bundleGraph
+          .getBundles({includeInline: true})
+          .filter((bundle) => bundle.getMainEntry() != null);
+        assert.deepEqual(
+          bundles.map((bundle) => {
+            return path.basename(bundle.getMainEntry()?.filePath);
+          }),
+          ['index.jsx', 'async.jsx', 'logo.svg'],
+        );
+        assert.equal(bundles.length, 3);
+
+        const bundleGroups = bundleGraph.getAllBundleGroups();
+        assert.equal(bundleGroups.length, 2);
+
+        const indexBundle = bundles.find((b) =>
+          b.getMainEntry()?.filePath.includes('index.jsx'),
+        );
+        assert(indexBundle != null);
+        const indexBundleGroups =
+          bundleGraph.getBundleGroupsContainingBundle(indexBundle);
+        assert.equal(indexBundleGroups.length, 1);
+
+        const svgBundle = bundles.find((b) =>
+          b.getMainEntry()?.filePath.includes('logo.svg'),
+        );
+        assert(svgBundle != null);
+        const svgBundleGroups =
+          bundleGraph.getBundleGroupsContainingBundle(svgBundle);
+        assert.equal(svgBundleGroups.length, 1);
+        assert.equal(svgBundleGroups[0], indexBundleGroups[0]);
+
+        const asyncBundle = bundles.find((b) =>
+          b.getMainEntry()?.filePath.includes('async.jsx'),
+        );
+        assert(asyncBundle != null);
+        const asyncBundleGroups =
+          bundleGraph.getBundleGroupsContainingBundle(asyncBundle);
+        assert.equal(asyncBundleGroups.length, 1);
+        assert.notEqual(asyncBundleGroups[0], indexBundleGroups[0]);
+      });
+
+      it(`${bundler} - does not create bundle groups at every shared boundary`, async () => {
+        await fsFixture(overlayFS, __dirname)`
+        get-bundles-in-bundle-group
+          logo.svg:
+            <svg></svg>
+
+          lib.js:
+            export default function() { return 10; }
+
+          async1.jsx:
+            import f from './lib';
+            export default function() { return f(); }
+
+          async2.jsx:
+            import f from './lib';
+            export default function() { return f(); }
+
+          index.jsx:
+            import logo from 'data-url:./logo.svg';
+            import('./async1.jsx').then(console.log);
+            import('./async2.jsx').then(console.log);
+
+          package.json:
+            {}
+          yarn.lock:
+            {}
+
+          .atlaspackrc:
+            {
+              "extends": "@atlaspack/config-default",
+              "bundler": ${JSON.stringify(bundler)}
+            }
+      `;
+
+        const bundleGraph = await bundle(
+          path.join(__dirname, 'get-bundles-in-bundle-group/index.jsx'),
+          {
+            inputFS: overlayFS,
+            config: '.atlaspackrc',
+          },
+        );
+
+        const bundleGroups = bundleGraph.getAllBundleGroups();
+        const bundles = bundleGraph
+          .getBundles({includeInline: true})
+          .filter((bundle) => bundle.getMainEntry() != null);
+        assert.equal(bundleGroups.length, 3);
+        assert.equal(bundles.length, 4);
+
+        const indexBundle = bundles.find((b) =>
+          b.getMainEntry()?.filePath.includes('index.jsx'),
+        );
+        assert(indexBundle != null);
+        const indexBundleGroups =
+          bundleGraph.getBundleGroupsContainingBundle(indexBundle);
+        assert.equal(indexBundleGroups.length, 1);
+
+        const svgBundle = bundles.find((b) =>
+          b.getMainEntry()?.filePath.includes('logo.svg'),
+        );
+        assert(svgBundle != null);
+        const svgBundleGroups =
+          bundleGraph.getBundleGroupsContainingBundle(svgBundle);
+        assert.equal(svgBundleGroups.length, 1);
+        assert.equal(svgBundleGroups[0], indexBundleGroups[0]);
+
+        const asyncBundle = bundles.find((b) =>
+          b.getMainEntry()?.filePath.includes('async1.jsx'),
+        );
+        assert(asyncBundle != null);
+        const asyncBundleGroups =
+          bundleGraph.getBundleGroupsContainingBundle(asyncBundle);
+        assert.equal(asyncBundleGroups.length, 1);
+        assert.notEqual(asyncBundleGroups[0], indexBundleGroups[0]);
+
+        const async2Bundle = bundles.find((b) =>
+          b.getMainEntry()?.filePath.includes('async2.jsx'),
+        );
+        assert(async2Bundle != null);
+        const async2BundleGroups =
+          bundleGraph.getBundleGroupsContainingBundle(async2Bundle);
+        assert.equal(async2BundleGroups.length, 1);
+        assert.notEqual(async2BundleGroups[0], indexBundleGroups[0]);
+        assert.notEqual(async2BundleGroups[0], asyncBundleGroups[0]);
+      });
     });
   });
 });
