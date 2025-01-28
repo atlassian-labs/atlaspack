@@ -423,7 +423,7 @@ export default class PackagerRunner {
         ) => {
           if (bundle.bundleBehavior !== 'inline') {
             throw new Error(
-              'Bundle is not inline and unable to retrieve contents',
+              `Bundle ${bundle.id} is not inline and unable to retrieve contents`,
             );
           }
 
