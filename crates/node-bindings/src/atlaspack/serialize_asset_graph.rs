@@ -12,6 +12,7 @@ use atlaspack_core::types::{Asset, Dependency};
 ///   nodes: Array<JsBuffer>,
 /// }
 /// ```
+#[tracing::instrument(level = "info", skip_all)]
 pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Result<JsObject> {
   // Serialize graph nodes in parallel
   let nodes = asset_graph

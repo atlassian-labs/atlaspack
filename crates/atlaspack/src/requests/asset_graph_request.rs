@@ -55,6 +55,7 @@ struct AssetGraphBuilder {
   receiver: ResultReceiver,
   asset_request_to_asset_idx: HashMap<u64, NodeIndex>,
   waiting_asset_requests: HashMap<u64, HashSet<NodeIndex>>,
+  entry_dependencies: Vec<(String, NodeIndex)>,
 }
 
 impl AssetGraphBuilder {
@@ -71,6 +72,7 @@ impl AssetGraphBuilder {
       receiver,
       asset_request_to_asset_idx: HashMap::new(),
       waiting_asset_requests: HashMap::new(),
+      entry_dependencies: Vec::new(),
     }
   }
 
@@ -129,6 +131,15 @@ impl AssetGraphBuilder {
           ))
         }
       }
+    }
+
+    // Connect the entries to the root node in the graph. We do this in
+    // alphabetical order so it's consistent between builds.
+    self
+      .entry_dependencies
+      .sort_by_key(|(entry, _)| entry.clone());
+    for (_, node_index) in self.entry_dependencies.iter() {
+      self.graph.add_edge(&self.graph.root_node(), node_index);
     }
 
     Ok(ResultAndInvalidations {
@@ -192,10 +203,12 @@ impl AssetGraphBuilder {
         .request_context
         .queue_request(asset_request, self.sender.clone());
     } else if let Some(asset_node_index) = self.asset_request_to_asset_idx.get(&id) {
-      // We have already completed this AssetRequest so we can connect the
-      // Dependency to the Asset immediately
-      self.graph.add_edge(&dependency_idx, asset_node_index);
-      self.propagate_requested_symbols(*asset_node_index, dependency_idx);
+      if !self.graph.has_edge(&dependency_idx, asset_node_index) {
+        // We have already completed this AssetRequest so we can connect the
+        // Dependency to the Asset immediately
+        self.graph.add_edge(&dependency_idx, asset_node_index);
+        self.propagate_requested_symbols(*asset_node_index, dependency_idx);
+      }
     } else {
       // The AssetRequest has already been kicked off but is yet to
       // complete. Register this Dependency to be connected once it
@@ -282,8 +295,10 @@ impl AssetGraphBuilder {
     // for this AssetNode to be created
     if let Some(waiting) = self.waiting_asset_requests.remove(&request_id) {
       for dep in waiting {
-        self.graph.add_edge(&dep, &asset_idx);
-        self.propagate_requested_symbols(asset_idx, dep);
+        if !self.graph.has_edge(&dep, &asset_idx) {
+          self.graph.add_edge(&dep, &asset_idx);
+          self.propagate_requested_symbols(asset_idx, dep);
+        }
       }
     }
   }
@@ -405,10 +420,12 @@ impl AssetGraphBuilder {
     for target in targets {
       let entry =
         diff_paths(&entry, &self.request_context.project_root).unwrap_or_else(|| entry.clone());
+      let entry = entry.to_str().unwrap().to_string();
 
-      let dependency = Dependency::entry(entry.to_str().unwrap().to_string(), target);
+      let dependency = Dependency::entry(entry.clone(), target);
 
       let dep_node = self.graph.add_entry_dependency(dependency.clone());
+      self.entry_dependencies.push((entry, dep_node));
 
       let request = PathRequest {
         dependency: Arc::new(dependency),
