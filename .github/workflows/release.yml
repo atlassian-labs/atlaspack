@@ -21,7 +21,7 @@ on:
         required: true
 
 permissions:
-  contents: read # for actions/checkout
+  contents: write # for actions/checkout and adding tag
 
 jobs:
   build-macos:
@@ -233,6 +233,6 @@ jobs:
             github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/${{ steps.canary-version.outputs.VERSION_TAG }}.trim(),
+              ref: 'refs/tags/${{ steps.canary-version.outputs.VERSION_TAG }}'.trim(),
               sha: context.sha
             })
