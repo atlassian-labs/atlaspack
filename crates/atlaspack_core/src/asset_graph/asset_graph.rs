@@ -175,6 +175,7 @@ impl AssetGraph {
   pub fn add_entry_dependency(&mut self, dependency: Dependency) -> NodeIndex {
     let is_library = dependency.env.is_library;
     let dependency_idx = self.add_dependency(dependency);
+    self.add_edge(&self.root_node_index.clone(), &dependency_idx);
 
     if is_library {
       if let Some(dependency_node) = self.get_dependency_node_mut(&dependency_idx) {
