@@ -35,11 +35,6 @@ export default (new Namer({
       );
     }
 
-    console.log(bundle, bundleGroupBundles, bundleGroup.entryAssetId);
-    console.log(
-      bundle.getEntryAssets(),
-      bundle.getEntryAssets().map((a) => a.id),
-    );
     let mainBundle =
       bundleGroupBundles.length === 1
         ? bundleGroupBundles[0]

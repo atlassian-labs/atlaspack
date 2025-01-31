@@ -109,8 +109,8 @@ export function bundleGraphToRootedGraph(
           dependency: node.value,
           target: node.value.target ?? context?.target,
         };
-      } else if (node.type === 'dependency') {
-        return null;
+        // } else if (node.type === 'dependency') {
+        //   return context;
       } else {
         return context;
       }
@@ -135,36 +135,28 @@ export function bundleGraphToRootedGraph(
         rootEdges.push(dependency);
         node.isEntryNode = true;
         node.isRoot = true;
-      } else if (
-        dependency.priority !== 'sync' ||
-        (dependency.sourceAssetType != null &&
-          dependency.sourceAssetType !== childAsset.type)
-      ) {
-        rootEdges.push(dependency);
-        node.isRoot = true;
+      } else {
+        if (dependency.priority !== 'sync') {
+          rootEdges.push(dependency);
+          node.isRoot = true;
+        } else if (dependency.sourceAssetType !== childAsset.type) {
+          rootEdges.push(dependency);
+          node.isRoot = true;
+        }
 
         const parentAsset = bundleGraph.getAssetWithDependency(dependency);
         if (!parentAsset) {
-          throw new Error('Non entry dependency had no asset');
+          throw new Error(
+            `Non entry dependency had no asset: ${dependency.id} - ${dependency.specifier}`,
+          );
         }
+
         graph.addEdge(
           graph.getNodeIdByContentKey(parentAsset.id),
           assetNodeId,
           dependency.priority !== 'sync'
             ? simpleAssetGraphEdges.asyncDependency
             : simpleAssetGraphEdges.dependency,
-          // dependency,
-        );
-      } else {
-        const parentAsset = bundleGraph.getAssetWithDependency(dependency);
-        if (!parentAsset) {
-          throw new Error('Non entry dependency had no asset');
-        }
-        graph.addEdge(
-          graph.getNodeIdByContentKey(parentAsset.id),
-          assetNodeId,
-          simpleAssetGraphEdges.dependency,
-          // dependency,
         );
       }
     }

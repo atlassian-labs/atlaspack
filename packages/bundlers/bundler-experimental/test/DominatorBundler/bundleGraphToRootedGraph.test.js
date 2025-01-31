@@ -208,7 +208,7 @@ digraph simplified_graph {
     await fsFixture(overlayFS, __dirname)`
     html-dependencies
       index.html:
-        <script type="module" src="./page1.js"></script>
+        <script src="./page1.js"></script>
 
       page1.js:
         console.log(1);
@@ -218,6 +218,24 @@ digraph simplified_graph {
     ]);
 
     const simplifiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+
+    const root = simplifiedGraph.getNodeIdByContentKey('root');
+    const rootNodes = simplifiedGraph
+      .getNodeIdsConnectedFrom(root)
+      .map((nodeId) => simplifiedGraph.getNode(nodeId));
+    // 1 HTML + 2 JS targets
+    assert.equal(rootNodes.length, 2);
+    const htmlNode = rootNodes.find((node) => node.asset.type === 'html');
+    assert(htmlNode != null);
+    assert.equal(htmlNode.type, 'asset');
+    assert.equal(
+      htmlNode.entryDependency.specifier,
+      'packages/bundlers/bundler-experimental/test/DominatorBundler/html-dependencies/index.html',
+    );
+    const jsNode = rootNodes.find((node) => node.asset.type === 'js');
+    assert.equal(path.basename(jsNode.asset.filePath), 'page1.js');
+    assert.strictEqual(jsNode.entryDependency, htmlNode.entryDependency);
+
     const dot = rootedGraphToDot(
       entryDir,
       simplifiedGraph,
@@ -235,9 +253,7 @@ digraph simplified_graph {
   "root";
   "root" -> "index.html";
   "root" -> "page1.js";
-  "root" -> "page1.js";
   "index.html";
-  "page1.js";
   "page1.js";
 
 }

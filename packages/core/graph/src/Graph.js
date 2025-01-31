@@ -330,6 +330,7 @@ export default class Graph<TNode, TEdgeType: number = NullEdgeType> {
     toNodeIds: $ReadOnlyArray<NodeId>,
     replaceFilter?: null | ((NodeId) => boolean),
     type?: TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
+    removeOrphans: boolean = true,
   ): void {
     this._assertHasNodeId(fromNodeId);
 
@@ -348,7 +349,7 @@ export default class Graph<TNode, TEdgeType: number = NullEdgeType> {
     }
 
     for (let child of childrenToRemove) {
-      this._removeEdge(fromNodeId, child, type);
+      this._removeEdge(fromNodeId, child, type, removeOrphans);
     }
   }
 

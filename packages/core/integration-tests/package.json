@@ -45,6 +45,7 @@
     "postcss-import": "^14.0.2",
     "posthtml-include": "^1.7.2",
     "posthtml-obfuscate": "^0.1.5",
+    "playwright": "1.50.0",
     "preact": "^10.5.9",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",

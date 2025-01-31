@@ -1344,7 +1344,14 @@ export default class RequestTracker {
     try {
       let node = this.graph.getRequestNode(requestNodeId);
 
-      this.stats.set(request.type, (this.stats.get(request.type) ?? 0) + 1);
+      const requestCount = (this.stats.get(request.type) ?? 0) + 1;
+      this.stats.set(request.type, requestCount);
+      console.log(
+        'RequestTracker::runRequest',
+        request.id,
+        request.type,
+        requestCount,
+      );
 
       let result = await request.run({
         input: request.input,
@@ -1368,7 +1375,7 @@ export default class RequestTracker {
       deferred.resolve(true);
 
       if (requestDuration > 10000) {
-        await this.writeToCache();
+        this.debouncedWriteToCache();
       }
 
       return result;
@@ -1479,6 +1486,19 @@ export default class RequestTracker {
     return {api, subRequestContentKeys};
   }
 
+  #debouncedWriteToCacheTimeout = null;
+
+  debouncedWriteToCache() {
+    if (this.#debouncedWriteToCacheTimeout != null) {
+      clearTimeout(this.#debouncedWriteToCacheTimeout);
+    }
+
+    this.#debouncedWriteToCacheTimeout = setTimeout(() => {
+      this.#debouncedWriteToCacheTimeout = null;
+      this.writeToCache();
+    }, 10000);
+  }
+
   async writeToCache(signal?: AbortSignal) {
     let cacheKey = getCacheKey(this.options);
     let requestGraphKey = `requestGraph-${cacheKey}`;
@@ -1554,6 +1574,9 @@ export default class RequestTracker {
         cacheableNodes[i] = node;
       }
     }
+    cacheableNodes = cacheableNodes.filter(
+      (node) => node && (node.result != null || node.resultCacheKey != null),
+    );
 
     let nodeCountsPerBlob = [];
 
@@ -1610,6 +1633,7 @@ export default class RequestTracker {
     }
 
     report({type: 'cache', phase: 'end', total, size: this.graph.nodes.length});
+    console.log('done writing to cache');
   }
 
   static async init({
@@ -1621,6 +1645,7 @@ export default class RequestTracker {
     options: AtlaspackOptions,
     rustAtlaspack?: AtlaspackV3,
   |}): Async<RequestTracker> {
+    console.log('loading request graph');
     let graph = await loadRequestGraph(options);
     return new RequestTracker({farm, graph, options, rustAtlaspack});
   }
@@ -1698,6 +1723,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
   const snapshotKey = `snapshot-${cacheKey}`;
   const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');
 
+  console.log('requestGraphKey', requestGraphKey);
   logger.verbose({
     origin: '@atlaspack/core',
     message: 'Loading request graph',
@@ -1752,6 +1778,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
       );
       return requestGraph;
     } catch (e) {
+      console.log('error loading cache', e);
       // Prevent logging fs events took too long warning
       clearTimeout(timeout);
       logErrorOnBailout(options, snapshotPath, e);
@@ -1761,6 +1788,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     }
   }
 
+  console.log('no graph found');
   logger.verbose({
     origin: '@atlaspack/core',
     message:

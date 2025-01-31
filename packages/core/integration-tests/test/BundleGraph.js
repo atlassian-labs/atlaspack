@@ -11,6 +11,8 @@ import {
 } from '@atlaspack/test-utils';
 import type {BundleGraph, BundleGroup, PackagedBundle} from '@atlaspack/types';
 
+const invariant = assert;
+
 describe('BundleGraph', () => {
   it('can traverse assets across bundles and contexts', async () => {
     let b = await bundle(
@@ -152,6 +154,75 @@ describe('BundleGraph', () => {
     ];
 
     bundlers.forEach((bundler) => {
+      it(`${bundler} - creates a bundle group for all assets referenced in HTML`, async () => {
+        await fsFixture(overlayFS, __dirname)`
+        get-bundles-in-bundle-group
+          index.jsx:
+            console.log('hey');
+
+          index.html:
+            <script src="./index.jsx" type="module"></script>
+
+          package.json:
+            {}
+          yarn.lock:
+            {}
+
+          .atlaspackrc:
+            {
+              "extends": "@atlaspack/config-default",
+              "bundler": ${JSON.stringify(bundler)}
+            }
+      `;
+
+        const bundleGraph = await bundle(
+          path.join(__dirname, 'get-bundles-in-bundle-group/index.html'),
+          {
+            inputFS: overlayFS,
+            config: '.atlaspackrc',
+          },
+        );
+
+        const bundles = bundleGraph
+          .getBundles({includeInline: true})
+          .filter((bundle) => bundle.getMainEntry() != null);
+        assert.deepEqual(
+          bundles
+            .map((bundle) => {
+              const filePath = bundle.getMainEntry()?.filePath;
+              invariant(filePath != null);
+              return path.basename(filePath);
+            })
+            .sort(),
+          ['index.html', 'index.jsx'],
+        );
+        assert.equal(bundles.length, 2);
+
+        // $FlowFixMe
+        const bundleGroups = bundleGraph.getAllBundleGroups();
+        assert.equal(bundleGroups.length, 1);
+
+        const indexHtmlBundle = bundles.find((b) =>
+          b.getMainEntry()?.filePath.includes('index.html'),
+        );
+        invariant(indexHtmlBundle != null);
+        const indexHtmlBundleGroups =
+          bundleGraph.getBundleGroupsContainingBundle(indexHtmlBundle);
+        const indexHtmlAssetId = indexHtmlBundle.getMainEntry()?.id;
+        assert.equal(indexHtmlBundleGroups.length, 1);
+        assert.equal(indexHtmlBundleGroups[0].entryAssetId, indexHtmlAssetId);
+
+        const indexBundle = bundles.find((b) =>
+          b.getMainEntry()?.filePath.includes('index.jsx'),
+        );
+        invariant(indexBundle != null);
+        const indexBundleGroups =
+          bundleGraph.getBundleGroupsContainingBundle(indexBundle);
+        assert.equal(indexBundleGroups.length, 1);
+        assert.equal(indexBundleGroups[0].entryAssetId, indexHtmlAssetId);
+        assert.equal(indexBundleGroups[0], indexHtmlBundleGroups[0]);
+      });
+
       it(`${bundler} - creates a bundle group per async boundary?`, async () => {
         await fsFixture(overlayFS, __dirname)`
         get-bundles-in-bundle-group
@@ -190,19 +261,22 @@ describe('BundleGraph', () => {
           .filter((bundle) => bundle.getMainEntry() != null);
         assert.deepEqual(
           bundles.map((bundle) => {
-            return path.basename(bundle.getMainEntry()?.filePath);
+            const filePath = bundle.getMainEntry()?.filePath;
+            invariant(filePath != null);
+            return path.basename(filePath);
           }),
           ['index.jsx', 'async.jsx', 'logo.svg'],
         );
         assert.equal(bundles.length, 3);
 
+        // $FlowFixMe
         const bundleGroups = bundleGraph.getAllBundleGroups();
         assert.equal(bundleGroups.length, 2);
 
         const indexBundle = bundles.find((b) =>
           b.getMainEntry()?.filePath.includes('index.jsx'),
         );
-        assert(indexBundle != null);
+        invariant(indexBundle != null);
         const indexBundleGroups =
           bundleGraph.getBundleGroupsContainingBundle(indexBundle);
         assert.equal(indexBundleGroups.length, 1);
@@ -210,7 +284,7 @@ describe('BundleGraph', () => {
         const svgBundle = bundles.find((b) =>
           b.getMainEntry()?.filePath.includes('logo.svg'),
         );
-        assert(svgBundle != null);
+        invariant(svgBundle != null);
         const svgBundleGroups =
           bundleGraph.getBundleGroupsContainingBundle(svgBundle);
         assert.equal(svgBundleGroups.length, 1);
@@ -219,7 +293,7 @@ describe('BundleGraph', () => {
         const asyncBundle = bundles.find((b) =>
           b.getMainEntry()?.filePath.includes('async.jsx'),
         );
-        assert(asyncBundle != null);
+        invariant(asyncBundle != null);
         const asyncBundleGroups =
           bundleGraph.getBundleGroupsContainingBundle(asyncBundle);
         assert.equal(asyncBundleGroups.length, 1);
@@ -268,6 +342,7 @@ describe('BundleGraph', () => {
           },
         );
 
+        // $FlowFixMe
         const bundleGroups = bundleGraph.getAllBundleGroups();
         const bundles = bundleGraph
           .getBundles({includeInline: true})
@@ -278,7 +353,7 @@ describe('BundleGraph', () => {
         const indexBundle = bundles.find((b) =>
           b.getMainEntry()?.filePath.includes('index.jsx'),
         );
-        assert(indexBundle != null);
+        invariant(indexBundle != null);
         const indexBundleGroups =
           bundleGraph.getBundleGroupsContainingBundle(indexBundle);
         assert.equal(indexBundleGroups.length, 1);
@@ -286,7 +361,7 @@ describe('BundleGraph', () => {
         const svgBundle = bundles.find((b) =>
           b.getMainEntry()?.filePath.includes('logo.svg'),
         );
-        assert(svgBundle != null);
+        invariant(svgBundle != null);
         const svgBundleGroups =
           bundleGraph.getBundleGroupsContainingBundle(svgBundle);
         assert.equal(svgBundleGroups.length, 1);
@@ -295,7 +370,7 @@ describe('BundleGraph', () => {
         const asyncBundle = bundles.find((b) =>
           b.getMainEntry()?.filePath.includes('async1.jsx'),
         );
-        assert(asyncBundle != null);
+        invariant(asyncBundle != null);
         const asyncBundleGroups =
           bundleGraph.getBundleGroupsContainingBundle(asyncBundle);
         assert.equal(asyncBundleGroups.length, 1);
@@ -304,7 +379,7 @@ describe('BundleGraph', () => {
         const async2Bundle = bundles.find((b) =>
           b.getMainEntry()?.filePath.includes('async2.jsx'),
         );
-        assert(async2Bundle != null);
+        invariant(async2Bundle != null);
         const async2BundleGroups =
           bundleGraph.getBundleGroupsContainingBundle(async2Bundle);
         assert.equal(async2BundleGroups.length, 1);

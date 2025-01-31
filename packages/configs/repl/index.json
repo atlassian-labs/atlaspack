@@ -1,5 +1,5 @@
 {
-  "bundler": "@atlaspack/bundler-default",
+  "bundler": "@atlaspack/bundler-experimental",
   "transformers": {
     "bundle-text:*": ["@atlaspack/transformer-inline-string", "..."],
     "*.{js,mjs,jsm,jsx,es6,ts,tsx}": [

@@ -54,13 +54,15 @@ export function dotFromBundleGroupsInGraph<B: Bundle>(
   const contents = [];
 
   const bundleGroups = new Set(
-    bundleGraph.getBundles().flatMap((bundle) => {
+    bundleGraph.getBundles({includeInline: true}).flatMap((bundle) => {
       return bundleGraph.getBundleGroupsContainingBundle(bundle);
     }),
   );
 
   for (let bundleGroup of bundleGroups) {
-    const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup);
+    const bundles = bundleGraph.getBundlesInBundleGroup(bundleGroup, {
+      includeInline: true,
+    });
     const id = bundleGroup.entryAssetId;
     contents.push(`subgraph cluster_${id} {`);
     contents.push(`  label = "Bundle Group ${id}";`);

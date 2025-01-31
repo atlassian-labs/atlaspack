@@ -28,7 +28,7 @@ import type {AssetNode} from './DominatorBundler/bundleGraphToRootedGraph';
 import {
   buildPackageGraph,
   buildPackageInfos,
-  // runMergePackages,
+  runMergePackages,
 } from './DominatorBundler/mergePackages';
 import {findNodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
 import type {NodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
@@ -58,8 +58,8 @@ export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
   const packages = createPackages(graph, dominators);
 
   debugLog('merging packages together using heuristics');
-  // const mergedPackages = runMergePackages(graph, packages);
-  const mergedPackages = packages;
+  const mergedPackages = runMergePackages(graph, packages);
+  // const mergedPackages = packages;
 
   debugLog('building package dependency graph');
   const {packageNodes, packageInfos} = buildPackageInfos(mergedPackages);
@@ -169,7 +169,7 @@ export function getOrCreateBundleGroupsForNode(
           // new bundles. When the split is due to type, we don't want a new
           // bundle group.
           const dependency =
-            linkDependency.priority !== 'sync'
+            linkDependency.priority === 'lazy'
               ? linkDependency
               : entry.entryDependency;
           const existingBundleGroup = bundleGroupsMap.get(dependency);
@@ -411,6 +411,7 @@ export function buildBundleGraph(
       const bundle =
         bundlesByPlanBundle.get(planBundle) ??
         bundleGraph.createBundle(planBundle.options);
+      // console.log('planBundle', planBundle, bundle.id);
 
       bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
       bundlesByPlanBundle.set(planBundle, bundle);
@@ -454,9 +455,9 @@ export function buildBundleGraph(
         return;
       }
 
-      if (!child.isRoot) {
-        bundleGraph.createBundleReference(bundle, childBundle);
-      }
+      // if (!child.isRoot) {
+      bundleGraph.createBundleReference(bundle, childBundle);
+      // }
     });
   });
 }
@@ -472,6 +473,7 @@ export function intoBundleGraph(
     entryDependencies.entryDependenciesByAsset,
     entryDependencies.asyncDependenciesByAsset,
   );
+  console.log(plan);
   buildBundleGraph(plan, packageGraph, bundleGraph);
 }
 

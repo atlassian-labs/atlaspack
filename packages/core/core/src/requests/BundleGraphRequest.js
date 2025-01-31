@@ -63,6 +63,7 @@ import {
   getDebugAssetGraphDotPath,
   getDebugAssetGraphDotOptions,
 } from './asset-graph-dot';
+import {dotFromBundleGroupsInGraph} from '@atlaspack/bundler-experimental/test/graphviz/GraphvizUtils';
 
 type BundleGraphRequestInput = {|
   requestedAssetIds: Set<string>,

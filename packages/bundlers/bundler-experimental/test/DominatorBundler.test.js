@@ -243,7 +243,9 @@ describe('getOrCreateBundleGroupsForNode', () => {
     const asyncAsset = makeAsset({filePath: 'async'});
     const target = makeTarget({});
     const entryDep = makeDependency({target});
-    const asyncDependency = makeDependency({});
+    const asyncDependency = makeDependency({
+      priority: 'parallel',
+    });
     const assetNode = {
       type: 'asset',
       id: 'asset',
@@ -275,18 +277,102 @@ describe('getOrCreateBundleGroupsForNode', () => {
     asyncDependenciesByAsset.set(asyncId, new Set([asyncNode]));
 
     const bundleGroupsByEntryDep = new DefaultMap(() => new Map());
+    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 0);
+    const rootResult = getOrCreateBundleGroupsForNode(
+      bundleGroupsByEntryDep,
+      packages,
+      entryDependenciesByAsset,
+      asyncDependenciesByAsset,
+      asset,
+      assetNode,
+    );
+    assert.equal(rootResult.size, 1);
+    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 1);
+
+    const result = Array.from(
+      getOrCreateBundleGroupsForNode(
+        bundleGroupsByEntryDep,
+        packages,
+        entryDependenciesByAsset,
+        asyncDependenciesByAsset,
+        asyncId,
+        asyncNode,
+      ),
+    );
+    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 2);
+
+    assert.strictEqual(result[0].entryDep, asyncDependency);
+    assert.deepStrictEqual(result, [
+      {
+        entryDep: asyncDependency,
+        target: assetNode.target,
+        bundles: [],
+      },
+    ]);
+  });
+
+  it('will not return a bundle group for a type change node', () => {
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
+    const root = packages.addNodeByContentKey('root', 'root');
+    packages.setRootNodeId(root);
+    const htmlAsset = makeAsset({filePath: 'entry.html'});
+    const jsAsset = makeAsset({filePath: 'index.js'});
+    const target = makeTarget({});
+    const entryDep = makeDependency({target, isEntry: true});
+    const jsDependency = makeDependency({priority: 'sync'});
+    const assetNode = {
+      type: 'asset',
+      id: 'html',
+      asset: htmlAsset,
+      entryDependency: entryDep,
+      target,
+      isEntryNode: true,
+      isRoot: true,
+    };
+    const asset = packages.addNodeByContentKey('asset', assetNode);
+    packages.addEdge(root, asset);
+
+    const jsNode = {
+      type: 'asset',
+      id: 'js',
+      asset: jsAsset,
+      entryDependency: entryDep,
+      target: null,
+      isEntryNode: false,
+      isRoot: true,
+    };
+    const jsId = packages.addNodeByContentKey('js', jsNode);
+    packages.addWeightedEdge(root, jsId, 1, [jsDependency]);
+
+    const entryDependenciesByAsset = new Map();
+    entryDependenciesByAsset.set(asset, new Set([assetNode]));
+    entryDependenciesByAsset.set(jsId, new Set([assetNode]));
+    const asyncDependenciesByAsset = new Map();
+
+    const bundleGroupsByEntryDep = new DefaultMap(() => new Map());
+    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 0);
+    getOrCreateBundleGroupsForNode(
+      bundleGroupsByEntryDep,
+      packages,
+      entryDependenciesByAsset,
+      asyncDependenciesByAsset,
+      asset,
+      assetNode,
+    );
+    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 1);
     const result = getOrCreateBundleGroupsForNode(
       bundleGroupsByEntryDep,
       packages,
       entryDependenciesByAsset,
       asyncDependenciesByAsset,
-      asyncId,
-      asyncNode,
+      jsId,
+      jsNode,
     );
+    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 1);
 
     assert.deepEqual(Array.from(result), [
       {
-        entryDep: asyncDependency,
+        entryDep: entryDep,
         target: assetNode.target,
         bundles: [],
       },

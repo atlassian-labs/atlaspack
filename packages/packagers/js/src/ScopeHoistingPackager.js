@@ -966,20 +966,20 @@ ${code}
   }
 
   isWrapped(resolved: Asset, parentAsset: Asset): boolean {
-    if (resolved.meta.isConstantModule) {
-      if (!this.bundle.hasAsset(resolved)) {
-        throw new AssertionError({
-          message: `Constant module ${path.relative(
-            this.options.projectRoot,
-            resolved.filePath,
-          )} referenced from ${path.relative(
-            this.options.projectRoot,
-            parentAsset.filePath,
-          )} not found in bundle ${this.bundle.name}`,
-        });
-      }
-      return false;
-    }
+    // if (resolved.meta.isConstantModule) {
+    //   if (!this.bundle.hasAsset(resolved)) {
+    //     throw new AssertionError({
+    //       message: `Constant module ${path.relative(
+    //         this.options.projectRoot,
+    //         resolved.filePath,
+    //       )} referenced from ${path.relative(
+    //         this.options.projectRoot,
+    //         parentAsset.filePath,
+    //       )} not found in bundle ${this.bundle.name}`,
+    //     });
+    //   }
+    //   return false;
+    // }
     return (
       (!this.bundle.hasAsset(resolved) && !this.externalAssets.has(resolved)) ||
       (this.wrappedAssets.has(resolved.id) && resolved !== parentAsset)
