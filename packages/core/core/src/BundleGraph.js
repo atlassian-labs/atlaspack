@@ -1703,7 +1703,8 @@ export default class BundleGraph {
       }
     }
 
-    return [...bundles];
+    // Sort the bundles by id to ensure they're consistent between builds
+    return [...bundles].sort((a, b) => a.id.localeCompare(b.id));
   }
 
   getReferencedBundles(

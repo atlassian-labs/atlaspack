@@ -262,7 +262,6 @@ export function createIdealGraph(
             actions.skipChildren();
             return node;
           }
-          assetToIndex.set(node.value, assets.length);
           assets.push(node.value);
 
           let bundleIdTuple = bundleRoots.get(node.value);
@@ -526,6 +525,14 @@ export function createIdealGraph(
     null,
     {skipUnusedDependencies: true},
   );
+
+  // Sort assets array so manual shared bundles have consistently ordered Assets
+  // in their bunles.
+  assets.sort((a, b) => a.id.localeCompare(b.id));
+  // Now assets is sorted, create the assetToIndex lookup
+  for (let [index, asset] of assets.entries()) {
+    assetToIndex.set(asset, index);
+  }
 
   // Strip MSBs of entries
   for (let [
