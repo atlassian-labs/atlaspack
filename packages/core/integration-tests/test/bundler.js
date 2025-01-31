@@ -2341,4 +2341,60 @@ describe('bundler', function () {
       await run(splitBundle);
     },
   );
+
+  it('should produce deterministic builds with multiple entries', async () => {
+    await fsFixture(overlayFS, __dirname)`
+        deterministic-builds
+          shared-one.js:
+            export const one = 'one';
+          shared-two.js:
+            export const two = 'two';
+          one.js:
+            import {one} from './shared-one';
+            import {two} from './shared-two';
+            sideEffectNoop(one + two);
+          entry-one.html:
+            <script type="module" src="./one.js" />
+          two.js:
+            import {two} from './shared-two';
+            import {one} from './shared-one';
+            sideEffectNoop(two + one);
+          entry-two.html:
+            <script type="module" src="./two.js" />
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "minBundleSize": 0,
+                "manualSharedBundles": [{
+                  "name": "shared",
+                  "assets": ["shared*.js"]
+                }]
+              }
+            }
+          yarn.lock:
+      `;
+
+    let build = () =>
+      bundle(
+        [
+          path.join(__dirname, 'deterministic-builds/entry-one.html'),
+          path.join(__dirname, 'deterministic-builds/entry-two.html'),
+        ],
+        {
+          inputFS: overlayFS,
+        },
+      ).then((b) =>
+        b
+          .getBundles()
+          .map((b) => b.filePath)
+          .sort(),
+      );
+
+    let bundles = await build();
+
+    for (let i = 0; i < 10; i++) {
+      let compareBundles = await build();
+      assert.deepEqual(bundles, compareBundles);
+    }
+  });
 });
