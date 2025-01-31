@@ -1,0 +1,149 @@
+name: Github Release
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches:
+      - "main"
+
+  push:
+    branches:
+      - "main"
+
+jobs:
+  # test_unit_js:
+  #   name: 🧪 Unit Tests JavaScript
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #     - uses: ./.github/actions/rust-toolchain
+  #     - uses: Swatinem/rust-cache@v2
+  #       with: { shared-key: "${{ runner.os }}" }
+  #     - run: yarn
+  #     - run: yarn build-native-release && yarn build
+  #     - run: yarn test:js:unit
+
+  # test_unit_rs:
+  #   name: 🧪 Unit Tests Rust
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #     - uses: ./.github/actions/rust-toolchain
+  #     - uses: Swatinem/rust-cache@v2
+  #       with: { shared-key: "${{ runner.os }}" }
+  #     - run: yarn
+  #     - run: yarn build-native-release && yarn build
+  #     - run: yarn test:rs:unit
+
+  # test_integration:
+  #   name: 🧪 Integration Tests
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #     - uses: ./.github/actions/rust-toolchain
+  #     - uses: Swatinem/rust-cache@v2
+  #       with: { shared-key: "${{ runner.os }}" }
+  #     - run: yarn
+  #     - run: yarn build-native-release && yarn build
+  #     - run: yarn test:integration
+
+  # lint_and_format:
+  #   name: 📝 Lint & Format
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #     - uses: ./.github/actions/rust-toolchain
+  #       with: { components: "clippy, rustfmt" }
+  #     - uses: Swatinem/rust-cache@v2
+  #       with: { shared-key: "${{ runner.os }}" }
+  #     - run: yarn --frozen-lockfile
+  #     - run: yarn build-native-release && yarn build
+  #     - run: yarn lint
+
+  build_native:
+    strategy:
+      matrix:
+        config:
+          - name: 🐥 Linux AMD64
+            os: linux
+            arch: amd64
+            runner: ubuntu-24.04
+
+          - name: 🐥 Linux ARM64
+            os: linux
+            arch: arm64
+            runner: ubuntu-24.04-arm
+
+          - name: 🍎 MacOS AMD64
+            os: macos
+            arch: amd64
+            runner: macos-13
+
+          - name: 🍎 MacOS ARM64
+            os: macos
+            arch: arm64
+            runner: macos-15
+
+          # - name: 🟦 Windows AMD64
+          #   os: windows
+          #   arch: amd64
+          #   runner: windows-latest
+
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/rust-toolchain
+      - run: yarn --frozen-lockfile
+      - run: yarn build-native-release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.config.os }}-${{ matrix.config.arch }}
+          path: ${{ github.workspace }}/packages/core/rust/*.node
+          if-no-files-found: error
+          retention-days: 1
+
+  build_flow:
+    name: 🔨 Build Flow
+    runs-on: ubuntu-24.04
+    needs: ["build_native"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - uses: actions/download-artifact@v4
+        with: { path: "${{ github.workspace }}/packages/core/rust" }
+      - run: yarn --frozen-lockfile
+      - run: yarn build
+      - run: yarn build-ts
+
+
+  publish-github-release:
+    name: "🔄 Publish Github Release"
+    runs-on: ubuntu-24.04
+    needs:
+      # - test_unit_js
+      # - test_unit_rs
+      # - test_integration
+      # - lint_and_format
+      - build_flow
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - name: Publish` Github Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+
+          TAG="$(date -u +"v%Y.%m.%d.%H%M").${GITHUB_SHA::4}"
+          echo "Tag: ${TAG}"
+
