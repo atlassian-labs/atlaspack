@@ -4,8 +4,8 @@ import logger from '@atlaspack/logger';
 import type {MutableBundleGraph} from '@atlaspack/types';
 import {type NodeId, Graph} from '@atlaspack/graph';
 import {bundleGraphToRootedGraph} from './bundleGraphToRootedGraph';
-import {convertToAcyclicGraph} from './oneCycleBreaker';
-import type {AcyclicGraph} from './oneCycleBreaker';
+import {convertToAcyclicGraph} from './cycleBreaker';
+import type {AcyclicGraph} from './cycleBreaker';
 import type {
   AssetNode,
   SimpleAssetGraph,

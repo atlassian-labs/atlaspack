@@ -9,7 +9,7 @@ import type {BundleGraph, Bundle} from '@atlaspack/types';
 import type {
   AcyclicGraph,
   StronglyConnectedComponentNode,
-} from '../../src/DominatorBundler/oneCycleBreaker';
+} from '../../src/DominatorBundler/cycleBreaker';
 import type {
   AssetNode,
   SimpleAssetGraph,

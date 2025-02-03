@@ -7,7 +7,7 @@ import {ContentGraph, type NodeId} from '@atlaspack/graph';
 import type {
   AcyclicGraph,
   StronglyConnectedComponentNode,
-} from './oneCycleBreaker';
+} from './cycleBreaker';
 
 import {EdgeContentGraph} from './EdgeContentGraph';
 import nullthrows from 'nullthrows';

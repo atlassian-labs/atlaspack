@@ -109,8 +109,8 @@ export function bundleGraphToRootedGraph(
           dependency: node.value,
           target: node.value.target ?? context?.target,
         };
-        // } else if (node.type === 'dependency') {
-        //   return context;
+      } else if (node.type === 'dependency' && node.value.priority === 'lazy') {
+        return null;
       } else {
         return context;
       }
@@ -151,12 +151,19 @@ export function bundleGraphToRootedGraph(
           );
         }
 
-        graph.addEdge(
+        const weights =
+          graph.getEdgeWeight(
+            graph.getNodeIdByContentKey(parentAsset.id),
+            assetNodeId,
+          ) ?? [];
+        weights.push(dependency);
+        graph.addWeightedEdge(
           graph.getNodeIdByContentKey(parentAsset.id),
           assetNodeId,
-          dependency.priority !== 'sync'
+          dependency.priority === 'lazy'
             ? simpleAssetGraphEdges.asyncDependency
             : simpleAssetGraphEdges.dependency,
+          weights,
         );
       }
     }

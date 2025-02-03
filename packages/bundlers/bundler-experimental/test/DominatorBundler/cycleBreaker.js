@@ -3,7 +3,7 @@
 import {
   convertToAcyclicGraph,
   findStronglyConnectedComponents,
-} from '../../src/DominatorBundler/oneCycleBreaker';
+} from '../../src/DominatorBundler/cycleBreaker';
 import assert from 'assert';
 import {dotTest, setupBundlerTest} from '../test-utils';
 import {asset, fixtureFromGraph} from '../fixtureFromGraph';
@@ -13,7 +13,7 @@ import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphTo
 import {rootedGraphToDot} from '../graphviz/GraphvizUtils';
 import {EdgeContentGraph} from '../../src/DominatorBundler/EdgeContentGraph';
 
-describe('oneCycleBreaker', () => {
+describe('cycleBreaker', () => {
   before(async function () {
     this.timeout(10000);
     // Warm up worker farm so that the first test doesn't account for this time.

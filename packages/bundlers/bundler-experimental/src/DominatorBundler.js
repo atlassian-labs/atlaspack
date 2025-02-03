@@ -32,7 +32,7 @@ import {
 } from './DominatorBundler/mergePackages';
 import {findNodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
 import type {NodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
-import type {StronglyConnectedComponentNode} from './DominatorBundler/oneCycleBreaker';
+import type {StronglyConnectedComponentNode} from './DominatorBundler/cycleBreaker';
 
 export type DominatorBundlerInput = {|
   bundleGraph: MutableBundleGraph,
@@ -58,8 +58,8 @@ export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
   const packages = createPackages(graph, dominators);
 
   debugLog('merging packages together using heuristics');
-  const mergedPackages = runMergePackages(graph, packages);
-  // const mergedPackages = packages;
+  // const mergedPackages = runMergePackages(graph, packages);
+  const mergedPackages = packages;
 
   debugLog('building package dependency graph');
   const {packageNodes, packageInfos} = buildPackageInfos(mergedPackages);
@@ -260,6 +260,8 @@ export function planBundleGraph(
   const bundleGroupsByEntryDep = new DefaultMap(() => new Map());
   const bundlesByPackageContentKey = result.bundlesByPackageContentKey;
 
+  /// TODO : Add references logic to this function
+
   for (const nodeId of packageNodes) {
     let node = packages.getNode(nodeId);
     invariant(node !== 'root');
@@ -411,7 +413,6 @@ export function buildBundleGraph(
       const bundle =
         bundlesByPlanBundle.get(planBundle) ??
         bundleGraph.createBundle(planBundle.options);
-      // console.log('planBundle', planBundle, bundle.id);
 
       bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
       bundlesByPlanBundle.set(planBundle, bundle);
@@ -439,6 +440,7 @@ export function buildBundleGraph(
     }
 
     const nodes = packageGraph.getNodeIdsConnectedFrom(nodeId);
+
     nodes.forEach((id) => {
       const child = packageGraph.getNode(id);
       if (child == null || child === 'root') {
@@ -455,8 +457,18 @@ export function buildBundleGraph(
         return;
       }
 
-      // if (!child.isRoot) {
-      bundleGraph.createBundleReference(bundle, childBundle);
+      // const shouldCreateReference = true;
+      // console.log({
+      //   planBundle,
+      //   shouldCreateReference,
+      //   child,
+      //   node,
+      //   childPlanBundle,
+      // });
+      // for (let dependency of dependencies) {
+      //   if (dependency.priority !== 'lazy') {
+      //     bundleGraph.createBundleReference(bundle, childBundle);
+      //   }
       // }
     });
   });
@@ -473,7 +485,15 @@ export function intoBundleGraph(
     entryDependencies.entryDependenciesByAsset,
     entryDependencies.asyncDependenciesByAsset,
   );
+  for (let bundleGroup of plan.bundleGroups) {
+    console.log(bundleGroup.entryDep);
+    console.log(bundleGroup.target);
+    for (let bundle of bundleGroup.bundles) {
+      console.log(bundle.assets);
+    }
+  }
   console.log(plan);
+  console.log(plan.bundleGroups);
   buildBundleGraph(plan, packageGraph, bundleGraph);
 }
 

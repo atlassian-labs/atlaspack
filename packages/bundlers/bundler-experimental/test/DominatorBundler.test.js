@@ -244,6 +244,81 @@ describe('getOrCreateBundleGroupsForNode', () => {
     const target = makeTarget({});
     const entryDep = makeDependency({target});
     const asyncDependency = makeDependency({
+      priority: 'lazy',
+    });
+    const assetNode = {
+      type: 'asset',
+      id: 'asset',
+      asset: entryAsset,
+      entryDependency: entryDep,
+      target,
+      isEntryNode: true,
+      isRoot: true,
+    };
+    const asset = packages.addNodeByContentKey('asset', assetNode);
+    packages.addEdge(root, asset);
+
+    const asyncNode = {
+      type: 'asset',
+      id: 'async',
+      asset: asyncAsset,
+      entryDependency: null,
+      target: null,
+      isEntryNode: false,
+      isRoot: true,
+    };
+    const asyncId = packages.addNodeByContentKey('async', asyncNode);
+    packages.addWeightedEdge(root, asyncId, 1, [asyncDependency]);
+
+    const entryDependenciesByAsset = new Map();
+    entryDependenciesByAsset.set(asset, new Set([assetNode]));
+    entryDependenciesByAsset.set(asyncId, new Set([assetNode]));
+    const asyncDependenciesByAsset = new Map();
+    asyncDependenciesByAsset.set(asyncId, new Set([asyncNode]));
+
+    const bundleGroupsByEntryDep = new DefaultMap(() => new Map());
+    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 0);
+    const rootResult = getOrCreateBundleGroupsForNode(
+      bundleGroupsByEntryDep,
+      packages,
+      entryDependenciesByAsset,
+      asyncDependenciesByAsset,
+      asset,
+      assetNode,
+    );
+    assert.equal(rootResult.size, 1);
+    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 1);
+
+    const result = Array.from(
+      getOrCreateBundleGroupsForNode(
+        bundleGroupsByEntryDep,
+        packages,
+        entryDependenciesByAsset,
+        asyncDependenciesByAsset,
+        asyncId,
+        asyncNode,
+      ),
+    );
+    assert.strictEqual(result[0].entryDep, asyncDependency);
+    assert.deepStrictEqual(result, [
+      {
+        entryDep: asyncDependency,
+        target: assetNode.target,
+        bundles: [],
+      },
+    ]);
+    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 2);
+  });
+
+  it('will not return a bundle group for a parallel node', () => {
+    const packages: PackagedDominatorGraph = new EdgeContentGraph();
+    const root = packages.addNodeByContentKey('root', 'root');
+    packages.setRootNodeId(root);
+    const entryAsset = makeAsset({filePath: 'entry'});
+    const asyncAsset = makeAsset({filePath: 'async'});
+    const target = makeTarget({});
+    const entryDep = makeDependency({target});
+    const asyncDependency = makeDependency({
       priority: 'parallel',
     });
     const assetNode = {
@@ -299,16 +374,8 @@ describe('getOrCreateBundleGroupsForNode', () => {
         asyncNode,
       ),
     );
-    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 2);
-
-    assert.strictEqual(result[0].entryDep, asyncDependency);
-    assert.deepStrictEqual(result, [
-      {
-        entryDep: asyncDependency,
-        target: assetNode.target,
-        bundles: [],
-      },
-    ]);
+    assert.strictEqual(result.length, 1);
+    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 1);
   });
 
   it('will not return a bundle group for a type change node', () => {
@@ -469,6 +536,7 @@ describe('planBundleGraph', () => {
     });
     const asyncDependency = makeDependency({
       target,
+      priority: 'lazy',
     });
     const assetNode = {
       type: 'asset',
@@ -536,6 +604,7 @@ describe('planBundleGraph', () => {
       ...expectedBundles,
       ...expectedAsyncBundles,
     ]);
+    assert.equal(result.bundleGroups.length, 2);
     assert.deepStrictEqual(result.bundleGroups, [
       {
         entryDep,
@@ -654,7 +723,10 @@ describe('planBundleGraph', () => {
       isRoot: true,
     };
     const page1 = packages.addNodeByContentKey('page1', page1Node);
-    const page1Dependency = makeDependency({id: 'index-to-page1'});
+    const page1Dependency = makeDependency({
+      id: 'index-to-page1',
+      priority: 'lazy',
+    });
     packages.addWeightedEdge(root, page1, 1, [page1Dependency]);
     const page2Node = {
       type: 'asset',
@@ -666,7 +738,10 @@ describe('planBundleGraph', () => {
       isRoot: true,
     };
     const page2 = packages.addNodeByContentKey('page2', page2Node);
-    const page2Dependency = makeDependency({id: 'index-to-page2'});
+    const page2Dependency = makeDependency({
+      id: 'index-to-page2',
+      priority: 'lazy',
+    });
     packages.addWeightedEdge(root, page2, 1, [page2Dependency]);
     const sharedAssetNode = {
       type: 'asset',

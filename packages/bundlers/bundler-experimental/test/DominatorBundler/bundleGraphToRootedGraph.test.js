@@ -256,6 +256,7 @@ digraph simplified_graph {
   "index.html";
   "page1.js";
 
+  "index.html" -> "page1.js";
 }
         `.trim(),
     );
@@ -378,6 +379,7 @@ digraph simplified_graph {
   "child.png";
   "index.js";
 
+  "index.js" -> "child.png";
 }
         `.trim(),
     );
