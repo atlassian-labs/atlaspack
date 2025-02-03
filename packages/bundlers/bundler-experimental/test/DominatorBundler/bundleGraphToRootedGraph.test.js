@@ -60,6 +60,21 @@ function getNodeIdsByPath(simplifiedGraph): Map<string, NodeId> {
   return nodeIdsByPath;
 }
 
+function getContentKeysByPath(simplifiedGraph): Map<string, string> {
+  const nodeIdsByPath = new Map();
+  simplifiedGraph.traverse((nodeId) => {
+    const node = simplifiedGraph.getNode(nodeId);
+    if (node == null || typeof node === 'string') {
+      return;
+    }
+    nodeIdsByPath.set(
+      path.basename(node.asset.filePath),
+      simplifiedGraph.getContentKeyByNodeId(nodeId),
+    );
+  });
+  return nodeIdsByPath;
+}
+
 describe('bundleGraphToRootedGraph', () => {
   before(async function () {
     this.timeout(10000);
@@ -212,21 +227,21 @@ digraph simplified_graph {
         `.trim(),
     );
 
-    const nodeIdsByPath = getNodeIdsByPath(simplifiedGraph);
+    const contentKeysByPath = getContentKeysByPath(simplifiedGraph);
     const bundleReferences = result.getBundleReferences();
-    const page1NodeId = nodeIdsByPath.get('page1.js') ?? -1;
-    const library1NodeId = nodeIdsByPath.get('library1.js') ?? -1;
-    const library2NodeId = nodeIdsByPath.get('library2.js') ?? -1;
+    const page1Key = contentKeysByPath.get('page1.js') ?? -1;
+    const library1Key = contentKeysByPath.get('library1.js') ?? -1;
+    const library2Key = contentKeysByPath.get('library2.js') ?? -1;
     assert.deepEqual(
-      bundleReferences.get(page1NodeId)?.map((r) => r.assetNodeId) ?? [],
-      [library2NodeId],
+      bundleReferences.get(page1Key)?.map((r) => r.assetContentKey) ?? [],
+      [library2Key],
     );
     assert.deepEqual(
-      bundleReferences.get(library1NodeId)?.map((r) => r.assetNodeId) ?? [],
+      bundleReferences.get(library1Key)?.map((r) => r.assetContentKey) ?? [],
       [],
     );
     assert.deepEqual(
-      bundleReferences.get(library2NodeId)?.map((r) => r.assetNodeId) ?? [],
+      bundleReferences.get(library2Key)?.map((r) => r.assetContentKey) ?? [],
       [],
     );
 
@@ -305,16 +320,16 @@ digraph simplified_graph {
         `.trim(),
     );
 
-    const nodeIdsByPath = getNodeIdsByPath(simplifiedGraph);
+    const contentKeysByPath = getContentKeysByPath(simplifiedGraph);
     const bundleReferences = result.getBundleReferences();
-    const indexHtmlNodeId = nodeIdsByPath.get('index.html') ?? -1;
-    const page1NodeId = nodeIdsByPath.get('page1.js') ?? -1;
+    const indexKey = contentKeysByPath.get('index.html') ?? -1;
+    const page1Key = contentKeysByPath.get('page1.js') ?? -1;
     assert.deepEqual(
-      bundleReferences.get(indexHtmlNodeId)?.map((r) => r.assetNodeId) ?? [],
-      [page1NodeId],
+      bundleReferences.get(indexKey)?.map((r) => r.assetContentKey) ?? [],
+      [page1Key],
     );
     assert.deepEqual(
-      bundleReferences.get(page1NodeId)?.map((r) => r.assetNodeId) ?? [],
+      bundleReferences.get(page1Key)?.map((r) => r.assetContentKey) ?? [],
       [],
     );
   });
@@ -443,16 +458,16 @@ digraph simplified_graph {
         `.trim(),
     );
 
-    const nodeIdsByPath = getNodeIdsByPath(simplifiedGraph);
+    const contentKeysByPath = getContentKeysByPath(simplifiedGraph);
     const bundleReferences = result.getBundleReferences();
-    const indexNodeId = nodeIdsByPath.get('index.js') ?? -1;
-    const childPngNodeId = nodeIdsByPath.get('child.png') ?? -1;
+    const indexKey = contentKeysByPath.get('index.js') ?? -1;
+    const childKey = contentKeysByPath.get('child.png') ?? -1;
     assert.deepEqual(
-      bundleReferences.get(indexNodeId)?.map((r) => r.assetNodeId) ?? [],
-      [childPngNodeId],
+      bundleReferences.get(indexKey)?.map((r) => r.assetContentKey) ?? [],
+      [childKey],
     );
     assert.deepEqual(
-      bundleReferences.get(childPngNodeId)?.map((r) => r.assetNodeId) ?? [],
+      bundleReferences.get(childKey)?.map((r) => r.assetContentKey) ?? [],
       [],
     );
   });

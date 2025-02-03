@@ -42,11 +42,14 @@ export default class ContentGraph<TNode, TEdgeType: number = 1> extends Graph<
   }
 
   clone(): ContentGraph<TNode, TEdgeType> {
-    const newGraph = new ContentGraph();
+    const newGraph: ContentGraph<TNode, TEdgeType> = new ContentGraph();
     let nodeId = 0;
     for (let node of this.nodes) {
       const contentKey = this._nodeIdToContentKey.get(nodeId);
-      if (contentKey == null) {
+      if (node == null) {
+        // $FlowFixMe
+        newGraph.addNode(null);
+      } else if (contentKey == null) {
         newGraph.addNode(node);
       } else {
         newGraph.addNodeByContentKey(contentKey, node);

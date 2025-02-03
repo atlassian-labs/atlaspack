@@ -101,7 +101,7 @@ export class RootedAssetGraph {
         this.#bundleReferences.get(parentContentKey) ?? [];
       const assetContentKey = this.#graph.getContentKeyByNodeId(assetNodeId);
       bundleReferences.push({assetNodeId, assetContentKey, dependency});
-      this.#bundleReferences.set(parentNodeId, bundleReferences);
+      this.#bundleReferences.set(parentContentKey, bundleReferences);
     }
   }
 }
