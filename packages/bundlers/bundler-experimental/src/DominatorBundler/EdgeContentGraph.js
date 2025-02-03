@@ -7,11 +7,15 @@ export class EdgeContentGraph<N, EW> extends ContentGraph<N, number> {
   #edgeWeights: Map<string, EW> = new Map();
 
   clone(): EdgeContentGraph<N, EW> {
-    const newGraph = new EdgeContentGraph();
+    const newGraph: EdgeContentGraph<N, EW> = new EdgeContentGraph();
     let nodeId = 0;
     for (let node of this.nodes) {
       const contentKey = this._nodeIdToContentKey.get(nodeId);
-      if (contentKey == null) {
+      if (node == null) {
+        // Add null node to preserve node ids
+        // $FlowFixMe
+        newGraph.addNode(null);
+      } else if (contentKey == null) {
         newGraph.addNode(node);
       } else {
         newGraph.addNodeByContentKey(contentKey, node);

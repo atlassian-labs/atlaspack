@@ -451,8 +451,8 @@ export function buildBundleGraph(
       return;
     }
 
-    const references = bundleReferences.get(nodeId) ?? [];
-    for (let {assetContentKey: childContentKey, dependency} of references) {
+    const references = bundleReferences.get(contentKey) ?? [];
+    for (let {assetContentKey: childContentKey} of references) {
       const childPlanBundle =
         plan.bundlesByPackageContentKey.get(childContentKey);
       if (childPlanBundle == null) {

@@ -8,6 +8,7 @@ import {convertToAcyclicGraph} from './cycleBreaker';
 import type {AcyclicGraph} from './cycleBreaker';
 import type {
   AssetNode,
+  BundleReferences,
   SimpleAssetGraph,
   SimpleAssetGraphEdgeWeight,
   SimpleAssetGraphNode,
@@ -43,7 +44,7 @@ export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
     'root' | SimpleAssetGraphNode,
     SimpleAssetGraphEdgeWeight,
   >,
-  bundleReferences: Map<NodeId, NodeId[]>,
+  bundleReferences: BundleReferences,
 |} {
   // Build a simpler graph with a root at the top
   debugLog('converting graph');
