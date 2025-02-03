@@ -154,7 +154,7 @@ describe.only('BundleGraph', () => {
     ];
 
     bundlers.forEach((bundler) => {
-      it.only(`${bundler} - creates a bundle group for all assets referenced in HTML`, async () => {
+      it(`${bundler} - creates a bundle group for all assets referenced in HTML`, async () => {
         await fsFixture(overlayFS, __dirname)`
         get-bundles-in-bundle-group
           index.jsx:

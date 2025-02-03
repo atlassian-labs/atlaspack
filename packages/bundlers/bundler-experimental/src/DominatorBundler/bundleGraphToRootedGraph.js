@@ -59,10 +59,15 @@ export type SimpleAssetGraph = EdgeContentGraph<
   SimpleAssetGraphEdgeWeight,
 >;
 
+export type BundleReferences = Map<
+  string,
+  {|assetNodeId: NodeId, dependency: Dependency, assetContentKey: string|}[],
+>;
+
 export class RootedAssetGraph {
   #graph: SimpleAssetGraph;
   #rootNodeId: NodeId;
-  #bundleReferences: Map<NodeId, NodeId[]> = new Map();
+  #bundleReferences: BundleReferences = new Map();
 
   constructor() {
     this.#graph = new EdgeContentGraph();
@@ -81,7 +86,7 @@ export class RootedAssetGraph {
     return this.#graph;
   }
 
-  getBundleReferences(): Map<NodeId, NodeId[]> {
+  getBundleReferences(): BundleReferences {
     return this.#bundleReferences;
   }
 
@@ -91,8 +96,11 @@ export class RootedAssetGraph {
     dependency: Dependency,
   ) {
     if (dependency.priority !== 'lazy') {
-      const bundleReferences = this.#bundleReferences.get(parentNodeId) ?? [];
-      bundleReferences.push(assetNodeId);
+      const parentContentKey = this.#graph.getContentKeyByNodeId(parentNodeId);
+      const bundleReferences =
+        this.#bundleReferences.get(parentContentKey) ?? [];
+      const assetContentKey = this.#graph.getContentKeyByNodeId(assetNodeId);
+      bundleReferences.push({assetNodeId, assetContentKey, dependency});
       this.#bundleReferences.set(parentNodeId, bundleReferences);
     }
   }

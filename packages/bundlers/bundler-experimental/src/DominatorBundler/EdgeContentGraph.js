@@ -10,7 +10,6 @@ export class EdgeContentGraph<N, EW> extends ContentGraph<N, number> {
     const newGraph = new EdgeContentGraph();
     let nodeId = 0;
     for (let node of this.nodes) {
-      if (node == null) continue;
       const contentKey = this._nodeIdToContentKey.get(nodeId);
       if (contentKey == null) {
         newGraph.addNode(node);

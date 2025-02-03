@@ -217,9 +217,18 @@ digraph simplified_graph {
     const page1NodeId = nodeIdsByPath.get('page1.js') ?? -1;
     const library1NodeId = nodeIdsByPath.get('library1.js') ?? -1;
     const library2NodeId = nodeIdsByPath.get('library2.js') ?? -1;
-    assert.deepEqual(bundleReferences.get(page1NodeId) ?? [], [library2NodeId]);
-    assert.deepEqual(bundleReferences.get(library1NodeId) ?? [], []);
-    assert.deepEqual(bundleReferences.get(library2NodeId) ?? [], []);
+    assert.deepEqual(
+      bundleReferences.get(page1NodeId)?.map((r) => r.assetNodeId) ?? [],
+      [library2NodeId],
+    );
+    assert.deepEqual(
+      bundleReferences.get(library1NodeId)?.map((r) => r.assetNodeId) ?? [],
+      [],
+    );
+    assert.deepEqual(
+      bundleReferences.get(library2NodeId)?.map((r) => r.assetNodeId) ?? [],
+      [],
+    );
 
     return [
       {
@@ -300,10 +309,14 @@ digraph simplified_graph {
     const bundleReferences = result.getBundleReferences();
     const indexHtmlNodeId = nodeIdsByPath.get('index.html') ?? -1;
     const page1NodeId = nodeIdsByPath.get('page1.js') ?? -1;
-    assert.deepEqual(bundleReferences.get(indexHtmlNodeId) ?? [], [
-      page1NodeId,
-    ]);
-    assert.deepEqual(bundleReferences.get(page1NodeId) ?? [], []);
+    assert.deepEqual(
+      bundleReferences.get(indexHtmlNodeId)?.map((r) => r.assetNodeId) ?? [],
+      [page1NodeId],
+    );
+    assert.deepEqual(
+      bundleReferences.get(page1NodeId)?.map((r) => r.assetNodeId) ?? [],
+      [],
+    );
   });
 
   it('image dependencies are linked to the root', async () => {
@@ -434,7 +447,13 @@ digraph simplified_graph {
     const bundleReferences = result.getBundleReferences();
     const indexNodeId = nodeIdsByPath.get('index.js') ?? -1;
     const childPngNodeId = nodeIdsByPath.get('child.png') ?? -1;
-    assert.deepEqual(bundleReferences.get(indexNodeId) ?? [], [childPngNodeId]);
-    assert.deepEqual(bundleReferences.get(childPngNodeId) ?? [], []);
+    assert.deepEqual(
+      bundleReferences.get(indexNodeId)?.map((r) => r.assetNodeId) ?? [],
+      [childPngNodeId],
+    );
+    assert.deepEqual(
+      bundleReferences.get(childPngNodeId)?.map((r) => r.assetNodeId) ?? [],
+      [],
+    );
   });
 });

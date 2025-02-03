@@ -45,7 +45,6 @@ export default class ContentGraph<TNode, TEdgeType: number = 1> extends Graph<
     const newGraph = new ContentGraph();
     let nodeId = 0;
     for (let node of this.nodes) {
-      if (node == null) continue;
       const contentKey = this._nodeIdToContentKey.get(nodeId);
       if (contentKey == null) {
         newGraph.addNode(node);

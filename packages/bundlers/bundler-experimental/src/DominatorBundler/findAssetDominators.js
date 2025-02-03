@@ -43,19 +43,25 @@ export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
     'root' | SimpleAssetGraphNode,
     SimpleAssetGraphEdgeWeight,
   >,
+  bundleReferences: Map<NodeId, NodeId[]>,
 |} {
   // Build a simpler graph with a root at the top
   debugLog('converting graph');
-  const simpleAssetGraph = bundleGraphToRootedGraph(bundleGraph);
-  const graph = simpleAssetGraph.getGraph();
+  const rootedGraph = bundleGraphToRootedGraph(bundleGraph);
+  const simpleAssetGraph = rootedGraph.getGraph();
   debugLog('finding cycles');
-  const noCyclesGraph = convertToAcyclicGraph(graph);
+  const noCyclesGraph = convertToAcyclicGraph(simpleAssetGraph);
   debugLog('dominating');
   const dominators = simpleFastDominance(noCyclesGraph);
   debugLog('dominator tree');
   const dominatorTree = buildDominatorTree(noCyclesGraph, dominators);
 
-  return {dominators: dominatorTree, graph, noCyclesGraph};
+  return {
+    dominators: dominatorTree,
+    graph: simpleAssetGraph,
+    noCyclesGraph,
+    bundleReferences: rootedGraph.getBundleReferences(),
+  };
 }
 
 /**
@@ -77,6 +83,10 @@ export function buildDominatorTree<T, EW>(
     const contentKey = graph.getContentKeyByNodeId(nodeId);
     if (node != null && node !== 'root') {
       dominatorTree.addNodeByContentKey(contentKey, node);
+    } else if (node == null) {
+      // Add null node to keep node ids stable
+      // $FlowFixMe
+      dominatorTree.addNode(null);
     }
   });
 

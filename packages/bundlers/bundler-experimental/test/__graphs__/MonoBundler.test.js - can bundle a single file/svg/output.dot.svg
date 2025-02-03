@@ -11,9 +11,9 @@
 <polygon fill="white" stroke="none" points="-4,4 -4,-121 181,-121 181,4 -4,4"/>
 <text text-anchor="middle" x="88.5" y="-99.7" font-family="Times,serif" font-size="14.00">Bundle graph</text>
 <g id="clust1" class="cluster">
-<title>cluster_8a22e7a8cbeac463</title>
+<title>cluster_5fe9c52654b5c79e</title>
 <polygon fill="none" stroke="black" points="8,-8 8,-84.5 169,-84.5 169,-8 8,-8"/>
-<text text-anchor="middle" x="88.5" y="-67.2" font-family="Times,serif" font-size="14.00">Bundle 8a22e7a8cbeac463</text>
+<text text-anchor="middle" x="88.5" y="-67.2" font-family="Times,serif" font-size="14.00">Bundle 5fe9c52654b5c79e</text>
 </g>
 <!-- test.js -->
 <g id="node1" class="node">

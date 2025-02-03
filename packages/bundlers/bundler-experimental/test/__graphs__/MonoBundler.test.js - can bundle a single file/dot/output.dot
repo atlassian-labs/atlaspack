@@ -2,8 +2,8 @@ digraph bundle_graph {
   labelloc="t";
   label="Bundle graph";
 
-  subgraph cluster_8a22e7a8cbeac463 {
-    label = "Bundle 8a22e7a8cbeac463";
+  subgraph cluster_5fe9c52654b5c79e {
+    label = "Bundle 5fe9c52654b5c79e";
     "test.js";
   }
 }

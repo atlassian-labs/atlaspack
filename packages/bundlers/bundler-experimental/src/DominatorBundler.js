@@ -24,7 +24,10 @@ import type {
   PackageNode,
 } from './DominatorBundler/createPackages';
 import type {NodeId} from '@atlaspack/graph';
-import type {AssetNode} from './DominatorBundler/bundleGraphToRootedGraph';
+import type {
+  AssetNode,
+  BundleReferences,
+} from './DominatorBundler/bundleGraphToRootedGraph';
 import {
   buildPackageGraph,
   buildPackageInfos,
@@ -51,7 +54,8 @@ export default DominatorBundler;
 
 export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
   debugLog('building dominators');
-  const {dominators, graph} = findAssetDominators(bundleGraph);
+  const {dominators, graph, bundleReferences} =
+    findAssetDominators(bundleGraph);
   debugLog('finding entries');
   const entryDependencies = findNodeEntryDependencies(graph);
   debugLog('merging things into packagse');
@@ -72,7 +76,13 @@ export function dominatorBundler({bundleGraph}: DominatorBundlerInput) {
   );
 
   debugLog('converting into parcel API');
-  intoBundleGraph(packages, bundleGraph, packageGraph, entryDependencies);
+  intoBundleGraph(
+    packages,
+    bundleGraph,
+    packageGraph,
+    entryDependencies,
+    bundleReferences,
+  );
   debugLog('done bundling');
 }
 
@@ -401,6 +411,7 @@ export function buildBundleGraph(
   plan: BundleGraphConversionResult,
   packageGraph: PackagedDominatorGraph,
   bundleGraph: MutableBundleGraph,
+  bundleReferences: BundleReferences,
 ) {
   const bundlesByPlanBundle = new Map();
 
@@ -440,38 +451,20 @@ export function buildBundleGraph(
       return;
     }
 
-    const nodes = packageGraph.getNodeIdsConnectedFrom(nodeId);
-
-    nodes.forEach((id) => {
-      const child = packageGraph.getNode(id);
-      if (child == null || child === 'root') {
-        return;
-      }
-      const childContentKey = packageGraph.getContentKeyByNodeId(id);
+    const references = bundleReferences.get(nodeId) ?? [];
+    for (let {assetContentKey: childContentKey, dependency} of references) {
       const childPlanBundle =
         plan.bundlesByPackageContentKey.get(childContentKey);
       if (childPlanBundle == null) {
-        return;
+        continue;
       }
       const childBundle = bundlesByPlanBundle.get(childPlanBundle);
       if (childBundle == null) {
-        return;
+        continue;
       }
 
-      // const shouldCreateReference = true;
-      // console.log({
-      //   planBundle,
-      //   shouldCreateReference,
-      //   child,
-      //   node,
-      //   childPlanBundle,
-      // });
-      // for (let dependency of dependencies) {
-      //   if (dependency.priority !== 'lazy') {
-      //     bundleGraph.createBundleReference(bundle, childBundle);
-      //   }
-      // }
-    });
+      bundleGraph.createBundleReference(bundle, childBundle);
+    }
   });
 }
 
@@ -480,22 +473,14 @@ export function intoBundleGraph(
   bundleGraph: MutableBundleGraph,
   packageGraph: PackagedDominatorGraph,
   entryDependencies: NodeEntryDependencies,
+  bundleReferences: BundleReferences,
 ) {
   const plan = planBundleGraph(
     packages,
     entryDependencies.entryDependenciesByAsset,
     entryDependencies.asyncDependenciesByAsset,
   );
-  // for (let bundleGroup of plan.bundleGroups) {
-  //   // console.log(bundleGroup.entryDep);
-  //   // console.log(bundleGroup.target);
-  //   for (let bundle of bundleGroup.bundles) {
-  //     // console.log(bundle.assets);
-  //   }
-  // }
-  // console.log(plan);
-  // console.log(plan.bundleGroups);
-  buildBundleGraph(plan, packageGraph, bundleGraph);
+  buildBundleGraph(plan, packageGraph, bundleGraph, bundleReferences);
 }
 
 export function addNodeToBundle(

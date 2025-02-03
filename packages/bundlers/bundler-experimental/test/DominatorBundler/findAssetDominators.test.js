@@ -35,7 +35,9 @@ describe('findAssetDominators', () => {
       const {inputGraph} = baseGraph();
       const dominators = simpleFastDominance(inputGraph);
       const result = buildDominatorTree(inputGraph, dominators);
-      assert.deepEqual(result.nodes, [result.getNodeByContentKey('root')]);
+      assert.deepEqual(result.nodes.filter(Boolean), [
+        result.getNodeByContentKey('root'),
+      ]);
     });
 
     it('works on a single node graph', () => {
@@ -50,7 +52,7 @@ describe('findAssetDominators', () => {
       const dominators = simpleFastDominance(inputGraph);
 
       const result = buildDominatorTree(inputGraph, dominators);
-      assert.deepEqual(result.nodes, [
+      assert.deepEqual(result.nodes.filter(Boolean), [
         result.getNodeByContentKey('root'),
         result.getNodeByContentKey('a'),
       ]);
