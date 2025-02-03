@@ -29,8 +29,10 @@ export class NodeVCSAwareFS extends NodeFS {
     snapshot: FilePath,
     opts: WatcherOptions,
   ): Promise<Array<Event>> {
-    const snapshotFile = await this.readFile(snapshot).toString();
-    const {nativeSnapshotPath, vcsState} = JSON.parse(snapshotFile);
+    // Note: can't use toString() directly, or it won't resolve the promise
+    const snapshotFile = await this.readFile(snapshot);
+    const snapshotFileContent = snapshotFile.toString();
+    const {nativeSnapshotPath, vcsState} = JSON.parse(snapshotFileContent);
 
     const watcherEventsSince = await this.watcher().getEventsSince(
       dir,
