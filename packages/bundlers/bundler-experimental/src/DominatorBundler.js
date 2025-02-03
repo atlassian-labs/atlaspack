@@ -28,7 +28,7 @@ import type {AssetNode} from './DominatorBundler/bundleGraphToRootedGraph';
 import {
   buildPackageGraph,
   buildPackageInfos,
-  runMergePackages,
+  // runMergePackages,
 } from './DominatorBundler/mergePackages';
 import {findNodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
 import type {NodeEntryDependencies} from './DominatorBundler/findNodeEntryDependencies';
@@ -82,7 +82,7 @@ export type SimpleBundle =
       assets: Asset[],
       options: {|
         entryAsset: Asset,
-        bundleBehavior: BundleBehavior,
+        bundleBehavior: BundleBehavior | null,
         target: Target,
         needsStableName?: boolean,
       |},
@@ -123,7 +123,7 @@ export function getOrCreateBundleGroupsForNode(
   node: AssetNode | PackageNode | StronglyConnectedComponentNode<AssetNode>,
 ): Set<SimpleBundleGroup> {
   const rootId = packages.getNodeIdByContentKey('root');
-  const result = new Set();
+  const result: Set<SimpleBundleGroup> = new Set();
 
   // This node is either an entry-point or an async import
   if (node.type === 'asset' && node.isRoot) {
@@ -172,6 +172,7 @@ export function getOrCreateBundleGroupsForNode(
             linkDependency.priority === 'lazy'
               ? linkDependency
               : entry.entryDependency;
+          invariant(dependency != null);
           const existingBundleGroup = bundleGroupsMap.get(dependency);
 
           if (existingBundleGroup != null) {
@@ -293,7 +294,7 @@ export function planBundleGraph(
           assets: [],
           options: {
             entryAsset: node.asset,
-            bundleBehavior: node.asset.bundleBehavior,
+            bundleBehavior: node.asset.bundleBehavior ?? null,
             needsStableName: node.isEntryNode,
             target,
           },
@@ -485,15 +486,15 @@ export function intoBundleGraph(
     entryDependencies.entryDependenciesByAsset,
     entryDependencies.asyncDependenciesByAsset,
   );
-  for (let bundleGroup of plan.bundleGroups) {
-    console.log(bundleGroup.entryDep);
-    console.log(bundleGroup.target);
-    for (let bundle of bundleGroup.bundles) {
-      console.log(bundle.assets);
-    }
-  }
-  console.log(plan);
-  console.log(plan.bundleGroups);
+  // for (let bundleGroup of plan.bundleGroups) {
+  //   // console.log(bundleGroup.entryDep);
+  //   // console.log(bundleGroup.target);
+  //   for (let bundle of bundleGroup.bundles) {
+  //     // console.log(bundle.assets);
+  //   }
+  // }
+  // console.log(plan);
+  // console.log(plan.bundleGroups);
   buildBundleGraph(plan, packageGraph, bundleGraph);
 }
 

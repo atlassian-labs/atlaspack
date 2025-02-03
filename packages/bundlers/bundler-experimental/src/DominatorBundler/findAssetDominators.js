@@ -13,7 +13,7 @@ import type {
   SimpleAssetGraphNode,
 } from './bundleGraphToRootedGraph';
 import {EdgeContentGraph} from './EdgeContentGraph';
-import {ALL_EDGE_TYPES} from '@atlaspack/graph/src';
+import {ALL_EDGE_TYPES} from '@atlaspack/graph';
 
 export function debugLog(message: string) {
   logger.info({
@@ -46,7 +46,8 @@ export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
 |} {
   // Build a simpler graph with a root at the top
   debugLog('converting graph');
-  const graph = bundleGraphToRootedGraph(bundleGraph);
+  const simpleAssetGraph = bundleGraphToRootedGraph(bundleGraph);
+  const graph = simpleAssetGraph.getGraph();
   debugLog('finding cycles');
   const noCyclesGraph = convertToAcyclicGraph(graph);
   debugLog('dominating');

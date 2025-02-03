@@ -51,7 +51,8 @@ describe('mergePackages', () => {
       async () => {
         const {mutableBundleGraph, entryDir} = await fixture1();
         const {dominators} = findAssetDominators(mutableBundleGraph);
-        const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+        const rootedGraph =
+          bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
         const packages = createPackages(
           rootedGraph,
           dominators,
@@ -130,7 +131,8 @@ digraph merged {
         );
 
         const {dominators} = findAssetDominators(mutableBundleGraph);
-        const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+        const rootedGraph =
+          bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
         const packages = createPackages(
           rootedGraph,
           dominators,
@@ -211,7 +213,8 @@ digraph merged {
         );
 
         const {dominators} = findAssetDominators(mutableBundleGraph);
-        const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+        const rootedGraph =
+          bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
         const packages = createPackages(
           rootedGraph,
           dominators,
@@ -278,7 +281,8 @@ digraph merged {
       async () => {
         const {mutableBundleGraph, entryDir} = await fixture1();
         const {dominators} = findAssetDominators(mutableBundleGraph);
-        const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+        const rootedGraph =
+          bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
         const packages = createPackages(rootedGraph, dominators);
         const result = runMergePackages(rootedGraph, packages);
         const dot = mergedDominatorsToDot(entryDir, result, 'Duplicated');

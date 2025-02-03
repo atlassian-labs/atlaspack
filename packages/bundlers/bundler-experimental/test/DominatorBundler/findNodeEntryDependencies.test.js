@@ -42,7 +42,7 @@ describe('findNodeEntryDependencies', () => {
     ]);
 
     const {mutableBundleGraph} = await setupBundlerTest(entryPath);
-    const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
 
     const result = findNodeEntryDependencies(rootedGraph);
 
@@ -76,7 +76,7 @@ describe('findNodeEntryDependencies', () => {
       entryPath1,
       entryPath2,
     ]);
-    const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
 
     const result = findNodeEntryDependencies(rootedGraph);
 
@@ -111,7 +111,7 @@ describe('findNodeEntryDependencies', () => {
       entryPath1,
       entryPath2,
     ]);
-    const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
 
     const result = findNodeEntryDependencies(rootedGraph);
 
@@ -149,7 +149,7 @@ describe('findNodeEntryDependencies', () => {
     ]);
 
     const {mutableBundleGraph} = await setupBundlerTest(entryPath);
-    const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
 
     const result = findNodeEntryDependencies(rootedGraph);
 

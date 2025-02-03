@@ -107,12 +107,12 @@ export default class BundleGraph<TBundle: IBundle>
     }
   }
 
-  getAllBundleGroups(): IBundleGroup[] {
-    const bundleGroups: BundleGroup = [];
+  getAllBundleGroups(): BundleGroup[] {
+    const bundleGroups: BundleGroup[] = [];
 
-    this.#graph._graph.nodes.forEach((node, nodeId) => {
+    this.#graph._graph.nodes.forEach((node /*, nodeId*/) => {
       if (node?.type === 'bundle_group') {
-        const parentNodes = this.#graph._graph.getNodeIdsConnectedTo(nodeId);
+        // const parentNodes = this.#graph._graph.getNodeIdsConnectedTo(nodeId);
         bundleGroups.push(new BundleGroup(node.value, this.#options));
       }
     });

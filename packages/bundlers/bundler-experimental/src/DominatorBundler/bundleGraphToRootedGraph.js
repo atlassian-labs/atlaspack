@@ -6,14 +6,26 @@ import type {
   MutableBundleGraph,
   Target,
 } from '@atlaspack/types';
+import type {NodeId} from '@atlaspack/graph';
 import invariant from 'assert';
 import {EdgeContentGraph} from './EdgeContentGraph';
 
 export type AssetNode = {|
   type: 'asset',
   id: string,
+  /**
+   * The asset that this node represents.
+   */
   asset: Asset,
+  /**
+   * If this node has a synchronous loading dependency link to an entry-point,
+   * this is the entrypoint's dependency.
+   */
   entryDependency: Dependency | null,
+  /**
+   * If this node has a synchronous loading dependency link to an entry-point,
+   * this is the entrypoint's target.
+   */
   target: Target | null,
   /**
    * We mark the assets that are connected to entry dependencies.
@@ -46,6 +58,45 @@ export type SimpleAssetGraph = EdgeContentGraph<
   SimpleAssetGraphNode,
   SimpleAssetGraphEdgeWeight,
 >;
+
+export class RootedAssetGraph {
+  #graph: SimpleAssetGraph;
+  #rootNodeId: NodeId;
+  #bundleReferences: Map<NodeId, NodeId[]> = new Map();
+
+  constructor() {
+    this.#graph = new EdgeContentGraph();
+    this.#rootNodeId = this.#graph.addNodeByContentKey('root', 'root');
+    this.#graph.setRootNodeId(this.#rootNodeId);
+  }
+
+  getRootNodeId(): NodeId {
+    return this.#rootNodeId;
+  }
+
+  getGraph(): EdgeContentGraph<
+    SimpleAssetGraphNode,
+    SimpleAssetGraphEdgeWeight,
+  > {
+    return this.#graph;
+  }
+
+  getBundleReferences(): Map<NodeId, NodeId[]> {
+    return this.#bundleReferences;
+  }
+
+  trackBundleReference(
+    parentNodeId: NodeId,
+    assetNodeId: NodeId,
+    dependency: Dependency,
+  ) {
+    if (dependency.priority !== 'lazy') {
+      const bundleReferences = this.#bundleReferences.get(parentNodeId) ?? [];
+      bundleReferences.push(assetNodeId);
+      this.#bundleReferences.set(parentNodeId, bundleReferences);
+    }
+  }
+}
 
 /**
  * Simplify the BundleGraph structure into a graph that only contains assets
@@ -83,11 +134,9 @@ export type SimpleAssetGraph = EdgeContentGraph<
  */
 export function bundleGraphToRootedGraph(
   bundleGraph: MutableBundleGraph,
-): SimpleAssetGraph {
-  const graph = new EdgeContentGraph();
-
-  const rootNodeId = graph.addNodeByContentKey('root', 'root');
-  graph.setRootNodeId(rootNodeId);
+): RootedAssetGraph {
+  const result = new RootedAssetGraph();
+  const graph = result.getGraph();
 
   const postOrder = [];
   bundleGraph.traverse({
@@ -151,26 +200,25 @@ export function bundleGraphToRootedGraph(
           );
         }
 
-        const weights =
-          graph.getEdgeWeight(
-            graph.getNodeIdByContentKey(parentAsset.id),
-            assetNodeId,
-          ) ?? [];
+        const parentNodeId = graph.getNodeIdByContentKey(parentAsset.id);
+        const weights = graph.getEdgeWeight(parentNodeId, assetNodeId) ?? [];
         weights.push(dependency);
+
         graph.addWeightedEdge(
-          graph.getNodeIdByContentKey(parentAsset.id),
+          parentNodeId,
           assetNodeId,
           dependency.priority === 'lazy'
             ? simpleAssetGraphEdges.asyncDependency
             : simpleAssetGraphEdges.dependency,
           weights,
         );
+        result.trackBundleReference(parentNodeId, assetNodeId, dependency);
       }
     }
 
     if (rootEdges.length) {
       graph.addWeightedEdge(
-        rootNodeId,
+        result.getRootNodeId(),
         assetNodeId,
         simpleAssetGraphEdges.dependency,
         rootEdges,
@@ -178,5 +226,5 @@ export function bundleGraphToRootedGraph(
     }
   }
 
-  return graph;
+  return result;
 }

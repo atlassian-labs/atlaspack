@@ -15,6 +15,7 @@ import {
   planBundleGraph,
 } from '../src';
 import {DefaultMap} from '@atlaspack/utils';
+import invariant from 'graphql/jsutils/invariant';
 
 // $FlowFixMe
 const makeDependency = (obj: mixed): Dependency => (obj: any);
@@ -276,8 +277,14 @@ describe('getOrCreateBundleGroupsForNode', () => {
     const asyncDependenciesByAsset = new Map();
     asyncDependenciesByAsset.set(asyncId, new Set([asyncNode]));
 
-    const bundleGroupsByEntryDep = new DefaultMap(() => new Map());
+    const bundleGroupsByEntryDep: DefaultMap<
+      Target,
+      Map<Dependency, SimpleBundleGroup>,
+    > = new DefaultMap(() => new Map());
+
+    invariant(entryDep.target != null);
     assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 0);
+
     const rootResult = getOrCreateBundleGroupsForNode(
       bundleGroupsByEntryDep,
       packages,
@@ -286,7 +293,9 @@ describe('getOrCreateBundleGroupsForNode', () => {
       asset,
       assetNode,
     );
+
     assert.equal(rootResult.size, 1);
+    invariant(entryDep.target != null);
     assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 1);
 
     const result = Array.from(
@@ -299,6 +308,7 @@ describe('getOrCreateBundleGroupsForNode', () => {
         asyncNode,
       ),
     );
+
     assert.strictEqual(result[0].entryDep, asyncDependency);
     assert.deepStrictEqual(result, [
       {
@@ -307,6 +317,7 @@ describe('getOrCreateBundleGroupsForNode', () => {
         bundles: [],
       },
     ]);
+    invariant(entryDep.target != null);
     assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 2);
   });
 
@@ -351,8 +362,11 @@ describe('getOrCreateBundleGroupsForNode', () => {
     const asyncDependenciesByAsset = new Map();
     asyncDependenciesByAsset.set(asyncId, new Set([asyncNode]));
 
-    const bundleGroupsByEntryDep = new DefaultMap(() => new Map());
-    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 0);
+    const bundleGroupsByEntryDep: DefaultMap<
+      Target,
+      Map<Dependency, SimpleBundleGroup>,
+    > = new DefaultMap(() => new Map());
+    assert.equal(bundleGroupsByEntryDep.get(target).size, 0);
     const rootResult = getOrCreateBundleGroupsForNode(
       bundleGroupsByEntryDep,
       packages,
@@ -362,7 +376,7 @@ describe('getOrCreateBundleGroupsForNode', () => {
       assetNode,
     );
     assert.equal(rootResult.size, 1);
-    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 1);
+    assert.equal(bundleGroupsByEntryDep.get(target).size, 1);
 
     const result = Array.from(
       getOrCreateBundleGroupsForNode(
@@ -375,7 +389,7 @@ describe('getOrCreateBundleGroupsForNode', () => {
       ),
     );
     assert.strictEqual(result.length, 1);
-    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 1);
+    assert.equal(bundleGroupsByEntryDep.get(target).size, 1);
   });
 
   it('will not return a bundle group for a type change node', () => {
@@ -417,7 +431,7 @@ describe('getOrCreateBundleGroupsForNode', () => {
     const asyncDependenciesByAsset = new Map();
 
     const bundleGroupsByEntryDep = new DefaultMap(() => new Map());
-    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 0);
+    assert.equal(bundleGroupsByEntryDep.get(target).size, 0);
     getOrCreateBundleGroupsForNode(
       bundleGroupsByEntryDep,
       packages,
@@ -426,7 +440,7 @@ describe('getOrCreateBundleGroupsForNode', () => {
       asset,
       assetNode,
     );
-    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 1);
+    assert.equal(bundleGroupsByEntryDep.get(target).size, 1);
     const result = getOrCreateBundleGroupsForNode(
       bundleGroupsByEntryDep,
       packages,
@@ -435,7 +449,7 @@ describe('getOrCreateBundleGroupsForNode', () => {
       jsId,
       jsNode,
     );
-    assert.equal(bundleGroupsByEntryDep.get(entryDep.target).size, 1);
+    assert.equal(bundleGroupsByEntryDep.get(target).size, 1);
 
     assert.deepEqual(Array.from(result), [
       {
@@ -503,7 +517,7 @@ describe('planBundleGraph', () => {
         assets: [entryAsset],
         options: {
           entryAsset,
-          bundleBehavior: undefined,
+          bundleBehavior: null,
           needsStableName: true,
           target,
         },
@@ -582,7 +596,7 @@ describe('planBundleGraph', () => {
         assets: [entryAsset],
         options: {
           entryAsset,
-          bundleBehavior: undefined,
+          bundleBehavior: null,
           needsStableName: true,
           target,
         },
@@ -594,7 +608,7 @@ describe('planBundleGraph', () => {
         assets: [asyncAssetValue],
         options: {
           entryAsset: asyncAssetValue,
-          bundleBehavior: undefined,
+          bundleBehavior: null,
           needsStableName: false,
           target,
         },
@@ -779,7 +793,7 @@ describe('planBundleGraph', () => {
         type: 'entry',
         assets: [entryAsset],
         options: {
-          bundleBehavior: undefined,
+          bundleBehavior: null,
           entryAsset,
           needsStableName: true,
           target,
@@ -790,7 +804,7 @@ describe('planBundleGraph', () => {
         assets: [page1Asset],
         options: {
           entryAsset: page1Asset,
-          bundleBehavior: undefined,
+          bundleBehavior: null,
           needsStableName: false,
           target,
         },
@@ -799,7 +813,7 @@ describe('planBundleGraph', () => {
         type: 'entry',
         assets: [page2Asset],
         options: {
-          bundleBehavior: undefined,
+          bundleBehavior: null,
           entryAsset: page2Asset,
           needsStableName: false,
           target,
@@ -809,7 +823,7 @@ describe('planBundleGraph', () => {
         type: 'entry',
         assets: [sharedAssetValue],
         options: {
-          bundleBehavior: undefined,
+          bundleBehavior: null,
           entryAsset: sharedAssetValue,
           needsStableName: false,
           target,

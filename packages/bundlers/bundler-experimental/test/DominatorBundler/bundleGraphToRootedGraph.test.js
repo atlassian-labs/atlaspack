@@ -9,6 +9,7 @@ import {
 import nullthrows from 'nullthrows';
 import * as path from 'path';
 import assert from 'assert';
+import type {NodeId} from '@atlaspack/graph';
 import MutableBundleGraph from '@atlaspack/core/src/public/MutableBundleGraph';
 import resolveOptions from '@atlaspack/core/src/resolveOptions';
 import AssetGraph from '@atlaspack/core/src/AssetGraph';
@@ -19,6 +20,8 @@ import {dotTest, setupBundlerTest} from '../test-utils';
 import {rootedGraphToDot} from '../graphviz/GraphvizUtils';
 import {bundleGraphToRootedGraph} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
 import {toProjectPath} from '@atlaspack/core/src/projectPath';
+import type {AssetNode} from '../../src/DominatorBundler/bundleGraphToRootedGraph';
+import invariant from 'graphql/jsutils/invariant';
 
 function encodeHex(str: string): string {
   return Buffer.from(str).toString('hex');
@@ -45,6 +48,18 @@ function makeAssetNode(asset: any): AssetGraphNode {
   };
 }
 
+function getNodeIdsByPath(simplifiedGraph): Map<string, NodeId> {
+  const nodeIdsByPath = new Map();
+  simplifiedGraph.traverse((nodeId) => {
+    const node = simplifiedGraph.getNode(nodeId);
+    if (node == null || typeof node === 'string') {
+      return;
+    }
+    nodeIdsByPath.set(path.basename(node.asset.filePath), nodeId);
+  });
+  return nodeIdsByPath;
+}
+
 describe('bundleGraphToRootedGraph', () => {
   before(async function () {
     this.timeout(10000);
@@ -60,7 +75,7 @@ describe('bundleGraphToRootedGraph', () => {
     ]);
 
     const {mutableBundleGraph} = await setupBundlerTest(entryPath);
-    const rootGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const rootGraph = bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
 
     const rootNode = rootGraph.getNodeIdByContentKey('root');
     const assetIdsByPath = new Map();
@@ -117,7 +132,8 @@ describe('bundleGraphToRootedGraph', () => {
         path.join(entryDir, 'page2.js'),
       ]);
 
-      const simplifiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+      const simplifiedGraph =
+        bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
       const dot = rootedGraphToDot(
         entryDir,
         simplifiedGraph,
@@ -168,7 +184,9 @@ digraph simplified_graph {
       path.join(entryDir, 'page1.js'),
     ]);
 
-    const simplifiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const result = bundleGraphToRootedGraph(mutableBundleGraph);
+
+    const simplifiedGraph = result.getGraph();
     const dot = rootedGraphToDot(
       entryDir,
       simplifiedGraph,
@@ -194,6 +212,15 @@ digraph simplified_graph {
         `.trim(),
     );
 
+    const nodeIdsByPath = getNodeIdsByPath(simplifiedGraph);
+    const bundleReferences = result.getBundleReferences();
+    const page1NodeId = nodeIdsByPath.get('page1.js') ?? -1;
+    const library1NodeId = nodeIdsByPath.get('library1.js') ?? -1;
+    const library2NodeId = nodeIdsByPath.get('library2.js') ?? -1;
+    assert.deepEqual(bundleReferences.get(page1NodeId) ?? [], [library2NodeId]);
+    assert.deepEqual(bundleReferences.get(library1NodeId) ?? [], []);
+    assert.deepEqual(bundleReferences.get(library2NodeId) ?? [], []);
+
     return [
       {
         label: 'simplifiedGraph',
@@ -217,22 +244,30 @@ digraph simplified_graph {
       path.join(entryDir, 'index.html'),
     ]);
 
-    const simplifiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const result = bundleGraphToRootedGraph(mutableBundleGraph);
+    const simplifiedGraph = result.getGraph();
 
     const root = simplifiedGraph.getNodeIdByContentKey('root');
-    const rootNodes = simplifiedGraph
+    const rootNodes: AssetNode[] = simplifiedGraph
       .getNodeIdsConnectedFrom(root)
-      .map((nodeId) => simplifiedGraph.getNode(nodeId));
+      .map((nodeId) => {
+        const node = simplifiedGraph.getNode(nodeId);
+        invariant(node != null && typeof node !== 'string');
+        return node;
+      });
+
     // 1 HTML + 2 JS targets
     assert.equal(rootNodes.length, 2);
     const htmlNode = rootNodes.find((node) => node.asset.type === 'html');
-    assert(htmlNode != null);
+    invariant(htmlNode != null);
+    invariant(typeof htmlNode !== 'string');
     assert.equal(htmlNode.type, 'asset');
     assert.equal(
-      htmlNode.entryDependency.specifier,
+      htmlNode.entryDependency?.specifier,
       'packages/bundlers/bundler-experimental/test/DominatorBundler/html-dependencies/index.html',
     );
     const jsNode = rootNodes.find((node) => node.asset.type === 'js');
+    invariant(jsNode != null);
     assert.equal(path.basename(jsNode.asset.filePath), 'page1.js');
     assert.strictEqual(jsNode.entryDependency, htmlNode.entryDependency);
 
@@ -260,6 +295,15 @@ digraph simplified_graph {
 }
         `.trim(),
     );
+
+    const nodeIdsByPath = getNodeIdsByPath(simplifiedGraph);
+    const bundleReferences = result.getBundleReferences();
+    const indexHtmlNodeId = nodeIdsByPath.get('index.html') ?? -1;
+    const page1NodeId = nodeIdsByPath.get('page1.js') ?? -1;
+    assert.deepEqual(bundleReferences.get(indexHtmlNodeId) ?? [], [
+      page1NodeId,
+    ]);
+    assert.deepEqual(bundleReferences.get(page1NodeId) ?? [], []);
   });
 
   it('image dependencies are linked to the root', async () => {
@@ -278,7 +322,8 @@ digraph simplified_graph {
       path.join(entryDir, 'page1.js'),
     ]);
 
-    const simplifiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const simplifiedGraph =
+      bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
     const dot = rootedGraphToDot(
       entryDir,
       simplifiedGraph,
@@ -358,7 +403,8 @@ digraph simplified_graph {
       resolvedOptions,
     );
 
-    const simplifiedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const result = bundleGraphToRootedGraph(mutableBundleGraph);
+    const simplifiedGraph = result.getGraph();
 
     const dot = rootedGraphToDot(
       '/test',
@@ -383,5 +429,12 @@ digraph simplified_graph {
 }
         `.trim(),
     );
+
+    const nodeIdsByPath = getNodeIdsByPath(simplifiedGraph);
+    const bundleReferences = result.getBundleReferences();
+    const indexNodeId = nodeIdsByPath.get('index.js') ?? -1;
+    const childPngNodeId = nodeIdsByPath.get('child.png') ?? -1;
+    assert.deepEqual(bundleReferences.get(indexNodeId) ?? [], [childPngNodeId]);
+    assert.deepEqual(bundleReferences.get(childPngNodeId) ?? [], []);
   });
 });

@@ -157,7 +157,8 @@ digraph merged {
         entryPath2,
       ]);
       const {dominators} = findAssetDominators(mutableBundleGraph);
-      const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+      const rootedGraph =
+        bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
 
       const chunkEntryPoints = getChunkEntryPoints(rootedGraph, dominators);
 
@@ -209,7 +210,8 @@ digraph merged {
           entryPath2,
         ]);
 
-        const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+        const rootedGraph =
+          bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
         const {dominators} = findAssetDominators(mutableBundleGraph);
         const outputDot = rootedGraphToDot(entryDir, dominators);
 

@@ -133,7 +133,8 @@ describe('cycleBreaker', () => {
         ]);
 
         const {mutableBundleGraph} = await setupBundlerTest([entryPath1]);
-        const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+        const rootedGraph =
+          bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
         const result = convertToAcyclicGraph(rootedGraph);
 
         return [
@@ -164,7 +165,8 @@ describe('cycleBreaker', () => {
             entryPath1,
             entryPath2,
           ]);
-          const rootedGraph = bundleGraphToRootedGraph(mutableBundleGraph);
+          const rootedGraph =
+            bundleGraphToRootedGraph(mutableBundleGraph).getGraph();
           const stronglyConnectedComponents =
             findStronglyConnectedComponents(rootedGraph);
 
