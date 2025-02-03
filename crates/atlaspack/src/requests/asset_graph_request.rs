@@ -135,6 +135,13 @@ impl AssetGraphBuilder {
 
     // Connect the entries to the root node in the graph. We do this in
     // alphabetical order so it's consistent between builds.
+    //
+    // Ideally, we wouldn't depend on edge order being consistent between builds
+    // and instead rely on in-place sorting or similar to ensure deterministic
+    // builds. However, as the rest of the code base (bundling, runtimes,
+    // packaging, etc) relies on the deterministic edge order and it's very
+    // complicated/risky to fix all the places that would be affected we'll keep it that
+    // way for now.
     self
       .entry_dependencies
       .sort_by_key(|(entry, _)| entry.clone());
