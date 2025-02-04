@@ -13,6 +13,7 @@ import {promisify} from 'util';
 export * from './NodeFS';
 export * from './MemoryFS';
 export * from './OverlayFS';
+export * from './NodeVCSAwareFS';
 
 export type {FileSystem, FileOptions};
 
