@@ -92,6 +92,7 @@ export type SimpleBundle =
       assets: Asset[],
       options: {|
         entryAsset: Asset,
+        entryDependency: Dependency,
         bundleBehavior: BundleBehavior | null,
         target: Target,
         needsStableName?: boolean,
@@ -304,6 +305,7 @@ export function planBundleGraph(
           assets: [],
           options: {
             entryAsset: node.asset,
+            entryDependency: node.entryDependency,
             bundleBehavior: node.asset.bundleBehavior ?? null,
             needsStableName: node.isEntryNode,
             target,
@@ -356,8 +358,6 @@ export function planBundleGraph(
         result.bundles.push(bundle);
         bundleGroups.forEach((bundleGroup) => bundleGroup.bundles.push(bundle));
         addNodeToBundle(packages, bundle, nodeId);
-
-        // bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
       } else if (node.type === 'StronglyConnectedComponent') {
         const children = packages
           .getNodeIdsConnectedFrom(nodeId)
@@ -450,9 +450,10 @@ export function buildBundleGraph(
     if (bundle == null) {
       return;
     }
+    console.log(planBundle);
 
     const references = bundleReferences.get(contentKey) ?? [];
-    for (let {assetContentKey: childContentKey} of references) {
+    for (let {assetContentKey: childContentKey, dependency} of references) {
       const childPlanBundle =
         plan.bundlesByPackageContentKey.get(childContentKey);
       if (childPlanBundle == null) {
@@ -463,7 +464,34 @@ export function buildBundleGraph(
         continue;
       }
 
+      bundleGraph.getDependencyAssets(dependency).forEach((asset) => {
+        console.log(
+          'createAssetReference',
+          dependency,
+          asset,
+          childBundle,
+          childBundle.filePath,
+        );
+        bundleGraph.createAssetReference(dependency, asset, childBundle);
+      });
+      console.log(
+        'createBundleReference',
+        bundle,
+        childBundle,
+        bundle.filePath,
+        childBundle.filePath,
+      );
       bundleGraph.createBundleReference(bundle, childBundle);
+    }
+
+    const assets = planBundle.assets;
+    for (let asset of assets) {
+      // this is a dominator bundle, link all dependencies that point to it into the bundle
+      const dependencies = bundleGraph.getIncomingDependencies(asset);
+      for (let dependency of dependencies) {
+        console.log('createAssetReference', dependency, asset, bundle);
+        bundleGraph.createAssetReference(dependency, asset, bundle);
+      }
     }
   });
 }

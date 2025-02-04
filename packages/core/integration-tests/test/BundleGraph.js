@@ -154,7 +154,7 @@ describe.only('BundleGraph', () => {
     ];
 
     bundlers.forEach((bundler) => {
-      it(`${bundler} - creates a bundle group for all assets referenced in HTML`, async () => {
+      it.only(`${bundler} - creates a bundle group for all assets referenced in HTML`, async () => {
         await fsFixture(overlayFS, __dirname)`
         get-bundles-in-bundle-group
           index.jsx:
@@ -222,6 +222,8 @@ describe.only('BundleGraph', () => {
         assert.equal(indexBundleGroups[0].entryAssetId, indexHtmlAssetId);
         assert.equal(indexBundleGroups[0], indexHtmlBundleGroups[0]);
 
+        console.log(indexBundle.name);
+
         // BUNDLE REFERENCES
         const indexHtmlBundleReferences =
           bundleGraph.getReferencedBundles(indexHtmlBundle);
@@ -232,6 +234,12 @@ describe.only('BundleGraph', () => {
           ),
           ['index.jsx'],
         );
+
+        const contents = overlayFS.readFileSync(
+          indexHtmlBundle.filePath,
+          'utf8',
+        );
+        console.log(contents);
       });
 
       it(`${bundler} - creates a bundle group per async boundary?`, async () => {
@@ -308,7 +316,6 @@ describe.only('BundleGraph', () => {
         const asyncBundleGroups =
           bundleGraph.getBundleGroupsContainingBundle(asyncBundle);
         assert.notEqual(asyncBundleGroups[0], indexBundleGroups[0]);
-        console.log(asyncBundleGroups);
         assert.equal(asyncBundleGroups.length, 1);
       });
 

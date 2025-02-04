@@ -60,6 +60,7 @@ export function replaceURLReferences({
     invariant(typeof placeholder === 'string');
 
     let resolved = bundleGraph.getReferencedBundle(dependency, bundle);
+    console.log(resolved);
     if (resolved == null) {
       replacements.set(placeholder, {
         from: placeholder,

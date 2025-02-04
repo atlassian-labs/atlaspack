@@ -49,6 +49,7 @@ export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
   // Build a simpler graph with a root at the top
   debugLog('converting graph');
   const rootedGraph = bundleGraphToRootedGraph(bundleGraph);
+  const bundleReferences = rootedGraph.getBundleReferences();
   const simpleAssetGraph = rootedGraph.getGraph();
   debugLog('finding cycles');
   const noCyclesGraph = convertToAcyclicGraph(simpleAssetGraph);
@@ -61,7 +62,7 @@ export function findAssetDominators(bundleGraph: MutableBundleGraph): {|
     dominators: dominatorTree,
     graph: simpleAssetGraph,
     noCyclesGraph,
-    bundleReferences: rootedGraph.getBundleReferences(),
+    bundleReferences,
   };
 }
 

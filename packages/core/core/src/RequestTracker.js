@@ -1346,12 +1346,12 @@ export default class RequestTracker {
 
       const requestCount = (this.stats.get(request.type) ?? 0) + 1;
       this.stats.set(request.type, requestCount);
-      console.log(
-        'RequestTracker::runRequest',
-        request.id,
-        request.type,
-        requestCount,
-      );
+      // console.log(
+      //   'RequestTracker::runRequest',
+      //   request.id,
+      //   request.type,
+      //   requestCount,
+      // );
 
       let result = await request.run({
         input: request.input,
