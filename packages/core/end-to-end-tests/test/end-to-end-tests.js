@@ -15,8 +15,6 @@ describe('End-to-end tests', () => {
       serveOptions: {
         port: 1234,
       },
-      shouldScopeHoist: true,
-      shouldOptimize: true,
     });
 
     await atlaspack.run();
@@ -47,8 +45,6 @@ describe('End-to-end tests', () => {
       serveOptions: {
         port: 1234,
       },
-      shouldScopeHoist: true,
-      shouldOptimize: true,
     });
 
     await atlaspack.run();
@@ -79,8 +75,6 @@ describe('End-to-end tests', () => {
       serveOptions: {
         port: 1234,
       },
-      shouldScopeHoist: false,
-      shouldOptimize: true,
     });
 
     await atlaspack.run();
@@ -110,8 +104,6 @@ describe('End-to-end tests', () => {
       serveOptions: {
         port: 1234,
       },
-      shouldScopeHoist: false,
-      shouldOptimize: true,
     });
 
     await atlaspack.run();
