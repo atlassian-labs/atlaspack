@@ -5,15 +5,24 @@ import {NodeFS} from './NodeFS';
 import {getVcsStateSnapshot, getEventsSince} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types-internal';
 import type {Event, Options as WatcherOptions} from '@parcel/watcher';
+import type {BuildSuccessEvent} from '@atlaspack/types';
 import {registerSerializableClass} from '@atlaspack/build-cache';
 
 // $FlowFixMe
 import packageJSON from '../package.json';
 
+interface VcsOptions extends WatcherOptions {
+  event?: BuildSuccessEvent;
+}
+
 export interface NodeVCSAwareFSOptions {
   gitRepoPath: FilePath;
   excludePatterns: Array<string>;
-  logEventDiff: (watcherEvents: Event[], vcsEvents: string[]) => void;
+  logEventDiff: (
+    watcherEvents: Event[],
+    vcsEvents: string[],
+    event: BuildSuccessEvent,
+  ) => void;
 }
 
 export class NodeVCSAwareFS extends NodeFS {
@@ -27,7 +36,7 @@ export class NodeVCSAwareFS extends NodeFS {
   async getEventsSince(
     dir: FilePath,
     snapshot: FilePath,
-    opts: WatcherOptions,
+    opts: VcsOptions,
   ): Promise<Array<Event>> {
     // Note: can't use toString() directly, or it won't resolve the promise
     const snapshotFile = await this.readFile(snapshot);
@@ -43,7 +52,13 @@ export class NodeVCSAwareFS extends NodeFS {
       this.#options.gitRepoPath,
       vcsState.gitHash,
     );
-    this.#options.logEventDiff(watcherEventsSince, vcsEventsSince);
+    if (opts.event) {
+      this.#options.logEventDiff(
+        watcherEventsSince,
+        vcsEventsSince,
+        opts.event,
+      );
+    }
 
     return watcherEventsSince;
   }
