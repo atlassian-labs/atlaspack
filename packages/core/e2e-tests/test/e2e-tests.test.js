@@ -5,12 +5,10 @@ import assert from 'assert';
 import {chromium} from 'playwright';
 import {Atlaspack} from '@atlaspack/core';
 
-describe('End-to-end tests', () => {
+describe('Atlaspack Playwright E2E tests', () => {
   it('can bundle a simple project', async () => {
     const atlaspack = new Atlaspack({
-      entries: [
-        path.join(__dirname, 'end-to-end-tests/simple-project/index.html'),
-      ],
+      entries: [path.join(__dirname, 'data/simple-project/index.html')],
       defaultConfig: require.resolve('@atlaspack/config-default'),
       serveOptions: {
         port: 1234,
@@ -36,10 +34,7 @@ describe('End-to-end tests', () => {
   it('can bundle a project with async imports', async () => {
     const atlaspack = new Atlaspack({
       entries: [
-        path.join(
-          __dirname,
-          'end-to-end-tests/simple-project-with-async/index.html',
-        ),
+        path.join(__dirname, 'data/simple-project-with-async/index.html'),
       ],
       defaultConfig: require.resolve('@atlaspack/config-default'),
       serveOptions: {
@@ -68,7 +63,7 @@ describe('End-to-end tests', () => {
       entries: [
         path.join(
           __dirname,
-          'end-to-end-tests/simple-project-with-async-shared-bundles/index.html',
+          'data/simple-project-with-async-shared-bundles/index.html',
         ),
       ],
       defaultConfig: require.resolve('@atlaspack/config-default'),
@@ -97,7 +92,7 @@ describe('End-to-end tests', () => {
       entries: [
         path.join(
           __dirname,
-          'end-to-end-tests/simple-project-with-shared-bundles/index.html',
+          'data/simple-project-with-shared-bundles/index.html',
         ),
       ],
       defaultConfig: require.resolve('@atlaspack/config-default'),
