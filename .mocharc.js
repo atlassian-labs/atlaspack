@@ -10,7 +10,7 @@ function isFileArg(file) {
 
 const spec = args.some(isFileArg)
   ? args.filter(isFileArg)
-  : 'packages/*/!(integration-tests)/test/{*.{js,ts,cts,mts,cjs,mjs},**/*.{test,spec}.{js,ts,mts,cts,cjs,mjs}}';
+  : 'packages/*/!(integration-tests|end-to-end-tests)/test/{*.{js,ts,cts,mts,cjs,mjs},**/*.{test,spec}.{js,ts,mts,cts,cjs,mjs}}';
 
 module.exports = {
   spec,
