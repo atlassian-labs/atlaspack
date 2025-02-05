@@ -32,8 +32,6 @@
     "lint": "node ./scripts/lint-all.mjs",
     "prepublishOnly": "yarn adjust-versions && yarn build && yarn build-ts",
     "test": "yarn test:unit && yarn test:integration",
-    "test:end-to-end": "yarn workspace @atlaspack/end-to-end-tests test",
-    "test:end-to-end:ci": "yarn workspace @atlaspack/end-to-end-tests test-ci",
     "test:integration": "yarn workspace @atlaspack/integration-tests test",
     "test:integration:v3": "ATLASPACK_V3=true yarn workspace @atlaspack/integration-tests test",
     "test:integration-ci": "yarn workspace @atlaspack/integration-tests test-ci",
