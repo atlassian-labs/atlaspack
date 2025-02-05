@@ -1,0 +1,8 @@
+// @flow
+
+export type AtlaspackAnalyticsEvent = {|
+  action: string,
+  attributes?: { [key: string]: string | number | boolean },
+|};
+
+declare export function sendAnalyticsEvent(event: AtlaspackAnalyticsEvent): void;

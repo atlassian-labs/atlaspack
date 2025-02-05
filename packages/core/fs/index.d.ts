@@ -1,5 +1,6 @@
 import type {FileSystem} from '@atlaspack/types-internal';
 import type WorkerFarm from '@atlaspack/workers';
+import type {NodeVCSAwareFSOptions} from './src/NodeVCSAwareFS';
 
 export type {
   FileSystem,
@@ -20,4 +21,8 @@ export const MemoryFS: {
 
 export const OverlayFS: {
   new (writable: FileSystem, readable: FileSystem): FileSystem;
+};
+
+export const NodeVCSAwareFS: {
+  new (options: NodeVCSAwareFSOptions): FileSystem;
 };

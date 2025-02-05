@@ -21,7 +21,7 @@ on:
         required: true
 
 permissions:
-  contents: read # for actions/checkout
+  contents: write # for actions/checkout and adding tag
 
 jobs:
   build-macos:
@@ -221,3 +221,18 @@ jobs:
           npm config set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
           npm config set registry https://registry.npmjs.org/
       - run: ${{ inputs.release-command }}
+      - name: Get canary version
+        if: ${{ inputs.profile == 'canary' }}
+        id: canary-version
+        run: echo "VERSION_TAG=$(npm show @atlaspack/cli@canary --json | jq .version -r)" >> "$GITHUB_OUTPUT"
+      - name: Create tag
+        uses: actions/github-script@v5
+        if: ${{ inputs.profile == 'canary' }}
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/${{ steps.canary-version.outputs.VERSION_TAG }}'.trim(),
+              sha: context.sha
+            })
