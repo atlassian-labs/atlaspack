@@ -13,7 +13,7 @@ import type {BundleGraph, BundleGroup, PackagedBundle} from '@atlaspack/types';
 
 const invariant = assert;
 
-describe.only('BundleGraph', () => {
+describe('BundleGraph', () => {
   it('can traverse assets across bundles and contexts', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/worker-shared/index.js'),
