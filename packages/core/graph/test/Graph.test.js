@@ -297,7 +297,7 @@ describe('Graph', () => {
       ]);
     });
 
-    it('replaceNodeIdsConnectedTo does not remove orphan nodes if flag is fals', () => {
+    it('replaceNodeIdsConnectedTo does not remove orphan nodes if flag is false', () => {
       let graph = new Graph();
       let nodeA = graph.addNode('a');
       graph.setRootNodeId(nodeA);
