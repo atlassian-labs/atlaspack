@@ -35,14 +35,14 @@ async function runPlaywrightTest(
 
 describe('Atlaspack Playwright E2E tests', () => {
   it('can bundle a simple project', async () => {
-    runPlaywrightTest('simple-project/index.html', async ({page}) => {
+    await runPlaywrightTest('simple-project/index.html', async ({page}) => {
       const element = await page.getByTestId('content');
       assert.equal(await element.innerText(), 'Hello, world!');
     });
   });
 
   it('can bundle a project with async imports', async () => {
-    runPlaywrightTest(
+    await runPlaywrightTest(
       'simple-project-with-async/index.html',
       async ({page}) => {
         const element = await page.getByTestId('content');
@@ -52,7 +52,7 @@ describe('Atlaspack Playwright E2E tests', () => {
   });
 
   it('can bundle a project with asynchronous shared bundles', async () => {
-    runPlaywrightTest(
+    await runPlaywrightTest(
       'simple-project-with-async-shared-bundles/index.html',
       async ({page}) => {
         const element = await page.getByTestId('content');
@@ -62,7 +62,7 @@ describe('Atlaspack Playwright E2E tests', () => {
   });
 
   it('can bundle a project with shared bundles', async () => {
-    runPlaywrightTest(
+    await runPlaywrightTest(
       'simple-project-with-shared-bundles/index.html',
       async ({page}) => {
         const element = await page.getByTestId('content');
