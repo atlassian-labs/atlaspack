@@ -27,7 +27,7 @@ async function runPlaywrightTest(
 
   await page.goto('http://localhost:1234');
 
-  await fn(page);
+  await fn({page});
 
   await context.close();
   await browser.close();
