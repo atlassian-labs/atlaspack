@@ -23,7 +23,6 @@ describe('Atlaspack Playwright E2E tests', () => {
     const page = await context.newPage();
 
     await page.goto('http://localhost:1234');
-    // await new Promise((resolve) => setTimeout(resolve, 500000));
     const element = await page.getByTestId('content');
     assert.equal(await element.innerText(), 'Hello, world!');
 
@@ -50,7 +49,6 @@ describe('Atlaspack Playwright E2E tests', () => {
     const page = await context.newPage();
 
     await page.goto('http://localhost:1234');
-    // await new Promise((resolve) => setTimeout(resolve, 500000));
     const element = await page.getByTestId('content');
     assert.equal(await element.innerText(), 'Hello, world!');
 
@@ -109,7 +107,6 @@ describe('Atlaspack Playwright E2E tests', () => {
     const page = await context.newPage();
 
     await page.goto('http://localhost:1234');
-    // await new Promise((resolve) => setTimeout(resolve, 500000));
     const element = await page.getByTestId('content');
     assert.equal(await element.innerText(), 'Hello, CRAZY WORLD!');
 
