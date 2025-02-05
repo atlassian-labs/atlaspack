@@ -39,4 +39,22 @@ describe('ContentGraph', () => {
 
     assert(!graph.hasContentKey('contentKey'));
   });
+
+  describe('getContentKeyByNodeId', () => {
+    it('returns the content key for a node', () => {
+      const graph = new ContentGraph();
+
+      const node1 = graph.addNodeByContentKey('node1', {});
+      assert.equal(graph.getContentKeyByNodeId(node1), 'node1');
+      const node2 = graph.addNodeByContentKey('node2', {});
+      assert.equal(graph.getContentKeyByNodeId(node2), 'node2');
+    });
+
+    it('throws if the node does not have a content key', () => {
+      const graph = new ContentGraph();
+
+      const node1 = graph.addNode({});
+      assert.throws(() => graph.getContentKeyByNodeId(node1));
+    });
+  });
 });
