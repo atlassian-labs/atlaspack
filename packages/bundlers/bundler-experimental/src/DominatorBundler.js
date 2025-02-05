@@ -450,7 +450,7 @@ export function buildBundleGraph(
     if (bundle == null) {
       return;
     }
-    console.log(planBundle);
+    // console.log(planBundle);
 
     const references = bundleReferences.get(contentKey) ?? [];
     for (let {assetContentKey: childContentKey, dependency} of references) {
@@ -465,22 +465,22 @@ export function buildBundleGraph(
       }
 
       bundleGraph.getDependencyAssets(dependency).forEach((asset) => {
-        console.log(
-          'createAssetReference',
-          dependency,
-          asset,
-          childBundle,
-          childBundle.filePath,
-        );
+        // console.log(
+        //   'createAssetReference',
+        //   dependency,
+        //   asset,
+        //   childBundle,
+        //   childBundle.filePath,
+        // );
         bundleGraph.createAssetReference(dependency, asset, childBundle);
       });
-      console.log(
-        'createBundleReference',
-        bundle,
-        childBundle,
-        bundle.filePath,
-        childBundle.filePath,
-      );
+      // console.log(
+      //   'createBundleReference',
+      //   bundle,
+      //   childBundle,
+      //   bundle.filePath,
+      //   childBundle.filePath,
+      // );
       bundleGraph.createBundleReference(bundle, childBundle);
     }
 
@@ -489,7 +489,7 @@ export function buildBundleGraph(
       // this is a dominator bundle, link all dependencies that point to it into the bundle
       const dependencies = bundleGraph.getIncomingDependencies(asset);
       for (let dependency of dependencies) {
-        console.log('createAssetReference', dependency, asset, bundle);
+        // console.log('createAssetReference', dependency, asset, bundle);
         bundleGraph.createAssetReference(dependency, asset, bundle);
       }
     }

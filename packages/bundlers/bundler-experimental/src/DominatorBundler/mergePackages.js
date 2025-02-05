@@ -2,12 +2,11 @@
 
 import type {Asset} from '@atlaspack/types';
 import type {PackageNode, PackagedDominatorGraph} from './createPackages';
-import {type NodeId} from '@atlaspack/graph';
+import {type NodeId, ALL_EDGE_TYPES} from '@atlaspack/graph';
 import {getGraphPostOrder} from './findAssetDominators';
 import type {StronglyConnectedComponentNode} from './cycleBreaker';
 import type {AssetNode, SimpleAssetGraph} from './bundleGraphToRootedGraph';
 import {EdgeContentGraph} from './EdgeContentGraph';
-import {ALL_EDGE_TYPES} from '@atlaspack/graph/src';
 
 function getAssetSize(asset: Asset): number {
   return asset.stats?.size ?? 0;

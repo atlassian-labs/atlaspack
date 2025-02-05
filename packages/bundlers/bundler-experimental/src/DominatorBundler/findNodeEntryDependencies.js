@@ -2,8 +2,7 @@
 
 import type {AssetNode, SimpleAssetGraph} from './bundleGraphToRootedGraph';
 import {getGraphPostOrder} from './findAssetDominators';
-import type {NodeId} from '@atlaspack/graph';
-import {ALL_EDGE_TYPES} from '@atlaspack/graph/src';
+import {type NodeId, ALL_EDGE_TYPES} from '@atlaspack/graph';
 
 export type NodeEntryDependencies = {|
   entryDependenciesByAsset: Map<NodeId, Set<AssetNode>>,
