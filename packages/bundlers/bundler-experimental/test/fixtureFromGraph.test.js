@@ -1,3 +1,5 @@
+// @flow strict-local
+
 import {MemoryFS} from '@atlaspack/fs';
 import assert from 'assert';
 import {workerFarm} from '@atlaspack/test-utils';

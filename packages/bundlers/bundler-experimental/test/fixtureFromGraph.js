@@ -119,6 +119,44 @@ export async function fixtureFromGraph(
 
 /**
  * Create a graphviz dot string from a fixture graph
+ *
+ * The contents of the GraphViz file will contain (in this order):
+ *
+ * * the list of all asset nodes
+ * * the dependencies between assets
+ *
+ * Given a graph build with:
+ *
+ * ```
+ * fixtureFromGraph('dir', fs, [
+ *   asset('a.js', ['b.js', 'c.js']),
+ *   asset('b.js', ['d.js']),
+ *   asset('d.js'),
+ * ])
+ * ```
+ *
+ * The output will be:
+ * ```
+ * digraph assets {
+ *   labelloc="t";
+ *   label="Assets";
+ *
+ *   "a.js";
+ *   "b.js";
+ *   "c.js";
+ *   "d.js";
+ *
+ *   "a.js" -> "b.js";
+ *   "a.js" -> "c.js";
+ *   "b.js" -> "d.js";
+ * }
+ * ```
+ *
+ * That is:
+ *
+ * * iterate all nodes and declare them
+ * * iterate all dependencies between nodes and declare them
+ *
  */
 export function dotFromGraph(entries: GraphEntry[]): string {
   const contents = [];
