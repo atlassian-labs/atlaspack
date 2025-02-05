@@ -133,7 +133,8 @@ jobs:
       - run: yarn --frozen-lockfile
       - run: yarn build-native-release
       - run: yarn build
-      - run: yarn test:end-to-end-ci
+      - run: yarn playwright install
+      - run: yarn test:end-to-end:ci
 
   repl:
     name: Deploy REPL
