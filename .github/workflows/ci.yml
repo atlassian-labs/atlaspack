@@ -109,6 +109,32 @@ jobs:
         env:
           ATLASPACK_V3: ${{ matrix.version == 'v3' && 'true' || 'false' }}
 
+  end_to_end_tests:
+    name: E2E tests
+    timeout-minutes: 35
+    strategy:
+      matrix:
+        node: [20]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: yarn
+          node-version: ${{ matrix.node }}
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ matrix.os }}
+      - name: Bump max inotify watches (Linux only)
+        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+        if: ${{ runner.os == 'Linux' }}
+      - run: yarn --frozen-lockfile
+      - run: yarn build-native-release
+      - run: yarn build
+      - run: yarn test:end-to-end-ci
+
   repl:
     name: Deploy REPL
     if: false # ${{ github.event_name == 'pull_request' }}
