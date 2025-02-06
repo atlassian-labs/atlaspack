@@ -13,7 +13,7 @@ describe('fixtureFromGraph', () => {
   });
 
   it('can create fixtures for single files', async () => {
-    const fs = new MemoryFS();
+    const fs = new MemoryFS(workerFarm);
     await fixtureFromGraph('dir', fs, [
       asset('file1.js'),
       asset('file2.js'),
@@ -32,7 +32,7 @@ describe('fixtureFromGraph', () => {
   });
 
   it('will create files with imports between themselves', async () => {
-    const fs = new MemoryFS();
+    const fs = new MemoryFS(workerFarm);
     await fixtureFromGraph('dir', fs, [
       asset('file1.js', ['file2.js', 'file3.js']),
       asset('file2.js'),
@@ -55,7 +55,7 @@ export default function run() { return [d0, d1] }
   });
 
   it('will create files with async imports between themselves', async () => {
-    const fs = new MemoryFS();
+    const fs = new MemoryFS(workerFarm);
     await fixtureFromGraph('dir', fs, [
       asset('file1.js', ['file2.js', {to: 'file3.js', type: 'async'}]),
       asset('file2.js'),
