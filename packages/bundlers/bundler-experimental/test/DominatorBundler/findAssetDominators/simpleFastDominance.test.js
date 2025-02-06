@@ -1,12 +1,12 @@
 // @flow strict-local
 
 import assert from 'assert';
-import {ContentGraph} from '@atlaspack/graph';
+import {Graph} from '@atlaspack/graph';
 import {simpleFastDominance} from '../../../src/DominatorBundler/findAssetDominators/simpleFastDominance';
 
 const baseGraph = () => {
-  const inputGraph = new ContentGraph();
-  const root = inputGraph.addNodeByContentKey('root', 'root');
+  const inputGraph = new Graph();
+  const root = inputGraph.addNode('root');
   inputGraph.setRootNodeId(root);
   return {inputGraph, root};
 };
@@ -19,10 +19,10 @@ describe('simpleFastDominance', () => {
     const {inputGraph, root} = baseGraph();
     inputGraph.setRootNodeId(root);
 
-    const a = inputGraph.addNodeByContentKey('a', 'a');
-    const b = inputGraph.addNodeByContentKey('b', 'b');
-    const c = inputGraph.addNodeByContentKey('c', 'c');
-    const d = inputGraph.addNodeByContentKey('d', 'd');
+    const a = inputGraph.addNode('a');
+    const b = inputGraph.addNode('b');
+    const c = inputGraph.addNode('c');
+    const d = inputGraph.addNode('d');
 
     inputGraph.addEdge(root, a);
     inputGraph.addEdge(a, b);
@@ -47,11 +47,11 @@ describe('simpleFastDominance', () => {
     // }
     const {inputGraph, root} = baseGraph();
 
-    const a = inputGraph.addNodeByContentKey('a', 'a');
-    const b = inputGraph.addNodeByContentKey('b', 'b');
-    const c = inputGraph.addNodeByContentKey('c', 'c');
-    const d = inputGraph.addNodeByContentKey('d', 'd');
-    const e = inputGraph.addNodeByContentKey('e', 'e');
+    const a = inputGraph.addNode('a');
+    const b = inputGraph.addNode('b');
+    const c = inputGraph.addNode('c');
+    const d = inputGraph.addNode('d');
+    const e = inputGraph.addNode('e');
 
     inputGraph.addEdge(root, a);
     inputGraph.addEdge(root, b);
@@ -77,9 +77,9 @@ describe('simpleFastDominance', () => {
     // }
     const {inputGraph, root} = baseGraph();
 
-    const a = inputGraph.addNodeByContentKey('a', 'a');
-    const b = inputGraph.addNodeByContentKey('b', 'b');
-    const c = inputGraph.addNodeByContentKey('c', 'c');
+    const a = inputGraph.addNode('a');
+    const b = inputGraph.addNode('b');
+    const c = inputGraph.addNode('c');
 
     inputGraph.addEdge(root, a);
     inputGraph.addEdge(a, b);
@@ -104,10 +104,10 @@ describe('simpleFastDominance', () => {
     // }
     const {inputGraph, root} = baseGraph();
 
-    const a = inputGraph.addNodeByContentKey('a', 'a');
-    const b = inputGraph.addNodeByContentKey('b', 'b');
-    const c = inputGraph.addNodeByContentKey('c', 'c');
-    const d = inputGraph.addNodeByContentKey('d', 'd');
+    const a = inputGraph.addNode('a');
+    const b = inputGraph.addNode('b');
+    const c = inputGraph.addNode('c');
+    const d = inputGraph.addNode('d');
 
     inputGraph.addEdge(root, a);
     inputGraph.addEdge(root, b);

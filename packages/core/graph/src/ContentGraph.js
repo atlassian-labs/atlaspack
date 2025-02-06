@@ -75,6 +75,13 @@ export default class ContentGraph<TNode, TEdgeType: number = 1> extends Graph<
     }
   }
 
+  getContentKeyByNodeId(nodeId: NodeId): ContentKey {
+    return nullthrows(
+      this._nodeIdToContentKey.get(nodeId),
+      `Expected node id ${nodeId} to exist`,
+    );
+  }
+
   getNodeIdByContentKey(contentKey: ContentKey): NodeId {
     return nullthrows(
       this._contentKeyToNodeId.get(contentKey),
