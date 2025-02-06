@@ -37,13 +37,6 @@ describe('Graph', () => {
     }, /Does not have node/);
   });
 
-  it("errors if replaceNodeIdsConnectedTo is called with a node that doesn't belong", () => {
-    let graph = new Graph();
-    assert.throws(() => {
-      graph.replaceNodeIdsConnectedTo(toNodeId(-1), []);
-    }, /Does not have node/);
-  });
-
   it("errors when adding an edge to a node that doesn't exist", () => {
     let graph = new Graph();
     let node = graph.addNode({});
@@ -274,26 +267,63 @@ describe('Graph', () => {
     }
   });
 
-  it("replaceNodeIdsConnectedTo should update a node's downstream nodes", () => {
-    let graph = new Graph();
-    let nodeA = graph.addNode('a');
-    graph.setRootNodeId(nodeA);
-    let nodeB = graph.addNode('b');
-    let nodeC = graph.addNode('c');
-    graph.addEdge(nodeA, nodeB);
-    graph.addEdge(nodeA, nodeC);
+  describe('replaceNodeIdsConnectedTo', () => {
+    it("errors if replaceNodeIdsConnectedTo is called with a node that doesn't belong", () => {
+      let graph = new Graph();
+      assert.throws(() => {
+        graph.replaceNodeIdsConnectedTo(toNodeId(-1), []);
+      }, /Does not have node/);
+    });
 
-    let nodeD = graph.addNode('d');
-    graph.replaceNodeIdsConnectedTo(nodeA, [nodeB, nodeD]);
+    it("replaceNodeIdsConnectedTo should update a node's downstream nodes", () => {
+      let graph = new Graph();
+      let nodeA = graph.addNode('a');
+      graph.setRootNodeId(nodeA);
+      let nodeB = graph.addNode('b');
+      let nodeC = graph.addNode('c');
+      graph.addEdge(nodeA, nodeB);
+      graph.addEdge(nodeA, nodeC);
 
-    assert(graph.hasNode(nodeA));
-    assert(graph.hasNode(nodeB));
-    assert(!graph.hasNode(nodeC));
-    assert(graph.hasNode(nodeD));
-    assert.deepEqual(Array.from(graph.getAllEdges()), [
-      {from: nodeA, to: nodeB, type: 1},
-      {from: nodeA, to: nodeD, type: 1},
-    ]);
+      let nodeD = graph.addNode('d');
+      graph.replaceNodeIdsConnectedTo(nodeA, [nodeB, nodeD]);
+
+      assert(graph.hasNode(nodeA));
+      assert(graph.hasNode(nodeB));
+      assert(!graph.hasNode(nodeC)); // orphan removed
+      assert(graph.hasNode(nodeD));
+      assert.deepEqual(Array.from(graph.getAllEdges()), [
+        {from: nodeA, to: nodeB, type: 1},
+        {from: nodeA, to: nodeD, type: 1},
+      ]);
+    });
+
+    it('replaceNodeIdsConnectedTo does not remove orphan nodes if flag is false', () => {
+      let graph = new Graph();
+      let nodeA = graph.addNode('a');
+      graph.setRootNodeId(nodeA);
+      let nodeB = graph.addNode('b');
+      let nodeC = graph.addNode('c');
+      graph.addEdge(nodeA, nodeB);
+      graph.addEdge(nodeA, nodeC);
+
+      let nodeD = graph.addNode('d');
+      graph.replaceNodeIdsConnectedTo(
+        nodeA,
+        [nodeB, nodeD],
+        () => true,
+        1,
+        false,
+      );
+
+      assert(graph.hasNode(nodeA));
+      assert(graph.hasNode(nodeB));
+      assert(graph.hasNode(nodeC)); // orphan kept
+      assert(graph.hasNode(nodeD));
+      assert.deepEqual(Array.from(graph.getAllEdges()), [
+        {from: nodeA, to: nodeB, type: 1},
+        {from: nodeA, to: nodeD, type: 1},
+      ]);
+    });
   });
 
   it('traverses along edge types if a filter is given', () => {
