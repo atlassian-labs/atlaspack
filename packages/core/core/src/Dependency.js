@@ -20,6 +20,7 @@ import {
 import {toInternalSourceLocation} from './utils';
 import {toProjectPath} from './projectPath';
 import assert from 'assert';
+import {identifierRegistry} from './IdentifierRegistry';
 
 type DependencyOpts = {|
   id?: string,
@@ -80,7 +81,9 @@ export function createDependencyId({
     priority: priority ? Priority[priority] : Priority.sync,
     packageConditions,
   };
-  return createDependencyIdRust(params);
+  const id = createDependencyIdRust(params);
+  identifierRegistry.addIdentifier('dependency', id, params);
+  return id;
 }
 
 export function createDependency(
