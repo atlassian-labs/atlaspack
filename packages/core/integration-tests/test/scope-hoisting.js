@@ -6177,8 +6177,11 @@ describe('scope hoisting', function () {
     let contents = await outputFS.readFile(indexBundle.filePath, 'utf8');
     assert(contents.includes('$parcel$global.rwr('));
 
+    let indexHtmlBundle = nullthrows(
+      b.getBundles().find((b) => /index.*\.html/.test(b.filePath)),
+    );
     let result;
-    await run(b, {
+    await runBundle(b, indexHtmlBundle, {
       result: (r) => {
         result = r;
       },
