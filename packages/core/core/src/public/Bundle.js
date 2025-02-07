@@ -35,6 +35,8 @@ import Target from './Target';
 import {BundleBehaviorNames} from '../types';
 import {fromProjectPath} from '../projectPath';
 
+const inspect = Symbol.for('nodejs.util.inspect.custom');
+
 const internalBundleToBundle: DefaultWeakMap<
   AtlaspackOptions,
   DefaultWeakMap<BundleGraph, WeakMap<InternalBundle, Bundle>>,
@@ -68,6 +70,11 @@ export class Bundle implements IBundle {
   #bundle /*: InternalBundle */;
   #bundleGraph /*: BundleGraph */;
   #options /*: AtlaspackOptions */;
+
+  // $FlowFixMe
+  [inspect]() {
+    return `Bundle(${this.#bundle.id})`;
+  }
 
   constructor(
     sentinel: mixed,
