@@ -3,12 +3,15 @@
 import fs from 'fs';
 
 export class IdentifierRegistry {
-  #createdDirectory = false;
+  #enabled: boolean;
+  #createdDirectory: boolean = false;
 
-  constructor() {}
+  constructor(enabled: boolean) {
+    this.#enabled = enabled;
+  }
 
   addIdentifier(type: string, identifier: string, data: mixed) {
-    if (process.env.ATLASPACK_IDENTIFIER_DEBUG === 'true') {
+    if (this.#enabled) {
       if (!this.#createdDirectory) {
         fs.mkdirSync('./.atlaspack', {recursive: true});
         this.#createdDirectory = true;
@@ -24,4 +27,6 @@ export class IdentifierRegistry {
   }
 }
 
-export const identifierRegistry: IdentifierRegistry = new IdentifierRegistry();
+export const identifierRegistry: IdentifierRegistry = new IdentifierRegistry(
+  process.env.ATLASPACK_IDENTIFIER_DEBUG === 'true',
+);
