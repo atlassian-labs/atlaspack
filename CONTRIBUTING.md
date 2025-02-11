@@ -45,3 +45,26 @@ Then you can try out some of the examples:
 cd packages/examples/kitchen-sink/
 yarn start
 ```
+
+## Releasing new versions
+
+You will need to set-up a Github personal access token with `read:user` and
+`read:repo` permissions and set it to the `GITHUB_TOKEN` environment variable.
+
+### Create a changeset with
+
+```
+yarn changeset
+```
+
+### Update package versions to bump pending changesets
+
+```
+yarn changeset version
+```
+
+### Publishing to NPM (CI should do this automatically)
+
+```
+yarn changeset publish
+```

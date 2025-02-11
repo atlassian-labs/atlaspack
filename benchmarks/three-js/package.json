@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/benchmark-three-js",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "scripts": {
     "start": "node ./scripts/build.js",
     "start:v2": "env ATLASPACK_BENCH_MODE=V2 ATLASPACK_BENCH_PLUGINS=0 node ./scripts/build.mjs",
