@@ -6,6 +6,7 @@ import {getVcsStateSnapshot, getEventsSince} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types-internal';
 import type {Event, Options as WatcherOptions} from '@parcel/watcher';
 import {registerSerializableClass} from '@atlaspack/build-cache';
+import {instrument, instrumentAsync} from '@atlaspack/logger';
 
 // $FlowFixMe
 import packageJSON from '../package.json';
@@ -34,14 +35,13 @@ export class NodeVCSAwareFS extends NodeFS {
     const snapshotFileContent = snapshotFile.toString();
     const {nativeSnapshotPath, vcsState} = JSON.parse(snapshotFileContent);
 
-    const watcherEventsSince = await this.watcher().getEventsSince(
-      dir,
-      nativeSnapshotPath,
-      opts,
+    const watcherEventsSince = await instrumentAsync(
+      'NodeVCSAwareFS::watchman.getEventsSince',
+      () => this.watcher().getEventsSince(dir, nativeSnapshotPath, opts),
     );
-    const vcsEventsSince = getEventsSince(
-      this.#options.gitRepoPath,
-      vcsState.gitHash,
+    const vcsEventsSince = instrument(
+      'NodeVCSAwareFS::rust.getEventsSince',
+      () => getEventsSince(this.#options.gitRepoPath, vcsState.gitHash),
     );
     this.#options.logEventDiff(watcherEventsSince, vcsEventsSince);
 

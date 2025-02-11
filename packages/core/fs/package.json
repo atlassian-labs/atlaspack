@@ -21,7 +21,9 @@
     "main": {
       "includeNodeModules": {
         "@atlaspack/build-cache": false,
+        "@atlaspack/diagnostic": false,
         "@atlaspack/feature-flags": false,
+        "@atlaspack/logger": false,
         "@atlaspack/rust": false,
         "@atlaspack/types-internal": false,
         "@atlaspack/utils": false,
@@ -33,7 +35,9 @@
     "browser": {
       "includeNodeModules": {
         "@atlaspack/build-cache": false,
+        "@atlaspack/diagnostic": false,
         "@atlaspack/feature-flags": false,
+        "@atlaspack/logger": false,
         "@atlaspack/rust": false,
         "@atlaspack/types-internal": false,
         "@atlaspack/utils": false,
@@ -50,6 +54,7 @@
   "dependencies": {
     "@atlaspack/build-cache": "2.13.0",
     "@atlaspack/feature-flags": "2.13.0",
+    "@atlaspack/logger": "2.13.0",
     "@atlaspack/rust": "2.13.0",
     "@atlaspack/types-internal": "2.13.0",
     "@atlaspack/utils": "2.13.0",

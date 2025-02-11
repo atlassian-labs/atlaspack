@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.13.0",
-    "@atlaspack/events": "2.13.0"
+    "@atlaspack/events": "2.13.0",
+    "@atlaspack/rust": "2.13.0"
   }
 }

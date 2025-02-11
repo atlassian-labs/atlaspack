@@ -16,9 +16,9 @@ import nullthrows from 'nullthrows';
 import {setEqual} from '@atlaspack/utils';
 import logger from '@atlaspack/logger';
 import {md, convertSourceLocationToHighlight} from '@atlaspack/diagnostic';
+import {instrument} from '@atlaspack/logger';
 import {BundleBehavior, Priority} from './types';
 import {fromProjectPathRelative, fromProjectPath} from './projectPath';
-import {instrument} from './tracer';
 
 export function propagateSymbols({
   options,
