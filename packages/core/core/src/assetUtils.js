@@ -39,6 +39,7 @@ import {
 import {hashString, createAssetId as createAssetIdRust} from '@atlaspack/rust';
 import {BundleBehavior as BundleBehaviorMap} from './types';
 import {PluginTracer} from '@atlaspack/profiler';
+import {identifierRegistry} from './IdentifierRegistry';
 
 export type AssetOptions = {|
   id?: string,
@@ -69,7 +70,7 @@ export type AssetOptions = {|
 |};
 
 export function createAssetIdFromOptions(options: AssetOptions): string {
-  return createAssetIdRust({
+  const data = {
     environmentId: options.env.id,
     filePath: options.filePath,
     code: options.code,
@@ -77,7 +78,10 @@ export function createAssetIdFromOptions(options: AssetOptions): string {
     query: options.query,
     uniqueKey: options.uniqueKey,
     fileType: options.type,
-  });
+  };
+  const id = createAssetIdRust(data);
+  identifierRegistry.addIdentifier('asset', id, data);
+  return id;
 }
 
 export function createAsset(
