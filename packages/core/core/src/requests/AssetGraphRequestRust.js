@@ -4,6 +4,7 @@ import invariant from 'assert';
 
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Async} from '@atlaspack/types';
+import {instrument} from '@atlaspack/logger';
 
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
@@ -15,7 +16,6 @@ import type {
   AssetGraphRequestInput,
   AssetGraphRequestResult,
 } from './AssetGraphRequest';
-import {instrument} from '../tracer';
 
 type RunInput = {|
   input: AssetGraphRequestInput,
