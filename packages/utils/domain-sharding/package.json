@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/domain-sharding",
-  "version": "2.13.0",
+  "version": "2.13.1",
   "license": "(MIT OR Apache-2.0)",
   "source": "src/index.js",
   "main": "lib/index.js",

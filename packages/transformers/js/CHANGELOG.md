@@ -1,5 +1,20 @@
 # @atlaspack/transformer-js
 
+## 3.0.1
+
+### Patch Changes
+
+- [`3ddd868`](https://github.com/atlassian-labs/atlaspack/commit/3ddd8682a6edb5c6a35357cfa3ade5741aff5f06) Thanks [@yamadapc](https://github.com/yamadapc)! - Add identifier registry and VCS tracing
+
+- Updated dependencies [[`3ddd868`](https://github.com/atlassian-labs/atlaspack/commit/3ddd8682a6edb5c6a35357cfa3ade5741aff5f06)]:
+  - @atlaspack/feature-flags@2.13.1
+  - @atlaspack/diagnostic@2.13.1
+  - @atlaspack/workers@2.13.1
+  - @atlaspack/plugin@2.13.1
+  - @atlaspack/utils@2.13.1
+  - @atlaspack/core@2.13.1
+  - @atlaspack/rust@2.13.1
+
 ## 3.0.0
 
 ### Minor Changes
