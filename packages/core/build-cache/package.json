@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/build-cache",
   "description": "Serialize and deserialize data structures to a build cache",
-  "version": "2.13.0",
+  "version": "2.13.1",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"

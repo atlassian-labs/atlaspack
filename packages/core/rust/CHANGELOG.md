@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 2.13.1
+
+### Patch Changes
+
+- [`3ddd868`](https://github.com/atlassian-labs/atlaspack/commit/3ddd8682a6edb5c6a35357cfa3ade5741aff5f06) Thanks [@yamadapc](https://github.com/yamadapc)! - Add identifier registry and VCS tracing
+
 ## 2.13.0
 
 ### Minor Changes
