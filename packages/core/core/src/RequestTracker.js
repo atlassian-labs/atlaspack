@@ -903,6 +903,10 @@ export class RequestGraph extends ContentGraph<
     events: Array<Event>,
     options: AtlaspackOptions,
     threshold: number,
+    /**
+     * True if this is the start-up (loading phase) invalidation.
+     */
+    isInitialBuild: boolean = false,
   ): Async<boolean> {
     let didInvalidate = false;
     let count = 0;
@@ -1114,6 +1118,7 @@ export class RequestGraph extends ContentGraph<
         trackableEvent: 'fsevent_response_time',
         duration,
         predictedTime,
+        isInitialBuild,
         numberOfEvents: events.length,
         numberOfInvalidatedNodes: invalidatedNodes.size,
       },
@@ -1718,6 +1723,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
         options.unstableFileInvalidations || events,
         options,
         10000,
+        true,
       );
       return requestGraph;
     } catch (e) {
