@@ -6455,4 +6455,40 @@ describe('scope hoisting', function () {
       },
     ]);
   });
+
+  // This is currently failing due to dependency.sourceAssetId becoming stale
+  // after Asset.type changing (e.g. ts -> js).
+  it.skip('should do stuff', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      stuff
+        one.ts:
+          export const one = 'one';
+        two.ts:
+          export {one as exportOne} from './one';
+        other.ts:
+          export const other = 'other';
+        library.ts:
+          export * from './two';
+          import {other} from './other';
+          export const exportOther = other;
+        index.ts:
+          import {exportOne, exportOther} from './library';
+          console.log(exportOne, exportOther);
+        index.html:
+          <script type="module" src="./index.ts"></script>
+        package.json:
+          {"sideEffects": false}
+        yarn.lock:`;
+
+    let b = await bundle([path.join(__dirname, 'stuff/index.html')], {
+      mode: 'production',
+      defaultTargetOptions: {
+        shouldScopeHoist: true,
+        outputFormat: 'esmodule',
+      },
+      inputFS: overlayFS,
+    });
+
+    await run(b);
+  });
 });
