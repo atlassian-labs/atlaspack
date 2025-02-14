@@ -6458,7 +6458,7 @@ describe('scope hoisting', function () {
 
   // This is currently failing due to dependency.sourceAssetId becoming stale
   // after Asset.type changing (e.g. ts -> js).
-  it.skip('should do stuff', async function () {
+  it.skip('should handle multiple re-export rename combinations', async function () {
     await fsFixture(overlayFS, __dirname)`
       stuff
         one.ts:
