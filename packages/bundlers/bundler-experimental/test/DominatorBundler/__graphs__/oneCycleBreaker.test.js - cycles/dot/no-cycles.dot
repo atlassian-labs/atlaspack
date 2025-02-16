@@ -1,0 +1,19 @@
+digraph dominators {
+  labelloc="t";
+  label="Dominators";
+
+  "root";
+  "root" -> "a.js";
+  "a.js";
+  "b.js";
+  "c.js";
+  "d.js";
+  "e.js";
+  "SCC";
+
+  "a.js" -> "SCC";
+  "SCC" -> "b.js";
+  "SCC" -> "c.js";
+  "SCC" -> "d.js";
+  "SCC" -> "e.js";
+}

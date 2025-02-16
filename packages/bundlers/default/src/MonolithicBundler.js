@@ -1,4 +1,5 @@
 // @flow strict-local
+
 import type {Asset, Dependency, MutableBundleGraph} from '@atlaspack/types';
 import nullthrows from 'nullthrows';
 

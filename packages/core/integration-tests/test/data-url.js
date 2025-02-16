@@ -1,4 +1,5 @@
 // @flow
+
 import assert from 'assert';
 import {join} from 'path';
 import {

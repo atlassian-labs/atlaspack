@@ -1,0 +1,16 @@
+digraph assets {
+  labelloc="t";
+  label="Assets";
+
+  "a.js";
+  "b.js";
+  "c.js";
+  "d.js";
+  "e.js";
+
+  "a.js" -> "b.js";
+  "b.js" -> "c.js";
+  "c.js" -> "d.js";
+  "d.js" -> "b.js";
+  "d.js" -> "e.js";
+}
