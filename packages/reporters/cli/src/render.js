@@ -38,27 +38,28 @@ let spinner = ora({
 let persistedMessages = [];
 
 export function writeOut(message: string, isError: boolean = false) {
-  let processedMessage = message + '\n';
-  let hasSpinner = spinner.isSpinning;
+  console.log(message);
+  // let processedMessage = message + '\n';
+  // let hasSpinner = spinner.isSpinning;
 
-  // Stop spinner so we don't duplicate it
-  if (hasSpinner) {
-    spinner.stop();
-  }
+  // // Stop spinner so we don't duplicate it
+  // if (hasSpinner) {
+  //   spinner.stop();
+  // }
 
-  let lines = countLines(message);
-  if (isError) {
-    stderr.write(processedMessage);
-    errorLineCount += lines;
-  } else {
-    stdout.write(processedMessage);
-    lineCount += lines;
-  }
+  // let lines = countLines(message);
+  // if (isError) {
+  //   stderr.write(processedMessage);
+  //   errorLineCount += lines;
+  // } else {
+  //   stdout.write(processedMessage);
+  //   lineCount += lines;
+  // }
 
-  // Restart the spinner
-  if (hasSpinner) {
-    spinner.start();
-  }
+  // // Restart the spinner
+  // if (hasSpinner) {
+  //   spinner.start();
+  // }
 }
 
 export function persistMessage(message: string) {
@@ -70,7 +71,7 @@ export function persistMessage(message: string) {
 
 export function updateSpinner(message: string) {
   // This helps the spinner play well with the tests
-  if (!isTTY) {
+  if (true || !isTTY) {
     writeOut(message);
     return;
   }
@@ -95,7 +96,7 @@ export function persistSpinner(
 }
 
 function clearStream(stream: Writable, lines: number) {
-  if (!isTTY) return;
+  if (true || !isTTY) return;
 
   readline.moveCursor(stream, 0, -lines);
   readline.clearScreenDown(stream);
@@ -103,7 +104,7 @@ function clearStream(stream: Writable, lines: number) {
 
 // Reset the window's state
 export function resetWindow() {
-  if (!isTTY) return;
+  if (true || !isTTY) return;
 
   // If status has been persisted we add a line
   // Otherwise final states would remain in the terminal for rebuilds
