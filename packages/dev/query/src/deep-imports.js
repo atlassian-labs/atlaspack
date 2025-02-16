@@ -36,6 +36,7 @@ const v =
         BundleGraph: require('@atlaspack/core/src/BundleGraph'),
         RequestTracker: require('@atlaspack/core/src/RequestTracker'),
         LMDBCache: require('@atlaspack/cache/src/LMDBCache').LMDBCache,
+        // LMDBCache: require('@atlaspack/cache/src/LMDBLiteCache').LMDBLiteCache,
         Priority: require('@atlaspack/core/src/types').Priority,
         fromProjectPathRelative: require('@atlaspack/core/src/projectPath')
           .fromProjectPathRelative,

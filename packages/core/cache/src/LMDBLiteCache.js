@@ -128,6 +128,15 @@ export class LMDBLiteCache implements Cache {
     return Promise.resolve(deserialize(data));
   }
 
+  getSync<T>(key: string): ?T {
+    let data = this.store.get(key);
+    if (data == null) {
+      return null;
+    }
+
+    return deserialize(data);
+  }
+
   async set(key: string, value: mixed): Promise<void> {
     await this.setBlob(key, serialize(value));
   }

@@ -27,6 +27,7 @@ import {
 import type {Options as WatcherOptions, Event} from '@parcel/watcher';
 import type WorkerFarm from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
+import makeDebug from 'debug';
 
 import {
   ATLASPACK_VERSION,
@@ -70,6 +71,8 @@ import type {
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
 import {identifierRegistry} from './IdentifierRegistry';
+
+const debug = makeDebug('atlaspack:RequestTracker');
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
@@ -1284,10 +1287,25 @@ export default class RequestTracker {
     this.graph.replaceSubrequests(requestNodeId, subrequestContextKeys);
   }
 
+  hasCachedRequest<TInput, TResult: RequestResult>(
+    request: Request<TInput, TResult>,
+  ): boolean {
+    let hasKey = this.graph.hasContentKey(request.id);
+    let requestId = hasKey
+      ? this.graph.getNodeIdByContentKey(request.id)
+      : undefined;
+    let hasValidResult = requestId != null && this.hasValidResult(requestId);
+
+    return hasValidResult;
+  }
+
   async runRequest<TInput, TResult: RequestResult>(
     request: Request<TInput, TResult>,
     opts?: ?RunRequestOpts,
   ): Promise<TResult> {
+    debug('RequestTracker::runRequest', request.id);
+
+    const startTime = performance.now();
     let hasKey = this.graph.hasContentKey(request.id);
     let requestId = hasKey
       ? this.graph.getNodeIdByContentKey(request.id)
@@ -1295,6 +1313,7 @@ export default class RequestTracker {
     let hasValidResult = requestId != null && this.hasValidResult(requestId);
 
     if (!opts?.force && hasValidResult) {
+      debug('RequestTracker::runRequest cached request', request.id);
       // $FlowFixMe[incompatible-type]
       return this.getRequestResult<TResult>(request.id);
     }
@@ -1331,7 +1350,14 @@ export default class RequestTracker {
     try {
       let node = this.graph.getRequestNode(requestNodeId);
 
-      this.stats.set(request.type, (this.stats.get(request.type) ?? 0) + 1);
+      const requestCount = (this.stats.get(request.type) ?? 0) + 1;
+      this.stats.set(request.type, requestCount);
+      // console.log(
+      //   'RequestTracker::runRequest',
+      //   request.id,
+      //   request.type,
+      //   requestCount,
+      // );
 
       let result = await request.run({
         input: request.input,
@@ -1341,6 +1367,13 @@ export default class RequestTracker {
         options: this.options,
         rustAtlaspack: this.rustAtlaspack,
       });
+
+      const requestDuration = performance.now() - startTime;
+      debug(
+        'RequestTracker::runRequest finished request',
+        request.id,
+        `duration=${requestDuration}ms`,
+      );
 
       assertSignalNotAborted(this.signal);
       this.completeRequest(requestNodeId);
@@ -1455,6 +1488,19 @@ export default class RequestTracker {
     return {api, subRequestContentKeys};
   }
 
+  #debouncedWriteToCacheTimeout = null;
+
+  debouncedWriteToCache() {
+    if (this.#debouncedWriteToCacheTimeout != null) {
+      clearTimeout(this.#debouncedWriteToCacheTimeout);
+    }
+
+    this.#debouncedWriteToCacheTimeout = setTimeout(() => {
+      this.#debouncedWriteToCacheTimeout = null;
+      this.writeToCache();
+    }, 10000);
+  }
+
   async writeToCache(signal?: AbortSignal) {
     console.log('writeToCache');
     let cacheKey = getCacheKey(this.options);
@@ -1531,6 +1577,9 @@ export default class RequestTracker {
         cacheableNodes[i] = node;
       }
     }
+    cacheableNodes = cacheableNodes.filter(
+      (node) => node && (node.result != null || node.resultCacheKey != null),
+    );
 
     let nodeCountsPerBlob = [];
 
