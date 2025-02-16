@@ -3,6 +3,7 @@ import type {FilePath} from '@atlaspack/types';
 import type {Cache} from './types';
 import type {Readable, Writable} from 'stream';
 
+import fs from 'fs';
 import stream from 'stream';
 import path from 'path';
 import {promisify} from 'util';
@@ -37,11 +38,25 @@ export class LMDBCache implements Cache {
     this.dir = cacheDir;
     this.fsCache = new FSCache(this.fs, cacheDir);
 
-    this.store = lmdb.open(cacheDir, {
-      name: 'parcel-cache',
-      encoding: 'binary',
-      compression: true,
-    });
+    try {
+      this.store = lmdb.open(cacheDir, {
+        name: 'parcel-cache',
+        encoding: 'binary',
+        compression: true,
+      });
+    } catch (err) {
+      if (err.message.includes('MDB_INVALID: File is not an LMDB file')) {
+        fs.rmSync(path.join(cacheDir, 'data.mdb'));
+        fs.rmSync(path.join(cacheDir, 'lock.mdb'));
+        this.store = lmdb.open(cacheDir, {
+          name: 'parcel-cache',
+          encoding: 'binary',
+          compression: true,
+        });
+      } else {
+        throw err;
+      }
+    }
   }
 
   ensure(): Promise<void> {

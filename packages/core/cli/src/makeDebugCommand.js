@@ -98,5 +98,23 @@ export function makeDebugCommand(): commander$Command {
     });
   applyOptions(buildAssetGraph, commonOptions);
 
+  const bundlerStats = debug
+    .command('bundler-stats [input...]')
+    .description('Build the asset graph then exit')
+    .action(async (entries: string[], opts: Options, command: CommandExt) => {
+      try {
+        const atlaspack = await getInstance(entries, opts, command);
+        await atlaspack.unstable_getBundlerStats();
+        logger.info({
+          message: 'Done getting statistics',
+          origin: '@atlaspack/cli',
+        });
+        process.exit(0);
+      } catch (err) {
+        handleUncaughtException(err);
+      }
+    });
+  applyOptions(bundlerStats, commonOptions);
+
   return debug;
 }

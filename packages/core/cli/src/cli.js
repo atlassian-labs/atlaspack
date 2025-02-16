@@ -161,7 +161,7 @@ async function run(
 
     if (process.stdin.isTTY && process.stdin.isRaw) {
       // $FlowFixMe
-      process.stdin.setRawMode(false);
+      // process.stdin.setRawMode(false);
     }
 
     disposable.dispose();
@@ -171,14 +171,13 @@ async function run(
   const isWatching = command.name() === 'watch' || command.name() === 'serve';
   if (process.stdin.isTTY) {
     // $FlowFixMe
-    process.stdin.setRawMode(true);
+    // process.stdin.setRawMode(true);
     require('readline').emitKeypressEvents(process.stdin);
 
     let stream = process.stdin.on('keypress', async (char, key) => {
       if (!key.ctrl) {
         return;
       }
-
       switch (key.name) {
         case 'c':
           // Detect the ctrl+c key, and gracefully exit after writing the asset graph to the cache.

@@ -136,7 +136,13 @@ export default class MutableBundleGraph
     let assetNodes =
       this.#graph._graph.getNodeIdsConnectedFrom(dependencyNodeId);
     this.#graph._graph.addEdge(dependencyNodeId, bundleGroupNodeId);
-    this.#graph._graph.replaceNodeIdsConnectedTo(bundleGroupNodeId, assetNodes);
+    this.#graph._graph.replaceNodeIdsConnectedTo(
+      bundleGroupNodeId,
+      assetNodes,
+      null,
+      1,
+      false,
+    );
     this.#graph._graph.addEdge(
       dependencyNodeId,
       resolvedNodeId,

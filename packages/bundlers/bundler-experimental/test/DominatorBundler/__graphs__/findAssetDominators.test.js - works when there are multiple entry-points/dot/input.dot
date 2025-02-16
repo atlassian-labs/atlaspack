@@ -1,0 +1,24 @@
+digraph assets {
+  labelloc="t";
+  label="Assets";
+
+  "page1.js";
+  "page2.js";
+  "react.js";
+  "lodash.js";
+  "left-pad.js";
+  "jsx.js";
+  "string-concat.js";
+  "string-chart-at.js";
+
+  "page1.js" -> "react.js";
+  "page1.js" -> "lodash.js";
+  "page2.js" -> "lodash.js";
+  "page2.js" -> "react.js";
+  "react.js" -> "left-pad.js";
+  "react.js" -> "string-concat.js";
+  "react.js" -> "jsx.js";
+  "lodash.js" -> "left-pad.js";
+  "left-pad.js" -> "string-concat.js";
+  "string-concat.js" -> "string-chart-at.js";
+}
