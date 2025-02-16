@@ -1,0 +1,26 @@
+digraph merged {
+  labelloc="t";
+  label="Merged";
+  layout="dot";
+
+  "jsx.js";
+  "left-pad.js";
+  "lodash.js";
+  "package:page1.js,page2.js";
+  "page1.js";
+  "page2.js";
+  "react.js";
+  "root";
+  "string-chart-at.js";
+  "string-concat.js";
+
+  "package:page1.js,page2.js" -> "left-pad.js";
+  "package:page1.js,page2.js" -> "lodash.js";
+  "package:page1.js,page2.js" -> "react.js";
+  "package:page1.js,page2.js" -> "string-concat.js";
+  "react.js" -> "jsx.js";
+  "root" -> "package:page1.js,page2.js";
+  "root" -> "page1.js";
+  "root" -> "page2.js";
+  "string-concat.js" -> "string-chart-at.js";
+}

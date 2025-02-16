@@ -1,0 +1,16 @@
+digraph merged {
+  labelloc="t";
+  label="Merged";
+  layout="dot";
+
+  "package:page1.js,page2.js";
+  "page1.js";
+  "page2.js";
+  "root";
+
+  "page1.js" -> "package:page1.js,page2.js";
+  "page2.js" -> "package:page1.js,page2.js";
+  "root" -> "package:page1.js,page2.js";
+  "root" -> "page1.js";
+  "root" -> "page2.js";
+}

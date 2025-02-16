@@ -21,6 +21,7 @@ import ThrowableDiagnostic, {anyToDiagnostic} from '@atlaspack/diagnostic';
 import {assetFromValue} from './public/Asset';
 import {PackagedBundle} from './public/Bundle';
 import BundleGraph from './public/BundleGraph';
+import InternalBundleGraph from './BundleGraph';
 import WorkerFarm from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 import {BuildAbortError} from './utils';
@@ -60,10 +61,18 @@ import {
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
+import {
+  createPackages,
+  findAssetDominators,
+  bundleGraphToRootedGraph,
+  runMergePackages,
+} from '@atlaspack/bundler-experimental';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
+import MutableBundleGraph from './public/MutableBundleGraph';
+import {runGetBundlerStats} from './BundlerStats';
 
 registerCoreWithSerializer();
 
@@ -173,8 +182,17 @@ export default class Atlaspack {
           : [entries],
         env: resolvedOptions.env,
         fs: inputFS && new FileSystemV3(inputFS),
-        // $FlowFixMe ProjectPath is a string
-        defaultTargetOptions: resolvedOptions.defaultTargetOptions,
+        defaultTargetOptions: {
+          // $FlowFixMe projectPath is just a string
+          distDir: resolvedOptions.defaultTargetOptions.distDir,
+          engines: resolvedOptions.defaultTargetOptions.engines,
+          isLibrary: resolvedOptions.defaultTargetOptions.isLibrary,
+          outputFormat: resolvedOptions.defaultTargetOptions.outputFormat,
+          sourceMaps: resolvedOptions.defaultTargetOptions.sourceMaps,
+          shouldOptimize: resolvedOptions.defaultTargetOptions.shouldOptimize,
+          shouldScopeHoist:
+            resolvedOptions.defaultTargetOptions.shouldScopeHoist,
+        },
         lmdb,
       });
     }
@@ -606,6 +624,40 @@ export default class Atlaspack {
     await this._init();
   }
 
+  async unstable_getBundlerStats() {
+    const log = (message) => {
+      logger.info({
+        message,
+        origin: '@atlaspack/core',
+      });
+    };
+
+    const assetGraphResult: AssetGraphRequestResult =
+      await this.unstable_buildAssetGraph(true);
+    const assetGraph = assetGraphResult.assetGraph;
+    log('Creating bundle graph');
+    const bundleGraph = InternalBundleGraph.fromAssetGraph(assetGraph, false);
+    const mutableBundleGraph = new MutableBundleGraph(
+      bundleGraph,
+      nullthrows(this.#resolvedOptions),
+    );
+    log('Running bundler');
+    const graph = bundleGraphToRootedGraph(mutableBundleGraph);
+    const {dominators} = findAssetDominators(mutableBundleGraph);
+    log('Done running dominators');
+    const packages = createPackages(graph.getGraph(), dominators);
+    log('Done creating packages');
+
+    const mergedPackages = runMergePackages(graph.getGraph(), packages);
+
+    runGetBundlerStats({
+      dominators,
+      packages,
+      mergedPackages,
+      resolvedOptions: nullthrows(this.#resolvedOptions),
+    });
+  }
+
   /**
    * Build the asset graph
    */
@@ -626,12 +678,12 @@ export default class Atlaspack {
     };
 
     const start = Date.now();
-    const result = await this.#requestTracker.runRequest(
+    const request =
       this.rustAtlaspack != null
         ? createAssetGraphRequestRust(this.rustAtlaspack)(input)
-        : createAssetGraphRequestJS(input),
-      {force: true},
-    );
+        : createAssetGraphRequestJS(input);
+    const hasCachedRequest = this.#requestTracker.hasCachedRequest(request);
+    const result = await this.#requestTracker.runRequest(request);
 
     const duration = Date.now() - start;
 
@@ -640,8 +692,8 @@ export default class Atlaspack {
       origin,
     });
 
-    if (writeToCache) {
-      logger.info({message: 'Write request tracker to cache', origin});
+    // Don't write to cache if we already had a cached request
+    if (!hasCachedRequest && writeToCache) {
       await this.writeRequestTrackerToCache();
       logger.info({message: 'Done writing request tracker to cache', origin});
     }

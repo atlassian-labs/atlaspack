@@ -1,0 +1,6 @@
+{
+  "extends": "@atlaspack/config-default",
+  "transformers": {
+    "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": ["@atlaspack/transformer-js"]
+  }
+}
