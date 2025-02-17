@@ -440,13 +440,14 @@ class BundlerRunner {
         }),
       });
     } finally {
-      invariant(internalBundleGraph != null); // ensures the graph was created
-      await dumpGraphToGraphViz(
-        // $FlowFixMe[incompatible-call]
-        internalBundleGraph._graph,
-        'after_bundle',
-        bundleGraphEdgeTypes,
-      );
+      if (internalBundleGraph != null) {
+        await dumpGraphToGraphViz(
+          // $FlowFixMe[incompatible-call]
+          internalBundleGraph._graph,
+          'after_bundle',
+          bundleGraphEdgeTypes,
+        );
+      }
     }
 
     let changedRuntimes = new Map();
