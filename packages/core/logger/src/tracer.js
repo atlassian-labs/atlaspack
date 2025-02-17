@@ -19,10 +19,11 @@ export async function instrumentAsync<T>(
   fn: () => Promise<T>,
 ): Promise<T> {
   const span = tracer.enter(label);
+  let result;
   try {
-    const result = await fn();
-    return result;
+    result = await fn();
   } finally {
     tracer.exit(span);
   }
+  return result;
 }
