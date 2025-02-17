@@ -114,6 +114,7 @@
 
 use anyhow::anyhow;
 use git2::{DiffOptions, Repository};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
   hash::{Hash, Hasher},
@@ -148,11 +149,15 @@ impl VCSState {
     exclude_patterns: &[String],
     failure_mode: FailureMode,
   ) -> anyhow::Result<VCSState> {
+    tracing::info!("Reading VCS state");
     let repo = Repository::open(path)?;
     let head = repo.revparse_single("HEAD")?.peel_to_commit()?;
     let git_hash = head.id().to_string();
+    tracing::info!("Found head commit");
     let file_listing = vcs_list_dirty_files(path, exclude_patterns)?;
+    tracing::info!("Listed dirty files");
     let yarn_states = list_yarn_states(path, failure_mode)?;
+    tracing::info!("Listed yarn states");
 
     Ok(VCSState {
       git_hash,
@@ -166,46 +171,49 @@ pub fn list_yarn_states(
   repo: &Path,
   failure_mode: FailureMode,
 ) -> anyhow::Result<Vec<YarnSnapshot>> {
-  let files = vcs_list_files(repo)?;
-  let yarn_lock_files = files
-    .iter()
-    .filter(|file| file.ends_with("yarn.lock"))
-    .cloned()
-    .collect::<Vec<_>>();
+  let yarn_lock_files = vcs_list_yarn_lock_files(repo)?;
+  tracing::info!("Found yarn.lock files");
 
-  let mut yarn_states = Vec::new();
+  let yarn_states = yarn_lock_files
+    .par_iter()
+    .map(|file| -> anyhow::Result<_> {
+      let yarn_lock_path = repo.join(file);
+      let node_modules_relative_path = yarn_lock_path.parent().unwrap().join("node_modules");
 
-  for file in yarn_lock_files {
-    let yarn_lock_path = repo.join(file);
-    let node_modules_relative_path = yarn_lock_path.parent().unwrap().join("node_modules");
+      let yarn_lock_blob = std::fs::read(&yarn_lock_path)?;
+      let yarn_lock: Result<YarnLock, _> = parse_yarn_lock(&String::from_utf8(yarn_lock_blob)?);
+      if failure_mode != FailureMode::FailOnMissingNodeModules && yarn_lock.is_err() {
+        return Ok(None);
+      };
+      let yarn_lock = yarn_lock?;
 
-    let yarn_lock_blob = std::fs::read(&yarn_lock_path)?;
-    let yarn_lock: Result<YarnLock, _> = parse_yarn_lock(&String::from_utf8(yarn_lock_blob)?);
-    if failure_mode != FailureMode::FailOnMissingNodeModules && yarn_lock.is_err() {
-      continue;
-    };
-    let yarn_lock = yarn_lock?;
+      let node_modules_path = repo.join(&node_modules_relative_path);
+      let yarn_state = parse_yarn_state_file(&node_modules_path).map_err(|err| {
+        tracing::warn!(
+          "Failed to read .yarn-state.yml {node_modules_relative_path:?} {}",
+          err
+        );
 
-    let node_modules_path = repo.join(&node_modules_relative_path);
-    let yarn_state = parse_yarn_state_file(&node_modules_path).map_err(|err| {
-      tracing::warn!(
-        "Failed to read .yarn-state.yml {node_modules_relative_path:?} {}",
-        err
-      );
+        anyhow!("Failed to read .yarn-state.yml at {node_modules_relative_path:?}: {err}")
+      });
+      if failure_mode != FailureMode::FailOnMissingNodeModules && yarn_state.is_err() {
+        return Ok(None);
+      };
+      let yarn_state = yarn_state?;
+      let yarn_snapshot = YarnSnapshot {
+        yarn_lock_path,
+        yarn_lock,
+        yarn_state,
+      };
 
-      anyhow!("Failed to read .yarn-state.yml at {node_modules_relative_path:?}: {err}")
-    });
-    if failure_mode != FailureMode::FailOnMissingNodeModules && yarn_state.is_err() {
-      continue;
-    };
-    let yarn_state = yarn_state?;
-    let yarn_snapshot = YarnSnapshot {
-      yarn_lock_path,
-      yarn_lock,
-      yarn_state,
-    };
-    yarn_states.push(yarn_snapshot);
-  }
+      Ok(Some(yarn_snapshot))
+    })
+    .filter_map(|result| match result {
+      Ok(Some(yarn_snapshot)) => Some(Ok(yarn_snapshot)),
+      Ok(None) => None,
+      Err(err) => Some(Err(err)),
+    })
+    .collect::<anyhow::Result<Vec<_>>>()?;
 
   Ok(yarn_states)
 }
@@ -324,15 +332,18 @@ pub fn get_changed_files(
   Ok(changed_files)
 }
 
-pub fn vcs_list_files(dir: &Path) -> Result<Vec<String>, anyhow::Error> {
+pub fn vcs_list_yarn_lock_files(dir: &Path) -> Result<Vec<String>, anyhow::Error> {
   let mut command = Command::new("git");
   command
     .arg("ls-files")
+    .arg("--cached")
+    .arg("--exclude=yarn.lock")
+    .arg("--ignored")
     .arg("-z") // We separate rows by \0 to avoid issues with newlines
     .current_dir(dir);
   let command = command.output()?;
   if !command.status.success() {
-    tracing::error!("git lfs-files: {:?}", String::from_utf8(command.stderr));
+    tracing::error!("git ls-files: {:?}", String::from_utf8(command.stderr));
     return Err(anyhow::anyhow!("Git ls-files failed"));
   }
   let output = String::from_utf8(command.stdout).unwrap();
@@ -354,10 +365,10 @@ pub fn vcs_list_dirty_files(
   let mut command = Command::new("git");
   command
     .arg("ls-files")
-    // .arg("--format=%(objectname)%(path)")
     .arg("--deleted")
     .arg("--modified")
     .arg("--others")
+    .arg("--exclude-standard")
     .arg("-z") // We separate rows by \0 to avoid issues with newlines
     .current_dir(dir);
   for pattern in exclude_patterns {
@@ -365,39 +376,40 @@ pub fn vcs_list_dirty_files(
   }
   let command = command.output()?;
   if !command.status.success() {
-    tracing::error!("git lfs-files: {:?}", String::from_utf8(command.stderr));
+    tracing::error!("git ls-files: {:?}", String::from_utf8(command.stderr));
     return Err(anyhow::anyhow!("Git ls-files failed"));
   }
   let output = String::from_utf8(command.stdout).unwrap();
-  let lines = output.split_terminator('\0');
+  let lines: Vec<_> = output.split_terminator('\0').map(String::from).collect();
 
-  let mut results = Vec::new();
+  let results = lines
+    .par_iter()
+    .map(|relative_path| {
+      tracing::info!("Hashing file {}", relative_path);
+      let path = Path::new(relative_path);
+      let path = dir.join(path);
 
-  for relative_path in lines {
-    tracing::debug!("Hashing file {}", relative_path);
-    let path = Path::new(relative_path);
-    let path = dir.join(path);
-
-    // We hash the contents of the file but if it's a symlink we hash the target
-    // path instead rather than following the link.
-    let metadata = std::fs::symlink_metadata(&path)?;
-    let contents = if metadata.is_symlink() {
-      std::fs::read_link(&path)?
-        .to_str()
-        .unwrap()
-        .as_bytes()
-        .to_vec()
-    } else {
-      std::fs::read(&path)?
-    };
-    let mut state = std::collections::hash_map::DefaultHasher::new();
-    contents.hash(&mut state);
-    let hash = state.finish();
-    results.push(VCSFile {
-      path: relative_path.into(),
-      hash,
-    });
-  }
+      // We hash the contents of the file but if it's a symlink we hash the target
+      // path instead rather than following the link.
+      let metadata = std::fs::symlink_metadata(&path)?;
+      let contents = if metadata.is_symlink() {
+        std::fs::read_link(&path)?
+          .to_str()
+          .unwrap()
+          .as_bytes()
+          .to_vec()
+      } else {
+        std::fs::read(&path)?
+      };
+      let mut state = std::collections::hash_map::DefaultHasher::new();
+      contents.hash(&mut state);
+      let hash = state.finish();
+      Ok(VCSFile {
+        path: relative_path.into(),
+        hash,
+      })
+    })
+    .collect::<anyhow::Result<Vec<_>>>()?;
 
   Ok(results)
 }
