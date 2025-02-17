@@ -11,7 +11,7 @@ import type {AtlaspackOptions} from './types';
 
 import path from 'path';
 import {hashString} from '@atlaspack/rust';
-import {NodeFS} from '@atlaspack/fs';
+import {NodeFS, NodeVCSAwareFS} from '@atlaspack/fs';
 import {LMDBCache, LMDBLiteCache, FSCache} from '@atlaspack/cache';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {NodePackageManager} from '@atlaspack/package-manager';
@@ -45,11 +45,23 @@ function compileGlobs(globs: string[]): RegExp[] {
   return globs.map((glob) => globToRegex(glob));
 }
 
+function getDefaultFS(): FileSystem {
+  if (true) {
+    return new NodeVCSAwareFS({
+      gitRepoPath: path.join(process.cwd(), '..'),
+      excludePatterns: [],
+      logEventDiff: () => {},
+    });
+  }
+
+  return new NodeFS();
+}
+
 export default async function resolveOptions(
   initialOptions: InitialAtlaspackOptions,
 ): Promise<AtlaspackOptions> {
-  let inputFS = initialOptions.inputFS || new NodeFS();
-  let outputFS = initialOptions.outputFS || new NodeFS();
+  const inputFS = initialOptions.inputFS || getDefaultFS();
+  const outputFS = initialOptions.outputFS || getDefaultFS();
 
   let inputCwd = inputFS.cwd();
   let outputCwd = outputFS.cwd();

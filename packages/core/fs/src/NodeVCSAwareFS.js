@@ -30,10 +30,15 @@ export class NodeVCSAwareFS extends NodeFS {
     snapshot: FilePath,
     opts: WatcherOptions,
   ): Promise<Array<Event>> {
-    // Note: can't use toString() directly, or it won't resolve the promise
-    const snapshotFile = await this.readFile(snapshot);
-    const snapshotFileContent = snapshotFile.toString();
-    const {nativeSnapshotPath, vcsState} = JSON.parse(snapshotFileContent);
+    const {nativeSnapshotPath, vcsState} = await instrumentAsync(
+      'NodeVCSAwareFS.readSnapshot',
+      async () => {
+        // Note: can't use toString() directly, or it won't resolve the promise
+        const snapshotFile = await this.readFile(snapshot);
+        const snapshotFileContent = snapshotFile.toString();
+        return JSON.parse(snapshotFileContent);
+      },
+    );
 
     const watcherEventsSince = await instrumentAsync(
       'NodeVCSAwareFS::watchman.getEventsSince',
@@ -59,12 +64,21 @@ export class NodeVCSAwareFS extends NodeFS {
       snapshotDirectory,
       `${filename}.native-snapshot.txt`,
     );
-    await this.watcher().writeSnapshot(dir, nativeSnapshotPath, opts);
 
-    // TODO: we need the git repo path, pass the exclude patterns
-    const vcsState = await getVcsStateSnapshot(
-      this.#options.gitRepoPath,
-      this.#options.excludePatterns,
+    console.log('watchman.writeSnapshot');
+    await instrumentAsync(
+      'NodeVCSAwareFS::watchman.writeSnapshot',
+      async () => {
+        await this.watcher().writeSnapshot(dir, nativeSnapshotPath, opts);
+      },
+    );
+    console.log('watchman.writeSnapshot.end');
+
+    const vcsState = instrument('NodeVCSAwareFS::getVcsStateSnapshot', () =>
+      getVcsStateSnapshot(
+        this.#options.gitRepoPath,
+        this.#options.excludePatterns,
+      ),
     );
 
     const snapshotContents = {
