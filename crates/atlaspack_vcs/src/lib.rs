@@ -162,19 +162,18 @@ impl VCSState {
     let git_hash = head.id().to_string();
     tracing::info!("Found head commit");
     let file_listing = vcs_list_dirty_files(path, exclude_patterns)?;
-    tracing::info!("Listed dirty files");
-    let yarn_states = list_yarn_states(path, failure_mode)?;
-    tracing::info!("Listed yarn states");
     let files_listing_duration = start_time
       .elapsed()
       .as_millis()
       .try_into()
       .unwrap_or(u64::MAX);
-    let yarn_states = list_yarn_states(path, failure_mode)?;
     tracing::info!(
       "vcs_list_dirty_files executed in: {:?}",
       files_listing_duration
     );
+    tracing::info!("Listed dirty files");
+    let yarn_states = list_yarn_states(path, failure_mode)?;
+    tracing::info!("Listed yarn states");
 
     Ok(VCSState {
       git_hash,
