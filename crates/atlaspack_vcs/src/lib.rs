@@ -139,7 +139,7 @@ pub mod yarn_integration;
 pub struct VCSState {
   pub git_hash: String,
   pub dirty_files: Vec<VCSFile>,
-  pub dirty_files_execution_time: u64,
+  pub dirty_files_execution_time: u32,
   pub yarn_states: Vec<YarnSnapshot>,
 }
 
@@ -166,7 +166,7 @@ impl VCSState {
       .elapsed()
       .as_millis()
       .try_into()
-      .unwrap_or(u64::MAX);
+      .unwrap_or(u32::MAX);
     tracing::info!(
       "vcs_list_dirty_files executed in: {:?}",
       files_listing_duration
