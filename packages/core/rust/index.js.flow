@@ -346,6 +346,7 @@ export interface YarnState {
 
 export interface VCSState {
   gitHash: string;
+  // Files that have been modified since the last commit
   dirtyFiles: VCSFile[];
   yarnStates: YarnState[];
 }
