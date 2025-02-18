@@ -251,6 +251,7 @@ dependencies = [
  "atlaspack_plugin_transformer_raw",
  "atlaspack_plugin_transformer_yaml",
  "atlaspack_sourcemap",
+ "bincode",
  "dyn-hash",
  "indexmap",
  "lmdb-js-lite",

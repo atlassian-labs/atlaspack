@@ -29,6 +29,7 @@ lmdb-js-lite = { path = "../lmdb-js-lite" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+bincode = { workspace = true }
 dyn-hash = { workspace = true }
 indexmap = { workspace = true }
 num_cpus = { workspace = true }

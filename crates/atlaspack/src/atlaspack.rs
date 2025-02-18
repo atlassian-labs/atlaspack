@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -12,6 +13,10 @@ use atlaspack_plugin_rpc::RpcFactoryRef;
 use lmdb_js_lite::writer::DatabaseWriter;
 use tokio::runtime::Runtime;
 
+use crate::build_entries::build_entries;
+use crate::build_targets::build_entry_dependencies;
+use crate::cache::{InMemoryKVCache, KVCache};
+use crate::compilation::Compilation;
 use crate::plugins::{config_plugins::ConfigPlugins, PluginsRef};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::RequestTracker;
@@ -26,7 +31,7 @@ struct AtlaspackState {
 pub struct Atlaspack {
   pub db: Arc<DatabaseWriter>,
   pub fs: FileSystemRef,
-  pub options: AtlaspackOptions,
+  pub options: Arc<AtlaspackOptions>,
   pub package_manager: PackageManagerRef,
   pub project_root: PathBuf,
   pub rpc: RpcFactoryRef,
@@ -55,7 +60,7 @@ impl Atlaspack {
     Ok(Self {
       db,
       fs,
-      options,
+      options: Arc::new(options),
       package_manager,
       project_root,
       rpc,
@@ -113,6 +118,28 @@ impl Atlaspack {
     Ok(state)
   }
 
+  pub fn build_asset_graph_2(&self) -> anyhow::Result<AssetGraph> {
+    self.runtime.block_on(async move {
+      let AtlaspackState { config, plugins } = self.state().unwrap();
+
+      let mut c = Compilation {
+        cache: KVCache::InMemory(InMemoryKVCache::default()),
+        fs: self.fs.clone(),
+        options: self.options.clone(),
+        config_loader: config,
+        project_root: self.project_root.clone(),
+        asset_graph: AssetGraph::default(),
+        entries: Vec::new(),
+        entry_dependencies: Vec::new(),
+      };
+
+      build_entries(&mut c).await?;
+      build_entry_dependencies(&mut c).await?;
+
+      Ok(c.asset_graph)
+    })
+  }
+
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
     self.runtime.block_on(async move {
       let AtlaspackState { config, plugins } = self.state().unwrap();
@@ -120,7 +147,7 @@ impl Atlaspack {
       let mut request_tracker = RequestTracker::new(
         config.clone(),
         self.fs.clone(),
-        Arc::new(self.options.clone()),
+        self.options.clone(),
         plugins.clone(),
         self.project_root.clone(),
       );
