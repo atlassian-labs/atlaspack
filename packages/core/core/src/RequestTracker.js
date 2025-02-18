@@ -945,6 +945,25 @@ export class RequestGraph extends ContentGraph<
       return above;
     };
 
+    if (getFeatureFlag('atlaspackV3')) {
+      let shouldRebuild = false;
+
+      for (let {path: _path, type} of events) {
+        if (!_path.includes('node_modules/.cache')) {
+          shouldRebuild = true;
+          break;
+        }
+      }
+
+      if (shouldRebuild) {
+        for (let [id, node] of this.nodes.entries()) {
+          this.invalidNodeIds.add(id);
+        }
+      }
+
+      return shouldRebuild;
+    }
+
     for (let {path: _path, type} of events) {
       if (
         !enableOptimization &&
