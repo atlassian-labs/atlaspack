@@ -253,16 +253,33 @@ pub enum FailureMode {
   FailOnMissingNodeModules,
 }
 
-pub fn get_changed_files(
-  repo_path: &Path,
-  old_rev: &str,
-  new_rev: &str,
-  failure_mode: FailureMode,
-) -> anyhow::Result<Vec<PathBuf>> {
-  let repo = Repository::open(repo_path)?;
-  let old_commit = repo.revparse_single(old_rev)?.peel_to_commit()?;
-  let new_commit = repo.revparse_single(new_rev)?.peel_to_commit()?;
+pub struct FileChangeEvent {
+  path: PathBuf,
+  change_type: FileChangeType,
+}
 
+impl FileChangeEvent {
+  pub fn path(&self) -> &Path {
+    &self.path
+  }
+
+  pub fn change_type(&self) -> &FileChangeType {
+    &self.change_type
+  }
+}
+
+pub enum FileChangeType {
+  Create,
+  Update,
+  Delete,
+}
+
+pub fn get_changed_files_from_git(
+  repo_path: &Path,
+  repo: &Repository,
+  old_commit: &git2::Commit<'_>,
+  new_commit: &git2::Commit<'_>,
+) -> anyhow::Result<Vec<FileChangeEvent>> {
   tracing::debug!("Calculating git diff");
   let mut diff_options = DiffOptions::new();
   let diff = repo.diff_tree_to_tree(
@@ -274,8 +291,42 @@ pub fn get_changed_files(
   let mut changed_files = Vec::new();
   diff.foreach(
     &mut |delta, _| {
-      if let Some(path) = delta.new_file().path() {
-        changed_files.push(repo_path.join(path));
+      if let Some(new_file_path) = delta.new_file().path() {
+        let new_file_path = repo_path.join(new_file_path);
+
+        let status = delta.status();
+        if status == git2::Delta::Renamed {
+          if let Some(old_file_path) = delta.old_file().path() {
+            let old_file_path = repo_path.join(old_file_path);
+            changed_files.push(FileChangeEvent {
+              path: old_file_path,
+              change_type: FileChangeType::Delete,
+            });
+          }
+
+          changed_files.push(FileChangeEvent {
+            path: new_file_path,
+            change_type: FileChangeType::Create,
+          });
+          return true;
+        }
+
+        changed_files.push(FileChangeEvent {
+          path: new_file_path,
+          change_type: match status {
+            git2::Delta::Added => FileChangeType::Create,
+            git2::Delta::Modified => FileChangeType::Update,
+            git2::Delta::Deleted => FileChangeType::Delete,
+            git2::Delta::Unmodified => FileChangeType::Update,
+            git2::Delta::Copied => FileChangeType::Create,
+            git2::Delta::Ignored => FileChangeType::Update,
+            git2::Delta::Untracked => FileChangeType::Update,
+            git2::Delta::Typechange => FileChangeType::Update,
+            git2::Delta::Unreadable => FileChangeType::Update,
+            git2::Delta::Conflicted => FileChangeType::Update,
+            git2::Delta::Renamed => panic!("Impossible branch"),
+          },
+        });
       }
       true
     },
@@ -284,12 +335,28 @@ pub fn get_changed_files(
     None,
   )?;
 
+  Ok(changed_files)
+}
+
+pub fn get_changed_files(
+  repo_path: &Path,
+  old_rev: &str,
+  new_rev: &str,
+  failure_mode: FailureMode,
+) -> anyhow::Result<Vec<FileChangeEvent>> {
+  let repo = Repository::open(repo_path)?;
+  let old_commit = repo.revparse_single(old_rev)?.peel_to_commit()?;
+  let new_commit = repo.revparse_single(new_rev)?.peel_to_commit()?;
+
+  let mut changed_files = get_changed_files_from_git(repo_path, &repo, &old_commit, &new_commit)?;
+
   tracing::debug!("Reading yarn.lock from {} and {}", old_rev, new_rev);
   let yarn_lock_changes = changed_files
     .iter()
-    .filter(|file| file.file_name().unwrap() == "yarn.lock")
-    .cloned()
+    .filter(|file| file.path.file_name().unwrap() == "yarn.lock")
+    .map(|file| file.path.clone())
     .collect::<Vec<_>>();
+
   for yarn_lock_path in yarn_lock_changes {
     tracing::debug!("Found yarn.lock in changed files");
     let yarn_lock_path = yarn_lock_path.strip_prefix(repo_path)?;
@@ -324,7 +391,17 @@ pub fn get_changed_files(
       &new_yarn_lock,
       &yarn_state,
     );
-    changed_files.extend(node_modules_changes);
+
+    for change in node_modules_changes {
+      changed_files.push(FileChangeEvent {
+        path: change.clone(),
+        change_type: FileChangeType::Delete,
+      });
+      changed_files.push(FileChangeEvent {
+        path: change,
+        change_type: FileChangeType::Create,
+      });
+    }
   }
 
   tracing::debug!("Done");
