@@ -141,6 +141,7 @@ pub struct VCSState {
   pub dirty_files: Vec<VCSFile>,
   pub dirty_files_execution_time: u32,
   pub yarn_states: Vec<YarnSnapshot>,
+  pub yarn_states_execution_time: u32,
 }
 
 impl VCSState {
@@ -152,35 +153,38 @@ impl VCSState {
     failure_mode: FailureMode,
   ) -> anyhow::Result<VCSState> {
     tracing::info!("Reading VCS state");
-    let start_time = Instant::now();
-
     let repo = Repository::open(path)?;
     let head = repo.revparse_single("HEAD")?.peel_to_commit()?;
     let git_hash = head.id().to_string();
     tracing::info!("Found head commit");
+    let files_listing_start_time = Instant::now();
     let file_listing = vcs_list_dirty_files(path, exclude_patterns)?;
-    let files_listing_duration = start_time
+    let files_listing_duration = files_listing_start_time
       .elapsed()
       .as_millis()
       .try_into()
       .unwrap_or(u32::MAX);
-    tracing::info!(
-      "vcs_list_dirty_files executed in: {:?}",
-      files_listing_duration
-    );
-    tracing::info!("Listed dirty files");
+    tracing::info!("Listed dirty files in: {:?} ms", files_listing_duration);
+    let yarn_states_start_time = Instant::now();
     let yarn_states = list_yarn_states(path, failure_mode)?;
-    tracing::info!("Listed yarn states");
+    let yarn_states_duration = yarn_states_start_time
+      .elapsed()
+      .as_millis()
+      .try_into()
+      .unwrap_or(u32::MAX);
+    tracing::info!("Listed yarn states in: {:?} ms", yarn_states_duration);
 
     Ok(VCSState {
       git_hash,
       dirty_files: file_listing,
       dirty_files_execution_time: files_listing_duration,
       yarn_states,
+      yarn_states_execution_time: yarn_states_duration,
     })
   }
 }
 
+#[tracing::instrument(level = "info", skip_all)]
 pub fn list_yarn_states(
   repo: &Path,
   failure_mode: FailureMode,
