@@ -146,15 +146,12 @@ pub struct VCSState {
 impl VCSState {
   /// Read the VCS state from a repository root. Ignore dirty files matching
   /// the exclude patterns.
-  #[tracing::instrument(level = "info", skip_all)]
   pub fn read_from_repository(
     path: &Path,
     exclude_patterns: &[String],
     failure_mode: FailureMode,
   ) -> anyhow::Result<VCSState> {
     tracing::info!("Reading VCS state");
-    let span = tracing::span!(tracing::Level::INFO, "vcs_dirty_files_duration");
-    let _enter = span.enter();
     let start_time = Instant::now();
 
     let repo = Repository::open(path)?;
@@ -375,6 +372,7 @@ pub fn vcs_list_yarn_lock_files(dir: &Path) -> Result<Vec<String>, anyhow::Error
   Ok(results)
 }
 
+#[tracing::instrument(level = "info", skip_all)]
 pub fn vcs_list_dirty_files(
   dir: &Path,
   exclude_patterns: &[String],
