@@ -269,9 +269,9 @@ impl FileChangeEvent {
 
   pub fn change_type_str(&self) -> &str {
     match self.change_type() {
-      atlaspack_vcs::FileChangeType::Create => "create",
-      atlaspack_vcs::FileChangeType::Update => "update",
-      atlaspack_vcs::FileChangeType::Delete => "delete",
+      FileChangeType::Create => "create",
+      FileChangeType::Update => "update",
+      FileChangeType::Delete => "delete",
     }
   }
 }
