@@ -63,8 +63,9 @@ fn main() {
       .unwrap();
 
       for change in changes {
-        let change = change.strip_prefix(&repository_root).unwrap();
-        println!("{}", change.display());
+        let change_type = change.change_type_str();
+        let change = change.path().strip_prefix(&repository_root).unwrap();
+        println!("{} {}", change_type, change.display());
       }
     }
   }

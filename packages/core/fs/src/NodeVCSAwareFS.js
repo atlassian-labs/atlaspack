@@ -14,7 +14,7 @@ import packageJSON from '../package.json';
 export interface NodeVCSAwareFSOptions {
   gitRepoPath: FilePath;
   excludePatterns: Array<string>;
-  logEventDiff: (watcherEvents: Event[], vcsEvents: string[]) => void;
+  logEventDiff: (watcherEvents: Event[], vcsEvents: Event[]) => void;
 }
 
 export class NodeVCSAwareFS extends NodeFS {
@@ -43,7 +43,10 @@ export class NodeVCSAwareFS extends NodeFS {
       'NodeVCSAwareFS::rust.getEventsSince',
       () => getEventsSince(this.#options.gitRepoPath, vcsState.gitHash),
     );
-    this.#options.logEventDiff(watcherEventsSince, vcsEventsSince);
+    this.#options.logEventDiff(
+      watcherEventsSince,
+      vcsEventsSince.map((e) => ({path: e.path, type: e.changeType})),
+    );
 
     return watcherEventsSince;
   }
