@@ -22,12 +22,18 @@ pub fn get_vcs_state_snapshot(
   Ok(vcs_state)
 }
 
+#[napi(object)]
+pub struct NodeChangeEvent {
+  pub path: String,
+  pub change_type: String,
+}
+
 #[napi]
 pub fn get_events_since(
   repo_path: String,
   old_rev: String,
   new_rev: Option<String>,
-) -> napi::Result<Vec<String>> {
+) -> napi::Result<Vec<NodeChangeEvent>> {
   let repo_path = Path::new(&repo_path);
   let files = atlaspack_vcs::get_changed_files(
     repo_path,
@@ -39,7 +45,10 @@ pub fn get_events_since(
 
   let files = files
     .iter()
-    .map(|file| file.to_str().unwrap().to_string())
+    .map(|event| NodeChangeEvent {
+      path: event.path().to_str().unwrap().to_string(),
+      change_type: event.change_type_str().to_string(),
+    })
     .collect();
 
   Ok(files)
