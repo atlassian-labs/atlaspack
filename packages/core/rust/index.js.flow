@@ -355,11 +355,16 @@ declare export function getVcsStateSnapshot(
   path: string,
   excludePatterns: Array<string>,
 ): VCSState;
+export interface NodeChangeEvent {
+  path: string;
+  changeType: 'update' | 'create' | 'delete';
+}
+
 declare export function getEventsSince(
   repoPath: string,
   oldRev: string,
   newRev?: string | void | null,
-): Array<string>;
+): Array<NodeChangeEvent>;
 
 declare export function createAssetId(params: mixed): string;
 declare export function createDependencyId(params: mixed): string;
