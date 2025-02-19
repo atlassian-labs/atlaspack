@@ -47,11 +47,7 @@ pub fn get_events_since(
     .iter()
     .map(|event| NodeChangeEvent {
       path: event.path().to_str().unwrap().to_string(),
-      change_type: match event.change_type() {
-        atlaspack_vcs::FileChangeType::Create => "create".to_string(),
-        atlaspack_vcs::FileChangeType::Update => "update".to_string(),
-        atlaspack_vcs::FileChangeType::Delete => "delete".to_string(),
-      },
+      change_type: event.change_type_str().to_string(),
     })
     .collect();
 
