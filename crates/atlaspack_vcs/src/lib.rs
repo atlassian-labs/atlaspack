@@ -254,15 +254,18 @@ fn get_file_contents_at_commit(
   repo: &Repository,
   commit: &git2::Commit,
   path: &Path,
-) -> anyhow::Result<String> {
+) -> anyhow::Result<Option<String>> {
   let tree = commit.tree()?;
-  let entry = tree.get_path(path)?;
-  let blob = entry
-    .to_object(repo)?
-    .into_blob()
-    .map_err(|_| anyhow::anyhow!("Failed to read yarn.lock from git"))?;
-  let contents = blob.content();
-  Ok(String::from_utf8(contents.to_vec())?)
+  if let Some(entry) = tree.get_path(path).ok() {
+    let blob = entry
+      .to_object(repo)?
+      .into_blob()
+      .map_err(|_| anyhow::anyhow!("Failed to read yarn.lock from git"))?;
+    let contents = blob.content();
+    Ok(Some(String::from_utf8(contents.to_vec())?))
+  } else {
+    Ok(None)
+  }
 }
 
 #[derive(Debug, PartialEq)]
@@ -388,9 +391,19 @@ pub fn get_changed_files(
     let yarn_lock_path = yarn_lock_path.strip_prefix(repo_path)?;
     let node_modules_relative_path = yarn_lock_path.parent().unwrap().join("node_modules");
 
-    let old_yarn_lock_blob = get_file_contents_at_commit(&repo, &old_commit, yarn_lock_path)?;
-    let old_yarn_lock: YarnLock = parse_yarn_lock(&old_yarn_lock_blob)?;
-    let new_yarn_lock_blob = get_file_contents_at_commit(&repo, &new_commit, yarn_lock_path)?;
+    tracing::debug!(
+      "Reading yarn.lock ({}) from {:?} and {:?}",
+      yarn_lock_path.display(),
+      old_commit,
+      new_commit
+    );
+    let maybe_old_yarn_lock_blob = get_file_contents_at_commit(&repo, &old_commit, yarn_lock_path)?;
+    let maybe_old_yarn_lock: Option<YarnLock> = maybe_old_yarn_lock_blob
+      .map(|s| parse_yarn_lock(&s))
+      .transpose()?;
+    let new_yarn_lock_blob: String =
+      get_file_contents_at_commit(&repo, &new_commit, yarn_lock_path)?
+        .ok_or_else(|| anyhow!("Expected lockfile to exist in current revision"))?;
     let new_yarn_lock: YarnLock = parse_yarn_lock(&new_yarn_lock_blob)?;
 
     let node_modules_path = repo_path.join(&node_modules_relative_path);
@@ -413,7 +426,7 @@ pub fn get_changed_files(
     );
     let node_modules_changes = yarn_integration::generate_events(
       node_modules_path.parent().unwrap(),
-      &old_yarn_lock,
+      &maybe_old_yarn_lock,
       &new_yarn_lock,
       &yarn_state,
     );

@@ -42,11 +42,8 @@ export class NodeVCSAwareFS extends NodeFS {
     const vcsEventsSince = instrument(
       'NodeVCSAwareFS::rust.getEventsSince',
       () => getEventsSince(this.#options.gitRepoPath, vcsState.gitHash),
-    );
-    this.#options.logEventDiff(
-      watcherEventsSince,
-      vcsEventsSince.map((e) => ({path: e.path, type: e.changeType})),
-    );
+    ).map((e) => ({path: e.path, type: e.changeType}));
+    this.#options.logEventDiff(watcherEventsSince, vcsEventsSince);
 
     return watcherEventsSince;
   }

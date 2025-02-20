@@ -39,6 +39,10 @@ impl YarnResolution {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct YarnLock {
+  /// Map of 'requirement' to 'resolution'
+  ///
+  /// * requirement -> `@atlaspack/core@^1.0.0`
+  /// * resolution -> `@atlaspack/core@^1.0.0: @atlaspack/core@1.1.15`
   inner: HashMap<String, YarnLockEntry>,
 }
 
@@ -132,13 +136,16 @@ pub fn parse_yarn_state_file(node_modules_directory: &Path) -> anyhow::Result<Ya
 
 pub fn generate_events(
   node_modules_parent_path: &Path,
-  old_yarn_lock: &YarnLock,
+  old_yarn_lock: &Option<YarnLock>,
   new_yarn_lock: &YarnLock,
   state: &YarnStateFile,
 ) -> Vec<PathBuf> {
   let changed_resolutions = new_yarn_lock
     .iter()
     .filter_map(|(package_name, new_resolution)| {
+      let Some(old_yarn_lock) = old_yarn_lock.as_ref() else {
+        return Some(new_resolution);
+      };
       let Some(old_resolution) = old_yarn_lock.get(package_name) else {
         return Some(new_resolution);
       };
