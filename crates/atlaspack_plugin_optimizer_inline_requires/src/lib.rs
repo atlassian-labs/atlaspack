@@ -5,6 +5,11 @@ use std::collections::HashSet;
 use swc_core::atoms::atom;
 use swc_core::atoms::Atom;
 use swc_core::common::Mark;
+use swc_core::common::Span;
+use swc_core::ecma::ast::Decl;
+use swc_core::ecma::ast::EmptyStmt;
+use swc_core::ecma::ast::ModuleItem;
+use swc_core::ecma::ast::Stmt;
 use swc_core::ecma::ast::{CallExpr, Expr, Id, Ident, Lit, VarDecl, VarDeclarator};
 use swc_core::ecma::utils::ExprExt;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
@@ -292,7 +297,7 @@ impl VisitMut for InlineRequiresOptimizer {
   }
 
   fn visit_mut_var_decl(&mut self, n: &mut VarDecl) {
-    for decl in n.decls.iter_mut() {
+    n.decls.retain_mut(|decl| {
       let mut require_matchers = self.require_matchers.clone();
       if let Some(module_stack_info) = self.module_stack.last() {
         require_matchers.push(module_stack_info.require_matcher.clone());
@@ -302,13 +307,16 @@ impl VisitMut for InlineRequiresOptimizer {
         // first let the normal replacement run on this expression so we inline the require
         decl.visit_mut_children_with(self);
         // get the value we've replaced and carry it forward, we'll inline this value now
-        let Some(init) = &decl.init else { continue };
+        let Some(init) = &decl.init else {
+          return true;
+        };
+
         let init = init.as_expr().clone();
-        decl.init = None;
         self
           .identifier_replacement_visitor
           .add_replacement(default_initializer_id, init);
-        continue;
+
+        return false;
       }
 
       let Some(initializer) = match_require_initializer(
@@ -318,7 +326,7 @@ impl VisitMut for InlineRequiresOptimizer {
         &self.ignore_patterns,
       ) else {
         decl.visit_mut_children_with(self);
-        continue;
+        return true;
       };
 
       self.identifier_replacement_visitor.add_replacement(
@@ -326,8 +334,31 @@ impl VisitMut for InlineRequiresOptimizer {
         Expr::Call(initializer.call_expr.clone()),
       );
       self.require_initializers.push(initializer);
-      decl.init = None;
+
+      false
+    });
+  }
+
+  fn visit_mut_stmt(&mut self, s: &mut Stmt) {
+    s.visit_mut_children_with(self);
+
+    if let Stmt::Decl(Decl::Var(var)) = s {
+      if var.decls.is_empty() {
+        *s = Stmt::Empty(EmptyStmt {
+          span: Span::default(),
+        });
+      }
     }
+  }
+
+  fn visit_mut_stmts(&mut self, stmts: &mut Vec<Stmt>) {
+    stmts.visit_mut_children_with(self);
+    stmts.retain(|s| !matches!(s, Stmt::Empty(..)));
+  }
+
+  fn visit_mut_module_items(&mut self, stmts: &mut Vec<ModuleItem>) {
+    stmts.visit_mut_children_with(self);
+    stmts.retain(|s| !matches!(s, ModuleItem::Stmt(Stmt::Empty(..))));
   }
 }
 
@@ -353,7 +384,6 @@ function doWork() {
     });
 
     let expected_output = r#"
-const fs;
 function doWork() {
     return (0, require('fs')).readFileSync('./something');
 }
@@ -383,7 +413,6 @@ parcelRequire.register('moduleId', function(require, module, exports) {
 
     let expected_output = r#"
 parcelRequire.register('moduleId', function(require, module, exports) {
-    const fs;
     function doWork() {
         return (0, require('fs')).readFileSync('./something');
     }
@@ -450,8 +479,6 @@ function run() {
     });
 
     let expected_output = r#"
-const app;
-const appDefault;
 function run() {
     return (0, parcelHelpers.interopDefault((0, require("./App")))).test();
 }
