@@ -303,7 +303,7 @@ impl VisitMut for InlineRequiresOptimizer {
         require_matchers.push(module_stack_info.require_matcher.clone());
       }
 
-      if let Some(default_initializer_id) = match_parcel_default_initializer(&decl) {
+      if let Some(default_initializer_id) = match_parcel_default_initializer(decl) {
         // first let the normal replacement run on this expression so we inline the require
         decl.visit_mut_children_with(self);
         // get the value we've replaced and carry it forward, we'll inline this value now
@@ -320,7 +320,7 @@ impl VisitMut for InlineRequiresOptimizer {
       }
 
       let Some(initializer) = match_require_initializer(
-        &decl,
+        decl,
         self.unresolved_mark,
         &require_matchers,
         &self.ignore_patterns,
@@ -335,22 +335,19 @@ impl VisitMut for InlineRequiresOptimizer {
       );
       self.require_initializers.push(initializer);
 
-      return false;
+      false
     });
   }
 
   fn visit_mut_stmt(&mut self, s: &mut Stmt) {
     s.visit_mut_children_with(self);
 
-    match s {
-      Stmt::Decl(Decl::Var(var)) => {
-        if var.decls.is_empty() {
-          *s = Stmt::Empty(EmptyStmt {
-            span: Span::default(),
-          });
-        }
+    if let Stmt::Decl(Decl::Var(var)) = s {
+      if var.decls.is_empty() {
+        *s = Stmt::Empty(EmptyStmt {
+          span: Span::default(),
+        });
       }
-      _ => {}
     }
   }
 
