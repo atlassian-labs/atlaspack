@@ -297,51 +297,46 @@ impl VisitMut for InlineRequiresOptimizer {
   }
 
   fn visit_mut_var_decl(&mut self, n: &mut VarDecl) {
-    n.decls = n
-      .decls
-      .iter()
-      .cloned()
-      .filter_map(|mut decl| {
-        let mut require_matchers = self.require_matchers.clone();
-        if let Some(module_stack_info) = self.module_stack.last() {
-          require_matchers.push(module_stack_info.require_matcher.clone());
-        }
+    n.decls.retain_mut(|decl| {
+      let mut require_matchers = self.require_matchers.clone();
+      if let Some(module_stack_info) = self.module_stack.last() {
+        require_matchers.push(module_stack_info.require_matcher.clone());
+      }
 
-        if let Some(default_initializer_id) = match_parcel_default_initializer(&decl) {
-          // first let the normal replacement run on this expression so we inline the require
-          decl.visit_mut_children_with(self);
-          // get the value we've replaced and carry it forward, we'll inline this value now
-          let Some(init) = &decl.init else {
-            return Some(decl);
-          };
-
-          let init = init.as_expr().clone();
-          self
-            .identifier_replacement_visitor
-            .add_replacement(default_initializer_id, init);
-
-          return None;
-        }
-
-        let Some(initializer) = match_require_initializer(
-          &decl,
-          self.unresolved_mark,
-          &require_matchers,
-          &self.ignore_patterns,
-        ) else {
-          decl.visit_mut_children_with(self);
-          return Some(decl);
+      if let Some(default_initializer_id) = match_parcel_default_initializer(&decl) {
+        // first let the normal replacement run on this expression so we inline the require
+        decl.visit_mut_children_with(self);
+        // get the value we've replaced and carry it forward, we'll inline this value now
+        let Some(init) = &decl.init else {
+          return true;
         };
 
-        self.identifier_replacement_visitor.add_replacement(
-          initializer.variable_id.clone(),
-          Expr::Call(initializer.call_expr.clone()),
-        );
-        self.require_initializers.push(initializer);
+        let init = init.as_expr().clone();
+        self
+          .identifier_replacement_visitor
+          .add_replacement(default_initializer_id, init);
 
-        return None;
-      })
-      .collect()
+        return false;
+      }
+
+      let Some(initializer) = match_require_initializer(
+        &decl,
+        self.unresolved_mark,
+        &require_matchers,
+        &self.ignore_patterns,
+      ) else {
+        decl.visit_mut_children_with(self);
+        return true;
+      };
+
+      self.identifier_replacement_visitor.add_replacement(
+        initializer.variable_id.clone(),
+        Expr::Call(initializer.call_expr.clone()),
+      );
+      self.require_initializers.push(initializer);
+
+      return false;
+    });
   }
 
   fn visit_mut_stmt(&mut self, s: &mut Stmt) {
