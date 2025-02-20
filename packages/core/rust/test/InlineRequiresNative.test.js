@@ -19,7 +19,6 @@ function main() {
     assert.equal(
       result.code,
       `
-;
 function main() {
     return (0, require('fs')).readFile('./something');
 }

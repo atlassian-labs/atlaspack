@@ -8,6 +8,7 @@ use swc_core::common::Mark;
 use swc_core::common::Span;
 use swc_core::ecma::ast::Decl;
 use swc_core::ecma::ast::EmptyStmt;
+use swc_core::ecma::ast::ModuleItem;
 use swc_core::ecma::ast::Stmt;
 use swc_core::ecma::ast::{CallExpr, Expr, Id, Ident, Lit, VarDecl, VarDeclarator};
 use swc_core::ecma::utils::ExprExt;
@@ -362,6 +363,11 @@ impl VisitMut for InlineRequiresOptimizer {
     stmts.visit_mut_children_with(self);
     stmts.retain(|s| !matches!(s, Stmt::Empty(..)));
   }
+
+  fn visit_mut_module_items(&mut self, stmts: &mut Vec<ModuleItem>) {
+    stmts.visit_mut_children_with(self);
+    stmts.retain(|s| !matches!(s, ModuleItem::Stmt(Stmt::Empty(..))));
+  }
 }
 
 #[cfg(test)]
@@ -386,7 +392,6 @@ function doWork() {
     });
 
     let expected_output = r#"
-;
 function doWork() {
     return (0, require('fs')).readFileSync('./something');
 }
@@ -482,8 +487,6 @@ function run() {
     });
 
     let expected_output = r#"
-;
-;
 function run() {
     return (0, parcelHelpers.interopDefault((0, require("./App")))).test();
 }
