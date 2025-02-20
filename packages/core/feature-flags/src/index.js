@@ -14,6 +14,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   fixQuadraticCacheInvalidation: 'OLD',
   useLmdbJsLite: false,
   conditionalBundlingApi: false,
+  vcsMode: 'OLD',
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
