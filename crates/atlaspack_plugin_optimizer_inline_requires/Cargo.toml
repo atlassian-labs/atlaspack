@@ -13,6 +13,7 @@ swc_core = { workspace = true, features = [
     "ecma_codegen",
     "ecma_parser",
     "ecma_preset_env",
+    "ecma_quote",
     "ecma_transforms",
     "ecma_transforms_compat",
     "ecma_transforms_optimization",

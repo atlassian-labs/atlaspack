@@ -302,9 +302,11 @@ impl VisitMut for InlineRequiresOptimizer {
         // first let the normal replacement run on this expression so we inline the require
         decl.visit_mut_children_with(self);
         // get the value we've replaced and carry it forward, we'll inline this value now
-        let Some(init) = &decl.init else { continue };
+        let Some(init) = &decl.init else {
+          continue;
+        };
         let init = init.as_expr().clone();
-        decl.init = None;
+        decl.init = Some(Box::new(swc_core::quote!("null" as Expr)));
         self
           .identifier_replacement_visitor
           .add_replacement(default_initializer_id, init);
@@ -326,7 +328,7 @@ impl VisitMut for InlineRequiresOptimizer {
         Expr::Call(initializer.call_expr.clone()),
       );
       self.require_initializers.push(initializer);
-      decl.init = None;
+      decl.init = Some(Box::new(swc_core::quote!("null" as Expr)));
     }
   }
 }
@@ -353,7 +355,7 @@ function doWork() {
     });
 
     let expected_output = r#"
-const fs;
+const fs = null;
 function doWork() {
     return (0, require('fs')).readFileSync('./something');
 }
@@ -383,7 +385,7 @@ parcelRequire.register('moduleId', function(require, module, exports) {
 
     let expected_output = r#"
 parcelRequire.register('moduleId', function(require, module, exports) {
-    const fs;
+    const fs = null;
     function doWork() {
         return (0, require('fs')).readFileSync('./something');
     }
@@ -450,8 +452,8 @@ function run() {
     });
 
     let expected_output = r#"
-const app;
-const appDefault;
+const app = null;
+const appDefault = null;
 function run() {
     return (0, parcelHelpers.interopDefault((0, require("./App")))).test();
 }
