@@ -309,15 +309,41 @@ pub fn get_changed_files_from_git(
   old_commit: &git2::Commit<'_>,
   new_commit: &git2::Commit<'_>,
 ) -> anyhow::Result<Vec<FileChangeEvent>> {
+  let mut changed_files = Vec::new();
+
+  // list current dirty files
+  tracing::debug!("Listing dirty files");
+  let mut status_options = git2::StatusOptions::new();
+
+  status_options.include_ignored(false);
+  status_options.include_untracked(true);
+  status_options.include_unmodified(false);
+
+  let statuses = repo.statuses(Some(&mut status_options))?;
+  statuses.iter().for_each(|entry| {
+    let path = entry.path().unwrap();
+    let status = entry.status();
+    let mut change_type = FileChangeType::Update;
+    if status.is_wt_deleted() {
+      change_type = FileChangeType::Delete;
+    } else if status.is_wt_new() {
+      change_type = FileChangeType::Create;
+    }
+    changed_files.push(FileChangeEvent {
+      path: repo_path.join(path),
+      change_type,
+    })
+  });
+
   tracing::debug!("Calculating git diff");
   let mut diff_options = DiffOptions::new();
+
   let diff = repo.diff_tree_to_tree(
     Some(&old_commit.tree()?),
     Some(&new_commit.tree()?),
     Some(&mut diff_options),
   )?;
 
-  let mut changed_files = Vec::new();
   diff.foreach(
     &mut |delta, _| {
       if let Some(new_file_path) = delta.new_file().path() {
