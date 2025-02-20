@@ -163,7 +163,7 @@ pub fn generate_events(
 
     if let Some(dependency_state) = state.get(&resolution.resolution) {
       for location in &dependency_state.locations {
-        if location == "" {
+        if location.is_empty() {
           // the workspace is listed as a location, which we can skip
           continue;
         }
