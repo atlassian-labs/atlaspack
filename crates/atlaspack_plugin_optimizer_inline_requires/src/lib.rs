@@ -5,6 +5,10 @@ use std::collections::HashSet;
 use swc_core::atoms::atom;
 use swc_core::atoms::Atom;
 use swc_core::common::Mark;
+use swc_core::common::Span;
+use swc_core::ecma::ast::Decl;
+use swc_core::ecma::ast::EmptyStmt;
+use swc_core::ecma::ast::Stmt;
 use swc_core::ecma::ast::{CallExpr, Expr, Id, Ident, Lit, VarDecl, VarDeclarator};
 use swc_core::ecma::utils::ExprExt;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
@@ -292,44 +296,71 @@ impl VisitMut for InlineRequiresOptimizer {
   }
 
   fn visit_mut_var_decl(&mut self, n: &mut VarDecl) {
-    for decl in n.decls.iter_mut() {
-      let mut require_matchers = self.require_matchers.clone();
-      if let Some(module_stack_info) = self.module_stack.last() {
-        require_matchers.push(module_stack_info.require_matcher.clone());
-      }
+    n.decls = n
+      .decls
+      .iter()
+      .cloned()
+      .filter_map(|mut decl| {
+        let mut require_matchers = self.require_matchers.clone();
+        if let Some(module_stack_info) = self.module_stack.last() {
+          require_matchers.push(module_stack_info.require_matcher.clone());
+        }
 
-      if let Some(default_initializer_id) = match_parcel_default_initializer(decl) {
-        // first let the normal replacement run on this expression so we inline the require
-        decl.visit_mut_children_with(self);
-        // get the value we've replaced and carry it forward, we'll inline this value now
-        let Some(init) = &decl.init else {
-          continue;
+        if let Some(default_initializer_id) = match_parcel_default_initializer(&decl) {
+          // first let the normal replacement run on this expression so we inline the require
+          decl.visit_mut_children_with(self);
+          // get the value we've replaced and carry it forward, we'll inline this value now
+          let Some(init) = &decl.init else {
+            return Some(decl);
+          };
+
+          let init = init.as_expr().clone();
+          self
+            .identifier_replacement_visitor
+            .add_replacement(default_initializer_id, init);
+
+          return None;
+        }
+
+        let Some(initializer) = match_require_initializer(
+          &decl,
+          self.unresolved_mark,
+          &require_matchers,
+          &self.ignore_patterns,
+        ) else {
+          decl.visit_mut_children_with(self);
+          return Some(decl);
         };
-        let init = init.as_expr().clone();
-        decl.init = Some(Box::new(swc_core::quote!("null" as Expr)));
-        self
-          .identifier_replacement_visitor
-          .add_replacement(default_initializer_id, init);
-        continue;
+
+        self.identifier_replacement_visitor.add_replacement(
+          initializer.variable_id.clone(),
+          Expr::Call(initializer.call_expr.clone()),
+        );
+        self.require_initializers.push(initializer);
+
+        return None;
+      })
+      .collect()
+  }
+
+  fn visit_mut_stmt(&mut self, s: &mut Stmt) {
+    s.visit_mut_children_with(self);
+
+    match s {
+      Stmt::Decl(Decl::Var(var)) => {
+        if var.decls.is_empty() {
+          *s = Stmt::Empty(EmptyStmt {
+            span: Span::default(),
+          });
+        }
       }
-
-      let Some(initializer) = match_require_initializer(
-        decl,
-        self.unresolved_mark,
-        &require_matchers,
-        &self.ignore_patterns,
-      ) else {
-        decl.visit_mut_children_with(self);
-        continue;
-      };
-
-      self.identifier_replacement_visitor.add_replacement(
-        initializer.variable_id.clone(),
-        Expr::Call(initializer.call_expr.clone()),
-      );
-      self.require_initializers.push(initializer);
-      decl.init = Some(Box::new(swc_core::quote!("null" as Expr)));
+      _ => {}
     }
+  }
+
+  fn visit_mut_stmts(&mut self, stmts: &mut Vec<Stmt>) {
+    stmts.visit_mut_children_with(self);
+    stmts.retain(|s| !matches!(s, Stmt::Empty(..)));
   }
 }
 
@@ -355,7 +386,7 @@ function doWork() {
     });
 
     let expected_output = r#"
-const fs = null;
+;
 function doWork() {
     return (0, require('fs')).readFileSync('./something');
 }
@@ -385,7 +416,6 @@ parcelRequire.register('moduleId', function(require, module, exports) {
 
     let expected_output = r#"
 parcelRequire.register('moduleId', function(require, module, exports) {
-    const fs = null;
     function doWork() {
         return (0, require('fs')).readFileSync('./something');
     }
@@ -452,8 +482,8 @@ function run() {
     });
 
     let expected_output = r#"
-const app = null;
-const appDefault = null;
+;
+;
 function run() {
     return (0, parcelHelpers.interopDefault((0, require("./App")))).test();
 }

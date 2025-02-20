@@ -19,7 +19,7 @@ function main() {
     assert.equal(
       result.code,
       `
-const fs = null;
+;
 function main() {
     return (0, require('fs')).readFile('./something');
 }
