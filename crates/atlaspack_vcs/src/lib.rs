@@ -256,7 +256,7 @@ fn get_file_contents_at_commit(
   path: &Path,
 ) -> anyhow::Result<Option<String>> {
   let tree = commit.tree()?;
-  if let Some(entry) = tree.get_path(path).ok() {
+  if let Ok(entry) = tree.get_path(path) {
     let blob = entry
       .to_object(repo)?
       .into_blob()
