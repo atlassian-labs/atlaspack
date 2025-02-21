@@ -1,0 +1,72 @@
+#!/bin/env bash
+set -e
+
+PATH_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+PATH_ROOT_DIR=$( dirname $PATH_SCRIPT_DIR )
+
+function help() {
+  echo "Usage:"
+  echo "  ./scripts/dev [COMMAND]"
+  echo ""
+  echo "Commands:"
+  echo "  build         Full build of Atlaspack"
+  echo "  build-rust    Build only the native Atlaspack modules"
+  echo "  build-js      Build only the JavaScript Atlaspack modules"
+  echo "  watch         Do a full build of Atlaspack and rebuild on file change"
+  echo "  watch-rust    Build Atlaspack native modules and rebuild on file change"
+  echo "  watch-js      Build Atlaspack javascript modules and rebuild on file change"
+}
+
+function build() {
+  yarn build-native-release
+  yarn build
+  npx lerna run build-ts
+}
+
+function build-rust() {
+  yarn build-native-release
+}
+
+function build-js() {
+  yarn build
+  npx lerna run build-ts
+}
+
+function watch() {
+  exec cargo watch \
+    -C "${PATH_ROOT_DIR}" \
+    -w "packages" \
+    -w "crates" \
+    --notify \
+    --why \
+    -- \
+    /bin/env bash ${PATH_SCRIPT_DIR}/dev build
+}
+
+function watch-rust() {
+  exec cargo watch \
+    -C "${PATH_ROOT_DIR}" \
+    -w "packages" \
+    -w "crates" \
+    --notify \
+    --why \
+    -- \
+    /bin/env bash ${PATH_SCRIPT_DIR}/dev build-rust
+}
+
+function watch-js() {
+  exec cargo watch \
+    -C "${PATH_ROOT_DIR}" \
+    -w "packages" \
+    -w "crates" \
+    --notify \
+    --why \
+    -- \
+    /bin/env bash ${PATH_SCRIPT_DIR}/dev build-js
+}
+
+if [ "$1" == "" ];then
+  help
+else
+  $1
+fi
