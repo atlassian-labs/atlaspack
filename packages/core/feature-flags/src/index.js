@@ -14,6 +14,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   fixQuadraticCacheInvalidation: 'OLD',
   useLmdbJsLite: false,
   conditionalBundlingApi: false,
+  vcsMode: 'OLD',
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
@@ -25,6 +26,12 @@ export function setFeatureFlags(flags: FeatureFlags) {
 export function getFeatureFlag(flagName: $Keys<FeatureFlags>): boolean {
   const value = featureFlagValues[flagName];
   return value === true || value === 'NEW';
+}
+
+export function getFeatureFlagValue(
+  flagName: $Keys<FeatureFlags>,
+): boolean | string | number {
+  return featureFlagValues[flagName];
 }
 
 export type DiffResult<CustomDiagnostic> = {|

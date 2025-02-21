@@ -30,6 +30,13 @@ export type FeatureFlags = {|
    * and requires server-side support.
    */
   conditionalBundlingApi: boolean,
+  /**
+   * Enable VCS mode. Expected values are:
+   * - OLD - default value, return watchman result
+   * - NEW_AND_CHECK - Return VCS result but still call watchman
+   * - NEW: Return VCS result, but don't call watchman
+   */
+  vcsMode: ConsistencyCheckFeatureFlagValue,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
