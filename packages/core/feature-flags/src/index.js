@@ -28,6 +28,12 @@ export function getFeatureFlag(flagName: $Keys<FeatureFlags>): boolean {
   return value === true || value === 'NEW';
 }
 
+export function getFeatureFlagValue(
+  flagName: $Keys<FeatureFlags>,
+): boolean | string | number {
+  return featureFlagValues[flagName];
+}
+
 export type DiffResult<CustomDiagnostic> = {|
   isDifferent: boolean,
   custom: CustomDiagnostic,

@@ -7,7 +7,7 @@ import type {FilePath} from '@atlaspack/types-internal';
 import type {Event, Options as WatcherOptions} from '@parcel/watcher';
 import {registerSerializableClass} from '@atlaspack/build-cache';
 import {instrument, instrumentAsync} from '@atlaspack/logger';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {getFeatureFlagValue} from '@atlaspack/feature-flags';
 
 // $FlowFixMe
 import packageJSON from '../package.json';
@@ -45,7 +45,7 @@ export class NodeVCSAwareFS extends NodeFS {
       type: e.changeType,
     }));
 
-    if (getFeatureFlag('vcsMode') !== 'NEW') {
+    if (getFeatureFlagValue('vcsMode') !== 'NEW') {
       watcherEventsSince = await instrumentAsync(
         'NodeVCSAwareFS::watchman.getEventsSince',
         () => this.watcher().getEventsSince(dir, nativeSnapshotPath, opts),
@@ -53,7 +53,7 @@ export class NodeVCSAwareFS extends NodeFS {
       this.#options.logEventDiff(watcherEventsSince, vcsEventsSince);
     }
 
-    if (['NEW_AND_CHECK', 'NEW'].includes(getFeatureFlag('vcsMode'))) {
+    if (['NEW_AND_CHECK', 'NEW'].includes(getFeatureFlagValue('vcsMode'))) {
       return vcsEventsSince;
     }
 
@@ -71,7 +71,7 @@ export class NodeVCSAwareFS extends NodeFS {
       snapshotDirectory,
       `${filename}.native-snapshot.txt`,
     );
-    if (getFeatureFlag('vcsMode') !== 'NEW') {
+    if (getFeatureFlagValue('vcsMode') !== 'NEW') {
       await this.watcher().writeSnapshot(dir, nativeSnapshotPath, opts);
     }
 
