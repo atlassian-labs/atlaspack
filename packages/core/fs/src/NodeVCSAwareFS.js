@@ -7,6 +7,7 @@ import type {FilePath} from '@atlaspack/types-internal';
 import type {Event, Options as WatcherOptions} from '@parcel/watcher';
 import {registerSerializableClass} from '@atlaspack/build-cache';
 import {instrument, instrumentAsync} from '@atlaspack/logger';
+import {getFeatureFlagValue} from '@atlaspack/feature-flags';
 
 // $FlowFixMe
 import packageJSON from '../package.json';
@@ -34,16 +35,27 @@ export class NodeVCSAwareFS extends NodeFS {
     const snapshotFile = await this.readFile(snapshot);
     const snapshotFileContent = snapshotFile.toString();
     const {nativeSnapshotPath, vcsState} = JSON.parse(snapshotFileContent);
+    let watcherEventsSince = [];
 
-    const watcherEventsSince = await instrumentAsync(
-      'NodeVCSAwareFS::watchman.getEventsSince',
-      () => this.watcher().getEventsSince(dir, nativeSnapshotPath, opts),
-    );
     const vcsEventsSince = instrument(
       'NodeVCSAwareFS::rust.getEventsSince',
       () => getEventsSince(this.#options.gitRepoPath, vcsState.gitHash),
-    ).map((e) => ({path: e.path, type: e.changeType}));
-    this.#options.logEventDiff(watcherEventsSince, vcsEventsSince);
+    ).map((e) => ({
+      path: e.path,
+      type: e.changeType,
+    }));
+
+    if (getFeatureFlagValue('vcsMode') !== 'NEW') {
+      watcherEventsSince = await instrumentAsync(
+        'NodeVCSAwareFS::watchman.getEventsSince',
+        () => this.watcher().getEventsSince(dir, nativeSnapshotPath, opts),
+      );
+      this.#options.logEventDiff(watcherEventsSince, vcsEventsSince);
+    }
+
+    if (['NEW_AND_CHECK', 'NEW'].includes(getFeatureFlagValue('vcsMode'))) {
+      return vcsEventsSince;
+    }
 
     return watcherEventsSince;
   }
@@ -59,9 +71,10 @@ export class NodeVCSAwareFS extends NodeFS {
       snapshotDirectory,
       `${filename}.native-snapshot.txt`,
     );
-    await this.watcher().writeSnapshot(dir, nativeSnapshotPath, opts);
+    if (getFeatureFlagValue('vcsMode') !== 'NEW') {
+      await this.watcher().writeSnapshot(dir, nativeSnapshotPath, opts);
+    }
 
-    // TODO: we need the git repo path, pass the exclude patterns
     const vcsState = await getVcsStateSnapshot(
       this.#options.gitRepoPath,
       this.#options.excludePatterns,
