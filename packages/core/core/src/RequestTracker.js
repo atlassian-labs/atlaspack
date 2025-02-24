@@ -1867,7 +1867,7 @@ function logErrorOnBailout(
         trackableEvent: 'invalid_clockspec_error',
       },
     });
-  } else if (!(e instanceof FSBailoutError)) {
+  } else {
     logger.warn({
       origin: '@atlaspack/core',
       message: `Unexpected error loading cache from disk, building with clean cache.`,
