@@ -39,7 +39,7 @@ export default async function loadPlugin<T>(
 |}> {
   let resolveFrom = configPath;
   let range;
-  if (resolveFrom.includes(NODE_MODULES)) {
+  if (resolveFrom.includes(NODE_MODULES) && !pluginName.startsWith('#')) {
     // Config packages can reference plugins, but cannot contain other plugins within them.
     // This forces every published plugin to be published separately so they can be mixed and matched if needed.
     if (pluginName.startsWith('.')) {
@@ -172,7 +172,7 @@ export default async function loadPlugin<T>(
 
   // Remove plugin version compatiblility validation in canary builds as they don't use semver
   if (!process.env.SKIP_PLUGIN_COMPATIBILITY_CHECK) {
-    if (!pluginName.startsWith('.')) {
+    if (!pluginName.startsWith('.') && !pluginName.startsWith('#')) {
       // Validate the plugin engines field
       let key = 'atlaspack';
       let atlaspackVersionRange;

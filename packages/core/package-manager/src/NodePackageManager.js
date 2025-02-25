@@ -584,12 +584,28 @@ export class NodePackageManager implements PackageManager {
       this.resolver = this._createResolver();
     }
 
-    let res = this.resolver.resolve({
-      filename: name,
-      specifierType: 'commonjs',
-      parent: from,
-      packageConditions: getConditionsFromEnv(),
-    });
+    let res;
+    if (name.startsWith('#')) {
+      const result = Module.createRequire(from).resolve(name);
+      res = {
+        resolution: {
+          type: 'Path',
+          value: result,
+        },
+        invalidateOnFileChange: [result],
+        invalidateOnFileCreate: [],
+        sideEffects: true,
+        error: undefined,
+        moduleType: 1,
+      };
+    } else {
+      res = this.resolver.resolve({
+        filename: name,
+        specifierType: 'commonjs',
+        parent: from,
+        packageConditions: getConditionsFromEnv(),
+      });
+    }
 
     // Invalidate whenever the .pnp.js file changes.
     // TODO: only when we actually resolve a node_modules package?
