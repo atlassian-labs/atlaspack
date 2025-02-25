@@ -912,6 +912,7 @@ export class RequestGraph extends ContentGraph<
     let count = 0;
     let predictedTime = 0;
     let startTime = Date.now();
+    const atlaspackV3 = getFeatureFlag('atlaspackV3');
     const enableOptimization = getFeatureFlag('fixQuadraticCacheInvalidation');
     const removeOrphans = !enableOptimization;
 
@@ -944,6 +945,20 @@ export class RequestGraph extends ContentGraph<
       aboveCache.set(fileNameNodeId, above);
       return above;
     };
+
+    if (atlaspackV3) {
+      for (let [id, node] of this.nodes.entries()) {
+        if (
+          node &&
+          (node.requestType === requestTypes.bundle_graph_request ||
+            node.requestType === requestTypes.asset_graph_request)
+        ) {
+          didInvalidate = true;
+          this.invalidNodeIds.add(id);
+        }
+      }
+      return didInvalidate && this.invalidNodeIds.size > 0;
+    }
 
     for (let {path: _path, type} of events) {
       if (
