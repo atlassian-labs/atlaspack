@@ -15,7 +15,7 @@ pub use transformer_plugin::*;
 pub use validator_plugin::*;
 
 use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
-use crate::types::{BuildMode, LogLevel};
+use crate::types::{BuildMode, FeatureFlags, LogLevel};
 
 mod bundler_plugin;
 mod compressor_plugin;
@@ -46,4 +46,5 @@ pub struct PluginOptions {
   pub log_level: LogLevel,
   pub mode: BuildMode,
   pub project_root: PathBuf,
+  pub feature_flags: FeatureFlags,
 }

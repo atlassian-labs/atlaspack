@@ -8,6 +8,7 @@ use serde::Serialize;
 
 use super::engines::Engines;
 use super::EnvironmentContext;
+use super::FeatureFlags;
 use super::IncludeNodeModules;
 use super::OutputFormat;
 use super::TargetSourceMapOptions;
@@ -41,6 +42,9 @@ pub struct AtlaspackOptions {
   pub threads: Option<usize>,
 
   pub targets: Option<Targets>,
+
+  #[serde(default)]
+  pub feature_flags: FeatureFlags,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Deserialize, Serialize)]
