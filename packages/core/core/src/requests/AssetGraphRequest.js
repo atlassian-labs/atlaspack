@@ -90,52 +90,6 @@ export default function createAssetGraphRequest(
         assetGraphRequest.assetGraph.safeToIncrementallyBundle = false;
       }
 
-      if (input.options.featureFlags?.loadableSideEffects) {
-        // Avoid revisiting nodes
-        let updatedAssetIds = new Set();
-
-        assetGraphRequest.assetGraph.traverse((nodeId) => {
-          let node = nullthrows(assetGraphRequest.assetGraph.getNode(nodeId));
-
-          if (
-            node.type !== 'dependency' ||
-            node.value.specifier.indexOf('@confluence/loadable') === -1
-          ) {
-            return;
-          }
-
-          assetGraphRequest.assetGraph.traverseAncestors(
-            nodeId,
-            (ancestorNodeId, _, actions) => {
-              if (updatedAssetIds.has(ancestorNodeId)) {
-                actions.skipChildren();
-                return;
-              }
-
-              let ancestorNode = nullthrows(
-                assetGraphRequest.assetGraph.getNode(ancestorNodeId),
-              );
-
-              // Async boundaries will catch the side effects
-              if (
-                ancestorNode.type === 'dependency' &&
-                ancestorNode.value.priority !== Priority.sync
-              ) {
-                actions.skipChildren();
-              }
-
-              // inline-requires optimizer is only checking assets
-              if (ancestorNode.type !== 'asset') {
-                return;
-              }
-
-              updatedAssetIds.add(ancestorNodeId);
-              ancestorNode.value.sideEffects = true;
-            },
-          );
-        }, assetGraphRequest.assetGraph.rootNodeId);
-      }
-
       return assetGraphRequest;
     },
     input: requestInput,

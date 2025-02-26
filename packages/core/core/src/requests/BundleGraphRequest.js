@@ -63,6 +63,7 @@ import {
   getDebugAssetGraphDotPath,
   getDebugAssetGraphDotOptions,
 } from './asset-graph-dot';
+import {Priority} from '../types';
 
 type BundleGraphRequestInput = {|
   requestedAssetIds: Set<string>,
@@ -124,6 +125,47 @@ export default function createBundleGraphRequest(
           force: options.shouldBuildLazily && requestedAssetIds.size > 0,
         },
       );
+
+      if (input.options.featureFlags?.loadableSideEffects) {
+        // Avoid revisiting nodes
+        let updatedAssetIds = new Set();
+
+        assetGraph.traverse((nodeId) => {
+          let node = nullthrows(assetGraph.getNode(nodeId));
+
+          if (
+            node.type !== 'dependency' ||
+            node.value.specifier.indexOf('@confluence/loadable') === -1
+          ) {
+            return;
+          }
+
+          assetGraph.traverseAncestors(nodeId, (ancestorNodeId, _, actions) => {
+            if (updatedAssetIds.has(ancestorNodeId)) {
+              actions.skipChildren();
+              return;
+            }
+
+            let ancestorNode = nullthrows(assetGraph.getNode(ancestorNodeId));
+
+            // Async boundaries will catch the side effects
+            if (
+              ancestorNode.type === 'dependency' &&
+              ancestorNode.value.priority !== Priority.sync
+            ) {
+              actions.skipChildren();
+            }
+
+            // inline-requires optimizer is only checking assets
+            if (ancestorNode.type !== 'asset') {
+              return;
+            }
+
+            updatedAssetIds.add(ancestorNodeId);
+            ancestorNode.value.sideEffects = true;
+          });
+        }, assetGraph.rootNodeId);
+      }
 
       let debugAssetGraphDotPath = getDebugAssetGraphDotPath();
       if (debugAssetGraphDotPath !== null) {
