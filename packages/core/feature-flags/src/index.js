@@ -15,6 +15,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   useLmdbJsLite: false,
   conditionalBundlingApi: false,
   vcsMode: 'OLD',
+  loadableSideEffects: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

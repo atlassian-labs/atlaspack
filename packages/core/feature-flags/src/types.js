@@ -37,6 +37,10 @@ export type FeatureFlags = {|
    * - NEW: Return VCS result, but don't call watchman
    */
   vcsMode: ConsistencyCheckFeatureFlagValue,
+  /**
+   * Enable scanning for the presence of loadable to determine side effects
+   */
+  loadableSideEffects: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
