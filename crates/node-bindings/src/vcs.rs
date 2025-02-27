@@ -38,7 +38,7 @@ pub fn get_events_since(
   let files = atlaspack_vcs::get_changed_files(
     repo_path,
     &old_rev,
-    new_rev.as_deref().unwrap_or("HEAD"),
+    new_rev.as_deref(),
     FailureMode::IgnoreMissingNodeModules,
   )
   .map_err(|err| napi::Error::new(napi::Status::GenericFailure, format!("[napi] {}", err)))?;

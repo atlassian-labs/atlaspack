@@ -10,6 +10,7 @@ use std::{
   path::{Path, PathBuf},
 };
 
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -143,21 +144,31 @@ pub fn generate_events(
   let changed_resolutions = new_yarn_lock
     .iter()
     .filter_map(|(package_name, new_resolution)| {
+      tracing::debug!("Checking resolution: {:?}", new_resolution.resolution);
       let Some(old_yarn_lock) = old_yarn_lock.as_ref() else {
+        tracing::debug!(
+          "No old resolution found for: {:?}",
+          new_resolution.resolution
+        );
         return Some(new_resolution);
       };
       let Some(old_resolution) = old_yarn_lock.get(package_name) else {
+        tracing::debug!(
+          "No old resolution found for: {:?}",
+          new_resolution.resolution
+        );
         return Some(new_resolution);
       };
 
       if old_resolution.resolution != new_resolution.resolution {
+        tracing::debug!("Resolution changed: {:?}", new_resolution.resolution);
         Some(new_resolution)
       } else {
         None
       }
     });
 
-  let mut changed_paths = vec![];
+  let mut changed_node_modules = vec![];
   for resolution in changed_resolutions {
     tracing::debug!("Changed resolution: {:?}", resolution.resolution);
 
@@ -167,10 +178,23 @@ pub fn generate_events(
           // the workspace is listed as a location, which we can skip
           continue;
         }
-        changed_paths.push(node_modules_parent_path.join(location));
+        let path = node_modules_parent_path.join(location);
+        changed_node_modules.push(path);
       }
     }
   }
+
+  let changed_paths = changed_node_modules
+    .par_iter()
+    .flat_map(|path| {
+      jwalk::WalkDir::new(&path)
+        .into_iter()
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| !entry.path().is_dir())
+        .map(|entry| entry.path().to_path_buf())
+        .collect::<Vec<_>>()
+    })
+    .collect();
 
   changed_paths
 }

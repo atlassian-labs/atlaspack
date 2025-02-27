@@ -207,7 +207,7 @@ pub fn list_yarn_states(
 
       let node_modules_path = repo.join(&node_modules_relative_path);
       let yarn_state = parse_yarn_state_file(&node_modules_path).map_err(|err| {
-        tracing::warn!(
+        tracing::debug!(
           "Failed to read .yarn-state.yml {node_modules_relative_path:?} {}",
           err
         );
@@ -274,6 +274,7 @@ pub enum FailureMode {
   FailOnMissingNodeModules,
 }
 
+#[derive(Debug)]
 pub struct FileChangeEvent {
   path: PathBuf,
   change_type: FileChangeType,
@@ -297,6 +298,7 @@ impl FileChangeEvent {
   }
 }
 
+#[derive(Debug)]
 pub enum FileChangeType {
   Create,
   Update,
@@ -318,6 +320,7 @@ pub fn get_changed_files_from_git(
   status_options.include_ignored(false);
   status_options.include_untracked(true);
   status_options.include_unmodified(false);
+  status_options.recurse_ignored_dirs(false);
 
   let statuses = repo.statuses(Some(&mut status_options))?;
   statuses.iter().for_each(|entry| {
@@ -396,16 +399,19 @@ pub fn get_changed_files_from_git(
 pub fn get_changed_files(
   repo_path: &Path,
   old_rev: &str,
-  new_rev: &str,
+  new_rev: Option<&str>,
   failure_mode: FailureMode,
 ) -> anyhow::Result<Vec<FileChangeEvent>> {
   let repo = Repository::open(repo_path)?;
   let old_commit = repo.revparse_single(old_rev)?.peel_to_commit()?;
-  let new_commit = repo.revparse_single(new_rev)?.peel_to_commit()?;
+  let new_commit = repo
+    .revparse_single(new_rev.unwrap_or("HEAD"))?
+    .peel_to_commit()?;
 
   let mut changed_files = get_changed_files_from_git(repo_path, &repo, &old_commit, &new_commit)?;
+  tracing::trace!("Changed files: {:?}", changed_files);
 
-  tracing::debug!("Reading yarn.lock from {} and {}", old_rev, new_rev);
+  tracing::debug!("Reading yarn.lock from {} and {:?}", old_rev, new_rev);
   let yarn_lock_changes = changed_files
     .iter()
     .filter(|file| file.path.file_name().unwrap() == "yarn.lock")
@@ -427,9 +433,12 @@ pub fn get_changed_files(
     let maybe_old_yarn_lock: Option<YarnLock> = maybe_old_yarn_lock_blob
       .map(|s| parse_yarn_lock(&s))
       .transpose()?;
-    let new_yarn_lock_blob: String =
+    let new_yarn_lock_blob: String = if new_rev.is_some() {
       get_file_contents_at_commit(&repo, &new_commit, yarn_lock_path)?
-        .ok_or_else(|| anyhow!("Expected lockfile to exist in current revision"))?;
+        .ok_or_else(|| anyhow!("Expected lockfile to exist in current revision"))?
+    } else {
+      std::fs::read_to_string(repo_path.join(yarn_lock_path))?
+    };
     let new_yarn_lock: YarnLock = parse_yarn_lock(&new_yarn_lock_blob)?;
 
     let node_modules_path = repo_path.join(&node_modules_relative_path);
@@ -470,6 +479,10 @@ pub fn get_changed_files(
   }
 
   tracing::debug!("Done");
+
+  for change in &changed_files {
+    tracing::trace!("Changed file: {:?}", change);
+  }
 
   Ok(changed_files)
 }
