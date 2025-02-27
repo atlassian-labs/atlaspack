@@ -135,7 +135,7 @@ pub fn parse_yarn_state_file(node_modules_directory: &Path) -> anyhow::Result<Ya
   Ok(state)
 }
 
-pub fn generate_events(
+fn get_changed_node_modules(
   node_modules_parent_path: &Path,
   old_yarn_lock: &Option<YarnLock>,
   new_yarn_lock: &YarnLock,
@@ -184,10 +184,26 @@ pub fn generate_events(
     }
   }
 
+  changed_node_modules
+}
+
+pub fn generate_events(
+  node_modules_parent_path: &Path,
+  old_yarn_lock: &Option<YarnLock>,
+  new_yarn_lock: &YarnLock,
+  state: &YarnStateFile,
+) -> Vec<PathBuf> {
+  let changed_node_modules = get_changed_node_modules(
+    node_modules_parent_path,
+    old_yarn_lock,
+    new_yarn_lock,
+    state,
+  );
+
   let changed_paths = changed_node_modules
     .par_iter()
     .flat_map(|path| {
-      jwalk::WalkDir::new(&path)
+      jwalk::WalkDir::new(path)
         .into_iter()
         .filter_map(|entry| entry.ok())
         .filter(|entry| !entry.path().is_dir())
@@ -220,7 +236,7 @@ mod test {
       serde_yaml::from_str(&std::fs::read_to_string(yarn_state_path)?)?;
     yarn_state.validate()?;
 
-    let events = generate_events(
+    let events = get_changed_node_modules(
       &node_modules_parent_path,
       &Some(old_yarn_lock),
       &new_yarn_lock,
@@ -249,7 +265,7 @@ mod test {
       serde_yaml::from_str(&std::fs::read_to_string(yarn_state_path)?)?;
     yarn_state.validate()?;
 
-    let events = generate_events(
+    let events = get_changed_node_modules(
       &node_modules_parent_path,
       &None,
       &new_yarn_lock,
