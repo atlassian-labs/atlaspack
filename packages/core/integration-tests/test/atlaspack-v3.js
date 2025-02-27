@@ -194,4 +194,36 @@ describe.v3('AtlaspackV3', function () {
       await assertOutputIsIdentical(join(__dirname, 'css-modules/index.html'));
     });
   });
+
+  describe('featureFlags', () => {
+    it('should not throw if feature flag is bool', () => {
+      assert.doesNotThrow(
+        () =>
+          new AtlaspackV3({
+            corePath: '',
+            entries: [join(__dirname, 'index.js')],
+            fs: new FileSystemV3(overlayFS),
+            lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
+            featureFlags: {
+              testFlag: true,
+            },
+          }),
+      );
+    });
+
+    it('should not throw if feature flag is string', () => {
+      assert.doesNotThrow(
+        () =>
+          new AtlaspackV3({
+            corePath: '',
+            entries: [join(__dirname, 'index.js')],
+            fs: new FileSystemV3(overlayFS),
+            lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
+            featureFlags: {
+              testFlag: 'testFlagValue',
+            },
+          }),
+      );
+    });
+  });
 });
