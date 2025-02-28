@@ -480,10 +480,6 @@ pub fn get_changed_files(
 
   tracing::debug!("Done");
 
-  for change in &changed_files {
-    tracing::trace!("Changed file: {:?}", change);
-  }
-
   Ok(changed_files)
 }
 

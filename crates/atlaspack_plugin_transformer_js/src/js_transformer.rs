@@ -190,12 +190,17 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   async fn transform(
     &self,
     context: TransformContext,
-    asset: Asset,
+    mut asset: Asset,
   ) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let file_type = asset.file_type.clone();
     let is_node = env.context.is_node();
     let source_code = asset.code.clone();
+
+    let feature_flag_conditional_bundling = self
+      .options
+      .feature_flags
+      .bool_enabled("conditionalBundlingApi");
 
     let mut targets: HashMap<String, String> = HashMap::new();
     if env.context.is_browser() {
@@ -307,10 +312,27 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
           })
         })
         .unwrap_or_default(),
+      conditional_bundling: feature_flag_conditional_bundling,
       ..atlaspack_js_swc_core::Config::default()
     };
 
     let transformation_result = atlaspack_js_swc_core::transform(transform_config, None)?;
+
+    if feature_flag_conditional_bundling {
+      let mut converted = vec![];
+
+      for condition in transformation_result.conditions.iter() {
+        converted.push(serde_json::json!({
+          "key": condition.key.to_string(),
+          "ifTruePlaceholder": condition.if_true_placeholder,
+          "ifFalsePlaceholder": condition.if_false_placeholder,
+        }));
+      }
+
+      asset
+        .meta
+        .insert("conditions".to_string(), serde_json::to_value(&converted)?);
+    }
 
     if let Some(errors) = transformation_result.diagnostics {
       return Err(anyhow!(map_diagnostics(
