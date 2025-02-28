@@ -18,3 +18,4 @@ jwalk = { workspace = true }
 [dev-dependencies]
 clap = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
+tempfile = { workspace = true }

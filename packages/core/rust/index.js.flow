@@ -41,6 +41,7 @@ export type AtlaspackNapiOptions = {|
   fs?: FileSystem,
   nodeWorkers?: number,
   options: {|
+    featureFlags?: { [string]: string | boolean },
     corePath?: string,
     // TODO Use Omit when available in flow >0.210.0
     ...$Diff<

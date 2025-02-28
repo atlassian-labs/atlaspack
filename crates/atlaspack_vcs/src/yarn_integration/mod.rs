@@ -187,6 +187,20 @@ fn get_changed_node_modules(
   changed_node_modules
 }
 
+fn expand_paths(directories: &Vec<PathBuf>) -> Vec<PathBuf> {
+  directories
+    .par_iter()
+    .flat_map(|path| {
+      jwalk::WalkDir::new(path)
+        .into_iter()
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| !entry.path().is_dir())
+        .map(|entry| entry.path().to_path_buf())
+        .collect::<Vec<_>>()
+    })
+    .collect()
+}
+
 pub fn generate_events(
   node_modules_parent_path: &Path,
   old_yarn_lock: &Option<YarnLock>,
@@ -200,19 +214,7 @@ pub fn generate_events(
     state,
   );
 
-  let changed_paths = changed_node_modules
-    .par_iter()
-    .flat_map(|path| {
-      jwalk::WalkDir::new(path)
-        .into_iter()
-        .filter_map(|entry| entry.ok())
-        .filter(|entry| !entry.path().is_dir())
-        .map(|entry| entry.path().to_path_buf())
-        .collect::<Vec<_>>()
-    })
-    .collect();
-
-  changed_paths
+  expand_paths(&changed_node_modules)
 }
 
 #[cfg(test)]
@@ -279,5 +281,41 @@ mod test {
     assert_eq!(events, vec!["node_modules/lodash"]);
 
     Ok(())
+  }
+
+  #[test]
+  fn test_expand_paths() {
+    // create temporary directory with files
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_dir_path = temp_dir.path();
+    let file1 = temp_dir_path.join("file1");
+    let file2 = temp_dir_path.join("file2");
+    // create sub-directory
+    let sub_dir = temp_dir_path.join("sub");
+    std::fs::create_dir(&sub_dir).unwrap();
+    let file3 = sub_dir.join("file3");
+    let file4 = sub_dir.join("file4");
+
+    std::fs::write(&file1, "file1").unwrap();
+    std::fs::write(&file2, "file2").unwrap();
+    std::fs::write(&file3, "file3").unwrap();
+    std::fs::write(&file4, "file4").unwrap();
+
+    let files = expand_paths(&vec![temp_dir_path.to_path_buf()]);
+    let mut files = files
+      .iter()
+      .map(|path| path.to_str().unwrap())
+      .collect::<Vec<_>>();
+    files.sort();
+
+    assert_eq!(
+      &files,
+      &[
+        file1.to_str().unwrap(),
+        file2.to_str().unwrap(),
+        file3.to_str().unwrap(),
+        file4.to_str().unwrap()
+      ]
+    );
   }
 }
