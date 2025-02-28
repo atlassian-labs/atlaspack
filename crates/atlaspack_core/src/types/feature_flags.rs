@@ -9,4 +9,30 @@ pub enum FeatureFlagValue {
   Bool(bool),
 }
 
-pub type FeatureFlags = HashMap<String, FeatureFlagValue>;
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct FeatureFlags(HashMap<String, FeatureFlagValue>);
+
+impl FeatureFlags {
+  pub fn get(&self, key: impl AsRef<str>) -> Option<&FeatureFlagValue> {
+    self.0.get(key.as_ref())
+  }
+
+  /// bool_enabled will return true if a featureFlag is present and
+  /// the value is true, otherwise it will return false
+  pub fn bool_enabled(&self, key: impl AsRef<str>) -> bool {
+    let Some(FeatureFlagValue::Bool(v)) = self.get(key.as_ref()) else {
+      return false;
+    };
+    *v
+  }
+
+  /// string_eq will return true if a featureFlag is a string and the string
+  /// matches the supplied value, otherwise it will return false
+  pub fn string_eq(&self, key: impl AsRef<str>, matches: impl AsRef<str>) -> bool {
+    let Some(FeatureFlagValue::String(v)) = self.0.get(key.as_ref()) else {
+      return false;
+    };
+    v == matches.as_ref()
+  }
+}
