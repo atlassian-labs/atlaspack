@@ -81,7 +81,7 @@ impl Atlaspack {
 pub struct BuildResult;
 
 impl Atlaspack {
-  pub fn build_asset_graph_2(&self) -> anyhow::Result<AssetGraph> {
+  pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
     self.runtime.block_on(async move {
       let AtlaspackState { config, plugins } = self.state().unwrap();
 
@@ -100,6 +100,9 @@ impl Atlaspack {
       compilation::build_entries(&mut c).await?;
       compilation::build_entry_dependencies(&mut c).await?;
       compilation::resolve_and_transform(&mut c).await?;
+
+      // dbg!(&c.asset_graph);
+      self.commit_assets(c.asset_graph.nodes().collect())?;
 
       Ok(c.asset_graph)
     })
@@ -151,7 +154,7 @@ impl Atlaspack {
     Ok(state)
   }
 
-  pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
+  pub fn build_asset_graph2(&self) -> anyhow::Result<AssetGraph> {
     self.runtime.block_on(async move {
       let AtlaspackState { config, plugins } = self.state().unwrap();
 

@@ -40,5 +40,11 @@ pub async fn build_entry_dependencies(
     }
   }
 
+  entry_dependencies.sort_by_key(|(entry, _)| entry.clone());
+
+  for (node_index, _) in entry_dependencies.iter() {
+    asset_graph.add_edge(&asset_graph.root_node(), node_index);
+  }
+
   Ok(())
 }

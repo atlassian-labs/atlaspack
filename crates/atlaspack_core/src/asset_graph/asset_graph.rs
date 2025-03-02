@@ -223,11 +223,10 @@ impl std::hash::Hash for AssetGraph {
 mod tests {
   use std::path::PathBuf;
 
-  use crate::types::Symbol;
-  use crate::types::Target;
-
   use super::super::propagate_requested_symbols::propagate_requested_symbols;
   use super::*;
+  use crate::types::Symbol;
+  use crate::types::Target;
 
   type TestSymbol<'a> = (&'a str, &'a str, bool);
   fn symbol(test_symbol: &TestSymbol) -> Symbol {

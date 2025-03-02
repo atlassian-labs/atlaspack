@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use atlaspack_core::asset_graph::propagate_requested_symbols_vec;
 use atlaspack_core::asset_graph::DependencyNode;
@@ -29,6 +30,8 @@ pub async fn resolve_and_transform(
   let mut asset_hash_to_idx = HashMap::<u64, NodeIndex>::new();
 
   while let Some((dependency_idx, dependency)) = queue.pop() {
+    println!("Q: {} {}", queue.len(), dependency.specifier);
+
     // Resolution (Thread)
     let (path, code, pipeline, query, side_effects) = {
       let resolution = resolve(dependency.clone(), plugins.clone()).await?;
@@ -78,7 +81,13 @@ pub async fn resolve_and_transform(
     );
 
     if let Some(asset_idx) = asset_hash_to_idx.get(&asset_hash) {
+      if asset_graph.has_edge(&dependency_idx, asset_idx) {
+        continue;
+      };
       asset_graph.add_edge(&dependency_idx, &asset_idx);
+      for next in propagate_requested_symbols_vec(asset_graph, *asset_idx, dependency_idx) {
+        queue.push(next);
+      }
       continue;
     }
 
@@ -106,6 +115,11 @@ pub async fn resolve_and_transform(
       .await?
     };
 
+    {
+      let asset_node = asset_graph.get_asset_node_mut(&asset_idx).unwrap();
+      asset_node.asset = asset.clone();
+    }
+
     let mut added_discovered_assets: HashMap<String, NodeIndex> = HashMap::new();
     let direct_discovered_assets = get_direct_discovered_assets(&discovered_assets, &dependencies);
 
@@ -128,6 +142,21 @@ pub async fn resolve_and_transform(
       for next in propagate_requested_symbols_vec(asset_graph, asset_idx, dependency_idx) {
         queue.push(next);
       }
+    }
+
+    for next in add_asset_dependencies(
+      asset_graph,
+      &dependencies,
+      &discovered_assets,
+      asset_idx,
+      &mut added_discovered_assets,
+      (&asset, asset_idx),
+    ) {
+      queue.push(next);
+    }
+
+    for next in propagate_requested_symbols_vec(asset_graph, asset_idx, dependency_idx) {
+      queue.push(next);
     }
   }
 
