@@ -30,8 +30,6 @@ pub async fn resolve_and_transform(
   let mut asset_hash_to_idx = HashMap::<u64, NodeIndex>::new();
 
   while let Some((dependency_idx, dependency)) = queue.pop() {
-    println!("Q: {} {}", queue.len(), dependency.specifier);
-
     // Resolution (Thread)
     let (path, code, pipeline, query, side_effects) = {
       let resolution = resolve(dependency.clone(), plugins.clone()).await?;
