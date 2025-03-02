@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use atlaspack_core::asset_graph::propagate_requested_symbols_vec;
 use atlaspack_core::asset_graph::DependencyNode;
@@ -30,8 +29,6 @@ pub async fn resolve_and_transform(
   let mut asset_hash_to_idx = HashMap::<u64, NodeIndex>::new();
 
   while let Some((dependency_idx, dependency)) = queue.pop() {
-    println!("Q: {} {}", queue.len(), dependency.specifier);
-
     // Resolution (Thread)
     let (path, code, pipeline, query, side_effects) = {
       let resolution = resolve(dependency.clone(), plugins.clone()).await?;

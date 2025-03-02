@@ -101,7 +101,6 @@ impl Atlaspack {
       compilation::build_entry_dependencies(&mut c).await?;
       compilation::resolve_and_transform(&mut c).await?;
 
-      // dbg!(&c.asset_graph);
       self.commit_assets(c.asset_graph.nodes().collect())?;
 
       Ok(c.asset_graph)
