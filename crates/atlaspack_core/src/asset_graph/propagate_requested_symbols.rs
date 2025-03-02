@@ -5,14 +5,29 @@ use petgraph::graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use petgraph::Direction;
 
+use super::asset_graph::AssetGraph;
+use super::asset_graph::DependencyNode;
+use super::asset_graph::DependencyState;
 use crate::types::Asset;
 use crate::types::Dependency;
 use crate::types::Symbol;
 
-use super::asset_graph::DependencyState;
-use super::asset_graph::{AssetGraph, DependencyNode};
-
 const CHAR_STAR: &str = "*";
+
+pub fn propagate_requested_symbols_vec(
+  asset_graph: &mut AssetGraph,
+  initial_asset_idx: NodeIndex,
+  initial_dependency_idx: NodeIndex,
+) -> Vec<(NodeIndex, Arc<Dependency>)> {
+  let mut results = vec![];
+  propagate_requested_symbols(
+    asset_graph,
+    initial_asset_idx,
+    initial_dependency_idx,
+    &mut |dependency_idx, dependency| results.push((dependency_idx, dependency)),
+  );
+  results
+}
 
 /// Propagates the requested symbols from an incoming dependency to an asset,
 /// and forwards those symbols to re-exported dependencies if needed.

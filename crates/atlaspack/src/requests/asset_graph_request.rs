@@ -1,24 +1,36 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::mpsc::channel;
+use std::sync::mpsc::Receiver;
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
+use atlaspack_core::asset_graph::propagate_requested_symbols;
+use atlaspack_core::asset_graph::AssetGraph;
+use atlaspack_core::asset_graph::DependencyNode;
+use atlaspack_core::asset_graph::DependencyState;
+use atlaspack_core::types::Asset;
+use atlaspack_core::types::AssetWithDependencies;
+use atlaspack_core::types::Dependency;
 use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 
-use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
-use atlaspack_core::asset_graph::{
-  propagate_requested_symbols, AssetGraph, DependencyNode, DependencyState,
-};
-use atlaspack_core::types::{Asset, AssetWithDependencies, Dependency};
-
-use super::asset_request::{AssetRequest, AssetRequestOutput};
-use super::entry_request::{EntryRequest, EntryRequestOutput};
-use super::path_request::{PathRequest, PathRequestOutput};
-use super::target_request::{TargetRequest, TargetRequestOutput};
+use super::asset_request::AssetRequest;
+use super::asset_request::AssetRequestOutput;
+use super::entry_request::EntryRequest;
+use super::entry_request::EntryRequestOutput;
+use super::path_request::PathRequest;
+use super::path_request::PathRequestOutput;
+use super::target_request::TargetRequest;
+use super::target_request::TargetRequestOutput;
 use super::RequestResult;
+use crate::request_tracker::Request;
+use crate::request_tracker::ResultAndInvalidations;
+use crate::request_tracker::RunRequestContext;
+use crate::request_tracker::RunRequestError;
 
 type ResultSender = Sender<Result<(RequestResult, u64), anyhow::Error>>;
 type ResultReceiver = Receiver<Result<(RequestResult, u64), anyhow::Error>>;
@@ -519,17 +531,23 @@ fn get_direct_discovered_assets<'a>(
 
 #[cfg(test)]
 mod tests {
-  use std::path::{Path, PathBuf};
+  use std::path::Path;
+  use std::path::PathBuf;
   use std::sync::Arc;
 
-  use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
-  use atlaspack_core::types::{AtlaspackOptions, Code};
+  use atlaspack_core::asset_graph::AssetGraph;
+  use atlaspack_core::asset_graph::AssetGraphNode;
+  use atlaspack_core::asset_graph::AssetNode;
+  use atlaspack_core::types::AtlaspackOptions;
+  use atlaspack_core::types::Code;
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
   use petgraph::visit::Bfs;
 
-  use crate::requests::{AssetGraphRequest, RequestResult};
-  use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
+  use crate::requests::AssetGraphRequest;
+  use crate::requests::RequestResult;
+  use crate::test_utils::request_tracker;
+  use crate::test_utils::RequestTrackerTestOptions;
 
   #[tokio::test(flavor = "multi_thread")]
   async fn test_asset_graph_request_with_no_entries() {

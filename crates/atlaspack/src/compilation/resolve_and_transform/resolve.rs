@@ -10,7 +10,7 @@ use atlaspack_resolver::parse_scheme;
 
 use crate::plugins::PluginsRef;
 
-pub enum RequestResult {
+pub enum ResolutionResult {
   Excluded,
   Resolved {
     can_defer: bool,
@@ -25,7 +25,7 @@ pub enum RequestResult {
 pub async fn resolve(
   dependency: Arc<Dependency>,
   plugins: PluginsRef,
-) -> anyhow::Result<RequestResult> {
+) -> anyhow::Result<ResolutionResult> {
   let (parsed_pipeline, specifier) = parse_scheme(&dependency.specifier)
     .and_then(|(pipeline, specifier)| {
       if plugins
@@ -60,7 +60,7 @@ pub async fn resolve(
 
     match resolved.resolution {
       Resolution::Unresolved => continue,
-      Resolution::Excluded => return Ok(RequestResult::Excluded),
+      Resolution::Excluded => return Ok(ResolutionResult::Excluded),
       Resolution::Resolved(ResolvedResolution {
         can_defer,
         code,
@@ -82,7 +82,7 @@ pub async fn resolve(
         // TODO resolution.diagnostics
         // TODO Set dependency meta and priority
 
-        return Ok(RequestResult::Resolved {
+        return Ok(ResolutionResult::Resolved {
           can_defer,
           code,
           path: file_path,
@@ -95,7 +95,7 @@ pub async fn resolve(
   }
 
   if dependency.is_optional {
-    return Ok(RequestResult::Excluded);
+    return Ok(ResolutionResult::Excluded);
   }
 
   let resolve_from = dependency
