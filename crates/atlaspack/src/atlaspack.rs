@@ -20,10 +20,9 @@ use atlaspack_plugin_rpc::RpcFactoryRef;
 use lmdb_js_lite::writer::DatabaseWriter;
 use tokio::runtime::Runtime;
 
-use crate::build_entries::build_entries;
-use crate::build_entry_dependencies::build_entry_dependencies;
 use crate::cache::InMemoryKVCache;
 use crate::cache::KVCache;
+use crate::compilation;
 use crate::compilation::Compilation;
 use crate::plugins::config_plugins::ConfigPlugins;
 use crate::plugins::PluginsRef;
@@ -82,6 +81,29 @@ impl Atlaspack {
 pub struct BuildResult;
 
 impl Atlaspack {
+  pub fn build_asset_graph_2(&self) -> anyhow::Result<AssetGraph> {
+    self.runtime.block_on(async move {
+      let AtlaspackState { config, plugins } = self.state().unwrap();
+
+      let mut c = Compilation {
+        cache: KVCache::InMemory(InMemoryKVCache::default()),
+        fs: self.fs.clone(),
+        options: self.options.clone(),
+        config_loader: config,
+        project_root: self.project_root.clone(),
+        asset_graph: AssetGraph::default(),
+        entries: Vec::new(),
+        entry_dependencies: Vec::new(),
+        plugins,
+      };
+
+      compilation::build_entries(&mut c).await?;
+      compilation::build_entry_dependencies(&mut c).await?;
+
+      Ok(c.asset_graph)
+    })
+  }
+
   fn state(&self) -> anyhow::Result<AtlaspackState> {
     let rpc_worker = self.rpc.start()?;
 
@@ -126,29 +148,6 @@ impl Atlaspack {
     };
 
     Ok(state)
-  }
-
-  pub fn build_asset_graph_2(&self) -> anyhow::Result<AssetGraph> {
-    self.runtime.block_on(async move {
-      let AtlaspackState { config, plugins } = self.state().unwrap();
-
-      let mut c = Compilation {
-        cache: KVCache::InMemory(InMemoryKVCache::default()),
-        fs: self.fs.clone(),
-        options: self.options.clone(),
-        config_loader: config,
-        project_root: self.project_root.clone(),
-        asset_graph: AssetGraph::default(),
-        entries: Vec::new(),
-        entry_dependencies: Vec::new(),
-        plugins,
-      };
-
-      build_entries(&mut c).await?;
-      build_entry_dependencies(&mut c).await?;
-
-      Ok(c.asset_graph)
-    })
   }
 
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {

@@ -20,9 +20,9 @@ use atlaspack_core::types::TargetDescriptor;
 use atlaspack_core::types::TargetSourceMapOptions;
 use atlaspack_resolver::IncludeNodeModules;
 
+use super::default_dist_dir::default_dist_dir;
 use super::package_json::ModuleFormat;
 use super::package_json::PackageJson;
-use crate::build_entry_dependencies::default_dist_dir::default_dist_dir;
 
 pub fn target_from_descriptor(
   entry: &Entry,
