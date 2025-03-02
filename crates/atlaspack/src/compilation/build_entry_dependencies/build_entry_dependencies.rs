@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Target;
 use pathdiff::diff_paths;
@@ -34,7 +36,7 @@ pub async fn build_entry_dependencies(
 
       let dependency = Dependency::entry(entry_path_str.clone(), target);
       let dep_node = asset_graph.add_entry_dependency(dependency.clone());
-      entry_dependencies.push((entry_path_str, dep_node));
+      entry_dependencies.push((dep_node, Arc::new(dependency)));
     }
   }
 

@@ -99,6 +99,7 @@ impl Atlaspack {
 
       compilation::build_entries(&mut c).await?;
       compilation::build_entry_dependencies(&mut c).await?;
+      compilation::resolve_and_transform(&mut c).await?;
 
       Ok(c.asset_graph)
     })

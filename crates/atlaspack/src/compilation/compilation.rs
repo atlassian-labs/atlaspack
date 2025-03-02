@@ -4,6 +4,7 @@ use std::sync::Arc;
 use atlaspack_core::asset_graph::AssetGraph;
 use atlaspack_core::config_loader::ConfigLoaderRef;
 use atlaspack_core::types::AtlaspackOptions;
+use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Entry;
 use atlaspack_filesystem::FileSystemRef;
 use petgraph::graph::NodeIndex;
@@ -20,5 +21,5 @@ pub struct Compilation {
   pub project_root: PathBuf,
   pub asset_graph: AssetGraph,
   pub entries: Vec<Entry>,
-  pub entry_dependencies: Vec<(String, NodeIndex)>,
+  pub entry_dependencies: Vec<(NodeIndex, Arc<Dependency>)>,
 }
