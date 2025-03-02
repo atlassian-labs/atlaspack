@@ -43,18 +43,6 @@ use super::RequestResult;
 
 mod package_json;
 
-/// Infers how and where source code is outputted
-///
-/// Targets will be generated from the project package.json file and input Atlaspack options.
-///
-#[derive(Debug, Hash)]
-pub struct TargetRequest {
-  pub default_target_options: DefaultTargetOptions,
-  pub entry: Entry,
-  pub env: Option<BTreeMap<String, String>>,
-  pub mode: BuildMode,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct TargetRequestOutput {
   pub entry: PathBuf,
@@ -70,6 +58,39 @@ struct BuiltInTarget<'a> {
 struct CustomTarget<'a> {
   descriptor: &'a TargetDescriptor,
   name: &'a str,
+}
+
+/// Infers how and where source code is outputted
+///
+/// Targets will be generated from the project package.json file and input Atlaspack options.
+///
+#[derive(Debug, Hash)]
+pub struct TargetRequest {
+  pub default_target_options: DefaultTargetOptions,
+  pub entry: Entry,
+  pub env: Option<BTreeMap<String, String>>,
+  pub mode: BuildMode,
+}
+
+#[async_trait]
+impl Request for TargetRequest {
+  #[tracing::instrument(level = "info", skip_all)]
+  async fn run(
+    &self,
+    request_context: RunRequestContext,
+  ) -> Result<ResultAndInvalidations, RunRequestError> {
+    // TODO options.targets, should this still be supported?
+    // TODO serve options
+    let package_targets = self.resolve_package_targets(request_context)?;
+
+    Ok(ResultAndInvalidations {
+      invalidations: Vec::new(),
+      result: RequestResult::Target(TargetRequestOutput {
+        entry: self.entry.file_path.clone(),
+        targets: package_targets.into_iter().flatten().collect(),
+      }),
+    })
+  }
 }
 
 impl TargetRequest {
@@ -688,27 +709,6 @@ fn fallback_output_format(context: EnvironmentContext) -> OutputFormat {
     EnvironmentContext::ElectronMain => OutputFormat::CommonJS,
     EnvironmentContext::ElectronRenderer => OutputFormat::CommonJS,
     _ => OutputFormat::Global,
-  }
-}
-
-#[async_trait]
-impl Request for TargetRequest {
-  #[tracing::instrument(level = "info", skip_all)]
-  async fn run(
-    &self,
-    request_context: RunRequestContext,
-  ) -> Result<ResultAndInvalidations, RunRequestError> {
-    // TODO options.targets, should this still be supported?
-    // TODO serve options
-    let package_targets = self.resolve_package_targets(request_context)?;
-
-    Ok(ResultAndInvalidations {
-      invalidations: Vec::new(),
-      result: RequestResult::Target(TargetRequestOutput {
-        entry: self.entry.file_path.clone(),
-        targets: package_targets.into_iter().flatten().collect(),
-      }),
-    })
   }
 }
 

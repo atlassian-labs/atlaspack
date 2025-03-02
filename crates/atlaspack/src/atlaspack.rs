@@ -2,25 +2,35 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
-use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
+use atlaspack_config::atlaspack_rc_config_loader::AtlaspackRcConfigLoader;
+use atlaspack_config::atlaspack_rc_config_loader::LoadConfigOptions;
+use atlaspack_core::asset_graph::AssetGraph;
+use atlaspack_core::asset_graph::AssetGraphNode;
+use atlaspack_core::asset_graph::AssetNode;
 use atlaspack_core::config_loader::ConfigLoader;
-use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
+use atlaspack_core::plugin::PluginContext;
+use atlaspack_core::plugin::PluginLogger;
+use atlaspack_core::plugin::PluginOptions;
 use atlaspack_core::types::AtlaspackOptions;
-use atlaspack_filesystem::{os_file_system::OsFileSystem, FileSystemRef};
-use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
+use atlaspack_filesystem::os_file_system::OsFileSystem;
+use atlaspack_filesystem::FileSystemRef;
+use atlaspack_package_manager::NodePackageManager;
+use atlaspack_package_manager::PackageManagerRef;
 use atlaspack_plugin_rpc::RpcFactoryRef;
 use lmdb_js_lite::writer::DatabaseWriter;
 use tokio::runtime::Runtime;
 
 use crate::build_entries::build_entries;
 use crate::build_targets::build_entry_dependencies;
-use crate::cache::{InMemoryKVCache, KVCache};
+use crate::cache::InMemoryKVCache;
+use crate::cache::KVCache;
 use crate::compilation::Compilation;
-use crate::plugins::{config_plugins::ConfigPlugins, PluginsRef};
+use crate::plugins::config_plugins::ConfigPlugins;
+use crate::plugins::PluginsRef;
 use crate::project_root::infer_project_root;
 use crate::request_tracker::RequestTracker;
-use crate::requests::{AssetGraphRequest, RequestResult};
+use crate::requests::AssetGraphRequest;
+use crate::requests::RequestResult;
 
 #[derive(Clone)]
 struct AtlaspackState {
@@ -131,6 +141,7 @@ impl Atlaspack {
         asset_graph: AssetGraph::default(),
         entries: Vec::new(),
         entry_dependencies: Vec::new(),
+        plugins,
       };
 
       build_entries(&mut c).await?;
@@ -194,12 +205,16 @@ impl Atlaspack {
 
 #[cfg(test)]
 mod tests {
-  use std::{collections::HashSet, env::temp_dir};
+  use std::collections::HashSet;
+  use std::env::temp_dir;
 
-  use atlaspack_core::types::{Asset, Code};
+  use atlaspack_core::types::Asset;
+  use atlaspack_core::types::Code;
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
-  use atlaspack_plugin_rpc::{MockRpcFactory, MockRpcWorker};
-  use lmdb_js_lite::{writer::DatabaseWriterError, LMDBOptions};
+  use atlaspack_plugin_rpc::MockRpcFactory;
+  use atlaspack_plugin_rpc::MockRpcWorker;
+  use lmdb_js_lite::writer::DatabaseWriterError;
+  use lmdb_js_lite::LMDBOptions;
 
   use super::*;
 
