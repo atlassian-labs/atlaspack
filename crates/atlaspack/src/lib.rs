@@ -5,7 +5,7 @@ pub use error::*;
 
 pub mod atlaspack;
 mod build_entries;
-mod build_targets;
+mod build_entry_dependencies;
 pub mod cache;
 mod compilation;
 pub(crate) mod request_tracker;

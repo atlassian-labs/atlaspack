@@ -22,7 +22,7 @@ use atlaspack_resolver::IncludeNodeModules;
 
 use super::package_json::ModuleFormat;
 use super::package_json::PackageJson;
-use crate::build_targets::default_dist_dir::default_dist_dir;
+use crate::build_entry_dependencies::default_dist_dir::default_dist_dir;
 
 pub fn target_from_descriptor(
   entry: &Entry,

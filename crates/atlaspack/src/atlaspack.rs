@@ -21,7 +21,7 @@ use lmdb_js_lite::writer::DatabaseWriter;
 use tokio::runtime::Runtime;
 
 use crate::build_entries::build_entries;
-use crate::build_targets::build_entry_dependencies;
+use crate::build_entry_dependencies::build_entry_dependencies;
 use crate::cache::InMemoryKVCache;
 use crate::cache::KVCache;
 use crate::compilation::Compilation;

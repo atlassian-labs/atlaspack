@@ -18,7 +18,7 @@ use super::target::builtin_module_target;
 use super::target::builtin_types_target;
 use super::target::CustomTarget;
 use super::target_from_descriptor::target_from_descriptor;
-use crate::build_targets::target_from_descriptor::infer_environment_context;
+use crate::build_entry_dependencies::target_from_descriptor::infer_environment_context;
 
 pub fn resolve_package_targets(
   entry: &Entry,
