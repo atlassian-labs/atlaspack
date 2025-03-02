@@ -57,7 +57,7 @@ fn main() {
       let changes = get_changed_files(
         &repository_root,
         &start_rev,
-        end_rev.as_deref().unwrap_or("HEAD"),
+        end_rev.as_deref(),
         FailureMode::IgnoreMissingNodeModules,
       )
       .unwrap();
