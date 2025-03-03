@@ -2,10 +2,8 @@ use core::str;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use std::thread;
 
 use anyhow::anyhow;
-use atlaspack::AtlaspackError;
 use atlaspack::AtlaspackInitOptions;
 use atlaspack::WatchEvents;
 use lmdb_js_lite::writer::DatabaseWriter;
@@ -24,7 +22,7 @@ use atlaspack_package_manager::PackageManagerRef;
 
 use super::atlaspack_cell::AtlaspackCell;
 use super::file_system_napi::FileSystemNapi;
-use super::napi_result::NapiAtlaspackResult;
+use super::napi_ext::NapiExt;
 use super::package_manager_napi::PackageManagerNapi;
 use super::serialize_asset_graph::serialize_asset_graph;
 
@@ -130,49 +128,32 @@ impl AtlaspackNapi {
   #[tracing::instrument(level = "info", skip_all)]
   #[napi]
   pub fn build_asset_graph(&self, env: Env) -> napi::Result<JsObject> {
-    let (deferred, promise) = env.create_deferred()?;
-    let atlaspack = self.atlaspack.get()?;
+    let atlaspack = self.atlaspack.clone();
 
-    thread::spawn(move || {
-      let result = atlaspack.build_asset_graph();
+    // Runs on separate thread
+    env.create_threaded_promise(move || {
+      let atlaspack = atlaspack.get()?;
+      let result = atlaspack.build_asset_graph()?;
 
-      // "deferred.resolve" closure executes on the JavaScript thread.
-      // Errors are returned as a resolved value because they need to be serialized and are
-      // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
-      deferred.resolve(move |env| match result {
-        Ok(asset_graph) => {
-          NapiAtlaspackResult::ok(&env, serialize_asset_graph(&env, &asset_graph)?)
-        }
-        Err(error) => {
-          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
-          NapiAtlaspackResult::error(&env, js_object)
-        }
-      })
-    });
-
-    Ok(promise)
+      // Runs on Javascript Thread
+      Ok(move |env: Env| Ok(serialize_asset_graph(&env, &result)?))
+    })
   }
 
   #[tracing::instrument(level = "info", skip_all)]
   #[napi]
   pub fn respond_to_fs_events(&self, env: Env, options: JsObject) -> napi::Result<JsObject> {
-    let (deferred, promise) = env.create_deferred()?;
     let options = env.from_js_value::<WatchEvents, _>(options)?;
-    let atlaspack = self.atlaspack.get()?;
+    let atlaspack = self.atlaspack.clone();
 
-    thread::spawn(move || {
-      let result = atlaspack.respond_to_fs_events(options);
+    // Runs on separate thread
+    env.create_threaded_promise(move || {
+      let atlaspack = atlaspack.get()?;
+      let result = atlaspack.respond_to_fs_events(options)?;
 
-      deferred.resolve(move |env| match result {
-        Ok(result) => NapiAtlaspackResult::ok(&env, env.get_boolean(result)?),
-        Err(error) => {
-          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
-          NapiAtlaspackResult::error(&env, js_object)
-        }
-      })
-    });
-
-    Ok(promise)
+      // Runs on Javascript Thread
+      Ok(move |_env: Env| Ok(result))
+    })
   }
 
   /// Check that the LMDB database is healthy
