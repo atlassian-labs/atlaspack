@@ -121,11 +121,6 @@ impl Atlaspack {
         .request_tracker
         .write()
         .await
-        .run_request(AssetGraphRequest {})
-        .await?;
-
-      let RequestResult::AssetGraph(asset_graph_request_output) = request_result else {
-        panic!("Something went wrong with the request tracker")
       };
 
       let asset_graph = asset_graph_request_output.graph;
