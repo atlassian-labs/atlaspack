@@ -127,6 +127,7 @@ impl RequireMatcher {
 }
 
 /// Different ways to ignore a `require` call, either using the binding identifier or module-ids.
+#[derive(Clone)]
 pub enum IgnorePattern {
   IdentifierSymbol(Atom),
   ModuleId(Atom),
@@ -206,6 +207,180 @@ impl InlineRequiresOptimizerBuilder {
   }
 }
 
+pub struct InlineRequiresCollector {
+  unresolved_mark: Mark,
+  require_matchers: Vec<RequireMatcher>,
+  module_stack: Vec<ModuleScopeInfo>,
+  require_initializers: Vec<RequireInitializer>,
+  ignore_patterns: Vec<IgnorePattern>,
+  identifier_replacement_visitor: IdentifierReplacementVisitor,
+}
+
+impl InlineRequiresCollector {
+  fn new(
+    unresolved_mark: Mark,
+    require_matchers: Vec<RequireMatcher>,
+    ignore_patterns: Vec<IgnorePattern>,
+  ) -> Self {
+    InlineRequiresCollector {
+      unresolved_mark,
+      require_matchers,
+      ignore_patterns,
+      module_stack: vec![],
+      require_initializers: vec![],
+      identifier_replacement_visitor: Default::default(),
+    }
+  }
+}
+
+impl VisitMut for InlineRequiresCollector {
+  fn visit_mut_expr(&mut self, node: &mut Expr) {
+    match node {
+      Expr::Fn(fn_expr) => {
+        if fn_expr.function.params.len() < 3 {
+          node.visit_mut_children_with(self);
+          return;
+        }
+
+        let (Some(require_ident), Some(module_ident), Some(exports_ident)) = (
+          fn_expr.function.params[0].pat.as_ident(),
+          fn_expr.function.params[1].pat.as_ident(),
+          fn_expr.function.params[2].pat.as_ident(),
+        ) else {
+          node.visit_mut_children_with(self);
+          return;
+        };
+
+        if require_ident.sym == atom!("require")
+          && module_ident.sym == atom!("module")
+          && exports_ident.sym == atom!("exports")
+        {
+          self.module_stack.push(ModuleScopeInfo {
+            require_matcher: RequireMatcher::Id(require_ident.to_id()),
+          });
+          fn_expr.visit_mut_children_with(self);
+          let _ = self.module_stack.pop();
+        }
+      }
+      _ => {
+        node.visit_mut_children_with(self);
+      }
+    }
+  }
+
+  fn visit_mut_var_decl(&mut self, node: &mut VarDecl) {
+    for decl in node.decls.iter_mut() {
+      let mut require_matchers = self.require_matchers.clone();
+      if let Some(module_stack_info) = self.module_stack.last() {
+        require_matchers.push(module_stack_info.require_matcher.clone());
+      }
+
+      if let Some(default_initializer_id) = match_parcel_default_initializer(decl) {
+        // first let the normal replacement run on this expression so we inline the require
+        decl.visit_mut_children_with(self);
+        // get the value we've replaced and carry it forward, we'll inline this value now
+        let Some(init) = &decl.init else {
+          continue;
+        };
+
+        let init = init.as_expr().clone();
+        self
+          .identifier_replacement_visitor
+          .add_replacement(default_initializer_id, init);
+
+        continue;
+      }
+
+      let Some(initializer) = match_require_initializer(
+        decl,
+        self.unresolved_mark,
+        &require_matchers,
+        &self.ignore_patterns,
+      ) else {
+        decl.visit_mut_children_with(self);
+        continue;
+      };
+
+      self.identifier_replacement_visitor.add_replacement(
+        initializer.variable_id.clone(),
+        Expr::Call(initializer.call_expr.clone()),
+      );
+      self.require_initializers.push(initializer);
+    }
+  }
+}
+
+pub struct InlineRequiresReplacer {
+  unresolved_mark: Mark,
+  require_matchers: Vec<RequireMatcher>,
+  ignore_patterns: Vec<IgnorePattern>,
+  identifier_replacement_visitor: IdentifierReplacementVisitor,
+}
+
+impl InlineRequiresReplacer {
+  fn new(
+    unresolved_mark: Mark,
+    require_matchers: Vec<RequireMatcher>,
+    ignore_patterns: Vec<IgnorePattern>,
+    identifier_replacement_visitor: IdentifierReplacementVisitor,
+  ) -> Self {
+    InlineRequiresReplacer {
+      unresolved_mark,
+      require_matchers,
+      ignore_patterns,
+      identifier_replacement_visitor,
+    }
+  }
+}
+
+impl VisitMut for InlineRequiresReplacer {
+  fn visit_mut_expr(&mut self, node: &mut Expr) {
+    self.identifier_replacement_visitor.visit_mut_expr(node);
+    node.visit_mut_children_with(self);
+  }
+
+  fn visit_mut_var_decl(&mut self, node: &mut VarDecl) {
+    node.decls.retain_mut(|decl| {
+      if match_parcel_default_initializer(decl).is_some() {
+        // first let the normal replacement run on this expression so we inline the require
+        decl.visit_mut_children_with(self);
+        // If this variable is actually initialized, then we can remove it
+        return decl.init.is_none();
+      }
+
+      // Only retain if it's not one of Atlaspack's initiatlizers
+      match_require_initializer(
+        decl,
+        self.unresolved_mark,
+        &self.require_matchers,
+        &self.ignore_patterns,
+      )
+      .is_none()
+    })
+  }
+
+  fn visit_mut_stmt(&mut self, stmt: &mut Stmt) {
+    stmt.visit_mut_children_with(self);
+
+    if let Stmt::Decl(Decl::Var(var)) = stmt {
+      if var.decls.is_empty() {
+        *stmt = Stmt::Empty(EmptyStmt {
+          span: Span::default(),
+        });
+      }
+    }
+  }
+
+  fn visit_mut_stmts(&mut self, stmts: &mut Vec<Stmt>) {
+    stmts.visit_mut_children_with(self);
+    stmts.retain(|s| !matches!(s, Stmt::Empty(..)));
+  }
+
+  fn visit_mut_module_items(&mut self, stmts: &mut Vec<ModuleItem>) {
+    stmts.retain(|s| !matches!(s, ModuleItem::Stmt(Stmt::Empty(..))));
+  }
+}
+
 /// Inlines require statements in module definitions.
 ///
 /// Use `InlineRequiresOptimizer::builder()` to construct instances.
@@ -230,10 +405,8 @@ impl InlineRequiresOptimizerBuilder {
 pub struct InlineRequiresOptimizer {
   unresolved_mark: Mark,
   require_matchers: Vec<RequireMatcher>,
-  module_stack: Vec<ModuleScopeInfo>,
   require_initializers: Vec<RequireInitializer>,
   ignore_patterns: Vec<IgnorePattern>,
-  identifier_replacement_visitor: IdentifierReplacementVisitor,
 }
 
 impl Default for InlineRequiresOptimizer {
@@ -242,9 +415,7 @@ impl Default for InlineRequiresOptimizer {
       unresolved_mark: Default::default(),
       require_matchers: default_require_matchers(),
       ignore_patterns: default_ignore_patterns(),
-      module_stack: vec![],
       require_initializers: vec![],
-      identifier_replacement_visitor: Default::default(),
     }
   }
 }
@@ -261,112 +432,113 @@ impl InlineRequiresOptimizer {
 }
 
 impl VisitMut for InlineRequiresOptimizer {
-  fn visit_mut_expr(&mut self, n: &mut Expr) {
-    self.identifier_replacement_visitor.visit_mut_expr(n);
-
-    match n {
-      Expr::Fn(fn_expr) => {
-        if fn_expr.function.params.len() < 3 {
-          n.visit_mut_children_with(self);
-          return;
-        }
-        let (Some(require_ident), Some(module_ident), Some(exports_ident)) = (
-          fn_expr.function.params[0].pat.as_ident(),
-          fn_expr.function.params[1].pat.as_ident(),
-          fn_expr.function.params[2].pat.as_ident(),
-        ) else {
-          n.visit_mut_children_with(self);
-          return;
-        };
-
-        if require_ident.sym == atom!("require")
-          && module_ident.sym == atom!("module")
-          && exports_ident.sym == atom!("exports")
-        {
-          self.module_stack.push(ModuleScopeInfo {
-            require_matcher: RequireMatcher::Id(require_ident.to_id()),
-          });
-          fn_expr.visit_mut_children_with(self);
-          let _ = self.module_stack.pop();
-        }
-      }
-      _ => {
-        n.visit_mut_children_with(self);
-      }
-    }
-  }
-
-  fn visit_mut_var_decl(&mut self, n: &mut VarDecl) {
-    n.decls.retain_mut(|decl| {
-      let mut require_matchers = self.require_matchers.clone();
-      if let Some(module_stack_info) = self.module_stack.last() {
-        require_matchers.push(module_stack_info.require_matcher.clone());
-      }
-
-      if let Some(default_initializer_id) = match_parcel_default_initializer(decl) {
-        // first let the normal replacement run on this expression so we inline the require
-        decl.visit_mut_children_with(self);
-        // get the value we've replaced and carry it forward, we'll inline this value now
-        let Some(init) = &decl.init else {
-          return true;
-        };
-
-        let init = init.as_expr().clone();
-        self
-          .identifier_replacement_visitor
-          .add_replacement(default_initializer_id, init);
-
-        return false;
-      }
-
-      let Some(initializer) = match_require_initializer(
-        decl,
-        self.unresolved_mark,
-        &require_matchers,
-        &self.ignore_patterns,
-      ) else {
-        decl.visit_mut_children_with(self);
-        return true;
-      };
-
-      self.identifier_replacement_visitor.add_replacement(
-        initializer.variable_id.clone(),
-        Expr::Call(initializer.call_expr.clone()),
-      );
-      self.require_initializers.push(initializer);
-
-      false
-    });
-  }
-
-  fn visit_mut_stmt(&mut self, s: &mut Stmt) {
-    s.visit_mut_children_with(self);
-
-    if let Stmt::Decl(Decl::Var(var)) = s {
-      if var.decls.is_empty() {
-        *s = Stmt::Empty(EmptyStmt {
-          span: Span::default(),
-        });
-      }
-    }
-  }
-
-  fn visit_mut_stmts(&mut self, stmts: &mut Vec<Stmt>) {
-    stmts.visit_mut_children_with(self);
-    stmts.retain(|s| !matches!(s, Stmt::Empty(..)));
-  }
-
   fn visit_mut_module_items(&mut self, stmts: &mut Vec<ModuleItem>) {
-    stmts.visit_mut_children_with(self);
-    stmts.retain(|s| !matches!(s, ModuleItem::Stmt(Stmt::Empty(..))));
+    let mut collector_visitor = InlineRequiresCollector::new(
+      self.unresolved_mark,
+      self.require_matchers.clone(),
+      self.ignore_patterns.clone(),
+    );
+
+    stmts.visit_mut_children_with(&mut collector_visitor);
+
+    let mut replacer_visitor = InlineRequiresReplacer::new(
+      collector_visitor.unresolved_mark,
+      collector_visitor.require_matchers,
+      collector_visitor.ignore_patterns,
+      collector_visitor.identifier_replacement_visitor,
+    );
+
+    self.require_initializers = collector_visitor.require_initializers;
+
+    // Needs to start with self to determine whether to retain module items
+    stmts.visit_mut_with(&mut replacer_visitor);
   }
 }
 
 #[cfg(test)]
 mod tests {
   use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
+  use pretty_assertions::assert_eq;
 
   use super::*;
+
+  #[test]
+  fn it_inlines_require_statements_that_are_declared_later() {
+    let code = r#"
+parcelRegister("k4tEj", function(module, exports) {
+  Object.defineProperty(module.exports, "InternSet", {
+    enumerable: true,
+    get: function() {
+        return $g34Jm.InternSet;
+    }
+  });
+
+  var $g34Jm = require("internmap");
+});
+    "#
+    .trim();
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+parcelRegister("k4tEj", function(module, exports) {
+  Object.defineProperty(module.exports, "InternSet", {
+    enumerable: true,
+    get: function() {
+        return (0, require('internmap')).InternSet;
+    }
+  });
+});
+    "#
+    .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
+
+  #[test]
+  fn it_respects_variables_across_scopes() {
+    let code = r#"
+parcelRegister("k4tEj", function(module, exports) {
+  Object.defineProperty(module.exports, "InternSet", {
+    enumerable: true,
+    get: function() {
+        return $g34Jm.InternSet;
+    }
+  });
+
+  var $g34Jm = require("internmap");
+});
+
+parcelRegister("12345", function(module, exports) {
+  var testVar = $g34Jm.otherKey;
+  console.log(testVar);
+});
+    "#
+    .trim();
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+parcelRegister("k4tEj", function(module, exports) {
+  Object.defineProperty(module.exports, "InternSet", {
+    enumerable: true,
+    get: function() {
+        return (0, require('internmap')).InternSet;
+    }
+  });
+});
+
+parcelRegister("12345", function(module, exports) {
+  var testVar = $g34Jm.otherKey;
+  console.log(testVar);
+});
+    "#
+    .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
 
   #[test]
   fn it_inlines_require_statements_in_simple_commonjs_modules() {
