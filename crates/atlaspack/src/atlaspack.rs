@@ -17,6 +17,15 @@ use crate::plugins::{config_plugins::ConfigPlugins, PluginsRef};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::RequestTracker;
 use crate::requests::{AssetGraphRequest, RequestResult};
+use crate::WatchEvents;
+
+pub struct AtlaspackInitOptions {
+  pub db: Arc<DatabaseWriter>,
+  pub fs: Option<FileSystemRef>,
+  pub options: AtlaspackOptions,
+  pub package_manager: Option<PackageManagerRef>,
+  pub rpc: RpcFactoryRef,
+}
 
 pub struct Atlaspack {
   pub db: Arc<DatabaseWriter>,
@@ -34,11 +43,13 @@ pub struct Atlaspack {
 
 impl Atlaspack {
   pub fn new(
-    db: Arc<DatabaseWriter>,
-    fs: Option<FileSystemRef>,
-    options: AtlaspackOptions,
-    package_manager: Option<PackageManagerRef>,
-    rpc: RpcFactoryRef,
+    AtlaspackInitOptions {
+      db,
+      fs,
+      options,
+      package_manager,
+      rpc,
+    }: AtlaspackInitOptions,
   ) -> Result<Self, anyhow::Error> {
     let fs = fs.unwrap_or_else(|| Arc::new(OsFileSystem));
     let project_root = infer_project_root(Arc::clone(&fs), options.entries.clone())?;
@@ -129,6 +140,13 @@ impl Atlaspack {
     })
   }
 
+  pub fn respond_to_fs_events(&self, _events: WatchEvents) -> anyhow::Result<bool> {
+    self.runtime.block_on(async move {
+      // TODO: For now just indicate that build must be triggered
+      Ok(true)
+    })
+  }
+
   fn commit_assets(&self, assets: Vec<&AssetGraphNode>) -> anyhow::Result<()> {
     let mut txn = self.db.environment().write_txn()?;
 
@@ -183,13 +201,13 @@ mod tests {
       .to_string(),
     );
 
-    let atlaspack = Atlaspack::new(
-      db.clone(),
-      Some(Arc::new(fs)),
-      AtlaspackOptions::default(),
-      None,
-      rpc(),
-    )?;
+    let atlaspack = Atlaspack::new(AtlaspackInitOptions {
+      db: db.clone(),
+      fs: Some(Arc::new(fs)),
+      options: AtlaspackOptions::default(),
+      package_manager: None,
+      rpc: rpc(),
+    })?;
 
     let assets_names = ["foo", "bar", "baz"];
     let assets = assets_names

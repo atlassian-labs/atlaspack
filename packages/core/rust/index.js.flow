@@ -9,6 +9,15 @@ import type {
 
 declare export var init: void | (() => void);
 
+export type WatchEventType = 'create' | 'update' | 'delete';
+
+export type WatchEvent = {|
+  path: string,
+  kind: WatchEventType,
+|}
+
+export type WatchEvents = Array<WatchEvent>;
+
 export type Transferable = {||};
 
 export type JsCallable<Args: $ReadOnlyArray<mixed>, Return> = (
@@ -55,17 +64,15 @@ export type AtlaspackNapiOptions = {|
   |},
   packageManager?: PackageManager,
   threads?: number,
-|};
-
-export type AtlaspackBuildOptions = {|
   registerWorker: (channel: Transferable) => void | Promise<void>,
+  releaseWorkers: () => void | Promise<void>,
 |};
 
 declare export class AtlaspackNapi {
   static create(options: AtlaspackNapiOptions, lmdb: mixed): AtlaspackNapi;
   nodeWorkerCount: number;
-  build(options: AtlaspackBuildOptions): Promise<void>;
-  buildAssetGraph(options: AtlaspackBuildOptions): Promise<any>;
+  buildAssetGraph(): Promise<any>;
+  respondToFsEvents(events: WatchEvents): boolean;
   static defaultThreadCount(): number;
   testingTempFsReadToString(path: string): string;
   testingTempFsIsDir(path: string): boolean;

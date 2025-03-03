@@ -7,6 +7,7 @@ import {
 } from '@atlaspack/rust';
 import {workerPool} from './WorkerPool';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
+import type {Event} from '@parcel/watcher';
 
 export type AtlaspackV3Options = {|
   fs?: AtlaspackNapiOptions['fs'],
@@ -23,6 +24,7 @@ export type AtlaspackV3Options = {|
 
 export class AtlaspackV3 {
   _internal: AtlaspackNapi;
+  _workerIds: any[];
 
   constructor({
     fs,
@@ -38,6 +40,7 @@ export class AtlaspackV3 {
     options.defaultTargetOptions.engines =
       options.defaultTargetOptions.engines || {};
 
+    this._workerIds = [];
     this._internal = AtlaspackNapi.create(
       {
         fs,
@@ -45,29 +48,27 @@ export class AtlaspackV3 {
         packageManager,
         threads,
         options,
+        registerWorker: (tx_worker) => {
+          // $FlowFixMe
+          const workerId = workerPool.registerWorker(tx_worker);
+          this._workerIds.push(workerId);
+        },
+        releaseWorkers: () => {
+          // In the integration tests we keep the workers alive so they don't need to
+          // be re-initialized for the next test
+          if (process.env.ATLASPACK_BUILD_ENV === 'test') {
+            workerPool.releaseWorkers(this._workerIds);
+          } else {
+            workerPool.shutdown();
+          }
+        },
       },
       lmdb,
     );
   }
 
   async buildAssetGraph(): Promise<any> {
-    const workerIds = [];
-
-    let [graph, error] = await this._internal.buildAssetGraph({
-      registerWorker: (tx_worker) => {
-        // $FlowFixMe
-        const workerId = workerPool.registerWorker(tx_worker);
-        workerIds.push(workerId);
-      },
-    });
-
-    // In the integration tests we keep the workers alive so they don't need to
-    // be re-initialized for the next test
-    if (process.env.ATLASPACK_BUILD_ENV === 'test') {
-      workerPool.releaseWorkers(workerIds);
-    } else {
-      workerPool.shutdown();
-    }
+    let [graph, error] = await this._internal.buildAssetGraph();
 
     if (error !== null) {
       throw new ThrowableDiagnostic({
@@ -76,5 +77,14 @@ export class AtlaspackV3 {
     }
 
     return graph;
+  }
+
+  respondToFsEvents(events: Array<Event>): boolean {
+    return this._internal.respondToFsEvents(
+      events.map((event) => ({
+        path: event.path,
+        kind: event.type,
+      })),
+    );
   }
 }
