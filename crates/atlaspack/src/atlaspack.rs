@@ -53,15 +53,17 @@ impl Atlaspack {
 
     let rpc_worker = rpc.start()?;
 
-    let (config, _files) =
-      AtlaspackRcConfigLoader::new(Arc::clone(&fs), Arc::clone(&package_manager)).load(
-        &project_root,
-        LoadConfigOptions {
-          additional_reporters: vec![], // TODO
-          config: options.config.as_deref(),
-          fallback_config: options.fallback_config.as_deref(),
-        },
-      )?;
+    let rc_config_loader =
+      AtlaspackRcConfigLoader::new(Arc::clone(&fs), Arc::clone(&package_manager));
+
+    let (config, _files) = rc_config_loader.load(
+      &project_root,
+      LoadConfigOptions {
+        additional_reporters: vec![], // TODO
+        config: options.config.as_deref(),
+        fallback_config: options.fallback_config.as_deref(),
+      },
+    )?;
 
     let config_loader = Arc::new(ConfigLoader {
       fs: Arc::clone(&fs),
@@ -111,8 +113,6 @@ impl Atlaspack {
     })
   }
 }
-
-pub struct BuildResult;
 
 impl Atlaspack {
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
@@ -175,6 +175,18 @@ mod tests {
     // TODO: Create overlay fs for integration test
     let db = Arc::new(create_db()?);
     let fs = InMemoryFileSystem::default();
+
+    fs.write_file(
+      &PathBuf::from("/.parcelrc"),
+      r#"
+      {
+        "bundler": "",
+        "namers": [""],
+        "resolvers": [""],
+      }
+    "#
+      .to_string(),
+    );
 
     let atlaspack = Atlaspack::new(
       db.clone(),
