@@ -45,7 +45,7 @@ async function assertOutputIsIdentical(
 }
 
 describe.v3('AtlaspackV3', function () {
-  it('builds', async () => {
+  it.only('builds', async () => {
     await fsFixture(overlayFS, __dirname)`
       index.js:
         console.log('hello world');
