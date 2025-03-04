@@ -269,7 +269,7 @@ impl VisitMut for InlineRequiresCollector {
   }
 
   fn visit_mut_var_decl(&mut self, node: &mut VarDecl) {
-    for decl in node.decls.iter_mut() {
+    node.decls.retain_mut(|decl| {
       let mut require_matchers = self.require_matchers.clone();
       if let Some(module_stack_info) = self.module_stack.last() {
         require_matchers.push(module_stack_info.require_matcher.clone());
@@ -280,7 +280,7 @@ impl VisitMut for InlineRequiresCollector {
         decl.visit_mut_children_with(self);
         // get the value we've replaced and carry it forward, we'll inline this value now
         let Some(init) = &decl.init else {
-          continue;
+          return true;
         };
 
         let init = init.as_expr().clone();
@@ -288,7 +288,7 @@ impl VisitMut for InlineRequiresCollector {
           .identifier_replacement_visitor
           .add_replacement(default_initializer_id, init);
 
-        continue;
+        return false;
       }
 
       let Some(initializer) = match_require_initializer(
@@ -298,7 +298,7 @@ impl VisitMut for InlineRequiresCollector {
         &self.ignore_patterns,
       ) else {
         decl.visit_mut_children_with(self);
-        continue;
+        return true;
       };
 
       self.identifier_replacement_visitor.add_replacement(
@@ -306,28 +306,19 @@ impl VisitMut for InlineRequiresCollector {
         Expr::Call(initializer.call_expr.clone()),
       );
       self.require_initializers.push(initializer);
-    }
+
+      false
+    });
   }
 }
 
 pub struct InlineRequiresReplacer {
-  unresolved_mark: Mark,
-  require_matchers: Vec<RequireMatcher>,
-  ignore_patterns: Vec<IgnorePattern>,
   identifier_replacement_visitor: IdentifierReplacementVisitor,
 }
 
 impl InlineRequiresReplacer {
-  fn new(
-    unresolved_mark: Mark,
-    require_matchers: Vec<RequireMatcher>,
-    ignore_patterns: Vec<IgnorePattern>,
-    identifier_replacement_visitor: IdentifierReplacementVisitor,
-  ) -> Self {
+  fn new(identifier_replacement_visitor: IdentifierReplacementVisitor) -> Self {
     InlineRequiresReplacer {
-      unresolved_mark,
-      require_matchers,
-      ignore_patterns,
       identifier_replacement_visitor,
     }
   }
@@ -337,26 +328,6 @@ impl VisitMut for InlineRequiresReplacer {
   fn visit_mut_expr(&mut self, node: &mut Expr) {
     self.identifier_replacement_visitor.visit_mut_expr(node);
     node.visit_mut_children_with(self);
-  }
-
-  fn visit_mut_var_decl(&mut self, node: &mut VarDecl) {
-    node.decls.retain_mut(|decl| {
-      if match_parcel_default_initializer(decl).is_some() {
-        // first let the normal replacement run on this expression so we inline the require
-        decl.visit_mut_children_with(self);
-        // If this variable is actually initialized, then we can remove it
-        return decl.init.is_none();
-      }
-
-      // Only retain if it's not one of Atlaspack's initiatlizers
-      match_require_initializer(
-        decl,
-        self.unresolved_mark,
-        &self.require_matchers,
-        &self.ignore_patterns,
-      )
-      .is_none()
-    })
   }
 
   fn visit_mut_stmt(&mut self, stmt: &mut Stmt) {
@@ -377,6 +348,7 @@ impl VisitMut for InlineRequiresReplacer {
   }
 
   fn visit_mut_module_items(&mut self, stmts: &mut Vec<ModuleItem>) {
+    stmts.visit_mut_children_with(self);
     stmts.retain(|s| !matches!(s, ModuleItem::Stmt(Stmt::Empty(..))));
   }
 }
@@ -441,16 +413,11 @@ impl VisitMut for InlineRequiresOptimizer {
 
     stmts.visit_mut_children_with(&mut collector_visitor);
 
-    let mut replacer_visitor = InlineRequiresReplacer::new(
-      collector_visitor.unresolved_mark,
-      collector_visitor.require_matchers,
-      collector_visitor.ignore_patterns,
-      collector_visitor.identifier_replacement_visitor,
-    );
+    let mut replacer_visitor =
+      InlineRequiresReplacer::new(collector_visitor.identifier_replacement_visitor);
 
     self.require_initializers = collector_visitor.require_initializers;
 
-    // Needs to start with self to determine whether to retain module items
     stmts.visit_mut_with(&mut replacer_visitor);
   }
 }
@@ -466,14 +433,14 @@ mod tests {
   fn it_inlines_require_statements_that_are_declared_later() {
     let code = r#"
 parcelRegister("k4tEj", function(module, exports) {
-  Object.defineProperty(module.exports, "InternSet", {
-    enumerable: true,
-    get: function() {
-        return $g34Jm.InternSet;
-    }
-  });
+    Object.defineProperty(module.exports, "InternSet", {
+        enumerable: true,
+        get: function() {
+            return $g34Jm.InternSet;
+        }
+    });
 
-  var $g34Jm = require("internmap");
+    var $g34Jm = require("internmap");
 });
     "#
     .trim();
@@ -484,12 +451,12 @@ parcelRegister("k4tEj", function(module, exports) {
 
     let expected_output = r#"
 parcelRegister("k4tEj", function(module, exports) {
-  Object.defineProperty(module.exports, "InternSet", {
-    enumerable: true,
-    get: function() {
-        return (0, require('internmap')).InternSet;
-    }
-  });
+    Object.defineProperty(module.exports, "InternSet", {
+        enumerable: true,
+        get: function() {
+            return (0, require("internmap")).InternSet;
+        }
+    });
 });
     "#
     .trim();
@@ -500,19 +467,19 @@ parcelRegister("k4tEj", function(module, exports) {
   fn it_respects_variables_across_scopes() {
     let code = r#"
 parcelRegister("k4tEj", function(module, exports) {
-  Object.defineProperty(module.exports, "InternSet", {
-    enumerable: true,
-    get: function() {
-        return $g34Jm.InternSet;
-    }
-  });
+    Object.defineProperty(module.exports, "InternSet", {
+        enumerable: true,
+        get: function() {
+            return $g34Jm.InternSet;
+        }
+    });
 
-  var $g34Jm = require("internmap");
+    var $g34Jm = require("internmap");
 });
 
 parcelRegister("12345", function(module, exports) {
-  var testVar = $g34Jm.otherKey;
-  console.log(testVar);
+    var testVar = $g34Jm.otherKey;
+    console.log(testVar);
 });
     "#
     .trim();
@@ -523,17 +490,16 @@ parcelRegister("12345", function(module, exports) {
 
     let expected_output = r#"
 parcelRegister("k4tEj", function(module, exports) {
-  Object.defineProperty(module.exports, "InternSet", {
-    enumerable: true,
-    get: function() {
-        return (0, require('internmap')).InternSet;
-    }
-  });
+    Object.defineProperty(module.exports, "InternSet", {
+        enumerable: true,
+        get: function() {
+            return (0, require("internmap")).InternSet;
+        }
+    });
 });
-
 parcelRegister("12345", function(module, exports) {
-  var testVar = $g34Jm.otherKey;
-  console.log(testVar);
+    var testVar = $g34Jm.otherKey;
+    console.log(testVar);
 });
     "#
     .trim();
