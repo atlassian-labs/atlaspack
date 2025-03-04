@@ -130,8 +130,7 @@ impl AtlaspackNapi {
   pub fn build_asset_graph(&self, env: Env) -> napi::Result<JsObject> {
     let atlaspack = self.atlaspack.clone();
 
-    // Runs on separate thread
-    env.create_threaded_promise(move || {
+    env.spawn_thread(move || {
       let atlaspack = atlaspack.get()?;
       let result = atlaspack.build_asset_graph()?;
 
@@ -147,7 +146,7 @@ impl AtlaspackNapi {
     let atlaspack = self.atlaspack.clone();
 
     // Runs on separate thread
-    env.create_threaded_promise(move || {
+    env.spawn_thread(move || {
       let atlaspack = atlaspack.get()?;
       let result = atlaspack.respond_to_fs_events(options)?;
 

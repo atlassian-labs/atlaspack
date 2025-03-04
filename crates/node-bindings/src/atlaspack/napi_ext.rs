@@ -1,29 +1,18 @@
-use std::sync::Arc;
 use std::thread;
 
 use atlaspack::AtlaspackError;
-use napi::bindgen_prelude::FromNapiValue;
 use napi::bindgen_prelude::ToNapiValue;
-use napi::threadsafe_function::ErrorStrategy;
-use napi::threadsafe_function::ThreadSafeCallContext;
-use napi::threadsafe_function::ThreadsafeFunction;
-use napi::threadsafe_function::ThreadsafeFunctionCallMode;
 use napi::Env;
-use napi::JsFunction;
 use napi::JsObject;
 use napi::JsUnknown;
-use once_cell::sync::OnceCell;
 
 pub trait NapiExt {
   fn tuple_ok(&self, value: impl ToNapiValue) -> napi::Result<JsObject>;
   fn tuple_err(&self, error: impl ToNapiValue) -> napi::Result<JsObject>;
-  fn tuple_err_string(&self, error: &anyhow::Error) -> napi::Result<JsObject>;
-  fn create_threaded_promise<ThreadFunc, NapiFunc, NapiRet>(
-    &self,
-    func: ThreadFunc,
-  ) -> napi::Result<JsObject>
+  fn atlaspack_err(&self, error: &anyhow::Error) -> napi::Result<JsUnknown>;
+  fn spawn_thread<ThreadFunc, NapiFunc, NapiRet>(&self, func: ThreadFunc) -> napi::Result<JsObject>
   where
-    ThreadFunc: FnOnce() -> anyhow::Result<NapiFunc> + Send + 'static,
+    ThreadFunc: FnOnce() -> napi::Result<NapiFunc> + Send + 'static,
     NapiFunc: FnOnce(Env) -> napi::Result<NapiRet> + Send + 'static,
     NapiRet: ToNapiValue;
 }
@@ -52,75 +41,26 @@ impl NapiExt for Env {
   }
 
   /// This casts an error to a string and returns it as a JavaScript tuple
-  fn tuple_err_string(&self, error: &anyhow::Error) -> napi::Result<JsObject> {
-    self.tuple_err(self.to_js_value(&AtlaspackError::from(error)))
+  fn atlaspack_err(&self, error: &anyhow::Error) -> napi::Result<JsUnknown> {
+    self.to_js_value(&AtlaspackError::from(error))
   }
 
-  /// Creates a system thread and returns a Promise back to JavaScript.
-  /// Captures errors and returns them as a JavaScript tuple
-  fn create_threaded_promise<ThreadFunc, NapiFunc, NapiRet>(
-    &self,
-    func: ThreadFunc,
-  ) -> napi::Result<JsObject>
+  fn spawn_thread<ThreadFunc, NapiFunc, NapiRet>(&self, func: ThreadFunc) -> napi::Result<JsObject>
   where
-    ThreadFunc: FnOnce() -> anyhow::Result<NapiFunc> + Send + 'static,
+    ThreadFunc: FnOnce() -> napi::Result<NapiFunc> + Send + 'static,
     NapiFunc: FnOnce(Env) -> napi::Result<NapiRet> + Send + 'static,
     NapiRet: ToNapiValue,
   {
-    // Captures the executor function of Promise creation as a threadsafe function
-    //   new Promise(resolve => {})
-    //               -------  <- this bit
-    let resolve_fn = Arc::new(OnceCell::new());
+    let (deferred, promise) = self.create_deferred()?;
 
-    // This is the callback supplied to `new Promise(executor)`
-    let executor = self.create_function_from_closure("Promise::executor", {
-      let resolve_fn = resolve_fn.clone();
-      move |ctx| {
-        let resolve: ThreadsafeFunction<MapJsParams, ErrorStrategy::Fatal> = ctx
-          .get::<JsFunction>(0)?
-          .create_threadsafe_function(0, |ctx: ThreadSafeCallContext<MapJsParams>| {
-            Ok((ctx.value)(&ctx.env)?)
-          })?;
-        resolve_fn.set(resolve).ok();
-        Ok(())
+    thread::spawn(move || match func() {
+      Ok(napi_func) => {
+        deferred.resolve(|env: Env| match napi_func(env) {
+          Ok(result) => Ok(env.tuple_ok(result)),
+          Err(error) => Ok(env.tuple_err(error)),
+        });
       }
-    })?;
-
-    // Construct a new Promise
-    let promise_ctor: JsFunction = self.get_global()?.get_named_property("Promise")?;
-    let promise = promise_ctor.new_instance(&[&executor])?;
-
-    // Spawn a thread to execute the off-thread work
-    // then calls the Promise.resolve function (threadsafe).
-    // This casts the value to the result tuple before returning to JavaScript
-    thread::spawn(move || {
-      // Call the function on the new thread
-      let result = func();
-
-      // Process the return value on the JS thread
-      resolve_fn.wait().call(
-        Box::new(move |env| match result {
-          Ok(value) => {
-            // Execute the function passed in by the caller
-            let data = match value(*env) {
-              Ok(data) => data,
-              Err(error) => {
-                return Ok(vec![env.tuple_err(env.create_error(error))?.into_unknown()])
-              }
-            };
-
-            // Safety: value is checked as being a ToNapiValue on the caller
-            let js_value = unsafe {
-              JsUnknown::from_napi_value(env.raw(), NapiRet::to_napi_value(env.raw(), data)?)?
-            };
-
-            Ok(vec![env.tuple_ok(js_value)?.into_unknown()])
-          }
-          // Capture errors and and return them as string values
-          Err(err) => Ok(vec![env.tuple_err_string(&err)?.into_unknown()]),
-        }),
-        ThreadsafeFunctionCallMode::NonBlocking,
-      );
+      Err(error) => deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
     });
 
     Ok(promise)
