@@ -64,14 +64,17 @@ export type AtlaspackNapiOptions = {|
   |},
   packageManager?: PackageManager,
   threads?: number,
+|};
+
+export type AtlaspackBuildOptions = {|
   registerWorker: (channel: Transferable) => void | Promise<void>,
-  releaseWorkers: () => void | Promise<void>,
 |};
 
 declare export class AtlaspackNapi {
   static create(options: AtlaspackNapiOptions, lmdb: mixed): AtlaspackNapi;
   nodeWorkerCount: number;
-  buildAssetGraph(): Promise<any>;
+  build(options: AtlaspackBuildOptions): Promise<void>;
+  buildAssetGraph(options: AtlaspackBuildOptions): Promise<any>;
   respondToFsEvents(events: WatchEvents): boolean;
   static defaultThreadCount(): number;
   testingTempFsReadToString(path: string): string;

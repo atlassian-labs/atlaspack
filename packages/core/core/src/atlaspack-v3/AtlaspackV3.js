@@ -48,27 +48,29 @@ export class AtlaspackV3 {
         packageManager,
         threads,
         options,
-        registerWorker: (tx_worker) => {
-          // $FlowFixMe
-          const workerId = workerPool.registerWorker(tx_worker);
-          this._workerIds.push(workerId);
-        },
-        releaseWorkers: () => {
-          // In the integration tests we keep the workers alive so they don't need to
-          // be re-initialized for the next test
-          if (process.env.ATLASPACK_BUILD_ENV === 'test') {
-            workerPool.releaseWorkers(this._workerIds);
-          } else {
-            workerPool.shutdown();
-          }
-        },
       },
       lmdb,
     );
   }
 
   async buildAssetGraph(): Promise<any> {
-    let [graph, error] = await this._internal.buildAssetGraph();
+    const workerIds = [];
+
+    let [graph, error] = await this._internal.buildAssetGraph({
+      registerWorker: (tx_worker) => {
+        // $FlowFixMe
+        const workerId = workerPool.registerWorker(tx_worker);
+        workerIds.push(workerId);
+      },
+    });
+
+    // In the integration tests we keep the workers alive so they don't need to
+    // be re-initialized for the next test
+    if (process.env.ATLASPACK_BUILD_ENV === 'test') {
+      workerPool.releaseWorkers(workerIds);
+    } else {
+      workerPool.shutdown();
+    }
 
     if (error !== null) {
       throw new ThrowableDiagnostic({

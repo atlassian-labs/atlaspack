@@ -20,12 +20,6 @@ export const isTTY: any | boolean | true =
 let stdout = process.stdout;
 let stderr = process.stderr;
 
-// We pipe worker output to stdout and stderr. If you have
-// more than 10 threads then this causes node to put up
-// warnings indicating we are exceeding the max listener count
-stdout.setMaxListeners(100);
-stderr.setMaxListeners(100);
-
 // Some state so we clear the output properly
 let lineCount = 0;
 let errorLineCount = 0;

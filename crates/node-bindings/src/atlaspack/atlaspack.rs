@@ -2,8 +2,10 @@ use core::str;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use std::thread;
 
 use anyhow::anyhow;
+use atlaspack::AtlaspackError;
 use atlaspack::AtlaspackInitOptions;
 use atlaspack::WatchEvents;
 use lmdb_js_lite::writer::DatabaseWriter;
@@ -20,11 +22,16 @@ use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
 
-use super::atlaspack_cell::AtlaspackCell;
+use super::atlaspack_lazy::AtlaspackLazy;
 use super::file_system_napi::FileSystemNapi;
-use super::napi_ext::NapiExt;
+use super::napi_result::NapiAtlaspackResult;
 use super::package_manager_napi::PackageManagerNapi;
 use super::serialize_asset_graph::serialize_asset_graph;
+
+#[napi(object)]
+pub struct AtlaspackNapiBuildOptions {
+  pub register_worker: JsFunction,
+}
 
 #[napi(object)]
 pub struct AtlaspackNapiOptions {
@@ -33,15 +40,13 @@ pub struct AtlaspackNapiOptions {
   pub options: JsObject,
   pub package_manager: Option<JsObject>,
   pub threads: Option<u32>,
-  pub register_worker: JsFunction,
-  pub release_workers: JsFunction,
 }
 
 #[napi]
 pub struct AtlaspackNapi {
   pub node_worker_count: u32,
-  atlaspack: AtlaspackCell,
-  release_workers: JsFunction,
+  atlaspack: AtlaspackLazy,
+  tx_worker: Sender<NodejsWorker>,
 }
 
 // Refer to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length
@@ -93,17 +98,7 @@ impl AtlaspackNapi {
     let rpc = Arc::new(rpc_host_nodejs);
     let options = env.from_js_value(napi_options.options)?;
 
-    // Initialize Nodejs worker threads
-    for _ in 0..node_worker_count {
-      let transferable = JsTransferable::new(tx_worker.clone());
-
-      napi_options
-        .register_worker
-        .call1::<JsTransferable<Sender<NodejsWorker>>, JsUnknown>(transferable)?;
-    }
-
-    // Initialize Atlaspack on another thread
-    let atlaspack = AtlaspackCell::new(AtlaspackInitOptions {
+    let atlaspack = AtlaspackLazy::new(AtlaspackInitOptions {
       db,
       fs,
       options,
@@ -114,45 +109,89 @@ impl AtlaspackNapi {
     Ok(Self {
       node_worker_count: node_worker_count as u32,
       atlaspack,
-      release_workers: napi_options.release_workers,
+      tx_worker,
     })
-  }
-
-  /// Shutdown Atlaspack and release worker threads
-  #[napi]
-  pub fn shutdown(&self, _env: Env) -> napi::Result<()> {
-    self.release_workers.call0::<JsUnknown>()?;
-    Ok(())
   }
 
   #[tracing::instrument(level = "info", skip_all)]
   #[napi]
-  pub fn build_asset_graph(&self, env: Env) -> napi::Result<JsObject> {
-    let atlaspack = self.atlaspack.clone();
+  pub fn build_asset_graph(
+    &self,
+    env: Env,
+    options: AtlaspackNapiBuildOptions,
+  ) -> napi::Result<JsObject> {
+    let (deferred, promise) = env.create_deferred()?;
 
-    env.spawn_thread(move || {
-      let atlaspack = atlaspack.get()?;
-      let result = atlaspack.build_asset_graph()?;
+    self.register_workers(&options)?;
 
-      // Runs on Javascript Thread
-      Ok(move |env: Env| Ok(serialize_asset_graph(&env, &result)?))
-    })
+    thread::spawn({
+      let atlaspack = self.atlaspack.clone();
+      move || {
+        let atlaspack = match atlaspack.get() {
+          Ok(atlaspack) => atlaspack,
+          Err(error) => return deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
+        };
+
+        let result = atlaspack.build_asset_graph();
+
+        // "deferred.resolve" closure executes on the JavaScript thread.
+        // Errors are returned as a resolved value because they need to be serialized and are
+        // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
+        deferred.resolve(move |env| match result {
+          Ok(asset_graph) => {
+            NapiAtlaspackResult::ok(&env, serialize_asset_graph(&env, &asset_graph)?)
+          }
+          Err(error) => {
+            let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+            NapiAtlaspackResult::error(&env, js_object)
+          }
+        })
+      }
+    });
+
+    Ok(promise)
   }
 
   #[tracing::instrument(level = "info", skip_all)]
   #[napi]
   pub fn respond_to_fs_events(&self, env: Env, options: JsObject) -> napi::Result<JsObject> {
+    let (deferred, promise) = env.create_deferred()?;
     let options = env.from_js_value::<WatchEvents, _>(options)?;
-    let atlaspack = self.atlaspack.clone();
 
-    // Runs on separate thread
-    env.spawn_thread(move || {
-      let atlaspack = atlaspack.get()?;
-      let result = atlaspack.respond_to_fs_events(options)?;
+    thread::spawn({
+      let atlaspack = self.atlaspack.clone();
+      move || {
+        let atlaspack = match atlaspack.get() {
+          Ok(atlaspack) => atlaspack,
+          Err(error) => return deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
+        };
 
-      // Runs on Javascript Thread
-      Ok(move |_env: Env| Ok(result))
-    })
+        let result = atlaspack.respond_to_fs_events(options);
+
+        deferred.resolve(move |env| match result {
+          Ok(should_rebuild) => NapiAtlaspackResult::ok(&env, should_rebuild),
+          Err(error) => {
+            let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+            NapiAtlaspackResult::error(&env, js_object)
+          }
+        })
+      }
+    });
+
+    Ok(promise)
+  }
+
+  #[tracing::instrument(level = "info", skip_all)]
+  fn register_workers(&self, options: &AtlaspackNapiBuildOptions) -> napi::Result<()> {
+    for _ in 0..self.node_worker_count {
+      let transferable = JsTransferable::new(self.tx_worker.clone());
+
+      options
+        .register_worker
+        .call1::<JsTransferable<Sender<NodejsWorker>>, JsUnknown>(transferable)?;
+    }
+
+    Ok(())
   }
 
   /// Check that the LMDB database is healthy
