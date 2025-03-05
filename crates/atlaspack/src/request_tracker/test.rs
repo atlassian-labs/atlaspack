@@ -49,7 +49,10 @@ async fn should_reuse_previously_run_request() {
   assert_eq!(result[2], "C");
 }
 
+// SKIP: Always run requests / don't cache anything
+// https://github.com/atlassian-labs/atlaspack/pull/364
 #[tokio::test(flavor = "multi_thread")]
+#[ignore]
 async fn should_run_request_once() {
   let mut rt = request_tracker(Default::default());
 
@@ -65,7 +68,10 @@ async fn should_run_request_once() {
   assert_eq!(request_a.run_count(), 1);
 }
 
+// SKIP: Always run requests / don't cache anything
+// https://github.com/atlassian-labs/atlaspack/pull/364
 #[tokio::test(flavor = "multi_thread")]
+#[ignore]
 async fn should_run_request_once_2() {
   let mut rt = request_tracker(Default::default());
 
@@ -94,6 +100,9 @@ async fn run_request(request_tracker: &mut RequestTracker, request: &TestRequest
   result
 }
 
+// SKIP: Always run requests / don't cache anything
+// https://github.com/atlassian-labs/atlaspack/pull/364
+#[allow(dead_code)]
 async fn run_sub_request(request_tracker: &mut RequestTracker, request: &TestRequest) -> String {
   let RequestResult::TestSub(result) = request_tracker.run_request(request.clone()).await.unwrap()
   else {
@@ -120,6 +129,9 @@ impl TestRequest {
     }
   }
 
+  // SKIP: Always run requests / don't cache anything
+  // https://github.com/atlassian-labs/atlaspack/pull/364
+  #[allow(dead_code)]
   pub fn run_count(&self) -> usize {
     self.runs.load(Ordering::Relaxed)
   }
