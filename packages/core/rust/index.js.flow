@@ -9,6 +9,15 @@ import type {
 
 declare export var init: void | (() => void);
 
+export type WatchEventType = 'create' | 'update' | 'delete';
+
+export interface WatchEvent {
+  path: string,
+  type: WatchEventType,
+}
+
+export type WatchEvents = Array<WatchEvent>;
+
 export type Transferable = {||};
 
 export type JsCallable<Args: $ReadOnlyArray<mixed>, Return> = (
@@ -66,6 +75,7 @@ declare export class AtlaspackNapi {
   nodeWorkerCount: number;
   build(options: AtlaspackBuildOptions): Promise<void>;
   buildAssetGraph(options: AtlaspackBuildOptions): Promise<any>;
+  respondToFsEvents(events: WatchEvents): boolean;
   static defaultThreadCount(): number;
   testingTempFsReadToString(path: string): string;
   testingTempFsIsDir(path: string): boolean;

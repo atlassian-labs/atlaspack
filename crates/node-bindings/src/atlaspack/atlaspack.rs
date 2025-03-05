@@ -6,6 +6,8 @@ use std::thread;
 
 use anyhow::anyhow;
 use atlaspack::AtlaspackError;
+use atlaspack::AtlaspackInitOptions;
+use atlaspack::WatchEvents;
 use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::LMDB;
 use napi::Env;
@@ -17,12 +19,10 @@ use napi_derive::napi;
 use atlaspack::file_system::FileSystemRef;
 use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack::rpc::nodejs::NodejsWorker;
-use atlaspack::rpc::RpcFactoryRef;
-use atlaspack::Atlaspack;
-use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
 
+use super::atlaspack_lazy::AtlaspackLazy;
 use super::file_system_napi::FileSystemNapi;
 use super::napi_result::NapiAtlaspackResult;
 use super::package_manager_napi::PackageManagerNapi;
@@ -32,9 +32,6 @@ use super::serialize_asset_graph::serialize_asset_graph;
 pub struct AtlaspackNapiBuildOptions {
   pub register_worker: JsFunction,
 }
-
-#[napi(object)]
-pub struct AtlaspackNapiBuildResult {}
 
 #[napi(object)]
 pub struct AtlaspackNapiOptions {
@@ -48,11 +45,7 @@ pub struct AtlaspackNapiOptions {
 #[napi]
 pub struct AtlaspackNapi {
   pub node_worker_count: u32,
-  db: Arc<DatabaseWriter>,
-  fs: Option<FileSystemRef>,
-  options: AtlaspackOptions,
-  package_manager: Option<PackageManagerRef>,
-  rpc: RpcFactoryRef,
+  atlaspack: AtlaspackLazy,
   tx_worker: Sender<NodejsWorker>,
 }
 
@@ -103,14 +96,19 @@ impl AtlaspackNapi {
     let (tx_worker, rx_worker) = channel::<NodejsWorker>();
     let rpc_host_nodejs = NodejsRpcFactory::new(node_worker_count, rx_worker)?;
     let rpc = Arc::new(rpc_host_nodejs);
+    let options = env.from_js_value(napi_options.options)?;
 
-    Ok(Self {
+    let atlaspack = AtlaspackLazy::new(AtlaspackInitOptions {
       db,
       fs,
-      node_worker_count: node_worker_count as u32,
-      options: env.from_js_value(napi_options.options)?,
+      options,
       package_manager,
       rpc,
+    });
+
+    Ok(Self {
+      node_worker_count: node_worker_count as u32,
+      atlaspack,
       tx_worker,
     })
   }
@@ -126,19 +124,12 @@ impl AtlaspackNapi {
 
     self.register_workers(&options)?;
 
-    // Both the atlaspack initialization and build must be run a dedicated system thread so that
-    // the napi threadsafe functions do not panic
     thread::spawn({
-      let fs = self.fs.clone();
-      let db = self.db.clone();
-      let options = self.options.clone();
-      let package_manager = self.package_manager.clone();
-      let rpc = self.rpc.clone();
-
+      let atlaspack = self.atlaspack.clone();
       move || {
-        let atlaspack = match Atlaspack::new(db, fs, options, package_manager, rpc) {
-          Err(error) => return deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
+        let atlaspack = match atlaspack.get() {
           Ok(atlaspack) => atlaspack,
+          Err(error) => return deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
         };
 
         let result = atlaspack.build_asset_graph();
@@ -150,6 +141,35 @@ impl AtlaspackNapi {
           Ok(asset_graph) => {
             NapiAtlaspackResult::ok(&env, serialize_asset_graph(&env, &asset_graph)?)
           }
+          Err(error) => {
+            let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+            NapiAtlaspackResult::error(&env, js_object)
+          }
+        })
+      }
+    });
+
+    Ok(promise)
+  }
+
+  #[tracing::instrument(level = "info", skip_all)]
+  #[napi]
+  pub fn respond_to_fs_events(&self, env: Env, options: JsObject) -> napi::Result<JsObject> {
+    let (deferred, promise) = env.create_deferred()?;
+    let options = env.from_js_value::<WatchEvents, _>(options)?;
+
+    thread::spawn({
+      let atlaspack = self.atlaspack.clone();
+      move || {
+        let atlaspack = match atlaspack.get() {
+          Ok(atlaspack) => atlaspack,
+          Err(error) => return deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
+        };
+
+        let result = atlaspack.respond_to_fs_events(options);
+
+        deferred.resolve(move |env| match result {
+          Ok(should_rebuild) => NapiAtlaspackResult::ok(&env, should_rebuild),
           Err(error) => {
             let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
             NapiAtlaspackResult::error(&env, js_object)

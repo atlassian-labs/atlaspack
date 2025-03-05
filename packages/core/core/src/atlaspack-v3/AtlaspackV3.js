@@ -7,6 +7,7 @@ import {
 } from '@atlaspack/rust';
 import {workerPool} from './WorkerPool';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
+import type {Event} from '@parcel/watcher';
 
 export type AtlaspackV3Options = {|
   fs?: AtlaspackNapiOptions['fs'],
@@ -23,6 +24,7 @@ export type AtlaspackV3Options = {|
 
 export class AtlaspackV3 {
   _internal: AtlaspackNapi;
+  _workerIds: any[];
 
   constructor({
     fs,
@@ -38,6 +40,7 @@ export class AtlaspackV3 {
     options.defaultTargetOptions.engines =
       options.defaultTargetOptions.engines || {};
 
+    this._workerIds = [];
     this._internal = AtlaspackNapi.create(
       {
         fs,
@@ -76,5 +79,9 @@ export class AtlaspackV3 {
     }
 
     return graph;
+  }
+
+  respondToFsEvents(events: Array<Event>): boolean {
+    return this._internal.respondToFsEvents(events);
   }
 }
