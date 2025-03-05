@@ -163,7 +163,9 @@ export default function createBundleGraphRequest(
       let {assetGraph, changedAssets, assetRequests} = await api.runRequest(
         request,
         {
-          force: options.shouldBuildLazily && requestedAssetIds.size > 0,
+          force:
+            Boolean(input.rustAtlaspack) ||
+            (options.shouldBuildLazily && requestedAssetIds.size > 0),
         },
       );
 
@@ -195,7 +197,10 @@ export default function createBundleGraphRequest(
       //       force: true,
       //     },
       //   );
-      //   require('./asset-graph-diff.js')(jsAssetGraph, assetGraph);
+      //   require('../../lib/requests/asset-graph-diff.js')(
+      //     jsAssetGraph,
+      //     assetGraph,
+      //   );
       // }
 
       measurement && measurement.end();

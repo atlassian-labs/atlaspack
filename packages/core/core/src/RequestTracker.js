@@ -1124,7 +1124,10 @@ export class RequestGraph extends ContentGraph<
       },
     });
 
-    return didInvalidate && this.invalidNodeIds.size > 0;
+    return (
+      getFeatureFlag('atlaspackV3') ||
+      (didInvalidate && this.invalidNodeIds.size > 0)
+    );
   }
 
   hasCachedRequestChunk(index: number): boolean {

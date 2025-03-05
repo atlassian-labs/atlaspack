@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
+use atlaspack_core::types::Invalidation;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
 
@@ -10,6 +11,8 @@ use atlaspack_core::config_loader::ConfigLoaderRef;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_filesystem::FileSystemRef;
+use petgraph::visit::Dfs;
+use petgraph::visit::Reversed;
 
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
@@ -43,6 +46,7 @@ pub struct RequestTracker {
   plugins: PluginsRef,
   project_root: PathBuf,
   request_index: HashMap<u64, NodeIndex>,
+  invalidations: HashMap<PathBuf, NodeIndex>,
 }
 
 impl RequestTracker {
@@ -64,6 +68,7 @@ impl RequestTracker {
       plugins,
       project_root,
       request_index: HashMap::new(),
+      invalidations: HashMap::new(),
       options,
     }
   }
@@ -219,14 +224,38 @@ impl RequestTracker {
       .node_weight_mut(*node_index)
       .ok_or_else(|| diagnostic_error!("Failed to find request"))?;
 
-    if let RequestNode::Valid(_) = request_node {
-      return Ok(());
-    }
-
+    // Update node with latest result
     *request_node = match result {
-      Ok(result) => RequestNode::Valid(result.clone()),
+      Ok(result) => RequestNode::Valid(result.result.clone()),
       Err(error) => RequestNode::Error(AtlaspackError::from(error).into()),
     };
+
+    // Assign invalidations
+    if let Ok(result) = result {
+      for invalidation in result.invalidations.iter() {
+        match invalidation {
+          Invalidation::FileChange(file_path) => {
+            let invalidation_node = self
+              .invalidations
+              .entry(file_path.clone())
+              .or_insert_with(|| self.graph.add_node(RequestNode::FileInvalidation));
+
+            tracing::trace!(
+              "Add {:?} as invalidation for {:?}",
+              file_path
+                .strip_prefix(&self.project_root)
+                .unwrap_or(file_path),
+              self.graph[*node_index]
+            );
+            self.graph.add_edge(
+              *node_index,
+              *invalidation_node,
+              RequestEdgeType::FileChangeInvalidation,
+            );
+          }
+        }
+      }
+    }
 
     Ok(())
   }
@@ -248,10 +277,9 @@ impl RequestTracker {
     };
 
     match request_node {
-      RequestNode::Root => Err(diagnostic_error!("Impossible")),
-      RequestNode::Incomplete => Err(diagnostic_error!("Impossible")),
       RequestNode::Error(error) => Err(AtlaspackError::from(error).into()),
-      RequestNode::Valid(value) => Ok(value.result.clone()),
+      RequestNode::Valid(value) => Ok(value.clone()),
+      _ => Err(diagnostic_error!("Impossible")),
     }
   }
 
@@ -280,6 +308,37 @@ impl RequestTracker {
         .add_edge(NodeIndex::new(0), *node_index, RequestEdgeType::SubRequest);
     }
     Ok(())
+  }
+
+  #[tracing::instrument(level = "info", skip_all)]
+  pub fn respond_to_fs_events(&mut self, watch_events: Vec<Invalidation>) {
+    tracing::info!("Responding to {} watch events", watch_events.len());
+    for invalidation in watch_events.iter() {
+      match invalidation {
+        Invalidation::FileChange(file_path) => {
+          if let Some(invalidation_node) = self.invalidations.get(file_path) {
+            let mut invalid_nodes = Vec::new();
+            {
+              let reverse_graph = Reversed(&self.graph);
+              let mut dfs = Dfs::new(reverse_graph, *invalidation_node);
+
+              while let Some(node_index) = dfs.next(reverse_graph) {
+                invalid_nodes.push(node_index);
+              }
+            }
+
+            for invalid_node in invalid_nodes {
+              tracing::trace!(
+                "{:?} invalidates {:#?}",
+                file_path,
+                self.graph.node_weight(invalid_node)
+              );
+              self.graph[invalid_node] = RequestNode::Invalid;
+            }
+          }
+        }
+      }
+    }
   }
 }
 
