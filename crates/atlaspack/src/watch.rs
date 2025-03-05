@@ -4,18 +4,11 @@ use serde::Deserialize;
 use serde::Serialize;
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum WatchEventType {
-  Create,
-  Update,
-  Delete,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WatchEvent {
-  pub path: PathBuf,
-  pub kind: WatchEventType,
+#[serde(tag = "type", content = "path", rename_all = "camelCase")]
+pub enum WatchEvent {
+  Create(PathBuf),
+  Update(PathBuf),
+  Delete(PathBuf),
 }
 
 pub type WatchEvents = Vec<WatchEvent>;

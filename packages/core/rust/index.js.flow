@@ -11,10 +11,10 @@ declare export var init: void | (() => void);
 
 export type WatchEventType = 'create' | 'update' | 'delete';
 
-export type WatchEvent = {|
+export interface WatchEvent {
   path: string,
-  kind: WatchEventType,
-|}
+  type: WatchEventType,
+}
 
 export type WatchEvents = Array<WatchEvent>;
 

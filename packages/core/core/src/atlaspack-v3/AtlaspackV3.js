@@ -82,11 +82,6 @@ export class AtlaspackV3 {
   }
 
   respondToFsEvents(events: Array<Event>): boolean {
-    return this._internal.respondToFsEvents(
-      events.map((event) => ({
-        path: event.path,
-        kind: event.type,
-      })),
-    );
+    return this._internal.respondToFsEvents(events);
   }
 }
