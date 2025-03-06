@@ -17,6 +17,8 @@ use petgraph::visit::Reversed;
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
 use crate::AtlaspackError;
+use crate::WatchEvent;
+use crate::WatchEvents;
 
 use super::Request;
 use super::RequestEdgeType;
@@ -199,10 +201,9 @@ impl RequestTracker {
       .ok_or_else(|| diagnostic_error!("Failed to find request node"))?;
 
     // Don't run if already run
-    // TEMP: Always run requests / don't cache anything
-    // if let RequestNode::Valid(_) = request_node {
-    //   return Ok(false);
-    // }
+    if let RequestNode::Valid(_) = request_node {
+      return Ok(false);
+    }
 
     *request_node = RequestNode::Incomplete;
     Ok(true)
@@ -245,7 +246,7 @@ impl RequestTracker {
               file_path
                 .strip_prefix(&self.project_root)
                 .unwrap_or(file_path),
-              self.graph[*node_index]
+              self.graph[*node_index],
             );
             self.graph.add_edge(
               *node_index,
@@ -311,11 +312,13 @@ impl RequestTracker {
   }
 
   #[tracing::instrument(level = "info", skip_all)]
-  pub fn respond_to_fs_events(&mut self, watch_events: Vec<Invalidation>) {
+  pub fn respond_to_fs_events(&mut self, watch_events: WatchEvents) -> bool {
     tracing::info!("Responding to {} watch events", watch_events.len());
+    let mut need_rebuild = false;
+
     for invalidation in watch_events.iter() {
       match invalidation {
-        Invalidation::FileChange(file_path) => {
+        WatchEvent::Delete(file_path) | WatchEvent::Update(file_path) => {
           if let Some(invalidation_node) = self.invalidations.get(file_path) {
             let mut invalid_nodes = Vec::new();
             {
@@ -328,17 +331,23 @@ impl RequestTracker {
             }
 
             for invalid_node in invalid_nodes {
-              tracing::trace!(
+              tracing::info!(
                 "{:?} invalidates {:#?}",
                 file_path,
                 self.graph.node_weight(invalid_node)
               );
               self.graph[invalid_node] = RequestNode::Invalid;
+              need_rebuild = true;
             }
           }
         }
+        WatchEvent::Create(_) => {
+          // Not currently handling creates
+        }
       }
     }
+
+    need_rebuild
   }
 }
 

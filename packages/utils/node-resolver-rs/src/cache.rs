@@ -178,7 +178,7 @@ impl Cache {
 
   pub fn read_package(&self, path: Cow<Path>) -> Arc<Result<Arc<PackageJson>, ResolverError>> {
     if let Some(pkg) = self.package_duplicates.get(path.as_ref()) {
-      tracing::info!("Deduplicating package import: {:?} -> {:?}", path, pkg.path);
+      tracing::debug!("Deduplicating package import: {:?} -> {:?}", path, pkg.path);
       return Arc::new(Ok(pkg.clone()));
     }
 

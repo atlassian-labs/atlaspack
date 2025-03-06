@@ -129,6 +129,11 @@ impl Request for AssetRequest {
       time: start.elapsed().as_millis().try_into().unwrap_or(u32::MAX),
     };
 
+    // Ensure the asset source file is marked as an invalidation
+    result
+      .invalidate_on_file_change
+      .push(result.asset.file_path.clone());
+
     Ok(ResultAndInvalidations {
       result: RequestResult::Asset(AssetRequestOutput {
         asset: result.asset,
