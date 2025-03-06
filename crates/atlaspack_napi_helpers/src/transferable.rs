@@ -2,8 +2,10 @@ use std::any;
 use std::any::Any;
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::sync::Mutex;
 
 use napi::bindgen_prelude::FromNapiValue;
@@ -13,8 +15,10 @@ use napi::JsNumber;
 use napi::NapiRaw;
 use once_cell::sync::Lazy;
 
+type Inner = Arc<dyn Any + Send + Sync>;
+
 static COUNTER: AtomicI32 = AtomicI32::new(0);
-static VALUES: Lazy<Mutex<HashMap<i32, Box<dyn Any + Send + Sync>>>> = Lazy::new(Default::default);
+static VALUES: Lazy<Mutex<HashMap<i32, Inner>>> = Lazy::new(Default::default);
 
 /// Creates an external reference to a Rust value and
 /// makes it transferable across Nodejs workers
@@ -34,7 +38,7 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
   pub fn new(value: T) -> Self {
     let id = COUNTER.fetch_add(1, Ordering::Relaxed);
 
-    VALUES.lock().unwrap().insert(id, Box::new(value));
+    VALUES.lock().unwrap().insert(id, Arc::new(value));
     Self {
       id,
       _value: Default::default(),
@@ -49,6 +53,7 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
         self.id
       )));
     };
+
     let Ok(val) = value.downcast::<T>() else {
       return Err(napi::Error::from_reason(format!(
         "JsTransferableError::InvalidDowncast: id({}) type({})",
@@ -56,7 +61,45 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
         any::type_name::<T>()
       )));
     };
-    Ok(*val)
+
+    let Some(value) = Arc::into_inner(val) else {
+      return Err(napi::Error::from_reason(format!(
+        "JsTransferableError::StillBorrowed: id({})",
+        self.id
+      )));
+    };
+
+    Ok(value)
+  }
+
+  pub fn get(&self) -> napi::Result<JsTransferableRef<T>> {
+    let values = VALUES.lock().unwrap();
+    let Some(value) = values.get(&self.id) else {
+      return Err(napi::Error::from_reason(format!(
+        "JsTransferableError::NotExists: id({})",
+        self.id
+      )));
+    };
+    let value = value.clone();
+    let Ok(val) = value.downcast::<T>() else {
+      return Err(napi::Error::from_reason(format!(
+        "JsTransferableError::InvalidDowncast: id({}) type({})",
+        self.id,
+        any::type_name::<T>()
+      )));
+    };
+
+    Ok(JsTransferableRef(val))
+  }
+}
+
+pub struct JsTransferableRef<T>(Arc<T>);
+
+impl<T> Deref for JsTransferableRef<T> {
+  type Target = T;
+
+  fn deref(&self) -> &Self::Target {
+    self.0.as_ref()
   }
 }
 

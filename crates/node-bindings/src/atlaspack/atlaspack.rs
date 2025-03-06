@@ -1,6 +1,4 @@
 use core::str;
-use std::sync::mpsc::channel;
-use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
 
@@ -13,14 +11,13 @@ use lmdb_js_lite::LMDB;
 use napi::Env;
 use napi::JsFunction;
 use napi::JsObject;
-use napi::JsUnknown;
 use napi_derive::napi;
 
 use atlaspack::file_system::FileSystemRef;
 use atlaspack::rpc::nodejs::NodejsRpcFactory;
-use atlaspack::rpc::nodejs::NodejsWorker;
-use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_package_manager::PackageManagerRef;
+
+use crate::atlaspack::worker::get_workers;
 
 use super::atlaspack_lazy::AtlaspackLazy;
 use super::file_system_napi::FileSystemNapi;
@@ -40,13 +37,12 @@ pub struct AtlaspackNapiOptions {
   pub options: JsObject,
   pub package_manager: Option<JsObject>,
   pub threads: Option<u32>,
+  pub worker_pool_v3: JsObject,
 }
 
 #[napi]
 pub struct AtlaspackNapi {
-  pub node_worker_count: u32,
   atlaspack: AtlaspackLazy,
-  tx_worker: Sender<NodejsWorker>,
 }
 
 // Refer to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length
@@ -81,21 +77,8 @@ impl AtlaspackNapi {
 
     let db = db_writer.clone();
 
-    // Assign Rust thread count from JavaScript
-    let threads = napi_options
-      .threads
-      .map(|t| t as usize)
-      .unwrap_or_else(num_cpus::get);
-
-    // Set up Nodejs plugin bindings
-    let node_worker_count = napi_options
-      .node_workers
-      .map(|w| w as usize)
-      .unwrap_or_else(|| threads);
-
-    let (tx_worker, rx_worker) = channel::<NodejsWorker>();
-    let rpc_host_nodejs = NodejsRpcFactory::new(node_worker_count, rx_worker)?;
-    let rpc = Arc::new(rpc_host_nodejs);
+    let rx_workers = get_workers(&env, &napi_options.worker_pool_v3)?;
+    let rpc = Arc::new(NodejsRpcFactory::new(rx_workers)?);
     let options = env.from_js_value(napi_options.options)?;
 
     let atlaspack = AtlaspackLazy::new(AtlaspackInitOptions {
@@ -106,23 +89,13 @@ impl AtlaspackNapi {
       rpc,
     });
 
-    Ok(Self {
-      node_worker_count: node_worker_count as u32,
-      atlaspack,
-      tx_worker,
-    })
+    Ok(Self { atlaspack })
   }
 
   #[tracing::instrument(level = "info", skip_all)]
   #[napi]
-  pub fn build_asset_graph(
-    &self,
-    env: Env,
-    options: AtlaspackNapiBuildOptions,
-  ) -> napi::Result<JsObject> {
+  pub fn build_asset_graph(&self, env: Env) -> napi::Result<JsObject> {
     let (deferred, promise) = env.create_deferred()?;
-
-    self.register_workers(&options)?;
 
     thread::spawn({
       let atlaspack = self.atlaspack.clone();
@@ -179,19 +152,6 @@ impl AtlaspackNapi {
     });
 
     Ok(promise)
-  }
-
-  #[tracing::instrument(level = "info", skip_all)]
-  fn register_workers(&self, options: &AtlaspackNapiBuildOptions) -> napi::Result<()> {
-    for _ in 0..self.node_worker_count {
-      let transferable = JsTransferable::new(self.tx_worker.clone());
-
-      options
-        .register_worker
-        .call1::<JsTransferable<Sender<NodejsWorker>>, JsUnknown>(transferable)?;
-    }
-
-    Ok(())
   }
 
   /// Check that the LMDB database is healthy

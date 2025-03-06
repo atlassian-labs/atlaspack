@@ -49,6 +49,7 @@ export interface FileSystem {
 export type AtlaspackNapiOptions = {|
   fs?: FileSystem,
   nodeWorkers?: number,
+  workerPoolV3: any,
   options: {|
     featureFlags?: { [string]: string | boolean },
     corePath?: string,
@@ -83,10 +84,16 @@ declare export class AtlaspackNapi {
   testingRpcPing(): void;
 }
 
+declare export function getAvailableThreads(): number;
+
 declare export function registerWorker(
   channel: Transferable,
   worker: any,
 ): void;
+
+declare export function newNodejsWorker(
+  delegate: any,
+): Transferable;
 
 declare export function initializeMonitoring(): void;
 declare export function closeMonitoring(): void;

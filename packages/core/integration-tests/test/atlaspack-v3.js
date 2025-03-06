@@ -13,6 +13,7 @@ import {
   overlayFS,
   outputFS,
   bundle,
+  workerPoolV3,
 } from '@atlaspack/test-utils';
 import {LMDBLiteCache} from '@atlaspack/cache';
 import type {InitialAtlaspackOptions} from '@atlaspack/types';
@@ -45,7 +46,7 @@ async function assertOutputIsIdentical(
 }
 
 describe.v3('AtlaspackV3', function () {
-  it.only('builds', async () => {
+  it('builds', async () => {
     await fsFixture(overlayFS, __dirname)`
       index.js:
         console.log('hello world');
@@ -65,7 +66,7 @@ describe.v3('AtlaspackV3', function () {
       corePath: '',
       entries: [join(__dirname, 'index.js')],
       fs: new FileSystemV3(overlayFS),
-      nodeWorkers: 1,
+      workerPoolV3,
       packageManager: new NodePackageManager(inputFS, __dirname),
       lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
     });
@@ -204,6 +205,7 @@ describe.v3('AtlaspackV3', function () {
             entries: [join(__dirname, 'index.js')],
             fs: new FileSystemV3(overlayFS),
             lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
+            workerPoolV3,
             featureFlags: {
               testFlag: true,
             },
@@ -218,6 +220,7 @@ describe.v3('AtlaspackV3', function () {
             corePath: '',
             entries: [join(__dirname, 'index.js')],
             fs: new FileSystemV3(overlayFS),
+            workerPoolV3,
             lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
             featureFlags: {
               testFlag: 'testFlagValue',

@@ -1,6 +1,8 @@
 // @flow strict-local
 
+export type Transferable = {||};
+
 export interface WorkerPoolV3 {
-  spawnWorker(): Promise<void>;
-  shutdown(): Promise<void>;
+  getWorkers(): Promise<Array<Transferable>>;
+  shutdown(): void;
 }
