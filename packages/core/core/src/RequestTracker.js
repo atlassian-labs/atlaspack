@@ -4,7 +4,7 @@ import invariant, {AssertionError} from 'assert';
 import path from 'path';
 
 import {deserialize, serialize} from '@atlaspack/build-cache';
-import type {Cache} from '@atlaspack/cache';
+import {type Cache, LMDBLiteCache} from '@atlaspack/cache';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {ContentGraph} from '@atlaspack/graph';
 import type {
@@ -1493,6 +1493,7 @@ export default class RequestTracker {
     let cacheKey = getCacheKey(this.options);
     let requestGraphKey = `requestGraph-${cacheKey}`;
     let snapshotKey = `snapshot-${cacheKey}`;
+    const enableNewWrites = this.options.cache instanceof LMDBLiteCache;
 
     if (this.options.shouldDisableCache) {
       return;
@@ -1509,95 +1510,11 @@ export default class RequestTracker {
     let serialisedGraph = this.graph.serialize();
 
     // Delete an existing request graph cache, to prevent invalid states
-    await this.options.cache.deleteLargeBlob(requestGraphKey);
-
-    const serialiseAndSet = async (
-      key: string,
-      // $FlowFixMe serialise input is any type
-      contents: any,
-    ): Promise<void> => {
-      if (signal?.aborted) {
-        throw new Error('Serialization was aborted');
-      }
-
-      await this.options.cache.setLargeBlob(
-        key,
-        serialize(contents),
-        signal
-          ? {
-              signal: signal,
-            }
-          : undefined,
-      );
-
-      total += 1;
-
-      report({
-        type: 'cache',
-        phase: 'write',
-        total,
-        size: this.graph.nodes.length,
-      });
-    };
-
-    let queue = new PromiseQueue({
-      maxConcurrent: 32,
-    });
-
-    // Preallocating a sparse array is faster than pushing when N is high enough
-    let cacheableNodes = new Array(serialisedGraph.nodes.length);
-    for (let i = 0; i < serialisedGraph.nodes.length; i += 1) {
-      let node = serialisedGraph.nodes[i];
-
-      let resultCacheKey = node?.resultCacheKey;
-      if (
-        node?.type === REQUEST &&
-        resultCacheKey != null &&
-        node?.result != null
-      ) {
-        queue.add(() => serialiseAndSet(resultCacheKey, node.result));
-
-        // eslint-disable-next-line no-unused-vars
-        let {result: _, ...newNode} = node;
-        cacheableNodes[i] = newNode;
-      } else {
-        cacheableNodes[i] = node;
-      }
+    if (!enableNewWrites) {
+      await this.options.cache.deleteLargeBlob(requestGraphKey);
     }
 
-    const chunks = [];
-    for (let i = 0; i < cacheableNodes.length; i += this.graph.nodesPerBlob) {
-      const chunk = cacheableNodes.slice(i, i + this.graph.nodesPerBlob);
-      chunks.push(chunk);
-    }
-
-    const nodeCountsPerBlob = chunks.map((chunk) => chunk.length);
-    for (let i = 0; i < chunks.length; i++) {
-      if (!this.graph.hasCachedRequestChunk(i)) {
-        // We assume the request graph nodes are immutable and won't change
-        const chunk = chunks[i];
-
-        queue.add(() =>
-          serialiseAndSet(getRequestGraphNodeKey(i, cacheKey), chunk).then(
-            () => {
-              // Succeeded in writing to disk, save that we have completed this chunk
-              this.graph.setCachedRequestChunk(i);
-            },
-          ),
-        );
-      }
-    }
-
-    try {
-      await queue.run();
-
-      // Set the request graph after the queue is flushed to avoid writing an invalid state
-      await serialiseAndSet(requestGraphKey, {
-        ...serialisedGraph,
-        nodeCountsPerBlob,
-        nodes: undefined,
-      });
-
+    const writeSnapshot = async () => {
       let opts = getWatcherOptions(this.options);
       let snapshotPath = path.join(this.options.cacheDir, snapshotKey + '.txt');
 
@@ -1608,9 +1525,144 @@ export default class RequestTracker {
         opts,
       );
       console.log('writeSnapshot done');
-    } catch (err) {
-      // If we have aborted, ignore the error and continue
-      if (!signal?.aborted) throw err;
+    };
+
+    if (enableNewWrites) {
+      const lmdb = this.options.cache.getNativeRef();
+
+      lmdb.startWriteTransaction();
+
+      console.log('starting bulk write, one entry per request node');
+      const snapshotWrite = writeSnapshot();
+
+      for (let i = 0; i < serialisedGraph.nodes.length; i += 1) {
+        const node = serialisedGraph.nodes[i];
+        const resultCacheKey = node?.resultCacheKey;
+        const key = resultCacheKey ?? `requestGraph:nodes:${cacheKey}:${i}`;
+
+        const serializedNode = serialize(node);
+        lmdb.putNoConfirm(key, serializedNode);
+      }
+      console.log('done writing nodes');
+
+      lmdb.putNoConfirm(
+        `requestGraph:options:${cacheKey}`,
+        serialize({
+          version: ATLASPACK_VERSION,
+          entries: this.options.entries,
+          mode: this.options.mode,
+          shouldBuildLazily: this.options.shouldBuildLazily,
+          watchBackend: this.options.watchBackend,
+        }),
+      );
+      lmdb.putNoConfirm(
+        `requestGraph:graph:${cacheKey}`,
+        serialize({
+          ...serialisedGraph,
+          nodeCount: serialisedGraph.nodes.length,
+          nodes: undefined,
+        }),
+      );
+
+      await snapshotWrite;
+      console.log('done writing snapshot');
+
+      console.log('waiting for write commit');
+      await lmdb.commitWriteTransaction();
+      console.log('done writing');
+    } else {
+      const serialiseAndSet = async (
+        key: string,
+        // $FlowFixMe serialise input is any type
+        contents: any,
+      ): Promise<void> => {
+        if (signal?.aborted) {
+          throw new Error('Serialization was aborted');
+        }
+
+        await this.options.cache.setLargeBlob(
+          key,
+          serialize(contents),
+          signal
+            ? {
+                signal: signal,
+              }
+            : undefined,
+        );
+
+        total += 1;
+
+        report({
+          type: 'cache',
+          phase: 'write',
+          total,
+          size: this.graph.nodes.length,
+        });
+      };
+
+      let queue = new PromiseQueue({
+        maxConcurrent: 32,
+      });
+
+      // Preallocating a sparse array is faster than pushing when N is high enough
+      let cacheableNodes = new Array(serialisedGraph.nodes.length);
+      for (let i = 0; i < serialisedGraph.nodes.length; i += 1) {
+        let node = serialisedGraph.nodes[i];
+
+        let resultCacheKey = node?.resultCacheKey;
+        if (
+          node?.type === REQUEST &&
+          resultCacheKey != null &&
+          node?.result != null
+        ) {
+          queue.add(() => serialiseAndSet(resultCacheKey, node.result));
+
+          // eslint-disable-next-line no-unused-vars
+          let {result: _, ...newNode} = node;
+          cacheableNodes[i] = newNode;
+        } else {
+          cacheableNodes[i] = node;
+        }
+      }
+
+      const chunks = [];
+      for (let i = 0; i < cacheableNodes.length; i += this.graph.nodesPerBlob) {
+        const chunk = cacheableNodes.slice(i, i + this.graph.nodesPerBlob);
+        chunks.push(chunk);
+      }
+
+      const nodeCountsPerBlob = chunks.map((chunk) => chunk.length);
+      for (let i = 0; i < chunks.length; i++) {
+        if (!this.graph.hasCachedRequestChunk(i)) {
+          // We assume the request graph nodes are immutable and won't change
+          const chunk = chunks[i];
+
+          queue.add(() =>
+            serialiseAndSet(getRequestGraphNodeKey(i, cacheKey), chunk).then(
+              () => {
+                // Succeeded in writing to disk, save that we have completed this chunk
+                this.graph.setCachedRequestChunk(i);
+              },
+            ),
+          );
+        }
+      }
+
+      try {
+        await queue.run();
+
+        // Set the request graph after the queue is flushed to avoid writing an invalid state
+        await serialiseAndSet(requestGraphKey, {
+          ...serialisedGraph,
+          nodeCountsPerBlob,
+          nodes: undefined,
+        });
+
+        await writeSnapshot();
+      } catch (err) {
+        // If we have aborted, ignore the error and continue
+        if (!signal?.aborted) throw err;
+      }
     }
 
     report({type: 'cache', phase: 'end', total, size: this.graph.nodes.length});
@@ -1666,38 +1718,61 @@ export async function readAndDeserializeRequestGraph(
   requestGraphKey: string,
   cacheKey: string,
 ): Async<{|requestGraph: RequestGraph, bufferLength: number|}> {
-  let bufferLength = 0;
-  const getAndDeserialize = async (key: string) => {
-    let buffer = await cache.getLargeBlob(key);
-    bufferLength += Buffer.byteLength(buffer);
-    return deserialize(buffer);
-  };
+  if (cache instanceof LMDBLiteCache) {
+    // $FlowFixMe
+    const serializedRequestGraph: any = await cache.get(
+      `requestGraph:${cacheKey}:graph`,
+    );
+    const nodes = [];
+    for (let i = 0; i < serializedRequestGraph.nodeCount; i++) {
+      // $FlowFixMe
+      const node: any = await cache.get(`requestGraph:${cacheKey}:nodes:${i}`);
+      nodes.push(node);
+    }
 
-  let serializedRequestGraph = await getAndDeserialize(requestGraphKey);
+    return {
+      requestGraph: RequestGraph.deserialize({
+        ...serializedRequestGraph,
+        nodes,
+      }),
+      bufferLength: 0,
+    };
+  } else {
+    let bufferLength = 0;
+    const getAndDeserialize = async (key: string) => {
+      let buffer = await cache.getLargeBlob(key);
+      bufferLength += Buffer.byteLength(buffer);
+      return deserialize(buffer);
+    };
 
-  let nodePromises = serializedRequestGraph.nodeCountsPerBlob.map(
-    async (nodesCount, i) => {
-      let nodes = await getAndDeserialize(getRequestGraphNodeKey(i, cacheKey));
-      invariant.equal(
-        nodes.length,
-        nodesCount,
-        'RequestTracker node chunk: invalid node count',
-      );
-      return nodes;
-    },
-  );
+    let serializedRequestGraph = await getAndDeserialize(requestGraphKey);
 
-  const chunks = await Promise.all(nodePromises);
-  const nodes = chunks.flat();
+    let nodePromises = serializedRequestGraph.nodeCountsPerBlob.map(
+      async (nodesCount, i) => {
+        let nodes = await getAndDeserialize(
+          getRequestGraphNodeKey(i, cacheKey),
+        );
+        invariant.equal(
+          nodes.length,
+          nodesCount,
+          'RequestTracker node chunk: invalid node count',
+        );
+        return nodes;
+      },
+    );
 
-  return {
-    requestGraph: RequestGraph.deserialize({
-      ...serializedRequestGraph,
-      nodes,
-    }),
-    // This is used inside atlaspack query for `.inspectCache`
-    bufferLength,
-  };
+    const chunks = await Promise.all(nodePromises);
+    const nodes = chunks.flat();
+
+    return {
+      requestGraph: RequestGraph.deserialize({
+        ...serializedRequestGraph,
+        nodes,
+      }),
+      // This is used inside atlaspack query for `.inspectCache`
+      bufferLength,
+    };
+  }
 }
 
 type RequestGraphInvalidation = {|type: 'file', filePath: ProjectPath|};
@@ -1760,7 +1835,11 @@ async function loadRequestGraph(options): Async<RequestGraph> {
       snapshotKey,
     },
   });
-  if (await options.cache.hasLargeBlob(requestGraphKey)) {
+
+  if (
+    (await options.cache.hasLargeBlob(requestGraphKey)) ||
+    (await options.cache.has(`requestGraph:graph:${cacheKey}`))
+  ) {
     try {
       let {requestGraph} = await readAndDeserializeRequestGraph(
         options.cache,
