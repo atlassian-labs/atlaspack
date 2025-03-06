@@ -72,6 +72,7 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
     Ok(value)
   }
 
+  // Get a read-only copy of a Transferable value
   pub fn get(&self) -> napi::Result<JsTransferableRef<T>> {
     let values = VALUES.lock().unwrap();
     let Some(value) = values.get(&self.id) else {

@@ -1,58 +1,49 @@
-use std::{
-  sync::{
-    mpsc::{channel, Receiver, Sender},
-    Arc,
-  },
-  thread,
-};
+use std::sync::mpsc::channel;
+use std::sync::mpsc::Receiver;
+use std::sync::Arc;
+use std::thread;
 
 use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack_napi_helpers::JsTransferable;
-use napi::{bindgen_prelude::FromNapiValue, Env, JsFunction, JsObject, JsUndefined, JsUnknown};
+use napi::bindgen_prelude::FromNapiValue;
+use napi::Env;
+use napi::JsFunction;
+use napi::JsObject;
+use napi::JsUnknown;
 use napi_derive::napi;
 
-/// This function is run in the Nodejs worker context upon initialization
-/// to notify the main thread that a Nodejs worker thread has started
-///
-/// A Rust channel is transferred to the worker via JavaScript `worker.postMessage`.
-/// The worker then calls `register_worker`, supplying it with an object containing
-/// callbacks.
-///
-/// The callbacks are later called from the main thread to send work to the worker.
-///
-/// |-------------| --- Init channel ----> |-------------------|
-/// | Main Thread |                        | Worker Thread (n) |
-/// |-------------| <-- Worker wrapper --- |-------------------|
-///
-///                 **Later During Build**
-///
-///                 -- Resolver.resolve -->
-///                 <- DependencyResult ---
-///
-///                 -- Transf.transform -->
-///                 <--- Array<Asset> -----
-#[napi]
-pub fn register_worker(
-  env: Env,
-  channel: JsTransferable<Sender<NodejsWorker>>,
-  worker: JsObject,
-) -> napi::Result<JsUndefined> {
-  let worker = NodejsWorker::new(worker)?;
-  let tx_worker = channel.take()?;
-  if tx_worker.send(worker).is_err() {
-    return Err(napi::Error::from_reason("Unable to register worker"));
-  }
-  env.get_undefined()
-}
+/*
+  Main Thread                       Worker Thread (n)
 
-// Called on the worker thread to create a reference to the NodeJs worker
+  Spawns worker threads      -->    Constructs native NodeJsWorker
+                             <--    postMessage "ptr" to NodeJsWorker
+  Waits for pointers then
+  forwards them to napi.
+  napi unwraps pointers to
+  underlying NodeJsWorker
+  then calls methods on it
+  during build
+*/
+
+/// Called on the worker thread to create a reference to the NodeJs worker
 #[napi]
 pub fn new_nodejs_worker(worker: JsObject) -> napi::Result<JsTransferable<Arc<NodejsWorker>>> {
   let worker = NodejsWorker::new(worker)?;
   Ok(JsTransferable::new(Arc::new(worker)))
 }
 
-// Called on the main thread to get the worker references
+/// Called on the main thread to get the worker references
+///
+/// On the JS side there is an object with
+/// ```
+/// interface WorkerPool {
+///   workerCount(): number
+///   getWorkers(): Promise<Array<JsTransferable>>
+/// }
+/// ```
+/// This function will unwrap the Promise on the `getWorkers()` method
+/// and emit the contained `Array<NodeJsWorker>` to Rust on a channel
+/// which must be awaited on a separate thread
 pub fn get_workers(
   env: &Env,
   worker_pool: &JsObject,

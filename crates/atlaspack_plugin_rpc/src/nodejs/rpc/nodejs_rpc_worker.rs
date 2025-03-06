@@ -5,7 +5,6 @@ use napi::JsObject;
 use serde::{Deserialize, Serialize};
 
 /// NodejsWorker is the connection to a single JavaScript worker thread
-#[derive(Debug, Clone)]
 pub struct NodejsWorker {
   pub load_plugin_fn: JsCallable,
   pub run_resolver_resolve_fn: JsCallable,

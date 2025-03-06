@@ -1,7 +1,6 @@
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use parking_lot::Mutex;
 
 use super::super::super::RpcFactory;

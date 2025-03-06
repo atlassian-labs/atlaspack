@@ -9,7 +9,6 @@ use atlaspack::WatchEvents;
 use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::LMDB;
 use napi::Env;
-use napi::JsFunction;
 use napi::JsObject;
 use napi_derive::napi;
 
@@ -26,14 +25,8 @@ use super::package_manager_napi::PackageManagerNapi;
 use super::serialize_asset_graph::serialize_asset_graph;
 
 #[napi(object)]
-pub struct AtlaspackNapiBuildOptions {
-  pub register_worker: JsFunction,
-}
-
-#[napi(object)]
 pub struct AtlaspackNapiOptions {
   pub fs: Option<JsObject>,
-  pub node_workers: Option<u32>,
   pub options: JsObject,
   pub package_manager: Option<JsObject>,
   pub threads: Option<u32>,
