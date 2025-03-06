@@ -16,7 +16,7 @@ use napi_derive::napi;
   Main Thread                       Worker Thread (n)
 
   Spawns worker threads      -->    Constructs native NodeJsWorker
-                             <--    postMessage "ptr" to NodeJsWorker
+                             <--    postMessage "ptr"
   Waits for pointers then
   forwards them to napi.
   napi unwraps pointers to
