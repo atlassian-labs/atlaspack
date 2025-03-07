@@ -1,23 +1,32 @@
 // @flow
-import type {WorkerPoolV3 as IWorkerPoolV3} from '@atlaspack/types';
+import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
 import {Worker} from 'worker_threads';
 import path from 'path';
+import process from 'process';
 import type {Transferable} from '@atlaspack/rust';
 import {getAvailableThreads} from '@atlaspack/rust';
 
 const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
+const ATLASPACK_NAPI_WORKERS =
+  process.env.ATLASPACK_NAPI_WORKERS &&
+  parseInt(process.env.ATLASPACK_NAPI_WORKERS, 10);
 
-export type WorkerPoolV3Options = {|
+export type NapiWorkerPoolOptions = {|
   workerCount?: number,
 |};
 
-export class WorkerPoolV3 implements IWorkerPoolV3 {
+export class NapiWorkerPool implements INapiWorkerPool {
   #workers: Worker[];
   #napiWorkers: Array<Promise<Transferable>>;
   #workerCount: number;
 
-  constructor({workerCount}: WorkerPoolV3Options = {workerCount: undefined}) {
-    this.#workerCount = workerCount || getAvailableThreads();
+  constructor({workerCount}: NapiWorkerPoolOptions = {workerCount: undefined}) {
+    this.#workerCount =
+      workerCount ?? ATLASPACK_NAPI_WORKERS ?? getAvailableThreads();
+    if (!this.#workerCount) {
+      // TODO use main thread if workerCount is 0
+    }
+
     this.#workers = [];
     this.#napiWorkers = [];
 

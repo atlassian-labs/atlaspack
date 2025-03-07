@@ -5,10 +5,10 @@ import {
   type Lmdb,
   type AtlaspackNapiOptions,
 } from '@atlaspack/rust';
-import {WorkerPoolV3} from './WorkerPoolV3';
+import {NapiWorkerPool} from './NapiWorkerPool';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Event} from '@parcel/watcher';
-import type {WorkerPoolV3 as IWorkerPoolV3} from '@atlaspack/types';
+import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
 
 export type AtlaspackV3Options = {|
   fs?: AtlaspackNapiOptions['fs'],
@@ -19,7 +19,7 @@ export type AtlaspackV3Options = {|
    */
   lmdb: Lmdb,
   featureFlags?: {[string]: string | boolean},
-  workerPoolV3?: IWorkerPoolV3,
+  napiWorkerPool?: INapiWorkerPool,
   ...AtlaspackNapiOptions['options'],
 |};
 
@@ -32,7 +32,7 @@ export class AtlaspackV3 {
     packageManager,
     threads,
     lmdb,
-    workerPoolV3 = new WorkerPoolV3(),
+    napiWorkerPool = new NapiWorkerPool(),
     ...options
   }: AtlaspackV3Options) {
     options.logLevel = options.logLevel || 'error';
@@ -47,7 +47,7 @@ export class AtlaspackV3 {
         packageManager,
         threads,
         options,
-        workerPoolV3,
+        napiWorkerPool,
       },
       lmdb,
     );

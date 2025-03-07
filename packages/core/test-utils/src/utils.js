@@ -21,7 +21,7 @@ import expect from 'expect';
 import invariant from 'assert';
 import assert from 'assert';
 import util from 'util';
-import Atlaspack, {createWorkerFarm, WorkerPoolV3} from '@atlaspack/core';
+import Atlaspack, {createWorkerFarm, NapiWorkerPool} from '@atlaspack/core';
 import vm from 'vm';
 import v8 from 'v8';
 import path from 'path';
@@ -111,9 +111,12 @@ If you don't know how, check here: https://bit.ly/2UmWsbD
 }
 
 export const isAtlaspackV3 = process.env.ATLASPACK_V3 === 'true';
-export let workerPoolV3: WorkerPoolV3;
+
+// Initialize the Napi Worker Pool once and
+// reuse the same instance in all of the tests
+export let napiWorkerPool: NapiWorkerPool;
 if (isAtlaspackV3) {
-  workerPoolV3 = new WorkerPoolV3();
+  napiWorkerPool = new NapiWorkerPool();
 }
 
 export function getParcelOptions(
@@ -131,7 +134,7 @@ export function getParcelOptions(
       inputFS,
       outputFS,
       workerFarm,
-      workerPoolV3,
+      napiWorkerPool,
       shouldContentHash: true,
       defaultTargetOptions: {
         distDir,

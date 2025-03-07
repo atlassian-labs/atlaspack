@@ -6,4 +6,4 @@
 '@atlaspack/reporter-cli': patch
 ---
 
-Added WorkerPoolV3
+Added NapiWorkerPool

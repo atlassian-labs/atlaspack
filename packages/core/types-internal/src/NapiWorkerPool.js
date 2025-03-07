@@ -2,7 +2,7 @@
 
 export type Transferable = {||};
 
-export interface WorkerPoolV3 {
+export interface NapiWorkerPool {
   getWorkers(): Promise<Array<Transferable>>;
   shutdown(): void;
 }

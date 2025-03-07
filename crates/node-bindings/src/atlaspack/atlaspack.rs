@@ -30,7 +30,7 @@ pub struct AtlaspackNapiOptions {
   pub options: JsObject,
   pub package_manager: Option<JsObject>,
   pub threads: Option<u32>,
-  pub worker_pool_v3: JsObject,
+  pub napi_worker_pool: JsObject,
 }
 
 #[napi]
@@ -70,7 +70,7 @@ impl AtlaspackNapi {
 
     let db = db_writer.clone();
 
-    let rx_workers = get_workers(&env, &napi_options.worker_pool_v3)?;
+    let rx_workers = get_workers(&env, &napi_options.napi_worker_pool)?;
     let rpc = Arc::new(NodejsRpcFactory::new(rx_workers)?);
     let options = env.from_js_value(napi_options.options)?;
 

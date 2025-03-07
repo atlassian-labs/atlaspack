@@ -13,7 +13,7 @@ import {
   overlayFS,
   outputFS,
   bundle,
-  workerPoolV3,
+  napiWorkerPool,
 } from '@atlaspack/test-utils';
 import {LMDBLiteCache} from '@atlaspack/cache';
 import type {InitialAtlaspackOptions} from '@atlaspack/types';
@@ -66,7 +66,7 @@ describe.v3('AtlaspackV3', function () {
       corePath: '',
       entries: [join(__dirname, 'index.js')],
       fs: new FileSystemV3(overlayFS),
-      workerPoolV3,
+      napiWorkerPool,
       packageManager: new NodePackageManager(inputFS, __dirname),
       lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
     });
@@ -205,7 +205,7 @@ describe.v3('AtlaspackV3', function () {
             entries: [join(__dirname, 'index.js')],
             fs: new FileSystemV3(overlayFS),
             lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
-            workerPoolV3,
+            napiWorkerPool,
             featureFlags: {
               testFlag: true,
             },
@@ -220,7 +220,7 @@ describe.v3('AtlaspackV3', function () {
             corePath: '',
             entries: [join(__dirname, 'index.js')],
             fs: new FileSystemV3(overlayFS),
-            workerPoolV3,
+            napiWorkerPool,
             lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
             featureFlags: {
               testFlag: 'testFlagValue',

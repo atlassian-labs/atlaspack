@@ -49,7 +49,7 @@ export interface FileSystem {
 export type AtlaspackNapiOptions = {|
   fs?: FileSystem,
   nodeWorkers?: number,
-  workerPoolV3: any,
+  napiWorkerPool: any,
   options: {|
     featureFlags?: { [string]: string | boolean },
     corePath?: string,
