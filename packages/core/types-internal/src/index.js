@@ -40,6 +40,7 @@ import type {
   FileInvalidation,
   FileAboveInvalidation,
 } from './FileCreateInvalidation';
+import type {NapiWorkerPool} from './NapiWorkerPool';
 
 export interface TraceMeasurement {
   end(): void;
@@ -69,6 +70,7 @@ export type {
   InstallOptions,
   InstallerOptions,
   Cache,
+  NapiWorkerPool,
 };
 
 /** Plugin-specific AST, <code>any</code> */
@@ -377,6 +379,7 @@ export type InitialAtlaspackOptionsInternal<WorkerFarm> = {|
   +outputFS?: FileSystem,
   +cache?: Cache,
   +workerFarm?: WorkerFarm,
+  +napiWorkerPool?: NapiWorkerPool,
   +packageManager?: PackageManager,
   +detailedReport?: ?DetailedReportOptions,
 
