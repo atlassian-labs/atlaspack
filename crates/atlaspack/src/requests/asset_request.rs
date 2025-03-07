@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigLoader;
+use atlaspack_core::hash::hash_bytes;
 use atlaspack_core::plugin::AssetBuildEvent;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
@@ -128,6 +129,10 @@ impl Request for AssetRequest {
       size: result.asset.code.size(),
       time: start.elapsed().as_millis().try_into().unwrap_or(u32::MAX),
     };
+
+    // Assign the output hash for the Asset now that all transforms have been
+    // applied
+    result.asset.output_hash = Some(hash_bytes(result.asset.code.bytes()));
 
     // Ensure the asset source file is marked as an invalidation
     result
