@@ -299,10 +299,28 @@ export class AtlaspackWorker {
   );
 }
 
-// Create napi worker and send it back to main thread
 const worker = new AtlaspackWorker();
-const napiWorker = napi.newNodejsWorker(worker);
-parentPort?.postMessage(napiWorker);
+parentPort?.on('message', (event) => {
+  if (event.type === 'registerWorker') {
+    try {
+      napi.registerWorker(event.tx_worker, worker);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(
+        'Registering worker failed... This might mean atlaspack is getting shut-down before the worker registered',
+        err,
+      );
+      parentPort?.postMessage({type: 'workerError', error: err});
+    }
+    parentPort?.postMessage({type: 'workerRegistered'});
+  } else if (event.type === 'probeStatus') {
+    parentPort.postMessage({
+      type: 'status',
+      status: 'ok',
+    });
+  }
+});
+parentPort?.postMessage({type: 'workerLoaded'});
 
 type ResolverState<T> = {|
   resolver: Resolver<T>,
