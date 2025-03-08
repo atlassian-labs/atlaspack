@@ -725,6 +725,6 @@ export function createWorkerFarm(
 ): WorkerFarm {
   return new WorkerFarm({
     ...options,
-    workerPath: require.resolve('./worker'),
+    workerPath: path.join(__dirname, 'worker.js'),
   });
 }

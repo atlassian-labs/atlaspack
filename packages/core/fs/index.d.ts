@@ -1,6 +1,11 @@
-import type {FileSystem} from '@atlaspack/types-internal';
+import type {FileSystem, FilePath} from '@atlaspack/types-internal';
 import type WorkerFarm from '@atlaspack/workers';
-import type {NodeVCSAwareFSOptions} from './src/NodeVCSAwareFS';
+
+export interface NodeVCSAwareFSOptions {
+  gitRepoPath: FilePath;
+  excludePatterns: Array<string>;
+  logEventDiff: (watcherEvents: Event[], vcsEvents: Event[]) => void;
+}
 
 export type {
   FileSystem,
