@@ -64,6 +64,21 @@ export function makeDebugCommand(): commander$Command {
     });
   applyOptions(invalidate, commonOptions);
 
+  const listCacheInvalidations = debug
+    .command('list-cache-invalidations [input...]')
+    .description('List cache invalidations, then exit')
+    .action(async (args: string[], opts: Options, command: CommandExt) => {
+      try {
+        const atlaspack = await getInstance(args, opts, command);
+
+        await atlaspack.unstable_listCacheInvalidations();
+        process.exit(0);
+      } catch (err) {
+        handleUncaughtException(err);
+      }
+    });
+  applyOptions(listCacheInvalidations, commonOptions);
+
   const buildAssetGraph = debug
     .command('build-asset-graph [input...]')
     .description('Build the asset graph then exit')
