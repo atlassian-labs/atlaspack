@@ -61,7 +61,7 @@ export default function createAtlaspackBuildRequest(
   };
 }
 
-async function run({input, api, options}) {
+async function run({input, api, options, rustAtlaspack}) {
   let {optionsRef, requestedAssetIds, signal} = input;
 
   let bundleGraphRequest = createBundleGraphRequest({
@@ -72,7 +72,9 @@ async function run({input, api, options}) {
 
   let {bundleGraph, changedAssets, assetRequests}: BundleGraphResult =
     await api.runRequest(bundleGraphRequest, {
-      force: options.shouldBuildLazily && requestedAssetIds.size > 0,
+      force:
+        Boolean(rustAtlaspack) ||
+        (options.shouldBuildLazily && requestedAssetIds.size > 0),
     });
 
   // $FlowFixMe Added in Flow 0.121.0 upgrade in #4381 (Windows only)
