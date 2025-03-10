@@ -47,6 +47,14 @@ function setupGitRepository() {
   const root = getTemporaryDirectory();
   fs.mkdirSync(root, {recursive: true});
   childProcess.execSync('git init', {cwd: root, stdio: execStdio});
+  childProcess.execSync('git config user.email "test@example.com"', {
+    cwd: root,
+    stdio: execStdio,
+  });
+  childProcess.execSync('git config user.name "Test User"', {
+    cwd: root,
+    stdio: execStdio,
+  });
 
   // gitignore the .parcel-cache directory
   fs.writeFileSync(
