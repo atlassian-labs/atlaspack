@@ -13,17 +13,48 @@ import {getFeatureFlagValue} from '@atlaspack/feature-flags';
 import packageJSON from '../package.json';
 
 export interface NodeVCSAwareFSOptions {
-  gitRepoPath: FilePath;
+  gitRepoPath: null | FilePath;
   excludePatterns: Array<string>;
-  logEventDiff: (watcherEvents: Event[], vcsEvents: Event[]) => void;
+  logEventDiff: null | ((watcherEvents: Event[], vcsEvents: Event[]) => void);
 }
 
 export class NodeVCSAwareFS extends NodeFS {
-  #options: NodeVCSAwareFSOptions;
+  #excludePatterns: Array<string>;
+  #logEventDiff: null | ((watcherEvents: Event[], vcsEvents: Event[]) => void);
+  #gitRepoPath: null | FilePath;
 
   constructor(options: NodeVCSAwareFSOptions) {
     super();
-    this.#options = options;
+    this.#excludePatterns = options.excludePatterns;
+    this.#logEventDiff = options.logEventDiff;
+    this.#gitRepoPath = options.gitRepoPath;
+  }
+
+  // $FlowFixMe[unclear-type] this is the serialization API
+  static deserialize(data: any): NodeVCSAwareFS {
+    const fs = new NodeVCSAwareFS({
+      excludePatterns: data.excludePatterns,
+      logEventDiff: null,
+      gitRepoPath: data.gitRepoPath,
+    });
+    return fs;
+  }
+
+  // $FlowFixMe[incompatible-extend] the serialization API is not happy with inheritance
+  serialize(): {|
+    excludePatterns: Array<string>,
+    logEventDiff: null | ((watcherEvents: Event[], vcsEvents: Event[]) => void),
+    gitRepoPath: null | FilePath,
+  |} {
+    return {
+      excludePatterns: this.#excludePatterns,
+      logEventDiff: null,
+      gitRepoPath: this.#gitRepoPath,
+    };
+  }
+
+  setGitRepoPath(gitRepoPath: null | FilePath) {
+    this.#gitRepoPath = gitRepoPath;
   }
 
   async getEventsSince(
@@ -31,15 +62,25 @@ export class NodeVCSAwareFS extends NodeFS {
     snapshot: FilePath,
     opts: WatcherOptions,
   ): Promise<Array<Event>> {
-    // Note: can't use toString() directly, or it won't resolve the promise
-    const snapshotFile = await this.readFile(snapshot);
-    const snapshotFileContent = snapshotFile.toString();
-    const {nativeSnapshotPath, vcsState} = JSON.parse(snapshotFileContent);
+    const gitRepoPath = this.#gitRepoPath;
+    if (gitRepoPath == null) {
+      return this.watcher().getEventsSince(dir, snapshot, opts);
+    }
+
+    const {nativeSnapshotPath, vcsState} = await instrumentAsync(
+      'NodeVCSAwareFS.readSnapshot',
+      async () => {
+        // Note: can't use toString() directly, or it won't resolve the promise
+        const snapshotFile = await this.readFile(snapshot);
+        const snapshotFileContent = snapshotFile.toString();
+        return JSON.parse(snapshotFileContent);
+      },
+    );
     let watcherEventsSince = [];
 
     const vcsEventsSince = instrument(
       'NodeVCSAwareFS::rust.getEventsSince',
-      () => getEventsSince(this.#options.gitRepoPath, vcsState.gitHash),
+      () => getEventsSince(gitRepoPath, vcsState, null),
     ).map((e) => ({
       path: e.path,
       type: e.changeType,
@@ -50,7 +91,7 @@ export class NodeVCSAwareFS extends NodeFS {
         'NodeVCSAwareFS::watchman.getEventsSince',
         () => this.watcher().getEventsSince(dir, nativeSnapshotPath, opts),
       );
-      this.#options.logEventDiff(watcherEventsSince, vcsEventsSince);
+      this.#logEventDiff?.(watcherEventsSince, vcsEventsSince);
     }
 
     if (['NEW_AND_CHECK', 'NEW'].includes(getFeatureFlagValue('vcsMode'))) {
@@ -65,19 +106,30 @@ export class NodeVCSAwareFS extends NodeFS {
     snapshot: FilePath,
     opts: WatcherOptions,
   ): Promise<void> {
+    const gitRepoPath = this.#gitRepoPath;
+    if (gitRepoPath == null) {
+      await this.watcher().writeSnapshot(dir, snapshot, opts);
+      return;
+    }
+
     const snapshotDirectory = path.dirname(snapshot);
     const filename = path.basename(snapshot, '.txt');
     const nativeSnapshotPath = path.join(
       snapshotDirectory,
       `${filename}.native-snapshot.txt`,
     );
+
     if (getFeatureFlagValue('vcsMode') !== 'NEW') {
-      await this.watcher().writeSnapshot(dir, nativeSnapshotPath, opts);
+      await instrumentAsync(
+        'NodeVCSAwareFS::watchman.writeSnapshot',
+        async () => {
+          await this.watcher().writeSnapshot(dir, nativeSnapshotPath, opts);
+        },
+      );
     }
 
-    const vcsState = await getVcsStateSnapshot(
-      this.#options.gitRepoPath,
-      this.#options.excludePatterns,
+    const vcsState = instrument('NodeVCSAwareFS::getVcsStateSnapshot', () =>
+      getVcsStateSnapshot(gitRepoPath, this.#excludePatterns),
     );
 
     const snapshotContents = {

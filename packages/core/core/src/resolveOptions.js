@@ -11,7 +11,7 @@ import type {AtlaspackOptions} from './types';
 
 import path from 'path';
 import {hashString} from '@atlaspack/rust';
-import {NodeFS} from '@atlaspack/fs';
+import {NodeFS, NodeVCSAwareFS} from '@atlaspack/fs';
 import {LMDBCache, LMDBLiteCache, FSCache} from '@atlaspack/cache';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {NodePackageManager} from '@atlaspack/package-manager';
@@ -45,11 +45,39 @@ function compileGlobs(globs: string[]): RegExp[] {
   return globs.map((glob) => globToRegex(glob));
 }
 
+function getDefaultFS(): FileSystem {
+  if (true) {
+    return new NodeVCSAwareFS({
+      gitRepoPath: null,
+      excludePatterns: [],
+      logEventDiff: () => {},
+    });
+  }
+
+  return new NodeFS();
+}
+
+async function findGitRepositoryRoot(
+  inputFS: FileSystem,
+  projectRoot: FilePath,
+): Promise<null | FilePath> {
+  let candidate = projectRoot;
+  while (candidate !== path.parse(candidate).root) {
+    const gitRepoPath = path.join(candidate, '.git');
+    if (await inputFS.exists(gitRepoPath)) {
+      return candidate;
+    }
+    candidate = path.dirname(candidate);
+  }
+
+  return null;
+}
+
 export default async function resolveOptions(
   initialOptions: InitialAtlaspackOptions,
 ): Promise<AtlaspackOptions> {
-  let inputFS = initialOptions.inputFS || new NodeFS();
-  let outputFS = initialOptions.outputFS || new NodeFS();
+  const inputFS = initialOptions.inputFS || getDefaultFS();
+  const outputFS = initialOptions.outputFS || getDefaultFS();
 
   let inputCwd = inputFS.cwd();
   let outputCwd = outputFS.cwd();
@@ -89,6 +117,15 @@ export default async function resolveOptions(
     )) || path.join(inputCwd, 'index'); // ? Should this just be rootDir
 
   let projectRoot = path.dirname(projectRootFile);
+
+  const gitRoot = await findGitRepositoryRoot(inputFS, projectRoot);
+  if (inputFS instanceof NodeVCSAwareFS) {
+    inputFS.setGitRepoPath(gitRoot);
+  }
+
+  if (outputFS instanceof NodeVCSAwareFS) {
+    outputFS.setGitRepoPath(gitRoot);
+  }
 
   let packageManager =
     initialOptions.packageManager ||

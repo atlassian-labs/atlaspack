@@ -13,7 +13,7 @@ use std::{
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum YarnLockEntry {
   Resolution(YarnResolution),
@@ -21,7 +21,7 @@ pub enum YarnLockEntry {
   Other(serde_yaml::Value),
 }
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct YarnResolution {
   resolution: String,
   checksum: Option<String>,
@@ -37,7 +37,7 @@ impl YarnResolution {
   }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct YarnLock {
   /// Map of 'requirement' to 'resolution'
