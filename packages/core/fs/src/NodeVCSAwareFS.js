@@ -18,9 +18,22 @@ export interface NodeVCSAwareFSOptions {
   logEventDiff: null | ((watcherEvents: Event[], vcsEvents: Event[]) => void);
 }
 
+export type SerializedNodeVCSAwareFS = NodeVCSAwareFSOptions;
+
 export class NodeVCSAwareFS extends NodeFS {
+  /**
+   * These files are excluded from 'dirty file' tracking even if they are
+   * modified.
+   */
   #excludePatterns: Array<string>;
+  /**
+   * Logging function for the diff between watcher events and vcs events.
+   */
   #logEventDiff: null | ((watcherEvents: Event[], vcsEvents: Event[]) => void);
+  /**
+   * The path of the git repository containing the project root. Null if the
+   * project is not a git repository.
+   */
   #gitRepoPath: null | FilePath;
 
   constructor(options: NodeVCSAwareFSOptions) {
@@ -30,8 +43,8 @@ export class NodeVCSAwareFS extends NodeFS {
     this.#gitRepoPath = options.gitRepoPath;
   }
 
-  // $FlowFixMe[unclear-type] this is the serialization API
-  static deserialize(data: any): NodeVCSAwareFS {
+  // $FlowFixMe[incompatible-extend] the serialization API is not happy with inheritance
+  static deserialize(data: SerializedNodeVCSAwareFS): NodeVCSAwareFS {
     const fs = new NodeVCSAwareFS({
       excludePatterns: data.excludePatterns,
       logEventDiff: null,
@@ -41,11 +54,7 @@ export class NodeVCSAwareFS extends NodeFS {
   }
 
   // $FlowFixMe[incompatible-extend] the serialization API is not happy with inheritance
-  serialize(): {|
-    excludePatterns: Array<string>,
-    logEventDiff: null | ((watcherEvents: Event[], vcsEvents: Event[]) => void),
-    gitRepoPath: null | FilePath,
-  |} {
+  serialize(): SerializedNodeVCSAwareFS {
     return {
       excludePatterns: this.#excludePatterns,
       logEventDiff: null,

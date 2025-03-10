@@ -1,11 +1,10 @@
 // @flow strict-local
 
-import os from 'os';
 import fs from 'fs';
 import childProcess from 'child_process';
 import assert from 'assert';
 import path from 'path';
-import {NodeFS, NodeVCSAwareFS} from '@atlaspack/fs';
+import {NodeVCSAwareFS} from '@atlaspack/fs';
 import {bundle, assertBundles, workerFarm} from '@atlaspack/test-utils';
 
 it('can parse a git commit message hash', () => {
@@ -250,15 +249,7 @@ describe('vcs cache', () => {
   });
 
   it('should write a correct snapshot into the cache', async () => {
-    const {
-      root,
-      file1,
-      file2,
-      file3,
-      initialCommitHash,
-      changeFile2Hash,
-      changeFile3Hash,
-    } = setupGitRepository();
+    const {root, file1, initialCommitHash} = setupGitRepository();
 
     // checkout the initial commit
     childProcess.execSync('git checkout ' + initialCommitHash, {
@@ -371,15 +362,7 @@ describe('vcs cache', () => {
   });
 
   it('should be able to detect files that have been modified outside of git', async () => {
-    const {
-      root,
-      file1,
-      file2,
-      file3,
-      initialCommitHash,
-      changeFile2Hash,
-      changeFile3Hash,
-    } = setupGitRepository();
+    const {root, file1, file2} = setupGitRepository();
 
     const vcsFS = new NodeVCSAwareFS({
       gitRepoPath: root,
@@ -414,16 +397,7 @@ describe('vcs cache', () => {
   });
 
   it('if a build is made over a dirty state, it should be able to detect changes on the next build', async () => {
-    const {
-      root,
-      file1,
-      file2,
-      file3,
-      initialCommitHash,
-      changeFile2Hash,
-      changeFile3Hash,
-      changeLockfileHash,
-    } = setupGitRepository();
+    const {root, file1, file2, changeLockfileHash} = setupGitRepository();
 
     const vcsFS = new NodeVCSAwareFS({
       gitRepoPath: root,
@@ -476,16 +450,8 @@ describe('vcs cache', () => {
   });
 
   it('can detect changes to node_modules', async () => {
-    const {
-      root,
-      file1,
-      file2,
-      file3,
-      initialCommitHash,
-      changeFile2Hash,
-      changeFile3Hash,
-      changeLockfileHash,
-    } = setupGitRepository();
+    const {root, file1, changeFile3Hash, changeLockfileHash} =
+      setupGitRepository();
 
     // checkout change 3, before the yarn.lock change
     childProcess.execSync('git checkout ' + changeFile3Hash, {
@@ -499,7 +465,7 @@ describe('vcs cache', () => {
       excludePatterns: [],
       logEventDiff: null,
     });
-    const result = await bundle(file1, {
+    await bundle(file1, {
       inputFS: vcsFS,
       outputFS: vcsFS,
       shouldDisableCache: false,
@@ -550,23 +516,14 @@ describe('vcs cache', () => {
   });
 
   it('can detect changes to node_modules that are untracked by git if the build is done on a clean state', async () => {
-    const {
-      root,
-      file1,
-      file2,
-      file3,
-      initialCommitHash,
-      changeFile2Hash,
-      changeFile3Hash,
-      changeLockfileHash,
-    } = setupGitRepository();
+    const {root, file1} = setupGitRepository();
 
     const vcsFS = new NodeVCSAwareFS({
       gitRepoPath: root,
       excludePatterns: [],
       logEventDiff: null,
     });
-    const result = await bundle(file1, {
+    await bundle(file1, {
       inputFS: vcsFS,
       outputFS: vcsFS,
       shouldDisableCache: false,
@@ -655,12 +612,6 @@ __metadata:
     const {
       root,
       file1,
-      file2,
-      file3,
-      initialCommitHash,
-      changeFile2Hash,
-      changeFile3Hash,
-      changeLockfileHash,
       yarnStateFileContents: initialYarnStateFileContents,
     } = setupGitRepository();
 
@@ -719,7 +670,7 @@ __metadata:
       excludePatterns: [],
       logEventDiff: null,
     });
-    const result = await bundle(file1, {
+    await bundle(file1, {
       inputFS: vcsFS,
       outputFS: vcsFS,
       shouldDisableCache: false,

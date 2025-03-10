@@ -146,6 +146,16 @@ pub struct VCSState {
 }
 
 impl VCSState {
+  pub fn from_git_hash(git_hash: String) -> Self {
+    Self {
+      git_hash,
+      dirty_files: vec![],
+      dirty_files_execution_time: 0,
+      yarn_states: vec![],
+      yarn_states_execution_time: 0,
+    }
+  }
+
   /// Read the VCS state from a repository root. Ignore dirty files matching
   /// the exclude patterns.
   pub fn read_from_repository(

@@ -56,13 +56,7 @@ fn main() {
     } => {
       let changes = get_changed_files(
         &repository_root,
-        &VCSState {
-          git_hash: start_rev,
-          dirty_files: vec![],
-          dirty_files_execution_time: 0,
-          yarn_states: vec![],
-          yarn_states_execution_time: 0,
-        },
+        &VCSState::from_git_hash(start_rev),
         end_rev.as_deref(),
         FailureMode::IgnoreMissingNodeModules,
       )
