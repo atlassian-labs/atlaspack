@@ -14,7 +14,7 @@ import type {
   SerializedContentGraph,
   Graph,
 } from '@atlaspack/graph';
-import logger from '@atlaspack/logger';
+import logger, {instrument, instrumentAsync} from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
 import type {Async, EnvMap, JSONObject} from '@atlaspack/types';
 import {
@@ -1488,19 +1488,6 @@ export default class RequestTracker {
     return {api, subRequestContentKeys};
   }
 
-  #debouncedWriteToCacheTimeout = null;
-
-  debouncedWriteToCache() {
-    if (this.#debouncedWriteToCacheTimeout != null) {
-      clearTimeout(this.#debouncedWriteToCacheTimeout);
-    }
-
-    this.#debouncedWriteToCacheTimeout = setTimeout(() => {
-      this.#debouncedWriteToCacheTimeout = null;
-      this.writeToCache();
-    }, 10000);
-  }
-
   async writeToCache(signal?: AbortSignal) {
     console.log('writeToCache');
     let cacheKey = getCacheKey(this.options);
@@ -1577,37 +1564,26 @@ export default class RequestTracker {
         cacheableNodes[i] = node;
       }
     }
-    cacheableNodes = cacheableNodes.filter(
-      (node) => node && (node.result != null || node.resultCacheKey != null),
-    );
 
-    let nodeCountsPerBlob = [];
+    const chunks = [];
+    for (let i = 0; i < cacheableNodes.length; i += this.graph.nodesPerBlob) {
+      const chunk = cacheableNodes.slice(i, i + this.graph.nodesPerBlob);
+      chunks.push(chunk);
+    }
 
-    for (
-      let i = 0;
-      i * this.graph.nodesPerBlob < cacheableNodes.length;
-      i += 1
-    ) {
-      let nodesStartIndex = i * this.graph.nodesPerBlob;
-      let nodesEndIndex = Math.min(
-        (i + 1) * this.graph.nodesPerBlob,
-        cacheableNodes.length,
-      );
-
-      nodeCountsPerBlob.push(nodesEndIndex - nodesStartIndex);
-
+    const nodeCountsPerBlob = chunks.map((chunk) => chunk.length);
+    for (let i = 0; i < chunks.length; i++) {
       if (!this.graph.hasCachedRequestChunk(i)) {
         // We assume the request graph nodes are immutable and won't change
-        let nodesToCache = cacheableNodes.slice(nodesStartIndex, nodesEndIndex);
+        const chunk = chunks[i];
 
         queue.add(() =>
-          serialiseAndSet(
-            getRequestGraphNodeKey(i, cacheKey),
-            nodesToCache,
-          ).then(() => {
-            // Succeeded in writing to disk, save that we have completed this chunk
-            this.graph.setCachedRequestChunk(i);
-          }),
+          serialiseAndSet(getRequestGraphNodeKey(i, cacheKey), chunk).then(
+            () => {
+              // Succeeded in writing to disk, save that we have completed this chunk
+              this.graph.setCachedRequestChunk(i);
+            },
+          ),
         );
       }
     }
@@ -1711,10 +1687,13 @@ export async function readAndDeserializeRequestGraph(
     },
   );
 
+  const chunks = await Promise.all(nodePromises);
+  const nodes = chunks.flat();
+
   return {
     requestGraph: RequestGraph.deserialize({
       ...serializedRequestGraph,
-      nodes: (await Promise.all(nodePromises)).flat(),
+      nodes,
     }),
     // This is used inside atlaspack query for `.inspectCache`
     bufferLength,
@@ -1815,17 +1794,21 @@ async function loadRequestGraph(options): Async<RequestGraph> {
         },
       });
 
-      requestGraph.invalidateUnpredictableNodes();
-      requestGraph.invalidateOnBuildNodes();
-      requestGraph.invalidateEnvNodes(options.env);
-      requestGraph.invalidateOptionNodes(options);
+      instrument('invalidate static nodes', () => {
+        requestGraph.invalidateUnpredictableNodes();
+        requestGraph.invalidateOnBuildNodes();
+        requestGraph.invalidateEnvNodes(options.env);
+        requestGraph.invalidateOptionNodes(options);
+      });
 
-      await requestGraph.respondToFSEvents(
-        options.unstableFileInvalidations || events,
-        options,
-        10000,
-        true,
-      );
+      await instrumentAsync('invalidate fs events', async () => {
+        await requestGraph.respondToFSEvents(
+          options.unstableFileInvalidations || events,
+          options,
+          10000,
+          true,
+        );
+      });
       return requestGraph;
     } catch (e) {
       // Prevent logging fs events took too long warning
