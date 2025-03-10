@@ -10,7 +10,7 @@ describe('@atlaspack/babel-plugin-transform-contextual-imports', () => {
     const input = `
       const Imported = importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
     `;
-    let {code: transformed} = babel.transformSync(input, {
+    const {code: transformed} = babel.transformSync(input, {
       configFile: false,
       presets: [],
       plugins: [plugin],
@@ -28,10 +28,10 @@ describe('@atlaspack/babel-plugin-transform-contextual-imports', () => {
 
       console.log(Imported);
     `;
-    let {code: transformed} = babel.transformSync(input, {
+    const {code: transformed} = babel.transformSync(input, {
       configFile: false,
       presets: [],
-      plugins: [[plugin, {server: true}]],
+      plugins: [[plugin, {node: true}]],
     });
 
     assert.equal(

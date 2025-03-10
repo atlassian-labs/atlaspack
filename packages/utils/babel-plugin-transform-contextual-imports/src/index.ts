@@ -4,7 +4,7 @@ import type {StringLiteral} from '@babel/types';
 
 interface Opts {
   // Use node safe import cond syntax
-  server?: boolean;
+  node?: boolean;
 }
 
 interface State {
@@ -12,7 +12,7 @@ interface State {
   importMap?: Map<string, string>;
 }
 
-const isServer = (opts: Opts): boolean => !!('server' in opts && opts.server);
+const isNode = (opts: Opts): boolean => !!('node' in opts && opts.node);
 
 export default declare((api): PluginObj<State> => {
   const {types: t} = api;
@@ -44,7 +44,7 @@ export default declare((api): PluginObj<State> => {
       ),
     );
 
-  const buildServerObject = (
+  const buildNodeObject = (
     identUid: string,
     cond: StringLiteral,
     ifTrue: StringLiteral,
@@ -135,7 +135,7 @@ export default declare((api): PluginObj<State> => {
             ) {
               const [cond, ifTrue, ifFalse] = path.node.arguments;
 
-              if (!isServer(state.opts)) {
+              if (!isNode(state.opts)) {
                 path.replaceWith(buildCondFunction(cond, ifTrue, ifFalse));
               }
             } else {
@@ -149,7 +149,7 @@ export default declare((api): PluginObj<State> => {
       },
       VariableDeclaration: {
         enter(path, state) {
-          if (isServer(state.opts)) {
+          if (isNode(state.opts)) {
             if (
               path.node.declarations.length === 1 &&
               path.node.declarations[0].type === 'VariableDeclarator' &&
@@ -175,7 +175,7 @@ export default declare((api): PluginObj<State> => {
                     );
 
                     path.replaceWithMultiple(
-                      buildServerObject(identUid, cond, ifTrue, ifFalse),
+                      buildNodeObject(identUid, cond, ifTrue, ifFalse),
                     );
 
                     state.importMap?.set(importId.name, identUid);
