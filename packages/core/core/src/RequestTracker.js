@@ -16,7 +16,7 @@ import type {
 } from '@atlaspack/graph';
 import logger from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
-import type {Async, EnvMap} from '@atlaspack/types';
+import type {Async, EnvMap, JSONObject} from '@atlaspack/types';
 import {
   type Deferred,
   isGlobMatch,
@@ -69,6 +69,7 @@ import type {
   InternalGlob,
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
+import {identifierRegistry} from './IdentifierRegistry';
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
@@ -1345,6 +1346,7 @@ export default class RequestTracker {
       this.completeRequest(requestNodeId);
 
       deferred.resolve(true);
+
       return result;
     } catch (err) {
       if (
@@ -1454,6 +1456,7 @@ export default class RequestTracker {
   }
 
   async writeToCache(signal?: AbortSignal) {
+    console.log('writeToCache');
     let cacheKey = getCacheKey(this.options);
     let requestGraphKey = `requestGraph-${cacheKey}`;
     let snapshotKey = `snapshot-${cacheKey}`;
@@ -1573,17 +1576,20 @@ export default class RequestTracker {
       let opts = getWatcherOptions(this.options);
       let snapshotPath = path.join(this.options.cacheDir, snapshotKey + '.txt');
 
+      console.log('writeSnapshot');
       await this.options.outputFS.writeSnapshot(
         this.options.watchDir,
         snapshotPath,
         opts,
       );
+      console.log('writeSnapshot done');
     } catch (err) {
       // If we have aborted, ignore the error and continue
       if (!signal?.aborted) throw err;
     }
 
     report({type: 'cache', phase: 'end', total, size: this.graph.nodes.length});
+    console.log('writeToCache done');
   }
 
   static async init({
@@ -1614,11 +1620,16 @@ export function getWatcherOptions({
 }
 
 function getCacheKey(options) {
-  return hashString(
-    `${ATLASPACK_VERSION}:${JSON.stringify(options.entries)}:${options.mode}:${
-      options.shouldBuildLazily ? 'lazy' : 'eager'
-    }:${options.watchBackend ?? ''}`,
-  );
+  const data = `${ATLASPACK_VERSION}:${JSON.stringify(options.entries)}:${
+    options.mode
+  }:${options.shouldBuildLazily ? 'lazy' : 'eager'}:${
+    options.watchBackend ?? ''
+  }`;
+  const cacheKey = hashString(data);
+
+  identifierRegistry.addIdentifier('requestTrackerCacheKey', data);
+
+  return cacheKey;
 }
 
 function getRequestGraphNodeKey(index: number, cacheKey: string) {
@@ -1659,6 +1670,47 @@ export async function readAndDeserializeRequestGraph(
     // This is used inside atlaspack query for `.inspectCache`
     bufferLength,
   };
+}
+
+type RequestGraphInvalidation = {|type: 'file', filePath: ProjectPath|};
+
+type LoadRequestGraphPlan =
+  | {|type: 'cache-disabled'|}
+  | {|type: 'cache-missing', reason: string, meta: JSONObject|}
+  | {|type: 'cache-present', invalidations: RequestGraphInvalidation[]|};
+
+export async function planLoadRequestGraph(
+  options,
+): Async<LoadRequestGraphPlan> {
+  if (options.shouldDisableCache) {
+    return {type: 'cache-disabled'};
+  }
+
+  const cacheKey = getCacheKey(options);
+  const requestGraphKey = `requestGraph-${cacheKey}`;
+  const snapshotKey = `snapshot-${cacheKey}`;
+  const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');
+
+  const requestGraphEntryExists = options.cache.hasLargeBlob(requestGraphKey);
+  if (!requestGraphEntryExists) {
+    return {
+      type: 'cache-missing',
+      reason:
+        'Cache entry for request tracker was not found, initializing a clean cache.',
+      meta: {
+        cacheKey,
+        snapshotKey,
+      },
+    };
+  }
+
+  const watcherOptions = getWatcherOptions(options);
+  const events = await options.inputFS.getEventsSince(
+    options.watchDir,
+    snapshotPath,
+    watcherOptions,
+  );
+  console.log(events);
 }
 
 async function loadRequestGraph(options): Async<RequestGraph> {

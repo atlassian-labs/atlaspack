@@ -35,6 +35,7 @@ import {AtlaspackConfig} from './AtlaspackConfig';
 import logger from '@atlaspack/logger';
 import RequestTracker, {
   getWatcherOptions,
+  planLoadRequestGraph,
   requestGraphEdgeTypes,
 } from './RequestTracker';
 import createValidationRequest from './requests/ValidationRequest';
@@ -586,6 +587,19 @@ export default class Atlaspack {
    */
   async clearBuildCaches(): Promise<void> {
     await this.#farm?.callAllWorkers('clearWorkerBuildCaches', []);
+  }
+
+  async unstable_listCacheInvalidations(): Promise<void> {
+    const featureFlags = {
+      ...DEFAULT_FEATURE_FLAGS,
+      ...this.#initialOptions.featureFlags,
+    };
+    setFeatureFlags(featureFlags);
+    const resolvedOptions: AtlaspackOptions = await resolveOptions({
+      ...this.#initialOptions,
+      featureFlags,
+    });
+    await planLoadRequestGraph(resolvedOptions);
   }
 
   async unstable_invalidate(): Promise<void> {
