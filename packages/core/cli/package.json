@@ -35,6 +35,7 @@
     "@atlaspack/reporter-dev-server": "2.13.1",
     "@atlaspack/reporter-tracer": "2.13.1",
     "@atlaspack/utils": "2.13.1",
+    "hapi": "*",
     "chalk": "^4.1.0",
     "commander": "^7.0.0",
     "get-port": "^4.2.0"

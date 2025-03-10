@@ -30,7 +30,12 @@ import {ATLASPACK_VERSION} from './constants';
 import {createAsset, createAssetIdFromOptions} from './assetUtils';
 import {BundleBehaviorNames} from './types';
 import {invalidateOnFileCreateToInternal, createInvalidations} from './utils';
-import {type ProjectPath, fromProjectPath} from './projectPath';
+import {
+  type ProjectPath,
+  fromProjectPath,
+  fromProjectPathRelative,
+} from './projectPath';
+import path from 'path';
 
 type UncommittedAssetOptions = {|
   value: Asset,
@@ -296,7 +301,17 @@ export default class UncommittedAsset {
   }
 
   getCacheKey(key: string): string {
-    return hashString(ATLASPACK_VERSION + key + this.value.id);
+    return (
+      'asset_code:' +
+      ATLASPACK_VERSION +
+      ':' +
+      this.value.filePath +
+      // path.relative(this.options.projectRoot, this.value.filePath) +
+      ':' +
+      key +
+      ':' +
+      this.value.id
+    );
   }
 
   addDependency(opts: DependencyOptions): string {

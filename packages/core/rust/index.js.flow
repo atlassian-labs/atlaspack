@@ -51,7 +51,7 @@ export type AtlaspackNapiOptions = {|
   nodeWorkers?: number,
   napiWorkerPool: any,
   options: {|
-    featureFlags?: { [string]: string | boolean },
+    featureFlags?: {[string]: string | boolean},
     corePath?: string,
     // TODO Use Omit when available in flow >0.210.0
     ...$Diff<
@@ -329,6 +329,7 @@ declare export class Lmdb {
   commitReadTransaction(): void;
   startWriteTransaction(): Promise<void>;
   commitWriteTransaction(): Promise<void>;
+  listKeys(): Array<string>;
   close(): void;
 }
 
