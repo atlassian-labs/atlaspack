@@ -608,6 +608,8 @@ export default class Atlaspack {
   }
 
   async unstable_listCacheInvalidations(): Promise<void> {
+    initializeMonitoring?.();
+
     const featureFlags = {
       ...DEFAULT_FEATURE_FLAGS,
       ...this.#initialOptions.featureFlags,
