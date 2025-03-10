@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+enum RequestType {
+    ATLASPACK_BUILD_REQUEST = 0;
+    BUNDLE_GRAPH_REQUEST = 1;
+    ASSET_GRAPH_REQUEST = 2; 
+    ENTRY_REQUEST = 3;
+    TARGET_REQUEST = 4;
+    ATLASPACK_CONFIG_REQUEST = 5;
+    PATH_REQUEST = 6;
+    DEV_DEP_REQUEST = 7;
+    ASSET_REQUEST = 8;
+    CONFIG_REQUEST = 9;
+    WRITE_BUNDLES_REQUEST = 10;
+    PACKAGE_REQUEST = 11;
+    WRITE_BUNDLE_REQUEST = 12;
+    VALIDATION_REQUEST = 13;
+}
+
+message RequestNode {
+    string id = 1;
+    RequestType requestType = 2;
+}
+
+enum RequestResultType {
+    ASSET_GRAPH_RESULT = 0;
+    ATLASPACK_CONFIG_RESULT = 1;
+    BUNDLE_GRAPH_RESULT = 2;
+    DEV_DEP_RESULT = 3;
+    PACKAGE_RESULT = 4;
+    WRITE_BUNDLES_RESULT = 5;
+}
+
+message RequestResult {
+    RequestResultType resultType = 1;
+
+    oneof result {
+        AssetGraphResult assetGraphResult = 2;
+        AtlaspackConfigResult atlaspackConfigResult = 3;
+        BundleGraphResult bundleGraphResult = 4;
+        DevDepResult devDepResult = 5;
+        PackageResult packageResult = 6;
+        WriteBundlesResult writeBundlesResult = 7;
+    }
+}

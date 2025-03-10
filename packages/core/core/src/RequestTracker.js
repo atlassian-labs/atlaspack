@@ -1537,11 +1537,78 @@ export default class RequestTracker {
 
       for (let i = 0; i < serialisedGraph.nodes.length; i += 1) {
         const node = serialisedGraph.nodes[i];
-        const resultCacheKey = node?.resultCacheKey;
-        const key = resultCacheKey ?? `requestGraph:nodes:${cacheKey}:${i}`;
 
-        const serializedNode = serialize(node);
-        lmdb.putNoConfirm(key, serializedNode);
+        if (
+          node.type === REQUEST &&
+          node.requestType === requestTypes.asset_graph_request &&
+          node.result != null
+        ) {
+          const key = node.id;
+          const envs = new Map();
+          const result: AssetGraphRequestResult = node.result;
+
+          for (let assetGraphNode of result.assetGraph.nodes) {
+            // assert(assetGraphNode.id != null);
+            if (assetGraphNode.type === 'asset') {
+              envs.set(assetGraphNode.value.env.id, assetGraphNode.value.env);
+              lmdb.putNoConfirm(
+                `assetGraph:${key}:${assetGraphNode.type}:${assetGraphNode.value.filePath}:${assetGraphNode.id}`,
+                serialize({
+                  ...assetGraphNode,
+                  value: {
+                    ...assetGraphNode.value,
+                    env: undefined,
+                    envId: assetGraphNode.value.env.id,
+                  },
+                }),
+              );
+            } else if (assetGraphNode.type === 'dependency') {
+              envs.set(assetGraphNode.value.env.id, assetGraphNode.value.env);
+              lmdb.putNoConfirm(
+                `assetGraph:${key}:${assetGraphNode.type}:${assetGraphNode.value.sourcePath}:${assetGraphNode.value.specifier}:${assetGraphNode.id}`,
+                serialize({
+                  ...assetGraphNode,
+                  value: {
+                    ...assetGraphNode.value,
+                    env: undefined,
+                    envId: assetGraphNode.value.env.id,
+                  },
+                }),
+              );
+            } else if (assetGraphNode.type === 'asset_group') {
+              envs.set(assetGraphNode.value.env.id, assetGraphNode.value.env);
+              lmdb.putNoConfirm(
+                `assetGraph:${key}:${assetGraphNode.type}:${assetGraphNode.value.filePath}:${assetGraphNode.id}`,
+                serialize({
+                  ...assetGraphNode,
+                  value: {
+                    ...assetGraphNode.value,
+                    env: undefined,
+                    envId: assetGraphNode.value.env.id,
+                  },
+                }),
+              );
+            } else {
+              console.log(assetGraphNode.type);
+              lmdb.putNoConfirm(
+                `assetGraph:${key}:${assetGraphNode.type}:${assetGraphNode.id}`,
+                serialize(assetGraphNode),
+              );
+            }
+          }
+
+          for (let env of envs.values()) {
+            lmdb.putNoConfirm(
+              `assetGraph:${key}:env:${env.id}`,
+              serialize(env),
+            );
+          }
+        } else {
+          const resultCacheKey = node?.resultCacheKey;
+          const key = resultCacheKey ?? `requestGraph:nodes:${cacheKey}:${i}`;
+          const serializedNode = serialize(node);
+          lmdb.putNoConfirm(key, serializedNode);
+        }
       }
       console.log('done writing nodes');
 
