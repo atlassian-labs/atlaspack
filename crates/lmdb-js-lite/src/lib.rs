@@ -307,6 +307,16 @@ mod napi {
     }
 
     #[napi]
+    pub fn list_keys(&mut self) -> napi::Result<Vec<String>> {
+      let database_handle = self.get_database_napi()?;
+      let database = &database_handle.database;
+      let keys = database
+        .list_keys()
+        .map_err(|err| napi_error(anyhow!("Failed to list keys {err}")))?;
+      Ok(keys)
+    }
+
+    #[napi]
     pub fn start_read_transaction(&mut self) -> napi::Result<()> {
       if self.read_transaction.is_some() {
         return Ok(());

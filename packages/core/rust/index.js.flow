@@ -328,6 +328,7 @@ declare export class Lmdb {
   commitReadTransaction(): void;
   startWriteTransaction(): Promise<void>;
   commitWriteTransaction(): Promise<void>;
+  listKeys(): Array<string>;
   close(): void;
 }
 

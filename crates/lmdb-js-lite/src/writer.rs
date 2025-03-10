@@ -335,6 +335,16 @@ impl DatabaseWriter {
     })
   }
 
+  pub fn list_keys(&self) -> Result<Vec<String>> {
+    let txn = self.environment.read_txn()?;
+    let mut iter = self.database.iter(&txn)?;
+    let mut keys = Vec::new();
+    while let Some(Ok((key, _))) = iter.next() {
+      keys.push(key.to_string());
+    }
+    Ok(keys)
+  }
+
   pub fn decompress(&self, data: &[u8]) -> Result<Vec<u8>> {
     let output_buffer = lz4_flex::block::decompress_size_prepended(data)?;
     Ok(output_buffer)

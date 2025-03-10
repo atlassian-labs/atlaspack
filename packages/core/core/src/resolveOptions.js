@@ -152,7 +152,7 @@ export default async function resolveOptions(
   let cache = needsRustLmdbCache
     ? new LMDBLiteCache(cacheDir)
     : outputFS instanceof NodeFS
-    ? new LMDBCache(cacheDir)
+    ? new LMDBLiteCache(cacheDir)
     : new FSCache(outputFS, cacheDir);
 
   let mode = initialOptions.mode ?? 'development';
