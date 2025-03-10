@@ -607,6 +607,15 @@ export default class Atlaspack {
     await this.#farm?.callAllWorkers('clearWorkerBuildCaches', []);
   }
 
+  unstable_getNativeCache(): LMDBLiteCache {
+    const options = nullthrows(this.#resolvedOptions);
+    if (options.cache instanceof LMDBLiteCache) {
+      return options.cache;
+    } else {
+      throw new Error('Cache is not an LMDBLiteCache');
+    }
+  }
+
   async unstable_listCacheInvalidations(): Promise<void> {
     initializeMonitoring?.();
 
