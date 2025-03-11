@@ -361,6 +361,7 @@ describe('vcs cache', () => {
     // query the fs for changes
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
+      changes.sort((a, b) => a.path.localeCompare(b.path));
       assert.equal(changes.length, 2);
       assert.equal(changes[0].path, file2);
       assert.equal(changes[0].type, 'update');
@@ -500,26 +501,28 @@ describe('vcs cache', () => {
     // there are changes now to all files under node_modules/lodash
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
+      changes.sort((a, b) => a.path.localeCompare(b.path));
       assert.equal(changes.length, 5);
 
       // 5 changes:
       // * the lock file
       // * plus delete/create for each of the files under node_modules/lodash
-      assert.equal(changes[0].path, path.join(root, 'yarn.lock'));
-      assert.equal(changes[0].type, 'update');
 
       const lodashDir = path.join(root, 'node_modules', 'lodash');
-      assert.equal(changes[1].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[1].type, 'delete');
+      assert.equal(changes[0].path, path.join(lodashDir, 'file1.js'));
+      assert.equal(changes[0].type, 'delete');
 
-      assert.equal(changes[2].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[2].type, 'create');
+      assert.equal(changes[1].path, path.join(lodashDir, 'file1.js'));
+      assert.equal(changes[1].type, 'create');
+
+      assert.equal(changes[2].path, path.join(lodashDir, 'src', 'file2.js'));
+      assert.equal(changes[2].type, 'delete');
 
       assert.equal(changes[3].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[3].type, 'delete');
+      assert.equal(changes[3].type, 'create');
 
-      assert.equal(changes[4].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[4].type, 'create');
+      assert.equal(changes[4].path, path.join(root, 'yarn.lock'));
+      assert.equal(changes[4].type, 'update');
     }
   });
 
@@ -593,26 +596,24 @@ __metadata:
     const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
+      changes.sort((a, b) => a.path.localeCompare(b.path));
       assert.equal(changes.length, 5);
 
-      // 5 changes:
-      // * the lock file
-      // * plus delete/create for each of the files under node_modules/lodash
-      assert.equal(changes[0].path, path.join(root, 'yarn.lock'));
-      assert.equal(changes[0].type, 'update');
-
       const lodashDir = path.join(root, 'node_modules', 'lodash');
-      assert.equal(changes[1].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[1].type, 'delete');
+      assert.equal(changes[0].path, path.join(lodashDir, 'file1.js'));
+      assert.equal(changes[0].type, 'delete');
 
-      assert.equal(changes[2].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[2].type, 'create');
+      assert.equal(changes[1].path, path.join(lodashDir, 'file1.js'));
+      assert.equal(changes[1].type, 'create');
+
+      assert.equal(changes[2].path, path.join(lodashDir, 'src', 'file2.js'));
+      assert.equal(changes[2].type, 'delete');
 
       assert.equal(changes[3].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[3].type, 'delete');
+      assert.equal(changes[3].type, 'create');
 
-      assert.equal(changes[4].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[4].type, 'create');
+      assert.equal(changes[4].path, path.join(root, 'yarn.lock'));
+      assert.equal(changes[4].type, 'update');
     }
   });
 
@@ -701,26 +702,24 @@ __metadata:
     const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
+      changes.sort((a, b) => a.path.localeCompare(b.path));
       assert.equal(changes.length, 5);
 
-      // 5 changes:
-      // * the lock file
-      // * plus delete/create for each of the files under node_modules/lodash
-      assert.equal(changes[0].path, path.join(root, 'yarn.lock'));
-      assert.equal(changes[0].type, 'update');
-
       const lodashDir = path.join(root, 'node_modules', 'lodash');
-      assert.equal(changes[1].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[1].type, 'delete');
+      assert.equal(changes[0].path, path.join(lodashDir, 'file1.js'));
+      assert.equal(changes[0].type, 'delete');
 
-      assert.equal(changes[2].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[2].type, 'create');
+      assert.equal(changes[1].path, path.join(lodashDir, 'file1.js'));
+      assert.equal(changes[1].type, 'create');
+
+      assert.equal(changes[2].path, path.join(lodashDir, 'src', 'file2.js'));
+      assert.equal(changes[2].type, 'delete');
 
       assert.equal(changes[3].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[3].type, 'delete');
+      assert.equal(changes[3].type, 'create');
 
-      assert.equal(changes[4].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[4].type, 'create');
+      assert.equal(changes[4].path, path.join(root, 'yarn.lock'));
+      assert.equal(changes[4].type, 'update');
     }
   });
 });
