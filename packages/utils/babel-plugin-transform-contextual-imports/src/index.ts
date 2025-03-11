@@ -178,6 +178,7 @@ export default declare((api): PluginObj<State> => {
               if (call && isImportCondCallExpression(call)) {
                 const [cond, ifTrue, ifFalse] = call.arguments;
 
+                // Replace with object containing imports and lazy getter, which allows us to load the correct import based on the condition at runtime
                 path.replaceWithMultiple(
                   buildNodeObject(importId, cond, ifTrue, ifFalse),
                 );
