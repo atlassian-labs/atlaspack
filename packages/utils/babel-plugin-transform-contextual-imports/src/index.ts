@@ -8,7 +8,9 @@ interface Opts {
 
 interface State {
   opts: Opts;
+  // Set of identifier names that need to be mutated after import was transformed
   conditionalImportIdentifiers?: Set<string>;
+  // Set of identifiers that have been visited in the exit pass, to avoid adding the load property multiple times
   visitedIdentifiers?: Set<BabelTypes.Identifier>;
 }
 
