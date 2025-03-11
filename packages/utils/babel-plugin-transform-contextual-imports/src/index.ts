@@ -1,6 +1,5 @@
-import type {PluginObj} from '@babel/core';
+import type {PluginObj, NodePath, types as BabelTypes} from '@babel/core';
 import {declare} from '@babel/helper-plugin-utils';
-import type {StringLiteral} from '@babel/types';
 
 interface Opts {
   // Use node safe import cond syntax
@@ -9,7 +8,8 @@ interface Opts {
 
 interface State {
   opts: Opts;
-  importMap?: Map<string, string>;
+  conditionalImportIdentifiers?: Set<string>;
+  visitedIdentifiers?: Set<BabelTypes.Identifier>;
 }
 
 const isNode = (opts: Opts): boolean => !!('node' in opts && opts.node);
@@ -17,10 +17,41 @@ const isNode = (opts: Opts): boolean => !!('node' in opts && opts.node);
 export default declare((api): PluginObj<State> => {
   const {types: t} = api;
 
+  const isImportCondCallExpression = (
+    node: BabelTypes.Node,
+  ): node is BabelTypes.CallExpression & {
+    arguments: [
+      BabelTypes.StringLiteral,
+      BabelTypes.StringLiteral,
+      BabelTypes.StringLiteral,
+    ];
+  } => {
+    if (
+      node.type === 'CallExpression' &&
+      node.callee.type === 'Identifier' &&
+      node.callee.name === 'importCond'
+    ) {
+      if (
+        node.arguments.length === 3 &&
+        node.arguments.every(
+          (arg): arg is BabelTypes.StringLiteral =>
+            arg.type === 'StringLiteral',
+        )
+      ) {
+        return true;
+      } else {
+        // Simple error for incorrect syntax (since it's documented with the type)
+        throw new Error('importCond must have three string literal arguments');
+      }
+    }
+
+    return false;
+  };
+
   const buildCondFunction = (
-    cond: StringLiteral,
-    ifTrue: StringLiteral,
-    ifFalse: StringLiteral,
+    cond: BabelTypes.StringLiteral,
+    ifTrue: BabelTypes.StringLiteral,
+    ifFalse: BabelTypes.StringLiteral,
   ) =>
     t.conditionalExpression(
       t.logicalExpression(
@@ -45,15 +76,15 @@ export default declare((api): PluginObj<State> => {
     );
 
   const buildNodeObject = (
-    identUid: string,
-    cond: StringLiteral,
-    ifTrue: StringLiteral,
-    ifFalse: StringLiteral,
+    identifier: BabelTypes.Identifier,
+    cond: BabelTypes.StringLiteral,
+    ifTrue: BabelTypes.StringLiteral,
+    ifFalse: BabelTypes.StringLiteral,
   ) => [
     // Create object containing imports
     t.variableDeclaration('const', [
       t.variableDeclarator(
-        t.identifier(identUid),
+        identifier,
         t.objectExpression([
           t.objectProperty(
             t.identifier('ifTrue'),
@@ -73,7 +104,8 @@ export default declare((api): PluginObj<State> => {
       ),
     ]),
 
-    // Create lazy getter via the load property on the object
+    // Create lazy getter via the load property on the object.
+    // This is node module resolution safe because each time the import is accessed, we re-evaluate the condition.
     t.expressionStatement(
       t.callExpression(
         t.memberExpression(
@@ -81,7 +113,7 @@ export default declare((api): PluginObj<State> => {
           t.identifier('defineProperty'),
         ),
         [
-          t.identifier(identUid),
+          identifier,
           t.stringLiteral('load'),
           t.objectExpression([
             t.objectProperty(
@@ -103,14 +135,8 @@ export default declare((api): PluginObj<State> => {
                       [cond],
                     ),
                   ),
-                  t.memberExpression(
-                    t.identifier(identUid),
-                    t.identifier('ifTrue'),
-                  ),
-                  t.memberExpression(
-                    t.identifier(identUid),
-                    t.identifier('ifFalse'),
-                  ),
+                  t.memberExpression(identifier, t.identifier('ifTrue')),
+                  t.memberExpression(identifier, t.identifier('ifFalse')),
                 ),
               ),
             ),
@@ -125,24 +151,12 @@ export default declare((api): PluginObj<State> => {
     visitor: {
       CallExpression: {
         enter(path, state) {
-          if (
-            path.node.callee.type === 'Identifier' &&
-            path.node.callee.name === 'importCond'
-          ) {
-            if (
-              path.node.arguments.length === 3 &&
-              path.node.arguments.every((arg) => arg.type === 'StringLiteral')
-            ) {
-              const [cond, ifTrue, ifFalse] = path.node.arguments;
-
-              if (!isNode(state.opts)) {
-                path.replaceWith(buildCondFunction(cond, ifTrue, ifFalse));
-              }
-            } else {
-              // Simple error for incorrect syntax (since it's documented with the type)
-              throw new Error(
-                'importCond must have three string literal arguments',
-              );
+          const node = path.node;
+          if (isImportCondCallExpression(node)) {
+            const [cond, ifTrue, ifFalse] = node.arguments;
+            if (!isNode(state.opts)) {
+              // Replace the importCond call with a conditional require import, as a fallback for environments that don't support Atlaspack
+              path.replaceWith(buildCondFunction(cond, ifTrue, ifFalse));
             }
           }
         },
@@ -158,34 +172,18 @@ export default declare((api): PluginObj<State> => {
               const importId = path.node.declarations[0].id;
               const call = path.node.declarations[0].init;
 
-              if (call?.type === 'CallExpression') {
-                if (
-                  call.callee.type === 'Identifier' &&
-                  call.callee.name === 'importCond'
-                ) {
-                  if (
-                    call.arguments.length === 3 &&
-                    call.arguments.every((arg) => arg.type === 'StringLiteral')
-                  ) {
-                    const [cond, ifTrue, ifFalse] = call.arguments;
+              // Mark identifier for object so we don't add the load property to it
+              state.visitedIdentifiers?.add(importId);
 
-                    // Make module pass lazy in ssr
-                    const identUid = path.scope.generateUid(
-                      `${cond.value}$${ifTrue.value}$${ifFalse.value}`,
-                    );
+              if (call && isImportCondCallExpression(call)) {
+                const [cond, ifTrue, ifFalse] = call.arguments;
 
-                    path.replaceWithMultiple(
-                      buildNodeObject(identUid, cond, ifTrue, ifFalse),
-                    );
+                path.replaceWithMultiple(
+                  buildNodeObject(importId, cond, ifTrue, ifFalse),
+                );
 
-                    state.importMap?.set(importId.name, identUid);
-                  } else {
-                    // Simple error for incorrect syntax (since it's documented with the type)
-                    throw new Error(
-                      'importCond must have three string literal arguments',
-                    );
-                  }
-                }
+                // Add identifier name to set so we can mutate all import usages in the exit pass
+                state.conditionalImportIdentifiers?.add(importId.name);
               }
             }
           }
@@ -193,20 +191,23 @@ export default declare((api): PluginObj<State> => {
       },
       Identifier: {
         exit(path, state) {
-          const newImportId = state.importMap?.get(path.node.name);
-          if (newImportId) {
+          const identifier = state.conditionalImportIdentifiers?.has(
+            path.node.name,
+          );
+          if (identifier && !state.visitedIdentifiers?.has(path.node)) {
+            // Add load property to the import usage
+            const newIdentifer = t.identifier(path.node.name);
             path.replaceWith(
-              t.memberExpression(
-                t.identifier(newImportId),
-                t.identifier('load'),
-              ),
+              t.memberExpression(newIdentifer, t.identifier('load')),
             );
+            state.visitedIdentifiers?.add(newIdentifer);
           }
         },
       },
       Program: {
         enter(_, state) {
-          state.importMap = new Map();
+          state.conditionalImportIdentifiers = new Set();
+          state.visitedIdentifiers = new Set();
         },
       },
     },

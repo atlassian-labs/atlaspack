@@ -26,7 +26,7 @@ describe('@atlaspack/babel-plugin-transform-contextual-imports', () => {
     const input = `
       const Imported = importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
 
-      console.log(Imported);
+      console.log(Imported, Imported.someProperty);
     `;
     const {code: transformed} = babel.transformSync(input, {
       configFile: false,
@@ -36,14 +36,14 @@ describe('@atlaspack/babel-plugin-transform-contextual-imports', () => {
 
     assert.equal(
       transformed,
-      `const _CONDITION$IF_TRUE$IF_FALSE = {
+      `const Imported = {
   ifTrue: require('IF_TRUE').default,
   ifFalse: require('IF_FALSE').default
 };
-Object.defineProperty(_CONDITION$IF_TRUE$IF_FALSE, "load", {
-  get: () => globalThis.__MCOND && globalThis.__MCOND('CONDITION') ? _CONDITION$IF_TRUE$IF_FALSE.ifTrue : _CONDITION$IF_TRUE$IF_FALSE.ifFalse
+Object.defineProperty(Imported, "load", {
+  get: () => globalThis.__MCOND && globalThis.__MCOND('CONDITION') ? Imported.ifTrue : Imported.ifFalse
 });
-console.log(_CONDITION$IF_TRUE$IF_FALSE.load);`,
+console.log(Imported.load, Imported.load.someProperty);`,
     );
   });
 });
