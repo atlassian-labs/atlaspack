@@ -502,9 +502,12 @@ export default class Atlaspack {
       resolvedOptions.watchDir,
       async (err, events) => {
         if (err) {
-          logger.verbose({
+          logger.warn({
             message: `File watch event error occured`,
-            meta: {err},
+            meta: {
+              err,
+              trackableEvent: 'watcher_error',
+            },
           });
           this.#watchEvents.emit({error: err});
           return;
