@@ -127,6 +127,7 @@ impl RequireMatcher {
 }
 
 /// Different ways to ignore a `require` call, either using the binding identifier or module-ids.
+#[derive(Clone)]
 pub enum IgnorePattern {
   IdentifierSymbol(Atom),
   ModuleId(Atom),
@@ -206,28 +207,7 @@ impl InlineRequiresOptimizerBuilder {
   }
 }
 
-/// Inlines require statements in module definitions.
-///
-/// Use `InlineRequiresOptimizer::builder()` to construct instances.
-///
-/// You may add ignore patterns to skip certain modules or variable identifier bindings.
-///
-/// You may add require matchers to match against certain function names or Ids for `require`.
-///
-/// The `unresolved_mark` must be set to respect scope and not replace any `require` variable in
-/// the module that might not be relevant.
-///
-/// Defaults can be overridden (do not match on `require`, do not ignore `parcelHelpers`).
-///
-/// After replacement has been executed, `InlineRequiresOptimizer::require_initializers()` may be
-/// used to retrieve which statements have been matched against. This would be used for diagnostics
-/// purposes only.
-///
-/// The replacements are wrapped with `(0, $expr)`. This is to avoid issues when rewriting
-/// `new ...` expressions, where inserting a bare function like symbol will cause different
-/// treatment when instantiating classes. See [`IdentifierReplacementVisitor`].
-#[non_exhaustive]
-pub struct InlineRequiresOptimizer {
+pub struct InlineRequiresCollector {
   unresolved_mark: Mark,
   require_matchers: Vec<RequireMatcher>,
   module_stack: Vec<ModuleScopeInfo>,
@@ -236,12 +216,16 @@ pub struct InlineRequiresOptimizer {
   identifier_replacement_visitor: IdentifierReplacementVisitor,
 }
 
-impl Default for InlineRequiresOptimizer {
-  fn default() -> Self {
-    InlineRequiresOptimizer {
-      unresolved_mark: Default::default(),
-      require_matchers: default_require_matchers(),
-      ignore_patterns: default_ignore_patterns(),
+impl InlineRequiresCollector {
+  fn new(
+    unresolved_mark: Mark,
+    require_matchers: Vec<RequireMatcher>,
+    ignore_patterns: Vec<IgnorePattern>,
+  ) -> Self {
+    InlineRequiresCollector {
+      unresolved_mark,
+      require_matchers,
+      ignore_patterns,
       module_stack: vec![],
       require_initializers: vec![],
       identifier_replacement_visitor: Default::default(),
@@ -249,33 +233,21 @@ impl Default for InlineRequiresOptimizer {
   }
 }
 
-impl InlineRequiresOptimizer {
-  /// Get the results for what initializers have been replaced
-  pub fn require_initializers(&self) -> &[RequireInitializer] {
-    &self.require_initializers
-  }
-
-  pub fn builder() -> InlineRequiresOptimizerBuilder {
-    InlineRequiresOptimizerBuilder::default()
-  }
-}
-
-impl VisitMut for InlineRequiresOptimizer {
-  fn visit_mut_expr(&mut self, n: &mut Expr) {
-    self.identifier_replacement_visitor.visit_mut_expr(n);
-
-    match n {
+impl VisitMut for InlineRequiresCollector {
+  fn visit_mut_expr(&mut self, node: &mut Expr) {
+    match node {
       Expr::Fn(fn_expr) => {
         if fn_expr.function.params.len() < 3 {
-          n.visit_mut_children_with(self);
+          node.visit_mut_children_with(self);
           return;
         }
+
         let (Some(require_ident), Some(module_ident), Some(exports_ident)) = (
           fn_expr.function.params[0].pat.as_ident(),
           fn_expr.function.params[1].pat.as_ident(),
           fn_expr.function.params[2].pat.as_ident(),
         ) else {
-          n.visit_mut_children_with(self);
+          node.visit_mut_children_with(self);
           return;
         };
 
@@ -291,13 +263,13 @@ impl VisitMut for InlineRequiresOptimizer {
         }
       }
       _ => {
-        n.visit_mut_children_with(self);
+        node.visit_mut_children_with(self);
       }
     }
   }
 
-  fn visit_mut_var_decl(&mut self, n: &mut VarDecl) {
-    n.decls.retain_mut(|decl| {
+  fn visit_mut_var_decl(&mut self, node: &mut VarDecl) {
+    node.decls.retain_mut(|decl| {
       let mut require_matchers = self.require_matchers.clone();
       if let Some(module_stack_info) = self.module_stack.last() {
         require_matchers.push(module_stack_info.require_matcher.clone());
@@ -338,13 +310,32 @@ impl VisitMut for InlineRequiresOptimizer {
       false
     });
   }
+}
 
-  fn visit_mut_stmt(&mut self, s: &mut Stmt) {
-    s.visit_mut_children_with(self);
+pub struct InlineRequiresReplacer {
+  identifier_replacement_visitor: IdentifierReplacementVisitor,
+}
 
-    if let Stmt::Decl(Decl::Var(var)) = s {
+impl InlineRequiresReplacer {
+  fn new(identifier_replacement_visitor: IdentifierReplacementVisitor) -> Self {
+    InlineRequiresReplacer {
+      identifier_replacement_visitor,
+    }
+  }
+}
+
+impl VisitMut for InlineRequiresReplacer {
+  fn visit_mut_expr(&mut self, node: &mut Expr) {
+    self.identifier_replacement_visitor.visit_mut_expr(node);
+    node.visit_mut_children_with(self);
+  }
+
+  fn visit_mut_stmt(&mut self, stmt: &mut Stmt) {
+    stmt.visit_mut_children_with(self);
+
+    if let Stmt::Decl(Decl::Var(var)) = stmt {
       if var.decls.is_empty() {
-        *s = Stmt::Empty(EmptyStmt {
+        *stmt = Stmt::Empty(EmptyStmt {
           span: Span::default(),
         });
       }
@@ -362,11 +353,158 @@ impl VisitMut for InlineRequiresOptimizer {
   }
 }
 
+/// Inlines require statements in module definitions.
+///
+/// Use `InlineRequiresOptimizer::builder()` to construct instances.
+///
+/// You may add ignore patterns to skip certain modules or variable identifier bindings.
+///
+/// You may add require matchers to match against certain function names or Ids for `require`.
+///
+/// The `unresolved_mark` must be set to respect scope and not replace any `require` variable in
+/// the module that might not be relevant.
+///
+/// Defaults can be overridden (do not match on `require`, do not ignore `parcelHelpers`).
+///
+/// After replacement has been executed, `InlineRequiresOptimizer::require_initializers()` may be
+/// used to retrieve which statements have been matched against. This would be used for diagnostics
+/// purposes only.
+///
+/// The replacements are wrapped with `(0, $expr)`. This is to avoid issues when rewriting
+/// `new ...` expressions, where inserting a bare function like symbol will cause different
+/// treatment when instantiating classes. See [`IdentifierReplacementVisitor`].
+#[non_exhaustive]
+pub struct InlineRequiresOptimizer {
+  unresolved_mark: Mark,
+  require_matchers: Vec<RequireMatcher>,
+  require_initializers: Vec<RequireInitializer>,
+  ignore_patterns: Vec<IgnorePattern>,
+}
+
+impl Default for InlineRequiresOptimizer {
+  fn default() -> Self {
+    InlineRequiresOptimizer {
+      unresolved_mark: Default::default(),
+      require_matchers: default_require_matchers(),
+      ignore_patterns: default_ignore_patterns(),
+      require_initializers: vec![],
+    }
+  }
+}
+
+impl InlineRequiresOptimizer {
+  /// Get the results for what initializers have been replaced
+  pub fn require_initializers(&self) -> &[RequireInitializer] {
+    &self.require_initializers
+  }
+
+  pub fn builder() -> InlineRequiresOptimizerBuilder {
+    InlineRequiresOptimizerBuilder::default()
+  }
+}
+
+impl VisitMut for InlineRequiresOptimizer {
+  fn visit_mut_module_items(&mut self, stmts: &mut Vec<ModuleItem>) {
+    let mut collector_visitor = InlineRequiresCollector::new(
+      self.unresolved_mark,
+      self.require_matchers.clone(),
+      self.ignore_patterns.clone(),
+    );
+
+    stmts.visit_mut_children_with(&mut collector_visitor);
+
+    let mut replacer_visitor =
+      InlineRequiresReplacer::new(collector_visitor.identifier_replacement_visitor);
+
+    self.require_initializers = collector_visitor.require_initializers;
+
+    stmts.visit_mut_with(&mut replacer_visitor);
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
+  use pretty_assertions::assert_eq;
 
   use super::*;
+
+  #[test]
+  fn it_inlines_require_statements_that_are_declared_later() {
+    let code = r#"
+parcelRegister("k4tEj", function(module, exports) {
+    Object.defineProperty(module.exports, "InternSet", {
+        enumerable: true,
+        get: function() {
+            return $g34Jm.InternSet;
+        }
+    });
+
+    var $g34Jm = require("internmap");
+});
+    "#
+    .trim();
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+parcelRegister("k4tEj", function(module, exports) {
+    Object.defineProperty(module.exports, "InternSet", {
+        enumerable: true,
+        get: function() {
+            return (0, require("internmap")).InternSet;
+        }
+    });
+});
+    "#
+    .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
+
+  #[test]
+  fn it_respects_variables_across_scopes() {
+    let code = r#"
+parcelRegister("k4tEj", function(module, exports) {
+    Object.defineProperty(module.exports, "InternSet", {
+        enumerable: true,
+        get: function() {
+            return $g34Jm.InternSet;
+        }
+    });
+
+    var $g34Jm = require("internmap");
+});
+
+parcelRegister("12345", function(module, exports) {
+    var testVar = $g34Jm.otherKey;
+    console.log(testVar);
+});
+    "#
+    .trim();
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+parcelRegister("k4tEj", function(module, exports) {
+    Object.defineProperty(module.exports, "InternSet", {
+        enumerable: true,
+        get: function() {
+            return (0, require("internmap")).InternSet;
+        }
+    });
+});
+parcelRegister("12345", function(module, exports) {
+    var testVar = $g34Jm.otherKey;
+    console.log(testVar);
+});
+    "#
+    .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
 
   #[test]
   fn it_inlines_require_statements_in_simple_commonjs_modules() {

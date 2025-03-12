@@ -25,3 +25,6 @@ swc_core = { workspace = true, features = [
     "stacker"
 ] }
 atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

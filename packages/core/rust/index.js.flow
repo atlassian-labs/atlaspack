@@ -9,6 +9,15 @@ import type {
 
 declare export var init: void | (() => void);
 
+export type WatchEventType = 'create' | 'update' | 'delete';
+
+export interface WatchEvent {
+  path: string,
+  type: WatchEventType,
+}
+
+export type WatchEvents = Array<WatchEvent>;
+
 export type Transferable = {||};
 
 export type JsCallable<Args: $ReadOnlyArray<mixed>, Return> = (
@@ -40,7 +49,9 @@ export interface FileSystem {
 export type AtlaspackNapiOptions = {|
   fs?: FileSystem,
   nodeWorkers?: number,
+  napiWorkerPool: any,
   options: {|
+    featureFlags?: { [string]: string | boolean },
     corePath?: string,
     // TODO Use Omit when available in flow >0.210.0
     ...$Diff<
@@ -56,15 +67,11 @@ export type AtlaspackNapiOptions = {|
   threads?: number,
 |};
 
-export type AtlaspackBuildOptions = {|
-  registerWorker: (channel: Transferable) => void | Promise<void>,
-|};
-
 declare export class AtlaspackNapi {
   static create(options: AtlaspackNapiOptions, lmdb: mixed): AtlaspackNapi;
   nodeWorkerCount: number;
-  build(options: AtlaspackBuildOptions): Promise<void>;
-  buildAssetGraph(options: AtlaspackBuildOptions): Promise<any>;
+  buildAssetGraph(): Promise<any>;
+  respondToFsEvents(events: WatchEvents): boolean;
   static defaultThreadCount(): number;
   testingTempFsReadToString(path: string): string;
   testingTempFsIsDir(path: string): boolean;
@@ -72,10 +79,16 @@ declare export class AtlaspackNapi {
   testingRpcPing(): void;
 }
 
+declare export function getAvailableThreads(): number;
+
 declare export function registerWorker(
   channel: Transferable,
   worker: any,
 ): void;
+
+declare export function newNodejsWorker(
+  delegate: any,
+): Transferable;
 
 declare export function initializeMonitoring(): void;
 declare export function closeMonitoring(): void;

@@ -502,9 +502,12 @@ export default class Atlaspack {
       resolvedOptions.watchDir,
       async (err, events) => {
         if (err) {
-          logger.verbose({
+          logger.warn({
             message: `File watch event error occured`,
-            meta: {err},
+            meta: {
+              err,
+              trackableEvent: 'watcher_error',
+            },
           });
           this.#watchEvents.emit({error: err});
           return;
@@ -514,11 +517,20 @@ export default class Atlaspack {
           message: `File watch event emitted with ${events.length} events. Sample event: [${events[0]?.type}] ${events[0]?.path}`,
         });
 
+        let nativeInvalid = false;
+        if (this.rustAtlaspack) {
+          nativeInvalid = await this.rustAtlaspack.respondToFsEvents(events);
+        }
+
         let isInvalid = await this.#requestTracker.respondToFSEvents(
           events,
           Number.POSITIVE_INFINITY,
         );
-        if (isInvalid && this.#watchQueue.getNumWaiting() === 0) {
+
+        if (
+          (nativeInvalid || isInvalid) &&
+          this.#watchQueue.getNumWaiting() === 0
+        ) {
           if (this.#watchAbortController) {
             this.#watchAbortController.abort();
           }

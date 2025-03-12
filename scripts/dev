@@ -1,0 +1,99 @@
+#!/bin/env bash
+set -e
+
+PATH_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+PATH_ROOT_DIR=$( dirname $PATH_SCRIPT_DIR )
+
+function help() {
+  echo "Usage:"
+  echo "  ./scripts/dev [COMMAND]"
+  echo ""
+  echo "Commands:"
+  echo "  build         Full build of Atlaspack"
+  echo "  build-rust    Build only the native Atlaspack modules"
+  echo "  build-js      Build only the JavaScript Atlaspack modules"
+  echo "  build-types   Build only the TypeScript types"
+  echo "  watch         Do a full build of Atlaspack and rebuild on file change"
+  echo "  watch-rust    Build Atlaspack native modules and rebuild on file change"
+  echo "  watch-js      Build Atlaspack javascript modules and rebuild on file change"
+}
+
+function build() {
+  build-rust
+  build-js
+  build-types
+}
+
+function build-rust() {
+  node "${PATH_ROOT_DIR}/scripts/build-native.js" --release
+}
+
+function build-js() {
+  export NODE_ENV=production
+  export ATLASPACK_BUILD_ENV=production
+  export ATLASPACK_SELF_BUILD=true
+
+  node "${PATH_ROOT_DIR}/node_modules/.bin/rimraf" --glob packages/*/*/lib
+  node "${PATH_ROOT_DIR}/node_modules/.bin/lerna"  run dev:prepare
+  node "${PATH_ROOT_DIR}/node_modules/.bin/atlaspack" build \
+    --no-cache \
+    packages/core/{fs,codeframe,package-manager,utils} \
+    packages/reporters/{cli,dev-server} \
+    packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}
+
+  node "${PATH_ROOT_DIR}/node_modules/.bin/gulp"
+}
+
+function build-types() {
+  node "${PATH_ROOT_DIR}/node_modules/.bin/lerna" run build-ts
+}
+
+function watch() {
+  exec node "${PATH_ROOT_DIR}/node_modules/.bin/nodemon" \
+    --ignore "${PATH_ROOT_DIR}/target" \
+    --ignore "${PATH_ROOT_DIR}/**/dist" \
+    --ignore "${PATH_ROOT_DIR}/**/lib" \
+    --ignore "${PATH_ROOT_DIR}/**/*.d.ts" \
+    --ignore "${PATH_ROOT_DIR}/packages/core/diagnostic/src/diagnostic.ts" \
+    --ignore "${PATH_ROOT_DIR}/node_modules" \
+    --watch "${PATH_ROOT_DIR}/crates" \
+    --watch "${PATH_ROOT_DIR}/packages" \
+    --ext "rs,toml,js,jsx,mjs,cjs,ts,tsx,mts,cts,json,html" \
+    --signal SIGTERM \
+    --exec "/bin/env bash ${PATH_SCRIPT_DIR}/dev build || exit 1"
+}
+
+function watch-rust() {
+  exec node "${PATH_ROOT_DIR}/node_modules/.bin/nodemon" \
+    --ignore "${PATH_ROOT_DIR}/target" \
+    --ignore "${PATH_ROOT_DIR}/**/dist" \
+    --ignore "${PATH_ROOT_DIR}/node_modules" \
+    --watch "${PATH_ROOT_DIR}/crates" \
+    --watch "${PATH_ROOT_DIR}/packages" \
+    --ext "rs,toml,json" \
+    --signal SIGTERM \
+    --exec "/bin/env bash ${PATH_SCRIPT_DIR}/dev build-rust || exit 1"
+}
+
+function watch-js() {
+  exec node "${PATH_ROOT_DIR}/node_modules/.bin/nodemon" \
+    --ignore "${PATH_ROOT_DIR}/target" \
+    --ignore "${PATH_ROOT_DIR}/**/dist" \
+    --ignore "${PATH_ROOT_DIR}/**/lib" \
+    --ignore "${PATH_ROOT_DIR}/**/*.d.ts" \
+    --ignore "${PATH_ROOT_DIR}/**/*.node" \
+    --ignore "${PATH_ROOT_DIR}/packages/core/diagnostic/src/diagnostic.ts" \
+    --ignore "${PATH_ROOT_DIR}/packages/core/rust/**/*" \
+    --ignore "${PATH_ROOT_DIR}/node_modules" \
+    --watch "${PATH_ROOT_DIR}/packages" \
+    --ext "js,jsx,mjs,cjs,ts,tsx,mts,cts,json,html" \
+    --verbose \
+    --signal SIGTERM \
+    --exec "/bin/env bash ${PATH_SCRIPT_DIR}/dev build-js || exit 1"
+}
+
+if [ "$1" == "" ];then
+  help
+else
+  $1
+fi

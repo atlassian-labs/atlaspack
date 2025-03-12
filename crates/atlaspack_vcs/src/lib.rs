@@ -117,6 +117,7 @@ use git2::{DiffOptions, Repository};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
+  collections::{HashMap, HashSet},
   hash::{Hash, Hasher},
   path::{Path, PathBuf},
   process::Command,
@@ -145,6 +146,16 @@ pub struct VCSState {
 }
 
 impl VCSState {
+  pub fn from_git_hash(git_hash: String) -> Self {
+    Self {
+      git_hash,
+      dirty_files: vec![],
+      dirty_files_execution_time: 0,
+      yarn_states: vec![],
+      yarn_states_execution_time: 0,
+    }
+  }
+
   /// Read the VCS state from a repository root. Ignore dirty files matching
   /// the exclude patterns.
   pub fn read_from_repository(
@@ -207,7 +218,7 @@ pub fn list_yarn_states(
 
       let node_modules_path = repo.join(&node_modules_relative_path);
       let yarn_state = parse_yarn_state_file(&node_modules_path).map_err(|err| {
-        tracing::warn!(
+        tracing::debug!(
           "Failed to read .yarn-state.yml {node_modules_relative_path:?} {}",
           err
         );
@@ -219,7 +230,7 @@ pub fn list_yarn_states(
       };
       let yarn_state = yarn_state?;
       let yarn_snapshot = YarnSnapshot {
-        yarn_lock_path,
+        yarn_lock_path: yarn_lock_path.strip_prefix(repo)?.to_path_buf(),
         yarn_lock,
         yarn_state,
       };
@@ -247,7 +258,7 @@ pub struct YarnSnapshot {
 #[serde(rename_all = "camelCase")]
 pub struct VCSFile {
   pub path: PathBuf,
-  pub hash: u64,
+  pub hash: String,
 }
 
 fn get_file_contents_at_commit(
@@ -274,6 +285,7 @@ pub enum FailureMode {
   FailOnMissingNodeModules,
 }
 
+#[derive(Debug)]
 pub struct FileChangeEvent {
   path: PathBuf,
   change_type: FileChangeType,
@@ -297,6 +309,7 @@ impl FileChangeEvent {
   }
 }
 
+#[derive(Debug)]
 pub enum FileChangeType {
   Create,
   Update,
@@ -308,16 +321,45 @@ pub fn get_changed_files_from_git(
   repo: &Repository,
   old_commit: &git2::Commit<'_>,
   new_commit: &git2::Commit<'_>,
+  dirty_files: &[VCSFile],
 ) -> anyhow::Result<Vec<FileChangeEvent>> {
+  let mut tracked_changes = HashSet::new();
+  let mut changed_files = Vec::new();
+
+  // list current dirty files
+  tracing::debug!("Listing dirty files");
+  let mut status_options = git2::StatusOptions::new();
+
+  status_options.include_ignored(false);
+  status_options.include_untracked(true);
+  status_options.include_unmodified(false);
+  status_options.recurse_ignored_dirs(false);
+
+  let statuses = repo.statuses(Some(&mut status_options))?;
+  statuses.iter().for_each(|entry| {
+    let path = entry.path().unwrap();
+    let status = entry.status();
+    let mut change_type = FileChangeType::Update;
+    if status.is_wt_deleted() {
+      change_type = FileChangeType::Delete;
+    } else if status.is_wt_new() {
+      change_type = FileChangeType::Create;
+    }
+
+    let path = repo_path.join(path);
+    tracked_changes.insert(path.clone());
+    changed_files.push(FileChangeEvent { path, change_type })
+  });
+
   tracing::debug!("Calculating git diff");
   let mut diff_options = DiffOptions::new();
+
   let diff = repo.diff_tree_to_tree(
     Some(&old_commit.tree()?),
     Some(&new_commit.tree()?),
     Some(&mut diff_options),
   )?;
 
-  let mut changed_files = Vec::new();
   diff.foreach(
     &mut |delta, _| {
       if let Some(new_file_path) = delta.new_file().path() {
@@ -327,12 +369,14 @@ pub fn get_changed_files_from_git(
         if status == git2::Delta::Renamed {
           if let Some(old_file_path) = delta.old_file().path() {
             let old_file_path = repo_path.join(old_file_path);
+            tracked_changes.insert(old_file_path.clone());
             changed_files.push(FileChangeEvent {
               path: old_file_path,
               change_type: FileChangeType::Delete,
             });
           }
 
+          tracked_changes.insert(new_file_path.clone());
           changed_files.push(FileChangeEvent {
             path: new_file_path,
             change_type: FileChangeType::Create,
@@ -364,30 +408,61 @@ pub fn get_changed_files_from_git(
     None,
   )?;
 
+  // we could content hash the files here to filter out changes that are not
+  // relevant
+  for dirty_file in dirty_files {
+    if !tracked_changes.contains(&dirty_file.path) {
+      let path = repo_path.join(dirty_file.path.clone());
+      changed_files.push(FileChangeEvent {
+        path,
+        change_type: FileChangeType::Update,
+      });
+    }
+  }
+
   Ok(changed_files)
 }
 
 pub fn get_changed_files(
   repo_path: &Path,
-  old_rev: &str,
-  new_rev: &str,
+  vcs_state: &VCSState,
+  new_rev: Option<&str>,
   failure_mode: FailureMode,
 ) -> anyhow::Result<Vec<FileChangeEvent>> {
   let repo = Repository::open(repo_path)?;
+  let old_rev = &vcs_state.git_hash;
   let old_commit = repo.revparse_single(old_rev)?.peel_to_commit()?;
-  let new_commit = repo.revparse_single(new_rev)?.peel_to_commit()?;
+  let new_commit = repo
+    .revparse_single(new_rev.unwrap_or("HEAD"))?
+    .peel_to_commit()?;
 
-  let mut changed_files = get_changed_files_from_git(repo_path, &repo, &old_commit, &new_commit)?;
+  let mut changed_files = get_changed_files_from_git(
+    repo_path,
+    &repo,
+    &old_commit,
+    &new_commit,
+    &vcs_state.dirty_files,
+  )?;
+  tracing::trace!("Changed files: {:?}", changed_files);
 
-  tracing::debug!("Reading yarn.lock from {} and {}", old_rev, new_rev);
+  tracing::debug!("Reading yarn.lock from {} and {:?}", old_rev, new_rev);
   let yarn_lock_changes = changed_files
     .iter()
     .filter(|file| file.path.file_name().unwrap() == "yarn.lock")
     .map(|file| file.path.clone())
     .collect::<Vec<_>>();
 
+  let yarn_snapshots_by_path = vcs_state
+    .yarn_states
+    .iter()
+    .map(|yarn_snapshot| (yarn_snapshot.yarn_lock_path.clone(), yarn_snapshot))
+    .collect::<HashMap<_, _>>();
+
   for yarn_lock_path in yarn_lock_changes {
-    tracing::debug!("Found yarn.lock in changed files");
+    tracing::debug!(
+      "Found yarn.lock in changed files: {}",
+      yarn_lock_path.display()
+    );
     let yarn_lock_path = yarn_lock_path.strip_prefix(repo_path)?;
     let node_modules_relative_path = yarn_lock_path.parent().unwrap().join("node_modules");
 
@@ -397,13 +472,29 @@ pub fn get_changed_files(
       old_commit,
       new_commit
     );
-    let maybe_old_yarn_lock_blob = get_file_contents_at_commit(&repo, &old_commit, yarn_lock_path)?;
-    let maybe_old_yarn_lock: Option<YarnLock> = maybe_old_yarn_lock_blob
-      .map(|s| parse_yarn_lock(&s))
-      .transpose()?;
-    let new_yarn_lock_blob: String =
+
+    tracing::debug!("Querying yarn snapshots for {}", yarn_lock_path.display());
+    let yarn_snapshot = yarn_snapshots_by_path.get(yarn_lock_path);
+    let maybe_old_yarn_lock: Option<YarnLock> = if let Some(yarn_snapshot) = yarn_snapshot {
+      // This handles the case where the yarn.lock was dirty in the build
+      tracing::debug!("Using yarn snapshot for {}", yarn_lock_path.display());
+      Some(yarn_snapshot.yarn_lock.clone())
+    } else {
+      tracing::debug!("Reading yarn.lock from git");
+      let maybe_old_yarn_lock_blob =
+        get_file_contents_at_commit(&repo, &old_commit, yarn_lock_path)?;
+      maybe_old_yarn_lock_blob
+        .map(|s| parse_yarn_lock(&s))
+        .transpose()?
+    };
+
+    let new_yarn_lock_blob: String = if new_rev.is_some() {
       get_file_contents_at_commit(&repo, &new_commit, yarn_lock_path)?
-        .ok_or_else(|| anyhow!("Expected lockfile to exist in current revision"))?;
+        .ok_or_else(|| anyhow!("Expected lockfile to exist in current revision"))?
+    } else {
+      tracing::debug!("Reading raw yarn.lock on current file-system",);
+      std::fs::read_to_string(repo_path.join(yarn_lock_path))?
+    };
     let new_yarn_lock: YarnLock = parse_yarn_lock(&new_yarn_lock_blob)?;
 
     let node_modules_path = repo_path.join(&node_modules_relative_path);
@@ -493,8 +584,10 @@ pub fn vcs_list_dirty_files(
   }
   let command = command.output()?;
   if !command.status.success() {
-    tracing::error!("git ls-files: {:?}", String::from_utf8(command.stderr));
-    return Err(anyhow::anyhow!("Git ls-files failed"));
+    let stderr =
+      String::from_utf8(command.stderr).unwrap_or_else(|_| "non-utf8 error message".to_string());
+    tracing::error!("git ls-files: {}", stderr);
+    return Err(anyhow::anyhow!("Git ls-files failed:\n{}", stderr));
   }
   let output = String::from_utf8(command.stdout).unwrap();
   let lines: Vec<_> = output.split_terminator('\0').map(String::from).collect();
@@ -520,7 +613,10 @@ pub fn vcs_list_dirty_files(
       };
       let mut state = std::collections::hash_map::DefaultHasher::new();
       contents.hash(&mut state);
+
       let hash = state.finish();
+      let hash = format!("{:x}", hash);
+
       Ok(VCSFile {
         path: relative_path.into(),
         hash,

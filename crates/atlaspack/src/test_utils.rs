@@ -85,6 +85,7 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
         log_level: atlaspack_options.log_level.clone(),
         mode: atlaspack_options.mode.clone(),
         project_root: project_root.clone(),
+        feature_flags: Default::default(),
       }),
       logger: PluginLogger::default(),
     })

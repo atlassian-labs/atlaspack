@@ -194,9 +194,10 @@ impl RequestTracker {
       .ok_or_else(|| diagnostic_error!("Failed to find request node"))?;
 
     // Don't run if already run
-    if let RequestNode::Valid(_) = request_node {
-      return Ok(false);
-    }
+    // TEMP: Always run requests / don't cache anything
+    // if let RequestNode::Valid(_) = request_node {
+    //   return Ok(false);
+    // }
 
     *request_node = RequestNode::Incomplete;
     Ok(true)

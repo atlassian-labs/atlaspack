@@ -8,19 +8,23 @@ use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_filesystem::{os_file_system::OsFileSystem, FileSystemRef};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
-use atlaspack_plugin_rpc::RpcFactoryRef;
+use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::writer::DatabaseWriter;
 use tokio::runtime::Runtime;
+use tokio::sync::RwLock;
 
 use crate::plugins::{config_plugins::ConfigPlugins, PluginsRef};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::RequestTracker;
 use crate::requests::{AssetGraphRequest, RequestResult};
+use crate::WatchEvents;
 
-#[derive(Clone)]
-struct AtlaspackState {
-  config: Arc<ConfigLoader>,
-  plugins: PluginsRef,
+pub struct AtlaspackInitOptions {
+  pub db: Arc<DatabaseWriter>,
+  pub fs: Option<FileSystemRef>,
+  pub options: AtlaspackOptions,
+  pub package_manager: Option<PackageManagerRef>,
+  pub rpc: RpcFactoryRef,
 }
 
 pub struct Atlaspack {
@@ -30,16 +34,22 @@ pub struct Atlaspack {
   pub package_manager: PackageManagerRef,
   pub project_root: PathBuf,
   pub rpc: RpcFactoryRef,
+  pub rpc_worker: RpcWorkerRef,
   pub runtime: Runtime,
+  pub config_loader: Arc<ConfigLoader>,
+  pub plugins: PluginsRef,
+  pub request_tracker: Arc<RwLock<RequestTracker>>,
 }
 
 impl Atlaspack {
   pub fn new(
-    db: Arc<DatabaseWriter>,
-    fs: Option<FileSystemRef>,
-    options: AtlaspackOptions,
-    package_manager: Option<PackageManagerRef>,
-    rpc: RpcFactoryRef,
+    AtlaspackInitOptions {
+      db,
+      fs,
+      options,
+      package_manager,
+      rpc,
+    }: AtlaspackInitOptions,
   ) -> Result<Self, anyhow::Error> {
     let fs = fs.unwrap_or_else(|| Arc::new(OsFileSystem));
     let project_root = infer_project_root(Arc::clone(&fs), options.entries.clone())?;
@@ -52,38 +62,24 @@ impl Atlaspack {
       .worker_threads(options.threads.unwrap_or_else(num_cpus::get))
       .build()?;
 
-    Ok(Self {
-      db,
-      fs,
-      options,
-      package_manager,
-      project_root,
-      rpc,
-      runtime,
-    })
-  }
-}
+    let rpc_worker = rpc.start()?;
 
-pub struct BuildResult;
+    let rc_config_loader =
+      AtlaspackRcConfigLoader::new(Arc::clone(&fs), Arc::clone(&package_manager));
 
-impl Atlaspack {
-  fn state(&self) -> anyhow::Result<AtlaspackState> {
-    let rpc_worker = self.rpc.start()?;
-
-    let (config, _files) =
-      AtlaspackRcConfigLoader::new(Arc::clone(&self.fs), Arc::clone(&self.package_manager)).load(
-        &self.project_root,
-        LoadConfigOptions {
-          additional_reporters: vec![], // TODO
-          config: self.options.config.as_deref(),
-          fallback_config: self.options.fallback_config.as_deref(),
-        },
-      )?;
+    let (config, _files) = rc_config_loader.load(
+      &project_root,
+      LoadConfigOptions {
+        additional_reporters: vec![], // TODO
+        config: options.config.as_deref(),
+        fallback_config: options.fallback_config.as_deref(),
+      },
+    )?;
 
     let config_loader = Arc::new(ConfigLoader {
-      fs: Arc::clone(&self.fs),
-      project_root: self.project_root.clone(),
-      search_path: self.project_root.join("index"),
+      fs: Arc::clone(&fs),
+      project_root: project_root.clone(),
+      search_path: project_root.join("index"),
     });
 
     let plugins = Arc::new(ConfigPlugins::new(
@@ -91,51 +87,68 @@ impl Atlaspack {
       config,
       PluginContext {
         config: Arc::clone(&config_loader),
-        file_system: self.fs.clone(),
+        file_system: fs.clone(),
         options: Arc::new(PluginOptions {
-          core_path: self.options.core_path.clone(),
-          env: self.options.env.clone(),
-          log_level: self.options.log_level.clone(),
-          mode: self.options.mode.clone(),
-          project_root: self.project_root.clone(),
+          core_path: options.core_path.clone(),
+          env: options.env.clone(),
+          log_level: options.log_level.clone(),
+          mode: options.mode.clone(),
+          project_root: project_root.clone(),
+          feature_flags: options.feature_flags.clone(),
         }),
         // TODO Initialise actual logger
         logger: PluginLogger::default(),
       },
     )?);
 
-    let state = AtlaspackState {
-      config: config_loader,
+    let request_tracker = RequestTracker::new(
+      config_loader.clone(),
+      fs.clone(),
+      Arc::new(options.clone()),
+      plugins.clone(),
+      project_root.clone(),
+    );
+
+    Ok(Self {
+      db,
+      fs,
+      options,
+      package_manager,
+      project_root,
+      rpc,
+      rpc_worker,
+      runtime,
+      config_loader,
       plugins,
-    };
-
-    Ok(state)
+      request_tracker: Arc::new(RwLock::new(request_tracker)),
+    })
   }
+}
 
+impl Atlaspack {
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
     self.runtime.block_on(async move {
-      let AtlaspackState { config, plugins } = self.state().unwrap();
+      let request_result = self
+        .request_tracker
+        .write()
+        .await
+        .run_request(AssetGraphRequest {})
+        .await?;
 
-      let mut request_tracker = RequestTracker::new(
-        config.clone(),
-        self.fs.clone(),
-        Arc::new(self.options.clone()),
-        plugins.clone(),
-        self.project_root.clone(),
-      );
-
-      let request_result = request_tracker.run_request(AssetGraphRequest {}).await?;
-
-      let asset_graph = match request_result {
-        RequestResult::AssetGraph(result) => {
-          self.commit_assets(result.graph.nodes().collect())?;
-
-          result.graph
-        }
-        _ => panic!("TODO"),
+      let RequestResult::AssetGraph(asset_graph_request_output) = request_result else {
+        panic!("Something went wrong with the request tracker")
       };
 
+      let asset_graph = asset_graph_request_output.graph;
+      self.commit_assets(asset_graph.nodes().collect())?;
       Ok(asset_graph)
+    })
+  }
+
+  pub fn respond_to_fs_events(&self, _events: WatchEvents) -> anyhow::Result<bool> {
+    self.runtime.block_on(async move {
+      // TODO: For now just indicate that build must be triggered
+      Ok(true)
     })
   }
 
@@ -181,13 +194,25 @@ mod tests {
     let db = Arc::new(create_db()?);
     let fs = InMemoryFileSystem::default();
 
-    let atlaspack = Atlaspack::new(
-      db.clone(),
-      Some(Arc::new(fs)),
-      AtlaspackOptions::default(),
-      None,
-      rpc(),
-    )?;
+    fs.write_file(
+      &PathBuf::from("/.parcelrc"),
+      r#"
+      {
+        "bundler": "",
+        "namers": [""],
+        "resolvers": [""],
+      }
+    "#
+      .to_string(),
+    );
+
+    let atlaspack = Atlaspack::new(AtlaspackInitOptions {
+      db: db.clone(),
+      fs: Some(Arc::new(fs)),
+      options: AtlaspackOptions::default(),
+      package_manager: None,
+      rpc: rpc(),
+    })?;
 
     let assets_names = ["foo", "bar", "baz"];
     let assets = assets_names

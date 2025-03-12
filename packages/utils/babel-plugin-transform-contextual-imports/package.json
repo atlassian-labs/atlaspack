@@ -15,11 +15,11 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@babel/core": "^7.12.2",
+    "@babel/core": "^7.22.11",
     "@babel/helper-plugin-utils": "^7.12.2"
   },
   "devDependencies": {
-    "@types/babel__core": "^7.10.3",
+    "@types/babel__core": "^7.20.5",
     "@types/babel__helper-plugin-utils": "^7.10.3"
   }
 }

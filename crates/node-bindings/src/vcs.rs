@@ -28,17 +28,25 @@ pub struct NodeChangeEvent {
   pub change_type: String,
 }
 
+#[napi(object)]
+pub struct NodeVCSFile {
+  pub path: String,
+  pub hash: String,
+}
+
 #[napi]
 pub fn get_events_since(
+  env: Env,
   repo_path: String,
-  old_rev: String,
+  vcs_state_snapshot: JsUnknown,
   new_rev: Option<String>,
 ) -> napi::Result<Vec<NodeChangeEvent>> {
   let repo_path = Path::new(&repo_path);
+  let vcs_state = env.from_js_value::<VCSState, _>(vcs_state_snapshot)?;
   let files = atlaspack_vcs::get_changed_files(
     repo_path,
-    &old_rev,
-    new_rev.as_deref().unwrap_or("HEAD"),
+    &vcs_state,
+    new_rev.as_deref(),
     FailureMode::IgnoreMissingNodeModules,
   )
   .map_err(|err| napi::Error::new(napi::Status::GenericFailure, format!("[napi] {}", err)))?;
