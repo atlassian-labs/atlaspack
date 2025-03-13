@@ -217,7 +217,7 @@ mod tests {
   fn test_paths() {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
-      paths: Some(HashMap::from([
+      paths: Some(Arc::new(HashMap::from([
         (
           "jquery".into(),
           vec![String::from("node_modules/jquery/dist/jquery")],
@@ -230,7 +230,7 @@ mod tests {
         ),
         ("@/components/*".into(), vec![String::from("components/*")]),
         ("url".into(), vec![String::from("node_modules/my-url")]),
-      ])),
+      ]))),
       ..Default::default()
     };
     tsconfig.validate();
@@ -263,7 +263,7 @@ mod tests {
   fn test_base_url() {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
-      base_url: Some(Path::new("src").into()),
+      base_url: Some(Arc::new(Path::new("src").into())),
       ..Default::default()
     };
     tsconfig.validate();
@@ -282,8 +282,8 @@ mod tests {
   fn test_paths_and_base_url() {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
-      base_url: Some(Path::new("src").into()),
-      paths: Some(HashMap::from([
+      base_url: Some(Arc::new(Path::new("src").into())),
+      paths: Some(Arc::new(HashMap::from([
         ("*".into(), vec![String::from("generated/*")]),
         ("bar/*".into(), vec![String::from("test/*")]),
         (
@@ -291,7 +291,7 @@ mod tests {
           vec![String::from("baz/*"), String::from("yo/*")],
         ),
         ("@/components/*".into(), vec![String::from("components/*")]),
-      ])),
+      ]))),
       ..Default::default()
     };
     tsconfig.validate();
