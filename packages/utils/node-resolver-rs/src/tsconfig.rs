@@ -159,7 +159,7 @@ impl TsConfig {
       let mut longest_prefix_length = 0;
       let mut longest_suffix_length = 0;
       let mut best_key = None;
-      let full_specifier = specifier.to_string();
+      let full_specifier = std::cell::LazyCell::new(|| specifier.to_string());
 
       if reduce_string_creation {
         for (key, path) in self.paths_specifier_strings() {
@@ -193,6 +193,8 @@ impl TsConfig {
 
       if let Some(key) = best_key {
         let paths = paths.get(key).unwrap();
+        // Needless clone once https://github.com/rust-lang/rust/issues/125623 is stable
+        let full_specifier = (*full_specifier).clone();
         return Either::Left(
           join_paths(
             &self.paths_base,
