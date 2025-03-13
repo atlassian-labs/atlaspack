@@ -1005,7 +1005,7 @@ impl<'a> ResolveRequest<'a> {
 
     if let Some(tsconfig) = self.tsconfig_read()? {
       if let Some(module_suffixs) = tsconfig.module_suffixes.as_ref() {
-        module_suffixes = module_suffixs.clone()
+        module_suffixes = module_suffixs.as_ref().clone()
       };
     }
 
