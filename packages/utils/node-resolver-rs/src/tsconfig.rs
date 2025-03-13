@@ -16,11 +16,11 @@ use serde::Deserialize;
 pub struct TsConfig {
   #[serde(skip)]
   pub path: PathBuf,
-  base_url: Option<PathBuf>,
-  paths: Option<HashMap<Specifier, Vec<String>>>,
+  base_url: Option<Arc<PathBuf>>,
+  paths: Option<Arc<HashMap<Specifier, Vec<String>>>>,
   #[serde(skip)]
-  paths_base: PathBuf,
-  pub module_suffixes: Option<Vec<String>>,
+  paths_base: Arc<PathBuf>,
+  pub module_suffixes: Option<Arc<Vec<String>>>,
   // rootDirs??
 }
 
@@ -88,14 +88,14 @@ impl TsConfig {
   fn validate(&mut self) {
     #[allow(clippy::needless_borrows_for_generic_args)]
     if let Some(base_url) = &mut self.base_url {
-      *base_url = resolve_path(&self.path, &base_url);
+      *base_url = Arc::new(resolve_path(&self.path, &**base_url));
     }
 
     if self.paths.is_some() {
       self.paths_base = if let Some(base_url) = &self.base_url {
-        base_url.to_owned()
+        base_url.clone()
       } else {
-        self.path.parent().unwrap().to_owned()
+        Arc::new(self.path.parent().unwrap().to_owned())
       };
     }
   }
