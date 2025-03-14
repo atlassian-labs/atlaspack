@@ -145,10 +145,15 @@ impl Atlaspack {
     })
   }
 
-  pub fn respond_to_fs_events(&self, _events: WatchEvents) -> anyhow::Result<bool> {
+  pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
     self.runtime.block_on(async move {
-      // TODO: For now just indicate that build must be triggered
-      Ok(true)
+      Ok(
+        self
+          .request_tracker
+          .write()
+          .await
+          .respond_to_fs_events(events),
+      )
     })
   }
 
