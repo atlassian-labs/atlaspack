@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::cell::OnceCell;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -23,7 +24,7 @@ pub struct TsConfig {
   pub module_suffixes: Option<Arc<Vec<String>>>,
   // rootDirs??
   #[serde(skip)]
-  paths_specifier_strings: HashMap<Specifier, String>,
+  paths_specifier_strings: OnceCell<HashMap<Specifier, String>>,
 }
 
 fn deserialize_extends<'a, 'de: 'a, D>(deserializer: D) -> Result<Vec<Specifier>, D::Error>
@@ -93,29 +94,25 @@ impl TsConfig {
       *base_url = Arc::new(resolve_path(&self.path, &**base_url));
     }
 
-    if let Some(paths) = &self.paths {
+    if self.paths.is_some() {
       self.paths_base = if let Some(base_url) = &self.base_url {
         base_url.clone()
       } else {
         Arc::new(self.path.parent().unwrap().to_owned())
       };
-
-      for specifier in paths.keys() {
-        self
-          .paths_specifier_strings
-          .insert(specifier.clone(), specifier.to_string().to_string());
-      }
     }
   }
 
-  pub fn update_specifier_strings(&mut self) {
-    if let Some(paths) = &self.paths {
-      for specifier in paths.keys() {
-        self
-          .paths_specifier_strings
-          .insert(specifier.clone(), specifier.to_string().to_string());
+  pub fn paths_specifier_strings(&mut self) -> &HashMap<Specifier, String> {
+    self.paths_specifier_strings.get_or_init(|| {
+      let mut paths_specifier_strings = HashMap::new();
+      if let Some(paths) = &self.paths {
+        for specifier in paths.keys() {
+          paths_specifier_strings.insert(specifier.clone(), specifier.to_string().to_string());
+        }
       }
-    }
+      paths_specifier_strings
+    })
   }
 
   pub fn extend(&mut self, extended: &TsConfig) {
@@ -131,6 +128,8 @@ impl TsConfig {
     if self.module_suffixes.is_none() {
       self.module_suffixes = extended.module_suffixes.clone();
     }
+
+    let _ = self.paths_specifier_strings.take();
   }
 
   pub fn paths<'a>(&'a self, specifier: &'a Specifier) -> impl Iterator<Item = PathBuf> + 'a {
@@ -158,7 +157,7 @@ impl TsConfig {
       let mut best_key = None;
       let full_specifier = specifier.to_string();
 
-      for (key, path) in &self.paths_specifier_strings {
+      for (key, path) in self.paths_specifier_strings() {
         if let Some((prefix, suffix)) = path.split_once('*') {
           if (best_key.is_none() || prefix.len() > longest_prefix_length)
             && full_specifier.starts_with(prefix)
