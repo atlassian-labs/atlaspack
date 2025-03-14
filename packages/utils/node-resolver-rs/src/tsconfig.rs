@@ -1,9 +1,9 @@
 use std::borrow::Cow;
-use std::cell::OnceCell;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use crate::path::resolve_path;
 use crate::specifier::Specifier;
@@ -24,7 +24,7 @@ pub struct TsConfig {
   pub module_suffixes: Option<Arc<Vec<String>>>,
   // rootDirs??
   #[serde(skip)]
-  paths_specifier_strings: OnceCell<HashMap<Specifier, String>>,
+  paths_specifier_strings: OnceLock<HashMap<Specifier, String>>,
 }
 
 fn deserialize_extends<'a, 'de: 'a, D>(deserializer: D) -> Result<Vec<Specifier>, D::Error>
@@ -103,7 +103,7 @@ impl TsConfig {
     }
   }
 
-  pub fn paths_specifier_strings(&mut self) -> &HashMap<Specifier, String> {
+  pub fn paths_specifier_strings(&self) -> &HashMap<Specifier, String> {
     self.paths_specifier_strings.get_or_init(|| {
       let mut paths_specifier_strings = HashMap::new();
       if let Some(paths) = &self.paths {

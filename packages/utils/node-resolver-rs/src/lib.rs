@@ -1271,8 +1271,6 @@ impl<'a> ResolveRequest<'a> {
           compiler_options.extend(&extended);
         }
 
-        compiler_options.update_specifier_strings();
-
         Ok(())
       });
       tsconfig.deref().clone()
