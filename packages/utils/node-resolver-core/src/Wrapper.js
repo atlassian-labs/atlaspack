@@ -82,13 +82,13 @@ export default class NodeResolver {
     let resolver = this.resolversByEnv.get(options.env.id);
     if (!resolver) {
       await init?.();
-      const useJavaScriptFs =
+      const useNativeFs =
         this.options.fs instanceof NodeFS &&
         process.versions.pnp == null &&
         // For Wasm builds
         !init;
 
-      if (useJavaScriptFs && process.env.NODE_ENV !== 'test') {
+      if (!useNativeFs && process.env.NODE_ENV !== 'test') {
         this.options.logger?.warn({
           message:
             'Using JavaScript file system for resolution. This should not be used in other than internal atlaspack tests.',
@@ -96,7 +96,7 @@ export default class NodeResolver {
       }
 
       resolver = new Resolver(this.options.projectRoot, {
-        fs: useJavaScriptFs
+        fs: useNativeFs
           ? undefined
           : {
               canonicalize: (path) => this.options.fs.realpathSync(path),
