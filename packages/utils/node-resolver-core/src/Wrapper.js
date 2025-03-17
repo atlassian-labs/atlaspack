@@ -33,6 +33,7 @@ import ThrowableDiagnostic, {
 import semver from 'semver';
 import {parse} from '@mischnic/json-sourcemap';
 import _Module from 'module';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 // Package.json fields. Must match package_json.rs.
 const MAIN = 1 << 0;
@@ -119,6 +120,7 @@ export default class NodeResolver {
                 );
               }
             : undefined,
+        reduceStringCreation: getFeatureFlag('reduceResolverStringCreation'),
       });
       this.resolversByEnv.set(options.env.id, resolver);
     }

@@ -132,7 +132,11 @@ impl TsConfig {
     let _ = self.paths_specifier_strings.take();
   }
 
-  pub fn paths<'a>(&'a self, specifier: &'a Specifier) -> impl Iterator<Item = PathBuf> + 'a {
+  pub fn paths<'a>(
+    &'a self,
+    specifier: &'a Specifier,
+    reduce_string_creation: bool,
+  ) -> impl Iterator<Item = PathBuf> + 'a {
     if !matches!(specifier, Specifier::Package(..) | Specifier::Builtin(..)) {
       return Either::Right(Either::Right(std::iter::empty()));
     }
@@ -157,15 +161,32 @@ impl TsConfig {
       let mut best_key = None;
       let full_specifier = specifier.to_string();
 
-      for (key, path) in self.paths_specifier_strings() {
-        if let Some((prefix, suffix)) = path.split_once('*') {
-          if (best_key.is_none() || prefix.len() > longest_prefix_length)
-            && full_specifier.starts_with(prefix)
-            && full_specifier.ends_with(suffix)
-          {
-            longest_prefix_length = prefix.len();
-            longest_suffix_length = suffix.len();
-            best_key = Some(key);
+      if reduce_string_creation {
+        for (key, path) in self.paths_specifier_strings() {
+          if let Some((prefix, suffix)) = path.split_once('*') {
+            if (best_key.is_none() || prefix.len() > longest_prefix_length)
+              && full_specifier.starts_with(prefix)
+              && full_specifier.ends_with(suffix)
+            {
+              longest_prefix_length = prefix.len();
+              longest_suffix_length = suffix.len();
+              best_key = Some(key);
+            }
+          }
+        }
+      } else if let Some(paths) = &self.paths {
+        for key in paths.keys() {
+          let path = key.to_string();
+
+          if let Some((prefix, suffix)) = path.split_once('*') {
+            if (best_key.is_none() || prefix.len() > longest_prefix_length)
+              && full_specifier.starts_with(prefix)
+              && full_specifier.ends_with(suffix)
+            {
+              longest_prefix_length = prefix.len();
+              longest_suffix_length = suffix.len();
+              best_key = Some(key);
+            }
           }
         }
       }
