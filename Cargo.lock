@@ -309,6 +309,7 @@ dependencies = [
  "sourcemap",
  "swc_core",
  "swc_ecma_parser",
+ "tempfile",
  "thiserror 2.0.9",
  "tracing",
  "tracing-test",
