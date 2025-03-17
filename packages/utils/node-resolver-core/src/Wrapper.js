@@ -83,19 +83,28 @@ export default class NodeResolver {
     let resolver = this.resolversByEnv.get(options.env.id);
     if (!resolver) {
       await init?.();
+      const useNativeFs =
+        this.options.fs instanceof NodeFS &&
+        process.versions.pnp == null &&
+        // For Wasm builds
+        !init;
+
+      if (!useNativeFs && process.env.NODE_ENV !== 'test') {
+        this.options.logger?.warn({
+          message:
+            'Using JavaScript file system for resolution. This should not be used in other than internal atlaspack tests.',
+        });
+      }
+
       resolver = new Resolver(this.options.projectRoot, {
-        fs:
-          this.options.fs instanceof NodeFS &&
-          process.versions.pnp == null &&
-          // For Wasm builds
-          !init
-            ? undefined
-            : {
-                canonicalize: (path) => this.options.fs.realpathSync(path),
-                read: (path) => this.options.fs.readFileSync(path),
-                isFile: (path) => this.options.fs.statSync(path).isFile(),
-                isDir: (path) => this.options.fs.statSync(path).isDirectory(),
-              },
+        fs: useNativeFs
+          ? undefined
+          : {
+              canonicalize: (path) => this.options.fs.realpathSync(path),
+              read: (path) => this.options.fs.readFileSync(path),
+              isFile: (path) => this.options.fs.statSync(path).isFile(),
+              isDir: (path) => this.options.fs.statSync(path).isDirectory(),
+            },
         mode: 1,
         includeNodeModules: options.env.includeNodeModules,
         entries: this.options.mainFields
