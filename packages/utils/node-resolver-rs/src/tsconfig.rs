@@ -174,7 +174,7 @@ impl TsConfig {
             }
           }
         }
-      } else if let Some(paths) = &self.paths {
+      } else {
         for key in paths.keys() {
           let path = key.to_string();
 
