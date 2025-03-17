@@ -50,3 +50,6 @@ regex = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-test = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
