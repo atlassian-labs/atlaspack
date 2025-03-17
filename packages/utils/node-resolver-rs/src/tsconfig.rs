@@ -252,6 +252,11 @@ mod tests {
 
   #[test]
   fn test_paths() {
+    test_paths_inner(false);
+    test_paths_inner(true);
+  }
+
+  fn test_paths_inner(reduce_string_creation: bool) {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
       paths: Some(Arc::new(HashMap::from([
@@ -272,7 +277,11 @@ mod tests {
     };
     tsconfig.validate();
 
-    let test = |specifier: &str| tsconfig.paths(&specifier.into()).collect::<Vec<PathBuf>>();
+    let test = |specifier: &str| {
+      tsconfig
+        .paths(&specifier.into(), reduce_string_creation)
+        .collect::<Vec<PathBuf>>()
+    };
 
     assert_eq!(
       test("jquery"),
@@ -298,6 +307,11 @@ mod tests {
 
   #[test]
   fn test_base_url() {
+    test_base_url_inner(false);
+    test_base_url_inner(true);
+  }
+
+  fn test_base_url_inner(reduce_string_creation: bool) {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
       base_url: Some(Arc::new(Path::new("src").into())),
@@ -305,7 +319,11 @@ mod tests {
     };
     tsconfig.validate();
 
-    let test = |specifier: &str| tsconfig.paths(&specifier.into()).collect::<Vec<PathBuf>>();
+    let test = |specifier: &str| {
+      tsconfig
+        .paths(&specifier.into(), reduce_string_creation)
+        .collect::<Vec<PathBuf>>()
+    };
 
     assert_eq!(test("foo"), vec![PathBuf::from("/foo/src/foo")]);
     assert_eq!(
@@ -317,6 +335,11 @@ mod tests {
 
   #[test]
   fn test_paths_and_base_url() {
+    test_paths_and_base_url_inner(false);
+    test_paths_and_base_url_inner(true);
+  }
+
+  fn test_paths_and_base_url_inner(reduce_string_creation: bool) {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
       base_url: Some(Arc::new(Path::new("src").into())),
@@ -333,7 +356,11 @@ mod tests {
     };
     tsconfig.validate();
 
-    let test = |specifier: &str| tsconfig.paths(&specifier.into()).collect::<Vec<PathBuf>>();
+    let test = |specifier: &str| {
+      tsconfig
+        .paths(&specifier.into(), reduce_string_creation)
+        .collect::<Vec<PathBuf>>()
+    };
 
     assert_eq!(
       test("test"),
