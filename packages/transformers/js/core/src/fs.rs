@@ -310,3 +310,132 @@ impl Fold for Evaluator<'_> {
     }
   }
 }
+
+#[cfg(test)]
+mod test {
+  use atlaspack_swc_runner::{runner::RunVisitResult, test_utils::run_test_fold};
+
+  use super::*;
+
+  #[test]
+  fn test_inline_fs_referencing_a_file_that_exists() {
+    // Create a temporary directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_dir_path = std::fs::canonicalize(temp_dir.path()).unwrap();
+
+    // Create a javascript file with code in temporary directory
+    let sample_code = r#"
+import fs from "fs";
+import path from "path";
+
+const content = fs.readFileSync(path.join(__dirname, "inline.txt"), "utf8");
+    "#;
+    std::fs::write(temp_dir_path.join("index.js"), sample_code).unwrap();
+    // Create a txt file
+    std::fs::write(temp_dir_path.join("inline.txt"), "Hello, world!").unwrap();
+
+    let mut deps = vec![];
+    let RunVisitResult { output_code, .. } = run_test_fold(sample_code, |ctx| {
+      inline_fs(
+        temp_dir_path.join("index.js").to_str().unwrap(),
+        ctx.source_map,
+        ctx.global_mark,
+        ctx.global_mark,
+        temp_dir_path.to_str().unwrap(),
+        &mut deps,
+        true,
+        false,
+      )
+    });
+
+    assert_eq!(
+      output_code.trim(),
+      r#"
+import fs from "fs";
+import path from "path";
+const content = "Hello, world!";
+      "#
+      .trim()
+    );
+  }
+
+  #[test]
+  fn test_inline_fs_referencing_a_file_that_does_not_exist() {
+    // Create a temporary directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_dir_path = std::fs::canonicalize(temp_dir.path()).unwrap();
+
+    // Create a javascript file with code in temporary directory
+    let sample_code = r#"
+import fs from "fs";
+import path from "path";
+
+const content = fs.readFileSync(path.join(__dirname, "inline.txt"), "utf8");
+    "#;
+    std::fs::write(temp_dir_path.join("index.js"), sample_code).unwrap();
+
+    let mut deps = vec![];
+    let RunVisitResult { output_code, .. } = run_test_fold(sample_code, |ctx| {
+      inline_fs(
+        temp_dir_path.join("index.js").to_str().unwrap(),
+        ctx.source_map,
+        ctx.global_mark,
+        ctx.global_mark,
+        temp_dir_path.to_str().unwrap(),
+        &mut deps,
+        true,
+        false,
+      )
+    });
+
+    assert_eq!(
+      output_code.trim(),
+      r#"
+import fs from "fs";
+import path from "path";
+const content = fs.readFileSync(path.join(__dirname, "inline.txt"), "utf8");
+      "#
+      .trim()
+    );
+  }
+
+  #[test]
+  fn test_inline_fs_with_a_file_path_string_concatenation() {
+    // Create a temporary directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_dir_path = std::fs::canonicalize(temp_dir.path()).unwrap();
+
+    // Create a javascript file with code in temporary directory
+    let sample_code = r#"
+import fs from "fs";
+
+const content = fs.readFileSync(__dirname + "/inline.txt", "utf8");
+    "#;
+    std::fs::write(temp_dir_path.join("index.js"), sample_code).unwrap();
+    // Create a txt file
+    std::fs::write(temp_dir_path.join("inline.txt"), "Hello, world!").unwrap();
+
+    let mut deps = vec![];
+    let RunVisitResult { output_code, .. } = run_test_fold(sample_code, |ctx| {
+      inline_fs(
+        temp_dir_path.join("index.js").to_str().unwrap(),
+        ctx.source_map,
+        ctx.global_mark,
+        ctx.global_mark,
+        temp_dir_path.to_str().unwrap(),
+        &mut deps,
+        true,
+        false,
+      )
+    });
+
+    assert_eq!(
+      output_code.trim(),
+      r#"
+import fs from "fs";
+const content = "Hello, world!";
+      "#
+      .trim()
+    );
+  }
+}
