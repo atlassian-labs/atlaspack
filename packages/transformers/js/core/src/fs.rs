@@ -400,7 +400,7 @@ const content = fs.readFileSync(path.join(__dirname, "inline.txt"), "utf8");
   }
 
   #[test]
-  fn test_inline_fs_with_a_string_concatenation() {
+  fn test_inline_fs_with_a_file_path_string_concatenation() {
     // Create a temporary directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_dir_path = std::fs::canonicalize(temp_dir.path()).unwrap();
