@@ -11,7 +11,7 @@ mod path_request;
 mod target_request;
 
 /// Union of all request outputs
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum RequestResult {
   AssetGraph(AssetGraphRequestOutput),
   Asset(AssetRequestOutput),
@@ -23,4 +23,22 @@ pub enum RequestResult {
   TestSub(String),
   #[cfg(test)]
   TestMain(Vec<String>),
+}
+
+impl std::fmt::Debug for RequestResult {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    match self {
+      RequestResult::AssetGraph(_) => write!(f, "AssetGraph"),
+      RequestResult::Asset(asset_request) => {
+        write!(f, "Asset({:?})", asset_request.asset.file_path)
+      }
+      RequestResult::Entry(_) => write!(f, "Entry"),
+      RequestResult::Path(_) => write!(f, "Path"),
+      RequestResult::Target(_) => write!(f, "Target"),
+      #[cfg(test)]
+      RequestResult::TestSub(_) => write!(f, "TestSub"),
+      #[cfg(test)]
+      RequestResult::TestMain(_) => write!(f, "TestMain"),
+    }
+  }
 }
