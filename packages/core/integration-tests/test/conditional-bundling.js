@@ -724,4 +724,144 @@ describe('conditional bundling', function () {
       'ifFalse script not found in HTML',
     );
   });
+
+  it(`should have correct deps as bundles in conditional manifest when nested`, async function () {
+    const dir = path.join(__dirname, 'import-cond-cond-manifest');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "reporters": [
+              "@atlaspack/reporter-conditional-manifest",
+              "..."
+            ]
+          }
+
+        index.js:
+          const imported = importCond('cond', './a', './b');
+
+          export const result = imported.default;
+
+        a.js:
+          const imported = importCond('cond', './c', './d');
+
+          export default 'module-a';
+
+        b.js:
+          const imported = importCond('cond', './c', './d');
+
+          export default 'module-b';
+
+        c.js:
+          export default 'module-c';
+
+        d.js:
+          export default 'module-d';
+      `;
+
+    await bundle(path.join(dir, '/index.js'), {
+      inputFS: overlayFS,
+      featureFlags: {conditionalBundlingApi: true},
+      defaultConfig: path.join(dir, '.parcelrc'),
+    });
+
+    // Load the generated manifest
+    let conditionalManifest = JSON.parse(
+      overlayFS
+        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+        .toString(),
+    );
+
+    assert.equal(conditionalManifest, {
+      'a.f8a7ec9f.js': {
+        cond: {
+          ifFalseBundles: ['d.590ea708.js'],
+          ifTrueBundles: ['c.362f0161.js'],
+        },
+      },
+      'b.11201f1a.js': {
+        cond: {
+          ifFalseBundles: ['d.590ea708.js'],
+          ifTrueBundles: ['c.362f0161.js'],
+        },
+      },
+      'index.js': {
+        cond: {
+          ifFalseBundles: ['b.11201f1a.js'],
+          ifTrueBundles: ['a.f8a7ec9f.js'],
+        },
+      },
+    });
+  });
+
+  // it.only(`should have correct deps as bundles loaded when async and when nested`, async function () {
+  //   const dir = path.join(__dirname, 'import-cond-cond-manifest');
+  //   await overlayFS.mkdirp(dir);
+
+  //   await fsFixture(overlayFS, dir)`
+  //       .parcelrc:
+  //         {
+  //           "extends": "@atlaspack/config-default",
+  //           "reporters": [
+  //             "@atlaspack/reporter-conditional-manifest",
+  //             "..."
+  //           ]
+  //         }
+
+  //       index.js:
+  //         const conditions = { 'cond': true };
+  //         globalThis.__MCOND = function(key) { return conditions[key]; }
+
+  //         export const result = import('./nested.js');
+
+  //       nested.js:
+  //         const imported = importCond('cond', './a', './b');
+
+  //         export const result = imported.default;
+
+  //       a.js:
+  //         const imported = importCond('cond', './c', './d');
+
+  //         export default 'module-a';
+
+  //       b.js:
+  //         const imported = importCond('cond', './c', './d');
+
+  //         export default 'module-b';
+
+  //       c.js:
+  //         export default 'module-c';
+
+  //       d.js:
+  //         export default 'module-d';
+  //     `;
+
+  //   let bundleGraph = await bundle(path.join(dir, '/index.js'), {
+  //     inputFS: overlayFS,
+  //     featureFlags: {conditionalBundlingApi: true},
+  //     defaultConfig: path.join(dir, '.parcelrc'),
+  //   });
+
+  //   let entry = nullthrows(
+  //     bundleGraph.getBundles().find((b) => b.name === 'index.js'),
+  //     'index.js bundle not found',
+  //   );
+
+  //   // Run the bundles and act like the webserver included the ifTrue bundles already
+  //   let output = await runBundles(
+  //     bundleGraph,
+  //     entry,
+  //     [[overlayFS.readFileSync(entry.filePath).toString(), entry]],
+  //     {},
+  //     {
+  //       entryAsset: nullthrows(entry.getMainEntry()),
+  //     },
+  //   );
+
+  //   const result
+
+  //   assert.deepEqual(, 'module-a');
+  // });
 });

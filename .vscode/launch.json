@@ -15,6 +15,7 @@
       "args": [
         "--inspect-brk",
         "${workspaceFolder}/node_modules/.bin/_mocha",
+        "--timeout=1000000",
         "${input:integration-tests-args}"
       ],
       "cwd": "${workspaceFolder}/packages/core/integration-tests",
