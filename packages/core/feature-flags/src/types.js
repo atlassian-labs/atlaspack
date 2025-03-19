@@ -17,10 +17,6 @@ export type FeatureFlags = {|
    */
   importRetry: boolean,
   /**
-   * Enable Rust based LMDB wrapper library
-   */
-  useLmdbJsLite: boolean,
-  /**
    * Fixes quadratic cache invalidation issue
    */
   fixQuadraticCacheInvalidation: ConsistencyCheckFeatureFlagValue,
