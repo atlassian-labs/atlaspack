@@ -12,7 +12,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   useWatchmanWatcher: false,
   importRetry: false,
   fixQuadraticCacheInvalidation: 'OLD',
-  useLmdbJsLite: false,
+  useLmdbJsLite: true,
   conditionalBundlingApi: false,
   vcsMode: 'OLD',
   loadableSideEffects: false,
