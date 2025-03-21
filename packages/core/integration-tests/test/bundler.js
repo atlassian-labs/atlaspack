@@ -2397,4 +2397,39 @@ describe('bundler', function () {
       assert.deepEqual(bundles, compareBundles);
     }
   });
+
+  it('should support circular dependencies that are also an async entry point', async () => {
+    await fsFixture(overlayFS, __dirname)`
+        async-circular-builds
+          entry.html:
+            <script type="module" src="./entry.js" />
+          entry.js:
+            (async () => {
+              const {one} = await import('./async-one.js');
+              const {two} = await import('./async-two.js');
+              sideEffectNoop(one() + two());
+            })();
+          async-one.js:
+            import {two} from './async-two';
+            export const one = () => two();
+            export const other = () => 'other';
+          async-two.js:
+            import {shared} from './shared';
+            export const two = () => shared('two');
+          shared.js:
+            import {other} from './async-one';
+            export const shared = (inputString) => {
+              return other() + inputString;
+            }
+      `;
+
+    const b = await bundle(
+      [path.join(__dirname, 'async-circular-builds/entry.html')],
+      {
+        inputFS: overlayFS,
+      },
+    );
+
+    await run(b);
+  });
 });
