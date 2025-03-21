@@ -85,7 +85,6 @@ use swc_core::ecma::transforms::optimization::simplify::expr_simplifier;
 use swc_core::ecma::transforms::proposal::decorators;
 use swc_core::ecma::transforms::react;
 use swc_core::ecma::transforms::typescript;
-use swc_core::ecma::visit::fold_pass;
 use swc_core::ecma::visit::visit_mut_pass;
 use swc_core::ecma::visit::FoldWith;
 use swc_core::ecma::visit::VisitMutWith;
@@ -411,7 +410,7 @@ pub fn transform(
                   dead_branch_remover(unresolved_mark),
                   // Inline Node fs.readFileSync calls
                   Optional::new(
-                    fold_pass(inline_fs(
+                    visit_mut_pass(inline_fs(
                       config.filename.as_str(),
                       source_map.clone(),
                       unresolved_mark,
