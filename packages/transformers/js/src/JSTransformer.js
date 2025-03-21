@@ -19,9 +19,15 @@ import ThrowableDiagnostic, {
   encodeJSONKeyComponent,
   convertSourceLocationToHighlight,
 } from '@atlaspack/diagnostic';
-import {validateSchema, remapSourceLocation, globMatch} from '@atlaspack/utils';
-import pkg from '../package.json';
+import {
+  validateSchema,
+  remapSourceLocation,
+  globMatch,
+  findPackageJson,
+} from '@atlaspack/utils';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+
+const pkg = findPackageJson(__dirname);
 
 const JSX_EXTENSIONS = {
   jsx: true,

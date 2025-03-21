@@ -1,4 +1,5 @@
 // @flow
+import path from 'path';
 
 import type {
   WorkerImpl,
@@ -12,7 +13,7 @@ import childProcess, {type ChildProcess} from 'child_process';
 
 import {serialize, deserialize} from '@atlaspack/build-cache';
 
-const WORKER_PATH = require.resolve('./ProcessChild');
+const WORKER_PATH = path.join(__dirname, 'ProcessChild.js');
 
 export default class ProcessWorker implements WorkerImpl {
   execArgv: Object;

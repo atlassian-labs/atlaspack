@@ -1,0 +1,6 @@
+!*
+.scripts
+.gitignore
+.npmignore
+node_modules
+*.tgz
