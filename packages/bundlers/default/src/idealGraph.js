@@ -961,7 +961,7 @@ export function createIdealGraph(
           );
 
           reachableIntersection.forEach((otherCandidateId) => {
-            // In the case of a ciruclar dependency, you may end up with two
+            // In the case of a circular dependency, you may end up with two
             // reusable bundles that each delete the other, leaving no reusable
             // bundles actually reachable. This check is to avoid assigning the
             // asset to a reusable bundle that has already been marked unreachable.
