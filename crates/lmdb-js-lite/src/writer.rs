@@ -281,6 +281,10 @@ impl DatabaseWriter {
   pub fn environment(&self) -> &Env {
     &self.environment
   }
+
+  pub fn database(&self) -> &heed::Database<Str, Bytes> {
+    &self.database
+  }
 }
 
 impl DatabaseWriter {
@@ -331,10 +335,15 @@ impl DatabaseWriter {
     })
   }
 
+  pub fn decompress(&self, data: &[u8]) -> Result<Vec<u8>> {
+    let output_buffer = lz4_flex::block::decompress_size_prepended(data)?;
+    Ok(output_buffer)
+  }
+
   /// Read an entry and decompress it
   pub fn get(&self, txn: &RoTxn, key: &str) -> Result<Option<Vec<u8>>> {
     if let Some(result) = self.database.get(txn, key)? {
-      let output_buffer = lz4_flex::block::decompress_size_prepended(result)?;
+      let output_buffer = self.decompress(&result)?;
       Ok(Some(output_buffer))
     } else {
       Ok(None)
