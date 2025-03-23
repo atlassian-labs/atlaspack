@@ -40,7 +40,7 @@ pub mod writer;
 pub use crate::writer::LMDBOptions;
 
 #[cfg(not(feature = "napi_noop"))]
-pub use napi::*;
+pub use lmdb_napi::*;
 
 pub struct NativeEntry {
   pub key: String,
@@ -49,7 +49,7 @@ pub struct NativeEntry {
 }
 
 #[cfg(not(feature = "napi_noop"))]
-mod napi {
+mod lmdb_napi {
   use super::*;
 
   use std::collections::HashMap;
