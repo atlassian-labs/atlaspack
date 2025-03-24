@@ -1,10 +1,5 @@
 // @flow
-import type {
-  FilePath,
-  PackageName,
-  Semver,
-  SemverRange,
-} from '@atlaspack/types';
+import type {FilePath, PackageName, Semver} from '@atlaspack/types';
 import type {AtlaspackOptions} from './types';
 
 import path from 'path';
