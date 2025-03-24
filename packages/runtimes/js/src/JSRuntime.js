@@ -1,5 +1,5 @@
 // @flow strict-local
-
+import logger from '@atlaspack/logger';
 import type {
   BundleGraph,
   BundleGroup,
@@ -514,25 +514,53 @@ function getLoaderRuntime({
     return code;
   }
 
-  if (getFeatureFlag('conditionalBundlingApi')) {
-    let conditionalDependencies = externalBundles.flatMap(
-      (to) => getDependencies(to).conditionalDependencies,
+  function getConditionalLoadersForCondition(
+    dependencies: Dependency[],
+    sourceBundle: NamedBundle,
+  ): string[] {
+    if (dependencies.length === 0) {
+      // Avoid extra work if there are no dependencies, so we don't have to traverse conditions
+      return [];
+    }
+
+    // Get all the condition objects for the conditional dependencies
+    const conditions = bundleGraph.getConditionsForDependencies(
+      dependencies,
+      sourceBundle,
     );
-    for (const cond of bundleGraph.getConditionsForDependencies(
-      conditionalDependencies,
-      bundle,
-    )) {
+
+    const loaders = [];
+    for (const cond of conditions) {
       // This bundle has a conditional dependency, we need to load the bundle group
-      const ifTrueLoaders = cond.ifTrueBundles.map((targetBundle) =>
-        getLoaderForBundle(bundle, targetBundle),
-      );
-      const ifFalseLoaders = cond.ifFalseBundles.map((targetBundle) =>
-        getLoaderForBundle(bundle, targetBundle),
-      );
+      const ifTrueLoaders = cond.ifTrueBundles
+        .flatMap((targetBundle) =>
+          getConditionalLoadersForCondition(
+            getDependencies(targetBundle).conditionalDependencies,
+            targetBundle,
+          ),
+        )
+        .concat(
+          cond.ifTrueBundles.map((targetBundle) =>
+            getLoaderForBundle(sourceBundle, targetBundle),
+          ),
+        );
+
+      const ifFalseLoaders = cond.ifFalseBundles
+        .flatMap((targetBundle) =>
+          getConditionalLoadersForCondition(
+            getDependencies(targetBundle).conditionalDependencies,
+            targetBundle,
+          ),
+        )
+        .concat(
+          cond.ifFalseBundles.map((targetBundle) =>
+            getLoaderForBundle(sourceBundle, targetBundle),
+          ),
+        );
 
       if (ifTrueLoaders.length > 0 || ifFalseLoaders.length > 0) {
         // Load conditional bundles with helper (and a dev mode with additional hints)
-        loaderModules.push(
+        loaders.push(
           `require('./helpers/conditional-loader${
             options.mode === 'development' ? '-dev' : ''
           }')('${
@@ -543,6 +571,52 @@ function getLoaderRuntime({
             ',',
           )}]);})`,
         );
+      }
+    }
+
+    return loaders;
+  }
+
+  if (getFeatureFlag('conditionalBundlingApi')) {
+    if (getFeatureFlag('conditionalBundlingNestedRuntime')) {
+      logger.info({message: 'Using nested runtime conditional bundling'});
+      let conditionalDependencies = externalBundles.flatMap(
+        (to) => getDependencies(to).conditionalDependencies,
+      );
+
+      loaderModules.push(
+        getConditionalLoadersForCondition(conditionalDependencies, bundle),
+      );
+    } else {
+      let conditionalDependencies = externalBundles.flatMap(
+        (to) => getDependencies(to).conditionalDependencies,
+      );
+      for (const cond of bundleGraph.getConditionsForDependencies(
+        conditionalDependencies,
+        bundle,
+      )) {
+        // This bundle has a conditional dependency, we need to load the bundle group
+        const ifTrueLoaders = cond.ifTrueBundles.map((targetBundle) =>
+          getLoaderForBundle(bundle, targetBundle),
+        );
+        const ifFalseLoaders = cond.ifFalseBundles.map((targetBundle) =>
+          getLoaderForBundle(bundle, targetBundle),
+        );
+
+        if (ifTrueLoaders.length > 0 || ifFalseLoaders.length > 0) {
+          // Load conditional bundles with helper (and a dev mode with additional hints)
+          loaderModules.push(
+            `require('./helpers/conditional-loader${
+              options.mode === 'development' ? '-dev' : ''
+            }')('${
+              cond.key
+            }', function (){return Promise.all([${ifTrueLoaders.join(
+              ',',
+            )}]);}, function (){return Promise.all([${ifFalseLoaders.join(
+              ',',
+            )}]);})`,
+          );
+        }
       }
     }
   }
