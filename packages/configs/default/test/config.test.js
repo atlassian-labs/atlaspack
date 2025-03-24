@@ -10,10 +10,9 @@ describe('@atlaspack/config-default', () => {
   let configPackageReferences: Set<string>;
 
   before(() => {
-    packageJsonDependencyNames = new Set([
-      ...Object.keys(packageJson.dependencies || {}),
-      ...Object.keys(packageJson.parcelDependencies || {}),
-    ]);
+    packageJsonDependencyNames = new Set(
+      Object.keys(packageJson.dependencies || {}),
+    );
     configPackageReferences = collectConfigPackageReferences(config);
   });
 
