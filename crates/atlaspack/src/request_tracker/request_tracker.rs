@@ -317,8 +317,11 @@ impl RequestTracker {
     let mut need_rebuild = false;
 
     for invalidation in watch_events.iter() {
+      // We don't currently distinguish between the different file event types
       match invalidation {
-        WatchEvent::Delete(file_path) | WatchEvent::Update(file_path) => {
+        WatchEvent::Delete(file_path)
+        | WatchEvent::Update(file_path)
+        | WatchEvent::Create(file_path) => {
           if let Some(invalidation_node) = self.invalidations.get(file_path) {
             let mut invalid_nodes = Vec::new();
             {
@@ -340,9 +343,6 @@ impl RequestTracker {
               need_rebuild = true;
             }
           }
-        }
-        WatchEvent::Create(_) => {
-          // Not currently handling creates
         }
       }
     }
