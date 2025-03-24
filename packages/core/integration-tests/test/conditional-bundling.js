@@ -753,11 +753,18 @@ describe('conditional bundling', function () {
           export default 'module-d';
       `;
 
-    await bundle(path.join(dir, '/index.js'), {
+    let bundleGraph = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       featureFlags: {conditionalBundlingApi: true},
       defaultConfig: path.join(dir, '.parcelrc'),
     });
+
+    // Get the generated bundle names
+    let bundleNames = new Map<string, string>(
+      bundleGraph
+        .getBundles()
+        .map((b) => [b.displayName, b.filePath.slice(distDir.length + 1)]),
+    );
 
     // Load the generated manifest
     let conditionalManifest = JSON.parse(
@@ -767,22 +774,22 @@ describe('conditional bundling', function () {
     );
 
     assert.deepEqual(conditionalManifest, {
-      'a.f8a7ec9f.js': {
+      [nullthrows(bundleNames.get('a.[hash].js'))]: {
         cond: {
-          ifFalseBundles: ['d.590ea708.js'],
-          ifTrueBundles: ['c.362f0161.js'],
+          ifFalseBundles: [nullthrows(bundleNames.get('d.[hash].js'))],
+          ifTrueBundles: [nullthrows(bundleNames.get('c.[hash].js'))],
         },
       },
-      'b.11201f1a.js': {
+      [nullthrows(bundleNames.get('b.[hash].js'))]: {
         cond: {
-          ifFalseBundles: ['d.590ea708.js'],
-          ifTrueBundles: ['c.362f0161.js'],
+          ifFalseBundles: [nullthrows(bundleNames.get('d.[hash].js'))],
+          ifTrueBundles: [nullthrows(bundleNames.get('c.[hash].js'))],
         },
       },
       'index.js': {
         cond: {
-          ifFalseBundles: ['b.11201f1a.js'],
-          ifTrueBundles: ['a.f8a7ec9f.js'],
+          ifFalseBundles: [nullthrows(bundleNames.get('b.[hash].js'))],
+          ifTrueBundles: [nullthrows(bundleNames.get('a.[hash].js'))],
         },
       },
     });
