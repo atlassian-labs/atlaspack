@@ -553,13 +553,12 @@ pub fn transform(
               }
 
               let mut module = module.module().expect("Module should be a module at this point");
-              let module = if config.scope_hoist {
-                let res = hoist(module, config.module_id.as_str(), unresolved_mark, &collect);
+              if config.scope_hoist {
+                let res = hoist(&mut module, config.module_id.as_str(), unresolved_mark, &collect);
                 match res {
-                  Ok((module, hoist_result, hoist_diagnostics)) => {
+                  Ok((hoist_result, hoist_diagnostics)) => {
                     result.hoist_result = Some(hoist_result);
                     diagnostics.extend(hoist_diagnostics);
-                    module
                   }
                   Err(diagnostics) => {
                     result.diagnostics = Some(diagnostics);
@@ -575,16 +574,13 @@ pub fn transform(
                 let mut esm2cjs = EsmToCjsReplacer::new(unresolved_mark, versions);
                 module.visit_mut_with(&mut esm2cjs);
                 result.needs_esm_helpers = esm2cjs.needs_helpers;
-                module
-              };
+              }
 
-              let module = Program::Module(module);
-              let module = module.apply(&mut (
+              module.visit_mut_with(&mut (
                 reserved_words(),
                 hygiene(),
                 fixer(Some(&comments)),
               ));
-              let module = module.module().expect("Module should be a module at this point");
 
               result.dependencies.extend(global_deps);
               result.dependencies.extend(fs_deps);
@@ -595,6 +591,7 @@ pub fn transform(
 
               let (buf, src_map_buf) =
                 emit(source_map.clone(), comments, &module, config.source_maps)?;
+
               if config.source_maps
                 && source_map
                   .build_source_map_with_config(&src_map_buf, None, SourceMapConfig)
@@ -603,6 +600,7 @@ pub fn transform(
               {
                 result.map = Some(String::from_utf8(map_buf).unwrap());
               }
+
               result.code = buf;
               Ok(result)
             },
