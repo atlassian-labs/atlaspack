@@ -226,6 +226,10 @@ pub struct Asset {
   /// True if the asset has CommonJS exports
   pub has_cjs_exports: bool,
 
+  /// The content hash for the final transformed source code of the Asset
+  /// Used for calculating the hash of any Bundles the Asset is assigned to
+  pub output_hash: Option<String>,
+
   /// This is true unless the module is a CommonJS module that does non-static access of the
   /// `this`, `exports` or `module.exports` objects. For example if the module uses code like
   /// `module.exports[key] = 10`.

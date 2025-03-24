@@ -23,7 +23,7 @@ import {symlinkSync} from 'fs';
 const inputDir = path.join(__dirname, '/watcher');
 const distDir = path.join(inputDir, 'dist');
 
-describe.v2('watcher', function () {
+describe('watcher', function () {
   let subscription;
   afterEach(async () => {
     if (subscription) {
@@ -82,7 +82,7 @@ describe.v2('watcher', function () {
     assert.equal(output, 'hello');
   });
 
-  it('should rebuild on a config file change', async function () {
+  it.v2('should rebuild on a config file change', async function () {
     let inDir = path.join(__dirname, 'integration/parcelrc-custom');
     let outDir = path.join(inDir, 'dist');
 
@@ -114,36 +114,42 @@ describe.v2('watcher', function () {
     assert(distFile.includes('TRANSFORMED CODE'));
   });
 
-  it('should rebuild properly when a dependency is removed', async function () {
-    await ncp(path.join(__dirname, 'integration/babel-default'), inputDir);
+  it.v2(
+    'should rebuild properly when a dependency is removed',
+    async function () {
+      await ncp(path.join(__dirname, 'integration/babel-default'), inputDir);
 
-    let b = bundler(path.join(inputDir, 'index.js'), {
-      inputFS: overlayFS,
-      targets: {
-        main: {
-          engines: {
-            node: '^8.0.0',
+      let b = bundler(path.join(inputDir, 'index.js'), {
+        inputFS: overlayFS,
+        targets: {
+          main: {
+            engines: {
+              node: '^8.0.0',
+            },
+            distDir,
           },
-          distDir,
         },
-      },
-    });
+      });
 
-    subscription = await b.watch();
-    await getNextBuild(b);
-    let distFile = await outputFS.readFile(
-      path.join(distDir, 'index.js'),
-      'utf8',
-    );
-    assert(distFile.includes('Foo'));
-    await outputFS.writeFile(
-      path.join(inputDir, 'index.js'),
-      'console.log("no more dependencies")',
-    );
-    await getNextBuild(b);
-    distFile = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    assert(!distFile.includes('Foo'));
-  });
+      subscription = await b.watch();
+      await getNextBuild(b);
+      let distFile = await outputFS.readFile(
+        path.join(distDir, 'index.js'),
+        'utf8',
+      );
+      assert(distFile.includes('Foo'));
+      await outputFS.writeFile(
+        path.join(inputDir, 'index.js'),
+        'console.log("no more dependencies")',
+      );
+      await getNextBuild(b);
+      distFile = await outputFS.readFile(
+        path.join(distDir, 'index.js'),
+        'utf8',
+      );
+      assert(!distFile.includes('Foo'));
+    },
+  );
 
   it.skip('should re-generate bundle tree when files change', async function () {
     await ncp(path.join(__dirname, '/integration/dynamic-hoist'), inputDir);
@@ -418,7 +424,7 @@ describe.v2('watcher', function () {
     }
   });
 
-  it('should add and remove necessary runtimes to bundles', async () => {
+  it.v2('should add and remove necessary runtimes to bundles', async () => {
     await ncp(path.join(__dirname, 'integration/dynamic'), inputDir);
 
     let indexPath = path.join(inputDir, 'index.js');
@@ -473,7 +479,7 @@ describe.v2('watcher', function () {
     ]);
   });
 
-  it('should rebuild if a missing file is added', async function () {
+  it.v2('should rebuild if a missing file is added', async function () {
     await outputFS.mkdirp(inputDir);
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
