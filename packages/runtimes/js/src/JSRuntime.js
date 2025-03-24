@@ -446,7 +446,7 @@ function getLoaderRuntime({
     !bundle.env.isLibrary && !bundle.env.supports('dynamic-import', true);
 
   let needsEsmLoadPrelude = false;
-  let loaderModules = [];
+  let loaderModules: Array<string> = [];
 
   function getLoaderForBundle(
     bundle: NamedBundle,
@@ -585,7 +585,7 @@ function getLoaderRuntime({
       );
 
       loaderModules.push(
-        getConditionalLoadersForCondition(conditionalDependencies, bundle),
+        ...getConditionalLoadersForCondition(conditionalDependencies, bundle),
       );
     } else {
       let conditionalDependencies = externalBundles.flatMap(
