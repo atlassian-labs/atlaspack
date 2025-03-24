@@ -1,10 +1,5 @@
 // @flow
-import type {
-  FilePath,
-  PackageName,
-  Semver,
-  SemverRange,
-} from '@atlaspack/types';
+import type {FilePath, PackageName, Semver} from '@atlaspack/types';
 import type {AtlaspackOptions} from './types';
 
 import path from 'path';
@@ -35,10 +30,8 @@ export default async function loadPlugin<T>(
   plugin: T,
   version: Semver,
   resolveFrom: ProjectPath,
-  range: ?SemverRange,
 |}> {
   let resolveFrom = configPath;
-  let range;
   if (resolveFrom.includes(NODE_MODULES)) {
     // Config packages can reference plugins, but cannot contain other plugins within them.
     // This forces every published plugin to be published separately so they can be mixed and matched if needed.
@@ -77,47 +70,34 @@ export default async function loadPlugin<T>(
       configPkg != null &&
       configPkg.config.dependencies?.[pluginName] == null
     ) {
-      // If not in the config's dependencies, the plugin will be auto installed with
-      // the version declared in "parcelDependencies".
-      range = configPkg.config.parcelDependencies?.[pluginName];
-
-      if (range == null) {
-        let contents = await options.inputFS.readFile(
-          configPkg.files[0].filePath,
-          'utf8',
-        );
-        throw new ThrowableDiagnostic({
-          diagnostic: {
-            message: md`Could not determine version of ${pluginName} in ${path.relative(
-              process.cwd(),
-              resolveFrom,
-            )}. Either include it in "dependencies" or "parcelDependencies".`,
-            origin: '@atlaspack/core',
-            codeFrames:
-              configPkg.config.dependencies ||
-              configPkg.config.parcelDependencies
-                ? [
+      let contents = await options.inputFS.readFile(
+        configPkg.files[0].filePath,
+        'utf8',
+      );
+      throw new ThrowableDiagnostic({
+        diagnostic: {
+          message: md`Could not determine version of ${pluginName} in ${path.relative(
+            process.cwd(),
+            resolveFrom,
+          )}. Include it in "dependencies".`,
+          origin: '@atlaspack/core',
+          codeFrames: configPkg.config.dependencies
+            ? [
+                {
+                  filePath: configPkg.files[0].filePath,
+                  language: 'json5',
+                  code: contents,
+                  codeHighlights: generateJSONCodeHighlights(contents, [
                     {
-                      filePath: configPkg.files[0].filePath,
-                      language: 'json5',
-                      code: contents,
-                      codeHighlights: generateJSONCodeHighlights(contents, [
-                        {
-                          key: configPkg.config.parcelDependencies
-                            ? '/parcelDependencies'
-                            : '/dependencies',
-                          type: 'key',
-                        },
-                      ]),
+                      key: '/dependencies',
+                      type: 'key',
                     },
-                  ]
-                : undefined,
-          },
-        });
-      }
-
-      // Resolve from project root if not in the config's dependencies.
-      resolveFrom = path.join(options.projectRoot, 'index');
+                  ]),
+                },
+              ]
+            : undefined,
+        },
+      });
     }
   }
 
@@ -126,10 +106,7 @@ export default async function loadPlugin<T>(
     ({resolved, pkg} = await options.packageManager.resolve(
       pluginName,
       resolveFrom,
-      {
-        shouldAutoInstall: options.shouldAutoInstall,
-        range,
-      },
+      {shouldAutoInstall: options.shouldAutoInstall},
     ));
   } catch (err) {
     if (err.code !== 'MODULE_NOT_FOUND') {
@@ -242,6 +219,5 @@ export default async function loadPlugin<T>(
     plugin,
     version: nullthrows(pkg).version,
     resolveFrom: toProjectPath(options.projectRoot, resolveFrom),
-    range,
   };
 }

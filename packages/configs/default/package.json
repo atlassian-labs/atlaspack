@@ -45,25 +45,6 @@
     "@atlaspack/transformer-react-refresh-wrap": "2.13.1",
     "@atlaspack/transformer-svg": "2.13.1"
   },
-  "parcelDependencies": {
-    "@atlaspack/optimizer-data-url": "2.12.0",
-    "@atlaspack/packager-raw-url": "2.12.0",
-    "@atlaspack/packager-ts": "2.12.0",
-    "@atlaspack/packager-xml": "2.12.0",
-    "@atlaspack/transformer-glsl": "2.12.0",
-    "@atlaspack/transformer-graphql": "2.12.0",
-    "@atlaspack/transformer-inline-string": "2.12.0",
-    "@atlaspack/transformer-jsonld": "2.12.0",
-    "@atlaspack/transformer-mdx": "2.12.0",
-    "@atlaspack/transformer-pug": "2.12.0",
-    "@atlaspack/transformer-sass": "2.12.0",
-    "@atlaspack/transformer-toml": "2.12.0",
-    "@atlaspack/transformer-typescript-types": "2.12.0",
-    "@atlaspack/transformer-webmanifest": "2.12.0",
-    "@atlaspack/transformer-worklet": "2.12.0",
-    "@atlaspack/transformer-xml": "2.12.0",
-    "@atlaspack/transformer-yaml": "2.12.0"
-  },
   "peerDependencies": {
     "@atlaspack/core": "^2.13.1"
   }
