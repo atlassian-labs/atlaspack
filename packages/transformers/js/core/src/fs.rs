@@ -9,9 +9,8 @@ use swc_core::common::SyntaxContext;
 use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
 use swc_core::ecma::atoms::JsWord;
-use swc_core::ecma::utils::stack_size::maybe_grow_default;
-use swc_core::ecma::visit::Fold;
-use swc_core::ecma::visit::FoldWith;
+use swc_core::ecma::visit::VisitMut;
+use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
 
 use crate::collect::Collect;
@@ -31,7 +30,7 @@ pub fn inline_fs<'a>(
   deps: &'a mut Vec<DependencyDescriptor>,
   is_module: bool,
   conditional_bundling: bool,
-) -> impl Fold + 'a {
+) -> impl VisitMut + 'a {
   InlineFS {
     filename: Path::new(filename).to_path_buf(),
     collect: Collect::new(
@@ -55,20 +54,21 @@ struct InlineFS<'a> {
   deps: &'a mut Vec<DependencyDescriptor>,
 }
 
-impl Fold for InlineFS<'_> {
-  fn fold_module(&mut self, node: Module) -> Module {
+impl VisitMut for InlineFS<'_> {
+  fn visit_mut_module(&mut self, node: &mut Module) {
     node.visit_with(&mut self.collect);
-    node.fold_children_with(self)
+    node.visit_mut_children_with(self);
   }
 
-  fn fold_expr(&mut self, node: Expr) -> Expr {
+  fn visit_mut_expr(&mut self, node: &mut Expr) {
     if let Expr::Call(call) = &node {
       if let Callee::Expr(expr) = &call.callee {
         if let Some((source, specifier)) = self.match_module_reference(expr) {
           if &source == "fs" && &specifier == "readFileSync" {
             if let Some(arg) = call.args.first() {
               if let Some(res) = self.evaluate_fs_arg(&arg.expr, call.args.get(1), call.span) {
-                return res;
+                *node = res;
+                return;
               }
             }
           }
@@ -76,7 +76,7 @@ impl Fold for InlineFS<'_> {
       }
     }
 
-    maybe_grow_default(|| node.fold_children_with(self))
+    node.visit_mut_children_with(self);
   }
 }
 
@@ -119,7 +119,7 @@ impl InlineFS<'_> {
           }
         }
       }
-      _ => {}
+      _ => return None,
     }
 
     None
@@ -133,14 +133,17 @@ impl InlineFS<'_> {
   ) -> Option<Expr> {
     let mut evaluator = Evaluator { inline: self };
 
-    let res = node.clone().fold_with(&mut evaluator);
-    match res {
+    let mut cloned_node = node.clone();
+    cloned_node.visit_mut_with(&mut evaluator);
+
+    match cloned_node {
       Expr::Lit(Lit::Str(str_)) => {
         // Ignore if outside the project root
         let path = match dunce::canonicalize(Path::new(&str_.value.to_string())) {
           Ok(path) => path,
           Err(_err) => return None,
         };
+
         if !path.starts_with(self.project_root) {
           return None;
         }
@@ -233,190 +236,204 @@ struct Evaluator<'a> {
   inline: &'a InlineFS<'a>,
 }
 
-impl Fold for Evaluator<'_> {
-  fn fold_expr(&mut self, node: Expr) -> Expr {
-    let node = maybe_grow_default(|| node.fold_children_with(self));
+impl VisitMut for Evaluator<'_> {
+  fn visit_mut_expr(&mut self, node: &mut Expr) {
+    node.visit_mut_children_with(self);
 
     match &node {
       Expr::Ident(ident) => match ident.sym.to_string().as_str() {
-        "__dirname" => Expr::Lit(Lit::Str(
-          self
-            .inline
-            .filename
-            .parent()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .into(),
-        )),
-        "__filename" => Expr::Lit(Lit::Str(self.inline.filename.to_str().unwrap().into())),
-        _ => node,
+        "__dirname" => {
+          *node = Expr::Lit(Lit::Str(
+            self
+              .inline
+              .filename
+              .parent()
+              .unwrap()
+              .to_str()
+              .unwrap()
+              .into(),
+          ));
+        }
+        "__filename" => {
+          *node = Expr::Lit(Lit::Str(self.inline.filename.to_str().unwrap().into()));
+        }
+        _ => {}
       },
-      Expr::Bin(bin) => match bin.op {
-        BinaryOp::Add => {
+      Expr::Bin(bin) => {
+        if bin.op == BinaryOp::Add {
           let left = match &*bin.left {
             Expr::Lit(Lit::Str(str_)) => str_.value.clone(),
-            _ => return node,
+            _ => return,
           };
 
           let right = match &*bin.right {
             Expr::Lit(Lit::Str(str_)) => str_.value.clone(),
-            _ => return node,
+            _ => return,
           };
 
-          Expr::Lit(Lit::Str(format!("{}{}", left, right).into()))
+          *node = Expr::Lit(Lit::Str(format!("{}{}", left, right).into()));
         }
-        _ => node,
-      },
+      }
       Expr::Call(call) => {
         let callee = match &call.callee {
           Callee::Expr(expr) => expr,
-          _ => return node,
+          _ => return,
         };
 
         if let Some((source, specifier)) = self.inline.match_module_reference(callee) {
-          match (source.to_string().as_str(), specifier.to_string().as_str()) {
-            ("path", "join") => {
-              let mut path = PathBuf::new();
-              for arg in call.args.clone() {
-                let s = match &*arg.expr {
-                  Expr::Lit(Lit::Str(str_)) => str_.value.clone(),
-                  _ => return node,
-                };
-                if path.as_os_str().is_empty() {
-                  path.push(s.to_string());
-                } else {
-                  let s = s.to_string();
-                  let mut p = Path::new(s.as_str());
+          if let ("path", "join") = (source.to_string().as_str(), specifier.to_string().as_str()) {
+            let mut path = PathBuf::new();
+            for arg in call.args.clone() {
+              let s = match &*arg.expr {
+                Expr::Lit(Lit::Str(str_)) => str_.value.clone(),
+                _ => return,
+              };
 
-                  // Node's path.join ignores separators at the start of path components.
-                  // Rust's does not, so we need to strip them.
-                  if let Ok(stripped) = p.strip_prefix("/") {
-                    p = stripped;
-                  }
-                  path.push(p);
+              if path.as_os_str().is_empty() {
+                path.push(s.to_string());
+              } else {
+                let s = s.to_string();
+                let mut p = Path::new(s.as_str());
+
+                // Node's path.join ignores separators at the start of path components.
+                // Rust's does not, so we need to strip them.
+                if let Ok(stripped) = p.strip_prefix("/") {
+                  p = stripped;
                 }
+                path.push(p);
               }
-
-              return Expr::Lit(Lit::Str(path.to_str().unwrap().into()));
             }
-            _ => return node,
+
+            *node = Expr::Lit(Lit::Str(path.to_str().unwrap().into()));
           }
         }
-
-        node
       }
-      _ => node,
+      _ => (),
     }
   }
 }
 
 #[cfg(test)]
-mod test {
-  use atlaspack_swc_runner::{runner::RunVisitResult, test_utils::run_test_fold};
+mod tests {
+  use atlaspack_swc_runner::{runner::RunVisitResult, test_utils::run_test_visit};
 
   use super::*;
 
   #[test]
-  fn test_inline_fs_referencing_a_file_that_exists() {
-    // Create a temporary directory
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_dir_path = std::fs::canonicalize(temp_dir.path()).unwrap();
-
-    // Create a javascript file with code in temporary directory
-    let sample_code = r#"
-import fs from "fs";
-import path from "path";
-
-const content = fs.readFileSync(path.join(__dirname, "inline.txt"), "utf8");
-    "#;
-    std::fs::write(temp_dir_path.join("index.js"), sample_code).unwrap();
-    // Create a txt file
-    std::fs::write(temp_dir_path.join("inline.txt"), "Hello, world!").unwrap();
-
-    let mut deps = vec![];
-    let RunVisitResult { output_code, .. } = run_test_fold(sample_code, |ctx| {
-      inline_fs(
-        temp_dir_path.join("index.js").to_str().unwrap(),
-        ctx.source_map,
-        ctx.global_mark,
-        ctx.global_mark,
-        temp_dir_path.to_str().unwrap(),
-        &mut deps,
-        true,
-        false,
-      )
-    });
-
-    assert_eq!(
-      output_code.trim(),
+  fn test_inline_fs_referencing_a_file_that_does_not_exist_in_module_scope() {
+    test_inline_fs_with_missing_file(
       r#"
-import fs from "fs";
-import path from "path";
-const content = "Hello, world!";
-      "#
-      .trim()
+        import fs from "fs";
+        import path from "path";
+
+        const content = fs.readFileSync(path.join(__dirname, "inline.txt"), "utf8");
+      "#,
     );
   }
 
   #[test]
-  fn test_inline_fs_referencing_a_file_that_does_not_exist() {
-    // Create a temporary directory
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_dir_path = std::fs::canonicalize(temp_dir.path()).unwrap();
-
-    // Create a javascript file with code in temporary directory
-    let sample_code = r#"
-import fs from "fs";
-import path from "path";
-
-const content = fs.readFileSync(path.join(__dirname, "inline.txt"), "utf8");
-    "#;
-    std::fs::write(temp_dir_path.join("index.js"), sample_code).unwrap();
-
-    let mut deps = vec![];
-    let RunVisitResult { output_code, .. } = run_test_fold(sample_code, |ctx| {
-      inline_fs(
-        temp_dir_path.join("index.js").to_str().unwrap(),
-        ctx.source_map,
-        ctx.global_mark,
-        ctx.global_mark,
-        temp_dir_path.to_str().unwrap(),
-        &mut deps,
-        true,
-        false,
-      )
-    });
-
-    assert_eq!(
-      output_code.trim(),
+  fn test_inline_fs_referencing_a_file_that_exists_in_module_scope() {
+    test_inline_fs(
+      vec![("inline.txt", "Hello, world!")],
       r#"
-import fs from "fs";
-import path from "path";
-const content = fs.readFileSync(path.join(__dirname, "inline.txt"), "utf8");
-      "#
-      .trim()
+        import fs from "fs";
+        import path from "path";
+
+        const content = fs.readFileSync(path.join(__dirname, "inline.txt"), "utf8");
+      "#,
+      r#"
+          import fs from "fs";
+          import path from "path";
+
+          const content = "Hello, world!";
+        "#,
+    );
+  }
+
+  #[test]
+  fn test_inline_fs_referencing_a_file_that_does_not_exist_in_function_scope() {
+    test_inline_fs_with_missing_file(
+      r#"
+        import fs from "fs";
+        import path from "path";
+
+        async function main() {
+          const content = fs.readFileSync(path.join(__dirname, "inline.txt"), "utf8");
+        }
+      "#,
+    );
+  }
+
+  #[test]
+  fn test_inline_fs_referencing_a_file_that_exists_in_function_scope() {
+    test_inline_fs(
+      vec![("inline.txt", "Hello, world!")],
+      r#"
+        import fs from "fs";
+        import path from "path";
+
+        async function main() {
+          const content = fs.readFileSync(path.join(__dirname, "inline.txt"), "utf8");
+        }
+      "#,
+      r#"
+          import fs from "fs";
+          import path from "path";
+
+          async function main() {
+            const content = "Hello, world!";
+          }
+        "#,
     );
   }
 
   #[test]
   fn test_inline_fs_with_a_file_path_string_concatenation() {
+    test_inline_fs(
+      vec![("inline.txt", "Hello, world!")],
+      r#"
+        import fs from "fs";
+
+        const content = fs.readFileSync(__dirname + "/inline.txt", "utf8");
+      "#,
+      r#"
+          import fs from "fs";
+
+          const content = "Hello, world!";
+        "#,
+    );
+  }
+
+  #[test]
+  fn test_inline_fs_with_destructured_imports() {
+    test_inline_fs(
+      vec![("inline.txt", "Hello, world!")],
+      r#"
+        import { readFileSync } from "fs";
+        import { join } from "path";
+
+        const content = readFileSync(join(__dirname, "inline.txt"), "utf8");
+      "#,
+      r#"
+          import { readFileSync } from "fs";
+          import { join } from "path";
+
+          const content = "Hello, world!";
+        "#,
+    );
+  }
+
+  fn test_inline_fs(files: Vec<(&str, &str)>, code: &str, expected_code: &str) {
     // Create a temporary directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_dir_path = std::fs::canonicalize(temp_dir.path()).unwrap();
 
-    // Create a javascript file with code in temporary directory
-    let sample_code = r#"
-import fs from "fs";
-
-const content = fs.readFileSync(__dirname + "/inline.txt", "utf8");
-    "#;
-    std::fs::write(temp_dir_path.join("index.js"), sample_code).unwrap();
-    // Create a txt file
-    std::fs::write(temp_dir_path.join("inline.txt"), "Hello, world!").unwrap();
+    for (name, contents) in files {
+      std::fs::write(temp_dir_path.join(name), contents).unwrap();
+    }
 
     let mut deps = vec![];
-    let RunVisitResult { output_code, .. } = run_test_fold(sample_code, |ctx| {
+    let RunVisitResult { output_code, .. } = run_test_visit(&code, |ctx| {
       inline_fs(
         temp_dir_path.join("index.js").to_str().unwrap(),
         ctx.source_map,
@@ -429,13 +446,14 @@ const content = fs.readFileSync(__dirname + "/inline.txt", "utf8");
       )
     });
 
-    assert_eq!(
-      output_code.trim(),
-      r#"
-import fs from "fs";
-const content = "Hello, world!";
-      "#
-      .trim()
-    );
+    assert_eq!(normalize(&output_code), normalize(expected_code));
+  }
+
+  fn test_inline_fs_with_missing_file(code: &str) {
+    test_inline_fs(Vec::new(), code, code);
+  }
+
+  fn normalize(code: &str) -> String {
+    code.trim().lines().map(|l| l.trim()).collect::<String>()
   }
 }
