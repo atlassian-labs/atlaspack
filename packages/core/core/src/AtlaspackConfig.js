@@ -12,7 +12,6 @@ import type {
   Packager,
   Reporter,
   Semver,
-  SemverRange,
   Validator,
   FilePath,
 } from '@atlaspack/types';
@@ -52,7 +51,6 @@ export type LoadedPlugin<T> = {|
   plugin: T,
   resolveFrom: ProjectPath,
   keyPath?: string,
-  range?: ?SemverRange,
 |};
 
 export class AtlaspackConfig {
@@ -120,7 +118,6 @@ export class AtlaspackConfig {
     plugin: T,
     version: Semver,
     resolveFrom: ProjectPath,
-    range: ?SemverRange,
   |}> {
     let plugin = this.pluginCache.get(node.packageName);
     if (plugin) {
