@@ -59,31 +59,28 @@ describe('watcher', function () {
     assert.equal(output, 'something else');
   });
 
-  it.v2(
-    'should rebuild on a source file change after a failed transformation',
-    async () => {
-      await outputFS.mkdirp(inputDir);
-      await outputFS.writeFile(
-        path.join(inputDir, '/index.js'),
-        'syntax\\error',
-        {encoding: 'utf8'},
-      );
-      let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
-      subscription = await b.watch();
-      let buildEvent = await getNextBuild(b);
-      assert.equal(buildEvent.type, 'buildFailure');
-      await outputFS.writeFile(
-        path.join(inputDir, '/index.js'),
-        'module.exports = "hello"',
-        {encoding: 'utf8'},
-      );
-      buildEvent = await getNextBuild(b);
-      if (!buildEvent.bundleGraph) return assert.fail();
-      let output = await run(buildEvent.bundleGraph);
+  it('should rebuild on a source file change after a failed transformation', async () => {
+    await outputFS.mkdirp(inputDir);
+    await outputFS.writeFile(
+      path.join(inputDir, '/index.js'),
+      'syntax\\error',
+      {encoding: 'utf8'},
+    );
+    let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
+    subscription = await b.watch();
+    let buildEvent = await getNextBuild(b);
+    assert.equal(buildEvent.type, 'buildFailure');
+    await outputFS.writeFile(
+      path.join(inputDir, '/index.js'),
+      'module.exports = "hello"',
+      {encoding: 'utf8'},
+    );
+    buildEvent = await getNextBuild(b);
+    if (!buildEvent.bundleGraph) return assert.fail();
+    let output = await run(buildEvent.bundleGraph);
 
-      assert.equal(output, 'hello');
-    },
-  );
+    assert.equal(output, 'hello');
+  });
 
   it.v2('should rebuild on a config file change', async function () {
     let inDir = path.join(__dirname, 'integration/parcelrc-custom');
