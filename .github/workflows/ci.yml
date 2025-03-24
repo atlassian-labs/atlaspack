@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - monica/scope-hoisting-fold-to-visit
 
 concurrency:
   # This causes the workflow to be cancelled if a newer commit is pushed to the
