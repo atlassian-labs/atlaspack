@@ -16,6 +16,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   conditionalBundlingApi: false,
   vcsMode: 'OLD',
   loadableSideEffects: false,
+  reduceResolverStringCreation: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

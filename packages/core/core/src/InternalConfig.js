@@ -12,6 +12,7 @@ import type {ProjectPath} from './projectPath';
 import {fromProjectPathRelative} from './projectPath';
 import {createEnvironment} from './Environment';
 import {hashString} from '@atlaspack/rust';
+import {identifierRegistry} from './IdentifierRegistry';
 
 type ConfigOpts = {|
   plugin: PackageName,
@@ -48,13 +49,20 @@ export function createConfig({
   invalidateOnBuild,
 }: ConfigOpts): Config {
   let environment = env ?? createEnvironment();
+  const configId = hashString(
+    plugin +
+      fromProjectPathRelative(searchPath) +
+      environment.id +
+      String(isSource),
+  );
+  identifierRegistry.addIdentifier('config_request', configId, {
+    plugin,
+    searchPath,
+    environmentId: environment.id,
+    isSource,
+  });
   return {
-    id: hashString(
-      plugin +
-        fromProjectPathRelative(searchPath) +
-        environment.id +
-        String(isSource),
-    ),
+    id: configId,
     isSource: isSource ?? false,
     searchPath,
     env: environment,

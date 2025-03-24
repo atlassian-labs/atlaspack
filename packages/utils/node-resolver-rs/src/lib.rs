@@ -92,6 +92,7 @@ pub struct Resolver<'a> {
   pub conditions: ExportsCondition,
   pub module_dir_resolver: Option<Arc<ResolveModuleDir>>,
   pub cache: CacheCow<'a>,
+  pub reduce_string_creation: bool,
 }
 
 pub enum Extensions<'a> {
@@ -146,6 +147,7 @@ impl<'a> Resolver<'a> {
       include_node_modules: Cow::Owned(IncludeNodeModules::default()),
       conditions: ExportsCondition::NODE,
       module_dir_resolver: None,
+      reduce_string_creation: false,
     }
   }
 
@@ -160,6 +162,7 @@ impl<'a> Resolver<'a> {
       include_node_modules: Cow::Owned(IncludeNodeModules::default()),
       conditions: ExportsCondition::NODE,
       module_dir_resolver: None,
+      reduce_string_creation: false,
     }
   }
 
@@ -177,6 +180,7 @@ impl<'a> Resolver<'a> {
       include_node_modules: Cow::Owned(IncludeNodeModules::default()),
       conditions: ExportsCondition::empty(),
       module_dir_resolver: None,
+      reduce_string_creation: false,
     }
   }
 
@@ -1005,7 +1009,7 @@ impl<'a> ResolveRequest<'a> {
 
     if let Some(tsconfig) = self.tsconfig_read()? {
       if let Some(module_suffixs) = tsconfig.module_suffixes.as_ref() {
-        module_suffixes = module_suffixs.clone()
+        module_suffixes = module_suffixs.as_ref().clone()
       };
     }
 
@@ -1141,7 +1145,7 @@ impl<'a> ResolveRequest<'a> {
 
   fn resolve_tsconfig_paths(&self) -> Result<Option<Resolution>, ResolverError> {
     if let Some(tsconfig) = self.tsconfig_read()? {
-      for path in tsconfig.paths(self.specifier) {
+      for path in tsconfig.paths(self.specifier, self.resolver.reduce_string_creation) {
         // TODO: should aliases apply to tsconfig paths??
         if let Some(res) = self.load_path(&path, None)? {
           return Ok(Some(res));
@@ -1237,6 +1241,7 @@ impl<'a> ResolveRequest<'a> {
                 include_node_modules: Cow::Owned(IncludeNodeModules::default()),
                 conditions: ExportsCondition::TYPES,
                 module_dir_resolver: self.resolver.module_dir_resolver.clone(),
+                reduce_string_creation: self.resolver.reduce_string_creation,
               };
 
               let req = ResolveRequest::new(

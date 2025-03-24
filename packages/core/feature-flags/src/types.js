@@ -41,6 +41,11 @@ export type FeatureFlags = {|
    * Enable scanning for the presence of loadable to determine side effects
    */
   loadableSideEffects: boolean,
+  /**
+   * Enable performance optimization for the resolver specifier to_string
+   * conversions
+   */
+  reduceResolverStringCreation: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =

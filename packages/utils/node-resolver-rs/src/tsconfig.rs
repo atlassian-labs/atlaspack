@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use crate::path::resolve_path;
 use crate::specifier::Specifier;
@@ -16,12 +17,14 @@ use serde::Deserialize;
 pub struct TsConfig {
   #[serde(skip)]
   pub path: PathBuf,
-  base_url: Option<PathBuf>,
-  paths: Option<HashMap<Specifier, Vec<String>>>,
+  base_url: Option<Arc<PathBuf>>,
+  paths: Option<Arc<HashMap<Specifier, Vec<String>>>>,
   #[serde(skip)]
-  paths_base: PathBuf,
-  pub module_suffixes: Option<Vec<String>>,
+  paths_base: Arc<PathBuf>,
+  pub module_suffixes: Option<Arc<Vec<String>>>,
   // rootDirs??
+  #[serde(skip)]
+  paths_specifier_strings: OnceLock<HashMap<Specifier, String>>,
 }
 
 fn deserialize_extends<'a, 'de: 'a, D>(deserializer: D) -> Result<Vec<Specifier>, D::Error>
@@ -88,16 +91,28 @@ impl TsConfig {
   fn validate(&mut self) {
     #[allow(clippy::needless_borrows_for_generic_args)]
     if let Some(base_url) = &mut self.base_url {
-      *base_url = resolve_path(&self.path, &base_url);
+      *base_url = Arc::new(resolve_path(&self.path, &**base_url));
     }
 
     if self.paths.is_some() {
       self.paths_base = if let Some(base_url) = &self.base_url {
-        base_url.to_owned()
+        base_url.clone()
       } else {
-        self.path.parent().unwrap().to_owned()
+        Arc::new(self.path.parent().unwrap().to_owned())
       };
     }
+  }
+
+  pub fn paths_specifier_strings(&self) -> &HashMap<Specifier, String> {
+    self.paths_specifier_strings.get_or_init(|| {
+      let mut paths_specifier_strings = HashMap::new();
+      if let Some(paths) = &self.paths {
+        for specifier in paths.keys() {
+          paths_specifier_strings.insert(specifier.clone(), specifier.to_string().to_string());
+        }
+      }
+      paths_specifier_strings
+    })
   }
 
   pub fn extend(&mut self, extended: &TsConfig) {
@@ -113,9 +128,15 @@ impl TsConfig {
     if self.module_suffixes.is_none() {
       self.module_suffixes = extended.module_suffixes.clone();
     }
+
+    let _ = self.paths_specifier_strings.take();
   }
 
-  pub fn paths<'a>(&'a self, specifier: &'a Specifier) -> impl Iterator<Item = PathBuf> + 'a {
+  pub fn paths<'a>(
+    &'a self,
+    specifier: &'a Specifier,
+    reduce_string_creation: bool,
+  ) -> impl Iterator<Item = PathBuf> + 'a {
     if !matches!(specifier, Specifier::Package(..) | Specifier::Builtin(..)) {
       return Either::Right(Either::Right(std::iter::empty()));
     }
@@ -140,16 +161,32 @@ impl TsConfig {
       let mut best_key = None;
       let full_specifier = specifier.to_string();
 
-      for key in paths.keys() {
-        let path = key.to_string();
-        if let Some((prefix, suffix)) = path.split_once('*') {
-          if (best_key.is_none() || prefix.len() > longest_prefix_length)
-            && full_specifier.starts_with(prefix)
-            && full_specifier.ends_with(suffix)
-          {
-            longest_prefix_length = prefix.len();
-            longest_suffix_length = suffix.len();
-            best_key = Some(key);
+      if reduce_string_creation {
+        for (key, path) in self.paths_specifier_strings() {
+          if let Some((prefix, suffix)) = path.split_once('*') {
+            if (best_key.is_none() || prefix.len() > longest_prefix_length)
+              && full_specifier.starts_with(prefix)
+              && full_specifier.ends_with(suffix)
+            {
+              longest_prefix_length = prefix.len();
+              longest_suffix_length = suffix.len();
+              best_key = Some(key);
+            }
+          }
+        }
+      } else {
+        for key in paths.keys() {
+          let path = key.to_string();
+
+          if let Some((prefix, suffix)) = path.split_once('*') {
+            if (best_key.is_none() || prefix.len() > longest_prefix_length)
+              && full_specifier.starts_with(prefix)
+              && full_specifier.ends_with(suffix)
+            {
+              longest_prefix_length = prefix.len();
+              longest_suffix_length = suffix.len();
+              best_key = Some(key);
+            }
           }
         }
       }
@@ -215,9 +252,14 @@ mod tests {
 
   #[test]
   fn test_paths() {
+    test_paths_inner(false);
+    test_paths_inner(true);
+  }
+
+  fn test_paths_inner(reduce_string_creation: bool) {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
-      paths: Some(HashMap::from([
+      paths: Some(Arc::new(HashMap::from([
         (
           "jquery".into(),
           vec![String::from("node_modules/jquery/dist/jquery")],
@@ -230,12 +272,16 @@ mod tests {
         ),
         ("@/components/*".into(), vec![String::from("components/*")]),
         ("url".into(), vec![String::from("node_modules/my-url")]),
-      ])),
+      ]))),
       ..Default::default()
     };
     tsconfig.validate();
 
-    let test = |specifier: &str| tsconfig.paths(&specifier.into()).collect::<Vec<PathBuf>>();
+    let test = |specifier: &str| {
+      tsconfig
+        .paths(&specifier.into(), reduce_string_creation)
+        .collect::<Vec<PathBuf>>()
+    };
 
     assert_eq!(
       test("jquery"),
@@ -261,14 +307,23 @@ mod tests {
 
   #[test]
   fn test_base_url() {
+    test_base_url_inner(false);
+    test_base_url_inner(true);
+  }
+
+  fn test_base_url_inner(reduce_string_creation: bool) {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
-      base_url: Some(Path::new("src").into()),
+      base_url: Some(Arc::new(Path::new("src").into())),
       ..Default::default()
     };
     tsconfig.validate();
 
-    let test = |specifier: &str| tsconfig.paths(&specifier.into()).collect::<Vec<PathBuf>>();
+    let test = |specifier: &str| {
+      tsconfig
+        .paths(&specifier.into(), reduce_string_creation)
+        .collect::<Vec<PathBuf>>()
+    };
 
     assert_eq!(test("foo"), vec![PathBuf::from("/foo/src/foo")]);
     assert_eq!(
@@ -280,10 +335,15 @@ mod tests {
 
   #[test]
   fn test_paths_and_base_url() {
+    test_paths_and_base_url_inner(false);
+    test_paths_and_base_url_inner(true);
+  }
+
+  fn test_paths_and_base_url_inner(reduce_string_creation: bool) {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
-      base_url: Some(Path::new("src").into()),
-      paths: Some(HashMap::from([
+      base_url: Some(Arc::new(Path::new("src").into())),
+      paths: Some(Arc::new(HashMap::from([
         ("*".into(), vec![String::from("generated/*")]),
         ("bar/*".into(), vec![String::from("test/*")]),
         (
@@ -291,12 +351,16 @@ mod tests {
           vec![String::from("baz/*"), String::from("yo/*")],
         ),
         ("@/components/*".into(), vec![String::from("components/*")]),
-      ])),
+      ]))),
       ..Default::default()
     };
     tsconfig.validate();
 
-    let test = |specifier: &str| tsconfig.paths(&specifier.into()).collect::<Vec<PathBuf>>();
+    let test = |specifier: &str| {
+      tsconfig
+        .paths(&specifier.into(), reduce_string_creation)
+        .collect::<Vec<PathBuf>>()
+    };
 
     assert_eq!(
       test("test"),
