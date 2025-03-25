@@ -15,5 +15,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               pullNumber: context.payload.pull_request.number,
-              token: process.env.GITHUB_TOKEN,
-            })
+              octokit: github
+            });

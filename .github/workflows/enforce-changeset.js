@@ -3,16 +3,14 @@
  * @property number pullNumber
  * @property string owner
  * @property string repo
- * @property string token
+ * @property {import('@actions/github-script').AsyncFunctionArguments} octokit
  */
 
 /**
  * Enforce that a changeset is present in a PR
  * @param EnforceChangesetOptions options
  */
-export async function enforceChangeset({pullNumber, owner, repo, token}) {
-  const octokit = github.getOctokit(token);
-
+export async function enforceChangeset({pullNumber, owner, repo, octokit}) {
   // Check for a changeset file in the PR
   const files = await octokit.rest.pulls.listFiles({
     owner,
