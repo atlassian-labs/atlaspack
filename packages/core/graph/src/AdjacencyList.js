@@ -170,7 +170,10 @@ export default class AdjacencyList<TEdgeType: number = NullEdgeType> {
   static deserialize(
     opts: SerializedAdjacencyList<TEdgeType>,
   ): AdjacencyList<TEdgeType> {
-    return new AdjacencyList(opts);
+    return new AdjacencyList({
+      nodes: new Uint32Array(opts.nodes),
+      edges: new Uint32Array(opts.edges),
+    });
   }
 
   /**
@@ -178,8 +181,8 @@ export default class AdjacencyList<TEdgeType: number = NullEdgeType> {
    */
   serialize(): SerializedAdjacencyList<TEdgeType> {
     return {
-      nodes: this.#nodes.data,
-      edges: this.#edges.data,
+      nodes: this.#nodes.data.buffer,
+      edges: this.#edges.data.buffer,
     };
   }
 
