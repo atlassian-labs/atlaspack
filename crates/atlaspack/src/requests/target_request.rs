@@ -275,10 +275,7 @@ impl TargetRequest {
 
     let browsers = match config.contents.browserslist.clone() {
       None => {
-        let browserslistrc_path = &request_context
-          .config()
-          .project_root
-          .join(".browserslistrc");
+        let browserslistrc_path = &request_context.project_root.join(".browserslistrc");
 
         // Loading .browserslistrc
         if request_context
@@ -354,7 +351,7 @@ impl TargetRequest {
               &config,
               descriptor.clone(),
               name,
-              &request_context.config().project_root,
+              &request_context.project_root,
             )?);
           }
 
@@ -415,7 +412,7 @@ impl TargetRequest {
         &config,
         custom_target.descriptor.clone(),
         custom_target.name,
-        &request_context.config().project_root,
+        &request_context.project_root,
       )?);
     }
 
