@@ -305,10 +305,10 @@ export default class UncommittedAsset {
       'asset_code:' +
       ATLASPACK_VERSION +
       ':' +
+      key +
+      ':' +
       this.value.filePath +
       // path.relative(this.options.projectRoot, this.value.filePath) +
-      ':' +
-      key +
       ':' +
       this.value.id
     );
