@@ -82,73 +82,74 @@ impl VisitMut for TypeofReplacer {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_swc_runner::test_utils::run_test_visit;
+  use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
+  use indoc::indoc;
 
   use super::*;
 
   #[test]
   fn test_visitor_typeof_replacer_without_shadowing() {
     let code = r#"
-const x = typeof require;
-const m = typeof module;
-const e = typeof exports;
-"#;
+      const x = typeof require;
+      const m = typeof module;
+      const e = typeof exports;
+    "#;
 
-    let output_code = run_test_visit(code, |context| TypeofReplacer {
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| TypeofReplacer {
       unresolved_mark: context.unresolved_mark,
-    })
-    .output_code;
+    });
 
-    let expected_code = r#"
-const x = "function";
-const m = "object";
-const e = "object";
-"#
-    .trim_start();
-    assert_eq!(output_code, expected_code);
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const x = "function";
+        const m = "object";
+        const e = "object";
+      "#}
+    );
   }
 
   #[test]
   fn test_typeof_nested_expression() {
     let code = r#"
-const x = typeof require === 'function';
-"#;
+      const x = typeof require === 'function';
+    "#;
 
-    let output_code = run_test_visit(code, |context| TypeofReplacer {
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| TypeofReplacer {
       unresolved_mark: context.unresolved_mark,
-    })
-    .output_code;
+    });
 
-    let expected_code = r#"
-const x = "function" === 'function';
-"#
-    .trim_start();
-    assert_eq!(output_code, expected_code);
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const x = "function" === 'function';
+      "#}
+    );
   }
 
   #[test]
   fn test_visitor_typeof_replacer_with_shadowing() {
     let code = r#"
-function wrapper({ require, exports }) {
-    const x = typeof require;
-    const m = typeof module;
-    const e = typeof exports;
-}
+      function wrapper({ require, exports }) {
+        const x = typeof require;
+        const m = typeof module;
+        const e = typeof exports;
+      }
     "#;
 
-    let output_code = run_test_visit(code, |context| TypeofReplacer {
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| TypeofReplacer {
       unresolved_mark: context.unresolved_mark,
-    })
-    .output_code;
+    });
 
-    let expected_code = r#"
-function wrapper({ require, exports }) {
-    const x = typeof require;
-    const m = "object";
-    const e = typeof exports;
-}
-"#
-    .trim_start();
-    assert_eq!(output_code, expected_code);
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function wrapper({ require, exports }) {
+            const x = typeof require;
+            const m = "object";
+            const e = typeof exports;
+        }
+      "#}
+    );
   }
 }

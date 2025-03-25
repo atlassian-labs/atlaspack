@@ -11,36 +11,15 @@ use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::preset_env::Feature;
 use swc_core::ecma::preset_env::Versions;
-use swc_core::ecma::utils::stack_size::maybe_grow_default;
-use swc_core::ecma::visit::Fold;
-use swc_core::ecma::visit::FoldWith;
+use swc_core::ecma::visit::VisitMut;
+use swc_core::ecma::visit::VisitMutWith;
 
-use crate::fold_member_expr_skip_prop;
 use crate::id;
 use crate::utils::get_undefined_ident;
 use crate::utils::match_export_name;
 use crate::utils::match_export_name_ident;
 
-pub fn esm2cjs(node: Module, unresolved_mark: Mark, versions: Option<Versions>) -> (Module, bool) {
-  let mut fold = ESMFold {
-    imports: HashMap::new(),
-    require_names: HashMap::new(),
-    interops: HashSet::new(),
-    requires: vec![],
-    exports: vec![],
-    needs_helpers: false,
-    in_export_decl: false,
-    in_function_scope: false,
-    mark: Mark::fresh(Mark::root()),
-    unresolved_mark,
-    versions,
-  };
-
-  let module = node.fold_with(&mut fold);
-  (module, fold.needs_helpers)
-}
-
-struct ESMFold {
+pub struct EsmToCjsReplacer {
   // Map of imported identifier to (source, specifier)
   imports: HashMap<Id, (JsWord, JsWord)>,
   // Map of source to (require identifier, mark)
@@ -51,7 +30,7 @@ struct ESMFold {
   requires: Vec<ModuleItem>,
   // List of exports to add.
   exports: Vec<ModuleItem>,
-  needs_helpers: bool,
+  pub needs_helpers: bool,
   in_export_decl: bool,
   in_function_scope: bool,
   mark: Mark,
@@ -67,7 +46,23 @@ fn local_name_for_src(src: &JsWord) -> JsWord {
   format!("_{}", src.split('/').last().unwrap().to_camel_case()).into()
 }
 
-impl ESMFold {
+impl EsmToCjsReplacer {
+  pub fn new(unresolved_mark: Mark, versions: Option<Versions>) -> Self {
+    EsmToCjsReplacer {
+      imports: HashMap::new(),
+      require_names: HashMap::new(),
+      interops: HashSet::new(),
+      requires: vec![],
+      exports: vec![],
+      needs_helpers: false,
+      in_export_decl: false,
+      in_function_scope: false,
+      mark: Mark::fresh(Mark::root()),
+      unresolved_mark,
+      versions,
+    }
+  }
+
   fn get_require_name(&mut self, src: &JsWord, span: Span) -> Ident {
     if let Some((name, mark)) = self.require_names.get(src) {
       return Ident::new(name.clone(), span, SyntaxContext::empty().apply_mark(*mark));
@@ -268,20 +263,19 @@ impl ESMFold {
   }
 }
 
-macro_rules! modules_visit_fn {
+macro_rules! visit_function_scope {
   ($name:ident, $type:ident) => {
-    fn $name(&mut self, node: $type) -> $type {
+    fn $name(&mut self, node: &mut $type) {
       let in_function_scope = self.in_function_scope;
       self.in_function_scope = true;
-      let res = node.fold_children_with(self);
+      node.visit_mut_children_with(self);
       self.in_function_scope = in_function_scope;
-      res
     }
   };
 }
 
-impl Fold for ESMFold {
-  fn fold_module(&mut self, node: Module) -> Module {
+impl VisitMut for EsmToCjsReplacer {
+  fn visit_mut_module(&mut self, node: &mut Module) {
     let mut is_esm = false;
     let mut needs_interop_flag = false;
 
@@ -393,10 +387,10 @@ impl Fold for ESMFold {
 
     // If we didn't see any module declarations, nothing to do.
     if !is_esm {
-      return node;
+      return;
     }
 
-    let node = node.fold_children_with(self);
+    node.visit_mut_children_with(self);
     let mut items = vec![];
 
     // Second pass
@@ -505,9 +499,11 @@ impl Fold for ESMFold {
                     Expr::Ident(class.ident.clone()),
                     export.span,
                   );
-                  items.push(ModuleItem::Stmt(Stmt::Decl(
-                    export.decl.clone().fold_with(self),
-                  )));
+
+                  let mut decl = export.decl.clone();
+                  decl.visit_mut_with(self);
+
+                  items.push(ModuleItem::Stmt(Stmt::Decl(decl)));
                 }
                 Decl::Fn(func) => {
                   self.create_export(
@@ -515,30 +511,35 @@ impl Fold for ESMFold {
                     Expr::Ident(func.ident.clone()),
                     export.span,
                   );
-                  items.push(ModuleItem::Stmt(Stmt::Decl(
-                    export.decl.clone().fold_with(self),
-                  )));
+
+                  let mut decl = export.decl.clone();
+                  decl.visit_mut_with(self);
+
+                  items.push(ModuleItem::Stmt(Stmt::Decl(decl)));
                 }
                 Decl::Var(var) => {
                   let mut var = var.clone();
+
                   var.decls = var
                     .decls
                     .iter()
                     .map(|decl| {
                       let mut decl = decl.clone();
                       self.in_export_decl = true;
-                      decl.name = decl.name.clone().fold_with(self);
+                      decl.name.visit_mut_with(self);
                       self.in_export_decl = false;
-                      decl.init = decl.init.clone().fold_with(self);
+                      decl.init.visit_mut_with(self);
                       decl
                     })
                     .collect();
+
                   items.push(ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))));
                 }
                 _ => {
-                  items.push(ModuleItem::Stmt(Stmt::Decl(
-                    export.decl.clone().fold_with(self),
-                  )));
+                  let mut decl = export.decl.clone();
+                  decl.visit_mut_with(self);
+
+                  items.push(ModuleItem::Stmt(Stmt::Decl(decl)));
                 }
               }
             }
@@ -558,7 +559,6 @@ impl Fold for ESMFold {
       self.exports.insert(0, helper);
     }
 
-    let mut node = node;
     items.splice(0..0, self.requires.clone());
     items.splice(0..0, self.exports.clone());
 
@@ -591,59 +591,415 @@ impl Fold for ESMFold {
     }
 
     node.body = items;
-    node
   }
 
-  fn fold_binding_ident(&mut self, node: BindingIdent) -> BindingIdent {
+  fn visit_mut_binding_ident(&mut self, node: &mut BindingIdent) {
     if self.in_export_decl {
       // export const {foo} = ...;
       self.create_export(node.id.sym.clone(), Expr::Ident(node.id.clone()), DUMMY_SP);
     }
 
-    node.fold_children_with(self)
+    node.visit_mut_children_with(self);
   }
 
-  modules_visit_fn!(fold_function, Function);
-  modules_visit_fn!(fold_class, Class);
-  modules_visit_fn!(fold_getter_prop, GetterProp);
-  modules_visit_fn!(fold_setter_prop, SetterProp);
+  visit_function_scope!(visit_mut_function, Function);
+  visit_function_scope!(visit_mut_class, Class);
+  visit_function_scope!(visit_mut_getter_prop, GetterProp);
+  visit_function_scope!(visit_mut_setter_prop, SetterProp);
 
-  fn fold_expr(&mut self, node: Expr) -> Expr {
+  fn visit_mut_expr(&mut self, node: &mut Expr) {
     match &node {
       Expr::Ident(ident) => {
         if let Some((source, imported)) = self.imports.get(&id!(ident)).cloned() {
-          self.create_import_access(&source, &imported, ident.span)
-        } else {
-          node
+          *node = self.create_import_access(&source, &imported, ident.span);
         }
       }
       Expr::This(_this) => {
         if !self.in_function_scope {
-          Expr::Ident(get_undefined_ident(self.unresolved_mark))
-        } else {
-          node
+          *node = Expr::Ident(get_undefined_ident(self.unresolved_mark));
         }
       }
-      _ => maybe_grow_default(|| node.fold_children_with(self)),
+      _ => {
+        node.visit_mut_children_with(self);
+      }
     }
   }
 
-  fn fold_prop(&mut self, node: Prop) -> Prop {
+  fn visit_mut_prop(&mut self, node: &mut Prop) {
     // let obj = {a, b}; -> let obj = {a: imported.a, b: imported.b};
-    match &node {
-      Prop::Shorthand(ident) => {
-        if let Some((source, imported)) = self.imports.get(&id!(ident)).cloned() {
-          Prop::KeyValue(KeyValueProp {
-            key: PropName::Ident(IdentName::new(ident.sym.clone(), DUMMY_SP)),
-            value: Box::new(self.create_import_access(&source, &imported, ident.span)),
-          })
-        } else {
-          node.fold_children_with(self)
-        }
+    if let Some(ident) = node.as_mut_shorthand() {
+      if let Some((source, imported)) = self.imports.get(&id!(ident)).cloned() {
+        *node = Prop::KeyValue(KeyValueProp {
+          key: PropName::Ident(IdentName::new(ident.sym.clone(), DUMMY_SP)),
+          value: Box::new(self.create_import_access(&source, &imported, ident.span)),
+        });
+
+        return;
       }
-      _ => node.fold_children_with(self),
     }
+
+    node.visit_mut_children_with(self);
   }
 
-  fold_member_expr_skip_prop! {}
+  fn visit_mut_member_expr(&mut self, node: &mut MemberExpr) {
+    node.obj.visit_mut_with(self);
+
+    if let MemberProp::Computed(_) = node.prop {
+      node.prop.visit_mut_with(self);
+    }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::str::FromStr;
+
+  use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
+  use indoc::indoc;
+  use swc_core::ecma::preset_env::{BrowserData, Version};
+
+  use super::*;
+
+  #[test]
+  fn transforms_imports_to_cjs() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        import { useEffect } from 'react';
+
+        useEffect(() => {});
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var _react = require("react");
+        0, _react.useEffect(()=>{});
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_imports_and_object_expressions_referencing_import_specifiers_to_cjs() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        import { a, b } from 'foo';
+
+        const obj = { a, b };
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var _foo = require("foo");
+        const obj = {
+            a: 0, _foo.a,
+            b: 0, _foo.b
+        };
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_imports_and_computed_object_keys_referencing_import_specifiers_to_cjs() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        import { a, b } from 'foo';
+
+        const obj = { [a]: 1, [b]: 2 };
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var _foo = require("foo");
+        const obj = {
+            [0, _foo.a]: 1,
+            [0, _foo.b]: 2
+        };
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_imports_and_object_values_referencing_import_specifiers_to_cjs() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        import { a, b } from 'foo';
+
+        const obj = { hello: a, world: b };
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var _foo = require("foo");
+        const obj = {
+            hello: 0, _foo.a,
+            world: 0, _foo.b
+        };
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_imports_and_computed_member_expressions_referencing_import_specifiers_to_cjs() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        import { foo } from 'foo';
+
+        const obj = foo[bar]();
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var _foo = require("foo");
+        const obj = 0, _foo.foo[bar]();
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_export_all_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        export * from './main';
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        var _main = require("./main");
+        parcelHelpers.exportAll(_main, exports);
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_default_export_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        export default function main() {}
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        parcelHelpers.export(exports, "default", ()=>main);
+        function main() {}
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_named_export_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        export function main() {}
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        parcelHelpers.export(exports, "main", ()=>main);
+        function main() {}
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_destructured_object_export_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        export const { main } = obj;
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        parcelHelpers.export(exports, "main", ()=>main);
+        const { main } = obj;
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
+
+  #[test]
+  fn does_not_transform_module_exports_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        module.exports = function main1() {}
+        module.exports.main = function main2() {}
+        exports = function main3() {}
+        exports.main = function main4() {}
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        module.exports = function main1() {};
+        module.exports.main = function main2() {};
+        exports = function main3() {};
+        exports.main = function main4() {};
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_imports_and_exports_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        import { useEffect } from 'react';
+        export function main() {
+          useEffect(() => {}, []);
+        }
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        parcelHelpers.export(exports, "main", ()=>main);
+        var _react = require("react");
+        function main() {
+            0, _react.useEffect(()=>{}, []);
+        }
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_arrow_functions_to_use_helpers_when_unsupported() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        export const main1 = () => {};
+        const main2 = () => {};
+      "#,
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          Some(BrowserData {
+            chrome: Some(Version::from_str("1.0.0").unwrap()),
+            ..BrowserData::default()
+          }),
+        )
+      },
+    );
+
+    // TODO: Should main1 and main2 not include an arrow function?
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        parcelHelpers.export(exports, "main1", function() {
+            return main1;
+        });
+        const main1 = ()=>{};
+        const main2 = ()=>{};
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
 }

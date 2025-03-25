@@ -353,6 +353,7 @@ impl EnvReplacer<'_> {
 #[cfg(test)]
 mod tests {
   use atlaspack_swc_runner::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
+  use indoc::indoc;
 
   use super::*;
 
@@ -380,11 +381,12 @@ mod tests {
     let mut diagnostics = Vec::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"process.browser = '1234';
-console.log('thing' in process.env);
-const isTest = process.env.IS_TEST === "true";
-const { package, IS_TEST: isTest2, ...other } = process.env;
-"#,
+      r#"
+        process.browser = '1234';
+        console.log('thing' in process.env);
+        const isTest = process.env.IS_TEST === "true";
+        const { package, IS_TEST: isTest2, ...other } = process.env;
+      "#,
       |run_test_context: RunTestContext| EnvReplacer {
         replace_env: false,
         is_browser: true,
@@ -396,15 +398,15 @@ const { package, IS_TEST: isTest2, ...other } = process.env;
       },
     );
 
-    // transforms the inline value
     // TODO: This behaviour is wrong, nothing should be changed on this case
     assert_eq!(
       output_code,
-      r#"process.browser = true;
-console.log(false);
-const isTest = process.env.IS_TEST === "true";
-const { package, IS_TEST: isTest2, ...other } = process.env;
-"#,
+      indoc! {r#"
+        process.browser = true;
+        console.log(false);
+        const isTest = process.env.IS_TEST === "true";
+        const { package, IS_TEST: isTest2, ...other } = process.env;
+      "#},
     );
   }
 
@@ -417,26 +419,26 @@ const { package, IS_TEST: isTest2, ...other } = process.env;
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-process.browser = '1234';
-other = '1234';
-console.log(process.browser = false);
-console.log(other = false);
-    "#,
+        process.browser = '1234';
+        other = '1234';
+        console.log(process.browser = false);
+        console.log(other = false);
+      "#,
       |run_test_context: RunTestContext| {
         make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
-    // transforms the inline value
     assert_eq!(
       output_code,
-      r#"process.browser = true;
-other = '1234';
-console.log(process.browser = true);
-console.log(other = false);
-"#
+      indoc! {r#"
+        process.browser = true;
+        other = '1234';
+        console.log(process.browser = true);
+        console.log(other = false);
+      "#}
     );
-    // tracks that the variable was used
+
     assert_eq!(used_env, HashSet::new());
     assert_eq!(diagnostics, vec![]);
   }
@@ -447,22 +449,12 @@ console.log(other = false);
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
-process.env = {};
-    "#,
-      |run_test_context: RunTestContext| {
+    let RunVisitResult { output_code, .. } =
+      run_test_visit("process.env = {};", |run_test_context: RunTestContext| {
         make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
-      },
-    );
+      });
 
-    // transforms the inline value
-    assert_eq!(
-      output_code,
-      r#"process.env = {};
-"#
-    );
-    // tracks that the variable was used
+    assert_eq!(output_code.trim(), "process.env = {};");
     assert_eq!(used_env, HashSet::new());
     assert_eq!(diagnostics, vec![]);
   }
@@ -475,24 +467,24 @@ process.env = {};
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-process.env.PROP = 'other';
-delete process.env.PROP;
-process.env.PROP++;
-    "#,
+        process.env.PROP = 'other';
+        delete process.env.PROP;
+        process.env.PROP++;
+      "#,
       |run_test_context: RunTestContext| {
         make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
-    // transforms the inline value
     assert_eq!(
       output_code,
-      r#"'other';
-true;
-undefined;
-"#
+      indoc! {r#"
+        'other';
+        true;
+        undefined;
+      "#}
     );
-    // tracks that the variable was used
+
     assert_eq!(used_env, HashSet::from(["PROP".into()]));
     assert_eq!(diagnostics.len(), 3);
     assert_eq!(
@@ -519,9 +511,9 @@ undefined;
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-console.log(foo = process.env);
-const x = ({ foo, ...others } = process.env);
-    "#,
+        console.log(foo = process.env);
+        const x = ({ foo, ...others } = process.env);
+      "#,
       |run_test_context: RunTestContext| {
         make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
@@ -530,11 +522,12 @@ const x = ({ foo, ...others } = process.env);
     // TODO: This seems wrong as there's an extra trailing object
     assert_eq!(
       output_code,
-      r#"console.log(foo = {}, {});
-const x = (foo = "foo", others = {}, {});
-"#
+      indoc! {r#"
+        console.log(foo = {}, {});
+        const x = (foo = "foo", others = {}, {});
+      "#}
     );
-    // tracks that the variable was used
+
     assert_eq!(used_env, HashSet::from(["foo".into()]));
     assert_eq!(diagnostics.len(), 0);
   }
@@ -547,22 +540,22 @@ const x = (foo = "foo", others = {}, {});
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-console.log(process.browser);
-function run(enabled = process.browser) {}
-    "#,
+        console.log(process.browser);
+        function run(enabled = process.browser) {}
+      "#,
       |run_test_context: RunTestContext| {
         make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
-    // transforms the inline value
     assert_eq!(
       output_code,
-      r#"console.log(true);
-function run(enabled = true) {}
-"#
+      indoc! {r#"
+        console.log(true);
+        function run(enabled = true) {}
+      "#}
     );
-    // tracks that the variable was used
+
     assert_eq!(used_env, HashSet::new());
     assert_eq!(diagnostics, vec![]);
   }
@@ -577,22 +570,22 @@ function run(enabled = true) {}
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-console.log('thing' in process.env);
-console.log('other' in process.env);
-    "#,
+        console.log('thing' in process.env);
+        console.log('other' in process.env);
+      "#,
       |run_test_context: RunTestContext| {
         make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
-    // transforms the inline value
     assert_eq!(
       output_code,
-      r#"console.log(true);
-console.log(false);
-"#
+      indoc! {r#"
+        console.log(true);
+        console.log(false);
+      "#}
     );
-    // tracks that the variable was used
+
     assert_eq!(used_env, HashSet::from(["thing".into(), "other".into()]));
     assert_eq!(diagnostics, vec![]);
   }
@@ -605,22 +598,22 @@ console.log(false);
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-const isTest = process.something;
-const version = process.env.hasOwnProperty('version');
-    "#,
+        const isTest = process.something;
+        const version = process.env.hasOwnProperty('version');
+      "#,
       |run_test_context: RunTestContext| {
         make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
-    // transforms the inline value
     assert_eq!(
       output_code,
-      r#"const isTest = process.something;
-const version = process.env.hasOwnProperty('version');
-"#
+      indoc! {r#"
+        const isTest = process.something;
+        const version = process.env.hasOwnProperty('version');
+      "#}
     );
-    // tracks that the variable was used
+
     assert_eq!(used_env, HashSet::new());
     assert_eq!(diagnostics, vec![]);
   }
@@ -637,24 +630,24 @@ const version = process.env.hasOwnProperty('version');
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-const isTest = process.env.IS_TEST === "true";
-const version = process.env['VERSION'];
-const { package, IS_TEST: isTest2 } = process.env;
-    "#,
+        const isTest = process.env.IS_TEST === "true";
+        const version = process.env['VERSION'];
+        const { package, IS_TEST: isTest2 } = process.env;
+      "#,
       |run_test_context: RunTestContext| {
         make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
-    // transforms the inline value
     assert_eq!(
       output_code,
-      r#"const isTest = "true" === "true";
-const version = "1.2.3";
-const package = "atlaspack", isTest2 = "true";
-"#
+      indoc! {r#"
+        const isTest = "true" === "true";
+        const version = "1.2.3";
+        const package = "atlaspack", isTest2 = "true";
+      "#}
     );
-    // tracks that the variable was used
+
     assert_eq!(
       used_env,
       ["package", "IS_TEST", "VERSION"]
@@ -662,6 +655,7 @@ const package = "atlaspack", isTest2 = "true";
         .map(|s| (*s).into())
         .collect::<HashSet<JsWord>>()
     );
+
     assert_eq!(diagnostics, vec![]);
   }
 
@@ -675,20 +669,20 @@ const package = "atlaspack", isTest2 = "true";
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-const { package, ...other } = process.env;
-    "#,
+        const { package, ...other } = process.env;
+      "#,
       |run_test_context: RunTestContext| {
         make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
-    // transforms the inline value
     assert_eq!(
       output_code,
-      r#"const package = "atlaspack", other = {};
-"#
+      indoc! {r#"
+        const package = "atlaspack", other = {};
+      "#}
     );
-    // tracks that the variable was used
+
     assert_eq!(
       used_env,
       ["package"]
@@ -711,20 +705,19 @@ const { package, ...other } = process.env;
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-const env = process.env;
-    "#,
+        const env = process.env;
+      "#,
       |run_test_context: RunTestContext| {
         make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
-    // transforms the inline value
     assert_eq!(
       output_code,
-      r#"const env = {};
-"#
+      indoc! {r#"
+        const env = {};
+      "#}
     );
-    // tracks that the variable was used
     assert_eq!(used_env, HashSet::new());
     assert_eq!(diagnostics, vec![]);
   }
