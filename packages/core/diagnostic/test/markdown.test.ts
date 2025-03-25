@@ -1,7 +1,6 @@
-// @flow
 import assert from 'assert';
 
-import {escapeMarkdown, md} from '../src/diagnostic';
+import {escapeMarkdown, md} from '../src/index.ts';
 
 describe('escapeMarkdown', () => {
   it('returns an escaped string 01', () => {
