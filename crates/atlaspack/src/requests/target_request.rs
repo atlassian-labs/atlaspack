@@ -349,7 +349,13 @@ impl TargetRequest {
         }
         Targets::CustomTarget(custom_targets) => {
           for (name, descriptor) in custom_targets.iter() {
-            targets.push(self.target_from_descriptor(None, &config, descriptor.clone(), name)?);
+            targets.push(self.target_from_descriptor(
+              None,
+              &config,
+              descriptor.clone(),
+              name,
+              &request_context.config().project_root,
+            )?);
           }
 
           // Custom targets have been passed in so let's just use those
@@ -371,6 +377,7 @@ impl TargetRequest {
             &config,
             builtin_target_descriptor,
             builtin_target.name,
+            &request_context.project_root,
           )?);
         }
       }
@@ -408,6 +415,7 @@ impl TargetRequest {
         &config,
         custom_target.descriptor.clone(),
         custom_target.name,
+        &request_context.config().project_root,
       )?);
     }
 
@@ -496,6 +504,7 @@ impl TargetRequest {
     package_json: &ConfigFile<PackageJson>,
     target_descriptor: TargetDescriptor,
     target_name: &str,
+    project_root: &Path,
   ) -> Result<Option<Target>, anyhow::Error> {
     if self.skip_target(target_name, &target_descriptor.source) {
       return Ok(None);
@@ -568,34 +577,13 @@ impl TargetRequest {
     tracing::debug!("Target descriptor engines: {:?}", target_descriptor_engines);
 
     Ok(Some(Target {
-      dist_dir: match dist.as_ref() {
-        None => self
-          .default_target_options
-          .dist_dir
-          .clone()
-          .unwrap_or_else(|| default_dist_dir(&package_json.path).join(target_name)),
-        Some(target_dist) => {
-          let package_dir = package_json
-            .path
-            .parent()
-            .unwrap_or_else(|| &package_json.path);
-          let dir = target_dist
-            .parent()
-            .map(|dir| dir.strip_prefix("./").ok().unwrap_or(dir))
-            .and_then(|dir| {
-              if dir == PathBuf::from("") {
-                None
-              } else {
-                Some(dir)
-              }
-            });
-
-          match dir {
-            None => PathBuf::from(package_dir),
-            Some(dir) => package_dir.join(dir),
-          }
-        }
-      },
+      dist_dir: self.infer_dist_dir(
+        dist,
+        package_json,
+        target_name,
+        &target_descriptor,
+        project_root,
+      )?,
       dist_entry,
       env: Arc::new(Environment {
         context,
@@ -637,6 +625,53 @@ impl TargetRequest {
         .unwrap_or(self.default_target_options.public_url.clone()),
       ..Target::default()
     }))
+  }
+
+  fn infer_dist_dir(
+    &self,
+    dist: Option<PathBuf>,
+    package_json: &ConfigFile<PackageJson>,
+    target_name: &str,
+    target_descriptor: &TargetDescriptor,
+    project_root: &Path,
+  ) -> anyhow::Result<PathBuf> {
+    // Use the target_descriptor dist_dir as the highest precedence
+    if let Some(dist_dir) = target_descriptor.dist_dir.as_ref() {
+      // Strip the leading "./" if present
+      let dist_dir = dist_dir.strip_prefix("./").ok().unwrap_or(dist_dir);
+      return Ok(project_root.join(dist_dir));
+    }
+
+    if let Some(target_dist) = dist.as_ref() {
+      let package_dir = package_json
+        .path
+        .parent()
+        .ok_or(anyhow::anyhow!("package.json has no parent"))?;
+      let dir = target_dist
+        .parent()
+        // Strip the leading "./" if present
+        .map(|dir| dir.strip_prefix("./").ok().unwrap_or(dir))
+        .and_then(|dir| {
+          if dir == PathBuf::from("") {
+            None
+          } else {
+            Some(dir)
+          }
+        });
+
+      return Ok(match dir {
+        None => PathBuf::from(package_dir),
+        Some(dir) => package_dir.join(dir),
+      });
+    }
+
+    Ok(
+      self
+        .default_target_options
+        .dist_dir
+        .clone()
+        .unwrap_or_else(|| default_dist_dir(&package_json.path).join(target_name)),
+    )
   }
 }
 
@@ -1433,6 +1468,50 @@ mod tests {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir().join("dist").join("custom"),
+          dist_entry: None,
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Browser,
+            engines: Engines {
+              browsers: Some(EnginesBrowsers::default()),
+              ..Engines::default()
+            },
+            is_library: false,
+            output_format: OutputFormat::Global,
+            should_optimize: true,
+            should_scope_hoist: false,
+            ..Environment::default()
+          }),
+          name: String::from("custom"),
+          ..Target::default()
+        }]
+      }))
+    );
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_custom_targets_from_options_with_custom_options() {
+    let targets = targets_from_config(
+      String::from(r#"{}"#),
+      None,
+      Some(AtlaspackOptions {
+        targets: Some(Targets::CustomTarget(BTreeMap::from([(
+          "custom".into(),
+          TargetDescriptor {
+            dist_dir: Some(PathBuf::from("./some-other-dist")),
+            ..Default::default()
+          },
+        )]))),
+        ..Default::default()
+      }),
+    )
+    .await;
+
+    assert_eq!(
+      targets.map_err(|e| e.to_string()),
+      Ok(RequestResult::Target(TargetRequestOutput {
+        entry: PathBuf::default(),
+        targets: vec![Target {
+          dist_dir: PathBuf::from("some-other-dist"),
           dist_entry: None,
           env: Arc::new(Environment {
             context: EnvironmentContext::Browser,
