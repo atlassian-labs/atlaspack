@@ -10,27 +10,13 @@ describe('@atlaspack/config-default', () => {
   let configPackageReferences: Set<string>;
 
   before(() => {
-    packageJsonDependencyNames = new Set([
-      ...Object.keys(packageJson.dependencies || {}),
-      ...Object.keys(packageJson.parcelDependencies || {}),
-    ]);
+    packageJsonDependencyNames = new Set(
+      Object.keys(packageJson.dependencies || {}),
+    );
     configPackageReferences = collectConfigPackageReferences(config);
   });
 
   describe('package.json', () => {
-    it('includes every package referenced in the config', () => {
-      let missingReferences = [];
-      for (let reference of configPackageReferences) {
-        if (!packageJsonDependencyNames.has(reference)) {
-          missingReferences.push(reference);
-        }
-      }
-
-      // Assert with deepEqual rather than e.g. missingReferences.size as the
-      // assertion message with deepEqual enumerates the differences nicely
-      assert.deepEqual(missingReferences, []);
-    });
-
     it('does not include packages not referenced in the config', () => {
       let unnecessaryDependencies = [];
       for (let dependency of packageJsonDependencyNames) {

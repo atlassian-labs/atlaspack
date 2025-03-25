@@ -12,7 +12,10 @@ pub type IdentifierHasher = Xxh3;
 
 /// Copy of one of the `node-bindings/src/hash.rs` functions.
 pub fn hash_string(s: String) -> String {
-  let s = s.as_bytes();
+  hash_bytes(s.as_bytes())
+}
+
+pub fn hash_bytes(s: &[u8]) -> String {
   let res = xxh3_64(s);
   format!("{:016x}", res)
 }
