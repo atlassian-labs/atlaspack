@@ -1,16 +1,16 @@
+name: 'Enforce Changeset'
+
 on: push
 
 jobs:
   enforce-changeset:
-    name: 'Enforce Changeset'
-    description: 'Ensures each PR either has a changeset, or has deliberately opted out of one.'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/github-script@v7
         with:
           script: |
-            const { enforceChangeset } = require('./index.js')
+            const { enforceChangeset } = require('./enforce-changeset.js')
             await enforceChangeset({
               owner: context.repo.owner,
               repo: context.repo.repo,
