@@ -222,12 +222,12 @@ jobs:
           npm config set registry https://registry.npmjs.org/
       - run: ${{ inputs.release-command }}
       - name: Get canary version
-        if: ${{ inputs.profile == 'canary' }}
+        if: ${{ inputs.type == 'canary' }}
         id: canary-version
         run: echo "VERSION_TAG=$(npm show @atlaspack/cli@canary --json | jq .version -r)" >> "$GITHUB_OUTPUT"
       - name: Create tag
         uses: actions/github-script@v5
-        if: ${{ inputs.profile == 'canary' }}
+        if: ${{ inputs.type == 'canary' }}
         with:
           script: |
             github.rest.git.createRef({
