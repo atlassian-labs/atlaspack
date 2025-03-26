@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 /**
  * @typedef EnforceChangesetOptions
  * @property number pullNumber
