@@ -69,6 +69,11 @@ registerCoreWithSerializer();
 export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
 
+function log(msg) {
+  if (process.env.LOG) {
+    console.log(msg);
+  }
+}
 export default class Atlaspack {
   #requestTracker /*: RequestTracker*/;
   #config /*: AtlaspackConfig*/;
@@ -106,6 +111,7 @@ export default class Atlaspack {
   }
 
   async _init(): Promise<void> {
+    log('[start] _init');
     if (this.#initialized) {
       return;
     }
@@ -117,7 +123,10 @@ export default class Atlaspack {
     setFeatureFlags(featureFlags);
 
     await initSourcemaps;
+
+    log('[start] initRust');
     await initRust?.();
+    log('[end] initRust');
 
     this.#disposable = new Disposable();
 
@@ -188,13 +197,16 @@ export default class Atlaspack {
       }
       this.#farm = this.#initialOptions.workerFarm;
     } else {
+      log('createWorkerFarm should not happen');
       this.#farm = createWorkerFarm({
         shouldPatchConsole: resolvedOptions.shouldPatchConsole,
         shouldTrace: resolvedOptions.shouldTrace,
       });
     }
 
+    log('[start] cache ensure');
     await resolvedOptions.cache.ensure();
+    log('[end] cache ensure');
 
     let {dispose: disposeOptions, ref: optionsRef} =
       await this.#farm.createSharedReference(resolvedOptions, false);
@@ -224,13 +236,16 @@ export default class Atlaspack {
       message: 'Intializing request tracker...',
     });
 
+    log('[start] RequestTracker.init');
     this.#requestTracker = await RequestTracker.init({
       farm: this.#farm,
       options: resolvedOptions,
       rustAtlaspack,
     });
+    log('[end] RequestTracker.init');
 
     this.#initialized = true;
+    log('[end] _init');
   }
 
   async run(): Promise<BuildSuccessEvent> {
@@ -373,6 +388,7 @@ export default class Atlaspack {
   |} = {
     /*::...null*/
   }): Promise<BuildEvent> {
+    log('[start] _build');
     this.#requestTracker.setSignal(signal);
     let options = nullthrows(this.#resolvedOptions);
     try {
@@ -394,8 +410,10 @@ export default class Atlaspack {
         signal,
       });
 
+      log('[start] AtlaspackBuildRequest');
       let {bundleGraph, bundleInfo, changedAssets, assetRequests} =
         await this.#requestTracker.runRequest(request, {force: true});
+      log('[end] AtlaspackBuildRequest');
 
       this.#requestedAssetIds.clear();
 
@@ -507,6 +525,7 @@ export default class Atlaspack {
     let sub = await resolvedOptions.inputFS.watch(
       resolvedOptions.watchDir,
       async (err, events) => {
+        log('inputFS watch handler');
         if (err) {
           logger.warn({
             message: `File watch event error occured`,
