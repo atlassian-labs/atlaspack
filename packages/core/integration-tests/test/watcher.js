@@ -23,7 +23,7 @@ import {symlinkSync} from 'fs';
 const inputDir = path.join(__dirname, '/watcher');
 const distDir = path.join(inputDir, 'dist');
 
-describe.only('watcher', function () {
+describe('watcher', function () {
   let subscription;
   afterEach(async () => {
     console.log('afterEach start');
