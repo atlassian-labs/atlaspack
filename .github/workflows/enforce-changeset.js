@@ -49,6 +49,8 @@ async function checkForExplanationTag({octokit, owner, repo, pullNumber}) {
  * @param EnforceChangesetOptions options
  */
 export async function enforceChangeset(prOptions) {
+  const {octokit, owner, repo, pullNumber} = prOptions;
+
   const [hasChangeset, commentId, hasExplanationTag] = await Promise.all([
     checkForChangesetFile(prOptions),
     getCommentId(prOptions),
@@ -60,9 +62,9 @@ export async function enforceChangeset(prOptions) {
 
     // If requirements are satisfied, delete the comment
     if (commentId) {
-      await prOptions.octokit.rest.issues.deleteComment({
-        owner: prOptions.owner,
-        repo: prOptions.repo,
+      await octokit.rest.issues.deleteComment({
+        owner,
+        repo,
         comment_id: commentId,
       });
     }
