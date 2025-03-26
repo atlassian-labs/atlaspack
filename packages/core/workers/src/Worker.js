@@ -96,11 +96,13 @@ export default class Worker extends EventEmitter {
 
     let onMessage = (data) => this.receive(data);
     let onExit = (code) => {
+      console.error('onExit', code);
       this.exitCode = code;
       this.emit('exit', code);
     };
 
     let onError = (err) => {
+      console.error('onError', err);
       this.emit('error', err);
     };
 
@@ -162,6 +164,12 @@ export default class Worker extends EventEmitter {
   }
 
   call(call: WorkerCall): void {
+    function log(...msg) {
+      if (process.env.LOG) {
+        console.log(...msg);
+      }
+    }
+
     if (this.stopped || this.isStopping) {
       return;
     }
