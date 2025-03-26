@@ -79,7 +79,7 @@ describe('watcher', function () {
     let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
     console.log('two');
     subscription = await b.watch((...results) => {
-      console.log('Watch callback', ...result);
+      console.log('Watch callback', ...results);
     });
     console.log('three');
     let buildEvent = await getNextBuild(b);
