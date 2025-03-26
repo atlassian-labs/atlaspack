@@ -31,6 +31,7 @@ import {setFeatureFlags} from '@atlaspack/feature-flags';
 import '@atlaspack/cache'; // register with serializer
 import '@atlaspack/package-manager';
 import '@atlaspack/fs';
+import {threadId} from 'worker_threads';
 
 // $FlowFixMe
 if (process.env.ATLASPACK_BUILD_REPL && process.browser) {
@@ -86,22 +87,20 @@ async function loadConfig(cachePath, options) {
 }
 
 function log(...msg) {
-  if (process.env.LOG) {
-    console.log(...msg);
-  }
+  console.log(...msg);
 }
 
 console.log('Worker started');
 export function clearWorkerBuildCaches() {
-  log('[start] clearWorkerBuildCaches');
+  log('[start] clearWorkerBuildCaches', threadId);
   try {
     configCache.clear();
     clearBuildCaches();
   } catch (e) {
-    log('[error] clearWorkerBuildCaches', e);
+    log('[error] clearWorkerBuildCaches', threadId, e);
     throw e;
   }
-  log('[end] clearWorkerBuildCaches');
+  log('[end] clearWorkerBuildCaches', threadId);
 }
 
 export async function runTransform(

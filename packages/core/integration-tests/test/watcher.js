@@ -23,7 +23,7 @@ import {symlinkSync} from 'fs';
 const inputDir = path.join(__dirname, '/watcher');
 const distDir = path.join(inputDir, 'dist');
 
-describe('watcher', function () {
+describe.only('watcher', function () {
   let subscription;
   afterEach(async () => {
     console.log('afterEach start');
@@ -41,7 +41,10 @@ describe('watcher', function () {
       'module.exports = "hello"',
       {encoding: 'utf8'},
     );
-    let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
+    let b = bundler(path.join(inputDir, '/index.js'), {
+      inputFS: overlayFS,
+      shouldPatchConsole: false,
+    });
     subscription = await b.watch();
     let buildEvent = await getNextBuild(b);
     if (!buildEvent.bundleGraph) return assert.fail();
@@ -76,7 +79,10 @@ describe('watcher', function () {
     );
     console.log('one');
     process.env.LOG = 'true';
-    let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
+    let b = bundler(path.join(inputDir, '/index.js'), {
+      inputFS: overlayFS,
+      shouldPatchConsole: false,
+    });
     console.log('two');
     subscription = await b.watch((...results) => {
       console.log('Watch callback', ...results);
@@ -120,6 +126,7 @@ describe('watcher', function () {
           distDir: outDir,
         },
       },
+      shouldPatchConsole: false,
     });
     subscription = await b.watch();
     await getNextBuild(b);
@@ -149,6 +156,7 @@ describe('watcher', function () {
           distDir,
         },
       },
+      shouldPatchConsole: false,
     });
 
     console.log('two');
@@ -455,7 +463,7 @@ describe('watcher', function () {
     let indexPath = path.join(inputDir, 'index.js');
 
     console.log('one');
-    let b = bundler(indexPath, {inputFS: overlayFS});
+    let b = bundler(indexPath, {inputFS: overlayFS, shouldPatchConsole: false});
     console.log('two');
     let bundleGraph;
     subscription = await b.watch((err, event) => {
