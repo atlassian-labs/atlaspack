@@ -420,19 +420,25 @@ describe('watcher', function () {
   });
 
   it('should add and remove necessary runtimes to bundles', async () => {
+    console.log('should add and remove necessary runtimes to bundles');
     await ncp(path.join(__dirname, 'integration/dynamic'), inputDir);
 
     let indexPath = path.join(inputDir, 'index.js');
 
+    console.log('one');
     let b = bundler(indexPath, {inputFS: overlayFS});
+    console.log('two');
     let bundleGraph;
     subscription = await b.watch((err, event) => {
       if (!event) return assert.fail();
       assert(event.type === 'buildSuccess');
       bundleGraph = event.bundleGraph;
     });
+
+    console.log('three');
     await getNextBuild(b);
 
+    console.log('four');
     if (!bundleGraph) return assert.fail();
     assertBundles(bundleGraph, [
       {
@@ -448,8 +454,10 @@ describe('watcher', function () {
       (await outputFS.readFile(indexPath, 'utf8')) +
         "\nimport('./other.js');\n",
     );
+    console.log('five');
 
     await getNextBuild(b);
+    console.log('six');
     if (!bundleGraph) return assert.fail();
 
     assertBundles(bundleGraph, [
@@ -463,7 +471,9 @@ describe('watcher', function () {
 
     await outputFS.writeFile(indexPath, '');
 
+    console.log('seven');
     await getNextBuild(b);
+    console.log('eight');
     if (!bundleGraph) return assert.fail();
 
     assertBundles(bundleGraph, [
