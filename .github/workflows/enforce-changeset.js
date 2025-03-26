@@ -6,6 +6,8 @@
  * @property {import('@actions/github-script').AsyncFunctionArguments} octokit
  */
 
+const commentTitle = '## Missing Changeset';
+
 async function getCommentId({octokit, owner, repo, pullNumber}) {
   const comments = await octokit.rest.issues.listComments({
     owner,
@@ -15,7 +17,7 @@ async function getCommentId({octokit, owner, repo, pullNumber}) {
 
   const comment = comments.data.find(
     (comment) =>
-      comment.body.includes('## Missing Changeset') &&
+      comment.body.includes(commentTitle) &&
       comment.user.login === 'github-actions[bot]',
   );
 
@@ -98,12 +100,14 @@ export async function enforceChangeset(prOptions) {
     repo,
     issue_number: pullNumber,
     body: `
-## Missing Changeset
+${commentTitle}
 No changeset found in PR.
 Please add a changeset file (\`yarn changeset\`), or add a '[no-changeset]' tag with explanation to the PR description.
 
-E.g.
-> [no-changeset]: This PR is a refactor and does not require a changeset
+<details>
+<summary>Example</summary>
+<blockquote>[no-changeset]: This PR is a refactor and does not require a changeset</blockquote>
+</details>
 `.trim(),
   });
 
