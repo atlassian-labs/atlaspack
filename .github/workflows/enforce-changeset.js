@@ -23,8 +23,6 @@ export async function enforceChangeset({pullNumber, owner, repo, octokit}) {
     return /\.changeset\/\w+-\w+-\w+\.md$/.test(filename);
   });
 
-  console.log('hasChangeset', hasChangeset);
-
   if (hasChangeset) {
     process.exit(0);
   } else {
