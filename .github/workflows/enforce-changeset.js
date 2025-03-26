@@ -19,6 +19,7 @@ export async function enforceChangeset({pullNumber, owner, repo, octokit}) {
   });
 
   const hasChangeset = files.data.some(({filename}) => {
+    console.log('filename', filename);
     return /\.changeset\/\w+-\w+\w+\.md$/.test(filename);
   });
 
