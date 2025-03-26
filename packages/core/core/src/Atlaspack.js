@@ -301,13 +301,18 @@ export default class Atlaspack {
   }
 
   async _startNextBuild(): Promise<?BuildEvent> {
+    log('[start] _startNextBuild');
     this.#watchAbortController = new AbortController();
+    log('[start] clearBuildCaches');
     await this.clearBuildCaches();
+    log('[end] clearBuildCaches');
 
     try {
+      log('[start] _build');
       let buildEvent = await this._build({
         signal: this.#watchAbortController.signal,
       });
+      log('[end] _build');
 
       this.#watchEvents.emit({
         buildEvent,
@@ -323,6 +328,7 @@ export default class Atlaspack {
       // If the build passes or fails, we want to cache the request graph
       await this.writeRequestTrackerToCache();
     }
+    log('[end] _startNextBuild');
   }
 
   async watch(
