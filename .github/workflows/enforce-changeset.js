@@ -24,8 +24,17 @@ export async function enforceChangeset({pullNumber, owner, repo, octokit}) {
   });
 
   if (hasChangeset) {
-    process.exit(0);
-  } else {
-    process.exit(1);
+    process.exitCode = 0;
+    return;
   }
+
+  // Get all comments on PR
+  const comments = await octokit.rest.issues.listComments({
+    owner,
+    repo,
+    issue_number: pullNumber,
+  });
+
+  console.log('comments', comments);
+  throw new Error('No changeset found in PR');
 }
