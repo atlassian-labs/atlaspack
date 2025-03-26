@@ -10,7 +10,7 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
-            const { enforceChangeset } = require('./.github/workflows/enforce-changeset.js');
+            const { enforceChangeset } = require('./scripts/enforce-changeset.js');
             await enforceChangeset({
               owner: context.repo.owner,
               repo: context.repo.repo,
