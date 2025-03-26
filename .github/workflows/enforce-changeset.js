@@ -6,6 +6,8 @@
  * @property {import('@actions/github-script').AsyncFunctionArguments} octokit
  */
 
+const checkboxMessage = '- [x] This change does not require a changeset';
+
 /**
  * Enforce that a changeset is present in a PR
  * @param EnforceChangesetOptions options
@@ -41,6 +43,11 @@ export async function enforceChangeset({pullNumber, owner, repo, octokit}) {
     pull_number: pullNumber,
   });
 
-  console.log('prDetails', prDetails);
+  if (prDetails.data.body.includes(checkboxMessage)) {
+    process.exitCode = 0;
+    return;
+  }
+
+  // Add a comment
   throw new Error('No changeset found in PR');
 }
