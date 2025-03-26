@@ -23,6 +23,11 @@ export type AtlaspackV3Options = {|
   ...AtlaspackNapiOptions['options'],
 |};
 
+function log(msg) {
+  if (process.env.LOG) {
+    console.log(msg);
+  }
+}
 export class AtlaspackV3 {
   _internal: AtlaspackNapi;
   _workerIds: any[];
@@ -35,6 +40,7 @@ export class AtlaspackV3 {
     napiWorkerPool = new NapiWorkerPool(),
     ...options
   }: AtlaspackV3Options) {
+    log('[start] AtlaspackV3.constructor');
     options.logLevel = options.logLevel || 'error';
     options.defaultTargetOptions = options.defaultTargetOptions || {};
     // $FlowFixMe "engines" are readonly
@@ -51,11 +57,14 @@ export class AtlaspackV3 {
       },
       lmdb,
     );
+    log('[end] AtlaspackV3.constructor');
   }
 
   async buildAssetGraph(): Promise<any> {
+    log('[start] buildAssetGraph');
     let [graph, error] = await this._internal.buildAssetGraph();
 
+    log('[end] buildAssetGraph');
     if (error !== null) {
       throw new ThrowableDiagnostic({
         diagnostic: error,
@@ -66,11 +75,16 @@ export class AtlaspackV3 {
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {
+    log('[start] respondToFsEvents');
     let result = await this._internal.respondToFsEvents(events);
+    log('[end] respondToFsEvents');
+
     return result;
   }
 
   async shutdown() {
+    log('[start] shutdown');
     await this._internal.shutdown();
+    log('[end] shutdown');
   }
 }

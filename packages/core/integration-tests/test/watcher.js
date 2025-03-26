@@ -72,6 +72,7 @@ describe('watcher', function () {
       {encoding: 'utf8'},
     );
     console.log('one');
+    process.env.LOG = 'true';
     let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
     console.log('two');
     subscription = await b.watch();
@@ -92,6 +93,7 @@ describe('watcher', function () {
 
     console.log('seven');
     assert.equal(output, 'hello');
+    process.env.LOG = undefined;
   });
 
   it.v2('should rebuild on a config file change', async function () {
