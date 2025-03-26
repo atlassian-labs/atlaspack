@@ -6,7 +6,7 @@
  * @property {import('@actions/github-script').AsyncFunctionArguments} octokit
  */
 
-const checkboxMessage = '- [x] This change does not require a changeset';
+const noChangesetRegex = /^ ?\[no-changeset]: ?\S/;
 
 /**
  * Enforce that a changeset is present in a PR
@@ -30,24 +30,50 @@ export async function enforceChangeset({pullNumber, owner, repo, octokit}) {
     return;
   }
 
-  // Get all comments on PR
-  // const comments = await octokit.rest.issues.listComments({
-  //   owner,
-  //   repo,
-  //   issue_number: pullNumber,
-  // });
-
   const prDetails = await octokit.rest.pulls.get({
     owner,
     repo,
     pull_number: pullNumber,
   });
 
-  if (prDetails.data.body.includes(checkboxMessage)) {
+  // Explanation already provided
+  if (noChangesetRegex.test(prDetails.data.body)) {
     process.exitCode = 0;
     return;
   }
 
-  // Add a comment
+  // Check to see if comment already exists
+  const comments = await octokit.rest.issues.listComments({
+    owner,
+    repo,
+    issue_number: pullNumber,
+  });
+
+  const existingComment = comments.data.find((comment) => {
+    return (
+      comment.body.includes('## Missing changeset') &&
+      comment.user.login === 'github-actions[bot]'
+    );
+  });
+
+  if (existingComment) {
+    throw new Error('No changeset or explanation found in PR');
+  }
+
+  // Add the comment
+  await octokit.rest.issues.createComment({
+    owner,
+    repo,
+    issue_number: pullNumber,
+    body: `
+## Missing changeset
+No changeset found in PR.
+Please add a changeset file (\`yarn changeset\`), or add a '[no-changeset]' tag with explanation to the PR description.
+
+E.g.
+> [no-changeset]: This PR is a refactor and does not require a changeset
+`.trim(),
+  });
+
   throw new Error('No changeset found in PR');
 }
