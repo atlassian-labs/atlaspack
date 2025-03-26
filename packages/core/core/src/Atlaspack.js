@@ -255,6 +255,12 @@ export default class Atlaspack {
     this.#initialized = false;
 
     await this.#disposable.dispose();
+
+    if (this.rustAtlaspack) {
+      // $FlowFixMe
+      await this.rustAtlaspack.shutdown();
+      this.rustAtlaspack = null;
+    }
   }
 
   async writeRequestTrackerToCache(): Promise<void> {

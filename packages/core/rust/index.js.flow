@@ -71,6 +71,7 @@ declare export class AtlaspackNapi {
   static create(options: AtlaspackNapiOptions, lmdb: mixed): AtlaspackNapi;
   nodeWorkerCount: number;
   buildAssetGraph(): Promise<any>;
+  shutdown(): Promise<any>;
   respondToFsEvents(events: WatchEvents): boolean;
   static defaultThreadCount(): number;
   testingTempFsReadToString(path: string): string;

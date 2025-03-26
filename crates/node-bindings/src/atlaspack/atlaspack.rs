@@ -147,6 +147,28 @@ impl AtlaspackNapi {
     Ok(promise)
   }
 
+  #[tracing::instrument(level = "info", skip_all)]
+  #[napi]
+  pub fn shutdown(&self, env: Env) -> napi::Result<JsObject> {
+    let (deferred, promise) = env.create_deferred()?;
+
+    thread::spawn({
+      let atlaspack = self.atlaspack.take();
+      move || {
+        let atlaspack = match atlaspack {
+          Ok(atlaspack) => atlaspack,
+          Err(error) => return deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
+        };
+
+        atlaspack.shutdown();
+
+        deferred.resolve(move |env| env.get_undefined())
+      }
+    });
+
+    Ok(promise)
+  }
+
   /// Check that the LMDB database is healthy
   ///
   /// JavaScript does all its writes through a single thread, which is not this handle. If we want

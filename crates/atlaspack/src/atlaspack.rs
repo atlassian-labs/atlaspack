@@ -19,6 +19,7 @@ use crate::request_tracker::RequestTracker;
 use crate::requests::{AssetGraphRequest, RequestResult};
 use crate::WatchEvents;
 
+#[derive(Clone)]
 pub struct AtlaspackInitOptions {
   pub db: Arc<DatabaseWriter>,
   pub fs: Option<FileSystemRef>,
@@ -179,6 +180,10 @@ impl Atlaspack {
     txn.commit()?;
 
     Ok(())
+  }
+
+  pub fn shutdown(self) {
+    self.runtime.shutdown_background();
   }
 }
 
