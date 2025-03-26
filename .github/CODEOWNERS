@@ -1,0 +1,3 @@
+# Adding the team as codeowners for everything automatically requests reviews when a PR is opened
+
+* @atlassian-labs/atlaspack-core
