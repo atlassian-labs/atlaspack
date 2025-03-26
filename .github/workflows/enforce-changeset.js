@@ -6,57 +6,73 @@
  * @property {import('@actions/github-script').AsyncFunctionArguments} octokit
  */
 
-const noChangesetRegex = /^ ?\[no-changeset]: ?\S/;
-
-/**
- * Enforce that a changeset is present in a PR
- * @param EnforceChangesetOptions options
- */
-export async function enforceChangeset({pullNumber, owner, repo, octokit}) {
-  // Check for a changeset file in the PR
-  const files = await octokit.rest.pulls.listFiles({
-    owner,
-    repo,
-    pull_number: pullNumber,
-  });
-
-  const hasChangeset = files.data.some(({filename}) => {
-    console.log('filename', filename);
-    return /\.changeset\/\w+-\w+-\w+\.md$/.test(filename);
-  });
-
-  if (hasChangeset) {
-    process.exitCode = 0;
-    return;
-  }
-
-  const prDetails = await octokit.rest.pulls.get({
-    owner,
-    repo,
-    pull_number: pullNumber,
-  });
-
-  // Explanation already provided
-  if (noChangesetRegex.test(prDetails.data.body)) {
-    process.exitCode = 0;
-    return;
-  }
-
-  // Check to see if comment already exists
+async function getCommentId({octokit, owner, repo, pullNumber}) {
   const comments = await octokit.rest.issues.listComments({
     owner,
     repo,
     issue_number: pullNumber,
   });
 
-  const existingComment = comments.data.find((comment) => {
-    return (
-      comment.body.includes('## Missing changeset') &&
-      comment.user.login === 'github-actions[bot]'
-    );
+  const comment = comments.data.find(
+    (comment) =>
+      comment.body.includes('## Missing Changeset') &&
+      comment.user.login === 'github-actions[bot]',
+  );
+
+  return comment?.id;
+}
+
+const changesetFileRegex = /^changesets\/\w+\.md$/;
+async function checkForChangesetFile({octokit, owner, repo, pullNumber}) {
+  const files = await octokit.rest.pulls.listFiles({
+    owner,
+    repo,
+    pull_number: pullNumber,
   });
 
-  if (existingComment) {
+  return files.data.some(({filename}) => changesetFileRegex.test(filename));
+}
+
+const noChangesetRegex = /^ ?\[no-changeset]: ?\S/;
+async function checkForExplanationTag({octokit, owner, repo, pullNumber}) {
+  const prDetails = await octokit.rest.pulls.get({
+    owner,
+    repo,
+    pull_number: pullNumber,
+  });
+
+  return noChangesetRegex.test(prDetails.data.body);
+}
+
+/**
+ * Enforce that a changeset is present in a PR
+ * @param EnforceChangesetOptions options
+ */
+export async function enforceChangeset(prOptions) {
+  const [hasChangeset, commentId, hasExplanationTag] = await Promise.all([
+    checkForChangesetFile(prOptions),
+    getCommentId(prOptions),
+    checkForExplanationTag(prOptions),
+  ]);
+
+  if (hasChangeset || hasExplanationTag) {
+    process.exitCode = 0;
+
+    // If requirements are satisfied, delete the comment
+    if (commentId) {
+      await prOptions.octokit.rest.issues.deleteComment({
+        owner: prOptions.owner,
+        repo: prOptions.repo,
+        comment_id: commentId,
+      });
+    }
+
+    return;
+  }
+
+  // If comment already exists, just leave it in place
+  if (commentId) {
+    process.exitCode = 1;
     throw new Error('No changeset or explanation found in PR');
   }
 
@@ -66,7 +82,7 @@ export async function enforceChangeset({pullNumber, owner, repo, octokit}) {
     repo,
     issue_number: pullNumber,
     body: `
-## Missing changeset
+## Missing Changeset
 No changeset found in PR.
 Please add a changeset file (\`yarn changeset\`), or add a '[no-changeset]' tag with explanation to the PR description.
 
