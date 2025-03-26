@@ -603,7 +603,11 @@ export default class WorkerFarm extends EventEmitter {
     for (let worker of this.workers.values()) {
       promises.push(
         new Promise((resolve, reject) => {
-          log('Worker', worker.id, 'callAllWorkers start');
+          log('Worker', worker.id, 'callAllWorkers start', {
+            ready: worker.ready,
+            stopped: worker.stopped,
+            isStopping: worker.isStopping,
+          });
           worker.call({
             method,
             args,
