@@ -62,6 +62,13 @@ export default class ThreadsWorker implements WorkerImpl {
   }
 
   send(data: WorkerMessage) {
-    this.worker.postMessage(prepareForSerialization(data));
+    function log(...msg) {
+      if (process.env.LOG) {
+        console.log(...msg);
+      }
+    }
+    let serializedData = prepareForSerialization(data);
+    log('ThreadsWorker.send', serializedData);
+    this.worker.postMessage(serializedData);
   }
 }
