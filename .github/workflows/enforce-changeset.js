@@ -35,6 +35,6 @@ export async function enforceChangeset({pullNumber, owner, repo, octokit}) {
     issue_number: pullNumber,
   });
 
-  console.log('comments', comments);
+  console.log('comments', JSON.stringify(comments.data, null, 2));
   throw new Error('No changeset found in PR');
 }
