@@ -65,6 +65,9 @@ describe('watcher', function () {
     console.log(
       'should rebuild on a source file change after a failed transformation',
     );
+    let interval = setInterval(() => {
+      console.log('Interval');
+    }, 1000);
     await outputFS.mkdirp(inputDir);
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
@@ -75,7 +78,9 @@ describe('watcher', function () {
     process.env.LOG = 'true';
     let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
     console.log('two');
-    subscription = await b.watch();
+    subscription = await b.watch((...results) => {
+      console.log('Watch callback', ...result);
+    });
     console.log('three');
     let buildEvent = await getNextBuild(b);
     console.log('four');
@@ -94,6 +99,7 @@ describe('watcher', function () {
     console.log('seven');
     assert.equal(output, 'hello');
     process.env.LOG = undefined;
+    clearInterval(interval);
   });
 
   it.v2('should rebuild on a config file change', async function () {
