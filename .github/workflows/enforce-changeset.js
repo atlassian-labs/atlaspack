@@ -30,7 +30,15 @@ async function checkForChangesetFile({octokit, owner, repo, pullNumber}) {
     pull_number: pullNumber,
   });
 
-  return files.data.some(({filename}) => changesetFileRegex.test(filename));
+  const hasChangesetFile = files.data.some(({filename}) =>
+    changesetFileRegex.test(filename),
+  );
+
+  if (!hasChangesetFile) {
+    console.log('No changeset file found in PR');
+  }
+
+  return hasChangesetFile;
 }
 
 const noChangesetRegex = /^ ?\[no-changeset]: ?\S/;
@@ -41,7 +49,13 @@ async function checkForExplanationTag({octokit, owner, repo, pullNumber}) {
     pull_number: pullNumber,
   });
 
-  return noChangesetRegex.test(prDetails.data.body);
+  const hasExplanationTag = noChangesetRegex.test(prDetails.data.body);
+
+  if (!hasExplanationTag) {
+    console.log('No explanation tag found in PR description');
+  }
+
+  return hasExplanationTag;
 }
 
 /**
