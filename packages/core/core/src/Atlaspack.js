@@ -69,9 +69,9 @@ registerCoreWithSerializer();
 export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
 
-function log(msg) {
+function log(...msg) {
   if (process.env.LOG) {
-    console.log(msg);
+    console.log(...msg);
   }
 }
 export default class Atlaspack {
@@ -345,6 +345,7 @@ export default class Atlaspack {
       );
     }
 
+    log('watcherCount', this.#watcherCount);
     if (this.#watcherCount === 0) {
       this.#watcherSubscription = await this._getWatcherSubscription();
       await this.#reporterRunner.report({type: 'watchStart'});
