@@ -26,7 +26,8 @@ export async function enforceChangeset({pullNumber, owner, repo, octokit}) {
   console.log('hasChangeset', hasChangeset);
 
   if (hasChangeset) {
-    // TODO: Change this to whatever actually makes the action pass
-    return true;
+    process.exit(0);
+  } else {
+    process.exit(1);
   }
 }
