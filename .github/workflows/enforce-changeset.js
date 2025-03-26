@@ -22,7 +22,7 @@ async function getCommentId({octokit, owner, repo, pullNumber}) {
   return comment?.id;
 }
 
-const changesetFileRegex = /^changesets\/\w+\.md$/;
+const changesetFileRegex = /\.changeset\/\w+-\w+-\w+\.md$/;
 async function checkForChangesetFile({octokit, owner, repo, pullNumber}) {
   const files = await octokit.rest.pulls.listFiles({
     owner,
