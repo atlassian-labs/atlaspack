@@ -34,7 +34,12 @@ export default class ThreadsChild implements ChildImpl {
   }
 
   handleMessage(data: WorkerMessage) {
-    this.onMessage(restoreDeserializedObject(data));
+    try {
+      this.onMessage(restoreDeserializedObject(data));
+    } catch (e) {
+      console.error('ERROR handleMessage', e);
+      throw e;
+    }
   }
 
   send(data: WorkerMessage) {
