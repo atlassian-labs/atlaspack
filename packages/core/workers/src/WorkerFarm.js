@@ -594,10 +594,16 @@ export default class WorkerFarm extends EventEmitter {
   }
 
   async callAllWorkers(method: string, args: Array<any>) {
+    function log(...msg) {
+      if (process.env.LOG) {
+        console.log(...msg);
+      }
+    }
     let promises = [];
     for (let worker of this.workers.values()) {
       promises.push(
         new Promise((resolve, reject) => {
+          log('Worker', worker.id, 'callAllWorkers start');
           worker.call({
             method,
             args,
@@ -605,6 +611,8 @@ export default class WorkerFarm extends EventEmitter {
             reject,
             retries: 0,
           });
+        }).then(() => {
+          log('Worker', worker.id, 'callAllWorkers complete');
         }),
       );
     }
