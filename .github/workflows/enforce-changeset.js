@@ -43,7 +43,7 @@ async function checkForChangesetFile({octokit, owner, repo, pullNumber}) {
   return hasChangesetFile;
 }
 
-const noChangesetRegex = /^ ?\[no-changeset]: ?\S/;
+const noChangesetRegex = /\n ?\[no-changeset\]: ?\S/;
 async function checkForExplanationTag({octokit, owner, repo, pullNumber}) {
   const prDetails = await octokit.rest.pulls.get({
     owner,
