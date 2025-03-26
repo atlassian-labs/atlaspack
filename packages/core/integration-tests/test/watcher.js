@@ -26,10 +26,12 @@ const distDir = path.join(inputDir, 'dist');
 describe('watcher', function () {
   let subscription;
   afterEach(async () => {
+    console.log('afterEach start');
     if (subscription) {
       await subscription.unsubscribe();
     }
     subscription = null;
+    console.log('afterEach end');
   });
 
   it('should rebuild on source file change', async function () {
@@ -60,25 +62,35 @@ describe('watcher', function () {
   });
 
   it('should rebuild on a source file change after a failed transformation', async () => {
+    console.log(
+      'should rebuild on a source file change after a failed transformation',
+    );
     await outputFS.mkdirp(inputDir);
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'syntax\\error',
       {encoding: 'utf8'},
     );
+    console.log('one');
     let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
+    console.log('two');
     subscription = await b.watch();
+    console.log('three');
     let buildEvent = await getNextBuild(b);
+    console.log('four');
     assert.equal(buildEvent.type, 'buildFailure');
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'module.exports = "hello"',
       {encoding: 'utf8'},
     );
+    console.log('five');
     buildEvent = await getNextBuild(b);
+    console.log('six');
     if (!buildEvent.bundleGraph) return assert.fail();
     let output = await run(buildEvent.bundleGraph);
 
+    console.log('seven');
     assert.equal(output, 'hello');
   });
 
@@ -115,8 +127,10 @@ describe('watcher', function () {
   });
 
   it('should rebuild properly when a dependency is removed', async function () {
+    console.log('should rebuild properly when a dependency is removed');
     await ncp(path.join(__dirname, 'integration/babel-default'), inputDir);
 
+    console.log('one');
     let b = bundler(path.join(inputDir, 'index.js'), {
       inputFS: overlayFS,
       targets: {
@@ -129,20 +143,27 @@ describe('watcher', function () {
       },
     });
 
+    console.log('two');
     subscription = await b.watch();
+    console.log('three');
     let buildEvent = await getNextBuild(b);
+    console.log('four');
     assert.equal(buildEvent.type, 'buildSuccess');
     let distFile = await outputFS.readFile(
       path.join(distDir, 'index.js'),
       'utf8',
     );
     assert(distFile.includes('Foo'));
+    console.log('five');
     await outputFS.writeFile(
       path.join(inputDir, 'index.js'),
       'console.log("no more dependencies")',
     );
+    console.log('six');
     await getNextBuild(b);
+    console.log('seven');
     distFile = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
+    console.log('eight');
     assert(!distFile.includes('Foo'));
   });
 
