@@ -363,7 +363,7 @@ export default class Atlaspack {
 
     let unsubscribePromise;
     const unsubscribe = async () => {
-      log('[start] unsubscribe');
+      log('[start] unsubscribe', this.#watcherCount, watchEventsDisposable);
       if (watchEventsDisposable) {
         watchEventsDisposable.dispose();
       }
