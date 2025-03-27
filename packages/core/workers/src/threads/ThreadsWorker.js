@@ -42,6 +42,12 @@ export default class ThreadsWorker implements WorkerImpl {
       env: process.env,
     });
 
+    this.worker.on('error', (err) => {
+      console.error('this.worker.on(error)', err);
+    });
+    this.worker.on('exit', (err) => {
+      console.error('this.worker.on(exit)', err);
+    });
     this.worker.on('message', (data) => this.handleMessage(data));
     this.worker.on('error', this.onError);
     this.worker.on('exit', this.onExit);
