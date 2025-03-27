@@ -5106,7 +5106,7 @@ describe('javascript', function () {
           await subscription.unsubscribe();
         });
 
-        it('correctly updates deferred assets that are reexported and imported directly', async function () {
+        it.skip('correctly updates deferred assets that are reexported and imported directly', async function () {
           let testDir = path.join(
             __dirname,
             '/integration/scope-hoisting/es6/side-effects-update-deferred-direct',

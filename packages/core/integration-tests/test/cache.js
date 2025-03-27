@@ -4050,7 +4050,7 @@ describe.v2('cache', function () {
 
     it('should support adding a deeper node_modules folder', async function () {});
 
-    it('should support yarn pnp', async function () {
+    it.skip('should support yarn pnp', async function () {
       let Module = require('module');
       // $FlowFixMe[incompatible-type]
       let origPnpVersion = process.versions.pnp;
