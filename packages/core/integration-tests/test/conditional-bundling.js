@@ -853,9 +853,13 @@ describe('conditional bundling', function () {
     // 1. If cond1 is true, it should load a.js and lazy.js
     // 2. If cond1 is false and cond2 is true, it should load b.js, c.js and lazy.js
     // 2. If cond1 is false and cond2 is false, it should load b.js, d.js and lazy.js
-    assert.ok(
-      overlayFS.readFileSync(entry.filePath).toString()
-        .includes(`module.exports = Promise.all([
+    const entryContents = overlayFS.readFileSync(entry.filePath).toString();
+    assert.equal(
+      entryContents.slice(
+        entryContents.indexOf('module.exports = Promise.all(['),
+        entryContents.indexOf(`.then(()=>module.bundle.root('l1mud'));`),
+      ),
+      `module.exports = Promise.all([
     require("fb03aa689d1dc557")('cond1', function() {
         return Promise.all([
             require("3e099e59a3214ae1")(require("8c49cf1ecead598d").getBundleURL('QQ5BZ') + "a.57636008.js").catch((err)=>{
@@ -890,7 +894,7 @@ describe('conditional bundling', function () {
         delete module.bundle.cache[module.id];
         throw err;
     })
-]).then(()=>module.bundle.root('l1mud'));`),
+])`,
     );
 
     let output = await runBundles(
