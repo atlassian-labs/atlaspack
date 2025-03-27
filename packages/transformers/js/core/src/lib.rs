@@ -552,7 +552,7 @@ pub fn transform(
                 diagnostics.extend(bailouts.iter().map(|bailout| bailout.to_diagnostic()));
               }
 
-              let module = module.module().expect("Module should be a module at this point");
+              let mut module = module.module().expect("Module should be a module at this point");
               let module = if config.scope_hoist {
                 let res = hoist(module, config.module_id.as_str(), unresolved_mark, &collect);
                 match res {
@@ -573,7 +573,7 @@ pub fn transform(
                 }
 
                 let mut esm2cjs = EsmToCjsReplacer::new(unresolved_mark, versions);
-                let module = module.fold_with(&mut esm2cjs);
+                module.visit_mut_with(&mut esm2cjs);
                 result.needs_esm_helpers = esm2cjs.needs_helpers;
                 module
               };
