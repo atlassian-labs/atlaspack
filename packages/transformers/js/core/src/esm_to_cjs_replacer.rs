@@ -21,26 +21,7 @@ use crate::utils::get_undefined_ident;
 use crate::utils::match_export_name;
 use crate::utils::match_export_name_ident;
 
-pub fn esm2cjs(node: Module, unresolved_mark: Mark, versions: Option<Versions>) -> (Module, bool) {
-  let mut fold = ESMFold {
-    imports: HashMap::new(),
-    require_names: HashMap::new(),
-    interops: HashSet::new(),
-    requires: vec![],
-    exports: vec![],
-    needs_helpers: false,
-    in_export_decl: false,
-    in_function_scope: false,
-    mark: Mark::fresh(Mark::root()),
-    unresolved_mark,
-    versions,
-  };
-
-  let module = node.fold_with(&mut fold);
-  (module, fold.needs_helpers)
-}
-
-struct ESMFold {
+pub struct EsmToCjsReplacer {
   // Map of imported identifier to (source, specifier)
   imports: HashMap<Id, (JsWord, JsWord)>,
   // Map of source to (require identifier, mark)
@@ -51,7 +32,7 @@ struct ESMFold {
   requires: Vec<ModuleItem>,
   // List of exports to add.
   exports: Vec<ModuleItem>,
-  needs_helpers: bool,
+  pub needs_helpers: bool,
   in_export_decl: bool,
   in_function_scope: bool,
   mark: Mark,
@@ -67,7 +48,23 @@ fn local_name_for_src(src: &JsWord) -> JsWord {
   format!("_{}", src.split('/').last().unwrap().to_camel_case()).into()
 }
 
-impl ESMFold {
+impl EsmToCjsReplacer {
+  pub fn new(unresolved_mark: Mark, versions: Option<Versions>) -> Self {
+    EsmToCjsReplacer {
+      imports: HashMap::new(),
+      require_names: HashMap::new(),
+      interops: HashSet::new(),
+      requires: vec![],
+      exports: vec![],
+      needs_helpers: false,
+      in_export_decl: false,
+      in_function_scope: false,
+      mark: Mark::fresh(Mark::root()),
+      unresolved_mark,
+      versions,
+    }
+  }
+
   fn get_require_name(&mut self, src: &JsWord, span: Span) -> Ident {
     if let Some((name, mark)) = self.require_names.get(src) {
       return Ident::new(name.clone(), span, SyntaxContext::empty().apply_mark(*mark));
@@ -280,7 +277,7 @@ macro_rules! modules_visit_fn {
   };
 }
 
-impl Fold for ESMFold {
+impl Fold for EsmToCjsReplacer {
   fn fold_module(&mut self, node: Module) -> Module {
     let mut is_esm = false;
     let mut needs_interop_flag = false;
@@ -646,4 +643,332 @@ impl Fold for ESMFold {
   }
 
   fold_member_expr_skip_prop! {}
+}
+
+#[cfg(test)]
+mod tests {
+  use std::str::FromStr;
+
+  use atlaspack_swc_runner::test_utils::{run_test_fold, RunVisitResult};
+  use indoc::indoc;
+  use swc_core::ecma::preset_env::{BrowserData, Version};
+
+  use super::*;
+
+  #[test]
+  fn transforms_imports_to_cjs() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_fold(
+      r#"
+        import { useEffect } from 'react';
+
+        useEffect(() => {});
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var _react = require("react");
+        0, _react.useEffect(()=>{});
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_imports_and_object_expressions_referencing_import_specifiers_to_cjs() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_fold(
+      r#"
+        import { a, b } from 'foo';
+
+        const obj = { a, b };
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var _foo = require("foo");
+        const obj = {
+            a: 0, _foo.a,
+            b: 0, _foo.b
+        };
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_imports_and_computed_object_keys_referencing_import_specifiers_to_cjs() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_fold(
+      r#"
+        import { a, b } from 'foo';
+
+        const obj = { [a]: 1, [b]: 2 };
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var _foo = require("foo");
+        const obj = {
+            [0, _foo.a]: 1,
+            [0, _foo.b]: 2
+        };
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_imports_and_object_values_referencing_import_specifiers_to_cjs() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_fold(
+      r#"
+        import { a, b } from 'foo';
+
+        const obj = { hello: a, world: b };
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var _foo = require("foo");
+        const obj = {
+            hello: 0, _foo.a,
+            world: 0, _foo.b
+        };
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_export_all_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_fold(
+      r#"
+        export * from './main';
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        var _main = require("./main");
+        parcelHelpers.exportAll(_main, exports);
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_default_export_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_fold(
+      r#"
+        export default function main() {}
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        parcelHelpers.export(exports, "default", ()=>main);
+        function main() {}
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_named_export_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_fold(
+      r#"
+        export function main() {}
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        parcelHelpers.export(exports, "main", ()=>main);
+        function main() {}
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_destructured_object_export_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_fold(
+      r#"
+        export const { main } = obj;
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        parcelHelpers.export(exports, "main", ()=>main);
+        const { main } = obj;
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
+
+  #[test]
+  fn does_not_transform_module_exports_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_fold(
+      r#"
+        module.exports = function main1() {}
+        module.exports.main = function main2() {}
+        exports = function main3() {}
+        exports.main = function main4() {}
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        module.exports = function main1() {};
+        module.exports.main = function main2() {};
+        exports = function main3() {};
+        exports.main = function main4() {};
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_imports_and_exports_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_fold(
+      r#"
+        import { useEffect } from 'react';
+        export function main() {
+          useEffect(() => {}, []);
+        }
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        parcelHelpers.export(exports, "main", ()=>main);
+        var _react = require("react");
+        function main() {
+            0, _react.useEffect(()=>{}, []);
+        }
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
+
+  #[test]
+  fn transforms_arrow_functions_to_use_helpers_when_unsupported() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_fold(
+      r#"
+        export const main1 = () => {};
+        const main2 = () => {};
+      "#,
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          Some(BrowserData {
+            chrome: Some(Version::from_str("1.0.0").unwrap()),
+            ..BrowserData::default()
+          }),
+        )
+      },
+    );
+
+    // TODO: Should main1 and main2 not include an arrow function?
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+        parcelHelpers.defineInteropFlag(exports);
+        parcelHelpers.export(exports, "main1", function() {
+            return main1;
+        });
+        const main1 = ()=>{};
+        const main2 = ()=>{};
+      "#}
+    );
+
+    assert!(visitor.needs_helpers);
+  }
 }

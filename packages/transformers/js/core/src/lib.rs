@@ -2,11 +2,11 @@ mod collect;
 mod constant_module;
 mod dependency_collector;
 mod env_replacer;
+mod esm_to_cjs_replacer;
 mod fs;
 mod global_replacer;
 mod hoist;
 mod magic_comments;
-mod modules;
 mod node_replacer;
 pub mod test_utils;
 mod typeof_replacer;
@@ -33,6 +33,7 @@ pub use dependency_collector::dependency_collector;
 pub use dependency_collector::DependencyDescriptor;
 pub use dependency_collector::DependencyKind;
 use env_replacer::*;
+use esm_to_cjs_replacer::EsmToCjsReplacer;
 use fs::inline_fs;
 use global_replacer::GlobalReplacer;
 use hoist::hoist;
@@ -41,7 +42,6 @@ use hoist::HoistResult;
 pub use hoist::ImportedSymbol;
 use indexmap::IndexMap;
 use magic_comments::MagicCommentsVisitor;
-use modules::esm2cjs;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
 use pathdiff::diff_paths;
@@ -566,8 +566,9 @@ pub fn transform(
                   result.symbol_result = Some(collect.into());
                 }
 
-                let (module, needs_helpers) = esm2cjs(module, unresolved_mark, versions);
-                result.needs_esm_helpers = needs_helpers;
+                let mut esm2cjs = EsmToCjsReplacer::new(unresolved_mark, versions);
+                let module = module.fold_with(&mut esm2cjs);
+                result.needs_esm_helpers = esm2cjs.needs_helpers;
                 module
               };
 

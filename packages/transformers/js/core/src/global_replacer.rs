@@ -211,11 +211,12 @@ impl GlobalReplacer<'_> {
 mod tests {
   use std::path::Path;
 
+  use atlaspack_swc_runner::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
+  use indoc::indoc;
   use swc_core::ecma::atoms::JsWord;
 
   use crate::global_replacer::GlobalReplacer;
   use crate::{DependencyDescriptor, DependencyKind};
-  use atlaspack_swc_runner::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
 
   fn make_global_replacer(
     run_test_context: RunTestContext,
@@ -239,15 +240,17 @@ mod tests {
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-console.log(process.test);
-    "#,
+        console.log(process.test);
+      "#,
       |run_test_context: RunTestContext| make_global_replacer(run_test_context, &mut items),
     );
+
     assert_eq!(
       output_code,
-      r#"var process = require("process");
-console.log(process.test);
-"#
+      indoc! {r#"
+        var process = require("process");
+        console.log(process.test);
+      "#}
     );
     assert_eq!(items.len(), 1);
     assert_eq!(items[0].kind, DependencyKind::Require);
@@ -260,18 +263,20 @@ console.log(process.test);
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-object[process.test];
-object[__dirname];
-    "#,
+        object[process.test];
+        object[__dirname];
+      "#,
       |run_test_context: RunTestContext| make_global_replacer(run_test_context, &mut items),
     );
+
     assert_eq!(
       output_code,
-      r#"var process = require("process");
-var __dirname = "..";
-object[process.test];
-object[__dirname];
-"#
+      indoc! {r#"
+        var process = require("process");
+        var __dirname = "..";
+        object[process.test];
+        object[__dirname];
+      "#}
     );
   }
 
@@ -281,16 +286,18 @@ object[__dirname];
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
-object.process.test;
-object.__filename;
-    "#,
+        object.process.test;
+        object.__filename;
+      "#,
       |run_test_context: RunTestContext| make_global_replacer(run_test_context, &mut items),
     );
+
     assert_eq!(
       output_code,
-      r#"object.process.test;
-object.__filename;
-"#
+      indoc! {r#"
+        object.process.test;
+        object.__filename;
+      "#}
     );
   }
 }
