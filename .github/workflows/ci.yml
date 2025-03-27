@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - monica/test-hanging-watcher
 
 concurrency:
   # This causes the workflow to be cancelled if a newer commit is pushed to the
@@ -82,9 +83,10 @@ jobs:
     timeout-minutes: 35
     strategy:
       matrix:
-        node: [18, 20]
+        node: [18]
         os: [macos-latest]
         version: [v3]
+        test: [1, 2, 3]
       # These tend to be quite flakey, so one failed instance shouldn't stop
       # others from potentially succeeding
       fail-fast: false

@@ -23,7 +23,7 @@ import {symlinkSync} from 'fs';
 const inputDir = path.join(__dirname, '/watcher');
 const distDir = path.join(inputDir, 'dist');
 
-describe('watcher', function () {
+describe.only('watcher', function () {
   let subscription;
   afterEach(async () => {
     console.log('afterEach start');
@@ -464,7 +464,10 @@ describe('watcher', function () {
     let indexPath = path.join(inputDir, 'index.js');
 
     console.log('one');
-    let b = bundler(indexPath, {inputFS: overlayFS, shouldPatchConsole: false});
+    let b = bundler(indexPath, {
+      inputFS: overlayFS,
+      shouldPatchConsole: false,
+    });
     console.log('two');
     let bundleGraph;
     subscription = await b.watch((err, event) => {
