@@ -122,15 +122,15 @@ impl AtlaspackNapi {
   #[napi]
   pub fn respond_to_fs_events(&self, env: Env, options: JsObject) -> napi::Result<JsObject> {
     let (deferred, promise) = env.create_deferred()?;
-    let options = env.from_js_value::<WatchEvents, _>(options)?;
+    // let options = env.from_js_value::<WatchEvents, _>(options)?;
 
     thread::spawn({
-      let atlaspack = self.atlaspack.clone();
+      // let atlaspack = self.atlaspack.clone();
       move || {
-        let atlaspack = match atlaspack.get() {
-          Ok(atlaspack) => atlaspack,
-          Err(error) => return deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
-        };
+        // let atlaspack = match atlaspack.get() {
+        //   Ok(atlaspack) => atlaspack,
+        //   Err(error) => return deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
+        // };
 
         let result = Ok(true); //atlaspack.respond_to_fs_events(options);
 
