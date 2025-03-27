@@ -273,7 +273,7 @@ export default class Atlaspack {
 
     if (this.rustAtlaspack) {
       // $FlowFixMe
-      await this.rustAtlaspack.shutdown();
+      // await this.rustAtlaspack.shutdown();
       this.rustAtlaspack = null;
     }
   }
