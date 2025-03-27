@@ -87,7 +87,9 @@ async function loadConfig(cachePath, options) {
 }
 
 function log(...msg) {
-  console.log(...msg);
+  if (process.env.LOG) {
+    console.log(...msg);
+  }
 }
 
 console.log('Worker started');

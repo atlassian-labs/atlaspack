@@ -28,6 +28,11 @@ type WorkerOpts = {|
 |};
 
 let WORKER_ID = 0;
+
+function log(...msg) {
+  console.log(...msg);
+}
+
 export default class Worker extends EventEmitter {
   +options: WorkerOpts;
   worker: WorkerImpl;
@@ -164,12 +169,6 @@ export default class Worker extends EventEmitter {
   }
 
   call(call: WorkerCall): void {
-    function log(...msg) {
-      if (process.env.LOG) {
-        console.log(...msg);
-      }
-    }
-
     if (this.stopped || this.isStopping) {
       return;
     }
@@ -195,6 +194,13 @@ export default class Worker extends EventEmitter {
 
   receive(message: WorkerMessage): void {
     if (this.stopped || this.isStopping) {
+      log(
+        'Worker received',
+        JSON.stringify(message),
+        'but did not send as stopped or stopping',
+        this.stopped,
+        this.isStopping,
+      );
       return;
     }
 
@@ -213,6 +219,7 @@ export default class Worker extends EventEmitter {
       }
 
       if (message.contentType === 'error') {
+        log('Worker should reject', JSON.stringify(message));
         call.reject(new ThrowableDiagnostic({diagnostic: message.content}));
       } else {
         call.resolve(message.content);

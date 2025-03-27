@@ -464,7 +464,10 @@ describe('watcher', function () {
     let indexPath = path.join(inputDir, 'index.js');
 
     console.log('one');
-    let b = bundler(indexPath, {inputFS: overlayFS, shouldPatchConsole: false});
+    let b = bundler(indexPath, {
+      inputFS: overlayFS,
+      shouldPatchConsole: false,
+    });
     console.log('two');
     let bundleGraph;
     subscription = await b.watch((err, event) => {

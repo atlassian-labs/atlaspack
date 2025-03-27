@@ -651,14 +651,21 @@ export default class WorkerFarm extends EventEmitter {
             reject,
             retries: 0,
           });
-        }).then(() => {
-          log('Worker', worker.id, 'callAllWorkers complete');
-        }),
+        })
+          .then(() => {
+            log('Worker', worker.id, 'callAllWorkers complete', method);
+          })
+          .catch((err) => {
+            log('Worker', worker.id, 'callAllWorkers failed', method, err);
+            throw err;
+          }),
       );
     }
 
+    log('Awaiting workers for', method);
     promises.push(this.localWorker[method](this.workerApi, ...args));
     await Promise.all(promises);
+    log('Awaited workers for', method);
   }
 
   async takeHeapSnapshot() {
