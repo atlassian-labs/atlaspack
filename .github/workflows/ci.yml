@@ -86,7 +86,7 @@ jobs:
         node: [18]
         os: [macos-latest]
         version: [v3]
-        test: [1, 2, 3]
+        test: [1, 2, 3, 4]
       # These tend to be quite flakey, so one failed instance shouldn't stop
       # others from potentially succeeding
       fail-fast: false

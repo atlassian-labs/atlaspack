@@ -335,11 +335,13 @@ export default class Atlaspack {
     cb?: (err: ?Error, buildEvent?: BuildEvent) => mixed,
   ): Promise<AsyncSubscription> {
     if (!this.#initialized) {
+      log('watcher: init');
       await this._init();
     }
 
     let watchEventsDisposable;
     if (cb) {
+      log('watcher: add listener');
       watchEventsDisposable = this.#watchEvents.addListener(
         ({error, buildEvent}) => cb(error, buildEvent),
       );
@@ -347,6 +349,7 @@ export default class Atlaspack {
 
     log('watcherCount', this.#watcherCount);
     if (this.#watcherCount === 0) {
+      log('watcher init');
       this.#watcherSubscription = await this._getWatcherSubscription();
       await this.#reporterRunner.report({type: 'watchStart'});
 
