@@ -99,7 +99,7 @@ export default class WorkerFarm extends EventEmitter {
       ),
       forcedKillTime: 500,
       warmWorkers: false,
-      useLocalWorker: false, // TODO: setting this to false makes some tests fail, figure out why
+      useLocalWorker: true, // TODO: setting this to false makes some tests fail, figure out why
       backend: detectBackend(),
       ...farmOptions,
     };

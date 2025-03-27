@@ -360,11 +360,13 @@ export default class Atlaspack {
 
     let unsubscribePromise;
     const unsubscribe = async () => {
+      log('[start] unsubscribe');
       if (watchEventsDisposable) {
         watchEventsDisposable.dispose();
       }
 
       this.#watcherCount--;
+      log('watcherCount', this.#watcherCount);
       if (this.#watcherCount === 0) {
         await nullthrows(this.#watcherSubscription).unsubscribe();
         this.#watcherSubscription = null;
@@ -373,6 +375,7 @@ export default class Atlaspack {
         await this.#watchQueue.run();
         await this._end();
       }
+      log('[end] unsubscribe');
     };
 
     return {
