@@ -92,7 +92,7 @@ function log(...msg) {
 
 console.log('Worker started');
 export function clearWorkerBuildCaches() {
-  log('[start] clearWorkerBuildCaches', threadId);
+  // log('[start] clearWorkerBuildCaches', threadId);
   try {
     configCache.clear();
     clearBuildCaches();
@@ -100,7 +100,7 @@ export function clearWorkerBuildCaches() {
     log('[error] clearWorkerBuildCaches', threadId, e);
     throw e;
   }
-  log('[end] clearWorkerBuildCaches', threadId);
+  // log('[end] clearWorkerBuildCaches', threadId);
 }
 
 export async function runTransform(

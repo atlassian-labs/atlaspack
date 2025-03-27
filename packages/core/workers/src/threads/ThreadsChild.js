@@ -29,7 +29,12 @@ export default class ThreadsChild implements ChildImpl {
 
     this.onMessage = onMessage;
     this.onExit = onExit;
-    parentPort.on('message', (data) => this.handleMessage(data));
+    parentPort.on('message', (data) => {
+      if (data.method === 'clearWorkerBuildCaches') {
+        console.log('ThreadsChild on.message', data);
+      }
+      this.handleMessage(data);
+    });
     parentPort.on('close', this.onExit);
   }
 
