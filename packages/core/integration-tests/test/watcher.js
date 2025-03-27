@@ -36,6 +36,7 @@ describe('watcher', function () {
   });
 
   it('should rebuild on source file change', async function () {
+    process.env.LOG = 'true';
     await outputFS.mkdirp(inputDir);
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
@@ -79,7 +80,6 @@ describe('watcher', function () {
       {encoding: 'utf8'},
     );
     console.log('one');
-    process.env.LOG = 'true';
     let b = bundler(path.join(inputDir, '/index.js'), {
       inputFS: overlayFS,
       shouldPatchConsole: false,
