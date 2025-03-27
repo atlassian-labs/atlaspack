@@ -93,6 +93,7 @@ describe('watcher', function () {
 
     while (!buildEvent) {
       console.log('No buildEvent, sleeping for 100ms...');
+      console.log(require('process').report.getReport());
       await sleep(100);
     }
 
@@ -180,6 +181,7 @@ describe('watcher', function () {
 
     while (!buildEvent) {
       console.log('No buildEvent, sleeping for 100ms...');
+      console.log(require('process').report.getReport());
       await sleep(100);
     }
     // let buildEvent = await getNextBuild(b);
