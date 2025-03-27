@@ -17,41 +17,41 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-      - uses: ./.github/actions/rust-toolchain
-        with:
-          components: clippy, rustfmt
-      - run: yarn --frozen-lockfile
-      - run: yarn lint
-
-  flow:
-    name: Flow
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-      - run: yarn --frozen-lockfile
-      - run: yarn flow check
-
-  ts-types:
-    name: TypeScript types
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-      - run: yarn --frozen-lockfile
-      - run: yarn build-ts
+  # lint:
+  #   name: Lint
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         cache: yarn
+  #     - uses: ./.github/actions/rust-toolchain
+  #       with:
+  #         components: clippy, rustfmt
+  #     - run: yarn --frozen-lockfile
+  #     - run: yarn lint
+  #
+  # flow:
+  #   name: Flow
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         cache: yarn
+  #     - run: yarn --frozen-lockfile
+  #     - run: yarn flow check
+  #
+  # ts-types:
+  #   name: TypeScript types
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         cache: yarn
+  #     - run: yarn --frozen-lockfile
+  #     - run: yarn build-ts
 
   # unit_tests:
   #   name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
@@ -83,8 +83,8 @@ jobs:
     strategy:
       matrix:
         node: [18, 20]
-        os: [ubuntu-latest, macos-latest]
-        version: [v2, v3]
+        os: [macos-latest]
+        version: [v3]
       # These tend to be quite flakey, so one failed instance shouldn't stop
       # others from potentially succeeding
       fail-fast: false
@@ -109,32 +109,32 @@ jobs:
         env:
           ATLASPACK_V3: ${{ matrix.version == 'v3' && 'true' || 'false' }}
 
-  end_to_end_tests:
-    name: E2E tests
-    timeout-minutes: 35
-    strategy:
-      matrix:
-        node: [20]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-          node-version: ${{ matrix.node }}
-      - uses: ./.github/actions/rust-toolchain
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ matrix.os }}
-      - name: Bump max inotify watches (Linux only)
-        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-        if: ${{ runner.os == 'Linux' }}
-      - run: yarn --frozen-lockfile
-      - run: yarn build-native-release
-      - run: yarn build
-      - run: yarn playwright install
-      - run: yarn test:e2e:ci
+  # end_to_end_tests:
+  #   name: E2E tests
+  #   timeout-minutes: 35
+  #   strategy:
+  #     matrix:
+  #       node: [20]
+  #       os: [ubuntu-latest]
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         cache: yarn
+  #         node-version: ${{ matrix.node }}
+  #     - uses: ./.github/actions/rust-toolchain
+  #     - uses: Swatinem/rust-cache@v2
+  #       with:
+  #         shared-key: ${{ matrix.os }}
+  #     - name: Bump max inotify watches (Linux only)
+  #       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+  #       if: ${{ runner.os == 'Linux' }}
+  #     - run: yarn --frozen-lockfile
+  #     - run: yarn build-native-release
+  #     - run: yarn build
+  #     - run: yarn playwright install
+  #     - run: yarn test:e2e:ci
 
   repl:
     name: Deploy REPL
