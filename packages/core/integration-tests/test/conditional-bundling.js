@@ -795,7 +795,7 @@ describe('conditional bundling', function () {
     });
   });
 
-  it.only(`should use load nested bundles when in an async bundle`, async function () {
+  it(`should use load nested bundles when in an async bundle`, async function () {
     const dir = path.join(__dirname, 'import-cond-false-dynamic');
     await overlayFS.mkdirp(dir);
 
