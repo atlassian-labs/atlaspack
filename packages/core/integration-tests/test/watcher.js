@@ -24,17 +24,6 @@ const inputDir = path.join(__dirname, '/watcher');
 const distDir = path.join(inputDir, 'dist');
 
 describe('watcher', function () {
-  let subscription;
-  afterEach(async () => {
-    console.log('afterEach start');
-    if (subscription) {
-      console.log('afterEach we have a subscription');
-      await subscription.unsubscribe();
-    }
-    subscription = null;
-    console.log('afterEach end');
-  });
-
   it('should rebuild on source file change', async function () {
     process.env.LOG = 'true';
     await outputFS.mkdirp(inputDir);
@@ -43,11 +32,12 @@ describe('watcher', function () {
       'module.exports = "hello"',
       {encoding: 'utf8'},
     );
+
     let b = bundler(path.join(inputDir, '/index.js'), {
       inputFS: overlayFS,
       shouldPatchConsole: false,
     });
-    subscription = await b.watch();
+
     let buildEvent = await getNextBuild(b);
     if (!buildEvent.bundleGraph) return assert.fail();
 
@@ -63,50 +53,37 @@ describe('watcher', function () {
     if (!buildEvent.bundleGraph) return assert.fail();
 
     output = await run(buildEvent.bundleGraph);
-    // assert.equal(output, 'something else');
+    assert.equal(output, 'something else');
   });
 
   it('should rebuild on a source file change after a failed transformation', async () => {
-    console.log(
-      'should rebuild on a source file change after a failed transformation',
-    );
-    let interval = setInterval(() => {
-      console.log('Interval');
-    }, 1000);
     await outputFS.mkdirp(inputDir);
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'syntax\\error',
       {encoding: 'utf8'},
     );
-    console.log('one');
+
     let b = bundler(path.join(inputDir, '/index.js'), {
       inputFS: overlayFS,
       shouldPatchConsole: false,
     });
-    console.log('two');
-    subscription = await b.watch((...results) => {
-      console.log('Watch callback', ...results);
-    });
-    console.log('three');
+
     let buildEvent = await getNextBuild(b);
-    console.log('four');
+
     assert.equal(buildEvent.type, 'buildFailure');
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'module.exports = "hello"',
       {encoding: 'utf8'},
     );
-    console.log('five');
+
     buildEvent = await getNextBuild(b);
-    console.log('six');
     if (!buildEvent.bundleGraph) return assert.fail();
+
     let output = await run(buildEvent.bundleGraph);
 
-    console.log('seven');
     assert.equal(output, 'hello');
-    process.env.LOG = undefined;
-    clearInterval(interval);
   });
 
   it.v2('should rebuild on a config file change', async function () {
@@ -118,6 +95,7 @@ describe('watcher', function () {
       path.dirname(require.resolve('@atlaspack/config-default')),
       path.join(inDir, 'node_modules', '@atlaspack', 'config-default'),
     );
+
     let copyPath = path.join(inDir, 'configCopy');
     let configPath = path.join(inDir, '.parcelrc');
     let b = bundler(path.join(inDir, 'index.js'), {
@@ -129,8 +107,9 @@ describe('watcher', function () {
       },
       shouldPatchConsole: false,
     });
-    subscription = await b.watch();
+
     await getNextBuild(b);
+
     let distFile = await outputFS.readFile(
       path.join(outDir, 'index.js'),
       'utf8',
@@ -143,10 +122,8 @@ describe('watcher', function () {
   });
 
   it('should rebuild properly when a dependency is removed', async function () {
-    console.log('should rebuild properly when a dependency is removed');
     await ncp(path.join(__dirname, 'integration/babel-default'), inputDir);
 
-    console.log('one');
     let b = bundler(path.join(inputDir, 'index.js'), {
       inputFS: overlayFS,
       targets: {
@@ -160,28 +137,23 @@ describe('watcher', function () {
       shouldPatchConsole: false,
     });
 
-    console.log('two');
-    subscription = await b.watch();
-    console.log('three');
     let buildEvent = await getNextBuild(b);
-    console.log('four');
     assert.equal(buildEvent.type, 'buildSuccess');
+
     let distFile = await outputFS.readFile(
       path.join(distDir, 'index.js'),
       'utf8',
     );
+
     assert(distFile.includes('Foo'));
-    console.log('five');
     await outputFS.writeFile(
       path.join(inputDir, 'index.js'),
       'console.log("no more dependencies")',
     );
-    console.log('six');
+
     await getNextBuild(b);
-    console.log('seven');
     distFile = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
-    console.log('eight');
-    // assert(!distFile.includes('Foo'));
+    assert(!distFile.includes('Foo'));
   });
 
   it.skip('should re-generate bundle tree when files change', async function () {
@@ -458,29 +430,21 @@ describe('watcher', function () {
   });
 
   it('should add and remove necessary runtimes to bundles', async () => {
-    console.log('should add and remove necessary runtimes to bundles');
     await ncp(path.join(__dirname, 'integration/dynamic'), inputDir);
 
     let indexPath = path.join(inputDir, 'index.js');
 
-    console.log('one');
     let b = bundler(indexPath, {
       inputFS: overlayFS,
       shouldPatchConsole: false,
     });
-    console.log('two');
-    let bundleGraph;
-    subscription = await b.watch((err, event) => {
-      if (!event) return assert.fail();
-      assert(event.type === 'buildSuccess');
-      bundleGraph = event.bundleGraph;
-    });
 
-    console.log('three');
-    await getNextBuild(b);
+    let buildEvent = await getNextBuild(b);
+    assert(buildEvent.type === 'buildSuccess');
 
-    console.log('four');
+    let bundleGraph = buildEvent.bundleGraph;
     if (!bundleGraph) return assert.fail();
+
     assertBundles(bundleGraph, [
       {
         name: 'index.js',
@@ -495,34 +459,36 @@ describe('watcher', function () {
       (await outputFS.readFile(indexPath, 'utf8')) +
         "\nimport('./other.js');\n",
     );
-    console.log('five');
 
-    await getNextBuild(b);
-    console.log('six');
+    buildEvent = await getNextBuild(b);
+    assert(buildEvent.type === 'buildSuccess');
+
+    bundleGraph = buildEvent.bundleGraph;
     if (!bundleGraph) return assert.fail();
 
-    // assertBundles(bundleGraph, [
-    //   {
-    //     name: 'index.js',
-    //     assets: ['index.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
-    //   },
-    //   {assets: ['local.js']},
-    //   {assets: ['other.js']},
-    // ]);
+    assertBundles(bundleGraph, [
+      {
+        name: 'index.js',
+        assets: ['index.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
+      },
+      {assets: ['local.js']},
+      {assets: ['other.js']},
+    ]);
 
     await outputFS.writeFile(indexPath, '');
 
-    console.log('seven');
-    await getNextBuild(b);
-    console.log('eight');
+    buildEvent = await getNextBuild(b);
+    assert(buildEvent.type === 'buildSuccess');
+
+    bundleGraph = buildEvent.bundleGraph;
     if (!bundleGraph) return assert.fail();
 
-    // assertBundles(bundleGraph, [
-    //   {
-    //     name: 'index.js',
-    //     assets: ['index.js'],
-    //   },
-    // ]);
+    assertBundles(bundleGraph, [
+      {
+        name: 'index.js',
+        assets: ['index.js'],
+      },
+    ]);
   });
 
   it.v2('should rebuild if a missing file is added', async function () {
@@ -534,8 +500,8 @@ describe('watcher', function () {
     );
 
     let b = bundler(path.join(inputDir, 'index.js'), {inputFS: overlayFS});
-    subscription = await b.watch();
     let buildEvent = await getNextBuild(b);
+
     assert.equal(buildEvent.type, 'buildFailure');
 
     await outputFS.writeFile(

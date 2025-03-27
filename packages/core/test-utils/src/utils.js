@@ -243,46 +243,29 @@ export async function bundle(
   return (await bundler(entries, opts).run()).bundleGraph;
 }
 
-function log(...msg) {
-  if (process.env.LOG) {
-    console.log(...msg);
-  }
-}
-
 export function getNextBuild(b: Atlaspack): Promise<BuildEvent> {
-  log('next build: start');
   return new Promise((resolve, reject) => {
     let subscriptionPromise = b
       .watch((err, buildEvent) => {
-        log('next build: watch');
         if (err) {
-          log('next build: err 1', err);
           reject(err);
           return;
         }
 
         subscriptionPromise
           .then((subscription) => {
-            log('next build: succeed 1');
             // If the watch callback was reached, subscription must have been successful
             invariant(subscription != null);
             return subscription.unsubscribe();
           })
           .then(() => {
-            log('next build: succeed 2');
             // If the build promise hasn't been rejected, buildEvent must exist
             invariant(buildEvent != null);
             resolve(buildEvent);
           })
-          .catch((err) => {
-            log('next build: err 2', err);
-            reject(err);
-          });
+          .catch(reject);
       })
-      .catch((err) => {
-        log('next build: err 3', err);
-        reject(err);
-      });
+      .catch(reject);
   });
 }
 
