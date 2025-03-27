@@ -382,6 +382,8 @@ export default class Atlaspack {
       unsubscribe() {
         if (unsubscribePromise == null) {
           unsubscribePromise = unsubscribe();
+        } else {
+          log('Unsubscribe skipped');
         }
 
         return unsubscribePromise;

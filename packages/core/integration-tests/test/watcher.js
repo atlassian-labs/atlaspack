@@ -28,6 +28,7 @@ describe('watcher', function () {
   afterEach(async () => {
     console.log('afterEach start');
     if (subscription) {
+      console.log('afterEach we have a subscription');
       await subscription.unsubscribe();
     }
     subscription = null;
