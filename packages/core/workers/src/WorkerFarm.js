@@ -68,6 +68,12 @@ const DEFAULT_MAX_CONCURRENT_CALLS: number = 30;
  * workerPath should always be defined inside farmOptions
  */
 
+function log(...msg) {
+  if (process.env.LOG) {
+    console.log(...msg);
+  }
+}
+
 export default class WorkerFarm extends EventEmitter {
   callQueue: Array<WorkerCall> = [];
   ending: boolean = false;
@@ -594,6 +600,7 @@ export default class WorkerFarm extends EventEmitter {
   }
 
   async healthCheck() {
+    log('[start] healthCheck');
     let promises = [];
     for (let worker of this.workers.values()) {
       promises.push(
@@ -624,14 +631,10 @@ export default class WorkerFarm extends EventEmitter {
     }
 
     await Promise.all(promises);
+    log('[end] healthCheck');
   }
 
   async callAllWorkers(method: string, args: Array<any>) {
-    function log(...msg) {
-      if (process.env.LOG) {
-        console.log(...msg);
-      }
-    }
     let promises = [];
     for (let worker of this.workers.values()) {
       promises.push(
