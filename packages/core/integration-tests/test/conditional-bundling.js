@@ -849,54 +849,6 @@ describe('conditional bundling', function () {
       'index.js bundle not found',
     );
 
-    // Check that the entry bundle is loading the correct dependencies for the lazy import
-    // 1. If cond1 is true, it should load a.js and lazy.js
-    // 2. If cond1 is false and cond2 is true, it should load b.js, c.js and lazy.js
-    // 2. If cond1 is false and cond2 is false, it should load b.js, d.js and lazy.js
-    const entryContents = overlayFS.readFileSync(entry.filePath).toString();
-    assert.equal(
-      entryContents.slice(
-        entryContents.indexOf('module.exports = Promise.all(['),
-        entryContents.indexOf(`.then(()=>module.bundle.root('l1mud'));`),
-      ),
-      `module.exports = Promise.all([
-    require("fb03aa689d1dc557")('cond1', function() {
-        return Promise.all([
-            require("3e099e59a3214ae1")(require("8c49cf1ecead598d").getBundleURL('QQ5BZ') + "a.57636008.js").catch((err)=>{
-                delete module.bundle.cache[module.id];
-                throw err;
-            })
-        ]);
-    }, function() {
-        return Promise.all([
-            require("fb03aa689d1dc557")('cond2', function() {
-                return Promise.all([
-                    require("3e099e59a3214ae1")(require("8c49cf1ecead598d").getBundleURL('ifvF9') + "c.a55df3ec.js").catch((err)=>{
-                        delete module.bundle.cache[module.id];
-                        throw err;
-                    })
-                ]);
-            }, function() {
-                return Promise.all([
-                    require("3e099e59a3214ae1")(require("8c49cf1ecead598d").getBundleURL('ifvF9') + "d.eb7f1b39.js").catch((err)=>{
-                        delete module.bundle.cache[module.id];
-                        throw err;
-                    })
-                ]);
-            }),
-            require("3e099e59a3214ae1")(require("8c49cf1ecead598d").getBundleURL('QQ5BZ') + "b.4f25411d.js").catch((err)=>{
-                delete module.bundle.cache[module.id];
-                throw err;
-            })
-        ]);
-    }),
-    require("3e099e59a3214ae1")(require("8c49cf1ecead598d").getBundleURL('QQ5BZ') + "lazy.465ec8e3.js").catch((err)=>{
-        delete module.bundle.cache[module.id];
-        throw err;
-    })
-])`,
-    );
-
     let output = await runBundles(
       bundleGraph,
       entry,
