@@ -53,8 +53,33 @@ jobs:
       - run: yarn --frozen-lockfile
       - run: yarn build-ts
 
+  build_native:
+    name: Build native
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: yarn
+          node-version: 20
+      - uses: ./.github/actions/rust-toolchain
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}/cache-target/${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}/cache-target/${{ github.ref }}
+            ${{ runner.os }}/cache-target
+      - run: yarn --frozen-lockfile
+      - run: yarn build-native-release
+
   unit_tests:
     name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
+    needs: [build_native]
     strategy:
       matrix:
         node: [18, 20]
@@ -67,9 +92,6 @@ jobs:
           cache: yarn
           node-version: ${{ matrix.node }}
       - uses: ./.github/actions/rust-toolchain
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ matrix.os }}
       - name: Cache Rust
         uses: actions/cache@v4
         with:
@@ -87,6 +109,7 @@ jobs:
 
   integration_tests:
     name: Integration tests (${{ matrix.version == 'v3' && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
+    needs: [build_native]
     timeout-minutes: 35
     strategy:
       matrix:
@@ -104,9 +127,6 @@ jobs:
           cache: yarn
           node-version: ${{ matrix.node }}
       - uses: ./.github/actions/rust-toolchain
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ matrix.os }}
       - name: Cache Rust
         uses: actions/cache@v4
         with:
