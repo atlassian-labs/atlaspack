@@ -593,6 +593,39 @@ export default class WorkerFarm extends EventEmitter {
     });
   }
 
+  async healthCheck() {
+    let promises = [];
+    for (let worker of this.workers.values()) {
+      promises.push(
+        new Promise((res, rej) => {
+          let timeout = setTimeout(() => {
+            console.error(
+              'Health check timeout exceeded for worker',
+              worker.id,
+            );
+            rej();
+          }, 5000);
+
+          worker.call({
+            method: 'healthCheck',
+            args: [],
+            resolve: () => {
+              clearTimeout(timeout);
+              res();
+            },
+            reject: () => {
+              clearTimeout(timeout);
+              rej();
+            },
+            retries: 0,
+          });
+        }),
+      );
+    }
+
+    await Promise.all(promises);
+  }
+
   async callAllWorkers(method: string, args: Array<any>) {
     function log(...msg) {
       if (process.env.LOG) {

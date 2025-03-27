@@ -617,6 +617,7 @@ export default class Atlaspack {
    * break things unexpectedly.
    */
   async clearBuildCaches(): Promise<void> {
+    await this.#farm?.healthCheck();
     await this.#farm?.callAllWorkers('clearWorkerBuildCaches', []);
   }
 

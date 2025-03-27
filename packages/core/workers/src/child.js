@@ -200,6 +200,8 @@ export class Child {
       this.sharedReferencesByValue.delete(value);
       this.sharedReferences.delete(ref);
       result = responseFromContent(null);
+    } else if (method === 'healthCheck') {
+      result = responseFromContent('healthy');
     } else {
       try {
         result = responseFromContent(
