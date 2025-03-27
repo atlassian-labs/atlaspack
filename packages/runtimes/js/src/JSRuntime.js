@@ -1,5 +1,4 @@
 // @flow strict-local
-import logger from '@atlaspack/logger';
 import type {
   BundleGraph,
   BundleGroup,
@@ -579,7 +578,6 @@ function getLoaderRuntime({
 
   if (getFeatureFlag('conditionalBundlingApi')) {
     if (getFeatureFlag('conditionalBundlingNestedRuntime')) {
-      logger.info({message: 'Using nested runtime conditional bundling'});
       let conditionalDependencies = externalBundles.flatMap(
         (to) => getDependencies(to).conditionalDependencies,
       );
