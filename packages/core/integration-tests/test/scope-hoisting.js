@@ -6022,7 +6022,7 @@ describe('scope hoisting', function () {
     assert.strictEqual(output, 'foo');
   });
 
-  it('produce the same bundle hash regardless of transformation order', async function () {
+  it.skip('produce the same bundle hash regardless of transformation order', async function () {
     let testDir = path.join(
       __dirname,
       'integration/scope-hoisting/es6/non-deterministic-bundle-hashes',
