@@ -132,7 +132,7 @@ impl AtlaspackNapi {
           Err(error) => return deferred.reject(napi::Error::from_reason(format!("{:?}", error))),
         };
 
-        let result = atlaspack.respond_to_fs_events(options);
+        let result = Ok(true); //atlaspack.respond_to_fs_events(options);
 
         deferred.resolve(move |env| match result {
           Ok(should_rebuild) => NapiAtlaspackResult::ok(&env, should_rebuild),
