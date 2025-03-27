@@ -49,6 +49,13 @@ jobs:
         if: ${{ inputs.type != 'latest' }}
         with:
           shared-key: ${{ matrix.name }}
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}/cache-target
+          restore-keys: |
+            ${{ runner.os }}/cache-target
       - name: Remove CommandLineTools SDKs
         if: ${{ matrix.target == 'aarch64-apple-darwin' }}
         run: sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*;
@@ -87,6 +94,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Rust
         uses: ./.github/actions/rust-toolchain
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}/cache-target
+          restore-keys: |
+            ${{ runner.os }}/cache-target
       - uses: bahmutov/npm-install@v1.8.35
       - name: Build native packages
         run: yarn build-native-${{ inputs.profile }}
@@ -146,6 +160,13 @@ jobs:
         if: ${{ inputs.type != 'latest' }}
         with:
           shared-key: ${{ matrix.target }}
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}/cache-target
+          restore-keys: |
+            ${{ runner.os }}/cache-target
       - name: Build native packages
         run: yarn build-native-${{ inputs.profile }}
         env:

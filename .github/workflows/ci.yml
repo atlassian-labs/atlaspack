@@ -70,6 +70,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ matrix.os }}
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}/cache-target/${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}/cache-target/${{ github.ref }}
+            ${{ runner.os }}/cache-target
       - name: Bump max inotify watches (Linux only)
         if: ${{ runner.os == 'Linux' }}
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
@@ -99,6 +107,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ matrix.os }}
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}/cache-target/${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}/cache-target/${{ github.ref }}
+            ${{ runner.os }}/cache-target
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
@@ -127,6 +143,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ matrix.os }}
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}/cache-target/${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}/cache-target/${{ github.ref }}
+            ${{ runner.os }}/cache-target
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
