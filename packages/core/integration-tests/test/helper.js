@@ -1,20 +1,22 @@
 // @flow strict-local
 
+import path from 'path';
 import {globSync} from '@atlaspack/utils';
 import {NodeFS} from '@atlaspack/fs';
-import rimraf from 'rimraf';
+import fs from 'fs';
 
 afterEach(() => {
-  const fs = new NodeFS();
+  const nodeFS = new NodeFS();
 
-  globSync(
-    'packages/core/integration-tests/**/.{parcel,atlaspack}-cache',
-    fs,
-  ).forEach((dir) => {
-    rimraf.sync(dir);
+  globSync(path.join(__dirname, '**/.parcel-cache'), nodeFS, {
+    onlyDirectories: true,
+  }).forEach((dir) => {
+    fs.rmSync(dir, {recursive: true});
   });
 
-  globSync('tmp/**/.{parcel,atlaspack}-cache', fs).forEach((dir) => {
-    rimraf.sync(dir);
+  globSync(path.join(__dirname, '../../../tmp/**/.parcel-cache'), nodeFS, {
+    onlyDirectories: true,
+  }).forEach((dir) => {
+    fs.rmSync(dir, {recursive: true});
   });
 });
