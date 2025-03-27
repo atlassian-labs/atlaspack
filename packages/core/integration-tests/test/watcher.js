@@ -85,11 +85,19 @@ describe('watcher', function () {
       shouldPatchConsole: false,
     });
     console.log('two');
-    subscription = await b.watch((...results) => {
-      console.log('Watch callback', ...results);
+    let buildEvent;
+    subscription = await b.watch((err, be) => {
+      console.log('Watch callback', err, be);
+      buildEvent = be;
     });
+
+    while (!buildEvent) {
+      console.log('No buildEvent, sleeping for 100ms...');
+      await sleep(100);
+    }
+
     console.log('three');
-    let buildEvent = await getNextBuild(b);
+    // let buildEvent = await getNextBuild(b);
     console.log('four');
     assert.equal(buildEvent.type, 'buildFailure');
     await outputFS.writeFile(
@@ -163,7 +171,18 @@ describe('watcher', function () {
     console.log('two');
     subscription = await b.watch();
     console.log('three');
-    let buildEvent = await getNextBuild(b);
+
+    let buildEvent;
+    subscription = await b.watch((err, be) => {
+      console.log('Watch callback', err, be);
+      buildEvent = be;
+    });
+
+    while (!buildEvent) {
+      console.log('No buildEvent, sleeping for 100ms...');
+      await sleep(100);
+    }
+    // let buildEvent = await getNextBuild(b);
     console.log('four');
     assert.equal(buildEvent.type, 'buildSuccess');
     let distFile = await outputFS.readFile(
