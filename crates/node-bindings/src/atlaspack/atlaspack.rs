@@ -12,6 +12,7 @@ use atlaspack_napi_helpers::js_callable::JsCallable;
 use atlaspack_napi_helpers::JsTransferable;
 use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::LMDB;
+use napi::bindgen_prelude::External;
 use napi::bindgen_prelude::FromNapiValue;
 use napi::Env;
 use napi::JsObject;
@@ -37,11 +38,7 @@ pub struct AtlaspackNapiOptions {
   pub napi_worker_pool: JsObject,
 }
 
-// #[napi]
-pub type AtlaspackNapi = JsTransferable<Arc<Mutex<Atlaspack>>>;
-
-// Refer to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length
-const MAX_STRING_LENGTH: usize = 268435440;
+pub type AtlaspackNapi = External<Arc<Mutex<Atlaspack>>>;
 
 #[tracing::instrument(level = "info", skip_all)]
 #[napi]
@@ -108,7 +105,7 @@ pub fn atlaspack_napi_create(
 
       deferred.resolve(move |env| match atlaspack {
         Ok(atlaspack) => {
-          NapiAtlaspackResult::ok(&env, JsTransferable::new(Arc::new(Mutex::new(atlaspack))))
+          NapiAtlaspackResult::ok(&env, External::new(Arc::new(Mutex::new(atlaspack))))
         }
         Err(error) => {
           let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
@@ -130,7 +127,7 @@ pub fn atlaspack_napi_build_asset_graph(
   let (deferred, promise) = env.create_deferred()?;
 
   thread::spawn({
-    let atlaspack = atlaspack_napi.get()?.clone();
+    let atlaspack = atlaspack_napi.clone();
     move || {
       let atlaspack = atlaspack.lock();
       let result = atlaspack.build_asset_graph();
@@ -164,7 +161,7 @@ pub fn atlaspack_napi_respond_to_fs_events(
   let options = env.from_js_value::<WatchEvents, _>(options)?;
 
   thread::spawn({
-    let atlaspack = atlaspack_napi.get()?.clone();
+    let atlaspack = atlaspack_napi.clone();
     move || {
       let atlaspack = atlaspack.lock();
       let result = atlaspack.respond_to_fs_events(options);
