@@ -361,12 +361,12 @@ export default class Atlaspack {
       this.#watcherCount--;
       log('watcherCount', this.#watcherCount);
       if (this.#watcherCount === 0) {
+        await this._end();
         this.#watchAbortController.abort();
         await nullthrows(this.#watcherSubscription).unsubscribe();
         this.#watcherSubscription = null;
         await this.#reporterRunner.report({type: 'watchEnd'});
         // await this.#watchQueue.run();
-        await this._end();
       }
       log('[end] unsubscribe');
     };

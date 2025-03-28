@@ -186,8 +186,10 @@ export default class Worker extends EventEmitter {
     };
 
     if (this.ready || call.skipReadyCheck === true) {
+      log('call msg', msg);
       this.send(msg);
     } else {
+      log('wait for ready, then call msg', msg);
       this.once('ready', () => this.send(msg));
     }
   }
