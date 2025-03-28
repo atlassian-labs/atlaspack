@@ -59,7 +59,7 @@
     "@atlaspack/transformer-typescript-types": "2.13.1",
     "@atlaspack/transformer-webmanifest": "2.13.1",
     "@atlaspack/transformer-worklet": "2.13.1",
-    "@atlaspack/transformer-xml": "3.0.1",
+    "@atlaspack/transformer-xml": "2.13.1",
     "@atlaspack/transformer-yaml": "2.13.1"
   },
   "peerDependencies": {
