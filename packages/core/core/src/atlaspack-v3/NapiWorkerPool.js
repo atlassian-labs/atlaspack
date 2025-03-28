@@ -15,6 +15,12 @@ export type NapiWorkerPoolOptions = {|
   workerCount?: number,
 |};
 
+function log(...msg) {
+  if (process.env.LOG) {
+    console.log(...msg);
+  }
+}
+
 export class NapiWorkerPool implements INapiWorkerPool {
   #workers: Worker[];
   #napiWorkers: Array<Promise<Transferable>>;
@@ -41,8 +47,14 @@ export class NapiWorkerPool implements INapiWorkerPool {
     return this.#workerCount;
   }
 
-  getWorkers(): Promise<Array<Transferable>> {
-    return Promise.all(this.#napiWorkers);
+  async getWorkers(): Promise<Array<Transferable>> {
+    log('[start] NapiWorkerPool.getWorkers()');
+
+    const workers = await Promise.all(this.#napiWorkers);
+
+    log('[end] NapiWorkerPool.getWorkers()');
+
+    return workers;
   }
 
   shutdown(): void {
