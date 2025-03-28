@@ -2,18 +2,20 @@ import type {PluginObj, NodePath, types as BabelTypes} from '@babel/core';
 import {declare} from '@babel/helper-plugin-utils';
 
 interface Opts {
-  // Deprecated syntax, use "node" instead
+  /** @deprecated Use "node" instead */
   server?: boolean;
-  // Use node safe import cond syntax
+  /** Use node safe import cond syntax */
   node?: boolean;
 }
 
 interface State {
+  /** Plugin options */
   opts: Opts;
-  importNodes?: any[]; // Deprecated: Statement types didn't work so using any
-  // Set of identifier names that need to be mutated after import was transformed
+  /** @deprecated Statement types didn't work so using any */
+  importNodes?: any[];
+  /** Set of identifier names that need to be mutated after import was transformed */
   conditionalImportIdentifiers?: Set<string>;
-  // Set of identifiers that have been visited in the exit pass, to avoid adding the load property multiple times
+  /** Set of identifiers that have been visited in the exit pass, to avoid adding the load property multiple times */
   visitedIdentifiers?: Set<BabelTypes.Identifier>;
 }
 
@@ -334,7 +336,7 @@ export default declare((api): PluginObj<State> => {
         },
         exit(path, state) {
           if (state.importNodes) {
-            // If there's an import
+            // If there's an import node, add it to the top of the body
             path.unshiftContainer('body', state.importNodes);
           }
         },

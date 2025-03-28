@@ -2,4 +2,4 @@
 '@atlaspack/babel-plugin-transform-contextual-imports': patch
 ---
 
-Bring back server config option to @atlaspack/babel-plugin-transform-contextual-imports
+Bring back server config option to babel plugin
