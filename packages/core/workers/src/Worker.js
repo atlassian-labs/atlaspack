@@ -214,6 +214,7 @@ export default class Worker extends EventEmitter {
 
       let call = this.calls.get(idx);
       if (!call) {
+        log('Worker has no call');
         // Return for unknown calls, these might accur if a third party process uses workers
         return;
       }

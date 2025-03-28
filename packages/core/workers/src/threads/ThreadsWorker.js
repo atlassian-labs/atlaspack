@@ -74,9 +74,7 @@ export default class ThreadsWorker implements WorkerImpl {
       }
     }
     let serializedData = prepareForSerialization(data);
-    if (data.method === 'clearWorkerBuildCaches') {
-      log('ThreadsWorker.send', serializedData);
-    }
+    log('ThreadsWorker.send', serializedData);
     this.worker.postMessage(serializedData);
   }
 }

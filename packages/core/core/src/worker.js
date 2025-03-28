@@ -91,6 +91,15 @@ function log(...msg) {
   }
 }
 
+process
+  .on('unhandledRejection', (reason, p) => {
+    console.error(reason, 'Worker: Unhandled Rejection at Promise', p);
+  })
+  .on('uncaughtException', (err) => {
+    console.error(err, 'Worker: Uncaught Exception thrown');
+    process.exit(1);
+  });
+
 console.log('Worker started');
 export function clearWorkerBuildCaches() {
   log('[start] clearWorkerBuildCaches', threadId);

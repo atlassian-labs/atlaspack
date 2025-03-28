@@ -199,8 +199,11 @@ export default class Atlaspack {
       });
     }
 
-    log('[start] cache ensure');
-    await resolvedOptions.cache.ensure();
+    log('[start] cache ensure + ping workers');
+    await Promise.all([
+      resolvedOptions.cache.ensure(),
+      this.#farm.callAllWorkers('ping', []),
+    ]);
     log('[end] cache ensure');
 
     let {dispose: disposeOptions, ref: optionsRef} =
@@ -296,11 +299,8 @@ export default class Atlaspack {
   }
 
   async _startNextBuild(): Promise<?BuildEvent> {
-    log('[start] _startNextBuild');
     this.#watchAbortController = new AbortController();
-    log('[start] clearBuildCaches');
     await this.clearBuildCaches();
-    log('[end] clearBuildCaches');
 
     try {
       log('[start] _build');
@@ -309,9 +309,7 @@ export default class Atlaspack {
       });
       log('[end] _build');
 
-      this.#watchEvents.emit({
-        buildEvent,
-      });
+      this.#watchEvents.emit({buildEvent});
 
       return buildEvent;
     } catch (err) {
@@ -330,7 +328,6 @@ export default class Atlaspack {
     cb?: (err: ?Error, buildEvent?: BuildEvent) => mixed,
   ): Promise<AsyncSubscription> {
     if (!this.#initialized) {
-      log('watcher: init');
       await this._init();
     }
 
@@ -359,21 +356,16 @@ export default class Atlaspack {
     let unsubscribePromise;
     const unsubscribe = async () => {
       log('[start] unsubscribe', this.#watcherCount, watchEventsDisposable);
-      if (watchEventsDisposable) {
-        watchEventsDisposable.dispose();
-      }
+      watchEventsDisposable?.dispose();
 
       this.#watcherCount--;
       log('watcherCount', this.#watcherCount);
       if (this.#watcherCount === 0) {
+        this.#watchAbortController.abort();
         await nullthrows(this.#watcherSubscription).unsubscribe();
         this.#watcherSubscription = null;
         await this.#reporterRunner.report({type: 'watchEnd'});
-        log('aborting watch controller');
-        this.#watchAbortController.abort();
-        log('awaiting watch queue');
-        await this.#watchQueue.run();
-        log('awaiting end');
+        // await this.#watchQueue.run();
         await this._end();
       }
       log('[end] unsubscribe');
