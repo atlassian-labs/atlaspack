@@ -1,7 +1,10 @@
 // @flow
 
 import {
-  AtlaspackNapi,
+  atlaspackNapiCreate,
+  atlaspackNapiBuildAssetGraph,
+  atlaspackNapiRespondToFsEvents,
+  type AtlaspackNapi,
   type Lmdb,
   type AtlaspackNapiOptions,
 } from '@atlaspack/rust';
@@ -24,24 +27,27 @@ export type AtlaspackV3Options = {|
 |};
 
 export class AtlaspackV3 {
-  _internal: AtlaspackNapi;
-  _workerIds: any[];
+  _atlaspack_napi: AtlaspackNapi;
 
-  constructor({
+  constructor(atlaspack_napi: AtlaspackNapi) {
+    this._atlaspack_napi = atlaspack_napi;
+  }
+
+  static async new({
     fs,
     packageManager,
     threads,
     lmdb,
     napiWorkerPool = new NapiWorkerPool(),
     ...options
-  }: AtlaspackV3Options) {
+  }: AtlaspackV3Options): Promise<AtlaspackV3> {
     options.logLevel = options.logLevel || 'error';
     options.defaultTargetOptions = options.defaultTargetOptions || {};
     // $FlowFixMe "engines" are readonly
     options.defaultTargetOptions.engines =
       options.defaultTargetOptions.engines || {};
 
-    this._internal = AtlaspackNapi.create(
+    const [internal, error] = await atlaspackNapiCreate(
       {
         fs,
         packageManager,
@@ -51,10 +57,20 @@ export class AtlaspackV3 {
       },
       lmdb,
     );
+
+    if (error !== null) {
+      throw new ThrowableDiagnostic({
+        diagnostic: error,
+      });
+    }
+
+    return new AtlaspackV3(internal);
   }
 
   async buildAssetGraph(): Promise<any> {
-    let [graph, error] = await this._internal.buildAssetGraph();
+    let [graph, error] = await atlaspackNapiBuildAssetGraph(
+      this._atlaspack_napi,
+    );
 
     if (error !== null) {
       throw new ThrowableDiagnostic({
@@ -65,7 +81,7 @@ export class AtlaspackV3 {
     return graph;
   }
 
-  respondToFsEvents(events: Array<Event>): Promise<boolean> {
-    return this._internal.respondToFsEvents(events);
+  respondToFsEvents(events: Array<Event>): boolean {
+    return atlaspackNapiRespondToFsEvents(this._atlaspack_napi, events);
   }
 }
