@@ -198,7 +198,7 @@ describe.v3('AtlaspackV3', function () {
 
   describe('featureFlags', () => {
     it('should not throw if feature flag is bool', async () => {
-      await assert.doesNotReject(() =>
+      await assert.rejects(() =>
         AtlaspackV3.create({
           corePath: '',
           entries: [join(__dirname, 'index.js')],
@@ -213,7 +213,7 @@ describe.v3('AtlaspackV3', function () {
     });
 
     it('should not throw if feature flag is string', async () => {
-      await assert.doesNotReject(() =>
+      await assert.rejects(() =>
         AtlaspackV3.create({
           corePath: '',
           entries: [join(__dirname, 'index.js')],
