@@ -49,7 +49,7 @@ export class AtlaspackV3 {
     napiWorkerPool = new NapiWorkerPool(),
     ...options
   }: AtlaspackV3Options): Promise<AtlaspackV3> {
-    console.log('[start] AtlaspackV3.constructor');
+    log('[start] AtlaspackV3.constructor');
     options.logLevel = options.logLevel || 'error';
     options.defaultTargetOptions = options.defaultTargetOptions || {};
     // $FlowFixMe "engines" are readonly
@@ -78,17 +78,17 @@ export class AtlaspackV3 {
     }
 
     const ap = new AtlaspackV3(internal);
-    console.log('[end] AtlaspackV3.constructor', internal);
+    log('[end] AtlaspackV3.constructor', internal);
     return ap;
   }
 
   async buildAssetGraph(): Promise<any> {
-    console.log('[start] buildAssetGraph', this._atlaspack_napi);
+    log('[start] buildAssetGraph', this._atlaspack_napi);
     let [graph, error] = await atlaspackNapiBuildAssetGraph(
       this._atlaspack_napi,
     );
 
-    console.log('[end] buildAssetGraph', this._atlaspack_napi);
+    log('[end] buildAssetGraph', this._atlaspack_napi);
     if (error !== null) {
       throw new ThrowableDiagnostic({
         diagnostic: error,

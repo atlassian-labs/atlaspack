@@ -62,7 +62,7 @@ describe.v3('AtlaspackV3', function () {
       yarn.lock: {}
     `;
 
-    let atlaspack = new AtlaspackV3({
+    let atlaspack = await AtlaspackV3.new({
       corePath: '',
       entries: [join(__dirname, 'index.js')],
       fs: new FileSystemV3(overlayFS),
