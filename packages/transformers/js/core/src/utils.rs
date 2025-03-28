@@ -423,24 +423,6 @@ impl BailoutReason {
 }
 
 #[macro_export]
-macro_rules! fold_member_expr_skip_prop {
-  () => {
-    fn fold_member_expr(
-      &mut self,
-      mut node: swc_core::ecma::ast::MemberExpr,
-    ) -> swc_core::ecma::ast::MemberExpr {
-      node.obj = node.obj.fold_with(self);
-
-      if let swc_core::ecma::ast::MemberProp::Computed(_) = node.prop {
-        node.prop = node.prop.fold_with(self);
-      }
-
-      node
-    }
-  };
-}
-
-#[macro_export]
 macro_rules! id {
   ($ident: expr) => {
     $ident.to_id()
