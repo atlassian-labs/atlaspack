@@ -29,10 +29,6 @@ type WorkerOpts = {|
 
 let WORKER_ID = 0;
 
-function log(...msg) {
-  console.log(...msg);
-}
-
 export default class Worker extends EventEmitter {
   +options: WorkerOpts;
   worker: WorkerImpl;
@@ -50,6 +46,10 @@ export default class Worker extends EventEmitter {
   constructor(options: WorkerOpts) {
     super();
     this.options = options;
+  }
+
+  log(...msg) {
+    console.log(...msg);
   }
 
   async fork(forkModule: FilePath) {
@@ -186,23 +186,17 @@ export default class Worker extends EventEmitter {
     };
 
     if (this.ready || call.skipReadyCheck === true) {
-      log('call msg', msg);
+      this.log('call msg', msg);
       this.send(msg);
     } else {
-      log('wait for ready, then call msg', msg);
+      this.log('wait for ready, then call msg', msg);
       this.once('ready', () => this.send(msg));
     }
   }
 
   receive(message: WorkerMessage): void {
     if (this.stopped || this.isStopping) {
-      log(
-        'Worker received',
-        JSON.stringify(message),
-        'but did not send as stopped or stopping',
-        this.stopped,
-        this.isStopping,
-      );
+      this.log('Worker', this.id, 'is stopping');
       return;
     }
 
@@ -216,15 +210,16 @@ export default class Worker extends EventEmitter {
 
       let call = this.calls.get(idx);
       if (!call) {
-        log('Worker has no call');
+        this.log('Worker', this.id, 'has no call');
         // Return for unknown calls, these might accur if a third party process uses workers
         return;
       }
 
       if (message.contentType === 'error') {
-        log('Worker should reject', JSON.stringify(message));
+        this.log('Worker', this.id, 'should reject', JSON.stringify(message));
         call.reject(new ThrowableDiagnostic({diagnostic: message.content}));
       } else {
+        this.log('Worker', this.id, 'should resolve');
         call.resolve(message.content);
       }
 
