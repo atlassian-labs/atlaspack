@@ -70,9 +70,9 @@ export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
 
 function log(...msg) {
-  if (process.env.LOG) {
-    console.log(...msg);
-  }
+  // if (process.env.LOG) {
+  //   console.log(...msg);
+  // }
 }
 export default class Atlaspack {
   #requestTracker /*: RequestTracker*/;
@@ -623,8 +623,7 @@ export default class Atlaspack {
    * break things unexpectedly.
    */
   async clearBuildCaches(): Promise<void> {
-    // await this.#farm?.healthCheck();
-    // await this.#farm?.callAllWorkers('clearWorkerBuildCaches', []);
+    await this.#farm?.callAllWorkers('clearWorkerBuildCaches', []);
   }
 
   async unstable_invalidate(): Promise<void> {

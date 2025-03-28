@@ -86,21 +86,9 @@ async function loadConfig(cachePath, options) {
   return config;
 }
 
-function log(...msg) {
-  console.log(...msg);
-}
-
-console.log('Worker started');
 export function clearWorkerBuildCaches() {
-  // log('[start] clearWorkerBuildCaches', threadId);
-  try {
-    configCache.clear();
-    clearBuildCaches();
-  } catch (e) {
-    log('[error] clearWorkerBuildCaches', threadId, e);
-    throw e;
-  }
-  // log('[end] clearWorkerBuildCaches', threadId);
+  configCache.clear();
+  clearBuildCaches();
 }
 
 export async function runTransform(

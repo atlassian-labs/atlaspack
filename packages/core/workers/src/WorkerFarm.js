@@ -69,9 +69,9 @@ const DEFAULT_MAX_CONCURRENT_CALLS: number = 30;
  */
 
 function log(...msg) {
-  if (process.env.LOG) {
-    console.log(...msg);
-  }
+  // if (process.env.LOG) {
+  //   console.log(...msg);
+  // }
 }
 
 export default class WorkerFarm extends EventEmitter {
