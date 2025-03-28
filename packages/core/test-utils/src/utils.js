@@ -116,7 +116,7 @@ export const isAtlaspackV3 = process.env.ATLASPACK_V3 === 'true';
 // reuse the same instance in all of the tests
 export let napiWorkerPool: NapiWorkerPool;
 if (isAtlaspackV3) {
-  napiWorkerPool = new NapiWorkerPool({workerCount: 1});
+  napiWorkerPool = new NapiWorkerPool({workerCount: 3});
 }
 
 export function getParcelOptions(

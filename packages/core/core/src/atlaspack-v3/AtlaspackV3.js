@@ -32,12 +32,13 @@ function log(msg) {
     console.log(msg);
   }
 }
+
 export class AtlaspackV3 {
-  _internal: AtlaspackNapi;
+  _atlaspack_napi: AtlaspackNapi;
   _workerIds: any[];
 
   constructor(internal: AtlaspackNapi) {
-    this._internal = internal;
+    this._atlaspack_napi = internal;
   }
 
   static async new({
@@ -48,7 +49,7 @@ export class AtlaspackV3 {
     napiWorkerPool = new NapiWorkerPool(),
     ...options
   }: AtlaspackV3Options): Promise<AtlaspackV3> {
-    log('[start] AtlaspackV3.constructor');
+    console.log('[start] AtlaspackV3.constructor');
     options.logLevel = options.logLevel || 'error';
     options.defaultTargetOptions = options.defaultTargetOptions || {};
     // $FlowFixMe "engines" are readonly
@@ -65,21 +66,29 @@ export class AtlaspackV3 {
       },
       lmdb,
     );
+
+    if (!internal) {
+      throw new Error('What');
+    }
+
     if (error !== null) {
       throw new ThrowableDiagnostic({
         diagnostic: error,
       });
     }
-    log('[end] AtlaspackV3.constructor');
-    return new AtlaspackV3(internal);
+
+    const ap = new AtlaspackV3(internal);
+    console.log('[end] AtlaspackV3.constructor', internal);
+    return ap;
   }
 
   async buildAssetGraph(): Promise<any> {
-    log('[start] buildAssetGraph');
+    console.log('[start] buildAssetGraph', this._atlaspack_napi);
+    let [graph, error] = await atlaspackNapiBuildAssetGraph(
+      this._atlaspack_napi,
+    );
 
-    let [graph, error] = await atlaspackNapiBuildAssetGraph(this._internal);
-
-    log('[end] buildAssetGraph');
+    console.log('[end] buildAssetGraph', this._atlaspack_napi);
     if (error !== null) {
       throw new ThrowableDiagnostic({
         diagnostic: error,
@@ -91,7 +100,10 @@ export class AtlaspackV3 {
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {
     log('[start] respondToFsEvents');
-    let result = await atlaspackNapiRespondToFsEvents(this._internal, events);
+    let result = await atlaspackNapiRespondToFsEvents(
+      this._atlaspack_napi,
+      events,
+    );
     log('[end] respondToFsEvents');
 
     return result;
@@ -99,7 +111,7 @@ export class AtlaspackV3 {
 
   async shutdown() {
     log('[start] shutdown');
-    await atlaspackNapiShutdown(this._internal);
+    await atlaspackNapiShutdown(this._atlaspack_napi);
     log('[end] shutdown');
   }
 }

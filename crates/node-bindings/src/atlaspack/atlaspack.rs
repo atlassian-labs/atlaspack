@@ -37,10 +37,8 @@ pub struct AtlaspackNapiOptions {
   pub napi_worker_pool: JsObject,
 }
 
-#[napi]
-pub struct AtlaspackNapi {
-  atlaspack: Arc<Mutex<Atlaspack>>,
-}
+// #[napi]
+pub type AtlaspackNapi = JsTransferable<Arc<Mutex<Atlaspack>>>;
 
 // Refer to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length
 const MAX_STRING_LENGTH: usize = 268435440;
@@ -92,7 +90,7 @@ pub fn atlaspack_napi_create(
             for i in 0..workers_arr.get_array_length()? {
               let worker = workers_arr.get_element::<JsUnknown>(i)?;
               let worker = JsTransferable::<Arc<NodejsWorker>>::from_unknown(worker)?;
-              workers.push(worker.take()?);
+              workers.push(worker.get()?.clone());
             }
             Ok(workers)
           },
@@ -109,12 +107,9 @@ pub fn atlaspack_napi_create(
       });
 
       deferred.resolve(move |env| match atlaspack {
-        Ok(atlaspack) => NapiAtlaspackResult::ok(
-          &env,
-          AtlaspackNapi {
-            atlaspack: Arc::new(Mutex::new(atlaspack)),
-          },
-        ),
+        Ok(atlaspack) => {
+          NapiAtlaspackResult::ok(&env, JsTransferable::new(Arc::new(Mutex::new(atlaspack))))
+        }
         Err(error) => {
           let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
           NapiAtlaspackResult::error(&env, js_object)
@@ -129,13 +124,13 @@ pub fn atlaspack_napi_create(
 #[tracing::instrument(level = "info", skip_all)]
 #[napi]
 pub fn atlaspack_napi_build_asset_graph(
-  atlaspack_napi: &AtlaspackNapi,
   env: Env,
+  atlaspack_napi: AtlaspackNapi,
 ) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
 
   thread::spawn({
-    let atlaspack = atlaspack_napi.atlaspack.clone();
+    let atlaspack = atlaspack_napi.get()?.clone();
     move || {
       let atlaspack = atlaspack.lock();
       let result = atlaspack.build_asset_graph();
@@ -161,15 +156,15 @@ pub fn atlaspack_napi_build_asset_graph(
 #[tracing::instrument(level = "info", skip_all)]
 #[napi]
 pub fn atlaspack_napi_respond_to_fs_events(
-  atlaspack_napi: &AtlaspackNapi,
   env: Env,
+  atlaspack_napi: AtlaspackNapi,
   options: JsObject,
 ) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
   let options = env.from_js_value::<WatchEvents, _>(options)?;
 
   thread::spawn({
-    let atlaspack = atlaspack_napi.atlaspack.clone();
+    let atlaspack = atlaspack_napi.get()?.clone();
     move || {
       let atlaspack = atlaspack.lock();
       let result = atlaspack.respond_to_fs_events(options);
@@ -189,10 +184,7 @@ pub fn atlaspack_napi_respond_to_fs_events(
 
 #[tracing::instrument(level = "info", skip_all)]
 #[napi]
-pub fn atlaspack_napi_shutdown(
-  _atlaspack_napi: &AtlaspackNapi,
-  env: Env,
-) -> napi::Result<JsObject> {
+pub fn atlaspack_napi_shutdown(env: Env, _atlaspack_napi: AtlaspackNapi) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
   thread::spawn(move || deferred.resolve(move |env| env.get_undefined()));
   Ok(promise)
