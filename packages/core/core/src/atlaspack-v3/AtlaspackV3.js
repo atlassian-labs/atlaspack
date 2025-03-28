@@ -33,7 +33,7 @@ export class AtlaspackV3 {
     this._atlaspack_napi = atlaspack_napi;
   }
 
-  static async new({
+  static async create({
     fs,
     packageManager,
     threads,

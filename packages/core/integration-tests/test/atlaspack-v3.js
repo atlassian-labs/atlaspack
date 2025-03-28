@@ -62,7 +62,7 @@ describe.v3('AtlaspackV3', function () {
       yarn.lock: {}
     `;
 
-    let atlaspack = await AtlaspackV3.new({
+    let atlaspack = await AtlaspackV3.create({
       corePath: '',
       entries: [join(__dirname, 'index.js')],
       fs: new FileSystemV3(overlayFS),
@@ -199,7 +199,7 @@ describe.v3('AtlaspackV3', function () {
   describe('featureFlags', () => {
     it('should not throw if feature flag is bool', async () => {
       await assert.doesNotReject(() =>
-        AtlaspackV3.new({
+        AtlaspackV3.create({
           corePath: '',
           entries: [join(__dirname, 'index.js')],
           fs: new FileSystemV3(overlayFS),
@@ -214,7 +214,7 @@ describe.v3('AtlaspackV3', function () {
 
     it('should not throw if feature flag is string', async () => {
       await assert.doesNotReject(() =>
-        AtlaspackV3.new({
+        AtlaspackV3.create({
           corePath: '',
           entries: [join(__dirname, 'index.js')],
           fs: new FileSystemV3(overlayFS),
