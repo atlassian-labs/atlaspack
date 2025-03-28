@@ -9,6 +9,7 @@ use petgraph::stable_graph::StableDiGraph;
 
 use atlaspack_core::config_loader::ConfigLoaderRef;
 use atlaspack_core::diagnostic_error;
+use atlaspack_core::error::AtlaspackError;
 use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_filesystem::FileSystemRef;
 use petgraph::visit::Dfs;
@@ -16,7 +17,6 @@ use petgraph::visit::Reversed;
 
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
-use crate::AtlaspackError;
 use crate::WatchEvent;
 use crate::WatchEvents;
 

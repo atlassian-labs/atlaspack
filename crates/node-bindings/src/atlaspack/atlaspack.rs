@@ -9,6 +9,7 @@ use atlaspack::AtlaspackError;
 use atlaspack::AtlaspackInitOptions;
 use atlaspack::WatchEvents;
 use atlaspack_napi_helpers::js_callable::JsCallable;
+use atlaspack_napi_helpers::napi_threads;
 use atlaspack_napi_helpers::JsTransferable;
 use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::LMDB;
@@ -182,9 +183,19 @@ pub fn atlaspack_napi_respond_to_fs_events(
 #[tracing::instrument(level = "info", skip_all)]
 #[napi]
 pub fn atlaspack_napi_shutdown(env: Env, _atlaspack_napi: AtlaspackNapi) -> napi::Result<JsObject> {
-  let (deferred, promise) = env.create_deferred()?;
-  thread::spawn(move || deferred.resolve(move |env| env.get_undefined()));
-  Ok(promise)
+  napi_threads::spawn(
+    &env,
+    || {
+      //
+      Ok(())
+    },
+    napi_threads::map_to_ok_tuple,
+    napi_threads::map_to_err_tuple,
+  )
+
+  // let (deferred, promise) = env.create_deferred()?;
+  // thread::spawn(move || deferred.resolve(move |env| env.get_undefined()));
+  // Ok(promise)
 }
 
 /// Check that the LMDB database is healthy

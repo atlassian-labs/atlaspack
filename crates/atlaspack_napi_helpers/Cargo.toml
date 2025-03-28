@@ -7,6 +7,7 @@ edition = "2021"
 [lib]
 
 [dependencies]
+atlaspack_core = { path = "../atlaspack_core" }
 serde = { workspace = true }
 anyhow = { workspace = true }
 napi = { workspace = true, features = ["serde-json", "napi4", "napi5", "async", "anyhow"] }
