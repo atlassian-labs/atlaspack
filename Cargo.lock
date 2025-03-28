@@ -507,6 +507,7 @@ name = "atlaspack_napi_helpers"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "atlaspack_core",
  "napi",
  "napi-build",
  "once_cell",

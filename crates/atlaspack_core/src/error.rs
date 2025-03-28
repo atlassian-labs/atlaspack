@@ -1,7 +1,8 @@
 use anyhow::anyhow;
-use atlaspack_core::types::Diagnostic;
-use atlaspack_core::types::Diagnostics;
 use serde::Serialize;
+
+use crate::types::Diagnostic;
+use crate::types::Diagnostics;
 
 pub enum AtlaspackError {
   Diagnostic(Diagnostic),
