@@ -2,6 +2,7 @@ pub mod asset_graph;
 pub mod bundle_graph;
 pub mod cache;
 pub mod config_loader;
+pub mod error;
 pub mod hash;
 pub mod plugin;
 pub mod project_path;

@@ -170,7 +170,7 @@ export default class Atlaspack {
       const version = require('../package.json').version;
       await lmdb.put('current_session_version', Buffer.from(version));
 
-      rustAtlaspack = new AtlaspackV3({
+      rustAtlaspack = await AtlaspackV3.new({
         ...options,
         corePath: path.join(__dirname, '..'),
         threads: process.env.NODE_ENV === 'test' ? 2 : undefined,
