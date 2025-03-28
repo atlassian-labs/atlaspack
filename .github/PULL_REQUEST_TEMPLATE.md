@@ -11,3 +11,7 @@ Describe the solution and changes you have made
 ## Checklist
 
 - [ ] Existing or new tests cover this change
+- [ ] There is a changeset for this change, or one is not required
+
+<!-- If this change does not require a changeset, uncomment the tag and explain why -->
+<!-- [no-changeset]: -->
