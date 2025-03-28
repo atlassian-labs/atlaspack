@@ -6,7 +6,8 @@
   "repository": "https://github.com/atlassian-labs/atlaspack",
   "os": [
     "darwin",
-    "linux"
+    "linux",
+    "win32"
   ],
   "napi": {
     "name": "lmdb-js-lite",
