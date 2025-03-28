@@ -24,7 +24,6 @@ import {AtlaspackConfig} from './AtlaspackConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {clearBuildCaches} from '@atlaspack/build-cache';
 import {init as initSourcemaps} from '@parcel/source-map';
-import {init as initRust} from '@atlaspack/rust';
 import WorkerFarm from '@atlaspack/workers';
 import {setFeatureFlags} from '@atlaspack/feature-flags';
 
@@ -176,7 +175,6 @@ export async function runPackage(
 
 export async function childInit() {
   await initSourcemaps;
-  await initRust?.();
 }
 
 const PKG_RE =

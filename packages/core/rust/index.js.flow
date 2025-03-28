@@ -7,13 +7,11 @@ import type {
   PackageManager,
 } from '@atlaspack/types';
 
-declare export var init: void | (() => void);
-
 export type WatchEventType = 'create' | 'update' | 'delete';
 
 export interface WatchEvent {
-  path: string,
-  type: WatchEventType,
+  path: string;
+  type: WatchEventType;
 }
 
 export type WatchEvents = Array<WatchEvent>;
@@ -51,7 +49,7 @@ export type AtlaspackNapiOptions = {|
   nodeWorkers?: number,
   napiWorkerPool: any,
   options: {|
-    featureFlags?: { [string]: string | boolean },
+    featureFlags?: {[string]: string | boolean},
     corePath?: string,
     // TODO Use Omit when available in flow >0.210.0
     ...$Diff<
@@ -87,9 +85,7 @@ declare export function registerWorker(
   worker: any,
 ): void;
 
-declare export function newNodejsWorker(
-  delegate: any,
-): Transferable;
+declare export function newNodejsWorker(delegate: any): Transferable;
 
 declare export function initializeMonitoring(): void;
 declare export function closeMonitoring(): void;

@@ -47,7 +47,6 @@ import {Disposable} from '@atlaspack/events';
 import {init as initSourcemaps} from '@parcel/source-map';
 import {LMDBLiteCache} from '@atlaspack/cache';
 import {
-  init as initRust,
   initializeMonitoring,
   closeMonitoring,
   type Lmdb,
@@ -123,10 +122,6 @@ export default class Atlaspack {
     setFeatureFlags(featureFlags);
 
     await initSourcemaps;
-
-    log('[start] initRust');
-    await initRust?.();
-    log('[end] initRust');
 
     this.#disposable = new Disposable();
 
