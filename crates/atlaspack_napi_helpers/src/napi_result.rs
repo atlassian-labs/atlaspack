@@ -4,9 +4,9 @@ use napi::{bindgen_prelude::ToNapiValue, Env, JsObject};
 /// ```
 /// [result: any | null, error: any | null]
 /// ```
-pub struct NapiAtlaspackResult;
+pub struct TupleResult;
 
-impl NapiAtlaspackResult {
+impl TupleResult {
   /// This creates the following JavaScript tuple
   /// ```
   /// [JsAny, null]
