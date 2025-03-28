@@ -149,14 +149,23 @@ pub struct LMDB {
   read_transaction: Option<heed::RoTxn<'static>>,
 }
 
+fn log(msg: &str) {
+  if std::env::var("LOG").is_ok() {
+    println!("{}", msg);
+  }
+}
+
 #[napi]
 impl LMDB {
   #[napi(constructor)]
   pub fn new(options: LMDBOptions) -> napi::Result<Self> {
+    log("[start] LMDB.new");
     let mut state = STATE
       .lock()
       .map_err(|_| napi::Error::from_reason("LMDB State mutex is poisoned"))?;
     let database = state.get_database(options).map_err(napi_error)?;
+
+    log("[end] LMDB.new");
     Ok(Self {
       inner: Some(database),
       read_transaction: None,
@@ -165,6 +174,7 @@ impl LMDB {
 
   #[napi(ts_return_type = "Promise<Buffer | null | undefined>")]
   pub fn get(&self, env: Env, key: String) -> napi::Result<napi::JsObject> {
+    log("[start] LMDB.get");
     let database_handle = self.get_database_napi()?;
     let (deferred, promise) = env.create_deferred()?;
 
@@ -179,11 +189,13 @@ impl LMDB {
       })
       .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
 
+    log("[end] LMDB.get");
     Ok(promise)
   }
 
   #[napi(ts_return_type = "Buffer | null")]
   pub fn get_sync(&self, env: Env, key: String) -> napi::Result<JsUnknown> {
+    log("[start] LMDB.get_sync");
     let database_handle = self.get_database_napi()?;
     let database = &database_handle.database;
 
@@ -211,11 +223,14 @@ impl LMDB {
     let mut result = env.create_buffer(size)?;
     // This is faster than moving the vector in
     result.copy_from_slice(&buffer);
+
+    log("[end] LMDB.get_sync");
     Ok(result.into_unknown())
   }
 
   #[napi]
   pub fn get_many_sync(&self, keys: Vec<String>) -> napi::Result<Vec<Option<Buffer>>> {
+    log("[start] LMDB.get_many_sync");
     let database_handle = self.get_database_napi()?;
     let database = &database_handle.database;
 
@@ -232,11 +247,13 @@ impl LMDB {
       results.push(buffer);
     }
 
+    log("[end] LMDB.get_many_sync");
     Ok(results)
   }
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn put_many(&self, env: Env, entries: Vec<Entry>) -> napi::Result<napi::JsObject> {
+    log("[start] LMDB.put_many");
     let database_handle = self.get_database_napi()?;
     let (deferred, promise) = env.create_deferred()?;
 
@@ -257,11 +274,13 @@ impl LMDB {
       .send(message)
       .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
 
+    log("[end] LMDB.put_many");
     Ok(promise)
   }
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn put(&self, env: Env, key: String, data: Buffer) -> napi::Result<napi::JsObject> {
+    log("[start] LMDB.put");
     let database_handle = self.get_database_napi()?;
     // This costs us 70% over the round-trip time after arg. conversion
     let (deferred, promise) = env.create_deferred()?;
@@ -279,11 +298,13 @@ impl LMDB {
       .send(message)
       .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
 
+    log("[end] LMDB.put");
     Ok(promise)
   }
 
   #[napi]
   pub fn put_no_confirm(&self, key: String, data: Buffer) -> napi::Result<()> {
+    log("[start] LMDB.put_no_confirm");
     let database_handle = self.get_database_napi()?;
 
     let message = DatabaseWriterMessage::Put {
@@ -296,11 +317,13 @@ impl LMDB {
       .send(message)
       .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
 
+    log("[end] LMDB.put_no_confirm");
     Ok(())
   }
 
   #[napi]
   pub fn start_read_transaction(&mut self) -> napi::Result<()> {
+    log("[start] LMDB.start_read_transaction");
     if self.read_transaction.is_some() {
       return Ok(());
     }
@@ -310,21 +333,23 @@ impl LMDB {
       .static_read_txn()
       .map_err(|err| napi_error(anyhow!(err)))?;
     self.read_transaction = Some(txn);
+    log("[end] LMDB.start_read_transaction");
     Ok(())
   }
 
   #[napi]
   pub fn commit_read_transaction(&mut self) -> napi::Result<()> {
+    log("[start] LMDB.commit_read_transaction");
     if let Some(txn) = self.read_transaction.take() {
       txn.commit().map_err(|err| napi_error(anyhow!(err)))?;
-      Ok(())
-    } else {
-      Ok(())
     }
+    log("[end] LMDB.commit_read_transaction");
+    Ok(())
   }
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn start_write_transaction(&self, env: Env) -> napi::Result<napi::JsObject> {
+    log("[start] LMDB.start_write_transaction");
     let database_handle = self.get_database_napi()?;
     let (deferred, promise) = env.create_deferred()?;
 
@@ -336,11 +361,13 @@ impl LMDB {
       .send(message)
       .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
 
+    log("[end] LMDB.start_write_transaction");
     Ok(promise)
   }
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn commit_write_transaction(&self, env: Env) -> napi::Result<napi::JsObject> {
+    log("[start] LMDB.commit_write_transaction");
     let database_handle = self.get_database_napi()?;
     let (deferred, promise) = env.create_deferred()?;
 
@@ -352,12 +379,15 @@ impl LMDB {
       .send(message)
       .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
 
+    log("[end] LMDB.commit_write_transaction");
     Ok(promise)
   }
 
   #[napi]
   pub fn close(&mut self) {
+    log("[start] LMDB.close");
     self.inner = None;
+    log("[end] LMDB.close");
   }
 }
 
