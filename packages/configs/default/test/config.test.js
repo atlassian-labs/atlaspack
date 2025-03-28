@@ -17,15 +17,11 @@ describe('@atlaspack/config-default', () => {
   });
 
   describe('package.json', () => {
-    it('does not include packages not referenced in the config', () => {
-      let unnecessaryDependencies = [];
-      for (let dependency of packageJsonDependencyNames) {
-        if (!configPackageReferences.has(dependency)) {
-          unnecessaryDependencies.push(dependency);
-        }
-      }
-
-      assert.deepEqual(unnecessaryDependencies, []);
+    it('config dependencies are in package.json', () => {
+      assert.deepEqual(
+        Array.from(packageJsonDependencyNames.values()).sort(),
+        Array.from(configPackageReferences.values()).sort(),
+      );
     });
   });
 });
