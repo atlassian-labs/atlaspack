@@ -443,6 +443,8 @@ pub fn transform(
                 ),
               );
 
+              let ignore_mark = Mark::fresh(Mark::root());
+
               let module = {
                 let mut passes = (
                   // Insert dependencies for node globals
@@ -459,6 +461,7 @@ pub fn transform(
                     }),
                     config.insert_node_globals
                   ),
+
                   // Transpile new syntax to older syntax if needed
                   Optional::new(
                     preset_env(
@@ -470,40 +473,42 @@ pub fn transform(
                     ),
                     should_run_preset_env,
                   ),
+
                   // Inject SWC helpers if needed.
                   helpers::inject_helpers(global_mark),
+
+                  // Flush Id=(JsWord, SyntaxContexts) into unique names and reresolve to set
+                  // global_mark for all nodes, even generated ones.
+                  //
+                  // This will also remove any other other marks (like ignore_mark) and only needs
+                  // to be done if preset_env ran because all other transforms insert declarations
+                  // with global_mark (even though they are generated).
+                  Optional::new(
+                    hygiene(),
+                    config.scope_hoist && should_run_preset_env,
+                  ),
+
+                  Optional::new(
+                    resolver(unresolved_mark, global_mark, false),
+                    config.scope_hoist && should_run_preset_env,
+                  ),
+
+                  // Collect dependencies
+                  visit_mut_pass(
+                    dependency_collector(
+                      source_map.clone(),
+                      &mut result.dependencies,
+                      ignore_mark,
+                      unresolved_mark,
+                      &config,
+                      &mut diagnostics,
+                      &mut result.conditions,
+                    ),
+                  ),
                 );
 
                 module.apply(&mut passes)
               };
-
-              // Flush Id=(JsWord, SyntaxContexts) into unique names and reresolve to
-              // set global_mark for all nodes, even generated ones.
-              // - This will also remove any other other marks (like ignore_mark)
-              // This only needs to be done if preset_env ran because all other transforms
-              // insert declarations with global_mark (even though they are generated).
-              let module = if config.scope_hoist && should_run_preset_env {
-                module.apply(&mut (
-                  hygiene(),
-                  resolver(unresolved_mark, global_mark, false)
-                ))
-              } else {
-                module
-              };
-
-              let ignore_mark = Mark::fresh(Mark::root());
-              let module = module.fold_with(
-                // Collect dependencies
-                &mut dependency_collector(
-                  source_map.clone(),
-                  &mut result.dependencies,
-                  ignore_mark,
-                  unresolved_mark,
-                  &config,
-                  &mut diagnostics,
-                  &mut result.conditions,
-                ),
-              );
 
               diagnostics.extend(error_buffer_to_diagnostics(&error_buffer, &source_map));
 
@@ -524,6 +529,7 @@ pub fn transform(
                 is_module,
                 config.conditional_bundling,
               );
+
               module.visit_with(&mut collect);
 
               if collect.is_empty_or_empty_export {
