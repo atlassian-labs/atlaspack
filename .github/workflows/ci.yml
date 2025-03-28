@@ -79,7 +79,7 @@ jobs:
 
   integration_tests:
     name: Integration tests (${{ matrix.version == 'v3' && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
-    timeout-minutes: 35
+    timeout-minutes: 10
     strategy:
       matrix:
         node: [18, 20]
