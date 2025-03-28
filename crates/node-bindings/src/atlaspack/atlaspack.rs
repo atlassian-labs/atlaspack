@@ -38,9 +38,6 @@ pub struct AtlaspackNapi {
   atlaspack: AtlaspackLazy,
 }
 
-// Refer to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length
-const MAX_STRING_LENGTH: usize = 268435440;
-
 #[napi]
 impl AtlaspackNapi {
   #[tracing::instrument(level = "info", skip_all)]
