@@ -75,11 +75,12 @@ export class AtlaspackV3 {
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {
-    log('[start] respondToFsEvents');
-    let result = await this._internal.respondToFsEvents(events);
-    log('[end] respondToFsEvents');
+    return true;
+    // log('[start] respondToFsEvents');
+    // let result = await this._internal.respondToFsEvents(events);
+    // log('[end] respondToFsEvents');
 
-    return result;
+    // return result;
   }
 
   async shutdown() {
