@@ -19,8 +19,14 @@ export type ConfigOptions = {|
   parser?: (string) => any,
 |};
 
-const configCache = new LRU<FilePath, ConfigOutput>({max: 500});
-const resolveCache = new Map();
+class AntiCache extends Map {
+  set() {}
+}
+
+// const configCache = new LRU<FilePath, ConfigOutput>({max: 500});
+// const resolveCache = new Map();
+const configCache = new AntiCache();
+const resolveCache = new AntiCache();
 
 export function resolveConfig(
   fs: FileSystem,

@@ -623,7 +623,7 @@ export default class Atlaspack {
    */
   async clearBuildCaches(): Promise<void> {
     // await this.#farm?.healthCheck();
-    await this.#farm?.callAllWorkers('clearWorkerBuildCaches', []);
+    // await this.#farm?.callAllWorkers('clearWorkerBuildCaches', []);
   }
 
   async unstable_invalidate(): Promise<void> {
