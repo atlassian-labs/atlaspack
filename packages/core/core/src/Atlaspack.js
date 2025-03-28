@@ -374,6 +374,7 @@ export default class Atlaspack {
         this.#watchAbortController.abort();
         await this.#watchQueue.run();
         await this._end();
+        await new Promise((res) => setTimeout(res, 500));
       }
       log('[end] unsubscribe');
     };

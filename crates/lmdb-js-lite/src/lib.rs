@@ -150,9 +150,9 @@ pub struct LMDB {
 }
 
 fn log(msg: &str) {
-  if std::env::var("LOG").is_ok() {
-    println!("{}", msg);
-  }
+  // if std::env::var("LOG").is_ok() {
+  //   println!("{}", msg);
+  // }
 }
 
 #[napi]
