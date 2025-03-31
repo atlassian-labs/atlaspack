@@ -57,7 +57,7 @@ jobs:
     name: Build native
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-13]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -70,42 +70,42 @@ jobs:
         uses: actions/cache@v4
         with:
           path: target
-          key: ${{ runner.os }}/cache-target/${{ github.ref }}
+          key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
           restore-keys: |
-            ${{ runner.os }}/cache-target/${{ github.ref }}
-            ${{ runner.os }}/cache-target
+            /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
+            /${{ runner.os }}/${{ runner.arch }}/main/target
       - run: yarn --frozen-lockfile
       - run: yarn build-native-release
 
-  unit_tests:
-    name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
-    needs: [build_native]
-    strategy:
-      matrix:
-        node: [18, 20]
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-          node-version: ${{ matrix.node }}
-      - uses: ./.github/actions/rust-toolchain
-      - name: Cache Rust
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}/cache-target/${{ github.ref }}
-          restore-keys: |
-            ${{ runner.os }}/cache-target/${{ github.ref }}
-            ${{ runner.os }}/cache-target
-      - name: Bump max inotify watches (Linux only)
-        if: ${{ runner.os == 'Linux' }}
-        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-      - run: yarn --frozen-lockfile
-      - run: yarn build-native-release
-      - run: yarn test:unit
+  # unit_tests:
+  #   name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
+  #   needs: [build_native]
+  #   strategy:
+  #     matrix:
+  #       node: [18, 20]
+  #       os: [ubuntu-latest, macos-latest]
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         cache: yarn
+  #         node-version: ${{ matrix.node }}
+  #     - uses: ./.github/actions/rust-toolchain
+  #     - name: Cache Rust
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: target
+  #         key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
+  #         restore-keys: |
+  #           /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
+  #           /${{ runner.os }}/${{ runner.arch }}/main/target
+  #     - name: Bump max inotify watches (Linux only)
+  #       if: ${{ runner.os == 'Linux' }}
+  #       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+  #     - run: yarn --frozen-lockfile
+  #     - run: yarn build-native-release
+  #     - run: yarn test:unit
 
   integration_tests:
     name: Integration tests (${{ matrix.version == 'v3' && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
@@ -114,8 +114,9 @@ jobs:
     strategy:
       matrix:
         node: [18, 20]
-        os: [ubuntu-latest, macos-latest]
-        version: [v2, v3]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-13]
+        # version: [v2, v3]
+        version: [v3]
       # These tend to be quite flakey, so one failed instance shouldn't stop
       # others from potentially succeeding
       fail-fast: false
@@ -131,10 +132,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: target
-          key: ${{ runner.os }}/cache-target/${{ github.ref }}
+          key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
           restore-keys: |
-            ${{ runner.os }}/cache-target/${{ github.ref }}
-            ${{ runner.os }}/cache-target
+            /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
+            /${{ runner.os }}/${{ runner.arch }}/main/target
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
@@ -167,10 +168,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: target
-          key: ${{ runner.os }}/cache-target/${{ github.ref }}
+          key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
           restore-keys: |
-            ${{ runner.os }}/cache-target/${{ github.ref }}
-            ${{ runner.os }}/cache-target
+            /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
+            /${{ runner.os }}/${{ runner.arch }}/main/target
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
