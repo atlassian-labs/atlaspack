@@ -98,6 +98,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     hasher.finish()
   }
 
+  #[tracing::instrument(level = "debug", skip_all, fields(plugin = self.plugin_node.package_name))]
   async fn transform(
     &self,
     _context: TransformContext,

@@ -4,7 +4,7 @@ import invariant from 'assert';
 
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Async} from '@atlaspack/types';
-import {instrument} from '@atlaspack/logger';
+import {instrument, instrumentAsync} from '@atlaspack/logger';
 
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
@@ -37,18 +37,30 @@ export function createAssetGraphRequestRust(
     id: input.name,
     run: async (input) => {
       let options = input.options;
-      let serializedAssetGraph = await rustAtlaspack.buildAssetGraph();
 
-      serializedAssetGraph.nodes = serializedAssetGraph.nodes.map((node) =>
-        JSON.parse(node),
+      let serializedAssetGraph = await instrumentAsync(
+        'rustAtlaspack.buildAssetGraph',
+        () => rustAtlaspack.buildAssetGraph(),
       );
+
+      instrument('atlaspack_v3_parse_graph_nodes', () => {
+        serializedAssetGraph.nodes = serializedAssetGraph.nodes.map((node) =>
+          JSON.parse(node),
+        );
+      });
+
+      let prevResult =
+        await input.api.getPreviousResult<AssetGraphRequestResult>();
 
       let {assetGraph, changedAssets} = instrument(
         'atlaspack_v3_getAssetGraph',
-        () => getAssetGraph(serializedAssetGraph),
+        () => getAssetGraph(serializedAssetGraph, prevResult?.assetGraph),
       );
 
       let changedAssetsPropagation = new Set(changedAssets.keys());
+
+      console.log(changedAssetsPropagation.size, 'changed assets');
+
       let errors = propagateSymbols({
         options,
         assetGraph,
@@ -65,7 +77,7 @@ export function createAssetGraphRequestRust(
         });
       }
 
-      return {
+      let result = {
         assetGraph,
         assetRequests: [],
         assetGroupsWithRemovedParents: new Set(),
@@ -73,23 +85,30 @@ export function createAssetGraphRequestRust(
         changedAssetsPropagation,
         previousSymbolPropagationErrors: undefined,
       };
+
+      await input.api.storeResult(result);
+
+      return result;
     },
     input,
   });
 }
 
-// $FlowFixMe
-export function getAssetGraph(serializedGraph: any): {
+export function getAssetGraph(
+  // $FlowFixMe
+  serializedGraph: any,
+  prevAssetGraph: AssetGraph | void,
+): {|
   assetGraph: AssetGraph,
   changedAssets: Map<string, Asset>,
-} {
+|} {
   let graph = new AssetGraph({
     _contentKeyToNodeId: new Map(),
     _nodeIdToContentKey: new Map(),
     initialCapacity: serializedGraph.edges.length,
   });
 
-  graph.safeToIncrementallyBundle = false;
+  graph.safeToIncrementallyBundle = true;
 
   function mapSymbols({exported, ...symbol}) {
     let jsSymbol = {
@@ -160,6 +179,19 @@ export function getAssetGraph(serializedGraph: any): {
         type: 'root',
         value: null,
       });
+    } else if (
+      node.type === 'unchangedAsset' ||
+      node.type === 'unchangedDependency'
+    ) {
+      let prevNode = prevAssetGraph?.getNodeByContentKey(node.id);
+
+      invariant(
+        prevNode,
+        'Asset/Dependency not found in previous Asset graph',
+        node.id,
+      );
+
+      graph.addNodeByContentKey(node.id, prevNode);
     } else if (node.type === 'asset') {
       let asset = node.value;
       let id = asset.id;

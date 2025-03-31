@@ -20,7 +20,7 @@ use crate::requests::RequestResult;
 pub struct RunRequestMessage {
   pub request: Box<dyn Request>,
   pub parent_request_id: Option<u64>,
-  pub response_tx: Option<Sender<Result<(RequestResult, RequestId), anyhow::Error>>>,
+  pub response_tx: Option<Sender<Result<RequestResponse, anyhow::Error>>>,
 }
 
 type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send + Sync>;
@@ -74,7 +74,7 @@ impl RunRequestContext {
   pub fn queue_request(
     &mut self,
     request: impl Request,
-    tx: Sender<anyhow::Result<(RequestResult, RequestId)>>,
+    tx: Sender<anyhow::Result<RequestResponse>>,
   ) -> anyhow::Result<()> {
     let request: Box<dyn Request> = Box::new(request);
     let message = RunRequestMessage {
@@ -124,4 +124,11 @@ dyn_hash::hash_trait_object!(Request);
 pub struct ResultAndInvalidations {
   pub result: RequestResult,
   pub invalidations: Vec<Invalidation>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RequestResponse {
+  pub result: RequestResult,
+  pub id: RequestId,
+  pub cached: bool,
 }
