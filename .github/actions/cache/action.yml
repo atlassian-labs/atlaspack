@@ -28,7 +28,6 @@ runs:
         key: /${{ runner.os }}/${{ runner.arch }}/main/yarn
         restore-keys: /${{ runner.os }}/${{ runner.arch }}/main/yarn
 
-    - shell: bash
     - name: Cache Outputs
       # if: github.ref == 'refs/heads/main'
       uses: actions/cache@v4
