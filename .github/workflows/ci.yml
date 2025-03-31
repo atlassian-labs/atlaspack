@@ -102,10 +102,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
+          key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/yarn
           restore-keys: |
-            /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
-            /${{ runner.os }}/${{ runner.arch }}/main/target
+            /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/yarn
+            /${{ runner.os }}/${{ runner.arch }}/main/yarn
       - run: yarn --frozen-lockfile
       - run: yarn build-native-release
 
