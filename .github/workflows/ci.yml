@@ -79,6 +79,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+        id: yarn-cache-dir-path
       - uses: ./.github/actions/rust-toolchain
       - name: Cache Rust
         uses: actions/cache@v4
@@ -96,12 +97,7 @@ jobs:
       - name: Cache Yarn
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/yarn
           restore-keys: |
             /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/yarn
