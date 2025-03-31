@@ -53,7 +53,7 @@ jobs:
   #     - run: yarn --frozen-lockfile
   #     - run: yarn build-ts
 
-  build_native:
+  build:
     strategy:
       matrix:
         config:
@@ -113,7 +113,7 @@ jobs:
 
   integration_tests:
     name: Integration tests (${{ matrix.version == 'v3' && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
-    needs: [build_native]
+    needs: [build]
     timeout-minutes: 35
     strategy:
       matrix:

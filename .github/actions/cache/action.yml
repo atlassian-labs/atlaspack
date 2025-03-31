@@ -18,7 +18,8 @@ runs:
           /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
           /${{ runner.os }}/${{ runner.arch }}/main/target
 
-    - run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+    - shell: bash
+      run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
       id: yarn-cache-dir-path
     - name: Cache Yarn
       uses: actions/cache@v4
