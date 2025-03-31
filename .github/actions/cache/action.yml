@@ -39,7 +39,7 @@ runs:
           packages/**/*.node
           packages/**/*.wasm
         key: /${{ runner.os }}/${{ runner.arch }}/main/outputs
-        restore-keys: /${{ runner.os }}/${{ runner.arch }}/main/yarn
+        restore-keys: /${{ runner.os }}/${{ runner.arch }}/main/outputs
 
     # - name: Cache Revive Rust
     #   if: github.ref != 'refs/heads/main'
