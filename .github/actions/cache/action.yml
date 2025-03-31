@@ -5,6 +5,7 @@ runs:
   using: composite
   steps:
     - name: Cache Rust
+      # if: github.ref == 'refs/heads/main'
       uses: actions/cache@v4
       with:
         path: |
@@ -20,8 +21,45 @@ runs:
       run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
       id: yarn-cache-dir-path
     - name: Cache Yarn
+      # if: github.ref == 'refs/heads/main'
       uses: actions/cache@v4
       with:
         path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
         key: /${{ runner.os }}/${{ runner.arch }}/main/yarn
         restore-keys: /${{ runner.os }}/${{ runner.arch }}/main/yarn
+
+    - shell: bash
+    - name: Cache Outputs
+      # if: github.ref == 'refs/heads/main'
+      uses: actions/cache@v4
+      with:
+        path: |
+          packages/**/lib
+          packages/**/dist
+          packages/**/*.node
+          packages/**/*.wasm
+        key: /${{ runner.os }}/${{ runner.arch }}/main/outputs
+        restore-keys: /${{ runner.os }}/${{ runner.arch }}/main/yarn
+
+    # - name: Cache Revive Rust
+    #   if: github.ref != 'refs/heads/main'
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: |
+    #       ~/.cargo/bin/
+    #       ~/.cargo/registry/index/
+    #       ~/.cargo/registry/cache/
+    #       ~/.cargo/git/db/
+    #       target/
+    #     restore-keys: /${{ runner.os }}/${{ runner.arch }}/main/target
+
+    # - shell: bash
+    #   run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+    #   id: yarn-cache-dir-path
+    # - name: Cache Revive Yarn
+    #   if: github.ref != 'refs/heads/main'
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+    #     key: /${{ runner.os }}/${{ runner.arch }}/main/yarn
+    #     restore-keys: /${{ runner.os }}/${{ runner.arch }}/main/yarn

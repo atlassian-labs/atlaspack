@@ -131,12 +131,14 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "${{ matrix.node }}" }
       - uses: ./.github/actions/rust-toolchain
-      - uses: ./.github/actions/cache
+      # - uses: ./.github/actions/cache
       - name: Bump max inotify watches (Linux only)
         if: ${{ runner.os == 'Linux' }}
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-      - run: yarn --frozen-lockfile
-      - run: yarn build-native-release
+      - run: ls -l
+      - run: ls -l target
+      # - run: yarn --frozen-lockfile
+      # - run: yarn build-native-release
       - run: yarn test:integration-ci
         env:
           ATLASPACK_V3: ${{ matrix.version == 'v3' && 'true' || 'false' }}
