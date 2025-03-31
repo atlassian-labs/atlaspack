@@ -74,32 +74,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-
       - uses: ./.github/actions/rust-toolchain
-      - name: Cache Rust
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
-          restore-keys: |
-            /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
-            /${{ runner.os }}/${{ runner.arch }}/main/target
-
-      - run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
-        id: yarn-cache-dir-path
-      - name: Cache Yarn
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/yarn
-          restore-keys: |
-            /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/yarn
-            /${{ runner.os }}/${{ runner.arch }}/main/yarn
+      - uses: ./.github/actions/cache
       - run: yarn --frozen-lockfile
       - run: yarn build-native-release
       - run: yarn build
@@ -136,6 +112,7 @@ jobs:
   #     - run: yarn test:unit
 
   integration_tests:
+    name: Integration tests (${{ matrix.version == 'v3' && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
     needs: [build_native]
     timeout-minutes: 35
     strategy:
@@ -152,49 +129,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-          node-version: ${{ matrix.node }}
+        with: { node-version: "${{ matrix.node }}" }
       - uses: ./.github/actions/rust-toolchain
+      - uses: ./.github/actions/cache
       - name: Bump max inotify watches (Linux only)
-        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
+        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
       - run: yarn --frozen-lockfile
       - run: yarn build-native-release
       - run: yarn test:integration-ci
         env:
           ATLASPACK_V3: ${{ matrix.version == 'v3' && 'true' || 'false' }}
-
-  # integration_tests:
-  #   name: Integration tests (${{ matrix.version == 'v3' && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
-  #   needs: [build_native]
-  #   timeout-minutes: 35
-  #   strategy:
-  #     matrix:
-  #       node: [18, 20]
-  #       os: [ ubuntu-24.04 ]
-  #       # os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-13]
-  #       # version: [v2, v3]
-  #       version: [v3]
-  #     # These tend to be quite flakey, so one failed instance shouldn't stop
-  #     # others from potentially succeeding
-  #     fail-fast: false
-  #   runs-on: ${{ matrix.os }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         cache: yarn
-  #         node-version: ${{ matrix.node }}
-  #     - uses: ./.github/actions/rust-toolchain
-  #     - name: Bump max inotify watches (Linux only)
-  #       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-  #       if: ${{ runner.os == 'Linux' }}
-  #     - run: yarn --frozen-lockfile
-  #     - run: yarn build-native-release
-  #     - run: yarn test:integration-ci
-  #       env:
-  #         ATLASPACK_V3: ${{ matrix.version == 'v3' && 'true' || 'false' }}
 
   # end_to_end_tests:
   #   name: E2E tests

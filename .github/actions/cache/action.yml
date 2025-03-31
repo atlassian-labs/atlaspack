@@ -1,0 +1,30 @@
+name: Cache
+description: Cache dependencies and build artifacts
+
+runs:
+  using: composite
+  steps:
+    - name: Cache Rust
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
+        restore-keys: |
+          /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
+          /${{ runner.os }}/${{ runner.arch }}/main/target
+
+    - run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+      id: yarn-cache-dir-path
+    - name: Cache Yarn
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+        key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/yarn
+        restore-keys: |
+          /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/yarn
+          /${{ runner.os }}/${{ runner.arch }}/main/yarn
