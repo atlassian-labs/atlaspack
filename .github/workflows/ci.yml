@@ -137,7 +137,7 @@ jobs:
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
       - run: ls -l
       - run: ls -l target
-      # - run: yarn --frozen-lockfile
+      - run: yarn --frozen-lockfile
       # - run: yarn build-native-release
       - run: yarn test:integration-ci
         env:
