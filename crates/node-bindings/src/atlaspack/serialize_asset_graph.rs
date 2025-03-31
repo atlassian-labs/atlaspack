@@ -14,6 +14,17 @@ use atlaspack_core::types::{Asset, Dependency};
 /// ```
 #[tracing::instrument(level = "info", skip_all)]
 pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Result<JsObject> {
+  // TODO use a napi_derive::napi(object) with NAPI3
+  let mut napi_asset_graph = env.create_object()?;
+
+  napi_asset_graph.set_named_property("nodes", serialize_asset_graph_nodes(env, asset_graph)?)?;
+  napi_asset_graph.set_named_property("edges", asset_graph.edges())?;
+
+  Ok(napi_asset_graph)
+}
+
+#[tracing::instrument(level = "info", skip_all)]
+fn serialize_asset_graph_nodes(env: &Env, asset_graph: &AssetGraph) -> anyhow::Result<JsObject> {
   // Serialize graph nodes in parallel
   let nodes = asset_graph
     .nodes()
@@ -23,16 +34,32 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
       serde_json::to_vec(&match item {
         AssetGraphNode::Root => SerializedAssetGraphNode::Root,
         AssetGraphNode::Entry => SerializedAssetGraphNode::Entry,
-        AssetGraphNode::Asset(asset_node) => SerializedAssetGraphNode::Asset {
-          value: asset_node.asset.clone(),
-        },
-        AssetGraphNode::Dependency(dependency_node) => SerializedAssetGraphNode::Dependency {
-          value: SerializedDependency {
-            id: dependency_node.dependency.id(),
-            dependency: dependency_node.dependency.as_ref().clone(),
-          },
-          has_deferred: dependency_node.state == DependencyState::Deferred,
-        },
+        AssetGraphNode::Asset(asset_node) => {
+          if asset_node.cached {
+            SerializedAssetGraphNode::UnchangedAsset {
+              id: asset_node.asset.id.clone(),
+            }
+          } else {
+            SerializedAssetGraphNode::Asset {
+              value: asset_node.asset.clone(),
+            }
+          }
+        }
+        AssetGraphNode::Dependency(dependency_node) => {
+          if dependency_node.cached {
+            SerializedAssetGraphNode::UnchangedDependency {
+              id: dependency_node.dependency.id(),
+            }
+          } else {
+            SerializedAssetGraphNode::Dependency {
+              value: SerializedDependency {
+                id: dependency_node.dependency.id(),
+                dependency: dependency_node.dependency.as_ref().clone(),
+              },
+              has_deferred: dependency_node.state == DependencyState::Deferred,
+            }
+          }
+        }
       })
     })
     .collect::<Vec<_>>();
@@ -48,12 +75,7 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
     js_nodes.set_element(i as u32, js_buffer)?;
   }
 
-  // TODO use a napi_derive::napi(object) with NAPI3
-  let mut napi_asset_graph = env.create_object()?;
-  napi_asset_graph.set_named_property("edges", asset_graph.edges())?;
-  napi_asset_graph.set_named_property("nodes", js_nodes)?;
-
-  Ok(napi_asset_graph)
+  Ok(js_nodes)
 }
 
 #[derive(Debug, Serialize)]
@@ -71,8 +93,14 @@ enum SerializedAssetGraphNode {
   Asset {
     value: Asset,
   },
+  UnchangedAsset {
+    id: String,
+  },
   Dependency {
     value: SerializedDependency,
     has_deferred: bool,
+  },
+  UnchangedDependency {
+    id: String,
   },
 }

@@ -8,11 +8,13 @@ use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 
-use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
+use crate::request_tracker::{
+  Request, RequestResponse, ResultAndInvalidations, RunRequestContext, RunRequestError,
+};
 use atlaspack_core::asset_graph::{
   propagate_requested_symbols, AssetGraph, DependencyNode, DependencyState,
 };
-use atlaspack_core::types::{Asset, AssetWithDependencies, Dependency};
+use atlaspack_core::types::{AssetWithDependencies, Dependency};
 
 use super::asset_request::{AssetRequest, AssetRequestOutput};
 use super::entry_request::{EntryRequest, EntryRequestOutput};
@@ -20,8 +22,8 @@ use super::path_request::{PathRequest, PathRequestOutput};
 use super::target_request::{TargetRequest, TargetRequestOutput};
 use super::RequestResult;
 
-type ResultSender = Sender<Result<(RequestResult, u64), anyhow::Error>>;
-type ResultReceiver = Receiver<Result<(RequestResult, u64), anyhow::Error>>;
+pub type ResultSender = Sender<anyhow::Result<RequestResponse>>;
+pub type ResultReceiver = Receiver<anyhow::Result<RequestResponse>>;
 
 /// The AssetGraphRequest is in charge of building the AssetGraphRequest
 /// In doing so, it kicks of the EntryRequest, TargetRequest, PathRequest and AssetRequests.
@@ -102,31 +104,46 @@ impl AssetGraphBuilder {
       self.work_count -= 1;
 
       match result {
-        Ok((RequestResult::Entry(result), _request_id)) => {
+        Ok(RequestResponse {
+          result: RequestResult::Entry(result),
+          ..
+        }) => {
           tracing::debug!("Handling EntryRequestOutput");
           self.handle_entry_result(result);
         }
-        Ok((RequestResult::Target(result), _request_id)) => {
+        Ok(RequestResponse {
+          result: RequestResult::Target(result),
+          cached,
+          ..
+        }) => {
           tracing::debug!("Handling TargetRequestOutput");
-          self.handle_target_request_result(result);
+          self.handle_target_request_result(result, cached);
         }
-        Ok((RequestResult::Asset(result), request_id)) => {
+        Ok(RequestResponse {
+          result: RequestResult::Asset(result),
+          id: request_id,
+          cached,
+        }) => {
           tracing::debug!(
             "Handling AssetRequestOutput: {}",
             result.asset.file_path.display()
           );
-          self.handle_asset_result(result, request_id);
+          self.handle_asset_result(result, request_id, cached);
         }
-        Ok((RequestResult::Path(result), request_id)) => {
+        Ok(RequestResponse {
+          result: RequestResult::Path(result),
+          id: request_id,
+          ..
+        }) => {
           tracing::debug!("Handling PathRequestOutput");
           self.handle_path_result(result, request_id);
         }
         Err(err) => return Err(err),
         // This branch should never occur
-        Ok((result, request_id)) => {
+        Ok(RequestResponse { result, id, .. }) => {
           return Err(anyhow!(
             "Unexpected request result in AssetGraphRequest ({}): {:?}",
-            request_id,
+            id,
             result
           ))
         }
@@ -165,6 +182,7 @@ impl AssetGraphBuilder {
       dependency,
       requested_symbols,
       state,
+      ..
     } = self.graph.get_dependency_node_mut(&dependency_idx).unwrap();
 
     let asset_request = match result {
@@ -247,7 +265,7 @@ impl AssetGraphBuilder {
     }
   }
 
-  fn handle_asset_result(&mut self, result: AssetRequestOutput, request_id: u64) {
+  fn handle_asset_result(&mut self, result: AssetRequestOutput, request_id: u64, cached: bool) {
     let AssetRequestOutput {
       asset,
       discovered_assets,
@@ -259,8 +277,10 @@ impl AssetGraphBuilder {
       .get(&request_id)
       .expect("Missing node index for request id {request_id}");
 
+    let asset_unique_key = asset.unique_key.clone();
+
     // Connect the incoming DependencyNode to the new AssetNode
-    let asset_idx = self.graph.add_asset(asset.clone());
+    let asset_idx = self.graph.add_asset(asset, cached);
 
     self.graph.add_edge(&incoming_dependency_idx, &asset_idx);
 
@@ -268,13 +288,12 @@ impl AssetGraphBuilder {
       .asset_request_to_asset_idx
       .insert(request_id, asset_idx);
 
-    let root_asset = (&asset, asset_idx);
     let mut added_discovered_assets: HashMap<String, NodeIndex> = HashMap::new();
 
     // Attach the "direct" discovered assets to the graph
     let direct_discovered_assets = get_direct_discovered_assets(&discovered_assets, &dependencies);
     for discovered_asset in direct_discovered_assets {
-      let asset_idx = self.graph.add_asset(discovered_asset.asset.clone());
+      let asset_idx = self.graph.add_asset(discovered_asset.asset.clone(), cached);
 
       self.graph.add_edge(&incoming_dependency_idx, &asset_idx);
 
@@ -283,7 +302,9 @@ impl AssetGraphBuilder {
         &discovered_assets,
         asset_idx,
         &mut added_discovered_assets,
-        root_asset,
+        asset_idx,
+        asset_unique_key.as_ref(),
+        cached,
       );
       self.propagate_requested_symbols(asset_idx, incoming_dependency_idx);
     }
@@ -293,7 +314,9 @@ impl AssetGraphBuilder {
       &discovered_assets,
       asset_idx,
       &mut added_discovered_assets,
-      root_asset,
+      asset_idx,
+      asset_unique_key.as_ref(),
+      cached,
     );
 
     self.propagate_requested_symbols(asset_idx, incoming_dependency_idx);
@@ -316,7 +339,9 @@ impl AssetGraphBuilder {
     discovered_assets: &Vec<AssetWithDependencies>,
     asset_idx: NodeIndex,
     added_discovered_assets: &mut HashMap<String, NodeIndex>,
-    root_asset: (&Asset, NodeIndex),
+    root_asset_id: NodeIndex,
+    root_asset_unique_key: Option<&String>,
+    cached: bool,
   ) {
     // Connect dependencies of the Asset
     let mut unique_deps: IndexMap<String, Dependency> = IndexMap::new();
@@ -353,17 +378,13 @@ impl AssetGraphBuilder {
       });
 
       // Check if this dependency points to the root asset
-      let dep_to_root_asset = root_asset
-        .0
-        .unique_key
-        .as_ref()
-        .is_some_and(|key| key == &dependency.specifier);
+      let dep_to_root_asset = root_asset_unique_key.is_some_and(|key| *key == dependency.specifier);
 
-      let dependency_idx = self.graph.add_dependency(dependency);
+      let dependency_idx = self.graph.add_dependency(dependency, cached);
       self.graph.add_edge(&asset_idx, &dependency_idx);
 
       if dep_to_root_asset {
-        self.graph.add_edge(&dependency_idx, &root_asset.1);
+        self.graph.add_edge(&dependency_idx, &root_asset_id);
       }
 
       // If the dependency points to a dicovered asset then add the asset using the new
@@ -383,7 +404,7 @@ impl AssetGraphBuilder {
           // This discovered_asset isn't yet in the graph so we'll need to add
           // it and assign it's dependencies by calling added_discovered_assets
           // recursively.
-          let asset_idx = self.graph.add_asset(asset.clone());
+          let asset_idx = self.graph.add_asset(asset.clone(), cached);
           self.graph.add_edge(&dependency_idx, &asset_idx);
           added_discovered_assets.insert(asset.id.clone(), asset_idx);
 
@@ -392,7 +413,9 @@ impl AssetGraphBuilder {
             discovered_assets,
             asset_idx,
             added_discovered_assets,
-            root_asset,
+            root_asset_id,
+            root_asset_unique_key,
+            cached,
           );
           self.propagate_requested_symbols(asset_idx, dependency_idx);
         }
@@ -422,7 +445,7 @@ impl AssetGraphBuilder {
     );
   }
 
-  fn handle_target_request_result(&mut self, result: TargetRequestOutput) {
+  fn handle_target_request_result(&mut self, result: TargetRequestOutput, cached: bool) {
     let TargetRequestOutput { entry, targets } = result;
     for target in targets {
       let entry =
@@ -431,7 +454,7 @@ impl AssetGraphBuilder {
 
       let dependency = Dependency::entry(entry.clone(), target);
 
-      let dep_node = self.graph.add_entry_dependency(dependency.clone());
+      let dep_node = self.graph.add_entry_dependency(dependency.clone(), cached);
       self.entry_dependencies.push((entry, dep_node));
 
       let request = PathRequest {

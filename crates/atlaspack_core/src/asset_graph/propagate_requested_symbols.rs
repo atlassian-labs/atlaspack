@@ -100,7 +100,7 @@ pub fn propagate_requested_symbols<F>(
         let DependencyNode {
           dependency,
           requested_symbols,
-          state: _,
+          ..
         } = asset_graph
           .get_dependency_node_mut(&nested_dependency_idx)
           .unwrap();
@@ -133,6 +133,7 @@ pub fn propagate_requested_symbols<F>(
         dependency,
         requested_symbols: _,
         state,
+        ..
       } = asset_graph
         .get_dependency_node(&nested_dependency_idx)
         .unwrap();

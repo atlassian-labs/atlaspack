@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::Context;
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
 use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
 use atlaspack_core::config_loader::ConfigLoader;
@@ -10,6 +11,7 @@ use atlaspack_filesystem::{os_file_system::OsFileSystem, FileSystemRef};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::writer::DatabaseWriter;
+use petgraph::graph::NodeIndex;
 use tokio::runtime::Runtime;
 use tokio::sync::RwLock;
 
@@ -140,7 +142,8 @@ impl Atlaspack {
       };
 
       let asset_graph = asset_graph_request_output.graph;
-      self.commit_assets(asset_graph.nodes().collect())?;
+      self.commit_assets(&asset_graph)?;
+
       Ok(asset_graph)
     })
   }
@@ -157,13 +160,19 @@ impl Atlaspack {
     })
   }
 
-  fn commit_assets(&self, assets: Vec<&AssetGraphNode>) -> anyhow::Result<()> {
+  #[tracing::instrument(level = "info", skip_all)]
+  fn commit_assets(&self, graph: &AssetGraph) -> anyhow::Result<()> {
     let mut txn = self.db.write_txn()?;
 
-    for asset_node in assets {
-      let AssetGraphNode::Asset(AssetNode { asset, .. }) = asset_node else {
+    for node in graph.nodes() {
+      let AssetGraphNode::Asset(asset_node) = node else {
         continue;
       };
+      if asset_node.cached {
+        continue;
+      }
+
+      let asset = &asset_node.asset;
 
       self.db.put(&mut txn, &asset.id, asset.code.bytes())?;
       if let Some(map) = &asset.map {
@@ -220,22 +229,19 @@ mod tests {
     })?;
 
     let assets_names = ["foo", "bar", "baz"];
-    let assets = assets_names
-      .iter()
-      .enumerate()
-      .map(|(idx, asset)| {
-        AssetGraphNode::Asset(AssetNode {
-          asset: Asset {
-            id: idx.to_string(),
-            code: Code::from(asset.to_string()),
-            ..Asset::default()
-          },
-          requested_symbols: HashSet::new(),
-        })
-      })
-      .collect::<Vec<AssetGraphNode>>();
+    let mut asset_graph = AssetGraph::new();
+    assets_names.iter().enumerate().for_each(|(idx, asset)| {
+      asset_graph.add_asset(
+        Asset {
+          id: idx.to_string(),
+          code: Code::from(asset.to_string()),
+          ..Asset::default()
+        },
+        true,
+      );
+    });
 
-    atlaspack.commit_assets(assets.iter().collect())?;
+    atlaspack.commit_assets(&asset_graph)?;
 
     let txn = db.read_txn()?;
     for (idx, asset) in assets_names.iter().enumerate() {

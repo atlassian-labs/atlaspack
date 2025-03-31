@@ -25,6 +25,7 @@ use super::RequestEdgeType;
 use super::RequestGraph;
 use super::RequestId;
 use super::RequestNode;
+use super::RequestResponse;
 use super::ResultAndInvalidations;
 use super::RunRequestError;
 use super::{RunRequestContext, RunRequestMessage};
@@ -164,7 +165,11 @@ impl RequestTracker {
             // Cached request
             if let Some(response_tx) = response_tx {
               let result = self.get_request(parent_request_id, request_id);
-              let _ = response_tx.send(result.map(|r| (r, request_id)));
+              let _ = response_tx.send(result.map(|r| RequestResponse {
+                result: r,
+                id: request_id,
+                cached: true,
+              }));
             }
           };
         }
@@ -179,7 +184,11 @@ impl RequestTracker {
           self.link_request_to_parent(request_id, parent_request_id)?;
 
           if let Some(response_tx) = response_tx {
-            let _ = response_tx.send(result.map(|result| (result.result, request_id)));
+            let _ = response_tx.send(result.map(|result| RequestResponse {
+              result: result.result,
+              id: request_id,
+              cached: false,
+            }));
           }
         }
       }
@@ -367,6 +376,6 @@ enum RequestQueueMessage {
     request_id: RequestId,
     parent_request_id: Option<RequestId>,
     result: Result<ResultAndInvalidations, RunRequestError>,
-    response_tx: Option<Sender<anyhow::Result<(RequestResult, RequestId)>>>,
+    response_tx: Option<Sender<anyhow::Result<RequestResponse>>>,
   },
 }
