@@ -138,7 +138,7 @@ jobs:
       - run: ls -l
       - run: ls -l target
       - run: yarn --frozen-lockfile
-      # - run: yarn build-native-release
+      - run: yarn build-native-release
       - run: yarn test:integration-ci
         env:
           ATLASPACK_V3: ${{ matrix.version == 'v3' && 'true' || 'false' }}
