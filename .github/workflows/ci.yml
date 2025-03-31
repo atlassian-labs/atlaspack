@@ -60,14 +60,14 @@ jobs:
           - name: 🐥 Build Linux AMD64
             runner: ubuntu-24.04
 
-          - name: 🐥 Build Linux ARM64
-            runner: ubuntu-24.04-arm
+          # - name: 🐥 Build Linux ARM64
+          #   runner: ubuntu-24.04-arm
 
-          - name: 🍎 Build MacOS AMD64
-            runner: macos-13
+          # - name: 🍎 Build MacOS AMD64
+          #   runner: macos-13
 
-          - name: 🍎 Build MacOS ARM64
-            runner: macos-15
+          # - name: 🍎 Build MacOS ARM64
+          #   runner: macos-15
 
           # Disabled
           # - name: 🟦 Windows AMD64
