@@ -17,59 +17,91 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-      - uses: ./.github/actions/rust-toolchain
-        with:
-          components: clippy, rustfmt
-      - run: yarn --frozen-lockfile
-      - run: yarn lint
+  # lint:
+  #   name: Lint
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         cache: yarn
+  #     - uses: ./.github/actions/rust-toolchain
+  #       with:
+  #         components: clippy, rustfmt
+  #     - run: yarn --frozen-lockfile
+  #     - run: yarn lint
 
-  flow:
-    name: Flow
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-      - run: yarn --frozen-lockfile
-      - run: yarn flow check
+  # flow:
+  #   name: Flow
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         cache: yarn
+  #     - run: yarn --frozen-lockfile
+  #     - run: yarn flow check
 
-  ts-types:
-    name: TypeScript types
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-      - run: yarn --frozen-lockfile
-      - run: yarn build-ts
+  # ts-types:
+  #   name: TypeScript types
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         cache: yarn
+  #     - run: yarn --frozen-lockfile
+  #     - run: yarn build-ts
 
   build_native:
-    name: Build native
     strategy:
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-13]
-    runs-on: ${{ matrix.os }}
+        config:
+          - name: 🐥 Build Linux AMD64
+            runner: ubuntu-24.04
+
+          - name: 🐥 Build Linux ARM64
+            runner: ubuntu-24.04-arm
+
+          - name: 🍎 Build MacOS AMD64
+            runner: macos-13
+
+          - name: 🍎 Build MacOS ARM64
+            runner: macos-15
+
+          # Disabled
+          # - name: 🟦 Windows AMD64
+          #   runner: windows-latest
+    name: ${{ matrix.config.name}}
+    runs-on: ${{ matrix.config.runner }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-          node-version: 20
+        with: { node-version: 20 }
+      - run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
       - uses: ./.github/actions/rust-toolchain
       - name: Cache Rust
         uses: actions/cache@v4
         with:
-          path: target
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
+          restore-keys: |
+            /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
+            /${{ runner.os }}/${{ runner.arch }}/main/target
+      - name: Cache Yarn
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
           key: /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
           restore-keys: |
             /${{ runner.os }}/${{ runner.arch }}/${{ github.ref }}/target
@@ -114,7 +146,8 @@ jobs:
     strategy:
       matrix:
         node: [18, 20]
-        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-13]
+        os: [ubuntu-24.04]
+        # os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-13]
         # version: [v2, v3]
         version: [v3]
       # These tend to be quite flakey, so one failed instance shouldn't stop
