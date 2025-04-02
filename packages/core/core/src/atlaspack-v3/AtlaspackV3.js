@@ -65,7 +65,13 @@ export class AtlaspackV3 {
     return graph;
   }
 
-  respondToFsEvents(events: Array<Event>): Promise<boolean> {
-    return this._internal.respondToFsEvents(events);
+  async respondToFsEvents(events: Array<Event>): Promise<boolean> {
+    let [isInvalid, err] = await this._internal.respondToFsEvents(events);
+
+    if (err) {
+      throw new Error(err);
+    }
+
+    return isInvalid;
   }
 }
