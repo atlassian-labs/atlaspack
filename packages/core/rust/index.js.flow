@@ -80,8 +80,7 @@ declare export function atlaspackNapiBuildAssetGraph(
 declare export function atlaspackNapiRespondToFsEvents(
   atlaspack: AtlaspackNapi,
   events: WatchEvents,
-): boolean;
-// AtlaspackNapi
+): Promise<[boolean, any]>;
 
 declare export function getAvailableThreads(): number;
 
