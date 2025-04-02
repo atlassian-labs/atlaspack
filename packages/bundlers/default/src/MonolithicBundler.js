@@ -28,14 +28,16 @@ export function addJSMonolithBundle(
         return;
       }
 
-      if (node.value.priority === 'lazy') {
+      let dependency = node.value;
+
+      if (dependency.priority === 'lazy') {
         // Any async dependencies need to be internalized into the bundle, and will
         // be included by the asset check above
-        bundleGraph.internalizeAsyncDependency(bundle, node.value);
+        bundleGraph.internalizeAsyncDependency(bundle, dependency);
         return;
       }
 
-      let assets = bundleGraph.getDependencyAssets(node.value);
+      let assets = bundleGraph.getDependencyAssets(dependency);
       invariant(
         assets.length === 1,
         'Expected dependency to have exactly one asset',
@@ -57,8 +59,10 @@ export function addJSMonolithBundle(
 
         // Add the new bundle to the bundle graph, in its own bundle group
         bundleGraph.createBundleReference(bundle, isolatedBundle);
-        let bundleGroup = bundleGraph.createBundleGroup(node.value, target);
-        bundleGraph.addBundleToBundleGroup(isolatedBundle, bundleGroup);
+        bundleGraph.addBundleToBundleGroup(
+          isolatedBundle,
+          bundleGraph.createBundleGroup(dependency, target),
+        );
 
         // Nothing below the isolated asset needs to go in the main bundle, so
         // we can stop traversal here
@@ -67,9 +71,9 @@ export function addJSMonolithBundle(
         // To be properly isolated, all of this asset's dependencies need to go
         // in this new bundle
         bundleGraph.traverse(
-          (node) => {
-            if (node.type === 'asset' && node.value.type === 'js') {
-              bundleGraph.addAssetToBundle(node.value, isolatedBundle);
+          (subNode) => {
+            if (subNode.type === 'asset' && subNode.value.type === 'js') {
+              bundleGraph.addAssetToBundle(subNode.value, isolatedBundle);
               return;
             }
           },
