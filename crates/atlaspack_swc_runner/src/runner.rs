@@ -1,16 +1,20 @@
 use std::string::FromUtf8Error;
+use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::input::StringInput;
 use swc_core::common::sync::Lrc;
 use swc_core::common::util::take::Take;
 use swc_core::common::{FileName, Globals, Mark, SourceMap, GLOBALS};
-use swc_core::ecma::ast::Module;
+use swc_core::ecma::ast::{Module, ModuleItem, Program};
 use swc_core::ecma::codegen::text_writer::JsWriter;
+use swc_core::ecma::codegen::Config;
 use swc_core::ecma::parser::lexer::Lexer;
 use swc_core::ecma::parser::Parser;
 use swc_core::ecma::transforms::base::resolver;
 use swc_core::ecma::visit::{Fold, FoldWith, Visit, VisitMut, VisitMutWith, VisitWith};
 
 pub struct RunContext {
+  /// Whether the passed in code is a module
+  pub is_module: bool,
   /// Source-map in use
   pub source_map: Lrc<SourceMap>,
   /// Global mark from SWC resolver
@@ -60,6 +64,7 @@ pub fn run_visit_const<V: Visit>(
       module.visit_with(&mut visit);
       visit
     })?;
+
   Ok(RunVisitResult {
     output_code,
     visitor,
@@ -78,6 +83,7 @@ pub fn run_fold<V: Fold>(
       *module = module.take().fold_with(&mut visit);
       visit
     })?;
+
   Ok(RunVisitResult {
     output_code,
     visitor,
@@ -107,17 +113,18 @@ fn run_with_transformation<R>(
 ) -> Result<RunWithTransformationOutput<R>, RunWithTransformationError> {
   let source_map = Lrc::new(SourceMap::default());
   let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), code.into());
+  let comments = SingleThreadedComments::default();
 
   let lexer = Lexer::new(
     Default::default(),
     Default::default(),
     StringInput::from(&*source_file),
-    None,
+    Some(&comments),
   );
 
   let mut parser = Parser::new_from(lexer);
-  let mut module = parser
-    .parse_module()
+  let program = parser
+    .parse_program()
     .map_err(RunWithTransformationError::SwcParse)?;
 
   GLOBALS.set(
@@ -125,13 +132,26 @@ fn run_with_transformation<R>(
     || -> Result<RunWithTransformationOutput<R>, RunWithTransformationError> {
       let global_mark = Mark::new();
       let unresolved_mark = Mark::new();
+
+      let is_module = program.is_module();
+      let mut module = match program {
+        Program::Module(module) => module,
+        Program::Script(script) => Module {
+          span: script.span,
+          shebang: None,
+          body: script.body.into_iter().map(ModuleItem::Stmt).collect(),
+        },
+      };
+
       module.visit_mut_with(&mut resolver(unresolved_mark, global_mark, false));
 
       let context = RunContext {
+        is_module,
         source_map: source_map.clone(),
         global_mark,
         unresolved_mark,
       };
+
       let result = transform(context, &mut module);
 
       let mut line_pos_buffer = vec![];
@@ -142,16 +162,20 @@ fn run_with_transformation<R>(
         &mut output_buffer,
         Some(&mut line_pos_buffer),
       );
+
       let mut emitter = swc_core::ecma::codegen::Emitter {
-        cfg: Default::default(),
+        cfg: Config::default(),
         cm: source_map.clone(),
-        comments: None,
+        comments: Some(&comments),
         wr: writer,
       };
+
       emitter.emit_module(&module)?;
+
       let output_code = String::from_utf8(output_buffer)?;
       let source_map = source_map.build_source_map(&line_pos_buffer);
       let mut output_map_buffer = vec![];
+
       source_map.to_writer(&mut output_map_buffer)?;
 
       Ok((output_code, result, output_map_buffer))
