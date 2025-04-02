@@ -148,6 +148,7 @@ impl Atlaspack {
     })
   }
 
+  #[tracing::instrument(level = "info", skip_all, ret)]
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
     self.runtime.block_on(async move {
       Ok(
