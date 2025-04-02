@@ -38,48 +38,44 @@ export function addJSMonolithBundle(
       }
 
       let assets = bundleGraph.getDependencyAssets(dependency);
-      invariant(
-        assets.length === 1,
-        'Expected dependency to have exactly one asset',
-      );
 
-      let asset = assets[0];
+      for (const asset of assets) {
+        // For assets marked as isolated, we create new bundles and let other
+        // plugins like optimizers include them in the primary bundle
+        if (asset.bundleBehavior === 'isolated') {
+          // Create a new bundle to hold the isolated asset
+          let isolatedBundle = bundleGraph.createBundle({
+            entryAsset: asset,
+            target,
+            bundleBehavior: 'isolated',
+          });
 
-      // For assets marked as isolated, we create new bundles and let other
-      // plugins like optimizers include them in the primary bundle
-      if (asset.bundleBehavior === 'isolated') {
-        // Create a new bundle to hold the isolated asset
-        let isolatedBundle = bundleGraph.createBundle({
-          entryAsset: asset,
-          target,
-          bundleBehavior: 'isolated',
-        });
+          bundleGraph.addAssetToBundle(asset, isolatedBundle);
 
-        bundleGraph.addAssetToBundle(asset, isolatedBundle);
+          // Add the new bundle to the bundle graph, in its own bundle group
+          bundleGraph.createBundleReference(bundle, isolatedBundle);
+          bundleGraph.addBundleToBundleGroup(
+            isolatedBundle,
+            bundleGraph.createBundleGroup(dependency, target),
+          );
 
-        // Add the new bundle to the bundle graph, in its own bundle group
-        bundleGraph.createBundleReference(bundle, isolatedBundle);
-        bundleGraph.addBundleToBundleGroup(
-          isolatedBundle,
-          bundleGraph.createBundleGroup(dependency, target),
-        );
+          // Nothing below the isolated asset needs to go in the main bundle, so
+          // we can stop traversal here
+          actions.skipChildren();
 
-        // Nothing below the isolated asset needs to go in the main bundle, so
-        // we can stop traversal here
-        actions.skipChildren();
-
-        // To be properly isolated, all of this asset's dependencies need to go
-        // in this new bundle
-        bundleGraph.traverse(
-          (subNode) => {
-            if (subNode.type === 'asset' && subNode.value.type === 'js') {
-              bundleGraph.addAssetToBundle(subNode.value, isolatedBundle);
-              return;
-            }
-          },
-          asset,
-          {skipUnusedDependencies: true},
-        );
+          // To be properly isolated, all of this asset's dependencies need to go
+          // in this new bundle
+          bundleGraph.traverse(
+            (subNode) => {
+              if (subNode.type === 'asset' && subNode.value.type === 'js') {
+                bundleGraph.addAssetToBundle(subNode.value, isolatedBundle);
+                return;
+              }
+            },
+            asset,
+            {skipUnusedDependencies: true},
+          );
+        }
       }
     },
     entryAsset,
