@@ -82,7 +82,6 @@ impl AtlaspackNapi {
     Ok(Self { atlaspack })
   }
 
-  #[tracing::instrument(level = "info", skip_all)]
   #[napi]
   pub fn build_asset_graph(&self, env: Env) -> napi::Result<JsObject> {
     let (deferred, promise) = env.create_deferred()?;
@@ -115,7 +114,6 @@ impl AtlaspackNapi {
     Ok(promise)
   }
 
-  #[tracing::instrument(level = "info", skip_all)]
   #[napi]
   pub fn respond_to_fs_events(&self, env: Env, options: JsObject) -> napi::Result<JsObject> {
     let (deferred, promise) = env.create_deferred()?;

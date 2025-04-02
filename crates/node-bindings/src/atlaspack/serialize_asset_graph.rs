@@ -23,7 +23,6 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
   Ok(napi_asset_graph)
 }
 
-#[tracing::instrument(level = "info", skip_all)]
 fn serialize_asset_graph_nodes(env: &Env, asset_graph: &AssetGraph) -> anyhow::Result<JsObject> {
   // Serialize graph nodes in parallel
   let nodes = asset_graph
