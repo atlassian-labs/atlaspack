@@ -65,7 +65,7 @@ export class AtlaspackV3 {
     return graph;
   }
 
-  respondToFsEvents(events: Array<Event>): boolean {
+  respondToFsEvents(events: Array<Event>): Promise<boolean> {
     return this._internal.respondToFsEvents(events);
   }
 }

@@ -205,8 +205,8 @@ mod tests {
   fn string() {
     let result = is_constant_module(
       r#"
-    export const SOMETHING = 'Hi';
-    "#,
+        export const SOMETHING = 'Hi';
+      "#,
     );
 
     assert!(result);
@@ -216,8 +216,8 @@ mod tests {
   fn null() {
     let result = is_constant_module(
       r#"
-    export const SOMETHING = null;
-    "#,
+        export const SOMETHING = null;
+      "#,
     );
 
     assert!(result);
@@ -227,8 +227,8 @@ mod tests {
   fn bool() {
     let result = is_constant_module(
       r#"
-    export const SOMETHING = false;
-    "#,
+        export const SOMETHING = false;
+      "#,
     );
 
     assert!(result);
@@ -238,8 +238,8 @@ mod tests {
   fn num() {
     let result = is_constant_module(
       r#"
-    export const SOMETHING = 3;
-    "#,
+        export const SOMETHING = 3;
+      "#,
     );
 
     assert!(result);
@@ -249,8 +249,8 @@ mod tests {
   fn bigint() {
     let result = is_constant_module(
       r#"
-    export const SOMETHING = 3n;
-    "#,
+        export const SOMETHING = 3n;
+      "#,
     );
 
     assert!(result);
@@ -260,9 +260,9 @@ mod tests {
   fn unexported_consts() {
     let result = is_constant_module(
       r#"
-    const local = 'local';
-    export const SOMETHING = 'export';
-    "#,
+        const local = 'local';
+        export const SOMETHING = 'export';
+      "#,
     );
 
     assert!(result);
@@ -272,8 +272,8 @@ mod tests {
   fn template_literals() {
     let result = is_constant_module(
       r#"
-    export const SOMETHING = `TEST`;
-    "#,
+        export const SOMETHING = `TEST`;
+      "#,
     );
 
     assert!(result);
@@ -283,9 +283,9 @@ mod tests {
   fn template_literals_known_var() {
     let result = is_constant_module(
       r#"
-    const localVar = 'local';
-    export const SOMETHING = `TEST-${localVar}`;
-    "#,
+        const localVar = 'local';
+        export const SOMETHING = `TEST-${localVar}`;
+      "#,
     );
 
     assert!(result);
@@ -295,8 +295,8 @@ mod tests {
   fn template_literals_nested_literal() {
     let result = is_constant_module(
       r#"
-    export const SOMETHING = `TEST-${'but-why'}`;
-    "#,
+        export const SOMETHING = `TEST-${'but-why'}`;
+      "#,
     );
 
     assert!(result);
@@ -306,8 +306,8 @@ mod tests {
   fn template_literals_unknown_var() {
     let result = is_constant_module(
       r#"
-    export const SOMETHING = `TEST-${someVar}`;
-    "#,
+        export const SOMETHING = `TEST-${someVar}`;
+      "#,
     );
 
     assert!(!result);
@@ -317,9 +317,9 @@ mod tests {
   fn side_effect() {
     let result = is_constant_module(
       r#"
-    sideEffect();
-    export const SOMETHING = '';
-    "#,
+        sideEffect();
+        export const SOMETHING = '';
+      "#,
     );
 
     assert!(!result);
@@ -329,9 +329,9 @@ mod tests {
   fn import() {
     let result = is_constant_module(
       r#"
-    import {something} from './somewhere';
-    export const SOMETHING = '';
-    "#,
+        import {something} from './somewhere';
+        export const SOMETHING = '';
+      "#,
     );
 
     assert!(!result);
@@ -341,8 +341,8 @@ mod tests {
   fn object() {
     let result = is_constant_module(
       r#"
-    export const SOMETHING = {};
-    "#,
+        export const SOMETHING = {};
+      "#,
     );
 
     assert!(!result);
@@ -352,8 +352,8 @@ mod tests {
   fn array() {
     let result = is_constant_module(
       r#"
-    export const SOMETHING = [];
-    "#,
+        export const SOMETHING = [];
+      "#,
     );
 
     assert!(!result);
@@ -363,8 +363,8 @@ mod tests {
   fn export_let() {
     let result = is_constant_module(
       r#"
-    export let SOMETHING = 'Hi';
-    "#,
+        export let SOMETHING = 'Hi';
+      "#,
     );
 
     assert!(!result);
@@ -374,8 +374,8 @@ mod tests {
   fn var() {
     let result = is_constant_module(
       r#"
-    export var SOMETHING = 'Hi';
-    "#,
+        export var SOMETHING = 'Hi';
+      "#,
     );
 
     assert!(!result);

@@ -224,7 +224,8 @@ impl NodeReplacer<'_> {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_swc_runner::test_utils::run_test_visit;
+  use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
+  use indoc::indoc;
 
   use super::*;
 
@@ -234,10 +235,11 @@ mod tests {
     let mut items = vec![];
 
     let code = r#"
-const filename = __filename;
-console.log(__filename);
+      const filename = __filename;
+      console.log(__filename);
     "#;
-    let output_code = run_test_visit(code, |context| NodeReplacer {
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| NodeReplacer {
       source_map: context.source_map.clone(),
       global_mark: context.global_mark,
       globals: HashMap::new(),
@@ -245,15 +247,14 @@ console.log(__filename);
       has_node_replacements: &mut has_node_replacements,
       items: &mut items,
       unresolved_mark: context.unresolved_mark,
-    })
-    .output_code;
+    });
 
-    let expected_code = r#"
-var $parcel$__filename = require("path").resolve(__dirname, "$parcel$filenameReplace", "random.js");
-const filename = $parcel$__filename;
-console.log($parcel$__filename);
-"#
-    .trim_start();
+    let expected_code = indoc! {r#"
+      var $parcel$__filename = require("path").resolve(__dirname, "$parcel$filenameReplace", "random.js");
+      const filename = $parcel$__filename;
+      console.log($parcel$__filename);
+    "#};
+
     assert_eq!(output_code, expected_code);
     assert!(has_node_replacements);
     assert_eq!(items[0].specifier, JsWord::from("path"));
@@ -268,10 +269,11 @@ console.log($parcel$__filename);
     let mut items = vec![];
 
     let code = r#"
-const dirname = __dirname;
-console.log(__dirname);
+      const dirname = __dirname;
+      console.log(__dirname);
     "#;
-    let output_code = run_test_visit(code, |context| NodeReplacer {
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| NodeReplacer {
       source_map: context.source_map.clone(),
       global_mark: context.global_mark,
       globals: HashMap::new(),
@@ -279,15 +281,14 @@ console.log(__dirname);
       has_node_replacements: &mut has_node_replacements,
       items: &mut items,
       unresolved_mark: context.unresolved_mark,
-    })
-    .output_code;
+    });
 
-    let expected_code = r#"
-var $parcel$__dirname = require("path").resolve(__dirname, "$parcel$dirnameReplace");
-const dirname = $parcel$__dirname;
-console.log($parcel$__dirname);
-"#
-    .trim_start();
+    let expected_code = indoc! { r#"
+      var $parcel$__dirname = require("path").resolve(__dirname, "$parcel$dirnameReplace");
+      const dirname = $parcel$__dirname;
+      console.log($parcel$__dirname);
+    "#};
+
     assert_eq!(output_code, expected_code);
     assert!(has_node_replacements);
     assert_eq!(items[0].specifier, JsWord::from("path"));
@@ -302,13 +303,14 @@ console.log($parcel$__dirname);
     let mut items = vec![];
 
     let code = r#"
-function something(__filename, __dirname) {
-    const filename = __filename;
-    console.log(__filename);
-    console.log(__dirname);
-}
+      function something(__filename, __dirname) {
+        const filename = __filename;
+        console.log(__filename);
+        console.log(__dirname);
+      }
     "#;
-    let output_code = run_test_visit(code, |context| NodeReplacer {
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| NodeReplacer {
       source_map: context.source_map.clone(),
       global_mark: context.global_mark,
       globals: HashMap::new(),
@@ -316,17 +318,16 @@ function something(__filename, __dirname) {
       has_node_replacements: &mut has_node_replacements,
       items: &mut items,
       unresolved_mark: context.unresolved_mark,
-    })
-    .output_code;
+    });
 
-    let expected_code = r#"
-function something(__filename, __dirname) {
-    const filename = __filename;
-    console.log(__filename);
-    console.log(__dirname);
-}
-"#
-    .trim_start();
+    let expected_code = indoc! {r#"
+      function something(__filename, __dirname) {
+          const filename = __filename;
+          console.log(__filename);
+          console.log(__dirname);
+      }
+    "#};
+
     assert_eq!(output_code, expected_code);
     assert!(!has_node_replacements);
     assert_eq!(items.len(), 0);
@@ -338,9 +339,10 @@ function something(__filename, __dirname) {
     let mut items = vec![];
 
     let code = r#"
-const filename = obj.__filename;
+      const filename = obj.__filename;
     "#;
-    let output_code = run_test_visit(code, |context| NodeReplacer {
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| NodeReplacer {
       source_map: context.source_map.clone(),
       global_mark: context.global_mark,
       globals: HashMap::new(),
@@ -348,13 +350,12 @@ const filename = obj.__filename;
       has_node_replacements: &mut has_node_replacements,
       items: &mut items,
       unresolved_mark: context.unresolved_mark,
-    })
-    .output_code;
+    });
 
-    let expected_code = r#"
-const filename = obj.__filename;
-"#
-    .trim_start();
+    let expected_code = indoc! {r#"
+      const filename = obj.__filename;
+    "#};
+
     assert_eq!(output_code, expected_code);
     assert!(!has_node_replacements);
     assert_eq!(items.len(), 0);
@@ -366,9 +367,10 @@ const filename = obj.__filename;
     let mut items = vec![];
 
     let code = r#"
-const filename = obj[__filename];
+      const filename = obj[__filename];
     "#;
-    let output_code = run_test_visit(code, |context| NodeReplacer {
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| NodeReplacer {
       source_map: context.source_map.clone(),
       global_mark: context.global_mark,
       globals: HashMap::new(),
@@ -376,14 +378,13 @@ const filename = obj[__filename];
       has_node_replacements: &mut has_node_replacements,
       items: &mut items,
       unresolved_mark: context.unresolved_mark,
-    })
-    .output_code;
+    });
 
-    let expected_code = r#"
-var $parcel$__filename = require("path").resolve(__dirname, "$parcel$filenameReplace", "random.js");
-const filename = obj[$parcel$__filename];
-"#
-    .trim_start();
+    let expected_code = indoc! {r#"
+      var $parcel$__filename = require("path").resolve(__dirname, "$parcel$filenameReplace", "random.js");
+      const filename = obj[$parcel$__filename];
+    "#};
+
     assert_eq!(output_code, expected_code);
     assert!(has_node_replacements);
     assert_eq!(items.len(), 1);

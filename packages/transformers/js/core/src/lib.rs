@@ -2,11 +2,11 @@ mod collect;
 mod constant_module;
 mod dependency_collector;
 mod env_replacer;
+mod esm_to_cjs_replacer;
 mod fs;
 mod global_replacer;
 mod hoist;
 mod magic_comments;
-mod modules;
 mod node_replacer;
 pub mod test_utils;
 mod typeof_replacer;
@@ -33,6 +33,7 @@ pub use dependency_collector::dependency_collector;
 pub use dependency_collector::DependencyDescriptor;
 pub use dependency_collector::DependencyKind;
 use env_replacer::*;
+use esm_to_cjs_replacer::EsmToCjsReplacer;
 use fs::inline_fs;
 use global_replacer::GlobalReplacer;
 use hoist::hoist;
@@ -41,7 +42,6 @@ use hoist::HoistResult;
 pub use hoist::ImportedSymbol;
 use indexmap::IndexMap;
 use magic_comments::MagicCommentsVisitor;
-use modules::esm2cjs;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
 use pathdiff::diff_paths;
@@ -443,6 +443,8 @@ pub fn transform(
                 ),
               );
 
+              let ignore_mark = Mark::fresh(Mark::root());
+
               let module = {
                 let mut passes = (
                   // Insert dependencies for node globals
@@ -459,6 +461,7 @@ pub fn transform(
                     }),
                     config.insert_node_globals
                   ),
+
                   // Transpile new syntax to older syntax if needed
                   Optional::new(
                     preset_env(
@@ -470,40 +473,42 @@ pub fn transform(
                     ),
                     should_run_preset_env,
                   ),
+
                   // Inject SWC helpers if needed.
                   helpers::inject_helpers(global_mark),
+
+                  // Flush Id=(JsWord, SyntaxContexts) into unique names and reresolve to set
+                  // global_mark for all nodes, even generated ones.
+                  //
+                  // This will also remove any other other marks (like ignore_mark) and only needs
+                  // to be done if preset_env ran because all other transforms insert declarations
+                  // with global_mark (even though they are generated).
+                  Optional::new(
+                    hygiene(),
+                    config.scope_hoist && should_run_preset_env,
+                  ),
+
+                  Optional::new(
+                    resolver(unresolved_mark, global_mark, false),
+                    config.scope_hoist && should_run_preset_env,
+                  ),
+
+                  // Collect dependencies
+                  visit_mut_pass(
+                    dependency_collector(
+                      source_map.clone(),
+                      &mut result.dependencies,
+                      ignore_mark,
+                      unresolved_mark,
+                      &config,
+                      &mut diagnostics,
+                      &mut result.conditions,
+                    ),
+                  ),
                 );
 
                 module.apply(&mut passes)
               };
-
-              // Flush Id=(JsWord, SyntaxContexts) into unique names and reresolve to
-              // set global_mark for all nodes, even generated ones.
-              // - This will also remove any other other marks (like ignore_mark)
-              // This only needs to be done if preset_env ran because all other transforms
-              // insert declarations with global_mark (even though they are generated).
-              let module = if config.scope_hoist && should_run_preset_env {
-                module.apply(&mut (
-                  hygiene(),
-                  resolver(unresolved_mark, global_mark, false)
-                ))
-              } else {
-                module
-              };
-
-              let ignore_mark = Mark::fresh(Mark::root());
-              let module = module.fold_with(
-                // Collect dependencies
-                &mut dependency_collector(
-                  source_map.clone(),
-                  &mut result.dependencies,
-                  ignore_mark,
-                  unresolved_mark,
-                  &config,
-                  &mut diagnostics,
-                  &mut result.conditions,
-                ),
-              );
 
               diagnostics.extend(error_buffer_to_diagnostics(&error_buffer, &source_map));
 
@@ -524,6 +529,7 @@ pub fn transform(
                 is_module,
                 config.conditional_bundling,
               );
+
               module.visit_with(&mut collect);
 
               if collect.is_empty_or_empty_export {
@@ -546,7 +552,7 @@ pub fn transform(
                 diagnostics.extend(bailouts.iter().map(|bailout| bailout.to_diagnostic()));
               }
 
-              let module = module.module().expect("Module should be a module at this point");
+              let mut module = module.module().expect("Module should be a module at this point");
               let module = if config.scope_hoist {
                 let res = hoist(module, config.module_id.as_str(), unresolved_mark, &collect);
                 match res {
@@ -566,8 +572,9 @@ pub fn transform(
                   result.symbol_result = Some(collect.into());
                 }
 
-                let (module, needs_helpers) = esm2cjs(module, unresolved_mark, versions);
-                result.needs_esm_helpers = needs_helpers;
+                let mut esm2cjs = EsmToCjsReplacer::new(unresolved_mark, versions);
+                module.visit_mut_with(&mut esm2cjs);
+                result.needs_esm_helpers = esm2cjs.needs_helpers;
                 module
               };
 

@@ -34,7 +34,7 @@ impl std::fmt::Debug for RequestResult {
       }
       RequestResult::Entry(_) => write!(f, "Entry"),
       RequestResult::Path(_) => write!(f, "Path"),
-      RequestResult::Target(_) => write!(f, "Target"),
+      RequestResult::Target(output) => output.fmt(f),
       #[cfg(test)]
       RequestResult::TestSub(_) => write!(f, "TestSub"),
       #[cfg(test)]
