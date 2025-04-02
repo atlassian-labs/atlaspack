@@ -5,13 +5,11 @@ import {
   bundle,
   describe,
   it,
-  distDir,
   overlayFS,
   fsFixture,
   run,
 } from '@atlaspack/test-utils';
 import assert from 'assert';
-import {outputFS} from '../../test-utils/src/utils';
 
 describe('monolithic bundler', function () {
   it.v2(
@@ -115,16 +113,6 @@ describe('monolithic bundler', function () {
           },
         },
       },
-    );
-
-    const contents = await Promise.all(
-      bundleResult
-        .getBundles()
-        .map((b) => [
-          b.filePath,
-          b.type,
-          overlayFS.readFile(b.filePath, 'utf8'),
-        ]),
     );
 
     const svgBundle = bundleResult.getBundles().find((b) => b.type === 'svg');
