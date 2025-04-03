@@ -190,6 +190,7 @@ describe('monolithic bundler', function () {
     });
 
     const result = await run(bundleResult);
-    assert(result.output.startsWith('File text: !function(e,n,r,t,o)'));
+    assert(result.output.startsWith('File text: !function('));
+    assert(result.output.includes('Hello world'));
   });
 });
