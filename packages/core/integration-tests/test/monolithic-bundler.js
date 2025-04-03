@@ -104,7 +104,6 @@ describe('monolithic bundler', function () {
       {
         defaultTargetOptions: {shouldScopeHoist: false},
         inputFS: overlayFS,
-        outputFS: overlayFS,
         mode: 'production',
         targets: {
           'isolated-bundle': {
@@ -131,29 +130,38 @@ describe('monolithic bundler', function () {
     ]);
   });
 
-  it.v2('should handle multiple assets like a CSS module', async function () {
+  it.v2('should support inline bundles', async function () {
     await fsFixture(overlayFS, __dirname)`
-      multi-asset-bundles
-        a.js:
-          import styles from './styles.module.css';
-          export const styleContainer = \`<div class="\${styles.container}" />\`;
-        styles.module.css:
-          .container {
-            color: papayawhip;
-          }
-        yarn.lock: {}
-    `;
+        inline-bundles
+          a.js:
+            import icon from './icon.svg';
+            export const image = \`<img src="\${icon}" />\`;
+          icon.svg:
+            <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+              <circle cx="50" cy="50" r="40" fill="green" />
+            </svg>
+          .parcelrc:
+            {
+              "extends": "@atlaspack/config-default",
+              "transformers": {
+                "*.svg": ["@atlaspack/transformer-inline-string"]
+              },
+              "optimizers": {
+                "*.svg": ["@atlaspack/optimizer-data-url"]
+              }
+            }
+          yarn.lock: {}
+      `;
 
     let bundleResult = await bundle(
-      path.join(__dirname, 'multi-asset-bundles/a.js'),
+      path.join(__dirname, 'inline-bundles/a.js'),
       {
         defaultTargetOptions: {shouldScopeHoist: false},
         inputFS: overlayFS,
-        outputFS: overlayFS,
         mode: 'production',
         targets: {
-          'multi-asset-bundle': {
-            distDir: 'dist-multi-asset',
+          'inline-bundle': {
+            distDir: 'dist-inline',
             __unstable_singleFileOutput: true,
           },
         },
@@ -162,6 +170,9 @@ describe('monolithic bundler', function () {
 
     const result = await run(bundleResult);
 
-    assert.equal(result.styleContainer, '<div class="EcQGha_container" />');
+    assert.equal(
+      result.image,
+      "<img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='50' cy='50' r='40' fill='green' /%3E%3C/svg%3E\" />",
+    );
   });
 });
