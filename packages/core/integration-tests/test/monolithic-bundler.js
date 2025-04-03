@@ -86,7 +86,7 @@ describe('monolithic bundler', function () {
     },
   );
 
-  it.v2('should support isolated bundles', async function () {
+  it.v2('should error if isolated assets are in the build', async function () {
     await fsFixture(overlayFS, __dirname)`
       isolated-bundles
         a.js:
@@ -99,61 +99,58 @@ describe('monolithic bundler', function () {
         yarn.lock: {}
     `;
 
-    let bundleResult = await bundle(
-      path.join(__dirname, 'isolated-bundles/a.js'),
-      {
-        defaultTargetOptions: {shouldScopeHoist: false},
-        inputFS: overlayFS,
-        outputFS: overlayFS,
-        mode: 'production',
-        targets: {
-          'isolated-bundle': {
-            distDir: 'dist-isolated',
-            __unstable_singleFileOutput: true,
+    await assert.rejects(
+      () =>
+        bundle(path.join(__dirname, 'isolated-bundles/a.js'), {
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+          mode: 'production',
+          targets: {
+            'isolated-bundle': {
+              distDir: 'dist-isolated',
+              __unstable_singleFileOutput: true,
+            },
           },
-        },
+        }),
+      {
+        message:
+          'Isolated assets are not supported for single file output builds',
       },
     );
-
-    const svgBundle = bundleResult.getBundles().find((b) => b.type === 'svg');
-    if (!svgBundle) {
-      throw new Error('SVG bundle not found');
-    }
-
-    const svgFileName = path.basename(svgBundle.filePath);
-
-    const result = await run(bundleResult);
-    assert.equal(result.image, `<img src="http://localhost/${svgFileName}" />`);
-
-    assertBundles(bundleResult, [
-      {assets: ['a.js', 'bundle-url.js', 'esmodule-helpers.js']},
-      {type: 'svg', assets: ['icon.svg']},
-    ]);
   });
 
-  it.v2('should handle multiple assets like a CSS module', async function () {
+  it.v2('should support inline bundles', async function () {
     await fsFixture(overlayFS, __dirname)`
-      multi-asset-bundles
-        a.js:
-          import styles from './styles.module.css';
-          export const styleContainer = \`<div class="\${styles.container}" />\`;
-        styles.module.css:
-          .container {
-            color: papayawhip;
-          }
-        yarn.lock: {}
-    `;
+        inline-bundles
+          a.js:
+            import icon from './icon.svg';
+            export const image = \`<img src="\${icon}" />\`;
+          icon.svg:
+            <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+              <circle cx="50" cy="50" r="40" fill="green" />
+            </svg>
+          .parcelrc:
+            {
+              "extends": "@atlaspack/config-default",
+              "transformers": {
+                "*.svg": ["@atlaspack/transformer-inline-string"]
+              },
+              "optimizers": {
+                "*.svg": ["@atlaspack/optimizer-data-url"]
+              }
+            }
+          yarn.lock: {}
+      `;
 
     let bundleResult = await bundle(
-      path.join(__dirname, 'multi-asset-bundles/a.js'),
+      path.join(__dirname, 'inline-bundles/a.js'),
       {
         defaultTargetOptions: {shouldScopeHoist: false},
         inputFS: overlayFS,
-        outputFS: overlayFS,
         mode: 'production',
         targets: {
-          'multi-asset-bundle': {
-            distDir: 'dist-multi-asset',
+          'inline-bundle': {
+            distDir: 'dist-inline',
             __unstable_singleFileOutput: true,
           },
         },
@@ -161,7 +158,39 @@ describe('monolithic bundler', function () {
     );
 
     const result = await run(bundleResult);
+    const expectedSvgString =
+      '%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22100%22%3E%0A%20%20%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2240%22%20fill%3D%22green%22%3E%3C%2Fcircle%3E%0A%3C%2Fsvg%3E';
+    assert.equal(
+      result.image,
+      `<img src="data:image/svg+xml,${expectedSvgString}" />`,
+    );
+  });
 
-    assert.equal(result.styleContainer, '<div class="EcQGha_container" />');
+  it.v2('should support inline bundles (bundle-text)', async function () {
+    await fsFixture(overlayFS, __dirname)`
+        bundle-text
+          a.js:
+            import b from 'bundle-text:./b.js';
+            export const output = \`File text: \${b}\`;
+          b.js:
+            export default 'Hello world';
+          yarn.lock: {}
+      `;
+
+    let bundleResult = await bundle(path.join(__dirname, 'bundle-text/a.js'), {
+      defaultTargetOptions: {shouldScopeHoist: false},
+      inputFS: overlayFS,
+      mode: 'production',
+      targets: {
+        'bundle-text': {
+          distDir: 'dist-bundle-text',
+          __unstable_singleFileOutput: true,
+        },
+      },
+    });
+
+    const result = await run(bundleResult);
+    assert(result.output.startsWith('File text: !function('));
+    assert(result.output.includes('Hello world'));
   });
 });
