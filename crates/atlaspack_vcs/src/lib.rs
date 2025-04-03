@@ -447,16 +447,13 @@ pub fn get_changed_files(
   new_rev: Option<&str>,
   failure_mode: FailureMode,
 ) -> anyhow::Result<Vec<FileChangeEvent>> {
-  tracing::info!("Repository::open");
   let repo = Repository::open(repo_path)?;
   let old_rev = &vcs_state.git_hash;
-  tracing::info!("Repository::open done");
   let old_commit = repo.revparse_single(old_rev)?.peel_to_commit()?;
   let new_commit = repo
     .revparse_single(new_rev.unwrap_or("HEAD"))?
     .peel_to_commit()?;
 
-  tracing::info!("get_changed_files_from_git");
   let mut changed_files = get_changed_files_from_git(
     repo_path,
     &repo,
@@ -464,9 +461,9 @@ pub fn get_changed_files(
     &new_commit,
     &vcs_state.dirty_files,
   )?;
-  tracing::info!("Changed files: {:?}", changed_files);
+  tracing::trace!("Changed files: {:?}", changed_files);
 
-  tracing::info!("Reading yarn.lock from {} and {:?}", old_rev, new_rev);
+  tracing::debug!("Reading yarn.lock from {} and {:?}", old_rev, new_rev);
   let yarn_lock_changes = changed_files
     .iter()
     .filter(|file| file.path.file_name().unwrap() == "yarn.lock")
