@@ -169,10 +169,38 @@ describe('monolithic bundler', function () {
     );
 
     const result = await run(bundleResult);
-
+    const expectedSvgString =
+      '%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22100%22%3E%0A%20%20%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2240%22%20fill%3D%22green%22%3E%3C%2Fcircle%3E%0A%3C%2Fsvg%3E';
     assert.equal(
       result.image,
-      "<img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='50' cy='50' r='40' fill='green' /%3E%3C/svg%3E\" />",
+      `<img src="data:image/svg+xml,${expectedSvgString}" />`,
     );
+  });
+
+  it.v2('should support inline bundles (bundle-text)', async function () {
+    await fsFixture(overlayFS, __dirname)`
+        bundle-text
+          a.js:
+            import b from 'bundle-text:./b.js';
+            export const output = \`File text: \${b}\`;
+          b.js:
+            export default 'Hello world';
+          yarn.lock: {}
+      `;
+
+    let bundleResult = await bundle(path.join(__dirname, 'bundle-text/a.js'), {
+      defaultTargetOptions: {shouldScopeHoist: false},
+      inputFS: overlayFS,
+      mode: 'production',
+      targets: {
+        'bundle-text': {
+          distDir: 'dist-bundle-text',
+          __unstable_singleFileOutput: true,
+        },
+      },
+    });
+
+    const result = await run(bundleResult);
+    assert(result.output.startsWith('File text: !function(e,n,r,t,o)'));
   });
 });
