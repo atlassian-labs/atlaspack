@@ -327,31 +327,11 @@ pub fn get_changed_files_from_git(
   let mut changed_files = Vec::new();
 
   // list current dirty files
-  tracing::debug!("Listing dirty files");
-  let mut status_options = git2::StatusOptions::new();
+  tracing::info!("Listing dirty files");
 
-  status_options.include_ignored(false);
-  status_options.include_untracked(true);
-  status_options.include_unmodified(false);
-  status_options.recurse_ignored_dirs(false);
+  get_status_with_git_cli(repo_path, &mut tracked_changes, &mut changed_files)?;
 
-  let statuses = repo.statuses(Some(&mut status_options))?;
-  statuses.iter().for_each(|entry| {
-    let path = entry.path().unwrap();
-    let status = entry.status();
-    let mut change_type = FileChangeType::Update;
-    if status.is_wt_deleted() {
-      change_type = FileChangeType::Delete;
-    } else if status.is_wt_new() {
-      change_type = FileChangeType::Create;
-    }
-
-    let path = repo_path.join(path);
-    tracked_changes.insert(path.clone());
-    changed_files.push(FileChangeEvent { path, change_type })
-  });
-
-  tracing::debug!("Calculating git diff");
+  tracing::info!("Calculating git diff");
   let mut diff_options = DiffOptions::new();
 
   let diff = repo.diff_tree_to_tree(
@@ -423,19 +403,54 @@ pub fn get_changed_files_from_git(
   Ok(changed_files)
 }
 
+/// Query git status from the CLI. This is because libgit2 does not support
+/// sparse checkouts.
+fn get_status_with_git_cli(
+  repo_path: &Path,
+  tracked_changes: &mut HashSet<PathBuf>,
+  changed_files: &mut Vec<FileChangeEvent>,
+) -> anyhow::Result<()> {
+  let mut command = Command::new("git");
+  command.arg("status").arg("--porcelain").arg("--no-ignored");
+  command.current_dir(repo_path);
+  let output = command.output()?;
+  if !output.status.success() {
+    return Err(anyhow::anyhow!("Git status failed"));
+  }
+  let output = String::from_utf8(output.stdout)?;
+  let lines = output.split_terminator('\n');
+  for line in lines {
+    let status = line.chars().nth(0).unwrap();
+    let path = line.chars().skip(3).collect::<String>();
+    let path = repo_path.join(path);
+    let change_type = match status {
+      'A' => FileChangeType::Create,
+      'D' => FileChangeType::Delete,
+      'M' => FileChangeType::Update,
+      _ => continue,
+    };
+    tracked_changes.insert(path.clone());
+    changed_files.push(FileChangeEvent { path, change_type });
+  }
+  Ok(())
+}
+
 pub fn get_changed_files(
   repo_path: &Path,
   vcs_state: &VCSState,
   new_rev: Option<&str>,
   failure_mode: FailureMode,
 ) -> anyhow::Result<Vec<FileChangeEvent>> {
+  tracing::info!("Repository::open");
   let repo = Repository::open(repo_path)?;
   let old_rev = &vcs_state.git_hash;
+  tracing::info!("Repository::open done");
   let old_commit = repo.revparse_single(old_rev)?.peel_to_commit()?;
   let new_commit = repo
     .revparse_single(new_rev.unwrap_or("HEAD"))?
     .peel_to_commit()?;
 
+  tracing::info!("get_changed_files_from_git");
   let mut changed_files = get_changed_files_from_git(
     repo_path,
     &repo,
@@ -443,9 +458,9 @@ pub fn get_changed_files(
     &new_commit,
     &vcs_state.dirty_files,
   )?;
-  tracing::trace!("Changed files: {:?}", changed_files);
+  tracing::info!("Changed files: {:?}", changed_files);
 
-  tracing::debug!("Reading yarn.lock from {} and {:?}", old_rev, new_rev);
+  tracing::info!("Reading yarn.lock from {} and {:?}", old_rev, new_rev);
   let yarn_lock_changes = changed_files
     .iter()
     .filter(|file| file.path.file_name().unwrap() == "yarn.lock")
