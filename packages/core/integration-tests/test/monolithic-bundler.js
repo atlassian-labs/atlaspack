@@ -86,7 +86,7 @@ describe('monolithic bundler', function () {
     },
   );
 
-  it.v2('should support isolated bundles', async function () {
+  it.v2('should error if isolated assets are in the build', async function () {
     await fsFixture(overlayFS, __dirname)`
       isolated-bundles
         a.js:
@@ -99,35 +99,24 @@ describe('monolithic bundler', function () {
         yarn.lock: {}
     `;
 
-    let bundleResult = await bundle(
-      path.join(__dirname, 'isolated-bundles/a.js'),
-      {
-        defaultTargetOptions: {shouldScopeHoist: false},
-        inputFS: overlayFS,
-        mode: 'production',
-        targets: {
-          'isolated-bundle': {
-            distDir: 'dist-isolated',
-            __unstable_singleFileOutput: true,
+    await assert.rejects(
+      () =>
+        bundle(path.join(__dirname, 'isolated-bundles/a.js'), {
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+          mode: 'production',
+          targets: {
+            'isolated-bundle': {
+              distDir: 'dist-isolated',
+              __unstable_singleFileOutput: true,
+            },
           },
-        },
+        }),
+      {
+        message:
+          'Isolated assets are not supported for single file output builds',
       },
     );
-
-    const svgBundle = bundleResult.getBundles().find((b) => b.type === 'svg');
-    if (!svgBundle) {
-      throw new Error('SVG bundle not found');
-    }
-
-    const svgFileName = path.basename(svgBundle.filePath);
-
-    const result = await run(bundleResult);
-    assert.equal(result.image, `<img src="http://localhost/${svgFileName}" />`);
-
-    assertBundles(bundleResult, [
-      {assets: ['a.js', 'bundle-url.js', 'esmodule-helpers.js']},
-      {type: 'svg', assets: ['icon.svg']},
-    ]);
   });
 
   it.v2('should support inline bundles', async function () {

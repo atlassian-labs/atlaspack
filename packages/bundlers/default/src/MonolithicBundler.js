@@ -39,12 +39,15 @@ export function addJSMonolithBundle(
       let assets = bundleGraph.getDependencyAssets(dependency);
 
       for (const asset of assets) {
-        // For assets marked as isolated, we create new bundles and let other
+        if (asset.bundleBehavior === 'isolated') {
+          throw new Error(
+            'Isolated assets are not supported for single file output builds',
+          );
+        }
+
+        // For assets marked as inline, we create new bundles and let other
         // plugins like optimizers include them in the primary bundle
-        if (
-          asset.bundleBehavior === 'isolated' ||
-          asset.bundleBehavior === 'inline'
-        ) {
+        if (asset.bundleBehavior === 'inline') {
           // Create a new bundle to hold the isolated asset
           let isolatedBundle = bundleGraph.createBundle({
             entryAsset: asset,
