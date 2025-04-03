@@ -130,4 +130,38 @@ describe('monolithic bundler', function () {
       {type: 'svg', assets: ['icon.svg']},
     ]);
   });
+
+  it.v2('should handle multiple assets like a CSS module', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      multi-asset-bundles
+        a.js:
+          import styles from './styles.module.css';
+          export const styleContainer = \`<div class="\${styles.container}" />\`;
+        styles.module.css:
+          .container {
+            color: papayawhip;
+          }
+        yarn.lock: {}
+    `;
+
+    let bundleResult = await bundle(
+      path.join(__dirname, 'multi-asset-bundles/a.js'),
+      {
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        mode: 'production',
+        targets: {
+          'multi-asset-bundle': {
+            distDir: 'dist-multi-asset',
+            __unstable_singleFileOutput: true,
+          },
+        },
+      },
+    );
+
+    const result = await run(bundleResult);
+
+    assert.equal(result.styleContainer, '<div class="EcQGha_container" />');
+  });
 });
