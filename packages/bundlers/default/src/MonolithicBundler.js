@@ -1,6 +1,5 @@
 // @flow strict-local
 import type {Asset, Dependency, MutableBundleGraph} from '@atlaspack/types';
-import invariant from 'assert';
 import nullthrows from 'nullthrows';
 
 export function addJSMonolithBundle(
