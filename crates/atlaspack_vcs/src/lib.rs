@@ -410,17 +410,23 @@ fn get_status_with_git_cli(
   tracked_changes: &mut HashSet<PathBuf>,
   changed_files: &mut Vec<FileChangeEvent>,
 ) -> anyhow::Result<()> {
-  let mut command = Command::new("git");
-  command.arg("status").arg("--porcelain").arg("--no-ignored");
-  command.current_dir(repo_path);
-  let output = command.output()?;
+  let output = Command::new("git")
+    .arg("status")
+    .arg("--porcelain")
+    .arg("--no-ignored")
+    .current_dir(repo_path)
+    .output()?;
+
   if !output.status.success() {
     return Err(anyhow::anyhow!("Git status failed"));
   }
   let output = String::from_utf8(output.stdout)?;
   let lines = output.split_terminator('\n');
   for line in lines {
-    let status = line.chars().nth(0).unwrap();
+    let status = line
+      .chars()
+      .nth(1)
+      .ok_or_else(|| anyhow!("Invalid git status line: {}", line))?;
     let path = line.chars().skip(3).collect::<String>();
     let path = repo_path.join(path);
     let change_type = match status {
