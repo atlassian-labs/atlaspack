@@ -46,10 +46,6 @@ export type FeatureFlags = {|
    * conversions
    */
   reduceResolverStringCreation: boolean,
-  /**
-   * Enable nested loading of bundles in the runtime with conditional bundling
-   */
-  conditionalBundlingNestedRuntime: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =

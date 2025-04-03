@@ -252,6 +252,10 @@ describe('conditional bundling', function () {
       inputFS: overlayFS,
       featureFlags: {conditionalBundlingApi: true},
       defaultConfig: path.join(dir, '.parcelrc'),
+      defaultTargetOptions: {
+        outputFormat: 'esmodule',
+        shouldScopeHoist: true,
+      },
     });
 
     let entry = nullthrows(
@@ -354,6 +358,9 @@ describe('conditional bundling', function () {
       outputFS: overlayFS,
       featureFlags: {conditionalBundlingApi: true},
       defaultConfig: path.join(dir, '.parcelrc'),
+      defaultTargetOptions: {
+        shouldScopeHoist: true,
+      },
     });
 
     let entry = nullthrows(
@@ -537,9 +544,6 @@ describe('conditional bundling', function () {
             "..."
           ]
         }
-
-      yarn.lock: {}
-
       package.json:
         {
           "@atlaspack/bundler-default": {
@@ -673,6 +677,10 @@ describe('conditional bundling', function () {
       inputFS: overlayFS,
       featureFlags: {conditionalBundlingApi: true},
       defaultConfig: path.join(dir, '.parcelrc'),
+      defaultTargetOptions: {
+        outputFormat: 'esmodule',
+        shouldScopeHoist: true,
+      },
     });
 
     let entry = nullthrows(
@@ -714,160 +722,6 @@ describe('conditional bundling', function () {
     assert.ok(
       entryContents.includes(ifFalseBundleName),
       'ifFalse script not found in HTML',
-    );
-  });
-
-  it(`should have correct deps as bundles in conditional manifest when nested`, async function () {
-    const dir = path.join(__dirname, 'import-cond-cond-manifest');
-    await overlayFS.mkdirp(dir);
-
-    await fsFixture(overlayFS, dir)`
-        .parcelrc:
-          {
-            "extends": "@atlaspack/config-default",
-            "reporters": [
-              "@atlaspack/reporter-conditional-manifest",
-              "..."
-            ]
-          }
-
-        index.js:
-          const imported = importCond('cond', './a', './b');
-
-          export const result = imported.default;
-
-        a.js:
-          const imported = importCond('cond', './c', './d');
-
-          export default 'module-a';
-
-        b.js:
-          const imported = importCond('cond', './c', './d');
-
-          export default 'module-b';
-
-        c.js:
-          export default 'module-c';
-
-        d.js:
-          export default 'module-d';
-      `;
-
-    let bundleGraph = await bundle(path.join(dir, '/index.js'), {
-      inputFS: overlayFS,
-      featureFlags: {conditionalBundlingApi: true},
-      defaultConfig: path.join(dir, '.parcelrc'),
-    });
-
-    // Get the generated bundle names
-    let bundleNames = new Map<string, string>(
-      bundleGraph
-        .getBundles()
-        .map((b) => [b.displayName, b.filePath.slice(distDir.length + 1)]),
-    );
-
-    // Load the generated manifest
-    let conditionalManifest = JSON.parse(
-      overlayFS
-        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
-        .toString(),
-    );
-
-    assert.deepEqual(conditionalManifest, {
-      [nullthrows(bundleNames.get('a.[hash].js'))]: {
-        cond: {
-          ifFalseBundles: [nullthrows(bundleNames.get('d.[hash].js'))],
-          ifTrueBundles: [nullthrows(bundleNames.get('c.[hash].js'))],
-        },
-      },
-      [nullthrows(bundleNames.get('b.[hash].js'))]: {
-        cond: {
-          ifFalseBundles: [nullthrows(bundleNames.get('d.[hash].js'))],
-          ifTrueBundles: [nullthrows(bundleNames.get('c.[hash].js'))],
-        },
-      },
-      'index.js': {
-        cond: {
-          ifFalseBundles: [nullthrows(bundleNames.get('b.[hash].js'))],
-          ifTrueBundles: [nullthrows(bundleNames.get('a.[hash].js'))],
-        },
-      },
-    });
-  });
-
-  it(`should use load nested bundles when in an async bundle`, async function () {
-    const dir = path.join(__dirname, 'import-cond-false-dynamic');
-    await overlayFS.mkdirp(dir);
-
-    await fsFixture(overlayFS, dir)`
-      .parcelrc:
-        {
-          "extends": "@atlaspack/config-default",
-          "reporters": [
-            "@atlaspack/reporter-conditional-manifest",
-            "..."
-          ]
-        }
-      index.js:
-        const conditions = { 'cond1': false, 'cond2': true };
-        globalThis.__MCOND = function(key) { return conditions[key]; }
-
-        globalThis.lazyImport = import('./lazy');
-
-      lazy.js:
-        const imported = importCond('cond1', './a', './b');
-
-        export default imported;
-
-      a.js:
-        export default 'module-a';
-
-      b.js:
-        const imported = importCond('cond2', './c', './d');
-
-        export default imported;
-
-      c.js:
-        export default 'module-c';
-
-      d.js:
-        export default 'module-d';
-    `;
-
-    let bundleGraph = await bundle(path.join(dir, '/index.js'), {
-      inputFS: overlayFS,
-      outputFS: overlayFS,
-      featureFlags: {
-        conditionalBundlingApi: true,
-        conditionalBundlingNestedRuntime: true,
-      },
-      defaultConfig: path.join(dir, '.parcelrc'),
-    });
-
-    let entry = nullthrows(
-      bundleGraph.getBundles().find((b) => b.name === 'index.js'),
-      'index.js bundle not found',
-    );
-
-    let output = await runBundles(
-      bundleGraph,
-      entry,
-      [[overlayFS.readFileSync(entry.filePath).toString(), entry]],
-      undefined,
-      {
-        require: false,
-        entryAsset: nullthrows(entry.getMainEntry()),
-      },
-    );
-
-    let lazyImported = await nullthrows(
-      typeof output === 'object' ? output?.lazyImport : null,
-      'Lazy import was not found on globalThis',
-    );
-
-    assert.deepEqual(
-      typeof lazyImported === 'object' && lazyImported?.default,
-      'module-c',
     );
   });
 });
