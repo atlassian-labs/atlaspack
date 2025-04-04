@@ -22,5 +22,6 @@
     "@atlaspack/utils": "2.13.1",
     "@swc/core": "^1.10.0",
     "nullthrows": "^1.1.1"
-  }
+  },
+  "type": "commonjs"
 }

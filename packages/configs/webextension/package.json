@@ -2,6 +2,7 @@
   "name": "@atlaspack/config-webextension",
   "version": "3.0.1",
   "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "publishConfig": {
     "access": "public"
   },

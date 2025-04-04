@@ -2,6 +2,7 @@
   "name": "@atlaspack/bundler-library",
   "version": "2.12.1",
   "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "publishConfig": {
     "access": "public"
   },

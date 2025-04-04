@@ -62,5 +62,6 @@
     "./src/http-server.js": false,
     "./src/openInBrowser.js": false,
     "@atlaspack/markdown-ansi": false
-  }
+  },
+  "type": "commonjs"
 }
