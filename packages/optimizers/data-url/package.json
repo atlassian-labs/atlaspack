@@ -20,5 +20,6 @@
     "@atlaspack/utils": "2.13.1",
     "isbinaryfile": "^4.0.2",
     "mime": "^2.4.4"
-  }
+  },
+  "type": "commonjs"
 }

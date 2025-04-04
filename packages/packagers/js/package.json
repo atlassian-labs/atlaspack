@@ -25,5 +25,6 @@
     "@atlaspack/utils": "2.13.1",
     "globals": "^13.2.0",
     "nullthrows": "^1.1.1"
-  }
+  },
+  "type": "commonjs"
 }

@@ -18,5 +18,6 @@
   "dependencies": {
     "@atlaspack/types-internal": "2.13.1",
     "@atlaspack/workers": "2.13.1"
-  }
+  },
+  "type": "commonjs"
 }

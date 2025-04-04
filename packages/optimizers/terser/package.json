@@ -22,5 +22,6 @@
     "@atlaspack/utils": "2.13.1",
     "nullthrows": "^1.1.1",
     "terser": "^5.2.0"
-  }
+  },
+  "type": "commonjs"
 }

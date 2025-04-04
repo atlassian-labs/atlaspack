@@ -20,5 +20,6 @@
     "@parcel/source-map": "^2.1.1",
     "cssnano": "^5.0.15",
     "postcss": "^8.4.5"
-  }
+  },
+  "type": "commonjs"
 }

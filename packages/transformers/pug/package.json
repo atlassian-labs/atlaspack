@@ -18,5 +18,6 @@
   "dependencies": {
     "@atlaspack/plugin": "2.13.1",
     "pug": "^3.0.2"
-  }
+  },
+  "type": "commonjs"
 }

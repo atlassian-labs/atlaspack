@@ -53,5 +53,6 @@
     "@atlaspack/fs": "*",
     "@atlaspack/types": "*"
   },
-  "stableVersion": "0.0.0"
+  "stableVersion": "0.0.0",
+  "type": "commonjs"
 }

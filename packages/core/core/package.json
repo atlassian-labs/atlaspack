@@ -65,5 +65,6 @@
   },
   "browser": {
     "./src/serializerCore.js": "./src/serializerCore.browser.js"
-  }
+  },
+  "type": "commonjs"
 }

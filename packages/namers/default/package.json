@@ -19,5 +19,6 @@
     "@atlaspack/diagnostic": "2.13.1",
     "@atlaspack/plugin": "2.13.1",
     "nullthrows": "^1.1.1"
-  }
+  },
+  "type": "commonjs"
 }

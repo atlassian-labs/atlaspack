@@ -21,5 +21,6 @@
     "nullthrows": "^1.1.1",
     "posthtml": "^0.16.5",
     "svgo": "^2.4.0"
-  }
+  },
+  "type": "commonjs"
 }

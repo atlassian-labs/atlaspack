@@ -14,5 +14,6 @@
   },
   "devDependencies": {
     "@parcel/watcher": "^2.4.1"
-  }
+  },
+  "type": "commonjs"
 }

@@ -25,5 +25,6 @@
     "@atlaspack/fs": "2.13.1",
     "@atlaspack/package-manager": "2.13.1",
     "pirates": "^4.0.0"
-  }
+  },
+  "type": "commonjs"
 }

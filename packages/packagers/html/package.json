@@ -21,5 +21,6 @@
     "@atlaspack/utils": "2.13.1",
     "nullthrows": "^1.1.1",
     "posthtml": "^0.16.5"
-  }
+  },
+  "type": "commonjs"
 }

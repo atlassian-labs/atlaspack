@@ -71,5 +71,6 @@
   "browser": {
     "@atlaspack/fs": "./lib/browser.js",
     "./src/NodeFS.js": "./src/NodeFS.browser.js"
-  }
+  },
+  "type": "commonjs"
 }

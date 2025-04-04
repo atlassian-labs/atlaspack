@@ -29,5 +29,6 @@
   },
   "browser": {
     "lightningcss": "lightningcss-wasm"
-  }
+  },
+  "type": "commonjs"
 }

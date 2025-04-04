@@ -22,5 +22,6 @@
   },
   "devDependencies": {
     "@atlaspack/types": "2.13.1"
-  }
+  },
+  "type": "commonjs"
 }

@@ -19,5 +19,6 @@
     "@atlaspack/plugin": "2.13.1",
     "@parcel/source-map": "^2.1.1",
     "less": "^4.1.1"
-  }
+  },
+  "type": "commonjs"
 }

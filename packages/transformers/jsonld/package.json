@@ -22,5 +22,6 @@
     "@atlaspack/plugin": "2.13.1",
     "@atlaspack/types": "2.13.1",
     "json5": "^2.2.0"
-  }
+  },
+  "type": "commonjs"
 }

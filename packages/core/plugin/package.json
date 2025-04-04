@@ -2,6 +2,7 @@
   "name": "@atlaspack/plugin",
   "version": "2.13.1",
   "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "publishConfig": {
     "access": "public"
   },

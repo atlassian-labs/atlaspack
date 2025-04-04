@@ -61,5 +61,6 @@
     "./src/Npm.js": false,
     "./src/Pnpm.js": false,
     "./src/Yarn.js": false
-  }
+  },
+  "type": "commonjs"
 }
