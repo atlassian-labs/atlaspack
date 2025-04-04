@@ -30,6 +30,7 @@
     "@atlaspack/profiler": "2.13.1",
     "@atlaspack/types-internal": "2.13.1",
     "@atlaspack/utils": "2.13.1",
+    "node-segfault-handler": "*",
     "nullthrows": "^1.1.1"
   },
   "browser": {

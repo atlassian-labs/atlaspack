@@ -4,7 +4,7 @@ import type {Root} from 'postcss';
 import type {Asset, Dependency} from '@atlaspack/types';
 import typeof PostCSS from 'postcss';
 // $FlowFixMe - init for browser build.
-import init, {bundleAsync} from 'lightningcss';
+// import init, {bundleAsync} from 'lightningcss';
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
@@ -150,36 +150,38 @@ export default (new Packager({
     let map = new SourceMap(options.projectRoot);
 
     // $FlowFixMe
-    if (process.browser) {
-      await init();
-    }
+    // if (process.browser) {
+    //   await init();
+    // }
 
-    let res = await bundleAsync({
-      filename: nullthrows(entry),
-      sourceMap: !!bundle.env.sourceMap,
-      resolver: {
-        resolve(specifier) {
-          return specifier;
-        },
-        async read(file) {
-          if (file === bundle.id) {
-            return entryContents;
-          }
+    let res = {code: ''};
 
-          let asset = assetsByPlaceholder.get(file);
-          if (!asset) {
-            return '';
-          }
-          let [code, map] = nullthrows(outputs.get(asset));
-          if (map) {
-            let sm = await map.stringify({format: 'inline'});
-            invariant(typeof sm === 'string');
-            code += `\n/*# sourceMappingURL=${sm} */`;
-          }
-          return code;
-        },
-      },
-    });
+    // let res = await bundleAsync({
+    //   filename: nullthrows(entry),
+    //   sourceMap: !!bundle.env.sourceMap,
+    //   resolver: {
+    //     resolve(specifier) {
+    //       return specifier;
+    //     },
+    //     async read(file) {
+    //       if (file === bundle.id) {
+    //         return entryContents;
+    //       }
+
+    //       let asset = assetsByPlaceholder.get(file);
+    //       if (!asset) {
+    //         return '';
+    //       }
+    //       let [code, map] = nullthrows(outputs.get(asset));
+    //       if (map) {
+    //         let sm = await map.stringify({format: 'inline'});
+    //         invariant(typeof sm === 'string');
+    //         code += `\n/*# sourceMappingURL=${sm} */`;
+    //       }
+    //       return code;
+    //     },
+    //   },
+    // });
 
     let contents = res.code.toString();
 

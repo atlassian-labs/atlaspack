@@ -5,9 +5,9 @@ use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::Visit;
 use swc_core::ecma::visit::VisitWith;
 
-thread_local! {
-  static RE_CHUNK_NAME: Regex = Regex::new(r#"webpackChunkName:\s*['"](?<name>[^'"]+)['"]"#).unwrap();
-}
+// thread_local! {
+//   static RE_CHUNK_NAME: Regex = Regex::new(r#"webpackChunkName:\s*['"](?<name>[^'"]+)['"]"#).unwrap();
+// }
 
 const MAGIC_COMMENT_DEFAULT_KEYWORD: &str = "webpackChunkName";
 
@@ -66,9 +66,10 @@ impl Visit for MagicCommentsVisitor<'_> {
 }
 
 fn match_re(src: &str) -> Option<String> {
-  RE_CHUNK_NAME.with(|re| {
-    let caps = re.captures(src)?;
-    let found = caps.name("name")?;
-    Some(found.as_str().to_string())
-  })
+  None
+  // RE_CHUNK_NAME.with(|re| {
+  //   let caps = re.captures(src)?;
+  //   let found = caps.name("name")?;
+  //   Some(found.as_str().to_string())
+  // })
 }

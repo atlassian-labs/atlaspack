@@ -1,67 +1,38 @@
 {
   "bundler": "@atlaspack/bundler-default",
   "transformers": {
-    "types:*.{ts,tsx}": ["@atlaspack/transformer-typescript-types"],
     "bundle-text:*": ["...", "@atlaspack/transformer-inline-string"],
     "data-url:*": ["...", "@atlaspack/transformer-inline-string"],
-    "worklet:*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": [
-      "@atlaspack/transformer-worklet",
-      "..."
-    ],
     "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": [
       "@atlaspack/transformer-js",
       "@atlaspack/transformer-react-refresh-wrap"
     ],
     "*.{json,json5}": ["@atlaspack/transformer-json"],
-    "*.jsonld": ["@atlaspack/transformer-jsonld"],
-    "*.toml": ["@atlaspack/transformer-toml"],
-    "*.webmanifest": ["@atlaspack/transformer-webmanifest"],
-    "webmanifest:*.{json,webmanifest}": ["@atlaspack/transformer-webmanifest"],
-    "*.{yaml,yml}": ["@atlaspack/transformer-yaml"],
-    "*.{glsl,vert,frag}": ["@atlaspack/transformer-glsl"],
     "*.{gql,graphql}": ["@atlaspack/transformer-graphql"],
-    "*.{sass,scss}": ["@atlaspack/transformer-sass"],
-    "*.{css,pcss}": [
-      "@atlaspack/transformer-postcss",
-      "@atlaspack/transformer-css"
-    ],
+    "*.{css,pcss}": ["@atlaspack/transformer-postcss"],
     "*.{htm,html,xhtml}": [
       "@atlaspack/transformer-posthtml",
       "@atlaspack/transformer-html"
     ],
-    "*.pug": ["@atlaspack/transformer-pug"],
-    "*.mdx": ["@atlaspack/transformer-mdx"],
     "*.{png,jpg,jpeg,webp,gif,tiff,avif,heic,heif}": [
-      "@atlaspack/transformer-image"
+      "@atlaspack/transformer-inline-string"
     ],
-    "*.svg": ["@atlaspack/transformer-svg"],
-    "*.{xml,rss,atom}": ["@atlaspack/transformer-xml"],
+    "*.svg": ["@atlaspack/transformer-inline-string"],
     "url:*": ["...", "@atlaspack/transformer-raw"]
   },
   "namers": ["@atlaspack/namer-default"],
-  "runtimes": [
-    "@atlaspack/runtime-js",
-    "@atlaspack/runtime-browser-hmr",
-    "@atlaspack/runtime-react-refresh",
-    "@atlaspack/runtime-service-worker"
-  ],
+  "runtimes": [],
   "optimizers": {
     "data-url:*": ["...", "@atlaspack/optimizer-data-url"],
     "*.css": ["@atlaspack/optimizer-css"],
     "*.{html,xhtml}": ["@atlaspack/optimizer-htmlnano"],
     "*.{js,mjs,cjs}": ["@atlaspack/optimizer-swc"],
-    "*.svg": ["@atlaspack/optimizer-svgo"],
-    "*.{jpg,jpeg,png}": ["@atlaspack/optimizer-image"]
+    "*.svg": ["@atlaspack/optimizer-svgo"]
   },
   "packagers": {
     "*.{html,xhtml}": "@atlaspack/packager-html",
     "*.css": "@atlaspack/packager-css",
     "*.{js,mjs,cjs}": "@atlaspack/packager-js",
-    "*.svg": "@atlaspack/packager-svg",
-    "*.{xml,rss,atom}": "@atlaspack/packager-xml",
-    "*.ts": "@atlaspack/packager-ts",
-    "*.wasm": "@atlaspack/packager-wasm",
-    "*.{jsonld,svg,webmanifest}": "@atlaspack/packager-raw-url",
     "*": "@atlaspack/packager-raw"
   },
   "compressors": {

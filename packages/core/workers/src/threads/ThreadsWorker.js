@@ -1,5 +1,7 @@
 // @flow
 
+import {join} from 'path';
+import {writeFile} from 'fs/promises';
 import type {
   WorkerImpl,
   MessageHandler,
@@ -14,8 +16,11 @@ import {
   prepareForSerialization,
   restoreDeserializedObject,
 } from '@atlaspack/build-cache';
+import SegfaultHandler from 'node-segfault-handler';
 
 const WORKER_PATH = require.resolve('./ThreadsChild');
+
+SegfaultHandler.registerHandler(join(__dirname, 'crash.log'));
 
 export default class ThreadsWorker implements WorkerImpl {
   execArgv: Object;
@@ -36,7 +41,7 @@ export default class ThreadsWorker implements WorkerImpl {
     this.onExit = onExit;
   }
 
-  start(): Promise<void> {
+  async start(): Promise<void> {
     this.worker = new Worker(WORKER_PATH, {
       execArgv: this.execArgv,
       env: process.env,

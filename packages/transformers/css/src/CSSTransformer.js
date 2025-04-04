@@ -11,13 +11,13 @@ import {
   globToRegex,
   normalizeSeparators,
 } from '@atlaspack/utils';
-import {type SourceLocation as LightningSourceLocation} from 'lightningcss';
-import * as native from 'lightningcss';
+// import {type SourceLocation as LightningSourceLocation} from 'lightningcss';
+// import * as native from 'lightningcss';
 import browserslist from 'browserslist';
 import nullthrows from 'nullthrows';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 
-const {transform, transformStyleAttribute, browserslistToTargets} = native;
+// const {transform, transformStyleAttribute, browserslistToTargets} = native;
 
 export default (new Transformer({
   async loadConfig({config, options}) {
@@ -63,15 +63,15 @@ export default (new Transformer({
     ]);
 
     let targets = getTargets(asset.env.engines.browsers);
-    let res;
+    let res = {code: ''};
     try {
       if (asset.meta.type === 'attr') {
-        res = transformStyleAttribute({
-          code,
-          analyzeDependencies: true,
-          errorRecovery: config?.errorRecovery || false,
-          targets,
-        });
+        // res = transformStyleAttribute({
+        //   code,
+        //   analyzeDependencies: true,
+        //   errorRecovery: config?.errorRecovery || false,
+        //   targets,
+        // });
       } else {
         let cssModules = false;
         if (
@@ -113,24 +113,24 @@ export default (new Transformer({
           }
         }
 
-        res = transform({
-          filename: normalizeSeparators(
-            path.relative(options.projectRoot, asset.filePath),
-          ),
-          code,
-          cssModules,
-          analyzeDependencies:
-            asset.meta.hasDependencies !== false
-              ? {
-                  preserveImports: true,
-                }
-              : false,
-          sourceMap: !!asset.env.sourceMap,
-          drafts: config?.drafts,
-          pseudoClasses: config?.pseudoClasses,
-          errorRecovery: config?.errorRecovery || false,
-          targets,
-        });
+        // res = transform({
+        //   filename: normalizeSeparators(
+        //     path.relative(options.projectRoot, asset.filePath),
+        //   ),
+        //   code,
+        //   cssModules,
+        //   analyzeDependencies:
+        //     asset.meta.hasDependencies !== false
+        //       ? {
+        //           preserveImports: true,
+        //         }
+        //       : false,
+        //   sourceMap: !!asset.env.sourceMap,
+        //   drafts: config?.drafts,
+        //   pseudoClasses: config?.pseudoClasses,
+        //   errorRecovery: config?.errorRecovery || false,
+        //   targets,
+        // });
       }
     } catch (err) {
       err.filePath = asset.filePath;
@@ -375,7 +375,8 @@ function getTargets(browsers) {
     return cached;
   }
 
-  let targets = browserslistToTargets(browserslist(browsers));
+  // let targets = browserslistToTargets(browserslist(browsers));
+  let targets = {};
 
   cache.set(browsers, targets);
   return targets;

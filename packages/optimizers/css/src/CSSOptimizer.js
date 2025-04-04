@@ -3,11 +3,11 @@
 import SourceMap from '@parcel/source-map';
 import {Optimizer} from '@atlaspack/plugin';
 // $FlowFixMe - init for browser build.
-import init, {
-  transform,
-  transformStyleAttribute,
-  browserslistToTargets,
-} from 'lightningcss';
+// import init, {
+//   transform,
+//   transformStyleAttribute,
+//   browserslistToTargets,
+// } from 'lightningcss';
 import {blobToBuffer} from '@atlaspack/utils';
 import browserslist from 'browserslist';
 import nullthrows from 'nullthrows';
@@ -141,34 +141,36 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
     }
 
     // Inline style attributes in HTML need to be parsed differently from full CSS files.
-    if (bundle.bundleBehavior === 'inline') {
-      let entry = bundle.getMainEntry();
-      if (entry?.meta.type === 'attr') {
-        let result = transformStyleAttribute({
-          code,
-          minify: true,
-          targets,
-        });
+    // if (bundle.bundleBehavior === 'inline') {
+    //   let entry = bundle.getMainEntry();
+    //   if (entry?.meta.type === 'attr') {
+    //     let result = transformStyleAttribute({
+    //       code,
+    //       minify: true,
+    //       targets,
+    //     });
 
-        return {
-          contents: Buffer.from(result.code),
-        };
-      }
-    }
+    //     return {
+    //       contents: Buffer.from(result.code),
+    //     };
+    //   }
+    // }
 
     // $FlowFixMe
-    if (process.browser) {
-      await init();
-    }
+    // if (process.browser) {
+    //   await init();
+    // }
 
-    let result = transform({
-      filename: bundle.name,
-      code,
-      minify: true,
-      sourceMap: !!bundle.env.sourceMap,
-      targets,
-      unusedSymbols,
-    });
+    let result = {code: ''};
+
+    // let result = transform({
+    //   filename: bundle.name,
+    //   code,
+    //   minify: true,
+    //   sourceMap: !!bundle.env.sourceMap,
+    //   targets,
+    //   unusedSymbols,
+    // });
 
     let map;
     if (result.map != null) {
@@ -212,7 +214,8 @@ function getTargets(browsers) {
     return cached;
   }
 
-  let targets = browserslistToTargets(browserslist(browsers));
+  // let targets = browserslistToTargets(browserslist(browsers));
+  let targets = {};
 
   cache.set(browsers, targets);
   return targets;

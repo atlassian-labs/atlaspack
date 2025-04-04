@@ -1,7 +1,7 @@
 // @flow
 
 import nullthrows from 'nullthrows';
-import {transform} from '@swc/core';
+// import {transform} from '@swc/core';
 import {Optimizer} from '@atlaspack/plugin';
 import {blobToString, stripAnsi} from '@atlaspack/utils';
 import SourceMap from '@parcel/source-map';
@@ -30,26 +30,26 @@ export default (new Optimizer({
     }
 
     let code = await blobToString(contents);
-    let result;
+    let result = {code};
     try {
-      result = await transform(code, {
-        jsc: {
-          target: 'es2022',
-          minify: {
-            mangle: true,
-            compress: true,
-            ...userConfig,
-            toplevel:
-              bundle.env.outputFormat === 'esmodule' ||
-              bundle.env.outputFormat === 'commonjs',
-            module: bundle.env.outputFormat === 'esmodule',
-          },
-        },
-        minify: true,
-        sourceMaps: !!bundle.env.sourceMap,
-        configFile: false,
-        swcrc: false,
-      });
+      // result = await transform(code, {
+      //   jsc: {
+      //     target: 'es2022',
+      //     minify: {
+      //       mangle: true,
+      //       compress: true,
+      //       ...userConfig,
+      //       toplevel:
+      //         bundle.env.outputFormat === 'esmodule' ||
+      //         bundle.env.outputFormat === 'commonjs',
+      //       module: bundle.env.outputFormat === 'esmodule',
+      //     },
+      //   },
+      //   minify: true,
+      //   sourceMaps: !!bundle.env.sourceMap,
+      //   configFile: false,
+      //   swcrc: false,
+      // });
     } catch (err) {
       // SWC doesn't give us nice error objects, so we need to parse the message.
       let message = escapeMarkdown(

@@ -35,10 +35,10 @@ struct JsMacroError {
 }
 
 // Allocate a single channel per thread to communicate with the JS thread.
-thread_local! {
-  #[allow(clippy::type_complexity)]
-  static CHANNEL: (Sender<Result<JsValue, MacroError>>, Receiver<Result<JsValue, MacroError>>) = crossbeam_channel::unbounded();
-}
+// thread_local! {
+//   #[allow(clippy::type_complexity)]
+//   static CHANNEL: (Sender<Result<JsValue, MacroError>>, Receiver<Result<JsValue, MacroError>>) = crossbeam_channel::unbounded();
+// }
 
 /// Creates a macro callback from a JS function.
 pub fn create_macro_callback(function: JsFunction, env: Env) -> napi::Result<MacroCallback> {
@@ -57,29 +57,31 @@ pub fn create_macro_callback(function: JsFunction, env: Env) -> napi::Result<Mac
   // Get around Env not being Send. See safety note below.
   let unsafe_env = env.raw() as usize;
 
+  let channel = crossbeam_channel::unbounded();
+
   Ok(Arc::new(move |src, export, args, loc| {
-    CHANNEL.with(|channel| {
-      // Call JS function to run the macro.
-      let tx = channel.0.clone();
-      call_macro_tsfn.call_with_return_value(
-        Ok(CallMacroMessage {
-          src,
-          export,
-          args,
-          loc,
-        }),
-        ThreadsafeFunctionCallMode::Blocking,
-        move |v: JsUnknown| {
-          // When the JS function returns, await the promise, and send the result
-          // through the channel back to the native thread.
-          // SAFETY: this function is called from the JS thread.
-          await_promise(unsafe { Env::from_raw(unsafe_env as _) }, v, tx)?;
-          Ok(())
-        },
-      );
-      // Lock the transformer thread until the JS thread returns a result.
-      channel.1.recv().expect("receive failure")
-    })
+    // CHANNEL.with(|channel| {
+    //   // Call JS function to run the macro.
+    let tx = channel.0.clone();
+    call_macro_tsfn.call_with_return_value(
+      Ok(CallMacroMessage {
+        src,
+        export,
+        args,
+        loc,
+      }),
+      ThreadsafeFunctionCallMode::Blocking,
+      move |v: JsUnknown| {
+        // When the JS function returns, await the promise, and send the result
+        // through the channel back to the native thread.
+        // SAFETY: this function is called from the JS thread.
+        await_promise(unsafe { Env::from_raw(unsafe_env as _) }, v, tx)?;
+        Ok(())
+      },
+    );
+    // Lock the transformer thread until the JS thread returns a result.
+    channel.1.recv().expect("receive failure")
+    // })
   }))
 }
 

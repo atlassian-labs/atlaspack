@@ -69,6 +69,11 @@ registerCoreWithSerializer();
 export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
 
+import 'lmdb-js-lite';
+import 'lightningcss';
+import 'sharp';
+import '@swc/core';
+
 export default class Atlaspack {
   #requestTracker /*: RequestTracker*/;
   #config /*: AtlaspackConfig*/;
