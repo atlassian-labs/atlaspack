@@ -1,3 +1,5 @@
+// @flow strict-local
+
 import load from '../src/helpers/browser/esm-js-loader-retry.js';
 import bundleManifest from '../src/helpers/bundle-manifest.js';
 import {mock} from 'node:test';
@@ -33,6 +35,13 @@ describe('esm-js-loader-retry', () => {
     globalThis.navigator = {onLine: true};
     globalThis.CustomEvent = globalThis.CustomEvent || class {};
     globalThis.dispatchEvent = mock.fn();
+
+    // Add mock for addEventListener
+    globalThis.addEventListener = mock.fn((event, callback) => {
+      if (event === 'online') {
+        callback();
+      }
+    });
   });
 
   it('should not throw', async () => {
