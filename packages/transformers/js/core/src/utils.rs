@@ -328,7 +328,7 @@ pub enum SourceType {
   Module,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Bailout {
   pub loc: SourceLocation,
   pub reason: BailoutReason,
