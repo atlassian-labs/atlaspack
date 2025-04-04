@@ -2,19 +2,27 @@
 import type {FilePath} from '@atlaspack/types';
 import path from 'path';
 import {relativePath, normalizeSeparators} from '@atlaspack/utils';
+import {getFeatureFlagValue} from '@atlaspack/feature-flags';
 
 /**
  * A path that's relative to the project root.
  */
 export opaque type ProjectPath = string;
 
+/**
+ * Converts a file path to a project-relative path.
+ *
+ * @param projectRoot - The project root.
+ * @param p - The file path to convert.
+ * @returns The project path.
+ */
 function toProjectPath_(projectRoot: FilePath, p: FilePath): ProjectPath {
   // If the file path is not provided, then treat it as though it is already from the project root
   if (p == null) {
     return p;
   }
 
-  // If the file path is already relative and it does not begin with . then treat the path as if it
+  // If the file path is already relative and it does not begin with '.', then treat the path as if it
   // is already from the project root. This prevents relative paths from being processed twice,
   // most often within `toInternalSourceLocation` when handling loc types from symbols and asset
   // dependencies.
@@ -27,6 +35,11 @@ function toProjectPath_(projectRoot: FilePath, p: FilePath): ProjectPath {
   // the project root is not portable anyway.
   let relative = relativePath(projectRoot, p, false);
   if (relative.startsWith('..')) {
+    // e.g given projectRoot = '/Users/monorepo/project' and p = '/Users/monorepo/other-project/src/index.js' --> relative = '../other-project/src/index.js'
+    if (getFeatureFlagValue('patchProjectPaths')) {
+      return relative;
+    }
+
     return process.platform === 'win32' ? normalizeSeparators(p) : p;
   }
 
