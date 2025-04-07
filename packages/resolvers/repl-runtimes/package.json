@@ -17,5 +17,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.12.2"
-  }
+  },
+  "type": "commonjs"
 }

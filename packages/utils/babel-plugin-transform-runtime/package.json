@@ -20,5 +20,6 @@
   "devDependencies": {
     "@babel/core": "^7.22.11",
     "@atlaspack/babel-preset-env": "2.13.1"
-  }
+  },
+  "type": "commonjs"
 }

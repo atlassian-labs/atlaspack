@@ -20,5 +20,6 @@
     "@atlaspack/plugin": "2.13.1",
     "@atlaspack/utils": "2.13.1",
     "content-security-policy-parser": "^0.3.0"
-  }
+  },
+  "type": "commonjs"
 }

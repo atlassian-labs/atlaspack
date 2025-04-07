@@ -40,5 +40,6 @@
     "ora": "^5.2.0",
     "string-width": "^4.2.0",
     "wrap-ansi": "^7.0.0"
-  }
+  },
+  "type": "commonjs"
 }
