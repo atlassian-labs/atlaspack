@@ -18,5 +18,6 @@
   "dependencies": {
     "@iarna/toml": "^2.2.3",
     "@atlaspack/plugin": "2.13.1"
-  }
+  },
+  "type": "commonjs"
 }
