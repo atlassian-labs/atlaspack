@@ -36,12 +36,14 @@ pub fn get_vcs_state_snapshot(
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NodeChangeEvent {
   pub path: String,
   pub change_type: String,
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NodeVCSFile {
   pub path: String,
   pub hash: String,
