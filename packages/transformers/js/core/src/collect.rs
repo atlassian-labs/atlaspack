@@ -42,7 +42,7 @@ macro_rules! collect_visit_fn {
   };
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Clone, Copy, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Clone, Copy, Hash, Serialize)]
 pub enum ImportKind {
   Require,
   Import,
@@ -883,7 +883,7 @@ impl Visit for Collect {
       // function logExports() {
       //   console.log(exports);
       // }
-      // exports.test = 2;
+      // exports.test = 1;
       // logExports();
       // exports = {test: 4};
       // logExports();
@@ -1205,60 +1205,984 @@ fn has_binding_identifier(node: &AssignTarget, sym: &JsWord, unresolved_mark: Ma
 
 #[cfg(test)]
 mod tests {
-  use crate::collect::Collect;
-  use atlaspack_swc_runner::runner::RunContext;
+  use super::*;
+
   use atlaspack_swc_runner::test_utils::{run_test_visit_const, RunVisitResult};
   use swc_core::common::Mark;
 
-  pub fn make_default_swc_collector(context: RunContext) -> Collect {
-    Collect::new(
-      context.source_map,
-      context.unresolved_mark,
-      Mark::fresh(Mark::root()),
-      context.global_mark,
-      false,
-      true,
-      false,
-    )
+  #[test]
+  fn sets_is_empty_on_empty_file() {
+    assert!(run_collect("").is_empty_or_empty_export);
   }
 
   #[test]
-  fn test_visit_module_sets_is_empty_on_empty_file() {
-    let RunVisitResult { visitor, .. } = run_test_visit_const(r#""#, make_default_swc_collector);
-    assert!(visitor.is_empty_or_empty_export);
+  fn sets_is_empty_on_empty_export() {
+    assert!(run_collect("export {};").is_empty_or_empty_export);
   }
 
   #[test]
-  fn test_visit_module_sets_is_empty_on_empty_export() {
-    let RunVisitResult { visitor, .. } = run_test_visit_const(r#"export {}"#, |context| {
-      make_default_swc_collector(context)
+  fn does_not_set_empty_on_file_with_content() {
+    assert!(!run_collect("console.log('hello');").is_empty_or_empty_export);
+    assert!(!run_collect("console.log('hello');console.log('world');").is_empty_or_empty_export);
+  }
+
+  #[test]
+  fn does_not_set_empty_on_file_with_non_empty_export() {
+    assert!(!run_collect("export default 1;").is_empty_or_empty_export);
+    assert!(!run_collect("export default {};").is_empty_or_empty_export);
+    assert!(!run_collect("export const a = 1;").is_empty_or_empty_export);
+  }
+
+  #[test]
+  fn collects_imports() {
+    assert_eq!(
+      map_imports(run_collect("import { foo } from 'other';").imports),
+      HashMap::from([(
+        js_word!("foo"),
+        PartialImport::new(ImportKind::Import, js_word!("other"), js_word!("foo")),
+      )]),
+    );
+
+    assert_eq!(
+      map_imports(run_collect("import { foo as bar } from 'other';").imports),
+      HashMap::from([(
+        js_word!("bar"),
+        PartialImport::new(ImportKind::Import, js_word!("other"), js_word!("foo")),
+      )]),
+    );
+
+    assert_eq!(
+      map_imports(run_collect("const x = require('other');").imports),
+      HashMap::from([(
+        js_word!("x"),
+        PartialImport::new(ImportKind::Require, js_word!("other"), js_word!("*")),
+      )]),
+    );
+
+    assert_eq!(
+      map_imports(run_collect("const {foo: bar} = require('other');").imports),
+      HashMap::from([(
+        js_word!("bar"),
+        PartialImport::new(ImportKind::Require, js_word!("other"), js_word!("foo")),
+      )]),
+    );
+
+    assert_eq!(
+      map_imports(
+        run_collect(
+          "
+            import { a, b, c, d, e } from 'other';
+            import * as x from 'other';
+            import * as y from 'other';
+          "
+        )
+        .imports
+      ),
+      ["a", "b", "c", "d", "e", "x", "y"]
+        .into_iter()
+        .map(|s| {
+          (
+            JsWord::from(s),
+            PartialImport {
+              kind: ImportKind::Import,
+              source: js_word!("other"),
+              specifier: match s {
+                "x" | "y" => JsWord::from("*"),
+                _ => JsWord::from(s),
+              },
+            },
+          )
+        })
+        .collect::<HashMap<JsWord, PartialImport>>()
+    );
+  }
+
+  #[test]
+  fn collects_dynamic_imports() {
+    fn assert_dynamic_import(
+      input_code: &str,
+      imports: HashMap<JsWord, PartialImport>,
+      non_static_access: HashSet<JsWord>,
+      non_static_requires: HashSet<JsWord>,
+    ) {
+      let collect = run_collect(input_code);
+
+      assert_eq!(map_imports(collect.imports), imports);
+      assert_eq!(collect.non_static_requires, non_static_requires);
+      assert_eq!(
+        map_non_static_access(collect.non_static_access),
+        non_static_access
+      );
+
+      assert_eq!(
+        collect.wrapped_requires,
+        HashSet::from([String::from("other")])
+      );
+    }
+
+    assert_dynamic_import(
+      "
+        async function test() {
+          const x = await import('other');
+          x.foo;
+        }
+      ",
+      HashMap::from([(js_word!("x"), star_import())]),
+      HashSet::new(),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "
+        async function test() {
+          const x = await import('other');
+          x[foo];
+        }
+      ",
+      HashMap::from([(js_word!("x"), star_import())]),
+      HashSet::from([js_word!("x")]),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "
+        async function test() {
+          const {foo} = await import('other');
+        }
+      ",
+      HashMap::from([(js_word!("foo"), foo_import())]),
+      HashSet::new(),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "
+        async function test() {
+          const {foo: bar} = await import('other');
+        }
+      ",
+      HashMap::from([(js_word!("bar"), foo_import())]),
+      HashSet::new(),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "import('other').then(x => x.foo);",
+      HashMap::from([(
+        js_word!("x"),
+        PartialImport {
+          kind: ImportKind::DynamicImport,
+          source: js_word!("other"),
+          specifier: js_word!("*"),
+        },
+      )]),
+      HashSet::new(),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "import('other').then(x => x);",
+      HashMap::from([(js_word!("x"), star_import())]),
+      HashSet::from([js_word!("x")]),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "import('other').then(({foo}) => foo);",
+      HashMap::from([(js_word!("foo"), foo_import())]),
+      HashSet::from([js_word!("foo")]),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "import('other').then(({foo: bar}) => bar);",
+      HashMap::from([(js_word!("bar"), foo_import())]),
+      HashSet::from([js_word!("bar")]),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "import('other').then(function (x) { return x.foo });",
+      HashMap::from([(js_word!("x"), star_import())]),
+      HashSet::new(),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "import('other').then(function (x) { return x });",
+      HashMap::from([(js_word!("x"), star_import())]),
+      HashSet::from([js_word!("x")]),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "import('other').then(function ({foo}) {});",
+      HashMap::from([(js_word!("foo"), foo_import())]),
+      HashSet::new(),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "import('other').then(function ({foo: bar}) {});",
+      HashMap::from([(js_word!("bar"), foo_import())]),
+      HashSet::new(),
+      HashSet::new(),
+    );
+
+    assert_dynamic_import(
+      "import('other');",
+      HashMap::new(),
+      HashSet::new(),
+      HashSet::from([js_word!("other")]),
+    );
+
+    assert_dynamic_import(
+      "let other = import('other');",
+      HashMap::new(),
+      HashSet::new(),
+      HashSet::from([js_word!("other")]),
+    );
+
+    assert_dynamic_import(
+      "
+        async function test() {
+          let {...other} = await import('other');
+        }
+      ",
+      HashMap::new(),
+      HashSet::new(),
+      HashSet::from([js_word!("other")]),
+    );
+
+    fn foo_import() -> PartialImport {
+      PartialImport::new(
+        ImportKind::DynamicImport,
+        js_word!("other"),
+        js_word!("foo"),
+      )
+    }
+
+    fn star_import() -> PartialImport {
+      PartialImport::new(ImportKind::DynamicImport, js_word!("other"), js_word!("*"))
+    }
+  }
+
+  #[test]
+  fn collects_used_imports() {
+    assert_eq!(
+      map_used_imports(
+        run_collect(
+          "
+            import { a, b, c, d, e } from 'other';
+            import * as x from 'other';
+            import * as y from 'other';
+
+            log(a);
+            b.x();
+            c();
+            log(x);
+            y.foo();
+            e.foo.bar();
+          ",
+        )
+        .used_imports
+      ),
+      HashSet::from([
+        js_word!("a"),
+        js_word!("b"),
+        js_word!("c"),
+        js_word!("e"),
+        js_word!("x"),
+        js_word!("y")
+      ])
+    );
+
+    assert_eq!(
+      map_used_imports(
+        run_collect(
+          "
+            import {bar} from 'source';
+
+            export function thing(props) {
+              const {something = bar} = props;
+              return something;
+            }
+          ",
+        )
+        .used_imports
+      ),
+      HashSet::from([js_word!("bar")])
+    );
+  }
+
+  #[test]
+  fn collects_exports() {
+    assert_eq!(
+      run_collect("export function test() {};").exports,
+      HashMap::from([(
+        js_word!("test"),
+        Export {
+          source: None,
+          specifier: "test".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 17,
+            end_line: 1,
+            end_col: 21
+          },
+          is_esm: true
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("export default function() {};").exports,
+      HashMap::from([(
+        js_word!("default"),
+        Export {
+          source: None,
+          specifier: "default".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 1,
+            end_line: 1,
+            end_col: 29
+          },
+          is_esm: true
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("export default function test() {};").exports,
+      HashMap::from([(
+        js_word!("default"),
+        Export {
+          source: None,
+          specifier: "test".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 1,
+            end_line: 1,
+            end_col: 34
+          },
+          is_esm: true
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("export default class {};").exports,
+      HashMap::from([(
+        js_word!("default"),
+        Export {
+          source: None,
+          specifier: "default".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 1,
+            end_line: 1,
+            end_col: 24
+          },
+          is_esm: true
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("export default class Test {};").exports,
+      HashMap::from([(
+        js_word!("default"),
+        Export {
+          source: None,
+          specifier: "Test".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 1,
+            end_line: 1,
+            end_col: 29
+          },
+          is_esm: true
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("export default foo;").exports,
+      HashMap::from([(
+        js_word!("default"),
+        Export {
+          source: None,
+          specifier: "default".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 1,
+            end_line: 1,
+            end_col: 20
+          },
+          is_esm: true
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("export { foo as test };").exports,
+      HashMap::from([(
+        js_word!("test"),
+        Export {
+          source: None,
+          specifier: "foo".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 17,
+            end_line: 1,
+            end_col: 21
+          },
+          is_esm: true
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("export const foo = 1;").exports,
+      HashMap::from([(
+        js_word!("foo"),
+        Export {
+          source: None,
+          specifier: "foo".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 14,
+            end_line: 1,
+            end_col: 17
+          },
+          is_esm: true
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("module.exports.foo = 1;").exports,
+      HashMap::from([(
+        js_word!("foo"),
+        Export {
+          source: None,
+          specifier: "foo".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 16,
+            end_line: 1,
+            end_col: 19
+          },
+          is_esm: false
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("module.exports['foo'] = 1;").exports,
+      HashMap::from([(
+        js_word!("foo"),
+        Export {
+          source: None,
+          specifier: "foo".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 16,
+            end_line: 1,
+            end_col: 21
+          },
+          is_esm: false
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("module.exports[`foo`] = 1;").exports,
+      HashMap::from([(
+        js_word!("foo"),
+        Export {
+          source: None,
+          specifier: "foo".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 16,
+            end_line: 1,
+            end_col: 21
+          },
+          is_esm: false
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("exports.foo = 1;").exports,
+      HashMap::from([(
+        js_word!("foo"),
+        Export {
+          source: None,
+          specifier: "foo".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 9,
+            end_line: 1,
+            end_col: 12
+          },
+          is_esm: false
+        }
+      )])
+    );
+
+    assert_eq!(
+      run_collect("this.foo = 1;").exports,
+      HashMap::from([(
+        js_word!("foo"),
+        Export {
+          source: None,
+          specifier: "foo".into(),
+          loc: SourceLocation {
+            start_line: 1,
+            start_col: 6,
+            end_line: 1,
+            end_col: 9
+          },
+          is_esm: false
+        }
+      )])
+    );
+  }
+
+  #[test]
+  fn collects_bailouts() {
+    fn assert_empty_bailouts(input_code: &str) {
+      assert_eq!(run_collect(input_code).bailouts, Some(Vec::new()));
+    }
+
+    assert_empty_bailouts(
+      "
+        import {foo as bar} from 'other';
+        let test = {bar: 3};
+        console.log(bar, test.bar);
+        bar();
+      ",
+    );
+
+    assert_empty_bailouts(
+      "
+          import * as foo from 'other';
+          console.log(foo.bar);
+          foo.bar();
+        ",
+    );
+
+    assert_empty_bailouts(
+      "
+          import other from 'other';
+          console.log(other, other.bar);
+          other();
+        ",
+    );
+
+    assert_empty_bailouts(
+      "
+        class Foo {
+          constructor() {
+            this.a = 4
+          }
+
+          bar() {
+            return this.baz()
+          }
+
+          baz() {
+            return this.a
+          }
+        }
+
+        exports.baz = new Foo()
+        exports.a = 2
+      ",
+    );
+
+    fn assert_bailouts(input_code: &str, bailouts: Vec<BailoutReason>) {
+      assert_eq!(
+        run_collect(input_code).bailouts.map(|bailouts| bailouts
+          .into_iter()
+          .map(|bailout| bailout.reason)
+          .collect::<Vec<BailoutReason>>()),
+        Some(bailouts)
+      );
+    }
+
+    assert_bailouts(
+      "
+        import * as foo from 'other';
+        foo.bar();
+        let y = 'bar';
+        foo[y]();
+      ",
+      vec![BailoutReason::NonStaticAccess],
+    );
+
+    assert_bailouts(
+      "
+        exports.foo = function() {
+          exports.bar();
+        }
+
+        exports.bar = function() {
+          this.baz();
+        }
+
+        exports.baz = function() {
+          return 2;
+        }
+      ",
+      vec![BailoutReason::ThisInExport],
+    );
+  }
+
+  #[test]
+  fn collects_non_static_access_requires() {
+    fn assert_non_static_access(input_code: &str, non_static_access: HashSet<JsWord>) {
+      assert_eq!(
+        map_non_static_access(run_collect(input_code).non_static_access),
+        non_static_access
+      );
+    }
+
+    assert_non_static_access(
+      "
+        const x = require('other');
+        console.log(x.foo);
+      ",
+      HashSet::new(),
+    );
+
+    assert_non_static_access(
+      "
+        const x = require('other');
+        console.log(x[foo]);
+      ",
+      HashSet::from([js_word!("x")]),
+    );
+
+    assert_non_static_access(
+      "
+        const x = require('other');
+        console.log(x);
+      ",
+      HashSet::from([js_word!("x")]),
+    );
+  }
+
+  #[test]
+  fn collects_has_cjs_exports() {
+    fn assert_does_not_have_cjs_exports(input_code: &str) {
+      assert!(!run_collect(input_code).has_cjs_exports);
+    }
+
+    // Some TSC polyfills use a pattern like below, we want to avoid marking these modules as cjs.
+    assert_does_not_have_cjs_exports(
+      "
+        import 'something';
+        var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function () {}
+      ",
+    );
+
+    assert_does_not_have_cjs_exports(
+      "
+        const performance = module.require('perf_hooks');
+        export { performance };
+      ",
+    );
+
+    fn assert_has_cjs_exports(input_code: &str) {
+      assert!(run_collect(input_code).has_cjs_exports);
+    }
+
+    assert_has_cjs_exports("module.exports = {};");
+    assert_has_cjs_exports("this.someExport = 'true';");
+
+    // A free module is maybe considered a cjs export
+    assert_has_cjs_exports(
+      "
+        const performance = req(module, 'perf_hooks');
+        export { performance };
+      ",
+    );
+  }
+
+  #[test]
+  fn collects_should_wrap() {
+    fn assert_should_not_wrap(input_code: &str) {
+      assert!(!run_collect(input_code).should_wrap);
+    }
+
+    assert_should_not_wrap("class Foo {}");
+    assert_should_not_wrap(
+      "
+        console.log(typeof module);
+        console.log(module.hot);
+      ",
+    );
+
+    assert_should_not_wrap(
+      "
+        const foo = {
+          get a() {
+            return 1;
+          }
+        };
+        console.log(foo.a);
+      ",
+    );
+
+    fn assert_should_wrap(input_code: &str) {
+      assert!(run_collect(input_code).should_wrap);
+    }
+
+    assert_should_wrap("eval('');");
+    assert_should_wrap("doSomething(module);");
+    assert_should_wrap("console.log(module.id);");
+    assert_should_wrap("exports = 1;");
+    assert_should_wrap("module = 1;");
+
+    assert_should_wrap(
+      "
+        console.log(module);
+        export default class X {}
+      ",
+    );
+
+    assert_should_wrap(
+      "
+        exports.foo = 1;
+        return;
+        exports.bar = 3;
+      ",
+    );
+
+    // Module is wrapped when `this` accessor matches an export
+    assert_should_wrap(
+      "
+        exports.foo = function() {
+          exports.bar()
+        }
+
+        exports.bar = function() {
+          this.baz();
+        }
+
+        exports.baz = function() {
+          return 2;
+        }
+      ",
+    );
+  }
+
+  #[test]
+  fn collects_static_cjs_exports() {
+    fn assert_no_static_cjs_exports(input_code: &str) {
+      assert!(!run_collect(input_code).static_cjs_exports);
+    }
+
+    assert_no_static_cjs_exports("exports[test] = 1;");
+    assert_no_static_cjs_exports("module.exports[test] = 1;");
+    assert_no_static_cjs_exports("this[test] = 1;");
+    assert_no_static_cjs_exports("alert(exports);");
+    assert_no_static_cjs_exports("alert(module.exports);");
+    assert_no_static_cjs_exports("alert(this);");
+
+    fn assert_static_cjs_exports(input_code: &str) {
+      assert!(run_collect(input_code).static_cjs_exports);
+    }
+
+    assert_static_cjs_exports("exports.foo = 1;");
+    assert_static_cjs_exports("module.exports.foo = 1;");
+    assert_static_cjs_exports("this.foo = 1;");
+    assert_static_cjs_exports("test(function(exports) { return Object.keys(exports) })");
+    assert_static_cjs_exports("test(exports => Object.keys(exports))");
+    assert_static_cjs_exports(
+      "
+        var exports = {};
+        exports[foo] = 1;
+      ",
+    );
+
+    assert_static_cjs_exports(
+      "
+        var module = {exports: {}};
+        module.exports[foo] = 1;
+      ",
+    );
+
+    assert_static_cjs_exports(
+      "
+        const foo = {};
+        exports.test = foo;
+      ",
+    );
+  }
+
+  #[test]
+  fn collects_wrapped_requires() {
+    fn assert_wrapped_requires(input_code: &str, wrapped_requires: HashSet<String>) {
+      assert_eq!(run_collect(input_code).wrapped_requires, wrapped_requires);
+    }
+
+    assert_wrapped_requires(
+      "
+        function x() {
+          const foo = require('other');
+          console.log(foo.bar);
+        }
+        require('bar');
+      ",
+      HashSet::<String>::from_iter(vec![String::from("other")]),
+    );
+
+    assert_wrapped_requires(
+      "
+        var foo = function () {
+          if (Date.now() < 0) {
+            var bar = require('other');
+          }
+        }();
+      ",
+      HashSet::<String>::from_iter(vec![String::from("other")]),
+    );
+
+    assert_wrapped_requires(
+      "
+        function x() {
+          const foo = require('other').foo;
+          console.log(foo);
+        }
+      ",
+      HashSet::<String>::from_iter(vec![String::from("other")]),
+    );
+
+    assert_wrapped_requires(
+      "
+        function x() {
+          console.log(require('other').foo);
+        }
+      ",
+      HashSet::<String>::from_iter(vec![String::from("other")]),
+    );
+
+    assert_wrapped_requires(
+      "
+        function x() {
+          const foo = require('other')[test];
+          console.log(foo);
+        }
+      ",
+      HashSet::<String>::from_iter(vec![String::from("other")]),
+    );
+
+    assert_wrapped_requires(
+      "
+        function x() {
+          const {foo} = require('other');
+          console.log(foo);
+        }
+      ",
+      HashSet::<String>::from_iter(vec![String::from("other")]),
+    );
+
+    assert_wrapped_requires(
+      "let x = require('a') + require('b');",
+      HashSet::<String>::from_iter(vec![String::from("a"), String::from("b")]),
+    );
+
+    assert_wrapped_requires(
+      "let x = (require('a'), require('b'));",
+      HashSet::<String>::from_iter(vec![String::from("a"), String::from("b")]),
+    );
+
+    assert_wrapped_requires(
+      "let x = require('a') || require('b');",
+      HashSet::<String>::from_iter(vec![String::from("a"), String::from("b")]),
+    );
+
+    assert_wrapped_requires(
+      "let x = condition ? require('a') : require('b');",
+      HashSet::<String>::from_iter(vec![String::from("a"), String::from("b")]),
+    );
+
+    assert_wrapped_requires(
+      "if (condition) require('a');",
+      HashSet::<String>::from_iter(vec![String::from("a")]),
+    );
+
+    assert_wrapped_requires(
+      "for (let x = require('y'); x < 5; x++) {}",
+      HashSet::<String>::from_iter(vec![String::from("y")]),
+    );
+  }
+
+  fn run_collect(input_code: &str) -> Collect {
+    let RunVisitResult { visitor, .. } = run_test_visit_const(input_code, |context| {
+      Collect::new(
+        context.source_map,
+        context.unresolved_mark,
+        Mark::fresh(Mark::root()),
+        context.global_mark,
+        true,
+        context.is_module,
+        false,
+      )
     });
-    assert!(visitor.is_empty_or_empty_export);
+
+    visitor
   }
 
-  #[test]
-  fn test_visit_module_sees_file_has_single_line() {
-    let RunVisitResult { visitor, .. } =
-      run_test_visit_const(r#"console.log('hello');"#, |context| {
-        make_default_swc_collector(context)
-      });
-    assert!(!visitor.is_empty_or_empty_export);
+  fn map_imports(imports: HashMap<Id, Import>) -> HashMap<JsWord, PartialImport> {
+    let mut map: HashMap<JsWord, PartialImport> = HashMap::new();
+    for (key, import) in imports.into_iter() {
+      map.insert(key.0, PartialImport::from(import));
+    }
+
+    map
   }
 
-  #[test]
-  fn test_visit_module_sees_file_has_single_line_with_non_empty_export() {
-    let RunVisitResult { visitor, .. } = run_test_visit_const(r#"export default 2;"#, |context| {
-      make_default_swc_collector(context)
-    });
-    assert!(!visitor.is_empty_or_empty_export);
+  fn map_non_static_access(non_static_access: HashMap<Id, Vec<Span>>) -> HashSet<JsWord> {
+    non_static_access
+      .into_keys()
+      .map(|key| JsWord::from(key.0))
+      .collect::<HashSet<JsWord>>()
   }
 
-  #[test]
-  fn test_visit_module_sees_file_has_multiple_lines() {
-    let RunVisitResult { visitor, .. } =
-      run_test_visit_const(r#"console.log('hello');console.log('world')"#, |context| {
-        make_default_swc_collector(context)
-      });
-    assert!(!visitor.is_empty_or_empty_export);
+  fn map_used_imports(set: HashSet<Id>) -> HashSet<JsWord> {
+    set.into_iter().map(|x| x.0).collect()
+  }
+
+  #[derive(Debug, Eq, Hash, PartialEq)]
+  struct PartialImport {
+    kind: ImportKind,
+    source: JsWord,
+    specifier: JsWord,
+  }
+
+  impl PartialImport {
+    pub fn new(kind: ImportKind, source: JsWord, specifier: JsWord) -> Self {
+      PartialImport {
+        kind,
+        source,
+        specifier,
+      }
+    }
+  }
+
+  impl From<Import> for PartialImport {
+    fn from(import: Import) -> Self {
+      PartialImport {
+        kind: import.kind,
+        source: import.source,
+        specifier: import.specifier,
+      }
+    }
   }
 }
