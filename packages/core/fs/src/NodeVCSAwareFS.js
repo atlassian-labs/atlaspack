@@ -6,7 +6,7 @@ import {getVcsStateSnapshot, getEventsSince} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types-internal';
 import type {Event, Options as WatcherOptions} from '@parcel/watcher';
 import {registerSerializableClass} from '@atlaspack/build-cache';
-import {instrument, instrumentAsync} from '@atlaspack/logger';
+import {instrumentAsync} from '@atlaspack/logger';
 import {getFeatureFlagValue} from '@atlaspack/feature-flags';
 
 // $FlowFixMe
@@ -87,9 +87,10 @@ export class NodeVCSAwareFS extends NodeFS {
     );
     let watcherEventsSince = [];
 
-    const vcsEventsSince = instrument(
-      'NodeVCSAwareFS::rust.getEventsSince',
-      () => getEventsSince(gitRepoPath, vcsState, null),
+    const vcsEventsSince = (
+      await instrumentAsync('NodeVCSAwareFS::rust.getEventsSince', () =>
+        getEventsSince(gitRepoPath, vcsState, null),
+      )
     ).map((e) => ({
       path: e.path,
       type: e.changeType,
@@ -137,8 +138,9 @@ export class NodeVCSAwareFS extends NodeFS {
       );
     }
 
-    const vcsState = instrument('NodeVCSAwareFS::getVcsStateSnapshot', () =>
-      getVcsStateSnapshot(gitRepoPath, this.#excludePatterns),
+    const vcsState = await instrumentAsync(
+      'NodeVCSAwareFS::getVcsStateSnapshot',
+      () => getVcsStateSnapshot(gitRepoPath, this.#excludePatterns),
     );
 
     const snapshotContents = {
