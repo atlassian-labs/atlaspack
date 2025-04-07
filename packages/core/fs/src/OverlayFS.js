@@ -16,13 +16,15 @@ import type {
 } from '@parcel/watcher';
 
 import {registerSerializableClass} from '@atlaspack/build-cache';
+import {readPackageJsonSync} from '@atlaspack/utils';
 import WorkerFarm from '@atlaspack/workers';
-import packageJSON from '../package.json';
 import {findAncestorFile, findNodeModule, findFirstFile} from './find';
 import {MemoryFS} from './MemoryFS';
 
 import nullthrows from 'nullthrows';
 import path from 'path';
+
+const packageJSON = readPackageJsonSync(__dirname);
 
 export class OverlayFS implements FileSystem {
   deleted: Set<FilePath> = new Set();

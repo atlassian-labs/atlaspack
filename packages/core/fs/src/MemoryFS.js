@@ -12,16 +12,18 @@ import type {
   Options as WatcherOptions,
   AsyncSubscription,
 } from '@parcel/watcher';
+import {readPackageJsonSync} from '@atlaspack/utils';
 
 import path from 'path';
 import {Readable, Writable} from 'stream';
 import {registerSerializableClass} from '@atlaspack/build-cache';
 import {SharedBuffer} from '@atlaspack/utils';
-import packageJSON from '../package.json';
 import WorkerFarm, {Handle} from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 import EventEmitter from 'events';
 import {findAncestorFile, findNodeModule, findFirstFile} from './find';
+
+const packageJSON = readPackageJsonSync(__dirname);
 
 const instances: Map<number, MemoryFS> = new Map();
 let id = 0;

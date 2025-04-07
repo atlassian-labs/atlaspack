@@ -20,16 +20,18 @@ import path from 'path';
 import {tmpdir} from 'os';
 import {promisify} from 'util';
 import {registerSerializableClass} from '@atlaspack/build-cache';
+import {readPackageJsonSync} from '@atlaspack/utils';
 import {hashFile} from '@atlaspack/utils';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import watcher from '@parcel/watcher';
-import packageJSON from '../package.json';
 
 import * as searchNative from '@atlaspack/rust';
 import * as searchJS from './find';
 
 // Most of this can go away once we only support Node 10+, which includes
 // require('fs').promises
+
+const packageJSON = readPackageJsonSync(__dirname);
 
 const realpath = promisify(
   process.platform === 'win32' ? fs.realpath : fs.realpath.native,

@@ -1,7 +1,8 @@
 // @flow strict-local
 import {registerSerializableClass} from '@atlaspack/build-cache';
-// $FlowFixMe
-import packageJson from '../package.json';
+import {readPackageJsonSync} from '@atlaspack/utils';
+
+const packageJson = readPackageJsonSync(__dirname);
 
 let HANDLE_ID = 0;
 // $FlowFixMe

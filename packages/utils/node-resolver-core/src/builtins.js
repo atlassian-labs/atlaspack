@@ -1,9 +1,10 @@
 // @flow strict-local
 // $FlowFixMe this is untyped
+import {readPackageJsonSync} from '@atlaspack/utils';
 import {builtinModules} from 'module';
 import nullthrows from 'nullthrows';
-// flowlint-next-line untyped-import:off
-import packageJson from '../package.json';
+
+const packageJson = readPackageJsonSync(__dirname);
 
 export const empty: string = require.resolve('./_empty.js');
 
@@ -16,7 +17,7 @@ for (let key of builtinModules) {
   builtins[key] = {name: empty, range: null};
 }
 
-let polyfills = {
+let polyfills: {[string]: string} = {
   assert: 'assert',
   buffer: 'buffer',
   console: 'console-browserify',
@@ -46,7 +47,7 @@ for (let k in polyfills) {
   let polyfill = polyfills[k];
   builtins[k] = {
     name: polyfill + (builtinModules.includes(polyfill) ? '/' : ''),
-    range: nullthrows(packageJson.devDependencies[polyfill]),
+    range: nullthrows(packageJson?.devDependencies[polyfill]),
   };
 }
 

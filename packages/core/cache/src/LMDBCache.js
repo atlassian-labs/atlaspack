@@ -13,13 +13,13 @@ import {
   serialize,
 } from '@atlaspack/build-cache';
 import {NodeFS} from '@atlaspack/fs';
+import {readPackageJsonSync} from '@atlaspack/utils';
 // flowlint-next-line untyped-import:off
 import lmdb from 'lmdb';
 
-// $FlowFixMe
-import packageJson from '../package.json';
-
 import {FSCache} from './FSCache';
+
+const packageJson = readPackageJsonSync(__dirname);
 
 const pipeline: (Readable, Writable) => Promise<void> = promisify(
   stream.pipeline,

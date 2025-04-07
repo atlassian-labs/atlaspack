@@ -1,8 +1,7 @@
 // @flow strict-local
 
+import {readPackageJsonSync} from '@atlaspack/utils';
 import program from 'commander';
-// flowlint-next-line untyped-import:off
-import {version} from '../package.json';
 // flowlint-next-line untyped-import:off
 import simpleGit from 'simple-git';
 import fs from 'fs';
@@ -18,6 +17,7 @@ import chalk from 'chalk';
 import * as emoji from './emoji';
 
 const TEMPLATES_DIR = path.resolve(__dirname, '../templates');
+const {version} = readPackageJsonSync(__dirname);
 
 const ncp = promisify(_ncp);
 // eslint-disable-next-line no-console

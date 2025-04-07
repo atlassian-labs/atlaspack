@@ -22,6 +22,7 @@ import ThrowableDiagnostic, {
   md,
 } from '@atlaspack/diagnostic';
 import {NodeFS} from '@atlaspack/fs';
+import {readPackageJsonSync} from '@atlaspack/utils';
 import nativeFS from 'fs';
 import Module from 'module';
 import path from 'path';
@@ -32,11 +33,12 @@ import nullthrows from 'nullthrows';
 import {getModuleParts} from '@atlaspack/utils';
 import {getConflictingLocalDependencies} from './utils';
 import {installPackage} from './installPackage';
-import pkg from '../package.json';
 import {getConditionsFromEnv} from './nodejsConditions';
 import {ResolverBase} from '@atlaspack/node-resolver-core';
 import {pathToFileURL} from 'url';
 import {transformSync} from '@swc/core';
+
+const pkg = readPackageJsonSync(__dirname);
 
 // Package.json fields. Must match package_json.rs.
 const MAIN = 1 << 0;

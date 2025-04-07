@@ -2,15 +2,15 @@
 // @flow strict-local
 import type {PackagedBundle} from '@atlaspack/types';
 import type {ParcelOptions} from '@atlaspack/core/src/types';
+import {readPackageJsonSync} from '@atlaspack/utils';
 import type {commander$Command} from 'commander';
-
-// $FlowFixMe[untyped-import]
-import {version} from '../package.json';
 
 import commander from 'commander';
 import fs from 'fs';
 import path from 'path';
 import {DefaultMap} from '@atlaspack/utils';
+
+const {version} = readPackageJsonSync(__dirname);
 
 const {
   loadGraphs,

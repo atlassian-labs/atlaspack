@@ -15,11 +15,11 @@ import path from 'path';
 import {promisify} from 'util';
 
 import {NodeFS} from '@atlaspack/fs';
-
-// $FlowFixMe
-import packageJson from '../package.json';
+import {readPackageJsonSync} from '@atlaspack/utils';
 
 import {FSCache} from './FSCache';
+
+const packageJson = readPackageJsonSync(__dirname);
 
 interface DBOpenOptions {
   name: string;

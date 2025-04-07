@@ -8,13 +8,11 @@ import {
   registerSerializableClass,
   serialize,
 } from '@atlaspack/build-cache';
-import {bufferStream} from '@atlaspack/utils';
+import {bufferStream, readPackageJsonSync} from '@atlaspack/utils';
 // $FlowFixMe[untyped-import]
 import {openDB} from 'idb';
 
-// $FlowFixMe[untyped-import]
-import packageJson from '../package.json';
-
+const packageJson = readPackageJsonSync(__dirname);
 const STORE_NAME = 'cache';
 
 export class IDBCache implements Cache {

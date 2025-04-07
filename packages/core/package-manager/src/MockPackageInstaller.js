@@ -10,9 +10,11 @@ import type {FilePath} from '@atlaspack/types';
 
 import path from 'path';
 import {registerSerializableClass} from '@atlaspack/build-cache';
+import {readPackageJsonSync} from '@atlaspack/utils';
 import {ncp} from '@atlaspack/fs';
-import pkg from '../package.json';
 import {moduleRequestsFromDependencyMap} from './utils';
+
+const pkg = readPackageJsonSync(__dirname);
 
 type Package = {|
   fs: FileSystem,

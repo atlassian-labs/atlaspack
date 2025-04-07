@@ -9,6 +9,7 @@ import stream from 'stream';
 import path from 'path';
 import {promisify} from 'util';
 
+import {readPackageJsonSync} from '@atlaspack/utils';
 import logger from '@atlaspack/logger';
 import {
   deserialize,
@@ -16,10 +17,9 @@ import {
   serialize,
 } from '@atlaspack/build-cache';
 
-// flowlint-next-line untyped-import:off
-import packageJson from '../package.json';
-
 import {WRITE_LIMIT_CHUNK} from './constants';
+
+const packageJson = readPackageJsonSync(__dirname);
 
 const pipeline: (Readable, Writable) => Promise<void> = promisify(
   stream.pipeline,

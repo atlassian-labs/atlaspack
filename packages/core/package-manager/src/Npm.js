@@ -8,9 +8,9 @@ import logger from '@atlaspack/logger';
 import {registerSerializableClass} from '@atlaspack/build-cache';
 import promiseFromProcess from './promiseFromProcess';
 import {npmSpecifierFromModuleRequest} from './utils';
+import {readPackageJsonSync} from '@atlaspack/utils';
 
-// $FlowFixMe
-import pkg from '../package.json';
+const pkg = readPackageJsonSync(__dirname);
 
 const NPM_CMD = 'npm';
 

@@ -10,8 +10,7 @@ import type {
   Invalidations,
   ResolveResult,
 } from '@atlaspack/package-manager';
-// $FlowFixMe[untyped-import]
-import packageJson from '../../package.json';
+import {readPackageJsonSync} from '@atlaspack/utils';
 
 import path from 'path';
 import nullthrows from 'nullthrows';
@@ -44,6 +43,8 @@ import transformerPostcss from '@atlaspack/transformer-postcss';
 import transformerPosthtml from '@atlaspack/transformer-posthtml';
 import transformerRaw from '@atlaspack/transformer-raw';
 import transformerReactRefreshWrap from '@atlaspack/transformer-react-refresh-wrap';
+
+const packageJson = readPackageJsonSync(__dirname);
 
 export const BUILTINS = {
   '@atlaspack/bundler-default': bundlerDefault,

@@ -10,10 +10,14 @@ import ThrowableDiagnostic, {
   generateJSONCodeHighlights,
   md,
 } from '@atlaspack/diagnostic';
-import {findAlternativeNodeModules, resolveConfig} from '@atlaspack/utils';
+import {
+  findAlternativeNodeModules,
+  resolveConfig,
+  readPackageJsonSync,
+} from '@atlaspack/utils';
 import {type ProjectPath, toProjectPath} from './projectPath';
-import {version as ATLASPACK_VERSION} from '../package.json';
 
+const {version: ATLASPACK_VERSION} = readPackageJsonSync(__dirname);
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
 const CONFIG = Symbol.for('parcel-plugin-config');
 

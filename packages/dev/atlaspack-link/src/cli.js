@@ -1,15 +1,16 @@
 // @flow strict-local
 /* eslint-disable no-console */
+import {readPackageJsonSync} from '@atlaspack/utils';
 
 import type {LinkCommandOptions} from './link';
 import type {UnlinkCommandOptions} from './unlink';
 
-// $FlowFixMe[untyped-import]
-import {version} from '../package.json';
 import {createLinkCommand} from './link';
 import {createUnlinkCommand} from './unlink';
 
 import commander from 'commander';
+
+const {version} = readPackageJsonSync(__dirname);
 
 export type ProgramOptions = {|...LinkCommandOptions, ...UnlinkCommandOptions|};
 

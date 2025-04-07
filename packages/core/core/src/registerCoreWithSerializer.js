@@ -2,14 +2,15 @@
 
 import {registerSerializableClass} from '@atlaspack/build-cache';
 import {Graph} from '@atlaspack/graph';
-
-import packageJson from '../package.json';
+import {readPackageJsonSync} from '@atlaspack/utils';
 
 import {AtlaspackConfig} from './AtlaspackConfig';
 import AssetGraph from './AssetGraph';
 import BundleGraph from './BundleGraph';
 import Config from './public/Config';
 import {RequestGraph} from './RequestTracker';
+
+const packageJson = readPackageJsonSync(__dirname);
 
 let coreRegistered;
 export function registerCoreWithSerializer() {

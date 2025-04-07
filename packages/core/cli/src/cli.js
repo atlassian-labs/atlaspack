@@ -5,10 +5,10 @@ import {NodeFS} from '@atlaspack/fs';
 import {openInBrowser} from '@atlaspack/utils';
 import {Disposable} from '@atlaspack/events';
 import {INTERNAL_ORIGINAL_CONSOLE} from '@atlaspack/logger';
+import {readPackageJsonSync} from '@atlaspack/utils';
 import chalk from 'chalk';
 import commander from 'commander';
 import path from 'path';
-import {version} from '../package.json';
 import {applyOptions} from './applyOptions';
 import {makeDebugCommand} from './makeDebugCommand';
 import {normalizeOptions} from './normalizeOptions';
@@ -18,6 +18,7 @@ import {
 } from './handleUncaughtException';
 import {commonOptions, hmrOptions} from './options';
 
+const {version} = readPackageJsonSync(__dirname);
 const program = new commander.Command();
 
 // Exit codes in response to signals are traditionally

@@ -30,7 +30,7 @@ import dumpGraphToGraphViz from './dumpGraphToGraphViz';
 import resolveOptions from './resolveOptions';
 import {ValueEmitter} from '@atlaspack/events';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
-import {PromiseQueue} from '@atlaspack/utils';
+import {PromiseQueue, readPackageJsonSync} from '@atlaspack/utils';
 import {AtlaspackConfig} from './AtlaspackConfig';
 import logger from '@atlaspack/logger';
 import RequestTracker, {
@@ -66,6 +66,7 @@ import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
 
 registerCoreWithSerializer();
 
+const packageJson = readPackageJsonSync(__dirname);
 export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
 
@@ -158,7 +159,7 @@ export default class Atlaspack {
       const lmdb: Lmdb = resolvedOptions.cache.getNativeRef();
 
       // $FlowFixMe
-      const version = require('../package.json').version;
+      const version = packageJson.version;
       await lmdb.put('current_session_version', Buffer.from(version));
 
       rustAtlaspack = new AtlaspackV3({

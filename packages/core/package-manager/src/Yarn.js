@@ -10,9 +10,9 @@ import split from 'split2';
 import JSONParseStream from './JSONParseStream';
 import promiseFromProcess from './promiseFromProcess';
 import {exec, npmSpecifierFromModuleRequest} from './utils';
+import {readPackageJsonSync} from '@atlaspack/utils';
 
-// $FlowFixMe
-import pkg from '../package.json';
+const pkg = readPackageJsonSync(__dirname);
 
 const YARN_CMD = 'yarn';
 

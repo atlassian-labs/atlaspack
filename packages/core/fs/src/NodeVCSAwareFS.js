@@ -8,9 +8,9 @@ import type {Event, Options as WatcherOptions} from '@parcel/watcher';
 import {registerSerializableClass} from '@atlaspack/build-cache';
 import {instrument, instrumentAsync} from '@atlaspack/logger';
 import {getFeatureFlagValue} from '@atlaspack/feature-flags';
+import {readPackageJsonSync} from '@atlaspack/utils';
 
-// $FlowFixMe
-import packageJSON from '../package.json';
+const packageJSON = readPackageJsonSync(__dirname);
 
 export interface NodeVCSAwareFSOptions {
   gitRepoPath: null | FilePath;

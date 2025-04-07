@@ -8,6 +8,7 @@ import type {
   PluginLogger,
 } from '@atlaspack/types';
 import typeof * as BabelCore from '@babel/core';
+import {readPackageJsonSync} from '@atlaspack/utils';
 
 import invariant from 'assert';
 import path from 'path';
@@ -15,7 +16,7 @@ import {md} from '@atlaspack/diagnostic';
 import {relativeUrl} from '@atlaspack/utils';
 import {remapAstLocations} from './remapAstLocations';
 
-import packageJson from '../package.json';
+const packageJson = readPackageJsonSync(__dirname);
 
 const transformerVersion: mixed = packageJson.version;
 invariant(typeof transformerVersion === 'string');

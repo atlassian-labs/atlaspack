@@ -1,7 +1,10 @@
 // @flow strict-local
 
-// $FlowFixMe
-import {version} from '../package.json';
+import {readPackageJsonSync} from '@atlaspack/utils';
+import {type PackageJSON} from '@atlaspack/types-internal';
+
+const pkg: PackageJSON = readPackageJsonSync(__dirname);
+const version = pkg.version;
 
 export const ATLASPACK_VERSION = version;
 export const HASH_REF_PREFIX = 'HASH_REF_';
