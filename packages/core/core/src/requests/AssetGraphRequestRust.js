@@ -47,6 +47,9 @@ export function createAssetGraphRequestRust(
         serializedAssetGraph.nodes = serializedAssetGraph.nodes.map((node) =>
           JSON.parse(node),
         );
+        serializedAssetGraph.updates = serializedAssetGraph.updates.map(
+          (node) => JSON.parse(node),
+        );
       });
 
       let prevResult =
@@ -87,6 +90,7 @@ export function createAssetGraphRequestRust(
       };
 
       await input.api.storeResult(result);
+      input.api.invalidateOnBuild();
 
       return result;
     },
@@ -102,13 +106,35 @@ export function getAssetGraph(
   assetGraph: AssetGraph,
   changedAssets: Map<string, Asset>,
 |} {
-  let graph = new AssetGraph({
-    _contentKeyToNodeId: new Map(),
-    _nodeIdToContentKey: new Map(),
-    initialCapacity: serializedGraph.edges.length,
+  let graph: AssetGraph;
+
+  instrument('Initialise asset graph', () => {
+    if (prevAssetGraph && serializedGraph.updates.length > 0) {
+      graph = new AssetGraph({
+        _contentKeyToNodeId: prevAssetGraph._contentKeyToNodeId,
+        _nodeIdToContentKey: prevAssetGraph._nodeIdToContentKey,
+        nodes: prevAssetGraph.nodes,
+        initialCapacity: serializedGraph.edges.length,
+      });
+    } else {
+      graph = new AssetGraph({
+        _contentKeyToNodeId: new Map(),
+        _nodeIdToContentKey: new Map(),
+        initialCapacity: serializedGraph.edges.length,
+      });
+      let index = graph.addNodeByContentKey('@@root', {
+        id: '@@root',
+        type: 'root',
+        value: null,
+      });
+
+      graph.setRootNodeId(index);
+    }
+
+    graph.safeToIncrementallyBundle = true;
   });
 
-  graph.safeToIncrementallyBundle = true;
+  invariant(graph, 'Graph not initialized');
 
   function mapSymbols({exported, ...symbol}) {
     let jsSymbol = {
@@ -155,138 +181,127 @@ export function getAssetGraph(
 
     let envId = envs.get(envKey);
     if (envId == null) {
-      envId = envs.size;
+      envId = envs.size.toString();
       envs.set(envKey, envId);
     }
 
     return envId;
   };
 
-  for (let node of serializedGraph.nodes) {
-    if (node.type === 'root') {
-      let index = graph.addNodeByContentKey('@@root', {
-        id: '@@root',
-        type: 'root',
-        value: null,
-      });
+  console.log({
+    newNodes: serializedGraph.nodes.length,
+    updatedNodes: serializedGraph.updates.length,
+  });
 
-      graph.setRootNodeId(index);
-    } else if (node.type === 'entry') {
-      let id = 'entry:' + ++entry;
+  instrument('Add/Update nodes', () => {
+    for (let node of [...serializedGraph.nodes, ...serializedGraph.updates]) {
+      if (node.type === 'entry') {
+        let id = 'entry:' + ++entry;
 
-      graph.addNodeByContentKey(id, {
-        id: id,
-        type: 'root',
-        value: null,
-      });
-    } else if (
-      node.type === 'unchangedAsset' ||
-      node.type === 'unchangedDependency'
-    ) {
-      let prevNode = prevAssetGraph?.getNodeByContentKey(node.id);
+        graph.addNodeByContentKey(id, {
+          id: id,
+          type: 'root',
+          value: null,
+        });
+      } else if (node.type === 'asset') {
+        let asset = node.value;
+        let id = asset.id;
 
-      invariant(
-        prevNode,
-        'Asset/Dependency not found in previous Asset graph',
-        node.id,
-      );
+        asset.committed = true;
+        asset.contentKey = id;
+        asset.env.id = getEnvId(asset.env);
+        asset.mapKey = `map:${asset.id}`;
 
-      graph.addNodeByContentKey(node.id, prevNode);
-    } else if (node.type === 'asset') {
-      let asset = node.value;
-      let id = asset.id;
+        // This is populated later when we map the edges between assets and dependencies
+        asset.dependencies = new Map();
 
-      asset.committed = true;
-      asset.contentKey = id;
-      asset.env.id = getEnvId(asset.env);
-      asset.mapKey = `map:${asset.id}`;
+        // We need to add this property for source map handling, as some assets like runtimes
+        // are processed after the Rust transformation and take the v2 code path
+        asset.meta.isV3 = true;
 
-      // This is populated later when we map the edges between assets and dependencies
-      asset.dependencies = new Map();
+        if (asset.symbols != null) {
+          asset.symbols = new Map(asset.symbols.map(mapSymbols));
+        }
 
-      // We need to add this property for source map handling, as some assets like runtimes
-      // are processed after the Rust transformation and take the v2 code path
-      asset.meta.isV3 = true;
+        changedAssets.set(id, asset);
 
-      if (asset.symbols != null) {
-        asset.symbols = new Map(asset.symbols.map(mapSymbols));
+        graph.addNode({
+          id,
+          type: 'asset',
+          usedSymbols: new Set(),
+          usedSymbolsDownDirty: true,
+          usedSymbolsUpDirty: true,
+          value: asset,
+        });
+      } else if (node.type === 'dependency') {
+        let id = node.value.id;
+        let dependency = node.value.dependency;
+
+        dependency.id = id;
+        dependency.env.id = getEnvId(dependency.env);
+
+        if (dependency.symbols != null) {
+          dependency.symbols = new Map(dependency.symbols?.map(mapSymbols));
+        }
+
+        let usedSymbolsDown = new Set();
+        let usedSymbolsUp = new Map();
+        if (dependency.isEntry && dependency.isLibrary) {
+          usedSymbolsDown.add('*');
+          usedSymbolsUp.set('*', undefined);
+        }
+
+        graph.addNode({
+          id,
+          type: 'dependency',
+          deferred: false,
+          excluded: false,
+          hasDeferred: node.has_deferred,
+          usedSymbolsDown,
+          usedSymbolsDownDirty: true,
+          usedSymbolsUp,
+          usedSymbolsUpDirtyDown: true,
+          usedSymbolsUpDirtyUp: true,
+          value: dependency,
+        });
       }
-
-      changedAssets.set(id, asset);
-
-      graph.addNodeByContentKey(id, {
-        id,
-        type: 'asset',
-        usedSymbols: new Set(),
-        usedSymbolsDownDirty: true,
-        usedSymbolsUpDirty: true,
-        value: asset,
-      });
-    } else if (node.type === 'dependency') {
-      let id = node.value.id;
-      let dependency = node.value.dependency;
-
-      dependency.id = id;
-      dependency.env.id = getEnvId(dependency.env);
-
-      if (dependency.symbols != null) {
-        dependency.symbols = new Map(dependency.symbols?.map(mapSymbols));
-      }
-
-      let usedSymbolsDown = new Set();
-      let usedSymbolsUp = new Map();
-      if (dependency.isEntry && dependency.isLibrary) {
-        usedSymbolsDown.add('*');
-        usedSymbolsUp.set('*', undefined);
-      }
-
-      graph.addNodeByContentKey(id, {
-        id,
-        type: 'dependency',
-        deferred: false,
-        excluded: false,
-        hasDeferred: node.has_deferred,
-        usedSymbolsDown,
-        usedSymbolsDownDirty: true,
-        usedSymbolsUp,
-        usedSymbolsUpDirtyDown: true,
-        usedSymbolsUpDirtyUp: true,
-        value: dependency,
-      });
     }
-  }
+  });
 
-  for (let i = 0; i < serializedGraph.edges.length; i += 2) {
-    let from = serializedGraph.edges[i];
-    let to = serializedGraph.edges[i + 1];
-    let fromNode = graph.getNode(from);
-    let toNode = graph.getNode(to);
+  instrument('Create edges', () => {
+    for (let i = 0; i < serializedGraph.edges.length; i += 2) {
+      let from = serializedGraph.edges[i];
+      let to = serializedGraph.edges[i + 1];
+      let fromNode = graph.getNode(from);
+      let toNode = graph.getNode(to);
 
-    if (fromNode?.type === 'dependency') {
-      invariant(toNode?.type === 'asset');
+      if (fromNode?.type === 'dependency') {
+        invariant(toNode?.type === 'asset');
 
-      // For backwards compatibility, create asset group node if needed.
-      let assetGroupNode = nodeFromAssetGroup({
-        filePath: toNode.value.filePath,
-        env: fromNode.value.env,
-        pipeline: toNode.value.pipeline,
-        sideEffects: Boolean(toNode.value.sideEffects),
-      });
+        // For backwards compatibility, create asset group node if needed.
+        // let assetGroupNode = nodeFromAssetGroup({
+        //   filePath: toNode.value.filePath,
+        //   env: fromNode.value.env,
+        //   pipeline: toNode.value.pipeline,
+        //   sideEffects: Boolean(toNode.value.sideEffects),
+        // });
+        //
+        // let index = graph.addNodeByContentKeyIfNeeded(
+        //   assetGroupNode.id,
+        //   assetGroupNode,
+        // );
 
-      let index = graph.addNodeByContentKeyIfNeeded(
-        assetGroupNode.id,
-        assetGroupNode,
-      );
-
-      graph.addEdge(from, index);
-      graph.addEdge(index, to);
-    } else if (fromNode?.type === 'asset' && toNode?.type === 'dependency') {
-      fromNode.value.dependencies.set(toNode.value.id, toNode.value);
-      graph.addEdge(from, to);
-    } else {
-      graph.addEdge(from, to);
+        // graph.addEdge(from, index);
+        // graph.addEdge(index, to);
+        graph.addEdge(from, to);
+      } else if (fromNode?.type === 'asset' && toNode?.type === 'dependency') {
+        fromNode.value.dependencies.set(toNode.value.id, toNode.value);
+        graph.addEdge(from, to);
+      } else {
+        graph.addEdge(from, to);
+      }
     }
-  }
+  });
 
   return {
     assetGraph: graph,

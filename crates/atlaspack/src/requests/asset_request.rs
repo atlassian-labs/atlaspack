@@ -46,7 +46,7 @@ pub struct AssetRequest {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssetRequestOutput {
-  pub asset: Asset,
+  pub asset: Arc<Asset>,
   pub discovered_assets: Vec<AssetWithDependencies>,
   pub dependencies: Vec<Dependency>,
 }
@@ -139,9 +139,20 @@ impl Request for AssetRequest {
       .invalidate_on_file_change
       .push(result.asset.file_path.clone());
 
+    for dep in result.dependencies.iter_mut() {
+      dep.ensure_id();
+    }
+    for dep in result
+      .discovered_assets
+      .iter_mut()
+      .flat_map(|da| da.dependencies.iter_mut())
+    {
+      dep.ensure_id();
+    }
+
     Ok(ResultAndInvalidations {
       result: RequestResult::Asset(AssetRequestOutput {
-        asset: result.asset,
+        asset: Arc::new(result.asset),
         // TODO: Need to decide whether a discovered asset will belong to the asset graph as it's own node
         discovered_assets: result.discovered_assets,
         dependencies: result.dependencies,

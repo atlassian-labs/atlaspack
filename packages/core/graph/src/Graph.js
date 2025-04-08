@@ -92,6 +92,12 @@ export default class Graph<TNode, TEdgeType: number = NullEdgeType> {
       : new AdjacencyList<TEdgeType>(
           typeof initialCapacity === 'number' ? {initialCapacity} : undefined,
         );
+
+    if (opts?.nodes && !opts?.adjacencyList) {
+      for (let i = 0; i < this.nodes.length; i++) {
+        this.adjacencyList.addNode();
+      }
+    }
   }
 
   setRootNodeId(id: ?NodeId) {

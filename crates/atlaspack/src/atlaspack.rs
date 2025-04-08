@@ -1,9 +1,8 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Context;
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
-use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
+use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::AtlaspackOptions;
@@ -11,7 +10,6 @@ use atlaspack_filesystem::{os_file_system::OsFileSystem, FileSystemRef};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::writer::DatabaseWriter;
-use petgraph::graph::NodeIndex;
 use tokio::runtime::Runtime;
 use tokio::sync::RwLock;
 
@@ -128,27 +126,34 @@ impl Atlaspack {
 }
 
 impl Atlaspack {
-  pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
+  pub fn build_asset_graph(&self) -> anyhow::Result<Arc<AssetGraph>> {
     self.runtime.block_on(async move {
-      let request_result = self
-        .request_tracker
-        .write()
-        .await
-        .run_request(AssetGraphRequest {})
+      let mut request_tracker = self.request_tracker.write().await;
+
+      let prev_asset_graph = request_tracker
+        .get_cached_request_result(AssetGraphRequest::default())
+        .map(|result| {
+          let RequestResult::AssetGraph(asset_graph_request_output) = &*result else {
+            panic!("Something went wrong with the request tracker")
+          };
+          asset_graph_request_output.graph.clone()
+        });
+
+      let request_result = request_tracker
+        .run_request(AssetGraphRequest { prev_asset_graph })
         .await?;
 
-      let RequestResult::AssetGraph(asset_graph_request_output) = request_result else {
+      let RequestResult::AssetGraph(asset_graph_request_output) = &*request_result else {
         panic!("Something went wrong with the request tracker")
       };
 
-      let asset_graph = asset_graph_request_output.graph;
+      let asset_graph = asset_graph_request_output.graph.clone();
       self.commit_assets(&asset_graph)?;
 
       Ok(asset_graph)
     })
   }
 
-  #[tracing::instrument(level = "info", skip_all, ret)]
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
     self.runtime.block_on(async move {
       Ok(
@@ -165,15 +170,15 @@ impl Atlaspack {
   fn commit_assets(&self, graph: &AssetGraph) -> anyhow::Result<()> {
     let mut txn = self.db.write_txn()?;
 
-    for node in graph.nodes() {
+    let mut nodes = graph.new_nodes();
+    nodes.extend(&graph.updated_nodes());
+
+    for node in nodes.iter() {
       let AssetGraphNode::Asset(asset_node) = node else {
         continue;
       };
-      if asset_node.cached {
-        continue;
-      }
 
-      let asset = &asset_node.asset;
+      let asset = &asset_node;
 
       self.db.put(&mut txn, &asset.id, asset.code.bytes())?;
       if let Some(map) = &asset.map {

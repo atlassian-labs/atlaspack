@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::PathBuf;
+use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
@@ -16,11 +17,15 @@ use dyn_hash::DynHash;
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
 
+type ChannelRequestResult = anyhow::Result<(Arc<RequestResult>, RequestId, bool)>;
+pub type RequestResultReceiver = Receiver<ChannelRequestResult>;
+pub type RequestResultSender = Sender<ChannelRequestResult>;
+
 #[derive(Debug)]
 pub struct RunRequestMessage {
   pub request: Box<dyn Request>,
   pub parent_request_id: Option<u64>,
-  pub response_tx: Option<Sender<Result<RequestResponse, anyhow::Error>>>,
+  pub response_tx: Option<RequestResultSender>,
 }
 
 type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send + Sync>;
@@ -74,7 +79,7 @@ impl RunRequestContext {
   pub fn queue_request(
     &mut self,
     request: impl Request,
-    tx: Sender<anyhow::Result<RequestResponse>>,
+    tx: RequestResultSender,
   ) -> anyhow::Result<()> {
     let request: Box<dyn Request> = Box::new(request);
     let message = RunRequestMessage {
@@ -124,11 +129,4 @@ dyn_hash::hash_trait_object!(Request);
 pub struct ResultAndInvalidations {
   pub result: RequestResult,
   pub invalidations: Vec<Invalidation>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct RequestResponse {
-  pub result: RequestResult,
-  pub id: RequestId,
-  pub cached: bool,
 }

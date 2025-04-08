@@ -2,7 +2,7 @@ use napi::{Env, JsObject};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::Serialize;
 
-use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, DependencyState};
+use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
 use atlaspack_core::types::{Asset, Dependency};
 
 /// Returns
@@ -17,48 +17,40 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
   // TODO use a napi_derive::napi(object) with NAPI3
   let mut napi_asset_graph = env.create_object()?;
 
-  napi_asset_graph.set_named_property("nodes", serialize_asset_graph_nodes(env, asset_graph)?)?;
+  napi_asset_graph.set_named_property(
+    "nodes",
+    serialize_asset_graph_nodes(env, &asset_graph.new_nodes())?,
+  )?;
+  napi_asset_graph.set_named_property(
+    "updates",
+    serialize_asset_graph_nodes(env, &asset_graph.updated_nodes())?,
+  )?;
   napi_asset_graph.set_named_property("edges", asset_graph.edges())?;
 
   Ok(napi_asset_graph)
 }
 
-fn serialize_asset_graph_nodes(env: &Env, asset_graph: &AssetGraph) -> anyhow::Result<JsObject> {
+fn serialize_asset_graph_nodes(
+  env: &Env,
+  nodes: &Vec<&AssetGraphNode>,
+) -> anyhow::Result<JsObject> {
   // Serialize graph nodes in parallel
-  let nodes = asset_graph
-    .nodes()
-    .collect::<Vec<_>>()
+  let nodes = nodes
     .par_iter()
     .map(|item| {
       serde_json::to_vec(&match item {
         AssetGraphNode::Root => SerializedAssetGraphNode::Root,
         AssetGraphNode::Entry => SerializedAssetGraphNode::Entry,
-        AssetGraphNode::Asset(asset_node) => {
-          if asset_node.cached {
-            SerializedAssetGraphNode::UnchangedAsset {
-              id: asset_node.asset.id.clone(),
-            }
-          } else {
-            SerializedAssetGraphNode::Asset {
-              value: asset_node.asset.clone(),
-            }
-          }
-        }
-        AssetGraphNode::Dependency(dependency_node) => {
-          if dependency_node.cached {
-            SerializedAssetGraphNode::UnchangedDependency {
-              id: dependency_node.dependency.id(),
-            }
-          } else {
-            SerializedAssetGraphNode::Dependency {
-              value: SerializedDependency {
-                id: dependency_node.dependency.id(),
-                dependency: dependency_node.dependency.as_ref().clone(),
-              },
-              has_deferred: dependency_node.state == DependencyState::Deferred,
-            }
-          }
-        }
+        AssetGraphNode::Asset(asset_node) => SerializedAssetGraphNode::Asset {
+          value: asset_node.as_ref().clone(),
+        },
+        AssetGraphNode::Dependency(dependency_node) => SerializedAssetGraphNode::Dependency {
+          value: SerializedDependency {
+            id: dependency_node.id(),
+            dependency: dependency_node.as_ref().clone(),
+          },
+          has_deferred: false,
+        },
       })
     })
     .collect::<Vec<_>>();
@@ -92,14 +84,8 @@ enum SerializedAssetGraphNode {
   Asset {
     value: Asset,
   },
-  UnchangedAsset {
-    id: String,
-  },
   Dependency {
     value: SerializedDependency,
     has_deferred: bool,
-  },
-  UnchangedDependency {
-    id: String,
   },
 }

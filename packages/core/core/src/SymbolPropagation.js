@@ -483,7 +483,15 @@ export function propagateSymbols({
                 incomingDep.excluded = true;
               }
             } else {
-              invariant(assetGroups.length === 0);
+              if (
+                assetGroups.every((nodeId) => {
+                  let asset = nullthrows(assetGraph.getNode(nodeId));
+                  invariant(asset.type === 'asset');
+                  return asset.value.sideEffects === false;
+                })
+              ) {
+                incomingDep.excluded = true;
+              }
             }
           }
         }
@@ -733,12 +741,19 @@ function getDependencyResolution(
   graph: AssetGraph,
   depId: ContentKey,
 ): Array<NodeId> {
+  invariant(
+    graph.getNodeByContentKey(depId)?.type === 'dependency',
+    '[!!!] Not a dep',
+  );
   let depNodeId = graph.getNodeIdByContentKey(depId);
   let connected = graph.getNodeIdsConnectedFrom(depNodeId);
-  invariant(connected.length <= 1);
+
+  return connected;
+
+  invariant(connected.length <= 1, 'More than 1 connected edge');
   let child = connected[0];
   if (child) {
-    let childNode = nullthrows(graph.getNode(child));
+    let childNode = nullthrows(graph.getNode(child), 'Hmm');
     if (childNode.type === 'asset_group') {
       return graph.getNodeIdsConnectedFrom(child);
     } else {

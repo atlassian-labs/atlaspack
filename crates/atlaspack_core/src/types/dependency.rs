@@ -61,6 +61,8 @@ pub struct Dependency {
   /// The environment of the dependency
   pub env: Arc<Environment>,
 
+  pub id: String,
+
   /// The location within the source file where the dependency was found
   #[serde(default)]
   pub loc: Option<SourceLocation>,
@@ -147,7 +149,11 @@ pub struct Dependency {
 
 impl Dependency {
   pub fn id(&self) -> String {
-    create_dependency_id(
+    self.id.clone()
+  }
+
+  pub fn ensure_id(&mut self) {
+    self.id = create_dependency_id(
       self.source_asset_id.as_ref(),
       &self.specifier,
       &self.env.id(),
@@ -175,7 +181,7 @@ impl Dependency {
       }]);
     }
 
-    Dependency {
+    let mut dep = Dependency {
       env: target.env.clone(),
       is_entry: true,
       needs_stable_name: true,
@@ -185,7 +191,11 @@ impl Dependency {
       symbols,
       target: Some(Box::new(target)),
       ..Dependency::default()
-    }
+    };
+
+    dep.ensure_id();
+
+    dep
   }
 
   pub fn new(specifier: String, env: Arc<Environment>) -> Dependency {
