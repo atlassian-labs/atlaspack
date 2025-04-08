@@ -115,12 +115,16 @@ export function getAssetGraph(
         _nodeIdToContentKey: prevAssetGraph._nodeIdToContentKey,
         nodes: prevAssetGraph.nodes,
         initialCapacity: serializedGraph.edges.length,
+        // Accomodate the root node
+        initialNodeCapacity: prevAssetGraph.nodes.length + 1,
       });
     } else {
       graph = new AssetGraph({
         _contentKeyToNodeId: new Map(),
         _nodeIdToContentKey: new Map(),
         initialCapacity: serializedGraph.edges.length,
+        // Accomodate the root node
+        initialNodeCapacity: serializedGraph.nodes.length + 1,
       });
       let index = graph.addNodeByContentKey('@@root', {
         id: '@@root',
