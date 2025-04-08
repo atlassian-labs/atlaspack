@@ -35,5 +35,6 @@
   "browser": {
     "./src/process/ProcessWorker.js": false,
     "./src/threads/ThreadsWorker.js": false
-  }
+  },
+  "type": "commonjs"
 }

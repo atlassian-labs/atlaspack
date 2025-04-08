@@ -57,8 +57,11 @@ jobs:
     name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
     strategy:
       matrix:
-        node: [18, 20, 22]
+        node: [18, 20]
         os: [ubuntu-latest, macos-latest]
+        include:
+          - node: 22
+            os: ubuntu-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

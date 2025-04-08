@@ -17,5 +17,6 @@
   },
   "dependencies": {
     "chalk": "^4.1.0"
-  }
+  },
+  "type": "commonjs"
 }

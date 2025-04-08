@@ -47,6 +47,10 @@ export type FeatureFlags = {|
    */
   reduceResolverStringCreation: boolean,
   /**
+   * Fixes source maps for inline bundles
+   */
+  inlineBundlesSourceMapFixes: boolean,
+  /**
    * Enable nested loading of bundles in the runtime with conditional bundling
    */
   conditionalBundlingNestedRuntime: boolean,

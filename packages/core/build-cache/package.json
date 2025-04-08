@@ -3,6 +3,7 @@
   "description": "Serialize and deserialize data structures to a build cache",
   "version": "2.13.1",
   "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "publishConfig": {
     "access": "public"
   },

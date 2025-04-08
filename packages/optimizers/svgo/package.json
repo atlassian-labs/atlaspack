@@ -20,5 +20,6 @@
     "@atlaspack/plugin": "2.13.1",
     "@atlaspack/utils": "2.13.1",
     "svgo": "^2.4.0"
-  }
+  },
+  "type": "commonjs"
 }
