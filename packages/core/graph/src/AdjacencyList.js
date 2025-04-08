@@ -29,6 +29,8 @@ export type SerializedAdjacencyList<TEdgeType> = {|
 export type AdjacencyListOptions<TEdgeType> = {|
   /** The initial number of edges to accommodate. */
   initialCapacity?: number,
+  /** The initial number of nodes to accommodate. */
+  initialNodeCapacity?: number,
   /** The max amount by which to grow the capacity. */
   maxGrowFactor?: number,
   /** The min amount by which to grow the capacity. */
@@ -43,6 +45,7 @@ export type AdjacencyListOptions<TEdgeType> = {|
 
 type AdjacencyListParams = {|
   initialCapacity: number,
+  initialNodeCapacity: number,
   unloadFactor: number,
   maxGrowFactor: number,
   minGrowFactor: number,
@@ -52,6 +55,7 @@ type AdjacencyListParams = {|
 
 const DEFAULT_PARAMS: AdjacencyListParams = {
   initialCapacity: 2,
+  initialNodeCapacity: 2,
   unloadFactor: 0.3,
   maxGrowFactor: 8,
   minGrowFactor: 2,
@@ -148,12 +152,8 @@ export default class AdjacencyList<TEdgeType: number = NullEdgeType> {
     } else {
       this.#params = {...DEFAULT_PARAMS, ...opts};
 
-      let {initialCapacity} = this.#params;
-
-      // TODO: Find a heuristic for right-sizing nodes.
-      // e.g., given an average ratio of `e` edges for every `n` nodes,
-      // init nodes with `capacity * n / e`.
-      let initialNodeCapacity = 2;
+      let {initialCapacity, initialNodeCapacity} = this.#params;
+      console.log({initialNodeCapacity, initialCapacity});
 
       NodeTypeMap.assertMaxCapacity(initialNodeCapacity);
       EdgeTypeMap.assertMaxCapacity(initialCapacity);
@@ -286,6 +286,7 @@ export default class AdjacencyList<TEdgeType: number = NullEdgeType> {
    * the `nodes` array is at capacity,
    */
   resizeNodes(size: number) {
+    console.log('resizeNodes', size);
     let nodes = this.#nodes;
     // Allocate the required space for a `nodes` map of the given `size`.
     this.#nodes = new NodeTypeMap(size);
@@ -299,6 +300,7 @@ export default class AdjacencyList<TEdgeType: number = NullEdgeType> {
    * This is used in `addEdge` when the `edges` array is at capacity.
    */
   resizeEdges(size: number) {
+    console.log('resizeEdges', size);
     // Allocate the required space for new `nodes` and `edges` maps.
     let edges = new EdgeTypeMap(size);
     let nodes = new NodeTypeMap(this.#nodes.capacity);
