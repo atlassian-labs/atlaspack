@@ -46,7 +46,10 @@ function compileGlobs(globs: string[]): RegExp[] {
 }
 
 function getDefaultFS(): FileSystem {
-  if (getFeatureFlagValue('vcsMode') !== 'OLD') {
+  if (
+    getFeatureFlag('enableVCSEventsShadowReads') &&
+    getFeatureFlagValue('vcsMode') !== 'OLD'
+  ) {
     return new NodeVCSAwareFS({
       gitRepoPath: null,
       excludePatterns: [],

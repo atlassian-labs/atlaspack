@@ -58,6 +58,11 @@ export type FeatureFlags = {|
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    */
   patchProjectPaths: boolean,
+
+  /**
+   * Enable shadow reads of VCS events
+   */
+  enableVCSEventsShadowReads: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
