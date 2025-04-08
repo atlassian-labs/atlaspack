@@ -68,6 +68,7 @@ registerCoreWithSerializer();
 
 export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
+export const WORKER_PATH: string = path.join(__dirname, 'worker.js');
 
 export default class Atlaspack {
   #requestTracker /*: RequestTracker*/;
@@ -728,6 +729,6 @@ export function createWorkerFarm(
 ): WorkerFarm {
   return new WorkerFarm({
     ...options,
-    workerPath: require.resolve('./worker'),
+    workerPath: WORKER_PATH,
   });
 }

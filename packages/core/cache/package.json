@@ -3,6 +3,7 @@
   "description": "Interface for defining caches and file-system, IDB and LMDB implementations.",
   "version": "2.13.1",
   "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "publishConfig": {
     "access": "public"
   },

@@ -17,7 +17,9 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   vcsMode: 'OLD',
   loadableSideEffects: false,
   reduceResolverStringCreation: false,
+  inlineBundlesSourceMapFixes: false,
   conditionalBundlingNestedRuntime: false,
+  patchProjectPaths: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

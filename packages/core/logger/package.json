@@ -25,5 +25,6 @@
     "@atlaspack/diagnostic": "2.13.1",
     "@atlaspack/events": "2.13.1",
     "@atlaspack/rust": "2.13.1"
-  }
+  },
+  "type": "commonjs"
 }

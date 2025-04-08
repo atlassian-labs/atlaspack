@@ -9,5 +9,6 @@
   "dependencies": {
     "@babel/core": "^7.22.11",
     "something": "1.0.0"
-  }
+  },
+  "type": "commonjs"
 }

@@ -19,5 +19,6 @@
     "@atlaspack/plugin": "2.13.1",
     "@atlaspack/utils": "2.13.1",
     "react-refresh": ">=0.9 <=0.14"
-  }
+  },
+  "type": "commonjs"
 }

@@ -56,5 +56,6 @@
   },
   "browser": {
     "./src/builtins.js": "./src/builtins.browser.js"
-  }
+  },
+  "type": "commonjs"
 }
