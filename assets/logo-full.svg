@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="60" viewBox="0 0 240 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Atlas icon - stylized "A" made of connected blocks -->
+  <g transform="translate(10,10)">
+    <path d="M20,0 L30,10 L25,15 L15,5 Z" fill="#0052CC"/>
+    <path d="M10,10 L20,20 L15,25 L5,15 Z" fill="#0065FF"/>
+    <path d="M0,20 L10,30 L5,35 L0,30 Z" fill="#2684FF"/>
+  </g>
+  <!-- Pack text -->
+  <text x="60" y="35" font-family="Arial, sans-serif" font-size="24" font-weight="bold">
+    <tspan fill="#0052CC">Atlas</tspan>
+    <tspan fill="#2684FF">pack</tspan>
+  </text>
+  <!-- Tagline -->
+  <text x="60" y="50" font-family="Arial, sans-serif" font-size="12" fill="#6B778C">Fast, zero-config bundler</text>
+</svg>

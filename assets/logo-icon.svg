@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Atlas icon - stylized "A" made of connected blocks -->
+  <g transform="translate(5,5)">
+    <path d="M20,0 L30,10 L25,15 L15,5 Z" fill="#0052CC"/>
+    <path d="M10,10 L20,20 L15,25 L5,15 Z" fill="#0065FF"/>
+    <path d="M0,20 L10,30 L5,35 L0,30 Z" fill="#2684FF"/>
+  </g>
+</svg>
