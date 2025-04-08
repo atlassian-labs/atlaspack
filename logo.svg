@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="80" viewBox="0 0 240 80" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <!-- Main bundle circle -->
+    <circle cx="120" cy="40" r="32" fill="#0052CC" opacity="0.1"/>
+    
+    <!-- Connected nodes representing bundled modules -->
+    <circle cx="120" cy="40" r="4" fill="#0052CC"/>
+    <circle cx="100" cy="30" r="4" fill="#0052CC"/>
+    <circle cx="140" cy="30" r="4" fill="#0052CC"/>
+    <circle cx="100" cy="50" r="4" fill="#0052CC"/>
+    <circle cx="140" cy="50" r="4" fill="#0052CC"/>
+    
+    <!-- Connection lines -->
+    <line x1="120" y1="40" x2="100" y2="30" stroke="#0052CC" stroke-width="2"/>
+    <line x1="120" y1="40" x2="140" y2="30" stroke="#0052CC" stroke-width="2"/>
+    <line x1="120" y1="40" x2="100" y2="50" stroke="#0052CC" stroke-width="2"/>
+    <line x1="120" y1="40" x2="140" y2="50" stroke="#0052CC" stroke-width="2"/>
+    
+    <!-- Text -->
+    <text x="120" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" dy="45" fill="#0052CC">
+        atlaspack
+    </text>
+</svg>
