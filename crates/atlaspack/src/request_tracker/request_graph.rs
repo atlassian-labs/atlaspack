@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use petgraph::stable_graph::StableDiGraph;
 
 use crate::{request_tracker::RunRequestError, requests::RequestResult};
@@ -9,8 +11,8 @@ pub enum RequestNode {
   Error(RunRequestError),
   Root,
   Incomplete,
-  Valid(RequestResult),
-  Invalid,
+  Valid(Arc<RequestResult>),
+  Invalid(Arc<RequestResult>),
   FileInvalidation,
 }
 

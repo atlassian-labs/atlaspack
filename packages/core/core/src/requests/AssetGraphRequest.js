@@ -16,7 +16,7 @@ import type {StaticRunOpts, RunAPI} from '../RequestTracker';
 import type {EntryRequestResult} from './EntryRequest';
 import type {PathRequestInput} from './PathRequest';
 import type {Diagnostic} from '@atlaspack/diagnostic';
-import logger from '@atlaspack/logger';
+import logger, {instrumentAsync} from '@atlaspack/logger';
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
@@ -79,16 +79,22 @@ export default function createAssetGraphRequest(
       let prevResult =
         await input.api.getPreviousResult<AssetGraphRequestResult>();
 
-      let builder = new AssetGraphBuilder(input, prevResult);
-      let assetGraphRequest = await await builder.build();
+      let assetGraphRequest = await instrumentAsync(
+        'buildAssetGraph (v2)',
+        async () => {
+          let builder = new AssetGraphBuilder(input, prevResult);
+          let assetGraphRequest = await builder.build();
 
-      // early break for incremental bundling if production or flag is off;
-      if (
-        !input.options.shouldBundleIncrementally ||
-        input.options.mode === 'production'
-      ) {
-        assetGraphRequest.assetGraph.safeToIncrementallyBundle = false;
-      }
+          // early break for incremental bundling if production or flag is off;
+          if (
+            !input.options.shouldBundleIncrementally ||
+            input.options.mode === 'production'
+          ) {
+            assetGraphRequest.assetGraph.safeToIncrementallyBundle = false;
+          }
+          return assetGraphRequest;
+        },
+      );
 
       return assetGraphRequest;
     },

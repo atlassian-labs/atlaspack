@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -11,21 +12,6 @@ use crate::types::Asset;
 use crate::types::Dependency;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct AssetNode {
-  pub asset: Asset,
-  pub requested_symbols: HashSet<String>,
-  pub cached: bool,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct DependencyNode {
-  pub dependency: Arc<Dependency>,
-  pub requested_symbols: HashSet<String>,
-  pub state: DependencyState,
-  pub cached: bool,
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub enum DependencyState {
   New,
   Deferred,
@@ -37,14 +23,23 @@ pub enum DependencyState {
 pub enum AssetGraphNode {
   Root,
   Entry,
-  Asset(AssetNode),
-  Dependency(DependencyNode),
+  Asset(Arc<Asset>),
+  Dependency(Arc<Dependency>),
 }
+
+pub type NodeId = usize;
 
 #[derive(Clone, Debug)]
 pub struct AssetGraph {
-  pub graph: StableDiGraph<AssetGraphNode, ()>,
-  root_node_index: NodeIndex,
+  pub graph: StableDiGraph<NodeId, ()>,
+  nodes: Vec<AssetGraphNode>,
+  requested_symbols: HashMap<NodeId, HashSet<String>>,
+  dependency_states: HashMap<NodeId, DependencyState>,
+  content_key_to_node_id: HashMap<String, NodeId>,
+  node_id_to_node_index: HashMap<NodeId, NodeIndex>,
+  root_node_id: NodeId,
+  node_delta: Vec<NodeId>,
+  pub starting_node_count: usize,
 }
 
 impl Default for AssetGraph {
@@ -56,145 +51,249 @@ impl Default for AssetGraph {
 impl AssetGraph {
   pub fn new() -> Self {
     let mut graph = StableDiGraph::new();
-    let root_node_index = graph.add_node(AssetGraphNode::Root);
+
+    let mut node_id_to_node_index = HashMap::new();
+    // Add root node to graph
+    let nodes = vec![AssetGraphNode::Root];
+    let root_node_id = 0;
+
+    node_id_to_node_index.insert(root_node_id, graph.add_node(root_node_id));
+
     AssetGraph {
       graph,
-      root_node_index,
+      content_key_to_node_id: HashMap::new(),
+      requested_symbols: HashMap::new(),
+      dependency_states: HashMap::new(),
+      node_id_to_node_index,
+      nodes,
+      root_node_id,
+      node_delta: Vec::new(),
+      starting_node_count: 0,
+    }
+  }
+
+  #[tracing::instrument(level = "info", skip_all)]
+  pub fn from(prev_asset_graph: &AssetGraph) -> Self {
+    let mut graph = StableDiGraph::new();
+
+    let mut node_id_to_node_index = HashMap::new();
+
+    // Add root node to graph
+    let root_node_id = prev_asset_graph.root_node_id;
+    node_id_to_node_index.insert(root_node_id, graph.add_node(root_node_id));
+    let nodes = prev_asset_graph.nodes.clone();
+
+    AssetGraph {
+      graph,
+      node_id_to_node_index,
+      root_node_id,
+      requested_symbols: HashMap::new(),
+      dependency_states: HashMap::new(),
+      content_key_to_node_id: prev_asset_graph.content_key_to_node_id.clone(),
+      starting_node_count: nodes.len(),
+      nodes,
+      node_delta: Vec::new(),
     }
   }
 
   pub fn edges(&self) -> Vec<u32> {
     let raw_edges = self.graph.edge_references();
     let mut edges = Vec::new();
+    let nodes = self.graph.node_weights().collect::<Vec<_>>();
 
     for edge in raw_edges {
-      edges.push(edge.source().index() as u32);
-      edges.push(edge.target().index() as u32);
+      edges.push(*nodes[edge.source().index()] as u32);
+      edges.push(*nodes[edge.target().index()] as u32);
     }
 
     edges
   }
 
   pub fn nodes(&self) -> impl Iterator<Item = &AssetGraphNode> {
-    self.graph.node_weights()
+    // self.graph.node_weights().map(|node| &self.nodes[*node])
+    self.nodes.iter()
   }
 
-  pub fn nodes_from(&self, node_index: &NodeIndex) -> Vec<(NodeIndex, &AssetGraphNode)> {
-    let mut result = vec![];
-
-    for edge in self.graph.edges_directed(*node_index, Direction::Outgoing) {
-      let target_idx = edge.target();
-      let target = self.graph.node_weight(target_idx).unwrap();
-      result.push((target_idx, target));
-    }
-
-    result
+  pub fn new_nodes(&self) -> Vec<&AssetGraphNode> {
+    self.nodes[self.starting_node_count..].iter().collect()
   }
 
-  pub fn root_node(&self) -> NodeIndex {
-    self.root_node_index
-  }
-
-  pub fn get_node(&self, idx: &NodeIndex) -> Option<&AssetGraphNode> {
-    self.graph.node_weight(*idx)
-  }
-
-  pub fn get_node_mut(&mut self, idx: &NodeIndex) -> Option<&mut AssetGraphNode> {
-    self.graph.node_weight_mut(*idx)
-  }
-
-  pub fn add_asset(&mut self, asset: Asset, cached: bool) -> NodeIndex {
-    self.graph.add_node(AssetGraphNode::Asset(AssetNode {
-      asset,
-      requested_symbols: HashSet::default(),
-      cached,
-    }))
-  }
-
-  pub fn get_asset_node(&self, idx: &NodeIndex) -> Option<&AssetNode> {
-    let value = self.graph.node_weight(*idx)?;
-    let AssetGraphNode::Asset(asset_node) = value else {
-      return None;
-    };
-    Some(asset_node)
-  }
-
-  pub fn get_asset_node_mut(&mut self, idx: &NodeIndex) -> Option<&mut AssetNode> {
-    let value = self.graph.node_weight_mut(*idx)?;
-    let AssetGraphNode::Asset(asset_node) = value else {
-      return None;
-    };
-    Some(asset_node)
-  }
-
-  pub fn get_asset_nodes(&self) -> Vec<&AssetNode> {
-    let mut results = vec![];
-    for n in self.nodes() {
-      let AssetGraphNode::Asset(asset) = n else {
-        continue;
-      };
-      results.push(asset);
-    }
-    results
-  }
-
-  pub fn add_dependency(&mut self, dependency: Dependency, cached: bool) -> NodeIndex {
+  pub fn updated_nodes(&self) -> Vec<&AssetGraphNode> {
     self
-      .graph
-      .add_node(AssetGraphNode::Dependency(DependencyNode {
-        dependency: Arc::new(dependency),
-        requested_symbols: HashSet::default(),
-        state: DependencyState::New,
-        cached,
-      }))
+      .node_delta
+      .iter()
+      .map(|node_id| &self.nodes[*node_id])
+      .collect()
   }
 
-  pub fn get_dependency_node(&self, idx: &NodeIndex) -> Option<&DependencyNode> {
-    let value = self.graph.node_weight(*idx)?;
+  pub fn root_node(&self) -> NodeId {
+    self.root_node_id
+  }
+
+  pub fn get_node(&self, idx: &NodeId) -> Option<&AssetGraphNode> {
+    self.nodes.get(*idx)
+  }
+
+  pub fn get_node_mut(&mut self, idx: &NodeId) -> Option<&mut AssetGraphNode> {
+    self.nodes.get_mut(*idx)
+  }
+
+  #[tracing::instrument(level = "info", skip_all)]
+  fn is_diff(&self, a: &AssetGraphNode, b: &AssetGraphNode) -> bool {
+    a != b
+  }
+
+  fn add_node(&mut self, content_key: String, node: AssetGraphNode, cached: bool) -> NodeId {
+    let node_id = if let Some(existing_node_id) = self.content_key_to_node_id.get(&content_key) {
+      if !cached {
+        self.nodes[*existing_node_id] = node;
+        self.node_delta.push(*existing_node_id);
+      }
+
+      *existing_node_id
+    } else {
+      let node_id = self.nodes.len();
+      self.nodes.push(node);
+      self
+        .content_key_to_node_id
+        .insert(content_key.clone(), node_id);
+      node_id
+    };
+
+    let node_index = self.graph.add_node(node_id);
+    self.node_id_to_node_index.insert(node_id, node_index);
+
+    node_id
+  }
+
+  pub fn add_asset(&mut self, asset: Arc<Asset>, cached: bool) -> NodeId {
+    let node_id = self.add_node(asset.id.clone(), AssetGraphNode::Asset(asset), cached);
+    self.requested_symbols.insert(node_id, HashSet::new());
+    node_id
+  }
+
+  pub fn get_asset_node(&self, idx: &NodeId) -> Option<&Asset> {
+    let value = self.get_node(idx)?;
+    let AssetGraphNode::Asset(asset_node) = value else {
+      return None;
+    };
+    Some(asset_node)
+  }
+
+  // pub fn get_asset_node_mut(&mut self, idx: &NodeId) -> Option<&mut Asset> {
+  //   let value = self.get_node_mut(idx)?;
+  //   let AssetGraphNode::Asset(asset_node) = value else {
+  //     return None;
+  //   };
+  //   Some(asset_node)
+  // }
+
+  // pub fn get_asset_nodes(&self) -> Vec<&Asset> {
+  //   let mut results = vec![];
+  //   for n in self.nodes() {
+  //     let AssetGraphNode::Asset(asset) = n else {
+  //       continue;
+  //     };
+  //     results.push(asset);
+  //   }
+  //   results
+  // }
+
+  pub fn add_dependency(&mut self, dependency: Dependency, cached: bool) -> NodeId {
+    let node_id = self.add_node(
+      dependency.id(),
+      AssetGraphNode::Dependency(Arc::new(dependency)),
+      cached,
+    );
+    self.requested_symbols.insert(node_id, HashSet::new());
+    self.dependency_states.insert(node_id, DependencyState::New);
+    node_id
+  }
+
+  pub fn get_dependency_node(&self, idx: &NodeId) -> Option<&Arc<Dependency>> {
+    let value = self.get_node(idx)?;
     let AssetGraphNode::Dependency(node) = value else {
       return None;
     };
     Some(node)
   }
 
-  pub fn get_dependency_nodes(&self) -> Vec<&DependencyNode> {
+  pub fn get_dependency_nodes(&self) -> Vec<&Dependency> {
     let mut results = vec![];
     for n in self.nodes() {
       let AssetGraphNode::Dependency(dependency) = n else {
         continue;
       };
-      results.push(dependency);
+      results.push(dependency.as_ref());
     }
     results
   }
 
-  pub fn get_dependency_node_mut(&mut self, idx: &NodeIndex) -> Option<&mut DependencyNode> {
-    let value = self.graph.node_weight_mut(*idx)?;
-    let AssetGraphNode::Dependency(node) = value else {
-      return None;
-    };
-    Some(node)
-  }
-
-  pub fn add_entry_dependency(&mut self, dependency: Dependency, cached: bool) -> NodeIndex {
+  pub fn add_entry_dependency(&mut self, dependency: Dependency, cached: bool) -> NodeId {
     let is_library = dependency.env.is_library;
     let dependency_idx = self.add_dependency(dependency, cached);
 
     if is_library {
-      if let Some(dependency_node) = self.get_dependency_node_mut(&dependency_idx) {
-        dependency_node.requested_symbols.insert("*".into());
-      }
+      self
+        .requested_symbols
+        .get_mut(&dependency_idx)
+        .unwrap()
+        .insert("*".into());
     }
 
     dependency_idx
   }
 
-  pub fn has_edge(&mut self, from_idx: &NodeIndex, to_idx: &NodeIndex) -> bool {
-    self.graph.contains_edge(*from_idx, *to_idx)
+  pub fn has_edge(&mut self, from_idx: &NodeId, to_idx: &NodeId) -> bool {
+    self.graph.contains_edge(
+      self.node_id_to_node_index[from_idx],
+      self.node_id_to_node_index[to_idx],
+    )
   }
 
-  pub fn add_edge(&mut self, from_idx: &NodeIndex, to_idx: &NodeIndex) {
-    self.graph.add_edge(*from_idx, *to_idx, ());
+  pub fn add_edge(&mut self, from_idx: &NodeId, to_idx: &NodeId) {
+    self.graph.add_edge(
+      self.node_id_to_node_index[from_idx],
+      self.node_id_to_node_index[to_idx],
+      (),
+    );
+  }
+
+  pub fn get_outgoing_dependencies(&self, asset_node_id: &NodeId) -> Vec<NodeId> {
+    self
+      .graph
+      .neighbors_directed(
+        self.node_id_to_node_index[asset_node_id],
+        Direction::Outgoing,
+      )
+      .filter_map(|node_index| self.graph.node_weight(node_index).map(|n| *n))
+      .collect()
+  }
+
+  pub fn resolve_dependency_asset(&self, dep_node_id: &NodeId) -> Option<&NodeId> {
+    if let Some(resolved) = self
+      .graph
+      .edges_directed(self.node_id_to_node_index[dep_node_id], Direction::Outgoing)
+      .next()
+    {
+      return self.graph.node_weight(resolved.target());
+    }
+
+    None
+  }
+
+  pub fn get_requested_symbols(&self, node_id: &NodeId) -> &HashSet<String> {
+    // TODO: Should probably do error handling here...
+    self.requested_symbols.get(node_id).unwrap()
+  }
+
+  pub fn get_mut_requested_symbols(&mut self, node_id: &NodeId) -> &mut HashSet<String> {
+    // TODO: Should probably do error handling here...
+    self.requested_symbols.get_mut(node_id).unwrap()
+  }
+  pub fn get_mut_dependency_state(&mut self, node_id: &NodeId) -> &mut DependencyState {
+    // TODO: Should probably do error handling here...
+    self.dependency_states.get_mut(node_id).unwrap()
   }
 }
 
@@ -210,18 +309,18 @@ impl PartialEq for AssetGraph {
   }
 }
 
-impl std::hash::Hash for AssetGraph {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    for node in self.graph.node_weights() {
-      std::mem::discriminant(node).hash(state);
-      match node {
-        AssetGraphNode::Asset(asset_node) => asset_node.asset.id.hash(state),
-        AssetGraphNode::Dependency(dependency_node) => dependency_node.dependency.id().hash(state),
-        _ => {}
-      }
-    }
-  }
-}
+// impl std::hash::Hash for AssetGraph {
+//   fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+//     for node in self.nodes() {
+//       std::mem::discriminant(node).hash(state);
+//       match node {
+//         AssetGraphNode::Asset(asset_node) => asset_node.asset.id.hash(state),
+//         AssetGraphNode::Dependency(dependency_node) => dependency_node.dependency.id().hash(state),
+//         _ => {}
+//       }
+//     }
+//   }
+// }
 
 #[cfg(test)]
 mod tests {
