@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="60" viewBox="0 0 240 60" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <title>Atlaspack Logo Light</title>
+  <desc>Light version of Atlaspack logo for dark backgrounds</desc>
+  <!-- Icon: Stylized package/bundle -->
+  <g transform="translate(10,10)">
+    <path d="M20,0 L40,10 L40,30 L20,40 L0,30 L0,10 Z" fill="#FFFFFF"/>
+    <path d="M20,0 L40,10 L20,20 L0,10 Z" fill="#FFFFFF" opacity="0.9"/>
+    <path d="M20,20 L20,40 L0,30 L0,10 Z" fill="#FFFFFF" opacity="0.7"/>
+    <path d="M40,10 L40,30 L20,40 L20,20 Z" fill="#FFFFFF" opacity="0.8"/>
+  </g>
+  <!-- Text: Atlaspack -->
+  <text x="70" y="35" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">
+    atlaspack
+  </text>
+</svg>
