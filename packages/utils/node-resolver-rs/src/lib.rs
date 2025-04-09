@@ -852,7 +852,7 @@ impl<'a> ResolveRequest<'a> {
         let esm_path = path.with_extension("mjs");
 
         if let Ok(Some(res)) = self.load_file(&esm_path, package) {
-          tracing::info!(
+          tracing::debug!(
             "Upgraded graphql import to mjs. {:?} to {:?}",
             path,
             esm_path

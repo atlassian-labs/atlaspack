@@ -311,9 +311,8 @@ impl RequestTracker {
     Ok(())
   }
 
-  #[tracing::instrument(level = "info", skip_all)]
+  #[tracing::instrument(level = "info", skip_all, ret, fields(events = watch_events.len()))]
   pub fn respond_to_fs_events(&mut self, watch_events: WatchEvents) -> bool {
-    tracing::info!("Responding to {} watch events", watch_events.len());
     let mut need_rebuild = false;
 
     for invalidation in watch_events.iter() {
