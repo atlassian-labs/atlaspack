@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "SWC runner functions for Atlaspack"
 
+[lints]
+workspace = true
+
 [dependencies]
 regex = { workspace = true }
 swc_core = { workspace = true, features = [

@@ -11,6 +11,10 @@ members = [
 inherits = "release"
 debug = true
 
+[workspace.lints.clippy]
+module_inception = "allow"
+rust-2018-idioms = "warn"
+
 [workspace.dependencies]
 anyhow = "1.0.95"
 assert_fs = "1.1.2"

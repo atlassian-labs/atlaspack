@@ -4,6 +4,9 @@ name = "lmdb-js-lite"
 version = "0.1.5"
 repository = "https://github.com/atlassian-labs/atlaspack"
 
+[lints]
+workspace = true
+
 [[bench]]
 name = "lmdb_js_safe_benchmark"
 harness = false

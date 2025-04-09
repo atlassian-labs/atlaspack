@@ -5,6 +5,9 @@ authors = ["Matt Jones <mattjones701@gmail.com>"]
 edition = "2021"
 description = "CSS transformer plugin for the Atlaspack Bundler"
 
+[lints]
+workspace = true
+
 [dependencies]
 anyhow = { workspace = true }
 async-trait = { workspace = true }
