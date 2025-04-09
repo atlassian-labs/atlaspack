@@ -236,3 +236,44 @@ jobs:
               ref: 'refs/tags/${{ steps.canary-version.outputs.VERSION_TAG }}'.trim(),
               sha: context.sha
             })
+
+  build-and-release-changesets:
+    name: Build and release Changesets
+    needs:
+      - build-linux-gnu-arm
+      - build-linux-gnu-x64
+      - build-macos
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: bahmutov/npm-install@v1.8.35
+      - name: Build native packages
+        run: yarn build-native-release
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Move bindings
+        run: for d in artifacts/bindings-*/*/*; do cp $d/*.node packages/$(basename $(dirname $d))/$(basename $d); done
+      - name: Move debug symbols
+        if: ${{ inputs.profile == 'canary' }}
+        run: |
+          mkdir debug-symbols
+          find artifacts -name "*.debug" -exec cp {} debug-symbols/ \;
+          find artifacts -name "*.node" -path "**/DWARF/**" -exec cp {} debug-symbols/ \;
+          ls -l debug-symbols
+      - name: Upload combined debug symbols artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ inputs.profile == 'canary' }}
+        with:
+          name: debug-symbols
+          path: debug-symbols/**
+      - uses: changesets/action@v1
+        with:
+          publish: yarn changeset publish
+          version: yarn changeset version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
