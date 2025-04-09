@@ -235,6 +235,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "atlaspack-resolver",
+ "atlaspack_cache",
  "atlaspack_config",
  "atlaspack_core",
  "atlaspack_filesystem",
@@ -403,6 +404,19 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "xxhash-rust",
+]
+
+[[package]]
+name = "atlaspack_cache"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lmdb-js-lite",
+ "mockall",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]

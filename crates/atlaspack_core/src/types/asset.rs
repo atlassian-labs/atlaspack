@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::ffi::OsStr;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -27,7 +27,7 @@ pub type AssetId = String;
 ///
 /// TODO: This should be called contents now that it's bytes
 /// TODO: This should be an enum and represent cases where the bytes are on disk
-#[derive(PartialEq, Default, Clone, Deserialize, Serialize)]
+#[derive(PartialEq, Hash, Default, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", transparent)]
 pub struct Code {
   inner: Vec<u8>,
@@ -143,7 +143,7 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
 ///
 /// Note that assets may exist in the file system or virtually.
 ///
-#[derive(Default, PartialEq, Clone, Debug, Deserialize, Serialize)]
+#[derive(Default, Hash, PartialEq, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Asset {
   /// The main identify hash for the asset. It is consistent for the entire
@@ -165,11 +165,11 @@ pub struct Asset {
 
   /// The code of this asset, initially read from disk, then becoming the
   /// transformed output
-  #[serde(skip_serializing)]
+  // #[serde(skip_serializing)]
   pub code: Code,
 
   /// The source map for the asset
-  #[serde(skip_serializing)]
+  // #[serde(skip_serializing)]
   pub map: Option<SourceMap>,
 
   /// Plugin specific metadata for the asset
@@ -196,7 +196,7 @@ pub struct Asset {
   /// This is optional because only when transformers add identifiable assets we should add this.
   ///
   /// We should not add this set to the asset ID.
-  #[serde(skip_serializing_if = "Option::is_none")]
+  // #[serde(skip_serializing_if = "Option::is_none")]
   pub unique_key: Option<String>,
 
   /// Whether this asset can be omitted if none of its exports are being used
@@ -220,7 +220,7 @@ pub struct Asset {
 
   /// True if the Asset's code was returned from a resolver rather than being
   /// read from disk.
-  #[serde(skip_serializing)]
+  // #[serde(skip_serializing)]
   pub is_virtual: bool,
 
   /// True if the asset has CommonJS exports
@@ -255,13 +255,13 @@ pub struct Asset {
   /// Contains all conditional imports for an asset
   ///
   /// This includes the condition key and the dependency placeholders
-  pub conditions: HashSet<Condition>,
+  pub conditions: BTreeSet<Condition>,
 
   pub config_path: Option<String>,
   pub config_key_path: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AssetWithDependencies {
   pub asset: Asset,
   pub dependencies: Vec<Dependency>,
@@ -437,14 +437,14 @@ impl Asset {
     }
   }
 
-  pub fn set_conditions(&mut self, conditions: HashSet<Condition>) {
+  pub fn set_conditions(&mut self, conditions: BTreeSet<Condition>) {
     self.conditions = conditions.clone();
     self.meta.insert("conditions".into(), json!(conditions));
   }
 }
 
 /// Statistics that pertain to an asset
-#[derive(PartialEq, Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(PartialEq, Hash, Clone, Debug, Default, Deserialize, Serialize)]
 pub struct AssetStats {
   pub size: u32,
   pub time: u32,
@@ -455,6 +455,17 @@ pub struct Condition {
   pub key: String,
   pub if_true_placeholder: Option<String>,
   pub if_false_placeholder: Option<String>,
+}
+
+impl Ord for Condition {
+  fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    self.key.cmp(&other.key)
+  }
+}
+impl PartialOrd for Condition {
+  fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    self.key.partial_cmp(&other.key)
+  }
 }
 
 #[cfg(test)]

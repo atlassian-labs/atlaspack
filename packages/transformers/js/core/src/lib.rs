@@ -12,6 +12,7 @@ pub mod test_utils;
 mod typeof_replacer;
 mod utils;
 
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
@@ -154,7 +155,7 @@ pub struct TransformResult {
   pub used_env: HashSet<swc_core::ecma::atoms::JsWord>,
   pub has_node_replacements: bool,
   pub is_constant_module: bool,
-  pub conditions: HashSet<Condition>,
+  pub conditions: BTreeSet<Condition>,
   pub magic_comments: HashMap<String, String>,
 }
 

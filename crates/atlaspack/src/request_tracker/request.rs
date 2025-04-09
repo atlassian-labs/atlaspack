@@ -6,6 +6,8 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use atlaspack_cache::cache::CacheHandler;
+use atlaspack_cache::cache::LmdbCacheReaderWriter;
 use atlaspack_core::config_loader::ConfigLoaderRef;
 use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::types::AtlaspackOptions;
@@ -36,6 +38,7 @@ pub struct RunRequestContext {
   parent_request_id: Option<u64>,
   plugins: PluginsRef,
   pub project_root: PathBuf,
+  pub cache_handler: Arc<CacheHandler<LmdbCacheReaderWriter>>,
   run_request_fn: RunRequestFn,
 }
 
@@ -47,6 +50,7 @@ impl RunRequestContext {
     parent_request_id: Option<u64>,
     plugins: PluginsRef,
     project_root: PathBuf,
+    cache_handler: Arc<CacheHandler<LmdbCacheReaderWriter>>,
     run_request_fn: RunRequestFn,
   ) -> Self {
     Self {
@@ -56,6 +60,7 @@ impl RunRequestContext {
       parent_request_id,
       plugins,
       project_root,
+      cache_handler,
       run_request_fn,
     }
   }

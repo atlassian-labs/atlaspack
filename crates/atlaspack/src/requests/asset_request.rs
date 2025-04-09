@@ -24,9 +24,30 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::plugins::PluginsRef;
+use crate::plugins::TransformerPipeline;
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
 use super::RequestResult;
+
+struct PluginWrapper {
+  inner: PluginsRef,
+}
+
+impl PluginWrapper {
+  fn transformers(
+    &self,
+    path: &Path,
+    pipeline: Option<String>,
+  ) -> Result<TransformerPipeline, anyhow::Error> {
+    self.inner.transformers(path, pipeline)
+  }
+}
+
+impl Hash for PluginWrapper {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    // EVIL LAUGH!!!!
+  }
+}
 
 /// The AssetRequest runs transformer plugins on discovered Assets.
 /// - Decides which transformer pipeline to run from the input Asset type
@@ -114,13 +135,33 @@ impl Request for AssetRequest {
     });
 
     let transform_context = TransformContext::new(config_loader, self.env.clone());
-    let mut result = run_pipelines(
-      transform_context,
-      asset,
-      request_context.plugins().clone(),
-      &request_context.project_root,
-    )
-    .await?;
+    let plugin_wrapper = PluginWrapper {
+      inner: request_context.plugins().clone(),
+    };
+
+    let mut result = request_context
+      .cache_handler
+      .run(
+        &asset.file_path.display().to_string(),
+        (
+          transform_context,
+          asset,
+          plugin_wrapper,
+          &request_context.project_root,
+        ),
+        |(transform_context, asset, plugins, project_root)| {
+          run_pipelines(transform_context, asset, plugins, project_root)
+        },
+      )
+      .await?;
+
+    // let mut result = run_pipelines(
+    //   transform_context,
+    //   asset,
+    //   request_context.plugins().clone(),
+    //   &request_context.project_root,
+    // )
+    // .await?;
 
     // TODO: Commit the asset with a project path now, as transformers rely on an absolute path
     // result.asset.file_path = to_project_path(&self.project_root, &result.asset.file_path);
@@ -159,7 +200,7 @@ impl Request for AssetRequest {
 async fn run_pipelines(
   transform_context: TransformContext,
   input: Asset,
-  plugins: PluginsRef,
+  plugins: PluginWrapper,
   project_root: &Path,
 ) -> anyhow::Result<TransformResult> {
   let mut invalidations = vec![];

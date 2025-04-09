@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
+use atlaspack_cache::cache::CacheHandler;
+use atlaspack_cache::cache::LmdbCacheReaderWriter;
 use atlaspack_core::types::Invalidation;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
@@ -47,6 +49,7 @@ pub struct RequestTracker {
   options: Arc<AtlaspackOptions>,
   plugins: PluginsRef,
   project_root: PathBuf,
+  cache_handler: Arc<CacheHandler<LmdbCacheReaderWriter>>,
   request_index: HashMap<u64, NodeIndex>,
   invalidations: HashMap<PathBuf, NodeIndex>,
 }
@@ -58,6 +61,7 @@ impl RequestTracker {
     options: Arc<AtlaspackOptions>,
     plugins: PluginsRef,
     project_root: PathBuf,
+    cache_handler: Arc<CacheHandler<LmdbCacheReaderWriter>>,
   ) -> Self {
     let mut graph = StableDiGraph::<RequestNode, RequestEdgeType>::new();
 
@@ -69,6 +73,7 @@ impl RequestTracker {
       graph,
       plugins,
       project_root,
+      cache_handler,
       request_index: HashMap::new(),
       invalidations: HashMap::new(),
       options,
@@ -137,6 +142,7 @@ impl RequestTracker {
               Some(request_id),
               self.plugins.clone(),
               self.project_root.clone(),
+              self.cache_handler.clone(),
               // sub-request run
               Box::new({
                 let tx = tx.clone();

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use atlaspack_cache::cache::{CacheHandler, LmdbCacheReaderWriter};
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
 use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
 use atlaspack_core::config_loader::ConfigLoader;
@@ -101,12 +102,15 @@ impl Atlaspack {
       },
     )?);
 
+    let cache_handler = Arc::new(CacheHandler::new(LmdbCacheReaderWriter::new(db.clone())));
+
     let request_tracker = RequestTracker::new(
       config_loader.clone(),
       fs.clone(),
       Arc::new(options.clone()),
       plugins.clone(),
       project_root.clone(),
+      cache_handler,
     );
 
     Ok(Self {

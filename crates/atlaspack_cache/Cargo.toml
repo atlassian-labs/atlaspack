@@ -1,0 +1,17 @@
+[package]
+authors = ["Matt jones<mattjones701@gmail.com>"]
+name = "atlaspack_cache"
+version = "0.1.0"
+edition = "2021"
+description = "Persistent cache API for Atlaspack"
+
+[dependencies]
+lmdb-js-lite = { path = "../lmdb-js-lite" }
+mockall = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+pretty_assertions = { workspace = true }

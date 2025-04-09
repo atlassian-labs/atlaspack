@@ -4,7 +4,7 @@ use crate::types::{Asset, AssetWithDependencies, Dependency, Environment, Specif
 use async_trait::async_trait;
 use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 use mockall::automock;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::any::Any;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
@@ -21,7 +21,7 @@ pub struct ResolveOptions {
 /// A function that enables transformers to resolve a dependency specifier
 pub type Resolve = dyn Fn(PathBuf, String, ResolveOptions) -> Result<PathBuf, anyhow::Error>;
 
-#[derive(Debug, Serialize, PartialEq, Default)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct TransformResult {
   pub asset: Asset,
   pub dependencies: Vec<Dependency>,
@@ -35,6 +35,13 @@ pub struct TransformResult {
 pub struct TransformContext {
   config: ConfigLoaderRef,
   environment: Arc<Environment>,
+}
+
+impl Hash for TransformContext {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    // self.config.hash(state);
+    self.environment.hash(state);
+  }
 }
 
 impl Default for TransformContext {

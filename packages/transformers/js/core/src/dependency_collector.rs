@@ -1,4 +1,5 @@
 use std::collections::hash_map::DefaultHasher;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -132,7 +133,7 @@ pub fn dependency_collector<'a>(
   unresolved_mark: swc_core::common::Mark,
   config: &'a Config,
   diagnostics: &'a mut Vec<Diagnostic>,
-  conditions: &'a mut HashSet<Condition>,
+  conditions: &'a mut BTreeSet<Condition>,
 ) -> impl VisitMut + 'a {
   DependencyCollector {
     source_map,
@@ -160,7 +161,7 @@ struct DependencyCollector<'a> {
   config: &'a Config,
   diagnostics: &'a mut Vec<Diagnostic>,
   import_meta: Option<VarDecl>,
-  conditions: &'a mut HashSet<Condition>,
+  conditions: &'a mut BTreeSet<Condition>,
 }
 
 impl DependencyCollector<'_> {
@@ -1635,7 +1636,7 @@ mod tests {
     items: &'a mut Vec<DependencyDescriptor>,
     diagnostics: &'a mut Vec<Diagnostic>,
     config: &'a Config,
-    conditions: &'a mut HashSet<Condition>,
+    conditions: &'a mut BTreeSet<Condition>,
   ) -> DependencyCollector<'a> {
     DependencyCollector {
       source_map: context.source_map.clone(),

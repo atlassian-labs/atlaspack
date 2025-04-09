@@ -4,10 +4,17 @@ use parcel_sourcemap::{Mapping, SourceMap as ParcelSourceMap, SourceMapError};
 use rkyv::AlignedVec;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
+use std::hash::Hash;
 
 #[derive(Clone, Debug)]
 pub struct SourceMap {
   inner: ParcelSourceMap,
+}
+
+impl Hash for SourceMap {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    // Ignore hashing SourceMaps for now
+  }
 }
 
 // TODO: Consider forking ParcelSourceMap
