@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="180" height="40" viewBox="0 0 180 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Text only version -->
+  <g transform="translate(10,25)">
+    <text font-family="Arial, sans-serif" font-size="24" font-weight="bold">
+      <tspan fill="#0052CC">atlas</tspan>
+      <tspan fill="#172B4D">pack</tspan>
+    </text>
+  </g>
+</svg>
