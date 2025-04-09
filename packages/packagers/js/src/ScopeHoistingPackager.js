@@ -279,6 +279,19 @@ export class ScopeHoistingPackager {
     let referencingBundles = this.bundleGraph.getReferencingBundles(bundle);
     let hasHtmlReference = referencingBundles.some((b) => b.type === 'html');
 
+    let hasConditionalReference = false;
+    let isConditionalBundle = false;
+    if (
+      getFeatureFlag('conditionalBundlingApi') &&
+      getFeatureFlag('conditionalBundlingAsyncRuntime')
+    ) {
+      // If the bundle has a conditional bundle reference (has an importCond)
+      hasConditionalReference =
+        this.bundleGraph.getReferencedConditionalBundles(bundle).length > 0;
+      // If the bundle is a conditional bundle
+      isConditionalBundle = this.hasConditionalDependency();
+    }
+
     return (
       this.useAsyncBundleRuntime &&
       bundle.type === 'js' &&
@@ -286,7 +299,7 @@ export class ScopeHoistingPackager {
       bundle.env.outputFormat === 'esmodule' &&
       !bundle.env.isIsolated() &&
       bundle.bundleBehavior !== 'isolated' &&
-      hasHtmlReference
+      (hasHtmlReference || hasConditionalReference || isConditionalBundle)
     );
   }
 
@@ -296,7 +309,32 @@ export class ScopeHoistingPackager {
       .filter((b) => this.shouldBundleQueue(b))
       .map((b) => b.publicId);
 
-    if (deps.length === 0) {
+    const conditions = [];
+    if (
+      getFeatureFlag('conditionalBundlingApi') &&
+      getFeatureFlag('conditionalBundlingAsyncRuntime')
+    ) {
+      const conditionSet = this.bundleGraph
+        .getConditionalBundleMapping()
+        .get(bundle.id);
+
+      for (const [
+        key,
+        {ifTrueBundles, ifFalseBundles},
+      ] of conditionSet?.entries() ?? []) {
+        const ifTrueBundleIds = ifTrueBundles
+          .map((b) => `"${b.publicId}"`)
+          .join(',');
+        const ifFalseBundleIds = ifFalseBundles
+          .map((b) => `"${b.publicId}"`)
+          .join(',');
+        conditions.push(
+          `(globalThis.__MCOND && globalThis.__MCOND('${key}') ? [${ifTrueBundleIds}] : [${ifFalseBundleIds}])`,
+        );
+      }
+    }
+
+    if (deps.length === 0 && conditions.length === 0) {
       // If no deps we can safely execute immediately
       return codeToRun;
     }
@@ -304,7 +342,13 @@ export class ScopeHoistingPackager {
     let params = [
       JSON.stringify(this.bundle.publicId),
       fnExpr(this.bundle.env, [], [codeToRun]),
-      JSON.stringify(deps),
+      `${JSON.stringify(deps)}${
+        conditions.length > 0
+          ? `.concat([${conditions
+              .map((conditions) => `...${conditions}`)
+              .join(',')}])`
+          : ''
+      }`,
     ];
 
     return `$parcel$global.rwr(${params.join(', ')});`;
