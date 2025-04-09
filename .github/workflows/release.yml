@@ -258,7 +258,6 @@ jobs:
       - name: Move bindings
         run: for d in artifacts/bindings-*/*/*; do cp $d/*.node packages/$(basename $(dirname $d))/$(basename $d); done
       - name: Move debug symbols
-        if: ${{ inputs.profile == 'canary' }}
         run: |
           mkdir debug-symbols
           find artifacts -name "*.debug" -exec cp {} debug-symbols/ \;
@@ -266,7 +265,6 @@ jobs:
           ls -l debug-symbols
       - name: Upload combined debug symbols artifact
         uses: actions/upload-artifact@v4
-        if: ${{ inputs.profile == 'canary' }}
         with:
           name: debug-symbols
           path: debug-symbols/**
