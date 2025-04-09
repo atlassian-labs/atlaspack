@@ -5,6 +5,9 @@ version = "0.1.0"
 edition = "2021"
 description = "Provides tracing, error and crash reporting system for atlaspack"
 
+[lints]
+workspace = true
+
 [features]
 canary = ["sentry", "whoami", "rustls", "minidumper", "crash-handler"]
 
