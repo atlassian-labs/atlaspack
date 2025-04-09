@@ -921,7 +921,10 @@ describe('conditional bundling', function () {
           shouldOptimize: false,
           outputFormat: 'esmodule',
         },
-        featureFlags: {conditionalBundlingApi: true},
+        featureFlags: {
+          conditionalBundlingApi: true,
+          conditionalBundlingAsyncRuntime: true,
+        },
         inputFS: overlayFS,
       },
     );
