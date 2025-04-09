@@ -15,6 +15,12 @@ app.get('/', (req, res, next) => {
     console.log('Manifest not loaded or found');
   }
   let index = fs.readFileSync('dist/index.html', 'utf-8');
+
+  // Make scripts async
+  index = index.replaceAll(
+    '<script type="module" src=',
+    '<script type="module" async src=',
+  );
   const assets = new Set();
 
   for (const [script, condition] of Object.entries(manifest)) {
@@ -38,15 +44,22 @@ app.get('/', (req, res, next) => {
 
   const scripts = Array.from(assets).map(
     (asset) =>
-      `<script type="module" src="/${path.relative('dist/', asset)}"></script>`,
+      `<script type="module" async data-src="/${path.relative(
+        'dist/',
+        asset,
+      )}"></script>`,
   );
 
+  // Add features and timeout to load scripts, replicating poor performance of async downloads
   const pos = index.indexOf('<script');
   index = `${index.slice(0, pos)}<script>const features = ${JSON.stringify(
     FEATURES,
-  )};globalThis.__MCOND = (key) => features[key];</script>${scripts.join(
-    '\n',
-  )}${index.slice(pos)}`;
+  )};globalThis.__MCOND = (key) => features[key];setTimeout(() => {
+    document.querySelectorAll('script[data-src]').forEach((script) => {
+      script.src = script.dataset.src;
+      delete script.dataset.src;
+    });
+  }, 1000);</script>${scripts.join('\n')}${index.slice(pos)}`;
   index.slice(pos);
   res.contentType = 'text/html';
   res.send(index);

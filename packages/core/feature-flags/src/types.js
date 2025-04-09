@@ -58,6 +58,10 @@ export type FeatureFlags = {|
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    */
   patchProjectPaths: boolean,
+  /**
+   * Enable support for the async bundle runtime (unstable_asyncBundleRuntime) in conditional bundling
+   */
+  conditionalBundlingAsyncRuntime: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
