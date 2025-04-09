@@ -3,11 +3,11 @@ use std::collections::HashSet;
 use std::vec;
 
 use ast::*;
+use swc_core::atoms::Atom;
 use swc_core::common::sync::Lrc;
 use swc_core::common::Mark;
 use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast;
-use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use crate::utils::*;
@@ -16,8 +16,8 @@ use crate::utils::*;
 pub struct EnvReplacer<'a> {
   pub replace_env: bool,
   pub is_browser: bool,
-  pub env: &'a HashMap<JsWord, JsWord>,
-  pub used_env: &'a mut HashSet<JsWord>,
+  pub env: &'a HashMap<Atom, Atom>,
+  pub used_env: &'a mut HashSet<Atom>,
   pub source_map: Lrc<swc_core::common::SourceMap>,
   pub diagnostics: &'a mut Vec<Diagnostic>,
   pub unresolved_mark: Mark,
@@ -233,7 +233,7 @@ impl EnvReplacer<'_> {
     Some(Expr::Assign(res))
   }
 
-  fn replace(&mut self, sym: &JsWord, fallback_undefined: bool) -> Option<Expr> {
+  fn replace(&mut self, sym: &Atom, fallback_undefined: bool) -> Option<Expr> {
     if let Some(val) = self.env.get(sym) {
       self.used_env.insert(sym.clone());
       return Some(Expr::Lit(Lit::Str(Str {
@@ -359,8 +359,8 @@ mod tests {
 
   fn make_env_replacer<'a>(
     run_test_context: RunTestContext,
-    env: &'a HashMap<JsWord, JsWord>,
-    used_env: &'a mut HashSet<JsWord>,
+    env: &'a HashMap<Atom, Atom>,
+    used_env: &'a mut HashSet<Atom>,
     diagnostics: &'a mut Vec<Diagnostic>,
   ) -> EnvReplacer<'a> {
     EnvReplacer {
@@ -376,7 +376,7 @@ mod tests {
 
   #[test]
   fn test_replacer_disabled() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: HashMap<Atom, Atom> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -413,7 +413,7 @@ mod tests {
   // TODO: This behaviour should be removed and will be disabled for canary builds.
   #[test]
   fn test_replace_browser_assignments() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: HashMap<Atom, Atom> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -445,7 +445,7 @@ mod tests {
 
   #[test]
   fn test_replace_env_assignments() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: HashMap<Atom, Atom> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -461,7 +461,7 @@ mod tests {
 
   #[test]
   fn test_replace_env_member_assignments() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: HashMap<Atom, Atom> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -503,7 +503,7 @@ mod tests {
 
   #[test]
   fn test_replace_env_in_expressions() {
-    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
+    let mut env: HashMap<Atom, Atom> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -534,7 +534,7 @@ mod tests {
 
   #[test]
   fn test_replace_process_dot_browser() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: HashMap<Atom, Atom> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -562,7 +562,7 @@ mod tests {
 
   #[test]
   fn test_replace_foo_in_process_env() {
-    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
+    let mut env: HashMap<Atom, Atom> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -592,7 +592,7 @@ mod tests {
 
   #[test]
   fn test_unrelated_code_is_not_affected() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: HashMap<Atom, Atom> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -620,8 +620,8 @@ mod tests {
 
   #[test]
   fn test_replace_env_has_the_variable() {
-    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
-    let mut used_env: HashSet<JsWord> = HashSet::new();
+    let mut env: HashMap<Atom, Atom> = HashMap::new();
+    let mut used_env: HashSet<Atom> = HashSet::new();
     let mut diagnostics = Vec::new();
 
     env.insert("IS_TEST".into(), "true".into());
@@ -653,7 +653,7 @@ mod tests {
       ["package", "IS_TEST", "VERSION"]
         .iter()
         .map(|s| (*s).into())
-        .collect::<HashSet<JsWord>>()
+        .collect::<HashSet<Atom>>()
     );
 
     assert_eq!(diagnostics, vec![]);
@@ -661,8 +661,8 @@ mod tests {
 
   #[test]
   fn test_replace_env_rest_spread() {
-    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
-    let mut used_env: HashSet<JsWord> = HashSet::new();
+    let mut env: HashMap<Atom, Atom> = HashMap::new();
+    let mut used_env: HashSet<Atom> = HashSet::new();
     let mut diagnostics = Vec::new();
 
     env.insert("package".into(), "atlaspack".into());
@@ -688,14 +688,14 @@ mod tests {
       ["package"]
         .iter()
         .map(|s| (*s).into())
-        .collect::<HashSet<JsWord>>()
+        .collect::<HashSet<Atom>>()
     );
     assert_eq!(diagnostics, vec![]);
   }
 
   #[test]
   fn test_assign_env_to_variable() {
-    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
+    let mut env: HashMap<Atom, Atom> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 

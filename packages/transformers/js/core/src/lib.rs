@@ -17,6 +17,7 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use atlaspack_contextual_imports::ContextualImportsConfig;
 use atlaspack_contextual_imports::ContextualImportsInlineRequireVisitor;
@@ -48,6 +49,7 @@ use pathdiff::diff_paths;
 use serde::Deserialize;
 use serde::Serialize;
 use std::io::{self};
+use swc_core::atoms::Atom;
 use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::errors::Handler;
 use swc_core::common::pass::Optional;
@@ -68,7 +70,8 @@ use swc_core::ecma::parser::Parser;
 use swc_core::ecma::parser::StringInput;
 use swc_core::ecma::parser::Syntax;
 use swc_core::ecma::parser::TsSyntax;
-use swc_core::ecma::preset_env::preset_env;
+use swc_core::ecma::preset_env::transform_from_env;
+use swc_core::ecma::preset_env::EnvConfig;
 use swc_core::ecma::preset_env::Mode::Entry;
 use swc_core::ecma::preset_env::Targets;
 use swc_core::ecma::preset_env::Version;
@@ -108,7 +111,7 @@ pub struct Config {
   pub module_id: String,
   pub project_root: String,
   pub replace_env: bool,
-  pub env: HashMap<swc_core::ecma::atoms::JsWord, swc_core::ecma::atoms::JsWord>,
+  pub env: HashMap<swc_core::atoms::Atom, swc_core::atoms::Atom>,
   pub inline_fs: bool,
   pub insert_node_globals: bool,
   pub node_replacer: bool,
@@ -151,7 +154,7 @@ pub struct TransformResult {
   pub symbol_result: Option<CollectResult>,
   pub diagnostics: Option<Vec<Diagnostic>>,
   pub needs_esm_helpers: bool,
-  pub used_env: HashSet<swc_core::ecma::atoms::JsWord>,
+  pub used_env: HashSet<swc_core::atoms::Atom>,
   pub has_node_replacements: bool,
   pub is_constant_module: bool,
   pub conditions: HashSet<Condition>,
@@ -246,10 +249,10 @@ pub fn transform(
               let mut react_options = react::Options::default();
               if config.is_jsx {
                 if let Some(jsx_pragma) = &config.jsx_pragma {
-                  react_options.pragma = Some(jsx_pragma.clone());
+                  react_options.pragma = Some(Arc::new(jsx_pragma.to_owned()));
                 }
                 if let Some(jsx_pragma_frag) = &config.jsx_pragma_frag {
-                  react_options.pragma_frag = Some(jsx_pragma_frag.clone());
+                  react_options.pragma_frag = Some(Arc::new(jsx_pragma_frag.to_owned()));
                 }
                 react_options.development = Some(config.is_development);
                 react_options.refresh = if config.react_refresh {
@@ -260,7 +263,7 @@ pub fn transform(
 
                 react_options.runtime = if config.automatic_jsx_runtime {
                   if let Some(import_source) = &config.jsx_import_source {
-                    react_options.import_source = Some(import_source.clone());
+                    react_options.import_source = Some(Atom::from(import_source.as_str()));
                   }
                   Some(react::Runtime::Automatic)
                 } else {
@@ -465,12 +468,11 @@ pub fn transform(
 
                   // Transpile new syntax to older syntax if needed
                   Optional::new(
-                    preset_env(
+                    transform_from_env(
                       unresolved_mark,
                       Some(&comments),
-                      preset_env_config,
+                      EnvConfig::from(preset_env_config),
                       assumptions,
-                      &mut Default::default(),
                     ),
                     should_run_preset_env,
                   ),
@@ -478,7 +480,7 @@ pub fn transform(
                   // Inject SWC helpers if needed.
                   helpers::inject_helpers(global_mark),
 
-                  // Flush Id=(JsWord, SyntaxContexts) into unique names and reresolve to set
+                  // Flush Id=(Atom, SyntaxContexts) into unique names and reresolve to set
                   // global_mark for all nodes, even generated ones.
                   //
                   // This will also remove any other other marks (like ignore_mark) and only needs
@@ -598,7 +600,7 @@ pub fn transform(
                 emit(source_map.clone(), comments, &module, config.source_maps)?;
               if config.source_maps
                 && source_map
-                  .build_source_map_with_config(&src_map_buf, None, SourceMapConfig)
+                  .build_source_map(&src_map_buf, None, SourceMapConfig)
                   .to_writer(&mut map_buf)
                   .is_ok()
               {

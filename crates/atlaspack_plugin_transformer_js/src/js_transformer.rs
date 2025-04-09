@@ -367,9 +367,12 @@ mod tests {
   };
   use atlaspack_filesystem::{in_memory_file_system::InMemoryFileSystem, FileSystemRef};
   use pretty_assertions::assert_eq;
-  use swc_core::ecma::parser::lexer::util::CharExt;
 
   use super::*;
+
+  fn is_line_break(c: char) -> bool {
+    matches!(c, '\r' | '\n')
+  }
 
   #[tokio::test(flavor = "multi_thread")]
   async fn test_transformer_on_noop_asset() -> anyhow::Result<()> {
@@ -923,7 +926,7 @@ mod tests {
 
   fn normalize_code(code: &str) -> String {
     let code = code
-      .trim_start_matches(|c: char| c.is_line_break())
+      .trim_start_matches(|c: char| is_line_break(c))
       .trim_end();
 
     let base_indent = code

@@ -10,14 +10,14 @@ use atlaspack_core::types::Condition;
 use path_slash::PathBufExt;
 use serde::Deserialize;
 use serde::Serialize;
+use swc_core::atoms::atom;
+use swc_core::atoms::Atom;
 use swc_core::common::sync::Lrc;
 use swc_core::common::Span;
 use swc_core::common::Spanned;
 use swc_core::common::DUMMY_SP;
 use swc_core::common::{Mark, SourceMap, SyntaxContext};
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::js_word;
-use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
 
@@ -116,8 +116,8 @@ pub struct DependencyDescriptor {
   pub kind: DependencyKind,
   pub loc: SourceLocation,
   /// The text specifier associated with the import/export statement.
-  pub specifier: swc_core::ecma::atoms::JsWord,
-  pub attributes: Option<HashMap<swc_core::ecma::atoms::JsWord, bool>>,
+  pub specifier: swc_core::atoms::Atom,
+  pub attributes: Option<HashMap<swc_core::atoms::Atom, bool>>,
   pub is_optional: bool,
   pub is_helper: bool,
   pub source_type: Option<SourceType>,
@@ -166,13 +166,13 @@ struct DependencyCollector<'a> {
 impl DependencyCollector<'_> {
   fn add_dependency(
     &mut self,
-    mut specifier: JsWord,
+    mut specifier: Atom,
     span: swc_core::common::Span,
     kind: DependencyKind,
-    attributes: Option<HashMap<swc_core::ecma::atoms::JsWord, bool>>,
+    attributes: Option<HashMap<swc_core::atoms::Atom, bool>>,
     is_optional: bool,
     source_type: SourceType,
-  ) -> Option<JsWord> {
+  ) -> Option<Atom> {
     // Rewrite SWC helpers from ESM to CJS for library output.
     let mut is_specifier_rewritten = false;
     if self.config.is_library && !self.config.is_esm_output {
@@ -222,7 +222,7 @@ impl DependencyCollector<'_> {
 
   fn add_url_dependency(
     &mut self,
-    specifier: JsWord,
+    specifier: Atom,
     span: swc_core::common::Span,
     kind: DependencyKind,
     source_type: SourceType,
@@ -270,7 +270,7 @@ impl DependencyCollector<'_> {
     )
   }
 
-  fn create_require(&mut self, specifier: JsWord) -> CallExpr {
+  fn create_require(&mut self, specifier: Atom) -> CallExpr {
     let mut res = create_require(specifier, self.unresolved_mark);
 
     // For scripts, we replace with __parcel__require__, which is later replaced
@@ -893,7 +893,7 @@ impl VisitMut for DependencyCollector<'_> {
     } = &node
     {
       if let Expr::Ident(ident) = &**arg {
-        if ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark) {
+        if ident.sym == atom!("require") && is_unresolved(ident, self.unresolved_mark) {
           return;
         }
       }
@@ -1039,7 +1039,7 @@ impl VisitMut for DependencyCollector<'_> {
       if !self.config.is_library && !self.config.standalone {
         *node = Expr::New(NewExpr {
           span: DUMMY_SP,
-          callee: Box::new(Expr::Ident(Ident::new_no_ctxt(js_word!("URL"), DUMMY_SP))),
+          callee: Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("URL"), DUMMY_SP))),
           ctxt: SyntaxContext::empty(),
           args: Some(vec![ExprOrSpread {
             expr: Box::new(url),
@@ -1058,12 +1058,12 @@ impl VisitMut for DependencyCollector<'_> {
     let is_require = match &node {
       Expr::Ident(ident) => {
         // Free `require` -> undefined
-        ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark)
+        ident.sym == atom!("require") && is_unresolved(ident, self.unresolved_mark)
       }
       Expr::Member(MemberExpr { obj: expr, .. }) => {
         // e.g. `require.extensions` -> undefined
         if let Expr::Ident(ident) = &**expr {
-          ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark)
+          ident.sym == atom!("require") && is_unresolved(ident, self.unresolved_mark)
         } else {
           false
         }
@@ -1283,7 +1283,7 @@ fn create_url_constructor(url: Expr, use_import_meta: bool) -> Expr {
         kind: MetaPropKind::ImportMeta,
         span: DUMMY_SP,
       })),
-      prop: MemberProp::Ident(IdentName::new(js_word!("url"), DUMMY_SP)),
+      prop: MemberProp::Ident(IdentName::new(atom!("url"), DUMMY_SP)),
     })
   } else {
     // CJS output: "file:" + __filename
@@ -1301,7 +1301,7 @@ fn create_url_constructor(url: Expr, use_import_meta: bool) -> Expr {
   Expr::New(NewExpr {
     span: DUMMY_SP,
     ctxt: SyntaxContext::empty(),
-    callee: Box::new(Expr::Ident(Ident::new_no_ctxt(js_word!("URL"), DUMMY_SP))),
+    callee: Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("URL"), DUMMY_SP))),
     args: Some(vec![
       ExprOrSpread {
         expr: Box::new(url),
@@ -1366,10 +1366,10 @@ impl VisitMut for PromiseTransformer {
 }
 
 impl DependencyCollector<'_> {
-  fn match_new_url(&mut self, expr: &Expr) -> Option<(JsWord, swc_core::common::Span)> {
+  fn match_new_url(&mut self, expr: &Expr) -> Option<(Atom, swc_core::common::Span)> {
     if let Expr::New(new) = expr {
       let is_url = match &*new.callee {
-        Expr::Ident(id) => id.sym == js_word!("URL") && is_unresolved(id, self.unresolved_mark),
+        Expr::Ident(id) => id.sym == atom!("URL") && is_unresolved(id, self.unresolved_mark),
         _ => false,
       };
 
@@ -1417,7 +1417,7 @@ impl DependencyCollector<'_> {
         let name = match_property_name(member);
 
         if let Some((name, _)) = name {
-          name == js_word!("url")
+          name == atom!("url")
         } else {
           false
         }
@@ -1507,10 +1507,7 @@ impl DependencyCollector<'_> {
           name: Pat::Ident(BindingIdent::from(ident.clone())),
           init: Some(Box::new(Expr::Call(CallExpr {
             callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
-              obj: Box::new(Expr::Ident(Ident::new_no_ctxt(
-                js_word!("Object"),
-                DUMMY_SP,
-              ))),
+              obj: Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("Object"), DUMMY_SP))),
               prop: MemberProp::Ident(IdentName::new("assign".into(), DUMMY_SP)),
               span: DUMMY_SP,
             }))),
@@ -1518,10 +1515,7 @@ impl DependencyCollector<'_> {
               ExprOrSpread {
                 expr: Box::new(Expr::Call(CallExpr {
                   callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
-                    obj: (Box::new(Expr::Ident(Ident::new_no_ctxt(
-                      js_word!("Object"),
-                      DUMMY_SP,
-                    )))),
+                    obj: (Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("Object"), DUMMY_SP)))),
                     prop: MemberProp::Ident(IdentName::new("create".into(), DUMMY_SP)),
                     span: DUMMY_SP,
                   }))),
@@ -1538,7 +1532,7 @@ impl DependencyCollector<'_> {
               ExprOrSpread {
                 expr: Box::new(Expr::Object(ObjectLit {
                   props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                    key: PropName::Ident(IdentName::new(js_word!("url"), DUMMY_SP)),
+                    key: PropName::Ident(IdentName::new(atom!("url"), DUMMY_SP)),
                     value: Box::new(self.get_import_meta_url()),
                   })))],
                   span: DUMMY_SP,
@@ -1653,9 +1647,10 @@ mod tests {
   }
 
   fn make_config() -> Config {
-    let mut config = Config::default();
-    config.is_browser = true;
-    config
+    Config {
+      is_browser: true,
+      ..Default::default()
+    }
   }
 
   fn make_placeholder_hash(specifier: &str, dependency_kind: DependencyKind) -> String {
@@ -1714,8 +1709,10 @@ mod tests {
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let mut config = Config::default();
-    config.source_type = SourceType::Script;
+    let config = Config {
+      source_type: SourceType::Script,
+      ..Default::default()
+    };
 
     let input_code = r#"
       const { x } = await import('other');
