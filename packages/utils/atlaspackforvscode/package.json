@@ -120,7 +120,7 @@
     "vscode-test": "^1.5.0"
   },
   "dependencies": {
-    "@parcel/watcher": "^2.0.7"
+    "@parcel/watcher": "^2.5.1"
   },
   "type": "commonjs"
 }
