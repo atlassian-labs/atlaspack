@@ -20,11 +20,11 @@
     "@atlaspack/plugin": "2.13.1",
     "@parcel/source-map": "^2.1.1",
     "@atlaspack/utils": "2.13.1",
-    "lightningcss": "^1.28.2",
+    "lightningcss": "^1.29.3",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
-    "lightningcss-wasm": "^1.28.2",
+    "lightningcss-wasm": "^1.29.3",
     "postcss": "^8.4.5"
   },
   "browser": {

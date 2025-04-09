@@ -1,3 +1,4 @@
+#![allow(clippy::doc_overindented_list_items)]
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;

@@ -28,7 +28,7 @@
     "@atlaspack/logger": "2.13.1",
     "@atlaspack/rust": "2.13.1",
     "@atlaspack/utils": "2.13.1",
-    "lmdb": "2.8.5"
+    "lmdb": "3.2.6"
   },
   "devDependencies": {
     "idb": "^5.0.8"

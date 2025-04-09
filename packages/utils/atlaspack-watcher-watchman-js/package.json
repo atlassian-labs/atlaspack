@@ -13,7 +13,7 @@
     "fb-watchman": "^2.0.2"
   },
   "devDependencies": {
-    "@parcel/watcher": "^2.4.1"
+    "@parcel/watcher": "^2.5.1"
   },
   "type": "commonjs"
 }
