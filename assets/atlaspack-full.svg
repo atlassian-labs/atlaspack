@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="60" viewBox="0 0 240 60" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="30" cy="30" r="25" fill="#0052CC"/>
+  
+  <!-- Stylized "A" made of package/bundle shapes -->
+  <path d="M20 40 L30 15 L40 40 Z" fill="white" />
+  <path d="M25 30 L35 30" stroke="white" stroke-width="3"/>
+  
+  <!-- Text "atlaspack" -->
+  <text x="70" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#253858">
+    atlaspack
+  </text>
+</svg>
