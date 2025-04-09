@@ -246,6 +246,8 @@ async fn run_pipelines(
         .await?;
 
       current_asset = transform_result.asset;
+      // TODO: REMOVE THIS
+      current_asset.map = None;
 
       current_dependencies.extend(transform_result.dependencies);
       invalidations.extend(transform_result.invalidate_on_file_change);
