@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="60" viewBox="0 0 240 60" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background rectangle -->
+  <rect width="240" height="60" fill="#0052CC"/>
+  
+  <!-- Package icon -->
+  <path d="M30 15 L45 25 L45 45 L15 45 L15 25 L30 15 Z" fill="#FFFFFF"/>
+  <path d="M30 15 L45 25 L30 35 L15 25 L30 15 Z" fill="#DEEBFF"/>
+  <path d="M30 35 L30 45 L15 45 L15 25 L30 35 Z" fill="#B3D4FF"/>
+  <path d="M30 35 L45 25 L45 45 L30 45 L30 35 Z" fill="#4C9AFF"/>
+  
+  <!-- Text -->
+  <text x="60" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">ATLASPACK</text>
+</svg>
