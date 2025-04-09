@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::Sender;
@@ -49,6 +50,7 @@ pub struct RequestTracker {
   project_root: PathBuf,
   request_index: HashMap<u64, NodeIndex>,
   invalidations: HashMap<PathBuf, NodeIndex>,
+  invalid_nodes: HashSet<NodeIndex>,
 }
 
 impl RequestTracker {
@@ -71,6 +73,7 @@ impl RequestTracker {
       project_root,
       request_index: HashMap::new(),
       invalidations: HashMap::new(),
+      invalid_nodes: HashSet::new(),
       options,
     }
   }
@@ -205,6 +208,7 @@ impl RequestTracker {
       return Ok(false);
     }
 
+    self.invalid_nodes.remove(node_index);
     *request_node = RequestNode::Incomplete;
     Ok(true)
   }
@@ -228,7 +232,10 @@ impl RequestTracker {
     // Update node with latest result
     *request_node = match result {
       Ok(result) => RequestNode::Valid(result.result.clone()),
-      Err(error) => RequestNode::Error(AtlaspackError::from(error).into()),
+      Err(error) => {
+        self.invalid_nodes.insert(*node_index);
+        RequestNode::Error(AtlaspackError::from(error).into())
+      }
     };
 
     // Assign invalidations
@@ -311,42 +318,53 @@ impl RequestTracker {
     Ok(())
   }
 
-  #[tracing::instrument(level = "info", skip_all, ret, fields(events = watch_events.len()))]
-  pub fn respond_to_fs_events(&mut self, watch_events: WatchEvents) -> bool {
-    let mut need_rebuild = false;
+  fn invalidate_node(&mut self, node_index: &NodeIndex, file_path_reason: &PathBuf) {
+    let mut invalid_nodes = Vec::new();
+    {
+      let reverse_graph = Reversed(&self.graph);
+      let mut dfs = Dfs::new(reverse_graph, *node_index);
 
-    for invalidation in watch_events.iter() {
-      // We don't currently distinguish between the different file event types
-      match invalidation {
-        WatchEvent::Delete(file_path)
-        | WatchEvent::Update(file_path)
-        | WatchEvent::Create(file_path) => {
-          if let Some(invalidation_node) = self.invalidations.get(file_path) {
-            let mut invalid_nodes = Vec::new();
-            {
-              let reverse_graph = Reversed(&self.graph);
-              let mut dfs = Dfs::new(reverse_graph, *invalidation_node);
-
-              while let Some(node_index) = dfs.next(reverse_graph) {
-                invalid_nodes.push(node_index);
-              }
-            }
-
-            for invalid_node in invalid_nodes {
-              tracing::info!(
-                "{:?} invalidates {:#?}",
-                file_path,
-                self.graph.node_weight(invalid_node)
-              );
-              self.graph[invalid_node] = RequestNode::Invalid;
-              need_rebuild = true;
-            }
-          }
-        }
+      while let Some(node_index) = dfs.next(reverse_graph) {
+        invalid_nodes.push(node_index);
       }
     }
 
-    need_rebuild
+    for invalid_node in invalid_nodes {
+      tracing::info!(
+        "{:?} invalidates {:#?}",
+        file_path_reason,
+        self.graph.node_weight(invalid_node)
+      );
+      self.graph[invalid_node] = RequestNode::Invalid;
+      self.invalid_nodes.insert(invalid_node);
+    }
+  }
+
+  #[tracing::instrument(level = "info", skip_all, ret, fields(events = watch_events.len()))]
+  pub fn respond_to_fs_events(&mut self, watch_events: WatchEvents) -> bool {
+    let nodes_to_invalidate: Vec<(NodeIndex, &PathBuf)> = watch_events
+      .iter()
+      .filter_map(|invalidation| {
+        // We don't currently distinguish between the different file event types
+        match invalidation {
+          WatchEvent::Delete(file_path)
+          | WatchEvent::Update(file_path)
+          | WatchEvent::Create(file_path) => {
+            self.invalidations.get(file_path).map(|n| (*n, file_path))
+          }
+        }
+      })
+      .collect();
+
+    for (node_id, file_path_reason) in nodes_to_invalidate.iter() {
+      self.invalidate_node(node_id, file_path_reason);
+    }
+
+    // We need to rebuild if there were any invalidated nodes from the file
+    // events
+    !nodes_to_invalidate.is_empty() ||
+    // or if there are still any remaining invalid nodes (e.g. Failed requests)
+    !self.invalid_nodes.is_empty()
   }
 }
 
