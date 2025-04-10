@@ -2151,7 +2151,7 @@ mod tests {
   fn map_non_static_access(non_static_access: HashMap<Id, Vec<Span>>) -> HashSet<JsWord> {
     non_static_access
       .into_keys()
-      .map(|key| JsWord::from(key.0))
+      .map(|key| key.0)
       .collect::<HashSet<JsWord>>()
   }
 

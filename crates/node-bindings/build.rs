@@ -1,3 +1,4 @@
+#[allow(unused_extern_crates)]
 #[cfg(not(target_arch = "wasm32"))]
 extern crate napi_build;
 

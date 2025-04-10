@@ -11,7 +11,7 @@ impl<'a> Attrs<'a> {
     Self { attributes }
   }
 
-  pub fn get(&self, name: ExpandedName) -> Option<&Tendril<UTF8>> {
+  pub fn get(&self, name: ExpandedName<'_>) -> Option<&Tendril<UTF8>> {
     self
       .attributes
       .iter()
@@ -19,7 +19,7 @@ impl<'a> Attrs<'a> {
       .map(|attr| &attr.value)
   }
 
-  pub fn delete(&mut self, name: ExpandedName) {
+  pub fn delete(&mut self, name: ExpandedName<'_>) {
     *self.attributes = self
       .attributes
       .iter()
@@ -28,7 +28,7 @@ impl<'a> Attrs<'a> {
       .collect();
   }
 
-  pub fn set(&mut self, name: ExpandedName, value: &str) {
+  pub fn set(&mut self, name: ExpandedName<'_>, value: &str) {
     if let Some(attribute) = self
       .attributes
       .iter_mut()

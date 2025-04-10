@@ -141,7 +141,7 @@ where
 
 fn consume_comment_whitespace_until_maybe_bracket(
   state: &mut State,
-  it: &mut IterMut<u8>,
+  it: &mut IterMut<'_, u8>,
   settings: &CommentSettings,
 ) -> Result<bool> {
   for c in it.by_ref() {
@@ -536,14 +536,14 @@ mod tests {
             "a1": [1 ],
             "a2": [1        ],
             "a3": [
-                1      
+                1
             ],
             "o1": {v:1 },
             "o2": {v:1        },
             "o3": {
-                "v":1      
-            } 
-                     
+                "v":1
+            }
+
         }"#;
 
     assert_eq!(json, expected);

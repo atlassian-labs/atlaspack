@@ -56,7 +56,7 @@ where
   F: AsRef<Path>,
   R: AsRef<Path>,
 {
-  let entries: Vec<Entry> = dirnames
+  let entries: Vec<Entry<'_>> = dirnames
     .iter()
     .map(|d| Entry::Directory(d.as_ref()))
     .collect();
@@ -75,7 +75,7 @@ where
   F: AsRef<Path>,
   R: AsRef<Path>,
 {
-  let entries: Vec<Entry> = filenames.iter().map(|d| Entry::File(d.as_ref())).collect();
+  let entries: Vec<Entry<'_>> = filenames.iter().map(|d| Entry::File(d.as_ref())).collect();
 
   find_ancestor(fs, &entries, from, root)
 }
