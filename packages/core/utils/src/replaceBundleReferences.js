@@ -9,6 +9,7 @@ import type {
   Dependency,
   NamedBundle,
 } from '@atlaspack/types';
+import {performStringReplacements} from '@atlaspack/rust';
 
 import {Readable} from 'stream';
 import nullthrows from 'nullthrows';
@@ -209,9 +210,10 @@ function performReplacement(
   map?: ?SourceMap,
 ): {|+contents: string, +map: ?SourceMap|} {
   let finalContents = contents;
-  for (let {from, to} of replacements.values()) {
-    // Perform replacement
-    finalContents = finalContents.split(from).join(to);
+  let replacementList = Array.from(replacements.values());
+
+  if (replacementList.length > 0) {
+    finalContents = performStringReplacements(contents, replacementList);
   }
 
   return {
