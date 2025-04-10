@@ -10,6 +10,7 @@ import type {
   NamedBundle,
 } from '@atlaspack/types';
 import {performStringReplacements} from '@atlaspack/rust';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 import {Readable} from 'stream';
 import nullthrows from 'nullthrows';
@@ -210,10 +211,18 @@ function performReplacement(
   map?: ?SourceMap,
 ): {|+contents: string, +map: ?SourceMap|} {
   let finalContents = contents;
-  let replacementList = Array.from(replacements.values());
 
-  if (replacementList.length > 0) {
-    finalContents = performStringReplacements(contents, replacementList);
+  if (getFeatureFlag('inlineStringReplacementPerf')) {
+    let replacementList = Array.from(replacements.values());
+
+    if (replacementList.length > 0) {
+      finalContents = performStringReplacements(contents, replacementList);
+    }
+  } else {
+    for (let {from, to} of replacements.values()) {
+      // Perform replacement
+      finalContents = finalContents.split(from).join(to);
+    }
   }
 
   return {

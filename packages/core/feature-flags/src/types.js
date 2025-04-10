@@ -58,6 +58,12 @@ export type FeatureFlags = {|
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    */
   patchProjectPaths: boolean,
+
+  /**
+   * Enables optimized inline string replacement perf for the packager.
+   * Used heavily for inline bundles.
+   */
+  inlineStringReplacementPerf: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
