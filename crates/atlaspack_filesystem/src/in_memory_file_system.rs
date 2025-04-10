@@ -151,6 +151,7 @@ impl FileSystem for InMemoryFileSystem {
   }
 }
 
+#[allow(clippy::join_absolute_paths)]
 #[cfg(test)]
 mod tests {
   use super::*;

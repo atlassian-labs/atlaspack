@@ -18,7 +18,7 @@ rust_2018_idioms = { priority = -1, level = "deny" }
 [workspace.lints.clippy]
 module_inception = "allow"
 doc_overindented_list_items = "allow"
-# all = { priority = -1, level = "deny" }
+all = { priority = -1, level = "deny" }
 # restriction = { priority = -1, level = "deny" }
 # pedantic = { priority = -1, level = "deny" }
 # nursery = { priority = -1, level = "deny" }
