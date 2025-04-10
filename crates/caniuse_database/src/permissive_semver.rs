@@ -103,7 +103,7 @@ impl VersionRange {
       && self
         .max
         .as_ref()
-        .map_or(true, |max| version.components <= max.components)
+        .is_none_or(|max| version.components <= max.components)
   }
 
   /// Get the minimum bounds for this range
