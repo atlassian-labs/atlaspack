@@ -1471,7 +1471,7 @@ impl DependencyCollector<'_> {
 
   fn get_project_relative_filename(&self) -> String {
     if let Some(relative) = pathdiff::diff_paths(&self.config.filename, &self.config.project_root) {
-      relative.to_slash_lossy()
+      relative.to_slash_lossy().to_string()
     } else if let Some(filename) = Path::new(&self.config.filename).file_name() {
       String::from(filename.to_string_lossy())
     } else {

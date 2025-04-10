@@ -625,7 +625,7 @@ fn parse(
   // Attempt to convert the path to be relative to the project root.
   // If outside the project root, use an absolute path so that if the project root moves the path still works.
   let filename: PathBuf = if let Ok(relative) = Path::new(filename).strip_prefix(project_root) {
-    relative.to_slash_lossy().into()
+    PathBuf::from(relative.to_slash_lossy().to_string())
   } else {
     filename.into()
   };
