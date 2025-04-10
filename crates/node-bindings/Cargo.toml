@@ -60,7 +60,7 @@ swc_core = { workspace = true }
 # Crash reporting dependencies
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { workspace = true, features = ["custom"] }
+getrandom = { workspace = true }
 napi = { workspace = true, features = ["serde-json"] }
 
 [target.'cfg(all(target_os = "macos", not(feature = "canary")))'.dependencies]

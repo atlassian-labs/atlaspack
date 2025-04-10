@@ -13,7 +13,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true}
 swc_core = { workspace = true, features = ["ecma_plugin_transform", "__utils", "ecma_quote"] }
 swc_ecma_transforms_testing = { workspace = true }
-getrandom = { workspace = true, features = ["js"] }
+getrandom = { workspace = true, features = ["wasm_js"] }
 
 [dev-dependencies]
 atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }
