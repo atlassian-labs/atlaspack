@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::Path;
 
+use swc_core::atoms::Atom;
 use swc_core::common::sync::Lrc;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
@@ -9,7 +10,6 @@ use swc_core::common::SyntaxContext;
 use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast;
 use swc_core::ecma::ast::MemberProp;
-use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use crate::dependency_collector::DependencyDescriptor;
@@ -29,7 +29,7 @@ use crate::utils::SourceType;
 pub struct NodeReplacer<'a> {
   pub source_map: Lrc<SourceMap>,
   pub global_mark: Mark,
-  pub globals: HashMap<JsWord, (SyntaxContext, ast::Stmt)>,
+  pub globals: HashMap<Atom, (SyntaxContext, ast::Stmt)>,
   pub filename: &'a Path,
   pub unresolved_mark: Mark,
   /// This will be set to true if the file has either __dirname or __filename replacements inserted
@@ -51,8 +51,8 @@ impl VisitMut for NodeReplacer<'_> {
 
         match id.sym.to_string().as_str() {
           "__filename" => {
-            let path_module_specifier = swc_core::ecma::atoms::JsWord::from("path");
-            let replace_me_value = swc_core::ecma::atoms::JsWord::from("$parcel$filenameReplace");
+            let path_module_specifier = swc_core::atoms::Atom::from("path");
+            let replace_me_value = swc_core::atoms::Atom::from("$parcel$filenameReplace");
 
             let unresolved_mark = self.unresolved_mark;
             let expr = |this: &NodeReplacer| {
@@ -74,7 +74,7 @@ impl VisitMut for NodeReplacer<'_> {
                       ctxt: SyntaxContext::empty(),
                       // This also uses __dirname as later in the path.join call the hierarchy is then correct
                       // Otherwise path.join(__filename, '..') would be one level to shallow (due to the /filename.js at the end)
-                      sym: swc_core::ecma::atoms::JsWord::from("__dirname"),
+                      sym: swc_core::atoms::Atom::from("__dirname"),
                     })),
                   },
                   ast::ExprOrSpread {
@@ -89,7 +89,7 @@ impl VisitMut for NodeReplacer<'_> {
                     spread: None,
                     expr: Box::new(ast::Expr::Lit(ast::Lit::Str(ast::Str {
                       span: DUMMY_SP,
-                      value: swc_core::ecma::atoms::JsWord::from(filename.to_string_lossy()),
+                      value: swc_core::atoms::Atom::from(filename.to_string_lossy()),
                       raw: None,
                     }))),
                   },
@@ -120,8 +120,8 @@ impl VisitMut for NodeReplacer<'_> {
             }
           }
           "__dirname" => {
-            let path_module_specifier = swc_core::ecma::atoms::JsWord::from("path");
-            let replace_me_value = swc_core::ecma::atoms::JsWord::from("$parcel$dirnameReplace");
+            let path_module_specifier = swc_core::atoms::Atom::from("path");
+            let replace_me_value = swc_core::atoms::Atom::from("$parcel$dirnameReplace");
 
             let unresolved_mark = self.unresolved_mark;
             if self.update_binding(id, "$parcel$__dirname".into(), |_| {
@@ -136,7 +136,7 @@ impl VisitMut for NodeReplacer<'_> {
                       optional: false,
                       span: DUMMY_SP,
                       ctxt: SyntaxContext::empty(),
-                      sym: swc_core::ecma::atoms::JsWord::from("__dirname"),
+                      sym: swc_core::atoms::Atom::from("__dirname"),
                     })),
                   },
                   ast::ExprOrSpread {
@@ -202,7 +202,7 @@ impl VisitMut for NodeReplacer<'_> {
 }
 
 impl NodeReplacer<'_> {
-  fn update_binding<F>(&mut self, id_ref: &mut ast::Ident, new_name: JsWord, expr: F) -> bool
+  fn update_binding<F>(&mut self, id_ref: &mut ast::Ident, new_name: Atom, expr: F) -> bool
   where
     F: FnOnce(&Self) -> ast::Expr,
   {
@@ -257,7 +257,7 @@ mod tests {
 
     assert_eq!(output_code, expected_code);
     assert!(has_node_replacements);
-    assert_eq!(items[0].specifier, JsWord::from("path"));
+    assert_eq!(items[0].specifier, Atom::from("path"));
     assert_eq!(items[0].kind, DependencyKind::Require);
     assert_eq!(items[0].source_type, Some(SourceType::Module));
     assert_eq!(items.len(), 1);
@@ -291,7 +291,7 @@ mod tests {
 
     assert_eq!(output_code, expected_code);
     assert!(has_node_replacements);
-    assert_eq!(items[0].specifier, JsWord::from("path"));
+    assert_eq!(items[0].specifier, Atom::from("path"));
     assert_eq!(items[0].kind, DependencyKind::Require);
     assert_eq!(items[0].source_type, Some(SourceType::Module));
     assert_eq!(items.len(), 1);
