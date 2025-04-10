@@ -125,7 +125,7 @@ impl VisitMut for GlobalReplacer<'_> {
         self.update_binding(id, |this| {
           let filename =
             if let Some(relative) = pathdiff::diff_paths(this.filename, this.project_root) {
-              relative.to_slash_lossy()
+              relative.to_slash_lossy().to_string()
             } else if let Some(filename) = this.filename.file_name() {
               format!("/{}", filename.to_string_lossy())
             } else {
@@ -139,7 +139,7 @@ impl VisitMut for GlobalReplacer<'_> {
         self.update_binding(id, |this| {
           let dirname = if let Some(dirname) = this.filename.parent() {
             if let Some(relative) = pathdiff::diff_paths(dirname, this.project_root) {
-              relative.to_slash_lossy()
+              relative.to_slash_lossy().to_string()
             } else {
               String::from("/")
             }
