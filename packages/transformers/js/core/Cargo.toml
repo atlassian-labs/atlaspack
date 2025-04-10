@@ -11,7 +11,6 @@ crate-type = ["rlib"]
 thiserror = { workspace = true }
 swc_core = { workspace = true, features = [
   "common",
-  "common_ahash",
   "common_sourcemap",
   "ecma_ast",
   "ecma_codegen",
