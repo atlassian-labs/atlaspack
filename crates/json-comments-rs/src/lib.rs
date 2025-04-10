@@ -141,7 +141,7 @@ where
 
 fn consume_comment_whitespace_until_maybe_bracket(
   state: &mut State,
-  it: &mut IterMut<'_, u8>,
+  it: &mut IterMut<u8>,
   settings: &CommentSettings,
 ) -> Result<bool> {
   for c in it.by_ref() {
