@@ -141,7 +141,7 @@ where
 
 fn consume_comment_whitespace_until_maybe_bracket(
   state: &mut State,
-  it: &mut IterMut<'_, u8>,
+  it: &mut IterMut<u8>,
   settings: &CommentSettings,
 ) -> Result<bool> {
   for c in it.by_ref() {
@@ -423,6 +423,8 @@ mod tests {
 
   #[test]
   fn line_comments() {
+    // Put these in an external file because VSCode automatically trims whitespace
+    // which is important to the tests. Removing the whitespace breaks the tests
     let json = include_str!("../fixtures/line_comments.txt").to_string();
     let expected = include_str!("../fixtures/line_comments_expected.txt").to_string();
     assert_eq!(strip_string(&json), expected);
@@ -506,6 +508,8 @@ mod tests {
 
   #[test]
   fn trailing_comma() {
+    // Put these in an external file because VSCode automatically trims whitespace
+    // which is important to the tests. Removing the whitespace breaks the tests
     let mut json = include_str!("../fixtures/trailing_comma.txt").to_string();
 
     #[allow(deprecated)]

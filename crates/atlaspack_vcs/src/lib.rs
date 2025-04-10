@@ -263,7 +263,7 @@ pub struct VCSFile {
 
 fn get_file_contents_at_commit(
   repo: &Repository,
-  commit: &git2::Commit<'_>,
+  commit: &git2::Commit,
   path: &Path,
 ) -> anyhow::Result<Option<String>> {
   let tree = commit.tree()?;
