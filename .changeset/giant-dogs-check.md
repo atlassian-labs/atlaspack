@@ -1,6 +1,7 @@
 ---
 '@atlaspack/integration-tests': patch
 '@atlaspack/transformer-js': patch
+'@atlaspack/rust': patch
 ---
 
-Enforce rust_2018_idioms lints
+Enabled Rust rust_2018_idioms lints and updated files to match linting rules
