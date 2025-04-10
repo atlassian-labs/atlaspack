@@ -4,6 +4,9 @@ name = "atlaspack-dev-dep-resolver"
 version = "0.1.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 atlaspack-resolver = { path = "../node-resolver-rs" }
 es-module-lexer = { workspace = true }

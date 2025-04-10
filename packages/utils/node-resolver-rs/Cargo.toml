@@ -4,6 +4,9 @@ name = "atlaspack-resolver"
 version = "0.1.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [[bench]]
 name = "node_resolver_bench"
 harness = false
