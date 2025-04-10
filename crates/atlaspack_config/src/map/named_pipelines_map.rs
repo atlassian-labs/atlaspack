@@ -112,7 +112,7 @@ impl NamedPipelinesMap {
   ///   })
   /// );
   /// ```
-  pub fn get(&self, path: &Path, named_pattern: Option<NamedPattern<'_>>) -> Vec<PluginNode> {
+  pub fn get(&self, path: &Path, named_pattern: Option<NamedPattern>) -> Vec<PluginNode> {
     let is_match = named_pattern_matcher(path);
     let mut matches: Vec<PluginNode> = Vec::new();
 
