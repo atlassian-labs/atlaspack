@@ -8,6 +8,9 @@ authors = [
 edition = "2021"
 description = "JavaScript transformer plugin for the Atlaspack Bundler"
 
+[lints]
+workspace = true
+
 [[bench]]
 name = "env_variables_benchmark"
 harness = false

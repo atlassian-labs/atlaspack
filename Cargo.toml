@@ -11,6 +11,13 @@ members = [
 inherits = "release"
 debug = true
 
+[workspace.lints.rust]
+# TODO enforce
+# rust_2018_idioms = "warn"
+
+[workspace.lints.clippy]
+module_inception = "allow"
+
 [workspace.dependencies]
 anyhow = "1.0.95"
 assert_fs = "1.1.2"

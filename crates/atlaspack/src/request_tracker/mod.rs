@@ -6,7 +6,6 @@ pub use self::request_tracker::*;
 mod request;
 mod request_graph;
 
-#[allow(clippy::module_inception)]
 mod request_tracker;
 
 #[cfg(test)]

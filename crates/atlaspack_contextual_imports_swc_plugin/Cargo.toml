@@ -5,6 +5,9 @@ authors = ["Jake Lane <me@jakelane.me>"]
 edition = "2021"
 description = "Atlaspack contextual imports plugin for SWC"
 
+[lints]
+workspace = true
+
 [lib]
 crate-type = ["cdylib"]
 
