@@ -78,7 +78,7 @@ impl TargetRequest {
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<BrowserField>,
     name: Option<String>,
-  ) -> BuiltInTarget<'_> {
+  ) -> BuiltInTarget {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| {
@@ -106,7 +106,7 @@ impl TargetRequest {
     &self,
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<PathBuf>,
-  ) -> BuiltInTarget<'_> {
+  ) -> BuiltInTarget {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))
@@ -124,7 +124,7 @@ impl TargetRequest {
     &self,
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<PathBuf>,
-  ) -> BuiltInTarget<'_> {
+  ) -> BuiltInTarget {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))
@@ -142,7 +142,7 @@ impl TargetRequest {
     &self,
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<PathBuf>,
-  ) -> BuiltInTarget<'_> {
+  ) -> BuiltInTarget {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))

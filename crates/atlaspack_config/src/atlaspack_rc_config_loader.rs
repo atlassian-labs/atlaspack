@@ -185,7 +185,7 @@ impl AtlaspackRcConfigLoader {
   pub fn load(
     &self,
     project_root: &Path,
-    options: LoadConfigOptions<'_>,
+    options: LoadConfigOptions,
   ) -> Result<(AtlaspackConfig, Vec<PathBuf>), DiagnosticError> {
     let resolve_from = self.resolve_from(project_root);
     let mut config_path = match options.config {
