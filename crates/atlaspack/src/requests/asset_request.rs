@@ -281,11 +281,12 @@ mod tests {
   use std::path::Path;
 
   fn make_asset(file_path: &str, file_type: FileType) -> Asset {
-    Asset {
-      file_path: PathBuf::from(file_path),
-      file_type,
-      ..Default::default()
-    }
+    let mut asset = Asset::default();
+
+    asset.file_path = PathBuf::from(file_path);
+    asset.file_type = file_type;
+
+    asset
   }
 
   fn assert_code(asset: &Asset, code: &str) {

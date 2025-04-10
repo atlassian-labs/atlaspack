@@ -50,7 +50,6 @@ mod tests {
     }
   }
 
-  #[allow(clippy::vec_init_then_push)]
   #[test]
   fn can_be_defined_in_dyn_vec() {
     let runtimes: Vec<Box<dyn RuntimePlugin>> = vec![Box::new(TestRuntimePlugin {})];

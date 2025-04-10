@@ -113,7 +113,10 @@ pub fn start_make_database_writer(
 
 /// Main-loop for the database writer thread
 fn run_database_writer(rx: Receiver<DatabaseWriterMessage>, writer: Arc<DatabaseWriter>) {
-  tracing::debug!("Starting database writer thread");
+  tracing::debug!(
+    "Starting database writer thread {:?}",
+    std::thread::current().id()
+  );
   let mut current_transaction: Option<RwTxn> = None;
 
   while let Ok(msg) = rx.recv() {

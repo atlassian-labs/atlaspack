@@ -147,11 +147,10 @@ impl FileSystem for InMemoryFileSystem {
     let path = self.canonicalize_impl(path);
     let files = self.files.read();
     let file = files.get(&path);
-    matches!(file, Some(InMemoryFileSystemEntry::Directory))
+    matches!(file, Some(InMemoryFileSystemEntry::Directory { .. }))
   }
 }
 
-#[allow(clippy::join_absolute_paths)]
 #[cfg(test)]
 mod tests {
   use super::*;
