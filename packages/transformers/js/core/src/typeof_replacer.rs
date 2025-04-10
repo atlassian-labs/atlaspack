@@ -1,9 +1,9 @@
+use swc_core::atoms::atom;
 use swc_core::common::Mark;
 use swc_core::ecma::ast::Expr;
 use swc_core::ecma::ast::Lit;
 use swc_core::ecma::ast::Str;
 use swc_core::ecma::ast::UnaryOp;
-use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use crate::utils::is_unresolved;
@@ -41,10 +41,10 @@ impl TypeofReplacer {
       return None;
     };
 
-    if ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark) {
+    if ident.sym == atom!("require") && is_unresolved(ident, self.unresolved_mark) {
       return Some(Expr::Lit(Lit::Str(Str {
         span: unary.span,
-        value: js_word!("function"),
+        value: atom!("function"),
         raw: None,
       })));
     }
@@ -52,15 +52,15 @@ impl TypeofReplacer {
     if &*ident.sym == "exports" && is_unresolved(ident, self.unresolved_mark) {
       return Some(Expr::Lit(Lit::Str(Str {
         span: unary.span,
-        value: js_word!("object"),
+        value: atom!("object"),
         raw: None,
       })));
     }
 
-    if ident.sym == js_word!("module") && is_unresolved(ident, self.unresolved_mark) {
+    if ident.sym == atom!("module") && is_unresolved(ident, self.unresolved_mark) {
       return Some(Expr::Lit(Lit::Str(Str {
         span: unary.span,
-        value: js_word!("object"),
+        value: atom!("object"),
         raw: None,
       })));
     }
