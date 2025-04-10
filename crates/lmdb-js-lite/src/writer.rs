@@ -5,9 +5,9 @@ use std::thread::JoinHandle;
 
 use crossbeam::channel::{Receiver, Sender};
 use heed::types::{Bytes, Str};
-use heed::EnvOpenOptions;
 use heed::{Env, RoTxn, RwTxn};
 use heed::{EnvFlags, MdbError};
+use heed::{EnvOpenOptions, WithTls};
 use napi_derive::napi;
 use rayon::prelude::*;
 
@@ -244,13 +244,13 @@ impl<'b> RwTransaction<'_, 'b> {
 }
 
 pub enum Transaction<'a, 'b> {
-  Owned(RoTxn<'b>),
-  Borrowed(&'a RoTxn<'b>),
+  Owned(RoTxn<'b, WithTls>),
+  Borrowed(&'a RoTxn<'b, WithTls>),
 }
 
 impl<'b> Transaction<'_, 'b> {
   #[allow(clippy::should_implement_trait)]
-  pub fn deref(&self) -> &RoTxn<'b> {
+  pub fn deref(&self) -> &RoTxn<'b, WithTls> {
     match self {
       Transaction::Borrowed(txn) => txn,
       #[allow(clippy::needless_borrow)]
@@ -349,13 +349,13 @@ impl DatabaseWriter {
   }
 
   /// Create a read transaction
-  pub fn read_txn(&self) -> heed::Result<RoTxn> {
+  pub fn read_txn(&self) -> heed::Result<RoTxn<'_, WithTls>> {
     self.environment.read_txn()
   }
 
   /// Create a static read transaction that owns a reference counted copy of
   /// the database environment
-  pub fn static_read_txn(&self) -> heed::Result<RoTxn<'static>> {
+  pub fn static_read_txn(&self) -> heed::Result<RoTxn<'static, WithTls>> {
     self.environment.clone().static_read_txn()
   }
 }
