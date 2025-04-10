@@ -113,11 +113,8 @@ pub fn start_make_database_writer(
 
 /// Main-loop for the database writer thread
 fn run_database_writer(rx: Receiver<DatabaseWriterMessage>, writer: Arc<DatabaseWriter>) {
-  tracing::debug!(
-    "Starting database writer thread {:?}",
-    std::thread::current().id()
-  );
-  let mut current_transaction: Option<RwTxn> = None;
+  tracing::debug!("Starting database writer thread");
+  let mut current_transaction: Option<RwTxn<'_>> = None;
 
   while let Ok(msg) = rx.recv() {
     if handle_message(&writer, &mut current_transaction, msg) {
@@ -407,7 +404,7 @@ impl DatabaseWriter {
   }
 
   /// Read an entry and decompress it
-  pub fn get(&self, txn: &RoTxn, key: &str) -> Result<Option<Vec<u8>>> {
+  pub fn get(&self, txn: &RoTxn<'_>, key: &str) -> Result<Option<Vec<u8>>> {
     if let Some(result) = self.database.get(txn, key)? {
       let output_buffer = lz4_flex::block::decompress_size_prepended(result)?;
       Ok(Some(output_buffer))
@@ -417,7 +414,7 @@ impl DatabaseWriter {
   }
 
   /// Compress an entry and store it
-  pub fn put(&self, txn: &mut RwTxn, key: &str, data: &[u8]) -> Result<()> {
+  pub fn put(&self, txn: &mut RwTxn<'_>, key: &str, data: &[u8]) -> Result<()> {
     let compressed_data = lz4_flex::block::compress_prepend_size(data);
     self.database.put(txn, key, &compressed_data)?;
     Ok(())
@@ -434,7 +431,7 @@ impl DatabaseWriter {
   }
 
   /// Create a read transaction
-  pub fn read_txn(&self) -> heed::Result<RoTxn> {
+  pub fn read_txn(&self) -> heed::Result<RoTxn<'_>> {
     self.environment.read_txn()
   }
 

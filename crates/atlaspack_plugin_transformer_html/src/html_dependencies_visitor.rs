@@ -58,7 +58,7 @@ impl HtmlDependenciesVisitor {
     dependency_id
   }
 
-  fn add_resource(&mut self, attrs: &mut Attrs, name: ExpandedName) {
+  fn add_resource(&mut self, attrs: &mut Attrs<'_>, name: ExpandedName<'_>) {
     if let Some(url) = attrs.get(name) {
       if url.starts_with("/") {
         return;

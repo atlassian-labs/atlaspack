@@ -279,8 +279,8 @@ pub struct VCSFile {
 }
 
 fn get_file_contents_at_commit(
-  repo: &Path,
-  commit: &str,
+  repo: &Repository,
+  commit: &git2::Commit<'_>,
   path: &Path,
 ) -> anyhow::Result<Option<String>> {
   let result = Command::new("git")

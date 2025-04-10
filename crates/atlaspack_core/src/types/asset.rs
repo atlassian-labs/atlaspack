@@ -112,7 +112,7 @@ pub struct CreateAssetIdParams<'a> {
   pub unique_key: Option<&'a str>,
 }
 
-pub fn create_asset_id(params: CreateAssetIdParams) -> String {
+pub fn create_asset_id(params: CreateAssetIdParams<'_>) -> String {
   tracing::debug!(?params, "Creating asset id");
 
   let CreateAssetIdParams {
