@@ -4,6 +4,9 @@ name = "atlaspack-js-swc-core"
 version = "0.1.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [lib]
 crate-type = ["rlib"]
 
