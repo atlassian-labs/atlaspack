@@ -239,6 +239,7 @@ jobs:
 
   build-and-release-changesets:
     name: Build and release Changesets
+    permissions: write-all
     needs:
       - build-linux-gnu-arm
       - build-linux-gnu-x64
