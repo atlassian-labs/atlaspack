@@ -34,7 +34,8 @@ fn absolute(cwd: &Path, path: &Path) -> PathBuf {
 
 /// Finds the common path prefix shared between all input paths
 fn common_path(paths: &[PathBuf]) -> Option<PathBuf> {
-  let mut path_components: Vec<Components> = paths.iter().map(|path| path.components()).collect();
+  let mut path_components: Vec<Components<'_>> =
+    paths.iter().map(|path| path.components()).collect();
   let mut common_path: Option<PathBuf> = None;
 
   loop {
@@ -42,7 +43,7 @@ fn common_path(paths: &[PathBuf]) -> Option<PathBuf> {
     let components = path_components
       .iter_mut()
       .map(Iterator::next)
-      .collect::<Vec<Option<Component>>>();
+      .collect::<Vec<Option<Component<'_>>>>();
 
     // When the first component is available, check if all other components match as well
     if let Some(Some(component)) = components.first() {
