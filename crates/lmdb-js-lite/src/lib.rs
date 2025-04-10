@@ -41,6 +41,7 @@ use std::fmt::Debug;
 use std::sync::{Arc, Mutex, Weak};
 
 use anyhow::anyhow;
+use heed::WithTls;
 use lazy_static::lazy_static;
 use napi::bindgen_prelude::Env;
 use napi::JsUnknown;
@@ -146,7 +147,7 @@ pub struct NativeEntry {
 #[napi]
 pub struct LMDB {
   inner: Option<Arc<DatabaseHandle>>,
-  read_transaction: Option<heed::RoTxn<'static>>,
+  read_transaction: Option<heed::RoTxn<'static, WithTls>>,
 }
 
 #[napi]
