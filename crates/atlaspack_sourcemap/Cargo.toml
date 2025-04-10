@@ -5,6 +5,9 @@ version = "0.1.0"
 edition = "2021"
 description = "Sourcemaps for Atlaspack"
 
+[lints]
+workspace = true
+
 [dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 parcel_sourcemap = { workspace = true, features = ["json"] }

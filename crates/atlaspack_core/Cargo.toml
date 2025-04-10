@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "Core logic and types for the atlaspack bundler"
 
+[lints]
+workspace = true
+
 [features]
 default = []
 

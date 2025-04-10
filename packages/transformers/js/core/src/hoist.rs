@@ -2591,7 +2591,7 @@ mod tests {
             module.exports.foo = 2;
             console.log(module.exports.foo);
           ",
-          &indoc! {"
+          indoc! {"
             var $abc$var$module = {
                 exports: {}
             };

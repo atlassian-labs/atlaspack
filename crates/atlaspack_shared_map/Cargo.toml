@@ -5,6 +5,9 @@ authors = ["Pedro Tacla Yamada <tacla.yamada@gmail.com>"]
 version = "0.1.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 thread_local = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }

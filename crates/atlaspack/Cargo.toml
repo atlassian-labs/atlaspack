@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "Atlaspack Bundler"
 
+[lints]
+workspace = true
+
 [features]
 nodejs = ["atlaspack_plugin_rpc/nodejs"]
 

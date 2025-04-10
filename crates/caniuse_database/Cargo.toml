@@ -3,6 +3,9 @@ name = "caniuse_database"
 version = "0.1.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 browserslist-rs = { workspace = true }
 lazy_static = { workspace = true }

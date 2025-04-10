@@ -239,6 +239,7 @@ jobs:
 
   build-and-release-changesets:
     name: Build and release Changesets
+    permissions: write-all
     needs:
       - build-linux-gnu-arm
       - build-linux-gnu-x64
@@ -257,17 +258,6 @@ jobs:
           path: artifacts
       - name: Move bindings
         run: for d in artifacts/bindings-*/*/*; do cp $d/*.node packages/$(basename $(dirname $d))/$(basename $d); done
-      - name: Move debug symbols
-        run: |
-          mkdir debug-symbols
-          find artifacts -name "*.debug" -exec cp {} debug-symbols/ \;
-          find artifacts -name "*.node" -path "**/DWARF/**" -exec cp {} debug-symbols/ \;
-          ls -l debug-symbols
-      - name: Upload combined debug symbols artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-symbols
-          path: debug-symbols/**
       - uses: changesets/action@v1
         with:
           publish: yarn changeset publish

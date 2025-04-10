@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "FileSystem wrapper trait for use in Atlaspack codebase."
 
+[lints]
+workspace = true
+
 [dependencies]
 anyhow = { workspace = true }
 atlaspack_shared_map = { path = "../atlaspack_shared_map" }
