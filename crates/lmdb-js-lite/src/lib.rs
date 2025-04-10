@@ -173,6 +173,7 @@ impl LMDB {
       .send(DatabaseWriterMessage::Get {
         key,
         resolve: Box::new(|value| match value {
+          #[allow(clippy::useless_conversion)]
           Ok(value) => deferred.resolve(move |_| Ok(value.map(Buffer::from))),
           Err(err) => deferred.reject(napi_error(err)),
         }),
@@ -225,10 +226,12 @@ impl LMDB {
       .map_err(|err| napi_error(anyhow!(err)))?;
 
     for key in keys {
+      #[allow(clippy::useless_conversion)]
       let buffer = database
         .get(&txn, &key)
         .map_err(|err| napi_error(anyhow!(err)))?
         .map(Buffer::from);
+
       results.push(buffer);
     }
 

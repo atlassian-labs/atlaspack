@@ -58,10 +58,7 @@ mod tests {
 
   #[test]
   fn can_be_defined_in_dyn_vec() {
-    let mut reporters = Vec::<Box<dyn ReporterPlugin>>::new();
-
-    reporters.push(Box::new(TestReporterPlugin {}));
-
+    let reporters = [Box::new(TestReporterPlugin {})];
     assert_eq!(reporters.len(), 1);
   }
 }

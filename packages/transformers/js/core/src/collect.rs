@@ -971,7 +971,7 @@ impl Visit for Collect {
         Expr::Member(member) => {
           // import('foo').then(foo => ...);
           if let Some(source) = match_import(&member.obj) {
-            if match_property_name(member).map_or(false, |f| &*f.0 == "then") {
+            if match_property_name(member).is_some_and(|f| &*f.0 == "then") {
               if let Some(ExprOrSpread { expr, .. }) = node.args.first() {
                 let param = match &**expr {
                   Expr::Fn(func) => func.function.params.first().map(|param| &param.pat),
@@ -2151,7 +2151,7 @@ mod tests {
   fn map_non_static_access(non_static_access: HashMap<Id, Vec<Span>>) -> HashSet<JsWord> {
     non_static_access
       .into_keys()
-      .map(|key| JsWord::from(key.0))
+      .map(|key| key.0)
       .collect::<HashSet<JsWord>>()
   }
 

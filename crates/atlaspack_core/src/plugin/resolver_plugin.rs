@@ -105,10 +105,7 @@ mod tests {
 
   #[test]
   fn can_be_defined_in_dyn_vec() {
-    let mut resolvers = Vec::<Box<dyn ResolverPlugin>>::new();
-
-    resolvers.push(Box::new(TestResolverPlugin {}));
-
+    let resolvers = [Box::new(TestResolverPlugin {})];
     assert_eq!(resolvers.len(), 1);
   }
 }
