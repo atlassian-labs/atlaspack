@@ -1653,9 +1653,10 @@ mod tests {
   }
 
   fn make_config() -> Config {
-    let mut config = Config::default();
-    config.is_browser = true;
-    config
+    Config {
+      is_browser: true,
+      ..Default::default()
+    }
   }
 
   fn make_placeholder_hash(specifier: &str, dependency_kind: DependencyKind) -> String {
@@ -1714,8 +1715,10 @@ mod tests {
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let mut config = Config::default();
-    config.source_type = SourceType::Script;
+    let config = Config {
+      source_type: SourceType::Script,
+      ..Default::default()
+    };
 
     let input_code = r#"
       const { x } = await import('other');

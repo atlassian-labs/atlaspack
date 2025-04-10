@@ -596,8 +596,7 @@ mod tests {
       .await
       .expect("Failed to run asset graph request")
     else {
-      assert!(false, "Got invalid result");
-      return;
+      panic!("Got invalid result");
     };
 
     assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 1);
@@ -693,8 +692,7 @@ mod tests {
       .await
       .expect("Failed to run asset graph request")
     else {
-      assert!(false, "Got invalid result");
-      return;
+      panic!("Got invalid result");
     };
 
     // Entry, 2 assets + helpers file

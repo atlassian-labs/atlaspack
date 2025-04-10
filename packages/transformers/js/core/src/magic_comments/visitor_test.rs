@@ -17,8 +17,10 @@ pub fn parse(code: &str) -> anyhow::Result<Program> {
 
   let comments = SingleThreadedComments::default();
   let syntax = {
-    let mut tsconfig = TsSyntax::default();
-    tsconfig.tsx = true;
+    let tsconfig = TsSyntax {
+      tsx: true,
+      ..Default::default()
+    };
     Syntax::Typescript(tsconfig)
   };
 

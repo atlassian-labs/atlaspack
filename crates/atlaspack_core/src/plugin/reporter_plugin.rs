@@ -57,6 +57,7 @@ mod tests {
     }
   }
 
+  #[allow(clippy::vec_init_then_push)]
   #[test]
   fn can_be_defined_in_dyn_vec() {
     let reporters: Vec<Box<dyn ReporterPlugin>> = vec![Box::new(TestReporterPlugin {})];
