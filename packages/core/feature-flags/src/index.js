@@ -20,6 +20,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   inlineBundlesSourceMapFixes: false,
   conditionalBundlingNestedRuntime: false,
   patchProjectPaths: false,
+  enableVCSEventsShadowReads: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
