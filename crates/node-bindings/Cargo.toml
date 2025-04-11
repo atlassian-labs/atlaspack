@@ -27,6 +27,7 @@ atlaspack_vcs = { path = "../atlaspack_vcs" }
 atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 
+aho-corasick = { workspace = true }
 anyhow = { workspace = true }
 glob = { workspace = true }
 log = { workspace = true }
@@ -51,7 +52,12 @@ crossbeam-channel = { workspace = true }
 indexmap = { workspace = true }
 libc = { workspace = true }
 mozjpeg-sys = { workspace = true }
-napi = { workspace = true, features = ["async", "napi4", "napi5", "serde-json"] }
+napi = { workspace = true, features = [
+  "async",
+  "napi4",
+  "napi5",
+  "serde-json",
+] }
 once_cell = { workspace = true }
 oxipng = { workspace = true }
 rayon = { workspace = true }
