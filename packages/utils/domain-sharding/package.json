@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/domain-sharding",
-  "version": "2.13.1",
+  "version": "2.14.1",
   "license": "(MIT OR Apache-2.0)",
   "source": "src/index.js",
   "main": "lib/index.js",
@@ -16,7 +16,6 @@
     "build-ts": "tsc src/index.js --allowJs --declaration --emitDeclarationOnly --outDir lib"
   },
   "engines": {
-    "atlaspack": "^2.12.0",
     "node": ">= 16.0.0"
   },
   "devDependencies": {

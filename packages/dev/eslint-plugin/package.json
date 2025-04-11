@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/eslint-plugin",
   "private": true,
-  "version": "2.13.1",
+  "version": "2.14.1",
   "main": "index.js",
   "scripts": {},
   "dependencies": {

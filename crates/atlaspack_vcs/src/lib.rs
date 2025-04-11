@@ -113,7 +113,7 @@
 //!
 
 use anyhow::anyhow;
-use git2::{DiffOptions, Repository};
+use git2::Repository;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -201,7 +201,7 @@ pub fn list_yarn_states(
   failure_mode: FailureMode,
 ) -> anyhow::Result<Vec<YarnSnapshot>> {
   let yarn_lock_files = vcs_list_yarn_lock_files(repo)?;
-  tracing::info!("Found yarn.lock files");
+  tracing::info!(?failure_mode, "Found yarn.lock files");
 
   let yarn_states = yarn_lock_files
     .par_iter()
@@ -209,11 +209,24 @@ pub fn list_yarn_states(
       let yarn_lock_path = repo.join(file);
       let node_modules_relative_path = yarn_lock_path.parent().unwrap().join("node_modules");
 
-      let yarn_lock_blob = std::fs::read(&yarn_lock_path)?;
-      let yarn_lock: Result<YarnLock, _> = parse_yarn_lock(&String::from_utf8(yarn_lock_blob)?);
+      let yarn_lock_blob = std::fs::read(&yarn_lock_path)
+        .map_err(|err| anyhow!("Failed to read {yarn_lock_path:?} from FS: {err}"));
+
+      if failure_mode != FailureMode::FailOnMissingNodeModules && yarn_lock_blob.is_err() {
+        return Ok(None);
+      };
+
+      let yarn_lock_blob = yarn_lock_blob?;
+      let yarn_lock: Result<YarnLock, _> = parse_yarn_lock(
+        &String::from_utf8(yarn_lock_blob)
+          .map_err(|err| anyhow!("Failed to parse {yarn_lock_path:?} as UTF-8: {err}"))?,
+      )
+      .map_err(|err| anyhow!("Failed to parse {yarn_lock_path:?}: {err}"));
+
       if failure_mode != FailureMode::FailOnMissingNodeModules && yarn_lock.is_err() {
         return Ok(None);
       };
+
       let yarn_lock = yarn_lock?;
 
       let node_modules_path = repo.join(&node_modules_relative_path);
@@ -318,7 +331,6 @@ pub enum FileChangeType {
 
 pub fn get_changed_files_from_git(
   repo_path: &Path,
-  repo: &Repository,
   old_commit: &git2::Commit<'_>,
   new_commit: &git2::Commit<'_>,
   dirty_files: &[VCSFile],
@@ -327,66 +339,23 @@ pub fn get_changed_files_from_git(
   let mut changed_files = Vec::new();
 
   // list current dirty files
-  tracing::info!("Listing dirty files");
-
+  tracing::info!("Listing dirty files...");
   get_status_with_git_cli(repo_path, &mut tracked_changes, &mut changed_files)?;
+  tracing::info!(num_dirty_files = changed_files.len(), "Listed dirty files");
 
-  tracing::info!("Calculating git diff");
-  let mut diff_options = DiffOptions::new();
-
-  let diff = repo.diff_tree_to_tree(
-    Some(&old_commit.tree()?),
-    Some(&new_commit.tree()?),
-    Some(&mut diff_options),
+  tracing::info!(?old_commit, ?new_commit, "Calculating git diff...");
+  get_diff_with_git_cli(
+    repo_path,
+    old_commit,
+    new_commit,
+    &mut tracked_changes,
+    &mut changed_files,
   )?;
 
-  diff.foreach(
-    &mut |delta, _| {
-      if let Some(new_file_path) = delta.new_file().path() {
-        let new_file_path = repo_path.join(new_file_path);
-
-        let status = delta.status();
-        if status == git2::Delta::Renamed {
-          if let Some(old_file_path) = delta.old_file().path() {
-            let old_file_path = repo_path.join(old_file_path);
-            tracked_changes.insert(old_file_path.clone());
-            changed_files.push(FileChangeEvent {
-              path: old_file_path,
-              change_type: FileChangeType::Delete,
-            });
-          }
-
-          tracked_changes.insert(new_file_path.clone());
-          changed_files.push(FileChangeEvent {
-            path: new_file_path,
-            change_type: FileChangeType::Create,
-          });
-          return true;
-        }
-
-        changed_files.push(FileChangeEvent {
-          path: new_file_path,
-          change_type: match status {
-            git2::Delta::Added => FileChangeType::Create,
-            git2::Delta::Modified => FileChangeType::Update,
-            git2::Delta::Deleted => FileChangeType::Delete,
-            git2::Delta::Unmodified => FileChangeType::Update,
-            git2::Delta::Copied => FileChangeType::Create,
-            git2::Delta::Ignored => FileChangeType::Update,
-            git2::Delta::Untracked => FileChangeType::Update,
-            git2::Delta::Typechange => FileChangeType::Update,
-            git2::Delta::Unreadable => FileChangeType::Update,
-            git2::Delta::Conflicted => FileChangeType::Update,
-            git2::Delta::Renamed => panic!("Impossible branch"),
-          },
-        });
-      }
-      true
-    },
-    None,
-    None,
-    None,
-  )?;
+  tracing::info!(
+    num_changed_files = changed_files.len(),
+    "Calculated git diff"
+  );
 
   // we could content hash the files here to filter out changes that are not
   // relevant
@@ -401,6 +370,51 @@ pub fn get_changed_files_from_git(
   }
 
   Ok(changed_files)
+}
+
+fn get_diff_with_git_cli(
+  repo_path: &Path,
+  old_commit: &git2::Commit<'_>,
+  new_commit: &git2::Commit<'_>,
+  tracked_changes: &mut HashSet<PathBuf>,
+  changed_files: &mut Vec<FileChangeEvent>,
+) -> anyhow::Result<()> {
+  if old_commit.id() == new_commit.id() {
+    return Ok(());
+  }
+
+  let output = Command::new("git")
+    .arg("diff")
+    .arg("--name-status")
+    .arg(format!("{}...{}", old_commit.id(), new_commit.id()))
+    .current_dir(repo_path)
+    .output()?;
+
+  if !output.status.success() {
+    return Err(anyhow::anyhow!("Git diff failed"));
+  }
+
+  let output = String::from_utf8(output.stdout)?;
+  let lines = output.split_terminator('\n');
+  for line in lines {
+    let status = line
+      .chars()
+      .next()
+      .ok_or_else(|| anyhow!("Invalid git diff line: {}", line))?;
+    let path = line.split_whitespace().skip(1).collect::<String>();
+    let path = repo_path.join(path);
+    let change_type = match status {
+      'A' => FileChangeType::Create,
+      'D' => FileChangeType::Delete,
+      'M' => FileChangeType::Update,
+      _ => FileChangeType::Update,
+    };
+
+    tracked_changes.insert(path.clone());
+    changed_files.push(FileChangeEvent { path, change_type });
+  }
+
+  Ok(())
 }
 
 /// Query git status from the CLI. This is because libgit2 does not support
@@ -427,7 +441,7 @@ fn get_status_with_git_cli(
       .chars()
       .nth(1)
       .ok_or_else(|| anyhow!("Invalid git status line: {}", line))?;
-    let path = line.chars().skip(3).collect::<String>();
+    let path = line.split_whitespace().skip(1).collect::<String>();
     let path = repo_path.join(path);
     let change_type = match status {
       'A' => FileChangeType::Create,
@@ -454,13 +468,8 @@ pub fn get_changed_files(
     .revparse_single(new_rev.unwrap_or("HEAD"))?
     .peel_to_commit()?;
 
-  let mut changed_files = get_changed_files_from_git(
-    repo_path,
-    &repo,
-    &old_commit,
-    &new_commit,
-    &vcs_state.dirty_files,
-  )?;
+  let mut changed_files =
+    get_changed_files_from_git(repo_path, &old_commit, &new_commit, &vcs_state.dirty_files)?;
   tracing::trace!("Changed files: {:?}", changed_files);
 
   tracing::debug!("Reading yarn.lock from {} and {:?}", old_rev, new_rev);

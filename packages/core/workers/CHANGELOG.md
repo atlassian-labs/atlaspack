@@ -1,5 +1,39 @@
 # @atlaspack/workers
 
+## 2.14.1
+
+### Patch Changes
+
+- [#478](https://github.com/atlassian-labs/atlaspack/pull/478) [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b) Thanks [@yamadapc](https://github.com/yamadapc)! - The first attempt at Version Packages didn't include the built artifacts.
+  This has hopefully been fixed, so this change will force those packages to re-release.
+- Updated dependencies [[`ce13d5e`](https://github.com/atlassian-labs/atlaspack/commit/ce13d5e885d55518ee6318e7a72e3a6e4e5126f2), [`e1422ad`](https://github.com/atlassian-labs/atlaspack/commit/e1422ad0a801faaa4bc4f1023bed042ffe236e9b), [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b)]:
+  - @atlaspack/utils@2.14.1
+  - @atlaspack/types-internal@2.14.1
+  - @atlaspack/diagnostic@2.14.1
+  - @atlaspack/logger@2.14.1
+  - @atlaspack/profiler@2.14.1
+  - @atlaspack/build-cache@2.13.3
+
+## 2.14.0
+
+### Minor Changes
+
+- [#339](https://github.com/atlassian-labs/atlaspack/pull/339) [`bfe81e5`](https://github.com/atlassian-labs/atlaspack/commit/bfe81e551c4e4bb2cac7fc4745222e66962c1728) Thanks [@yamadapc](https://github.com/yamadapc)! - Update cache invalidation metrics with build type
+
+### Patch Changes
+
+- [#416](https://github.com/atlassian-labs/atlaspack/pull/416) [`1de1c81`](https://github.com/atlassian-labs/atlaspack/commit/1de1c8138fbe4d38a64aa1f3c22a70aad59fb5bb) Thanks [@alshdavid](https://github.com/alshdavid)! - Replace require.resolve with path.join
+
+- [#414](https://github.com/atlassian-labs/atlaspack/pull/414) [`eff9809`](https://github.com/atlassian-labs/atlaspack/commit/eff98093703b9999a511b87a19562f5aaccfcb53) Thanks [@alshdavid](https://github.com/alshdavid)! - Added type:commonjs to package.json files
+
+- Updated dependencies [[`bfe81e5`](https://github.com/atlassian-labs/atlaspack/commit/bfe81e551c4e4bb2cac7fc4745222e66962c1728), [`4837b69`](https://github.com/atlassian-labs/atlaspack/commit/4837b6988e56ca842a24797b796160964d3696ce), [`eff9809`](https://github.com/atlassian-labs/atlaspack/commit/eff98093703b9999a511b87a19562f5aaccfcb53), [`4812d0f`](https://github.com/atlassian-labs/atlaspack/commit/4812d0f7400af0f8416f1b7175ecb87700860a68), [`3005307`](https://github.com/atlassian-labs/atlaspack/commit/30053076dfd20ca62ddbc682f58adb994029ac55)]:
+  - @atlaspack/diagnostic@2.14.0
+  - @atlaspack/logger@2.14.0
+  - @atlaspack/profiler@2.14.0
+  - @atlaspack/types-internal@2.14.0
+  - @atlaspack/utils@2.14.0
+  - @atlaspack/build-cache@2.13.2
+
 ## 2.13.1
 
 ### Patch Changes

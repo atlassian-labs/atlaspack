@@ -17,7 +17,7 @@ const {
     readAndDeserializeRequestGraph,
     requestGraphEdgeTypes,
   },
-  LMDBCache,
+  LMDBLiteCache,
 } = require('./deep-imports.js');
 
 export async function loadGraphs(cacheDir: string): Promise<{|
@@ -74,7 +74,7 @@ export async function loadGraphs(cacheDir: string): Promise<{|
 
   let {requestGraphBlob, bundleGraphBlob, assetGraphBlob} =
     getMostRecentCacheBlobs();
-  const cache = new LMDBCache(cacheDir);
+  const cache = new LMDBLiteCache(cacheDir);
 
   // Get requestTracker
   let requestTracker;

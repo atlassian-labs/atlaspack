@@ -1,5 +1,18 @@
 # @atlaspack/e2e-tests
 
+## 2.14.1
+
+### Patch Changes
+
+- [#478](https://github.com/atlassian-labs/atlaspack/pull/478) [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b) Thanks [@yamadapc](https://github.com/yamadapc)! - The first attempt at Version Packages didn't include the built artifacts.
+  This has hopefully been fixed, so this change will force those packages to re-release.
+
+## 2.14.0
+
+### Minor Changes
+
+- [#339](https://github.com/atlassian-labs/atlaspack/pull/339) [`bfe81e5`](https://github.com/atlassian-labs/atlaspack/commit/bfe81e551c4e4bb2cac7fc4745222e66962c1728) Thanks [@yamadapc](https://github.com/yamadapc)! - Update cache invalidation metrics with build type
+
 ## 2.13.1
 
 ### Patch Changes
