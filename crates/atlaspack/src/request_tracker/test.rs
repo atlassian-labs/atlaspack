@@ -117,13 +117,13 @@ async fn run_sub_request(request_tracker: &mut RequestTracker, request: &TestReq
 /// This is a universal "Request" that can be instructed
 /// to run subrequests via the constructor
 #[derive(Clone, Debug)]
-pub enum TestRequestType {
+enum TestRequestType {
   Simple(TestRequest),
   WithInvalidation(TestRequestWithInvalidation),
 }
 
 #[derive(Clone, Default, Debug)]
-pub struct TestRequest {
+struct TestRequest {
   pub runs: Arc<AtomicUsize>,
   pub name: String,
   pub subrequests: Vec<TestRequestType>,
