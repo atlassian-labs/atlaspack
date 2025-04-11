@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/babel-plugin-transform-contextual-imports",
-  "version": "2.13.1",
+  "version": "2.14.0",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
