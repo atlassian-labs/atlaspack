@@ -168,4 +168,65 @@ describe('inline requires', () => {
     expect(originalPosition.line).toBe(7);
     expect(originalPosition.source).toBe('inline-requires/index.js');
   });
+
+  it('produces valid code', async () => {
+    await fsFixture(overlayFS, __dirname)`
+        inline-requires
+          dependency/index.js:
+            export function exportedFunction() {
+              return 10 + 20;
+            }
+
+          other.js:
+            // this is here so that we don't scope hoist dependency/index.js
+            import {exportedFunction} from './dependency';
+            console.log(exportedFunction());
+
+          index.js:
+            import {exportedFunction} from './dependency';
+
+            import('./other');
+
+            setTimeout(() => {
+              const x = 255 / /* @__PURE__ */ exportedFunction();
+              console.log('line 7', x);
+            }, 5000);
+
+          dependency/package.json:
+            {
+              "sideEffects": false
+            }
+
+          .parcelrc:
+            {
+              "extends": "@atlaspack/config-default",
+              "optimizers": {
+                "*.js": ["@atlaspack/optimizer-inline-requires", "..."]
+              }
+            }
+    `;
+
+    const bundleGraph = await bundle(
+      path.join(__dirname, 'inline-requires/index.js'),
+      {
+        ...options,
+        inputFS: overlayFS,
+        config: path.join(__dirname, 'inline-requires/.parcelrc'),
+        mode: 'production',
+        defaultTargetOptions: {
+          sourceMaps: true,
+        },
+      },
+    );
+    const bundles = bundleGraph.getBundles();
+    const mainBundle = bundles.find((b) => b.name === 'index.js');
+    const otherBundle = bundles.find((b) => b.name.includes('other'));
+    if (mainBundle == null) throw new Error('There was no JS bundle');
+    if (otherBundle == null) throw new Error('There was no JS bundle');
+    const bundleContents = overlayFS.readFileSync(mainBundle.filePath, 'utf8');
+    // If the optimizer is not stripping out comments, this should still show-up as
+    // 255/ /* @__PURE__ */...
+    // but it's important that there is a space between the slash and the comment.
+    expect(bundleContents).toContain('255/(0');
+  });
 });
