@@ -70,16 +70,22 @@ export type AtlaspackNapiOptions = {|
 
 // AtlaspackNapi
 export type AtlaspackNapi = {||};
-declare export function atlaspackNapiCreate(options: AtlaspackNapiOptions, lmdb: mixed): Promise<AtlaspackNapi>;
-declare export function atlaspackNapiBuildAssetGraph(atlaspack: AtlaspackNapi): Promise<any>;
-declare export function atlaspackNapiRespondToFsEvents(atlaspack: AtlaspackNapi, events: WatchEvents): Promise<[boolean, any]>;
+declare export function atlaspackNapiCreate(
+  options: AtlaspackNapiOptions,
+  lmdb: mixed,
+): Promise<AtlaspackNapi>;
+declare export function atlaspackNapiBuildAssetGraph(
+  atlaspack: AtlaspackNapi,
+): Promise<any>;
+declare export function atlaspackNapiRespondToFsEvents(
+  atlaspack: AtlaspackNapi,
+  events: WatchEvents,
+): Promise<[boolean, any]>;
 // AtlaspackNapi
 
 declare export function getAvailableThreads(): number;
 
-declare export function newNodejsWorker(
-  delegate: any,
-): Transferable;
+declare export function newNodejsWorker(delegate: any): Transferable;
 
 declare export function initializeMonitoring(): void;
 declare export function closeMonitoring(): void;
@@ -307,6 +313,16 @@ export interface LmdbEntry {
   key: string;
   value: Buffer;
 }
+
+export type StringReplacement = {|
+  from: string,
+  to: string,
+|};
+
+declare export function performStringReplacements(
+  input: string,
+  replacements: Array<StringReplacement>,
+): string;
 
 declare export class Lmdb {
   constructor(options: LmdbOptions): Lmdb;

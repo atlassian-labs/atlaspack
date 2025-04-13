@@ -1,3 +1,6 @@
+[target.'cfg(target_env = "gnu")']
+rustflags = ["-C", "link-args=-Wl,-z,nodelete"]
+
 [target.x86_64-unknown-linux-gnu]
 # This turns the presence of undefined symbols in the output binary into a
 # warning instead of an error when linking.
@@ -15,7 +18,7 @@
 # unit-testing, however if this crate depends on a crate B that also defines
 # `napi` bindings, the linker will fail because B will have been compiled
 # without the testing mode noop removal.
-rustflags = ["-C", "link-args=-Wl,--warn-unresolved-symbols"]
+rustflags = ["-C", "link-args=-Wl,-z,nodelete,--warn-unresolved-symbols"]
 
 [target.x86_64-apple-darwin]
 rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
@@ -25,12 +28,15 @@ rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
 
 [target.arm-unknown-linux-gnueabihf]
 linker = "arm-linux-gnueabihf-gcc"
+rustflags = ["-C", "link-args=-Wl,-z,nodelete"]
 
 [target.armv7-unknown-linux-gnueabihf]
 linker = "arm-linux-gnueabihf-gcc"
+rustflags = ["-C", "link-args=-Wl,-z,nodelete"]
 
 [target.aarch64-unknown-linux-gnu]
 linker = "aarch64-linux-gnu-gcc"
+rustflags = ["-C", "link-args=-Wl,-z,nodelete"]
 
 [target.aarch64-unknown-linux-musl]
 linker = "aarch64-linux-musl-gcc"

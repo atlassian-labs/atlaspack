@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/codeframe",
-  "version": "2.13.1",
+  "version": "2.13.3",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",

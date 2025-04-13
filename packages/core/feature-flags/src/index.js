@@ -12,7 +12,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   useWatchmanWatcher: false,
   importRetry: false,
   fixQuadraticCacheInvalidation: 'OLD',
-  useLmdbJsLite: false,
+  useLmdbJsLite: true,
   conditionalBundlingApi: false,
   vcsMode: 'OLD',
   loadableSideEffects: false,
@@ -20,6 +20,9 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   inlineBundlesSourceMapFixes: false,
   conditionalBundlingNestedRuntime: false,
   patchProjectPaths: false,
+  enableRustWorkerThreadDylibHack: true,
+  inlineStringReplacementPerf: false,
+  conditionalBundlingAsyncRuntime: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

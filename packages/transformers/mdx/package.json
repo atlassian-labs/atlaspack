@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-mdx",
-  "version": "2.13.1",
+  "version": "2.14.1",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -12,12 +12,11 @@
   "main": "lib/MDXTransformer.js",
   "source": "src/MDXTransformer.js",
   "engines": {
-    "atlaspack": "^2.12.0",
     "node": ">= 16.0.0"
   },
   "dependencies": {
     "@mdx-js/mdx": "^1.6.22",
-    "@atlaspack/plugin": "2.13.1"
+    "@atlaspack/plugin": "2.14.1"
   },
   "peerDependencies": {
     "@mdx-js/react": "^1.6.22"

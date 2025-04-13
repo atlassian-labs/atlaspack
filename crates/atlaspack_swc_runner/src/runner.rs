@@ -1,5 +1,4 @@
 use std::string::FromUtf8Error;
-use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::input::StringInput;
 use swc_core::common::sync::Lrc;
 use swc_core::common::util::take::Take;
@@ -113,13 +112,12 @@ fn run_with_transformation<R>(
 ) -> Result<RunWithTransformationOutput<R>, RunWithTransformationError> {
   let source_map = Lrc::new(SourceMap::default());
   let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), code.into());
-  let comments = SingleThreadedComments::default();
 
   let lexer = Lexer::new(
     Default::default(),
     Default::default(),
     StringInput::from(&*source_file),
-    Some(&comments),
+    None,
   );
 
   let mut parser = Parser::new_from(lexer);
@@ -166,7 +164,7 @@ fn run_with_transformation<R>(
       let mut emitter = swc_core::ecma::codegen::Emitter {
         cfg: Config::default(),
         cm: source_map.clone(),
-        comments: Some(&comments),
+        comments: None,
         wr: writer,
       };
 

@@ -1697,11 +1697,14 @@ async function loadRequestGraph(options): Async<RequestGraph> {
         });
       }, 5000);
       let startTime = Date.now();
-      let events = await options.inputFS.getEventsSince(
-        options.watchDir,
-        snapshotPath,
-        opts,
-      );
+      let events =
+        process.env.ATLASPACK_BYPASS_CACHE_INVALIDATION === 'true'
+          ? []
+          : await options.inputFS.getEventsSince(
+              options.watchDir,
+              snapshotPath,
+              opts,
+            );
       clearTimeout(timeout);
 
       logger.verbose({

@@ -27,6 +27,7 @@ mod atlaspack;
 pub mod lmdb;
 mod optimizers;
 mod resolver;
+mod string_ops;
 mod transformer;
 pub mod vcs;
 
