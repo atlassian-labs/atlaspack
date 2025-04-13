@@ -17,7 +17,6 @@ declare module "assert" {
       message?: string
     ): void;
     doesNotThrow(block: Function, message?: string): void;
-    doesNotReject(asyncFn: Function, message?: string): void;
     ifError(value: any): void;
     AssertionError: typeof AssertionError;
     strict: AssertStrict;
@@ -43,7 +42,6 @@ declare module "assert" {
       message?: string
     ): void,
     doesNotThrow(block: Function, message?: string): void,
-    doesNotReject(asyncFn: Function, message?: string): void;
     rejects(
       block: Function,
       error?: Function | RegExp | (err: any) => boolean,
