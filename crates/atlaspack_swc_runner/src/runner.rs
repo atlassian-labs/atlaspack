@@ -107,7 +107,7 @@ type RunWithTransformationOutput<R> = (String, R, Vec<u8>);
 
 /// Parse code, run resolver over it, then run the `tranform` function with the parsed module
 /// codegen and return the results.
-fn run_with_transformation<R>(
+pub fn run_with_transformation<R>(
   code: &str,
   transform: impl FnOnce(RunContext, &mut Module) -> R,
 ) -> Result<RunWithTransformationOutput<R>, RunWithTransformationError> {
