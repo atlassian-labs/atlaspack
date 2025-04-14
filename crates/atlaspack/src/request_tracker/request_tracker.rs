@@ -28,6 +28,7 @@ use super::RequestEdgeType;
 use super::RequestGraph;
 use super::RequestId;
 use super::RequestNode;
+use super::RequestResultSender;
 use super::ResultAndInvalidations;
 use super::RunRequestError;
 use super::{RunRequestContext, RunRequestMessage};
@@ -106,7 +107,7 @@ impl RequestTracker {
   ///     these will run on the main-thread, therefore it'll be simpler to implement queueing
   ///     without stalls and locks/channels
   ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
-  pub async fn run_request(&mut self, request: impl Request) -> anyhow::Result<RequestResult> {
+  pub async fn run_request(&mut self, request: impl Request) -> anyhow::Result<Arc<RequestResult>> {
     let request_id = request.id();
     let (tx, rx) = std::sync::mpsc::channel();
     let tx2 = tx.clone();
@@ -134,44 +135,47 @@ impl RequestTracker {
           let request_id = request.id();
           tracing::trace!(?request_id, ?parent_request_id, "Run request");
 
-          if self.prepare_request(request_id)? {
-            let context = RunRequestContext::new(
-              self.config_loader.clone(),
-              self.file_system.clone(),
-              self.options.clone(),
-              Some(request_id),
-              self.plugins.clone(),
-              self.project_root.clone(),
-              // sub-request run
-              Box::new({
-                let tx = tx.clone();
-                move |message| {
-                  let tx2 = tx.clone();
-                  tx.send(RequestQueueMessage::RunRequest { message, tx: tx2 })
-                    .unwrap();
-                }
-              }),
-            );
+          if let Some(prev_result) = self.prepare_request(request_id)? {
+            self.link_request_to_parent(request_id, parent_request_id)?;
 
-            tokio::spawn({
-              let tx = tx.clone();
-              async move {
-                let result = request.run(context).await;
-                let _ = tx.send(RequestQueueMessage::RequestResult {
-                  request_id,
-                  parent_request_id,
-                  result,
-                  response_tx,
-                });
-              }
-            });
-          } else {
             // Cached request
             if let Some(response_tx) = response_tx {
-              let result = self.get_request(parent_request_id, request_id);
-              let _ = response_tx.send(result.map(|r| (r, request_id)));
+              let _ = response_tx.send(Ok((prev_result, request_id, true)));
             }
-          };
+            continue;
+          }
+
+          // Request needs to be executed
+          let context = RunRequestContext::new(
+            self.config_loader.clone(),
+            self.file_system.clone(),
+            self.options.clone(),
+            Some(request_id),
+            self.plugins.clone(),
+            self.project_root.clone(),
+            // sub-request run
+            Box::new({
+              let tx = tx.clone();
+              move |message| {
+                let tx2 = tx.clone();
+                tx.send(RequestQueueMessage::RunRequest { message, tx: tx2 })
+                  .unwrap();
+              }
+            }),
+          );
+
+          tokio::spawn({
+            let tx = tx.clone();
+            async move {
+              let result = request.run(context).await;
+              let _ = tx.send(RequestQueueMessage::RequestResult {
+                request_id,
+                parent_request_id,
+                result,
+                response_tx,
+              });
+            }
+          });
         }
         RequestQueueMessage::RequestResult {
           request_id,
@@ -180,25 +184,26 @@ impl RequestTracker {
           response_tx,
         } => {
           tracing::trace!(?request_id, ?parent_request_id, "Request result");
-          self.store_request(request_id, &result)?;
+          let result = self.store_request(request_id, result);
           self.link_request_to_parent(request_id, parent_request_id)?;
 
           if let Some(response_tx) = response_tx {
-            let _ = response_tx.send(result.map(|result| (result.result, request_id)));
+            let _ = response_tx.send(result.map(|result| (result, request_id, false)));
           }
         }
       }
     }
 
-    self.get_request(None, request_id)
+    self.link_request_to_parent(request_id, None)?;
+    self.get_request(request_id)
   }
 
   /// Before a request is run, a 'pending' [`RequestNode::Incomplete`] entry is added to the graph.
-  fn prepare_request(&mut self, request_id: u64) -> anyhow::Result<bool> {
+  fn prepare_request(&mut self, request_id: u64) -> anyhow::Result<Option<Arc<RequestResult>>> {
     let node_index = *self
       .request_index
       .entry(request_id)
-      .or_insert_with(|| self.graph.add_node(RequestNode::Incomplete));
+      .or_insert_with(|| self.graph.add_node(RequestNode::Incomplete(None)));
 
     let request_node = self
       .graph
@@ -206,16 +211,20 @@ impl RequestTracker {
       .ok_or_else(|| diagnostic_error!("Failed to find request node"))?;
 
     // Don't run if already run
-    if let RequestNode::Valid(_) = request_node {
-      return Ok(false);
+    if let RequestNode::Valid(prev_result) = request_node {
+      return Ok(Some(prev_result.clone()));
     }
 
     self.invalid_nodes.remove(&node_index);
-    *request_node = RequestNode::Incomplete;
+    *request_node = if let RequestNode::Invalid(prev_result) = request_node {
+      RequestNode::Incomplete(prev_result.clone())
+    } else {
+      RequestNode::Incomplete(None)
+    };
 
     self.clear_invalidations(node_index);
 
-    Ok(true)
+    Ok(None)
   }
 
   /// Cleans up old invalidations before a request is executed
@@ -235,8 +244,8 @@ impl RequestTracker {
   fn store_request(
     &mut self,
     request_id: u64,
-    result: &Result<ResultAndInvalidations, RunRequestError>,
-  ) -> anyhow::Result<()> {
+    result: Result<ResultAndInvalidations, RunRequestError>,
+  ) -> anyhow::Result<Arc<RequestResult>> {
     let node_index = self
       .request_index
       .get(&request_id)
@@ -247,65 +256,63 @@ impl RequestTracker {
       .node_weight_mut(*node_index)
       .ok_or_else(|| diagnostic_error!("Failed to find request"))?;
 
-    // Update node with latest result
-    *request_node = match result {
-      Ok(result) => RequestNode::Valid(result.result.clone()),
+    match result {
       Err(error) => {
         self.invalid_nodes.insert(*node_index);
-        RequestNode::Error(AtlaspackError::from(error).into())
+        *request_node = RequestNode::Error(AtlaspackError::from(&error).into());
+
+        Err(error)
       }
-    };
+      Ok(result) => {
+        let ResultAndInvalidations {
+          result,
+          invalidations,
+        } = result;
+        let result = Arc::new(result);
 
-    // Assign invalidations
-    if let Ok(result) = result {
-      for invalidation in result.invalidations.iter() {
-        match invalidation {
-          Invalidation::FileChange(file_path) => {
-            let invalidation_node = self
-              .invalidations
-              .entry(file_path.clone())
-              .or_insert_with(|| self.graph.add_node(RequestNode::FileInvalidation));
+        // Update node with latest result
+        *request_node = RequestNode::Valid(result.clone());
 
-            tracing::trace!(
-              "Add {:?} as invalidation for {:?}",
-              file_path
-                .strip_prefix(&self.project_root)
-                .unwrap_or(file_path),
-              self.graph[*node_index],
-            );
-            self.graph.add_edge(
-              *node_index,
-              *invalidation_node,
-              RequestEdgeType::FileChangeInvalidation,
-            );
+        // Assign invalidations
+        for invalidation in invalidations.iter() {
+          match invalidation {
+            Invalidation::FileChange(file_path) => {
+              let invalidation_node = self
+                .invalidations
+                .entry(file_path.clone())
+                .or_insert_with(|| self.graph.add_node(RequestNode::FileInvalidation));
+
+              tracing::trace!(
+                "Add {:?} as invalidation for {:?}",
+                file_path
+                  .strip_prefix(&self.project_root)
+                  .unwrap_or(file_path),
+                self.graph[*node_index],
+              );
+              self.graph.add_edge(
+                *node_index,
+                *invalidation_node,
+                RequestEdgeType::FileChangeInvalidation,
+              );
+            }
           }
         }
+
+        Ok(result)
       }
     }
-
-    Ok(())
   }
 
-  /// Get a request result and call [`RequestTracker::link_request_to_parent`] to create a
-  /// dependency link between the source request and this sub-request.
-  fn get_request(
-    &mut self,
-    parent_request_hash: Option<u64>,
-    request_id: u64,
-  ) -> anyhow::Result<RequestResult> {
-    self.link_request_to_parent(request_id, parent_request_hash)?;
+  fn get_request_node(&self, request_id: u64) -> Option<&RequestNode> {
+    let node_index = self.request_index.get(&request_id)?;
+    self.graph.node_weight(*node_index)
+  }
 
-    let Some(node_index) = self.request_index.get(&request_id) else {
-      return Err(diagnostic_error!("Impossible error"));
-    };
-    let Some(request_node) = self.graph.node_weight(*node_index) else {
-      return Err(diagnostic_error!("Impossible"));
-    };
-
-    match request_node {
-      RequestNode::Error(error) => Err(AtlaspackError::from(error).into()),
-      RequestNode::Valid(value) => Ok(value.clone()),
-      _ => Err(diagnostic_error!("Impossible")),
+  fn get_request(&self, request_id: u64) -> anyhow::Result<Arc<RequestResult>> {
+    match self.get_request_node(request_id) {
+      Some(RequestNode::Error(error)) => Err(AtlaspackError::from(error).into()),
+      Some(RequestNode::Valid(value)) => Ok(value.clone()),
+      _ => Err(diagnostic_error!("No request with result {}", request_id)),
     }
   }
 
@@ -346,14 +353,14 @@ impl RequestTracker {
         let node = &self.graph[node_index];
 
         match node {
-          RequestNode::Incomplete | RequestNode::Valid(_) => {
+          RequestNode::Incomplete(_) | RequestNode::Valid(_) => {
             invalid_nodes.push(node_index);
           }
           // Ignore the following node types
           RequestNode::Root => {}
           RequestNode::FileInvalidation => {}
           RequestNode::Error(_) => {}
-          RequestNode::Invalid => {}
+          RequestNode::Invalid(_) => {}
         }
       }
     }
@@ -364,7 +371,15 @@ impl RequestTracker {
         file_path_reason,
         self.graph.node_weight(invalid_node)
       );
-      self.graph[invalid_node] = RequestNode::Invalid;
+
+      self.graph[invalid_node] = match &self.graph[invalid_node] {
+        RequestNode::Valid(prev_result) => RequestNode::Invalid(Some(prev_result.clone())),
+        RequestNode::Incomplete(prev_result) => RequestNode::Invalid(prev_result.clone()),
+        _ => {
+          panic!("Impossible node type ");
+        }
+      };
+
       self.invalid_nodes.insert(invalid_node);
     }
   }
@@ -421,6 +436,6 @@ enum RequestQueueMessage {
     request_id: RequestId,
     parent_request_id: Option<RequestId>,
     result: Result<ResultAndInvalidations, RunRequestError>,
-    response_tx: Option<Sender<anyhow::Result<(RequestResult, RequestId)>>>,
+    response_tx: Option<RequestResultSender>,
   },
 }

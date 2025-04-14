@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::channel;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -8,7 +8,10 @@ use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 
-use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
+use crate::request_tracker::{
+  Request, RequestResultReceiver, RequestResultSender, ResultAndInvalidations, RunRequestContext,
+  RunRequestError,
+};
 use atlaspack_core::asset_graph::{
   propagate_requested_symbols, AssetGraph, DependencyNode, DependencyState,
 };
@@ -20,9 +23,6 @@ use super::path_request::{PathRequest, PathRequestOutput};
 use super::target_request::{TargetRequest, TargetRequestOutput};
 use super::RequestResult;
 
-type ResultSender = Sender<Result<(RequestResult, u64), anyhow::Error>>;
-type ResultReceiver = Receiver<Result<(RequestResult, u64), anyhow::Error>>;
-
 /// The AssetGraphRequest is in charge of building the AssetGraphRequest
 /// In doing so, it kicks of the EntryRequest, TargetRequest, PathRequest and AssetRequests.
 #[derive(Debug, Hash)]
@@ -30,7 +30,7 @@ pub struct AssetGraphRequest {}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AssetGraphRequestOutput {
-  pub graph: AssetGraph,
+  pub graph: Arc<AssetGraph>,
 }
 
 #[async_trait]
@@ -51,8 +51,8 @@ struct AssetGraphBuilder {
   visited: HashSet<u64>,
   work_count: u32,
   request_context: RunRequestContext,
-  sender: ResultSender,
-  receiver: ResultReceiver,
+  sender: RequestResultSender,
+  receiver: RequestResultReceiver,
   asset_request_to_asset_idx: HashMap<u64, NodeIndex>,
   waiting_asset_requests: HashMap<u64, HashSet<NodeIndex>>,
   entry_dependencies: Vec<(String, NodeIndex)>,
@@ -101,29 +101,30 @@ impl AssetGraphBuilder {
 
       self.work_count -= 1;
 
-      match result {
-        Ok((RequestResult::Entry(result), _request_id)) => {
+      let (result, request_id, _cached) = result?;
+
+      match &*result {
+        RequestResult::Entry(result) => {
           tracing::debug!("Handling EntryRequestOutput");
           self.handle_entry_result(result);
         }
-        Ok((RequestResult::Target(result), _request_id)) => {
+        RequestResult::Target(result) => {
           tracing::debug!("Handling TargetRequestOutput");
           self.handle_target_request_result(result);
         }
-        Ok((RequestResult::Asset(result), request_id)) => {
+        RequestResult::Asset(result) => {
           tracing::debug!(
             "Handling AssetRequestOutput: {}",
             result.asset.file_path.display()
           );
           self.handle_asset_result(result, request_id);
         }
-        Ok((RequestResult::Path(result), request_id)) => {
+        RequestResult::Path(result) => {
           tracing::debug!("Handling PathRequestOutput");
           self.handle_path_result(result, request_id);
         }
-        Err(err) => return Err(err),
         // This branch should never occur
-        Ok((result, request_id)) => {
+        result => {
           return Err(anyhow!(
             "Unexpected request result in AssetGraphRequest ({}): {:?}",
             request_id,
@@ -150,12 +151,14 @@ impl AssetGraphBuilder {
     }
 
     Ok(ResultAndInvalidations {
-      result: RequestResult::AssetGraph(AssetGraphRequestOutput { graph: self.graph }),
+      result: RequestResult::AssetGraph(AssetGraphRequestOutput {
+        graph: Arc::new(self.graph),
+      }),
       invalidations: vec![],
     })
   }
 
-  fn handle_path_result(&mut self, result: PathRequestOutput, request_id: u64) {
+  fn handle_path_result(&mut self, result: &PathRequestOutput, request_id: u64) {
     let dependency_idx = *self
       .request_id_to_dependency_idx
       .get(&request_id)
@@ -177,7 +180,7 @@ impl AssetGraphBuilder {
         can_defer,
       } => {
         if !side_effects
-          && can_defer
+          && *can_defer
           && requested_symbols.is_empty()
           && dependency.symbols.is_some()
         {
@@ -189,11 +192,11 @@ impl AssetGraphBuilder {
         AssetRequest {
           code: code.clone(),
           env: dependency.env.clone(),
-          file_path: path,
+          file_path: path.clone(),
           project_root: self.request_context.project_root.clone(),
           pipeline: pipeline.clone(),
-          query,
-          side_effects,
+          query: query.clone(),
+          side_effects: *side_effects,
         }
       }
       PathRequestOutput::Excluded => {
@@ -230,12 +233,12 @@ impl AssetGraphBuilder {
     }
   }
 
-  fn handle_entry_result(&mut self, result: EntryRequestOutput) {
+  fn handle_entry_result(&mut self, result: &EntryRequestOutput) {
     let EntryRequestOutput { entries } = result;
     for entry in entries {
       let target_request = TargetRequest {
         default_target_options: self.request_context.options.default_target_options.clone(),
-        entry,
+        entry: entry.clone(),
         env: self.request_context.options.env.clone(),
         mode: self.request_context.options.mode.clone(),
       };
@@ -247,12 +250,12 @@ impl AssetGraphBuilder {
     }
   }
 
-  fn handle_asset_result(&mut self, result: AssetRequestOutput, request_id: u64) {
+  fn handle_asset_result(&mut self, result: &AssetRequestOutput, request_id: u64) {
     let AssetRequestOutput {
       asset,
       discovered_assets,
       dependencies,
-    } = result;
+    } = result.clone();
 
     let incoming_dependency_idx = *self
       .request_id_to_dependency_idx
@@ -422,14 +425,14 @@ impl AssetGraphBuilder {
     );
   }
 
-  fn handle_target_request_result(&mut self, result: TargetRequestOutput) {
+  fn handle_target_request_result(&mut self, result: &TargetRequestOutput) {
     let TargetRequestOutput { entry, targets } = result;
     for target in targets {
       let entry =
         diff_paths(&entry, &self.request_context.project_root).unwrap_or_else(|| entry.clone());
       let entry = entry.to_str().unwrap().to_string();
 
-      let dependency = Dependency::entry(entry.clone(), target);
+      let dependency = Dependency::entry(entry.clone(), target.clone());
 
       let dep_node = self.graph.add_entry_dependency(dependency.clone());
       self.entry_dependencies.push((entry, dep_node));
@@ -456,7 +459,7 @@ impl AssetGraphBuilder {
     request_id_to_dep_node_index: &mut HashMap<u64, NodeIndex>,
     work_count: &mut u32,
     request_context: &mut RunRequestContext,
-    sender: &ResultSender,
+    sender: &RequestResultSender,
     dependency_node_index: NodeIndex,
     dependency: Arc<Dependency>,
   ) {
