@@ -245,6 +245,17 @@ mod tests {
     }
   }
 
+  fn assert_path_result(
+    actual: Result<Arc<RequestResult>, anyhow::Error>,
+    expected: PathRequestOutput,
+  ) {
+    let Ok(result) = actual else {
+      panic!("Request failed");
+    };
+
+    assert_eq!(result, Arc::new(RequestResult::Path(expected)));
+  }
+
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_excluded_resolution() {
     let request = PathRequest {
@@ -258,10 +269,7 @@ mod tests {
     .run_request(request)
     .await;
 
-    assert_eq!(
-      resolution.map_err(|e| e.to_string()),
-      Ok(RequestResult::Path(PathRequestOutput::Excluded))
-    );
+    assert_path_result(resolution, PathRequestOutput::Excluded);
   }
 
   #[tokio::test(flavor = "multi_thread")]
@@ -325,16 +333,16 @@ mod tests {
     .run_request(request)
     .await;
 
-    assert_eq!(
-      resolution.map_err(|e| e.to_string()),
-      Ok(RequestResult::Path(PathRequestOutput::Resolved {
+    assert_path_result(
+      resolution,
+      PathRequestOutput::Resolved {
         can_defer: false,
         code: None,
         path,
         pipeline: None,
         query: None,
-        side_effects: false
-      }))
+        side_effects: false,
+      },
     );
   }
 
@@ -358,10 +366,7 @@ mod tests {
       .run_request(request)
       .await;
 
-      assert_eq!(
-        resolution.map_err(|e| e.to_string()),
-        Ok(RequestResult::Path(PathRequestOutput::Excluded))
-      );
+      assert_path_result(resolution, PathRequestOutput::Excluded);
     }
 
     #[tokio::test(flavor = "multi_thread")]
