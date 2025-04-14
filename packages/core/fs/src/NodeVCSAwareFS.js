@@ -6,7 +6,7 @@ import {getVcsStateSnapshot, getEventsSince} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types-internal';
 import type {Event, Options as WatcherOptions} from '@parcel/watcher';
 import {registerSerializableClass} from '@atlaspack/build-cache';
-import {instrumentAsync, logger} from '@atlaspack/logger';
+import logger, {instrumentAsync} from '@atlaspack/logger';
 import {getFeatureFlagValue} from '@atlaspack/feature-flags';
 
 // $FlowFixMe
