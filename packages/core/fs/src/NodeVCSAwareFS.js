@@ -6,7 +6,7 @@ import {getVcsStateSnapshot, getEventsSince} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types-internal';
 import type {Event, Options as WatcherOptions} from '@parcel/watcher';
 import {registerSerializableClass} from '@atlaspack/build-cache';
-import {instrumentAsync} from '@atlaspack/logger';
+import logger, {instrumentAsync} from '@atlaspack/logger';
 import {getFeatureFlagValue} from '@atlaspack/feature-flags';
 
 // $FlowFixMe
@@ -87,16 +87,19 @@ export class NodeVCSAwareFS extends NodeFS {
     );
     let watcherEventsSince = [];
 
-    const vcsEventsSince = (
-      await instrumentAsync('NodeVCSAwareFS::rust.getEventsSince', () =>
-        getEventsSince(gitRepoPath, vcsState, null),
-      )
-    ).map((e) => ({
-      path: e.path,
-      type: e.changeType,
-    }));
+    const vcsEventsSince =
+      vcsState != null
+        ? (
+            await instrumentAsync('NodeVCSAwareFS::rust.getEventsSince', () =>
+              getEventsSince(gitRepoPath, vcsState, null),
+            )
+          ).map((e) => ({
+            path: e.path,
+            type: e.changeType,
+          }))
+        : null;
 
-    if (getFeatureFlagValue('vcsMode') !== 'NEW') {
+    if (getFeatureFlagValue('vcsMode') !== 'NEW' && vcsEventsSince != null) {
       watcherEventsSince = await instrumentAsync(
         'NodeVCSAwareFS::watchman.getEventsSince',
         () => this.watcher().getEventsSince(dir, nativeSnapshotPath, opts),
@@ -105,6 +108,19 @@ export class NodeVCSAwareFS extends NodeFS {
     }
 
     if (['NEW_AND_CHECK', 'NEW'].includes(getFeatureFlagValue('vcsMode'))) {
+      if (vcsEventsSince == null) {
+        logger.error({
+          origin: '@atlaspack/fs',
+          message:
+            'Missing VCS state. There was an error when writing the snapshot. Please clear your cache.',
+          meta: {
+            trackableEvent: 'vcs_state_snapshot_read_failed',
+          },
+        });
+
+        return [];
+      }
+
       return vcsEventsSince;
     }
 
@@ -138,10 +154,22 @@ export class NodeVCSAwareFS extends NodeFS {
       );
     }
 
-    const vcsState = await instrumentAsync(
-      'NodeVCSAwareFS::getVcsStateSnapshot',
-      () => getVcsStateSnapshot(gitRepoPath, this.#excludePatterns),
-    );
+    let vcsState = null;
+    try {
+      vcsState = await instrumentAsync(
+        'NodeVCSAwareFS::getVcsStateSnapshot',
+        () => getVcsStateSnapshot(gitRepoPath, this.#excludePatterns),
+      );
+    } catch (err) {
+      logger.error({
+        origin: '@atlaspack/fs',
+        message: `Failed to get VCS state snapshot: ${err.message}`,
+        meta: {
+          trackableEvent: 'vcs_state_snapshot_failed',
+          error: err,
+        },
+      });
+    }
 
     const snapshotContents = {
       vcsState,
