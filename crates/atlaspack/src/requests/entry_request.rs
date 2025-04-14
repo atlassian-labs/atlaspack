@@ -66,6 +66,17 @@ mod tests {
 
   use super::*;
 
+  fn assert_entry_result(
+    actual: Result<Arc<RequestResult>, anyhow::Error>,
+    expected: EntryRequestOutput,
+  ) {
+    let Ok(result) = actual else {
+      panic!("Request failed");
+    };
+
+    assert_eq!(result, Arc::new(RequestResult::Entry(expected)));
+  }
+
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_error_when_entry_is_not_found() {
     let request = EntryRequest {
@@ -102,14 +113,14 @@ mod tests {
     .run_request(request)
     .await;
 
-    assert_eq!(
-      entry.map_err(|e| e.to_string()),
-      Ok(RequestResult::Entry(EntryRequestOutput {
+    assert_entry_result(
+      entry,
+      EntryRequestOutput {
         entries: vec![Entry {
           file_path: entry_path,
           target: None,
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -138,14 +149,14 @@ mod tests {
     .run_request(request)
     .await;
 
-    assert_eq!(
-      entry.map_err(|e| e.to_string()),
-      Ok(RequestResult::Entry(EntryRequestOutput {
+    assert_entry_result(
+      entry,
+      EntryRequestOutput {
         entries: vec![Entry {
           file_path: entry_path,
           target: None,
-        }]
-      }))
+        }],
+      },
     );
   }
 }

@@ -786,7 +786,7 @@ mod tests {
     package_json: String,
     browserslistrc: Option<String>,
     atlaspack_options: Option<AtlaspackOptions>,
-  ) -> Result<RequestResult, anyhow::Error> {
+  ) -> Result<Arc<RequestResult>, anyhow::Error> {
     let fs = InMemoryFileSystem::default();
     let project_root = PathBuf::default();
     let package_dir = package_dir();
@@ -816,6 +816,17 @@ mod tests {
     })
     .run_request(request)
     .await
+  }
+
+  fn assert_target_result(
+    actual: Result<Arc<RequestResult>, anyhow::Error>,
+    expected: TargetRequestOutput,
+  ) {
+    let Ok(result) = actual else {
+      panic!("Request failed");
+    };
+
+    assert_eq!(result, Arc::new(RequestResult::Target(expected)));
   }
 
   fn to_deterministic_error(error: anyhow::Error) -> String {
@@ -1007,13 +1018,13 @@ mod tests {
 
     assert_eq!(
       targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+      Ok(Arc::new(RequestResult::Target(TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: default_dist_dir(&PathBuf::default()),
           ..default_target()
         }],
-      }))
+      })))
     );
   }
 
@@ -1027,12 +1038,12 @@ mod tests {
       )
       .await;
 
-      assert_eq!(
-        targets.map_err(|e| e.to_string()),
-        Ok(RequestResult::Target(TargetRequestOutput {
+      assert_target_result(
+        targets,
+        TargetRequestOutput {
           entry: PathBuf::default(),
-          targets: vec![default_target()]
-        }))
+          targets: vec![default_target()],
+        },
       );
     }
   }
@@ -1041,12 +1052,12 @@ mod tests {
   async fn returns_default_target_when_no_targets_are_specified() {
     let targets = targets_from_config(String::from("{}"), None, None).await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
-        targets: vec![default_target()]
-      }))
+        targets: vec![default_target()],
+      },
     );
   }
 
@@ -1069,9 +1080,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir().join("build"),
@@ -1087,8 +1098,8 @@ mod tests {
           }),
           name: String::from("browser"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1112,9 +1123,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir().join("build"),
@@ -1130,8 +1141,8 @@ mod tests {
           }),
           name: String::from("browser"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1140,9 +1151,9 @@ mod tests {
     let targets =
       targets_from_config(String::from(r#"{ "main": "./build/main.js" }"#), None, None).await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir().join("build"),
@@ -1154,8 +1165,8 @@ mod tests {
           }),
           name: String::from("main"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1179,9 +1190,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir().join("build"),
@@ -1194,8 +1205,8 @@ mod tests {
           }),
           name: String::from("main"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1204,9 +1215,9 @@ mod tests {
     let targets =
       targets_from_config(String::from(r#"{ "module": "module.js" }"#), None, None).await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir(),
@@ -1218,8 +1229,8 @@ mod tests {
           }),
           name: String::from("module"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1243,9 +1254,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir(),
@@ -1258,8 +1269,8 @@ mod tests {
           }),
           name: String::from("module"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1283,9 +1294,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir(),
@@ -1297,8 +1308,8 @@ mod tests {
           }),
           name: String::from("types"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1307,9 +1318,9 @@ mod tests {
     let targets =
       targets_from_config(String::from(r#"{ "types": "./types.d.ts" }"#), None, None).await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir(),
@@ -1321,8 +1332,8 @@ mod tests {
           }),
           name: String::from("types"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1355,9 +1366,9 @@ mod tests {
 
     let package_dir = package_dir();
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![
           Target {
@@ -1404,8 +1415,8 @@ mod tests {
             name: String::from("types"),
             ..Target::default()
           },
-        ]
-      }))
+        ],
+      },
     );
   }
 
@@ -1418,9 +1429,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir().join("dist").join("custom"),
@@ -1439,8 +1450,8 @@ mod tests {
           }),
           name: String::from("custom"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1459,9 +1470,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir().join("dist").join("custom"),
@@ -1480,8 +1491,8 @@ mod tests {
           }),
           name: String::from("custom"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1503,9 +1514,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: PathBuf::from("some-other-dist"),
@@ -1524,8 +1535,8 @@ mod tests {
           }),
           name: String::from("custom"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1557,9 +1568,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir().join("dist/custom-two"),
@@ -1576,8 +1587,8 @@ mod tests {
           }),
           name: String::from("custom-two"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1603,9 +1614,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir().join("dist"),
@@ -1620,8 +1631,8 @@ mod tests {
           }),
           name: String::from("custom"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1644,9 +1655,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir().join("dist"),
@@ -1667,8 +1678,8 @@ mod tests {
           }),
           name: String::from("custom"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
@@ -1695,9 +1706,9 @@ mod tests {
     )
     .await;
 
-    assert_eq!(
-      targets.map_err(|e| e.to_string()),
-      Ok(RequestResult::Target(TargetRequestOutput {
+    assert_target_result(
+      targets,
+      TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
           dist_dir: package_dir().join("dist"),
@@ -1718,17 +1729,17 @@ mod tests {
           }),
           name: String::from("custom"),
           ..Target::default()
-        }]
-      }))
+        }],
+      },
     );
   }
 
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_inferred_custom_node_target() {
-    let assert_targets = |targets: Result<RequestResult, anyhow::Error>, engines| {
-      assert_eq!(
-        targets.map_err(|e| e.to_string()),
-        Ok(RequestResult::Target(TargetRequestOutput {
+    let assert_targets = |targets: Result<Arc<RequestResult>, anyhow::Error>, engines| {
+      assert_target_result(
+        targets,
+        TargetRequestOutput {
           entry: PathBuf::default(),
           targets: vec![Target {
             dist_dir: package_dir().join("dist"),
@@ -1743,8 +1754,8 @@ mod tests {
             }),
             name: String::from("custom"),
             ..Target::default()
-          }]
-        }))
+          }],
+        },
       );
     };
 
@@ -1818,9 +1829,9 @@ mod tests {
       )
       .await;
 
-      assert_eq!(
-        targets.map_err(|e| e.to_string()),
-        Ok(RequestResult::Target(TargetRequestOutput {
+      assert_target_result(
+        targets,
+        TargetRequestOutput {
           entry: PathBuf::default(),
           targets: vec![Target {
             dist_dir: package_dir().join("dist"),
@@ -1838,7 +1849,7 @@ mod tests {
             name: String::from("custom"),
             ..Target::default()
           }],
-        }))
+        },
       );
     };
 

@@ -96,22 +96,23 @@ async fn test_single_execution_with_dependencies() {
 }
 
 async fn run_request(request_tracker: &mut RequestTracker, request: &TestRequest) -> Vec<String> {
-  let RequestResult::TestMain(result) = request_tracker.run_request(request.clone()).await.unwrap()
+  let RequestResult::TestMain(result) =
+    &*request_tracker.run_request(request.clone()).await.unwrap()
   else {
     panic!("Unexpected result");
   };
-  result
+  result.clone()
 }
 
 // SKIP: Always run requests / don't cache anything
 // https://github.com/atlassian-labs/atlaspack/pull/364
-#[allow(dead_code)]
 async fn run_sub_request(request_tracker: &mut RequestTracker, request: &TestRequest) -> String {
-  let RequestResult::TestSub(result) = request_tracker.run_request(request.clone()).await.unwrap()
+  let RequestResult::TestSub(result) =
+    &*request_tracker.run_request(request.clone()).await.unwrap()
   else {
     panic!("Unexpected result");
   };
-  result
+  result.clone()
 }
 
 /// This is a universal "Request" that can be instructed
@@ -184,10 +185,11 @@ impl Request for TestRequest {
 
     let mut results = vec![name];
     while let Ok(response) = rx.recv_timeout(Duration::from_secs(2)) {
-      match response {
-        Ok((RequestResult::TestSub(result), _id)) => results.push(result),
-        Ok((RequestResult::TestMain(sub_results), _id)) => results.extend(sub_results),
-        a => todo!("{:?}", a),
+      let (result, _id, _cached) = response?;
+      match &*result {
+        RequestResult::TestSub(result) => results.push(result.clone()),
+        RequestResult::TestMain(sub_results) => results.extend(sub_results.clone()),
+        _ => panic!("Unexpected request type"),
       }
     }
 
@@ -235,8 +237,9 @@ impl Request for TestRequest2 {
 
     let mut responses = Vec::new();
     while let Ok(response) = rx.recv_timeout(Duration::from_secs(2)) {
-      match response {
-        Ok((RequestResult::TestSub(result), _idd)) => responses.push(result),
+      let (result, _id, _cached) = response?;
+      match &*result {
+        RequestResult::TestSub(result) => responses.push(result.clone()),
         _ => todo!("unimplemented"),
       }
     }
@@ -257,7 +260,7 @@ async fn test_invalidation_of_cached_results() {
 
   // First run should succeed and cache the result
   let result = rt.run_request(request.clone()).await.unwrap();
-  assert!(matches!(result, RequestResult::TestSub(_)));
+  assert!(matches!(&*result, RequestResult::TestSub(_)));
 
   // Simulate a file change event
   let events = vec![WatchEvent::Update(PathBuf::from("test.txt"))];
@@ -268,7 +271,7 @@ async fn test_invalidation_of_cached_results() {
 
   // Running the request again should execute it again rather than use cache
   let second_run = rt.run_request(request.clone()).await.unwrap();
-  assert!(matches!(second_run, RequestResult::TestSub(_)));
+  assert!(matches!(&*second_run, RequestResult::TestSub(_)));
 
   // Request should have run twice
   assert_eq!(request.run_count(), 2);
@@ -374,10 +377,11 @@ async fn test_parallel_subrequests() {
   let sub_requests = 20;
   let result = request_tracker(Default::default())
     .run_request(TestRequest2 { sub_requests })
-    .await;
+    .await
+    .unwrap();
 
-  match result {
-    Ok(RequestResult::TestMain(responses)) => {
+  match &*result {
+    RequestResult::TestMain(responses) => {
       let expected: HashSet<String> = (0..sub_requests).map(|v| v.to_string()).collect();
       assert_eq!(HashSet::from_iter(responses.iter().cloned()), expected);
     }

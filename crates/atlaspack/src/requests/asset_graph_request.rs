@@ -540,7 +540,7 @@ mod tests {
     let mut request_tracker = request_tracker(options);
 
     let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+    let RequestResult::AssetGraph(asset_graph_request_result) = &*request_tracker
       .run_request(asset_graph_request)
       .await
       .unwrap()
@@ -595,7 +595,7 @@ mod tests {
     });
 
     let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+    let RequestResult::AssetGraph(asset_graph_request_result) = &*request_tracker
       .run_request(asset_graph_request)
       .await
       .expect("Failed to run asset graph request")
@@ -692,7 +692,7 @@ mod tests {
     });
 
     let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+    let RequestResult::AssetGraph(asset_graph_request_result) = &*request_tracker
       .run_request(asset_graph_request)
       .await
       .expect("Failed to run asset graph request")
