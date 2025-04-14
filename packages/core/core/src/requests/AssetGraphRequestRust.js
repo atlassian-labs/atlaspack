@@ -7,7 +7,7 @@ import type {Async} from '@atlaspack/types';
 import {instrument} from '@atlaspack/logger';
 
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
-import type {AtlaspackV3} from '../atlaspack-v3';
+import type {AtlaspackV3, AtlaspackV3Old} from '../atlaspack-v3';
 import {requestTypes, type StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
 import type {Environment, Asset} from '../types';
@@ -30,7 +30,7 @@ type AssetGraphRequest = {|
 |};
 
 export function createAssetGraphRequestRust(
-  rustAtlaspack: AtlaspackV3,
+  rustAtlaspack: AtlaspackV3 | AtlaspackV3Old,
 ): (input: AssetGraphRequestInput) => AssetGraphRequest {
   return (input) => ({
     type: requestTypes.asset_graph_request,

@@ -58,8 +58,14 @@ import {
   fromProjectPathRelative,
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
-import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
+import {
+  AtlaspackV3,
+  AtlaspackV3Old,
+  FileSystemV3,
+  type AtlaspackV3Options,
+} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
@@ -98,7 +104,7 @@ export default class Atlaspack {
   #watcherCount /*: number*/ = 0;
   #requestedAssetIds /*: Set<string>*/ = new Set();
 
-  rustAtlaspack: AtlaspackV3 | null | void;
+  rustAtlaspack: AtlaspackV3 | AtlaspackV3Old | null | void;
 
   isProfiling /*: boolean */;
 
@@ -147,7 +153,7 @@ export default class Atlaspack {
     });
     this.#resolvedOptions = resolvedOptions;
 
-    let rustAtlaspack: AtlaspackV3;
+    let rustAtlaspack: AtlaspackV3 | AtlaspackV3Old;
     if (resolvedOptions.featureFlags.atlaspackV3) {
       // eslint-disable-next-line no-unused-vars
       let {entries, inputFS, outputFS, ...options} = this.#initialOptions;
@@ -162,7 +168,7 @@ export default class Atlaspack {
       const version = require('../package.json').version;
       await lmdb.put('current_session_version', Buffer.from(version));
 
-      rustAtlaspack = new AtlaspackV3({
+      const atlaspackV3Options: AtlaspackV3Options = {
         ...options,
         corePath: path.join(__dirname, '..'),
         threads: process.env.NODE_ENV === 'test' ? 2 : undefined,
@@ -176,7 +182,12 @@ export default class Atlaspack {
         // $FlowFixMe ProjectPath is a string
         defaultTargetOptions: resolvedOptions.defaultTargetOptions,
         lmdb,
-      });
+      };
+      if (getFeatureFlag('atlaspackNativeAsyncInit')) {
+        rustAtlaspack = await AtlaspackV3.create(atlaspackV3Options);
+      } else {
+        rustAtlaspack = new AtlaspackV3Old(atlaspackV3Options);
+      }
     }
     this.rustAtlaspack = rustAtlaspack;
 

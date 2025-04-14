@@ -62,7 +62,7 @@ describe.v3('AtlaspackV3', function () {
       yarn.lock: {}
     `;
 
-    let atlaspack = new AtlaspackV3({
+    let atlaspack = await AtlaspackV3.create({
       corePath: '',
       entries: [join(__dirname, 'index.js')],
       fs: new FileSystemV3(overlayFS),
@@ -197,35 +197,33 @@ describe.v3('AtlaspackV3', function () {
   });
 
   describe('featureFlags', () => {
-    it('should not throw if feature flag is bool', () => {
-      assert.doesNotThrow(
-        () =>
-          new AtlaspackV3({
-            corePath: '',
-            entries: [join(__dirname, 'index.js')],
-            fs: new FileSystemV3(overlayFS),
-            lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
-            napiWorkerPool,
-            featureFlags: {
-              testFlag: true,
-            },
-          }),
+    it('should not throw if feature flag is bool', async () => {
+      await assert.rejects(() =>
+        AtlaspackV3.create({
+          corePath: '',
+          entries: [join(__dirname, 'index.js')],
+          fs: new FileSystemV3(overlayFS),
+          lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
+          napiWorkerPool,
+          featureFlags: {
+            testFlag: true,
+          },
+        }),
       );
     });
 
-    it('should not throw if feature flag is string', () => {
-      assert.doesNotThrow(
-        () =>
-          new AtlaspackV3({
-            corePath: '',
-            entries: [join(__dirname, 'index.js')],
-            fs: new FileSystemV3(overlayFS),
-            napiWorkerPool,
-            lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
-            featureFlags: {
-              testFlag: 'testFlagValue',
-            },
-          }),
+    it('should not throw if feature flag is string', async () => {
+      await assert.rejects(() =>
+        AtlaspackV3.create({
+          corePath: '',
+          entries: [join(__dirname, 'index.js')],
+          fs: new FileSystemV3(overlayFS),
+          napiWorkerPool,
+          lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
+          featureFlags: {
+            testFlag: 'testFlagValue',
+          },
+        }),
       );
     });
   });

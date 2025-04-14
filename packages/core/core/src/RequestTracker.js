@@ -40,7 +40,7 @@ import {
   STARTUP,
   ERROR,
 } from './constants';
-import type {AtlaspackV3} from './atlaspack-v3/AtlaspackV3';
+import type {AtlaspackV3, AtlaspackV3Old} from './atlaspack-v3/AtlaspackV3';
 import {
   type ProjectPath,
   fromProjectPathRelative,
@@ -244,7 +244,7 @@ export type StaticRunOpts<TResult> = {|
   farm: WorkerFarm,
   invalidateReason: InvalidateReason,
   options: AtlaspackOptions,
-  rustAtlaspack: ?AtlaspackV3,
+  rustAtlaspack: ?AtlaspackV3 | ?AtlaspackV3Old,
 |};
 
 const nodeFromFilePath = (filePath: ProjectPath): RequestGraphNode => ({
@@ -1144,7 +1144,7 @@ export default class RequestTracker {
   graph: RequestGraph;
   farm: WorkerFarm;
   options: AtlaspackOptions;
-  rustAtlaspack: ?AtlaspackV3;
+  rustAtlaspack: ?AtlaspackV3 | ?AtlaspackV3Old;
   signal: ?AbortSignal;
   stats: Map<RequestType, number> = new Map();
 
@@ -1157,7 +1157,7 @@ export default class RequestTracker {
     graph?: RequestGraph,
     farm: WorkerFarm,
     options: AtlaspackOptions,
-    rustAtlaspack?: AtlaspackV3,
+    rustAtlaspack?: AtlaspackV3 | AtlaspackV3Old,
   |}) {
     this.graph = graph || new RequestGraph();
     this.farm = farm;
@@ -1593,7 +1593,7 @@ export default class RequestTracker {
   }: {|
     farm: WorkerFarm,
     options: AtlaspackOptions,
-    rustAtlaspack?: AtlaspackV3,
+    rustAtlaspack?: AtlaspackV3 | AtlaspackV3Old,
   |}): Async<RequestTracker> {
     let graph = await loadRequestGraph(options);
     return new RequestTracker({farm, graph, options, rustAtlaspack});

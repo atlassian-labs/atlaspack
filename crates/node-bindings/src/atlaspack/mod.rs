@@ -2,6 +2,7 @@ pub mod asset;
 
 pub mod atlaspack;
 pub mod atlaspack_lazy;
+pub mod atlaspack_old;
 pub mod dependency;
 pub mod environment;
 pub mod file_system_napi;

@@ -19,6 +19,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   reduceResolverStringCreation: false,
   inlineBundlesSourceMapFixes: false,
   conditionalBundlingNestedRuntime: false,
+  atlaspackNativeAsyncInit: false,
   patchProjectPaths: false,
 };
 

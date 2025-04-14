@@ -68,8 +68,8 @@ export type AtlaspackNapiOptions = {|
   threads?: number,
 |};
 
-declare export class AtlaspackNapi {
-  static create(options: AtlaspackNapiOptions, lmdb: mixed): AtlaspackNapi;
+declare export class AtlaspackNapiOld {
+  static create(options: AtlaspackNapiOptions, lmdb: mixed): AtlaspackNapiOld;
   nodeWorkerCount: number;
   buildAssetGraph(): Promise<any>;
   respondToFsEvents(events: WatchEvents): Promise<boolean>;
@@ -80,12 +80,22 @@ declare export class AtlaspackNapi {
   testingRpcPing(): void;
 }
 
-declare export function getAvailableThreads(): number;
+// AtlaspackNapi
+export type AtlaspackNapi = {||};
+declare export function atlaspackNapiCreate(
+  options: AtlaspackNapiOptions,
+  lmdb: mixed,
+): Promise<AtlaspackNapi>;
+declare export function atlaspackNapiBuildAssetGraph(
+  atlaspack: AtlaspackNapi,
+): Promise<any>;
+declare export function atlaspackNapiRespondToFsEvents(
+  atlaspack: AtlaspackNapi,
+  events: WatchEvents,
+): boolean;
+// AtlaspackNapi
 
-declare export function registerWorker(
-  channel: Transferable,
-  worker: any,
-): void;
+declare export function getAvailableThreads(): number;
 
 declare export function newNodejsWorker(delegate: any): Transferable;
 

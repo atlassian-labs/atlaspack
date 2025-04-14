@@ -58,6 +58,10 @@ export type FeatureFlags = {|
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    */
   patchProjectPaths: boolean,
+  /**
+   * Enable native async init for Atlaspack
+   */
+  atlaspackNativeAsyncInit: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =

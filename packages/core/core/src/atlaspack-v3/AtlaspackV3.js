@@ -1,7 +1,10 @@
 // @flow
-
 import {
-  AtlaspackNapi,
+  type AtlaspackNapi,
+  AtlaspackNapiOld,
+  atlaspackNapiCreate,
+  atlaspackNapiBuildAssetGraph,
+  atlaspackNapiRespondToFsEvents,
   type Lmdb,
   type AtlaspackNapiOptions,
 } from '@atlaspack/rust';
@@ -23,8 +26,8 @@ export type AtlaspackV3Options = {|
   ...AtlaspackNapiOptions['options'],
 |};
 
-export class AtlaspackV3 {
-  _internal: AtlaspackNapi;
+export class AtlaspackV3Old {
+  _internal: AtlaspackNapiOld;
   _workerIds: any[];
 
   constructor({
@@ -41,7 +44,7 @@ export class AtlaspackV3 {
     options.defaultTargetOptions.engines =
       options.defaultTargetOptions.engines || {};
 
-    this._internal = AtlaspackNapi.create(
+    this._internal = AtlaspackNapiOld.create(
       {
         fs,
         packageManager,
@@ -67,5 +70,65 @@ export class AtlaspackV3 {
 
   respondToFsEvents(events: Array<Event>): Promise<boolean> {
     return this._internal.respondToFsEvents(events);
+  }
+}
+
+export class AtlaspackV3 {
+  _atlaspack_napi: AtlaspackNapi;
+
+  constructor(atlaspack_napi: AtlaspackNapi) {
+    this._atlaspack_napi = atlaspack_napi;
+  }
+
+  static async create({
+    fs,
+    packageManager,
+    threads,
+    lmdb,
+    napiWorkerPool = new NapiWorkerPool(),
+    ...options
+  }: AtlaspackV3Options): Promise<AtlaspackV3> {
+    options.logLevel = options.logLevel || 'error';
+    options.defaultTargetOptions = options.defaultTargetOptions || {};
+    // $FlowFixMe "engines" are readonly
+    options.defaultTargetOptions.engines =
+      options.defaultTargetOptions.engines || {};
+
+    const [internal, error] = await atlaspackNapiCreate(
+      {
+        fs,
+        packageManager,
+        threads,
+        options,
+        napiWorkerPool,
+      },
+      lmdb,
+    );
+
+    if (error !== null) {
+      throw new ThrowableDiagnostic({
+        diagnostic: error,
+      });
+    }
+
+    return new AtlaspackV3(internal);
+  }
+
+  async buildAssetGraph(): Promise<any> {
+    const [graph, error] = await atlaspackNapiBuildAssetGraph(
+      this._atlaspack_napi,
+    );
+
+    if (error !== null) {
+      throw new ThrowableDiagnostic({
+        diagnostic: error,
+      });
+    }
+
+    return graph;
+  }
+
+  respondToFsEvents(events: Array<Event>): boolean {
+    return atlaspackNapiRespondToFsEvents(this._atlaspack_napi, events);
   }
 }
