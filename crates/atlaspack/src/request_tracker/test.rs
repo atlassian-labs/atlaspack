@@ -52,10 +52,8 @@ async fn test_request_caching() {
   assert_eq!(result[2], "C");
 }
 
-// SKIP: Always run requests / don't cache anything
 // https://github.com/atlassian-labs/atlaspack/pull/364
 #[tokio::test(flavor = "multi_thread")]
-#[ignore]
 async fn test_single_request_execution() {
   let mut rt = request_tracker(Default::default());
 
@@ -71,10 +69,8 @@ async fn test_single_request_execution() {
   assert_eq!(request_a.run_count(), 1);
 }
 
-// SKIP: Always run requests / don't cache anything
 // https://github.com/atlassian-labs/atlaspack/pull/364
 #[tokio::test(flavor = "multi_thread")]
-#[ignore]
 async fn test_single_execution_with_dependencies() {
   let mut rt = request_tracker(Default::default());
 
