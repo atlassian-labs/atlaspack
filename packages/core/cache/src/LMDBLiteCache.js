@@ -63,7 +63,10 @@ export function open(
     new Lmdb({
       path: directory,
       asyncWrites: true,
-      mapSize: 1024 * 1024 * 1024 * 15,
+      mapSize:
+        process.env.ATLASPACK_BUILD_ENV === 'test'
+          ? 1024 * 1024 * 1024
+          : 1024 * 1024 * 1024 * 15,
     }),
   );
 }
@@ -101,7 +104,8 @@ export class LMDBLiteCache implements Cache {
     return this.store.lmdb;
   }
 
-  ensure(): Promise<void> {
+  async ensure(): Promise<void> {
+    await this.fsCache.ensure();
     return Promise.resolve();
   }
 
