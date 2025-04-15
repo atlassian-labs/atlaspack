@@ -308,6 +308,16 @@ export interface LmdbEntry {
   value: Buffer;
 }
 
+export type StringReplacement = {|
+  from: string,
+  to: string,
+|};
+
+declare export function performStringReplacements(
+  input: string,
+  replacements: Array<StringReplacement>,
+): string;
+
 declare export class Lmdb {
   constructor(options: LmdbOptions): Lmdb;
   get(key: string): Promise<Buffer | null | void>;
