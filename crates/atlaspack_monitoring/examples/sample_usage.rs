@@ -76,6 +76,7 @@ fn main() {
   }
 
   let exe = std::env::current_exe().expect("Unable to find ourselves");
+  #[allow(clippy::zombie_processes)]
   let server = std::process::Command::new(exe)
     .arg("--server")
     .spawn()
