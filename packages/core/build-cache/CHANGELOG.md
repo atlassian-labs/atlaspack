@@ -1,5 +1,11 @@
 # @atlaspack/build-cache
 
+## 2.13.2
+
+### Patch Changes
+
+- [#414](https://github.com/atlassian-labs/atlaspack/pull/414) [`eff9809`](https://github.com/atlassian-labs/atlaspack/commit/eff98093703b9999a511b87a19562f5aaccfcb53) Thanks [@alshdavid](https://github.com/alshdavid)! - Added type:commonjs to package.json files
+
 ## 2.13.1
 
 ### Patch Changes
