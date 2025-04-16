@@ -266,8 +266,8 @@ jobs:
         run: yarn pre-publish
       - uses: changesets/action@v1
         with:
-          publish: yarn changeset publish
-          version: yarn changeset version
+          publish: yarn changesets-publish
+          version: yarn changesets-version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
