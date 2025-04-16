@@ -262,8 +262,6 @@ jobs:
           path: artifacts
       - name: Move bindings
         run: for d in artifacts/bindings-*/*/*; do cp $d/*.node packages/$(basename $(dirname $d))/$(basename $d); done
-      - name: Prepare for publishing
-        run: yarn pre-publish
       - uses: changesets/action@v1
         with:
           publish: yarn changesets-publish
