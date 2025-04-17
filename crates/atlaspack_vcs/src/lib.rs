@@ -201,7 +201,7 @@ pub fn list_yarn_states(
   failure_mode: FailureMode,
 ) -> anyhow::Result<Vec<YarnSnapshot>> {
   let yarn_lock_files = vcs_list_yarn_lock_files(repo)?;
-  tracing::info!("Found yarn.lock files");
+  tracing::info!(?failure_mode, "Found yarn.lock files");
 
   let yarn_states = yarn_lock_files
     .par_iter()
@@ -209,11 +209,24 @@ pub fn list_yarn_states(
       let yarn_lock_path = repo.join(file);
       let node_modules_relative_path = yarn_lock_path.parent().unwrap().join("node_modules");
 
-      let yarn_lock_blob = std::fs::read(&yarn_lock_path)?;
-      let yarn_lock: Result<YarnLock, _> = parse_yarn_lock(&String::from_utf8(yarn_lock_blob)?);
+      let yarn_lock_blob = std::fs::read(&yarn_lock_path)
+        .map_err(|err| anyhow!("Failed to read {yarn_lock_path:?} from FS: {err}"));
+
+      if failure_mode != FailureMode::FailOnMissingNodeModules && yarn_lock_blob.is_err() {
+        return Ok(None);
+      };
+
+      let yarn_lock_blob = yarn_lock_blob?;
+      let yarn_lock: Result<YarnLock, _> = parse_yarn_lock(
+        &String::from_utf8(yarn_lock_blob)
+          .map_err(|err| anyhow!("Failed to parse {yarn_lock_path:?} as UTF-8: {err}"))?,
+      )
+      .map_err(|err| anyhow!("Failed to parse {yarn_lock_path:?}: {err}"));
+
       if failure_mode != FailureMode::FailOnMissingNodeModules && yarn_lock.is_err() {
         return Ok(None);
       };
+
       let yarn_lock = yarn_lock?;
 
       let node_modules_path = repo.join(&node_modules_relative_path);
