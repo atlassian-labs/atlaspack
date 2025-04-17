@@ -80,7 +80,7 @@ jobs:
 
   build-linux-gnu-x64:
     name: linux-gnu-x64
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     container:
       image: node:22.4-bullseye
     steps:
@@ -130,7 +130,7 @@ jobs:
             objcopy: aarch64-linux-gnu-objcopy
             cflags: ''
     name: ${{ matrix.target }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
@@ -187,7 +187,7 @@ jobs:
       - build-linux-gnu-arm
       - build-linux-gnu-x64
       - build-macos
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -244,7 +244,7 @@ jobs:
       - build-linux-gnu-arm
       - build-linux-gnu-x64
       - build-macos
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
