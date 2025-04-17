@@ -20,9 +20,9 @@ module.exports = (api) => {
       [
         require('@babel/preset-env'),
         {
-          modules: false,
+          modules: 'commonjs',
           targets: {
-            node: 16,
+            node: 22,
           },
         },
       ],
@@ -30,12 +30,12 @@ module.exports = (api) => {
       require('@babel/preset-flow'),
     ],
     plugins: [
-      [
-        require('@babel/plugin-transform-modules-commonjs'),
-        {
-          lazy: true,
-        },
-      ],
+      // [
+      //   require('@babel/plugin-transform-modules-commonjs'),
+      //   {
+      //     lazy: true,
+      //   },
+      // ],
     ],
     env: {
       production: {

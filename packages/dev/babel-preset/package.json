@@ -9,8 +9,8 @@
     "directory": "packages/dev/babel-preset"
   },
   "dependencies": {
-    "@babel/plugin-transform-modules-commonjs": "^7.22.11",
-    "@babel/preset-env": "^7.22.14",
+    "@babel/plugin-transform-modules-commonjs": "^7.26.3",
+    "@babel/preset-env": "^7.26.9",
     "@babel/preset-flow": "^7.22.5",
     "@babel/preset-react": "^7.22.5",
     "babel-plugin-minify-dead-code-elimination": "^0.5.0",
@@ -18,7 +18,7 @@
     "read-pkg-up": "^4.0.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.11"
+    "@babel/core": "^7.26.10"
   },
   "type": "commonjs"
 }

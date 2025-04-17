@@ -20,7 +20,7 @@
     "@atlaspack/plugin": "2.14.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.11"
+    "@babel/core": "^7.26.10"
   },
   "type": "commonjs"
 }

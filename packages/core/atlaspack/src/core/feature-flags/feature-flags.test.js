@@ -5,7 +5,7 @@ import {
   DEFAULT_FEATURE_FLAGS,
   setFeatureFlags,
   runWithConsistencyCheck,
-} from '../src';
+} from './index.js';
 import sinon from 'sinon';
 
 describe('feature-flag test', () => {

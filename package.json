@@ -15,8 +15,7 @@
     "packages/*/*"
   ],
   "scripts": {
-    "build": "yarn build-bundles && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production gulp",
-    "build-bundles": "rimraf --glob packages/*/*/lib && lerna run dev:prepare && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SELF_BUILD=true atlaspack build --no-cache packages/core/{fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}",
+    "build": "lerna run dev:prepare && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production gulp",
     "build-ts": "lerna run build-ts && lerna run check-ts",
     "build-native": "node scripts/build-native.js",
     "build-native-release": "node scripts/build-native.js --release",
@@ -53,7 +52,7 @@
     "postinstall": "patch-package"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.11",
+    "@babel/core": "^7.26.10",
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@changesets/changelog-github": "^0.5.0",
     "@changesets/cli": "^2.27.9",

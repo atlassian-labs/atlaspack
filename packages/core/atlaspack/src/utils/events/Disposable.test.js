@@ -1,8 +1,8 @@
 // @flow strict-local
 
 import assert from 'assert';
-import Disposable from '../src/Disposable';
-import {AlreadyDisposedError} from '../src/errors';
+import Disposable from './Disposable';
+import {AlreadyDisposedError} from './errors';
 
 describe('Disposable', () => {
   it('can wrap an IDisposable', () => {
