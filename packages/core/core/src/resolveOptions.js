@@ -12,7 +12,7 @@ import type {AtlaspackOptions} from './types';
 import path from 'path';
 import {hashString} from '@atlaspack/rust';
 import {NodeFS, NodeVCSAwareFS} from '@atlaspack/fs';
-import {LMDBCache, LMDBLiteCache, FSCache} from '@atlaspack/cache';
+import {LMDBLiteCache, FSCache} from '@atlaspack/cache';
 import {getFeatureFlag, getFeatureFlagValue} from '@atlaspack/feature-flags';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {
