@@ -30,7 +30,7 @@ import ThrowableDiagnostic, {
   md,
   errorToDiagnostic,
 } from '@atlaspack/diagnostic';
-import {parse} from 'json5';
+import json5 from 'json5';
 import path from 'path';
 import invariant from 'assert';
 
@@ -216,7 +216,7 @@ export async function parseAndProcessConfig(
 ): Promise<AtlaspackConfigChain> {
   let config: RawAtlaspackConfig;
   try {
-    config = parse(contents);
+    config = json5.parse(contents);
   } catch (e) {
     let pos = {
       line: e.lineNumber,
