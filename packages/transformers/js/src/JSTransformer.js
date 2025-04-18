@@ -415,6 +415,8 @@ export default (new Transformer({
       }
     }
 
+    let isWorkerFile = (await asset.getCode()).includes('WORKER_PATH');
+
     let macroAssets = [];
     let {
       dependencies,
@@ -438,7 +440,7 @@ export default (new Transformer({
       inline_fs: Boolean(config?.inlineFS) && !asset.env.isNode(),
       insert_node_globals:
         !asset.env.isNode() && asset.env.sourceType !== 'script',
-      node_replacer: asset.env.isNode(),
+      node_replacer: asset.env.isNode() && !isWorkerFile,
       is_browser: asset.env.isBrowser(),
       is_worker: asset.env.isWorker(),
       env,

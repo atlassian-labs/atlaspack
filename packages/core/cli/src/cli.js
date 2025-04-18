@@ -132,12 +132,26 @@ async function run(
 
   entries = entries.map((entry) => path.resolve(entry));
 
+  const resolve = (specifier, {paths}) => {
+    for (let path of paths) {
+      let customRequire = require('module').createRequire(path);
+      try {
+        return customRequire.resolve('@atlaspack/config-default');
+      } catch (e) {
+        // Ignore error
+      }
+    }
+    throw new Error(
+      `Can't resolve "${specifier}" from any of [${paths.join(', ')}]`,
+    );
+  };
+
   let Atlaspack = require('@atlaspack/core').default;
   let fs = new NodeFS();
   let options = await normalizeOptions(command, fs);
   let atlaspack = new Atlaspack({
     entries,
-    defaultConfig: require.resolve('@atlaspack/config-default', {
+    defaultConfig: resolve('@atlaspack/config-default', {
       paths: [fs.cwd(), __dirname],
     }),
     shouldPatchConsole: false,

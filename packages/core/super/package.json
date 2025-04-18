@@ -1,0 +1,47 @@
+{
+  "name": "@atlaspack/super",
+  "version": "2.14.0",
+  "description": "Blazing fast, zero configuration web application bundler",
+  "license": "(MIT OR Apache-2.0)",
+  "scripts": {
+    "build": "yarn generate-entries && yarn build:atlaspack && yarn build:native-bindings",
+    "generate-entries": "rm -rf entries && node ./scripts/generate-entries.js",
+    "build:atlaspack": "NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SUPER_BUILD=true atlaspack build --no-cache --no-autoinstall ./entries/*.js --config .parcelrc",
+    "build:native-bindings": "mkdir -p lib/node_modules/@atlaspack/rust && cp ../rust/*.* lib/node_modules/@atlaspack/rust"
+  },
+  "targets": {
+    "default": {
+      "context": "node",
+      "isLibrary": true,
+      "distDir": "lib",
+      "optimize": false,
+      "sourceMap": false,
+      "includeNodeModules": {
+        "@parcel/source-map": false,
+        "@atlaspack/rust": false,
+        "lightningcss": false
+      }
+    }
+  },
+  "alias": {
+    "@swc/wasm": false
+  },
+  "dependencies": {
+    "@atlaspack/core": "*"
+  },
+  "devDependencies": {
+    "@atlaspack/transformer-raw": "*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
+  "source": "src/index.js",
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "type": "commonjs"
+}

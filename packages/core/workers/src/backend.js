@@ -12,7 +12,7 @@ export function detectBackend(): BackendType {
   }
 
   try {
-    require('worker_threads');
+    () => require('worker_threads')();
     return 'threads';
   } catch (err) {
     return 'process';
@@ -25,8 +25,13 @@ export function getWorkerBackend(backend: BackendType): Class<WorkerImpl> {
       return require('./threads/ThreadsWorker').default;
     case 'process':
       return require('./process/ProcessWorker').default;
-    case 'web':
-      return require('./web/WebWorker').default;
+    case 'web': {
+      if (!process.env.ATLASPACK_SUPER_BUILD) {
+        return require('./web/WebWorker').default;
+      } else {
+        throw new Error('Web worker not supported');
+      }
+    }
     default:
       throw new Error(`Invalid backend: ${backend}`);
   }
