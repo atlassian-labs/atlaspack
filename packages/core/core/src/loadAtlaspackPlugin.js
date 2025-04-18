@@ -102,61 +102,6 @@ export default async function loadPlugin<T>(
     });
   }
 
-  // Remove plugin version compatiblility validation in canary builds as they don't use semver
-  if (!process.env.SKIP_PLUGIN_COMPATIBILITY_CHECK) {
-    if (!pluginName.startsWith('.')) {
-      // Validate the plugin engines field
-      let key = 'atlaspack';
-      let atlaspackVersionRange;
-      if (pkg?.engines?.atlaspack) {
-        atlaspackVersionRange = pkg.engines.atlaspack;
-      } else if (pkg?.engines?.parcel) {
-        key = 'parcel';
-        atlaspackVersionRange = pkg.engines.parcel;
-      }
-
-      if (!atlaspackVersionRange) {
-        logger.warn({
-          origin: '@atlaspack/core',
-          message: `The plugin "${pluginName}" needs to specify a \`package.json#engines.atlaspack\` field with the supported Atlaspack version range.`,
-        });
-      }
-
-      if (
-        atlaspackVersionRange &&
-        !semver.satisfies(ATLASPACK_VERSION, atlaspackVersionRange)
-      ) {
-        let pkgFile = nullthrows(
-          await resolveConfig(
-            options.inputFS,
-            resolved,
-            ['package.json'],
-            options.projectRoot,
-          ),
-        );
-        let pkgContents = await options.inputFS.readFile(pkgFile, 'utf8');
-        throw new ThrowableDiagnostic({
-          diagnostic: {
-            message: md`The plugin "${pluginName}" is not compatible with the current version of Atlaspack. Requires "${atlaspackVersionRange}" but the current version is "${ATLASPACK_VERSION}".`,
-            origin: '@atlaspack/core',
-            codeFrames: [
-              {
-                filePath: pkgFile,
-                language: 'json5',
-                code: pkgContents,
-                codeHighlights: generateJSONCodeHighlights(pkgContents, [
-                  {
-                    key: `/engines/${key}`,
-                  },
-                ]),
-              },
-            ],
-          },
-        });
-      }
-    }
-  }
-
   let plugin = await options.packageManager.require(pluginName, resolveFrom, {
     shouldAutoInstall: options.shouldAutoInstall,
   });
