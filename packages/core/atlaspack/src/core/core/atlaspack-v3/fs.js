@@ -1,0 +1,55 @@
+// @flow strict-local
+
+import type {FileSystem, JsCallable} from '../../rust/index';
+import type {
+  Encoding,
+  FilePath,
+  FileSystem as IFileSystem,
+} from '../../types/index.js';
+
+import {jsCallable} from './jsCallable';
+
+export class FileSystemV3 implements FileSystem {
+  #fs: IFileSystem;
+
+  constructor(fs: IFileSystem) {
+    this.#fs = fs;
+  }
+
+  canonicalize: JsCallable<[FilePath], FilePath> = jsCallable(
+    (path: FilePath) => this.#fs.realpathSync(path),
+  );
+
+  createDirectory: JsCallable<[FilePath], Promise<void>> = jsCallable(
+    (path: FilePath) => this.#fs.mkdirp(path),
+  );
+
+  cwd: JsCallable<[], FilePath> = jsCallable(() => this.#fs.cwd());
+
+  isFile: JsCallable<[FilePath], boolean> = (path: string) => {
+    try {
+      return this.#fs.statSync(path).isFile();
+    } catch {
+      return false;
+    }
+  };
+
+  isDir: JsCallable<[FilePath], boolean> = (path: string) => {
+    try {
+      return this.#fs.statSync(path).isDirectory();
+    } catch {
+      return false;
+    }
+  };
+
+  readFile: JsCallable<[FilePath, Encoding], string> = jsCallable(
+    (path: string, encoding?: Encoding) => {
+      if (!encoding) {
+        // $FlowFixMe
+        return [...this.#fs.readFileSync(path)];
+      } else {
+        return this.#fs.readFileSync(path, encoding);
+      }
+    },
+  );
+}

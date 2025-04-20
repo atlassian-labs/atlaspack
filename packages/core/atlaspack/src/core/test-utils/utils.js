@@ -12,7 +12,7 @@ import type {
 } from '../types/index.js';
 import type {FileSystem} from '../fs/index.js';
 import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '../fs/index.js';
-import type WorkerFarm from '@atlaspack/workers';
+import type WorkerFarm from '../workers/index.js';
 import type {IncomingMessage} from 'http';
 import http from 'http';
 // $FlowFixMe

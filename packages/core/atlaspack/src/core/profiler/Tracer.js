@@ -4,13 +4,13 @@ import type {
   TraceEvent,
   IDisposable,
   PluginTracer as IPluginTracer,
-} from '@atlaspack/types';
+} from '../types/index.js';
 import type {
   TraceMeasurement as ITraceMeasurement,
   TraceMeasurementData,
 } from './types';
 // @ts-ignore
-import {ValueEmitter} from '@atlaspack/events';
+import {ValueEmitter} from '../../utils/events/index.js';
 
 import {performance} from 'perf_hooks';
 

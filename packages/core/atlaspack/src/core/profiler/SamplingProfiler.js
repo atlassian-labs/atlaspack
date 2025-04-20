@@ -1,7 +1,7 @@
 // @flow
 import type {Session} from 'inspector';
 import invariant from 'assert';
-import ThrowableDiagnostic from '@atlaspack/diagnostic';
+import ThrowableDiagnostic from '../diagnostic/index.js';
 
 // https://chromedevtools.github.io/devtools-protocol/tot/Profiler#type-Profile
 export type Profile = {|

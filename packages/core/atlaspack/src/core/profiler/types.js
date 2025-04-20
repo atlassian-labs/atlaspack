@@ -1,6 +1,6 @@
 // @flow
 
-export type {TraceMeasurement} from '@atlaspack/types-internal';
+export type {TraceMeasurement} from '../types-internal/index.js';
 
 export type TraceMeasurementData = {|
   +categories: string[],
