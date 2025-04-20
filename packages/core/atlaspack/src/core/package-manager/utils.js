@@ -1,11 +1,11 @@
 // @flow strict-local
 
-import type {FilePath, ModuleRequest} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
+import type {FilePath, ModuleRequest} from '../types/index.js';
+import type {FileSystem} from '../fs/index.js';
 
 import invariant from 'assert';
-import ThrowableDiagnostic from '@atlaspack/diagnostic';
-import {resolveConfig} from '@atlaspack/utils';
+import ThrowableDiagnostic from '../diagnostic/index.js';
+import {resolveConfig} from '../utils/index.js';
 import {exec as _exec} from 'child_process';
 import {promisify} from 'util';
 

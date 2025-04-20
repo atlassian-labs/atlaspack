@@ -4,14 +4,14 @@ import type {
   ModuleRequest,
   PackageInstaller,
   InstallerOptions,
-} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
-import type {FilePath} from '@atlaspack/types';
+} from '../types/index.js';
+import type {FileSystem} from '../fs/index.js';
+import type {FilePath} from '../types/index.js';
 
 import path from 'path';
-import {registerSerializableClass} from '@atlaspack/build-cache';
-import {ncp} from '@atlaspack/fs';
-import pkg from '../package.json';
+import {registerSerializableClass} from '../build-cache/index.js';
+import {ncp} from '../fs/index.js';
+import pkg from '../../../package.json';
 import {moduleRequestsFromDependencyMap} from './utils';
 
 type Package = {|

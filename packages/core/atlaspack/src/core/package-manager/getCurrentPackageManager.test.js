@@ -1,6 +1,6 @@
 // @flow
 import assert from 'assert';
-import getCurrentPackageManager from '../src/getCurrentPackageManager';
+import getCurrentPackageManager from './getCurrentPackageManager';
 
 describe('getCurrentPackageManager', () => {
   it('yarn', () => {

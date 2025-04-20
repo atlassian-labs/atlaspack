@@ -1,8 +1,8 @@
 // @flow strict-local
 
-import type {JSONObject} from '@atlaspack/types';
+import type {JSONObject} from '../types/index.js';
 
-import logger from '@atlaspack/logger';
+import logger from '../logger/index.js';
 import {Transform} from 'stream';
 
 // Transforms chunks of json strings to parsed objects.

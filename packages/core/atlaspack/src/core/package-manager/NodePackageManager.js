@@ -3,8 +3,8 @@ import type {
   FilePath,
   DependencySpecifier,
   SemverRange,
-} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
+} from '../types/index.js';
+import type {FileSystem} from '../fs/index.js';
 import type {
   ModuleRequest,
   PackageManager,
@@ -12,29 +12,29 @@ import type {
   InstallOptions,
   Invalidations,
   PackageManagerResolveResult,
-} from '@atlaspack/types';
+} from '../types/index.js';
 
-import {registerSerializableClass} from '@atlaspack/build-cache';
+import {registerSerializableClass} from '../build-cache/index.js';
 import ThrowableDiagnostic, {
   encodeJSONKeyComponent,
   escapeMarkdown,
   generateJSONCodeHighlights,
   md,
-} from '@atlaspack/diagnostic';
-import {NodeFS} from '@atlaspack/fs';
+} from '../diagnostic/index.js';
+import {NodeFS} from '../fs/index.js';
 import nativeFS from 'fs';
 import Module from 'module';
 import path from 'path';
 import semver from 'semver';
-import logger from '@atlaspack/logger';
+import logger from '../logger/index.js';
 import nullthrows from 'nullthrows';
 
-import {getModuleParts} from '@atlaspack/utils';
+import {getModuleParts} from '../utils/index.js';
 import {getConflictingLocalDependencies} from './utils';
 import {installPackage} from './installPackage';
-import pkg from '../package.json';
+import pkg from '../../../package.json';
 import {getConditionsFromEnv} from './nodejsConditions';
-import {ResolverBase} from '@atlaspack/node-resolver-core';
+import {ResolverBase} from '../node-resolver-core/index.js';
 import {pathToFileURL} from 'url';
 import {transformSync} from '@swc/core';
 

@@ -1,13 +1,13 @@
 // @flow
 
-import type {FilePath, PackageJSON} from '@atlaspack/types';
+import type {FilePath, PackageJSON} from '../types/index.js';
 import type {
   ModuleRequest,
   PackageManager,
   PackageInstaller,
   InstallOptions,
-} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
+} from '../types/index.js';
+import type {FileSystem} from '../fs/index.js';
 
 import invariant from 'assert';
 import path from 'path';
@@ -17,10 +17,10 @@ import ThrowableDiagnostic, {
   generateJSONCodeHighlights,
   encodeJSONKeyComponent,
   md,
-} from '@atlaspack/diagnostic';
-import logger from '@atlaspack/logger';
-import {loadConfig, PromiseQueue, resolveConfig} from '@atlaspack/utils';
-import WorkerFarm from '@atlaspack/workers';
+} from '../diagnostic/index.js';
+import logger from '../logger/index.js';
+import {loadConfig, PromiseQueue, resolveConfig} from '../utils/index.js';
+import WorkerFarm from '../workers/index.js';
 
 import {Npm} from './Npm';
 import {Yarn} from './Yarn';

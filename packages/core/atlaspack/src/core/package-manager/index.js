@@ -1,13 +1,13 @@
 // @flow
 
-import type {PackageManagerResolveResult} from '@atlaspack/types';
+import type {PackageManagerResolveResult} from '../types/index.js';
 
 export type {
   PackageManager,
   Invalidations,
   PackageInstaller,
   ModuleRequest,
-} from '@atlaspack/types';
+} from '../types/index.js';
 export * from './Npm';
 export * from './Pnpm';
 export * from './Yarn';

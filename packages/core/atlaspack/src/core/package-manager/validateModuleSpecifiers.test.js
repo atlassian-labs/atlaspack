@@ -1,7 +1,7 @@
 // @flow
 import assert from 'assert';
 
-import validateModuleSpecifier from '../src/validateModuleSpecifier';
+import validateModuleSpecifier from './validateModuleSpecifier';
 
 describe('Validate Module Specifiers', () => {
   it('Validate Module Specifiers', () => {

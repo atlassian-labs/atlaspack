@@ -1,14 +1,14 @@
 // @flow strict-local
 
-import {MemoryFS, NodeFS, OverlayFS} from '@atlaspack/fs';
+import {MemoryFS, NodeFS, OverlayFS} from '../fs/index.js';
 import assert from 'assert';
 import invariant from 'assert';
 import path from 'path';
 import sinon from 'sinon';
-import ThrowableDiagnostic from '@atlaspack/diagnostic';
-import {loadConfig} from '@atlaspack/utils';
-import WorkerFarm from '@atlaspack/workers';
-import {MockPackageInstaller, NodePackageManager} from '../src';
+import ThrowableDiagnostic from '../diagnostic/index.js';
+import {loadConfig} from '../utils/index.js';
+import WorkerFarm from '../workers/index.js';
+import {MockPackageInstaller, NodePackageManager} from './index.js';
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 

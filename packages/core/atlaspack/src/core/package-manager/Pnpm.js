@@ -1,13 +1,13 @@
 // @flow strict-local
 
-import type {PackageInstaller, InstallerOptions} from '@atlaspack/types';
+import type {PackageInstaller, InstallerOptions} from '../types/index.js';
 
 import path from 'path';
 import fs from 'fs';
 import commandExists from 'command-exists';
 import spawn from 'cross-spawn';
-import {registerSerializableClass} from '@atlaspack/build-cache';
-import logger from '@atlaspack/logger';
+import {registerSerializableClass} from '../build-cache/index.js';
+import logger from '../logger/index.js';
 import split from 'split2';
 import JSONParseStream from './JSONParseStream';
 import promiseFromProcess from './promiseFromProcess';
