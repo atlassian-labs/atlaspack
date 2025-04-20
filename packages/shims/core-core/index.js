@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/conditional-import-types/index.js');
+module.exports = require('atlaspack/core/index.js');
