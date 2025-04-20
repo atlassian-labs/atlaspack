@@ -1,2 +1,2 @@
-export * from 'atlaspack/core/package-manager';
-export {default} from 'atlaspack/core/package-manager';
+export * from 'atlaspack/core/package-manager/index.js';
+export {default} from 'atlaspack/core/package-manager/index.js';

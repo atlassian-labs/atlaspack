@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/utils/events');
+module.exports = require('atlaspack/utils/events/index.js');

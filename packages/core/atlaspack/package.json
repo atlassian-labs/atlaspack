@@ -9,9 +9,8 @@
   "type": "commonjs",
   "exports": {
     ".": "./lib/index.js",
-    "./*": "./lib/core/*/index.js",
-    "./core/*": "./lib/core/*/index.js",
-    "./utils/*": "./lib/utils/*/index.js"
+    "./*": "./lib/*",
+    "./src/*": "./src/*"
   },
   "main": "./lib/index.js",
   "dependencies": {

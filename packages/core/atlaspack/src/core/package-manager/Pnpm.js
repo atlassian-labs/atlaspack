@@ -14,7 +14,7 @@ import promiseFromProcess from './promiseFromProcess';
 import {exec, npmSpecifierFromModuleRequest} from './utils';
 
 // $FlowFixMe
-import pkg from '../package.json';
+import pkg from '../../../package.json';
 
 const PNPM_CMD = 'pnpm';
 

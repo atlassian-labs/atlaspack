@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/core/codeframe');
+module.exports = require('atlaspack/core/codeframe/index.js');

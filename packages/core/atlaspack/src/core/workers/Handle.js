@@ -1,7 +1,7 @@
 // @flow strict-local
 import {registerSerializableClass} from '../build-cache/index.js';
 // $FlowFixMe
-import packageJson from '../package.json';
+import packageJson from '../../../package.json';
 
 let HANDLE_ID = 0;
 // $FlowFixMe

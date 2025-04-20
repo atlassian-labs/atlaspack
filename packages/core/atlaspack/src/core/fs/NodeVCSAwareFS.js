@@ -10,7 +10,7 @@ import logger, {instrumentAsync} from '../logger/index.js';
 import {getFeatureFlagValue} from '../feature-flags/index.js';
 
 // $FlowFixMe
-import packageJSON from '../package.json';
+import packageJSON from '../../../package.json';
 
 export interface NodeVCSAwareFSOptions {
   gitRepoPath: null | FilePath;

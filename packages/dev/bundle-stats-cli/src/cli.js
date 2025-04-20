@@ -1,7 +1,7 @@
 /* eslint-disable no-console, monorepo/no-internal-import */
 // @flow strict-local
 import type {PackagedBundle} from '@atlaspack/types';
-import type {ParcelOptions} from '@atlaspack/core/src/types';
+import type {ParcelOptions} from 'atlaspack/core/core/types';
 import type {commander$Command} from 'commander';
 
 // $FlowFixMe[untyped-import]

@@ -17,7 +17,7 @@ import {promisify} from 'util';
 import {NodeFS} from '../fs/index.js';
 
 // $FlowFixMe
-import packageJson from '../package.json';
+import packageJson from '../../../package.json';
 
 import {FSCache} from './FSCache';
 

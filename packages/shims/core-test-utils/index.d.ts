@@ -1,2 +1,2 @@
-export * from 'atlaspack/core/test-utils';
-export {default} from 'atlaspack/core/test-utils';
+export * from 'atlaspack/core/test-utils/index.js';
+export {default} from 'atlaspack/core/test-utils/index.js';

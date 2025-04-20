@@ -17,7 +17,7 @@ import {NodeFS} from '../fs/index.js';
 import lmdb from 'lmdb';
 
 // $FlowFixMe
-import packageJson from '../package.json';
+import packageJson from '../../../package.json';
 
 import {FSCache} from './FSCache';
 

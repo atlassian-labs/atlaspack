@@ -10,7 +10,7 @@ import promiseFromProcess from './promiseFromProcess';
 import {npmSpecifierFromModuleRequest} from './utils';
 
 // $FlowFixMe
-import pkg from '../package.json';
+import pkg from '../../../package.json';
 
 const NPM_CMD = 'npm';
 

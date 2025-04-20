@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/core/feature-flags');
+module.exports = require('atlaspack/core/feature-flags/index.js');

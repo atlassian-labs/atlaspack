@@ -12,7 +12,7 @@ import {
   overlayFS,
 } from '@atlaspack/test-utils';
 
-import {ATLASPACK_VERSION} from '../../core/src/constants';
+import {ATLASPACK_VERSION} from '../../atlaspack/src/core/core/constants.js';
 
 describe('JS API', function () {
   it.v2('should respect distEntry', async function () {

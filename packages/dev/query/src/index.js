@@ -1,7 +1,7 @@
 // @flow strict-local
 /* eslint-disable no-console, monorepo/no-internal-import */
 import type {ContentKey, NodeId} from '@atlaspack/graph';
-import type {PackagedBundleInfo} from '@atlaspack/core/src/types';
+import type {PackagedBundleInfo} from '../../../core/atlaspack/src/core/types';
 
 import fs from 'fs';
 import path from 'path';

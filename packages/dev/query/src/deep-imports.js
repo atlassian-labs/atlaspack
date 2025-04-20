@@ -10,7 +10,7 @@ import typeof RequestTracker, {
 } from '@atlaspack/core/src/RequestTracker';
 import typeof {requestGraphEdgeTypes} from '@atlaspack/core/src/RequestTracker';
 import typeof {LMDBCache} from '@atlaspack/cache/src/LMDBCache';
-import typeof {Priority} from '@atlaspack/core/src/types';
+import typeof {Priority} from '../../../core/atlaspack/src/core/types';
 import typeof {fromProjectPathRelative} from '@atlaspack/core/src/projectPath';
 
 const v =
@@ -36,7 +36,7 @@ const v =
         BundleGraph: require('@atlaspack/core/src/BundleGraph'),
         RequestTracker: require('@atlaspack/core/src/RequestTracker'),
         LMDBCache: require('@atlaspack/cache/src/LMDBCache').LMDBCache,
-        Priority: require('@atlaspack/core/src/types').Priority,
+        Priority: require('../../../core/atlaspack/src/core/types').Priority,
         fromProjectPathRelative: require('@atlaspack/core/src/projectPath')
           .fromProjectPathRelative,
       };

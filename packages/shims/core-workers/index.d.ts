@@ -1,2 +1,2 @@
-export * from 'atlaspack/core/workers';
-export {default} from 'atlaspack/core/workers';
+export * from 'atlaspack/core/workers/index.js';
+export {default} from 'atlaspack/core/workers/index.js';

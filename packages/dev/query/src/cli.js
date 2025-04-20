@@ -1,8 +1,8 @@
 // @flow strict-local
 /* eslint-disable no-console, monorepo/no-internal-import */
 import type {ContentGraph, ContentKey, NodeId} from '@atlaspack/graph';
-import type {BundleGraphEdgeType} from '@atlaspack/core/src/BundleGraph';
-import type {AssetGraphNode, BundleGraphNode} from '@atlaspack/core/src/types';
+import type {BundleGraphEdgeType} from '../../../core/atlaspack/src/core/core/BundleGraph';
+import type {AssetGraphNode, BundleGraphNode} from '../../../core/atlaspack/src/core/core/types';
 
 import path from 'path';
 import fs from 'fs';

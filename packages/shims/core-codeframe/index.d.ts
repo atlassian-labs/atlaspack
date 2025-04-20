@@ -1,2 +1,2 @@
-export * from 'atlaspack/core/codeframe';
-export {default} from 'atlaspack/core/codeframe';
+export * from 'atlaspack/core/codeframe/index.js';
+export {default} from 'atlaspack/core/codeframe/index.js';

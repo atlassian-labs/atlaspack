@@ -1,2 +1,2 @@
-export * from 'atlaspack/core/diagnostic';
-export {default} from 'atlaspack/core/diagnostic';
+export * from 'atlaspack/core/diagnostic/index.js';
+export {default} from 'atlaspack/core/diagnostic/index.js';
