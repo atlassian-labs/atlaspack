@@ -1,25 +1,15 @@
 {
   "name": "@atlaspack/babel-plugin-transform-runtime",
   "version": "2.14.0",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "src/index.js",
-  "engines": {
-    "node": ">= 16.0.0"
-  },
-  "dependencies": {
-    "@babel/plugin-transform-runtime": "^7.22.10",
-    "semver": "^7.5.2"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.26.10",
-    "@atlaspack/babel-preset-env": "2.14.0"
-  },
-  "type": "commonjs"
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  }
 }
