@@ -1,0 +1,5 @@
+/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable monorepo/no-internal-import */
+// @flow
+export * from 'atlaspack/src/babel-plugin-transform-runtime/index.js';
+export {default} from 'atlaspack/src/babel-plugin-transform-runtime/index.js';

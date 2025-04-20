@@ -3,7 +3,7 @@
 import * as babel from '@babel/core';
 import assert from 'assert';
 
-const plugin = require.resolve('../src/index.ts');
+const plugin = require.resolve('./index.ts');
 
 describe('@atlaspack/babel-plugin-transform-contextual-imports', () => {
   it('should transform importCond to inline requires', () => {
