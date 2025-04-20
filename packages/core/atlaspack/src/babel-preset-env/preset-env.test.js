@@ -19,7 +19,7 @@ export default class Foo {
 }
 `;
 
-const preset = require.resolve('../src');
+const preset = require.resolve('./index.js');
 
 describe('@atlaspack/babel-preset-env', () => {
   it('compiles against targets passed through caller when the caller is parcel 2.x', () => {
