@@ -1,14 +1,14 @@
 // @flow strict-local
-import NodeResolver from '../src/Wrapper';
+import NodeResolver from '../Wrapper';
 import path from 'path';
 import assert from 'assert';
 import nullthrows from 'nullthrows';
-import {ncp, overlayFS, outputFS} from '@atlaspack/test-utils';
-import {loadConfig as configCache} from '@atlaspack/utils';
-import {createEnvironment} from '@atlaspack/core/src/Environment';
-import Environment from '@atlaspack/core/src/public/Environment';
-import {DEFAULT_OPTIONS} from '@atlaspack/core/test/test-utils';
-import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
+import {ncp, overlayFS, outputFS} from '../../../core/test-utils/index.js';
+import {loadConfig as configCache} from '../../../core/utils/index.js';
+import {createEnvironment} from '../../../core/core/Environment.js';
+import Environment from '../../../core/core/public/Environment.js';
+import {DEFAULT_OPTIONS} from '../../../core/core/test-utils.js';
+import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '../../../core/feature-flags/index.js';
 
 const rootDir = path.join(__dirname, 'fixture');
 

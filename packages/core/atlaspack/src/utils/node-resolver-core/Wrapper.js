@@ -8,12 +8,12 @@ import type {
   BuildMode,
   ResolveResult,
   PluginLogger,
-} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
-import type {PackageManager} from '@atlaspack/package-manager';
-import type {Diagnostic} from '@atlaspack/diagnostic';
-import {NodeFS} from '@atlaspack/fs';
-import {init, Resolver} from '@atlaspack/rust';
+} from '../../core/types/index.js';
+import type {FileSystem} from '../../core/fs/index.js';
+import type {PackageManager} from '../../core/package-manager/index.js';
+import type {Diagnostic} from '../../core/diagnostic/index.js';
+import {NodeFS} from '../../core/fs/index.js';
+import {init, Resolver} from '../../core/rust/index.js';
 import builtins, {empty} from './builtins';
 import path from 'path';
 import {
@@ -22,18 +22,18 @@ import {
   findAlternativeFiles,
   loadConfig,
   getModuleParts,
-} from '@atlaspack/utils';
+} from '../../core/utils/index.js';
 import ThrowableDiagnostic, {
   convertSourceLocationToHighlight,
   encodeJSONKeyComponent,
   errorToDiagnostic,
   generateJSONCodeHighlights,
   md,
-} from '@atlaspack/diagnostic';
+} from '../../core/diagnostic/index.js';
 import semver from 'semver';
 import {parse} from '@mischnic/json-sourcemap';
 import _Module from 'module';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {getFeatureFlag} from '../../core/feature-flags/index.js';
 
 // Package.json fields. Must match package_json.rs.
 const MAIN = 1 << 0;

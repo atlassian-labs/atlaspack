@@ -34,7 +34,7 @@ import {getConflictingLocalDependencies} from './utils';
 import {installPackage} from './installPackage';
 import pkg from '../../../package.json';
 import {getConditionsFromEnv} from './nodejsConditions';
-import {ResolverBase} from '../node-resolver-core/index.js';
+import {ResolverBase} from '../../utils/node-resolver-core/index.js';
 import {pathToFileURL} from 'url';
 import {transformSync} from '@swc/core';
 

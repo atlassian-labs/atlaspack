@@ -3,7 +3,7 @@
 import {builtinModules} from 'module';
 import nullthrows from 'nullthrows';
 // flowlint-next-line untyped-import:off
-import packageJson from '../package.json';
+import packageJson from '../../../package.json';
 
 export const empty: string = require.resolve('./_empty.js');
 
