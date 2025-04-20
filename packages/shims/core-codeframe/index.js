@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/core/logger');
+module.exports = require('atlaspack/core/codeframe');

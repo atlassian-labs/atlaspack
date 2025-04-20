@@ -2,7 +2,7 @@
 import assert from 'assert';
 import chalk from 'chalk';
 
-import mdAnsi from '../src/markdown-ansi';
+import mdAnsi from './markdown-ansi';
 
 process.env.FORCE_COLOR = '3';
 
