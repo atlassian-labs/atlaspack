@@ -2,12 +2,12 @@
 
 import path from 'path';
 import {NodeFS} from './NodeFS';
-import {getVcsStateSnapshot, getEventsSince} from '@atlaspack/rust';
-import type {FilePath} from '@atlaspack/types-internal';
+import {getVcsStateSnapshot, getEventsSince} from '../rust/index.js';
+import type {FilePath} from '../types-internal/index.js';
 import type {Event, Options as WatcherOptions} from '@parcel/watcher';
 import {registerSerializableClass} from '@atlaspack/build-cache';
-import logger, {instrumentAsync} from '@atlaspack/logger';
-import {getFeatureFlagValue} from '@atlaspack/feature-flags';
+import logger, {instrumentAsync} from '../logger/index.js';
+import {getFeatureFlagValue} from '../feature-flags/index.js';
 
 // $FlowFixMe
 import packageJSON from '../package.json';

@@ -3,7 +3,7 @@ import type {
   FilePath,
   FileSystem,
   FileOptions,
-} from '@atlaspack/types-internal';
+} from '../types-internal/index.js';
 import type {Readable, Writable} from 'stream';
 
 import path from 'path';

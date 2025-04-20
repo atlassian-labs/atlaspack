@@ -8,7 +8,7 @@ import type {
   FileSystem,
   ReaddirOptions,
   FileStats,
-} from '@atlaspack/types-internal';
+} from '../types-internal/index.js';
 import type {
   Event,
   Options as WatcherOptions,
@@ -17,7 +17,7 @@ import type {
 
 import {registerSerializableClass} from '@atlaspack/build-cache';
 import WorkerFarm from '@atlaspack/workers';
-import packageJSON from '../package.json';
+import packageJSON from '../../../package.json';
 import {findAncestorFile, findNodeModule, findFirstFile} from './find';
 import {MemoryFS} from './MemoryFS';
 

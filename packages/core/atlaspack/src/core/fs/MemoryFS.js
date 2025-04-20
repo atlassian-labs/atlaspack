@@ -6,7 +6,7 @@ import type {
   FileOptions,
   ReaddirOptions,
   Encoding,
-} from '@atlaspack/types-internal';
+} from '../types-internal/index.js';
 import type {
   Event,
   Options as WatcherOptions,
@@ -16,8 +16,8 @@ import type {
 import path from 'path';
 import {Readable, Writable} from 'stream';
 import {registerSerializableClass} from '@atlaspack/build-cache';
-import {SharedBuffer} from '@atlaspack/utils';
-import packageJSON from '../package.json';
+import {SharedBuffer} from '../utils/index.js';
+import packageJSON from '../../../package.json';
 import WorkerFarm, {Handle} from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
 import EventEmitter from 'events';

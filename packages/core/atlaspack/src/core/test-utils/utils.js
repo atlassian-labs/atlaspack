@@ -9,9 +9,9 @@ import type {
   FilePath,
   InitialAtlaspackOptions,
   PackagedBundle,
-} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
-import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '@atlaspack/fs';
+} from '../types/index.js';
+import type {FileSystem} from '../fs/index.js';
+import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '../fs/index.js';
 import type WorkerFarm from '@atlaspack/workers';
 import type {IncomingMessage} from 'http';
 import http from 'http';
@@ -21,7 +21,7 @@ import expect from 'expect';
 import invariant from 'assert';
 import assert from 'assert';
 import util from 'util';
-import Atlaspack, {createWorkerFarm, NapiWorkerPool} from '@atlaspack/core';
+import Atlaspack, {createWorkerFarm, NapiWorkerPool} from '../core/indx.js';
 import vm from 'vm';
 import v8 from 'v8';
 import path from 'path';
@@ -33,7 +33,7 @@ import postHtml from 'posthtml';
 import EventEmitter from 'events';
 import https from 'https';
 
-import {makeDeferredWithPromise, normalizeSeparators} from '@atlaspack/utils';
+import {makeDeferredWithPromise, normalizeSeparators} from '../utils/index.js';
 import _chalk from 'chalk';
 import resolve from 'resolve';
 

@@ -1,5 +1,5 @@
 // @flow
-import type {FileSystem} from '@atlaspack/types-internal';
+import type {FileSystem} from '../types-internal/index.js';
 
 // $FlowFixMe[prop-missing] handled by the throwing constructor
 export class NodeFS implements FileSystem {

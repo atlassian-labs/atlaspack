@@ -1,6 +1,0 @@
-{
-  "extends": "@atlaspack/eslint-config",
-  "env": {
-    "mocha": true
-  }
-}

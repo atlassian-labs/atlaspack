@@ -1,5 +1,5 @@
 // @flow
-import type {FilePath, FileSystem} from '@atlaspack/types-internal';
+import type {FilePath, FileSystem} from '../types-internal/index.js';
 import path from 'path';
 
 export function findNodeModule(

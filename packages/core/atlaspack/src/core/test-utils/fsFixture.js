@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import type {FileSystem} from '@atlaspack/fs';
+import type {FileSystem} from '../fs/index.js';
 
 import assert from 'assert';
 import nullthrows from 'nullthrows';

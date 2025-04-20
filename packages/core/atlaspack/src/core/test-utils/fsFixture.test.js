@@ -10,8 +10,8 @@ import {
   FixtureDir,
   FixtureFile,
   FixtureLink,
-} from '../src/fsFixture';
-import {MemoryFS} from '@atlaspack/fs';
+} from './fsFixture';
+import {MemoryFS} from '../fs';
 import WorkerFarm from '@atlaspack/workers';
 
 import assert from 'assert';
