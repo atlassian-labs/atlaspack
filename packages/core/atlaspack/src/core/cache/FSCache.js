@@ -1,23 +1,23 @@
 // @flow strict-local
 
 import type {Readable, Writable} from 'stream';
-import type {FilePath} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
+import type {FilePath} from '../types/index.js';
+import type {FileSystem} from '../fs/index.js';
 import type {Cache} from './types';
 
 import stream from 'stream';
 import path from 'path';
 import {promisify} from 'util';
 
-import logger from '@atlaspack/logger';
+import logger from '../logger/index.js';
 import {
   deserialize,
   registerSerializableClass,
   serialize,
-} from '@atlaspack/build-cache';
+} from '../build-cache/index.js';
 
 // flowlint-next-line untyped-import:off
-import packageJson from '../package.json';
+import packageJson from '../../../package.json';
 
 import {WRITE_LIMIT_CHUNK} from './constants';
 

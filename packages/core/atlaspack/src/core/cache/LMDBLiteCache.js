@@ -1,5 +1,12 @@
 // @flow strict-local
-import type {FilePath} from '@atlaspack/types';
+
+import {
+  deserialize,
+  registerSerializableClass,
+  serialize,
+} from '../build-cache/index.js';
+import {Lmdb} from '../rust/index.js';
+import type {FilePath} from '../types/index.js';
 import type {Cache} from './types';
 import type {Readable, Writable} from 'stream';
 
@@ -7,29 +14,72 @@ import stream from 'stream';
 import path from 'path';
 import {promisify} from 'util';
 
-import {
-  deserialize,
-  registerSerializableClass,
-  serialize,
-} from '@atlaspack/build-cache';
-import {NodeFS} from '@atlaspack/fs';
-// flowlint-next-line untyped-import:off
-import lmdb from 'lmdb';
+import {NodeFS} from '../fs/index.js';
 
 // $FlowFixMe
 import packageJson from '../package.json';
 
 import {FSCache} from './FSCache';
 
+interface DBOpenOptions {
+  name: string;
+  // unused
+  encoding: string;
+  // unused
+  compression: boolean;
+}
+
+export class LmdbWrapper {
+  lmdb: Lmdb;
+
+  constructor(lmdb: Lmdb) {
+    this.lmdb = lmdb;
+
+    // $FlowFixMe
+    this[Symbol.dispose] = () => {
+      this.lmdb.close();
+    };
+  }
+
+  get(key: string): Buffer | null {
+    return this.lmdb.getSync(key);
+  }
+
+  async put(key: string, value: Buffer | string): Promise<void> {
+    const buffer: Buffer =
+      typeof value === 'string' ? Buffer.from(value) : value;
+    await this.lmdb.put(key, buffer);
+  }
+
+  resetReadTxn() {}
+}
+
+export function open(
+  directory: string,
+  // eslint-disable-next-line no-unused-vars
+  openOptions: DBOpenOptions,
+): LmdbWrapper {
+  return new LmdbWrapper(
+    new Lmdb({
+      path: directory,
+      asyncWrites: true,
+      mapSize: 1024 * 1024 * 1024 * 15,
+    }),
+  );
+}
+
 const pipeline: (Readable, Writable) => Promise<void> = promisify(
   stream.pipeline,
 );
 
-export class LMDBCache implements Cache {
+export type SerLMDBLiteCache = {|
+  dir: FilePath,
+|};
+
+export class LMDBLiteCache implements Cache {
   fs: NodeFS;
   dir: FilePath;
-  // $FlowFixMe
-  store: any;
+  store: LmdbWrapper;
   fsCache: FSCache;
 
   constructor(cacheDir: FilePath) {
@@ -37,25 +87,32 @@ export class LMDBCache implements Cache {
     this.dir = cacheDir;
     this.fsCache = new FSCache(this.fs, cacheDir);
 
-    this.store = lmdb.open(cacheDir, {
+    this.store = open(cacheDir, {
       name: 'parcel-cache',
       encoding: 'binary',
       compression: true,
     });
   }
 
+  /**
+   * Use this to pass the native LMDB instance back to Rust.
+   */
+  getNativeRef(): Lmdb {
+    return this.store.lmdb;
+  }
+
   ensure(): Promise<void> {
     return Promise.resolve();
   }
 
-  serialize(): {|dir: FilePath|} {
+  serialize(): SerLMDBLiteCache {
     return {
       dir: this.dir,
     };
   }
 
-  static deserialize(opts: {|dir: FilePath|}): LMDBCache {
-    return new LMDBCache(opts.dir);
+  static deserialize(cache: SerLMDBLiteCache): LMDBLiteCache {
+    return new LMDBLiteCache(cache.dir);
   }
 
   has(key: string): Promise<boolean> {
@@ -86,11 +143,17 @@ export class LMDBCache implements Cache {
     );
   }
 
-  getBlob(key: string): Promise<Buffer> {
-    let buffer = this.store.get(key);
-    return buffer != null
-      ? Promise.resolve(buffer)
-      : Promise.reject(new Error(`Key ${key} not found in cache`));
+  // eslint-disable-next-line require-await
+  async getBlob(key: string): Promise<Buffer> {
+    return this.getBlobSync(key);
+  }
+
+  getBlobSync(key: string): Buffer {
+    const buffer = this.store.get(key);
+    if (buffer == null) {
+      throw new Error(`Key ${key} not found in cache`);
+    }
+    return buffer;
   }
 
   async setBlob(key: string, contents: Buffer | string): Promise<void> {
@@ -136,4 +199,7 @@ export class LMDBCache implements Cache {
   }
 }
 
-registerSerializableClass(`${packageJson.version}:LMDBCache`, LMDBCache);
+registerSerializableClass(
+  `${packageJson.version}:LMDBLiteCache`,
+  LMDBLiteCache,
+);

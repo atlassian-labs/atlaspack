@@ -7,13 +7,13 @@ import {
   deserialize,
   registerSerializableClass,
   serialize,
-} from '@atlaspack/build-cache';
-import {bufferStream} from '@atlaspack/utils';
+} from '../build-cache/index.js';
+import {bufferStream} from '../utils/index.js';
 // $FlowFixMe[untyped-import]
 import {openDB} from 'idb';
 
 // $FlowFixMe[untyped-import]
-import packageJson from '../package.json';
+import packageJson from '../../../package.json';
 
 const STORE_NAME = 'cache';
 

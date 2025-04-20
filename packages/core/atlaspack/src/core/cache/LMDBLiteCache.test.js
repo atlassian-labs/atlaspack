@@ -1,7 +1,7 @@
 // @flow
 import * as path from 'path';
 import {tmpdir} from 'os';
-import {LMDBLiteCache} from '../src/index';
+import {LMDBLiteCache} from './index.js';
 import {deserialize, serialize} from 'v8';
 import assert from 'assert';
 
