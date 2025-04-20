@@ -1,12 +1,12 @@
 // @flow
 
-import type {FilePath} from '@atlaspack/types-internal';
+import type {FilePath} from '../types-internal/index.js';
 import type {BackendType, WorkerImpl, WorkerMessage} from './types';
 import type {SharedReference} from './WorkerFarm';
 
 import nullthrows from 'nullthrows';
 import EventEmitter from 'events';
-import ThrowableDiagnostic from '@atlaspack/diagnostic';
+import ThrowableDiagnostic from '../diagnostic/index.js';
 import {getWorkerBackend} from './backend';
 
 export type WorkerCall = {|

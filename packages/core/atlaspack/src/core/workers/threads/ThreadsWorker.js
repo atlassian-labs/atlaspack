@@ -14,7 +14,7 @@ import path from 'path';
 import {
   prepareForSerialization,
   restoreDeserializedObject,
-} from '@atlaspack/build-cache';
+} from '../../build-cache/index.js';
 
 const WORKER_PATH = path.join(__dirname, './ThreadsChild.js');
 

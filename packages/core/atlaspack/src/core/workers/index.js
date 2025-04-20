@@ -1,10 +1,10 @@
 // @flow
-import type {TraceEvent, LogEvent} from '@atlaspack/types-internal';
+import type {TraceEvent, LogEvent} from '../types-internal/index.js';
 import invariant from 'assert';
 import WorkerFarm from './WorkerFarm';
-import Logger from '@atlaspack/logger';
+import Logger from '../logger/index.js';
 import bus from './bus';
-import {tracer} from '@atlaspack/profiler';
+import {tracer} from '../profiler/index.js';
 
 if (!WorkerFarm.isWorker()) {
   // Forward all logger events originating from workers into the main process

@@ -2,7 +2,7 @@
 import assert from 'assert';
 import os from 'os';
 
-import getCores, {detectRealCores} from '../src/cpuCount';
+import getCores, {detectRealCores} from './cpuCount';
 
 describe('cpuCount', function () {
   it('Should be able to detect real cpu count', () => {

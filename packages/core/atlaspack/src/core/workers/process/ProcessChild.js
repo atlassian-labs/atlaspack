@@ -7,7 +7,7 @@ import type {
   WorkerMessage,
 } from '../types';
 
-import {serialize, deserialize} from '@atlaspack/build-cache';
+import {serialize, deserialize} from '../../build-cache/index.js';
 import nullthrows from 'nullthrows';
 
 import {Child} from '../child';

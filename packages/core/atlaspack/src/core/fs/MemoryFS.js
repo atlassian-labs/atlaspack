@@ -15,10 +15,10 @@ import type {
 
 import path from 'path';
 import {Readable, Writable} from 'stream';
-import {registerSerializableClass} from '@atlaspack/build-cache';
+import {registerSerializableClass} from '../build-cache/index.js';
 import {SharedBuffer} from '../utils/index.js';
 import packageJSON from '../../../package.json';
-import WorkerFarm, {Handle} from '@atlaspack/workers';
+import WorkerFarm, {Handle} from '../workers/index.js';
 import nullthrows from 'nullthrows';
 import EventEmitter from 'events';
 import {findAncestorFile, findNodeModule, findFirstFile} from './find';

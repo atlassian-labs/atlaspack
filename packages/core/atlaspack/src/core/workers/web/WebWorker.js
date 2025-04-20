@@ -11,8 +11,8 @@ import type {
 import {
   prepareForSerialization,
   restoreDeserializedObject,
-} from '@atlaspack/build-cache';
-import {makeDeferredWithPromise} from '@atlaspack/utils';
+} from '../../build-cache/index.js';
+import {makeDeferredWithPromise} from '../../utils/index.js';
 
 let id = 0;
 

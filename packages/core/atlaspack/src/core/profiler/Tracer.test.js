@@ -1,5 +1,5 @@
 // @flow
-import {tracer, PluginTracer} from '../src/Tracer';
+import {tracer, PluginTracer} from './Tracer';
 import sinon from 'sinon';
 import assert from 'assert';
 

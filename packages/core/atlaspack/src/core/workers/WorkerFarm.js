@@ -1,6 +1,6 @@
 // @flow
 
-import type {ErrorWithCode, FilePath} from '@atlaspack/types-internal';
+import type {ErrorWithCode, FilePath} from '../types-internal/index.js';
 import type {
   CallRequest,
   HandleCallRequest,
@@ -20,16 +20,16 @@ import {
   prepareForSerialization,
   restoreDeserializedObject,
   serialize,
-} from '@atlaspack/build-cache';
-import ThrowableDiagnostic, {anyToDiagnostic, md} from '@atlaspack/diagnostic';
+} from '../build-cache/index.js';
+import ThrowableDiagnostic, {anyToDiagnostic, md} from '../diagnostic/index.js';
 import Worker, {type WorkerCall} from './Worker';
 import cpuCount from './cpuCount';
 import Handle from './Handle';
 import {child} from './childState';
 import {detectBackend} from './backend';
-import {SamplingProfiler, Trace} from '@atlaspack/profiler';
+import {SamplingProfiler, Trace} from '../profiler/index.js';
 import fs from 'fs';
-import logger from '@atlaspack/logger';
+import logger from '../logger/index.js';
 
 let referenceId = 1;
 

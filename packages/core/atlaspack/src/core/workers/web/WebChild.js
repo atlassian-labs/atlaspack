@@ -11,7 +11,7 @@ import type {
 import {
   prepareForSerialization,
   restoreDeserializedObject,
-} from '@atlaspack/build-cache';
+} from '../../build-cache/index.js';
 
 import {Child} from '../child';
 import {setChild} from '../childState';

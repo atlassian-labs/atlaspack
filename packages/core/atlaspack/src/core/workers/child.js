@@ -9,16 +9,16 @@ import type {
   WorkerResponse,
   ChildImpl,
 } from './types';
-import type {Async, IDisposable} from '@atlaspack/types-internal';
+import type {Async, IDisposable} from '../types-internal/index.js';
 import type {SharedReference} from './WorkerFarm';
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
-import {deserialize} from '@atlaspack/build-cache';
-import Logger, {patchConsole, unpatchConsole} from '@atlaspack/logger';
-import ThrowableDiagnostic, {anyToDiagnostic} from '@atlaspack/diagnostic';
+import {deserialize} from '../build-cache/index.js';
+import Logger, {patchConsole, unpatchConsole} from '../logger/index.js';
+import ThrowableDiagnostic, {anyToDiagnostic} from '../diagnostic/index.js';
 import bus from './bus';
-import {SamplingProfiler, tracer} from '@atlaspack/profiler';
+import {SamplingProfiler, tracer} from '../profiler/index.js';
 import _Handle from './Handle';
 
 // The import of './Handle' should really be imported eagerly (with @babel/plugin-transform-modules-commonjs's lazy mode).

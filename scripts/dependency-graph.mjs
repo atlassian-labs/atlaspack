@@ -34,7 +34,8 @@ let allDevDeps = {}
 
 for (const packagee of fs.readdirSync(path.join(__root, 'packages', 'shims'))) {
   console.log(packagee)
-  const packageJsonPath = path.join(__root, 'packages', 'shims', packagee, 'package.json')
+  const packagePath = path.join(__root, 'packages', 'shims', packagee)
+  const packageJsonPath = path.join(packagePath, 'package.json')
   if (!fs.existsSync(packageJsonPath)) continue
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
 
@@ -57,7 +58,14 @@ for (const packagee of fs.readdirSync(path.join(__root, 'packages', 'shims'))) {
 
   fs.writeFileSync(packageJsonPath, JSON.stringify(newPackageJson, null, 2))
 
+  fs.rmSync(path.join(packagePath, 'index.js'), { recursive: true, force: true })
+  fs.rmSync(path.join(packagePath, 'index.d.ts'), { recursive: true, force: true })
+
+  const [namespce, pkg] = packagee.split(/-(.*)/s).filter(v => v)
+  fs.writeFileSync(path.join(packagePath, 'index.js'), `module.exports = require('atlaspack/${namespce}/${pkg}');\n`)
+  fs.writeFileSync(path.join(packagePath, 'index.d.ts'), `export * from 'atlaspack/${namespce}/${pkg}';\nexport {default} from 'atlaspack/${namespce}/${pkg}';\n`)
+
   child_process.execSync('/usr/bin/env node /run/user/1000/fnm_multishells/212082_1745134745812/bin/sort-package-json', {
-    cwd: path.dirname(packageJsonPath)
+    cwd: packagePath
   })
 }

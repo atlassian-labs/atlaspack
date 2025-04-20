@@ -12,7 +12,7 @@ import {
   FixtureLink,
 } from './fsFixture';
 import {MemoryFS} from '../fs';
-import WorkerFarm from '@atlaspack/workers';
+import WorkerFarm from '../workers/index.js';
 
 import assert from 'assert';
 import path from 'path';

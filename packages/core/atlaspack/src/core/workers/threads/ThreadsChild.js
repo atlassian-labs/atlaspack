@@ -12,7 +12,7 @@ import {isMainThread, parentPort} from 'worker_threads';
 import {
   prepareForSerialization,
   restoreDeserializedObject,
-} from '@atlaspack/build-cache';
+} from '../../build-cache/index.js';
 import nullthrows from 'nullthrows';
 
 import {Child} from '../child';

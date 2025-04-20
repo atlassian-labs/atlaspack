@@ -11,7 +11,7 @@ import type {
 import childProcess, {type ChildProcess} from 'child_process';
 import path from 'path';
 
-import {serialize, deserialize} from '@atlaspack/build-cache';
+import {serialize, deserialize} from '../../build-cache/index.js';
 
 const WORKER_PATH = path.join(__dirname, './ProcessChild.js');
 
