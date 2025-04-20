@@ -51,12 +51,12 @@ const SLASH_REGEX = /\//g;
 export const SOURCES_ENDPOINT = '/__parcel_source_root';
 const EDITOR_ENDPOINT = '/__parcel_launch_editor';
 const TEMPLATE_404 = fs.readFileSync(
-  path.join(__dirname, '..', 'templates', '404.html'),
+  path.join(__dirname, '..', '..', '..', 'static', 'reporters', 'dev-server', 'templates', '404.html'),
   'utf8',
 );
 
 const TEMPLATE_500 = fs.readFileSync(
-  path.join(__dirname, '..', 'templates', '500.html'),
+  path.join(__dirname, '..', '..', '..', 'static', 'reporters', 'dev-server', 'templates', '500.html'),
   'utf8',
 );
 type NextFunction = (req: Request, res: Response, next?: (any) => any) => any;
