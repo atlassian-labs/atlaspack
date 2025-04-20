@@ -1,8 +1,0 @@
-{
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "start": "atlaspack src/index.html",
-    "build": "atlaspack build src/index.html"
-  }
-}
