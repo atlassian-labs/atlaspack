@@ -1,8 +1,8 @@
 // @flow
 
-import {Resolver} from '@atlaspack/rust';
+import {Resolver} from '../rust';
 
 export const ResolverBase: typeof Resolver = Resolver;
 
 export {default} from './Wrapper';
-export {init} from '@atlaspack/rust';
+export {init} from '../rust';
