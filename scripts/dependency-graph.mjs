@@ -85,7 +85,7 @@ const __root = path.dirname(__dirname);
 // }
 
 const destPath = '/Users/dalsh/Development/atlassian-labs/atlaspack/packages/core/atlaspack/src'
-const subfolder = 'validators'
+const subfolder = 'runtimes'
 
 for (const packageName of fs.readdirSync(path.join(__root, 'packages', subfolder))) {
   console.log(packageName)
