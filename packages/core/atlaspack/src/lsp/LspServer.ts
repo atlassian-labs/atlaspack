@@ -24,7 +24,7 @@ import {
 } from 'vscode-jsonrpc/node';
 import * as invariant from 'assert';
 import * as url from 'url';
-import commonPathPrefix = require('common-path-prefix');
+import commonPathPrefix from 'common-path-prefix';
 
 // import {TextDocument} from 'vscode-languageserver-textdocument';
 import * as watcher from '@parcel/watcher';
@@ -34,7 +34,7 @@ import {
   NotificationWorkspaceDiagnostics,
   RequestDocumentDiagnostics,
   RequestImporters,
-} from '@atlaspack/lsp-protocol';
+} from '../lsp-protocol';
 
 type Metafile = {
   projectRoot: string;
