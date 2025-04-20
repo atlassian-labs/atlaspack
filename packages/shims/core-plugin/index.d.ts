@@ -1,0 +1,2 @@
+export * from 'atlaspack/core/plugin/index.js';
+export {default} from 'atlaspack/core/plugin/index.js';

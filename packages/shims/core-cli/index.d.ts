@@ -1,0 +1,2 @@
+export * from 'atlaspack/core/cli/index.js';
+export {default} from 'atlaspack/core/cli/index.js';
