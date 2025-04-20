@@ -84,22 +84,24 @@ const __root = path.dirname(__dirname);
 //   })
 // }
 
-const destPath = '/home/dalsh/Development/atlassian-labs/atlaspack/packages/core/atlaspack/src'
-const subfolder = 'bundlers'
+const destPath = '/Users/dalsh/Development/atlassian-labs/atlaspack/packages/core/atlaspack/src'
+const subfolder = 'compressors'
 
 for (const packageName of fs.readdirSync(path.join(__root, 'packages', subfolder))) {
   console.log(packageName)
   const packagePath = path.join(__root, 'packages', subfolder, packageName)
-  const packagePathDest = path.join(__root, 'packages', 'shims', `${subfolder}-${packageName}`)
   const packageJsonPath = path.join(packagePath, 'package.json')
 
   if (!fs.existsSync(packageJsonPath)) continue
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
-
   const packageJsonName = packageJson.name.split('@atlaspack/')[1]
-  const packagePathCoreDest = path.join(destPath, packageJsonName)
-  console.log(packageName, packageJsonName)
 
+  const packagePathDest = path.join(__root, 'packages', 'shims', `${subfolder}-${packageName}`)
+
+  const packagePathCoreDest = path.join(destPath, 'compressors', packageName)
+  console.log(packageName, packageName)
+
+  fs.rmSync(packagePathDest, { force: true, recursive: true })
   fs.renameSync(packagePath, packagePathDest)
   fs.renameSync(path.join(packagePathDest, 'src'), packagePathCoreDest)
 
