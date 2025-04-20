@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/utils/diagnostic');
+module.exports = require('atlaspack/utils/events');

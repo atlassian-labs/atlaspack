@@ -1,0 +1,11 @@
+// @flow strict-local
+import type {FilePath} from '../types/index.js';
+import path from 'path';
+
+export default function isDirectoryInside(
+  child: FilePath,
+  parent: FilePath,
+): boolean {
+  const relative = path.relative(parent, child);
+  return !relative.startsWith('..') && !path.isAbsolute(relative);
+}

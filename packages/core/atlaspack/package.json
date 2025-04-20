@@ -18,6 +18,7 @@
     "./utils/*": "./lib/utils/*/index.js"
   },
   "dependencies": {
+    "@atlaspack/rust": "3.0.0",
     "@mischnic/json-sourcemap": "^0.1.0",
     "nullthrows": "^1.1.1"
   }
