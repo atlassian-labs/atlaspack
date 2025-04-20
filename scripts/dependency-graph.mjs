@@ -64,6 +64,7 @@ for (const packagee of fs.readdirSync(path.join(__root, 'packages', 'shims'))) {
   const [namespce, pkg] = packagee.split(/-(.*)/s).filter(v => v)
   fs.writeFileSync(path.join(packagePath, 'index.js'), `module.exports = require('atlaspack/${namespce}/${pkg}/index.js');\n`)
   fs.writeFileSync(path.join(packagePath, 'index.d.ts'), `export * from 'atlaspack/${namespce}/${pkg}/index.js';\nexport {default} from 'atlaspack/${namespce}/${pkg}/index.js';\n`)
+  fs.writeFileSync(path.join(packagePath, 'index.flow'), `// @flow\nexport * from 'atlaspack/${namespce}/${pkg}/index.js';\nexport {default} from 'atlaspack/${namespce}/${pkg}/index.js';\n`)
 
   child_process.execSync('/usr/bin/env node /run/user/1000/fnm_multishells/212082_1745134745812/bin/sort-package-json', {
     cwd: packagePath
