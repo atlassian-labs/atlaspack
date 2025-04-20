@@ -5,7 +5,7 @@ import {NodeFS} from './NodeFS';
 import {getVcsStateSnapshot, getEventsSince} from '../rust/index.js';
 import type {FilePath} from '../types-internal/index.js';
 import type {Event, Options as WatcherOptions} from '@parcel/watcher';
-import {registerSerializableClass} from '@atlaspack/build-cache';
+import {registerSerializableClass} from '../build-cache/index.js';
 import logger, {instrumentAsync} from '../logger/index.js';
 import {getFeatureFlagValue} from '../feature-flags/index.js';
 

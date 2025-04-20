@@ -15,8 +15,8 @@ import type {
   AsyncSubscription,
 } from '@parcel/watcher';
 
-import {registerSerializableClass} from '@atlaspack/build-cache';
-import WorkerFarm from '@atlaspack/workers';
+import {registerSerializableClass} from '../build-cache.js';
+import WorkerFarm from '../workers/index.js';
 import packageJSON from '../../../package.json';
 import {findAncestorFile, findNodeModule, findFirstFile} from './find';
 import {MemoryFS} from './MemoryFS';
