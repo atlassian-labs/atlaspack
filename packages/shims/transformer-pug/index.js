@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/pug/undefined/index.js');
+module.exports = require('atlaspack/transformers/pug/index.js');

@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/sass/undefined/index.js');
+module.exports = require('atlaspack/transformers/sass/index.js');

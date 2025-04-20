@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/graphql/undefined/index.js');
+module.exports = require('atlaspack/transformers/graphql/index.js');

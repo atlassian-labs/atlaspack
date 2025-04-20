@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/react/refresh-wrap/index.js');
+module.exports = require('atlaspack/transformers/react-refresh-wrap/index.js');

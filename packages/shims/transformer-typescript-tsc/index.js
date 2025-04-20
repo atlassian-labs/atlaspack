@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/typescript/tsc/index.js');
+module.exports = require('atlaspack/transformers/typescript-tsc/index.js');

@@ -1,2 +1,2 @@
-export * from 'atlaspack/svg/undefined/index.js';
-export {default} from 'atlaspack/svg/undefined/index.js';
+export * from 'atlaspack/transformers/svg/index.js';
+export {default} from 'atlaspack/transformers/svg/index.js';

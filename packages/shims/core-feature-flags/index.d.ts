@@ -1,2 +1,2 @@
-export * from 'atlaspack/core/feature-flags/index.js';
-export {default} from 'atlaspack/core/feature-flags/index.js';
+export * from 'atlaspack/feature-flags/index.js';
+export {default} from 'atlaspack/feature-flags/index.js';

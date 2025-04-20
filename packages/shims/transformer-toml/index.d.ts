@@ -1,2 +1,2 @@
-export * from 'atlaspack/toml/undefined/index.js';
-export {default} from 'atlaspack/toml/undefined/index.js';
+export * from 'atlaspack/transformers/toml/index.js';
+export {default} from 'atlaspack/transformers/toml/index.js';

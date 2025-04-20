@@ -1,2 +1,2 @@
-export * from 'atlaspack/core/fs/index.js';
-export {default} from 'atlaspack/core/fs/index.js';
+export * from 'atlaspack/fs/index.js';
+export {default} from 'atlaspack/fs/index.js';

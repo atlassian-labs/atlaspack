@@ -1,2 +1,2 @@
-export * from 'atlaspack/inline/string/index.js';
-export {default} from 'atlaspack/inline/string/index.js';
+export * from 'atlaspack/transformers/inline-string/index.js';
+export {default} from 'atlaspack/transformers/inline-string/index.js';

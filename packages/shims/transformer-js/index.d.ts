@@ -1,2 +1,2 @@
-export * from 'atlaspack/js/undefined/index.js';
-export {default} from 'atlaspack/js/undefined/index.js';
+export * from 'atlaspack/transformers/js/index.js';
+export {default} from 'atlaspack/transformers/js/index.js';

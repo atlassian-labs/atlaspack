@@ -1,2 +1,2 @@
-export * from 'atlaspack/core/profiler/index.js';
-export {default} from 'atlaspack/core/profiler/index.js';
+export * from 'atlaspack/profiler/index.js';
+export {default} from 'atlaspack/profiler/index.js';

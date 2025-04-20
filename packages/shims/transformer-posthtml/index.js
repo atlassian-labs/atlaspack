@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/posthtml/undefined/index.js');
+module.exports = require('atlaspack/transformers/posthtml/index.js');

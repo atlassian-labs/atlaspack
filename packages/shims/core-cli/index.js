@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/core/cli/index.js');
+module.exports = require('atlaspack/cli/index.js');

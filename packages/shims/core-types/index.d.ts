@@ -1,2 +1,2 @@
-export * from 'atlaspack/core/types/index.js';
-export {default} from 'atlaspack/core/types/index.js';
+export * from 'atlaspack/types/index.js';
+export {default} from 'atlaspack/types/index.js';

@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/json/undefined/index.js');
+module.exports = require('atlaspack/transformers/json/index.js');

@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/core/markdown-ansi/index.js');
+module.exports = require('atlaspack/markdown-ansi/index.js');

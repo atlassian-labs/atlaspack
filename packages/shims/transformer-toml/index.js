@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/toml/undefined/index.js');
+module.exports = require('atlaspack/transformers/toml/index.js');

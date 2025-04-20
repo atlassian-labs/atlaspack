@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/utils/node-resolver-core/index.js');
+module.exports = require('atlaspack/node-resolver-core/index.js');

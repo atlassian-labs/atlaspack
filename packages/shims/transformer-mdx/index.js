@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/mdx/undefined/index.js');
+module.exports = require('atlaspack/transformers/mdx/index.js');

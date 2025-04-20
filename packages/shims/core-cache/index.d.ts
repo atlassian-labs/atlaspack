@@ -1,2 +1,2 @@
-export * from 'atlaspack/core/cache/index.js';
-export {default} from 'atlaspack/core/cache/index.js';
+export * from 'atlaspack/cache/index.js';
+export {default} from 'atlaspack/cache/index.js';

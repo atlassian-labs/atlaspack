@@ -1,2 +1,2 @@
-export * from 'atlaspack/posthtml/undefined/index.js';
-export {default} from 'atlaspack/posthtml/undefined/index.js';
+export * from 'atlaspack/transformers/posthtml/index.js';
+export {default} from 'atlaspack/transformers/posthtml/index.js';

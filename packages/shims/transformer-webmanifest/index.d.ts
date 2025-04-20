@@ -1,2 +1,2 @@
-export * from 'atlaspack/webmanifest/undefined/index.js';
-export {default} from 'atlaspack/webmanifest/undefined/index.js';
+export * from 'atlaspack/transformers/webmanifest/index.js';
+export {default} from 'atlaspack/transformers/webmanifest/index.js';

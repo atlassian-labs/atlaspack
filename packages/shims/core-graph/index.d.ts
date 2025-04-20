@@ -1,2 +1,2 @@
-export * from 'atlaspack/core/graph/index.js';
-export {default} from 'atlaspack/core/graph/index.js';
+export * from 'atlaspack/graph/index.js';
+export {default} from 'atlaspack/graph/index.js';

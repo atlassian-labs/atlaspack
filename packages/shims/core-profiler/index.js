@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/core/profiler/index.js');
+module.exports = require('atlaspack/profiler/index.js');

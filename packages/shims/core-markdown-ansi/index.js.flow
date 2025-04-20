@@ -1,6 +1,6 @@
 /* eslint-disable import/no-extraneous-dependencies */
 /* eslint-disable monorepo/no-internal-import */
 // @flow
-export * from 'atlaspack/src/core/markdown-ansi/index.js';
+export * from 'atlaspack/src/markdown-ansi/index.js';
 // $FlowFixMe
-export {default} from 'atlaspack/src/core/markdown-ansi/index.js';
+export {default} from 'atlaspack/src/markdown-ansi/index.js';

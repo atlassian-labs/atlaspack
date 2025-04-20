@@ -1,2 +1,2 @@
-export * from 'atlaspack/webextension/undefined/index.js';
-export {default} from 'atlaspack/webextension/undefined/index.js';
+export * from 'atlaspack/transformers/webextension/index.js';
+export {default} from 'atlaspack/transformers/webextension/index.js';

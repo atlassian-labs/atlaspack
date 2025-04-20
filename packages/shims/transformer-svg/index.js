@@ -1,1 +1,1 @@
-module.exports = require('atlaspack/svg/undefined/index.js');
+module.exports = require('atlaspack/transformers/svg/index.js');
