@@ -5,9 +5,9 @@ import sinon from 'sinon';
 import path from 'path';
 import {Worker} from 'worker_threads';
 
-import AdjacencyList, {NodeTypeMap, EdgeTypeMap} from '../src/AdjacencyList';
-import {toNodeId} from '../src/types';
-import {ALL_EDGE_TYPES} from '../src/Graph';
+import AdjacencyList, {NodeTypeMap, EdgeTypeMap} from './AdjacencyList';
+import {toNodeId} from './types';
+import {ALL_EDGE_TYPES} from './Graph';
 
 describe('AdjacencyList', () => {
   it('constructor should initialize an empty graph', () => {

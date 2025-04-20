@@ -1,7 +1,7 @@
 // @flow strict-local
 
 import assert from 'assert';
-import {BitSet} from '../src/BitSet';
+import {BitSet} from './BitSet';
 
 function assertValues(set: BitSet, values: Array<number>) {
   let setValues = [];

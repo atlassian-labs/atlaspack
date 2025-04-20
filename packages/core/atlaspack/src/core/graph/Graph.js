@@ -7,7 +7,7 @@ import type {
   TraversalActions,
   GraphVisitor,
   GraphTraversalCallback,
-} from '@atlaspack/types';
+} from '../types/index.js';
 import {BitSet} from './BitSet';
 
 import nullthrows from 'nullthrows';

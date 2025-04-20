@@ -3,7 +3,7 @@
 import {registerSerializableClass} from '../build-cache/index.js';
 import {Graph} from '../graph/index.js';
 
-import packageJson from '../package.json';
+import packageJson from '../../../package.json';
 
 import {AtlaspackConfig} from './AtlaspackConfig';
 import AssetGraph from './AssetGraph';

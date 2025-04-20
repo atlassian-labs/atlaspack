@@ -21,7 +21,7 @@ import expect from 'expect';
 import invariant from 'assert';
 import assert from 'assert';
 import util from 'util';
-import Atlaspack, {createWorkerFarm, NapiWorkerPool} from '../core/indx.js';
+import Atlaspack, {createWorkerFarm, NapiWorkerPool} from '../core/index.js';
 import vm from 'vm';
 import v8 from 'v8';
 import path from 'path';
@@ -45,6 +45,7 @@ export const inputFS: NodeFS = new NodeFS();
 export let outputFS: MemoryFS = new MemoryFS(workerFarm);
 export let overlayFS: OverlayFS = new OverlayFS(outputFS, inputFS);
 
+// eslint-disable-next-line no-undef
 beforeEach(() => {
   outputFS = new MemoryFS(workerFarm);
   overlayFS = new OverlayFS(outputFS, inputFS);

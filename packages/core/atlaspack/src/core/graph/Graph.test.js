@@ -2,10 +2,10 @@
 
 import assert from 'assert';
 import sinon from 'sinon';
-import type {TraversalActions} from '@atlaspack/types-internal';
+import type {TraversalActions} from '../types-internal/index.js';
 
-import Graph from '../src/Graph';
-import {toNodeId, type NodeId} from '../src/types';
+import Graph from './Graph';
+import {toNodeId, type NodeId} from './types';
 
 describe('Graph', () => {
   it('constructor should initialize an empty graph', () => {

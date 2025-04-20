@@ -28,7 +28,7 @@ import {loadAtlaspackConfig} from './requests/AtlaspackConfigRequest';
 import ReporterRunner from './ReporterRunner';
 import dumpGraphToGraphViz from './dumpGraphToGraphViz';
 import resolveOptions from './resolveOptions';
-import {ValueEmitter} from '../events/index.js';
+import {ValueEmitter} from '../../utils/events/index.js';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {PromiseQueue} from '../utils/index.js';
 import {AtlaspackConfig} from './AtlaspackConfig';
@@ -43,7 +43,7 @@ import createAssetRequest from './requests/AssetRequest';
 import createPathRequest from './requests/PathRequest';
 import {createEnvironment} from './Environment';
 import {createDependency} from './Dependency';
-import {Disposable} from '../events/index.js';
+import {Disposable} from '../../utils/events/index.js';
 import {init as initSourcemaps} from '@parcel/source-map';
 import {LMDBLiteCache} from '../cache/index.js';
 import {

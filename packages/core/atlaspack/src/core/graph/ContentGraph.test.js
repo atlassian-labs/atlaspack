@@ -1,7 +1,7 @@
 // @flow strict-local
 
 import assert from 'assert';
-import ContentGraph from '../src/ContentGraph';
+import ContentGraph from './ContentGraph';
 
 describe('ContentGraph', () => {
   it('should addNodeByContentKey if no node exists with the content key', () => {
