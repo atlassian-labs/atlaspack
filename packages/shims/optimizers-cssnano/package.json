@@ -1,0 +1,15 @@
+{
+  "name": "@atlaspack/optimizer-cssnano",
+  "version": "2.14.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  }
+}

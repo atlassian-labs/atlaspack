@@ -85,7 +85,7 @@ const __root = path.dirname(__dirname);
 // }
 
 const destPath = '/Users/dalsh/Development/atlassian-labs/atlaspack/packages/core/atlaspack/src'
-const subfolder = 'namers'
+const subfolder = 'optimizers'
 
 for (const packageName of fs.readdirSync(path.join(__root, 'packages', subfolder))) {
   console.log(packageName)
@@ -157,5 +157,4 @@ export {default} from 'atlaspack/src/${subfolder}/${packageName}/index.js';`.tri
     cwd: packagePathDest
   })
 
-  break
 }
