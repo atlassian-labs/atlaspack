@@ -9,19 +9,10 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "src/index.js",
-  "engines": {
-    "node": ">= 16.0.0"
-  },
-  "dependencies": {
-    "@babel/preset-env": "^7.26.9",
-    "semver": "^7.5.2"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.26.10"
-  },
+  "type": "commonjs",
+  "main": "./index.js",
+  "types": "./index.d.ts",
   "peerDependencies": {
     "@babel/core": "^7.26.10"
-  },
-  "type": "commonjs"
+  }
 }
