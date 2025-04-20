@@ -141,21 +141,17 @@ for (const packageName of fs.readdirSync(path.join(__root, 'packages', subfolder
   fs.rmSync(path.join(packagePathDest, 'index.d.ts'), { recursive: true, force: true })
   fs.rmSync(path.join(packagePathDest, 'index.flow'), { recursive: true, force: true })
 
-  let [namespce, pkg] = packageName.split(/-(.*)/s).filter(v => v)
-  if (namespce === 'core' || namespce === 'utils') {
-    namespce = ''
-  } else {
-    namespce = `${namespce}s/`
-  }
-  fs.writeFileSync(path.join(packagePathDest, 'index.js'), `module.exports = require('atlaspack/${namespce}${pkg}/index.js');\n`)
-  fs.writeFileSync(path.join(packagePathDest, 'index.d.ts'), `export * from 'atlaspack/${namespce}${pkg}/index.js';\nexport {default} from 'atlaspack/${namespce}${pkg}/index.js';\n`)
+  let [namespce, pkg] = packageName.replace('@atlassian').split(/-(.*)/s).filter(v => v)
+
+  fs.writeFileSync(path.join(packagePathDest, 'index.js'), `module.exports = require('atlaspack/${subfolder}/${packageName}/index.js');\n`)
+  fs.writeFileSync(path.join(packagePathDest, 'index.d.ts'), `export * from 'atlaspack/${subfolder}/${packageName}/index.js';\nexport {default} from 'atlaspack/${subfolder}/${packageName}/index.js';\n`)
   fs.writeFileSync(path.join(packagePathDest, 'index.js.flow'), `
 /* eslint-disable import/no-extraneous-dependencies */
 /* eslint-disable monorepo/no-internal-import */
 // @flow
-export * from 'atlaspack/src/${namespce}${pkg}/index.js';
+export * from 'atlaspack/src/${subfolder}/${packageName}/index.js';
 // $FlowFixMe
-export {default} from 'atlaspack/src/${namespce}${pkg}/index.js';`.trim() + '\n')
+export {default} from 'atlaspack/src/${subfolder}/${packageName}/index.js';`.trim() + '\n')
 
   child_process.execSync('/usr/bin/env node /Users/dalsh/Library/Caches/fnm_multishells/79866_1745157444054/bin/sort-package-json', {
     cwd: packagePathDest

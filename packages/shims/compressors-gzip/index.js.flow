@@ -1,0 +1,6 @@
+/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable monorepo/no-internal-import */
+// @flow
+export * from 'atlaspack/src/compressors/gzip/index.js';
+// $FlowFixMe
+export {default} from 'atlaspack/src/compressors/gzip/index.js';
