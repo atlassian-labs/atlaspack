@@ -3,7 +3,7 @@ import assert from 'assert';
 import {readFileSync} from 'fs';
 import {join as joinPath} from 'path';
 
-import codeframe from '../src/codeframe';
+import codeframe from './codeframe';
 
 const LINE_END = '\n';
 

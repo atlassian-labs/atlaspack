@@ -15,7 +15,7 @@ import type {
   AsyncSubscription,
 } from '@parcel/watcher';
 
-import {registerSerializableClass} from '../build-cache.js';
+import {registerSerializableClass} from '../build-cache/index.js';
 import WorkerFarm from '../workers/index.js';
 import packageJSON from '../../../package.json';
 import {findAncestorFile, findNodeModule, findFirstFile} from './find';

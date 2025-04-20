@@ -8,7 +8,7 @@ import {
   deserialize,
   registerSerializableClass,
   unregisterSerializableClass,
-} from '../src/serializer';
+} from './serializer';
 
 describe('serializer', () => {
   it('should serialize a basic object', () => {
