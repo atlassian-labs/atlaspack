@@ -20,6 +20,14 @@
   "dependencies": {
     "@atlaspack/rust": "3.0.0",
     "@mischnic/json-sourcemap": "^0.1.0",
-    "nullthrows": "^1.1.1"
+    "nullthrows": "^1.1.1",
+    "chalk": "^4.1.0",
+    "@parcel/source-map": "^2.1.1",
+    "utility-types": "^3.10.0"
+  },
+  "devDependencies": {
+    "emphasize": "^4.2.0",
+    "slice-ansi": "^4.0.0",
+    "string-width": "^4.2.0"
   }
 }

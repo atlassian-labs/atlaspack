@@ -6,8 +6,8 @@ import type {
   Diagnostic,
   Diagnostifiable,
   DiagnosticWithoutOrigin,
-} from '@atlaspack/diagnostic';
-import type {FeatureFlags} from '@atlaspack/feature-flags';
+} from '../diagnostic/index.js';
+import type {FeatureFlags} from '../feature-flags/index.js';
 import type {Event, BackendType} from '@parcel/watcher';
 
 import type {Cache} from './Cache';
