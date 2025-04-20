@@ -1,3 +1,0 @@
-// @flow
-export * from 'atlaspack/core/codeframe/index.js';
-export {default} from 'atlaspack/core/codeframe/index.js';

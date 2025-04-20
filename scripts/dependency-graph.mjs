@@ -60,11 +60,18 @@ for (const packagee of fs.readdirSync(path.join(__root, 'packages', 'shims'))) {
 
   fs.rmSync(path.join(packagePath, 'index.js'), { recursive: true, force: true })
   fs.rmSync(path.join(packagePath, 'index.d.ts'), { recursive: true, force: true })
+  fs.rmSync(path.join(packagePath, 'index.flow'), { recursive: true, force: true })
 
   const [namespce, pkg] = packagee.split(/-(.*)/s).filter(v => v)
   fs.writeFileSync(path.join(packagePath, 'index.js'), `module.exports = require('atlaspack/${namespce}/${pkg}/index.js');\n`)
   fs.writeFileSync(path.join(packagePath, 'index.d.ts'), `export * from 'atlaspack/${namespce}/${pkg}/index.js';\nexport {default} from 'atlaspack/${namespce}/${pkg}/index.js';\n`)
-  fs.writeFileSync(path.join(packagePath, 'index.flow'), `// @flow\nexport * from 'atlaspack/${namespce}/${pkg}/index.js';\nexport {default} from 'atlaspack/${namespce}/${pkg}/index.js';\n`)
+  fs.writeFileSync(path.join(packagePath, 'index.js.flow'), `
+/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable monorepo/no-internal-import */
+// @flow
+export * from 'atlaspack/src/${namespce}/${pkg}/index.js';
+// $FlowFixMe
+export {default} from 'atlaspack/src/${namespce}/${pkg}/index.js';`.trim() + '\n')
 
   child_process.execSync('/usr/bin/env node /run/user/1000/fnm_multishells/212082_1745134745812/bin/sort-package-json', {
     cwd: packagePath
