@@ -85,7 +85,7 @@ const __root = path.dirname(__dirname);
 // }
 
 const destPath = '/Users/dalsh/Development/atlassian-labs/atlaspack/packages/core/atlaspack/src'
-const subfolder = 'compressors'
+const subfolder = 'namers'
 
 for (const packageName of fs.readdirSync(path.join(__root, 'packages', subfolder))) {
   console.log(packageName)
@@ -98,7 +98,7 @@ for (const packageName of fs.readdirSync(path.join(__root, 'packages', subfolder
 
   const packagePathDest = path.join(__root, 'packages', 'shims', `${subfolder}-${packageName}`)
 
-  const packagePathCoreDest = path.join(destPath, 'compressors', packageName)
+  const packagePathCoreDest = path.join(destPath, subfolder, packageName)
   console.log(packageName, packageName)
 
   fs.rmSync(packagePathDest, { force: true, recursive: true })
