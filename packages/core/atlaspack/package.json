@@ -12,6 +12,9 @@
     "./*": "./lib/*",
     "./src/*": "./src/*"
   },
+  "bin": {
+    "atlaspack": "./lib/core/cli/index.js"
+  },
   "main": "./lib/index.js",
   "dependencies": {
     "@atlaskit/button": "*",

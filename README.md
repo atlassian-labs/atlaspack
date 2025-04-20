@@ -1,1 +1,1 @@
-packages/core/cli/README.md
+packages/shims/core-cli/README.md
