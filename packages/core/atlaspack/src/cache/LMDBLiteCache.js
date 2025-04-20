@@ -1,0 +1,205 @@
+// @flow strict-local
+
+import {
+  deserialize,
+  registerSerializableClass,
+  serialize,
+} from '../build-cache/index.js';
+import {Lmdb} from '../rust/index.js';
+import type {FilePath} from '../types/index.js';
+import type {Cache} from './types';
+import type {Readable, Writable} from 'stream';
+
+import stream from 'stream';
+import path from 'path';
+import {promisify} from 'util';
+
+import {NodeFS} from '../fs/index.js';
+
+// $FlowFixMe
+import packageJson from '../../package.json';
+
+import {FSCache} from './FSCache';
+
+interface DBOpenOptions {
+  name: string;
+  // unused
+  encoding: string;
+  // unused
+  compression: boolean;
+}
+
+export class LmdbWrapper {
+  lmdb: Lmdb;
+
+  constructor(lmdb: Lmdb) {
+    this.lmdb = lmdb;
+
+    // $FlowFixMe
+    this[Symbol.dispose] = () => {
+      this.lmdb.close();
+    };
+  }
+
+  get(key: string): Buffer | null {
+    return this.lmdb.getSync(key);
+  }
+
+  async put(key: string, value: Buffer | string): Promise<void> {
+    const buffer: Buffer =
+      typeof value === 'string' ? Buffer.from(value) : value;
+    await this.lmdb.put(key, buffer);
+  }
+
+  resetReadTxn() {}
+}
+
+export function open(
+  directory: string,
+  // eslint-disable-next-line no-unused-vars
+  openOptions: DBOpenOptions,
+): LmdbWrapper {
+  return new LmdbWrapper(
+    new Lmdb({
+      path: directory,
+      asyncWrites: true,
+      mapSize: 1024 * 1024 * 1024 * 15,
+    }),
+  );
+}
+
+const pipeline: (Readable, Writable) => Promise<void> = promisify(
+  stream.pipeline,
+);
+
+export type SerLMDBLiteCache = {|
+  dir: FilePath,
+|};
+
+export class LMDBLiteCache implements Cache {
+  fs: NodeFS;
+  dir: FilePath;
+  store: LmdbWrapper;
+  fsCache: FSCache;
+
+  constructor(cacheDir: FilePath) {
+    this.fs = new NodeFS();
+    this.dir = cacheDir;
+    this.fsCache = new FSCache(this.fs, cacheDir);
+
+    this.store = open(cacheDir, {
+      name: 'parcel-cache',
+      encoding: 'binary',
+      compression: true,
+    });
+  }
+
+  /**
+   * Use this to pass the native LMDB instance back to Rust.
+   */
+  getNativeRef(): Lmdb {
+    return this.store.lmdb;
+  }
+
+  ensure(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  serialize(): SerLMDBLiteCache {
+    return {
+      dir: this.dir,
+    };
+  }
+
+  static deserialize(cache: SerLMDBLiteCache): LMDBLiteCache {
+    return new LMDBLiteCache(cache.dir);
+  }
+
+  has(key: string): Promise<boolean> {
+    return Promise.resolve(this.store.get(key) != null);
+  }
+
+  get<T>(key: string): Promise<?T> {
+    let data = this.store.get(key);
+    if (data == null) {
+      return Promise.resolve(null);
+    }
+
+    return Promise.resolve(deserialize(data));
+  }
+
+  async set(key: string, value: mixed): Promise<void> {
+    await this.setBlob(key, serialize(value));
+  }
+
+  getStream(key: string): Readable {
+    return this.fs.createReadStream(path.join(this.dir, key));
+  }
+
+  setStream(key: string, stream: Readable): Promise<void> {
+    return pipeline(
+      stream,
+      this.fs.createWriteStream(path.join(this.dir, key)),
+    );
+  }
+
+  // eslint-disable-next-line require-await
+  async getBlob(key: string): Promise<Buffer> {
+    return this.getBlobSync(key);
+  }
+
+  getBlobSync(key: string): Buffer {
+    const buffer = this.store.get(key);
+    if (buffer == null) {
+      throw new Error(`Key ${key} not found in cache`);
+    }
+    return buffer;
+  }
+
+  async setBlob(key: string, contents: Buffer | string): Promise<void> {
+    await this.store.put(key, contents);
+  }
+
+  getBuffer(key: string): Promise<?Buffer> {
+    return Promise.resolve(this.store.get(key));
+  }
+
+  #getFilePath(key: string, index: number): string {
+    return path.join(this.dir, `${key}-${index}`);
+  }
+
+  hasLargeBlob(key: string): Promise<boolean> {
+    return this.fs.exists(this.#getFilePath(key, 0));
+  }
+
+  // eslint-disable-next-line require-await
+  async getLargeBlob(key: string): Promise<Buffer> {
+    return this.fsCache.getLargeBlob(key);
+  }
+
+  // eslint-disable-next-line require-await
+  async setLargeBlob(
+    key: string,
+    contents: Buffer | string,
+    options?: {|signal?: AbortSignal|},
+  ): Promise<void> {
+    return this.fsCache.setLargeBlob(key, contents, options);
+  }
+
+  deleteLargeBlob(key: string): Promise<void> {
+    return this.fsCache.deleteLargeBlob(key);
+  }
+
+  refresh(): void {
+    // Reset the read transaction for the store. This guarantees that
+    // the next read will see the latest changes to the store.
+    // Useful in scenarios where reads and writes are multi-threaded.
+    // See https://github.com/kriszyp/lmdb-js#resetreadtxn-void
+    this.store.resetReadTxn();
+  }
+}
+
+registerSerializableClass(
+  `${packageJson.version}:LMDBLiteCache`,
+  LMDBLiteCache,
+);
