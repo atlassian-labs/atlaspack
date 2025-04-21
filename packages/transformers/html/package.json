@@ -15,7 +15,6 @@
   "main": "lib/HTMLTransformer.js",
   "source": "src/HTMLTransformer.js",
   "engines": {
-    "atlaspack": "^2.12.0",
     "node": ">= 16.0.0"
   },
   "dependencies": {

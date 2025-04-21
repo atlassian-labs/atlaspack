@@ -12,7 +12,6 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "engines": {
-    "atlaspack": "^2.12.0",
     "node": ">= 16.0.0"
   },
   "files": [

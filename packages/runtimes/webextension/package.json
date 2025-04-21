@@ -12,8 +12,7 @@
   "main": "lib/WebExtensionRuntime.js",
   "source": "src/WebExtensionRuntime.js",
   "engines": {
-    "node": ">= 16.0.0",
-    "atlaspack": "^2.12.0"
+    "node": ">= 16.0.0"
   },
   "dependencies": {
     "@atlaspack/plugin": "2.14.0",

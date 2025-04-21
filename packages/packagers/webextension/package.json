@@ -12,7 +12,6 @@
   "main": "lib/WebExtensionPackager.js",
   "source": "src/WebExtensionPackager.js",
   "engines": {
-    "atlaspack": "^2.12.0",
     "node": ">=16.0.0"
   },
   "dependencies": {
