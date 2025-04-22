@@ -1,0 +1,182 @@
+name: Release Alt
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+
+jobs:
+  lint_javascript:
+    name: "📝 Lint: JavaScript"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: . ./.github/install-scripts/nodejs/main.ps1
+      - run: yarn install
+      - run: npx eslint .
+      - run: npx prettier "./packages/*/*/{src,bin,test}/**/*.{js,json,md}" --list-different
+
+  lint_rust:
+    name: "📝 Lint: Rust"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: . ./.github/install-scripts/rust/main.ps1
+      - run: rustup component add clippy
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy -- -D warnings
+
+  build_javascript:
+    name: "🔨 JavaScript"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: . ./.github/install-scripts/nodejs/main.ps1
+      - run: . ./.github/install-scripts/rust/main.ps1
+      - run: yarn install
+      - run: yarn build
+      - run: yarn build-ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-javascript
+          path: ${{ github.workspace }}/packages/**/*
+          if-no-files-found: error
+          retention-days: 1
+
+  build_native:
+    strategy:
+      matrix:
+        config:
+          - name: "🔨🐥 Linux AMD64"
+            runner: ubuntu-24.04
+          - name: "🔨🐥 Linux ARM64"
+            runner: ubuntu-24.04-arm
+          - name: "🔨🍎 MacOS AMD64"
+            runner: macos-13
+          - name: "🔨🍎 MacOS ARM64"
+            runner: macos-15
+
+    name: "${{ matrix.config.name }}"
+    runs-on: ${{ matrix.config.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: . ./.github/install-scripts/nodejs/main.ps1
+      - run: . ./.github/install-scripts/rust/main.ps1
+      - run: yarn install
+      - run: yarn build-native-release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.config.os }}-${{ matrix.config.arch }}
+          path: ${{ github.workspace }}/packages/**/*
+          if-no-files-found: error
+          retention-days: 1
+
+  integration_tests:
+    strategy:
+      matrix:
+        config:
+          - name: "🧪🐥 Linux AMD64"
+            runner: ubuntu-24.04
+          - name: "🧪🍎 MacOS ARM64"
+            runner: macos-15
+    name: "${{ matrix.config.name }}"
+    runs-on: ${{ matrix.config.runner }}
+    needs:
+      - build_native
+      - build_javascript
+    steps:
+      - uses: actions/checkout@v4
+      - run: . ./.github/install-scripts/nodejs/main.ps1
+      - run: . ./.github/install-scripts/rust/main.ps1
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - run: yarn install
+      - run: yarn test:integration
+
+  integration_tests_v3:
+    strategy:
+      matrix:
+        config:
+          - name: "🧪🐥 Linux AMD64"
+            runner: ubuntu-24.04
+          - name: "🧪🍎 MacOS ARM64"
+            runner: macos-15
+    name: "${{ matrix.config.name }}"
+    runs-on: ${{ matrix.config.runner }}
+    needs:
+      - build_native
+      - build_javascript
+    steps:
+      - uses: actions/checkout@v4
+      - run: . ./.github/install-scripts/nodejs/main.ps1
+      - run: . ./.github/install-scripts/rust/main.ps1
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - run: yarn install
+      - run: yarn test:integration:v3
+
+  unit_tests_javascript:
+    name: "🔬 Unit Tests: JavaScript"
+    runs-on: ubuntu-24.04
+    needs:
+      - build_native
+      - build_javascript
+    steps:
+      - uses: actions/checkout@v4
+      - run: . ./.github/install-scripts/nodejs/main.ps1
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - run: yarn install
+      - run: yarn test:js:unit
+
+  unit_tests_rust:
+    name: "🔬 Unit Tests: Rust"
+    runs-on: ubuntu-24.04
+    needs:
+      - build_native
+      - build_javascript
+    steps:
+      - uses: actions/checkout@v4
+      - run: . ./.github/install-scripts/nodejs/main.ps1
+      - run: cargo test
+
+  publish_npm:
+    name: "🔄 Publish: NPM Packages"
+    runs-on: ubuntu-24.04
+    needs:
+      - lint_javascript
+      - lint_rust
+      - build_javascript
+      - build_native
+      - integration_tests
+      - unit_tests_javascript
+      - integration_tests_v3
+      - unit_tests_rust
+    steps:
+      - run: echo "Made it"
+
+  publish_github_release:
+    name: "🔄 Publish: Github Release"
+    runs-on: ubuntu-24.04
+    needs:
+      - lint_javascript
+      - lint_rust
+      - build_javascript
+      - build_native
+      - integration_tests
+      - unit_tests_javascript
+      - integration_tests_v3
+      - unit_tests_rust
+    steps:
+      - run: echo "Made it"
