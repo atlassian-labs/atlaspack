@@ -12,6 +12,11 @@ const EXCLUSIONS = [
   '@atlaspack/macros',
   '@atlaspack/validator-eslint',
   '@atlaspack/validator-typescript',
+  '@atlaspack/create-react-app',
+  '@atlaspack/query',
+  '@atlaspack/bundle-stats',
+  // Sass dep causes issues
+  '@atlaspack/transformer-sass',
 ];
 const entryDir = path.join(__dirname, '../entries');
 
@@ -42,6 +47,10 @@ async function main() {
   entries.push({
     entryName: 'ThreadsChild',
     importSpecifier: '@atlaspack/workers/src/threads/ThreadsChild',
+  });
+  entries.push({
+    entryName: 'ProcessChild',
+    importSpecifier: '@atlaspack/workers/src/process/ProcessChild',
   });
 
   for (let {importSpecifier, entryName} of entries) {

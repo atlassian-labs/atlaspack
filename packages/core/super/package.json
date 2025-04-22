@@ -4,7 +4,7 @@
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "scripts": {
-    "build": "yarn generate-entries && yarn build:atlaspack && yarn build:native-bindings",
+    "build": "rm -rf lib && yarn generate-entries && yarn build:atlaspack && yarn build:native-bindings && touch lib/core/core/_empty.js",
     "generate-entries": "rm -rf entries && node ./scripts/generate-entries.js",
     "build:atlaspack": "NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SUPER_BUILD=true atlaspack build --no-cache --no-autoinstall ./entries/*.js --config .parcelrc",
     "build:native-bindings": "mkdir -p lib/node_modules/@atlaspack/rust && cp ../rust/*.* lib/node_modules/@atlaspack/rust"
