@@ -8,10 +8,12 @@ on:
       release-command:
         description: 'The command that will release packages as part of the final step'
         required: true
+        default: ''
         type: string
       type:
         description: 'The type of release, usually corresponds to the dist-tag'
         required: true
+        default: 'release'
         type: string
       profile:
         description: 'The profile to use when building the native binaries'
@@ -71,7 +73,7 @@ jobs:
         if: ${{ matrix.target == 'aarch64-apple-darwin' }}
         run: sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*;
       - name: Build native packages
-        run: yarn build-native-${{ inputs.profile }}
+        run: yarn build-native-release
         env:
           RUST_TARGET: ${{ matrix.target }}
       - name: Extract debug symbols
@@ -107,7 +109,7 @@ jobs:
         uses: ./.github/actions/rust-toolchain
       - uses: bahmutov/npm-install@v1.8.35
       - name: Build native packages
-        run: yarn build-native-${{ inputs.profile }}
+        run: yarn build-native-release
       - name: Extract debug symbols
         if: ${{ inputs.profile == 'canary' }}
         run: |
@@ -165,7 +167,7 @@ jobs:
         with:
           shared-key: ${{ matrix.target }}
       - name: Build native packages
-        run: yarn build-native-${{ inputs.profile }}
+        run: yarn build-native-release
         env:
           RUST_TARGET: ${{ matrix.target }}
           CFLAGS: ${{ matrix.cflags }}
