@@ -4,7 +4,7 @@
 #
 ###############################################################################
 #
-FROM --platform=$BUILDPLATFORM ubuntu:22.04
+FROM --platform=$TARGETPLATFORM ubuntu:22.04
 
 RUN apt-get update && apt-get -y upgrade && apt-get -y autoremove && apt-get -y clean && apt-get -f -y install build-essential wget pkg-config curl sudo
 
