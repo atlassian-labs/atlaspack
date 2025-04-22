@@ -4,6 +4,6 @@
         "*.node": ["@atlaspack/transformer-raw"],
         "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": ["@atlaspack/transformer-babel", "..."]
     },
-    //"bundler": "@atlaspack/bundler-library",
-    //"namers": ["./Namer.js", "..."]
+    "bundler": "@atlaspack/bundler-library",
+    "namers": ["./plugins/Namer.js", "..."]
 }
