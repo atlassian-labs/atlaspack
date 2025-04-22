@@ -178,7 +178,9 @@ jobs:
         uses: addnab/docker-run-action@v3
         with:
           image: ghcr.io/${{ github.repository }}/multiarch-node:node18
-          options: -v ${{github.workspace}}:/work
+          options: |
+            --platform linux/${{ matrix.arch == 'armhf' && 'arm/v7' || 'arm64' }}
+            -v ${{github.workspace}}:/work
           run: cd /work && node -e "require('@atlaspack/rust')"
 
   build-and-release:
