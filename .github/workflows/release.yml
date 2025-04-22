@@ -182,6 +182,7 @@ jobs:
             --platform linux/${{ matrix.arch == 'armhf' && 'arm/v7' || 'arm64' }}
             -v ${{github.workspace}}:/work
           run: cd /work && node -e "require('@atlaspack/rust')"
+          shell: bash
 
   build-and-release:
     name: Build and release
