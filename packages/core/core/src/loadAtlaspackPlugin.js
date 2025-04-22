@@ -3,16 +3,13 @@ import type {FilePath, PackageName, Semver} from '@atlaspack/types';
 import type {AtlaspackOptions} from './types';
 
 import path from 'path';
-import semver from 'semver';
-import logger from '@atlaspack/logger';
 import nullthrows from 'nullthrows';
 import ThrowableDiagnostic, {
   generateJSONCodeHighlights,
   md,
 } from '@atlaspack/diagnostic';
-import {findAlternativeNodeModules, resolveConfig} from '@atlaspack/utils';
+import {findAlternativeNodeModules} from '@atlaspack/utils';
 import {type ProjectPath, toProjectPath} from './projectPath';
-import {version as ATLASPACK_VERSION} from '../package.json';
 
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
 const CONFIG = Symbol.for('parcel-plugin-config');
@@ -56,13 +53,11 @@ export default async function loadPlugin<T>(
     });
   }
 
-  let resolved, pkg;
+  let pkg;
   try {
-    ({resolved, pkg} = await options.packageManager.resolve(
-      pluginName,
-      resolveFrom,
-      {shouldAutoInstall: options.shouldAutoInstall},
-    ));
+    ({pkg} = await options.packageManager.resolve(pluginName, resolveFrom, {
+      shouldAutoInstall: options.shouldAutoInstall,
+    }));
   } catch (err) {
     if (err.code !== 'MODULE_NOT_FOUND') {
       throw err;

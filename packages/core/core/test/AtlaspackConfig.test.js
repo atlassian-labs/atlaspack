@@ -3,10 +3,6 @@
 import assert from 'assert';
 import path from 'path';
 
-import logger from '@atlaspack/logger';
-import {inputFS} from '@atlaspack/test-utils';
-import sinon from 'sinon';
-
 import {AtlaspackConfig} from '../src/AtlaspackConfig';
 import {toProjectPath} from '../src/projectPath';
 import {parseAndProcessConfig} from '../src/requests/AtlaspackConfigRequest';
