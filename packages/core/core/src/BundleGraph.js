@@ -1315,7 +1315,7 @@ export default class BundleGraph {
     }
 
     let dependencies = this._graph
-      .getNodeIdsConnectedTo(assetNodeId)
+      .getNodeIdsConnectedTo(assetNodeId, ALL_EDGE_TYPES)
       .map((id) => nullthrows(this._graph.getNode(id)))
       .filter((node) => node.type === 'dependency')
       .map((node) => {
