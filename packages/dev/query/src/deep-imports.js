@@ -9,7 +9,7 @@ import typeof RequestTracker, {
   readAndDeserializeRequestGraph,
 } from '@atlaspack/core/src/RequestTracker';
 import typeof {requestGraphEdgeTypes} from '@atlaspack/core/src/RequestTracker';
-import typeof {LMDBCache} from '@atlaspack/cache/src/LMDBCache';
+import typeof {LMDBLiteCache} from '@atlaspack/cache/src/LMDBLiteCache';
 import typeof {Priority} from '@atlaspack/core/src/types';
 import typeof {fromProjectPathRelative} from '@atlaspack/core/src/projectPath';
 
@@ -24,7 +24,8 @@ const v =
         // $FlowFixMe(unsupported-syntax)
         RequestTracker: require('@atlaspack/core' + '/lib/RequestTracker'),
         // $FlowFixMe(unsupported-syntax)
-        LMDBCache: require('@atlaspack/cache' + '/lib/LMDBCache').LMDBCache,
+        LMDBCache: require('@atlaspack/cache' + '/lib/LMDBLiteCache')
+          .LMDBLiteCache,
         // $FlowFixMe(unsupported-syntax)
         Priority: require('@atlaspack/core' + '/lib/types').Priority,
         // $FlowFixMe(unsupported-syntax)
@@ -35,7 +36,7 @@ const v =
         AssetGraph: require('@atlaspack/core/src/AssetGraph').default,
         BundleGraph: require('@atlaspack/core/src/BundleGraph'),
         RequestTracker: require('@atlaspack/core/src/RequestTracker'),
-        LMDBCache: require('@atlaspack/cache/src/LMDBCache').LMDBCache,
+        LMDBCache: require('@atlaspack/cache/src/LMDBLiteCache').LMDBLiteCache,
         Priority: require('@atlaspack/core/src/types').Priority,
         fromProjectPathRelative: require('@atlaspack/core/src/projectPath')
           .fromProjectPathRelative,
@@ -55,7 +56,7 @@ module.exports = (v: {|
     requestGraphEdgeTypes: requestGraphEdgeTypes,
     ...
   },
-  LMDBCache: LMDBCache,
+  LMDBCache: LMDBLiteCache,
   Priority: Priority,
   fromProjectPathRelative: fromProjectPathRelative,
 |});
