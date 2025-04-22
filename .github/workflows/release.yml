@@ -200,7 +200,7 @@ jobs:
           image: ghcr.io/${{ github.repository }}/multiarch-node:node18
           options: --platform linux/${{ matrix.arch == 'armhf' && 'arm/v7' || 'arm64' }} -v ${{github.workspace}}:/work
           run: cd /work && node -e "require('@atlaspack/rust')"
-          shell: bash
+          shell: /bin/bash
 
   # build-and-release:
   #   name: Build and release
