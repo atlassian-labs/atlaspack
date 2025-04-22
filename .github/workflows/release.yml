@@ -4,6 +4,20 @@ on:
   push:
     branches:
       - spr/yamadapc/try-to-use-bash-as-the-smoke-test-shell
+    inputs:
+      release-command:
+        description: 'The command that will release packages as part of the final step'
+        required: true
+        type: string
+      type:
+        description: 'The type of release, usually corresponds to the dist-tag'
+        required: true
+        type: string
+      profile:
+        description: 'The profile to use when building the native binaries'
+        required: false
+        default: 'release'
+        type: string
 
   workflow_call:
     inputs:
