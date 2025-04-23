@@ -48,7 +48,8 @@
 //! * Technology preview / non-numeric versions are not supported.
 //!
 use std::collections::HashMap;
-use std::sync::LazyLock;
+
+use lazy_static::lazy_static;
 
 pub use generated::*;
 pub use permissive_semver::*;
@@ -65,10 +66,12 @@ type BrowserAgentKey = String;
 /// The `data`/stats field in caniuse JSON data. This is generated with `generate.mjs`
 type BrowserFeatureStats = HashMap<BrowserFeatureKey, HashMap<BrowserAgentKey, BrowserFeatureStat>>;
 
-static BROWSER_FEATURE_STATS: LazyLock<BrowserFeatureStats> =
-  LazyLock::new(|| serde_json::from_str(BROWSER_FEATURE_STATS_JSON).unwrap());
-static BROWSER_FEATURES: LazyLock<BrowsersFeaturesData> =
-  LazyLock::new(|| BrowsersFeaturesData::new(&BROWSER_FEATURE_STATS).unwrap());
+lazy_static! {
+  static ref BROWSER_FEATURE_STATS: BrowserFeatureStats =
+    serde_json::from_str(BROWSER_FEATURE_STATS_JSON).unwrap();
+  static ref BROWSER_FEATURES: BrowsersFeaturesData =
+    BrowsersFeaturesData::new(&BROWSER_FEATURE_STATS).unwrap();
+}
 
 type BrowserFeatureStat = HashMap<String, u8>;
 
