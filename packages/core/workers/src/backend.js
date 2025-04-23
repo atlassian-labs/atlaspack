@@ -27,7 +27,7 @@ export function getWorkerBackend(backend: BackendType): Class<WorkerImpl> {
       return require('./process/ProcessWorker').default;
     case 'web': {
       if (!process.env.ATLASPACK_SUPER_BUILD) {
-        return require('./web/WebWorker').default;
+        // return require('./web/WebWorker').default;
       } else {
         throw new Error('Web worker not supported');
       }

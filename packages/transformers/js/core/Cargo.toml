@@ -26,7 +26,7 @@ swc_core = { workspace = true, features = [
   "ecma_utils",
   "ecma_visit",
   "ecma_quote",
-  "stacker"
+  "stacker",
 ] }
 
 sourcemap = { workspace = true }
@@ -40,6 +40,7 @@ sha-1 = { workspace = true }
 dunce = { workspace = true }
 pathdiff = { workspace = true }
 path-slash = { workspace = true }
+pretty_assertions = { workspace = true }
 indexmap = { workspace = true }
 atlaspack-macros = { path = "../../../../crates/macros" }
 atlaspack_core = { path = "../../../../crates/atlaspack_core" }
