@@ -24,11 +24,19 @@ permissions:
   contents: write # for actions/checkout and adding tag
 
 jobs:
-  build-macos:
+  build-native:
     strategy:
       fail-fast: false
       matrix:
         include:
+          - name: x86_64-unknown-linux-gnu
+            os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+
+          - name: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+
           - name: aarch64-apple-darwin
             os: macos-latest
             target: aarch64-apple-darwin
@@ -49,168 +57,39 @@ jobs:
         if: ${{ inputs.type != 'latest' }}
         with:
           shared-key: ${{ matrix.name }}
-      - name: Remove CommandLineTools SDKs
-        if: ${{ matrix.target == 'aarch64-apple-darwin' }}
-        run: sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*;
       - name: Build native packages
-        run: yarn build-native-${{ inputs.profile }}
         env:
-          RUST_TARGET: ${{ matrix.target }}
+          RUSTUP_TARGET: ${{ matrix.target }}
+          CARGO_PROFILE: ${{ inputs.profile }}
+        run: yarn build-native
       - name: Extract debug symbols
-        if: ${{ runner.os == 'macOS' && inputs.profile == 'canary' }}
-        run: dsymutil packages/*/*/*.node
-      - name: Upload debug symbols
-        uses: actions/upload-artifact@v4
-        if: ${{ inputs.profile == 'canary' }}
-        with:
-          name: debug-symbols-${{ matrix.name }}
-          path: packages/*/*/*.node.dSYM/Contents/Resources/DWARF/*.node
-      - name: Strip debug symbols # https://github.com/rust-lang/rust/issues/46034
-        run: strip -x packages/*/*/*.node # Must use -x on macOS. This produces larger results on linux.
+        run: npx workspace-scripts debug-symbols
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: bindings-${{ matrix.name }}
-          path: packages/*/*/*.node
-      - name: Debug
-        run: ls -l packages/*/*/*.node
-      - name: Smoke test
-        if: ${{ !matrix.target }}
-        run: node -e "require('@atlaspack/rust')"
-
-  build-linux-gnu-x64:
-    name: linux-gnu-x64
-    runs-on: ubuntu-22.04
-    container:
-      image: node:22.4-bullseye
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: ./.github/actions/rust-toolchain
-      - uses: bahmutov/npm-install@v1.8.35
-      - name: Build native packages
-        run: yarn build-native-${{ inputs.profile }}
-      - name: Extract debug symbols
-        if: ${{ inputs.profile == 'canary' }}
-        run: |
-          find packages -name "*.node" -type f -exec objcopy --only-keep-debug --compress-debug-sections=zlib {} {}.debug \;
-          find packages -name "*.node" -type f -exec objcopy --strip-debug --strip-unneeded {} \;
-          find packages -name "*.node" -type f -exec objcopy --add-gnu-debuglink={}.debug {} \;
-      - name: Upload debug symbols
-        uses: actions/upload-artifact@v4
-        if: ${{ inputs.profile == 'canary' }}
-        with:
-          name: debug-symbols-linux-gnu-x64
-          path: packages/*/*/*.node.debug
-      - name: Strip debug symbols # https://github.com/rust-lang/rust/issues/46034
-        run: strip packages/*/*/*.node
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: bindings-linux-gnu-x64
-          path: packages/*/*/*.node
-      - name: Debug
-        run: ls -l packages/*/*/*.node
-      - name: Smoke test
-        run: node -e 'require("@atlaspack/rust")'
-
-  build-linux-gnu-arm:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: arm-unknown-linux-gnueabihf
-            arch: armhf
-            strip: arm-linux-gnueabihf-strip
-            objcopy: arm-linux-gnueabihf-objcopy
-            cflags: ''
-          - target: aarch64-unknown-linux-gnu
-            arch: arm64
-            strip: aarch64-linux-gnu-strip
-            objcopy: aarch64-linux-gnu-objcopy
-            cflags: ''
-    name: ${{ matrix.target }}
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: ./.github/actions/rust-toolchain
-        with:
-          targets: ${{ matrix.target }}
-      - name: Install cross compile toolchains
-        run: |
-          sudo apt-get update
-          sudo apt-get install gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu g++-aarch64-linux-gnu -y
-      - uses: bahmutov/npm-install@v1.8.35
-      - uses: Swatinem/rust-cache@v2
-        if: ${{ inputs.type != 'latest' }}
-        with:
-          shared-key: ${{ matrix.target }}
-      - name: Build native packages
-        run: yarn build-native-${{ inputs.profile }}
-        env:
-          RUST_TARGET: ${{ matrix.target }}
-          CFLAGS: ${{ matrix.cflags }}
-      - name: Extract debug symbols
-        if: ${{ inputs.profile == 'canary' }}
-        run: |
-          find packages -name "*.node" -type f -exec ${{ matrix.objcopy }} --only-keep-debug --compress-debug-sections=zlib {} {}.debug \;
-          find packages -name "*.node" -type f -exec ${{ matrix.objcopy }} --strip-debug --strip-unneeded {} \;
-          find packages -name "*.node" -type f -exec ${{ matrix.objcopy }} --add-gnu-debuglink={}.debug {} \;
-      - name: Upload debug symbols
-        uses: actions/upload-artifact@v4
-        if: ${{ inputs.profile == 'canary' }}
-        with:
-          name: debug-symbols-${{ matrix.target }}
-          path: packages/*/*/*.node.debug
-      - name: Strip debug symbols # https://github.com/rust-lang/rust/issues/46034
-        run: ${{ matrix.strip }} packages/*/*/*.node
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: bindings-${{ matrix.target }}
-          path: packages/*/*/*.node
-      - name: Debug
-        run: ls -l packages/*/*/*.node
-      - name: Configure binfmt-support
-        run: docker run --rm --privileged multiarch/qemu-user-static:register --reset
-
-      # TODO: Disabled because there is something wrong with the multiarch image right now. See #453
-      # - name: Smoke test
-      #   uses: addnab/docker-run-action@v3
-      #   with:
-      #     image: ghcr.io/${{ github.repository }}/multiarch-node:node18
-      #     options: |
-      #       --platform linux/${{ matrix.arch == 'armhf' && 'arm/v7' || 'arm64' }}
-      #       -v ${{github.workspace}}:/work
-      #     run: cd /work && node -e "require('@atlaspack/rust')"
+          name: packages-${{ matrix.target }}
+          path: packages/**/*
 
   build-and-release:
     name: Build and release
     needs:
-      - build-linux-gnu-arm
-      - build-linux-gnu-x64
-      - build-macos
-    runs-on: ubuntu-22.04
+      - build-native
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
       - uses: bahmutov/npm-install@v1.8.35
-      - name: Build native packages
-        run: yarn build-native-${{ inputs.profile }}
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: artifacts
-      - name: Move bindings
-        run: for d in artifacts/bindings-*/*/*; do cp $d/*.node packages/$(basename $(dirname $d))/$(basename $d); done
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
       - name: Move debug symbols
         if: ${{ inputs.profile == 'canary' }}
         run: |
           mkdir debug-symbols
-          find artifacts -name "*.debug" -exec cp {} debug-symbols/ \;
-          find artifacts -name "*.node" -path "**/DWARF/**" -exec cp {} debug-symbols/ \;
+          find packages -name "*.debug" -exec cp {} debug-symbols/ \;
+          find packages -name "*.node" -path "**/DWARF/**" -exec cp {} debug-symbols/ \;
           ls -l debug-symbols
       - name: Upload combined debug symbols artifact
         uses: actions/upload-artifact@v4
@@ -245,10 +124,8 @@ jobs:
     name: Build and release Changesets
     permissions: write-all
     needs:
-      - build-linux-gnu-arm
-      - build-linux-gnu-x64
-      - build-macos
-    runs-on: ubuntu-22.04
+      - build-native
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -256,12 +133,11 @@ jobs:
       - uses: bahmutov/npm-install@v1.8.35
       - name: Build native packages
         run: yarn build-native-release
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: artifacts
-      - name: Move bindings
-        run: for d in artifacts/bindings-*/*/*; do cp $d/*.node packages/$(basename $(dirname $d))/$(basename $d); done
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
       - uses: changesets/action@v1
         with:
           publish: yarn changeset publish
