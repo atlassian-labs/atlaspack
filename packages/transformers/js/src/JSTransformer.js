@@ -415,8 +415,6 @@ export default (new Transformer({
       }
     }
 
-    let isWorkerFile = (await asset.getCode()).includes('WORKER_PATH');
-
     let macroAssets = [];
     let {
       dependencies,
@@ -437,10 +435,12 @@ export default (new Transformer({
       module_id: asset.id,
       project_root: options.projectRoot,
       replace_env: !asset.env.isNode(),
-      inline_fs: Boolean(config?.inlineFS) && !asset.env.isNode(),
+      inline_fs:
+        process.env.ATLASPACK_SUPER_BUILD === 'true' ||
+        (Boolean(config?.inlineFS) && !asset.env.isNode()),
       insert_node_globals:
         !asset.env.isNode() && asset.env.sourceType !== 'script',
-      node_replacer: asset.env.isNode() && !isWorkerFile,
+      node_replacer: asset.env.isNode(),
       is_browser: asset.env.isBrowser(),
       is_worker: asset.env.isWorker(),
       env,
