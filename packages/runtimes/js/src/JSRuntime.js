@@ -20,6 +20,8 @@ import path from 'path';
 import nullthrows from 'nullthrows';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 
+const filename = /*#__ATLASPACK_IGNORE__*/ __filename;
+
 // Used for as="" in preload/prefetch
 const TYPE_TO_RESOURCE_PRIORITY = {
   css: 'style',
@@ -157,7 +159,7 @@ export default (new Runtime({
           // return a simple runtime of `Promise.resolve(internalRequire(assetId))`.
           // The linker handles this for scope-hoisting.
           assets.push({
-            filePath: __filename,
+            filePath: filename,
             code: `module.exports = Promise.resolve(module.bundle.root(${JSON.stringify(
               bundleGraph.getAssetPublicId(resolved.value),
             )}))`,
@@ -257,7 +259,7 @@ export default (new Runtime({
         // If a URL dependency was not able to be resolved, add a runtime that
         // exports the original specifier.
         assets.push({
-          filePath: __filename,
+          filePath: filename,
           code: `module.exports = ${JSON.stringify(dependency.specifier)}`,
           dependency,
           env: {sourceType: 'module'},
@@ -324,7 +326,7 @@ export default (new Runtime({
           config.domainSharding,
         )})`;
         assets.push({
-          filePath: __filename,
+          filePath: filename,
           code: loaderCode,
           isEntry: true,
           env: {sourceType: 'module'},
@@ -340,7 +342,7 @@ export default (new Runtime({
       isNewContext(bundle, bundleGraph)
     ) {
       assets.push({
-        filePath: __filename,
+        filePath: filename,
         code: getRegisterCode(bundle, bundleGraph),
         isEntry: true,
         env: {sourceType: 'module'},
@@ -685,7 +687,7 @@ function getLoaderRuntime({
       }})`;
 
     return {
-      filePath: __filename,
+      filePath: filename,
       code: loaderCode,
       dependency,
       env: {sourceType: 'module'},
@@ -705,7 +707,7 @@ function getLoaderRuntime({
   code.push(`module.exports = ${loaderCode};`);
 
   return {
-    filePath: __filename,
+    filePath: filename,
     code: code.join('\n'),
     dependency,
     env: {sourceType: 'module'},
@@ -833,7 +835,7 @@ function getURLRuntime(
   }
 
   return {
-    filePath: __filename,
+    filePath: filename,
     code,
     dependency,
     env: {sourceType: 'module'},

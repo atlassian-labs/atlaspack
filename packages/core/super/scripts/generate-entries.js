@@ -20,6 +20,8 @@ const EXCLUSIONS = [
   '@atlaspack/transformer-sass',
 ];
 const entryDir = path.join(__dirname, '../entries');
+const packagesDir = path.join(__dirname, '../../..');
+const libDir = path.join(__dirname, '../lib');
 
 const pluginPrefixes = [
   'transformer',
@@ -40,16 +42,23 @@ async function getEntries() {
   });
 
   return entries
-    .map((path) => require(path))
+    .map((packagePath) => ({packagePath, ...require(packagePath)}))
     .filter(({name, private}) => !private && !EXCLUSIONS.includes(name))
-    .map(({name, source}) => {
+    .map(({name, source, atlaspackReferences, packagePath}) => {
       let entryName = name.substring(`@atlaspack/`.length);
       let isPlugin = pluginPrefixes.some((prefix) => name.startsWith(prefix));
+      let references = atlaspackReferences
+        ? glob.sync(atlaspackReferences, {
+            cwd: path.dirname(packagePath),
+            absolute: true,
+          })
+        : [];
 
       return {
         entryName,
         importSpecifier: source ? path.join(name, source) : name,
         pluginSpecifier: isPlugin ? name : null,
+        references,
       };
     });
 }
@@ -73,7 +82,12 @@ async function main() {
 
   let internalPlugins = [];
 
-  for (let {importSpecifier, entryName, pluginSpecifier} of entries) {
+  for (let {
+    importSpecifier,
+    entryName,
+    pluginSpecifier,
+    references = [],
+  } of entries) {
     let code = [];
 
     if (entryName === 'cli') {
@@ -89,18 +103,35 @@ async function main() {
     }
 
     let entryPath = path.join(entryDir, entryName + '.js');
-    await fs.mkdir(path.dirname(entryPath), {recursive: true});
-    await fs.writeFile(entryPath, code.join('\n'), {encoding: 'utf8'});
+    await writeFile(entryPath, code.join('\n'));
+
+    for (let reference of references) {
+      let target = path
+        .join(libDir, path.relative(packagesDir, reference))
+        .replace('/src/', '/');
+
+      await copyFile(reference, target);
+    }
   }
 
   let internalPluginMap = internalPlugins
     .map(([key, value]) => `"${key}": () => ${value}`)
     .join(',');
 
-  await fs.writeFile(
+  await writeFile(
     path.join(entryDir, 'internal-plugins.js'),
     `export default {${internalPluginMap}}`,
   );
+}
+
+async function copyFile(from, to) {
+  await fs.mkdir(path.dirname(to), {recursive: true});
+  await fs.copyFile(from, to);
+}
+
+async function writeFile(filePath, content) {
+  await fs.mkdir(path.dirname(filePath), {recursive: true});
+  await fs.writeFile(filePath, content, 'utf8');
 }
 
 main();
