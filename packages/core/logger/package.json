@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/logger",
-  "version": "2.14.0",
+  "version": "2.14.1",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -24,7 +24,7 @@
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.0",
     "@atlaspack/events": "2.14.0",
-    "@atlaspack/rust": "3.0.0"
+    "@atlaspack/rust": "3.0.1"
   },
   "type": "commonjs"
 }

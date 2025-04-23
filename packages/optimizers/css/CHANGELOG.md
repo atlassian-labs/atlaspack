@@ -1,5 +1,13 @@
 # @atlaspack/optimizer-css
 
+## 2.14.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.1
+  - @atlaspack/plugin@2.14.1
+
 ## 2.14.0
 
 ### Minor Changes

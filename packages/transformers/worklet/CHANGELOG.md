@@ -1,5 +1,12 @@
 # @atlaspack/transformer-worklet
 
+## 2.14.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.1
+
 ## 2.14.0
 
 ### Minor Changes
