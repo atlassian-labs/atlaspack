@@ -20,12 +20,11 @@
       "includeNodeModules": {
         "@parcel/source-map": false,
         "@atlaspack/rust": false,
-        "lightningcss": false
+        "lightningcss": false,
+        "@swc/core": false,
+        "htmlnano": false
       }
     }
-  },
-  "alias": {
-    "@swc/wasm": false
   },
   "sideEffects": true,
   "dependencies": {
