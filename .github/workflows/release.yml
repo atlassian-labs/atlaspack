@@ -174,14 +174,16 @@ jobs:
         run: ls -l packages/*/*/*.node
       - name: Configure binfmt-support
         run: docker run --rm --privileged multiarch/qemu-user-static:register --reset
-      - name: Smoke test
-        uses: addnab/docker-run-action@v3
-        with:
-          image: ghcr.io/${{ github.repository }}/multiarch-node:node18
-          options: |
-            --platform linux/${{ matrix.arch == 'armhf' && 'arm/v7' || 'arm64' }}
-            -v ${{github.workspace}}:/work
-          run: cd /work && node -e "require('@atlaspack/rust')"
+
+      # TODO: Disabled because there is something wrong with the multiarch image right now. See #453
+      # - name: Smoke test
+      #   uses: addnab/docker-run-action@v3
+      #   with:
+      #     image: ghcr.io/${{ github.repository }}/multiarch-node:node18
+      #     options: |
+      #       --platform linux/${{ matrix.arch == 'armhf' && 'arm/v7' || 'arm64' }}
+      #       -v ${{github.workspace}}:/work
+      #     run: cd /work && node -e "require('@atlaspack/rust')"
 
   build-and-release:
     name: Build and release
