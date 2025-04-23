@@ -166,6 +166,35 @@ function buildNapiLibrary(pkgDir) {
       );
       break;
     }
+
+    // Copy binaries for packages that distribute bins
+    if (pkgJson.copyBin && pkgJson.copyBin.rustTarget === rustTarget) {
+      if (!pkgJson.copyBin.name) {
+        console.error('No bin specified for', pkgJson.name);
+        process.exit(1);
+      }
+      const sourceBin = path.join(
+        'target',
+        rustTarget,
+        rustProfile,
+        pkgJson.copyBin.name,
+      );
+      const targetBin = path.join(
+        pkgDir,
+        pkgJson.copyBin.dest || pkgJson.copyBin.name,
+      );
+
+      if (!fs.existsSync(sourceBin)) {
+        console.error('No bin exists for', pkgJson.name, pkgJson.copyBin.name);
+        process.exit(1);
+      }
+
+      if (fs.existsSync(targetBin)) {
+        fs.rmSync(targetBin);
+      }
+
+      fs.cpSync(sourceBin, targetBin);
+    }
   }
 }
 

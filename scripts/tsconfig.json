@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "lib": ["ESNext"]
+  },
+  "include": ["./**/*.ts", "./**/*.mts", "./**/*.cts"]
+}
