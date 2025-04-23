@@ -4,7 +4,14 @@ let findUp = require('find-up');
 
 let lib_node_modules_dir = path.join(__dirname, '../lib/node_modules');
 
-let bindings = ['@atlaspack/rust', '@parcel/source-map', 'lightningcss'];
+let bindings = [
+  '@atlaspack/rust',
+  '@parcel/source-map',
+  'lightningcss',
+  '@swc/core',
+  // Uses dynamic requires internally so it can't easily be compiled
+  'htmlnano',
+];
 
 async function main() {
   for (let package of bindings) {
