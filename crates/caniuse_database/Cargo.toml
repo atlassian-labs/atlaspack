@@ -8,7 +8,6 @@ workspace = true
 
 [dependencies]
 browserslist-rs = { workspace = true }
-lazy_static = { workspace = true }
 thiserror = { workspace = true }
 tinyvec = { workspace = true, features = ["alloc", "serde"] }
 serde = { workspace = true }
