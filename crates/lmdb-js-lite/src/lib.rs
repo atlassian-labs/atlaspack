@@ -38,10 +38,10 @@
 
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::sync::LazyLock;
 use std::sync::{Arc, Mutex, Weak};
 
 use anyhow::anyhow;
+use lazy_static::lazy_static;
 use napi::bindgen_prelude::Env;
 use napi::JsUnknown;
 use napi_derive::napi;
@@ -120,8 +120,9 @@ impl LMDBGlobalState {
   }
 }
 
-static STATE: LazyLock<Mutex<LMDBGlobalState>> =
-  LazyLock::new(|| Mutex::new(LMDBGlobalState::new()));
+lazy_static! {
+  static ref STATE: Mutex<LMDBGlobalState> = Mutex::new(LMDBGlobalState::new());
+}
 
 #[napi]
 pub fn init_tracing_subscriber() {

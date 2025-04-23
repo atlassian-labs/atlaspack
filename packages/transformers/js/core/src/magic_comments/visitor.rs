@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 
 use regex::Regex;
-use std::sync::LazyLock;
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::Visit;
 use swc_core::ecma::visit::VisitWith;
 
-static RE_CHUNK_NAME: LazyLock<Regex> =
-  LazyLock::new(|| Regex::new(r#"webpackChunkName:\s*['"](?<name>[^'"]+)['"]"#).unwrap());
+thread_local! {
+  static RE_CHUNK_NAME: Regex = Regex::new(r#"webpackChunkName:\s*['"](?<name>[^'"]+)['"]"#).unwrap();
+}
+
 const MAGIC_COMMENT_DEFAULT_KEYWORD: &str = "webpackChunkName";
 
 /// MagicCommentsVisitor will scan code for Webpack Magic Comments
@@ -65,7 +66,9 @@ impl Visit for MagicCommentsVisitor<'_> {
 }
 
 fn match_re(src: &str) -> Option<String> {
-  RE_CHUNK_NAME
-    .captures(src)
-    .and_then(|caps| caps.name("name").map(|found| found.as_str().to_string()))
+  RE_CHUNK_NAME.with(|re| {
+    let caps = re.captures(src)?;
+    let found = caps.name("name")?;
+    Some(found.as_str().to_string())
+  })
 }
