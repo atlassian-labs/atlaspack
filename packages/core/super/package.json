@@ -4,11 +4,11 @@
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "scripts": {
-    "build": "rm -rf lib && yarn generate-entries && yarn build:atlaspack && yarn build:native-bindings && yarn create-empty-files",
+    "build": "rm -rf lib && yarn generate-entries && yarn build:atlaspack && yarn native-bindings && yarn create-empty-files",
     "generate-entries": "rm -rf entries && node ./scripts/generate-entries.js",
     "build:atlaspack": "NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SUPER_BUILD=true atlaspack build --no-cache --no-autoinstall ./entries/*.js --config .parcelrc",
-    "build:native-bindings": "node ./scripts/copy-native-bindings.js",
-    "build:create-empty-files": "touch lib/core/core/_empty.js && touch lib/utils/node-resolver-core/_empty.js"
+    "native-bindings": "node ./scripts/copy-native-bindings.js",
+    "create-empty-files": "touch lib/core/core/_empty.js && touch lib/utils/node-resolver-core/_empty.js"
   },
   "targets": {
     "default": {
