@@ -1,4 +1,4 @@
-const {Atlaspack} = require('./lib');
+const {Atlaspack} = require('./lib/core');
 
 (async () => {
   console.log('new Atlaspack');
