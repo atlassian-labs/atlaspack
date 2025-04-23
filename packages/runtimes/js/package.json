@@ -11,6 +11,9 @@
   },
   "main": "lib/JSRuntime.js",
   "source": "src/JSRuntime.js",
+  "atlaspackReferences": [
+    "./src/helpers/**/*"
+  ],
   "engines": {
     "node": ">= 16.0.0"
   },
