@@ -26,6 +26,7 @@
   "alias": {
     "@swc/wasm": false
   },
+  "sideEffects": true,
   "dependencies": {
     "@atlaspack/core": "*"
   },
