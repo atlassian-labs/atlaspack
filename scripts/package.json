@@ -1,0 +1,13 @@
+{
+  "name": "@workspace/scripts",
+  "private": true,
+  "version": "0.0.1-local",
+  "bin": {
+    "workspace-scripts": "./_bin.mjs"
+  },
+  "devDependencies": {
+    "glob": "^7.1.6",
+    "zx": "^8.1.9",
+    "tsx": "4.19.3"
+  }
+}
