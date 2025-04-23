@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::Path;
 
+use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::sync::Lrc;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
@@ -30,6 +31,7 @@ pub struct NodeReplacer<'a> {
   pub source_map: Lrc<SourceMap>,
   pub global_mark: Mark,
   pub globals: HashMap<JsWord, (SyntaxContext, ast::Stmt)>,
+  pub comments: SingleThreadedComments,
   pub filename: &'a Path,
   pub unresolved_mark: Mark,
   /// This will be set to true if the file has either __dirname or __filename replacements inserted
@@ -46,6 +48,15 @@ impl VisitMut for NodeReplacer<'_> {
       Ident(id) => {
         // Only handle global variables
         if !is_unresolved(id, self.unresolved_mark) {
+          return;
+        }
+
+        // If the ignore comment is preceeding the replacer then we skip
+        if self.comments.with_leading(id.span.lo, |comments| {
+          comments
+            .iter()
+            .any(|comment| comment.text == "#__ATLASPACK_IGNORE__")
+        }) {
           return;
         }
 
@@ -226,6 +237,7 @@ impl NodeReplacer<'_> {
 mod tests {
   use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
   use indoc::indoc;
+  use pretty_assertions::{assert_eq, assert_str_eq};
 
   use super::*;
 
@@ -247,6 +259,7 @@ mod tests {
       has_node_replacements: &mut has_node_replacements,
       items: &mut items,
       unresolved_mark: context.unresolved_mark,
+      comments: context.comments,
     });
 
     let expected_code = indoc! {r#"
@@ -255,7 +268,7 @@ mod tests {
       console.log($parcel$__filename);
     "#};
 
-    assert_eq!(output_code, expected_code);
+    assert_str_eq!(output_code, expected_code);
     assert!(has_node_replacements);
     assert_eq!(items[0].specifier, JsWord::from("path"));
     assert_eq!(items[0].kind, DependencyKind::Require);
@@ -281,6 +294,7 @@ mod tests {
       has_node_replacements: &mut has_node_replacements,
       items: &mut items,
       unresolved_mark: context.unresolved_mark,
+      comments: context.comments,
     });
 
     let expected_code = indoc! { r#"
@@ -289,7 +303,77 @@ mod tests {
       console.log($parcel$__dirname);
     "#};
 
-    assert_eq!(output_code, expected_code);
+    assert_str_eq!(output_code, expected_code);
+    assert!(has_node_replacements);
+    assert_eq!(items[0].specifier, JsWord::from("path"));
+    assert_eq!(items[0].kind, DependencyKind::Require);
+    assert_eq!(items[0].source_type, Some(SourceType::Module));
+    assert_eq!(items.len(), 1);
+  }
+
+  #[test]
+  fn test_inline_ignore_replace_filename() {
+    let mut has_node_replacements = false;
+    let mut items = vec![];
+
+    let code = r#"
+      const dirname = /*#__ATLASPACK_IGNORE__*/ __filename;
+      console.log(__filename);
+    "#;
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| NodeReplacer {
+      source_map: context.source_map.clone(),
+      global_mark: context.global_mark,
+      globals: HashMap::new(),
+      filename: Path::new("/path/random.js"),
+      has_node_replacements: &mut has_node_replacements,
+      items: &mut items,
+      unresolved_mark: context.unresolved_mark,
+      comments: context.comments,
+    });
+
+    let expected_code = indoc! { r#"
+      var $parcel$__filename = require("path").resolve(__dirname, "$parcel$filenameReplace", "random.js");
+      const dirname = __filename;
+      console.log($parcel$__filename);
+    "#};
+
+    assert_str_eq!(output_code, expected_code);
+    assert!(has_node_replacements);
+    assert_eq!(items[0].specifier, JsWord::from("path"));
+    assert_eq!(items[0].kind, DependencyKind::Require);
+    assert_eq!(items[0].source_type, Some(SourceType::Module));
+    assert_eq!(items.len(), 1);
+  }
+
+  #[test]
+  fn test_inline_ignore_replace_dirname() {
+    let mut has_node_replacements = false;
+    let mut items = vec![];
+
+    let code = r#"
+      const dirname = /*#__ATLASPACK_IGNORE__*/__dirname;
+      console.log(__dirname);
+    "#;
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| NodeReplacer {
+      source_map: context.source_map.clone(),
+      global_mark: context.global_mark,
+      globals: HashMap::new(),
+      filename: Path::new("/path/random.js"),
+      has_node_replacements: &mut has_node_replacements,
+      items: &mut items,
+      unresolved_mark: context.unresolved_mark,
+      comments: context.comments,
+    });
+
+    let expected_code = indoc! { r#"
+      var $parcel$__dirname = require("path").resolve(__dirname, "$parcel$dirnameReplace");
+      const dirname = __dirname;
+      console.log($parcel$__dirname);
+    "#};
+
+    assert_str_eq!(output_code, expected_code);
     assert!(has_node_replacements);
     assert_eq!(items[0].specifier, JsWord::from("path"));
     assert_eq!(items[0].kind, DependencyKind::Require);
@@ -318,6 +402,7 @@ mod tests {
       has_node_replacements: &mut has_node_replacements,
       items: &mut items,
       unresolved_mark: context.unresolved_mark,
+      comments: context.comments,
     });
 
     let expected_code = indoc! {r#"
@@ -328,7 +413,7 @@ mod tests {
       }
     "#};
 
-    assert_eq!(output_code, expected_code);
+    assert_str_eq!(output_code, expected_code);
     assert!(!has_node_replacements);
     assert_eq!(items.len(), 0);
   }
@@ -350,13 +435,14 @@ mod tests {
       has_node_replacements: &mut has_node_replacements,
       items: &mut items,
       unresolved_mark: context.unresolved_mark,
+      comments: context.comments,
     });
 
     let expected_code = indoc! {r#"
       const filename = obj.__filename;
     "#};
 
-    assert_eq!(output_code, expected_code);
+    assert_str_eq!(output_code, expected_code);
     assert!(!has_node_replacements);
     assert_eq!(items.len(), 0);
   }
@@ -378,6 +464,7 @@ mod tests {
       has_node_replacements: &mut has_node_replacements,
       items: &mut items,
       unresolved_mark: context.unresolved_mark,
+      comments: context.comments,
     });
 
     let expected_code = indoc! {r#"
@@ -385,7 +472,7 @@ mod tests {
       const filename = obj[$parcel$__filename];
     "#};
 
-    assert_eq!(output_code, expected_code);
+    assert_str_eq!(output_code, expected_code);
     assert!(has_node_replacements);
     assert_eq!(items.len(), 1);
   }
