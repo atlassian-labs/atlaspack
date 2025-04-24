@@ -343,8 +343,11 @@ export default class WorkerFarm extends EventEmitter {
     if (handleId != null) {
       mod = nullthrows(this.handles.get(handleId)?.fn);
     } else if (location) {
-      // $FlowFixMe
-      if (process.browser) {
+      // Fix for super package builds
+      if (location.endsWith('core/workers/bus.js')) {
+        mod = (bus: any);
+        // $FlowFixMe
+      } else if (process.browser) {
         if (location === '@atlaspack/workers/bus') {
           mod = (bus: any);
         } else {
