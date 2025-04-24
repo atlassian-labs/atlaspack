@@ -12,7 +12,8 @@
   "main": "index.js",
   "browser": "browser.js",
   "napi": {
-    "name": "atlaspack-node-bindings"
+    "name": "atlaspack-node-bindings",
+    "permittedTargets": "*"
   },
   "engines": {
     "node": ">= 16.0.0"
