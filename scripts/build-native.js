@@ -9,7 +9,7 @@ const __root = path.normalize(path.join(__dirname, '..'));
 
 // Do a full cargo build
 const CARGO_PROFILE = process.env.CARGO_PROFILE;
-const RUSTUP_TARGET = process.env.RUSTUP_TARGET;
+const RUSTUP_TARGET = process.env.RUST_TARGET || process.env.RUSTUP_TARGET;
 
 const defaultTarget = {
   'linux-x64': 'x86_64-unknown-linux-gnu',
