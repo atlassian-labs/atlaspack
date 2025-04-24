@@ -31,7 +31,7 @@
     "unlink-all": "node scripts/unlink-all.js packages",
     "check": "flow check",
     "lint": "node ./scripts/lint-all.mjs",
-    "prepublishOnly": "yarn build && yarn build-ts",
+    "prepublishOnly": "yarn build && yarn build-ts && lerna run build --scope=@atlaspack/super",
     "test": "yarn test:unit && yarn test:integration",
     "test:e2e": "yarn workspace @atlaspack/e2e-tests test",
     "test:e2e:ci": "yarn workspace @atlaspack/e2e-tests test-ci",

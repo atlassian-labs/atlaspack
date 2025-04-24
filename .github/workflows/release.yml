@@ -197,6 +197,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: bahmutov/npm-install@v1.8.35
+        with:
+          install-command: yarn --frozen-lockfile --ignore-platform --ignore-engines
       - name: Build native packages
         run: yarn build-native-${{ inputs.profile }}
       - name: Download artifacts
