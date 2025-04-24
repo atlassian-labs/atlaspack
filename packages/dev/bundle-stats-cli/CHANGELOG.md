@@ -1,5 +1,17 @@
 # @atlaspack/bundle-stats
 
+## 2.14.1
+
+### Patch Changes
+
+- [#450](https://github.com/atlassian-labs/atlaspack/pull/450) [`b9d41b1`](https://github.com/atlassian-labs/atlaspack/commit/b9d41b175ad5771651a5b0278a5a0147e669234a) Thanks [@benjervis](https://github.com/benjervis)! - Remove the Atlaspack engines compatibility check
+
+- Updated dependencies [[`b9d41b1`](https://github.com/atlassian-labs/atlaspack/commit/b9d41b175ad5771651a5b0278a5a0147e669234a)]:
+  - @atlaspack/reporter-bundle-stats@2.14.1
+  - @atlaspack/core@2.14.1
+  - @atlaspack/query@2.14.1
+  - @atlaspack/utils@2.14.1
+
 ## 2.14.0
 
 ### Minor Changes
