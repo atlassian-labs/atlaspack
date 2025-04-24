@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/query",
-  "version": "2.14.0",
+  "version": "2.14.1",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -18,8 +18,8 @@
   },
   "main": "src/index.js",
   "dependencies": {
-    "@atlaspack/cache": "2.13.2",
-    "@atlaspack/core": "2.14.0",
+    "@atlaspack/cache": "2.13.3",
+    "@atlaspack/core": "2.14.1",
     "@atlaspack/graph": "3.4.0",
     "nullthrows": "^1.1.1",
     "table": "^6.8.1",

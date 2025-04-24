@@ -1,5 +1,14 @@
 # @atlaspack/compressor-brotli
 
+## 2.13.3
+
+### Patch Changes
+
+- [#450](https://github.com/atlassian-labs/atlaspack/pull/450) [`b9d41b1`](https://github.com/atlassian-labs/atlaspack/commit/b9d41b175ad5771651a5b0278a5a0147e669234a) Thanks [@benjervis](https://github.com/benjervis)! - Remove the Atlaspack engines compatibility check
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.1
+
 ## 2.13.2
 
 ### Patch Changes
