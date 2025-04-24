@@ -39,11 +39,12 @@ jobs:
             os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
 
-          # Linux ARM
-          - name: arm-unknown-linux-gnueabihf
-            os: ubuntu-24.04
-            target: arm-unknown-linux-gnueabihf
-            run: apt install -y gcc-arm-linux-gnueabihf
+          # # Linux ARM
+          # We don't support 32 bit linux
+          # - name: arm-unknown-linux-gnueabihf
+          #   os: ubuntu-24.04
+          #   target: arm-unknown-linux-gnueabihf
+          #   run: apt install -y gcc-arm-linux-gnueabihf
 
           # MACOS ARM64
           - name: aarch64-apple-darwin
@@ -66,8 +67,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         if: ${{ inputs.type != 'latest' }}
         with: { shared-key: "${{ matrix.name }}" }
-      - if: matrix.run
-        run: ${{ matrix.run }}
       - name: Build native packages
         env:
           RUSTUP_TARGET: ${{ matrix.target }}
