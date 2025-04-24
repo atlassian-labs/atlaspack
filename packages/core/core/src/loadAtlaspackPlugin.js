@@ -8,14 +8,14 @@ import ThrowableDiagnostic, {
   generateJSONCodeHighlights,
   md,
 } from '@atlaspack/diagnostic';
+import {version as ATLASPACK_VERSION} from '../package.json';
+import atlaspackInternalPlugins from './internal-plugins';
 import {findAlternativeNodeModules} from '@atlaspack/utils';
 import {
   type ProjectPath,
   toProjectPath,
   toProjectPathUnsafe,
 } from './projectPath';
-import {version as ATLASPACK_VERSION} from '../package.json';
-import atlaspackInternalPlugins from './internal-plugins';
 
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
 const CONFIG = Symbol.for('parcel-plugin-config');
