@@ -138,6 +138,7 @@ jobs:
 
   build-and-release-changesets:
     name: Build and release Changesets
+    if: github.ref_name == 'main'
     permissions: write-all
     needs:
       - build-native
