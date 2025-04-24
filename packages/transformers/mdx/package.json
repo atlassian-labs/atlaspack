@@ -12,7 +12,6 @@
   "main": "lib/MDXTransformer.js",
   "source": "src/MDXTransformer.js",
   "engines": {
-    "atlaspack": "^2.12.0",
     "node": ">= 16.0.0"
   },
   "dependencies": {

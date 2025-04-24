@@ -13,7 +13,6 @@
   "main": "lib/LibraryBundler.js",
   "source": "src/LibraryBundler.js",
   "engines": {
-    "atlaspack": "^2.12.0",
     "node": ">= 16.0.0"
   },
   "dependencies": {

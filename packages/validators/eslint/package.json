@@ -12,7 +12,6 @@
   "main": "lib/EslintValidator.js",
   "source": "src/EslintValidator.js",
   "engines": {
-    "atlaspack": "^2.12.0",
     "node": ">= 16.0.0"
   },
   "dependencies": {

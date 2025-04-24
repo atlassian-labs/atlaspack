@@ -11,9 +11,7 @@
   },
   "main": "lib/WebExtensionTransformer.js",
   "source": "src/WebExtensionTransformer.js",
-  "engines": {
-    "atlaspack": "^2.12.0"
-  },
+  "engines": {},
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",
     "@atlaspack/diagnostic": "2.14.0",
