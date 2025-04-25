@@ -265,8 +265,7 @@ jobs:
         run: for d in artifacts/bindings-*/*/*; do cp $d/*.node packages/$(basename $(dirname $d))/$(basename $d); done
       - uses: changesets/action@v1
         with:
-          publish: yarn changeset publish
-          version: yarn changeset version
+          publish: yarn changesets-publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
