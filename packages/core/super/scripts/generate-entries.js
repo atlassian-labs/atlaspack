@@ -16,6 +16,10 @@ const EXCLUSIONS = [
   '@atlaspack/query',
   '@atlaspack/bundle-stats',
   '@atlaspack/repl',
+  '@atlaspack/resolver-repl-runtimes',
+  '@atlaspack/lsp',
+  '@atlaspack/lsp-protocol',
+  '@atlaspack/reporter-lsp',
   // Sass dep causes issues
   '@atlaspack/transformer-sass',
 ];
