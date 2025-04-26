@@ -22,6 +22,15 @@ module.exports = new Namer({
   name({bundle, options}) {
     let entryAsset = bundle.getMainEntry();
 
+    if (bundle.type === 'node') {
+      return path.join(
+        'native',
+        `${path.basename(entryAsset.filePath, '.node')}.${
+          bundle.hashReference
+        }.node`,
+      );
+    }
+
     if (entryAsset?.filePath.includes('/node_modules/')) {
       assert(
         !bundle.needsStableName,
