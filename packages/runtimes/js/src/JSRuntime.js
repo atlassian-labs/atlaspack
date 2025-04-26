@@ -279,6 +279,19 @@ export default (new Runtime({
         }),
       );
 
+      // Skip URL runtime for native node imports as they need to be require
+      // directly
+      // Currently enabled only for internal builds
+      if (process.env.ATLASPACK_SUPER_BUILD === 'true') {
+        if (
+          mainBundle.bundleBehavior === 'isolated' &&
+          mainBundle.env.context === 'node' &&
+          mainBundle.type === 'node'
+        ) {
+          continue;
+        }
+      }
+
       // Skip URL runtimes for library builds. This is handled in packaging so that
       // the url is inlined and statically analyzable.
       if (bundle.env.isLibrary && mainBundle.bundleBehavior !== 'isolated') {
