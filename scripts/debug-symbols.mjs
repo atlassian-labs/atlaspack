@@ -8,7 +8,7 @@ import glob from "glob";
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const __root = path.dirname(__dirname)
 
-for (const foundRel of glob.sync("packages/**/*.node", { cwd: __root })) {
+for (const foundRel of glob.sync("packages/**/*.node", { cwd: __root, ignore: '**/node_modules/**'  })) {
   const found = path.join(__root, foundRel)
   if (process.platform === 'linux') {
     console.log(`Stripping:     ${found}`)
