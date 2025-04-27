@@ -37,6 +37,7 @@ const pluginPrefixes = [
   'compressor',
   'namer',
   'optimizer',
+  'config',
 ].map((pluginType) => `@atlaspack/${pluginType}-`);
 
 async function getEntries() {
@@ -123,7 +124,7 @@ async function main() {
     .join(',');
 
   await writeFile(
-    path.join(entryDir, 'internal-plugins.js'),
+    path.join(__dirname, '../patches', 'internal-plugins.js'),
     `export default {${internalPluginMap}}`,
   );
 }
