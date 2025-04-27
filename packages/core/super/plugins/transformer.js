@@ -2,12 +2,14 @@ let path = require('path');
 let {Transformer} = require('@atlaspack/plugin');
 
 const patches = {
-  'node_modules/htmlnano/lib/htmlnano.js': './patches/htmlnano.js',
-  'packages/core/rust/index.js': './patches/atlaspack-rust.js',
-  'node_modules/@parcel/watcher/index.js': './patches/parcel-watcher.js',
+  'node_modules/htmlnano/lib/htmlnano.js': '../patches/htmlnano.js',
+  'packages/core/rust/index.js': '../patches/atlaspack-rust.js',
+  'node_modules/@parcel/watcher/index.js': '../patches/parcel-watcher.js',
   'node_modules/@parcel/source-map/parcel_sourcemap_node/index.js':
-    './patches/parcel-source-map.js',
-  'node_modules/lightningcss/node/index.js': './patches/lightning.js',
+    '../patches/parcel-source-map.js',
+  'node_modules/lightningcss/node/index.js': '../patches/lightning.js',
+  'packages/core/core/src/internal-plugins.js':
+    '../patches/internal-plugins.js',
 };
 
 const rootDir = path.join(__dirname, '../../../..');

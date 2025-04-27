@@ -34,6 +34,7 @@ import json5 from 'json5';
 import path from 'path';
 import invariant from 'assert';
 
+import atlaspackInternalPlugins from '../internal-plugins';
 import {AtlaspackConfig} from '../AtlaspackConfig';
 import AtlaspackConfigSchema from '../AtlaspackConfig.schema';
 import {toProjectPath} from '../projectPath';
@@ -446,11 +447,29 @@ export async function processConfigChain(
           let key = Array.isArray(configFile.extends)
             ? `/extends/${i}`
             : '/extends';
-          let resolved = await resolveExtends(ext, filePath, key, options);
-          extendedFiles.push(resolved);
-          let {extendedFiles: moreExtendedFiles, config: nextConfig} =
-            await processExtendedConfig(filePath, key, ext, resolved, options);
-          extendedFiles = extendedFiles.concat(moreExtendedFiles);
+
+          let nextConfig;
+          if (atlaspackInternalPlugins[ext]) {
+            nextConfig = (
+              await processConfigChain(
+                atlaspackInternalPlugins[ext](),
+                /*#__ATLASPACK_IGNORE__*/ __dirname,
+                options,
+              )
+            ).config;
+          } else {
+            let resolved = await resolveExtends(ext, filePath, key, options);
+            extendedFiles.push(resolved);
+            let {extendedFiles: moreExtendedFiles, config: nextConfig} =
+              await processExtendedConfig(
+                filePath,
+                key,
+                ext,
+                resolved,
+                options,
+              );
+            extendedFiles = extendedFiles.concat(moreExtendedFiles);
+          }
           extStartConfig = extStartConfig
             ? mergeConfigs(extStartConfig, nextConfig)
             : nextConfig;
