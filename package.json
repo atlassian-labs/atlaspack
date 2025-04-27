@@ -32,7 +32,7 @@
     "unlink-all": "node scripts/unlink-all.js packages",
     "check": "flow check",
     "lint": "node ./scripts/lint-all.mjs",
-    "prepublishOnly": "pre-publish",
+    "prepublishOnly": "yarn pre-publish",
     "pre-publish": "yarn build && yarn build-ts",
     "changesets-publish": "yarn pre-publish && yarn changeset publish",
     "test": "yarn test:unit && yarn test:integration",
