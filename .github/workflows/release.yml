@@ -64,47 +64,6 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-          node-version: 22
-      - uses: Swatinem/rust-cache@v2
-        if: ${{ inputs.type != 'latest' }}
-        with: {shared-key: '${{ matrix.name }}'}
-      - run: yarn install --frozen-lockfile
-      - name: Build native packages
-        env:
-          RUSTUP_TARGET: ${{ matrix.target }}
-          CARGO_PROFILE: ${{ inputs.profile }}
-        run: yarn build-native
-      - name: Extract debug symbols
-        run: node "./scripts/debug-symbols.mjs"
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: packages-${{ matrix.target }}
-          path: packages/**/*
-
-  build-native-macos:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # MACOS ARM64
-          - name: aarch64-apple-darwin
-            target: aarch64-apple-darwin
-
-          # MACOS AMD64
-          - name: x86_64-apple-darwin
-            target: x86_64-apple-darwin
-    name: ${{ matrix.name }}
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: ./.github/actions/rust-toolchain
-        with:
-          targets: ${{ matrix.target }}
-      - uses: actions/setup-node@v4
         with: {cache: yarn}
       - uses: Swatinem/rust-cache@v2
         if: ${{ inputs.type != 'latest' }}
@@ -159,8 +118,6 @@ jobs:
         run: |
           npm config set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
           npm config set registry https://registry.npmjs.org/
-      - name: Build super
-        run: yarn build && yarn lerna run build --scope=@atlaspack/super
       - run: ${{ inputs.release-command }}
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
