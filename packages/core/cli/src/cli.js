@@ -1,6 +1,6 @@
 // @flow
 
-import {BuildError} from '@atlaspack/core';
+import {BuildError, isSuperPackage} from '@atlaspack/core';
 import {NodeFS} from '@atlaspack/fs';
 import {openInBrowser} from '@atlaspack/utils';
 import {Disposable} from '@atlaspack/events';
@@ -132,8 +132,24 @@ async function run(
 
   entries = entries.map((entry) => path.resolve(entry));
 
-  const resolve = (specifier, {paths}) => {
-    for (let path of paths) {
+  let fs = new NodeFS();
+
+  const resolveDefaultConfig = () => {
+    if (isSuperPackage()) {
+      // We're in the super package so resolve the inbuilt config
+      let inbuiltDefaultConfig = path.join(
+        /*#__ATLASPACK_IGNORE__*/ __dirname,
+        '../../configs/default/index.json.js',
+      );
+      if (!fs.existsSync(inbuiltDefaultConfig)) {
+        throw new Error(
+          `Missing inbuilt default config. Expected '${inbuiltDefaultConfig}' to exist`,
+        );
+      }
+      return inbuiltDefaultConfig;
+    }
+
+    for (let path of [fs.cwd(), __dirname]) {
       let customRequire = require('module').createRequire(path);
       try {
         return customRequire.resolve('@atlaspack/config-default');
@@ -141,19 +157,14 @@ async function run(
         // Ignore error
       }
     }
-    throw new Error(
-      `Can't resolve "${specifier}" from any of [${paths.join(', ')}]`,
-    );
+    throw new Error(`Can't resolve default config`);
   };
 
   let Atlaspack = require('@atlaspack/core').default;
-  let fs = new NodeFS();
   let options = await normalizeOptions(command, fs);
   let atlaspack = new Atlaspack({
     entries,
-    defaultConfig: resolve('@atlaspack/config-default', {
-      paths: [fs.cwd(), __dirname],
-    }),
+    defaultConfig: resolveDefaultConfig(),
     shouldPatchConsole: false,
     ...options,
   });
