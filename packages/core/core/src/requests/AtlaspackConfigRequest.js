@@ -460,15 +460,15 @@ export async function processConfigChain(
           } else {
             let resolved = await resolveExtends(ext, filePath, key, options);
             extendedFiles.push(resolved);
-            let {extendedFiles: moreExtendedFiles, config: nextConfig} =
-              await processExtendedConfig(
-                filePath,
-                key,
-                ext,
-                resolved,
-                options,
-              );
-            extendedFiles = extendedFiles.concat(moreExtendedFiles);
+            let result = await processExtendedConfig(
+              filePath,
+              key,
+              ext,
+              resolved,
+              options,
+            );
+            extendedFiles = extendedFiles.concat(result.extendedFiles);
+            nextConfig = result.config;
           }
           extStartConfig = extStartConfig
             ? mergeConfigs(extStartConfig, nextConfig)
