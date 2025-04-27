@@ -64,10 +64,10 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - uses: actions/setup-node@v4
-        with: { cache: yarn }
+        with: {cache: yarn}
       - uses: Swatinem/rust-cache@v2
         if: ${{ inputs.type != 'latest' }}
-        with: { shared-key: "${{ matrix.name }}" }
+        with: {shared-key: '${{ matrix.name }}'}
       - run: yarn install --frozen-lockfile
       - name: Build native packages
         env:
@@ -91,9 +91,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with: {fetch-depth: 0}
       - uses: actions/setup-node@v4
-        with: { cache: yarn }
+        with: {cache: yarn}
       - uses: actions/download-artifact@v4
         with:
           pattern: packages-*
@@ -119,8 +119,6 @@ jobs:
         run: |
           npm config set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
           npm config set registry https://registry.npmjs.org/
-      - name: Build super
-        run: yarn build && yarn lerna run build --scope=@atlaspack/super
       - run: ${{ inputs.release-command }}
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
@@ -152,7 +150,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v4
-        with: { cache: yarn }
+        with: {cache: yarn}
       - uses: actions/download-artifact@v4
         with:
           pattern: packages-*
