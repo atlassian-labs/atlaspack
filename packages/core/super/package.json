@@ -28,12 +28,6 @@
     "!lib/native/*win32*",
     "!lib/native/*musl*"
   ],
-  "dependencies": {
-    "@atlaspack/core": "*"
-  },
-  "devDependencies": {
-    "@atlaspack/transformer-raw": "*"
-  },
   "publishConfig": {
     "access": "public"
   },
