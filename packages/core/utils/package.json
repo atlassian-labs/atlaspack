@@ -19,6 +19,7 @@
     "main": {
       "includeNodeModules": {
         "@atlaspack/codeframe": false,
+        "@atlaspack/feature-flags": false,
         "@atlaspack/diagnostic": false,
         "@atlaspack/rust": false,
         "@atlaspack/logger": false,
@@ -31,6 +32,7 @@
   "dependencies": {
     "@atlaspack/codeframe": "2.13.2",
     "@atlaspack/diagnostic": "2.14.0",
+    "@atlaspack/feature-flags": "2.14.0",
     "@atlaspack/logger": "2.14.0",
     "@atlaspack/markdown-ansi": "2.14.0",
     "@atlaspack/rust": "3.0.0",
