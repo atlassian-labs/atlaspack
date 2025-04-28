@@ -45,6 +45,8 @@ jobs:
           - name: 🐥 Build Linux AMD64
             os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
+            # We just do this on linux to save time on Mac agents
+            build_js: true
 
           # MacOS ARM64
           - name: 🍎 Build MacOS ARM64
@@ -69,61 +71,17 @@ jobs:
       # Build native artifacts
       - env:
           RUSTUP_TARGET: ${{ matrix.target }}
-          CARGO_PROFILE: ${{ inputs.profile }}
+          CARGO_PROFILE: release
         run: yarn build-native
       # Upload artifacts for use later in pipeline
+      - if: ${{ matrix.build_js }}
+        run: yarn build
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: packages-${{ matrix.target }}
-          path: |
-            packages/**/*
-            !./**/*/node_modules
+          path: packages/**/*
           retention-days: 1
-
-  # Build and store JavaScript packages, This must be run after the native build because
-  # we do a "self build" of Atlaspack that requires working native binaries
-  build_javascript:
-    name: 🌊 Build JavaScript
-    runs-on: ubuntu-22.04
-    needs:
-      - build_native
-    steps:
-      # Job setup
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { cache: yarn }
-      # Download native artifacts
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: packages-*
-          path: packages
-          merge-multiple: true
-      - run: yarn --frozen-lockfile
-      # Build Flow and Typescript packages
-      - run: npx rimraf --glob packages/*/*/lib
-      - run: npx lerna  run dev:prepare
-      - env:
-          NODE_ENV: production
-          ATLASPACK_SELF_BUILD: true
-          ATLASPACK_BUILD_ENV: production
-        run: npx atlaspack build --no-cache packages/core/{fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}
-      - env:
-          NODE_ENV: production
-          ATLASPACK_BUILD_ENV: production
-        run: npx gulp
-      - run: npx lerna run build-ts
-      - run: npx lerna run check-ts
-
-      - run: yarn build-ts
-      # Upload artifacts for use later in pipeline
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: packages-javascript
-          path: |
-            packages/**/*
-            !./**/*/node_modules
 
   lint_javascript:
     name: 🐵 Lint JavaScript
@@ -136,6 +94,8 @@ jobs:
       - run: npx flow check
       - run: npx eslint .
       - run: npx prettier "./packages/*/*/{src,bin,test}/**/*.{js,json,md}" --list-different
+      - run: npx lerna run build-ts
+      - run: npx lerna run check-ts
 
   lint_rust:
     name: 🦀 Lint Rust
@@ -152,11 +112,12 @@ jobs:
     name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
       - build_native
-      - build_javascript
     strategy:
       matrix:
         include:
           # Linux AMD64
+          - os: ubuntu-22.04
+            node: 22
           - os: ubuntu-22.04
             node: 20
           - os: ubuntu-22.04
@@ -186,10 +147,9 @@ jobs:
       - run: yarn test:unit
 
   integration_tests:
-    name: Integration tests (${{ matrix.ATLASPACK_V3 && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
+    name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
       - build_native
-      - build_javascript
     timeout-minutes: 35
     strategy:
       # These tend to be quite flakey, so one failed instance shouldn't stop
@@ -201,26 +161,53 @@ jobs:
           - os: ubuntu-22.04
             node: 20
           - os: ubuntu-22.04
-            node: 20
-            ATLASPACK_V3: true
-          - os: ubuntu-22.04
             node: 18
-          - os: ubuntu-22.04
-            node: 18
-            ATLASPACK_V3: true
 
           # MacOS ARM64
           - os: macos-15
             node: 20
           - os: macos-15
-            node: 20
-            ATLASPACK_V3: true
-          - os: macos-15
             node: 18
-          - os: macos-15
-            node: 18
-            ATLASPACK_V3: true
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: yarn
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - name: Bump max inotify watches (Linux only)
+        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+        if: ${{ runner.os == 'Linux' }}
+      - run: yarn --frozen-lockfile
+      - run: yarn test:integration-ci
 
+  integration_tests_v3:
+    name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }})
+    needs:
+      - build_native
+    timeout-minutes: 15
+    strategy:
+      # These tend to be quite flakey, so one failed instance shouldn't stop
+      # others from potentially succeeding
+      fail-fast: false
+      matrix:
+        include:
+          # Linux AMD64
+          - os: ubuntu-22.04
+            node: 20
+          - os: ubuntu-22.04
+            node: 18
+
+          # MacOS ARM64
+          - os: macos-15
+            node: 20
+          - os: macos-15
+            node: 18
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -239,13 +226,12 @@ jobs:
       - run: yarn --frozen-lockfile
       - run: yarn test:integration-ci
         env:
-          ATLASPACK_V3: ${{ matrix.ATLASPACK_V3 }}
+          ATLASPACK_V3: true
 
   end_to_end_tests:
     name: E2E tests
     needs:
       - build_native
-      - build_javascript
     timeout-minutes: 35
     strategy:
       matrix:
