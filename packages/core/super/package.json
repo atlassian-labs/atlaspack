@@ -20,7 +20,8 @@
     }
   },
   "alias": {
-    "@swc/wasm": false
+    "@swc/wasm": false,
+    "@atlaspack/babel-register": false
   },
   "sideEffects": true,
   "files": [
