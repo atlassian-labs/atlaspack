@@ -2,4 +2,3 @@ index.*
 *.node
 *.wasm
 !*.flow
-atlaspack-node-bindings.*
