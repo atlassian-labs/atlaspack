@@ -1,9 +1,0 @@
-{
-  "name": "@workspace/scripts",
-  "private": true,
-  "version": "0.0.1-local",
-  "devDependencies": {
-    "glob": "^7.1.6",
-    "zx": "^8.1.9"
-  }
-}
