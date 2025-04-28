@@ -40,6 +40,7 @@ import AtlaspackConfigSchema from '../AtlaspackConfig.schema';
 import {toProjectPath} from '../projectPath';
 import {requestTypes} from '../RequestTracker';
 import {optionsProxy} from '../utils';
+import {isSuperPackage} from '../isSuperPackage';
 
 type ConfigMap<K, V> = {[K]: V, ...};
 
@@ -160,34 +161,59 @@ export async function resolveAtlaspackConfig(
         );
 
   let usedDefault = false;
-  if (configPath == null && options.defaultConfig != null) {
+  let config, extendedFiles;
+
+  if (
+    configPath == null &&
+    options.defaultConfig != null &&
+    isSuperPackage() &&
+    options.defaultConfig.endsWith('.js')
+  ) {
     usedDefault = true;
-    configPath = (
-      await options.packageManager.resolve(options.defaultConfig, resolveFrom)
-    ).resolved;
-  }
+    // Load the super package default config
+    let result: AtlaspackConfigChain = await processConfigChain(
+      atlaspackInternalPlugins['@atlaspack/config-default'](),
+      options.defaultConfig,
+      options,
+    );
+    config = result.config;
+    extendedFiles = result.extendedFiles;
+  } else {
+    if (configPath == null && options.defaultConfig != null) {
+      usedDefault = true;
 
-  if (configPath == null) {
-    return null;
-  }
+      configPath = (
+        await options.packageManager.resolve(options.defaultConfig, resolveFrom)
+      ).resolved;
+    }
 
-  let contents;
-  try {
-    contents = await options.inputFS.readFile(configPath, 'utf8');
-  } catch (e) {
-    throw new ThrowableDiagnostic({
-      diagnostic: {
-        message: md`Could not find parcel config at ${path.relative(
-          options.projectRoot,
-          configPath,
-        )}`,
-        origin: '@atlaspack/core',
-      },
-    });
-  }
+    if (configPath == null) {
+      return null;
+    }
 
-  let {config, extendedFiles}: AtlaspackConfigChain =
-    await parseAndProcessConfig(configPath, contents, options);
+    let contents;
+    try {
+      contents = await options.inputFS.readFile(configPath, 'utf8');
+    } catch (e) {
+      throw new ThrowableDiagnostic({
+        diagnostic: {
+          message: md`Could not find parcel config at ${path.relative(
+            options.projectRoot,
+            configPath,
+          )}`,
+          origin: '@atlaspack/core',
+        },
+      });
+    }
+
+    let result: AtlaspackConfigChain = await parseAndProcessConfig(
+      configPath,
+      contents,
+      options,
+    );
+    config = result.config;
+    extendedFiles = result.extendedFiles;
+  }
 
   if (options.additionalReporters.length > 0) {
     config.reporters = [
