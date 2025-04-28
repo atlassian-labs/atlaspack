@@ -58,7 +58,10 @@ export type FeatureFlags = {|
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    */
   patchProjectPaths: boolean,
-
+  /**
+   * Enable loading of the parcel dylib in the main thread.
+   */
+  enableRustWorkerThreadDylibHack: boolean,
   /**
    * Enables optimized inline string replacement perf for the packager.
    * Used heavily for inline bundles.
