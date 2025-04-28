@@ -21,7 +21,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   conditionalBundlingNestedRuntime: false,
   patchProjectPaths: false,
   enableRustWorkerThreadDylibHack: false,
-  inlineStringReplacementPerf: false,
+  inlineStringReplacementPerf: true,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
