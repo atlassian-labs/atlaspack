@@ -58,14 +58,16 @@ import {
   fromProjectPathRelative,
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
-import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
+import {
+  getFeatureFlag,
+  setFeatureFlags,
+  DEFAULT_FEATURE_FLAGS,
+} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
 import {loadRustWorkerThreadDylibHack} from './rustWorkerThreadDylibHack';
-
-loadRustWorkerThreadDylibHack();
 
 registerCoreWithSerializer();
 
@@ -119,6 +121,10 @@ export default class Atlaspack {
       ...this.#initialOptions.featureFlags,
     };
     setFeatureFlags(featureFlags);
+
+    if (getFeatureFlag('enableRustWorkerThreadDylibHack')) {
+      loadRustWorkerThreadDylibHack();
+    }
 
     await initSourcemaps;
     await initRust?.();
