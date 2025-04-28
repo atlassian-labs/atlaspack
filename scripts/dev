@@ -97,3 +97,12 @@ if [ "$1" == "" ];then
 else
   $1
 fi
+
+
+rimraf --glob packages/*/*/lib &&
+lerna run dev:prepare &&
+cross-env
+  NODE_ENV=production
+  ATLASPACK_BUILD_ENV=production
+  ATLASPACK_SELF_BUILD=true
+  atlaspack build --no-cache packages/core/{fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}

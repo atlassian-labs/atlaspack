@@ -86,8 +86,6 @@ jobs:
   build_javascript:
     name: 🌊 Build JavaScript
     runs-on: ubuntu-22.04
-    needs:
-      - build_native
     steps:
       # Job setup
       - uses: actions/checkout@v4
@@ -102,20 +100,19 @@ jobs:
       - run: yarn --frozen-lockfile
       # Build Flow and Typescript packages
       - run: npx rimraf --glob packages/*/*/lib
-      - run: npx lerna  run dev:prepare
-      - env:
-          NODE_ENV: production
-          ATLASPACK_SELF_BUILD: true
-          ATLASPACK_BUILD_ENV: production
-        run: npx atlaspack build --no-cache packages/core/{fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}
+      - run: npx lerna run dev:prepare
+      # Why does this segfault?
+      # - env:
+      #     NODE_ENV: production
+      #     ATLASPACK_SELF_BUILD: true
+      #     ATLASPACK_BUILD_ENV: production
+      #   run: npx atlaspack build --no-cache packages/core/{fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}
       - env:
           NODE_ENV: production
           ATLASPACK_BUILD_ENV: production
         run: npx gulp
       - run: npx lerna run build-ts
       - run: npx lerna run check-ts
-
-      - run: yarn build-ts
       # Upload artifacts for use later in pipeline
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
