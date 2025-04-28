@@ -12,6 +12,7 @@ import type {Diagnostic} from '@atlaspack/diagnostic';
 import SourceMap from '@parcel/source-map';
 import {Transformer} from '@atlaspack/plugin';
 import {transform, transformAsync} from '@atlaspack/rust';
+import {isSuperPackage} from '@atlaspack/core';
 import browserslist from 'browserslist';
 import semver from 'semver';
 import nullthrows from 'nullthrows';
@@ -1068,16 +1069,29 @@ export default (new Transformer({
       }
 
       if (needs_esm_helpers) {
-        asset.addDependency({
-          specifier: '@atlaspack/transformer-js/src/esmodule-helpers.js',
-          specifierType: 'esm',
-          resolveFrom: __filename,
-          env: {
-            includeNodeModules: {
-              '@atlaspack/transformer-js': true,
+        if (isSuperPackage()) {
+          asset.addDependency({
+            specifier: './esmodule-helpers.js',
+            specifierType: 'esm',
+            resolveFrom: /*#__ATLASPACK_IGNORE__*/ __filename,
+            env: {
+              includeNodeModules: {
+                '@atlaspack/super': true,
+              },
             },
-          },
-        });
+          });
+        } else {
+          asset.addDependency({
+            specifier: '@atlaspack/transformer-js/src/esmodule-helpers.js',
+            specifierType: 'esm',
+            resolveFrom: __filename,
+            env: {
+              includeNodeModules: {
+                '@atlaspack/transformer-js': true,
+              },
+            },
+          });
+        }
       }
     }
 
