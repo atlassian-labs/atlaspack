@@ -32,7 +32,8 @@ export default async function loadPlugin<T>(
 |}> {
   if (atlaspackInternalPlugins && atlaspackInternalPlugins[pluginName]) {
     let plugin = atlaspackInternalPlugins[pluginName]();
-    plugin = plugin.default[CONFIG];
+    plugin = plugin.default || plugin;
+    plugin = plugin[CONFIG];
     if (!plugin) {
       throw new Error(
         `Plugin ${pluginName} is not a valid Atlaspack plugin, should export an instance of a Atlaspack plugin ex. "export default new Reporter({ ... })".`,
