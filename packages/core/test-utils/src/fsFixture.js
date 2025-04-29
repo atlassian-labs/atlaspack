@@ -147,6 +147,9 @@ export async function applyFixture(
               {superPackage: process.env.SUPER_PACKAGE === 'true'},
             ],
           ],
+          generatorOpts: {
+            retainLines: true,
+          },
         });
         content = transformed;
       }
