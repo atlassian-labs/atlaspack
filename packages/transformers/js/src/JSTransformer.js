@@ -24,6 +24,10 @@ import {validateSchema, remapSourceLocation, globMatch} from '@atlaspack/utils';
 import pkg from '../package.json';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 
+const esm_helpers_specifier = isSuperPackage()
+  ? './esmodule-helpers.js'
+  : '@atlaspack/transformer-js/src/esmodule-helpers.js';
+
 const JSX_EXTENSIONS = {
   jsx: true,
   tsx: true,
@@ -474,6 +478,7 @@ export default (new Transformer({
       inline_constants: config.inlineConstants,
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
       magic_comments: Boolean(config?.magicComments),
+      esm_helpers_specifier,
       callMacro: asset.isSource
         ? async (err, src, exportName, args, loc) => {
             let mod;
@@ -1071,7 +1076,7 @@ export default (new Transformer({
       if (needs_esm_helpers) {
         if (isSuperPackage()) {
           asset.addDependency({
-            specifier: './esmodule-helpers.js',
+            specifier: esm_helpers_specifier,
             specifierType: 'esm',
             resolveFrom: /*#__ATLASPACK_IGNORE__*/ __filename,
             env: {
@@ -1082,7 +1087,7 @@ export default (new Transformer({
           });
         } else {
           asset.addDependency({
-            specifier: '@atlaspack/transformer-js/src/esmodule-helpers.js',
+            specifier: esm_helpers_specifier,
             specifierType: 'esm',
             resolveFrom: __filename,
             env: {
