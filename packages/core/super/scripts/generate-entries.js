@@ -20,6 +20,7 @@ const EXCLUSIONS = [
   '@atlaspack/lsp',
   '@atlaspack/lsp-protocol',
   '@atlaspack/reporter-lsp',
+  '@atlaspack/test-utils',
   // Sass dep causes issues
   '@atlaspack/transformer-sass',
 ];
