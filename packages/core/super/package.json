@@ -16,7 +16,9 @@
       "distDir": "lib",
       "optimize": false,
       "sourceMap": false,
-      "includeNodeModules": true
+      "includeNodeModules": {
+        "lmdb": false
+      }
     }
   },
   "alias": {
