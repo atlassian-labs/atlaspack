@@ -1644,10 +1644,11 @@ export interface BundleGraph<TBundle: Bundle> {
   /** Returns the common root directory for the entry assets of a target. */
   getEntryRoot(target: Target): FilePath;
   getConditionalBundleMapping(): Map<
-    TBundle,
+    string,
     Map<
       string,
       {|
+        bundle: TBundle,
         ifTrueBundles: Array<TBundle>,
         ifFalseBundles: Array<TBundle>,
       |},
