@@ -191,7 +191,7 @@ export function assertCode(codeMatch: string, actualCode) {
 
   expectedCode = expectedCode.replaceAll('{id}', '[\\w\\d]+');
 
-  assert.ok(new RegExp(expectedCode).test(actualCode));
+  assert.ok(new RegExp(expectedCode).test(actualCode), 'Code match failed');
 }
 
 export function findDependency(
