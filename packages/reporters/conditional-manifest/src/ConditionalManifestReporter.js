@@ -28,20 +28,20 @@ async function report({
       bundles.map((bundle) => relative(bundle.target.distDir, bundle.filePath));
 
     const manifest = {};
-    for (const [bundle, conditions] of bundles.entries()) {
+    for (const conditions of bundles.values()) {
       const bundleInfo = {};
       for (const [key, cond] of conditions) {
+        const bundle = cond.bundle;
         bundleInfo[key] = {
           // Reverse bundles so we load children bundles first
           ifTrueBundles: mapBundles(cond.ifTrueBundles).reverse(),
           ifFalseBundles: mapBundles(cond.ifFalseBundles).reverse(),
         };
+        manifest[bundle.target.name] ??= {};
+        manifest[bundle.target.name][
+          relative(bundle.target.distDir, bundle.filePath)
+        ] = bundleInfo;
       }
-
-      manifest[bundle.target.name] ??= {};
-      manifest[bundle.target.name][
-        relative(bundle.target.distDir, bundle.filePath)
-      ] = bundleInfo;
     }
 
     const targets = new Set(

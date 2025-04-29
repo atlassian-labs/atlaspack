@@ -22,6 +22,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   patchProjectPaths: false,
   enableRustWorkerThreadDylibHack: true,
   inlineStringReplacementPerf: false,
+  conditionalBundlingAsyncRuntime: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
