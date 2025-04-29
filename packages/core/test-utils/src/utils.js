@@ -157,10 +157,16 @@ export function bundler(
 export function findAsset(
   bundleGraph: BundleGraph<PackagedBundle>,
   assetFileName: string,
+  mode?: 'basename' | 'includes' = 'basename',
 ): ?Asset {
+  const matcher = {
+    basename: (filePath) => path.basename(filePath) === assetFileName,
+    includes: (filePath) => filePath.includes(assetFileName),
+  }[mode];
+
   return bundleGraph.traverseBundles((bundle, context, actions) => {
     let asset = bundle.traverseAssets((asset, context, actions) => {
-      if (path.basename(asset.filePath) === assetFileName) {
+      if (matcher(asset.filePath)) {
         actions.stop();
         return asset;
       }
@@ -172,13 +178,30 @@ export function findAsset(
   });
 }
 
+export function assertCode(codeMatch: string, actualCode) {
+  let expectedCode = codeMatch;
+
+  let regexCharacters = '()[].$+*'.split('');
+  for (let regexCharacter of regexCharacters) {
+    expectedCode = expectedCode.replaceAll(
+      regexCharacter,
+      `\\${regexCharacter}`,
+    );
+  }
+
+  expectedCode = expectedCode.replaceAll('{id}', '[\\w\\d]+');
+
+  assert.ok(new RegExp(expectedCode).test(actualCode));
+}
+
 export function findDependency(
   bundleGraph: BundleGraph<PackagedBundle>,
   assetFileName: string,
   specifier: string,
+  mode?: 'basename' | 'includes' = 'basename',
 ): Dependency {
   let asset = nullthrows(
-    findAsset(bundleGraph, assetFileName),
+    findAsset(bundleGraph, assetFileName, mode),
     `Couldn't find asset ${assetFileName}`,
   );
 
