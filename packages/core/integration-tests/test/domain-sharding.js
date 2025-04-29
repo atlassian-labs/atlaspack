@@ -2,7 +2,14 @@
 import assert from 'assert';
 import path from 'path';
 
-import {fsFixture, overlayFS, bundle, run} from '@atlaspack/test-utils';
+import {
+  fsFixture,
+  overlayFS,
+  bundle,
+  run,
+  findAsset,
+  assertCode,
+} from '@atlaspack/test-utils';
 import {domainShardingKey} from '@atlaspack/domain-sharding';
 import nullthrows from 'nullthrows';
 
@@ -57,13 +64,16 @@ describe('domain-sharding', () => {
         .find((b) => b.name === 'index.js');
       if (!mainBundle) return assert(mainBundle);
 
+      const bBundle = bundleGraph
+        .getBundles()
+        .find((b) => b.getMainEntry().filePath.includes('b.js'));
+      if (!bBundle) return assert(bBundle);
+
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
 
-      assert.ok(
-        code.includes(
-          `require("85e3bc75ab94a411")(require("f41955f5cc01151").shardUrl(require("40cc202a4c7abf8d").resolve("aVRxe"), ${maxShards}))`,
-          'Expected generated code for shardUrl was not found',
-        ),
+      assertCode(
+        `require("{id}")(require("{id}").shardUrl(require("{id}").resolve("${bBundle.publicId}"), ${maxShards}))`,
+        code,
       );
     });
 
@@ -179,15 +189,11 @@ describe('domain-sharding', () => {
 
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
       const esmLoadAsset = nullthrows(
-        bundleGraph.traverse((node, _, actions) => {
-          if (
-            node.type === 'asset' &&
-            node.value.filePath.includes('helpers/browser/esm-js-loader-shards')
-          ) {
-            actions.stop();
-            return node.value;
-          }
-        }),
+        findAsset(
+          bundleGraph,
+          'helpers/browser/esm-js-loader-shards',
+          'includes',
+        ),
         'Could not find esm-js-loader-shard asset',
       );
 
