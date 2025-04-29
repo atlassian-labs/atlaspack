@@ -13,8 +13,10 @@ import assert from 'assert';
 import path from 'path';
 import sinon from 'sinon';
 import {NodePackageManager} from '@atlaspack/package-manager';
-
 import {type Asset} from '@atlaspack/types';
+
+import Bundler from '@atlaspack/bundler-default';
+import CustomBundler from './integration/incremental-bundling/node_modules/atlaspack-bundler-test';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 let packageManager = new NodePackageManager(inputFS, '/');
@@ -41,16 +43,7 @@ describe.v2('incremental bundling', function () {
     return changedAssets.filter((a) => !a.filePath.includes('runtime'));
   };
   beforeEach(async () => {
-    let Bundler = (
-      await packageManager.require('@atlaspack/bundler-default', __filename)
-    ).default;
-    let CustomBundler = await packageManager.require(
-      './integration/incremental-bundling/node_modules/atlaspack-bundler-test',
-      __filename,
-    );
-
     defaultBundlerSpy = sinon.spy(Bundler[CONFIG], 'bundle'); // $FlowFixMe[prop-missing]
-
     customBundlerSpy = sinon.spy(CustomBundler[CONFIG], 'bundle');
   });
 
