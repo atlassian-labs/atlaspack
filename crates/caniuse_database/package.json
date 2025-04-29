@@ -1,6 +1,7 @@
 {
   "name": "caniuse-database",
   "version": "0.0.0",
+  "type": "commonjs",
   "private": true,
   "scripts": {
     "generate": "node ./generate.mjs > ./src/generated.rs"

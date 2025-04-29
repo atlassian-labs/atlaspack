@@ -5,6 +5,9 @@ authors = ["Jake Lane <me@jakelane.me>"]
 edition = "2021"
 description = "Atlaspack contextual imports transformation"
 
+[lints]
+workspace = true
+
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true}

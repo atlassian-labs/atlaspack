@@ -444,10 +444,11 @@ export default class BundleGraph<TBundle: IBundle>
   // be used by a webserver to understand which conditions are used by which bundles,
   // and which bundles those conditions require depending on what they evaluate to.
   getConditionalBundleMapping(): Map<
-    TBundle,
+    string,
     Map<
       string,
       {|
+        bundle: TBundle,
         ifTrueBundles: Array<TBundle>,
         ifFalseBundles: Array<TBundle>,
       |},
@@ -486,14 +487,15 @@ export default class BundleGraph<TBundle: IBundle>
       }
 
       for (let bundle of bundles) {
-        const conditions = bundleConditions.get(bundle) ?? new Map();
+        const conditions = bundleConditions.get(bundle.id) ?? new Map();
 
         conditions.set(cond.key, {
+          bundle,
           ifTrueBundles,
           ifFalseBundles,
         });
 
-        bundleConditions.set(bundle, conditions);
+        bundleConditions.set(bundle.id, conditions);
       }
     }
 

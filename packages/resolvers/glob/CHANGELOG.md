@@ -1,5 +1,21 @@
 # @atlaspack/resolver-glob
 
+## 2.14.0
+
+### Minor Changes
+
+- [#339](https://github.com/atlassian-labs/atlaspack/pull/339) [`bfe81e5`](https://github.com/atlassian-labs/atlaspack/commit/bfe81e551c4e4bb2cac7fc4745222e66962c1728) Thanks [@yamadapc](https://github.com/yamadapc)! - Update cache invalidation metrics with build type
+
+### Patch Changes
+
+- [#414](https://github.com/atlassian-labs/atlaspack/pull/414) [`eff9809`](https://github.com/atlassian-labs/atlaspack/commit/eff98093703b9999a511b87a19562f5aaccfcb53) Thanks [@alshdavid](https://github.com/alshdavid)! - Added type:commonjs to package.json files
+
+- Updated dependencies [[`bfe81e5`](https://github.com/atlassian-labs/atlaspack/commit/bfe81e551c4e4bb2cac7fc4745222e66962c1728), [`ce4ce95`](https://github.com/atlassian-labs/atlaspack/commit/ce4ce953914e08991cf58c70c98f758690e5ee21), [`4837b69`](https://github.com/atlassian-labs/atlaspack/commit/4837b6988e56ca842a24797b796160964d3696ce), [`eff9809`](https://github.com/atlassian-labs/atlaspack/commit/eff98093703b9999a511b87a19562f5aaccfcb53), [`8fae5f3`](https://github.com/atlassian-labs/atlaspack/commit/8fae5f3005bd7c806b175b4df1754abf58922591), [`6796ed9`](https://github.com/atlassian-labs/atlaspack/commit/6796ed90d1ea32c5266053644ba6666f62c5fe95), [`47eb5af`](https://github.com/atlassian-labs/atlaspack/commit/47eb5afcf02f9512b26bae9fdd90ecb54e3b2da8)]:
+  - @atlaspack/diagnostic@2.14.0
+  - @atlaspack/plugin@2.14.0
+  - @atlaspack/utils@2.14.0
+  - @atlaspack/node-resolver-core@3.5.0
+
 ## 2.13.1
 
 ### Patch Changes

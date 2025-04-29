@@ -58,16 +58,22 @@ import {
   fromProjectPathRelative,
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
-import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
+import {
+  getFeatureFlag,
+  setFeatureFlags,
+  DEFAULT_FEATURE_FLAGS,
+} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
+import {loadRustWorkerThreadDylibHack} from './rustWorkerThreadDylibHack';
 
 registerCoreWithSerializer();
 
 export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
+export const WORKER_PATH: string = path.join(__dirname, 'worker.js');
 
 export default class Atlaspack {
   #requestTracker /*: RequestTracker*/;
@@ -116,6 +122,10 @@ export default class Atlaspack {
     };
     setFeatureFlags(featureFlags);
 
+    if (getFeatureFlag('enableRustWorkerThreadDylibHack')) {
+      loadRustWorkerThreadDylibHack();
+    }
+
     await initSourcemaps;
     await initRust?.();
 
@@ -161,7 +171,7 @@ export default class Atlaspack {
       const version = require('../package.json').version;
       await lmdb.put('current_session_version', Buffer.from(version));
 
-      rustAtlaspack = new AtlaspackV3({
+      rustAtlaspack = await AtlaspackV3.create({
         ...options,
         corePath: path.join(__dirname, '..'),
         threads: process.env.NODE_ENV === 'test' ? 2 : undefined,
@@ -728,6 +738,6 @@ export function createWorkerFarm(
 ): WorkerFarm {
   return new WorkerFarm({
     ...options,
-    workerPath: require.resolve('./worker'),
+    workerPath: WORKER_PATH,
   });
 }

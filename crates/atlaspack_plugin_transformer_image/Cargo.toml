@@ -5,6 +5,9 @@ authors = ["Monica Olejniczak <monica.j.olejniczak@gmail.com>"]
 edition = "2021"
 description = "Image transformer plugin for the Atlaspack Bundler"
 
+[lints]
+workspace = true
+
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
 

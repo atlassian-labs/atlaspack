@@ -46,6 +46,31 @@ export type FeatureFlags = {|
    * conversions
    */
   reduceResolverStringCreation: boolean,
+  /**
+   * Fixes source maps for inline bundles
+   */
+  inlineBundlesSourceMapFixes: boolean,
+  /**
+   * Enable nested loading of bundles in the runtime with conditional bundling
+   */
+  conditionalBundlingNestedRuntime: boolean,
+  /** Enable patch project paths. This will patch the project paths to be relative to the project root.
+   * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
+   */
+  patchProjectPaths: boolean,
+  /**
+   * Enable loading of the parcel dylib in the main thread.
+   */
+  enableRustWorkerThreadDylibHack: boolean,
+  /**
+   * Enables optimized inline string replacement perf for the packager.
+   * Used heavily for inline bundles.
+   */
+  inlineStringReplacementPerf: boolean,
+  /**
+   * Enable support for the async bundle runtime (unstable_asyncBundleRuntime) in conditional bundling
+   */
+  conditionalBundlingAsyncRuntime: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =

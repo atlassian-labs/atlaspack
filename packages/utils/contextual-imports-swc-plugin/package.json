@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/swc-plugin-contextual-imports",
-  "version": "2.13.1",
+  "version": "2.14.0",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -20,5 +20,6 @@
     "build": "cargo build -p atlaspack_contextual_imports_swc_plugin --target wasm32-unknown-unknown && cp ../../../target/wasm32-unknown-unknown/debug/atlaspack_contextual_imports_swc_plugin.wasm .",
     "build-canary": "CARGO_PROFILE_RELEASE_LTO=true cargo build -p atlaspack_contextual_imports_swc_plugin --target wasm32-unknown-unknown --release && wasm-opt --strip-debug -O ../../../target/wasm32-unknown-unknown/canary/atlaspack_contextual_imports_swc_plugin.wasm -o atlaspack_contextual_imports_swc_plugin.wasm",
     "build-release": "CARGO_PROFILE_RELEASE_LTO=true cargo build -p atlaspack_contextual_imports_swc_plugin --target wasm32-unknown-unknown --release && wasm-opt --strip-debug -O ../../../target/wasm32-unknown-unknown/release/atlaspack_contextual_imports_swc_plugin.wasm -o atlaspack_contextual_imports_swc_plugin.wasm"
-  }
+  },
+  "type": "commonjs"
 }

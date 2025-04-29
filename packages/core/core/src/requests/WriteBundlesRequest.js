@@ -2,6 +2,7 @@
 
 import type {ContentKey} from '@atlaspack/graph';
 import type {Async} from '@atlaspack/types';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import type {SharedReference} from '@atlaspack/workers';
 import type {StaticRunOpts} from '../RequestTracker';
 import {requestTypes} from '../RequestTracker';
@@ -63,29 +64,37 @@ async function run({input, api, farm, options}) {
   |} = {};
   let writeEarlyPromises = {};
   let hashRefToNameHash = new Map();
-  let bundles = bundleGraph.getBundles().filter((bundle) => {
-    // Do not package and write placeholder bundles to disk. We just
-    // need to update the name so other bundles can reference it.
-    if (bundle.isPlaceholder) {
-      let hash = bundle.id.slice(-8);
-      hashRefToNameHash.set(bundle.hashReference, hash);
-      let name = nullthrows(
-        bundle.name,
-        `Expected ${bundle.type} bundle to have a name`,
-      ).replace(bundle.hashReference, hash);
-      res.set(bundle.id, {
-        filePath: joinProjectPath(bundle.target.distDir, name),
-        type: bundle.type, // FIXME: this is wrong if the packager changes the type...
-        stats: {
-          time: 0,
-          size: 0,
-        },
-      });
-      return false;
-    }
 
-    return true;
+  // Include inline bundles so that non-inline bundles referenced from inline bundles are written to
+  // separate files. This ensures that source maps are written and work.
+  const allBundles = bundleGraph.getBundles({
+    includeInline: getFeatureFlag('inlineBundlesSourceMapFixes'),
   });
+  const bundles = allBundles
+    .filter((bundle) => bundle.bundleBehavior !== 'inline')
+    .filter((bundle) => {
+      // Do not package and write placeholder bundles to disk. We just
+      // need to update the name so other bundles can reference it.
+      if (bundle.isPlaceholder) {
+        let hash = bundle.id.slice(-8);
+        hashRefToNameHash.set(bundle.hashReference, hash);
+        let name = nullthrows(
+          bundle.name,
+          `Expected ${bundle.type} bundle to have a name`,
+        ).replace(bundle.hashReference, hash);
+        res.set(bundle.id, {
+          filePath: joinProjectPath(bundle.target.distDir, name),
+          type: bundle.type, // FIXME: this is wrong if the packager changes the type...
+          stats: {
+            time: 0,
+            size: 0,
+          },
+        });
+        return false;
+      }
+
+      return true;
+    });
 
   // Package on the main thread if there is only one bundle to package.
   // This avoids the cost of serializing the bundle graph for single file change builds.
@@ -194,7 +203,7 @@ function getBundlesIncludedInHash(
   included = new Set(),
 ) {
   included.add(bundleId);
-  for (let hashRef of bundleInfoMap[bundleId].hashReferences) {
+  for (let hashRef of bundleInfoMap[bundleId]?.hashReferences ?? []) {
     let referencedId = getIdFromHashRef(hashRef);
     if (!included.has(referencedId)) {
       getBundlesIncludedInHash(referencedId, bundleInfoMap, included);

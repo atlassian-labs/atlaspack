@@ -10,6 +10,7 @@
     "win32"
   ],
   "napi": {
+    "skip": true,
     "name": "lmdb-js-lite",
     "triples": {
       "defaults": false,
@@ -53,5 +54,6 @@
     "@atlaspack/fs": "*",
     "@atlaspack/types": "*"
   },
-  "stableVersion": "0.0.0"
+  "stableVersion": "0.0.0",
+  "type": "commonjs"
 }

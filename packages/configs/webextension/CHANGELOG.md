@@ -1,5 +1,18 @@
 # @atlaspack/config-webextension
 
+## 3.0.2
+
+### Patch Changes
+
+- [#414](https://github.com/atlassian-labs/atlaspack/pull/414) [`eff9809`](https://github.com/atlassian-labs/atlaspack/commit/eff98093703b9999a511b87a19562f5aaccfcb53) Thanks [@alshdavid](https://github.com/alshdavid)! - Added type:commonjs to package.json files
+
+- Updated dependencies [[`bfe81e5`](https://github.com/atlassian-labs/atlaspack/commit/bfe81e551c4e4bb2cac7fc4745222e66962c1728), [`8386ca4`](https://github.com/atlassian-labs/atlaspack/commit/8386ca4dc318688fbed1af3bbebf2af3e7d24552), [`eff9809`](https://github.com/atlassian-labs/atlaspack/commit/eff98093703b9999a511b87a19562f5aaccfcb53)]:
+  - @atlaspack/packager-webextension@2.14.0
+  - @atlaspack/runtime-webextension@2.14.0
+  - @atlaspack/transformer-raw@2.14.0
+  - @atlaspack/transformer-webextension@2.14.0
+  - @atlaspack/config-default@3.1.0
+
 ## 3.0.1
 
 ### Patch Changes

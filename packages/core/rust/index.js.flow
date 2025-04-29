@@ -68,26 +68,18 @@ export type AtlaspackNapiOptions = {|
   threads?: number,
 |};
 
-declare export class AtlaspackNapi {
-  static create(options: AtlaspackNapiOptions, lmdb: mixed): AtlaspackNapi;
-  nodeWorkerCount: number;
-  buildAssetGraph(): Promise<any>;
-  respondToFsEvents(events: WatchEvents): Promise<boolean>;
-  static defaultThreadCount(): number;
-  testingTempFsReadToString(path: string): string;
-  testingTempFsIsDir(path: string): boolean;
-  testingTempFsIsFile(path: string): boolean;
-  testingRpcPing(): void;
-}
+// AtlaspackNapi
+export type AtlaspackNapi = {||};
+declare export function atlaspackNapiCreate(options: AtlaspackNapiOptions, lmdb: mixed): Promise<AtlaspackNapi>;
+declare export function atlaspackNapiBuildAssetGraph(atlaspack: AtlaspackNapi): Promise<any>;
+declare export function atlaspackNapiRespondToFsEvents(atlaspack: AtlaspackNapi, events: WatchEvents): boolean;
+// AtlaspackNapi
 
 declare export function getAvailableThreads(): number;
 
-declare export function registerWorker(
-  channel: Transferable,
-  worker: any,
-): void;
-
-declare export function newNodejsWorker(delegate: any): Transferable;
+declare export function newNodejsWorker(
+  delegate: any,
+): Transferable;
 
 declare export function initializeMonitoring(): void;
 declare export function closeMonitoring(): void;
@@ -316,6 +308,16 @@ export interface LmdbEntry {
   value: Buffer;
 }
 
+export type StringReplacement = {|
+  from: string,
+  to: string,
+|};
+
+declare export function performStringReplacements(
+  input: string,
+  replacements: Array<StringReplacement>,
+): string;
+
 declare export class Lmdb {
   constructor(options: LmdbOptions): Lmdb;
   get(key: string): Promise<Buffer | null | void>;
@@ -366,7 +368,7 @@ export interface VCSState {
 declare export function getVcsStateSnapshot(
   path: string,
   excludePatterns: Array<string>,
-): VCSState;
+): Promise<VCSState>;
 export interface NodeChangeEvent {
   path: string;
   changeType: 'update' | 'create' | 'delete';
@@ -376,7 +378,7 @@ declare export function getEventsSince(
   repoPath: string,
   oldRev: string,
   newRev?: string | void | null,
-): Array<NodeChangeEvent>;
+): Promise<Array<NodeChangeEvent>>;
 
 declare export function createAssetId(params: mixed): string;
 declare export function createDependencyId(params: mixed): string;

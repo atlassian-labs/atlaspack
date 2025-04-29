@@ -423,17 +423,11 @@ mod tests {
 
   #[test]
   fn line_comments() {
-    let json = r#"{
-            // line comment
-            "a": 4,
-            # another
-        }"#;
-
-    let expected = "{
-                           \n            \"a\": 4,
-                     \n        }";
-
-    assert_eq!(strip_string(json), expected);
+    // Put these in an external file because VSCode automatically trims whitespace
+    // which is important to the tests. Removing the whitespace breaks the tests
+    let json = include_str!("../fixtures/line_comments.txt").to_string();
+    let expected = include_str!("../fixtures/line_comments_expected.txt").to_string();
+    assert_eq!(strip_string(&json), expected);
   }
 
   #[test]
@@ -514,38 +508,14 @@ mod tests {
 
   #[test]
   fn trailing_comma() {
-    let mut json = String::from(
-      r#"{
-            "a1": [1,],
-            "a2": [1,/* x */],
-            "a3": [
-                1, // x
-            ],
-            "o1": {v:1,},
-            "o2": {v:1,/* x */},
-            "o3": {
-                "v":1, // x
-            },
-            # another
-        }"#,
-    );
+    // Put these in an external file because VSCode automatically trims whitespace
+    // which is important to the tests. Removing the whitespace breaks the tests
+    let mut json = include_str!("../fixtures/trailing_comma.txt").to_string();
+
     #[allow(deprecated)]
     strip_comments_in_place(&mut json, Default::default(), true).unwrap();
 
-    let expected = r#"{
-            "a1": [1 ],
-            "a2": [1        ],
-            "a3": [
-                1      
-            ],
-            "o1": {v:1 },
-            "o2": {v:1        },
-            "o3": {
-                "v":1      
-            } 
-                     
-        }"#;
-
+    let expected = include_str!("../fixtures/trailing_comma_expected.txt").to_string();
     assert_eq!(json, expected);
   }
 }

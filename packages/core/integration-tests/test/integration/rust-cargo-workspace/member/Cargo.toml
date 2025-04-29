@@ -3,6 +3,9 @@ name = "member"
 version = "0.1.0"
 authors = ["josealbizures <albizures3601@gmail.com>"]
 
+[lints]
+workspace = true
+
 [dependencies]
 
 [lib]

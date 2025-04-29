@@ -19,9 +19,13 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@atlaspack/cli": "^2.13.1",
-    "@atlaspack/reporter-conditional-manifest": "^2.13.1",
+    "@atlaspack/cli": "^2.13.2",
+    "@atlaspack/reporter-conditional-manifest": "^2.14.0",
     "@types/react-dom": "^17.0.2",
     "express": "*"
+  },
+  "type": "commonjs",
+  "@atlaspack/packager-js": {
+    "unstable_asyncBundleRuntime": true
   }
 }

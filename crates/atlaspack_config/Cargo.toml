@@ -7,6 +7,9 @@ authors = [
 ]
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }

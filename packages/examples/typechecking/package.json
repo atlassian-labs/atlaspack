@@ -7,8 +7,9 @@
     "build": "atlaspack build src/index.ts"
   },
   "devDependencies": {
-    "@atlaspack/cli": "^2.13.1",
-    "@atlaspack/config-default": "^3.0.1",
-    "@atlaspack/validator-typescript": "^2.13.1"
-  }
+    "@atlaspack/cli": "^2.13.2",
+    "@atlaspack/config-default": "^3.1.0",
+    "@atlaspack/validator-typescript": "^2.14.0"
+  },
+  "type": "commonjs"
 }

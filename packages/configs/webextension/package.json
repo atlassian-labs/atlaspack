@@ -1,7 +1,8 @@
 {
   "name": "@atlaspack/config-webextension",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "publishConfig": {
     "access": "public"
   },
@@ -11,11 +12,11 @@
   },
   "main": "index.json",
   "dependencies": {
-    "@atlaspack/config-default": "3.0.1",
-    "@atlaspack/packager-webextension": "2.13.1",
-    "@atlaspack/runtime-webextension": "2.13.1",
-    "@atlaspack/transformer-raw": "2.13.1",
-    "@atlaspack/transformer-webextension": "2.13.1"
+    "@atlaspack/config-default": "3.1.0",
+    "@atlaspack/packager-webextension": "2.14.0",
+    "@atlaspack/runtime-webextension": "2.14.0",
+    "@atlaspack/transformer-raw": "2.14.0",
+    "@atlaspack/transformer-webextension": "2.14.0"
   },
   "peerDependencies": {
     "@atlaspack/core": "^2.13.1"

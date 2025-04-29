@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "Resolver Plugin for the Atlaspack Bundler"
 
+[lints]
+workspace = true
+
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }

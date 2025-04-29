@@ -94,7 +94,7 @@ pub struct ExportedSymbol {
 /// * `loc` will be this source-code location
 ///
 /// See [`HoistResult::imported_symbols`] and [`HoistResult::re_exports`].
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct ImportedSymbol {
   /// The specifier for a certain dependency this symbol comes from
   pub source: JsWord,
@@ -1401,2575 +1401,1363 @@ impl Hoist<'_> {
 
 #[cfg(test)]
 mod tests {
-  use swc_core::common::comments::SingleThreadedComments;
-  use swc_core::common::sync::Lrc;
-  use swc_core::common::FileName;
-  use swc_core::common::Globals;
-  use swc_core::common::SourceMap;
-  use swc_core::ecma::codegen::text_writer::JsWriter;
-  use swc_core::ecma::parser::lexer::Lexer;
-  use swc_core::ecma::parser::Parser;
-  use swc_core::ecma::parser::StringInput;
-  use swc_core::ecma::transforms::base::fixer::fixer;
-  use swc_core::ecma::transforms::base::hygiene::hygiene;
-  use swc_core::ecma::transforms::base::resolver;
-  use swc_core::ecma::visit::VisitWith;
+  use atlaspack_swc_runner::test_utils::{run_test_fold, run_test_visit_const, RunVisitResult};
+  use indoc::{formatdoc, indoc};
 
   use super::*;
-  use crate::utils::BailoutReason;
-  extern crate indoc;
-  use self::indoc::indoc;
 
-  fn parse(code: &str) -> (Collect, String, HoistResult) {
-    let source_map = Lrc::new(SourceMap::default());
-    let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), code.into());
+  #[test]
+  fn test_imports() {
+    fn assert_imports(
+      input_code: &str,
+      expected_code: &str,
+      imported_symbols: Vec<PartialImportedSymbol>,
+    ) {
+      let (code, hoist) = run_hoist(input_code);
 
-    let comments = SingleThreadedComments::default();
-    let lexer = Lexer::new(
-      Default::default(),
-      Default::default(),
-      StringInput::from(&*source_file),
-      Some(&comments),
+      assert_eq!(code, expected_code);
+      assert_eq!(
+        map_imported_symbols(hoist.imported_symbols),
+        imported_symbols
+      );
+    }
+
+    assert_imports(
+      "
+        import foo from 'other';
+        console.log(foo);
+        import bar from 'bar';
+        console.log(bar);
+      ",
+      indoc! {r#"
+        import "abc:other:esm";
+        import "abc:bar:esm";
+        console.log(0, $abc$import$70a00e0a8474f72a$2e2bcd8739ae039);
+        console.log(0, $abc$import$d927737047eb3867$2e2bcd8739ae039);
+      "#},
+      vec![other_default_symbol(), bar_default_symbol()],
     );
 
-    let mut parser = Parser::new_from(lexer);
-    match parser.parse_program() {
-      Ok(program) => swc_core::common::GLOBALS.set(&Globals::new(), || {
-        swc_core::ecma::transforms::base::helpers::HELPERS.set(
-          &swc_core::ecma::transforms::base::helpers::Helpers::new(false),
-          || {
-            let is_module = program.is_module();
-            let module = match program {
-              Program::Module(module) => module,
-              Program::Script(script) => Module {
-                span: script.span,
-                shebang: None,
-                body: script.body.into_iter().map(ModuleItem::Stmt).collect(),
-              },
-            };
+    assert_imports(
+      "
+        import foo from 'other';
+        console.log(foo, foo.bar);
+        console.log(foo())
+        const x = require('x');
+        console.log(x);
+        import bar from 'bar';
+        console.log(bar);
+      ",
+      indoc! {r#"
+        import "abc:other:esm";
+        import "abc:bar:esm";
+        console.log(0, $abc$import$70a00e0a8474f72a$2e2bcd8739ae039, 0, $abc$import$70a00e0a8474f72a$2e2bcd8739ae039.bar);
+        console.log(0, $abc$import$70a00e0a8474f72a$2e2bcd8739ae039());
+        import "abc:x";
+        console.log($abc$import$d141bba7fdc215a3);
+        console.log(0, $abc$import$d927737047eb3867$2e2bcd8739ae039);
+      "#},
+      vec![
+        other_default_symbol(),
+        other_default_symbol(),
+        other_default_symbol(),
+        PartialImportedSymbol {
+          imported: js_word!("*"),
+          kind: ImportKind::Require,
+          local: js_word!("$abc$import$d141bba7fdc215a3"),
+          source: js_word!("x"),
+        },
+        bar_default_symbol(),
+      ],
+    );
 
-            let unresolved_mark = Mark::fresh(Mark::root());
-            let global_mark = Mark::fresh(Mark::root());
-            let program = Program::Module(module);
-            let module = program
-              .apply(&mut resolver(unresolved_mark, global_mark, false))
-              .module()
-              .expect("Module should be returned");
+    assert_imports(
+      "
+        import {foo as bar} from 'other';
+        let test = {bar: 3};
+        console.log(bar, test.bar);
+        bar();
+      ",
+      indoc! {r#"
+        import "abc:other:esm";
+        let $abc$var$test = {
+            bar: 3
+        };
+        console.log(0, $abc$import$70a00e0a8474f72a$6a5cdcad01c973fa, $abc$var$test.bar);
+        0, $abc$import$70a00e0a8474f72a$6a5cdcad01c973fa();
+      "#},
+      vec![other_foo_symbol(), other_foo_symbol()],
+    );
 
-            let mut collect = Collect::new(
-              source_map.clone(),
-              unresolved_mark,
-              Mark::fresh(Mark::root()),
-              global_mark,
-              true,
-              is_module,
-              false,
-            );
-            module.visit_with(&mut collect);
+    assert_imports(
+      "
+        import * as foo from 'other';
+        console.log(foo.bar);
+        foo.bar();
+      ",
+      indoc! {r#"
+        import "abc:other:esm";
+        console.log($abc$import$70a00e0a8474f72a$d927737047eb3867);
+        $abc$import$70a00e0a8474f72a$d927737047eb3867();
+      "#},
+      vec![other_bar_symbol(), other_bar_symbol()],
+    );
 
-            let (module, res) = {
-              let mut hoist = Hoist::new("abc", unresolved_mark, &collect);
-              let module = module.fold_with(&mut hoist);
-              (module, hoist.get_result())
-            };
+    assert_imports(
+      "
+        import { foo } from 'other';
+        async function test() {
+          console.log(foo.bar);
+        }
+      ",
+      indoc! {r#"
+        import "abc:other:esm";
+        async function $abc$var$test() {
+            console.log(0, $abc$import$70a00e0a8474f72a$6a5cdcad01c973fa.bar);
+        }
+      "#},
+      vec![other_foo_symbol()],
+    );
 
-            let program = Program::Module(module);
-            let module = program
-              .apply(&mut (hygiene(), fixer(Some(&comments))))
-              .module()
-              .expect("Module should be returned");
+    fn other_foo_symbol() -> PartialImportedSymbol {
+      PartialImportedSymbol {
+        imported: js_word!("foo"),
+        kind: ImportKind::Import,
+        local: js_word!("$abc$import$70a00e0a8474f72a$6a5cdcad01c973fa"),
+        source: js_word!("other"),
+      }
+    }
 
-            let code = emit(source_map, comments, &module);
-            (collect, code, res)
-          },
-        )
-      }),
-      Err(err) => {
-        panic!("{:?}", err);
+    fn other_bar_symbol() -> PartialImportedSymbol {
+      PartialImportedSymbol {
+        imported: js_word!("bar"),
+        kind: ImportKind::Import,
+        local: js_word!("$abc$import$70a00e0a8474f72a$d927737047eb3867"),
+        source: js_word!("other"),
+      }
+    }
+
+    fn other_default_symbol() -> PartialImportedSymbol {
+      PartialImportedSymbol {
+        imported: js_word!("default"),
+        kind: ImportKind::Import,
+        local: js_word!("$abc$import$70a00e0a8474f72a$2e2bcd8739ae039"),
+        source: js_word!("other"),
+      }
+    }
+
+    fn bar_default_symbol() -> PartialImportedSymbol {
+      PartialImportedSymbol {
+        imported: js_word!("default"),
+        kind: ImportKind::Import,
+        local: js_word!("$abc$import$d927737047eb3867$2e2bcd8739ae039"),
+        source: js_word!("bar"),
       }
     }
   }
 
-  fn emit(source_map: Lrc<SourceMap>, comments: SingleThreadedComments, module: &Module) -> String {
-    let mut src_map_buf = vec![];
-    let mut buf = vec![];
-    {
-      let writer = Box::new(JsWriter::new(
-        source_map.clone(),
-        "\n",
-        &mut buf,
-        Some(&mut src_map_buf),
-      ));
-      let config =
-        swc_core::ecma::codegen::Config::default().with_target(swc_core::ecma::ast::EsVersion::Es5);
-      let mut emitter = swc_core::ecma::codegen::Emitter {
-        cfg: config,
-        comments: Some(&comments),
-        cm: source_map,
-        wr: writer,
-      };
+  #[test]
+  fn test_dynamic_imports() {
+    fn assert_dynamic_import(
+      input_code: &str,
+      expected_code: &str,
+      imported_symbols: Vec<PartialImportedSymbol>,
+    ) {
+      let (code, hoist) = run_hoist(input_code);
 
-      emitter.emit_module(module).unwrap();
+      assert_eq!(code, expected_code);
+      assert_eq!(
+        map_imported_symbols(hoist.imported_symbols),
+        imported_symbols
+      );
+
+      assert_eq!(
+        hoist.dynamic_imports,
+        HashMap::from([(
+          js_word!("$abc$importAsync$70a00e0a8474f72a"),
+          js_word!("other")
+        )])
+      );
     }
 
-    String::from_utf8(buf).unwrap()
+    assert_dynamic_import(
+      "
+        async function test() {
+          const x = await import('other');
+          console.log(x.foo);
+        }
+     ",
+      indoc! {r#"
+        import "abc:other";
+        async function $abc$var$test() {
+            const x = await $abc$importAsync$70a00e0a8474f72a;
+            console.log(x.foo);
+        }
+      "#},
+      vec![foo_symbol()],
+    );
+
+    assert_dynamic_import(
+      "
+        async function test() {
+          const x = await import('other');
+          console.log(x[foo]);
+        }
+     ",
+      indoc! {r#"
+        import "abc:other";
+        async function $abc$var$test() {
+            const x = await $abc$importAsync$70a00e0a8474f72a;
+            console.log(x[foo]);
+        }
+      "#},
+      vec![star_symbol(), star_symbol()],
+    );
+
+    assert_dynamic_import(
+      "
+        async function test() {
+          const x = await import('other');
+          console.log(foo);
+        }
+     ",
+      indoc! {r#"
+        import "abc:other";
+        async function $abc$var$test() {
+            const x = await $abc$importAsync$70a00e0a8474f72a;
+            console.log(foo);
+        }
+      "#},
+      vec![],
+    );
+
+    assert_dynamic_import(
+      "
+        async function test() {
+          const {foo} = await import('other');
+          console.log(foo);
+        }
+     ",
+      indoc! {r#"
+        import "abc:other";
+        async function $abc$var$test() {
+            const { foo: foo } = await $abc$importAsync$70a00e0a8474f72a;
+            console.log(foo);
+        }
+      "#},
+      vec![foo_symbol(), foo_symbol()],
+    );
+
+    assert_dynamic_import(
+      "
+        async function test() {
+          const {foo: bar} = await import('other');
+          console.log(bar);
+        }
+     ",
+      indoc! {r#"
+        import "abc:other";
+        async function $abc$var$test() {
+            const { foo: bar } = await $abc$importAsync$70a00e0a8474f72a;
+            console.log(bar);
+        }
+      "#},
+      vec![foo_symbol(), foo_symbol()],
+    );
+
+    assert_dynamic_import(
+      "
+        import('other').then(x => x.foo);
+     ",
+      indoc! {r#"
+        import "abc:other";
+        $abc$importAsync$70a00e0a8474f72a.then((x)=>x.foo);
+      "#},
+      vec![foo_symbol()],
+    );
+
+    assert_dynamic_import(
+      "
+        import('other').then(x => x);
+     ",
+      indoc! {r#"
+        import "abc:other";
+        $abc$importAsync$70a00e0a8474f72a.then((x)=>x);
+      "#},
+      vec![star_symbol(), star_symbol()],
+    );
+
+    assert_dynamic_import(
+      "
+        import('other').then(({foo}) => foo);
+     ",
+      indoc! {r#"
+        import "abc:other";
+        $abc$importAsync$70a00e0a8474f72a.then(({ foo: foo })=>foo);
+      "#},
+      vec![foo_symbol(), foo_symbol()],
+    );
+
+    assert_dynamic_import(
+      "
+        import('other').then(({foo: bar}) => bar);
+     ",
+      indoc! {r#"
+        import "abc:other";
+        $abc$importAsync$70a00e0a8474f72a.then(({ foo: bar })=>bar);
+      "#},
+      vec![foo_symbol(), foo_symbol()],
+    );
+
+    assert_dynamic_import(
+      "
+        import('other').then(function (x) { return x.foo });
+     ",
+      indoc! {r#"
+        import "abc:other";
+        $abc$importAsync$70a00e0a8474f72a.then(function(x) {
+            return x.foo;
+        });
+      "#},
+      vec![foo_symbol()],
+    );
+
+    assert_dynamic_import(
+      "
+        import('other').then(function (x) { return x });
+     ",
+      indoc! {r#"
+        import "abc:other";
+        $abc$importAsync$70a00e0a8474f72a.then(function(x) {
+            return x;
+        });
+      "#},
+      vec![star_symbol(), star_symbol()],
+    );
+
+    assert_dynamic_import(
+      "
+        import('other').then(function ({foo}) {});
+     ",
+      indoc! {r#"
+        import "abc:other";
+        $abc$importAsync$70a00e0a8474f72a.then(function({ foo: foo }) {});
+      "#},
+      vec![foo_symbol()],
+    );
+
+    assert_dynamic_import(
+      "
+        import('other').then(function ({foo: bar}) {});
+     ",
+      indoc! {r#"
+        import "abc:other";
+        $abc$importAsync$70a00e0a8474f72a.then(function({ foo: bar }) {});
+      "#},
+      vec![foo_symbol()],
+    );
+
+    fn foo_symbol() -> PartialImportedSymbol {
+      PartialImportedSymbol {
+        imported: js_word!("foo"),
+        kind: ImportKind::DynamicImport,
+        local: js_word!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa"),
+        source: js_word!("other"),
+      }
+    }
+
+    fn star_symbol() -> PartialImportedSymbol {
+      PartialImportedSymbol {
+        imported: js_word!("*"),
+        kind: ImportKind::DynamicImport,
+        local: js_word!("$abc$importAsync$70a00e0a8474f72a"),
+        source: js_word!("other"),
+      }
+    }
   }
 
-  macro_rules! map(
-    { $($key:expr => $value:expr),* } => {
-      {
-        #[allow(unused_mut)]
-        let mut m = HashMap::new();
-        $(
-          m.insert($key, $value);
-        )*
-        m
-      }
-    };
-  );
+  #[test]
+  fn test_requires() {
+    fn assert_require(
+      input_code: &str,
+      expected_code: &str,
+      imported_symbols: Vec<PartialImportedSymbol>,
+    ) {
+      let (code, hoist) = run_hoist(input_code);
 
-  macro_rules! set(
-    { $($key:expr),* } => {
-      {
-        #[allow(unused_mut)]
-        let mut m = HashSet::new();
-        $(
-          m.insert($key);
-        )*
-        m
-      }
-    };
-  );
+      assert_eq!(code, expected_code);
+      assert_eq!(hoist.re_exports, Vec::new());
+      assert_eq!(
+        map_imported_symbols(hoist.imported_symbols),
+        imported_symbols
+      );
+    }
 
-  macro_rules! w {
-    ($s: expr) => {{
-      let w: JsWord = $s.into();
-      w
-    }};
+    assert_require(
+      "require('other');",
+      indoc! {r#"
+        import "abc:other";
+      "#},
+      Vec::new(),
+    );
+
+    assert_require(
+      "
+        function x() {
+          const foo = require('other');
+          console.log(foo.bar);
+        }
+        require('bar');
+      ",
+      indoc! {r#"
+        import "abc:other";
+        function $abc$var$x() {
+            const foo = $abc$import$70a00e0a8474f72a;
+            console.log(foo.bar);
+        }
+        import "abc:bar";
+      "#},
+      vec![star_symbol()],
+    );
+
+    assert_require(
+      "
+        function x() {
+          console.log(require('other').foo);
+        }
+      ",
+      indoc! {r#"
+        import "abc:other";
+        function $abc$var$x() {
+            console.log($abc$import$70a00e0a8474f72a$6a5cdcad01c973fa);
+        }
+      "#},
+      vec![foo_symbol()],
+    );
+
+    assert_require(
+      "
+        function x() {
+          const {foo} = require('other');
+          console.log(foo);
+        }
+      ",
+      indoc! {r#"
+        import "abc:other";
+        function $abc$var$x() {
+            const { foo: foo } = $abc$import$70a00e0a8474f72a;
+            console.log(foo);
+        }
+      "#},
+      vec![star_symbol()],
+    );
+
+    assert_require(
+      "
+        function x() {
+          const foo = require('other').foo;
+          console.log(foo);
+        }
+      ",
+      indoc! {r#"
+        import "abc:other";
+        function $abc$var$x() {
+            const foo = $abc$import$70a00e0a8474f72a$6a5cdcad01c973fa;
+            console.log(foo);
+        }
+      "#},
+      vec![foo_symbol()],
+    );
+
+    assert_require(
+      "
+        function x() {
+          const foo = require('other')[test];
+          console.log(foo);
+        }
+      ",
+      indoc! {r#"
+        import "abc:other";
+        function $abc$var$x() {
+            const foo = $abc$import$70a00e0a8474f72a[test];
+            console.log(foo);
+        }
+      "#},
+      vec![star_symbol()],
+    );
+
+    assert_require(
+      "
+        var foo = function () {
+          if (Date.now() < 0) {
+            var bar = require('other');
+          }
+        }();
+      ",
+      indoc! {r#"
+        import "abc:other";
+        var $abc$var$foo = function() {
+            if (Date.now() < 0) {
+                var bar = $abc$import$70a00e0a8474f72a;
+            }
+        }();
+      "#},
+      vec![star_symbol()],
+    );
+
+    assert_require(
+      "
+        let x = require('a') + require('b');
+      ",
+      indoc! {r#"
+        import "abc:a";
+        import "abc:b";
+        let $abc$var$x = $abc$import$407448d2b89b1813 + $abc$import$8b22cf2602fb60ce;
+      "#},
+      a_b_imported_symbols(),
+    );
+
+    assert_require(
+      "
+        let x = (require('a'), require('b'));
+      ",
+      indoc! {r#"
+        import "abc:a";
+        import "abc:b";
+        let $abc$var$x = (!$abc$import$407448d2b89b1813, $abc$import$8b22cf2602fb60ce);
+      "#},
+      a_b_imported_symbols(),
+    );
+
+    assert_require(
+      "
+        let x = require('a') || require('b');
+      ",
+      indoc! {r#"
+        import "abc:a";
+        import "abc:b";
+        let $abc$var$x = $abc$import$407448d2b89b1813 || $abc$import$8b22cf2602fb60ce;
+      "#},
+      a_b_imported_symbols(),
+    );
+
+    assert_require(
+      "
+        let x = condition ? require('a') : require('b');
+      ",
+      indoc! {r#"
+        import "abc:a";
+        import "abc:b";
+        let $abc$var$x = condition ? $abc$import$407448d2b89b1813 : $abc$import$8b22cf2602fb60ce;
+      "#},
+      a_b_imported_symbols(),
+    );
+
+    assert_require(
+      "
+        if (condition) require('a');
+      ",
+      indoc! {r#"
+        import "abc:a";
+        if (condition) $abc$import$407448d2b89b1813;
+      "#},
+      vec![PartialImportedSymbol {
+        imported: js_word!("*"),
+        kind: ImportKind::Require,
+        local: js_word!("$abc$import$407448d2b89b1813"),
+        source: js_word!("a"),
+      }],
+    );
+
+    assert_require(
+      "
+        for (let x = require('y'); x < 5; x++) {}
+      ",
+      indoc! {r#"
+        import "abc:y";
+        for(let x = $abc$import$4a5767248b18ef41; x < 5; x++){}
+      "#},
+      vec![PartialImportedSymbol {
+        imported: js_word!("*"),
+        kind: ImportKind::Require,
+        local: js_word!("$abc$import$4a5767248b18ef41"),
+        source: js_word!("y"),
+      }],
+    );
+
+    assert_require(
+      "
+        const x = 4, {bar} = require('other'), baz = 3;
+        console.log(bar);
+      ",
+      indoc! {r#"
+        const $abc$var$x = 4;
+        import "abc:other";
+        var $abc$require$bar = $abc$import$70a00e0a8474f72a$d927737047eb3867;
+        const $abc$var$baz = 3;
+        console.log($abc$require$bar);
+      "#},
+      vec![PartialImportedSymbol {
+        imported: js_word!("bar"),
+        kind: ImportKind::Require,
+        local: js_word!("$abc$import$70a00e0a8474f72a$d927737047eb3867"),
+        source: js_word!("other"),
+      }],
+    );
+
+    assert_require(
+      "
+        const x = 3, foo = require('other'), bar = 2;
+        console.log(foo.bar);
+      ",
+      indoc! {r#"
+        const $abc$var$x = 3;
+        import "abc:other";
+        const $abc$var$bar = 2;
+        console.log($abc$import$70a00e0a8474f72a$d927737047eb3867);
+      "#},
+      vec![PartialImportedSymbol {
+        imported: js_word!("bar"),
+        kind: ImportKind::Require,
+        local: js_word!("$abc$import$70a00e0a8474f72a$d927737047eb3867"),
+        source: js_word!("other"),
+      }],
+    );
+
+    assert_require(
+      "
+        const {foo, ...bar} = require('other');
+        console.log(foo, bar);
+      ",
+      indoc! {r#"
+        import "abc:other";
+        const { foo: $abc$var$foo, ...$abc$var$bar } = $abc$import$70a00e0a8474f72a;
+        console.log($abc$var$foo, $abc$var$bar);
+      "#},
+      vec![star_symbol()],
+    );
+
+    assert_require(
+      "
+        const {x: {y: z}} = require('other');
+        console.log(z);
+      ",
+      indoc! {r#"
+        import "abc:other";
+        const { x: { y: $abc$var$z } } = $abc$import$70a00e0a8474f72a;
+        console.log($abc$var$z);
+      "#},
+      vec![star_symbol()],
+    );
+
+    assert_require(
+      "
+        const foo = require('other');
+        console.log(foo[bar]);
+      ",
+      indoc! {r#"
+        import "abc:other";
+        console.log($abc$import$70a00e0a8474f72a[bar]);
+      "#},
+      vec![star_symbol()],
+    );
+
+    assert_require(
+      "
+        const foo = require('other');
+        console.log(foo[bar], foo.baz);
+      ",
+      indoc! {r#"
+        import "abc:other";
+        console.log($abc$import$70a00e0a8474f72a[bar], $abc$import$70a00e0a8474f72a.baz);
+      "#},
+      vec![star_symbol(), star_symbol()],
+    );
+
+    assert_require(
+      "
+        const foo = require('other').foo;
+        console.log(foo);
+      ",
+      indoc! {r#"
+        import "abc:other";
+        var $abc$require$foo = $abc$import$70a00e0a8474f72a$6a5cdcad01c973fa;
+        console.log($abc$require$foo);
+      "#},
+      vec![foo_symbol()],
+    );
+
+    assert_require(
+      "
+        const foo = require('other')[bar];
+        console.log(foo);
+      ",
+      indoc! {r#"
+        import "abc:other";
+        const $abc$var$foo = $abc$import$70a00e0a8474f72a[bar];
+        console.log($abc$var$foo);
+      "#},
+      vec![star_symbol()],
+    );
+
+    assert_require(
+      "
+        const {foo} = require('other').foo;
+        console.log(foo);
+      ",
+      indoc! {r#"
+        import "abc:other";
+        const { foo: $abc$var$foo } = $abc$import$70a00e0a8474f72a$6a5cdcad01c973fa;
+        console.log($abc$var$foo);
+      "#},
+      vec![foo_symbol()],
+    );
+
+    fn foo_symbol() -> PartialImportedSymbol {
+      PartialImportedSymbol {
+        imported: js_word!("foo"),
+        kind: ImportKind::Require,
+        local: js_word!("$abc$import$70a00e0a8474f72a$6a5cdcad01c973fa"),
+        source: js_word!("other"),
+      }
+    }
+
+    fn star_symbol() -> PartialImportedSymbol {
+      PartialImportedSymbol {
+        imported: js_word!("*"),
+        kind: ImportKind::Require,
+        local: js_word!("$abc$import$70a00e0a8474f72a"),
+        source: js_word!("other"),
+      }
+    }
+
+    fn a_b_imported_symbols() -> Vec<PartialImportedSymbol> {
+      vec![
+        PartialImportedSymbol {
+          imported: js_word!("*"),
+          kind: ImportKind::Require,
+          local: js_word!("$abc$import$407448d2b89b1813"),
+          source: js_word!("a"),
+        },
+        PartialImportedSymbol {
+          imported: js_word!("*"),
+          kind: ImportKind::Require,
+          local: js_word!("$abc$import$8b22cf2602fb60ce"),
+          source: js_word!("b"),
+        },
+      ]
+    }
   }
 
-  macro_rules! assert_eq_imports {
-    ($m: expr, $match: expr) => {{
-      let mut map = HashMap::new();
-      for (key, val) in $m {
-        map.insert(
-          key.0,
-          (
-            val.source,
-            val.specifier,
-            val.kind == ImportKind::DynamicImport,
-          ),
+  #[test]
+  fn test_exports() {
+    fn assert_exports(
+      input_code: &str,
+      expected_code: &str,
+      exported_symbols: Vec<PartialExportedSymbol>,
+    ) {
+      let (code, hoist) = run_hoist(input_code);
+      assert_eq!(code, expected_code);
+      assert_eq!(hoist.self_references.len(), 0);
+      assert_eq!(
+        map_exported_symbols(hoist.exported_symbols),
+        exported_symbols
+      );
+    }
+
+    assert_exports(
+      "
+        let x = 1;
+        let y = 2;
+        let z = 3;
+        export {x, y};
+      ",
+      indoc! {"
+        let $abc$export$d141bba7fdc215a3 = 1;
+        let $abc$export$4a5767248b18ef41 = 2;
+        let $abc$var$z = 3;
+      "},
+      // TODO: There should be one less x and y symbol?
+      vec![
+        x_symbol(),
+        y_symbol(),
+        x_symbol(),
+        x_symbol(),
+        y_symbol(),
+        y_symbol(),
+      ],
+    );
+
+    assert_exports(
+      "export default 1;",
+      indoc! {"
+        var $abc$export$2e2bcd8739ae039 = 1;
+      "},
+      vec![default_symbol()],
+    );
+
+    assert_exports(
+      "
+        let x = 3;
+        export default x;
+      ",
+      indoc! {"
+        let $abc$var$x = 3;
+        var $abc$export$2e2bcd8739ae039 = $abc$var$x;
+      "},
+      vec![default_symbol()],
+    );
+
+    assert_exports(
+      "export default function () {}",
+      indoc! {"
+        function $abc$export$2e2bcd8739ae039() {}
+      "},
+      vec![default_symbol()],
+    );
+
+    assert_exports(
+      "export default class {}",
+      indoc! {"
+        class $abc$export$2e2bcd8739ae039 {
+        }
+      "},
+      vec![default_symbol()],
+    );
+
+    assert_exports(
+      "
+        console.log(module);
+        export default class X {}
+      ",
+      indoc! {"
+        console.log(module);
+        class X {
+        }
+      "},
+      Vec::new(),
+    );
+
+    assert_exports(
+      "export var x = 2, y = 3;",
+      indoc! {"
+        var $abc$export$d141bba7fdc215a3 = 2, $abc$export$4a5767248b18ef41 = 3;
+      "},
+      vec![x_symbol(), y_symbol()],
+    );
+
+    assert_exports(
+      "
+        export var {x, ...y} = something;
+        export var [p, ...q] = something;
+        export var {x = 3} = something;
+      ",
+      indoc! {"
+        var { x: $abc$export$d141bba7fdc215a3, ...$abc$export$4a5767248b18ef41 } = something;
+        var [$abc$export$ffb5f4729a158638, ...$abc$export$9e5f44173e64f162] = something;
+        var { x: $abc$export$d141bba7fdc215a3 = 3 } = something;
+      "},
+      vec![
+        PartialExportedSymbol {
+          exported: js_word!("x"),
+          is_esm: true,
+          local: js_word!("$abc$export$d141bba7fdc215a3"),
+        },
+        PartialExportedSymbol {
+          exported: js_word!("y"),
+          is_esm: true,
+          local: js_word!("$abc$export$4a5767248b18ef41"),
+        },
+        PartialExportedSymbol {
+          exported: js_word!("p"),
+          is_esm: true,
+          local: js_word!("$abc$export$ffb5f4729a158638"),
+        },
+        PartialExportedSymbol {
+          exported: js_word!("q"),
+          is_esm: true,
+          local: js_word!("$abc$export$9e5f44173e64f162"),
+        },
+        PartialExportedSymbol {
+          exported: js_word!("x"),
+          is_esm: true,
+          local: js_word!("$abc$export$d141bba7fdc215a3"),
+        },
+      ],
+    );
+
+    assert_exports(
+      "export function test() {}",
+      indoc! {"
+        function $abc$export$e0969da9b8fb378d() {}
+      "},
+      vec![PartialExportedSymbol {
+        exported: js_word!("test"),
+        is_esm: true,
+        local: js_word!("$abc$export$e0969da9b8fb378d"),
+      }],
+    );
+
+    assert_exports(
+      "export class Test {}",
+      indoc! {"
+        class $abc$export$1b16fc9eb974a84d {
+        }
+      "},
+      vec![PartialExportedSymbol {
+        exported: js_word!("Test"),
+        is_esm: true,
+        local: js_word!("$abc$export$1b16fc9eb974a84d"),
+      }],
+    );
+
+    assert_exports(
+      "export {foo} from 'bar';",
+      indoc! {r#"
+        import "abc:bar:esm";
+      "#},
+      Vec::new(),
+    );
+
+    assert_exports(
+      "export * from 'bar';",
+      indoc! {r#"
+        import "abc:bar:esm";
+      "#},
+      Vec::new(),
+    );
+
+    fn default_symbol() -> PartialExportedSymbol {
+      PartialExportedSymbol {
+        exported: js_word!("default"),
+        is_esm: true,
+        local: js_word!("$abc$export$2e2bcd8739ae039"),
+      }
+    }
+
+    fn x_symbol() -> PartialExportedSymbol {
+      PartialExportedSymbol {
+        exported: js_word!("x"),
+        is_esm: true,
+        local: js_word!("$abc$export$d141bba7fdc215a3"),
+      }
+    }
+
+    fn y_symbol() -> PartialExportedSymbol {
+      PartialExportedSymbol {
+        exported: js_word!("y"),
+        is_esm: true,
+        local: js_word!("$abc$export$4a5767248b18ef41"),
+      }
+    }
+  }
+
+  #[test]
+  fn test_reexports() {
+    fn assert_reexports(
+      input_code: &str,
+      expected_code: &str,
+      exported_symbols: Vec<PartialExportedSymbol>,
+      reexports: Vec<PartialImportedSymbol>,
+    ) {
+      let (code, hoist) = run_hoist(input_code);
+
+      assert_eq!(code, expected_code);
+      assert_eq!(hoist.self_references.len(), 0);
+      assert_eq!(
+        map_exported_symbols(hoist.exported_symbols),
+        exported_symbols
+      );
+
+      assert_eq!(
+        hoist
+          .re_exports
+          .into_iter()
+          .map(PartialImportedSymbol::from)
+          .collect::<Vec<PartialImportedSymbol>>(),
+        reexports
+      );
+    }
+
+    assert_reexports(
+      "export { foo as bar } from './foo';",
+      indoc! {r#"
+        import "abc:./foo:esm";
+      "#},
+      vec![],
+      vec![PartialImportedSymbol {
+        imported: js_word!("foo"),
+        kind: ImportKind::Import,
+        local: js_word!("bar"),
+        source: js_word!("./foo"),
+      }],
+    );
+
+    assert_reexports(
+      "
+        export { foo as bar } from './foo';
+        export const foo = 1;
+      ",
+      indoc! {r#"
+        import "abc:./foo:esm";
+        const $abc$export$6a5cdcad01c973fa = 1;
+      "#},
+      vec![PartialExportedSymbol {
+        exported: js_word!("foo"),
+        is_esm: true,
+        local: js_word!("$abc$export$6a5cdcad01c973fa"),
+      }],
+      vec![PartialImportedSymbol {
+        imported: js_word!("foo"),
+        kind: ImportKind::Import,
+        local: js_word!("bar"),
+        source: js_word!("./foo"),
+      }],
+    );
+  }
+
+  #[test]
+  fn test_cjs_exports() {
+    fn assert_cjs_exports(
+      input_code: &str,
+      expected_code: &str,
+      exported_symbols: Vec<PartialExportedSymbol>,
+      self_references: HashSet<JsWord>,
+    ) {
+      let (code, hoist) = run_hoist(input_code);
+
+      assert_eq!(code, expected_code);
+      assert_eq!(hoist.self_references, self_references);
+      assert_eq!(
+        map_exported_symbols(hoist.exported_symbols),
+        exported_symbols
+      );
+    }
+
+    for exports in ["exports", "module.exports"] {
+      for input_code in [
+        format!("{exports}.foo = 1;"),
+        format!("{exports}['foo'] = 1;"),
+      ] {
+        assert_cjs_exports(
+          &input_code,
+          indoc! {"
+            var $abc$export$6a5cdcad01c973fa;
+            $abc$export$6a5cdcad01c973fa = 1;
+          "},
+          vec![foo_symbol()],
+          HashSet::new(),
+        );
+
+        assert_cjs_exports(
+          &formatdoc! {"
+            {input_code}
+            sideEffects(exports);
+          "},
+          &formatdoc! {"
+            $abc${}
+            sideEffects($abc$exports);
+          ", input_code.replace("module.", "")},
+          vec![star_symbol(), star_symbol()],
+          HashSet::from([js_word!("*")]),
         );
       }
-      assert_eq!(map, $match);
-    }};
-  }
 
-  macro_rules! assert_eq_imported_symbols {
-    ($m: expr, $match: expr) => {{
-      let mut map = HashMap::new();
-      for sym in $m {
-        map.insert(sym.local, (sym.source, sym.imported));
-      }
-      assert_eq!(map, $match);
-    }};
-  }
+      assert_cjs_exports(
+        &formatdoc! {"
+          {exports}.foo = 1;
+          console.log({exports}.foo);
+          sideEffects({exports}['foo']);
+        "},
+        indoc! {"
+          var $abc$export$6a5cdcad01c973fa;
+          $abc$export$6a5cdcad01c973fa = 1;
+          console.log($abc$export$6a5cdcad01c973fa);
+          sideEffects($abc$export$6a5cdcad01c973fa);
+        "},
+        vec![foo_symbol(), foo_symbol(), foo_symbol()],
+        HashSet::from([js_word!("foo")]),
+      );
 
-  macro_rules! assert_eq_exported_symbols {
-    ($m: expr, $match: expr) => {{
-      let mut map = HashMap::new();
-      for sym in $m {
-        map.insert(sym.exported, (sym.local, sym.is_esm));
-      }
-      assert_eq!(map, $match);
-    }};
-  }
+      assert_cjs_exports(
+        &formatdoc! {"
+          {exports}['foo'] = 1;
+          console.log({exports}.foo);
+          sideEffects({exports}['bar']);
+        "},
+        indoc! {"
+          var $abc$export$6a5cdcad01c973fa;
+          $abc$export$6a5cdcad01c973fa = 1;
+          console.log($abc$export$6a5cdcad01c973fa);
+          sideEffects($abc$export$d927737047eb3867);
+        "},
+        vec![foo_symbol(), foo_symbol(), bar_symbol()],
+        HashSet::from([js_word!("foo"), js_word!("bar")]),
+      );
 
-  macro_rules! assert_eq_set {
-    ($m: expr, $match: expr) => {{
-      let mut map = HashSet::new();
-      for item in $m {
-        map.insert(item.0);
+      assert_cjs_exports(
+        &format!("{exports}[foo] = 1;"),
+        indoc! {"
+          $abc$exports[foo] = 1;
+        "},
+        vec![star_symbol()],
+        HashSet::new(),
+      );
+
+      assert_cjs_exports(
+        &formatdoc! {"
+          {exports}[foo] = 1;
+          console.log({exports}.foo);
+          console['log']({exports}['foo']);
+          sideEffects({exports}[foo]);
+        "},
+        indoc! {"
+          $abc$exports[foo] = 1;
+          console.log($abc$exports.foo);
+          console['log']($abc$exports['foo']);
+          sideEffects($abc$exports[foo]);
+        "},
+        vec![star_symbol(), star_symbol(), star_symbol(), star_symbol()],
+        HashSet::from([js_word!("*")]),
+      );
+
+      assert_cjs_exports(
+        &formatdoc! {"
+          {exports}.foo = 1;
+          {exports}[bar] = 2;
+          {exports}['baz'] = 3;
+        "},
+        indoc! {"
+          $abc$exports.foo = 1;
+          $abc$exports[bar] = 2;
+          $abc$exports['baz'] = 3;
+        "},
+        vec![star_symbol(), star_symbol(), star_symbol()],
+        HashSet::new(),
+      );
+
+      assert_cjs_exports(
+        &formatdoc! {"
+          {exports}.foo = 1;
+          sideEffects({});
+        ", if exports == "exports" { "module.exports" } else { "exports" }},
+        indoc! {"
+          $abc$exports.foo = 1;
+          sideEffects($abc$exports);
+        "},
+        vec![star_symbol(), star_symbol()],
+        HashSet::from([js_word!("*")]),
+      );
+
+      assert_cjs_exports(
+        &formatdoc! {"
+          {exports}.foo = 1;
+          {exports}.bar = function() {{
+            return {exports}.foo;
+          }}
+        "},
+        indoc! {"
+          var $abc$export$6a5cdcad01c973fa;
+          var $abc$export$d927737047eb3867;
+          $abc$export$6a5cdcad01c973fa = 1;
+          $abc$export$d927737047eb3867 = function() {
+              return $abc$export$6a5cdcad01c973fa;
+          };
+        "},
+        vec![foo_symbol(), bar_symbol(), foo_symbol()],
+        HashSet::from([js_word!("foo")]),
+      );
+
+      assert_cjs_exports(
+        &formatdoc! {"
+          function main() {{
+            {exports}.foo = 1;
+          }}
+        "},
+        indoc! {"
+          var $abc$export$6a5cdcad01c973fa;
+          function $abc$var$main() {
+              $abc$export$6a5cdcad01c973fa = 1;
+          }
+        "},
+        vec![foo_symbol()],
+        HashSet::new(),
+      );
+
+      if exports == "module.exports" {
+        assert_cjs_exports(
+          "
+            var module = { exports: {} };
+            module.exports.foo = 2;
+            console.log(module.exports.foo);
+          ",
+          indoc! {"
+            var $abc$var$module = {
+                exports: {}
+            };
+            $abc$var$module.exports.foo = 2;
+            console.log($abc$var$module.exports.foo);
+          "},
+          vec![],
+          HashSet::new(),
+        );
       }
-      assert_eq!(map, $match);
-    }};
+    }
+
+    fn foo_symbol() -> PartialExportedSymbol {
+      PartialExportedSymbol {
+        exported: js_word!("foo"),
+        is_esm: false,
+        local: js_word!("$abc$export$6a5cdcad01c973fa"),
+      }
+    }
+
+    fn bar_symbol() -> PartialExportedSymbol {
+      PartialExportedSymbol {
+        exported: js_word!("bar"),
+        is_esm: false,
+        local: js_word!("$abc$export$d927737047eb3867"),
+      }
+    }
+
+    fn star_symbol() -> PartialExportedSymbol {
+      PartialExportedSymbol {
+        exported: js_word!("*"),
+        is_esm: false,
+        local: js_word!("$abc$exports"),
+      }
+    }
   }
 
   #[test]
-  fn collect_esm() {
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import {foo as bar} from 'other';
-    export {bar as test};
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("bar") => (w!("other"), w!("foo"), false) }
-    );
-    assert_eq!(
-      collect.exports,
-      map! {
-        w!("test") => Export {
-          source: Some("other".into()),
-          specifier: "foo".into(),
-          loc: SourceLocation {
-            start_line: 3,
-            start_col: 20,
-            end_line: 3,
-            end_col: 24
-          },
-          is_esm: true
-        }
-      }
-    );
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import { a, b, c, d, e } from "other";
-    import * as x from "other";
-    import * as y from "other";
-
-    log(a);
-    b.x();
-    c();
-    log(x);
-    y.foo();
-    e.foo.bar();
-    "#,
-    );
-    assert_eq_set!(
-      collect.used_imports,
-      set! { w!("a"), w!("b"), w!("c"), w!("e"), w!("x"), w!("y") }
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! {
-        w!("a") => (w!("other"), w!("a"), false),
-        w!("b") => (w!("other"), w!("b"), false),
-        w!("c") => (w!("other"), w!("c"), false),
-        w!("d") => (w!("other"), w!("d"), false),
-        w!("e") => (w!("other"), w!("e"), false),
-        w!("x") => (w!("other"), w!("*"), false),
-        w!("y") => (w!("other"), w!("*"), false)
-      }
-    );
-  }
-
-  #[test]
-  fn collect_cjs_namespace() {
-    let (collect, _code, _hoist) = parse(
-      r#"
-    const x = require('other');
-    console.log(x.foo);
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("x") => (w!("other"), w!("*"), false) }
-    );
-    assert_eq!(collect.non_static_access, map! {});
-
-    let (_collect, _code, hoist) = parse(
-      r#"
-      require('other');
-    "#,
-    );
-    assert_eq_imported_symbols!(hoist.imported_symbols, map! {});
-  }
-
-  #[test]
-  fn collect_cjs_namespace_non_static() {
-    let (collect, _code, _hoist) = parse(
-      r#"
-    const x = require('other');
-    console.log(x[foo]);
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("x") => (w!("other"), w!("*"), false) }
-    );
-    assert_eq_set!(collect.non_static_access.into_keys(), set! { w!("x") });
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    const x = require('other');
-    console.log(x);
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("x") => (w!("other"), w!("*"), false) }
-    );
-    assert_eq_set!(collect.non_static_access.into_keys(), set! { w!("x") });
-  }
-
-  #[test]
-  fn collect_cjs_destructure() {
-    let (collect, _code, _hoist) = parse(
-      r#"
-    const {foo: bar} = require('other');
-    exports.test = bar;
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("bar") => (w!("other"), w!("foo"), false) }
-    );
-    assert!(collect.static_cjs_exports);
-  }
-
-  #[test]
-  fn collect_destructure_default() {
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import {bar} from 'source';
-
-    export function thing(props) {
-      const {something = bar} = props;
-      return something;
-    }
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("bar") => (w!("source"), w!("bar"), false) }
-    );
-    assert_eq_set!(collect.used_imports, set! { w!("bar") });
-  }
-
-  #[test]
-  fn collect_cjs_reassign() {
-    let (collect, _code, _hoist) = parse(
-      r#"
-    exports = 2;
-    "#,
-    );
-    assert!(collect.should_wrap);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    module = 2;
-    "#,
-    );
-    assert!(collect.should_wrap);
-  }
-
-  #[test]
-  fn collect_has_cjs_exports() {
-    let (collect, _code, _hoist) = parse("module.exports = {};");
-    assert!(collect.has_cjs_exports);
-
-    let (collect, _code, _hoist) = parse("this.someExport = 'true';");
-    assert!(collect.has_cjs_exports);
-
-    // Some TSC polyfills use a pattern like below, we want to avoid marking these modules as cjs.
-    let (collect, _code, _hoist) = parse(
-      r#"
-        import 'something';
-        var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function () {}
-      "#,
-    );
-    assert!(!collect.has_cjs_exports);
-
-    // A free module is maybe considered a cjs export
-    let (collect, _code, _hoist) = parse(
-      "
-          const performance = req(module, 'perf_hooks');
-          export { performance };
-      ",
-    );
-    assert!(collect.has_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      "
-        const performance = module.require('perf_hooks');
-        export { performance };
-      ",
-    );
-    assert!(!collect.has_cjs_exports);
-  }
-
-  #[test]
-  fn collect_should_wrap() {
-    let (collect, _code, _hoist) = parse(
-      r#"
-    eval('');
-    "#,
-    );
-    assert!(collect.should_wrap);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    doSomething(module);
-    "#,
-    );
-    assert!(collect.should_wrap);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    console.log(module.id);
-    "#,
-    );
-    assert!(collect.should_wrap);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    console.log(typeof module);
-    console.log(module.hot);
-    "#,
-    );
-    assert!(!collect.should_wrap);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    exports.foo = 2;
-    return;
-    exports.bar = 3;
-    "#,
-    );
-    assert!(collect.should_wrap);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    const foo = {
-      get a() {
-        return 1;
-      },
-      set b(v) {
-        return;
-      },
-      run() {
-        return 3;
-      },
-    };
-    console.log(foo.a);
-    "#,
-    );
-    assert!(!collect.should_wrap);
-  }
-
-  #[test]
-  fn collect_cjs_non_static_exports() {
-    let (collect, _code, _hoist) = parse(
-      r#"
-    exports[test] = 2;
-    "#,
-    );
-    assert!(!collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    module.exports[test] = 2;
-    "#,
-    );
-    assert!(!collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    this[test] = 2;
-    "#,
-    );
-    assert!(!collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    module.exports[test] = 2;
-    "#,
-    );
-    assert!(!collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    alert(exports)
-    "#,
-    );
-    assert!(!collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    alert(module.exports)
-    "#,
-    );
-    assert!(!collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    alert(this)
-    "#,
-    );
-    assert!(!collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    exports.foo = 2;
-    "#,
-    );
-    assert!(collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    module.exports.foo = 2;
-    "#,
-    );
-    assert!(collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    this.foo = 2;
-    "#,
-    );
-    assert!(collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    var exports = {};
-    exports[foo] = 2;
-    "#,
-    );
-    assert!(collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    var module = {exports: {}};
-    module.exports[foo] = 2;
-    "#,
-    );
-    assert!(collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    test(function(exports) { return Object.keys(exports) })
-    "#,
-    );
-    assert!(collect.static_cjs_exports);
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    test(exports => Object.keys(exports))
-    "#,
-    );
-    assert!(collect.static_cjs_exports);
-  }
-
-  #[test]
-  fn collect_dynamic_import() {
-    let (collect, _code, _hoist) = parse(
-      r#"
-    async function test() {
-      const x = await import('other');
-      x.foo;
-    }
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("x") => (w!("other"), w!("*"), true) }
-    );
-    assert_eq_set!(collect.non_static_access.into_keys(), set! {});
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    async function test() {
-      const x = await import('other');
-      x[foo];
-    }
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("x") => (w!("other"), w!("*"), true) }
-    );
-    assert_eq_set!(collect.non_static_access.into_keys(), set! { w!("x") });
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    async function test() {
-      const {foo} = await import('other');
-    }
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("foo") => (w!("other"), w!("foo"), true) }
-    );
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    async function test() {
-      const {foo: bar} = await import('other');
-    }
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("bar") => (w!("other"), w!("foo"), true) }
-    );
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import('other').then(x => x.foo);
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("x") => (w!("other"), w!("*"), true) }
-    );
-    assert_eq_set!(collect.non_static_access.into_keys(), set! {});
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import('other').then(x => x);
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("x") => (w!("other"), w!("*"), true) }
-    );
-    assert_eq_set!(collect.non_static_access.into_keys(), set! { w!("x") });
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import('other').then(({foo}) => foo);
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("foo") => (w!("other"), w!("foo"), true) }
-    );
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import('other').then(({foo: bar}) => bar);
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("bar") => (w!("other"), w!("foo"), true) }
-    );
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import('other').then(function (x) { return x.foo });
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("x") => (w!("other"), w!("*"), true) }
-    );
-    assert_eq_set!(collect.non_static_access.into_keys(), set! {});
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import('other').then(function (x) { return x });
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("x") => (w!("other"), w!("*"), true) }
-    );
-    assert_eq_set!(collect.non_static_access.into_keys(), set! { w!("x") });
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import('other').then(function ({foo}) {});
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("foo") => (w!("other"), w!("foo"), true) }
-    );
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import('other').then(function ({foo: bar}) {});
-    "#,
-    );
-    assert_eq_imports!(
-      collect.imports,
-      map! { w!("bar") => (w!("other"), w!("foo"), true) }
-    );
-    assert_eq!(collect.non_static_requires, set! {});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    import('other');
-    "#,
-    );
-    assert_eq_imports!(collect.imports, map! {});
-    assert_eq!(collect.non_static_requires, set! {w!("other")});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    let other = import('other');
-    "#,
-    );
-    assert_eq_imports!(collect.imports, map! {});
-    assert_eq!(collect.non_static_requires, set! {w!("other")});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-
-    let (collect, _code, _hoist) = parse(
-      r#"
-    async function test() {
-      let {...other} = await import('other');
-    }
-    "#,
-    );
-    assert_eq_imports!(collect.imports, map! {});
-    assert_eq!(collect.non_static_requires, set! {w!("other")});
-    assert_eq!(collect.wrapped_requires, set! {String::from("other")});
-  }
-
-  #[test]
-  fn fold_import() {
-    let (collect, code, _hoist) = parse(
-      r#"
-    import {foo as bar} from 'other';
-    let test = {bar: 3};
-    console.log(bar, test.bar);
-    bar();
-    "#,
-    );
-
-    assert!(collect.bailouts.unwrap().is_empty());
+  fn test_this_assignment() {
+    let (code, hoist) = run_hoist("this.foo = 1;");
 
     assert_eq!(
       code,
-      indoc! {r#"
-    import "abc:other:esm";
-    let $abc$var$test = {
-        bar: 3
-    };
-    console.log((0, $abc$import$70a00e0a8474f72a$6a5cdcad01c973fa), $abc$var$test.bar);
-    (0, $abc$import$70a00e0a8474f72a$6a5cdcad01c973fa)();
-    "#}
-    );
-
-    let (collect, code, _hoist) = parse(
-      r#"
-    import * as foo from 'other';
-    console.log(foo.bar);
-    foo.bar();
-    "#,
-    );
-    assert!(collect.bailouts.unwrap().is_empty());
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other:esm";
-    console.log($abc$import$70a00e0a8474f72a$d927737047eb3867);
-    $abc$import$70a00e0a8474f72a$d927737047eb3867();
-    "#}
-    );
-
-    let (collect, code, _hoist) = parse(
-      r#"
-    import * as foo from 'other';
-    foo.bar();
-    let y = "bar";
-    foo[y]();
-    "#,
-    );
-    assert_eq!(
-      collect
-        .bailouts
-        .unwrap()
-        .iter()
-        .map(|b| &b.reason)
-        .collect::<Vec<_>>(),
-      vec![&BailoutReason::NonStaticAccess]
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other:esm";
-    $abc$import$70a00e0a8474f72a.bar();
-    let $abc$var$y = "bar";
-    $abc$import$70a00e0a8474f72a[$abc$var$y]();
-    "#}
-    );
-
-    let (collect, code, _hoist) = parse(
-      r#"
-    import other from 'other';
-    console.log(other, other.bar);
-    other();
-    "#,
-    );
-
-    assert!(collect.bailouts.unwrap().is_empty());
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other:esm";
-    console.log((0, $abc$import$70a00e0a8474f72a$2e2bcd8739ae039), (0, $abc$import$70a00e0a8474f72a$2e2bcd8739ae039).bar);
-    (0, $abc$import$70a00e0a8474f72a$2e2bcd8739ae039)();
-    "#}
-    );
-  }
-
-  #[test]
-  fn fold_import_hoist() {
-    let (_collect, code, _hoist) = parse(
-      r#"
-    import foo from 'other';
-    console.log(foo);
-    import bar from 'bar';
-    console.log(bar);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other:esm";
-    import "abc:bar:esm";
-    console.log((0, $abc$import$70a00e0a8474f72a$2e2bcd8739ae039));
-    console.log((0, $abc$import$d927737047eb3867$2e2bcd8739ae039));
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    import foo from 'other';
-    console.log(foo);
-    const x = require('x');
-    console.log(x);
-    import bar from 'bar';
-    console.log(bar);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other:esm";
-    import "abc:bar:esm";
-    console.log((0, $abc$import$70a00e0a8474f72a$2e2bcd8739ae039));
-    import "abc:x";
-    console.log($abc$import$d141bba7fdc215a3);
-    console.log((0, $abc$import$d927737047eb3867$2e2bcd8739ae039));
-    "#}
-    );
-  }
-
-  #[test]
-  fn fold_static_require() {
-    let (_collect, code, _hoist) = parse(
-      r#"
-    const x = 4, {bar} = require('other'), baz = 3;
-    console.log(bar);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    const $abc$var$x = 4;
-    import "abc:other";
-    var $abc$require$bar = $abc$import$70a00e0a8474f72a$d927737047eb3867;
-    const $abc$var$baz = 3;
-    console.log($abc$require$bar);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    const x = 3, foo = require('other'), bar = 2;
-    console.log(foo.bar);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    const $abc$var$x = 3;
-    import "abc:other";
-    const $abc$var$bar = 2;
-    console.log($abc$import$70a00e0a8474f72a$d927737047eb3867);
-    "#}
-    );
-  }
-
-  #[test]
-  fn fold_non_static_require() {
-    let (_collect, code, _hoist) = parse(
-      r#"
-    const {foo, ...bar} = require('other');
-    console.log(foo, bar);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    const { foo: $abc$var$foo, ...$abc$var$bar } = $abc$import$70a00e0a8474f72a;
-    console.log($abc$var$foo, $abc$var$bar);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    const {x: {y: z}} = require('x');
-    console.log(z);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:x";
-    const { x: { y: $abc$var$z } } = $abc$import$d141bba7fdc215a3;
-    console.log($abc$var$z);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    const foo = require('other');
-    console.log(foo[bar]);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    console.log($abc$import$70a00e0a8474f72a[bar]);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    const foo = require('other');
-    console.log(foo[bar], foo.baz);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    console.log($abc$import$70a00e0a8474f72a[bar], $abc$import$70a00e0a8474f72a.baz);
-    "#}
-    );
-  }
-
-  #[test]
-  fn fold_require_member() {
-    // let (_collect, code, _hoist) = parse(r#"
-    // let foo;
-    // ({foo} = require('other'));
-    // console.log(foo);
-    // "#);
-
-    // println!("{}", code);
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    const foo = require('other').foo;
-    console.log(foo);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    var $abc$require$foo = $abc$import$70a00e0a8474f72a$6a5cdcad01c973fa;
-    console.log($abc$require$foo);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    const foo = require('other')[bar];
-    console.log(foo);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    const $abc$var$foo = $abc$import$70a00e0a8474f72a[bar];
-    console.log($abc$var$foo);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    const {foo} = require('other').foo;
-    console.log(foo);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    const { foo: $abc$var$foo } = $abc$import$70a00e0a8474f72a$6a5cdcad01c973fa;
-    console.log($abc$var$foo);
-    "#}
-    );
-  }
-
-  #[test]
-  fn fold_require_wrapped() {
-    let (_collect, code, hoist) = parse(
-      r#"
-    function x() {
-      const foo = require('other');
-      console.log(foo.bar);
-    }
-    require('bar');
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    function $abc$var$x() {
-        const foo = $abc$import$70a00e0a8474f72a;
-        console.log(foo.bar);
-    }
-    import "abc:bar";
-    "#}
-    );
-    assert_eq!(
-      hoist.wrapped_requires,
-      HashSet::<String>::from_iter(vec![String::from("other")])
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    var foo = function () {
-      if (Date.now() < 0) {
-        var bar = require("other");
-      }
-    }();
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    var $abc$var$foo = function() {
-        if (Date.now() < 0) {
-            var bar = $abc$import$70a00e0a8474f72a;
-        }
-    }();
-    "#}
-    );
-    assert_eq!(
-      hoist.wrapped_requires,
-      HashSet::<String>::from_iter(vec![String::from("other")])
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    function x() {
-      const foo = require('other').foo;
-      console.log(foo);
-    }
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    function $abc$var$x() {
-        const foo = $abc$import$70a00e0a8474f72a$6a5cdcad01c973fa;
-        console.log(foo);
-    }
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    function x() {
-      console.log(require('other').foo);
-    }
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    function $abc$var$x() {
-        console.log($abc$import$70a00e0a8474f72a$6a5cdcad01c973fa);
-    }
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    function x() {
-      const foo = require('other')[test];
-      console.log(foo);
-    }
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    function $abc$var$x() {
-        const foo = $abc$import$70a00e0a8474f72a[test];
-        console.log(foo);
-    }
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    function x() {
-      const {foo} = require('other');
-      console.log(foo);
-    }
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    function $abc$var$x() {
-        const { foo: foo } = $abc$import$70a00e0a8474f72a;
-        console.log(foo);
-    }
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    let x = require('a') + require('b');
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:a";
-    import "abc:b";
-    let $abc$var$x = $abc$import$407448d2b89b1813 + $abc$import$8b22cf2602fb60ce;
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    let x = (require('a'), require('b'));
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:a";
-    import "abc:b";
-    let $abc$var$x = (!$abc$import$407448d2b89b1813, $abc$import$8b22cf2602fb60ce);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    let x = require('a') || require('b');
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:a";
-    import "abc:b";
-    let $abc$var$x = $abc$import$407448d2b89b1813 || $abc$import$8b22cf2602fb60ce;
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    let x = condition ? require('a') : require('b');
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:a";
-    import "abc:b";
-    let $abc$var$x = condition ? $abc$import$407448d2b89b1813 : $abc$import$8b22cf2602fb60ce;
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    if (condition) require('a');
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:a";
-    if (condition) $abc$import$407448d2b89b1813;
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    for (let x = require('y'); x < 5; x++) {}
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:y";
-    for(let x = $abc$import$4a5767248b18ef41; x < 5; x++){}
-    "#}
-    );
-  }
-
-  #[test]
-  fn fold_export() {
-    let (_collect, code, hoist) = parse(
-      r#"
-    let x = 3;
-    let y = 4;
-    let z = 6;
-    export {x, y};
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    let $abc$export$d141bba7fdc215a3 = 3;
-    let $abc$export$4a5767248b18ef41 = 4;
-    let $abc$var$z = 6;
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("x") => (w!("$abc$export$d141bba7fdc215a3"), true),
-        w!("y") => (w!("$abc$export$4a5767248b18ef41"), true)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    export default 3;
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$export$2e2bcd8739ae039 = 3;
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("default") => (w!("$abc$export$2e2bcd8739ae039"), true)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    let x = 3;
-    export default x;
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    let $abc$var$x = 3;
-    var $abc$export$2e2bcd8739ae039 = $abc$var$x;
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("default") => (w!("$abc$export$2e2bcd8739ae039"), true)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    export default function () {}
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    function $abc$export$2e2bcd8739ae039() {}
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("default") => (w!("$abc$export$2e2bcd8739ae039"), true)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    export default class {}
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    class $abc$export$2e2bcd8739ae039 {
-    }
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("default") => (w!("$abc$export$2e2bcd8739ae039"), true)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    console.log(module);
-    export default class X {}
-    "#,
-    );
-
-    assert!(hoist.should_wrap);
-    assert_eq!(
-      code,
-      indoc! {r#"
-    console.log(module);
-    class X {
-    }
-    "#}
-    );
-
-    assert_eq_exported_symbols!(hoist.exported_symbols, map! {});
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    export var x = 2, y = 3;
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-      var $abc$export$d141bba7fdc215a3 = 2, $abc$export$4a5767248b18ef41 = 3;
-      "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("x") => (w!("$abc$export$d141bba7fdc215a3"), true),
-        w!("y") => (w!("$abc$export$4a5767248b18ef41"), true)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    export var {x, ...y} = something;
-    export var [p, ...q] = something;
-    export var {x = 3} = something;
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var { x: $abc$export$d141bba7fdc215a3, ...$abc$export$4a5767248b18ef41 } = something;
-    var [$abc$export$ffb5f4729a158638, ...$abc$export$9e5f44173e64f162] = something;
-    var { x: $abc$export$d141bba7fdc215a3 = 3 } = something;
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("x") => (w!("$abc$export$d141bba7fdc215a3"), true),
-        w!("y") => (w!("$abc$export$4a5767248b18ef41"), true),
-        w!("p") => (w!("$abc$export$ffb5f4729a158638"), true),
-        w!("q") => (w!("$abc$export$9e5f44173e64f162"), true),
-        w!("x") => (w!("$abc$export$d141bba7fdc215a3"), true)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    export function test() {}
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    function $abc$export$e0969da9b8fb378d() {}
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("test") => (w!("$abc$export$e0969da9b8fb378d"), true)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    export class Test {}
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    class $abc$export$1b16fc9eb974a84d {
-    }
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("Test") => (w!("$abc$export$1b16fc9eb974a84d"), true)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    export {foo} from 'bar';
-    "#,
-    );
-
-    assert_eq_exported_symbols!(hoist.exported_symbols, map! {});
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:bar:esm";
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    export * from 'bar';
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:bar:esm";
-    "#}
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    export { settings as siteSettings } from "./settings";
-    export const settings = "hi";
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:./settings:esm";
-    const $abc$export$a5a6e0b888b2c992 = "hi";
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("settings") => (w!("$abc$export$a5a6e0b888b2c992"), true)
-      }
-    );
-    assert_eq_imported_symbols!(
-      hoist.re_exports,
-      map! {
-        w!("siteSettings") => (w!("./settings"), w!("settings"))
-      }
-    );
-  }
-
-  #[test]
-  fn fold_cjs_export() {
-    let (_collect, code, hoist) = parse(
-      r#"
-    exports.foo = 2;
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$export$6a5cdcad01c973fa;
-    $abc$export$6a5cdcad01c973fa = 2;
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("foo") => (w!("$abc$export$6a5cdcad01c973fa"), false)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    exports['foo'] = 2;
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$export$6a5cdcad01c973fa;
-    $abc$export$6a5cdcad01c973fa = 2;
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("foo") => (w!("$abc$export$6a5cdcad01c973fa"), false)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    function init() {
-      exports.foo = 2;
-    }
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$export$6a5cdcad01c973fa;
-    function $abc$var$init() {
-        $abc$export$6a5cdcad01c973fa = 2;
-    }
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("foo") => (w!("$abc$export$6a5cdcad01c973fa"), false)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    module.exports.foo = 2;
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$export$6a5cdcad01c973fa;
-    $abc$export$6a5cdcad01c973fa = 2;
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("foo") => (w!("$abc$export$6a5cdcad01c973fa"), false)
-      }
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    module.exports['foo'] = 2;
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$export$6a5cdcad01c973fa;
-    $abc$export$6a5cdcad01c973fa = 2;
-    "#}
-    );
-
-    assert_eq_exported_symbols!(
-      hoist.exported_symbols,
-      map! {
-        w!("foo") => (w!("$abc$export$6a5cdcad01c973fa"), false)
-      }
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    exports.foo = 2;
-    console.log(exports.foo)
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$export$6a5cdcad01c973fa;
-    $abc$export$6a5cdcad01c973fa = 2;
-    console.log($abc$export$6a5cdcad01c973fa);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    module.exports.foo = 2;
-    console.log(module.exports.foo)
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$export$6a5cdcad01c973fa;
-    $abc$export$6a5cdcad01c973fa = 2;
-    console.log($abc$export$6a5cdcad01c973fa);
-    "#}
-    );
-  }
-
-  #[test]
-  fn fold_cjs_export_non_static() {
-    let (_collect, code, _hoist) = parse(
-      r#"
-    exports[foo] = 2;
-    exports.bar = 3;
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    $abc$exports[foo] = 2;
-    $abc$exports.bar = 3;
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    module.exports[foo] = 2;
-    module.exports.bar = 3;
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    $abc$exports[foo] = 2;
-    $abc$exports.bar = 3;
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    exports.foo = 2;
-    sideEffects(exports);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    $abc$exports.foo = 2;
-    sideEffects($abc$exports);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    exports.foo = 2;
-    sideEffects(module.exports);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    $abc$exports.foo = 2;
-    sideEffects($abc$exports);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    exports[foo] = 2;
-    console.log(exports[foo]);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    $abc$exports[foo] = 2;
-    console.log($abc$exports[foo]);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    exports[foo] = 2;
-    console.log(exports.foo);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    $abc$exports[foo] = 2;
-    console.log($abc$exports.foo);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    module.exports[foo] = 2;
-    console.log(module.exports[foo]);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    $abc$exports[foo] = 2;
-    console.log($abc$exports[foo]);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    module.exports[foo] = 2;
-    console.log(module.exports.foo);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    $abc$exports[foo] = 2;
-    console.log($abc$exports.foo);
-    "#}
-    );
-
-    let (_collect, code, _hoist) = parse(
-      r#"
-    var module = {exports: {}};
-    module.exports.foo = 2;
-    console.log(module.exports.foo);
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$var$module = {
-        exports: {}
-    };
-    $abc$var$module.exports.foo = 2;
-    console.log($abc$var$module.exports.foo);
-    "#}
-    );
-  }
-
-  #[test]
-  fn test_parse_self_reference() {
-    let (_collect, code, hoist) = parse(
-      r#"
-    exports.foo = 10;
-    exports.something = function() {
-       return exports.foo;
-    }
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$export$6a5cdcad01c973fa;
-    var $abc$export$ce14ccb78c97a7d4;
-    $abc$export$6a5cdcad01c973fa = 10;
-    $abc$export$ce14ccb78c97a7d4 = function() {
-        return $abc$export$6a5cdcad01c973fa;
-    };
-    "#}
-    );
-    assert_eq!(
-      hoist
-        .self_references
-        .iter()
-        .cloned()
-        .collect::<Vec<JsWord>>(),
-      vec![JsWord::from("foo")]
-    );
-    assert_eq!(hoist.exported_symbols.len(), 3);
-    // First exported symbol is `export foo`
-    assert_eq!(
-      hoist.exported_symbols[0].local,
-      JsWord::from("$abc$export$6a5cdcad01c973fa")
-    );
-    assert_eq!(hoist.exported_symbols[0].exported, JsWord::from("foo"));
-
-    // Second is `export something`
-    assert_eq!(
-      hoist.exported_symbols[1].local,
-      JsWord::from("$abc$export$ce14ccb78c97a7d4")
-    );
-    assert_eq!(
-      hoist.exported_symbols[1].exported,
-      JsWord::from("something")
-    );
-
-    // Third is `export foo` again, but on the something location
-    assert_eq!(
-      hoist.exported_symbols[2].local,
-      JsWord::from("$abc$export$6a5cdcad01c973fa")
-    );
-    assert_eq!(hoist.exported_symbols[2].exported, JsWord::from("foo"));
-
-    assert_ne!(hoist.exported_symbols[2].loc, hoist.exported_symbols[0].loc);
-  }
-
-  #[test]
-  fn test_parse_module_exports() {
-    let (_collect, code, hoist) = parse(
-      r#"
-    module.exports.foo = 10;
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$export$6a5cdcad01c973fa;
-    $abc$export$6a5cdcad01c973fa = 10;
-    "#}
+      indoc! {"
+        var $abc$export$6a5cdcad01c973fa;
+        $abc$export$6a5cdcad01c973fa = 1;
+      "}
     );
     assert_eq!(hoist.self_references.len(), 0);
     assert_eq!(hoist.exported_symbols.len(), 1);
     assert_eq!(
       hoist.exported_symbols[0].local,
-      JsWord::from("$abc$export$6a5cdcad01c973fa")
+      js_word!("$abc$export$6a5cdcad01c973fa")
     );
-    assert_eq!(hoist.exported_symbols[0].exported, JsWord::from("foo"));
+    assert_eq!(hoist.exported_symbols[0].exported, js_word!("foo"));
   }
 
   #[test]
-  fn test_parse_this() {
-    let (_collect, code, hoist) = parse(
-      r#"
-    this.foo = 10;
-    "#,
-    );
+  fn test_vars() {
+    let (code, _hoist) = run_hoist(
+      "
+        var x = 2;
+        var y = {x};
+        var z = {x: 3};
+        var w = {[x]: 4};
 
+        function test() {
+          var x = 3;
+        }
+      ",
+    );
     assert_eq!(
       code,
-      indoc! {r#"
-    var $abc$export$6a5cdcad01c973fa;
-    $abc$export$6a5cdcad01c973fa = 10;
-    "#}
+      indoc! {"
+        var $abc$var$x = 2;
+        var $abc$var$y = {
+            x: $abc$var$x
+        };
+        var $abc$var$z = {
+            x: 3
+        };
+        var $abc$var$w = {
+            [$abc$var$x]: 4
+        };
+        function $abc$var$test() {
+            var x = 3;
+        }
+      "}
     );
-    assert_eq!(hoist.self_references.len(), 0);
-    assert_eq!(hoist.exported_symbols.len(), 1);
-    assert_eq!(
-      hoist.exported_symbols[0].local,
-      JsWord::from("$abc$export$6a5cdcad01c973fa")
-    );
-    assert_eq!(hoist.exported_symbols[0].exported, JsWord::from("foo"));
   }
 
-  #[test]
-  fn test_parse_import_statement() {
-    let (_collect, code, hoist) = parse(
-      r#"
-    import { x } from 'other';
-    async function test() {
-      console.log(x.foo);
-    }
-    "#,
-    );
-
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other:esm";
-    async function $abc$var$test() {
-        console.log((0, $abc$import$70a00e0a8474f72a$d141bba7fdc215a3).foo);
-    }
-    "#}
-    );
-    assert_eq!(hoist.imported_symbols.len(), 1);
-    assert_eq!(hoist.imported_symbols[0].imported, JsWord::from("x"));
-    assert_eq!(
-      hoist.imported_symbols[0].local,
-      JsWord::from("$abc$import$70a00e0a8474f72a$d141bba7fdc215a3")
-    );
-    assert_eq!(hoist.imported_symbols[0].source, JsWord::from("other"));
-    assert_eq!(hoist.imported_symbols[0].kind, ImportKind::Import);
+  #[derive(Debug, Eq, Hash, PartialEq)]
+  struct PartialImportedSymbol {
+    imported: JsWord,
+    kind: ImportKind,
+    local: JsWord,
+    source: JsWord,
   }
 
-  #[test]
-  fn fold_dynamic_import() {
-    let (_collect, code, hoist) = parse(
-      r#"
-    async function test() {
-      const x = await import('other');
-      console.log(x.foo);
+  impl From<ImportedSymbol> for PartialImportedSymbol {
+    fn from(symbol: ImportedSymbol) -> Self {
+      PartialImportedSymbol {
+        imported: symbol.imported,
+        kind: symbol.kind,
+        local: symbol.local,
+        source: symbol.source,
+      }
     }
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa") => (w!("other"), w!("foo"))
+  }
+
+  #[derive(Debug, Eq, Hash, PartialEq)]
+  struct PartialExportedSymbol {
+    exported: JsWord,
+    is_esm: bool,
+    local: JsWord,
+  }
+
+  impl From<ExportedSymbol> for PartialExportedSymbol {
+    fn from(symbol: ExportedSymbol) -> Self {
+      PartialExportedSymbol {
+        exported: symbol.exported,
+        is_esm: symbol.is_esm,
+        local: symbol.local,
       }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    async function $abc$var$test() {
-        const x = await $abc$importAsync$70a00e0a8474f72a;
-        console.log(x.foo);
     }
-    "#}
-    );
+  }
 
-    let (_collect, code, hoist) = parse(
-      r#"
-    async function test() {
-      const x = await import('other');
-      console.log(x[foo]);
-    }
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => (w!("other"), w!("*"))
-      }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    async function $abc$var$test() {
-        const x = await $abc$importAsync$70a00e0a8474f72a;
-        console.log(x[foo]);
-    }
-    "#}
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    async function test() {
-      const {foo} = await import('other');
-      console.log(foo);
-    }
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa") => (w!("other"), w!("foo"))
-      }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    async function $abc$var$test() {
-        const { foo: foo } = await $abc$importAsync$70a00e0a8474f72a;
-        console.log(foo);
-    }
-    "#}
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    async function test() {
-      const {foo: bar} = await import('other');
-      console.log(bar);
-    }
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa") => (w!("other"), w!("foo"))
-      }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    async function $abc$var$test() {
-        const { foo: bar } = await $abc$importAsync$70a00e0a8474f72a;
-        console.log(bar);
-    }
-    "#}
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    import('other').then(x => x.foo);
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa") => (w!("other"), w!("foo"))
-      }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    $abc$importAsync$70a00e0a8474f72a.then((x)=>x.foo);
-    "#}
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    import('other').then(x => x);
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => (w!("other"), w!("*"))
-      }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    $abc$importAsync$70a00e0a8474f72a.then((x)=>x);
-    "#}
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    import('other').then(({foo}) => foo);
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa") => (w!("other"), w!("foo"))
-      }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    $abc$importAsync$70a00e0a8474f72a.then(({ foo: foo })=>foo);
-    "#}
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    import('other').then(({foo: bar}) => bar);
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa") => (w!("other"), w!("foo"))
-      }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    $abc$importAsync$70a00e0a8474f72a.then(({ foo: bar })=>bar);
-    "#}
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    import('other').then(function (x) { return x.foo });
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa") => (w!("other"), w!("foo"))
-      }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    $abc$importAsync$70a00e0a8474f72a.then(function(x) {
-        return x.foo;
+  fn run_hoist(input_code: &str) -> (String, HoistResult) {
+    let RunVisitResult {
+      output_code: collect_output_code,
+      visitor: collect,
+      ..
+    } = run_test_visit_const(input_code, |context| {
+      Collect::new(
+        context.source_map.clone(),
+        context.unresolved_mark,
+        Mark::fresh(Mark::root()),
+        context.global_mark,
+        true,
+        context.is_module,
+        false,
+      )
     });
-    "#}
-    );
 
-    let (_collect, code, hoist) = parse(
-      r#"
-    import('other').then(function (x) { return x });
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => (w!("other"), w!("*"))
-      }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    $abc$importAsync$70a00e0a8474f72a.then(function(x) {
-        return x;
+    let RunVisitResult {
+      output_code,
+      visitor: hoist,
+      ..
+    } = run_test_fold(&collect_output_code, |context| {
+      Hoist::new("abc", context.unresolved_mark, &collect)
     });
-    "#}
-    );
 
-    let (_collect, code, hoist) = parse(
-      r#"
-    import('other').then(function ({foo}) {});
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa") => (w!("other"), w!("foo"))
-      }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    $abc$importAsync$70a00e0a8474f72a.then(function({ foo: foo }) {});
-    "#}
-    );
-
-    let (_collect, code, hoist) = parse(
-      r#"
-    import('other').then(function ({foo: bar}) {});
-    "#,
-    );
-    assert_eq_imported_symbols!(
-      hoist.imported_symbols,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a$6a5cdcad01c973fa") => (w!("other"), w!("foo"))
-      }
-    );
-    assert_eq!(
-      hoist.dynamic_imports,
-      map! {
-        w!("$abc$importAsync$70a00e0a8474f72a") => w!("other")
-      }
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    import "abc:other";
-    $abc$importAsync$70a00e0a8474f72a.then(function({ foo: bar }) {});
-    "#}
-    );
+    (output_code, hoist.get_result())
   }
 
-  #[test]
-  fn fold_hoist_vars() {
-    let (_collect, code, _hoist) = parse(
-      r#"
-    var x = 2;
-    var y = {x};
-    var z = {x: 3};
-    var w = {[x]: 4};
-
-    function test() {
-      var x = 3;
-    }
-    "#,
-    );
-    assert_eq!(
-      code,
-      indoc! {r#"
-    var $abc$var$x = 2;
-    var $abc$var$y = {
-        x: $abc$var$x
-    };
-    var $abc$var$z = {
-        x: 3
-    };
-    var $abc$var$w = {
-        [$abc$var$x]: 4
-    };
-    function $abc$var$test() {
-        var x = 3;
-    }
-    "#}
-    );
+  fn map_exported_symbols(exported_symbols: Vec<ExportedSymbol>) -> Vec<PartialExportedSymbol> {
+    exported_symbols
+      .into_iter()
+      .map(PartialExportedSymbol::from)
+      .collect::<Vec<PartialExportedSymbol>>()
   }
 
-  #[test]
-  fn collect_exports() {
-    let (collect, _code, _hoist) = parse("export default function () {};");
-    assert_eq!(
-      collect.exports,
-      map! {
-        w!("default") => Export {
-          source: None,
-          specifier: "default".into(),
-          loc: SourceLocation {
-            start_line: 1,
-            start_col: 1,
-            end_line: 1,
-            end_col: 30
-          },
-          is_esm: true
-        }
-      }
-    );
-
-    let (collect, _code, _hoist) = parse("export default function test () {};");
-    assert_eq!(
-      collect.exports,
-      map! {
-        w!("default") => Export {
-          source: None,
-          specifier: "test".into(),
-          loc: SourceLocation {
-            start_line: 1,
-            start_col: 1,
-            end_line: 1,
-            end_col: 35
-          },
-          is_esm: true
-        }
-      }
-    );
-
-    let (collect, _code, _hoist) = parse("export default class {};");
-    assert_eq!(
-      collect.exports,
-      map! {
-        w!("default") => Export {
-          source: None,
-          specifier: "default".into(),
-          loc: SourceLocation {
-            start_line: 1,
-            start_col: 1,
-            end_line: 1,
-            end_col: 24
-          },
-          is_esm: true
-        }
-      }
-    );
-
-    let (collect, _code, _hoist) = parse("export default class test {};");
-    assert_eq!(
-      collect.exports,
-      map! {
-        w!("default") => Export {
-          source: None,
-          specifier: "test".into(),
-          loc: SourceLocation {
-            start_line: 1,
-            start_col: 1,
-            end_line: 1,
-            end_col: 29
-          },
-          is_esm: true
-        }
-      }
-    );
-
-    let (collect, _code, _hoist) = parse("export default foo;");
-    assert_eq!(
-      collect.exports,
-      map! {
-        w!("default") => Export {
-          source: None,
-          specifier: "default".into(),
-          loc: SourceLocation {
-            start_line: 1,
-            start_col: 1,
-            end_line: 1,
-            end_col: 20
-          },
-          is_esm: true
-        }
-      }
-    );
-
-    let (collect, _code, _hoist) = parse("module.exports.foo = 2;");
-    assert_eq!(
-      collect.exports,
-      map! {
-        w!("foo") => Export {
-          source: None,
-          specifier: "foo".into(),
-          loc: SourceLocation {
-            start_line: 1,
-            start_col: 16,
-            end_line: 1,
-            end_col: 19
-          },
-          is_esm: false
-        }
-      }
-    );
-
-    let (collect, _code, _hoist) = parse("module.exports['foo'] = 2;");
-    assert_eq!(
-      collect.exports,
-      map! {
-        w!("foo") => Export {
-          source: None,
-          specifier: "foo".into(),
-          loc: SourceLocation {
-            start_line: 1,
-            start_col: 16,
-            end_line: 1,
-            end_col: 21
-          },
-          is_esm: false
-        }
-      }
-    );
-
-    let (collect, _code, _hoist) = parse("module.exports[`foo`] = 2;");
-    assert_eq!(
-      collect.exports,
-      map! {
-        w!("foo") => Export {
-          source: None,
-          specifier: "foo".into(),
-          loc: SourceLocation {
-            start_line: 1,
-            start_col: 16,
-            end_line: 1,
-            end_col: 21
-          },
-          is_esm: false
-        }
-      }
-    );
-
-    let (collect, _code, _hoist) = parse("exports.foo = 2;");
-    assert_eq!(
-      collect.exports,
-      map! {
-        w!("foo") => Export {
-          source: None,
-          specifier: "foo".into(),
-          loc: SourceLocation {
-            start_line: 1,
-            start_col: 9,
-            end_line: 1,
-            end_col: 12
-          },
-          is_esm: false
-        }
-      }
-    );
-
-    let (collect, _code, _hoist) = parse("this.foo = 2;");
-    assert_eq!(
-      collect.exports,
-      map! {
-        w!("foo") => Export {
-          source: None,
-          specifier: "foo".into(),
-          loc: SourceLocation {
-            start_line: 1,
-            start_col: 6,
-            end_line: 1,
-            end_col: 9
-          },
-          is_esm: false
-        }
-      }
-    );
-  }
-
-  #[test]
-  fn collect_this_exports() {
-    // module is wrapped when `this` accessor matches an export
-    let (collect, _code, _hoist) = parse(
-      r#"
-      exports.foo = function() {
-        exports.bar()
-      }
-
-      exports.bar = function() {
-        this.baz()
-      }
-
-      exports.baz = function() {
-        return 2
-      }
-      "#,
-    );
-    assert_eq!(
-      collect
-        .bailouts
-        .unwrap()
-        .iter()
-        .map(|b| &b.reason)
-        .collect::<Vec<_>>(),
-      vec![&BailoutReason::ThisInExport]
-    );
-    assert!(collect.should_wrap);
-
-    // module is not wrapped when `this` inside a class collides with an export
-    let (collect, _code, _hoist) = parse(
-      r#"
-      class Foo {
-        constructor() {
-          this.a = 4
-        }
-
-        bar() {
-          return this.baz()
-        }
-
-        baz() {
-          return this.a
-        }
-      }
-
-      exports.baz = new Foo()
-      exports.a = 2
-      "#,
-    );
-    assert_eq!(
-      collect
-        .bailouts
-        .unwrap()
-        .iter()
-        .map(|b| &b.reason)
-        .collect::<Vec<_>>(),
-      Vec::<&BailoutReason>::new()
-    );
-    assert!(!collect.should_wrap);
+  fn map_imported_symbols(imported_symbols: Vec<ImportedSymbol>) -> Vec<PartialImportedSymbol> {
+    imported_symbols
+      .into_iter()
+      .map(PartialImportedSymbol::from)
+      .collect::<Vec<PartialImportedSymbol>>()
   }
 }

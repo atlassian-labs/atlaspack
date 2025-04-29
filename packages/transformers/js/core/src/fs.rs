@@ -433,7 +433,7 @@ mod tests {
     }
 
     let mut deps = vec![];
-    let RunVisitResult { output_code, .. } = run_test_visit(&code, |ctx| {
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| {
       inline_fs(
         temp_dir_path.join("index.js").to_str().unwrap(),
         ctx.source_map,

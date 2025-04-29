@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/eslint-plugin",
   "private": true,
-  "version": "2.13.1",
+  "version": "2.14.0",
   "main": "index.js",
   "scripts": {},
   "dependencies": {
@@ -15,5 +15,6 @@
     "@babel/core": "^7.22.11",
     "@babel/eslint-parser": "^7.22.11",
     "eslint": "^8.41.0"
-  }
+  },
+  "type": "commonjs"
 }

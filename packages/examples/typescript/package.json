@@ -7,9 +7,10 @@
     "build": "atlaspack build src/index.ts"
   },
   "devDependencies": {
-    "@atlaspack/cli": "^2.13.1"
+    "@atlaspack/cli": "^2.13.2"
   },
   "main": "dist/main.js",
   "module": "dist/module.js",
-  "types": "dist/types.d.ts"
+  "types": "dist/types.d.ts",
+  "type": "commonjs"
 }
