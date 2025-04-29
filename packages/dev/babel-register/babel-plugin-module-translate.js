@@ -2,6 +2,16 @@ const resolve = require('resolve');
 const path = require('path');
 
 function resolveSource(specifier, from) {
+  if (specifier.includes('@atlaspack')) {
+    let superPath = path.join(__dirname, '../../core/super/lib');
+    let thing = specifier.substring('@atlaspack/'.length);
+
+    let result = path.join(superPath, thing + '.js');
+    if (require('fs').existsSync(result)) {
+      return result;
+    }
+  }
+
   return resolve.sync(specifier, {
     basedir: path.dirname(from),
     packageFilter(pkg) {

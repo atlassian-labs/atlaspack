@@ -1,9 +1,9 @@
 let fs = require('fs');
-let path = require('path');
 let {findAncestorFile} = require('@atlaspack/rust');
+
 let dirname = /*#__ATLASPACK_IGNORE__*/ __dirname;
 
-module.exports.isSuperPackage = () => {
+function isSuperPackage() {
   if (!dirname) {
     return false;
   }
@@ -13,4 +13,14 @@ module.exports.isSuperPackage = () => {
   );
 
   return packageJson.name === '@atlaspack/super';
+}
+
+let result;
+
+module.exports.isSuperPackage = () => {
+  if (result == null) {
+    result = isSuperPackage();
+  }
+
+  return result;
 };
