@@ -67,6 +67,10 @@ export type FeatureFlags = {|
    * Used heavily for inline bundles.
    */
   inlineStringReplacementPerf: boolean,
+  /**
+   * Enable support for the async bundle runtime (unstable_asyncBundleRuntime) in conditional bundling
+   */
+  conditionalBundlingAsyncRuntime: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
