@@ -124,11 +124,10 @@ describe('domain-sharding', () => {
       if (!mainBundle) return assert(mainBundle);
 
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
-      assert.ok(
-        code.includes(
-          `require("e480067c5bab431e")(require("5091f5df3a0c51b6").shardUrl(require("5e2c91749d676db2").getBundleURL('d8wEr') + "${commonFileName}", ${maxShards})`,
-        ),
-        'Expected generated code for shardUrl was not found',
+
+      assertCode(
+        `require("{id}")(require("{id}").shardUrl(require("{id}").getBundleURL('${mainBundle.publicId}') + "${commonFileName}", ${maxShards})`,
+        code,
       );
     });
 
