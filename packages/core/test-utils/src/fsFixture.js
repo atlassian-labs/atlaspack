@@ -139,19 +139,23 @@ export async function applyFixture(
     case 'file': {
       let content = node.content;
       if (node.name.endsWith('.js')) {
-        let {code: transformed} = babel.transformSync(content, {
-          configFile: false,
-          plugins: [
-            [
-              '@atlaspack/babel-register/babel-plugin-module-translate',
-              {superPackage: process.env.SUPER_PACKAGE === 'true'},
+        try {
+          let {code: transformed} = babel.transformSync(content, {
+            configFile: false,
+            plugins: [
+              [
+                '@atlaspack/babel-register/babel-plugin-module-translate',
+                {superPackage: process.env.SUPER_PACKAGE === 'true'},
+              ],
             ],
-          ],
-          generatorOpts: {
-            retainLines: true,
-          },
-        });
-        content = transformed;
+            generatorOpts: {
+              retainLines: true,
+            },
+          });
+          content = transformed;
+        } catch (e) {
+          // Ignore parser errors as some tests intentionally have invalid syntax
+        }
       }
       await fs.writeFile(path.join(dir, node.name), content);
       break;
