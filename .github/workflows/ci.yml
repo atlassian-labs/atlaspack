@@ -60,9 +60,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Rust
         uses: ./.github/actions/rust-toolchain
-        with: { components: "clippy, rustfmt" }
       - uses: Swatinem/rust-cache@v2
-        if: ${{ inputs.type != 'latest' }}
         with: { shared-key: "${{ matrix.target }}" }
       - uses: actions/setup-node@v4
         with: { cache: yarn }
@@ -73,9 +71,9 @@ jobs:
           RUSTUP_TARGET: ${{ matrix.target }}
           CARGO_PROFILE: release
         run: yarn build-native
-      # Upload artifacts for use later in pipeline
       - if: ${{ matrix.build_js }}
         run: yarn build
+      # Upload artifacts for use later in pipeline
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -107,6 +105,20 @@ jobs:
         with: { components: "clippy, rustfmt" }
       - run: cargo fmt --all -- --check
       - run: cargo clippy -- -D warnings
+
+  unit_tests_rust:
+    strategy:
+      matrix:
+        include:
+        - os: ubuntu-22.04
+        - os: macos-15
+    name: Unit tests (${{ matrix.os }}, Rust)
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: ./.github/actions/rust-toolchain
+      - run: cargo test
 
   unit_tests:
     name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
@@ -144,7 +156,7 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
       - run: yarn --frozen-lockfile
-      - run: yarn test:unit
+      - run: yarn test:js:unit
 
   integration_tests:
     name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
