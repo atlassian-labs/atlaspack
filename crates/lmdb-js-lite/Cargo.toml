@@ -16,6 +16,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = { workspace = true }
+backtrace = "*"
 crossbeam = { workspace = true }
 heed = { workspace = true }
 lazy_static = { workspace = true }

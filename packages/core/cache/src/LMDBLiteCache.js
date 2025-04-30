@@ -59,16 +59,28 @@ export function open(
   // eslint-disable-next-line no-unused-vars
   openOptions: DBOpenOptions,
 ): LmdbWrapper {
-  return new LmdbWrapper(
-    new Lmdb({
-      path: directory,
-      asyncWrites: true,
-      mapSize:
-        process.env.ATLASPACK_BUILD_ENV === 'test'
-          ? 1024 * 1024 * 1024
-          : 1024 * 1024 * 1024 * 15,
-    }),
-  );
+  const openImpl = (): LmdbWrapper => {
+    return new LmdbWrapper(
+      new Lmdb({
+        path: directory,
+        asyncWrites: true,
+        mapSize:
+          process.env.ATLASPACK_BUILD_ENV === 'test'
+            ? 1024 * 1024 * 1024
+            : 1024 * 1024 * 1024 * 15,
+      }),
+    );
+  };
+
+  for (let i = 0; i < 5; i++) {
+    try {
+      return openImpl();
+    } catch (error) {
+      /* ignore */
+    }
+  }
+
+  return openImpl();
 }
 
 const pipeline: (Readable, Writable) => Promise<void> = promisify(
