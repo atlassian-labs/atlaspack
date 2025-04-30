@@ -40,7 +40,9 @@ const {workspaces} = JSON.parse(
 
 for (const workspace of workspaces) {
   for (const pkg of glob.sync(workspace, {cwd: __root})) {
-    buildNapiLibrary(path.join(__root, pkg));
+    const pkgDir = path.join(__root, pkg);
+    buildNapiLibrary(pkgDir);
+    copyBinaries(pkgDir);
   }
 }
 
@@ -167,6 +169,70 @@ function buildNapiLibrary(pkgDir) {
       break;
     }
   }
+}
+
+/*
+  This script will automatically copy binaries from target into a package
+  if that package requests native binaries
+
+  USAGE:
+
+  ```json
+  //package.json
+  {
+    "copyBin": {
+      // Name of executable under ~/target/<target>/<profile>/<exename>
+      "name": "exename",
+
+      // Optional: rename the executable to the specified name
+      "dest": "exename-renamed",
+
+      // This key defines cargo targets that
+      // are permitted to be copied into the package.
+      // This is used for packages dedicated to an os/arch
+      "permittedTargets": [
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "*"                           // can specify any
+                                      // target with wildcard
+      ],
+    }
+  }
+  ```
+*/
+function copyBinaries(pkgDir) {
+  let pkgJsonPath = path.join(pkgDir, 'package.json');
+  if (!fs.existsSync(pkgJsonPath)) return false;
+  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+
+  if (!arrayOrStringHas(pkgJson.copyBin?.permittedTargets, rustTarget)) return;
+  if (!pkgJson.copyBin.name) {
+    console.error('No bin specified for', pkgJson.name);
+    process.exit(1);
+  }
+
+  const sourceBin = path.join(
+    'target',
+    rustTarget,
+    rustProfile,
+    pkgJson.copyBin.name,
+  );
+
+  const targetBin = path.join(
+    pkgDir,
+    pkgJson.copyBin.dest || pkgJson.copyBin.name,
+  );
+
+  if (!fs.existsSync(sourceBin)) {
+    console.error('Binary not found', pkgJson.name, pkgJson.copyBin.name);
+    process.exit(1);
+  }
+
+  if (fs.existsSync(targetBin)) {
+    fs.rmSync(targetBin);
+  }
+
+  fs.cpSync(sourceBin, targetBin);
 }
 
 function arrayOrStringHas(target, contains) {
