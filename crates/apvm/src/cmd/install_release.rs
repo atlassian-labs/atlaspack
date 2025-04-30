@@ -1,0 +1,51 @@
+use super::install::InstallCommand;
+use crate::context::Context;
+use crate::platform::archive;
+use crate::platform::constants as c;
+use crate::platform::fs_ext;
+use crate::platform::hash::Integrity;
+use crate::platform::http;
+use crate::platform::package::ReleasePackage;
+use crate::platform::specifier::Specifier;
+use crate::public::json_serde::JsonSerde;
+use crate::public::package_kind::PackageKind;
+use crate::public::package_meta::PackageMeta;
+
+pub fn install_from_release(
+  ctx: Context,
+  cmd: InstallCommand,
+  version: &Specifier,
+) -> anyhow::Result<()> {
+  let pkg = ReleasePackage::from_name(&ctx.paths.versions_v1, version)?;
+
+  println!("Downloading");
+  let url_tarball = format!(
+    "{}/v{}/{}.tar.gz",
+    ctx.env.atlaspack_release_url,
+    version.version(),
+    c::RELEASE_NAME
+  );
+  let url_checksum = format!("{}.integrity", url_tarball);
+  let bytes_archive = http::download_bytes(&url_tarball)?;
+  let checksum = http::download_string(&url_checksum)?;
+
+  if !cmd.skip_checksum && !Integrity::parse(&checksum)?.eq(&bytes_archive) {
+    return Err(anyhow::anyhow!("Integrity check failed"));
+  }
+
+  println!("Extracting");
+  fs_ext::create_dir_if_not_exists(pkg.contents())?;
+  archive::tar_gz(bytes_archive.as_slice()).unpack(pkg.contents())?;
+
+  PackageMeta::write_to_file(
+    &PackageMeta {
+      kind: PackageKind::Release,
+      version: Some(version.version().to_string()),
+      specifier: Some(version.to_string()),
+      checksum: Some(checksum),
+    },
+    pkg.meta_file(),
+  )?;
+
+  Ok(())
+}
