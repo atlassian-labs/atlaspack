@@ -582,7 +582,7 @@ export default (new Transformer({
               let stack = (err.stack || '').split('\n').slice(1);
               let message = err.message;
               for (let line of stack) {
-                if (line.includes(__filename)) {
+                if (line.includes(/*#__ATLASPACK_IGNORE__*/ __filename)) {
                   break;
                 }
                 message += '\n' + line;
@@ -886,7 +886,9 @@ export default (new Transformer({
               : 'sync',
           isOptional: dep.is_optional,
           meta,
-          resolveFrom: isHelper ? __filename : undefined,
+          resolveFrom: isHelper
+            ? /*#__ATLASPACK_IGNORE__*/ __filename
+            : undefined,
           range,
           env,
         });
@@ -1089,7 +1091,7 @@ export default (new Transformer({
           asset.addDependency({
             specifier: esm_helpers_specifier,
             specifierType: 'esm',
-            resolveFrom: __filename,
+            resolveFrom: /*#__ATLASPACK_IGNORE__*/ __filename,
             env: {
               includeNodeModules: {
                 '@atlaspack/transformer-js': true,
