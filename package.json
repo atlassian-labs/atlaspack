@@ -40,6 +40,7 @@
     "test:e2e:ci": "yarn workspace @atlaspack/e2e-tests test-ci",
     "test:integration": "yarn workspace @atlaspack/integration-tests test",
     "test:integration:v3": "ATLASPACK_V3=true yarn workspace @atlaspack/integration-tests test",
+    "test:integration:super": "SUPER_PACKAGE=true yarn workspace @atlaspack/integration-tests test:super",
     "test:integration-ci": "yarn workspace @atlaspack/integration-tests test-ci",
     "test:js": "yarn test:js:unit && yarn test:integration",
     "test:js:coverage": "yarn nyc yarn test:js:unit",
@@ -99,5 +100,8 @@
   "dependencies": {
     "nodemon": "^3.1.9",
     "patch-package": "^8.0.0"
+  },
+  "resolutions": {
+    "@swc/core": "^1.11.24"
   }
 }
