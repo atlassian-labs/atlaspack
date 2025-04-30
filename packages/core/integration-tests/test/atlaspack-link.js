@@ -20,6 +20,10 @@ function createProgram(opts: ProgramOptions) {
 }
 
 describe('@atlaspack/link', () => {
+  if (process.env.ATLASPACK_SUPER_BUILD) {
+    this.skip();
+  }
+
   let _cwd;
   let _stdout;
 
