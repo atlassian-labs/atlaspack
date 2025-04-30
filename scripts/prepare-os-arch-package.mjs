@@ -17,7 +17,6 @@ if (!fs.existsSync(packageJsonPath)) {
 
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
 
-
 const [,platform, arch] = packageJson.name.split('/')[1].split('-')
 if (!platform || !arch) {
   // eslint-disable-next-line no-console
@@ -46,6 +45,5 @@ if (!nodeArch || !nodePlatform) {
 
 packageJson.os = [nodePlatform]
 packageJson.cpu = [nodeArch]
-packageJson.scripts = undefined
 
 fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf8')
