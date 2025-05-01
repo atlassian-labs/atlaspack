@@ -1,0 +1,28 @@
+{
+  "name": "@atlaspack/apvm-macos-arm64",
+  "description": "Atlaspack version manager",
+  "version": "0.0.1",
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
+  "copyBin": {
+    "name": "apvm",
+    "dest": "apvm-macos-arm64",
+    "permittedTargets": [
+      "aarch64-apple-darwin"
+    ]
+  },
+  "bin": {
+    "apvm-macos-arm64": "apvm-macos-arm64"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
+  "scripts": {
+    "prepack": "node ../../../scripts/prepare-os-arch-package.mjs",
+    "prepublishOnly": "node ../../../scripts/prepare-os-arch-package.mjs"
+  }
+}
