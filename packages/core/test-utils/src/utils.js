@@ -13,6 +13,7 @@ import type {
 import type {FileSystem} from '@atlaspack/fs';
 import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '@atlaspack/fs';
 import type WorkerFarm from '@atlaspack/workers';
+import {LMDBLiteCache} from '@atlaspack/cache';
 import type {IncomingMessage} from 'http';
 import http from 'http';
 // $FlowFixMe
@@ -240,7 +241,13 @@ export async function bundle(
   entries: FilePath | Array<FilePath>,
   opts?: InitialAtlaspackOptions,
 ): Promise<BundleGraph<PackagedBundle>> {
-  return (await bundler(entries, opts).run()).bundleGraph;
+  const instance: Atlaspack = bundler(entries, opts);
+  const bundleGraph = (await instance.run()).bundleGraph;
+  const cache = instance.unstable_getCacheForTesting();
+  if (cache instanceof LMDBLiteCache) {
+    cache.close();
+  }
+  return bundleGraph;
 }
 
 export function getNextBuild(b: Atlaspack): Promise<BuildEvent> {

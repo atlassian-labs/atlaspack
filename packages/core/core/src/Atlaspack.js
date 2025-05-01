@@ -45,7 +45,7 @@ import {createEnvironment} from './Environment';
 import {createDependency} from './Dependency';
 import {Disposable} from '@atlaspack/events';
 import {init as initSourcemaps} from '@parcel/source-map';
-import {LMDBLiteCache} from '@atlaspack/cache';
+import {type Cache, LMDBLiteCache} from '@atlaspack/cache';
 import {
   init as initRust,
   initializeMonitoring,
@@ -723,6 +723,10 @@ export default class Atlaspack {
       query: res.query,
       sideEffects: res.sideEffects,
     };
+  }
+
+  unstable_getCacheForTesting(): Cache {
+    return nullthrows(this.#resolvedOptions).cache;
   }
 }
 

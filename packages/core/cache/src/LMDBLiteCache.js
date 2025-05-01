@@ -41,6 +41,10 @@ export class LmdbWrapper {
     };
   }
 
+  close() {
+    this.lmdb.close();
+  }
+
   get(key: string): Buffer | null {
     return this.lmdb.getSync(key);
   }
@@ -59,28 +63,16 @@ export function open(
   // eslint-disable-next-line no-unused-vars
   openOptions: DBOpenOptions,
 ): LmdbWrapper {
-  const openImpl = (): LmdbWrapper => {
-    return new LmdbWrapper(
-      new Lmdb({
-        path: directory,
-        asyncWrites: true,
-        mapSize:
-          process.env.ATLASPACK_BUILD_ENV === 'test'
-            ? 1024 * 1024 * 1024
-            : 1024 * 1024 * 1024 * 15,
-      }),
-    );
-  };
-
-  for (let i = 0; i < 5; i++) {
-    try {
-      return openImpl();
-    } catch (error) {
-      /* ignore */
-    }
-  }
-
-  return openImpl();
+  return new LmdbWrapper(
+    new Lmdb({
+      path: directory,
+      asyncWrites: true,
+      mapSize:
+        process.env.ATLASPACK_BUILD_ENV === 'test'
+          ? 1024 * 1024 * 1024
+          : 1024 * 1024 * 1024 * 15,
+    }),
+  );
 }
 
 const pipeline: (Readable, Writable) => Promise<void> = promisify(
@@ -212,6 +204,10 @@ export class LMDBLiteCache implements Cache {
     // Useful in scenarios where reads and writes are multi-threaded.
     // See https://github.com/kriszyp/lmdb-js#resetreadtxn-void
     this.store.resetReadTxn();
+  }
+
+  close() {
+    this.store.close();
   }
 }
 
