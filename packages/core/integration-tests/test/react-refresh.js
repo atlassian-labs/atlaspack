@@ -13,7 +13,6 @@ import {
   run,
   getNextBuildSuccess,
 } from '@atlaspack/test-utils';
-import {FSCache} from '@atlaspack/cache';
 import getPort from 'get-port';
 import type {BuildEvent, Asset} from '@atlaspack/types';
 // flowlint-next-line untyped-import:off
