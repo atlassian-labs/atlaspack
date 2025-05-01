@@ -59,7 +59,7 @@ if (MessageChannel) {
         assert.equal((await getNextBuild(b)).type, 'buildSuccess');
 
         // Wait for the hmr-runtime to process the event
-        await sleep(1000);
+        await sleep(100);
 
         let [, indexNum, appNum, fooText, fooNum] = root.textContent.match(
           /^([\d.]+) ([\d.]+) ([\w]+):([\d.]+)$/,
@@ -325,8 +325,6 @@ async function setup(entry) {
       port,
       host: '127.0.0.1',
     },
-    // These tests currently only work with the FSCache
-    cache: new FSCache(fs, path.join(__dirname, '.parcel-cache')),
     hmrOptions: {
       port,
     },
@@ -368,7 +366,7 @@ async function setup(entry) {
   await window[parcelRequire](
     bundleGraph.getAssetPublicId(bundle.getEntryAssets().pop()),
   ).default();
-  await sleep(1000);
+  await sleep(100);
 
   let m = root.textContent.match(/^([\d.]+) ([\d.]+) ([\w]+):([\d.]+)$/);
   if (m) {
