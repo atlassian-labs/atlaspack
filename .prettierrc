@@ -9,6 +9,12 @@
       "options": {
         "trailingComma": "es5"
       }
+    },
+    {
+      "files": "*.js",
+      "options": {
+        "parser": "flow"
+      }
     }
   ]
 }

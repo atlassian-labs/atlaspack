@@ -19,4 +19,5 @@ export const tsRuleTester = new RuleTester({
 });
 
 // Dummy filename, needed for every test to make ESLint tests work
+// This file needs to exist but its contents don't matter
 export const filename = path.join(__dirname, 'test.ts');
