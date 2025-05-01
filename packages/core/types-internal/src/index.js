@@ -81,6 +81,12 @@ export type ConfigResultWithFilePath<T> = {|
   contents: T,
   filePath: FilePath,
 |};
+
+export type ProjectConfigResultWithFilePath<T> = {|
+  contents: T,
+  filePath: FilePath,
+  isProjectConfig: true,
+|};
 /** <code>process.env</code> */
 export type EnvMap = typeof process.env;
 
@@ -959,6 +965,8 @@ export interface Config {
   /**
    * Searches for config files with the given names in all parent directories
    * of the config's searchPath.
+   *
+   * @deprecated Use getProjectConfig instead
    */
   getConfig<T>(
     filePaths: Array<FilePath>,
@@ -971,6 +979,8 @@ export interface Config {
   /**
    * Searches for config files with the given names in all parent directories
    * of the passed searchPath.
+   *
+   * @deprecated Use getProjectConfig instead
    */
   getConfigFrom<T>(
     searchPath: FilePath,
@@ -981,6 +991,23 @@ export interface Config {
       exclude?: boolean,
     |},
   ): Promise<?ConfigResultWithFilePath<T>>;
+
+  /**
+   * Loads config from the project configuration.
+   *
+   * Fallback behaviour needs to be specified
+   *
+   * This is new syntax for getConfigFrom. */
+  getProjectConfig<T, F>(
+    options: {|
+      key?: string,
+    |},
+    fallback: () => Promise<?ConfigResultWithFilePath<F>>,
+  ): Promise<?(
+    | ProjectConfigResultWithFilePath<T>
+    | ConfigResultWithFilePath<F>
+  )>;
+
   /** Finds the nearest package.json from the config's searchPath. */
   getPackage(): Promise<?PackageJSON>;
 }

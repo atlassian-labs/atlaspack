@@ -1,0 +1,19 @@
+{
+  "name": "@atlaspack/new-project-config-example",
+  "version": "2.12.0",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "serve": "PARCEL_WORKERS=0 node --inspect-brk $(yarn bin atlaspack) serve --no-cache --feature-flag useNewProjectConfigSyntax=true src/index.html"
+  },
+  "dependencies": {
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "@atlaspack/cli": "^2.13.1",
+    "@types/react-dom": "^17.0.2",
+    "express": "*"
+  },
+  "type": "commonjs"
+}
