@@ -41,10 +41,6 @@ export class LmdbWrapper {
     };
   }
 
-  close() {
-    this.lmdb.close();
-  }
-
   get(key: string): Buffer | null {
     return this.lmdb.getSync(key);
   }
