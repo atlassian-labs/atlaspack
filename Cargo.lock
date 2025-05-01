@@ -2851,7 +2851,6 @@ name = "lmdb-js-lite"
 version = "0.1.5"
 dependencies = [
  "anyhow",
- "backtrace",
  "criterion",
  "crossbeam",
  "heed",
