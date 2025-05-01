@@ -81,6 +81,39 @@ jobs:
           path: packages/**/*
           retention-days: 1
 
+  # Build and store super package
+  build_super_package:
+    strategy:
+      matrix:
+        include:
+          # Linux AMD64
+          - name: 🦸 Build Super package
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+
+    needs: build_native
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-node@v4
+        with: {cache: yarn}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      # Yarn install is required for @napi-rs/cli
+      - run: yarn install --frozen-lockfile
+      - name: Build super package
+        run: yarn build-super
+      # Upload artifacts for use later in pipeline
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-super
+          path: packages/**/*
+          retention-days: 1
+
   lint_javascript:
     name: 🐵 Lint JavaScript
     runs-on: ubuntu-24.04
@@ -181,6 +214,8 @@ jobs:
           - os: macos-15
             node: 18
     runs-on: ${{ matrix.os }}
+    env:
+      CI: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -196,12 +231,13 @@ jobs:
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
       - run: yarn --frozen-lockfile
-      - run: yarn test:integration-ci
+      - run: yarn test:integration
 
   integration_tests_super:
     name: Integration tests (Super, ${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
       - build_native
+      - build_super_package
     timeout-minutes: 35
     strategy:
       # These tend to be quite flakey, so one failed instance shouldn't stop
@@ -213,6 +249,8 @@ jobs:
           - os: ubuntu-22.04
             node: 20
     runs-on: ${{ matrix.os }}
+    env:
+      CI: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -228,8 +266,6 @@ jobs:
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
       - run: yarn --frozen-lockfile
-      - name: Build super package
-        run: yarn lerna run build --scope=@atlaspack/super
       - run: yarn test:integration:super
 
   integration_tests_v3:
@@ -255,6 +291,8 @@ jobs:
           - os: macos-15
             node: 18
     runs-on: ${{ matrix.os }}
+    env:
+      CI: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -270,7 +308,7 @@ jobs:
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
       - run: yarn --frozen-lockfile
-      - run: yarn test:integration-ci
+      - run: yarn test:integration
         env:
           ATLASPACK_V3: true
 

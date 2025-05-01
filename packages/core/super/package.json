@@ -6,7 +6,7 @@
   "scripts": {
     "build": "rm -rf lib && yarn generate-entries && yarn build:atlaspack && yarn create-empty-files",
     "generate-entries": "rm -rf entries && node ./scripts/generate-entries.js",
-    "build:atlaspack": "NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SUPER_BUILD=true node ../cli/bin/atlaspack.js build --no-cache --no-autoinstall ./entries/*.js --config .parcelrc",
+    "build:atlaspack": "NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SUPER_BUILD=true yarn atlaspack build --no-cache --no-autoinstall ./entries/*.js --config .parcelrc",
     "create-empty-files": "touch lib/core/core/_empty.js && touch lib/utils/node-resolver-core/_empty.js"
   },
   "targets": {
