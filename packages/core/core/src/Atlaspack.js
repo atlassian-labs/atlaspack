@@ -45,7 +45,7 @@ import {createEnvironment} from './Environment';
 import {createDependency} from './Dependency';
 import {Disposable} from '@atlaspack/events';
 import {init as initSourcemaps} from '@parcel/source-map';
-import {type Cache, LMDBLiteCache} from '@atlaspack/cache';
+import {LMDBLiteCache} from '@atlaspack/cache';
 import {
   init as initRust,
   initializeMonitoring,
