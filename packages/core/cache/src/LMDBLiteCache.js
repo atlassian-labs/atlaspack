@@ -205,10 +205,6 @@ export class LMDBLiteCache implements Cache {
     // See https://github.com/kriszyp/lmdb-js#resetreadtxn-void
     this.store.resetReadTxn();
   }
-
-  close() {
-    this.store.close();
-  }
 }
 
 registerSerializableClass(

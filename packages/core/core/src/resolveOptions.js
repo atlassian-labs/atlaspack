@@ -151,18 +151,17 @@ export default async function resolveOptions(
       return initialOptions.cache;
     }
 
-    const needsRustLmdbCache =
-      getFeatureFlag('useLmdbJsLite') || getFeatureFlag('atlaspackV3');
+    const needsRustLmdbCache = getFeatureFlag('atlaspackV3');
 
-    if (needsRustLmdbCache) {
+    if (!needsRustLmdbCache && !(outputFS instanceof NodeFS)) {
+      return new FSCache(outputFS, cacheDir);
+    }
+
+    if (needsRustLmdbCache || getFeatureFlag('useLmdbJsLite')) {
       return new LMDBLiteCache(cacheDir);
     }
 
-    if (outputFS instanceof NodeFS) {
-      return new LMDBCache(cacheDir);
-    }
-
-    return new FSCache(outputFS, cacheDir);
+    return new LMDBCache(cacheDir);
   }
 
   let cache = createCache();

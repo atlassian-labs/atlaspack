@@ -724,10 +724,6 @@ export default class Atlaspack {
       sideEffects: res.sideEffects,
     };
   }
-
-  unstable_getCacheForTesting(): Cache {
-    return nullthrows(this.#resolvedOptions).cache;
-  }
 }
 
 export class BuildError extends ThrowableDiagnostic {
