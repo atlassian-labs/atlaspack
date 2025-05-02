@@ -13,7 +13,7 @@ export const messages = {
     'The type annotation for this conditional import usage is incorrect. Please apply the suggestion to fix it.',
   suggestTypeAnnotation:
     'Fix the type annotation for this conditional import usage.',
-} satisfies Record<string, string>;
+}; // satisfies Record<string, string>;   // Uncomment this line once prettier is updated to a version that supports it
 
 export type Options = [];
 

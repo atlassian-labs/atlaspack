@@ -9,7 +9,7 @@ export const messages = {
   noImportCondExports:
     'Directly exporting Atlaspack conditional imports (importCond) from a file is not supported and will break in tests. If you need the component for testing, please import the old and new versions of the components or modules directly in the test file instead.\n\n' +
     'Does your use case require exporting the component? Reach out to #atlaspack-contextual-imports so we can help find a workaround.',
-} satisfies Record<string, string>;
+}; // satisfies Record<string, string>;   // Uncomment this line once prettier is updated to a version that supports it
 
 export type Options = [];
 
