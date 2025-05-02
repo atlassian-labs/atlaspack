@@ -1,3 +1,4 @@
+/* eslint-disable */
 // node_modules/htmlnano/lib/htmlnano.js
 // Modified to make requires static
 'use strict';
