@@ -263,7 +263,9 @@ export async function bundle(
   entries: FilePath | Array<FilePath>,
   opts?: InitialAtlaspackOptions,
 ): Promise<BundleGraph<PackagedBundle>> {
-  return (await bundler(entries, opts).run()).bundleGraph;
+  const instance: Atlaspack = bundler(entries, opts);
+  const bundleGraph = (await instance.run()).bundleGraph;
+  return bundleGraph;
 }
 
 export function getNextBuild(b: Atlaspack): Promise<BuildEvent> {

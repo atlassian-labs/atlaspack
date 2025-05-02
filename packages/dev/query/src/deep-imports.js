@@ -24,7 +24,7 @@ const v =
         // $FlowFixMe(unsupported-syntax)
         RequestTracker: require('@atlaspack/core' + '/lib/RequestTracker'),
         // $FlowFixMe(unsupported-syntax)
-        LMDBCache: require('@atlaspack/cache' + '/lib/LMDBLiteCache')
+        LMDBLiteCache: require('@atlaspack/cache' + '/lib/LMDBLiteCache')
           .LMDBLiteCache,
         // $FlowFixMe(unsupported-syntax)
         Priority: require('@atlaspack/core' + '/lib/types').Priority,
@@ -36,7 +36,8 @@ const v =
         AssetGraph: require('@atlaspack/core/src/AssetGraph').default,
         BundleGraph: require('@atlaspack/core/src/BundleGraph'),
         RequestTracker: require('@atlaspack/core/src/RequestTracker'),
-        LMDBCache: require('@atlaspack/cache/src/LMDBLiteCache').LMDBLiteCache,
+        LMDBLiteCache: require('@atlaspack/cache/src/LMDBLiteCache')
+          .LMDBLiteCache,
         Priority: require('@atlaspack/core/src/types').Priority,
         fromProjectPathRelative: require('@atlaspack/core/src/projectPath')
           .fromProjectPathRelative,
@@ -56,7 +57,7 @@ module.exports = (v: {|
     requestGraphEdgeTypes: requestGraphEdgeTypes,
     ...
   },
-  LMDBCache: LMDBLiteCache,
+  LMDBLiteCache: LMDBLiteCache,
   Priority: Priority,
   fromProjectPathRelative: fromProjectPathRelative,
 |});
