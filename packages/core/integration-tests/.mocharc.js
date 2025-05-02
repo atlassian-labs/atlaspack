@@ -1,8 +1,15 @@
 const isCI = process.env.CI === 'true';
 const isSuperPackageBuild = process.env.SUPER_PACKAGE === 'true';
 
+const nodeOptions = ['--experimental-vm-modules'];
+
+if (!isSuperPackageBuild) {
+  nodeOptions.push('--conditions="@atlaspack::sources"');
+}
+
 const config = {
   extension: ['js', 'mjs', 'cjs', 'ts', 'cts', 'mts'],
+  'node-option': nodeOptions,
   require: [
     '@atlaspack/babel-register',
     '@atlaspack/test-utils/src/mochaSetup.js',
