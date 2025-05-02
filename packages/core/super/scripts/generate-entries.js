@@ -4,6 +4,7 @@ let path = require('path');
 let fs = require('fs/promises');
 let glob = require('fast-glob');
 let {copyTypes} = require('./copy-types.cjs');
+let {sortPackageJson} = require('sort-package-json');
 
 const EXCLUSIONS = [
   '@atlaspack/super',
@@ -86,7 +87,10 @@ async function main() {
 
   superPkgJson.exports = {
     './*': {default: './*'},
-    '.': {default: './lib/core.js'},
+    '.': {
+      default: './lib/core.js',
+      types: './types/@atlaspack/core/index.d.ts'
+    },
   };
   let entries = await getEntries();
 
@@ -158,7 +162,7 @@ async function main() {
 
   await fs.writeFile(
     path.join(__dirname, '..', 'package.json'),
-    JSON.stringify(superPkgJson, null, 2),
+    JSON.stringify(sortPackageJson(superPkgJson), null, 2),
     'utf8',
   );
 }

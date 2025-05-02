@@ -2,69 +2,12 @@
   "name": "@atlaspack/super",
   "version": "2.14.0",
   "description": "Blazing fast, zero configuration web application bundler",
-  "license": "(MIT OR Apache-2.0)",
-  "scripts": {
-    "build": "rm -rf lib && yarn generate-entries && yarn build:atlaspack && yarn create-empty-files",
-    "generate-entries": "rm -rf entries && node ./scripts/generate-entries.js",
-    "build:atlaspack": "NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SUPER_BUILD=true yarn atlaspack build --no-cache --no-autoinstall ./entries/*.js --config .parcelrc",
-    "create-empty-files": "touch lib/core/core/_empty.js && touch lib/utils/node-resolver-core/_empty.js"
-  },
-  "targets": {
-    "default": {
-      "context": "node",
-      "isLibrary": true,
-      "distDir": "lib",
-      "optimize": false,
-      "sourceMap": false,
-      "includeNodeModules": {
-        "lmdb": false
-      }
-    }
-  },
-  "alias": {
-    "@swc/wasm": false,
-    "@atlaspack/babel-register": false
-  },
-  "copyTypes": [
-    "@atlaspack/cache",
-    "@atlaspack/conditional-import-types",
-    "@atlaspack/core",
-    "@atlaspack/diagnostic",
-    "@atlaspack/feature-flags",
-    "@atlaspack/fs",
-    "@atlaspack/package-manager",
-    "@atlaspack/plugin",
-    "@atlaspack/profiler",
-    "@atlaspack/rust",
-    "@atlaspack/types",
-    "@atlaspack/types-internal",
-    "@atlaspack/workers",
-    "@mischnic/json-sourcemap",
-    "chrome-trace-event",
-    "@parcel/watcher",
-    "@parcel/source-map"
-  ],
-  "devDependencies": {
-    "@atlaspack/plugin": "*",
-    "fast-glob": "^3.2.12",
-    "prettier": "2.4.1"
-  },
-  "sideEffects": true,
-  "files": [
-    "lib",
-    "!lib/native/*win32*",
-    "!lib/native/*musl*"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "engines": {
-    "node": ">= 16.0.0"
-  },
+  "license": "(MIT OR Apache-2.0)",
+  "sideEffects": true,
   "type": "commonjs",
   "exports": {
     "./*": {
@@ -82,17 +25,17 @@
     "./compressor-raw": {
       "default": "./lib/compressor-raw.js"
     },
+    "./bundler-library": {
+      "default": "./lib/bundler-library.js"
+    },
+    "./bundler-default": {
+      "default": "./lib/bundler-default.js"
+    },
     "./config-default": {
       "default": "./lib/config-default.js"
     },
     "./config-webextension": {
       "default": "./lib/config-webextension.js"
-    },
-    "./bundler-default": {
-      "default": "./lib/bundler-default.js"
-    },
-    "./bundler-library": {
-      "default": "./lib/bundler-library.js"
     },
     "./build-cache": {
       "default": "./lib/build-cache.js"
@@ -189,41 +132,11 @@
     "./optimizer-swc": {
       "default": "./lib/optimizer-swc.js"
     },
-    "./packager-css": {
-      "default": "./lib/packager-css.js"
-    },
     "./optimizer-terser": {
       "default": "./lib/optimizer-terser.js"
     },
-    "./packager-html": {
-      "default": "./lib/packager-html.js"
-    },
-    "./packager-js": {
-      "default": "./lib/packager-js.js"
-    },
-    "./packager-raw": {
-      "default": "./lib/packager-raw.js"
-    },
-    "./packager-svg": {
-      "default": "./lib/packager-svg.js"
-    },
-    "./packager-raw-url": {
-      "default": "./lib/packager-raw-url.js"
-    },
-    "./packager-ts": {
-      "default": "./lib/packager-ts.js"
-    },
-    "./packager-wasm": {
-      "default": "./lib/packager-wasm.js"
-    },
-    "./packager-webextension": {
-      "default": "./lib/packager-webextension.js"
-    },
     "./reporter-build-metrics": {
       "default": "./lib/reporter-build-metrics.js"
-    },
-    "./packager-xml": {
-      "default": "./lib/packager-xml.js"
     },
     "./reporter-bundle-analyzer": {
       "default": "./lib/reporter-bundle-analyzer.js"
@@ -252,11 +165,56 @@
     "./reporter-tracer": {
       "default": "./lib/reporter-tracer.js"
     },
+    "./packager-css": {
+      "default": "./lib/packager-css.js"
+    },
+    "./packager-html": {
+      "default": "./lib/packager-html.js"
+    },
+    "./packager-js": {
+      "default": "./lib/packager-js.js"
+    },
+    "./packager-raw": {
+      "default": "./lib/packager-raw.js"
+    },
+    "./packager-raw-url": {
+      "default": "./lib/packager-raw-url.js"
+    },
+    "./packager-svg": {
+      "default": "./lib/packager-svg.js"
+    },
+    "./packager-ts": {
+      "default": "./lib/packager-ts.js"
+    },
+    "./packager-wasm": {
+      "default": "./lib/packager-wasm.js"
+    },
+    "./packager-webextension": {
+      "default": "./lib/packager-webextension.js"
+    },
+    "./packager-xml": {
+      "default": "./lib/packager-xml.js"
+    },
     "./resolver-default": {
       "default": "./lib/resolver-default.js"
     },
     "./resolver-glob": {
       "default": "./lib/resolver-glob.js"
+    },
+    "./runtime-browser-hmr": {
+      "default": "./lib/runtime-browser-hmr.js"
+    },
+    "./runtime-js": {
+      "default": "./lib/runtime-js.js"
+    },
+    "./runtime-react-refresh": {
+      "default": "./lib/runtime-react-refresh.js"
+    },
+    "./runtime-service-worker": {
+      "default": "./lib/runtime-service-worker.js"
+    },
+    "./runtime-webextension": {
+      "default": "./lib/runtime-webextension.js"
     },
     "./transformer-babel": {
       "default": "./lib/transformer-babel.js"
@@ -369,21 +327,6 @@
     "./ts-utils": {
       "default": "./lib/ts-utils.js"
     },
-    "./runtime-browser-hmr": {
-      "default": "./lib/runtime-browser-hmr.js"
-    },
-    "./runtime-js": {
-      "default": "./lib/runtime-js.js"
-    },
-    "./runtime-react-refresh": {
-      "default": "./lib/runtime-react-refresh.js"
-    },
-    "./runtime-service-worker": {
-      "default": "./lib/runtime-service-worker.js"
-    },
-    "./runtime-webextension": {
-      "default": "./lib/runtime-webextension.js"
-    },
     "./worker": {
       "default": "./lib/worker.js"
     },
@@ -401,6 +344,64 @@
     },
     "./rust": {
       "types": "./types/@atlaspack/rust/index.d.ts"
+    }
+  },
+  "files": [
+    "lib",
+    "!lib/native/*win32*",
+    "!lib/native/*musl*"
+  ],
+  "scripts": {
+    "build": "rm -rf lib && yarn generate-entries && yarn build:atlaspack && yarn create-empty-files",
+    "build:atlaspack": "NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SUPER_BUILD=true yarn atlaspack build --no-cache --no-autoinstall ./entries/*.js --config .parcelrc",
+    "create-empty-files": "touch lib/core/core/_empty.js && touch lib/utils/node-resolver-core/_empty.js",
+    "generate-entries": "rm -rf entries && node ./scripts/generate-entries.js"
+  },
+  "devDependencies": {
+    "@atlaspack/plugin": "*",
+    "fast-glob": "^3.2.12",
+    "prettier": "2.4.1",
+    "sort-package-json": "^3.1.0"
+  },
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "alias": {
+    "@swc/wasm": false,
+    "@atlaspack/babel-register": false
+  },
+  "copyTypes": [
+    "@atlaspack/cache",
+    "@atlaspack/conditional-import-types",
+    "@atlaspack/core",
+    "@atlaspack/diagnostic",
+    "@atlaspack/feature-flags",
+    "@atlaspack/fs",
+    "@atlaspack/package-manager",
+    "@atlaspack/plugin",
+    "@atlaspack/profiler",
+    "@atlaspack/rust",
+    "@atlaspack/types",
+    "@atlaspack/types-internal",
+    "@atlaspack/workers",
+    "@mischnic/json-sourcemap",
+    "chrome-trace-event",
+    "@parcel/watcher",
+    "@parcel/source-map"
+  ],
+  "targets": {
+    "default": {
+      "context": "node",
+      "isLibrary": true,
+      "distDir": "lib",
+      "optimize": false,
+      "sourceMap": false,
+      "includeNodeModules": {
+        "lmdb": false
+      }
     }
   }
 }
