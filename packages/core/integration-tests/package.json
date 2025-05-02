@@ -8,7 +8,8 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "scripts": {
-    "test": "cross-env NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha"
+    "test": "cross-env NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --conditions=\"@atlaspack::sources\" --experimental-vm-modules",
+    "test:super": "cross-env NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --experimental-vm-modules"
   },
   "devDependencies": {
     "@atlaspack/cli": "2.13.2",
