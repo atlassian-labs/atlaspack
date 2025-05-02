@@ -26,24 +26,24 @@
     "./compressor-raw": {
       "default": "./lib/compressor-raw.js"
     },
-    "./config-default": {
-      "default": "./lib/config-default.js"
-    },
-    "./config-webextension": {
-      "default": "./lib/config-webextension.js"
-    },
     "./bundler-default": {
       "default": "./lib/bundler-default.js"
     },
     "./bundler-library": {
       "default": "./lib/bundler-library.js"
     },
-    "./build-cache": {
-      "default": "./lib/build-cache.js"
+    "./config-default": {
+      "default": "./lib/config-default.js"
+    },
+    "./config-webextension": {
+      "default": "./lib/config-webextension.js"
     },
     "./cache": {
       "default": "./lib/cache.js",
       "types": "./types/@atlaspack/cache/index.d.ts"
+    },
+    "./build-cache": {
+      "default": "./lib/build-cache.js"
     },
     "./codeframe": {
       "default": "./lib/codeframe.js"
@@ -64,11 +64,11 @@
       "default": "./lib/fs.js",
       "types": "./types/@atlaspack/fs/index.d.ts"
     },
-    "./logger": {
-      "default": "./lib/logger.js"
-    },
     "./graph": {
       "default": "./lib/graph.js"
+    },
+    "./logger": {
+      "default": "./lib/logger.js"
     },
     "./markdown-ansi": {
       "default": "./lib/markdown-ansi.js"
@@ -103,6 +103,39 @@
       "default": "./lib/workers.js",
       "types": "./types/@atlaspack/workers/index.d.ts"
     },
+    "./namer-default": {
+      "default": "./lib/namer-default.js"
+    },
+    "./optimizer-blob-url": {
+      "default": "./lib/optimizer-blob-url.js"
+    },
+    "./optimizer-css": {
+      "default": "./lib/optimizer-css.js"
+    },
+    "./optimizer-cssnano": {
+      "default": "./lib/optimizer-cssnano.js"
+    },
+    "./optimizer-data-url": {
+      "default": "./lib/optimizer-data-url.js"
+    },
+    "./optimizer-htmlnano": {
+      "default": "./lib/optimizer-htmlnano.js"
+    },
+    "./optimizer-image": {
+      "default": "./lib/optimizer-image.js"
+    },
+    "./optimizer-svgo": {
+      "default": "./lib/optimizer-svgo.js"
+    },
+    "./optimizer-inline-requires": {
+      "default": "./lib/optimizer-inline-requires.js"
+    },
+    "./optimizer-swc": {
+      "default": "./lib/optimizer-swc.js"
+    },
+    "./optimizer-terser": {
+      "default": "./lib/optimizer-terser.js"
+    },
     "./packager-css": {
       "default": "./lib/packager-css.js"
     },
@@ -112,11 +145,11 @@
     "./packager-js": {
       "default": "./lib/packager-js.js"
     },
-    "./packager-raw-url": {
-      "default": "./lib/packager-raw-url.js"
-    },
     "./packager-raw": {
       "default": "./lib/packager-raw.js"
+    },
+    "./packager-raw-url": {
+      "default": "./lib/packager-raw-url.js"
     },
     "./packager-svg": {
       "default": "./lib/packager-svg.js"
@@ -133,53 +166,23 @@
     "./packager-xml": {
       "default": "./lib/packager-xml.js"
     },
-    "./optimizer-css": {
-      "default": "./lib/optimizer-css.js"
+    "./resolver-default": {
+      "default": "./lib/resolver-default.js"
     },
-    "./namer-default": {
-      "default": "./lib/namer-default.js"
-    },
-    "./optimizer-cssnano": {
-      "default": "./lib/optimizer-cssnano.js"
-    },
-    "./optimizer-blob-url": {
-      "default": "./lib/optimizer-blob-url.js"
-    },
-    "./optimizer-data-url": {
-      "default": "./lib/optimizer-data-url.js"
-    },
-    "./optimizer-htmlnano": {
-      "default": "./lib/optimizer-htmlnano.js"
-    },
-    "./optimizer-image": {
-      "default": "./lib/optimizer-image.js"
-    },
-    "./optimizer-inline-requires": {
-      "default": "./lib/optimizer-inline-requires.js"
-    },
-    "./optimizer-svgo": {
-      "default": "./lib/optimizer-svgo.js"
-    },
-    "./optimizer-terser": {
-      "default": "./lib/optimizer-terser.js"
+    "./resolver-glob": {
+      "default": "./lib/resolver-glob.js"
     },
     "./reporter-build-metrics": {
       "default": "./lib/reporter-build-metrics.js"
     },
-    "./optimizer-swc": {
-      "default": "./lib/optimizer-swc.js"
+    "./reporter-bundle-analyzer": {
+      "default": "./lib/reporter-bundle-analyzer.js"
     },
     "./reporter-bundle-buddy": {
       "default": "./lib/reporter-bundle-buddy.js"
     },
-    "./reporter-bundle-analyzer": {
-      "default": "./lib/reporter-bundle-analyzer.js"
-    },
     "./reporter-bundle-stats": {
       "default": "./lib/reporter-bundle-stats.js"
-    },
-    "./reporter-cli": {
-      "default": "./lib/reporter-cli.js"
     },
     "./reporter-dev-server": {
       "default": "./lib/reporter-dev-server.js"
@@ -187,17 +190,11 @@
     "./reporter-conditional-manifest": {
       "default": "./lib/reporter-conditional-manifest.js"
     },
+    "./reporter-cli": {
+      "default": "./lib/reporter-cli.js"
+    },
     "./reporter-json": {
       "default": "./lib/reporter-json.js"
-    },
-    "./reporter-sourcemap-visualiser": {
-      "default": "./lib/reporter-sourcemap-visualiser.js"
-    },
-    "./resolver-glob": {
-      "default": "./lib/resolver-glob.js"
-    },
-    "./resolver-default": {
-      "default": "./lib/resolver-default.js"
     },
     "./reporter-tracer": {
       "default": "./lib/reporter-tracer.js"
@@ -208,29 +205,26 @@
     "./runtime-browser-hmr": {
       "default": "./lib/runtime-browser-hmr.js"
     },
-    "./runtime-service-worker": {
-      "default": "./lib/runtime-service-worker.js"
-    },
     "./runtime-react-refresh": {
       "default": "./lib/runtime-react-refresh.js"
+    },
+    "./runtime-service-worker": {
+      "default": "./lib/runtime-service-worker.js"
     },
     "./runtime-webextension": {
       "default": "./lib/runtime-webextension.js"
     },
-    "./transformer-babel": {
-      "default": "./lib/transformer-babel.js"
-    },
     "./transformer-css": {
       "default": "./lib/transformer-css.js"
     },
-    "./transformer-glsl": {
-      "default": "./lib/transformer-glsl.js"
-    },
-    "./transformer-image": {
-      "default": "./lib/transformer-image.js"
+    "./transformer-babel": {
+      "default": "./lib/transformer-babel.js"
     },
     "./transformer-graphql": {
       "default": "./lib/transformer-graphql.js"
+    },
+    "./transformer-glsl": {
+      "default": "./lib/transformer-glsl.js"
     },
     "./transformer-html": {
       "default": "./lib/transformer-html.js"
@@ -238,8 +232,14 @@
     "./transformer-inline": {
       "default": "./lib/transformer-inline.js"
     },
+    "./transformer-image": {
+      "default": "./lib/transformer-image.js"
+    },
     "./transformer-inline-string": {
       "default": "./lib/transformer-inline-string.js"
+    },
+    "./transformer-js": {
+      "default": "./lib/transformer-js.js"
     },
     "./transformer-json": {
       "default": "./lib/transformer-json.js"
@@ -247,32 +247,26 @@
     "./transformer-jsonld": {
       "default": "./lib/transformer-jsonld.js"
     },
-    "./transformer-js": {
-      "default": "./lib/transformer-js.js"
+    "./transformer-mdx": {
+      "default": "./lib/transformer-mdx.js"
     },
     "./transformer-less": {
       "default": "./lib/transformer-less.js"
     },
-    "./transformer-mdx": {
-      "default": "./lib/transformer-mdx.js"
-    },
     "./transformer-posthtml": {
       "default": "./lib/transformer-posthtml.js"
-    },
-    "./transformer-postcss": {
-      "default": "./lib/transformer-postcss.js"
     },
     "./transformer-pug": {
       "default": "./lib/transformer-pug.js"
     },
-    "./transformer-raw": {
-      "default": "./lib/transformer-raw.js"
-    },
-    "./transformer-svg": {
-      "default": "./lib/transformer-svg.js"
+    "./reporter-sourcemap-visualiser": {
+      "default": "./lib/reporter-sourcemap-visualiser.js"
     },
     "./transformer-react-refresh-wrap": {
       "default": "./lib/transformer-react-refresh-wrap.js"
+    },
+    "./transformer-svg": {
+      "default": "./lib/transformer-svg.js"
     },
     "./transformer-svg-react": {
       "default": "./lib/transformer-svg-react.js"
@@ -283,23 +277,23 @@
     "./transformer-typescript-tsc": {
       "default": "./lib/transformer-typescript-tsc.js"
     },
-    "./transformer-webextension": {
-      "default": "./lib/transformer-webextension.js"
-    },
     "./transformer-typescript-types": {
       "default": "./lib/transformer-typescript-types.js"
     },
-    "./transformer-webmanifest": {
-      "default": "./lib/transformer-webmanifest.js"
+    "./transformer-webextension": {
+      "default": "./lib/transformer-webextension.js"
     },
     "./transformer-worklet": {
       "default": "./lib/transformer-worklet.js"
     },
+    "./transformer-webmanifest": {
+      "default": "./lib/transformer-webmanifest.js"
+    },
     "./transformer-xml": {
       "default": "./lib/transformer-xml.js"
     },
-    "./transformer-yaml": {
-      "default": "./lib/transformer-yaml.js"
+    "./transformer-postcss": {
+      "default": "./lib/transformer-postcss.js"
     },
     "./watcher-watchman-js": {
       "default": "./lib/watcher-watchman-js.js"
@@ -313,11 +307,14 @@
     "./babel-preset-env": {
       "default": "./lib/babel-preset-env.js"
     },
-    "./events": {
-      "default": "./lib/events.js"
-    },
     "./domain-sharding": {
       "default": "./lib/domain-sharding.js"
+    },
+    "./transformer-yaml": {
+      "default": "./lib/transformer-yaml.js"
+    },
+    "./events": {
+      "default": "./lib/events.js"
     },
     "./node-resolver-core": {
       "default": "./lib/node-resolver-core.js"
@@ -327,6 +324,9 @@
     },
     "./ts-utils": {
       "default": "./lib/ts-utils.js"
+    },
+    "./transformer-raw": {
+      "default": "./lib/transformer-raw.js"
     },
     "./worker": {
       "default": "./lib/worker.js"
@@ -361,7 +361,6 @@
   "devDependencies": {
     "@atlaspack/plugin": "*",
     "fast-glob": "^3.2.12",
-    "prettier": "2.4.1",
     "sort-package-json": "^3.1.0"
   },
   "engines": {
@@ -399,7 +398,7 @@
       "isLibrary": true,
       "distDir": "lib",
       "optimize": false,
-      "sourceMap": false,
+      "sourceMap": true,
       "includeNodeModules": {
         "lmdb": false
       }
