@@ -65,5 +65,325 @@
   "engines": {
     "node": ">= 16.0.0"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "exports": {
+    "./*": {
+      "default": "./*"
+    },
+    ".": {
+      "default": "./core.js"
+    },
+    "./compressor-brotli": {
+      "default": "./lib/compressor-brotli.js"
+    },
+    "./compressor-raw": {
+      "default": "./lib/compressor-raw.js"
+    },
+    "./compressor-gzip": {
+      "default": "./lib/compressor-gzip.js"
+    },
+    "./config-default": {
+      "default": "./lib/config-default.js"
+    },
+    "./config-webextension": {
+      "default": "./lib/config-webextension.js"
+    },
+    "./build-cache": {
+      "default": "./lib/build-cache.js"
+    },
+    "./cache": {
+      "default": "./lib/cache.js"
+    },
+    "./codeframe": {
+      "default": "./lib/codeframe.js"
+    },
+    "./diagnostic": {
+      "default": "./lib/diagnostic.js"
+    },
+    "./core": {
+      "default": "./lib/core.js"
+    },
+    "./feature-flags": {
+      "default": "./lib/feature-flags.js"
+    },
+    "./fs": {
+      "default": "./lib/fs.js"
+    },
+    "./graph": {
+      "default": "./lib/graph.js"
+    },
+    "./logger": {
+      "default": "./lib/logger.js"
+    },
+    "./markdown-ansi": {
+      "default": "./lib/markdown-ansi.js"
+    },
+    "./plugin": {
+      "default": "./lib/plugin.js"
+    },
+    "./package-manager": {
+      "default": "./lib/package-manager.js"
+    },
+    "./profiler": {
+      "default": "./lib/profiler.js"
+    },
+    "./types-internal": {
+      "default": "./lib/types-internal.js"
+    },
+    "./types": {
+      "default": "./lib/types.js"
+    },
+    "./utils": {
+      "default": "./lib/utils.js"
+    },
+    "./workers": {
+      "default": "./lib/workers.js"
+    },
+    "./cli": {
+      "default": "./lib/cli.js"
+    },
+    "./bundler-default": {
+      "default": "./lib/bundler-default.js"
+    },
+    "./bundler-library": {
+      "default": "./lib/bundler-library.js"
+    },
+    "./namer-default": {
+      "default": "./lib/namer-default.js"
+    },
+    "./optimizer-blob-url": {
+      "default": "./lib/optimizer-blob-url.js"
+    },
+    "./optimizer-css": {
+      "default": "./lib/optimizer-css.js"
+    },
+    "./optimizer-cssnano": {
+      "default": "./lib/optimizer-cssnano.js"
+    },
+    "./optimizer-data-url": {
+      "default": "./lib/optimizer-data-url.js"
+    },
+    "./optimizer-htmlnano": {
+      "default": "./lib/optimizer-htmlnano.js"
+    },
+    "./optimizer-image": {
+      "default": "./lib/optimizer-image.js"
+    },
+    "./optimizer-inline-requires": {
+      "default": "./lib/optimizer-inline-requires.js"
+    },
+    "./optimizer-svgo": {
+      "default": "./lib/optimizer-svgo.js"
+    },
+    "./optimizer-swc": {
+      "default": "./lib/optimizer-swc.js"
+    },
+    "./optimizer-terser": {
+      "default": "./lib/optimizer-terser.js"
+    },
+    "./packager-css": {
+      "default": "./lib/packager-css.js"
+    },
+    "./packager-html": {
+      "default": "./lib/packager-html.js"
+    },
+    "./packager-js": {
+      "default": "./lib/packager-js.js"
+    },
+    "./packager-raw": {
+      "default": "./lib/packager-raw.js"
+    },
+    "./packager-raw-url": {
+      "default": "./lib/packager-raw-url.js"
+    },
+    "./packager-svg": {
+      "default": "./lib/packager-svg.js"
+    },
+    "./packager-ts": {
+      "default": "./lib/packager-ts.js"
+    },
+    "./packager-wasm": {
+      "default": "./lib/packager-wasm.js"
+    },
+    "./packager-webextension": {
+      "default": "./lib/packager-webextension.js"
+    },
+    "./packager-xml": {
+      "default": "./lib/packager-xml.js"
+    },
+    "./reporter-build-metrics": {
+      "default": "./lib/reporter-build-metrics.js"
+    },
+    "./reporter-bundle-analyzer": {
+      "default": "./lib/reporter-bundle-analyzer.js"
+    },
+    "./reporter-bundle-buddy": {
+      "default": "./lib/reporter-bundle-buddy.js"
+    },
+    "./reporter-bundle-stats": {
+      "default": "./lib/reporter-bundle-stats.js"
+    },
+    "./reporter-cli": {
+      "default": "./lib/reporter-cli.js"
+    },
+    "./reporter-dev-server": {
+      "default": "./lib/reporter-dev-server.js"
+    },
+    "./reporter-conditional-manifest": {
+      "default": "./lib/reporter-conditional-manifest.js"
+    },
+    "./reporter-json": {
+      "default": "./lib/reporter-json.js"
+    },
+    "./reporter-sourcemap-visualiser": {
+      "default": "./lib/reporter-sourcemap-visualiser.js"
+    },
+    "./reporter-tracer": {
+      "default": "./lib/reporter-tracer.js"
+    },
+    "./resolver-default": {
+      "default": "./lib/resolver-default.js"
+    },
+    "./resolver-glob": {
+      "default": "./lib/resolver-glob.js"
+    },
+    "./runtime-browser-hmr": {
+      "default": "./lib/runtime-browser-hmr.js"
+    },
+    "./runtime-js": {
+      "default": "./lib/runtime-js.js"
+    },
+    "./runtime-react-refresh": {
+      "default": "./lib/runtime-react-refresh.js"
+    },
+    "./runtime-service-worker": {
+      "default": "./lib/runtime-service-worker.js"
+    },
+    "./runtime-webextension": {
+      "default": "./lib/runtime-webextension.js"
+    },
+    "./watcher-watchman-js": {
+      "default": "./lib/watcher-watchman-js.js"
+    },
+    "./babel-plugin-transform-contextual-imports": {
+      "default": "./lib/babel-plugin-transform-contextual-imports.js"
+    },
+    "./babel-plugin-transform-runtime": {
+      "default": "./lib/babel-plugin-transform-runtime.js"
+    },
+    "./babel-preset-env": {
+      "default": "./lib/babel-preset-env.js"
+    },
+    "./domain-sharding": {
+      "default": "./lib/domain-sharding.js"
+    },
+    "./events": {
+      "default": "./lib/events.js"
+    },
+    "./node-resolver-core": {
+      "default": "./lib/node-resolver-core.js"
+    },
+    "./service-worker": {
+      "default": "./lib/service-worker.js"
+    },
+    "./ts-utils": {
+      "default": "./lib/ts-utils.js"
+    },
+    "./transformer-babel": {
+      "default": "./lib/transformer-babel.js"
+    },
+    "./transformer-css": {
+      "default": "./lib/transformer-css.js"
+    },
+    "./transformer-glsl": {
+      "default": "./lib/transformer-glsl.js"
+    },
+    "./transformer-graphql": {
+      "default": "./lib/transformer-graphql.js"
+    },
+    "./transformer-html": {
+      "default": "./lib/transformer-html.js"
+    },
+    "./transformer-image": {
+      "default": "./lib/transformer-image.js"
+    },
+    "./transformer-inline": {
+      "default": "./lib/transformer-inline.js"
+    },
+    "./transformer-inline-string": {
+      "default": "./lib/transformer-inline-string.js"
+    },
+    "./transformer-js": {
+      "default": "./lib/transformer-js.js"
+    },
+    "./transformer-json": {
+      "default": "./lib/transformer-json.js"
+    },
+    "./transformer-jsonld": {
+      "default": "./lib/transformer-jsonld.js"
+    },
+    "./transformer-less": {
+      "default": "./lib/transformer-less.js"
+    },
+    "./transformer-mdx": {
+      "default": "./lib/transformer-mdx.js"
+    },
+    "./transformer-postcss": {
+      "default": "./lib/transformer-postcss.js"
+    },
+    "./transformer-posthtml": {
+      "default": "./lib/transformer-posthtml.js"
+    },
+    "./transformer-pug": {
+      "default": "./lib/transformer-pug.js"
+    },
+    "./transformer-raw": {
+      "default": "./lib/transformer-raw.js"
+    },
+    "./transformer-react-refresh-wrap": {
+      "default": "./lib/transformer-react-refresh-wrap.js"
+    },
+    "./transformer-svg": {
+      "default": "./lib/transformer-svg.js"
+    },
+    "./transformer-svg-react": {
+      "default": "./lib/transformer-svg-react.js"
+    },
+    "./transformer-toml": {
+      "default": "./lib/transformer-toml.js"
+    },
+    "./transformer-typescript-types": {
+      "default": "./lib/transformer-typescript-types.js"
+    },
+    "./transformer-typescript-tsc": {
+      "default": "./lib/transformer-typescript-tsc.js"
+    },
+    "./transformer-webextension": {
+      "default": "./lib/transformer-webextension.js"
+    },
+    "./transformer-webmanifest": {
+      "default": "./lib/transformer-webmanifest.js"
+    },
+    "./transformer-worklet": {
+      "default": "./lib/transformer-worklet.js"
+    },
+    "./transformer-xml": {
+      "default": "./lib/transformer-xml.js"
+    },
+    "./transformer-yaml": {
+      "default": "./lib/transformer-yaml.js"
+    },
+    "./worker": {
+      "default": "./lib/worker.js"
+    },
+    "./napi-worker": {
+      "default": "./lib/napi-worker.js"
+    },
+    "./ThreadsChild": {
+      "default": "./lib/ThreadsChild.js"
+    },
+    "./ProcessChild": {
+      "default": "./lib/ProcessChild.js"
+    }
+  }
 }

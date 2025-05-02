@@ -7,7 +7,6 @@ import * as path from 'node:path';
 import * as url from 'node:url';
 import glob from 'glob';
 
-const imports_re = /import(?:(?:(?:[ \n\t]+([^ *\n\t\{\},]+)[ \n\t]*(?:,|[ \n\t]+))?([ \n\t]*\{(?:[ \n\t]*[^ \n\t"'\{\}]+[ \n\t]*,?)+\})?[ \n\t]*)|[ \n\t]*\*[ \n\t]*as[ \n\t]+([^ \n\t\{\}]+)[ \n\t]+)from[ \n\t]*(?:['"])([^'"\n]+)(['"])/g
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const __types = path.normalize(path.join(__dirname, '..', 'types'));
 // const __root = path.normalize(path.join(__dirname, '..', '..', '..', '..'));
@@ -65,6 +64,9 @@ for (const entry of found) {
   }
 
   if (process.env.DEBUG_TYPES === "true") {
+    // eslint-disable-next-line no-useless-escape
+    const imports_re = /import(?:(?:(?:[ \n\t]+([^ *\n\t\{\},]+)[ \n\t]*(?:,|[ \n\t]+))?([ \n\t]*\{(?:[ \n\t]*[^ \n\t"'\{\}]+[ \n\t]*,?)+\})?[ \n\t]*)|[ \n\t]*\*[ \n\t]*as[ \n\t]+([^ \n\t\{\}]+)[ \n\t]+)from[ \n\t]*(?:['"])([^'"\n]+)(['"])/g
+
     for (const match of Array.from(matchAll(content, imports_re))) {
       const specifier = match[4]
       if (specifier.startsWith(".")) continue
