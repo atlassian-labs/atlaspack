@@ -2,6 +2,7 @@ let path = require('path');
 let assert = require('assert');
 let {Namer} = require('@atlaspack/plugin');
 
+// This corresesponds to the worker entries in scripts/generate-entries.js
 let workerEntries = {
   // Use the hash reference for the oringal worker file
   'core/workers/src/threads/ThreadsChild.js': (hashReference) =>
@@ -10,12 +11,16 @@ let workerEntries = {
     `core/workers/process/ProcessChild.${hashReference}.js`,
   'core/core/src/worker.js': (hashReference) =>
     `core/core/worker.${hashReference}.js`,
+  'core/core/src/atlaspack-v3/worker/napi-worker.js': (hashReference) =>
+    `core/core/atlaspack-v3/worker/napi-worker.${hashReference}.js`,
   // Use a stable name for the entry worker files
   'core/super/entries/ThreadsChild.js': () =>
     `core/workers/threads/ThreadsChild.js`,
   'core/super/entries/ProcessChild.js': () =>
     `core/workers/process/ProcessChild.js`,
   'core/super/entries/worker.js': () => `core/core/worker.js`,
+  'core/super/entries/napi-worker.js': () =>
+    `core/core/atlaspack-v3/worker/napi-worker.js`,
 };
 
 module.exports = new Namer({

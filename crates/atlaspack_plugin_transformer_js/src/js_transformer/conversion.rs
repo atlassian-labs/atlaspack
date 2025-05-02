@@ -23,6 +23,8 @@ use crate::js_transformer::conversion::symbol::{
   transformer_imported_symbol_to_symbol,
 };
 
+use super::EsmoduleHelperOptions;
+
 mod dependency_kind;
 mod loc;
 /// Conversions from SWC symbol types into [`Symbol`]
@@ -33,6 +35,7 @@ pub(crate) fn convert_result(
   transformer_config: &atlaspack_js_swc_core::Config,
   result: atlaspack_js_swc_core::TransformResult,
   options: &PluginOptions,
+  esmodule_helper_options: &EsmoduleHelperOptions,
 ) -> Result<TransformResult, Vec<Diagnostic>> {
   let asset_file_path = asset.file_path.to_path_buf();
   let asset_environment = asset.env.clone();
@@ -55,6 +58,7 @@ pub(crate) fn convert_result(
       &asset_file_path,
       (*asset_environment).clone(),
       &asset.id,
+      esmodule_helper_options,
     );
     dependency_by_specifier.insert(dependency.specifier.as_str().into(), dependency);
   }
@@ -443,15 +447,16 @@ fn make_esm_helpers_dependency(
   #[allow(clippy::ptr_arg)] asset_file_path: &PathBuf,
   asset_environment: Environment,
   asset_id: &str,
+  esmodule_helper_options: &EsmoduleHelperOptions,
 ) -> Dependency {
   Dependency {
     source_asset_id: Some(asset_id.to_string()),
-    specifier: "@atlaspack/transformer-js/src/esmodule-helpers.js".into(),
+    specifier: esmodule_helper_options.specifier.clone(),
     specifier_type: SpecifierType::Esm,
     source_path: Some(asset_file_path.clone()),
     env: Environment {
       include_node_modules: IncludeNodeModules::Map(BTreeMap::from([(
-        "@atlaspack/transformer-js".into(),
+        esmodule_helper_options.include_node_modules.clone(),
         true,
       )])),
       ..asset_environment.clone()

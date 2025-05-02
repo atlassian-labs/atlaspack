@@ -41,7 +41,7 @@
     "test:e2e:ci": "yarn workspace @atlaspack/e2e-tests test-ci",
     "test:integration": "yarn workspace @atlaspack/integration-tests test",
     "test:integration:v3": "ATLASPACK_V3=true yarn workspace @atlaspack/integration-tests test",
-    "test:integration:super": "SUPER_PACKAGE=true yarn workspace @atlaspack/integration-tests test",
+    "test:integration:super": "SUPER_PACKAGE=true yarn workspace @atlaspack/integration-tests test:super",
     "test:js": "yarn test:js:unit && yarn test:integration",
     "test:js:coverage": "yarn nyc yarn test:js:unit",
     "test:js:coverage:report": "yarn nyc report --reporter=html-spa",

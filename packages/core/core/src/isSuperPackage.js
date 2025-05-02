@@ -1,15 +1,17 @@
+// @flow strict-local
 let fs = require('fs');
 let {findAncestorFile} = require('@atlaspack/rust');
 
 let dirname = /*#__ATLASPACK_IGNORE__*/ __dirname;
 
-function isSuperPackage() {
+function isSuperPackage(): boolean {
   if (!dirname) {
     return false;
   }
 
   let packageJson = JSON.parse(
-    fs.readFileSync(findAncestorFile(['package.json'], dirname, '/')),
+    // $FlowFixMe
+    fs.readFileSync(findAncestorFile(['package.json'], dirname, '/'), 'utf8'),
   );
 
   return packageJson.name === '@atlaspack/super';
@@ -17,7 +19,7 @@ function isSuperPackage() {
 
 let result;
 
-module.exports.isSuperPackage = () => {
+module.exports.isSuperPackage = (): boolean => {
   if (result == null) {
     result = isSuperPackage();
   }

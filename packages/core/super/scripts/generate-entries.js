@@ -83,6 +83,10 @@ async function main() {
     importSpecifier: '@atlaspack/core/src/worker',
   });
   entries.push({
+    entryName: 'napi-worker',
+    importSpecifier: '@atlaspack/core/src/atlaspack-v3/worker/napi-worker',
+  });
+  entries.push({
     entryName: 'ThreadsChild',
     importSpecifier: '@atlaspack/workers/src/threads/ThreadsChild',
   });

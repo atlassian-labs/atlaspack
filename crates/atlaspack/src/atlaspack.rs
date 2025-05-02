@@ -95,6 +95,7 @@ impl Atlaspack {
           mode: options.mode.clone(),
           project_root: project_root.clone(),
           feature_flags: options.feature_flags.clone(),
+          is_super_package: options.is_super_package,
         }),
         // TODO Initialise actual logger
         logger: PluginLogger::default(),

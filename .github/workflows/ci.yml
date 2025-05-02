@@ -95,6 +95,7 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {cache: yarn}
       - uses: actions/download-artifact@v4
@@ -234,7 +235,7 @@ jobs:
       - run: yarn test:integration
 
   integration_tests_super:
-    name: Integration tests (Super, ${{ matrix.os }}, Node ${{ matrix.node }})
+    name: Integration tests (Super, ${{matrix.atlaspackV3=='true' && 'v3, ' || ''}}${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
       - build_native
       - build_super_package
@@ -248,6 +249,10 @@ jobs:
           # Linux AMD64
           - os: ubuntu-22.04
             node: 20
+            atlaspackV3: false
+          - os: ubuntu-22.04
+            node: 20
+            atlaspackV3: true
     runs-on: ${{ matrix.os }}
     env:
       CI: true
@@ -267,6 +272,8 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
       - run: yarn --frozen-lockfile
       - run: yarn test:integration:super
+        env:
+          ATLASPACK_V3: ${{ matrix.atlaspackV3 }}
 
   integration_tests_v3:
     name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }})
