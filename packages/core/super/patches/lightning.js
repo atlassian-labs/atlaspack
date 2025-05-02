@@ -1,3 +1,4 @@
+/* eslint-disable */
 let parts = [process.platform, process.arch];
 if (process.platform === 'linux') {
   const {MUSL, family} = require('detect-libc');

@@ -1,3 +1,4 @@
+/* eslint-disable */
 const path = require('path');
 const micromatch = require('micromatch');
 const isGlob = require('is-glob');
