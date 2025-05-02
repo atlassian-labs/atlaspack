@@ -71,16 +71,16 @@
       "default": "./*"
     },
     ".": {
-      "default": "./core.js"
+      "default": "./lib/core.js"
     },
     "./compressor-brotli": {
       "default": "./lib/compressor-brotli.js"
     },
-    "./compressor-raw": {
-      "default": "./lib/compressor-raw.js"
-    },
     "./compressor-gzip": {
       "default": "./lib/compressor-gzip.js"
+    },
+    "./compressor-raw": {
+      "default": "./lib/compressor-raw.js"
     },
     "./config-default": {
       "default": "./lib/config-default.js"
@@ -88,26 +88,37 @@
     "./config-webextension": {
       "default": "./lib/config-webextension.js"
     },
+    "./bundler-default": {
+      "default": "./lib/bundler-default.js"
+    },
+    "./bundler-library": {
+      "default": "./lib/bundler-library.js"
+    },
     "./build-cache": {
       "default": "./lib/build-cache.js"
-    },
-    "./cache": {
-      "default": "./lib/cache.js"
     },
     "./codeframe": {
       "default": "./lib/codeframe.js"
     },
-    "./diagnostic": {
-      "default": "./lib/diagnostic.js"
+    "./cache": {
+      "default": "./lib/cache.js",
+      "types": "./types/@atlaspack/cache/index.d.ts"
     },
     "./core": {
-      "default": "./lib/core.js"
+      "default": "./lib/core.js",
+      "types": "./types/@atlaspack/core/index.d.ts"
+    },
+    "./diagnostic": {
+      "default": "./lib/diagnostic.js",
+      "types": "./types/@atlaspack/diagnostic/lib/diagnostic.d.ts"
     },
     "./feature-flags": {
-      "default": "./lib/feature-flags.js"
+      "default": "./lib/feature-flags.js",
+      "types": "./types/@atlaspack/feature-flags/lib/types.d.ts"
     },
     "./fs": {
-      "default": "./lib/fs.js"
+      "default": "./lib/fs.js",
+      "types": "./types/@atlaspack/fs/index.d.ts"
     },
     "./graph": {
       "default": "./lib/graph.js"
@@ -118,35 +129,35 @@
     "./markdown-ansi": {
       "default": "./lib/markdown-ansi.js"
     },
-    "./plugin": {
-      "default": "./lib/plugin.js"
-    },
     "./package-manager": {
-      "default": "./lib/package-manager.js"
+      "default": "./lib/package-manager.js",
+      "types": "./types/@atlaspack/package-manager/index.d.ts"
+    },
+    "./plugin": {
+      "default": "./lib/plugin.js",
+      "types": "./types/@atlaspack/plugin/src/PluginAPI.d.ts"
     },
     "./profiler": {
-      "default": "./lib/profiler.js"
-    },
-    "./types-internal": {
-      "default": "./lib/types-internal.js"
+      "default": "./lib/profiler.js",
+      "types": "./types/@atlaspack/profiler/./lib/index.d.ts"
     },
     "./types": {
-      "default": "./lib/types.js"
+      "default": "./lib/types.js",
+      "types": "./types/@atlaspack/types/lib/index.d.ts"
+    },
+    "./types-internal": {
+      "default": "./lib/types-internal.js",
+      "types": "./types/@atlaspack/types-internal/lib/index.d.ts"
     },
     "./utils": {
       "default": "./lib/utils.js"
     },
     "./workers": {
-      "default": "./lib/workers.js"
+      "default": "./lib/workers.js",
+      "types": "./types/@atlaspack/workers/index.d.ts"
     },
     "./cli": {
       "default": "./lib/cli.js"
-    },
-    "./bundler-default": {
-      "default": "./lib/bundler-default.js"
-    },
-    "./bundler-library": {
-      "default": "./lib/bundler-library.js"
     },
     "./namer-default": {
       "default": "./lib/namer-default.js"
@@ -178,11 +189,11 @@
     "./optimizer-swc": {
       "default": "./lib/optimizer-swc.js"
     },
-    "./optimizer-terser": {
-      "default": "./lib/optimizer-terser.js"
-    },
     "./packager-css": {
       "default": "./lib/packager-css.js"
+    },
+    "./optimizer-terser": {
+      "default": "./lib/optimizer-terser.js"
     },
     "./packager-html": {
       "default": "./lib/packager-html.js"
@@ -193,11 +204,11 @@
     "./packager-raw": {
       "default": "./lib/packager-raw.js"
     },
-    "./packager-raw-url": {
-      "default": "./lib/packager-raw-url.js"
-    },
     "./packager-svg": {
       "default": "./lib/packager-svg.js"
+    },
+    "./packager-raw-url": {
+      "default": "./lib/packager-raw-url.js"
     },
     "./packager-ts": {
       "default": "./lib/packager-ts.js"
@@ -208,11 +219,11 @@
     "./packager-webextension": {
       "default": "./lib/packager-webextension.js"
     },
-    "./packager-xml": {
-      "default": "./lib/packager-xml.js"
-    },
     "./reporter-build-metrics": {
       "default": "./lib/reporter-build-metrics.js"
+    },
+    "./packager-xml": {
+      "default": "./lib/packager-xml.js"
     },
     "./reporter-bundle-analyzer": {
       "default": "./lib/reporter-bundle-analyzer.js"
@@ -226,11 +237,11 @@
     "./reporter-cli": {
       "default": "./lib/reporter-cli.js"
     },
-    "./reporter-dev-server": {
-      "default": "./lib/reporter-dev-server.js"
-    },
     "./reporter-conditional-manifest": {
       "default": "./lib/reporter-conditional-manifest.js"
+    },
+    "./reporter-dev-server": {
+      "default": "./lib/reporter-dev-server.js"
     },
     "./reporter-json": {
       "default": "./lib/reporter-json.js"
@@ -246,48 +257,6 @@
     },
     "./resolver-glob": {
       "default": "./lib/resolver-glob.js"
-    },
-    "./runtime-browser-hmr": {
-      "default": "./lib/runtime-browser-hmr.js"
-    },
-    "./runtime-js": {
-      "default": "./lib/runtime-js.js"
-    },
-    "./runtime-react-refresh": {
-      "default": "./lib/runtime-react-refresh.js"
-    },
-    "./runtime-service-worker": {
-      "default": "./lib/runtime-service-worker.js"
-    },
-    "./runtime-webextension": {
-      "default": "./lib/runtime-webextension.js"
-    },
-    "./watcher-watchman-js": {
-      "default": "./lib/watcher-watchman-js.js"
-    },
-    "./babel-plugin-transform-contextual-imports": {
-      "default": "./lib/babel-plugin-transform-contextual-imports.js"
-    },
-    "./babel-plugin-transform-runtime": {
-      "default": "./lib/babel-plugin-transform-runtime.js"
-    },
-    "./babel-preset-env": {
-      "default": "./lib/babel-preset-env.js"
-    },
-    "./domain-sharding": {
-      "default": "./lib/domain-sharding.js"
-    },
-    "./events": {
-      "default": "./lib/events.js"
-    },
-    "./node-resolver-core": {
-      "default": "./lib/node-resolver-core.js"
-    },
-    "./service-worker": {
-      "default": "./lib/service-worker.js"
-    },
-    "./ts-utils": {
-      "default": "./lib/ts-utils.js"
     },
     "./transformer-babel": {
       "default": "./lib/transformer-babel.js"
@@ -352,11 +321,11 @@
     "./transformer-toml": {
       "default": "./lib/transformer-toml.js"
     },
-    "./transformer-typescript-types": {
-      "default": "./lib/transformer-typescript-types.js"
-    },
     "./transformer-typescript-tsc": {
       "default": "./lib/transformer-typescript-tsc.js"
+    },
+    "./transformer-typescript-types": {
+      "default": "./lib/transformer-typescript-types.js"
     },
     "./transformer-webextension": {
       "default": "./lib/transformer-webextension.js"
@@ -373,6 +342,48 @@
     "./transformer-yaml": {
       "default": "./lib/transformer-yaml.js"
     },
+    "./watcher-watchman-js": {
+      "default": "./lib/watcher-watchman-js.js"
+    },
+    "./babel-plugin-transform-contextual-imports": {
+      "default": "./lib/babel-plugin-transform-contextual-imports.js"
+    },
+    "./babel-plugin-transform-runtime": {
+      "default": "./lib/babel-plugin-transform-runtime.js"
+    },
+    "./babel-preset-env": {
+      "default": "./lib/babel-preset-env.js"
+    },
+    "./domain-sharding": {
+      "default": "./lib/domain-sharding.js"
+    },
+    "./events": {
+      "default": "./lib/events.js"
+    },
+    "./node-resolver-core": {
+      "default": "./lib/node-resolver-core.js"
+    },
+    "./service-worker": {
+      "default": "./lib/service-worker.js"
+    },
+    "./ts-utils": {
+      "default": "./lib/ts-utils.js"
+    },
+    "./runtime-browser-hmr": {
+      "default": "./lib/runtime-browser-hmr.js"
+    },
+    "./runtime-js": {
+      "default": "./lib/runtime-js.js"
+    },
+    "./runtime-react-refresh": {
+      "default": "./lib/runtime-react-refresh.js"
+    },
+    "./runtime-service-worker": {
+      "default": "./lib/runtime-service-worker.js"
+    },
+    "./runtime-webextension": {
+      "default": "./lib/runtime-webextension.js"
+    },
     "./worker": {
       "default": "./lib/worker.js"
     },
@@ -384,6 +395,12 @@
     },
     "./ProcessChild": {
       "default": "./lib/ProcessChild.js"
+    },
+    "./conditional-import-types": {
+      "types": "./types/@atlaspack/conditional-import-types/index.d.ts"
+    },
+    "./rust": {
+      "types": "./types/@atlaspack/rust/index.d.ts"
     }
   }
 }
