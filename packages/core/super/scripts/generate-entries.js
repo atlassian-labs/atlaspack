@@ -54,7 +54,9 @@ async function getEntries() {
 
   return entries
     .map((packagePath) => ({packagePath, ...require(packagePath)}))
-    .filter(({name, private}) => !private && !EXCLUSIONS.includes(name))
+    .filter(
+      ({name, private: isPrivate}) => !isPrivate && !EXCLUSIONS.includes(name),
+    )
     .map(({name, source, atlaspackReferences, packagePath}) => {
       let entryName = name.substring(`@atlaspack/`.length);
       let isPlugin = pluginPrefixes.some((prefix) => name.startsWith(prefix));

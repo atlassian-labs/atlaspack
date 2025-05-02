@@ -178,7 +178,7 @@ export function findAsset(
   });
 }
 
-export function assertCode(codeMatch: string, actualCode) {
+export function assertCode(codeMatch: string, actualCode: string) {
   let expectedCode = codeMatch;
 
   let regexCharacters = '()[].$+*'.split('');

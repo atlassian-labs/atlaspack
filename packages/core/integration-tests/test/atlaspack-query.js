@@ -11,10 +11,6 @@ import {
 import {loadGraphs} from '../../../dev/query/src';
 
 describe.v2('atlaspack-query', () => {
-  if (process.env.ATLASPACK_SUPER_BUILD) {
-    this.skip();
-  }
-
   it('loadGraphs', async function () {
     let entries = 'index.js';
     let options = {

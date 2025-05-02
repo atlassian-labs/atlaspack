@@ -3,7 +3,6 @@ import {
   bundler,
   describe,
   getNextBuildSuccess,
-  inputFS,
   it,
   overlayFS,
   run,
@@ -12,14 +11,13 @@ import {
 import assert from 'assert';
 import path from 'path';
 import sinon from 'sinon';
-import {NodePackageManager} from '@atlaspack/package-manager';
 import {type Asset} from '@atlaspack/types';
 
 import Bundler from '@atlaspack/bundler-default';
+// $FlowFixMe
 import CustomBundler from './integration/incremental-bundling/node_modules/atlaspack-bundler-test';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
-let packageManager = new NodePackageManager(inputFS, '/');
 
 describe.v2('incremental bundling', function () {
   let defaultBundlerSpy, customBundlerSpy;
@@ -42,8 +40,9 @@ describe.v2('incremental bundling', function () {
   let getChangedAssetsBeforeRuntimes = (changedAssets: Array<Asset>) => {
     return changedAssets.filter((a) => !a.filePath.includes('runtime'));
   };
-  beforeEach(async () => {
-    defaultBundlerSpy = sinon.spy(Bundler[CONFIG], 'bundle'); // $FlowFixMe[prop-missing]
+  beforeEach(() => {
+    // $FlowFixMe[prop-missing]
+    defaultBundlerSpy = sinon.spy(Bundler[CONFIG], 'bundle');
     customBundlerSpy = sinon.spy(CustomBundler[CONFIG], 'bundle');
   });
 

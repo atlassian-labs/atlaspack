@@ -54,6 +54,7 @@ export type AtlaspackNapiOptions = {|
   options: {|
     featureFlags?: {[string]: string | boolean},
     corePath?: string,
+    isSuperPackage?: boolean,
     // TODO Use Omit when available in flow >0.210.0
     ...$Diff<
       InitialAtlaspackOptions,
