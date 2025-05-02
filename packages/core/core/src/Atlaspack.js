@@ -68,6 +68,7 @@ import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
 import {loadRustWorkerThreadDylibHack} from './rustWorkerThreadDylibHack';
+import {isSuperPackage} from './isSuperPackage';
 
 registerCoreWithSerializer();
 
@@ -176,7 +177,7 @@ export default class Atlaspack {
 
       rustAtlaspack = await AtlaspackV3.create({
         ...options,
-        corePath: path.join(__dirname, '..'),
+        corePath: path.join(/*#__ATLASPACK_IGNORE__*/ __dirname, '..'),
         threads: process.env.NODE_ENV === 'test' ? 2 : undefined,
         entries: Array.isArray(entries)
           ? entries
@@ -188,6 +189,7 @@ export default class Atlaspack {
         // $FlowFixMe ProjectPath is a string
         defaultTargetOptions: resolvedOptions.defaultTargetOptions,
         lmdb,
+        isSuperPackage: isSuperPackage(),
       });
     }
     this.rustAtlaspack = rustAtlaspack;
