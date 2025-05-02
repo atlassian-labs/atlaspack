@@ -1,5 +1,5 @@
 {
-  "name": "@atlaspack/super",
+  "name": "atlaspack",
   "version": "2.14.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "repository": {
@@ -14,7 +14,8 @@
       "default": "./*"
     },
     ".": {
-      "default": "./lib/core.js"
+      "default": "./lib/core.js",
+      "types": "./types/@atlaspack/core/index.d.ts"
     },
     "./compressor-brotli": {
       "default": "./lib/compressor-brotli.js"
@@ -25,27 +26,27 @@
     "./compressor-raw": {
       "default": "./lib/compressor-raw.js"
     },
-    "./bundler-library": {
-      "default": "./lib/bundler-library.js"
-    },
-    "./bundler-default": {
-      "default": "./lib/bundler-default.js"
-    },
     "./config-default": {
       "default": "./lib/config-default.js"
     },
     "./config-webextension": {
       "default": "./lib/config-webextension.js"
     },
+    "./bundler-default": {
+      "default": "./lib/bundler-default.js"
+    },
+    "./bundler-library": {
+      "default": "./lib/bundler-library.js"
+    },
     "./build-cache": {
       "default": "./lib/build-cache.js"
-    },
-    "./codeframe": {
-      "default": "./lib/codeframe.js"
     },
     "./cache": {
       "default": "./lib/cache.js",
       "types": "./types/@atlaspack/cache/index.d.ts"
+    },
+    "./codeframe": {
+      "default": "./lib/codeframe.js"
     },
     "./core": {
       "default": "./lib/core.js",
@@ -63,11 +64,11 @@
       "default": "./lib/fs.js",
       "types": "./types/@atlaspack/fs/index.d.ts"
     },
-    "./graph": {
-      "default": "./lib/graph.js"
-    },
     "./logger": {
       "default": "./lib/logger.js"
+    },
+    "./graph": {
+      "default": "./lib/graph.js"
     },
     "./markdown-ansi": {
       "default": "./lib/markdown-ansi.js"
@@ -79,6 +80,9 @@
     "./plugin": {
       "default": "./lib/plugin.js",
       "types": "./types/@atlaspack/plugin/src/PluginAPI.d.ts"
+    },
+    "./cli": {
+      "default": "./lib/cli.js"
     },
     "./profiler": {
       "default": "./lib/profiler.js",
@@ -99,72 +103,6 @@
       "default": "./lib/workers.js",
       "types": "./types/@atlaspack/workers/index.d.ts"
     },
-    "./cli": {
-      "default": "./lib/cli.js"
-    },
-    "./namer-default": {
-      "default": "./lib/namer-default.js"
-    },
-    "./optimizer-blob-url": {
-      "default": "./lib/optimizer-blob-url.js"
-    },
-    "./optimizer-css": {
-      "default": "./lib/optimizer-css.js"
-    },
-    "./optimizer-cssnano": {
-      "default": "./lib/optimizer-cssnano.js"
-    },
-    "./optimizer-data-url": {
-      "default": "./lib/optimizer-data-url.js"
-    },
-    "./optimizer-htmlnano": {
-      "default": "./lib/optimizer-htmlnano.js"
-    },
-    "./optimizer-image": {
-      "default": "./lib/optimizer-image.js"
-    },
-    "./optimizer-inline-requires": {
-      "default": "./lib/optimizer-inline-requires.js"
-    },
-    "./optimizer-svgo": {
-      "default": "./lib/optimizer-svgo.js"
-    },
-    "./optimizer-swc": {
-      "default": "./lib/optimizer-swc.js"
-    },
-    "./optimizer-terser": {
-      "default": "./lib/optimizer-terser.js"
-    },
-    "./reporter-build-metrics": {
-      "default": "./lib/reporter-build-metrics.js"
-    },
-    "./reporter-bundle-analyzer": {
-      "default": "./lib/reporter-bundle-analyzer.js"
-    },
-    "./reporter-bundle-buddy": {
-      "default": "./lib/reporter-bundle-buddy.js"
-    },
-    "./reporter-bundle-stats": {
-      "default": "./lib/reporter-bundle-stats.js"
-    },
-    "./reporter-cli": {
-      "default": "./lib/reporter-cli.js"
-    },
-    "./reporter-conditional-manifest": {
-      "default": "./lib/reporter-conditional-manifest.js"
-    },
-    "./reporter-dev-server": {
-      "default": "./lib/reporter-dev-server.js"
-    },
-    "./reporter-json": {
-      "default": "./lib/reporter-json.js"
-    },
-    "./reporter-sourcemap-visualiser": {
-      "default": "./lib/reporter-sourcemap-visualiser.js"
-    },
-    "./reporter-tracer": {
-      "default": "./lib/reporter-tracer.js"
-    },
     "./packager-css": {
       "default": "./lib/packager-css.js"
     },
@@ -174,11 +112,11 @@
     "./packager-js": {
       "default": "./lib/packager-js.js"
     },
-    "./packager-raw": {
-      "default": "./lib/packager-raw.js"
-    },
     "./packager-raw-url": {
       "default": "./lib/packager-raw-url.js"
+    },
+    "./packager-raw": {
+      "default": "./lib/packager-raw.js"
     },
     "./packager-svg": {
       "default": "./lib/packager-svg.js"
@@ -195,23 +133,86 @@
     "./packager-xml": {
       "default": "./lib/packager-xml.js"
     },
-    "./resolver-default": {
-      "default": "./lib/resolver-default.js"
+    "./optimizer-css": {
+      "default": "./lib/optimizer-css.js"
+    },
+    "./namer-default": {
+      "default": "./lib/namer-default.js"
+    },
+    "./optimizer-cssnano": {
+      "default": "./lib/optimizer-cssnano.js"
+    },
+    "./optimizer-blob-url": {
+      "default": "./lib/optimizer-blob-url.js"
+    },
+    "./optimizer-data-url": {
+      "default": "./lib/optimizer-data-url.js"
+    },
+    "./optimizer-htmlnano": {
+      "default": "./lib/optimizer-htmlnano.js"
+    },
+    "./optimizer-image": {
+      "default": "./lib/optimizer-image.js"
+    },
+    "./optimizer-inline-requires": {
+      "default": "./lib/optimizer-inline-requires.js"
+    },
+    "./optimizer-svgo": {
+      "default": "./lib/optimizer-svgo.js"
+    },
+    "./optimizer-terser": {
+      "default": "./lib/optimizer-terser.js"
+    },
+    "./reporter-build-metrics": {
+      "default": "./lib/reporter-build-metrics.js"
+    },
+    "./optimizer-swc": {
+      "default": "./lib/optimizer-swc.js"
+    },
+    "./reporter-bundle-buddy": {
+      "default": "./lib/reporter-bundle-buddy.js"
+    },
+    "./reporter-bundle-analyzer": {
+      "default": "./lib/reporter-bundle-analyzer.js"
+    },
+    "./reporter-bundle-stats": {
+      "default": "./lib/reporter-bundle-stats.js"
+    },
+    "./reporter-cli": {
+      "default": "./lib/reporter-cli.js"
+    },
+    "./reporter-dev-server": {
+      "default": "./lib/reporter-dev-server.js"
+    },
+    "./reporter-conditional-manifest": {
+      "default": "./lib/reporter-conditional-manifest.js"
+    },
+    "./reporter-json": {
+      "default": "./lib/reporter-json.js"
+    },
+    "./reporter-sourcemap-visualiser": {
+      "default": "./lib/reporter-sourcemap-visualiser.js"
     },
     "./resolver-glob": {
       "default": "./lib/resolver-glob.js"
     },
-    "./runtime-browser-hmr": {
-      "default": "./lib/runtime-browser-hmr.js"
+    "./resolver-default": {
+      "default": "./lib/resolver-default.js"
+    },
+    "./reporter-tracer": {
+      "default": "./lib/reporter-tracer.js"
     },
     "./runtime-js": {
       "default": "./lib/runtime-js.js"
     },
-    "./runtime-react-refresh": {
-      "default": "./lib/runtime-react-refresh.js"
+    "./runtime-browser-hmr": {
+      "default": "./lib/runtime-browser-hmr.js"
     },
     "./runtime-service-worker": {
       "default": "./lib/runtime-service-worker.js"
+    },
+    "./runtime-react-refresh": {
+      "default": "./lib/runtime-react-refresh.js"
     },
     "./runtime-webextension": {
       "default": "./lib/runtime-webextension.js"
@@ -225,14 +226,14 @@
     "./transformer-glsl": {
       "default": "./lib/transformer-glsl.js"
     },
+    "./transformer-image": {
+      "default": "./lib/transformer-image.js"
+    },
     "./transformer-graphql": {
       "default": "./lib/transformer-graphql.js"
     },
     "./transformer-html": {
       "default": "./lib/transformer-html.js"
-    },
-    "./transformer-image": {
-      "default": "./lib/transformer-image.js"
     },
     "./transformer-inline": {
       "default": "./lib/transformer-inline.js"
@@ -240,14 +241,14 @@
     "./transformer-inline-string": {
       "default": "./lib/transformer-inline-string.js"
     },
-    "./transformer-js": {
-      "default": "./lib/transformer-js.js"
-    },
     "./transformer-json": {
       "default": "./lib/transformer-json.js"
     },
     "./transformer-jsonld": {
       "default": "./lib/transformer-jsonld.js"
+    },
+    "./transformer-js": {
+      "default": "./lib/transformer-js.js"
     },
     "./transformer-less": {
       "default": "./lib/transformer-less.js"
@@ -255,11 +256,11 @@
     "./transformer-mdx": {
       "default": "./lib/transformer-mdx.js"
     },
-    "./transformer-postcss": {
-      "default": "./lib/transformer-postcss.js"
-    },
     "./transformer-posthtml": {
       "default": "./lib/transformer-posthtml.js"
+    },
+    "./transformer-postcss": {
+      "default": "./lib/transformer-postcss.js"
     },
     "./transformer-pug": {
       "default": "./lib/transformer-pug.js"
@@ -267,11 +268,11 @@
     "./transformer-raw": {
       "default": "./lib/transformer-raw.js"
     },
-    "./transformer-react-refresh-wrap": {
-      "default": "./lib/transformer-react-refresh-wrap.js"
-    },
     "./transformer-svg": {
       "default": "./lib/transformer-svg.js"
+    },
+    "./transformer-react-refresh-wrap": {
+      "default": "./lib/transformer-react-refresh-wrap.js"
     },
     "./transformer-svg-react": {
       "default": "./lib/transformer-svg-react.js"
@@ -282,11 +283,11 @@
     "./transformer-typescript-tsc": {
       "default": "./lib/transformer-typescript-tsc.js"
     },
-    "./transformer-typescript-types": {
-      "default": "./lib/transformer-typescript-types.js"
-    },
     "./transformer-webextension": {
       "default": "./lib/transformer-webextension.js"
+    },
+    "./transformer-typescript-types": {
+      "default": "./lib/transformer-typescript-types.js"
     },
     "./transformer-webmanifest": {
       "default": "./lib/transformer-webmanifest.js"
@@ -312,11 +313,11 @@
     "./babel-preset-env": {
       "default": "./lib/babel-preset-env.js"
     },
-    "./domain-sharding": {
-      "default": "./lib/domain-sharding.js"
-    },
     "./events": {
       "default": "./lib/events.js"
+    },
+    "./domain-sharding": {
+      "default": "./lib/domain-sharding.js"
     },
     "./node-resolver-core": {
       "default": "./lib/node-resolver-core.js"

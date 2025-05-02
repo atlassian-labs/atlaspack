@@ -7,7 +7,7 @@ let {copyTypes} = require('./copy-types.cjs');
 let {sortPackageJson} = require('sort-package-json');
 
 const EXCLUSIONS = [
-  '@atlaspack/super',
+  'atlaspack',
   '@atlaspack/parcel-to-atlaspack',
   '@atlaspack/bundler-experimental',
   '@atlaspack/rust',
@@ -89,7 +89,7 @@ async function main() {
     './*': {default: './*'},
     '.': {
       default: './lib/core.js',
-      types: './types/@atlaspack/core/index.d.ts'
+      types: './types/@atlaspack/core/index.d.ts',
     },
   };
   let entries = await getEntries();

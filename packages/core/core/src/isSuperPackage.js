@@ -14,7 +14,7 @@ function isSuperPackage(): boolean {
     fs.readFileSync(findAncestorFile(['package.json'], dirname, '/'), 'utf8'),
   );
 
-  return packageJson.name === '@atlaspack/super';
+  return packageJson.name === 'atlaspack';
 }
 
 let result;

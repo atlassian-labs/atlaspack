@@ -23,7 +23,7 @@ import {isSuperPackage} from '@atlaspack/core';
 
 const domainShardingImports = isSuperPackage()
   ? {
-      specifier: '@atlaspack/super/lib/domain-sharding.js',
+      specifier: 'atlaspack/lib/domain-sharding.js',
       helper: './helpers/browser/esm-js-loader-shards-super.js',
     }
   : {

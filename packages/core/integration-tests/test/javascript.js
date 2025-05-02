@@ -34,9 +34,7 @@ const paths =
   process.env.SUPER_PACKAGE === 'true'
     ? {
         jsTransformer: normalizePath(
-          require.resolve(
-            '@atlaspack/super/lib/transformers/js/JSTransformer.js',
-          ),
+          require.resolve('atlaspack/lib/transformers/js/JSTransformer.js'),
         ),
       }
     : {

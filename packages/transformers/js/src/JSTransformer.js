@@ -1083,7 +1083,7 @@ export default (new Transformer({
             resolveFrom: /*#__ATLASPACK_IGNORE__*/ __filename,
             env: {
               includeNodeModules: {
-                '@atlaspack/super': true,
+                atlaspack: true,
               },
             },
           });

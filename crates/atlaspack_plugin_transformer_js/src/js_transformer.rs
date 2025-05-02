@@ -105,7 +105,7 @@ impl AtlaspackJsTransformerPlugin {
         // Once super builds are rolled out we should improve the way static
         // file paths are passed to rust.
         specifier: String::from("./transformers/js/esmodule-helpers.js"),
-        include_node_modules: String::from("@atlaspack/super"),
+        include_node_modules: String::from("atlaspack"),
       },
     };
 
