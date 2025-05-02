@@ -43,7 +43,7 @@ const rule = createRule<Options, keyof typeof messages>({
   defaultOptions: [],
   create(context) {
     return {
-      CallExpression(node: TSESTree.CallExpression) {
+      CallExpression(node) {
         // Check if the function being called is `importCond`
         // Note that this is a global, so we don't need to check the imports
         if (
