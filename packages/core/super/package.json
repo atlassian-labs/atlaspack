@@ -25,6 +25,10 @@
     "@swc/wasm": false,
     "@atlaspack/babel-register": false
   },
+  "devDependencies": {
+    "@atlaspack/plugin": "*",
+    "prettier": "2.4.1"
+  },
   "sideEffects": true,
   "files": [
     "lib",

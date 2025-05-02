@@ -1,4 +1,3 @@
-let path = require('path');
 let {Optimizer} = require('@atlaspack/plugin');
 let prettier = require('prettier');
 
