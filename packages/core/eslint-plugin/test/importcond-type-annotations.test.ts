@@ -1,13 +1,12 @@
 import rule, {RULE_NAME} from '../src/rules/importcond-type-annotations/index';
 
 import {outdent} from 'outdent';
-import {filename, tsRuleTester} from './utils';
+import {tsRuleTester} from './utils';
 
 tsRuleTester.run(RULE_NAME, rule, {
   valid: [
     {
       name: 'Correct type annotation is present',
-      filename,
       code: outdent`
         importCond<typeof import('./new.tsx'), typeof import('./old.tsx')>(
           'gate_name',
@@ -18,7 +17,6 @@ tsRuleTester.run(RULE_NAME, rule, {
     },
     {
       name: 'Correct type annotation with extra spaces',
-      filename,
       code: outdent`
         importCond<
           typeof import('./new.tsx'),
@@ -32,14 +30,12 @@ tsRuleTester.run(RULE_NAME, rule, {
     },
     {
       name: 'Non-importCond function call',
-      filename,
       code: outdent`
         otherFunction('gate_name', './new.tsx', './old.tsx');
       `,
     },
     {
       name: 'importCond with fewer than 3 arguments',
-      filename,
       code: outdent`
         importCond('gate_name', './new.tsx');
       `,
@@ -49,7 +45,6 @@ tsRuleTester.run(RULE_NAME, rule, {
   invalid: [
     {
       name: 'Missing type annotation',
-      filename,
       code: outdent`
         importCond('gate_name', './new.tsx', './old.tsx');
       `,
@@ -60,7 +55,6 @@ tsRuleTester.run(RULE_NAME, rule, {
     },
     {
       name: 'Incorrect type annotation order',
-      filename,
       code: outdent`
         importCond<
           typeof import('./old.tsx'),
@@ -87,7 +81,6 @@ tsRuleTester.run(RULE_NAME, rule, {
     },
     {
       name: 'Missing type annotation with extra spaces',
-      filename,
       code: outdent`
         importCond(
           'gate_name',
@@ -102,7 +95,6 @@ tsRuleTester.run(RULE_NAME, rule, {
     },
     {
       name: 'Incorrect type annotation with inline arguments',
-      filename,
       code: outdent`
         importCond<typeof import('./old.tsx'), typeof import('./new.tsx')>('gate_name', './new.tsx', './old.tsx');
       `,

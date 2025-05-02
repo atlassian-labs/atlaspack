@@ -1,11 +1,10 @@
-import {filename, tsRuleTester} from './utils';
+import {tsRuleTester} from './utils';
 import rule, {RULE_NAME} from '../src/rules/no-importcond-exports/index';
 
 tsRuleTester.run(RULE_NAME, rule, {
   valid: [
     {
       name: 'No importCond usage',
-      filename,
       code: `
         import { something } from 'module';
         export const myFunction = () => {};
@@ -13,7 +12,6 @@ tsRuleTester.run(RULE_NAME, rule, {
     },
     {
       name: 'importCond is used inside a function, not directly exported',
-      filename,
       code: `
         const MyComponent = importCond<
           typeof import('./old.tsx'),
@@ -30,7 +28,6 @@ tsRuleTester.run(RULE_NAME, rule, {
     },
     {
       name: 'importCond is used inside a function, not directly exported',
-      filename,
       code: `
         export function getComponent() {
           const MyComponent = importCond<
@@ -49,7 +46,6 @@ tsRuleTester.run(RULE_NAME, rule, {
   invalid: [
     {
       name: 'Directly exporting importCond',
-      filename,
       code: `
         export const MyComponent = importCond<
           typeof import('./old.tsx'),
@@ -64,7 +60,6 @@ tsRuleTester.run(RULE_NAME, rule, {
     },
     {
       name: 'importCond is indirectly exported',
-      filename,
       code: `
         const MyComponent = importCond<
           typeof import('./old.tsx'),
@@ -80,7 +75,6 @@ tsRuleTester.run(RULE_NAME, rule, {
     },
     {
       name: 'Directly exporting importCond as default',
-      filename,
       code: `
         export default importCond({ old: OldComponent, new: NewComponent });
       `,
@@ -88,7 +82,6 @@ tsRuleTester.run(RULE_NAME, rule, {
     },
     {
       name: 'Named export of a variable initialized with importCond',
-      filename,
       code: `
         const MyComponent = importCond<
           typeof import('./old.tsx'),
