@@ -2,13 +2,396 @@
   "name": "@atlaspack/super",
   "version": "2.14.0",
   "description": "Blazing fast, zero configuration web application bundler",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
   "license": "(MIT OR Apache-2.0)",
+  "sideEffects": true,
+  "type": "commonjs",
+  "exports": {
+    "./*": {
+      "default": "./*"
+    },
+    ".": {
+      "default": "./lib/core.js"
+    },
+    "./compressor-brotli": {
+      "default": "./lib/compressor-brotli.js"
+    },
+    "./compressor-gzip": {
+      "default": "./lib/compressor-gzip.js"
+    },
+    "./compressor-raw": {
+      "default": "./lib/compressor-raw.js"
+    },
+    "./bundler-library": {
+      "default": "./lib/bundler-library.js"
+    },
+    "./bundler-default": {
+      "default": "./lib/bundler-default.js"
+    },
+    "./config-default": {
+      "default": "./lib/config-default.js"
+    },
+    "./config-webextension": {
+      "default": "./lib/config-webextension.js"
+    },
+    "./build-cache": {
+      "default": "./lib/build-cache.js"
+    },
+    "./codeframe": {
+      "default": "./lib/codeframe.js"
+    },
+    "./cache": {
+      "default": "./lib/cache.js",
+      "types": "./types/@atlaspack/cache/index.d.ts"
+    },
+    "./core": {
+      "default": "./lib/core.js",
+      "types": "./types/@atlaspack/core/index.d.ts"
+    },
+    "./diagnostic": {
+      "default": "./lib/diagnostic.js",
+      "types": "./types/@atlaspack/diagnostic/lib/diagnostic.d.ts"
+    },
+    "./feature-flags": {
+      "default": "./lib/feature-flags.js",
+      "types": "./types/@atlaspack/feature-flags/lib/types.d.ts"
+    },
+    "./fs": {
+      "default": "./lib/fs.js",
+      "types": "./types/@atlaspack/fs/index.d.ts"
+    },
+    "./graph": {
+      "default": "./lib/graph.js"
+    },
+    "./logger": {
+      "default": "./lib/logger.js"
+    },
+    "./markdown-ansi": {
+      "default": "./lib/markdown-ansi.js"
+    },
+    "./package-manager": {
+      "default": "./lib/package-manager.js",
+      "types": "./types/@atlaspack/package-manager/index.d.ts"
+    },
+    "./plugin": {
+      "default": "./lib/plugin.js",
+      "types": "./types/@atlaspack/plugin/src/PluginAPI.d.ts"
+    },
+    "./profiler": {
+      "default": "./lib/profiler.js",
+      "types": "./types/@atlaspack/profiler/./lib/index.d.ts"
+    },
+    "./types": {
+      "default": "./lib/types.js",
+      "types": "./types/@atlaspack/types/lib/index.d.ts"
+    },
+    "./types-internal": {
+      "default": "./lib/types-internal.js",
+      "types": "./types/@atlaspack/types-internal/lib/index.d.ts"
+    },
+    "./utils": {
+      "default": "./lib/utils.js"
+    },
+    "./workers": {
+      "default": "./lib/workers.js",
+      "types": "./types/@atlaspack/workers/index.d.ts"
+    },
+    "./cli": {
+      "default": "./lib/cli.js"
+    },
+    "./namer-default": {
+      "default": "./lib/namer-default.js"
+    },
+    "./optimizer-blob-url": {
+      "default": "./lib/optimizer-blob-url.js"
+    },
+    "./optimizer-css": {
+      "default": "./lib/optimizer-css.js"
+    },
+    "./optimizer-cssnano": {
+      "default": "./lib/optimizer-cssnano.js"
+    },
+    "./optimizer-data-url": {
+      "default": "./lib/optimizer-data-url.js"
+    },
+    "./optimizer-htmlnano": {
+      "default": "./lib/optimizer-htmlnano.js"
+    },
+    "./optimizer-image": {
+      "default": "./lib/optimizer-image.js"
+    },
+    "./optimizer-inline-requires": {
+      "default": "./lib/optimizer-inline-requires.js"
+    },
+    "./optimizer-svgo": {
+      "default": "./lib/optimizer-svgo.js"
+    },
+    "./optimizer-swc": {
+      "default": "./lib/optimizer-swc.js"
+    },
+    "./optimizer-terser": {
+      "default": "./lib/optimizer-terser.js"
+    },
+    "./reporter-build-metrics": {
+      "default": "./lib/reporter-build-metrics.js"
+    },
+    "./reporter-bundle-analyzer": {
+      "default": "./lib/reporter-bundle-analyzer.js"
+    },
+    "./reporter-bundle-buddy": {
+      "default": "./lib/reporter-bundle-buddy.js"
+    },
+    "./reporter-bundle-stats": {
+      "default": "./lib/reporter-bundle-stats.js"
+    },
+    "./reporter-cli": {
+      "default": "./lib/reporter-cli.js"
+    },
+    "./reporter-conditional-manifest": {
+      "default": "./lib/reporter-conditional-manifest.js"
+    },
+    "./reporter-dev-server": {
+      "default": "./lib/reporter-dev-server.js"
+    },
+    "./reporter-json": {
+      "default": "./lib/reporter-json.js"
+    },
+    "./reporter-sourcemap-visualiser": {
+      "default": "./lib/reporter-sourcemap-visualiser.js"
+    },
+    "./reporter-tracer": {
+      "default": "./lib/reporter-tracer.js"
+    },
+    "./packager-css": {
+      "default": "./lib/packager-css.js"
+    },
+    "./packager-html": {
+      "default": "./lib/packager-html.js"
+    },
+    "./packager-js": {
+      "default": "./lib/packager-js.js"
+    },
+    "./packager-raw": {
+      "default": "./lib/packager-raw.js"
+    },
+    "./packager-raw-url": {
+      "default": "./lib/packager-raw-url.js"
+    },
+    "./packager-svg": {
+      "default": "./lib/packager-svg.js"
+    },
+    "./packager-ts": {
+      "default": "./lib/packager-ts.js"
+    },
+    "./packager-wasm": {
+      "default": "./lib/packager-wasm.js"
+    },
+    "./packager-webextension": {
+      "default": "./lib/packager-webextension.js"
+    },
+    "./packager-xml": {
+      "default": "./lib/packager-xml.js"
+    },
+    "./resolver-default": {
+      "default": "./lib/resolver-default.js"
+    },
+    "./resolver-glob": {
+      "default": "./lib/resolver-glob.js"
+    },
+    "./runtime-browser-hmr": {
+      "default": "./lib/runtime-browser-hmr.js"
+    },
+    "./runtime-js": {
+      "default": "./lib/runtime-js.js"
+    },
+    "./runtime-react-refresh": {
+      "default": "./lib/runtime-react-refresh.js"
+    },
+    "./runtime-service-worker": {
+      "default": "./lib/runtime-service-worker.js"
+    },
+    "./runtime-webextension": {
+      "default": "./lib/runtime-webextension.js"
+    },
+    "./transformer-babel": {
+      "default": "./lib/transformer-babel.js"
+    },
+    "./transformer-css": {
+      "default": "./lib/transformer-css.js"
+    },
+    "./transformer-glsl": {
+      "default": "./lib/transformer-glsl.js"
+    },
+    "./transformer-graphql": {
+      "default": "./lib/transformer-graphql.js"
+    },
+    "./transformer-html": {
+      "default": "./lib/transformer-html.js"
+    },
+    "./transformer-image": {
+      "default": "./lib/transformer-image.js"
+    },
+    "./transformer-inline": {
+      "default": "./lib/transformer-inline.js"
+    },
+    "./transformer-inline-string": {
+      "default": "./lib/transformer-inline-string.js"
+    },
+    "./transformer-js": {
+      "default": "./lib/transformer-js.js"
+    },
+    "./transformer-json": {
+      "default": "./lib/transformer-json.js"
+    },
+    "./transformer-jsonld": {
+      "default": "./lib/transformer-jsonld.js"
+    },
+    "./transformer-less": {
+      "default": "./lib/transformer-less.js"
+    },
+    "./transformer-mdx": {
+      "default": "./lib/transformer-mdx.js"
+    },
+    "./transformer-postcss": {
+      "default": "./lib/transformer-postcss.js"
+    },
+    "./transformer-posthtml": {
+      "default": "./lib/transformer-posthtml.js"
+    },
+    "./transformer-pug": {
+      "default": "./lib/transformer-pug.js"
+    },
+    "./transformer-raw": {
+      "default": "./lib/transformer-raw.js"
+    },
+    "./transformer-react-refresh-wrap": {
+      "default": "./lib/transformer-react-refresh-wrap.js"
+    },
+    "./transformer-svg": {
+      "default": "./lib/transformer-svg.js"
+    },
+    "./transformer-svg-react": {
+      "default": "./lib/transformer-svg-react.js"
+    },
+    "./transformer-toml": {
+      "default": "./lib/transformer-toml.js"
+    },
+    "./transformer-typescript-tsc": {
+      "default": "./lib/transformer-typescript-tsc.js"
+    },
+    "./transformer-typescript-types": {
+      "default": "./lib/transformer-typescript-types.js"
+    },
+    "./transformer-webextension": {
+      "default": "./lib/transformer-webextension.js"
+    },
+    "./transformer-webmanifest": {
+      "default": "./lib/transformer-webmanifest.js"
+    },
+    "./transformer-worklet": {
+      "default": "./lib/transformer-worklet.js"
+    },
+    "./transformer-xml": {
+      "default": "./lib/transformer-xml.js"
+    },
+    "./transformer-yaml": {
+      "default": "./lib/transformer-yaml.js"
+    },
+    "./watcher-watchman-js": {
+      "default": "./lib/watcher-watchman-js.js"
+    },
+    "./babel-plugin-transform-contextual-imports": {
+      "default": "./lib/babel-plugin-transform-contextual-imports.js"
+    },
+    "./babel-plugin-transform-runtime": {
+      "default": "./lib/babel-plugin-transform-runtime.js"
+    },
+    "./babel-preset-env": {
+      "default": "./lib/babel-preset-env.js"
+    },
+    "./domain-sharding": {
+      "default": "./lib/domain-sharding.js"
+    },
+    "./events": {
+      "default": "./lib/events.js"
+    },
+    "./node-resolver-core": {
+      "default": "./lib/node-resolver-core.js"
+    },
+    "./service-worker": {
+      "default": "./lib/service-worker.js"
+    },
+    "./ts-utils": {
+      "default": "./lib/ts-utils.js"
+    },
+    "./worker": {
+      "default": "./lib/worker.js"
+    },
+    "./napi-worker": {
+      "default": "./lib/napi-worker.js"
+    },
+    "./ThreadsChild": {
+      "default": "./lib/ThreadsChild.js"
+    },
+    "./ProcessChild": {
+      "default": "./lib/ProcessChild.js"
+    },
+    "./conditional-import-types": {
+      "types": "./types/@atlaspack/conditional-import-types/index.d.ts"
+    },
+    "./rust": {
+      "types": "./types/@atlaspack/rust/index.d.ts"
+    }
+  },
+  "files": [
+    "lib",
+    "!lib/native/*win32*",
+    "!lib/native/*musl*"
+  ],
   "scripts": {
     "build": "rm -rf lib && yarn generate-entries && yarn build:atlaspack && yarn create-empty-files",
-    "generate-entries": "rm -rf entries && node ./scripts/generate-entries.js",
     "build:atlaspack": "NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SUPER_BUILD=true yarn atlaspack build --no-cache --no-autoinstall ./entries/*.js --config .parcelrc",
-    "create-empty-files": "touch lib/core/core/_empty.js && touch lib/utils/node-resolver-core/_empty.js"
+    "create-empty-files": "touch lib/core/core/_empty.js && touch lib/utils/node-resolver-core/_empty.js",
+    "generate-entries": "rm -rf entries && node ./scripts/generate-entries.js"
   },
+  "devDependencies": {
+    "@atlaspack/plugin": "*",
+    "fast-glob": "^3.2.12",
+    "prettier": "2.4.1",
+    "sort-package-json": "^3.1.0"
+  },
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "alias": {
+    "@swc/wasm": false,
+    "@atlaspack/babel-register": false
+  },
+  "copyTypes": [
+    "@atlaspack/cache",
+    "@atlaspack/conditional-import-types",
+    "@atlaspack/core",
+    "@atlaspack/diagnostic",
+    "@atlaspack/feature-flags",
+    "@atlaspack/fs",
+    "@atlaspack/package-manager",
+    "@atlaspack/plugin",
+    "@atlaspack/profiler",
+    "@atlaspack/rust",
+    "@atlaspack/types",
+    "@atlaspack/types-internal",
+    "@atlaspack/workers",
+    "@mischnic/json-sourcemap",
+    "chrome-trace-event",
+    "@parcel/watcher",
+    "@parcel/source-map"
+  ],
   "targets": {
     "default": {
       "context": "node",
@@ -20,31 +403,5 @@
         "lmdb": false
       }
     }
-  },
-  "alias": {
-    "@swc/wasm": false,
-    "@atlaspack/babel-register": false
-  },
-  "devDependencies": {
-    "@atlaspack/plugin": "*",
-    "fast-glob": "^3.2.12",
-    "prettier": "2.4.1"
-  },
-  "sideEffects": true,
-  "files": [
-    "lib",
-    "!lib/native/*win32*",
-    "!lib/native/*musl*"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/atlassian-labs/atlaspack.git"
-  },
-  "engines": {
-    "node": ">= 16.0.0"
-  },
-  "type": "commonjs"
+  }
 }

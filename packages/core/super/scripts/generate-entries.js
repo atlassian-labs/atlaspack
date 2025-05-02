@@ -1,6 +1,10 @@
+/* eslint-disable import/no-extraneous-dependencies */
+
 let path = require('path');
 let fs = require('fs/promises');
 let glob = require('fast-glob');
+let {copyTypes} = require('./copy-types.cjs');
+let {sortPackageJson} = require('sort-package-json');
 
 const EXCLUSIONS = [
   '@atlaspack/super',
@@ -77,6 +81,17 @@ async function getEntries() {
 }
 
 async function main() {
+  const superPkgJson = JSON.parse(
+    await fs.readFile(path.join(__dirname, '..', 'package.json'), 'utf8'),
+  );
+
+  superPkgJson.exports = {
+    './*': {default: './*'},
+    '.': {
+      default: './lib/core.js',
+      types: './types/@atlaspack/core/index.d.ts'
+    },
+  };
   let entries = await getEntries();
 
   // Add worker entries
@@ -121,6 +136,9 @@ async function main() {
 
     let entryPath = path.join(entryDir, entryName + '.js');
     await writeFile(entryPath, code.join('\n'));
+    superPkgJson.exports[`./${entryName}`] =
+      superPkgJson.exports[`./${entryName}`] || {};
+    superPkgJson.exports[`./${entryName}`].default = `./lib/${entryName}.js`;
 
     for (let reference of references) {
       let target = path
@@ -138,6 +156,14 @@ async function main() {
   await writeFile(
     path.join(__dirname, '../patches', 'internal-plugins.js'),
     `export default {${internalPluginMap}}`,
+  );
+
+  copyTypes(superPkgJson);
+
+  await fs.writeFile(
+    path.join(__dirname, '..', 'package.json'),
+    JSON.stringify(sortPackageJson(superPkgJson), null, 2),
+    'utf8',
   );
 }
 
