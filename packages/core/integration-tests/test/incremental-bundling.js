@@ -16,6 +16,7 @@ import {NodePackageManager} from '@atlaspack/package-manager';
 import {type Asset} from '@atlaspack/types';
 
 import Bundler from '@atlaspack/bundler-default';
+// $FlowFixMe
 import CustomBundler from './integration/incremental-bundling/node_modules/atlaspack-bundler-test';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
@@ -43,7 +44,8 @@ describe.v2('incremental bundling', function () {
     return changedAssets.filter((a) => !a.filePath.includes('runtime'));
   };
   beforeEach(async () => {
-    defaultBundlerSpy = sinon.spy(Bundler[CONFIG], 'bundle'); // $FlowFixMe[prop-missing]
+    // $FlowFixMe[prop-missing]
+    defaultBundlerSpy = sinon.spy(Bundler[CONFIG], 'bundle');
     customBundlerSpy = sinon.spy(CustomBundler[CONFIG], 'bundle');
   });
 

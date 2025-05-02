@@ -66,7 +66,7 @@ describe('domain-sharding', () => {
 
       const bBundle = bundleGraph
         .getBundles()
-        .find((b) => b.getMainEntry().filePath.includes('b.js'));
+        .find((b) => b.getMainEntry()?.filePath.includes('b.js'));
       if (!bBundle) return assert(bBundle);
 
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');

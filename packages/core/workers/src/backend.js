@@ -12,6 +12,7 @@ export function detectBackend(): BackendType {
   }
 
   try {
+    // $FlowFixMe
     () => require('worker_threads')();
     return 'threads';
   } catch (err) {
