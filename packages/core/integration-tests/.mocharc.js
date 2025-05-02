@@ -13,7 +13,12 @@ const config = {
   retries: isCI ? 2 : 0,
   ignore: isSuperPackageBuild
     ? // Ignore irrelevant tests for the super package
-      ['test/atlaspack-link.js', 'test/atlaspack-query.js', 'test/cache.js']
+      [
+        'test/atlaspack-link.js',
+        'test/atlaspack-query.js',
+        'test/cache.js',
+        'test/incremental-bundling.js',
+      ]
     : [],
 };
 
