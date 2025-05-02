@@ -235,7 +235,7 @@ jobs:
       - run: yarn test:integration
 
   integration_tests_super:
-    name: Integration tests (Super, ${{matrix.atlaspackV3=='true' && 'v3, ' || ''}}${{ matrix.os }}, Node ${{ matrix.node }})
+    name: Integration tests (Super, ${{ matrix.atlaspackV3 == 'true' && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
       - build_native
       - build_super_package
