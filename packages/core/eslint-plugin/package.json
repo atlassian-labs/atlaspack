@@ -23,6 +23,6 @@
     "@typescript-eslint/rule-tester": "^8.31.1"
   },
   "peerDependencies": {
-    "eslint": ">8.0.0"
+    "eslint": "^8.57.0 || ^9.0.0"
   }
 }
