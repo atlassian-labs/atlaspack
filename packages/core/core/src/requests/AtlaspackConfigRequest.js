@@ -173,6 +173,7 @@ export async function resolveAtlaspackConfig(
     // Load the super package default config
     let result: AtlaspackConfigChain = await processConfigChain(
       atlaspackInternalPlugins['@atlaspack/config-default'](),
+      // $FlowFixMe
       options.defaultConfig,
       options,
     );
