@@ -1,5 +1,5 @@
 {
-  "name": "@atlaspack/eslint-plugin-public",
+  "name": "@atlaspack/eslint-plugin",
   "version": "2.14.0",
   "license": "(MIT OR Apache-2.0)",
   "main": "lib/index.js",

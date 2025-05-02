@@ -1,1 +1,0 @@
-# @atlaspack/eslint-plugin-public

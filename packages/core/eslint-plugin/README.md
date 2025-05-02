@@ -1,4 +1,4 @@
-# @atlaspack/eslint-plugin-public
+# @atlaspack/eslint-plugin
 
 ESLint rules recommended when using Atlaspack.
 
