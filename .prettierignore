@@ -20,34 +20,3 @@ crates
 # in precommit hook, causing `yarn lint:readme` to fail
 /README.md
 /packages/core/cli/README.md
-
-# TODO: resolve these Prettier violations - some of these are easy, but some cause prettier errors or are not one-to-one changes!
-# A long-term solution would be to migrate these to TypeScript
-
-packages/bundlers/library/src/LibraryBundler.js
-packages/core/cache/src/IDBCache.browser.js
-packages/core/core/src/atlaspack-v3/worker/compat/asset-symbols.js
-packages/core/core/src/Atlaspack.js
-packages/core/core/src/BundleGraph.js
-packages/core/core/src/Environment.js
-packages/core/core/src/public/Asset.js
-packages/core/core/src/public/Symbols.js
-packages/core/core/src/requests/AtlaspackConfigRequest.js
-packages/core/core/src/resolveOptions.js
-packages/core/graph/src/AdjacencyList.js
-packages/core/package-manager/src/NodePackageManager.js
-packages/core/test-utils/src/fsFixture.js
-packages/core/utils/src/hash.js
-packages/core/workers/src/web/WebWorker.js
-packages/dev/repl/src/atlaspack/index.js
-packages/dev/repl/src/components/helper.js
-packages/dev/repl/src/graphs/index.js
-packages/dev/repl/src/index.js
-packages/dev/repl/src/utils/assets.js
-packages/examples/kitchen-sink/src/index.js
-packages/reporters/conditional-manifest/src/ConditionalManifestReporter.js
-packages/runtimes/hmr/src/loaders/hmr-runtime.js
-packages/transformers/css/src/CSSTransformer.js
-packages/transformers/js/src/JSTransformer.js
-packages/transformers/typescript-types/src/shake.js
-packages/utils/atlaspack-lsp-protocol/src/index.js
