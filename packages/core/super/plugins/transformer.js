@@ -19,7 +19,6 @@ module.exports = new Transformer({
     let patch = patches[path.relative(rootDir, asset.filePath)];
 
     if (patch) {
-      console.log('Patching', asset.filePath);
       let patchedCode = await options.inputFS.readFile(
         path.join(__dirname, patch),
       );

@@ -2,7 +2,6 @@
 import {validateConfig} from './validateConfig';
 import {Transformer} from '@atlaspack/plugin';
 import nullthrows from 'nullthrows';
-import WorkerFarm from '@atlaspack/workers';
 import loadSharp from './loadSharp';
 
 // from https://github.com/lovell/sharp/blob/df7b8ba73808fc494be413e88cfb621b6279218c/lib/output.js#L6-L17
@@ -17,8 +16,6 @@ const FORMATS = new Map([
   ['heic', 'heif'],
   ['heif', 'heif'],
 ]);
-
-let isSharpLoadedOnMainThread = false;
 
 export default (new Transformer({
   async loadConfig({config}) {
