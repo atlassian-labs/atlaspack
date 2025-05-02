@@ -26,6 +26,25 @@
     "@swc/wasm": false,
     "@atlaspack/babel-register": false
   },
+  "copyTypes": [
+    "@atlaspack/cache",
+    "@atlaspack/conditional-import-types",
+    "@atlaspack/core",
+    "@atlaspack/diagnostic",
+    "@atlaspack/feature-flags",
+    "@atlaspack/fs",
+    "@atlaspack/package-manager",
+    "@atlaspack/plugin",
+    "@atlaspack/profiler",
+    "@atlaspack/rust",
+    "@atlaspack/types",
+    "@atlaspack/types-internal",
+    "@atlaspack/workers",
+    "@mischnic/json-sourcemap",
+    "chrome-trace-event",
+    "@parcel/watcher",
+    "@parcel/source-map"
+  ],
   "exports": {
     "./*": "./*",
     ".": {
