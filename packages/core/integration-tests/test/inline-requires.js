@@ -21,7 +21,7 @@ describe('inline requires', () => {
     mode: 'production',
   };
 
-  it('inlines require statements', async () => {
+  it.only('inlines require statements', async () => {
     await fsFixture(overlayFS, __dirname)`
         inline-requires
           dependency/index.js:
@@ -52,7 +52,7 @@ describe('inline requires', () => {
             {
               "extends": "@atlaspack/config-default",
               "optimizers": {
-                "*.js": ["@atlaspack/optimizer-inline-requires"]
+                "*.js": ["@atlaspack/optimizer-js"]
               }
             }
     `;

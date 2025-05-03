@@ -337,6 +337,22 @@ declare export function runInlineRequiresOptimizer(
   input: InlineRequiresOptimizerInput,
 ): InlineRequiresOptimizerResult;
 
+export interface JsOptimizerInput {
+  code: string;
+  sourceMaps: boolean;
+  inlineRequires: {|
+    ignoreModuleIds: Array<string>;
+  |}
+}
+export interface JsOptimizerResult {
+  code: string;
+  sourceMap?: string;
+}
+
+declare export function runJsOptimizer(
+  input: JsOptimizerInput,
+): JsOptimizerResult;
+
 export interface VCSFile {
   path: string;
   hash: number;
