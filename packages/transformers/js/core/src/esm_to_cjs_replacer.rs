@@ -43,7 +43,7 @@ fn local_name_for_src(src: &JsWord) -> JsWord {
     return format!("_{}", src.to_camel_case()).into();
   }
 
-  format!("_{}", src.split('/').last().unwrap().to_camel_case()).into()
+  format!("_{}", src.split('/').next_back().unwrap().to_camel_case()).into()
 }
 
 impl EsmToCjsReplacer {

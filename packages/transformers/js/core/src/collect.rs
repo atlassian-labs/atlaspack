@@ -971,7 +971,7 @@ impl Visit for Collect {
         Expr::Member(member) => {
           // import('foo').then(foo => ...);
           if let Some(source) = match_import(&member.obj) {
-            if match_property_name(member).map_or(false, |f| &*f.0 == "then") {
+            if match_property_name(member).is_some_and(|f| &*f.0 == "then") {
               if let Some(ExprOrSpread { expr, .. }) = node.args.first() {
                 let param = match &**expr {
                   Expr::Fn(func) => func.function.params.first().map(|param| &param.pat),
