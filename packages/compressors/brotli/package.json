@@ -13,7 +13,6 @@
   "main": "lib/BrotliCompressor.js",
   "source": "src/BrotliCompressor.js",
   "engines": {
-    "atlaspack": "^2.12.0",
     "node": ">= 16.0.0"
   },
   "dependencies": {

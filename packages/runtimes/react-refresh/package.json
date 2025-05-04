@@ -12,7 +12,6 @@
   "main": "lib/ReactRefreshRuntime.js",
   "source": "src/ReactRefreshRuntime.js",
   "engines": {
-    "atlaspack": "^2.12.0",
     "node": ">= 16.0.0"
   },
   "dependencies": {

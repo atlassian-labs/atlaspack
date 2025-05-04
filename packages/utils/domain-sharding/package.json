@@ -16,7 +16,6 @@
     "build-ts": "tsc src/index.js --allowJs --declaration --emitDeclarationOnly --outDir lib"
   },
   "engines": {
-    "atlaspack": "^2.12.0",
     "node": ">= 16.0.0"
   },
   "devDependencies": {

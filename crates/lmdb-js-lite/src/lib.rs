@@ -155,7 +155,10 @@ impl LMDB {
     let mut state = STATE
       .lock()
       .map_err(|_| napi::Error::from_reason("LMDB State mutex is poisoned"))?;
-    let database = state.get_database(options).map_err(napi_error)?;
+    let database = state
+      .get_database(options)
+      .map_err(|err| anyhow!("Failed to get database: {err}"))
+      .map_err(napi_error)?;
     Ok(Self {
       inner: Some(database),
       read_transaction: None,

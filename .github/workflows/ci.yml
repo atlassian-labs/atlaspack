@@ -17,51 +17,129 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
+  # Test for changesets if branch is not main
+  enforce-changeset:
+    name: ✍️ Enforce Changesets
+    runs-on: ubuntu-24.04
+    if: github.ref_name != 'main'
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/github-script@v7
         with:
-          cache: yarn
-      - uses: ./.github/actions/rust-toolchain
-        with:
-          components: clippy, rustfmt
-      - run: yarn --frozen-lockfile
-      - run: yarn lint
+          script: |
+            const { enforceChangeset } = require('./scripts/enforce-changeset.js');
+            await enforceChangeset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pullNumber: context.payload.pull_request.number,
+              octokit: github
+            });
 
-  flow:
-    name: Flow
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-      - run: yarn --frozen-lockfile
-      - run: yarn flow check
+  # Build and store native packages
+  build_native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux AMD64
+          - name: 🐥 Build Linux AMD64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            # We just do this on linux to save time on Mac agents
+            build_js: true
 
-  ts-types:
-    name: TypeScript types
-    runs-on: ubuntu-latest
+          # MacOS ARM64
+          - name: 🍎 Build MacOS ARM64
+            os: macos-15
+            target: aarch64-apple-darwin
+
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Job Setup
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: "${{ matrix.target }}" }
+      - uses: actions/setup-node@v4
+        with: { cache: yarn }
+      # Yarn install is required for @napi-rs/cli
+      - run: yarn install --frozen-lockfile
+      # Build native artifacts
+      - env:
+          RUSTUP_TARGET: ${{ matrix.target }}
+          CARGO_PROFILE: release
+        run: yarn build-native
+      - if: ${{ matrix.build_js }}
+        run: yarn build
+      # Upload artifacts for use later in pipeline
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.target }}
+          path: packages/**/*
+          retention-days: 1
+
+  lint_javascript:
+    name: 🐵 Lint JavaScript
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-      - run: yarn --frozen-lockfile
-      - run: yarn build-ts
+        with: { cache: yarn }
+      - run: yarn install --frozen-lockfile
+      - run: npx flow check
+      - run: npx eslint .
+      - run: npx prettier "./packages/*/*/{src,bin,test}/**/*.{js,json,md}" --list-different
+      - run: npx lerna run build-ts
+      - run: npx lerna run check-ts
+
+  lint_rust:
+    name: 🦀 Lint Rust
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: ./.github/actions/rust-toolchain
+        with: { components: "clippy, rustfmt" }
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy -- -D warnings
+
+  unit_tests_rust:
+    strategy:
+      matrix:
+        include:
+        - os: ubuntu-22.04
+        - os: macos-15
+    name: Unit tests (${{ matrix.os }}, Rust)
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: ./.github/actions/rust-toolchain
+      - run: cargo test
 
   unit_tests:
     name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
+    needs:
+      - build_native
     strategy:
       matrix:
-        node: [18, 20]
-        os: [ubuntu-latest, macos-latest]
         include:
-          - node: 22
-            os: ubuntu-latest
+          # Linux AMD64
+          - os: ubuntu-22.04
+            node: 22
+          - os: ubuntu-22.04
+            node: 20
+          - os: ubuntu-22.04
+            node: 18
+
+          # MacOS ARM64
+          - os: macos-15
+            node: 20
+          - os: macos-15
+            node: 18
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -69,28 +147,39 @@ jobs:
         with:
           cache: yarn
           node-version: ${{ matrix.node }}
-      - uses: ./.github/actions/rust-toolchain
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
         with:
-          shared-key: ${{ matrix.os }}
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
       - name: Bump max inotify watches (Linux only)
         if: ${{ runner.os == 'Linux' }}
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
       - run: yarn --frozen-lockfile
-      - run: yarn build-native-release
-      - run: yarn test:unit
+      - run: yarn test:js:unit
 
   integration_tests:
-    name: Integration tests (${{ matrix.version == 'v3' && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
+    name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
+    needs:
+      - build_native
     timeout-minutes: 35
     strategy:
-      matrix:
-        node: [18, 20]
-        os: [ubuntu-latest, macos-latest]
-        version: [v2, v3]
       # These tend to be quite flakey, so one failed instance shouldn't stop
       # others from potentially succeeding
       fail-fast: false
+      matrix:
+        include:
+          # Linux AMD64
+          - os: ubuntu-22.04
+            node: 20
+          - os: ubuntu-22.04
+            node: 18
+
+          # MacOS ARM64
+          - os: macos-15
+            node: 20
+          - os: macos-15
+            node: 18
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -98,22 +187,63 @@ jobs:
         with:
           cache: yarn
           node-version: ${{ matrix.node }}
-      - uses: ./.github/actions/rust-toolchain
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
         with:
-          shared-key: ${{ matrix.os }}
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
       - run: yarn --frozen-lockfile
-      - run: yarn build-native-release
-      - run: yarn build
+      - run: yarn test:integration-ci
+
+  integration_tests_v3:
+    name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }})
+    needs:
+      - build_native
+    timeout-minutes: 15
+    strategy:
+      # These tend to be quite flakey, so one failed instance shouldn't stop
+      # others from potentially succeeding
+      fail-fast: false
+      matrix:
+        include:
+          # Linux AMD64
+          - os: ubuntu-22.04
+            node: 20
+          - os: ubuntu-22.04
+            node: 18
+
+          # MacOS ARM64
+          - os: macos-15
+            node: 20
+          - os: macos-15
+            node: 18
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: yarn
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - name: Bump max inotify watches (Linux only)
+        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+        if: ${{ runner.os == 'Linux' }}
+      - run: yarn --frozen-lockfile
       - run: yarn test:integration-ci
         env:
-          ATLASPACK_V3: ${{ matrix.version == 'v3' && 'true' || 'false' }}
+          ATLASPACK_V3: true
 
   end_to_end_tests:
     name: E2E tests
+    needs:
+      - build_native
     timeout-minutes: 35
     strategy:
       matrix:
@@ -126,28 +256,14 @@ jobs:
         with:
           cache: yarn
           node-version: ${{ matrix.node }}
-      - uses: ./.github/actions/rust-toolchain
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
         with:
-          shared-key: ${{ matrix.os }}
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
       - run: yarn --frozen-lockfile
-      - run: yarn build-native-release
-      - run: yarn build
       - run: yarn playwright install
       - run: yarn test:e2e:ci
-
-  repl:
-    name: Deploy REPL
-    if: false # ${{ github.event_name == 'pull_request' }}
-    uses: ./.github/workflows/repl.yml
-    permissions:
-      contents: read
-      deployments: write
-    secrets: inherit
-    with:
-      alias-domains: |
-        pr-{{PR_NUMBER}}.repl.atlaspack.org
-      environment: Preview
