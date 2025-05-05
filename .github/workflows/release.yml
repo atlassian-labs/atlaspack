@@ -32,12 +32,12 @@ jobs:
           # Linux AMD64
           - name: x86_64-unknown-linux-gnu
             target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
 
           # Linux ARM64
           - name: aarch64-unknown-linux-gnu
             target: aarch64-unknown-linux-gnu
-            objcopy: aarch64-linux-gnu-objcopy
-            needs_cross_compile: true
+            os: ubuntu-22.04-arm
 
           # # Linux ARM
           # We don't support 32 bit linux
@@ -47,7 +47,7 @@ jobs:
           #   run: apt install -y gcc-arm-linux-gnueabihf
 
     name: ${{ matrix.name }}
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     container:
       image: debian:bullseye-slim
     steps:
@@ -59,10 +59,6 @@ jobs:
           apt-get update
           apt-get install -y build-essential curl nodejs npm
           npm i -g yarn
-      - name: Install cross-compiler
-        if: ${{ matrix.needs_cross_compile }}
-        run: |
-          apt-get install -y gcc-aarch64-linux-gnu
       - name: Install Rust
         uses: ./.github/actions/rust-toolchain
         with:
@@ -82,8 +78,6 @@ jobs:
         run: yarn build-native
       - name: Extract debug symbols
         run: node "./scripts/debug-symbols.mjs"
-        env:
-          OBJCOPY: ${{ inputs.objcopy }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
