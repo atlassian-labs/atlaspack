@@ -36,6 +36,7 @@ jobs:
           # Linux ARM64
           - name: aarch64-unknown-linux-gnu
             target: aarch64-unknown-linux-gnu
+            objcopy: aarch64-linux-gnu-objcopy
             needs_cross_compile: true
 
           # # Linux ARM
@@ -81,6 +82,8 @@ jobs:
         run: yarn build-native
       - name: Extract debug symbols
         run: node "./scripts/debug-symbols.mjs"
+        env:
+          OBJCOPY: ${{ inputs.objcopy }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
