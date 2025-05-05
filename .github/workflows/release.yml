@@ -24,39 +24,80 @@ permissions:
   contents: write # for actions/checkout and adding tag
 
 jobs:
-  build-native:
+  build-native-linux:
     strategy:
       fail-fast: false
       matrix:
         include:
           # Linux AMD64
           - name: x86_64-unknown-linux-gnu
-            os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
 
           # Linux ARM64
           - name: aarch64-unknown-linux-gnu
-            os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04-arm
 
           # # Linux ARM
           # We don't support 32 bit linux
           # - name: arm-unknown-linux-gnueabihf
-          #   os: ubuntu-24.04
+          #   os: ubuntu-22.04
           #   target: arm-unknown-linux-gnueabihf
           #   run: apt install -y gcc-arm-linux-gnueabihf
 
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    container:
+      image: debian:bullseye-slim
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        # We need to install nodejs because `setup-node` requires
+        # the runner to have nodejs installed (https://github.com/actions/setup-node/issues/1287)
+        run: |
+          apt-get update
+          apt-get install -y build-essential curl nodejs npm
+          npm i -g yarn
+      - name: Install Rust
+        uses: ./.github/actions/rust-toolchain
+        with:
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-node@v4
+        with:
+          cache: yarn
+          node-version: 22
+      - uses: Swatinem/rust-cache@v2
+        if: ${{ inputs.type != 'latest' }}
+        with: { shared-key: "${{ matrix.name }}" }
+      - run: yarn install --frozen-lockfile
+      - name: Build native packages
+        env:
+          RUSTUP_TARGET: ${{ matrix.target }}
+          CARGO_PROFILE: ${{ inputs.profile }}
+        run: yarn build-native
+      - name: Extract debug symbols
+        run: node "./scripts/debug-symbols.mjs"
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.target }}
+          path: packages/**/*
+
+  build-native-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
           # MACOS ARM64
           - name: aarch64-apple-darwin
-            os: macos-latest
             target: aarch64-apple-darwin
 
           # MACOS AMD64
           - name: x86_64-apple-darwin
-            os: macos-latest
             target: x86_64-apple-darwin
     name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
@@ -76,8 +117,6 @@ jobs:
         run: yarn build-native
       - name: Extract debug symbols
         run: node "./scripts/debug-symbols.mjs"
-        # Upload the entire contents of ./packages for each platform
-        # and later combine them to build up the /platform folder
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -87,8 +126,9 @@ jobs:
   build-and-release:
     name: Build and release
     needs:
-      - build-native
-    runs-on: ubuntu-24.04
+      - build-native-linux
+      - build-native-macos
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -141,8 +181,9 @@ jobs:
     if: github.ref_name == 'main'
     permissions: write-all
     needs:
-      - build-native
-    runs-on: ubuntu-24.04
+      - build-native-linux
+      - build-native-macos
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
