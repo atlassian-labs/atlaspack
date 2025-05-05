@@ -1,19 +1,19 @@
 #!/usr/bin/env zx
 /* eslint-disable no-console */
-import { $ } from 'zx';
+import {$} from 'zx';
 
 try {
-  console.log("Linting js...")
+  console.log('Linting js...');
   await $`eslint .`;
-  console.log("Linting js successful!");
+  console.log('Linting js successful!');
 
-  console.log("Prettifying...")
-  await $`prettier "./packages/*/*/{src,bin,test}/**/*.{js,json,md}" --list-different`;
-  console.log("Prettifying successful!");
+  console.log('Prettifying...');
+  await $`prettier --list-different .`;
+  console.log('Prettifying successful!');
 
-  console.log("Formatting rust...")
+  console.log('Formatting rust...');
   await $`cargo fmt --all -- --check`;
-  console.log("Rust formatting successful!");
+  console.log('Rust formatting successful!');
 
   try {
     await $`cargo clippy --version`;
@@ -21,11 +21,10 @@ try {
     console.log('cargo-clippy not found, installing...');
     await $`rustup component add clippy`;
   }
-  console.log("Running clippy...")
+  console.log('Running clippy...');
   await $`cargo clippy -- -D warnings`;
-  console.log("Clippy found no warnings!");
+  console.log('Clippy found no warnings!');
 } catch (error) {
-
   console.error('An error occurred during the checks:', error);
   process.exit(1);
 }

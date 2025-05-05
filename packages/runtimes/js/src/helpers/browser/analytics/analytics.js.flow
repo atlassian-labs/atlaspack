@@ -2,7 +2,9 @@
 
 export type AtlaspackAnalyticsEvent = {|
   action: string,
-  attributes?: { [key: string]: string | number | boolean },
+  attributes?: {[key: string]: string | number | boolean},
 |};
 
-declare export function sendAnalyticsEvent(event: AtlaspackAnalyticsEvent): void;
+declare export function sendAnalyticsEvent(
+  event: AtlaspackAnalyticsEvent,
+): void;
