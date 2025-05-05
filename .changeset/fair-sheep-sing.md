@@ -1,5 +1,5 @@
 ---
-'@atlaspack/eslint-plugin-public': patch
+'@atlaspack/eslint-plugin': patch
 ---
 
-Create @atlaspack/eslint-plugin-public for Atlaspack conditional imports ESLint rules
+Create @atlaspack/eslint-plugin for Atlaspack conditional imports ESLint rules
