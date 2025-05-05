@@ -36,25 +36,19 @@ jobs:
             });
 
   # Build and store native packages
-  build_native:
+  build_native_linux:
     strategy:
       fail-fast: false
       matrix:
         include:
           # Linux AMD64
           - name: 🐥 Build Linux AMD64
-            os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            # We just do this on linux to save time on Mac agents
             build_js: true
-
-          # MacOS ARM64
-          - name: 🍎 Build MacOS ARM64
-            os: macos-15
-            target: aarch64-apple-darwin
-
     name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-22.04
+    container:
+      image: debian:bullseye-slim
     steps:
       # Job Setup
       - uses: actions/checkout@v4
@@ -73,6 +67,40 @@ jobs:
         run: yarn build-native
       - if: ${{ matrix.build_js }}
         run: yarn build
+      # Upload artifacts for use later in pipeline
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.target }}
+          path: packages/**/*
+          retention-days: 1
+
+  build_native_macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # MacOS ARM64
+          - name: 🍎 Build MacOS ARM64
+            target: aarch64-apple-darwin
+    name: ${{ matrix.name }}
+    runs-on: macos-15
+    steps:
+      # Job Setup
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: "${{ matrix.target }}" }
+      - uses: actions/setup-node@v4
+        with: { cache: yarn }
+      # Yarn install is required for @napi-rs/cli
+      - run: yarn install --frozen-lockfile
+      # Build native artifacts
+      - env:
+          RUSTUP_TARGET: ${{ matrix.target }}
+          CARGO_PROFILE: release
+        run: yarn build-native
       # Upload artifacts for use later in pipeline
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -123,7 +151,8 @@ jobs:
   unit_tests:
     name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
-      - build_native
+      - build_native_linux
+      - build_native_macos
     strategy:
       matrix:
         include:
@@ -161,7 +190,8 @@ jobs:
   integration_tests:
     name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
-      - build_native
+      - build_native_linux
+      - build_native_macos
     timeout-minutes: 35
     strategy:
       # These tend to be quite flakey, so one failed instance shouldn't stop
@@ -201,7 +231,8 @@ jobs:
   integration_tests_v3:
     name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
-      - build_native
+      - build_native_linux
+      - build_native_macos
     timeout-minutes: 15
     strategy:
       # These tend to be quite flakey, so one failed instance shouldn't stop
@@ -243,7 +274,8 @@ jobs:
   end_to_end_tests:
     name: E2E tests
     needs:
-      - build_native
+      - build_native_linux
+      - build_native_macos
     timeout-minutes: 35
     strategy:
       matrix:
