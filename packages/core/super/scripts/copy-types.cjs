@@ -77,7 +77,7 @@ module.exports.copyTypes = function (pkgJson) {
       }
     }
   }
-}
+};
 
 function resolveTypesEntry(pkgDir) {
   const pkgJson = JSON.parse(
