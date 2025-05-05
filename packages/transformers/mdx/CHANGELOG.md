@@ -1,5 +1,16 @@
 # @atlaspack/transformer-mdx
 
+## 2.14.1
+
+### Patch Changes
+
+- [#450](https://github.com/atlassian-labs/atlaspack/pull/450) [`b9d41b1`](https://github.com/atlassian-labs/atlaspack/commit/b9d41b175ad5771651a5b0278a5a0147e669234a) Thanks [@benjervis](https://github.com/benjervis)! - Remove the Atlaspack engines compatibility check
+
+- [#478](https://github.com/atlassian-labs/atlaspack/pull/478) [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b) Thanks [@yamadapc](https://github.com/yamadapc)! - The first attempt at Version Packages didn't include the built artifacts.
+  This has hopefully been fixed, so this change will force those packages to re-release.
+- Updated dependencies [[`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b)]:
+  - @atlaspack/plugin@2.14.1
+
 ## 2.14.0
 
 ### Minor Changes

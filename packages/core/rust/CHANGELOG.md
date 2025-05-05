@@ -1,5 +1,22 @@
 # @atlaspack/rust
 
+## 3.0.1
+
+### Patch Changes
+
+- [#444](https://github.com/atlassian-labs/atlaspack/pull/444) [`80bd57b`](https://github.com/atlassian-labs/atlaspack/commit/80bd57b9f9e966563957dee0780d956a682eb2d4) Thanks [@yamadapc](https://github.com/yamadapc)! - Allow missing .yarn-state.yml files without throwing on VCS file change reads
+
+- [#448](https://github.com/atlassian-labs/atlaspack/pull/448) [`ae70b81`](https://github.com/atlassian-labs/atlaspack/commit/ae70b810384cf58f9c57d341ab4c925c7bb2060c) Thanks [@yamadapc](https://github.com/yamadapc)! - Upgrade GLIBC to 2.35
+
+- [#487](https://github.com/atlassian-labs/atlaspack/pull/487) [`c0a61a9`](https://github.com/atlassian-labs/atlaspack/commit/c0a61a92405b6830fe39cc17622cc2e97bf02dd7) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix listing diff for VCS filesystem on sparse checkouts
+
+- [#488](https://github.com/atlassian-labs/atlaspack/pull/488) [`cb35e7d`](https://github.com/atlassian-labs/atlaspack/commit/cb35e7d2b90b372de8401792915f12f410508d24) Thanks [@yamadapc](https://github.com/yamadapc)! - Binaries are now built on debian bullseye
+
+- [#459](https://github.com/atlassian-labs/atlaspack/pull/459) [`6ec11f1`](https://github.com/atlassian-labs/atlaspack/commit/6ec11f10a9366fb8a9fc0475c7678235056bd80e) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix segmentation faults on exit
+
+- [#478](https://github.com/atlassian-labs/atlaspack/pull/478) [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b) Thanks [@yamadapc](https://github.com/yamadapc)! - The first attempt at Version Packages didn't include the built artifacts.
+  This has hopefully been fixed, so this change will force those packages to re-release.
+
 ## 3.0.0
 
 ### Major Changes
