@@ -47,7 +47,7 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ubuntu-22.04
     container:
-      image: debian:bullseye-slim
+      image: debian:bullseye
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
