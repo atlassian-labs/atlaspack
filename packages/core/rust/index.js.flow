@@ -70,16 +70,22 @@ export type AtlaspackNapiOptions = {|
 
 // AtlaspackNapi
 export type AtlaspackNapi = {||};
-declare export function atlaspackNapiCreate(options: AtlaspackNapiOptions, lmdb: mixed): Promise<AtlaspackNapi>;
-declare export function atlaspackNapiBuildAssetGraph(atlaspack: AtlaspackNapi): Promise<any>;
-declare export function atlaspackNapiRespondToFsEvents(atlaspack: AtlaspackNapi, events: WatchEvents): boolean;
+declare export function atlaspackNapiCreate(
+  options: AtlaspackNapiOptions,
+  lmdb: mixed,
+): Promise<AtlaspackNapi>;
+declare export function atlaspackNapiBuildAssetGraph(
+  atlaspack: AtlaspackNapi,
+): Promise<any>;
+declare export function atlaspackNapiRespondToFsEvents(
+  atlaspack: AtlaspackNapi,
+  events: WatchEvents,
+): boolean;
 // AtlaspackNapi
 
 declare export function getAvailableThreads(): number;
 
-declare export function newNodejsWorker(
-  delegate: any,
-): Transferable;
+declare export function newNodejsWorker(delegate: any): Transferable;
 
 declare export function initializeMonitoring(): void;
 declare export function closeMonitoring(): void;
