@@ -1,3 +1,5 @@
+// TODO validate checksum of tarball
+
 use std::fs;
 
 use flate2::read::GzDecoder;
