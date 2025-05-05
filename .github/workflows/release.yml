@@ -51,9 +51,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
+        # We need to install nodejs because `setup-node` requires
+        # the runner to have nodejs installed (https://github.com/actions/setup-node/issues/1287)
         run: |
           apt-get update
-          apt-get install -y build-essential curl
+          apt-get install -y build-essential curl nodejs npm yarnpkg
       - name: Install Rust
         uses: ./.github/actions/rust-toolchain
         with:
