@@ -47,9 +47,13 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ubuntu-22.04
     container:
-      image: debian:bullseye
+      image: debian:bullseye-slim
     steps:
       - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y build-essential curl
       - name: Install Rust
         uses: ./.github/actions/rust-toolchain
         with:
