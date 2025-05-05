@@ -1,5 +1,21 @@
 # @atlaspack/package-manager
 
+## 2.14.1
+
+### Patch Changes
+
+- [#478](https://github.com/atlassian-labs/atlaspack/pull/478) [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b) Thanks [@yamadapc](https://github.com/yamadapc)! - The first attempt at Version Packages didn't include the built artifacts.
+  This has hopefully been fixed, so this change will force those packages to re-release.
+- Updated dependencies [[`80bd57b`](https://github.com/atlassian-labs/atlaspack/commit/80bd57b9f9e966563957dee0780d956a682eb2d4), [`ce13d5e`](https://github.com/atlassian-labs/atlaspack/commit/ce13d5e885d55518ee6318e7a72e3a6e4e5126f2), [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b)]:
+  - @atlaspack/fs@2.14.1
+  - @atlaspack/utils@2.14.1
+  - @atlaspack/diagnostic@2.14.1
+  - @atlaspack/logger@2.14.1
+  - @atlaspack/types@2.14.1
+  - @atlaspack/workers@2.14.1
+  - @atlaspack/node-resolver-core@3.5.1
+  - @atlaspack/build-cache@2.13.3
+
 ## 2.14.0
 
 ### Minor Changes
