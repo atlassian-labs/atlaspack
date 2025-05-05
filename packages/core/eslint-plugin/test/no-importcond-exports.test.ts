@@ -14,12 +14,12 @@ tsRuleTester.run(RULE_NAME, rule, {
       name: 'importCond is used inside a function, not directly exported',
       code: `
         const MyComponent = importCond<
-          typeof import('./old.tsx'),
-          typeof import('./new.tsx')
+          typeof import('./new.tsx'),
+          typeof import('./old.tsx')
         >(
           'gate-name',
-          './old.tsx',
           './new.tsx',
+          './old.tsx',
         );
         export function getComponent() {
           return MyComponent;
@@ -31,12 +31,12 @@ tsRuleTester.run(RULE_NAME, rule, {
       code: `
         export function getComponent() {
           const MyComponent = importCond<
-            typeof import('./old.tsx'),
-            typeof import('./new.tsx')
+            typeof import('./new.tsx'),
+            typeof import('./old.tsx')
           >(
             'gate-name',
-            './old.tsx',
             './new.tsx',
+            './old.tsx',
           );
         }
       `,
@@ -48,12 +48,12 @@ tsRuleTester.run(RULE_NAME, rule, {
       name: 'Directly exporting importCond',
       code: `
         export const MyComponent = importCond<
-          typeof import('./old.tsx'),
-          typeof import('./new.tsx')
+          typeof import('./new.tsx'),
+          typeof import('./old.tsx')
         >(
           'gate-name',
-          './old.tsx',
           './new.tsx',
+          './old.tsx',
         );
       `,
       errors: [{messageId: 'noImportCondExports'}],
@@ -62,12 +62,12 @@ tsRuleTester.run(RULE_NAME, rule, {
       name: 'importCond is indirectly exported',
       code: `
         const MyComponent = importCond<
-          typeof import('./old.tsx'),
-          typeof import('./new.tsx')
+          typeof import('./new.tsx'),
+          typeof import('./old.tsx')
         >(
           'gate-name',
-          './old.tsx',
           './new.tsx',
+          './old.tsx',
         );
         export default MyComponent;
       `,
@@ -76,7 +76,7 @@ tsRuleTester.run(RULE_NAME, rule, {
     {
       name: 'Directly exporting importCond as default',
       code: `
-        export default importCond({ old: OldComponent, new: NewComponent });
+        export default importCond<typeof import('./new.tsx'), typeof import('./old.tsx')>('gate-name', './new.tsx', './old.tsx');
       `,
       errors: [{messageId: 'noImportCondExports'}],
     },
@@ -84,12 +84,12 @@ tsRuleTester.run(RULE_NAME, rule, {
       name: 'Named export of a variable initialized with importCond',
       code: `
         const MyComponent = importCond<
-          typeof import('./old.tsx'),
-          typeof import('./new.tsx')
+          typeof import('./new.tsx'),
+          typeof import('./old.tsx')
         >(
           'gate-name',
-          './old.tsx',
           './new.tsx',
+          './old.tsx',
         );
         export { MyComponent };
       `,

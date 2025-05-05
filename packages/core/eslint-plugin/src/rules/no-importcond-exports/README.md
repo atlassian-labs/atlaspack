@@ -22,9 +22,9 @@ the test file and test those instead.
 ```ts
 // `importCond` is used within the file but not directly exported
 const MyComponent = importCond<
-  typeof import('./old.tsx'),
-  typeof import('./new.tsx')
->('gate-name', './old.tsx', './new.tsx');
+  typeof import('./new.tsx'),
+  typeof import('./old.tsx')
+>('gate-name', './new.tsx', './old.tsx');
 
 export function getComponent() {
   return MyComponent;
@@ -36,21 +36,21 @@ export function getComponent() {
 ```ts
 // Directly exporting `importCond` as a named export
 export const MyComponent = importCond<
-  typeof import('./old.tsx'),
-  typeof import('./new.tsx')
->('gate-name', './old.tsx', './new.tsx');
+  typeof import('./new.tsx'),
+  typeof import('./old.tsx')
+>('gate-name', './new.tsx', './old.tsx');
 
 // Directly exporting `importCond` as the default export
 export default importCond<
-  typeof import('./old.tsx'),
-  typeof import('./new.tsx')
->('gate-name', './old.tsx', './new.tsx');
+  typeof import('./new.tsx'),
+  typeof import('./old.tsx')
+>('gate-name', './new.tsx', './old.tsx');
 
 // Indirectly exporting a variable initialized with `importCond`
 const MyComponent = importCond<
-  typeof import('./old.tsx'),
-  typeof import('./new.tsx')
->('gate-name', './old.tsx', './new.tsx');
+  typeof import('./new.tsx'),
+  typeof import('./old.tsx')
+>('gate-name', './new.tsx', './old.tsx');
 export {MyComponent};
 ```
 

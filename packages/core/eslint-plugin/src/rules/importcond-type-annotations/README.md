@@ -21,34 +21,26 @@ This ESLint rule ensures two things:
 👍 Examples of **correct** code for this rule:
 
 ```ts
-importCond<typeof import('./new.tsx'), typeof import('./old.tsx')>(
-  'gate_name',
-  './new.tsx',
-  './old.tsx',
-);
-
-importCond<typeof import('./new.tsx'), typeof import('./old.tsx')>(
-  'gate_name',
-  './new.tsx',
-  './old.tsx',
-);
+const Component = importCond<
+  typeof import('./new.tsx'),
+  typeof import('./old.tsx')
+>('gate_name', './new.tsx', './old.tsx');
 ```
 
 👎 Examples of **incorrect** code for this rule:
 
 ```ts
 // Missing type annotation
-importCond('gate_name', './new.tsx', './old.tsx');
+const Component = importCond('gate_name', './new.tsx', './old.tsx');
 
 // Incorrect type annotation order
-importCond<typeof import('./old.tsx'), typeof import('./new.tsx')>(
-  'gate_name',
-  './new.tsx',
-  './old.tsx',
-);
+const Component = importCond<
+  typeof import('./old.tsx'),
+  typeof import('./new.tsx')
+>('gate_name', './new.tsx', './old.tsx');
 
 // Missing type annotation with extra spaces
-importCond('gate_name', './new.tsx', './old.tsx');
+const Component = importCond('gate_name', './new.tsx', './old.tsx');
 ```
 
 ## Resources
