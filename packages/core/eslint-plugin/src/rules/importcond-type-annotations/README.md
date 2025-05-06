@@ -5,9 +5,9 @@ This rule ensures that all `importCond` function calls have the correct type ann
 ## Rule Details
 
 The `importCond` function is used for conditional imports, which allows developers to switch between
-two modules or components based on a feature gate value. It is a more performant alternative to
-`componentWithFG` as the user only loads the module or component matching the feature gate value,
-instead of loading both regardless of the feature gate value.
+two modules or components based on a feature gate value. It is superior to other component feature gating
+solutions in that the user only loads the module or component matching the feature gate value, instead
+of loading both regardless of the feature gate value.
 
 Due to TypeScript limitations, we need to declare type annotations on every `importCond` usage in
 order for type-checking to continue to work. These are defined between the `<` and `>`.

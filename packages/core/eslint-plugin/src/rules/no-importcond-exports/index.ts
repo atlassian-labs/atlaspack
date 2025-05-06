@@ -2,6 +2,7 @@
  * @file Bans directly exporting Atlaspack conditional imports (importCond) from a file, as this is not expressly supported and will break in tests.
  */
 import {createRule} from '../../utils/index';
+import {TSESTree} from '@typescript-eslint/utils';
 
 export const RULE_NAME = 'no-importcond-exports';
 
@@ -29,6 +30,9 @@ const rule = createRule<Options, keyof typeof messages>({
   create(context) {
     // Track variables initialized with `importCond`
     const importCondVariables = new Set<string>();
+    const namedExportStatements = new Set<TSESTree.ExportNamedDeclaration>();
+    const defaultExportStatements =
+      new Set<TSESTree.ExportDefaultDeclaration>();
 
     return {
       VariableDeclarator(node) {
@@ -43,10 +47,10 @@ const rule = createRule<Options, keyof typeof messages>({
           importCondVariables.add(node.id.name);
         }
       },
-      ExportNamedDeclaration(node) {
+      'Program:exit'(_node) {
         // Check if any named export references a tracked variable
-        if (node.specifiers) {
-          node.specifiers.forEach((specifier) => {
+        for (const exportStatement of namedExportStatements) {
+          exportStatement.specifiers.forEach((specifier) => {
             if (
               specifier.type === 'ExportSpecifier' &&
               specifier.local.type === 'Identifier' &&
@@ -60,6 +64,19 @@ const rule = createRule<Options, keyof typeof messages>({
           });
         }
 
+        for (const exportStatement of defaultExportStatements) {
+          if (
+            exportStatement.declaration.type === 'Identifier' &&
+            importCondVariables.has(exportStatement.declaration.name)
+          ) {
+            context.report({
+              node: exportStatement,
+              messageId: 'noImportCondExports',
+            });
+          }
+        }
+      },
+      ExportNamedDeclaration(node) {
         // Check if a variable declaration is directly exported
         if (
           node.declaration &&
@@ -79,22 +96,23 @@ const rule = createRule<Options, keyof typeof messages>({
               });
             }
           });
+        } else {
+          namedExportStatements.add(node);
         }
       },
       ExportDefaultDeclaration(node) {
         // Check if the default export is a tracked variable or an `importCond` call
         if (
-          node.declaration &&
-          ((node.declaration.type === 'Identifier' &&
-            importCondVariables.has(node.declaration.name)) ||
-            (node.declaration.type === 'CallExpression' &&
-              node.declaration.callee.type === 'Identifier' &&
-              node.declaration.callee.name === 'importCond'))
+          node.declaration.type === 'CallExpression' &&
+          node.declaration.callee.type === 'Identifier' &&
+          node.declaration.callee.name === 'importCond'
         ) {
           context.report({
             node,
             messageId: 'noImportCondExports',
           });
+        } else {
+          defaultExportStatements.add(node);
         }
       },
     };
