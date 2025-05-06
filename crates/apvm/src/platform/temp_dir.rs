@@ -3,18 +3,11 @@ use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 
-use rand::distr::Alphanumeric;
-use rand::Rng;
-
 pub struct TempDir(PathBuf);
 
 impl TempDir {
   pub fn new(base: &Path) -> anyhow::Result<Self> {
-    let random = rand::rng()
-      .sample_iter(&Alphanumeric)
-      .take(7)
-      .map(char::from)
-      .collect::<String>();
+    let random = format!("{}", rand::random::<i32>());
 
     let target = base.join(&random);
     if !fs::exists(&target)? {
