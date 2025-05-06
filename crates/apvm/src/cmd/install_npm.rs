@@ -36,7 +36,7 @@ pub fn install_from_npm(
   let target_temp = TempDir::new(&ctx.paths.temp)?;
   let target = ctx.paths.versions_npm.join(&package.version_encoded);
 
-  let url = format!("{}/{}", c::NPM_API_URL, package.version,);
+  let url = format!("{}/{}", c::NPM_API_URL, package.version);
 
   info!("{}", url);
 
