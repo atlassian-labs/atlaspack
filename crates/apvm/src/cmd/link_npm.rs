@@ -126,6 +126,9 @@ pub fn npm_link_npm(
       .pretty(2),
     )?;
 
+    // TODO: Remove this. One of our consumer packages imports this path directly.
+    // This path should not be imported by consumers and will be fixed there.
+    // In the interim, this workaround unblocks the roll out but will eventually be removed.
     if file_stem == "runtime-js" {
       fs::create_dir_all(node_modules_atlaspack_pkg.join("lib").join("helpers"))?;
       link::soft_link(
