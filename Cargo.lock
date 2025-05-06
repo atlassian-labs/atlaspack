@@ -323,6 +323,7 @@ dependencies = [
  "parking_lot",
  "path-slash",
  "pathdiff",
+ "pretty_assertions",
  "regex",
  "serde",
  "serde_bytes",

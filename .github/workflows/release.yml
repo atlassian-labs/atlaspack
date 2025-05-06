@@ -69,7 +69,10 @@ jobs:
           node-version: 22
       - uses: Swatinem/rust-cache@v2
         if: ${{ inputs.type != 'latest' }}
-        with: {shared-key: '${{ matrix.name }}'}
+        with:
+          shared-key: '${{ matrix.name }}'
+          # Only store new caches on main
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: yarn install --frozen-lockfile
       - name: Build native packages
         env:
