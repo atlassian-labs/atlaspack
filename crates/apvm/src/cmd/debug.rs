@@ -28,19 +28,18 @@ pub struct DebugCommand {
   pub query: Option<DebugCommandType>,
 }
 
-#[rustfmt::skip]
 pub fn main(ctx: Context, cmd: DebugCommand) -> anyhow::Result<()> {
   match cmd.query {
     None => {
       dbg!(&ctx);
-    },
+    }
     Some(DebugCommandType::Path) => {
       let Some(active) = ctx.active_version else {
         return Err(anyhow::anyhow!("No version selected"));
       };
       print!("{}", active.package.path.try_to_string()?);
-    },
-    Some(DebugCommandType::Resolve{specifier, link}) => {
+    }
+    Some(DebugCommandType::Resolve { specifier, link }) => {
       let Some(active) = ctx.active_version else {
         return Err(anyhow::anyhow!("No version selected"));
       };
@@ -51,8 +50,8 @@ pub fn main(ctx: Context, cmd: DebugCommand) -> anyhow::Result<()> {
 
       let package_path = {
         if link {
-          let Some(node_modules_path) = active.node_modules_path  else {
-            return Err(anyhow::anyhow!("Not linked into node_modules"));  
+          let Some(node_modules_path) = active.node_modules_path else {
+            return Err(anyhow::anyhow!("Not linked into node_modules"));
           };
           node_modules_path
         } else {
@@ -88,12 +87,11 @@ pub fn main(ctx: Context, cmd: DebugCommand) -> anyhow::Result<()> {
             if name_stripped == file_stem {
               print!("{}", entry_path.try_to_string()?);
               break;
-            } 
+            }
           }
-
         }
       }
-    },
+    }
   }
 
   Ok(())
