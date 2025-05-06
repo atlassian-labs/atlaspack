@@ -56,7 +56,7 @@ describe('utils', () => {
       assert.equal(
         relativePathForRequire({
           origin: __filename,
-          request: '@atlaspack/eslint-plugin/',
+          request: '@atlaspack/eslint-plugin-internal/',
           pkgName,
           pkgPath,
         }),
@@ -71,7 +71,7 @@ describe('utils', () => {
       assert.equal(
         relativePathForRequire({
           origin: __filename,
-          request: '@atlaspack/eslint-plugin/',
+          request: '@atlaspack/eslint-plugin-internal/',
           pkgName,
           pkgPath,
         }),
@@ -96,7 +96,7 @@ describe('utils', () => {
       assert.equal(
         relativePathForRequire({
           origin: __filename,
-          request: '@atlaspack/eslint-plugin/test/baz',
+          request: '@atlaspack/eslint-plugin-internal/test/baz',
           pkgName,
           pkgPath,
         }),

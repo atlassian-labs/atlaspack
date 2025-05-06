@@ -1,4 +1,4 @@
-# @atlaspack/eslint-plugin
+# @atlaspack/eslint-plugin-internal
 
 ## 2.14.1
 
