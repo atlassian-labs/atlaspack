@@ -1,4 +1,5 @@
 use std::string::FromUtf8Error;
+use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::input::StringInput;
 use swc_core::common::sync::Lrc;
 use swc_core::common::util::take::Take;
@@ -20,6 +21,8 @@ pub struct RunContext {
   pub global_mark: Mark,
   /// Unresolved mark from SWC resolver
   pub unresolved_mark: Mark,
+  /// Parsed comments from the file
+  pub comments: SingleThreadedComments,
 }
 
 pub struct RunVisitResult<V> {
@@ -113,11 +116,12 @@ fn run_with_transformation<R>(
   let source_map = Lrc::new(SourceMap::default());
   let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), code.into());
 
+  let comments = SingleThreadedComments::default();
   let lexer = Lexer::new(
     Default::default(),
     Default::default(),
     StringInput::from(&*source_file),
-    None,
+    Some(&comments),
   );
 
   let mut parser = Parser::new_from(lexer);
@@ -148,6 +152,7 @@ fn run_with_transformation<R>(
         source_map: source_map.clone(),
         global_mark,
         unresolved_mark,
+        comments: comments.clone(),
       };
 
       let result = transform(context, &mut module);
