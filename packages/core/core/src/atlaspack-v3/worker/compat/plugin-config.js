@@ -9,6 +9,7 @@ import type {
   ConfigResultWithFilePath,
   PackageJSON,
   PackageManager as IPackageManager,
+  ProjectConfigResultWithFilePath,
 } from '@atlaspack/types';
 
 import type {FileSystem as IFileSystem} from '@atlaspack/fs';
@@ -111,5 +112,17 @@ export class PluginConfig implements IPluginConfig {
 
   getPackage(): Promise<?PackageJSON> {
     return this.#inner.getPackage();
+  }
+
+  getProjectConfig<T, F>(
+    options: {|
+      key?: string,
+    |},
+    fallback: () => Promise<?ConfigResultWithFilePath<F>>,
+  ): Promise<?(
+    | ProjectConfigResultWithFilePath<T>
+    | ConfigResultWithFilePath<F>
+  )> {
+    return this.#inner.getProjectConfig(options, fallback);
   }
 }

@@ -135,24 +135,26 @@ const SCRIPT_ERRORS = {
   },
 };
 
+type JSConfig = {
+  // https://www.typescriptlang.org/tsconfig#jsx
+  jsx?: 'react' | 'react-jsx' | 'react-jsxdev' | 'preserve' | 'react-native',
+  // https://www.typescriptlang.org/tsconfig#jsxFactory
+  jsxFactory?: string,
+  // https://www.typescriptlang.org/tsconfig#jsxFragmentFactory
+  jsxFragmentFactory?: string,
+  // https://www.typescriptlang.org/tsconfig#jsxImportSource
+  jsxImportSource?: string,
+  // https://www.typescriptlang.org/tsconfig#experimentalDecorators
+  experimentalDecorators?: boolean,
+  // https://www.typescriptlang.org/tsconfig#useDefineForClassFields
+  useDefineForClassFields?: boolean,
+  // https://www.typescriptlang.org/tsconfig#target
+  target?: string, // 'es3' | 'es5' | 'es6' | 'es2015' | ...  |'es2022' | ... | 'esnext'
+  ...
+};
+
 type TSConfig = {
-  compilerOptions?: {
-    // https://www.typescriptlang.org/tsconfig#jsx
-    jsx?: 'react' | 'react-jsx' | 'react-jsxdev' | 'preserve' | 'react-native',
-    // https://www.typescriptlang.org/tsconfig#jsxFactory
-    jsxFactory?: string,
-    // https://www.typescriptlang.org/tsconfig#jsxFragmentFactory
-    jsxFragmentFactory?: string,
-    // https://www.typescriptlang.org/tsconfig#jsxImportSource
-    jsxImportSource?: string,
-    // https://www.typescriptlang.org/tsconfig#experimentalDecorators
-    experimentalDecorators?: boolean,
-    // https://www.typescriptlang.org/tsconfig#useDefineForClassFields
-    useDefineForClassFields?: boolean,
-    // https://www.typescriptlang.org/tsconfig#target
-    target?: string, // 'es3' | 'es5' | 'es6' | 'es2015' | ...  |'es2022' | ... | 'esnext'
-    ...
-  },
+  compilerOptions?: {...JSConfig, ...},
   ...
 };
 
@@ -206,11 +208,17 @@ export default (new Transformer({
             pkg?.peerDependencies?.react,
         );
 
-      let tsconfig = await config.getConfigFrom<TSConfig>(
-        options.projectRoot + '/index',
-        ['tsconfig.json', 'jsconfig.json'],
+      let resolvedConfig = await config.getProjectConfig<JSConfig, TSConfig>(
+        {key: 'js'},
+        () =>
+          config.getConfigFrom<TSConfig>(options.projectRoot + '/index', [
+            'tsconfig.json',
+            'jsconfig.json',
+          ]),
       );
-      let compilerOptions = tsconfig?.contents?.compilerOptions;
+      let compilerOptions = resolvedConfig?.isProjectConfig
+        ? resolvedConfig.contents
+        : resolvedConfig?.contents?.compilerOptions;
 
       // Use explicitly defined JSX options in tsconfig.json over inferred values from dependencies.
       pragma =
@@ -283,9 +291,13 @@ export default (new Transformer({
       typeof pkg.browser === 'object' &&
       pkg.browser.fs === false;
 
-    let conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
-      packageKey: '@atlaspack/transformer-js',
-    });
+    let conf = await config.getProjectConfig(
+      {key: '@atlaspack/transformer-js'},
+      () =>
+        config.getConfigFrom(options.projectRoot + '/index', [], {
+          packageKey: '@atlaspack/transformer-js',
+        }),
+    );
 
     let inlineEnvironment = config.isSource;
     let inlineFS = !ignoreFS;

@@ -21,9 +21,13 @@ const {transform, transformStyleAttribute, browserslistToTargets} = native;
 
 export default (new Transformer({
   async loadConfig({config, options}) {
-    let conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
-      packageKey: '@atlaspack/transformer-css',
-    });
+    let conf = await config.getProjectConfig(
+      {key: '@atlaspack/transformer-css'},
+      () =>
+        config.getConfigFrom(options.projectRoot + '/index', [], {
+          packageKey: '@atlaspack/transformer-css',
+        }),
+    );
     let contents = conf?.contents;
     if (typeof contents?.cssModules?.include === 'string') {
       contents.cssModules.include = [globToRegex(contents.cssModules.include)];

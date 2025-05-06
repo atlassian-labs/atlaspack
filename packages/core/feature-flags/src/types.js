@@ -71,6 +71,10 @@ export type FeatureFlags = {|
    * Enable support for the async bundle runtime (unstable_asyncBundleRuntime) in conditional bundling
    */
   conditionalBundlingAsyncRuntime: boolean,
+  /**
+   * Use the new project config syntax (config.getProjectConfig)
+   */
+  useNewProjectConfigSyntax: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =

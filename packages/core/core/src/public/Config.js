@@ -7,6 +7,7 @@ import type {
   PackageJSON,
   ConfigResultWithFilePath,
   DevDepOptions,
+  ProjectConfigResultWithFilePath,
 } from '@atlaspack/types';
 import type {Config, AtlaspackOptions} from '../types';
 
@@ -257,5 +258,65 @@ export default class PublicConfig implements IConfig {
     this.#pkgFilePath = pkgConfig.filePath;
 
     return this.#pkg;
+  }
+
+  async getProjectConfig<T, F>(
+    options: {key?: string, ...},
+    fallback: () => Promise<?ConfigResultWithFilePath<F>>,
+  ): Promise<?(
+    | ProjectConfigResultWithFilePath<T>
+    | ConfigResultWithFilePath<F>
+  )> {
+    if (!this.#options.featureFlags.useNewProjectConfigSyntax) {
+      return fallback();
+    }
+
+    // Invalidate when any of the file names are created above the search path.
+    this.invalidateOnFileCreate({
+      fileName: 'atlaspack.config.ts',
+      aboveFilePath: this.searchPath,
+    });
+
+    let configFilePath = await resolveConfig(
+      this.#options.inputFS,
+      this.searchPath,
+      ['atlaspack.config.ts'],
+      this.#options.projectRoot,
+    );
+
+    if (configFilePath == null) {
+      // No config file found, use the fallback config functor
+      return fallback();
+    }
+
+    let specifier = relativePath(path.dirname(this.searchPath), configFilePath);
+
+    let config = await this.#options.packageManager.require(
+      specifier,
+      this.searchPath,
+    );
+
+    if (config.default != null) {
+      // Native ESM config. Try to use a default export, otherwise fall back to the whole namespace.
+      config = config.default;
+    }
+
+    if (typeof options.key === 'string') {
+      if (config[options.key] == null) {
+        return fallback();
+      }
+
+      return ({
+        contents: config[options.key],
+        filePath: configFilePath,
+        isProjectConfig: true,
+      }: ProjectConfigResultWithFilePath<T>);
+    }
+
+    return ({
+      contents: config,
+      filePath: configFilePath,
+      isProjectConfig: true,
+    }: ProjectConfigResultWithFilePath<T>);
   }
 }
