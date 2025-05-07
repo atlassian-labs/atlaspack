@@ -3,7 +3,7 @@
 use minidumper::Server;
 
 use atlaspack_monitoring::{
-  initialize_monitoring, CrashReporterOptions, MonitoringOptions, MONITORING_GUARD,
+  initialize_monitoring, CrashReporterOptions, MonitoringOptions, TracerMode, MONITORING_GUARD,
 };
 
 const SOCKET_NAME: &str = "minidumper-example";
@@ -84,7 +84,7 @@ fn main() {
 
   initialize_monitoring(MonitoringOptions {
     sentry_options: None,
-    tracing_options: None,
+    tracing_options: vec![TracerMode::Stdout],
     crash_reporter_options: Some(CrashReporterOptions {
       minidumper_server_socket_name: SOCKET_NAME.to_string(),
       minidumper_server_pid: server.id(),
