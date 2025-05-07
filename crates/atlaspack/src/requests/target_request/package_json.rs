@@ -281,6 +281,7 @@ where
 #[cfg(test)]
 mod test {
   use super::*;
+  use atlaspack_core::types::SourceField;
 
   #[test]
   fn test_parse_package_json() {
@@ -327,5 +328,53 @@ mod test {
         ..Default::default()
       }
     )
+  }
+
+  #[test]
+  fn test_parsing_of_target_sources() {
+    let raw_package_json = r#"
+    {
+      "name": "example-package",
+      "targets": {
+        "development": {
+          "source": [ "./src/index.js", "./src/utils.js" ]
+        },
+        "production": {
+          "source": "./src/index-prod.js"
+        }
+      }
+    }"#;
+
+    let package_json: PackageJson = serde_json::from_str(raw_package_json).unwrap();
+
+    assert_eq!(
+      package_json,
+      PackageJson {
+        name: Some(String::from("example-package")),
+        targets: TargetsField {
+          custom_targets: HashMap::from([
+            (
+              String::from("development"),
+              TargetDescriptor {
+                source: Some(SourceField::Sources(vec![
+                  String::from("./src/index.js"),
+                  String::from("./src/utils.js")
+                ])),
+                ..Default::default()
+              }
+            ),
+            (
+              String::from("production"),
+              TargetDescriptor {
+                source: Some(SourceField::Source(String::from("./src/index-prod.js"))),
+                ..Default::default()
+              }
+            )
+          ]),
+          ..Default::default()
+        },
+        ..Default::default()
+      }
+    );
   }
 }

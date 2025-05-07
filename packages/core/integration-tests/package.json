@@ -12,7 +12,8 @@
     "test:super": "cross-env NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --experimental-vm-modules"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.13.3",
+    "@atlaspack/cli": "2.13.10",
+    "@atlaspack/mocha-profiler": "*",
     "@babel/core": "^7.22.11",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
     "@babel/plugin-syntax-export-default-from": "^7.22.5",

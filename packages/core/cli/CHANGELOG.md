@@ -1,5 +1,117 @@
 # @atlaspack/cli
 
+## 2.13.10
+
+### Patch Changes
+
+- Updated dependencies [[`30f6017`](https://github.com/atlassian-labs/atlaspack/commit/30f60175ba4d272c5fc193973c63bc298584775b), [`3a3e8e7`](https://github.com/atlassian-labs/atlaspack/commit/3a3e8e7be9e2dffd7304436d792f0f595d59665a), [`1ab0a27`](https://github.com/atlassian-labs/atlaspack/commit/1ab0a275aeca40350415e2b03e7440d1dddc6228), [`b8a4ae8`](https://github.com/atlassian-labs/atlaspack/commit/b8a4ae8f83dc0a83d8b145c5f729936ce52080a3), [`15c1e3c`](https://github.com/atlassian-labs/atlaspack/commit/15c1e3c0628bae4c768d76cf3afc53d6d0d7ce7c)]:
+  - @atlaspack/core@2.17.3
+  - @atlaspack/feature-flags@2.15.1
+  - @atlaspack/fs@2.15.3
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/reporter-cli@2.15.4
+  - @atlaspack/package-manager@2.14.8
+  - @atlaspack/logger@2.14.8
+  - @atlaspack/config-default@3.1.8
+  - @atlaspack/reporter-dev-server@2.14.8
+  - @atlaspack/reporter-tracer@2.14.8
+
+## 2.13.9
+
+### Patch Changes
+
+- Updated dependencies [[`a1773d2`](https://github.com/atlassian-labs/atlaspack/commit/a1773d2a62d0ef7805ac7524621dcabcc1afe929), [`556d6ab`](https://github.com/atlassian-labs/atlaspack/commit/556d6ab8ede759fa7f37fcd3f4da336ef1c55e8f)]:
+  - @atlaspack/feature-flags@2.15.0
+  - @atlaspack/logger@2.14.7
+  - @atlaspack/core@2.17.2
+  - @atlaspack/fs@2.15.2
+  - @atlaspack/utils@2.14.7
+  - @atlaspack/reporter-cli@2.15.3
+  - @atlaspack/config-default@3.1.7
+  - @atlaspack/package-manager@2.14.7
+  - @atlaspack/reporter-dev-server@2.14.7
+  - @atlaspack/reporter-tracer@2.14.7
+
+## 2.13.8
+
+### Patch Changes
+
+- Updated dependencies [[`e0f5337`](https://github.com/atlassian-labs/atlaspack/commit/e0f533757bd1019dbd108a04952c87da15286e09)]:
+  - @atlaspack/feature-flags@2.14.4
+  - @atlaspack/core@2.17.1
+  - @atlaspack/fs@2.15.1
+  - @atlaspack/utils@2.14.6
+  - @atlaspack/reporter-cli@2.15.2
+  - @atlaspack/logger@2.14.6
+  - @atlaspack/config-default@3.1.6
+  - @atlaspack/package-manager@2.14.6
+  - @atlaspack/reporter-dev-server@2.14.6
+  - @atlaspack/reporter-tracer@2.14.6
+
+## 2.13.7
+
+### Patch Changes
+
+- Updated dependencies [[`2e90c9b`](https://github.com/atlassian-labs/atlaspack/commit/2e90c9bd07d7eb52645f9d84ccbb7f82685cbc8c), [`11d6f16`](https://github.com/atlassian-labs/atlaspack/commit/11d6f16b6397dee2f217167e5c98b39edb63f7a7), [`e2ba0f6`](https://github.com/atlassian-labs/atlaspack/commit/e2ba0f69702656f3d1ce95ab1454e35062b13b39), [`4c17141`](https://github.com/atlassian-labs/atlaspack/commit/4c1714103dab2aa9039c488f381551d2b65d1d01)]:
+  - @atlaspack/core@2.17.0
+  - @atlaspack/feature-flags@2.14.3
+  - @atlaspack/fs@2.15.0
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/reporter-cli@2.15.1
+  - @atlaspack/logger@2.14.5
+  - @atlaspack/config-default@3.1.5
+  - @atlaspack/package-manager@2.14.5
+  - @atlaspack/reporter-dev-server@2.14.5
+  - @atlaspack/reporter-tracer@2.14.5
+
+## 2.13.6
+
+### Patch Changes
+
+- Updated dependencies [[`41f62c4`](https://github.com/atlassian-labs/atlaspack/commit/41f62c4479595808d8426c1e674d69fbe1bf0d5e), [`cb9da16`](https://github.com/atlassian-labs/atlaspack/commit/cb9da16fb2648e7f53c64df0313f60d5fb8970cc)]:
+  - @atlaspack/reporter-cli@2.15.0
+  - @atlaspack/core@2.16.1
+  - @atlaspack/fs@2.14.4
+  - @atlaspack/logger@2.14.4
+  - @atlaspack/utils@2.14.4
+  - @atlaspack/config-default@3.1.4
+  - @atlaspack/package-manager@2.14.4
+  - @atlaspack/reporter-dev-server@2.14.4
+  - @atlaspack/reporter-tracer@2.14.4
+
+## 2.13.5
+
+### Patch Changes
+
+- Updated dependencies [[`90150df`](https://github.com/atlassian-labs/atlaspack/commit/90150dfb68236e1d1c11813108ecabd92cff9366)]:
+  - @atlaspack/core@2.16.0
+  - @atlaspack/fs@2.14.3
+  - @atlaspack/logger@2.14.3
+  - @atlaspack/utils@2.14.3
+  - @atlaspack/config-default@3.1.3
+  - @atlaspack/package-manager@2.14.3
+  - @atlaspack/reporter-cli@2.14.3
+  - @atlaspack/reporter-dev-server@2.14.3
+  - @atlaspack/reporter-tracer@2.14.3
+
+## 2.13.4
+
+### Patch Changes
+
+- [#516](https://github.com/atlassian-labs/atlaspack/pull/516) [`e1c9f47`](https://github.com/atlassian-labs/atlaspack/commit/e1c9f47f884a86d51eb3edff4135707c60f3f3fb) Thanks [@yamadapc](https://github.com/yamadapc)! - Make sure atlaspack debug build-asset-graph stores a no-lazy cache
+
+- Updated dependencies [[`9b85d3e`](https://github.com/atlassian-labs/atlaspack/commit/9b85d3e645b10bd027eed2304afc970a5ba40062), [`17b9579`](https://github.com/atlassian-labs/atlaspack/commit/17b9579484eced0ed8f23e2aba6d23b3c7238c39), [`8f4e6c1`](https://github.com/atlassian-labs/atlaspack/commit/8f4e6c1b0e7c1fd48624afda48c1dcc599f1460f)]:
+  - @atlaspack/feature-flags@2.14.2
+  - @atlaspack/core@2.15.1
+  - @atlaspack/fs@2.14.2
+  - @atlaspack/utils@2.14.2
+  - @atlaspack/reporter-cli@2.14.2
+  - @atlaspack/config-default@3.1.2
+  - @atlaspack/logger@2.14.2
+  - @atlaspack/package-manager@2.14.2
+  - @atlaspack/reporter-dev-server@2.14.2
+  - @atlaspack/reporter-tracer@2.14.2
+
 ## 2.13.3
 
 ### Patch Changes

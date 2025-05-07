@@ -277,7 +277,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -329,7 +328,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -347,9 +345,7 @@ describe('vcs cache', () => {
     const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
-      assert.equal(changes.length, 1);
-      assert.equal(changes[0].path, file2);
-      assert.equal(changes[0].type, 'update');
+      assert.deepEqual(changes, [{path: file2, type: 'update'}]);
     }
 
     // checkout the next commit
@@ -362,11 +358,10 @@ describe('vcs cache', () => {
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
       changes.sort((a, b) => a.path.localeCompare(b.path));
-      assert.equal(changes.length, 2);
-      assert.equal(changes[0].path, file2);
-      assert.equal(changes[0].type, 'update');
-      assert.equal(changes[1].path, file3);
-      assert.equal(changes[1].type, 'update');
+      assert.deepEqual(changes, [
+        {path: file2, type: 'update'},
+        {path: file3, type: 'update'},
+      ]);
     }
   });
 
@@ -385,7 +380,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -399,10 +393,42 @@ describe('vcs cache', () => {
     const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
-      assert.equal(changes.length, 1);
-      assert.equal(changes[0].path, file2);
-      assert.equal(changes[0].type, 'delete');
+      assert.deepEqual(changes, [{path: file2, type: 'delete'}]);
     }
+  });
+
+  it('should be able to write a snapshot when a file has been deleted and the delete is not committed', async () => {
+    const {root, file1, file2} = setupGitRepository();
+
+    const vcsFS = new NodeVCSAwareFS({
+      gitRepoPath: root,
+      excludePatterns: [],
+      logEventDiff: null,
+    });
+
+    // bundle the file
+    const result = await bundle(file1, {
+      inputFS: vcsFS,
+      outputFS: vcsFS,
+      shouldDisableCache: false,
+      featureFlags: {
+        vcsMode: 'NEW',
+      },
+    });
+    assertBundles(result, [
+      {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
+    ]);
+
+    // remove file2
+    fs.rmSync(file2, {force: true});
+
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
+    await vcsFS.writeSnapshot(root, snapshotPath, {});
+
+    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+    assert.equal(snapshot.vcsState.dirtyFiles.length, 1);
+    assert.equal(snapshot.vcsState.dirtyFiles[0].path, 'file2.js');
+    assert.equal(snapshot.vcsState.dirtyFiles[0].hash, null);
   });
 
   it('if a build is made over a dirty state, it should be able to detect changes on the next build', async () => {
@@ -424,7 +450,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -452,9 +477,7 @@ describe('vcs cache', () => {
 
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
-      assert.equal(changes.length, 1);
-      assert.equal(changes[0].path, file2);
-      assert.equal(changes[0].type, 'update');
+      assert.deepEqual(changes, [{path: file2, type: 'update'}]);
     }
   });
 
@@ -479,7 +502,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -502,27 +524,20 @@ describe('vcs cache', () => {
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
       changes.sort((a, b) => a.path.localeCompare(b.path));
-      assert.equal(changes.length, 5);
 
       // 5 changes:
       // * the lock file
       // * plus delete/create for each of the files under node_modules/lodash
 
       const lodashDir = path.join(root, 'node_modules', 'lodash');
-      assert.equal(changes[0].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[0].type, 'delete');
 
-      assert.equal(changes[1].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[1].type, 'create');
-
-      assert.equal(changes[2].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[2].type, 'delete');
-
-      assert.equal(changes[3].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[3].type, 'create');
-
-      assert.equal(changes[4].path, path.join(root, 'yarn.lock'));
-      assert.equal(changes[4].type, 'update');
+      assert.deepEqual(changes, [
+        {path: path.join(lodashDir, 'file1.js'), type: 'delete'},
+        {path: path.join(lodashDir, 'file1.js'), type: 'create'},
+        {path: path.join(lodashDir, 'src', 'file2.js'), type: 'delete'},
+        {path: path.join(lodashDir, 'src', 'file2.js'), type: 'create'},
+        {path: path.join(root, 'yarn.lock'), type: 'update'},
+      ]);
     }
   });
 
@@ -539,7 +554,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -597,23 +611,16 @@ __metadata:
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
       changes.sort((a, b) => a.path.localeCompare(b.path));
-      assert.equal(changes.length, 5);
 
       const lodashDir = path.join(root, 'node_modules', 'lodash');
-      assert.equal(changes[0].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[0].type, 'delete');
 
-      assert.equal(changes[1].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[1].type, 'create');
-
-      assert.equal(changes[2].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[2].type, 'delete');
-
-      assert.equal(changes[3].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[3].type, 'create');
-
-      assert.equal(changes[4].path, path.join(root, 'yarn.lock'));
-      assert.equal(changes[4].type, 'update');
+      assert.deepEqual(changes, [
+        {path: path.join(lodashDir, 'file1.js'), type: 'delete'},
+        {path: path.join(lodashDir, 'file1.js'), type: 'create'},
+        {path: path.join(lodashDir, 'src', 'file2.js'), type: 'delete'},
+        {path: path.join(lodashDir, 'src', 'file2.js'), type: 'create'},
+        {path: path.join(root, 'yarn.lock'), type: 'update'},
+      ]);
     }
   });
 
@@ -684,7 +691,6 @@ __metadata:
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -703,23 +709,219 @@ __metadata:
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
       changes.sort((a, b) => a.path.localeCompare(b.path));
-      assert.equal(changes.length, 5);
 
       const lodashDir = path.join(root, 'node_modules', 'lodash');
-      assert.equal(changes[0].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[0].type, 'delete');
-
-      assert.equal(changes[1].path, path.join(lodashDir, 'file1.js'));
-      assert.equal(changes[1].type, 'create');
-
-      assert.equal(changes[2].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[2].type, 'delete');
-
-      assert.equal(changes[3].path, path.join(lodashDir, 'src', 'file2.js'));
-      assert.equal(changes[3].type, 'create');
-
-      assert.equal(changes[4].path, path.join(root, 'yarn.lock'));
-      assert.equal(changes[4].type, 'update');
+      assert.deepEqual(changes, [
+        {path: path.join(lodashDir, 'file1.js'), type: 'delete'},
+        {path: path.join(lodashDir, 'file1.js'), type: 'create'},
+        {path: path.join(lodashDir, 'src', 'file2.js'), type: 'delete'},
+        {path: path.join(lodashDir, 'src', 'file2.js'), type: 'create'},
+        {path: path.join(root, 'yarn.lock'), type: 'update'},
+      ]);
     }
+  });
+
+  it('should handle git branches with different states correctly', async () => {
+    const {root, file1, file2, file3} = setupGitRepository();
+
+    // Create and switch to a new branch
+    childProcess.execSync('git checkout -b feature-branch', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    // Modify files in the feature branch
+    fs.writeFileSync(file2, 'module.exports = "feature-branch-two"');
+    fs.writeFileSync(file3, 'module.exports = "feature-branch-three"');
+    childProcess.execSync('git add .', {cwd: root, stdio: execStdio});
+    childProcess.execSync('git commit -m "Update files in feature branch"', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    const vcsFS = new NodeVCSAwareFS({
+      gitRepoPath: root,
+      excludePatterns: [],
+      logEventDiff: null,
+    });
+
+    // Bundle in feature branch
+    const result1 = await bundle(file1, {
+      inputFS: vcsFS,
+      outputFS: vcsFS,
+      shouldDisableCache: false,
+      featureFlags: {
+        vcsMode: 'NEW',
+      },
+    });
+    assertBundles(result1, [
+      {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
+    ]);
+
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
+    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+    assert.equal(snapshot.vcsState.dirtyFiles.length, 0);
+
+    // Switch back to master branch
+    childProcess.execSync('git checkout master', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    // Check that changes are detected when switching branches
+    const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
+    changes.sort((a, b) => a.path.localeCompare(b.path));
+    assert.deepEqual(changes, [
+      {path: file2, type: 'update'},
+      {path: file3, type: 'update'},
+    ]);
+
+    // Bundle in main branch
+    const result2 = await bundle(file1, {
+      inputFS: vcsFS,
+      outputFS: vcsFS,
+      shouldDisableCache: false,
+      featureFlags: {
+        vcsMode: 'NEW',
+      },
+    });
+    assertBundles(result2, [
+      {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
+    ]);
+
+    // Switch back to feature branch
+    childProcess.execSync('git checkout feature-branch', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    // Check that changes are detected when switching back
+    const changes2 = await vcsFS.getEventsSince(root, snapshotPath, {});
+    changes2.sort((a, b) => a.path.localeCompare(b.path));
+    assert.deepEqual(changes2, [
+      {path: file2, type: 'update'},
+      {path: file3, type: 'update'},
+    ]);
+  });
+
+  it('should handle uncommitted changes when switching branches', async () => {
+    const {root, file1, file2, file3} = setupGitRepository();
+
+    // Create and switch to a new branch
+    childProcess.execSync('git checkout -b feature-branch', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    // Modify files in the feature branch
+    fs.writeFileSync(file2, 'module.exports = "feature-branch-two"');
+    fs.writeFileSync(file3, 'module.exports = "feature-branch-three"');
+    childProcess.execSync('git add .', {cwd: root, stdio: execStdio});
+    childProcess.execSync('git commit -m "Update files in feature branch"', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    const vcsFS = new NodeVCSAwareFS({
+      gitRepoPath: root,
+      excludePatterns: [],
+      logEventDiff: null,
+    });
+
+    // Bundle in feature branch
+    const result1 = await bundle(file1, {
+      inputFS: vcsFS,
+      outputFS: vcsFS,
+      shouldDisableCache: false,
+      featureFlags: {
+        vcsMode: 'NEW',
+      },
+    });
+    assertBundles(result1, [
+      {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
+    ]);
+
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
+    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+    assert.equal(snapshot.vcsState.dirtyFiles.length, 0);
+
+    // Make uncommitted changes in feature branch
+    fs.writeFileSync(file2, 'module.exports = "uncommitted-change"');
+    fs.writeFileSync(file3, 'module.exports = "another-uncommitted-change"');
+
+    // Bundle with uncommitted changes
+    const result2 = await bundle(file1, {
+      inputFS: vcsFS,
+      outputFS: vcsFS,
+      shouldDisableCache: false,
+      featureFlags: {
+        vcsMode: 'NEW',
+      },
+    });
+    assertBundles(result2, [
+      {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
+    ]);
+
+    // Check that the snapshot tracks the uncommitted changes
+    const snapshot2 = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+    const dirtyFiles2 = snapshot2.vcsState.dirtyFiles;
+    dirtyFiles2.sort((a, b) => a.path.localeCompare(b.path));
+    assert.deepEqual(
+      dirtyFiles2.map((f) => f.path),
+      [path.relative(root, file2), path.relative(root, file3)],
+    );
+
+    // Try to switch to master branch (should fail due to uncommitted changes)
+    try {
+      childProcess.execSync('git checkout master', {
+        cwd: root,
+        stdio: execStdio,
+      });
+      assert.fail(
+        'Should have failed to switch branches with uncommitted changes',
+      );
+    } catch (e) {
+      // Expected error
+    }
+
+    // Stash the changes
+    childProcess.execSync('git stash', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    // Now switch to master branch
+    childProcess.execSync('git checkout master', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    // Check that changes are detected when switching branches
+    const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
+    changes.sort((a, b) => a.path.localeCompare(b.path));
+    assert.deepEqual(changes, [
+      {path: file2, type: 'update'},
+      {path: file3, type: 'update'},
+    ]);
+
+    // Switch back to feature branch
+    childProcess.execSync('git checkout feature-branch', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    // Apply the stashed changes
+    childProcess.execSync('git stash pop', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    // Check that the uncommitted changes are still detected
+    const changes2 = await vcsFS.getEventsSince(root, snapshotPath, {});
+    changes2.sort((a, b) => a.path.localeCompare(b.path));
+    assert.deepEqual(changes2, [
+      {path: file2, type: 'update'},
+      {path: file3, type: 'update'},
+    ]);
   });
 });

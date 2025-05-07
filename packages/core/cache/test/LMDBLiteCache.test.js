@@ -1,4 +1,6 @@
 // @flow
+
+import * as fs from 'fs';
 import * as path from 'path';
 import {tmpdir} from 'os';
 import {LMDBLiteCache} from '../src/index';
@@ -8,13 +10,23 @@ import assert from 'assert';
 const cacheDir = path.join(tmpdir(), 'lmdb-lite-cache-tests');
 
 describe('LMDBLiteCache', () => {
+  let cache;
+
+  beforeEach(async () => {
+    await fs.promises.rm(cacheDir, {recursive: true, force: true});
+  });
+
+  afterEach(() => {
+    cache.getNativeRef().close();
+  });
+
   it('can be constructed', async () => {
-    const cache = new LMDBLiteCache(cacheDir);
+    cache = new LMDBLiteCache(cacheDir);
     await cache.ensure();
   });
 
   it('can retrieve keys', async () => {
-    const cache = new LMDBLiteCache(cacheDir);
+    cache = new LMDBLiteCache(cacheDir);
     await cache.ensure();
     await cache.setBlob('key', Buffer.from(serialize({value: 42})));
     const buffer = await cache.getBlob('key');
@@ -23,11 +35,35 @@ describe('LMDBLiteCache', () => {
   });
 
   it('can retrieve keys synchronously', async () => {
-    const cache = new LMDBLiteCache(cacheDir);
+    cache = new LMDBLiteCache(path.join(cacheDir, 'retrieve_keys_test'));
     await cache.ensure();
-    cache.setBlob('key', Buffer.from(serialize({value: 42})));
+    await cache.setBlob('key', Buffer.from(serialize({value: 42})));
     const buffer = cache.getBlobSync('key');
     const result = deserialize(buffer);
     assert.equal(result.value, 42);
+  });
+
+  it('can iterate over keys', async () => {
+    cache = new LMDBLiteCache(path.join(cacheDir, 'keys_test'));
+    await cache.ensure();
+    await cache.setBlob('key1', Buffer.from(serialize({value: 42})));
+    await cache.setBlob('key2', Buffer.from(serialize({value: 43})));
+    const keys = cache.keys();
+    assert.deepEqual(Array.from(keys), ['key1', 'key2']);
+  });
+
+  it('can compact databases', async () => {
+    cache = new LMDBLiteCache(path.join(cacheDir, 'compact_test'));
+    await cache.ensure();
+    await cache.setBlob('key1', Buffer.from(serialize({value: 42})));
+    await cache.setBlob('key2', Buffer.from(serialize({value: 43})));
+    await cache.compact(path.join(cacheDir, 'compact_test_compacted'));
+
+    cache.getNativeRef().close();
+
+    cache = new LMDBLiteCache(path.join(cacheDir, 'compact_test_compacted'));
+    await cache.ensure();
+    const keys = cache.keys();
+    assert.deepEqual(Array.from(keys), ['key1', 'key2']);
   });
 });

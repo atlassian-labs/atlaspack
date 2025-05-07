@@ -160,6 +160,16 @@ export class NodeVCSAwareFS extends NodeFS {
         'NodeVCSAwareFS::getVcsStateSnapshot',
         () => getVcsStateSnapshot(gitRepoPath, this.#excludePatterns),
       );
+
+      logger.info({
+        origin: '@atlaspack/fs',
+        message: 'Expose VCS timing metrics',
+        meta: {
+          trackableEvent: 'vcs_timing_metrics',
+          dirtyFilesExecutionTime: vcsState?.dirtyFilesExecutionTime,
+          yarnStatesExecutionTime: vcsState?.yarnStatesExecutionTime,
+        },
+      });
     } catch (err) {
       logger.error({
         origin: '@atlaspack/fs',

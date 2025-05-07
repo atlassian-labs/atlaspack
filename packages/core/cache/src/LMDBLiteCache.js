@@ -5,21 +5,22 @@ import {
   registerSerializableClass,
   serialize,
 } from '@atlaspack/build-cache';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Lmdb} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types';
 import type {Cache} from './types';
 import type {Readable, Writable} from 'stream';
-
+import fs from 'fs';
+import ncp from 'ncp';
+import {promisify} from 'util';
 import stream from 'stream';
 import path from 'path';
-import {promisify} from 'util';
-
 import {NodeFS} from '@atlaspack/fs';
-
 // $FlowFixMe
 import packageJson from '../package.json';
-
 import {FSCache} from './FSCache';
+
+const ncpAsync = promisify(ncp);
 
 interface DBOpenOptions {
   name: string;
@@ -41,6 +42,14 @@ export class LmdbWrapper {
     };
   }
 
+  has(key: string): boolean {
+    return this.lmdb.hasSync(key);
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.lmdb.delete(key);
+  }
+
   get(key: string): Buffer | null {
     return this.lmdb.getSync(key);
   }
@@ -51,7 +60,21 @@ export class LmdbWrapper {
     await this.lmdb.put(key, buffer);
   }
 
-  resetReadTxn() {}
+  *keys(): Iterable<string> {
+    const PAGE_SIZE = 10000000;
+
+    let currentKeys = this.lmdb.keysSync(0, PAGE_SIZE);
+    while (currentKeys.length > 0) {
+      for (const key of currentKeys) {
+        yield key;
+      }
+      currentKeys = this.lmdb.keysSync(currentKeys.length, PAGE_SIZE);
+    }
+  }
+
+  compact(targetPath: string) {
+    this.lmdb.compact(targetPath);
+  }
 }
 
 export function open(
@@ -105,7 +128,9 @@ export class LMDBLiteCache implements Cache {
   }
 
   async ensure(): Promise<void> {
-    await this.fsCache.ensure();
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      await this.fsCache.ensure();
+    }
     return Promise.resolve();
   }
 
@@ -120,7 +145,7 @@ export class LMDBLiteCache implements Cache {
   }
 
   has(key: string): Promise<boolean> {
-    return Promise.resolve(this.store.get(key) != null);
+    return Promise.resolve(this.store.has(key));
   }
 
   get<T>(key: string): Promise<?T> {
@@ -173,34 +198,70 @@ export class LMDBLiteCache implements Cache {
   }
 
   hasLargeBlob(key: string): Promise<boolean> {
-    return this.fs.exists(this.#getFilePath(key, 0));
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.hasLargeBlob(key);
+    }
+    return this.has(key);
   }
 
-  // eslint-disable-next-line require-await
-  async getLargeBlob(key: string): Promise<Buffer> {
-    return this.fsCache.getLargeBlob(key);
+  /**
+   * @deprecated Use getBlob instead.
+   */
+  getLargeBlob(key: string): Promise<Buffer> {
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.getLargeBlob(key);
+    }
+    return Promise.resolve(this.getBlobSync(key));
   }
 
-  // eslint-disable-next-line require-await
-  async setLargeBlob(
+  /**
+   * @deprecated Use setBlob instead.
+   */
+  setLargeBlob(
     key: string,
     contents: Buffer | string,
     options?: {|signal?: AbortSignal|},
   ): Promise<void> {
-    return this.fsCache.setLargeBlob(key, contents, options);
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.setLargeBlob(key, contents, options);
+    }
+    return this.setBlob(key, contents);
   }
 
+  /**
+   * @deprecated Use store.delete instead.
+   */
   deleteLargeBlob(key: string): Promise<void> {
-    return this.fsCache.deleteLargeBlob(key);
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.deleteLargeBlob(key);
+    }
+
+    return this.store.delete(key);
   }
 
-  refresh(): void {
-    // Reset the read transaction for the store. This guarantees that
-    // the next read will see the latest changes to the store.
-    // Useful in scenarios where reads and writes are multi-threaded.
-    // See https://github.com/kriszyp/lmdb-js#resetreadtxn-void
-    this.store.resetReadTxn();
+  keys(): Iterable<string> {
+    return this.store.keys();
   }
+
+  async compact(targetPath: string): Promise<void> {
+    await fs.promises.mkdir(targetPath, {recursive: true});
+
+    const files = await fs.promises.readdir(this.dir);
+    // copy all files except data.mdb and lock.mdb to the target path (recursive)
+    for (const file of files) {
+      const filePath = path.join(this.dir, file);
+
+      if (file === 'data.mdb' || file === 'lock.mdb') {
+        continue;
+      }
+
+      await ncpAsync(filePath, path.join(targetPath, file));
+    }
+
+    this.store.compact(path.join(targetPath, 'data.mdb'));
+  }
+
+  refresh(): void {}
 }
 
 registerSerializableClass(

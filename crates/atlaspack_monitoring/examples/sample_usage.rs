@@ -3,7 +3,7 @@
 use minidumper::Server;
 
 use atlaspack_monitoring::{
-  initialize_monitoring, CrashReporterOptions, MonitoringOptions, MONITORING_GUARD,
+  initialize_monitoring, CrashReporterOptions, MonitoringOptions, TracerMode, MONITORING_GUARD,
 };
 
 const SOCKET_NAME: &str = "minidumper-example";
@@ -76,7 +76,7 @@ fn main() {
   }
 
   let exe = std::env::current_exe().expect("Unable to find ourselves");
-  let server = std::process::Command::new(exe)
+  let mut server = std::process::Command::new(exe)
     .arg("--server")
     .spawn()
     .expect("Unable to spawn server process");
@@ -84,7 +84,7 @@ fn main() {
 
   initialize_monitoring(MonitoringOptions {
     sentry_options: None,
-    tracing_options: None,
+    tracing_options: vec![TracerMode::Stdout],
     crash_reporter_options: Some(CrashReporterOptions {
       minidumper_server_socket_name: SOCKET_NAME.to_string(),
       minidumper_server_pid: server.id(),
@@ -92,7 +92,7 @@ fn main() {
   })
   .expect("Failed to set-up monitoring");
 
-  let monitoring_guard = MONITORING_GUARD.lock().unwrap();
+  let monitoring_guard = MONITORING_GUARD.lock();
   let handler = monitoring_guard.as_ref().unwrap().crash_handler().unwrap();
 
   tracing::info!(%pid, "Simulating crash");
@@ -105,4 +105,6 @@ fn main() {
           handler.simulate_exception(None);
       }
   }
+
+  server.wait().unwrap();
 }

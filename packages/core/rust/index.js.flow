@@ -332,6 +332,8 @@ declare export function performStringReplacements(
 declare export class Lmdb {
   constructor(options: LmdbOptions): Lmdb;
   get(key: string): Promise<Buffer | null | void>;
+  keysSync(skip: number, limit: number): Array<string>;
+  hasSync(key: string): boolean;
   getSync(key: string): Buffer | null;
   getManySync(keys: Array<string>): Array<Buffer | void | null>;
   putMany(entries: Array<LmdbEntry>): Promise<void>;
@@ -341,7 +343,9 @@ declare export class Lmdb {
   commitReadTransaction(): void;
   startWriteTransaction(): Promise<void>;
   commitWriteTransaction(): Promise<void>;
+  delete(key: string): Promise<void>;
   close(): void;
+  compact(targetPath: string): void;
 }
 
 export interface InlineRequiresOptimizerInput {
@@ -358,9 +362,13 @@ declare export function runInlineRequiresOptimizer(
   input: InlineRequiresOptimizerInput,
 ): InlineRequiresOptimizerResult;
 
+declare export function runInlineRequiresOptimizerAsync(
+  input: InlineRequiresOptimizerInput,
+): Promise<InlineRequiresOptimizerResult>;
+
 export interface VCSFile {
   path: string;
-  hash: number;
+  hash?: string | null;
 }
 
 export interface YarnState {
@@ -374,6 +382,8 @@ export interface VCSState {
   // Files that have been modified since the last commit
   dirtyFiles: VCSFile[];
   yarnStates: YarnState[];
+  dirtyFilesExecutionTime: number;
+  yarnStatesExecutionTime: number;
 }
 
 declare export function getVcsStateSnapshot(

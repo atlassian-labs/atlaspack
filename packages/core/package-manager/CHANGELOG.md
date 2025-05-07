@@ -1,5 +1,89 @@
 # @atlaspack/package-manager
 
+## 2.14.8
+
+### Patch Changes
+
+- Updated dependencies [[`3a3e8e7`](https://github.com/atlassian-labs/atlaspack/commit/3a3e8e7be9e2dffd7304436d792f0f595d59665a), [`1ab0a27`](https://github.com/atlassian-labs/atlaspack/commit/1ab0a275aeca40350415e2b03e7440d1dddc6228), [`b8a4ae8`](https://github.com/atlassian-labs/atlaspack/commit/b8a4ae8f83dc0a83d8b145c5f729936ce52080a3)]:
+  - @atlaspack/fs@2.15.3
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/node-resolver-core@3.5.8
+  - @atlaspack/logger@2.14.8
+  - @atlaspack/types@2.14.8
+  - @atlaspack/workers@2.14.8
+
+## 2.14.7
+
+### Patch Changes
+
+- Updated dependencies [[`556d6ab`](https://github.com/atlassian-labs/atlaspack/commit/556d6ab8ede759fa7f37fcd3f4da336ef1c55e8f)]:
+  - @atlaspack/logger@2.14.7
+  - @atlaspack/fs@2.15.2
+  - @atlaspack/utils@2.14.7
+  - @atlaspack/node-resolver-core@3.5.7
+  - @atlaspack/workers@2.14.7
+  - @atlaspack/types@2.14.7
+
+## 2.14.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.1
+  - @atlaspack/utils@2.14.6
+  - @atlaspack/node-resolver-core@3.5.6
+  - @atlaspack/logger@2.14.6
+  - @atlaspack/types@2.14.6
+  - @atlaspack/workers@2.14.6
+
+## 2.14.5
+
+### Patch Changes
+
+- Updated dependencies [[`4c17141`](https://github.com/atlassian-labs/atlaspack/commit/4c1714103dab2aa9039c488f381551d2b65d1d01)]:
+  - @atlaspack/fs@2.15.0
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/node-resolver-core@3.5.5
+  - @atlaspack/logger@2.14.5
+  - @atlaspack/types@2.14.5
+  - @atlaspack/workers@2.14.5
+
+## 2.14.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.14.4
+  - @atlaspack/logger@2.14.4
+  - @atlaspack/utils@2.14.4
+  - @atlaspack/node-resolver-core@3.5.4
+  - @atlaspack/workers@2.14.4
+  - @atlaspack/types@2.14.4
+
+## 2.14.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.14.3
+  - @atlaspack/logger@2.14.3
+  - @atlaspack/utils@2.14.3
+  - @atlaspack/node-resolver-core@3.5.3
+  - @atlaspack/workers@2.14.3
+  - @atlaspack/types@2.14.3
+
+## 2.14.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.14.2
+  - @atlaspack/utils@2.14.2
+  - @atlaspack/node-resolver-core@3.5.2
+  - @atlaspack/logger@2.14.2
+  - @atlaspack/types@2.14.2
+  - @atlaspack/workers@2.14.2
+
 ## 2.14.1
 
 ### Patch Changes

@@ -12,17 +12,22 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   useWatchmanWatcher: false,
   importRetry: false,
   fixQuadraticCacheInvalidation: 'OLD',
-  useLmdbJsLite: true,
   conditionalBundlingApi: false,
+  inlineRequiresMultiThreading: false,
   vcsMode: 'OLD',
   loadableSideEffects: false,
   reduceResolverStringCreation: false,
   inlineBundlesSourceMapFixes: false,
   conditionalBundlingNestedRuntime: false,
   patchProjectPaths: false,
-  enableRustWorkerThreadDylibHack: true,
+  cachePerformanceImprovements: false,
   inlineStringReplacementPerf: false,
   conditionalBundlingAsyncRuntime: false,
+  // Default to true as it's a monitoring change. Can be turned off if necessary.
+  verboseRequestInvalidationStats: true,
+  conditionalBundlingReporterDuplicateFix: false,
+  resolveBundlerConfigFromCwd: false,
+  conditionalBundlingReporterSameConditionFix: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

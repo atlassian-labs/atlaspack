@@ -1,5 +1,72 @@
 # @atlaspack/reporter-cli
 
+## 2.15.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/types@2.14.8
+  - @atlaspack/plugin@2.14.8
+
+## 2.15.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.7
+  - @atlaspack/types@2.14.7
+  - @atlaspack/plugin@2.14.7
+
+## 2.15.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.6
+  - @atlaspack/types@2.14.6
+  - @atlaspack/plugin@2.14.6
+
+## 2.15.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/types@2.14.5
+  - @atlaspack/plugin@2.14.5
+
+## 2.15.0
+
+### Minor Changes
+
+- [#524](https://github.com/atlassian-labs/atlaspack/pull/524) [`41f62c4`](https://github.com/atlassian-labs/atlaspack/commit/41f62c4479595808d8426c1e674d69fbe1bf0d5e) Thanks [@yamadapc](https://github.com/yamadapc)! - Log the time it takes to write the cache
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.4
+  - @atlaspack/types@2.14.4
+  - @atlaspack/plugin@2.14.4
+
+## 2.14.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.3
+  - @atlaspack/types@2.14.3
+  - @atlaspack/plugin@2.14.3
+
+## 2.14.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.2
+  - @atlaspack/types@2.14.2
+  - @atlaspack/plugin@2.14.2
+
 ## 2.14.1
 
 ### Patch Changes

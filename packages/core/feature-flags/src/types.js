@@ -17,10 +17,6 @@ export type FeatureFlags = {|
    */
   importRetry: boolean,
   /**
-   * Enable Rust based LMDB wrapper library
-   */
-  useLmdbJsLite: boolean,
-  /**
    * Fixes quadratic cache invalidation issue
    */
   fixQuadraticCacheInvalidation: ConsistencyCheckFeatureFlagValue,
@@ -31,12 +27,23 @@ export type FeatureFlags = {|
    */
   conditionalBundlingApi: boolean,
   /**
+   * Run inline requires optimizer in the rayon thread pool.
+   */
+  inlineRequiresMultiThreading: boolean,
+  /**
    * Enable VCS mode. Expected values are:
    * - OLD - default value, return watchman result
    * - NEW_AND_CHECK - Return VCS result but still call watchman
    * - NEW: Return VCS result, but don't call watchman
    */
   vcsMode: ConsistencyCheckFeatureFlagValue,
+  /**
+   * Refactor cache to:
+   * - Split writes into multiple entries
+   * - Remove "large file blob" writes
+   * - Reduce size of the caches by deduplicating data
+   */
+  cachePerformanceImprovements: boolean,
   /**
    * Enable scanning for the presence of loadable to determine side effects
    */
@@ -46,6 +53,10 @@ export type FeatureFlags = {|
    * conversions
    */
   reduceResolverStringCreation: boolean,
+  /**
+   * Add verbose metrics for request tracker invalidation
+   */
+  verboseRequestInvalidationStats: boolean,
   /**
    * Fixes source maps for inline bundles
    */
@@ -59,10 +70,6 @@ export type FeatureFlags = {|
    */
   patchProjectPaths: boolean,
   /**
-   * Enable loading of the parcel dylib in the main thread.
-   */
-  enableRustWorkerThreadDylibHack: boolean,
-  /**
    * Enables optimized inline string replacement perf for the packager.
    * Used heavily for inline bundles.
    */
@@ -71,6 +78,18 @@ export type FeatureFlags = {|
    * Enable support for the async bundle runtime (unstable_asyncBundleRuntime) in conditional bundling
    */
   conditionalBundlingAsyncRuntime: boolean,
+  /**
+   * Fix a bug where the conditional manifest reporter would report and write the same manifest multiple times
+   */
+  conditionalBundlingReporterDuplicateFix: boolean,
+  /**
+   * Enable resolution of bundler config starting from the CWD
+   */
+  resolveBundlerConfigFromCwd: boolean,
+  /**
+   * Fix a bug where the conditional manifest reporter would drop bundles that have the same condition
+   */
+  conditionalBundlingReporterSameConditionFix: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =

@@ -267,11 +267,18 @@ pub struct YarnSnapshot {
   pub yarn_state: YarnStateFile,
 }
 
+/// "Dirty" files are files modified in the current work-tree and uncommitted.
+///
+/// These files are hashed and stored in the snapshot.
+///
+/// Currently on boot all dirty files will be invalidated on the cache regardless of
+/// whether they have changes or not.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VCSFile {
   pub path: PathBuf,
-  pub hash: String,
+  /// Missing in case the file has been deleted
+  pub hash: Option<String>,
 }
 
 fn get_file_contents_at_commit(
@@ -279,17 +286,24 @@ fn get_file_contents_at_commit(
   commit: &git2::Commit,
   path: &Path,
 ) -> anyhow::Result<Option<String>> {
+  // return None if the file is new
   let tree = commit.tree()?;
-  if let Ok(entry) = tree.get_path(path) {
-    let blob = entry
-      .to_object(repo)?
-      .into_blob()
-      .map_err(|_| anyhow::anyhow!("Failed to read yarn.lock from git"))?;
-    let contents = blob.content();
-    Ok(Some(String::from_utf8(contents.to_vec())?))
-  } else {
-    Ok(None)
+  if tree.get_path(path).is_err() {
+    return Ok(None);
   }
+
+  let commit_id = commit.id();
+  let contents = Command::new("git")
+    .arg("show")
+    .arg(format!("{}:{}", commit_id, path.display()))
+    .current_dir(repo.path().parent().unwrap())
+    .output()
+    .map_err(|err| {
+      anyhow::anyhow!("Failed to read contents at {path:?} in revision {commit_id} from git: {err}")
+    })?;
+
+  let contents = String::from_utf8(contents.stdout)?;
+  Ok(Some(contents))
 }
 
 #[derive(Debug, PartialEq)]
@@ -386,7 +400,10 @@ fn get_diff_with_git_cli(
   let output = Command::new("git")
     .arg("diff")
     .arg("--name-status")
-    .arg(format!("{}...{}", old_commit.id(), new_commit.id()))
+    // We need to list all changes even if `new_commit` is an ancestor of `old_commit`
+    // https://git-scm.com/docs/git-diff
+    // https://git-scm.com/docs/gitrevisions
+    .arg(format!("{}..{}", old_commit.id(), new_commit.id()))
     .current_dir(repo_path)
     .output()?;
 
@@ -402,7 +419,8 @@ fn get_diff_with_git_cli(
       .next()
       .ok_or_else(|| anyhow!("Invalid git diff line: {}", line))?;
     let path = line.split_whitespace().skip(1).collect::<String>();
-    let path = repo_path.join(path);
+    let relative_path = PathBuf::from(path);
+    let path = repo_path.join(&relative_path);
     let change_type = match status {
       'A' => FileChangeType::Create,
       'D' => FileChangeType::Delete,
@@ -410,7 +428,7 @@ fn get_diff_with_git_cli(
       _ => FileChangeType::Update,
     };
 
-    tracked_changes.insert(path.clone());
+    tracked_changes.insert(relative_path.clone());
     changed_files.push(FileChangeEvent { path, change_type });
   }
 
@@ -442,14 +460,15 @@ fn get_status_with_git_cli(
       .nth(1)
       .ok_or_else(|| anyhow!("Invalid git status line: {}", line))?;
     let path = line.split_whitespace().skip(1).collect::<String>();
-    let path = repo_path.join(path);
+    let relative_path = PathBuf::from(path);
+    let path = repo_path.join(&relative_path);
     let change_type = match status {
       'A' => FileChangeType::Create,
       'D' => FileChangeType::Delete,
       'M' => FileChangeType::Update,
       _ => continue,
     };
-    tracked_changes.insert(path.clone());
+    tracked_changes.insert(relative_path.clone());
     changed_files.push(FileChangeEvent { path, change_type });
   }
   Ok(())
@@ -520,7 +539,8 @@ pub fn get_changed_files(
         .ok_or_else(|| anyhow!("Expected lockfile to exist in current revision"))?
     } else {
       tracing::debug!("Reading raw yarn.lock on current file-system",);
-      std::fs::read_to_string(repo_path.join(yarn_lock_path))?
+      std::fs::read_to_string(repo_path.join(yarn_lock_path))
+        .map_err(|err| anyhow!("Failed to read {yarn_lock_path:?} from file-system: {err}"))?
     };
     let new_yarn_lock: YarnLock = parse_yarn_lock(&new_yarn_lock_blob)?;
 
@@ -617,26 +637,36 @@ pub fn vcs_list_dirty_files(
     return Err(anyhow::anyhow!("Git ls-files failed:\n{}", stderr));
   }
   let output = String::from_utf8(command.stdout).unwrap();
-  let lines: Vec<_> = output.split_terminator('\0').map(String::from).collect();
+  let lines: HashSet<_> = output.split_terminator('\0').map(String::from).collect();
 
   let results = lines
     .par_iter()
     .map(|relative_path| {
       tracing::info!("Hashing file {}", relative_path);
+      let map_err = |err: std::io::Error| anyhow!("Failed to hash {relative_path:?}: {err}");
+
       let path = Path::new(relative_path);
       let path = dir.join(path);
 
+      if !path.exists() {
+        return Ok(VCSFile {
+          path: relative_path.into(),
+          hash: None,
+        });
+      }
+
       // We hash the contents of the file but if it's a symlink we hash the target
       // path instead rather than following the link.
-      let metadata = std::fs::symlink_metadata(&path)?;
+      let metadata = std::fs::symlink_metadata(&path).map_err(map_err)?;
       let contents = if metadata.is_symlink() {
-        std::fs::read_link(&path)?
+        std::fs::read_link(&path)
+          .map_err(map_err)?
           .to_str()
           .unwrap()
           .as_bytes()
           .to_vec()
       } else {
-        std::fs::read(&path)?
+        std::fs::read(&path).map_err(map_err)?
       };
       let mut state = std::collections::hash_map::DefaultHasher::new();
       contents.hash(&mut state);
@@ -646,7 +676,7 @@ pub fn vcs_list_dirty_files(
 
       Ok(VCSFile {
         path: relative_path.into(),
-        hash,
+        hash: Some(hash),
       })
     })
     .collect::<anyhow::Result<Vec<_>>>()?;

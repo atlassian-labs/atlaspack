@@ -1,5 +1,147 @@
 # @atlaspack/core
 
+## 2.17.3
+
+### Patch Changes
+
+- [#551](https://github.com/atlassian-labs/atlaspack/pull/551) [`30f6017`](https://github.com/atlassian-labs/atlaspack/commit/30f60175ba4d272c5fc193973c63bc298584775b) Thanks [@yamadapc](https://github.com/yamadapc)! - Log request tracker invalidation counts on start-up
+
+- [#550](https://github.com/atlassian-labs/atlaspack/pull/550) [`3a3e8e7`](https://github.com/atlassian-labs/atlaspack/commit/3a3e8e7be9e2dffd7304436d792f0f595d59665a) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix typescript declaration files
+
+- [#555](https://github.com/atlassian-labs/atlaspack/pull/555) [`15c1e3c`](https://github.com/atlassian-labs/atlaspack/commit/15c1e3c0628bae4c768d76cf3afc53d6d0d7ce7c) Thanks [@alshdavid](https://github.com/alshdavid)! - Added ATLASPACK_NATIVE_THREADS env variable to control the number of threads used by the native thread schedular
+
+- Updated dependencies [[`30f6017`](https://github.com/atlassian-labs/atlaspack/commit/30f60175ba4d272c5fc193973c63bc298584775b), [`3a3e8e7`](https://github.com/atlassian-labs/atlaspack/commit/3a3e8e7be9e2dffd7304436d792f0f595d59665a), [`1ab0a27`](https://github.com/atlassian-labs/atlaspack/commit/1ab0a275aeca40350415e2b03e7440d1dddc6228), [`b8a4ae8`](https://github.com/atlassian-labs/atlaspack/commit/b8a4ae8f83dc0a83d8b145c5f729936ce52080a3)]:
+  - @atlaspack/feature-flags@2.15.1
+  - @atlaspack/fs@2.15.3
+  - @atlaspack/rust@3.3.3
+  - @atlaspack/cache@3.2.3
+  - @atlaspack/graph@3.4.6
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/package-manager@2.14.8
+  - @atlaspack/logger@2.14.8
+  - @atlaspack/profiler@2.14.6
+  - @atlaspack/types@2.14.8
+  - @atlaspack/workers@2.14.8
+  - @atlaspack/plugin@2.14.8
+
+## 2.17.2
+
+### Patch Changes
+
+- Updated dependencies [[`a1773d2`](https://github.com/atlassian-labs/atlaspack/commit/a1773d2a62d0ef7805ac7524621dcabcc1afe929), [`556d6ab`](https://github.com/atlassian-labs/atlaspack/commit/556d6ab8ede759fa7f37fcd3f4da336ef1c55e8f)]:
+  - @atlaspack/feature-flags@2.15.0
+  - @atlaspack/logger@2.14.7
+  - @atlaspack/rust@3.3.2
+  - @atlaspack/cache@3.2.2
+  - @atlaspack/fs@2.15.2
+  - @atlaspack/graph@3.4.5
+  - @atlaspack/utils@2.14.7
+  - @atlaspack/package-manager@2.14.7
+  - @atlaspack/workers@2.14.7
+  - @atlaspack/profiler@2.14.5
+  - @atlaspack/types@2.14.7
+  - @atlaspack/plugin@2.14.7
+
+## 2.17.1
+
+### Patch Changes
+
+- Updated dependencies [[`e0f5337`](https://github.com/atlassian-labs/atlaspack/commit/e0f533757bd1019dbd108a04952c87da15286e09)]:
+  - @atlaspack/feature-flags@2.14.4
+  - @atlaspack/rust@3.3.1
+  - @atlaspack/cache@3.2.1
+  - @atlaspack/fs@2.15.1
+  - @atlaspack/graph@3.4.4
+  - @atlaspack/utils@2.14.6
+  - @atlaspack/logger@2.14.6
+  - @atlaspack/package-manager@2.14.6
+  - @atlaspack/profiler@2.14.4
+  - @atlaspack/types@2.14.6
+  - @atlaspack/workers@2.14.6
+  - @atlaspack/plugin@2.14.6
+
+## 2.17.0
+
+### Minor Changes
+
+- [#541](https://github.com/atlassian-labs/atlaspack/pull/541) [`e2ba0f6`](https://github.com/atlassian-labs/atlaspack/commit/e2ba0f69702656f3d1ce95ab1454e35062b13b39) Thanks [@yamadapc](https://github.com/yamadapc)! - Add database compaction debug command
+
+### Patch Changes
+
+- [#530](https://github.com/atlassian-labs/atlaspack/pull/530) [`2e90c9b`](https://github.com/atlassian-labs/atlaspack/commit/2e90c9bd07d7eb52645f9d84ccbb7f82685cbc8c) Thanks [@yamadapc](https://github.com/yamadapc)! - Write metadata about the cache in a new entry
+
+- [#511](https://github.com/atlassian-labs/atlaspack/pull/511) [`11d6f16`](https://github.com/atlassian-labs/atlaspack/commit/11d6f16b6397dee2f217167e5c98b39edb63f7a7) Thanks [@yamadapc](https://github.com/yamadapc)! - Clean-up dylib worker threads segmentation fault bug fix feature-flag
+
+- Updated dependencies [[`11d6f16`](https://github.com/atlassian-labs/atlaspack/commit/11d6f16b6397dee2f217167e5c98b39edb63f7a7), [`e2ba0f6`](https://github.com/atlassian-labs/atlaspack/commit/e2ba0f69702656f3d1ce95ab1454e35062b13b39), [`d2c50c2`](https://github.com/atlassian-labs/atlaspack/commit/d2c50c2c020888b33bb25b8690d9320c2b69e2a6), [`46a90dc`](https://github.com/atlassian-labs/atlaspack/commit/46a90dccd019a26b222c878a92d23acc75dc67c5), [`4c17141`](https://github.com/atlassian-labs/atlaspack/commit/4c1714103dab2aa9039c488f381551d2b65d1d01)]:
+  - @atlaspack/feature-flags@2.14.3
+  - @atlaspack/rust@3.3.0
+  - @atlaspack/cache@3.2.0
+  - @atlaspack/fs@2.15.0
+  - @atlaspack/graph@3.4.3
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/logger@2.14.5
+  - @atlaspack/package-manager@2.14.5
+  - @atlaspack/profiler@2.14.3
+  - @atlaspack/types@2.14.5
+  - @atlaspack/workers@2.14.5
+  - @atlaspack/plugin@2.14.5
+
+## 2.16.1
+
+### Patch Changes
+
+- [#525](https://github.com/atlassian-labs/atlaspack/pull/525) [`cb9da16`](https://github.com/atlassian-labs/atlaspack/commit/cb9da16fb2648e7f53c64df0313f60d5fb8970cc) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix issues with large blob cache writes, run cache writes in a write transaction
+
+- Updated dependencies [[`1a2c14c`](https://github.com/atlassian-labs/atlaspack/commit/1a2c14c3cd4587551cc12e94d0680c8b71ea12bf), [`cb9da16`](https://github.com/atlassian-labs/atlaspack/commit/cb9da16fb2648e7f53c64df0313f60d5fb8970cc)]:
+  - @atlaspack/rust@3.2.0
+  - @atlaspack/cache@3.1.0
+  - @atlaspack/fs@2.14.4
+  - @atlaspack/logger@2.14.4
+  - @atlaspack/utils@2.14.4
+  - @atlaspack/package-manager@2.14.4
+  - @atlaspack/workers@2.14.4
+  - @atlaspack/types@2.14.4
+  - @atlaspack/plugin@2.14.4
+
+## 2.16.0
+
+### Minor Changes
+
+- [#520](https://github.com/atlassian-labs/atlaspack/pull/520) [`90150df`](https://github.com/atlassian-labs/atlaspack/commit/90150dfb68236e1d1c11813108ecabd92cff9366) Thanks [@pancaspe87](https://github.com/pancaspe87)! - Modify "large blobs" to be written to the LMDB cache
+
+### Patch Changes
+
+- Updated dependencies [[`f27d39e`](https://github.com/atlassian-labs/atlaspack/commit/f27d39e767b06def059944b3bc5fd50797eaea96)]:
+  - @atlaspack/rust@3.1.1
+  - @atlaspack/cache@3.0.1
+  - @atlaspack/fs@2.14.3
+  - @atlaspack/logger@2.14.3
+  - @atlaspack/utils@2.14.3
+  - @atlaspack/package-manager@2.14.3
+  - @atlaspack/workers@2.14.3
+  - @atlaspack/types@2.14.3
+  - @atlaspack/plugin@2.14.3
+
+## 2.15.1
+
+### Patch Changes
+
+- [#512](https://github.com/atlassian-labs/atlaspack/pull/512) [`8f4e6c1`](https://github.com/atlassian-labs/atlaspack/commit/8f4e6c1b0e7c1fd48624afda48c1dcc599f1460f) Thanks [@yamadapc](https://github.com/yamadapc)! - Remove LMDB cache back-end
+
+- Updated dependencies [[`9b85d3e`](https://github.com/atlassian-labs/atlaspack/commit/9b85d3e645b10bd027eed2304afc970a5ba40062), [`a891d65`](https://github.com/atlassian-labs/atlaspack/commit/a891d652bc4eb3d757d381adf65c5083f706effc), [`d02eab9`](https://github.com/atlassian-labs/atlaspack/commit/d02eab95eb60bf7457e0869af0b773608592c0e6), [`fb87a90`](https://github.com/atlassian-labs/atlaspack/commit/fb87a901973776b33ca4ce530e9d71669a9bd36d), [`7b9e8cf`](https://github.com/atlassian-labs/atlaspack/commit/7b9e8cf29e01a98e72e46b2b2fb74ccc514f4463), [`17b9579`](https://github.com/atlassian-labs/atlaspack/commit/17b9579484eced0ed8f23e2aba6d23b3c7238c39), [`8f4e6c1`](https://github.com/atlassian-labs/atlaspack/commit/8f4e6c1b0e7c1fd48624afda48c1dcc599f1460f)]:
+  - @atlaspack/feature-flags@2.14.2
+  - @atlaspack/rust@3.1.0
+  - @atlaspack/cache@3.0.0
+  - @atlaspack/fs@2.14.2
+  - @atlaspack/graph@3.4.2
+  - @atlaspack/utils@2.14.2
+  - @atlaspack/logger@2.14.2
+  - @atlaspack/package-manager@2.14.2
+  - @atlaspack/profiler@2.14.2
+  - @atlaspack/types@2.14.2
+  - @atlaspack/workers@2.14.2
+  - @atlaspack/plugin@2.14.2
+
 ## 2.15.0
 
 ### Minor Changes

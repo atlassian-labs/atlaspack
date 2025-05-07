@@ -39,6 +39,12 @@ let statusThrottle = throttle((message: string) => {
   updateSpinner(message);
 }, THROTTLE_DELAY);
 
+const cacheWriteState: {|
+  startTime: number | null,
+|} = {
+  startTime: null,
+};
+
 // Exported only for test
 export async function _report(
   event: ReporterEvent,
@@ -158,13 +164,20 @@ export async function _report(
         switch (event.phase) {
           case 'start':
             updateSpinner('Writing cache to disk');
+            cacheWriteState.startTime = Date.now();
             break;
           case 'end':
             persistSpinner(
               'cache',
               'success',
-              chalk.grey.bold(`Cache written to disk`),
+              chalk.grey.bold(
+                `Cache written to disk in ${prettifyTime(
+                  Date.now() - (cacheWriteState.startTime ?? 0),
+                )}`,
+              ),
             );
+
+            cacheWriteState.startTime = null;
             break;
         }
       }

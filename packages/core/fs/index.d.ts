@@ -1,4 +1,5 @@
-import type {FileSystem} from '@atlaspack/types-internal';
+import type {FileSystem, FilePath} from '@atlaspack/types-internal';
+import type {Event} from '@parcel/watcher';
 import type WorkerFarm from '@atlaspack/workers';
 
 export type {
@@ -22,11 +23,11 @@ export const OverlayFS: {
   new (writable: FileSystem, readable: FileSystem): FileSystem;
 };
 
-export type NodeVCSAwareFSOptions = {
-  gitRepoPath: null | string;
+interface NodeVCSAwareFSOptions {
+  gitRepoPath: null | FilePath;
   excludePatterns: Array<string>;
   logEventDiff: null | ((watcherEvents: Event[], vcsEvents: Event[]) => void);
-};
+}
 
 export const NodeVCSAwareFS: {
   new (options: NodeVCSAwareFSOptions): FileSystem;

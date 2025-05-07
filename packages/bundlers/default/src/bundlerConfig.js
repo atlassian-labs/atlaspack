@@ -7,6 +7,7 @@ import type {
   BuildMode,
   PluginLogger,
 } from '@atlaspack/types';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {type SchemaEntity, validateSchema} from '@atlaspack/utils';
 import invariant from 'assert';
 
@@ -28,6 +29,7 @@ type BaseBundlerConfig = {|
   disableSharedBundles?: boolean,
   manualSharedBundles?: ManualSharedBundles,
   loadConditionalBundlesInParallel?: boolean,
+  sharedBundleMergeThreshold?: number,
 |};
 
 type BundlerConfig = {|
@@ -42,6 +44,7 @@ export type ResolvedBundlerConfig = {|
   disableSharedBundles: boolean,
   manualSharedBundles: ManualSharedBundles,
   loadConditionalBundlesInParallel?: boolean,
+  sharedBundleMergeThreshold: number,
 |};
 
 function resolveModeConfig(
@@ -76,6 +79,7 @@ const HTTP_OPTIONS = {
     minBundleSize: 30000,
     maxParallelRequests: 6,
     disableSharedBundles: false,
+    sharedBundleMergeThreshold: 1,
   },
   '2': {
     minBundles: 1,
@@ -83,6 +87,7 @@ const HTTP_OPTIONS = {
     minBundleSize: 20000,
     maxParallelRequests: 25,
     disableSharedBundles: false,
+    sharedBundleMergeThreshold: 1,
   },
 };
 
@@ -139,6 +144,9 @@ const CONFIG_SCHEMA: SchemaEntity = {
     loadConditionalBundlesInParallel: {
       type: 'boolean',
     },
+    sharedBundleMergeThreshold: {
+      type: 'number',
+    },
   },
   additionalProperties: false,
 };
@@ -148,9 +156,17 @@ export async function loadBundlerConfig(
   options: PluginOptions,
   logger: PluginLogger,
 ): Promise<ResolvedBundlerConfig> {
-  let conf = await config.getConfig<BundlerConfig>([], {
-    packageKey: '@atlaspack/bundler-default',
-  });
+  let conf;
+
+  if (getFeatureFlag('resolveBundlerConfigFromCwd')) {
+    conf = await config.getConfigFrom(`${process.cwd()}/index`, [], {
+      packageKey: '@atlaspack/bundler-default',
+    });
+  } else {
+    conf = await config.getConfig<BundlerConfig>([], {
+      packageKey: '@atlaspack/bundler-default',
+    });
+  }
 
   if (!conf) {
     const modDefault = {
@@ -224,6 +240,9 @@ export async function loadBundlerConfig(
   return {
     minBundles: modeConfig.minBundles ?? defaults.minBundles,
     minBundleSize: modeConfig.minBundleSize ?? defaults.minBundleSize,
+    sharedBundleMergeThreshold:
+      modeConfig.sharedBundleMergeThreshold ??
+      defaults.sharedBundleMergeThreshold,
     maxParallelRequests:
       modeConfig.maxParallelRequests ?? defaults.maxParallelRequests,
     projectRoot: options.projectRoot,

@@ -37,7 +37,7 @@ describe('reporters', () => {
     it('exit successfully when no errors are emitted', () => {
       assert.doesNotThrow(() =>
         execSync(`node ${cliPath} build --no-cache ${successfulEntry}`, {
-          stdio: 'ignore',
+          stdio: 'inherit',
         }),
       );
     });
@@ -47,7 +47,7 @@ describe('reporters', () => {
         execSync(
           `node ${cliPath} build --no-cache ${loadReporterFailureEntry}`,
           {
-            stdio: 'ignore',
+            stdio: 'inherit',
           },
         ),
       );
@@ -56,7 +56,7 @@ describe('reporters', () => {
     it('exit with an error code when a reporter emits an error', () => {
       assert.throws(() =>
         execSync(`node ${cliPath} build --no-cache ${failingReporterEntry}`, {
-          stdio: 'ignore',
+          stdio: 'inherit',
         }),
       );
     });

@@ -1,5 +1,68 @@
 # @atlaspack/transformer-image
 
+## 3.1.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/workers@2.14.8
+  - @atlaspack/plugin@2.14.8
+
+## 3.1.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.7
+  - @atlaspack/workers@2.14.7
+  - @atlaspack/plugin@2.14.7
+
+## 3.1.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.6
+  - @atlaspack/workers@2.14.6
+  - @atlaspack/plugin@2.14.6
+
+## 3.1.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/workers@2.14.5
+  - @atlaspack/plugin@2.14.5
+
+## 3.1.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.4
+  - @atlaspack/workers@2.14.4
+  - @atlaspack/plugin@2.14.4
+
+## 3.1.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.3
+  - @atlaspack/workers@2.14.3
+  - @atlaspack/plugin@2.14.3
+
+## 3.1.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.2
+  - @atlaspack/workers@2.14.2
+  - @atlaspack/plugin@2.14.2
+
 ## 3.1.1
 
 ### Patch Changes
