@@ -39,26 +39,27 @@ function getJsPaths(): AtlaspackNapiOptions['options']['jsPaths'] {
   if (isSuperPackage()) {
     // dirname: atlaspack/lib/core/core/atlaspack-v3
     // core: atlaspack/lib/core/core/index.js
-    const corePath = path.join(dirname, '../index.js');
+    const corePath = path.join(dirname, '..');
     // esmodule helpers: atlaspack/lib/transformers/js/esmodule-helpers.js
     const esmoduleHelpersPath = path.join(
-      '../../transformers/js/esmodule-helpers.js',
+      dirname,
+      '../../../transformers/js/esmodule-helpers.js',
     );
 
     // empty file: atlaspack/lib/core/core/_empty.js
-    const emptyFile = path.join(dirname, '_emtpy.js');
+    const emptyFile = path.join(dirname, '_empty.js');
 
     return {
       corePath,
-      esmoduleHelpersSpecifier: path.relative(esmoduleHelpersPath, corePath),
+      esmoduleHelpersSpecifier: path.relative(corePath, esmoduleHelpersPath),
       esmoduleHelpersIncludeNodeModules: 'atlaspack',
       emptyFile,
     };
   }
 
   // dirname: @atlaspack/core/lib/atlaspack-v3
-  // core: @atlaspack/core/index.js
-  const corePath = path.join(dirname, '../../index.js');
+  // core: @atlaspack/core
+  const corePath = path.join(dirname, '../..');
   // empty file: atlaspack/lib/core/core/_empty.js
   const emptyFile = path.join(dirname, '_empty.js');
 

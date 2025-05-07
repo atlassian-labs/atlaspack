@@ -460,7 +460,7 @@ fn make_esm_helpers_dependency(
       ..asset_environment.clone()
     }
     .into(),
-    resolve_from: Some(options.js_paths.core_path.clone()),
+    resolve_from: Some(options.js_paths.core_path.join("index").clone()),
     ..Default::default()
   }
 }
