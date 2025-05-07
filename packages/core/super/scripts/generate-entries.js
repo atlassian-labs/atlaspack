@@ -4,7 +4,7 @@ let path = require('path');
 let fs = require('fs/promises');
 let glob = require('fast-glob');
 let {copyTypes} = require('./copy-types.cjs');
-let {sortPackageJson} = require('sort-package-json');
+let sortObject = require('sort-object-keys');
 
 const EXCLUSIONS = [
   'atlaspack',
@@ -14,6 +14,7 @@ const EXCLUSIONS = [
   '@atlaspack/conditional-import-types',
   '@atlaspack/swc-plugin-contextual-imports',
   '@atlaspack/macros',
+  '@atlaspack/eslint-plugin',
   '@atlaspack/validator-eslint',
   '@atlaspack/validator-typescript',
   '@atlaspack/create-react-app',
@@ -139,6 +140,7 @@ async function main() {
     superPkgJson.exports[`./${entryName}`] =
       superPkgJson.exports[`./${entryName}`] || {};
     superPkgJson.exports[`./${entryName}`].default = `./lib/${entryName}.js`;
+    superPkgJson.exports = sortObject(superPkgJson.exports);
 
     for (let reference of references) {
       let target = path
@@ -162,7 +164,7 @@ async function main() {
 
   await fs.writeFile(
     path.join(__dirname, '..', 'package.json'),
-    JSON.stringify(sortPackageJson(superPkgJson), null, 2),
+    JSON.stringify(superPkgJson, null, 2),
     'utf8',
   );
 }
