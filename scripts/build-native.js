@@ -21,11 +21,11 @@ const defaultTarget = {
 }[`${process.platform}-${process.arch}`];
 
 const rustTarget = RUSTUP_TARGET || defaultTarget;
-const rustProfile = CARGO_PROFILE || 'debug';
+let rustProfile = CARGO_PROFILE || 'dev';
 
 const cargoCommand = ['cargo', 'build', '--target', rustTarget];
 
-if (rustProfile !== 'debug') {
+if (rustProfile !== 'dev') {
   cargoCommand.push('--profile', rustProfile);
 }
 
@@ -134,7 +134,7 @@ function buildNapiLibrary(pkgDir) {
     rustTarget,
   );
 
-  if (rustProfile !== 'debug') {
+  if (rustProfile !== 'dev') {
     command.push('--profile', rustProfile);
   }
 
@@ -214,7 +214,7 @@ function copyBinaries(pkgDir) {
   const sourceBin = path.join(
     'target',
     rustTarget,
-    rustProfile,
+    rustProfile === 'dev' ? 'debug' : rustProfile,
     pkgJson.copyBin.name,
   );
 

@@ -1,5 +1,53 @@
 # @atlaspack/cli
 
+## 2.13.6
+
+### Patch Changes
+
+- Updated dependencies [[`41f62c4`](https://github.com/atlassian-labs/atlaspack/commit/41f62c4479595808d8426c1e674d69fbe1bf0d5e), [`cb9da16`](https://github.com/atlassian-labs/atlaspack/commit/cb9da16fb2648e7f53c64df0313f60d5fb8970cc)]:
+  - @atlaspack/reporter-cli@2.15.0
+  - @atlaspack/core@2.16.1
+  - @atlaspack/fs@2.14.4
+  - @atlaspack/logger@2.14.4
+  - @atlaspack/utils@2.14.4
+  - @atlaspack/config-default@3.1.4
+  - @atlaspack/package-manager@2.14.4
+  - @atlaspack/reporter-dev-server@2.14.4
+  - @atlaspack/reporter-tracer@2.14.4
+
+## 2.13.5
+
+### Patch Changes
+
+- Updated dependencies [[`90150df`](https://github.com/atlassian-labs/atlaspack/commit/90150dfb68236e1d1c11813108ecabd92cff9366)]:
+  - @atlaspack/core@2.16.0
+  - @atlaspack/fs@2.14.3
+  - @atlaspack/logger@2.14.3
+  - @atlaspack/utils@2.14.3
+  - @atlaspack/config-default@3.1.3
+  - @atlaspack/package-manager@2.14.3
+  - @atlaspack/reporter-cli@2.14.3
+  - @atlaspack/reporter-dev-server@2.14.3
+  - @atlaspack/reporter-tracer@2.14.3
+
+## 2.13.4
+
+### Patch Changes
+
+- [#516](https://github.com/atlassian-labs/atlaspack/pull/516) [`e1c9f47`](https://github.com/atlassian-labs/atlaspack/commit/e1c9f47f884a86d51eb3edff4135707c60f3f3fb) Thanks [@yamadapc](https://github.com/yamadapc)! - Make sure atlaspack debug build-asset-graph stores a no-lazy cache
+
+- Updated dependencies [[`9b85d3e`](https://github.com/atlassian-labs/atlaspack/commit/9b85d3e645b10bd027eed2304afc970a5ba40062), [`17b9579`](https://github.com/atlassian-labs/atlaspack/commit/17b9579484eced0ed8f23e2aba6d23b3c7238c39), [`8f4e6c1`](https://github.com/atlassian-labs/atlaspack/commit/8f4e6c1b0e7c1fd48624afda48c1dcc599f1460f)]:
+  - @atlaspack/feature-flags@2.14.2
+  - @atlaspack/core@2.15.1
+  - @atlaspack/fs@2.14.2
+  - @atlaspack/utils@2.14.2
+  - @atlaspack/reporter-cli@2.14.2
+  - @atlaspack/config-default@3.1.2
+  - @atlaspack/logger@2.14.2
+  - @atlaspack/package-manager@2.14.2
+  - @atlaspack/reporter-dev-server@2.14.2
+  - @atlaspack/reporter-tracer@2.14.2
+
 ## 2.13.3
 
 ### Patch Changes

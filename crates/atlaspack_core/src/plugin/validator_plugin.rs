@@ -87,9 +87,7 @@ mod tests {
 
   #[test]
   fn can_be_defined_in_dyn_vec() {
-    let mut validators = Vec::<Box<dyn ValidatorPlugin>>::new();
-
-    validators.push(Box::new(TestValidatorPlugin {}));
+    let validators: Vec<Box<dyn ValidatorPlugin>> = vec![Box::new(TestValidatorPlugin {})];
 
     assert_eq!(validators.len(), 1);
   }

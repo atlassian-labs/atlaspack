@@ -1,5 +1,43 @@
 # @atlaspack/cache
 
+## 3.1.0
+
+### Minor Changes
+
+- [#525](https://github.com/atlassian-labs/atlaspack/pull/525) [`cb9da16`](https://github.com/atlassian-labs/atlaspack/commit/cb9da16fb2648e7f53c64df0313f60d5fb8970cc) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix issues with large blob cache writes, run cache writes in a write transaction
+
+### Patch Changes
+
+- Updated dependencies [[`1a2c14c`](https://github.com/atlassian-labs/atlaspack/commit/1a2c14c3cd4587551cc12e94d0680c8b71ea12bf), [`cb9da16`](https://github.com/atlassian-labs/atlaspack/commit/cb9da16fb2648e7f53c64df0313f60d5fb8970cc)]:
+  - @atlaspack/rust@3.2.0
+  - @atlaspack/fs@2.14.4
+  - @atlaspack/logger@2.14.4
+  - @atlaspack/utils@2.14.4
+
+## 3.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`f27d39e`](https://github.com/atlassian-labs/atlaspack/commit/f27d39e767b06def059944b3bc5fd50797eaea96)]:
+  - @atlaspack/rust@3.1.1
+  - @atlaspack/fs@2.14.3
+  - @atlaspack/logger@2.14.3
+  - @atlaspack/utils@2.14.3
+
+## 3.0.0
+
+### Major Changes
+
+- [#512](https://github.com/atlassian-labs/atlaspack/pull/512) [`8f4e6c1`](https://github.com/atlassian-labs/atlaspack/commit/8f4e6c1b0e7c1fd48624afda48c1dcc599f1460f) Thanks [@yamadapc](https://github.com/yamadapc)! - Remove LMDB cache back-end
+
+### Patch Changes
+
+- Updated dependencies [[`a891d65`](https://github.com/atlassian-labs/atlaspack/commit/a891d652bc4eb3d757d381adf65c5083f706effc), [`d02eab9`](https://github.com/atlassian-labs/atlaspack/commit/d02eab95eb60bf7457e0869af0b773608592c0e6), [`fb87a90`](https://github.com/atlassian-labs/atlaspack/commit/fb87a901973776b33ca4ce530e9d71669a9bd36d), [`7b9e8cf`](https://github.com/atlassian-labs/atlaspack/commit/7b9e8cf29e01a98e72e46b2b2fb74ccc514f4463)]:
+  - @atlaspack/rust@3.1.0
+  - @atlaspack/fs@2.14.2
+  - @atlaspack/utils@2.14.2
+  - @atlaspack/logger@2.14.2
+
 ## 2.13.3
 
 ### Patch Changes

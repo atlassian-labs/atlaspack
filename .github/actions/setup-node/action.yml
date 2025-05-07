@@ -1,0 +1,41 @@
+name: Setup node
+description: Setup node with caching
+
+inputs:
+  node-version:
+    description: Explicit node version
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        node-version-file: .nvmrc
+
+    - name: Get yarn cache directory path
+      id: yarn-cache-dir-path
+      run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+      shell: bash
+
+    # We only store yarn cache on main to save cache space
+    - name: Setup yarn cache
+      if: ${{ github.ref == 'refs/heads/main' }}
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+        key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+        restore-keys: yarn-${{ runner.os }}
+
+    - name: Restore yarn cache
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+        key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+        restore-keys: yarn-${{ runner.os }}
+
+    - name: Yarn install
+      run: yarn install --frozen-lockfile
+      shell: bash

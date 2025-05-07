@@ -41,9 +41,7 @@ mod tests {
 
   #[test]
   fn can_be_defined_in_dyn_vec() {
-    let mut compressors = Vec::<Box<dyn CompressorPlugin>>::new();
-
-    compressors.push(Box::new(TestCompressorPlugin {}));
+    let compressors: Vec<Box<dyn CompressorPlugin>> = vec![Box::new(TestCompressorPlugin {})];
 
     assert_eq!(compressors.len(), 1);
   }

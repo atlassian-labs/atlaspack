@@ -1,5 +1,6 @@
 // @flow strict-local
 import {relative, join, dirname} from 'path';
+import crypto from 'crypto';
 import {Reporter} from '@atlaspack/plugin';
 import type {
   Async,
@@ -7,10 +8,40 @@ import type {
   PluginOptions,
   PluginTracer,
   ReporterEvent,
+  FileSystem,
+  FilePath,
 } from '@atlaspack/types-internal';
 import {getConfig} from './Config';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
-async function report({
+export const manifestHashes: Map<FilePath, string> = new Map();
+
+export const updateManifest = async (
+  outputFS: FileSystem,
+  logger: PluginLogger,
+  conditionalManifestFilename: FilePath,
+  conditionalManifest: string,
+) => {
+  const hash = crypto
+    .createHash('sha1')
+    .update(conditionalManifest)
+    .digest('hex');
+
+  if (manifestHashes.get(conditionalManifestFilename) !== hash) {
+    manifestHashes.set(conditionalManifestFilename, hash);
+
+    await outputFS.mkdirp(dirname(conditionalManifestFilename));
+    await outputFS.writeFile(conditionalManifestFilename, conditionalManifest, {
+      mode: 0o666,
+    });
+
+    logger.info({
+      message: `Wrote conditional manifest to ${conditionalManifestFilename}`,
+    });
+  }
+};
+
+export async function report({
   event,
   options,
   logger,
@@ -59,17 +90,26 @@ async function report({
         2,
       );
 
-      await options.outputFS.mkdirp(dirname(conditionalManifestFilename));
+      if (getFeatureFlag('conditionalBundlingReporterDuplicateFix')) {
+        await updateManifest(
+          options.outputFS,
+          logger,
+          conditionalManifestFilename,
+          conditionalManifest,
+        );
+      } else {
+        await options.outputFS.mkdirp(dirname(conditionalManifestFilename));
+        await options.outputFS.writeFile(
+          conditionalManifestFilename,
+          conditionalManifest,
+          {mode: 0o666},
+        );
 
-      await options.outputFS.writeFile(
-        conditionalManifestFilename,
-        conditionalManifest,
-        {mode: 0o666},
-      );
-
-      logger.info({
-        message: 'Wrote conditional manifest to ' + conditionalManifestFilename,
-      });
+        logger.info({
+          message:
+            'Wrote conditional manifest to ' + conditionalManifestFilename,
+        });
+      }
     }
   }
 }

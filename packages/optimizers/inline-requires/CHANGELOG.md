@@ -1,5 +1,33 @@
 # @atlaspack/optimizer-inline-requires
 
+## 2.14.4
+
+### Patch Changes
+
+- Updated dependencies [[`1a2c14c`](https://github.com/atlassian-labs/atlaspack/commit/1a2c14c3cd4587551cc12e94d0680c8b71ea12bf), [`cb9da16`](https://github.com/atlassian-labs/atlaspack/commit/cb9da16fb2648e7f53c64df0313f60d5fb8970cc)]:
+  - @atlaspack/rust@3.2.0
+  - @atlaspack/types@2.14.4
+  - @atlaspack/plugin@2.14.4
+
+## 2.14.3
+
+### Patch Changes
+
+- Updated dependencies [[`f27d39e`](https://github.com/atlassian-labs/atlaspack/commit/f27d39e767b06def059944b3bc5fd50797eaea96)]:
+  - @atlaspack/rust@3.1.1
+  - @atlaspack/types@2.14.3
+  - @atlaspack/plugin@2.14.3
+
+## 2.14.2
+
+### Patch Changes
+
+- Updated dependencies [[`9b85d3e`](https://github.com/atlassian-labs/atlaspack/commit/9b85d3e645b10bd027eed2304afc970a5ba40062), [`a891d65`](https://github.com/atlassian-labs/atlaspack/commit/a891d652bc4eb3d757d381adf65c5083f706effc), [`d02eab9`](https://github.com/atlassian-labs/atlaspack/commit/d02eab95eb60bf7457e0869af0b773608592c0e6), [`fb87a90`](https://github.com/atlassian-labs/atlaspack/commit/fb87a901973776b33ca4ce530e9d71669a9bd36d), [`7b9e8cf`](https://github.com/atlassian-labs/atlaspack/commit/7b9e8cf29e01a98e72e46b2b2fb74ccc514f4463), [`17b9579`](https://github.com/atlassian-labs/atlaspack/commit/17b9579484eced0ed8f23e2aba6d23b3c7238c39), [`8f4e6c1`](https://github.com/atlassian-labs/atlaspack/commit/8f4e6c1b0e7c1fd48624afda48c1dcc599f1460f)]:
+  - @atlaspack/feature-flags@2.14.2
+  - @atlaspack/rust@3.1.0
+  - @atlaspack/types@2.14.2
+  - @atlaspack/plugin@2.14.2
+
 ## 2.14.1
 
 ### Patch Changes

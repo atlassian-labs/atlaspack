@@ -52,9 +52,7 @@ mod tests {
 
   #[test]
   fn can_be_defined_in_dyn_vec() {
-    let mut runtimes = Vec::<Box<dyn RuntimePlugin>>::new();
-
-    runtimes.push(Box::new(TestRuntimePlugin {}));
+    let runtimes: Vec<Box<dyn RuntimePlugin>> = vec![Box::new(TestRuntimePlugin {})];
 
     assert_eq!(runtimes.len(), 1);
   }

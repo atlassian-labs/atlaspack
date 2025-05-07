@@ -277,7 +277,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -329,7 +328,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -385,7 +383,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -424,7 +421,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -479,7 +475,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -539,7 +534,6 @@ describe('vcs cache', () => {
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });
@@ -684,7 +678,6 @@ __metadata:
       outputFS: vcsFS,
       shouldDisableCache: false,
       featureFlags: {
-        useLmdbJsLite: true,
         vcsMode: 'NEW',
       },
     });

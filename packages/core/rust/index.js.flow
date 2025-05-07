@@ -332,6 +332,8 @@ declare export function performStringReplacements(
 declare export class Lmdb {
   constructor(options: LmdbOptions): Lmdb;
   get(key: string): Promise<Buffer | null | void>;
+  keysSync(skip: number, limit: number): Array<string>;
+  hasSync(key: string): boolean;
   getSync(key: string): Buffer | null;
   getManySync(keys: Array<string>): Array<Buffer | void | null>;
   putMany(entries: Array<LmdbEntry>): Promise<void>;
@@ -341,6 +343,7 @@ declare export class Lmdb {
   commitReadTransaction(): void;
   startWriteTransaction(): Promise<void>;
   commitWriteTransaction(): Promise<void>;
+  delete(key: string): Promise<void>;
   close(): void;
 }
 

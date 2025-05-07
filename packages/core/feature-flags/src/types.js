@@ -17,10 +17,6 @@ export type FeatureFlags = {|
    */
   importRetry: boolean,
   /**
-   * Enable Rust based LMDB wrapper library
-   */
-  useLmdbJsLite: boolean,
-  /**
    * Fixes quadratic cache invalidation issue
    */
   fixQuadraticCacheInvalidation: ConsistencyCheckFeatureFlagValue,
@@ -37,6 +33,13 @@ export type FeatureFlags = {|
    * - NEW: Return VCS result, but don't call watchman
    */
   vcsMode: ConsistencyCheckFeatureFlagValue,
+  /**
+   * Refactor cache to:
+   * - Split writes into multiple entries
+   * - Remove "large file blob" writes
+   * - Reduce size of the caches by deduplicating data
+   */
+  cachePerformanceImprovements: boolean,
   /**
    * Enable scanning for the presence of loadable to determine side effects
    */
@@ -59,10 +62,6 @@ export type FeatureFlags = {|
    */
   patchProjectPaths: boolean,
   /**
-   * Enable loading of the parcel dylib in the main thread.
-   */
-  enableRustWorkerThreadDylibHack: boolean,
-  /**
    * Enables optimized inline string replacement perf for the packager.
    * Used heavily for inline bundles.
    */
@@ -71,6 +70,10 @@ export type FeatureFlags = {|
    * Enable support for the async bundle runtime (unstable_asyncBundleRuntime) in conditional bundling
    */
   conditionalBundlingAsyncRuntime: boolean,
+  /**
+   * Fix a bug where the conditional manifest reporter would report and write the same manifest multiple times
+   */
+  conditionalBundlingReporterDuplicateFix: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =

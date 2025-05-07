@@ -37,8 +37,20 @@ if (!fs.existsSync(binPath)) {
   process.exit(1);
 }
 
+if (platform !== 'windows' && !isExec(binPath)) {
+  fs.chmodSync(binPath, '755');
+}
+
 const [, , ...args] = process.argv;
-child_process.execFileSync(`${binPath} ${args.join(' ')}`, {
-  stdio: 'inherit',
-  shell: true,
-});
+try {
+  child_process.execFileSync(binPath, args, {
+    stdio: 'inherit',
+    shell: true,
+  });
+} catch (err) {
+  process.exit(err.status);
+}
+
+function isExec(p) {
+  return !!(fs.statSync(p).mode & fs.constants.S_IXUSR);
+}

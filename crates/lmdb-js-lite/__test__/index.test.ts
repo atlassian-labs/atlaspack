@@ -1,5 +1,4 @@
 import { initTracingSubscriber, Lmdb } from "../index.js";
-import { type Database as UnsafeDatabase, open as openLMDBUnsafe } from "lmdb";
 import * as v8 from "node:v8";
 import * as assert from "node:assert";
 import { mkdirSync, rmSync } from "node:fs";
@@ -86,6 +85,22 @@ describe("lmdb", () => {
     }
   });
 
+  it('can delete entries', async () => {
+    db = new Lmdb({
+      path: "./databases/test.db",
+      asyncWrites,
+      mapSize: MAP_SIZE,
+    });
+
+    await db.put("key", v8.serialize(1));
+    await db.delete("key");
+    const result = await db.get("key");
+    assert.equal(result, null);
+
+    const hasEntry = db.hasSync("key");
+    assert.equal(hasEntry, false);
+  })
+
   describe("reading", () => {
     beforeEach(async () => {
       db = new Lmdb({
@@ -121,50 +136,25 @@ describe("lmdb", () => {
       }
     });
 
-    describe("unsafe", () => {
-      let unsafeDB: UnsafeDatabase | null = null;
-
-      beforeEach(async () => {
-        unsafeDB = openLMDBUnsafe({
-          path: "./databases/unsafe",
-          compression,
-        });
-
-        await unsafeDB.transaction(async () => {
-          for (let i = 0; i < numEntriesToTest; i += 1) {
-            await unsafeDB?.put(`${i}`, v8.serialize(i));
-          }
-        });
-      });
-
-      it("read many entries", () => {
-        for (let i = 0; i < numEntriesToTest; i += 1) {
-          const result = unsafeDB?.get(`${i}`);
-          const resultValue = v8.deserialize(result);
-          assert.equal(resultValue, i);
-        }
-      });
-    });
   });
 
-  describe("unsafe", () => {
-    it("read and write many entries", async () => {
-      const unsafeDB = openLMDBUnsafe({
-        path: "./databases/unsafe",
-        compression,
+  describe('keys', () => {
+    it('can iterate over keys', async () => {
+      db = new Lmdb({
+        path: "./databases/keys_test.db",
+        asyncWrites,
+        mapSize: MAP_SIZE,
       });
 
-      await unsafeDB.transaction(async () => {
-        for (let i = 0; i < numEntriesToTest; i += 1) {
-          await unsafeDB.put(`${i}`, v8.serialize(i));
-        }
+      await db.put("key1", v8.serialize(1));
+      await db.put("key2", v8.serialize(2));
+      await db.put("key3", v8.serialize(3));
 
-        for (let i = 0; i < numEntriesToTest; i += 1) {
-          const result = unsafeDB.get(`${i}`);
-          const resultValue = v8.deserialize(result);
-          assert.equal(resultValue, i);
-        }
-      });
+      const keys1 = await db.keysSync(0, 1);
+      assert.deepEqual(keys1, ["key1"]);
+
+      const keys2 = await db.keysSync(1, 2);
+      assert.deepEqual(keys2, ["key2", "key3"]);
     });
   });
 });
