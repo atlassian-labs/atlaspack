@@ -61,7 +61,10 @@ jobs:
       - name: Install Rust
         uses: ./.github/actions/rust-toolchain
       - uses: Swatinem/rust-cache@v2
-        with: {shared-key: '${{ matrix.target }}'}
+        with:
+          shared-key: '${{ matrix.target }}'
+          # Only store new caches on main
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: actions/setup-node@v4
         with: {cache: yarn}
       # Yarn install is required for @napi-rs/cli

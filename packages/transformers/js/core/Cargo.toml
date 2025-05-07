@@ -40,13 +40,13 @@ sha-1 = { workspace = true }
 dunce = { workspace = true }
 pathdiff = { workspace = true }
 path-slash = { workspace = true }
-pretty_assertions = { workspace = true }
 indexmap = { workspace = true }
 atlaspack-macros = { path = "../../../../crates/macros" }
 atlaspack_core = { path = "../../../../crates/atlaspack_core" }
 atlaspack_contextual_imports = { path = "../../../../crates/atlaspack_contextual_imports" }
 atlaspack_swc_runner = { path = "../../../../crates/atlaspack_swc_runner" }
 parking_lot = { workspace = true }
+pretty_assertions = { workspace = true }
 regex = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }

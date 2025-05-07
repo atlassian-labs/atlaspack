@@ -439,7 +439,7 @@ pub fn transform(
                     filename: Path::new(&config.filename),
                     unresolved_mark,
                     has_node_replacements: &mut result.has_node_replacements,
-                    comments: comments.clone()
+                    comments: comments.clone(),
                   },
                   config.node_replacer,
                 ),
