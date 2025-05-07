@@ -53,8 +53,12 @@ export type AtlaspackNapiOptions = {|
   napiWorkerPool: any,
   options: {|
     featureFlags?: {[string]: string | boolean},
-    corePath?: string,
-    isSuperPackage?: boolean,
+    jsPaths: {|
+      esmoduleHelpersSpecifier: string,
+      esmoduleHelpersIncludeNodeModules: string,
+      emptyFile: string,
+      corePath: string,
+    |},
     // TODO Use Omit when available in flow >0.210.0
     ...$Diff<
       InitialAtlaspackOptions,

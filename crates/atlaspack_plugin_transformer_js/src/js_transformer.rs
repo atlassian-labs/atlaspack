@@ -42,12 +42,6 @@ pub struct AtlaspackJsTransformerPlugin {
   config: JsTransformerConfig,
   options: Arc<PluginOptions>,
   ts_config: Option<TsConfig>,
-  esmodule_helper_options: EsmoduleHelperOptions,
-}
-
-struct EsmoduleHelperOptions {
-  specifier: String,
-  include_node_modules: String,
 }
 
 #[derive(Default)]
@@ -95,26 +89,11 @@ impl AtlaspackJsTransformerPlugin {
       })
       .ok();
 
-    let esmodule_helper_options = match ctx.options.is_super_package {
-      false => EsmoduleHelperOptions {
-        specifier: String::from("@atlaspack/transformer-js/src/esmodule-helpers.js"),
-        include_node_modules: String::from("@atlaspack/transformer-js"),
-      },
-      true => EsmoduleHelperOptions {
-        // TODO: Core path is currently set to parent dir of core/lib/Atlaspack.js
-        // Once super builds are rolled out we should improve the way static
-        // file paths are passed to rust.
-        specifier: String::from("./transformers/js/esmodule-helpers.js"),
-        include_node_modules: String::from("atlaspack"),
-      },
-    };
-
     Ok(Self {
       cache: Default::default(),
       config,
       options: ctx.options.clone(),
       ts_config,
-      esmodule_helper_options,
     })
   }
 
@@ -334,7 +313,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         })
         .unwrap_or_default(),
       conditional_bundling: feature_flag_conditional_bundling,
-      esm_helpers_specifier: self.esmodule_helper_options.specifier.clone(),
+      esm_helpers_specifier: self.options.js_paths.esmodule_helpers_specifier.clone(),
       ..atlaspack_js_swc_core::Config::default()
     };
 
@@ -368,14 +347,8 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     }
 
     let config = atlaspack_js_swc_core::Config::default();
-    let result = conversion::convert_result(
-      asset,
-      &config,
-      transformation_result,
-      &self.options,
-      &self.esmodule_helper_options,
-    )
-    .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
+    let result = conversion::convert_result(asset, &config, transformation_result, &self.options)
+      .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
 
     Ok(result)
   }

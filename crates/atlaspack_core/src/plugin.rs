@@ -15,7 +15,7 @@ pub use transformer_plugin::*;
 pub use validator_plugin::*;
 
 use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
-use crate::types::{BuildMode, FeatureFlags, LogLevel};
+use crate::types::{BuildMode, FeatureFlags, JsPaths, LogLevel};
 
 mod bundler_plugin;
 mod compressor_plugin;
@@ -40,7 +40,7 @@ pub struct PluginLogger {}
 
 #[derive(Debug, Default)]
 pub struct PluginOptions {
-  pub core_path: PathBuf,
+  pub js_paths: JsPaths,
   /// Environment variables
   pub env: Option<BTreeMap<String, String>>,
   pub log_level: LogLevel,

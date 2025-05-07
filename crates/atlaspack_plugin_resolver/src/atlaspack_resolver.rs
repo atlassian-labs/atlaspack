@@ -222,7 +222,7 @@ impl AtlaspackResolver {
   fn resolve_empty(&self, side_effects: bool) -> ResolvedResolution {
     ResolvedResolution {
       code: Some(String::default()),
-      file_path: self.options.core_path.join("_empty.js"),
+      file_path: self.options.js_paths.empty_file.clone(),
       side_effects,
       ..ResolvedResolution::default()
     }

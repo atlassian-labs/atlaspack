@@ -89,7 +89,7 @@ impl Atlaspack {
         config: Arc::clone(&config_loader),
         file_system: fs.clone(),
         options: Arc::new(PluginOptions {
-          core_path: options.core_path.clone(),
+          js_paths: options.js_paths.clone(),
           env: options.env.clone(),
           log_level: options.log_level.clone(),
           mode: options.mode.clone(),

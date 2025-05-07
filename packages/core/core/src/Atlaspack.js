@@ -177,7 +177,6 @@ export default class Atlaspack {
 
       rustAtlaspack = await AtlaspackV3.create({
         ...options,
-        corePath: path.join(/*#__ATLASPACK_IGNORE__*/ __dirname, '..'),
         threads: process.env.NODE_ENV === 'test' ? 2 : undefined,
         entries: Array.isArray(entries)
           ? entries
@@ -189,7 +188,6 @@ export default class Atlaspack {
         // $FlowFixMe ProjectPath is a string
         defaultTargetOptions: resolvedOptions.defaultTargetOptions,
         lmdb,
-        isSuperPackage: isSuperPackage(),
       });
     }
     this.rustAtlaspack = rustAtlaspack;

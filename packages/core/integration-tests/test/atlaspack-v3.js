@@ -70,8 +70,6 @@ describe.v3('AtlaspackV3', function () {
     `;
 
     let atlaspack = await AtlaspackV3.create({
-      corePath: '',
-      isSuperPackage: false,
       entries: [join(__dirname, 'index.js')],
       fs: new FileSystemV3(overlayFS),
       napiWorkerPool,
@@ -204,8 +202,6 @@ describe.v3('AtlaspackV3', function () {
     it('should not throw if feature flag is bool', async () => {
       await assert.rejects(() =>
         AtlaspackV3.create({
-          corePath: '',
-          isSuperPackage: false,
           entries: [join(__dirname, 'index.js')],
           fs: new FileSystemV3(overlayFS),
           lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
@@ -220,8 +216,6 @@ describe.v3('AtlaspackV3', function () {
     it('should not throw if feature flag is string', async () => {
       await assert.rejects(() =>
         AtlaspackV3.create({
-          corePath: '',
-          isSuperPackage: false,
           entries: [join(__dirname, 'index.js')],
           fs: new FileSystemV3(overlayFS),
           napiWorkerPool,

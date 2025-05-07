@@ -13,16 +13,26 @@ use super::IncludeNodeModules;
 use super::OutputFormat;
 use super::TargetSourceMapOptions;
 
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JsPaths {
+  /// Specifier for the esmodule_helpers file, will be resolved from Self.core
+  pub esmodule_helpers_specifier: String,
+  /// Which node_module to include in the esmodule_helpers dependency
+  pub esmodule_helpers_include_node_modules: String,
+  /// Path to the empty file. Used for resolving aliases set to false
+  pub empty_file: PathBuf,
+  /// Path to the core package (@atlaspack/core)
+  pub core_path: PathBuf,
+}
+
 /// The options passed into Atlaspack either through the CLI or the programmatic API
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AtlaspackOptions {
   pub config: Option<String>,
 
-  /// Path to the atlaspack core node_module. This will be used to resolve built-ins or runtime files.
-  ///
-  /// In the future this may be replaced with embedding those files into the rust binary.
-  pub core_path: PathBuf,
+  pub js_paths: JsPaths,
 
   #[serde(default)]
   pub default_target_options: DefaultTargetOptions,
