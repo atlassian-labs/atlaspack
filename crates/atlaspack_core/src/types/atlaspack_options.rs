@@ -55,8 +55,6 @@ pub struct AtlaspackOptions {
 
   #[serde(default)]
   pub feature_flags: FeatureFlags,
-
-  pub is_super_package: bool,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Deserialize, Serialize)]

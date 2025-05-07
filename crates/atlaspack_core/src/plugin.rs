@@ -47,5 +47,4 @@ pub struct PluginOptions {
   pub mode: BuildMode,
   pub project_root: PathBuf,
   pub feature_flags: FeatureFlags,
-  pub is_super_package: bool,
 }
