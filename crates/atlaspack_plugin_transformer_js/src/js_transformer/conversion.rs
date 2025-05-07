@@ -10,7 +10,7 @@ use atlaspack_core::plugin::{PluginOptions, TransformResult};
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
   Asset, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, Diagnostic, DiagnosticBuilder,
-  Environment, EnvironmentContext, File, FileType, IncludeNodeModules, JsPaths, OutputFormat,
+  Environment, EnvironmentContext, File, FileType, IncludeNodeModules, OutputFormat,
   SourceLocation, SourceMap, SourceType, SpecifierType, Symbol,
 };
 

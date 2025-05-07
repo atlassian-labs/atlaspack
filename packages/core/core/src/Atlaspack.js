@@ -64,7 +64,6 @@ import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
 import {loadRustWorkerThreadDylibHack} from './rustWorkerThreadDylibHack';
-import {isSuperPackage} from './isSuperPackage';
 
 registerCoreWithSerializer();
 
