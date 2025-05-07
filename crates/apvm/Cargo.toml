@@ -16,7 +16,7 @@ fs_extra = { workspace = true }
 homedir = { workspace = true }
 json = { workspace = true }
 rand = { workspace = true }
-reqwest = { workspace = true, features = ["blocking"] }
+reqwest = { workspace = true, features = ["blocking", "rustls-tls"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tar = { workspace = true }
