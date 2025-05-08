@@ -33,7 +33,7 @@
     "check": "flow check",
     "lint": "node ./scripts/lint-all.mjs",
     "prepublishOnly": "yarn pre-publish",
-    "pre-publish": "yarn build && yarn build-ts && yarn build-super",
+    "pre-publish": "yarn build && yarn build-ts && yarn build-super && yarn workspace atlaspack upload-sourcemaps",
     "changesets-publish": "yarn pre-publish && yarn changeset publish",
     "test": "yarn test:unit && yarn test:integration",
     "test:e2e": "yarn workspace @atlaspack/e2e-tests test",

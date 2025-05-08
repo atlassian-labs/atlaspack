@@ -152,8 +152,6 @@ jobs:
           npm config set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
           npm config set registry https://registry.npmjs.org/
       - run: ${{ inputs.release-command }}
-      - name: Upload source maps
-        run: yarn workspace atlaspack upload-sourcemaps
         env:
           SENTRY_ORG: ${{secrets.SENTRY_ORG}}
           SENTRY_PROJECT: ${{secrets.SENTRY_PROJECT}}
