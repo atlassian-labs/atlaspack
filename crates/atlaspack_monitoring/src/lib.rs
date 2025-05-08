@@ -65,14 +65,21 @@ pub fn initialize_monitoring(options: MonitoringOptions) -> anyhow::Result<()> {
     return Ok(());
   }
 
-  let mut guard = MonitoringGuard::default();
+  #[allow(unused)]
+  let mut sentry_setup = None;
 
   #[cfg(feature = "canary")]
   if let Some(sentry_options) = options.sentry_options {
-    guard.sentry = Some(sentry_integration::init_sentry(sentry_options)?);
+    sentry_setup = Some(sentry_integration::init_sentry(sentry_options)?);
   }
 
-  guard.tracer = Some(tracer::Tracer::new(&options.tracing_options)?);
+  let tracing_setup = Some(tracer::Tracer::new(&options.tracing_options)?);
+
+  let mut guard = MonitoringGuard {
+    sentry: sentry_setup,
+    tracer: tracing_setup,
+    ..Default::default()
+  };
 
   #[cfg(all(feature = "canary", not(target_env = "musl")))]
   if let Some(crash_reporter_options) = options.crash_reporter_options {
