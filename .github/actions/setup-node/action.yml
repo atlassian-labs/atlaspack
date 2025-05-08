@@ -2,7 +2,7 @@ name: Setup node
 description: Setup node with caching
 
 inputs:
-  version:
+  node-version:
     description: Explicit node version
     required: false
 
@@ -11,7 +11,7 @@ runs:
   steps:
     - uses: actions/setup-node@v4
       with:
-        node-version: ${{ inputs.version }}
+        node-version: ${{ inputs.node-version }}
         node-version-file: .nvmrc
 
     - name: Get yarn cache directory path
