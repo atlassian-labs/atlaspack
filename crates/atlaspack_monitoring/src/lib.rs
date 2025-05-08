@@ -27,6 +27,7 @@ pub struct MonitoringGuard {
   sentry: Option<sentry::ClientInitGuard>,
   #[cfg(all(feature = "canary", not(target_env = "musl")))]
   crash_handler: Option<crash_handler::CrashHandler>,
+  #[allow(unused)]
   tracer: Option<tracer::Tracer>,
 }
 
@@ -65,26 +66,28 @@ pub fn initialize_monitoring(options: MonitoringOptions) -> anyhow::Result<()> {
     return Ok(());
   }
 
-  #[allow(unused)]
-  let mut sentry_setup = None;
-
   #[cfg(feature = "canary")]
-  if let Some(sentry_options) = options.sentry_options {
-    sentry_setup = Some(sentry_integration::init_sentry(sentry_options)?);
-  }
+  let sentry = options
+    .sentry_options
+    .map(sentry_integration::init_sentry)
+    .transpose()?;
 
-  let tracing_setup = Some(tracer::Tracer::new(&options.tracing_options)?);
-
-  let mut guard = MonitoringGuard {
-    sentry: sentry_setup,
-    tracer: tracing_setup,
-    ..Default::default()
-  };
+  // Order matters, tracer must be initialized after sentry
+  let tracer = Some(tracer::Tracer::new(&options.tracing_options)?);
 
   #[cfg(all(feature = "canary", not(target_env = "musl")))]
-  if let Some(crash_reporter_options) = options.crash_reporter_options {
-    guard.crash_handler = Some(crash_reporter::init_crash_reporter(crash_reporter_options)?);
-  }
+  let crash_handler = options
+    .crash_reporter_options
+    .map(crash_reporter::init_crash_reporter)
+    .transpose()?;
+
+  let guard = MonitoringGuard {
+    #[cfg(feature = "canary")]
+    sentry,
+    #[cfg(all(feature = "canary", not(target_env = "musl")))]
+    crash_handler,
+    tracer,
+  };
 
   *global = Some(guard);
 
