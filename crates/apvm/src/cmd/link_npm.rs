@@ -75,8 +75,6 @@ pub fn npm_link_npm(
     },
   )?;
 
-  link::soft_link(&node_modules_super, &node_modules_atlaspack.join("super"))?;
-
   #[cfg(unix)]
   {
     use std::os::unix::fs::PermissionsExt;
@@ -99,17 +97,27 @@ pub fn npm_link_npm(
     let entry = entry?;
     let entry_path = entry.path();
 
+    info!("Entry: {:?}", entry_path);
+
     if fs::metadata(&entry_path)?.is_dir() {
       continue;
     }
 
-    let file_stem = entry_path.try_file_stem()?;
+    // Skip non .js files
+    if entry_path.extension().is_some_and(|ext| ext != "js") {
+      continue;
+    }
 
+    let file_stem = entry_path.try_file_stem()?;
     if file_stem.starts_with("vendor.") {
       continue;
     }
 
     let node_modules_atlaspack_pkg = node_modules_atlaspack.join(&file_stem);
+    info!(
+      "Linking: {:?} -> {:?}",
+      file_stem, node_modules_atlaspack_pkg
+    );
     if fs::exists(&node_modules_atlaspack_pkg)? {
       info!("Deleting: {:?}", node_modules_atlaspack_pkg);
       fs::remove_dir_all(&node_modules_atlaspack_pkg)?;
