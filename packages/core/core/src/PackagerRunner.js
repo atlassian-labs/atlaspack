@@ -601,6 +601,11 @@ export default class PackagerRunner {
       }
     }
 
+    if (process.env.ATLASPACK_SUPER_BUILD === 'true') {
+      // Set source root to 'atlaspack' so stack traces are clean in Sentry
+      sourceRoot = 'atlaspack';
+    }
+
     let mapFilename = fullPath + '.map';
     let isInlineMap = bundle.env.sourceMap && bundle.env.sourceMap.inline;
 
