@@ -21,18 +21,18 @@ runs:
 
     # We only store yarn cache on main to save cache space
     - name: Setup yarn cache
-      # if: ${{ github.ref == 'refs/heads/main' }}
+      if: ${{ github.ref == 'refs/heads/main' }}
       uses: actions/cache@v4
       with:
         path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
         key: yarn-${{ runner.os }}
 
-    # - name: Restore yarn cache
-    #   if: ${{ github.ref != 'refs/heads/main' }}
-    #   uses: actions/cache/restore@v4
-    #   with:
-    #     path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-    #     key: yarn-${{ runner.os }}
+    - name: Restore yarn cache
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+        key: yarn-${{ runner.os }}
 
     - name: Yarn install
       run: yarn install --frozen-lockfile
