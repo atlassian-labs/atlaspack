@@ -46,7 +46,7 @@ module.exports = new Namer({
     }
 
     let projectRelativePath = path.relative(
-      path.join(options.projectRoot, '../..'),
+      path.join(options.projectRoot, 'packages'),
       entryAsset.filePath,
     );
 

@@ -368,10 +368,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "alias": {
-    "@swc/wasm": false,
-    "@atlaspack/babel-register": false
-  },
   "copyTypes": [
     "@atlaspack/cache",
     "@atlaspack/conditional-import-types",
