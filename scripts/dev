@@ -37,7 +37,7 @@ function build-js() {
   node "${PATH_ROOT_DIR}/node_modules/.bin/lerna"  run dev:prepare
   node "${PATH_ROOT_DIR}/node_modules/.bin/atlaspack" build \
     --no-cache \
-    packages/core/{fs,codeframe,package-manager,utils} \
+    packages/core/{eslint-plugin,fs,codeframe,package-manager,utils} \
     packages/reporters/{cli,dev-server} \
     packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}
 

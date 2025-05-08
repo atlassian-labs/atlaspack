@@ -20,31 +20,31 @@ new RuleTester({
   ],
   invalid: [
     {
-      code: "require('@atlaspack/eslint-plugin/lib/rules/no-self-package-imports');",
+      code: "require('@atlaspack/eslint-plugin-internal/lib/rules/no-self-package-imports');",
       errors: [{message}],
       filename,
       output: "require('../../lib/rules/no-self-package-imports');",
     },
     {
-      code: "require('@atlaspack/eslint-plugin');",
+      code: "require('@atlaspack/eslint-plugin-internal');",
       filename,
       errors: [{message}],
       output: "require('../../');",
     },
     {
-      code: "require.resolve('@atlaspack/eslint-plugin/lib/rules/no-self-package-imports');",
+      code: "require.resolve('@atlaspack/eslint-plugin-internal/lib/rules/no-self-package-imports');",
       filename,
       errors: [{message}],
       output: "require.resolve('../../lib/rules/no-self-package-imports');",
     },
     {
-      code: "import rule from '@atlaspack/eslint-plugin';",
+      code: "import rule from '@atlaspack/eslint-plugin-internal';",
       filename,
       errors: [{message}],
       output: "import rule from '../../';",
     },
     {
-      code: "import rule from '@atlaspack/eslint-plugin/lib/rules/no-self-package-imports';",
+      code: "import rule from '@atlaspack/eslint-plugin-internal/lib/rules/no-self-package-imports';",
       filename,
       errors: [{message}],
       output: "import rule from '../../lib/rules/no-self-package-imports';",
