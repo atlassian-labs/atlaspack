@@ -184,9 +184,6 @@ jobs:
     id: authenticate-changesets
     if: github.ref_name == 'main'
     permissions: write-all
-    needs:
-      - build-native-linux
-      - build-native-macos
     runs-on: ubuntu-22.04
     uses: actions/create-github-app-token@v1
     with:
@@ -197,7 +194,10 @@ jobs:
     name: Build and release Changesets
     if: github.ref_name == 'main'
     permissions: write-all
-    needs: authenticate-changesets
+    needs:
+      - authenticate-changesets
+      - build-native-linux
+      - build-native-macos
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
