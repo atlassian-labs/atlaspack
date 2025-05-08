@@ -26,8 +26,7 @@ runs:
       with:
         path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
         key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
-        restore-keys: |
-          yarn-${{ runner.os }}-
+        restore-keys: yarn-${{ runner.os }}
 
     - name: Restore yarn cache
       if: ${{ github.ref != 'refs/heads/main' }}
@@ -35,8 +34,7 @@ runs:
       with:
         path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
         key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
-        restore-keys: |
-          yarn-${{ runner.os }}-
+        restore-keys: yarn-${{ runner.os }}
 
     - name: Yarn install
       run: yarn install --frozen-lockfile
