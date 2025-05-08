@@ -61,6 +61,9 @@ pub fn init_sentry(options: SentryOptions) -> anyhow::Result<ClientInitGuard> {
   tracing::info!("Initialising Sentry in rust...");
 
   let mut sentry_client_options = sentry::ClientOptions {
+    traces_sample_rate: std::env::var("ATLASPACK_SENTRY_TRACES_SAMPLE_RATE")
+      .map(|v| v.parse::<f32>().unwrap())
+      .unwrap_or(0.0),
     ..Default::default()
   };
 

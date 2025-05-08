@@ -26,6 +26,7 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing-appender = { workspace = true }
 tracing-chrome = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+sentry-tracing = { workspace = true }
 serde_json = { workspace = true }
 
 whoami = { workspace = true, optional = true }

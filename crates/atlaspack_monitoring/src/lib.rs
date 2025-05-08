@@ -39,7 +39,7 @@ impl MonitoringGuard {
 
 #[derive(Debug)]
 pub struct MonitoringOptions {
-  pub tracing_options: Option<TracerMode>,
+  pub tracing_options: Vec<TracerMode>,
   #[cfg(feature = "canary")]
   pub sentry_options: Option<SentryOptions>,
   #[cfg(all(feature = "canary", not(target_env = "musl")))]
@@ -67,9 +67,7 @@ pub fn initialize_monitoring(options: MonitoringOptions) -> anyhow::Result<()> {
 
   let mut guard = MonitoringGuard::default();
   // TODO: Too complicated. Tracing should be set-up at the very top and be easy to understand
-  if let Some(tracing_options) = options.tracing_options {
-    guard.tracer = Some(tracer::Tracer::new(tracing_options)?);
-  }
+  guard.tracer = Some(tracer::Tracer::new(&options.tracing_options)?);
   #[cfg(feature = "canary")]
   if let Some(sentry_options) = options.sentry_options {
     guard.sentry = Some(sentry_integration::init_sentry(sentry_options)?);
