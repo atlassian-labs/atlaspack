@@ -85,6 +85,7 @@ rand = "0.8.5"
 rayon = "1.10.0"
 regex = "1.11.1"
 sentry = { version = "0.35.0", default-features = false }
+sentry-tracing = { version = "0.35" }
 serde = "1.0.217"
 serde_bytes = "0.11.15"
 serde_json = "1.0.135"
