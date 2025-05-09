@@ -25,6 +25,7 @@ import {
 import loadDotEnv from './loadDotEnv';
 import {toProjectPath} from './projectPath';
 import {getResolveFrom} from './requests/AtlaspackConfigRequest';
+import {isSuperPackage} from './isSuperPackage';
 
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {ATLASPACK_VERSION} from './constants';
@@ -275,6 +276,7 @@ export default async function resolveOptions(
     // feature-flags
     featureFlags: {...DEFAULT_FEATURE_FLAGS, ...initialOptions?.featureFlags},
     parcelVersion: ATLASPACK_VERSION,
+    isAtlaspackSuper: isSuperPackage(),
   };
 }
 
