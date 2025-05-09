@@ -4,6 +4,8 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 
+use crate::paths::Paths;
+
 use super::origin::VersionTarget;
 use super::package_json::PackageJson;
 use super::path_ext::find_ancestor_file;
@@ -48,7 +50,7 @@ impl ApvmRc {
   /// # Install and link a version by specifier
   /// apvm npm link --install 2.13.0              # Installs 2.13.0
   /// ```
-  pub fn detect(start_dir: &Path) -> anyhow::Result<Option<Self>> {
+  pub fn detect(start_dir: &Path, paths: &Paths) -> anyhow::Result<Option<Self>> {
     for package_json_path in find_ancestor_file(start_dir, "package.json")? {
       let Ok(package_json) = PackageJson::parse_from_file(&package_json_path) else {
         continue;
@@ -66,14 +68,14 @@ impl ApvmRc {
       if let Some(version) = atlaspack.version {
         apvmrc
           .version_aliases
-          .insert("default".to_string(), VersionTarget::parse(version)?);
+          .insert("default".to_string(), VersionTarget::parse(version, paths)?);
       };
 
       if let Some(versions) = atlaspack.versions {
         for (alias, specifier) in versions {
           apvmrc
             .version_aliases
-            .insert(alias, VersionTarget::parse(specifier)?);
+            .insert(alias, VersionTarget::parse(specifier, paths)?);
         }
       };
 

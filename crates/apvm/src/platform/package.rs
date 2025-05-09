@@ -23,14 +23,18 @@ impl PackageDescriptor {
   /// Create a PackageDescriptor from a version target.
   /// This file might not exist
   pub fn parse(paths: &Paths, version_target: &VersionTarget) -> anyhow::Result<Self> {
-    if let VersionTarget::Local(path) = version_target {
-      return Ok(Self {
-        version_target: version_target.clone(),
-        origin: version_target.origin().to_string(),
-        version: version_target.version().to_string(),
-        version_encoded: "".to_string(),
-        path: PathBuf::from(path),
-      });
+    if let VersionTarget::Local(_path) = version_target {
+      if let Some(atlaspack_local) = &paths.atlaspack_local {
+        return Ok(Self {
+          version_target: version_target.clone(),
+          origin: version_target.origin().to_string(),
+          version: version_target.version().to_string(),
+          version_encoded: "".to_string(),
+          path: atlaspack_local.clone(),
+        });
+      } else {
+        return Err(anyhow::anyhow!("No local version registered"));
+      }
     };
 
     let version = version_target.version();
@@ -64,7 +68,7 @@ impl PackageDescriptor {
 
     PackageDescriptor::parse(
       paths,
-      &VersionTarget::parse(format!("{}:{}", parent_type, name))?,
+      &VersionTarget::parse(format!("{}:{}", parent_type, name), paths)?,
     )
   }
 

@@ -16,7 +16,7 @@ pub struct UninstallCommand {
 pub fn main(ctx: Context, cmd: UninstallCommand) -> anyhow::Result<()> {
   let start_time = SystemTime::now();
 
-  let version_target = VersionTarget::parse(&cmd.version)?;
+  let version_target = VersionTarget::parse(&cmd.version, &ctx.paths)?;
   let package = PackageDescriptor::parse(&ctx.paths, &version_target)?;
 
   if !package.exists()? {

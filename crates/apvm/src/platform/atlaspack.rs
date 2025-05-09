@@ -5,35 +5,49 @@ use super::exec::ExecOptions;
 use super::runtime::resolve_runtime;
 use crate::context::Context;
 use crate::platform::origin::VersionTarget;
+use crate::platform::package::PackageDescriptor;
 use crate::platform::path_ext::*;
 
-pub fn atlaspack_exec(ctx: &Context, command: Vec<String>) -> anyhow::Result<()> {
-  let runtime = resolve_runtime(&ctx.env.runtime)?;
+pub fn atlaspack_exec(mut ctx: Context) -> anyhow::Result<()> {
+  let active_package = 'block: {
+    let possible_version = ctx.env.argv.first().map(|v| v.as_str().to_string());
+    if let Ok(version) = VersionTarget::resolve(&ctx, &possible_version) {
+      let package = PackageDescriptor::parse(&ctx.paths, &version)?;
+      if !package.exists()? {
+        return Err(anyhow::anyhow!("Atlaspack version not installed"));
+      }
+      ctx.env.argv.remove(0);
+      break 'block package;
+    };
 
-  let Some(active) = &ctx.active_version else {
+    if let Some(active) = &ctx.active_version {
+      break 'block active.package.clone();
+    };
+
     return Err(anyhow::anyhow!("No version of Atlaspack selected"));
   };
 
-  let bin_path = match active.package.version_target {
-    VersionTarget::Npm(_) => active.package.path.join("lib").join("cli.js"),
-    VersionTarget::Git(_) => active
-      .package
+  log::info!("Running With: {:?}", active_package.path);
+
+  let runtime = resolve_runtime(&ctx.env.runtime)?;
+
+  let bin_path = match active_package.version_target {
+    VersionTarget::Npm(_) => active_package.path.join("lib").join("cli.js"),
+    VersionTarget::Git(_) => active_package
       .path
       .join("packages")
       .join("core")
       .join("cli")
       .join("lib")
       .join("cli.js"),
-    VersionTarget::Local(_) => active
-      .package
+    VersionTarget::Local(_) => active_package
       .path
       .join("packages")
       .join("core")
       .join("cli")
       .join("lib")
       .join("cli.js"),
-    VersionTarget::LocalSuper(_) => active
-      .package
+    VersionTarget::LocalSuper(_) => active_package
       .path
       .join("packages")
       .join("core")
@@ -46,7 +60,7 @@ pub fn atlaspack_exec(ctx: &Context, command: Vec<String>) -> anyhow::Result<()>
 
   args.push(runtime.try_to_string()?);
   args.push(bin_path.try_to_string()?);
-  args.extend(command);
+  args.extend(ctx.env.argv);
 
   log::info!("{:?}", args);
 

@@ -37,7 +37,7 @@ impl ActiveVersion {
       let version = fs::read_to_string(&breadcrumb)?;
 
       if fs::exists(&breadcrumb)? {
-        let version_target = VersionTarget::parse(version)?;
+        let version_target = VersionTarget::parse(version, paths)?;
 
         let alias: Option<String> = 'block: {
           if let Some(apvmrc) = apvmrc {
@@ -66,7 +66,7 @@ impl ActiveVersion {
       let version = fs::read_to_string(&version_file)?;
       return Ok(Some(ActiveVersion {
         active_type: ActiveType::SystemDefault,
-        package: PackageDescriptor::parse(paths, &VersionTarget::parse(version)?)?,
+        package: PackageDescriptor::parse(paths, &VersionTarget::parse(version, paths)?)?,
         node_modules_path: None,
         alias: None,
       }));

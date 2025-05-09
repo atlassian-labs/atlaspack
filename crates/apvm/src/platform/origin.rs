@@ -1,6 +1,7 @@
 use serde::Serialize;
 
 use crate::context::Context;
+use crate::paths::Paths;
 use crate::platform::path_ext::*;
 
 #[derive(PartialEq, Eq, Debug, Clone, Serialize)]
@@ -23,6 +24,15 @@ impl TryFrom<&str> for VersionTarget {
 
   fn try_from(value: &str) -> Result<Self, Self::Error> {
     let Some((origin, specifier)) = value.split_once(":") else {
+      if value == "local" {
+        return Ok(Self::Local(value.to_string()));
+      }
+      if value == "local-super" {
+        return Ok(Self::Local(value.to_string()));
+      }
+      if !value.chars().next().unwrap().is_numeric() {
+        return Err(anyhow::anyhow!("Invalid semver"));
+      }
       return Ok(Self::Npm(value.to_string()));
     };
     match origin {
@@ -55,8 +65,31 @@ impl From<VersionTarget> for String {
 }
 
 impl VersionTarget {
-  pub fn parse<S: AsRef<str>>(value: S) -> anyhow::Result<Self> {
-    Self::try_from(value.as_ref())
+  pub fn parse<S: AsRef<str>>(value: S, paths: &Paths) -> anyhow::Result<Self> {
+    let version = value.as_ref();
+    let Some((origin, specifier)) = version.split_once(":") else {
+      if version == "local" || version == "local-super" {
+        let Some(local_dir) = &paths.atlaspack_local else {
+          return Err(anyhow::anyhow!(
+            "Requested local but no local version available"
+          ));
+        };
+        if version == "local" {
+          return Ok(Self::Local(local_dir.try_to_string()?));
+        }
+        if version == "local-super" {
+          return Ok(Self::LocalSuper(local_dir.try_to_string()?));
+        }
+      }
+      return Ok(Self::Npm(version.to_string()));
+    };
+    match origin {
+      "git" => Ok(Self::Git(specifier.to_string())),
+      "npm" => Ok(Self::Npm(specifier.to_string())),
+      "local" => Ok(Self::Local(specifier.to_string())),
+      "local-super" => Ok(Self::Local(specifier.to_string())),
+      _ => Err(anyhow::anyhow!("Cannot convert string to VersionTarget")),
+    }
   }
 
   pub fn resolve(ctx: &Context, version: &Option<String>) -> anyhow::Result<Self> {
@@ -76,6 +109,10 @@ impl VersionTarget {
         return Ok(Self::LocalSuper(local_dir.try_to_string()?));
       }
     };
+
+    if !version.chars().next().unwrap().is_numeric() && !version.starts_with("git:") {
+      return Err(anyhow::anyhow!("Invalid version specifier"));
+    }
 
     // Order of target selection:
     // (empty version)  -> package.json#atlaspack.version
