@@ -2,13 +2,15 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
+use serde::Serialize;
+
 use super::name;
 use super::origin::VersionTarget;
 use super::path_ext::*;
 use crate::paths::Paths;
 
 #[allow(unused)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct PackageDescriptor {
   pub version_target: VersionTarget,
   pub origin: String,

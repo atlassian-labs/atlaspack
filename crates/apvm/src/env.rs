@@ -1,9 +1,11 @@
 use std::path::PathBuf;
 
+use serde::Serialize;
+
 use crate::platform::path_ext::*;
 
 #[allow(unused)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Env {
   pub pwd: PathBuf,
   pub exe_path: PathBuf,

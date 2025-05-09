@@ -1,7 +1,9 @@
+use serde::Serialize;
+
 use crate::context::Context;
 use crate::platform::path_ext::*;
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize)]
 pub enum VersionTarget {
   Npm(String),
   Git(String),
