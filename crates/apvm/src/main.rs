@@ -33,7 +33,10 @@ pub enum ApvmCommandType {
   /// Version information
   Version,
   /// Run command with specified version of atlaspack
-  Atlaspack,
+  Atlaspack {
+    /// Version of Atlaspack to run command with
+    version: Option<String>,
+  },
   #[clap(hide = true)]
   Debug(cmd::debug::DebugCommand),
 }
@@ -60,7 +63,7 @@ fn main() -> anyhow::Result<()> {
 
   let env = Env::parse()?;
   let paths = Paths::new(&env)?;
-  let apvmrc = ApvmRc::detect(&env.pwd)?;
+  let apvmrc = ApvmRc::detect(&env.pwd, &paths)?;
   let active_version = ActiveVersion::detect(&apvmrc, &paths)?;
   let ctx = context::Context {
     env,
@@ -71,17 +74,19 @@ fn main() -> anyhow::Result<()> {
 
   // If the executable is called "atlaspack" then only proxy
   if &ctx.env.exe_stem == "atlaspack" {
-    return atlaspack_exec(&ctx, ctx.env.argv.clone());
+    return atlaspack_exec(ctx);
   }
 
   // Calling "apvm atlaspack" will proxy to the active Atlaspack version
+  // This needs to be done outside of clap::parse() otherwise it will
+  // hijack the arguments
   if let Some("atlaspack") = ctx.env.argv.first().map(|v| v.as_str()) {
     // Remove the first arg and forward remaining to the exec proxy
     // The arg structure is [arg0, command, ...args]
     // This forwards only "args" to the exec proxy
     let mut ctx = ctx;
     ctx.env.argv.remove(0);
-    return atlaspack_exec(&ctx, ctx.env.argv.clone());
+    return atlaspack_exec(ctx);
   }
 
   // APVM Commands
@@ -96,6 +101,16 @@ fn main() -> anyhow::Result<()> {
     ApvmCommandType::Debug(cmd) => cmd::debug::main(ctx, cmd),
     ApvmCommandType::Default(cmd) => cmd::default::main(ctx, cmd),
     ApvmCommandType::Link(cmd) => cmd::link::main(ctx, cmd),
-    ApvmCommandType::Atlaspack => unreachable!(),
+    ApvmCommandType::Atlaspack { version: _ } => unreachable!(),
   }
 }
+
+/*
+    // Remove the first arg and forward remaining to the exec proxy
+    // The arg structure is [arg0, command, ...args]
+    // This forwards only "args" to the exec proxy
+    let mut ctx = ctx;
+    ctx.env.argv.remove(0);
+    return atlaspack_exec(&ctx, ctx.env.argv.clone());
+
+*/

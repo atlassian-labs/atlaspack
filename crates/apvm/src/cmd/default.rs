@@ -14,7 +14,7 @@ pub struct DefaultCommand {
 }
 
 pub fn main(ctx: Context, cmd: DefaultCommand) -> anyhow::Result<()> {
-  let version_target = VersionTarget::parse(&cmd.version)?;
+  let version_target = VersionTarget::parse(&cmd.version, &ctx.paths)?;
   let package = PackageDescriptor::parse(&ctx.paths, &version_target)?;
 
   if package.version == "local" || package.version == "local-super" {
