@@ -252,9 +252,8 @@ jobs:
       CI: true
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-node
         with:
-          cache: yarn
           node-version: ${{ matrix.node }}
       - uses: actions/download-artifact@v4
         with:
@@ -264,7 +263,6 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
-      - run: yarn --frozen-lockfile
       - run: yarn test:integration:super
         env:
           ATLASPACK_V3: ${{ matrix.atlaspackV3 }}
