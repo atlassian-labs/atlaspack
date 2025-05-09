@@ -10,11 +10,7 @@ use crate::platform::link;
 use crate::platform::package::PackageDescriptor;
 use crate::platform::path_ext::*;
 
-pub fn npm_link_npm(
-  ctx: Context,
-  _cmd: LinkCommand,
-  package: PackageDescriptor,
-) -> anyhow::Result<()> {
+pub fn link_npm(ctx: Context, _cmd: LinkCommand, package: PackageDescriptor) -> anyhow::Result<()> {
   let package_lib = package.path_real()?;
   let package_lib_static = package_lib.join("lib");
 

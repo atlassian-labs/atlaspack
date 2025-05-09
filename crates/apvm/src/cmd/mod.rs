@@ -4,6 +4,7 @@ pub mod install;
 pub mod install_git;
 pub mod install_npm;
 pub mod link;
+pub mod link_local;
 pub mod link_npm;
 pub mod list;
 pub mod reinstall;

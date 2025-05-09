@@ -10,6 +10,7 @@ use serde::Deserialize;
 pub struct PackageJson {
   pub name: Option<String>,
   pub version: Option<String>,
+  pub private: Option<bool>,
   pub atlaspack: Option<PackageJsonAtlaspack>,
 }
 
