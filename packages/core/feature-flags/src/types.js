@@ -71,6 +71,10 @@ export type FeatureFlags = {|
    * Enable support for the async bundle runtime (unstable_asyncBundleRuntime) in conditional bundling
    */
   conditionalBundlingAsyncRuntime: boolean,
+  /**
+   * Fix a bug where the conditional manifest reporter would report and write the same manifest multiple times
+   */
+  conditionalBundlingReporterDuplicateFix: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
