@@ -60,9 +60,17 @@ pub fn npm_link_npm(
   // Create node_modules/@atlaspack
   if fs::exists(&node_modules_atlaspack)? {
     info!("Deleting: {:?}", node_modules_atlaspack);
-    fs::remove_dir_all(&node_modules_atlaspack)?
+    for entry in fs::read_dir(&node_modules_atlaspack)? {
+      let entry = entry?;
+      let entry_path = entry.path();
+      if entry_path.ends_with("apvm") {
+        continue;
+      }
+      fs::remove_dir_all(&entry_path)?;
+    }
+  } else {
+    fs::create_dir_all(&node_modules_atlaspack)?;
   }
-  fs::create_dir_all(&node_modules_atlaspack)?;
 
   info!("Copying: {:?} {:?}", package_lib, node_modules_super);
 
