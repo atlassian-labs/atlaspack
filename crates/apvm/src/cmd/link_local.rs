@@ -5,6 +5,7 @@ use log::info;
 
 use super::link::LinkCommand;
 use crate::context::Context;
+use crate::platform::constants as c;
 use crate::platform::link;
 use crate::platform::package::PackageDescriptor;
 use crate::platform::package_json::PackageJson;
@@ -21,6 +22,7 @@ pub fn link_local(
   // node_modules
   let node_modules = ctx.env.pwd.join("node_modules");
   let node_modules_bin = node_modules.join(".bin");
+  let node_modules_apvm = node_modules.join(".apvm");
 
   // node_modules/.bin
   #[cfg(unix)]
@@ -63,6 +65,13 @@ pub fn link_local(
     fs::remove_dir_all(&node_modules_atlaspack)?;
   }
   fs::create_dir_all(&node_modules_atlaspack)?;
+
+  // node_modules/.apvm
+  if fs::exists(&node_modules_apvm)? {
+    info!("Deleting: {:?}", node_modules_apvm);
+    fs::remove_dir_all(&node_modules_apvm)?
+  }
+  fs::create_dir_all(&node_modules_apvm)?;
 
   for entry in fs::read_dir(&package_packages)? {
     let entry = entry?;
@@ -126,6 +135,8 @@ if (process.env.ATLASPACK_DEV === 'true') {{
     use std::os::unix::fs::PermissionsExt;
     fs::set_permissions(&node_modules_bin_atlaspack, Permissions::from_mode(0o777))?;
   }
+
+  fs::write(node_modules_apvm.join(c::APVM_VERSION_FILE), r"local")?;
 
   Ok(())
 }

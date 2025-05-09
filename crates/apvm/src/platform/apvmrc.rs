@@ -12,8 +12,7 @@ use super::path_ext::find_ancestor_file;
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct ApvmRc {
   pub path: PathBuf,
-  pub version_target: Option<VersionTarget>,
-  pub version_target_aliases: HashMap<String, VersionTarget>,
+  pub version_aliases: HashMap<String, VersionTarget>,
 }
 
 impl ApvmRc {
@@ -61,22 +60,19 @@ impl ApvmRc {
 
       let mut apvmrc = Self {
         path: package_json_path,
-        version_target: None,
-        version_target_aliases: HashMap::new(),
+        version_aliases: HashMap::new(),
       };
 
       if let Some(version) = atlaspack.version {
-        apvmrc.version_target = Some(VersionTarget::parse(version)?);
+        apvmrc
+          .version_aliases
+          .insert("default".to_string(), VersionTarget::parse(version)?);
       };
 
       if let Some(versions) = atlaspack.versions {
         for (alias, specifier) in versions {
-          if alias == "default" {
-            apvmrc.version_target = Some(VersionTarget::parse(specifier)?);
-            continue;
-          }
           apvmrc
-            .version_target_aliases
+            .version_aliases
             .insert(alias, VersionTarget::parse(specifier)?);
         }
       };

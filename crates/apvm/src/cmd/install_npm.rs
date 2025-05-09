@@ -69,11 +69,6 @@ pub fn install_from_npm(
     return Err(anyhow::anyhow!("Unable to find inner package"));
   };
 
-  fs::write(
-    inner_temp.path().join(c::APVM_VERSION_FILE),
-    package.version.to_string().as_bytes(),
-  )?;
-
   fs::rename(inner_temp.path(), &target)?;
 
   Ok(())

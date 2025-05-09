@@ -84,14 +84,14 @@ impl VersionTarget {
 
     // If the version is empty and there is a default specified in the apvmrc
     if version.is_empty() {
-      if let Some(target) = apvmrc.version_target {
+      if let Some(target) = apvmrc.version_aliases.get("default") {
         return Ok(target.clone());
       }
       return Err(anyhow::anyhow!("No version selected"));
     }
 
     // If the version is specified and it matches an alias in the apvmrc
-    if let Some(target) = apvmrc.version_target_aliases.get(&version) {
+    if let Some(target) = apvmrc.version_aliases.get(&version) {
       return Ok(target.clone());
     }
 
