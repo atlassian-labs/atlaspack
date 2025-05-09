@@ -1,11 +1,13 @@
 use std::fs;
 use std::path::PathBuf;
 
+use serde::Serialize;
+
 use crate::env::Env;
 use crate::platform::path_ext::find_ancestor_file;
 
 #[allow(unused)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Paths {
   /// $APVM_DIR (default $HOME/.local/.apvm)
   pub apvm_dir: PathBuf,

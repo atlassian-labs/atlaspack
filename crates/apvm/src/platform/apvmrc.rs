@@ -2,12 +2,14 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 
+use serde::Serialize;
+
 use super::origin::VersionTarget;
 use super::package_json::PackageJson;
 use super::path_ext::find_ancestor_file;
 
 #[allow(unused)]
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct ApvmRc {
   pub path: PathBuf,
   pub version_target: Option<VersionTarget>,

@@ -31,7 +31,7 @@ pub struct DebugCommand {
 pub fn main(ctx: Context, cmd: DebugCommand) -> anyhow::Result<()> {
   match cmd.query {
     None => {
-      dbg!(&ctx);
+      print!("{}", serde_json::to_string_pretty(&ctx)?);
     }
     Some(DebugCommandType::Path) => {
       let Some(active) = ctx.active_version else {
