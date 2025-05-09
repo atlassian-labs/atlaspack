@@ -8,15 +8,18 @@ use crate::platform::origin::VersionTarget;
 use crate::platform::package::PackageDescriptor;
 use crate::platform::path_ext::*;
 
-pub fn atlaspack_exec(mut ctx: Context) -> anyhow::Result<()> {
+pub fn atlaspack_exec(
+  ctx: Context,
+  argv: Vec<String>,
+  version: Option<String>,
+) -> anyhow::Result<()> {
   let active_package = 'block: {
-    let possible_version = ctx.env.argv.first().map(|v| v.as_str().to_string());
-    if let Ok(version) = VersionTarget::resolve(&ctx, &possible_version) {
+    if let Ok(version) = VersionTarget::resolve(&ctx, &version) {
+      println!("{:?}", version);
       let package = PackageDescriptor::parse(&ctx.paths, &version)?;
       if !package.exists()? {
         return Err(anyhow::anyhow!("Atlaspack version not installed"));
       }
-      ctx.env.argv.remove(0);
       break 'block package;
     };
 
@@ -60,7 +63,7 @@ pub fn atlaspack_exec(mut ctx: Context) -> anyhow::Result<()> {
 
   args.push(runtime.try_to_string()?);
   args.push(bin_path.try_to_string()?);
-  args.extend(ctx.env.argv);
+  args.extend(argv);
 
   log::info!("{:?}", args);
 

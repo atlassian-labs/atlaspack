@@ -1,7 +1,10 @@
+use std::fs;
+
 use serde::Serialize;
 
 use crate::context::Context;
 use crate::paths::Paths;
+use crate::platform::constants as c;
 use crate::platform::path_ext::*;
 
 #[derive(PartialEq, Eq, Debug, Clone, Serialize)]
@@ -110,7 +113,10 @@ impl VersionTarget {
       }
     };
 
-    if !version.chars().next().unwrap().is_numeric() && !version.starts_with("git:") {
+    if !version.is_empty()
+      && !version.chars().next().unwrap().is_numeric()
+      && !version.starts_with("git:")
+    {
       return Err(anyhow::anyhow!("Invalid version specifier"));
     }
 
@@ -121,6 +127,9 @@ impl VersionTarget {
 
     // If the version is empty and there is a default specified in the apvmrc
     if version.is_empty() {
+      if let Some(node_modules_apvm) = &ctx.paths.node_modules_apvm {
+        if fs::exists(&node_modules_apvm.join(c::APVM_VERSION_FILE))? {}
+      }
       if let Some(target) = apvmrc.version_aliases.get("default") {
         return Ok(target.clone());
       }
