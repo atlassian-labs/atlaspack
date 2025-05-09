@@ -32,6 +32,14 @@ pub fn atlaspack_exec(ctx: &Context, command: Vec<String>) -> anyhow::Result<()>
       .join("cli")
       .join("lib")
       .join("cli.js"),
+    VersionTarget::LocalSuper(_) => active
+      .package
+      .path
+      .join("packages")
+      .join("core")
+      .join("cli")
+      .join("lib")
+      .join("cli.js"),
   };
 
   let mut args = Vec::<String>::new();

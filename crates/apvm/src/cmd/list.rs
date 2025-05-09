@@ -5,7 +5,6 @@ use clap::Parser;
 use crate::context::Context;
 use crate::platform::colors::*;
 use crate::platform::package::PackageDescriptor;
-use crate::platform::path_ext::*;
 
 #[derive(Debug, Parser)]
 pub struct ListCommand {}
@@ -38,8 +37,8 @@ pub fn main(ctx: Context, _cmd: ListCommand) -> anyhow::Result<()> {
   } else {
     println!("  <No Active Version>");
   }
-  println!();
 
+  println!();
   println!("{style_underline}Installed Versions{style_reset}");
 
   let npm_versions = fs::read_dir(&ctx.paths.versions_npm)?.collect::<Vec<_>>();
@@ -54,20 +53,6 @@ pub fn main(ctx: Context, _cmd: ListCommand) -> anyhow::Result<()> {
     println!("  <No Versions Installed>");
   }
 
-  let local_versions = fs::read_dir(&ctx.paths.versions_local)?.collect::<Vec<_>>();
-  if !local_versions.is_empty() {
-    for entry in local_versions {
-      let entry = entry?.path();
-      let package = PackageDescriptor::parse_from_dir(&ctx.paths, &entry)?;
-
-      print_name(
-        &package.path_real()?.try_to_string()?,
-        false,
-        &format!("({}) ", package.version),
-      );
-    }
-  }
-
   let git_versions = fs::read_dir(&ctx.paths.versions_git)?.collect::<Vec<_>>();
   if !git_versions.is_empty() {
     for entry in git_versions {
@@ -76,6 +61,12 @@ pub fn main(ctx: Context, _cmd: ListCommand) -> anyhow::Result<()> {
 
       print_name(&package.version, false, "(git) ");
     }
+  }
+
+  if let Some(local) = ctx.paths.atlaspack_local {
+    println!();
+    println!("{style_underline}Local Sources{style_reset}");
+    println!("  {:?}", local);
   }
 
   Ok(())

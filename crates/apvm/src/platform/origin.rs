@@ -1,10 +1,12 @@
-use super::apvmrc::ApvmRc;
+use crate::context::Context;
+use crate::platform::path_ext::*;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum VersionTarget {
   Npm(String),
   Git(String),
   Local(String),
+  LocalSuper(String),
 }
 
 impl std::fmt::Display for VersionTarget {
@@ -25,6 +27,7 @@ impl TryFrom<&str> for VersionTarget {
       "git" => Ok(Self::Git(specifier.to_string())),
       "npm" => Ok(Self::Npm(specifier.to_string())),
       "local" => Ok(Self::Local(specifier.to_string())),
+      "local-super" => Ok(Self::Local(specifier.to_string())),
       _ => Err(anyhow::anyhow!("Cannot convert string to VersionTarget")),
     }
   }
@@ -43,7 +46,8 @@ impl From<VersionTarget> for String {
     match val {
       VersionTarget::Npm(version) => version.to_string(),
       VersionTarget::Git(version) => format!("git:{}", version),
-      VersionTarget::Local(version) => version.to_string(),
+      VersionTarget::Local(version) => format!("{:?}", version),
+      VersionTarget::LocalSuper(version) => format!("{:?}", version),
     }
   }
 }
@@ -53,9 +57,23 @@ impl VersionTarget {
     Self::try_from(value.as_ref())
   }
 
-  pub fn resolve(apvmrc: &Option<ApvmRc>, version: &Option<String>) -> anyhow::Result<Self> {
+  pub fn resolve(ctx: &Context, version: &Option<String>) -> anyhow::Result<Self> {
     let version = version.clone().unwrap_or_default();
-    let apvmrc = apvmrc.clone().unwrap_or_default();
+    let apvmrc = ctx.apvmrc.clone().unwrap_or_default();
+
+    if version == "local" || version == "local-super" {
+      let Some(local_dir) = &ctx.env.apvm_atlaspack_local else {
+        return Err(anyhow::anyhow!(
+          "Requested local but no local version available"
+        ));
+      };
+      if version == "local" {
+        return Ok(Self::Local(local_dir.try_to_string()?));
+      }
+      if version == "local-super" {
+        return Ok(Self::LocalSuper(local_dir.try_to_string()?));
+      }
+    };
 
     // Order of target selection:
     // (empty version)  -> package.json#atlaspack.version
@@ -84,6 +102,7 @@ impl VersionTarget {
       VersionTarget::Npm(version) => version,
       VersionTarget::Git(version) => version,
       VersionTarget::Local(version) => version,
+      VersionTarget::LocalSuper(version) => version,
     }
   }
 
@@ -92,6 +111,7 @@ impl VersionTarget {
       VersionTarget::Npm(_version) => "npm",
       VersionTarget::Git(_version) => "git",
       VersionTarget::Local(_version) => "local",
+      VersionTarget::LocalSuper(_version) => "local-super",
     }
   }
 }

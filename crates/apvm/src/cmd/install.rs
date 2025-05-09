@@ -3,7 +3,6 @@ use std::time::SystemTime;
 
 use clap::Parser;
 
-use super::install_local::install_from_local;
 use crate::cmd::install_git::install_from_git;
 use crate::cmd::install_npm::install_from_npm;
 use crate::context::Context;
@@ -27,7 +26,7 @@ pub struct InstallCommand {
 pub fn main(ctx: Context, cmd: InstallCommand) -> anyhow::Result<()> {
   let start_time = SystemTime::now();
 
-  let version_target = VersionTarget::resolve(&ctx.apvmrc, &cmd.version)?;
+  let version_target = VersionTarget::resolve(&ctx, &cmd.version)?;
   let package = PackageDescriptor::parse(&ctx.paths, &version_target)?;
   let exists = package.exists()?;
 
@@ -44,7 +43,12 @@ pub fn main(ctx: Context, cmd: InstallCommand) -> anyhow::Result<()> {
   match &version_target {
     VersionTarget::Npm(_) => install_from_npm(ctx, cmd, package)?,
     VersionTarget::Git(_) => install_from_git(ctx, cmd, package)?,
-    VersionTarget::Local(_) => install_from_local(ctx, cmd, package)?,
+    VersionTarget::Local(_) => {
+      return Err(anyhow::anyhow!("Cannot install a local version"));
+    }
+    VersionTarget::LocalSuper(_) => {
+      return Err(anyhow::anyhow!("Cannot install a local version"));
+    }
   };
 
   println!(

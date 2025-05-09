@@ -13,10 +13,13 @@ pub struct LinkCommand {
 }
 
 pub fn main(ctx: Context, cmd: LinkCommand) -> anyhow::Result<()> {
-  let version = VersionTarget::resolve(&ctx.apvmrc, &cmd.version)?;
+  let version = VersionTarget::resolve(&ctx, &cmd.version)?;
   let package = PackageDescriptor::parse(&ctx.paths, &version)?;
 
-  if !package.exists()? {
+  if !package.exists()?
+    && !matches!(version, VersionTarget::Local(_))
+    && !matches!(version, VersionTarget::LocalSuper(_))
+  {
     super::install::main(
       ctx.clone(),
       InstallCommand {
@@ -33,6 +36,7 @@ pub fn main(ctx: Context, cmd: LinkCommand) -> anyhow::Result<()> {
     VersionTarget::Npm(_) => npm_link_npm(ctx, cmd, package)?,
     VersionTarget::Git(_) => npm_link_git(ctx, cmd, package)?,
     VersionTarget::Local(_) => npm_link_local(ctx, cmd, package)?,
+    VersionTarget::LocalSuper(_) => npm_link_local_super(ctx, cmd, package)?,
   }
 
   println!("✅ Link completed");
@@ -49,10 +53,25 @@ fn npm_link_git(
 }
 
 fn npm_link_local(
-  _ctx: Context,
-  _cmd: LinkCommand,
-  _package: PackageDescriptor,
+  ctx: Context,
+  cmd: LinkCommand,
+  package: PackageDescriptor,
 ) -> anyhow::Result<()> {
-  println!("TODO");
+  println!("Link Local");
+  dbg!(&ctx);
+  dbg!(&cmd);
+  dbg!(&package);
+  Ok(())
+}
+
+fn npm_link_local_super(
+  ctx: Context,
+  cmd: LinkCommand,
+  package: PackageDescriptor,
+) -> anyhow::Result<()> {
+  println!("Link Local Super");
+  dbg!(&ctx);
+  dbg!(&cmd);
+  dbg!(&package);
   Ok(())
 }

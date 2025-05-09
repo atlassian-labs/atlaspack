@@ -21,6 +21,16 @@ impl PackageDescriptor {
   /// Create a PackageDescriptor from a version target.
   /// This file might not exist
   pub fn parse(paths: &Paths, version_target: &VersionTarget) -> anyhow::Result<Self> {
+    if let VersionTarget::Local(path) = version_target {
+      return Ok(Self {
+        version_target: version_target.clone(),
+        origin: version_target.origin().to_string(),
+        version: version_target.version().to_string(),
+        version_encoded: "".to_string(),
+        path: PathBuf::from(path),
+      });
+    };
+
     let version = version_target.version();
     let version_encoded = name::encode(version)?;
     let path = paths

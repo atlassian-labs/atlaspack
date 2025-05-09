@@ -11,6 +11,7 @@ pub struct Env {
   pub argv: Vec<String>,
   pub apvm_dir: PathBuf,
   pub runtime: String,
+  pub apvm_atlaspack_local: Option<PathBuf>,
 }
 
 impl Env {
@@ -35,6 +36,10 @@ impl Env {
       runtime: match std::env::var("APVM_RUNTIME") {
         Ok(runtime) => runtime,
         Err(_) => "node".to_string(),
+      },
+      apvm_atlaspack_local: match std::env::var("APVM_ATLASPACK_LOCAL") {
+        Ok(apvm_atlaspack_local) => Some(PathBuf::from(apvm_atlaspack_local)),
+        Err(_) => None,
       },
     })
   }
