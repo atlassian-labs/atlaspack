@@ -11,13 +11,8 @@ export function detectBackend(): BackendType {
       return process.env.ATLASPACK_WORKER_BACKEND;
   }
 
-  try {
-    // $FlowFixMe
-    (() => require('worker_threads'))();
-    return 'threads';
-  } catch (err) {
-    return 'process';
-  }
+  // default to threads if no explicit option has been passed
+  return 'threads';
 }
 
 export function getWorkerBackend(backend: BackendType): Class<WorkerImpl> {
