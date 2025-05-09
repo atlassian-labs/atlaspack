@@ -164,7 +164,7 @@ async function main() {
 
   await fs.writeFile(
     path.join(__dirname, '..', 'package.json'),
-    JSON.stringify(superPkgJson, null, 2),
+    JSON.stringify(superPkgJson, null, 2) + '\n',
     'utf8',
   );
 }
