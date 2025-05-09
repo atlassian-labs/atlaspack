@@ -25,6 +25,7 @@ pub struct MonitoringGuard {
   sentry: Option<sentry::ClientInitGuard>,
   #[cfg(not(target_env = "musl"))]
   crash_handler: Option<crash_handler::CrashHandler>,
+  #[allow(unused)]
   tracer: Option<tracer::Tracer>,
 }
 
@@ -37,7 +38,7 @@ impl MonitoringGuard {
 
 #[derive(Debug)]
 pub struct MonitoringOptions {
-  pub tracing_options: Option<TracerMode>,
+  pub tracing_options: Vec<TracerMode>,
   pub sentry_options: Option<SentryOptions>,
   #[cfg(not(target_env = "musl"))]
   pub crash_reporter_options: Option<CrashReporterOptions>,
@@ -61,20 +62,26 @@ pub fn initialize_monitoring(options: MonitoringOptions) -> anyhow::Result<()> {
     return Ok(());
   }
 
-  let mut guard = MonitoringGuard::default();
-  // TODO: Too complicated. Tracing should be set-up at the very top and be easy to understand
-  if let Some(tracing_options) = options.tracing_options {
-    guard.tracer = Some(tracer::Tracer::new(tracing_options)?);
-  }
+  let sentry = options
+    .sentry_options
+    .map(sentry_integration::init_sentry)
+    .transpose()?;
 
-  if let Some(sentry_options) = options.sentry_options {
-    guard.sentry = Some(sentry_integration::init_sentry(sentry_options)?);
-  }
+  // Order matters, tracer must be initialized after sentry
+  let tracer = Some(tracer::Tracer::new(&options.tracing_options)?);
 
   #[cfg(not(target_env = "musl"))]
-  if let Some(crash_reporter_options) = options.crash_reporter_options {
-    guard.crash_handler = Some(crash_reporter::init_crash_reporter(crash_reporter_options)?);
-  }
+  let crash_handler = options
+    .crash_reporter_options
+    .map(crash_reporter::init_crash_reporter)
+    .transpose()?;
+
+  let guard = MonitoringGuard {
+    sentry,
+    #[cfg(not(target_env = "musl"))]
+    crash_handler,
+    tracer,
+  };
 
   *global = Some(guard);
 
