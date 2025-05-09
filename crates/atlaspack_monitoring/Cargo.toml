@@ -9,14 +9,11 @@ description = "Provides tracing, error and crash reporting system for atlaspack"
 workspace = true
 
 [features]
-canary = ["sentry", "whoami", "rustls", "minidumper", "crash-handler"]
-
 rustls = ["sentry/rustls"]
 openssl = ["sentry/native-tls"]
 
 [[example]]
 name = "sample_usage"
-required-features = ["canary"]
 
 [dependencies]
 anyhow = { workspace = true }
@@ -29,12 +26,12 @@ serde = { workspace = true, features = ["derive"] }
 sentry-tracing = { workspace = true }
 serde_json = { workspace = true }
 
-whoami = { workspace = true, optional = true }
-sentry = { workspace = true, optional = true, features = ["anyhow", "backtrace", "contexts", "debug-images", "panic", "reqwest"] }
+whoami = { workspace = true }
+sentry = { workspace = true }
 
 [target.'cfg(not(target_env = "musl"))'.dependencies]
-crash-handler = { workspace = true, optional = true }
-minidumper = { workspace = true, optional = true }
+crash-handler = { workspace = true }
+minidumper = { workspace = true }
 
 [dev-dependencies]
 cfg-if = { workspace = true }

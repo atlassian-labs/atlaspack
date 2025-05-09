@@ -74,7 +74,7 @@ pub fn init_sentry(options: SentryOptions) -> anyhow::Result<ClientInitGuard> {
     sentry_client_options.environment = Some(environment.to_string().into());
   }
   if let Some(debug) = options.sentry_tags.get("debug") {
-    sentry_client_options.debug = debug.to_string() == "true";
+    sentry_client_options.debug = debug == "true";
   }
 
   let guard = sentry::init((options.sentry_dsn, sentry_client_options));
