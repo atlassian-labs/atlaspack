@@ -26,7 +26,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 
 whoami = { workspace = true }
-sentry = { workspace = true, features = ["anyhow", "backtrace", "contexts", "debug-images", "panic", "reqwest"] }
+sentry = { workspace = true }
 
 [target.'cfg(not(target_env = "musl"))'.dependencies]
 crash-handler = { workspace = true }
