@@ -29,10 +29,6 @@ if (rustProfile !== 'debug') {
   cargoCommand.push('--profile', rustProfile);
 }
 
-if (rustProfile === 'canary') {
-  cargoCommand.push('--features', 'canary');
-}
-
 // eslint-disable-next-line no-console
 console.log(cargoCommand.join(' '));
 child_process.execSync(cargoCommand.join(' '), {stdio: 'inherit', cwd: __root});
@@ -140,10 +136,6 @@ function buildNapiLibrary(pkgDir) {
 
   if (rustProfile !== 'debug') {
     command.push('--profile', rustProfile);
-  }
-
-  if (rustProfile === 'canary') {
-    command.push('--features', 'canary');
   }
 
   command.push('--cargo-name', pkgJson.napi.name.replaceAll('-', '_'));

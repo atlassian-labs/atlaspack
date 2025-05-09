@@ -10,9 +10,6 @@ workspace = true
 [lib]
 crate-type = ["cdylib"]
 
-[features]
-canary = ["atlaspack_monitoring/canary"]
-
 [dependencies]
 atlaspack = { path = "../atlaspack" }
 atlaspack_core = { path = "../atlaspack_core" }
@@ -68,11 +65,6 @@ swc_core = { workspace = true }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { workspace = true, features = ["custom"] }
 napi = { workspace = true, features = ["serde-json"] }
-
-[target.'cfg(all(target_os = "macos", not(feature = "canary")))'.dependencies]
-# jemallocator is disabled on canary builds to experiment with its performance
-# and reliability
-jemallocator = { workspace = true, features = ["disable_initial_exec_tls"] }
 
 [target.'cfg(windows)'.dependencies]
 mimalloc = { workspace = true }
