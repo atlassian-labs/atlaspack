@@ -23,6 +23,8 @@ pub struct Paths {
   pub versions_npm: PathBuf,
   /// $PWD/node_modules/atlaspack/.version (recursive search)
   pub node_modules_atlaspack: Option<PathBuf>,
+  /// Local path to Atlaspack source code
+  pub atlaspack_local: Option<PathBuf>,
 }
 
 impl Paths {
@@ -76,6 +78,7 @@ impl Paths {
       versions_git: apvm_versions_git_dir,
       versions_npm: apvm_versions_npm_dir,
       node_modules_atlaspack,
+      atlaspack_local: env.apvm_atlaspack_local.clone(),
     })
   }
 }

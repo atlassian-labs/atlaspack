@@ -2,7 +2,6 @@ pub mod debug;
 pub mod default;
 pub mod install;
 pub mod install_git;
-pub mod install_local;
 pub mod install_npm;
 pub mod link;
 pub mod link_npm;
