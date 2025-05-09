@@ -47,6 +47,10 @@ export default class PluginOptions implements IPluginOptions {
     return this.#options.parcelVersion;
   }
 
+  get isAtlaspackSuper(): boolean {
+    return Boolean(this.#options.isAtlaspackSuper);
+  }
+
   get hmrOptions(): ?HMROptions {
     return this.#options.hmrOptions;
   }
