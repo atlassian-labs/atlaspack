@@ -65,10 +65,7 @@ jobs:
           shared-key: '${{ matrix.target }}'
           # Only store new caches on main
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: actions/setup-node@v4
-        with: {cache: yarn}
-      # Yarn install is required for @napi-rs/cli
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/setup-node
       # Build native artifacts
       - env:
           RUSTUP_TARGET: ${{ matrix.target }}
@@ -123,9 +120,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: {cache: yarn}
-      - run: yarn install --frozen-lockfile
+      - uses: ./.github/actions/setup-node
       - run: npx flow check
       - run: npx eslint .
       - run: npx prettier --list-different .
@@ -180,9 +175,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-node
         with:
-          cache: yarn
           node-version: ${{ matrix.node }}
       - uses: actions/download-artifact@v4
         with:
@@ -222,9 +216,8 @@ jobs:
       CI: true
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-node
         with:
-          cache: yarn
           node-version: ${{ matrix.node }}
       - uses: actions/download-artifact@v4
         with:
@@ -234,7 +227,6 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
-      - run: yarn --frozen-lockfile
       - run: yarn test:integration
 
   integration_tests_super:
@@ -261,9 +253,8 @@ jobs:
       CI: true
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-node
         with:
-          cache: yarn
           node-version: ${{ matrix.node }}
       - uses: actions/download-artifact@v4
         with:
@@ -273,7 +264,6 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
-      - run: yarn --frozen-lockfile
       - run: yarn test:integration:super
         env:
           ATLASPACK_V3: ${{ matrix.atlaspackV3 }}
@@ -305,9 +295,8 @@ jobs:
       CI: true
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-node
         with:
-          cache: yarn
           node-version: ${{ matrix.node }}
       - uses: actions/download-artifact@v4
         with:
@@ -317,7 +306,6 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
-      - run: yarn --frozen-lockfile
       - run: yarn test:integration
         env:
           ATLASPACK_V3: true
@@ -334,9 +322,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-node
         with:
-          cache: yarn
           node-version: ${{ matrix.node }}
       - uses: actions/download-artifact@v4
         with:
@@ -346,6 +333,5 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
-      - run: yarn --frozen-lockfile
       - run: yarn playwright install
       - run: yarn test:e2e:ci
