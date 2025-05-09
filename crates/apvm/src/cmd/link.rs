@@ -1,6 +1,7 @@
 use clap::Parser;
 
-use super::link_npm::npm_link_npm;
+use super::link_local::link_local;
+use super::link_npm::link_npm;
 use crate::cmd::install::InstallCommand;
 use crate::context::Context;
 use crate::platform::origin::VersionTarget;
@@ -33,9 +34,9 @@ pub fn main(ctx: Context, cmd: LinkCommand) -> anyhow::Result<()> {
   println!("Linking {}", package.version_target);
 
   match version {
-    VersionTarget::Npm(_) => npm_link_npm(ctx, cmd, package)?,
+    VersionTarget::Npm(_) => link_npm(ctx, cmd, package)?,
     VersionTarget::Git(_) => npm_link_git(ctx, cmd, package)?,
-    VersionTarget::Local(_) => npm_link_local(ctx, cmd, package)?,
+    VersionTarget::Local(_) => link_local(ctx, cmd, package)?,
     VersionTarget::LocalSuper(_) => npm_link_local_super(ctx, cmd, package)?,
   }
 
@@ -49,18 +50,6 @@ fn npm_link_git(
   _package: PackageDescriptor,
 ) -> anyhow::Result<()> {
   println!("TODO");
-  Ok(())
-}
-
-fn npm_link_local(
-  ctx: Context,
-  cmd: LinkCommand,
-  package: PackageDescriptor,
-) -> anyhow::Result<()> {
-  println!("Link Local");
-  dbg!(&ctx);
-  dbg!(&cmd);
-  dbg!(&package);
   Ok(())
 }
 
