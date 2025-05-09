@@ -137,6 +137,7 @@ pub struct Config {
   pub inline_constants: bool,
   pub conditional_bundling: bool,
   pub magic_comments: bool,
+  pub esm_helpers_specifier: String,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -573,7 +574,7 @@ pub fn transform(
                   result.symbol_result = Some(collect.into());
                 }
 
-                let mut esm2cjs = EsmToCjsReplacer::new(unresolved_mark, versions);
+                let mut esm2cjs = EsmToCjsReplacer::new(unresolved_mark, versions, config.esm_helpers_specifier.clone());
                 module.visit_mut_with(&mut esm2cjs);
                 result.needs_esm_helpers = esm2cjs.needs_helpers;
                 module

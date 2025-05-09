@@ -313,6 +313,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         })
         .unwrap_or_default(),
       conditional_bundling: feature_flag_conditional_bundling,
+      esm_helpers_specifier: self.options.js_paths.esmodule_helpers_specifier.clone(),
       ..atlaspack_js_swc_core::Config::default()
     };
 
@@ -361,8 +362,8 @@ mod tests {
     config_loader::ConfigLoader,
     plugin::PluginLogger,
     types::{
-      Code, Dependency, Environment, EnvironmentContext, Location, SourceLocation, SpecifierType,
-      Symbol,
+      Code, Dependency, Environment, EnvironmentContext, JsPaths, Location, SourceLocation,
+      SpecifierType, Symbol,
     },
   };
   use atlaspack_filesystem::{in_memory_file_system::InMemoryFileSystem, FileSystemRef};
@@ -884,6 +885,14 @@ mod tests {
     let file_system = options
       .file_system
       .unwrap_or_else(|| default_fs(&project_root));
+    let js_paths = JsPaths {
+      esmodule_helpers_specifier: String::from("@atlaspack/transformer-js/src/esmodule-helpers.js"),
+      ..Default::default()
+    };
+    let plugin_options = PluginOptions {
+      js_paths,
+      ..Default::default()
+    };
 
     let ctx = PluginContext {
       config: Arc::new(ConfigLoader {
@@ -893,7 +902,7 @@ mod tests {
       }),
       file_system: file_system.clone(),
       logger: PluginLogger::default(),
-      options: Arc::new(PluginOptions::default()),
+      options: Arc::new(plugin_options),
     };
 
     let transformer = AtlaspackJsTransformerPlugin::new(&ctx)?;
