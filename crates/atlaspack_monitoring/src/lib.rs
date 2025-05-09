@@ -6,16 +6,15 @@
 use std::sync::Mutex;
 use std::time::Duration;
 
-#[cfg(all(feature = "canary", not(target_env = "musl")))]
+#[cfg(not(target_env = "musl"))]
 pub use crash_reporter::CrashReporterOptions;
-#[cfg(feature = "canary")]
+
 pub use sentry_integration::SentryOptions;
 pub use tracer::TracerMode;
 
-#[cfg(all(feature = "canary", not(target_env = "musl")))]
+#[cfg(not(target_env = "musl"))]
 mod crash_reporter;
 mod from_env;
-#[cfg(feature = "canary")]
 mod sentry_integration;
 mod tracer;
 
@@ -23,15 +22,14 @@ pub static MONITORING_GUARD: Mutex<Option<MonitoringGuard>> = Mutex::new(None);
 
 #[derive(Default)]
 pub struct MonitoringGuard {
-  #[cfg(feature = "canary")]
   sentry: Option<sentry::ClientInitGuard>,
-  #[cfg(all(feature = "canary", not(target_env = "musl")))]
+  #[cfg(not(target_env = "musl"))]
   crash_handler: Option<crash_handler::CrashHandler>,
   tracer: Option<tracer::Tracer>,
 }
 
 impl MonitoringGuard {
-  #[cfg(all(feature = "canary", not(target_env = "musl")))]
+  #[cfg(not(target_env = "musl"))]
   pub fn crash_handler(&self) -> Option<&crash_handler::CrashHandler> {
     self.crash_handler.as_ref()
   }
@@ -40,9 +38,8 @@ impl MonitoringGuard {
 #[derive(Debug)]
 pub struct MonitoringOptions {
   pub tracing_options: Option<TracerMode>,
-  #[cfg(feature = "canary")]
   pub sentry_options: Option<SentryOptions>,
-  #[cfg(all(feature = "canary", not(target_env = "musl")))]
+  #[cfg(not(target_env = "musl"))]
   pub crash_reporter_options: Option<CrashReporterOptions>,
 }
 
@@ -50,9 +47,8 @@ impl MonitoringOptions {
   pub fn from_env() -> Result<Self, from_env::FromEnvError> {
     Ok(Self {
       tracing_options: TracerMode::from_env()?,
-      #[cfg(feature = "canary")]
       sentry_options: SentryOptions::from_env()?,
-      #[cfg(all(feature = "canary", not(target_env = "musl")))]
+      #[cfg(not(target_env = "musl"))]
       crash_reporter_options: CrashReporterOptions::from_env()?,
     })
   }
@@ -70,11 +66,12 @@ pub fn initialize_monitoring(options: MonitoringOptions) -> anyhow::Result<()> {
   if let Some(tracing_options) = options.tracing_options {
     guard.tracer = Some(tracer::Tracer::new(tracing_options)?);
   }
-  #[cfg(feature = "canary")]
+
   if let Some(sentry_options) = options.sentry_options {
     guard.sentry = Some(sentry_integration::init_sentry(sentry_options)?);
   }
-  #[cfg(all(feature = "canary", not(target_env = "musl")))]
+
+  #[cfg(not(target_env = "musl"))]
   if let Some(crash_reporter_options) = options.crash_reporter_options {
     guard.crash_handler = Some(crash_reporter::init_crash_reporter(crash_reporter_options)?);
   }
@@ -97,7 +94,6 @@ pub fn close_monitoring() {
     return;
   };
 
-  #[cfg(feature = "canary")]
   if let Some(sentry_guard) = &monitoring_guard.sentry {
     tracing::debug!("Flushing sentry events");
     sentry_guard.close(Some(CLOSE_TIMEOUT));
