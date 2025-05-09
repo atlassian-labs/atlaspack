@@ -81,7 +81,16 @@ export class AtlaspackV3 {
     return graph;
   }
 
-  respondToFsEvents(events: Array<Event>): boolean {
-    return atlaspackNapiRespondToFsEvents(this._atlaspack_napi, events);
+  async respondToFsEvents(events: Array<Event>): Promise<boolean> {
+    let [needsRebuild, error] = await atlaspackNapiRespondToFsEvents(
+      this._atlaspack_napi,
+      events,
+    );
+
+    if (error) {
+      throw new Error(error);
+    }
+
+    return needsRebuild;
   }
 }
