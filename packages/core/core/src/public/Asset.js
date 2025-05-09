@@ -221,6 +221,14 @@ export class Asset extends BaseAsset implements IAsset {
 
 export class MutableAsset extends BaseAsset implements IMutableAsset {
   #asset /*: UncommittedAsset */;
+  /**
+   * This is set to true if the asset source code has been modified.
+   */
+  #hasUpdatedSource: boolean = false;
+  /**
+   * This is set to true if the asset source-maps have been updated.
+   */
+  #hasUpdatedSourceMap: boolean = false;
 
   constructor(asset: UncommittedAsset): MutableAsset {
     let existing = assetValueToMutableAsset.get(asset.value);
@@ -236,7 +244,22 @@ export class MutableAsset extends BaseAsset implements IMutableAsset {
   }
 
   setMap(map: ?SourceMap): void {
+    this.#hasUpdatedSourceMap = true;
     this.#asset.setMap(map);
+  }
+
+  /**
+   * True if the asset source code has been modified.
+   */
+  get hasUpdatedSource(): boolean {
+    return this.#hasUpdatedSource;
+  }
+
+  /**
+   * True if the asset source-maps have been updated.
+   */
+  get hasUpdatedSourceMap(): boolean {
+    return this.#hasUpdatedSourceMap;
   }
 
   get type(): string {
@@ -325,18 +348,22 @@ export class MutableAsset extends BaseAsset implements IMutableAsset {
   }
 
   setBuffer(buffer: Buffer): void {
+    this.#hasUpdatedSource = true;
     this.#asset.setBuffer(buffer);
   }
 
   setCode(code: string): void {
+    this.#hasUpdatedSource = true;
     this.#asset.setCode(code);
   }
 
   setStream(stream: Readable): void {
+    this.#hasUpdatedSource = true;
     this.#asset.setStream(stream);
   }
 
   setAST(ast: AST): void {
+    this.#hasUpdatedSource = true;
     return this.#asset.setAST(ast);
   }
 
