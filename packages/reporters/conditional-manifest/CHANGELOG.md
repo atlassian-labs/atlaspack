@@ -1,5 +1,15 @@
 # @atlaspack/reporter-conditional-manifest
 
+## 2.14.2
+
+### Patch Changes
+
+- [#494](https://github.com/atlassian-labs/atlaspack/pull/494) [`9b85d3e`](https://github.com/atlassian-labs/atlaspack/commit/9b85d3e645b10bd027eed2304afc970a5ba40062) Thanks [@JakeLane](https://github.com/JakeLane)! - When conditionalBundlingReporterDuplicateFix is enabled, avoid duplicated writes to the descriptor and logging
+
+- Updated dependencies [[`9b85d3e`](https://github.com/atlassian-labs/atlaspack/commit/9b85d3e645b10bd027eed2304afc970a5ba40062)]:
+  - @atlaspack/feature-flags@2.14.2
+  - @atlaspack/plugin@2.14.2
+
 ## 2.14.1
 
 ### Patch Changes
