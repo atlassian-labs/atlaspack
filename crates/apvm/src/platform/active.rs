@@ -28,18 +28,20 @@ pub struct ActiveVersion {
 impl ActiveVersion {
   pub fn detect(apvmrc: &Option<ApvmRc>, paths: &Paths) -> anyhow::Result<Option<Self>> {
     // Detect from node_modules
-    log::info!("Testing Local {:?}", paths.node_modules_atlaspack);
-    if let Some(atlaspack_version_path) = &paths.node_modules_atlaspack {
-      let version_path = atlaspack_version_path.join(c::APVM_VERSION_FILE);
-      log::info!("Version Path {:?}", version_path);
+    log::info!(
+      "Looking for node_modules {:?}",
+      paths.node_modules_atlaspack
+    );
+    if let Some(node_modules) = &paths.node_modules_apvm {
+      let breadcrumb = node_modules.join(c::APVM_VERSION_FILE);
+      let version = fs::read_to_string(&breadcrumb)?;
 
-      if fs::exists(&version_path)? {
-        let version = fs::read_to_string(atlaspack_version_path.join(c::APVM_VERSION_FILE))?;
+      if fs::exists(&breadcrumb)? {
         let version_target = VersionTarget::parse(version)?;
 
         let alias: Option<String> = 'block: {
           if let Some(apvmrc) = apvmrc {
-            for (alias, version) in &apvmrc.version_target_aliases {
+            for (alias, version) in &apvmrc.version_aliases {
               if version == &version_target {
                 break 'block Some(alias.clone());
               }
@@ -51,14 +53,14 @@ impl ActiveVersion {
         return Ok(Some(ActiveVersion {
           active_type: ActiveType::NodeModules,
           package: PackageDescriptor::parse(paths, &version_target)?,
-          node_modules_path: Some(atlaspack_version_path.clone()),
+          node_modules_path: Some(node_modules.clone()),
           alias,
         }));
       }
     }
 
     // Detect the system default (unlinked)
-    log::info!("Testing Global {:?}", paths.global);
+    log::info!("Checking if system version is set {:?}", paths.global);
     let version_file = paths.global.join(c::APVM_VERSION_FILE);
     if fs::exists(&paths.global)? && fs::exists(&version_file)? {
       let version = fs::read_to_string(&version_file)?;

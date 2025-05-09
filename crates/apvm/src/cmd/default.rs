@@ -17,6 +17,10 @@ pub fn main(ctx: Context, cmd: DefaultCommand) -> anyhow::Result<()> {
   let version_target = VersionTarget::parse(&cmd.version)?;
   let package = PackageDescriptor::parse(&ctx.paths, &version_target)?;
 
+  if package.version == "local" || package.version == "local-super" {
+    return Err(anyhow::anyhow!("TODO setting local as system default"));
+  }
+
   if !package.exists()? {
     return Err(anyhow::anyhow!("Version not installed"));
   }

@@ -6,6 +6,7 @@ use log::info;
 
 use super::link::LinkCommand;
 use crate::context::Context;
+use crate::platform::constants as c;
 use crate::platform::link;
 use crate::platform::package::PackageDescriptor;
 use crate::platform::path_ext::*;
@@ -17,6 +18,7 @@ pub fn link_npm(ctx: Context, _cmd: LinkCommand, package: PackageDescriptor) -> 
   // node_modules
   let node_modules = ctx.env.pwd.join("node_modules");
   let node_modules_bin = node_modules.join(".bin");
+  let node_modules_apvm = node_modules.join(".apvm");
 
   // node_modules/.bin
   #[cfg(unix)]
@@ -52,6 +54,13 @@ pub fn link_npm(ctx: Context, _cmd: LinkCommand, package: PackageDescriptor) -> 
     fs::remove_dir_all(&node_modules_super)?;
   }
   fs::create_dir_all(&node_modules_super)?;
+
+  // node_modules/.apvm
+  if fs::exists(&node_modules_apvm)? {
+    info!("Deleting: {:?}", node_modules_apvm);
+    fs::remove_dir_all(&node_modules_apvm)?
+  }
+  fs::create_dir_all(&node_modules_apvm)?;
 
   // Create node_modules/@atlaspack
   if fs::exists(&node_modules_atlaspack)? {
@@ -162,5 +171,9 @@ pub fn link_npm(ctx: Context, _cmd: LinkCommand, package: PackageDescriptor) -> 
     )?;
   }
 
+  fs::write(
+    node_modules_apvm.join(c::APVM_VERSION_FILE),
+    package.version.to_string().as_bytes(),
+  )?;
   Ok(())
 }

@@ -13,11 +13,7 @@ pub fn main(ctx: Context, _cmd: ListCommand) -> anyhow::Result<()> {
   if let Some(apvmrc) = &ctx.apvmrc {
     let mut project_versions = vec![];
 
-    if let Some(default) = &apvmrc.version_target {
-      project_versions.push((default.to_string(), "".to_string()));
-    }
-
-    for (alias, version) in &apvmrc.version_target_aliases {
+    for (alias, version) in &apvmrc.version_aliases {
       project_versions.push((version.to_string(), format!("({}) ", alias)));
     }
 

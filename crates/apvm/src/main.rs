@@ -42,15 +42,20 @@ pub enum ApvmCommandType {
 pub struct ApvmCommand {
   #[clap(subcommand)]
   pub command: ApvmCommandType,
+  /// Log all of the things
+  #[arg(short = 'v', long = "verbose")]
+  pub verbose: bool,
   /// [default value: "$HOME/.local/apvm"]
   #[arg(env = "APVM_DIR")]
   pub apvm_dir: Option<PathBuf>,
-  /// [possible values: "error", "warn", "info", "debug", "trace"]
-  #[arg(env = "RUST_LOG")]
-  pub _rust_log: Option<String>,
 }
 
 fn main() -> anyhow::Result<()> {
+  // Checking args for the verbose flag before clap::parse() to ensure
+  // logging starts before anything happens
+  if std::env::args().any(|a| &a == "-v" || &a == "--verbose") {
+    std::env::set_var("RUST_LOG", "debug");
+  }
   env_logger::init();
 
   let env = Env::parse()?;

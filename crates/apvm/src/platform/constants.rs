@@ -9,4 +9,4 @@ API_URL/
 }
 */
 pub static NPM_API_URL: &str = "https://registry.npmjs.org/atlaspack";
-pub static APVM_VERSION_FILE: &str = ".apvm_version";
+pub static APVM_VERSION_FILE: &str = "atlaspack_version";
