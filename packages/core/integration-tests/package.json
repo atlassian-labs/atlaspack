@@ -12,7 +12,7 @@
     "test-ci": "yarn test --config .mocharc.ci.json"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.13.3",
+    "@atlaspack/cli": "2.13.4",
     "@babel/core": "^7.22.11",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
     "@babel/plugin-syntax-export-default-from": "^7.22.5",
