@@ -68,7 +68,8 @@ pub fn link_npm(ctx: Context, _cmd: LinkCommand, package: PackageDescriptor) -> 
     for entry in fs::read_dir(&node_modules_atlaspack)? {
       let entry = entry?;
       let entry_path = entry.path();
-      if entry_path.ends_with("apvm") {
+      let file_stem = entry_path.try_file_stem()?;
+      if file_stem.contains("apvm") {
         continue;
       }
       fs::remove_dir_all(&entry_path)?;
