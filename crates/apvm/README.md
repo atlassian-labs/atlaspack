@@ -29,6 +29,10 @@ apvm link
 # Link into node_modules (overriding project config)
 apvm link 2.14.0
 apvm link 2.15.0
+
+# Execute command with a specific version of Atlaspack
+apvm atlaspack -v 2.14.0 -- --version # 2.14.0
+apvm atlaspack -v 2.15.0 -- --version # 2.15.0
 ```
 
 ### Config
@@ -71,19 +75,16 @@ apvm link
 apvm link next
 ```
 
-### Install a version from git
-
-Versions obtained from git will build after being fetched. This takes a while.
+### Use local Atlaspack sources
 
 ```bash
-apvm install git:main
-apvm install git:my-branch
-apvm install git:1fb73643c
-```
+# Add the path to your local repo in your .bashrc or .zshrc
+export APVM_ATLASPACK_LOCAL="$HOME/Development/atlassian-labs/atlaspack"
 
-### Register a locally installed git repo
+# Link local into node_modules
+apvm link local
+npx atlaspack build
 
-```bash
-# Register your local Atlaspack sources
-apvm install local:/Users/username/atlaspack
+# Run an arbitrary command with your local version
+apvm atlaspack -v local -- build
 ```

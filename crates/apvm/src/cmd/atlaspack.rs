@@ -1,17 +1,12 @@
-use std::fs;
-
 use clap::Parser;
 
-use crate::{
-  context::Context,
-  platform::{
-    exec::{exec_blocking, ExecOptions},
-    origin::VersionTarget,
-    package::PackageDescriptor,
-    path_ext::PathExt,
-    runtime::resolve_runtime,
-  },
-};
+use crate::context::Context;
+use crate::platform::exec::exec_blocking;
+use crate::platform::exec::ExecOptions;
+use crate::platform::origin::VersionTarget;
+use crate::platform::package::PackageDescriptor;
+use crate::platform::path_ext::PathExt;
+use crate::platform::runtime::resolve_runtime;
 
 #[derive(Debug, Parser)]
 pub struct AtlaspackCommand {
