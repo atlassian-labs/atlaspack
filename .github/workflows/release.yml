@@ -157,10 +157,24 @@ jobs:
           SENTRY_PROJECT: ${{secrets.SENTRY_PROJECT}}
           SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
 
+  authenticate-changesets:
+    name: Authenticate Changesets
+    id: authenticate-changesets
+    if: github.ref_name == 'main'
+    permissions: write-all
+    runs-on: ubuntu-22.04
+    uses: actions/create-github-app-token@v1
+    with:
+      app-id: ${{ vars.ATLASPACK_CI_APP_ID }}
+      private-key: ${{ secrets.ATLASPACK_CI_PRIVATE_KEY }}
+
   build-and-release-changesets:
     name: Build and release Changesets
     if: github.ref_name == 'main'
-    needs: build-and-release
+    needs:
+      - authenticate-changesets
+      - build-native-linux
+      - build-native-macos
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
