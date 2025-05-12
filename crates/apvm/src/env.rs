@@ -20,9 +20,7 @@ impl Env {
   pub fn parse() -> anyhow::Result<Self> {
     let pwd = std::env::current_dir()?;
 
-    let mut argv = std::env::args().collect::<Vec<String>>();
-    argv.remove(0);
-
+    let argv = std::env::args().collect::<Vec<String>>();
     let exe_path = std::env::current_exe()?;
     let exe_stem = exe_path.try_file_stem()?;
 

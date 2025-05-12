@@ -14,6 +14,7 @@ use crate::paths::Paths;
 pub enum ActiveType {
   SystemDefault,
   NodeModules,
+  Unmanaged,
 }
 
 #[allow(unused)]
@@ -21,8 +22,8 @@ pub enum ActiveType {
 pub struct ActiveVersion {
   pub active_type: ActiveType,
   pub alias: Option<String>,
-  pub package: PackageDescriptor,
-  pub node_modules_path: Option<PathBuf>,
+  pub package: Option<PackageDescriptor>,
+  pub bin_path: PathBuf,
 }
 
 impl ActiveVersion {
@@ -32,43 +33,65 @@ impl ActiveVersion {
       "Looking for node_modules {:?}",
       paths.node_modules_atlaspack
     );
-    if let Some(node_modules) = &paths.node_modules_apvm {
-      let breadcrumb = node_modules.join(c::APVM_VERSION_FILE);
-      let version = fs::read_to_string(&breadcrumb)?;
+    if let Some(node_modules) = &paths.node_modules {
+      log::info!("Found {:?}", node_modules);
+      if let Some(node_modules_apvm) = &paths.node_modules_apvm {
+        log::info!("Found {:?}", node_modules_apvm);
+        let breadcrumb = node_modules_apvm.join(c::APVM_VERSION_FILE);
+        if fs::exists(&breadcrumb)? {
+          log::info!("Found {:?}", breadcrumb);
+          let version = fs::read_to_string(&breadcrumb)?;
+          let version_target = VersionTarget::parse(version, paths)?;
+          let package = PackageDescriptor::parse(paths, &version_target)?;
+          let bin_path = package.path.join(&package.bin_path);
 
-      if fs::exists(&breadcrumb)? {
-        let version_target = VersionTarget::parse(version, paths)?;
-
-        let alias: Option<String> = 'block: {
-          if let Some(apvmrc) = apvmrc {
-            for (alias, version) in &apvmrc.version_aliases {
-              if version == &version_target {
-                break 'block Some(alias.clone());
+          let alias: Option<String> = 'block: {
+            if let Some(apvmrc) = apvmrc {
+              for (alias, version) in &apvmrc.version_aliases {
+                if version == &version_target {
+                  break 'block Some(alias.clone());
+                }
               }
             }
-          }
-          None
-        };
+            None
+          };
 
-        return Ok(Some(ActiveVersion {
-          active_type: ActiveType::NodeModules,
-          package: PackageDescriptor::parse(paths, &version_target)?,
-          node_modules_path: Some(node_modules.clone()),
-          alias,
-        }));
+          return Ok(Some(ActiveVersion {
+            active_type: ActiveType::NodeModules,
+            package: Some(package),
+            alias,
+            bin_path,
+          }));
+        }
+      } else {
+        let atlaspack_legacy = node_modules.join("@atlaspack").join("core");
+        if fs::exists(&atlaspack_legacy)? {
+          log::info!("Found {:?}", atlaspack_legacy);
+
+          return Ok(Some(ActiveVersion {
+            active_type: ActiveType::Unmanaged,
+            package: None,
+            alias: None,
+            bin_path: node_modules.join(".bin").join("atlaspack"),
+          }));
+        }
       }
     }
 
     // Detect the system default (unlinked)
-    log::info!("Checking if system version is set {:?}", paths.global);
-    let version_file = paths.global.join(c::APVM_VERSION_FILE);
-    if fs::exists(&paths.global)? && fs::exists(&version_file)? {
-      let version = fs::read_to_string(&version_file)?;
+    log::info!("Looking for default version {:?}", paths.global);
+    if fs::exists(&paths.global)? && fs::exists(&paths.global_version)? {
+      log::info!("Found {:?}", paths.global);
+      let version = fs::read_to_string(&paths.global_version)?;
+      let version_target = VersionTarget::parse(version, paths)?;
+      let package = PackageDescriptor::parse(paths, &version_target)?;
+      let bin_path = package.path.join(&package.bin_path);
+
       return Ok(Some(ActiveVersion {
         active_type: ActiveType::SystemDefault,
-        package: PackageDescriptor::parse(paths, &VersionTarget::parse(version, paths)?)?,
-        node_modules_path: None,
+        package: Some(package),
         alias: None,
+        bin_path,
       }));
     }
 

@@ -14,7 +14,6 @@ use env::Env;
 use paths::Paths;
 use platform::active::ActiveVersion;
 use platform::apvmrc::ApvmRc;
-use platform::atlaspack::atlaspack_exec;
 
 #[derive(Debug, Subcommand)]
 pub enum ApvmCommandType {
@@ -33,10 +32,7 @@ pub enum ApvmCommandType {
   /// Version information
   Version,
   /// Run command with specified version of atlaspack
-  Atlaspack {
-    /// Version of Atlaspack to run command with
-    version: Option<String>,
-  },
+  Atlaspack(cmd::atlaspack::AtlaspackCommand),
   #[clap(hide = true)]
   Debug(cmd::debug::DebugCommand),
 }
@@ -46,17 +42,20 @@ pub struct ApvmCommand {
   #[clap(subcommand)]
   pub command: ApvmCommandType,
   /// Log all of the things
-  #[arg(short = 'v', long = "verbose")]
-  pub verbose: bool,
+  #[arg(short = 'D', long = "debug")]
+  pub debug: bool,
   /// [default value: "$HOME/.local/apvm"]
   #[arg(env = "APVM_DIR")]
   pub apvm_dir: Option<PathBuf>,
+  // Path to local Atlaspack sources for local development
+  #[arg(env = "APVM_ATLASPACK_LOCAL")]
+  pub apvm_local: Option<PathBuf>,
 }
 
 fn main() -> anyhow::Result<()> {
   // Checking args for the verbose flag before clap::parse() to ensure
   // logging starts before anything happens
-  if std::env::args().any(|a| &a == "-v" || &a == "--verbose") {
+  if std::env::args().any(|a| &a == "-D" || &a == "--debug") {
     std::env::set_var("RUST_LOG", "debug");
   }
   env_logger::init();
@@ -74,23 +73,15 @@ fn main() -> anyhow::Result<()> {
 
   // If the executable is called "atlaspack" then only proxy
   if &ctx.env.exe_stem == "atlaspack" {
-    return atlaspack_exec(ctx);
-  }
-
-  // Calling "apvm atlaspack" will proxy to the active Atlaspack version
-  // This needs to be done outside of clap::parse() otherwise it will
-  // hijack the arguments
-  if let Some("atlaspack") = ctx.env.argv.first().map(|v| v.as_str()) {
-    // Remove the first arg and forward remaining to the exec proxy
-    // The arg structure is [arg0, command, ...args]
-    // This forwards only "args" to the exec proxy
-    let mut ctx = ctx;
-    ctx.env.argv.remove(0);
-    return atlaspack_exec(ctx);
+    let cmd = cmd::atlaspack::AtlaspackCommand {
+      version: None,
+      argv: ctx.env.argv[1..].to_vec(),
+    };
+    return cmd::atlaspack::main(ctx, cmd);
   }
 
   // APVM Commands
-  let args = ApvmCommand::parse();
+  let args = ApvmCommand::parse_from(&ctx.env.argv);
 
   match args.command {
     ApvmCommandType::Install(cmd) => cmd::install::main(ctx, cmd),
@@ -101,16 +92,6 @@ fn main() -> anyhow::Result<()> {
     ApvmCommandType::Debug(cmd) => cmd::debug::main(ctx, cmd),
     ApvmCommandType::Default(cmd) => cmd::default::main(ctx, cmd),
     ApvmCommandType::Link(cmd) => cmd::link::main(ctx, cmd),
-    ApvmCommandType::Atlaspack { version: _ } => unreachable!(),
+    ApvmCommandType::Atlaspack(cmd) => cmd::atlaspack::main(ctx, cmd),
   }
 }
-
-/*
-    // Remove the first arg and forward remaining to the exec proxy
-    // The arg structure is [arg0, command, ...args]
-    // This forwards only "args" to the exec proxy
-    let mut ctx = ctx;
-    ctx.env.argv.remove(0);
-    return atlaspack_exec(&ctx, ctx.env.argv.clone());
-
-*/

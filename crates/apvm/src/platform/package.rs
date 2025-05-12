@@ -17,6 +17,7 @@ pub struct PackageDescriptor {
   pub version: String,
   pub version_encoded: String,
   pub path: PathBuf,
+  pub bin_path: PathBuf,
 }
 
 impl PackageDescriptor {
@@ -31,6 +32,7 @@ impl PackageDescriptor {
           version: version_target.version().to_string(),
           version_encoded: "".to_string(),
           path: atlaspack_local.clone(),
+          bin_path: PathBuf::from_iter(&["packages", "core", "cli", "lib", "cli.js"]),
         });
       } else {
         return Err(anyhow::anyhow!("No local version registered"));
@@ -44,12 +46,18 @@ impl PackageDescriptor {
       .join(version_target.origin())
       .join(&version_encoded);
 
+    let bin_path = match version_target {
+      VersionTarget::Npm(_) => PathBuf::from_iter(&["lib", "cli.js"]),
+      _ => PathBuf::from_iter(&["packages", "core", "cli", "lib", "cli.js"]),
+    };
+
     Ok(Self {
       version_target: version_target.clone(),
       origin: version_target.origin().to_string(),
       version: version.to_string(),
       version_encoded,
       path,
+      bin_path,
     })
   }
 

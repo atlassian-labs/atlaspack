@@ -29,8 +29,15 @@ pub fn main(ctx: Context, cmd: DefaultCommand) -> anyhow::Result<()> {
     fs::remove_dir_all(&ctx.paths.global)?;
   }
 
-  link::soft_link(&package.path_real()?, &ctx.paths.global)?;
+  fs::create_dir_all(&ctx.paths.global)?;
+  link::soft_link(&package.path_real()?, &ctx.paths.global_atlaspack)?;
 
+  let version = if cmd.version == "local" {
+    "local".to_string()
+  } else {
+    version_target.to_string()
+  };
+  fs::write(&ctx.paths.global_version, version.as_bytes())?;
   println!("✅ Default version set: {}", version_target);
 
   Ok(())

@@ -110,10 +110,6 @@ impl VersionTarget {
       }
     };
 
-    if !version.chars().next().unwrap().is_numeric() && !version.starts_with("git:") {
-      return Err(anyhow::anyhow!("Invalid version specifier"));
-    }
-
     // Order of target selection:
     // (empty version)  -> package.json#atlaspack.version
     // version          -> package.json#atlaspack.versions[version]

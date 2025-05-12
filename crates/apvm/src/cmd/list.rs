@@ -28,7 +28,11 @@ pub fn main(ctx: Context, _cmd: ListCommand) -> anyhow::Result<()> {
 
   println!("{style_underline}Active Version{style_reset}");
   if let Some(active) = ctx.active_version {
-    println!("  Version: {}", active.package.version_target);
+    if let Some(version_target) = active.package {
+      println!("  Version: {:?}", version_target);
+    } else {
+      println!("  Version: Unmanaged");
+    }
     println!("  From:    {:?}", active.active_type);
   } else {
     println!("  <No Active Version>");

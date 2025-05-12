@@ -1,3 +1,4 @@
+pub mod atlaspack;
 pub mod debug;
 pub mod default;
 pub mod install;

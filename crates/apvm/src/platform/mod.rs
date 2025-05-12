@@ -1,6 +1,5 @@
 pub mod active;
 pub mod apvmrc;
-pub mod atlaspack;
 pub mod colors;
 pub mod constants;
 pub mod exec;
