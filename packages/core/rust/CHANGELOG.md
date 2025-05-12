@@ -1,5 +1,23 @@
 # @atlaspack/rust
 
+## 3.1.0
+
+### Minor Changes
+
+- [#491](https://github.com/atlassian-labs/atlaspack/pull/491) [`a891d65`](https://github.com/atlassian-labs/atlaspack/commit/a891d652bc4eb3d757d381adf65c5083f706effc) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Support ignore comments for node replacements
+
+  Adding `#__ATLASPACK_IGNORE__` before `__filename` and `__dirname` will now disable the default node replacement behaviour of these variables. This is useful when you want your compiled output to be aware of it's runtime directory rather than it's pre-compiled source directory.
+
+  ```js
+  const dirname = /*#__ATLASPACK_IGNORE__*/ __dirname;
+  ```
+
+### Patch Changes
+
+- [#495](https://github.com/atlassian-labs/atlaspack/pull/495) [`d02eab9`](https://github.com/atlassian-labs/atlaspack/commit/d02eab95eb60bf7457e0869af0b773608592c0e6) Thanks [@yamadapc](https://github.com/yamadapc)! - Update with sentry tracing support
+
+- [#498](https://github.com/atlassian-labs/atlaspack/pull/498) [`7b9e8cf`](https://github.com/atlassian-labs/atlaspack/commit/7b9e8cf29e01a98e72e46b2b2fb74ccc514f4463) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix compile time flags (sentry integration, crash reporting, memory allocator)
+
 ## 3.0.1
 
 ### Patch Changes
