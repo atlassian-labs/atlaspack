@@ -115,7 +115,7 @@ jobs:
       - name: Build native packages
         env:
           RUSTUP_TARGET: ${{ matrix.target }}
-          CARGO_PROFILE: ${{ inputs.profile }}
+          CARGO_PROFILE: release
         run: yarn build-native
       - name: Upload debug symbols to sentry
         run: node "./scripts/debug-symbols.mjs"
