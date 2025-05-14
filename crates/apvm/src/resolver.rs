@@ -11,7 +11,7 @@ use crate::{
 
 #[derive(Clone, Serialize)]
 pub struct PackageResolver {
-  apvmrc: ApvmRc,
+  apvmrc: Option<ApvmRc>,
   versions: Versions,
 }
 
@@ -22,7 +22,7 @@ impl std::fmt::Debug for PackageResolver {
 }
 
 impl PackageResolver {
-  pub fn new(apvmrc: &ApvmRc, versions: &Versions) -> Self {
+  pub fn new(apvmrc: &Option<ApvmRc>, versions: &Versions) -> Self {
     Self {
       apvmrc: apvmrc.clone(),
       versions: versions.clone(),
@@ -34,8 +34,10 @@ impl PackageResolver {
 
     if input == "local" {
       return Ok(Specifier::Local);
-    } else if let Some(alias) = self.apvmrc.version_aliases.get(input) {
-      return Ok(alias.clone());
+    } else if let Some(apvmrc) = &self.apvmrc {
+      if let Some(alias) = apvmrc.version_aliases.get(input) {
+        return Ok(alias.clone());
+      }
     }
 
     Specifier::parse(input)

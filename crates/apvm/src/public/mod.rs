@@ -1,3 +1,5 @@
+// Types that get serialized/deserialized to disk
+
 pub mod json_serde;
 pub mod linked_meta;
 pub mod package_json;

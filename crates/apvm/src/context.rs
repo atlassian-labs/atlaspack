@@ -10,7 +10,7 @@ use crate::versions::Versions;
 pub struct Context {
   pub env: Env,
   pub paths: Paths,
-  pub apvmrc: ApvmRc,
+  pub apvmrc: Option<ApvmRc>,
   pub versions: Versions,
   #[serde(skip)]
   pub resolver: PackageResolver,

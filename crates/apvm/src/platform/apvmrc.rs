@@ -48,12 +48,7 @@ impl ApvmRc {
   /// # Install and link a version by specifier
   /// apvm npm link --install 2.13.0              # Installs 2.13.0
   /// ```
-  pub fn detect(start_dir: &Path) -> anyhow::Result<Self> {
-    let mut apvmrc = Self {
-      path: Default::default(),
-      version_aliases: HashMap::new(),
-    };
-
+  pub fn detect(start_dir: &Path) -> anyhow::Result<Option<Self>> {
     for package_json_path in find_ancestor_file(start_dir, "package.json")? {
       let Ok(package_json) = PackageJson::read_from_file(&package_json_path) else {
         continue;
@@ -61,6 +56,11 @@ impl ApvmRc {
 
       let Some(atlaspack) = package_json.atlaspack else {
         continue;
+      };
+
+      let mut apvmrc = Self {
+        path: package_json_path,
+        version_aliases: HashMap::new(),
       };
 
       if let Some(specifier) = atlaspack.version {
@@ -77,10 +77,9 @@ impl ApvmRc {
         }
       };
 
-      apvmrc.path = package_json_path;
-      break;
+      return Ok(Some(apvmrc));
     }
 
-    Ok(apvmrc)
+    Ok(None)
   }
 }

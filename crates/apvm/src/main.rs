@@ -91,8 +91,12 @@ fn main() -> anyhow::Result<()> {
     return cmd::atlaspack::main(ctx, cmd);
   }
 
+  log::debug!("Parsing arguments");
+
   // APVM Commands
   let args = ApvmCommand::parse_from(&ctx.env.argv);
+
+  log::debug!("Running command");
 
   match args.command {
     ApvmCommandType::Install(cmd) => cmd::install::main(ctx, cmd),
