@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use serde::Serialize;
 
 use crate::env::Env;
-use crate::platform::package_path::{PackagePath, PackagePathInstalled};
 use crate::platform::path_ext::*;
 use crate::platform::temp_dir::TempDir;
 
@@ -76,13 +75,8 @@ impl Paths {
     })
   }
 
-  pub fn versions_v1_pkg<S: AsRef<str>>(&self, name: S) -> PackagePathInstalled {
-    let base = self.versions_v1.join(name.as_ref());
-    PackagePathInstalled {
-      meta: base.join("meta.json"),
-      contents: base.join("contents"),
-      base,
-    }
+  pub fn versions_v1_pkg<S: AsRef<str>>(&self, name: S) -> PathBuf {
+    self.versions_v1.join(name.as_ref())
   }
 
   pub fn temp_dir(&self) -> anyhow::Result<TempDir> {

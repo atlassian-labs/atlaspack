@@ -4,16 +4,15 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 
-use super::package_json::PackageJson;
-use super::package_meta::PackageMeta;
 use super::path_ext::find_ancestor_file;
-use super::specifier::parse_specifier;
+use super::specifier::Specifier;
+use crate::public::json_serde::JsonSerde;
+use crate::public::package_json::PackageJson;
 
-#[allow(unused)]
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct ApvmRc {
   pub path: PathBuf,
-  pub version_aliases: HashMap<String, PackageMeta>,
+  pub version_aliases: HashMap<String, Specifier>,
 }
 
 impl ApvmRc {
@@ -51,7 +50,7 @@ impl ApvmRc {
   /// ```
   pub fn detect(start_dir: &Path) -> anyhow::Result<Option<Self>> {
     for package_json_path in find_ancestor_file(start_dir, "package.json")? {
-      let Ok(package_json) = PackageJson::parse_from_file(&package_json_path) else {
+      let Ok(package_json) = PackageJson::read_from_file(&package_json_path) else {
         continue;
       };
 
@@ -65,20 +64,16 @@ impl ApvmRc {
       };
 
       if let Some(specifier) = atlaspack.version {
-        let (kind, specifier) = parse_specifier(specifier)?;
-
         apvmrc
           .version_aliases
-          .insert("default".to_string(), PackageMeta { kind, specifier });
+          .insert("default".to_string(), Specifier::parse(specifier)?);
       };
 
       if let Some(versions) = atlaspack.versions {
         for (alias, specifier) in versions {
-          let (kind, specifier) = parse_specifier(specifier)?;
-
           apvmrc
             .version_aliases
-            .insert(alias, PackageMeta { kind, specifier });
+            .insert(alias, Specifier::parse(specifier)?);
         }
       };
 

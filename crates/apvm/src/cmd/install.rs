@@ -24,6 +24,70 @@ pub struct InstallCommand {
 pub fn main(ctx: Context, cmd: InstallCommand) -> anyhow::Result<()> {
   let start_time = SystemTime::now();
 
+  // let (kind, specifier) = match ctx.versions.resolve(&cmd.version)? {
+  //   VersionResolveResult::Invalid => return Err(anyhow::anyhow!("Invalid install request")),
+  //   VersionResolveResult::CannotResolve => {
+  //     return Err(anyhow::anyhow!("Failed to resolve version specifier"))
+  //   }
+  //   VersionResolveResult::Installed(version) => {
+  //     if !cmd.force {
+  //       println!(
+  //         "✅ Already installed ({})",
+  //         version.specifier.unwrap_or_default()
+  //       );
+  //       return Ok(());
+  //     }
+  //     (version.kind, version.specifier)
+  //   }
+  //   VersionResolveResult::NotInstalledLocal => {
+  //     return Err(anyhow::anyhow!("Local version not defined"))
+  //   }
+  //   VersionResolveResult::NotInstalled { specifier, kind } => (kind, specifier),
+  // };
+
+  // let Some(specifier) = specifier else {
+  //   return Err(anyhow::anyhow!("No specifier provided"));
+  // };
+
+  // dbg!(&kind);
+  // dbg!(&specifier);
+
+  // let (kind, specifier) = match ctx.versions.resolve(&cmd.version)? {
+  //   Some(VersionResolveResult::Installed(version)) => match version.kind {
+  //     PackageKind::Local => (PackageKind::Local, "".to_string()),
+  //     PackageKind::Unmanaged => return Err(anyhow::anyhow!("Cannot reinstall unmanaged")),
+  //     _ => {
+  //       let Some(specifier) = version.specifier else {
+  //         return Err(anyhow::anyhow!("No specifier provided"));
+  //       };
+
+  //       if !cmd.force {
+  //         println!("✅ Already installed ({:?})", specifier);
+  //         return Ok(());
+  //       }
+
+  //       (version.kind, specifier)
+  //     }
+  //   },
+  //   Some(VersionResolveResult::NotInstalled { specifier, kind }) => (kind, specifier),
+  //   None => {
+  //     let Some(specifier) = cmd.version else {
+  //       return Err(anyhow::anyhow!("No specifier provided"));
+  //     };
+  //     if specifier == "local" {
+  //       return Err(anyhow::anyhow!("No local version installed"));
+  //     }
+  //     let (kind, specifier) = parse_specifier(&specifier)?;
+  //     let Some(specifier) = specifier else {
+  //       return Err(anyhow::anyhow!("No specifier provided"));
+  //     };
+  //     (kind, specifier)
+  //   }
+  // };
+
+  // dbg!(&kind);
+  // dbg!(&specifier);
+  // if let Some(version) = ctx.versions.resolve(&cmd.version)? {};
   // let version_target = VersionTarget::resolve(&ctx, &cmd.version)?;
   // let package = PackageDescriptor::parse(&ctx.paths, &version_target)?;
   // let exists = package.exists()?;

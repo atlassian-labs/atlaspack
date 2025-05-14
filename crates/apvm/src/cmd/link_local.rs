@@ -7,7 +7,6 @@ use super::link::LinkCommand;
 use crate::context::Context;
 use crate::platform::constants as c;
 use crate::platform::link;
-use crate::platform::package_json::PackageJson;
 use crate::platform::path_ext::*;
 
 pub fn link_local(ctx: Context, _cmd: LinkCommand) -> anyhow::Result<()> {

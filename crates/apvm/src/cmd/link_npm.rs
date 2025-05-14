@@ -7,9 +7,8 @@ use log::info;
 use super::link::LinkCommand;
 use crate::context::Context;
 use crate::platform::constants as c;
+use crate::platform::encoder;
 use crate::platform::link;
-use crate::platform::name;
-use crate::platform::package_path::PackagePath;
 use crate::platform::path_ext::*;
 
 pub fn link_npm(ctx: Context, cmd: LinkCommand) -> anyhow::Result<()> {

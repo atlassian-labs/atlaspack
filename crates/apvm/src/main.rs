@@ -5,6 +5,8 @@ mod context;
 mod env;
 mod paths;
 mod platform;
+mod public;
+mod resolver;
 mod versions;
 
 use std::path::PathBuf;
@@ -66,7 +68,7 @@ fn main() -> anyhow::Result<()> {
   let env = Env::parse()?;
   let paths = Paths::new(&env)?;
   let apvmrc = ApvmRc::detect(&env.pwd)?;
-  let versions = Versions::detect(&paths, &apvmrc)?;
+  let versions = Versions::detect(&paths)?;
 
   let ctx = context::Context {
     versions,
