@@ -13,7 +13,7 @@ members = [
 opt-level = 3
 
 [profile.release]
-# We extra the debug symbols and send them to sentry in CI
+# The debug symbols are built for release and then sent to sentry in CI
 debug = true
 
 [workspace.lints.rust]
