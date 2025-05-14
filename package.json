@@ -47,7 +47,7 @@
     "test:js:unit": "cross-env NODE_ENV=test mocha --conditions=\"@atlaspack::sources\" --timeout 5000",
     "test:unit": "yarn test:js:unit && cargo test",
     "dev:release": "lerna publish -y --canary --preid dev --dist-tag=dev --exact --force-publish=* --no-git-tag-version --no-push",
-    "canary:release": "lerna publish -y --canary --preid canary --dist-tag=canary --exact --force-publish=* --no-push",
+    "canary:release": "lerna publish -y --canary --preid canary --dist-tag=canary --exact --force-publish=* --no-git-tag-version --no-push",
     "tag:prerelease": "lerna version --exact --force-publish=* --no-git-tag-version --no-push",
     "tag:release": "lerna version --exact --force-publish=* --no-git-tag-version --no-push",
     "release": "lerna publish -y from-package --pre-dist-tag=next --no-git-tag-version --no-push",
