@@ -7,6 +7,10 @@ pub struct TempDir(PathBuf);
 
 impl TempDir {
   pub fn new(base: &Path) -> anyhow::Result<Self> {
+    if !fs::exists(base)? {
+      fs::create_dir(base)?;
+    }
+
     let random = format!("{}", rand::random::<i32>());
 
     let target = base.join(&random);

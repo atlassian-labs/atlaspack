@@ -1,6 +1,9 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use crate::platform::constants as c;
 use serde::{Deserialize, Serialize};
+
+use super::encoder;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -41,12 +44,46 @@ pub struct NpmPackage {
   pub path: PathBuf,
 }
 
+impl NpmPackage {
+  pub fn from_name(base: &Path, version: &str) -> anyhow::Result<Self> {
+    Ok(Self {
+      version: version.to_string(),
+      path: base.join(encoder::encode(version)?),
+    })
+  }
+
+  pub fn meta(&self) -> PathBuf {
+    self.path.join(c::PACKAGE_META_FILE)
+  }
+
+  pub fn contents(&self) -> PathBuf {
+    self.path.join("contents")
+  }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct GitPackage {
   pub branch: String,
   /// $APVM_DIR/versions_v1/<name>
   pub path: PathBuf,
+}
+
+impl GitPackage {
+  pub fn from_name(base: &Path, branch: &str) -> anyhow::Result<Self> {
+    Ok(Self {
+      branch: branch.to_string(),
+      path: base.join(encoder::encode(branch)?),
+    })
+  }
+
+  pub fn meta(&self) -> PathBuf {
+    self.path.join(c::PACKAGE_META_FILE)
+  }
+
+  pub fn contents(&self) -> PathBuf {
+    self.path.join("contents")
+  }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

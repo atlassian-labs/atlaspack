@@ -6,14 +6,8 @@ use clap::Parser;
 use crate::cmd::install_git::install_from_git;
 use crate::cmd::install_npm::install_from_npm;
 use crate::context::Context;
-use crate::platform::package::{InstallablePackage, ManagedPackage, Package};
-use crate::platform::specifier::{self, Specifier};
-
-#[derive(Debug)]
-pub enum PackageResolveResult {
-  Installed(ManagedPackage),
-  NotInstalled(Specifier),
-}
+use crate::platform::package::ManagedPackage;
+use crate::platform::specifier::Specifier;
 
 #[derive(Debug, Parser)]
 pub struct InstallCommand {
@@ -48,10 +42,12 @@ pub fn main(ctx: Context, cmd: InstallCommand) -> anyhow::Result<()> {
     }
   }
 
+  println!("Installing ({})", specifier);
+
   match &specifier {
-    Specifier::Npm { version: _ } => install_from_npm(ctx, cmd, &specifier)?,
-    Specifier::Git { branch } => todo!(),
-    Specifier::Local => todo!(),
+    Specifier::Npm { version } => install_from_npm(ctx, cmd, version)?,
+    Specifier::Git { branch } => install_from_git(ctx, cmd, branch)?,
+    Specifier::Local => unreachable!(),
   };
 
   println!(

@@ -46,7 +46,7 @@ fn detect_node_modules_version(paths: &Paths) -> anyhow::Result<Option<Package>>
 
   // Check for an "node_modules/.apvm/atlaspack_version" file
   if let Some(node_modules_apvm) = &paths.node_modules_apvm {
-    let meta_file = node_modules_apvm.join(c::APVM_VERSION_FILE);
+    let meta_file = node_modules_apvm.join(c::LINK_META_FILE);
     if !fs::exists(&meta_file)? {
       return Ok(None);
     }

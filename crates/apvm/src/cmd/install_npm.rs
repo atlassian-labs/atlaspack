@@ -1,92 +1,84 @@
 // TODO validate checksum of tarball
 
-// use std::fs;
+use std::fs;
 
-// use flate2::read::GzDecoder;
-// use log::info;
-// use serde::Deserialize;
-// use tar::Archive;
+use flate2::read::GzDecoder;
+use log::info;
+use serde::Deserialize;
+use tar::Archive;
 
 use super::install::InstallCommand;
-use crate::{context::Context, platform::specifier::Specifier};
-// use crate::platform::constants as c;
-// use crate::platform::package_meta::{PackageKind, PackageMeta};
-// use crate::platform::package_path::PackagePath;
-// use crate::platform::version::VersionKind;
+use crate::context::Context;
+use crate::platform::constants as c;
+use crate::platform::package::NpmPackage;
+use crate::public::json_serde::JsonSerde;
+use crate::public::package_kind::PackageKind;
+use crate::public::package_meta::PackageMeta;
 
-// #[derive(Debug, Deserialize)]
-// struct NpmApiResponse {
-//   dist: NpmApiResponseDist,
-// }
+#[derive(Debug, Deserialize)]
+struct NpmApiResponse {
+  dist: NpmApiResponseDist,
+}
 
-// #[derive(Debug, Deserialize)]
-// struct NpmApiResponseDist {
-//   tarball: String,
-// }
+#[derive(Debug, Deserialize)]
+struct NpmApiResponseDist {
+  tarball: String,
+}
 
-pub fn install_from_npm(
-  ctx: Context,
-  _cmd: InstallCommand,
-  specifier: &Specifier,
-) -> anyhow::Result<()> {
-  // let target_temp = ctx.paths.temp_dir()?;
+pub fn install_from_npm(ctx: Context, _cmd: InstallCommand, version: &str) -> anyhow::Result<()> {
+  let pkg = NpmPackage::from_name(&ctx.paths.versions_v1, version)?;
 
-  // let url = format!("{}/{}", c::NPM_API_URL, package.version);
+  let target_temp = ctx.paths.temp_dir()?;
 
-  // info!("{}", url);
+  let url = format!("{}/{}", c::NPM_API_URL, version);
 
-  // println!("Resolving");
-  // let response = reqwest::blocking::get(&url)?;
-  // if response.status() != 200 {
-  //   return Err(anyhow::anyhow!(
-  //     "Unable to resolve version {}",
-  //     package.version
-  //   ));
-  // }
+  info!("{}", url);
 
-  // let bytes = response.bytes()?.to_vec();
-  // let data = serde_json::from_slice::<NpmApiResponse>(&bytes)?;
-  // let tarball_url = data.dist.tarball;
+  println!("Resolving");
+  let response = reqwest::blocking::get(&url)?;
+  if response.status() != 200 {
+    return Err(anyhow::anyhow!("Unable to resolve version {}", version));
+  }
 
-  // println!("Downloading");
-  // let response = reqwest::blocking::get(&tarball_url)?;
-  // if response.status() != 200 {
-  //   return Err(anyhow::anyhow!(
-  //     "Unable to download version {}",
-  //     package.version
-  //   ));
-  // }
+  let bytes = response.bytes()?.to_vec();
+  let data = serde_json::from_slice::<NpmApiResponse>(&bytes)?;
+  let tarball_url = data.dist.tarball;
 
-  // let bytes = response.bytes()?.to_vec();
+  println!("Downloading");
+  let response = reqwest::blocking::get(&tarball_url)?;
+  if response.status() != 200 {
+    return Err(anyhow::anyhow!("Unable to download version {}", version));
+  }
 
-  // println!("Extracting");
-  // let tar = GzDecoder::new(bytes.as_slice());
-  // let mut archive = Archive::new(tar);
+  let bytes = response.bytes()?.to_vec();
 
-  // archive.unpack(&target_temp)?;
+  println!("Extracting");
+  let tar = GzDecoder::new(bytes.as_slice());
+  let mut archive = Archive::new(tar);
 
-  // let Some(Ok(inner_temp)) = fs::read_dir(&target_temp)?.next() else {
-  //   return Err(anyhow::anyhow!("Unable to find inner package"));
-  // };
+  archive.unpack(&target_temp)?;
 
-  // println!("Finalizing");
-  // let pkg = ctx.paths.versions_v1_pkg(&package.version_encoded);
+  let Some(Ok(inner_temp)) = fs::read_dir(&target_temp)?.next() else {
+    return Err(anyhow::anyhow!("Unable to find inner package"));
+  };
 
-  // if !fs::exists(&pkg.base)? {
-  //   fs::create_dir(&pkg.base)?;
-  // }
+  println!("Finalizing");
 
-  // if !fs::exists(&pkg.contents)? {
-  //   fs::create_dir(&pkg.contents)?;
-  // }
+  if !fs::exists(&pkg.path)? {
+    fs::create_dir(&pkg.path)?;
+  }
 
-  // let package_meta = PackageMeta {
-  //   kind: PackageKind::Npm,
-  //   version_specifier: Some(package.version.clone()),
-  // };
+  if !fs::exists(pkg.contents())? {
+    fs::create_dir(pkg.contents())?;
+  }
 
-  // package_meta.write_to_file(&pkg.meta)?;
-  // fs::rename(inner_temp.path(), &pkg.contents)?;
+  let package_meta = PackageMeta {
+    kind: PackageKind::Npm,
+    specifier: Some(pkg.version.clone()),
+  };
+
+  package_meta.write_to_file(pkg.meta())?;
+  fs::rename(inner_temp.path(), pkg.contents())?;
 
   Ok(())
 }
