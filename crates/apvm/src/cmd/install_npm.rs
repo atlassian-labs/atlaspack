@@ -3,13 +3,14 @@
 use std::fs;
 
 use flate2::read::GzDecoder;
-use log::info;
+use log::{info, Level};
 use serde::Deserialize;
 use tar::Archive;
 
 use super::install::InstallCommand;
 use crate::context::Context;
 use crate::platform::constants as c;
+use crate::platform::exec::{exec_blocking, ExecOptions};
 use crate::platform::package::NpmPackage;
 use crate::public::json_serde::JsonSerde;
 use crate::public::package_kind::PackageKind;
@@ -61,6 +62,18 @@ pub fn install_from_npm(ctx: Context, _cmd: InstallCommand, version: &str) -> an
   let Some(Ok(inner_temp)) = fs::read_dir(&target_temp)?.next() else {
     return Err(anyhow::anyhow!("Unable to find inner package"));
   };
+
+  println!("Installing additional dependencies");
+  let mut command_options = ExecOptions {
+    cwd: Some(inner_temp.path()),
+    ..Default::default()
+  };
+
+  if log::log_enabled!(target: "Global", Level::Debug) {
+    command_options.silent = false;
+  };
+
+  exec_blocking(["npm", "install", "lmdb"], command_options.clone())?;
 
   println!("Finalizing");
 

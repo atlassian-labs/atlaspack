@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+#[allow(unused)]
 pub fn resolve_runtime<S: AsRef<str>>(runtime: S) -> anyhow::Result<PathBuf> {
   let runtime = if runtime.as_ref().starts_with("/") {
     PathBuf::from(runtime.as_ref())

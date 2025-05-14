@@ -4,39 +4,40 @@ use super::link_local::link_local;
 use super::link_npm::link_npm;
 use crate::cmd::install::InstallCommand;
 use crate::context::Context;
+use crate::platform::package::ManagedPackage;
 
 #[derive(Debug, Parser, Clone)]
 pub struct LinkCommand {
   /// Target version to link
-  pub version: Option<String>,
+  #[clap(default_value = "default")]
+  pub version: String,
 }
 
 pub fn main(ctx: Context, cmd: LinkCommand) -> anyhow::Result<()> {
-  // let version = VersionTarget::resolve(&ctx, &cmd.version)?;
-  // let package = PackageDescriptor::parse(&ctx.paths, &version)?;
+  let specifier = ctx.resolver.resolve_specifier(&cmd.version)?;
 
-  // if !package.exists()?
-  //   && !matches!(version, VersionTarget::Local(_))
-  //   && !matches!(version, VersionTarget::LocalSuper(_))
-  // {
-  //   super::install::main(
-  //     ctx.clone(),
-  //     InstallCommand {
-  //       version: cmd.version.clone(),
-  //       force: true,
-  //       skip_build: false,
-  //     },
-  //   )?;
-  // };
+  let package = match ctx.resolver.resolve(&specifier) {
+    Some(package) => package,
+    // Install package if not found
+    None => {
+      super::install::main(
+        ctx.clone(),
+        InstallCommand {
+          version: cmd.version.clone(),
+          force: true,
+          skip_build: false,
+        },
+      )?;
+      ctx.resolver.resolve(&specifier).unwrap()
+    }
+  };
 
   println!("Linking {:?}", cmd.version);
-  link_npm(ctx, cmd)?;
-  // match version {
-  //   VersionTarget::Npm(_) => link_npm(ctx, cmd, package)?,
-  //   VersionTarget::Git(_) => npm_link_git(ctx, cmd, package)?,
-  //   VersionTarget::Local(_) => link_local(ctx, cmd, package)?,
-  //   VersionTarget::LocalSuper(_) => npm_link_local_super(ctx, cmd, package)?,
-  // }
+  match package {
+    ManagedPackage::Local(local_package) => link_local(ctx, cmd, &specifier, local_package)?,
+    ManagedPackage::Npm(npm_package) => link_npm(ctx, cmd, &specifier, npm_package)?,
+    ManagedPackage::Git(_git_package) => npm_link_git(ctx, cmd)?,
+  };
 
   println!("✅ Link completed");
   Ok(())
@@ -44,12 +45,5 @@ pub fn main(ctx: Context, cmd: LinkCommand) -> anyhow::Result<()> {
 
 fn npm_link_git(_ctx: Context, _cmd: LinkCommand) -> anyhow::Result<()> {
   println!("TODO");
-  Ok(())
-}
-
-fn npm_link_local_super(ctx: Context, cmd: LinkCommand) -> anyhow::Result<()> {
-  println!("Link Local Super");
-  dbg!(&ctx);
-  dbg!(&cmd);
   Ok(())
 }

@@ -75,10 +75,6 @@ impl Paths {
     })
   }
 
-  pub fn versions_v1_pkg<S: AsRef<str>>(&self, name: S) -> PathBuf {
-    self.versions_v1.join(name.as_ref())
-  }
-
   pub fn temp_dir(&self) -> anyhow::Result<TempDir> {
     if !fs::exists(&self.temp)? {
       fs::create_dir(&self.temp)?;

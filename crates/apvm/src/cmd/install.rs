@@ -28,6 +28,7 @@ pub fn main(ctx: Context, cmd: InstallCommand) -> anyhow::Result<()> {
   let start_time = SystemTime::now();
 
   let specifier = ctx.resolver.resolve_specifier(&cmd.version)?;
+  println!("Installing ({})", specifier);
 
   if let Some(package) = ctx.resolver.resolve(&specifier) {
     if !cmd.force {
@@ -41,8 +42,6 @@ pub fn main(ctx: Context, cmd: InstallCommand) -> anyhow::Result<()> {
       ManagedPackage::Git(git_package) => fs::remove_dir_all(&git_package.path)?,
     }
   }
-
-  println!("Installing ({})", specifier);
 
   match &specifier {
     Specifier::Npm { version } => install_from_npm(ctx, cmd, version)?,

@@ -1,6 +1,7 @@
 pub mod atlaspack;
 pub mod debug;
 pub mod default;
+pub mod info;
 pub mod install;
 pub mod install_git;
 pub mod install_npm;

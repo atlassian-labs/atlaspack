@@ -23,6 +23,8 @@ use versions::Versions;
 pub enum ApvmCommandType {
   /// Set the default version of Atlaspack
   Default(cmd::default::DefaultCommand),
+  /// Print info on the current status
+  Info(cmd::info::InfoCommand),
   /// Install a version of Atlaspack
   Install(cmd::install::InstallCommand),
   /// Helpers to work with node_modules
@@ -94,6 +96,7 @@ fn main() -> anyhow::Result<()> {
 
   match args.command {
     ApvmCommandType::Install(cmd) => cmd::install::main(ctx, cmd),
+    ApvmCommandType::Info(cmd) => cmd::info::main(ctx, cmd),
     ApvmCommandType::Reinstall(cmd) => cmd::reinstall::main(ctx, cmd),
     ApvmCommandType::List(cmd) => cmd::list::main(ctx, cmd),
     ApvmCommandType::Uninstall(cmd) => cmd::uninstall::main(ctx, cmd),

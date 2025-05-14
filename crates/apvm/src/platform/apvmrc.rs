@@ -83,8 +83,4 @@ impl ApvmRc {
 
     Ok(apvmrc)
   }
-
-  pub fn default(&self) -> Option<&Specifier> {
-    self.version_aliases.get("default")
-  }
 }
