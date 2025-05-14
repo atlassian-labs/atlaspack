@@ -61,6 +61,115 @@ const TEMPLATE_500 = fs.readFileSync(
 );
 type NextFunction = (req: Request, res: Response, next?: (any) => any) => any;
 
+interface ServerDataProvider {
+  /**
+   * Request for bundle corresponding to `path` to be built.
+   */
+  requestBundleBuild(path: string): Promise<void>;
+  /**
+   * Get index bundle filepath
+   */
+  getIndexBundleFilePath(requestUrl: string): Promise<string>;
+}
+
+class MainThreadServerDataProvider implements ServerDataProvider {
+  options: DevServerOptions;
+  bundleGraph: BundleGraph<PackagedBundle> | null;
+  requestBundle: ?(bundle: PackagedBundle) => Promise<BuildSuccessEvent>;
+
+  constructor(
+    options: DevServerOptions,
+    bundleGraph: BundleGraph<PackagedBundle>,
+    requestBundle: ?(bundle: PackagedBundle) => Promise<BuildSuccessEvent>,
+  ) {
+    this.options = options;
+    this.bundleGraph = bundleGraph;
+    this.requestBundle = requestBundle;
+  }
+
+  async requestBundleBuild(requestedPath: string): Promise<void> {
+    if (!this.bundleGraph) {
+      throw new Error('Bundle graph is not available');
+    }
+
+    let bundle = this.bundleGraph
+      .getBundles()
+      .find(
+        (b) =>
+          path.relative(this.options.distDir, b.filePath) === requestedPath,
+      );
+
+    if (!bundle) {
+      throw new Error(`Bundle for path ${requestedPath} not found`);
+    }
+
+    invariant(this.requestBundle != null);
+    await this.requestBundle(bundle);
+  }
+
+  async getIndexBundleFilePath(requestUrl: string): Promise<string> {
+    if (!this.bundleGraph) {
+      throw new Error('Bundle graph is not available');
+    }
+
+    let htmlBundleFilePaths = this.bundleGraph
+      .getBundles()
+      .filter((bundle) => path.posix.extname(bundle.name) === '.html')
+      .map((bundle) => {
+        return `/${relativePath(this.options.distDir, bundle.filePath, false)}`;
+      });
+
+    let indexFilePath = null;
+    let {pathname: reqURL} = url.parse(requestUrl);
+
+    if (!reqURL) {
+      reqURL = '/';
+    }
+
+    if (htmlBundleFilePaths.length === 1) {
+      indexFilePath = htmlBundleFilePaths[0];
+    } else {
+      let bestMatch = null;
+      for (let bundle of htmlBundleFilePaths) {
+        let bundleDir = path.posix.dirname(bundle);
+        let bundleDirSubdir = bundleDir === '/' ? bundleDir : bundleDir + '/';
+        let withoutExtension = path.posix.basename(
+          bundle,
+          path.posix.extname(bundle),
+        );
+        let isIndex = withoutExtension === 'index';
+
+        let matchesIsIndex = null;
+        if (
+          isIndex &&
+          (reqURL.startsWith(bundleDirSubdir) || reqURL === bundleDir)
+        ) {
+          // bundle is /bar/index.html and (/bar or something inside of /bar/** was requested was requested)
+          matchesIsIndex = true;
+        } else if (reqURL == path.posix.join(bundleDir, withoutExtension)) {
+          // bundle is /bar/foo.html and /bar/foo was requested
+          matchesIsIndex = false;
+        }
+        if (matchesIsIndex != null) {
+          let depth = bundle.match(SLASH_REGEX)?.length ?? 0;
+          if (
+            bestMatch == null ||
+            // This one is more specific (deeper)
+            bestMatch.depth < depth ||
+            // This one is just as deep, but the bundle name matches and not just index.html
+            (bestMatch.depth === depth && bestMatch.isIndex)
+          ) {
+            bestMatch = {bundle, depth, isIndex: matchesIsIndex};
+          }
+        }
+      }
+      indexFilePath = bestMatch?.['bundle'] ?? htmlBundleFilePaths[0];
+    }
+
+    return indexFilePath;
+  }
+}
+
 export default class Server {
   pending: boolean;
   pendingRequests: Array<[Request, Response]>;

@@ -6,5 +6,6 @@
     "editor.defaultFormatter": "rust-lang.rust-analyzer",
     "editor.formatOnSave": true
   },
-  "cSpell.words": ["overindented"]
+  "cSpell.words": ["overindented"],
+  "rust-analyzer.checkOnSave": false
 }
