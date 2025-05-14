@@ -3514,6 +3514,66 @@
   resolved "https://registry.yarnpkg.com/@rushstack/eslint-patch/-/eslint-patch-1.2.0.tgz#8be36a1f66f3265389e90b5f9c9962146758f728"
   integrity sha512-sXo/qW2/pAcmT43VoRKOJbDOfV3cYpq3szSVfIThQXNt+E4DfKj361vaAt3c88U5tPUxzEswam7GW48PJqtKAg==
 
+"@sentry/cli-darwin@2.45.0":
+  version "2.45.0"
+  resolved "https://registry.yarnpkg.com/@sentry/cli-darwin/-/cli-darwin-2.45.0.tgz#e3d6feae4fadcfdf91db9c7b9c4689a66d3d8d19"
+  integrity sha512-p4Uxfv/L2fQdP3/wYnKVVz9gzZJf/1Xp9D+6raax/3Bu5y87yHYUqcdt98y/VAXQD4ofp2QgmhGUVPofvQNZmg==
+
+"@sentry/cli-linux-arm64@2.45.0":
+  version "2.45.0"
+  resolved "https://registry.yarnpkg.com/@sentry/cli-linux-arm64/-/cli-linux-arm64-2.45.0.tgz#384c8e17f7e7dc007d164033d0e7c75aa83a2e9b"
+  integrity sha512-gUcLoEjzg7AIc4QQGEZwRHri+EHf3Gcms9zAR1VHiNF3/C/jL4WeDPJF2YiWAQt6EtH84tHiyhw1Ab/R8XFClg==
+
+"@sentry/cli-linux-arm@2.45.0":
+  version "2.45.0"
+  resolved "https://registry.yarnpkg.com/@sentry/cli-linux-arm/-/cli-linux-arm-2.45.0.tgz#b9d6f86f3934b4d9ced5b45a8158ff2ac2bdd25d"
+  integrity sha512-6sEskFLlFKJ+e0MOYgIclBTUX5jYMyYhHIxXahEkI/4vx6JO0uvpyRAkUJRpJkRh/lPog0FM+tbP3so+VxB2qQ==
+
+"@sentry/cli-linux-i686@2.45.0":
+  version "2.45.0"
+  resolved "https://registry.yarnpkg.com/@sentry/cli-linux-i686/-/cli-linux-i686-2.45.0.tgz#39e22beb84cfa26e11bdc198364315fdfb4da4d5"
+  integrity sha512-VmmOaEAzSW23YdGNdy/+oQjCNAMY+HmOGA77A25/ep/9AV7PQB6FI7xO5Y1PVvlkxZFJ23e373njSsEeg4uDZw==
+
+"@sentry/cli-linux-x64@2.45.0":
+  version "2.45.0"
+  resolved "https://registry.yarnpkg.com/@sentry/cli-linux-x64/-/cli-linux-x64-2.45.0.tgz#25cd3699297f9433835fb5edd42dad722c11f041"
+  integrity sha512-a0Oj68mrb25a0WjX/ShZ6AAd4PPiuLcgyzQr7bl2+DvYxIOajwkGbR+CZFEhOVZcfhTnixKy/qIXEzApEPHPQg==
+
+"@sentry/cli-win32-arm64@2.45.0":
+  version "2.45.0"
+  resolved "https://registry.yarnpkg.com/@sentry/cli-win32-arm64/-/cli-win32-arm64-2.45.0.tgz#50c7d29ea2169bdb4d98bbde81c5f7dac0dd3955"
+  integrity sha512-vn+CwS4p+52pQSLNPoi20ZOrQmv01ZgAmuMnjkh1oUZfTyBAwWLrAh6Cy4cztcN8DfL5dOWKQBo8DBKURE4ttg==
+
+"@sentry/cli-win32-i686@2.45.0":
+  version "2.45.0"
+  resolved "https://registry.yarnpkg.com/@sentry/cli-win32-i686/-/cli-win32-i686-2.45.0.tgz#201075c4aec37a3e797160e0b468641245437f0c"
+  integrity sha512-8mMoDdlwxtcdNIMtteMK7dbi7054jak8wKSHJ5yzMw8UmWxC5thc/gXBc1uPduiaI56VjoJV+phWHBKCD+6I4w==
+
+"@sentry/cli-win32-x64@2.45.0":
+  version "2.45.0"
+  resolved "https://registry.yarnpkg.com/@sentry/cli-win32-x64/-/cli-win32-x64-2.45.0.tgz#2075e9e1ea3c3609e0fa1a758ca033e94e1c600f"
+  integrity sha512-ZvK9cIqFaq7vZ0jkHJ/xh5au6902Dr+AUxSk6L6vCL7JCe2p93KGL/4d8VFB5PD/P7Y9b+105G/e0QIFKzpeOw==
+
+"@sentry/cli@^2.45.0":
+  version "2.45.0"
+  resolved "https://registry.yarnpkg.com/@sentry/cli/-/cli-2.45.0.tgz#35feed7a2fee54faf25daed73001a2a2a3143396"
+  integrity sha512-4sWu7zgzgHAjIxIjXUA/66qgeEf5ZOlloO+/JaGD5qXNSW0G7KMTR6iYjReNKMgdBCTH6bUUt9qiuA+Ex9Masw==
+  dependencies:
+    https-proxy-agent "^5.0.0"
+    node-fetch "^2.6.7"
+    progress "^2.0.3"
+    proxy-from-env "^1.1.0"
+    which "^2.0.2"
+  optionalDependencies:
+    "@sentry/cli-darwin" "2.45.0"
+    "@sentry/cli-linux-arm" "2.45.0"
+    "@sentry/cli-linux-arm64" "2.45.0"
+    "@sentry/cli-linux-i686" "2.45.0"
+    "@sentry/cli-linux-x64" "2.45.0"
+    "@sentry/cli-win32-arm64" "2.45.0"
+    "@sentry/cli-win32-i686" "2.45.0"
+    "@sentry/cli-win32-x64" "2.45.0"
+
 "@sigstore/bundle@^2.3.2":
   version "2.3.2"
   resolved "https://registry.yarnpkg.com/@sigstore/bundle/-/bundle-2.3.2.tgz#ad4dbb95d665405fd4a7a02c8a073dbd01e4e95e"
@@ -13865,6 +13925,11 @@ proggy@^2.0.0:
   resolved "https://registry.yarnpkg.com/proggy/-/proggy-2.0.0.tgz#154bb0e41d3125b518ef6c79782455c2c47d94e1"
   integrity sha512-69agxLtnI8xBs9gUGqEnK26UfiexpHy+KUpBQWabiytQjnn5wFY8rklAi7GRfABIuPNnQ/ik48+LGLkYYJcy4A==
 
+progress@^2.0.3:
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/progress/-/progress-2.0.3.tgz#7e8cf8d8f5b8f239c1bc68beb4eb78567d572ef8"
+  integrity sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==
+
 promise-all-reject-late@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/promise-all-reject-late/-/promise-all-reject-late-1.0.1.tgz#f8ebf13483e5ca91ad809ccc2fcf25f26f8643c2"
@@ -17270,7 +17335,7 @@ which-typed-array@^1.1.11, which-typed-array@^1.1.13, which-typed-array@^1.1.2, 
     gopd "^1.0.1"
     has-tostringtag "^1.0.0"
 
-which@2.0.2, which@^2.0.1:
+which@2.0.2, which@^2.0.1, which@^2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/which/-/which-2.0.2.tgz#7c6a8dd0a636a0327e10b59c9286eee93f3f51b1"
   integrity sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==

@@ -60,6 +60,7 @@
     "@changesets/cli": "^2.27.9",
     "@khanacademy/flow-to-ts": "^0.5.2",
     "@napi-rs/cli": "^2.18.3",
+    "@sentry/cli": "^2.45.0",
     "@types/node": ">= 18",
     "buffer": "mischnic/buffer#b8a4fa94",
     "cross-env": "^7.0.0",
