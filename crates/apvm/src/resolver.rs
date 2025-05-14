@@ -1,3 +1,77 @@
+use serde::Serialize;
+
+use crate::{
+  platform::{
+    apvmrc::ApvmRc,
+    package::{InstallablePackage, ManagedPackage},
+    specifier::Specifier,
+  },
+  versions::Versions,
+};
+
+#[derive(Clone, Serialize)]
+pub struct PackageResolver {
+  apvmrc: ApvmRc,
+  versions: Versions,
+}
+
+impl std::fmt::Debug for PackageResolver {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "PackageResolver{{}}")
+  }
+}
+
+impl PackageResolver {
+  pub fn new(apvmrc: &ApvmRc, versions: &Versions) -> Self {
+    Self {
+      apvmrc: apvmrc.clone(),
+      versions: versions.clone(),
+    }
+  }
+  /// Convert a parse text into an specifier, resolving to an underlying alias in the apvmrc
+  pub fn resolve_specifier<S: AsRef<str>>(&self, input: S) -> anyhow::Result<Specifier> {
+    let input = input.as_ref();
+
+    if input == "local" {
+      return Ok(Specifier::Local);
+    } else if let Some(alias) = self.apvmrc.version_aliases.get(input) {
+      return Ok(alias.clone());
+    }
+
+    Specifier::parse(input)
+  }
+
+  /// Resolve a specifier to an installed version
+  pub fn resolve(&self, input: &Specifier) -> Option<ManagedPackage> {
+    if *input == Specifier::Local {
+      if let Some(local) = &self.versions.local {
+        return Some(ManagedPackage::Local(local.clone()));
+      }
+    } else {
+      for installed in &self.versions.installed {
+        match &installed {
+          InstallablePackage::Npm(npm_package) => {
+            if let Specifier::Npm { version } = &input {
+              if &npm_package.version == version {
+                return Some(ManagedPackage::Npm(npm_package.clone()));
+              };
+            };
+          }
+          InstallablePackage::Git(git_package) => {
+            if let Specifier::Git { branch } = &input {
+              if &git_package.branch == branch {
+                return Some(ManagedPackage::Git(git_package.clone()));
+              };
+            };
+          }
+        }
+      }
+    }
+
+    None
+  }
+}
+
 // pub fn resolve<S: AsRef<str>>(
 //   &self,
 //   specifier: &Option<S>,

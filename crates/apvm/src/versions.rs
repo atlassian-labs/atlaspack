@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::paths::Paths;
 use crate::platform::constants as c;
 use crate::platform::package::GitPackage;
+use crate::platform::package::InstallablePackage;
 use crate::platform::package::LocalPackage;
 use crate::platform::package::NpmPackage;
 use crate::platform::package::Package;
@@ -14,12 +15,12 @@ use crate::public::linked_meta::LinkedMeta;
 use crate::public::package_kind::PackageKind;
 use crate::public::package_meta::PackageMeta;
 
+/// A virtual representation of the packages available locally
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Versions {
-  // pub default: Option<DefaultVersion>,
   pub node_modules: Option<Package>,
-  pub local: Option<Package>,
-  pub installed: Vec<Package>,
+  pub local: Option<LocalPackage>,
+  pub installed: Vec<InstallablePackage>,
 }
 
 impl Versions {
@@ -79,19 +80,19 @@ fn detect_node_modules_version(paths: &Paths) -> anyhow::Result<Option<Package>>
 }
 
 /// Detect if there is a local version specified in the environment
-fn detect_local_version(paths: &Paths) -> Option<Package> {
+fn detect_local_version(paths: &Paths) -> Option<LocalPackage> {
   if let Some(atlaspack_local) = &paths.atlaspack_local {
-    Some(Package::Local(LocalPackage {
+    Some(LocalPackage {
       path: atlaspack_local.clone(),
-    }))
+    })
   } else {
     None
   }
 }
 
 /// Read the install directory and load the installed versions
-fn detect_installed_versions(paths: &Paths) -> anyhow::Result<Vec<Package>> {
-  let mut versions_installed = Vec::<Package>::new();
+fn detect_installed_versions(paths: &Paths) -> anyhow::Result<Vec<InstallablePackage>> {
+  let mut versions_installed = Vec::<InstallablePackage>::new();
 
   for entry in std::fs::read_dir(&paths.versions_v1)? {
     let path = entry?.path();
@@ -99,11 +100,11 @@ fn detect_installed_versions(paths: &Paths) -> anyhow::Result<Vec<Package>> {
 
     let package_meta = PackageMeta::read_from_file(&meta)?;
     versions_installed.push(match package_meta.kind {
-      PackageKind::Npm => Package::Npm(NpmPackage {
+      PackageKind::Npm => InstallablePackage::Npm(NpmPackage {
         version: package_meta.specifier.unwrap_or_default(),
         path,
       }),
-      PackageKind::Git => Package::Git(GitPackage {
+      PackageKind::Git => InstallablePackage::Git(GitPackage {
         branch: package_meta.specifier.unwrap_or_default(),
         path,
       }),

@@ -16,6 +16,7 @@ use clap::Subcommand;
 use env::Env;
 use paths::Paths;
 use platform::apvmrc::ApvmRc;
+use resolver::PackageResolver;
 use versions::Versions;
 
 #[derive(Debug, Subcommand)]
@@ -69,12 +70,14 @@ fn main() -> anyhow::Result<()> {
   let paths = Paths::new(&env)?;
   let apvmrc = ApvmRc::detect(&env.pwd)?;
   let versions = Versions::detect(&paths)?;
+  let resolver = PackageResolver::new(&apvmrc, &versions);
 
   let ctx = context::Context {
     versions,
     apvmrc,
     env,
     paths,
+    resolver,
   };
 
   // If the executable is called "atlaspack" then only proxy

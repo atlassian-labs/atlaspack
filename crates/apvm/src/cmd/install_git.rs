@@ -6,10 +6,14 @@
 // use tar::Archive;
 
 use super::install::InstallCommand;
-use crate::context::Context;
+use crate::{context::Context, platform::specifier::Specifier};
 // use crate::platform::constants as c;
 
-pub fn install_from_git(_ctx: Context, _cmd: InstallCommand) -> anyhow::Result<()> {
+pub fn install_from_git(
+  _ctx: Context,
+  _cmd: InstallCommand,
+  _specifier: &Specifier,
+) -> anyhow::Result<()> {
   // let target_temp = TempDir::new(&ctx.paths.temp)?;
   // let target = ctx.paths.versions_git.join(&package.version_encoded);
 

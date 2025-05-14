@@ -8,7 +8,7 @@
 // use tar::Archive;
 
 use super::install::InstallCommand;
-use crate::context::Context;
+use crate::{context::Context, platform::specifier::Specifier};
 // use crate::platform::constants as c;
 // use crate::platform::package_meta::{PackageKind, PackageMeta};
 // use crate::platform::package_path::PackagePath;
@@ -24,7 +24,11 @@ use crate::context::Context;
 //   tarball: String,
 // }
 
-pub fn install_from_npm(ctx: Context, _cmd: InstallCommand) -> anyhow::Result<()> {
+pub fn install_from_npm(
+  ctx: Context,
+  _cmd: InstallCommand,
+  specifier: &Specifier,
+) -> anyhow::Result<()> {
   // let target_temp = ctx.paths.temp_dir()?;
 
   // let url = format!("{}/{}", c::NPM_API_URL, package.version);

@@ -12,6 +12,21 @@ pub enum Package {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ManagedPackage {
+  Local(LocalPackage),
+  Npm(NpmPackage),
+  Git(GitPackage),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum InstallablePackage {
+  Npm(NpmPackage),
+  Git(GitPackage),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct LocalPackage {
   /// $APVM_ATLASPACK_LOCAL
