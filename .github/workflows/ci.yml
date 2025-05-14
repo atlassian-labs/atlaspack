@@ -152,7 +152,6 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         if: ${{ runner.os == 'Linux' }}
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-      - run: yarn --frozen-lockfile
       - run: yarn test:js:unit
 
   integration_tests:
