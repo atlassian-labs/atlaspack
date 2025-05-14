@@ -37,7 +37,7 @@ async function uploadDebugSymbolsToSentry() {
   }
 
   console.log('Uploading debug files to sentry');
-  await $`yarn sentry-cli debug-files upload --include-sources --log-level=info .`;
+  await $`yarn sentry-cli debug-files upload --include-sources --log-level=info packages`;
 
   for (const debugFile of debugFiles) {
     await $`rm -rf ${debugFile}`;
