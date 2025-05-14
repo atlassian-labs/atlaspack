@@ -1,11 +1,12 @@
-#![allow(clippy::manual_map)]
 use std::fs;
 use std::path::PathBuf;
 
 use serde::Serialize;
 
 use crate::env::Env;
-use crate::platform::path_ext::find_ancestor_file;
+use crate::platform::package_path::{PackagePath, PackagePathInstalled};
+use crate::platform::path_ext::*;
+use crate::platform::temp_dir::TempDir;
 
 #[allow(unused)]
 #[derive(Debug, Clone, Serialize)]
@@ -20,12 +21,8 @@ pub struct Paths {
   pub global_atlaspack: PathBuf,
   /// $APVM_DIR/global/version
   pub global_version: PathBuf,
-  /// $APVM_DIR/versions
-  pub versions: PathBuf,
-  /// $APVM_DIR/versions/git
-  pub versions_git: PathBuf,
-  /// $APVM_DIR/versions/npm
-  pub versions_npm: PathBuf,
+  /// $APVM_DIR/versions_v1
+  pub versions_v1: PathBuf,
   /// $PWD/node_modules (recursive search)
   pub node_modules: Option<PathBuf>,
   /// $PWD/node_modules/atlaspack (recursive search)
@@ -41,9 +38,7 @@ impl Paths {
     let apvm_dir = env.apvm_dir.clone();
     let apvm_global_dir = apvm_dir.join("global");
     let apvm_dir_temp = apvm_dir.join(".temp");
-    let apvm_versions_dir = apvm_dir.join("versions");
-    let apvm_versions_git_dir = apvm_versions_dir.join("git");
-    let apvm_versions_npm_dir = apvm_versions_dir.join("npm");
+    let apvm_versions_v1_dir = apvm_dir.join("versions_v1");
 
     let node_modules = find_ancestor_file(&env.pwd, PathBuf::from_iter(&["node_modules"]))?
       .first()
@@ -63,24 +58,8 @@ impl Paths {
       fs::create_dir(&apvm_dir)?;
     }
 
-    if !fs::exists(&apvm_versions_dir)? {
-      fs::create_dir(&apvm_versions_dir)?;
-    }
-
-    if !fs::exists(&apvm_dir_temp)? {
-      fs::create_dir(&apvm_dir_temp)?;
-    }
-
-    if !fs::exists(&apvm_versions_dir)? {
-      fs::create_dir(&apvm_versions_dir)?;
-    }
-
-    if !fs::exists(&apvm_versions_git_dir)? {
-      fs::create_dir(&apvm_versions_git_dir)?;
-    }
-
-    if !fs::exists(&apvm_versions_npm_dir)? {
-      fs::create_dir(&apvm_versions_npm_dir)?;
+    if !fs::exists(&apvm_versions_v1_dir)? {
+      fs::create_dir(&apvm_versions_v1_dir)?;
     }
 
     Ok(Self {
@@ -89,13 +68,27 @@ impl Paths {
       global_version: apvm_global_dir.join("version"),
       global: apvm_global_dir,
       temp: apvm_dir_temp,
-      versions: apvm_versions_dir,
-      versions_git: apvm_versions_git_dir,
-      versions_npm: apvm_versions_npm_dir,
+      versions_v1: apvm_versions_v1_dir,
       node_modules,
       node_modules_apvm,
       node_modules_atlaspack,
       atlaspack_local: env.apvm_atlaspack_local.clone(),
     })
+  }
+
+  pub fn versions_v1_pkg<S: AsRef<str>>(&self, name: S) -> PackagePathInstalled {
+    let base = self.versions_v1.join(name.as_ref());
+    PackagePathInstalled {
+      meta: base.join("meta.json"),
+      contents: base.join("contents"),
+      base,
+    }
+  }
+
+  pub fn temp_dir(&self) -> anyhow::Result<TempDir> {
+    if !fs::exists(&self.temp)? {
+      fs::create_dir(&self.temp)?;
+    }
+    TempDir::new(&self.temp)
   }
 }

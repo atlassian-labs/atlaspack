@@ -4,17 +4,16 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 
-use crate::paths::Paths;
-
-use super::origin::VersionTarget;
 use super::package_json::PackageJson;
+use super::package_meta::PackageMeta;
 use super::path_ext::find_ancestor_file;
+use super::specifier::parse_specifier;
 
 #[allow(unused)]
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct ApvmRc {
   pub path: PathBuf,
-  pub version_aliases: HashMap<String, VersionTarget>,
+  pub version_aliases: HashMap<String, PackageMeta>,
 }
 
 impl ApvmRc {
@@ -50,7 +49,7 @@ impl ApvmRc {
   /// # Install and link a version by specifier
   /// apvm npm link --install 2.13.0              # Installs 2.13.0
   /// ```
-  pub fn detect(start_dir: &Path, paths: &Paths) -> anyhow::Result<Option<Self>> {
+  pub fn detect(start_dir: &Path) -> anyhow::Result<Option<Self>> {
     for package_json_path in find_ancestor_file(start_dir, "package.json")? {
       let Ok(package_json) = PackageJson::parse_from_file(&package_json_path) else {
         continue;
@@ -65,17 +64,21 @@ impl ApvmRc {
         version_aliases: HashMap::new(),
       };
 
-      if let Some(version) = atlaspack.version {
+      if let Some(specifier) = atlaspack.version {
+        let (kind, specifier) = parse_specifier(specifier)?;
+
         apvmrc
           .version_aliases
-          .insert("default".to_string(), VersionTarget::parse(version, paths)?);
+          .insert("default".to_string(), PackageMeta { kind, specifier });
       };
 
       if let Some(versions) = atlaspack.versions {
         for (alias, specifier) in versions {
+          let (kind, specifier) = parse_specifier(specifier)?;
+
           apvmrc
             .version_aliases
-            .insert(alias, VersionTarget::parse(specifier, paths)?);
+            .insert(alias, PackageMeta { kind, specifier });
         }
       };
 

@@ -1,10 +1,11 @@
-#![deny(unused_crate_dependencies)]
+// #![deny(unused_crate_dependencies)]
 
 mod cmd;
 mod context;
 mod env;
 mod paths;
 mod platform;
+mod versions;
 
 use std::path::PathBuf;
 
@@ -12,8 +13,8 @@ use clap::Parser;
 use clap::Subcommand;
 use env::Env;
 use paths::Paths;
-use platform::active::ActiveVersion;
 use platform::apvmrc::ApvmRc;
+use versions::Versions;
 
 #[derive(Debug, Subcommand)]
 pub enum ApvmCommandType {
@@ -60,15 +61,18 @@ fn main() -> anyhow::Result<()> {
   }
   env_logger::init();
 
+  log::debug!("Setting up state");
+
   let env = Env::parse()?;
   let paths = Paths::new(&env)?;
-  let apvmrc = ApvmRc::detect(&env.pwd, &paths)?;
-  let active_version = ActiveVersion::detect(&apvmrc, &paths)?;
+  let apvmrc = ApvmRc::detect(&env.pwd)?;
+  let versions = Versions::detect(&paths, &apvmrc)?;
+
   let ctx = context::Context {
+    versions,
+    apvmrc,
     env,
     paths,
-    apvmrc,
-    active_version,
   };
 
   // If the executable is called "atlaspack" then only proxy

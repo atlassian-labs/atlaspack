@@ -6,8 +6,6 @@ use clap::Parser;
 use crate::cmd::install_git::install_from_git;
 use crate::cmd::install_npm::install_from_npm;
 use crate::context::Context;
-use crate::platform::origin::VersionTarget;
-use crate::platform::package::PackageDescriptor;
 
 #[derive(Debug, Parser)]
 pub struct InstallCommand {
@@ -26,35 +24,35 @@ pub struct InstallCommand {
 pub fn main(ctx: Context, cmd: InstallCommand) -> anyhow::Result<()> {
   let start_time = SystemTime::now();
 
-  let version_target = VersionTarget::resolve(&ctx, &cmd.version)?;
-  let package = PackageDescriptor::parse(&ctx.paths, &version_target)?;
-  let exists = package.exists()?;
+  // let version_target = VersionTarget::resolve(&ctx, &cmd.version)?;
+  // let package = PackageDescriptor::parse(&ctx.paths, &version_target)?;
+  // let exists = package.exists()?;
 
-  if exists && !cmd.force {
-    println!("✅ Already installed ({})", version_target);
-    return Ok(());
-  }
+  // if exists && !cmd.force {
+  //   println!("✅ Already installed ({})", version_target);
+  //   return Ok(());
+  // }
 
-  if exists {
-    println!("Removing Existing");
-    fs::remove_dir_all(&package.path)?;
-  }
+  // if exists {
+  //   println!("Removing Existing");
+  //   fs::remove_dir_all(&package.path)?;
+  // }
 
-  match &version_target {
-    VersionTarget::Npm(_) => install_from_npm(ctx, cmd, package)?,
-    VersionTarget::Git(_) => install_from_git(ctx, cmd, package)?,
-    VersionTarget::Local(_) => {
-      return Err(anyhow::anyhow!("Cannot install a local version"));
-    }
-    VersionTarget::LocalSuper(_) => {
-      return Err(anyhow::anyhow!("Cannot install a local version"));
-    }
-  };
+  // match &version_target {
+  //   VersionTarget::Npm(_) => install_from_npm(ctx, cmd, package)?,
+  //   VersionTarget::Git(_) => install_from_git(ctx, cmd, package)?,
+  //   VersionTarget::Local(_) => {
+  //     return Err(anyhow::anyhow!("Cannot install a local version"));
+  //   }
+  //   VersionTarget::LocalSuper(_) => {
+  //     return Err(anyhow::anyhow!("Cannot install a local version"));
+  //   }
+  // };
 
-  println!(
-    "✅ Installed in {:.2?} ({})",
-    start_time.elapsed()?,
-    version_target
-  );
+  // println!(
+  //   "✅ Installed in {:.2?} ({})",
+  //   start_time.elapsed()?,
+  //   version_target
+  // );
   Ok(())
 }

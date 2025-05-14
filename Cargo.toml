@@ -17,6 +17,7 @@ rust_2018_idioms = { priority = -1, level = "deny" }
 
 [workspace.lints.clippy]
 module_inception = "allow"
+manual_map = "allow"
 # all = { priority = -1, level = "deny" }
 # restriction = { priority = -1, level = "deny" }
 # pedantic = { priority = -1, level = "deny" }
