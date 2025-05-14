@@ -19,21 +19,23 @@ async function uploadDebugSymbolsToSentry() {
   })) {
     const found = path.join(__root, foundRel);
     console.log(`Stripping:     ${found}`);
-    const output = `${found}.debug`;
+
     if (process.platform === 'linux') {
-      await $`objcopy --only-keep-debug ${found} ${output}`;
+      const output = `${found}.debug`;
+
+      await $`objcopy --only-keep-debug --compress-debug-sections=zlib ${found} ${output}`;
       await $`objcopy --strip-debug --strip-unneeded ${found}`;
       await $`objcopy --add-gnu-debuglink=${output} ${found}`;
+
+      debugFiles.push(output);
     } else if (process.platform === 'darwin') {
       const dsymOutput = `${found}.dsym`;
-      debugFiles.push(dsymOutput);
 
       await $`dsymutil ${found} -o ${dsymOutput}`;
-      await $`strip -x ${found} -o ${output}`;
-    }
-    debugFiles.push(output);
+      await $`strip -x ${found}`;
 
-    console.log(`  ➜ Generated: ${output}`);
+      debugFiles.push(dsymOutput);
+    }
   }
 
   console.log('Uploading debug files to sentry');
