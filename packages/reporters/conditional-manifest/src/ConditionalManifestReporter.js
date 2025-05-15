@@ -73,13 +73,12 @@ export async function report({
             manifest[bundle.target.name]?.[relativeBundlePath] ?? {};
 
           bundleInfo[key] = {
-            // Reverse bundles so we load children bundles first
             ifTrueBundles: mapBundles(cond.ifTrueBundles)
-              .reverse()
-              .concat(bundleInfo[key]?.ifTrueBundles ?? []),
+              .concat(bundleInfo[key]?.ifTrueBundles ?? [])
+              .sort(),
             ifFalseBundles: mapBundles(cond.ifFalseBundles)
-              .reverse()
-              .concat(bundleInfo[key]?.ifFalseBundles ?? []),
+              .concat(bundleInfo[key]?.ifFalseBundles ?? [])
+              .sort(),
           };
 
           manifest[bundle.target.name] ??= {};
