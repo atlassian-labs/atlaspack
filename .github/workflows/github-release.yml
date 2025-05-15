@@ -1,0 +1,154 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The version for this release of Atlaspack'
+        required: true
+        type: string
+
+permissions:
+  contents: write # for actions/checkout and adding tag
+
+env:
+  ATLASPACK_VERSION: ${{ inputs.version }}
+
+jobs:
+  build-native-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux AMD64
+          - name: x86_64-unknown-linux-gnu
+            target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+
+          # Linux ARM64
+          - name: aarch64-unknown-linux-gnu
+            target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04-arm
+
+          # # Linux ARM
+          # We don't support 32 bit linux
+          # - name: arm-unknown-linux-gnueabihf
+          #   os: ubuntu-22.04
+          #   target: arm-unknown-linux-gnueabihf
+          #   run: apt install -y gcc-arm-linux-gnueabihf
+
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    container:
+      image: debian:bullseye-slim
+    steps:
+      - uses: actions/checkout@v4
+        # We need to install nodejs because `setup-node` requires
+        # the runner to have nodejs installed (https://github.com/actions/setup-node/issues/1287)
+      - run: apt-get update
+      - run: apt-get install -y build-essential curl nodejs npm
+      - run: npm i -g yarn
+      - name: Install Rust
+        uses: ./.github/actions/rust-toolchain
+        with:
+          targets: ${{ matrix.target }}
+      - uses: ./.github/actions/setup-node
+        with:
+          node-version: 22
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: '${{ matrix.name }}'
+          # Only store new caches on main
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build native packages
+        env:
+          RUSTUP_TARGET: ${{ matrix.target }}
+          CARGO_PROFILE: release
+        run: yarn build-native
+      - name: Upload debug symbols to sentry
+        run: node "./scripts/debug-symbols.mjs"
+        env:
+          SENTRY_ORG: ${{secrets.SENTRY_ORG}}
+          SENTRY_PROJECT: ${{secrets.SENTRY_PROJECT}}
+          SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
+      - run: yarn build
+      - run: yarn build-ts
+      - run: node scripts/build-gh-release.mjs
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: release/**/*
+
+  build-native-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # MACOS ARM64
+          - name: aarch64-apple-darwin
+            target: aarch64-apple-darwin
+
+          # MACOS AMD64
+          - name: x86_64-apple-darwin
+            target: x86_64-apple-darwin
+    name: ${{ matrix.name }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: ./.github/actions/rust-toolchain
+        with:
+          targets: ${{ matrix.target }}
+      - uses: ./.github/actions/setup-node
+      - uses: Swatinem/rust-cache@v2
+        with: {shared-key: '${{ matrix.name }}'}
+      - name: Build native packages
+        env:
+          RUSTUP_TARGET: ${{ matrix.target }}
+          CARGO_PROFILE: release
+        run: yarn build-native
+      - name: Upload debug symbols to sentry
+        run: node "./scripts/debug-symbols.mjs"
+        env:
+          SENTRY_ORG: ${{secrets.SENTRY_ORG}}
+          SENTRY_PROJECT: ${{secrets.SENTRY_PROJECT}}
+          SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
+      - run: yarn build
+      - run: yarn build-ts
+      - run: node scripts/build-gh-release.mjs
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: release/**/*
+
+  build-and-release-github:
+    name: Build and release Github
+    if: github.ref_name == 'main'
+    needs:
+      - build-native-linux
+      - build-native-macos
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-node
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release
+          merge-multiple: true
+      - run: |
+          echo "Version: ${ATLASPACK_VERSION}"
+          gh release create $TAG  --draft --notes "Release ${ATLASPACK_VERSION}"
+          gh release edit $TAG --title "Release ${ATLASPACK_VERSION}" --prerelease
+
+          cd release
+          for name in *.tar.gz; do
+              [ -f "$i" ] || break
+              gh release upload $ATLASPACK_VERSION ${name}.tar.gz
+          done
+
+          gh release edit $TAG --draft=false

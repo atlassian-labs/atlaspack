@@ -12,6 +12,7 @@ lib/
 logs/
 node_modules/
 tmp
+release
 
 /target/
 
