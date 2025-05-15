@@ -356,7 +356,8 @@
   "files": [
     "lib",
     "!lib/native/*win32*",
-    "!lib/native/*musl*"
+    "!lib/native/*musl*",
+    "types"
   ],
   "devDependencies": {
     "@atlaspack/plugin": "*",
