@@ -24,6 +24,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   inlineStringReplacementPerf: false,
   conditionalBundlingAsyncRuntime: false,
   conditionalBundlingReporterDuplicateFix: false,
+  conditionalBundlingReporterSameConditionFix: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
