@@ -74,6 +74,10 @@ export type FeatureFlags = {|
    * Fix a bug where the conditional manifest reporter would report and write the same manifest multiple times
    */
   conditionalBundlingReporterDuplicateFix: boolean,
+  /**
+   * Fix a bug where the conditional manifest reporter would drop bundles that have the same condition
+   */
+  conditionalBundlingReporterSameConditionFix: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
