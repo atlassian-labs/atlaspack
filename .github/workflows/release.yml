@@ -11,13 +11,14 @@ on:
         description: 'The type of release, usually corresponds to the dist-tag'
         required: true
         type: string
-      profile:
-        description: 'The profile to use when building the native binaries'
-        required: false
-        default: 'release'
-        type: string
     secrets:
       NPM_TOKEN:
+        required: true
+      SENTRY_ORG:
+        required: true
+      SENTRY_PROJECT:
+        required: true
+      SENTRY_AUTH_TOKEN:
         required: true
 
 permissions:
@@ -67,7 +68,6 @@ jobs:
         with:
           node-version: 22
       - uses: Swatinem/rust-cache@v2
-        if: ${{ inputs.type != 'latest' }}
         with:
           shared-key: '${{ matrix.name }}'
           # Only store new caches on main
@@ -75,10 +75,14 @@ jobs:
       - name: Build native packages
         env:
           RUSTUP_TARGET: ${{ matrix.target }}
-          CARGO_PROFILE: ${{ inputs.profile }}
+          CARGO_PROFILE: release
         run: yarn build-native
-      - name: Extract debug symbols
+      - name: Upload debug symbols to sentry
         run: node "./scripts/debug-symbols.mjs"
+        env:
+          SENTRY_ORG: ${{secrets.SENTRY_ORG}}
+          SENTRY_PROJECT: ${{secrets.SENTRY_PROJECT}}
+          SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -107,15 +111,18 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: ./.github/actions/setup-node
       - uses: Swatinem/rust-cache@v2
-        if: ${{ inputs.type != 'latest' }}
         with: {shared-key: '${{ matrix.name }}'}
       - name: Build native packages
         env:
           RUSTUP_TARGET: ${{ matrix.target }}
-          CARGO_PROFILE: ${{ inputs.profile }}
+          CARGO_PROFILE: release
         run: yarn build-native
-      - name: Extract debug symbols
+      - name: Upload debug symbols to sentry
         run: node "./scripts/debug-symbols.mjs"
+        env:
+          SENTRY_ORG: ${{secrets.SENTRY_ORG}}
+          SENTRY_PROJECT: ${{secrets.SENTRY_PROJECT}}
+          SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -137,20 +144,6 @@ jobs:
           pattern: packages-*
           path: packages
           merge-multiple: true
-      - run: yarn install --frozen-lockfile
-      - name: Move debug symbols
-        if: ${{ inputs.profile == 'canary' }}
-        run: |
-          mkdir debug-symbols
-          find packages -name "*.debug" -exec cp {} debug-symbols/ \;
-          find packages -name "*.node" -path "**/DWARF/**" -exec cp {} debug-symbols/ \;
-          ls -l debug-symbols
-      - name: Upload combined debug symbols artifact
-        uses: actions/upload-artifact@v4
-        if: ${{ inputs.profile == 'canary' }}
-        with:
-          name: debug-symbols
-          path: debug-symbols/**
       - name: Debug
         run: ls -l packages/*/*/*.node
       - name: Npm
