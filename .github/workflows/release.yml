@@ -111,7 +111,10 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: ./.github/actions/setup-node
       - uses: Swatinem/rust-cache@v2
-        with: {shared-key: '${{ matrix.name }}'}
+        with:
+          shared-key: '${{ matrix.name }}'
+          # Only store new caches on main
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Build native packages
         env:
           RUSTUP_TARGET: ${{ matrix.target }}
