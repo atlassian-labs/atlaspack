@@ -13,6 +13,8 @@ use atlaspack_package_manager::PackageManagerRef;
 use pathdiff::diff_paths;
 use serde_json5::Location;
 
+use crate::builtin_configs::get_builtin_config;
+
 use super::atlaspack_config::AtlaspackConfig;
 use super::atlaspack_config::PluginNode;
 use super::atlaspack_rc::AtlaspackRcFile;
@@ -34,13 +36,20 @@ pub struct LoadConfigOptions<'a> {
 pub struct AtlaspackRcConfigLoader {
   fs: FileSystemRef,
   package_manager: PackageManagerRef,
+  /// Whether to load the builtin default config or load from disk
+  use_builtin_config: bool,
 }
 
 impl AtlaspackRcConfigLoader {
-  pub fn new(fs: FileSystemRef, package_manager: PackageManagerRef) -> Self {
+  pub fn new(
+    fs: FileSystemRef,
+    package_manager: PackageManagerRef,
+    use_builtin_default_config: bool,
+  ) -> Self {
     AtlaspackRcConfigLoader {
       fs,
       package_manager,
+      use_builtin_config: use_builtin_default_config,
     }
   }
 
@@ -93,12 +102,18 @@ impl AtlaspackRcConfigLoader {
     })
   }
 
-  fn resolve_extends(
+  fn load_extends(
     &self,
     atlaspack_rc_file: &AtlaspackRcFile,
     extend: &str,
-  ) -> Result<PathBuf, DiagnosticError> {
-    let path = if extend.starts_with(".") {
+  ) -> Result<(PartialAtlaspackConfig, Vec<PathBuf>), DiagnosticError> {
+    if self.use_builtin_config {
+      if let Some(config) = get_builtin_config(extend) {
+        return Ok((PartialAtlaspackConfig::try_from(config)?, vec![]));
+      }
+    }
+
+    let mut path = if extend.starts_with(".") {
       atlaspack_rc_file
         .path
         .parent()
@@ -119,14 +134,16 @@ impl AtlaspackRcConfigLoader {
         .resolved
     };
 
-    self.fs.canonicalize_base(&path).map_err(|source| {
+    path = self.fs.canonicalize_base(&path).map_err(|source| {
       diagnostic_error!("{}", source).context(diagnostic_error!(DiagnosticBuilder::default()
         .message(format!(
           "Failed to resolve extended config {extend} from {}",
           atlaspack_rc_file.path.display()
         ))
         .code_frames(vec![CodeFrame::from(File::from(atlaspack_rc_file))])))
-    })
+    })?;
+
+    self.load_config(path)
   }
 
   /// Processes a .parcelrc file by loading and merging "extends" configurations into a single
@@ -156,8 +173,8 @@ impl AtlaspackRcConfigLoader {
 
     let mut merged_config: Option<PartialAtlaspackConfig> = None;
     for extend in extends {
-      let extended_file_path = self.resolve_extends(&atlaspack_rc_file, &extend)?;
-      let (extended_config, mut extended_file_paths) = self.load_config(extended_file_path)?;
+      let (extended_config, mut extended_file_paths) =
+        self.load_extends(&atlaspack_rc_file, &extend)?;
 
       merged_config = match merged_config {
         None => Some(extended_config),
@@ -204,6 +221,12 @@ impl AtlaspackRcConfigLoader {
 
     if config_path.is_err() {
       if let Some(fallback_config) = options.fallback_config {
+        if self.use_builtin_config {
+          if let Some(config) = get_builtin_config(fallback_config) {
+            return finalize_config(options, PartialAtlaspackConfig::try_from(config)?, vec![]);
+          }
+        }
+
         config_path = self
           .package_manager
           .resolve(fallback_config, &resolve_from)
@@ -218,18 +241,26 @@ impl AtlaspackRcConfigLoader {
     }
 
     let config_path = config_path?;
-    let (mut atlaspack_config, files) = self.load_config(config_path)?;
+    let (atlaspack_config, files) = self.load_config(config_path)?;
 
-    if !options.additional_reporters.is_empty() {
-      atlaspack_config
-        .reporters
-        .extend(options.additional_reporters);
-    }
-
-    let atlaspack_config = AtlaspackConfig::try_from(atlaspack_config)?;
-
-    Ok((atlaspack_config, files))
+    finalize_config(options, atlaspack_config, files)
   }
+}
+
+fn finalize_config(
+  options: LoadConfigOptions<'_>,
+  mut atlaspack_config: PartialAtlaspackConfig,
+  files: Vec<PathBuf>,
+) -> Result<(AtlaspackConfig, Vec<PathBuf>), DiagnosticError> {
+  if !options.additional_reporters.is_empty() {
+    atlaspack_config
+      .reporters
+      .extend(options.additional_reporters);
+  }
+
+  let atlaspack_config = AtlaspackConfig::try_from(atlaspack_config)?;
+
+  Ok((atlaspack_config, files))
 }
 
 fn serde_to_diagnostic_error(error: serde_json5::Error, file: File) -> DiagnosticError {
@@ -335,7 +366,7 @@ mod tests {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap();
 
-      let err = AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::new()))
+      let err = AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::new()), false)
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
@@ -362,7 +393,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
@@ -386,7 +417,7 @@ mod tests {
       fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
       let atlaspack_config =
-        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
+        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()), false)
           .load(&project_root, LoadConfigOptions::default())
           .map_err(|e| e.to_string());
 
@@ -407,7 +438,7 @@ mod tests {
       fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
       let atlaspack_config =
-        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
+        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()), false)
           .load(&project_root, LoadConfigOptions::default())
           .map_err(|e| e.to_string());
 
@@ -429,7 +460,7 @@ mod tests {
       fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
       let atlaspack_config =
-        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
+        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()), false)
           .load(&project_root, LoadConfigOptions::default())
           .map_err(|e| e.to_string());
 
@@ -465,7 +496,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
@@ -494,7 +525,7 @@ mod tests {
 
       let package_manager = Arc::new(package_manager);
 
-      let err = AtlaspackRcConfigLoader::new(fs, package_manager)
+      let err = AtlaspackRcConfigLoader::new(fs, package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -528,7 +559,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -565,7 +596,7 @@ mod tests {
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(package_manager);
 
-      let err = AtlaspackRcConfigLoader::new(fs, package_manager)
+      let err = AtlaspackRcConfigLoader::new(fs, package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -607,7 +638,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -644,7 +675,7 @@ mod tests {
 
       let package_manager = Arc::new(package_manager);
 
-      let err = AtlaspackRcConfigLoader::new(fs, package_manager)
+      let err = AtlaspackRcConfigLoader::new(fs, package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -681,7 +712,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -715,7 +746,7 @@ mod tests {
 
       let package_manager = Arc::new(package_manager);
 
-      let err = AtlaspackRcConfigLoader::new(fs, package_manager)
+      let err = AtlaspackRcConfigLoader::new(fs, package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -757,7 +788,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -792,7 +823,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -831,7 +862,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -862,7 +893,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {

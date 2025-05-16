@@ -29,6 +29,7 @@ export type AtlaspackV3Options = {|
     AtlaspackNapiOptions['options'],
     {|
       jsPaths: AtlaspackNapiOptions['options']['jsPaths'],
+      useBuiltinConfigs: AtlaspackNapiOptions['options']['useBuiltinConfigs'],
     |},
   >,
 |};
@@ -101,6 +102,7 @@ export class AtlaspackV3 {
         options: {
           ...options,
           jsPaths: getJsPaths(),
+          useBuiltinConfigs: isSuperPackage(),
         },
         napiWorkerPool,
       },
