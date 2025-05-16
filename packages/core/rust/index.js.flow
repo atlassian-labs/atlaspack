@@ -59,6 +59,7 @@ export type AtlaspackNapiOptions = {|
       emptyFile: string,
       corePath: string,
     |},
+    useBuiltinConfigs: boolean,
     // TODO Use Omit when available in flow >0.210.0
     ...$Diff<
       InitialAtlaspackOptions,

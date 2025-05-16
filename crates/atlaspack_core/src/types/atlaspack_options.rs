@@ -34,6 +34,8 @@ pub struct AtlaspackOptions {
 
   pub js_paths: JsPaths,
 
+  pub use_builtin_configs: bool,
+
   #[serde(default)]
   pub default_target_options: DefaultTargetOptions,
 
