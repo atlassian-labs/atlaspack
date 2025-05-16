@@ -78,7 +78,7 @@ jobs:
           CARGO_PROFILE: release
         run: yarn build-native
       - name: Upload debug symbols to sentry
-        run: node "./scripts/debug-symbols.mjs"
+        run: node "./scripts/debug-symbols.mjs" --upload-to-sentry --rm
         env:
           SENTRY_ORG: ${{secrets.SENTRY_ORG}}
           SENTRY_PROJECT: ${{secrets.SENTRY_PROJECT}}
@@ -121,7 +121,7 @@ jobs:
           CARGO_PROFILE: release
         run: yarn build-native
       - name: Upload debug symbols to sentry
-        run: node "./scripts/debug-symbols.mjs"
+        run: node "./scripts/debug-symbols.mjs" --upload-to-sentry --rm
         env:
           SENTRY_ORG: ${{secrets.SENTRY_ORG}}
           SENTRY_PROJECT: ${{secrets.SENTRY_PROJECT}}
