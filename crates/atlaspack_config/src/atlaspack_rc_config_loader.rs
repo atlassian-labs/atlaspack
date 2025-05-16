@@ -505,6 +505,49 @@ mod tests {
         Ok((default_config.atlaspack_config, files))
       );
     }
+
+    #[test]
+    fn returns_merged_config_with_builtin_extends_when_use_builtin_config_is_true() {
+      let fs = Arc::new(InMemoryFileSystem::default());
+      let project_root = fs.cwd().unwrap();
+
+      let config_string = r#"{
+          "extends": "@atlaspack/config-default",
+          "transformers": {
+            "*.js": ["custom-transformer"]
+          }
+        }"#;
+      // Create a config that extends from the builtin default config
+      let base_config = AtlaspackRcFile {
+        contents: serde_json5::from_str(config_string).unwrap(),
+        path: project_root.join(".parcelrc"),
+        raw: String::from(config_string),
+      };
+
+      fs.write_file(&base_config.path, base_config.raw.clone());
+
+      let fs: FileSystemRef = fs;
+      let package_manager = Arc::new(MockPackageManager::new());
+
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, true)
+        .load(&project_root, LoadConfigOptions::default())
+        .map_err(|e| e.to_string());
+
+      // Only the base config file should be in the files list since the extended config is builtin
+      let files = vec![base_config.path.clone()];
+
+      // Get the builtin config that will be extended
+      let builtin_config = get_builtin_config("@atlaspack/config-default").unwrap();
+      let extended_config = PartialAtlaspackConfig::try_from(builtin_config).unwrap();
+
+      // Merge with the base config - base config should be merged on top of extended config
+      let base_partial = PartialAtlaspackConfig::try_from(base_config).unwrap();
+      let expected_config = PartialAtlaspackConfig::merge(base_partial, extended_config);
+
+      let expected_config = AtlaspackConfig::try_from(expected_config).unwrap();
+
+      assert_eq!(atlaspack_config, Ok((expected_config, files)));
+    }
   }
 
   mod config {
@@ -835,6 +878,39 @@ mod tests {
         .map_err(|e| e.to_string());
 
       assert_eq!(atlaspack_config, Ok((fallback.atlaspack_config, files)));
+    }
+
+    #[test]
+    fn returns_builtin_fallback_config_when_use_builtin_config_is_true() {
+      let fs = Arc::new(InMemoryFileSystem::default());
+      let project_root = fs.cwd().unwrap();
+
+      let fs: FileSystemRef = fs;
+      let package_manager = Arc::new(TestPackageManager {
+        fs: Arc::clone(&fs),
+      });
+
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, true)
+        .load(
+          &project_root,
+          LoadConfigOptions {
+            additional_reporters: Vec::new(),
+            config: None,
+            fallback_config: Some("@atlaspack/config-default"),
+          },
+        )
+        .map_err(|e| e.to_string());
+
+      // When using builtin config, no files are read from disk
+      let files = vec![];
+
+      // Get the expected config from the builtin configs
+      let builtin_config = get_builtin_config("@atlaspack/config-default").unwrap();
+      let expected_config =
+        AtlaspackConfig::try_from(PartialAtlaspackConfig::try_from(builtin_config).unwrap())
+          .unwrap();
+
+      assert_eq!(atlaspack_config, Ok((expected_config, files)));
     }
   }
 
