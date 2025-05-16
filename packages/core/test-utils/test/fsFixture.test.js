@@ -577,7 +577,7 @@ describe('fsFixture', () => {
           import foo from "foo";
 
           export function bar() {
-            return \`\${foo()} bar\`
+            return \`\${foo()} bar\`;
           }`;
 
     assert.equal(
@@ -587,7 +587,7 @@ describe('fsFixture', () => {
 
     assert.equal(
       fs.readFileSync('/app/bar.js', 'utf8'),
-      `import foo from "foo";\n\nexport function bar() {\n  return \`\${foo()} bar\`\n}`,
+      `import foo from "foo";\n\nexport function bar() {\n  return \`\${foo()} bar\`;\n}`,
     );
   });
 

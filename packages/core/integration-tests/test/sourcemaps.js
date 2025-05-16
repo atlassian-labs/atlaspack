@@ -21,6 +21,17 @@ import {loadSourceMapUrl} from '@atlaspack/utils';
 import nullthrows from 'nullthrows';
 import {SourceMapConsumer} from 'source-map';
 
+const paths =
+  process.env.SUPER_PACKAGE === 'true'
+    ? {
+        esmoduleHelpers:
+          '../../../../super/lib/transformers/js/esmodule-helpers.js',
+      }
+    : {
+        esmoduleHelpers:
+          '../../../../../transformers/js/src/esmodule-helpers.js',
+      };
+
 const bundle = (name, opts?: InitialAtlaspackOptions) => {
   return _bundle(
     name,
@@ -513,10 +524,7 @@ describe('sourcemaps', function () {
 
     let mapData = sourceMap.getMap();
     assert.equal(mapData.sources.length, 2);
-    assert.deepEqual(mapData.sources, [
-      'index.ts',
-      '../../../../../transformers/js/src/esmodule-helpers.js',
-    ]);
+    assert.deepEqual(mapData.sources, ['index.ts', paths.esmoduleHelpers]);
 
     let input = await inputFS.readFile(
       path.join(path.dirname(filename), map.sourceRoot, map.sources[0]),
@@ -558,7 +566,7 @@ describe('sourcemaps', function () {
     assert.deepEqual(mapData.sources, [
       'index.ts',
       'local.ts',
-      '../../../../../transformers/js/src/esmodule-helpers.js',
+      paths.esmoduleHelpers,
     ]);
 
     let input = await inputFS.readFile(
@@ -1013,10 +1021,7 @@ describe('sourcemaps', function () {
 
     let map = mapData.map;
     assert.equal(map.file, 'index.js.map');
-    assert.deepEqual(map.sources, [
-      'index.js',
-      '../../../../../transformers/js/src/esmodule-helpers.js',
-    ]);
+    assert.deepEqual(map.sources, ['index.js', paths.esmoduleHelpers]);
     assert.equal(map.sourcesContent[0], sourceContent);
   });
 
@@ -1047,10 +1052,7 @@ describe('sourcemaps', function () {
 
     let map = mapUrlData.map;
     assert.equal(map.file, 'index.js.map');
-    assert.deepEqual(map.sources, [
-      'index.js',
-      '../../../../../transformers/js/src/esmodule-helpers.js',
-    ]);
+    assert.deepEqual(map.sources, ['index.js', paths.esmoduleHelpers]);
   });
 
   it('should respect --no-source-maps', async function () {
