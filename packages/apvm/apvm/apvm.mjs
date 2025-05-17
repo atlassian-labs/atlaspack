@@ -38,7 +38,11 @@ if (!fs.existsSync(binPath)) {
 }
 
 const [, , ...args] = process.argv;
-child_process.execFileSync(`${binPath} ${args.join(' ')}`, {
-  stdio: 'inherit',
-  shell: true,
-});
+try {
+  child_process.execFileSync(`${binPath} ${args.join(' ')}`, {
+    stdio: 'inherit',
+    shell: true,
+  });
+} catch (err) {
+  process.exit(err.status);
+}
