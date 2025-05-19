@@ -396,9 +396,7 @@
       "distDir": "lib",
       "optimize": false,
       "sourceMap": true,
-      "includeNodeModules": {
-        "lmdb": false
-      }
+      "includeNodeModules": true
     }
   }
 }
