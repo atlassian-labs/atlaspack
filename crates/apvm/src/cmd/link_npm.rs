@@ -196,10 +196,12 @@ export {{ default }} from "atlaspack/{file_stem}";
 
   if let Some(alias) = cmd.set_alias {
     println!("Updating config");
-    ctx.validator.set_alias(&alias, &specifier.to_string())?;
+    ctx.apvmrc.set_alias(&alias, specifier.clone());
     ctx
-      .validator
-      .update_checksum(specifier, package.checksum.unwrap_or_default())?;
+      .apvmrc
+      .set_checksum(specifier, package.checksum.unwrap_or_default());
+    ctx.apvmrc.tidy();
+    ctx.apvmrc.write_to_file()?;
   }
 
   Ok(())

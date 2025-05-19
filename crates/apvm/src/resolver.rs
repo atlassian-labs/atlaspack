@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::platform::apvmrc::ApvmRc;
+use crate::platform::apvmrc::ApvmRcRef;
 use crate::platform::package::InstallablePackage;
 use crate::platform::package::ManagedPackage;
 use crate::platform::package::Package;
@@ -9,7 +9,7 @@ use crate::versions::Versions;
 
 #[derive(Clone, Serialize)]
 pub struct PackageResolver {
-  apvmrc: Option<ApvmRc>,
+  apvmrc: ApvmRcRef,
   versions: Versions,
 }
 
@@ -20,7 +20,7 @@ impl std::fmt::Debug for PackageResolver {
 }
 
 impl PackageResolver {
-  pub fn new(apvmrc: &Option<ApvmRc>, versions: &Versions) -> Self {
+  pub fn new(apvmrc: &ApvmRcRef, versions: &Versions) -> Self {
     Self {
       apvmrc: apvmrc.clone(),
       versions: versions.clone(),
@@ -32,8 +32,8 @@ impl PackageResolver {
 
     if input == "local" {
       return Ok(Specifier::Local);
-    } else if let Some(apvmrc) = &self.apvmrc {
-      if let Some(alias) = apvmrc.versions.get(input) {
+    } else if self.apvmrc.exists {
+      if let Some(alias) = self.apvmrc.get_alias(input) {
         return Ok(alias.clone());
       }
     }
@@ -42,32 +42,32 @@ impl PackageResolver {
   }
 
   /// Resolve a specifier to an installed version
-  pub fn resolve(&self, input: &Specifier) -> Option<ManagedPackage> {
+  pub fn resolve(&self, input: &Specifier) -> anyhow::Result<Option<ManagedPackage>> {
     if *input == Specifier::Local {
-      if let Some(local) = &self.versions.local {
-        return Some(ManagedPackage::Local(local.clone()));
+      if let Some(local) = self.versions.local() {
+        return Ok(Some(ManagedPackage::Local(local)));
       }
     } else {
-      for installed in &self.versions.installed {
-        match &installed {
+      for installed in self.versions.installed()? {
+        match installed {
           InstallablePackage::Npm(package) => {
             if let Specifier::Npm { version } = &input {
               if &package.version == version {
-                return Some(ManagedPackage::Npm(package.clone()));
+                return Ok(Some(ManagedPackage::Npm(package)));
               };
             };
           }
           InstallablePackage::Release(package) => {
             if let Specifier::Release { version } = &input {
               if &package.version == version {
-                return Some(ManagedPackage::Release(package.clone()));
+                return Ok(Some(ManagedPackage::Release(package)));
               };
             };
           }
           InstallablePackage::Git(package) => {
             if let Specifier::Git { version: branch } = &input {
               if &package.version == branch {
-                return Some(ManagedPackage::Git(package.clone()));
+                return Ok(Some(ManagedPackage::Git(package)));
               };
             };
           }
@@ -75,7 +75,7 @@ impl PackageResolver {
       }
     }
 
-    None
+    Ok(None)
   }
 
   /// Resolve a specifier to an installed package
@@ -92,18 +92,18 @@ impl PackageResolver {
 
     if let Some(version) = input {
       specifier = Some(self.resolve_specifier(version)?)
-    } else if let Some(result) = &self.versions.node_modules {
-      return Ok(result.clone());
-    } else if let Some(apvmrc) = &self.apvmrc {
-      if let Some(default) = apvmrc.versions.get("default") {
-        specifier = Some(default.clone())
+    } else if let Some(result) = self.versions.node_modules()? {
+      return Ok(result);
+    } else if self.apvmrc.exists {
+      if let Some(default) = self.apvmrc.get_alias("default") {
+        specifier = Some(default)
       }
     }
 
     log::info!("resolved: {:?}", specifier);
 
     if let Some(specifier) = &specifier {
-      if let Some(result) = self.resolve(specifier) {
+      if let Some(result) = self.resolve(specifier)? {
         return Ok(match result {
           ManagedPackage::Npm(package) => Package::Npm(package),
           ManagedPackage::Release(package) => Package::Release(package),
@@ -113,8 +113,8 @@ impl PackageResolver {
       } else {
         return Err(anyhow::anyhow!("Version not installed {}", specifier));
       }
-    } else if let Some(result) = &self.versions.default {
-      return Ok(Package::Default(result.clone()));
+    } else if let Some(result) = self.versions.default()? {
+      return Ok(Package::Default(result));
     }
 
     Err(anyhow::anyhow!("Version not found"))

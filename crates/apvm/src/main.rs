@@ -71,10 +71,10 @@ fn main() -> anyhow::Result<()> {
   log::info!("state_setup");
   let env = Env::parse()?;
   let paths = Paths::new(&env)?;
-  let apvmrc = ApvmRc::detect(&env.pwd)?;
-  let versions = Versions::detect(&paths, &apvmrc)?;
+  let apvmrc = ApvmRc::new(&env.pwd)?;
+  let versions = Versions::new(&paths, &apvmrc)?;
   let resolver = PackageResolver::new(&apvmrc, &versions);
-  let validator = Validator::new(&env, &apvmrc);
+  let validator = Validator::new(&apvmrc);
 
   let ctx = context::Context {
     versions,

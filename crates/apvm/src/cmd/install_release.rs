@@ -13,7 +13,7 @@ use crate::public::package_meta::PackageMeta;
 
 pub fn install_from_release(
   ctx: Context,
-  cmd: InstallCommand,
+  _cmd: InstallCommand,
   version: &Specifier,
 ) -> anyhow::Result<()> {
   let pkg = ReleasePackage::from_name(&ctx.paths.versions_v1, version)?;
@@ -29,7 +29,7 @@ pub fn install_from_release(
   let bytes_archive = http::download_bytes(&url_tarball)?;
   let checksum = http::download_string(&url_checksum)?;
 
-  if !cmd.skip_checksum && !Integrity::parse(&checksum)?.eq(&bytes_archive) {
+  if !Integrity::parse(&checksum)?.eq(&bytes_archive) {
     return Err(anyhow::anyhow!("Integrity check failed"));
   }
 

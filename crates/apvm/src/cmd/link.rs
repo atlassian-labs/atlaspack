@@ -5,6 +5,7 @@ use clap::Parser;
 use super::link_local::link_local;
 use super::link_npm::link_npm;
 use super::link_release::link_release;
+use crate::cmd::install::InstallCommand;
 use crate::context::Context;
 use crate::platform::package::ManagedPackage;
 
@@ -15,8 +16,11 @@ pub struct LinkCommand {
   pub version: String,
 
   /// Add version as an alias in the apvm.json
-  #[clap(short = 'a', long = "set-alias", default_value = "default")]
+  #[clap(long = "set-alias")]
   pub set_alias: Option<String>,
+
+  #[clap(long = "strict")]
+  pub strict: bool,
 }
 
 /// Link Atlaspack into the current project's node_modules
@@ -28,11 +32,25 @@ pub fn main(ctx: Context, cmd: LinkCommand) -> anyhow::Result<()> {
   let start_time = SystemTime::now();
   let specifier = ctx.resolver.resolve_specifier(&cmd.version)?;
 
-  let package = match ctx.resolver.resolve(&specifier) {
+  let package = match ctx.resolver.resolve(&specifier)? {
     Some(package) => package,
     // Install package if not found
     None => {
-      return Err(anyhow::anyhow!("Version not installed {}", specifier));
+      println!("Not Installed");
+      crate::cmd::install::main(
+        ctx.clone(),
+        InstallCommand {
+          version: cmd.version.clone(),
+          force: true,
+          skip_postinstall: false,
+        },
+      )?;
+      let Some(package) = ctx.resolver.resolve(&specifier)? else {
+        return Err(anyhow::anyhow!(
+          "Package installed but unable to link, please try again"
+        ));
+      };
+      package
     }
   };
 
@@ -44,6 +62,12 @@ pub fn main(ctx: Context, cmd: LinkCommand) -> anyhow::Result<()> {
   {
     return Err(anyhow::anyhow!(
       "Checksum of package does not match specified"
+    ));
+  }
+
+  if cmd.strict && ctx.apvmrc.get_checksum(&specifier).is_none() {
+    return Err(anyhow::anyhow!(
+      "Cannot link package without checksum when in strict mode"
     ));
   }
 

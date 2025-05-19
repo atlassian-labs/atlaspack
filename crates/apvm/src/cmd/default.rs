@@ -20,7 +20,7 @@ pub struct DefaultCommand {
 pub fn main(ctx: Context, cmd: DefaultCommand) -> anyhow::Result<()> {
   let specifier = ctx.resolver.resolve_specifier(&cmd.version)?;
 
-  let package = match ctx.resolver.resolve(&specifier) {
+  let package = match ctx.resolver.resolve(&specifier)? {
     Some(package) => package,
     None => {
       return Err(anyhow::anyhow!("Version not installed"));

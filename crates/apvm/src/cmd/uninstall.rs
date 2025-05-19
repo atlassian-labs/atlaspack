@@ -18,7 +18,7 @@ pub fn main(ctx: Context, cmd: UninstallCommand) -> anyhow::Result<()> {
 
   let specifier = ctx.resolver.resolve_specifier(&cmd.version)?;
 
-  if let Some(package) = ctx.resolver.resolve(&specifier) {
+  if let Some(package) = ctx.resolver.resolve(&specifier)? {
     let path = match &package {
       ManagedPackage::Local(_package) => {
         return Err(anyhow::anyhow!("Cannot uninstall local"));

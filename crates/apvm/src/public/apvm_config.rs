@@ -11,8 +11,6 @@ impl JsonSerde for ApvmConfig {}
 #[serde(rename = "camelCase")]
 pub struct ApvmConfig {
   #[serde(skip_serializing_if = "Option::is_none")]
-  pub version: Option<String>,
-  #[serde(skip_serializing_if = "Option::is_none")]
   pub versions: Option<HashMap<String, String>>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub checksums: Option<HashMap<String, String>>,

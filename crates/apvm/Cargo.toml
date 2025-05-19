@@ -17,7 +17,7 @@ json = { workspace = true }
 jwalk = { workspace = true }
 rand = { workspace = true }
 reqwest = { workspace = true, default-features = false, features = ["blocking", "rustls-tls"] }
-serde = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true }
 tar = { workspace = true }
 env_logger = { workspace = true }

@@ -23,10 +23,6 @@ pub struct InstallCommand {
   /// Skips any build steps
   #[arg(long = "skip-postinstall")]
   pub skip_postinstall: bool,
-
-  /// Skips any build steps
-  #[arg(long = "skip-checksum")]
-  pub skip_checksum: bool,
 }
 
 /// Install a version of Atlaspack
@@ -40,7 +36,7 @@ pub fn main(ctx: Context, cmd: InstallCommand) -> anyhow::Result<()> {
   let specifier = ctx.resolver.resolve_specifier(&cmd.version)?;
   println!("Installing ({})", specifier);
 
-  if let Some(package) = ctx.resolver.resolve(&specifier) {
+  if let Some(package) = ctx.resolver.resolve(&specifier)? {
     if !cmd.force {
       println!("✅ Already installed ({})", specifier);
       return Ok(());

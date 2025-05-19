@@ -8,32 +8,32 @@ pub struct ListCommand {}
 
 /// List the installed versions of Atlaspack available on the system
 pub fn main(ctx: Context, _cmd: ListCommand) -> anyhow::Result<()> {
-  for version in list_fmt(&ctx) {
+  for version in list_fmt(&ctx)? {
     println!("* {}", version)
   }
   Ok(())
 }
 
-pub fn list_fmt(ctx: &Context) -> Vec<String> {
+pub fn list_fmt(ctx: &Context) -> anyhow::Result<Vec<String>> {
   let mut output = vec![];
 
-  for version in &ctx.versions.installed {
+  for version in &ctx.versions.installed()? {
     if let InstallablePackage::Npm(package) = version {
       output.push(format!("{}", package.version));
     };
   }
 
-  for version in &ctx.versions.installed {
+  for version in &ctx.versions.installed()? {
     if let InstallablePackage::Release(package) = version {
       output.push(format!("release:{}", package.version));
     };
   }
 
-  for version in &ctx.versions.installed {
+  for version in &ctx.versions.installed()? {
     if let InstallablePackage::Git(package) = version {
       output.push(format!("git:{}", package.version));
     };
   }
 
-  output
+  Ok(output)
 }
