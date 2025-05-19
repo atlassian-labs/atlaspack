@@ -492,19 +492,25 @@ export default class BundleGraph<TBundle: IBundle>
 
         const currentCondition = conditions.get(cond.key);
 
-        conditions.set(cond.key, {
-          bundle,
-          ifTrueBundles: getFeatureFlag(
-            'conditionalBundlingReporterSameConditionFix',
-          )
-            ? [...(currentCondition?.ifTrueBundles ?? []), ...ifTrueBundles]
-            : ifTrueBundles,
-          ifFalseBundles: getFeatureFlag(
-            'conditionalBundlingReporterSameConditionFix',
-          )
-            ? [...(currentCondition?.ifFalseBundles ?? []), ...ifFalseBundles]
-            : ifFalseBundles,
-        });
+        if (getFeatureFlag('conditionalBundlingReporterSameConditionFix')) {
+          conditions.set(cond.key, {
+            bundle,
+            ifTrueBundles: [
+              ...(currentCondition?.ifTrueBundles ?? []),
+              ...ifTrueBundles,
+            ],
+            ifFalseBundles: [
+              ...(currentCondition?.ifFalseBundles ?? []),
+              ...ifFalseBundles,
+            ],
+          });
+        } else {
+          conditions.set(cond.key, {
+            bundle,
+            ifTrueBundles,
+            ifFalseBundles,
+          });
+        }
 
         bundleConditions.set(bundle.id, conditions);
       }
