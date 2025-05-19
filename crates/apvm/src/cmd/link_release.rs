@@ -34,7 +34,7 @@ pub fn link_release(
   let node_modules_super = node_modules.join("atlaspack");
   let node_modules_atlaspack = node_modules.join("@atlaspack");
 
-  // Create the following folder strucutre
+  // Create the following folder structure
   //   /node_modules
   //     /.apvm
   //     /@atlaspack
@@ -44,23 +44,30 @@ pub fn link_release(
   fs_ext::create_dir_if_not_exists(&node_modules)?;
   fs_ext::create_dir_if_not_exists(&node_modules_bin)?;
 
-  // Delete existing node_modules/.bin/atlaspack
-  fs_ext::remove_if_exists(&node_modules_bin_atlaspack)?;
-
-  // Recrease node_modules/atlaspack
+  // Recreate node_modules/atlaspack
   fs_ext::recreate_dir(&node_modules_super)?;
 
-  // Recrease node_modules/@atlaspack
-  fs_ext::recreate_dir(&node_modules_atlaspack)?;
-
-  // Recrease node_modules/.apvm
+  // Recreate node_modules/.apvm
   fs_ext::recreate_dir(&node_modules_apvm)?;
 
   // Copy managed version into node_modules
   fs_ext::cp_dir_recursive(&dir_package, &node_modules_super)?;
 
+  // Delete existing node_modules/.bin/atlaspack
+  fs_ext::remove_if_exists(&node_modules_bin_atlaspack)?;
   create_bin(&node_modules_bin_atlaspack)?;
 
+  // Recreate node_modules/@atlaspack
+  fs_ext::create_dir_if_not_exists(&node_modules_atlaspack)?;
+  for entry in fs::read_dir(&node_modules_atlaspack)? {
+    let entry_path = entry?.path();
+    if entry_path.try_file_stem()?.contains("apvm") {
+      continue;
+    }
+    fs_ext::remove_if_exists(&entry_path)?;
+  }
+
+  // Map super package to target directory
   for entry in fs::read_dir(&dir_package_node_modules_atlaspack)? {
     let entry = entry?;
     let entry_path = entry.path();
@@ -71,6 +78,8 @@ pub fn link_release(
     fs_ext::recreate_dir(&dest)?;
     PackageJson::write_to_file(
       &PackageJson {
+        name: Some(format!("@atlaspack/{entry_basename}")),
+        version: Some(specifier.to_string()),
         main: Some("./index.cjs".to_string()),
         types: Some("./index.d.ts".to_string()),
         r#type: Some("commonjs".to_string()),
