@@ -42,7 +42,6 @@
   "runtimes": [
     "@atlaspack/runtime-js",
     "@atlaspack/runtime-browser-hmr",
-    "@atlaspack/runtime-react-refresh",
     "@atlaspack/runtime-service-worker"
   ],
   "optimizers": {
