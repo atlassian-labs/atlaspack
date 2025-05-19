@@ -103,6 +103,7 @@
   },
   "alias": {
     "@swc/wasm": false,
-    "@atlaspack/babel-register": false
+    "@atlaspack/babel-register": false,
+    "lmdb": false
   }
 }
