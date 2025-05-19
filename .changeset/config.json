@@ -5,8 +5,7 @@
     {"repo": "atlassian-labs/atlaspack"}
   ],
   "commit": false,
-  "fixed": [],
-  "linked": [
+  "fixed": [
     [
       "@atlaspack/apvm",
       "@atlaspack/apvm-linux-amd64",
