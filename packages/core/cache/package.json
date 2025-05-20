@@ -27,14 +27,12 @@
     "@atlaspack/fs": "2.14.1",
     "@atlaspack/logger": "2.14.1",
     "@atlaspack/rust": "3.0.1",
-    "@atlaspack/utils": "2.14.1",
-    "lmdb": "2.8.5"
+    "@atlaspack/utils": "2.14.1"
   },
   "devDependencies": {
     "idb": "^5.0.8"
   },
   "browser": {
-    "./src/IDBCache.js": "./src/IDBCache.browser.js",
-    "./src/LMDBCache.js": false
+    "./src/IDBCache.js": "./src/IDBCache.browser.js"
   }
 }

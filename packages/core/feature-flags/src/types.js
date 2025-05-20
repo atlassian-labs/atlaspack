@@ -17,10 +17,6 @@ export type FeatureFlags = {|
    */
   importRetry: boolean,
   /**
-   * Enable Rust based LMDB wrapper library
-   */
-  useLmdbJsLite: boolean,
-  /**
    * Fixes quadratic cache invalidation issue
    */
   fixQuadraticCacheInvalidation: ConsistencyCheckFeatureFlagValue,
@@ -37,6 +33,13 @@ export type FeatureFlags = {|
    * - NEW: Return VCS result, but don't call watchman
    */
   vcsMode: ConsistencyCheckFeatureFlagValue,
+  /**
+   * Refactor cache to:
+   * - Split writes into multiple entries
+   * - Remove "large file blob" writes
+   * - Reduce size of the caches by deduplicating data
+   */
+  cachePerformanceImprovements: boolean,
   /**
    * Enable scanning for the presence of loadable to determine side effects
    */

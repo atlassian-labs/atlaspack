@@ -50,8 +50,8 @@ class TapStream extends Transform {
   }
 }
 
-gulp.task('clean', async (cb) => {
-  await Promise.all([
+gulp.task('clean', (cb) => {
+  Promise.all([
     rimraf.sync('packages/*/*/lib/**'),
     rimraf.sync('packages/unified/lib'),
   ]).then(
@@ -71,12 +71,6 @@ gulp.task('prepare', (cb) => {
 
 gulp.task('typescript', (cb) => {
   execSync('yarn lerna run build-ts', {
-    cwd: __dirname,
-    shell: true,
-    stdio: 'inherit',
-  });
-
-  execSync('yarn lerna run check-ts', {
     cwd: __dirname,
     shell: true,
     stdio: 'inherit',

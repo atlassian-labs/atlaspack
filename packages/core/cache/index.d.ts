@@ -7,10 +7,6 @@ export const FSCache: {
   new (cacheDir: FilePath): Cache;
 };
 
-export const LMDBCache: {
-  new (cacheDir: FilePath): Cache;
-};
-
 export const LMDBLiteCache: {
   new (cacheDir: FilePath): Cache;
 };
