@@ -279,17 +279,21 @@ fn get_file_contents_at_commit(
   commit: &git2::Commit,
   path: &Path,
 ) -> anyhow::Result<Option<String>> {
+  // return None if the file is new
   let tree = commit.tree()?;
-  if let Ok(entry) = tree.get_path(path) {
-    let blob = entry
-      .to_object(repo)?
-      .into_blob()
-      .map_err(|_| anyhow::anyhow!("Failed to read yarn.lock from git"))?;
-    let contents = blob.content();
-    Ok(Some(String::from_utf8(contents.to_vec())?))
-  } else {
-    Ok(None)
+  if tree.get_path(path).is_err() {
+    return Ok(None);
   }
+
+  let contents = Command::new("git")
+    .arg("show")
+    .arg(format!("{}:{}", commit.id(), path.display()))
+    .current_dir(repo.path().parent().unwrap())
+    .output()
+    .map_err(|err| anyhow::anyhow!("Failed to read yarn.lock from git: {err}"))?;
+
+  let contents = String::from_utf8(contents.stdout)?;
+  Ok(Some(contents))
 }
 
 #[derive(Debug, PartialEq)]
