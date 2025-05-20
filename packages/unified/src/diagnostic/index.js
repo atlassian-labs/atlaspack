@@ -1,8 +1,8 @@
 // @flow strict-local
 
 import invariant from 'assert';
-import nullthrows from 'nullthrows';
-import {parse, type Mapping} from '@mischnic/json-sourcemap';
+import nullthrows from '../vendor/nullthrows/index.js';
+import {parse, type Mapping} from '../vendor/@mischnic/json-sourcemap/index.js';
 
 /** These positions are 1-based (so <code>1</code> is the first line/column) */
 export type DiagnosticHighlightLocation = {|

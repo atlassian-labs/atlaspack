@@ -1,4 +1,5 @@
 const {Transform} = require('stream');
+const {execSync} = require('child_process');
 const babel = require('gulp-babel');
 const gulp = require('gulp');
 const path = require('path');
@@ -12,14 +13,7 @@ const IGNORED_PACKAGES = [
   '!packages/core/test-utils/**',
   '!packages/core/types/**',
   '!packages/core/types-internal/**',
-
-  // These packages are bundled.
-  '!packages/core/codeframe/**',
-  '!packages/core/fs/**',
-  '!packages/core/package-manager/**',
-  '!packages/core/utils/**',
-  '!packages/reporters/cli/**',
-  '!packages/reporters/dev-server/**',
+  '!packages/shims/**',
 ];
 
 const paths = {
@@ -56,14 +50,69 @@ class TapStream extends Transform {
   }
 }
 
-exports.clean = function clean(cb) {
-  rimraf('packages/*/*/lib/**').then(
+gulp.task('clean', async (cb) => {
+  await Promise.all([
+    rimraf.sync('packages/*/*/lib/**'),
+    rimraf.sync('packages/unified/lib'),
+  ]).then(
     () => cb(),
     (err) => cb(err),
   );
-};
+});
 
-exports.default = exports.build = gulp.parallel(buildBabel, copyOthers);
+gulp.task('prepare', (cb) => {
+  execSync('yarn lerna run dev:prepare', {
+    cwd: __dirname,
+    shell: true,
+    stdio: 'inherit',
+  });
+  cb();
+});
+
+gulp.task('typescript', (cb) => {
+  execSync('yarn lerna run build-ts', {
+    cwd: __dirname,
+    shell: true,
+    stdio: 'inherit',
+  });
+
+  execSync('yarn lerna run check-ts', {
+    cwd: __dirname,
+    shell: true,
+    stdio: 'inherit',
+  });
+
+  cb();
+});
+
+gulp.task('unified:post', (cb) => {
+  execSync('node ./scripts/unified-build-vendor.mjs', {
+    cwd: __dirname,
+    shell: true,
+    stdio: 'inherit',
+  });
+
+  execSync('node ./scripts/unified-build-ts.mjs', {
+    cwd: __dirname,
+    shell: true,
+    stdio: 'inherit',
+  });
+
+  cb();
+});
+
+function buildUnified() {
+  return gulp
+    .src(['packages/unified/src/**/*.js', '!packages/unified/src/vendor/**'])
+    .pipe(
+      babel({
+        ...babelConfig,
+        babelrcRoots: [__dirname + '/packages/unified/**'],
+      }),
+    )
+    .pipe(renameStream((relative) => relative.replace('src', 'lib')))
+    .pipe(gulp.dest('packages/unified/lib'));
+}
 
 function buildBabel() {
   return gulp
@@ -86,3 +135,13 @@ function renameStream(fn) {
     vinyl.path = path.join(vinyl.base, fn(relative));
   });
 }
+
+exports.default = exports.build = gulp.series(
+  'clean',
+  buildUnified,
+  'unified:post',
+  'prepare',
+  buildBabel,
+  copyOthers,
+  'typescript',
+);
