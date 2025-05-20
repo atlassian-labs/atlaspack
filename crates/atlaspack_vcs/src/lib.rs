@@ -285,12 +285,15 @@ fn get_file_contents_at_commit(
     return Ok(None);
   }
 
+  let commit_id = commit.id();
   let contents = Command::new("git")
     .arg("show")
-    .arg(format!("{}:{}", commit.id(), path.display()))
+    .arg(format!("{}:{}", commit_id, path.display()))
     .current_dir(repo.path().parent().unwrap())
     .output()
-    .map_err(|err| anyhow::anyhow!("Failed to read yarn.lock from git: {err}"))?;
+    .map_err(|err| {
+      anyhow::anyhow!("Failed to read contents at {path:?} in revision {commit_id} from git: {err}")
+    })?;
 
   let contents = String::from_utf8(contents.stdout)?;
   Ok(Some(contents))
