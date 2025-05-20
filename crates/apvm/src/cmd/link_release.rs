@@ -80,7 +80,7 @@ pub fn link_release(
       &PackageJson {
         name: Some(format!("@atlaspack/{entry_basename}")),
         version: Some(specifier.to_string()),
-        main: Some("./index.cjs".to_string()),
+        main: Some("./index.js".to_string()),
         types: Some("./index.d.ts".to_string()),
         r#type: Some("commonjs".to_string()),
         ..PackageJson::read_from_file(entry_path.join("package.json"))?
@@ -89,7 +89,7 @@ pub fn link_release(
     )?;
 
     fs::write(
-      dest.join("index.cjs"),
+      dest.join("index.js"),
       format!("module.exports = require('atlaspack/{}')\n", entry_basename),
     )?;
 
