@@ -16,7 +16,7 @@ import {DEFAULT_OPTIONS} from './test-utils';
 import {FILE_CREATE, FILE_UPDATE, INITIAL_BUILD} from '../src/constants';
 import {makeDeferredWithPromise} from '@atlaspack/utils';
 import {toProjectPath} from '../src/projectPath';
-import {DEFAULT_FEATURE_FLAGS, setFeatureFlags} from '../../feature-flags/src';
+import {DEFAULT_FEATURE_FLAGS, setFeatureFlags} from '../../../unified/src/feature-flags/index.js';
 import sinon from 'sinon';
 import type {AtlaspackOptions} from '../src/types';
 
