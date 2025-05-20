@@ -1484,15 +1484,19 @@ export default class RequestTracker {
         throw new Error('Serialization was aborted');
       }
 
-      await this.options.cache.setLargeBlob(
-        key,
-        serialize(contents),
-        signal
-          ? {
-              signal: signal,
-            }
-          : undefined,
-      );
+      if (getFeatureFlag('cachePerformanceImprovements')) {
+        await this.options.cache.set(key, serialize(contents));
+      } else {
+        await this.options.cache.setLargeBlob(
+          key,
+          serialize(contents),
+          signal
+            ? {
+                signal: signal,
+              }
+            : undefined,
+        );
+      }
 
       total += 1;
 
