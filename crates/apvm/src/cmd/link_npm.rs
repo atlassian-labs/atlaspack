@@ -98,7 +98,7 @@ pub fn link_npm(
       &PackageJson {
         name: Some(format!("@atlaspack/{file_stem}")),
         version: Some(specifier.to_string()),
-        main: Some("./index.cjs".to_string()),
+        main: Some("./index.js".to_string()),
         types: Some("./index.d.ts".to_string()),
         r#type: Some("commonjs".to_string()),
         private: None,
