@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build-ts": "mkdir -p lib ; flow-to-ts src/index.js > lib/index.d.ts",
-    "check-ts": "tsc --noEmit lib/index.d.ts"
+    "check-ts": "tsc  --module node16 --moduleResolution node16 --noEmit lib/index.d.ts"
   },
   "dependencies": {
     "@atlaspack/types-internal": "2.14.9",

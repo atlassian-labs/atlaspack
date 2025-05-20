@@ -9,6 +9,8 @@ packages/*/*/test/fixtures
 packages/*/*/test/.atlaspack-cache
 packages/*/*/test/.parcel-cache
 packages/*/*/lib
+packages/unified/lib
+packages/core/rust/index*
 vendor
 tmp
 .atlaspack-cache

@@ -99,8 +99,8 @@ jobs:
       - run: npx flow check
       - run: npx eslint .
       - run: npx prettier --list-different .
-      - run: npx lerna run build-ts
-      - run: npx lerna run check-ts
+      - run: yarn build
+      - run: yarn check-ts
 
   lint_rust:
     name: 🦀 Lint Rust

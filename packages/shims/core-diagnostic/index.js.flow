@@ -1,0 +1,4 @@
+// @flow
+
+export * from '@atlaspack/unified/src/diagnostic/index.js';
+export {default} from '@atlaspack/unified/src/diagnostic/index.js';

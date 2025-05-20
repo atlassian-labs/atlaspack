@@ -1,0 +1,37 @@
+{
+  "name": "@atlaspack/unified",
+  "version": "2.14.1",
+  "description": "One package to rule them all",
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git",
+    "directory": "packages/unified"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "./lib",
+    "./src",
+    "./package.json"
+  ],
+  "exports": {
+    "./package.json": "./package.json",
+    "./*": {
+      "atlaspack::sources": "./src/*/index.js",
+      "types": "./lib/*/index.d.ts",
+      "default": "./lib/*/index.js"
+    }
+  },
+  "peerDependencies": {
+    "@types/node": "^22"
+  },
+  "devDependencies": {
+    "@mischnic/json-sourcemap": "0.1.0",
+    "@types/node": "^22",
+    "nullthrows": "1.1.1",
+    "utility-types": "^3.10.0"
+  }
+}

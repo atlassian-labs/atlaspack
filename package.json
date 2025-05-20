@@ -13,15 +13,14 @@
     "crates/caniuse_database",
     "crates/lmdb-js-lite",
     "packages/*/*",
+    "packages/unified",
     "scripts"
   ],
   "resolutions": {
     "@swc/core": "1.11.18"
   },
   "scripts": {
-    "build": "yarn build-bundles && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production gulp",
-    "build-bundles": "rimraf --glob packages/*/*/lib && lerna run dev:prepare && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SELF_BUILD=true atlaspack build --feature-flag cachePerformanceImprovements=true --no-cache packages/core/{eslint-plugin,fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}",
-    "build-ts": "lerna run build-ts && lerna run check-ts",
+    "build": "gulp",
     "build-native": "node scripts/build-native.js",
     "build-native-release": "cross-env CARGO_PROFILE=release node scripts/build-native.js",
     "build-native-wasm": "cross-env CARGO_PROFILE=release RUSTUP_TARGET=wasm32-unknown-unknown scripts/build-native.js",
@@ -33,9 +32,10 @@
     "link-all": "node scripts/link-all.js packages",
     "unlink-all": "node scripts/unlink-all.js packages",
     "check": "flow check",
+    "check-ts": "yarn lerna run check-ts",
     "lint": "node ./scripts/lint-all.mjs",
     "prepublishOnly": "yarn pre-publish",
-    "pre-publish": "yarn build && yarn build-ts",
+    "pre-publish": "yarn build",
     "changesets-publish": "yarn pre-publish && yarn changeset publish",
     "test": "yarn test:unit && yarn test:integration",
     "test:e2e": "yarn workspace @atlaspack/e2e-tests test",
