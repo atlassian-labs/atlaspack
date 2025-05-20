@@ -38,6 +38,13 @@ export type FeatureFlags = {|
    */
   vcsMode: ConsistencyCheckFeatureFlagValue,
   /**
+   * Refactor cache to:
+   * - Split writes into multiple entries
+   * - Remove "large file blob" writes
+   * - Reduce size of the caches by deduplicating data
+   */
+  cachePerformanceImprovements: boolean,
+  /**
    * Enable scanning for the presence of loadable to determine side effects
    */
   loadableSideEffects: boolean,
