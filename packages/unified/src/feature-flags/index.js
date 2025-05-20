@@ -1,6 +1,6 @@
 // @flow strict
 
-import type {FeatureFlags as _FeatureFlags} from './types';
+import type {FeatureFlags as _FeatureFlags} from './types.js';
 // We need to do these gymnastics as we don't want flow-to-ts to touch DEFAULT_FEATURE_FLAGS,
 // but we want to export FeatureFlags for Flow
 export type FeatureFlags = _FeatureFlags;
