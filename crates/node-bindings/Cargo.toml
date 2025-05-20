@@ -13,6 +13,7 @@ crate-type = ["cdylib"]
 [dependencies]
 atlaspack = { path = "../atlaspack" }
 atlaspack_core = { path = "../atlaspack_core" }
+atlaspack_dev_server = { path = "../atlaspack_dev_server" }
 atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 atlaspack_monitoring = { path = "../atlaspack_monitoring" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }

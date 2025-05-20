@@ -16,6 +16,7 @@ mod hash;
 #[cfg(not(target_arch = "wasm32"))]
 mod image;
 pub mod js_tracing;
+pub mod server;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod atlaspack;

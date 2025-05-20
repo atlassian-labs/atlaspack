@@ -1,0 +1,12 @@
+[package]
+name = "atlaspack_event_diff_analysis"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+csv = "1.3.1"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
