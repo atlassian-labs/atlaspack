@@ -1,7 +1,7 @@
 ---
-'@atlaspack/feature-flags': major
+'@atlaspack/feature-flags': patch
 '@atlaspack/cache': major
-'@atlaspack/core': major
+'@atlaspack/core': patch
 ---
 
 Remove LMDB cache back-end
