@@ -34,8 +34,8 @@ export function makeDebugCommand(): commander$Command {
         paths: [fs.cwd(), __dirname],
       }),
       shouldPatchConsole: false,
+      shouldBuildLazily: false,
       ...options,
-      shouldBuildLazily: true,
       watchBackend: 'watchman',
     });
     logger.info({
