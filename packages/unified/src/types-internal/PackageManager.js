@@ -1,10 +1,10 @@
 // @flow
 
-import type {FileCreateInvalidation, PackageJSON} from './index';
-import type {SemverRange} from './SemverRange';
-import type {DependencySpecifier} from './DependencySpecifier';
-import type {FileSystem} from './FileSystem';
-import type {FilePath} from './FilePath';
+import type {FileCreateInvalidation, PackageJSON} from './index.js';
+import type {SemverRange} from './SemverRange.js';
+import type {DependencySpecifier} from './DependencySpecifier.js';
+import type {FileSystem} from './FileSystem.js';
+import type {FilePath} from './FilePath.js';
 
 export type PackageManagerResolveResult = {|
   resolved: FilePath | DependencySpecifier,

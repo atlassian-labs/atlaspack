@@ -1,7 +1,7 @@
 // @flow
 
-import type {Glob} from './Glob';
-import type {FilePath} from './FilePath';
+import type {Glob} from './Glob.js';
+import type {FilePath} from './FilePath.js';
 
 export type GlobInvalidation = {|
   glob: Glob,

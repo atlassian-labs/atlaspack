@@ -1,11 +1,11 @@
 // @flow
-import type {FilePath} from './FilePath';
 import type {Readable, Writable} from 'stream';
+import type {FilePath} from './FilePath.js';
 import type {
   Event,
   Options as WatcherOptions,
   AsyncSubscription,
-} from '@parcel/watcher';
+} from '../vendor/parcel_watcher/index.js';
 
 export type FileOptions = {mode?: number, ...};
 export type ReaddirOptions =

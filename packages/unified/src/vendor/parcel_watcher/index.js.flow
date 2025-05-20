@@ -1,0 +1,3 @@
+// @flow
+export * from '@parcel/watcher';
+export type * from '@parcel/watcher';
