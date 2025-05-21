@@ -6,7 +6,7 @@ use super::link::LinkCommand;
 use crate::context::Context;
 use crate::platform::constants as c;
 use crate::platform::fs_ext;
-use crate::platform::package::LocalPackage;
+use crate::platform::package::GitPackage;
 use crate::platform::path_ext::*;
 use crate::platform::specifier::Specifier;
 use crate::public::json_serde::JsonSerde;
@@ -14,13 +14,14 @@ use crate::public::linked_meta::LinkedMeta;
 use crate::public::package_json::PackageJson;
 use crate::public::package_kind::PackageKind;
 
-pub fn link_local(
+pub fn link_git(
   ctx: Context,
   _cmd: LinkCommand,
   specifier: &Specifier,
-  package: LocalPackage,
+  package: GitPackage,
 ) -> anyhow::Result<()> {
-  let package_packages = package.path.join("packages");
+  let package_contents = package.contents();
+  let package_packages = package_contents.join("packages");
 
   // node_modules
   let node_modules = ctx.env.pwd.join("node_modules");
@@ -97,21 +98,22 @@ pub fn link_local(
       log::info!("Linking: {}", name);
 
       let pkg_dir = node_modules_atlaspack.join(&name);
-      fs_ext::soft_link(&entry_path, &node_modules_atlaspack.join(&pkg_dir))?;
+      fs::create_dir_all(&pkg_dir)?;
+      fs_ext::cp_dir_recursive(&entry_path, node_modules_atlaspack.join(&pkg_dir))?;
     }
   }
 
-  fs_ext::soft_link(
-    &package.path.join("node_modules"),
-    &node_modules_atlaspack.join("node_modules"),
+  fs_ext::cp_dir_recursive(
+    package_contents.join("node_modules"),
+    node_modules_atlaspack.join("node_modules"),
   )?;
 
   LinkedMeta::write_to_file(
     &LinkedMeta {
-      kind: PackageKind::Local,
+      kind: PackageKind::Git,
       version: Some(specifier.version().to_string()),
       specifier: Some(specifier.to_string()),
-      original_path: package.path.to_path_buf(),
+      original_path: package.path.clone(),
       content_path: package.path,
     },
     node_modules_apvm.join(c::LINK_META_FILE),
@@ -126,16 +128,7 @@ fn create_bin(node_modules_bin_atlaspack: &Path) -> std::io::Result<()> {
     use std::os::unix::fs::PermissionsExt;
     fs::write(
       node_modules_bin_atlaspack,
-      r#"#!/usr/bin/env node
-
-if (process.env.ATLASPACK_DEV === 'true') {{
-  console.log('USING ATLASPACK SOURCES')
-  require('@atlaspack/babel-register')
-  require('@atlaspack/cli/src/bin.js')
-}} else {{
-  require('@atlaspack/cli/bin/atlaspack.js')
-}}
-"#,
+      "#!/usr/bin/env node\nrequire('@atlaspack/cli/bin/atlaspack.js\n",
     )?;
     fs::set_permissions(node_modules_bin_atlaspack, Permissions::from_mode(0o777))?;
   }

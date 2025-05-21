@@ -33,6 +33,8 @@ pub fn link_npm(
 
   // Create the following folder structure
   //   /node_modules
+  //     /.bin
+  //       atlaspack
   //     /.apvm
   //     /@atlaspack
   //     /atlaspack
