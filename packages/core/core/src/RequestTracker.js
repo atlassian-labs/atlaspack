@@ -14,7 +14,7 @@ import type {
   SerializedContentGraph,
   Graph,
 } from '@atlaspack/graph';
-import logger from '@atlaspack/logger';
+import logger, {instrument} from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
 import type {Async, EnvMap} from '@atlaspack/types';
 import {
@@ -69,7 +69,6 @@ import type {
   InternalGlob,
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
-import {instrument} from '../../logger/src/tracer';
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
