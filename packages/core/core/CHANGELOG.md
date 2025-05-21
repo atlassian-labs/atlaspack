@@ -1,5 +1,24 @@
 # @atlaspack/core
 
+## 2.16.0
+
+### Minor Changes
+
+- [#520](https://github.com/atlassian-labs/atlaspack/pull/520) [`90150df`](https://github.com/atlassian-labs/atlaspack/commit/90150dfb68236e1d1c11813108ecabd92cff9366) Thanks [@pancaspe87](https://github.com/pancaspe87)! - Modify "large blobs" to be written to the LMDB cache
+
+### Patch Changes
+
+- Updated dependencies [[`f27d39e`](https://github.com/atlassian-labs/atlaspack/commit/f27d39e767b06def059944b3bc5fd50797eaea96)]:
+  - @atlaspack/rust@3.1.1
+  - @atlaspack/cache@3.0.1
+  - @atlaspack/fs@2.14.3
+  - @atlaspack/logger@2.14.3
+  - @atlaspack/utils@2.14.3
+  - @atlaspack/package-manager@2.14.3
+  - @atlaspack/workers@2.14.3
+  - @atlaspack/types@2.14.3
+  - @atlaspack/plugin@2.14.3
+
 ## 2.15.1
 
 ### Patch Changes

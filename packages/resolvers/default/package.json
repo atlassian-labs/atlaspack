@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/resolver-default",
-  "version": "2.14.2",
+  "version": "2.14.3",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -15,8 +15,8 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/node-resolver-core": "3.5.2",
-    "@atlaspack/plugin": "2.14.2"
+    "@atlaspack/node-resolver-core": "3.5.3",
+    "@atlaspack/plugin": "2.14.3"
   },
   "devDependencies": {
     "@babel/core": "^7.22.11"
