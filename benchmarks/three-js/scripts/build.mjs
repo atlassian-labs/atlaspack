@@ -44,11 +44,6 @@ const RUNS = process.env.ATLASPACK_BENCH_RUNS
   : 10;
 
 async function main() {
-  console.log(vendorDir);
-  if (!fsSync.existsSync(vendorDir)) {
-    fetchThreeJs();
-  }
-
   writeHeader('Settings');
 
   printTable({
@@ -135,12 +130,9 @@ async function main() {
     ]);
 
     // Get three-js
-    if ((await fs.readdir(path.join(benchDir, 'three-js')).length) === 0) {
+    if (!fsSync.existsSync(vendorDir)) {
       console.log('Pulling three-js...');
-      child_process.execSync('git submodule update --init ./three-js', {
-        cwd: benchDir,
-        shell: true,
-      });
+      fetchThreeJs();
     }
 
     // Copy three-js to bench directory
