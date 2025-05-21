@@ -1,6 +1,6 @@
 ---
 '@atlaspack/cache': minor
-'@atlaspack/core': minor
+'@atlaspack/core': patch
 '@atlaspack/rust': minor
 ---
 
