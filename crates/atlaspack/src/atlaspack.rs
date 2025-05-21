@@ -158,7 +158,7 @@ impl Atlaspack {
   }
 
   fn commit_assets(&self, assets: Vec<&AssetGraphNode>) -> anyhow::Result<()> {
-    let mut txn = self.db.environment().write_txn()?;
+    let mut txn = self.db.write_txn()?;
 
     for asset_node in assets {
       let AssetGraphNode::Asset(AssetNode { asset, .. }) = asset_node else {
@@ -237,7 +237,7 @@ mod tests {
 
     atlaspack.commit_assets(assets.iter().collect())?;
 
-    let txn = db.environment().read_txn()?;
+    let txn = db.read_txn()?;
     for (idx, asset) in assets_names.iter().enumerate() {
       let entry = db.get(&txn, &idx.to_string())?;
       assert_eq!(entry, Some(asset.to_string().into()));

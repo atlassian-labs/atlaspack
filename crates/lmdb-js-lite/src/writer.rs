@@ -199,6 +199,16 @@ fn handle_message<'a, 'b>(
       let result = run();
       resolve(result);
     }
+    DatabaseWriterMessage::Delete { key, resolve } => {
+      let run = || {
+        let mut txn = writer.environment.write_txn()?;
+        writer.delete(&mut txn, &key)?;
+        txn.commit()?;
+        Ok(())
+      };
+
+      resolve(run());
+    }
   }
   false
 }
@@ -217,6 +227,10 @@ pub enum DatabaseWriterMessage {
   },
   PutMany {
     entries: Vec<NativeEntry>,
+    resolve: ResolveCallback<()>,
+  },
+  Delete {
+    key: String,
     resolve: ResolveCallback<()>,
   },
   StartTransaction {
@@ -278,12 +292,6 @@ pub struct DatabaseWriter {
 }
 
 impl DatabaseWriter {
-  pub fn environment(&self) -> &Env {
-    &self.environment
-  }
-}
-
-impl DatabaseWriter {
   /// Create a new [`DatabaseWriter`] handle see [`LMDBOptions`] for
   /// documentation on the settings.
   pub fn new(options: &LMDBOptions) -> Result<Self> {
@@ -331,6 +339,11 @@ impl DatabaseWriter {
     })
   }
 
+  /// Check if an entry exists in the database
+  pub fn has(&self, txn: &RoTxn, key: &str) -> Result<bool> {
+    Ok(self.database.get(txn, key)?.is_some())
+  }
+
   /// Read an entry and decompress it
   pub fn get(&self, txn: &RoTxn, key: &str) -> Result<Option<Vec<u8>>> {
     if let Some(result) = self.database.get(txn, key)? {
@@ -346,6 +359,16 @@ impl DatabaseWriter {
     let compressed_data = lz4_flex::block::compress_prepend_size(data);
     self.database.put(txn, key, &compressed_data)?;
     Ok(())
+  }
+
+  pub fn delete(&self, txn: &mut RwTxn, key: &str) -> Result<()> {
+    self.database.delete(txn, key)?;
+    Ok(())
+  }
+
+  /// Create a write transaction
+  pub fn write_txn(&self) -> heed::Result<RwTxn> {
+    self.environment.write_txn()
   }
 
   /// Create a read transaction
@@ -387,17 +410,17 @@ mod tests {
     };
 
     let writer = DatabaseWriter::new(&options).unwrap();
-    let mut write_txn = writer.environment().write_txn().unwrap();
+    let mut write_txn = writer.environment.write_txn().unwrap();
     writer
       .put(&mut write_txn, "key", &[1, 2, 3, 3, 3, 3, 3, 3, 4])
       .unwrap();
     write_txn.commit().unwrap();
 
-    let read_txn = writer.environment().read_txn().unwrap();
+    let read_txn = writer.environment.read_txn().unwrap();
     let value = writer.get(&read_txn, "key").unwrap().unwrap();
     assert_eq!(&value, &vec![1, 2, 3, 3, 3, 3, 3, 3, 4]);
     drop(read_txn);
-    let read_txn = writer.environment().read_txn().unwrap();
+    let read_txn = writer.environment.read_txn().unwrap();
     let value = writer.get(&read_txn, "other-key").unwrap();
     assert_eq!(&value, &None);
   }
@@ -557,5 +580,44 @@ mod tests {
       })
       .unwrap();
     rx.recv().unwrap().unwrap()
+  }
+
+  #[test]
+  fn test_filling_up_the_database() {
+    let _ = tracing_subscriber::fmt::try_init();
+    let db_path = temp_dir()
+      .join("lmdb-js-lite")
+      .join("test_filling_up_the_database")
+      .join("lmdb-cache-tests.db");
+    tracing::info!("db_path={db_path:?}");
+    let _ = std::fs::remove_dir_all(&db_path);
+    let mut current_size = 10485760;
+    let options = LMDBOptions {
+      path: db_path.to_str().unwrap().to_string(),
+      async_writes: false,
+      map_size: None,
+    };
+    let (_, read) = start_make_database_writer(&options).unwrap();
+
+    // 1MB entry
+    let mut buffer: Vec<u8> = vec![];
+    for _j in 0..(1024 * 1024) {
+      buffer.push(rand::random());
+    }
+    // 1GB writes +/-
+    for i in 0..1024 {
+      let mut write_txn = read.environment.write_txn().unwrap();
+      let error = (|| -> std::result::Result<(), DatabaseWriterError> {
+        read.put(&mut write_txn, &format!("{i}"), &buffer)?;
+        write_txn.commit()?;
+        Ok(())
+      })();
+      if let Err(DatabaseWriterError::HeedError(heed::Error::Mdb(heed::MdbError::MapFull))) = error
+      {
+        current_size *= 2;
+        tracing::info!("Resizing database {current_size}");
+        unsafe { read.environment.resize(current_size).unwrap() }
+      }
+    }
   }
 }

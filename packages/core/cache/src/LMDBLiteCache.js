@@ -42,6 +42,14 @@ export class LmdbWrapper {
     };
   }
 
+  has(key: string): boolean {
+    return this.lmdb.hasSync(key);
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.lmdb.delete(key);
+  }
+
   get(key: string): Buffer | null {
     return this.lmdb.getSync(key);
   }
@@ -123,7 +131,7 @@ export class LMDBLiteCache implements Cache {
   }
 
   has(key: string): Promise<boolean> {
-    return Promise.resolve(this.store.get(key) != null);
+    return Promise.resolve(this.store.has(key));
   }
 
   get<T>(key: string): Promise<?T> {
@@ -206,11 +214,15 @@ export class LMDBLiteCache implements Cache {
     return this.setBlob(key, contents);
   }
 
+  /**
+   * @deprecated Use store.delete instead.
+   */
   deleteLargeBlob(key: string): Promise<void> {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.deleteLargeBlob(key);
     }
-    return this.set(key, null);
+
+    return this.store.delete(key);
   }
 
   refresh(): void {

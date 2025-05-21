@@ -4,7 +4,7 @@ import invariant, {AssertionError} from 'assert';
 import path from 'path';
 
 import {deserialize, serialize} from '@atlaspack/build-cache';
-import type {Cache} from '@atlaspack/cache';
+import {LMDBLiteCache, type Cache} from '@atlaspack/cache';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {ContentGraph} from '@atlaspack/graph';
 import type {
@@ -1457,6 +1457,22 @@ export default class RequestTracker {
   }
 
   async writeToCache(signal?: AbortSignal) {
+    const runCacheImprovements = async <T>(
+      newPath: (cache: LMDBLiteCache) => Promise<T>,
+      oldPath?: () => Promise<T>,
+    ): Promise<T> => {
+      if (getFeatureFlag('cachePerformanceImprovements')) {
+        invariant(this.options.cache instanceof LMDBLiteCache);
+        return newPath(this.options.cache);
+      } else {
+        await oldPath?.();
+      }
+    };
+
+    await runCacheImprovements(async (cache) => {
+      await cache.getNativeRef().startWriteTransaction();
+    });
+
     let cacheKey = getCacheKey(this.options);
     let requestGraphKey = `requestGraph-${cacheKey}`;
     let snapshotKey = `snapshot-${cacheKey}`;
@@ -1475,10 +1491,8 @@ export default class RequestTracker {
 
     let serialisedGraph = this.graph.serialize();
 
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      // Delete an existing request graph cache, to prevent invalid states
-      await this.options.cache.deleteLargeBlob(requestGraphKey);
-    }
+    // Delete an existing request graph cache, to prevent invalid states
+    await this.options.cache.deleteLargeBlob(requestGraphKey);
 
     const serialiseAndSet = async (
       key: string,
@@ -1489,19 +1503,23 @@ export default class RequestTracker {
         throw new Error('Serialization was aborted');
       }
 
-      if (getFeatureFlag('cachePerformanceImprovements')) {
-        await this.options.cache.set(key, contents);
-      } else {
-        await this.options.cache.setLargeBlob(
-          key,
-          serialize(contents),
-          signal
-            ? {
-                signal: signal,
-              }
-            : undefined,
-        );
-      }
+      runCacheImprovements(
+        (cache) => {
+          cache.getNativeRef().putNoConfirm(key, contents);
+          return Promise.resolve();
+        },
+        async () => {
+          await this.options.cache.setLargeBlob(
+            key,
+            serialize(contents),
+            signal
+              ? {
+                  signal: signal,
+                }
+              : undefined,
+          );
+        },
+      );
 
       total += 1;
 
@@ -1591,6 +1609,10 @@ export default class RequestTracker {
       // If we have aborted, ignore the error and continue
       if (!signal?.aborted) throw err;
     }
+
+    await runCacheImprovements(async (cache) => {
+      await cache.getNativeRef().commitWriteTransaction();
+    });
 
     report({type: 'cache', phase: 'end', total, size: this.graph.nodes.length});
   }
