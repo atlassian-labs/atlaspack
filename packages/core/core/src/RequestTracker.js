@@ -69,6 +69,7 @@ import type {
   InternalGlob,
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
+import {instrument} from '../../logger/src/tracer';
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
@@ -1511,7 +1512,9 @@ export default class RequestTracker {
 
       await runCacheImprovements(
         (cache) => {
-          cache.getNativeRef().putNoConfirm(key, serialize(contents));
+          instrument(`cache.put(${key})`, () => {
+            cache.getNativeRef().putNoConfirm(key, serialize(contents));
+          });
           return Promise.resolve();
         },
         async () => {
