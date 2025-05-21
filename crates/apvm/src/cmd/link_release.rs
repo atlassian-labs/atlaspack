@@ -36,6 +36,8 @@ pub fn link_release(
 
   // Create the following folder structure
   //   /node_modules
+  //     /.bin
+  //       atlaspack
   //     /.apvm
   //     /@atlaspack
   //     /atlaspack

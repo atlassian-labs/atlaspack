@@ -6,6 +6,7 @@ pub mod install_git;
 pub mod install_npm;
 pub mod install_release;
 pub mod link;
+pub mod link_git;
 pub mod link_local;
 pub mod link_npm;
 pub mod link_release;

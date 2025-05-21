@@ -6,6 +6,7 @@ use super::link_local::link_local;
 use super::link_npm::link_npm;
 use super::link_release::link_release;
 use crate::cmd::install::InstallCommand;
+use crate::cmd::link_git::link_git;
 use crate::context::Context;
 use crate::platform::package::ManagedPackage;
 
@@ -75,15 +76,10 @@ pub fn main(ctx: Context, cmd: LinkCommand) -> anyhow::Result<()> {
   match package {
     ManagedPackage::Local(package) => link_local(ctx, cmd, &specifier, package)?,
     ManagedPackage::Npm(package) => link_npm(ctx, cmd, &specifier, package)?,
-    ManagedPackage::Git(_package) => link_git(ctx, cmd)?,
+    ManagedPackage::Git(package) => link_git(ctx, cmd, &specifier, package)?,
     ManagedPackage::Release(package) => link_release(ctx, cmd, &specifier, package)?,
   };
 
   println!("✅ Linked in {:.2?} ({})", start_time.elapsed()?, specifier);
-  Ok(())
-}
-
-fn link_git(_ctx: Context, _cmd: LinkCommand) -> anyhow::Result<()> {
-  println!("TODO");
   Ok(())
 }
