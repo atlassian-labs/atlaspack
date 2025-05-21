@@ -1228,10 +1228,13 @@ export default class RequestTracker {
       return result;
     } else if (node.resultCacheKey != null && ifMatch == null) {
       let key = node.resultCacheKey;
-      invariant(this.options.cache.hasLargeBlob(key));
-      let cachedResult: T = deserialize(
-        await this.options.cache.getLargeBlob(key),
-      );
+      if (!getFeatureFlag('cachePerformanceImprovements')) {
+        invariant(this.options.cache.hasLargeBlob(key));
+      }
+
+      let cachedResult: T = getFeatureFlag('cachePerformanceImprovements')
+        ? nullthrows(await this.options.cache.get<T>(key))
+        : deserialize(await this.options.cache.getLargeBlob(key));
       node.result = cachedResult;
       return cachedResult;
     }
@@ -1472,8 +1475,10 @@ export default class RequestTracker {
 
     let serialisedGraph = this.graph.serialize();
 
-    // Delete an existing request graph cache, to prevent invalid states
-    await this.options.cache.deleteLargeBlob(requestGraphKey);
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      // Delete an existing request graph cache, to prevent invalid states
+      await this.options.cache.deleteLargeBlob(requestGraphKey);
+    }
 
     const serialiseAndSet = async (
       key: string,
@@ -1635,6 +1640,15 @@ export async function readAndDeserializeRequestGraph(
   cacheKey: string,
 ): Async<{|requestGraph: RequestGraph, bufferLength: number|}> {
   let bufferLength = 0;
+
+  if (getFeatureFlag('cachePerformanceImprovements')) {
+    let data = nullthrows(await cache.get(requestGraphKey));
+    return {
+      requestGraph: RequestGraph.deserialize(data),
+      bufferLength,
+    };
+  }
+
   const getAndDeserialize = async (key: string) => {
     let buffer = await cache.getLargeBlob(key);
     bufferLength += Buffer.byteLength(buffer);
@@ -1684,7 +1698,11 @@ async function loadRequestGraph(options): Async<RequestGraph> {
       snapshotKey,
     },
   });
-  if (await options.cache.hasLargeBlob(requestGraphKey)) {
+
+  if (
+    !getFeatureFlag('cachePerformanceImprovements') &&
+    (await options.cache.hasLargeBlob(requestGraphKey))
+  ) {
     try {
       let {requestGraph} = await readAndDeserializeRequestGraph(
         options.cache,
