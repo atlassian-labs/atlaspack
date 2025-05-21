@@ -97,14 +97,41 @@ pub fn initialize_from_env() -> anyhow::Result<()> {
 const CLOSE_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub fn close_monitoring() {
-  let Some(monitoring_guard) = MONITORING_GUARD.lock().unwrap().take() else {
+  let monitoring_guard = MONITORING_GUARD.lock().unwrap();
+  let Some(monitoring_guard) = monitoring_guard.as_ref() else {
     return;
   };
 
   if let Some(sentry_guard) = &monitoring_guard.sentry {
     tracing::debug!("Flushing sentry events");
-    sentry_guard.close(Some(CLOSE_TIMEOUT));
+    sentry_guard.flush(Some(CLOSE_TIMEOUT));
   }
+}
 
-  drop(monitoring_guard);
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  #[test]
+  fn test_initialize_monitoring_multiple_times() {
+    initialize_monitoring(MonitoringOptions {
+      tracing_options: vec![TracerMode::Stdout],
+      sentry_options: None,
+      #[cfg(not(target_env = "musl"))]
+      crash_reporter_options: None,
+    })
+    .unwrap();
+
+    close_monitoring();
+
+    initialize_monitoring(MonitoringOptions {
+      tracing_options: vec![TracerMode::Stdout],
+      sentry_options: None,
+      #[cfg(not(target_env = "musl"))]
+      crash_reporter_options: None,
+    })
+    .unwrap();
+
+    close_monitoring();
+  }
 }
