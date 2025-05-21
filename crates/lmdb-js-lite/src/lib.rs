@@ -371,7 +371,11 @@ impl LMDB {
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::StartTransaction {
-      resolve: Box::new(|_| deferred.resolve(|_| Ok(()))),
+      resolve: Box::new(|value| {
+        deferred.resolve(|_| {
+          value.map_err(|err| napi_error(anyhow!("Failed to start write transaction {err}")))
+        })
+      }),
     };
     database_handle
       .writer_thread_handle()

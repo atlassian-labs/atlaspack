@@ -168,6 +168,8 @@ fn handle_message<'a, 'b>(
     DatabaseWriterMessage::CommitTransaction { resolve } => {
       if let Some(txn) = current_transaction.take() {
         resolve(txn.commit().map_err(DatabaseWriterError::from))
+      } else {
+        resolve(Ok(()))
       }
     }
     DatabaseWriterMessage::PutMany { entries, resolve } => {
@@ -200,10 +202,20 @@ fn handle_message<'a, 'b>(
       resolve(result);
     }
     DatabaseWriterMessage::Delete { key, resolve } => {
-      let run = || {
-        let mut txn = writer.environment.write_txn()?;
-        writer.delete(&mut txn, &key)?;
-        txn.commit()?;
+      let mut run = || {
+        let mut txn = if let Some(txn) = current_transaction {
+          RwTransaction::Borrowed(txn)
+        } else {
+          let txn = writer.environment.write_txn()?;
+          RwTransaction::Owned(txn)
+        };
+
+        writer.delete(txn.deref_mut(), &key)?;
+
+        if let RwTransaction::Owned(txn) = txn {
+          txn.commit()?;
+        }
+
         Ok(())
       };
 
