@@ -13,7 +13,8 @@
       "@atlaspack/apvm-macos-amd64",
       "@atlaspack/apvm-macos-arm64",
       "@atlaspack/apvm-windows-amd64"
-    ]
+    ],
+    ["@atlaspack/unified", "@atlaspack/diagnostic"]
   ],
   "access": "public",
   "baseBranch": "main",

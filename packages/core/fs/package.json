@@ -49,7 +49,7 @@
   },
   "scripts": {
     "build-ts": "mkdir -p lib && flow-to-ts src/types.js > lib/types.d.ts",
-    "check-ts": "tsc --noEmit index.d.ts"
+    "check-ts": "tsc  --module node16 --moduleResolution node16  --noEmit index.d.ts"
   },
   "dependencies": {
     "@atlaspack/build-cache": "2.13.3",
