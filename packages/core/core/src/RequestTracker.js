@@ -1490,7 +1490,7 @@ export default class RequestTracker {
       }
 
       if (getFeatureFlag('cachePerformanceImprovements')) {
-        await this.options.cache.set(key, serialize(contents));
+        await this.options.cache.set(key, contents);
       } else {
         await this.options.cache.setLargeBlob(
           key,
@@ -1641,14 +1641,6 @@ export async function readAndDeserializeRequestGraph(
 ): Async<{|requestGraph: RequestGraph, bufferLength: number|}> {
   let bufferLength = 0;
 
-  if (getFeatureFlag('cachePerformanceImprovements')) {
-    let data = nullthrows(await cache.get(requestGraphKey));
-    return {
-      requestGraph: RequestGraph.deserialize(data),
-      bufferLength,
-    };
-  }
-
   const getAndDeserialize = async (key: string) => {
     let buffer = await cache.getLargeBlob(key);
     bufferLength += Buffer.byteLength(buffer);
@@ -1699,10 +1691,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     },
   });
 
-  if (
-    !getFeatureFlag('cachePerformanceImprovements') &&
-    (await options.cache.hasLargeBlob(requestGraphKey))
-  ) {
+  if (await options.cache.hasLargeBlob(requestGraphKey)) {
     try {
       let {requestGraph} = await readAndDeserializeRequestGraph(
         options.cache,

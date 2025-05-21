@@ -9,6 +9,7 @@ import {Lmdb} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types';
 import type {Cache} from './types';
 import type {Readable, Writable} from 'stream';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 import stream from 'stream';
 import path from 'path';
@@ -105,7 +106,9 @@ export class LMDBLiteCache implements Cache {
   }
 
   async ensure(): Promise<void> {
-    await this.fsCache.ensure();
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      await this.fsCache.ensure();
+    }
     return Promise.resolve();
   }
 
@@ -173,25 +176,41 @@ export class LMDBLiteCache implements Cache {
   }
 
   hasLargeBlob(key: string): Promise<boolean> {
-    return this.fs.exists(this.#getFilePath(key, 0));
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.hasLargeBlob(key);
+    }
+    return this.has(key);
   }
 
-  // eslint-disable-next-line require-await
-  async getLargeBlob(key: string): Promise<Buffer> {
-    return this.fsCache.getLargeBlob(key);
+  /**
+   * @deprecated Use getBlob instead.
+   */
+  getLargeBlob(key: string): Promise<Buffer> {
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.getLargeBlob(key);
+    }
+    return Promise.resolve(this.getBlobSync(key));
   }
 
-  // eslint-disable-next-line require-await
-  async setLargeBlob(
+  /**
+   * @deprecated Use setBlob instead.
+   */
+  setLargeBlob(
     key: string,
     contents: Buffer | string,
     options?: {|signal?: AbortSignal|},
   ): Promise<void> {
-    return this.fsCache.setLargeBlob(key, contents, options);
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.setLargeBlob(key, contents, options);
+    }
+    return this.setBlob(key, contents);
   }
 
   deleteLargeBlob(key: string): Promise<void> {
-    return this.fsCache.deleteLargeBlob(key);
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.deleteLargeBlob(key);
+    }
+    return this.set(key, null);
   }
 
   refresh(): void {
