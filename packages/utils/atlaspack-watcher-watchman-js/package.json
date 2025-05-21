@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/watcher-watchman-js",
-  "version": "2.14.2",
+  "version": "2.14.3",
   "license": "(MIT OR Apache-2.0)",
   "main": "lib/index.js",
   "source": "src/index.js",
@@ -8,8 +8,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@atlaspack/logger": "2.14.2",
-    "@atlaspack/utils": "2.14.2",
+    "@atlaspack/logger": "2.14.3",
+    "@atlaspack/utils": "2.14.3",
     "fb-watchman": "^2.0.2"
   },
   "devDependencies": {

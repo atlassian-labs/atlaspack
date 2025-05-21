@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.1.1
+
+### Patch Changes
+
+- [#458](https://github.com/atlassian-labs/atlaspack/pull/458) [`f27d39e`](https://github.com/atlassian-labs/atlaspack/commit/f27d39e767b06def059944b3bc5fd50797eaea96) Thanks [@yamadapc](https://github.com/yamadapc)! - Migrate to LazyLock from lazy_static
+
 ## 3.1.0
 
 ### Minor Changes
