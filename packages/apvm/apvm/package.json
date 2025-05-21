@@ -18,7 +18,6 @@
     "@atlaspack/apvm-linux-amd64": "0.0.3",
     "@atlaspack/apvm-linux-arm64": "0.0.3",
     "@atlaspack/apvm-macos-amd64": "0.0.3",
-    "@atlaspack/apvm-macos-arm64": "0.0.3",
-    "@atlaspack/apvm-windows-amd64": "0.0.3"
+    "@atlaspack/apvm-macos-arm64": "0.0.3"
   }
 }
