@@ -910,6 +910,7 @@ export function createIdealGraph(
       if (!manualSharedMap.has(manualSharedBundleKey)) {
         let firstSourceBundle = nullthrows(
           bundleGraph.getNode(sourceBundles[0]),
+          'Bro are you sure this is the error',
         );
         invariant(firstSourceBundle !== 'root');
 
@@ -1184,7 +1185,7 @@ export function createIdealGraph(
   // Step Remove Shared Bundles: Remove shared bundles from bundle groups that hit the parallel request limit.
   if (config.disableSharedBundles === false) {
     console.time('PRL merging');
-    let sharedBundles: Array<NodeId> = [];
+    let sharedBundles = new Set<NodeId>();
 
     bundleGraph.traverse((nodeId) => {
       let bundle = bundleGraph.getNode(nodeId);
@@ -1198,28 +1199,34 @@ export function createIdealGraph(
       }
 
       if (bundle.sourceBundles.size > 0 && bundle.manualSharedBundle == null) {
-        sharedBundles.push(nodeId);
+        sharedBundles.add(nodeId);
       }
     });
 
     let bundleOverlapThreshold = 0.8;
     let bundleOverlapScores = new Map<NodeId, Map<NodeId, number>>();
 
-    console.time('BundleOverlapScores');
-    for (let bundleId of sharedBundles) {
-      let bundleOverlapScore = new Map<NodeId, number>();
+    function calculateAllOverlapScores() {
+      bundleOverlapScores.clear();
 
-      for (let otherBundle of sharedBundles) {
-        if (bundleId !== otherBundle) {
-          bundleOverlapScore.set(
-            otherBundle,
-            calculateBundleOverlap(bundleGraph, bundleId, otherBundle),
-          );
+      for (let bundleId of sharedBundles) {
+        let bundleOverlapScore = new Map<NodeId, number>();
+
+        for (let otherBundle of sharedBundles) {
+          if (bundleId !== otherBundle) {
+            bundleOverlapScore.set(
+              otherBundle,
+              calculateBundleOverlap(bundleGraph, bundleId, otherBundle),
+            );
+          }
         }
-      }
 
-      bundleOverlapScores.set(bundleId, bundleOverlapScore);
+        bundleOverlapScores.set(bundleId, bundleOverlapScore);
+      }
     }
+
+    console.time('BundleOverlapScores');
+    calculateAllOverlapScores();
     console.timeEnd('BundleOverlapScores');
 
     for (let bundleGroupId of bundleGraph.getNodeIdsConnectedFrom(rootNodeId)) {
@@ -1231,14 +1238,14 @@ export function createIdealGraph(
 
       // Filter out inline assests as they should not contribute to PRL
       let numBundlesContributingToPRL = bundleIdsInGroup.reduce((count, b) => {
-        let bundle = nullthrows(bundleGraph.getNode(b));
+        let bundle = nullthrows(bundleGraph.getNode(b), '1');
         invariant(bundle !== 'root');
         return count + (bundle.bundleBehavior !== 'inline');
       }, 0);
 
       if (numBundlesContributingToPRL > config.maxParallelRequests) {
         let sharedBundleIdsInBundleGroup = bundleIdsInGroup.filter((b) => {
-          let bundle = nullthrows(bundleGraph.getNode(b));
+          let bundle = nullthrows(bundleGraph.getNode(b), '2');
           // shared bundles must have source bundles, we could have a bundle
           // connected to another bundle that isnt a shared bundle, so check
           return (
@@ -1253,7 +1260,7 @@ export function createIdealGraph(
         let sharedBundlesInGroup = sharedBundleIdsInBundleGroup
           .map((id) => ({
             id,
-            bundle: nullthrows(bundleGraph.getNode(id)),
+            bundle: nullthrows(bundleGraph.getNode(id), '3'),
           }))
           .map(({id, bundle}) => {
             // For Flow
@@ -1299,6 +1306,12 @@ export function createIdealGraph(
           }
 
           if (bestBundleId != null) {
+            console.log(`Merge ${bundleIdToRemove} into ${bestBundleId}`);
+            bundleOverlapScores.delete(bundleIdToRemove);
+            for (let otherBundleId of bundleOverlapScores.keys()) {
+              bundleOverlapScores.get(otherBundleId)?.delete(bundleIdToRemove);
+            }
+
             mergeBundles(
               bundleGraph,
               bestBundleId,
@@ -1306,7 +1319,10 @@ export function createIdealGraph(
               assetReference,
             );
             sharedBundlesInGroup.sort(sortBundlesBySize);
+            sharedBundles.delete(bundleIdToRemove);
+            calculateAllOverlapScores();
           } else {
+            console.log(`Deleting ${bundleIdToRemove}`);
             // Add all assets in the shared bundle into the source bundles that are within this bundle group.
             let sourceBundles = [...bundleToRemove.sourceBundles].filter((b) =>
               bundleIdsInGroup.includes(b),
@@ -1314,6 +1330,7 @@ export function createIdealGraph(
             for (let sourceBundleId of sourceBundles) {
               let sourceBundle = nullthrows(
                 bundleGraph.getNode(sourceBundleId),
+                '4',
               );
               invariant(sourceBundle !== 'root');
               modifiedSourceBundles.add(sourceBundle);
@@ -1321,7 +1338,7 @@ export function createIdealGraph(
               for (let asset of bundleToRemove.assets) {
                 addAssetToBundleRoot(
                   asset,
-                  nullthrows(sourceBundle.mainEntryAsset),
+                  nullthrows(sourceBundle.mainEntryAsset, '5'),
                 );
               }
               //This case is specific to reused bundles, which can have shared bundles attached to it
@@ -1374,8 +1391,8 @@ export function createIdealGraph(
     for (let bundle of modifiedSourceBundles) {
       bundle.assets = new Set(
         [...bundle.assets].sort((a, b) => {
-          let aIndex = nullthrows(assetOrderMap.get(a));
-          let bIndex = nullthrows(assetOrderMap.get(b));
+          let aIndex = nullthrows(assetOrderMap.get(a), '6');
+          let bIndex = nullthrows(assetOrderMap.get(b), '7');
 
           return aIndex - bIndex;
         }),
@@ -1383,7 +1400,7 @@ export function createIdealGraph(
     }
   }
   function deleteBundle(bundleRoot: BundleRoot) {
-    bundleGraph.removeNode(nullthrows(bundles.get(bundleRoot.id)));
+    bundleGraph.removeNode(nullthrows(bundles.get(bundleRoot.id), '8'));
     bundleRoots.delete(bundleRoot);
     bundles.delete(bundleRoot.id);
     let bundleRootId = assetToBundleRootNodeId.get(bundleRoot);
@@ -1401,21 +1418,25 @@ export function createIdealGraph(
 
   function getBundleFromBundleRoot(bundleRoot: BundleRoot): Bundle {
     let bundle = bundleGraph.getNode(
-      nullthrows(bundleRoots.get(bundleRoot))[0],
+      nullthrows(bundleRoots.get(bundleRoot), '9')[0],
     );
     invariant(bundle !== 'root' && bundle != null);
     return bundle;
   }
 
   function addAssetToBundleRoot(asset: Asset, bundleRoot: Asset) {
-    let [bundleId, bundleGroupId] = nullthrows(bundleRoots.get(bundleRoot));
-    let bundle = nullthrows(bundleGraph.getNode(bundleId));
+    let [bundleId, bundleGroupId] = nullthrows(
+      bundleRoots.get(bundleRoot),
+      '10',
+    );
+    let bundle = nullthrows(bundleGraph.getNode(bundleId), '11');
     invariant(bundle !== 'root');
 
     if (asset.type !== bundle.type) {
-      let bundleGroup = nullthrows(bundleGraph.getNode(bundleGroupId));
+      let bundleGroup = nullthrows(bundleGraph.getNode(bundleGroupId), '12');
       invariant(bundleGroup !== 'root');
-      let key = nullthrows(bundleGroup.mainEntryAsset).id + '.' + asset.type;
+      let key =
+        nullthrows(bundleGroup.mainEntryAsset, '13').id + '.' + asset.type;
       let typeChangeBundleId = bundles.get(key);
       if (typeChangeBundleId == null) {
         let typeChangeBundle = createBundle({
@@ -1431,7 +1452,7 @@ export function createIdealGraph(
         bundles.set(key, typeChangeBundleId);
         bundle = typeChangeBundle;
       } else {
-        bundle = nullthrows(bundleGraph.getNode(typeChangeBundleId));
+        bundle = nullthrows(bundleGraph.getNode(typeChangeBundleId), '14');
         invariant(bundle !== 'root');
       }
     }
@@ -1446,7 +1467,7 @@ export function createIdealGraph(
     bundleId: NodeId,
     assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
   ) {
-    let bundle = nullthrows(bundleGraph.getNode(bundleId));
+    let bundle = nullthrows(bundleGraph.getNode(bundleId), '15');
     invariant(bundle !== 'root');
     for (let asset of bundle.assets) {
       assetReference.set(
@@ -1454,9 +1475,15 @@ export function createIdealGraph(
         assetReference.get(asset).filter((t) => !t.includes(bundle)),
       );
       for (let sourceBundleId of bundle.sourceBundles) {
-        let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
+        let sourceBundle = nullthrows(
+          bundleGraph.getNode(sourceBundleId),
+          '16',
+        );
         invariant(sourceBundle !== 'root');
-        addAssetToBundleRoot(asset, nullthrows(sourceBundle.mainEntryAsset));
+        addAssetToBundleRoot(
+          asset,
+          nullthrows(sourceBundle.mainEntryAsset, '17'),
+        );
       }
     }
 
@@ -1469,8 +1496,11 @@ export function createIdealGraph(
     bundleToRemoveId: NodeId,
     assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
   ) {
-    let bundleToKeep = nullthrows(bundleGraph.getNode(bundleToKeepId));
-    let bundleToRemove = nullthrows(bundleGraph.getNode(bundleToRemoveId));
+    let bundleToKeep = nullthrows(bundleGraph.getNode(bundleToKeepId), '18');
+    let bundleToRemove = nullthrows(
+      bundleGraph.getNode(bundleToRemoveId),
+      '19',
+    );
     invariant(bundleToKeep !== 'root' && bundleToRemove !== 'root');
     for (let asset of bundleToRemove.assets) {
       bundleToKeep.assets.add(asset);
@@ -1522,7 +1552,7 @@ function createBundle(opts: {|
     return {
       assets: new Set(),
       bundleBehavior: opts.bundleBehavior,
-      env: nullthrows(opts.env),
+      env: nullthrows(opts.env, '20'),
       mainEntryAsset: null,
       manualSharedBundle: opts.manualSharedBundle,
       needsStableName: Boolean(opts.needsStableName),
@@ -1534,7 +1564,7 @@ function createBundle(opts: {|
     };
   }
 
-  let asset = nullthrows(opts.asset);
+  let asset = nullthrows(opts.asset, '21');
   return {
     assets: new Set([asset]),
     bundleBehavior: opts.bundleBehavior ?? asset.bundleBehavior,
