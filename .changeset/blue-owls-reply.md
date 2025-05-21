@@ -1,4 +1,5 @@
 ---
+'@atlaspack/core': patch
 '@atlaspack/feature-flags': patch
 ---
 
