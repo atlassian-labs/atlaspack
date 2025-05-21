@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/apvm",
   "description": "Atlaspack version manager",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "bin": {
@@ -15,10 +15,10 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "optionalDependencies": {
-    "@atlaspack/apvm-linux-amd64": "0.0.1",
-    "@atlaspack/apvm-linux-arm64": "0.0.1",
-    "@atlaspack/apvm-macos-amd64": "0.0.1",
-    "@atlaspack/apvm-macos-arm64": "0.0.1",
-    "@atlaspack/apvm-windows-amd64": "0.0.1"
+    "@atlaspack/apvm-linux-amd64": "0.0.3",
+    "@atlaspack/apvm-linux-arm64": "0.0.3",
+    "@atlaspack/apvm-macos-amd64": "0.0.3",
+    "@atlaspack/apvm-macos-arm64": "0.0.3",
+    "@atlaspack/apvm-windows-amd64": "0.0.3"
   }
 }
