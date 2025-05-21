@@ -1457,21 +1457,24 @@ export default class RequestTracker {
   }
 
   async writeToCache(signal?: AbortSignal) {
-    const runCacheImprovements = async <T>(
+    const runCacheImprovements = <T>(
       newPath: (cache: LMDBLiteCache) => Promise<T>,
-      oldPath?: () => Promise<T>,
+      oldPath: () => Promise<T>,
     ): Promise<T> => {
       if (getFeatureFlag('cachePerformanceImprovements')) {
         invariant(this.options.cache instanceof LMDBLiteCache);
         return newPath(this.options.cache);
       } else {
-        await oldPath?.();
+        return oldPath();
       }
     };
 
-    await runCacheImprovements(async (cache) => {
-      await cache.getNativeRef().startWriteTransaction();
-    });
+    await runCacheImprovements(
+      async (cache) => {
+        await cache.getNativeRef().startWriteTransaction();
+      },
+      () => Promise.resolve(),
+    );
 
     let cacheKey = getCacheKey(this.options);
     let requestGraphKey = `requestGraph-${cacheKey}`;
@@ -1503,9 +1506,9 @@ export default class RequestTracker {
         throw new Error('Serialization was aborted');
       }
 
-      runCacheImprovements(
+      await runCacheImprovements(
         (cache) => {
-          cache.getNativeRef().putNoConfirm(key, contents);
+          cache.getNativeRef().putNoConfirm(key, serialize(contents));
           return Promise.resolve();
         },
         async () => {
@@ -1610,9 +1613,12 @@ export default class RequestTracker {
       if (!signal?.aborted) throw err;
     }
 
-    await runCacheImprovements(async (cache) => {
-      await cache.getNativeRef().commitWriteTransaction();
-    });
+    await runCacheImprovements(
+      async (cache) => {
+        await cache.getNativeRef().commitWriteTransaction();
+      },
+      () => Promise.resolve(),
+    );
 
     report({type: 'cache', phase: 'end', total, size: this.graph.nodes.length});
   }

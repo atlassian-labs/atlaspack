@@ -5,11 +5,11 @@ import {
   registerSerializableClass,
   serialize,
 } from '@atlaspack/build-cache';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Lmdb} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types';
 import type {Cache} from './types';
 import type {Readable, Writable} from 'stream';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 import stream from 'stream';
 import path from 'path';
