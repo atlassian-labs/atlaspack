@@ -1,5 +1,11 @@
 # @atlaspack/apvm
 
+## 0.0.4
+
+### Patch Changes
+
+- [#523](https://github.com/atlassian-labs/atlaspack/pull/523) [`e940eb1`](https://github.com/atlassian-labs/atlaspack/commit/e940eb1d950840494b49534ef467ddde7e992547) Thanks [@alshdavid](https://github.com/alshdavid)! - Removing windows package
+
 ## 0.0.3
 
 ### Patch Changes
