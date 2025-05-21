@@ -34,7 +34,7 @@ describe('reporters', () => {
         execSync(
           `./node_modules/.bin/atlaspack build --no-cache ${successfulEntry}`,
           {
-            stdio: 'ignore',
+            stdio: 'inherit',
           },
         ),
       );
@@ -45,7 +45,7 @@ describe('reporters', () => {
         execSync(
           `./node_modules/.bin/atlaspack build --no-cache ${loadReporterFailureEntry}`,
           {
-            stdio: 'ignore',
+            stdio: 'inherit',
           },
         ),
       );
@@ -56,7 +56,7 @@ describe('reporters', () => {
         execSync(
           `./node_modules/.bin/atlaspack build --no-cache ${failingReporterEntry}`,
           {
-            stdio: 'ignore',
+            stdio: 'inherit',
           },
         ),
       );
