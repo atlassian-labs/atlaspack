@@ -1457,17 +1457,18 @@ export default class RequestTracker {
   }
 
   async writeToCache(signal?: AbortSignal) {
-    const runCacheImprovements = <T>(
+    const options = this.options;
+    function runCacheImprovements<T>(
       newPath: (cache: LMDBLiteCache) => Promise<T>,
       oldPath: () => Promise<T>,
-    ): Promise<T> => {
+    ): Promise<T> {
       if (getFeatureFlag('cachePerformanceImprovements')) {
-        invariant(this.options.cache instanceof LMDBLiteCache);
-        return newPath(this.options.cache);
+        invariant(options.cache instanceof LMDBLiteCache);
+        return newPath(options.cache);
       } else {
         return oldPath();
       }
-    };
+    }
 
     await runCacheImprovements(
       async (cache) => {
