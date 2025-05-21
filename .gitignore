@@ -28,3 +28,4 @@ yarn-error.log*
 
 artifacts/
 debug-symbols/
+/databases
