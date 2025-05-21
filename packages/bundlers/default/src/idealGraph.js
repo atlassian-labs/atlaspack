@@ -84,6 +84,42 @@ export type IdealGraph = {|
   manualAssetToBundle: Map<Asset, NodeId>,
 |};
 
+// Returns a decimal showing the proportion source bundles are common to
+// both bundles versus the total number of source bundles.
+function calculateBundleOverlap(
+  bundleGraph: IdealBundleGraph,
+  bundleIdA: NodeId,
+  bundleIdB: NodeId,
+): number {
+  let bundleA = nullthrows(
+    bundleGraph.getNode(bundleIdA),
+    `Bundle not found: ${bundleIdA} - overlap`,
+  );
+  let bundleB = nullthrows(
+    bundleGraph.getNode(bundleIdB),
+    `Bundle not found: ${bundleIdB} - overlap`,
+  );
+  invariant(bundleA !== 'root' && bundleB !== 'root');
+
+  let sharedSourceBundles = 0;
+  let allSourceBundles = new Set([
+    ...bundleA.sourceBundles,
+    ...bundleB.sourceBundles,
+  ]);
+
+  for (let bundle of bundleB.sourceBundles) {
+    if (bundleA.sourceBundles.has(bundle)) {
+      sharedSourceBundles++;
+    }
+  }
+
+  return sharedSourceBundles / allSourceBundles.size;
+}
+
+function sortBundlesBySize(a, b) {
+  return b.bundle.size - a.bundle.size;
+}
+
 export function createIdealGraph(
   assetGraph: MutableBundleGraph,
   config: ResolvedBundlerConfig,
@@ -1147,12 +1183,51 @@ export function createIdealGraph(
 
   // Step Remove Shared Bundles: Remove shared bundles from bundle groups that hit the parallel request limit.
   if (config.disableSharedBundles === false) {
+    console.time('PRL merging');
+    let sharedBundles: Array<NodeId> = [];
+
+    bundleGraph.traverse((nodeId) => {
+      let bundle = bundleGraph.getNode(nodeId);
+
+      if (!bundle) {
+        throw new Error(`Unable to find bundle ${nodeId} in bundle graph`);
+      }
+
+      if (bundle === 'root') {
+        return;
+      }
+
+      if (bundle.sourceBundles.size > 0 && bundle.manualSharedBundle == null) {
+        sharedBundles.push(nodeId);
+      }
+    });
+
+    let bundleOverlapThreshold = 0.8;
+    let bundleOverlapScores = new Map<NodeId, Map<NodeId, number>>();
+
+    console.time('BundleOverlapScores');
+    for (let bundleId of sharedBundles) {
+      let bundleOverlapScore = new Map<NodeId, number>();
+
+      for (let otherBundle of sharedBundles) {
+        if (bundleId !== otherBundle) {
+          bundleOverlapScore.set(
+            otherBundle,
+            calculateBundleOverlap(bundleGraph, bundleId, otherBundle),
+          );
+        }
+      }
+
+      bundleOverlapScores.set(bundleId, bundleOverlapScore);
+    }
+    console.timeEnd('BundleOverlapScores');
+
     for (let bundleGroupId of bundleGraph.getNodeIdsConnectedFrom(rootNodeId)) {
       // Find shared bundles in this bundle group.
       let bundleId = bundleGroupId;
 
       // We should include "bundle reuse" as shared bundles that may be removed but the bundle itself would have to be retained
-      let bundleIdsInGroup = getBundlesForBundleGroup(bundleId); //get all bundlegrups this bundle is an ancestor of
+      let bundleIdsInGroup = getBundlesForBundleGroup(bundleId); //get all bundlegroups this bundle is an ancestor of
 
       // Filter out inline assests as they should not contribute to PRL
       let numBundlesContributingToPRL = bundleIdsInGroup.reduce((count, b) => {
@@ -1198,55 +1273,92 @@ export function createIdealGraph(
           //TODO add integration test where bundles in bunlde group > max parallel request limit & only remove a couple shared bundles
           // but total # bundles still exceeds limit due to non shared bundles
 
-          // Add all assets in the shared bundle into the source bundles that are within this bundle group.
-          let sourceBundles = [...bundleToRemove.sourceBundles].filter((b) =>
-            bundleIdsInGroup.includes(b),
-          );
+          // Check for a merge opportunity with the bundle that has the most
+          // overlap with this one.
+          let bestBundleId = null;
+          let bestOverlap = 0;
 
-          for (let sourceBundleId of sourceBundles) {
-            let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
-            invariant(sourceBundle !== 'root');
-            modifiedSourceBundles.add(sourceBundle);
-            bundleToRemove.sourceBundles.delete(sourceBundleId);
-            for (let asset of bundleToRemove.assets) {
-              addAssetToBundleRoot(
-                asset,
-                nullthrows(sourceBundle.mainEntryAsset),
-              );
+          let bundleOverlapsForTargetBundle =
+            bundleOverlapScores.get(bundleIdToRemove);
+
+          if (bundleOverlapsForTargetBundle != null) {
+            for (let otherBundleId of bundleOverlapsForTargetBundle.keys()) {
+              let otherBundleMap = bundleOverlapScores.get(bundleIdToRemove);
+
+              if (otherBundleMap == null) {
+                continue;
+              }
+
+              let overlap = otherBundleMap.get(otherBundleId) ?? 0;
+
+              if (overlap >= bundleOverlapThreshold && overlap > bestOverlap) {
+                bestOverlap = overlap;
+                bestBundleId = otherBundleId;
+              }
             }
-            //This case is specific to reused bundles, which can have shared bundles attached to it
-            for (let childId of bundleGraph.getNodeIdsConnectedFrom(
+          }
+
+          if (bestBundleId != null) {
+            mergeBundles(
+              bundleGraph,
+              bestBundleId,
               bundleIdToRemove,
-            )) {
-              let child = bundleGraph.getNode(childId);
-              invariant(child !== 'root' && child != null);
-              child.sourceBundles.add(sourceBundleId);
-              bundleGraph.addEdge(sourceBundleId, childId);
-            }
-            // needs to add test case where shared bundle is removed from ONE bundlegroup but not from the whole graph!
-            // Remove the edge from this bundle group to the shared bundle.
-            // If there is now only a single bundle group that contains this bundle,
-            // merge it into the remaining source bundles. If it is orphaned entirely, remove it.
-            let incomingNodeCount =
-              bundleGraph.getNodeIdsConnectedTo(bundleIdToRemove).length;
+              assetReference,
+            );
+            sharedBundlesInGroup.sort(sortBundlesBySize);
+          } else {
+            // Add all assets in the shared bundle into the source bundles that are within this bundle group.
+            let sourceBundles = [...bundleToRemove.sourceBundles].filter((b) =>
+              bundleIdsInGroup.includes(b),
+            );
+            for (let sourceBundleId of sourceBundles) {
+              let sourceBundle = nullthrows(
+                bundleGraph.getNode(sourceBundleId),
+              );
+              invariant(sourceBundle !== 'root');
+              modifiedSourceBundles.add(sourceBundle);
+              bundleToRemove.sourceBundles.delete(sourceBundleId);
+              for (let asset of bundleToRemove.assets) {
+                addAssetToBundleRoot(
+                  asset,
+                  nullthrows(sourceBundle.mainEntryAsset),
+                );
+              }
+              //This case is specific to reused bundles, which can have shared bundles attached to it
+              for (let childId of bundleGraph.getNodeIdsConnectedFrom(
+                bundleIdToRemove,
+              )) {
+                let child = bundleGraph.getNode(childId);
+                invariant(child !== 'root' && child != null);
+                child.sourceBundles.add(sourceBundleId);
+                bundleGraph.addEdge(sourceBundleId, childId);
+              }
+              // needs to add test case where shared bundle is removed from ONE bundlegroup but not from the whole graph!
+              // Remove the edge from this bundle group to the shared bundle.
+              // If there is now only a single bundle group that contains this bundle,
+              // merge it into the remaining source bundles. If it is orphaned entirely, remove it.
+              let incomingNodeCount =
+                bundleGraph.getNodeIdsConnectedTo(bundleIdToRemove).length;
 
-            if (
-              incomingNodeCount <= 2 &&
-              //Never fully remove reused bundles
-              bundleToRemove.mainEntryAsset == null
-            ) {
-              // If one bundle group removes a shared bundle, but the other *can* keep it, still remove because that shared bundle is pointless (only one source bundle)
-              removeBundle(bundleGraph, bundleIdToRemove, assetReference);
-              // Stop iterating through bundleToRemove's sourceBundles as the bundle has been removed.
-              break;
-            } else {
-              bundleGraph.removeEdge(sourceBundleId, bundleIdToRemove);
+              if (
+                incomingNodeCount <= 2 &&
+                //Never fully remove reused bundles
+                bundleToRemove.mainEntryAsset == null
+              ) {
+                // If one bundle group removes a shared bundle, but the other *can* keep it, still remove because that shared bundle is pointless (only one source bundle)
+                removeBundle(bundleGraph, bundleIdToRemove, assetReference);
+                // Stop iterating through bundleToRemove's sourceBundles as the bundle has been removed.
+                break;
+              } else {
+                bundleGraph.removeEdge(sourceBundleId, bundleIdToRemove);
+              }
             }
           }
           numBundlesContributingToPRL--;
         }
       }
     }
+    console.timeEnd('PRL merging');
   }
 
   function getBigIntFromContentKey(contentKey) {
@@ -1349,6 +1461,40 @@ export function createIdealGraph(
     }
 
     bundleGraph.removeNode(bundleId);
+  }
+
+  function mergeBundles(
+    bundleGraph: IdealBundleGraph,
+    bundleToKeepId: NodeId,
+    bundleToRemoveId: NodeId,
+    assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
+  ) {
+    let bundleToKeep = nullthrows(bundleGraph.getNode(bundleToKeepId));
+    let bundleToRemove = nullthrows(bundleGraph.getNode(bundleToRemoveId));
+    invariant(bundleToKeep !== 'root' && bundleToRemove !== 'root');
+    for (let asset of bundleToRemove.assets) {
+      bundleToKeep.assets.add(asset);
+      bundleToKeep.size += asset.stats.size;
+
+      let newAssetReference = assetReference
+        .get(asset)
+        .map(([dep, bundle]) =>
+          bundle === bundleToRemove ? [dep, bundleToKeep] : [dep, bundle],
+        );
+
+      assetReference.set(asset, newAssetReference);
+    }
+
+    for (let sourceBundleId of bundleToRemove.sourceBundles) {
+      if (bundleToKeep.sourceBundles.has(sourceBundleId)) {
+        continue;
+      }
+
+      bundleToKeep.sourceBundles.add(sourceBundleId);
+      bundleGraph.addEdge(sourceBundleId, bundleToKeepId);
+    }
+
+    bundleGraph.removeNode(bundleToRemoveId);
   }
 
   return {
