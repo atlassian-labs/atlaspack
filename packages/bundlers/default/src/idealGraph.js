@@ -24,6 +24,7 @@ import invariant from 'assert';
 import nullthrows from 'nullthrows';
 
 import type {ResolvedBundlerConfig} from './bundlerConfig';
+import {findMergeCandidates} from './bundleMerge';
 
 /* BundleRoot - An asset that is the main entry of a Bundle. */
 type BundleRoot = Asset;
@@ -67,7 +68,7 @@ export const idealBundleGraphEdges = Object.freeze({
   conditional: 2,
 });
 
-type IdealBundleGraph = Graph<
+export type IdealBundleGraph = Graph<
   Bundle | 'root',
   $Values<typeof idealBundleGraphEdges>,
 >;
@@ -1228,6 +1229,8 @@ export function createIdealGraph(
     console.time('BundleOverlapScores');
     calculateAllOverlapScores();
     console.timeEnd('BundleOverlapScores');
+
+    findMergeCandidates(bundleGraph, Array.from(sharedBundles), 0.9);
 
     for (let bundleGroupId of bundleGraph.getNodeIdsConnectedFrom(rootNodeId)) {
       // Find shared bundles in this bundle group.
