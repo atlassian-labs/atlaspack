@@ -1,5 +1,17 @@
 # @atlaspack/apvm
 
+## 0.0.3
+
+### Patch Changes
+
+- [#517](https://github.com/atlassian-labs/atlaspack/pull/517) [`23a8687`](https://github.com/atlassian-labs/atlaspack/commit/23a8687f886a45ebec028882291732a07e70b02f) Thanks [@alshdavid](https://github.com/alshdavid)! - Fixing "package.json#main" specifier in npm shims produced by "apvm link"
+
+- [#507](https://github.com/atlassian-labs/atlaspack/pull/507) [`ef95f8c`](https://github.com/atlassian-labs/atlaspack/commit/ef95f8c1a1f3d47721ca49bc543fe0010f9edbb1) Thanks [@alshdavid](https://github.com/alshdavid)! - Added "version" to the package.json of shims
+
+- [#482](https://github.com/atlassian-labs/atlaspack/pull/482) [`4b5daf8`](https://github.com/atlassian-labs/atlaspack/commit/4b5daf81c7b2b42ffc1adc0af0422f38b4d82e60) Thanks [@alshdavid](https://github.com/alshdavid)! - Initial commit of Atlaspack Version Manager
+
+- [#509](https://github.com/atlassian-labs/atlaspack/pull/509) [`8e1bec1`](https://github.com/atlassian-labs/atlaspack/commit/8e1bec17f4b0ae5132c6777ec14bb2c1275724b1) Thanks [@alshdavid](https://github.com/alshdavid)! - Yarn install resets permissions on binaries. This change checks the binary has the correct permissions before running it and if not, sets the correct permissions
+
 ## 0.0.2
 
 ### Patch Changes

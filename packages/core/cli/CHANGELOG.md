@@ -1,5 +1,23 @@
 # @atlaspack/cli
 
+## 2.13.4
+
+### Patch Changes
+
+- [#516](https://github.com/atlassian-labs/atlaspack/pull/516) [`e1c9f47`](https://github.com/atlassian-labs/atlaspack/commit/e1c9f47f884a86d51eb3edff4135707c60f3f3fb) Thanks [@yamadapc](https://github.com/yamadapc)! - Make sure atlaspack debug build-asset-graph stores a no-lazy cache
+
+- Updated dependencies [[`9b85d3e`](https://github.com/atlassian-labs/atlaspack/commit/9b85d3e645b10bd027eed2304afc970a5ba40062), [`17b9579`](https://github.com/atlassian-labs/atlaspack/commit/17b9579484eced0ed8f23e2aba6d23b3c7238c39), [`8f4e6c1`](https://github.com/atlassian-labs/atlaspack/commit/8f4e6c1b0e7c1fd48624afda48c1dcc599f1460f)]:
+  - @atlaspack/feature-flags@2.14.2
+  - @atlaspack/core@2.15.1
+  - @atlaspack/fs@2.14.2
+  - @atlaspack/utils@2.14.2
+  - @atlaspack/reporter-cli@2.14.2
+  - @atlaspack/config-default@3.1.2
+  - @atlaspack/logger@2.14.2
+  - @atlaspack/package-manager@2.14.2
+  - @atlaspack/reporter-dev-server@2.14.2
+  - @atlaspack/reporter-tracer@2.14.2
+
 ## 2.13.3
 
 ### Patch Changes

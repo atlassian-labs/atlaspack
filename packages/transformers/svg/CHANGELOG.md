@@ -1,5 +1,13 @@
 # @atlaspack/transformer-svg
 
+## 2.14.2
+
+### Patch Changes
+
+- Updated dependencies [[`a891d65`](https://github.com/atlassian-labs/atlaspack/commit/a891d652bc4eb3d757d381adf65c5083f706effc), [`d02eab9`](https://github.com/atlassian-labs/atlaspack/commit/d02eab95eb60bf7457e0869af0b773608592c0e6), [`fb87a90`](https://github.com/atlassian-labs/atlaspack/commit/fb87a901973776b33ca4ce530e9d71669a9bd36d), [`7b9e8cf`](https://github.com/atlassian-labs/atlaspack/commit/7b9e8cf29e01a98e72e46b2b2fb74ccc514f4463)]:
+  - @atlaspack/rust@3.1.0
+  - @atlaspack/plugin@2.14.2
+
 ## 2.14.1
 
 ### Patch Changes
