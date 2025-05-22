@@ -83,7 +83,7 @@ export default function createAtlaspackConfigRequest(): AtlaspackConfigRequest {
         ...AtlaspackConfigChain,
         usedDefault: boolean,
       |} = await loadAtlaspackConfig(
-        optionsProxy(options, api.invalidateOnOptionChange),
+        optionsProxy(options, (opt) => api.invalidateOnOptionChange(opt)),
       );
 
       api.invalidateOnFileUpdate(config.filePath);
