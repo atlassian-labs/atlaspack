@@ -356,6 +356,16 @@ impl DatabaseWriter {
     Ok(self.database.get(txn, key)?.is_some())
   }
 
+  pub fn keys(&self, txn: &RoTxn, skip: usize, limit: usize) -> Result<Vec<String>> {
+    self
+      .database
+      .iter(txn)?
+      .skip(skip)
+      .take(limit)
+      .map(|entry| -> Result<_> { Ok(entry?.0.to_string()) })
+      .collect()
+  }
+
   /// Read an entry and decompress it
   pub fn get(&self, txn: &RoTxn, key: &str) -> Result<Option<Vec<u8>>> {
     if let Some(result) = self.database.get(txn, key)? {

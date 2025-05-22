@@ -60,6 +60,18 @@ export class LmdbWrapper {
     await this.lmdb.put(key, buffer);
   }
 
+  *keys(): Iterable<string> {
+    const PAGE_SIZE = 10000000;
+
+    let currentKeys = this.lmdb.keysSync(0, PAGE_SIZE);
+    while (currentKeys.length > 0) {
+      for (const key of currentKeys) {
+        yield key;
+      }
+      currentKeys = this.lmdb.keysSync(currentKeys.length, PAGE_SIZE);
+    }
+  }
+
   resetReadTxn() {}
 }
 
@@ -223,6 +235,10 @@ export class LMDBLiteCache implements Cache {
     }
 
     return this.store.delete(key);
+  }
+
+  keys(): Iterable<string> {
+    return this.store.keys();
   }
 
   refresh(): void {
