@@ -1,5 +1,11 @@
 # @atlaspack/apvm
 
+## 0.0.5
+
+### Patch Changes
+
+- [#519](https://github.com/atlassian-labs/atlaspack/pull/519) [`9dc57fe`](https://github.com/atlassian-labs/atlaspack/commit/9dc57fed22b42e40b4b4a11c60d65f342fffe26c) Thanks [@alshdavid](https://github.com/alshdavid)! - Added npm link support for git versions
+
 ## 0.0.4
 
 ### Patch Changes

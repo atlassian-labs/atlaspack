@@ -10,8 +10,8 @@
     "@babel/generator": "^7.22.10",
     "@babel/template": "^7.22.5",
     "@babel/types": "^7.22.11",
-    "@atlaspack/core": "^2.16.0",
-    "@atlaspack/fs": "^2.14.3",
+    "@atlaspack/core": "^2.16.1",
+    "@atlaspack/fs": "^2.14.4",
     "nanoid": "^3.1.12",
     "nullthrows": "^1.1.1"
   },

@@ -1,5 +1,15 @@
 # @atlaspack/rust
 
+## 3.2.0
+
+### Minor Changes
+
+- [#525](https://github.com/atlassian-labs/atlaspack/pull/525) [`cb9da16`](https://github.com/atlassian-labs/atlaspack/commit/cb9da16fb2648e7f53c64df0313f60d5fb8970cc) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix issues with large blob cache writes, run cache writes in a write transaction
+
+### Patch Changes
+
+- [#527](https://github.com/atlassian-labs/atlaspack/pull/527) [`1a2c14c`](https://github.com/atlassian-labs/atlaspack/commit/1a2c14c3cd4587551cc12e94d0680c8b71ea12bf) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix warnings when creating multiple instances on a process
+
 ## 3.1.1
 
 ### Patch Changes
