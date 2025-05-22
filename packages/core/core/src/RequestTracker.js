@@ -75,6 +75,123 @@ import {
   writeEnvironmentsToCache,
 } from './EnvironmentManager';
 
+class RunAPIImpl<T: RequestResult> implements RunAPI<T> {
+  requestId: NodeId;
+  previousInvalidations: Array<RequestInvalidation>;
+  requestTracker: RequestTracker;
+  subRequestContentKeys: Set<ContentKey>;
+
+  constructor(
+    requestId: NodeId,
+    previousInvalidations: Array<RequestInvalidation>,
+    requestTracker: RequestTracker,
+    subRequestContentKeys: Set<ContentKey>,
+  ) {
+    this.requestId = requestId;
+    this.previousInvalidations = previousInvalidations;
+    this.requestTracker = requestTracker;
+    this.subRequestContentKeys = subRequestContentKeys;
+  }
+
+  invalidateOnFileCreate(input: InternalFileCreateInvalidation): void {
+    this.requestTracker.graph.invalidateOnFileCreate(this.requestId, input);
+  }
+
+  invalidateOnConfigKeyChange(
+    filePath: ProjectPath,
+    configKey: string,
+    contentHash: string,
+  ): void {
+    this.requestTracker.graph.invalidateOnConfigKeyChange(
+      this.requestId,
+      filePath,
+      configKey,
+      contentHash,
+    );
+  }
+
+  invalidateOnFileDelete(filePath: ProjectPath): void {
+    this.requestTracker.graph.invalidateOnFileDelete(this.requestId, filePath);
+  }
+
+  invalidateOnFileUpdate(filePath: ProjectPath): void {
+    this.requestTracker.graph.invalidateOnFileUpdate(this.requestId, filePath);
+  }
+
+  invalidateOnStartup(): void {
+    this.requestTracker.graph.invalidateOnStartup(this.requestId);
+  }
+
+  invalidateOnBuild(): void {
+    this.requestTracker.graph.invalidateOnBuild(this.requestId);
+  }
+
+  invalidateOnEnvChange(env: string): void {
+    this.requestTracker.graph.invalidateOnEnvChange(
+      this.requestId,
+      env,
+      this.requestTracker.options.env[env],
+    );
+  }
+
+  invalidateOnOptionChange(option: string): void {
+    this.requestTracker.graph.invalidateOnOptionChange(
+      this.requestId,
+      option,
+      this.requestTracker.options[option],
+    );
+  }
+
+  getInvalidations(): Array<RequestInvalidation> {
+    return this.requestTracker.graph.getInvalidations(this.requestId);
+  }
+
+  storeResult(result: RequestResult, cacheKey?: string): void {
+    this.requestTracker.storeResult(this.requestId, result, cacheKey);
+  }
+
+  getSubRequests(): Array<RequestNode> {
+    return this.requestTracker.graph.getSubRequests(this.requestId);
+  }
+
+  getInvalidSubRequests(): Array<RequestNode> {
+    return this.requestTracker.graph.getInvalidSubRequests(this.requestId);
+  }
+
+  getPreviousResult<T: RequestResult>(ifMatch?: string): Async<?T> {
+    let contentKey = nullthrows(
+      this.requestTracker.graph.getNode(this.requestId)?.id,
+    );
+    return this.requestTracker.getRequestResult<T>(contentKey, ifMatch);
+  }
+
+  getRequestResult<T: RequestResult>(id: ContentKey): Async<?T> {
+    return this.requestTracker.getRequestResult<T>(id);
+  }
+
+  canSkipSubrequest(contentKey: ContentKey): boolean {
+    if (
+      this.requestTracker.graph.hasContentKey(contentKey) &&
+      this.requestTracker.hasValidResult(
+        this.requestTracker.graph.getNodeIdByContentKey(contentKey),
+      )
+    ) {
+      this.subRequestContentKeys.add(contentKey);
+      return true;
+    }
+
+    return false;
+  }
+
+  runRequest<TInput, TResult: RequestResult>(
+    subRequest: Request<TInput, TResult>,
+    opts?: RunRequestOpts,
+  ): Promise<TResult> {
+    this.subRequestContentKeys.add(subRequest.id);
+    return this.requestTracker.runRequest<TInput, TResult>(subRequest, opts);
+  }
+}
+
 export const requestGraphEdgeTypes = {
   subrequest: 2,
   invalidated_by_update: 3,
@@ -210,31 +327,31 @@ type RequestGraphNode =
   | OptionNode
   | ConfigKeyNode;
 
-export type RunAPI<TResult: RequestResult> = {|
-  invalidateOnFileCreate: (InternalFileCreateInvalidation) => void,
-  invalidateOnFileDelete: (ProjectPath) => void,
-  invalidateOnFileUpdate: (ProjectPath) => void,
-  invalidateOnConfigKeyChange: (
+export interface RunAPI<TResult: RequestResult> {
+  invalidateOnFileCreate(InternalFileCreateInvalidation): void;
+  invalidateOnFileDelete(ProjectPath): void;
+  invalidateOnFileUpdate(ProjectPath): void;
+  invalidateOnConfigKeyChange(
     filePath: ProjectPath,
     configKey: string[],
     contentHash: string,
-  ) => void,
-  invalidateOnStartup: () => void,
-  invalidateOnBuild: () => void,
-  invalidateOnEnvChange: (string) => void,
-  invalidateOnOptionChange: (string) => void,
-  getInvalidations(): Array<RequestInvalidation>,
-  storeResult(result: TResult, cacheKey?: string): void,
-  getRequestResult<T: RequestResult>(contentKey: ContentKey): Async<?T>,
-  getPreviousResult<T: RequestResult>(ifMatch?: string): Async<?T>,
-  getSubRequests(): Array<RequestNode>,
-  getInvalidSubRequests(): Array<RequestNode>,
-  canSkipSubrequest(ContentKey): boolean,
-  runRequest: <TInput, TResult: RequestResult>(
+  ): void;
+  invalidateOnStartup(): void;
+  invalidateOnBuild(): void;
+  invalidateOnEnvChange(string): void;
+  invalidateOnOptionChange(string): void;
+  getInvalidations(): Array<RequestInvalidation>;
+  storeResult(result: TResult, cacheKey?: string): void;
+  getRequestResult<T: RequestResult>(contentKey: ContentKey): Async<?T>;
+  getPreviousResult<T: RequestResult>(ifMatch?: string): Async<?T>;
+  getSubRequests(): Array<RequestNode>;
+  getInvalidSubRequests(): Array<RequestNode>;
+  canSkipSubrequest(ContentKey): boolean;
+  runRequest<TInput, TResult: RequestResult>(
     subRequest: Request<TInput, TResult>,
     opts?: RunRequestOpts,
-  ) => Promise<TResult>,
-|};
+  ): Promise<TResult>;
+}
 
 type RunRequestOpts = {|
   force: boolean,
@@ -1416,65 +1533,85 @@ export default class RequestTracker {
   createAPI<TResult: RequestResult>(
     requestId: NodeId,
     previousInvalidations: Array<RequestInvalidation>,
-  ): {|api: RunAPI<TResult>, subRequestContentKeys: Set<ContentKey>|} {
-    let subRequestContentKeys = new Set<ContentKey>();
-    let api: RunAPI<TResult> = {
-      invalidateOnFileCreate: (input) =>
-        this.graph.invalidateOnFileCreate(requestId, input),
-      invalidateOnConfigKeyChange: (filePath, configKey, contentHash) =>
-        this.graph.invalidateOnConfigKeyChange(
-          requestId,
-          filePath,
-          configKey,
-          contentHash,
-        ),
-      invalidateOnFileDelete: (filePath) =>
-        this.graph.invalidateOnFileDelete(requestId, filePath),
-      invalidateOnFileUpdate: (filePath) =>
-        this.graph.invalidateOnFileUpdate(requestId, filePath),
-      invalidateOnStartup: () => this.graph.invalidateOnStartup(requestId),
-      invalidateOnBuild: () => this.graph.invalidateOnBuild(requestId),
-      invalidateOnEnvChange: (env) =>
-        this.graph.invalidateOnEnvChange(requestId, env, this.options.env[env]),
-      invalidateOnOptionChange: (option) =>
-        this.graph.invalidateOnOptionChange(
-          requestId,
-          option,
-          this.options[option],
-        ),
-      getInvalidations: () => previousInvalidations,
-      storeResult: (result, cacheKey) => {
-        this.storeResult(requestId, result, cacheKey);
-      },
-      getSubRequests: () => this.graph.getSubRequests(requestId),
-      getInvalidSubRequests: () => this.graph.getInvalidSubRequests(requestId),
-      getPreviousResult: <T: RequestResult>(ifMatch?: string): Async<?T> => {
-        let contentKey = nullthrows(this.graph.getNode(requestId)?.id);
-        return this.getRequestResult<T>(contentKey, ifMatch);
-      },
-      getRequestResult: <T: RequestResult>(id): Async<?T> =>
-        this.getRequestResult<T>(id),
-      canSkipSubrequest: (contentKey) => {
-        if (
-          this.graph.hasContentKey(contentKey) &&
-          this.hasValidResult(this.graph.getNodeIdByContentKey(contentKey))
-        ) {
-          subRequestContentKeys.add(contentKey);
-          return true;
-        }
+  ): {|
+    api: RunAPI<TResult>,
+    subRequestContentKeys: Set<ContentKey>,
+  |} {
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      const subRequestContentKeys = new Set<ContentKey>();
+      const api = new RunAPIImpl(
+        requestId,
+        previousInvalidations,
+        this,
+        subRequestContentKeys,
+      );
 
-        return false;
-      },
-      runRequest: <TInput, TResult: RequestResult>(
-        subRequest: Request<TInput, TResult>,
-        opts?: RunRequestOpts,
-      ): Promise<TResult> => {
-        subRequestContentKeys.add(subRequest.id);
-        return this.runRequest<TInput, TResult>(subRequest, opts);
-      },
-    };
+      return {api, subRequestContentKeys};
+    } else {
+      let subRequestContentKeys = new Set<ContentKey>();
+      let api: RunAPI<TResult> = {
+        invalidateOnFileCreate: (input) =>
+          this.graph.invalidateOnFileCreate(requestId, input),
+        invalidateOnConfigKeyChange: (filePath, configKey, contentHash) =>
+          this.graph.invalidateOnConfigKeyChange(
+            requestId,
+            filePath,
+            configKey,
+            contentHash,
+          ),
+        invalidateOnFileDelete: (filePath) =>
+          this.graph.invalidateOnFileDelete(requestId, filePath),
+        invalidateOnFileUpdate: (filePath) =>
+          this.graph.invalidateOnFileUpdate(requestId, filePath),
+        invalidateOnStartup: () => this.graph.invalidateOnStartup(requestId),
+        invalidateOnBuild: () => this.graph.invalidateOnBuild(requestId),
+        invalidateOnEnvChange: (env) =>
+          this.graph.invalidateOnEnvChange(
+            requestId,
+            env,
+            this.options.env[env],
+          ),
+        invalidateOnOptionChange: (option) =>
+          this.graph.invalidateOnOptionChange(
+            requestId,
+            option,
+            this.options[option],
+          ),
+        getInvalidations: () => previousInvalidations,
+        storeResult: (result, cacheKey) => {
+          this.storeResult(requestId, result, cacheKey);
+        },
+        getSubRequests: () => this.graph.getSubRequests(requestId),
+        getInvalidSubRequests: () =>
+          this.graph.getInvalidSubRequests(requestId),
+        getPreviousResult: <T: RequestResult>(ifMatch?: string): Async<?T> => {
+          let contentKey = nullthrows(this.graph.getNode(requestId)?.id);
+          return this.getRequestResult<T>(contentKey, ifMatch);
+        },
+        getRequestResult: <T: RequestResult>(id): Async<?T> =>
+          this.getRequestResult<T>(id),
+        canSkipSubrequest: (contentKey) => {
+          if (
+            this.graph.hasContentKey(contentKey) &&
+            this.hasValidResult(this.graph.getNodeIdByContentKey(contentKey))
+          ) {
+            subRequestContentKeys.add(contentKey);
+            return true;
+          }
 
-    return {api, subRequestContentKeys};
+          return false;
+        },
+        runRequest: <TInput, TResult: RequestResult>(
+          subRequest: Request<TInput, TResult>,
+          opts?: RunRequestOpts,
+        ): Promise<TResult> => {
+          subRequestContentKeys.add(subRequest.id);
+          return this.runRequest<TInput, TResult>(subRequest, opts);
+        },
+      };
+
+      return {api, subRequestContentKeys};
+    }
   }
 
   async writeToCache(signal?: AbortSignal) {

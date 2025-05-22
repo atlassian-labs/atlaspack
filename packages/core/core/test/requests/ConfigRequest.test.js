@@ -90,22 +90,27 @@ describe('ConfigRequest tests', () => {
     });
 
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnFileUpdate).called,
       'Invalidate was called',
     );
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnFileUpdate).calledWith('path1'),
       'Invalidate was called with path1',
     );
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnFileUpdate).calledWith('path2'),
       'Invalidate was called with path2',
     );
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnFileDelete).calledWith('path1'),
       'Invalidate was called with path1',
     );
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnFileDelete).calledWith('path2'),
       'Invalidate was called with path2',
     );
@@ -126,22 +131,26 @@ describe('ConfigRequest tests', () => {
     });
 
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnFileCreate).called,
       'Invalidate was called',
     );
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnFileCreate).calledWithMatch({
         filePath: 'filePath',
       }),
       'Invalidate was called for path',
     );
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnFileCreate).calledWithMatch({
         glob: 'glob',
       }),
       'Invalidate was called for glob',
     );
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnFileCreate).calledWithMatch({
         fileName: 'package.json',
         aboveFilePath: 'fileAbove',
@@ -158,14 +167,17 @@ describe('ConfigRequest tests', () => {
     });
 
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnEnvChange).called,
       'Invalidate was called',
     );
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnEnvChange).calledWithMatch('env1'),
       'Invalidate was called for env1',
     );
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnEnvChange).calledWithMatch('env2'),
       'Invalidate was called for env1',
     );
@@ -179,14 +191,17 @@ describe('ConfigRequest tests', () => {
     });
 
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnOptionChange).called,
       'Invalidate was called',
     );
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnOptionChange).calledWithMatch('option1'),
       'Invalidate was called for option1',
     );
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnOptionChange).calledWithMatch('option2'),
       'Invalidate was called for option2',
     );
@@ -200,6 +215,7 @@ describe('ConfigRequest tests', () => {
     });
 
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnStartup).called,
       'Invalidate was called',
     );
@@ -213,6 +229,7 @@ describe('ConfigRequest tests', () => {
     });
 
     assert(
+      // $FlowFixMe
       mockCast(mockRunApi.invalidateOnBuild).called,
       'Invalidate was called',
     );
@@ -244,6 +261,7 @@ describe('ConfigRequest tests', () => {
       'readFile was called',
     );
 
+    // $FlowFixMe
     const call = mockCast(mockRunApi.invalidateOnConfigKeyChange).getCall(0);
     assert.deepEqual(
       call.args,
