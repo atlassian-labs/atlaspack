@@ -24,9 +24,9 @@ fn main() {
     println!("------------ {} -----------", dep);
     let resolved = match cjs_resolver.resolve(dep, &cwd, SpecifierType::Esm).result {
       Ok(res) => res.0,
-      Err(e) => {
+      Err(_e) => {
         #[cfg(debug_assertions)]
-        println!("FAILED TO RESOLVE {} {:?}", dep, e);
+        println!("FAILED TO RESOLVE {} {:?}", dep, _e);
         return;
       }
     };
@@ -37,9 +37,9 @@ fn main() {
           // #[cfg(debug_assertions)]
           // println!("{:?}", res)
         }
-        Err(err) => {
+        Err(_err) => {
           #[cfg(debug_assertions)]
-          println!("FAIL: {:?}", err)
+          println!("FAIL: {:?}", _err)
         }
       }
     }
