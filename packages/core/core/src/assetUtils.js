@@ -16,7 +16,6 @@ import type {
   Asset,
   RequestInvalidation,
   Dependency,
-  Environment,
   AtlaspackOptions,
 } from './types';
 
@@ -56,7 +55,7 @@ export type AssetOptions = {|
   bundleBehavior?: ?BundleBehavior,
   isBundleSplittable?: ?boolean,
   isSource: boolean,
-  env: Environment,
+  env: string,
   meta?: Meta,
   outputHash?: ?string,
   pipeline?: ?string,
@@ -71,7 +70,7 @@ export type AssetOptions = {|
 
 export function createAssetIdFromOptions(options: AssetOptions): string {
   const data = {
-    environmentId: options.env.id,
+    environmentId: options.env,
     filePath: options.filePath,
     code: options.code,
     pipeline: options.pipeline,
