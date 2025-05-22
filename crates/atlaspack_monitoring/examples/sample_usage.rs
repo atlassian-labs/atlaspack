@@ -76,7 +76,7 @@ fn main() {
   }
 
   let exe = std::env::current_exe().expect("Unable to find ourselves");
-  let server = std::process::Command::new(exe)
+  let mut server = std::process::Command::new(exe)
     .arg("--server")
     .spawn()
     .expect("Unable to spawn server process");
@@ -105,4 +105,6 @@ fn main() {
           handler.simulate_exception(None);
       }
   }
+
+  server.wait().unwrap();
 }
