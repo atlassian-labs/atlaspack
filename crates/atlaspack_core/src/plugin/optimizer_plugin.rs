@@ -53,9 +53,7 @@ mod tests {
 
   #[test]
   fn can_be_defined_in_dyn_vec() {
-    let mut optimizers = Vec::<Box<dyn OptimizerPlugin>>::new();
-
-    optimizers.push(Box::new(TestOptimizerPlugin {}));
+    let optimizers: Vec<Box<dyn OptimizerPlugin>> = vec![Box::new(TestOptimizerPlugin {})];
 
     assert_eq!(optimizers.len(), 1);
   }

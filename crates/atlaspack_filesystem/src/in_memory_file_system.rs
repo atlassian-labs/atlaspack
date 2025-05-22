@@ -176,9 +176,9 @@ mod tests {
   fn test_remove_relative_parent_dots() {
     let fs = InMemoryFileSystem::default();
     let result = fs
-      .canonicalize(&root_dir().join("/foo/./bar/../baz/"), &Default::default())
+      .canonicalize(&root_dir().join("foo/./bar/../baz/"), &Default::default())
       .unwrap();
-    assert_eq!(result, root_dir().join("/foo/baz"));
+    assert_eq!(result, root_dir().join("foo/baz"));
   }
 
   #[test]
@@ -188,7 +188,7 @@ mod tests {
     let result = fs
       .canonicalize(Path::new("./foo/./bar/../baz/"), &Default::default())
       .unwrap();
-    assert_eq!(result, root_dir().join("/other/foo/baz"));
+    assert_eq!(result, root_dir().join("other/foo/baz"));
     assert!(result.is_absolute());
   }
 

@@ -542,8 +542,7 @@ mod tests {
       .await
       .unwrap()
     else {
-      assert!(false, "Got invalid result");
-      return;
+      panic!("Got invalid result");
     };
 
     assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 0);
