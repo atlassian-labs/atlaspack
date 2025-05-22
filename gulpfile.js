@@ -20,6 +20,7 @@ const IGNORED_PACKAGES = [
   '!packages/core/utils/**',
   '!packages/reporters/cli/**',
   '!packages/reporters/dev-server/**',
+  '!packages/dev/inspector/src/frontend/**',
 ];
 
 const paths = {

@@ -1,0 +1,28 @@
+{
+  "name": "@atlaspack/inspector",
+  "version": "2.16.0",
+  "license": "(MIT OR Apache-2.0)",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "./ensure-no-dev-lib.sh",
+    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
+  "bin": {
+    "atlaspack-inspector": "bin/atlaspack-inspector.js"
+  },
+  "main": "src/index.js",
+  "dependencies": {
+    "@atlaspack/core": "2.16.1",
+    "@atlaspack/cache": "3.1.0",
+    "express": "^5.1.0",
+    "commander": "^7.0.0"
+  },
+  "devDependencies": {},
+  "type": "commonjs"
+}

@@ -1858,7 +1858,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     : `requestGraph-${cacheKey}`;
 
   let timeout;
-  const snapshotKey = `snapshot-${cacheKey}`;
+  const snapshotKey = `snapshot-${hashString(cacheKey)}`;
   const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');
 
   const commonMeta = {
