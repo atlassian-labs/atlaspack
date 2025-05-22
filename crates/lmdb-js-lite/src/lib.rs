@@ -188,20 +188,20 @@ impl LMDB {
   pub fn has_sync(&self, key: String) -> napi::Result<bool> {
     let database_handle = self.get_database_napi()?;
     let database = &database_handle.database;
+    let txn = self.read_txn()?;
 
-    let txn = if let Some(txn) = &self.read_transaction {
-      writer::Transaction::Borrowed(txn)
-    } else {
-      writer::Transaction::Owned(
-        database
-          .read_txn()
-          .map_err(|err| napi_error(anyhow!(err)))?,
-      )
-    };
+    database.has(txn.deref(), &key).map_err(napi_error)
+  }
+
+  #[napi]
+  pub fn keys_sync(&self, skip: i32, limit: i32) -> napi::Result<Vec<String>> {
+    let database_handle = self.get_database_napi()?;
+    let database = &database_handle.database;
+    let txn = self.read_txn()?;
 
     database
-      .has(txn.deref(), &key)
-      .map_err(|err| napi_error(anyhow!(err)))
+      .keys(txn.deref(), skip as usize, limit as usize)
+      .map_err(napi_error)
   }
 
   #[napi(ts_return_type = "Buffer | null")]
@@ -209,15 +209,7 @@ impl LMDB {
     let database_handle = self.get_database_napi()?;
     let database = &database_handle.database;
 
-    let txn = if let Some(txn) = &self.read_transaction {
-      writer::Transaction::Borrowed(txn)
-    } else {
-      writer::Transaction::Owned(
-        database
-          .read_txn()
-          .map_err(|err| napi_error(anyhow!(err)))?,
-      )
-    };
+    let txn = self.read_txn()?;
     let buffer = database.get(txn.deref(), &key);
     let Some(buffer) = buffer.map_err(|err| napi_error(anyhow!(err)))? else {
       return Ok(env.get_null()?.into_unknown());
@@ -408,6 +400,19 @@ impl LMDB {
 }
 
 impl LMDB {
+  /// On the main thread, we either start a new read transaction on each read, or use the currently
+  /// active read transaction.
+  fn read_txn(&self) -> napi::Result<writer::Transaction> {
+    if let Some(txn) = &self.read_transaction {
+      Ok(writer::Transaction::Borrowed(txn))
+    } else {
+      let database = self.get_database_napi()?;
+      Ok(writer::Transaction::Owned(
+        database.database.read_txn().map_err(napi_error)?,
+      ))
+    }
+  }
+
   pub fn get_database_napi(&self) -> napi::Result<&Arc<DatabaseHandle>> {
     let inner = self
       .inner

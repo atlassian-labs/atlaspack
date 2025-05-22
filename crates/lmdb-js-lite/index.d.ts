@@ -32,6 +32,7 @@ export declare class Lmdb {
   constructor(options: LmdbOptions)
   get(key: string): Promise<Buffer | null | undefined>
   hasSync(key: string): boolean
+  keysSync(skip: number, limit: number): Array<string>
   getSync(key: string): Buffer | null
   getManySync(keys: Array<string>): Array<Buffer | undefined | null>
   putMany(entries: Array<Entry>): Promise<void>

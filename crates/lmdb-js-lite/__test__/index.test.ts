@@ -137,4 +137,24 @@ describe("lmdb", () => {
     });
 
   });
+
+  describe('keys', () => {
+    it('can iterate over keys', async () => {
+      db = new Lmdb({
+        path: "./databases/test.db",
+        asyncWrites,
+        mapSize: MAP_SIZE,
+      });
+
+      await db.put("key1", v8.serialize(1));
+      await db.put("key2", v8.serialize(2));
+      await db.put("key3", v8.serialize(3));
+
+      const keys1 = await db.keysSync(0, 1);
+      assert.deepEqual(keys1, ["key1"]);
+
+      const keys2 = await db.keysSync(1, 2);
+      assert.deepEqual(keys2, ["key2", "key3"]);
+    });
+  });
 });

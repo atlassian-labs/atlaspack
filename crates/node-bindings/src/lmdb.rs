@@ -26,6 +26,11 @@ impl LMDB {
     self.inner.has_sync(key)
   }
 
+  #[napi]
+  pub fn keys_sync(&self, skip: i32, limit: i32) -> napi::Result<Vec<String>> {
+    self.inner.keys_sync(skip, limit)
+  }
+
   #[napi(ts_return_type = "Buffer | null")]
   pub fn get_sync(&self, env: Env, key: String) -> napi::Result<JsUnknown> {
     self.inner.get_sync(env, key)
