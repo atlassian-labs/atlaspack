@@ -26,7 +26,7 @@ fn main() {
       Ok(res) => res.0,
       Err(_e) => {
         #[cfg(debug_assertions)]
-        println!("FAILED TO RESOLVE {} {:?}", dep, e);
+        println!("FAILED TO RESOLVE {} {:?}", dep, _e);
         return;
       }
     };
@@ -39,7 +39,7 @@ fn main() {
         }
         Err(_err) => {
           #[cfg(debug_assertions)]
-          println!("FAIL: {:?}", err)
+          println!("FAIL: {:?}", _err)
         }
       }
     }
