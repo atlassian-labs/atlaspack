@@ -20,7 +20,10 @@ function scoreBundleMerge(bundleA: Bundle, bundleB: Bundle): number {
     }
   }
 
-  return sharedSourceBundles / allSourceBundles.size;
+  let overlapScore = sharedSourceBundles / allSourceBundles.size;
+  let sizeScore = 1 / Math.log10(Math.min(bundleA.size, bundleB.size));
+
+  return overlapScore * sizeScore;
 }
 
 export function findMergeCandidates(
@@ -37,6 +40,9 @@ export function findMergeCandidates(
   for (let bundleId of bundles) {
     let bundle = bundleGraph.getNode(bundleId);
     invariant(bundle && bundle !== 'root');
+    if (bundle.type !== 'js') {
+      continue;
+    }
 
     for (let otherBundleId of bundles) {
       if (bundleId === otherBundleId) {
@@ -75,10 +81,10 @@ export function findMergeCandidates(
     }
   }
 
-  const clusters = [];
+  const clusters: Array<Array<NodeId>> = [];
 
   for (let candidate of candidates) {
-    let cluster = [];
+    let cluster: Array<NodeId> = [];
 
     graph.traverse((nodeId) => {
       cluster.push(graph.getNode(nodeId));
@@ -90,6 +96,39 @@ export function findMergeCandidates(
   }
 
   clusters.sort((a, b) => b.length - a.length);
+
+  let firstCluster = clusters[0];
+  let allSourceBundles = new Set();
+  let mergedBundleSize = 0;
+
+  for (let bundleId of firstCluster) {
+    let bundle = bundleGraph.getNode(bundleId);
+
+    invariant(bundle && bundle !== 'root');
+
+    mergedBundleSize += bundle.size;
+
+    for (let sourceBundle of bundle.sourceBundles) {
+      allSourceBundles.add(sourceBundle);
+    }
+  }
+
+  console.log('Merged bundle size', mergedBundleSize);
+  console.log('Number of source bundles', allSourceBundles.size);
+
+  for (let bundleId of firstCluster) {
+    let bundle = bundleGraph.getNode(bundleId);
+
+    invariant(bundle && bundle !== 'root');
+
+    console.table({
+      bundleId,
+      size: bundle.size,
+      sourceBundles: bundle.sourceBundles.size,
+      type: bundle.type,
+      overlapScore: bundle.sourceBundles.size / allSourceBundles.size,
+    });
+  }
 
   console.timeEnd('findMergeCandidates');
   console.log('Clusters', clusters);
