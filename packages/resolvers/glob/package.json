@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/resolver-glob",
-  "version": "2.14.3",
+  "version": "2.14.4",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,9 +16,9 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.1",
-    "@atlaspack/node-resolver-core": "3.5.3",
-    "@atlaspack/plugin": "2.14.3",
-    "@atlaspack/utils": "2.14.3",
+    "@atlaspack/node-resolver-core": "3.5.4",
+    "@atlaspack/plugin": "2.14.4",
+    "@atlaspack/utils": "2.14.4",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs"
