@@ -1605,6 +1605,18 @@ export default class RequestTracker {
         nodes: undefined,
       });
 
+      await runCacheImprovements(
+        () =>
+          serialiseAndSet(`request_tracker:cache_metadata:${cacheKey}`, {
+            version: ATLASPACK_VERSION,
+            entries: this.options.entries,
+            mode: this.options.mode,
+            shouldBuildLazily: this.options.shouldBuildLazily,
+            watchBackend: this.options.watchBackend,
+          }),
+        () => Promise.resolve(),
+      );
+
       let opts = getWatcherOptions(this.options);
       let snapshotPath = path.join(this.options.cacheDir, snapshotKey + '.txt');
 
