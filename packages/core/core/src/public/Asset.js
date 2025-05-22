@@ -36,6 +36,7 @@ import {
   BundleBehaviorNames,
 } from '../types';
 import {toInternalSourceLocation} from '../utils';
+import {fromEnvironmentId} from '../EnvironmentManager';
 
 const inspect = Symbol.for('nodejs.util.inspect.custom');
 
@@ -101,7 +102,10 @@ class BaseAsset {
   }
 
   get env(): IEnvironment {
-    return new Environment(this.#asset.value.env, this.#asset.options);
+    return new Environment(
+      fromEnvironmentId(this.#asset.value.env),
+      this.#asset.options,
+    );
   }
 
   get fs(): FileSystem {
@@ -210,7 +214,10 @@ export class Asset extends BaseAsset implements IAsset {
   }
 
   get env(): IEnvironment {
-    this.#env ??= new Environment(this.#asset.value.env, this.#asset.options);
+    this.#env ??= new Environment(
+      fromEnvironmentId(this.#asset.value.env),
+      this.#asset.options,
+    );
     return this.#env;
   }
 
