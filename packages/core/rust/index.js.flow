@@ -137,39 +137,49 @@ declare export class Hash {
   finish(): string;
 }
 
-export type Engines = {|
-  atlaspack?: string,
-  browsers?: string | string[],
-  electron?: string,
-  node?: string,
-|};
+export type Engines = {
+  +atlaspack?: string,
+  +browsers?: string | string[],
+  +electron?: string,
+  +node?: string,
+  +parcel?: string,
+  ...
+};
 
 export type Environment = {|
-  context: string,
-  engines: Engines,
-  includeNodeModules: IncludeNodeModules,
-  isLibrary: boolean,
-  loc?: SourceLocation,
-  outputFormat: string,
-  shouldScopeHoist: boolean,
-  shouldOptimize: boolean,
-  sourceMap?: {|
-    inline?: boolean,
-    inlineSources?: boolean,
-    sourceRoot?: string,
+  +context:
+    | 'browser'
+    | 'node'
+    | 'electron-main'
+    | 'electron-renderer'
+    | 'web-worker'
+    | 'worklet'
+    | 'service-worker',
+  +engines: Engines,
+  +includeNodeModules: IncludeNodeModules,
+  +isLibrary: boolean,
+  +loc: ?SourceLocation,
+  +outputFormat: 'esmodule' | 'commonjs' | 'global',
+  +shouldScopeHoist: boolean,
+  +shouldOptimize: boolean,
+  +sourceMap: ?{|
+    +inline?: boolean,
+    +inlineSources?: boolean,
+    +sourceRoot?: string,
   |},
-  sourceType: string,
+  +sourceType: 'script' | 'module',
+  +unstableSingleFileOutput: boolean,
 |};
 
 export type SourceLocation = {|
-  filePath: string,
-  start: {|
-    line: number,
-    column: number,
+  +filePath: ProjectPath,
+  +start: {|
+    +line: number,
+    +column: number,
   |},
-  end: {|
-    line: number,
-    column: number,
+  +end: {|
+    +line: number,
+    +column: number,
   |},
 |};
 
@@ -437,3 +447,13 @@ declare export class AtlaspackTracer {
   enter(label: string): number;
   exit(id: number): void;
 }
+
+declare export function getEnvironment(id: string): {|
+  ...Environment,
+  id: string,
+|};
+
+declare export function addEnvironment(environment: {|
+  ...Environment,
+  id: string,
+|}): void;
