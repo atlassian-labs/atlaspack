@@ -195,6 +195,7 @@ jobs:
       - uses: changesets/action@v1
         with:
           publish: yarn changesets-publish
+          createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
