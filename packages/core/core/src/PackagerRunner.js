@@ -63,6 +63,7 @@ import {getInvalidationId, getInvalidationHash} from './assetUtils';
 import {optionsProxy} from './utils';
 import {invalidateDevDeps} from './requests/DevDepRequest';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
+import {fromEnvironmentId} from './EnvironmentManager';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type Opts = {|
@@ -578,32 +579,32 @@ export default class PackagerRunner {
     );
     let inlineSources = false;
 
+    const bundleEnv = fromEnvironmentId(bundle.env);
     if (bundle.target) {
-      if (
-        bundle.env.sourceMap &&
-        bundle.env.sourceMap.sourceRoot !== undefined
-      ) {
-        sourceRoot = bundle.env.sourceMap.sourceRoot;
+      const bundleTargetEnv = fromEnvironmentId(bundle.target.env);
+
+      if (bundleEnv.sourceMap && bundleEnv.sourceMap.sourceRoot !== undefined) {
+        sourceRoot = bundleEnv.sourceMap.sourceRoot;
       } else if (
         this.options.serveOptions &&
-        bundle.target.env.context === 'browser'
+        bundleTargetEnv.context === 'browser'
       ) {
         sourceRoot = '/__parcel_source_root';
       }
 
       if (
-        bundle.env.sourceMap &&
-        bundle.env.sourceMap.inlineSources !== undefined
+        bundleEnv.sourceMap &&
+        bundleEnv.sourceMap.inlineSources !== undefined
       ) {
-        inlineSources = bundle.env.sourceMap.inlineSources;
-      } else if (bundle.target.env.context !== 'node') {
+        inlineSources = bundleEnv.sourceMap.inlineSources;
+      } else if (bundleTargetEnv.context !== 'node') {
         // inlining should only happen in production for browser targets by default
         inlineSources = this.options.mode === 'production';
       }
     }
 
     let mapFilename = fullPath + '.map';
-    let isInlineMap = bundle.env.sourceMap && bundle.env.sourceMap.inline;
+    let isInlineMap = bundleEnv.sourceMap && bundleEnv.sourceMap.inline;
 
     let stringified = await map.stringify({
       file: path.basename(mapFilename),
