@@ -63,16 +63,12 @@ export class LmdbWrapper {
   *keys(): Iterable<string> {
     const PAGE_SIZE = 10000000;
 
-    console.time('keys');
     let currentKeys = this.lmdb.keysSync(0, PAGE_SIZE);
-    console.timeEnd('keys');
     while (currentKeys.length > 0) {
       for (const key of currentKeys) {
         yield key;
       }
-      console.time('keys');
       currentKeys = this.lmdb.keysSync(currentKeys.length, PAGE_SIZE);
-      console.timeEnd('keys');
     }
   }
 
