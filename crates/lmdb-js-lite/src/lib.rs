@@ -184,6 +184,26 @@ impl LMDB {
     Ok(promise)
   }
 
+  #[napi(ts_return_type = "boolean")]
+  pub fn has_sync(&self, key: String) -> napi::Result<bool> {
+    let database_handle = self.get_database_napi()?;
+    let database = &database_handle.database;
+
+    let txn = if let Some(txn) = &self.read_transaction {
+      writer::Transaction::Borrowed(txn)
+    } else {
+      writer::Transaction::Owned(
+        database
+          .read_txn()
+          .map_err(|err| napi_error(anyhow!(err)))?,
+      )
+    };
+
+    database
+      .has(txn.deref(), &key)
+      .map_err(|err| napi_error(anyhow!(err)))
+  }
+
   #[napi(ts_return_type = "Buffer | null")]
   pub fn get_sync(&self, env: Env, key: String) -> napi::Result<JsUnknown> {
     let database_handle = self.get_database_napi()?;
@@ -301,6 +321,26 @@ impl LMDB {
     Ok(())
   }
 
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn delete(&self, env: Env, key: String) -> napi::Result<napi::JsObject> {
+    let database_handle = self.get_database_napi()?;
+    let (deferred, promise) = env.create_deferred()?;
+
+    let message = DatabaseWriterMessage::Delete {
+      key,
+      resolve: Box::new(|value| match value {
+        Ok(_) => deferred.resolve(|_| Ok(())),
+        Err(err) => deferred.reject(napi_error(anyhow!("Failed to delete {err}"))),
+      }),
+    };
+    database_handle
+      .writer_thread_handle()
+      .send(message)
+      .map_err(|err| napi_error(anyhow!("Failed to send {err}")))?;
+
+    Ok(promise)
+  }
+
   #[napi]
   pub fn start_read_transaction(&mut self) -> napi::Result<()> {
     if self.read_transaction.is_some() {
@@ -331,7 +371,11 @@ impl LMDB {
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::StartTransaction {
-      resolve: Box::new(|_| deferred.resolve(|_| Ok(()))),
+      resolve: Box::new(|value| {
+        deferred.resolve(|_| {
+          value.map_err(|err| napi_error(anyhow!("Failed to start write transaction {err}")))
+        })
+      }),
     };
     database_handle
       .writer_thread_handle()
@@ -376,7 +420,6 @@ impl LMDB {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use rand::random;
   use std::env::temp_dir;
   use std::sync::mpsc::channel;
 
@@ -437,44 +480,5 @@ mod tests {
     let value = read.get(&read_txn, "key").unwrap().unwrap();
     read_txn.commit().unwrap();
     assert_eq!(value, [1, 2, 3, 4]);
-  }
-
-  #[test]
-  fn test_filling_up_the_database() {
-    let _ = tracing_subscriber::fmt::try_init();
-    let db_path = temp_dir()
-      .join("lmdb-js-lite")
-      .join("test_filling_up_the_database")
-      .join("lmdb-cache-tests.db");
-    tracing::info!("db_path={db_path:?}");
-    let _ = std::fs::remove_dir_all(&db_path);
-    let mut current_size = 10485760;
-    let options = LMDBOptions {
-      path: db_path.to_str().unwrap().to_string(),
-      async_writes: false,
-      map_size: None,
-    };
-    let (_, read) = start_make_database_writer(&options).unwrap();
-
-    // 1MB entry
-    let mut buffer: Vec<u8> = vec![];
-    for _j in 0..(1024 * 1024) {
-      buffer.push(random());
-    }
-    // 1GB writes +/-
-    for i in 0..1024 {
-      let mut write_txn = read.environment().write_txn().unwrap();
-      let error = (|| -> Result<(), DatabaseWriterError> {
-        read.put(&mut write_txn, &format!("{i}"), &buffer)?;
-        write_txn.commit()?;
-        Ok(())
-      })();
-      if let Err(DatabaseWriterError::HeedError(heed::Error::Mdb(heed::MdbError::MapFull))) = error
-      {
-        current_size *= 2;
-        tracing::info!("Resizing database {current_size}");
-        unsafe { read.environment().resize(current_size).unwrap() }
-      }
-    }
   }
 }

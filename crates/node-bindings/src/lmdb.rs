@@ -21,6 +21,11 @@ impl LMDB {
     self.inner.get(env, key)
   }
 
+  #[napi(ts_return_type = "boolean")]
+  pub fn has_sync(&self, key: String) -> napi::Result<bool> {
+    self.inner.has_sync(key)
+  }
+
   #[napi(ts_return_type = "Buffer | null")]
   pub fn get_sync(&self, env: Env, key: String) -> napi::Result<JsUnknown> {
     self.inner.get_sync(env, key)
@@ -43,6 +48,11 @@ impl LMDB {
   #[napi(ts_return_type = "Promise<void>")]
   pub fn put(&self, env: Env, key: String, data: Buffer) -> napi::Result<napi::JsObject> {
     self.inner.put(env, key, data)
+  }
+
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn delete(&self, env: Env, key: String) -> napi::Result<napi::JsObject> {
+    self.inner.delete(env, key)
   }
 
   #[napi]

@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@atlaspack/build-cache": "2.13.3",
+    "@atlaspack/feature-flags": "2.14.2",
     "@atlaspack/fs": "2.14.3",
     "@atlaspack/logger": "2.14.3",
     "@atlaspack/rust": "3.1.1",

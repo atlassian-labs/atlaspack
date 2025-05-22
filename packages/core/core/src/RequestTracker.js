@@ -4,7 +4,7 @@ import invariant, {AssertionError} from 'assert';
 import path from 'path';
 
 import {deserialize, serialize} from '@atlaspack/build-cache';
-import type {Cache} from '@atlaspack/cache';
+import {LMDBLiteCache, type Cache} from '@atlaspack/cache';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {ContentGraph} from '@atlaspack/graph';
 import type {
@@ -14,7 +14,7 @@ import type {
   SerializedContentGraph,
   Graph,
 } from '@atlaspack/graph';
-import logger from '@atlaspack/logger';
+import logger, {instrument} from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
 import type {Async, EnvMap} from '@atlaspack/types';
 import {
@@ -1457,6 +1457,28 @@ export default class RequestTracker {
   }
 
   async writeToCache(signal?: AbortSignal) {
+    const options = this.options;
+    async function runCacheImprovements<T>(
+      newPath: (cache: LMDBLiteCache) => Promise<T>,
+      oldPath: () => Promise<T>,
+    ): Promise<T> {
+      if (getFeatureFlag('cachePerformanceImprovements')) {
+        invariant(options.cache instanceof LMDBLiteCache);
+        const result = await newPath(options.cache);
+        return result;
+      } else {
+        const result = await oldPath();
+        return result;
+      }
+    }
+
+    await runCacheImprovements(
+      async (cache) => {
+        await cache.getNativeRef().startWriteTransaction();
+      },
+      () => Promise.resolve(),
+    );
+
     let cacheKey = getCacheKey(this.options);
     let requestGraphKey = `requestGraph-${cacheKey}`;
     let snapshotKey = `snapshot-${cacheKey}`;
@@ -1475,10 +1497,8 @@ export default class RequestTracker {
 
     let serialisedGraph = this.graph.serialize();
 
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      // Delete an existing request graph cache, to prevent invalid states
-      await this.options.cache.deleteLargeBlob(requestGraphKey);
-    }
+    // Delete an existing request graph cache, to prevent invalid states
+    await this.options.cache.deleteLargeBlob(requestGraphKey);
 
     const serialiseAndSet = async (
       key: string,
@@ -1489,19 +1509,25 @@ export default class RequestTracker {
         throw new Error('Serialization was aborted');
       }
 
-      if (getFeatureFlag('cachePerformanceImprovements')) {
-        await this.options.cache.set(key, serialize(contents));
-      } else {
-        await this.options.cache.setLargeBlob(
-          key,
-          serialize(contents),
-          signal
-            ? {
-                signal: signal,
-              }
-            : undefined,
-        );
-      }
+      await runCacheImprovements(
+        (cache) => {
+          instrument(`cache.put(${key})`, () => {
+            cache.getNativeRef().putNoConfirm(key, serialize(contents));
+          });
+          return Promise.resolve();
+        },
+        async () => {
+          await this.options.cache.setLargeBlob(
+            key,
+            serialize(contents),
+            signal
+              ? {
+                  signal: signal,
+                }
+              : undefined,
+          );
+        },
+      );
 
       total += 1;
 
@@ -1592,6 +1618,13 @@ export default class RequestTracker {
       if (!signal?.aborted) throw err;
     }
 
+    await runCacheImprovements(
+      async (cache) => {
+        await cache.getNativeRef().commitWriteTransaction();
+      },
+      () => Promise.resolve(),
+    );
+
     report({type: 'cache', phase: 'end', total, size: this.graph.nodes.length});
   }
 
@@ -1640,14 +1673,6 @@ export async function readAndDeserializeRequestGraph(
   cacheKey: string,
 ): Async<{|requestGraph: RequestGraph, bufferLength: number|}> {
   let bufferLength = 0;
-
-  if (getFeatureFlag('cachePerformanceImprovements')) {
-    let data = nullthrows(await cache.get(requestGraphKey));
-    return {
-      requestGraph: RequestGraph.deserialize(data),
-      bufferLength,
-    };
-  }
 
   const getAndDeserialize = async (key: string) => {
     let buffer = await cache.getLargeBlob(key);
@@ -1699,10 +1724,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     },
   });
 
-  if (
-    !getFeatureFlag('cachePerformanceImprovements') &&
-    (await options.cache.hasLargeBlob(requestGraphKey))
-  ) {
+  if (await options.cache.hasLargeBlob(requestGraphKey)) {
     try {
       let {requestGraph} = await readAndDeserializeRequestGraph(
         options.cache,
