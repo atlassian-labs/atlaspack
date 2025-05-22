@@ -1,0 +1,44 @@
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+.sidebar {
+  height: 100vh;
+  overflow-y: scroll;
+  width: 300px;
+  border-right: 1px solid #ccc;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+  flex: 0 0 300px;
+}
+
+.sidebar h2 {
+  padding: 0 4px;
+}
+
+ul {
+  list-style: none;
+  padding: 0px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+li {
+  padding: 2px 4px;
+}
+
+.content {
+  flex: 1;
+  border-left: 1px solid #ccc;
+  display: flex;
+  width: calc(100% - 300px);
+  overflow-x: scroll;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px;
+}
