@@ -840,7 +840,6 @@ describe('conditional bundling', function () {
       outputFS: overlayFS,
       featureFlags: {
         conditionalBundlingApi: true,
-        conditionalBundlingNestedRuntime: true,
       },
       defaultConfig: path.join(dir, '.parcelrc'),
     });
@@ -923,7 +922,6 @@ describe('conditional bundling', function () {
         },
         featureFlags: {
           conditionalBundlingApi: true,
-          conditionalBundlingAsyncRuntime: true,
         },
         inputFS: overlayFS,
       },

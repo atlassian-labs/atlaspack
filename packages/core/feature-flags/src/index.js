@@ -17,11 +17,9 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   loadableSideEffects: false,
   reduceResolverStringCreation: false,
   inlineBundlesSourceMapFixes: false,
-  conditionalBundlingNestedRuntime: false,
   patchProjectPaths: false,
   cachePerformanceImprovements: false,
   inlineStringReplacementPerf: false,
-  conditionalBundlingAsyncRuntime: false,
   conditionalBundlingReporterDuplicateFix: false,
 };
 
