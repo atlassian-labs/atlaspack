@@ -1,6 +1,7 @@
 // @flow strict-local
 
 import invariant from 'assert';
+import nullthrows from 'nullthrows';
 import type {NodeId} from '@atlaspack/graph';
 import type {Bundle, IdealBundleGraph} from './idealGraph';
 import {ContentGraph} from '@atlaspack/graph';
@@ -20,18 +21,35 @@ function scoreBundleMerge(bundleA: Bundle, bundleB: Bundle): number {
     }
   }
 
-  let overlapScore = sharedSourceBundles / allSourceBundles.size;
-  let sizeScore = 1 / Math.log10(Math.min(bundleA.size, bundleB.size));
+  return sharedSourceBundles / allSourceBundles.size;
+}
 
-  return overlapScore * sizeScore;
+function getMergeClusters(
+  graph: ContentGraph<NodeId>,
+  candidates: Set<NodeId>,
+): Array<Array<NodeId>> {
+  let clusters = [];
+
+  for (let candidate of candidates) {
+    let cluster: Array<NodeId> = [];
+
+    graph.traverse((nodeId) => {
+      cluster.push(nullthrows(graph.getNode(nodeId)));
+      // Remove node from candidates as it has already been processed
+      candidates.delete(nodeId);
+    }, candidate);
+
+    clusters.push(cluster);
+  }
+
+  return clusters;
 }
 
 export function findMergeCandidates(
   bundleGraph: IdealBundleGraph,
   bundles: Array<NodeId>,
   threshold: number,
-) {
-  console.time('findMergeCandidates');
+): Array<Array<NodeId>> {
   let graph = new ContentGraph<NodeId>();
   let seen = new Set<string>();
   let candidates = new Set<NodeId>();
@@ -81,55 +99,5 @@ export function findMergeCandidates(
     }
   }
 
-  const clusters: Array<Array<NodeId>> = [];
-
-  for (let candidate of candidates) {
-    let cluster: Array<NodeId> = [];
-
-    graph.traverse((nodeId) => {
-      cluster.push(graph.getNode(nodeId));
-      // Remove node from candidates as it has already been processed
-      candidates.delete(nodeId);
-    }, candidate);
-
-    clusters.push(cluster);
-  }
-
-  clusters.sort((a, b) => b.length - a.length);
-
-  let firstCluster = clusters[0];
-  let allSourceBundles = new Set();
-  let mergedBundleSize = 0;
-
-  for (let bundleId of firstCluster) {
-    let bundle = bundleGraph.getNode(bundleId);
-
-    invariant(bundle && bundle !== 'root');
-
-    mergedBundleSize += bundle.size;
-
-    for (let sourceBundle of bundle.sourceBundles) {
-      allSourceBundles.add(sourceBundle);
-    }
-  }
-
-  console.log('Merged bundle size', mergedBundleSize);
-  console.log('Number of source bundles', allSourceBundles.size);
-
-  for (let bundleId of firstCluster) {
-    let bundle = bundleGraph.getNode(bundleId);
-
-    invariant(bundle && bundle !== 'root');
-
-    console.table({
-      bundleId,
-      size: bundle.size,
-      sourceBundles: bundle.sourceBundles.size,
-      type: bundle.type,
-      overlapScore: bundle.sourceBundles.size / allSourceBundles.size,
-    });
-  }
-
-  console.timeEnd('findMergeCandidates');
-  console.log('Clusters', clusters);
+  return getMergeClusters(graph, candidates);
 }

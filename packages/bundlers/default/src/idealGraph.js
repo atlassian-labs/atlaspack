@@ -23,8 +23,8 @@ import {DefaultMap, globToRegex} from '@atlaspack/utils';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
 
-import type {ResolvedBundlerConfig} from './bundlerConfig';
 import {findMergeCandidates} from './bundleMerge';
+import type {ResolvedBundlerConfig} from './bundlerConfig';
 
 /* BundleRoot - An asset that is the main entry of a Bundle. */
 type BundleRoot = Asset;
@@ -68,7 +68,7 @@ export const idealBundleGraphEdges = Object.freeze({
   conditional: 2,
 });
 
-export type IdealBundleGraph = Graph<
+type IdealBundleGraph = Graph<
   Bundle | 'root',
   $Values<typeof idealBundleGraphEdges>,
 >;
@@ -84,42 +84,6 @@ export type IdealGraph = {|
   dependencyBundleGraph: DependencyBundleGraph,
   manualAssetToBundle: Map<Asset, NodeId>,
 |};
-
-// Returns a decimal showing the proportion source bundles are common to
-// both bundles versus the total number of source bundles.
-function calculateBundleOverlap(
-  bundleGraph: IdealBundleGraph,
-  bundleIdA: NodeId,
-  bundleIdB: NodeId,
-): number {
-  let bundleA = nullthrows(
-    bundleGraph.getNode(bundleIdA),
-    `Bundle not found: ${bundleIdA} - overlap`,
-  );
-  let bundleB = nullthrows(
-    bundleGraph.getNode(bundleIdB),
-    `Bundle not found: ${bundleIdB} - overlap`,
-  );
-  invariant(bundleA !== 'root' && bundleB !== 'root');
-
-  let sharedSourceBundles = 0;
-  let allSourceBundles = new Set([
-    ...bundleA.sourceBundles,
-    ...bundleB.sourceBundles,
-  ]);
-
-  for (let bundle of bundleB.sourceBundles) {
-    if (bundleA.sourceBundles.has(bundle)) {
-      sharedSourceBundles++;
-    }
-  }
-
-  return sharedSourceBundles / allSourceBundles.size;
-}
-
-function sortBundlesBySize(a, b) {
-  return b.bundle.size - a.bundle.size;
-}
 
 export function createIdealGraph(
   assetGraph: MutableBundleGraph,
@@ -911,7 +875,6 @@ export function createIdealGraph(
       if (!manualSharedMap.has(manualSharedBundleKey)) {
         let firstSourceBundle = nullthrows(
           bundleGraph.getNode(sourceBundles[0]),
-          'Bro are you sure this is the error',
         );
         invariant(firstSourceBundle !== 'root');
 
@@ -1181,74 +1144,33 @@ export function createIdealGraph(
     }
   }
 
-  let modifiedSourceBundles = new Set();
+  // Step merge shared bundles that meet the overlap threshold
+  // This step is skipped by default as the threshold defaults to 1
+  if (config.sharedBundleMergeThreshold < 1) {
+    mergeOverlapBundles();
+  }
 
   // Step Remove Shared Bundles: Remove shared bundles from bundle groups that hit the parallel request limit.
+  let modifiedSourceBundles = new Set();
+
   if (config.disableSharedBundles === false) {
-    console.time('PRL merging');
-    let sharedBundles = new Set<NodeId>();
-
-    bundleGraph.traverse((nodeId) => {
-      let bundle = bundleGraph.getNode(nodeId);
-
-      if (!bundle) {
-        throw new Error(`Unable to find bundle ${nodeId} in bundle graph`);
-      }
-
-      if (bundle === 'root') {
-        return;
-      }
-
-      if (bundle.sourceBundles.size > 0 && bundle.manualSharedBundle == null) {
-        sharedBundles.add(nodeId);
-      }
-    });
-
-    let bundleOverlapThreshold = 0.8;
-    let bundleOverlapScores = new Map<NodeId, Map<NodeId, number>>();
-
-    function calculateAllOverlapScores() {
-      bundleOverlapScores.clear();
-
-      for (let bundleId of sharedBundles) {
-        let bundleOverlapScore = new Map<NodeId, number>();
-
-        for (let otherBundle of sharedBundles) {
-          if (bundleId !== otherBundle) {
-            bundleOverlapScore.set(
-              otherBundle,
-              calculateBundleOverlap(bundleGraph, bundleId, otherBundle),
-            );
-          }
-        }
-
-        bundleOverlapScores.set(bundleId, bundleOverlapScore);
-      }
-    }
-
-    // console.time('BundleOverlapScores');
-    // calculateAllOverlapScores();
-    // console.timeEnd('BundleOverlapScores');
-
-    findMergeCandidates(bundleGraph, Array.from(sharedBundles), 0.3);
-
     for (let bundleGroupId of bundleGraph.getNodeIdsConnectedFrom(rootNodeId)) {
       // Find shared bundles in this bundle group.
       let bundleId = bundleGroupId;
 
       // We should include "bundle reuse" as shared bundles that may be removed but the bundle itself would have to be retained
-      let bundleIdsInGroup = getBundlesForBundleGroup(bundleId); //get all bundlegroups this bundle is an ancestor of
+      let bundleIdsInGroup = getBundlesForBundleGroup(bundleId); //get all bundlegrups this bundle is an ancestor of
 
       // Filter out inline assests as they should not contribute to PRL
       let numBundlesContributingToPRL = bundleIdsInGroup.reduce((count, b) => {
-        let bundle = nullthrows(bundleGraph.getNode(b), '1');
+        let bundle = nullthrows(bundleGraph.getNode(b));
         invariant(bundle !== 'root');
         return count + (bundle.bundleBehavior !== 'inline');
       }, 0);
 
       if (numBundlesContributingToPRL > config.maxParallelRequests) {
         let sharedBundleIdsInBundleGroup = bundleIdsInGroup.filter((b) => {
-          let bundle = nullthrows(bundleGraph.getNode(b), '2');
+          let bundle = nullthrows(bundleGraph.getNode(b));
           // shared bundles must have source bundles, we could have a bundle
           // connected to another bundle that isnt a shared bundle, so check
           return (
@@ -1263,7 +1185,7 @@ export function createIdealGraph(
         let sharedBundlesInGroup = sharedBundleIdsInBundleGroup
           .map((id) => ({
             id,
-            bundle: nullthrows(bundleGraph.getNode(id), '3'),
+            bundle: nullthrows(bundleGraph.getNode(id)),
           }))
           .map(({id, bundle}) => {
             // For Flow
@@ -1283,65 +1205,20 @@ export function createIdealGraph(
           //TODO add integration test where bundles in bunlde group > max parallel request limit & only remove a couple shared bundles
           // but total # bundles still exceeds limit due to non shared bundles
 
-          // Check for a merge opportunity with the bundle that has the most
-          // overlap with this one.
-          // let bestBundleId = null;
-          // let bestOverlap = 0;
-          //
-          // let bundleOverlapsForTargetBundle =
-          //   bundleOverlapScores.get(bundleIdToRemove);
-          //
-          // if (bundleOverlapsForTargetBundle != null) {
-          //   for (let otherBundleId of bundleOverlapsForTargetBundle.keys()) {
-          //     let otherBundleMap = bundleOverlapScores.get(bundleIdToRemove);
-          //
-          //     if (otherBundleMap == null) {
-          //       continue;
-          //     }
-          //
-          //     let overlap = otherBundleMap.get(otherBundleId) ?? 0;
-          //
-          //     if (overlap >= bundleOverlapThreshold && overlap > bestOverlap) {
-          //       bestOverlap = overlap;
-          //       bestBundleId = otherBundleId;
-          //     }
-          //   }
-          // }
-
-          // if (bestBundleId != null) {
-          //   console.log(`Merge ${bundleIdToRemove} into ${bestBundleId}`);
-          //   bundleOverlapScores.delete(bundleIdToRemove);
-          //   for (let otherBundleId of bundleOverlapScores.keys()) {
-          //     bundleOverlapScores.get(otherBundleId)?.delete(bundleIdToRemove);
-          //   }
-          //
-          //   mergeBundles(
-          //     bundleGraph,
-          //     bestBundleId,
-          //     bundleIdToRemove,
-          //     assetReference,
-          //   );
-          //   sharedBundlesInGroup.sort(sortBundlesBySize);
-          //   sharedBundles.delete(bundleIdToRemove);
-          //   calculateAllOverlapScores();
-          // } else {
-          console.log(`Deleting ${bundleIdToRemove}`);
           // Add all assets in the shared bundle into the source bundles that are within this bundle group.
           let sourceBundles = [...bundleToRemove.sourceBundles].filter((b) =>
             bundleIdsInGroup.includes(b),
           );
+
           for (let sourceBundleId of sourceBundles) {
-            let sourceBundle = nullthrows(
-              bundleGraph.getNode(sourceBundleId),
-              '4',
-            );
+            let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
             invariant(sourceBundle !== 'root');
             modifiedSourceBundles.add(sourceBundle);
             bundleToRemove.sourceBundles.delete(sourceBundleId);
             for (let asset of bundleToRemove.assets) {
               addAssetToBundleRoot(
                 asset,
-                nullthrows(sourceBundle.mainEntryAsset, '5'),
+                nullthrows(sourceBundle.mainEntryAsset),
               );
             }
             //This case is specific to reused bundles, which can have shared bundles attached to it
@@ -1373,124 +1250,10 @@ export function createIdealGraph(
               bundleGraph.removeEdge(sourceBundleId, bundleIdToRemove);
             }
           }
-          // }
           numBundlesContributingToPRL--;
         }
       }
     }
-    console.timeEnd('PRL merging');
-  }
-
-  function getBigIntFromContentKey(contentKey) {
-    let b = Buffer.alloc(64);
-    b.write(contentKey);
-    // $FlowFixMe Flow doesn't have BigInt types in this version
-    return b.readBigInt64BE();
-  }
-  // Fix asset order in source bundles as they are likely now incorrect after shared bundle deletion
-  if (modifiedSourceBundles.size > 0) {
-    let assetOrderMap = new Map(assets.map((a, index) => [a, index]));
-
-    for (let bundle of modifiedSourceBundles) {
-      bundle.assets = new Set(
-        [...bundle.assets].sort((a, b) => {
-          let aIndex = nullthrows(assetOrderMap.get(a), '6');
-          let bIndex = nullthrows(assetOrderMap.get(b), '7');
-
-          return aIndex - bIndex;
-        }),
-      );
-    }
-  }
-  function deleteBundle(bundleRoot: BundleRoot) {
-    bundleGraph.removeNode(nullthrows(bundles.get(bundleRoot.id), '8'));
-    bundleRoots.delete(bundleRoot);
-    bundles.delete(bundleRoot.id);
-    let bundleRootId = assetToBundleRootNodeId.get(bundleRoot);
-    if (bundleRootId != null && bundleRootGraph.hasNode(bundleRootId)) {
-      bundleRootGraph.removeNode(bundleRootId);
-    }
-  }
-  function getBundlesForBundleGroup(bundleGroupId) {
-    let bundlesInABundleGroup = [];
-    bundleGraph.traverse((nodeId) => {
-      bundlesInABundleGroup.push(nodeId);
-    }, bundleGroupId);
-    return bundlesInABundleGroup;
-  }
-
-  function getBundleFromBundleRoot(bundleRoot: BundleRoot): Bundle {
-    let bundle = bundleGraph.getNode(
-      nullthrows(bundleRoots.get(bundleRoot), '9')[0],
-    );
-    invariant(bundle !== 'root' && bundle != null);
-    return bundle;
-  }
-
-  function addAssetToBundleRoot(asset: Asset, bundleRoot: Asset) {
-    let [bundleId, bundleGroupId] = nullthrows(
-      bundleRoots.get(bundleRoot),
-      '10',
-    );
-    let bundle = nullthrows(bundleGraph.getNode(bundleId), '11');
-    invariant(bundle !== 'root');
-
-    if (asset.type !== bundle.type) {
-      let bundleGroup = nullthrows(bundleGraph.getNode(bundleGroupId), '12');
-      invariant(bundleGroup !== 'root');
-      let key =
-        nullthrows(bundleGroup.mainEntryAsset, '13').id + '.' + asset.type;
-      let typeChangeBundleId = bundles.get(key);
-      if (typeChangeBundleId == null) {
-        let typeChangeBundle = createBundle({
-          uniqueKey: key,
-          needsStableName: bundle.needsStableName,
-          bundleBehavior: bundle.bundleBehavior,
-          type: asset.type,
-          target: bundle.target,
-          env: bundle.env,
-        });
-        typeChangeBundleId = bundleGraph.addNode(typeChangeBundle);
-        bundleGraph.addEdge(bundleId, typeChangeBundleId);
-        bundles.set(key, typeChangeBundleId);
-        bundle = typeChangeBundle;
-      } else {
-        bundle = nullthrows(bundleGraph.getNode(typeChangeBundleId), '14');
-        invariant(bundle !== 'root');
-      }
-    }
-
-    bundle.assets.add(asset);
-    bundle.size += asset.stats.size;
-    assignInlineConstants(asset, bundle);
-  }
-
-  function removeBundle(
-    bundleGraph: IdealBundleGraph,
-    bundleId: NodeId,
-    assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
-  ) {
-    let bundle = nullthrows(bundleGraph.getNode(bundleId), '15');
-    invariant(bundle !== 'root');
-    for (let asset of bundle.assets) {
-      assetReference.set(
-        asset,
-        assetReference.get(asset).filter((t) => !t.includes(bundle)),
-      );
-      for (let sourceBundleId of bundle.sourceBundles) {
-        let sourceBundle = nullthrows(
-          bundleGraph.getNode(sourceBundleId),
-          '16',
-        );
-        invariant(sourceBundle !== 'root');
-        addAssetToBundleRoot(
-          asset,
-          nullthrows(sourceBundle.mainEntryAsset, '17'),
-        );
-      }
-    }
-
-    bundleGraph.removeNode(bundleId);
   }
 
   function mergeBundles(
@@ -1527,7 +1290,162 @@ export function createIdealGraph(
       bundleGraph.addEdge(sourceBundleId, bundleToKeepId);
     }
 
+    // Merge any internalized assets
+    if (bundleToRemove.internalizedAssets) {
+      if (bundleToKeep.internalizedAssets) {
+        bundleToKeep.internalizedAssets.union(
+          bundleToRemove.internalizedAssets,
+        );
+      } else {
+        bundleToKeep.internalizedAssets = bundleToRemove.internalizedAssets;
+      }
+    }
+
     bundleGraph.removeNode(bundleToRemoveId);
+  }
+
+  function mergeOverlapBundles() {
+    // Find all shared bundles
+    let sharedBundles = new Set<NodeId>();
+    bundleGraph.traverse((nodeId) => {
+      let bundle = bundleGraph.getNode(nodeId);
+
+      if (!bundle) {
+        throw new Error(`Unable to find bundle ${nodeId} in bundle graph`);
+      }
+
+      if (bundle === 'root') {
+        return;
+      }
+
+      // Only consider JS shared bundles and non-reused bundles.
+      // These count potentially be considered for merging in future but they're
+      // more complicated to merge
+      if (
+        bundle.sourceBundles.size > 0 &&
+        bundle.manualSharedBundle == null &&
+        !bundle.mainEntryAsset &&
+        bundle.type === 'js'
+      ) {
+        sharedBundles.add(nodeId);
+      }
+    });
+
+    let clusters = findMergeCandidates(
+      bundleGraph,
+      Array.from(sharedBundles),
+      config.sharedBundleMergeThreshold,
+    );
+
+    for (let cluster of clusters) {
+      let [mergeTarget, ...rest] = cluster;
+
+      for (let bundleIdToMerge of rest) {
+        mergeBundles(bundleGraph, mergeTarget, bundleIdToMerge, assetReference);
+      }
+    }
+  }
+
+  function getBigIntFromContentKey(contentKey) {
+    let b = Buffer.alloc(64);
+    b.write(contentKey);
+    // $FlowFixMe Flow doesn't have BigInt types in this version
+    return b.readBigInt64BE();
+  }
+  // Fix asset order in source bundles as they are likely now incorrect after shared bundle deletion
+  if (modifiedSourceBundles.size > 0) {
+    let assetOrderMap = new Map(assets.map((a, index) => [a, index]));
+
+    for (let bundle of modifiedSourceBundles) {
+      bundle.assets = new Set(
+        [...bundle.assets].sort((a, b) => {
+          let aIndex = nullthrows(assetOrderMap.get(a));
+          let bIndex = nullthrows(assetOrderMap.get(b));
+
+          return aIndex - bIndex;
+        }),
+      );
+    }
+  }
+  function deleteBundle(bundleRoot: BundleRoot) {
+    bundleGraph.removeNode(nullthrows(bundles.get(bundleRoot.id)));
+    bundleRoots.delete(bundleRoot);
+    bundles.delete(bundleRoot.id);
+    let bundleRootId = assetToBundleRootNodeId.get(bundleRoot);
+    if (bundleRootId != null && bundleRootGraph.hasNode(bundleRootId)) {
+      bundleRootGraph.removeNode(bundleRootId);
+    }
+  }
+  function getBundlesForBundleGroup(bundleGroupId) {
+    let bundlesInABundleGroup = [];
+    bundleGraph.traverse((nodeId) => {
+      bundlesInABundleGroup.push(nodeId);
+    }, bundleGroupId);
+    return bundlesInABundleGroup;
+  }
+
+  function getBundleFromBundleRoot(bundleRoot: BundleRoot): Bundle {
+    let bundle = bundleGraph.getNode(
+      nullthrows(bundleRoots.get(bundleRoot))[0],
+    );
+    invariant(bundle !== 'root' && bundle != null);
+    return bundle;
+  }
+
+  function addAssetToBundleRoot(asset: Asset, bundleRoot: Asset) {
+    let [bundleId, bundleGroupId] = nullthrows(bundleRoots.get(bundleRoot));
+    let bundle = nullthrows(bundleGraph.getNode(bundleId));
+    invariant(bundle !== 'root');
+
+    if (asset.type !== bundle.type) {
+      let bundleGroup = nullthrows(bundleGraph.getNode(bundleGroupId));
+      invariant(bundleGroup !== 'root');
+      let key = nullthrows(bundleGroup.mainEntryAsset).id + '.' + asset.type;
+      let typeChangeBundleId = bundles.get(key);
+      if (typeChangeBundleId == null) {
+        let typeChangeBundle = createBundle({
+          uniqueKey: key,
+          needsStableName: bundle.needsStableName,
+          bundleBehavior: bundle.bundleBehavior,
+          type: asset.type,
+          target: bundle.target,
+          env: bundle.env,
+        });
+        typeChangeBundleId = bundleGraph.addNode(typeChangeBundle);
+        bundleGraph.addEdge(bundleId, typeChangeBundleId);
+        bundles.set(key, typeChangeBundleId);
+        bundle = typeChangeBundle;
+      } else {
+        bundle = nullthrows(bundleGraph.getNode(typeChangeBundleId));
+        invariant(bundle !== 'root');
+      }
+    }
+
+    bundle.assets.add(asset);
+    bundle.size += asset.stats.size;
+    assignInlineConstants(asset, bundle);
+  }
+
+  function removeBundle(
+    bundleGraph: IdealBundleGraph,
+    bundleId: NodeId,
+    assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
+  ) {
+    let bundle = nullthrows(bundleGraph.getNode(bundleId));
+    invariant(bundle !== 'root');
+    for (let asset of bundle.assets) {
+      assetReference.set(
+        asset,
+        assetReference.get(asset).filter((t) => !t.includes(bundle)),
+      );
+      for (let sourceBundleId of bundle.sourceBundles) {
+        let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
+        invariant(sourceBundle !== 'root');
+        addAssetToBundleRoot(asset, nullthrows(sourceBundle.mainEntryAsset));
+      }
+    }
+
+    bundleGraph.removeNode(bundleId);
   }
 
   return {
@@ -1555,7 +1473,7 @@ function createBundle(opts: {|
     return {
       assets: new Set(),
       bundleBehavior: opts.bundleBehavior,
-      env: nullthrows(opts.env, '20'),
+      env: nullthrows(opts.env),
       mainEntryAsset: null,
       manualSharedBundle: opts.manualSharedBundle,
       needsStableName: Boolean(opts.needsStableName),
@@ -1567,7 +1485,7 @@ function createBundle(opts: {|
     };
   }
 
-  let asset = nullthrows(opts.asset, '21');
+  let asset = nullthrows(opts.asset);
   return {
     assets: new Set([asset]),
     bundleBehavior: opts.bundleBehavior ?? asset.bundleBehavior,
