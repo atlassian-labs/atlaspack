@@ -35,7 +35,7 @@ describe('LMDBLiteCache', () => {
   });
 
   it('can retrieve keys synchronously', async () => {
-    cache = new LMDBLiteCache(cacheDir);
+    cache = new LMDBLiteCache(path.join(cacheDir, 'retrieve_keys_test'));
     await cache.ensure();
     await cache.setBlob('key', Buffer.from(serialize({value: 42})));
     const buffer = cache.getBlobSync('key');
@@ -44,7 +44,7 @@ describe('LMDBLiteCache', () => {
   });
 
   it('can iterate over keys', async () => {
-    cache = new LMDBLiteCache(cacheDir);
+    cache = new LMDBLiteCache(path.join(cacheDir, 'keys_test'));
     await cache.ensure();
     await cache.setBlob('key1', Buffer.from(serialize({value: 42})));
     await cache.setBlob('key2', Buffer.from(serialize({value: 43})));

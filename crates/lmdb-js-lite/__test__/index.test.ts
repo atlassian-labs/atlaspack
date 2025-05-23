@@ -141,7 +141,7 @@ describe("lmdb", () => {
   describe('keys', () => {
     it('can iterate over keys', async () => {
       db = new Lmdb({
-        path: "./databases/test.db",
+        path: "./databases/keys_test.db",
         asyncWrites,
         mapSize: MAP_SIZE,
       });
