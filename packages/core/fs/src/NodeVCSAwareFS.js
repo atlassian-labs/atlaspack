@@ -91,9 +91,9 @@ export class NodeVCSAwareFS extends NodeFS {
         ) {
           logger.info({
             origin: '@atlaspack/fs',
-            message: 'Expose VCS timing metrics',
+            message: 'Expose VCS timing metrics on getEventsSince',
             meta: {
-              trackableEvent: 'vcs_timing_metrics',
+              trackableEvent: 'vcs_timing_metrics-getEventsSince',
               dirtyFilesExecutionTime:
                 vcsContent.vcsState?.dirtyFilesExecutionTime,
               yarnStatesExecutionTime:
@@ -180,6 +180,18 @@ export class NodeVCSAwareFS extends NodeFS {
         'NodeVCSAwareFS::getVcsStateSnapshot',
         () => getVcsStateSnapshot(gitRepoPath, this.#excludePatterns),
       );
+
+      logger.info({
+        origin: '@atlaspack/fs',
+        message: 'Expose VCS timing metrics on writeSnapshot',
+        meta: {
+          trackableEvent: 'vcs_timing_metrics-writeSnapshot',
+          // $FlowFixMe[prop-missing] Rust type includes these properties
+          dirtyFilesExecutionTime: vcsState?.dirtyFilesExecutionTime,
+          // $FlowFixMe[prop-missing] Rust type includes these properties
+          yarnStatesExecutionTime: vcsState?.yarnStatesExecutionTime,
+        },
+      });
     } catch (err) {
       logger.error({
         origin: '@atlaspack/fs',
