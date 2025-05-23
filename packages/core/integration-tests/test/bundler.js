@@ -2358,4 +2358,84 @@ describe('bundler', function () {
 
     await run(b);
   });
+
+  describe('shared bundle merging', () => {
+    it('should support bundling merging', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        bundle-merge
+          shared-one.js:
+            export const one = 'one';
+          shared-two.js:
+            export const two = 'two';
+          shared-three.js:
+            export const three = 'three';
+          one.js:
+            import {one} from './shared-one';
+            import {two} from './shared-two';
+          two.js:
+            import {two} from './shared-two';
+            import {three} from './shared-three';
+          three.js:
+            import {three} from './shared-three';
+            import {one} from './shared-one';
+          entry.js:
+            const one = import('./one');
+            const two = import('./two');
+            const three = import('./three');
+            sideEffectNoop(Promise.all([one, two, three]));
+
+          entry.html:
+            <script type="module" src="./entry.js"></script>
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "minBundleSize": 0,
+                "sharedBundleMergeThreshold": 0.5
+              }
+            }
+          yarn.lock:
+      `;
+
+      const b = await bundle(
+        [path.join(__dirname, 'bundle-merge/entry.html')],
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          assets: ['entry.html'],
+        },
+        {
+          assets: [
+            'entry.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          // Merged shared bundle
+          assets: [
+            'shared-one.js',
+            'shared-two.js',
+            'shared-three.js',
+            'esmodule-helpers.js',
+          ],
+        },
+        {
+          assets: ['one.js'],
+        },
+        {
+          assets: ['two.js'],
+        },
+        {
+          assets: ['three.js'],
+        },
+      ]);
+
+      await run(b);
+    });
+  });
 });
