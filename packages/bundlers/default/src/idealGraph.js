@@ -68,7 +68,7 @@ export const idealBundleGraphEdges = Object.freeze({
   conditional: 2,
 });
 
-type IdealBundleGraph = Graph<
+export type IdealBundleGraph = Graph<
   Bundle | 'root',
   $Values<typeof idealBundleGraphEdges>,
 >;
@@ -1129,6 +1129,12 @@ export function createIdealGraph(
     }
   }
 
+  // Step merge shared bundles that meet the overlap threshold
+  // This step is skipped by default as the threshold defaults to 1
+  if (config.sharedBundleMergeThreshold < 1) {
+    mergeOverlapBundles();
+  }
+
   // Step Merge Share Bundles: Merge any shared bundles under the minimum bundle size back into
   // their source bundles, and remove the bundle.
   // We should include "bundle reuse" as shared bundles that may be removed but the bundle itself would have to be retained
@@ -1142,12 +1148,6 @@ export function createIdealGraph(
     ) {
       removeBundle(bundleGraph, bundleNodeId, assetReference);
     }
-  }
-
-  // Step merge shared bundles that meet the overlap threshold
-  // This step is skipped by default as the threshold defaults to 1
-  if (config.sharedBundleMergeThreshold < 1) {
-    mergeOverlapBundles();
   }
 
   // Step Remove Shared Bundles: Remove shared bundles from bundle groups that hit the parallel request limit.
