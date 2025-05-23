@@ -13,6 +13,7 @@ import type {
 } from '@atlaspack/types-internal';
 import {getConfig} from './Config';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {setUnion} from '@atlaspack/utils';
 
 export const manifestHashes: Map<FilePath, string> = new Map();
 
@@ -73,12 +74,18 @@ export async function report({
             manifest[bundle.target.name]?.[relativeBundlePath] ?? {};
 
           bundleInfo[key] = {
-            ifTrueBundles: mapBundles(cond.ifTrueBundles)
-              .concat(bundleInfo[key]?.ifTrueBundles ?? [])
-              .sort(),
-            ifFalseBundles: mapBundles(cond.ifFalseBundles)
-              .concat(bundleInfo[key]?.ifFalseBundles ?? [])
-              .sort(),
+            ifTrueBundles: Array.from(
+              setUnion(
+                mapBundles(cond.ifTrueBundles),
+                bundleInfo[key]?.ifTrueBundles ?? [],
+              ),
+            ).sort(),
+            ifFalseBundles: Array.from(
+              setUnion(
+                mapBundles(cond.ifFalseBundles),
+                bundleInfo[key]?.ifFalseBundles ?? [],
+              ),
+            ).sort(),
           };
 
           manifest[bundle.target.name] ??= {};
