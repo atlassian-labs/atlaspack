@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="60" viewBox="0 0 240 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Package Shape -->
+  <path d="M30 10L45 20V40L30 50L15 40V20L30 10Z" fill="#172B4D"/>
+  
+  <!-- Inner Bundle Lines -->
+  <path d="M30 15L40 22V38L30 45L20 38V22L30 15Z" stroke="#FFFFFF" stroke-width="2"/>
+  <path d="M25 25H35M25 30H35M25 35H35" stroke="#FFFFFF" stroke-width="2"/>
+  
+  <!-- Text -->
+  <text x="60" y="35" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#172B4D">
+    atlaspack
+  </text>
+</svg>
