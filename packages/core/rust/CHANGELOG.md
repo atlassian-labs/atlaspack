@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.3.0
+
+### Minor Changes
+
+- [#531](https://github.com/atlassian-labs/atlaspack/pull/531) [`d2c50c2`](https://github.com/atlassian-labs/atlaspack/commit/d2c50c2c020888b33bb25b8690d9320c2b69e2a6) Thanks [@yamadapc](https://github.com/yamadapc)! - Add way to iterate LMDB cache keys
+
 ## 3.2.0
 
 ### Minor Changes

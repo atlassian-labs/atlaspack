@@ -1,5 +1,20 @@
 # @atlaspack/cache
 
+## 3.2.0
+
+### Minor Changes
+
+- [#531](https://github.com/atlassian-labs/atlaspack/pull/531) [`d2c50c2`](https://github.com/atlassian-labs/atlaspack/commit/d2c50c2c020888b33bb25b8690d9320c2b69e2a6) Thanks [@yamadapc](https://github.com/yamadapc)! - Add way to iterate LMDB cache keys
+
+### Patch Changes
+
+- Updated dependencies [[`11d6f16`](https://github.com/atlassian-labs/atlaspack/commit/11d6f16b6397dee2f217167e5c98b39edb63f7a7), [`d2c50c2`](https://github.com/atlassian-labs/atlaspack/commit/d2c50c2c020888b33bb25b8690d9320c2b69e2a6)]:
+  - @atlaspack/feature-flags@2.14.3
+  - @atlaspack/rust@3.3.0
+  - @atlaspack/fs@2.14.5
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/logger@2.14.5
+
 ## 3.1.0
 
 ### Minor Changes

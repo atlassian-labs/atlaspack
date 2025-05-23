@@ -1,5 +1,14 @@
 # @atlaspack/transformer-postcss
 
+## 2.14.5
+
+### Patch Changes
+
+- Updated dependencies [[`d2c50c2`](https://github.com/atlassian-labs/atlaspack/commit/d2c50c2c020888b33bb25b8690d9320c2b69e2a6)]:
+  - @atlaspack/rust@3.3.0
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/plugin@2.14.5
+
 ## 2.14.4
 
 ### Patch Changes
