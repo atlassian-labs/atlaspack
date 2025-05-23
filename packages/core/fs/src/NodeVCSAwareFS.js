@@ -82,7 +82,27 @@ export class NodeVCSAwareFS extends NodeFS {
         // Note: can't use toString() directly, or it won't resolve the promise
         const snapshotFile = await this.readFile(snapshot);
         const snapshotFileContent = snapshotFile.toString();
-        return JSON.parse(snapshotFileContent);
+        const vcsContent = JSON.parse(snapshotFileContent);
+
+        // Expose VCS timing metrics to analytics
+        if (
+          vcsContent.vcsState?.dirtyFilesExecutionTime != null ||
+          vcsContent.vcsState?.yarnStatesExecutionTime != null
+        ) {
+          logger.info({
+            origin: '@atlaspack/fs',
+            message: 'Expose VCS timing metrics on getEventsSince',
+            meta: {
+              trackableEvent: 'vcs_timing_metrics-getEventsSince',
+              dirtyFilesExecutionTime:
+                vcsContent.vcsState?.dirtyFilesExecutionTime,
+              yarnStatesExecutionTime:
+                vcsContent.vcsState?.yarnStatesExecutionTime,
+            },
+          });
+        }
+
+        return vcsContent;
       },
     );
     let watcherEventsSince = [];
@@ -160,6 +180,18 @@ export class NodeVCSAwareFS extends NodeFS {
         'NodeVCSAwareFS::getVcsStateSnapshot',
         () => getVcsStateSnapshot(gitRepoPath, this.#excludePatterns),
       );
+
+      logger.info({
+        origin: '@atlaspack/fs',
+        message: 'Expose VCS timing metrics on writeSnapshot',
+        meta: {
+          trackableEvent: 'vcs_timing_metrics-writeSnapshot',
+          // $FlowFixMe[prop-missing] Rust type includes these properties
+          dirtyFilesExecutionTime: vcsState?.dirtyFilesExecutionTime,
+          // $FlowFixMe[prop-missing] Rust type includes these properties
+          yarnStatesExecutionTime: vcsState?.yarnStatesExecutionTime,
+        },
+      });
     } catch (err) {
       logger.error({
         origin: '@atlaspack/fs',
