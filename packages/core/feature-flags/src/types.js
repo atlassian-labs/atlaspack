@@ -62,10 +62,6 @@ export type FeatureFlags = {|
    */
   patchProjectPaths: boolean,
   /**
-   * Enable loading of the parcel dylib in the main thread.
-   */
-  enableRustWorkerThreadDylibHack: boolean,
-  /**
    * Enables optimized inline string replacement perf for the packager.
    * Used heavily for inline bundles.
    */

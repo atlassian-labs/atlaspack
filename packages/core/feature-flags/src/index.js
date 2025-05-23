@@ -20,7 +20,6 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   conditionalBundlingNestedRuntime: false,
   patchProjectPaths: false,
   cachePerformanceImprovements: false,
-  enableRustWorkerThreadDylibHack: true,
   inlineStringReplacementPerf: false,
   conditionalBundlingAsyncRuntime: false,
   conditionalBundlingReporterDuplicateFix: false,
