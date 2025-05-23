@@ -139,6 +139,10 @@ describe("lmdb", () => {
   });
 
   describe('keys', () => {
+    afterEach(() => {
+      db?.close();
+    });
+
     it('can iterate over keys', async () => {
       db = new Lmdb({
         path: "./databases/test.db",
