@@ -1,5 +1,27 @@
 # @atlaspack/core
 
+## 2.16.2
+
+### Patch Changes
+
+- [#530](https://github.com/atlassian-labs/atlaspack/pull/530) [`2e90c9b`](https://github.com/atlassian-labs/atlaspack/commit/2e90c9bd07d7eb52645f9d84ccbb7f82685cbc8c) Thanks [@yamadapc](https://github.com/yamadapc)! - Write metadata about the cache in a new entry
+
+- [#511](https://github.com/atlassian-labs/atlaspack/pull/511) [`11d6f16`](https://github.com/atlassian-labs/atlaspack/commit/11d6f16b6397dee2f217167e5c98b39edb63f7a7) Thanks [@yamadapc](https://github.com/yamadapc)! - Clean-up dylib worker threads segmentation fault bug fix feature-flag
+
+- Updated dependencies [[`11d6f16`](https://github.com/atlassian-labs/atlaspack/commit/11d6f16b6397dee2f217167e5c98b39edb63f7a7), [`d2c50c2`](https://github.com/atlassian-labs/atlaspack/commit/d2c50c2c020888b33bb25b8690d9320c2b69e2a6)]:
+  - @atlaspack/feature-flags@2.14.3
+  - @atlaspack/cache@3.2.0
+  - @atlaspack/rust@3.3.0
+  - @atlaspack/fs@2.14.5
+  - @atlaspack/graph@3.4.3
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/logger@2.14.5
+  - @atlaspack/package-manager@2.14.5
+  - @atlaspack/profiler@2.14.3
+  - @atlaspack/types@2.14.5
+  - @atlaspack/workers@2.14.5
+  - @atlaspack/plugin@2.14.5
+
 ## 2.16.1
 
 ### Patch Changes
