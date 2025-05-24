@@ -1262,11 +1262,8 @@ export function createIdealGraph(
     bundleToRemoveId: NodeId,
     assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
   ) {
-    let bundleToKeep = nullthrows(bundleGraph.getNode(bundleToKeepId), '18');
-    let bundleToRemove = nullthrows(
-      bundleGraph.getNode(bundleToRemoveId),
-      '19',
-    );
+    let bundleToKeep = nullthrows(bundleGraph.getNode(bundleToKeepId));
+    let bundleToRemove = nullthrows(bundleGraph.getNode(bundleToRemoveId));
     invariant(bundleToKeep !== 'root' && bundleToRemove !== 'root');
     for (let asset of bundleToRemove.assets) {
       bundleToKeep.assets.add(asset);
