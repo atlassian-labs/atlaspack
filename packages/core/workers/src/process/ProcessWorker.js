@@ -13,7 +13,10 @@ import path from 'path';
 
 import {serialize, deserialize} from '@atlaspack/build-cache';
 
-const WORKER_PATH = path.join(__dirname, './ProcessChild.js');
+const WORKER_PATH = path.join(
+  /*#__ATLASPACK_IGNORE__*/ __dirname,
+  './ProcessChild.js',
+);
 
 export default class ProcessWorker implements WorkerImpl {
   execArgv: Object;

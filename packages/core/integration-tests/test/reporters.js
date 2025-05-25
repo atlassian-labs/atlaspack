@@ -6,6 +6,11 @@ import path from 'path';
 
 import {bundler, describe, it} from '@atlaspack/test-utils';
 
+let cliPath =
+  process.env.SUPER_PACKAGE === 'true'
+    ? path.join(__dirname, '../../super/lib/cli.js')
+    : './node_modules/.bin/atlaspack';
+
 describe('reporters', () => {
   let successfulEntry = path.join(
     __dirname,
@@ -31,19 +36,16 @@ describe('reporters', () => {
   describe('running on the cli', () => {
     it('exit successfully when no errors are emitted', () => {
       assert.doesNotThrow(() =>
-        execSync(
-          `./node_modules/.bin/atlaspack build --no-cache ${successfulEntry}`,
-          {
-            stdio: 'inherit',
-          },
-        ),
+        execSync(`node ${cliPath} build --no-cache ${successfulEntry}`, {
+          stdio: 'inherit',
+        }),
       );
     });
 
     it('exit with an error code when a reporter fails to load', () => {
       assert.throws(() =>
         execSync(
-          `./node_modules/.bin/atlaspack build --no-cache ${loadReporterFailureEntry}`,
+          `node ${cliPath} build --no-cache ${loadReporterFailureEntry}`,
           {
             stdio: 'inherit',
           },
@@ -53,12 +55,9 @@ describe('reporters', () => {
 
     it('exit with an error code when a reporter emits an error', () => {
       assert.throws(() =>
-        execSync(
-          `./node_modules/.bin/atlaspack build --no-cache ${failingReporterEntry}`,
-          {
-            stdio: 'inherit',
-          },
-        ),
+        execSync(`node ${cliPath} build --no-cache ${failingReporterEntry}`, {
+          stdio: 'inherit',
+        }),
       );
     });
   });

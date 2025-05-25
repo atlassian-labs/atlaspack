@@ -417,6 +417,7 @@ export type InitialServerOptions = {|
 export interface PluginOptions {
   +mode: BuildMode;
   +parcelVersion: string;
+  +isAtlaspackSuper?: boolean;
   +env: EnvMap;
   +hmrOptions: ?HMROptions;
   +serveOptions: ServerOptions | false;

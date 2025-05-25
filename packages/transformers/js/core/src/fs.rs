@@ -1,3 +1,4 @@
+use std::env;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -144,7 +145,7 @@ impl InlineFS<'_> {
           Err(_err) => return None,
         };
 
-        if !path.starts_with(self.project_root) {
+        if !path.starts_with(self.project_root) && env::var("ATLASPACK_SUPER_BUILD").is_err() {
           return None;
         }
 
