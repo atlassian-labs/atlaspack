@@ -82,27 +82,7 @@ export class NodeVCSAwareFS extends NodeFS {
         // Note: can't use toString() directly, or it won't resolve the promise
         const snapshotFile = await this.readFile(snapshot);
         const snapshotFileContent = snapshotFile.toString();
-        const vcsContent = JSON.parse(snapshotFileContent);
-
-        // Expose VCS timing metrics to analytics
-        if (
-          vcsContent.vcsState?.dirtyFilesExecutionTime != null ||
-          vcsContent.vcsState?.yarnStatesExecutionTime != null
-        ) {
-          logger.info({
-            origin: '@atlaspack/fs',
-            message: 'Expose VCS timing metrics on getEventsSince',
-            meta: {
-              trackableEvent: 'vcs_timing_metrics-getEventsSince',
-              dirtyFilesExecutionTime:
-                vcsContent.vcsState?.dirtyFilesExecutionTime,
-              yarnStatesExecutionTime:
-                vcsContent.vcsState?.yarnStatesExecutionTime,
-            },
-          });
-        }
-
-        return vcsContent;
+        return JSON.parse(snapshotFileContent);
       },
     );
     let watcherEventsSince = [];
@@ -183,12 +163,10 @@ export class NodeVCSAwareFS extends NodeFS {
 
       logger.info({
         origin: '@atlaspack/fs',
-        message: 'Expose VCS timing metrics on writeSnapshot',
+        message: 'Expose VCS timing metrics',
         meta: {
-          trackableEvent: 'vcs_timing_metrics-writeSnapshot',
-          // $FlowFixMe[prop-missing] Rust type includes these properties
+          trackableEvent: 'vcs_timing_metrics',
           dirtyFilesExecutionTime: vcsState?.dirtyFilesExecutionTime,
-          // $FlowFixMe[prop-missing] Rust type includes these properties
           yarnStatesExecutionTime: vcsState?.yarnStatesExecutionTime,
         },
       });
