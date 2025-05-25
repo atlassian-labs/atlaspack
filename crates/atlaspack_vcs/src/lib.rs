@@ -527,7 +527,8 @@ pub fn get_changed_files(
         .ok_or_else(|| anyhow!("Expected lockfile to exist in current revision"))?
     } else {
       tracing::debug!("Reading raw yarn.lock on current file-system",);
-      std::fs::read_to_string(repo_path.join(yarn_lock_path))?
+      std::fs::read_to_string(repo_path.join(yarn_lock_path))
+        .map_err(|err| anyhow!("Failed to read {yarn_lock_path:?} from file-system: {err}"))?
     };
     let new_yarn_lock: YarnLock = parse_yarn_lock(&new_yarn_lock_blob)?;
 
@@ -630,20 +631,23 @@ pub fn vcs_list_dirty_files(
     .par_iter()
     .map(|relative_path| {
       tracing::info!("Hashing file {}", relative_path);
+      let map_err = |err: std::io::Error| anyhow!("Failed to hash {relative_path:?}: {err}");
+
       let path = Path::new(relative_path);
       let path = dir.join(path);
 
       // We hash the contents of the file but if it's a symlink we hash the target
       // path instead rather than following the link.
-      let metadata = std::fs::symlink_metadata(&path)?;
+      let metadata = std::fs::symlink_metadata(&path).map_err(map_err)?;
       let contents = if metadata.is_symlink() {
-        std::fs::read_link(&path)?
+        std::fs::read_link(&path)
+          .map_err(map_err)?
           .to_str()
           .unwrap()
           .as_bytes()
           .to_vec()
       } else {
-        std::fs::read(&path)?
+        std::fs::read(&path).map_err(map_err)?
       };
       let mut state = std::collections::hash_map::DefaultHasher::new();
       contents.hash(&mut state);
