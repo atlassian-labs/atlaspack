@@ -316,6 +316,14 @@ impl RequestTracker {
     }
   }
 
+  pub fn get_cached_request_result(&self, request: impl Request) -> Option<Arc<RequestResult>> {
+    match self.get_request_node(request.id())? {
+      RequestNode::Valid(value) => Some(value.clone()),
+      RequestNode::Invalid(value) => value.as_ref().map(|a| a.clone()),
+      _ => None,
+    }
+  }
+
   /// Create an edge between a parent request and the target request.
   fn link_request_to_parent(
     &mut self,

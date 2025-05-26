@@ -1,4 +1,6 @@
 use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 
@@ -11,10 +13,8 @@ use crate::request_tracker::{
   Request, RequestResultReceiver, RequestResultSender, ResultAndInvalidations, RunRequestContext,
   RunRequestError,
 };
-use atlaspack_core::asset_graph::{
-  propagate_requested_symbols, AssetGraph, DependencyNode, DependencyState,
-};
-use atlaspack_core::asset_graph::{AssetGraph, NodeId};
+use atlaspack_core::asset_graph::AssetGraph;
+use atlaspack_core::asset_graph::NodeId;
 use atlaspack_core::types::{AssetWithDependencies, Dependency};
 
 use super::asset_request::{AssetRequest, AssetRequestOutput};
@@ -63,9 +63,9 @@ struct AssetGraphBuilder {
   request_context: RunRequestContext,
   sender: RequestResultSender,
   receiver: RequestResultReceiver,
-  asset_request_to_asset_idx: HashMap<u64, NodeIndex>,
-  waiting_asset_requests: HashMap<u64, HashSet<NodeIndex>>,
-  entry_dependencies: Vec<(String, NodeIndex)>,
+  asset_request_to_asset_idx: HashMap<u64, NodeId>,
+  waiting_asset_requests: HashMap<u64, HashSet<NodeId>>,
+  entry_dependencies: Vec<(String, NodeId)>,
 }
 
 impl AssetGraphBuilder {
@@ -118,7 +118,7 @@ impl AssetGraphBuilder {
       match &*result {
         RequestResult::Entry(result) => {
           tracing::debug!("Handling EntryRequestOutput");
-          self.handle_entry_result(result.clone());
+          self.handle_entry_result(result);
         }
         RequestResult::Target(result) => {
           tracing::debug!("Handling TargetRequestOutput");
@@ -133,7 +133,7 @@ impl AssetGraphBuilder {
         }
         RequestResult::Path(result) => {
           tracing::debug!("Handling PathRequestOutput");
-          self.handle_path_result(result.clone(), request_id);
+          self.handle_path_result(result, request_id);
         }
         // This branch should never occur
         result => {
@@ -190,7 +190,7 @@ impl AssetGraphBuilder {
         pipeline,
         side_effects,
         query,
-        can_defer,
+        ..
       } => {
         // if !side_effects
         //   && can_defer
@@ -210,7 +210,7 @@ impl AssetGraphBuilder {
             .unwrap()
             .env
             .clone(),
-          file_path: path,
+          file_path: path.clone(),
           project_root: self.request_context.project_root.clone(),
           pipeline: pipeline.clone(),
           query: query.clone(),
