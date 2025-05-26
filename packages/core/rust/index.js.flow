@@ -357,6 +357,10 @@ declare export function runInlineRequiresOptimizer(
   input: InlineRequiresOptimizerInput,
 ): InlineRequiresOptimizerResult;
 
+declare export function runInlineRequiresOptimizerAsync(
+  input: InlineRequiresOptimizerInput,
+): Promise<InlineRequiresOptimizerResult>;
+
 export interface VCSFile {
   path: string;
   hash: number;

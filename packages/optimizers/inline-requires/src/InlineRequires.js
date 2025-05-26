@@ -1,6 +1,10 @@
 // @flow strict-local
 import {Optimizer} from '@atlaspack/plugin';
-import {runInlineRequiresOptimizer} from '@atlaspack/rust';
+import {
+  runInlineRequiresOptimizer,
+  runInlineRequiresOptimizerAsync,
+} from '@atlaspack/rust';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import nullthrows from 'nullthrows';
 import SourceMap from '@parcel/source-map';
 
@@ -42,7 +46,7 @@ module.exports = new Optimizer<empty, BundleConfig>({
     return {assetPublicIdsWithSideEffects};
   },
 
-  optimize({
+  async optimize({
     bundle,
     contents,
     map: originalMap,
@@ -56,11 +60,22 @@ module.exports = new Optimizer<empty, BundleConfig>({
 
     try {
       let sourceMap = null;
-      const result = runInlineRequiresOptimizer({
-        code: contents.toString(),
-        sourceMaps: !!bundle.env.sourceMap,
-        ignoreModuleIds: Array.from(bundleConfig.assetPublicIdsWithSideEffects),
-      });
+      const result = getFeatureFlag('inlineRequiresMultiThreading')
+        ? await runInlineRequiresOptimizerAsync({
+            code: contents.toString(),
+            sourceMaps: !!bundle.env.sourceMap,
+            ignoreModuleIds: Array.from(
+              bundleConfig.assetPublicIdsWithSideEffects,
+            ),
+          })
+        : runInlineRequiresOptimizer({
+            code: contents.toString(),
+            sourceMaps: !!bundle.env.sourceMap,
+            ignoreModuleIds: Array.from(
+              bundleConfig.assetPublicIdsWithSideEffects,
+            ),
+          });
+
       const sourceMapResult = result.sourceMap;
       if (sourceMapResult != null) {
         sourceMap = new SourceMap(options.projectRoot);
