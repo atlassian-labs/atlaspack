@@ -1,5 +1,6 @@
 use atlaspack_plugin_optimizer_inline_requires::IgnorePattern;
 use atlaspack_swc_runner::runner::run_visit;
+use napi::{Env, JsObject};
 use napi_derive::napi;
 use swc_core::atoms::Atom;
 
@@ -11,6 +12,7 @@ pub struct InlineRequiresOptimizerInput {
 }
 
 #[napi(object)]
+#[derive(serde::Serialize)]
 pub struct InlineRequiresOptimizerResult {
   pub code: String,
   pub source_map: Option<String>,
@@ -46,4 +48,32 @@ pub fn run_inline_requires_optimizer(
       None
     },
   })
+}
+
+#[napi]
+pub fn run_inline_requires_optimizer_async(
+  env: Env,
+  input: InlineRequiresOptimizerInput,
+) -> napi::Result<JsObject> {
+  let (deferred, promise) = env.create_deferred()?;
+
+  rayon::spawn(move || {
+    let result = run_inline_requires_optimizer(input);
+    match result {
+      Ok(result) => {
+        deferred.resolve(move |env| {
+          let result = env.to_js_value(&result)?;
+          Ok(result)
+        });
+      }
+      Err(err) => {
+        deferred.reject(napi::Error::new(
+          napi::Status::GenericFailure,
+          format!("[napi] Failed to run inline require optimizer: {}", err),
+        ));
+      }
+    }
+  });
+
+  Ok(promise)
 }
