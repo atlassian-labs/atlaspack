@@ -639,6 +639,18 @@ export default class Atlaspack {
     return result;
   }
 
+  /**
+   * Copy the cache to a new directory and compact it.
+   */
+  async unstable_compactCache(): Promise<void> {
+    const cache = nullthrows(this.#resolvedOptions).cache;
+    if (cache instanceof LMDBLiteCache) {
+      await cache.compact('parcel-cache-compacted');
+    } else {
+      throw new Error('Cache is not an LMDBLiteCache');
+    }
+  }
+
   async unstable_transform(
     options: AtlaspackTransformOptions,
   ): Promise<Array<Asset>> {

@@ -51,4 +51,19 @@ describe('LMDBLiteCache', () => {
     const keys = cache.keys();
     assert.deepEqual(Array.from(keys), ['key1', 'key2']);
   });
+
+  it('can compact databases', async () => {
+    cache = new LMDBLiteCache(path.join(cacheDir, 'compact_test'));
+    await cache.ensure();
+    await cache.setBlob('key1', Buffer.from(serialize({value: 42})));
+    await cache.setBlob('key2', Buffer.from(serialize({value: 43})));
+    await cache.compact(path.join(cacheDir, 'compact_test_compacted'));
+
+    cache.getNativeRef().close();
+
+    cache = new LMDBLiteCache(path.join(cacheDir, 'compact_test_compacted'));
+    await cache.ensure();
+    const keys = cache.keys();
+    assert.deepEqual(Array.from(keys), ['key1', 'key2']);
+  });
 });

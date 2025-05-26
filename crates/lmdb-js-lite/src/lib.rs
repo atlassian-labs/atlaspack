@@ -38,6 +38,7 @@
 
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::path::Path;
 use std::sync::LazyLock;
 use std::sync::{Arc, Mutex, Weak};
 
@@ -396,6 +397,21 @@ impl LMDB {
   #[napi]
   pub fn close(&mut self) {
     self.inner = None;
+  }
+
+  /// Compact the database to the target path
+  #[napi]
+  pub fn compact(&self, target_path: String) -> napi::Result<()> {
+    let database_handle = self.get_database_napi()?;
+    database_handle
+      .database()
+      .compact(Path::new(&target_path))
+      .map_err(|err| {
+        napi::Error::from_reason(format!(
+          "[napi] Failed to compact database at {target_path}: {err:?}"
+        ))
+      })?;
+    Ok(())
   }
 }
 
