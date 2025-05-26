@@ -15,6 +15,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
+    "@atlaspack/build-cache": "2.13.3",
     "@atlaspack/diagnostic": "2.14.1",
     "@atlaspack/feature-flags": "2.19.2",
     "@atlaspack/plugin": "2.14.20",
