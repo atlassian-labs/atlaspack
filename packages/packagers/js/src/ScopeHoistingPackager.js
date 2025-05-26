@@ -25,6 +25,7 @@ import ThrowableDiagnostic, {
 import globals from 'globals';
 import path from 'path';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {createBuildCache} from '@atlaspack/build-cache';
 
 import {ESMOutputFormat} from './ESMOutputFormat';
 import {CJSOutputFormat} from './CJSOutputFormat';
@@ -74,6 +75,8 @@ export interface OutputFormat {
   buildBundlePrelude(): [string, number];
   buildBundlePostlude(): [string, number];
 }
+
+const bundleDirectReferences = createBuildCache();
 
 export class ScopeHoistingPackager {
   options: PluginOptions;
@@ -357,6 +360,12 @@ export class ScopeHoistingPackager {
   async loadAssets(): Promise<Array<Asset>> {
     let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped = [];
+
+    const referencedAssets = this.bundleGraph.getReferencedAssets(
+      this.bundle,
+      bundleDirectReferences,
+    );
+
     this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
         let [code, map] = await Promise.all([
@@ -369,7 +378,7 @@ export class ScopeHoistingPackager {
       if (
         asset.meta.shouldWrap ||
         this.bundle.env.sourceType === 'script' ||
-        this.bundleGraph.isAssetReferenced(this.bundle, asset) ||
+        referencedAssets.has(asset.id) ||
         this.bundleGraph
           .getIncomingDependencies(asset)
           .some((dep) => dep.meta.shouldWrap && dep.specifierType !== 'url')
