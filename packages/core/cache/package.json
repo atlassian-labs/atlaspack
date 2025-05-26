@@ -28,7 +28,8 @@
     "@atlaspack/fs": "2.14.4",
     "@atlaspack/logger": "2.14.4",
     "@atlaspack/rust": "3.2.0",
-    "@atlaspack/utils": "2.14.4"
+    "@atlaspack/utils": "2.14.4",
+    "ncp": "^2.0.0"
   },
   "devDependencies": {
     "idb": "^5.0.8"
