@@ -1,5 +1,21 @@
 # @atlaspack/fs
 
+## 2.15.0
+
+### Minor Changes
+
+- [#534](https://github.com/atlassian-labs/atlaspack/pull/534) [`4c17141`](https://github.com/atlassian-labs/atlaspack/commit/4c1714103dab2aa9039c488f381551d2b65d1d01) Thanks [@pancaspe87](https://github.com/pancaspe87)! - Expose vcs metrics
+
+### Patch Changes
+
+- Updated dependencies [[`11d6f16`](https://github.com/atlassian-labs/atlaspack/commit/11d6f16b6397dee2f217167e5c98b39edb63f7a7), [`e2ba0f6`](https://github.com/atlassian-labs/atlaspack/commit/e2ba0f69702656f3d1ce95ab1454e35062b13b39), [`d2c50c2`](https://github.com/atlassian-labs/atlaspack/commit/d2c50c2c020888b33bb25b8690d9320c2b69e2a6), [`46a90dc`](https://github.com/atlassian-labs/atlaspack/commit/46a90dccd019a26b222c878a92d23acc75dc67c5)]:
+  - @atlaspack/feature-flags@2.14.3
+  - @atlaspack/rust@3.3.0
+  - @atlaspack/types-internal@2.14.3
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/logger@2.14.5
+  - @atlaspack/workers@2.14.5
+
 ## 2.14.4
 
 ### Patch Changes
