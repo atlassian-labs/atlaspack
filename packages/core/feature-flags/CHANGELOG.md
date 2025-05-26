@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.14.3
+
+### Patch Changes
+
+- [#511](https://github.com/atlassian-labs/atlaspack/pull/511) [`11d6f16`](https://github.com/atlassian-labs/atlaspack/commit/11d6f16b6397dee2f217167e5c98b39edb63f7a7) Thanks [@yamadapc](https://github.com/yamadapc)! - Clean-up dylib worker threads segmentation fault bug fix feature-flag
+
 ## 2.14.2
 
 ### Patch Changes

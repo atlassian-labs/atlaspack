@@ -1,5 +1,17 @@
 # @atlaspack/rust
 
+## 3.3.0
+
+### Minor Changes
+
+- [#541](https://github.com/atlassian-labs/atlaspack/pull/541) [`e2ba0f6`](https://github.com/atlassian-labs/atlaspack/commit/e2ba0f69702656f3d1ce95ab1454e35062b13b39) Thanks [@yamadapc](https://github.com/yamadapc)! - Add database compaction debug command
+
+- [#531](https://github.com/atlassian-labs/atlaspack/pull/531) [`d2c50c2`](https://github.com/atlassian-labs/atlaspack/commit/d2c50c2c020888b33bb25b8690d9320c2b69e2a6) Thanks [@yamadapc](https://github.com/yamadapc)! - Add way to iterate LMDB cache keys
+
+### Patch Changes
+
+- [#540](https://github.com/atlassian-labs/atlaspack/pull/540) [`46a90dc`](https://github.com/atlassian-labs/atlaspack/commit/46a90dccd019a26b222c878a92d23acc75dc67c5) Thanks [@yamadapc](https://github.com/yamadapc)! - Log verbose errors when failing to read VCS files
+
 ## 3.2.0
 
 ### Minor Changes
