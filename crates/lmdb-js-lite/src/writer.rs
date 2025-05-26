@@ -403,6 +403,15 @@ impl DatabaseWriter {
   pub fn static_read_txn(&self) -> heed::Result<RoTxn<'static>> {
     self.environment.clone().static_read_txn()
   }
+
+  /// Compact the database to the target path
+  pub fn compact(&self, target_path: &Path) -> Result<()> {
+    self
+      .environment
+      .copy_to_file(target_path, heed::CompactionOption::Enabled)?;
+
+    Ok(())
+  }
 }
 
 #[cfg(test)]

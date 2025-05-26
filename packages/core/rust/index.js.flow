@@ -340,6 +340,7 @@ declare export class Lmdb {
   commitWriteTransaction(): Promise<void>;
   delete(key: string): Promise<void>;
   close(): void;
+  compact(targetPath: string): void;
 }
 
 export interface InlineRequiresOptimizerInput {
