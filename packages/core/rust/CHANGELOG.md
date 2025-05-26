@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.3.1
+
+### Patch Changes
+
+- [#542](https://github.com/atlassian-labs/atlaspack/pull/542) [`e0f5337`](https://github.com/atlassian-labs/atlaspack/commit/e0f533757bd1019dbd108a04952c87da15286e09) Thanks [@yamadapc](https://github.com/yamadapc)! - Add feature-flagged option to use rayon thread-pool to optimize inline requires
+
 ## 3.3.0
 
 ### Minor Changes

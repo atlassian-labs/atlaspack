@@ -1,5 +1,17 @@
 # @atlaspack/optimizer-inline-requires
 
+## 2.14.6
+
+### Patch Changes
+
+- [#542](https://github.com/atlassian-labs/atlaspack/pull/542) [`e0f5337`](https://github.com/atlassian-labs/atlaspack/commit/e0f533757bd1019dbd108a04952c87da15286e09) Thanks [@yamadapc](https://github.com/yamadapc)! - Add feature-flagged option to use rayon thread-pool to optimize inline requires
+
+- Updated dependencies [[`e0f5337`](https://github.com/atlassian-labs/atlaspack/commit/e0f533757bd1019dbd108a04952c87da15286e09)]:
+  - @atlaspack/feature-flags@2.14.4
+  - @atlaspack/rust@3.3.1
+  - @atlaspack/types@2.14.6
+  - @atlaspack/plugin@2.14.6
+
 ## 2.14.5
 
 ### Patch Changes

@@ -1,5 +1,36 @@
 # @atlaspack/config-repl
 
+## 2.13.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/bundler-default@2.15.1
+  - @atlaspack/packager-js@2.14.6
+  - @atlaspack/runtime-js@2.14.6
+  - @atlaspack/transformer-js@3.2.4
+  - @atlaspack/transformer-html@2.14.6
+  - @atlaspack/transformer-postcss@2.14.6
+  - @atlaspack/optimizer-terser@2.14.6
+  - @atlaspack/packager-css@2.14.6
+  - @atlaspack/packager-html@2.14.6
+  - @atlaspack/reporter-dev-server-sw@2.14.6
+  - @atlaspack/reporter-json@2.14.6
+  - @atlaspack/runtime-browser-hmr@2.14.6
+  - @atlaspack/runtime-react-refresh@2.14.6
+  - @atlaspack/transformer-babel@2.14.6
+  - @atlaspack/transformer-css@2.14.6
+  - @atlaspack/transformer-posthtml@2.14.6
+  - @atlaspack/transformer-react-refresh-wrap@2.14.6
+  - @atlaspack/resolver-default@2.14.6
+  - @atlaspack/compressor-raw@2.13.8
+  - @atlaspack/namer-default@2.14.6
+  - @atlaspack/packager-raw@2.14.6
+  - @atlaspack/resolver-repl-runtimes@2.14.6
+  - @atlaspack/transformer-inline-string@2.14.6
+  - @atlaspack/transformer-json@2.14.6
+  - @atlaspack/transformer-raw@2.14.6
+
 ## 2.13.7
 
 ### Patch Changes
