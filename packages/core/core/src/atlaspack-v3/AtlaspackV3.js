@@ -82,15 +82,15 @@ export class AtlaspackV3 {
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {
-    let [isInvalid, err] = await atlaspackNapiRespondToFsEvents(
+    let [needsRebuild, error] = await atlaspackNapiRespondToFsEvents(
       this._atlaspack_napi,
       events,
     );
 
-    if (err) {
-      throw new Error(err);
+    if (error) {
+      throw new Error(error);
     }
 
-    return isInvalid;
+    return needsRebuild;
   }
 }

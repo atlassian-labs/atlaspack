@@ -10,9 +10,9 @@ pub type RequestGraph = StableDiGraph<RequestNode, RequestEdgeType>;
 pub enum RequestNode {
   Error(RunRequestError),
   Root,
-  Incomplete,
+  Incomplete(Option<Arc<RequestResult>>),
   Valid(Arc<RequestResult>),
-  Invalid(Arc<RequestResult>),
+  Invalid(Option<Arc<RequestResult>>),
   FileInvalidation,
 }
 

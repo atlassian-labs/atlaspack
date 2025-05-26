@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::hash::{Hash, Hasher};
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 
@@ -11,6 +10,9 @@ use pathdiff::diff_paths;
 use crate::request_tracker::{
   Request, RequestResultReceiver, RequestResultSender, ResultAndInvalidations, RunRequestContext,
   RunRequestError,
+};
+use atlaspack_core::asset_graph::{
+  propagate_requested_symbols, AssetGraph, DependencyNode, DependencyState,
 };
 use atlaspack_core::asset_graph::{AssetGraph, NodeId};
 use atlaspack_core::types::{AssetWithDependencies, Dependency};
@@ -61,9 +63,9 @@ struct AssetGraphBuilder {
   request_context: RunRequestContext,
   sender: RequestResultSender,
   receiver: RequestResultReceiver,
-  asset_request_to_asset_idx: HashMap<u64, NodeId>,
-  waiting_asset_requests: HashMap<u64, HashSet<NodeId>>,
-  entry_dependencies: Vec<(String, NodeId)>,
+  asset_request_to_asset_idx: HashMap<u64, NodeIndex>,
+  waiting_asset_requests: HashMap<u64, HashSet<NodeIndex>>,
+  entry_dependencies: Vec<(String, NodeIndex)>,
 }
 
 impl AssetGraphBuilder {
@@ -168,7 +170,7 @@ impl AssetGraphBuilder {
     })
   }
 
-  fn handle_path_result(&mut self, result: PathRequestOutput, request_id: u64) {
+  fn handle_path_result(&mut self, result: &PathRequestOutput, request_id: u64) {
     let dependency_idx = *self
       .request_id_to_dependency_idx
       .get(&request_id)
@@ -211,8 +213,8 @@ impl AssetGraphBuilder {
           file_path: path,
           project_root: self.request_context.project_root.clone(),
           pipeline: pipeline.clone(),
-          query,
-          side_effects,
+          query: query.clone(),
+          side_effects: *side_effects,
         }
       }
       PathRequestOutput::Excluded => {
@@ -249,12 +251,12 @@ impl AssetGraphBuilder {
     }
   }
 
-  fn handle_entry_result(&mut self, result: EntryRequestOutput) {
+  fn handle_entry_result(&mut self, result: &EntryRequestOutput) {
     let EntryRequestOutput { entries } = result;
     for entry in entries {
       let target_request = TargetRequest {
         default_target_options: self.request_context.options.default_target_options.clone(),
-        entry,
+        entry: entry.clone(),
         env: self.request_context.options.env.clone(),
         mode: self.request_context.options.mode.clone(),
       };
@@ -271,7 +273,7 @@ impl AssetGraphBuilder {
       asset,
       discovered_assets,
       dependencies,
-    } = result;
+    } = result.clone();
 
     let incoming_dependency_idx = *self
       .request_id_to_dependency_idx
@@ -484,7 +486,7 @@ impl AssetGraphBuilder {
         diff_paths(&entry, &self.request_context.project_root).unwrap_or_else(|| entry.clone());
       let entry = entry.to_str().unwrap().to_string();
 
-      let dependency = Dependency::entry(entry.clone(), target);
+      let dependency = Dependency::entry(entry.clone(), target.clone());
 
       let dep_node = self.graph.add_entry_dependency(dependency.clone(), cached);
       self.entry_dependencies.push((entry, dep_node));
@@ -592,7 +594,7 @@ mod tests {
     let mut request_tracker = request_tracker(options);
 
     let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+    let RequestResult::AssetGraph(asset_graph_request_result) = &*request_tracker
       .run_request(asset_graph_request)
       .await
       .unwrap()
@@ -646,7 +648,7 @@ mod tests {
     });
 
     let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+    let RequestResult::AssetGraph(asset_graph_request_result) = &*request_tracker
       .run_request(asset_graph_request)
       .await
       .expect("Failed to run asset graph request")
@@ -743,7 +745,7 @@ mod tests {
     });
 
     let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+    let RequestResult::AssetGraph(asset_graph_request_result) = &*request_tracker
       .run_request(asset_graph_request)
       .await
       .expect("Failed to run asset graph request")
