@@ -1286,7 +1286,7 @@ export default class BundleGraph {
 
   getReferencedAssets(
     bundle: Bundle,
-    cache: Map<Bundle, Set<string>>,
+    cache: Map<string, Set<string>>,
   ): Set<string> {
     const result = new Set();
 
@@ -1389,9 +1389,9 @@ export default class BundleGraph {
 
   getBundleDirectReferences(
     bundle: Bundle,
-    cache: Map<Bundle, Set<string>>,
+    cache: Map<string, Set<string>>,
   ): Set<string> {
-    const cachedResult = cache.get(bundle);
+    const cachedResult = cache.get(bundle.id);
     if (cachedResult != null) {
       return cachedResult;
     }
@@ -1416,7 +1416,7 @@ export default class BundleGraph {
       );
     }
 
-    cache.set(bundle, directReferences);
+    cache.set(bundle.id, directReferences);
 
     return directReferences;
   }

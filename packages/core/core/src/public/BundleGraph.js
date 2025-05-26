@@ -187,7 +187,7 @@ export default class BundleGraph<TBundle: IBundle>
 
   getReferencedAssets(
     bundle: IBundle,
-    cache: Map<Bundle, Set<string>>,
+    cache: Map<string, Set<string>>,
   ): Set<string> {
     return this.#graph.getReferencedAssets(
       bundleToInternalBundle(bundle),
