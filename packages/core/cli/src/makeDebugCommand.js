@@ -84,7 +84,7 @@ export function makeDebugCommand(): commander$Command {
   applyOptions(buildAssetGraph, commonOptions);
 
   const compactCache = debug
-    .command('compact-cache')
+    .command('compact-cache [input...]')
     .description('Compact the cache')
     .action(async (args: string[], opts: Options, command: CommandExt) => {
       const atlaspack = await getInstance(args, opts, command);

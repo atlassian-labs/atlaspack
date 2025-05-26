@@ -373,6 +373,8 @@ export interface VCSState {
   // Files that have been modified since the last commit
   dirtyFiles: VCSFile[];
   yarnStates: YarnState[];
+  dirtyFilesExecutionTime: number;
+  yarnStatesExecutionTime: number;
 }
 
 declare export function getVcsStateSnapshot(

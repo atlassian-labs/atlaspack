@@ -643,6 +643,8 @@ export default class Atlaspack {
    * Copy the cache to a new directory and compact it.
    */
   async unstable_compactCache(): Promise<void> {
+    await this._init();
+
     const cache = nullthrows(this.#resolvedOptions).cache;
     if (cache instanceof LMDBLiteCache) {
       await cache.compact('parcel-cache-compacted');
