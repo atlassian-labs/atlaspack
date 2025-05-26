@@ -83,5 +83,23 @@ export function makeDebugCommand(): commander$Command {
     });
   applyOptions(buildAssetGraph, commonOptions);
 
+  const compactCache = debug
+    .command('compact-cache [input...]')
+    .description('Compact the cache')
+    .action(async (args: string[], opts: Options, command: CommandExt) => {
+      const atlaspack = await getInstance(args, opts, command);
+      try {
+        await atlaspack.unstable_compactCache();
+        logger.info({
+          message: 'Done compacting cache',
+          origin: '@atlaspack/cli',
+        });
+        process.exit(0);
+      } catch (err) {
+        handleUncaughtException(err);
+      }
+    });
+  applyOptions(compactCache, commonOptions);
+
   return debug;
 }

@@ -10,17 +10,17 @@ import {Lmdb} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types';
 import type {Cache} from './types';
 import type {Readable, Writable} from 'stream';
-
+import fs from 'fs';
+import ncp from 'ncp';
+import {promisify} from 'util';
 import stream from 'stream';
 import path from 'path';
-import {promisify} from 'util';
-
 import {NodeFS} from '@atlaspack/fs';
-
 // $FlowFixMe
 import packageJson from '../package.json';
-
 import {FSCache} from './FSCache';
+
+const ncpAsync = promisify(ncp);
 
 interface DBOpenOptions {
   name: string;
@@ -72,7 +72,9 @@ export class LmdbWrapper {
     }
   }
 
-  resetReadTxn() {}
+  compact(targetPath: string) {
+    this.lmdb.compact(targetPath);
+  }
 }
 
 export function open(
@@ -241,13 +243,25 @@ export class LMDBLiteCache implements Cache {
     return this.store.keys();
   }
 
-  refresh(): void {
-    // Reset the read transaction for the store. This guarantees that
-    // the next read will see the latest changes to the store.
-    // Useful in scenarios where reads and writes are multi-threaded.
-    // See https://github.com/kriszyp/lmdb-js#resetreadtxn-void
-    this.store.resetReadTxn();
+  async compact(targetPath: string): Promise<void> {
+    await fs.promises.mkdir(targetPath, {recursive: true});
+
+    const files = await fs.promises.readdir(this.dir);
+    // copy all files except data.mdb and lock.mdb to the target path (recursive)
+    for (const file of files) {
+      const filePath = path.join(this.dir, file);
+
+      if (file === 'data.mdb' || file === 'lock.mdb') {
+        continue;
+      }
+
+      await ncpAsync(filePath, path.join(targetPath, file));
+    }
+
+    this.store.compact(path.join(targetPath, 'data.mdb'));
   }
+
+  refresh(): void {}
 }
 
 registerSerializableClass(

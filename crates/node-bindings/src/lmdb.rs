@@ -2,6 +2,7 @@ use napi::bindgen_prelude::Buffer;
 use napi::bindgen_prelude::Env;
 use napi::JsUnknown;
 use napi_derive::napi;
+
 #[napi]
 pub struct LMDB {
   inner: lmdb_js_lite::LMDB,
@@ -88,5 +89,10 @@ impl LMDB {
   #[napi]
   pub fn close(&mut self) {
     self.inner.close()
+  }
+
+  #[napi]
+  pub fn compact(&self, target_path: String) -> napi::Result<()> {
+    self.inner.compact(target_path)
   }
 }
