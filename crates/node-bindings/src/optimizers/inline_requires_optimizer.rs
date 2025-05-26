@@ -12,7 +12,6 @@ pub struct InlineRequiresOptimizerInput {
 }
 
 #[napi(object)]
-#[derive(serde::Serialize)]
 pub struct InlineRequiresOptimizerResult {
   pub code: String,
   pub source_map: Option<String>,
@@ -61,10 +60,7 @@ pub fn run_inline_requires_optimizer_async(
     let result = run_inline_requires_optimizer(input);
     match result {
       Ok(result) => {
-        deferred.resolve(move |env| {
-          let result = env.to_js_value(&result)?;
-          Ok(result)
-        });
+        deferred.resolve(move |_env| Ok(result));
       }
       Err(err) => {
         deferred.reject(napi::Error::new(
