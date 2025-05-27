@@ -7,8 +7,7 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<App />}>
-        <Route index element={<CacheValue />} />
-        <Route path="/app/stats" element={<Stats />} />
+        <Route index element={<Stats />} />
         <Route path="/app/cache/:key" element={<CacheValue />} />
       </Route>
     </Routes>

@@ -1,10 +1,13 @@
-// @flow strict-local
+/* eslint-disable monorepo/no-internal-import */
+/* eslint-disable no-console */
 
-import program from 'commander';
-import {Atlaspack} from '@atlaspack/core';
-import path from 'path';
-import {LMDBLiteCache} from '@atlaspack/cache';
-import express from 'express';
+const program = require('commander');
+const path = require('path');
+const {LMDBLiteCache} = require('@atlaspack/cache');
+const {loadGraphs} = require('@atlaspack/query');
+const express = require('express');
+const {spawn} = require('child_process');
+const cors = require('cors');
 
 function take(iterable, n) {
   const result = [];
@@ -50,21 +53,48 @@ async function main() {
     .requiredOption('-t, --target <path>', 'Path to the target cache')
     .parse(process.argv);
 
-  // $FlowFixMe
-  const options: any = command.opts();
+  const options = command.opts();
   const cache = new LMDBLiteCache(options.target);
 
+  const {assetGraph, bundleGraph, requestTracker, bundleInfo, cacheInfo} =
+    await loadGraphs(options.target);
+
   process.chdir(path.join(__dirname, 'frontend'));
-  const frontEndBuilder = new Atlaspack({
-    shouldDisableCache: true,
-    entries: [path.join(__dirname, './frontend/index.html')],
-    config: path.join(__dirname, './frontend/.atlaspackrc'),
+
+  const child = spawn(
+    'atlaspack',
+    ['serve', '--no-cache', path.join(__dirname, './frontend/index.html')],
+    {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        PORT: '3333',
+      },
+    },
+  );
+  process.on('beforeExit', () => {
+    child.kill();
   });
 
-  // eslint-disable-next-line no-unused-vars
-  const _subscription = await frontEndBuilder.watch();
-
   const app = express();
+
+  app.use(
+    cors({
+      origin: 'http://localhost:3333',
+      credentials: true,
+    }),
+  );
+
+  app.use((req, res, next) => {
+    if (res.headersSent) {
+      console.log(req.method, req.url, res.statusCode);
+    } else {
+      res.on('finish', function () {
+        console.log(req.method, req.url, res.statusCode);
+      });
+    }
+    next();
+  });
 
   app.get('/', (req, res) => {
     res.sendFile(path.join(process.cwd(), './dist/index.html'));
@@ -74,6 +104,8 @@ async function main() {
     res.sendFile(path.join(process.cwd(), './dist/index.html'));
   });
   app.use(express.static(path.join(process.cwd(), './dist')));
+
+  app.get('/api/asset-graph', (req, res) => {});
 
   app.get('/api/stats', (req, res) => {
     const stats = getCacheStats(cache);
