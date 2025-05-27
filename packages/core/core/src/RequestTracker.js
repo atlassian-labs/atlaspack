@@ -1887,9 +1887,15 @@ type InvalidationStats = {|
    * Percentage of nodes that have been invalidated
    */
   nodeInvalidationRatio: number,
+  /**
+   * Details for each invalidation type
+   */
   invalidations: InvalidationFnStats[],
 |};
 
+/**
+ * Information about a certain cache invalidation type.
+ */
 type InvalidationFnStats = {|
   /**
    * Invalidation type, one of:
