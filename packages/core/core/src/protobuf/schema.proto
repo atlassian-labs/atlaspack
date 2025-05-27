@@ -1,0 +1,243 @@
+// brew install protobuf protoc-gen-js
+syntax = "proto3";
+
+enum SpecifierType {
+  SPECIFIER_TYPE_COMMONJS = 0;
+  SPECIFIER_TYPE_ESM = 1;
+  SPECIFIER_TYPE_URL = 2;
+  SPECIFIER_TYPE_CUSTOM = 3;
+}
+
+enum DependencyPriority {
+  DEPENDENCY_PRIORITY_SYNC = 0;
+  DEPENDENCY_PRIORITY_PARALLEL = 1;
+  DEPENDENCY_PRIORITY_LAZY = 2;
+  DEPENDENCY_PRIORITY_CONDITIONAL = 3;
+}
+
+enum BundleBehavior {
+  BUNDLE_BEHAVIOR_INLINE = 0;
+  BUNDLE_BEHAVIOR_ISOLATED = 1;
+}
+
+message ASTGenerator {
+  string name = 1;
+  string version = 2;
+}
+
+message LineColumn {
+  int32 line = 1;
+  int32 column = 2;
+}
+
+message SourceLocation {
+  string filePath = 1;
+  LineColumn start = 2;
+  LineColumn end = 3;
+}
+
+message DependencySymbol {
+  string local = 1;
+  SourceLocation loc = 2;
+  bool isWeak = 3;
+  // JSON string
+  string meta = 4;
+}
+
+message AssetSymbol {
+  string local = 1;
+  SourceLocation loc = 2;
+  // JSON string
+  string meta = 3;
+}
+
+message TargetSourceMapOptions {
+  optional string sourceRoot = 1;
+  bool inline = 2;
+  bool inlineSources = 3;
+}
+
+message Environment {
+  string id = 1;
+  EnvironmentContext context = 2;
+  // JSON Record<string, string | string[]>
+  string engines = 3;
+  // JSON boolean | Array<string> | Record<string, boolean>
+  string includeNodeModules = 4;
+  OutputFormat outputFormat = 5;
+  SourceType sourceType = 6;
+  bool isLibrary = 7;
+  bool shouldOptimize = 8;
+  bool shouldScopeHoist = 9;
+  optional TargetSourceMapOptions sourceMap = 10;
+  optional SourceLocation loc = 11;
+  bool unstableSingleFileOutput = 12;
+}
+
+message Target {
+  optional string distEntry = 1;
+  string distDir = 2;
+  Environment env = 3;
+  string name = 4;
+  string publicUrl = 5;
+  optional SourceLocation loc = 6;
+}
+
+message AssetGraphEntrySpecifierNode {
+  string id = 1;
+  string value = 2;
+  optional string correspondingRequest = 3;
+}
+
+message Entry {
+  string filePath = 1;
+  string packagePath = 2;
+  optional string target = 3;
+  optional SourceLocation loc = 4;
+}
+
+message AssetGraphEntryFileNode {
+  string id = 1;
+  Entry value = 2;
+  optional string correspondingRequest = 3;
+}
+
+message AssetGraphRootNode {
+  string id = 1;
+  optional string value = 2;
+}
+
+message AssetGraphDependencyNode {
+  string id = 1;
+  Dependency value = 2;
+  optional bool complete = 3;
+  optional string correspondingRequest = 4;
+  bool deferred = 5;
+  optional bool hasDeferred = 6;
+  // Set<string>
+  repeated string usedSymbolsDown = 7;
+  // JSON Record<string, {|asset: string, symbol: string|} | null>
+  string usedSymbolsUp = 8;
+  bool usedSymbolsDownDirty = 9;
+  bool usedSymbolsUpDirtyDown = 10;
+  bool usedSymbolsUpDirtyUp = 11;
+  bool excluded = 12;
+}
+
+message Asset {
+  string id = 1;
+  bool committed = 2;
+  string filePath = 3;
+  optional string query = 4;
+  string type = 5;
+  map<string, Dependency> dependencies = 6;
+  BundleBehavior bundleBehavior = 7;
+  bool isBundleSplittable = 8;
+  bool isSource = 9;
+  string env = 10;
+  // JSON string
+  string meta = 11;
+  // JSON string
+  string stats = 12;
+  optional string contentKey = 13;
+  optional string mapKey = 14;
+  optional string outputHash = 15;
+  optional string pipeline = 16;
+  optional string astKey = 17;
+  optional ASTGenerator astGenerator = 18;
+  map<string, AssetSymbol> symbols = 19;
+  bool sideEffects = 20;
+  optional string uniqueKey = 21;
+  optional string configPath = 22;
+  optional string plugin = 23;
+  optional string configKeyPath = 24;
+  optional bool isLargeBlob = 25;
+}
+
+message AssetGraphNode {
+  oneof value {
+    AssetGraphRootNode root = 1;
+    AssetGraphEntryFileNode entryFile = 2;
+    AssetGraphEntrySpecifierNode entrySpecifier = 3;
+    AssetGraphDependencyNode dependency = 4;
+  }
+}
+
+message Dependency {
+  string id = 1;
+  string specifier = 2;
+  SpecifierType specifierType = 3;
+  DependencyPriority priority = 4;
+  BundleBehavior bundleBehavior = 5;
+  bool needsStableName = 6;
+  bool isOptional = 7;
+  bool isEntry = 8;
+  SourceLocation loc = 9;
+  string environmentId = 10;
+  repeated string packageConditions = 11;
+  // JSON string
+  string meta = 12;
+
+  optional Target target = 13;
+
+  string sourceAssetId = 14;
+  string sourcePath = 15;
+  string sourceAssetType = 16;
+  string resolveFrom = 17;
+  string range = 18;
+  string pipeline = 19;
+
+  map<string, DependencySymbol> symbols = 20;
+}
+
+message AssetRequestInput {
+  string name = 1;
+  string filePath = 2;
+  string env = 3;
+  bool isSource = 4;
+  bool canDefer = 5;
+  bool sideEffects = 6;
+  string code = 7;
+  string pipeline = 8;
+  bool isURL = 10;
+  string query = 11;
+  bool isSingleChangeRebuild = 12;
+
+  string optionsId = 13;
+}
+
+message AssetRequestNode {
+  string id = 1;
+  AssetRequestInput input = 2;
+}
+
+enum SourceType {
+  SOURCE_TYPE_SCRIPT = 0;
+  SOURCE_TYPE_MODULE = 1;
+}
+
+enum OutputFormat {
+  OUTPUT_FORMAT_ESMODULE = 0;
+  OUTPUT_FORMAT_COMMONJS = 1;
+  OUTPUT_FORMAT_GLOBAL = 2;
+}
+
+enum EnvironmentContext {
+  ENVIRONMENT_CONTEXT_BROWSER = 0;
+  ENVIRONMENT_CONTEXT_WEB_WORKER = 1;
+  ENVIRONMENT_CONTEXT_SERVICE_WORKER = 2;
+  ENVIRONMENT_CONTEXT_WORKLET = 3;
+  ENVIRONMENT_CONTEXT_NODE = 4;
+  ENVIRONMENT_CONTEXT_ELECTRON_MAIN = 5;
+  ENVIRONMENT_CONTEXT_ELECTRON_RENDERER = 6;
+}
+
+enum EnvironmentFeature {
+  ENVIRONMENT_FEATURE_ESMODULES = 0;
+  ENVIRONMENT_FEATURE_DYNAMIC_IMPORT = 1;
+  ENVIRONMENT_FEATURE_WORKER_MODULE = 2;
+  ENVIRONMENT_FEATURE_SERVICE_WORKER_MODULE = 3;
+  ENVIRONMENT_FEATURE_IMPORT_META_URL = 4;
+  ENVIRONMENT_FEATURE_ARROW_FUNCTIONS = 5;
+  ENVIRONMENT_FEATURE_GLOBAL_THIS = 6;
+}
