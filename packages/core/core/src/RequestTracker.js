@@ -20,7 +20,6 @@ import type {Async, EnvMap} from '@atlaspack/types';
 import {
   type Deferred,
   isGlobMatch,
-  isDirectoryInside,
   makeDeferredWithPromise,
   PromiseQueue,
 } from '@atlaspack/utils';
@@ -78,10 +77,6 @@ export const requestGraphEdgeTypes = {
   invalidated_by_create_above: 6,
   dirname: 7,
 };
-
-class FSBailoutError extends Error {
-  name: string = 'FSBailoutError';
-}
 
 export type RequestGraphEdgeType = $Values<typeof requestGraphEdgeTypes>;
 
@@ -884,7 +879,6 @@ export class RequestGraph extends ContentGraph<
     isInitialBuild: boolean = false,
   ): Async<boolean> {
     let didInvalidate = false;
-    let count = 0;
     let predictedTime = 0;
     let startTime = Date.now();
 
