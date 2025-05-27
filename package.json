@@ -17,7 +17,11 @@
   ],
   "scripts": {
     "build": "yarn build-bundles && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production gulp",
+<<<<<<< HEAD
     "build-bundles": "rimraf --glob packages/*/*/lib && lerna run dev:prepare && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SELF_BUILD=true atlaspack build --feature-flag cachePerformanceImprovements=true --no-cache packages/core/{eslint-plugin,fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}",
+=======
+    "build-bundles": "rimraf --glob packages/*/*/lib && lerna run dev:prepare && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SELF_BUILD=true atlaspack build --feature-flag cachePerformanceImprovements=true packages/core/{eslint-plugin,fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}",
+>>>>>>> f377e7370 (Inspector wip)
     "build-ts": "lerna run build-ts && lerna run check-ts",
     "build-native": "node scripts/build-native.js",
     "build-native-release": "cross-env CARGO_PROFILE=release node scripts/build-native.js",
