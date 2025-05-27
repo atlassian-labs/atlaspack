@@ -20,7 +20,6 @@ import type {Async, EnvMap} from '@atlaspack/types';
 import {
   type Deferred,
   isGlobMatch,
-  isDirectoryInside,
   makeDeferredWithPromise,
   PromiseQueue,
 } from '@atlaspack/utils';
@@ -84,10 +83,6 @@ export const requestGraphEdgeTypes = {
   invalidated_by_create_above: 6,
   dirname: 7,
 };
-
-class FSBailoutError extends Error {
-  name: string = 'FSBailoutError';
-}
 
 export type RequestGraphEdgeType = $Values<typeof requestGraphEdgeTypes>;
 
@@ -862,52 +857,27 @@ export class RequestGraph extends ContentGraph<
     let nodeId = this.getNodeIdByContentKey(node.id);
     let dirname = path.dirname(fromProjectPathRelative(filePath));
 
-    if (getFeatureFlag('fixQuadraticCacheInvalidation')) {
-      while (dirname !== '/') {
-        if (!this.hasContentKey(dirname)) break;
-        const matchNodeId = this.getNodeIdByContentKey(dirname);
-        if (
-          !this.hasEdge(
-            nodeId,
-            matchNodeId,
-            requestGraphEdgeTypes.invalidated_by_create_above,
-          )
-        )
-          break;
-
-        const connectedNodes = this.getNodeIdsConnectedTo(
+    while (dirname !== '/') {
+      if (!this.hasContentKey(dirname)) break;
+      const matchNodeId = this.getNodeIdByContentKey(dirname);
+      if (
+        !this.hasEdge(
+          nodeId,
           matchNodeId,
-          requestGraphEdgeTypes.invalidated_by_create,
-        );
-        for (let connectedNode of connectedNodes) {
-          invalidateNode(connectedNode, FILE_CREATE);
-        }
+          requestGraphEdgeTypes.invalidated_by_create_above,
+        )
+      )
+        break;
 
-        dirname = path.dirname(dirname);
+      const connectedNodes = this.getNodeIdsConnectedTo(
+        matchNodeId,
+        requestGraphEdgeTypes.invalidated_by_create,
+      );
+      for (let connectedNode of connectedNodes) {
+        invalidateNode(connectedNode, FILE_CREATE);
       }
-    } else {
-      for (let matchNode of matchNodes) {
-        let matchNodeId = this.getNodeIdByContentKey(matchNode.id);
-        if (
-          this.hasEdge(
-            nodeId,
-            matchNodeId,
-            requestGraphEdgeTypes.invalidated_by_create_above,
-          ) &&
-          isDirectoryInside(
-            fromProjectPathRelative(toProjectPathUnsafe(matchNode.id)),
-            dirname,
-          )
-        ) {
-          let connectedNodes = this.getNodeIdsConnectedTo(
-            matchNodeId,
-            requestGraphEdgeTypes.invalidated_by_create,
-          );
-          for (let connectedNode of connectedNodes) {
-            this.invalidateNode(connectedNode, FILE_CREATE);
-          }
-        }
-      }
+
+      dirname = path.dirname(dirname);
     }
 
     // Find the `file_name` node for the parent directory and
@@ -947,15 +917,12 @@ export class RequestGraph extends ContentGraph<
     invalidationsByPath: Map<string, number>,
   |}> {
     let didInvalidate = false;
-    let count = 0;
     let predictedTime = 0;
     let startTime = Date.now();
-    const enableOptimization = getFeatureFlag('fixQuadraticCacheInvalidation');
-    const removeOrphans = !enableOptimization;
 
     const invalidatedNodes = new Set();
     const invalidateNode = (nodeId, reason) => {
-      if (enableOptimization && invalidatedNodes.has(nodeId)) {
+      if (invalidatedNodes.has(nodeId)) {
         return;
       }
       invalidatedNodes.add(nodeId);
@@ -964,7 +931,7 @@ export class RequestGraph extends ContentGraph<
     const aboveCache = new Map();
     const getAbove = (fileNameNodeId) => {
       const cachedResult = aboveCache.get(fileNameNodeId);
-      if (enableOptimization && cachedResult) {
+      if (cachedResult) {
         return cachedResult;
       }
 
@@ -986,30 +953,6 @@ export class RequestGraph extends ContentGraph<
     const invalidationsByPath = new Map();
     for (let {path: _path, type} of events) {
       const invalidationsBefore = this.getInvalidNodeCount();
-
-      if (
-        !enableOptimization &&
-        process.env.ATLASPACK_DISABLE_CACHE_TIMEOUT !== 'true' &&
-        ++count === 256
-      ) {
-        let duration = Date.now() - startTime;
-        predictedTime = duration * (events.length >> 8);
-        if (predictedTime > threshold) {
-          logger.warn({
-            origin: '@atlaspack/core',
-            message:
-              'Building with clean cache. Cache invalidation took too long.',
-            meta: {
-              trackableEvent: 'cache_invalidation_timeout',
-              watcherEventCount: events.length,
-              predictedTime,
-            },
-          });
-          throw new FSBailoutError(
-            'Responding to file system events exceeded threshold, start with empty cache.',
-          );
-        }
-      }
 
       let _filePath = toProjectPath(options.projectRoot, _path);
       let filePath = fromProjectPathRelative(_filePath);
@@ -1112,7 +1055,7 @@ export class RequestGraph extends ContentGraph<
         // Delete the file node since it doesn't exist anymore.
         // This ensures that files that don't exist aren't sent
         // to requests as invalidations for future requests.
-        this.removeNode(nodeId, removeOrphans);
+        this.removeNode(nodeId, false);
       }
 
       let configKeyNodes = this.configKeyNodes.get(_filePath);
@@ -1151,7 +1094,7 @@ export class RequestGraph extends ContentGraph<
               );
             }
             didInvalidate = true;
-            this.removeNode(nodeId, removeOrphans);
+            this.removeNode(nodeId, false);
           }
         }
       }
@@ -1164,9 +1107,7 @@ export class RequestGraph extends ContentGraph<
       );
     }
 
-    if (getFeatureFlag('fixQuadraticCacheInvalidation')) {
-      cleanUpOrphans(this);
-    }
+    cleanUpOrphans(this);
 
     let duration = Date.now() - startTime;
     logger.verbose({
