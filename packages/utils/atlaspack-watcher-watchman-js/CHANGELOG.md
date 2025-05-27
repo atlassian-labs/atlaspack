@@ -1,5 +1,13 @@
 # @atlaspack/watcher-watchman-js
 
+## 2.14.7
+
+### Patch Changes
+
+- Updated dependencies [[`556d6ab`](https://github.com/atlassian-labs/atlaspack/commit/556d6ab8ede759fa7f37fcd3f4da336ef1c55e8f)]:
+  - @atlaspack/logger@2.14.7
+  - @atlaspack/utils@2.14.7
+
 ## 2.14.6
 
 ### Patch Changes

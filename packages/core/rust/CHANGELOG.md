@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.3.2
+
+### Patch Changes
+
+- [#549](https://github.com/atlassian-labs/atlaspack/pull/549) [`556d6ab`](https://github.com/atlassian-labs/atlaspack/commit/556d6ab8ede759fa7f37fcd3f4da336ef1c55e8f) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix log file RUST_LOG levels
+
 ## 3.3.1
 
 ### Patch Changes

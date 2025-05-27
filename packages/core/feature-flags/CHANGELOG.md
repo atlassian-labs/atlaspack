@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.15.0
+
+### Minor Changes
+
+- [#547](https://github.com/atlassian-labs/atlaspack/pull/547) [`a1773d2`](https://github.com/atlassian-labs/atlaspack/commit/a1773d2a62d0ef7805ac7524621dcabcc1afe929) Thanks [@benjervis](https://github.com/benjervis)! - Add a feature flag for resolving the configuration for `@atlaspack/bundler-default` from CWD, rather than exclusively from the project root.
+
 ## 2.14.4
 
 ### Patch Changes
