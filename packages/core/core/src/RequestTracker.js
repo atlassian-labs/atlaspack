@@ -1812,21 +1812,28 @@ async function loadRequestGraph(options): Async<RequestGraph> {
         },
       });
 
-      const invalidationStats = await invalidateRequestGraph(
-        requestGraph,
-        options,
-        events,
-      );
+      if (getFeatureFlag('verboseRequestInvalidationStats')) {
+        const invalidationStats = await invalidateRequestGraph(
+          requestGraph,
+          options,
+          events,
+        );
 
-      logger.verbose({
-        origin: '@atlaspack/core',
-        message: 'Request track loaded from cache',
-        meta: {
-          ...commonMeta,
-          trackableEvent: 'request_tracker_cache_key_hit',
-          invalidationStats,
-        },
-      });
+        logger.verbose({
+          origin: '@atlaspack/core',
+          message: 'Request track loaded from cache',
+          meta: {
+            ...commonMeta,
+            trackableEvent: 'request_tracker_cache_key_hit',
+            invalidationStats,
+          },
+        });
+      } else {
+        requestGraph.invalidateUnpredictableNodes();
+        requestGraph.invalidateOnBuildNodes();
+        requestGraph.invalidateEnvNodes(options.env);
+        requestGraph.invalidateOptionNodes(options);
+      }
 
       return requestGraph;
     } catch (e) {
@@ -1860,6 +1867,26 @@ type InvalidationFn = {|
 |};
 
 type InvalidationStats = {|
+  /**
+   * Total number of request graph nodes
+   */
+  nodeCount: number,
+  /**
+   * Number of requests in RequestGraph
+   */
+  requestCount: number,
+  /**
+   * Number of nodes that have been invalidated.
+   */
+  invalidatedCount: number,
+  /**
+   * Percentage of requests that have been invalidated
+   */
+  requestInvalidationRatio: number,
+  /**
+   * Percentage of nodes that have been invalidated
+   */
+  nodeInvalidationRatio: number,
   invalidations: InvalidationFnStats[],
 |};
 
@@ -1929,8 +1956,26 @@ async function invalidateRequestGraph(
   for (const invalidation of invalidationFns) {
     invalidations.push(await runInvalidation(requestGraph, invalidation));
   }
+  const invalidatedCount = invalidations.reduce(
+    (acc, invalidation) => acc + invalidation.count,
+    0,
+  );
+  const requestCount = requestGraph.nodes.reduce(
+    (acc, node) => acc + (node?.type === REQUEST ? 1 : 0),
+    0,
+  );
+  const nodeCount = requestGraph.nodes.length;
+  const nodeInvalidationRatio = invalidatedCount / nodeCount;
+  const requestInvalidationRatio = invalidatedCount / requestCount;
 
-  return {invalidations};
+  return {
+    invalidations,
+    nodeCount,
+    requestCount,
+    invalidatedCount,
+    nodeInvalidationRatio,
+    requestInvalidationRatio,
+  };
 }
 
 /**

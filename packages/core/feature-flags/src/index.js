@@ -23,6 +23,8 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   cachePerformanceImprovements: false,
   inlineStringReplacementPerf: false,
   conditionalBundlingAsyncRuntime: false,
+  // Default to true as it's a monitoring change. Can be turned off if necessary.
+  verboseRequestInvalidationStats: true,
   conditionalBundlingReporterDuplicateFix: false,
   resolveBundlerConfigFromCwd: false,
 };
