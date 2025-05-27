@@ -45,6 +45,11 @@ export const inputFS: NodeFS = new NodeFS();
 export let outputFS: MemoryFS = new MemoryFS(workerFarm);
 export let overlayFS: OverlayFS = new OverlayFS(outputFS, inputFS);
 
+export function resetOverlayFS() {
+  outputFS = new MemoryFS(workerFarm);
+  overlayFS = new OverlayFS(outputFS, inputFS);
+}
+
 beforeEach(() => {
   outputFS = new MemoryFS(workerFarm);
   overlayFS = new OverlayFS(outputFS, inputFS);
