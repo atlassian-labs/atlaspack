@@ -30,19 +30,16 @@ export async function loadGraphs(cacheDir: string): Promise<{|
   let cacheInfo: Map<string, Array<string | number>> = new Map();
   const cache = new LMDBLiteCache(cacheDir);
 
-  let requestGraphBlob;
-  let bundleGraphBlob;
-  let assetGraphBlob;
+  let requestGraphKey: string | null = null;
+  let requestGraphBlob: string | null = null;
+  let bundleGraphBlob: string | null = null;
+  let assetGraphBlob: string | null = null;
   for (let key of cache.keys()) {
     console.log(key);
-    if (key.startsWith('requestGraph:')) {
-      requestGraphBlob = key;
-    }
-    if (key.startsWith('bundleGraph:')) {
-      bundleGraphBlob = key;
-    }
-    if (key.startsWith('assetGraph:')) {
-      assetGraphBlob = key;
+    if (key.startsWith('request_tracker:cache_metadata')) {
+      const metadata = await cache.get(key);
+      requestGraphBlob = `requestGraph-${metadata.cacheKey}`;
+      requestGraphKey = metadata.cacheKey;
     }
   }
 
@@ -50,14 +47,13 @@ export async function loadGraphs(cacheDir: string): Promise<{|
 
   // Get requestTracker
   let requestTracker;
-  if (requestGraphBlob != null) {
+  if (requestGraphBlob != null && requestGraphKey != null) {
     try {
-      let requestGraphKey = requestGraphBlob.slice(0, -'-0'.length);
       let date = Date.now();
       let {requestGraph, bufferLength} = await readAndDeserializeRequestGraph(
         cache,
+        requestGraphBlob,
         requestGraphKey,
-        requestGraphKey.replace('requestGraph-', ''),
       );
 
       requestTracker = new RequestTracker({
