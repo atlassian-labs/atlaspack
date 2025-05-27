@@ -1,10 +1,16 @@
 /* eslint-disable monorepo/no-internal-import */
 /* eslint-disable no-console */
 
+require('@atlaspack/core/src/Atlaspack.js');
 const program = require('commander');
 const path = require('path');
-const {LMDBLiteCache} = require('@atlaspack/cache');
+const {LMDBLiteCache} = require('@atlaspack/cache/src/LMDBLiteCache');
 const {loadGraphs} = require('@atlaspack/query');
+const {requestTypes} = require('@atlaspack/core/src/RequestTracker.js');
+const {
+  setFeatureFlags,
+  DEFAULT_FEATURE_FLAGS,
+} = require('@atlaspack/feature-flags/src/index');
 const express = require('express');
 const {spawn} = require('child_process');
 const cors = require('cors');
@@ -53,34 +59,21 @@ async function main() {
     .requiredOption('-t, --target <path>', 'Path to the target cache')
     .parse(process.argv);
 
+  setFeatureFlags({
+    ...DEFAULT_FEATURE_FLAGS,
+    cachePerformanceImprovements: true,
+  });
+
   const options = command.opts();
   const cache = new LMDBLiteCache(options.target);
 
-  const {assetGraph, bundleGraph, requestTracker, bundleInfo, cacheInfo} =
-    await loadGraphs(options.target);
-
-  process.chdir(path.join(__dirname, 'frontend'));
-
-  const child = spawn(
-    'atlaspack',
-    ['serve', '--no-cache', path.join(__dirname, './frontend/index.html')],
-    {
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        PORT: '3333',
-      },
-    },
-  );
-  process.on('beforeExit', () => {
-    child.kill();
-  });
+  const {requestTracker} = await loadGraphs(options.target);
 
   const app = express();
 
   app.use(
     cors({
-      origin: 'http://localhost:3333',
+      // origin: 'http://localhost:3333',
       credentials: true,
     }),
   );
@@ -105,7 +98,37 @@ async function main() {
   });
   app.use(express.static(path.join(process.cwd(), './dist')));
 
-  app.get('/api/asset-graph', (req, res) => {});
+  app.get('/api/asset-graph', async (req, res) => {
+    const assetGraphRequest = requestTracker.graph.nodes.find(
+      (node) =>
+        node.type === 1 &&
+        node.requestType === requestTypes.asset_graph_request,
+    );
+    console.log(assetGraphRequest);
+    const {assetGraph} = await cache.get(assetGraphRequest.resultCacheKey);
+    console.log(assetGraph);
+
+    const nodes = [];
+    const nodeIds = new Set();
+    const rootNodeId = assetGraph.rootNodeId;
+    nodeIds.add(rootNodeId);
+    nodes.push(assetGraph.getNode(rootNodeId));
+    assetGraph.getNodeIdsConnectedFrom(rootNodeId).forEach((nodeId) => {
+      nodeIds.add(nodeId);
+      nodes.push(assetGraph.getNode(nodeId));
+    });
+
+    const jsonAssetGraph = {
+      nodes: nodes.map((node, i) => ({
+        id: node.id,
+        edges: assetGraph
+          .getNodeIdsConnectedFrom(i)
+          .filter((nodeId) => nodeIds.has(nodeId))
+          .map((nodeId) => assetGraph.getNode(nodeId).id),
+      })),
+    };
+    res.json(jsonAssetGraph);
+  });
 
   app.get('/api/stats', (req, res) => {
     const stats = getCacheStats(cache);
