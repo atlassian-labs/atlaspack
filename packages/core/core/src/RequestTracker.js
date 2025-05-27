@@ -446,23 +446,28 @@ export class RequestGraph extends ContentGraph<
     this.removeCachedRequestChunkForNode(nodeId);
   }
 
-  invalidateUnpredictableNodes() {
+  invalidateUnpredictableNodes(): number {
+    const currentInvalidatedNodes = this.invalidNodeIds.size;
     for (let nodeId of this.unpredicatableNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type !== FILE && node.type !== GLOB);
       this.invalidateNode(nodeId, STARTUP);
     }
+    return this.invalidNodeIds.size - currentInvalidatedNodes;
   }
 
-  invalidateOnBuildNodes() {
+  invalidateOnBuildNodes(): number {
+    const currentInvalidatedNodes = this.invalidNodeIds.size;
     for (let nodeId of this.invalidateOnBuildNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type !== FILE && node.type !== GLOB);
       this.invalidateNode(nodeId, STARTUP);
     }
+    return this.invalidNodeIds.size - currentInvalidatedNodes;
   }
 
-  invalidateEnvNodes(env: EnvMap) {
+  invalidateEnvNodes(env: EnvMap): number {
+    const currentInvalidatedNodes = this.invalidNodeIds.size;
     for (let nodeId of this.envNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === ENV);
@@ -476,9 +481,11 @@ export class RequestGraph extends ContentGraph<
         }
       }
     }
+    return this.invalidNodeIds.size - currentInvalidatedNodes;
   }
 
-  invalidateOptionNodes(options: AtlaspackOptions) {
+  invalidateOptionNodes(options: AtlaspackOptions): number {
+    const currentInvalidatedNodes = this.invalidNodeIds.size;
     for (let nodeId of this.optionNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === OPTION);
@@ -494,6 +501,7 @@ export class RequestGraph extends ContentGraph<
         }
       }
     }
+    return this.invalidNodeIds.size - currentInvalidatedNodes;
   }
 
   invalidateOnConfigKeyChange(
@@ -1773,17 +1781,41 @@ async function loadRequestGraph(options): Async<RequestGraph> {
         },
       });
 
-      requestGraph.invalidateUnpredictableNodes();
-      requestGraph.invalidateOnBuildNodes();
-      requestGraph.invalidateEnvNodes(options.env);
-      requestGraph.invalidateOptionNodes(options);
+      const invalidationCounts = {
+        unpredictable: 0,
+        onBuild: 0,
+        env: 0,
+        option: 0,
+        fsEvents: 0,
+      };
 
+      invalidationCounts.unpredictable =
+        requestGraph.invalidateUnpredictableNodes();
+      invalidationCounts.onBuild = requestGraph.invalidateOnBuildNodes();
+      invalidationCounts.env = requestGraph.invalidateEnvNodes(options.env);
+      invalidationCounts.option = requestGraph.invalidateOptionNodes(options);
+
+      const invalidationCountBeforeFsEvents = requestGraph.invalidNodeIds.size;
       await requestGraph.respondToFSEvents(
         options.unstableFileInvalidations || events,
         options,
         10000,
         true,
       );
+      invalidationCounts.fsEvents =
+        requestGraph.invalidNodeIds.size - invalidationCountBeforeFsEvents;
+
+      logger.verbose({
+        origin: '@atlaspack/core',
+        message: 'Request track loaded from cache',
+        meta: {
+          cacheKey,
+          snapshotKey,
+          trackableEvent: 'request_tracker_cache_key_hit',
+          invalidationCounts,
+        },
+      });
+
       return requestGraph;
     } catch (e) {
       // Prevent logging fs events took too long warning
@@ -1802,6 +1834,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     meta: {
       cacheKey,
       snapshotKey,
+      trackableEvent: 'request_tracker_cache_key_miss',
     },
   });
   return new RequestGraph();
