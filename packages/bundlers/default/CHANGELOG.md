@@ -1,5 +1,20 @@
 # @atlaspack/bundler-default
 
+## 2.16.0
+
+### Minor Changes
+
+- [#547](https://github.com/atlassian-labs/atlaspack/pull/547) [`a1773d2`](https://github.com/atlassian-labs/atlaspack/commit/a1773d2a62d0ef7805ac7524621dcabcc1afe929) Thanks [@benjervis](https://github.com/benjervis)! - Add a feature flag for resolving the configuration for `@atlaspack/bundler-default` from CWD, rather than exclusively from the project root.
+
+### Patch Changes
+
+- Updated dependencies [[`a1773d2`](https://github.com/atlassian-labs/atlaspack/commit/a1773d2a62d0ef7805ac7524621dcabcc1afe929), [`556d6ab`](https://github.com/atlassian-labs/atlaspack/commit/556d6ab8ede759fa7f37fcd3f4da336ef1c55e8f)]:
+  - @atlaspack/feature-flags@2.15.0
+  - @atlaspack/rust@3.3.2
+  - @atlaspack/graph@3.4.5
+  - @atlaspack/utils@2.14.7
+  - @atlaspack/plugin@2.14.7
+
 ## 2.15.1
 
 ### Patch Changes
