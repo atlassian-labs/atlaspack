@@ -7,6 +7,7 @@ import type {
   BuildMode,
   PluginLogger,
 } from '@atlaspack/types';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {type SchemaEntity, validateSchema} from '@atlaspack/utils';
 import invariant from 'assert';
 
@@ -155,9 +156,17 @@ export async function loadBundlerConfig(
   options: PluginOptions,
   logger: PluginLogger,
 ): Promise<ResolvedBundlerConfig> {
-  let conf = await config.getConfig<BundlerConfig>([], {
-    packageKey: '@atlaspack/bundler-default',
-  });
+  let conf;
+
+  if (getFeatureFlag('resolveBundlerConfigFromCwd')) {
+    conf = await config.getConfigFrom(`${process.cwd()}/index`, [], {
+      packageKey: '@atlaspack/bundler-default',
+    });
+  } else {
+    conf = await config.getConfig<BundlerConfig>([], {
+      packageKey: '@atlaspack/bundler-default',
+    });
+  }
 
   if (!conf) {
     const modDefault = {
