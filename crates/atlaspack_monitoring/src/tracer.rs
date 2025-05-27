@@ -102,7 +102,8 @@ impl Tracer {
 
     let layer = tracing_subscriber::fmt::layer()
       .with_writer(non_blocking)
-      .with_span_events(FmtSpan::CLOSE);
+      .with_span_events(FmtSpan::CLOSE)
+      .with_filter(EnvFilter::from_default_env());
 
     worker_guards.push(TracerGuard::WorkerGuard(worker_guard));
 
