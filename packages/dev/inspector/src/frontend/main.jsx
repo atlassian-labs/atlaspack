@@ -1,16 +1,29 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import {createRoot} from 'react-dom/client';
 import AppRoutes from './ui/AppRoutes';
 import {BrowserRouter} from 'react-router';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
+import axios from 'axios';
 
-const queryClient = new QueryClient();
+const defaultQueryFn = async ({queryKey}) => {
+  const {data} = await axios.get(`http://localhost:3000${queryKey[0]}`);
+  return data;
+};
 
-ReactDOM.render(
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryFn: defaultQueryFn,
+    },
+  },
+});
+
+const root = createRoot(document.getElementById('root'));
+
+root.render(
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <AppRoutes />
     </BrowserRouter>
   </QueryClientProvider>,
-  document.getElementById('root'),
 );

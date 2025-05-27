@@ -1,5 +1,5 @@
 import './globals.css';
-import React, {useState, useEffect} from 'react';
+import React from 'react';
 import {Outlet, Link, useParams, useSearchParams} from 'react-router';
 import styles from './App.module.css';
 import {useQuery} from '@tanstack/react-query';
@@ -14,8 +14,7 @@ function formatBytes(bytes) {
 
 export function Stats() {
   const {data, isLoading, error} = useQuery({
-    queryKey: ['stats'],
-    queryFn: () => fetch('/api/stats').then((res) => res.json()),
+    queryKey: ['/api/stats'],
   });
 
   if (isLoading) {
@@ -111,11 +110,7 @@ export function CacheValue() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['cacheValue', key],
-    queryFn: () =>
-      fetch(`/api/cache-value/${encodeURIComponent(key)}`).then((res) =>
-        res.json(),
-      ),
+    queryKey: [`/api/cache-value/${encodeURIComponent(key)}`],
   });
 
   const content = () => {
@@ -162,18 +157,14 @@ export default function App() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['cacheKeys', sortBy],
-    queryFn: () =>
-      fetch('/api/cache-keys/?' + qs.stringify({sortBy})).then((res) =>
-        res.json(),
-      ),
+    queryKey: ['/api/cache-keys/?' + qs.stringify({sortBy})],
   });
 
   return (
     <div className={styles.app}>
       <div className={styles.sidebar}>
         <h2>cache keys</h2>
-        <Link to="/app/stats">stats</Link>
+        <Link to="/">stats</Link>
 
         <hr />
 

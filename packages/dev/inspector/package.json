@@ -18,11 +18,11 @@
   },
   "main": "src/index.js",
   "dependencies": {
-    "@atlaspack/core": "2.16.1",
-    "@atlaspack/cache": "3.1.0",
+    "@atlaspack/core": "*",
+    "@atlaspack/cache": "*",
     "express": "^5.1.0",
+    "cors": "^2.8.5",
     "commander": "^7.0.0"
   },
-  "devDependencies": {},
-  "type": "commonjs"
+  "devDependencies": {}
 }
