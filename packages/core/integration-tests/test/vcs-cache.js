@@ -864,8 +864,10 @@ __metadata:
 
     // Check that the snapshot tracks the uncommitted changes
     const snapshot2 = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+    const dirtyFiles2 = snapshot2.vcsState.dirtyFiles;
+    dirtyFiles2.sort((a, b) => a.path.localeCompare(b.path));
     assert.deepEqual(
-      snapshot2.vcsState.dirtyFiles.map((f) => f.path),
+      dirtyFiles2.map((f) => f.path),
       [path.relative(root, file2), path.relative(root, file3)],
     );
 
