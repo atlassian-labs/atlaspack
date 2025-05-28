@@ -363,7 +363,7 @@ declare export function runInlineRequiresOptimizerAsync(
 
 export interface VCSFile {
   path: string;
-  hash: number;
+  hash?: string | null;
 }
 
 export interface YarnState {
