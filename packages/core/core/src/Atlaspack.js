@@ -165,10 +165,17 @@ export default class Atlaspack {
       const version = require('../package.json').version;
       await lmdb.put('current_session_version', Buffer.from(version));
 
+      let threads = undefined;
+      if (process.env.ATLASPACK_NATIVE_THREADS !== undefined) {
+        threads = parseInt(process.env.ATLASPACK_NATIVE_THREADS, 10);
+      } else if (process.env.NODE_ENV === 'test') {
+        threads = 2;
+      }
+
       rustAtlaspack = await AtlaspackV3.create({
         ...options,
         corePath: path.join(__dirname, '..'),
-        threads: process.env.NODE_ENV === 'test' ? 2 : undefined,
+        threads,
         entries: Array.isArray(entries)
           ? entries
           : entries == null
