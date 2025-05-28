@@ -147,7 +147,7 @@ describe.v2('cache', function () {
     assert.equal(await run(b.bundleGraph), 6);
   });
 
-  it('should support adding a dependency', async function () {
+  it.only('should support adding a dependency', async function () {
     let b = await testCache(async (b) => {
       assert.equal(await run(b.bundleGraph), 4);
       await overlayFS.writeFile(
