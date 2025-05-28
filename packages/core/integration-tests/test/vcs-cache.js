@@ -397,6 +397,40 @@ describe('vcs cache', () => {
     }
   });
 
+  it('should be able to write a snapshot when a file has been deleted and the delete is not committed', async () => {
+    const {root, file1, file2} = setupGitRepository();
+
+    const vcsFS = new NodeVCSAwareFS({
+      gitRepoPath: root,
+      excludePatterns: [],
+      logEventDiff: null,
+    });
+
+    // bundle the file
+    const result = await bundle(file1, {
+      inputFS: vcsFS,
+      outputFS: vcsFS,
+      shouldDisableCache: false,
+      featureFlags: {
+        vcsMode: 'NEW',
+      },
+    });
+    assertBundles(result, [
+      {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
+    ]);
+
+    // remove file2
+    fs.rmSync(file2, {force: true});
+
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
+    await vcsFS.writeSnapshot(root, snapshotPath, {});
+
+    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+    assert.equal(snapshot.vcsState.dirtyFiles.length, 1);
+    assert.equal(snapshot.vcsState.dirtyFiles[0].path, 'file2.js');
+    assert.equal(snapshot.vcsState.dirtyFiles[0].hash, null);
+  });
+
   it('if a build is made over a dirty state, it should be able to detect changes on the next build', async () => {
     const {root, file1, file2, changeLockfileHash} = setupGitRepository();
 

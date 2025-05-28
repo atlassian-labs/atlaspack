@@ -267,11 +267,18 @@ pub struct YarnSnapshot {
   pub yarn_state: YarnStateFile,
 }
 
+/// "Dirty" files are files modified in the current work-tree and uncommitted.
+///
+/// These files are hashed and stored in the snapshot.
+///
+/// Currently on boot all dirty files will be invalidated on the cache regardless of
+/// whether they have changes or not.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VCSFile {
   pub path: PathBuf,
-  pub hash: String,
+  /// Missing in case the file has been deleted
+  pub hash: Option<String>,
 }
 
 fn get_file_contents_at_commit(
@@ -627,7 +634,7 @@ pub fn vcs_list_dirty_files(
     return Err(anyhow::anyhow!("Git ls-files failed:\n{}", stderr));
   }
   let output = String::from_utf8(command.stdout).unwrap();
-  let lines: Vec<_> = output.split_terminator('\0').map(String::from).collect();
+  let lines: HashSet<_> = output.split_terminator('\0').map(String::from).collect();
 
   let results = lines
     .par_iter()
@@ -637,6 +644,13 @@ pub fn vcs_list_dirty_files(
 
       let path = Path::new(relative_path);
       let path = dir.join(path);
+
+      if !path.exists() {
+        return Ok(VCSFile {
+          path: relative_path.into(),
+          hash: None,
+        });
+      }
 
       // We hash the contents of the file but if it's a symlink we hash the target
       // path instead rather than following the link.
@@ -659,7 +673,7 @@ pub fn vcs_list_dirty_files(
 
       Ok(VCSFile {
         path: relative_path.into(),
-        hash,
+        hash: Some(hash),
       })
     })
     .collect::<anyhow::Result<Vec<_>>>()?;
