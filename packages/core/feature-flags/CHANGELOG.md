@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.15.1
+
+### Patch Changes
+
+- [#551](https://github.com/atlassian-labs/atlaspack/pull/551) [`30f6017`](https://github.com/atlassian-labs/atlaspack/commit/30f60175ba4d272c5fc193973c63bc298584775b) Thanks [@yamadapc](https://github.com/yamadapc)! - Log request tracker invalidation counts on start-up
+
 ## 2.15.0
 
 ### Minor Changes

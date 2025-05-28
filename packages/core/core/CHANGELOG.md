@@ -1,5 +1,29 @@
 # @atlaspack/core
 
+## 2.17.3
+
+### Patch Changes
+
+- [#551](https://github.com/atlassian-labs/atlaspack/pull/551) [`30f6017`](https://github.com/atlassian-labs/atlaspack/commit/30f60175ba4d272c5fc193973c63bc298584775b) Thanks [@yamadapc](https://github.com/yamadapc)! - Log request tracker invalidation counts on start-up
+
+- [#550](https://github.com/atlassian-labs/atlaspack/pull/550) [`3a3e8e7`](https://github.com/atlassian-labs/atlaspack/commit/3a3e8e7be9e2dffd7304436d792f0f595d59665a) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix typescript declaration files
+
+- [#555](https://github.com/atlassian-labs/atlaspack/pull/555) [`15c1e3c`](https://github.com/atlassian-labs/atlaspack/commit/15c1e3c0628bae4c768d76cf3afc53d6d0d7ce7c) Thanks [@alshdavid](https://github.com/alshdavid)! - Added ATLASPACK_NATIVE_THREADS env variable to control the number of threads used by the native thread schedular
+
+- Updated dependencies [[`30f6017`](https://github.com/atlassian-labs/atlaspack/commit/30f60175ba4d272c5fc193973c63bc298584775b), [`3a3e8e7`](https://github.com/atlassian-labs/atlaspack/commit/3a3e8e7be9e2dffd7304436d792f0f595d59665a), [`1ab0a27`](https://github.com/atlassian-labs/atlaspack/commit/1ab0a275aeca40350415e2b03e7440d1dddc6228), [`b8a4ae8`](https://github.com/atlassian-labs/atlaspack/commit/b8a4ae8f83dc0a83d8b145c5f729936ce52080a3)]:
+  - @atlaspack/feature-flags@2.15.1
+  - @atlaspack/fs@2.15.3
+  - @atlaspack/rust@3.3.3
+  - @atlaspack/cache@3.2.3
+  - @atlaspack/graph@3.4.6
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/package-manager@2.14.8
+  - @atlaspack/logger@2.14.8
+  - @atlaspack/profiler@2.14.6
+  - @atlaspack/types@2.14.8
+  - @atlaspack/workers@2.14.8
+  - @atlaspack/plugin@2.14.8
+
 ## 2.17.2
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @atlaspack/runtime-js
 
+## 2.14.8
+
+### Patch Changes
+
+- Updated dependencies [[`30f6017`](https://github.com/atlassian-labs/atlaspack/commit/30f60175ba4d272c5fc193973c63bc298584775b)]:
+  - @atlaspack/feature-flags@2.15.1
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/plugin@2.14.8
+
 ## 2.14.7
 
 ### Patch Changes

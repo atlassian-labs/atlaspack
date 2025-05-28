@@ -1,5 +1,15 @@
 # @atlaspack/workers
 
+## 2.14.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.6
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/logger@2.14.8
+  - @atlaspack/profiler@2.14.6
+
 ## 2.14.7
 
 ### Patch Changes
