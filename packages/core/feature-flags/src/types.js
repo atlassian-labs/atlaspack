@@ -54,6 +54,10 @@ export type FeatureFlags = {|
    */
   reduceResolverStringCreation: boolean,
   /**
+   * Add verbose metrics for request tracker invalidation
+   */
+  verboseRequestInvalidationStats: boolean,
+  /**
    * Fixes source maps for inline bundles
    */
   inlineBundlesSourceMapFixes: boolean,

@@ -446,6 +446,11 @@ export class RequestGraph extends ContentGraph<
     this.removeCachedRequestChunkForNode(nodeId);
   }
 
+  /**
+   * Nodes that are invalidated on start-up, such as JavaScript babel configuration files which are
+   * imported when the build kicks-off and might doing arbitrary work such as reading from the file
+   * system.
+   */
   invalidateUnpredictableNodes() {
     for (let nodeId of this.unpredicatableNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
@@ -454,6 +459,9 @@ export class RequestGraph extends ContentGraph<
     }
   }
 
+  /**
+   * Effectively uncacheable nodes.
+   */
   invalidateOnBuildNodes() {
     for (let nodeId of this.invalidateOnBuildNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
@@ -462,11 +470,20 @@ export class RequestGraph extends ContentGraph<
     }
   }
 
-  invalidateEnvNodes(env: EnvMap) {
+  /**
+   * Nodes invalidated by environment changes, corresponds to `env: ...` inputs.
+   */
+  invalidateEnvNodes(env: EnvMap): string[] {
+    const invalidatedKeys = [];
+
     for (let nodeId of this.envNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === ENV);
-      if (env[keyFromEnvContentKey(node.id)] !== node.value) {
+
+      const key = keyFromEnvContentKey(node.id);
+      if (env[key] !== node.value) {
+        invalidatedKeys.push(key);
+
         let parentNodes = this.getNodeIdsConnectedTo(
           nodeId,
           requestGraphEdgeTypes.invalidated_by_update,
@@ -476,15 +493,23 @@ export class RequestGraph extends ContentGraph<
         }
       }
     }
+
+    return invalidatedKeys;
   }
 
-  invalidateOptionNodes(options: AtlaspackOptions) {
+  /**
+   * Nodes invalidated by option changes.
+   */
+  invalidateOptionNodes(options: AtlaspackOptions): string[] {
+    const invalidatedKeys = [];
+
     for (let nodeId of this.optionNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === OPTION);
-      if (
-        hashFromOption(options[keyFromOptionContentKey(node.id)]) !== node.hash
-      ) {
+      const key = keyFromOptionContentKey(node.id);
+
+      if (hashFromOption(options[key]) !== node.hash) {
+        invalidatedKeys.push(key);
         let parentNodes = this.getNodeIdsConnectedTo(
           nodeId,
           requestGraphEdgeTypes.invalidated_by_update,
@@ -494,6 +519,8 @@ export class RequestGraph extends ContentGraph<
         }
       }
     }
+
+    return invalidatedKeys;
   }
 
   invalidateOnConfigKeyChange(
@@ -1727,12 +1754,23 @@ async function loadRequestGraph(options): Async<RequestGraph> {
   const snapshotKey = `snapshot-${cacheKey}`;
   const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');
 
+  const commonMeta = {
+    cacheKey,
+    snapshotKey,
+    cacheKeyOptions: {
+      version: ATLASPACK_VERSION,
+      entries: options.entries,
+      mode: options.mode,
+      shouldBuildLazily: options.shouldBuildLazily,
+      watchBackend: options.watchBackend,
+    },
+  };
+
   logger.verbose({
     origin: '@atlaspack/core',
     message: 'Loading request graph',
     meta: {
-      cacheKey,
-      snapshotKey,
+      ...commonMeta,
     },
   });
 
@@ -1767,23 +1805,36 @@ async function loadRequestGraph(options): Async<RequestGraph> {
         origin: '@atlaspack/core',
         message: `File system event count: ${events.length}`,
         meta: {
+          ...commonMeta,
           trackableEvent: 'watcher_events_count',
           watcherEventCount: events.length,
           duration: Date.now() - startTime,
         },
       });
 
-      requestGraph.invalidateUnpredictableNodes();
-      requestGraph.invalidateOnBuildNodes();
-      requestGraph.invalidateEnvNodes(options.env);
-      requestGraph.invalidateOptionNodes(options);
+      if (getFeatureFlag('verboseRequestInvalidationStats')) {
+        const invalidationStats = await invalidateRequestGraph(
+          requestGraph,
+          options,
+          events,
+        );
 
-      await requestGraph.respondToFSEvents(
-        options.unstableFileInvalidations || events,
-        options,
-        10000,
-        true,
-      );
+        logger.verbose({
+          origin: '@atlaspack/core',
+          message: 'Request track loaded from cache',
+          meta: {
+            ...commonMeta,
+            trackableEvent: 'request_tracker_cache_key_hit',
+            invalidationStats,
+          },
+        });
+      } else {
+        requestGraph.invalidateUnpredictableNodes();
+        requestGraph.invalidateOnBuildNodes();
+        requestGraph.invalidateEnvNodes(options.env);
+        requestGraph.invalidateOptionNodes(options);
+      }
+
       return requestGraph;
     } catch (e) {
       // Prevent logging fs events took too long warning
@@ -1800,11 +1851,156 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     message:
       'Cache entry for request tracker was not found, initializing a clean cache.',
     meta: {
-      cacheKey,
-      snapshotKey,
+      ...commonMeta,
+      trackableEvent: 'request_tracker_cache_key_miss',
     },
   });
   return new RequestGraph();
+}
+
+/**
+ * A wrapper around an invalidation type / method
+ */
+type InvalidationFn = {|
+  key: string,
+  fn: () => string[] | void | Promise<void>,
+|};
+
+type InvalidationStats = {|
+  /**
+   * Total number of request graph nodes
+   */
+  nodeCount: number,
+  /**
+   * Number of requests in RequestGraph
+   */
+  requestCount: number,
+  /**
+   * Number of nodes that have been invalidated.
+   */
+  invalidatedCount: number,
+  /**
+   * Percentage of requests that have been invalidated
+   */
+  requestInvalidationRatio: number,
+  /**
+   * Percentage of nodes that have been invalidated
+   */
+  nodeInvalidationRatio: number,
+  /**
+   * Details for each invalidation type
+   */
+  invalidations: InvalidationFnStats[],
+|};
+
+/**
+ * Information about a certain cache invalidation type.
+ */
+type InvalidationFnStats = {|
+  /**
+   * Invalidation type, one of:
+   *
+   * - unpredictable
+   * - onBuild
+   * - env
+   * - option
+   * - fsEvents
+   */
+  key: string,
+  /**
+   * Number of invalidated nodes coming from this invalidation type.
+   */
+  count: number,
+  /**
+   * If this is a env or option invalidation, this key will contain the list of changed values.
+   */
+  changes: null | string[],
+|};
+
+/**
+ * Respond to unpredictable, build, environment changes, option changes and file-system events
+ * invalidating RequestGraph nodes.
+ *
+ * Returns the count of nodes invalidated by each invalidation type.
+ */
+async function invalidateRequestGraph(
+  requestGraph: RequestGraph,
+  options: AtlaspackOptions,
+  events: Event[],
+): Promise<InvalidationStats> {
+  const invalidationFns: InvalidationFn[] = [
+    {
+      key: 'unpredictable',
+      fn: () => requestGraph.invalidateUnpredictableNodes(),
+    },
+    {
+      key: 'onBuild',
+      fn: () => requestGraph.invalidateOnBuildNodes(),
+    },
+    {
+      key: 'env',
+      fn: () => requestGraph.invalidateEnvNodes(options.env),
+    },
+    {
+      key: 'option',
+      fn: () => requestGraph.invalidateOptionNodes(options),
+    },
+    {
+      key: 'fsEvents',
+      fn: async () => {
+        await requestGraph.respondToFSEvents(
+          options.unstableFileInvalidations || events,
+          options,
+          10000,
+          true,
+        );
+      },
+    },
+  ];
+
+  const invalidations = [];
+  for (const invalidation of invalidationFns) {
+    invalidations.push(await runInvalidation(requestGraph, invalidation));
+  }
+  const invalidatedCount = invalidations.reduce(
+    (acc, invalidation) => acc + invalidation.count,
+    0,
+  );
+  const requestCount = requestGraph.nodes.reduce(
+    (acc, node) => acc + (node?.type === REQUEST ? 1 : 0),
+    0,
+  );
+  const nodeCount = requestGraph.nodes.length;
+  const nodeInvalidationRatio = invalidatedCount / nodeCount;
+  const requestInvalidationRatio = invalidatedCount / requestCount;
+
+  return {
+    invalidations,
+    nodeCount,
+    requestCount,
+    invalidatedCount,
+    nodeInvalidationRatio,
+    requestInvalidationRatio,
+  };
+}
+
+/**
+ * Runs an invalidation function and reports metrics.
+ */
+async function runInvalidation(
+  requestGraph: RequestGraph,
+  invalidationFn: InvalidationFn,
+): Promise<InvalidationFnStats> {
+  const startInvalidationCount = requestGraph.invalidNodeIds.size;
+  const result = await invalidationFn.fn();
+  const count = requestGraph.invalidNodeIds.size - startInvalidationCount;
+
+  return {
+    key: invalidationFn.key,
+    count,
+    changes:
+      typeof result === 'object' && Array.isArray(result) ? result : null,
+  };
 }
 
 function logErrorOnBailout(
