@@ -107,10 +107,15 @@ export class LMDBLiteCache implements Cache {
   dir: FilePath;
   store: LmdbWrapper;
   fsCache: FSCache;
+  /**
+   * Directory where we store raw files.
+   */
+  cacheFilesDirectory: FilePath;
 
   constructor(cacheDir: FilePath) {
     this.fs = new NodeFS();
     this.dir = cacheDir;
+    this.cacheFilesDirectory = path.join(cacheDir, 'files');
     this.fsCache = new FSCache(this.fs, cacheDir);
 
     this.store = open(cacheDir, {
@@ -131,6 +136,7 @@ export class LMDBLiteCache implements Cache {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       await this.fsCache.ensure();
     }
+    await this.fs.mkdirp(this.cacheFilesDirectory);
     return Promise.resolve();
   }
 
@@ -162,14 +168,22 @@ export class LMDBLiteCache implements Cache {
   }
 
   getStream(key: string): Readable {
-    return this.fs.createReadStream(path.join(this.dir, key));
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fs.createReadStream(path.join(this.dir, key));
+    }
+
+    return this.fs.createReadStream(this.getFileKey(key));
   }
 
   setStream(key: string, stream: Readable): Promise<void> {
-    return pipeline(
-      stream,
-      this.fs.createWriteStream(path.join(this.dir, key)),
-    );
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return pipeline(
+        stream,
+        this.fs.createWriteStream(path.join(this.dir, key)),
+      );
+    }
+
+    return pipeline(stream, this.fs.createWriteStream(this.getFileKey(key)));
   }
 
   // eslint-disable-next-line require-await
@@ -178,6 +192,8 @@ export class LMDBLiteCache implements Cache {
   }
 
   getBlobSync(key: string): Buffer {
+    // eslint-disable-next-line no-console
+    console.log('getBlob', key);
     const buffer = this.store.get(key);
     if (buffer == null) {
       throw new Error(`Key ${key} not found in cache`);
@@ -186,6 +202,8 @@ export class LMDBLiteCache implements Cache {
   }
 
   async setBlob(key: string, contents: Buffer | string): Promise<void> {
+    // eslint-disable-next-line no-console
+    console.log('setBlob', key);
     await this.store.put(key, contents);
   }
 
@@ -193,31 +211,21 @@ export class LMDBLiteCache implements Cache {
     return Promise.resolve(this.store.get(key));
   }
 
-  #getFilePath(key: string, index: number): string {
-    return path.join(this.dir, `${key}-${index}`);
-  }
-
   hasLargeBlob(key: string): Promise<boolean> {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.hasLargeBlob(key);
     }
-    return this.has(key);
+    return this.fs.exists(this.getFileKey(key));
   }
 
-  /**
-   * @deprecated Use getBlob instead.
-   */
   getLargeBlob(key: string): Promise<Buffer> {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.getLargeBlob(key);
     }
-    return Promise.resolve(this.getBlobSync(key));
+    return this.fs.readFile(this.getFileKey(key));
   }
 
-  /**
-   * @deprecated Use setBlob instead.
-   */
-  setLargeBlob(
+  async setLargeBlob(
     key: string,
     contents: Buffer | string,
     options?: {|signal?: AbortSignal|},
@@ -225,7 +233,10 @@ export class LMDBLiteCache implements Cache {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.setLargeBlob(key, contents, options);
     }
-    return this.setBlob(key, contents);
+
+    const targetPath = this.getFileKey(key);
+    await this.fs.mkdirp(path.dirname(targetPath));
+    return this.fs.writeFile(targetPath, contents);
   }
 
   /**
@@ -262,6 +273,30 @@ export class LMDBLiteCache implements Cache {
   }
 
   refresh(): void {}
+
+  /**
+   * Streams, packages are stored in files instead of LMDB.
+   *
+   * On this case, if a cache key happens to have a parent traversal, ../..
+   * it is treated specially
+   *
+   * That is, something/../something and something are meant to be different
+   * keys.
+   *
+   * Plus we do not want to store values outside of the cache directory.
+   */
+  getFileKey(key: string): string {
+    const cleanKey = key
+      .split('/')
+      .map((part) => {
+        if (part === '..') {
+          return '$$__parent_dir$$';
+        }
+        return part;
+      })
+      .join('/');
+    return path.join(this.cacheFilesDirectory, cleanKey);
+  }
 }
 
 registerSerializableClass(

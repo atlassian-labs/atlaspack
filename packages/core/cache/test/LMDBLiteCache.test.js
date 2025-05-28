@@ -66,4 +66,23 @@ describe('LMDBLiteCache', () => {
     const keys = cache.keys();
     assert.deepEqual(Array.from(keys), ['key1', 'key2']);
   });
+
+  describe('getFileKey', () => {
+    it('should return the correct key', () => {
+      const target = path.join(cacheDir, 'test-file-keys');
+      const cache = new LMDBLiteCache(target);
+      const key = cache.getFileKey('key');
+      assert.equal(key, path.join(target, 'files', 'key'));
+    });
+
+    it('should return the correct key for a key with a parent traversal', () => {
+      const target = path.join(cacheDir, 'test-parent-keys');
+      cache = new LMDBLiteCache(target);
+      const key = cache.getFileKey('../../key');
+      assert.equal(
+        key,
+        path.join(target, 'files', '$$__parent_dir$$/$$__parent_dir$$/key'),
+      );
+    });
+  });
 });
