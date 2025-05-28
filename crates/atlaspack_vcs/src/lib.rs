@@ -393,7 +393,7 @@ fn get_diff_with_git_cli(
   let output = Command::new("git")
     .arg("diff")
     .arg("--name-status")
-    .arg(format!("{}...{}", old_commit.id(), new_commit.id()))
+    .arg(format!("{}..{}", old_commit.id(), new_commit.id()))
     .current_dir(repo_path)
     .output()?;
 
@@ -409,7 +409,8 @@ fn get_diff_with_git_cli(
       .next()
       .ok_or_else(|| anyhow!("Invalid git diff line: {}", line))?;
     let path = line.split_whitespace().skip(1).collect::<String>();
-    let path = repo_path.join(path);
+    let relative_path = PathBuf::from(path);
+    let path = repo_path.join(&relative_path);
     let change_type = match status {
       'A' => FileChangeType::Create,
       'D' => FileChangeType::Delete,
@@ -417,7 +418,7 @@ fn get_diff_with_git_cli(
       _ => FileChangeType::Update,
     };
 
-    tracked_changes.insert(path.clone());
+    tracked_changes.insert(relative_path.clone());
     changed_files.push(FileChangeEvent { path, change_type });
   }
 
@@ -449,14 +450,15 @@ fn get_status_with_git_cli(
       .nth(1)
       .ok_or_else(|| anyhow!("Invalid git status line: {}", line))?;
     let path = line.split_whitespace().skip(1).collect::<String>();
-    let path = repo_path.join(path);
+    let relative_path = PathBuf::from(path);
+    let path = repo_path.join(&relative_path);
     let change_type = match status {
       'A' => FileChangeType::Create,
       'D' => FileChangeType::Delete,
       'M' => FileChangeType::Update,
       _ => continue,
     };
-    tracked_changes.insert(path.clone());
+    tracked_changes.insert(relative_path.clone());
     changed_files.push(FileChangeEvent { path, change_type });
   }
   Ok(())
