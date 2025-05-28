@@ -396,4 +396,78 @@ mod tests {
       remove_code_whitespace(expected_code)
     );
   }
+
+  #[test]
+  fn test_import_cond_spread_operator() {
+    let input_code = r#"
+      const cardRendererNodes = importCond('card_condition', 'a', 'b');
+      const mediaRendererNodes = importCond('media_condition', 'c', 'd');
+
+      export const OtherComponent = () => {
+        let nodeOverrides = {};
+        if (firstCondition) {
+          nodeOverrides = { ...nodeOverrides, ...cardRendererNodes };
+        }
+        if (secondCondition) {
+          nodeOverrides = { ...nodeOverrides, ...mediaRendererNodes };
+        }
+        return nodeOverrides;
+      }
+    "#;
+
+    let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
+      ContextualImportsInlineRequireVisitor::new(
+        context.unresolved_mark,
+        ContextualImportsConfig {
+          server: true,
+          ..Default::default()
+        },
+      )
+    });
+
+    // TODO: update implementation so that the ".load" is moved from the cardRendererNodes / mediaRendererNodes
+    // definitions to the *usages* of cardRendererNodes / mediaRendererNodes instead.
+    //
+    // This is because we do not want globalThis.__MCOND to be called module-level as we cannot guarantee that the
+    // tenant context (which has information needed for feature gating) exists at module-level in SSR.
+    let expected_code = r#"
+      const card_conditionab = {
+        ifTrue: require("a").default,
+        ifFalse: require("b").default
+      };
+      Object.defineProperty(card_conditionab, "load", {
+        get: ()=>globalThis.__MCOND && globalThis.__MCOND("card_condition") ? card_conditionab.ifTrue : card_conditionab.ifFalse
+      });
+      const media_conditioncd = {
+        ifTrue: require("c").default,
+        ifFalse: require("d").default
+      };
+      Object.defineProperty(media_conditioncd, "load", {
+        get: ()=>globalThis.__MCOND && globalThis.__MCOND("media_condition") ? media_conditioncd.ifTrue : media_conditioncd.ifFalse
+      });
+      const cardRendererNodes = card_conditionab;
+      const mediaRendererNodes = media_conditioncd;
+      export const OtherComponent = ()=>{
+        let nodeOverrides = {};
+        if (firstCondition) {
+          nodeOverrides = {
+          ...nodeOverrides,
+          ...cardRendererNodes.load
+          };
+        }
+        if (secondCondition) {
+          nodeOverrides = {
+          ...nodeOverrides,
+          ...mediaRendererNodes.load
+          };
+        }
+        return nodeOverrides;
+      };
+    "#;
+
+    assert_eq!(
+      remove_code_whitespace(output_code.as_str()),
+      remove_code_whitespace(expected_code)
+    );
+  }
 }
