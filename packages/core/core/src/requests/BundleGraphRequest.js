@@ -20,6 +20,7 @@ import invariant from 'assert';
 import assert from 'assert';
 import nullthrows from 'nullthrows';
 import {PluginLogger} from '@atlaspack/logger';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import AssetGraph from '../AssetGraph';
 import BundleGraph from '../public/BundleGraph';
@@ -282,12 +283,21 @@ class BundlerRunner {
     this.pluginOptions = new PluginOptions(
       optionsProxy(this.options, api.invalidateOnOptionChange),
     );
-    this.cacheKey =
-      hashString(
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      const key = hashString(
         `${ATLASPACK_VERSION}:BundleGraph:${
           JSON.stringify(options.entries) ?? ''
         }${options.mode}${options.shouldBuildLazily ? 'lazy' : 'eager'}`,
-      ) + '-BundleGraph';
+      );
+      this.cacheKey = `BundleGraph/${ATLASPACK_VERSION}/${options.mode}/${key}`;
+    } else {
+      this.cacheKey =
+        hashString(
+          `${ATLASPACK_VERSION}:BundleGraph:${
+            JSON.stringify(options.entries) ?? ''
+          }${options.mode}${options.shouldBuildLazily ? 'lazy' : 'eager'}`,
+        ) + '-BundleGraph';
+    }
   }
 
   async loadConfigs() {
