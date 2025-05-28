@@ -400,6 +400,9 @@ fn get_diff_with_git_cli(
   let output = Command::new("git")
     .arg("diff")
     .arg("--name-status")
+    // We need to list all changes even if `new_commit` is an ancestor of `old_commit`
+    // https://git-scm.com/docs/git-diff
+    // https://git-scm.com/docs/gitrevisions
     .arg(format!("{}..{}", old_commit.id(), new_commit.id()))
     .current_dir(repo_path)
     .output()?;
