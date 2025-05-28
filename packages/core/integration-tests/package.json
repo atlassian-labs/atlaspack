@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "cross-env NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --conditions=\"@atlaspack::sources\" --experimental-vm-modules",
-    "test-ci": "yarn test --config .mocharc.ci.json"
+    "test-ci": "yarn test --config .mocharc.ci.js"
   },
   "devDependencies": {
     "@atlaspack/cli": "2.13.9",

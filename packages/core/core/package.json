@@ -10,6 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/index.js",
+  "types": "index.d.ts",
   "source": "src/index.js",
   "engines": {
     "node": ">= 16.0.0"
@@ -57,7 +58,10 @@
   },
   "exports": {
     "./*": "./*",
-    ".": "./lib/index.js",
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./lib/index.js"
+    },
     "./worker": {
       "@atlaspack::sources": "./src/worker.js",
       "default": "./lib/worker.js"
