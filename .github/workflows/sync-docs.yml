@@ -1,0 +1,34 @@
+name: Sync docs to Confluence
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Manual trigger
+    inputs:
+      files-to-sync:
+        description: 'Space-separated list of files to synchronize'
+        required: true
+        type: string
+
+jobs:
+  wiki-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+
+      - name: Get modified files
+        run: echo "MODIFIED_FILES=`git diff HEAD^ --name-only | xargs`" >> $GITHUB_ENV
+
+      - name: Wiki Sync
+        uses: talkiq/confluence-wiki-sync@v1.4
+        with:
+          wiki-base-url: https://hello.atlassian.net/
+          user: gwong2@atlassian.com
+          token: ${{ secrets.TOKEN }}
+          modified-files: ${{ env.MODIFIED_FILES }}
+          space-name: GTS4
+          root-page-title: Root page
