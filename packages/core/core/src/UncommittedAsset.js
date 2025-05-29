@@ -35,7 +35,7 @@ import {
   fromProjectPath,
   fromProjectPathRelative,
 } from './projectPath';
-import {getFeatureFlag} from '../../feature-flags/src';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type UncommittedAssetOptions = {|
   value: Asset,
