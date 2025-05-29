@@ -159,11 +159,7 @@ export default class UncommittedAsset {
     }
 
     // Maybe we should just store this in a file instead of LMDB
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      await this.options.cache.setLargeBlob(contentKey, content);
-    } else {
-      await this.options.cache.setBlob(contentKey, content);
-    }
+    await this.options.cache.setBlob(contentKey, content);
 
     return {size, hash};
   }
