@@ -267,11 +267,18 @@ pub struct YarnSnapshot {
   pub yarn_state: YarnStateFile,
 }
 
+/// "Dirty" files are files modified in the current work-tree and uncommitted.
+///
+/// These files are hashed and stored in the snapshot.
+///
+/// Currently on boot all dirty files will be invalidated on the cache regardless of
+/// whether they have changes or not.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VCSFile {
   pub path: PathBuf,
-  pub hash: String,
+  /// Missing in case the file has been deleted
+  pub hash: Option<String>,
 }
 
 fn get_file_contents_at_commit(
@@ -393,7 +400,10 @@ fn get_diff_with_git_cli(
   let output = Command::new("git")
     .arg("diff")
     .arg("--name-status")
-    .arg(format!("{}...{}", old_commit.id(), new_commit.id()))
+    // We need to list all changes even if `new_commit` is an ancestor of `old_commit`
+    // https://git-scm.com/docs/git-diff
+    // https://git-scm.com/docs/gitrevisions
+    .arg(format!("{}..{}", old_commit.id(), new_commit.id()))
     .current_dir(repo_path)
     .output()?;
 
@@ -409,7 +419,8 @@ fn get_diff_with_git_cli(
       .next()
       .ok_or_else(|| anyhow!("Invalid git diff line: {}", line))?;
     let path = line.split_whitespace().skip(1).collect::<String>();
-    let path = repo_path.join(path);
+    let relative_path = PathBuf::from(path);
+    let path = repo_path.join(&relative_path);
     let change_type = match status {
       'A' => FileChangeType::Create,
       'D' => FileChangeType::Delete,
@@ -417,7 +428,7 @@ fn get_diff_with_git_cli(
       _ => FileChangeType::Update,
     };
 
-    tracked_changes.insert(path.clone());
+    tracked_changes.insert(relative_path.clone());
     changed_files.push(FileChangeEvent { path, change_type });
   }
 
@@ -449,14 +460,15 @@ fn get_status_with_git_cli(
       .nth(1)
       .ok_or_else(|| anyhow!("Invalid git status line: {}", line))?;
     let path = line.split_whitespace().skip(1).collect::<String>();
-    let path = repo_path.join(path);
+    let relative_path = PathBuf::from(path);
+    let path = repo_path.join(&relative_path);
     let change_type = match status {
       'A' => FileChangeType::Create,
       'D' => FileChangeType::Delete,
       'M' => FileChangeType::Update,
       _ => continue,
     };
-    tracked_changes.insert(path.clone());
+    tracked_changes.insert(relative_path.clone());
     changed_files.push(FileChangeEvent { path, change_type });
   }
   Ok(())
@@ -625,7 +637,7 @@ pub fn vcs_list_dirty_files(
     return Err(anyhow::anyhow!("Git ls-files failed:\n{}", stderr));
   }
   let output = String::from_utf8(command.stdout).unwrap();
-  let lines: Vec<_> = output.split_terminator('\0').map(String::from).collect();
+  let lines: HashSet<_> = output.split_terminator('\0').map(String::from).collect();
 
   let results = lines
     .par_iter()
@@ -635,6 +647,13 @@ pub fn vcs_list_dirty_files(
 
       let path = Path::new(relative_path);
       let path = dir.join(path);
+
+      if !path.exists() {
+        return Ok(VCSFile {
+          path: relative_path.into(),
+          hash: None,
+        });
+      }
 
       // We hash the contents of the file but if it's a symlink we hash the target
       // path instead rather than following the link.
@@ -657,7 +676,7 @@ pub fn vcs_list_dirty_files(
 
       Ok(VCSFile {
         path: relative_path.into(),
-        hash,
+        hash: Some(hash),
       })
     })
     .collect::<anyhow::Result<Vec<_>>>()?;

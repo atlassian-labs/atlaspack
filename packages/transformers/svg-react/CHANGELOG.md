@@ -1,5 +1,12 @@
 # @atlaspack/transformer-svg-react
 
+## 2.14.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.8
+
 ## 2.14.7
 
 ### Patch Changes
