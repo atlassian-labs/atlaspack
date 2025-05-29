@@ -1,5 +1,13 @@
 # @atlaspack/rust
 
+## 3.3.3
+
+### Patch Changes
+
+- [#558](https://github.com/atlassian-labs/atlaspack/pull/558) [`1ab0a27`](https://github.com/atlassian-labs/atlaspack/commit/1ab0a275aeca40350415e2b03e7440d1dddc6228) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bug handling dirty deleted git files
+
+- [#559](https://github.com/atlassian-labs/atlaspack/pull/559) [`b8a4ae8`](https://github.com/atlassian-labs/atlaspack/commit/b8a4ae8f83dc0a83d8b145c5f729936ce52080a3) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bugs in VCS cache invalidation
+
 ## 3.3.2
 
 ### Patch Changes
