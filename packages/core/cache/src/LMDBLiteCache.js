@@ -131,6 +131,7 @@ export class LMDBLiteCache implements Cache {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       await this.fsCache.ensure();
     }
+    await this.fs.mkdirp(path.join(this.dir, 'large-blobs'));
     return Promise.resolve();
   }
 
@@ -162,13 +163,24 @@ export class LMDBLiteCache implements Cache {
   }
 
   getStream(key: string): Readable {
-    return this.fs.createReadStream(path.join(this.dir, key));
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fs.createReadStream(path.join(this.dir, key));
+    }
+
+    return this.fs.createReadStream(path.join(this.dir, 'large-blobs', key));
   }
 
   setStream(key: string, stream: Readable): Promise<void> {
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return pipeline(
+        stream,
+        this.fs.createWriteStream(path.join(this.dir, key)),
+      );
+    }
+
     return pipeline(
       stream,
-      this.fs.createWriteStream(path.join(this.dir, key)),
+      this.fs.createWriteStream(path.join(this.dir, 'large-blobs', key)),
     );
   }
 
@@ -211,13 +223,10 @@ export class LMDBLiteCache implements Cache {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.getLargeBlob(key);
     }
-    return Promise.resolve(this.getBlobSync(key));
+    return this.fs.readFile(path.join(this.dir, 'large-blobs', key));
   }
 
-  /**
-   * @deprecated Use setBlob instead.
-   */
-  setLargeBlob(
+  async setLargeBlob(
     key: string,
     contents: Buffer | string,
     options?: {|signal?: AbortSignal|},
@@ -225,7 +234,10 @@ export class LMDBLiteCache implements Cache {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.setLargeBlob(key, contents, options);
     }
-    return this.setBlob(key, contents);
+
+    const targetPath = path.join(this.dir, 'large-blobs', key);
+    await this.fs.mkdirp(path.dirname(targetPath));
+    return this.fs.writeFile(targetPath, contents);
   }
 
   /**
