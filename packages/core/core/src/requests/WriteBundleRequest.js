@@ -40,7 +40,7 @@ import {AtlaspackConfig} from '../AtlaspackConfig';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {PluginTracer, tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
-import {getFeatureFlag} from '../../../feature-flags/src';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const HASH_REF_PREFIX_LEN = HASH_REF_PREFIX.length;
 const BOUNDARY_LENGTH = HASH_REF_PREFIX.length + 32 - 1;
