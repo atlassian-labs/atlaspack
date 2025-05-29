@@ -1695,6 +1695,18 @@ export function getWatcherOptions({
 }
 
 function getCacheKey(options) {
+  if (getFeatureFlag('cachePerformanceImprovements')) {
+    const hash = hashString(
+      `${ATLASPACK_VERSION}:${JSON.stringify(options.entries)}:${
+        options.mode
+      }:${options.shouldBuildLazily ? 'lazy' : 'eager'}:${
+        options.watchBackend ?? ''
+      }`,
+    );
+
+    return `RequestTracker/${ATLASPACK_VERSION}/${hash}`;
+  }
+
   return hashString(
     `${ATLASPACK_VERSION}:${JSON.stringify(options.entries)}:${options.mode}:${
       options.shouldBuildLazily ? 'lazy' : 'eager'
@@ -1749,7 +1761,10 @@ async function loadRequestGraph(options): Async<RequestGraph> {
   }
 
   let cacheKey = getCacheKey(options);
-  let requestGraphKey = `requestGraph-${cacheKey}`;
+  let requestGraphKey = getFeatureFlag('cachePerformanceImprovements')
+    ? `${cacheKey}/RequestGraph`
+    : `requestGraph-${cacheKey}`;
+
   let timeout;
   const snapshotKey = `snapshot-${cacheKey}`;
   const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');

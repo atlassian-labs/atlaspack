@@ -107,10 +107,15 @@ export class LMDBLiteCache implements Cache {
   dir: FilePath;
   store: LmdbWrapper;
   fsCache: FSCache;
+  /**
+   * Directory where we store raw files.
+   */
+  cacheFilesDirectory: FilePath;
 
   constructor(cacheDir: FilePath) {
     this.fs = new NodeFS();
     this.dir = cacheDir;
+    this.cacheFilesDirectory = path.join(cacheDir, 'files');
     this.fsCache = new FSCache(this.fs, cacheDir);
 
     this.store = open(cacheDir, {
@@ -131,7 +136,7 @@ export class LMDBLiteCache implements Cache {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       await this.fsCache.ensure();
     }
-    await this.fs.mkdirp(path.join(this.dir, 'large-blobs'));
+    await this.fs.mkdirp(this.cacheFilesDirectory);
     return Promise.resolve();
   }
 
@@ -167,7 +172,7 @@ export class LMDBLiteCache implements Cache {
       return this.fs.createReadStream(path.join(this.dir, key));
     }
 
-    return this.fs.createReadStream(path.join(this.dir, 'large-blobs', key));
+    return this.fs.createReadStream(this.getFileKey(key));
   }
 
   setStream(key: string, stream: Readable): Promise<void> {
@@ -178,10 +183,7 @@ export class LMDBLiteCache implements Cache {
       );
     }
 
-    return pipeline(
-      stream,
-      this.fs.createWriteStream(path.join(this.dir, 'large-blobs', key)),
-    );
+    return pipeline(stream, this.fs.createWriteStream(this.getFileKey(key)));
   }
 
   // eslint-disable-next-line require-await
@@ -205,25 +207,18 @@ export class LMDBLiteCache implements Cache {
     return Promise.resolve(this.store.get(key));
   }
 
-  #getFilePath(key: string, index: number): string {
-    return path.join(this.dir, `${key}-${index}`);
-  }
-
   hasLargeBlob(key: string): Promise<boolean> {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.hasLargeBlob(key);
     }
-    return this.has(key);
+    return this.fs.exists(this.getFileKey(key));
   }
 
-  /**
-   * @deprecated Use getBlob instead.
-   */
   getLargeBlob(key: string): Promise<Buffer> {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.getLargeBlob(key);
     }
-    return this.fs.readFile(path.join(this.dir, 'large-blobs', key));
+    return this.fs.readFile(this.getFileKey(key));
   }
 
   async setLargeBlob(
@@ -235,7 +230,7 @@ export class LMDBLiteCache implements Cache {
       return this.fsCache.setLargeBlob(key, contents, options);
     }
 
-    const targetPath = path.join(this.dir, 'large-blobs', key);
+    const targetPath = this.getFileKey(key);
     await this.fs.mkdirp(path.dirname(targetPath));
     return this.fs.writeFile(targetPath, contents);
   }
@@ -274,6 +269,22 @@ export class LMDBLiteCache implements Cache {
   }
 
   refresh(): void {}
+
+  /**
+   * Streams, packages are stored in files instead of LMDB.
+   *
+   * On this case, if a cache key happens to have a parent traversal, ../..
+   * it is treated specially
+   *
+   * That is, something/../something and something are meant to be different
+   * keys.
+   *
+   * Plus we do not want to store values outside of the cache directory.
+   */
+  getFileKey(key: string): string {
+    const cleanKey = key.replace(/^(\.\/)?\.\.\//, '$$__parent_dir$$/');
+    return path.join(this.cacheFilesDirectory, cleanKey);
+  }
 }
 
 registerSerializableClass(

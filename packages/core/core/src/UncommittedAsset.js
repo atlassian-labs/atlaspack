@@ -30,7 +30,12 @@ import {ATLASPACK_VERSION} from './constants';
 import {createAsset, createAssetIdFromOptions} from './assetUtils';
 import {BundleBehaviorNames} from './types';
 import {invalidateOnFileCreateToInternal, createInvalidations} from './utils';
-import {type ProjectPath, fromProjectPath} from './projectPath';
+import {
+  type ProjectPath,
+  fromProjectPath,
+  fromProjectPathRelative,
+} from './projectPath';
+import {getFeatureFlag} from '../../feature-flags/src';
 
 type UncommittedAssetOptions = {|
   value: Asset,
@@ -153,7 +158,9 @@ export default class UncommittedAsset {
       size = content.length;
     }
 
+    // Maybe we should just store this in a file instead of LMDB
     await this.options.cache.setBlob(contentKey, content);
+
     return {size, hash};
   }
 
@@ -296,6 +303,12 @@ export default class UncommittedAsset {
   }
 
   getCacheKey(key: string): string {
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      let filePath = fromProjectPathRelative(this.value.filePath);
+      // replace ./../something, ../something with $$atlaspack__parent_dir$$/something
+      return `Asset/${ATLASPACK_VERSION}/${filePath}/${this.value.id}/${key}`;
+    }
+
     return hashString(ATLASPACK_VERSION + key + this.value.id);
   }
 
