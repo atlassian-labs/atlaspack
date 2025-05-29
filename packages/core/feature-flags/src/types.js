@@ -86,6 +86,14 @@ export type FeatureFlags = {|
    * Enable resolution of bundler config starting from the CWD
    */
   resolveBundlerConfigFromCwd: boolean,
+  /**
+   * Operational only feature flag for validating atlaspack integration with the AFM statsig FF client.
+   */
+  +kokoTestGateOne: boolean,
+  /**
+   * Operational only feature flag for validating atlaspack integration with the AFM statsig FF client.
+   */
+  +kokoTestGateTwo: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
