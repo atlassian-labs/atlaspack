@@ -304,8 +304,7 @@ export default class UncommittedAsset {
 
   getCacheKey(key: string): string {
     if (getFeatureFlag('cachePerformanceImprovements')) {
-      let filePath = fromProjectPathRelative(this.value.filePath);
-      // replace ./../something, ../something with $$atlaspack__parent_dir$$/something
+      const filePath = fromProjectPathRelative(this.value.filePath);
       return `Asset/${ATLASPACK_VERSION}/${filePath}/${this.value.id}/${key}`;
     }
 
