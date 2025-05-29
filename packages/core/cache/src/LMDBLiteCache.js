@@ -282,7 +282,15 @@ export class LMDBLiteCache implements Cache {
    * Plus we do not want to store values outside of the cache directory.
    */
   getFileKey(key: string): string {
-    const cleanKey = key.replace(/^(\.\/)?\.\.\//, '$$__parent_dir$$/');
+    const cleanKey = key
+      .split('/')
+      .map((part) => {
+        if (part === '..') {
+          return '$$__parent_dir$$';
+        }
+        return part;
+      })
+      .join('/');
     return path.join(this.cacheFilesDirectory, cleanKey);
   }
 }

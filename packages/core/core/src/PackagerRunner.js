@@ -815,21 +815,21 @@ export default class PackagerRunner {
 
   static getContentKey(cacheKey: string): string {
     if (getFeatureFlag('cachePerformanceImprovements')) {
-      return `PackagerRunner/${cacheKey}/content`;
+      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/content`;
     }
     return hashString(`${cacheKey}:content`);
   }
 
   static getMapKey(cacheKey: string): string {
     if (getFeatureFlag('cachePerformanceImprovements')) {
-      return `PackagerRunner/${cacheKey}/map`;
+      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/map`;
     }
     return hashString(`${cacheKey}:map`);
   }
 
   static getInfoKey(cacheKey: string): string {
     if (getFeatureFlag('cachePerformanceImprovements')) {
-      return `PackagerRunner/${cacheKey}/info`;
+      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/info`;
     }
     return hashString(`${cacheKey}:info`);
   }
