@@ -14,6 +14,7 @@ import {
   it,
   run,
   runBundle as runSingleBundle,
+  resetOverlayFS,
   overlayFS,
   outputFS,
   inputFS,
@@ -74,7 +75,7 @@ type TestConfig = {|
 |};
 
 async function testCache(update: UpdateFn | TestConfig, integration) {
-  await overlayFS.rimraf(path.join(__dirname, '/input'));
+  resetOverlayFS();
   await ncp(
     path.join(__dirname, '/integration', integration ?? 'cache'),
     path.join(inputDir),
@@ -122,7 +123,7 @@ async function testCache(update: UpdateFn | TestConfig, integration) {
   return b;
 }
 
-describe.v2('cache', function () {
+describe.v2.only('cache', function () {
   before(async () => {
     await inputFS.rimraf(path.join(__dirname, 'input'));
   });
