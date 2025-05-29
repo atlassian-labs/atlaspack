@@ -7,6 +7,7 @@ import RequestTracker, {
   cleanUpOrphans,
 } from '../src/RequestTracker';
 import {Graph} from '@atlaspack/graph';
+import {LMDBLiteCache} from '@atlaspack/cache';
 import WorkerFarm from '@atlaspack/workers';
 import {DEFAULT_OPTIONS} from './test-utils';
 import {FILE_CREATE, FILE_UPDATE, INITIAL_BUILD} from '../src/constants';
@@ -14,10 +15,21 @@ import {makeDeferredWithPromise} from '@atlaspack/utils';
 import {toProjectPath} from '../src/projectPath';
 import {DEFAULT_FEATURE_FLAGS, setFeatureFlags} from '../../feature-flags/src';
 
-const options = DEFAULT_OPTIONS;
+const options = {
+  ...DEFAULT_OPTIONS,
+  cache: new LMDBLiteCache(DEFAULT_OPTIONS.cacheDir),
+};
 const farm = new WorkerFarm({workerPath: require.resolve('../src/worker')});
 
 describe('RequestTracker', () => {
+  beforeEach(async () => {
+    await options.cache.ensure();
+
+    for (const key of options.cache.keys()) {
+      await options.cache.getNativeRef().delete(key);
+    }
+  });
+
   it('should not run requests that have not been invalidated', async () => {
     let tracker = new RequestTracker({farm, options});
     await tracker.runRequest({

@@ -221,6 +221,9 @@ export default class UncommittedAsset {
     this.clearAST();
   }
 
+  /**
+   * @deprecated This has been broken on any cache other than FSCache for a long time.
+   */
   setStream(stream: Readable) {
     this.content = stream;
     this.clearAST();

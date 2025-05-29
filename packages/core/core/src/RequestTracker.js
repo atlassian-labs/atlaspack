@@ -1507,7 +1507,9 @@ export default class RequestTracker {
     );
 
     let cacheKey = getCacheKey(this.options);
-    let requestGraphKey = `requestGraph-${cacheKey}`;
+    let requestGraphKey = getFeatureFlag('cachePerformanceImprovements')
+      ? `${cacheKey}/RequestGraph`
+      : `requestGraph-${cacheKey}`;
     let snapshotKey = `snapshot-${cacheKey}`;
 
     if (this.options.shouldDisableCache) {
@@ -1634,7 +1636,7 @@ export default class RequestTracker {
 
       await runCacheImprovements(
         () =>
-          serialiseAndSet(`request_tracker:cache_metadata:${cacheKey}`, {
+          serialiseAndSet(`${cacheKey}/cache_metadata`, {
             version: ATLASPACK_VERSION,
             entries: this.options.entries,
             mode: this.options.mode,
@@ -1655,14 +1657,14 @@ export default class RequestTracker {
     } catch (err) {
       // If we have aborted, ignore the error and continue
       if (!signal?.aborted) throw err;
+    } finally {
+      await runCacheImprovements(
+        async (cache) => {
+          await cache.getNativeRef().commitWriteTransaction();
+        },
+        () => Promise.resolve(),
+      );
     }
-
-    await runCacheImprovements(
-      async (cache) => {
-        await cache.getNativeRef().commitWriteTransaction();
-      },
-      () => Promise.resolve(),
-    );
 
     report({type: 'cache', phase: 'end', total, size: this.graph.nodes.length});
   }
@@ -1715,6 +1717,10 @@ function getCacheKey(options) {
 }
 
 function getRequestGraphNodeKey(index: number, cacheKey: string) {
+  if (getFeatureFlag('cachePerformanceImprovements')) {
+    return `${cacheKey}/RequestGraph/nodes/${index}`;
+  }
+
   return `requestGraph-nodes-${index}-${cacheKey}`;
 }
 
@@ -1726,9 +1732,15 @@ export async function readAndDeserializeRequestGraph(
   let bufferLength = 0;
 
   const getAndDeserialize = async (key: string) => {
-    let buffer = await cache.getLargeBlob(key);
-    bufferLength += Buffer.byteLength(buffer);
-    return deserialize(buffer);
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      const buffer = await cache.getBlob(key);
+      bufferLength += Buffer.byteLength(buffer);
+      return deserialize(buffer);
+    } else {
+      const buffer = await cache.getLargeBlob(key);
+      bufferLength += Buffer.byteLength(buffer);
+      return deserialize(buffer);
+    }
   };
 
   let serializedRequestGraph = await getAndDeserialize(requestGraphKey);
@@ -1789,7 +1801,11 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     },
   });
 
-  if (await options.cache.hasLargeBlob(requestGraphKey)) {
+  const hasRequestGraphInCache = getFeatureFlag('cachePerformanceImprovements')
+    ? await options.cache.has(requestGraphKey)
+    : await options.cache.hasLargeBlob(requestGraphKey);
+
+  if (hasRequestGraphInCache) {
     try {
       let {requestGraph} = await readAndDeserializeRequestGraph(
         options.cache,
