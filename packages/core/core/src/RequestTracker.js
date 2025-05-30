@@ -1503,7 +1503,9 @@ export default class RequestTracker {
     let requestGraphKey = getFeatureFlag('cachePerformanceImprovements')
       ? `${cacheKey}/RequestGraph`
       : `requestGraph-${cacheKey}`;
-    let snapshotKey = `snapshot-${cacheKey}`;
+    let snapshotKey = getFeatureFlag('cachePerformanceImprovements')
+      ? `${cacheKey}/snapshot`
+      : `snapshot-${cacheKey}`;
 
     if (this.options.shouldDisableCache) {
       return;
