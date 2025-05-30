@@ -1,19 +1,16 @@
 // @flow strict-local
 
 import invariant from 'assert';
-import path from 'path';
-import {basename} from 'path';
 
 import nullthrows from 'nullthrows';
 
 import type {NodeId} from '@atlaspack/graph';
-import type {Asset, Dependency, MutableBundleGraph} from '@atlaspack/types';
+import type {Asset, Dependency} from '@atlaspack/types';
+import type {DefaultMap} from '@atlaspack/utils';
 
 import type {Bundle, IdealBundleGraph} from './idealGraph';
-import {inspect} from 'util';
 /* $FlowFixMe[untyped-import] */
 import {PriorityQueue} from './PriorityQueue';
-import type {DefaultMap} from '@atlaspack/utils';
 
 /** 100Kb */
 const MAX_SHARED_BUNDLE_SIZE = 100e3;
@@ -239,10 +236,7 @@ export function getSmallestSharedBundleMergesByLeastCodeLoaded(
       bundle,
       bundleGroup,
     );
-    for (const {
-      id: otherBundleId,
-      bundle: otherBundle,
-    } of nonReusedSharedBundles) {
+    for (const {id: otherBundleId} of nonReusedSharedBundles) {
       if (bundleId === otherBundleId) {
         continue;
       }
