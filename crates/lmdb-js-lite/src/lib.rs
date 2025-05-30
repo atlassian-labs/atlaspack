@@ -36,11 +36,12 @@
 //! it should still be consistent in memory and within transactions.
 #![deny(clippy::all)]
 
+use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::Path;
 use std::sync::LazyLock;
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Weak};
 
 use anyhow::anyhow;
 use napi::bindgen_prelude::Env;
@@ -153,9 +154,7 @@ pub struct LMDB {
 impl LMDB {
   #[napi(constructor)]
   pub fn new(options: LMDBOptions) -> napi::Result<Self> {
-    let mut state = STATE
-      .lock()
-      .map_err(|_| napi::Error::from_reason("LMDB State mutex is poisoned"))?;
+    let mut state = STATE.lock();
     let database = state
       .get_database(options)
       .map_err(|err| anyhow!("Failed to get database: {err}"))

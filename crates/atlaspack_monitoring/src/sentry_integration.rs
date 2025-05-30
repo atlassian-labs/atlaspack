@@ -96,9 +96,11 @@ pub fn init_sentry(options: SentryOptions) -> anyhow::Result<ClientInitGuard> {
 
 #[cfg(test)]
 mod tests {
+  use parking_lot::Mutex;
+
   use super::*;
 
-  static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+  static TEST_LOCK: Mutex<()> = Mutex::new(());
 
   #[test]
   fn test_sentry_options_from_env_if_disabled_returns_none() {

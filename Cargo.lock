@@ -302,6 +302,7 @@ dependencies = [
  "atlaspack-resolver",
  "es-module-lexer",
  "glob",
+ "parking_lot",
  "rayon",
  "serde_json",
  "xxhash-rust",
@@ -502,6 +503,7 @@ dependencies = [
  "atlaspack_shared_map",
  "is_elevated",
  "mockall",
+ "parking_lot",
  "thread_local",
  "xxhash-rust",
 ]
@@ -514,6 +516,7 @@ dependencies = [
  "cfg-if",
  "crash-handler",
  "minidumper",
+ "parking_lot",
  "sentry",
  "sentry-tracing",
  "serde",
@@ -720,6 +723,7 @@ dependencies = [
 name = "atlaspack_shared_map"
 version = "0.1.0"
 dependencies = [
+ "parking_lot",
  "thread_local",
  "xxhash-rust",
 ]
@@ -2911,6 +2915,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "parking_lot",
  "rand",
  "rayon",
  "thiserror 2.0.9",

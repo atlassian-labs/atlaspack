@@ -1,18 +1,18 @@
 //! This module configures `tracing_subscriber` to either write to a log file or standard output.
 //!
 //! Tracing is disabled by default.
-use std::sync::Arc;
-use std::sync::Mutex;
-
-use crate::from_env::{optional_var, FromEnvError};
 use anyhow::anyhow;
+use parking_lot::Mutex;
 use serde::Deserialize;
 use serde::Serialize;
+use std::sync::Arc;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Registry;
+
+use crate::from_env::{optional_var, FromEnvError};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", tag = "mode")]
@@ -159,9 +159,11 @@ impl Tracer {
 
 #[cfg(test)]
 mod tests {
+  use parking_lot::Mutex;
+
   use super::*;
 
-  static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+  static TEST_LOCK: Mutex<()> = Mutex::new(());
 
   #[test]
   fn test_tracing_options_sets_to_none_if_no_mode_is_set() {

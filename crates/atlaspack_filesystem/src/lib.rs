@@ -28,6 +28,7 @@ pub type FileSystemRealPathCache = SharedHashMap<PathBuf, Option<PathBuf>>;
 ///       it should not be in the trait
 /// * [ ] Do not use io results, instead use anyhow or this error
 ///
+#[allow(clippy::disallowed_methods)]
 #[mockall::automock]
 pub trait FileSystem: std::fmt::Debug {
   fn cwd(&self) -> std::io::Result<PathBuf> {

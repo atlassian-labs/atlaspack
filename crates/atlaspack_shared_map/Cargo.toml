@@ -11,3 +11,4 @@ workspace = true
 [dependencies]
 thread_local = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
+parking_lot = { workspace = true }
