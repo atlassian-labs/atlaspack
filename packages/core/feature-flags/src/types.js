@@ -90,6 +90,10 @@ export type FeatureFlags = {|
    * Fix a bug where the conditional manifest reporter would drop bundles that have the same condition
    */
   conditionalBundlingReporterSameConditionFix: boolean,
+  /**
+   * Merge shared bundles when they lead to less code loaded when compared to bundleGroup merges.
+   */
+  mergeLeastCodeLoadedSharedBundles: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =

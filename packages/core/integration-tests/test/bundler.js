@@ -2439,7 +2439,7 @@ describe('bundler', function () {
     });
   });
 
-  describe('getSmallestBundleMergesByLeastCodeLoaded', () => {
+  describe('mergeLeastCodeLoadedSharedBundles', () => {
     it('Should reduce the amount of code loaded after merging', async () => {
       await fsFixture(overlayFS, __dirname)`
           code-loaded
@@ -2472,8 +2472,11 @@ describe('bundler', function () {
             yarn.lock:
         `;
 
-      const b = await bundle([path.join(__dirname, 'code-loaded/index.js')], {
+      let b = await bundle([path.join(__dirname, 'code-loaded/index.js')], {
         inputFS: overlayFS,
+        featureFlags: {
+          mergeLeastCodeLoadedSharedBundles: true,
+        },
       });
       assertBundles(b, [
         {
@@ -2495,6 +2498,34 @@ describe('bundler', function () {
         },
         {
           assets: ['five.js'],
+        },
+      ]);
+
+      await run(b);
+
+      b = await bundle([path.join(__dirname, 'code-loaded/index.js')], {
+        inputFS: overlayFS,
+      });
+      assertBundles(b, [
+        {
+          assets: [
+            'bundle-url.js',
+            'cacheLoader.js',
+            'index.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          assets: ['esmodule-helpers.js', 'two.js'],
+        },
+        {
+          assets: ['one.js', 'three.js'],
+        },
+        {
+          assets: ['four.js'],
+        },
+        {
+          assets: ['one.js', 'five.js'],
         },
       ]);
 
