@@ -1,5 +1,23 @@
 # @atlaspack/fs
 
+## 2.15.3
+
+### Patch Changes
+
+- [#550](https://github.com/atlassian-labs/atlaspack/pull/550) [`3a3e8e7`](https://github.com/atlassian-labs/atlaspack/commit/3a3e8e7be9e2dffd7304436d792f0f595d59665a) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix typescript declaration files
+
+- [#558](https://github.com/atlassian-labs/atlaspack/pull/558) [`1ab0a27`](https://github.com/atlassian-labs/atlaspack/commit/1ab0a275aeca40350415e2b03e7440d1dddc6228) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bug handling dirty deleted git files
+
+- [#559](https://github.com/atlassian-labs/atlaspack/pull/559) [`b8a4ae8`](https://github.com/atlassian-labs/atlaspack/commit/b8a4ae8f83dc0a83d8b145c5f729936ce52080a3) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bugs in VCS cache invalidation
+
+- Updated dependencies [[`30f6017`](https://github.com/atlassian-labs/atlaspack/commit/30f60175ba4d272c5fc193973c63bc298584775b), [`1ab0a27`](https://github.com/atlassian-labs/atlaspack/commit/1ab0a275aeca40350415e2b03e7440d1dddc6228), [`b8a4ae8`](https://github.com/atlassian-labs/atlaspack/commit/b8a4ae8f83dc0a83d8b145c5f729936ce52080a3)]:
+  - @atlaspack/feature-flags@2.15.1
+  - @atlaspack/rust@3.3.3
+  - @atlaspack/types-internal@2.14.6
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/logger@2.14.8
+  - @atlaspack/workers@2.14.8
+
 ## 2.15.2
 
 ### Patch Changes

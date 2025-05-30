@@ -55,6 +55,7 @@ pub enum Targets {
 }
 
 #[derive(Debug, Clone, Deserialize, Hash, PartialEq, Serialize)]
+#[serde(untagged)]
 pub enum SourceField {
   #[allow(unused)]
   Source(String),
