@@ -25,6 +25,7 @@ import nullthrows from 'nullthrows';
 
 import {findMergeCandidates} from './bundleMerge';
 import type {ResolvedBundlerConfig} from './bundlerConfig';
+import {getSmallestSharedBundleMergesByLeastCodeLoaded} from './getSmallestSharedBundleMergesByLeastCodeLoaded';
 
 /* BundleRoot - An asset that is the main entry of a Bundle. */
 type BundleRoot = Asset;
@@ -1183,22 +1184,37 @@ export function createIdealGraph(
 
         // Sort the bundles so the smallest ones are removed first.
         let sharedBundlesInGroup = sharedBundleIdsInBundleGroup
-          .map((id) => ({
-            id,
-            bundle: nullthrows(bundleGraph.getNode(id)),
-          }))
-          .map(({id, bundle}) => {
-            // For Flow
+          .map((id) => {
+            const bundle = nullthrows(bundleGraph.getNode(id));
             invariant(bundle !== 'root');
             return {id, bundle};
           })
           .sort((a, b) => b.bundle.size - a.bundle.size);
 
         // Remove bundles until the bundle group is within the parallel request limit.
+        const candidates = getSmallestSharedBundleMergesByLeastCodeLoaded(
+          sharedBundlesInGroup,
+          bundleGraph,
+          bundleGroupId,
+          assetReference,
+        );
         while (
           sharedBundlesInGroup.length > 0 &&
           numBundlesContributingToPRL > config.maxParallelRequests
         ) {
+          const candidate = candidates.shift();
+          if (candidate) {
+            const {bundleToMergeId, bundleToKeepId} = candidate;
+            mergeBundles(
+              bundleGraph,
+              bundleToKeepId,
+              bundleToMergeId,
+              assetReference,
+            );
+            numBundlesContributingToPRL--;
+            continue;
+          }
+
           let bundleTuple = sharedBundlesInGroup.pop();
           let bundleToRemove = bundleTuple.bundle;
           let bundleIdToRemove = bundleTuple.id;
