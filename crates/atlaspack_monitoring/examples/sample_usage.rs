@@ -92,7 +92,7 @@ fn main() {
   })
   .expect("Failed to set-up monitoring");
 
-  let monitoring_guard = MONITORING_GUARD.lock().unwrap();
+  let monitoring_guard = MONITORING_GUARD.lock();
   let handler = monitoring_guard.as_ref().unwrap().crash_handler().unwrap();
 
   tracing::info!(%pid, "Simulating crash");

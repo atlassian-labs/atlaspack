@@ -2785,7 +2785,6 @@ mod tests {
       invalidations
         .invalidate_on_file_change
         .read()
-        .unwrap()
         .iter()
         .cloned()
         .collect::<HashSet<_>>(),
