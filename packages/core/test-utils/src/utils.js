@@ -64,13 +64,16 @@ beforeEach(async () => {
   outputFS = new MemoryFS(workerFarm);
   overlayFS = new OverlayFS(outputFS, inputFS);
 
-  cacheDir = tempy.directory();
   for (let i = 0; i < 5; i++) {
     try {
+      cacheDir = tempy.directory();
       cache.getNativeRef().close();
       cache = new LMDBLiteCache(cacheDir);
     } catch (err) {
-      if (err.message.includes('temporarily unavailable')) {
+      if (
+        err.message.includes('temporarily unavailable') ||
+        err.message.includes('close it to be able to open it again')
+      ) {
         continue;
       }
       throw err;
