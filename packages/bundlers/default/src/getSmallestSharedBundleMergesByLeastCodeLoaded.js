@@ -173,9 +173,7 @@ export function getSmallestSharedBundleMergesByLeastCodeLoaded(
   bundleGroupId: NodeId,
   assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
 ): {|
-  shift():
-    | typeof undefined
-    | {|bundleToMergeId: NodeId, bundleToKeepId: NodeId|},
+  shift(): void | {|bundleToMergeId: NodeId, bundleToKeepId: NodeId|},
 |} {
   const seen = new Set<string>();
   const queue = new PriorityQueue(
