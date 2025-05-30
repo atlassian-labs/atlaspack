@@ -14,7 +14,7 @@ pub struct Resolution {
   pub resolved: PathBuf,
 }
 
-#[allow(clippy::disallowed_methods)]
+#[allow(clippy::disallowed_methods, clippy::disallowed_types)]
 #[automock]
 pub trait PackageManager {
   fn resolve(&self, specifier: &str, from: &Path) -> anyhow::Result<Resolution>;

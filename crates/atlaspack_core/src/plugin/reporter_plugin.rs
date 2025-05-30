@@ -35,7 +35,7 @@ pub enum ReporterEvent {
 /// For example, reporters may write status information to stdout, run a dev server, or generate a
 /// bundle analysis report at the end of a build.
 ///
-#[allow(clippy::disallowed_methods)]
+#[allow(clippy::disallowed_methods, clippy::disallowed_types)]
 #[mockall::automock]
 #[async_trait]
 pub trait ReporterPlugin: Debug + Send + Sync {

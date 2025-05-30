@@ -5,4 +5,9 @@ disallowed-methods = [
   "std::sync::Condvar::new",
   "std::sync::Once::new",
 ]
-disallowed-types = ["Mutex", "RwLock", "Condvar", "Once"]
+disallowed-types = [
+  "std::sync::Mutex",
+  "std::sync::RwLock",
+  "std::sync::Condvar",
+  "std::sync::Once",
+]
