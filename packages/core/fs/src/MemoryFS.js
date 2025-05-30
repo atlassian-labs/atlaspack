@@ -497,6 +497,7 @@ export class MemoryFS implements FileSystem {
   }
 
   createWriteStream(filePath: FilePath, options: ?FileOptions): WriteStream {
+    this.mkdirp(path.dirname(filePath));
     return new WriteStream(this, filePath, options);
   }
 
