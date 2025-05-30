@@ -32,6 +32,7 @@ import {parser as postHtmlParse} from 'posthtml-parser';
 import postHtml from 'posthtml';
 import EventEmitter from 'events';
 import https from 'https';
+import childProcess from 'child_process';
 
 import {makeDeferredWithPromise, normalizeSeparators} from '@atlaspack/utils';
 import _chalk from 'chalk';
@@ -51,11 +52,31 @@ export const inputFS: NodeFS = new NodeFS();
 export let outputFS: MemoryFS = new MemoryFS(workerFarm);
 export let overlayFS: OverlayFS = new OverlayFS(outputFS, inputFS);
 
-beforeEach(() => {
+before(() => {
+  try {
+    childProcess.execSync('watchman shutdown-server');
+  } catch (err) {
+    /* empty */
+  }
+});
+
+beforeEach(async () => {
   outputFS = new MemoryFS(workerFarm);
   overlayFS = new OverlayFS(outputFS, inputFS);
+
   cacheDir = tempy.directory();
-  cache = new LMDBLiteCache(cacheDir);
+  for (let i = 0; i < 5; i++) {
+    try {
+      cache = new LMDBLiteCache(cacheDir);
+    } catch (err) {
+      if (err.message.includes('temporarily unavailable')) {
+        continue;
+      }
+      throw err;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
   cache.ensure();
 });
 
