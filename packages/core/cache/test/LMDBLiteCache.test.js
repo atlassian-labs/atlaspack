@@ -16,10 +16,6 @@ describe('LMDBLiteCache', () => {
     await fs.promises.rm(cacheDir, {recursive: true, force: true});
   });
 
-  afterEach(() => {
-    cache.getNativeRef().close();
-  });
-
   it('can be constructed', async () => {
     cache = new LMDBLiteCache(cacheDir);
     await cache.ensure();
@@ -58,8 +54,6 @@ describe('LMDBLiteCache', () => {
     await cache.setBlob('key1', Buffer.from(serialize({value: 42})));
     await cache.setBlob('key2', Buffer.from(serialize({value: 43})));
     await cache.compact(path.join(cacheDir, 'compact_test_compacted'));
-
-    cache.getNativeRef().close();
 
     cache = new LMDBLiteCache(path.join(cacheDir, 'compact_test_compacted'));
     await cache.ensure();

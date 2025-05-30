@@ -192,8 +192,6 @@ export class LMDBLiteCache implements Cache {
   }
 
   getBlobSync(key: string): Buffer {
-    // eslint-disable-next-line no-console
-    console.log('getBlob', key);
     const buffer = this.store.get(key);
     if (buffer == null) {
       throw new Error(`Key ${key} not found in cache`);
@@ -202,8 +200,6 @@ export class LMDBLiteCache implements Cache {
   }
 
   async setBlob(key: string, contents: Buffer | string): Promise<void> {
-    // eslint-disable-next-line no-console
-    console.log('setBlob', key);
     await this.store.put(key, contents);
   }
 
