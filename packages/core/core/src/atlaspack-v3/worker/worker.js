@@ -141,6 +141,13 @@ export class AtlaspackWorker {
         };
       }
 
+      if (result.isExcluded) {
+        return {
+          invalidations: [],
+          resolution: {type: 'excluded'},
+        };
+      }
+
       return {
         invalidations: [],
         resolution: {
