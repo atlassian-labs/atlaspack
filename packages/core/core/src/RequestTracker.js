@@ -1509,6 +1509,7 @@ export default class RequestTracker {
       return;
     }
 
+    let total = 0;
     await runCacheImprovements(
       async (cache) => {
         await cache.getNativeRef().startWriteTransaction();
@@ -1516,7 +1517,6 @@ export default class RequestTracker {
       () => Promise.resolve(),
     );
     try {
-      let total = 0;
       report({
         type: 'cache',
         phase: 'start',
