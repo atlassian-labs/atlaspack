@@ -1499,13 +1499,6 @@ export default class RequestTracker {
       }
     }
 
-    await runCacheImprovements(
-      async (cache) => {
-        await cache.getNativeRef().startWriteTransaction();
-      },
-      () => Promise.resolve(),
-    );
-
     let cacheKey = getCacheKey(this.options);
     let requestGraphKey = getFeatureFlag('cachePerformanceImprovements')
       ? `${cacheKey}/RequestGraph`
@@ -1516,115 +1509,124 @@ export default class RequestTracker {
       return;
     }
 
-    let total = 0;
-    report({
-      type: 'cache',
-      phase: 'start',
-      total,
-      size: this.graph.nodes.length,
-    });
-
-    let serialisedGraph = this.graph.serialize();
-
-    // Delete an existing request graph cache, to prevent invalid states
-    await this.options.cache.deleteLargeBlob(requestGraphKey);
-
-    const serialiseAndSet = async (
-      key: string,
-      // $FlowFixMe serialise input is any type
-      contents: any,
-    ): Promise<void> => {
-      if (signal?.aborted) {
-        throw new Error('Serialization was aborted');
-      }
-
-      await runCacheImprovements(
-        (cache) => {
-          instrument(`cache.put(${key})`, () => {
-            cache.getNativeRef().putNoConfirm(key, serialize(contents));
-          });
-          return Promise.resolve();
-        },
-        async () => {
-          await this.options.cache.setLargeBlob(
-            key,
-            serialize(contents),
-            signal
-              ? {
-                  signal: signal,
-                }
-              : undefined,
-          );
-        },
-      );
-
-      total += 1;
-
+    await runCacheImprovements(
+      async (cache) => {
+        await cache.getNativeRef().startWriteTransaction();
+      },
+      () => Promise.resolve(),
+    );
+    try {
+      let total = 0;
       report({
         type: 'cache',
-        phase: 'write',
+        phase: 'start',
         total,
         size: this.graph.nodes.length,
       });
-    };
 
-    let queue = new PromiseQueue({
-      maxConcurrent: 32,
-    });
+      let serialisedGraph = this.graph.serialize();
 
-    // Preallocating a sparse array is faster than pushing when N is high enough
-    let cacheableNodes = new Array(serialisedGraph.nodes.length);
-    for (let i = 0; i < serialisedGraph.nodes.length; i += 1) {
-      let node = serialisedGraph.nodes[i];
+      // Delete an existing request graph cache, to prevent invalid states
+      await this.options.cache.deleteLargeBlob(requestGraphKey);
 
-      let resultCacheKey = node?.resultCacheKey;
-      if (
-        node?.type === REQUEST &&
-        resultCacheKey != null &&
-        node?.result != null
-      ) {
-        queue.add(() => serialiseAndSet(resultCacheKey, node.result));
+      const serialiseAndSet = async (
+        key: string,
+        // $FlowFixMe serialise input is any type
+        contents: any,
+      ): Promise<void> => {
+        if (signal?.aborted) {
+          throw new Error('Serialization was aborted');
+        }
 
-        // eslint-disable-next-line no-unused-vars
-        let {result: _, ...newNode} = node;
-        cacheableNodes[i] = newNode;
-      } else {
-        cacheableNodes[i] = node;
-      }
-    }
-
-    let nodeCountsPerBlob = [];
-
-    for (
-      let i = 0;
-      i * this.graph.nodesPerBlob < cacheableNodes.length;
-      i += 1
-    ) {
-      let nodesStartIndex = i * this.graph.nodesPerBlob;
-      let nodesEndIndex = Math.min(
-        (i + 1) * this.graph.nodesPerBlob,
-        cacheableNodes.length,
-      );
-
-      nodeCountsPerBlob.push(nodesEndIndex - nodesStartIndex);
-
-      if (!this.graph.hasCachedRequestChunk(i)) {
-        // We assume the request graph nodes are immutable and won't change
-        let nodesToCache = cacheableNodes.slice(nodesStartIndex, nodesEndIndex);
-
-        queue.add(() =>
-          serialiseAndSet(
-            getRequestGraphNodeKey(i, cacheKey),
-            nodesToCache,
-          ).then(() => {
-            // Succeeded in writing to disk, save that we have completed this chunk
-            this.graph.setCachedRequestChunk(i);
-          }),
+        await runCacheImprovements(
+          (cache) => {
+            instrument(`cache.put(${key})`, () => {
+              cache.getNativeRef().putNoConfirm(key, serialize(contents));
+            });
+            return Promise.resolve();
+          },
+          async () => {
+            await this.options.cache.setLargeBlob(
+              key,
+              serialize(contents),
+              signal
+                ? {
+                    signal: signal,
+                  }
+                : undefined,
+            );
+          },
         );
-      }
-    }
 
-    try {
+        total += 1;
+
+        report({
+          type: 'cache',
+          phase: 'write',
+          total,
+          size: this.graph.nodes.length,
+        });
+      };
+
+      let queue = new PromiseQueue({
+        maxConcurrent: 32,
+      });
+
+      // Preallocating a sparse array is faster than pushing when N is high enough
+      let cacheableNodes = new Array(serialisedGraph.nodes.length);
+      for (let i = 0; i < serialisedGraph.nodes.length; i += 1) {
+        let node = serialisedGraph.nodes[i];
+
+        let resultCacheKey = node?.resultCacheKey;
+        if (
+          node?.type === REQUEST &&
+          resultCacheKey != null &&
+          node?.result != null
+        ) {
+          queue.add(() => serialiseAndSet(resultCacheKey, node.result));
+
+          // eslint-disable-next-line no-unused-vars
+          let {result: _, ...newNode} = node;
+          cacheableNodes[i] = newNode;
+        } else {
+          cacheableNodes[i] = node;
+        }
+      }
+
+      let nodeCountsPerBlob = [];
+
+      for (
+        let i = 0;
+        i * this.graph.nodesPerBlob < cacheableNodes.length;
+        i += 1
+      ) {
+        let nodesStartIndex = i * this.graph.nodesPerBlob;
+        let nodesEndIndex = Math.min(
+          (i + 1) * this.graph.nodesPerBlob,
+          cacheableNodes.length,
+        );
+
+        nodeCountsPerBlob.push(nodesEndIndex - nodesStartIndex);
+
+        if (!this.graph.hasCachedRequestChunk(i)) {
+          // We assume the request graph nodes are immutable and won't change
+          let nodesToCache = cacheableNodes.slice(
+            nodesStartIndex,
+            nodesEndIndex,
+          );
+
+          queue.add(() =>
+            serialiseAndSet(
+              getRequestGraphNodeKey(i, cacheKey),
+              nodesToCache,
+            ).then(() => {
+              // Succeeded in writing to disk, save that we have completed this chunk
+              this.graph.setCachedRequestChunk(i);
+            }),
+          );
+        }
+      }
+
       await queue.run();
 
       // Set the request graph after the queue is flushed to avoid writing an invalid state
