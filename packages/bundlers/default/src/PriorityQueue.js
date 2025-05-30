@@ -1,31 +1,36 @@
+// @flow strict-local
+
 // https://stackoverflow.com/a/42919752
 const top = 0;
 const parent = (i) => ((i + 1) >>> 1) - 1;
 const left = (i) => (i << 1) + 1;
 const right = (i) => (i + 1) << 1;
 
-export class PriorityQueue {
-  constructor(comparator = (a, b) => a > b) {
+export class PriorityQueue<T> {
+  _heap: T[] = [];
+  _comparator: (a: T, b: T) => number;
+
+  constructor(comparator: (a: T, b: T) => number) {
     this._heap = [];
     this._comparator = comparator;
   }
-  size() {
+  size(): number {
     return this._heap.length;
   }
-  isEmpty() {
+  isEmpty(): boolean {
     return this.size() == 0;
   }
-  peek() {
+  peek(): T | void {
     return this._heap[top];
   }
-  push(...values) {
+  push(...values: T[]): number {
     values.forEach((value) => {
       this._heap.push(value);
       this._siftUp();
     });
     return this.size();
   }
-  pop() {
+  pop(): T | void {
     const poppedValue = this.peek();
     const bottom = this.size() - 1;
     if (bottom > top) {
@@ -35,16 +40,11 @@ export class PriorityQueue {
     this._siftDown();
     return poppedValue;
   }
-  replace(value) {
-    const replacedValue = this.peek();
-    this._heap[top] = value;
-    this._siftDown();
-    return replacedValue;
-  }
-  _greater(i, j) {
+  _greater(i: number, j: number): number {
     return this._comparator(this._heap[i], this._heap[j]);
   }
-  _swap(i, j) {
+  _swap(i: number, j: number) {
+    /* $FlowIssue[unsupported-syntax] Flow thinks that parameters are consts */
     [this._heap[i], this._heap[j]] = [this._heap[j], this._heap[i]];
   }
   _siftUp() {
