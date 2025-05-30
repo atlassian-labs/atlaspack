@@ -25,6 +25,7 @@ import nullthrows from 'nullthrows';
 
 import {findMergeCandidates} from './bundleMerge';
 import type {ResolvedBundlerConfig} from './bundlerConfig';
+import {getSmallestSharedBundleMergesByLeastCodeLoaded} from './getSmallestSharedBundleMergesByLeastCodeLoaded';
 
 /* BundleRoot - An asset that is the main entry of a Bundle. */
 type BundleRoot = Asset;
@@ -1152,6 +1153,9 @@ export function createIdealGraph(
 
   // Step Remove Shared Bundles: Remove shared bundles from bundle groups that hit the parallel request limit.
   let modifiedSourceBundles = new Set();
+  const shouldMergeLeastCodeLoadedSharedBundles = getFeatureFlag(
+    'mergeLeastCodeLoadedSharedBundles',
+  );
 
   if (config.disableSharedBundles === false) {
     for (let bundleGroupId of bundleGraph.getNodeIdsConnectedFrom(rootNodeId)) {
@@ -1183,16 +1187,36 @@ export function createIdealGraph(
 
         // Sort the bundles so the smallest ones are removed first.
         let sharedBundlesInGroup = sharedBundleIdsInBundleGroup
-          .map((id) => ({
-            id,
-            bundle: nullthrows(bundleGraph.getNode(id)),
-          }))
-          .map(({id, bundle}) => {
-            // For Flow
+          .map((id) => {
+            const bundle = nullthrows(bundleGraph.getNode(id));
             invariant(bundle !== 'root');
             return {id, bundle};
           })
           .sort((a, b) => b.bundle.size - a.bundle.size);
+
+        if (shouldMergeLeastCodeLoadedSharedBundles) {
+          const mergeQueue = getSmallestSharedBundleMergesByLeastCodeLoaded(
+            sharedBundlesInGroup,
+            bundleGraph,
+            bundleGroupId,
+            assetReference,
+          );
+
+          let merge;
+          while (
+            numBundlesContributingToPRL > config.maxParallelRequests &&
+            (merge = mergeQueue.shift())
+          ) {
+            const {bundleToMergeId, bundleToKeepId} = merge;
+            mergeBundles(
+              bundleGraph,
+              bundleToKeepId,
+              bundleToMergeId,
+              assetReference,
+            );
+            numBundlesContributingToPRL--;
+          }
+        }
 
         // Remove bundles until the bundle group is within the parallel request limit.
         while (
@@ -1200,6 +1224,17 @@ export function createIdealGraph(
           numBundlesContributingToPRL > config.maxParallelRequests
         ) {
           let bundleTuple = sharedBundlesInGroup.pop();
+
+          /**
+           * When 'mergeLeastCodeLoadedSharedBundles' is turned on bundles in `sharedBundlesInGroup`
+           * might be merged. We need to make sure that the bundle exists!
+           */
+          if (shouldMergeLeastCodeLoadedSharedBundles) {
+            while (!bundleGraph.hasNode(bundleTuple.id)) {
+              bundleTuple = sharedBundlesInGroup.pop();
+            }
+          }
+
           let bundleToRemove = bundleTuple.bundle;
           let bundleIdToRemove = bundleTuple.id;
           //TODO add integration test where bundles in bunlde group > max parallel request limit & only remove a couple shared bundles

@@ -86,6 +86,11 @@ export type FeatureFlags = {|
    * Enable resolution of bundler config starting from the CWD
    */
   resolveBundlerConfigFromCwd: boolean,
+
+  /**
+   * Merge shared bundles when they lead to less code loaded when compared to bundleGroup merges.
+   */
+  mergeLeastCodeLoadedSharedBundles: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
