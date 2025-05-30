@@ -497,6 +497,7 @@ export class MemoryFS implements FileSystem {
   }
 
   createWriteStream(filePath: FilePath, options: ?FileOptions): WriteStream {
+    this.mkdirp(path.dirname(filePath));
     return new WriteStream(this, filePath, options);
   }
 
@@ -549,9 +550,12 @@ export class MemoryFS implements FileSystem {
           dir += path.sep;
         }
 
-        if (event.path.startsWith(dir)) {
+        const relevantEvents = events.filter((event) =>
+          event.path.startsWith(dir),
+        );
+        if (relevantEvents.length > 0) {
           for (let watcher of watchers) {
-            watcher.trigger(events);
+            watcher.trigger(relevantEvents);
           }
         }
       }

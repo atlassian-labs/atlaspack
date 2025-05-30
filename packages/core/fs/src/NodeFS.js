@@ -198,6 +198,7 @@ export class NodeFS implements FileSystem {
     snapshot: FilePath,
     opts: WatcherOptions,
   ): Promise<void> {
+    await this.mkdirp(path.dirname(snapshot));
     await this.watcher().writeSnapshot(dir, snapshot, opts);
   }
 
