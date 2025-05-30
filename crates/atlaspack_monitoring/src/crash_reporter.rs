@@ -117,11 +117,12 @@ fn try_to_connect_to_server(options: &CrashReporterOptions) -> anyhow::Result<Cl
 
 #[cfg(test)]
 mod tests {
+  use parking_lot::Mutex;
   use std::env::temp_dir;
 
   use super::*;
 
-  static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+  static TEST_LOCK: Mutex<()> = Mutex::new(());
 
   #[test]
   fn test_crash_reporter_set_to_none() {
