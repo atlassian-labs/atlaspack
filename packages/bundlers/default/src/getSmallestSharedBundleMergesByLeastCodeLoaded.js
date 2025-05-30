@@ -48,7 +48,7 @@ function getNewAssetsLoadedByMerge(
       }
     }
 
-    let duplicatedAssetsFromA = 0;
+    let newAssetSizeLoadedInBFromA = 0;
     for (const sourceBundle of sourceBundlesUniqueToB) {
       for (const asset of assetsUniqueToA) {
         if (sourceBundle.assets.has(asset)) {
@@ -59,12 +59,12 @@ function getNewAssetsLoadedByMerge(
           (_dependency, bundle) => bundle === sourceBundle,
         );
         if (!sourceBundleReferencesAsset) {
-          duplicatedAssetsFromA += asset.stats.size;
+          newAssetSizeLoadedInBFromA += asset.stats.size;
         }
       }
     }
 
-    return duplicatedAssetsFromA;
+    return newAssetSizeLoadedInBFromA;
   }
 
   /**
@@ -99,13 +99,13 @@ function getBundleSizeAfterMerge(bundleA: Bundle, bundleB: Bundle) {
 }
 
 /**
- * Create a `compareFn` used for determining if a merge
+ * @returns A `compareFn` which determinines if a merge
  * (`[bundleA, bundleB]` where `bundleA` is being merged into `bundleB`)
  *
  *  1. Is merging a smaller bundle (`bundleA`)
  *  2. Leads to less new code loaded after merge
  */
-function createSortSmallestMergeByLeastCodeLoaded(
+function getCompareBundleMergesSmallestAndLeastCodeLoaded(
   bundleGraph: IdealBundleGraph,
   assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
 ) {
@@ -121,7 +121,7 @@ function createSortSmallestMergeByLeastCodeLoaded(
 
   return (mergeA: [NodeId, NodeId], mergeB: [NodeId, NodeId]) => {
     /**
-     * These invalid merges will be removed by the `isCandidateInvalid`
+     * These invalid merges will be removed by the `isMergeInvalid`
      * check in `shift`
      */
     if (isMergeOutdated(mergeA)) {
@@ -177,7 +177,10 @@ export function getSmallestSharedBundleMergesByLeastCodeLoaded(
 |} {
   const seen = new Set<string>();
   const queue = new PriorityQueue(
-    createSortSmallestMergeByLeastCodeLoaded(bundleGraph, assetReference),
+    getCompareBundleMergesSmallestAndLeastCodeLoaded(
+      bundleGraph,
+      assetReference,
+    ),
   );
   // Only consider JS shared bundles and non-reused bundles.
   // These could potentially be considered for merging in future but they're
@@ -189,7 +192,7 @@ export function getSmallestSharedBundleMergesByLeastCodeLoaded(
   const bundleGroup = nullthrows(bundleGraph.getNode(bundleGroupId));
   invariant(bundleGroup !== 'root');
 
-  function isCandidateInvalid(
+  function isMergeInvalid(
     [bundleId, otherBundleId]: [NodeId, NodeId],
     newCodeLoadedAfterBundleGroupMerge?: number,
   ) {
@@ -221,7 +224,7 @@ export function getSmallestSharedBundleMergesByLeastCodeLoaded(
       bundleGroup,
     );
     return (
-      /* $FlowIssue[invalid-compare] duplicatedAssetsFromOtherBundleMerge will always be a number here */
+      /* $FlowIssue[invalid-compare] newCodeLoadedAfterOtherBundleMerge will always be a number here */
       newCodeLoadedAfterOtherBundleMerge >= newCodeLoadedAfterBundleGroupMerge
     );
   }
@@ -242,25 +245,25 @@ export function getSmallestSharedBundleMergesByLeastCodeLoaded(
         continue;
       }
 
-      const candidate = [bundleId, otherBundleId];
-      if (!isCandidateInvalid(candidate, newCodeLoadedAfterBundleGroupMerge)) {
-        queue.push(candidate);
+      const merge = [bundleId, otherBundleId];
+      if (!isMergeInvalid(merge, newCodeLoadedAfterBundleGroupMerge)) {
+        queue.push(merge);
       }
     }
   }
 
   return {
     shift() {
-      let candidate = queue.pop();
-      while (candidate && isCandidateInvalid(candidate)) {
-        candidate = queue.pop();
+      let merge = queue.pop();
+      while (merge && isMergeInvalid(merge)) {
+        merge = queue.pop();
       }
 
-      if (!candidate) {
+      if (!merge) {
         return undefined;
       }
 
-      const [bundleToMergeId, bundleToKeepId] = candidate;
+      const [bundleToMergeId, bundleToKeepId] = merge;
       return {bundleToMergeId, bundleToKeepId};
     },
   };
