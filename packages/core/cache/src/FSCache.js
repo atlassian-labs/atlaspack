@@ -96,6 +96,9 @@ export class FSCache implements Cache {
   }
 
   #getFilePath(key: string, index: number): string {
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      return path.join(this.dir, `${hashString(key)}-${index}`);
+    }
     return path.join(this.dir, `${key}-${index}`);
   }
 

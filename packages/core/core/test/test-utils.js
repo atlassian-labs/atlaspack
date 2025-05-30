@@ -3,7 +3,7 @@
 import type {Environment, AtlaspackOptions, Target} from '../src/types';
 
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
-import {FSCache} from '@atlaspack/cache';
+import {LMDBLiteCache} from '@atlaspack/cache';
 import tempy from 'tempy';
 import {inputFS, outputFS} from '@atlaspack/test-utils';
 import {relativePath} from '@atlaspack/utils';
@@ -12,7 +12,7 @@ import {createEnvironment} from '../src/Environment';
 import {toProjectPath} from '../src/projectPath';
 
 let cacheDir = tempy.directory();
-export let cache: FSCache = new FSCache(outputFS, cacheDir);
+export let cache: LMDBLiteCache = new LMDBLiteCache(cacheDir);
 cache.ensure();
 
 export const DEFAULT_OPTIONS: AtlaspackOptions = {
