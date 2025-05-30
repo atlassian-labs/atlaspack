@@ -549,9 +549,12 @@ export class MemoryFS implements FileSystem {
           dir += path.sep;
         }
 
-        if (event.path.startsWith(dir)) {
+        const relevantEvents = events.filter((event) =>
+          event.path.startsWith(dir),
+        );
+        if (relevantEvents.length > 0) {
           for (let watcher of watchers) {
-            watcher.trigger(events);
+            watcher.trigger(relevantEvents);
           }
         }
       }
@@ -979,9 +982,7 @@ class WorkerFS extends MemoryFS {
             this.symlinks.delete(event.path);
             break;
           case 'mkdir':
-            if (!this.dirs.has(event.path)) {
-              this.dirs.set(event.path, new Directory());
-            }
+            this.dirs.set(event.path, new Directory());
             break;
           case 'symlink':
             this.symlinks.set(event.path, event.target);

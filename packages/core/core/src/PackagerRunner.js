@@ -723,14 +723,20 @@ export default class PackagerRunner {
       return null;
     }
 
-    let mapExists = await this.options.cache.has(mapKey);
+    let mapExists = getFeatureFlag('cachePerformanceImprovements')
+      ? await this.options.cache.hasLargeBlob(mapKey)
+      : await this.options.cache.has(mapKey);
 
     return {
       contents: isLargeBlob
         ? this.options.cache.getStream(contentKey)
-        : blobToStream(await this.options.cache.getLargeBlob(contentKey)),
+        : blobToStream(await this.options.cache.getBlob(contentKey)),
       map: mapExists
-        ? blobToStream(await this.options.cache.getLargeBlob(mapKey))
+        ? blobToStream(
+            getFeatureFlag('cachePerformanceImprovements')
+              ? await this.options.cache.getLargeBlob(mapKey)
+              : await this.options.cache.getBlob(mapKey),
+          )
         : null,
     };
   }

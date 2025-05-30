@@ -36,6 +36,12 @@ import https from 'https';
 import {makeDeferredWithPromise, normalizeSeparators} from '@atlaspack/utils';
 import _chalk from 'chalk';
 import resolve from 'resolve';
+import {LMDBLiteCache} from '@atlaspack/cache';
+import tempy from 'tempy';
+
+export let cacheDir: string = tempy.directory();
+export let cache: LMDBLiteCache = new LMDBLiteCache(cacheDir);
+cache.ensure();
 
 export {fsFixture} from './fsFixture';
 export * from './stubs';
@@ -48,11 +54,16 @@ export let overlayFS: OverlayFS = new OverlayFS(outputFS, inputFS);
 beforeEach(() => {
   outputFS = new MemoryFS(workerFarm);
   overlayFS = new OverlayFS(outputFS, inputFS);
+  cacheDir = tempy.directory();
+  cache = new LMDBLiteCache(cacheDir);
+  cache.ensure();
 });
 
 // Recursively copies a directory from the inputFS to the outputFS
 export async function ncp(source: FilePath, destination: FilePath) {
-  await _ncp(inputFS, source, outputFS, destination);
+  await _ncp(inputFS, source, outputFS, destination, (filePath) => {
+    return !filePath.includes('.parcel-cache');
+  });
 }
 
 // Mocha is currently run with exit: true because of this issue preventing us
@@ -126,6 +137,8 @@ export function getParcelOptions(
   return mergeParcelOptions(
     {
       entries,
+      cache,
+      cacheDir,
       shouldDisableCache: true,
       logLevel: 'none',
       shouldBundleIncrementally:

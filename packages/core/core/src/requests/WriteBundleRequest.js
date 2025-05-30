@@ -168,11 +168,14 @@ async function run({input, options, api}) {
     api,
   );
 
+  const hasSourceMap = getFeatureFlag('cachePerformanceImprovements')
+    ? await options.cache.hasLargeBlob(mapKey)
+    : await options.cache.has(mapKey);
   if (
     mapKey &&
     bundle.env.sourceMap &&
     !bundle.env.sourceMap.inline &&
-    (await options.cache.has(mapKey))
+    hasSourceMap
   ) {
     const mapEntry = getFeatureFlag('cachePerformanceImprovements')
       ? await options.cache.getLargeBlob(mapKey)

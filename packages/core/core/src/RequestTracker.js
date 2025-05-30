@@ -1540,9 +1540,12 @@ export default class RequestTracker {
 
         await runCacheImprovements(
           (cache) => {
-            instrument(`cache.put(${key})`, () => {
-              cache.getNativeRef().putNoConfirm(key, serialize(contents));
-            });
+            instrument(
+              `RequestTracker::writeToCache::cache.put(${key})`,
+              () => {
+                cache.getNativeRef().putNoConfirm(key, serialize(contents));
+              },
+            );
             return Promise.resolve();
           },
           async () => {

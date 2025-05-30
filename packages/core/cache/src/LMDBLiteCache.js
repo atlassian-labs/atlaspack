@@ -19,6 +19,7 @@ import {NodeFS} from '@atlaspack/fs';
 // $FlowFixMe
 import packageJson from '../package.json';
 import {FSCache} from './FSCache';
+import {instrumentAsync} from '@atlaspack/logger';
 
 const ncpAsync = promisify(ncp);
 
@@ -172,10 +173,10 @@ export class LMDBLiteCache implements Cache {
       return this.fs.createReadStream(path.join(this.dir, key));
     }
 
-    return this.fs.createReadStream(this.getFileKey(key));
+    return fs.createReadStream(this.getFileKey(key));
   }
 
-  setStream(key: string, stream: Readable): Promise<void> {
+  async setStream(key: string, stream: Readable): Promise<void> {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return pipeline(
         stream,
@@ -183,7 +184,9 @@ export class LMDBLiteCache implements Cache {
       );
     }
 
-    return pipeline(stream, this.fs.createWriteStream(this.getFileKey(key)));
+    const filePath = this.getFileKey(key);
+    await fs.promises.mkdir(path.dirname(filePath), {recursive: true});
+    return pipeline(stream, fs.createWriteStream(filePath));
   }
 
   // eslint-disable-next-line require-await
@@ -211,14 +214,18 @@ export class LMDBLiteCache implements Cache {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.hasLargeBlob(key);
     }
-    return this.fs.exists(this.getFileKey(key));
+
+    return fs.promises
+      .access(this.getFileKey(key), fs.constants.F_OK)
+      .then(() => true)
+      .catch(() => false);
   }
 
   getLargeBlob(key: string): Promise<Buffer> {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.getLargeBlob(key);
     }
-    return this.fs.readFile(this.getFileKey(key));
+    return fs.promises.readFile(this.getFileKey(key));
   }
 
   async setLargeBlob(
@@ -231,8 +238,8 @@ export class LMDBLiteCache implements Cache {
     }
 
     const targetPath = this.getFileKey(key);
-    await this.fs.mkdirp(path.dirname(targetPath));
-    return this.fs.writeFile(targetPath, contents);
+    await fs.promises.mkdir(path.dirname(targetPath), {recursive: true});
+    return fs.promises.writeFile(targetPath, contents);
   }
 
   /**
@@ -292,6 +299,18 @@ export class LMDBLiteCache implements Cache {
       })
       .join('/');
     return path.join(this.cacheFilesDirectory, cleanKey);
+  }
+
+  async clear(): Promise<void> {
+    await instrumentAsync('LMDBLiteCache::clear', async () => {
+      const keys = await this.keys();
+      for (const key of keys) {
+        await this.store.delete(key);
+      }
+
+      await this.fs.rimraf(this.cacheFilesDirectory);
+      await this.fs.mkdirp(this.cacheFilesDirectory);
+    });
   }
 }
 
