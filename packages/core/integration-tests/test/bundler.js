@@ -2438,4 +2438,67 @@ describe('bundler', function () {
       await run(b);
     });
   });
+
+  describe('getSmallestBundleMergesByLeastCodeLoaded', () => {
+    it('Should reduce the amount of code loaded after merging', async () => {
+      await fsFixture(overlayFS, __dirname)`
+          code-loaded
+            one.js:
+              export const one = 1;
+            two.js:
+              export const two = 2;
+            three.js:
+              import { one } from "./one";
+              import { two } from "./two";
+              export const three = one + two;
+            four.js:
+              import { two } from "./two";
+              export const four = two + two;
+            five.js:
+              import { one } from "./one";
+              import { two } from "./two";
+              export const five = two + two + one;
+            index.js:
+              import('./three');
+              import('./four');
+              import('./five');
+            package.json:
+              {
+                "@atlaspack/bundler-default": {
+                  "minBundleSize": 0,
+                  "maxParallelRequests": 2
+                }
+              }
+            yarn.lock:
+        `;
+
+      const b = await bundle([path.join(__dirname, 'code-loaded/index.js')], {
+        inputFS: overlayFS,
+      });
+      assertBundles(b, [
+        {
+          assets: [
+            'bundle-url.js',
+            'cacheLoader.js',
+            'index.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          assets: ['esmodule-helpers.js', 'one.js', 'two.js'],
+        },
+        {
+          assets: ['three.js'],
+        },
+        {
+          assets: ['four.js'],
+        },
+        {
+          assets: ['five.js'],
+        },
+      ]);
+
+      await run(b);
+    });
+  });
 });
