@@ -32,7 +32,7 @@ function getNewAssetsLoadedByMerge(
   /**
    * @returns The sum of the size of all assets that will be loaded
    * in `bundleB.sourceBundles` that weren't previously loaded before
-   * merging `bundleA` into `bundleB`
+   * merging `bundleA` and `bundleB`
    */
   function getNewAssetsLoadedInBByMerge(bundleA: Bundle, bundleB: Bundle) {
     const sourceBundlesUniqueToB = new Set();
@@ -106,14 +106,13 @@ function getBundleSizeAfterMerge(bundleA: Bundle, bundleB: Bundle) {
  * Create a `compareFn` used for determining if a merge
  * (`[bundleA, bundleB]` where `bundleA` is being merged into `bundleB`)
  *
- *  1. Is merging a smaller asset (`bundleA`)
+ *  1. Is merging a smaller bundle (`bundleA`)
  *  2. Leads to less new code loaded after merge
  */
 function createSortSmallestMergeByLeastCodeLoaded(
   bundleGraph: IdealBundleGraph,
   assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
 ) {
-  [].sort();
   function getBundle(nodeId: NodeId) {
     const bundle = bundleGraph.getNode(nodeId);
     invariant(bundle && bundle !== 'root');
@@ -141,7 +140,7 @@ function createSortSmallestMergeByLeastCodeLoaded(
     const bundleSizeAfterMergeA = getBundleSizeAfterMerge(...mergeBundlesA);
     const bundleSizeAfterMergeB = getBundleSizeAfterMerge(...mergeBundlesB);
 
-    // We want to prevent overmerging assets!!
+    // We want to prevent over-merging assets!!
     if (bundleSizeAfterMergeA > MAX_SHARED_BUNDLE_SIZE) {
       return 1;
     } else if (bundleSizeAfterMergeB > MAX_SHARED_BUNDLE_SIZE) {
