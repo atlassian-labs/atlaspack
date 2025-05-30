@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use atlaspack_resolver::CacheCow;
 use atlaspack_resolver::Invalidations;
@@ -17,6 +17,7 @@ use atlaspack_resolver::SpecifierError;
 use atlaspack_resolver::SpecifierType;
 use es_module_lexer::lex;
 use es_module_lexer::ImportKind;
+use parking_lot::RwLock;
 // use rayon::prelude::{ParallelBridge, ParallelIterator};
 
 #[derive(Debug)]
@@ -82,11 +83,11 @@ struct EsmGraphBuilder<'a> {
 
 impl<'a> EsmGraphBuilder<'a> {
   pub fn build(&self, file: &Path) -> Result<(), EsmGraphBuilderError> {
-    if self.visited.read().unwrap().contains(file) {
+    if self.visited.read().contains(file) {
       return Ok(());
     }
 
-    self.visited.write().unwrap().insert(file.to_owned());
+    self.visited.write().insert(file.to_owned());
 
     if let Some(ext) = file.extension() {
       if ext != "js" && ext != "cjs" && ext != "mjs" {
@@ -95,12 +96,12 @@ impl<'a> EsmGraphBuilder<'a> {
       }
     }
 
-    let read = self.cache.entries.read().unwrap();
+    let read = self.cache.entries.read();
     let value = read.get(file).cloned();
     drop(read);
     if let Some(invalidations) = value {
       self.invalidations.extend(&invalidations);
-      let read = invalidations.invalidate_on_file_change.read().unwrap();
+      let read = invalidations.invalidate_on_file_change.read();
       let paths: Vec<PathBuf> = read.iter().cloned().collect();
       drop(read);
       for p in paths {
@@ -173,7 +174,6 @@ impl<'a> EsmGraphBuilder<'a> {
       .cache
       .entries
       .write()
-      .unwrap()
       .insert(file.to_owned(), Arc::new(invalidations));
     Ok(())
   }
@@ -213,15 +213,11 @@ impl<'a> EsmGraphBuilder<'a> {
     // Invalidate when new files match the glob.
     invalidations.invalidate_on_glob_create(pattern.to_string_lossy());
 
-    if self.visited_globs.read().unwrap().contains(&pattern) {
+    if self.visited_globs.read().contains(&pattern) {
       return Ok(());
     }
 
-    self
-      .visited_globs
-      .write()
-      .unwrap()
-      .insert(pattern.to_path_buf());
+    self.visited_globs.write().insert(pattern.to_path_buf());
 
     for path in glob::glob(pattern.to_string_lossy().as_ref())? {
       let path = path?;

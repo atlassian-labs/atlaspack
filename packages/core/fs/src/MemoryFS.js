@@ -979,7 +979,9 @@ class WorkerFS extends MemoryFS {
             this.symlinks.delete(event.path);
             break;
           case 'mkdir':
-            this.dirs.set(event.path, new Directory());
+            if (!this.dirs.has(event.path)) {
+              this.dirs.set(event.path, new Directory());
+            }
             break;
           case 'symlink':
             this.symlinks.set(event.path, event.target);

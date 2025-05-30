@@ -9,6 +9,8 @@ import stream from 'stream';
 import path from 'path';
 import {promisify} from 'util';
 
+import {hashString} from '@atlaspack/rust';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import logger from '@atlaspack/logger';
 import {
   deserialize,
@@ -51,6 +53,10 @@ export class FSCache implements Cache {
   }
 
   _getCachePath(cacheId: string): FilePath {
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      const cleanId = hashString(cacheId);
+      return path.join(this.dir, cleanId.slice(0, 2), cleanId.slice(2));
+    }
     return path.join(this.dir, cacheId.slice(0, 2), cacheId.slice(2));
   }
 

@@ -1,3 +1,4 @@
+use parking_lot::Mutex;
 use std::any;
 use std::any::Any;
 use std::collections::HashMap;
@@ -6,7 +7,6 @@ use std::ops::Deref;
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 use napi::bindgen_prelude::FromNapiValue;
 use napi::bindgen_prelude::ToNapiValue;
@@ -38,7 +38,7 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
   pub fn new(value: T) -> Self {
     let id = COUNTER.fetch_add(1, Ordering::Relaxed);
 
-    VALUES.lock().unwrap().insert(id, Arc::new(value));
+    VALUES.lock().insert(id, Arc::new(value));
     Self {
       id,
       _value: Default::default(),
@@ -47,7 +47,7 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
 
   /// Take the value out of Transferable, so it can no longer be accessed
   pub fn take(self) -> napi::Result<T> {
-    let Some(value) = VALUES.lock().unwrap().remove(&self.id) else {
+    let Some(value) = VALUES.lock().remove(&self.id) else {
       return Err(napi::Error::from_reason(format!(
         "JsTransferableError::NotExists: id({})",
         self.id
@@ -74,7 +74,7 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
 
   // Get a read-only copy of a Transferable value
   pub fn get(&self) -> napi::Result<JsTransferableRef<T>> {
-    let values = VALUES.lock().unwrap();
+    let values = VALUES.lock();
     let Some(value) = values.get(&self.id) else {
       return Err(napi::Error::from_reason(format!(
         "JsTransferableError::NotExists: id({})",
