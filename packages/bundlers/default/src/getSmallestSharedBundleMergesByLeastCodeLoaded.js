@@ -9,7 +9,6 @@ import type {Asset, Dependency} from '@atlaspack/types';
 import type {DefaultMap} from '@atlaspack/utils';
 
 import type {Bundle, IdealBundleGraph} from './idealGraph';
-/* $FlowFixMe[untyped-import] */
 import {PriorityQueue} from './PriorityQueue';
 
 /** 100Kb */
