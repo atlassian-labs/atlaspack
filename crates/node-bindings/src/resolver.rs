@@ -482,7 +482,7 @@ fn convert_invalidations(
   Vec<String>,
   Vec<Either3<FilePathCreateInvalidation, FileNameCreateInvalidation, GlobCreateInvalidation>>,
 ) {
-  let invalidate_on_file_change = invalidations.invalidate_on_file_change.read().unwrap();
+  let invalidate_on_file_change = invalidations.invalidate_on_file_change.read();
   let invalidate_on_file_change = invalidate_on_file_change
     .iter()
     .map(|p| p.to_string_lossy().into_owned())
@@ -490,7 +490,6 @@ fn convert_invalidations(
   let invalidate_on_file_create = invalidations
     .invalidate_on_file_create
     .read()
-    .unwrap()
     .iter()
     .map(|i| match i {
       FileCreateInvalidation::Path(p) => Either3::A(FilePathCreateInvalidation {

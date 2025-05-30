@@ -11,3 +11,4 @@ serde_json = { workspace = true }
 rayon = { workspace = true }
 glob = { workspace = true }
 xxhash-rust = { workspace = true }
+parking_lot = { workspace = true }

@@ -1,9 +1,9 @@
+use parking_lot::RwLock;
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::RwLock;
 
 use crate::path::normalize_path;
 use crate::ResolverError;
@@ -28,7 +28,6 @@ impl Invalidations {
     self
       .invalidate_on_file_create
       .write()
-      .unwrap()
       .insert(FileCreateInvalidation::Path(normalize_path(path)));
   }
 
@@ -36,7 +35,6 @@ impl Invalidations {
     self
       .invalidate_on_file_create
       .write()
-      .unwrap()
       .insert(FileCreateInvalidation::FileName {
         file_name: file_name.into(),
         above: normalize_path(above),
@@ -47,7 +45,6 @@ impl Invalidations {
     self
       .invalidate_on_file_create
       .write()
-      .unwrap()
       .insert(FileCreateInvalidation::Glob(glob.into()));
   }
 
@@ -55,7 +52,6 @@ impl Invalidations {
     self
       .invalidate_on_file_change
       .write()
-      .unwrap()
       .insert(normalize_path(invalidation));
   }
 
@@ -64,13 +60,13 @@ impl Invalidations {
   }
 
   pub fn extend(&self, other: &Invalidations) {
-    let mut invalidate_on_file_create = self.invalidate_on_file_create.write().unwrap();
-    for f in other.invalidate_on_file_create.read().unwrap().iter() {
+    let mut invalidate_on_file_create = self.invalidate_on_file_create.write();
+    for f in other.invalidate_on_file_create.read().iter() {
       invalidate_on_file_create.insert(f.clone());
     }
 
-    let mut invalidate_on_file_change = self.invalidate_on_file_change.write().unwrap();
-    for f in other.invalidate_on_file_change.read().unwrap().iter() {
+    let mut invalidate_on_file_change = self.invalidate_on_file_change.write();
+    for f in other.invalidate_on_file_change.read().iter() {
       invalidate_on_file_change.insert(f.clone());
     }
 

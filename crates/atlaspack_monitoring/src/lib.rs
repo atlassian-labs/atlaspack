@@ -3,7 +3,7 @@
 //! They are all disabled by default.
 //!
 //! Reporting should only be initialized once.
-use std::sync::Mutex;
+use parking_lot::Mutex;
 use std::time::Duration;
 
 #[cfg(not(target_env = "musl"))]
@@ -56,7 +56,7 @@ impl MonitoringOptions {
 }
 
 pub fn initialize_monitoring(options: MonitoringOptions) -> anyhow::Result<()> {
-  let mut global = MONITORING_GUARD.lock().unwrap();
+  let mut global = MONITORING_GUARD.lock();
   if global.is_some() {
     tracing::warn!("Monitoring is getting set-up twice, this will no-op");
     return Ok(());
@@ -97,7 +97,7 @@ pub fn initialize_from_env() -> anyhow::Result<()> {
 const CLOSE_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub fn close_monitoring() {
-  let monitoring_guard = MONITORING_GUARD.lock().unwrap();
+  let monitoring_guard = MONITORING_GUARD.lock();
   let Some(monitoring_guard) = monitoring_guard.as_ref() else {
     return;
   };

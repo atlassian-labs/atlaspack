@@ -1,8 +1,8 @@
+use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::RwLock;
 
 use crate::FileSystem;
 
@@ -24,14 +24,14 @@ impl InMemoryFileSystem {
   /// Change the current working directory. Used for resolving relative paths.
   pub fn set_current_working_directory(&self, cwd: &Path) {
     let cwd = self.canonicalize_impl(cwd);
-    let mut state = self.current_working_directory.write().unwrap();
+    let mut state = self.current_working_directory.write();
     *state = cwd;
   }
 
   /// Write a file at path.
   pub fn write_file(&self, path: &Path, contents: String) {
     let path = self.canonicalize_impl(path);
-    let mut files = self.files.write().unwrap();
+    let mut files = self.files.write();
     files.insert(path.clone(), InMemoryFileSystemEntry::File { contents });
 
     let mut dir = path.parent();
@@ -42,7 +42,7 @@ impl InMemoryFileSystem {
   }
 
   fn canonicalize_impl(&self, path: &Path) -> PathBuf {
-    let cwd = self.current_working_directory.read().unwrap();
+    let cwd = self.current_working_directory.read();
     let mut result = if path.is_absolute() {
       vec![]
     } else {
@@ -93,7 +93,7 @@ impl Default for InMemoryFileSystem {
 
 impl FileSystem for InMemoryFileSystem {
   fn cwd(&self) -> std::io::Result<PathBuf> {
-    Ok(self.current_working_directory.read().unwrap().clone())
+    Ok(self.current_working_directory.read().clone())
   }
 
   fn canonicalize_base(&self, path: &Path) -> std::io::Result<PathBuf> {
@@ -101,7 +101,7 @@ impl FileSystem for InMemoryFileSystem {
   }
 
   fn create_directory(&self, path: &Path) -> std::io::Result<()> {
-    let mut files = self.files.write().unwrap();
+    let mut files = self.files.write();
     let path = self.canonicalize_impl(path);
     files.insert(path, InMemoryFileSystemEntry::Directory);
     Ok(())
@@ -118,7 +118,7 @@ impl FileSystem for InMemoryFileSystem {
 
   fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
     let path = self.canonicalize_impl(path);
-    let files = self.files.read().unwrap();
+    let files = self.files.read();
     files.get(&path).map_or_else(
       || {
         Err(std::io::Error::new(
@@ -138,14 +138,14 @@ impl FileSystem for InMemoryFileSystem {
 
   fn is_file(&self, path: &Path) -> bool {
     let path = self.canonicalize_impl(path);
-    let files = self.files.read().unwrap();
+    let files = self.files.read();
     let file = files.get(&path);
     matches!(file, Some(InMemoryFileSystemEntry::File { .. }))
   }
 
   fn is_dir(&self, path: &Path) -> bool {
     let path = self.canonicalize_impl(path);
-    let files = self.files.read().unwrap();
+    let files = self.files.read();
     let file = files.get(&path);
     matches!(file, Some(InMemoryFileSystemEntry::Directory { .. }))
   }

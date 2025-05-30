@@ -73,6 +73,7 @@ impl TransformContext {
 /// Many transformers are wrappers around other tools such as compilers and preprocessors, and are
 /// designed to integrate with Atlaspack.
 ///
+#[allow(clippy::disallowed_methods)]
 #[automock]
 #[async_trait]
 pub trait TransformerPlugin: Any + Debug + Send + Sync {
