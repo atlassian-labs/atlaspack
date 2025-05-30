@@ -1412,7 +1412,6 @@ mod tests {
       invalidations
         .invalidate_on_file_create
         .read()
-        .unwrap()
         .iter()
         .collect::<HashSet<_>>(),
       HashSet::new()
@@ -1421,7 +1420,6 @@ mod tests {
       invalidations
         .invalidate_on_file_change
         .read()
-        .unwrap()
         .iter()
         .cloned()
         .collect::<HashSet<_>>(),
@@ -1667,7 +1665,6 @@ mod tests {
       invalidations
         .invalidate_on_file_create
         .read()
-        .unwrap()
         .iter()
         .cloned()
         .collect::<HashSet<_>>(),
@@ -1680,7 +1677,6 @@ mod tests {
       invalidations
         .invalidate_on_file_change
         .read()
-        .unwrap()
         .iter()
         .cloned()
         .collect::<HashSet<_>>(),
@@ -1820,7 +1816,6 @@ mod tests {
       invalidations
         .invalidate_on_file_create
         .read()
-        .unwrap()
         .iter()
         .cloned()
         .collect::<HashSet<_>>(),
@@ -1833,7 +1828,6 @@ mod tests {
       invalidations
         .invalidate_on_file_change
         .read()
-        .unwrap()
         .iter()
         .cloned()
         .collect::<HashSet<_>>(),
@@ -2552,7 +2546,6 @@ mod tests {
       invalidations
         .invalidate_on_file_create
         .read()
-        .unwrap()
         .iter()
         .cloned()
         .collect::<HashSet<_>>(),
@@ -2562,7 +2555,6 @@ mod tests {
       invalidations
         .invalidate_on_file_change
         .read()
-        .unwrap()
         .iter()
         .cloned()
         .collect::<HashSet<_>>(),
@@ -2765,7 +2757,6 @@ mod tests {
       invalidations
         .invalidate_on_file_create
         .read()
-        .unwrap()
         .iter()
         .cloned()
         .collect::<HashSet<_>>(),
