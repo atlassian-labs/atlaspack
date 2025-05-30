@@ -27,6 +27,8 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   verboseRequestInvalidationStats: true,
   conditionalBundlingReporterDuplicateFix: false,
   resolveBundlerConfigFromCwd: false,
+  kokoTestGateOne: false,
+  kokoTestGateTwo: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
