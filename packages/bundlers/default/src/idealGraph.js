@@ -1216,6 +1216,9 @@ export function createIdealGraph(
           }
 
           let bundleTuple = sharedBundlesInGroup.pop();
+          while (!bundleGraph.hasNode(bundleTuple.id)) {
+            bundleTuple = sharedBundlesInGroup.pop();
+          }
           let bundleToRemove = bundleTuple.bundle;
           let bundleIdToRemove = bundleTuple.id;
           //TODO add integration test where bundles in bunlde group > max parallel request limit & only remove a couple shared bundles
