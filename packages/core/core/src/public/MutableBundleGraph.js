@@ -32,6 +32,7 @@ import {BundleBehavior} from '../types';
 import BundleGroup, {bundleGroupToInternalBundleGroup} from './BundleGroup';
 import type {ProjectPath} from '../projectPath';
 import {identifierRegistry} from '../IdentifierRegistry';
+import {toEnvironmentId} from '../EnvironmentManager';
 
 function createBundleId(data: {|
   entryAssetId: string | null,
@@ -236,7 +237,7 @@ export default class MutableBundleGraph
           : bundleId.slice(-8),
         type: opts.entryAsset ? opts.entryAsset.type : opts.type,
         env: opts.env
-          ? environmentToInternalEnvironment(opts.env)
+          ? toEnvironmentId(environmentToInternalEnvironment(opts.env))
           : nullthrows(entryAsset).env,
         entryAssetIds: entryAsset ? [entryAsset.id] : [],
         mainEntryId: entryAsset?.id,

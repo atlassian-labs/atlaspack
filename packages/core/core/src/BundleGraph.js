@@ -49,6 +49,7 @@ import {ISOLATED_ENVS} from './public/Environment';
 import {fromProjectPath, fromProjectPathRelative} from './projectPath';
 import {HASH_REF_PREFIX} from './constants';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {fromEnvironmentId} from './EnvironmentManager';
 
 export const bundleGraphEdgeTypes = {
   // A lack of an edge type indicates to follow the edge while traversing
@@ -148,6 +149,7 @@ export default class BundleGraph {
   _graph: ContentGraph<BundleGraphNode, BundleGraphEdgeType>;
   _bundlePublicIds /*: Set<string> */ = new Set<string>();
   _conditions /*: Map<string, Condition> */ = new Map<string, Condition>();
+  _environmentMap: Map<string, Environment> = new Map();
 
   constructor({
     graph,
@@ -283,7 +285,7 @@ export default class BundleGraph {
       if (
         node.type === 'dependency' &&
         node.value.symbols != null &&
-        node.value.env.shouldScopeHoist &&
+        fromEnvironmentId(node.value.env).shouldScopeHoist &&
         // Disable in dev mode because this feature is at odds with safeToIncrementallyBundle
         isProduction
       ) {
@@ -555,11 +557,11 @@ export default class BundleGraph {
           +needsStableName?: ?boolean,
           +bundleBehavior?: ?IBundleBehavior,
           +shouldContentHash: boolean,
-          +env: Environment,
+          +env: string,
         |}
       | {|
           +type: string,
-          +env: Environment,
+          +env: string,
           +uniqueKey: string,
           +target: Target,
           +needsStableName?: ?boolean,
@@ -1359,7 +1361,8 @@ export default class BundleGraph {
 
         if (
           descendant.type !== bundle.type ||
-          descendant.env.context !== bundle.env.context
+          fromEnvironmentId(descendant.env).context !==
+            fromEnvironmentId(bundle.env).context
         ) {
           actions.skipChildren();
           return;
@@ -1400,7 +1403,7 @@ export default class BundleGraph {
     // If a bundle's environment is isolated, it can't access assets present
     // in any ancestor bundles. Don't consider any assets reachable.
     if (
-      ISOLATED_ENVS.has(bundle.env.context) ||
+      ISOLATED_ENVS.has(fromEnvironmentId(bundle.env).context) ||
       !bundle.isSplittable ||
       bundle.bundleBehavior === BundleBehavior.isolated ||
       bundle.bundleBehavior === BundleBehavior.inline
@@ -1454,7 +1457,8 @@ export default class BundleGraph {
               node.type === 'root' ||
               (node.type === 'bundle' &&
                 (node.value.id === bundle.id ||
-                  node.value.env.context !== bundle.env.context))
+                  fromEnvironmentId(node.value.env).context !==
+                    fromEnvironmentId(bundle.env).context))
             ) {
               isReachable = false;
               actions.stop();
@@ -2128,7 +2132,9 @@ export default class BundleGraph {
       hash.writeString(referencedBundle.id);
     }
 
-    hash.writeString(JSON.stringify(objectSortedEntriesDeep(bundle.env)));
+    hash.writeString(
+      JSON.stringify(objectSortedEntriesDeep(fromEnvironmentId(bundle.env))),
+    );
     return hash.finish();
   }
 

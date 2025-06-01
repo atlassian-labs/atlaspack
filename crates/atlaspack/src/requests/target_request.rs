@@ -457,6 +457,7 @@ impl TargetRequest {
             .source_maps
             .then(TargetSourceMapOptions::default),
           source_type: SourceType::Module,
+          unstable_single_file_output: false,
         }),
         loc: None,
         name: String::from("default"),

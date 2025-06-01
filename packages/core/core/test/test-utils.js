@@ -1,19 +1,13 @@
 // @flow strict-local
 
-import type {Environment, AtlaspackOptions, Target} from '../src/types';
+import type {AtlaspackOptions, Target} from '../src/types';
 
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
-import {FSCache} from '@atlaspack/cache';
-import tempy from 'tempy';
-import {inputFS, outputFS} from '@atlaspack/test-utils';
+import {inputFS, outputFS, cache, cacheDir} from '@atlaspack/test-utils';
 import {relativePath} from '@atlaspack/utils';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {createEnvironment} from '../src/Environment';
 import {toProjectPath} from '../src/projectPath';
-
-let cacheDir = tempy.directory();
-export let cache: FSCache = new FSCache(outputFS, cacheDir);
-cache.ensure();
 
 export const DEFAULT_OPTIONS: AtlaspackOptions = {
   cacheDir,
@@ -57,7 +51,7 @@ export const DEFAULT_OPTIONS: AtlaspackOptions = {
   },
 };
 
-export const DEFAULT_ENV: Environment = createEnvironment({
+export const DEFAULT_ENV: string = createEnvironment({
   context: 'browser',
   engines: {
     browsers: ['> 1%'],
