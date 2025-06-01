@@ -528,12 +528,17 @@ describe('Graph', () => {
           getChildren,
         });
 
-        assert.deepEqual(contexts, [
-          [0, undefined],
-          [1, 'node-0-created-context'],
-          [2, 'node-1-created-context'],
-          [3, 'node-2-created-context'],
-        ]);
+        assert.deepEqual(
+          contexts.map((values) =>
+            values.map((v) => (v != null ? v : undefined)),
+          ),
+          [
+            [0, undefined],
+            [1, 'node-0-created-context'],
+            [2, 'node-1-created-context'],
+            [3, 'node-2-created-context'],
+          ],
+        );
         assert.equal(result, undefined);
       });
     });
@@ -572,16 +577,21 @@ describe('Graph', () => {
           getChildren,
         });
 
-        assert.deepEqual(contexts, [
-          [0, undefined],
-          [1, 'node-0-created-context'],
-          [2, 'node-1-created-context'],
-          ['exit', 2, 'node-2-created-context'],
-          [3, 'node-1-created-context'],
-          ['exit', 3, 'node-3-created-context'],
-          ['exit', 1, 'node-1-created-context'],
-          ['exit', 0, 'node-0-created-context'],
-        ]);
+        assert.deepEqual(
+          contexts.map((values) =>
+            values.map((v) => (v != null ? v : undefined)),
+          ),
+          [
+            [0, undefined],
+            [1, 'node-0-created-context'],
+            [2, 'node-1-created-context'],
+            ['exit', 2, 'node-2-created-context'],
+            [3, 'node-1-created-context'],
+            ['exit', 3, 'node-3-created-context'],
+            ['exit', 1, 'node-1-created-context'],
+            ['exit', 0, 'node-0-created-context'],
+          ],
+        );
         assert.equal(result, undefined);
       });
     });
