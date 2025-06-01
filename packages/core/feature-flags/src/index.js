@@ -11,7 +11,6 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   atlaspackV3: false,
   useWatchmanWatcher: false,
   importRetry: false,
-  fixQuadraticCacheInvalidation: 'OLD',
   conditionalBundlingApi: false,
   inlineRequiresMultiThreading: false,
   vcsMode: 'OLD',
@@ -20,7 +19,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   inlineBundlesSourceMapFixes: false,
   conditionalBundlingNestedRuntime: false,
   patchProjectPaths: false,
-  cachePerformanceImprovements: false,
+  cachePerformanceImprovements: process.env.NODE_ENV === 'test' ? true : false,
   inlineStringReplacementPerf: false,
   conditionalBundlingAsyncRuntime: false,
   // Default to true as it's a monitoring change. Can be turned off if necessary.
