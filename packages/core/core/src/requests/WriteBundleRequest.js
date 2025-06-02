@@ -40,7 +40,6 @@ import {AtlaspackConfig} from '../AtlaspackConfig';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {PluginTracer, tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const HASH_REF_PREFIX_LEN = HASH_REF_PREFIX.length;
 const BOUNDARY_LENGTH = HASH_REF_PREFIX.length + 32 - 1;
@@ -168,20 +167,14 @@ async function run({input, options, api}) {
     api,
   );
 
-  const hasSourceMap = getFeatureFlag('cachePerformanceImprovements')
-    ? await options.cache.hasLargeBlob(mapKey)
-    : await options.cache.has(mapKey);
   if (
     mapKey &&
     bundle.env.sourceMap &&
     !bundle.env.sourceMap.inline &&
-    hasSourceMap
+    (await options.cache.has(mapKey))
   ) {
-    const mapEntry = getFeatureFlag('cachePerformanceImprovements')
-      ? await options.cache.getLargeBlob(mapKey)
-      : await options.cache.getBlob(mapKey);
     await writeFiles(
-      blobToStream(mapEntry),
+      blobToStream(await options.cache.getBlob(mapKey)),
       info,
       hashRefToNameHash,
       options,

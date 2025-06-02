@@ -139,7 +139,6 @@ export class NodeVCSAwareFS extends NodeFS {
     }
 
     const snapshotDirectory = path.dirname(snapshot);
-    await this.mkdirp(snapshotDirectory);
     const filename = path.basename(snapshot, '.txt');
     const nativeSnapshotPath = path.join(
       snapshotDirectory,

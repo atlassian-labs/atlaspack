@@ -5,13 +5,7 @@ import childProcess from 'child_process';
 import assert from 'assert';
 import path from 'path';
 import {NodeVCSAwareFS} from '@atlaspack/fs';
-import {
-  bundle,
-  assertBundles,
-  workerFarm,
-  cacheDir,
-} from '@atlaspack/test-utils';
-import {ATLASPACK_VERSION} from '@atlaspack/core/src/constants.js';
+import {bundle, assertBundles, workerFarm} from '@atlaspack/test-utils';
 
 it('can parse a git commit message hash', () => {
   const example = '[master (root-commit) e997505] Initial commit';
@@ -235,30 +229,16 @@ __metadata:
   };
 }
 
-function findSnapshotPath(): string {
-  const requestTrackerKey = fs.readdirSync(
-    path.join(cacheDir, 'RequestTracker', ATLASPACK_VERSION),
-  )[0];
-  const snapshotFileName = fs
-    .readdirSync(
-      path.join(
-        cacheDir,
-        'RequestTracker',
-        ATLASPACK_VERSION,
-        requestTrackerKey,
-      ),
-    )
-    .find((file) => file.endsWith('snapshot.txt'));
+function findSnapshotPath(cacheDir: string): string {
+  const filesInCache = fs.readdirSync(cacheDir);
+  const snapshotFileName = filesInCache.find(
+    (file) =>
+      file.startsWith('snapshot-') && !file.endsWith('.native-snapshot.txt'),
+  );
   if (snapshotFileName == null) {
     throw new Error('No snapshot file found in cache');
   }
-  return path.join(
-    cacheDir,
-    'RequestTracker',
-    ATLASPACK_VERSION,
-    requestTrackerKey,
-    snapshotFileName,
-  );
+  return path.join(cacheDir, snapshotFileName);
 }
 
 describe('vcs cache', () => {
@@ -305,10 +285,11 @@ describe('vcs cache', () => {
     ]);
 
     // check that the cache directory was created
+    const cacheDir = path.join(root, '.parcel-cache');
     assert.ok(fs.existsSync(cacheDir));
 
     // check that the snapshot file was created
-    const snapshotPath = findSnapshotPath();
+    const snapshotPath = findSnapshotPath(cacheDir);
     assert.ok(fs.existsSync(snapshotPath));
 
     // check that the snapshot file is valid
@@ -361,7 +342,7 @@ describe('vcs cache', () => {
     });
 
     // query the fs for changes
-    const snapshotPath = findSnapshotPath();
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
       assert.deepEqual(changes, [{path: file2, type: 'update'}]);
@@ -409,7 +390,7 @@ describe('vcs cache', () => {
     // remove file2
     fs.rmSync(file2, {force: true});
 
-    const snapshotPath = findSnapshotPath();
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
       assert.deepEqual(changes, [{path: file2, type: 'delete'}]);
@@ -441,7 +422,7 @@ describe('vcs cache', () => {
     // remove file2
     fs.rmSync(file2, {force: true});
 
-    const snapshotPath = findSnapshotPath();
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     await vcsFS.writeSnapshot(root, snapshotPath, {});
 
     const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
@@ -477,7 +458,7 @@ describe('vcs cache', () => {
     ]);
 
     // check the snapshot tracks the file2 state
-    const snapshotPath = findSnapshotPath();
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
     assert.equal(snapshot.vcsState.gitHash.slice(0, 7), changeLockfileHash);
     assert.equal(snapshot.vcsState.dirtyFiles.length, 1);
@@ -525,7 +506,7 @@ describe('vcs cache', () => {
       },
     });
 
-    const snapshotPath = findSnapshotPath();
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
 
     // there are no changes yet
     {
@@ -626,7 +607,7 @@ __metadata:
       yarnStateFileContents,
     );
 
-    const snapshotPath = findSnapshotPath();
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
       changes.sort((a, b) => a.path.localeCompare(b.path));
@@ -724,7 +705,7 @@ __metadata:
       initialYarnStateFileContents,
     );
 
-    const snapshotPath = findSnapshotPath();
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     {
       const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
       changes.sort((a, b) => a.path.localeCompare(b.path));
@@ -777,7 +758,7 @@ __metadata:
       {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
     ]);
 
-    const snapshotPath = findSnapshotPath();
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
     assert.equal(snapshot.vcsState.dirtyFiles.length, 0);
 
@@ -860,7 +841,7 @@ __metadata:
       {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
     ]);
 
-    const snapshotPath = findSnapshotPath();
+    const snapshotPath = findSnapshotPath(path.join(root, '.parcel-cache'));
     const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
     assert.equal(snapshot.vcsState.dirtyFiles.length, 0);
 

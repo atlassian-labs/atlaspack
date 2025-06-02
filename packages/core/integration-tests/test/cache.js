@@ -39,8 +39,6 @@ import sinon from 'sinon';
 import {version} from '@atlaspack/core/package.json';
 import {deserialize} from '@atlaspack/build-cache';
 import {hashString} from '@atlaspack/rust';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
-import {ATLASPACK_VERSION} from '@atlaspack/core/src/constants';
 
 let inputDir: string;
 let packageManager = new NodePackageManager(inputFS, '/');
@@ -76,6 +74,7 @@ type TestConfig = {|
 |};
 
 async function testCache(update: UpdateFn | TestConfig, integration) {
+  await overlayFS.rimraf(path.join(__dirname, '/input'));
   await ncp(
     path.join(__dirname, '/integration', integration ?? 'cache'),
     path.join(inputDir),
@@ -124,6 +123,10 @@ async function testCache(update: UpdateFn | TestConfig, integration) {
 }
 
 describe.v2('cache', function () {
+  before(async () => {
+    await inputFS.rimraf(path.join(__dirname, 'input'));
+  });
+
   beforeEach(() => {
     inputDir = path.join(
       __dirname,
@@ -6183,26 +6186,19 @@ describe.v2('cache', function () {
         getParcelOptions(entries, options),
       );
 
-      let bundleGraphCacheKey = getFeatureFlag('cachePerformanceImprovements')
-        ? `BundleGraph/${ATLASPACK_VERSION}/${
-            resolvedOptions.mode
-          }/${hashString(
-            `${version}:BundleGraph:${
-              JSON.stringify(resolvedOptions.entries) ?? ''
-            }${resolvedOptions.mode}${
-              resolvedOptions.shouldBuildLazily ? 'lazy' : 'eager'
-            }`,
-          )}`
-        : hashString(
-            `${version}:BundleGraph:${
-              JSON.stringify(resolvedOptions.entries) ?? ''
-            }${resolvedOptions.mode}${
-              resolvedOptions.shouldBuildLazily ? 'lazy' : 'eager'
-            }`,
-          ) + '-BundleGraph';
+      let bundleGraphCacheKey =
+        hashString(
+          `${version}:BundleGraph:${
+            JSON.stringify(resolvedOptions.entries) ?? ''
+          }${resolvedOptions.mode}${
+            resolvedOptions.shouldBuildLazily ? 'lazy' : 'eager'
+          }`,
+        ) + '-BundleGraph';
 
       assert(
-        deserialize(await resolvedOptions.cache.getBlob(bundleGraphCacheKey)),
+        deserialize(
+          await resolvedOptions.cache.getLargeBlob(bundleGraphCacheKey),
+        ),
       );
     });
 
