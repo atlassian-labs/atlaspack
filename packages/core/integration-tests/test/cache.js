@@ -39,115 +39,104 @@ import sinon from 'sinon';
 import {version} from '@atlaspack/core/package.json';
 import {deserialize} from '@atlaspack/build-cache';
 import {hashString} from '@atlaspack/rust';
-import {
-  getFeatureFlag,
-  DEFAULT_FEATURE_FLAGS,
-  setFeatureFlags,
-} from '@atlaspack/feature-flags';
 import {ATLASPACK_VERSION} from '@atlaspack/core/src/constants';
 
 let inputDir: string;
 let packageManager = new NodePackageManager(inputFS, '/');
 
-function getEntries(entries = 'src/index.js') {
-  return (Array.isArray(entries) ? entries : [entries]).map((entry) =>
-    path.resolve(inputDir, entry),
-  );
-}
-
-function getOptions(opts) {
-  return mergeParcelOptions(
-    {
-      inputFS: overlayFS,
-      shouldDisableCache: false,
-    },
-    opts,
-  );
-}
-
-function runBundle(entries = 'src/index.js', opts) {
-  return bundler(getEntries(entries), getOptions(opts)).run();
-}
-
-type UpdateFn = (BuildSuccessEvent) =>
-  | ?InitialAtlaspackOptions
-  | Promise<?InitialAtlaspackOptions>;
-type TestConfig = {|
-  ...InitialAtlaspackOptions,
-  entries?: Array<string>,
-  setup?: () => void | Promise<void>,
-  update: UpdateFn,
-|};
-
-async function testCache(update: UpdateFn | TestConfig, integration) {
-  await ncp(
-    path.join(__dirname, '/integration', integration ?? 'cache'),
-    path.join(inputDir),
-  );
-
-  let entries;
-  let options: ?InitialAtlaspackOptions;
-  if (typeof update === 'object') {
-    let setup;
-    ({entries, setup, update, ...options} = update);
-
-    if (setup) {
-      await setup();
-    }
+[true, false].forEach((cachePerformanceImprovements) => {
+  function getEntries(entries = 'src/index.js') {
+    return (Array.isArray(entries) ? entries : [entries]).map((entry) =>
+      path.resolve(inputDir, entry),
+    );
   }
 
-  let resolvedOptions = await resolveOptions(
-    getParcelOptions(getEntries(entries), getOptions(options)),
-  );
+  function getOptions(opts) {
+    return mergeParcelOptions(
+      {
+        inputFS: overlayFS,
+        shouldDisableCache: false,
+        featureFlags: {
+          cachePerformanceImprovements,
+        },
+      },
+      opts,
+    );
+  }
 
-  let b = await runBundle(entries, options);
+  function runBundle(entries = 'src/index.js', opts) {
+    return bundler(getEntries(entries), getOptions(opts)).run();
+  }
 
-  await assertNoFilePathInCache(
-    resolvedOptions.outputFS,
-    resolvedOptions.cacheDir,
-    resolvedOptions.projectRoot,
-  );
+  type UpdateFn = (BuildSuccessEvent) =>
+    | ?InitialAtlaspackOptions
+    | Promise<?InitialAtlaspackOptions>;
+  type TestConfig = {|
+    ...InitialAtlaspackOptions,
+    entries?: Array<string>,
+    setup?: () => void | Promise<void>,
+    update: UpdateFn,
+  |};
 
-  // update
-  let newOptions = await update(b);
-  options = mergeParcelOptions(options || {}, newOptions);
+  async function testCache(update: UpdateFn | TestConfig, integration) {
+    await ncp(
+      path.join(__dirname, '/integration', integration ?? 'cache'),
+      path.join(inputDir),
+    );
 
-  // Run cached build
-  b = await runBundle(entries, options);
+    let entries;
+    let options: ?InitialAtlaspackOptions;
+    if (typeof update === 'object') {
+      let setup;
+      ({entries, setup, update, ...options} = update);
 
-  resolvedOptions = await resolveOptions(
-    getParcelOptions(getEntries(entries), getOptions(options)),
-  );
-  await assertNoFilePathInCache(
-    resolvedOptions.outputFS,
-    resolvedOptions.cacheDir,
-    resolvedOptions.projectRoot,
-  );
+      if (setup) {
+        await setup();
+      }
+    }
 
-  return b;
-}
+    let resolvedOptions = await resolveOptions(
+      getParcelOptions(getEntries(entries), getOptions(options)),
+    );
 
-[true, false].forEach((cachePerformanceImprovements) => {
+    let b = await runBundle(entries, options);
+
+    await assertNoFilePathInCache(
+      resolvedOptions.outputFS,
+      resolvedOptions.cacheDir,
+      resolvedOptions.projectRoot,
+    );
+
+    // update
+    let newOptions = await update(b);
+    options = mergeParcelOptions(options || {}, newOptions);
+
+    // Run cached build
+    b = await runBundle(entries, options);
+
+    resolvedOptions = await resolveOptions(
+      getParcelOptions(getEntries(entries), getOptions(options)),
+    );
+    await assertNoFilePathInCache(
+      resolvedOptions.outputFS,
+      resolvedOptions.cacheDir,
+      resolvedOptions.projectRoot,
+    );
+
+    return b;
+  }
+
   describe.v2(
     `cache cachePerformanceImprovements=${JSON.stringify(
       cachePerformanceImprovements,
     )}`,
     function () {
       beforeEach(() => {
-        setFeatureFlags({
-          ...DEFAULT_FEATURE_FLAGS,
-          cachePerformanceImprovements,
-        });
-
         inputDir = path.join(
           __dirname,
           '/input',
           Math.random().toString(36).slice(2),
         );
-      });
-
-      afterEach(() => {
-        setFeatureFlags(DEFAULT_FEATURE_FLAGS);
       });
 
       it('should support updating a JS file', async function () {
@@ -6270,9 +6259,7 @@ async function testCache(update: UpdateFn | TestConfig, integration) {
             getParcelOptions(entries, options),
           );
 
-          let bundleGraphCacheKey = getFeatureFlag(
-            'cachePerformanceImprovements',
-          )
+          let bundleGraphCacheKey = cachePerformanceImprovements
             ? `BundleGraph/${ATLASPACK_VERSION}/${
                 resolvedOptions.mode
               }/${hashString(
@@ -6290,7 +6277,7 @@ async function testCache(update: UpdateFn | TestConfig, integration) {
                 }`,
               ) + '-BundleGraph';
 
-          if (getFeatureFlag('cachePerformanceImprovements')) {
+          if (cachePerformanceImprovements) {
             assert(
               deserialize(
                 await resolvedOptions.cache.getBlob(bundleGraphCacheKey),
