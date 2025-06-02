@@ -165,7 +165,6 @@ function getCompareBundleMergesByCodeLoaded(
 }
 
 /**
- * @param {{ id: NodeId, bundle: Bundle }[]} sharedBundles all sharedBundles within `bundleGroupId`
  * @returns A PriorityQueue of shared bundle merge combinations within `bundleGroupId` which lead
  * to less code being loaded when compared to merging the bundle back into the the `bundleGroup`.
  *
