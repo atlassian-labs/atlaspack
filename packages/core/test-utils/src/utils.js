@@ -74,12 +74,11 @@ beforeEach(async () => {
         err.message.includes('temporarily unavailable') ||
         err.message.includes('close it to be able to open it again')
       ) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
         continue;
       }
       throw err;
     }
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
   }
   cache.ensure();
 });
