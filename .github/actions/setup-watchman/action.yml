@@ -11,16 +11,7 @@ runs:
 
     - name: Install watchman from a binary
       run: |
-        WATCHMAN_VERSION="2025.05.26.00"
-        curl -L -O https://github.com/facebook/watchman/releases/download/v${WATCHMAN_VERSION}/watchman-v${WATCHMAN_VERSION}-linux.zip
-        unzip watchman-v${WATCHMAN_VERSION}-linux.zip
-        echo "$PWD/watchman-v${WATCHMAN_VERSION}-linux/bin" >> $GITHUB_PATH
-
-        sudo mkdir -p /usr/local/{bin,lib} /usr/local/var/run/watchman
-        sudo cp watchman-v${WATCHMAN_VERSION}-linux/bin/* /usr/local/bin
-        sudo cp watchman-v${WATCHMAN_VERSION}-linux/lib/* /usr/local/lib
-        sudo chmod 755 /usr/local/bin/watchman
-        sudo chmod 2777 /usr/local/var/run/watchman
+        apt install -y watchman
 
       shell: bash
       if: ${{ runner.os == 'Linux' }}
