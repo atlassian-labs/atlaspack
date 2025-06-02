@@ -139,14 +139,10 @@ jobs:
             node: 22
           - os: ubuntu-22.04
             node: 20
-          - os: ubuntu-22.04
-            node: 18
 
           # MacOS ARM64
           - os: macos-15
             node: 20
-          - os: macos-15
-            node: 18
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -177,14 +173,10 @@ jobs:
           # Linux AMD64
           - os: ubuntu-22.04
             node: 20
-          - os: ubuntu-22.04
-            node: 18
 
           # MacOS ARM64
           - os: macos-15
             node: 20
-          - os: macos-15
-            node: 18
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -215,14 +207,10 @@ jobs:
           # Linux AMD64
           - os: ubuntu-22.04
             node: 20
-          - os: ubuntu-22.04
-            node: 18
 
           # MacOS ARM64
           - os: macos-15
             node: 20
-          - os: macos-15
-            node: 18
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
