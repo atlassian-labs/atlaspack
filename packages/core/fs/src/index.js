@@ -27,15 +27,10 @@ export async function ncp(
   source: FilePath,
   destinationFS: FileSystem,
   destination: FilePath,
-  filter?: (filePath: FilePath) => boolean,
 ) {
   await destinationFS.mkdirp(destination);
   let files = await sourceFS.readdir(source);
   for (let file of files) {
-    if (filter && !filter(file)) {
-      continue;
-    }
-
     let sourcePath = path.join(source, file);
     let destPath = path.join(destination, file);
     let stats = await sourceFS.stat(sourcePath);
@@ -45,7 +40,7 @@ export async function ncp(
         destinationFS.createWriteStream(destPath),
       );
     } else if (stats.isDirectory()) {
-      await ncp(sourceFS, sourcePath, destinationFS, destPath, filter);
+      await ncp(sourceFS, sourcePath, destinationFS, destPath);
     }
   }
 }

@@ -1499,139 +1499,130 @@ export default class RequestTracker {
       }
     }
 
-    let cacheKey = getCacheKey(this.options);
-    let requestGraphKey = getFeatureFlag('cachePerformanceImprovements')
-      ? `${cacheKey}/RequestGraph`
-      : `requestGraph-${cacheKey}`;
-    let snapshotKey = getFeatureFlag('cachePerformanceImprovements')
-      ? `${cacheKey}/snapshot`
-      : `snapshot-${cacheKey}`;
-
-    if (this.options.shouldDisableCache) {
-      return;
-    }
-
-    let total = 0;
     await runCacheImprovements(
       async (cache) => {
         await cache.getNativeRef().startWriteTransaction();
       },
       () => Promise.resolve(),
     );
-    try {
+
+    let cacheKey = getCacheKey(this.options);
+    let requestGraphKey = `requestGraph-${cacheKey}`;
+    let snapshotKey = `snapshot-${cacheKey}`;
+
+    if (this.options.shouldDisableCache) {
+      return;
+    }
+
+    let total = 0;
+    report({
+      type: 'cache',
+      phase: 'start',
+      total,
+      size: this.graph.nodes.length,
+    });
+
+    let serialisedGraph = this.graph.serialize();
+
+    // Delete an existing request graph cache, to prevent invalid states
+    await this.options.cache.deleteLargeBlob(requestGraphKey);
+
+    const serialiseAndSet = async (
+      key: string,
+      // $FlowFixMe serialise input is any type
+      contents: any,
+    ): Promise<void> => {
+      if (signal?.aborted) {
+        throw new Error('Serialization was aborted');
+      }
+
+      await runCacheImprovements(
+        (cache) => {
+          instrument(`cache.put(${key})`, () => {
+            cache.getNativeRef().putNoConfirm(key, serialize(contents));
+          });
+          return Promise.resolve();
+        },
+        async () => {
+          await this.options.cache.setLargeBlob(
+            key,
+            serialize(contents),
+            signal
+              ? {
+                  signal: signal,
+                }
+              : undefined,
+          );
+        },
+      );
+
+      total += 1;
+
       report({
         type: 'cache',
-        phase: 'start',
+        phase: 'write',
         total,
         size: this.graph.nodes.length,
       });
+    };
 
-      let serialisedGraph = this.graph.serialize();
+    let queue = new PromiseQueue({
+      maxConcurrent: 32,
+    });
 
-      // Delete an existing request graph cache, to prevent invalid states
-      await this.options.cache.deleteLargeBlob(requestGraphKey);
+    // Preallocating a sparse array is faster than pushing when N is high enough
+    let cacheableNodes = new Array(serialisedGraph.nodes.length);
+    for (let i = 0; i < serialisedGraph.nodes.length; i += 1) {
+      let node = serialisedGraph.nodes[i];
 
-      const serialiseAndSet = async (
-        key: string,
-        // $FlowFixMe serialise input is any type
-        contents: any,
-      ): Promise<void> => {
-        if (signal?.aborted) {
-          throw new Error('Serialization was aborted');
-        }
-
-        await runCacheImprovements(
-          (cache) => {
-            instrument(
-              `RequestTracker::writeToCache::cache.put(${key})`,
-              () => {
-                cache.getNativeRef().putNoConfirm(key, serialize(contents));
-              },
-            );
-            return Promise.resolve();
-          },
-          async () => {
-            await this.options.cache.setLargeBlob(
-              key,
-              serialize(contents),
-              signal
-                ? {
-                    signal: signal,
-                  }
-                : undefined,
-            );
-          },
-        );
-
-        total += 1;
-
-        report({
-          type: 'cache',
-          phase: 'write',
-          total,
-          size: this.graph.nodes.length,
-        });
-      };
-
-      let queue = new PromiseQueue({
-        maxConcurrent: 32,
-      });
-
-      // Preallocating a sparse array is faster than pushing when N is high enough
-      let cacheableNodes = new Array(serialisedGraph.nodes.length);
-      for (let i = 0; i < serialisedGraph.nodes.length; i += 1) {
-        let node = serialisedGraph.nodes[i];
-
-        let resultCacheKey = node?.resultCacheKey;
-        if (
-          node?.type === REQUEST &&
-          resultCacheKey != null &&
-          node?.result != null
-        ) {
-          queue.add(() => serialiseAndSet(resultCacheKey, node.result));
-
-          // eslint-disable-next-line no-unused-vars
-          let {result: _, ...newNode} = node;
-          cacheableNodes[i] = newNode;
-        } else {
-          cacheableNodes[i] = node;
-        }
-      }
-
-      let nodeCountsPerBlob = [];
-
-      for (
-        let i = 0;
-        i * this.graph.nodesPerBlob < cacheableNodes.length;
-        i += 1
+      let resultCacheKey = node?.resultCacheKey;
+      if (
+        node?.type === REQUEST &&
+        resultCacheKey != null &&
+        node?.result != null
       ) {
-        let nodesStartIndex = i * this.graph.nodesPerBlob;
-        let nodesEndIndex = Math.min(
-          (i + 1) * this.graph.nodesPerBlob,
-          cacheableNodes.length,
-        );
+        queue.add(() => serialiseAndSet(resultCacheKey, node.result));
 
-        nodeCountsPerBlob.push(nodesEndIndex - nodesStartIndex);
-
-        if (!this.graph.hasCachedRequestChunk(i)) {
-          // We assume the request graph nodes are immutable and won't change
-          let nodesToCache = cacheableNodes.slice(
-            nodesStartIndex,
-            nodesEndIndex,
-          );
-
-          queue.add(() =>
-            serialiseAndSet(
-              getRequestGraphNodeKey(i, cacheKey),
-              nodesToCache,
-            ).then(() => {
-              // Succeeded in writing to disk, save that we have completed this chunk
-              this.graph.setCachedRequestChunk(i);
-            }),
-          );
-        }
+        // eslint-disable-next-line no-unused-vars
+        let {result: _, ...newNode} = node;
+        cacheableNodes[i] = newNode;
+      } else {
+        cacheableNodes[i] = node;
       }
+    }
 
+    let nodeCountsPerBlob = [];
+
+    for (
+      let i = 0;
+      i * this.graph.nodesPerBlob < cacheableNodes.length;
+      i += 1
+    ) {
+      let nodesStartIndex = i * this.graph.nodesPerBlob;
+      let nodesEndIndex = Math.min(
+        (i + 1) * this.graph.nodesPerBlob,
+        cacheableNodes.length,
+      );
+
+      nodeCountsPerBlob.push(nodesEndIndex - nodesStartIndex);
+
+      if (!this.graph.hasCachedRequestChunk(i)) {
+        // We assume the request graph nodes are immutable and won't change
+        let nodesToCache = cacheableNodes.slice(nodesStartIndex, nodesEndIndex);
+
+        queue.add(() =>
+          serialiseAndSet(
+            getRequestGraphNodeKey(i, cacheKey),
+            nodesToCache,
+          ).then(() => {
+            // Succeeded in writing to disk, save that we have completed this chunk
+            this.graph.setCachedRequestChunk(i);
+          }),
+        );
+      }
+    }
+
+    try {
       await queue.run();
 
       // Set the request graph after the queue is flushed to avoid writing an invalid state
@@ -1643,7 +1634,7 @@ export default class RequestTracker {
 
       await runCacheImprovements(
         () =>
-          serialiseAndSet(`${cacheKey}/cache_metadata`, {
+          serialiseAndSet(`request_tracker:cache_metadata:${cacheKey}`, {
             version: ATLASPACK_VERSION,
             entries: this.options.entries,
             mode: this.options.mode,
@@ -1664,14 +1655,14 @@ export default class RequestTracker {
     } catch (err) {
       // If we have aborted, ignore the error and continue
       if (!signal?.aborted) throw err;
-    } finally {
-      await runCacheImprovements(
-        async (cache) => {
-          await cache.getNativeRef().commitWriteTransaction();
-        },
-        () => Promise.resolve(),
-      );
     }
+
+    await runCacheImprovements(
+      async (cache) => {
+        await cache.getNativeRef().commitWriteTransaction();
+      },
+      () => Promise.resolve(),
+    );
 
     report({type: 'cache', phase: 'end', total, size: this.graph.nodes.length});
   }
@@ -1704,18 +1695,6 @@ export function getWatcherOptions({
 }
 
 function getCacheKey(options) {
-  if (getFeatureFlag('cachePerformanceImprovements')) {
-    const hash = hashString(
-      `${ATLASPACK_VERSION}:${JSON.stringify(options.entries)}:${
-        options.mode
-      }:${options.shouldBuildLazily ? 'lazy' : 'eager'}:${
-        options.watchBackend ?? ''
-      }`,
-    );
-
-    return `RequestTracker/${ATLASPACK_VERSION}/${hash}`;
-  }
-
   return hashString(
     `${ATLASPACK_VERSION}:${JSON.stringify(options.entries)}:${options.mode}:${
       options.shouldBuildLazily ? 'lazy' : 'eager'
@@ -1724,10 +1703,6 @@ function getCacheKey(options) {
 }
 
 function getRequestGraphNodeKey(index: number, cacheKey: string) {
-  if (getFeatureFlag('cachePerformanceImprovements')) {
-    return `${cacheKey}/RequestGraph/nodes/${index}`;
-  }
-
   return `requestGraph-nodes-${index}-${cacheKey}`;
 }
 
@@ -1739,15 +1714,9 @@ export async function readAndDeserializeRequestGraph(
   let bufferLength = 0;
 
   const getAndDeserialize = async (key: string) => {
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      const buffer = await cache.getBlob(key);
-      bufferLength += Buffer.byteLength(buffer);
-      return deserialize(buffer);
-    } else {
-      const buffer = await cache.getLargeBlob(key);
-      bufferLength += Buffer.byteLength(buffer);
-      return deserialize(buffer);
-    }
+    let buffer = await cache.getLargeBlob(key);
+    bufferLength += Buffer.byteLength(buffer);
+    return deserialize(buffer);
   };
 
   let serializedRequestGraph = await getAndDeserialize(requestGraphKey);
@@ -1780,10 +1749,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
   }
 
   let cacheKey = getCacheKey(options);
-  let requestGraphKey = getFeatureFlag('cachePerformanceImprovements')
-    ? `${cacheKey}/RequestGraph`
-    : `requestGraph-${cacheKey}`;
-
+  let requestGraphKey = `requestGraph-${cacheKey}`;
   let timeout;
   const snapshotKey = `snapshot-${cacheKey}`;
   const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');
@@ -1808,11 +1774,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     },
   });
 
-  const hasRequestGraphInCache = getFeatureFlag('cachePerformanceImprovements')
-    ? await options.cache.has(requestGraphKey)
-    : await options.cache.hasLargeBlob(requestGraphKey);
-
-  if (hasRequestGraphInCache) {
+  if (await options.cache.hasLargeBlob(requestGraphKey)) {
     try {
       let {requestGraph} = await readAndDeserializeRequestGraph(
         options.cache,
