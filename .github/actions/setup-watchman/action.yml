@@ -16,11 +16,11 @@ runs:
         unzip watchman-v${WATCHMAN_VERSION}-linux.zip
         echo "$PWD/watchman-v${WATCHMAN_VERSION}-linux/bin" >> $GITHUB_PATH
 
-        mkdir -p /usr/local/{bin,lib} /usr/local/var/run/watchman
-        cp bin/* /usr/local/bin
-        cp lib/* /usr/local/lib
-        chmod 755 /usr/local/bin/watchman
-        chmod 2777 /usr/local/var/run/watchman
+        sudo mkdir -p /usr/local/{bin,lib} /usr/local/var/run/watchman
+        sudo cp bin/* /usr/local/bin
+        sudo cp lib/* /usr/local/lib
+        sudo chmod 755 /usr/local/bin/watchman
+        sudo chmod 2777 /usr/local/var/run/watchman
 
       shell: bash
       if: ${{ runner.os == 'Linux' }}
