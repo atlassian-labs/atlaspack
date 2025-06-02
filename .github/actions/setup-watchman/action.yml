@@ -17,8 +17,8 @@ runs:
         echo "$PWD/watchman-v${WATCHMAN_VERSION}-linux/bin" >> $GITHUB_PATH
 
         sudo mkdir -p /usr/local/{bin,lib} /usr/local/var/run/watchman
-        sudo cp bin/* /usr/local/bin
-        sudo cp lib/* /usr/local/lib
+        sudo cp watchman-v${WATCHMAN_VERSION}-linux/bin/* /usr/local/bin
+        sudo cp watchman-v${WATCHMAN_VERSION}-linux/lib/* /usr/local/lib
         sudo chmod 755 /usr/local/bin/watchman
         sudo chmod 2777 /usr/local/var/run/watchman
 
