@@ -44,7 +44,7 @@ import {ATLASPACK_VERSION} from '@atlaspack/core/src/constants';
 let inputDir: string;
 let packageManager = new NodePackageManager(inputFS, '/');
 
-[true, false].forEach((cachePerformanceImprovements) => {
+[false, true].forEach((cachePerformanceImprovements) => {
   function getEntries(entries = 'src/index.js') {
     return (Array.isArray(entries) ? entries : [entries]).map((entry) =>
       path.resolve(inputDir, entry),
@@ -6219,6 +6219,9 @@ let packageManager = new NodePackageManager(inputFS, '/');
             shouldDisableCache: false,
             inputFS: overlayFS,
             cacheDir: path.join(__dirname, '.parcel-cache'),
+            featureFlags: {
+              cachePerformanceImprovements,
+            },
           };
 
           await fsFixture(overlayFS)`
