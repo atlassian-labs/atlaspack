@@ -14,6 +14,9 @@ runs:
         curl -L -O https://github.com/facebook/watchman/releases/download/v2025.05.26.00/watchman-v2025.05.26.00-linux.zip
         unzip watchman-v2025.05.26.00-linux.zip
         echo "$PWD/watchman-v2025.05.26.00-linux/bin" >> $GITHUB_PATH
-        watchman --version
       shell: bash
       if: ${{ runner.os == 'Linux' }}
+
+    - name: Run watchman version
+      run: watchman --version
+      shell: bash
