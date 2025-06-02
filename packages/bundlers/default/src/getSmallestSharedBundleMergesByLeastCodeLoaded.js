@@ -15,6 +15,15 @@ import {PriorityQueue} from './PriorityQueue';
 const MAX_SHARED_BUNDLE_SIZE = 100e3;
 
 /**
+ * @returns The of the size of all assets that will be created
+ * if `bundle` is duplicated into all of the `sourceBundles` that
+ * it exists in.
+ */
+function getNewAssetsLoadedByBundleGroupMerge(bundle: Bundle): number {
+  return bundle.size * (bundle.sourceBundles.size - 1);
+}
+
+/**
  * @returns The sum of the size of all assets that will be loaded
  * in sourceBundles that weren't previously loaded before
  * merging `bundleA` into `bundleB`
@@ -217,12 +226,8 @@ export function getSmallestSharedBundleMergesByLeastCodeLoaded(
       otherBundle,
     );
     /* $FlowIssue[reassign-const] Flow thinks that parameters are consts */
-    newCodeLoadedAfterBundleGroupMerge ??= getNewAssetsLoadedByMerge(
-      bundleGraph,
-      assetReference,
-      bundle,
-      bundleGroup,
-    );
+    newCodeLoadedAfterBundleGroupMerge ??=
+      getNewAssetsLoadedByBundleGroupMerge(bundle);
     return (
       /* $FlowIssue[invalid-compare] newCodeLoadedAfterOtherBundleMerge will always be a number here */
       newCodeLoadedAfterOtherBundleMerge >= newCodeLoadedAfterBundleGroupMerge
@@ -230,12 +235,8 @@ export function getSmallestSharedBundleMergesByLeastCodeLoaded(
   }
 
   for (const {id: bundleId, bundle} of nonReusedSharedBundles) {
-    const newCodeLoadedAfterBundleGroupMerge = getNewAssetsLoadedByMerge(
-      bundleGraph,
-      assetReference,
-      bundle,
-      bundleGroup,
-    );
+    const newCodeLoadedAfterBundleGroupMerge =
+      getNewAssetsLoadedByBundleGroupMerge(bundle);
     for (const {id: otherBundleId} of nonReusedSharedBundles) {
       if (bundleId === otherBundleId) {
         continue;
