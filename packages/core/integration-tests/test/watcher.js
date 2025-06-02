@@ -1,5 +1,6 @@
 // @flow
 import assert from 'assert';
+import childProcess from 'child_process';
 import nodeFS from 'fs';
 import path from 'path';
 import {
@@ -19,6 +20,7 @@ import {
   overlayFS,
 } from '@atlaspack/test-utils';
 import {symlinkSync} from 'fs';
+import tempy from 'tempy';
 
 const inputDir = path.join(__dirname, '/watcher');
 const distDir = path.join(inputDir, 'dist');
@@ -508,5 +510,93 @@ describe.v2('watcher', function () {
 
     let res = await run(buildEvent.bundleGraph);
     assert.equal(res.default, 2);
+  });
+
+  describe('watcher tests', () => {
+    let hasWatchman = false;
+    try {
+      childProcess.execSync('watchman --version');
+      hasWatchman = true;
+    } catch (e) {
+      hasWatchman = false;
+    }
+
+    it('must have watchman installed for our test suite to work', () => {
+      assert(
+        hasWatchman,
+        'watchman must be installed for our test suite to work',
+      );
+    });
+
+    if (hasWatchman) {
+      it('watchman - picks-up changes in a directory', async () => {
+        const tempDir = tempy.directory();
+        await nodeFS.promises.mkdir(tempDir, {recursive: true});
+
+        await fs.writeSnapshot(tempDir, path.join(tempDir, 'snapshot.txt'), {
+          backend: 'watchman',
+        });
+        await fs.writeFile(path.join(tempDir, 'test.js'), 'export default 4');
+
+        const events = (
+          await fs.getEventsSince(tempDir, path.join(tempDir, 'snapshot.txt'), {
+            backend: 'watchman',
+          })
+        ).map((e) => e.path);
+        events.sort((a, b) => a.localeCompare(b));
+
+        assert.deepEqual(events, [
+          path.join(tempDir, 'snapshot.txt'),
+          path.join(tempDir, 'test.js'),
+        ]);
+      });
+    }
+
+    if (process.platform === 'darwin') {
+      it('macOS - fs-events - fails to pick-up changes in a directory', async () => {
+        const tempDir = tempy.directory();
+        await nodeFS.promises.mkdir(tempDir, {recursive: true});
+
+        await fs.writeSnapshot(tempDir, path.join(tempDir, 'snapshot.txt'), {
+          backend: 'fs-events',
+        });
+        await fs.writeFile(path.join(tempDir, 'test.js'), 'export default 4');
+
+        const events = await fs.getEventsSince(
+          tempDir,
+          path.join(tempDir, 'snapshot.txt'),
+          {
+            backend: 'fs-events',
+          },
+        );
+        events.sort((a, b) => a.path.localeCompare(b.path));
+
+        assert.deepEqual(events, []); // <--- ⚠️⚠️⚠️ This is wrong
+      });
+    }
+
+    if (process.platform === 'linux') {
+      it('linux - inotify - picks-up changes in a directory', async () => {
+        const tempDir = tempy.directory();
+        await nodeFS.promises.mkdir(tempDir, {recursive: true});
+
+        await fs.writeSnapshot(tempDir, path.join(tempDir, 'snapshot.txt'), {
+          backend: 'inotify',
+        });
+        await fs.writeFile(path.join(tempDir, 'test.js'), 'export default 4');
+
+        const events = (
+          await fs.getEventsSince(tempDir, path.join(tempDir, 'snapshot.txt'), {
+            backend: 'inotify',
+          })
+        ).map((e) => e.path);
+        events.sort((a, b) => a.localeCompare(b));
+
+        assert.deepEqual(events, [
+          path.join(tempDir, 'snapshot.txt'),
+          path.join(tempDir, 'test.js'),
+        ]);
+      });
+    }
   });
 });

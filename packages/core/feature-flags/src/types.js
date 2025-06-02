@@ -86,6 +86,10 @@ export type FeatureFlags = {|
    * Enable resolution of bundler config starting from the CWD
    */
   resolveBundlerConfigFromCwd: boolean,
+  /**
+   * Fix a bug where the conditional manifest reporter would drop bundles that have the same condition
+   */
+  conditionalBundlingReporterSameConditionFix: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
