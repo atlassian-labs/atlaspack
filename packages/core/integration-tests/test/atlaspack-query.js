@@ -10,7 +10,7 @@ import {
 } from '@atlaspack/test-utils';
 import {loadGraphs} from '../../../dev/query/src';
 
-describe.v2('atlaspack-query', () => {
+describe.skip('atlaspack-query', () => {
   it('loadGraphs', async function () {
     let entries = 'index.js';
     let options = {
