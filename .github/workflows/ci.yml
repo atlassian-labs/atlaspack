@@ -125,6 +125,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Rust
         uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: '${{ matrix.os }}-rust-unit-tests'
+          # Only store new caches on main
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo test
 
   unit_tests:

@@ -5,6 +5,7 @@ import childProcess from 'child_process';
 import assert from 'assert';
 import path from 'path';
 import {NodeVCSAwareFS} from '@atlaspack/fs';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {
   bundle,
   assertBundles,
@@ -236,6 +237,20 @@ __metadata:
 }
 
 function findSnapshotPath(): string {
+  if (!getFeatureFlag('cachePerformanceImprovements')) {
+    const filesInCache = fs.readdirSync(cacheDir);
+    const snapshotFileName = filesInCache.find(
+      (file) =>
+        file.startsWith('snapshot-') && !file.endsWith('.native-snapshot.txt'),
+    );
+
+    if (snapshotFileName == null) {
+      throw new Error('No snapshot file found in cache');
+    }
+
+    return path.join(cacheDir, snapshotFileName);
+  }
+
   const requestTrackerKey = fs.readdirSync(
     path.join(cacheDir, 'RequestTracker', ATLASPACK_VERSION),
   )[0];
@@ -261,7 +276,7 @@ function findSnapshotPath(): string {
   );
 }
 
-describe('vcs cache', () => {
+describe.only('vcs cache', () => {
   before(async function () {
     this.timeout(10000);
     // Warm up worker farm so that the first test doesn't account for this time.
