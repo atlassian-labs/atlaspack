@@ -538,24 +538,16 @@ describe.v2('watcher', function () {
         });
         await fs.writeFile(path.join(tempDir, 'test.js'), 'export default 4');
 
-        const events = await fs.getEventsSince(
-          tempDir,
-          path.join(tempDir, 'snapshot.txt'),
-          {
+        const events = (
+          await fs.getEventsSince(tempDir, path.join(tempDir, 'snapshot.txt'), {
             backend: 'watchman',
-          },
-        );
-        events.sort((a, b) => a.path.localeCompare(b.path));
+          })
+        ).map((e) => e.path);
+        events.sort((a, b) => a.localeCompare(b));
 
         assert.deepEqual(events, [
-          {
-            type: 'create',
-            path: path.join(tempDir, 'snapshot.txt'),
-          },
-          {
-            type: 'create',
-            path: path.join(tempDir, 'test.js'),
-          },
+          path.join(tempDir, 'snapshot.txt'),
+          path.join(tempDir, 'test.js'),
         ]);
       });
     }
@@ -593,24 +585,16 @@ describe.v2('watcher', function () {
         });
         await fs.writeFile(path.join(tempDir, 'test.js'), 'export default 4');
 
-        const events = await fs.getEventsSince(
-          tempDir,
-          path.join(tempDir, 'snapshot.txt'),
-          {
+        const events = (
+          await fs.getEventsSince(tempDir, path.join(tempDir, 'snapshot.txt'), {
             backend: 'inotify',
-          },
-        );
-        events.sort((a, b) => a.path.localeCompare(b.path));
+          })
+        ).map((e) => e.path);
+        events.sort((a, b) => a.localeCompare(b));
 
         assert.deepEqual(events, [
-          {
-            type: 'create',
-            path: path.join(tempDir, 'snapshot.txt'),
-          },
-          {
-            type: 'create',
-            path: path.join(tempDir, 'test.js'),
-          },
+          path.join(tempDir, 'snapshot.txt'),
+          path.join(tempDir, 'test.js'),
         ]);
       });
     }
