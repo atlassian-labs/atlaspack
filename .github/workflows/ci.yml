@@ -65,12 +65,21 @@ jobs:
           shared-key: '${{ matrix.target }}'
           # Only store new caches on main
           save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.9
+      - name: Run sccache stat for check
+        shell: bash
+        run: ${SCCACHE_PATH} --show-stats
+
       - uses: ./.github/actions/setup-node
       # Build native artifacts
       - env:
           RUSTUP_TARGET: ${{ matrix.target }}
           CARGO_PROFILE: release
+          SCCACHE_GHA_ENABLED: 'true'
+          RUSTC_WRAPPER: 'sccache'
         run: yarn build-native
+
       - if: ${{ matrix.build_js }}
         run: yarn build
       # Upload artifacts for use later in pipeline
