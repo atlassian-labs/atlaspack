@@ -108,13 +108,10 @@ function getBundleSizeAfterMerge(bundleA: Bundle, bundleB: Bundle) {
 }
 
 /**
- * @returns A `compareFn` which determinines if a merge
- * (`[bundleA, bundleB]` where `bundleA` is being merged into `bundleB`)
- *
- *  1. Is merging a smaller bundle (`bundleA`)
- *  2. Leads to less new code loaded after merge
+ * @returns A `compareFn` which determinines if a `mergeA`
+ * leads to less code loaded when compared to `mergeB`
  */
-function getCompareBundleMergesSmallestAndLeastCodeLoaded(
+function getCompareBundleMergesByCodeLoaded(
   bundleGraph: IdealBundleGraph,
   assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
 ) {
@@ -152,18 +149,18 @@ function getCompareBundleMergesSmallestAndLeastCodeLoaded(
       return -1;
     }
 
-    const getNewAssetsLoadedAfterMergeA = getNewAssetsLoadedByMerge(
+    const newAssetsLoadedAfterMergeA = getNewAssetsLoadedByMerge(
       bundleGraph,
       assetReference,
       ...mergeBundlesA,
     );
-    const getNewAssetsLoadedAfterMergeB = getNewAssetsLoadedByMerge(
+    const newAssetsLoadedAfterMergeB = getNewAssetsLoadedByMerge(
       bundleGraph,
       assetReference,
       ...mergeBundlesB,
     );
 
-    return getNewAssetsLoadedAfterMergeA - getNewAssetsLoadedAfterMergeB;
+    return newAssetsLoadedAfterMergeA - newAssetsLoadedAfterMergeB;
   };
 }
 
@@ -172,11 +169,9 @@ function getCompareBundleMergesSmallestAndLeastCodeLoaded(
  * @returns A PriorityQueue of shared bundle merge combinations within `bundleGroupId` which lead
  * to less code being loaded when compared to merging the bundle back into the the `bundleGroup`.
  *
- * The queue is sorted by:
- *  1. Smallest bundles merged first
- *  2. Merge combinations which lead to the least amount of new code loaded after being merged
+ * The queue is sorted (ASC) by the amount of new code loaded by the merge.
  */
-export function getSmallestSharedBundleMergesByLeastCodeLoaded(
+export function getSharedBundleMergesByLeastCodeLoaded(
   sharedBundles: {|id: NodeId, bundle: Bundle|}[],
   bundleGraph: IdealBundleGraph,
   bundleGroupId: NodeId,
@@ -186,10 +181,7 @@ export function getSmallestSharedBundleMergesByLeastCodeLoaded(
 |} {
   const seen = new Set<string>();
   const queue = new PriorityQueue(
-    getCompareBundleMergesSmallestAndLeastCodeLoaded(
-      bundleGraph,
-      assetReference,
-    ),
+    getCompareBundleMergesByCodeLoaded(bundleGraph, assetReference),
   );
   // Only consider JS shared bundles and non-reused bundles.
   // These could potentially be considered for merging in future but they're

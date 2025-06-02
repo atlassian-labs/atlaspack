@@ -25,7 +25,7 @@ import nullthrows from 'nullthrows';
 
 import {findMergeCandidates} from './bundleMerge';
 import type {ResolvedBundlerConfig} from './bundlerConfig';
-import {getSmallestSharedBundleMergesByLeastCodeLoaded} from './getSmallestSharedBundleMergesByLeastCodeLoaded';
+import {getSharedBundleMergesByLeastCodeLoaded} from './getSharedBundleMergesByLeastCodeLoaded';
 
 /* BundleRoot - An asset that is the main entry of a Bundle. */
 type BundleRoot = Asset;
@@ -1195,7 +1195,7 @@ export function createIdealGraph(
           .sort((a, b) => b.bundle.size - a.bundle.size);
 
         if (shouldMergeLeastCodeLoadedSharedBundles) {
-          const mergeQueue = getSmallestSharedBundleMergesByLeastCodeLoaded(
+          const mergeQueue = getSharedBundleMergesByLeastCodeLoaded(
             sharedBundlesInGroup,
             bundleGraph,
             bundleGroupId,
