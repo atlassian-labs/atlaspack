@@ -174,7 +174,6 @@ function getCompareBundleMergesByCodeLoaded(
 export function getSharedBundleMergesByLeastCodeLoaded(
   sharedBundles: {|id: NodeId, bundle: Bundle|}[],
   bundleGraph: IdealBundleGraph,
-  bundleGroupId: NodeId,
   assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
 ): {|
   shift(): void | {|bundleToMergeId: NodeId, bundleToKeepId: NodeId|},
@@ -189,9 +188,6 @@ export function getSharedBundleMergesByLeastCodeLoaded(
   const nonReusedSharedBundles = sharedBundles.filter(
     ({bundle}) => bundle.type === 'js' && !bundle.mainEntryAsset,
   );
-
-  const bundleGroup = nullthrows(bundleGraph.getNode(bundleGroupId));
-  invariant(bundleGroup !== 'root');
 
   function isMergeInvalid(
     [bundleId, otherBundleId]: [NodeId, NodeId],

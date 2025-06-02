@@ -1198,7 +1198,6 @@ export function createIdealGraph(
           const mergeQueue = getSharedBundleMergesByLeastCodeLoaded(
             sharedBundlesInGroup,
             bundleGraph,
-            bundleGroupId,
             assetReference,
           );
 
