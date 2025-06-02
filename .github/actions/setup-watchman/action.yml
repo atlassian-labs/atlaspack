@@ -1,0 +1,19 @@
+name: Setup watchman
+description: Setup watchman
+
+runs:
+  using: composite
+  steps:
+    - name: Install watchman with brew
+      run: brew install watchman
+      shell: bash
+      if: ${{ runner.os == 'macOS' }}
+
+    - name: Install watchman from a binary
+      run: |
+        curl -L -O https://github.com/facebook/watchman/releases/download/v2025.05.26.00/watchman-v2025.05.26.00-linux.zip
+        unzip watchman-v2025.05.26.00-linux.zip
+        echo "$PWD/watchman-v2025.05.26.00-linux/bin" >> $GITHUB_PATH
+        watchman --version
+      shell: bash
+      if: ${{ runner.os == 'Linux' }}

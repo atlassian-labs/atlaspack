@@ -521,6 +521,13 @@ describe.v2('watcher', function () {
       hasWatchman = false;
     }
 
+    it('must have watchman installed for our test suite to work', () => {
+      assert(
+        hasWatchman,
+        'watchman must be installed for our test suite to work',
+      );
+    });
+
     if (hasWatchman) {
       it('watchman - picks-up changes in a directory', async () => {
         const tempDir = tempy.directory();
