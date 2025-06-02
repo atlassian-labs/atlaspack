@@ -67,7 +67,6 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
-        if: ${{ }}
       - name: Run sccache stat for check
         shell: bash
         run: ${SCCACHE_PATH} --show-stats
