@@ -577,7 +577,7 @@ describe.v2('watcher', function () {
     }
 
     if (process.platform === 'linux') {
-      it('linux - inotify - fails to pick-up changes in a directory', async () => {
+      it('linux - inotify - picks-up changes in a directory', async () => {
         const tempDir = tempy.directory();
         await nodeFS.promises.mkdir(tempDir, {recursive: true});
 
@@ -595,7 +595,16 @@ describe.v2('watcher', function () {
         );
         events.sort((a, b) => a.path.localeCompare(b.path));
 
-        assert.deepEqual(events, []); // <--- ⚠️⚠️⚠️ This is wrong
+        assert.deepEqual(events, [
+          {
+            type: 'create',
+            path: path.join(tempDir, 'snapshot.txt'),
+          },
+          {
+            type: 'create',
+            path: path.join(tempDir, 'test.js'),
+          },
+        ]);
       });
     }
   });
