@@ -201,6 +201,9 @@ jobs:
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
       - run: yarn test:integration-ci
+        env:
+          RUST_LOG: debug
+          ATLASPACK_TRACING_MODE: stdout
 
   integration_tests_v3:
     name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }})
@@ -237,6 +240,8 @@ jobs:
       - run: yarn test:integration-ci
         env:
           ATLASPACK_V3: true
+          RUST_LOG: debug
+          ATLASPACK_TRACING_MODE: stdout
 
   end_to_end_tests:
     name: E2E tests
