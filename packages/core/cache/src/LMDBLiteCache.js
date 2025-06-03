@@ -36,11 +36,6 @@ export class LmdbWrapper {
 
   constructor(lmdb: Lmdb) {
     this.lmdb = lmdb;
-
-    // $FlowFixMe
-    this[Symbol.dispose] = () => {
-      this.lmdb.close();
-    };
   }
 
   has(key: string): boolean {
