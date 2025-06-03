@@ -99,7 +99,6 @@ describe('LMDBLiteCache', () => {
     const cache1 = new LMDBLiteCache(testDir);
     await cache1.ensure();
 
-    // This should throw an error
     assert.doesNotThrow(() => {
       new LMDBLiteCache(testDir);
     });
@@ -108,21 +107,16 @@ describe('LMDBLiteCache', () => {
   it('should NOT fail when trying to open after GC', async () => {
     const testDir = path.join(cacheDir, 'gc_test');
 
-    // Create first instance
     let cache1 = new LMDBLiteCache(testDir);
     await cache1.ensure();
     await cache1.setBlob('key', Buffer.from(serialize({value: 42})));
 
-    // Clear the cache reference to allow GC
     cache1 = null;
 
-    // Force GC (this is a best effort, actual GC timing is not guaranteed)
     if (global.gc) {
       global.gc();
     }
 
-    // Try to create a new instance
-    // This should fail because the native instance is still held by the global state
     assert.doesNotThrow(() => {
       new LMDBLiteCache(testDir);
     });
@@ -131,18 +125,15 @@ describe('LMDBLiteCache', () => {
   it('should handle rapid open/close cycles', async () => {
     const testDir = path.join(cacheDir, 'rapid_cycles_test');
 
-    // Create and close multiple instances rapidly
     for (let i = 0; i < 10; i++) {
       const cache = new LMDBLiteCache(testDir);
       await cache.ensure();
       await cache.setBlob(`key${i}`, Buffer.from(serialize({value: i})));
       cache.getNativeRef().close();
 
-      // Small delay to allow for cleanup
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
-    // Final instance should work
     const finalCache = new LMDBLiteCache(testDir);
     await finalCache.ensure();
     const buffer = await finalCache.getBlob('key9');
