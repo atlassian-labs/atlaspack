@@ -27,7 +27,7 @@ pub enum DatabaseWriterError {
   CompressError(#[from] lz4_flex::block::CompressError),
 }
 
-#[derive(Clone, PartialOrd, PartialEq)]
+#[derive(Clone, Debug, PartialOrd, PartialEq)]
 #[napi(object)]
 pub struct LMDBOptions {
   /// The database directory path
@@ -411,6 +411,10 @@ impl DatabaseWriter {
       .copy_to_file(target_path, heed::CompactionOption::Enabled)?;
 
     Ok(())
+  }
+
+  pub fn path(&self) -> &Path {
+    self.environment.path()
   }
 }
 

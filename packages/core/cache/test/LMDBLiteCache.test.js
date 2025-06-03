@@ -79,4 +79,16 @@ describe('LMDBLiteCache', () => {
       );
     });
   });
+
+  it('can be closed and re-opened', async () => {
+    cache = new LMDBLiteCache(path.join(cacheDir, 'close_and_reopen_test'));
+    await cache.ensure();
+    await cache.setBlob('key', Buffer.from(serialize({value: 42})));
+    cache.getNativeRef().close();
+    cache = new LMDBLiteCache(path.join(cacheDir, 'close_and_reopen_test'));
+    await cache.ensure();
+    const buffer = await cache.getBlob('key');
+    const result = deserialize(buffer);
+    assert.equal(result.value, 42);
+  });
 });
