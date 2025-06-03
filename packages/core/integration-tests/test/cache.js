@@ -41,6 +41,7 @@ import {deserialize} from '@atlaspack/build-cache';
 import {hashString} from '@atlaspack/rust';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {ATLASPACK_VERSION} from '@atlaspack/core/src/constants';
+import {getAllEnvironments} from '@atlaspack/rust';
 
 let inputDir: string;
 let packageManager = new NodePackageManager(inputFS, '/');
@@ -6804,5 +6805,60 @@ describe.v2('cache', function () {
       shouldBuildLazily: false,
     });
     assert.equal(eagerBundleGraph.getBundles().length, 2);
+  });
+
+  describe('environment caching', function () {
+    it('should cache and load environments between builds', async function () {
+      let firstBuildEnvs;
+      let cacheSpy = sinon.spy(logger, 'verbose');
+
+      // First build: Set up initial environments and write to cache
+      await testCache({
+        entries: 'src/index.js',
+        async setup() {
+          await overlayFS.writeFile(path.join(inputDir, 'src/index.js'), '');
+        },
+        update() {
+          firstBuildEnvs = getAllEnvironments();
+          const env = firstBuildEnvs.find((e) => e.context === 'browser');
+          assert(env, 'Browser environment should be created in first build');
+        },
+      });
+
+      // Second build: Verify environments are loaded from cache
+      await testCache({
+        entries: 'src/index.js',
+        setup() {
+          // No need to write file again, it should be cached
+        },
+        update() {
+          assert(
+            cacheSpy.calledWith(
+              sinon.match({
+                origin: '@atlaspack/core',
+                message: 'Environments were loaded from cache',
+              }),
+            ),
+            'Should load environments from cache',
+          );
+
+          const secondBuildEnvs = getAllEnvironments();
+          for (const env of firstBuildEnvs) {
+            const matchingEnv = secondBuildEnvs.find((e) => e.id === env.id);
+            assert(
+              matchingEnv,
+              `Environment from first build (id: ${env.id}) should be present in second build`,
+            );
+            assert.deepEqual(
+              matchingEnv,
+              env,
+              `Environment from first build (id: ${env.id}) should be identical in second build`,
+            );
+          }
+        },
+      });
+
+      cacheSpy.restore();
+    });
   });
 });

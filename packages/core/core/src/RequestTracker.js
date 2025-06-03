@@ -15,7 +15,11 @@ import type {
   Graph,
 } from '@atlaspack/graph';
 import logger, {instrument} from '@atlaspack/logger';
-import {hashString} from '@atlaspack/rust';
+import {
+  hashString,
+  getAllEnvironments,
+  setAllEnvironments,
+} from '@atlaspack/rust';
 import type {Async, EnvMap} from '@atlaspack/types';
 import {
   type Deferred,
@@ -29,15 +33,15 @@ import nullthrows from 'nullthrows';
 
 import {
   ATLASPACK_VERSION,
-  VALID,
-  INITIAL_BUILD,
   FILE_CREATE,
-  FILE_UPDATE,
   FILE_DELETE,
+  FILE_UPDATE,
   ENV_CHANGE,
+  ERROR,
+  INITIAL_BUILD,
   OPTION_CHANGE,
   STARTUP,
-  ERROR,
+  VALID,
 } from './constants';
 import type {AtlaspackV3} from './atlaspack-v3/AtlaspackV3';
 import {
@@ -1467,6 +1471,13 @@ export default class RequestTracker {
         size: this.graph.nodes.length,
       });
 
+      await runCacheImprovements(
+        async (cache) => {
+          await writeEnvironments(cache);
+        },
+        () => Promise.resolve(),
+      );
+
       let serialisedGraph = this.graph.serialize();
 
       // Delete an existing request graph cache, to prevent invalid states
@@ -1748,6 +1759,28 @@ async function loadRequestGraph(options): Async<RequestGraph> {
       ...commonMeta,
     },
   });
+
+  if (getFeatureFlag('cachePerformanceImprovements')) {
+    try {
+      await loadEnvironmentsFromCache(options.cache);
+      logger.verbose({
+        origin: '@atlaspack/core',
+        message: 'Environments were loaded from cache',
+        meta: {
+          ...commonMeta,
+        },
+      });
+    } catch (err) {
+      logger.warn({
+        origin: '@atlaspack/core',
+        message: 'Failed to load environments from cache',
+        meta: {
+          ...commonMeta,
+          error: err,
+        },
+      });
+    }
+  }
 
   const hasRequestGraphInCache = getFeatureFlag('cachePerformanceImprovements')
     ? await options.cache.has(requestGraphKey)
@@ -2032,4 +2065,83 @@ export function cleanUpOrphans<N, E: number>(graph: Graph<N, E>): NodeId[] {
   });
 
   return removedNodeIds;
+}
+
+/**
+ * Stores an environment object by its ID
+ * @param {LMDBLiteCache} cache
+ * @param {Environment} env
+ */
+export async function storeEnvById(cache, env) {
+  const envKey = `Environment/${ATLASPACK_VERSION}/${env.id}`;
+
+  await instrument(
+    `RequestTracker::writeToCache::cache.put(${envKey})`,
+    async () => {
+      await cache.set(envKey, env);
+    },
+  );
+}
+
+/**
+ * Stores the list of environment IDs
+ * @param {LMDBLiteCache} cache
+ * @param {Set<string>} environmentIds
+ */
+export async function storeEnvManager(cache, environmentIds) {
+  await instrument(
+    `RequestTracker::writeToCache::cache.put(${`EnvironmentManager/${ATLASPACK_VERSION}`})`,
+    async () => {
+      await cache.set(
+        `EnvironmentManager/${ATLASPACK_VERSION}`,
+        Array.from(environmentIds),
+      );
+    },
+  );
+}
+
+/**
+ * Writes all environments and their IDs to the cache
+ * @param {LMDBLiteCache} cache
+ * @returns {Promise<void>}
+ */
+export async function writeEnvironments(cache) {
+  const environments = getAllEnvironments();
+  const environmentIds = new Set<string>();
+
+  // Store each environment individually
+  for (const env of environments) {
+    environmentIds.add(env.id);
+    await storeEnvById(cache, env);
+  }
+
+  // Store the list of environment IDs
+  await storeEnvManager(cache, environmentIds);
+}
+
+/**
+ * Loads all environments and their IDs from the cache
+ * @param {LMDBLiteCache} cache
+ * @returns {Promise<void>}
+ */
+export async function loadEnvironmentsFromCache(cache) {
+  const cachedEnvIds = await cache.get(
+    `EnvironmentManager/${ATLASPACK_VERSION}`,
+  );
+
+  if (cachedEnvIds == null) {
+    return;
+  }
+
+  const environments = [];
+  for (const envId of cachedEnvIds) {
+    const envKey = `Environment/${ATLASPACK_VERSION}/${envId}`;
+    const cachedEnv = await cache.get(envKey);
+    if (cachedEnv != null) {
+      environments.push(cachedEnv);
+    }
+  }
+  if (environments.length > 0) {
+    setAllEnvironments(environments);
+  }
 }
