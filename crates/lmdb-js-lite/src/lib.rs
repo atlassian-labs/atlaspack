@@ -92,6 +92,13 @@ impl DatabaseHandle {
   }
 }
 
+impl Drop for DatabaseHandle {
+  fn drop(&mut self) {
+    let _ = self.writer_thread_handle.send(DatabaseWriterMessage::Stop);
+    tracing::debug!("Dropping LMDB database handle");
+  }
+}
+
 struct LMDBGlobalState {
   /// Grows unbounded. It will not be cleaned-up as that complicates things. Opening and closing
   /// many databases on the same process will cause this to grow.
@@ -116,7 +123,13 @@ impl LMDBGlobalState {
     {
       return Ok(database);
     }
+
     let (writer, database) = start_make_database_writer(&options)?;
+    tracing::debug!(
+      "Spawned new database writer thread {:?} for {}",
+      writer.thread_id(),
+      options.path
+    );
     let handle = Arc::new(DatabaseHandle {
       writer_thread_handle: Arc::new(writer),
       database,

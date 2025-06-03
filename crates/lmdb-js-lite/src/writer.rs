@@ -50,8 +50,7 @@ pub struct LMDBOptions {
 /// There is always a single writer thread per database.
 pub struct DatabaseWriterHandle {
   tx: Sender<DatabaseWriterMessage>,
-  #[allow(unused)]
-  thread_handle: JoinHandle<()>,
+  thread_handle: Option<JoinHandle<()>>,
 }
 
 impl DatabaseWriterHandle {
@@ -62,11 +61,24 @@ impl DatabaseWriterHandle {
   ) -> std::result::Result<(), crossbeam::channel::SendError<DatabaseWriterMessage>> {
     self.tx.send(message)
   }
+
+  pub fn thread_id(&self) -> std::thread::ThreadId {
+    self.thread_handle.as_ref().unwrap().thread().id()
+  }
+
+  pub fn join(&mut self) -> std::thread::Result<()> {
+    if let Some(thread_handle) = self.thread_handle.take() {
+      thread_handle.join()
+    } else {
+      Ok(())
+    }
+  }
 }
 
 impl Drop for DatabaseWriterHandle {
   fn drop(&mut self) {
     let _ = self.tx.send(DatabaseWriterMessage::Stop);
+    let _ = self.join();
   }
 }
 
@@ -90,12 +102,21 @@ pub fn start_make_database_writer(
     }
   });
 
-  Ok((DatabaseWriterHandle { tx, thread_handle }, writer))
+  Ok((
+    DatabaseWriterHandle {
+      tx,
+      thread_handle: Some(thread_handle),
+    },
+    writer,
+  ))
 }
 
 /// Main-loop for the database writer thread
 fn run_database_writer(rx: Receiver<DatabaseWriterMessage>, writer: Arc<DatabaseWriter>) {
-  tracing::debug!("Starting database writer thread");
+  tracing::debug!(
+    "Starting database writer thread {:?}",
+    std::thread::current().id()
+  );
   let mut current_transaction: Option<RwTxn> = None;
 
   while let Ok(msg) = rx.recv() {
@@ -107,6 +128,11 @@ fn run_database_writer(rx: Receiver<DatabaseWriterMessage>, writer: Arc<Database
   if let Some(txn) = current_transaction {
     let _ = txn.commit();
   }
+
+  tracing::debug!(
+    "Database writer thread {:?} exited",
+    std::thread::current().id()
+  );
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -151,7 +177,16 @@ fn handle_message<'a, 'b>(
       resolve(result);
     }
     DatabaseWriterMessage::Stop => {
-      tracing::debug!("Stopping writer thread");
+      tracing::debug!(
+        "Stopping writer thread {:?}...",
+        std::thread::current().id()
+      );
+
+      if let Some(txn) = current_transaction.take() {
+        if let Err(e) = txn.commit() {
+          tracing::error!("Failed to commit trailing transaction on shutdown: {e}");
+        }
+      }
       return true;
     }
     DatabaseWriterMessage::StartTransaction { resolve } => {
