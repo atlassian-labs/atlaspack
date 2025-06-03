@@ -164,7 +164,7 @@ jobs:
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
       - run: yarn test:js:unit
         env:
-          RUST_LOG: debug
+          RUST_LOG: 'lmdb_js_lite=debug'
           ATLASPACK_TRACING_MODE: stdout
 
   integration_tests:
@@ -202,7 +202,7 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
       - run: yarn test:integration-ci
         env:
-          RUST_LOG: debug
+          RUST_LOG: 'lmdb_js_lite=debug'
           ATLASPACK_TRACING_MODE: stdout
 
   integration_tests_v3:
@@ -240,7 +240,7 @@ jobs:
       - run: yarn test:integration-ci
         env:
           ATLASPACK_V3: true
-          RUST_LOG: debug
+          RUST_LOG: 'lmdb_js_lite=debug'
           ATLASPACK_TRACING_MODE: stdout
 
   end_to_end_tests:
