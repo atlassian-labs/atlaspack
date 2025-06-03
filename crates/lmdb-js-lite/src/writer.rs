@@ -18,16 +18,16 @@ type Result<R> = std::result::Result<R, DatabaseWriterError>;
 #[derive(thiserror::Error, Debug)]
 pub enum DatabaseWriterError {
   #[error("heed error: {0}")]
-  HeedError(#[from] heed::Error),
+  Heed(#[from] heed::Error),
   #[error("IO error: {0}")]
-  IOError(#[from] std::io::Error),
+  IO(#[from] std::io::Error),
   #[error("Failed to decompress entry {0}")]
-  DecompressError(#[from] lz4_flex::block::DecompressError),
+  Decompress(#[from] lz4_flex::block::DecompressError),
   #[error("Failed to compress entry {0}")]
-  CompressError(#[from] lz4_flex::block::CompressError),
+  Compress(#[from] lz4_flex::block::CompressError),
 }
 
-#[derive(Clone, PartialOrd, PartialEq)]
+#[derive(Clone, Debug, PartialOrd, PartialEq)]
 #[napi(object)]
 pub struct LMDBOptions {
   /// The database directory path
@@ -412,6 +412,10 @@ impl DatabaseWriter {
 
     Ok(())
   }
+
+  pub fn path(&self) -> &Path {
+    self.environment.path()
+  }
 }
 
 #[cfg(test)]
@@ -643,8 +647,7 @@ mod tests {
         write_txn.commit()?;
         Ok(())
       })();
-      if let Err(DatabaseWriterError::HeedError(heed::Error::Mdb(heed::MdbError::MapFull))) = error
-      {
+      if let Err(DatabaseWriterError::Heed(heed::Error::Mdb(heed::MdbError::MapFull))) = error {
         current_size *= 2;
         tracing::info!("Resizing database {current_size}");
         unsafe { read.environment.resize(current_size).unwrap() }

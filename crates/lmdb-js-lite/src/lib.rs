@@ -55,7 +55,7 @@ use crate::writer::{
   DatabaseWriterMessage,
 };
 
-pub mod writer;
+mod writer;
 
 #[cfg(not(test))]
 type Buffer = napi::bindgen_prelude::Buffer;
@@ -71,19 +71,23 @@ pub struct DatabaseHandle {
   /// This is a handle into the writer thread
   writer_thread_handle: Arc<DatabaseWriterHandle>,
   /// This is a raw handle to the LMDB database
+  ///
+  /// ATTENTION: Leaking this handle may cause problems where the same database is opened twice.
+  /// All access MUST go through the `Arc<DatabaseHandle>` construct, otherwise our clean-up routines will
+  /// break.
   database: Arc<DatabaseWriter>,
 }
 
 impl DatabaseHandle {
   /// This should only be used if you need to share transaction state with
   /// JavaScript writers, as in, use the same transaction for multiple threads.
-  pub fn writer_thread_handle(&self) -> &Arc<DatabaseWriterHandle> {
+  pub fn writer_thread_handle(&self) -> &DatabaseWriterHandle {
     &self.writer_thread_handle
   }
 
   /// Get the raw database handle. Prefer using this for reads and writes on
   /// native.
-  pub fn database(&self) -> &Arc<DatabaseWriter> {
+  pub fn database(&self) -> &DatabaseWriter {
     &self.database
   }
 }
@@ -144,6 +148,13 @@ pub struct NativeEntry {
   pub value: Vec<u8>,
 }
 
+pub fn get_database(options: LMDBOptions) -> anyhow::Result<Arc<DatabaseHandle>> {
+  let mut state = STATE.lock();
+  state
+    .get_database(options)
+    .map_err(|err| anyhow!("Failed to get database: {err}"))
+}
+
 #[napi]
 pub struct LMDB {
   inner: Option<Arc<DatabaseHandle>>,
@@ -154,11 +165,7 @@ pub struct LMDB {
 impl LMDB {
   #[napi(constructor)]
   pub fn new(options: LMDBOptions) -> napi::Result<Self> {
-    let mut state = STATE.lock();
-    let database = state
-      .get_database(options)
-      .map_err(|err| anyhow!("Failed to get database: {err}"))
-      .map_err(napi_error)?;
+    let database = get_database(options).map_err(napi_error)?;
     Ok(Self {
       inner: Some(database),
       read_transaction: None,
