@@ -67,6 +67,9 @@
       "default": "./lib/worker.js"
     }
   },
+  "atlaspackReferences": [
+    "_empty.js"
+  ],
   "browser": {
     "./src/serializerCore.js": "./src/serializerCore.browser.js"
   },

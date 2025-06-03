@@ -19,7 +19,12 @@ require('@babel/register')({
   ],
   only: [path.join(__dirname, '../../..')],
   presets: [parcelBabelPreset],
-  plugins: [require('./babel-plugin-module-translate')],
+  plugins: [
+    [
+      require('./babel-plugin-module-translate'),
+      {superPackage: process.env.SUPER_PACKAGE === 'true'},
+    ],
+  ],
   extensions: ['.js', '.jsx'],
 });
 
