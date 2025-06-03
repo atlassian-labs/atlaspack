@@ -162,9 +162,7 @@ jobs:
   build-and-release-changesets:
     name: Build and release Changesets
     if: github.ref_name == 'main'
-    needs:
-      - build-native-linux
-      - build-native-macos
+    needs: build-and-release
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
