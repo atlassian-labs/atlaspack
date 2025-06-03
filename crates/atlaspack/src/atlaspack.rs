@@ -192,14 +192,14 @@ mod tests {
   use atlaspack_core::types::{Asset, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_plugin_rpc::{MockRpcFactory, MockRpcWorker};
-  use lmdb_js_lite::{DatabaseWriterError, LMDBOptions};
+  use lmdb_js_lite::{get_database, LMDBOptions};
 
   use super::*;
 
   #[test]
   fn build_asset_graph_commits_assets_to_lmdb() -> Result<(), anyhow::Error> {
     // TODO: Create overlay fs for integration test
-    let db = Arc::new(create_db()?);
+    let db = create_db()?;
     let fs = InMemoryFileSystem::default();
 
     fs.write_file(
@@ -240,16 +240,16 @@ mod tests {
 
     atlaspack.commit_assets(assets.iter().collect())?;
 
-    let txn = db.read_txn()?;
+    let txn = db.database().read_txn()?;
     for (idx, asset) in assets_names.iter().enumerate() {
-      let entry = db.get(&txn, &idx.to_string())?;
+      let entry = db.database().get(&txn, &idx.to_string())?;
       assert_eq!(entry, Some(asset.to_string().into()));
     }
 
     Ok(())
   }
 
-  fn create_db() -> Result<DatabaseHandle, DatabaseWriterError> {
+  fn create_db() -> anyhow::Result<Arc<DatabaseHandle>> {
     let path = temp_dir().join("atlaspack").join("asset-graph-tests");
     let _ = std::fs::remove_dir_all(&path);
 
