@@ -167,7 +167,7 @@ describe('LMDBLiteCache', () => {
       hello: 'world',
     });
     setTimeout(() => {
-      cache.getNativeRef().close();
+      cache?.getNativeRef().close();
       cache = null;
 
       if (global.gc) {
@@ -188,7 +188,7 @@ describe('LMDBLiteCache', () => {
       workers.push(worker);
 
       const responsePromise = new Promise((resolve, reject) => {
-        worker.addListener('error', (error) => {
+        worker.addListener('error', (error: Error) => {
           reject(error);
         });
         worker.addListener('message', (message) => {
@@ -197,6 +197,7 @@ describe('LMDBLiteCache', () => {
       });
 
       worker.addListener('message', (message) => {
+        // eslint-disable-next-line no-console
         console.log('Worker message', message);
       });
       worker.addListener('online', () => {
@@ -208,9 +209,11 @@ describe('LMDBLiteCache', () => {
       responsePromises.push(responsePromise);
     }
 
+    // eslint-disable-next-line no-console
     console.log('Waiting for responses');
     const responses = await Promise.all(responsePromises);
 
+    // eslint-disable-next-line no-console
     console.log('Responses received');
     for (const [index, response] of responses.entries()) {
       const worker = workers[index];
@@ -228,17 +231,19 @@ describe('LMDBLiteCache', () => {
       );
     }
 
+    // eslint-disable-next-line no-console
     console.log('Getting main thread key');
     cache = new LMDBLiteCache(testDir);
-    const data = await cache.get('main_thread_key');
+    const data = await cache?.get('main_thread_key');
     assert.deepEqual(data, {
       mainThreadId: 0,
       hello: 'world',
     });
 
+    // eslint-disable-next-line no-console
     console.log('Getting worker keys');
     for (const worker of workers) {
-      const data = await cache.get(`worker_key/${worker.threadId}`);
+      const data = await cache?.get(`worker_key/${worker.threadId}`);
       assert.deepEqual(data, {
         workerId: worker.threadId,
       });
