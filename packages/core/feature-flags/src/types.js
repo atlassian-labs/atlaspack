@@ -97,3 +97,5 @@ export type ConsistencyCheckFeatureFlagValue =
   | 'OLD'
   | 'NEW_AND_CHECK'
   | 'OLD_AND_CHECK';
+
+declare export var DEFAULT_FEATURE_FLAGS: FeatureFlags;
