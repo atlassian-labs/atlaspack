@@ -427,6 +427,10 @@ impl LMDB {
       })?;
     Ok(())
   }
+
+  pub fn get_database(&self) -> &Arc<DatabaseHandle> {
+    &self.inner
+  }
 }
 
 impl LMDB {

@@ -67,7 +67,7 @@ pub fn atlaspack_napi_create(
   };
 
   // Get access to LMDB reference
-  let db_handle = lmdb.get_database_napi()?.clone();
+  let db_handle = lmdb.get_database().clone();
   atlaspack_napi_run_db_health_check(&db_handle)?;
 
   // Get Atlaspack Options
