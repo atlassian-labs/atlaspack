@@ -20,6 +20,8 @@ import {
 } from '@atlaspack/utils';
 import Environment from './Environment';
 import {fromProjectPath, toProjectPath} from '../projectPath';
+import {fromEnvironmentId} from '../EnvironmentManager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const internalConfigToConfig: DefaultWeakMap<
   AtlaspackOptions,
@@ -45,7 +47,7 @@ export default class PublicConfig implements IConfig {
   }
 
   get env(): Environment {
-    return new Environment(this.#config.env, this.#options);
+    return new Environment(fromEnvironmentId(this.#config.env), this.#options);
   }
 
   get searchPath(): FilePath {
@@ -165,25 +167,27 @@ export default class PublicConfig implements IConfig {
       }
     }
 
-    const configKey = options?.configKey;
-    if (configKey != null) {
-      for (let fileName of fileNames) {
-        let config = await this.getConfigFrom(searchPath, [fileName], {
-          exclude: true,
-        });
+    if (getFeatureFlag('granularTsConfigInvalidation')) {
+      const configKey = options?.configKey;
+      if (configKey != null) {
+        for (let fileName of fileNames) {
+          let config = await this.getConfigFrom(searchPath, [fileName], {
+            exclude: true,
+          });
 
-        if (config && config.contents[configKey]) {
-          // Invalidate only when the package key changes
-          this.invalidateOnConfigKeyChange(config.filePath, configKey);
+          if (config && config.contents[configKey]) {
+            // Invalidate only when the package key changes
+            this.invalidateOnConfigKeyChange(config.filePath, configKey);
 
-          return {
-            contents: config.contents[configKey],
-            filePath: config.filePath,
-          };
+            return {
+              contents: config.contents[configKey],
+              filePath: config.filePath,
+            };
+          }
         }
-      }
 
-      return null;
+        return null;
+      }
     }
 
     if (fileNames.length === 0) {
