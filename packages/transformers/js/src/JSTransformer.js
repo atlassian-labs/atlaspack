@@ -206,11 +206,12 @@ export default (new Transformer({
             pkg?.peerDependencies?.react,
         );
 
-      let tsconfig = await config.getConfigFrom<TSConfig>(
+      let tsconfig = await config.getConfigFrom<TSConfig['compilerOptions']>(
         options.projectRoot + '/index',
         ['tsconfig.json', 'jsconfig.json'],
+        {configKey: 'compilerOptions'},
       );
-      let compilerOptions = tsconfig?.contents?.compilerOptions;
+      let compilerOptions = tsconfig?.contents;
 
       // Use explicitly defined JSX options in tsconfig.json over inferred values from dependencies.
       pragma =

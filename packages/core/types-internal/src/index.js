@@ -975,11 +975,21 @@ export interface Config {
   getConfigFrom<T>(
     searchPath: FilePath,
     filePaths: Array<FilePath>,
-    options?: {|
-      packageKey?: string,
-      parse?: boolean,
-      exclude?: boolean,
-    |},
+    options?:
+      | {|
+          /**
+           * @deprecated Use `configKey` instead.
+           */
+          packageKey?: string,
+          parse?: boolean,
+          exclude?: boolean,
+        |}
+      | {|
+          /**
+           * If specified, only invalidate when this config key changes.
+           */
+          configKey?: string,
+        |},
   ): Promise<?ConfigResultWithFilePath<T>>;
   /** Finds the nearest package.json from the config's searchPath. */
   getPackage(): Promise<?PackageJSON>;
