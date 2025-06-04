@@ -86,7 +86,6 @@ describe('LMDBLiteCache', () => {
     cache = new LMDBLiteCache(path.join(cacheDir, 'close_and_reopen_test'));
     await cache.ensure();
     await cache.setBlob('key', Buffer.from(serialize({value: 42})));
-    cache.getNativeRef().close();
     cache = new LMDBLiteCache(path.join(cacheDir, 'close_and_reopen_test'));
     await cache.ensure();
     const buffer = await cache.getBlob('key');
@@ -129,7 +128,6 @@ describe('LMDBLiteCache', () => {
       const cache = new LMDBLiteCache(testDir);
       await cache.ensure();
       await cache.setBlob(`key${i}`, Buffer.from(serialize({value: i})));
-      cache.getNativeRef().close();
 
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
@@ -158,7 +156,6 @@ describe('LMDBLiteCache', () => {
       hello: 'world',
     });
     setTimeout(() => {
-      cache?.getNativeRef().close();
       cache = null;
 
       if (global.gc) {

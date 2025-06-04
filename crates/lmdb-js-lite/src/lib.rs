@@ -170,7 +170,7 @@ pub fn get_database(options: LMDBOptions) -> anyhow::Result<Arc<DatabaseHandle>>
 
 #[napi]
 pub struct LMDB {
-  inner: Option<Arc<DatabaseHandle>>,
+  inner: Arc<DatabaseHandle>,
   read_transaction: Option<heed::RoTxn<'static>>,
 }
 
@@ -180,14 +180,14 @@ impl LMDB {
   pub fn new(options: LMDBOptions) -> napi::Result<Self> {
     let database = get_database(options).map_err(napi_error)?;
     Ok(Self {
-      inner: Some(database),
+      inner: database,
       read_transaction: None,
     })
   }
 
   #[napi(ts_return_type = "Promise<Buffer | null | undefined>")]
   pub fn get(&self, env: Env, key: String) -> napi::Result<napi::JsObject> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     let (deferred, promise) = env.create_deferred()?;
 
     database_handle
@@ -206,7 +206,7 @@ impl LMDB {
 
   #[napi(ts_return_type = "boolean")]
   pub fn has_sync(&self, key: String) -> napi::Result<bool> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     let database = &database_handle.database;
     let txn = self.read_txn()?;
 
@@ -215,7 +215,7 @@ impl LMDB {
 
   #[napi]
   pub fn keys_sync(&self, skip: i32, limit: i32) -> napi::Result<Vec<String>> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     let database = &database_handle.database;
     let txn = self.read_txn()?;
 
@@ -226,7 +226,7 @@ impl LMDB {
 
   #[napi(ts_return_type = "Buffer | null")]
   pub fn get_sync(&self, env: Env, key: String) -> napi::Result<JsUnknown> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     let database = &database_handle.database;
 
     let txn = self.read_txn()?;
@@ -250,7 +250,7 @@ impl LMDB {
 
   #[napi]
   pub fn get_many_sync(&self, keys: Vec<String>) -> napi::Result<Vec<Option<Buffer>>> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     let database = &database_handle.database;
 
     let mut results = vec![];
@@ -271,7 +271,7 @@ impl LMDB {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn put_many(&self, env: Env, entries: Vec<Entry>) -> napi::Result<napi::JsObject> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::PutMany {
@@ -296,7 +296,7 @@ impl LMDB {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn put(&self, env: Env, key: String, data: Buffer) -> napi::Result<napi::JsObject> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     // This costs us 70% over the round-trip time after arg. conversion
     let (deferred, promise) = env.create_deferred()?;
 
@@ -318,7 +318,7 @@ impl LMDB {
 
   #[napi]
   pub fn put_no_confirm(&self, key: String, data: Buffer) -> napi::Result<()> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
 
     let message = DatabaseWriterMessage::Put {
       key,
@@ -335,7 +335,7 @@ impl LMDB {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn delete(&self, env: Env, key: String) -> napi::Result<napi::JsObject> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::Delete {
@@ -358,7 +358,7 @@ impl LMDB {
     if self.read_transaction.is_some() {
       return Ok(());
     }
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     let txn = database_handle
       .database
       .static_read_txn()
@@ -379,7 +379,7 @@ impl LMDB {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn start_write_transaction(&self, env: Env) -> napi::Result<napi::JsObject> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::StartTransaction {
@@ -399,7 +399,7 @@ impl LMDB {
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn commit_write_transaction(&self, env: Env) -> napi::Result<napi::JsObject> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     let (deferred, promise) = env.create_deferred()?;
 
     let message = DatabaseWriterMessage::CommitTransaction {
@@ -413,15 +413,10 @@ impl LMDB {
     Ok(promise)
   }
 
-  #[napi]
-  pub fn close(&mut self) {
-    self.inner = None;
-  }
-
   /// Compact the database to the target path
   #[napi]
   pub fn compact(&self, target_path: String) -> napi::Result<()> {
-    let database_handle = self.get_database_napi()?;
+    let database_handle = &self.inner;
     database_handle
       .database()
       .compact(Path::new(&target_path))
@@ -441,19 +436,11 @@ impl LMDB {
     if let Some(txn) = &self.read_transaction {
       Ok(writer::Transaction::Borrowed(txn))
     } else {
-      let database = self.get_database_napi()?;
+      let database = &self.inner;
       Ok(writer::Transaction::Owned(
         database.database.read_txn().map_err(napi_error)?,
       ))
     }
-  }
-
-  pub fn get_database_napi(&self) -> napi::Result<&Arc<DatabaseHandle>> {
-    let inner = self
-      .inner
-      .as_ref()
-      .ok_or_else(|| napi::Error::from_reason("[napi] Trying to get a closed database"))?;
-    Ok(inner)
   }
 }
 
@@ -476,7 +463,7 @@ mod tests {
       map_size: None,
     };
     let mut lmdb = LMDB::new(options).unwrap();
-    lmdb.close();
+    drop(lmdb);
   }
 
   #[test]

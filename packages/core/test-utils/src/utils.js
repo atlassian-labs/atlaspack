@@ -67,7 +67,6 @@ beforeEach(async () => {
   for (let i = 0; i < 5; i++) {
     try {
       cacheDir = tempy.directory();
-      cache.getNativeRef().close();
       cache = new LMDBLiteCache(cacheDir);
     } catch (err) {
       if (

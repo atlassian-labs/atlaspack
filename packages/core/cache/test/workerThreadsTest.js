@@ -26,8 +26,6 @@ if (!isMainThread) {
       });
 
       setTimeout(() => {
-        cache.getNativeRef().close();
-
         parentPort.postMessage({
           type: 'close',
           workerId: threadId,
